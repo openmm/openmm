@@ -46,13 +46,17 @@ Stream::Stream(const Stream& copy) : impl(copy.impl) {
 }
 
 Stream::~Stream() {
-    impl->referenceCount--;
-    if (impl->referenceCount == 0)
-        delete impl;
+    if (impl) {
+        impl->referenceCount--;
+        if (impl->referenceCount == 0)
+            delete impl;
+    }
 }
 
-Stream Stream::operator=(const Stream& copy) {
-    return Stream(copy);
+Stream& Stream::operator=(const Stream& copy) {
+    impl = copy.impl;
+    impl->referenceCount++;
+    return *this;
 }
 
 string Stream::Stream::getName() const {

@@ -38,12 +38,11 @@
 #include <string>
 #include <vector>
 
-class thalweg_ARRAY;
-
 namespace OpenMM {
 
 class OpenMMContextImpl;
 class Vec3;
+class Platform;
 
 /**
  * An OpenMMContext stores the complete state of a simulation.  More specifically, it includes:
@@ -70,6 +69,15 @@ public:
      * @param integrator  the Integrator which will be used to simulate the System
      */
     OpenMMContext(System& system, Integrator& integrator);
+    /**
+     * Construct a new OpenMMContext in which to run a simulation, explicitly specifying what Platform should be used
+     * to perform calculations.
+     * 
+     * @param system      the System which will be simulated
+     * @param integrator  the Integrator which will be used to simulate the System
+     * @param platform    the Platform to use for calculations
+     */
+    OpenMMContext(System& system, Integrator& integrator, Platform& platform);
     /**
      * Get System being simulated in this context.
      */

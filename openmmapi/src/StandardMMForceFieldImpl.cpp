@@ -41,14 +41,14 @@ using std::set;
 StandardMMForceFieldImpl::StandardMMForceFieldImpl(StandardMMForceField& owner, OpenMMContextImpl& context) : owner(owner) {
     forceKernel = context.getPlatform().createKernel(CalcStandardMMForcesKernel::Name());
     energyKernel = context.getPlatform().createKernel(CalcStandardMMEnergyKernel::Name());
-    vector<vector<int> > bondIndices;
-    vector<vector<double> > bondParameters;
-    vector<vector<int> > angleIndices;
-    vector<vector<double> > angleParameters;
-    vector<vector<int> > periodicTorsionIndices;
-    vector<vector<double> > periodicTorsionParameters;
-    vector<vector<int> > rbTorsionIndices;
-    vector<vector<double> > rbTorsionParameters;
+    vector<vector<int> > bondIndices(owner.getNumBonds());
+    vector<vector<double> > bondParameters(owner.getNumBonds());
+    vector<vector<int> > angleIndices(owner.getNumAngles());
+    vector<vector<double> > angleParameters(owner.getNumAngles());
+    vector<vector<int> > periodicTorsionIndices(owner.getNumPeriodicTorsions());
+    vector<vector<double> > periodicTorsionParameters(owner.getNumPeriodicTorsions());
+    vector<vector<int> > rbTorsionIndices(owner.getNumRBTorsions());
+    vector<vector<double> > rbTorsionParameters(owner.getNumRBTorsions());
     vector<vector<int> > bonded14Indices;
     vector<set<int> > exclusions(owner.getNumAtoms());
     vector<vector<double> > nonbondedParameters(owner.getNumAtoms());
@@ -107,6 +107,12 @@ StandardMMForceFieldImpl::StandardMMForceFieldImpl(StandardMMForceField& owner, 
     }
     set<pair<int, int> > bonded14set;
     findExclusions(bondIndices, exclusions, bonded14set);
+    bonded14Indices.resize(bonded14set.size());
+    int index = 0;
+    for (set<pair<int, int> >::const_iterator iter = bonded14set.begin(); iter != bonded14set.end(); ++iter) {
+        bonded14Indices[index].push_back(iter->first);
+        bonded14Indices[index++].push_back(iter->second);
+    }
     dynamic_cast<CalcStandardMMForcesKernel&>(forceKernel.getImpl()).initialize(bondIndices, bondParameters, angleIndices, angleParameters,
             periodicTorsionIndices, periodicTorsionParameters, rbTorsionIndices, rbTorsionParameters, bonded14Indices, exclusions, nonbondedParameters);
     dynamic_cast<CalcStandardMMEnergyKernel&>(energyKernel.getImpl()).initialize(bondIndices, bondParameters, angleIndices, angleParameters,
@@ -135,24 +141,25 @@ void StandardMMForceFieldImpl::findExclusions(const vector<vector<int> >& bondIn
     vector<set<int> > bonded12(exclusions.size());
     for (int i = 0; i < (int) bondIndices.size(); ++i) {
         bonded12[bondIndices[i][0]].insert(bondIndices[i][1]);
-        bonded12[bondIndices[i][1]].insert(bondIndices[i][2]);
+        bonded12[bondIndices[i][1]].insert(bondIndices[i][0]);
     }
     for (int i = 0; i < (int) exclusions.size(); ++i)
-        addExclusionsToSet(bonded12, exclusions[i], i, 2);
+        addExclusionsToSet(bonded12, exclusions[i], i, i, 2);
     for (int i = 0; i < (int) exclusions.size(); ++i) {
         set<int> bonded13;
-        addExclusionsToSet(bonded12, bonded13, i, 1);
+        addExclusionsToSet(bonded12, bonded13, i, i, 1);
         for (set<int>::const_iterator iter = exclusions[i].begin(); iter != exclusions[i].end(); ++iter)
             if (*iter < i && bonded13.find(*iter) == bonded13.end())
                 bonded14Indices.insert(pair<int, int> (*iter, i));
     }
 }
 
-void StandardMMForceFieldImpl::addExclusionsToSet(const vector<set<int> >& bonded12, set<int>& exclusions, int fromAtom, int currentLevel) const {
+void StandardMMForceFieldImpl::addExclusionsToSet(const vector<set<int> >& bonded12, set<int>& exclusions, int baseAtom, int fromAtom, int currentLevel) const {
     for (set<int>::const_iterator iter = bonded12[fromAtom].begin(); iter != bonded12[fromAtom].end(); ++iter) {
-        exclusions.insert(*iter);
+        if (*iter != baseAtom)
+            exclusions.insert(*iter);
         if (currentLevel > 0)
-            addExclusionsToSet(bonded12, exclusions, *iter, currentLevel-1);
+            addExclusionsToSet(bonded12, exclusions, baseAtom, *iter, currentLevel-1);
     }
 }
 

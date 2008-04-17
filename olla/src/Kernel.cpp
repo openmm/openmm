@@ -45,13 +45,17 @@ Kernel::Kernel(const Kernel& copy) : impl(copy.impl) {
 }
 
 Kernel::~Kernel() {
-    impl->referenceCount--;
-    if (impl->referenceCount == 0)
-        delete impl;
+    if (impl) {
+        impl->referenceCount--;
+        if (impl->referenceCount == 0)
+            delete impl;
+    }
 }
 
-Kernel Kernel::operator=(const Kernel& copy) {
-    return Kernel(copy);
+Kernel& Kernel::operator=(const Kernel& copy) {
+    impl = copy.impl;
+    impl->referenceCount++;
+    return *this;
 }
 
 string Kernel::Kernel::getName() const {

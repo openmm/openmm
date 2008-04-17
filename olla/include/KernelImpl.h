@@ -51,6 +51,7 @@ public:
      */
     KernelImpl(std::string name);
     virtual ~KernelImpl() {
+        assert(referenceCount == 0);
     }
     /**
      * Get the name of this kernel.

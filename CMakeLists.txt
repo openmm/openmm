@@ -1,0 +1,238 @@
+#---------------------------------------------------
+# OpenMM 
+#
+# Creates OpenMM library, base name=OpenMM.
+# Default libraries are shared & optimized. Variants
+# are created for static (_static) and debug (_d).
+#
+# Windows:
+#   OpenMM[_d].dll
+#   OpenMM[_d].lib
+#   OpenMM_static[_d].lib
+# Unix:
+#   libOpenMM[_d].so
+#   libOpenMM_static[_d].a
+#----------------------------------------------------
+
+PROJECT (OpenMM)
+
+SUBDIRS (tests)
+
+ADD_DEFINITIONS(-DOPENMM_BUILDING_SHARED_LIBRARY)
+
+# The source is organized into subdirectories, but we handle them all from
+# this CMakeLists file rather than letting CMake visit them as SUBDIRS.
+SET(OPENMM_SOURCE_SUBDIRS . openmmapi olla)
+
+
+# The build system will set ARCH64 for 64 bit builds, which require
+# use of the lib64/ library directories rather than lib/.
+#SET( ARCH64 OFF CACHE BOOL "ON for 64bit builds, OFF for 32bit builds")
+#MARK_AS_ADVANCED( ARCH64  )
+#IF (ARCH64)
+#    SET(LIB64 64)
+#ELSE (ARCH64)
+#    SET(LIB64) # nothing
+#ENDIF (ARCH64)
+
+IF( ${CMAKE_SIZEOF_VOID_P} EQUAL 8 )
+  SET( LIB64 64 )
+ELSE( ${CMAKE_SIZEOF_VOID_P} EQUAL 8 )
+  SET( LIB64  )
+ENDIF( ${CMAKE_SIZEOF_VOID_P} EQUAL 8 )
+
+
+IF(UNIX AND NOT CMAKE_BUILD_TYPE)
+    SET(CMAKE_BUILD_TYPE Debug CACHE STRING "Debug or Release build" FORCE)
+ENDIF (UNIX AND NOT CMAKE_BUILD_TYPE)
+
+IF (NOT CMAKE_CXX_FLAGS_DEBUG)
+    SET(CMAKE_CXX_FLAGS_DEBUG "-g" CACHE STRING "To use when CMAKE_BUILD_TYPE=Debug" FORCE)
+ENDIF (NOT CMAKE_CXX_FLAGS_DEBUG)
+
+IF (NOT CMAKE_CXX_FLAGS_RELEASE)
+    SET(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG" CACHE STRING 
+          "To use when CMAKE_BUILD_TYPE=Release" FORCE)
+ENDIF (NOT CMAKE_CXX_FLAGS_RELEASE)
+
+
+
+# Collect up information about the version of the simbody library we're building
+# and make it available to the code so it can be built into the binaries.
+
+SET(OPENMM_LIBRARY_NAME OpenMM)
+SET(OPENMM_MAJOR_VERSION 1)
+SET(OPENMM_MINOR_VERSION 0)
+SET(OPENMM_BUILD_VERSION 0)
+
+SET(OPENMM_COPYRIGHT_YEARS "2008")
+
+# underbar separated list of dotted authors, no spaces or commas
+SET(OPENMM_AUTHORS "Peter.Eastman")
+
+# Get the subversion revision number if we can
+# It's possible that WIN32 installs use svnversion through cygwin
+# so we'll try for both svnversion.exe and svnversion. Note that
+# this will result in warnings if all you have is Tortoise without
+# Cygwin, and your "about" string will say "unknown" rather than
+# providing the SVN version of the source.
+
+FIND_PROGRAM (SVNVERSION_EXE svnversion.exe)
+IF (SVNVERSION_EXE)
+    EXEC_PROGRAM (${SVNVERSION_EXE}
+                  ARGS  \"${PROJECT_SOURCE_DIR}\"
+                  OUTPUT_VARIABLE OPENMM_SVN_REVISION )
+ELSE (SVNVERSION_EXE) 
+    FIND_PROGRAM (SVNVERSION svnversion) 
+    IF (SVNVERSION)
+        EXEC_PROGRAM (${SVNVERSION}
+                      ARGS "${PROJECT_SOURCE_DIR}"
+                      OUTPUT_VARIABLE OPENMM_SVN_REVISION)
+    ELSE (SVNVERSION)
+        MESSAGE (STATUS 
+          "Could not find 'svnversion' executable; 'about' will be wrong. (Cygwin provides one on Windows.)"
+        )
+        SET (OPENMM_SVN_REVISION unknown) 
+    ENDIF (SVNVERSION)
+ENDIF (SVNVERSION_EXE)
+# Remove colon from build version, for easier placement in directory names
+STRING(REPLACE ":" "_" OPENMM_SVN_REVISION ${OPENMM_SVN_REVISION})
+
+ADD_DEFINITIONS(-DOPENMM_LIBRARY_NAME=${OPENMM_LIBRARY_NAME}
+                -DOPENMM_MAJOR_VERSION=${OPENMM_MAJOR_VERSION}
+                -DOPENMM_MINOR_VERSION=${OPENMM_MINOR_VERSION}
+		-DOPENMM_BUILD_VERSION=${OPENMM_BUILD_VERSION})
+
+# CMake quotes automatically when building Visual Studio projects but we need
+# to add them ourselves for Linux or Cygwin. Two cases to avoid duplicate quotes
+# in Visual Studio which end up in the binary.
+
+IF (${CMAKE_GENERATOR} MATCHES "Visual Studio")
+   SET(NEED_QUOTES FALSE)
+ELSE (${CMAKE_GENERATOR} MATCHES "Visual Studio")
+   SET(NEED_QUOTES TRUE)
+ENDIF (${CMAKE_GENERATOR} MATCHES "Visual Studio")
+
+##TODO: doesn't work without quotes in nightly build
+SET(NEED_QUOTES TRUE)
+
+IF(NEED_QUOTES)
+   ADD_DEFINITIONS(-DOPENMM_SVN_REVISION="${OPENMM_SVN_REVISION}"
+                   -DOPENMM_COPYRIGHT_YEARS="${OPENMM_COPYRIGHT_YEARS}"
+                   -DOPENMM_AUTHORS="${OPENMM_AUTHORS}")
+ELSE(NEED_QUOTES)
+   ADD_DEFINITIONS(-DOPENMM_SVN_REVISION=${OPENMM_SVN_REVISION}
+                   -DOPENMM_COPYRIGHT_YEARS=${OPENMM_COPYRIGHT_YEARS}
+                   -DOPENMM_AUTHORS=${OPENMM_AUTHORS})
+ENDIF(NEED_QUOTES)
+
+# -DOPENMM_TYPE has to be defined in the target subdirectories.
+# -Dsimbody_EXPORTS defined automatically when Windows DLL build is being done.
+
+# Report the version number to the CMake UI
+SET(OPENMM_VERSION
+    "${OPENMM_MAJOR_VERSION}.${OPENMM_MINOR_VERSION}.${OPENMM_BUILD_VERSION}"
+     CACHE STRING "This is the version of OpenMM which will be built." FORCE)
+
+
+SET(SHARED_TARGET ${OPENMM_LIBRARY_NAME})
+SET(STATIC_TARGET ${OPENMM_LIBRARY_NAME}_static)
+
+
+## If no one says otherwise, change the executable path to drop into the same binary
+## location as the DLLs so that the test cases will use the just-build DLLs.
+IF(NOT EXECUTABLE_OUTPUT_PATH)
+  SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR} 
+      CACHE INTERNAL "Single output directory for building all executables.")
+ENDIF(NOT EXECUTABLE_OUTPUT_PATH)
+IF(NOT LIBRARY_OUTPUT_PATH)
+  SET(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR} 
+      CACHE INTERNAL "Single output directory for building all libraries.")
+ENDIF(NOT LIBRARY_OUTPUT_PATH)
+SET(${PROJECT_NAME}_EXECUTABLE_DIR ${EXECUTABLE_OUTPUT_PATH}/${CMAKE_CFG_INTDIR})
+SET(${PROJECT_NAME}_LIBRARY_DIR    ${LIBRARY_OUTPUT_PATH}/${CMAKE_CFG_INTDIR})
+
+# Ensure that debug libraries have "_d" appended to their names.
+# CMake gets this right on Windows automatically with this definition.
+IF (${CMAKE_GENERATOR} MATCHES "Visual Studio")
+    SET(CMAKE_DEBUG_POSTFIX "_d" CACHE INTERNAL "" FORCE)
+ENDIF (${CMAKE_GENERATOR} MATCHES "Visual Studio")
+
+# But on Unix or Cygwin we have to add the suffix manually
+IF (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
+    SET(SHARED_TARGET ${SHARED_TARGET}_d)
+    SET(STATIC_TARGET ${STATIC_TARGET}_d)
+ENDIF (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
+
+
+# These are all the places to search for header files which are
+# to be part of the API.
+SET(API_INCLUDE_DIRS) # start empty
+FOREACH(subdir ${OPENMM_SOURCE_SUBDIRS})
+    # append
+    SET(API_INCLUDE_DIRS ${API_INCLUDE_DIRS}
+                         ${subdir}/include 
+                         ${subdir}/include/internal)
+ENDFOREACH(subdir)
+
+# We'll need both *relative* path names, starting with their API_INCLUDE_DIRS,
+# and absolute pathnames.
+SET(API_REL_INCLUDE_FILES)   # start these out empty
+SET(API_ABS_INCLUDE_FILES)
+
+FOREACH(dir ${API_INCLUDE_DIRS})
+    FILE(GLOB fullpaths ${dir}/*.h)	# returns full pathnames
+    SET(API_ABS_INCLUDE_FILES ${API_ABS_INCLUDE_FILES} ${fullpaths})
+
+    FOREACH(pathname ${fullpaths})
+        GET_FILENAME_COMPONENT(filename ${pathname} NAME)
+        SET(API_REL_INCLUDE_FILES ${API_REL_INCLUDE_FILES} ${dir}/${filename})
+    ENDFOREACH(pathname)
+ENDFOREACH(dir)
+
+# collect up source files
+SET(SOURCE_FILES) # empty
+SET(SOURCE_INCLUDE_FILES)
+
+FOREACH(subdir ${OPENMM_SOURCE_SUBDIRS})
+    FILE(GLOB src_files  ${subdir}/src/*.cpp ${subdir}/src/*/*.cpp)
+    FILE(GLOB incl_files ${subdir}/src/*.h)
+    SET(SOURCE_FILES         ${SOURCE_FILES}         ${src_files})   #append
+    SET(SOURCE_INCLUDE_FILES ${SOURCE_INCLUDE_FILES} ${incl_files})
+
+    ## Make sure we find these locally before looking in SimTK/core/include if
+    ## OpenMM was previously installed there.
+    INCLUDE_DIRECTORIES(BEFORE ${PROJECT_SOURCE_DIR}/${subdir}/include)
+ENDFOREACH(subdir)
+
+INCLUDE_DIRECTORIES(BEFORE ${PROJECT_SOURCE_DIR}/src)
+
+ADD_LIBRARY(${SHARED_TARGET} SHARED ${SOURCE_FILES} ${SOURCE_INCLUDE_FILES} ${API_ABS_INCLUDE_FILES})
+
+#
+# Allow automated build and dashboard.
+#
+INCLUDE (Dart)
+
+#IF (UNIX AND NOT CYGWIN AND NOT APPLE)
+#  IF (NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE MATCHES Debug)
+#    ADD_DEFINITIONS(-fprofile-arcs -ftest-coverage)
+#    LINK_LIBRARIES(gcov)
+#  ENDIF (NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE MATCHES Debug)
+#ENDIF (UNIX AND NOT CYGWIN AND NOT APPLE)
+
+
+#
+# Testing
+#
+
+ENABLE_TESTING()
+
+IF (EXECUTABLE_OUTPUT_PATH)
+  SET (TEST_PATH ${EXECUTABLE_OUTPUT_PATH})
+ELSE (EXECUTABLE_OUTPUT_PATH)
+  SET (TEST_PATH .)
+ENDIF (EXECUTABLE_OUTPUT_PATH)
+
+INCLUDE(ApiDoxygen.cmake)
+

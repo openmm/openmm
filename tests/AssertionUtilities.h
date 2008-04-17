@@ -1,5 +1,5 @@
-#ifndef OPENMM_STREAMIMPL_H_
-#define OPENMM_STREAMIMPL_H_
+#ifndef OPENMM_ASSERTIONUTILITIES_H_
+#define OPENMM_ASSERTIONUTILITIES_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -32,72 +32,29 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "Stream.h"
-#include <string>
-
-namespace OpenMM {
-
 /**
- * A StreamImpl defines the internal implementation of a Stream object.
+ * This file provides a variety of macros useful in test cases.
  */
 
-class StreamImpl {
-public:
-    /**
-     * Create a StreamImpl.
-     * 
-     * @param name the name of the stream to create
-     * @param size the number of elements in the stream
-     * @param type the data type of each element in the stream
-     */
-    StreamImpl(std::string name, int size, Stream::DataType type);
-    virtual ~StreamImpl() {
-        assert(referenceCount == 0);
-    }
-    /**
-     * Get the name of this stream.
-     */
-    std::string getName() const;
-    /**
-     * Get the number of elements in this stream.
-     */
-    int getSize() const;
-    /**
-     * Get the data type of each element in the stream.
-     */
-    Stream::DataType getDataType() const;
-    /**
-     * Copy the contents of an array into this stream.
-     * 
-     * @param  array a pointer to the start of the array.  The array is assumed to have the same length as this stream,
-     * and to contain elements of the correct data type for this stream.  If the stream has a compound data type, all
-     * the values should be packed into a single array: all the values for the first element, followed by all the values
-     * for the next element, etc.
-     */
-    virtual void loadFromArray(const void* array) = 0;
-    /**
-     * Copy the contents of this stream into an array.
-     * 
-     * @param  array a pointer to the start of the array.  The array is assumed to have the same length as this stream,
-     * and to contain elements of the correct data type for this stream.  If the stream has a compound data type, all
-     * the values should be packed into a single array: all the values for the first element, followed by all the values
-     * for the next element, etc.
-     */
-    virtual void saveToArray(void* array) = 0;
-    /**
-     * Set every element of this stream to the same value.
-     * 
-     * @param a pointer to the value.  It is assumed to be of the correct data type for this stream.
-     */
-    virtual void fillWithValue(void* value) = 0;
-private:
-    friend class Stream;
-    std::string name;
-    int size;
-    Stream::DataType type;
-    int referenceCount;
-};
+#include "OpenMMException.h"
+#include <string>
+#include <sstream>
 
-} // namespace OpenMM
+void throwException(const char* file, int line, const std::string& details) {
+    std::string fn(file);
+    std::string::size_type pos = fn.find_last_of("/\\");
+    if (pos+1>=fn.size())
+        pos=0;
+    std::string filename(fn,(int)(pos+1),(int)(fn.size()-(pos+1)));
+    std::stringstream message;
+    message << "Assertion failure at "<<filename<<":"<<line;
+    if (details.size() > 0)
+        message << ".  "<<details;
+    throw OpenMM::OpenMMException(message.str());
+}
 
-#endif /*OPENMM_STREAMIMPL_H_*/
+#define ASSERT(cond) {if (!(cond)) throwException(__FILE__, __LINE__, "");};
+
+#define ASSERT_EQUAL(expected, found) {if ((expected) != (found)) {std::stringstream details; details << "Expected "<<(expected)<<", found "<<(found); throwException(__FILE__, __LINE__, details.str());}};
+
+#endif /*OPENMM_ASSERTIONUTILITIES_H_*/

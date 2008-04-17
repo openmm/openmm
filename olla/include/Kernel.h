@@ -59,7 +59,7 @@ public:
     Kernel();
     Kernel(const Kernel& copy);
     ~Kernel();
-    Kernel operator=(const Kernel& copy);
+    Kernel& operator=(const Kernel& copy);
     /**
      * Get the name of this Kernel.
      */

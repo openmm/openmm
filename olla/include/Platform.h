@@ -83,7 +83,7 @@ public:
      * Get the default StreamFactory for this Platform.  It will be used to create Streams whenever a
      * different StreamFactory has not been registered for the requested stream name.
      */
-    virtual StreamFactory& getDefaultStreamFactory() const = 0;
+    virtual const StreamFactory& getDefaultStreamFactory() const = 0;
     /**
      * Register a KernelFactory which should be used to create Kernels with a particular name.
      * 

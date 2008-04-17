@@ -54,7 +54,7 @@ public:
     /**
      * Create an OpenMMContextImpl for an OpenMMContext;
      */
-    OpenMMContextImpl(OpenMMContext& owner, System& system, Integrator& integrator);
+    OpenMMContextImpl(OpenMMContext& owner, System& system, Integrator& integrator, Platform* platform);
     ~OpenMMContextImpl();
     /**
      * Get the OpenMMContext for which this is the implementation.

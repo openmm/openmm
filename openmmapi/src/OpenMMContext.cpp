@@ -36,7 +36,10 @@
 using namespace OpenMM;
 using namespace std;
 
-OpenMMContext::OpenMMContext(System& system, Integrator& integrator) : impl(new OpenMMContextImpl(*this, system, integrator)) {
+OpenMMContext::OpenMMContext(System& system, Integrator& integrator) : impl(new OpenMMContextImpl(*this, system, integrator, 0)) {
+}
+
+OpenMMContext::OpenMMContext(System& system, Integrator& integrator, Platform& platform) : impl(new OpenMMContextImpl(*this, system, integrator, &platform)) {
 }
 
 const System& OpenMMContext::getSystem() const {

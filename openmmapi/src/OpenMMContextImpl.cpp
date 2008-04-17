@@ -42,7 +42,8 @@ using namespace OpenMM;
 using std::vector;
 using std::string;
 
-OpenMMContextImpl::OpenMMContextImpl(OpenMMContext& owner, System& system, Integrator& integrator) : owner(owner), system(system), integrator(integrator) {
+OpenMMContextImpl::OpenMMContextImpl(OpenMMContext& owner, System& system, Integrator& integrator, Platform* platform) :
+            owner(owner), system(system), integrator(integrator), platform(platform) {
     vector<string> kernelNames;
     kernelNames.push_back(CalcKineticEnergyKernel::Name());
     for (int i = 0; i < system.getNumForces(); ++i) {
@@ -52,7 +53,10 @@ OpenMMContextImpl::OpenMMContextImpl(OpenMMContext& owner, System& system, Integ
     }
     vector<string> integratorKernels = integrator.getKernelNames();
     kernelNames.insert(kernelNames.begin(), integratorKernels.begin(), integratorKernels.end());
-    platform = &Platform::findPlatform(kernelNames);
+    if (platform == 0)
+        platform = &Platform::findPlatform(kernelNames);
+    else if (!platform->supportsKernels(kernelNames))
+        throw OpenMMException("Specified a Platform for an OpenMMContext which does not support all required kernels");
     positions = platform->createStream("atomPositions", system.getNumAtoms(), Stream::Double3);
     velocities = platform->createStream("atomVelocities", system.getNumAtoms(), Stream::Double3);
     forces = platform->createStream("atomForces", system.getNumAtoms(), Stream::Double3);

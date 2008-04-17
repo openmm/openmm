@@ -72,7 +72,7 @@ public:
     Stream();
     Stream(const Stream& copy);
     ~Stream();
-    Stream operator=(const Stream& copy);
+    Stream& operator=(const Stream& copy);
     /**
      * This is an enumeration of the allowed data types for a Stream.
      */

@@ -63,6 +63,8 @@ Kernel Platform::createKernel(std::string name) const {
 }
 
 Stream Platform::createStream(std::string name, int size, Stream::DataType type) const {
+    if (streamFactories.find(name) == streamFactories.end())
+        return Stream(getDefaultStreamFactory().createStreamImpl(name, size, type));
     return Stream(streamFactories.find(name)->second->createStreamImpl(name, size, type));
 }
 
