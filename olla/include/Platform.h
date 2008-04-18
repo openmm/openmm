@@ -61,8 +61,7 @@ class StreamFactory;
 
 class Platform {
 public:
-    virtual ~Platform() {
-    }
+    virtual ~Platform();
     /**
      * Get the name of this platform.  This should be a unique identifier which can be used to recognized it.
      */
@@ -86,6 +85,8 @@ public:
     virtual const StreamFactory& getDefaultStreamFactory() const = 0;
     /**
      * Register a KernelFactory which should be used to create Kernels with a particular name.
+     * The Platform takes over ownership of the factory, and will delete it when the Platform itself
+     * is deleted.
      * 
      * @param name     the kernel name for which the factory should be used
      * @param factory  the factory to use for creating Kernels with the specified name
@@ -93,6 +94,8 @@ public:
     void registerKernelFactory(std::string name, KernelFactory* factory);
     /**
      * Register a StreamFactory which should be used to create Streams with a particular name.
+     * The Platform takes over ownership of the factory, and will delete it when the Platform itself
+     * is deleted.
      * 
      * @param name     the stream name for which the factory should be used
      * @param factory  the factory to use for creating Streams with the specified name

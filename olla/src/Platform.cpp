@@ -35,11 +35,25 @@
 #include "Stream.h"
 #include "KernelFactory.h"
 #include "StreamFactory.h"
+#include <set>
 
 using namespace OpenMM;
 using namespace std;
 
 std::vector<Platform*> Platform::platforms;
+
+Platform::~Platform() {
+    set<KernelFactory*> uniqueKernelFactories;
+    set<StreamFactory*> uniqueStreamFactories;
+    for (map<string, KernelFactory*>::const_iterator iter = kernelFactories.begin(); iter != kernelFactories.end(); ++iter)
+        uniqueKernelFactories.insert(iter->second);
+    for (map<string, StreamFactory*>::const_iterator iter = streamFactories.begin(); iter != streamFactories.end(); ++iter)
+        uniqueStreamFactories.insert(iter->second);
+    for (set<KernelFactory*>::const_iterator iter = uniqueKernelFactories.begin(); iter != uniqueKernelFactories.end(); ++iter)
+        delete *iter;
+    for (set<StreamFactory*>::const_iterator iter = uniqueStreamFactories.begin(); iter != uniqueStreamFactories.end(); ++iter)
+        delete *iter;
+}
 
 void Platform::registerKernelFactory(std::string name, KernelFactory* factory) {
     kernelFactories[name] = factory;

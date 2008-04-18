@@ -22,11 +22,11 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include "SimTKOpenMMGromacsUtilities.h"
+#include "../SimTKUtilities/SimTKOpenMMGromacsUtilities.h"
 #include "gromacsReferenceParameterPrint.h"
 
-#include "SimTKOpenMMLog.h"
-#include "SimTKOpenMMUtilities.h"
+#include "../SimTKUtilities/SimTKOpenMMLog.h"
+#include "../SimTKUtilities/SimTKOpenMMUtilities.h"
 
 /**---------------------------------------------------------------------------------------
       

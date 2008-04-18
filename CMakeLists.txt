@@ -22,7 +22,7 @@ ADD_DEFINITIONS(-DOPENMM_BUILDING_SHARED_LIBRARY)
 
 # The source is organized into subdirectories, but we handle them all from
 # this CMakeLists file rather than letting CMake visit them as SUBDIRS.
-SET(OPENMM_SOURCE_SUBDIRS . openmmapi olla)
+SET(OPENMM_SOURCE_SUBDIRS . openmmapi olla platforms/reference)
 
 
 # The build system will set ARCH64 for 64 bit builds, which require

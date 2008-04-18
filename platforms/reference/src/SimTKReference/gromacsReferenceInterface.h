@@ -31,6 +31,8 @@
 #define externC extern
 #endif
 
+#include "../SimTKUtilities/SimTKOpenMMCommon.h"
+
 /**---------------------------------------------------------------------------------------
 
    Calculate forces for given configuration and topology
