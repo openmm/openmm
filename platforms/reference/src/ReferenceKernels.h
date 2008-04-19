@@ -33,6 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "kernels.h"
+#include "SimTKUtilities/SimTKOpenMMRealType.h"
 
 namespace OpenMM {
 
@@ -41,8 +42,9 @@ namespace OpenMM {
  */
 class ReferenceCalcStandardMMForcesKernel : public CalcStandardMMForcesKernel {
 public:
-    ReferenceCalcStandardMMForcesKernel(std::string name) : CalcStandardMMForcesKernel(name) {
+    ReferenceCalcStandardMMForcesKernel(std::string name, const Platform& platform) : CalcStandardMMForcesKernel(name, platform) {
     }
+    ~ReferenceCalcStandardMMForcesKernel();
     /**
      * Initialize the kernel, setting up the values of all the force field parameters.
      * 
@@ -75,6 +77,10 @@ public:
      *                    have been calculated so far.  The kernel should add its own forces to the values already in the stream.
      */
     void execute(const Stream& positions, Stream& forces);
+private:
+    int numAtoms, numBonds, numAngles, numPeriodicTorsions, numRBTorsions;
+    int **bondIndexArray, **angleIndexArray, **periodicTorsionIndexArray, **rbTorsionIndexArray;
+    RealOpenMM **bondParamArray, **angleParamArray, **periodicTorsionParamArray, **rbTorsionParamArray;
 };
 
 /**
@@ -82,7 +88,7 @@ public:
  */
 class ReferenceCalcStandardMMEnergyKernel : public CalcStandardMMEnergyKernel {
 public:
-    ReferenceCalcStandardMMEnergyKernel(std::string name) : CalcStandardMMEnergyKernel(name) {
+    ReferenceCalcStandardMMEnergyKernel(std::string name, const Platform& platform) : CalcStandardMMEnergyKernel(name, platform) {
     }
     /**
      * Initialize the kernel, setting up the values of all the force field parameters.
@@ -122,7 +128,7 @@ public:
  */
 class ReferenceCalcGBSAOBCForcesKernel : public CalcGBSAOBCForcesKernel {
 public:
-    ReferenceCalcGBSAOBCForcesKernel(std::string name) : CalcGBSAOBCForcesKernel(name) {
+    ReferenceCalcGBSAOBCForcesKernel(std::string name, const Platform& platform) : CalcGBSAOBCForcesKernel(name, platform) {
     }
     /**
      * Initialize the kernel, setting up the values of all the force field parameters.
@@ -149,7 +155,7 @@ public:
  */
 class ReferenceCalcGBSAOBCEnergyKernel : public CalcGBSAOBCEnergyKernel {
 public:
-    ReferenceCalcGBSAOBCEnergyKernel(std::string name) : CalcGBSAOBCEnergyKernel(name) {
+    ReferenceCalcGBSAOBCEnergyKernel(std::string name, const Platform& platform) : CalcGBSAOBCEnergyKernel(name, platform) {
     }
     /**
      * Initialize the kernel, setting up the values of all the force field parameters.
@@ -175,7 +181,7 @@ public:
  */
 class ReferenceIntegrateVerletStepKernel : public IntegrateVerletStepKernel {
 public:
-    ReferenceIntegrateVerletStepKernel(std::string name) : IntegrateVerletStepKernel(name) {
+    ReferenceIntegrateVerletStepKernel(std::string name, const Platform& platform) : IntegrateVerletStepKernel(name, platform) {
     }
     /**
      * Initialize the kernel, setting up all parameters related to integrator.
@@ -202,7 +208,7 @@ public:
  */
 class ReferenceIntegrateLangevinStepKernel : public IntegrateLangevinStepKernel {
 public:
-    ReferenceIntegrateLangevinStepKernel(std::string name) : IntegrateLangevinStepKernel(name) {
+    ReferenceIntegrateLangevinStepKernel(std::string name, const Platform& platform) : IntegrateLangevinStepKernel(name, platform) {
     }
     /**
      * Initialize the kernel, setting up all parameters related to integrator.
@@ -231,7 +237,7 @@ public:
  */
 class ReferenceIntegrateBrownianStepKernel : public IntegrateBrownianStepKernel {
 public:
-    ReferenceIntegrateBrownianStepKernel(std::string name) : IntegrateBrownianStepKernel(name) {
+    ReferenceIntegrateBrownianStepKernel(std::string name, const Platform& platform) : IntegrateBrownianStepKernel(name, platform) {
     }
     /**
      * Initialize the kernel, setting up all parameters related to integrator.
@@ -260,7 +266,7 @@ public:
  */
 class ReferenceApplyAndersenThermostatKernel : public ApplyAndersenThermostatKernel {
 public:
-    ReferenceApplyAndersenThermostatKernel(std::string name) : ApplyAndersenThermostatKernel(name) {
+    ReferenceApplyAndersenThermostatKernel(std::string name, const Platform& platform) : ApplyAndersenThermostatKernel(name, platform) {
     }
     /**
      * Initialize the kernel, setting up the values of unchanging parameters.
@@ -284,7 +290,7 @@ public:
  */
 class ReferenceCalcKineticEnergyKernel : public CalcKineticEnergyKernel {
 public:
-    ReferenceCalcKineticEnergyKernel(std::string name) : CalcKineticEnergyKernel(name) {
+    ReferenceCalcKineticEnergyKernel(std::string name, const Platform& platform) : CalcKineticEnergyKernel(name, platform) {
     }
     /**
      * Initialize the kernel, setting up the atomic masses.

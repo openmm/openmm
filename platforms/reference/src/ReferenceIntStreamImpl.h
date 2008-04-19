@@ -1,3 +1,6 @@
+#ifndef OPENMM_REFERENCEINTSTREAMIMPL_H_
+#define OPENMM_REFERENCEINTSTREAMIMPL_H_
+
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -29,19 +32,28 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "KernelImpl.h"
+#include "StreamImpl.h"
 
-using namespace OpenMM;
-using namespace std;
+namespace OpenMM {
 
-KernelImpl::KernelImpl(string name, const Platform& platform) : name(name), platform(&platform), referenceCount(1) {
-}
+/**
+ * This is the implementation of Float and Double streams in the reference Platform.
+ */
 
-std::string KernelImpl::getName() const {
-    return name;
-}
+class ReferenceIntStreamImpl : public StreamImpl {
+public:
+    ReferenceIntStreamImpl(std::string name, int size, Stream::DataType type, const Platform& platform);
+    ~ReferenceIntStreamImpl();
+    void loadFromArray(const void* array);
+    void saveToArray(void* array);
+    void fillWithValue(void* value);
+    int** getData();
+private:
+    int width;
+    Stream::DataType baseType;
+    int** data;
+};
 
-const Platform& KernelImpl::getPlatform() {
-    return *platform;
-}
+} // namespace OpenMM
 
+#endif /*OPENMM_REFERENCEINTSTREAMIMPL_H_*/

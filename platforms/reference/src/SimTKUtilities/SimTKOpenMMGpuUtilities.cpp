@@ -31,12 +31,12 @@
 
 #include <math.h>
 
-#define UseGromacsMalloc 1
-#ifdef UseGromacsMalloc
-extern "C" {
-#include "smalloc.h" 
-}
-#endif
+//#define UseGromacsMalloc 1
+//#ifdef UseGromacsMalloc
+//extern "C" {
+//#include "smalloc.h" 
+//}
+//#endif
 
 /* ---------------------------------------------------------------------------------------
 

@@ -32,6 +32,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include "Platform.h"
 #include <string>
 
 namespace OpenMM {
@@ -47,9 +48,10 @@ public:
     /**
      * Create a KernelImpl.
      * 
-     * @param name the name of the kernel to create
+     * @param name      the name of the kernel to create
+     * @param platform  the Platform that created this kernel
      */
-    KernelImpl(std::string name);
+    KernelImpl(std::string name, const Platform& platform);
     virtual ~KernelImpl() {
         assert(referenceCount == 0);
     }
@@ -57,9 +59,14 @@ public:
      * Get the name of this kernel.
      */
     std::string getName() const;
+    /**
+     * Get the Platform that created this KernelImpl.
+     */
+    const Platform& getPlatform();
 private:
     friend class Kernel;
     std::string name;
+    const Platform* platform;
     int referenceCount;
 };
 

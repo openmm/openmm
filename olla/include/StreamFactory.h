@@ -51,7 +51,7 @@ public:
      * @param size the number of elements in the stream
      * @param type the data type of each element in the stream
      */
-    virtual StreamImpl* createStreamImpl(std::string name, int size, Stream::DataType type) const = 0;
+    virtual StreamImpl* createStreamImpl(std::string name, int size, Stream::DataType type, const Platform& platform) const = 0;
     virtual ~StreamFactory() {
     }
 };

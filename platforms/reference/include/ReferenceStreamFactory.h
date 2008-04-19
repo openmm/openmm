@@ -42,7 +42,7 @@ namespace OpenMM {
 
 class ReferenceStreamFactory : public StreamFactory {
 public:
-    StreamImpl* createStreamImpl(std::string name, int size, Stream::DataType type) const;
+    StreamImpl* createStreamImpl(std::string name, int size, Stream::DataType type, const Platform& platform) const;
 };
 
 } // namespace OpenMM

@@ -30,26 +30,27 @@
  * -------------------------------------------------------------------------- */
 
 #include "ReferenceKernelFactory.h"
+#include "ReferenceKernels.h"
 
 using namespace OpenMM;
 
-KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name) const {
+KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name, const Platform& platform) const {
     if (name == CalcStandardMMForcesKernel::Name())
-        return new ReferenceCalcStandardMMForcesKernel(name);
+        return new ReferenceCalcStandardMMForcesKernel(name, platform);
     if (name == CalcStandardMMEnergyKernel::Name())
-        return new ReferenceCalcStandardMMEnergyKernel(name);
+        return new ReferenceCalcStandardMMEnergyKernel(name, platform);
     if (name == CalcGBSAOBCForcesKernel::Name())
-        return new ReferenceCalcGBSAOBCForcesKernel(name);
+        return new ReferenceCalcGBSAOBCForcesKernel(name, platform);
     if (name == CalcGBSAOBCEnergyKernel::Name())
-        return new ReferenceCalcGBSAOBCEnergyKernel(name);
+        return new ReferenceCalcGBSAOBCEnergyKernel(name, platform);
     if (name == IntegrateVerletStepKernel::Name())
-        return new ReferenceIntegrateVerletStepKernel(name);
+        return new ReferenceIntegrateVerletStepKernel(name, platform);
     if (name == IntegrateLangevinStepKernel::Name())
-        return new ReferenceIntegrateLangevinStepKernel(name);
+        return new ReferenceIntegrateLangevinStepKernel(name, platform);
     if (name == IntegrateBrownianStepKernel::Name())
-        return new ReferenceIntegrateBrownianStepKernel(name);
+        return new ReferenceIntegrateBrownianStepKernel(name, platform);
     if (name == ApplyAndersenThermostatKernel::Name())
-        return new ReferenceApplyAndersenThermostatKernel(name);
+        return new ReferenceApplyAndersenThermostatKernel(name, platform);
     if (name == CalcKineticEnergyKernel::Name())
-        return new ReferenceCalcKineticEnergyKernel(name);
+        return new ReferenceCalcKineticEnergyKernel(name, platform);
 }

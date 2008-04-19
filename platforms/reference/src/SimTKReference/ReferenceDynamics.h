@@ -49,8 +49,8 @@ class ReferenceDynamics {
       
          --------------------------------------------------------------------------------------- */
 
-       static const int DefaultReturn      = 0;
-       static const int ErrorReturn        = -1;
+       static const int DefaultReturn;
+       static const int ErrorReturn;
 
    private:
 

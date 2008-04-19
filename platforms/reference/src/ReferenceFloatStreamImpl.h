@@ -43,7 +43,7 @@ namespace OpenMM {
 
 class ReferenceFloatStreamImpl : public StreamImpl {
 public:
-    ReferenceFloatStreamImpl(std::string name, int size, Stream::DataType type);
+    ReferenceFloatStreamImpl(std::string name, int size, Stream::DataType type, const Platform& platform);
     ~ReferenceFloatStreamImpl();
     void loadFromArray(const void* array);
     void saveToArray(void* array);

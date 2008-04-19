@@ -29,19 +29,56 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "KernelImpl.h"
+#include "ReferenceIntStreamImpl.h"
 
 using namespace OpenMM;
-using namespace std;
 
-KernelImpl::KernelImpl(string name, const Platform& platform) : name(name), platform(&platform), referenceCount(1) {
+ReferenceIntStreamImpl::ReferenceIntStreamImpl(std::string name, int size, Stream::DataType type, const Platform& platform) : StreamImpl(name, size, type, platform) {
+    switch (type) {
+    case Stream::Integer:
+        width = 1;
+        break;
+    case Stream::Integer2:
+        width = 2;
+        break;
+    case Stream::Integer3:
+        width = 3;
+        break;
+    case Stream::Integer4:
+        width = 4;
+        break;
+    }
+    data = new int*[size];
+    for (int i = 0; i < size; ++i)
+        data[i] = new int[width];
 }
 
-std::string KernelImpl::getName() const {
-    return name;
+ReferenceIntStreamImpl::~ReferenceIntStreamImpl() {
+    delete data;
 }
 
-const Platform& KernelImpl::getPlatform() {
-    return *platform;
+void ReferenceIntStreamImpl::loadFromArray(const void* array) {
+    int* arrayData = (int*) array;
+    for (int i = 0; i < getSize(); ++i)
+        for (int j = 0; j < width; ++j)
+            data[i][j] = arrayData[i*width+j];
+}
+
+void ReferenceIntStreamImpl::saveToArray(void* array) {
+    int* arrayData = (int*) array;
+    for (int i = 0; i < getSize(); ++i)
+        for (int j = 0; j < width; ++j)
+            arrayData[i*width+j] = data[i][j];
+}
+
+void ReferenceIntStreamImpl::fillWithValue(void* value) {
+    int valueData = *((int*) value);
+    for (int i = 0; i < getSize(); ++i)
+        for (int j = 0; j < width; ++j)
+            data[i][j] = valueData;
+}
+
+int** ReferenceIntStreamImpl::getData() {
+    return data;
 }
 

@@ -73,13 +73,13 @@ bool Platform::supportsKernels(std::vector<std::string> kernelNames) const {
 Kernel Platform::createKernel(std::string name) const {
     if (kernelFactories.find(name) == kernelFactories.end())
         throw PlatformException("Called createKernel() on a Platform which does not support the requested kernel");
-    return Kernel(kernelFactories.find(name)->second->createKernelImpl(name));
+    return Kernel(kernelFactories.find(name)->second->createKernelImpl(name, *this));
 }
 
 Stream Platform::createStream(std::string name, int size, Stream::DataType type) const {
     if (streamFactories.find(name) == streamFactories.end())
-        return Stream(getDefaultStreamFactory().createStreamImpl(name, size, type));
-    return Stream(streamFactories.find(name)->second->createStreamImpl(name, size, type));
+        return Stream(getDefaultStreamFactory().createStreamImpl(name, size, type, *this));
+    return Stream(streamFactories.find(name)->second->createStreamImpl(name, size, type, *this));
 }
 
 void Platform::registerPlatform(Platform* platform) {

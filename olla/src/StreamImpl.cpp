@@ -34,7 +34,7 @@
 using namespace OpenMM;
 using namespace std;
 
-StreamImpl::StreamImpl(string name, int size, Stream::DataType type) : name(name), size(size), type(type), referenceCount(1) {
+StreamImpl::StreamImpl(string name, int size, Stream::DataType type, const Platform& platform) : name(name), size(size), type(type), platform(&platform), referenceCount(1) {
 }
 
 std::string StreamImpl::getName() const {
@@ -49,3 +49,6 @@ Stream::DataType StreamImpl::getDataType() const {
     return  type;
 }
 
+const Platform& StreamImpl::getPlatform() {
+    return *platform;
+}

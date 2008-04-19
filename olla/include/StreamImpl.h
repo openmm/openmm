@@ -32,6 +32,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include "Platform.h"
 #include "Stream.h"
 #include <string>
 
@@ -46,11 +47,12 @@ public:
     /**
      * Create a StreamImpl.
      * 
-     * @param name the name of the stream to create
-     * @param size the number of elements in the stream
-     * @param type the data type of each element in the stream
+     * @param name     the name of the stream to create
+     * @param size     the number of elements in the stream
+     * @param type     the data type of each element in the stream
+     * @param platform the Platform that created this kernel
      */
-    StreamImpl(std::string name, int size, Stream::DataType type);
+    StreamImpl(std::string name, int size, Stream::DataType type, const Platform& platform);
     virtual ~StreamImpl() {
         assert(referenceCount == 0);
     }
@@ -66,6 +68,10 @@ public:
      * Get the data type of each element in the stream.
      */
     Stream::DataType getDataType() const;
+    /**
+     * Get the Platform that created this KernelImpl.
+     */
+    const Platform& getPlatform();
     /**
      * Copy the contents of an array into this stream.
      * 
@@ -95,6 +101,7 @@ private:
     std::string name;
     int size;
     Stream::DataType type;
+    const Platform* platform;
     int referenceCount;
 };
 

@@ -48,7 +48,7 @@ public:
     static std::string Name() {
         return "CalcStandardMMForces";
     }
-    CalcStandardMMForcesKernel(std::string name) : KernelImpl(name) {
+    CalcStandardMMForcesKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
     /**
      * Initialize the kernel, setting up the values of all the force field parameters.
@@ -92,7 +92,7 @@ public:
     static std::string Name() {
         return "CalcStandardMMEnergy";
     }
-    CalcStandardMMEnergyKernel(std::string name) : KernelImpl(name) {
+    CalcStandardMMEnergyKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
     /**
      * Initialize the kernel, setting up the values of all the force field parameters.
@@ -135,7 +135,7 @@ public:
     static std::string Name() {
         return "CalcGBSAOBCForces";
     }
-    CalcGBSAOBCForcesKernel(std::string name) : KernelImpl(name) {
+    CalcGBSAOBCForcesKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
     /**
      * Initialize the kernel, setting up the values of all the force field parameters.
@@ -165,7 +165,7 @@ public:
     static std::string Name() {
         return "CalcGBSAOBCEnergy";
     }
-    CalcGBSAOBCEnergyKernel(std::string name) : KernelImpl(name) {
+    CalcGBSAOBCEnergyKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
     /**
      * Initialize the kernel, setting up the values of all the force field parameters.
@@ -194,7 +194,7 @@ public:
     static std::string Name() {
         return "IntegrateVerletStep";
     }
-    IntegrateVerletStepKernel(std::string name) : KernelImpl(name) {
+    IntegrateVerletStepKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
     /**
      * Initialize the kernel, setting up all parameters related to integrator.
@@ -224,7 +224,7 @@ public:
     static std::string Name() {
         return "IntegrateLangevinStep";
     }
-    IntegrateLangevinStepKernel(std::string name) : KernelImpl(name) {
+    IntegrateLangevinStepKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
     /**
      * Initialize the kernel, setting up all parameters related to integrator.
@@ -256,7 +256,7 @@ public:
     static std::string Name() {
         return "IntegrateBrownianStep";
     }
-    IntegrateBrownianStepKernel(std::string name) : KernelImpl(name) {
+    IntegrateBrownianStepKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
     /**
      * Initialize the kernel, setting up all parameters related to integrator.
@@ -288,7 +288,7 @@ public:
     static std::string Name() {
         return "ApplyAndersenThermostat";
     }
-    ApplyAndersenThermostatKernel(std::string name) : KernelImpl(name) {
+    ApplyAndersenThermostatKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
     /**
      * Initialize the kernel, setting up the values of unchanging parameters.
@@ -315,7 +315,7 @@ public:
     static std::string Name() {
         return "CalcKineticEnergy";
     }
-    CalcKineticEnergyKernel(std::string name) : KernelImpl(name) {
+    CalcKineticEnergyKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
     /**
      * Initialize the kernel, setting up the atomic masses.

@@ -25,9 +25,9 @@
 #include <string.h>
 #include <sstream>
 
-#include "SimTKOpenMMCommon.h"
-#include "SimTKOpenMMLog.h"
-#include "SimTKOpenMMUtilities.h"
+#include "../SimTKUtilities/SimTKOpenMMCommon.h"
+#include "../SimTKUtilities/SimTKOpenMMLog.h"
+#include "../SimTKUtilities/SimTKOpenMMUtilities.h"
 #include "ReferenceConstraint.h"
 #include "ReferenceDynamics.h"
 

@@ -42,7 +42,7 @@ namespace OpenMM {
 
 class ReferenceKernelFactory : public KernelFactory {
 public:
-    KernelImpl* createKernelImpl(std::string name) const;
+    KernelImpl* createKernelImpl(std::string name, const Platform& platform) const;
 };
 
 } // namespace OpenMM

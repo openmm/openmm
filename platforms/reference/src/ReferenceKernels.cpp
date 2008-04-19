@@ -34,13 +34,85 @@
 using namespace OpenMM;
 using namespace std;
 
+int** allocateIntArray(int length, int width) {
+    int** array = new int*[length];
+    for (int i = 0; i < length; ++i)
+        array[i] = new int[width];
+    return array;
+}
+
+RealOpenMM** allocateRealArray(int length, int width) {
+    RealOpenMM** array = new RealOpenMM*[length];
+    for (int i = 0; i < length; ++i)
+        array[i] = new RealOpenMM[width];
+    return array;
+}
+
+int** copyToArray(const vector<vector<int> > vec) {
+    if (vec.size() == 0)
+        return new int*[0];
+    int** array = allocateIntArray(vec.size(), vec[0].size());
+    for (int i = 0; i < vec.size(); ++i)
+        for (int j = 0; j < vec[i].size(); ++j)
+            array[i][j] = vec[i][j];
+    return array;
+}
+
+RealOpenMM** copyToArray(const vector<vector<double> > vec) {
+    if (vec.size() == 0)
+        return new RealOpenMM*[0];
+    RealOpenMM** array = allocateRealArray(vec.size(), vec[0].size());
+    for (int i = 0; i < vec.size(); ++i)
+        for (int j = 0; j < vec[i].size(); ++j)
+            array[i][j] = vec[i][j];
+    return array;
+}
+
+void disposeIntArray(int** array, int size) {
+    if (array) {
+        for (int i = 0; i < size; ++i)
+            delete[] array[i];
+        delete[] array;
+    }
+}
+
+void disposeRealArray(RealOpenMM** array, int size) {
+    if (array) {
+        for (int i = 0; i < size; ++i)
+            delete[] array[i];
+        delete[] array;
+    }
+}
+
+ReferenceCalcStandardMMForcesKernel::~ReferenceCalcStandardMMForcesKernel() {
+    disposeIntArray(bondIndexArray, numBonds);
+    disposeRealArray(bondParamArray, numBonds);
+    disposeIntArray(angleIndexArray, numAngles);
+    disposeRealArray(angleParamArray, numAngles);
+    disposeIntArray(periodicTorsionIndexArray, numPeriodicTorsions);
+    disposeRealArray(periodicTorsionParamArray, numPeriodicTorsions);
+    disposeIntArray(rbTorsionIndexArray, numRBTorsions);
+    disposeRealArray(rbTorsionParamArray, numRBTorsions);
+}
+
 void ReferenceCalcStandardMMForcesKernel::initialize(const vector<vector<int> >& bondIndices, const vector<vector<double> >& bondParameters,
         const vector<vector<int> >& angleIndices, const vector<vector<double> >& angleParameters,
         const vector<vector<int> >& periodicTorsionIndices, const vector<vector<double> >& periodicTorsionParameters,
         const vector<vector<int> >& rbTorsionIndices, const vector<vector<double> >& rbTorsionParameters,
         const vector<vector<int> >& bonded14Indices, const vector<set<int> >& exclusions,
         const vector<vector<double> >& nonbondedParameters) {
-    
+    numBonds = bondIndices.size();
+    numAngles = angleIndices.size();
+    numPeriodicTorsions = periodicTorsionIndices.size();
+    numRBTorsions = rbTorsionIndices.size();
+    bondIndexArray = copyToArray(bondIndices);
+    bondParamArray = copyToArray(bondParameters);
+    angleIndexArray = copyToArray(angleIndices);
+    angleParamArray = copyToArray(angleParameters);
+    periodicTorsionIndexArray = copyToArray(periodicTorsionIndices);
+    periodicTorsionParamArray = copyToArray(periodicTorsionParameters);
+    rbTorsionIndexArray = copyToArray(rbTorsionIndices);
+    rbTorsionParamArray = copyToArray(rbTorsionParameters);
 }
 
 void ReferenceCalcStandardMMForcesKernel::execute(const Stream& positions, Stream& forces) {
@@ -69,12 +141,12 @@ void ReferenceCalcGBSAOBCForcesKernel::execute(const Stream& positions, Stream& 
     
 }
 
-void CalcGBSAOBCEnergyKernel::initialize(const vector<double>& bornRadii, const vector<vector<double> >& atomParameters,
+void ReferenceCalcGBSAOBCEnergyKernel::initialize(const vector<double>& bornRadii, const vector<vector<double> >& atomParameters,
         double solventDielectric, double soluteDielectric) {
     
 }
 
-double CalcGBSAOBCEnergyKernel::execute(const Stream& positions) {
+double ReferenceCalcGBSAOBCEnergyKernel::execute(const Stream& positions) {
     return 0.0; // TODO implement correctly
 }
 

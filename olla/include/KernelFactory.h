@@ -49,7 +49,7 @@ public:
      * 
      * @param name the name of the kernel to create
      */
-    virtual KernelImpl* createKernelImpl(std::string name) const = 0;
+    virtual KernelImpl* createKernelImpl(std::string name, const Platform& platform) const = 0;
     virtual ~KernelFactory() {
     }
 };

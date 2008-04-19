@@ -29,12 +29,14 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include "OpenMMException.h"
 #include "ReferenceStreamFactory.h"
 #include "ReferenceFloatStreamImpl.h"
+#include "ReferenceIntStreamImpl.h"
 
 using namespace OpenMM;
 
-StreamImpl* ReferenceStreamFactory::createStreamImpl(std::string name, int size, Stream::DataType type) const {
+StreamImpl* ReferenceStreamFactory::createStreamImpl(std::string name, int size, Stream::DataType type, const Platform& platform) const {
     switch (type) {
     case Stream::Float:
     case Stream::Float2:
@@ -44,9 +46,12 @@ StreamImpl* ReferenceStreamFactory::createStreamImpl(std::string name, int size,
     case Stream::Double2:
     case Stream::Double3:
     case Stream::Double4:
-        return new ReferenceFloatStreamImpl(name, size, type);
-    default:
-        // TODO implement integer streams
-        return 0;
+        return new ReferenceFloatStreamImpl(name, size, type, platform);
+    case Stream::Integer:
+    case Stream::Integer2:
+    case Stream::Integer3:
+    case Stream::Integer4:
+        return new ReferenceIntStreamImpl(name, size, type, platform);
     }
+    throw OpenMMException("Tried to create a Stream with an illegal DataType.");
 }

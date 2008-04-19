@@ -32,6 +32,7 @@
 #include "ReferencePlatform.h"
 #include "ReferenceKernelFactory.h"
 #include "ReferenceKernels.h"
+#include "SimTKUtilities/SimTKOpenMMRealType.h"
 
 using namespace OpenMM;
 
@@ -53,4 +54,12 @@ ReferencePlatform::ReferencePlatform() {
     registerKernelFactory(IntegrateBrownianStepKernel::Name(), factory);
     registerKernelFactory(ApplyAndersenThermostatKernel::Name(), factory);
     registerKernelFactory(CalcKineticEnergyKernel::Name(), factory);
+}
+
+bool ReferencePlatform::supportsDoublePrecision() const {
+    return (sizeof(RealOpenMM) >= sizeof(double));
+}
+
+const StreamFactory& ReferencePlatform::getDefaultStreamFactory() const {
+    return defaultStreamFactory;
 }
