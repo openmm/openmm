@@ -22,14 +22,14 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __ReferenceLJ14_H__
-#define __ReferenceLJ14_H__
+#ifndef __ReferenceLJCoulomb14_H__
+#define __ReferenceLJCoulomb14_H__
 
 #include "ReferenceBondIxn.h"
 
 // ---------------------------------------------------------------------------------------
 
-class ReferenceLJ14 : public ReferenceBondIxn {
+class ReferenceLJCoulomb14 : public ReferenceBondIxn {
 
    private:
 
@@ -41,7 +41,7 @@ class ReferenceLJ14 : public ReferenceBondIxn {
       
          --------------------------------------------------------------------------------------- */
 
-       ReferenceLJ14( );
+       ReferenceLJCoulomb14( );
 
       /**---------------------------------------------------------------------------------------
       
@@ -49,7 +49,7 @@ class ReferenceLJ14 : public ReferenceBondIxn {
       
          --------------------------------------------------------------------------------------- */
 
-       ~ReferenceLJ14( );
+       ~ReferenceLJCoulomb14( );
 
       /**---------------------------------------------------------------------------------------
       
@@ -59,7 +59,7 @@ class ReferenceLJ14 : public ReferenceBondIxn {
          @param c12              c12
          @param q1               q1 charge atom 1
          @param q2               q2 charge atom 2
-         @param epsfac           epsfac ????????????/
+         @param epsfac           epsfac ????????????
          @param parameters       output parameters:
                                     parameter[0]= c6*c6/c12
                                     parameter[1]= (c12/c6)**1/6
@@ -69,7 +69,7 @@ class ReferenceLJ14 : public ReferenceBondIxn {
       
          --------------------------------------------------------------------------------------- */
       
-      int ReferenceLJ14::getDerivedParameters( RealOpenMM c6, RealOpenMM c12, RealOpenMM q1, 
+      int ReferenceLJCoulomb14::getDerivedParameters( RealOpenMM c6, RealOpenMM c12, RealOpenMM q1, 
                                                RealOpenMM q2, RealOpenMM epsfac,
                                                RealOpenMM* parameters ) const;
       
@@ -97,4 +97,4 @@ class ReferenceLJ14 : public ReferenceBondIxn {
 
 // ---------------------------------------------------------------------------------------
 
-#endif // __ReferenceLJ14_H__
+#endif // __ReferenceLJCoulomb14_H__

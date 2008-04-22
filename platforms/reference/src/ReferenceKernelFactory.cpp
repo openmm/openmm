@@ -35,14 +35,10 @@
 using namespace OpenMM;
 
 KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name, const Platform& platform) const {
-    if (name == CalcStandardMMForcesKernel::Name())
-        return new ReferenceCalcStandardMMForcesKernel(name, platform);
-    if (name == CalcStandardMMEnergyKernel::Name())
-        return new ReferenceCalcStandardMMEnergyKernel(name, platform);
-    if (name == CalcGBSAOBCForcesKernel::Name())
-        return new ReferenceCalcGBSAOBCForcesKernel(name, platform);
-    if (name == CalcGBSAOBCEnergyKernel::Name())
-        return new ReferenceCalcGBSAOBCEnergyKernel(name, platform);
+    if (name == CalcStandardMMForceFieldKernel::Name())
+        return new ReferenceCalcStandardMMForceFieldKernel(name, platform);
+    if (name == CalcGBSAOBCForceFieldKernel::Name())
+        return new ReferenceCalcGBSAOBCForceFieldKernel(name, platform);
     if (name == IntegrateVerletStepKernel::Name())
         return new ReferenceIntegrateVerletStepKernel(name, platform);
     if (name == IntegrateLangevinStepKernel::Name())

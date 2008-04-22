@@ -61,7 +61,7 @@ public:
 private:
     void initialize(OpenMMContextImpl& context);
     GBSAOBCForceField& owner;
-    Kernel forceKernel, energyKernel;
+    Kernel kernel;
     bool hasInitialized;
 };
 

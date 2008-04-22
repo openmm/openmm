@@ -58,7 +58,7 @@ class ReferenceProperDihedralBond : public ReferenceBondIxn {
          @param atomIndices      atom indices of 4 atoms in bond
          @param atomCoordinates  atom coordinates
          @param parameters       3 parameters: parameters[0] = k
-                                               parameters[1] = ideal bond angle in degrees
+                                               parameters[1] = ideal bond angle in radians
                                                parameters[2] = multiplicity
          @param forces           force array (forces added to current values)
          @param energiesByBond   energies by bond: energiesByBond[bondIndex]

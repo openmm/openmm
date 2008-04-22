@@ -68,7 +68,7 @@ ReferenceAngleBondIxn::~ReferenceAngleBondIxn( ){
    Get dEdR and energy term for angle bond
 
    @param  cosine               cosine of angle
-   @param  angleParameters      angleParameters: angleParameters[0] = angle in degrees
+   @param  angleParameters      angleParameters: angleParameters[0] = angle in radians
                                                  angleParameters[1] = k (force constant)
    @param  dEdR                 output dEdR
    @param  energyTerm           output energyTerm
@@ -98,7 +98,7 @@ int ReferenceAngleBondIxn::getPrefactorsGivenAngleCosine( RealOpenMM cosine, Rea
    } else {
       angle = ACOS(cosine);
    }
-   RealOpenMM deltaIdeal         = angle - (angleParameters[0]*DEGREE_TO_RADIAN);
+   RealOpenMM deltaIdeal         = angle - angleParameters[0];
    RealOpenMM deltaIdeal2        = deltaIdeal*deltaIdeal;
 
   *dEdR                          = angleParameters[1]*deltaIdeal;

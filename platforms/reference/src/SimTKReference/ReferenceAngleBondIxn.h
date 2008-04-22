@@ -56,7 +56,7 @@ class ReferenceAngleBondIxn : public ReferenceBondIxn {
          Get dEdR and energy term for angle bond
       
          @param  cosine               cosine of angle
-         @param  angleParameters      angleParameters: angleParameters[0] = angle in degrees
+         @param  angleParameters      angleParameters: angleParameters[0] = angle in radians
                                                        angleParameters[1] = k (force constant)
          @param  dEdR                 output dEdR
          @param  energyTerm           output energyTerm

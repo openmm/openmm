@@ -70,10 +70,10 @@ ReferenceLJCoulombIxn::~ReferenceLJCoulombIxn( ){
    @param c6               c6
    @param c12              c12
    @param q1               q1 charge atom 1
-   @param epsfac           epsfacSqrt ????????????/
+   @param epsfac           epsfacSqrt ????????????
    @param parameters       output parameters:
-										parameter[SigIndex]  = sqrt(c6*c6/c12)
-										parameter[EpsIndex]  = 0.5*( (c12/c6)**1/6 )
+										parameter[SigIndex]  = 0.5*( (c12/c6)**1/6 ) (sigma/2)
+										parameter[EpsIndex]  = sqrt(c6*c6/c12)       (2*sqrt(epsilon))
 										parameter[QIndex]    = epsfactorSqrt*q1
 
    @return ReferenceForce::DefaultReturn
@@ -218,10 +218,15 @@ int ReferenceLJCoulombIxn::calculatePairIxn( int numberOfAtoms, RealOpenMM** ato
          
             // accumulate energies
          
-            *totalEnergy += energy;
-            if( energyByAtom ){
-               energyByAtom[ii] += energy;
-               energyByAtom[jj] += energy;
+            if( totalEnergy || energyByAtom ) {
+                energy = atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*inverseR;
+                energy += eps*(sig6-one)*sig6;
+                if( totalEnergy )
+                   *totalEnergy += energy;
+                if( energyByAtom ){
+                   energyByAtom[ii] += energy;
+                   energyByAtom[jj] += energy;
+                }
             }
          
             // debug 

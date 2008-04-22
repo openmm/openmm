@@ -37,6 +37,7 @@
  */
 
 #include "OpenMMException.h"
+#include <cmath>
 #include <string>
 #include <sstream>
 
@@ -56,5 +57,9 @@ void throwException(const char* file, int line, const std::string& details) {
 #define ASSERT(cond) {if (!(cond)) throwException(__FILE__, __LINE__, "");};
 
 #define ASSERT_EQUAL(expected, found) {if ((expected) != (found)) {std::stringstream details; details << "Expected "<<(expected)<<", found "<<(found); throwException(__FILE__, __LINE__, details.str());}};
+
+#define ASSERT_EQUAL_TOL(expected, found, tol) {double scale = std::max(1.0, std::fabs(expected)); if (std::fabs(expected-found)/scale > tol) {std::stringstream details; details << "Expected "<<(expected)<<", found "<<(found); throwException(__FILE__, __LINE__, details.str());}};
+
+#define ASSERT_EQUAL_VEC(expected, found, tol) {ASSERT_EQUAL_TOL(expected[0], found[0], tol); ASSERT_EQUAL_TOL(expected[1], found[1], tol); ASSERT_EQUAL_TOL(expected[2], found[2], tol);};
 
 #endif /*OPENMM_ASSERTIONUTILITIES_H_*/

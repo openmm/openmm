@@ -42,8 +42,7 @@ GBSAOBCForceFieldImpl::GBSAOBCForceFieldImpl(GBSAOBCForceField& owner, OpenMMCon
 
 void GBSAOBCForceFieldImpl::initialize(OpenMMContextImpl& context) {
     hasInitialized = true;
-    forceKernel = context.getPlatform().createKernel(CalcStandardMMForcesKernel::Name());
-    energyKernel = context.getPlatform().createKernel(CalcStandardMMEnergyKernel::Name());
+    kernel = context.getPlatform().createKernel(CalcGBSAOBCForceFieldKernel::Name());
     std::vector<double> bornRadii;
     // TODO calculate the initial Born radii.
     vector<vector<double> > atomParameters;
@@ -54,27 +53,24 @@ void GBSAOBCForceFieldImpl::initialize(OpenMMContextImpl& context) {
         atomParameters[i].push_back(radius);
         atomParameters[i].push_back(scalingFactor);
     }
-    dynamic_cast<CalcGBSAOBCForcesKernel&>(forceKernel.getImpl()).initialize(bornRadii, atomParameters,
-            owner.getSolventDielectric(), owner.getSoluteDielectric());
-    dynamic_cast<CalcGBSAOBCEnergyKernel&>(forceKernel.getImpl()).initialize(bornRadii, atomParameters,
+    dynamic_cast<CalcGBSAOBCForceFieldKernel&>(kernel.getImpl()).initialize(bornRadii, atomParameters,
             owner.getSolventDielectric(), owner.getSoluteDielectric());
 }
 
 void GBSAOBCForceFieldImpl::calcForces(OpenMMContextImpl& context, Stream& forces) {
     if (!hasInitialized)
         initialize(context);
-    dynamic_cast<CalcGBSAOBCForcesKernel&>(forceKernel.getImpl()).execute(context.getPositions(), forces);
+    dynamic_cast<CalcGBSAOBCForceFieldKernel&>(kernel.getImpl()).executeForces(context.getPositions(), forces);
 }
 
 double GBSAOBCForceFieldImpl::calcEnergy(OpenMMContextImpl& context) {
     if (!hasInitialized)
         initialize(context);
-    return dynamic_cast<CalcGBSAOBCEnergyKernel&>(energyKernel.getImpl()).execute(context.getPositions());
+    return dynamic_cast<CalcGBSAOBCForceFieldKernel&>(kernel.getImpl()).executeEnergy(context.getPositions());
 }
 
 std::vector<std::string> GBSAOBCForceFieldImpl::getKernelNames() {
     std::vector<std::string> names;
-    names.push_back(CalcGBSAOBCForcesKernel::Name());
-    names.push_back(CalcGBSAOBCEnergyKernel::Name());
+    names.push_back(CalcGBSAOBCForceFieldKernel::Name());
     return names;
 }

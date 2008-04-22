@@ -47,6 +47,7 @@ public:
     void loadFromArray(const void* array);
     void saveToArray(void* array);
     void fillWithValue(void* value);
+    const int* const * getData() const;
     int** getData();
 private:
     int width;

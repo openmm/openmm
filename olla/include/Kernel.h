@@ -67,6 +67,10 @@ public:
     /**
      * Get the object which implements this Kernel.
      */
+    const KernelImpl& getImpl() const;
+    /**
+     * Get the object which implements this Kernel.
+     */
     KernelImpl& getImpl();
 private:
     friend class Platform;

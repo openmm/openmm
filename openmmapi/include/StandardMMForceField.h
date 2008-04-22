@@ -104,8 +104,8 @@ public:
      * 
      * @param index     the index of the atom for which to set parameters
      * @param charge    the charge of the atom, measured in units of the proton charge
-     * @param radius    the van der Waals radius of the atom, measured in angstroms
-     * @param depth     the well depth of the van der Waals interaction, measured in kcal/mol
+     * @param radius    the van der Waals radius of the atom (sigma in the Lennard Jones potential), measured in angstroms
+     * @param depth     the well depth of the van der Waals interaction (epsilon in the Lennard Jones potential), measured in kcal/mol
      */
     void setAtomParameters(int index, double charge, double radius, double depth);
     /**

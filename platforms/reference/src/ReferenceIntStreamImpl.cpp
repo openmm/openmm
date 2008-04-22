@@ -78,6 +78,10 @@ void ReferenceIntStreamImpl::fillWithValue(void* value) {
             data[i][j] = valueData;
 }
 
+const int* const * ReferenceIntStreamImpl::getData() const {
+    return data;
+}
+
 int** ReferenceIntStreamImpl::getData() {
     return data;
 }

@@ -61,12 +61,14 @@ Integrator& OpenMMContext::getIntegrator() {
 
 }
 
-State OpenMMContext::getState(State::DataType types) const {
-    State state(impl->getTime(), impl->getSystem().getNumAtoms(), types);
+State OpenMMContext::getState(int types) const {
+    State state(impl->getTime(), impl->getSystem().getNumAtoms(), State::DataType(types));
     if (types&State::Energy)
         state.setEnergy(impl->calcKineticEnergy(), impl->calcPotentialEnergy());
-    if (types&State::Forces)
+    if (types&State::Forces) {
+        impl->calcForces();
         impl->getForces().saveToArray(&state.updForces()[0]);
+    }
     if (types&State::Parameters) {
         for (map<string, double>::const_iterator iter = impl->parameters.begin(); iter != impl->parameters.end(); iter++)
             state.updParameters()[iter->first] = iter->second;

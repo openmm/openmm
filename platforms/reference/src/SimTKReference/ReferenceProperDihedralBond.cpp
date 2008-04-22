@@ -70,7 +70,7 @@ ReferenceProperDihedralBond::~ReferenceProperDihedralBond( ){
    @param atomIndices      atom indices of 4 atoms in bond
    @param atomCoordinates  atom coordinates
    @param parameters       3 parameters: parameters[0] = k
-                                         parameters[1] = ideal bond angle in degrees
+                                         parameters[1] = ideal bond angle in radians
                                          parameters[2] = multiplicity
    @param forces           force array (forces added to current values)
    @param energiesByBond   energies by bond: energiesByBond[bondIndex]
@@ -145,7 +145,7 @@ int ReferenceProperDihedralBond::calculateBondIxn( int* atomIndices,
 
    // evaluate delta angle, dE/d(angle) 
 
-   RealOpenMM deltaAngle     = parameters[2]*dihedralAngle - (parameters[1]*DEGREE_TO_RADIAN); 
+   RealOpenMM deltaAngle     = parameters[2]*dihedralAngle - parameters[1]; 
    RealOpenMM sinDeltaAngle  = SIN( deltaAngle );
    RealOpenMM dEdAngle       = -parameters[0]*parameters[2]*sinDeltaAngle;
    RealOpenMM energy         =  parameters[0]*(one + COS( deltaAngle ) );

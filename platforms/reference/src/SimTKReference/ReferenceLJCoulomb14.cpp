@@ -28,20 +28,20 @@
 #include "../SimTKUtilities/SimTKOpenMMCommon.h"
 #include "../SimTKUtilities/SimTKOpenMMLog.h"
 #include "../SimTKUtilities/SimTKOpenMMUtilities.h"
-#include "ReferenceLJ14.h"
+#include "ReferenceLJCoulomb14.h"
 #include "ReferenceForce.h"
 
 /**---------------------------------------------------------------------------------------
 
-   ReferenceLJ14 constructor
+   ReferenceLJCoulomb14 constructor
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceLJ14::ReferenceLJ14( ){
+ReferenceLJCoulomb14::ReferenceLJCoulomb14( ){
 
    // ---------------------------------------------------------------------------------------
 
-   // static const char* methodName = "\nReferenceLJ14::ReferenceLJ14";
+   // static const char* methodName = "\nReferenceLJCoulomb14::ReferenceLJCoulomb14";
 
    // ---------------------------------------------------------------------------------------
 
@@ -49,15 +49,15 @@ ReferenceLJ14::ReferenceLJ14( ){
 
 /**---------------------------------------------------------------------------------------
 
-   ReferenceLJ14 destructor
+   ReferenceLJCoulomb14 destructor
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceLJ14::~ReferenceLJ14( ){
+ReferenceLJCoulomb14::~ReferenceLJCoulomb14( ){
 
    // ---------------------------------------------------------------------------------------
 
-   // static const char* methodName = "\nReferenceLJ14::~ReferenceLJ14";
+   // static const char* methodName = "\nReferenceLJCoulomb14::~ReferenceLJCoulomb14";
 
    // ---------------------------------------------------------------------------------------
 
@@ -71,7 +71,7 @@ ReferenceLJ14::~ReferenceLJ14( ){
    @param c12              c12
    @param q1               q1 charge atom 1
    @param q2               q2 charge atom 2
-   @param epsfac           epsfac ????????????/
+   @param epsfac           epsfac ????????????
    @param parameters       output parameters:
 										parameter[0]= c6*c6/c12
 										parameter[1]= (c12/c6)**1/6
@@ -81,13 +81,13 @@ ReferenceLJ14::~ReferenceLJ14( ){
 
    --------------------------------------------------------------------------------------- */
 
-int ReferenceLJ14::getDerivedParameters( RealOpenMM c6, RealOpenMM c12, RealOpenMM q1,
+int ReferenceLJCoulomb14::getDerivedParameters( RealOpenMM c6, RealOpenMM c12, RealOpenMM q1,
                                          RealOpenMM q2, RealOpenMM epsfac,
                                          RealOpenMM* parameters ) const {
 
    // ---------------------------------------------------------------------------------------
 
-   // static const char* methodName = "\nReferenceLJ14::getDerivedParameters";
+   // static const char* methodName = "\nReferenceLJCoulomb14::getDerivedParameters";
 
    static const RealOpenMM zero       =  0.0;
    static const RealOpenMM one        =  1.0;
@@ -114,10 +114,10 @@ int ReferenceLJ14::getDerivedParameters( RealOpenMM c6, RealOpenMM c12, RealOpen
 
    @param atomIndices      atom indices of 4 atoms in bond
    @param atomCoordinates  atom coordinates
-   @param parameters       two parameters:
-										parameter[0]= c6*c6/c12
-										parameter[1]= (c12/c6)**1/6
-										parameter[2]= epsfac*q1*q2
+   @param parameters       three parameters:
+                                        parameters[0]= (c12/c6)**1/6  (sigma)
+										parameters[1]= c6*c6/c12      (4*epsilon)
+										parameters[2]= epsfac*q1*q2
    @param forces           force array (forces added to current values)
    @param energiesByBond   energies by bond: energiesByBond[bondIndex]
    @param energiesByAtom   energies by atom: energiesByAtom[atomIndex]
@@ -126,18 +126,18 @@ int ReferenceLJ14::getDerivedParameters( RealOpenMM c6, RealOpenMM c12, RealOpen
 
    --------------------------------------------------------------------------------------- */
 
-int ReferenceLJ14::calculateBondIxn( int* atomIndices, RealOpenMM** atomCoordinates,
+int ReferenceLJCoulomb14::calculateBondIxn( int* atomIndices, RealOpenMM** atomCoordinates,
                                      RealOpenMM* parameters, RealOpenMM** forces,
                                      RealOpenMM* energiesByBond,
                                      RealOpenMM* energiesByAtom ) const {
 
    // ---------------------------------------------------------------------------------------
 
-   // static const char* methodName = "\nReferenceLJ14::calculateBondIxn";
+   // static const char* methodName = "\nReferenceLJCoulomb14::calculateBondIxn";
 
    // ---------------------------------------------------------------------------------------
 
-   static const std::string methodName = "\nReferenceLJ14::calculateBondIxn";
+   static const std::string methodName = "\nReferenceLJCoulomb14::calculateBondIxn";
 
    // constants -- reduce Visual Studio warnings regarding conversions between float & double
 
@@ -172,11 +172,11 @@ int ReferenceLJ14::calculateBondIxn( int* atomIndices, RealOpenMM** atomCoordina
    ReferenceForce::getDeltaR( atomCoordinates[atomBIndex], atomCoordinates[atomAIndex], deltaR[0] );  
 
    RealOpenMM inverseR  = one/(deltaR[0][ReferenceForce::RIndex]);
-   RealOpenMM sig2      = inverseR*parameters[1];
+   RealOpenMM sig2      = inverseR*parameters[0];
               sig2     *= sig2;
    RealOpenMM sig6      = sig2*sig2*sig2;
 
-   RealOpenMM dEdR      = parameters[0]*( twelve*sig6 - six )*sig6;
+   RealOpenMM dEdR      = parameters[1]*( twelve*sig6 - six )*sig6;
               dEdR     += parameters[2]*inverseR;
               dEdR     *= inverseR*inverseR;
 
@@ -188,11 +188,11 @@ int ReferenceLJ14::calculateBondIxn( int* atomIndices, RealOpenMM** atomCoordina
       forces[atomBIndex][ii] -= force;
    }
 
-   RealOpenMM energy = 0.0;
+   RealOpenMM energy = parameters[1]*( sig6 - one )*sig6 + parameters[2]*inverseR;
 
    // accumulate energies
 
-   //updateEnergy( energy, energiesByBond, LastAtomIndex, atomIndices, energiesByAtom );
+   updateEnergy( energy, energiesByBond, LastAtomIndex, atomIndices, energiesByAtom );
 
    // debug 
 

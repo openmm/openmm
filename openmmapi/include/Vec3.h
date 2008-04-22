@@ -33,6 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include <cassert>
+#include <iosfwd>
 
 namespace OpenMM {
 
@@ -68,6 +69,12 @@ public:
 private:
     double data[3];
 };
+
+template <class CHAR, class TRAITS>
+std::basic_ostream<CHAR,TRAITS>& operator<<(std::basic_ostream<CHAR,TRAITS>& o, const Vec3& v) {
+    o<<'['<<v[0]<<", "<<v[1]<<", "<<v[2]<<']';
+    return o;
+}
 
 } // namespace OpenMM
 

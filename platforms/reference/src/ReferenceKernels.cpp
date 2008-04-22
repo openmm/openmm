@@ -30,6 +30,15 @@
  * -------------------------------------------------------------------------- */
 
 #include "ReferenceKernels.h"
+#include "ReferenceFloatStreamImpl.h"
+#include "SimTKReference/ReferenceAngleBondIxn.h"
+#include "SimTKReference/ReferenceBondForce.h"
+#include "SimTKReference/ReferenceHarmonicBondIxn.h"
+#include "SimTKReference/ReferenceLJCoulomb14.h"
+#include "SimTKReference/ReferenceLJCoulombIxn.h"
+#include "SimTKReference/ReferenceProperDihedralBond.h"
+#include "SimTKReference/ReferenceRbDihedralBond.h"
+#include <cmath>
 
 using namespace OpenMM;
 using namespace std;
@@ -84,7 +93,7 @@ void disposeRealArray(RealOpenMM** array, int size) {
     }
 }
 
-ReferenceCalcStandardMMForcesKernel::~ReferenceCalcStandardMMForcesKernel() {
+ReferenceCalcStandardMMForceFieldKernel::~ReferenceCalcStandardMMForceFieldKernel() {
     disposeIntArray(bondIndexArray, numBonds);
     disposeRealArray(bondParamArray, numBonds);
     disposeIntArray(angleIndexArray, numAngles);
@@ -93,18 +102,24 @@ ReferenceCalcStandardMMForcesKernel::~ReferenceCalcStandardMMForcesKernel() {
     disposeRealArray(periodicTorsionParamArray, numPeriodicTorsions);
     disposeIntArray(rbTorsionIndexArray, numRBTorsions);
     disposeRealArray(rbTorsionParamArray, numRBTorsions);
+    disposeRealArray(atomParamArray, numAtoms);
+    disposeIntArray(exclusionArray, numAtoms);
+    disposeIntArray(bonded14IndexArray, num14);
+    disposeRealArray(bonded14ParamArray, num14);
 }
 
-void ReferenceCalcStandardMMForcesKernel::initialize(const vector<vector<int> >& bondIndices, const vector<vector<double> >& bondParameters,
+void ReferenceCalcStandardMMForceFieldKernel::initialize(const vector<vector<int> >& bondIndices, const vector<vector<double> >& bondParameters,
         const vector<vector<int> >& angleIndices, const vector<vector<double> >& angleParameters,
         const vector<vector<int> >& periodicTorsionIndices, const vector<vector<double> >& periodicTorsionParameters,
         const vector<vector<int> >& rbTorsionIndices, const vector<vector<double> >& rbTorsionParameters,
-        const vector<vector<int> >& bonded14Indices, const vector<set<int> >& exclusions,
-        const vector<vector<double> >& nonbondedParameters) {
+        const vector<vector<int> >& bonded14Indices, double lj14Scale, double coulomb14Scale,
+        const vector<set<int> >& exclusions, const vector<vector<double> >& nonbondedParameters) {
+    numAtoms = nonbondedParameters.size();
     numBonds = bondIndices.size();
     numAngles = angleIndices.size();
     numPeriodicTorsions = periodicTorsionIndices.size();
     numRBTorsions = rbTorsionIndices.size();
+    num14 = bonded14Indices.size();
     bondIndexArray = copyToArray(bondIndices);
     bondParamArray = copyToArray(bondParameters);
     angleIndexArray = copyToArray(angleIndices);
@@ -113,40 +128,94 @@ void ReferenceCalcStandardMMForcesKernel::initialize(const vector<vector<int> >&
     periodicTorsionParamArray = copyToArray(periodicTorsionParameters);
     rbTorsionIndexArray = copyToArray(rbTorsionIndices);
     rbTorsionParamArray = copyToArray(rbTorsionParameters);
+    atomParamArray = allocateRealArray(numAtoms, 3);
+    RealOpenMM sqrtEps = std::sqrt(138.935485);
+    for (int i = 0; i < numAtoms; ++i) {
+        atomParamArray[i][0] = 0.5*nonbondedParameters[i][1];
+        atomParamArray[i][1] = 2.0*sqrt(nonbondedParameters[i][2]);
+        atomParamArray[i][2] = nonbondedParameters[i][0]*sqrtEps;
+    }
+    exclusionArray = new int*[numAtoms];
+    for (int i = 0; i < numAtoms; ++i) {
+        exclusionArray[i] = new int[exclusions[i].size()+1];
+        exclusionArray[i][0] = exclusions[i].size();
+        int index = 0;
+        for (set<int>::const_iterator iter = exclusions[i].begin(); iter != exclusions[i].end(); ++iter)
+            exclusionArray[i][++index] = *iter;
+    }
+    bonded14IndexArray = copyToArray(bonded14Indices);
+    bonded14ParamArray = allocateRealArray(num14, 3);
+    for (int i = 0; i < num14; ++i) {
+        int atom1 = bonded14Indices[i][0];
+        int atom2 = bonded14Indices[i][1];
+        bonded14ParamArray[i][0] = atomParamArray[atom1][0]+atomParamArray[atom2][0];
+        bonded14ParamArray[i][1] = lj14Scale*(atomParamArray[atom1][1]*atomParamArray[atom2][1]);
+        bonded14ParamArray[i][2] = coulomb14Scale*(atomParamArray[atom1][2]*atomParamArray[atom2][2]);
+    }
 }
 
-void ReferenceCalcStandardMMForcesKernel::execute(const Stream& positions, Stream& forces) {
-    
+void ReferenceCalcStandardMMForceFieldKernel::executeForces(const Stream& positions, Stream& forces) {
+    RealOpenMM** posData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) positions.getImpl()).getData());
+    RealOpenMM** forceData = ((ReferenceFloatStreamImpl&) forces.getImpl()).getData();
+    ReferenceBondForce refBondForce;
+    ReferenceHarmonicBondIxn harmonicBond;
+    refBondForce.calculateForce(numBonds, bondIndexArray, posData, bondParamArray, forceData, 0, 0, 0, harmonicBond);
+    ReferenceAngleBondIxn angleBond;
+    refBondForce.calculateForce(numAngles, angleIndexArray, posData, angleParamArray, forceData, 0, 0, 0, angleBond);
+    ReferenceProperDihedralBond periodicTorsionBond;
+    refBondForce.calculateForce(numPeriodicTorsions, periodicTorsionIndexArray, posData, periodicTorsionParamArray, forceData, 0, 0, 0, periodicTorsionBond);
+    ReferenceRbDihedralBond rbTorsionBond;
+    refBondForce.calculateForce(numRBTorsions, rbTorsionIndexArray, posData, rbTorsionParamArray, forceData, 0, 0, 0, rbTorsionBond);
+    ReferenceLJCoulombIxn clj;
+    clj.calculatePairIxn(numAtoms, posData, atomParamArray, exclusionArray, 0, forceData, 0, 0);
+    ReferenceLJCoulomb14 nonbonded14;
+    refBondForce.calculateForce(num14, bonded14IndexArray, posData, bonded14ParamArray, forceData, 0, 0, 0, nonbonded14);
 }
 
-void ReferenceCalcStandardMMEnergyKernel::initialize(const vector<vector<int> >& bondIndices, const vector<vector<double> >& bondParameters,
-        const vector<vector<int> >& angleIndices, const vector<vector<double> >& angleParameters,
-        const vector<vector<int> >& periodicTorsionIndices, const vector<vector<double> >& periodicTorsionParameters,
-        const vector<vector<int> >& rbTorsionIndices, const vector<vector<double> >& rbTorsionParameters,
-        const vector<vector<int> >& bonded14Indices, const vector<set<int> >& exclusions,
-        const vector<vector<double> >& nonbondedParameters) {
-    
+double ReferenceCalcStandardMMForceFieldKernel::executeEnergy(const Stream& positions) {
+    RealOpenMM** posData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) positions.getImpl()).getData());
+    RealOpenMM** forceData = allocateRealArray(numAtoms, 3);
+    int arraySize = max(max(max(max(numAtoms, numBonds), numAngles), numPeriodicTorsions), numRBTorsions);
+    RealOpenMM* energyArray = new RealOpenMM[arraySize];
+    RealOpenMM energy = 0;
+    ReferenceBondForce refBondForce;
+    ReferenceHarmonicBondIxn harmonicBond;
+    for (int i = 0; i < arraySize; ++i)
+        energyArray[i] = 0;
+    refBondForce.calculateForce(numBonds, bondIndexArray, posData, bondParamArray, forceData, energyArray, 0, &energy, harmonicBond);
+    ReferenceAngleBondIxn angleBond;
+    for (int i = 0; i < arraySize; ++i)
+        energyArray[i] = 0;
+    refBondForce.calculateForce(numAngles, angleIndexArray, posData, angleParamArray, forceData, energyArray, 0, &energy, angleBond);
+    ReferenceProperDihedralBond periodicTorsionBond;
+    for (int i = 0; i < arraySize; ++i)
+        energyArray[i] = 0;
+    refBondForce.calculateForce(numPeriodicTorsions, periodicTorsionIndexArray, posData, periodicTorsionParamArray, forceData, energyArray, 0, &energy, periodicTorsionBond);
+    ReferenceRbDihedralBond rbTorsionBond;
+    for (int i = 0; i < arraySize; ++i)
+        energyArray[i] = 0;
+    refBondForce.calculateForce(numRBTorsions, rbTorsionIndexArray, posData, rbTorsionParamArray, forceData, energyArray, 0, &energy, rbTorsionBond);
+    ReferenceLJCoulombIxn clj;
+    clj.calculatePairIxn(numAtoms, posData, atomParamArray, exclusionArray, 0, forceData, 0, &energy);
+    ReferenceLJCoulomb14 nonbonded14;
+    for (int i = 0; i < arraySize; ++i)
+        energyArray[i] = 0;
+    refBondForce.calculateForce(num14, bonded14IndexArray, posData, bonded14ParamArray, forceData, energyArray, 0, &energy, nonbonded14);
+    disposeRealArray(forceData, numAtoms);
+    delete[] energyArray;
+    return energy;
 }
 
-double ReferenceCalcStandardMMEnergyKernel::execute(const Stream& positions) {
-    return 0.0; // TODO implement correctly
-}
-
-void ReferenceCalcGBSAOBCForcesKernel::initialize(const vector<double>& bornRadii, const vector<vector<double> >& atomParameters,
+void ReferenceCalcGBSAOBCForceFieldKernel::initialize(const vector<double>& bornRadii, const vector<vector<double> >& atomParameters,
         double solventDielectric, double soluteDielectric) {
     
 }
 
-void ReferenceCalcGBSAOBCForcesKernel::execute(const Stream& positions, Stream& forces) {
+void ReferenceCalcGBSAOBCForceFieldKernel::executeForces(const Stream& positions, Stream& forces) {
     
 }
 
-void ReferenceCalcGBSAOBCEnergyKernel::initialize(const vector<double>& bornRadii, const vector<vector<double> >& atomParameters,
-        double solventDielectric, double soluteDielectric) {
-    
-}
-
-double ReferenceCalcGBSAOBCEnergyKernel::execute(const Stream& positions) {
+double ReferenceCalcGBSAOBCForceFieldKernel::executeEnergy(const Stream& positions) {
     return 0.0; // TODO implement correctly
 }
 

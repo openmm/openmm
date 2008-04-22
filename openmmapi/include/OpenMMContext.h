@@ -100,7 +100,7 @@ public:
      * @param types the set of data types which should be stored in the State object.  This
      * should be a union of DataType values, e.g. (State::Positions | State::Velocities).
      */
-    State getState(State::DataType types) const;
+    State getState(int types) const;
     /**
      * Get the current time of the simulation (in picoseconds).
      */

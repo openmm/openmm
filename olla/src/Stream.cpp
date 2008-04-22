@@ -83,6 +83,10 @@ void Stream::fillWithValue(void* value) {
     impl->fillWithValue(value);
 }
 
+const StreamImpl& Stream::getImpl() const {
+    return *impl;
+}
+
 StreamImpl& Stream::getImpl() {
     return *impl;
 }

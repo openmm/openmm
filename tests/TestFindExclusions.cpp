@@ -136,43 +136,28 @@ void verify14(const vector<vector<int> >& bonded14Indices) {
  * to the initialize() methods.
  */
 
-class DummyForceKernel : public CalcStandardMMForcesKernel {
+class DummyForceKernel : public CalcStandardMMForceFieldKernel {
 public:
-    DummyForceKernel(string name) : CalcStandardMMForcesKernel(name) {
+    DummyForceKernel(string name, const Platform& platform) : CalcStandardMMForceFieldKernel(name, platform) {
     }
     void initialize(const vector<vector<int> >& bondIndices, const vector<vector<double> >& bondParameters,
             const vector<vector<int> >& angleIndices, const vector<vector<double> >& angleParameters,
             const vector<vector<int> >& periodicTorsionIndices, const vector<vector<double> >& periodicTorsionParameters,
             const vector<vector<int> >& rbTorsionIndices, const vector<vector<double> >& rbTorsionParameters,
-            const vector<vector<int> >& bonded14Indices, const vector<set<int> >& exclusions,
-            const vector<vector<double> >& nonbondedParameters) {
+            const vector<vector<int> >& bonded14Indices, double lj14Scale, double coulomb14Scale,
+            const vector<set<int> >& exclusions, const vector<vector<double> >& nonbondedParameters) {
         verifyExclusions(exclusions);
         verify14(bonded14Indices);
     }
-    void execute(const Stream& positions, Stream& forces) {
+    void executeForces(const Stream& positions, Stream& forces) {
     }
-};
-
-class DummyEnergyKernel : public CalcStandardMMEnergyKernel {
-public:
-    DummyEnergyKernel(string name) : CalcStandardMMEnergyKernel(name) {
-    }
-    void initialize(const vector<vector<int> >& bondIndices, const vector<vector<double> >& bondParameters,
-            const vector<vector<int> >& angleIndices, const vector<vector<double> >& angleParameters,
-            const vector<vector<int> >& periodicTorsionIndices, const vector<vector<double> >& periodicTorsionParameters,
-            const vector<vector<int> >& rbTorsionIndices, const vector<vector<double> >& rbTorsionParameters,
-            const vector<vector<int> >& bonded14Indices, const vector<set<int> >& exclusions,
-            const vector<vector<double> >& nonbondedParameters) {
-        verifyExclusions(exclusions);
-        verify14(bonded14Indices);
-    }
-    double execute(const Stream& positions) {
+    double executeEnergy(const Stream& positions) {
     }
 };
 
 class DummyIntegratorKernel : public IntegrateVerletStepKernel {
 public:
-    DummyIntegratorKernel(string name) : IntegrateVerletStepKernel(name) {
+    DummyIntegratorKernel(string name, const Platform& platform) : IntegrateVerletStepKernel(name, platform) {
     }
     void initialize(const vector<double>& masses, const vector<vector<int> >& constraintIndices, const vector<double>& constraintLengths) {
     }
@@ -182,7 +167,7 @@ public:
 
 class DummyKEKernel : public CalcKineticEnergyKernel {
 public:
-    DummyKEKernel(string name) : CalcKineticEnergyKernel(name) {
+    DummyKEKernel(string name, const Platform& platform) : CalcKineticEnergyKernel(name, platform) {
     }
     void initialize(const vector<double>& masses) {
     }
@@ -192,7 +177,7 @@ public:
 
 class DummyStreamImpl : public StreamImpl {
 public:
-    DummyStreamImpl(string name, int size, Stream::DataType type) : StreamImpl(name, size, type) {
+    DummyStreamImpl(string name, int size, Stream::DataType type, const Platform& platform) : StreamImpl(name, size, type, platform) {
     }
     void loadFromArray(const void* array) {
     }
@@ -204,31 +189,28 @@ public:
 
 class DummyKernelFactory : public KernelFactory {
 public:
-    KernelImpl* createKernelImpl(string name) const {
-        if (name == CalcStandardMMForcesKernel::Name())
-            return new DummyForceKernel(name);
-        if (name == CalcStandardMMEnergyKernel::Name())
-            return new DummyEnergyKernel(name);
+    KernelImpl* createKernelImpl(string name, const Platform& platform) const {
+        if (name == CalcStandardMMForceFieldKernel::Name())
+            return new DummyForceKernel(name, platform);
         if (name == IntegrateVerletStepKernel::Name())
-            return new DummyIntegratorKernel(name);
+            return new DummyIntegratorKernel(name, platform);
         if (name == CalcKineticEnergyKernel::Name())
-            return new DummyKEKernel(name);
+            return new DummyKEKernel(name, platform);
         return 0;
     }
 };
 
 class DummyStreamFactory : public StreamFactory {
 public:
-    StreamImpl* createStreamImpl(string name, int size, Stream::DataType type) const {
-        return new DummyStreamImpl(name, size, type);
+    StreamImpl* createStreamImpl(string name, int size, Stream::DataType type, const Platform& platform) const {
+        return new DummyStreamImpl(name, size, type, platform);
     }
 };
 
 class DummyPlatform : public Platform {
 public:
     DummyPlatform() {
-        registerKernelFactory(CalcStandardMMForcesKernel::Name(), new DummyKernelFactory());
-        registerKernelFactory(CalcStandardMMEnergyKernel::Name(), new DummyKernelFactory());
+        registerKernelFactory(CalcStandardMMForceFieldKernel::Name(), new DummyKernelFactory());
         registerKernelFactory(IntegrateVerletStepKernel::Name(), new DummyKernelFactory());
         registerKernelFactory(CalcKineticEnergyKernel::Name(), new DummyKernelFactory());
     }

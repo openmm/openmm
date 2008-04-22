@@ -65,7 +65,7 @@ private:
     void findExclusions(const std::vector<std::vector<int> >& bondIndices, std::vector<std::set<int> >& exclusions, std::set<std::pair<int, int> >& bonded14Indices) const;
     void addExclusionsToSet(const std::vector<std::set<int> >& bonded12, std::set<int>& exclusions, int baseAtom, int fromAtom, int currentLevel) const;
     StandardMMForceField& owner;
-    Kernel forceKernel, energyKernel;
+    Kernel kernel;
 };
 
 } // namespace OpenMM

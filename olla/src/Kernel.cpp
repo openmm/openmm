@@ -62,6 +62,10 @@ string Kernel::Kernel::getName() const {
     return impl->getName();
 }
 
+const KernelImpl& Kernel::getImpl() const {
+    return *impl;
+}
+
 KernelImpl& Kernel::getImpl() {
     return *impl;
 }

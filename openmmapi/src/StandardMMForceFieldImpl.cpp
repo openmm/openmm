@@ -39,8 +39,7 @@ using std::vector;
 using std::set;
 
 StandardMMForceFieldImpl::StandardMMForceFieldImpl(StandardMMForceField& owner, OpenMMContextImpl& context) : owner(owner) {
-    forceKernel = context.getPlatform().createKernel(CalcStandardMMForcesKernel::Name());
-    energyKernel = context.getPlatform().createKernel(CalcStandardMMEnergyKernel::Name());
+    kernel = context.getPlatform().createKernel(CalcStandardMMForceFieldKernel::Name());
     vector<vector<int> > bondIndices(owner.getNumBonds());
     vector<vector<double> > bondParameters(owner.getNumBonds());
     vector<vector<int> > angleIndices(owner.getNumAngles());
@@ -79,9 +78,9 @@ StandardMMForceFieldImpl::StandardMMForceFieldImpl(StandardMMForceField& owner, 
         periodicTorsionIndices[i].push_back(atom2);
         periodicTorsionIndices[i].push_back(atom3);
         periodicTorsionIndices[i].push_back(atom4);
-        periodicTorsionParameters[i].push_back(periodicity);
-        periodicTorsionParameters[i].push_back(phase);
         periodicTorsionParameters[i].push_back(k);
+        periodicTorsionParameters[i].push_back(phase);
+        periodicTorsionParameters[i].push_back(periodicity);
     }
     for (int i = 0; i < owner.getNumRBTorsions(); ++i) {
         int atom1, atom2, atom3, atom4;
@@ -113,27 +112,24 @@ StandardMMForceFieldImpl::StandardMMForceFieldImpl(StandardMMForceField& owner, 
         bonded14Indices[index].push_back(iter->first);
         bonded14Indices[index++].push_back(iter->second);
     }
-    dynamic_cast<CalcStandardMMForcesKernel&>(forceKernel.getImpl()).initialize(bondIndices, bondParameters, angleIndices, angleParameters,
-            periodicTorsionIndices, periodicTorsionParameters, rbTorsionIndices, rbTorsionParameters, bonded14Indices, exclusions, nonbondedParameters);
-    dynamic_cast<CalcStandardMMEnergyKernel&>(energyKernel.getImpl()).initialize(bondIndices, bondParameters, angleIndices, angleParameters,
-            periodicTorsionIndices, periodicTorsionParameters, rbTorsionIndices, rbTorsionParameters, bonded14Indices, exclusions, nonbondedParameters);
+    dynamic_cast<CalcStandardMMForceFieldKernel&>(kernel.getImpl()).initialize(bondIndices, bondParameters, angleIndices, angleParameters,
+            periodicTorsionIndices, periodicTorsionParameters, rbTorsionIndices, rbTorsionParameters, bonded14Indices, 0.5, 1.0/1.2, exclusions, nonbondedParameters);
 }
 
 StandardMMForceFieldImpl::~StandardMMForceFieldImpl() {
 }
 
 void StandardMMForceFieldImpl::calcForces(OpenMMContextImpl& context, Stream& forces) {
-    dynamic_cast<CalcStandardMMForcesKernel&>(forceKernel.getImpl()).execute(context.getPositions(), forces);
+    dynamic_cast<CalcStandardMMForceFieldKernel&>(kernel.getImpl()).executeForces(context.getPositions(), forces);
 }
 
 double StandardMMForceFieldImpl::calcEnergy(OpenMMContextImpl& context) {
-    return dynamic_cast<CalcStandardMMEnergyKernel&>(energyKernel.getImpl()).execute(context.getPositions());
+    return dynamic_cast<CalcStandardMMForceFieldKernel&>(kernel.getImpl()).executeEnergy(context.getPositions());
 }
 
 std::vector<std::string> StandardMMForceFieldImpl::getKernelNames() {
     std::vector<std::string> names;
-    names.push_back(CalcStandardMMForcesKernel::Name());
-    names.push_back(CalcStandardMMEnergyKernel::Name());
+    names.push_back(CalcStandardMMForceFieldKernel::Name());
     return names;
 }
 

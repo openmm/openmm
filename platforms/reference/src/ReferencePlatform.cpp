@@ -45,10 +45,8 @@ ReferencePlatform* staticPlatform = registerReferencePlatform();
 
 ReferencePlatform::ReferencePlatform() {
     ReferenceKernelFactory* factory = new ReferenceKernelFactory();
-    registerKernelFactory(CalcStandardMMForcesKernel::Name(), factory);
-    registerKernelFactory(CalcStandardMMEnergyKernel::Name(), factory);
-    registerKernelFactory(CalcGBSAOBCForcesKernel::Name(), factory);
-    registerKernelFactory(CalcGBSAOBCEnergyKernel::Name(), factory);
+    registerKernelFactory(CalcStandardMMForceFieldKernel::Name(), factory);
+    registerKernelFactory(CalcGBSAOBCForceFieldKernel::Name(), factory);
     registerKernelFactory(IntegrateVerletStepKernel::Name(), factory);
     registerKernelFactory(IntegrateLangevinStepKernel::Name(), factory);
     registerKernelFactory(IntegrateBrownianStepKernel::Name(), factory);

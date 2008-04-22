@@ -116,6 +116,10 @@ public:
     /**
      * Get the object which implements this Stream.
      */
+    const StreamImpl& getImpl() const;
+    /**
+     * Get the object which implements this Stream.
+     */
     StreamImpl& getImpl();
 private:
     friend class Platform;

@@ -48,6 +48,7 @@ public:
     void loadFromArray(const void* array);
     void saveToArray(void* array);
     void fillWithValue(void* value);
+    const RealOpenMM* const * getData() const;
     RealOpenMM** getData();
 private:
     int width;

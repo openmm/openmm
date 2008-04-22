@@ -121,6 +121,10 @@ void ReferenceFloatStreamImpl::fillWithValue(void* value) {
 
 }
 
+const RealOpenMM* const * ReferenceFloatStreamImpl::getData() const {
+    return data;
+}
+
 RealOpenMM** ReferenceFloatStreamImpl::getData() {
     return data;
 }

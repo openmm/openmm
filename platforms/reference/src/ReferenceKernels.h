@@ -40,11 +40,11 @@ namespace OpenMM {
 /**
  * This kernel is invoked by StandardMMForceField to calculate the forces acting on the system.
  */
-class ReferenceCalcStandardMMForcesKernel : public CalcStandardMMForcesKernel {
+class ReferenceCalcStandardMMForceFieldKernel : public CalcStandardMMForceFieldKernel {
 public:
-    ReferenceCalcStandardMMForcesKernel(std::string name, const Platform& platform) : CalcStandardMMForcesKernel(name, platform) {
+    ReferenceCalcStandardMMForceFieldKernel(std::string name, const Platform& platform) : CalcStandardMMForceFieldKernel(name, platform) {
     }
-    ~ReferenceCalcStandardMMForcesKernel();
+    ~ReferenceCalcStandardMMForceFieldKernel();
     /**
      * Initialize the kernel, setting up the values of all the force field parameters.
      * 
@@ -53,82 +53,51 @@ public:
      * @param angleIndices              the three atoms connected by each angle term
      * @param angleParameters           the force parameters (angle, k) for each angle term
      * @param periodicTorsionIndices    the four atoms connected by each periodic torsion term
-     * @param periodicTorsionParameters the force parameters (periodicity, phase, k) for each periodic torsion term
+     * @param periodicTorsionParameters the force parameters (k, phase, periodicity) for each periodic torsion term
      * @param rbTorsionIndices          the four atoms connected by each Ryckaert-Bellemans torsion term
      * @param rbTorsionParameters       the coefficients (in order of increasing powers) for each Ryckaert-Bellemans torsion term
      * @param bonded14Indices           each element contains the indices of two atoms whose nonbonded interactions should be reduced since
      *                                  they form a bonded 1-4 pair
+     * @param lj14Scale                 the factor by which van der Waals interactions should be reduced for bonded 1-4 pairs
+     * @param coulomb14Scale            the factor by which Coulomb interactions should be reduced for bonded 1-4 pairs
      * @param exclusions                the i'th element lists the indices of all atoms with which the i'th atom should not interact through
      *                                  nonbonded forces.  Bonded 1-4 pairs are also included in this list, since they should be omitted from
      *                                  the standard nonbonded calculation.
-     * @param nonbondedParameters       the nonbonded force parameters (charge, van der Waals radius, van der Waals depth) for each atom
+     * @param nonbondedParameters       the nonbonded force parameters (charge, sigma, epsilon) for each atom
      */
     void initialize(const std::vector<std::vector<int> >& bondIndices, const std::vector<std::vector<double> >& bondParameters,
             const std::vector<std::vector<int> >& angleIndices, const std::vector<std::vector<double> >& angleParameters,
             const std::vector<std::vector<int> >& periodicTorsionIndices, const std::vector<std::vector<double> >& periodicTorsionParameters,
             const std::vector<std::vector<int> >& rbTorsionIndices, const std::vector<std::vector<double> >& rbTorsionParameters,
-            const std::vector<std::vector<int> >& bonded14Indices, const std::vector<std::set<int> >& exclusions,
-            const std::vector<std::vector<double> >& nonbondedParameters);
+            const std::vector<std::vector<int> >& bonded14Indices, double lj14Scale, double coulomb14Scale,
+            const std::vector<std::set<int> >& exclusions, const std::vector<std::vector<double> >& nonbondedParameters);
     /**
-     * Execute the kernel.
+     * Execute the kernel to calculate the forces.
      * 
      * @param positions   a Stream of type Double3 containing the position (x, y, z) of each atom
      * @param forces      a Stream of type Double3 containing the force (x, y, z) on each atom.  On entry, this contains the forces that
      *                    have been calculated so far.  The kernel should add its own forces to the values already in the stream.
      */
-    void execute(const Stream& positions, Stream& forces);
-private:
-    int numAtoms, numBonds, numAngles, numPeriodicTorsions, numRBTorsions;
-    int **bondIndexArray, **angleIndexArray, **periodicTorsionIndexArray, **rbTorsionIndexArray;
-    RealOpenMM **bondParamArray, **angleParamArray, **periodicTorsionParamArray, **rbTorsionParamArray;
-};
-
-/**
- * This kernel is invoked by StandardMMForceField to calculate the energy of the system.
- */
-class ReferenceCalcStandardMMEnergyKernel : public CalcStandardMMEnergyKernel {
-public:
-    ReferenceCalcStandardMMEnergyKernel(std::string name, const Platform& platform) : CalcStandardMMEnergyKernel(name, platform) {
-    }
+    void executeForces(const Stream& positions, Stream& forces);
     /**
-     * Initialize the kernel, setting up the values of all the force field parameters.
-     * 
-     * @param bondIndices               the two atoms connected by each bond term
-     * @param bondParameters            the force parameters (length, k) for each bond term
-     * @param angleIndices              the three atoms connected by each angle term
-     * @param angleParameters           the force parameters (angle, k) for each angle term
-     * @param periodicTorsionIndices    the four atoms connected by each periodic torsion term
-     * @param periodicTorsionParameters the force parameters (periodicity, phase, k) for each periodic torsion term
-     * @param rbTorsionIndices          the four atoms connected by each Ryckaert-Bellemans torsion term
-     * @param rbTorsionParameters       the coefficients (in order of increasing powers) for each Ryckaert-Bellemans torsion term
-     * @param bonded14Indices           each element contains the indices of two atoms whose nonbonded interactions should be reduced since
-     *                                  they form a bonded 1-4 pair
-     * @param exclusions                the i'th element lists the indices of all atoms with which the i'th atom should not interact through
-     *                                  nonbonded forces.  Bonded 1-4 pairs are also included in this list, since they should be omitted from
-     *                                  the standard nonbonded calculation.
-     * @param nonbondedParameters       the nonbonded force parameters (charge, van der Waals radius, van der Waals depth) for each atom
-     */
-    void initialize(const std::vector<std::vector<int> >& bondIndices, const std::vector<std::vector<double> >& bondParameters,
-            const std::vector<std::vector<int> >& angleIndices, const std::vector<std::vector<double> >& angleParameters,
-            const std::vector<std::vector<int> >& periodicTorsionIndices, const std::vector<std::vector<double> >& periodicTorsionParameters,
-            const std::vector<std::vector<int> >& rbTorsionIndices, const std::vector<std::vector<double> >& rbTorsionParameters,
-            const std::vector<std::vector<int> >& bonded14Indices, const std::vector<std::set<int> >& exclusions,
-            const std::vector<std::vector<double> >& nonbondedParameters);
-    /**
-     * Execute the kernel.
+     * Execute the kernel to calculate the energy.
      * 
      * @param positions   a Stream of type Double3 containing the position (x, y, z) of each atom
      * @return the potential energy due to the StandardMMForceField
      */
-    double execute(const Stream& positions);
+    double executeEnergy(const Stream& positions);
+private:
+    int numAtoms, numBonds, numAngles, numPeriodicTorsions, numRBTorsions, num14;
+    int **bondIndexArray, **angleIndexArray, **periodicTorsionIndexArray, **rbTorsionIndexArray, **exclusionArray, **bonded14IndexArray;
+    RealOpenMM **bondParamArray, **angleParamArray, **periodicTorsionParamArray, **rbTorsionParamArray, **atomParamArray, **bonded14ParamArray;
 };
 
 /**
  * This kernel is invoked by GBSAOBCForceField to calculate the forces acting on the system.
  */
-class ReferenceCalcGBSAOBCForcesKernel : public CalcGBSAOBCForcesKernel {
+class ReferenceCalcGBSAOBCForceFieldKernel : public CalcGBSAOBCForceFieldKernel {
 public:
-    ReferenceCalcGBSAOBCForcesKernel(std::string name, const Platform& platform) : CalcGBSAOBCForcesKernel(name, platform) {
+    ReferenceCalcGBSAOBCForceFieldKernel(std::string name, const Platform& platform) : CalcGBSAOBCForceFieldKernel(name, platform) {
     }
     /**
      * Initialize the kernel, setting up the values of all the force field parameters.
@@ -141,39 +110,20 @@ public:
     void initialize(const std::vector<double>& bornRadii, const std::vector<std::vector<double> >& atomParameters,
             double solventDielectric, double soluteDielectric);
     /**
-     * Execute the kernel.
+     * Execute the kernel to calculate the forces.
      * 
      * @param positions   a Stream of type Double3 containing the position (x, y, z) of each atom
      * @param forces      a Stream of type Double3 containing the force (x, y, z) on each atom.  On entry, this contains the forces that
      *                    have been calculated so far.  The kernel should add its own forces to the values already in the stream.
      */
-    void execute(const Stream& positions, Stream& forces);
-};
-
-/**
- * This kernel is invoked by GBSAOBCForceField to calculate the energy of the system.
- */
-class ReferenceCalcGBSAOBCEnergyKernel : public CalcGBSAOBCEnergyKernel {
-public:
-    ReferenceCalcGBSAOBCEnergyKernel(std::string name, const Platform& platform) : CalcGBSAOBCEnergyKernel(name, platform) {
-    }
+    void executeForces(const Stream& positions, Stream& forces);
     /**
-     * Initialize the kernel, setting up the values of all the force field parameters.
-     * 
-     * @param bornRadii           the initial value of the Born radius for each atom
-     * @param atomParameters      the force parameters (charge, atomic radius, scaling factor) for each atom
-     * @param solventDielectric   the dielectric constant of the solvent
-     * @param soluteDielectric    the dielectric constant of the solute
-     */
-    void initialize(const std::vector<double>& bornRadii, const std::vector<std::vector<double> >& atomParameters,
-            double solventDielectric, double soluteDielectric);
-    /**
-     * Execute the kernel.
+     * Execute the kernel to calculate the energy.
      * 
      * @param positions   a Stream of type Double3 containing the position (x, y, z) of each atom
      * @return the potential energy due to the GBSAOBCForceField
      */
-    double execute(const Stream& positions);
+    double executeEnergy(const Stream& positions);
 };
 
 /**
