@@ -567,14 +567,14 @@ int ReferenceStochasticDynamics::update( int numberOfAtoms, RealOpenMM** atomCoo
 
       referenceShakeAlgorithm->applyShake( numberOfAtoms, atomCoordinates, xPrime,
                                            inverseMasses );
+   }
 
-      // copy xPrime -> atomCoordinates
+   // copy xPrime -> atomCoordinates
 
-      for( int ii = 0; ii < numberOfAtoms; ii++ ){
-         atomCoordinates[ii][0] = xPrime[ii][0];
-         atomCoordinates[ii][1] = xPrime[ii][1];
-         atomCoordinates[ii][2] = xPrime[ii][2];
-      }
+   for( int ii = 0; ii < numberOfAtoms; ii++ ){
+      atomCoordinates[ii][0] = xPrime[ii][0];
+      atomCoordinates[ii][1] = xPrime[ii][1];
+      atomCoordinates[ii][2] = xPrime[ii][2];
    }
 
    incrementTimeStep();

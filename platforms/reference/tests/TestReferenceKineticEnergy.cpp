@@ -29,62 +29,48 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "OpenMMException.h"
-#include "State.h"
+/**
+ * This tests the reference implementation of the kernel to calculate kinetic energy.
+ */
+
+#include "../../../tests/AssertionUtilities.h"
+#include "OpenMMContext.h"
+#include "ReferencePlatform.h"
+#include "System.h"
+#include "VerletIntegrator.h"
+#include <iostream>
+#include <vector>
 
 using namespace OpenMM;
 using namespace std;
 
-double State::getTime() const {
-    return time;
+const double TOL = 1e-5;
+
+void testCalcKE() {
+    ReferencePlatform platform;
+    System system(4, 0);
+    for (int i = 0; i < 4; ++i)
+        system.setAtomMass(i, i+1);
+    VerletIntegrator integrator(0.01);
+    OpenMMContext context(system, integrator, platform);
+    vector<Vec3> velocities(4);
+    velocities[0] = Vec3(1, 0, 0);
+    velocities[1] = Vec3(0, 1, 0);
+    velocities[2] = Vec3(0, 0, 2);
+    velocities[3] = Vec3(std::sqrt(2.0), 0, std::sqrt(2.0));
+    context.setVelocities(velocities);
+    State state = context.getState(State::Energy);
+    ASSERT_EQUAL_TOL(0.5*(1+2+4*3+4*4), state.getKineticEnergy(), TOL);
 }
-const vector<Vec3>& State::getPositions() const {
-    if ((types&Positions) == 0)
-        throw OpenMMException("Invoked getPositions() on a State which does not contain positions.");
-    return positions;
-}
-const vector<Vec3>& State::getVelocities() const {
-    if ((types&Velocities) == 0)
-        throw OpenMMException("Invoked getVelocities() on a State which does not contain velocities.");
-    return velocities;
-}
-const vector<Vec3>& State::getForces() const {
-    if ((types&Forces) == 0)
-        throw OpenMMException("Invoked getForces() on a State which does not contain forces.");
-    return forces;
-}
-double State::getKineticEnergy() const {
-    if ((types&Energy) == 0)
-        throw OpenMMException("Invoked getKineticEnergy() on a State which does not contain energies.");
-    return ke;
-}
-double State::getPotentialEnergy() const {
-    if ((types&Energy) == 0)
-        throw OpenMMException("Invoked getPotentialEnergy() on a State which does not contain energies.");
-    return pe;
-}
-const map<string, double>& State::getParameters() const {
-    if ((types&Parameters) == 0)
-        throw OpenMMException("Invoked getParameters() on a State which does not contain parameters.");
-    return parameters;
-}
-State::State(double time, int numAtoms, DataType types) : types(types), time(time), ke(0), pe(0),
-        positions(types&Positions == 0 ? 0 : numAtoms), velocities(types&Velocities== 0 ? 0 : numAtoms),
-        forces(types&Forces== 0 ? 0 : numAtoms) {
-}
-vector<Vec3>& State::updPositions() {
-    return positions;
-}
-vector<Vec3>& State::updVelocities() {
-    return velocities;
-}
-vector<Vec3>& State::updForces() {
-    return forces;
-}
-map<string, double>& State::updParameters() {
-    return parameters;
-}
-void State::setEnergy(double kinetic, double potential) {
-    ke = kinetic;
-    pe = potential;
+
+int main() {
+    try {
+        testCalcKE();
+    }
+    catch(const exception& e) {
+        cout << "exception: " << e.what() << endl;
+        return 1;
+    }
+    cout << "Done" << endl;
+    return 0;
 }

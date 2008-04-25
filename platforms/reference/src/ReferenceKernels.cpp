@@ -38,7 +38,10 @@
 #include "SimTKReference/ReferenceLJCoulombIxn.h"
 #include "SimTKReference/ReferenceProperDihedralBond.h"
 #include "SimTKReference/ReferenceRbDihedralBond.h"
+#include "SimTKReference/ReferenceStochasticDynamics.h"
+#include "SimTKReference/ReferenceShakeAlgorithm.h"
 #include <cmath>
+#include <limits>
 
 using namespace OpenMM;
 using namespace std;
@@ -155,7 +158,7 @@ void ReferenceCalcStandardMMForceFieldKernel::initialize(const vector<vector<int
 }
 
 void ReferenceCalcStandardMMForceFieldKernel::executeForces(const Stream& positions, Stream& forces) {
-    RealOpenMM** posData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) positions.getImpl()).getData());
+    RealOpenMM** posData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) positions.getImpl()).getData()); // Reference code needs to be made const correct
     RealOpenMM** forceData = ((ReferenceFloatStreamImpl&) forces.getImpl()).getData();
     ReferenceBondForce refBondForce;
     ReferenceHarmonicBondIxn harmonicBond;
@@ -173,7 +176,7 @@ void ReferenceCalcStandardMMForceFieldKernel::executeForces(const Stream& positi
 }
 
 double ReferenceCalcStandardMMForceFieldKernel::executeEnergy(const Stream& positions) {
-    RealOpenMM** posData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) positions.getImpl()).getData());
+    RealOpenMM** posData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) positions.getImpl()).getData()); // Reference code needs to be made const correct
     RealOpenMM** forceData = allocateRealArray(numAtoms, 3);
     int arraySize = max(max(max(max(numAtoms, numBonds), numAngles), numPeriodicTorsions), numRBTorsions);
     RealOpenMM* energyArray = new RealOpenMM[arraySize];
@@ -227,14 +230,56 @@ void ReferenceIntegrateVerletStepKernel::initialize(const vector<double>& masses
 void ReferenceIntegrateVerletStepKernel::execute(Stream& positions, Stream& velocities, const Stream& forces, double stepSize) {
     
 }
+#include <iostream>
+ReferenceIntegrateLangevinStepKernel::~ReferenceIntegrateLangevinStepKernel() {
+    if (dynamics)
+        delete dynamics;
+    if (shake)
+        delete shake;
+    if (masses)
+        delete[] masses;
+    if (constraintIndices)
+        disposeIntArray(constraintIndices, numConstraints);
+    if (shakeParameters)
+        disposeRealArray(shakeParameters, numConstraints);
+}
 
 void ReferenceIntegrateLangevinStepKernel::initialize(const vector<double>& masses, const vector<vector<int> >& constraintIndices,
         const vector<double>& constraintLengths) {
-    
+    this->masses = new RealOpenMM[masses.size()];
+    for (int i = 0; i < masses.size(); ++i)
+        this->masses[i] = masses[i];
+    numConstraints = constraintIndices.size();
+    this->constraintIndices = allocateIntArray(numConstraints, 2);
+    for (int i = 0; i < numConstraints; ++i) {
+        this->constraintIndices[i][0] = constraintIndices[i][0];
+        this->constraintIndices[i][1] = constraintIndices[i][1];
+    }
+    shakeParameters = allocateRealArray(constraintLengths.size(), 1);
+    for (int i = 0; i < constraintLengths.size(); ++i)
+        shakeParameters[i][0] = constraintLengths[i];
 }
 
 void ReferenceIntegrateLangevinStepKernel::execute(Stream& positions, Stream& velocities, const Stream& forces, double temperature, double friction, double stepSize) {
-    
+    RealOpenMM** posData = ((ReferenceFloatStreamImpl&) positions.getImpl()).getData();
+    RealOpenMM** velData = ((ReferenceFloatStreamImpl&) velocities.getImpl()).getData();
+    RealOpenMM** forceData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) forces.getImpl()).getData()); // Reference code needs to be made const correct
+    if (dynamics == 0 || temperature != prevTemp || friction != prevFriction || stepSize != prevStepSize) {
+        // Recreate the computation objects with the new parameters.
+        
+        if (dynamics) {
+            delete dynamics;
+            delete shake;
+        }
+        RealOpenMM tau = (friction == 0.0 ? 0.0 : 1.0/friction);
+        dynamics = new ReferenceStochasticDynamics(positions.getSize(), stepSize, tau, temperature);
+        shake = new ReferenceShakeAlgorithm(numConstraints, constraintIndices, shakeParameters);
+        dynamics->setReferenceShakeAlgorithm(shake);
+        prevTemp = temperature;
+        prevFriction = friction;
+        prevStepSize = stepSize;
+    }
+    dynamics->update(positions.getSize(), posData, velData, forceData, masses);
 }
 
 void ReferenceIntegrateBrownianStepKernel::initialize(const vector<double>& masses, const vector<vector<int> >& constraintIndices,
@@ -255,9 +300,13 @@ void ReferenceApplyAndersenThermostatKernel::execute(Stream& velocities, double 
 }
 
 void ReferenceCalcKineticEnergyKernel::initialize(const vector<double>& masses) {
-    
+    this->masses = masses;
 }
 
-double ReferenceCalcKineticEnergyKernel::execute(const Stream& positions) {
-    return 0.0; // TODO implement correctly
+double ReferenceCalcKineticEnergyKernel::execute(const Stream& velocities) {
+    RealOpenMM** velData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) velocities.getImpl()).getData()); // Reference code needs to be made const correct
+    double energy = 0.0;
+    for (int i = 0; i < masses.size(); ++i)
+        energy += masses[i]*(velData[i][0]*velData[i][0]+velData[i][1]*velData[i][1]+velData[i][2]*velData[i][2]);
+    return 0.5*energy;
 }

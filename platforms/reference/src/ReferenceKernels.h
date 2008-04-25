@@ -35,6 +35,9 @@
 #include "kernels.h"
 #include "SimTKUtilities/SimTKOpenMMRealType.h"
 
+class ReferenceStochasticDynamics;
+class ReferenceShakeAlgorithm;
+
 namespace OpenMM {
 
 /**
@@ -158,8 +161,10 @@ public:
  */
 class ReferenceIntegrateLangevinStepKernel : public IntegrateLangevinStepKernel {
 public:
-    ReferenceIntegrateLangevinStepKernel(std::string name, const Platform& platform) : IntegrateLangevinStepKernel(name, platform) {
+    ReferenceIntegrateLangevinStepKernel(std::string name, const Platform& platform) : IntegrateLangevinStepKernel(name, platform),
+        dynamics(0), shake(0), masses(0), shakeParameters(0), constraintIndices(0) {
     }
+    ~ReferenceIntegrateLangevinStepKernel();
     /**
      * Initialize the kernel, setting up all parameters related to integrator.
      * 
@@ -180,6 +185,14 @@ public:
      * @param stepSize           the integration step size
      */
     void execute(Stream& positions, Stream& velocities, const Stream& forces, double temperature, double friction, double stepSize);
+private:
+    ReferenceStochasticDynamics* dynamics;
+    ReferenceShakeAlgorithm* shake;
+    RealOpenMM* masses;
+    RealOpenMM** shakeParameters;
+    int** constraintIndices;
+    int numConstraints;
+    double prevTemp, prevFriction, prevStepSize;
 };
 
 /**
@@ -254,7 +267,9 @@ public:
      * @param velocities a Stream of type Double3 containing the velocity (x, y, z) of each atom
      * @return the kinetic energy of the system
      */
-    double execute(const Stream& positions);
+    double execute(const Stream& velocities);
+private:
+    std::vector<double> masses;
 };
 
 } // namespace OpenMM

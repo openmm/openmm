@@ -832,7 +832,7 @@ void SimTKOpenMMUtilities::Xfree( const char* name, char* fileName, int line, vo
 #ifdef UseGromacsMalloc
    return save_free( name, fileName, line, ptr );
 #else
-   delete (char*) ptr;
+   delete[] (char*) ptr;
    return;
 #endif
 }

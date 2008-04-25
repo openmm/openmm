@@ -273,7 +273,7 @@ public:
      * @param velocities a Stream of type Double3 containing the velocity (x, y, z) of each atom
      * @return the kinetic energy of the system
      */
-    virtual double execute(const Stream& positions) = 0;
+    virtual double execute(const Stream& velocities) = 0;
 };
 
 } // namespace OpenMM

@@ -26,6 +26,7 @@
 #define __ReferenceDynamics_H__
 
 #include "ReferenceShakeAlgorithm.h"
+#include "../SimTKUtilities/SimTKOpenMMCommon.h"
 
 // ---------------------------------------------------------------------------------------
 

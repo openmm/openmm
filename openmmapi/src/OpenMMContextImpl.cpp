@@ -60,7 +60,13 @@ OpenMMContextImpl::OpenMMContextImpl(OpenMMContext& owner, System& system, Integ
     positions = platform->createStream("atomPositions", system.getNumAtoms(), Stream::Double3);
     velocities = platform->createStream("atomVelocities", system.getNumAtoms(), Stream::Double3);
     forces = platform->createStream("atomForces", system.getNumAtoms(), Stream::Double3);
+    double zero[] = {0.0, 0.0, 0.0};
+    velocities.fillWithValue(&zero);
     kineticEnergyKernel = platform->createKernel(CalcKineticEnergyKernel::Name());
+    vector<double> masses(system.getNumAtoms());
+    for (int i = 0; i < masses.size(); ++i)
+        masses[i] = system.getAtomMass(i);
+    dynamic_cast<CalcKineticEnergyKernel&>(kineticEnergyKernel.getImpl()).initialize(masses);
     integrator.initialize(*this);
 }
 
