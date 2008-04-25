@@ -27,6 +27,7 @@
 
 #include "ReferenceShakeAlgorithm.h"
 #include "../SimTKUtilities/SimTKOpenMMCommon.h"
+#include <cstddef>
 
 // ---------------------------------------------------------------------------------------
 
@@ -60,7 +61,7 @@ class ReferenceDynamics {
 
       RealOpenMM _deltaT;
       RealOpenMM _temperature;
-      RealOpenMM _randomNumberSeed;
+      uint32_t _randomNumberSeed;
 
       int _numberOf2DTempArrays;
       RealOpenMM*** _twoDTempArrays;
@@ -277,7 +278,7 @@ class ReferenceDynamics {
       
          --------------------------------------------------------------------------------------- */
       
-      RealOpenMM getRandomNumberSeed( void ) const;
+      uint32_t getRandomNumberSeed( void ) const;
       
       /**---------------------------------------------------------------------------------------
       
@@ -289,7 +290,7 @@ class ReferenceDynamics {
       
          --------------------------------------------------------------------------------------- */
       
-      int setRandomNumberSeed( RealOpenMM seed );
+      int setRandomNumberSeed( uint32_t seed );
 
       /**---------------------------------------------------------------------------------------
       

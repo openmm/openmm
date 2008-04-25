@@ -28,6 +28,7 @@
 #include "../SimTKUtilities/SimTKOpenMMCommon.h"
 #include "../SimTKUtilities/SimTKOpenMMLog.h"
 #include "../SimTKUtilities/SimTKOpenMMUtilities.h"
+#include "../sfmt/SFMT.h"
 #include "ReferenceDynamics.h"
 
 const int ReferenceDynamics::DefaultReturn      = 0;
@@ -56,7 +57,8 @@ ReferenceDynamics::ReferenceDynamics( int numberOfAtoms,  RealOpenMM deltaT, Rea
    // ---------------------------------------------------------------------------------------
 
    _timeStep             = 0;
-   _randomNumberSeed     = one;
+   _randomNumberSeed     = 0;
+   init_gen_rand(_randomNumberSeed);
 
    _twoDTempArrays       = 0;
    _twoDTempArrays       = NULL;
@@ -391,27 +393,25 @@ RealOpenMM ReferenceDynamics::getTemperature( void ) const {
    --------------------------------------------------------------------------------------- */
 
 RealOpenMM ReferenceDynamics::getNormallyDistributedRandomNumber( void ){
-
-   // ---------------------------------------------------------------------------------------
-
-   static const char* methodName  = "\nReferenceDynamics::getNormallyDistributedRandomNumber";
-
-   static const RealOpenMM randomValue        =  (RealOpenMM) 0.1;
-   static int printOnce                       =  0;
-
-   // ---------------------------------------------------------------------------------------
-
-   // for now just using fixed random value to allow for testing
-
-   if( !printOnce ){
-      std::stringstream message;
-      message << methodName;
-      message << " random value fixed at value=" << randomValue;
-      SimTKOpenMMLog::printMessage( message );
-      printOnce++;
-   }
-
-   return randomValue;
+    static bool nextValueIsValid = false;
+    static RealOpenMM nextValue = 0;
+    if (nextValueIsValid) {
+        nextValueIsValid = false;
+        return nextValue;
+    }
+    
+    // Use the polar form of the Box-Muller transformation to generate two Gaussian random numbers.
+    
+    RealOpenMM x, y, r2;
+    do {
+        x = 2.0*genrand_real2()-1.0;
+        y = 2.0*genrand_real2()-1.0;
+        r2 = x*x + y*y;
+    } while (r2 >= 1.0 || r2 == 0.0);
+    RealOpenMM multiplier = sqrt((-2.0*log(r2))/r2);
+    nextValue = y*multiplier;
+    nextValueIsValid = true;
+    return x*multiplier;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -422,7 +422,7 @@ RealOpenMM ReferenceDynamics::getNormallyDistributedRandomNumber( void ){
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM ReferenceDynamics::getRandomNumberSeed( void ) const {
+uint32_t ReferenceDynamics::getRandomNumberSeed( void ) const {
 
    // ---------------------------------------------------------------------------------------
 
@@ -443,7 +443,7 @@ RealOpenMM ReferenceDynamics::getRandomNumberSeed( void ) const {
 
    --------------------------------------------------------------------------------------- */
 
-int ReferenceDynamics::setRandomNumberSeed( RealOpenMM seed ){
+int ReferenceDynamics::setRandomNumberSeed( uint32_t seed ){
 
    // ---------------------------------------------------------------------------------------
 

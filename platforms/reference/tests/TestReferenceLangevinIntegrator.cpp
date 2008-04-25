@@ -88,15 +88,49 @@ void testSingleBond() {
         state = context.getState(State::Energy);
         double energy = state.getKineticEnergy()+state.getPotentialEnergy();
         ASSERT_EQUAL_TOL(initialEnergy, energy, 0.01);
-//        std::cout << state.getKineticEnergy()+state.getPotentialEnergy() << std::endl;
-//        std::cout << state.getPositions()[1]<<" "<<state.getKineticEnergy()<<" "<<state.getPotentialEnergy()<<" "<<(state.getKineticEnergy()+state.getPotentialEnergy()) << std::endl;
         integrator.step(1);
     }
+}
+
+void testTemperature() {
+    const int numAtoms = 8;
+    const double temp = 100.0;
+    ReferencePlatform platform;
+    System system(numAtoms, 0);
+    LangevinIntegrator integrator(temp, 2.0, 0.01);
+    StandardMMForceField* forceField = new StandardMMForceField(numAtoms, 0, 0, 0, 0);
+    for (int i = 0; i < numAtoms; ++i) {
+        system.setAtomMass(i, 2.0);
+        forceField->setAtomParameters(i, (i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
+    }
+    system.addForce(forceField);
+    OpenMMContext context(system, integrator, platform);
+    vector<Vec3> positions(numAtoms);
+    for (int i = 0; i < numAtoms; ++i)
+        positions[i] = Vec3((i%2 == 0 ? 2 : -2), (i%4 < 2 ? 2 : -2), (i < 4 ? 2 : -2));
+    context.setPositions(positions);
+    
+    // Let it equilibrate.
+    
+    integrator.step(10000);
+    
+    // Now run it for a while and see if the temperature is correct.
+    
+    double ke = 0.0;
+    for (int i = 0; i < 1000; ++i) {
+        State state = context.getState(State::Energy);
+        ke += state.getKineticEnergy();
+        integrator.step(1);
+    }
+    ke /= 1000;
+    double expected = 0.5*numAtoms*3*BOLTZ*temp;
+    ASSERT_EQUAL_TOL(expected, ke, 3*expected/std::sqrt(1000.0));
 }
 
 int main() {
     try {
         testSingleBond();
+        testTemperature();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;
