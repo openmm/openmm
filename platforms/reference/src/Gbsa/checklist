@@ -1,0 +1,13 @@
+
+In gbsaCpu: 
+
+	cpuSetGbsaParameters:
+      cpuGbsaLog setting
+		ACE approximation
+		force/energy conversion factors
+
+   cpuCalculateGbsaForces
+		cpuGbsaLog setting
+
+In CpuGbsa::computeGbsaForces
+   printSampleOutput = 10
