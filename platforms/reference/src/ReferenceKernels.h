@@ -36,6 +36,7 @@
 #include "SimTKUtilities/SimTKOpenMMRealType.h"
 
 class CpuObc;
+class ReferenceBrownianDynamics;
 class ReferenceStochasticDynamics;
 class ReferenceShakeAlgorithm;
 
@@ -203,8 +204,10 @@ private:
  */
 class ReferenceIntegrateBrownianStepKernel : public IntegrateBrownianStepKernel {
 public:
-    ReferenceIntegrateBrownianStepKernel(std::string name, const Platform& platform) : IntegrateBrownianStepKernel(name, platform) {
+    ReferenceIntegrateBrownianStepKernel(std::string name, const Platform& platform) : IntegrateBrownianStepKernel(name, platform),
+        dynamics(0), shake(0), masses(0), shakeParameters(0), constraintIndices(0) {
     }
+    ~ReferenceIntegrateBrownianStepKernel();
     /**
      * Initialize the kernel, setting up all parameters related to integrator.
      * 
@@ -225,6 +228,14 @@ public:
      * @param stepSize           the integration step size
      */
     void execute(Stream& positions, Stream& velocities, const Stream& forces, double temperature, double friction, double stepSize);
+private:
+    ReferenceBrownianDynamics* dynamics;
+    ReferenceShakeAlgorithm* shake;
+    RealOpenMM* masses;
+    RealOpenMM** shakeParameters;
+    int** constraintIndices;
+    int numConstraints;
+    double prevTemp, prevFriction, prevStepSize;
 };
 
 /**

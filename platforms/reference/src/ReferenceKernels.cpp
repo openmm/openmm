@@ -34,6 +34,7 @@
 #include "gbsa/CpuObc.h"
 #include "SimTKReference/ReferenceAngleBondIxn.h"
 #include "SimTKReference/ReferenceBondForce.h"
+#include "SimTKReference/ReferenceBrownianDynamics.h"
 #include "SimTKReference/ReferenceHarmonicBondIxn.h"
 #include "SimTKReference/ReferenceLJCoulomb14.h"
 #include "SimTKReference/ReferenceLJCoulombIxn.h"
@@ -258,7 +259,7 @@ void ReferenceIntegrateVerletStepKernel::initialize(const vector<double>& masses
 void ReferenceIntegrateVerletStepKernel::execute(Stream& positions, Stream& velocities, const Stream& forces, double stepSize) {
     
 }
-#include <iostream>
+
 ReferenceIntegrateLangevinStepKernel::~ReferenceIntegrateLangevinStepKernel() {
     if (dynamics)
         delete dynamics;
@@ -310,13 +311,54 @@ void ReferenceIntegrateLangevinStepKernel::execute(Stream& positions, Stream& ve
     dynamics->update(positions.getSize(), posData, velData, forceData, masses);
 }
 
+ReferenceIntegrateBrownianStepKernel::~ReferenceIntegrateBrownianStepKernel() {
+    if (dynamics)
+        delete dynamics;
+    if (shake)
+        delete shake;
+    if (masses)
+        delete[] masses;
+    if (constraintIndices)
+        disposeIntArray(constraintIndices, numConstraints);
+    if (shakeParameters)
+        disposeRealArray(shakeParameters, numConstraints);
+}
+
 void ReferenceIntegrateBrownianStepKernel::initialize(const vector<double>& masses, const vector<vector<int> >& constraintIndices,
         const vector<double>& constraintLengths) {
-    
+    this->masses = new RealOpenMM[masses.size()];
+    for (int i = 0; i < masses.size(); ++i)
+        this->masses[i] = masses[i];
+    numConstraints = constraintIndices.size();
+    this->constraintIndices = allocateIntArray(numConstraints, 2);
+    for (int i = 0; i < numConstraints; ++i) {
+        this->constraintIndices[i][0] = constraintIndices[i][0];
+        this->constraintIndices[i][1] = constraintIndices[i][1];
+    }
+    shakeParameters = allocateRealArray(constraintLengths.size(), 1);
+    for (int i = 0; i < constraintLengths.size(); ++i)
+        shakeParameters[i][0] = constraintLengths[i];
 }
 
 void ReferenceIntegrateBrownianStepKernel::execute(Stream& positions, Stream& velocities, const Stream& forces, double temperature, double friction, double stepSize) {
-    
+    RealOpenMM** posData = ((ReferenceFloatStreamImpl&) positions.getImpl()).getData();
+    RealOpenMM** velData = ((ReferenceFloatStreamImpl&) velocities.getImpl()).getData();
+    RealOpenMM** forceData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) forces.getImpl()).getData()); // Reference code needs to be made const correct
+    if (dynamics == 0 || temperature != prevTemp || friction != prevFriction || stepSize != prevStepSize) {
+        // Recreate the computation objects with the new parameters.
+        
+        if (dynamics) {
+            delete dynamics;
+            delete shake;
+        }
+        dynamics = new ReferenceBrownianDynamics(positions.getSize(), stepSize, friction, temperature);
+        shake = new ReferenceShakeAlgorithm(numConstraints, constraintIndices, shakeParameters);
+        dynamics->setReferenceShakeAlgorithm(shake);
+        prevTemp = temperature;
+        prevFriction = friction;
+        prevStepSize = stepSize;
+    }
+    dynamics->update(positions.getSize(), posData, velData, forceData, masses);
 }
 
 void ReferenceApplyAndersenThermostatKernel::initialize(const vector<double>& masses) {
