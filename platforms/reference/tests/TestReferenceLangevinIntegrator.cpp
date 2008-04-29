@@ -40,6 +40,7 @@
 #include "System.h"
 #include "LangevinIntegrator.h"
 #include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
+#include "../src/sfmt/SFMT.h"
 #include <iostream>
 #include <vector>
 
@@ -127,10 +128,50 @@ void testTemperature() {
     ASSERT_EQUAL_TOL(expected, ke, 3*expected/std::sqrt(1000.0));
 }
 
+void testConstraints() {
+    const int numAtoms = 8;
+    const double temp = 100.0;
+    ReferencePlatform platform;
+    System system(numAtoms, numAtoms-1);
+    LangevinIntegrator integrator(temp, 2.0, 0.01);
+    StandardMMForceField* forceField = new StandardMMForceField(numAtoms, 0, 0, 0, 0);
+    for (int i = 0; i < numAtoms; ++i) {
+        system.setAtomMass(i, 10.0);
+        forceField->setAtomParameters(i, (i%2 == 0 ? 0.2 : -0.2), 0.5, 5.0);
+    }
+    for (int i = 0; i < numAtoms-1; ++i)
+        system.setConstraintParameters(i, i, i+1, 1.0);
+    system.addForce(forceField);
+    OpenMMContext context(system, integrator, platform);
+    vector<Vec3> positions(numAtoms);
+    vector<Vec3> velocities(numAtoms);
+    init_gen_rand(0);
+    for (int i = 0; i < numAtoms; ++i) {
+        positions[i] = Vec3(i/2, (i+1)/2, 0);
+        velocities[i] = Vec3(genrand_real2()-0.5, genrand_real2()-0.5, genrand_real2()-0.5);
+    }
+    context.setPositions(positions);
+    context.setVelocities(velocities);
+    
+    // Simulate it and see whether the constraints remain satisfied.
+    
+    for (int i = 0; i < 1000; ++i) {
+        State state = context.getState(State::Positions);
+        for (int i = 0; i < numAtoms-1; ++i) {
+            Vec3 p1 = state.getPositions()[i];
+            Vec3 p2 = state.getPositions()[i+1];
+            double dist = std::sqrt((p1[0]-p2[0])*(p1[0]-p2[0])+(p1[1]-p2[1])*(p1[1]-p2[1])+(p1[2]-p2[2])*(p1[2]-p2[2]));
+            ASSERT_EQUAL_TOL(1.0, dist, 1e-4);
+        }
+        integrator.step(1);
+    }
+}
+
 int main() {
     try {
         testSingleBond();
         testTemperature();
+        testConstraints();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

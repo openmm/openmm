@@ -31,6 +31,7 @@
 
 #include "ReferenceKernels.h"
 #include "ReferenceFloatStreamImpl.h"
+#include "gbsa/CpuObc.h"
 #include "SimTKReference/ReferenceAngleBondIxn.h"
 #include "SimTKReference/ReferenceBondForce.h"
 #include "SimTKReference/ReferenceHarmonicBondIxn.h"
@@ -209,17 +210,44 @@ double ReferenceCalcStandardMMForceFieldKernel::executeEnergy(const Stream& posi
     return energy;
 }
 
-void ReferenceCalcGBSAOBCForceFieldKernel::initialize(const vector<double>& bornRadii, const vector<vector<double> >& atomParameters,
-        double solventDielectric, double soluteDielectric) {
-    
+ReferenceCalcGBSAOBCForceFieldKernel::~ReferenceCalcGBSAOBCForceFieldKernel() {
+    if (obc) {
+        delete obc->getObcParameters();
+        delete obc;
+    }
+}
+
+void ReferenceCalcGBSAOBCForceFieldKernel::initialize(const vector<vector<double> >& atomParameters, double solventDielectric, double soluteDielectric) {
+    int numAtoms = atomParameters.size();
+    charges.resize(numAtoms);
+    vector<RealOpenMM> atomicRadii(numAtoms);
+    vector<RealOpenMM> scaleFactors(numAtoms);
+    for (int i = 0; i < numAtoms; ++i) {
+        charges[i] = atomParameters[i][0];
+        atomicRadii[i] = atomParameters[i][1];
+        scaleFactors[i] = atomParameters[i][2];
+    }
+    ObcParameters* obcParameters  = new ObcParameters(numAtoms, ObcParameters::ObcTypeII);
+    obcParameters->setAtomicRadii(atomicRadii, SimTKOpenMMCommon::KcalAngUnits);
+    obcParameters->setScaledRadiusFactors(scaleFactors);
+    obcParameters->setSolventDielectric(solventDielectric);
+    obcParameters->setSoluteDielectric(soluteDielectric);
+    obc = new CpuObc(obcParameters);
+    obc->setIncludeAceApproximation(true);
 }
 
 void ReferenceCalcGBSAOBCForceFieldKernel::executeForces(const Stream& positions, Stream& forces) {
-    
+    RealOpenMM** posData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) positions.getImpl()).getData()); // Reference code needs to be made const correct
+    RealOpenMM** forceData = ((ReferenceFloatStreamImpl&) forces.getImpl()).getData();
+    obc->computeImplicitSolventForces(posData, &charges[0], forceData, 0);
 }
 
 double ReferenceCalcGBSAOBCForceFieldKernel::executeEnergy(const Stream& positions) {
-    return 0.0; // TODO implement correctly
+    RealOpenMM** posData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) positions.getImpl()).getData()); // Reference code needs to be made const correct
+    RealOpenMM** forceData = allocateRealArray(positions.getSize(), 3);
+    obc->computeImplicitSolventForces(posData, &charges[0], forceData, 1);
+    disposeRealArray(forceData, positions.getSize());
+    return obc->getEnergy();
 }
 
 void ReferenceIntegrateVerletStepKernel::initialize(const vector<double>& masses, const vector<vector<int> >& constraintIndices,

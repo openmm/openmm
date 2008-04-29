@@ -43,9 +43,7 @@ GBSAOBCForceFieldImpl::GBSAOBCForceFieldImpl(GBSAOBCForceField& owner, OpenMMCon
 void GBSAOBCForceFieldImpl::initialize(OpenMMContextImpl& context) {
     hasInitialized = true;
     kernel = context.getPlatform().createKernel(CalcGBSAOBCForceFieldKernel::Name());
-    std::vector<double> bornRadii;
-    // TODO calculate the initial Born radii.
-    vector<vector<double> > atomParameters;
+    vector<vector<double> > atomParameters(owner.getNumAtoms());
     for (int i = 0; i < owner.getNumAtoms(); ++i) {
         double charge, radius, scalingFactor;
         owner.getAtomParameters(i, charge, radius, scalingFactor);
@@ -53,8 +51,7 @@ void GBSAOBCForceFieldImpl::initialize(OpenMMContextImpl& context) {
         atomParameters[i].push_back(radius);
         atomParameters[i].push_back(scalingFactor);
     }
-    dynamic_cast<CalcGBSAOBCForceFieldKernel&>(kernel.getImpl()).initialize(bornRadii, atomParameters,
-            owner.getSolventDielectric(), owner.getSoluteDielectric());
+    dynamic_cast<CalcGBSAOBCForceFieldKernel&>(kernel.getImpl()).initialize(atomParameters, owner.getSolventDielectric(), owner.getSoluteDielectric());
 }
 
 void GBSAOBCForceFieldImpl::calcForces(OpenMMContextImpl& context, Stream& forces) {

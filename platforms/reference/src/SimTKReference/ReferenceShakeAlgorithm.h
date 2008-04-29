@@ -42,6 +42,7 @@ class ReferenceShakeAlgorithm {
       RealOpenMM* _d_ij2;
       RealOpenMM* _distanceTolerance;
       RealOpenMM* _reducedMasses;
+      bool _hasInitializedMasses;
       
    public:
 

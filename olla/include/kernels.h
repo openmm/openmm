@@ -106,13 +106,11 @@ public:
     /**
      * Initialize the kernel, setting up the values of all the force field parameters.
      * 
-     * @param bornRadii           the initial value of the Born radius for each atom
      * @param atomParameters      the force parameters (charge, atomic radius, scaling factor) for each atom
      * @param solventDielectric   the dielectric constant of the solvent
      * @param soluteDielectric    the dielectric constant of the solute
      */
-    virtual void initialize(const std::vector<double>& bornRadii, const std::vector<std::vector<double> >& atomParameters,
-            double solventDielectric, double soluteDielectric) = 0;
+    virtual void initialize(const std::vector<std::vector<double> >& atomParameters, double solventDielectric, double soluteDielectric) = 0;
     /**
      * Execute the kernel to calculate the forces.
      * 

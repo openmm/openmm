@@ -36,7 +36,7 @@
 
 using namespace OpenMM;
 
-GBSAOBCForceField::GBSAOBCForceField(int numAtoms) : atoms(numAtoms) {
+GBSAOBCForceField::GBSAOBCForceField(int numAtoms) : atoms(numAtoms), solventDielectric(78.3), soluteDielectric(1.0) {
 }
 
 void GBSAOBCForceField::getAtomParameters(int index, double& charge, double& radius, double& scalingFactor) const {

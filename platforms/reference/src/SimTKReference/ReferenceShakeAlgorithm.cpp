@@ -65,6 +65,7 @@ ReferenceShakeAlgorithm::ReferenceShakeAlgorithm( int numberOfConstraints,
 
    _maximumNumberOfIterations  = 15;
    _tolerance                  = (RealOpenMM) 1.0e-04;
+   _hasInitializedMasses       = false;
 
    // work arrays
 
@@ -237,7 +238,6 @@ int ReferenceShakeAlgorithm::applyShake( int numberOfAtoms, RealOpenMM** atomCoo
 
    static const RealOpenMM epsilon6    = (RealOpenMM) 1.0e-06;
 
-   static int firstPass                = 1;
    static int debug                    = 0;
 
    // ---------------------------------------------------------------------------------------
@@ -253,8 +253,8 @@ int ReferenceShakeAlgorithm::applyShake( int numberOfAtoms, RealOpenMM** atomCoo
 
    // calculate reduced masses on 1st pass
 
-   if( firstPass ){
-      firstPass = 0;
+   if( !_hasInitializedMasses ){
+      _hasInitializedMasses = true;
       for( int ii = 0; ii < _numberOfConstraints; ii++ ){
          int atomI          = _atomIndices[ii][0];
          int atomJ          = _atomIndices[ii][1];
@@ -298,7 +298,8 @@ int ReferenceShakeAlgorithm::applyShake( int numberOfAtoms, RealOpenMM** atomCoo
          }
 
          RealOpenMM rp2  = DOT3( rp_ij, rp_ij );
-         RealOpenMM diff = d_ij2[ii] - rp2;
+         RealOpenMM dist2= _shakeParameters[ii][0]*_shakeParameters[ii][0];
+         RealOpenMM diff = dist2 - rp2;
          int iconv       = (int) ( FABS( diff )*distanceTolerance[ii] );
          if( iconv ){
             RealOpenMM rrpr  = DOT3(  rp_ij, r_ij[ii] );

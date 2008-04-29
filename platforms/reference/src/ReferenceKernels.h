@@ -35,6 +35,7 @@
 #include "kernels.h"
 #include "SimTKUtilities/SimTKOpenMMRealType.h"
 
+class CpuObc;
 class ReferenceStochasticDynamics;
 class ReferenceShakeAlgorithm;
 
@@ -102,16 +103,15 @@ class ReferenceCalcGBSAOBCForceFieldKernel : public CalcGBSAOBCForceFieldKernel 
 public:
     ReferenceCalcGBSAOBCForceFieldKernel(std::string name, const Platform& platform) : CalcGBSAOBCForceFieldKernel(name, platform) {
     }
+    ~ReferenceCalcGBSAOBCForceFieldKernel();
     /**
      * Initialize the kernel, setting up the values of all the force field parameters.
      * 
-     * @param bornRadii           the initial value of the Born radius for each atom
      * @param atomParameters      the force parameters (charge, atomic radius, scaling factor) for each atom
      * @param solventDielectric   the dielectric constant of the solvent
      * @param soluteDielectric    the dielectric constant of the solute
      */
-    void initialize(const std::vector<double>& bornRadii, const std::vector<std::vector<double> >& atomParameters,
-            double solventDielectric, double soluteDielectric);
+    void initialize(const std::vector<std::vector<double> >& atomParameters, double solventDielectric, double soluteDielectric);
     /**
      * Execute the kernel to calculate the forces.
      * 
@@ -127,6 +127,9 @@ public:
      * @return the potential energy due to the GBSAOBCForceField
      */
     double executeEnergy(const Stream& positions);
+private:
+    CpuObc* obc;
+    std::vector<RealOpenMM> charges;
 };
 
 /**
