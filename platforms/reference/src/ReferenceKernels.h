@@ -39,6 +39,7 @@ class CpuObc;
 class ReferenceBrownianDynamics;
 class ReferenceStochasticDynamics;
 class ReferenceShakeAlgorithm;
+class ReferenceVerletDynamics;
 
 namespace OpenMM {
 
@@ -138,8 +139,10 @@ private:
  */
 class ReferenceIntegrateVerletStepKernel : public IntegrateVerletStepKernel {
 public:
-    ReferenceIntegrateVerletStepKernel(std::string name, const Platform& platform) : IntegrateVerletStepKernel(name, platform) {
+    ReferenceIntegrateVerletStepKernel(std::string name, const Platform& platform) : IntegrateVerletStepKernel(name, platform),
+        dynamics(0), shake(0), masses(0), shakeParameters(0), constraintIndices(0) {
     }
+    ~ReferenceIntegrateVerletStepKernel();
     /**
      * Initialize the kernel, setting up all parameters related to integrator.
      * 
@@ -158,6 +161,14 @@ public:
      * @param stepSize           the integration step size
      */
     void execute(Stream& positions, Stream& velocities, const Stream& forces, double stepSize);
+private:
+    ReferenceVerletDynamics* dynamics;
+    ReferenceShakeAlgorithm* shake;
+    RealOpenMM* masses;
+    RealOpenMM** shakeParameters;
+    int** constraintIndices;
+    int numConstraints;
+    double prevStepSize;
 };
 
 /**

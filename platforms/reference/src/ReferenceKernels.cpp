@@ -42,6 +42,7 @@
 #include "SimTKReference/ReferenceRbDihedralBond.h"
 #include "SimTKReference/ReferenceStochasticDynamics.h"
 #include "SimTKReference/ReferenceShakeAlgorithm.h"
+#include "SimTKReference/ReferenceVerletDynamics.h"
 #include <cmath>
 #include <limits>
 
@@ -251,13 +252,52 @@ double ReferenceCalcGBSAOBCForceFieldKernel::executeEnergy(const Stream& positio
     return obc->getEnergy();
 }
 
+ReferenceIntegrateVerletStepKernel::~ReferenceIntegrateVerletStepKernel() {
+    if (dynamics)
+        delete dynamics;
+    if (shake)
+        delete shake;
+    if (masses)
+        delete[] masses;
+    if (constraintIndices)
+        disposeIntArray(constraintIndices, numConstraints);
+    if (shakeParameters)
+        disposeRealArray(shakeParameters, numConstraints);
+}
+
 void ReferenceIntegrateVerletStepKernel::initialize(const vector<double>& masses, const vector<vector<int> >& constraintIndices,
         const vector<double>& constraintLengths) {
-    
+    this->masses = new RealOpenMM[masses.size()];
+    for (int i = 0; i < masses.size(); ++i)
+        this->masses[i] = masses[i];
+    numConstraints = constraintIndices.size();
+    this->constraintIndices = allocateIntArray(numConstraints, 2);
+    for (int i = 0; i < numConstraints; ++i) {
+        this->constraintIndices[i][0] = constraintIndices[i][0];
+        this->constraintIndices[i][1] = constraintIndices[i][1];
+    }
+    shakeParameters = allocateRealArray(constraintLengths.size(), 1);
+    for (int i = 0; i < constraintLengths.size(); ++i)
+        shakeParameters[i][0] = constraintLengths[i];
 }
 
 void ReferenceIntegrateVerletStepKernel::execute(Stream& positions, Stream& velocities, const Stream& forces, double stepSize) {
-    
+    RealOpenMM** posData = ((ReferenceFloatStreamImpl&) positions.getImpl()).getData();
+    RealOpenMM** velData = ((ReferenceFloatStreamImpl&) velocities.getImpl()).getData();
+    RealOpenMM** forceData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) forces.getImpl()).getData()); // Reference code needs to be made const correct
+    if (dynamics == 0 || stepSize != prevStepSize) {
+        // Recreate the computation objects with the new parameters.
+        
+        if (dynamics) {
+            delete dynamics;
+            delete shake;
+        }
+        dynamics = new ReferenceVerletDynamics(positions.getSize(), stepSize);
+        shake = new ReferenceShakeAlgorithm(numConstraints, constraintIndices, shakeParameters);
+        dynamics->setReferenceShakeAlgorithm(shake);
+        prevStepSize = stepSize;
+    }
+    dynamics->update(positions.getSize(), posData, velData, forceData, masses);
 }
 
 ReferenceIntegrateLangevinStepKernel::~ReferenceIntegrateLangevinStepKernel() {

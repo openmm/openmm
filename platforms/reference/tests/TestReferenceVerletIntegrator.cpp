@@ -30,7 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 /**
- * This tests the reference implementation of LangevinIntegrator.
+ * This tests the reference implementation of VerletIntegrator.
  */
 
 #include "../../../tests/AssertionUtilities.h"
@@ -38,7 +38,7 @@
 #include "ReferencePlatform.h"
 #include "StandardMMForceField.h"
 #include "System.h"
-#include "LangevinIntegrator.h"
+#include "VerletIntegrator.h"
 #include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
 #include "../src/sfmt/SFMT.h"
 #include <iostream>
@@ -54,7 +54,7 @@ void testSingleBond() {
     System system(2, 0);
     system.setAtomMass(0, 2.0);
     system.setAtomMass(1, 2.0);
-    LangevinIntegrator integrator(0, 0.1, 0.01);
+    VerletIntegrator integrator(0.01);
     StandardMMForceField* forceField = new StandardMMForceField(2, 1, 0, 0, 0);
     forceField->setBondParameters(0, 0, 1, 1.5, 1);
     system.addForce(forceField);
@@ -64,68 +64,24 @@ void testSingleBond() {
     positions[1] = Vec3(1, 0, 0);
     context.setPositions(positions);
     
-    // This is simply a damped harmonic oscillator, so compare it to the analytical solution.
+    // This is simply a harmonic oscillator, so compare it to the analytical solution.
     
-    double freq = std::sqrt(1-0.05*0.05);
+    const double freq = 1.0;;
+    State state = context.getState(State::Energy);
+    const double initialEnergy = state.getKineticEnergy()+state.getPotentialEnergy();
     for (int i = 0; i < 1000; ++i) {
-        State state = context.getState(State::Positions | State::Velocities);
+        state = context.getState(State::Positions | State::Velocities | State::Energy);
         double time = state.getTime();
-        double expectedDist = 1.5+0.5*std::exp(-0.05*time)*std::cos(freq*time);
+        double expectedDist = 1.5+0.5*std::cos(freq*time);
         ASSERT_EQUAL_VEC(Vec3(-0.5*expectedDist, 0, 0), state.getPositions()[0], 0.02);
         ASSERT_EQUAL_VEC(Vec3(0.5*expectedDist, 0, 0), state.getPositions()[1], 0.02);
-        double expectedSpeed = -0.5*std::exp(-0.05*time)*(0.05*std::cos(freq*time)+freq*std::sin(freq*time));
+        double expectedSpeed = -0.5*freq*std::sin(freq*time);
         ASSERT_EQUAL_VEC(Vec3(-0.5*expectedSpeed, 0, 0), state.getVelocities()[0], 0.02);
         ASSERT_EQUAL_VEC(Vec3(0.5*expectedSpeed, 0, 0), state.getVelocities()[1], 0.02);
-        integrator.step(1);
-    }
-    
-    // Not set the friction to a tiny value and see if it conserves energy.
-    
-    integrator.setFriction(5e-5);
-    context.setPositions(positions);
-    State state = context.getState(State::Energy);
-    double initialEnergy = state.getKineticEnergy()+state.getPotentialEnergy();
-    for (int i = 0; i < 1000; ++i) {
-        state = context.getState(State::Energy);
         double energy = state.getKineticEnergy()+state.getPotentialEnergy();
         ASSERT_EQUAL_TOL(initialEnergy, energy, 0.01);
         integrator.step(1);
     }
-}
-
-void testTemperature() {
-    const int numAtoms = 8;
-    const double temp = 100.0;
-    ReferencePlatform platform;
-    System system(numAtoms, 0);
-    LangevinIntegrator integrator(temp, 2.0, 0.01);
-    StandardMMForceField* forceField = new StandardMMForceField(numAtoms, 0, 0, 0, 0);
-    for (int i = 0; i < numAtoms; ++i) {
-        system.setAtomMass(i, 2.0);
-        forceField->setAtomParameters(i, (i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
-    }
-    system.addForce(forceField);
-    OpenMMContext context(system, integrator, platform);
-    vector<Vec3> positions(numAtoms);
-    for (int i = 0; i < numAtoms; ++i)
-        positions[i] = Vec3((i%2 == 0 ? 2 : -2), (i%4 < 2 ? 2 : -2), (i < 4 ? 2 : -2));
-    context.setPositions(positions);
-    
-    // Let it equilibrate.
-    
-    integrator.step(10000);
-    
-    // Now run it for a while and see if the temperature is correct.
-    
-    double ke = 0.0;
-    for (int i = 0; i < 1000; ++i) {
-        State state = context.getState(State::Energy);
-        ke += state.getKineticEnergy();
-        integrator.step(1);
-    }
-    ke /= 1000;
-    double expected = 0.5*numAtoms*3*BOLTZ*temp;
-    ASSERT_EQUAL_TOL(expected, ke, 3*expected/std::sqrt(1000.0));
 }
 
 void testConstraints() {
@@ -133,7 +89,7 @@ void testConstraints() {
     const double temp = 100.0;
     ReferencePlatform platform;
     System system(numAtoms, numAtoms-1);
-    LangevinIntegrator integrator(temp, 2.0, 0.01);
+    VerletIntegrator integrator(0.002);
     StandardMMForceField* forceField = new StandardMMForceField(numAtoms, 0, 0, 0, 0);
     for (int i = 0; i < numAtoms; ++i) {
         system.setAtomMass(i, 10.0);
@@ -155,14 +111,20 @@ void testConstraints() {
     
     // Simulate it and see whether the constraints remain satisfied.
     
+    double initialEnergy = 0.0;
     for (int i = 0; i < 1000; ++i) {
-        State state = context.getState(State::Positions);
+        State state = context.getState(State::Positions | State::Energy);
         for (int j = 0; j < numAtoms-1; ++j) {
             Vec3 p1 = state.getPositions()[j];
             Vec3 p2 = state.getPositions()[j+1];
             double dist = std::sqrt((p1[0]-p2[0])*(p1[0]-p2[0])+(p1[1]-p2[1])*(p1[1]-p2[1])+(p1[2]-p2[2])*(p1[2]-p2[2]));
             ASSERT_EQUAL_TOL(1.0, dist, 2e-4);
         }
+        double energy = state.getKineticEnergy()+state.getPotentialEnergy();
+        if (i == 1)
+            initialEnergy = energy;
+        else if (i > 1)
+            ASSERT_EQUAL_TOL(initialEnergy, energy, 0.01);
         integrator.step(1);
     }
 }
@@ -170,7 +132,6 @@ void testConstraints() {
 int main() {
     try {
         testSingleBond();
-        testTemperature();
         testConstraints();
     }
     catch(const exception& e) {
