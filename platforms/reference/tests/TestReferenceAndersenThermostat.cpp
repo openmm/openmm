@@ -29,39 +29,71 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "internal/AndersenThermostatImpl.h"
-#include "internal/OpenMMContextImpl.h"
-#include "Integrator.h"
+/**
+ * This tests the reference implementation of AndersenThermostat.
+ */
+
+#include "../../../tests/AssertionUtilities.h"
+#include "AndersenThermostat.h"
+#include "OpenMMContext.h"
+#include "ReferencePlatform.h"
+#include "StandardMMForceField.h"
 #include "System.h"
-#include "kernels.h"
+#include "VerletIntegrator.h"
+#include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
+#include "../src/sfmt/SFMT.h"
+#include <iostream>
 #include <vector>
 
 using namespace OpenMM;
-using std::vector;
+using namespace std;
 
-AndersenThermostatImpl::AndersenThermostatImpl(AndersenThermostat& owner, OpenMMContextImpl& context) : owner(owner) {
-    kernel = context.getPlatform().createKernel(ApplyAndersenThermostatKernel::Name());
-    const System& system = context.getSystem();
-    vector<double> masses(system.getNumAtoms());
-    for (int i = 0; i < system.getNumAtoms(); ++i)
-        masses[i] = system.getAtomMass(i);
-    dynamic_cast<ApplyAndersenThermostatKernel&>(kernel.getImpl()).initialize(masses);
+void testTemperature() {
+    const int numAtoms = 8;
+    const double temp = 100.0;
+    const double collisionFreq = 10.0;
+    ReferencePlatform platform;
+    System system(numAtoms, 0);
+    VerletIntegrator integrator(0.01);
+    StandardMMForceField* forceField = new StandardMMForceField(numAtoms, 0, 0, 0, 0);
+    for (int i = 0; i < numAtoms; ++i) {
+        system.setAtomMass(i, 2.0);
+        forceField->setAtomParameters(i, (i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
+    }
+    system.addForce(forceField);
+    AndersenThermostat* thermstat = new AndersenThermostat(temp, collisionFreq);
+    system.addForce(thermstat);
+    OpenMMContext context(system, integrator, platform);
+    vector<Vec3> positions(numAtoms);
+    for (int i = 0; i < numAtoms; ++i)
+        positions[i] = Vec3((i%2 == 0 ? 2 : -2), (i%4 < 2 ? 2 : -2), (i < 4 ? 2 : -2));
+    context.setPositions(positions);
+    
+    // Let it equilibrate.
+    
+    integrator.step(10000);
+    
+    // Now run it for a while and see if the temperature is correct.
+    
+    double ke = 0.0;
+    for (int i = 0; i < 1000; ++i) {
+        State state = context.getState(State::Energy);
+        ke += state.getKineticEnergy();
+        integrator.step(1);
+    }
+    ke /= 1000;
+    double expected = 0.5*numAtoms*3*BOLTZ*temp;
+    ASSERT_EQUAL_TOL(expected, ke, 3*expected/std::sqrt(1000.0));
 }
 
-void AndersenThermostatImpl::updateContextState(OpenMMContextImpl& context) {
-    dynamic_cast<ApplyAndersenThermostatKernel&>(kernel.getImpl()).execute(context.getVelocities(), context.getParameter(AndersenThermostat::Temperature),
-            context.getParameter(AndersenThermostat::CollisionFrequency), context.getIntegrator().getStepSize());
-}
-
-std::map<std::string, double> AndersenThermostatImpl::getDefaultParameters() {
-    std::map<std::string, double> parameters;
-    parameters[AndersenThermostat::Temperature] = getOwner().getDefaultTemperature();
-    parameters[AndersenThermostat::CollisionFrequency] = getOwner().getDefaultCollisionFrequency();
-    return parameters;
-}
-
-std::vector<std::string> AndersenThermostatImpl::getKernelNames() {
-    std::vector<std::string> names;
-    names.push_back(ApplyAndersenThermostatKernel::Name());
-    return names;
+int main() {
+    try {
+        testTemperature();
+    }
+    catch(const exception& e) {
+        cout << "exception: " << e.what() << endl;
+        return 1;
+    }
+    cout << "Done" << endl;
+    return 0;
 }

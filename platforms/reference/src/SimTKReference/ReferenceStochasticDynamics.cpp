@@ -284,9 +284,9 @@ int ReferenceStochasticDynamics::updatePart1( int numberOfAtoms, RealOpenMM** at
          oldVelocities[ii][jj] = velocities[ii][jj];
 
          RealOpenMM Vmh        = xVector[ii][jj]*fixedParameters[D]/(tau*fixedParameters[C]) +
-                                 sqrtInvMass*fixedParameters[Yv]*getNormallyDistributedRandomNumber();
+                                 sqrtInvMass*fixedParameters[Yv]*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
 
-           vVector[ii][jj]     = sqrtInvMass*fixedParameters[V]*getNormallyDistributedRandomNumber();
+           vVector[ii][jj]     = sqrtInvMass*fixedParameters[V]*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
           
            velocities[ii][jj]  = oldVelocities[ii][jj]*fixedParameters[EM] +
                                  inverseMasses[ii]*forces[ii][jj]*tau*( one - fixedParameters[EM]) +
@@ -375,9 +375,9 @@ int ReferenceStochasticDynamics::updatePart2( int numberOfAtoms, RealOpenMM** at
 
            velocities[ii][jj]  = (xPrime[ii][jj] - atomCoordinates[ii][jj])*fix1;
          RealOpenMM Xmh        = vVector[ii][jj]*tau*fixedParameters[D]/(fixedParameters[EM] - one) +
-                                 sqrtInvMass*fixedParameters[Yx]*getNormallyDistributedRandomNumber();
+                                 sqrtInvMass*fixedParameters[Yx]*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
 
-           xVector[ii][jj]     = sqrtInvMass*fixedParameters[X]*getNormallyDistributedRandomNumber();
+           xVector[ii][jj]     = sqrtInvMass*fixedParameters[X]*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
             
            xPrime[ii][jj]     += xVector[ii][jj] - Xmh;
       }
@@ -480,7 +480,7 @@ int ReferenceStochasticDynamics::update( int numberOfAtoms, RealOpenMM** atomCoo
       for( int ii = 0; ii < numberOfAtoms; ii++ ){
          RealOpenMM sqrtInverseMass = SQRT( inverseMasses[ii] )*fixedParameters[X];
          for( int jj = 0; jj < 3; jj++ ){
-            xVector[ii][jj] = sqrtInverseMass*getNormallyDistributedRandomNumber();
+            xVector[ii][jj] = sqrtInverseMass*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
          }
       }
 

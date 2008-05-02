@@ -52,6 +52,11 @@ bool checkString( T& t, const std::string& s, std::ios_base& (*f)(std::ios_base&
 
 class SimTKOpenMMUtilities {
 
+   private:
+
+       static uint32_t _randomNumberSeed;
+       static bool _randomInitialized;
+
    public:
 
       // file flag enums
@@ -575,6 +580,48 @@ class SimTKOpenMMUtilities {
       static int addTwoDimArray( int dimension1, int dimension2, RealOpenMM** arrayToAdd,
                                  RealOpenMM** sumArray );
       
+      
+      /**---------------------------------------------------------------------------------------
+      
+         Get normally distributed random number
+      
+         @return random value
+      
+         --------------------------------------------------------------------------------------- */
+      
+      static RealOpenMM getNormallyDistributedRandomNumber( void );
+      
+      /**---------------------------------------------------------------------------------------
+      
+         Get uniformly distributed random number in the range [0, 1)
+      
+         @return random value
+      
+         --------------------------------------------------------------------------------------- */
+      
+      static RealOpenMM getUniformlyDistributedRandomNumber( void );
+
+      /**---------------------------------------------------------------------------------------
+      
+         Get random number seed
+      
+         @return random number seed
+      
+         --------------------------------------------------------------------------------------- */
+      
+      static uint32_t getRandomNumberSeed( void );
+      
+      /**---------------------------------------------------------------------------------------
+      
+         Set random number seed
+      
+         @param seed    new seed value
+      
+         @return DefaultReturn
+      
+         --------------------------------------------------------------------------------------- */
+      
+      static void setRandomNumberSeed( uint32_t seed );
       
 };
    

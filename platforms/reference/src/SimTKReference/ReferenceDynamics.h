@@ -61,7 +61,6 @@ class ReferenceDynamics {
 
       RealOpenMM _deltaT;
       RealOpenMM _temperature;
-      uint32_t _randomNumberSeed;
 
       int _numberOf2DTempArrays;
       RealOpenMM*** _twoDTempArrays;
@@ -259,38 +258,6 @@ class ReferenceDynamics {
       
       virtual int update( int numberOfAtoms, RealOpenMM** atomCoordinates,
                           RealOpenMM** velocities, RealOpenMM** forces, RealOpenMM* masses );
-      
-      /**---------------------------------------------------------------------------------------
-      
-         Get normally distributed random number
-      
-         @return random value
-      
-         --------------------------------------------------------------------------------------- */
-      
-      RealOpenMM getNormallyDistributedRandomNumber( void );
-      
-      /**---------------------------------------------------------------------------------------
-      
-         Get random number seed
-      
-         @return random number seed
-      
-         --------------------------------------------------------------------------------------- */
-      
-      uint32_t getRandomNumberSeed( void ) const;
-      
-      /**---------------------------------------------------------------------------------------
-      
-         Set random number seed
-      
-         @param seed    new seed value
-      
-         @return DefaultReturn
-      
-         --------------------------------------------------------------------------------------- */
-      
-      int setRandomNumberSeed( uint32_t seed );
 
       /**---------------------------------------------------------------------------------------
       

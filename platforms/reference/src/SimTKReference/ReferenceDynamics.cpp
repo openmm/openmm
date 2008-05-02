@@ -28,7 +28,6 @@
 #include "../SimTKUtilities/SimTKOpenMMCommon.h"
 #include "../SimTKUtilities/SimTKOpenMMLog.h"
 #include "../SimTKUtilities/SimTKOpenMMUtilities.h"
-#include "../sfmt/SFMT.h"
 #include "ReferenceDynamics.h"
 
 const int ReferenceDynamics::DefaultReturn      = 0;
@@ -57,8 +56,6 @@ ReferenceDynamics::ReferenceDynamics( int numberOfAtoms,  RealOpenMM deltaT, Rea
    // ---------------------------------------------------------------------------------------
 
    _timeStep             = 0;
-   _randomNumberSeed     = 0;
-   init_gen_rand(_randomNumberSeed);
 
    _twoDTempArrays       = 0;
    _twoDTempArrays       = NULL;
@@ -386,77 +383,6 @@ RealOpenMM ReferenceDynamics::getTemperature( void ) const {
 
 /**---------------------------------------------------------------------------------------
 
-   Get normally distributed random number
-
-   @return random value
-
-   --------------------------------------------------------------------------------------- */
-
-RealOpenMM ReferenceDynamics::getNormallyDistributedRandomNumber( void ){
-    static bool nextValueIsValid = false;
-    static RealOpenMM nextValue = 0;
-    if (nextValueIsValid) {
-        nextValueIsValid = false;
-        return nextValue;
-    }
-    
-    // Use the polar form of the Box-Muller transformation to generate two Gaussian random numbers.
-    
-    RealOpenMM x, y, r2;
-    do {
-        x = 2.0*genrand_real2()-1.0;
-        y = 2.0*genrand_real2()-1.0;
-        r2 = x*x + y*y;
-    } while (r2 >= 1.0 || r2 == 0.0);
-    RealOpenMM multiplier = sqrt((-2.0*log(r2))/r2);
-    nextValue = y*multiplier;
-    nextValueIsValid = true;
-    return x*multiplier;
-}
-
-/**---------------------------------------------------------------------------------------
-
-   Get random number seed
-
-   @return random number seed
-
-   --------------------------------------------------------------------------------------- */
-
-uint32_t ReferenceDynamics::getRandomNumberSeed( void ) const {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName  = "\nReferenceDynamics::getRandomNumberSeed";
-
-   // ---------------------------------------------------------------------------------------
-
-   return _randomNumberSeed;
-}
-
-/**---------------------------------------------------------------------------------------
-
-   Set random number seed
-
-   @param seed    new seed value
-
-   @return ReferenceDynamics::DefaultReturn
-
-   --------------------------------------------------------------------------------------- */
-
-int ReferenceDynamics::setRandomNumberSeed( uint32_t seed ){
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName  = "\nReferenceDynamics::setRandomNumberSeed";
-
-   // ---------------------------------------------------------------------------------------
-
-   _randomNumberSeed = seed;
-   return ReferenceDynamics::DefaultReturn;
-}
-
-/**---------------------------------------------------------------------------------------
-
    Get ReferenceShake
 
    @return referenceShake  object
@@ -664,7 +590,7 @@ int ReferenceDynamics::printParameters( std::stringstream& message ) const {
    message << "delta_t=" << getDeltaT()          << " ";
    message << "temperature=" << getTemperature() << " ";
    message << "step=" << getTimeStep()           << " ";
-   message << "seed=" << getRandomNumberSeed()   << " ";
+   message << "seed=" << SimTKOpenMMUtilities::getRandomNumberSeed()   << " ";
    message << std::endl;
 
    return ReferenceDynamics::DefaultReturn;
@@ -759,7 +685,7 @@ int ReferenceDynamics::writeState( int numberOfAtoms, RealOpenMM** atomCoordinat
    scalarR.push_back( getDeltaT() );
    scalarNameR.push_back( "delta_t" );
 
-   scalarR.push_back( getRandomNumberSeed() );
+   scalarR.push_back( SimTKOpenMMUtilities::getRandomNumberSeed() );
    scalarNameR.push_back( "seed" );
 
    scalarR.push_back( getTemperature() );

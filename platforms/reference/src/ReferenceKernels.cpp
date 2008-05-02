@@ -32,6 +32,7 @@
 #include "ReferenceKernels.h"
 #include "ReferenceFloatStreamImpl.h"
 #include "gbsa/CpuObc.h"
+#include "SimTKReference/ReferenceAndersenThermostat.h"
 #include "SimTKReference/ReferenceAngleBondIxn.h"
 #include "SimTKReference/ReferenceBondForce.h"
 #include "SimTKReference/ReferenceBrownianDynamics.h"
@@ -401,12 +402,23 @@ void ReferenceIntegrateBrownianStepKernel::execute(Stream& positions, Stream& ve
     dynamics->update(positions.getSize(), posData, velData, forceData, masses);
 }
 
+ReferenceApplyAndersenThermostatKernel::~ReferenceApplyAndersenThermostatKernel() {
+    if (thermostat)
+        delete thermostat;
+    if (masses)
+        delete[] masses;
+}
+
 void ReferenceApplyAndersenThermostatKernel::initialize(const vector<double>& masses) {
-    
+    this->masses = new RealOpenMM[masses.size()];
+    for (int i = 0; i < masses.size(); ++i)
+        this->masses[i] = masses[i];
+    thermostat = new ReferenceAndersenThermostat();
 }
 
 void ReferenceApplyAndersenThermostatKernel::execute(Stream& velocities, double temperature, double collisionFrequency, double stepSize) {
-    
+    RealOpenMM** velData = ((ReferenceFloatStreamImpl&) velocities.getImpl()).getData();
+    thermostat->applyThermostat(velocities.getSize(), velData, masses, temperature, collisionFrequency, stepSize);
 }
 
 void ReferenceCalcKineticEnergyKernel::initialize(const vector<double>& masses) {

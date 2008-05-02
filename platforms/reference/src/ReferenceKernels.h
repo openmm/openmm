@@ -36,6 +36,7 @@
 #include "SimTKUtilities/SimTKOpenMMRealType.h"
 
 class CpuObc;
+class ReferenceAndersenThermostat;
 class ReferenceBrownianDynamics;
 class ReferenceStochasticDynamics;
 class ReferenceShakeAlgorithm;
@@ -254,8 +255,9 @@ private:
  */
 class ReferenceApplyAndersenThermostatKernel : public ApplyAndersenThermostatKernel {
 public:
-    ReferenceApplyAndersenThermostatKernel(std::string name, const Platform& platform) : ApplyAndersenThermostatKernel(name, platform) {
+    ReferenceApplyAndersenThermostatKernel(std::string name, const Platform& platform) : ApplyAndersenThermostatKernel(name, platform), thermostat(0) {
     }
+    ~ReferenceApplyAndersenThermostatKernel();
     /**
      * Initialize the kernel, setting up the values of unchanging parameters.
      * 
@@ -271,6 +273,9 @@ public:
      * @param stepSize           the integration step size
      */
     void execute(Stream& velocities, double temperature, double collisionFrequency, double stepSize);
+private:
+    ReferenceAndersenThermostat* thermostat;
+    RealOpenMM* masses;
 };
 
 /**

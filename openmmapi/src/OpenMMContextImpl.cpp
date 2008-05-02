@@ -36,9 +36,11 @@
 #include "kernels.h"
 #include "internal/ForceImpl.h"
 #include "internal/OpenMMContextImpl.h"
+#include <map>
 #include <vector>
 
 using namespace OpenMM;
+using std::map;
 using std::vector;
 using std::string;
 
@@ -48,6 +50,8 @@ OpenMMContextImpl::OpenMMContextImpl(OpenMMContext& owner, System& system, Integ
     kernelNames.push_back(CalcKineticEnergyKernel::Name());
     for (int i = 0; i < system.getNumForces(); ++i) {
         forceImpls.push_back(system.getForce(i).createImpl(*this));
+        map<string, double> forceParameters = forceImpls[forceImpls.size()-1]->getDefaultParameters();
+        parameters.insert(forceParameters.begin(), forceParameters.end());
         vector<string> forceKernels = forceImpls[forceImpls.size()-1]->getKernelNames();
         kernelNames.insert(kernelNames.begin(), forceKernels.begin(), forceKernels.end());
     }

@@ -26,10 +26,14 @@
 
 #include "SimTKOpenMMUtilities.h"
 #include "SimTKOpenMMLog.h"
+#include "../sfmt/SFMT.h"
 
 // fabs(), ...
 
 #include <math.h>
+
+uint32_t SimTKOpenMMUtilities::_randomNumberSeed = 0;
+bool SimTKOpenMMUtilities::_randomInitialized = false;
 
 /* ---------------------------------------------------------------------------------------
 
@@ -1413,4 +1417,95 @@ int SimTKOpenMMUtilities::addTwoDimArray( int dimension1, int dimension2,
    }
       
    return  SimTKOpenMMCommon::DefaultReturn;
+}
+
+/**---------------------------------------------------------------------------------------
+
+   Get normally distributed random number
+
+   @return random value
+
+   --------------------------------------------------------------------------------------- */
+
+RealOpenMM SimTKOpenMMUtilities::getNormallyDistributedRandomNumber( void ) {
+    static bool nextValueIsValid = false;
+    static RealOpenMM nextValue = 0;
+    if (nextValueIsValid) {
+        nextValueIsValid = false;
+        return nextValue;
+    }
+    if (!_randomInitialized) {
+        init_gen_rand(_randomNumberSeed);
+        _randomInitialized = true;
+    }
+    
+    // Use the polar form of the Box-Muller transformation to generate two Gaussian random numbers.
+    
+    RealOpenMM x, y, r2;
+    do {
+        x = 2.0*genrand_real2()-1.0;
+        y = 2.0*genrand_real2()-1.0;
+        r2 = x*x + y*y;
+    } while (r2 >= 1.0 || r2 == 0.0);
+    RealOpenMM multiplier = sqrt((-2.0*log(r2))/r2);
+    nextValue = y*multiplier;
+    nextValueIsValid = true;
+    return x*multiplier;
+}
+
+/**---------------------------------------------------------------------------------------
+
+   Get uniformly distributed random number in the range [0, 1)
+
+   @return random value
+
+   --------------------------------------------------------------------------------------- */
+
+RealOpenMM SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber( void ) {
+    if (!_randomInitialized) {
+        init_gen_rand(_randomNumberSeed);
+        _randomInitialized = true;
+    }
+    return genrand_real2();
+}
+
+/**---------------------------------------------------------------------------------------
+
+   Get random number seed
+
+   @return random number seed
+
+   --------------------------------------------------------------------------------------- */
+
+uint32_t SimTKOpenMMUtilities::getRandomNumberSeed( void ) {
+
+   // ---------------------------------------------------------------------------------------
+
+   // static const char* methodName  = "\nReferenceDynamics::getRandomNumberSeed";
+
+   // ---------------------------------------------------------------------------------------
+
+   return _randomNumberSeed;
+}
+
+/**---------------------------------------------------------------------------------------
+
+   Set random number seed
+
+   @param seed    new seed value
+
+   @return ReferenceDynamics::DefaultReturn
+
+   --------------------------------------------------------------------------------------- */
+
+void SimTKOpenMMUtilities::setRandomNumberSeed( uint32_t seed ) {
+
+   // ---------------------------------------------------------------------------------------
+
+   // static const char* methodName  = "\nReferenceDynamics::setRandomNumberSeed";
+
+   // ---------------------------------------------------------------------------------------
+
+   _randomNumberSeed = seed;
+   init_gen_rand(_randomNumberSeed);
 }
