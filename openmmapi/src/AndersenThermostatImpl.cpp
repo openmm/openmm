@@ -39,7 +39,10 @@
 using namespace OpenMM;
 using std::vector;
 
-AndersenThermostatImpl::AndersenThermostatImpl(AndersenThermostat& owner, OpenMMContextImpl& context) : owner(owner) {
+AndersenThermostatImpl::AndersenThermostatImpl(AndersenThermostat& owner) : owner(owner) {
+}
+
+void AndersenThermostatImpl::initialize(OpenMMContextImpl& context) {
     kernel = context.getPlatform().createKernel(ApplyAndersenThermostatKernel::Name());
     const System& system = context.getSystem();
     vector<double> masses(system.getNumAtoms());

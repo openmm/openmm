@@ -51,6 +51,6 @@ void GBSAOBCForceField::setAtomParameters(int index, double charge, double radiu
     atoms[index].scalingFactor = scalingFactor;
 }
 
-ForceImpl* GBSAOBCForceField::createImpl(OpenMMContextImpl& context) {
-    return new GBSAOBCForceFieldImpl(*this, context);
+ForceImpl* GBSAOBCForceField::createImpl() {
+    return new GBSAOBCForceFieldImpl(*this);
 }

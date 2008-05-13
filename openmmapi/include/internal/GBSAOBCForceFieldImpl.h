@@ -45,7 +45,8 @@ namespace OpenMM {
 
 class GBSAOBCForceFieldImpl : public ForceImpl {
 public:
-    GBSAOBCForceFieldImpl(GBSAOBCForceField& owner, OpenMMContextImpl& context);
+    GBSAOBCForceFieldImpl(GBSAOBCForceField& owner);
+    void initialize(OpenMMContextImpl& context);
     GBSAOBCForceField& getOwner() {
         return owner;
     }
@@ -59,10 +60,8 @@ public:
     }
     std::vector<std::string> getKernelNames();
 private:
-    void initialize(OpenMMContextImpl& context);
     GBSAOBCForceField& owner;
     Kernel kernel;
-    bool hasInitialized;
 };
 
 } // namespace OpenMM

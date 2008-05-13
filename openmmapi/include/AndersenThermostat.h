@@ -72,7 +72,7 @@ public:
         return defaultFreq;
     }
 protected:
-    ForceImpl* createImpl(OpenMMContextImpl& context);
+    ForceImpl* createImpl();
 private:
     double defaultTemp, defaultFreq;
 };

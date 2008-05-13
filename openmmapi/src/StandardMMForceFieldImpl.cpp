@@ -38,7 +38,13 @@ using std::pair;
 using std::vector;
 using std::set;
 
-StandardMMForceFieldImpl::StandardMMForceFieldImpl(StandardMMForceField& owner, OpenMMContextImpl& context) : owner(owner) {
+StandardMMForceFieldImpl::StandardMMForceFieldImpl(StandardMMForceField& owner) : owner(owner) {
+}
+
+StandardMMForceFieldImpl::~StandardMMForceFieldImpl() {
+}
+
+void StandardMMForceFieldImpl::initialize(OpenMMContextImpl& context) {
     kernel = context.getPlatform().createKernel(CalcStandardMMForceFieldKernel::Name());
     vector<vector<int> > bondIndices(owner.getNumBonds());
     vector<vector<double> > bondParameters(owner.getNumBonds());
@@ -114,9 +120,6 @@ StandardMMForceFieldImpl::StandardMMForceFieldImpl(StandardMMForceField& owner, 
     }
     dynamic_cast<CalcStandardMMForceFieldKernel&>(kernel.getImpl()).initialize(bondIndices, bondParameters, angleIndices, angleParameters,
             periodicTorsionIndices, periodicTorsionParameters, rbTorsionIndices, rbTorsionParameters, bonded14Indices, 0.5, 1.0/1.2, exclusions, nonbondedParameters);
-}
-
-StandardMMForceFieldImpl::~StandardMMForceFieldImpl() {
 }
 
 void StandardMMForceFieldImpl::calcForces(OpenMMContextImpl& context, Stream& forces) {

@@ -57,6 +57,11 @@ public:
     virtual ~ForceImpl() {
     }
     /**
+     * This is called after the ForceImpl is created and before updateContextState(), calcForces(),
+     * or calcEnergy() is called on it.  This allows it to do any necessary initialization.
+     */
+    virtual void initialize(OpenMMContextImpl& context) = 0;
+    /**
      * Get the Force object from which this ForceImpl was created.
      */
     virtual Force& getOwner() = 0;

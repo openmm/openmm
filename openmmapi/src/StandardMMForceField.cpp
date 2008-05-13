@@ -128,6 +128,6 @@ void StandardMMForceField::setRBTorsionParameters(int index, int atom1, int atom
     rbTorsions[index].c[5] = c5;
 }
 
-ForceImpl* StandardMMForceField::createImpl(OpenMMContextImpl& context) {
-    return new StandardMMForceFieldImpl(*this, context);
+ForceImpl* StandardMMForceField::createImpl() {
+    return new StandardMMForceFieldImpl(*this);
 }

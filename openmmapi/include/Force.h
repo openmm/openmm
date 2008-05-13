@@ -62,7 +62,7 @@ protected:
      * It should create a new ForceImpl object which can be used by the context for calculating forces.
      * The ForceImpl will be deleted automatically when the OpenMMContext is deleted.
      */
-    virtual ForceImpl* createImpl(OpenMMContextImpl& context) = 0;
+    virtual ForceImpl* createImpl() = 0;
 };
 
 } // namespace OpenMM

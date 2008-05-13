@@ -47,8 +47,9 @@ namespace OpenMM {
 
 class StandardMMForceFieldImpl : public ForceImpl {
 public:
-    StandardMMForceFieldImpl(StandardMMForceField& owner, OpenMMContextImpl& context);
+    StandardMMForceFieldImpl(StandardMMForceField& owner);
     ~StandardMMForceFieldImpl();
+    void initialize(OpenMMContextImpl& context);
     StandardMMForceField& getOwner() {
         return owner;
     }

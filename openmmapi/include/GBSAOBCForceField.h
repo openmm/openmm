@@ -98,7 +98,7 @@ public:
         soluteDielectric = dielectric;
     }
 protected:
-    ForceImpl* createImpl(OpenMMContextImpl& context);
+    ForceImpl* createImpl();
 private:
     class AtomInfo;
     double solventDielectric, soluteDielectric;

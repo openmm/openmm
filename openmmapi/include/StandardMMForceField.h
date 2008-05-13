@@ -209,7 +209,7 @@ public:
      */
     void setRBTorsionParameters(int index, int atom1, int atom2, int atom3, int atom4, double c0, double c1, double c2, double c3, double c4, double c5);
 protected:
-    ForceImpl* createImpl(OpenMMContextImpl& context);
+    ForceImpl* createImpl();
 private:
     class AtomInfo;
     class BondInfo;

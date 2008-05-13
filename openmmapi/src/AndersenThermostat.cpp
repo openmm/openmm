@@ -41,6 +41,6 @@ AndersenThermostat::AndersenThermostat(double defaultTemperature, double default
     defaultTemp(defaultTemperature), defaultFreq(defaultCollisionFrequency) {
 }
 
-ForceImpl* AndersenThermostat::createImpl(OpenMMContextImpl& context) {
-    return new AndersenThermostatImpl(*this, context);
+ForceImpl* AndersenThermostat::createImpl() {
+    return new AndersenThermostatImpl(*this);
 }

@@ -45,7 +45,8 @@ namespace OpenMM {
 
 class AndersenThermostatImpl : public ForceImpl {
 public:
-    AndersenThermostatImpl(AndersenThermostat& owner, OpenMMContextImpl& context);
+    AndersenThermostatImpl(AndersenThermostat& owner);
+    void initialize(OpenMMContextImpl& context);
     AndersenThermostat& getOwner() {
         return owner;
     }

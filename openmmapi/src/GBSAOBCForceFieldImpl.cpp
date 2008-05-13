@@ -37,11 +37,10 @@
 using namespace OpenMM;
 using std::vector;
 
-GBSAOBCForceFieldImpl::GBSAOBCForceFieldImpl(GBSAOBCForceField& owner, OpenMMContextImpl& context) : owner(owner), hasInitialized(false) {
+GBSAOBCForceFieldImpl::GBSAOBCForceFieldImpl(GBSAOBCForceField& owner) : owner(owner) {
 }
 
 void GBSAOBCForceFieldImpl::initialize(OpenMMContextImpl& context) {
-    hasInitialized = true;
     kernel = context.getPlatform().createKernel(CalcGBSAOBCForceFieldKernel::Name());
     vector<vector<double> > atomParameters(owner.getNumAtoms());
     for (int i = 0; i < owner.getNumAtoms(); ++i) {
@@ -55,14 +54,10 @@ void GBSAOBCForceFieldImpl::initialize(OpenMMContextImpl& context) {
 }
 
 void GBSAOBCForceFieldImpl::calcForces(OpenMMContextImpl& context, Stream& forces) {
-    if (!hasInitialized)
-        initialize(context);
     dynamic_cast<CalcGBSAOBCForceFieldKernel&>(kernel.getImpl()).executeForces(context.getPositions(), forces);
 }
 
 double GBSAOBCForceFieldImpl::calcEnergy(OpenMMContextImpl& context) {
-    if (!hasInitialized)
-        initialize(context);
     return dynamic_cast<CalcGBSAOBCForceFieldKernel&>(kernel.getImpl()).executeEnergy(context.getPositions());
 }
 

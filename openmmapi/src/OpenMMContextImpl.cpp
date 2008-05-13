@@ -49,7 +49,7 @@ OpenMMContextImpl::OpenMMContextImpl(OpenMMContext& owner, System& system, Integ
     vector<string> kernelNames;
     kernelNames.push_back(CalcKineticEnergyKernel::Name());
     for (int i = 0; i < system.getNumForces(); ++i) {
-        forceImpls.push_back(system.getForce(i).createImpl(*this));
+        forceImpls.push_back(system.getForce(i).createImpl());
         map<string, double> forceParameters = forceImpls[forceImpls.size()-1]->getDefaultParameters();
         parameters.insert(forceParameters.begin(), forceParameters.end());
         vector<string> forceKernels = forceImpls[forceImpls.size()-1]->getKernelNames();
@@ -58,7 +58,7 @@ OpenMMContextImpl::OpenMMContextImpl(OpenMMContext& owner, System& system, Integ
     vector<string> integratorKernels = integrator.getKernelNames();
     kernelNames.insert(kernelNames.begin(), integratorKernels.begin(), integratorKernels.end());
     if (platform == 0)
-        platform = &Platform::findPlatform(kernelNames);
+        this->platform = platform = &Platform::findPlatform(kernelNames);
     else if (!platform->supportsKernels(kernelNames))
         throw OpenMMException("Specified a Platform for an OpenMMContext which does not support all required kernels");
     positions = platform->createStream("atomPositions", system.getNumAtoms(), Stream::Double3);
@@ -71,6 +71,8 @@ OpenMMContextImpl::OpenMMContextImpl(OpenMMContext& owner, System& system, Integ
     for (int i = 0; i < masses.size(); ++i)
         masses[i] = system.getAtomMass(i);
     dynamic_cast<CalcKineticEnergyKernel&>(kineticEnergyKernel.getImpl()).initialize(masses);
+    for (int i = 0; i < forceImpls.size(); ++i)
+        forceImpls[i]->initialize(*this);
     integrator.initialize(*this);
 }
 
@@ -118,7 +120,9 @@ void OpenMMContextImpl::reinitialize() {
     for (int i = 0; i < (int) forceImpls.size(); ++i)
         delete forceImpls[i];
     forceImpls.resize(0);
-    for (int i = 0; i < system.getNumForces(); ++i)
-        forceImpls.push_back(system.getForce(i).createImpl(*this));
+    for (int i = 0; i < system.getNumForces(); ++i) {
+        forceImpls.push_back(system.getForce(i).createImpl());
+        forceImpls[i]->initialize(*this);
+    }
     integrator.initialize(*this);
 }
