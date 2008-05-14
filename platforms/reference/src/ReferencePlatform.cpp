@@ -39,6 +39,7 @@ using namespace OpenMM;
 ReferencePlatform* registerReferencePlatform() {
     ReferencePlatform* platform = new ReferencePlatform();
     Platform::registerPlatform(platform);
+	return platform;
 }
 
 ReferencePlatform* staticPlatform = registerReferencePlatform();

@@ -28,6 +28,7 @@
 // class of shared, static utility methods
 
 #include "SimTKOpenMMCommon.h" 
+#include "../sfmt/SFMT.h"
 
 #include <stdio.h>
 #include <string.h>
