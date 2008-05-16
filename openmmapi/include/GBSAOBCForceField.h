@@ -60,7 +60,7 @@ public:
      * 
      * @param index          the index of the atom for which to get parameters
      * @param charge         the charge of the atom, measured in units of the proton charge
-     * @param radius         the GBSA radius of the atom, measured in angstroms
+     * @param radius         the GBSA radius of the atom, measured in nm
      * @param scalingFactor  the OBC scaling factor for the atom
      */
     void getAtomParameters(int index, double& charge, double& radius, double& scalingFactor) const;
@@ -69,7 +69,7 @@ public:
      * 
      * @param index          the index of the atom for which to set parameters
      * @param charge         the charge of the atom, measured in units of the proton charge
-     * @param radius         the GBSA radius of the atom, measured in angstroms
+     * @param radius         the GBSA radius of the atom, measured in nm
      * @param scalingFactor  the OBC scaling factor for the atom
      */
     void setAtomParameters(int index, double charge, double radius, double scalingFactor);

@@ -98,7 +98,7 @@ public:
      * @param index     the index of the constraint for which to get parameters
      * @param atom1     the index of the first atom involved in the constraint
      * @param atom2     the index of the second atom involved in the constraint
-     * @param distance  the required distance between the two atoms, measured in angstroms
+     * @param distance  the required distance between the two atoms, measured in nm
      */
     void getConstraintParameters(int index, int& atom1, int& atom2, double& distance) const;
     /**
@@ -107,7 +107,7 @@ public:
      * @param index     the index of the constraint for which to set parameters
      * @param atom1     the index of the first atom involved in the constraint
      * @param atom2     the index of the second atom involved in the constraint
-     * @param distance  the required distance between the two atoms, measured in angstroms
+     * @param distance  the required distance between the two atoms, measured in nm
      */
     void setConstraintParameters(int index, int atom1, int atom2, double distance);
     /**

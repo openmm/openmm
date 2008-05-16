@@ -132,11 +132,11 @@ public:
      */
     void calcForces();
     /**
-     * Calculate the kinetic energy of the system (in kcal/mol).
+     * Calculate the kinetic energy of the system (in kJ/mol).
      */
     double calcKineticEnergy();
     /**
-     * Calculate the potential energy of the system (in kcal/mol).
+     * Calculate the potential energy of the system (in kJ/mol).
      */
     double calcPotentialEnergy();
     /**

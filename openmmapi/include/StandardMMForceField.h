@@ -95,8 +95,8 @@ public:
      * 
      * @param index     the index of the atom for which to get parameters
      * @param charge    the charge of the atom, measured in units of the proton charge
-     * @param radius    the van der Waals radius of the atom, measured in angstroms
-     * @param depth     the well depth of the van der Waals interaction, measured in kcal/mol
+     * @param radius    the van der Waals radius of the atom, measured in nm
+     * @param depth     the well depth of the van der Waals interaction, measured in kJ/mol
      */
     void getAtomParameters(int index, double& charge, double& radius, double& depth) const;
     /**
@@ -104,8 +104,8 @@ public:
      * 
      * @param index     the index of the atom for which to set parameters
      * @param charge    the charge of the atom, measured in units of the proton charge
-     * @param radius    the van der Waals radius of the atom (sigma in the Lennard Jones potential), measured in angstroms
-     * @param depth     the well depth of the van der Waals interaction (epsilon in the Lennard Jones potential), measured in kcal/mol
+     * @param radius    the van der Waals radius of the atom (sigma in the Lennard Jones potential), measured in nm
+     * @param depth     the well depth of the van der Waals interaction (epsilon in the Lennard Jones potential), measured in kJ/mol
      */
     void setAtomParameters(int index, double charge, double radius, double depth);
     /**
@@ -114,7 +114,7 @@ public:
      * @param index     the index of the bond for which to get parameters
      * @param atom1     the index of the first atom connected by the bond
      * @param atom2     the index of the second atom connected by the bond
-     * @param length    the equilibrium length of the bond, measured in angstroms
+     * @param length    the equilibrium length of the bond, measured in nm
      * @param k         the harmonic force constant for the bond
      */
     void getBondParameters(int index, int& atom1, int& atom2, double& length, double& k) const;
@@ -124,7 +124,7 @@ public:
      * @param index     the index of the bond for which to set parameters
      * @param atom1     the index of the first atom connected by the bond
      * @param atom2     the index of the second atom connected by the bond
-     * @param length    the equilibrium length of the bond, measured in angstroms
+     * @param length    the equilibrium length of the bond, measured in nm
      * @param k         the harmonic force constant for the bond
      */
     void setBondParameters(int index, int atom1, int atom2, double length, double k);

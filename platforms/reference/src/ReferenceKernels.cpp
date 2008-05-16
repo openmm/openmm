@@ -231,7 +231,7 @@ void ReferenceCalcGBSAOBCForceFieldKernel::initialize(const vector<vector<double
         scaleFactors[i] = atomParameters[i][2];
     }
     ObcParameters* obcParameters  = new ObcParameters(numAtoms, ObcParameters::ObcTypeII);
-    obcParameters->setAtomicRadii(atomicRadii, SimTKOpenMMCommon::KcalAngUnits);
+    obcParameters->setAtomicRadii(atomicRadii, SimTKOpenMMCommon::MdUnits);
     obcParameters->setScaledRadiusFactors(scaleFactors);
     obcParameters->setSolventDielectric(solventDielectric);
     obcParameters->setSoluteDielectric(soluteDielectric);

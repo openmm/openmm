@@ -110,14 +110,14 @@ public:
      */
     void setTime(double time);
     /**
-     * Set the positions of all atoms in the System (measured in angstroms).
+     * Set the positions of all atoms in the System (measured in nm).
      * 
      * @param a vector whose length equals the number of atoms in the System.  The i'th element
      * contains the position of the i'th atom.
      */
     void setPositions(const std::vector<Vec3>& positions);
     /**
-     * Set the velocities of all atoms in the System (measured in angstroms/picosecond).
+     * Set the velocities of all atoms in the System (measured in nm/picosecond).
      * 
      * @param a vector whose length equals the number of atoms in the System.  The i'th element
      * contains the velocity of the i'th atom.
