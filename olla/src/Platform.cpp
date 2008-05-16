@@ -37,10 +37,23 @@
 #include "StreamFactory.h"
 #include <set>
 
+#include "ReferencePlatform.h"
+
 using namespace OpenMM;
 using namespace std;
 
 std::vector<Platform*> Platform::platforms;
+
+static int registerPlatforms() {
+
+    // Register the Platforms built into the main library.  This should eventually be moved elsewhere.
+    
+    ReferencePlatform* platform = new ReferencePlatform();
+    Platform::registerPlatform(platform);
+    return 0;
+}
+
+static int platformInitializer = registerPlatforms();
 
 Platform::~Platform() {
     set<KernelFactory*> uniqueKernelFactories;
