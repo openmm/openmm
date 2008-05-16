@@ -432,3 +432,33 @@ double ReferenceCalcKineticEnergyKernel::execute(const Stream& velocities) {
         energy += masses[i]*(velData[i][0]*velData[i][0]+velData[i][1]*velData[i][1]+velData[i][2]*velData[i][2]);
     return 0.5*energy;
 }
+
+void ReferenceRemoveCMMotionKernel::initialize(const vector<double>& masses) {
+    this->masses.resize(masses.size());
+    for (int i = 0; i < masses.size(); ++i)
+        this->masses[i] = masses[i];
+}
+
+void ReferenceRemoveCMMotionKernel::execute(Stream& velocities) {
+    RealOpenMM** velData = ((ReferenceFloatStreamImpl&) velocities.getImpl()).getData();
+    
+    // Calculate the center of mass momentum.
+    
+    RealOpenMM momentum[] = {0.0, 0.0, 0.0};
+    for (int i = 0; i < masses.size(); ++i) {
+        momentum[0] += masses[i]*velData[i][0];
+        momentum[1] += masses[i]*velData[i][1];
+        momentum[2] += masses[i]*velData[i][2];
+    }
+    
+    // Adjust the atom velocities.
+    
+    momentum[0] /= masses.size();
+    momentum[1] /= masses.size();
+    momentum[2] /= masses.size();
+    for (int i = 0; i < masses.size(); ++i) {
+        velData[i][0] -= momentum[0]/masses[i];
+        velData[i][1] -= momentum[1]/masses[i];
+        velData[i][2] -= momentum[2]/masses[i];
+    }
+}

@@ -302,6 +302,29 @@ private:
     std::vector<double> masses;
 };
 
+/**
+ * This kernel is invoked to remove center of mass motion from the system.
+ */
+class ReferenceRemoveCMMotionKernel : public RemoveCMMotionKernel {
+public:
+    ReferenceRemoveCMMotionKernel(std::string name, const Platform& platform) : RemoveCMMotionKernel(name, platform) {
+    }
+    /**
+     * Initialize the kernel, setting up the atomic masses.
+     * 
+     * @param masses the mass of each atom
+     */
+    void initialize(const std::vector<double>& masses);
+    /**
+     * Execute the kernel.
+     * 
+     * @param velocities a Stream of type Double3 containing the velocity (x, y, z) of each atom
+     */
+    void execute(Stream& velocities);
+private:
+    std::vector<double> masses;
+};
+
 } // namespace OpenMM
 
 #endif /*OPENMM_REFERENCEKERNELS_H_*/

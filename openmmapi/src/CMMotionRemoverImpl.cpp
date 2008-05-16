@@ -29,37 +29,34 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "ReferencePlatform.h"
-#include "ReferenceKernelFactory.h"
-#include "ReferenceKernels.h"
-#include "SimTKUtilities/SimTKOpenMMRealType.h"
+#include "internal/CMMotionRemoverImpl.h"
+#include "internal/OpenMMContextImpl.h"
+#include "Integrator.h"
+#include "System.h"
+#include "kernels.h"
+#include <vector>
 
 using namespace OpenMM;
+using std::vector;
 
-ReferencePlatform* registerReferencePlatform() {
-    ReferencePlatform* platform = new ReferencePlatform();
-    Platform::registerPlatform(platform);
-	return platform;
+CMMotionRemoverImpl::CMMotionRemoverImpl(CMMotionRemover& owner) : owner(owner) {
 }
 
-ReferencePlatform* staticPlatform = registerReferencePlatform();
-
-ReferencePlatform::ReferencePlatform() {
-    ReferenceKernelFactory* factory = new ReferenceKernelFactory();
-    registerKernelFactory(CalcStandardMMForceFieldKernel::Name(), factory);
-    registerKernelFactory(CalcGBSAOBCForceFieldKernel::Name(), factory);
-    registerKernelFactory(IntegrateVerletStepKernel::Name(), factory);
-    registerKernelFactory(IntegrateLangevinStepKernel::Name(), factory);
-    registerKernelFactory(IntegrateBrownianStepKernel::Name(), factory);
-    registerKernelFactory(ApplyAndersenThermostatKernel::Name(), factory);
-    registerKernelFactory(CalcKineticEnergyKernel::Name(), factory);
-    registerKernelFactory(RemoveCMMotionKernel::Name(), factory);
+void CMMotionRemoverImpl::initialize(OpenMMContextImpl& context) {
+    kernel = context.getPlatform().createKernel(RemoveCMMotionKernel::Name());
+    const System& system = context.getSystem();
+    vector<double> masses(system.getNumAtoms());
+    for (int i = 0; i < system.getNumAtoms(); ++i)
+        masses[i] = system.getAtomMass(i);
+    dynamic_cast<RemoveCMMotionKernel&>(kernel.getImpl()).initialize(masses);
 }
 
-bool ReferencePlatform::supportsDoublePrecision() const {
-    return (sizeof(RealOpenMM) >= sizeof(double));
+void CMMotionRemoverImpl::updateContextState(OpenMMContextImpl& context) {
+    dynamic_cast<RemoveCMMotionKernel&>(kernel.getImpl()).execute(context.getVelocities());
 }
 
-const StreamFactory& ReferencePlatform::getDefaultStreamFactory() const {
-    return defaultStreamFactory;
+std::vector<std::string> CMMotionRemoverImpl::getKernelNames() {
+    std::vector<std::string> names;
+    names.push_back(RemoveCMMotionKernel::Name());
+    return names;
 }

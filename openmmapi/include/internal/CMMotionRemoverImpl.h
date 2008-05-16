@@ -1,3 +1,6 @@
+#ifndef OPENMM_CMMOTIONREMOVERIMPL_H_
+#define OPENMM_CMMOTIONREMOVERIMPL_H_
+
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -29,37 +32,39 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "ReferencePlatform.h"
-#include "ReferenceKernelFactory.h"
-#include "ReferenceKernels.h"
-#include "SimTKUtilities/SimTKOpenMMRealType.h"
+#include "ForceImpl.h"
+#include "CMMotionRemover.h"
+#include "Kernel.h"
 
-using namespace OpenMM;
+namespace OpenMM {
 
-ReferencePlatform* registerReferencePlatform() {
-    ReferencePlatform* platform = new ReferencePlatform();
-    Platform::registerPlatform(platform);
-	return platform;
-}
+/**
+ * This is the internal implementation of CMMotionRemover.
+ */
 
-ReferencePlatform* staticPlatform = registerReferencePlatform();
+class CMMotionRemoverImpl : public ForceImpl {
+public:
+    CMMotionRemoverImpl(CMMotionRemover& owner);
+    void initialize(OpenMMContextImpl& context);
+    CMMotionRemover& getOwner() {
+        return owner;
+    }
+    void updateContextState(OpenMMContextImpl& context);
+    void calcForces(OpenMMContextImpl& context, Stream& forces) {
+        // This force doesn't apply forces to atoms.
+    }
+    double calcEnergy(OpenMMContextImpl& context) {
+        return 0.0; // This force doesn't contribute to the potential energy.
+    }
+    std::map<std::string, double> getDefaultParameters() {
+        return std::map<std::string, double>(); // This force doesn't define any parameters.
+    }
+    std::vector<std::string> getKernelNames();
+private:
+    CMMotionRemover& owner;
+    Kernel kernel;
+};
 
-ReferencePlatform::ReferencePlatform() {
-    ReferenceKernelFactory* factory = new ReferenceKernelFactory();
-    registerKernelFactory(CalcStandardMMForceFieldKernel::Name(), factory);
-    registerKernelFactory(CalcGBSAOBCForceFieldKernel::Name(), factory);
-    registerKernelFactory(IntegrateVerletStepKernel::Name(), factory);
-    registerKernelFactory(IntegrateLangevinStepKernel::Name(), factory);
-    registerKernelFactory(IntegrateBrownianStepKernel::Name(), factory);
-    registerKernelFactory(ApplyAndersenThermostatKernel::Name(), factory);
-    registerKernelFactory(CalcKineticEnergyKernel::Name(), factory);
-    registerKernelFactory(RemoveCMMotionKernel::Name(), factory);
-}
+} // namespace OpenMM
 
-bool ReferencePlatform::supportsDoublePrecision() const {
-    return (sizeof(RealOpenMM) >= sizeof(double));
-}
-
-const StreamFactory& ReferencePlatform::getDefaultStreamFactory() const {
-    return defaultStreamFactory;
-}
+#endif /*OPENMM_CMMOTIONREMOVERIMPL_H_*/

@@ -29,37 +29,14 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "ReferencePlatform.h"
-#include "ReferenceKernelFactory.h"
-#include "ReferenceKernels.h"
-#include "SimTKUtilities/SimTKOpenMMRealType.h"
+#include "CMMotionRemover.h"
+#include "internal/CMMotionRemoverImpl.h"
 
 using namespace OpenMM;
 
-ReferencePlatform* registerReferencePlatform() {
-    ReferencePlatform* platform = new ReferencePlatform();
-    Platform::registerPlatform(platform);
-	return platform;
+CMMotionRemover::CMMotionRemover() {
 }
 
-ReferencePlatform* staticPlatform = registerReferencePlatform();
-
-ReferencePlatform::ReferencePlatform() {
-    ReferenceKernelFactory* factory = new ReferenceKernelFactory();
-    registerKernelFactory(CalcStandardMMForceFieldKernel::Name(), factory);
-    registerKernelFactory(CalcGBSAOBCForceFieldKernel::Name(), factory);
-    registerKernelFactory(IntegrateVerletStepKernel::Name(), factory);
-    registerKernelFactory(IntegrateLangevinStepKernel::Name(), factory);
-    registerKernelFactory(IntegrateBrownianStepKernel::Name(), factory);
-    registerKernelFactory(ApplyAndersenThermostatKernel::Name(), factory);
-    registerKernelFactory(CalcKineticEnergyKernel::Name(), factory);
-    registerKernelFactory(RemoveCMMotionKernel::Name(), factory);
-}
-
-bool ReferencePlatform::supportsDoublePrecision() const {
-    return (sizeof(RealOpenMM) >= sizeof(double));
-}
-
-const StreamFactory& ReferencePlatform::getDefaultStreamFactory() const {
-    return defaultStreamFactory;
+ForceImpl* CMMotionRemover::createImpl() {
+    return new CMMotionRemoverImpl(*this);
 }

@@ -274,6 +274,30 @@ public:
     virtual double execute(const Stream& velocities) = 0;
 };
 
+/**
+ * This kernel is invoked to remove center of mass motion from the system.
+ */
+class RemoveCMMotionKernel : public KernelImpl {
+public:
+    static std::string Name() {
+        return "RemoveCMMotion";
+    }
+    RemoveCMMotionKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    }
+    /**
+     * Initialize the kernel, setting up the atomic masses.
+     * 
+     * @param masses the mass of each atom
+     */
+    virtual void initialize(const std::vector<double>& masses) = 0;
+    /**
+     * Execute the kernel.
+     * 
+     * @param velocities a Stream of type Double3 containing the velocity (x, y, z) of each atom
+     */
+    virtual void execute(Stream& velocities) = 0;
+};
+
 } // namespace OpenMM
 
 #endif /*OPENMM_KERNELS_H_*/

@@ -1,3 +1,6 @@
+#ifndef OPENMM_CMMOTIONREMOVER_H_
+#define OPENMM_CMMOTIONREMOVER_H_
+
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -29,37 +32,26 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "ReferencePlatform.h"
-#include "ReferenceKernelFactory.h"
-#include "ReferenceKernels.h"
-#include "SimTKUtilities/SimTKOpenMMRealType.h"
+#include "Force.h"
+#include <string>
 
-using namespace OpenMM;
+namespace OpenMM {
 
-ReferencePlatform* registerReferencePlatform() {
-    ReferencePlatform* platform = new ReferencePlatform();
-    Platform::registerPlatform(platform);
-	return platform;
-}
+/**
+ * This class prevents the center of mass of a System from drifting.  At each time step, it calculates the
+ * center of mass momentum, then adjusts the individual atom velocities to make it zero.
+ */
 
-ReferencePlatform* staticPlatform = registerReferencePlatform();
+class CMMotionRemover : public Force {
+public:
+    /**
+     * Create a CMMotionRemover.
+     */
+    CMMotionRemover();
+protected:
+    ForceImpl* createImpl();
+};
 
-ReferencePlatform::ReferencePlatform() {
-    ReferenceKernelFactory* factory = new ReferenceKernelFactory();
-    registerKernelFactory(CalcStandardMMForceFieldKernel::Name(), factory);
-    registerKernelFactory(CalcGBSAOBCForceFieldKernel::Name(), factory);
-    registerKernelFactory(IntegrateVerletStepKernel::Name(), factory);
-    registerKernelFactory(IntegrateLangevinStepKernel::Name(), factory);
-    registerKernelFactory(IntegrateBrownianStepKernel::Name(), factory);
-    registerKernelFactory(ApplyAndersenThermostatKernel::Name(), factory);
-    registerKernelFactory(CalcKineticEnergyKernel::Name(), factory);
-    registerKernelFactory(RemoveCMMotionKernel::Name(), factory);
-}
+} // namespace OpenMM
 
-bool ReferencePlatform::supportsDoublePrecision() const {
-    return (sizeof(RealOpenMM) >= sizeof(double));
-}
-
-const StreamFactory& ReferencePlatform::getDefaultStreamFactory() const {
-    return defaultStreamFactory;
-}
+#endif /*OPENMM_CMMOTIONREMOVER_H_*/

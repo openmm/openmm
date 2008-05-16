@@ -49,4 +49,6 @@ KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name, const Pla
         return new ReferenceApplyAndersenThermostatKernel(name, platform);
     if (name == CalcKineticEnergyKernel::Name())
         return new ReferenceCalcKineticEnergyKernel(name, platform);
+    if (name == RemoveCMMotionKernel::Name())
+        return new ReferenceRemoveCMMotionKernel(name, platform);
 }
