@@ -134,7 +134,7 @@ public:
     }
 private:
     class ConstraintInfo;
-    std::vector<int> masses;
+    std::vector<double> masses;
     std::vector<ConstraintInfo> constraints;
     std::vector<Force*> forces;
 };

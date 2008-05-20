@@ -16,6 +16,8 @@
 
 PROJECT (OpenMM)
 
+INCLUDE(Dart)
+
 SUBDIRS (tests platforms/reference/tests)
 
 ADD_DEFINITIONS(-DOPENMM_BUILDING_SHARED_LIBRARY)

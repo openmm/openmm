@@ -69,7 +69,7 @@ class ReferenceLJCoulomb14 : public ReferenceBondIxn {
       
          --------------------------------------------------------------------------------------- */
       
-      int ReferenceLJCoulomb14::getDerivedParameters( RealOpenMM c6, RealOpenMM c12, RealOpenMM q1, 
+      int getDerivedParameters( RealOpenMM c6, RealOpenMM c12, RealOpenMM q1, 
                                                RealOpenMM q2, RealOpenMM epsfac,
                                                RealOpenMM* parameters ) const;
       

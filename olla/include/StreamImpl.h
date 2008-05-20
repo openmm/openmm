@@ -35,6 +35,7 @@
 #include "Platform.h"
 #include "Stream.h"
 #include <string>
+#include <cassert>
 
 namespace OpenMM {
 

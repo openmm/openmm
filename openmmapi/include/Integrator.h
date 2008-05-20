@@ -39,6 +39,7 @@
 namespace OpenMM {
 
 class OpenMMContext;
+class OpenMMContextImpl;
 
 /**
  * An Integrator defines a method for simulating a System by integrating the equations of motion.

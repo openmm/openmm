@@ -34,6 +34,7 @@
 
 #include "Platform.h"
 #include <string>
+#include <cassert>
 
 namespace OpenMM {
 
