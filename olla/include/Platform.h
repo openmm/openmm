@@ -40,6 +40,7 @@ namespace OpenMM {
 
 class Kernel;
 class KernelFactory;
+class OpenMMContextImpl;
 class StreamFactory;
 
 /**
@@ -84,6 +85,16 @@ public:
      */
     virtual const StreamFactory& getDefaultStreamFactory() const = 0;
     /**
+     * This is called whenever a new OpenMMContext is created.  It gives the Platform a chance to initialize
+     * the context and store platform-specific data in it.
+     */
+    virtual void contextCreated(OpenMMContextImpl& context) const;
+    /**
+     * This is called whenever an OpenMMContext is deleted.  It gives the Platform a chance to clean up
+     * any platform-specific data that was stored in it.
+     */
+    virtual void contextDestroyed(OpenMMContextImpl& context) const;
+    /**
      * Register a KernelFactory which should be used to create Kernels with a particular name.
      * The Platform takes over ownership of the factory, and will delete it when the Platform itself
      * is deleted.
@@ -110,19 +121,20 @@ public:
      */
     bool supportsKernels(std::vector<std::string> kernelNames) const ;
     /**
-     * Create a Kernel object.  If you call this method multiple times with the same name,
+     * Create a Kernel object.  If you call this method multiple times for different contexts with the same name,
      * the returned Kernels are independent and do not interact with each other.  This means
      * that it is possible to have multiple simulations in progress at one time without them
      * interfering.
      * 
      * If no KernelFactory has been registered for the specified name, this will throw an exception.
      * 
-     * @param the name of the Kernel to get
+     * @param name the name of the Kernel to get
+     * @param context the context for which to create a Kernel
      * @return a newly created Kernel object
      */
-    Kernel createKernel(std::string name) const;
+    Kernel createKernel(std::string name, OpenMMContextImpl& context) const;
     /**
-     * Create a Stream object.  If you call this method multiple times with the same name,
+     * Create a Stream object.  If you call this method multiple times for different contexts with the same name,
      * the returned Streams are independent and do not interact with each other.  This means
      * that it is possible to have multiple simulations in progress at one time without them
      * interfering.
@@ -130,10 +142,11 @@ public:
      * If a StreamFactory has been registered for the specified name, it will be used to create
      * the Stream.  Otherwise, the default StreamFactory will be used.
      * 
-     * @param the name of the Stream to get
+     * @param name the name of the Stream to get
+     * @param context the context for which to create a Stream
      * @return a newly created Stream object
      */
-    Stream createStream(std::string name, int size, Stream::DataType type) const;
+    Stream createStream(std::string name, int size, Stream::DataType type, OpenMMContextImpl& context) const;
     /**
      * Register a new Platform.
      */

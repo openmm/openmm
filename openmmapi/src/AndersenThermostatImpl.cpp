@@ -43,7 +43,7 @@ AndersenThermostatImpl::AndersenThermostatImpl(AndersenThermostat& owner) : owne
 }
 
 void AndersenThermostatImpl::initialize(OpenMMContextImpl& context) {
-    kernel = context.getPlatform().createKernel(ApplyAndersenThermostatKernel::Name());
+    kernel = context.getPlatform().createKernel(ApplyAndersenThermostatKernel::Name(), context);
     const System& system = context.getSystem();
     vector<double> masses(system.getNumAtoms());
     for (int i = 0; i < system.getNumAtoms(); ++i)

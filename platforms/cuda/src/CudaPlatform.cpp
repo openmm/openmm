@@ -7,7 +7,7 @@
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
  * Portions copyright (c) 2008 Stanford University and the Authors.           *
- * Authors: Peter Eastman, Mark Friedrichs                                    *
+ * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
@@ -29,24 +29,39 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "BrookKernelFactory.h"
-#include "BrookKernels.h"
+#include "CudaPlatform.h"
+#include "CudaKernelFactory.h"
+#include "CudaKernels.h"
+#include "internal/OpenMMContextImpl.h"
+#include "kernels/gpuTypes.h"
 
 using namespace OpenMM;
 
-KernelImpl* BrookKernelFactory::createKernelImpl(std::string name, const Platform& platform, OpenMMContextImpl& context) const {
-    if (name == CalcStandardMMForceFieldKernel::Name())
-        return new BrookCalcStandardMMForceFieldKernel(name, platform);
-    if (name == CalcGBSAOBCForceFieldKernel::Name())
-        return new BrookCalcGBSAOBCForceFieldKernel(name, platform);
-    if (name == IntegrateVerletStepKernel::Name())
-        return new BrookIntegrateVerletStepKernel(name, platform);
-    if (name == IntegrateLangevinStepKernel::Name())
-        return new BrookIntegrateLangevinStepKernel(name, platform);
-    if (name == IntegrateBrownianStepKernel::Name())
-        return new BrookIntegrateBrownianStepKernel(name, platform);
-    if (name == ApplyAndersenThermostatKernel::Name())
-        return new BrookApplyAndersenThermostatKernel(name, platform);
-    if (name == CalcKineticEnergyKernel::Name())
-        return new BrookCalcKineticEnergyKernel(name, platform);
+CudaPlatform::CudaPlatform() {
+    CudaKernelFactory* factory = new CudaKernelFactory();
+//    registerKernelFactory(CalcStandardMMForceFieldKernel::Name(), factory);
+//    registerKernelFactory(CalcGBSAOBCForceFieldKernel::Name(), factory);
+//    registerKernelFactory(IntegrateVerletStepKernel::Name(), factory);
+//    registerKernelFactory(IntegrateLangevinStepKernel::Name(), factory);
+//    registerKernelFactory(IntegrateBrownianStepKernel::Name(), factory);
+//    registerKernelFactory(ApplyAndersenThermostatKernel::Name(), factory);
+//    registerKernelFactory(CalcKineticEnergyKernel::Name(), factory);
+//    registerKernelFactory(RemoveCMMotionKernel::Name(), factory);
+}
+
+bool CudaPlatform::supportsDoublePrecision() const {
+    return false;
+}
+
+const StreamFactory& CudaPlatform::getDefaultStreamFactory() const {
+    return defaultStreamFactory;
+}
+
+void CudaPlatform::contextCreated(OpenMMContextImpl& context) const {
+    context.setPlatformData(new _gpuContext());
+}
+
+void CudaPlatform::contextDestroyed(OpenMMContextImpl& context) const {
+    _gpuContext* data = reinterpret_cast<_gpuContext*>(context.getPlatformData());
+    delete data;
 }

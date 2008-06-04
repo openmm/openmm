@@ -36,7 +36,7 @@
 
 using namespace OpenMM;
 
-StreamImpl* BrookStreamFactory::createStreamImpl(std::string name, int size, Stream::DataType type, int streamWidth, const Platform& platform) const {
+StreamImpl* BrookStreamFactory::createStreamImpl(std::string name, int size, Stream::DataType type, int streamWidth, const Platform& platform, OpenMMContextImpl& context) const {
     switch (type) {
     case Stream::Float:
     case Stream::Float2:

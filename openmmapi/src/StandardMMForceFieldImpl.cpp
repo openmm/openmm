@@ -45,7 +45,7 @@ StandardMMForceFieldImpl::~StandardMMForceFieldImpl() {
 }
 
 void StandardMMForceFieldImpl::initialize(OpenMMContextImpl& context) {
-    kernel = context.getPlatform().createKernel(CalcStandardMMForceFieldKernel::Name());
+    kernel = context.getPlatform().createKernel(CalcStandardMMForceFieldKernel::Name(), context);
     vector<vector<int> > bondIndices(owner.getNumBonds());
     vector<vector<double> > bondParameters(owner.getNumBonds());
     vector<vector<int> > angleIndices(owner.getNumAngles());

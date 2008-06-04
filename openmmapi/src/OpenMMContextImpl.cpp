@@ -45,7 +45,7 @@ using std::vector;
 using std::string;
 
 OpenMMContextImpl::OpenMMContextImpl(OpenMMContext& owner, System& system, Integrator& integrator, Platform* platform) :
-            owner(owner), system(system), integrator(integrator), platform(platform) {
+            owner(owner), system(system), integrator(integrator), platform(platform), platformData(NULL) {
     vector<string> kernelNames;
     kernelNames.push_back(CalcKineticEnergyKernel::Name());
     for (int i = 0; i < system.getNumForces(); ++i) {
@@ -61,12 +61,13 @@ OpenMMContextImpl::OpenMMContextImpl(OpenMMContext& owner, System& system, Integ
         this->platform = platform = &Platform::findPlatform(kernelNames);
     else if (!platform->supportsKernels(kernelNames))
         throw OpenMMException("Specified a Platform for an OpenMMContext which does not support all required kernels");
-    positions = platform->createStream("atomPositions", system.getNumAtoms(), Stream::Double3);
-    velocities = platform->createStream("atomVelocities", system.getNumAtoms(), Stream::Double3);
-    forces = platform->createStream("atomForces", system.getNumAtoms(), Stream::Double3);
+    platform->contextCreated(*this);
+    positions = platform->createStream("atomPositions", system.getNumAtoms(), Stream::Double3, *this);
+    velocities = platform->createStream("atomVelocities", system.getNumAtoms(), Stream::Double3, *this);
+    forces = platform->createStream("atomForces", system.getNumAtoms(), Stream::Double3, *this);
     double zero[] = {0.0, 0.0, 0.0};
     velocities.fillWithValue(&zero);
-    kineticEnergyKernel = platform->createKernel(CalcKineticEnergyKernel::Name());
+    kineticEnergyKernel = platform->createKernel(CalcKineticEnergyKernel::Name(), *this);
     vector<double> masses(system.getNumAtoms());
     for (int i = 0; i < masses.size(); ++i)
         masses[i] = system.getAtomMass(i);
@@ -79,6 +80,7 @@ OpenMMContextImpl::OpenMMContextImpl(OpenMMContext& owner, System& system, Integ
 OpenMMContextImpl::~OpenMMContextImpl() {
     for (int i = 0; i < (int) forceImpls.size(); ++i)
         delete forceImpls[i];
+    platform->contextDestroyed(*this);
 }
 
 double OpenMMContextImpl::getParameter(std::string name) {
@@ -125,4 +127,12 @@ void OpenMMContextImpl::reinitialize() {
         forceImpls[i]->initialize(*this);
     }
     integrator.initialize(*this);
+}
+
+void* OpenMMContextImpl::getPlatformData() {
+    return platformData;
+}
+
+void OpenMMContextImpl::setPlatformData(void* data) {
+    platformData = data;
 }

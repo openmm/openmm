@@ -55,19 +55,19 @@ void testSingleAtom() {
     system.setAtomMass(0, 2.0);
     LangevinIntegrator integrator(0, 0.1, 0.01);
     GBSAOBCForceField* forceField = new GBSAOBCForceField(1);
-    forceField->setAtomParameters(0, 0.5, 1.5, 1);
+    forceField->setAtomParameters(0, 0.5, 0.15, 1);
     system.addForce(forceField);
     OpenMMContext context(system, integrator, platform);
     vector<Vec3> positions(1);
     positions[0] = Vec3(0, 0, 0);
     context.setPositions(positions);
     State state = context.getState(State::Energy);
-    double bornRadius = 1.5-0.09; // dielectric offset
-    double eps0 = EPSILON0*A2NM*CAL2JOULE;
+    double bornRadius = 0.15-0.009; // dielectric offset
+    double eps0 = EPSILON0;
     double bornEnergy = (-0.5*0.5/(8*PI_M*eps0))*(1.0/forceField->getSoluteDielectric()-1.0/forceField->getSolventDielectric())/bornRadius;
-    double extendedRadius = bornRadius+1.4; // probe radius
-    double nonpolarEnergy = PI_M*0.0216*extendedRadius*extendedRadius*std::pow(1.5/bornRadius, 6.0); // Where did this formula come from?  Just copied it from CpuImplicitSolvent.cpp
-    ASSERT_EQUAL_TOL(bornEnergy+nonpolarEnergy, state.getPotentialEnergy(), 0.01);
+    double extendedRadius = bornRadius+0.14; // probe radius
+    double nonpolarEnergy = CAL2JOULE*PI_M*0.0216*(10*extendedRadius)*(10*extendedRadius)*std::pow(0.15/bornRadius, 6.0); // Where did this formula come from?  Just copied it from CpuImplicitSolvent.cpp
+    ASSERT_EQUAL_TOL((bornEnergy+nonpolarEnergy), state.getPotentialEnergy(), 0.01);
 }
 
 void testForce() {
@@ -77,7 +77,7 @@ void testForce() {
     LangevinIntegrator integrator(0, 0.1, 0.01);
     GBSAOBCForceField* forceField = new GBSAOBCForceField(numAtoms);
     for (int i = 0; i < numAtoms; ++i)
-        forceField->setAtomParameters(i, i%2 == 0 ? -1 : 1, 1.5, 1);
+        forceField->setAtomParameters(i, i%2 == 0 ? -1 : 1, 0.15, 1);
     system.addForce(forceField);
     OpenMMContext context(system, integrator, platform);
     

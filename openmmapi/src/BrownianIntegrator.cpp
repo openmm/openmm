@@ -47,7 +47,7 @@ BrownianIntegrator::BrownianIntegrator(double temperature, double frictionCoeff,
 
 void BrownianIntegrator::initialize(OpenMMContextImpl& contextRef) {
     context = &contextRef;
-    kernel = context->getPlatform().createKernel(IntegrateBrownianStepKernel::Name());
+    kernel = context->getPlatform().createKernel(IntegrateBrownianStepKernel::Name(), contextRef);
     const System& system = context->getSystem();
     vector<double> masses(system.getNumAtoms());
     vector<std::vector<int> > constraintIndices(system.getNumConstraints());

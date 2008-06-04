@@ -189,7 +189,7 @@ public:
 
 class DummyKernelFactory : public KernelFactory {
 public:
-    KernelImpl* createKernelImpl(string name, const Platform& platform) const {
+    KernelImpl* createKernelImpl(string name, const Platform& platform, OpenMMContextImpl& context) const {
         if (name == CalcStandardMMForceFieldKernel::Name())
             return new DummyForceKernel(name, platform);
         if (name == IntegrateVerletStepKernel::Name())
@@ -202,7 +202,7 @@ public:
 
 class DummyStreamFactory : public StreamFactory {
 public:
-    StreamImpl* createStreamImpl(string name, int size, Stream::DataType type, const Platform& platform) const {
+    StreamImpl* createStreamImpl(string name, int size, Stream::DataType type, const Platform& platform, OpenMMContextImpl& context) const {
         return new DummyStreamImpl(name, size, type, platform);
     }
 };

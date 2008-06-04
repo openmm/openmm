@@ -7,7 +7,7 @@
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
  * Portions copyright (c) 2008 Stanford University and the Authors.           *
- * Authors: Peter Eastman, Mark Friedrichs                                    *
+ * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
@@ -29,24 +29,26 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "BrookKernelFactory.h"
-#include "BrookKernels.h"
+#include "CudaKernelFactory.h"
+#include "CudaKernels.h"
 
 using namespace OpenMM;
 
-KernelImpl* BrookKernelFactory::createKernelImpl(std::string name, const Platform& platform, OpenMMContextImpl& context) const {
-    if (name == CalcStandardMMForceFieldKernel::Name())
-        return new BrookCalcStandardMMForceFieldKernel(name, platform);
-    if (name == CalcGBSAOBCForceFieldKernel::Name())
-        return new BrookCalcGBSAOBCForceFieldKernel(name, platform);
-    if (name == IntegrateVerletStepKernel::Name())
-        return new BrookIntegrateVerletStepKernel(name, platform);
-    if (name == IntegrateLangevinStepKernel::Name())
-        return new BrookIntegrateLangevinStepKernel(name, platform);
-    if (name == IntegrateBrownianStepKernel::Name())
-        return new BrookIntegrateBrownianStepKernel(name, platform);
-    if (name == ApplyAndersenThermostatKernel::Name())
-        return new BrookApplyAndersenThermostatKernel(name, platform);
-    if (name == CalcKineticEnergyKernel::Name())
-        return new BrookCalcKineticEnergyKernel(name, platform);
+KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform& platform, OpenMMContextImpl& context) const {
+//    if (name == CalcStandardMMForceFieldKernel::Name())
+//        return new CudaCalcStandardMMForceFieldKernel(name, platform);
+//    if (name == CalcGBSAOBCForceFieldKernel::Name())
+//        return new CudaCalcGBSAOBCForceFieldKernel(name, platform);
+//    if (name == IntegrateVerletStepKernel::Name())
+//        return new CudaIntegrateVerletStepKernel(name, platform);
+//    if (name == IntegrateLangevinStepKernel::Name())
+//        return new CudaIntegrateLangevinStepKernel(name, platform);
+//    if (name == IntegrateBrownianStepKernel::Name())
+//        return new CudaIntegrateBrownianStepKernel(name, platform);
+//    if (name == ApplyAndersenThermostatKernel::Name())
+//        return new CudaApplyAndersenThermostatKernel(name, platform);
+//    if (name == CalcKineticEnergyKernel::Name())
+//        return new CudaCalcKineticEnergyKernel(name, platform);
+//    if (name == RemoveCMMotionKernel::Name())
+//        return new CudaRemoveCMMotionKernel(name, platform);
 }

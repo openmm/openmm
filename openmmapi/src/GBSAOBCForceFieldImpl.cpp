@@ -41,7 +41,7 @@ GBSAOBCForceFieldImpl::GBSAOBCForceFieldImpl(GBSAOBCForceField& owner) : owner(o
 }
 
 void GBSAOBCForceFieldImpl::initialize(OpenMMContextImpl& context) {
-    kernel = context.getPlatform().createKernel(CalcGBSAOBCForceFieldKernel::Name());
+    kernel = context.getPlatform().createKernel(CalcGBSAOBCForceFieldKernel::Name(), context);
     vector<vector<double> > atomParameters(owner.getNumAtoms());
     for (int i = 0; i < owner.getNumAtoms(); ++i) {
         double charge, radius, scalingFactor;

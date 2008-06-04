@@ -148,6 +148,14 @@ public:
      * Delete all ForceImpl objects that have been created and create new ones.
      */
     void reinitialize();
+    /**
+     * Get the platform-specific data stored in this context.
+     */
+    void* getPlatformData();
+    /**
+     * Set the platform-specific data stored in this context.
+     */
+    void setPlatformData(void* data);
 private:
     friend class OpenMMContext;
     OpenMMContext& owner;
@@ -159,6 +167,7 @@ private:
     Platform* platform;
     Stream positions, velocities, forces;
     Kernel kineticEnergyKernel;
+    void* platformData;
 };
 
 } // namespace OpenMM

@@ -68,6 +68,12 @@ Platform::~Platform() {
         delete *iter;
 }
 
+void Platform::contextCreated(OpenMMContextImpl& context) const {
+}
+
+void Platform::contextDestroyed(OpenMMContextImpl& context) const {
+}
+
 void Platform::registerKernelFactory(std::string name, KernelFactory* factory) {
     kernelFactories[name] = factory;
 }
@@ -83,16 +89,16 @@ bool Platform::supportsKernels(std::vector<std::string> kernelNames) const {
     return true;
 }
 
-Kernel Platform::createKernel(std::string name) const {
+Kernel Platform::createKernel(std::string name, OpenMMContextImpl& context) const {
     if (kernelFactories.find(name) == kernelFactories.end())
         throw PlatformException("Called createKernel() on a Platform which does not support the requested kernel");
-    return Kernel(kernelFactories.find(name)->second->createKernelImpl(name, *this));
+    return Kernel(kernelFactories.find(name)->second->createKernelImpl(name, *this, context));
 }
 
-Stream Platform::createStream(std::string name, int size, Stream::DataType type) const {
+Stream Platform::createStream(std::string name, int size, Stream::DataType type, OpenMMContextImpl& context) const {
     if (streamFactories.find(name) == streamFactories.end())
-        return Stream(getDefaultStreamFactory().createStreamImpl(name, size, type, *this));
-    return Stream(streamFactories.find(name)->second->createStreamImpl(name, size, type, *this));
+        return Stream(getDefaultStreamFactory().createStreamImpl(name, size, type, *this, context));
+    return Stream(streamFactories.find(name)->second->createStreamImpl(name, size, type, *this, context));
 }
 
 void Platform::registerPlatform(Platform* platform) {

@@ -7,7 +7,7 @@
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
  * Portions copyright (c) 2008 Stanford University and the Authors.           *
- * Authors: Peter Eastman, Mark Friedrichs                                    *
+ * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
@@ -29,24 +29,51 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "BrookKernelFactory.h"
-#include "BrookKernels.h"
+#include "CudaStreamFactory.h"
+#include "CudaStreamImpl.h"
+#include "OpenMMException.h"
+#include "internal/OpenMMContextImpl.h"
+#include "kernels/gpuTypes.h"
 
 using namespace OpenMM;
 
-KernelImpl* BrookKernelFactory::createKernelImpl(std::string name, const Platform& platform, OpenMMContextImpl& context) const {
-    if (name == CalcStandardMMForceFieldKernel::Name())
-        return new BrookCalcStandardMMForceFieldKernel(name, platform);
-    if (name == CalcGBSAOBCForceFieldKernel::Name())
-        return new BrookCalcGBSAOBCForceFieldKernel(name, platform);
-    if (name == IntegrateVerletStepKernel::Name())
-        return new BrookIntegrateVerletStepKernel(name, platform);
-    if (name == IntegrateLangevinStepKernel::Name())
-        return new BrookIntegrateLangevinStepKernel(name, platform);
-    if (name == IntegrateBrownianStepKernel::Name())
-        return new BrookIntegrateBrownianStepKernel(name, platform);
-    if (name == ApplyAndersenThermostatKernel::Name())
-        return new BrookApplyAndersenThermostatKernel(name, platform);
-    if (name == CalcKineticEnergyKernel::Name())
-        return new BrookCalcKineticEnergyKernel(name, platform);
+StreamImpl* CudaStreamFactory::createStreamImpl(std::string name, int size, Stream::DataType type, const Platform& platform, OpenMMContextImpl& context) const {
+    if (name == "atomPositions") {
+        _gpuContext& gpu = *reinterpret_cast<_gpuContext*>(context.getPlatformData());
+        float padding[] = {100000.0f, 100000.0f, 100000.0f, 0.2f};
+        return new CudaStreamImpl<float4>(name, size, type, platform, gpu.psPosq4, 4, padding);
+    }
+    if (name == "atomVelocities") {
+        _gpuContext& gpu = *reinterpret_cast<_gpuContext*>(context.getPlatformData());
+        float padding[] = {0.0f, 0.0f, 0.0f, 0.0f};
+        return new CudaStreamImpl<float4>(name, size, type, platform, gpu.psVelm4, 4, padding);
+    }
+    if (name == "atomForces") {
+        _gpuContext& gpu = *reinterpret_cast<_gpuContext*>(context.getPlatformData());
+        float padding[] = {0.0f, 0.0f, 0.0f, 0.0f};
+        return new CudaStreamImpl<float4>(name, size, type, platform, gpu.psForce4, 4, padding);
+    }
+    switch (type) {
+    case Stream::Float:
+    case Stream::Double:
+        return new CudaStreamImpl<float1>(name, size, type, platform, 1);
+    case Stream::Float2:
+    case Stream::Double2:
+        return new CudaStreamImpl<float2>(name, size, type, platform, 1);
+    case Stream::Float3:
+    case Stream::Double3:
+        return new CudaStreamImpl<float3>(name, size, type, platform, 1);
+    case Stream::Float4:
+    case Stream::Double4:
+        return new CudaStreamImpl<float4>(name, size, type, platform, 1);
+    case Stream::Integer:
+        return new CudaStreamImpl<int1>(name, size, type, platform, 1);
+    case Stream::Integer2:
+        return new CudaStreamImpl<int2>(name, size, type, platform, 1);
+    case Stream::Integer3:
+        return new CudaStreamImpl<int3>(name, size, type, platform, 1);
+    case Stream::Integer4:
+        return new CudaStreamImpl<int4>(name, size, type, platform, 1);
+    }
+    throw OpenMMException("Tried to create a Stream with an illegal DataType.");
 }

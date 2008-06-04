@@ -42,7 +42,7 @@ namespace OpenMM {
 
 class BrookStreamFactory : public StreamFactory {
 public:
-    StreamImpl* createStreamImpl(std::string name, int size, Stream::DataType type, int streamWidth, const Platform& platform) const;
+    StreamImpl* createStreamImpl(std::string name, int size, Stream::DataType type, int streamWidth, const Platform& platform, OpenMMContextImpl& context) const;
 };
 
 } // namespace OpenMM

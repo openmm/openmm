@@ -1,3 +1,6 @@
+#ifndef OPENMM_CUDAPLATFORM_H_
+#define OPENMM_CUDAPLATFORM_H_
+
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -7,7 +10,7 @@
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
  * Portions copyright (c) 2008 Stanford University and the Authors.           *
- * Authors: Peter Eastman, Mark Friedrichs                                    *
+ * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
@@ -29,24 +32,32 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "BrookKernelFactory.h"
-#include "BrookKernels.h"
+#include "Platform.h"
+#include "CudaStreamFactory.h"
 
-using namespace OpenMM;
+namespace OpenMM {
 
-KernelImpl* BrookKernelFactory::createKernelImpl(std::string name, const Platform& platform, OpenMMContextImpl& context) const {
-    if (name == CalcStandardMMForceFieldKernel::Name())
-        return new BrookCalcStandardMMForceFieldKernel(name, platform);
-    if (name == CalcGBSAOBCForceFieldKernel::Name())
-        return new BrookCalcGBSAOBCForceFieldKernel(name, platform);
-    if (name == IntegrateVerletStepKernel::Name())
-        return new BrookIntegrateVerletStepKernel(name, platform);
-    if (name == IntegrateLangevinStepKernel::Name())
-        return new BrookIntegrateLangevinStepKernel(name, platform);
-    if (name == IntegrateBrownianStepKernel::Name())
-        return new BrookIntegrateBrownianStepKernel(name, platform);
-    if (name == ApplyAndersenThermostatKernel::Name())
-        return new BrookApplyAndersenThermostatKernel(name, platform);
-    if (name == CalcKineticEnergyKernel::Name())
-        return new BrookCalcKineticEnergyKernel(name, platform);
-}
+/**
+ * This Platform subclass uses CUDA implementations of the OpenMM kernels to run on NVidia GPUs.
+ */
+
+class CudaPlatform : public Platform {
+public:
+    CudaPlatform();
+    std::string getName() const {
+        return "Cuda";
+    }
+    double getSpeed() const {
+        return 100;
+    }
+    bool supportsDoublePrecision() const;
+    const StreamFactory& getDefaultStreamFactory() const;
+    void contextCreated(OpenMMContextImpl& context) const;
+    void contextDestroyed(OpenMMContextImpl& context) const;
+private:
+    CudaStreamFactory defaultStreamFactory;
+};
+
+} // namespace OpenMM
+
+#endif /*OPENMM_CUDAPLATFORM_H_*/

@@ -43,7 +43,7 @@ CMMotionRemoverImpl::CMMotionRemoverImpl(CMMotionRemover& owner) : owner(owner) 
 }
 
 void CMMotionRemoverImpl::initialize(OpenMMContextImpl& context) {
-    kernel = context.getPlatform().createKernel(RemoveCMMotionKernel::Name());
+    kernel = context.getPlatform().createKernel(RemoveCMMotionKernel::Name(), context);
     const System& system = context.getSystem();
     vector<double> masses(system.getNumAtoms());
     for (int i = 0; i < system.getNumAtoms(); ++i)

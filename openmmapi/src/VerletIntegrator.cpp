@@ -45,7 +45,7 @@ VerletIntegrator::VerletIntegrator(double stepSize) {
 
 void VerletIntegrator::initialize(OpenMMContextImpl& contextRef) {
     context = &contextRef;
-    kernel = context->getPlatform().createKernel(IntegrateVerletStepKernel::Name());
+    kernel = context->getPlatform().createKernel(IntegrateVerletStepKernel::Name(), contextRef);
     const System& system = context->getSystem();
     vector<double> masses(system.getNumAtoms());
     vector<std::vector<int> > constraintIndices(system.getNumConstraints());

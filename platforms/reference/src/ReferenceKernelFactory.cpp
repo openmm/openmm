@@ -34,7 +34,7 @@
 
 using namespace OpenMM;
 
-KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name, const Platform& platform) const {
+KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name, const Platform& platform, OpenMMContextImpl& context) const {
     if (name == CalcStandardMMForceFieldKernel::Name())
         return new ReferenceCalcStandardMMForceFieldKernel(name, platform);
     if (name == CalcGBSAOBCForceFieldKernel::Name())
