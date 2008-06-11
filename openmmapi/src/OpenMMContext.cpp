@@ -42,6 +42,10 @@ OpenMMContext::OpenMMContext(System& system, Integrator& integrator) : impl(new 
 OpenMMContext::OpenMMContext(System& system, Integrator& integrator, Platform& platform) : impl(new OpenMMContextImpl(*this, system, integrator, &platform)) {
 }
 
+OpenMMContext::~OpenMMContext() {
+	delete impl;
+}
+
 const System& OpenMMContext::getSystem() const {
     return impl->getSystem();
 

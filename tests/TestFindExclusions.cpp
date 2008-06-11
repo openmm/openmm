@@ -236,11 +236,18 @@ int main() {
         System system(NUM_ATOMS, 0);
         VerletIntegrator integrator(0.01);
         StandardMMForceField* forces = new StandardMMForceField(NUM_ATOMS, NUM_ATOMS-1, 0, 0, 0);
-        for (int i = 0; i < NUM_ATOMS; i += 2) {
-            forces->setBondParameters(i, i, i+1, 1.0, 1.0);
-            if (i < NUM_ATOMS-1)
+        
+        // loop over all main-chain atoms (even numbered atoms)
+        for (int i = 0; i < NUM_ATOMS-1; i += 2) 
+        {
+        	// side-chain bonds
+        	forces->setBondParameters(i, i, i+1, 1.0, 1.0);
+
+        	// main-chain bonds
+            if (i < NUM_ATOMS-2) // penultimate atom (NUM_ATOMS-2) has no subsequent main-chain atom
                 forces->setBondParameters(i+1, i, i+2, 1.0, 1.0);
         }
+        
         system.addForce(forces);
         OpenMMContext context(system, integrator, platform);
     }

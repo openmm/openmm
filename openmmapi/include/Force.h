@@ -53,6 +53,7 @@ class ForceImpl;
 
 class Force {
 public:
+	Force() {}
     virtual ~Force() {
     }
 protected:
@@ -63,6 +64,10 @@ protected:
      * The ForceImpl will be deleted automatically when the OpenMMContext is deleted.
      */
     virtual ForceImpl* createImpl() = 0;
+    
+private:
+	Force& operator=(const Force& rhs);
+	Force(const Force& rhs);
 };
 
 } // namespace OpenMM

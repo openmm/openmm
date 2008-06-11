@@ -78,6 +78,7 @@ public:
      * @param platform    the Platform to use for calculations
      */
     OpenMMContext(System& system, Integrator& integrator, Platform& platform);
+    ~OpenMMContext();
     /**
      * Get System being simulated in this context.
      */
