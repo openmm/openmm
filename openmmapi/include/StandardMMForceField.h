@@ -255,7 +255,7 @@ public:
 class StandardMMForceField::RBTorsionInfo {
 public:
     int atom1, atom2, atom3, atom4;
-    double c[5];
+    double c[6];
     RBTorsionInfo() {
         atom1 = atom2 = atom3 = atom4 = -1;
         c[0] = c[1] = c[2] = c[3] = c[4] = c[5] = 0.0;

@@ -215,7 +215,7 @@ double ReferenceCalcStandardMMForceFieldKernel::executeEnergy(const Stream& posi
 
 ReferenceCalcGBSAOBCForceFieldKernel::~ReferenceCalcGBSAOBCForceFieldKernel() {
     if (obc) {
-        delete obc->getObcParameters();
+        // delete obc->getObcParameters();
         delete obc;
     }
 }

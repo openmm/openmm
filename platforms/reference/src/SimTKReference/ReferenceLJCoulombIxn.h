@@ -64,7 +64,7 @@ class ReferenceLJCoulombIxn : public ReferencePairIxn {
          @param c6               c6
          @param c12              c12
          @param q1               q1 charge atom
-         @param epsfacSqrt       epsfacSqrt ????????????/
+         @param epsfacSqrt       epsfacSqrt (what is this?)
          @param parameters       output parameters:
                                     parameter[SigIndex]  = sqrt(c6*c6/c12)
                                     parameter[EpsIndex]  = 0.5*( (c12/c6)**1/6 )
