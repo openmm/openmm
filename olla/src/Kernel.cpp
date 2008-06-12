@@ -58,7 +58,7 @@ Kernel& Kernel::operator=(const Kernel& copy) {
     return *this;
 }
 
-string Kernel::Kernel::getName() const {
+string Kernel::getName() const {
     return impl->getName();
 }
 

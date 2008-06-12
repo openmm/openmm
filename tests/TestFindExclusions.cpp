@@ -172,6 +172,7 @@ public:
     void initialize(const vector<double>& masses) {
     }
     double execute(const Stream& positions) {
+        return 0.0;
     }
 };
 

@@ -59,7 +59,7 @@ Stream& Stream::operator=(const Stream& copy) {
     return *this;
 }
 
-string Stream::Stream::getName() const {
+string Stream::getName() const {
     return impl->getName();
 }
 
