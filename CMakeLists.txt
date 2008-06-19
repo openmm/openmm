@@ -14,7 +14,11 @@
 #   libOpenMM_static[_d].a
 #----------------------------------------------------
 
-PROJECT (OpenMM)
+# Don't create a new project name if this is part of a mega-build from the
+# parent directory
+IF( NOT PROJECT_NAME )
+    PROJECT (OpenMM)
+ENDIF( NOT PROJECT_NAME )
 
 INCLUDE(Dart)
 
