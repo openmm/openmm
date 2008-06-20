@@ -86,13 +86,13 @@ SET(OPENMM_AUTHORS "Peter.Eastman")
 FIND_PROGRAM (SVNVERSION_EXE svnversion.exe)
 IF (SVNVERSION_EXE)
     EXEC_PROGRAM (${SVNVERSION_EXE}
-                  ARGS  \"${PROJECT_SOURCE_DIR}\"
+                  ARGS  \"${CMAKE_CURRENT_SOURCE_DIR}\"
                   OUTPUT_VARIABLE OPENMM_SVN_REVISION )
 ELSE (SVNVERSION_EXE) 
     FIND_PROGRAM (SVNVERSION svnversion) 
     IF (SVNVERSION)
         EXEC_PROGRAM (${SVNVERSION}
-                      ARGS "${PROJECT_SOURCE_DIR}"
+                      ARGS "${CMAKE_CURRENT_SOURCE_DIR}"
                       OUTPUT_VARIABLE OPENMM_SVN_REVISION)
     ELSE (SVNVERSION)
         MESSAGE (STATUS 
@@ -177,8 +177,8 @@ SET(API_INCLUDE_DIRS) # start empty
 FOREACH(subdir ${OPENMM_SOURCE_SUBDIRS})
     # append
     SET(API_INCLUDE_DIRS ${API_INCLUDE_DIRS}
-                         ${subdir}/include 
-                         ${subdir}/include/internal)
+                         ${CMAKE_CURRENT_SOURCE_DIR}/${subdir}/include 
+                         ${CMAKE_CURRENT_SOURCE_DIR}/${subdir}/include/internal)
 ENDFOREACH(subdir)
 
 # We'll need both *relative* path names, starting with their API_INCLUDE_DIRS,
@@ -201,17 +201,17 @@ SET(SOURCE_FILES) # empty
 SET(SOURCE_INCLUDE_FILES)
 
 FOREACH(subdir ${OPENMM_SOURCE_SUBDIRS})
-    FILE(GLOB src_files  ${subdir}/src/*.cpp ${subdir}/src/*/*.cpp)
-    FILE(GLOB incl_files ${subdir}/src/*.h)
+    FILE(GLOB src_files  ${CMAKE_CURRENT_SOURCE_DIR}/${subdir}/src/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/${subdir}/src/*/*.cpp)
+    FILE(GLOB incl_files ${CMAKE_CURRENT_SOURCE_DIR}/${subdir}/src/*.h)
     SET(SOURCE_FILES         ${SOURCE_FILES}         ${src_files})   #append
     SET(SOURCE_INCLUDE_FILES ${SOURCE_INCLUDE_FILES} ${incl_files})
 
     ## Make sure we find these locally before looking in SimTK/core/include if
     ## OpenMM was previously installed there.
-    INCLUDE_DIRECTORIES(BEFORE ${PROJECT_SOURCE_DIR}/${subdir}/include)
+    INCLUDE_DIRECTORIES(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/${subdir}/include)
 ENDFOREACH(subdir)
 
-INCLUDE_DIRECTORIES(BEFORE ${PROJECT_SOURCE_DIR}/src)
+INCLUDE_DIRECTORIES(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 ADD_LIBRARY(${SHARED_TARGET} SHARED ${SOURCE_FILES} ${SOURCE_INCLUDE_FILES} ${API_ABS_INCLUDE_FILES})
 ADD_LIBRARY(${STATIC_TARGET} STATIC ${SOURCE_FILES} ${SOURCE_INCLUDE_FILES} ${API_ABS_INCLUDE_FILES})
