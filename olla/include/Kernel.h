@@ -33,6 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "KernelImpl.h"
+#include "internal/windowsExport.h"
 
 namespace OpenMM {
 
@@ -54,7 +55,7 @@ namespace OpenMM {
  * </pre>
  */
 
-class Kernel {
+class OPENMM_EXPORT Kernel {
 public:
     Kernel();
     Kernel(const Kernel& copy);

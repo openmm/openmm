@@ -35,6 +35,7 @@
 #include "Stream.h"
 #include <map>
 #include <vector>
+#include "internal/windowsExport.h"
 
 namespace OpenMM {
 
@@ -60,7 +61,7 @@ class StreamFactory;
  * You can then call createKernel() and createStream() to construct particular kernels and streams as needed.
  */
 
-class Platform {
+class OPENMM_EXPORT Platform {
 public:
     virtual ~Platform();
     /**
@@ -168,9 +169,23 @@ public:
      */
     static Platform& findPlatform(std::vector<std::string> kernelNames);
 private:
+
+// Retarded visual studio compiler complains about being unable to 
+// export private stl class members.
+// This stanza explains that it should temporarily shut up.
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable:4251)
+#endif
+
     std::map<std::string, KernelFactory*> kernelFactories;
     std::map<std::string, StreamFactory*> streamFactories;
     static std::vector<Platform*> platforms;
+
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
+
 };
 
 } // namespace OpenMM

@@ -685,7 +685,7 @@ int ReferenceDynamics::writeState( int numberOfAtoms, RealOpenMM** atomCoordinat
    scalarR.push_back( getDeltaT() );
    scalarNameR.push_back( "delta_t" );
 
-   scalarR.push_back( SimTKOpenMMUtilities::getRandomNumberSeed() );
+   scalarR.push_back( static_cast<RealOpenMM>(SimTKOpenMMUtilities::getRandomNumberSeed()) );
    scalarNameR.push_back( "seed" );
 
    scalarR.push_back( getTemperature() );

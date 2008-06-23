@@ -176,7 +176,7 @@ int ReferenceVerletDynamics::update( int numberOfAtoms, RealOpenMM** atomCoordin
    
    // Update the positions and velocities.
    
-   RealOpenMM velocityScale = 1.0/getDeltaT();
+   RealOpenMM velocityScale = static_cast<RealOpenMM>( 1.0/getDeltaT() );
    for (int i = 0; i < numberOfAtoms; ++i) {
        for (int j = 0; j < 3; ++j) {
            velocities[i][j] = velocityScale*(xPrime[i][j] - atomCoordinates[i][j]);

@@ -34,6 +34,7 @@
 
 #include "Platform.h"
 #include "ReferenceStreamFactory.h"
+#include "internal/windowsExport.h"
 
 namespace OpenMM {
 
@@ -41,7 +42,7 @@ namespace OpenMM {
  * This Platform subclass uses the reference implementations of all the OpenMM kernels.
  */
 
-class ReferencePlatform : public Platform {
+class OPENMM_EXPORT ReferencePlatform : public Platform {
 public:
     ReferencePlatform();
     std::string getName() const {

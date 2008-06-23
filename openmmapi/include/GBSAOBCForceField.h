@@ -34,6 +34,7 @@
 
 #include "Force.h"
 #include <vector>
+#include "internal/windowsExport.h"
 
 namespace OpenMM {
 
@@ -41,7 +42,7 @@ namespace OpenMM {
  * This class implements an implicit solvation force using the GBSA-OBC model.
  */
 
-class GBSAOBCForceField : public Force {
+class OPENMM_EXPORT GBSAOBCForceField : public Force {
 public:
     /*
      * Create a GBSAOBCForceField.
@@ -102,7 +103,21 @@ protected:
 private:
     class AtomInfo;
     double solventDielectric, soluteDielectric;
+
+// Retarded visual studio compiler complains about being unable to 
+// export private stl class members.
+// This stanza explains that it should temporarily shut up.
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable:4251)
+#endif
+
     std::vector<AtomInfo> atoms;
+
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
+
 };
 
 class GBSAOBCForceField::AtomInfo {

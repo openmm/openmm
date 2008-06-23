@@ -45,7 +45,11 @@ using std::vector;
 using std::string;
 
 OpenMMContextImpl::OpenMMContextImpl(OpenMMContext& owner, System& system, Integrator& integrator, Platform* platform) :
-            owner(owner), system(system), integrator(integrator), platform(platform), platformData(NULL) {
+				owner(owner), system(system), 
+				integrator(integrator), platform(platform), 
+				platformData(NULL),
+				time(0)
+{
     vector<string> kernelNames;
     kernelNames.push_back(CalcKineticEnergyKernel::Name());
     for (int i = 0; i < system.getNumForces(); ++i) {
@@ -69,10 +73,10 @@ OpenMMContextImpl::OpenMMContextImpl(OpenMMContext& owner, System& system, Integ
     velocities.fillWithValue(&zero);
     kineticEnergyKernel = platform->createKernel(CalcKineticEnergyKernel::Name(), *this);
     vector<double> masses(system.getNumAtoms());
-    for (int i = 0; i < masses.size(); ++i)
+    for (size_t i = 0; i < masses.size(); ++i)
         masses[i] = system.getAtomMass(i);
     dynamic_cast<CalcKineticEnergyKernel&>(kineticEnergyKernel.getImpl()).initialize(masses);
-    for (int i = 0; i < forceImpls.size(); ++i)
+    for (size_t i = 0; i < forceImpls.size(); ++i)
         forceImpls[i]->initialize(*this);
     integrator.initialize(*this);
 }

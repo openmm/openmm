@@ -1443,11 +1443,11 @@ RealOpenMM SimTKOpenMMUtilities::getNormallyDistributedRandomNumber( void ) {
     
     RealOpenMM x, y, r2;
     do {
-        x = 2.0*genrand_real2()-1.0;
-        y = 2.0*genrand_real2()-1.0;
+        x = static_cast<RealOpenMM>(2.0 * genrand_real2() - 1.0);
+        y = static_cast<RealOpenMM>(2.0 * genrand_real2() - 1.0);
         r2 = x*x + y*y;
     } while (r2 >= 1.0 || r2 == 0.0);
-    RealOpenMM multiplier = sqrt((-2.0*log(r2))/r2);
+    RealOpenMM multiplier = static_cast<RealOpenMM>( sqrt((-2.0*log(r2))/r2) );
     nextValue = y*multiplier;
     nextValueIsValid = true;
     return x*multiplier;
@@ -1466,7 +1466,7 @@ RealOpenMM SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber( void ) {
         init_gen_rand(_randomNumberSeed);
         _randomInitialized = true;
     }
-    return genrand_real2();
+    return static_cast<RealOpenMM>( genrand_real2() );
 }
 
 /**---------------------------------------------------------------------------------------

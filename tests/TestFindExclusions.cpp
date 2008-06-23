@@ -120,7 +120,7 @@ void verify14(const vector<vector<int> >& bonded14Indices) {
         addAtomsTo14List(i+1, i+4, expected);
     }
     ASSERT_EQUAL(expected.size(), bonded14Indices.size());
-    for (int i = 0; i < bonded14Indices.size(); ++i) {
+    for (size_t i = 0; i < bonded14Indices.size(); ++i) {
         int atom1 = bonded14Indices[i][0];
         int atom2 = bonded14Indices[i][1];
         found.insert(pair<int, int>(min(atom1, atom2), max(atom1, atom2)));
@@ -152,6 +152,7 @@ public:
     void executeForces(const Stream& positions, Stream& forces) {
     }
     double executeEnergy(const Stream& positions) {
+		return 0.0;
     }
 };
 

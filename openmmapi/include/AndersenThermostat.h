@@ -34,6 +34,7 @@
 
 #include "Force.h"
 #include <string>
+#include "internal/windowsExport.h"
 
 namespace OpenMM {
 
@@ -41,7 +42,7 @@ namespace OpenMM {
  * This class uses the Andersen method to maintain constant temperature.
  */
 
-class AndersenThermostat : public Force {
+class OPENMM_EXPORT AndersenThermostat : public Force {
 public:
     /**
      * This is the name of the parameter which stores the current temperature of the

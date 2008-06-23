@@ -67,7 +67,7 @@
                   
                   // A collision occurred, so set the velocity to a new value chosen from a Boltzmann distribution.
                   
-                  const RealOpenMM velocityScale = sqrt(BOLTZ*temperature/atomMasses[i]);
+                  const RealOpenMM velocityScale = static_cast<RealOpenMM>( sqrt(BOLTZ*temperature/atomMasses[i]) );
                   atomVelocities[i][0] = velocityScale*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
                   atomVelocities[i][1] = velocityScale*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
                   atomVelocities[i][2] = velocityScale*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();

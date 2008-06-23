@@ -32,6 +32,7 @@
 #define SFMT_H
 
 #include <stdio.h>
+#include "internal/windowsExport.h"
 
 #if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L)
   #include <inttypes.h>
@@ -72,11 +73,14 @@
   #define PRE_ALWAYS inline
 #endif
 
-uint32_t gen_rand32(void);
-uint64_t gen_rand64(void);
+uint32_t OPENMM_EXPORT gen_rand32(void);
+uint64_t OPENMM_EXPORT gen_rand64(void);
+
 void fill_array32(uint32_t *array, int size);
 void fill_array64(uint64_t *array, int size);
-void init_gen_rand(uint32_t seed);
+
+void OPENMM_EXPORT init_gen_rand(uint32_t seed);
+
 void init_by_array(uint32_t *init_key, int key_length);
 const char *get_idstring(void);
 int get_min_array_size32(void);

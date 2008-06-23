@@ -1,0 +1,36 @@
+#ifndef OPENMM_WINDOWSEXPORT_H_
+#define OPENMM_WINDOWSEXPORT_H_
+
+/*
+ * Shared libraries are messy in Visual Studio. We have to distinguish three
+ * cases:
+ *   (1) this header is being used to build the SimTKcommon shared library (dllexport)
+ *   (2) this header is being used by a *client* of the SimTKcommon shared
+ *       library (dllimport)
+ *   (3) we are building the SimTKcommon static library, or the client is
+ *       being compiled with the expectation of linking with the
+ *       SimTKcommon static library (nothing special needed)
+ * In the CMake script for building this library, we define one of the symbols
+ *     SimTK_SimTKCOMMON_BUILDING_{SHARED|STATIC}_LIBRARY
+ * Client code normally has no special symbol defined, in which case we'll
+ * assume it wants to use the shared library. However, if the client defines
+ * the symbol SimTK_USE_STATIC_LIBRARIES we'll suppress the dllimport so
+ * that the client code can be linked with static libraries. Note that
+ * the client symbol is not library dependent, while the library symbols
+ * affect only the SimTKcommon library, meaning that other libraries can
+ * be clients of this one. However, we are assuming all-static or all-shared.
+ */
+
+#ifdef _MSC_VER
+	#if defined(OPENMM_BUILDING_SHARED_LIBRARY)
+		#define OPENMM_EXPORT __declspec(dllexport)
+	#elif defined(OPENMM_BUILDING_STATIC_LIBRARY) || defined(OPENMM_USE_STATIC_LIBRARIES)
+		#define OPENMM_EXPORT
+	#else
+		#define OPENMM_EXPORT __declspec(dllimport)   // i.e., a client of a shared library
+    #endif
+#else
+    #define OPENMM_EXPORT // Linux, Mac
+#endif
+
+#endif // OPENMM_WINDOWSEXPORT_H_

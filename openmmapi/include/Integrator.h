@@ -35,6 +35,7 @@
 #include "Vec3.h"
 #include <map>
 #include <vector>
+#include "internal/windowsExport.h"
 
 namespace OpenMM {
 
@@ -49,7 +50,7 @@ class OpenMMContextImpl;
  * is specified by passing the Integrator as an argument to the constructor of the OpenMMContext.
  */
 
-class Integrator {
+class OPENMM_EXPORT Integrator {
 public:
     virtual ~Integrator() {
     }

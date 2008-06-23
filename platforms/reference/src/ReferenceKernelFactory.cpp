@@ -31,24 +31,28 @@
 
 #include "ReferenceKernelFactory.h"
 #include "ReferenceKernels.h"
+#include "OpenMMException.h"
 
 using namespace OpenMM;
 
 KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name, const Platform& platform, OpenMMContextImpl& context) const {
     if (name == CalcStandardMMForceFieldKernel::Name())
         return new ReferenceCalcStandardMMForceFieldKernel(name, platform);
-    if (name == CalcGBSAOBCForceFieldKernel::Name())
+    else if (name == CalcGBSAOBCForceFieldKernel::Name())
         return new ReferenceCalcGBSAOBCForceFieldKernel(name, platform);
-    if (name == IntegrateVerletStepKernel::Name())
+    else if (name == IntegrateVerletStepKernel::Name())
         return new ReferenceIntegrateVerletStepKernel(name, platform);
-    if (name == IntegrateLangevinStepKernel::Name())
+    else if (name == IntegrateLangevinStepKernel::Name())
         return new ReferenceIntegrateLangevinStepKernel(name, platform);
-    if (name == IntegrateBrownianStepKernel::Name())
+    else if (name == IntegrateBrownianStepKernel::Name())
         return new ReferenceIntegrateBrownianStepKernel(name, platform);
-    if (name == ApplyAndersenThermostatKernel::Name())
+    else if (name == ApplyAndersenThermostatKernel::Name())
         return new ReferenceApplyAndersenThermostatKernel(name, platform);
-    if (name == CalcKineticEnergyKernel::Name())
+    else if (name == CalcKineticEnergyKernel::Name())
         return new ReferenceCalcKineticEnergyKernel(name, platform);
-    if (name == RemoveCMMotionKernel::Name())
+    else if (name == RemoveCMMotionKernel::Name())
         return new ReferenceRemoveCMMotionKernel(name, platform);
+	else {
+		throw OpenMMException( (std::string("Tried to create kernel with illegal kernel name '") + name + "'").c_str() );
+	}
 }

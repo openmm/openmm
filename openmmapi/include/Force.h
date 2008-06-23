@@ -32,6 +32,8 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include "internal/windowsExport.h"
+
 namespace OpenMM {
 
 class ForceImpl;
@@ -51,7 +53,7 @@ class ForceImpl;
  * </ul>
  */
 
-class Force {
+class OPENMM_EXPORT Force {
 public:
 	Force() {}
     virtual ~Force() {

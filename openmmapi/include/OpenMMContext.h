@@ -37,6 +37,7 @@
 #include "System.h"
 #include <string>
 #include <vector>
+#include "internal/windowsExport.h"
 
 namespace OpenMM {
 
@@ -60,7 +61,7 @@ class Platform;
  * atom and the current energy of the System.
  */
 
-class OpenMMContext {
+class OPENMM_EXPORT OpenMMContext {
 public:
     /**
      * Construct a new OpenMMContext in which to run a simulation.

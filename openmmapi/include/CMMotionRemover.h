@@ -34,6 +34,7 @@
 
 #include "Force.h"
 #include <string>
+#include "internal/windowsExport.h"
 
 namespace OpenMM {
 
@@ -42,7 +43,7 @@ namespace OpenMM {
  * center of mass momentum, then adjusts the individual atom velocities to make it zero.
  */
 
-class CMMotionRemover : public Force {
+class OPENMM_EXPORT CMMotionRemover : public Force {
 public:
     /**
      * Create a CMMotionRemover.

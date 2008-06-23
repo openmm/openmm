@@ -34,6 +34,7 @@
 
 #include "Integrator.h"
 #include "Kernel.h"
+#include "internal/windowsExport.h"
 
 namespace OpenMM {
 
@@ -41,7 +42,7 @@ namespace OpenMM {
  * This is an Integrator which simulates a System using Langevin dynamics.
  */
 
-class LangevinIntegrator : public Integrator {
+class OPENMM_EXPORT LangevinIntegrator : public Integrator {
 public:
     /**
      * Create a LangevinIntegrator.

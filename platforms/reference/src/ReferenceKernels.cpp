@@ -68,8 +68,8 @@ int** copyToArray(const vector<vector<int> > vec) {
     if (vec.size() == 0)
         return new int*[0];
     int** array = allocateIntArray(vec.size(), vec[0].size());
-    for (int i = 0; i < vec.size(); ++i)
-        for (int j = 0; j < vec[i].size(); ++j)
+    for (size_t i = 0; i < vec.size(); ++i)
+        for (size_t j = 0; j < vec[i].size(); ++j)
             array[i][j] = vec[i][j];
     return array;
 }
@@ -78,9 +78,9 @@ RealOpenMM** copyToArray(const vector<vector<double> > vec) {
     if (vec.size() == 0)
         return new RealOpenMM*[0];
     RealOpenMM** array = allocateRealArray(vec.size(), vec[0].size());
-    for (int i = 0; i < vec.size(); ++i)
-        for (int j = 0; j < vec[i].size(); ++j)
-            array[i][j] = vec[i][j];
+    for (size_t i = 0; i < vec.size(); ++i)
+        for (size_t j = 0; j < vec[i].size(); ++j)
+            array[i][j] = static_cast<RealOpenMM>(vec[i][j]);
     return array;
 }
 
@@ -136,11 +136,11 @@ void ReferenceCalcStandardMMForceFieldKernel::initialize(const vector<vector<int
     rbTorsionIndexArray = copyToArray(rbTorsionIndices);
     rbTorsionParamArray = copyToArray(rbTorsionParameters);
     atomParamArray = allocateRealArray(numAtoms, 3);
-    RealOpenMM sqrtEps = std::sqrt(138.935485);
+    RealOpenMM sqrtEps = static_cast<RealOpenMM>( std::sqrt(138.935485) );
     for (int i = 0; i < numAtoms; ++i) {
-        atomParamArray[i][0] = 0.5*nonbondedParameters[i][1];
-        atomParamArray[i][1] = 2.0*sqrt(nonbondedParameters[i][2]);
-        atomParamArray[i][2] = nonbondedParameters[i][0]*sqrtEps;
+        atomParamArray[i][0] = static_cast<RealOpenMM>( 0.5*nonbondedParameters[i][1] );
+        atomParamArray[i][1] = static_cast<RealOpenMM>( 2.0*sqrt(nonbondedParameters[i][2]) );
+        atomParamArray[i][2] = static_cast<RealOpenMM>( nonbondedParameters[i][0]*sqrtEps );
     }
     exclusionArray = new int*[numAtoms];
     for (int i = 0; i < numAtoms; ++i) {
@@ -155,9 +155,9 @@ void ReferenceCalcStandardMMForceFieldKernel::initialize(const vector<vector<int
     for (int i = 0; i < num14; ++i) {
         int atom1 = bonded14Indices[i][0];
         int atom2 = bonded14Indices[i][1];
-        bonded14ParamArray[i][0] = atomParamArray[atom1][0]+atomParamArray[atom2][0];
-        bonded14ParamArray[i][1] = lj14Scale*(atomParamArray[atom1][1]*atomParamArray[atom2][1]);
-        bonded14ParamArray[i][2] = coulomb14Scale*(atomParamArray[atom1][2]*atomParamArray[atom2][2]);
+        bonded14ParamArray[i][0] = static_cast<RealOpenMM>( atomParamArray[atom1][0]+atomParamArray[atom2][0] );
+        bonded14ParamArray[i][1] = static_cast<RealOpenMM>( lj14Scale*(atomParamArray[atom1][1]*atomParamArray[atom2][1]) );
+        bonded14ParamArray[i][2] = static_cast<RealOpenMM>( coulomb14Scale*(atomParamArray[atom1][2]*atomParamArray[atom2][2]) );
     }
 }
 
@@ -226,15 +226,15 @@ void ReferenceCalcGBSAOBCForceFieldKernel::initialize(const vector<vector<double
     vector<RealOpenMM> atomicRadii(numAtoms);
     vector<RealOpenMM> scaleFactors(numAtoms);
     for (int i = 0; i < numAtoms; ++i) {
-        charges[i] = atomParameters[i][0];
-        atomicRadii[i] = atomParameters[i][1];
-        scaleFactors[i] = atomParameters[i][2];
+        charges[i] = static_cast<RealOpenMM>( atomParameters[i][0] );
+        atomicRadii[i] = static_cast<RealOpenMM>( atomParameters[i][1] );
+        scaleFactors[i] = static_cast<RealOpenMM>( atomParameters[i][2] );
     }
     ObcParameters* obcParameters  = new ObcParameters(numAtoms, ObcParameters::ObcTypeII);
     obcParameters->setAtomicRadii(atomicRadii, SimTKOpenMMCommon::MdUnits);
     obcParameters->setScaledRadiusFactors(scaleFactors);
-    obcParameters->setSolventDielectric(solventDielectric);
-    obcParameters->setSoluteDielectric(soluteDielectric);
+    obcParameters->setSolventDielectric( static_cast<RealOpenMM>(solventDielectric) );
+    obcParameters->setSoluteDielectric( static_cast<RealOpenMM>(soluteDielectric) );
     obc = new CpuObc(obcParameters);
     obc->setIncludeAceApproximation(true);
 }
@@ -269,8 +269,8 @@ ReferenceIntegrateVerletStepKernel::~ReferenceIntegrateVerletStepKernel() {
 void ReferenceIntegrateVerletStepKernel::initialize(const vector<double>& masses, const vector<vector<int> >& constraintIndices,
         const vector<double>& constraintLengths) {
     this->masses = new RealOpenMM[masses.size()];
-    for (int i = 0; i < masses.size(); ++i)
-        this->masses[i] = masses[i];
+    for (size_t i = 0; i < masses.size(); ++i)
+        this->masses[i] = static_cast<RealOpenMM>( masses[i] );
     numConstraints = constraintIndices.size();
     this->constraintIndices = allocateIntArray(numConstraints, 2);
     for (int i = 0; i < numConstraints; ++i) {
@@ -278,8 +278,8 @@ void ReferenceIntegrateVerletStepKernel::initialize(const vector<double>& masses
         this->constraintIndices[i][1] = constraintIndices[i][1];
     }
     shakeParameters = allocateRealArray(constraintLengths.size(), 1);
-    for (int i = 0; i < constraintLengths.size(); ++i)
-        shakeParameters[i][0] = constraintLengths[i];
+    for (size_t i = 0; i < constraintLengths.size(); ++i)
+        shakeParameters[i][0] = static_cast<RealOpenMM>( constraintLengths[i] );
 }
 
 void ReferenceIntegrateVerletStepKernel::execute(Stream& positions, Stream& velocities, const Stream& forces, double stepSize) {
@@ -293,7 +293,7 @@ void ReferenceIntegrateVerletStepKernel::execute(Stream& positions, Stream& velo
             delete dynamics;
             delete shake;
         }
-        dynamics = new ReferenceVerletDynamics(positions.getSize(), stepSize);
+        dynamics = new ReferenceVerletDynamics(positions.getSize(), static_cast<RealOpenMM>(stepSize) );
         shake = new ReferenceShakeAlgorithm(numConstraints, constraintIndices, shakeParameters);
         dynamics->setReferenceShakeAlgorithm(shake);
         prevStepSize = stepSize;
@@ -317,8 +317,8 @@ ReferenceIntegrateLangevinStepKernel::~ReferenceIntegrateLangevinStepKernel() {
 void ReferenceIntegrateLangevinStepKernel::initialize(const vector<double>& masses, const vector<vector<int> >& constraintIndices,
         const vector<double>& constraintLengths) {
     this->masses = new RealOpenMM[masses.size()];
-    for (int i = 0; i < masses.size(); ++i)
-        this->masses[i] = masses[i];
+    for (size_t i = 0; i < masses.size(); ++i)
+        this->masses[i] = static_cast<RealOpenMM>( masses[i] );
     numConstraints = constraintIndices.size();
     this->constraintIndices = allocateIntArray(numConstraints, 2);
     for (int i = 0; i < numConstraints; ++i) {
@@ -326,8 +326,8 @@ void ReferenceIntegrateLangevinStepKernel::initialize(const vector<double>& mass
         this->constraintIndices[i][1] = constraintIndices[i][1];
     }
     shakeParameters = allocateRealArray(constraintLengths.size(), 1);
-    for (int i = 0; i < constraintLengths.size(); ++i)
-        shakeParameters[i][0] = constraintLengths[i];
+    for (size_t i = 0; i < constraintLengths.size(); ++i)
+        shakeParameters[i][0] = static_cast<RealOpenMM>( constraintLengths[i] );
 }
 
 void ReferenceIntegrateLangevinStepKernel::execute(Stream& positions, Stream& velocities, const Stream& forces, double temperature, double friction, double stepSize) {
@@ -341,8 +341,12 @@ void ReferenceIntegrateLangevinStepKernel::execute(Stream& positions, Stream& ve
             delete dynamics;
             delete shake;
         }
-        RealOpenMM tau = (friction == 0.0 ? 0.0 : 1.0/friction);
-        dynamics = new ReferenceStochasticDynamics(positions.getSize(), stepSize, tau, temperature);
+        RealOpenMM tau = static_cast<RealOpenMM>( friction == 0.0 ? 0.0 : 1.0/friction );
+        dynamics = new ReferenceStochasticDynamics(
+				positions.getSize(), 
+				static_cast<RealOpenMM>(stepSize), 
+				static_cast<RealOpenMM>(tau), 
+				static_cast<RealOpenMM>(temperature) );
         shake = new ReferenceShakeAlgorithm(numConstraints, constraintIndices, shakeParameters);
         dynamics->setReferenceShakeAlgorithm(shake);
         prevTemp = temperature;
@@ -368,8 +372,8 @@ ReferenceIntegrateBrownianStepKernel::~ReferenceIntegrateBrownianStepKernel() {
 void ReferenceIntegrateBrownianStepKernel::initialize(const vector<double>& masses, const vector<vector<int> >& constraintIndices,
         const vector<double>& constraintLengths) {
     this->masses = new RealOpenMM[masses.size()];
-    for (int i = 0; i < masses.size(); ++i)
-        this->masses[i] = masses[i];
+    for (size_t i = 0; i < masses.size(); ++i)
+        this->masses[i] = static_cast<RealOpenMM>(masses[i]);
     numConstraints = constraintIndices.size();
     this->constraintIndices = allocateIntArray(numConstraints, 2);
     for (int i = 0; i < numConstraints; ++i) {
@@ -377,8 +381,8 @@ void ReferenceIntegrateBrownianStepKernel::initialize(const vector<double>& mass
         this->constraintIndices[i][1] = constraintIndices[i][1];
     }
     shakeParameters = allocateRealArray(constraintLengths.size(), 1);
-    for (int i = 0; i < constraintLengths.size(); ++i)
-        shakeParameters[i][0] = constraintLengths[i];
+    for (size_t i = 0; i < constraintLengths.size(); ++i)
+        shakeParameters[i][0] = static_cast<RealOpenMM>( constraintLengths[i] );
 }
 
 void ReferenceIntegrateBrownianStepKernel::execute(Stream& positions, Stream& velocities, const Stream& forces, double temperature, double friction, double stepSize) {
@@ -392,7 +396,11 @@ void ReferenceIntegrateBrownianStepKernel::execute(Stream& positions, Stream& ve
             delete dynamics;
             delete shake;
         }
-        dynamics = new ReferenceBrownianDynamics(positions.getSize(), stepSize, friction, temperature);
+        dynamics = new ReferenceBrownianDynamics(
+				positions.getSize(), 
+				static_cast<RealOpenMM>(stepSize), 
+				static_cast<RealOpenMM>(friction), 
+				static_cast<RealOpenMM>(temperature) );
         shake = new ReferenceShakeAlgorithm(numConstraints, constraintIndices, shakeParameters);
         dynamics->setReferenceShakeAlgorithm(shake);
         prevTemp = temperature;
@@ -411,14 +419,20 @@ ReferenceApplyAndersenThermostatKernel::~ReferenceApplyAndersenThermostatKernel(
 
 void ReferenceApplyAndersenThermostatKernel::initialize(const vector<double>& masses) {
     this->masses = new RealOpenMM[masses.size()];
-    for (int i = 0; i < masses.size(); ++i)
-        this->masses[i] = masses[i];
+    for (size_t i = 0; i < masses.size(); ++i)
+        this->masses[i] = static_cast<RealOpenMM>( masses[i] );
     thermostat = new ReferenceAndersenThermostat();
 }
 
 void ReferenceApplyAndersenThermostatKernel::execute(Stream& velocities, double temperature, double collisionFrequency, double stepSize) {
     RealOpenMM** velData = ((ReferenceFloatStreamImpl&) velocities.getImpl()).getData();
-    thermostat->applyThermostat(velocities.getSize(), velData, masses, temperature, collisionFrequency, stepSize);
+    thermostat->applyThermostat(
+			velocities.getSize(), 
+			velData, 
+			masses, 
+			static_cast<RealOpenMM>(temperature), 
+			static_cast<RealOpenMM>(collisionFrequency), 
+			static_cast<RealOpenMM>(stepSize) );
 }
 
 void ReferenceCalcKineticEnergyKernel::initialize(const vector<double>& masses) {
@@ -428,14 +442,14 @@ void ReferenceCalcKineticEnergyKernel::initialize(const vector<double>& masses) 
 double ReferenceCalcKineticEnergyKernel::execute(const Stream& velocities) {
     RealOpenMM** velData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) velocities.getImpl()).getData()); // Reference code needs to be made const correct
     double energy = 0.0;
-    for (int i = 0; i < masses.size(); ++i)
+    for (size_t i = 0; i < masses.size(); ++i)
         energy += masses[i]*(velData[i][0]*velData[i][0]+velData[i][1]*velData[i][1]+velData[i][2]*velData[i][2]);
     return 0.5*energy;
 }
 
 void ReferenceRemoveCMMotionKernel::initialize(const vector<double>& masses) {
     this->masses.resize(masses.size());
-    for (int i = 0; i < masses.size(); ++i)
+    for (size_t i = 0; i < masses.size(); ++i)
         this->masses[i] = masses[i];
 }
 
@@ -445,20 +459,20 @@ void ReferenceRemoveCMMotionKernel::execute(Stream& velocities) {
     // Calculate the center of mass momentum.
     
     RealOpenMM momentum[] = {0.0, 0.0, 0.0};
-    for (int i = 0; i < masses.size(); ++i) {
-        momentum[0] += masses[i]*velData[i][0];
-        momentum[1] += masses[i]*velData[i][1];
-        momentum[2] += masses[i]*velData[i][2];
+    for (size_t i = 0; i < masses.size(); ++i) {
+        momentum[0] += static_cast<RealOpenMM>( masses[i]*velData[i][0] );
+        momentum[1] += static_cast<RealOpenMM>( masses[i]*velData[i][1] );
+        momentum[2] += static_cast<RealOpenMM>( masses[i]*velData[i][2] );
     }
     
     // Adjust the atom velocities.
     
-    momentum[0] /= masses.size();
-    momentum[1] /= masses.size();
-    momentum[2] /= masses.size();
-    for (int i = 0; i < masses.size(); ++i) {
-        velData[i][0] -= momentum[0]/masses[i];
-        velData[i][1] -= momentum[1]/masses[i];
-        velData[i][2] -= momentum[2]/masses[i];
+    momentum[0] /= static_cast<RealOpenMM>( masses.size() );
+    momentum[1] /= static_cast<RealOpenMM>( masses.size() );
+    momentum[2] /= static_cast<RealOpenMM>( masses.size() );
+    for (size_t i = 0; i < masses.size(); ++i) {
+        velData[i][0] -= static_cast<RealOpenMM>( momentum[0]/masses[i] );
+        velData[i][1] -= static_cast<RealOpenMM>( momentum[1]/masses[i] );
+        velData[i][2] -= static_cast<RealOpenMM>( momentum[2]/masses[i] );
     }
 }

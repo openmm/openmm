@@ -33,10 +33,11 @@
  * -------------------------------------------------------------------------- */
 
 #include <vector>
+#include "internal/windowsExport.h"
 
 namespace OpenMM {
 
-class Force;
+class OPENMM_EXPORT Force;
 
 /**
  * This class represents a molecular system.  The definition of a System involves
@@ -53,7 +54,7 @@ class Force;
  * stores a list of Force objects that determine the motion of the atoms.
  */
 
-class System {
+class OPENMM_EXPORT System {
 public:
     /**
      * Create a new System.
@@ -134,9 +135,23 @@ public:
     }
 private:
     class ConstraintInfo;
-    std::vector<double> masses;
+
+// Retarded visual studio compiler complains about being unable to 
+// export private stl class members.
+// This stanza explains that it should temporarily shut up.
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable:4251)
+#endif
+
+	std::vector<double> masses;
     std::vector<ConstraintInfo> constraints;
     std::vector<Force*> forces;
+
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
+
 };
 
 class System::ConstraintInfo {

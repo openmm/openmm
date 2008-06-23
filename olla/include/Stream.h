@@ -33,10 +33,11 @@
  * -------------------------------------------------------------------------- */
 
 #include <string>
+#include "internal/windowsExport.h"
 
 namespace OpenMM {
 
-class StreamImpl;
+class OPENMM_EXPORT StreamImpl;
 
 /**
  * A Stream encapsulates a particular implementation of a stream of data elements.  A Stream has three

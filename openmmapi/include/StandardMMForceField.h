@@ -35,6 +35,7 @@
 #include "Force.h"
 #include <map>
 #include <vector>
+#include "internal/windowsExport.h"
 
 namespace OpenMM {
 
@@ -48,7 +49,7 @@ namespace OpenMM {
  * method to set the force field parameters for each one.
  */
 
-class StandardMMForceField : public Force {
+class OPENMM_EXPORT StandardMMForceField : public Force {
 public:
     /**
      * Create a StandardMMForceField.
@@ -216,11 +217,25 @@ private:
     class AngleInfo;
     class PeriodicTorsionInfo;
     class RBTorsionInfo;
+
+// Retarded visual studio compiler complains about being unable to 
+// export private stl class members.
+// This stanza explains that it should temporarily shut up.
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable:4251)
+#endif
+
     std::vector<AtomInfo> atoms;
     std::vector<BondInfo> bonds;
     std::vector<AngleInfo> angles;
     std::vector<PeriodicTorsionInfo> periodicTorsions;
     std::vector<RBTorsionInfo> rbTorsions;
+
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
+
 };
 
 class StandardMMForceField::AtomInfo {

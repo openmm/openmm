@@ -33,6 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "StreamFactory.h"
+#include "internal/windowsExport.h"
 
 namespace OpenMM {
 
@@ -40,7 +41,7 @@ namespace OpenMM {
  * This StreamFactory creates all streams for ReferencePlatform.
  */
 
-class ReferenceStreamFactory : public StreamFactory {
+class OPENMM_EXPORT ReferenceStreamFactory : public StreamFactory {
 public:
     StreamImpl* createStreamImpl(std::string name, int size, Stream::DataType type, const Platform& platform, OpenMMContextImpl& context) const;
 };

@@ -33,6 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "StreamImpl.h"
+#include "internal/windowsExport.h"
 
 namespace OpenMM {
 
@@ -42,7 +43,7 @@ namespace OpenMM {
  * StreamImpls as needed.
  */
 
-class StreamFactory {
+class OPENMM_EXPORT StreamFactory {
 public:
     /**
      * Create a StreamImpl.

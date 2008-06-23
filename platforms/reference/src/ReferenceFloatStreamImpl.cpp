@@ -86,7 +86,7 @@ void ReferenceFloatStreamImpl::loadFromArray(const void* array) {
         double* arrayData = (double*) array;
         for (int i = 0; i < getSize(); ++i)
             for (int j = 0; j < width; ++j)
-                data[i][j] = arrayData[i*width+j];
+                data[i][j] = static_cast<RealOpenMM>( arrayData[i*width+j] );
     }
 }
 
@@ -116,7 +116,7 @@ void ReferenceFloatStreamImpl::fillWithValue(void* value) {
         double valueData = *((double*) value);
         for (int i = 0; i < getSize(); ++i)
             for (int j = 0; j < width; ++j)
-                data[i][j] = valueData;
+                data[i][j] = static_cast<RealOpenMM>(valueData);
     }
 
 }

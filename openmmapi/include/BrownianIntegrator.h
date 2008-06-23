@@ -34,6 +34,7 @@
 
 #include "Integrator.h"
 #include "Kernel.h"
+#include "internal/windowsExport.h"
 
 namespace OpenMM {
 
@@ -41,7 +42,7 @@ namespace OpenMM {
  * This is an Integrator which simulates a System using Brownian dynamics.
  */
 
-class BrownianIntegrator : public Integrator {
+class OPENMM_EXPORT BrownianIntegrator : public Integrator {
 public:
     /**
      * Create a BrownianIntegrator.

@@ -35,6 +35,7 @@
 #include "Platform.h"
 #include <string>
 #include <cassert>
+#include "internal/windowsExport.h"
 
 namespace OpenMM {
 
@@ -44,7 +45,7 @@ namespace OpenMM {
  * will in turn subclass it and provide concrete implementations of the execute() method.
  */
 
-class KernelImpl {
+class OPENMM_EXPORT KernelImpl {
 public:
     /**
      * Create a KernelImpl.

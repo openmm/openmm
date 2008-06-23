@@ -196,7 +196,7 @@ int ReferenceBrownianDynamics::update( int numberOfAtoms, RealOpenMM** atomCoord
    
    // Perform the integration.
    
-   const RealOpenMM noiseAmplitude = sqrt(2.0*BOLTZ*getTemperature()*getDeltaT()/getFriction());
+   const RealOpenMM noiseAmplitude = static_cast<RealOpenMM>( sqrt(2.0*BOLTZ*getTemperature()*getDeltaT()/getFriction()) );
    const RealOpenMM forceScale = getDeltaT()/getFriction();
    for (int i = 0; i < numberOfAtoms; ++i) {
        for (int j = 0; j < 3; ++j) {
@@ -209,7 +209,7 @@ int ReferenceBrownianDynamics::update( int numberOfAtoms, RealOpenMM** atomCoord
    
    // Update the positions and velocities.
    
-   RealOpenMM velocityScale = 1.0/getDeltaT();
+   RealOpenMM velocityScale = static_cast<RealOpenMM>( 1.0/getDeltaT() );
    for (int i = 0; i < numberOfAtoms; ++i) {
        for (int j = 0; j < 3; ++j) {
            velocities[i][j] = velocityScale*(xPrime[i][j] - atomCoordinates[i][j]);
