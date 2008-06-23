@@ -1,0 +1,279 @@
+/* -------------------------------------------------------------------------- *
+ *                                   OpenMM                                   *
+ * -------------------------------------------------------------------------- *
+ * This is part of the OpenMM molecular simulation toolkit originating from   *
+ * Simbios, the NIH National Center for Physics-Based Simulation of           *
+ * Biological Structures at Stanford, funded under the NIH Roadmap for        *
+ * Medical Research, grant U54 GM072970. See https://simtk.org.               *
+ *                                                                            *
+ * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Authors: Peter Eastman                                                     *
+ * Contributors:                                                              *
+ *                                                                            *
+ * Permission is hereby granted, free of charge, to any person obtaining a    *
+ * copy of this software and associated documentation files (the "Software"), *
+ * to deal in the Software without restriction, including without limitation  *
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,   *
+ * and/or sell copies of the Software, and to permit persons to whom the      *
+ * Software is furnished to do so, subject to the following conditions:       *
+ *                                                                            *
+ * The above copyright notice and this permission notice shall be included in *
+ * all copies or substantial portions of the Software.                        *
+ *                                                                            *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR *
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,   *
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL    *
+ * THE AUTHORS, CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,    *
+ * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR      *
+ * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE  *
+ * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
+ * -------------------------------------------------------------------------- */
+
+/**
+ * This tests all the different force terms in the platform implementation of StandardMMForceField.
+ */
+
+#include "@OPENMM_PLATFORM_NAME@.h"
+
+#include "../../../tests/AssertionUtilities.h"
+#include "OpenMMContext.h"
+#include "StandardMMForceField.h"
+#include "System.h"
+#include "VerletIntegrator.h"
+#include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
+#include <iostream>
+#include <vector>
+
+using namespace OpenMM;
+using namespace std;
+
+const double TOL = 1e-5;
+
+void testBonds(Platform& platform) {
+    System system(3, 0);
+    VerletIntegrator integrator(0.01);
+    StandardMMForceField* forceField = new StandardMMForceField(3, 2, 0, 0, 0);
+    forceField->setBondParameters(0, 0, 1, 1.5, 0.8);
+    forceField->setBondParameters(1, 1, 2, 1.2, 0.7);
+    system.addForce(forceField);
+    OpenMMContext context(system, integrator, platform);
+    vector<Vec3> positions(3);
+    positions[0] = Vec3(0, 2, 0);
+    positions[1] = Vec3(0, 0, 0);
+    positions[2] = Vec3(1, 0, 0);
+    context.setPositions(positions);
+    State state = context.getState(State::Forces | State::Energy);
+    const vector<Vec3>& forces = state.getForces();
+    ASSERT_EQUAL_VEC(Vec3(0, -0.8*0.5, 0), forces[0], TOL);
+    ASSERT_EQUAL_VEC(Vec3(0.7*0.2, 0, 0), forces[2], TOL);
+    ASSERT_EQUAL_VEC(Vec3(-forces[0][0]-forces[2][0], -forces[0][1]-forces[2][1], -forces[0][2]-forces[2][2]), forces[1], TOL);
+    ASSERT_EQUAL_TOL(0.5*0.8*0.5*0.5 + 0.5*0.7*0.2*0.2, state.getPotentialEnergy(), TOL);
+}
+
+void testAngles(Platform& platform) {
+    System system(4, 0);
+    VerletIntegrator integrator(0.01);
+    StandardMMForceField* forceField = new StandardMMForceField(4, 0, 2, 0, 0);
+    forceField->setAngleParameters(0, 0, 1, 2, PI_M/3, 1.1);
+    forceField->setAngleParameters(1, 1, 2, 3, PI_M/2, 1.2);
+    system.addForce(forceField);
+    OpenMMContext context(system, integrator, platform);
+    vector<Vec3> positions(4);
+    positions[0] = Vec3(0, 1, 0);
+    positions[1] = Vec3(0, 0, 0);
+    positions[2] = Vec3(1, 0, 0);
+    positions[3] = Vec3(2, 1, 0);
+    context.setPositions(positions);
+    State state = context.getState(State::Forces | State::Energy);
+    const vector<Vec3>& forces = state.getForces();
+    double torque1 = 1.1*PI_M/6;
+    double torque2 = 1.2*PI_M/4;
+    ASSERT_EQUAL_VEC(Vec3(torque1, 0, 0), forces[0], TOL);
+    ASSERT_EQUAL_VEC(Vec3(-0.5*torque2, 0.5*torque2, 0), forces[3], TOL); // reduced by sqrt(2) due to the bond length, another sqrt(2) due to the angle
+    ASSERT_EQUAL_VEC(Vec3(forces[0][0]+forces[1][0]+forces[2][0]+forces[3][0], forces[0][1]+forces[1][1]+forces[2][1]+forces[3][1], forces[0][2]+forces[1][2]+forces[2][2]+forces[3][2]), Vec3(0, 0, 0), TOL);
+    ASSERT_EQUAL_TOL(0.5*1.1*(PI_M/6)*(PI_M/6) + 0.5*1.2*(PI_M/4)*(PI_M/4), state.getPotentialEnergy(), TOL);
+}
+
+void testPeriodicTorsions(Platform& platform) {
+    System system(4, 0);
+    VerletIntegrator integrator(0.01);
+    StandardMMForceField* forceField = new StandardMMForceField(4, 0, 0, 1, 0);
+    forceField->setPeriodicTorsionParameters(0, 0, 1, 2, 3, 2, PI_M/3, 1.1);
+    system.addForce(forceField);
+    OpenMMContext context(system, integrator, platform);
+    vector<Vec3> positions(4);
+    positions[0] = Vec3(0, 1, 0);
+    positions[1] = Vec3(0, 0, 0);
+    positions[2] = Vec3(1, 0, 0);
+    positions[3] = Vec3(1, 0, 2);
+    context.setPositions(positions);
+    State state = context.getState(State::Forces | State::Energy);
+    const vector<Vec3>& forces = state.getForces();
+    double torque = -2*1.1*std::sin(2*PI_M/3);
+    ASSERT_EQUAL_VEC(Vec3(0, 0, torque), forces[0], TOL);
+    ASSERT_EQUAL_VEC(Vec3(0, 0.5*torque, 0), forces[3], TOL);
+    ASSERT_EQUAL_VEC(Vec3(forces[0][0]+forces[1][0]+forces[2][0]+forces[3][0], forces[0][1]+forces[1][1]+forces[2][1]+forces[3][1], forces[0][2]+forces[1][2]+forces[2][2]+forces[3][2]), Vec3(0, 0, 0), TOL);
+    ASSERT_EQUAL_TOL(1.1*(1+std::cos(2*PI_M/3)), state.getPotentialEnergy(), TOL);
+}
+
+void testRBTorsions(Platform& platform) {
+    System system(4, 0);
+    VerletIntegrator integrator(0.01);
+    StandardMMForceField* forceField = new StandardMMForceField(4, 0, 0, 0, 1);
+    forceField->setRBTorsionParameters(0, 0, 1, 2, 3, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6);
+    system.addForce(forceField);
+    OpenMMContext context(system, integrator, platform);
+    vector<Vec3> positions(4);
+    positions[0] = Vec3(0, 1, 0);
+    positions[1] = Vec3(0, 0, 0);
+    positions[2] = Vec3(1, 0, 0);
+    positions[3] = Vec3(1, 1, 1);
+    context.setPositions(positions);
+    State state = context.getState(State::Forces | State::Energy);
+    const vector<Vec3>& forces = state.getForces();
+    double psi = 0.25*PI_M - PI_M;
+    double torque = 0.0;
+    for (int i = 1; i < 6; ++i) {
+        double c = 0.1*(i+1);
+        torque += -c*i*std::pow(std::cos(psi), i-1)*std::sin(psi);
+    }
+    ASSERT_EQUAL_VEC(Vec3(0, 0, torque), forces[0], TOL);
+    ASSERT_EQUAL_VEC(Vec3(0, 0.5*torque, -0.5*torque), forces[3], TOL);
+    ASSERT_EQUAL_VEC(Vec3(forces[0][0]+forces[1][0]+forces[2][0]+forces[3][0], forces[0][1]+forces[1][1]+forces[2][1]+forces[3][1], forces[0][2]+forces[1][2]+forces[2][2]+forces[3][2]), Vec3(0, 0, 0), TOL);
+    double energy = 0.0;
+    for (int i = 0; i < 6; ++i) {
+        double c = 0.1*(i+1);
+        energy += c*std::pow(std::cos(psi), i);
+    }
+    ASSERT_EQUAL_TOL(energy, state.getPotentialEnergy(), TOL);
+}
+
+void testCoulomb(Platform& platform) {
+    System system(2, 0);
+    VerletIntegrator integrator(0.01);
+    StandardMMForceField* forceField = new StandardMMForceField(2, 0, 0, 0, 0);
+    forceField->setAtomParameters(0, 0.5, 1, 0);
+    forceField->setAtomParameters(1, -1.5, 1, 0);
+    system.addForce(forceField);
+    OpenMMContext context(system, integrator, platform);
+    vector<Vec3> positions(2);
+    positions[0] = Vec3(0, 0, 0);
+    positions[1] = Vec3(2, 0, 0);
+    context.setPositions(positions);
+    State state = context.getState(State::Forces | State::Energy);
+    const vector<Vec3>& forces = state.getForces();
+    double force = 138.935485*(-0.75)/4.0;
+    ASSERT_EQUAL_VEC(Vec3(-force, 0, 0), forces[0], TOL);
+    ASSERT_EQUAL_VEC(Vec3(force, 0, 0), forces[1], TOL);
+    ASSERT_EQUAL_TOL(138.935485*(-0.75)/2.0, state.getPotentialEnergy(), TOL);
+}
+
+void testLJ(Platform& platform) {
+    System system(2, 0);
+    VerletIntegrator integrator(0.01);
+    StandardMMForceField* forceField = new StandardMMForceField(2, 0, 0, 0, 0);
+    forceField->setAtomParameters(0, 0, 1.2, 1);
+    forceField->setAtomParameters(1, 0, 1.4, 2);
+    system.addForce(forceField);
+    OpenMMContext context(system, integrator, platform);
+    vector<Vec3> positions(2);
+    positions[0] = Vec3(0, 0, 0);
+    positions[1] = Vec3(2, 0, 0);
+    context.setPositions(positions);
+    State state = context.getState(State::Forces | State::Energy);
+    const vector<Vec3>& forces = state.getForces();
+    double x = 1.3/2.0;
+    double eps = SQRT_TWO;
+    double force = 4.0*eps*(12*std::pow(x, 12.0)-6*std::pow(x, 6.0))/2.0;
+    ASSERT_EQUAL_VEC(Vec3(-force, 0, 0), forces[0], TOL);
+    ASSERT_EQUAL_VEC(Vec3(force, 0, 0), forces[1], TOL);
+    ASSERT_EQUAL_TOL(4.0*eps*(std::pow(x, 12.0)-std::pow(x, 6.0)), state.getPotentialEnergy(), TOL);
+}
+
+void testExclusionsAnd14(Platform& platform) {
+    System system(5, 0);
+    VerletIntegrator integrator(0.01);
+    StandardMMForceField* forceField = new StandardMMForceField(5, 4, 0, 0, 0);
+    forceField->setBondParameters(0, 0, 1, 1, 0);
+    forceField->setBondParameters(1, 1, 2, 1, 0);
+    forceField->setBondParameters(2, 2, 3, 1, 0);
+    forceField->setBondParameters(3, 3, 4, 1, 0);
+    system.addForce(forceField);
+    OpenMMContext context(system, integrator, platform);
+    vector<Vec3> positions(5);
+    const double r = 1.0;
+    positions[0] = Vec3(0, 0, 0);
+    positions[1] = Vec3(r, 0, 0);
+    positions[2] = Vec3(r, 0, 0);
+    positions[3] = Vec3(r, 0, 0);
+    positions[4] = Vec3(r, 0, 0);
+    for (int i = 1; i < 5; ++i) {
+ 
+        // Test LJ forces
+        
+        forceField->setAtomParameters(0, 0, 1.5, 1);
+        for (int j = 1; j < 5; ++j)
+            forceField->setAtomParameters(j, 0, 1.5, 0);
+        forceField->setAtomParameters(i, 0, 1.5, 1);
+        context.reinitialize();
+        context.setPositions(positions);
+        State state = context.getState(State::Forces | State::Energy);
+        const vector<Vec3>& forces = state.getForces();
+        double x = 1.5/r;
+        double eps = 1.0;
+        double force = 4.0*eps*(12*std::pow(x, 12.0)-6*std::pow(x, 6.0))/r;
+        double energy = 4.0*eps*(std::pow(x, 12.0)-std::pow(x, 6.0));
+        if (i == 3) {
+            force *= 0.5;
+            energy *= 0.5;
+        }
+        if (i < 3) {
+            force = 0;
+            energy = 0;
+        }
+        ASSERT_EQUAL_VEC(Vec3(-force, 0, 0), forces[0], TOL);
+        ASSERT_EQUAL_VEC(Vec3(force, 0, 0), forces[i], TOL);
+        ASSERT_EQUAL_TOL(energy, state.getPotentialEnergy(), TOL);
+
+        // Test Coulomb forces
+        
+        forceField->setAtomParameters(0, 2, 1.5, 0);
+        forceField->setAtomParameters(i, 2, 1.5, 0);
+        context.reinitialize();
+        context.setPositions(positions);
+        state = context.getState(State::Forces | State::Energy);
+        const vector<Vec3>& forces2 = state.getForces();
+        force = 138.935485*4/(r*r);
+        energy = 138.935485*4/r;
+        if (i == 3) {
+            force /= 1.2;
+            energy /= 1.2;
+        }
+        if (i < 3) {
+            force = 0;
+            energy = 0;
+        }
+        ASSERT_EQUAL_VEC(Vec3(-force, 0, 0), forces2[0], TOL);
+        ASSERT_EQUAL_VEC(Vec3(force, 0, 0), forces2[i], TOL);
+        ASSERT_EQUAL_TOL(energy, state.getPotentialEnergy(), TOL);
+    }
+}
+
+int main() {
+    try {
+        @OPENMM_PLATFORM_NAME@ platform;        
+        testBonds(platform);
+        testAngles(platform);
+        testPeriodicTorsions(platform);
+        testRBTorsions(platform);
+        testCoulomb(platform);
+        testLJ(platform);
+        testExclusionsAnd14(platform);
+    }
+    catch(const exception& e) {
+        cout << "exception: " << e.what() << endl;
+        return 1;
+    }
+    cout << "Done" << endl;
+    return 0;
+}
