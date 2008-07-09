@@ -66,6 +66,38 @@ public:
         assert(index >= 0 && index < 3);
         return data[index];
     }
+    
+    // Arithmetic operators
+    
+    // unary plus
+    Vec3 operator+() const {
+        return Vec3(*this);
+    }
+    
+    // plus
+    Vec3 operator+(const Vec3& rhs) const {
+        const Vec3& lhs = *this;
+        return Vec3(lhs[0] + rhs[0], lhs[1] + rhs[1], lhs[2] + rhs[2]);
+    }
+    
+    // unary minus
+    Vec3 operator-() const {
+        const Vec3& lhs = *this;
+        return Vec3(-lhs[0], -lhs[1], -lhs[2]);
+    }
+    
+    // minus
+    Vec3 operator-(const Vec3& rhs) const {
+        const Vec3& lhs = *this;
+        return Vec3(lhs[0] - rhs[0], lhs[1] - rhs[1], lhs[2] - rhs[2]);
+    }
+    
+    // dot product
+    double dot(const Vec3& rhs) const {
+        const Vec3& lhs = *this;
+        return lhs[0]*rhs[0] + lhs[1]*rhs[1] + lhs[2]*rhs[2];
+    }
+    
 private:
     double data[3];
 };
