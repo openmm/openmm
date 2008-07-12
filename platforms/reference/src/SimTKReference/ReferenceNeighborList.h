@@ -1,12 +1,13 @@
 #ifndef OPENMM_REFERENCE_NEIGHBORLIST_H_
 #define OPENMM_REFERENCE_NEIGHBORLIST_H_
 
-#include "Vec3.h"
+#include "../SimTKUtilities/SimTKOpenMMRealType.h"
+#include <set>
 #include <vector>
 
 namespace OpenMM {
 
-typedef std::vector<Vec3> AtomLocationList;
+typedef RealOpenMM** AtomLocationList;
 typedef unsigned int AtomIndex;
 typedef std::pair<AtomIndex, AtomIndex> AtomPair;
 typedef std::vector<AtomPair>  NeighborList;
@@ -17,7 +18,10 @@ typedef std::vector<AtomPair>  NeighborList;
 // neighbors are added
 void computeNeighborListNaive(
                               NeighborList& neighborList,
+                              int nAtoms,
                               const AtomLocationList& atomLocations, 
+                              const std::vector<std::set<int> >& exclusions,
+                              const RealOpenMM* periodicBoxSize,
                               double maxDistance,
                               double minDistance = 0.0,
                               bool reportSymmetricPairs = false
@@ -28,9 +32,12 @@ void computeNeighborListNaive(
 // neighbors are added
 void computeNeighborListVoxelHash(
                               NeighborList& neighborList,
+                              int nAtoms,
                               const AtomLocationList& atomLocations, 
+                              const std::vector<std::set<int> >& exclusions,
+                              const RealOpenMM* periodicBoxSize,
                               double maxDistance,
-                              double minDistance,
+                              double minDistance = 0.0,
                               bool reportSymmetricPairs = false
                              );
 

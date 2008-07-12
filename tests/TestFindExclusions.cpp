@@ -145,7 +145,8 @@ public:
             const vector<vector<int> >& periodicTorsionIndices, const vector<vector<double> >& periodicTorsionParameters,
             const vector<vector<int> >& rbTorsionIndices, const vector<vector<double> >& rbTorsionParameters,
             const vector<vector<int> >& bonded14Indices, double lj14Scale, double coulomb14Scale,
-            const vector<set<int> >& exclusions, const vector<vector<double> >& nonbondedParameters) {
+            const vector<set<int> >& exclusions, const vector<vector<double> >& nonbondedParameters,
+            NonbondedMethod nonbondedMethod, double nonbondedCutoff, double periodicBoxSize[3]) {
         verifyExclusions(exclusions);
         verify14(bonded14Indices);
     }

@@ -26,18 +26,47 @@
 #define __ReferenceLJCoulombIxn_H__
 
 #include "ReferencePairIxn.h"
+#include "ReferenceNeighborList.h"
 
 // ---------------------------------------------------------------------------------------
 
 class ReferenceLJCoulombIxn : public ReferencePairIxn {
 
    private:
+       
+      bool cutoff;
+      bool periodic;
+      const OpenMM::NeighborList* neighborList;
+      RealOpenMM periodicBoxSize[3];
+      RealOpenMM cutoffDistance;
+      RealOpenMM krf, crf;
 
       // parameter indices
 
       static const int SigIndex = 0;
       static const int EpsIndex = 1;
       static const int   QIndex = 2;
+            
+      /**---------------------------------------------------------------------------------------
+      
+         Calculate LJ Coulomb pair ixn between two atoms
+      
+         @param atom1            the index of the first atom
+         @param atom2            the index of the second atom
+         @param atomCoordinates  atom coordinates
+         @param atomParameters   atom parameters (charges, c6, c12, ...)     atomParameters[atomIndex][paramterIndex]
+         @param forces           force array (forces added)
+         @param energyByAtom     atom energy
+         @param totalEnergy      total energy
+      
+         @return ReferenceForce::DefaultReturn
+            
+         --------------------------------------------------------------------------------------- */
+          
+      int calculateOneIxn( int atom1, int atom2, RealOpenMM** atomCoordinates,
+                            RealOpenMM** atomParameters, RealOpenMM** forces,
+                            RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const;
+
 
    public:
 
@@ -56,6 +85,34 @@ class ReferenceLJCoulombIxn : public ReferencePairIxn {
          --------------------------------------------------------------------------------------- */
 
        ~ReferenceLJCoulombIxn( );
+
+      /**---------------------------------------------------------------------------------------
+      
+         Set the force to use a cutoff.
+      
+         @param distance            the cutoff distance
+         @param neighbors           the neighbor list to use
+         @param solventDielectric   the dielectric constant of the bulk solvent
+      
+         @return ReferenceForce::DefaultReturn
+      
+         --------------------------------------------------------------------------------------- */
+      
+      int setUseCutoff( RealOpenMM distance, const OpenMM::NeighborList& neighbors, RealOpenMM solventDielectric );
+      
+      /**---------------------------------------------------------------------------------------
+      
+         Set the force to use periodic boundary conditions.  This requires that a cutoff has
+         already been set, and the smallest side of the periodic box is at least twice the cutoff
+         distance.
+      
+         @param boxSize             the X, Y, and Z widths of the periodic box
+      
+         @return ReferenceForce::DefaultReturn
+      
+         --------------------------------------------------------------------------------------- */
+      
+      int setPeriodic( RealOpenMM* boxSize );      
 
       /**---------------------------------------------------------------------------------------
       

@@ -64,6 +64,20 @@ ReferenceForce::~ReferenceForce( ){
 
 /**---------------------------------------------------------------------------------------
 
+   Given two coordinates on a periodic lattice, return the difference between them.
+
+   --------------------------------------------------------------------------------------- */
+
+RealOpenMM ReferenceForce::periodicDifference(RealOpenMM val1, RealOpenMM val2, RealOpenMM period) {
+    RealOpenMM diff = val1-val2;
+    RealOpenMM base = floor(diff/period+0.5)*period;
+    return diff-base;
+
+}
+
+
+/**---------------------------------------------------------------------------------------
+
    Get deltaR and distance and distance**2 between atomI and atomJ (static method)
    deltaR: j - i
 
@@ -87,6 +101,39 @@ int ReferenceForce::getDeltaR( const RealOpenMM* atomCoordinatesI, const RealOpe
    deltaR[XIndex]    = atomCoordinatesJ[0] - atomCoordinatesI[0];
    deltaR[YIndex]    = atomCoordinatesJ[1] - atomCoordinatesI[1];
    deltaR[ZIndex]    = atomCoordinatesJ[2] - atomCoordinatesI[2];
+
+   deltaR[R2Index]   = DOT3( deltaR, deltaR );
+   deltaR[RIndex]    = (RealOpenMM) SQRT( deltaR[R2Index] );
+
+   return ReferenceForce::DefaultReturn;
+}
+
+/**---------------------------------------------------------------------------------------
+
+   Get deltaR and distance and distance**2 between atomI and atomJ, assuming periodic
+   boundary conditions (static method); deltaR: j - i
+
+   @param atomCoordinatesI    atom i coordinates
+   @param atomCoordinatesI    atom j coordinates
+   @param boxSize             X, Y, and Z sizes of the periodic box
+   @param deltaR              deltaX, deltaY, deltaZ, R2, R upon return
+
+   @return ReferenceForce::DefaultReturn
+
+   --------------------------------------------------------------------------------------- */
+
+int ReferenceForce::getDeltaRPeriodic( const RealOpenMM* atomCoordinatesI, const RealOpenMM* atomCoordinatesJ,
+                               const RealOpenMM* boxSize, RealOpenMM* deltaR ){
+
+   // ---------------------------------------------------------------------------------------
+
+   // static const std::string methodName = "\nReferenceForce::getDeltaR";
+
+   // ---------------------------------------------------------------------------------------
+
+   deltaR[XIndex]    = periodicDifference(atomCoordinatesJ[0], atomCoordinatesI[0], boxSize[0]);
+   deltaR[YIndex]    = periodicDifference(atomCoordinatesJ[1], atomCoordinatesI[1], boxSize[1]);
+   deltaR[ZIndex]    = periodicDifference(atomCoordinatesJ[2], atomCoordinatesI[2], boxSize[2]);
 
    deltaR[R2Index]   = DOT3( deltaR, deltaR );
    deltaR[RIndex]    = (RealOpenMM) SQRT( deltaR[R2Index] );

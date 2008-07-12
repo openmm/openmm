@@ -118,8 +118,11 @@ void StandardMMForceFieldImpl::initialize(OpenMMContextImpl& context) {
         bonded14Indices[index].push_back(iter->first);
         bonded14Indices[index++].push_back(iter->second);
     }
+    double boxSize[3];
+    owner.getPeriodicBoxSize(boxSize[0], boxSize[1], boxSize[2]);
     dynamic_cast<CalcStandardMMForceFieldKernel&>(kernel.getImpl()).initialize(bondIndices, bondParameters, angleIndices, angleParameters,
-            periodicTorsionIndices, periodicTorsionParameters, rbTorsionIndices, rbTorsionParameters, bonded14Indices, 0.5, 1.0/1.2, exclusions, nonbondedParameters);
+            periodicTorsionIndices, periodicTorsionParameters, rbTorsionIndices, rbTorsionParameters, bonded14Indices, 0.5, 1.0/1.2, exclusions,
+            nonbondedParameters, CalcStandardMMForceFieldKernel::NonbondedMethod(owner.getNonbondedMethod()), owner.getCutoffDistance(), boxSize);
 }
 
 void StandardMMForceFieldImpl::calcForces(OpenMMContextImpl& context, Stream& forces) {

@@ -30,6 +30,8 @@
 class ReferenceForce {
 
    private:
+       
+       static RealOpenMM periodicDifference(RealOpenMM val1, RealOpenMM val2, RealOpenMM period);
 
    public:
 
@@ -84,6 +86,23 @@ class ReferenceForce {
                             RealOpenMM* deltaR );
       
       /**---------------------------------------------------------------------------------------
+
+         Get deltaR and distance and distance**2 between atomI and atomJ, assuming periodic
+         boundary conditions (static method); deltaR: j - i
+
+         @param atomCoordinatesI    atom i coordinates
+         @param atomCoordinatesI    atom j coordinates
+         @param boxSize             X, Y, and Z sizes of the periodic box
+         @param deltaR              deltaX, deltaY, deltaZ, R2, R upon return
+
+         @return ReferenceForce::DefaultReturn
+
+         --------------------------------------------------------------------------------------- */
+
+      static int ReferenceForce::getDeltaRPeriodic( const RealOpenMM* atomCoordinatesI, const RealOpenMM* atomCoordinatesJ,
+                                             const RealOpenMM* boxSize, RealOpenMM* deltaR );
+
+    /**---------------------------------------------------------------------------------------
       
          Get deltaR between atomI and atomJ (static method): deltaR: j - i
       

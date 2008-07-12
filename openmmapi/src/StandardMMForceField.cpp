@@ -37,7 +37,37 @@
 using namespace OpenMM;
 
 StandardMMForceField::StandardMMForceField(int numAtoms, int numBonds, int numAngles, int numPeriodicTorsions, int numRBTorsions) :
-    atoms(numAtoms), bonds(numBonds), angles(numAngles), periodicTorsions(numPeriodicTorsions), rbTorsions(numRBTorsions) {
+        atoms(numAtoms), bonds(numBonds), angles(numAngles), periodicTorsions(numPeriodicTorsions), rbTorsions(numRBTorsions),
+        nonbondedMethod(NoCutoff), cutoffDistance(1.0) {
+    periodicBoxSize[0] = periodicBoxSize[1] = periodicBoxSize[2] = 2.0;
+}
+
+StandardMMForceField::NonbondedMethod StandardMMForceField::getNonbondedMethod() {
+    return nonbondedMethod;
+}
+
+void StandardMMForceField::setNonbondedMethod(NonbondedMethod method) {
+    nonbondedMethod = method;
+}
+
+double StandardMMForceField::getCutoffDistance() {
+    return cutoffDistance;
+}
+
+void StandardMMForceField::setCutoffDistance(double distance) {
+    cutoffDistance = distance;
+}
+
+void StandardMMForceField::getPeriodicBoxSize(double& x, double& y, double& z) {
+    x = periodicBoxSize[0];
+    y = periodicBoxSize[1];
+    z = periodicBoxSize[2];
+}
+
+void StandardMMForceField::setPeriodicBoxSize(double x, double y, double z) {
+    periodicBoxSize[0] = x;
+    periodicBoxSize[1] = y;
+    periodicBoxSize[2] = z;
 }
 
 void StandardMMForceField::getAtomParameters(int index, double& charge, double& radius, double& depth) const {

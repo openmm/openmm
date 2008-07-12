@@ -265,6 +265,71 @@ void testExclusionsAnd14() {
     }
 }
 
+void testCutoff() {
+    ReferencePlatform platform;
+    System system(3, 0);
+    VerletIntegrator integrator(0.01);
+    StandardMMForceField* forceField = new StandardMMForceField(3, 0, 0, 0, 0);
+    forceField->setAtomParameters(0, 1.0, 1, 0);
+    forceField->setAtomParameters(1, 1.0, 1, 0);
+    forceField->setAtomParameters(2, 1.0, 1, 0);
+    forceField->setNonbondedMethod(StandardMMForceField::CutoffNonPeriodic);
+    const double cutoff = 2.9;
+    forceField->setCutoffDistance(cutoff);
+    system.addForce(forceField);
+    OpenMMContext context(system, integrator, platform);
+    vector<Vec3> positions(3);
+    positions[0] = Vec3(0, 0, 0);
+    positions[1] = Vec3(0, 2, 0);
+    positions[2] = Vec3(0, 3, 0);
+    context.setPositions(positions);
+    State state = context.getState(State::Forces | State::Energy);
+    const vector<Vec3>& forces = state.getForces();
+    const double eps = 78.3;
+    const double krf = (1.0/(cutoff*cutoff*cutoff))*(eps-1.0)/(2.0*eps+1.0);
+    const double crf = (1.0/cutoff)*(3.0*eps)/(2.0*eps+1.0);
+    const double force1 = 138.935485*(1.0)*(0.25-2.0*krf*2.0);
+    const double force2 = 138.935485*(1.0)*(1.0-2.0*krf*1.0);
+    ASSERT_EQUAL_VEC(Vec3(0, -force1, 0), forces[0], TOL);
+    ASSERT_EQUAL_VEC(Vec3(0, force1-force2, 0), forces[1], TOL);
+    ASSERT_EQUAL_VEC(Vec3(0, force2, 0), forces[2], TOL);
+    const double energy1 = 138.935485*(1.0)*(0.5+krf*4.0-crf);
+    const double energy2 = 138.935485*(1.0)*(1.0+krf*1.0-crf);
+    ASSERT_EQUAL_TOL(energy1+energy2, state.getPotentialEnergy(), TOL);
+}
+
+void testPeriodic() {
+    ReferencePlatform platform;
+    System system(3, 0);
+    VerletIntegrator integrator(0.01);
+    StandardMMForceField* forceField = new StandardMMForceField(3, 1, 0, 0, 0);
+    forceField->setAtomParameters(0, 1.0, 1, 0);
+    forceField->setAtomParameters(1, 1.0, 1, 0);
+    forceField->setAtomParameters(2, 1.0, 1, 0);
+    forceField->setBondParameters(0, 0, 1, 1.0, 0.0);
+    forceField->setNonbondedMethod(StandardMMForceField::CutoffPeriodic);
+    const double cutoff = 2.0;
+    forceField->setCutoffDistance(cutoff);
+    forceField->setPeriodicBoxSize(4.0, 4.0, 4.0);
+    system.addForce(forceField);
+    OpenMMContext context(system, integrator, platform);
+    vector<Vec3> positions(3);
+    positions[0] = Vec3(0, 0, 0);
+    positions[1] = Vec3(2, 0, 0);
+    positions[2] = Vec3(3, 0, 0);
+    context.setPositions(positions);
+    State state = context.getState(State::Forces | State::Energy);
+    const vector<Vec3>& forces = state.getForces();
+    const double eps = 78.3;
+    const double krf = (1.0/(cutoff*cutoff*cutoff))*(eps-1.0)/(2.0*eps+1.0);
+    const double crf = (1.0/cutoff)*(3.0*eps)/(2.0*eps+1.0);
+    const double force = 138.935485*(1.0)*(1.0-2.0*krf*1.0);
+    ASSERT_EQUAL_VEC(Vec3(force, 0, 0), forces[0], TOL);
+    ASSERT_EQUAL_VEC(Vec3(-force, 0, 0), forces[1], TOL);
+    ASSERT_EQUAL_VEC(Vec3(0, 0, 0), forces[2], TOL);
+    ASSERT_EQUAL_TOL(2*138.935485*(1.0)*(1.0+krf*1.0-crf), state.getPotentialEnergy(), TOL);
+}
+
 int main() {
     try {
         testBonds();
@@ -274,6 +339,8 @@ int main() {
         testCoulomb();
         testLJ();
         testExclusionsAnd14();
+        testCutoff();
+        testPeriodic();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

@@ -52,6 +52,27 @@ namespace OpenMM {
 class OPENMM_EXPORT StandardMMForceField : public Force {
 public:
     /**
+     * This is an enumeration of the different methods that may be used for handling long range nonbonded forces.
+     */
+    enum NonbondedMethod {
+        /**
+         * No cutoff is applied to nonbonded interactions.  The full set of N^2 interactions is computed exactly.
+         * This necessarily means that periodic boundary conditions cannot be used.
+         */
+        NoCutoff = 0,
+        /**
+         * Interactions beyond the cutoff distance are ignored.  Coulomb interactions closer than the cutoff distance
+         * are modified based using the reaction field method.
+         */
+        CutoffNonPeriodic = 1,
+        /**
+         * Periodic boundary conditions are used, so that each atom interacts only with the nearest periodic copy of
+         * each other atom.  Interactions beyond the cutoff distance are ignored.  Coulomb interactions closer than the
+         * cutoff distance are modified based using the reaction field method.
+         */
+        CutoffPeriodic = 2
+    };
+    /**
      * Create a StandardMMForceField.
      * 
      * @param numAtoms            the number of atoms in the system
@@ -91,6 +112,42 @@ public:
     int getNumRBTorsions() const {
         return rbTorsions.size();
     }
+    /**
+     * Get the method used for handling long range nonbonded interactions.
+     */
+    NonbondedMethod getNonbondedMethod();
+    /**
+     * Set the method used for handling long range nonbonded interactions.
+     */
+    void setNonbondedMethod(NonbondedMethod method);
+    /**
+     * Get the cutoff distance (in nm) being used for nonbonded interactions.  If the NonbondedMethod in use
+     * does not use cutoffs, this value will have no effect.
+     */
+    double getCutoffDistance();
+    /**
+     * Set the cutoff distance (in nm) being used for nonbonded interactions.  If the NonbondedMethod in use
+     * does not use cutoffs, this value will have no effect.
+     */
+    void setCutoffDistance(double distance);
+    /**
+     * Get the dimensions of the periodic box (in nm).  If the NonbondedMethod in use does not use periodic
+     * boundary conditions, these values will have no effect.
+     *
+     * @param x      on exit, this contains the width of the periodic box along the x axis
+     * @param y      on exit, this contains the width of the periodic box along the y axis
+     * @param z      on exit, this contains the width of the periodic box along the z axis
+     */
+    void getPeriodicBoxSize(double& x, double& y, double& z);
+    /**
+     * Set the dimensions of the periodic box (in nm).  If the NonbondedMethod in use does not use periodic
+     * boundary conditions, these values will have no effect.
+     *
+     * @param x      the width of the periodic box along the x axis
+     * @param y      the width of the periodic box along the y axis
+     * @param z      the width of the periodic box along the z axis
+     */
+    void setPeriodicBoxSize(double x, double y, double z);
     /**
      * Get the nonbonded force parameters for an atom.
      * 
@@ -217,6 +274,9 @@ private:
     class AngleInfo;
     class PeriodicTorsionInfo;
     class RBTorsionInfo;
+    NonbondedMethod nonbondedMethod;
+    double cutoffDistance;
+    double periodicBoxSize[3];
 
 // Retarded visual studio compiler complains about being unable to 
 // export private stl class members.

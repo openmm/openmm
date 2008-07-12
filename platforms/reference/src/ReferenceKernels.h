@@ -34,6 +34,7 @@
 
 #include "kernels.h"
 #include "SimTKUtilities/SimTKOpenMMRealType.h"
+#include "SimTKReference/ReferenceNeighborList.h"
 
 class CpuObc;
 class ReferenceAndersenThermostat;
@@ -71,13 +72,17 @@ public:
      *                                  nonbonded forces.  Bonded 1-4 pairs are also included in this list, since they should be omitted from
      *                                  the standard nonbonded calculation.
      * @param nonbondedParameters       the nonbonded force parameters (charge, sigma, epsilon) for each atom
+     * @param nonbondedMethod           the method to use for handling long range nonbonded interactions
+     * @param nonbondedCutoff           the cutoff distance for nonbonded interactions (if nonbondedMethod involves a cutoff)
+     * @param periodicBoxSize           the size of the periodic box (if nonbondedMethod involves a periodic boundary conditions)
      */
     void initialize(const std::vector<std::vector<int> >& bondIndices, const std::vector<std::vector<double> >& bondParameters,
             const std::vector<std::vector<int> >& angleIndices, const std::vector<std::vector<double> >& angleParameters,
             const std::vector<std::vector<int> >& periodicTorsionIndices, const std::vector<std::vector<double> >& periodicTorsionParameters,
             const std::vector<std::vector<int> >& rbTorsionIndices, const std::vector<std::vector<double> >& rbTorsionParameters,
             const std::vector<std::vector<int> >& bonded14Indices, double lj14Scale, double coulomb14Scale,
-            const std::vector<std::set<int> >& exclusions, const std::vector<std::vector<double> >& nonbondedParameters);
+            const std::vector<std::set<int> >& exclusions, const std::vector<std::vector<double> >& nonbondedParameters,
+            NonbondedMethod nonbondedMethod, double nonbondedCutoff, double periodicBoxSize[3]);
     /**
      * Execute the kernel to calculate the forces.
      * 
@@ -97,6 +102,10 @@ private:
     int numAtoms, numBonds, numAngles, numPeriodicTorsions, numRBTorsions, num14;
     int **bondIndexArray, **angleIndexArray, **periodicTorsionIndexArray, **rbTorsionIndexArray, **exclusionArray, **bonded14IndexArray;
     RealOpenMM **bondParamArray, **angleParamArray, **periodicTorsionParamArray, **rbTorsionParamArray, **atomParamArray, **bonded14ParamArray;
+    RealOpenMM nonbondedCutoff, periodicBoxSize[3];
+    std::vector<std::set<int> > exclusions;
+    NonbondedMethod nonbondedMethod;
+    NeighborList* neighborList;
 };
 
 /**

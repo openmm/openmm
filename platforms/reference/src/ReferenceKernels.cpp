@@ -113,6 +113,8 @@ ReferenceCalcStandardMMForceFieldKernel::~ReferenceCalcStandardMMForceFieldKerne
     disposeIntArray(exclusionArray, numAtoms);
     disposeIntArray(bonded14IndexArray, num14);
     disposeRealArray(bonded14ParamArray, num14);
+    if (neighborList != NULL)
+        delete neighborList;
 }
 
 void ReferenceCalcStandardMMForceFieldKernel::initialize(const vector<vector<int> >& bondIndices, const vector<vector<double> >& bondParameters,
@@ -120,7 +122,8 @@ void ReferenceCalcStandardMMForceFieldKernel::initialize(const vector<vector<int
         const vector<vector<int> >& periodicTorsionIndices, const vector<vector<double> >& periodicTorsionParameters,
         const vector<vector<int> >& rbTorsionIndices, const vector<vector<double> >& rbTorsionParameters,
         const vector<vector<int> >& bonded14Indices, double lj14Scale, double coulomb14Scale,
-        const vector<set<int> >& exclusions, const vector<vector<double> >& nonbondedParameters) {
+        const vector<set<int> >& exclusions, const vector<vector<double> >& nonbondedParameters,
+        NonbondedMethod nonbondedMethod, double nonbondedCutoff, double periodicBoxSize[3]) {
     numAtoms = nonbondedParameters.size();
     numBonds = bondIndices.size();
     numAngles = angleIndices.size();
@@ -142,6 +145,7 @@ void ReferenceCalcStandardMMForceFieldKernel::initialize(const vector<vector<int
         atomParamArray[i][1] = static_cast<RealOpenMM>( 2.0*sqrt(nonbondedParameters[i][2]) );
         atomParamArray[i][2] = static_cast<RealOpenMM>( nonbondedParameters[i][0]*sqrtEps );
     }
+    this->exclusions = exclusions;
     exclusionArray = new int*[numAtoms];
     for (int i = 0; i < numAtoms; ++i) {
         exclusionArray[i] = new int[exclusions[i].size()+1];
@@ -159,6 +163,16 @@ void ReferenceCalcStandardMMForceFieldKernel::initialize(const vector<vector<int
         bonded14ParamArray[i][1] = static_cast<RealOpenMM>( lj14Scale*(atomParamArray[atom1][1]*atomParamArray[atom2][1]) );
         bonded14ParamArray[i][2] = static_cast<RealOpenMM>( coulomb14Scale*(atomParamArray[atom1][2]*atomParamArray[atom2][2]) );
     }
+    this->nonbondedMethod = nonbondedMethod;
+    this->nonbondedCutoff = nonbondedCutoff;
+    this->periodicBoxSize[0] = periodicBoxSize[0];
+    this->periodicBoxSize[1] = periodicBoxSize[1];
+    this->periodicBoxSize[2] = periodicBoxSize[2];
+    if (nonbondedMethod == NoCutoff)
+        neighborList = NULL;
+    else
+        neighborList = new NeighborList();
+        
 }
 
 void ReferenceCalcStandardMMForceFieldKernel::executeForces(const Stream& positions, Stream& forces) {
@@ -174,6 +188,13 @@ void ReferenceCalcStandardMMForceFieldKernel::executeForces(const Stream& positi
     ReferenceRbDihedralBond rbTorsionBond;
     refBondForce.calculateForce(numRBTorsions, rbTorsionIndexArray, posData, rbTorsionParamArray, forceData, 0, 0, 0, rbTorsionBond);
     ReferenceLJCoulombIxn clj;
+    bool periodic = (nonbondedMethod == CutoffPeriodic);
+    if (nonbondedMethod != NoCutoff) {
+        computeNeighborListVoxelHash(*neighborList, numAtoms, posData, exclusions, periodic ? periodicBoxSize : NULL, nonbondedCutoff, 0.0);
+        clj.setUseCutoff(nonbondedCutoff, *neighborList, 78.3);
+    }
+    if (periodic)
+        clj.setPeriodic(periodicBoxSize);
     clj.calculatePairIxn(numAtoms, posData, atomParamArray, exclusionArray, 0, forceData, 0, 0);
     ReferenceLJCoulomb14 nonbonded14;
     refBondForce.calculateForce(num14, bonded14IndexArray, posData, bonded14ParamArray, forceData, 0, 0, 0, nonbonded14);
@@ -203,6 +224,13 @@ double ReferenceCalcStandardMMForceFieldKernel::executeEnergy(const Stream& posi
         energyArray[i] = 0;
     refBondForce.calculateForce(numRBTorsions, rbTorsionIndexArray, posData, rbTorsionParamArray, forceData, energyArray, 0, &energy, rbTorsionBond);
     ReferenceLJCoulombIxn clj;
+    bool periodic = (nonbondedMethod == CutoffPeriodic);
+    if (nonbondedMethod != NoCutoff) {
+        computeNeighborListVoxelHash(*neighborList, numAtoms, posData, exclusions, periodic ? periodicBoxSize : NULL, nonbondedCutoff, 0.0);
+        clj.setUseCutoff(nonbondedCutoff, *neighborList, 78.3);
+    }
+    if (periodic)
+        clj.setPeriodic(periodicBoxSize);
     clj.calculatePairIxn(numAtoms, posData, atomParamArray, exclusionArray, 0, forceData, 0, &energy);
     ReferenceLJCoulomb14 nonbonded14;
     for (int i = 0; i < arraySize; ++i)
