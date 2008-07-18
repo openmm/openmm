@@ -298,6 +298,83 @@ void testCutoff() {
     ASSERT_EQUAL_TOL(energy1+energy2, state.getPotentialEnergy(), TOL);
 }
 
+void testCutoff14() {
+    ReferencePlatform platform;
+    System system(5, 0);
+    VerletIntegrator integrator(0.01);
+    StandardMMForceField* forceField = new StandardMMForceField(5, 4, 0, 0, 0);
+    forceField->setBondParameters(0, 0, 1, 1, 0);
+    forceField->setBondParameters(1, 1, 2, 1, 0);
+    forceField->setBondParameters(2, 2, 3, 1, 0);
+    forceField->setBondParameters(3, 3, 4, 1, 0);
+    forceField->setNonbondedMethod(StandardMMForceField::CutoffNonPeriodic);
+    const double cutoff = 3.5;
+    forceField->setCutoffDistance(cutoff);
+    system.addForce(forceField);
+    OpenMMContext context(system, integrator, platform);
+    vector<Vec3> positions(5);
+    positions[0] = Vec3(0, 0, 0);
+    positions[1] = Vec3(1, 0, 0);
+    positions[2] = Vec3(2, 0, 0);
+    positions[3] = Vec3(3, 0, 0);
+    positions[4] = Vec3(4, 0, 0);
+    for (int i = 1; i < 5; ++i) {
+ 
+        // Test LJ forces
+        
+        forceField->setAtomParameters(0, 0, 1.5, 1);
+        for (int j = 1; j < 5; ++j)
+            forceField->setAtomParameters(j, 0, 1.5, 0);
+        forceField->setAtomParameters(i, 0, 1.5, 1);
+        context.reinitialize();
+        context.setPositions(positions);
+        State state = context.getState(State::Forces | State::Energy);
+        const vector<Vec3>& forces = state.getForces();
+        double r = positions[i][0];
+        double x = 1.5/r;
+        double e = 1.0;
+        double force = 4.0*e*(12*std::pow(x, 12.0)-6*std::pow(x, 6.0))/r;
+        double energy = 4.0*e*(std::pow(x, 12.0)-std::pow(x, 6.0));
+        if (i == 3) {
+            force *= 0.5;
+            energy *= 0.5;
+        }
+        if (i < 3 || r > cutoff) {
+            force = 0;
+            energy = 0;
+        }
+        ASSERT_EQUAL_VEC(Vec3(-force, 0, 0), forces[0], TOL);
+        ASSERT_EQUAL_VEC(Vec3(force, 0, 0), forces[i], TOL);
+        ASSERT_EQUAL_TOL(energy, state.getPotentialEnergy(), TOL);
+
+        // Test Coulomb forces
+        
+        const double q = 0.7;
+        forceField->setAtomParameters(0, q, 1.5, 0);
+        forceField->setAtomParameters(i, q, 1.5, 0);
+        context.reinitialize();
+        context.setPositions(positions);
+        state = context.getState(State::Forces | State::Energy);
+        const vector<Vec3>& forces2 = state.getForces();
+        const double eps = 78.3;
+        const double krf = (1.0/(cutoff*cutoff*cutoff))*(eps-1.0)/(2.0*eps+1.0);
+        const double crf = (1.0/cutoff)*(3.0*eps)/(2.0*eps+1.0);
+        force = 138.935485*q*q*(1.0/(r*r)-2.0*krf*r);
+        energy = 138.935485*q*q*(1.0/r+krf*r*r-crf);
+        if (i == 3) {
+            force /= 1.2;
+            energy /= 1.2;
+        }
+        if (i < 3 || r > cutoff) {
+            force = 0;
+            energy = 0;
+        }
+        ASSERT_EQUAL_VEC(Vec3(-force, 0, 0), forces2[0], TOL);
+        ASSERT_EQUAL_VEC(Vec3(force, 0, 0), forces2[i], TOL);
+        ASSERT_EQUAL_TOL(energy, state.getPotentialEnergy(), TOL);
+    }
+}
+
 void testPeriodic() {
     ReferencePlatform platform;
     System system(3, 0);
@@ -340,6 +417,7 @@ int main() {
         testLJ();
         testExclusionsAnd14();
         testCutoff();
+        testCutoff14();
         testPeriodic();
     }
     catch(const exception& e) {

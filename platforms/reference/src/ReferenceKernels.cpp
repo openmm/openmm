@@ -197,6 +197,8 @@ void ReferenceCalcStandardMMForceFieldKernel::executeForces(const Stream& positi
         clj.setPeriodic(periodicBoxSize);
     clj.calculatePairIxn(numAtoms, posData, atomParamArray, exclusionArray, 0, forceData, 0, 0);
     ReferenceLJCoulomb14 nonbonded14;
+    if (nonbondedMethod != NoCutoff)
+        nonbonded14.setUseCutoff(nonbondedCutoff, 78.3);
     refBondForce.calculateForce(num14, bonded14IndexArray, posData, bonded14ParamArray, forceData, 0, 0, 0, nonbonded14);
 }
 
@@ -233,6 +235,8 @@ double ReferenceCalcStandardMMForceFieldKernel::executeEnergy(const Stream& posi
         clj.setPeriodic(periodicBoxSize);
     clj.calculatePairIxn(numAtoms, posData, atomParamArray, exclusionArray, 0, forceData, 0, &energy);
     ReferenceLJCoulomb14 nonbonded14;
+    if (nonbondedMethod != NoCutoff)
+        nonbonded14.setUseCutoff(nonbondedCutoff, 78.3);
     for (int i = 0; i < arraySize; ++i)
         energyArray[i] = 0;
     refBondForce.calculateForce(num14, bonded14IndexArray, posData, bonded14ParamArray, forceData, energyArray, 0, &energy, nonbonded14);

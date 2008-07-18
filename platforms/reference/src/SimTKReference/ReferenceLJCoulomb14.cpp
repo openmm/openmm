@@ -37,7 +37,7 @@
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceLJCoulomb14::ReferenceLJCoulomb14( ){
+ReferenceLJCoulomb14::ReferenceLJCoulomb14( ) : cutoff(false) {
 
    // ---------------------------------------------------------------------------------------
 
@@ -63,6 +63,27 @@ ReferenceLJCoulomb14::~ReferenceLJCoulomb14( ){
 
 }
 
+  /**---------------------------------------------------------------------------------------
+
+     Set the force to use a cutoff.
+
+     @param distance            the cutoff distance
+     @param solventDielectric   the dielectric constant of the bulk solvent
+
+     @return ReferenceForce::DefaultReturn
+
+     --------------------------------------------------------------------------------------- */
+
+  int ReferenceLJCoulomb14::setUseCutoff( RealOpenMM distance, RealOpenMM solventDielectric ) {
+    
+    cutoff = true;
+    cutoffDistance = distance;
+    krf = pow(cutoffDistance, -3.0)*(solventDielectric-1.0)/(2.0*solventDielectric+1.0);
+    crf = (1.0/cutoffDistance)*(3.0*solventDielectric)/(2.0*solventDielectric+1.0);
+            
+    return ReferenceForce::DefaultReturn;
+  }
+  
 /**---------------------------------------------------------------------------------------
 
    Calculate parameters for LJ 1-4 ixn
@@ -171,13 +192,19 @@ int ReferenceLJCoulomb14::calculateBondIxn( int* atomIndices, RealOpenMM** atomC
    int atomBIndex = atomIndices[1];
    ReferenceForce::getDeltaR( atomCoordinates[atomBIndex], atomCoordinates[atomAIndex], deltaR[0] );  
 
+   if (cutoff && deltaR[0][ReferenceForce::RIndex] > cutoffDistance)
+       return ReferenceForce::DefaultReturn;
+   RealOpenMM r2        = deltaR[0][ReferenceForce::R2Index];
    RealOpenMM inverseR  = one/(deltaR[0][ReferenceForce::RIndex]);
    RealOpenMM sig2      = inverseR*parameters[0];
               sig2     *= sig2;
    RealOpenMM sig6      = sig2*sig2*sig2;
 
    RealOpenMM dEdR      = parameters[1]*( twelve*sig6 - six )*sig6;
-              dEdR     += parameters[2]*inverseR;
+              if (cutoff)
+                  dEdR += parameters[2]*(inverseR-2.0*krf*r2);
+              else
+                  dEdR += parameters[2]*inverseR;
               dEdR     *= inverseR*inverseR;
 
    // accumulate forces
@@ -188,7 +215,11 @@ int ReferenceLJCoulomb14::calculateBondIxn( int* atomIndices, RealOpenMM** atomC
       forces[atomBIndex][ii] -= force;
    }
 
-   RealOpenMM energy = parameters[1]*( sig6 - one )*sig6 + parameters[2]*inverseR;
+   RealOpenMM energy = parameters[1]*( sig6 - one )*sig6;
+   if (cutoff)
+       energy += parameters[2]*(inverseR+krf*r2-crf);
+   else
+       energy += parameters[2]*inverseR;
 
    // accumulate energies
 
