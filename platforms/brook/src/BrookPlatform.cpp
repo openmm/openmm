@@ -31,33 +31,65 @@
 
 #include "BrookPlatform.h"
 #include "BrookKernelFactory.h"
-#include "BrookKernels.h"
+//#include "BrookKernels.h"
 #include "SimTKUtilities/SimTKOpenMMRealType.h"
 
 using namespace OpenMM;
 
-BrookPlatform* registerBrookPlatform() {
-    BrookPlatform* platform = new BrookPlatform();
-    Platform::registerPlatform(platform);
+BrookPlatform* registerBrookPlatform( void ){
+   BrookPlatform* platform = new BrookPlatform();
+   Platform::registerPlatform(platform);
+   return platform;
 }
 
-BrookPlatform* staticPlatform = registerBrookPlatform();
+BrookPlatform* staticPlatform = registerBrookPlatform( );
 
-BrookPlatform::BrookPlatform() {
-    BrookKernelFactory* factory = new BrookKernelFactory();
-    registerKernelFactory(CalcStandardMMForceFieldKernel::Name(), factory);
-    registerKernelFactory(CalcGBSAOBCForceFieldKernel::Name(), factory);
-    registerKernelFactory(IntegrateVerletStepKernel::Name(), factory);
-    registerKernelFactory(IntegrateLangevinStepKernel::Name(), factory);
-    registerKernelFactory(IntegrateBrownianStepKernel::Name(), factory);
-    registerKernelFactory(ApplyAndersenThermostatKernel::Name(), factory);
-    registerKernelFactory(CalcKineticEnergyKernel::Name(), factory);
+BrookPlatform::BrookPlatform( ){
+   _defaultAtomStreamWidth  = DefaultAtomStreamWidth;
+   _initializeFactory();
 }
 
-bool BrookPlatform::supportsDoublePrecision() const {
+BrookPlatform::BrookPlatform( int defaultAtomStreamWidth ){
+   _defaultAtomStreamWidth  = defaultAtomStreamWidth;
+   _initializeFactory();
+}
+
+BrookPlatform::~BrookPlatform( ){
+}
+
+void BrookPlatform::_initializeFactory( void ){
+   //BrookKernelFactory* factory = new BrookKernelFactory();
+   /*
+   registerKernelFactory( CalcStandardMMForceFieldKernel::Name(), factory);
+   registerKernelFactory( CalcGBSAOBCForceFieldKernel::Name(),    factory);
+   registerKernelFactory( IntegrateVerletStepKernel::Name(),      factory);
+   registerKernelFactory( IntegrateLangevinStepKernel::Name(),    factory);
+   registerKernelFactory( IntegrateBrownianStepKernel::Name(),    factory);
+   registerKernelFactory( ApplyAndersenThermostatKernel::Name(),  factory);
+   registerKernelFactory( CalcKineticEnergyKernel::Name(),        factory);
+   */
+}
+
+bool BrookPlatform::supportsDoublePrecision( void ) const {
     return (sizeof(RealOpenMM) >= sizeof(double));
 }
 
-const StreamFactory& BrookPlatform::getDefaultStreamFactory() const {
+const StreamFactory& BrookPlatform::getDefaultStreamFactory( void ) const {
     return defaultStreamFactory;
+}
+
+int BrookPlatform::getStreamSize( int size, int streamWidth, int* outputHeight ) const {
+
+   if( streamWidth < 1 ){
+      return -1;
+   }
+
+   int height = size/streamWidth;
+   if( streamWidth*height < size ){
+      height++;
+   }
+   if( outputHeight ){
+      *outputHeight = height;
+   }
+   return height*streamWidth;
 }

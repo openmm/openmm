@@ -30,59 +30,162 @@
  * -------------------------------------------------------------------------- */
 
 #include "BrookIntStreamImpl.h"
+#include "OpenMMException.h"
+#include <sstream>
 
 using namespace OpenMM;
 
-BrookIntStreamImpl::BrookIntStreamImpl(std::string name, int size, Stream::DataType type, const Platform& platform) : StreamImpl(name, size, type, platform) {
-    switch (type) {
-    case Stream::Integer:
-        width = 1;
-        break;
-    case Stream::Integer2:
-        width = 2;
-        break;
-    case Stream::Integer3:
-        width = 3;
-        break;
-    case Stream::Integer4:
-        width = 4;
-        break;
-    }
-    data = new int*[size];
-    for (int i = 0; i < size; ++i)
-        data[i] = new int[width];
+/** 
+ * BrookIntStreamImpl constructor
+ * 
+ * @param name                      stream name
+ * @param size                      stream size
+ * @param platform                  platform
+ *
+ */
+
+BrookIntStreamImpl::BrookIntStreamImpl( std::string name, int size, Stream::DataType type, const Platform& platform ) : StreamImpl( name, size, type, platform ){
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName      = "BrookIntStreamImpl::BrookIntStreamImpl";
+   // static const int debug                   = 1;
+
+// ---------------------------------------------------------------------------------------
+
+   switch( type ){
+
+      case Stream::Integer:
+          width = 1;
+          break;
+
+      case Stream::Integer2:
+          width = 2;
+          break;
+
+      case Stream::Integer3:
+          width = 3;
+          break;
+
+      case Stream::Integer4:
+          width = 4;
+          break;
+
+      default:
+         std::stringstream message;
+         message << methodName << " type=" << type << " not recognized.";
+         throw OpenMMException( message.str() );
+   }
+
+   data = new int*[size];
+
+   for( int ii = 0; ii < size; ii++ ){
+       data[ii] = new int[width];
+   }
 }
+
+/** 
+ * BrookIntStreamImpl destructor
+ * 
+ */
 
 BrookIntStreamImpl::~BrookIntStreamImpl() {
-    delete data;
+   delete[] data;
 }
 
-void BrookIntStreamImpl::loadFromArray(const void* array) {
-    int* arrayData = (int*) array;
-    for (int i = 0; i < getSize(); ++i)
-        for (int j = 0; j < width; ++j)
-            data[i][j] = arrayData[i*width+j];
+/** 
+ * Load data from array into stream
+ * 
+ * @param array                     array to load (length=size*width)
+ *
+ */
+
+void BrookIntStreamImpl::loadFromArray( const void* array ){
+
+// ---------------------------------------------------------------------------------------
+
+   // static const std::string methodName      = "BrookIntStreamImpl::loadFromArray";
+   // static const int debug                   = 1;
+
+// ---------------------------------------------------------------------------------------
+
+   int* arrayData = (int*) array;
+   int index      = 0;
+   for( int ii = 0; ii < getSize(); ii++ ){
+      for( int jj = 0; jj < width; jj++ ){
+         data[ii][jj] = arrayData[index++];
+      }
+   }
 }
 
-void BrookIntStreamImpl::saveToArray(void* array) {
-    int* arrayData = (int*) array;
-    for (int i = 0; i < getSize(); ++i)
-        for (int j = 0; j < width; ++j)
-            arrayData[i*width+j] = data[i][j];
+/** 
+ * Save data from stream to array 
+ * 
+ * @param array                     array to save data to (length=size*width)
+ *
+ */
+
+void BrookIntStreamImpl::saveToArray( void* array ){
+
+// ---------------------------------------------------------------------------------------
+
+   // static const std::string methodName      = "BrookIntStreamImpl::saveToArray";
+   // static const int debug                   = 1;
+
+// ---------------------------------------------------------------------------------------
+
+   int* arrayData = (int*) array;
+   int index      = 0;
+   for( int ii = 0; ii < getSize(); ii++ ){
+      for( int jj = 0; jj < width; jj++ ){
+         arrayData[index++] = data[ii][jj];
+      }
+   }
 }
 
-void BrookIntStreamImpl::fillWithValue(void* value) {
-    int valueData = *((int*) value);
-    for (int i = 0; i < getSize(); ++i)
-        for (int j = 0; j < width; ++j)
-            data[i][j] = valueData;
+/** 
+ * Set all stream entries to input value
+ * 
+ * @param value                     value to load into stream
+ *
+ */
+
+void BrookIntStreamImpl::fillWithValue( void* value ){
+
+// ---------------------------------------------------------------------------------------
+
+   // static const std::string methodName      = "BrookIntStreamImpl::fillWithValue";
+   // static const int debug                   = 1;
+
+// ---------------------------------------------------------------------------------------
+
+   int valueData = *((int*) value);
+   for( int ii = 0; ii < getSize(); ii++ ){
+      for (int jj = 0; jj < width; jj++ ){
+         data[ii][jj] = valueData;
+      }
+   }
 }
 
-const int* const * BrookIntStreamImpl::getData() const {
-    return data;
+/** 
+ * Get data
+ * 
+ * @return data ptr
+ *
+ */
+
+const int* const * BrookIntStreamImpl::getData( void ) const {
+   return data;
 }
 
-int** BrookIntStreamImpl::getData() {
-    return data;
+/** 
+ * Get data
+ * 
+ * @return data ptr
+ *
+ */
+
+int** BrookIntStreamImpl::getData( void ){
+   return data;
 }
 

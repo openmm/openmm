@@ -9,12 +9,12 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright ( c ) 2008 Stanford University and the Authors.           *
  * Authors: Peter Eastman, Mark Friedrichs                                    *
  * Contributors:                                                              *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
- * copy of this software and associated documentation files (the "Software"), *
+ * copy of this software and associated documentation files ( the "Software" ), *
  * to deal in the Software without restriction, including without limitation  *
  * the rights to use, copy, modify, merge, publish, distribute, sublicense,   *
  * and/or sell copies of the Software, and to permit persons to whom the      *
@@ -33,37 +33,58 @@
  * -------------------------------------------------------------------------- */
 
 #include "StreamImpl.h"
+#include "BrookPlatform.h"
 #include <brook/brook.hpp>
 #include "SimTKUtilities/SimTKOpenMMRealType.h"
 
 namespace OpenMM {
 
 /**
- * This is the implementation of Float and Double streams in the reference Platform.
+ * This is the implementation of Float and Double streams in the Brook Platform.
  */
 
 class BrookFloatStreamImpl : public StreamImpl {
-public:
-    BrookFloatStreamImpl(std::string name, int size, Stream::DataType type, int streamWidth, const Platform& platform, float defaultDangleValue );
-    ~BrookFloatStreamImpl();
-    void loadFromArray(const void* array);
-    void saveToArray(void* array);
-    void fillWithValue(void* value);
-    const RealOpenMM* const * getData() const;
-    RealOpenMM** getData();
-private:
-    int width;
-    int streamWidth;
-    int streamHeight;
-    int streamSize;
 
-    float defaultDangleValue;
-    Stream::DataType baseType;
-    brook::stream aStream;
-    float** data;
-    RealOpenMM** realOpenMMData;
+   public:
 
-    void _loadDanglingValues(void );
+      BrookFloatStreamImpl( std::string name, int size, Stream::DataType type, const Platform& platform, int inputStreamWidth, double defaultDangleValue );
+
+      ~BrookFloatStreamImpl(  );
+      void loadFromArray( const void* array );
+      void loadFromArray( const void* array, Stream::DataType type );
+      void saveToArray( void* array );
+      void fillWithValue( void* value );
+      const RealOpenMM* const * getData( ) const;
+      RealOpenMM** getData( void );
+
+      /** 
+       * Get width
+       * 
+       * @return width
+       */
+
+      int BrookFloatStreamImpl::getWidth( void ) const;
+    
+      int getStreamWidth( void ) const;
+      int getStreamHeight( void ) const;
+      int getStreamSize( void ) const;
+
+      brook::stream& getBrookStream( void );
+
+   private:
+
+      int _width;
+      int _streamWidth;
+      int _streamHeight;
+  
+      float _defaultDangleValue;
+      Stream::DataType _baseType;
+      brook::stream _aStream;
+      float** _data;
+      RealOpenMM** _realOpenMMData;
+  
+      void _loadDanglingValues( void  );
+      void _loadDanglingValues( float );
 };
 
 } // namespace OpenMM

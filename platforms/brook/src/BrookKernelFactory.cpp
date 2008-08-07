@@ -36,9 +36,13 @@ using namespace OpenMM;
 
 KernelImpl* BrookKernelFactory::createKernelImpl(std::string name, const Platform& platform, OpenMMContextImpl& context) const {
     if (name == CalcStandardMMForceFieldKernel::Name())
-        return new BrookCalcStandardMMForceFieldKernel(name, platform);
+		(void) fprintf( stderr, "CalcStandardMMForceFieldKernel not set BrookKernelFactory::createKernelImpl\n" );
+        (void) fflush( stderr );
+        //return new BrookCalcStandardMMForceFieldKernel(name, platform);
     if (name == CalcGBSAOBCForceFieldKernel::Name())
-        return new BrookCalcGBSAOBCForceFieldKernel(name, platform);
+        (void) fprintf( stderr, "CalcGBSAOBCForceFieldKernel not set BrookKernelFactory::createKernelImpl\n" );
+        (void) fflush( stderr );
+        //return new BrookCalcGBSAOBCForceFieldKernel(name, platform);
     if (name == IntegrateVerletStepKernel::Name())
         return new BrookIntegrateVerletStepKernel(name, platform);
     if (name == IntegrateLangevinStepKernel::Name())

@@ -31,6 +31,7 @@
 
 #include "BrookKernels.h"
 #include "BrookFloatStreamImpl.h"
+/*
 #include "SimTKBrook/BrookAngleBondIxn.h"
 #include "SimTKBrook/BrookBondForce.h"
 #include "SimTKBrook/BrookHarmonicBondIxn.h"
@@ -40,12 +41,14 @@
 #include "SimTKBrook/BrookRbDihedralBond.h"
 #include "SimTKBrook/BrookStochasticDynamics.h"
 #include "SimTKBrook/BrookShakeAlgorithm.h"
+*/
 #include <cmath>
 #include <limits>
 
 using namespace OpenMM;
 using namespace std;
 
+/*
 int** allocateIntArray(int length, int width) {
     int** array = new int*[length];
     for (int i = 0; i < length; ++i)
@@ -95,8 +98,10 @@ void disposeRealArray(RealOpenMM** array, int size) {
         delete[] array;
     }
 }
+*/
 
 BrookCalcStandardMMForceFieldKernel::~BrookCalcStandardMMForceFieldKernel() {
+/*
     disposeIntArray(bondIndexArray, numBonds);
     disposeRealArray(bondParamArray, numBonds);
     disposeIntArray(angleIndexArray, numAngles);
@@ -109,6 +114,7 @@ BrookCalcStandardMMForceFieldKernel::~BrookCalcStandardMMForceFieldKernel() {
     disposeIntArray(exclusionArray, numAtoms);
     disposeIntArray(bonded14IndexArray, num14);
     disposeRealArray(bonded14ParamArray, num14);
+*/
 }
 
 void BrookCalcStandardMMForceFieldKernel::initialize(const vector<vector<int> >& bondIndices, const vector<vector<double> >& bondParameters,
@@ -117,6 +123,7 @@ void BrookCalcStandardMMForceFieldKernel::initialize(const vector<vector<int> >&
         const vector<vector<int> >& rbTorsionIndices, const vector<vector<double> >& rbTorsionParameters,
         const vector<vector<int> >& bonded14Indices, double lj14Scale, double coulomb14Scale,
         const vector<set<int> >& exclusions, const vector<vector<double> >& nonbondedParameters) {
+/*
     numAtoms = nonbondedParameters.size();
     numBonds = bondIndices.size();
     numAngles = angleIndices.size();
@@ -155,9 +162,11 @@ void BrookCalcStandardMMForceFieldKernel::initialize(const vector<vector<int> >&
         bonded14ParamArray[i][1] = lj14Scale*(atomParamArray[atom1][1]*atomParamArray[atom2][1]);
         bonded14ParamArray[i][2] = coulomb14Scale*(atomParamArray[atom1][2]*atomParamArray[atom2][2]);
     }
+*/
 }
 
 void BrookCalcStandardMMForceFieldKernel::executeForces(const Stream& positions, Stream& forces) {
+/*
     RealOpenMM** posData = const_cast<RealOpenMM**>(((BrookFloatStreamImpl&) positions.getImpl()).getData()); // Brook code needs to be made const correct
     RealOpenMM** forceData = ((BrookFloatStreamImpl&) forces.getImpl()).getData();
     BrookBondForce refBondForce;
@@ -173,14 +182,16 @@ void BrookCalcStandardMMForceFieldKernel::executeForces(const Stream& positions,
     clj.calculatePairIxn(numAtoms, posData, atomParamArray, exclusionArray, 0, forceData, 0, 0);
     BrookLJCoulomb14 nonbonded14;
     refBondForce.calculateForce(num14, bonded14IndexArray, posData, bonded14ParamArray, forceData, 0, 0, 0, nonbonded14);
+*/
 }
 
 double BrookCalcStandardMMForceFieldKernel::executeEnergy(const Stream& positions) {
+    RealOpenMM energy = 0;
+/*
     RealOpenMM** posData = const_cast<RealOpenMM**>(((BrookFloatStreamImpl&) positions.getImpl()).getData()); // Brook code needs to be made const correct
     RealOpenMM** forceData = allocateRealArray(numAtoms, 3);
     int arraySize = max(max(max(max(numAtoms, numBonds), numAngles), numPeriodicTorsions), numRBTorsions);
     RealOpenMM* energyArray = new RealOpenMM[arraySize];
-    RealOpenMM energy = 0;
     BrookBondForce refBondForce;
     BrookHarmonicBondIxn harmonicBond;
     for (int i = 0; i < arraySize; ++i)
@@ -206,6 +217,7 @@ double BrookCalcStandardMMForceFieldKernel::executeEnergy(const Stream& position
     refBondForce.calculateForce(num14, bonded14IndexArray, posData, bonded14ParamArray, forceData, energyArray, 0, &energy, nonbonded14);
     disposeRealArray(forceData, numAtoms);
     delete[] energyArray;
+*/
     return energy;
 }
 
@@ -232,6 +244,7 @@ void BrookIntegrateVerletStepKernel::execute(Stream& positions, Stream& velociti
 }
 #include <iostream>
 BrookIntegrateLangevinStepKernel::~BrookIntegrateLangevinStepKernel() {
+/*
     if (dynamics)
         delete dynamics;
     if (shake)
@@ -242,10 +255,12 @@ BrookIntegrateLangevinStepKernel::~BrookIntegrateLangevinStepKernel() {
         disposeIntArray(constraintIndices, numConstraints);
     if (shakeParameters)
         disposeRealArray(shakeParameters, numConstraints);
+*/
 }
 
 void BrookIntegrateLangevinStepKernel::initialize(const vector<double>& masses, const vector<vector<int> >& constraintIndices,
         const vector<double>& constraintLengths) {
+/*
     this->masses = new RealOpenMM[masses.size()];
     for (int i = 0; i < masses.size(); ++i)
         this->masses[i] = masses[i];
@@ -258,9 +273,11 @@ void BrookIntegrateLangevinStepKernel::initialize(const vector<double>& masses, 
     shakeParameters = allocateRealArray(constraintLengths.size(), 1);
     for (int i = 0; i < constraintLengths.size(); ++i)
         shakeParameters[i][0] = constraintLengths[i];
+*/
 }
 
 void BrookIntegrateLangevinStepKernel::execute(Stream& positions, Stream& velocities, const Stream& forces, double temperature, double friction, double stepSize) {
+/*
     RealOpenMM** posData = ((BrookFloatStreamImpl&) positions.getImpl()).getData();
     RealOpenMM** velData = ((BrookFloatStreamImpl&) velocities.getImpl()).getData();
     RealOpenMM** forceData = const_cast<RealOpenMM**>(((BrookFloatStreamImpl&) forces.getImpl()).getData()); // Brook code needs to be made const correct
@@ -280,6 +297,7 @@ void BrookIntegrateLangevinStepKernel::execute(Stream& positions, Stream& veloci
         prevStepSize = stepSize;
     }
     dynamics->update(positions.getSize(), posData, velData, forceData, masses);
+*/
 }
 
 void BrookIntegrateBrownianStepKernel::initialize(const vector<double>& masses, const vector<vector<int> >& constraintIndices,
@@ -304,9 +322,11 @@ void BrookCalcKineticEnergyKernel::initialize(const vector<double>& masses) {
 }
 
 double BrookCalcKineticEnergyKernel::execute(const Stream& velocities) {
-    RealOpenMM** velData = const_cast<RealOpenMM**>(((BrookFloatStreamImpl&) velocities.getImpl()).getData()); // Brook code needs to be made const correct
     double energy = 0.0;
+/*
+    RealOpenMM** velData = const_cast<RealOpenMM**>(((BrookFloatStreamImpl&) velocities.getImpl()).getData()); // Brook code needs to be made const correct
     for (int i = 0; i < masses.size(); ++i)
         energy += masses[i]*(velData[i][0]*velData[i][0]+velData[i][1]*velData[i][1]+velData[i][2]*velData[i][2]);
+*/
     return 0.5*energy;
 }

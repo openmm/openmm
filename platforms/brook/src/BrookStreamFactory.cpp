@@ -29,6 +29,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include <sstream>
 #include "OpenMMException.h"
 #include "BrookStreamFactory.h"
 #include "BrookFloatStreamImpl.h"
@@ -36,22 +37,167 @@
 
 using namespace OpenMM;
 
-StreamImpl* BrookStreamFactory::createStreamImpl(std::string name, int size, Stream::DataType type, int streamWidth, const Platform& platform, OpenMMContextImpl& context) const {
-    switch (type) {
-    case Stream::Float:
-    case Stream::Float2:
-    case Stream::Float3:
-    case Stream::Float4:
-    case Stream::Double:
-    case Stream::Double2:
-    case Stream::Double3:
-    case Stream::Double4:
-        return new BrookFloatStreamImpl(name, size, type, streamWidth, platform);
-    case Stream::Integer:
-    case Stream::Integer2:
-    case Stream::Integer3:
-    case Stream::Integer4:
-        return new BrookIntStreamImpl(name, size, type, streamWidth, platform);
-    }
-    throw OpenMMException("Tried to create a Stream with an illegal DataType.");
+const std::string BrookStreamFactory::AtomPositions              = "atomPositions";
+const std::string BrookStreamFactory::AtomVelocities             = "atomVelocities";
+const std::string BrookStreamFactory::AtomForces                 = "atomForces";
+
+// bonded streams
+                                    
+const std::string BrookStreamFactory::BondedAtomIndicesStream    = "BondedAtomIndicesStream";
+const std::string BrookStreamFactory::BondedParametersStream     = "BondedParametersStream";
+const std::string BrookStreamFactory::UnrolledForceStream        = "UnrolledForceStream";
+const std::string BrookStreamFactory::BondedChargeStream         = "BondedChargeStream";
+const std::string BrookStreamFactory::BondedInverseMapStreams    = "BondedInverseMapStreams";
+
+// non-bonded streams
+
+const std::string BrookStreamFactory::NonBondedExclusionStream   = "NonBondedExclusionStream";
+const std::string BrookStreamFactory::NonBondedVdwStream         = "NonBondedVdwStream";
+
+/** 
+ * BrookStreamFactory constructor
+ * 
+ * @return BrookStreamFactory
+ */
+
+BrookStreamFactory::BrookStreamFactory( void ){
+
+	double defaultDangleValue                       = 1.0e+38;
+	int    defaultStreamWidth                       = 32;
+
+   _streamInfoMap[AtomPositions]                   = new BrookStreamInfo( AtomPositions,             defaultStreamWidth, defaultDangleValue );
+   _streamInfoMap[AtomVelocities]                  = new BrookStreamInfo( AtomVelocities,            defaultStreamWidth, defaultDangleValue );
+   _streamInfoMap[AtomForces]                      = new BrookStreamInfo( AtomForces,                defaultStreamWidth, defaultDangleValue );
+
+   // bonded streams
+
+   _streamInfoMap[BondedAtomIndicesStream]         = new BrookStreamInfo( BondedAtomIndicesStream,   defaultStreamWidth, defaultDangleValue );
+   _streamInfoMap[BondedParametersStream]          = new BrookStreamInfo( BondedParametersStream,    defaultStreamWidth, defaultDangleValue );
+   _streamInfoMap[UnrolledForceStream]             = new BrookStreamInfo( UnrolledForceStream,       defaultStreamWidth, defaultDangleValue );
+   _streamInfoMap[BondedChargeStream]              = new BrookStreamInfo( BondedChargeStream,        defaultStreamWidth, defaultDangleValue );
+   _streamInfoMap[BondedInverseMapStreams]         = new BrookStreamInfo( BondedInverseMapStreams,   defaultStreamWidth, defaultDangleValue );
+
+   _streamInfoMap[NonBondedExclusionStream]        = new BrookStreamInfo( NonBondedExclusionStream,  defaultStreamWidth, defaultDangleValue );
+   _streamInfoMap[NonBondedVdwStream]              = new BrookStreamInfo( NonBondedVdwStream,        defaultStreamWidth, defaultDangleValue );
+}
+
+/** 
+ * BrookStreamFactory destructor
+ * 
+ */
+
+BrookStreamFactory::~BrookStreamFactory( void ){
+   //_streamInfoMap[UnrolledForceStream]      = new BrookStreamInfo( UnrolledForceStream, 32, defaultDangleValue );
+}
+
+/** 
+ * Get BrookStreamInfo reference given stream name
+ *
+ * @param name stream name
+ * 
+ * @return BrookStreamInfo  -- look up streamInfo object given name; return NULL if name not recognized
+ */
+
+BrookStreamInfo* BrookStreamFactory::getBrookStreamInfo( std::string name ) const {
+
+   if( _streamInfoMap.find( name ) == _streamInfoMap.end() ){
+      return NULL;
+   }
+   return _streamInfoMap.find( name )->second;
+}
+
+/** 
+ * Create StreamImpl
+ *
+ * @param name     stream name
+ * @param size     stream size
+ * @param type     data type (float, float2, ...)
+ * @param platform platform reference
+ * @param context  context (currently ignored)
+ * 
+ * @return StreamImpl
+ */
+
+StreamImpl* BrookStreamFactory::createStreamImpl( std::string name, int size, Stream::DataType type,
+                                                  const Platform& platform, OpenMMContextImpl& context ) const {
+
+   return BrookStreamFactory::createStreamImplCommon( name, size, type, platform );
+
+}
+
+/** 
+ * Create StreamImpl
+ *
+ * @param name     stream name
+ * @param size     stream size
+ * @param type     data type (float, float2, ...)
+ * @param platform platform reference
+ * 
+ * @return StreamImpl
+ */
+
+StreamImpl* BrookStreamFactory::createStreamImpl( std::string name, int size, Stream::DataType type,
+                                                  const Platform& platform ) const {
+
+   return BrookStreamFactory::createStreamImplCommon( name, size, type, platform );
+}
+
+/** 
+ * Create StreamImpl
+ *
+ * @param name     stream name
+ * @param size     stream size
+ * @param type     data type (float, float2, ...)
+ * @param platform platform reference
+ * 
+ * @return StreamImpl
+ */
+
+StreamImpl* BrookStreamFactory::createStreamImplCommon( std::string name, int size, Stream::DataType type,
+                                                        const Platform& platform ) const {
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName      = "BrookStreamFactory::createStreamImplCommon";
+   //static const int debug                   = 0;
+
+// ---------------------------------------------------------------------------------------
+
+   // get stream width & dangle value
+
+   BrookStreamInfo* streamInfo = getBrookStreamInfo( name );
+   if( streamInfo == NULL ){
+      std::stringstream message;
+      message << methodName << " stream=" << name << " not registered.";
+      throw OpenMMException( message.str() );
+   }
+
+   int streamWidth    = streamInfo->getStreamWidth();
+   double dangleValue = streamInfo->getDangleValue();
+      
+   switch ( type ){
+
+      case Stream::Float:
+      case Stream::Float2:
+      case Stream::Float3:
+      case Stream::Float4:
+      case Stream::Double:
+      case Stream::Double2:
+      case Stream::Double3:
+      case Stream::Double4:
+          return new BrookFloatStreamImpl( name, size, type, platform, streamWidth, dangleValue );
+          break;
+
+      case Stream::Integer:
+      case Stream::Integer2:
+      case Stream::Integer3:
+      case Stream::Integer4:
+          return new BrookIntStreamImpl( name, size, type, platform );
+          break;
+   }
+
+   std::stringstream message;
+   message << methodName << " type=" << type << " for stream=" << name << " is invalid.";
+   throw OpenMMException( message.str() );
+
 }

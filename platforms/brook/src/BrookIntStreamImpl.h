@@ -38,22 +38,25 @@
 namespace OpenMM {
 
 /**
- * This is the implementation of Float and Double streams in the reference Platform.
+ * Implementation of int streams for the Brook platform
  */
 
 class BrookIntStreamImpl : public StreamImpl {
+
 public:
 
-    BrookIntStreamImpl(std::string name, int size, Stream::DataType type, const Platform& platform);
-    ~BrookIntStreamImpl();
+    BrookIntStreamImpl( std::string name, int size, Stream::DataType type, const Platform& platform );
 
-    void loadFromArray(const void* array);
-    void saveToArray(void* array);
-    void fillWithValue(void* value);
-    const int* const * getData() const;
-    int** getData();
+    ~BrookIntStreamImpl( );
+
+    void loadFromArray( const void* array );
+    void saveToArray( void* array );
+    void fillWithValue( void* value );
+    const int* const * getData( void  ) const;
+    int** getData( void );
 
 private:
+
     int width;
     Stream::DataType baseType;
     int** data;
