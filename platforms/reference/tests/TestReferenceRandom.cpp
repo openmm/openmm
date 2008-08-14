@@ -29,52 +29,53 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "CudaPlatform.h"
-#include "CudaKernelFactory.h"
-#include "CudaKernels.h"
-#include "internal/OpenMMContextImpl.h"
-#include "kernels/gpuTypes.h"
-#include "System.h"
+/**
+ * This tests the reference implementation of random number generation.
+ */
 
-extern "C" gpuContext
-gpuInit( 
-        int natoms,
-        int atomstrwidth,
-        int testmode,
-        FILE *log
-        );
-extern "C"
-void gpuShutDown(gpuContext gpu);
+#include "../../../tests/AssertionUtilities.h"
+#include "../src/SimTKUtilities/SimTKOpenMMUtilities.h"
+#include <iostream>
 
 using namespace OpenMM;
+using namespace std;
 
-CudaPlatform::CudaPlatform() {
-    CudaKernelFactory* factory = new CudaKernelFactory();
-    registerKernelFactory(CalcStandardMMForceFieldKernel::Name(), factory);
-//    registerKernelFactory(CalcGBSAOBCForceFieldKernel::Name(), factory);
-//    registerKernelFactory(IntegrateVerletStepKernel::Name(), factory);
-//    registerKernelFactory(IntegrateLangevinStepKernel::Name(), factory);
-//    registerKernelFactory(IntegrateBrownianStepKernel::Name(), factory);
-//    registerKernelFactory(ApplyAndersenThermostatKernel::Name(), factory);
-//    registerKernelFactory(CalcKineticEnergyKernel::Name(), factory);
-//    registerKernelFactory(RemoveCMMotionKernel::Name(), factory);
+void testGaussian() {
+    mt_init(0);
+    const int numValues = 10000000;
+    double mean = 0.0;
+    double var = 0.0;
+    double skew = 0.0;
+    double kurtosis = 0.0;
+    unsigned long jran = 12399103;
+    for (int i = 0; i < numValues; i++) {
+        double value = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+        mean += value;
+        var += value*value;
+        skew += value*value*value;
+        kurtosis += value*value*value*value;
+    }
+    mean /= numValues;
+    var /= numValues;
+    skew /= numValues;
+    kurtosis /= numValues;
+    double c2 = var-mean*mean;
+    double c3 = skew-3*var*mean+2*mean*mean*mean;
+    double c4 = kurtosis-4*skew*mean-3*var*var+12*var*mean*mean-6*mean*mean*mean*mean;
+    ASSERT_EQUAL_TOL(0.0, mean, 0.01);
+    ASSERT_EQUAL_TOL(1.0, c2, 0.01);
+    ASSERT_EQUAL_TOL(0.0, c3, 0.01);
+    ASSERT_EQUAL_TOL(0.0, c4, 0.01);
 }
 
-bool CudaPlatform::supportsDoublePrecision() const {
-    return false;
-}
-
-const StreamFactory& CudaPlatform::getDefaultStreamFactory() const {
-    return defaultStreamFactory;
-}
-
-void CudaPlatform::contextCreated(OpenMMContextImpl& context) const {
-    int numAtoms = context.getSystem().getNumAtoms();
-    _gpuContext* gpu = gpuInit(numAtoms, 0 /* ignored? */, 0, stdout);
-    context.setPlatformData(gpu);
-}
-
-void CudaPlatform::contextDestroyed(OpenMMContextImpl& context) const {
-    _gpuContext* data = reinterpret_cast<_gpuContext*>(context.getPlatformData());
-    gpuShutDown(data);
+int main() {
+    try {
+        testGaussian();
+    }
+    catch(const exception& e) {
+        cout << "exception: " << e.what() << endl;
+        return 1;
+    }
+    cout << "Done" << endl;
+    return 0;
 }

@@ -63,7 +63,7 @@ ENDIF (NOT CMAKE_CXX_FLAGS_RELEASE)
 
 
 
-# Collect up information about the version of the simbody library we're building
+# Collect up information about the version of the OpenMM library we're building
 # and make it available to the code so it can be built into the binaries.
 
 SET(OPENMM_LIBRARY_NAME OpenMM)
@@ -206,7 +206,7 @@ FOREACH(subdir ${OPENMM_SOURCE_SUBDIRS})
     SET(SOURCE_FILES         ${SOURCE_FILES}         ${src_files})   #append
     SET(SOURCE_INCLUDE_FILES ${SOURCE_INCLUDE_FILES} ${incl_files})
 
-    ## Make sure we find these locally before looking in SimTK/core/include if
+    ## Make sure we find these locally before looking in OpenMM/include if
     ## OpenMM was previously installed there.
     INCLUDE_DIRECTORIES(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/${subdir}/include)
 ENDFOREACH(subdir)

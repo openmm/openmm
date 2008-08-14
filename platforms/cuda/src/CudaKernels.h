@@ -33,6 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "kernels.h"
+#include "kernels/gpuTypes.h"
 
 class CudaAndersenThermostat;
 class CudaBrownianDynamics;
@@ -42,61 +43,63 @@ class CudaVerletDynamics;
 
 namespace OpenMM {
 
-///**
-// * This kernel is invoked by StandardMMForceField to calculate the forces acting on the system.
-// */
-//class CudaCalcStandardMMForceFieldKernel : public CalcStandardMMForceFieldKernel {
-//public:
-//    CudaCalcStandardMMForceFieldKernel(std::string name, const Platform& platform) : CalcStandardMMForceFieldKernel(name, platform) {
-//    }
-//    ~CudaCalcStandardMMForceFieldKernel();
-//    /**
-//     * Initialize the kernel, setting up the values of all the force field parameters.
-//     * 
-//     * @param bondIndices               the two atoms connected by each bond term
-//     * @param bondParameters            the force parameters (length, k) for each bond term
-//     * @param angleIndices              the three atoms connected by each angle term
-//     * @param angleParameters           the force parameters (angle, k) for each angle term
-//     * @param periodicTorsionIndices    the four atoms connected by each periodic torsion term
-//     * @param periodicTorsionParameters the force parameters (k, phase, periodicity) for each periodic torsion term
-//     * @param rbTorsionIndices          the four atoms connected by each Ryckaert-Bellemans torsion term
-//     * @param rbTorsionParameters       the coefficients (in order of increasing powers) for each Ryckaert-Bellemans torsion term
-//     * @param bonded14Indices           each element contains the indices of two atoms whose nonbonded interactions should be reduced since
-//     *                                  they form a bonded 1-4 pair
-//     * @param lj14Scale                 the factor by which van der Waals interactions should be reduced for bonded 1-4 pairs
-//     * @param coulomb14Scale            the factor by which Coulomb interactions should be reduced for bonded 1-4 pairs
-//     * @param exclusions                the i'th element lists the indices of all atoms with which the i'th atom should not interact through
-//     *                                  nonbonded forces.  Bonded 1-4 pairs are also included in this list, since they should be omitted from
-//     *                                  the standard nonbonded calculation.
-//     * @param nonbondedParameters       the nonbonded force parameters (charge, sigma, epsilon) for each atom
-//     */
-//    void initialize(const std::vector<std::vector<int> >& bondIndices, const std::vector<std::vector<double> >& bondParameters,
-//            const std::vector<std::vector<int> >& angleIndices, const std::vector<std::vector<double> >& angleParameters,
-//            const std::vector<std::vector<int> >& periodicTorsionIndices, const std::vector<std::vector<double> >& periodicTorsionParameters,
-//            const std::vector<std::vector<int> >& rbTorsionIndices, const std::vector<std::vector<double> >& rbTorsionParameters,
-//            const std::vector<std::vector<int> >& bonded14Indices, double lj14Scale, double coulomb14Scale,
-//            const std::vector<std::set<int> >& exclusions, const std::vector<std::vector<double> >& nonbondedParameters);
-//    /**
-//     * Execute the kernel to calculate the forces.
-//     * 
-//     * @param positions   a Stream of type Double3 containing the position (x, y, z) of each atom
-//     * @param forces      a Stream of type Double3 containing the force (x, y, z) on each atom.  On entry, this contains the forces that
-//     *                    have been calculated so far.  The kernel should add its own forces to the values already in the stream.
-//     */
-//    void executeForces(const Stream& positions, Stream& forces);
-//    /**
-//     * Execute the kernel to calculate the energy.
-//     * 
-//     * @param positions   a Stream of type Double3 containing the position (x, y, z) of each atom
-//     * @return the potential energy due to the StandardMMForceField
-//     */
-//    double executeEnergy(const Stream& positions);
-//private:
-//    int numAtoms, numBonds, numAngles, numPeriodicTorsions, numRBTorsions, num14;
+/**
+ * This kernel is invoked by StandardMMForceField to calculate the forces acting on the system.
+ */
+class CudaCalcStandardMMForceFieldKernel : public CalcStandardMMForceFieldKernel {
+public:
+    CudaCalcStandardMMForceFieldKernel(std::string name, const Platform& platform, _gpuContext* gpu) : CalcStandardMMForceFieldKernel(name, platform), gpu(gpu) {
+    }
+    ~CudaCalcStandardMMForceFieldKernel();
+    /**
+     * Initialize the kernel, setting up the values of all the force field parameters.
+     * 
+     * @param bondIndices               the two atoms connected by each bond term
+     * @param bondParameters            the force parameters (length, k) for each bond term
+     * @param angleIndices              the three atoms connected by each angle term
+     * @param angleParameters           the force parameters (angle, k) for each angle term
+     * @param periodicTorsionIndices    the four atoms connected by each periodic torsion term
+     * @param periodicTorsionParameters the force parameters (k, phase, periodicity) for each periodic torsion term
+     * @param rbTorsionIndices          the four atoms connected by each Ryckaert-Bellemans torsion term
+     * @param rbTorsionParameters       the coefficients (in order of increasing powers) for each Ryckaert-Bellemans torsion term
+     * @param bonded14Indices           each element contains the indices of two atoms whose nonbonded interactions should be reduced since
+     *                                  they form a bonded 1-4 pair
+     * @param lj14Scale                 the factor by which van der Waals interactions should be reduced for bonded 1-4 pairs
+     * @param coulomb14Scale            the factor by which Coulomb interactions should be reduced for bonded 1-4 pairs
+     * @param exclusions                the i'th element lists the indices of all atoms with which the i'th atom should not interact through
+     *                                  nonbonded forces.  Bonded 1-4 pairs are also included in this list, since they should be omitted from
+     *                                  the standard nonbonded calculation.
+     * @param nonbondedParameters       the nonbonded force parameters (charge, sigma, epsilon) for each atom
+     */
+    void initialize(const std::vector<std::vector<int> >& bondIndices, const std::vector<std::vector<double> >& bondParameters,
+            const std::vector<std::vector<int> >& angleIndices, const std::vector<std::vector<double> >& angleParameters,
+            const std::vector<std::vector<int> >& periodicTorsionIndices, const std::vector<std::vector<double> >& periodicTorsionParameters,
+            const std::vector<std::vector<int> >& rbTorsionIndices, const std::vector<std::vector<double> >& rbTorsionParameters,
+            const std::vector<std::vector<int> >& bonded14Indices, double lj14Scale, double coulomb14Scale,
+            const std::vector<std::set<int> >& exclusions, const std::vector<std::vector<double> >& nonbondedParameters,
+            NonbondedMethod nonbondedMethod, double nonbondedCutoff, double periodicBoxSize[3]);
+    /**
+     * Execute the kernel to calculate the forces.
+     * 
+     * @param positions   a Stream of type Double3 containing the position (x, y, z) of each atom
+     * @param forces      a Stream of type Double3 containing the force (x, y, z) on each atom.  On entry, this contains the forces that
+     *                    have been calculated so far.  The kernel should add its own forces to the values already in the stream.
+     */
+    void executeForces(const Stream& positions, Stream& forces);
+    /**
+     * Execute the kernel to calculate the energy.
+     * 
+     * @param positions   a Stream of type Double3 containing the position (x, y, z) of each atom
+     * @return the potential energy due to the StandardMMForceField
+     */
+    double executeEnergy(const Stream& positions);
+private:
+    _gpuContext* gpu;
+    int numAtoms, numBonds, numAngles, numPeriodicTorsions, numRBTorsions, num14;
 //    int **bondIndexArray, **angleIndexArray, **periodicTorsionIndexArray, **rbTorsionIndexArray, **exclusionArray, **bonded14IndexArray;
 //    RealOpenMM **bondParamArray, **angleParamArray, **periodicTorsionParamArray, **rbTorsionParamArray, **atomParamArray, **bonded14ParamArray;
-//};
-//
+};
+
 ///**
 // * This kernel is invoked by GBSAOBCForceField to calculate the forces acting on the system.
 // */

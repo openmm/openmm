@@ -31,12 +31,14 @@
 
 #include "CudaKernelFactory.h"
 #include "CudaKernels.h"
+#include "internal/OpenMMContextImpl.h"
 
 using namespace OpenMM;
 
 KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform& platform, OpenMMContextImpl& context) const {
-//    if (name == CalcStandardMMForceFieldKernel::Name())
-//        return new CudaCalcStandardMMForceFieldKernel(name, platform);
+    _gpuContext* gpu = static_cast<_gpuContext*>(context.getPlatformData());
+    if (name == CalcStandardMMForceFieldKernel::Name())
+        return new CudaCalcStandardMMForceFieldKernel(name, platform, gpu);
 //    if (name == CalcGBSAOBCForceFieldKernel::Name())
 //        return new CudaCalcGBSAOBCForceFieldKernel(name, platform);
 //    if (name == IntegrateVerletStepKernel::Name())
