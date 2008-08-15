@@ -1,5 +1,5 @@
-#ifndef BrookBonded_H_
-#define BrookBonded_H_
+#ifndef OPENMM_BROOK_BONDED_H_
+#define OPENMM_BROOK_BONDED_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -34,8 +34,8 @@
 
 #include <vector>
 
-#include "BrookFloatStreamImpl.h"
-#include "BrookIntStreamImpl.h"
+#include "BrookFloatStreamInternal.h"
+#include "BrookIntStreamInternal.h"
 #include "BrookPlatform.h"
 #include "BrookCommon.h"
 #include "OpenMMContext.h"
@@ -84,8 +84,17 @@ class BrookBonded : public BrookCommon {
                  const std::vector<std::vector<int> >& periodicTorsionIndices, const std::vector<std::vector<double> >& periodicTorsionParameters,
                  const std::vector<std::vector<int> >& rbTorsionIndices,       const std::vector<std::vector<double> >& rbTorsionParameters,
                  const std::vector<std::vector<int> >& bonded14Indices,        const std::vector<std::vector<double> >& nonbondedParameters,
-                 double lj14Scale, double coulomb14Scale, const BrookPlatform& platform );
+                 double lj14Scale, double coulomb14Scale, const Platform& platform );
 
+      /**
+       * Get inverse map stream width
+       * 
+       * @return stream width
+       *
+       */
+
+      int getInverseMapStreamWidth( void ) const;
+      
       /**
        * Return number of parameter streams
        * 
@@ -123,12 +132,23 @@ class BrookBonded : public BrookCommon {
       int getMaxInverseMapStreamCount( void ) const; 
 
       /**
+       * Return max stream count for specified index
+       * 
+       * @param index index of force stream
+       *
+       * @return max stream count
+       *
+       */
+
+      int getMaxInverseMapStreamCount( int index ) const; 
+
+      /**
        * Return Brook stream handle
        * 
        * @return 
        */
 
-      BrookFloatStreamImpl* getBrookAtomIndices( void ) const; 
+      BrookFloatStreamInternal* getBrookAtomIndices( void ) const; 
 
       /**
        * Get LJ 14 scale factor
@@ -155,7 +175,7 @@ class BrookBonded : public BrookCommon {
        *
        */
       
-      BrookFloatStreamImpl* getAtomIndicesStream( void ) const;
+      BrookFloatStreamInternal* getAtomIndicesStream( void ) const;
       
       /** 
        * Get array of bonded parameter streams
@@ -164,7 +184,7 @@ class BrookBonded : public BrookCommon {
        *
        */
       
-      BrookFloatStreamImpl** getBondedParameterStreams( void );
+      BrookFloatStreamInternal** getBondedParameterStreams( void );
       
       /** 
        * Get array of force streams
@@ -173,7 +193,7 @@ class BrookBonded : public BrookCommon {
        *
        */
       
-      BrookFloatStreamImpl** getBondedForceStreams( void );
+      BrookFloatStreamInternal** getBondedForceStreams( void );
       
       /** 
        * Get array of inverse map streams
@@ -184,7 +204,7 @@ class BrookBonded : public BrookCommon {
        *
        */
       
-      BrookFloatStreamImpl** getInverseStreamMapsStreams( int index );
+      BrookFloatStreamInternal** getInverseStreamMapsStreams( int index );
       
       /** 
        * Return true if force[index] stream is set
@@ -228,7 +248,7 @@ class BrookBonded : public BrookCommon {
        *
        * */
       
-      std::string getContents( int level ) const;
+      std::string getContentsString( int level = 0 ) const;
 
    private:
    
@@ -240,7 +260,7 @@ class BrookBonded : public BrookCommon {
 
       // inverse map stream width
 
-      int _invMapStreamWidth;
+      int _inverseMapStreamWidth;
 
       // actual max number of inverse maps 
 
@@ -253,11 +273,11 @@ class BrookBonded : public BrookCommon {
 
       // streams
 
-      BrookFloatStreamImpl* _atomIndicesStream;
-      BrookFloatStreamImpl* _bondedParameters[NumberOfParameterStreams];
-      BrookFloatStreamImpl* _bondedForceStreams[NumberOfForceStreams];
-      BrookFloatStreamImpl* _chargeStream;
-      BrookFloatStreamImpl* _inverseStreamMaps[NumberOfForceStreams][MaxNumberOfInverseMaps];
+      BrookFloatStreamInternal* _atomIndicesStream;
+      BrookFloatStreamInternal* _bondedParameters[NumberOfParameterStreams];
+      BrookFloatStreamInternal* _bondedForceStreams[NumberOfForceStreams];
+      BrookFloatStreamInternal* _chargeStream;
+      BrookFloatStreamInternal* _inverseStreamMaps[NumberOfForceStreams][MaxNumberOfInverseMaps];
 
       int _maxInverseMapStreamCount[NumberOfForceStreams];
       int _inverseMapStreamCount[NumberOfForceStreams];
@@ -370,15 +390,6 @@ class BrookBonded : public BrookCommon {
       int loadInvMaps( int nbondeds, int natoms, int *atoms, const BrookPlatform& platform );
       
       /**
-       * Get inverse amp stream width
-       * 
-       * @return stream width
-       *
-       */
-
-      int getInvMapStreamWidth( void ) const;
-      
-      /**
        * Validate inverse map count
        * 
        * @param index index to check (1-4) 
@@ -396,4 +407,4 @@ class BrookBonded : public BrookCommon {
 
 } // namespace OpenMM
 
-#endif /*OPENMM_BROOKKERNELS_H_*/
+#endif /* OPENMM_BROOK_BONDED_H_ */

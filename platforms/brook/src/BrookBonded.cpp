@@ -100,7 +100,7 @@ BrookBonded::BrookBonded( ){
       throw OpenMMException( message.str() );
    }
 
-   _invMapStreamWidth = -1;
+   _inverseMapStreamWidth = -1;
 }   
  
 /** 
@@ -165,14 +165,27 @@ int BrookBonded::getMaxInverseMapStreamCount( void ) const {
 }
 
 /** 
+ * Get max number of inverse maps for specified force stream index
+ * 
+ * @param index index of force stream
+ *
+ * @return  max number of inverse maps or -1 if index is out of range
+ *
+ */
+
+int BrookBonded::getMaxInverseMapStreamCount( int index ) const {
+   return (index >= 0 && index < getNumberOfForceStreams())  ? _maxInverseMapStreamCount[index] : -1;
+}
+
+/** 
  * Get width of inverse map streams
  * 
  * @return  width of inverse map streams
  *
  */
 
-int BrookBonded::getInvMapStreamWidth( void ) const {
-   return _invMapStreamWidth;
+int BrookBonded::getInverseMapStreamWidth( void ) const {
+   return _inverseMapStreamWidth;
 }
 
 /** 
@@ -329,7 +342,7 @@ int BrookBonded::getInverseMapStreamCount( int index ) const {
  *
  */
 
-BrookFloatStreamImpl* BrookBonded::getAtomIndicesStream( void ) const {
+BrookFloatStreamInternal* BrookBonded::getAtomIndicesStream( void ) const {
 
 // ---------------------------------------------------------------------------------------
 
@@ -347,7 +360,7 @@ BrookFloatStreamImpl* BrookBonded::getAtomIndicesStream( void ) const {
  *
  */
 
-BrookFloatStreamImpl** BrookBonded::getBondedParameterStreams( void ){
+BrookFloatStreamInternal** BrookBonded::getBondedParameterStreams( void ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -365,7 +378,7 @@ BrookFloatStreamImpl** BrookBonded::getBondedParameterStreams( void ){
  *
  */
 
-BrookFloatStreamImpl** BrookBonded::getBondedForceStreams( void ){
+BrookFloatStreamInternal** BrookBonded::getBondedForceStreams( void ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -385,7 +398,7 @@ BrookFloatStreamImpl** BrookBonded::getBondedForceStreams( void ){
  *
  */
 
-BrookFloatStreamImpl** BrookBonded::getInverseStreamMapsStreams( int index ){
+BrookFloatStreamInternal** BrookBonded::getInverseStreamMapsStreams( int index ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -1012,16 +1025,16 @@ int BrookBonded::loadInvMaps( int nbondeds, int natoms, int *atoms, const BrookP
 // ---------------------------------------------------------------------------------------
 
    static const std::string methodName = "BrookBonded::loadInvMaps";
+   double dangleValue                  = 0.0;
 
 // ---------------------------------------------------------------------------------------
 
    // get atom stream size
 
    const BrookStreamFactory& brookStreamFactory = dynamic_cast<const BrookStreamFactory&> (brookPlatform.getDefaultStreamFactory() );
-   BrookStreamInfo* brookStreamInfo             = brookStreamFactory.getBrookStreamInfo( BrookStreamFactory::AtomPositions );
-   int atomStreamWidth                          = brookStreamInfo->getStreamWidth();
+   int atomStreamWidth                          = brookStreamFactory.getDefaultAtomStreamWidth();
    int atomStreamSize                           = brookPlatform.getStreamSize( getNumberOfAtoms(), atomStreamWidth, NULL );
-   _invMapStreamWidth                           = atomStreamWidth;
+   _inverseMapStreamWidth                       = atomStreamWidth;
    
    // allocate temp memory
 
@@ -1035,14 +1048,26 @@ int BrookBonded::loadInvMaps( int nbondeds, int natoms, int *atoms, const BrookP
 
    // get inverse maps and load into streams
 
+   // create streams
+   // done independently from loading since for test cases some stream counts == 0, but kernels expect stream to
+   // have been created even though unused
+
+   for( int ii = 0; ii < getNumberOfForceStreams(); ii++ ){
+      for( int jj = 0; jj < getMaxInverseMapStreamCount(ii); jj++ ){
+         _inverseStreamMaps[ii][jj] = new BrookFloatStreamInternal( BrookStreamFactory::BondedInverseMapStreams, atomStreamSize,
+                                                                    atomStreamWidth, BrookStreamInternal::Float4, dangleValue );
+      }
+   }
+
+   // load data
+
    for( int ii = 0; ii < getNumberOfForceStreams(); ii++ ){
       gpuCalcInvMap( ii, 4, nbondeds, natoms, atoms, getInverseMapStreamCount( ii ), counts, invmaps, &(_inverseMapStreamCount[ii]) );
       validateInverseMapStreamCount( ii, _inverseMapStreamCount[ii] ); 
       for( int jj = 0; jj < _inverseMapStreamCount[ii]; jj++ ){
-         StreamImpl* inverseStreamMaps = brookStreamFactory.createStreamImpl( BrookStreamFactory::BondedInverseMapStreams, atomStreamSize, Stream::Float4, brookPlatform );
-         _inverseStreamMaps[ii][jj]    = dynamic_cast<BrookFloatStreamImpl*> ( inverseStreamMaps );
          _inverseStreamMaps[ii][jj]->loadFromArray( invmaps[jj] );
-      }
+      }    
+
    }
 
    if( getLog() ){
@@ -1096,15 +1121,18 @@ int BrookBonded::setup( int numberOfAtoms,
                         const vector<vector<int> >& periodicTorsionIndices, const vector<vector<double> >& periodicTorsionParameters,
                         const vector<vector<int> >& rbTorsionIndices,       const vector<vector<double> >& rbTorsionParameters,
                         const vector<vector<int> >& bonded14Indices,        const vector<vector<double> >& nonbondedParameters,
-                        double lj14Scale, double coulombScale,  const BrookPlatform& platform ){
+                        double lj14Scale, double coulombScale,  const Platform& platform ){
 
 // ---------------------------------------------------------------------------------------
 
    static const std::string methodName = "BrookBonded::setup";
+   double dangleValue                  = 0.0;
 
 // ---------------------------------------------------------------------------------------
 
    _numberOfAtoms = numberOfAtoms;
+
+   const BrookPlatform& brookPlatform = dynamic_cast<const BrookPlatform&> (platform);
 
    // check that atom indices & parameters agree
 
@@ -1206,23 +1234,22 @@ int BrookBonded::setup( int numberOfAtoms,
       (void) fflush( getLog() );
    }
 
-   // get factory
-
-   const BrookStreamFactory& brookStreamFactory = dynamic_cast<const BrookStreamFactory&> (platform.getDefaultStreamFactory());
+   const BrookStreamFactory& brookStreamFactory = dynamic_cast<const BrookStreamFactory&> (brookPlatform.getDefaultStreamFactory() );
+   int atomStreamWidth                          = brookStreamFactory.getDefaultAtomStreamWidth();
 
    // build streams
 
-   StreamImpl* atomIndicesStream    = brookStreamFactory.createStreamImpl( BrookStreamFactory::BondedAtomIndicesStream, nbondeds, Stream::Float4, platform );
-   _atomIndicesStream               = dynamic_cast<BrookFloatStreamImpl*> (atomIndicesStream); 
-   _atomIndicesStream->loadFromArray( atoms, Stream::Integer ); 
+   _atomIndicesStream    = new BrookFloatStreamInternal( BrookStreamFactory::BondedAtomIndicesStream, nbondeds, atomStreamWidth,
+                                                         BrookStreamInternal::Float4, dangleValue );
+   _atomIndicesStream->loadFromArray( atoms, BrookStreamInternal::Integer ); 
 
-   StreamImpl* chargeStream         = brookStreamFactory.createStreamImpl( BrookStreamFactory::BondedChargeStream, numberOfAtoms, Stream::Float, platform );
-   _chargeStream                    = dynamic_cast<BrookFloatStreamImpl*> (chargeStream); 
+   _chargeStream         = new BrookFloatStreamInternal( BrookStreamFactory::BondedChargeStream, numberOfAtoms, atomStreamWidth,
+                                                         BrookStreamInternal::Float, dangleValue );
    _chargeStream->loadFromArray( charges ); 
 
    for( int ii = 0; ii < getNumberOfParameterStreams(); ii++ ){
-      StreamImpl* bondedParameters  = brookStreamFactory.createStreamImpl( BrookStreamFactory::BondedParametersStream, nbondeds, Stream::Float4, platform );
-      _bondedParameters[ii]         = dynamic_cast<BrookFloatStreamImpl*> (bondedParameters); 
+      _bondedParameters[ii]  = new BrookFloatStreamInternal( BrookStreamFactory::BondedParametersStream, nbondeds, atomStreamWidth,
+                                                             BrookStreamInternal::Float4, dangleValue );
       _bondedParameters[ii]->loadFromArray( params[ii] );
    }
 
@@ -1230,11 +1257,10 @@ int BrookBonded::setup( int numberOfAtoms,
 
    if( 1 && getLog() ){
 
-      BrookFloatStreamImpl* atomIndicesStream = dynamic_cast<BrookFloatStreamImpl*> (_atomIndicesStream); 
       (void) fprintf( getLog(), "%s nbondeds=%d strDim [%d %d ] sz=%d\n", methodName.c_str(), nbondeds,
-                      atomIndicesStream->getStreamWidth(),
-                      atomIndicesStream->getStreamHeight(), 
-                      atomIndicesStream->getStreamSize() );
+                      _atomIndicesStream->getStreamWidth(),
+                      _atomIndicesStream->getStreamHeight(), 
+                      _atomIndicesStream->getStreamSize() );
 
       int kIndex = 0;
       int jIndex = 1;
@@ -1271,7 +1297,7 @@ int BrookBonded::setup( int numberOfAtoms,
 
    // load inverse maps to streams
 
-   loadInvMaps( nbondeds, getNumberOfAtoms(), atoms, platform );
+   loadInvMaps( nbondeds, getNumberOfAtoms(), atoms, brookPlatform );
    
    // free memory
 
@@ -1290,8 +1316,8 @@ int BrookBonded::setup( int numberOfAtoms,
    // initialize output streams
 
    for( int ii = 0; ii < getNumberOfForceStreams(); ii++ ){
-      StreamImpl* bondedForceStreams = brookStreamFactory.createStreamImpl( BrookStreamFactory::UnrolledForceStream, nbondeds, Stream::Float3, platform );
-      _bondedForceStreams[ii]        = dynamic_cast<BrookFloatStreamImpl*> (bondedForceStreams); 
+      _bondedForceStreams[ii] = new BrookFloatStreamInternal( BrookStreamFactory::UnrolledForceStream, nbondeds, atomStreamWidth, 
+                                                              BrookStreamInternal::Float3, dangleValue );
    }
 
    return DefaultReturnValue;
@@ -1307,11 +1333,11 @@ int BrookBonded::setup( int numberOfAtoms,
  *
  * */
 
-std::string BrookBonded::getContents( int level ) const {
+std::string BrookBonded::getContentsString( int level ) const {
 
 // ---------------------------------------------------------------------------------------
 
-   static const std::string methodName      = "BrookBonded::getContents";
+   static const std::string methodName      = "BrookBonded::getContentsString";
 
    static const unsigned int MAX_LINE_CHARS = 256;
    char value[MAX_LINE_CHARS];
@@ -1339,6 +1365,9 @@ std::string BrookBonded::getContents( int level ) const {
 
    (void) LOCAL_SPRINTF( value, "%.5f", getCoulombFactor() );
    message << _getLine( tab, "Coulomb factor:", value ); 
+
+   (void) LOCAL_SPRINTF( value, "%d", getInverseMapStreamWidth() );
+   message << _getLine( tab, "Inverse map stream width:", value ); 
 
 /*
    (void) LOCAL_SPRINTF( value, "%d", getAtomStreamWidth() );

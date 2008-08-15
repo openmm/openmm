@@ -1,0 +1,37 @@
+
+/****************************************************************
+* This file is part of the gpu acceleration library for gromacs.
+* Author: V. Vishal
+* Copyright (C) Pande Group, Stanford, 2006
+*****************************************************************/
+
+//Harmonic bonds kernel
+//Input is a stream of i, j pairs
+//parms is float2( b0, kA )
+//Output is two streams of forces fi, fj
+//Can be optimized as necessary
+kernel void kbonds_harmonic(
+		float xstrwidth, //atom stream width
+		float2 atoms<>,
+		float2 parms<>,
+		float4 posq[][],
+		out float3 fi<>,
+		out float3 fj<>
+		) {
+	float2 ai, aj;
+	float3 rij;
+	float rinv;
+	
+	ai.y = floor( atoms.x / xstrwidth );
+	ai.x = atoms.x - ai.y * xstrwidth;
+
+	aj.y = floor( atoms.y / xstrwidth );
+	aj.x = atoms.y - aj.y * xstrwidth;
+
+	rij = posq[ai].xyz - posq[aj].xyz; //3
+	rinv = rsqrt( dot(rij, rij) ); //6
+	fi = -parms.y * ( 1.0f - parms.x * rinv ) * rij; //6
+	fj = -fi; 
+
+	//Total: 15 flops
+}

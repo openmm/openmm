@@ -254,8 +254,7 @@ void BrookCommon::_getAtomStreamDimensions( const Platform& platform ){
 
    const BrookPlatform brookPlatform            = dynamic_cast<const BrookPlatform&> (platform);
    const BrookStreamFactory& brookStreamFactory = dynamic_cast<const BrookStreamFactory&> (platform.getDefaultStreamFactory() );
-   BrookStreamInfo* brookStreamInfo             = brookStreamFactory.getBrookStreamInfo( BrookStreamFactory::AtomPositions );
-   _atomStreamWidth                             = brookStreamInfo->getStreamWidth();
+   _atomStreamWidth                             = brookStreamFactory.getDefaultAtomStreamWidth();
    _atomStreamSize                              = brookPlatform.getStreamSize( getNumberOfAtoms(), _atomStreamWidth, NULL );
    _atomStreamHeight                            = (int) ( ((float) _atomStreamSize)/( (float) _atomStreamWidth) + 0.001);
 

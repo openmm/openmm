@@ -1,0 +1,76 @@
+
+/****************************************************************
+* This file is part of the gpu acceleration library for gromacs.
+* Author: V. Vishal
+* Copyright (C) Pande Group, Stanford, 2006
+*****************************************************************/
+
+//Harmonic angles kernel
+//Input is a stream of triplets i, j, k
+//parms is float2( theta0, kA )
+//Output is three streams of forces fi, fj, fk
+//Again, this is kept simple for now, can be optimized 
+//later as necessary
+kernel void kangles_harmonic( 
+		float xstrwidth,
+		float3 atoms<>, 
+		float2 parms<>, 
+		float4 posq[][],
+		out float3 fi<>, 
+		out float3 fj<>,
+		out float3 fk<>
+		) {
+	float theta;
+	float dx, dx2, fs;
+
+	float st,  dvdt, cik, sth, nrkj2, nrij2, cii, ckk, costheta, sintheta;
+	float rij2, rkj2;
+	float2 idx;
+	float2 ai, aj, ak;
+
+	float3 xi, xj, xk, rij, rkj;
+	
+	ai.y = floor( atoms.x / xstrwidth );
+	ai.x = atoms.x - ai.y * xstrwidth;
+
+	aj.y = floor( atoms.y / xstrwidth );
+	aj.x = atoms.y - aj.y * xstrwidth;
+	
+	ak.y = floor( atoms.z / xstrwidth );
+	ak.x = atoms.z - ak.y * xstrwidth;
+	
+	rij = posq[ ai ].xyz - posq[ aj ].xyz; //3
+	rkj = posq[ ak ].xyz - posq[ aj ].xyz; //3
+
+	rij2 = dot( rij, rij ); //5
+	rkj2 = dot( rkj, rkj ); //5
+	costheta = dot( rij, rkj ) / sqrt( rij2 * rkj2 ); //8
+
+	costheta = clamp( costheta, -1.0, 1.0 );
+	theta = acos( costheta ); //1 flop, ouch
+	sintheta = sqrt( 1 - costheta * costheta ); //3
+
+	dx = theta - parms.x; //1
+	dx2 = dx * dx; //1
+	
+	/*scalar force = dv/dtheta*/
+	fs = -parms.y * dx; //1
+
+	st = fs / sintheta; //1
+	st = clamp( st, -1000000.0, 1000000.0 ); //Does this work on the gpu for st=inf?
+
+	sth = st * costheta;	//1
+	
+	nrkj2 = dot( rkj, rkj ); //5
+	nrij2 = dot( rij, rij ); //5
+
+	cik = st * rsqrt( nrkj2 * nrij2 ); //3
+	cii = sth / nrij2; //1
+	ckk = sth / nrkj2; //1
+
+	fi = -( cik * rkj - cii * rij ); //7
+	fk = -( cik * rij - ckk * rkj ); //7
+	fj = -fi - fk; //3
+
+	//Total flops: 64
+}

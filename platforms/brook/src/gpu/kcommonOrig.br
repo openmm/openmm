@@ -1,0 +1,34 @@
+
+/****************************************************************
+* This file is part of the gpu acceleration library for gromacs.
+* Author: V. Vishal
+* Copyright (C) Pande Group, Stanford, 2006
+*****************************************************************/
+
+//Kernel to set the xyz components of a float4 stream
+//Used for changing the coordinates without changing
+//the charges in strPosQ
+kernel void ksetxyz( float3 instr<>, float4 before<>, out float4 after<> ) {
+	after.xyz = instr;
+	after.w   = before.w;
+}
+
+//Inverse of above
+kernel void kgetxyz( float4 instr<>, out float3 outstr<> ) {
+	outstr = instr.xyz;
+}
+
+
+//Zeroes out a stream
+kernel void kzerof3( out float3 outstr<> ) {
+	outstr = float3( 0.0, 0.0, 0.0 );
+}
+
+//Zeros out a stream
+kernel void kzerof4( out float4 outstr<> ) {
+	outstr = float4( 0.0, 0.0, 0.0, 0.0 );
+}
+
+kernel void ksetf4( float4 val, out float4 outstr<> ) {
+	outstr = val;
+}

@@ -1,5 +1,5 @@
-#ifndef BrookCommon_H_
-#define BrookCommon_H_
+#ifndef OPENMM_BROOK_COMMON_H_
+#define OPENMM_BROOK_COMMON_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -35,8 +35,8 @@
 #include <vector>
 #include <set>
 
-#include "BrookFloatStreamImpl.h"
-#include "BrookIntStreamImpl.h"
+#include "BrookFloatStreamInternal.h"
+#include "BrookIntStreamInternal.h"
 #include "BrookPlatform.h"
 
 namespace OpenMM {
@@ -151,6 +151,15 @@ class BrookCommon {
       
       std::string getContents( int level ) const;
 
+      /** 
+       * Get log file reference
+       * 
+       * @return  log file reference
+       *
+       */
+      
+      FILE* getLog( void ) const;
+      
    protected:
    
       // number of atoms
@@ -189,15 +198,6 @@ class BrookCommon {
       
       void _getAtomStreamDimensions( const Platform& platform );
       
-      /** 
-       * Get log file reference
-       * 
-       * @return  log file reference
-       *
-       */
-      
-      FILE* getLog( void ) const;
-      
       /* 
        * Get line
        *
@@ -215,4 +215,4 @@ class BrookCommon {
 
 } // namespace OpenMM
 
-#endif /*OPENMM_BROOKKERNELS_H_*/
+#endif /* OPENMM_BROOK_COMMON_H_ */

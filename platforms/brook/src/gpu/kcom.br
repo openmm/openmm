@@ -1,0 +1,142 @@
+
+/* Portions copyright (c) 2006 Stanford University and Simbios.
+ * Contributors: Pande Group
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject
+ * to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS, CONTRIBUTORS OR COPYRIGHT HOLDERS BE
+ * LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+ * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+/**---------------------------------------------------------------------------------------
+
+   This kernel calculates the linear momentum
+
+   @param mass           stream of masses
+   @param velocities     stream of velocities
+   @param linearMomentum output stream of linear momentum
+
+   --------------------------------------------------------------------------------------- */
+
+kernel void kCalculateLinearMomentum( float mass<>, float3 velocities<>, out float3 linearMomentum<> ){
+   linearMomentum = mass*velocities;
+}
+
+/**---------------------------------------------------------------------------------------
+
+   This kernel scales the linear momentum
+
+   @param scale              scale factor
+   @param linearMomentumIn   input linearMomentum
+   @param linearMomentumOut  output linearMomentum
+
+   --------------------------------------------------------------------------------------- */
+
+kernel void kScale( float scale, float3 linearMomentumIn<>, out float3 linearMomentumOut<> ){
+   linearMomentumOut = scale*linearMomentumIn;
+}
+
+/**---------------------------------------------------------------------------------------
+
+   This kernel calculates the total linear momentum via a reduction
+
+   @param momentum       momentum
+   @param linearMomentum total momentum
+
+   Note: treating the output linearMomentum as non-stream did not compile, even though
+   I found examples in Brook testing code that had that construct -- MSF 3/6/08
+
+   --------------------------------------------------------------------------------------- */
+
+reduce void kReduceLinearMomentum( float3 momentum<>, reduce float3 linearMomentum<> ){
+   linearMomentum += momentum;
+}
+
+/**---------------------------------------------------------------------------------------
+
+   This kernel calculates the total linear momentum via a reduction
+
+   @param atomStrWidth   atom stream width
+   @param numberOfAtoms  number of atoms
+   @param momentum       momentum
+   @param linearMomentum total momentum
+
+   --------------------------------------------------------------------------------------- */
+
+kernel void kSumLinearMomentum( float atomStrWidth, float numberOfAtoms, float3 momentum[][],
+                                out float3 linearMomentum<> ){
+
+   float atomCount;
+   float2 atomIndex;
+
+   atomCount      = 0.0f;
+   linearMomentum = float3( 0.0f, 0.0f, 0.0f );
+   atomIndex.y    =  0.0f;
+   atomIndex.x    =  0.0f;
+
+   while( atomCount < numberOfAtoms ){
+
+      linearMomentum += momentum[atomIndex];
+
+      atomIndex.x    += 1.0f;
+      if( atomIndex.x == atomStrWidth ){
+         atomIndex.x  = 0.0f; 
+         atomIndex.y += 1.0f;
+      }
+
+      atomCount += 1.0f;
+   } 
+}
+
+/**---------------------------------------------------------------------------------------
+
+   This kernel calculates the total linear momentum via a reduction
+
+   @param momentum       momentum
+   @param linearMomentum total momentum
+
+   Note: treating the output linearMomentum as non-stream did not compile, even though
+   I found examples in Brook testing code that had that construct -- MSF 3/6/08
+
+   --------------------------------------------------------------------------------------- */
+
+reduce void kSum( float3 array<>, reduce float3 sum<> ){
+   //sum += array;
+   //sum += array.x + array.y + array.z;
+   //sum += float3( 1.0, 1.0, 1.0 );
+/*
+   sum.x += 1.0;
+   sum.y += 1.0;
+   sum.z += 1.0;
+*/
+   sum += array;
+   //sum += 1.0;
+}
+
+/**---------------------------------------------------------------------------------------
+
+   This kernel subtracts the (total linear momentum)/totalMass from the velocities 
+
+   @param linearMomentum  normalized linear momentum
+   @param velocities      stream of velocities
+   @param velocitiesOut   output stream of velocities
+
+   --------------------------------------------------------------------------------------- */
+
+kernel void kRemoveLinearMomentum( float3 linearMomentum[], float3 velocities<>, out float3 velocitiesOut<> ){
+   velocitiesOut = velocities - linearMomentum[0];
+}

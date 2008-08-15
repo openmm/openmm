@@ -1,5 +1,5 @@
-#ifndef BrookNonBonded_H_
-#define BrookNonBonded_H_
+#ifndef OPENMM_BROOK_NONBONDED_H_
+#define OPENMM_BROOK_NONBONDED_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -35,8 +35,8 @@
 #include <vector>
 #include <set>
 
-#include "BrookFloatStreamImpl.h"
-#include "BrookIntStreamImpl.h"
+#include "BrookFloatStreamInternal.h"
+#include "BrookIntStreamInternal.h"
 #include "BrookPlatform.h"
 #include "BrookCommon.h"
 
@@ -54,7 +54,7 @@ class BrookNonBonded : public BrookCommon {
       static const int DefaultReturnValue = 0;
       static const int ErrorReturnValue   = -1;
 
-      BrookNonBonded( );
+     BrookNonBonded( );
   
       ~BrookNonBonded();
   
@@ -250,7 +250,7 @@ class BrookNonBonded : public BrookCommon {
        *
        */
       
-      BrookFloatStreamImpl* getExclusionStream( void ) const;
+      BrookFloatStreamInternal* getExclusionStream( void ) const;
       
       /** 
        * Get vdw stream 
@@ -259,7 +259,7 @@ class BrookNonBonded : public BrookCommon {
        *
        */
       
-      BrookFloatStreamImpl* getVdwStream( void ) const;
+      BrookFloatStreamInternal* getOuterVdwStream( void ) const;
       
       /** 
        * Get charge stream 
@@ -268,7 +268,7 @@ class BrookNonBonded : public BrookCommon {
        *
        */
       
-      BrookFloatStreamImpl* getChargeStream( void ) const;
+      BrookFloatStreamInternal* getChargeStream( void ) const;
       
       /** 
        * Get sigma-eps stream 
@@ -277,7 +277,7 @@ class BrookNonBonded : public BrookCommon {
        *
        */
       
-      BrookFloatStreamImpl* getSigmaStream( void ) const;
+      BrookFloatStreamInternal* getInnerSigmaStream( void ) const;
       
       /** 
        * Get epsilon stream 
@@ -286,7 +286,7 @@ class BrookNonBonded : public BrookCommon {
        *
        */
       
-      BrookFloatStreamImpl* getEpsilonStream( void ) const;
+      BrookFloatStreamInternal* getInnerEpsilonStream( void ) const;
       
       /** 
        * Get force streams 
@@ -295,7 +295,7 @@ class BrookNonBonded : public BrookCommon {
        *
        */
       
-      BrookFloatStreamImpl** getForceStreams( void );
+      BrookFloatStreamInternal** getForceStreams( void );
       
       /** 
        * Return true if force[index] stream is set 
@@ -320,7 +320,7 @@ class BrookNonBonded : public BrookCommon {
        * */
       
       int setup( int numberOfAtoms, const std::vector<std::vector<double> >& nonbondedParameters,
-                 const std::vector<std::set<int> >& exclusions,  const BrookPlatform& platform );
+                 const std::vector<std::set<int> >& exclusions,  const Platform& platform );
       
       /* 
        * Get contents of object
@@ -331,13 +331,24 @@ class BrookNonBonded : public BrookCommon {
        *
        * */
       
-      std::string getContents( int level ) const;
+      std::string getContentsString( int level = 0 ) const;
 
    private:
    
       // fixed number of force streams
 
       static const int NumberOfForceStreams     = 4;
+
+      // streams indices
+
+      enum { 
+              ExclusionStream,
+              OuterVdwStream,
+              ChargeStream,
+              InnerSigmaStream,
+              InnerEpsilonStream,
+              LastStreamIndex
+           };
 
       // atom ceiling
 
@@ -370,15 +381,23 @@ class BrookNonBonded : public BrookCommon {
       int _jStreamHeight;
       int _jStreamSize;
 
-      // streams
+      // internal streams
 
-      BrookFloatStreamImpl* _exclusionStream;
-      BrookFloatStreamImpl* _vdwStream;
-      BrookFloatStreamImpl* _chargeStream;
-      BrookFloatStreamImpl* _sigmaStream;
-      BrookFloatStreamImpl* _epsilonStream;
-      BrookFloatStreamImpl* _nonbondedForceStreams[NumberOfForceStreams];
+      BrookFloatStreamInternal* _nonbondedStreams[LastStreamIndex];
+      BrookFloatStreamInternal* _nonbondedForceStreams[NumberOfForceStreams];
 
+      /* 
+       * Setup of stream dimensions for exclusion stream
+       *
+       * @param atomStreamSize        atom stream size
+       * @param atomStreamWidth       atom stream width
+       *
+       * @return ErrorReturnValue if error, else DefaultReturnValue
+       *
+       * */
+      
+      int initializeExclusionStreamSize( int atomStreamSize, int atomStreamWidth );
+      
       /** 
        * Initialize exclusion stream dimensions and stream
        * 
@@ -417,6 +436,18 @@ class BrookNonBonded : public BrookCommon {
       int initializeExclusions( const std::vector<std::set<int> >& exclusionsVector, const Platform& platform );
 
       /** 
+       * Initialize stream dimensions
+       * 
+       * @param numberOfAtoms             number of atoms
+       * @param platform                  platform
+       *
+       * @return ErrorReturnValue if error, else DefaultReturnValue
+       *
+       */
+      
+      int initializeStreamSizes( int numberOfAtoms, const Platform& platform );
+      
+      /** 
        * Initialize stream dimensions and streams
        * 
        * @param platform                  platform
@@ -425,8 +456,36 @@ class BrookNonBonded : public BrookCommon {
        *
        */
       
-      int initializeStreams( int numberOfAtoms, const Platform& platform );
+      int initializeStreams( const Platform& platform );
       
+      /* 
+       * Setup of j-stream dimensions
+       *
+       * @param atomStreamSize        atom stream size
+       * @param atomStreamWidth       atom stream width
+       *
+       * @return ErrorReturnValue if error, else DefaultReturnValue
+       *
+       * @throw  OpenMMException  if jStreamWidth < 1 || innerUnroll < 1
+       *
+       * */
+      
+      int initializeJStreamSize( int atomStreamSize, int atomStreamWidth );
+
+      /* 
+       * Setup of outer vdw stream size
+       *
+       * @param atomStreamSize        atom stream size
+       * @param atomStreamWidth       atom stream width
+       *
+       * @return ErrorReturnValue if error, else DefaultReturnValue
+       *
+       * @throw  OpenMMException  if jStreamWidth < 1 || innerUnroll < 1
+       *
+       * */
+      
+      int initializeOuterVdwStreamSize( int atomStreamSize, int atomStreamWidth );
+
       /** 
        * Set sigma & epsilon given c6 & c12 (geometric rule)
        * 
@@ -453,8 +512,20 @@ class BrookNonBonded : public BrookCommon {
       
       int initializeVdwAndCharge( const std::vector<std::vector<double> >& nonbondedParameters, const Platform& platform );
       
+      /* 
+       * Setup of stream dimensions for partial force streams
+       *
+       * @param atomStreamSize        atom stream size
+       * @param atomStreamWidth       atom stream width
+       *
+       * @return ErrorReturnValue if error, else DefaultReturnValue
+       *
+       * */
+      
+      int initializePartialForceStreamSize( int atomStreamSize, int atomStreamWidth );
+      
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_BROOKKERNELS_H_*/
+#endif /* OPENMM_BROOK_NONBONDED_H_ */

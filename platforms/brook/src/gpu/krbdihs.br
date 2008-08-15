@@ -1,0 +1,100 @@
+
+/****************************************************************
+* This file is part of the gpu acceleration library for gromacs.
+* Author: V. Vishal
+* Copyright (C) Pande Group, Stanford, 2006
+*****************************************************************/
+
+
+//Ryckaert Bellman dihedrals, needed for Amber/OPLS ff's
+//
+//Input is a stream of quartets i, j, k, l and the output is
+//four float3 streams fi, fj, fk, fl.
+//If by any chance this kernel becomes the bottleneck, we will
+//optimize, but for now, this is kept pretty simple.
+//To keep things streaming, we have a stream of 6 parameters(a float4 and float2)
+//for each dihedral.
+kernel void krbdih( 
+        float xstrwidth, //stream width for x
+        float4 xq[][], //particle coordinates and charges
+        float4 atoms<>, //ijkl quartets
+        float4 parm03<>, //params 0-3
+        float2 parm45<>, //params 4 and 5
+        out float3 fi<>, //output forces for i, j, k, l
+        out float3 fj<>,
+        out float3 fk<>,
+        out float3 fl<>
+	  	) {
+	
+	float3 r_ij, r_kj, r_kl;
+	float2 ai, aj, ak, al;
+	float3 m, n;
+	float sgnphi;
+	float cosfac;
+	float ddphi;
+	float3 u, v, s;
+	float nrkj, nrkj2, msq, nsq, cos_phi, sin_phi;
+
+	//Convert from linear indices to 2D indices into x
+	//If this kernel is compute bound, we can do this 
+	//conversion before-hand and feed in the 2D coordinates
+	
+	ai.y = floor( atoms.x / xstrwidth );
+	ai.x = atoms.x - ai.y * xstrwidth;
+
+	aj.y = floor( atoms.y / xstrwidth );
+	aj.x = atoms.y - aj.y * xstrwidth;
+	
+	ak.y = floor( atoms.z / xstrwidth );
+	ak.x = atoms.z - ak.y * xstrwidth;
+	
+	al.y = floor( atoms.w / xstrwidth );
+	al.x = atoms.w - al.y * xstrwidth;
+	
+	
+	r_ij = xq[ai].xyz - xq[aj].xyz; //3
+	r_kj = xq[ak].xyz - xq[aj].xyz; //3
+	r_kl = xq[ak].xyz - xq[al].xyz; //3
+	
+	m = cross( r_ij, r_kj ); //9
+	n = cross( r_kj, r_kl ); //9
+
+	msq = dot(m, m); //5
+	nsq = dot(n, n); //5
+	
+	cos_phi = dot(m, n)/sqrt(msq*nsq); //8 (sqrt=1)
+
+	//Switching to "polymer convention"
+	//See gromacs code
+	cos_phi = -cos_phi;
+	sgnphi  = sign( dot(r_ij, n) ); //5
+	sin_phi = -sgnphi*sqrt( clamp( 1.0 - cos_phi * cos_phi, 0.0, 1.0) ); //3
+
+	//ddphi is basically sum_{i=1}^5 i parm_i cosphi^{i-1}
+	//This might not be the best way to use the 
+	//4-way mads, but for now we'll let fxc figure it
+	//out.
+	//If we precompute some ratios of the parameters
+	//we can use the 4-way mads better
+	ddphi = 5.0 * parm45.y;
+	ddphi = 4.0 * parm45.x + ddphi * cos_phi;
+	ddphi = 3.0 * parm03.w + ddphi * cos_phi;
+	ddphi = 2.0 * parm03.z + ddphi * cos_phi;
+	ddphi = parm03.y + ddphi * cos_phi;
+	ddphi = -ddphi * sin_phi; //13 flops total for ddphi
+
+	nrkj2 = dot( r_kj, r_kj ); //5
+	nrkj  = sqrt( nrkj2 );     //1
+
+	fi = -ddphi * nrkj / msq * m; //5
+	fl =  ddphi * nrkj / nsq * n; //5
+	
+	u = dot( r_ij, r_kj ) / nrkj2 * fi; //9
+	v = dot( r_kl, r_kj ) / nrkj2 * fl; //9
+	s = u - v; //3
+	
+	fj = s - fi; //3
+	fk = -(s + fl); //3
+
+	//Total flops: 109 per rb torsion.
+}

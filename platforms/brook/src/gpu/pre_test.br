@@ -1,0 +1,11 @@
+/* pre-tests, known to be right */
+
+kernel void pre_test0( float input<>, out float output<> )
+{
+  output = input;
+}
+
+kernel void pre_test1( float input<>, out float output<> )
+{
+  output = ( input * input ) + input;
+}

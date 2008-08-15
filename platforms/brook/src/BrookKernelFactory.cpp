@@ -30,27 +30,58 @@
  * -------------------------------------------------------------------------- */
 
 #include "BrookKernelFactory.h"
-#include "BrookKernels.h"
+#include "BrookCalcStandardMMForceFieldKernel.h"
+#include "BrookIntegrateKernals.h"
+#include "BrookCalcKineticEnergyKernel.h"
 
 using namespace OpenMM;
 
-KernelImpl* BrookKernelFactory::createKernelImpl(std::string name, const Platform& platform, OpenMMContextImpl& context) const {
-    if (name == CalcStandardMMForceFieldKernel::Name())
-		(void) fprintf( stderr, "CalcStandardMMForceFieldKernel not set BrookKernelFactory::createKernelImpl\n" );
-        (void) fflush( stderr );
-        //return new BrookCalcStandardMMForceFieldKernel(name, platform);
-    if (name == CalcGBSAOBCForceFieldKernel::Name())
-        (void) fprintf( stderr, "CalcGBSAOBCForceFieldKernel not set BrookKernelFactory::createKernelImpl\n" );
-        (void) fflush( stderr );
-        //return new BrookCalcGBSAOBCForceFieldKernel(name, platform);
-    if (name == IntegrateVerletStepKernel::Name())
-        return new BrookIntegrateVerletStepKernel(name, platform);
+KernelImpl* BrookKernelFactory::createKernelImpl( std::string name, const Platform& platform, OpenMMContextImpl& context ) const {
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName      = "BrookKernelFactory::createKernelImpl";
+
+// ---------------------------------------------------------------------------------------
+
+
+   // StandardMM
+
+	if( name == CalcStandardMMForceFieldKernel::Name() ){
+      return new BrookCalcStandardMMForceFieldKernel( name, platform );
+
+   // GBSA OBC
+
+	} else if( name == CalcGBSAOBCForceFieldKernel::Name() ){
+
+      (void) fprintf( stderr, "CalcGBSAOBCForceFieldKernel not set BrookKernelFactory::createKernelImpl\n" );
+      (void) fflush( stderr );
+      //return new BrookCalcGBSAOBCForceFieldKernel(name, platform);
+
+   // Verlet integrator
+
+	} else if( name == IntegrateVerletStepKernel::Name() ){
+
+      (void) fprintf( stderr, "IntegrateVerletStepKernel created BrookKernelFactory::createKernelImpl\n" );
+      (void) fflush( stderr );
+      return new BrookIntegrateVerletStepKernel( name, platform );
+
+   // KE calculator
+
+   } else if( name == CalcKineticEnergyKernel::Name() ){
+      return new BrookCalcKineticEnergyKernel( name, platform );
+	} 
+
+   (void) fprintf( stderr, "createKernelImpl: name=<%s> not found.", methodName.c_str(), name.c_str() );
+   (void) fflush( stderr );
+
+/*
     if (name == IntegrateLangevinStepKernel::Name())
-        return new BrookIntegrateLangevinStepKernel(name, platform);
-    if (name == IntegrateBrownianStepKernel::Name())
-        return new BrookIntegrateBrownianStepKernel(name, platform);
+        //return new BrookIntegrateLangevinStepKernel(name, platform);
+    //if (name == IntegrateBrownianStepKernel::Name())
+        //return new BrookIntegrateBrownianStepKernel(name, platform);
     if (name == ApplyAndersenThermostatKernel::Name())
-        return new BrookApplyAndersenThermostatKernel(name, platform);
-    if (name == CalcKineticEnergyKernel::Name())
-        return new BrookCalcKineticEnergyKernel(name, platform);
+        //return new BrookApplyAndersenThermostatKernel(name, platform);
+*/
+	return NULL;
 }

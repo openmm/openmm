@@ -32,8 +32,7 @@
 #include <sstream>
 #include "OpenMMException.h"
 #include "BrookStreamFactory.h"
-#include "BrookFloatStreamImpl.h"
-#include "BrookIntStreamImpl.h"
+#include "BrookStreamImpl.h"
 
 using namespace OpenMM;
 
@@ -52,8 +51,13 @@ const std::string BrookStreamFactory::BondedInverseMapStreams    = "BondedInvers
 // non-bonded streams
 
 const std::string BrookStreamFactory::NonBondedExclusionStream   = "NonBondedExclusionStream";
-const std::string BrookStreamFactory::NonBondedVdwStream         = "NonBondedVdwStream";
+const std::string BrookStreamFactory::OuterVdwStream             = "OuterVdwStream";
+const std::string BrookStreamFactory::InnerSigmaStream           = "InnerSigmaStream";
+const std::string BrookStreamFactory::InnerEpsilonStream         = "InnerEpsilonStream";
+const std::string BrookStreamFactory::NonBondedChargeStream      = "NonBondedChargeStream";
+const std::string BrookStreamFactory::PartialForceStream         = "PartialForceStream";
 
+const double DefaultDangleValue                                  = 1.0e+38;
 /** 
  * BrookStreamFactory constructor
  * 
@@ -62,23 +66,15 @@ const std::string BrookStreamFactory::NonBondedVdwStream         = "NonBondedVdw
 
 BrookStreamFactory::BrookStreamFactory( void ){
 
-	double defaultDangleValue                       = 1.0e+38;
-	int    defaultStreamWidth                       = 32;
+// ---------------------------------------------------------------------------------------
 
-   _streamInfoMap[AtomPositions]                   = new BrookStreamInfo( AtomPositions,             defaultStreamWidth, defaultDangleValue );
-   _streamInfoMap[AtomVelocities]                  = new BrookStreamInfo( AtomVelocities,            defaultStreamWidth, defaultDangleValue );
-   _streamInfoMap[AtomForces]                      = new BrookStreamInfo( AtomForces,                defaultStreamWidth, defaultDangleValue );
+   //static const std::string methodName      = "BrookStreamFactory::BrookStreamFactory";
 
-   // bonded streams
+// ---------------------------------------------------------------------------------------
 
-   _streamInfoMap[BondedAtomIndicesStream]         = new BrookStreamInfo( BondedAtomIndicesStream,   defaultStreamWidth, defaultDangleValue );
-   _streamInfoMap[BondedParametersStream]          = new BrookStreamInfo( BondedParametersStream,    defaultStreamWidth, defaultDangleValue );
-   _streamInfoMap[UnrolledForceStream]             = new BrookStreamInfo( UnrolledForceStream,       defaultStreamWidth, defaultDangleValue );
-   _streamInfoMap[BondedChargeStream]              = new BrookStreamInfo( BondedChargeStream,        defaultStreamWidth, defaultDangleValue );
-   _streamInfoMap[BondedInverseMapStreams]         = new BrookStreamInfo( BondedInverseMapStreams,   defaultStreamWidth, defaultDangleValue );
+	_defaultDangleValue                      = 1.0e+38;
+	_defaultAtomStreamWidth                  = 32;
 
-   _streamInfoMap[NonBondedExclusionStream]        = new BrookStreamInfo( NonBondedExclusionStream,  defaultStreamWidth, defaultDangleValue );
-   _streamInfoMap[NonBondedVdwStream]              = new BrookStreamInfo( NonBondedVdwStream,        defaultStreamWidth, defaultDangleValue );
 }
 
 /** 
@@ -87,27 +83,103 @@ BrookStreamFactory::BrookStreamFactory( void ){
  */
 
 BrookStreamFactory::~BrookStreamFactory( void ){
-   //_streamInfoMap[UnrolledForceStream]      = new BrookStreamInfo( UnrolledForceStream, 32, defaultDangleValue );
 }
 
 /** 
- * Get BrookStreamInfo reference given stream name
- *
- * @param name stream name
+ * Get atom stream width
  * 
- * @return BrookStreamInfo  -- look up streamInfo object given name; return NULL if name not recognized
+ * @return atomStreamWidth
+ *
  */
 
-BrookStreamInfo* BrookStreamFactory::getBrookStreamInfo( std::string name ) const {
+int BrookStreamFactory::getDefaultAtomStreamWidth( void ) const {
 
-   if( _streamInfoMap.find( name ) == _streamInfoMap.end() ){
-      return NULL;
-   }
-   return _streamInfoMap.find( name )->second;
+// ---------------------------------------------------------------------------------------
+
+   //static const std::string methodName      = "BrookStreamFactory::getDefaultAtomStreamWidth";
+
+// ---------------------------------------------------------------------------------------
+
+   return _defaultAtomStreamWidth;
 }
 
 /** 
- * Create StreamImpl
+ * Set atom stream width
+ * 
+ * @param atomStreamWidth  atom stream width
+ *
+ * @return DefaultReturnValue
+ *
+ * @throw OpenMMException if atomStreamWidth < 1
+ *
+ */
+
+int BrookStreamFactory::setDefaultAtomStreamWidth( int atomStreamWidth ){
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName      = "BrookStreamFactory::setDefaultAtomStreamWidth";
+
+// ---------------------------------------------------------------------------------------
+
+   // validate atom stream width
+
+   if( atomStreamWidth < 1 ){
+      std::stringstream message;
+      message << methodName << " atomStreamWidth=" << atomStreamWidth << " is less than 1.";
+      throw OpenMMException( message.str() );
+      return ErrorReturnValue;
+   }
+
+   _defaultAtomStreamWidth = atomStreamWidth;
+
+   return DefaultReturnValue;
+
+}
+
+/** 
+ * get default dangle value
+ * 
+ * @return default dangle value
+ *
+ */
+
+double BrookStreamFactory::getDefaultDangleValue( void ) const {
+
+// ---------------------------------------------------------------------------------------
+
+   //static const std::string methodName      = "BrookStreamFactory::getDefaultDangleValue";
+
+// ---------------------------------------------------------------------------------------
+
+   return _defaultDangleValue;
+}
+
+/** 
+ * Set default dangle value
+ * 
+ * @param DefaultDangleValue default dangle value
+ *
+ * @return DefaultReturnValue
+ *
+ */
+
+int BrookStreamFactory::setDefaultDangleValue( double defaultDangleValue ){
+
+// ---------------------------------------------------------------------------------------
+
+   //static const std::string methodName      = "BrookStreamFactory::setDefaultDangleValue";
+
+// ---------------------------------------------------------------------------------------
+
+   _defaultDangleValue = defaultDangleValue;
+
+   return DefaultReturnValue;
+
+}
+
+/** 
+ * Create StreamInternal
  *
  * @param name     stream name
  * @param size     stream size
@@ -115,89 +187,23 @@ BrookStreamInfo* BrookStreamFactory::getBrookStreamInfo( std::string name ) cons
  * @param platform platform reference
  * @param context  context (currently ignored)
  * 
- * @return StreamImpl
+ * @return StreamInternal
  */
 
 StreamImpl* BrookStreamFactory::createStreamImpl( std::string name, int size, Stream::DataType type,
                                                   const Platform& platform, OpenMMContextImpl& context ) const {
 
-   return BrookStreamFactory::createStreamImplCommon( name, size, type, platform );
+// ---------------------------------------------------------------------------------------
 
-}
-
-/** 
- * Create StreamImpl
- *
- * @param name     stream name
- * @param size     stream size
- * @param type     data type (float, float2, ...)
- * @param platform platform reference
- * 
- * @return StreamImpl
- */
-
-StreamImpl* BrookStreamFactory::createStreamImpl( std::string name, int size, Stream::DataType type,
-                                                  const Platform& platform ) const {
-
-   return BrookStreamFactory::createStreamImplCommon( name, size, type, platform );
-}
-
-/** 
- * Create StreamImpl
- *
- * @param name     stream name
- * @param size     stream size
- * @param type     data type (float, float2, ...)
- * @param platform platform reference
- * 
- * @return StreamImpl
- */
-
-StreamImpl* BrookStreamFactory::createStreamImplCommon( std::string name, int size, Stream::DataType type,
-                                                        const Platform& platform ) const {
+   //static const std::string methodName      = "BrookStreamFactory::createStreamImpl";
 
 // ---------------------------------------------------------------------------------------
 
-   static const std::string methodName      = "BrookStreamFactory::createStreamImplCommon";
-   //static const int debug                   = 0;
 
-// ---------------------------------------------------------------------------------------
+   // stream width hould be based on name & value set in platform; for now only atom stream types
 
-   // get stream width & dangle value
+   int streamWidth = getDefaultAtomStreamWidth();
 
-   BrookStreamInfo* streamInfo = getBrookStreamInfo( name );
-   if( streamInfo == NULL ){
-      std::stringstream message;
-      message << methodName << " stream=" << name << " not registered.";
-      throw OpenMMException( message.str() );
-   }
-
-   int streamWidth    = streamInfo->getStreamWidth();
-   double dangleValue = streamInfo->getDangleValue();
-      
-   switch ( type ){
-
-      case Stream::Float:
-      case Stream::Float2:
-      case Stream::Float3:
-      case Stream::Float4:
-      case Stream::Double:
-      case Stream::Double2:
-      case Stream::Double3:
-      case Stream::Double4:
-          return new BrookFloatStreamImpl( name, size, type, platform, streamWidth, dangleValue );
-          break;
-
-      case Stream::Integer:
-      case Stream::Integer2:
-      case Stream::Integer3:
-      case Stream::Integer4:
-          return new BrookIntStreamImpl( name, size, type, platform );
-          break;
-   }
-
-   std::stringstream message;
-   message << methodName << " type=" << type << " for stream=" << name << " is invalid.";
-   throw OpenMMException( message.str() );
+   return new BrookStreamImpl( name, size, streamWidth, type, platform );
 
 }

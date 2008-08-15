@@ -1,0 +1,509 @@
+/* -------------------------------------------------------------------------- *
+ *                                   OpenMM                                   *
+ * -------------------------------------------------------------------------- *
+ * This is part of the OpenMM molecular simulation toolkit originating from   *
+ * Simbios, the NIH National Center for Physics-Based Simulation of           *
+ * Biological Structures at Stanford, funded under the NIH Roadmap for        *
+ * Medical Research, grant U54 GM072970. See https://simtk.org.               *
+ *                                                                            *
+ * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Authors: Peter Eastman, Mark Friedrichs                                    *
+ * Contributors:                                                              *
+ *                                                                            *
+ * Permission is hereby granted, free of charge, to any person obtaining a    *
+ * copy of this software and associated documentation files (the "Software"), *
+ * to deal in the Software without restriction, including without limitation  *
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,   *
+ * and/or sell copies of the Software, and to permit persons to whom the      *
+ * Software is furnished to do so, subject to the following conditions:       *
+ *                                                                            *
+ * The above copyright notice and this permission notice shall be included in *
+ * all copies or substantial portions of the Software.                        *
+ *                                                                            *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR *
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,   *
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL    *
+ * THE AUTHORS, CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,    *
+ * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR      *
+ * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE  *
+ * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
+ * -------------------------------------------------------------------------- */
+
+#include <sstream>
+#include "BrookFloatStreamInternal.h"
+#include "BrookPlatform.h"
+#include "OpenMMException.h"
+
+using namespace OpenMM;
+
+/** 
+ * BrookFloatStreamInternal constructor
+ * 
+ * @param name                      stream name
+ * @param size                      stream size
+ * @param type                      stream type (float, float2, ...)
+ * @param platform                  platform
+ * @param inputStreamWidth          stream width
+ * @param inputDefaultDangleValue   default dangle value
+ *
+ */
+
+BrookFloatStreamInternal::BrookFloatStreamInternal( const std::string& name, int size, int streamWidth, BrookStreamInternal::DataType type,
+                                                    double inputDefaultDangleValue ) : BrookStreamInternal( name, size, streamWidth, type ){
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName      = "BrookFloatStreamInternal::BrookFloatStreamInternal";
+   // static const int debug                   = 1;
+
+// ---------------------------------------------------------------------------------------
+
+   // set base type (currently only FLOAT supported)
+
+   switch( type ){
+
+      case BrookStreamInternal::Float:
+      case BrookStreamInternal::Float2:
+      case BrookStreamInternal::Float3:
+      case BrookStreamInternal::Float4:
+   
+          _baseType = BrookStreamInternal::Float;
+          break;
+   
+      case BrookStreamInternal::Double:
+      case BrookStreamInternal::Double2:
+      case BrookStreamInternal::Double3:
+      case BrookStreamInternal::Double4:
+
+          _baseType = BrookStreamInternal::Double;
+          break;
+
+      default:
+         std::stringstream message;
+         message << methodName << " stream=" << name << " input type=" << type << " not recognized.";
+         throw OpenMMException( message.str() );
+         break;
+   }
+
+   // set _width (FLOAT, FLOAT2, ... )
+
+   switch( type ){
+
+      case BrookStreamInternal::Float:
+      case BrookStreamInternal::Double:
+
+          _width = 1;
+          break;
+
+      case BrookStreamInternal::Float2:
+      case BrookStreamInternal::Double2:
+
+          _width = 2;
+          break;
+
+      case BrookStreamInternal::Float3:
+      case BrookStreamInternal::Double3:
+
+          _width = 3;
+          break;
+
+      case BrookStreamInternal::Float4:
+      case BrookStreamInternal::Double4:
+
+          _width = 4;
+          break;
+   }
+
+   _defaultDangleValue = (float) inputDefaultDangleValue;
+
+   // set stream height based on specified stream _width
+
+   if( streamWidth < 1 ){
+      std::stringstream message;
+      message << methodName << " stream=" << name << " input stream width=" << streamWidth << " is less than 1.";
+      throw OpenMMException( message.str() );
+   }
+
+   // create Brook stream handle
+
+   switch( _width ){
+
+      case 1:
+
+         _aStream      = brook::stream::create<float>(  _streamHeight, _streamWidth );
+         break;
+   
+      case 2:
+
+         _aStream      = brook::stream::create<float2>( _streamHeight, _streamWidth );
+         break;
+   
+      case 3:
+
+         _aStream      = brook::stream::create<float3>( _streamHeight, _streamWidth );
+         break;
+   
+      case 4:
+
+         _aStream      = brook::stream::create<float4>( _streamHeight, _streamWidth );
+         break;
+   }
+
+   int streamSize = getStreamSize();
+
+   // allocate memory for data buffer
+
+   _data = new float[streamSize*_width];
+
+}
+
+/** 
+ * BrookFloatStreamInternal destructor
+ * 
+ */
+
+BrookFloatStreamInternal::~BrookFloatStreamInternal( ){
+
+// ---------------------------------------------------------------------------------------
+
+   //static const std::string methodName      = "BrookFloatStreamInternal::~BrookFloatStreamInternal";
+   // static const int debug                   = 1;
+
+// ---------------------------------------------------------------------------------------
+
+   //delete _aStream;
+   delete[] _data;
+
+}
+
+/** 
+ * Get dangle value
+ * 
+ * @return  dangle value
+ */
+
+double BrookFloatStreamInternal::getDangleValue( void ) const {
+   return _defaultDangleValue;
+}
+
+/** 
+ * Load data from input array
+ * 
+ * @param  array a pointer to the start of the array.  The array is assumed to have the same length as this stream,
+ * and to contain elements of the correct _data type for this stream.  If the stream has a compound _data type, all
+ * the values should be packed into a single array: all the values for the first element, followed by all the values
+ * for the next element, etc.
+ *
+ * @throw exception if baseType not recognized
+ *
+ */
+
+void BrookFloatStreamInternal::loadFromArray( const void* array ){
+
+// ---------------------------------------------------------------------------------------
+
+   //static const std::string methodName      = "BrookFloatStreamInternal::loadFromArray";
+
+// ---------------------------------------------------------------------------------------
+
+   return loadFromArray( array, getBaseDataType() );
+
+}
+
+/** 
+ * Load data from input array
+ * 
+ * @param  array a pointer to the start of the array.  The array is assumed to have the same length as this stream,
+ * and to contain elements of the correct _data type for this stream.  If the stream has a compound _data type, all
+ * the values should be packed into a single array: all the values for the first element, followed by all the values
+ * for the next element, etc.
+ *
+ * @throw exception if baseType not float or double
+ *
+ */
+
+void BrookFloatStreamInternal::loadFromArray( const void* array, BrookStreamInternal::DataType baseType ){
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName      = "BrookFloatStreamInternal::loadFromArray";
+   // static const int debug                   = 1;
+
+// ---------------------------------------------------------------------------------------
+
+   int totalSize                           = getSize()*getWidth();
+
+   if( baseType == BrookStreamInternal::Float ){
+
+      memcpy( _data, array, sizeof( float )*totalSize );
+/*
+      float* arrayData = (float*) array;
+      for( int ii = 0; ii < totalSize; ii++ ){
+         _data[ii] = (BrookOpenMMFloat) arrayData[ii];
+      }
+*/
+
+   } else if( baseType == BrookStreamInternal::Double ){
+
+      double* arrayData = (double*) array;
+      for( int ii = 0; ii < totalSize; ii++ ){
+         _data[ii] = (BrookOpenMMFloat) arrayData[ii];
+      }
+
+   } else if( baseType == BrookStreamInternal::Integer ){
+
+      int* arrayData = (int*) array;
+      for( int ii = 0; ii < totalSize; ii++ ){
+         _data[ii] = (BrookOpenMMFloat) arrayData[ii];
+      }
+
+   } else {
+      
+      std::stringstream message;
+      message << methodName << " stream=" << getName() << " base type=" << getTypeString( baseType ) << " not recognized.";
+      throw OpenMMException( message.str() );
+
+   }
+
+   // set dangling values
+
+   _loadDanglingValues();
+
+   // write to GPU
+
+   _aStream.read( _data );
+}
+
+void BrookFloatStreamInternal::saveToArray( void* array ){
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName      = "BrookFloatStreamInternal::saveToArray";
+
+// ---------------------------------------------------------------------------------------
+
+   // get _data from GPU
+
+   _aStream.write( _data );
+
+   // load into array
+
+   int totalSize                             = getSize()*getWidth();
+   BrookStreamInternal::DataType  baseType   = getBaseDataType();
+
+   if( baseType == BrookStreamInternal::Float ){
+
+      memcpy( array, _data, sizeof( float )*totalSize );
+/*
+      float* arrayData = (float*) array;
+      for( int ii = 0; ii < totalSize; ii++ ){
+         arrayData[ii] = (float) _data[ii];
+      }
+*/
+
+   } else if( baseType == BrookStreamInternal::Double ){
+
+      double* arrayData = (double*) array;
+      for( int ii = 0; ii < totalSize; ii++ ){
+         arrayData[ii] = (double) _data[ii];
+      }
+
+   } else if( baseType == BrookStreamInternal::Integer ){
+
+      int* arrayData = (int*) array;
+      for( int ii = 0; ii < totalSize; ii++ ){
+         arrayData[ii] = (int) _data[ii];
+      }
+   } else {
+      
+      std::stringstream message;
+      message << methodName << " stream=" << getName() << " base type=" << getTypeString( baseType ) << " not recognized.";
+      throw OpenMMException( message.str() );
+
+   }
+}
+
+/** 
+ * Fill stream w/ specified value
+ * 
+ * @param value                     value to fill stream w/
+ *
+ */
+
+void BrookFloatStreamInternal::fillWithValue( void* value ){
+
+// ---------------------------------------------------------------------------------------
+
+   // static const std::string methodName      = "BrookFloatStreamInternal::fillWithValue";
+   // static const int debug                   = 1;
+
+// ---------------------------------------------------------------------------------------
+
+   BrookOpenMMFloat valueData;
+   if( _baseType == BrookStreamInternal::Float) {
+      valueData = (BrookOpenMMFloat) *((float*) value);
+   } else {
+      valueData = (BrookOpenMMFloat) *((double*) value);
+   }
+   //memset( _data, valueData, sizeof( float )*getSize()*getWidth() );
+
+   int totalSize = getSize()*getWidth();
+   for( int ii = 0; ii < totalSize; ii++ ){
+      _data[ii] = valueData;
+   }
+
+   _loadDanglingValues();
+   _aStream.read( _data );
+
+}
+
+const RealOpenMM* const * BrookFloatStreamInternal::getData() const {
+   return NULL;
+}
+
+// problem w/ const here -- _data is modified (cast away?)
+
+/*
+const RealOpenMM* const * BrookFloatStreamInternal::getData() const {
+
+   // retrieve _data from GPU
+
+   _aStream.write( _data );
+
+   // check if RealOpenMM is float; if not, then 
+   // copy into realOpenMMData[][] array
+
+   if( realOpenMMData ){
+      for( int i = 0; i < getSize(); i++ ){
+         for( int j = 0; j < getWidth(); j++ ){
+            realOpenMMData[i][j] = (RealOpenMM) _data[i][j];
+         }
+      }
+      return realOpenMMData;
+   } else {
+      return _data;
+   }
+}
+*/
+
+/** 
+ * Get data
+ * 
+ * @return data array
+ *
+ */
+
+RealOpenMM** BrookFloatStreamInternal::getData( void ){
+
+// ---------------------------------------------------------------------------------------
+
+   // static const std::string methodName      = "BrookFloatStreamInternal::getData";
+   // static const int debug                   = 1;
+
+// ---------------------------------------------------------------------------------------
+
+/*
+   _aStream.write( _data );
+   if( _realOpenMMData ){
+      int totalSize                             = getSize()*getWidth();
+      for( int ii = 0; ii < totalSize; ii++ ){
+         _realOpenMMData[ii] = (RealOpenMM) _data[ii];
+      }
+      return _realOpenMMData;
+   } else {
+      return _data;
+   }
+*/
+   return NULL;
+}
+
+/** 
+ * Load dangling value into stream
+ * 
+ * @param danglingValue   dangling value to load
+ *
+ */
+
+void BrookFloatStreamInternal::_loadDanglingValues( float danglingValue ){
+
+// ---------------------------------------------------------------------------------------
+
+   // static const std::string methodName      = "BrookFloatStreamInternal::_loadDanglingValues";
+   // static const int debug                   = 1;
+
+// ---------------------------------------------------------------------------------------
+
+   int width      = getWidth();
+
+   int arraySize  = getSize()*width;
+   int streamSize = getStreamSize()*width;
+
+   if( arraySize < streamSize ){
+      for( int ii = arraySize; ii < streamSize; ii++ ){
+          _data[ii] = danglingValue;
+       }
+    }
+}
+
+/** 
+ * Load default dangling value into stream
+ * 
+ */
+
+void BrookFloatStreamInternal::_loadDanglingValues( void ){
+   _loadDanglingValues( _defaultDangleValue );
+}
+
+/* 
+ * Get contents of object
+ *
+ * @param level   level of dump
+ *
+ * @return string containing contents
+ *
+ * */
+
+const std::string BrookFloatStreamInternal::getContentsString( int level ) const {
+
+// ---------------------------------------------------------------------------------------
+
+   // static const std::string methodName      = "BrookFloatStreamInternal::getContentsString";
+
+   static const unsigned int MAX_LINE_CHARS = 256; 
+   char value[MAX_LINE_CHARS];
+   //static const char* Set                   = "Set";
+   //static const char* NotSet                = "Not set";
+
+
+// ---------------------------------------------------------------------------------------
+
+   std::stringstream message;
+   std::string tab   = "   ";
+ 
+#ifdef WIN32
+#define LOCAL_SPRINTF(a,b,c) sprintf_s( (a), MAX_LINE_CHARS, (b), (c) );   
+#else
+#define LOCAL_SPRINTF(a,b,c) sprintf( (a), (b), (c) );   
+#endif
+
+   (void) LOCAL_SPRINTF( value, "%s", getName().c_str() );
+   message << _getLine( tab, "Name:", value ); 
+
+   (void) LOCAL_SPRINTF( value, "%d", getWidth() );
+   message << _getLine( tab, "Width:", value ); 
+
+   (void) LOCAL_SPRINTF( value, "%d", getStreamSize() );
+   message << _getLine( tab, "Stream size:", value ); 
+
+   (void) LOCAL_SPRINTF( value, "%d", getStreamWidth() );
+   message << _getLine( tab, "Stream width:", value ); 
+
+   (void) LOCAL_SPRINTF( value, "%d", getStreamHeight() );
+   message << _getLine( tab, "Stream height:", value ); 
+
+   (void) LOCAL_SPRINTF( value, "%3e", getDangleValue() );
+   message << _getLine( tab, "Dangle value:", value ); 
+
+   return message.str();
+}
+

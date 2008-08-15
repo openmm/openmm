@@ -1,0 +1,141 @@
+
+/****************************************************************
+* This file is part of the gpu acceleration library for gromacs.
+* Author: V. Vishal
+* Copyright (C) Pande Group, Stanford, 2006
+*****************************************************************/
+
+kernel void kupdate_md1_berendsen( 
+		float dt,
+		float3 lg, //Berendsen coupling, assuming only one group
+		float3 uold, //Mean velocity from previous step
+		float4 posq<>, 
+		float3 v<>, 
+		float3 f<>,
+		float invmass<>,
+		out float3 vnew<>, 
+		out float4 posqp<> )
+{
+	float3 vb;
+	float3 one;
+	posqp = posq;
+
+	one = float3( 1.0f, 1.0f, 1.0f );
+
+	vb = ( one - lg ) * uold;
+	
+	vnew = lg* ( v + f * invmass * dt ) + vb;
+ 	
+	posqp.xyz += vnew * dt;
+}
+
+//Nose-Hoover / Parinello Rahman
+kernel void kupdate_md1_extended (
+		float dt,
+		float3 lg, 
+		float xi,
+		float3 M0, 
+		float3 M1,
+		float3 M2,
+		float3 uold,
+		float4 posq<>, 
+		float3 v<>, 
+		float3 f<>,
+		float invmass<>,
+		out float3 vnew<>, 
+		out float4 posqp<> )
+{
+	float3 vrel, vnrel;
+	float3 vtrans;
+
+	vrel  = v - uold;
+	vtrans = float3( dot(M0, vrel), dot(M1, vrel), dot(M2, vrel) );
+	vrel += dt * ( invmass * f - xi * vrel - vtrans );
+	vnew = uold + lg * vrel;
+	posqp = posq;
+	posqp.xyz += vnew * dt;
+}
+
+		
+kernel void kupdate_md2(
+		float dtinv, //1/dt
+		float4 posqp<>, //positions after constraints
+		float4 posq<>,  //positions before update
+		out float3 vnew<>, //Corrected velocities
+		out float4 posqnew<> //equal to posqp, avoids an extra call to copy
+		)
+{
+	posqnew = posqp;
+	vnew = ( posqp - posq ) * dtinv;
+}
+
+/* Version that handles terms of order dt more carefully
+ * Update1 computes deltax's rather than x + deltax 
+ * Corresponding shake implementation modifies the delta's
+ * Update2 adds the constrained deltas to x.
+ * */
+
+kernel void kupdate_md1_berendsen_fix1( 
+		float dt,
+		float3 lg, //Berendsen coupling, assuming only one group
+		float3 uold, //Mean velocity from previous step
+		float4 posq<>, 
+		float3 v<>, 
+		float3 f<>,
+		float invmass<>,
+		out float3 vnew<>, 
+		out float4 posqp<> )
+{
+	float3 vb;
+	float3 one;
+
+	one = float3( 1.0f, 1.0f, 1.0f );
+
+	vb = ( one - lg ) * uold;
+	
+	vnew = lg* ( v + f * invmass * dt ) + vb;
+ 	
+	posqp.xyz = vnew * dt;
+	posqp.w = posq.w;
+}
+
+//Nose-Hoover / Parinello Rahman
+kernel void kupdate_md1_extended_fix1 (
+		float dt,
+		float3 lg, 
+		float xi,
+		float3 M0, 
+		float3 M1,
+		float3 M2,
+		float3 uold,
+		float4 posq<>, 
+		float3 v<>, 
+		float3 f<>,
+		float invmass<>,
+		out float3 vnew<>, 
+		out float4 posqp<> )
+{
+	float3 vrel, vnrel;
+	float3 vtrans;
+
+	vrel  = v - uold;
+	vtrans = float3( dot(M0, vrel), dot(M1, vrel), dot(M2, vrel) );
+	vrel += dt * ( invmass * f - xi * vrel - vtrans );
+	vnew = uold + lg * vrel;
+	posqp.w = posq.w;
+	posqp.xyz = vnew * dt;
+}
+
+kernel void kupdate_md2_fix1(
+		float dtinv, //1/dt
+		float4 posqp<>, //positions after constraints
+		float4 posq<>,  //positions before update
+		out float3 vnew<>, //Corrected velocities
+		out float4 posqnew<> //equal to posqp, avoids an extra call to copy
+		)
+{
+	posqnew.xyz = posq.xyz + posqp.xyz;
+	posqnew.w   = posq.w;
+	vnew = posqp.xyz * dtinv;
+}
+

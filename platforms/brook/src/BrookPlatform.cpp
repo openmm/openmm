@@ -31,56 +31,232 @@
 
 #include "BrookPlatform.h"
 #include "BrookKernelFactory.h"
-//#include "BrookKernels.h"
+#include "OpenMMException.h"
+#include "kernels.h"
 #include "SimTKUtilities/SimTKOpenMMRealType.h"
+#include <brook/brook.hpp>
+#include <stdlib.h>
+#include <sstream>
+#include <cctype>
+#include <algorithm>
 
 using namespace OpenMM;
 
+/** 
+ * Register BrookPlatform
+ *
+ * @return BrookPlatform instance
+ *
+ */
+
 BrookPlatform* registerBrookPlatform( void ){
+
+// ---------------------------------------------------------------------------------------
+
+   // static const std::string methodName      = "BrookPlatform::registerBrookPlatform";
+
+// ---------------------------------------------------------------------------------------
+
    BrookPlatform* platform = new BrookPlatform();
    Platform::registerPlatform(platform);
+
    return platform;
 }
 
 BrookPlatform* staticPlatform = registerBrookPlatform( );
 
+/** 
+ * BrookPlatform constructor
+ *
+ */
+
 BrookPlatform::BrookPlatform( ){
-   _defaultAtomStreamWidth  = DefaultAtomStreamWidth;
-   _initializeFactory();
+
+// ---------------------------------------------------------------------------------------
+
+   // static const std::string methodName      = "BrookPlatform::BrookPlatform(0)";
+
+// ---------------------------------------------------------------------------------------
+
+   _atomStreamWidth  = DefaultAtomStreamWidth;
+   _log              = NULL;
+
+   // get Brook runtime
+
+   char* runtime     = getenv( "brt_runtime" );
+
+   _initializeKernelFactory( );
+   _setBrookRuntime( runtime );
 }
 
-BrookPlatform::BrookPlatform( int defaultAtomStreamWidth ){
-   _defaultAtomStreamWidth  = defaultAtomStreamWidth;
-   _initializeFactory();
+/** 
+ * BrookPlatform constructor
+ *
+ * @param defaultAtomStreamWidth  stream width
+ * @param runtime                 Brook runtime (cal/cpu)
+ * @param log                     log file reference
+ *
+ */
+
+BrookPlatform::BrookPlatform( int atomStreamWidth, const std::string& runtime, FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+   // static const std::string methodName      = "BrookPlatform::BrookPlatform(2)";
+
+// ---------------------------------------------------------------------------------------
+
+   _log              = log;
+   _atomStreamWidth  = atomStreamWidth;
+   _initializeKernelFactory( );
+   _setBrookRuntime( runtime );
+
 }
+
+/** 
+ * BrookPlatform destructor
+ *
+ */
 
 BrookPlatform::~BrookPlatform( ){
+
+// ---------------------------------------------------------------------------------------
+
+   // static const std::string methodName      = "BrookPlatform::BrookPlatform";
+
+// ---------------------------------------------------------------------------------------
+
 }
 
-void BrookPlatform::_initializeFactory( void ){
-   //BrookKernelFactory* factory = new BrookKernelFactory();
-   /*
+/** 
+ * Initialize kernel factory
+ *
+ */
+
+void BrookPlatform::_initializeKernelFactory( void ){
+
+// ---------------------------------------------------------------------------------------
+
+   // static const std::string methodName      = "BrookPlatform::_initializeKernelFactory";
+
+// ---------------------------------------------------------------------------------------
+
+   BrookKernelFactory* factory = new BrookKernelFactory();
+
    registerKernelFactory( CalcStandardMMForceFieldKernel::Name(), factory);
-   registerKernelFactory( CalcGBSAOBCForceFieldKernel::Name(),    factory);
+   // registerKernelFactory( CalcGBSAOBCForceFieldKernel::Name(),    factory);
    registerKernelFactory( IntegrateVerletStepKernel::Name(),      factory);
-   registerKernelFactory( IntegrateLangevinStepKernel::Name(),    factory);
-   registerKernelFactory( IntegrateBrownianStepKernel::Name(),    factory);
-   registerKernelFactory( ApplyAndersenThermostatKernel::Name(),  factory);
+   //registerKernelFactory( IntegrateLangevinStepKernel::Name(),    factory);
+   //registerKernelFactory( IntegrateBrownianStepKernel::Name(),    factory);
+   //registerKernelFactory( ApplyAndersenThermostatKernel::Name(),  factory);
    registerKernelFactory( CalcKineticEnergyKernel::Name(),        factory);
-   */
+   
 }
+
+/** 
+ * Set & validate runtime
+ *
+ * @param runtime    Brook runtime (cal/cpu)
+ *
+ * @throws exception if runtime is invalid
+ */
+
+void BrookPlatform::_setBrookRuntime( const std::string& runtime ){
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName      = "BrookPlatform::_setBrookRuntime";
+
+// ---------------------------------------------------------------------------------------
+
+   // set & validate runtime
+
+   _runtime = runtime;
+   std::transform( _runtime.begin(), _runtime.end(), _runtime.begin(), tolower);
+   if(  _runtime != "cal" && _runtime != "cpu" ){
+      std::stringstream message;
+      message << methodName << " Brook runtime=" << _runtime << " not recognized.";
+      throw OpenMMException( message.str() );
+   }
+
+   if( getLog() ){
+      (void) fprintf( getLog(), "%s Brook initializing to runtime=<%s>", methodName.c_str(), _runtime.c_str() ); 
+      (void) fflush( getLog() );
+   }
+
+   brook::initialize( _runtime.c_str(), NULL );
+
+}
+
+/** 
+ * Return platform name
+ *
+ * @return "Brook"
+ */
+    
+std::string BrookPlatform::getName() const {
+  return "Brook";
+}   
+
+/** 
+ * Return platform speed
+ *
+ * @return speed
+ */
+    
+double BrookPlatform::getSpeed() const {
+  return 10.0;
+}   
+
+/** 
+ * Return true if BrookPlatform supports double precison
+ *
+ * @return true if BrookPlatform supports double precison
+ */
 
 bool BrookPlatform::supportsDoublePrecision( void ) const {
+
+// ---------------------------------------------------------------------------------------
+
+   // static const std::string methodName      = "BrookPlatform::supportsDoublePrecision";
+
+// ---------------------------------------------------------------------------------------
+
     return (sizeof(RealOpenMM) >= sizeof(double));
 }
 
+/** 
+ * Return Stream factory
+ *
+ */
+
 const StreamFactory& BrookPlatform::getDefaultStreamFactory( void ) const {
-    return defaultStreamFactory;
+    return _defaultStreamFactory;
 }
 
-int BrookPlatform::getStreamSize( int size, int streamWidth, int* outputHeight ) const {
+/** 
+ *
+ * Static method
+ *
+ * Return stream size and height given size of array and stream width
+ *
+ * @param size           size of array
+ * @param streamWidth    stream width
+ * @param outputHeight   output stream height
+ *
+ * @return stream size; -1 if streamWidth < 1 || size < 1
+ *
+ */
 
-   if( streamWidth < 1 ){
+int BrookPlatform::getStreamSize( int size, int streamWidth, int* outputHeight ){
+
+// ---------------------------------------------------------------------------------------
+
+   // static const std::string methodName      = "BrookPlatform::getStreamSize";
+
+// ---------------------------------------------------------------------------------------
+
+   if( streamWidth < 1 || size < 1){
       return -1;
    }
 
@@ -93,3 +269,29 @@ int BrookPlatform::getStreamSize( int size, int streamWidth, int* outputHeight )
    }
    return height*streamWidth;
 }
+
+/** 
+ * Get log file reference
+ * 
+ * @return  log file reference
+ *
+ */
+
+FILE* BrookPlatform::getLog( void ) const {
+   return _log;
+}
+
+/** 
+ * Set log file reference
+ * 
+ * @param  log file reference
+ *
+ * @return  DefaultReturnValue
+ *
+ */
+
+int BrookPlatform::setLog( FILE* log ){
+   _log = log;
+   return BrookPlatform::DefaultErrorValue;
+}
+

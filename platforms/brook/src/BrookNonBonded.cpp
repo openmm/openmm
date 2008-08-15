@@ -29,7 +29,6 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include <math.h>
 #include <sstream>
 #include "BrookNonBonded.h"
 #include "BrookPlatform.h"
@@ -56,26 +55,26 @@ BrookNonBonded::BrookNonBonded(  ){
 // ---------------------------------------------------------------------------------------
 
    _atomSizeCeiling           = -1;
-   _outerUnroll               = 4;
-   _innerUnroll               = 4;
+   _outerUnroll               =  4;
+   _innerUnroll               =  4;
 
    _partialForceStreamWidth   = 64;
    _partialForceStreamHeight  = -1;
    _partialForceStreamSize    = -1;
 
-   _duplicationFactor         = 4;
+   _duplicationFactor         =  4;
 
    _exclusionStreamWidth      = -1;
    _exclusionStreamHeight     = -1;
    _exclusionStreamSize       = -1;
 
-   _jStreamWidth              = -1;
+   _jStreamWidth              = 16;
    _jStreamHeight             = -1;
    _jStreamSize               = -1;
 
-   _exclusionStream           = NULL;
-   _sigmaStream               = NULL;
-   _epsilonStream             = NULL;
+   for( int ii = 0; ii < LastStreamIndex; ii++ ){
+      _nonbondedStreams[ii] = NULL;
+   }
 
    for( int ii = 0; ii < getNumberOfForceStreams(); ii++ ){
       _nonbondedForceStreams[ii] = NULL;
@@ -97,9 +96,9 @@ BrookNonBonded::~BrookNonBonded( ){
 
 // ---------------------------------------------------------------------------------------
 
-   delete _exclusionStream;
-   delete _sigmaStream;
-   delete _epsilonStream;
+   for( int ii = 0; ii < LastStreamIndex; ii++ ){
+      delete _nonbondedStreams[ii];
+   }
 
    for( int ii = 0; ii < getNumberOfForceStreams(); ii++ ){
       delete _nonbondedForceStreams[ii];
@@ -166,6 +165,12 @@ int BrookNonBonded::setOuterLoopUnroll( int outerUnroll ){
 
 int BrookNonBonded::getAtomSizeCeiling( void ) const {
 
+// ---------------------------------------------------------------------------------------
+
+   //static const std::string methodName      = "BrookNonBonded::getAtomSizeCeiling";
+
+// ---------------------------------------------------------------------------------------
+
    if( _atomSizeCeiling < 0 ){
       BrookNonBonded* localThis = const_cast<BrookNonBonded* const>(this);
       localThis->_atomSizeCeiling = localThis->getNumberOfAtoms() % localThis->getOuterLoopUnroll();
@@ -191,32 +196,6 @@ int BrookNonBonded::getDuplicationFactor( void ) const {
 /** 
  * Get j-stream width
  * 
- * @param platform  platform
- *
- * @return  j-stream width
- *
- */
-
-int BrookNonBonded::getJStreamWidth( const Platform& platform ){
-
-// ---------------------------------------------------------------------------------------
-
-   // static const std::string methodName      = "BrookNonBonded::getJStreamWidth";
-   // static const int debug                   = 1;
-
-// ---------------------------------------------------------------------------------------
-
-   // get j-stream width
-
-   if( _jStreamWidth < 0 ){
-      //_getJStreamDimensions( platform );
-   }
-   return _jStreamWidth;
-}
-
-/** 
- * Get j-stream width
- * 
  * @return  j-stream width
  *
  */
@@ -226,37 +205,10 @@ int BrookNonBonded::getJStreamWidth( void ) const {
 // ---------------------------------------------------------------------------------------
 
    // static const std::string methodName      = "BrookNonBonded::getJStreamWidth";
-   // static const int debug                   = 1;
 
 // ---------------------------------------------------------------------------------------
 
    return _jStreamWidth;
-}
-
-/** 
- * Get j-stream height
- * 
- * @param platform platform
- *
- * @return  j-stream height 
- *
- */
-
-int BrookNonBonded::getJStreamHeight( const Platform& platform ){
-
-// ---------------------------------------------------------------------------------------
-
-   // static const std::string methodName      = "BrookNonBonded::getJStreamHeight";
-   // static const int debug                   = 1;
-
-// ---------------------------------------------------------------------------------------
-
-   // get j-stream height
-
-   if( _jStreamHeight < 0 ){
-      //_getJStreamDimensions( platform );
-   }
-   return _jStreamHeight;
 }
 
 /** 
@@ -271,37 +223,10 @@ int BrookNonBonded::getJStreamHeight( void ) const {
 // ---------------------------------------------------------------------------------------
 
    // static const std::string methodName      = "BrookNonBonded::getJStreamHeight";
-   // static const int debug                   = 1;
 
 // ---------------------------------------------------------------------------------------
 
    return _jStreamHeight;
-}
-
-/** 
- * Get j-stream size
- * 
- * @param platform  platform
- *
- * @return  j-stream size
- *
- */
-
-int BrookNonBonded::getJStreamSize( const Platform& platform ){
-
-// ---------------------------------------------------------------------------------------
-
-   // static const std::string methodName      = "BrookNonBonded::getJStreamSize";
-   // static const int debug                   = 1;
-
-// ---------------------------------------------------------------------------------------
-
-   // get j-stream size
-
-   if( _jStreamSize < 0 ){
-      //_getJStreamDimensions( platform );
-   }
-   return _jStreamSize;
 }
 
 /** 
@@ -329,7 +254,6 @@ int BrookNonBonded::getPartialForceStreamWidth( const Platform& platform ){
 // ---------------------------------------------------------------------------------------
 
    // static const std::string methodName      = "BrookNonBonded::getPartialForceStreamWidth";
-   // static const int debug                   = 1;
 
 // ---------------------------------------------------------------------------------------
 
@@ -374,7 +298,6 @@ int BrookNonBonded::getPartialForceStreamHeight( const Platform& platform ){
 // ---------------------------------------------------------------------------------------
 
    // static const std::string methodName      = "BrookNonBonded::getPartialForceStreamHeight";
-   // static const int debug                   = 1;
 
 // ---------------------------------------------------------------------------------------
 
@@ -398,7 +321,6 @@ int BrookNonBonded::getPartialForceStreamHeight( void ) const {
 // ---------------------------------------------------------------------------------------
 
    // static const std::string methodName      = "BrookNonBonded::getPartialForceStreamHeight";
-   // static const int debug                   = 1;
 
 // ---------------------------------------------------------------------------------------
 
@@ -419,7 +341,6 @@ int BrookNonBonded::getPartialForceStreamSize( const Platform& platform ){
 // ---------------------------------------------------------------------------------------
 
    // static const std::string methodName      = "BrookNonBonded::getPartialForceStreamSize";
-   // static const int debug                   = 1;
 
 // ---------------------------------------------------------------------------------------
 
@@ -471,8 +392,8 @@ int BrookNonBonded::getExclusionStreamWidth( void ) const {
  *
  */
 
-BrookFloatStreamImpl* BrookNonBonded::getExclusionStream( void ) const {
-   return _exclusionStream;
+BrookFloatStreamInternal* BrookNonBonded::getExclusionStream( void ) const {
+   return _nonbondedStreams[ExclusionStream];
 }
 
 /** 
@@ -482,8 +403,8 @@ BrookFloatStreamImpl* BrookNonBonded::getExclusionStream( void ) const {
  *
  */
 
-BrookFloatStreamImpl* BrookNonBonded::getVdwStream( void ) const {
-   return _vdwStream;
+BrookFloatStreamInternal* BrookNonBonded::getOuterVdwStream( void ) const {
+   return _nonbondedStreams[OuterVdwStream];
 }
 
 /** 
@@ -493,8 +414,8 @@ BrookFloatStreamImpl* BrookNonBonded::getVdwStream( void ) const {
  *
  */
 
-BrookFloatStreamImpl* BrookNonBonded::getChargeStream( void ) const {
-   return _chargeStream;
+BrookFloatStreamInternal* BrookNonBonded::getChargeStream( void ) const {
+   return _nonbondedStreams[ChargeStream];
 }
 
 /** 
@@ -504,8 +425,8 @@ BrookFloatStreamImpl* BrookNonBonded::getChargeStream( void ) const {
  *
  */
 
-BrookFloatStreamImpl* BrookNonBonded::getSigmaStream( void ) const {
-   return _sigmaStream;
+BrookFloatStreamInternal* BrookNonBonded::getInnerSigmaStream( void ) const {
+   return _nonbondedStreams[InnerSigmaStream];
 }
 
 /** 
@@ -515,8 +436,8 @@ BrookFloatStreamImpl* BrookNonBonded::getSigmaStream( void ) const {
  *
  */
 
-BrookFloatStreamImpl* BrookNonBonded::getEpsilonStream( void ) const {
-   return _epsilonStream;
+BrookFloatStreamInternal* BrookNonBonded::getInnerEpsilonStream( void ) const {
+   return _nonbondedStreams[InnerEpsilonStream];
 }
 
 /** 
@@ -526,7 +447,7 @@ BrookFloatStreamImpl* BrookNonBonded::getEpsilonStream( void ) const {
  *
  */
 
-BrookFloatStreamImpl** BrookNonBonded::getForceStreams( void ){
+BrookFloatStreamInternal** BrookNonBonded::getForceStreams( void ){
    return _nonbondedForceStreams;
 }
 
@@ -543,7 +464,7 @@ int BrookNonBonded::isForceStreamSet( int index ) const {
 }
 
 /** 
- * Initialize stream dimensions and streams
+ * Initialize stream dimensions
  * 
  * @param numberOfAtoms             number of atoms
  * @param platform                  platform
@@ -552,49 +473,79 @@ int BrookNonBonded::isForceStreamSet( int index ) const {
  *
  */
 
-int BrookNonBonded::initializeStreams( int numberOfAtoms, const Platform& platform ){
+int BrookNonBonded::initializeStreamSizes( int numberOfAtoms, const Platform& platform ){
 
 // ---------------------------------------------------------------------------------------
 
-   static const std::string methodName      = "BrookNonBonded::initializeStreams";
+   static const std::string methodName      = "BrookNonBonded::initializeStreamSizes";
    // static const int debug                   = 1;
 
 // ---------------------------------------------------------------------------------------
 
-   int atomStreamSize        = getAtomStreamSize( platform );
-   _exclusionStreamWidth     = atomStreamSize;
+   int atomStreamSize                  = getAtomStreamSize( platform );
+   int atomStreamWidth                 = getAtomStreamWidth( platform );
 
-   int innerUnroll           = getInnerLoopUnroll();
-   if( innerUnroll < 1 ){
-      std::stringstream message;
-      message << methodName << " innerUnrolls=" << innerUnroll << " is less than 1.";
-      throw OpenMMException( message.str() );
-      return ErrorReturnValue;
-   }
+   initializeExclusionStreamSize( atomStreamSize, atomStreamWidth );
+   initializeJStreamSize( atomStreamSize, atomStreamWidth );
+   initializeOuterVdwStreamSize( atomStreamSize, atomStreamWidth );
+   initializePartialForceStreamSize( atomStreamSize, atomStreamWidth );
 
-   const BrookPlatform brookPlatform            = dynamic_cast<const BrookPlatform&> (platform);
-   const BrookStreamFactory& brookStreamFactory = dynamic_cast<const BrookStreamFactory&> (platform.getDefaultStreamFactory() );
+   return DefaultReturnValue;
+}
 
-   _exclusionStreamHeight    = _exclusionStreamWidth/innerUnroll; 
-   _exclusionStreamSize      = _exclusionStreamWidth*_exclusionStreamHeight;
-   StreamImpl* exStream      = brookStreamFactory.createStreamImpl( BrookStreamFactory::NonBondedExclusionStream, _exclusionStreamSize, Stream::Float, platform );
-   _exclusionStream          = dynamic_cast<BrookFloatStreamImpl*> ( exStream );
+/** 
+ * Initialize streams
+ * 
+ * @param platform                  platform
+ *
+ * @return ErrorReturnValue if error, else DefaultReturnValue
+ *
+ */
 
+int BrookNonBonded::initializeStreams( const Platform& platform ){
 
-   StreamImpl* vStream       = brookStreamFactory.createStreamImpl( BrookStreamFactory::NonBondedVdwStream, atomStreamSize, Stream::Float3, platform );
-   _vdwStream                = dynamic_cast<BrookFloatStreamImpl*> ( vStream );
+// ---------------------------------------------------------------------------------------
 
-   StreamImpl* cStream       = brookStreamFactory.createStreamImpl( BrookStreamFactory::NonBondedVdwStream, atomStreamSize, Stream::Float3, platform );
-   _chargeStream             = dynamic_cast<BrookFloatStreamImpl*> ( cStream );
+   static const std::string methodName      = "BrookNonBonded::initializeStreams";
+   static const double dangleValue          = 0.0;
+   // static const int debug                   = 1;
 
-   if( getLog() ){
-      int atomStreamWidth       = getAtomStreamWidth( platform );
-      int atomStreamHeight      = getAtomStreamHeight( platform );
-      (void) fprintf( getLog(), "%s initializeVdwStream: stream dimensions: [%d %d] size=%d\n", methodName.c_str(), atomStreamWidth, atomStreamHeight, atomStreamSize );
-   }
+// ---------------------------------------------------------------------------------------
 
-   if( getLog() ){
-      (void) fprintf( getLog(), "%s initializeExclusionStream: stream dimensions: [%d %d] size=%d\n", methodName.c_str(), _exclusionStreamWidth, _exclusionStreamHeight, _exclusionStreamSize );
+   const BrookStreamFactory& brookStreamFactory = dynamic_cast<const BrookStreamFactory&> (platform.getDefaultStreamFactory());
+
+   // exclusion
+
+    _nonbondedStreams[ExclusionStream]          = new BrookFloatStreamInternal( BrookStreamFactory::NonBondedExclusionStream,
+                                                                                getExclusionStreamSize(), getExclusionStreamWidth(),
+                                                                                BrookStreamInternal::Float, dangleValue );
+
+   // outer vdw
+
+   _nonbondedStreams[OuterVdwStream]            = new BrookFloatStreamInternal( BrookStreamFactory::OuterVdwStream, getAtomStreamSize(), 
+                                                                                getAtomStreamWidth(), BrookStreamInternal::Float2, dangleValue );
+
+   // inner sigma & epsilon
+
+   _nonbondedStreams[InnerSigmaStream]         = new BrookFloatStreamInternal( BrookStreamFactory::InnerSigmaStream, getJStreamSize(), 
+                                                                               getJStreamWidth(), BrookStreamInternal::Float4, dangleValue );
+
+   _nonbondedStreams[InnerEpsilonStream]       = new BrookFloatStreamInternal( BrookStreamFactory::InnerEpsilonStream, getJStreamSize(),
+                                                                               getJStreamWidth(), BrookStreamInternal::Float4, dangleValue );
+
+   // charge stream
+
+   _nonbondedStreams[ChargeStream]              = new BrookFloatStreamInternal( BrookStreamFactory::NonBondedChargeStream, getAtomStreamSize(),
+                                                                                getAtomStreamWidth(), BrookStreamInternal::Float, dangleValue );
+
+   
+   // partial force stream
+   std::string partialForceStream = BrookStreamFactory::PartialForceStream;
+   for( int ii = 0; ii < getNumberOfForceStreams(); ii++ ){
+      std::stringstream name;
+      name << partialForceStream << ii;
+      _nonbondedForceStreams[ii] = new BrookFloatStreamInternal( name.str(), getPartialForceStreamSize(),
+                                                                 getPartialForceStreamWidth(), BrookStreamInternal::Float4, dangleValue );
    }
 
    return DefaultReturnValue;
@@ -621,7 +572,7 @@ int BrookNonBonded::setExclusion( int i, int j, int exclusionStreamWidth, BrookO
 
 // ---------------------------------------------------------------------------------------
 
-   int index    = ( (j/4)* exclusionStreamWidth + i ); //iindex is the x coordinate!
+   int index    = ( (j/4)* exclusionStreamWidth + i ); // index is the x coordinate!
    int joffset  = j % 4; 
 
    BrookOpenMMFloat flag;
@@ -718,7 +669,7 @@ int BrookNonBonded::initializeExclusions( const std::vector<std::set<int> >& exc
 
    // load stream
 
-   _exclusionStream->loadFromArray( exclusions ); 
+   _nonbondedStreams[ExclusionStream]->loadFromArray( exclusions ); 
    delete[] exclusions;
 
    return DefaultReturnValue;
@@ -797,7 +748,8 @@ int BrookNonBonded::initializeVdwAndCharge( const vector<vector<double> >& nonbo
    int trackingIndex         = 0;
    for( unsigned int ii = 0; ii < nonbondedParameters.size(); ii++ ){
 
-      vector<double> nonbondedParameterVector = nonbondedParameters[ii];
+      vector<double> nonbondedParameterVector 
+                                     = nonbondedParameters[ii];
 
       double c6                      = nonbondedParameterVector[0];
       double c12                     = nonbondedParameterVector[1];
@@ -822,8 +774,8 @@ int BrookNonBonded::initializeVdwAndCharge( const vector<vector<double> >& nonbo
 
    // load stream
 
-   _vdwStream->loadFromArray( vdwParameters ); 
-   _chargeStream->loadFromArray( charges ); 
+   _nonbondedStreams[OuterVdwStream]->loadFromArray( vdwParameters ); 
+   _nonbondedStreams[ChargeStream]->loadFromArray( charges ); 
 
    delete[] vdwParameters;
    delete[] charges;
@@ -845,7 +797,7 @@ int BrookNonBonded::initializeVdwAndCharge( const vector<vector<double> >& nonbo
  * */
 
 int BrookNonBonded::setup( int numberOfAtoms, const std::vector<std::vector<double> >& nonbondedParameters,
-                           const std::vector<std::set<int> >& exclusions, const BrookPlatform& platform ){
+                           const std::vector<std::set<int> >& exclusions, const Platform& platform ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -856,7 +808,8 @@ int BrookNonBonded::setup( int numberOfAtoms, const std::vector<std::vector<doub
 
    setNumberOfAtoms( numberOfAtoms );
 
-   initializeStreams( numberOfAtoms, platform );
+   initializeStreamSizes( numberOfAtoms, platform );
+   initializeStreams( platform );
 
    initializeExclusions( exclusions, platform );
    initializeVdwAndCharge( nonbondedParameters, platform );
@@ -866,6 +819,180 @@ int BrookNonBonded::setup( int numberOfAtoms, const std::vector<std::vector<doub
 }
 
 /* 
+ * Setup of stream dimensions for exclusion stream
+ *
+ * @param atomStreamSize        atom stream size
+ * @param atomStreamWidth       atom stream width
+ *
+ * @return ErrorReturnValue if error, else DefaultReturnValue
+ *
+ * */
+
+int BrookNonBonded::initializeExclusionStreamSize( int atomStreamSize, int atomStreamWidth ){
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName      = "BrookNonBonded::initializeExclusionStreamSize";
+   //static const int debug                   = 1;
+
+// ---------------------------------------------------------------------------------------
+
+   _exclusionStreamWidth     = atomStreamSize;
+   int innerUnroll           = getInnerLoopUnroll();
+   if( innerUnroll < 1 ){
+      std::stringstream message;
+      message << methodName << " innerUnrolls=" << innerUnroll << " is less than 1.";
+      throw OpenMMException( message.str() );
+      return ErrorReturnValue;
+   }
+
+   _exclusionStreamHeight    = _exclusionStreamWidth/innerUnroll; 
+   _exclusionStreamSize      = _exclusionStreamWidth*_exclusionStreamHeight;
+
+   return DefaultReturnValue;
+}
+
+/* 
+ * Setup of j-stream dimensions
+ *
+ * @param atomStreamSize        atom stream size
+ * @param atomStreamWidth       atom stream width
+ *
+ * @return ErrorReturnValue if error, else DefaultReturnValue
+ *
+ * @throw  OpenMMException  if jStreamWidth < 1 || innerUnroll < 1
+ *
+ * */
+
+int BrookNonBonded::initializeJStreamSize( int atomStreamSize, int atomStreamWidth ){
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName      = "BrookNonBonded::initializeJStreamSize";
+
+// ---------------------------------------------------------------------------------------
+
+   // validate stream width & inner unroll
+
+   int jStreamWidth                             = getJStreamWidth();
+   if( jStreamWidth < 1 ){
+      std::stringstream message;
+      message << methodName << " jStreamWidth=" << jStreamWidth << " is less than 1.";
+      throw OpenMMException( message.str() );
+      return ErrorReturnValue;
+   }
+
+   int innerUnroll           = getInnerLoopUnroll();
+   if( innerUnroll < 1 ){
+      std::stringstream message;
+      message << methodName << " innerUnroll=" << innerUnroll << " is less than 1.";
+      throw OpenMMException( message.str() );
+      return ErrorReturnValue;
+   }
+
+   // set dimesnions
+
+   _jStreamSize                                 = atomStreamSize/innerUnroll;
+   _jStreamHeight                               = _jStreamSize/jStreamWidth; 
+   _jStreamHeight                              += ( (_jStreamSize % _jStreamWidth) ? 1 : 0 ); 
+   _jStreamSize                                 = jStreamWidth*_jStreamHeight;
+
+   return DefaultReturnValue;
+}
+
+/* 
+ * Setup of outer vdw stream size
+ *
+ * @param atomStreamSize        atom stream size
+ * @param atomStreamWidth       atom stream width
+ *
+ * @return ErrorReturnValue if error, else DefaultReturnValue
+ *
+ * @throw  OpenMMException  if jStreamWidth < 1 || innerUnroll < 1
+ *
+ * */
+
+int BrookNonBonded::initializeOuterVdwStreamSize( int atomStreamSize, int atomStreamWidth ){
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName      = "BrookNonBonded::initializeOuterVdwStreamSize";
+
+// ---------------------------------------------------------------------------------------
+
+   // validate stream width & inner unroll
+/*
+   int jStreamWidth                             = getJStreamWidth();
+   if( jStreamWidth < 1 ){
+      std::stringstream message;
+      message << methodName << " jStreamWidth=" << jStreamWidth << " is less than 1.";
+      throw OpenMMException( message.str() );
+      return ErrorReturnValue;
+   }
+
+   int innerUnroll           = getInnerLoopUnroll();
+   if( innerUnroll < 1 ){
+      std::stringstream message;
+      message << methodName << " innerUnroll=" << innerUnroll << " is less than 1.";
+      throw OpenMMException( message.str() );
+      return ErrorReturnValue;
+   }
+
+   // set dimesnions
+
+   _jStreamSize                                 = atomStreamSize/innerUnroll;
+   _jStreamHeight                               = _jStreamSize/jStreamWidth; 
+   _jStreamHeight                              += ( (_jStreamSize % _jStreamWidth) ? 1 : 0 ); 
+   _jStreamSize                                 = jStreamWidth*_jStreamHeight;
+*/
+
+   return DefaultReturnValue;
+}
+
+/* 
+ * Setup of stream dimensions for partial force streams
+ *
+ * @param atomStreamSize        atom stream size
+ * @param atomStreamWidth       atom stream width
+ *
+ * @return ErrorReturnValue if error, else DefaultReturnValue
+ *
+ * */
+
+int BrookNonBonded::initializePartialForceStreamSize( int atomStreamSize, int atomStreamWidth ){
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName      = "BrookNonBonded::initializePartialForceStreamSize";
+   //static const int debug                   = 1;
+
+// ---------------------------------------------------------------------------------------
+
+   int innerUnroll           = getInnerLoopUnroll();
+   if( innerUnroll < 1 ){
+      std::stringstream message;
+      message << methodName << " innerUnrolls=" << innerUnroll << " is less than 1.";
+      throw OpenMMException( message.str() );
+      return ErrorReturnValue;
+   }
+
+   if( _partialForceStreamWidth < 1 ){
+      std::stringstream message;
+      message << methodName << " partial force stream width=" << _partialForceStreamWidth << " is less than 1.";
+      throw OpenMMException( message.str() );
+      return ErrorReturnValue;
+   }
+
+   _partialForceStreamSize    = atomStreamSize*getDuplicationFactor()/innerUnroll;
+   _partialForceStreamHeight  = _partialForceStreamSize/_partialForceStreamWidth;
+   _partialForceStreamHeight += ( (_partialForceStreamSize % _partialForceStreamWidth) ? 1 : 0);
+
+   return DefaultReturnValue;
+}
+
+/* 
+ * Setup of j-stream dimensions
+ * 
  * Get contents of object
  *
  *
@@ -875,11 +1002,11 @@ int BrookNonBonded::setup( int numberOfAtoms, const std::vector<std::vector<doub
  *
  * */
 
-std::string BrookNonBonded::getContents( int level ) const {
+std::string BrookNonBonded::getContentsString( int level ) const {
 
 // ---------------------------------------------------------------------------------------
 
-   static const std::string methodName      = "BrookNonBonded::getContents";
+   static const std::string methodName      = "BrookNonBonded::getContentsString";
 
    static const unsigned int MAX_LINE_CHARS = 256;
    char value[MAX_LINE_CHARS];
@@ -951,19 +1078,35 @@ std::string BrookNonBonded::getContents( int level ) const {
    (void) LOCAL_SPRINTF( value, "%d", getExclusionStreamSize() );
    message << _getLine( tab, "Exclusion stream size:", value ); 
 
-   message << _getLine( tab, "Log:",                  (getLog()             ? Set : NotSet) ); 
-   message << _getLine( tab, "ExclusionStream:",      (getExclusionStream() ? Set : NotSet) ); 
-   message << _getLine( tab, "VdwStream:",            (getVdwStream()       ? Set : NotSet) ); 
-   message << _getLine( tab, "ChargeStream:",         (getChargeStream()    ? Set : NotSet) ); 
-   message << _getLine( tab, "SigmaStream:",          (getSigmaStream()     ? Set : NotSet) ); 
-   message << _getLine( tab, "EpsilonStream:",        (getEpsilonStream()   ? Set : NotSet) ); 
+   message << _getLine( tab, "Log:",                  (getLog()                ? Set : NotSet) ); 
+   message << _getLine( tab, "ExclusionStream:",      (getExclusionStream()    ? Set : NotSet) ); 
+   message << _getLine( tab, "VdwStream:",            (getOuterVdwStream()     ? Set : NotSet) ); 
+   message << _getLine( tab, "ChargeStream:",         (getChargeStream()       ? Set : NotSet) ); 
+   message << _getLine( tab, "SigmaStream:",          (getInnerSigmaStream()   ? Set : NotSet) ); 
+   message << _getLine( tab, "EpsilonStream:",        (getInnerEpsilonStream() ? Set : NotSet) ); 
  
+   for( int ii = 0; ii < LastStreamIndex; ii++ ){
+      message << std::endl;
+      if( _nonbondedStreams[ii] ){
+         message << _nonbondedStreams[ii]->getContentsString( );
+      }
+   }
+
+   // force streams
+
    for( int ii = 0; ii < getNumberOfForceStreams(); ii++ ){
       char description[256];
       (void) LOCAL_SPRINTF( description, "PartialForceStream %d", ii );
       message << _getLine( tab, description,  (isForceStreamSet(ii) ? Set : NotSet) ); 
    }
  
+   for( int ii = 0; ii < getNumberOfForceStreams(); ii++ ){
+      message << std::endl;
+      if( _nonbondedForceStreams[ii] ){
+         message << _nonbondedForceStreams[ii]->getContentsString( );
+      }
+   }
+
 #undef LOCAL_SPRINTF
 
    return message.str();
