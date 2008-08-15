@@ -263,6 +263,15 @@ void BrookStreamImpl::fillWithValue( void* value ){
 }
 
 /** 
+ * Set every element of this stream to the same value.
+ * 
+ * @return data array
+ */
+void* BrookStreamImpl::getData( void* value ){
+   return _brookStreamInternal->getData( );
+}
+
+/** 
  * Get Brook stream
  * 
  * @return Brook stream reference

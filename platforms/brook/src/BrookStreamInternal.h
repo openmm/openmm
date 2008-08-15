@@ -130,6 +130,13 @@ class BrookStreamInternal {
        */
       virtual void fillWithValue(void* value) = 0;
   
+      /**
+       * Get data
+       * 
+       * @return data array
+       */
+      virtual void* getData( void ) = 0;
+  
       /** 
        * Get type string
        *

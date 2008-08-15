@@ -53,8 +53,51 @@ class BrookCommon {
       static const int DefaultReturnValue = 0;
       static const int ErrorReturnValue   = -1;
 
+      // ---------------------------------------------------------------------------------------
+
+      // Stream names
+     
+      // bonded stream names
+
+      static const std::string BondedAtomIndicesStream;
+      static const std::string BondedParametersStream;
+      static const std::string UnrolledForceStream;
+      static const std::string BondedChargeStream;
+      static const std::string BondedInverseMapStreams;
+
+      // nonbonded stream names
+
+      static const std::string NonBondedExclusionStream;
+      static const std::string OuterVdwStream;
+      static const std::string InnerSigmaStream;
+      static const std::string InnerEpsilonStream;
+      static const std::string NonBondedChargeStream;
+      static const std::string PartialForceStream;
+
+      // OBC Gbsa streams
+
+      static const std::string ObcAtomicRadiiStream;
+      static const std::string ObcScaledAtomicRadiiStream;
+      static const std::string ObcAtomicRadiiWithDielectricOffsetStream;
+      static const std::string ObcBornRadiiStream;
+      static const std::string ObcBornRadii2Stream;
+      static const std::string ObcIntermediateForceStream;
+      static const std::string ObcChainStream;
+
+      // ---------------------------------------------------------------------------------------
+
+     /** 
+      * Constructor
+      * 
+      */
+     
       BrookCommon( );
   
+     /** 
+      * Destructor
+      * 
+      */
+     
       ~BrookCommon();
   
       /**

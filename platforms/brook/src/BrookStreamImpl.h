@@ -109,6 +109,13 @@ class BrookStreamImpl : public StreamImpl {
       void fillWithValue( void* value );
   
       /**
+       * Get data array
+       * 
+       * @return data array
+       */
+      void* getData( void );
+  
+      /**
        * Get Brook stream
        * 
        * @return Brook stream reference 

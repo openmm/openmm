@@ -1054,7 +1054,7 @@ int BrookBonded::loadInvMaps( int nbondeds, int natoms, int *atoms, const BrookP
 
    for( int ii = 0; ii < getNumberOfForceStreams(); ii++ ){
       for( int jj = 0; jj < getMaxInverseMapStreamCount(ii); jj++ ){
-         _inverseStreamMaps[ii][jj] = new BrookFloatStreamInternal( BrookStreamFactory::BondedInverseMapStreams, atomStreamSize,
+         _inverseStreamMaps[ii][jj] = new BrookFloatStreamInternal( BrookCommon::BondedInverseMapStreams, atomStreamSize,
                                                                     atomStreamWidth, BrookStreamInternal::Float4, dangleValue );
       }
    }
@@ -1239,16 +1239,16 @@ int BrookBonded::setup( int numberOfAtoms,
 
    // build streams
 
-   _atomIndicesStream    = new BrookFloatStreamInternal( BrookStreamFactory::BondedAtomIndicesStream, nbondeds, atomStreamWidth,
+   _atomIndicesStream    = new BrookFloatStreamInternal( BrookCommon::BondedAtomIndicesStream, nbondeds, atomStreamWidth,
                                                          BrookStreamInternal::Float4, dangleValue );
    _atomIndicesStream->loadFromArray( atoms, BrookStreamInternal::Integer ); 
 
-   _chargeStream         = new BrookFloatStreamInternal( BrookStreamFactory::BondedChargeStream, numberOfAtoms, atomStreamWidth,
+   _chargeStream         = new BrookFloatStreamInternal( BrookCommon::BondedChargeStream, numberOfAtoms, atomStreamWidth,
                                                          BrookStreamInternal::Float, dangleValue );
    _chargeStream->loadFromArray( charges ); 
 
    for( int ii = 0; ii < getNumberOfParameterStreams(); ii++ ){
-      _bondedParameters[ii]  = new BrookFloatStreamInternal( BrookStreamFactory::BondedParametersStream, nbondeds, atomStreamWidth,
+      _bondedParameters[ii]  = new BrookFloatStreamInternal( BrookCommon::BondedParametersStream, nbondeds, atomStreamWidth,
                                                              BrookStreamInternal::Float4, dangleValue );
       _bondedParameters[ii]->loadFromArray( params[ii] );
    }
@@ -1316,7 +1316,7 @@ int BrookBonded::setup( int numberOfAtoms,
    // initialize output streams
 
    for( int ii = 0; ii < getNumberOfForceStreams(); ii++ ){
-      _bondedForceStreams[ii] = new BrookFloatStreamInternal( BrookStreamFactory::UnrolledForceStream, nbondeds, atomStreamWidth, 
+      _bondedForceStreams[ii] = new BrookFloatStreamInternal( BrookCommon::UnrolledForceStream, nbondeds, atomStreamWidth, 
                                                               BrookStreamInternal::Float3, dangleValue );
    }
 

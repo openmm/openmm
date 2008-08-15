@@ -516,31 +516,31 @@ int BrookNonBonded::initializeStreams( const Platform& platform ){
 
    // exclusion
 
-    _nonbondedStreams[ExclusionStream]          = new BrookFloatStreamInternal( BrookStreamFactory::NonBondedExclusionStream,
+    _nonbondedStreams[ExclusionStream]          = new BrookFloatStreamInternal( BrookCommon::NonBondedExclusionStream,
                                                                                 getExclusionStreamSize(), getExclusionStreamWidth(),
                                                                                 BrookStreamInternal::Float, dangleValue );
 
    // outer vdw
 
-   _nonbondedStreams[OuterVdwStream]            = new BrookFloatStreamInternal( BrookStreamFactory::OuterVdwStream, getAtomStreamSize(), 
+   _nonbondedStreams[OuterVdwStream]            = new BrookFloatStreamInternal( BrookCommon::OuterVdwStream, getAtomStreamSize(), 
                                                                                 getAtomStreamWidth(), BrookStreamInternal::Float2, dangleValue );
 
    // inner sigma & epsilon
 
-   _nonbondedStreams[InnerSigmaStream]         = new BrookFloatStreamInternal( BrookStreamFactory::InnerSigmaStream, getJStreamSize(), 
+   _nonbondedStreams[InnerSigmaStream]         = new BrookFloatStreamInternal( BrookCommon::InnerSigmaStream, getJStreamSize(), 
                                                                                getJStreamWidth(), BrookStreamInternal::Float4, dangleValue );
 
-   _nonbondedStreams[InnerEpsilonStream]       = new BrookFloatStreamInternal( BrookStreamFactory::InnerEpsilonStream, getJStreamSize(),
+   _nonbondedStreams[InnerEpsilonStream]       = new BrookFloatStreamInternal( BrookCommon::InnerEpsilonStream, getJStreamSize(),
                                                                                getJStreamWidth(), BrookStreamInternal::Float4, dangleValue );
 
    // charge stream
 
-   _nonbondedStreams[ChargeStream]              = new BrookFloatStreamInternal( BrookStreamFactory::NonBondedChargeStream, getAtomStreamSize(),
+   _nonbondedStreams[ChargeStream]              = new BrookFloatStreamInternal( BrookCommon::NonBondedChargeStream, getAtomStreamSize(),
                                                                                 getAtomStreamWidth(), BrookStreamInternal::Float, dangleValue );
 
    
    // partial force stream
-   std::string partialForceStream = BrookStreamFactory::PartialForceStream;
+   std::string partialForceStream = BrookCommon::PartialForceStream;
    for( int ii = 0; ii < getNumberOfForceStreams(); ii++ ){
       std::stringstream name;
       name << partialForceStream << ii;

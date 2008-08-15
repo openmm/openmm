@@ -182,6 +182,12 @@ void BrookCalcGBSAOBCForceFieldKernel::executeForces( const Stream& positions, S
    float includeAce                                    = (float) (_brookGbsa->includeAce());
    BrookFloatStreamInternal**  gbsaForceStreams        = _brookGbsa->getForceStreams();
 
+   // calculate Born radii first time thru and initialize on board
+
+   if( _brookGbsa->haveBornRadiiBeenInitialized() ){
+      _brookGbsa->calculateBornRadii( positions );  
+   }
+
    // first major loop
 
    kObcLoop1( (float) _brookGbsa->getNumberOfAtoms(),

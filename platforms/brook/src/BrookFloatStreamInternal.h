@@ -104,10 +104,33 @@ class BrookFloatStreamInternal : public BrookStreamInternal {
 
       void saveToArray( void* array );
 
+      /** 
+       * Fill data w/ input value
+       * 
+       * @param  value to set array to
+       *
+       *
+       */
+
       void fillWithValue( void* value );
 
-      const RealOpenMM* const * getData( ) const;
-      RealOpenMM** getData( void );
+      /** 
+       * Get data array -- no read from board!
+       * 
+       * @return  data array
+       */
+      
+      void* getData( void );
+
+      /** 
+       * Get data array
+       * 
+       * @param readFromBoard if set, read values on board 
+       *
+       * @return  data array
+       */
+      
+      void* getData( int readFromBoard );
 
       /** 
        * Get dangle value

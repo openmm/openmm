@@ -39,18 +39,21 @@ using namespace OpenMM;
  * BrookIntStreamInternal constructor
  * 
  * @param name                      stream name
- * @param size                      stream size
- * @param platform                  platform
+ * @param size                      array size
+ * @param streamWidth               stream width
+ * @param type                      stream type (Integer, Integer2, ...)
+ * @param dangleValue               fill value for tail of stream beyond array size
  *
  */
 
-BrookIntStreamInternal::BrookIntStreamInternal( std::string name, int size, int width, BrookStreamInternal::DataType type,
-                                                int dangleValue ) : BrookStreamInternal( name, size, width, type ){
+BrookIntStreamInternal::BrookIntStreamInternal( std::string name, int size, int streamWidth,
+                                                BrookStreamInternal::DataType type,
+                                                int dangleValue ) : 
+                        BrookStreamInternal( name, size, streamWidth, type ){
 
 // ---------------------------------------------------------------------------------------
 
    static const std::string methodName      = "BrookIntStreamInternal::BrookIntStreamInternal";
-   // static const int debug                   = 1;
 
 // ---------------------------------------------------------------------------------------
 
@@ -59,32 +62,34 @@ BrookIntStreamInternal::BrookIntStreamInternal( std::string name, int size, int 
    switch( type ){
 
       case BrookStreamInternal::Integer:
-          width = 1;
+
+          _width = 1;
           break;
 
       case BrookStreamInternal::Integer2:
-          width = 2;
+
+          _width = 2;
           break;
 
       case BrookStreamInternal::Integer3:
-          width = 3;
+
+          _width = 3;
           break;
 
       case BrookStreamInternal::Integer4:
-          width = 4;
+
+          _width = 4;
           break;
 
       default:
+
          std::stringstream message;
          message << methodName << " type=" << type << " not recognized.";
          throw OpenMMException( message.str() );
    }
 
-   data = new int*[size];
+   _data = new int[size*_width];
 
-   for( int ii = 0; ii < size; ii++ ){
-       data[ii] = new int[width];
-   }
 }
 
 /** 
@@ -93,7 +98,7 @@ BrookIntStreamInternal::BrookIntStreamInternal( std::string name, int size, int 
  */
 
 BrookIntStreamInternal::~BrookIntStreamInternal() {
-   delete[] data;
+   delete[] _data;
 }
 
 /** 
@@ -127,7 +132,6 @@ void BrookIntStreamInternal::loadFromArray( const void* array, BrookStreamIntern
 // ---------------------------------------------------------------------------------------
 
    static const std::string methodName      = "BrookIntStreamInternal::loadFromArray(1)";
-   // static const int debug                   = 1;
 
 // ---------------------------------------------------------------------------------------
 
@@ -138,11 +142,10 @@ void BrookIntStreamInternal::loadFromArray( const void* array, BrookStreamIntern
    }
 
    int* arrayData = (int*) array;
-   int index      = 0;
-   for( int ii = 0; ii < getSize(); ii++ ){
-      for( int jj = 0; jj < getWidth(); jj++ ){
-         data[ii][jj] = arrayData[index++];
-      }
+   int totalSize  = getSize()*getWidth();
+
+   for( int ii = 0; ii < totalSize; ii++ ){
+      _data[ii] = arrayData[ii];
    }
 }
 
@@ -158,16 +161,13 @@ void BrookIntStreamInternal::saveToArray( void* array ){
 // ---------------------------------------------------------------------------------------
 
    // static const std::string methodName      = "BrookIntStreamInternal::saveToArray";
-   // static const int debug                   = 1;
 
 // ---------------------------------------------------------------------------------------
 
    int* arrayData = (int*) array;
-   int index      = 0;
-   for( int ii = 0; ii < getSize(); ii++ ){
-      for( int jj = 0; jj < getWidth(); jj++ ){
-         arrayData[index++] = data[ii][jj];
-      }
+   int totalSize  = getSize()*getWidth();
+   for( int ii = 0; ii < totalSize; ii++ ){
+      arrayData[ii] = _data[ii];
    }
 }
 
@@ -183,15 +183,14 @@ void BrookIntStreamInternal::fillWithValue( void* value ){
 // ---------------------------------------------------------------------------------------
 
    // static const std::string methodName      = "BrookIntStreamInternal::fillWithValue";
-   // static const int debug                   = 1;
 
 // ---------------------------------------------------------------------------------------
 
    int valueData = *((int*) value);
-   for( int ii = 0; ii < getSize(); ii++ ){
-      for (int jj = 0; jj < getWidth(); jj++ ){
-         data[ii][jj] = valueData;
-      }
+   int totalSize  = getSize()*getWidth();
+
+   for( int ii = 0; ii < totalSize; ii++ ){
+         _data[ii] = valueData;
    }
 }
 
@@ -202,18 +201,7 @@ void BrookIntStreamInternal::fillWithValue( void* value ){
  *
  */
 
-const int* const * BrookIntStreamInternal::getData( void ) const {
-   return data;
-}
-
-/** 
- * Get data
- * 
- * @return data ptr
- *
- */
-
-int** BrookIntStreamInternal::getData( void ){
-   return data;
+void* BrookIntStreamInternal::getData( void ){
+   return _data;
 }
 

@@ -45,11 +45,25 @@ class BrookIntStreamInternal : public BrookStreamInternal {
 
 public:
 
-    BrookIntStreamInternal( std::string name, int size, int streamWidth, BrookStreamInternal::DataType type, int dangleValue );
+      /** 
+       * BrookIntStreamInternal constructor
+       * 
+       * @param name                      stream name
+       * @param size                      size of array
+       * @param streamWidth               stream width
+       * @param type                      stream type (float, float2, ...)
+       * @param inputDefaultDangleValue   default dangle value
+       *
+       */
 
-    ~BrookIntStreamInternal( );
+      BrookIntStreamInternal( std::string name, int size, int streamWidth, BrookStreamInternal::DataType type, int dangleValue );
 
-    void loadFromArray( const void* array );
+      /** 
+       * BrookIntStreamInternal destructor
+       * 
+       */
+
+      ~BrookIntStreamInternal( );
 
       /** 
        * Copy the contents of an array into this stream.
@@ -58,19 +72,62 @@ public:
        * and to contain elements of the correct data type for this stream.  If the stream has a compound data type, all
        * the values should be packed into a single array: all the values for the first element, followed by all the values
        * for the next element, etc.
+       *
        */
-    void loadFromArray( const void* array, BrookStreamInternal::DataType baseType );
 
-    void saveToArray( void* array );
-    void fillWithValue( void* value );
-    const int* const * getData( void  ) const;
-    int** getData( void );
+      void loadFromArray( const void* array );
+
+      /** 
+       * Copy the contents of an array into this stream.
+       * 
+       * @param  array a pointer to the start of the array.  The array is assumed to have the same length as this stream,
+       * and to contain elements of the correct data type for this stream.  If the stream has a compound data type, all
+       * the values should be packed into a single array: all the values for the first element, followed by all the values
+       * for the next element, etc.
+       *
+       * @param baseType data type of input array (float, double, int)
+       *
+       */
+
+      void loadFromArray( const void* array, BrookStreamInternal::DataType baseType );
+
+      /** 
+       * Save data to input array
+       * 
+       * @param  array a pointer to the start of the array.  The array is assumed to have the same length as this stream,
+       * and to contain elements of the correct _data type for this stream.  If the stream has a compound _data type, all
+       * the values should be packed into a single array: all the values for the first element, followed by all the values
+       * for the next element, etc.
+       *
+       * @throw exception if baseType not float or double
+       *
+       */
+
+      void saveToArray( void* array );
+
+      /** 
+       * Fill data w/ input value
+       * 
+       * @param  value to set array to
+       *
+       *
+       */
+
+      void fillWithValue( void* value );
+
+      /** 
+       * Get data array
+       * 
+       * @return  data array
+       */
+
+      void* getData( void );
 
 private:
 
     int _dangleValue;
 
-    int** data;
+    int* _data;
 };
 
 } // namespace OpenMM

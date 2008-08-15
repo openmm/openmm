@@ -357,34 +357,29 @@ void BrookFloatStreamInternal::fillWithValue( void* value ){
 
 }
 
-const RealOpenMM* const * BrookFloatStreamInternal::getData() const {
-   return NULL;
-}
+/** 
+ * Get data
+ * 
+ * @param readFromBoard if set, read values on board 
+ *
+ * @return data array
+ *
+ */
 
-// problem w/ const here -- _data is modified (cast away?)
+void* BrookFloatStreamInternal::getData( int readFromBoard ){
 
-/*
-const RealOpenMM* const * BrookFloatStreamInternal::getData() const {
+// ---------------------------------------------------------------------------------------
 
-   // retrieve _data from GPU
+   // static const std::string methodName      = "BrookFloatStreamInternal::getData";
 
-   _aStream.write( _data );
+// ---------------------------------------------------------------------------------------
 
-   // check if RealOpenMM is float; if not, then 
-   // copy into realOpenMMData[][] array
-
-   if( realOpenMMData ){
-      for( int i = 0; i < getSize(); i++ ){
-         for( int j = 0; j < getWidth(); j++ ){
-            realOpenMMData[i][j] = (RealOpenMM) _data[i][j];
-         }
-      }
-      return realOpenMMData;
-   } else {
-      return _data;
+   if( readFromBoard ){
+      _aStream.write( _data );
    }
+
+   return (void*) _data;
 }
-*/
 
 /** 
  * Get data
@@ -393,28 +388,15 @@ const RealOpenMM* const * BrookFloatStreamInternal::getData() const {
  *
  */
 
-RealOpenMM** BrookFloatStreamInternal::getData( void ){
+void* BrookFloatStreamInternal::getData( void ){
 
 // ---------------------------------------------------------------------------------------
 
    // static const std::string methodName      = "BrookFloatStreamInternal::getData";
-   // static const int debug                   = 1;
 
 // ---------------------------------------------------------------------------------------
 
-/*
-   _aStream.write( _data );
-   if( _realOpenMMData ){
-      int totalSize                             = getSize()*getWidth();
-      for( int ii = 0; ii < totalSize; ii++ ){
-         _realOpenMMData[ii] = (RealOpenMM) _data[ii];
-      }
-      return _realOpenMMData;
-   } else {
-      return _data;
-   }
-*/
-   return NULL;
+   return getData( 0 );
 }
 
 /** 

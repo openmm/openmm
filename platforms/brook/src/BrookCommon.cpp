@@ -39,6 +39,33 @@
 using namespace OpenMM;
 using namespace std;
 
+// bonded streams
+    
+const std::string BrookCommon::BondedAtomIndicesStream                            = "BondedAtomIndicesStream";
+const std::string BrookCommon::BondedParametersStream                             = "BondedParametersStream";
+const std::string BrookCommon::UnrolledForceStream                                = "UnrolledForceStream";
+const std::string BrookCommon::BondedChargeStream                                 = "BondedChargeStream";
+const std::string BrookCommon::BondedInverseMapStreams                            = "BondedInverseMapStreams";
+
+// non-bonded streams
+
+const std::string BrookCommon::NonBondedExclusionStream                           = "NonBondedExclusionStream";
+const std::string BrookCommon::OuterVdwStream                                     = "OuterVdwStream";
+const std::string BrookCommon::InnerSigmaStream                                   = "InnerSigmaStream";
+const std::string BrookCommon::InnerEpsilonStream                                 = "InnerEpsilonStream";
+const std::string BrookCommon::NonBondedChargeStream                              = "NonBondedChargeStream";
+const std::string BrookCommon::PartialForceStream                                 = "PartialForceStream";
+
+// OBC Gbsa streams
+
+const std::string BrookCommon::ObcAtomicRadiiStream                               = "ObcAtomicRadiiStream";
+const std::string BrookCommon::ObcScaledAtomicRadiiStream                         = "ObcScaledAtomicRadiiStream";
+const std::string BrookCommon::ObcAtomicRadiiWithDielectricOffsetStream           = "ObcAtomicRadiiWithDielectricOffsetStream";
+const std::string BrookCommon::ObcBornRadiiStream                                 = "ObcBornRadiiStream";
+const std::string BrookCommon::ObcBornRadii2Stream                                = "ObcBornRadii2Stream";
+const std::string BrookCommon::ObcIntermediateForceStream                         = "ObcIntermediateForceStream";
+const std::string BrookCommon::ObcChainStream                                     = "ObcChainStream";
+
 /** 
  * Constructor
  * 

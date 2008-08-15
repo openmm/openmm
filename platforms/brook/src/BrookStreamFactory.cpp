@@ -40,23 +40,6 @@ const std::string BrookStreamFactory::AtomPositions              = "atomPosition
 const std::string BrookStreamFactory::AtomVelocities             = "atomVelocities";
 const std::string BrookStreamFactory::AtomForces                 = "atomForces";
 
-// bonded streams
-                                    
-const std::string BrookStreamFactory::BondedAtomIndicesStream    = "BondedAtomIndicesStream";
-const std::string BrookStreamFactory::BondedParametersStream     = "BondedParametersStream";
-const std::string BrookStreamFactory::UnrolledForceStream        = "UnrolledForceStream";
-const std::string BrookStreamFactory::BondedChargeStream         = "BondedChargeStream";
-const std::string BrookStreamFactory::BondedInverseMapStreams    = "BondedInverseMapStreams";
-
-// non-bonded streams
-
-const std::string BrookStreamFactory::NonBondedExclusionStream   = "NonBondedExclusionStream";
-const std::string BrookStreamFactory::OuterVdwStream             = "OuterVdwStream";
-const std::string BrookStreamFactory::InnerSigmaStream           = "InnerSigmaStream";
-const std::string BrookStreamFactory::InnerEpsilonStream         = "InnerEpsilonStream";
-const std::string BrookStreamFactory::NonBondedChargeStream      = "NonBondedChargeStream";
-const std::string BrookStreamFactory::PartialForceStream         = "PartialForceStream";
-
 const double DefaultDangleValue                                  = 1.0e+38;
 /** 
  * BrookStreamFactory constructor

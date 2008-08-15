@@ -38,6 +38,7 @@
 #include "BrookFloatStreamInternal.h"
 #include "BrookPlatform.h"
 #include "BrookCommon.h"
+#include "../../../platforms/reference/src/gbsa/CpuObc.h"
 
 namespace OpenMM {
 
@@ -53,8 +54,18 @@ class BrookGbsa : public BrookCommon {
       static const int DefaultReturnValue = 0;
       static const int ErrorReturnValue   = -1;
 
+      /** 
+       * Constructor
+       * 
+       */
+      
       BrookGbsa( );
   
+      /** 
+       * Destructor
+       * 
+       */
+      
       ~BrookGbsa();
   
       /**
@@ -145,6 +156,30 @@ class BrookGbsa : public BrookCommon {
       int getPartialForceStreamSize( void ) const; 
 
       /**
+       * Get Gbsa atom stream width
+       *
+       * @return atom stream width
+       */
+
+      int getGbsaAtomStreamWidth( void ) const; 
+
+      /**
+       * Get Gbsa atom stream height
+       *
+       * @return atom stream height
+       */
+
+      int getGbsaAtomStreamHeight( void ) const;
+
+      /**
+       * Get Gbsa atom stream size
+       * 
+       * @return atom stream size
+       */
+
+      int getGbsaAtomStreamSize( void ) const; 
+
+      /**
        * Get solute dielectric
        * 
        * @return solute dielectric
@@ -159,6 +194,14 @@ class BrookGbsa : public BrookCommon {
        */
 
       float getSolventDielectric( void ) const; 
+
+      /**
+       * Get OBC dielectric offset
+       * 
+       * @return dielectric offset
+       */
+
+      float getDielectricOffset( void ) const; 
 
       /** 
        * Get atomic radii
@@ -233,6 +276,15 @@ class BrookGbsa : public BrookCommon {
       BrookFloatStreamInternal** getForceStreams( void );
       
       /** 
+       * Get array of Gbsa streams 
+       *
+       * @return  array ofstreams
+       *
+       */
+      
+      BrookFloatStreamInternal** getStreams( void );
+      
+      /** 
        * Return true if force[index] stream is set 
        *
        * @return  true  if index is valid && force[index] stream is set; else false
@@ -241,22 +293,40 @@ class BrookGbsa : public BrookCommon {
       
       int isForceStreamSet( int index ) const;
       
+      /** 
+       * Return true if Born radii have been initialized
+       *
+       * @return  true  if Born radii have been initialized
+       *
+       */
+      
+      int haveBornRadiiBeenInitialized( void ) const;
+      
+      /** 
+       * Calculate Born radii
+       *
+       * @return  calculate Born radii
+       *
+       */
+      
+      int BrookGbsa::calculateBornRadii( const Stream& positions );
+      
       /* 
        * Setup of Gbsa parameters
        *
-       * @param atomParameters        vector of OBC parameters [atomI][0=index]
-       *                                                       [atomI][1=charge]
-       *                                                       [atomI][2=radius]
+       * @param atomParameters        vector of OBC parameters [atomI][0=charge]
+       *                                                       [atomI][1=radius]
        *                                                       [atomI][2=scaling factor]
        * @param solventDielectric     solvent dielectric
        * @param soluteDielectric      solute dielectric
+       * @param platform              Brook platform
        *
        * @return nonzero value if error
        *
        * */
       
       int setup( const std::vector<std::vector<double> >& atomParameters, 
-                 double solventDielectric, double soluteDielectric );
+                 double solventDielectric, double soluteDielectric, const Platform& platform  );
       
       /* 
        * Get contents of object
@@ -279,7 +349,6 @@ class BrookGbsa : public BrookCommon {
 
       enum { 
               ObcAtomicRadiiStream,
-              ObcRadiiStreamStream,
               ObcScaledAtomicRadiiStream,
               ObcAtomicRadiiWithDielectricOffsetStream,
               ObcBornRadiiStream,
@@ -308,21 +377,31 @@ class BrookGbsa : public BrookCommon {
       int _partialForceStreamHeight;
       int _partialForceStreamSize;
 
-      // Gbsa stream dimensions
+      // Atom stream dimensions
 
-      int _gbsaStreamWidth;
-      int _gbsaStreamHeight;
-      int _gbsaStreamSize;
+      int _gbsaAtomStreamWidth;
+      int _gbsaAtomStreamHeight;
+      int _gbsaAtomStreamSize;
 
       // dielectrics
 
-      double _solventDielectric
-      double _soluteDielectric
+      double _solventDielectric;
+      double _soluteDielectric;
+
+      // dielectric offset
+
+      double _dielectricOffset;
 
       // internal streams
 
       BrookFloatStreamInternal* _gbsaStreams[LastStreamIndex];
       BrookFloatStreamInternal* _gbsaForceStreams[NumberOfForceStreams];
+
+      int _bornRadiiInitialized;
+
+      // CpuObc reference
+
+      CpuObc* _cpuObc;
 
       /* 
        * Setup of stream dimensions
