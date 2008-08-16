@@ -267,7 +267,7 @@ void BrookStreamImpl::fillWithValue( void* value ){
  * 
  * @return data array
  */
-void* BrookStreamImpl::getData( void* value ){
+void* BrookStreamImpl::getData( void ){
    return _brookStreamInternal->getData( );
 }
 

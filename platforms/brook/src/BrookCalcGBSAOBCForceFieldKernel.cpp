@@ -145,7 +145,7 @@ void BrookCalcGBSAOBCForceFieldKernel::initialize( const std::vector<std::vector
    _brookGbsa              = new BrookGbsa();
    _brookGbsa->setLog( log );
     
-   _brookGbsa->setup( atomParameters, solventDielectric, soluteDielectric );
+   _brookGbsa->setup( atomParameters, solventDielectric, soluteDielectric, getPlatform() );
 
    if( log ){
       std::string contents = _brookGbsa->getContentsString( ); 

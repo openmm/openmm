@@ -85,10 +85,7 @@ class BrookIntegrateVerletStepKernel : public IntegrateVerletStepKernel {
 
    protected:
 
-      int _width;
-      int _streamWidth;
-      int _streamHeight;
-      int _streamSize;
+  
   
 };
 
