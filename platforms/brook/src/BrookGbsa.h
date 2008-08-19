@@ -43,8 +43,11 @@
 namespace OpenMM {
 
 /**
- * This kernel is invoked by StandardMMForceField to calculate the forces acting on the system.
+ *
+ * Used by BrookCalcGBSAOBCForceFieldKernel kernel to execute OBC algorithm on GPU
+ *
  */
+
 class BrookGbsa : public BrookCommon {
 
    public:
@@ -309,7 +312,7 @@ class BrookGbsa : public BrookCommon {
        *
        */
       
-      int BrookGbsa::calculateBornRadii( const Stream& positions );
+      int calculateBornRadii( const Stream& positions );
       
       /* 
        * Setup of Gbsa parameters

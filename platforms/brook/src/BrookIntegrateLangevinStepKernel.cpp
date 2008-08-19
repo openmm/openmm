@@ -73,8 +73,8 @@ BrookIntegrateLangevinStepKernel::~BrookIntegrateLangevinStepKernel( ){
 }
 
 void BrookIntegrateLangevinStepKernel::initialize( const vector<double>& masses,
-                                                 const vector<vector<int> >& constraintIndices,
-                                                 const vector<double>& constraintLengths ){
+                                                   const vector<vector<int> >& constraintIndices,
+                                                   const vector<double>& constraintLengths ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -82,6 +82,8 @@ void BrookIntegrateLangevinStepKernel::initialize( const vector<double>& masses,
 
 // ---------------------------------------------------------------------------------------
    
+   _brookkStochasticDynamics = new BrookStochasticDynamics( masses );
+   _brookShakeAlgorithm      = new BrookShakeAlgorithm( masses, constraintIndices, constraintLengths );
 /*
     this->masses = new RealOpenMM[masses.size()];
     for (size_t i = 0; i < masses.size(); ++i)
@@ -131,8 +133,8 @@ void BrookIntegrateLangevinStepKernel::execute( Stream& positions, Stream& veloc
    if( _brookStochasticDynamics == NULL ){
       _brookStochasticDynamics = new BrookStochasticDynamics( getNumberOfAtoms(), static_cast<RealOpenMM>(stepSize), 
                                                               static_cast<RealOpenMM>(tau), static_cast<RealOpenMM>(temperature) );
-   } else {
-      _brookStochasticDynamics->updateParameters( temperature, friction, stepSize );
+   } else if( temperature != _brookStochasticDynamics->getTemperatur() || friction != _brookStochasticDynamics->getFriction() ){
+      _brookStochasticDynamics->updateParameters( temperature, friction );
    } 
    _brookStochasticDynamics->update( positions, velocities, forces );
 
