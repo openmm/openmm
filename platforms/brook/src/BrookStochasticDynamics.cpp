@@ -43,20 +43,26 @@ using namespace OpenMM;
 using namespace std;
 
 /** 
+ *
  * Constructor
  * 
- * @param masses atomic masses
  */
 
-BrookStochasticDynamics::BrookStochasticDynamics( const std::vector<double>& masses, uint32_t randomNumberSeed ){
+BrookStochasticDynamics::BrookStochasticDynamics( ){
 
 // ---------------------------------------------------------------------------------------
 
    static const std::string methodName      = "BrookStochasticDynamics::BrookStochasticDynamics";
-   BrookOpenMMFloat zero                    = (BrookOpenMMFloat) 0.0;
-   BrookOpenMMFloat one                     = (BrookOpenMMFloat) 1.0;
+
+   BrookOpenMMFloat zero                    = (BrookOpenMMFloat)  0.0;
+   BrookOpenMMFloat one                     = (BrookOpenMMFloat)  1.0;
+   BrookOpenMMFloat oneMinus                = (BrookOpenMMFloat) -1.0;
 
 // ---------------------------------------------------------------------------------------
+
+   _numberOfAtoms             = -1;
+
+   // mark stream dimension variables as unset
 
    _sdAtomStreamWidth         = -1;
    _sdAtomStreamHeight        = -1;
@@ -66,22 +72,20 @@ BrookStochasticDynamics::BrookStochasticDynamics( const std::vector<double>& mas
       _sdStreams[ii]   = NULL;
    }
 
-   // setup inverse masses
-
-   _inverseMasses = new std::vector<BrookOpenMMFloat>;
-   for( std::vector<double>::const_interator ii = masses.begin(); ii != masses.end(); ii++ ){
-      if( *ii != 0.0 ){
-         _inverseMasses->push_back( SQRT( one/(*ii) ) );
-      } else {
-         _inverseMasses->push_back( zero );
-      }
+   for( int ii = 0; ii < MaxDerivedParameters; ii++ ){
+      _derivedParameters[ii]   = oneMinus;
    }
 
-   // randomNumberSeed 
+   _temperature = _stepSize = _tau = oneMinus;
 
-   if( randomNumberSeed ){
-      SimTKOpenMMUtilities::setRandomNumberSeed( randomNumberSeed );
-   }
+   // setup inverse sqrt masses
+
+   _inverseSqrtMasses = NULL;
+
+   // set randomNumber seed 
+
+   //_randomNumberSeed = randomNumberSeed ? randomNumberSeed : 1393;
+   //SimTKOpenMMUtilities::setRandomNumberSeed( randomNumberSeed );
 }   
  
 /** 
@@ -101,22 +105,111 @@ BrookStochasticDynamics::~BrookStochasticDynamics( ){
       delete _sdStreams[ii];
    }
 
-   delete _inverseMasses;
+   delete[] _inverseSqrtMasses;
 
 }
 
 /** 
- * Update fixed parameters
+ * Get tau
+ * 
+ * @return  tau
+ *
+ */
+
+BrookOpenMMFloat BrookStochasticDynamics::getTau( void ) const {
+   return _tau;
+}
+
+/** 
+ * Get temperature
+ * 
+ * @return  temperature
+ *
+ */
+
+BrookOpenMMFloat BrookStochasticDynamics::getTemperature( void ) const {
+   return _temperature;
+}
+
+/** 
+ * Get stepSize
+ * 
+ * @return  stepSize
+ *
+ */
+
+BrookOpenMMFloat BrookStochasticDynamics::getStepSize( void ) const {
+   return _stepSize;
+}
+
+/** 
+ * Set tau
+ * 
+ * @param tau   new tau value
+ *
+ * @return      DefaultReturn
+ *
+ */
+
+int BrookStochasticDynamics::_setTau( BrookOpenMMFloat tau ){
+   _tau = tau;
+   return DefaultReturn;
+}
+
+/** 
+ * Set friction = 1/tau
+ * 
+ * @param friction   new friction value
+ *
+ * @return      DefaultReturn
+ *
+ */
+
+int BrookStochasticDynamics::_setFriction( BrookOpenMMFloat friction ){
+   _tau   = (BrookOpenMMFloat) ( (friction != 0.0) ? 1.0/friction : 0.0);
+   return DefaultReturn;
+}
+
+/** 
+ * Set temperature
+ * 
+ * @parameter   temperature
+ *
+ * @return      DefaultReturn
+ *
+ */
+
+int BrookStochasticDynamics::_setTemperature( BrookOpenMMFloat temperature ){
+   _temperature = temperature;
+   return DefaultReturn;
+}
+
+/** 
+ * Set stepSize
+ * 
+ * @param   stepSize
+ *
+ * @return      DefaultReturn
+ *
+ */
+
+int BrookStochasticDynamics::_setStepSize( BrookOpenMMFloat stepSize ){
+   _stepSize = stepSize;
+   return DefaultReturn;
+}
+
+/** 
+ * Update derived parameters
  * 
  * @return  DefaultReturn
  *
  */
 
-int BrookStochasticDynamics::_updateFixedParameters( void ){
+int BrookStochasticDynamics::_updateDerivedParameters( void ){
 
    // ---------------------------------------------------------------------------------------
 
-   // static const char* methodName = "\nBrookStochasticDynamics::updateFixedParameters";
+   // static const char* methodName = "\nBrookStochasticDynamics::_updateDerivedParameters";
 
    static const BrookOpenMMFloat zero       =  0.0;
    static const BrookOpenMMFloat one        =  1.0;
@@ -127,90 +220,68 @@ int BrookStochasticDynamics::_updateFixedParameters( void ){
 
    // ---------------------------------------------------------------------------------------
 
-   setStepSize( stepSize );
-   setFriction( friction );
-   setTemperature( temperature );
+   BrookOpenMMFloat tau         = getTau();
+   BrookOpenMMFloat temperature = getTemperature();
+   BrookOpenMMFloat stepSize    = getStepSize();
 
-   _fixedParameters[GDT]      = getDeltaT()/getTau();
-   _fixedParameters[EPH]      = EXP(  half*_fixedParameters[GDT] );
-   _fixedParameters[EMH]      = EXP( -half*_fixedParameters[GDT] );
-   _fixedParameters[EM]       = EXP(      -_fixedParameters[GDT] );
-   _fixedParameters[EP]       = EXP(       _fixedParameters[GDT] );
+   _derivedParameters[GDT]      = stepSize/tau;
 
-   if( _fixedParameters[GDT] >= (BrookOpenMMFloat) 0.1 ){
+   _derivedParameters[EPH]      = EXP(  half*_derivedParameters[GDT] );
+   _derivedParameters[EMH]      = EXP( -half*_derivedParameters[GDT] );
+   _derivedParameters[EM]       = EXP(      -_derivedParameters[GDT] );
+   _derivedParameters[EP]       = EXP(       _derivedParameters[GDT] );
 
-      BrookOpenMMFloat term1  = _fixedParameters[EPH] - one;
-                 term1       *= term1;
-      _fixedParameters[B]     = _fixedParameters[GDT]*(_fixedParameters[EP] - one) - four*term1;
+   if( _derivedParameters[GDT] >= (BrookOpenMMFloat) 0.1 ){
 
-      _fixedParameters[C]     = _fixedParameters[GDT] - three + four*_fixedParameters[EMH] - _fixedParameters[EM];
-      _fixedParameters[D]     = two - _fixedParameters[EPH] - _fixedParameters[EMH];
+      BrookOpenMMFloat term1    = _derivedParameters[EPH] - one;
+                 term1         *= term1;
+      _derivedParameters[B]     = _derivedParameters[GDT]*(_derivedParameters[EP] - one) - four*term1;
+
+      _derivedParameters[C]     = _derivedParameters[GDT] - three + four*_derivedParameters[EMH] - _derivedParameters[EM];
+      _derivedParameters[D]     = two - _derivedParameters[EPH] - _derivedParameters[EMH];
 
     } else {
 
-      // this has not been debugged
-
-      BrookOpenMMFloat term1        = half*_fixedParameters[GDT];
+      BrookOpenMMFloat term1        = half*_derivedParameters[GDT];
       BrookOpenMMFloat term2        = term1*term1;
       BrookOpenMMFloat term4        = term2*term2;
 
-      BrookOpenMMFloat third        = (RealOpenMM) ( 1.0/3.0 );
-      BrookOpenMMFloat o7_9         = (RealOpenMM) ( 7.0/9.0 );
-      BrookOpenMMFloat o1_12        = (RealOpenMM) ( 1.0/12.0 );
-      BrookOpenMMFloat o17_90       = (RealOpenMM) ( 17.0/90.0 );
-      BrookOpenMMFloat o7_30        = (RealOpenMM) ( 7.0/30.0 );
-      BrookOpenMMFloat o31_1260     = (RealOpenMM) ( 31.0/1260.0 );
-      BrookOpenMMFloat o_360        = (RealOpenMM) ( 1.0/360.0 );
+      BrookOpenMMFloat third        = (BrookOpenMMFloat) ( 1.0/3.0 );
+      BrookOpenMMFloat o7_9         = (BrookOpenMMFloat) ( 7.0/9.0 );
+      BrookOpenMMFloat o1_12        = (BrookOpenMMFloat) ( 1.0/12.0 );
+      BrookOpenMMFloat o17_90       = (BrookOpenMMFloat) ( 17.0/90.0 );
+      BrookOpenMMFloat o7_30        = (BrookOpenMMFloat) ( 7.0/30.0 );
+      BrookOpenMMFloat o31_1260     = (BrookOpenMMFloat) ( 31.0/1260.0 );
+      BrookOpenMMFloat o_360        = (BrookOpenMMFloat) ( 1.0/360.0 );
 
-      _fixedParameters[B]     = term4*( third  + term1*( third + term1*( o17_90 + term1*o7_9 )));
-      _fixedParameters[C]     = term2*term1*( two*third + term1*( -half + term1*( o7_30 + term1*(-o1_12 + term1*o31_1260 ))));
-      _fixedParameters[D]     = term2*( -one + term2*(-o1_12 - term2*o_360));
+      _derivedParameters[B]         = term4*( third  + term1*( third + term1*( o17_90 + term1*o7_9 )));
+      _derivedParameters[C]         = term2*term1*( two*third + term1*( -half + term1*( o7_30 + term1*(-o1_12 + term1*o31_1260 ))));
+      _derivedParameters[D]         = term2*( -one + term2*(-o1_12 - term2*o_360));
    }    
 
-   RealOpenMM kT        = ((RealOpenMM) BOLTZ)*getTemperature();
+   BrookOpenMMFloat kT        = ((BrookOpenMMFloat) BOLTZ)*temperature;
 
-   _fixedParameters[V]  = SQRT( kT*( one - _fixedParameters[EM]) );
-   _fixedParameters[X]  = getTau()*SQRT( kT*_fixedParameters[C] );
-   _fixedParameters[Yv] = SQRT( kT*_fixedParameters[B]/_fixedParameters[C] );
-   _fixedParameters[Yx] = getTau()*SQRT( kT*_fixedParameters[B]/(one - _fixedParameters[EM]) );
+   _derivedParameters[V]      = SQRT( kT*( one - _derivedParameters[EM]) );
+   _derivedParameters[X]      = tau*SQRT( kT*_derivedParameters[C] );
+   _derivedParameters[Yv]     = SQRT( kT*_derivedParameters[B]/_derivedParameters[C] );
+   _derivedParameters[Yx]     = tau*SQRT( kT*_derivedParameters[B]/(one - _derivedParameters[EM]) );
 
-   return DefaultReturn;
-
-};
-
-
-/** 
- * Update fixed parameters
- * 
- * @return  DefaultReturn
- *
- */
-
-int BrookStochasticDynamics::_updateSdStreams( void ){
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nBrookStochasticDynamics::updateFixedParameters";
-
-   static const BrookOpenMMFloat zero       =  0.0;
-   static const BrookOpenMMFloat one        =  1.0;
-   static const BrookOpenMMFloat two        =  2.0;
-   static const BrookOpenMMFloat three      =  3.0;
-   static const BrookOpenMMFloat four       =  4.0;
-   static const BrookOpenMMFloat half       =  0.5;
-
-   // ---------------------------------------------------------------------------------------
-
-   
+   _derivedParameters[Sd1pc1] = tau*( one - _derivedParameters[EM] );
+   _derivedParameters[Sd1pc2] = tau*( _derivedParameters[EPH] - _derivedParameters[EMH] );
+   _derivedParameters[Sd1pc3] = _derivedParameters[D]/(tau*_derivedParameters[C] );
+   _derivedParameters[Sd2pc1] = one/_derivedParameters[Sd1pc2];
+   _derivedParameters[Sd2pc2] = tau*_derivedParameters[D]/( _derivedParameters[EM] - one );
+       
    return DefaultReturn;
 
 };
 
 /** 
- * Update parameters
+ * Update parameters -- only way parameters can be set
  * 
  * @param  temperature     temperature
  * @param  friction        friction
+ * @param  step size       step size
  *
  * @return   solute dielectric
  *
@@ -224,11 +295,11 @@ int BrookStochasticDynamics::updateParameters( double temperature, double fricti
 
    // ---------------------------------------------------------------------------------------
 
-   setStepSize( stepSize );
-   setFriction( friction );
-   setTemperature( temperature );
+   _setStepSize( stepSize );
+   _setFriction( friction );
+   _setTemperature( temperature );
 
-   _updateFixedParameters( );
+   _updateDerivedParameters( );
    _updateSdStreams( );
 
    return DefaultReturn;
@@ -237,40 +308,21 @@ int BrookStochasticDynamics::updateParameters( double temperature, double fricti
 
 /**---------------------------------------------------------------------------------------
 
-   Get tau
-
-   @return tau
-
-   --------------------------------------------------------------------------------------- */
-
-RealOpenMM BrookStochasticDynamics::getTau( void ) const {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName  = "\nBrookStochasticDynamics::getTau";
-
-   // ---------------------------------------------------------------------------------------
-
-   return _tau;
-}
-
-/**---------------------------------------------------------------------------------------
-
-   Get array of fixed parameters indexed by 'FixedParameters' enums
+   Get array of derived parameters indexed by 'DerivedParameters' enums
 
    @return array
 
    --------------------------------------------------------------------------------------- */
    
-const RealOpenMM* BrookStochasticDynamics::getFixedParameters( void ) const {
+const BrookOpenMMFloat* BrookStochasticDynamics::getDerivedParameters( void ) const {
 
    // ---------------------------------------------------------------------------------------
 
-   // static const char* methodName  = "\nBrookStochasticDynamics::getFixedParameters";
+   // static const char* methodName  = "\nBrookStochasticDynamics::getDerivedParameters";
 
    // ---------------------------------------------------------------------------------------
 
-   return _fixedParameters;
+   return _derivedParameters;
 }
 
 /** 
@@ -359,11 +411,11 @@ BrookFloatStreamInternal* BrookStochasticDynamics::getSD1V( void ) const {
  *
  */
 
-int BrookStochasticDynamics::initializeStreamSizes( int numberOfAtoms, const Platform& platform ){
+int BrookStochasticDynamics::_initializeStreamSizes( int numberOfAtoms, const Platform& platform ){
 
 // ---------------------------------------------------------------------------------------
 
-   static const std::string methodName      = "BrookStochasticDynamics::initializeStreamSizes";
+   //static const std::string methodName      = "BrookStochasticDynamics::_initializeStreamSizes";
 
 // ---------------------------------------------------------------------------------------
 
@@ -375,6 +427,104 @@ int BrookStochasticDynamics::initializeStreamSizes( int numberOfAtoms, const Pla
 }
 
 /** 
+ * Initialize stream dimensions
+ * 
+ * @param numberOfAtoms             number of atoms
+ * @param platform                  platform
+ *
+ * @return ErrorReturnValue if error, else DefaultReturnValue
+ *
+ */
+
+std::string BrookStochasticDynamics::_getDerivedParametersString( BrookStochasticDynamics::DerivedParameters  derivedParametersIndex ) const {
+
+// ---------------------------------------------------------------------------------------
+
+   //static const std::string methodName      = "BrookStochasticDynamics::_getDerivedParametersString";
+
+// ---------------------------------------------------------------------------------------
+
+   std::string returnString;
+ 
+   switch( derivedParametersIndex ){
+ 
+      case GDT:
+         returnString = "GDT";
+         break;
+ 
+      case EPH:
+         returnString = "EPH";
+         break;
+ 
+      case EMH:
+         returnString = "EMH";
+         break;
+ 
+      case EP:
+         returnString = "EP";
+         break;
+ 
+      case EM:
+         returnString = "EM";
+         break;
+ 
+      case B:
+         returnString = "B";
+         break;
+ 
+      case C:
+         returnString = "C";
+         break;
+ 
+      case D:
+         returnString = "D";
+         break;
+ 
+      case V:
+         returnString = "V";
+         break;
+ 
+      case X:
+         returnString = "X";
+         break;
+ 
+      case Yv:
+         returnString = "Yv";
+         break;
+ 
+      case Yx:
+         returnString = "Yx";
+         break;
+ 
+      case Sd1pc1:
+         returnString = "Sd1pc1";
+         break;
+ 
+      case Sd1pc2:
+         returnString = "Sd1pc2";
+         break;
+ 
+      case Sd1pc3:
+         returnString = "Sd1pc3";
+         break;
+ 
+      case Sd2pc1:
+         returnString = "Sd2pc1";
+         break;
+ 
+      case Sd2pc2:
+         returnString = "Sd2pc2";
+         break;
+ 
+      default:
+         returnString = "Unknown";
+         break;
+    }
+ 
+    return returnString;
+}
+
+/** 
  * Initialize streams
  * 
  * @param platform                  platform
@@ -383,33 +533,32 @@ int BrookStochasticDynamics::initializeStreamSizes( int numberOfAtoms, const Pla
  *
  */
 
-int BrookStochasticDynamics::initializeStreams( const Platform& platform ){
+int BrookStochasticDynamics::_initializeStreams( const Platform& platform ){
 
 // ---------------------------------------------------------------------------------------
 
-   static const std::string methodName      = "BrookStochasticDynamics::initializeStreams";
-   static const double dangleValue          = 0.0;
+   //static const std::string methodName      = "BrookStochasticDynamics::_initializeStreams";
 
 // ---------------------------------------------------------------------------------------
 
-   int sdAtomStreamSize   = getStochasticDynamicsAtomStreamSize();
-   int sdAtomStreamWidth  = getStochasticDynamicsAtomStreamWidth();
+   int sdAtomStreamSize             = getStochasticDynamicsAtomStreamSize();
+   int sdAtomStreamWidth            = getStochasticDynamicsAtomStreamWidth();
 
-    _sdStreams[SDPC1Stream]                                   = new BrookFloatStreamInternal( BrookCommon::SDPC1Stream,
-                                                                                              sdAtomStreamSize, sdAtomStreamWidth,
-                                                                                              BrookStreamInternal::Float2, dangleValue );
+    _sdStreams[SDPC1Stream]         = new BrookFloatStreamInternal( BrookCommon::SDPC1Stream,
+                                                                    sdAtomStreamSize, sdAtomStreamWidth,
+                                                                    BrookStreamInternal::Float2, dangleValue );
 
-    _sdStreams[SDPC2Stream]                                   = new BrookFloatStreamInternal( BrookCommon::SDPC2Stream,
-                                                                                              sdAtomStreamSize, sdAtomStreamWidth,
-                                                                                              BrookStreamInternal::Float2, dangleValue );
+    _sdStreams[SDPC2Stream]         = new BrookFloatStreamInternal( BrookCommon::SDPC2Stream,
+                                                                    sdAtomStreamSize, sdAtomStreamWidth,
+                                                                    BrookStreamInternal::Float2, dangleValue );
 
-    _sdStreams[SD2XStream]                                    = new BrookFloatStreamInternal( BrookCommon::SD2XStream,
-                                                                                              sdAtomStreamSize, sdAtomStreamWidth,
-                                                                                              BrookStreamInternal::Float3, dangleValue );
+    _sdStreams[SD2XStream]          = new BrookFloatStreamInternal( BrookCommon::SD2XStream,
+                                                                    sdAtomStreamSize, sdAtomStreamWidth,
+                                                                    BrookStreamInternal::Float3, dangleValue );
 
-    _sdStreams[ObcBornRadiiStream]                            = new BrookFloatStreamInternal( BrookCommon::SD1VStream,
-                                                                                              sdAtomStreamSize, sdAtomStreamWidth,
-                                                                                              BrookStreamInternal::Float3, dangleValue );
+    _sdStreams[SD1VStream]          = new BrookFloatStreamInternal( BrookCommon::SD1VStream,
+                                                                    sdAtomStreamSize, sdAtomStreamWidth,
+                                                                    BrookStreamInternal::Float3, dangleValue );
 
    return DefaultReturnValue;
 }
@@ -425,8 +574,7 @@ int BrookStochasticDynamics::_updateSdStreams( void ){
 
 // ---------------------------------------------------------------------------------------
 
-   static const std::string methodName      = "BrookStochasticDynamics::updateSdStreams";
-   static const double dangleValue          = 0.0;
+   static const std::string methodName      = "BrookStochasticDynamics::_updateSdStreams";
 
 // ---------------------------------------------------------------------------------------
 
@@ -438,16 +586,16 @@ int BrookStochasticDynamics::_updateSdStreams( void ){
       memset( sdpc[ii], 0, 2*sdAtomStreamSize*sizeof( BrookOpenMMFloat ) ); 
    }
 
-   const RealOpenMM* fixedParameters = getFixedParameters( );
-   int numberOfAtoms                 = getNumberOfAtoms();
-   int index                         = 0;
+   const BrookOpenMMFloat* derivedParameters = getDerivedParameters( );
+   int numberOfAtoms                   = getNumberOfAtoms();
+   int index                           = 0;
    for( int ii = 0; ii < numberOfAtoms; ii++ ){
 
-      sdpc[0][index]      = _inverseMasses[ii]*( static_cast<BrookOpenMMFloat> (fixedParameters[Yv]) );
-      sdpc[0][index+1]    = _inverseMasses[ii]*( static_cast<BrookOpenMMFloat> (fixedParameters[V])  );
+      sdpc[0][index]      = _inverseSqrtMasses[ii]*( static_cast<BrookOpenMMFloat> (derivedParameters[Yv]) );
+      sdpc[0][index+1]    = _inverseSqrtMasses[ii]*( static_cast<BrookOpenMMFloat> (derivedParameters[V])  );
 
-      sdpc[1][index]      = _inverseMasses[ii]*( static_cast<BrookOpenMMFloat> (fixedParameters[Yx]) );
-      sdpc[1][index+1]    = _inverseMasses[ii]*( static_cast<BrookOpenMMFloat> (fixedParameters[X])  );
+      sdpc[1][index]      = _inverseSqrtMasses[ii]*( static_cast<BrookOpenMMFloat> (derivedParameters[Yx]) );
+      sdpc[1][index+1]    = _inverseSqrtMasses[ii]*( static_cast<BrookOpenMMFloat> (derivedParameters[X])  );
 
       index              += 2;
    }
@@ -467,9 +615,9 @@ int BrookStochasticDynamics::_updateSdStreams( void ){
    memset( sd2x, 0, 3*sdAtomStreamSize*sizeof( BrookOpenMMFloat ) ); 
 
    for( int ii = 0; ii < numberOfAtoms; ii++ ){
-      sd2x[index]        = _inverseMasses[ii]*fixedParameters[X]*( static_cast<BrookOpenMMFloat> (SimTKOpenMMUtilities::getNormallyDistributedRandomNumber()) );
-      sd2x[index+1]      = _inverseMasses[ii]*fixedParameters[X]*( static_cast<BrookOpenMMFloat> (SimTKOpenMMUtilities::getNormallyDistributedRandomNumber()) );
-      sd2x[index+2]      = _inverseMasses[ii]*fixedParameters[X]*( static_cast<BrookOpenMMFloat> (SimTKOpenMMUtilities::getNormallyDistributedRandomNumber()) );
+      sd2x[index]        = _inverseSqrtMasses[ii]*derivedParameters[X]*( static_cast<BrookOpenMMFloat> (SimTKOpenMMUtilities::getNormallyDistributedRandomNumber()) );
+      sd2x[index+1]      = _inverseSqrtMasses[ii]*derivedParameters[X]*( static_cast<BrookOpenMMFloat> (SimTKOpenMMUtilities::getNormallyDistributedRandomNumber()) );
+      sd2x[index+2]      = _inverseSqrtMasses[ii]*derivedParameters[X]*( static_cast<BrookOpenMMFloat> (SimTKOpenMMUtilities::getNormallyDistributedRandomNumber()) );
    }
    
    _sdStreams[SD2XStream]->loadFromArray( sd2x );
@@ -480,118 +628,58 @@ int BrookStochasticDynamics::_updateSdStreams( void ){
 
 }
 
+/** 
+ * Set masses 
+ * 
+ * @param masses             atomic masses
+ *
+ */
+
+int BrookStochasticDynamics::_setInverseSqrtMasses( const std::vector<double>& masses ){
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName      = "BrookStochasticDynamics::_setInverseSqrtMasses";
+
+// ---------------------------------------------------------------------------------------
+
+   // setup inverse sqrt masses
+
+   _inverseSqrtMasses = new BrookOpenMMFloat[masses.size()];
+   int index          = 0;
+   for( std::vector<double>::const_interator ii = masses.begin(); ii != masses.end(); ii++, index++ ){
+      if( *ii != 0.0 ){
+         _inverseSqrtMasses[index] = ( SQRT( one/(*ii) ) );
+      } else {
+         _inverseSqrtMasses[index] = zero;
+      }
+   }
+
+   return DefaultReturnValue;
+}   
+ 
 /*  
  * Setup of StochasticDynamics parameters
  *
- * @param atomParameters        vector of OBC parameters [atomI][0=charge]
- *                                                       [atomI][1=radius]
- *                                                       [atomI][2=scaling factor]
- * @param solventDielectric     solvent dielectric
- * @param soluteDielectric      solute dielectric
+ * @param masses                masses
  * @param platform              Brook platform
  *
  * @return nonzero value if error
  *
  * */
     
-int BrookStochasticDynamics::setup( const std::vector<std::vector<double> >& vectorOfAtomParameters, 
-                      double solventDielectric, double soluteDielectric, const Platform& platform ){
+int BrookStochasticDynamics::setup( const std::vector<<double> >& masses, const Platform& platform ){
     
 // ---------------------------------------------------------------------------------------
 
-   static const int atomParametersSize      = 4; 
-   static const int maxErrors               = 20; 
    static const std::string methodName      = "BrookStochasticDynamics::setup";
 
 // ---------------------------------------------------------------------------------------
 
-   int numberOfAtoms  = (int) vectorOfAtomParameters.size();
+   int numberOfAtoms  = (int) masses.size();
    setNumberOfAtoms( numberOfAtoms );
 
-   _solventDielectric = solventDielectric;
-   _soluteDielectric  = soluteDielectric;
-
-   // initialize stream sizes and then Brook streams
-
-   initializeStreamSizes( numberOfAtoms, platform );
-   initializeStreams( platform );
-
-   BrookOpenMMFloat* radiiAndCharge         = new BrookOpenMMFloat[getNumberOfAtoms()*2];
-   BrookOpenMMFloat* scaledRadiiAndOffset   = new BrookOpenMMFloat[getNumberOfAtoms()*2];
-
-   // used by CpuObc to calculate initial Born radii
-
-   vector<RealOpenMM> atomicRadii(numberOfAtoms);
-   vector<RealOpenMM> scaleFactors(numberOfAtoms);
-
-   float dielectricOffset                  = getDielectricOffset();
-
-   // loop over atom parameters
-   // track any errors and then throw exception
-   //    check parameter vector is right size
-   // set parameter entries or board and arrays used by CpuObc
-
-   int vectorIndex  = 0;
-   int errors       = 0;
-   std::stringstream message;
-
-   typedef std::vector< std::vector<double> > VectorOfDoubleVectors;
-   typedef VectorOfDoubleVectors::const_iterator VectorOfDoubleVectorsCI;
-
-   for( VectorOfDoubleVectorsCI ii = vectorOfAtomParameters.begin(); ii != vectorOfAtomParameters.end(); ii++ ){
-
-      std::vector<double> atomParameters = *ii;
-
-      if( atomParameters.size() != atomParametersSize && errors < maxErrors ){
-         message << methodName << " parameter size=" << atomParameters.size() << " for parameter vector index=" << vectorIndex << " is less than expected.\n";
-         errors++;
-      } else {
-
-         double charge                            = atomParameters[0];     
-         double radius                            = atomParameters[1];     
-         double scalingFactor                     = atomParameters[2];     
-
-         int streamIndex                          = 2*vectorIndex;
-
-         atomicRadii[vectorIndex]                 = static_cast<RealOpenMM> (radius);
-         scaleFactors[vectorIndex]                = static_cast<RealOpenMM> (scalingFactor);
-
-         radiiAndCharge[streamIndex]              = static_cast<BrookOpenMMFloat> (radius);
-         radiiAndCharge[streamIndex+1]            = static_cast<BrookOpenMMFloat> (charge);
-
-         scaledRadiiAndOffset[streamIndex]        = static_cast<BrookOpenMMFloat> (radius*scalingFactor);
-         scaledRadiiAndOffset[streamIndex+1]      = static_cast<BrookOpenMMFloat> (radius - dielectricOffset);
-
-      }
-
-      vectorIndex++;
-   }
-
-   // throw exception if errors detected
-
-   if( errors ){
-      throw OpenMMException( message.str() );
-   }
-
-   // load streams
-
-   _sdStreams[ObcAtomicRadiiStream]->loadFromArray( radiiAndCharge );
-   _sdStreams[ObcScaledAtomicRadiiStream]->loadFromArray( scaledRadiiAndOffset );
-
-   delete[] radiiAndCharge;
-   delete[] scaledRadiiAndOffset;
-
-   // setup for Born radii
-
-   ObcParameters* obcParameters  = new ObcParameters( numberOfAtoms, ObcParameters::ObcTypeII );
-   obcParameters->setAtomicRadii( atomicRadii, SimTKOpenMMCommon::MdUnits);
-
-   obcParameters->setScaledRadiusFactors( scaleFactors );
-   obcParameters->setSolventDielectric( static_cast<RealOpenMM>(solventDielectric) );
-   obcParameters->setSoluteDielectric(  static_cast<RealOpenMM>(soluteDielectric)  );
-
-   _cpuObc  = new CpuObc(obcParameters);
-   _cpuObc->setIncludeAceApproximation( true );
+   _setInverseSqrtMasses( masses );
 
    return DefaultReturnValue;
 }

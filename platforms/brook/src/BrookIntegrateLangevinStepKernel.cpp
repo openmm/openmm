@@ -83,6 +83,8 @@ void BrookIntegrateLangevinStepKernel::initialize( const vector<double>& masses,
 // ---------------------------------------------------------------------------------------
    
    _brookkStochasticDynamics = new BrookStochasticDynamics( masses );
+   _brookkStochasticDynamics->setup( masses, getPlatform() );
+
    _brookShakeAlgorithm      = new BrookShakeAlgorithm( masses, constraintIndices, constraintLengths );
 /*
     this->masses = new RealOpenMM[masses.size()];

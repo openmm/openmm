@@ -49,12 +49,21 @@ class BrookBonded : public BrookCommon {
 
    public:
   
-      static const int DefaultReturnValue = 0;
-      static const int ErrorReturnValue   = -1; 
-
+      /** 
+       *
+       * BrookBonded constructor
+       * 
+       */
+      
       BrookBonded( );
   
-      ~BrookBonded();
+      /** 
+       *
+       * BrookBonded desstructor
+       * 
+       */
+      
+      ~BrookBonded( );
   
       /**
        * Initialize the kernel, setting up the values of all the force field parameters.

@@ -45,6 +45,7 @@ using namespace std;
 #define PARAMS(X,Y,Z) (params[(Y)][4*(X) + Z])
 
 /** 
+ *
  * BrookBonded constructor
  * 
  */

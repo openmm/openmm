@@ -66,6 +66,13 @@ const std::string BrookCommon::ObcBornRadii2Stream                              
 const std::string BrookCommon::ObcIntermediateForceStream                         = "ObcIntermediateForceStream";
 const std::string BrookCommon::ObcChainStream                                     = "ObcChainStream";
 
+// StochasticDynamics streams
+
+const std::string BrookCommon::SDPC1Stream                                        = "SDPC1Stream";
+const std::string BrookCommon::SDPC2Stream                                        = "SDPC2Stream";
+const std::string BrookCommon::SD2XStream                                         = "SD2XStream";
+const std::string BrookCommon::SD1VStream                                         = "SD1VStream";
+
 /** 
  * Constructor
  * 

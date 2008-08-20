@@ -52,11 +52,6 @@ class BrookGbsa : public BrookCommon {
 
    public:
   
-      // return values
-
-      static const int DefaultReturnValue = 0;
-      static const int ErrorReturnValue   = -1;
-
       /** 
        * Constructor
        * 
