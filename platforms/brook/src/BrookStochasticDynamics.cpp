@@ -52,7 +52,7 @@ BrookStochasticDynamics::BrookStochasticDynamics( ){
 
 // ---------------------------------------------------------------------------------------
 
-   static const std::string methodName      = "BrookStochasticDynamics::BrookStochasticDynamics";
+   //static const std::string methodName      = "BrookStochasticDynamics::BrookStochasticDynamics";
 
    BrookOpenMMFloat zero                    = (BrookOpenMMFloat)  0.0;
    BrookOpenMMFloat one                     = (BrookOpenMMFloat)  1.0;
@@ -76,13 +76,17 @@ BrookStochasticDynamics::BrookStochasticDynamics( ){
       _derivedParameters[ii]   = oneMinus;
    }
 
-   _temperature = _stepSize = _tau = oneMinus;
+   _temperature = oneMinus;
+   _stepSize    = oneMinus;
+   _tau         = oneMinus;
 
    // setup inverse sqrt masses
 
    _inverseSqrtMasses = NULL;
 
    // set randomNumber seed 
+
+   _randomNumberSeed  = 1393;
 
    //_randomNumberSeed = randomNumberSeed ? randomNumberSeed : 1393;
    //SimTKOpenMMUtilities::setRandomNumberSeed( randomNumberSeed );
@@ -121,6 +125,19 @@ BrookOpenMMFloat BrookStochasticDynamics::getTau( void ) const {
 }
 
 /** 
+ * Get friction
+ * 
+ * @return  friction
+ *
+ */
+
+BrookOpenMMFloat BrookStochasticDynamics::getFriction( void ) const {
+   static const BrookOpenMMFloat zero = (BrookOpenMMFloat) 0.0; 
+   static const BrookOpenMMFloat one  = (BrookOpenMMFloat) 1.0; 
+   return ( (_tau == zero) ? zero : (one/_tau) );
+}
+
+/** 
  * Get temperature
  * 
  * @return  temperature
@@ -147,13 +164,13 @@ BrookOpenMMFloat BrookStochasticDynamics::getStepSize( void ) const {
  * 
  * @param tau   new tau value
  *
- * @return      DefaultReturn
+ * @return      DefaultReturnValue
  *
  */
 
 int BrookStochasticDynamics::_setTau( BrookOpenMMFloat tau ){
    _tau = tau;
-   return DefaultReturn;
+   return DefaultReturnValue;
 }
 
 /** 
@@ -161,13 +178,13 @@ int BrookStochasticDynamics::_setTau( BrookOpenMMFloat tau ){
  * 
  * @param friction   new friction value
  *
- * @return      DefaultReturn
+ * @return      DefaultReturnValue
  *
  */
 
 int BrookStochasticDynamics::_setFriction( BrookOpenMMFloat friction ){
    _tau   = (BrookOpenMMFloat) ( (friction != 0.0) ? 1.0/friction : 0.0);
-   return DefaultReturn;
+   return DefaultReturnValue;
 }
 
 /** 
@@ -175,13 +192,13 @@ int BrookStochasticDynamics::_setFriction( BrookOpenMMFloat friction ){
  * 
  * @parameter   temperature
  *
- * @return      DefaultReturn
+ * @return      DefaultReturnValue
  *
  */
 
 int BrookStochasticDynamics::_setTemperature( BrookOpenMMFloat temperature ){
    _temperature = temperature;
-   return DefaultReturn;
+   return DefaultReturnValue;
 }
 
 /** 
@@ -189,19 +206,19 @@ int BrookStochasticDynamics::_setTemperature( BrookOpenMMFloat temperature ){
  * 
  * @param   stepSize
  *
- * @return      DefaultReturn
+ * @return      DefaultReturnValue
  *
  */
 
 int BrookStochasticDynamics::_setStepSize( BrookOpenMMFloat stepSize ){
    _stepSize = stepSize;
-   return DefaultReturn;
+   return DefaultReturnValue;
 }
 
 /** 
  * Update derived parameters
  * 
- * @return  DefaultReturn
+ * @return  DefaultReturnValue
  *
  */
 
@@ -272,7 +289,7 @@ int BrookStochasticDynamics::_updateDerivedParameters( void ){
    _derivedParameters[Sd2pc1] = one/_derivedParameters[Sd1pc2];
    _derivedParameters[Sd2pc2] = tau*_derivedParameters[D]/( _derivedParameters[EM] - one );
        
-   return DefaultReturn;
+   return DefaultReturnValue;
 
 };
 
@@ -295,24 +312,51 @@ int BrookStochasticDynamics::updateParameters( double temperature, double fricti
 
    // ---------------------------------------------------------------------------------------
 
-   _setStepSize( stepSize );
-   _setFriction( friction );
-   _setTemperature( temperature );
+   _setStepSize(    (BrookOpenMMFloat)  stepSize );
+   _setFriction(    (BrookOpenMMFloat)  friction );
+   _setTemperature( (BrookOpenMMFloat)  temperature );
 
    _updateDerivedParameters( );
    _updateSdStreams( );
 
-   return DefaultReturn;
+   return DefaultReturnValue;
 
 };
 
-/**---------------------------------------------------------------------------------------
+/** 
+ * Update
+ * 
+ * @param  positions           atom positions
+ * @param  velocities          atom velocities
+ * @param  forces              atom forces
+ * @param  brookShakeAlgorithm BrookShakeAlgorithm reference
+ *
+ * @return  DefaultReturnValue
+ *
+ */
 
-   Get array of derived parameters indexed by 'DerivedParameters' enums
+int BrookStochasticDynamics::update( Stream& positions, Stream& velocities,
+                                     const Stream& forces,
+                                     BrookShakeAlgorithm& brookShakeAlgorithm ){
 
-   @return array
+   // ---------------------------------------------------------------------------------------
 
-   --------------------------------------------------------------------------------------- */
+   // static const char* methodName = "\nBrookStochasticDynamics::update";
+
+   // ---------------------------------------------------------------------------------------
+
+
+   return DefaultReturnValue;
+
+};
+
+/**
+ *
+ * Get array of derived parameters indexed by 'DerivedParameters' enums
+ *
+ * @return array
+ *
+ */
    
 const BrookOpenMMFloat* BrookStochasticDynamics::getDerivedParameters( void ) const {
 
@@ -364,7 +408,7 @@ int BrookStochasticDynamics::getStochasticDynamicsAtomStreamHeight( void ) const
  *
  */
 
-BrookFloatStreamInternal* BrookStochasticDynamics::getSDPC1( void ) const {
+BrookFloatStreamInternal* BrookStochasticDynamics::getSDPC1Stream( void ) const {
    return _sdStreams[SDPC1Stream];
 }
 
@@ -375,7 +419,7 @@ BrookFloatStreamInternal* BrookStochasticDynamics::getSDPC1( void ) const {
  *
  */
 
-BrookFloatStreamInternal* BrookStochasticDynamics::getSDPC2( void ) const {
+BrookFloatStreamInternal* BrookStochasticDynamics::getSDPC2Stream( void ) const {
    return _sdStreams[SDPC2Stream];
 }
 
@@ -386,7 +430,7 @@ BrookFloatStreamInternal* BrookStochasticDynamics::getSDPC2( void ) const {
  *
  */
 
-BrookFloatStreamInternal* BrookStochasticDynamics::getSD2X( void ) const {
+BrookFloatStreamInternal* BrookStochasticDynamics::getSD2XStream( void ) const {
    return _sdStreams[SD2XStream];
 }
 
@@ -397,7 +441,7 @@ BrookFloatStreamInternal* BrookStochasticDynamics::getSD2X( void ) const {
  *
  */
 
-BrookFloatStreamInternal* BrookStochasticDynamics::getSD1V( void ) const {
+BrookFloatStreamInternal* BrookStochasticDynamics::getSD1VStream( void ) const {
    return _sdStreams[SD1VStream];
 }
 
@@ -406,7 +450,7 @@ BrookFloatStreamInternal* BrookStochasticDynamics::getSD1V( void ) const {
  * 
  * @param numberOfAtoms             number of atoms
  * @param platform                  platform
- *
+ *      
  * @return ErrorReturnValue if error, else DefaultReturnValue
  *
  */
@@ -436,7 +480,8 @@ int BrookStochasticDynamics::_initializeStreamSizes( int numberOfAtoms, const Pl
  *
  */
 
-std::string BrookStochasticDynamics::_getDerivedParametersString( BrookStochasticDynamics::DerivedParameters  derivedParametersIndex ) const {
+//std::string BrookStochasticDynamics::_getDerivedParametersString( BrookStochasticDynamics::DerivedParameters  derivedParametersIndex ) const {
+std::string BrookStochasticDynamics::_getDerivedParametersString( int derivedParametersIndex ) const {
 
 // ---------------------------------------------------------------------------------------
 
@@ -539,6 +584,8 @@ int BrookStochasticDynamics::_initializeStreams( const Platform& platform ){
 
    //static const std::string methodName      = "BrookStochasticDynamics::_initializeStreams";
 
+   BrookOpenMMFloat dangleValue            = (BrookOpenMMFloat) 0.0;
+
 // ---------------------------------------------------------------------------------------
 
    int sdAtomStreamSize             = getStochasticDynamicsAtomStreamSize();
@@ -574,22 +621,22 @@ int BrookStochasticDynamics::_updateSdStreams( void ){
 
 // ---------------------------------------------------------------------------------------
 
-   static const std::string methodName      = "BrookStochasticDynamics::_updateSdStreams";
+   static const std::string methodName       = "BrookStochasticDynamics::_updateSdStreams";
 
 // ---------------------------------------------------------------------------------------
 
-   int sdAtomStreamSize          = getStochasticDynamicsAtomStreamSize();
+   int sdAtomStreamSize                      = getStochasticDynamicsAtomStreamSize();
 
-   BrookOpenMMFloat sdpc[2];
+   BrookOpenMMFloat* sdpc[2];
    for( int ii = 0; ii < 2; ii++ ){
       sdpc[ii] = new BrookOpenMMFloat[2*sdAtomStreamSize];
       memset( sdpc[ii], 0, 2*sdAtomStreamSize*sizeof( BrookOpenMMFloat ) ); 
    }
 
    const BrookOpenMMFloat* derivedParameters = getDerivedParameters( );
-   int numberOfAtoms                   = getNumberOfAtoms();
-   int index                           = 0;
-   for( int ii = 0; ii < numberOfAtoms; ii++ ){
+   int numberOfAtoms                         = getNumberOfAtoms();
+   int index                                 = 0;
+   for( int ii = 0; ii < numberOfAtoms; ii++, index += 2 ){
 
       sdpc[0][index]      = _inverseSqrtMasses[ii]*( static_cast<BrookOpenMMFloat> (derivedParameters[Yv]) );
       sdpc[0][index+1]    = _inverseSqrtMasses[ii]*( static_cast<BrookOpenMMFloat> (derivedParameters[V])  );
@@ -597,7 +644,6 @@ int BrookStochasticDynamics::_updateSdStreams( void ){
       sdpc[1][index]      = _inverseSqrtMasses[ii]*( static_cast<BrookOpenMMFloat> (derivedParameters[Yx]) );
       sdpc[1][index+1]    = _inverseSqrtMasses[ii]*( static_cast<BrookOpenMMFloat> (derivedParameters[X])  );
 
-      index              += 2;
    }
 
    _sdStreams[SDPC1Stream]->loadFromArray( sdpc[0] );
@@ -609,12 +655,13 @@ int BrookStochasticDynamics::_updateSdStreams( void ){
 
    // initialize SD2X
 
-   sd2x = new BrookOpenMMFloat[3*sdAtomStreamSize];
-   SimTKOpenMMUtilities::setRandomNumberSeed( (uint32_t) getRandomNumberSeed() );
+   BrookOpenMMFloat* sd2x = new BrookOpenMMFloat[3*sdAtomStreamSize];
+   //SimTKOpenMMUtilities::setRandomNumberSeed( (uint32_t) getRandomNumberSeed() );
 
    memset( sd2x, 0, 3*sdAtomStreamSize*sizeof( BrookOpenMMFloat ) ); 
 
-   for( int ii = 0; ii < numberOfAtoms; ii++ ){
+   index = 0;
+   for( int ii = 0; ii < numberOfAtoms; ii++, index += 3 ){
       sd2x[index]        = _inverseSqrtMasses[ii]*derivedParameters[X]*( static_cast<BrookOpenMMFloat> (SimTKOpenMMUtilities::getNormallyDistributedRandomNumber()) );
       sd2x[index+1]      = _inverseSqrtMasses[ii]*derivedParameters[X]*( static_cast<BrookOpenMMFloat> (SimTKOpenMMUtilities::getNormallyDistributedRandomNumber()) );
       sd2x[index+2]      = _inverseSqrtMasses[ii]*derivedParameters[X]*( static_cast<BrookOpenMMFloat> (SimTKOpenMMUtilities::getNormallyDistributedRandomNumber()) );
@@ -639,7 +686,10 @@ int BrookStochasticDynamics::_setInverseSqrtMasses( const std::vector<double>& m
 
 // ---------------------------------------------------------------------------------------
 
-   static const std::string methodName      = "BrookStochasticDynamics::_setInverseSqrtMasses";
+   //static const std::string methodName      = "BrookStochasticDynamics::_setInverseSqrtMasses";
+
+   BrookOpenMMFloat zero                    = (BrookOpenMMFloat)  0.0;
+   BrookOpenMMFloat one                     = (BrookOpenMMFloat)  1.0;
 
 // ---------------------------------------------------------------------------------------
 
@@ -647,9 +697,10 @@ int BrookStochasticDynamics::_setInverseSqrtMasses( const std::vector<double>& m
 
    _inverseSqrtMasses = new BrookOpenMMFloat[masses.size()];
    int index          = 0;
-   for( std::vector<double>::const_interator ii = masses.begin(); ii != masses.end(); ii++, index++ ){
+   for( std::vector<double>::const_iterator ii = masses.begin(); ii != masses.end(); ii++, index++ ){
       if( *ii != 0.0 ){
-         _inverseSqrtMasses[index] = ( SQRT( one/(*ii) ) );
+         BrookOpenMMFloat value    = static_cast<BrookOpenMMFloat>(*ii);
+         _inverseSqrtMasses[index] = ( SQRT( one/value ) );
       } else {
          _inverseSqrtMasses[index] = zero;
       }
@@ -668,7 +719,7 @@ int BrookStochasticDynamics::_setInverseSqrtMasses( const std::vector<double>& m
  *
  * */
     
-int BrookStochasticDynamics::setup( const std::vector<<double> >& masses, const Platform& platform ){
+int BrookStochasticDynamics::setup( const std::vector<double>& masses, const Platform& platform ){
     
 // ---------------------------------------------------------------------------------------
 
@@ -679,57 +730,18 @@ int BrookStochasticDynamics::setup( const std::vector<<double> >& masses, const 
    int numberOfAtoms  = (int) masses.size();
    setNumberOfAtoms( numberOfAtoms );
 
+   // set stream sizes and then create streams
+
+   _initializeStreamSizes( numberOfAtoms, platform );
+   _initializeStreams( platform );
+
    _setInverseSqrtMasses( masses );
 
    return DefaultReturnValue;
 }
 
 /* 
- * Setup of stream dimensions for partial force streams
- *
- * @param atomStreamSize        atom stream size
- * @param atomStreamWidth       atom stream width
- *
- * @return ErrorReturnValue if error, else DefaultReturnValue
- *
- * */
-
-int BrookStochasticDynamics::initializePartialForceStreamSize( int atomStreamSize, int atomStreamWidth ){
-
-// ---------------------------------------------------------------------------------------
-
-   static const std::string methodName      = "BrookStochasticDynamics::initializePartialForceStreamSize";
-   //static const int debug                   = 1;
-
-// ---------------------------------------------------------------------------------------
-
-   int innerUnroll           = getInnerLoopUnroll();
-   if( innerUnroll < 1 ){
-      std::stringstream message;
-      message << methodName << " innerUnrolls=" << innerUnroll << " is less than 1.";
-      throw OpenMMException( message.str() );
-      return ErrorReturnValue;
-   }
-
-   if( _partialForceStreamWidth < 1 ){
-      std::stringstream message;
-      message << methodName << " partial force stream width=" << _partialForceStreamWidth << " is less than 1.";
-      throw OpenMMException( message.str() );
-      return ErrorReturnValue;
-   }
-
-   _partialForceStreamSize    = atomStreamSize*getDuplicationFactor()/innerUnroll;
-   _partialForceStreamHeight  = _partialForceStreamSize/_partialForceStreamWidth;
-   _partialForceStreamHeight += ( (_partialForceStreamSize % _partialForceStreamWidth) ? 1 : 0);
-
-   return DefaultReturnValue;
-}
-
-/* 
- * Setup of j-stream dimensions
- * 
  * Get contents of object
- *
  *
  * @param level   level of dump
  *
@@ -762,21 +774,6 @@ std::string BrookStochasticDynamics::getContentsString( int level ) const {
    (void) LOCAL_SPRINTF( value, "%d", getNumberOfAtoms() );
    message << _getLine( tab, "Number of atoms:", value ); 
 
-   (void) LOCAL_SPRINTF( value, "%d", getNumberOfForceStreams() );
-   message << _getLine( tab, "Number of force streams:", value ); 
-
-   (void) LOCAL_SPRINTF( value, "%d", getDuplicationFactor() );
-   message << _getLine( tab, "Duplication factor:", value ); 
-
-   (void) LOCAL_SPRINTF( value, "%d", getInnerLoopUnroll () )
-   message << _getLine( tab, "Inner loop unroll:", value ); 
-
-   (void) LOCAL_SPRINTF( value, "%d", getOuterLoopUnroll() )
-   message << _getLine( tab, "Outer loop unroll:", value ); 
-
-   (void) LOCAL_SPRINTF( value, "%d", getAtomSizeCeiling() );
-   message << _getLine( tab, "Atom ceiling:", value ); 
-
    (void) LOCAL_SPRINTF( value, "%d", getAtomStreamWidth() );
    message << _getLine( tab, "Atom stream width:", value ); 
 
@@ -786,43 +783,35 @@ std::string BrookStochasticDynamics::getContentsString( int level ) const {
    (void) LOCAL_SPRINTF( value, "%d", getAtomStreamSize() );
    message << _getLine( tab, "Atom stream size:", value ); 
 
-   (void) LOCAL_SPRINTF( value, "%d", getPartialForceStreamWidth() );
-   message << _getLine( tab, "Partial force stream width:", value ); 
+   (void) LOCAL_SPRINTF( value, "%.5f", getTau() );
+   message << _getLine( tab, "Tau:", value ); 
 
-   (void) LOCAL_SPRINTF( value, "%d", getPartialForceStreamHeight() );
-   message << _getLine( tab, "Partial force stream height:", value ); 
+   (void) LOCAL_SPRINTF( value, "%.5f", getTemperature() );
+   message << _getLine( tab, "Temperature:", value ); 
 
-   (void) LOCAL_SPRINTF( value, "%d", getPartialForceStreamSize() );
-   message << _getLine( tab, "Partial force stream size:", value ); 
+   (void) LOCAL_SPRINTF( value, "%.5f", getStepSize() );
+   message << _getLine( tab, "Step size:", value ); 
+
+   const BrookOpenMMFloat* derivedParameters = getDerivedParameters();
+   for( int ii = 0; ii < MaxDerivedParameters; ii++ ){
+      (void) LOCAL_SPRINTF( value, "%.5e", derivedParameters[ii] );
+      message << _getLine( tab, _getDerivedParametersString( ii ), value ); 
+   }
+
+   (void) LOCAL_SPRINTF( value, "%.5f", getTemperature() );
+   message << _getLine( tab, "Temperature:", value ); 
 
    message << _getLine( tab, "Log:",                  (getLog()                ? Set : NotSet) ); 
-/*
-   message << _getLine( tab, "ExclusionStream:",      (getExclusionStream()    ? Set : NotSet) ); 
-   message << _getLine( tab, "VdwStream:",            (getOuterVdwStream()     ? Set : NotSet) ); 
-   message << _getLine( tab, "ChargeStream:",         (getChargeStream()       ? Set : NotSet) ); 
-   message << _getLine( tab, "SigmaStream:",          (getInnerSigmaStream()   ? Set : NotSet) ); 
-   message << _getLine( tab, "EpsilonStream:",        (getInnerEpsilonStream() ? Set : NotSet) ); 
-*/
+
+   message << _getLine( tab, "SDPC1:",                (getSDPC1Stream()        ? Set : NotSet) ); 
+   message << _getLine( tab, "SDPC2:",                (getSDPC2Stream()        ? Set : NotSet) ); 
+   message << _getLine( tab, "SD2X:",                 (getSD2XStream()         ? Set : NotSet) ); 
+   message << _getLine( tab, "SD1V:",                 (getSD1VStream()         ? Set : NotSet) ); 
  
    for( int ii = 0; ii < LastStreamIndex; ii++ ){
       message << std::endl;
       if( _sdStreams[ii] ){
          message << _sdStreams[ii]->getContentsString( );
-      }
-   }
-
-   // force streams
-
-   for( int ii = 0; ii < getNumberOfForceStreams(); ii++ ){
-      char description[256];
-      (void) LOCAL_SPRINTF( description, "PartialForceStream %d", ii );
-      message << _getLine( tab, description,  (isForceStreamSet(ii) ? Set : NotSet) ); 
-   }
- 
-   for( int ii = 0; ii < getNumberOfForceStreams(); ii++ ){
-      message << std::endl;
-      if( _sdForceStreams[ii] ){
-         message << _sdForceStreams[ii]->getContentsString( );
       }
    }
 

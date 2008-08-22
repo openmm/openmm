@@ -84,6 +84,23 @@ class BrookCommon {
       static const std::string ObcIntermediateForceStream;
       static const std::string ObcChainStream;
 
+      // Stochastic Dynamics streams
+
+      static const std::string SDPC1Stream;
+      static const std::string SDPC2Stream;
+      static const std::string SD2XStream;
+      static const std::string SD1VStream;
+
+      // Shake streams
+
+      static const std::string ShakeAtomIndicesStream;
+      static const std::string ShakeAtomParameterStream;
+      static const std::string ShakeXCons0Stream;
+      static const std::string ShakeXCons1Stream;
+      static const std::string ShakeXCons2Stream;
+      static const std::string ShakeXCons3Stream;
+      static const std::string ShakeInverseMapStream;
+
       // ---------------------------------------------------------------------------------------
 
      /** 
@@ -202,6 +219,32 @@ class BrookCommon {
        */
       
       FILE* getLog( void ) const;
+
+      /* 
+       * Given number of stream elements and width, returns the appropriate
+       * height of the stream
+       *
+       * @param streamSize   stream size 
+       * @param width        stream width
+       *
+       * @return stream height
+       *
+       */
+      
+      static int getStreamHeight( int streamSize, int streamWidth );
+      
+      /* 
+       * Given number of stream elements, get stream width & height
+       *
+       * @param streamSize    stream size 
+       * @param streamWidth   output stream width
+       * @param streamHeight  output stream height
+       *
+       * @return stream height
+       *
+       */
+      
+      static void getStreamDimensions( int streamSize, int *streamWidth, int *streamHeight );
       
    protected:
    

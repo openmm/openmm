@@ -29,14 +29,14 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "BrookIntegrateKernals.h"
+#include "BrookIntegrateLangevinStepKernel.h"
 #include "BrookStreamInternal.h"
 
 using namespace OpenMM;
 using namespace std;
 
 BrookIntegrateLangevinStepKernel::BrookIntegrateLangevinStepKernel( std::string name, const Platform& platform ) :
-                                IntegrateLangevinStepKernel( name, platform ){
+                                  IntegrateLangevinStepKernel( name, platform ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -44,14 +44,8 @@ BrookIntegrateLangevinStepKernel::BrookIntegrateLangevinStepKernel( std::string 
 
 // ---------------------------------------------------------------------------------------
 
-   _numberOfConstraints            = -1;
-
    _brookStochasticDynamics        = NULL;
    _brookShakeAlgorithm            = NULL;
-   _atomMasses                     = NULL;
-   _shakeParameters                = NULL;
-   _constraintIndices              = NULL;
-   _shakeParameters                = NULL;
    
 }
 
@@ -63,12 +57,8 @@ BrookIntegrateLangevinStepKernel::~BrookIntegrateLangevinStepKernel( ){
 
 // ---------------------------------------------------------------------------------------
    
-   delete _brookkStochasticDynamics;
+   delete _brookStochasticDynamics;
    delete _brookShakeAlgorithm;
-   delete _atomMasses;
-   delete _shakeParameters;
-   delete _constraintIndices;
-   delete _shakeParameters;
 
 }
 
@@ -82,25 +72,11 @@ void BrookIntegrateLangevinStepKernel::initialize( const vector<double>& masses,
 
 // ---------------------------------------------------------------------------------------
    
-   _brookkStochasticDynamics = new BrookStochasticDynamics( masses );
-   _brookkStochasticDynamics->setup( masses, getPlatform() );
+   _brookStochasticDynamics = new BrookStochasticDynamics( );
+   _brookStochasticDynamics->setup( masses, getPlatform() );
 
-   _brookShakeAlgorithm      = new BrookShakeAlgorithm( masses, constraintIndices, constraintLengths );
-/*
-    this->masses = new RealOpenMM[masses.size()];
-    for (size_t i = 0; i < masses.size(); ++i)
-        this->masses[i] = static_cast<RealOpenMM>( masses[i] );
-    numConstraints = constraintIndices.size();
-    this->constraintIndices = allocateIntArray(numConstraints, 2); 
-    for (int i = 0; i < numConstraints; ++i) {
-        this->constraintIndices[i][0] = constraintIndices[i][0];
-        this->constraintIndices[i][1] = constraintIndices[i][1];
-    }   
-    shakeParameters = allocateRealArray(constraintLengths.size(), 1); 
-    for (size_t i = 0; i < constraintLengths.size(); ++i)
-        shakeParameters[i][0] = static_cast<RealOpenMM>( constraintLengths[i] );
-
-*/
+   _brookShakeAlgorithm      = new BrookShakeAlgorithm( );
+   _brookShakeAlgorithm->setup( masses, constraintIndices, constraintLengths, getPlatform() );
 }
 
 /** 
@@ -121,6 +97,7 @@ void BrookIntegrateLangevinStepKernel::execute( Stream& positions, Stream& veloc
 
 // ---------------------------------------------------------------------------------------
 
+   double epsilon = 1.0e-04;
    //static const std::string methodName      = "BrookIntegrateLangevinStepKernel::execute";
 
 // ---------------------------------------------------------------------------------------
@@ -132,12 +109,13 @@ void BrookIntegrateLangevinStepKernel::execute( Stream& positions, Stream& veloc
 
    // take step
 
-   if( _brookStochasticDynamics == NULL ){
-      _brookStochasticDynamics = new BrookStochasticDynamics( getNumberOfAtoms(), static_cast<RealOpenMM>(stepSize), 
-                                                              static_cast<RealOpenMM>(tau), static_cast<RealOpenMM>(temperature) );
-   } else if( temperature != _brookStochasticDynamics->getTemperatur() || friction != _brookStochasticDynamics->getFriction() ){
-      _brookStochasticDynamics->updateParameters( temperature, friction );
+   double differences[3];
+   differences[0] = temperature - (double) _brookStochasticDynamics->getTemperature();
+   differences[1] = friction    - (double) _brookStochasticDynamics->getFriction();
+   differences[2] = stepSize    - (double) _brookStochasticDynamics->getStepSize();
+   if( fabs( differences[0] ) < epsilon || fabs( differences[1] ) < epsilon || fabs( differences[2] ) < epsilon ){
+      _brookStochasticDynamics->updateParameters( temperature, friction, stepSize );
    } 
-   _brookStochasticDynamics->update( positions, velocities, forces );
+   _brookStochasticDynamics->update( positions, velocities, forces, *_brookShakeAlgorithm );
 
 }

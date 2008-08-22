@@ -30,7 +30,10 @@
  * -------------------------------------------------------------------------- */
 
 #include <math.h>
+#include <stdlib.h>
+
 #include <sstream>
+
 #include "BrookCommon.h"
 #include "BrookPlatform.h"
 #include "BrookStreamFactory.h"
@@ -72,6 +75,16 @@ const std::string BrookCommon::SDPC1Stream                                      
 const std::string BrookCommon::SDPC2Stream                                        = "SDPC2Stream";
 const std::string BrookCommon::SD2XStream                                         = "SD2XStream";
 const std::string BrookCommon::SD1VStream                                         = "SD1VStream";
+
+// Shake streams
+
+const std::string BrookCommon::ShakeAtomIndicesStream                             = "ShakeAtomIndicesStream";
+const std::string BrookCommon::ShakeAtomParameterStream                           = "ShakeAtomParameterStream";
+const std::string BrookCommon::ShakeXCons0Stream                                  = "ShakeXCons0Stream";
+const std::string BrookCommon::ShakeXCons1Stream                                  = "ShakeXCons1Stream";
+const std::string BrookCommon::ShakeXCons2Stream                                  = "ShakeXCons2Stream";
+const std::string BrookCommon::ShakeXCons3Stream                                  = "ShakeXCons3Stream";
+const std::string BrookCommon::ShakeInverseMapStream                              = "ShakeInverseMapStream";
 
 /** 
  * Constructor
@@ -354,3 +367,90 @@ std::string BrookCommon::_getLine( const std::string& tab, const std::string& de
    return message.str();
 
 }
+
+/* 
+ * Given number of stream elements and width, returns the appropriate
+ * height of the stream
+ *
+ * @param streamSize   stream size 
+ * @param width        stream width
+ *
+ * @return stream height
+ *
+ */
+
+int BrookCommon::getStreamHeight( int streamSize, int streamWidth ){
+
+// ---------------------------------------------------------------------------------------
+
+   //static const std::string methodName      = "BrookCommon::getStreamHeight";
+
+// ---------------------------------------------------------------------------------------
+
+	int streamHeight = streamSize/streamWidth;
+
+	if( streamSize % streamWidth ){
+      streamHeight++;
+   }
+
+	return streamHeight;
+}
+
+/* 
+ * Given number of stream elements, get stream width & height
+ *
+ * @param streamSize    stream size 
+ * @param streamWidth   output stream width
+ * @param streamHeight  output stream height
+ *
+ * @return stream height
+ *
+ */
+
+void BrookCommon::getStreamDimensions( int streamSize, int *streamWidth, int *streamHeight ){
+
+// ---------------------------------------------------------------------------------------
+
+   //static const std::string methodName      = "BrookCommon::getStreamDimensions";
+
+// ---------------------------------------------------------------------------------------
+
+	// There are two conditions - stream should be as square 
+	// as possible, but should also be multiple of 16 along
+	// one dimension
+	
+	float s = sqrtf( (float) streamSize );
+
+	// find nearest multiple of 16 to the perfect square size
+
+	int low  = ( (int) floor( s/16.0f ) ) * 16;
+
+	if ( !low ) {
+		*streamWidth  = 16;
+		*streamHeight = getStreamHeight( streamSize, *streamWidth );
+	} else { 
+
+	   int high = low + 1;
+
+		// I'm not sure 48 is such a good stream width. Things seem
+		// to be faster with 32 or 64. Can make this a special
+		// case later.
+		
+		// Choose low or high depending on which one is 
+		// more square
+
+		int htlow  = getStreamHeight( streamSize, low );
+		int hthigh = getStreamHeight( streamSize, high );
+		
+		if ( abs( htlow - low ) < abs( hthigh - high ) ) {
+			*streamWidth   = low;
+			*streamHeight  = htlow;
+		} else {
+			*streamWidth   = high;
+			*streamHeight  = hthigh;
+		}
+	}
+	return;
+}
+
+

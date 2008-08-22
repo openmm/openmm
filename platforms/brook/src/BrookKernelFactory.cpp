@@ -31,8 +31,9 @@
 
 #include "BrookKernelFactory.h"
 #include "BrookCalcStandardMMForceFieldKernel.h"
-#include "BrookIntegrateKernals.h"
+#include "BrookIntegrateLangevinStepKernel.h"
 #include "BrookCalcKineticEnergyKernel.h"
+#include "BrookCalcGBSAOBCForceFieldKernel.h"
 
 using namespace OpenMM;
 
@@ -44,27 +45,41 @@ KernelImpl* BrookKernelFactory::createKernelImpl( std::string name, const Platfo
 
 // ---------------------------------------------------------------------------------------
 
-
    // StandardMM
 
 	if( name == CalcStandardMMForceFieldKernel::Name() ){
+
       return new BrookCalcStandardMMForceFieldKernel( name, platform );
 
    // GBSA OBC
 
 	} else if( name == CalcGBSAOBCForceFieldKernel::Name() ){
 
-      (void) fprintf( stderr, "CalcGBSAOBCForceFieldKernel not set BrookKernelFactory::createKernelImpl\n" );
-      (void) fflush( stderr );
-      //return new BrookCalcGBSAOBCForceFieldKernel(name, platform);
+      return new BrookCalcGBSAOBCForceFieldKernel(name, platform);
 
    // Verlet integrator
 
 	} else if( name == IntegrateVerletStepKernel::Name() ){
 
-      (void) fprintf( stderr, "IntegrateVerletStepKernel created BrookKernelFactory::createKernelImpl\n" );
-      (void) fflush( stderr );
-      return new BrookIntegrateVerletStepKernel( name, platform );
+      // return new BrookIntegrateVerletStepKernel( name, platform );
+
+   // Brownian integrator
+
+	} else if( name == IntegrateBrownianStepKernel::Name() ){
+
+      // return new BrookIntegrateBrownianStepKernel( name, platform );
+
+   //  Andersen integrator
+
+	} else if( name == ApplyAndersenThermostatKernel::Name() ){
+
+      // return new BrookIntegrateAndersenThermostatKernel( name, platform );
+
+   // Langevin integrator
+
+	} else if( name == IntegrateLangevinStepKernel::Name() ){
+
+      return new BrookIntegrateLangevinStepKernel( name, platform );
 
    // KE calculator
 
@@ -75,13 +90,5 @@ KernelImpl* BrookKernelFactory::createKernelImpl( std::string name, const Platfo
    (void) fprintf( stderr, "createKernelImpl: name=<%s> not found.", methodName.c_str(), name.c_str() );
    (void) fflush( stderr );
 
-/*
-    if (name == IntegrateLangevinStepKernel::Name())
-        //return new BrookIntegrateLangevinStepKernel(name, platform);
-    //if (name == IntegrateBrownianStepKernel::Name())
-        //return new BrookIntegrateBrownianStepKernel(name, platform);
-    if (name == ApplyAndersenThermostatKernel::Name())
-        //return new BrookApplyAndersenThermostatKernel(name, platform);
-*/
 	return NULL;
 }

@@ -85,19 +85,13 @@ class BrookIntegrateLangevinStepKernel : public IntegrateLangevinStepKernel {
        *
        */
 
-      void execute(Stream& positions, Stream& velocities, const Stream& forces, double temperature, double friction, double stepSize);
+      void execute( Stream& positions, Stream& velocities, const Stream& forces, double temperature, double friction, double stepSize);
 
    protected:
 
       BrookStochasticDynamics* _brookStochasticDynamics;
-      BrookShakeAlgorithm* _brookShakeAlgorithm;
-      RealOpenMM*  _atomMasses;
-      RealOpenMM** _shakeParameters;
-      int** _constraintIndices;
-      int _numberOfConstraints;
-      double prevTemp, prevFriction, prevStepSize;
-        
-  
+      BrookShakeAlgorithm*     _brookShakeAlgorithm;
+
 };
 
 } // namespace OpenMM

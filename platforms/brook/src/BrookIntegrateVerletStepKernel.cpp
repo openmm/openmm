@@ -29,7 +29,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "BrookIntegrateKernals.h"
+#include "BrookIntegrateVerletStepKernel.h"
 #include "BrookStreamInternal.h"
 
 using namespace OpenMM;

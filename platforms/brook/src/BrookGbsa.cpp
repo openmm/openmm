@@ -65,6 +65,7 @@ BrookGbsa::BrookGbsa(  ){
 
    _duplicationFactor         =  4;
 
+   _includeAce                = 1;
    _solventDielectric         = 78.3;
    _soluteDielectric          = 1.0;
    _dielectricOffset          = 0.09;
@@ -115,6 +116,18 @@ BrookGbsa::~BrookGbsa( ){
 
 int BrookGbsa::getNumberOfForceStreams( void ) const {
    return NumberOfForceStreams;
+}
+
+
+/** 
+ * Include ACE approximation in calculation of force
+ * 
+ * @return true if ACE approximation is to be included in calculation of force
+ *
+ */
+
+int BrookGbsa::includeAce( void ) const {
+   return _includeAce;
 }
 
 /** 

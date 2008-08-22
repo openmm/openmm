@@ -36,6 +36,7 @@
 #include <set>
 
 #include "BrookFloatStreamInternal.h"
+#include "BrookShakeAlgorithm.h"
 #include "BrookPlatform.h"
 #include "BrookCommon.h"
 
@@ -54,12 +55,9 @@ class BrookStochasticDynamics : public BrookCommon {
       /** 
        * Constructor
        * 
-       * @param masses             atomic masses
-       * @param randomNumberSeed   random number seed
-       *
        */
       
-      BrookStochasticDynamics( const std::vector<double>& masses, uint32_t randomNumberSeed = 1364 );
+      BrookStochasticDynamics(  );
   
       /** 
        * Destructor
@@ -77,6 +75,14 @@ class BrookStochasticDynamics : public BrookCommon {
       BrookOpenMMFloat getTau( void ) const; 
 
       /**
+       * Get friction
+       *
+       * @return friction
+       */
+
+      BrookOpenMMFloat getFriction( void ) const; 
+
+      /**
        * Get temperature
        *
        * @return temperature
@@ -92,6 +98,16 @@ class BrookStochasticDynamics : public BrookCommon {
 
       BrookOpenMMFloat getStepSize( void ) const; 
 
+      /**
+       *
+       * Get array of derived parameters indexed by 'DerivedParameters' enums
+       *
+       * @return array
+       *
+       */
+      
+      const BrookOpenMMFloat* getDerivedParameters( void ) const;
+      
       /**
        * Get StochasticDynamics atom stream width
        *
@@ -121,13 +137,28 @@ class BrookStochasticDynamics : public BrookCommon {
        * 
        * @param  temperature     temperature
        * @param  friction        friction
+       * @param  step size       step size
        *
-       * @return   solute dielectric
+       * @return   DefaultReturnValue
        *
        */
       
-      int updateParameters( double temperature, double friction );
+      int updateParameters( double temperature, double friction, double stepSize );
       
+      /** 
+       * Update
+       * 
+       * @param  positions           atom positions
+       * @param  velocities          atom velocities
+       * @param  forces              atom forces
+       * @param  brookShakeAlgorithm BrookShakeAlgorithm reference
+       *
+       * @return  DefaultReturnValue
+       *
+       */
+      
+      int update( Stream& positions, Stream& velocities,
+                  const Stream& forces, BrookShakeAlgorithm& brookShakeAlgorithm );
       /** 
        * Get array of StochasticDynamics streams 
        *
@@ -140,19 +171,14 @@ class BrookStochasticDynamics : public BrookCommon {
       /* 
        * Setup of StochasticDynamics parameters
        *
-       * @param atomParameters        vector of OBC parameters [atomI][0=charge]
-       *                                                       [atomI][1=radius]
-       *                                                       [atomI][2=scaling factor]
-       * @param solventDielectric     solvent dielectric
-       * @param soluteDielectric      solute dielectric
+       * @param masses                atom masses
        * @param platform              Brook platform
        *
-       * @return nonzero value if error
+       * @return ErrorReturnValue value if error, else DefaultReturnValue
        *
        * */
       
-      int setup( const std::vector<std::vector<double> >& atomParameters, 
-                 double solventDielectric, double soluteDielectric, const Platform& platform  );
+      int setup( const std::vector<double>& masses, const Platform& platform  );
       
       /* 
        * Get contents of object
@@ -172,7 +198,7 @@ class BrookStochasticDynamics : public BrookCommon {
        *
        */
       
-      BrookFloatStreamInternal* getSDPC1( void ) const;
+      BrookFloatStreamInternal* getSDPC1Stream( void ) const;
       
       /** 
        * Get SDPC2 stream 
@@ -181,7 +207,7 @@ class BrookStochasticDynamics : public BrookCommon {
        *
        */
       
-      BrookFloatStreamInternal* getSDPC2( void ) const;
+      BrookFloatStreamInternal* getSDPC2Stream( void ) const;
       
       /** 
        * Get SD2X stream 
@@ -190,7 +216,7 @@ class BrookStochasticDynamics : public BrookCommon {
        *
        */
       
-      BrookFloatStreamInternal* getSD2X( void ) const;
+      BrookFloatStreamInternal* getSD2XStream( void ) const;
       
       /** 
        * Get SD1V stream 
@@ -199,18 +225,18 @@ class BrookStochasticDynamics : public BrookCommon {
        *
        */
       
-      BrookFloatStreamInternal* getSD1V( void ) const;
+      BrookFloatStreamInternal* getSD1VStream( void ) const;
 
    private:
    
-      enum DerivedParameters   { GDT, EPH, EMH, EP, EM, B, C, D, V, X, Yv, Yx,
-                                 Sd1pc1, Sd1pc2, Sd1pc3, Sd2pc1, Sd2pc2, MaxDerivedParameters };
+      enum DerivedParameters { GDT, EPH, EMH, EP, EM, B, C, D, V, X, Yv, Yx,
+                               Sd1pc1, Sd1pc2, Sd1pc3, Sd2pc1, Sd2pc2, MaxDerivedParameters };
 
       BrookOpenMMFloat _derivedParameters[MaxDerivedParameters];
 
       // streams indices
 
-      enum { 
+      enum BrookStochasticDynamicsStreams { 
               SDPC1Stream,
               SDPC2Stream,
               SD2XStream,
@@ -220,7 +246,7 @@ class BrookStochasticDynamics : public BrookCommon {
 
       // randomNumberSeed
 
-      uint32_t _randomNumberSeed;
+      unsigned int _randomNumberSeed;
 
       BrookOpenMMFloat _tau;
       BrookOpenMMFloat _temperature;
@@ -239,7 +265,8 @@ class BrookStochasticDynamics : public BrookCommon {
        *
        */
 
-      std::string _getDerivedParametersString( BrookStochasticDynamics::DerivedParameters ) const;
+      //std::string _getDerivedParametersString( BrookStochasticDynamics::DerivedParameters ) const;
+      std::string _getDerivedParametersString( int id ) const;
 
       /** 
        * Update derived parameters

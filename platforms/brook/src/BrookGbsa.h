@@ -369,6 +369,10 @@ class BrookGbsa : public BrookCommon {
 
       int _duplicationFactor;
 
+      // include ACE approximation
+
+      int _includeAce;
+
       // force stream width
 
       int _partialForceStreamWidth;
