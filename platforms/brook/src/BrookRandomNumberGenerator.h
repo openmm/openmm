@@ -1,5 +1,5 @@
-#ifndef OPENMM_BROOK_STOCHASTIC_DYNAMCIS_H_
-#define OPENMM_BROOK_STOCHASTIC_DYNAMCIS_H_
+#ifndef OPENMM_BROOK_RANDOM_NUMBER_GENERATOR_H_
+#define OPENMM_BROOK_RANDOM_NUMBER_GENERATOR_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -48,7 +48,7 @@ namespace OpenMM {
  *
  */
 
-class BrookStochasticDynamics : public BrookCommon {
+class BrookRandomNumberGenerator : public BrookCommon {
 
    public:
   
@@ -57,14 +57,14 @@ class BrookStochasticDynamics : public BrookCommon {
        * 
        */
       
-      BrookStochasticDynamics(  );
+      BrookRandomNumberGenerator(  );
   
       /** 
        * Destructor
        * 
        */
       
-      ~BrookStochasticDynamics();
+      ~BrookRandomNumberGenerator();
   
       /**
        * Get tau
@@ -210,137 +210,100 @@ class BrookStochasticDynamics : public BrookCommon {
       BrookFloatStreamInternal* getSDPC2Stream( void ) const;
       
       /** 
-       * Get SD2X stream 
+       * Get shuffle stream 
        *
-       * @return  SD2X stream
+       * @return  Shuffle stream
        *
        */
       
-      BrookFloatStreamInternal* getSD2XStream( void ) const;
+      BrookFloatStreamInternal* getShuffleStream( void ) const;
       
       /** 
-       * Get SD1V stream 
+       * Generate a random number using algorithm in Gromacs
+       * 
+       * @param ig seed
        *
-       * @return  SD1V stream
+       * @return  random number
        *
        */
       
-      BrookFloatStreamInternal* getSD1VStream( void ) const;
+      BrookOpenMMFloat generateGromacsRandomNumber( int* ig );
+      
+      /** 
+       * Generate a random number using algorithm in Nvidia code
+       * http://www.helsbreth.org/random/rng_kiss.html
+       * 
+       * @param randomV1   output random value
+       * @param randomV2   output random value
+       * @param randomV3   output random value
+       * @param state      state
+       *
+       */
+      
+      void generateRandomsAlaNvidia( float* randomV1, float* randomV2, float* randomV3, 
+                                     unsigned int state[4] );
 
+      /** 
+       * Load random number streams using Nvidia algorithm
+       * 
+       *
+       * @return DefaultReturnValue;
+       */
+      
+      int loadRandomNumberStreamsNvidia( void );
+            
+      /** 
+       * Get random number seed
+       *
+       * @return random number seed
+       */
+      
+      unsigned long int getRandomNumberSeed( void ) const;
+            
+      /** 
+       * Increment random number seed
+       *
+       * @param increment    amount to increment random number seed; default = 1
+       *
+       * @return updated random number seed
+       */
+      
+      unsigned long int incrementRandomNumberSeed( unsigned long int  increment = 1 );
+            
+      /** 
+       * Set random number seed
+       *
+       * @param new random number seed; default = 1
+       *
+       * @return random number seed
+       */
+      
+      unsigned long int setRandomNumberSeed( unsigned long int seed = 1 );
+            
    private:
    
-      enum DerivedParameters { GDT, EPH, EMH, EP, EM, B, C, D, V, X, Yv, Yx,
-                               Sd1pc1, Sd1pc2, Sd1pc3, Sd2pc1, Sd2pc2, MaxDerivedParameters };
-
-      BrookOpenMMFloat _derivedParameters[MaxDerivedParameters];
-
       // streams indices
 
-      enum BrookStochasticDynamicsStreams { 
-              SDPC1Stream,
-              SDPC2Stream,
-              SD2XStream,
-              SD1VStream,
-              VPrimeStream,
-              XPrimeStream,
-              InverseMassStream,
+      enum BrookRandomNumberGeneratorStreams { 
+              RandomNumberStream,
+              ShuffleStream,
               LastStreamIndex
            };
 
       // randomNumberSeed
 
-      unsigned int _randomNumberSeed;
+      unsigned long int _randomNumberSeed;
 
-      BrookOpenMMFloat _tau;
-      BrookOpenMMFloat _temperature;
-      BrookOpenMMFloat _stepSize;
+      // number of random number streams
 
-      // Atom stream dimensions
+      int _numberOfRandomNumberStreams;
 
-      int _sdAtomStreamWidth;
-      int _sdAtomStreamHeight;
-      int _sdAtomStreamSize;
+      // random number stream dimensions
 
-      /** 
-       * Get derived parameter string
-       * 
-       * @return  string
-       *
-       */
+      int _randomNumberStreamWidth;
+      int _randomNumberStreamHeight;
+      int _randomNumberStreamSize;
 
-      //std::string _getDerivedParametersString( BrookStochasticDynamics::DerivedParameters ) const;
-      std::string _getDerivedParametersString( int id ) const;
-
-      /** 
-       * Update derived parameters
-       * 
-       * @return  DefaultReturn
-       *
-       */
-
-      int _updateDerivedParameters( void );
-
-      /*
-       * Update streams
-       * 
-       * @return  DefaultReturn
-       *
-       */
-      
-      int _updateSdStreams( void );
-      
-      // inverse sqrt masses
-
-      BrookOpenMMFloat* _inverseSqrtMasses;
-
-      // internal streams
-
-      BrookFloatStreamInternal* _sdStreams[LastStreamIndex];
-
-      /** 
-       * Set tau
-       * 
-       * @param tau   new tau value
-       *
-       * @return      DefaultReturn
-       *
-       */
-      
-      int _setTau( BrookOpenMMFloat tau );
-      
-      /** 
-       * Set friction = 1/tau
-       * 
-       * @param friction   new friction value
-       *
-       * @return      DefaultReturn
-       *
-       */
-      
-      int _setFriction( BrookOpenMMFloat friction );
-      
-      /** 
-       * Set temperature
-       * 
-       * @parameter   temperature
-       *
-       * @return      DefaultReturn
-       *
-       */
-      
-      int _setTemperature( BrookOpenMMFloat temperature );
-      
-      /** 
-       * Set stepSize
-       * 
-       * @param   stepSize
-       *
-       * @return      DefaultReturn
-       *
-       */
-      
-      int _setStepSize( BrookOpenMMFloat stepSize );
-      
       /* 
        * Setup of stream dimensions
        *
@@ -391,4 +354,4 @@ class BrookStochasticDynamics : public BrookCommon {
 
 } // namespace OpenMM
 
-#endif /* OPENMM_BROOK_STOCHASTIC_DYNAMCIS_H_ */
+#endif /* OPENMM_BROOK_RANDOM_NUMBER_GENERATOR_H_ */

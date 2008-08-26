@@ -1,3 +1,4 @@
+working on shuffleGVStreams
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -30,7 +31,7 @@
  * -------------------------------------------------------------------------- */
 
 #include <sstream>
-#include "BrookStochasticDynamics.h"
+#include "BrookRandomNumberGenerator.h"
 #include "BrookPlatform.h"
 #include "OpenMMException.h"
 #include "BrookStreamImpl.h"
@@ -48,41 +49,27 @@ using namespace std;
  * 
  */
 
-BrookStochasticDynamics::BrookStochasticDynamics( ){
+BrookRandomNumberGenerator::BrookRandomNumberGenerator( ){
 
 // ---------------------------------------------------------------------------------------
 
-   //static const std::string methodName      = "BrookStochasticDynamics::BrookStochasticDynamics";
-
-   BrookOpenMMFloat zero                    = (BrookOpenMMFloat)  0.0;
-   BrookOpenMMFloat one                     = (BrookOpenMMFloat)  1.0;
-   BrookOpenMMFloat oneMinus                = (BrookOpenMMFloat) -1.0;
+   //static const std::string methodName      = "BrookRandomNumberGenerator::BrookRandomNumberGenerator";
 
 // ---------------------------------------------------------------------------------------
 
-   _numberOfAtoms             = -1;
+   // fixed for now
+
+   _numberOfRandomNumberStreams     = 2;
 
    // mark stream dimension variables as unset
 
-   _sdAtomStreamWidth         = -1;
-   _sdAtomStreamHeight        = -1;
-   _sdAtomStreamSize          = -1;
+   _randomNumberStreamWidth         = -1;
+   _randomNumberStreamHeight        = -1;
+   _randomNumberStreamSize          = -1;
 
    for( int ii = 0; ii < LastStreamIndex; ii++ ){
-      _sdStreams[ii]   = NULL;
+      _randomNumberStreams[ii]   = NULL;
    }
-
-   for( int ii = 0; ii < MaxDerivedParameters; ii++ ){
-      _derivedParameters[ii]   = oneMinus;
-   }
-
-   _temperature = oneMinus;
-   _stepSize    = oneMinus;
-   _tau         = oneMinus;
-
-   // setup inverse sqrt masses
-
-   _inverseSqrtMasses = NULL;
 
    // set randomNumber seed 
 
@@ -97,11 +84,11 @@ BrookStochasticDynamics::BrookStochasticDynamics( ){
  * 
  */
 
-BrookStochasticDynamics::~BrookStochasticDynamics( ){
+BrookRandomNumberGenerator::~BrookRandomNumberGenerator( ){
 
 // ---------------------------------------------------------------------------------------
 
-   //static const std::string methodName      = "BrookStochasticDynamics::~BrookStochasticDynamics";
+   //static const std::string methodName      = "BrookRandomNumberGenerator::~BrookRandomNumberGenerator";
 
 // ---------------------------------------------------------------------------------------
 
@@ -109,190 +96,562 @@ BrookStochasticDynamics::~BrookStochasticDynamics( ){
       delete _sdStreams[ii];
    }
 
-   delete[] _inverseSqrtMasses;
-
 }
 
 /** 
- * Get tau
+ * Get number of random number streams
  * 
- * @return  tau
+ * @return     number of random number streams 
  *
  */
 
-BrookOpenMMFloat BrookStochasticDynamics::getTau( void ) const {
-   return _tau;
+int BrookRandomNumberGenerator::getNumberOfRandomNumberStreams( void ) const {
+   return _numberOfRandomNumberStreams;
 }
 
 /** 
- * Get friction
+ * Get number of random number streams
  * 
- * @return  friction
+ * @return     number of random number streams 
  *
  */
 
-BrookOpenMMFloat BrookStochasticDynamics::getFriction( void ) const {
-   static const BrookOpenMMFloat zero = (BrookOpenMMFloat) 0.0; 
-   static const BrookOpenMMFloat one  = (BrookOpenMMFloat) 1.0; 
-   return ( (_tau == zero) ? zero : (one/_tau) );
+int BrookRandomNumberGenerator::getNumberOfRandomNumberStreams( void ) const {
+   return _numberOfRandomNumberStreams;
+}
+/** 
+ * Get random number seed
+ *
+ * @return random number seed
+ */
+    
+unsigned long int BrookRandomNumberGenerator::getRandomNumberSeed( void ) const {
+   return _randomNumberSeed;
+}
+          
+/** 
+ * Increment random number seed
+ *
+ * @param increment    amount to increment random number seed; default = 1
+ *
+ * @return updated random number seed
+ */
+     
+unsigned long int BrookRandomNumberGenerator::incrementRandomNumberSeed( unsigned long int  increment ){
+   _randomNumberSeed += increment;
+   return _randomNumberSeed;
 }
 
 /** 
- * Get temperature
- * 
- * @return  temperature
+ * Set random number seed
  *
+ * @param new random number seed; default = 1
+ *
+ * @return random number seed
  */
-
-BrookOpenMMFloat BrookStochasticDynamics::getTemperature( void ) const {
-   return _temperature;
+    
+unsigned long int setRandomNumberSeed( unsigned long int seed = 1 );
+   _randomNumberSeed = seed;
+   return _randomNumberSeed;
 }
 
 /** 
- * Get stepSize
+ * Generate a random number using algorithm in Gromacs
  * 
- * @return  stepSize
+ * @param ig seed
+ *
+ * @return  random number
  *
  */
 
-BrookOpenMMFloat BrookStochasticDynamics::getStepSize( void ) const {
-   return _stepSize;
-}
-
-/** 
- * Set tau
- * 
- * @param tau   new tau value
- *
- * @return      DefaultReturnValue
- *
- */
-
-int BrookStochasticDynamics::_setTau( BrookOpenMMFloat tau ){
-   _tau = tau;
-   return DefaultReturnValue;
-}
-
-/** 
- * Set friction = 1/tau
- * 
- * @param friction   new friction value
- *
- * @return      DefaultReturnValue
- *
- */
-
-int BrookStochasticDynamics::_setFriction( BrookOpenMMFloat friction ){
-   _tau   = (BrookOpenMMFloat) ( (friction != 0.0) ? 1.0/friction : 0.0);
-   return DefaultReturnValue;
-}
-
-/** 
- * Set temperature
- * 
- * @parameter   temperature
- *
- * @return      DefaultReturnValue
- *
- */
-
-int BrookStochasticDynamics::_setTemperature( BrookOpenMMFloat temperature ){
-   _temperature = temperature;
-   return DefaultReturnValue;
-}
-
-/** 
- * Set stepSize
- * 
- * @param   stepSize
- *
- * @return      DefaultReturnValue
- *
- */
-
-int BrookStochasticDynamics::_setStepSize( BrookOpenMMFloat stepSize ){
-   _stepSize = stepSize;
-   return DefaultReturnValue;
-}
-
-/** 
- * Update derived parameters
- * 
- * @return  DefaultReturnValue
- *
- */
-
-int BrookStochasticDynamics::_updateDerivedParameters( void ){
+BrookOpenMMFloat BrookRandomNumberGenerator::generateGromacsRandomNumber( int* ig ){
 
    // ---------------------------------------------------------------------------------------
 
-   // static const char* methodName = "\nBrookStochasticDynamics::_updateDerivedParameters";
+   // static const char* methodName = "\nBrookRandomNumberGenerator::generateGromacsRandomNumber";
 
-   static const BrookOpenMMFloat zero       =  0.0;
-   static const BrookOpenMMFloat one        =  1.0;
-   static const BrookOpenMMFloat two        =  2.0;
-   static const BrookOpenMMFloat three      =  3.0;
-   static const BrookOpenMMFloat four       =  4.0;
-   static const BrookOpenMMFloat half       =  0.5;
+   int  irand;
+ 
+   int  m     = 100000000;
+   float rm   = 100000000.0;  /* same number as m, but real format */
+   int  m1    = 10000;
+   int  mult  = 31415821;
+   
+   BrookOpenMMFloat r;
+   int  irandh,irandl,multh,multl;
+ 
+   // ---------------------------------------------------------------------------------------
+ 
+   irand = abs(*ig) % m; 
+   
+   /* multiply irand by mult, but take into account that overflow
+    * must be discarded, and do not generate an error.
+    */
+
+   irandh = irand / m1;
+   irandl = irand % m1;
+   multh  = mult / m1;
+   multl  = mult % m1;
+   irand  = ((irandh*multl+irandl*multh) % m1) * m1 + irandl*multl;
+   irand  = (irand + 1) % m; 
+ 
+   /* convert irand to a real random number between 0 and 1. */
+
+   r = (BrookOpenMMFloat) (irand / 10); 
+   r = r * 10 / rm;
+   if ((r <= 0) || (r > 1))
+     r = 0.0; 
+   *ig = irand;
+   
+   return r;
+}     
+
+inline int MaxInt( unsigned int x, unsigned int y ){ return x > y ? x : y; }
+
+/** 
+ * Generate a random number using algorithm in Nvidia code
+ * http://www.helsbreth.org/random/rng_kiss.html
+ * 
+ * @param randomV1   output random value
+ * @param randomV2   output random value
+ * @param randomV3   output random value
+ * @param state      state
+ *
+ */
+
+void BrookRandomNumberGenerator::generateRandomsAlaNvidia( float* randomV1, float* randomV2, float* randomV3, 
+                                                           unsigned int state[4] ){
+    
+   // ---------------------------------------------------------------------------------------
+
+   // static const char* methodName = "\nBrookRandomNumberGenerator::generateRandomsAlaNvidia";
+
+   unsigned int carry          = 0;
+
+   // ---------------------------------------------------------------------------------------
+ 
+   state[0]             = state[0] * 69069 + 1;
+   state[1]            ^= state[1] << 13;
+   state[1]            ^= state[1] >> 17;
+   state[1]            ^= state[1] << 5;
+   unsigned int k       = (state[2] >> 2) + (state[3] >> 3) + (carry >> 2);
+   unsigned int m       = state[3] + state[3] + state[2] + carry;
+   state[2]             = state[3];
+   state[3]             = m;
+   carry                = k >> 30;
+   unsigned int z1      = MaxInt(state[0] + state[1] + state[3], 0x00000001);
+   float x1             = (float) ( (double) z1 / (double)UINT_MAX );
+
+/*
+if( x1 < 0.0f ){
+   unsigned int z1 = MaxInt(state[0] + state[1] + state[3], 0x00000001);
+   double       z2 = (double) z1/((double) UINT_MAX);
+   (void) fprintf( logFile, "x1=%.6e state[%u %u %u] sum %u %.6e den=%u z2=%.6e\n",
+                   x1, state[0], state[1], state[3], 
+                   (state[0] + state[1] + state[3]), (float) (state[0] + state[1] + state[3]), z1, z2 );
+}
+*/
+
+   state[0]             = state[0] * 69069 + 1;
+   state[1]            ^= state[1] << 13;
+   state[1]            ^= state[1] >> 17;
+   state[1]            ^= state[1] << 5;
+   x1                   = sqrt(-2.0f * log(x1));
+   k                    = (state[2] >> 2) + (state[3] >> 3) + (carry >> 2);
+   m                    = state[3] + state[3] + state[2] + carry;
+   state[2]             = state[3];
+   state[3]             = m;
+   carry                = k >> 30;
+   float x2             = (float)(state[0] + state[1] + state[3]) / (float)UINT_MAX;
+   
+   state[0]             = state[0] * 69069 + 1;
+   state[1]            ^= state[1] << 13;
+   state[1]            ^= state[1] >> 17;
+   state[1]            ^= state[1] << 5;
+   *randomV1            = x1 * cos(2.0f * 3.14159265f * x2);
+
+   k                    = (state[2] >> 2) + (state[3] >> 3) + (carry >> 2);
+   m                    = state[3] + state[3] + state[2] + carry;
+   state[2]             = state[3];
+   state[3]             = m;
+   carry                = k >> 30;
+
+   unsigned int z3      = MaxInt(state[0] + state[1] + state[3], 0x00000001);
+   float x3             = (float) ( (double) z3 / (double)UINT_MAX );
+   //float x3             = (float)MaxInt(state[0] + state[1] + state[3], 0x00000001) / (float)UINT_MAX;
+
+   state[0]             = state[0] * 69069 + 1;
+   state[1]            ^= state[1] << 13;
+   state[1]            ^= state[1] >> 17;
+   state[1]            ^= state[1] << 5;
+   x3                   = sqrt(-2.0f * log(x3));
+   k                    = (state[2] >> 2) + (state[3] >> 3) + (carry >> 2);
+   m                    = state[3] + state[3] + state[2] + carry;
+   state[2]             = state[3];
+   state[3]             = m;
+   carry                = k >> 30;
+   float x4             = (float)(state[0] + state[1] + state[3]) / (float)UINT_MAX;
+   
+   state[0]             = state[0] * 69069 + 1;
+   state[1]            ^= state[1] << 13;
+   state[1]            ^= state[1] >> 17;
+   state[1]            ^= state[1] << 5;
+   *randomV2            = x3 * cos(2.0f * 3.14159265f * x4);
+   k                    = (state[2] >> 2) + (state[3] >> 3) + (carry >> 2);
+   m                    = state[3] + state[3] + state[2] + carry;
+   state[2]             = state[3];
+   state[3]             = m;
+   carry                = k >> 30;
+
+   //float x5             = (float)MaxInt(state[0] + state[1] + state[3], 0x00000001) / (float)UINT_MAX;
+   unsigned int z5      = MaxInt(state[0] + state[1] + state[3], 0x00000001);
+   float x5             = (float) ( (double) z5 / (double)UINT_MAX );
+
+   state[0]             = state[0] * 69069 + 1;
+   state[1]            ^= state[1] << 13;
+   state[1]            ^= state[1] >> 17;
+   state[1]            ^= state[1] << 5;
+   x5                   = sqrt(-2.0f * log(x5));
+   k                    = (state[2] >> 2) + (state[3] >> 3) + (carry >> 2);
+   m                    = state[3] + state[3] + state[2] + carry;
+   state[2]             = state[3];
+   state[3]             = m;
+   carry                = k >> 30;
+   float x6             = (float)(state[0] + state[1] + state[3]) / (float)UINT_MAX;
+   *randomV3            = x5 * cos(2.0f * 3.14159265f * x6); 
+   
+//(void) fprintf( logFile, "rv=%.6e %.6e %.6e\n", *randomV1, *randomV2, *randomV3 );
+//exit(0);
+
+   return;
+}
+
+/** 
+ * Load random number streams using Nvidia algorithm
+ * 
+ *
+ * @return DefaultReturnValue;
+ */
+
+int BrookRandomNumberGenerator::loadRandomNumberStreamsNvidia( void ){
 
    // ---------------------------------------------------------------------------------------
 
-   BrookOpenMMFloat tau         = getTau();
-   BrookOpenMMFloat temperature = getTemperature();
-   BrookOpenMMFloat stepSize    = getStepSize();
+	static float *buf              = NULL;
+   static unsigned int state[4];
+   static int stateInitialized    = 0;
+   static const int reseed        = 5;
+ 
+   // static const char* methodName = "\nBrookRandomNumberGenerator::loadGVStreamsNvidia";
 
-   _derivedParameters[GDT]      = stepSize/tau;
+   // ---------------------------------------------------------------------------------------
+   
+   // periodically reset seeds
 
-   _derivedParameters[EPH]      = EXP(  half*_derivedParameters[GDT] );
-   _derivedParameters[EMH]      = EXP( -half*_derivedParameters[GDT] );
-   _derivedParameters[EM]       = EXP(      -_derivedParameters[GDT] );
-   _derivedParameters[EP]       = EXP(       _derivedParameters[GDT] );
+   if( !stateInitialized || !(stateInitialized % reseed) ){
 
-   if( _derivedParameters[GDT] >= (BrookOpenMMFloat) 0.1 ){
+      state[0] = rand();
+      state[1] = rand();
+      state[2] = rand();
+      state[3] = rand();
 
-      BrookOpenMMFloat term1    = _derivedParameters[EPH] - one;
-                 term1         *= term1;
-      _derivedParameters[B]     = _derivedParameters[GDT]*(_derivedParameters[EP] - one) - four*term1;
+      if( getVerbosity() && getLog() ){
+         (void) fprintf( getLog(), "LoadGVStreamsNvidia: reset state seeds stateInitialized=%d reseed=%d\n",
+                         stateInitialized, reseed );
+         (void) fflush( getLog() );
+      }
 
-      _derivedParameters[C]     = _derivedParameters[GDT] - three + four*_derivedParameters[EMH] - _derivedParameters[EM];
-      _derivedParameters[D]     = two - _derivedParameters[EPH] - _derivedParameters[EMH];
+/*
+state[0] = 9578;
+state[1] = 29245;
+state[2] = 16266;
+state[3] = 27587;
+*/
 
-    } else {
+   }
+   stateInitialized++;
 
-      BrookOpenMMFloat term1        = half*_derivedParameters[GDT];
-      BrookOpenMMFloat term2        = term1*term1;
-      BrookOpenMMFloat term4        = term2*term2;
+   // allocate memory once for download of random nos.
 
-      BrookOpenMMFloat third        = (BrookOpenMMFloat) ( 1.0/3.0 );
-      BrookOpenMMFloat o7_9         = (BrookOpenMMFloat) ( 7.0/9.0 );
-      BrookOpenMMFloat o1_12        = (BrookOpenMMFloat) ( 1.0/12.0 );
-      BrookOpenMMFloat o17_90       = (BrookOpenMMFloat) ( 17.0/90.0 );
-      BrookOpenMMFloat o7_30        = (BrookOpenMMFloat) ( 7.0/30.0 );
-      BrookOpenMMFloat o31_1260     = (BrookOpenMMFloat) ( 31.0/1260.0 );
-      BrookOpenMMFloat o_360        = (BrookOpenMMFloat) ( 1.0/360.0 );
+   if( buf == NULL ){	
+	   buf = (float*) malloc( sizeof(float) * 3 * getRandomNumberStreamSize() );
+   }
 
-      _derivedParameters[B]         = term4*( third  + term1*( third + term1*( o17_90 + term1*o7_9 )));
-      _derivedParameters[C]         = term2*term1*( two*third + term1*( -half + term1*( o7_30 + term1*(-o1_12 + term1*o31_1260 ))));
-      _derivedParameters[D]         = term2*( -one + term2*(-o1_12 - term2*o_360));
-   }    
+   if( getVerbosity() && getLog() ){
+	   static float count   = 0.0f;
+      float block          = (float) (3*sdp->gvSize);
+      count               += 1.0f;
+      (void) fprintf( getLog(), "LoadGVStreamsNvidia: count=%.1f ttl=%.3e no./count=%.1f %d %d\n",
+                      count, block*count, block, sdp->gvSize, NGVSTREAMS );
+      (void) fflush( getLog() );
+   }
+	
+   for( int jj = 0; jj < getNumberOfRandomNumberStreams(); jj++ ){
+      for( int ii = 0; ii < 3*getRandomNumberStreamSize(); ii += 3 ){
+         float v1,v2,v3;
+         generateRandomsAlaNvidia( &v1, &v2, &v3, state, NULL );
+         buf[ii]   = v1;
+         buf[ii+1] = v2;
+         buf[ii+2] = v3;
+   	}
+	   getRandomNumberStream( jj )->loadFromArray( buf );
+   }
 
-   BrookOpenMMFloat kT        = ((BrookOpenMMFloat) BOLTZ)*temperature;
-
-   _derivedParameters[V]      = SQRT( kT*( one - _derivedParameters[EM]) );
-   _derivedParameters[X]      = tau*SQRT( kT*_derivedParameters[C] );
-   _derivedParameters[Yv]     = SQRT( kT*_derivedParameters[B]/_derivedParameters[C] );
-   _derivedParameters[Yx]     = tau*SQRT( kT*_derivedParameters[B]/(one - _derivedParameters[EM]) );
-
-   _derivedParameters[Sd1pc1] = tau*( one - _derivedParameters[EM] );
-   _derivedParameters[Sd1pc2] = tau*( _derivedParameters[EPH] - _derivedParameters[EMH] );
-   _derivedParameters[Sd1pc3] = _derivedParameters[D]/(tau*_derivedParameters[C] );
-   _derivedParameters[Sd2pc1] = one/_derivedParameters[Sd1pc2];
-   _derivedParameters[Sd2pc2] = tau*_derivedParameters[D]/( _derivedParameters[EM] - one );
-       
    return DefaultReturnValue;
+}
 
-};
+/** 
+ * Load random number streams using original gpu algorithm
+ * 
+ *
+ * @return DefaultReturnValue;
+ */
 
+int BrookRandomNumberGenerator::loadGVStreamsOriginal( void ){
+
+   // ---------------------------------------------------------------------------------------
+
+	int i, j;
+	static float *buf = NULL;
+	unsigned long int jran;
+
+   // static const char* methodName = "\nBrookRandomNumberGenerator::LoadGVStreamsOriginal";
+
+   // ---------------------------------------------------------------------------------------
+	
+   if( buf == NULL ){
+      buf = (float*) malloc( sizeof(float) * 3 * sdp->gvSize );
+   }
+	
+	jran = getRandomNumberSeed();
+	
+   for( int jj = 0; jj < getNumberOfRandomNumberStreams(); jj++ ){
+      for( int ii = 0; ii < 3*getRandomNumberStreamSize(); ii += 3 ){
+			//buf[i] = sdp->fgauss( &jran );
+			buf[i] = generateGromacsRandomNumber( &jran );
+		}
+	   getRandomNumberStream( jj )->loadFromArray( buf );
+	}
+	
+   incrementRandomNumberSeed( 1 );
+
+   return DefaultReturnValue;
+}
+
+/** 
+ * Loads a permutation of indices from 0 to gvSize-1 in
+ * sdp->strShuffle. To make sure that the order of the
+ * permutation is atleast NGVSHUFFLE, we create the
+ * permutation by introducing a random number of p-cycles
+ * where p is randomly determined from 2,3,5,7 and 11.
+ * The LCM of these numbers is 2310. 
+ * Ofcourse the p-cycles are not necessarily disjoint
+ * the way it's done here, but there's a good chance 
+ * there will enough disjoint cycles to make the 
+ * order of the permutation larger than NGVSHUFFLE
+ *
+ *
+ * This function is only called once at startup
+ *
+ * @return DefaultReturnValue;
+ **/
+
+int BrookRandomNumberGenerator::loadGVShuffle( void ){
+
+   // ---------------------------------------------------------------------------------------
+
+	const int p[] = { 2, 3, 5, 7, 11 };
+	const int np  = sizeof(p) / sizeof(p[0]);
+   const int pmax = p[np-1];
+
+	static float *buf = 0;
+	int iter, i, j;
+	static int *indices; 
+	float tmp;
+
+   // static const char* methodName = "\nBrookRandomNumberGenerator::loadGVShuffle";
+
+   // ---------------------------------------------------------------------------------------
+	
+   if( buf == NULL ){
+	   buf = (float*) malloc( sizeof(float) * sdp->gvSize );
+	   indices = (int*) malloc( sizeof(int) * pmax );
+   }
+	
+   int rvSize = getRandomNumberStreamSize();
+	for ( i = 0; i < rvSize; i++ ) {
+		buf[i] = (float) i;
+	}
+
+	//How to come up with this number here?
+
+   unsigned long int seed = getRandomNumberSeed();
+	for ( iter = 0; iter < 1000000; iter++ ) {
+		//for each p
+		for ( i = 0; i < np; i++ ){
+			//Come up with p random indices
+			//Not checking that they are distinct
+			//because that should be fairly rare
+			for ( j = 0; j < p[i]; j++ ) {
+				//indices[j] = (int) ( gmx_rando( &sdp->seed ) * sdp->gvSize );
+				indices[j] = (int) ( generateGromacsRandomNumber( &seed )*rvSize );
+			}
+			//do a p-cycle
+			tmp = buf[ indices[0] ];
+			for ( j = 0; j < p[i]-1; j++ ) {
+				buf[ indices[j] ] = buf[ indices[j+1] ];
+			}
+			buf[ indices[ p[i]-1 ] ] = tmp;
+		}
+	}
+   getShuffleStream()->loadFromArray( buf );
+	
+   return DefaultReturnValue;
+}
+
+/** 
+ * Shuffle streams
+ *
+ * @return DefaultReturnValue;
+ */
+
+int BrookRandomNumberGenerator::shuffleGVStreams( void ){
+
+   // ---------------------------------------------------------------------------------------
+
+   // static const char* methodName = "\nBrookRandomNumberGenerator::shuffleGVStreams";
+
+   // ---------------------------------------------------------------------------------------
+	
+   int numberOfRvStreams = getNumberOfRandomNumberStreams();
+	for( int ii = 0; ii < numberOfRvStreams - 1; ii++ ){
+		kpermute_vectors( (float) , sdp->strShuffle, sdp->strVGauss[i+1], 
+		                  sdp->strVGauss[i] );
+   }
+
+   for( int jj = 0; jj < numberOfRvStreams - 1; jj++ ){
+	   kpermute_vectors( (float) sdp->gvWidth, sdp->strShuffle, sdp->strVGauss[0], 
+	                      sdp->strVGauss[ NGVSTREAMS-1 ] );
+   }
+
+   return DefaultReturnValue;
+}
+
+static int
+PrintGVStreams( gpuContext gpu )
+{
+	int ii;
+	
+	gpuSDParams sdp = gpu->sdparams;
+   char testName[128];
+   char fileName[128];
+      
+   /* dump inputs */
+
+   (void) sprintf( testName, "ShuffleGVStreams" );
+   (void) sprintf( fileName, "%s.32bits.in", testName );
+   Save32Bits( fileName, "iiiii", sdp->gvWidth, sdp->seed, sdp->gvOffset, sdp->gvCurStream, sdp->gvNumShuffles );  
+
+   (void) sprintf( fileName, "%s.strShuffle.in", testName );
+   SaveStream( fileName, sdp->strShuffle );
+
+	for ( ii = 0; ii < NGVSTREAMS; ii++ ){
+      (void) sprintf( testName, "ShuffleGVStreams%d", ii );
+      (void) sprintf( fileName, "%s.strVGaussIn.in", testName );
+      SaveStream( fileName, sdp->strVGauss[ii] );
+
+   }
+
+	return 1;
+}
+
+/* Advances the current position by 2*gpu->natoms
+ * If we run out of rand numbers, we shuffle and 
+ * reuse a few times before reloading from the cpu
+ * */
+
+static int
+AdvanceGVCursor( gpuSDParams sdp, gpuContext gpu, int step )
+{
+   static clock_t rvTime      = 0;
+   static clock_t shuffleTime = 0;
+   static const int trackTime = 0;
+   clock_t time;
+
+   if( trackTime ){
+      time               = clock();
+   }
+
+	sdp->gvOffset += 2*gpu->natoms;
+	//Check if we've used up this texture
+	if ( sdp->gvOffset > sdp->gvSize - 2*gpu->natoms ) {
+		//Next one if available
+		sdp->gvOffset = 0;
+		if ( sdp->gvCurStream < NGVSTREAMS - 1 ) {
+			sdp->gvCurStream++;
+			//printf( "Using stream %d\n", sdp->gvCurStream ); 
+			//fflush( stdout );
+		} else {
+			//No more textures, need to shuffle
+			if ( sdp->gvNumShuffles < NGVSHUFFLE ) {
+				//printf( "Shuffling streams\n" );
+				//fflush( stdout );
+
+            clock_t localTime;
+            if( trackTime ){
+               localTime = clock();
+            }
+
+				ShuffleGVStreams( sdp, gpu );
+
+            if( trackTime ){
+               shuffleTime += clock() - localTime;
+            }
+				sdp->gvNumShuffles++;
+			} else { //Need to refresh random numbers from cpu
+            static int reducePrint = 0;
+				fflush( gpu->log );
+            if( UseOriginalRng ){
+               LoadGVStreamsOriginal( sdp );
+            } else {
+               LoadGVStreamsNvidia( sdp, gpu->log );
+            }
+				sdp->gvNumShuffles = 0;
+
+   if( trackTime && !(reducePrint++ % 20) ){
+      rvTime += clock() - time;
+		(void) fprintf( gpu->log, "Reloading random number streams from cpu: seed=%d at step=%d", sdp->seed, step );
+      (void) fprintf( gpu->log, " cmltv times: RValue=%.5f Shuffle=%.5f\n", ((double) rvTime/(double)CLOCKS_PER_SEC), ((double) shuffleTime/(double)CLOCKS_PER_SEC) );
+      (void) fflush( gpu->log );
+   }
+
+			}
+			sdp->gvCurStream = 0;
+		}
+	}
+
+/*
+   if( trackTime ){
+      rvTime += clock() - time;
+      if( (!sdp->gvNumShuffles && rvTime > 1) || !(sdp->gvNumShuffles %20) && (rvTime > 2*CLOCKS_PER_SEC) ){
+         (void) fprintf( gpu->log, "\n   Total RValue=%.5f Shuffle=%.5f", ((double) rvTime/(double)CLOCKS_PER_SEC), ((double) shuffleTime/(double)CLOCKS_PER_SEC) );
+      }
+   }
+*/
+
+	return 1;
+}
+
+
+extern "C" int
+gpuResetSdSeed( gpuContext gpu, int step, int seed )
+{
+	gpuSDParams sdp = gpu->sdparams;
+   sdp->seed       = seed;
+   (void) fprintf( gpu->log, "gpuResetSdSeed: reset SD seed to %d at step=%d.\n", seed, step );
+   (void) fflush( gpu->log );
+   return 0;
+}
 /** 
  * Update parameters -- only way parameters can be set
  * 
@@ -304,11 +663,11 @@ int BrookStochasticDynamics::_updateDerivedParameters( void ){
  *
  */
 
-int BrookStochasticDynamics::updateParameters( double temperature, double friction, double stepSize ){
+int BrookRandomNumberGenerator::updateParameters( double temperature, double friction, double stepSize ){
 
    // ---------------------------------------------------------------------------------------
 
-   // static const char* methodName = "\nBrookStochasticDynamics::updateParameters";
+   // static const char* methodName = "\nBrookRandomNumberGenerator::updateParameters";
 
    // ---------------------------------------------------------------------------------------
 
@@ -335,7 +694,7 @@ int BrookStochasticDynamics::updateParameters( double temperature, double fricti
  *
  */
 
-int BrookStochasticDynamics::update( Stream& positions, Stream& velocities,
+int BrookRandomNumberGenerator::update( Stream& positions, Stream& velocities,
                                      const Stream& forces,
                                      BrookShakeAlgorithm& brookShakeAlgorithm ){
 
@@ -345,7 +704,7 @@ int BrookStochasticDynamics::update( Stream& positions, Stream& velocities,
 
       float omega                   = 1.0f;
 
-   // static const char* methodName = "\nBrookStochasticDynamics::update";
+   // static const char* methodName = "\nBrookRandomNumberGenerator::update";
 
    // ---------------------------------------------------------------------------------------
 
@@ -487,11 +846,11 @@ AdvanceGVCursor( sdp, gpu, step );
  *
  */
    
-const BrookOpenMMFloat* BrookStochasticDynamics::getDerivedParameters( void ) const {
+const BrookOpenMMFloat* BrookRandomNumberGenerator::getDerivedParameters( void ) const {
 
    // ---------------------------------------------------------------------------------------
 
-   // static const char* methodName  = "\nBrookStochasticDynamics::getDerivedParameters";
+   // static const char* methodName  = "\nBrookRandomNumberGenerator::getDerivedParameters";
 
    // ---------------------------------------------------------------------------------------
 
@@ -505,7 +864,7 @@ const BrookOpenMMFloat* BrookStochasticDynamics::getDerivedParameters( void ) co
  *
  */
 
-int BrookStochasticDynamics::getStochasticDynamicsAtomStreamSize( void ) const {
+int BrookRandomNumberGenerator::getStochasticDynamicsAtomStreamSize( void ) const {
    return _sdAtomStreamSize;
 }
 
@@ -516,7 +875,7 @@ int BrookStochasticDynamics::getStochasticDynamicsAtomStreamSize( void ) const {
  *
  */
 
-int BrookStochasticDynamics::getStochasticDynamicsAtomStreamWidth( void ) const {
+int BrookRandomNumberGenerator::getStochasticDynamicsAtomStreamWidth( void ) const {
    return _sdAtomStreamWidth;
 }
 
@@ -526,7 +885,7 @@ int BrookStochasticDynamics::getStochasticDynamicsAtomStreamWidth( void ) const 
  * @return atom stream height
  */
 
-int BrookStochasticDynamics::getStochasticDynamicsAtomStreamHeight( void ) const {
+int BrookRandomNumberGenerator::getStochasticDynamicsAtomStreamHeight( void ) const {
    return _sdAtomStreamHeight;
 }
 
@@ -537,7 +896,7 @@ int BrookStochasticDynamics::getStochasticDynamicsAtomStreamHeight( void ) const
  *
  */
 
-BrookFloatStreamInternal* BrookStochasticDynamics::getSDPC1Stream( void ) const {
+BrookFloatStreamInternal* BrookRandomNumberGenerator::getSDPC1Stream( void ) const {
    return _sdStreams[SDPC1Stream];
 }
 
@@ -548,7 +907,7 @@ BrookFloatStreamInternal* BrookStochasticDynamics::getSDPC1Stream( void ) const 
  *
  */
 
-BrookFloatStreamInternal* BrookStochasticDynamics::getSDPC2Stream( void ) const {
+BrookFloatStreamInternal* BrookRandomNumberGenerator::getSDPC2Stream( void ) const {
    return _sdStreams[SDPC2Stream];
 }
 
@@ -559,7 +918,7 @@ BrookFloatStreamInternal* BrookStochasticDynamics::getSDPC2Stream( void ) const 
  *
  */
 
-BrookFloatStreamInternal* BrookStochasticDynamics::getSD2XStream( void ) const {
+BrookFloatStreamInternal* BrookRandomNumberGenerator::getSD2XStream( void ) const {
    return _sdStreams[SD2XStream];
 }
 
@@ -570,7 +929,7 @@ BrookFloatStreamInternal* BrookStochasticDynamics::getSD2XStream( void ) const {
  *
  */
 
-BrookFloatStreamInternal* BrookStochasticDynamics::getSD1VStream( void ) const {
+BrookFloatStreamInternal* BrookRandomNumberGenerator::getSD1VStream( void ) const {
    return _sdStreams[SD1VStream];
 }
 
@@ -581,7 +940,7 @@ BrookFloatStreamInternal* BrookStochasticDynamics::getSD1VStream( void ) const {
  *
  */
 
-BrookFloatStreamInternal* BrookStochasticDynamics::getVPrimeStream( void ) const {
+BrookFloatStreamInternal* BrookRandomNumberGenerator::getVPrimeStream( void ) const {
    return _sdStreams[VPrimeStream];
 }
 
@@ -592,7 +951,7 @@ BrookFloatStreamInternal* BrookStochasticDynamics::getVPrimeStream( void ) const
  *
  */
 
-BrookFloatStreamInternal* BrookStochasticDynamics::getXPrimeStream( void ) const {
+BrookFloatStreamInternal* BrookRandomNumberGenerator::getXPrimeStream( void ) const {
    return _sdStreams[XPrimeStream];
 }
 
@@ -603,7 +962,7 @@ BrookFloatStreamInternal* BrookStochasticDynamics::getXPrimeStream( void ) const
  *
  */
 
-BrookFloatStreamInternal* BrookStochasticDynamics::getInverseMassStream( void ) const {
+BrookFloatStreamInternal* BrookRandomNumberGenerator::getInverseMassStream( void ) const {
    return _sdStreams[InverseMassStream];
 }
 
@@ -617,11 +976,11 @@ BrookFloatStreamInternal* BrookStochasticDynamics::getInverseMassStream( void ) 
  *
  */
 
-int BrookStochasticDynamics::_initializeStreamSizes( int numberOfAtoms, const Platform& platform ){
+int BrookRandomNumberGenerator::_initializeStreamSizes( int numberOfAtoms, const Platform& platform ){
 
 // ---------------------------------------------------------------------------------------
 
-   //static const std::string methodName      = "BrookStochasticDynamics::_initializeStreamSizes";
+   //static const std::string methodName      = "BrookRandomNumberGenerator::_initializeStreamSizes";
 
 // ---------------------------------------------------------------------------------------
 
@@ -642,12 +1001,12 @@ int BrookStochasticDynamics::_initializeStreamSizes( int numberOfAtoms, const Pl
  *
  */
 
-//std::string BrookStochasticDynamics::_getDerivedParametersString( BrookStochasticDynamics::DerivedParameters  derivedParametersIndex ) const {
-std::string BrookStochasticDynamics::_getDerivedParametersString( int derivedParametersIndex ) const {
+//std::string BrookRandomNumberGenerator::_getDerivedParametersString( BrookRandomNumberGenerator::DerivedParameters  derivedParametersIndex ) const {
+std::string BrookRandomNumberGenerator::_getDerivedParametersString( int derivedParametersIndex ) const {
 
 // ---------------------------------------------------------------------------------------
 
-   //static const std::string methodName      = "BrookStochasticDynamics::_getDerivedParametersString";
+   //static const std::string methodName      = "BrookRandomNumberGenerator::_getDerivedParametersString";
 
 // ---------------------------------------------------------------------------------------
 
@@ -740,11 +1099,11 @@ std::string BrookStochasticDynamics::_getDerivedParametersString( int derivedPar
  *
  */
 
-int BrookStochasticDynamics::_initializeStreams( const Platform& platform ){
+int BrookRandomNumberGenerator::_initializeStreams( const Platform& platform ){
 
 // ---------------------------------------------------------------------------------------
 
-   //static const std::string methodName      = "BrookStochasticDynamics::_initializeStreams";
+   //static const std::string methodName      = "BrookRandomNumberGenerator::_initializeStreams";
 
    BrookOpenMMFloat dangleValue            = (BrookOpenMMFloat) 0.0;
 
@@ -791,11 +1150,11 @@ int BrookStochasticDynamics::_initializeStreams( const Platform& platform ){
  *
  */
 
-int BrookStochasticDynamics::_updateSdStreams( void ){
+int BrookRandomNumberGenerator::_updateSdStreams( void ){
 
 // ---------------------------------------------------------------------------------------
 
-   static const std::string methodName       = "BrookStochasticDynamics::_updateSdStreams";
+   static const std::string methodName       = "BrookRandomNumberGenerator::_updateSdStreams";
 
 // ---------------------------------------------------------------------------------------
 
@@ -856,11 +1215,11 @@ int BrookStochasticDynamics::_updateSdStreams( void ){
  *
  */
 
-int BrookStochasticDynamics::_setInverseSqrtMasses( const std::vector<double>& masses ){
+int BrookRandomNumberGenerator::_setInverseSqrtMasses( const std::vector<double>& masses ){
 
 // ---------------------------------------------------------------------------------------
 
-   //static const std::string methodName      = "BrookStochasticDynamics::_setInverseSqrtMasses";
+   //static const std::string methodName      = "BrookRandomNumberGenerator::_setInverseSqrtMasses";
 
    BrookOpenMMFloat zero                    = (BrookOpenMMFloat)  0.0;
    BrookOpenMMFloat one                     = (BrookOpenMMFloat)  1.0;
@@ -893,11 +1252,11 @@ int BrookStochasticDynamics::_setInverseSqrtMasses( const std::vector<double>& m
  *
  * */
     
-int BrookStochasticDynamics::setup( const std::vector<double>& masses, const Platform& platform ){
+int BrookRandomNumberGenerator::setup( const std::vector<double>& masses, const Platform& platform ){
     
 // ---------------------------------------------------------------------------------------
 
-   static const std::string methodName      = "BrookStochasticDynamics::setup";
+   static const std::string methodName      = "BrookRandomNumberGenerator::setup";
 
 // ---------------------------------------------------------------------------------------
 
@@ -923,11 +1282,11 @@ int BrookStochasticDynamics::setup( const std::vector<double>& masses, const Pla
  *
  * */
 
-std::string BrookStochasticDynamics::getContentsString( int level ) const {
+std::string BrookRandomNumberGenerator::getContentsString( int level ) const {
 
 // ---------------------------------------------------------------------------------------
 
-   static const std::string methodName      = "BrookStochasticDynamics::getContentsString";
+   static const std::string methodName      = "BrookRandomNumberGenerator::getContentsString";
 
    static const unsigned int MAX_LINE_CHARS = 256;
    char value[MAX_LINE_CHARS];

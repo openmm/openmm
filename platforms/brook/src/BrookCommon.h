@@ -90,6 +90,9 @@ class BrookCommon {
       static const std::string SDPC2Stream;
       static const std::string SD2XStream;
       static const std::string SD1VStream;
+      static const std::string VPrimeStream;
+      static const std::string XPrimeStream;
+      static const std::string InverseMassStream;
 
       // Shake streams
 
@@ -220,6 +223,24 @@ class BrookCommon {
       
       FILE* getLog( void ) const;
 
+      /** 
+       * Be verbose flag
+       *
+       * @return  verbosity flag
+       *
+       */
+    
+      int getVerbosity( void ) const;
+
+      /** 
+       * Set verbosity flag
+       *
+       * @param verbosity flag
+       *
+       */
+    
+      int setVerbosity( int verbositym);
+
       /* 
        * Given number of stream elements and width, returns the appropriate
        * height of the stream
@@ -265,6 +286,10 @@ class BrookCommon {
       // log file reference
 
       FILE* _log;
+
+      // verbosity
+
+      int _verbosity;
 
       /**
        * Set number of atoms

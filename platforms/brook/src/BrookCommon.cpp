@@ -75,6 +75,9 @@ const std::string BrookCommon::SDPC1Stream                                      
 const std::string BrookCommon::SDPC2Stream                                        = "SDPC2Stream";
 const std::string BrookCommon::SD2XStream                                         = "SD2XStream";
 const std::string BrookCommon::SD1VStream                                         = "SD1VStream";
+const std::string BrookCommon::VPrimeStream                                       = "VPrimeStream";
+const std::string BrookCommon::XPrimeStream                                       = "XPrimeStream";
+const std::string BrookCommon::InverseMassStream                                  = "InverseMassStream";
 
 // Shake streams
 
@@ -108,6 +111,7 @@ BrookCommon::BrookCommon(  ){
    _atomStreamSize            = -1;
 
    _log                       = NULL;
+   _verbosity                 = 0;
 
 }   
  
@@ -330,6 +334,31 @@ FILE* BrookCommon::getLog( void ) const {
 
 int BrookCommon::setLog( FILE* log ){
    _log = log;
+   return BrookCommon::DefaultReturnValue;
+}
+
+/** 
+ * Get verbosity 
+ * 
+ * @return   verbosity
+ *
+ */
+
+int BrookCommon::getVerbosity( void ) const {
+   return _verbosity;
+}
+
+/** 
+ * Set verbosity
+ * 
+ * @param  verbosity
+ *
+ * @return  DefaultReturnValue
+ *
+ */
+
+int BrookCommon::setVerbosity( int verbosity ){
+   _verbosity = verbosity;
    return BrookCommon::DefaultReturnValue;
 }
 
