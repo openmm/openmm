@@ -32,12 +32,6 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include <vector>
-#include <set>
-
-#include "BrookFloatStreamInternal.h"
-#include "BrookShakeAlgorithm.h"
-#include "BrookPlatform.h"
 #include "BrookCommon.h"
 
 namespace OpenMM {
@@ -52,6 +46,10 @@ class BrookRandomNumberGenerator : public BrookCommon {
 
    public:
   
+      // toggle between original rng & Kiss (Nvidia) code
+
+      static const int UseOriginalRng = 1;
+
       /** 
        * Constructor
        * 
@@ -66,99 +64,39 @@ class BrookRandomNumberGenerator : public BrookCommon {
       
       ~BrookRandomNumberGenerator();
   
-      /**
-       * Get tau
-       *
-       * @return tau
-       */
-
-      BrookOpenMMFloat getTau( void ) const; 
-
-      /**
-       * Get friction
-       *
-       * @return friction
-       */
-
-      BrookOpenMMFloat getFriction( void ) const; 
-
-      /**
-       * Get temperature
-       *
-       * @return temperature
-       */
-
-      BrookOpenMMFloat getTemperature( void ) const; 
-
-      /**
-       * Get step size
-       *
-       * @return step size
-       */
-
-      BrookOpenMMFloat getStepSize( void ) const; 
-
-      /**
-       *
-       * Get array of derived parameters indexed by 'DerivedParameters' enums
-       *
-       * @return array
-       *
-       */
-      
-      const BrookOpenMMFloat* getDerivedParameters( void ) const;
-      
-      /**
-       * Get StochasticDynamics atom stream width
-       *
-       * @return atom stream width
-       */
-
-      int getStochasticDynamicsAtomStreamWidth( void ) const; 
-
-      /**
-       * Get StochasticDynamics atom stream height
-       *
-       * @return atom stream height
-       */
-
-      int getStochasticDynamicsAtomStreamHeight( void ) const;
-
-      /**
-       * Get StochasticDynamics atom stream size
-       * 
-       * @return atom stream size
-       */
-
-      int getStochasticDynamicsAtomStreamSize( void ) const; 
-
       /** 
-       * Update parameters
+       * Get number of random number streams
        * 
-       * @param  temperature     temperature
-       * @param  friction        friction
-       * @param  step size       step size
-       *
-       * @return   DefaultReturnValue
+       * @return     number of random number streams 
        *
        */
       
-      int updateParameters( double temperature, double friction, double stepSize );
+      int getNumberOfRandomNumberStreams( void ) const;
       
-      /** 
-       * Update
-       * 
-       * @param  positions           atom positions
-       * @param  velocities          atom velocities
-       * @param  forces              atom forces
-       * @param  brookShakeAlgorithm BrookShakeAlgorithm reference
+      /**
+       * Get stream width
        *
-       * @return  DefaultReturnValue
-       *
+       * @return stream width
        */
-      
-      int update( Stream& positions, Stream& velocities,
-                  const Stream& forces, BrookShakeAlgorithm& brookShakeAlgorithm );
+
+      int getRandomNumberStreamWidth( void ) const; 
+
+      /**
+       * Get stream height
+       *
+       * @return stream height
+       */
+
+      int getRandomNumberStreamHeight( void ) const;
+
+      /**
+       * Get stream size
+       * 
+       * @return stream size
+       */
+
+      int getRandomNumberStreamSize( void ) const; 
+
       /** 
        * Get array of StochasticDynamics streams 
        *
@@ -169,16 +107,16 @@ class BrookRandomNumberGenerator : public BrookCommon {
       BrookFloatStreamInternal** getStreams( void );
       
       /* 
-       * Setup of StochasticDynamics parameters
+       * Setup of RNG parameters
        *
-       * @param masses                atom masses
-       * @param platform              Brook platform
+       * @param numberOfAtoms        number of atoms
+       * @param platform             Brook platform
        *
        * @return ErrorReturnValue value if error, else DefaultReturnValue
        *
        * */
       
-      int setup( const std::vector<double>& masses, const Platform& platform  );
+      int setup( int numberOfAtoms,  const Platform& platform  );
       
       /* 
        * Get contents of object
@@ -192,66 +130,16 @@ class BrookRandomNumberGenerator : public BrookCommon {
       std::string getContentsString( int level = 0 ) const;
 
       /** 
-       * Get SDPC1 stream 
+       * Get random number stream 
        *
-       * @return  SDPC1 stream
+       * @param index random number stream index     
        *
-       */
-      
-      BrookFloatStreamInternal* getSDPC1Stream( void ) const;
-      
-      /** 
-       * Get SDPC2 stream 
-       *
-       * @return  SDPC2 stream
+       * @return  random number stream
        *
        */
       
-      BrookFloatStreamInternal* getSDPC2Stream( void ) const;
+      BrookFloatStreamInternal* getRandomNumberStream( int index ) const;
       
-      /** 
-       * Get shuffle stream 
-       *
-       * @return  Shuffle stream
-       *
-       */
-      
-      BrookFloatStreamInternal* getShuffleStream( void ) const;
-      
-      /** 
-       * Generate a random number using algorithm in Gromacs
-       * 
-       * @param ig seed
-       *
-       * @return  random number
-       *
-       */
-      
-      BrookOpenMMFloat generateGromacsRandomNumber( int* ig );
-      
-      /** 
-       * Generate a random number using algorithm in Nvidia code
-       * http://www.helsbreth.org/random/rng_kiss.html
-       * 
-       * @param randomV1   output random value
-       * @param randomV2   output random value
-       * @param randomV3   output random value
-       * @param state      state
-       *
-       */
-      
-      void generateRandomsAlaNvidia( float* randomV1, float* randomV2, float* randomV3, 
-                                     unsigned int state[4] );
-
-      /** 
-       * Load random number streams using Nvidia algorithm
-       * 
-       *
-       * @return DefaultReturnValue;
-       */
-      
-      int loadRandomNumberStreamsNvidia( void );
-            
       /** 
        * Get random number seed
        *
@@ -280,15 +168,54 @@ class BrookRandomNumberGenerator : public BrookCommon {
       
       unsigned long int setRandomNumberSeed( unsigned long int seed = 1 );
             
+      /** 
+       * Get index of rv texture
+       *
+       * @return index of rv texture
+       */
+      
+      int getRvStreamIndex( void ) const;
+            
+      /** 
+       * Get max shuffles
+       *
+       * @return  max shuffles
+       *
+       */
+      
+      int getMaxShuffles( void ) const;
+      
+      /** 
+       * Advance random values stream index
+       *
+       * @param numberOfEntriesToAdvance number of entries consumed in previous iteration
+       *
+       * @return  DefaultReturnValue
+       *
+       */
+      
+      int advanceGVCursor( int numberOfEntriesToAdvance );
+      
+      /** 
+       * Get random value stream offset
+       *
+       * @return  random value stream offset
+       *
+       */
+      
+      int getRvStreamOffset( void ) const;
+      
    private:
    
       // streams indices
 
       enum BrookRandomNumberGeneratorStreams { 
-              RandomNumberStream,
               ShuffleStream,
               LastStreamIndex
            };
+
+      BrookFloatStreamInternal*  _auxiliaryStreams[LastStreamIndex];
+      BrookFloatStreamInternal** _randomNumberGeneratorStreams;
 
       // randomNumberSeed
 
@@ -303,6 +230,16 @@ class BrookRandomNumberGenerator : public BrookCommon {
       int _randomNumberStreamWidth;
       int _randomNumberStreamHeight;
       int _randomNumberStreamSize;
+
+      // control variables
+
+      int _rvStreamIndex;
+      int _rvStreamOffset;
+      int _numberOfShuffles;
+      int _maxShuffles;
+
+      float* _loadBuffer;
+      int*   _shuffleIndices;
 
       /* 
        * Setup of stream dimensions
@@ -326,7 +263,7 @@ class BrookRandomNumberGenerator : public BrookCommon {
        *
        */
       
-      int _initializeStreamSizes( int numberOfAtoms, const Platform& platform );
+      int _initializeStreamSizes(  int numberOfAtoms, const Platform& platform );
       
       /** 
        * Initialize stream dimensions and streams
@@ -340,15 +277,125 @@ class BrookRandomNumberGenerator : public BrookCommon {
       int _initializeStreams( const Platform& platform );
 
       /** 
-       * Set masses 
-       * 
-       * @param masses             atomic masses
+       * Increment random number offset
+       *
+       * @param increment increment for offset
+       *
+       * @return random number offset
+       */
+      
+      int _incrementRvOffset( int increment );
+            
+      /** 
+       * Get shuffle stream 
+       *
+       * @return  Shuffle stream
        *
        */
       
-      int _setInverseSqrtMasses( const std::vector<double>& masses );
+      BrookFloatStreamInternal* _getShuffleStream( void ) const;
       
+      /** 
+       * Generate a random number using algorithm in Gromacs
+       * 
+       * @param ig seed
+       *
+       * @return  random number
+       *
+       */
       
+      BrookOpenMMFloat _generateGromacsRandomNumber( unsigned long int* ig );
+      
+      /** 
+       * Generate a random number using Kiss (algorithm in Kiss code)
+       * http://www.helsbreth.org/random/rng_kiss.html
+       * 
+       * @param randomV1   output random value
+       * @param randomV2   output random value
+       * @param randomV3   output random value
+       * @param state      state
+       *
+       */
+      
+      void _generateRandomsKiss( float* randomV1, float* randomV2, float* randomV3, 
+                                 unsigned int state[4] );
+
+      /** 
+       * Load random number streams using Kiss algorithm
+       * 
+       *
+       * @return DefaultReturnValue;
+       */
+      
+      int _loadRandomNumberStreamsKiss( void );
+
+      /** 
+       * Load random number streams using original gpu algorithm
+       * 
+       *
+       * @return DefaultReturnValue;
+       */
+      
+      int _loadGVStreamsOriginal( void );
+      
+      /** 
+       * Loads a permutation of indices from 0 to gvSize-1 in
+       * sdp->strShuffle. To make sure that the order of the
+       * permutation is atleast NGVSHUFFLE, we create the
+       * permutation by introducing a random number of p-cycles
+       * where p is randomly determined from 2,3,5,7 and 11.
+       * The LCM of these numbers is 2310. 
+       * Ofcourse the p-cycles are not necessarily disjoint
+       * the way it's done here, but there's a good chance 
+       * there will enough disjoint cycles to make the 
+       * order of the permutation larger than NGVSHUFFLE
+       *
+       *
+       * This function is only called once at startup
+       *
+       * @return DefaultReturnValue;
+       **/
+      
+      int _loadGVShuffle( void );
+
+      /** 
+       * Get number of shuffles
+       *
+       * @return  number of shuffles
+       *
+       */
+      
+      int _getNumberOfShuffles( void ) const;
+
+      /** 
+       * Load buffer
+       *
+       * @return ptr to load buffer
+       *
+       * @throw OpenMMException if rv stream size is < 1
+       *
+       **/
+      
+      float* _getLoadBuffer( void );
+      
+      /** 
+       * Get ptr to shuffle indices
+       *
+       * @return ptr to shuffle indices
+       *
+       * @throw OpenMMException if size is < 1
+       *
+       **/
+      
+      int* _getShuffleIndices( int size );
+      
+      /** 
+       * Shuffle streams
+       *
+       * @return DefaultReturnValue;
+       */
+      
+      int _shuffleGVStreams( void );
       
 };
 

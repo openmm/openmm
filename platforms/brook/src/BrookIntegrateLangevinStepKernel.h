@@ -35,6 +35,7 @@
 #include "kernels.h"
 #include "BrookStochasticDynamics.h"
 #include "BrookShakeAlgorithm.h"
+#include "BrookRandomNumberGenerator.h"
 
 namespace OpenMM {
 
@@ -89,8 +90,9 @@ class BrookIntegrateLangevinStepKernel : public IntegrateLangevinStepKernel {
 
    protected:
 
-      BrookStochasticDynamics* _brookStochasticDynamics;
-      BrookShakeAlgorithm*     _brookShakeAlgorithm;
+      BrookStochasticDynamics*      _brookStochasticDynamics;
+      BrookShakeAlgorithm*          _brookShakeAlgorithm;
+      BrookRandomNumberGenerator*   _brookRandomNumberGenerator;
 
 };
 

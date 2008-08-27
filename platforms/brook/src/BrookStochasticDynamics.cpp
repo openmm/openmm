@@ -34,6 +34,8 @@
 #include "BrookPlatform.h"
 #include "OpenMMException.h"
 #include "BrookStreamImpl.h"
+#include "kshakeh.h"
+#include "kupdatesd.h"
 
 // use random number generator
 
@@ -326,10 +328,11 @@ int BrookStochasticDynamics::updateParameters( double temperature, double fricti
 /** 
  * Update
  * 
- * @param  positions           atom positions
- * @param  velocities          atom velocities
- * @param  forces              atom forces
- * @param  brookShakeAlgorithm BrookShakeAlgorithm reference
+ * @param  positions                   atom positions
+ * @param  velocities                  atom velocities
+ * @param  forces                      atom forces
+ * @param  brookShakeAlgorithm         BrookShakeAlgorithm reference
+ * @param  brookRandomNumberGenerator  BrookRandomNumberGenerator reference
  *
  * @return  DefaultReturnValue
  *
@@ -337,7 +340,8 @@ int BrookStochasticDynamics::updateParameters( double temperature, double fricti
 
 int BrookStochasticDynamics::update( Stream& positions, Stream& velocities,
                                      const Stream& forces,
-                                     BrookShakeAlgorithm& brookShakeAlgorithm ){
+                                     BrookShakeAlgorithm& brookShakeAlgorithm,
+                                     BrookRandomNumberGenerator& brookRandomNumberGenerator ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -349,26 +353,25 @@ int BrookStochasticDynamics::update( Stream& positions, Stream& velocities,
 
    // ---------------------------------------------------------------------------------------
 
-      BrookOpenMMFloat* derivedParameters                 = getDerivedParameters();
+      const BrookOpenMMFloat* derivedParameters           = getDerivedParameters();
 
       BrookStreamImpl& positionStream                     = dynamic_cast<BrookStreamImpl&>       (positions.getImpl());
       BrookStreamImpl& velocityStream                     = dynamic_cast<BrookStreamImpl&>       (velocities.getImpl());
-      BrookStreamImpl& forceStreamC                       = dynamic_cast<BrookStreamImpl&>       (forces.getImpl());
-      const BrookStreamImpl& forceStream                  = dynamic_cast<const BrookStreamImpl&> (forceStream.getImpl());
-
+      const BrookStreamImpl& forceStreamC                 = dynamic_cast<const BrookStreamImpl&> (forces.getImpl());
+      BrookStreamImpl& forceStream                        = const_cast<BrookStreamImpl&> (forceStreamC);
 
       // first integration step
 
       kupdate_sd1_fix1(
             (float) getStochasticDynamicsAtomStreamWidth(),
-(float) sdp->gvWidth,
-(float) sdp->gvOffset,
+            (float) brookRandomNumberGenerator.getRandomNumberStreamWidth(),
+            (float) brookRandomNumberGenerator.getRvStreamOffset(),
             derivedParameters[EM],
             derivedParameters[Sd1pc1],
             derivedParameters[Sd1pc2],
             derivedParameters[Sd1pc3],
             getSDPC1Stream()->getBrookStream(),
-sdp->strVGauss[ sdp->gvCurStream ],
+            brookRandomNumberGenerator.getRandomNumberStream( brookRandomNumberGenerator.getRvStreamIndex() )->getBrookStream(),
             getSD2XStream()->getBrookStream(),
             positionStream.getBrookStream(),
             forceStream.getBrookStream(),
@@ -379,100 +382,104 @@ sdp->strVGauss[ sdp->gvCurStream ],
             getXPrimeStream()->getBrookStream() 
             );
  
-AdvanceGVCursor( sdp, gpu, step );
+      // advance random number cursor
+
+      brookRandomNumberGenerator.advanceGVCursor( 2*getNumberOfAtoms() );
 
       // first Shake step
 
       kshakeh_fix1( 
                     10.0f,
                     (float) getStochasticDynamicsAtomStreamWidth(),
-                    brookShakeAlgorithm->getInverseHydrogenMass(),
+                    brookShakeAlgorithm.getInverseHydrogenMass(),
                     omega, 
-                    brookShakeAlgorithm->getShakeAtomIndicesStream()->getBrookStream(),
+                    brookShakeAlgorithm.getShakeAtomIndicesStream()->getBrookStream(),
                     positionStream.getBrookStream(),
                     getXPrimeStream()->getBrookStream(),
-                    brookShakeAlgorithm->getShakeAtomParameterStream()->getBrookStream(),
-                    brookShakeAlgorithm->getShakeXCons0Stream()->getBrookStream(),
-                    brookShakeAlgorithm->getShakeXCons1Stream()->getBrookStream(),
-                    brookShakeAlgorithm->getShakeXCons2Stream()->getBrookStream(),
-                    brookShakeAlgorithm->getShakeXCons3Stream()->getBrookStream() );
+                    brookShakeAlgorithm.getShakeAtomParameterStream()->getBrookStream(),
+                    brookShakeAlgorithm.getShakeXCons0Stream()->getBrookStream(),
+                    brookShakeAlgorithm.getShakeXCons1Stream()->getBrookStream(),
+                    brookShakeAlgorithm.getShakeXCons2Stream()->getBrookStream(),
+                    brookShakeAlgorithm.getShakeXCons3Stream()->getBrookStream() );
 
       // first Shake gather
 
       kshakeh_update1_fix1(
                     (float) getStochasticDynamicsAtomStreamWidth(),
                     derivedParameters[Sd2pc1],
-                    brookShakeAlgorithm->getShakeInverseMapStream()->getBrookStream(),
+                    brookShakeAlgorithm.getShakeInverseMapStream()->getBrookStream(),
                     positionStream.getBrookStream(),
                     getXPrimeStream()->getBrookStream(),
                     getVPrimeStream()->getBrookStream(),
-                    brookShakeAlgorithm->getShakeXCons0Stream()->getBrookStream(),
-                    brookShakeAlgorithm->getShakeXCons1Stream()->getBrookStream(),
-                    brookShakeAlgorithm->getShakeXCons2Stream()->getBrookStream(),
-                    brookShakeAlgorithm->getShakeXCons3Stream()->getBrookStream(),
+                    brookShakeAlgorithm.getShakeXCons0Stream()->getBrookStream(),
+                    brookShakeAlgorithm.getShakeXCons1Stream()->getBrookStream(),
+                    brookShakeAlgorithm.getShakeXCons2Stream()->getBrookStream(),
+                    brookShakeAlgorithm.getShakeXCons3Stream()->getBrookStream(),
                     getXPrimeStream()->getBrookStream() );
 
       // second integration step
 
       kupdate_sd2_fix1(
             (float) getStochasticDynamicsAtomStreamWidth(),
-(float) sdp->gvWidth,
-(float) sdp->gvOffset,
+            (float) brookRandomNumberGenerator.getRandomNumberStreamWidth(),
+            (float) brookRandomNumberGenerator.getRvStreamOffset(),
             derivedParameters[Sd2pc1],
             derivedParameters[Sd2pc2],
             getSDPC2Stream()->getBrookStream(),
-sdp->strVGauss[ sdp->gvCurStream ],
+            brookRandomNumberGenerator.getRandomNumberStream( brookRandomNumberGenerator.getRvStreamIndex() )->getBrookStream(),
             getSD1VStream()->getBrookStream(),
             positionStream.getBrookStream(),
             getXPrimeStream()->getBrookStream(), 
             getVPrimeStream()->getBrookStream(),
-            getS2XStream()->getBrookStream(),
+            getSD2XStream()->getBrookStream(),
             velocityStream.getBrookStream(),
             getXPrimeStream()->getBrookStream() 
             );
 
-AdvanceGVCursor( sdp, gpu, step );
+      // advance random number cursor
+
+      brookRandomNumberGenerator.advanceGVCursor( 2*getNumberOfAtoms() );
 
       // second Shake step
 
       kshakeh_fix1( 
                     10.0f,
                     (float) getStochasticDynamicsAtomStreamWidth(),
-                    brookShakeAlgorithm->getInverseHydrogenMass(),
+                    brookShakeAlgorithm.getInverseHydrogenMass(),
                     omega, 
-                    brookShakeAlgorithm->getShakeAtomIndicesStream()->getBrookStream(),
+                    brookShakeAlgorithm.getShakeAtomIndicesStream()->getBrookStream(),
                     positionStream.getBrookStream(),
                     getXPrimeStream()->getBrookStream(),
-                    brookShakeAlgorithm->getShakeAtomParameterStream()->getBrookStream(),
-                    brookShakeAlgorithm->getShakeXCons0Stream()->getBrookStream(),
-                    brookShakeAlgorithm->getShakeXCons1Stream()->getBrookStream(),
-                    brookShakeAlgorithm->getShakeXCons2Stream()->getBrookStream(),
-                    brookShakeAlgorithm->getShakeXCons3Stream()->getBrookStream() );
+                    brookShakeAlgorithm.getShakeAtomParameterStream()->getBrookStream(),
+                    brookShakeAlgorithm.getShakeXCons0Stream()->getBrookStream(),
+                    brookShakeAlgorithm.getShakeXCons1Stream()->getBrookStream(),
+                    brookShakeAlgorithm.getShakeXCons2Stream()->getBrookStream(),
+                    brookShakeAlgorithm.getShakeXCons3Stream()->getBrookStream() );
 
       // second Shake gather
 
       kshakeh_update1_fix1(
                     (float) getStochasticDynamicsAtomStreamWidth(),
                     derivedParameters[Sd2pc1],
-                    brookShakeAlgorithm->getShakeInverseMapStream()->getBrookStream(),
+                    brookShakeAlgorithm.getShakeInverseMapStream()->getBrookStream(),
                     positionStream.getBrookStream(),
                     getXPrimeStream()->getBrookStream(),
                     getVPrimeStream()->getBrookStream(),
-                    brookShakeAlgorithm->getShakeXCons0Stream()->getBrookStream(),
-                    brookShakeAlgorithm->getShakeXCons1Stream()->getBrookStream(),
-                    brookShakeAlgorithm->getShakeXCons2Stream()->getBrookStream(),
-                    brookShakeAlgorithm->getShakeXCons3Stream()->getBrookStream(),
+                    brookShakeAlgorithm.getShakeXCons0Stream()->getBrookStream(),
+                    brookShakeAlgorithm.getShakeXCons1Stream()->getBrookStream(),
+                    brookShakeAlgorithm.getShakeXCons2Stream()->getBrookStream(),
+                    brookShakeAlgorithm.getShakeXCons3Stream()->getBrookStream(),
                     getXPrimeStream()->getBrookStream() );
 
       kshakeh_update2_fix1( 
                     (float) getStochasticDynamicsAtomStreamWidth(),
-                    brookShakeAlgorithm->getShakeInverseMapStream()->getBrookStream(),
+                    brookShakeAlgorithm.getShakeInverseMapStream()->getBrookStream(),
                     positionStream.getBrookStream(),
                     getXPrimeStream()->getBrookStream(),
-                    brookShakeAlgorithm->getShakeXCons0Stream()->getBrookStream(),
-                    brookShakeAlgorithm->getShakeXCons1Stream()->getBrookStream(),
-                    brookShakeAlgorithm->getShakeXCons2Stream()->getBrookStream(),
-                    brookShakeAlgorithm->getShakeXCons3Stream()->getBrookStream(),
+                    brookShakeAlgorithm.getShakeXCons0Stream()->getBrookStream(),
+                    brookShakeAlgorithm.getShakeXCons1Stream()->getBrookStream(),
+                    brookShakeAlgorithm.getShakeXCons2Stream()->getBrookStream(),
+                    brookShakeAlgorithm.getShakeXCons3Stream()->getBrookStream(),
                     positionStream.getBrookStream() );
 
    return DefaultReturnValue;

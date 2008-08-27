@@ -37,6 +37,7 @@
 
 #include "BrookFloatStreamInternal.h"
 #include "BrookShakeAlgorithm.h"
+#include "BrookRandomNumberGenerator.h"
 #include "BrookPlatform.h"
 #include "BrookCommon.h"
 
@@ -148,17 +149,19 @@ class BrookStochasticDynamics : public BrookCommon {
       /** 
        * Update
        * 
-       * @param  positions           atom positions
-       * @param  velocities          atom velocities
-       * @param  forces              atom forces
-       * @param  brookShakeAlgorithm BrookShakeAlgorithm reference
+       * @param  positions                   atom positions
+       * @param  velocities                  atom velocities
+       * @param  forces                      atom forces
+       * @param  brookShakeAlgorithm         BrookShakeAlgorithm reference
+       * @param  brookRandomNumberGenerator  BrookRandomNumberGenerator reference
        *
        * @return  DefaultReturnValue
        *
        */
       
       int update( Stream& positions, Stream& velocities,
-                  const Stream& forces, BrookShakeAlgorithm& brookShakeAlgorithm );
+                  const Stream& forces, BrookShakeAlgorithm& brookShakeAlgorithm,
+                  BrookRandomNumberGenerator& brookRandomNumberGenerator );
       /** 
        * Get array of StochasticDynamics streams 
        *
@@ -226,6 +229,33 @@ class BrookStochasticDynamics : public BrookCommon {
        */
       
       BrookFloatStreamInternal* getSD1VStream( void ) const;
+
+      /** 
+       * Get V-prime stream 
+       *
+       * @return  V-prime stream
+       *
+       */
+      
+      BrookFloatStreamInternal* getVPrimeStream( void ) const;
+
+      /** 
+       * Get X-prime stream 
+       *
+       * @return  X-prime stream
+       *
+       */
+      
+      BrookFloatStreamInternal* getXPrimeStream( void ) const;
+
+      /** 
+       * Get inverse sqrt masses 
+       * 
+       * @return   inverse sqrt masses stream
+       *
+       */
+      
+      BrookFloatStreamInternal* getInverseMassStream( void ) const;
 
    private:
    
@@ -384,8 +414,6 @@ class BrookStochasticDynamics : public BrookCommon {
        */
       
       int _setInverseSqrtMasses( const std::vector<double>& masses );
-      
-      
       
 };
 

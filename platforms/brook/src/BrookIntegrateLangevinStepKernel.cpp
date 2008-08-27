@@ -46,7 +46,8 @@ BrookIntegrateLangevinStepKernel::BrookIntegrateLangevinStepKernel( std::string 
 
    _brookStochasticDynamics        = NULL;
    _brookShakeAlgorithm            = NULL;
-   
+   _brookRandomNumberGenerator     = NULL;
+
 }
 
 BrookIntegrateLangevinStepKernel::~BrookIntegrateLangevinStepKernel( ){
@@ -59,6 +60,7 @@ BrookIntegrateLangevinStepKernel::~BrookIntegrateLangevinStepKernel( ){
    
    delete _brookStochasticDynamics;
    delete _brookShakeAlgorithm;
+   delete _brookRandomNumberGenerator;
 
 }
 
@@ -72,11 +74,14 @@ void BrookIntegrateLangevinStepKernel::initialize( const vector<double>& masses,
 
 // ---------------------------------------------------------------------------------------
    
-   _brookStochasticDynamics = new BrookStochasticDynamics( );
+   _brookStochasticDynamics      = new BrookStochasticDynamics( );
    _brookStochasticDynamics->setup( masses, getPlatform() );
 
-   _brookShakeAlgorithm      = new BrookShakeAlgorithm( );
+   _brookShakeAlgorithm          = new BrookShakeAlgorithm( );
    _brookShakeAlgorithm->setup( masses, constraintIndices, constraintLengths, getPlatform() );
+
+   _brookRandomNumberGenerator   = new BrookRandomNumberGenerator( );
+   _brookRandomNumberGenerator->setup( (int) masses.size(), getPlatform() );
 }
 
 /** 
@@ -116,6 +121,7 @@ void BrookIntegrateLangevinStepKernel::execute( Stream& positions, Stream& veloc
    if( fabs( differences[0] ) < epsilon || fabs( differences[1] ) < epsilon || fabs( differences[2] ) < epsilon ){
       _brookStochasticDynamics->updateParameters( temperature, friction, stepSize );
    } 
-   _brookStochasticDynamics->update( positions, velocities, forces, *_brookShakeAlgorithm );
+   _brookStochasticDynamics->update( positions, velocities, forces, (_brookShakeAlgorithm ? *_brookShakeAlgorithm : NULL),
+                                     *_brookRandomNumberGenerator );
 
 }

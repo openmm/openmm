@@ -145,8 +145,8 @@ void BrookPlatform::_initializeKernelFactory( void ){
 
    registerKernelFactory( CalcStandardMMForceFieldKernel::Name(), factory);
    // registerKernelFactory( CalcGBSAOBCForceFieldKernel::Name(),    factory);
-   registerKernelFactory( IntegrateVerletStepKernel::Name(),      factory);
-   //registerKernelFactory( IntegrateLangevinStepKernel::Name(),    factory);
+   //registerKernelFactory( IntegrateVerletStepKernel::Name(),      factory);
+   registerKernelFactory( IntegrateLangevinStepKernel::Name(),    factory);
    //registerKernelFactory( IntegrateBrownianStepKernel::Name(),    factory);
    //registerKernelFactory( ApplyAndersenThermostatKernel::Name(),  factory);
    registerKernelFactory( CalcKineticEnergyKernel::Name(),        factory);
@@ -180,7 +180,7 @@ void BrookPlatform::_setBrookRuntime( const std::string& runtime ){
    }
 
    if( getLog() ){
-      (void) fprintf( getLog(), "%s Brook initializing to runtime=<%s>", methodName.c_str(), _runtime.c_str() ); 
+      (void) fprintf( getLog(), "%s Brook initializing to runtime=<%s>\n", methodName.c_str(), _runtime.c_str() ); 
       (void) fflush( getLog() );
    }
 

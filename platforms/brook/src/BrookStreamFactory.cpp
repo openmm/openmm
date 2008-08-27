@@ -56,7 +56,9 @@ BrookStreamFactory::BrookStreamFactory( void ){
 // ---------------------------------------------------------------------------------------
 
 	_defaultDangleValue                      = 1.0e+38;
-	_defaultAtomStreamWidth                  = 32;
+	_defaultAtomStreamWidth                  = DefaultStreamAtomWidth;
+   _defaultStreamRandomNumberWidth          = DefaultStreamRandomNumberWidth;
+   _defaultStreamRandomNumberSize           = DefaultStreamRandomNumberSize;
 
 }
 
@@ -121,7 +123,111 @@ int BrookStreamFactory::setDefaultAtomStreamWidth( int atomStreamWidth ){
 }
 
 /** 
- * get default dangle value
+ * Get randomNumber stream width
+ * 
+ * @return randomNumberStreamWidth
+ *
+ */
+
+int BrookStreamFactory::getDefaultRandomNumberStreamWidth( void ) const {
+
+// ---------------------------------------------------------------------------------------
+
+   //static const std::string methodName      = "BrookStreamFactory::getDefaultRandomNumberStreamWidth";
+
+// ---------------------------------------------------------------------------------------
+
+   return _defaultStreamRandomNumberWidth;
+}
+
+/** 
+ * Set randomNumber stream width
+ * 
+ * @param randomNumberStreamWidth  randomNumber stream width
+ *
+ * @return DefaultReturnValue
+ *
+ * @throw OpenMMException if randomNumberStreamWidth < 1
+ *
+ */
+
+int BrookStreamFactory::setDefaultRandomNumberStreamWidth( int randomNumberStreamWidth ){
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName      = "BrookStreamFactory::setDefaultRandomNumberStreamWidth";
+
+// ---------------------------------------------------------------------------------------
+
+   // validate randomNumber stream width
+
+   if( randomNumberStreamWidth < 1 ){
+      std::stringstream message;
+      message << methodName << " randomNumberStreamWidth=" << randomNumberStreamWidth << " is less than 1.";
+      throw OpenMMException( message.str() );
+      return ErrorReturnValue;
+   }
+
+   _defaultStreamRandomNumberWidth = randomNumberStreamWidth;
+
+   return DefaultReturnValue;
+
+}
+
+/*
+ * Get randomNumber stream size
+ * 
+ * @return randomNumberStreamSize
+ *
+ */
+
+int BrookStreamFactory::getDefaultRandomNumberStreamSize( void ) const {
+
+// ---------------------------------------------------------------------------------------
+
+   //static const std::string methodName      = "BrookStreamFactory::getDefaultRandomNumberStreamSize";
+
+// ---------------------------------------------------------------------------------------
+
+   return _defaultStreamRandomNumberSize;
+}
+
+/** 
+ * Set randomNumber stream size
+ * 
+ * @param randomNumberStreamSize  randomNumber stream size
+ *
+ * @return DefaultReturnValue
+ *
+ * @throw OpenMMException if randomNumberStreamSize < 1
+ *
+ */
+
+int BrookStreamFactory::setDefaultRandomNumberStreamSize( int randomNumberStreamSize ){
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName      = "BrookStreamFactory::setDefaultRandomNumberStreamSize";
+
+// ---------------------------------------------------------------------------------------
+
+   // validate randomNumber stream size
+
+   if( randomNumberStreamSize < 1 ){
+      std::stringstream message;
+      message << methodName << " randomNumberStreamSize=" << randomNumberStreamSize << " is less than 1.";
+      throw OpenMMException( message.str() );
+      return ErrorReturnValue;
+   }
+
+   _defaultStreamRandomNumberSize = randomNumberStreamSize;
+
+   return DefaultReturnValue;
+
+}
+
+/** 
+ * Get default dangle value
  * 
  * @return default dangle value
  *

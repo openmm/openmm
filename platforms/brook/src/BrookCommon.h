@@ -104,6 +104,10 @@ class BrookCommon {
       static const std::string ShakeXCons3Stream;
       static const std::string ShakeInverseMapStream;
 
+      // Random number generator streams
+
+      static const std::string ShuffleStream;
+
       // ---------------------------------------------------------------------------------------
 
      /** 
@@ -224,7 +228,7 @@ class BrookCommon {
       FILE* getLog( void ) const;
 
       /** 
-       * Be verbose flag
+       * Get verbose flag
        *
        * @return  verbosity flag
        *
@@ -239,7 +243,7 @@ class BrookCommon {
        *
        */
     
-      int setVerbosity( int verbositym);
+      int setVerbosity( int verbosity );
 
       /* 
        * Given number of stream elements and width, returns the appropriate
