@@ -54,7 +54,6 @@ BrookFloatStreamInternal::BrookFloatStreamInternal( const std::string& name, int
 // ---------------------------------------------------------------------------------------
 
    static const std::string methodName      = "BrookFloatStreamInternal::BrookFloatStreamInternal";
-   // static const int debug                   = 1;
 
 // ---------------------------------------------------------------------------------------
 
@@ -119,6 +118,7 @@ BrookFloatStreamInternal::BrookFloatStreamInternal( const std::string& name, int
    // set stream height based on specified stream _width
 
    if( streamWidth < 1 ){
+
       std::stringstream message;
       message << methodName << " stream=" << name << " input stream width=" << streamWidth << " is less than 1.";
       throw OpenMMException( message.str() );
@@ -155,6 +155,9 @@ BrookFloatStreamInternal::BrookFloatStreamInternal( const std::string& name, int
 
    _data = new float[streamSize*_width];
 
+//printf( "%s %s data=%u stream=%d [%d %d] width=%d\n", methodName.c_str(), getName().c_str(), (unsigned int) _data, streamSize, _streamHeight, _streamWidth, _width );
+//fflush( stdout );
+
 }
 
 /** 
@@ -166,12 +169,15 @@ BrookFloatStreamInternal::~BrookFloatStreamInternal( ){
 
 // ---------------------------------------------------------------------------------------
 
-   //static const std::string methodName      = "BrookFloatStreamInternal::~BrookFloatStreamInternal";
-   // static const int debug                   = 1;
+   static const std::string methodName      = "BrookFloatStreamInternal::~BrookFloatStreamInternal";
 
 // ---------------------------------------------------------------------------------------
 
    //delete _aStream;
+
+//printf( "%s %s data=%u stream=%d [%d %d] width=%d\n", methodName.c_str(), getName().c_str(), (unsigned int) _data, getStreamSize(), _streamHeight, _streamWidth, _width );
+//fflush( stdout );
+
    delete[] _data;
 
 }
@@ -218,7 +224,7 @@ void BrookFloatStreamInternal::loadFromArray( const void* array ){
  * the values should be packed into a single array: all the values for the first element, followed by all the values
  * for the next element, etc.
  *
- * @throw exception if baseType not float or double
+ * @throw exception if baseType not float, double, or integer
  *
  */
 
@@ -227,11 +233,11 @@ void BrookFloatStreamInternal::loadFromArray( const void* array, BrookStreamInte
 // ---------------------------------------------------------------------------------------
 
    static const std::string methodName      = "BrookFloatStreamInternal::loadFromArray";
-   // static const int debug                   = 1;
 
 // ---------------------------------------------------------------------------------------
 
    int totalSize                           = getSize()*getWidth();
+   //int totalSize                           = getSize();
 
    if( baseType == BrookStreamInternal::Float ){
 
@@ -293,6 +299,8 @@ void BrookFloatStreamInternal::saveToArray( void* array ){
 
    if( baseType == BrookStreamInternal::Float ){
 
+//printf( "%s Basetype is float\n", methodName.c_str() );
+//fflush( stdout );
       memcpy( array, _data, sizeof( float )*totalSize );
 /*
       float* arrayData = (float*) array;
@@ -303,12 +311,18 @@ void BrookFloatStreamInternal::saveToArray( void* array ){
 
    } else if( baseType == BrookStreamInternal::Double ){
 
+//printf( "%s Basetype is double\n", methodName.c_str() );
+//fflush( stdout );
+
       double* arrayData = (double*) array;
       for( int ii = 0; ii < totalSize; ii++ ){
          arrayData[ii] = (double) _data[ii];
       }
 
    } else if( baseType == BrookStreamInternal::Integer ){
+
+//printf( "%s Basetype is int\n", methodName.c_str() );
+//fflush( stdout );
 
       int* arrayData = (int*) array;
       for( int ii = 0; ii < totalSize; ii++ ){
@@ -410,8 +424,7 @@ void BrookFloatStreamInternal::_loadDanglingValues( float danglingValue ){
 
 // ---------------------------------------------------------------------------------------
 
-   // static const std::string methodName      = "BrookFloatStreamInternal::_loadDanglingValues";
-   // static const int debug                   = 1;
+    static const std::string methodName      = "BrookFloatStreamInternal::_loadDanglingValues";
 
 // ---------------------------------------------------------------------------------------
 
@@ -419,6 +432,9 @@ void BrookFloatStreamInternal::_loadDanglingValues( float danglingValue ){
 
    int arraySize  = getSize()*width;
    int streamSize = getStreamSize()*width;
+
+//printf( "%s array=%d stream=%d width=%d %s\n", methodName.c_str(), arraySize, streamSize, width, getName().c_str() );
+//fflush( stdout );
 
    if( arraySize < streamSize ){
       for( int ii = arraySize; ii < streamSize; ii++ ){
@@ -487,5 +503,70 @@ const std::string BrookFloatStreamInternal::getContentsString( int level ) const
    message << _getLine( tab, "Dangle value:", value ); 
 
    return message.str();
+}
+
+/* 
+ * Print array contents of object to file
+ *
+ * @param log         file to print to
+ *
+ * @return DefaultReturnValue
+ *
+ * */
+
+int BrookFloatStreamInternal::_bodyPrintToFile( FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+   //static const std::string methodName      = "BrookStreamInternal::_bodyPrintToFile";
+
+// ---------------------------------------------------------------------------------------
+
+   void* dataArrayV = getDataArray( );
+   saveToArray( dataArrayV );
+
+   int streamSize   = getStreamSize();
+   int width        = getWidth();
+   int index        = 0;
+    float* dataArray = (float*) dataArrayV;
+   for( int ii = 0; ii < streamSize; ii++ ){
+      std::stringstream message;
+      message.width( 15 );
+      message.precision( 5 );
+      message << ii << " [ ";
+      for( int jj = 0; jj < width; jj++ ){
+         message << dataArray[index++] << " ";
+      }
+      message << "]\n";
+      (void) fprintf( log, "%s", message.str().c_str() );    
+   }
+
+   delete[] dataArrayV;
+
+   return DefaultReturnValue;
+
+}
+
+/** 
+ * Get array of appropritate size for loading data
+ *
+ * @return data array -- user's responsibility to free
+ */
+
+void* BrookFloatStreamInternal::getDataArray( void ){
+
+// ---------------------------------------------------------------------------------------
+
+   //static const std::string methodName      = "BrookStreamInternal::getDataArray";
+
+// ---------------------------------------------------------------------------------------
+
+   int totalSize                          = getStreamSize()*getWidth();
+   BrookStreamInternal::DataType baseType = getBaseDataType();
+   
+   if( baseType == Double || baseType == Double2 ||  baseType == Double3 ||  baseType == Double4 ){
+      totalSize *= 2;
+   }
+   return new float[totalSize];
 }
 

@@ -103,7 +103,7 @@ void BrookIntegrateLangevinStepKernel::execute( Stream& positions, Stream& veloc
 // ---------------------------------------------------------------------------------------
 
    double epsilon = 1.0e-04;
-   //static const std::string methodName      = "BrookIntegrateLangevinStepKernel::execute";
+   static const std::string methodName      = "BrookIntegrateLangevinStepKernel::execute";
 
 // ---------------------------------------------------------------------------------------
    
@@ -121,7 +121,17 @@ void BrookIntegrateLangevinStepKernel::execute( Stream& positions, Stream& veloc
    if( fabs( differences[0] ) < epsilon || fabs( differences[1] ) < epsilon || fabs( differences[2] ) < epsilon ){
       _brookStochasticDynamics->updateParameters( temperature, friction, stepSize );
    } 
-   _brookStochasticDynamics->update( positions, velocities, forces, (_brookShakeAlgorithm ? *_brookShakeAlgorithm : NULL),
-                                     *_brookRandomNumberGenerator );
+
+   assert( _brookShakeAlgorithm );
+/*
+   if( _brookShakeAlgorithm == NULL ){
+      std::stringstream message;
+      message << methodName << " _brookShakeAlgorithm is not set -- case not handled.";
+      throw OpenMMException( message.str() );
+      return NULL;
+   }
+*/
+
+   _brookStochasticDynamics->update( positions, velocities, forces, *_brookShakeAlgorithm, *_brookRandomNumberGenerator );
 
 }

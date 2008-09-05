@@ -223,19 +223,109 @@ void BrookCalcStandardMMForceFieldKernel::executeForces( const Stream& positions
    static const int K_Stream                = 2;
    static const int L_Stream                = 3;
 
+   static const int PrintOn                 = 0;
+
    static const float4 dummyParameters( 0.0, 0.0, 0.0, 0.0 );
 
    // static const int debug                   = 1;
 
 // ---------------------------------------------------------------------------------------
 
-   // bonded
+   // ---------------------------------------------------------------------------------------
 
    const BrookStreamImpl& positionStreamC              = dynamic_cast<const BrookStreamImpl&> (positions.getImpl());
    BrookStreamImpl& positionStream                     = const_cast<BrookStreamImpl&>         (positionStreamC);
    BrookStreamImpl& forceStream                        = dynamic_cast<BrookStreamImpl&>       (forces.getImpl());
    
-   float epsfac                                        = (float) (_brookBonded->getLJ_14Scale()*_brookBonded->getCoulombFactor());
+   // nonbonded forces
+
+   // added charge stream to knbforce_CDLJ4
+   // libs generated from ~/src/gmxgpu-nsqOpenMM
+
+   BrookFloatStreamInternal**  nonbondedForceStreams = _brookNonBonded->getForceStreams();
+
+   float epsfac                                      = 138.935485f;
+
+   knbforce_CDLJ4(
+             (float) _brookNonBonded->getNumberOfAtoms(),
+             (float) _brookNonBonded->getAtomSizeCeiling(),
+             (float) _brookNonBonded->getDuplicationFactor(),
+             (float) _brookNonBonded->getAtomStreamHeight( ),
+             (float) _brookNonBonded->getAtomStreamWidth( ),
+             (float) _brookNonBonded->getJStreamWidth( ),
+             (float) _brookNonBonded->getPartialForceStreamWidth( ),
+             epsfac,
+             dummyParameters,
+             positionStream.getBrookStream(),
+             _brookNonBonded->getChargeStream()->getBrookStream(),
+             _brookNonBonded->getOuterVdwStream()->getBrookStream(),
+             _brookNonBonded->getInnerSigmaStream()->getBrookStream(),
+             _brookNonBonded->getInnerEpsilonStream()->getBrookStream(),
+             _brookNonBonded->getExclusionStream()->getBrookStream(),
+             nonbondedForceStreams[0]->getBrookStream(),
+             nonbondedForceStreams[1]->getBrookStream(),
+             nonbondedForceStreams[2]->getBrookStream(),
+             nonbondedForceStreams[3]->getBrookStream()
+           );
+
+/*
+float zerof = 0.0f;
+nonbondedForceStreams[0]->fillWithValue( &zerof );
+nonbondedForceStreams[1]->fillWithValue( &zerof );
+nonbondedForceStreams[2]->fillWithValue( &zerof );
+nonbondedForceStreams[3]->fillWithValue( &zerof );
+*/
+
+   // diagnostics
+
+   if( PrintOn ){
+      (void) fprintf( getLog(), "\nPost knbforce_CDLJ4: atoms=%6d ceiling=%3d dupFac=%3d", _brookNonBonded->getNumberOfAtoms(),  
+                                                                                           _brookNonBonded->getAtomSizeCeiling(),
+                                                                                           _brookNonBonded->getDuplicationFactor()  );
+
+      (void) fprintf( getLog(), "\n                      hght=%6d   width=%3d   jWid=%3d", _brookNonBonded->getAtomStreamHeight( ),
+                                                                                           _brookNonBonded->getAtomStreamWidth( ),
+                                                                                           _brookNonBonded->getJStreamWidth( ) );
+      (void) fprintf( getLog(), "\n                      pFrc=%6d     eps=%12.5e\n",       _brookNonBonded->getPartialForceStreamWidth( ), epsfac );
+
+      (void) fprintf( getLog(), "\nOuterVdwStreamd\n" );
+      _brookNonBonded->getOuterVdwStream()->printToFile( getLog() );
+
+      (void) fprintf( getLog(), "\nInnerSigmaStream\n" );
+      _brookNonBonded->getInnerSigmaStream()->printToFile( getLog() );
+
+      (void) fprintf( getLog(), "\nInnerEpsilonStream\n" );
+      _brookNonBonded->getInnerEpsilonStream()->printToFile( getLog() );
+
+      (void) fprintf( getLog(), "\nExclusionStream\n" );
+      _brookNonBonded->getExclusionStream()->printToFile( getLog() );
+
+      (void) fprintf( getLog(), "\nChargeStream\n" );
+      _brookNonBonded->getChargeStream()->printToFile( getLog() );
+
+      for( int ii = 0; ii < 4; ii++ ){
+         (void) fprintf( getLog(), "\nForce stream %d\n", ii );
+         nonbondedForceStreams[ii]->printToFile( getLog() );
+      }
+   }
+
+   // gather forces
+
+   kMergeFloat3_4_nobranch( (float) _brookNonBonded->getDuplicationFactor(),
+                            (float) _brookNonBonded->getAtomStreamWidth(),
+                            (float) _brookNonBonded->getPartialForceStreamWidth(),
+                            (float) _brookNonBonded->getNumberOfAtoms(),
+                            (float) _brookNonBonded->getAtomSizeCeiling(),
+                            (float) _brookNonBonded->getOuterLoopUnroll(),
+                            nonbondedForceStreams[0]->getBrookStream(),
+                            nonbondedForceStreams[1]->getBrookStream(),
+                            nonbondedForceStreams[2]->getBrookStream(),
+                            nonbondedForceStreams[3]->getBrookStream(),
+                            forceStream.getBrookStream() );
+
+   // bonded
+
+         epsfac                                        = (float) (_brookBonded->getLJ_14Scale()*_brookBonded->getCoulombFactor());
    float width                                         = (float) (_brookBonded->getInverseMapStreamWidth());
 
    // bonded forces
@@ -253,6 +343,7 @@ void BrookCalcStandardMMForceFieldKernel::executeForces( const Stream& positions
                  (float) bondedForceStreams[0]->getStreamWidth(),
                  dummyParameters,
                  positionStream.getBrookStream(),
+                 _brookBonded->getChargeStream()->getBrookStream(),
                  _brookBonded->getAtomIndicesStream()->getBrookStream(),
                  bondedParameters[0]->getBrookStream(),
                  bondedParameters[1]->getBrookStream(),
@@ -263,6 +354,37 @@ void BrookCalcStandardMMForceFieldKernel::executeForces( const Stream& positions
                  bondedForceStreams[1]->getBrookStream(),
                  bondedForceStreams[2]->getBrookStream(),
                  bondedForceStreams[3]->getBrookStream() );
+
+
+   // diagnostics
+
+   if( 1 && PrintOn ){
+
+      int countPrintInvMap[4] = { 3, 5, 2, 4 }; 
+
+      (void) fprintf( getLog(), "\nPost kbonded_CDLJ: epsFac=%.6f %.6f %.6f", epsfac, _brookBonded->getLJ_14Scale(), _brookBonded->getCoulombFactor());
+      (void) fprintf( getLog(), "\nAtom indices stream\n" );
+      _brookBonded->getAtomIndicesStream()->printToFile( getLog() );
+
+      (void) fprintf( getLog(), "\nCharge stream\n" );
+      _brookBonded->getChargeStream()->printToFile( getLog() );
+
+      for( int ii = 0; ii < 5; ii++ ){
+         (void) fprintf( getLog(), "\nParam stream %d\n", ii );
+         bondedParameters[ii]->printToFile( getLog() );
+      }
+      for( int ii = 0; ii < 4; ii++ ){
+         (void) fprintf( getLog(), "\nForce stream %d\n", ii );
+         bondedForceStreams[ii]->printToFile( getLog() );
+      }
+      (void) fprintf( getLog(), "\nInverse map streams\n" );
+      for( int ii = 0; ii < 4; ii++ ){
+         for( int jj = 0; jj < countPrintInvMap[ii]; jj++ ){
+            (void) fprintf( getLog(), "\n   Inverse map streams index=%d %d\n", ii, jj );
+            inverseStreamMaps[ii][jj]->printToFile( getLog() );
+         }
+      }
+   }
 
    // gather forces
 
@@ -327,50 +449,6 @@ void BrookCalcStandardMMForceFieldKernel::executeForces( const Stream& positions
                       inverseStreamMaps[L_Stream][1]->getBrookStream(),
                       bondedForceStreams[L_Stream]->getBrookStream(),
                       forceStream.getBrookStream(), forceStream.getBrookStream() );
-
-   // ---------------------------------------------------------------------------------------
-
-   // nonbonded forces
-
-   BrookFloatStreamInternal**  nonbondedForceStreams = _brookNonBonded->getForceStreams();
-
-   knbforce_CDLJ4(
-             (float) _brookNonBonded->getNumberOfAtoms(),
-             (float) _brookNonBonded->getAtomSizeCeiling(),
-             (float) _brookNonBonded->getDuplicationFactor(),
-             (float) _brookNonBonded->getAtomStreamHeight( ),
-             (float) _brookNonBonded->getAtomStreamWidth( ),
-             (float) _brookNonBonded->getJStreamWidth( ),
-             (float) _brookNonBonded->getPartialForceStreamWidth( ),
-             epsfac,
-             dummyParameters,
-             positionStream.getBrookStream(),
-             _brookNonBonded->getOuterVdwStream()->getBrookStream(),
-             _brookNonBonded->getInnerSigmaStream()->getBrookStream(),
-             _brookNonBonded->getInnerEpsilonStream()->getBrookStream(),
-             _brookNonBonded->getExclusionStream()->getBrookStream(),
-             nonbondedForceStreams[0]->getBrookStream(),
-             nonbondedForceStreams[1]->getBrookStream(),
-             nonbondedForceStreams[2]->getBrookStream(),
-             nonbondedForceStreams[3]->getBrookStream()
-           );
-
-   // strF is assummed to be zero here
-
-   // gather forces
-
-   kMergeFloat3_4_nobranch( (float) _brookNonBonded->getDuplicationFactor(),
-                            (float) _brookNonBonded->getAtomStreamWidth(),
-                            (float) _brookNonBonded->getPartialForceStreamWidth(),
-                            (float) _brookNonBonded->getNumberOfAtoms(),
-                            (float) _brookNonBonded->getAtomSizeCeiling(),
-                            (float) _brookNonBonded->getOuterLoopUnroll(),
-                            nonbondedForceStreams[0]->getBrookStream(),
-                            nonbondedForceStreams[1]->getBrookStream(),
-                            nonbondedForceStreams[2]->getBrookStream(),
-                            nonbondedForceStreams[3]->getBrookStream(),
-                            forceStream.getBrookStream() );
-
 
    // ---------------------------------------------------------------------------------------
 }

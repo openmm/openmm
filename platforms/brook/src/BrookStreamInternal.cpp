@@ -281,3 +281,82 @@ std::string BrookStreamInternal::_getLine( const std::string& tab,
 
 }
 
+/* 
+ * Print contents of object to file
+ *
+ * @param log         file to print to
+ *
+ * @return DefaultReturnValue
+ *
+ * */
+
+int BrookStreamInternal::printToFile( FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName      = "BrookStreamInternal::printToFile";
+
+// ---------------------------------------------------------------------------------------
+
+   if( log == NULL ){
+      log = stderr;
+   }
+   std::string contents = getContentsString();
+   (void) fprintf( log, "%s\n", contents.c_str() );
+
+   _bodyPrintToFile( log );
+
+   return DefaultReturnValue;
+
+}
+
+/* 
+ * Get contents of object
+ *
+ * @param level   level of dump
+ *
+ * @return string containing contents
+ *
+ * */
+
+const std::string BrookStreamInternal::getContentsString( int level ) const {
+
+// ---------------------------------------------------------------------------------------
+
+   // static const std::string methodName      = "BrookIntStreamInternal::getContentsString";
+
+   static const unsigned int MAX_LINE_CHARS = 256;
+   char value[MAX_LINE_CHARS];
+   //static const char* Set                   = "Set";
+   //static const char* NotSet                = "Not set";
+
+
+// ---------------------------------------------------------------------------------------
+
+   std::stringstream message;
+   std::string tab   = "   ";
+
+#ifdef WIN32
+#define LOCAL_SPRINTF(a,b,c) sprintf_s( (a), MAX_LINE_CHARS, (b), (c) );   
+#else
+#define LOCAL_SPRINTF(a,b,c) sprintf( (a), (b), (c) );   
+#endif
+
+   (void) LOCAL_SPRINTF( value, "%s", getName().c_str() );
+   message << _getLine( tab, "Name:", value );
+
+   (void) LOCAL_SPRINTF( value, "%d", getWidth() );
+   message << _getLine( tab, "Width:", value );
+
+   (void) LOCAL_SPRINTF( value, "%d", getStreamSize() );
+   message << _getLine( tab, "Stream size:", value );
+
+   (void) LOCAL_SPRINTF( value, "%d", getStreamWidth() );
+   message << _getLine( tab, "Stream width:", value );
+
+   (void) LOCAL_SPRINTF( value, "%d", getStreamHeight() );
+   message << _getLine( tab, "Stream height:", value );
+
+   return message.str();
+}
+

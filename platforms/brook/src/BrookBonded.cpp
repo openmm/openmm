@@ -59,8 +59,9 @@ BrookBonded::BrookBonded( ){
 // ---------------------------------------------------------------------------------------
 
    _numberOfAtoms             = 0;
-   _ljScale                   = 1.0;
-   _coulombFactor             = 332.0;
+   _ljScale                   = (BrookOpenMMFloat) 0.83333333;
+   //_coulombFactor             = 332.0;
+   _coulombFactor             = (BrookOpenMMFloat) 138.935485;
 
    _atomIndicesStream         = NULL;
    _chargeStream              = NULL;
@@ -355,6 +356,24 @@ BrookFloatStreamInternal* BrookBonded::getAtomIndicesStream( void ) const {
 }
 
 /** 
+ * Get bonded charge stream
+ * 
+ * @return  charge stream
+ *
+ */
+
+BrookFloatStreamInternal* BrookBonded::getChargeStream( void ) const {
+
+// ---------------------------------------------------------------------------------------
+
+   // static const std::string methodName = "BrookBonded::getChargeStream";
+
+// ---------------------------------------------------------------------------------------
+
+   return _chargeStream;
+}
+
+/** 
  * Get array of bonded parameter streams
  * 
  * @return  array of bonded parameter streams
@@ -593,8 +612,7 @@ int BrookBonded::matchBond( int i, int j, int nbondeds, int *atoms, int *flag ){
             *flag = 1;
             return n;
          }
-      }
-      else if(  ( i == ATOMS(n, 1) && j == ATOMS(n, 2) ) ||( i == ATOMS(n, 2) && j == ATOMS(n, 1) ) ){
+      } else if(  ( i == ATOMS(n, 1) && j == ATOMS(n, 2) ) ||( i == ATOMS(n, 2) && j == ATOMS(n, 1) ) ){
          *flag = 1;
          return n;
       }
@@ -880,7 +898,7 @@ int BrookBonded::addBonds( int *nbondeds, int *atoms, float *params[], const vec
 // ---------------------------------------------------------------------------------------
 
    static const std::string methodName = "BrookBonded::addBonds";
-   static const int debug              = 0;
+   static const int debug              = 1;
 
 // ---------------------------------------------------------------------------------------
 
@@ -899,8 +917,17 @@ int BrookBonded::addBonds( int *nbondeds, int *atoms, float *params[], const vec
       int i     = atomsIndices[index++];
       int j     = atomsIndices[index++];
 
+      // insure i < j
+
+      if( i > j ){
+         int k = i;
+         i     = j;
+         j     = k;
+      }
+
       int flag;
       int ibonded = matchBond( i, j, *nbondeds, atoms, &flag );
+int saveIbond = ibonded;
       if( ibonded < 0 ){
          ibonded = *nbondeds;
          ATOMS( ibonded, 0 ) = i;
@@ -918,7 +945,7 @@ int BrookBonded::addBonds( int *nbondeds, int *atoms, float *params[], const vec
       }
 
       if( debug && getLog() ){
-         (void) fprintf( getLog(), "   %d [%d %d ] flag=%d %.3e %.3e\n", ibonded, i, j, flag,
+         (void) fprintf( getLog(), "   %d (%5d) [%6d %6d ] flag=%2d %.3e %.3e\n", ibonded, saveIbond, i, j, flag,
                          bndParameters[0], bndParameters[1] );
       }
    }
@@ -951,9 +978,9 @@ int BrookBonded::addPairs( int *nbondeds, int *atoms, BrookOpenMMFloat* params[]
 
 // ---------------------------------------------------------------------------------------
 
-   static const std::string methodName = "BrookBonded::BrookBonded";
+   static const std::string methodName = "BrookBonded::addPairs";
    static const double oneSixth        = 1.0/6.0;
-   static const int debug              = 0;
+   static const int debug              = 1;
 
 // ---------------------------------------------------------------------------------------
 
@@ -980,13 +1007,16 @@ int BrookBonded::addPairs( int *nbondeds, int *atoms, BrookOpenMMFloat* params[]
       vector<double> iParameters  = nonbondedParameters[i];
       vector<double> jParameters  = nonbondedParameters[j];
 
-      double c6                   = iParameters[0] + jParameters[0];
-      double c12                  = lj14Scale*(iParameters[1] * jParameters[1]);
+      double c6                   = 0.5*(iParameters[1] + jParameters[1]);
+      //double c12                  = lj14Scale*(iParameters[2] * jParameters[2]);
+      double c12                  = 2.0*(iParameters[2] * jParameters[2]);
 
       double sig, eps;
       if( c12 != 0.0 ){
-         eps = c6*c6/c12;
-         sig = pow( c12/c6, oneSixth );
+         //eps = c6*c6/c12;
+         //sig = pow( c12/c6, oneSixth );
+         eps = c12;
+         sig = c6;
       } else {
          eps = 0.0;
          sig = 1.0;
@@ -997,11 +1027,11 @@ int BrookBonded::addPairs( int *nbondeds, int *atoms, BrookOpenMMFloat* params[]
 
       // a little wasteful, but ...
 
-      charges[i] = (BrookOpenMMFloat) iParameters[2];
-      charges[j] = (BrookOpenMMFloat) jParameters[2];
+      charges[i] = (BrookOpenMMFloat) iParameters[0];
+      charges[j] = (BrookOpenMMFloat) jParameters[0];
 
       if( debug ){
-         (void) fprintf( getLog(), "\n %d [%d %d ] %.3e %.3e", ibonded, i, j, sig, eps );
+         (void) fprintf( getLog(), "   %d [%d %d ] %.3e %.3e\n", ibonded, i, j, sig, eps );
       }
    }
 
@@ -1037,21 +1067,31 @@ int BrookBonded::loadInvMaps( int nbondeds, int natoms, int *atoms, const BrookP
    int atomStreamSize                           = brookPlatform.getStreamSize( getNumberOfAtoms(), atomStreamWidth, NULL );
    _inverseMapStreamWidth                       = atomStreamWidth;
    
+// ---------------------------------------------------------------------------------------
+
    // allocate temp memory
 
    float4** invmaps = new float4*[getMaxInverseMapStreamCount()];
    float* block     = new float[4*getMaxInverseMapStreamCount()*atomStreamSize];
+
+   //memset( block, 0, 4*getMaxInverseMapStreamCount()*atomStreamSize*sizeof( float ) );
+
+   float* blockPtr = block;
    for( int ii = 0; ii < getMaxInverseMapStreamCount(); ii++ ){
-      invmaps[ii]  = (float4*) block;
-      block       += 4*atomStreamSize;
+      invmaps[ii]  = (float4*) blockPtr;
+      blockPtr    += 4*atomStreamSize;
    }
    int* counts = new int[atomStreamSize];
+
+// ---------------------------------------------------------------------------------------
 
    // get inverse maps and load into streams
 
    // create streams
    // done independently from loading since for test cases some stream counts == 0, but kernels expect stream to
    // have been created even though unused
+
+   // load streams -- initialize all streams even if unused since gather methods will still pick up
 
    for( int ii = 0; ii < getNumberOfForceStreams(); ii++ ){
       for( int jj = 0; jj < getMaxInverseMapStreamCount(ii); jj++ ){
@@ -1060,28 +1100,60 @@ int BrookBonded::loadInvMaps( int nbondeds, int natoms, int *atoms, const BrookP
       }
    }
 
+   if( getLog() ){
+      (void) fprintf( getLog(), "%s force stream strms=%d nbondeds=%d max counts=[%d %d %d %d] strSz&Wd=%d %d\n", methodName.c_str(), getNumberOfForceStreams(),
+                      nbondeds, getMaxInverseMapStreamCount(0), getMaxInverseMapStreamCount(1), getMaxInverseMapStreamCount(2), getMaxInverseMapStreamCount(3),
+                      atomStreamSize, atomStreamWidth );
+      (void) fflush( getLog() );
+   }
+
    // load data
 
    for( int ii = 0; ii < getNumberOfForceStreams(); ii++ ){
       gpuCalcInvMap( ii, 4, nbondeds, natoms, atoms, getInverseMapStreamCount( ii ), counts, invmaps, &(_inverseMapStreamCount[ii]) );
+//gpuPrintInvMaps( _inverseMapStreamCount[ii], natoms, counts, invmaps, getLog() );
       validateInverseMapStreamCount( ii, _inverseMapStreamCount[ii] ); 
       for( int jj = 0; jj < _inverseMapStreamCount[ii]; jj++ ){
          _inverseStreamMaps[ii][jj]->loadFromArray( invmaps[jj] );
+
+         (void) fprintf( getLog(), "%s inverseMap stream strms=%d count=%d index=%d %d InverseMapStreamCount[ii]=%d max=%d\n",
+                         methodName.c_str(), getNumberOfForceStreams(), _inverseMapStreamCount[ii], ii, jj,
+                         getInverseMapStreamCount( ii ), getMaxInverseMapStreamCount( ii ) );
+
+/*
+         for( int kk = 0; kk < atomStreamSize; kk++ ){
+            (void) fprintf( getLog(), "%8d [ %.1f %.1f %.1f %.1f]\n", kk, invmaps[jj][kk].x, invmaps[jj][kk].y, invmaps[jj][kk].z, invmaps[jj][kk].w  );
+         }
+*/
+
+      }    
+
+      // for small systems, must all initialize inverse maps to negative values in order to 
+      // keep invalid entries from being included in forces
+
+      if( _inverseMapStreamCount[ii] < getMaxInverseMapStreamCount( ii ) ){
+         for( int jj = 0; jj < 4*atomStreamSize; jj++ ){
+            block[jj] = -1.0f;
+         }
+         for( int jj = _inverseMapStreamCount[ii]; jj < getMaxInverseMapStreamCount( ii ); jj++ ){
+             _inverseStreamMaps[ii][jj]->loadFromArray( invmaps[0] );
+         }
       }    
 
    }
 
+   // diagnostics 
+
    if( getLog() ){
       (void) fprintf( getLog(), "%s done\n", methodName.c_str() );
       (void) fflush( getLog() );
-      //gpuPrintInvMaps( bp->nimaps, natoms, counts, invmaps, gpu->log );
    }
 
    // free memory
 
-   delete counts;
-   delete invmaps[0];
-   delete invmaps;
+   delete[] counts;
+   delete[] invmaps[0];
+   delete[] invmaps;
 
    return DefaultReturnValue;
 }
@@ -1191,7 +1263,13 @@ int BrookBonded::setup( int numberOfAtoms,
    for( int ii = 0; ii < getNumberOfParameterStreams(); ii++ ){
       params[ii] = new BrookOpenMMFloat[4*maxBonds];
    }
-   BrookOpenMMFloat* charges = new BrookOpenMMFloat[numberOfAtoms];
+
+// ---------------------------------------------------------------------------------------
+
+   // build streams
+
+   const BrookStreamFactory& brookStreamFactory = dynamic_cast<const BrookStreamFactory&> (brookPlatform.getDefaultStreamFactory() );
+   int atomStreamWidth                          = brookStreamFactory.getDefaultAtomStreamWidth();
 
    // Initialize all atom indices to -1 to indicate empty slots
    // All parameters must be initialized to values that will 
@@ -1222,6 +1300,19 @@ int BrookBonded::setup( int numberOfAtoms,
    addAngles(      &nbondeds, atoms, params, angleIndices,           angleParameters           );
    addBonds(       &nbondeds, atoms, params, bondIndices,            bondParameters            );
 
+// ---------------------------------------------------------------------------------------
+
+   // charge stream
+
+   _chargeStream         = new BrookFloatStreamInternal( BrookCommon::BondedChargeStream, numberOfAtoms, atomStreamWidth,
+                                                         BrookStreamInternal::Float, dangleValue );
+   BrookOpenMMFloat* charges = new BrookOpenMMFloat[_chargeStream->getStreamSize()];
+   memset( charges, 0, _chargeStream->getStreamSize()*sizeof( BrookOpenMMFloat ) );
+
+// ---------------------------------------------------------------------------------------
+
+//(void) fprintf( getLog(), "%s Post addBonds atoms=%d number of bonds=%d maxBonds=%d\n", methodName.c_str(), numberOfAtoms, nbondeds, maxBonds );
+
    addPairs( &nbondeds, atoms, params, charges, bonded14Indices, nonbondedParameters, lj14Scale, coulombScale );
 
    // check that number of bonds not too large for memory allocated
@@ -1235,24 +1326,41 @@ int BrookBonded::setup( int numberOfAtoms,
       (void) fflush( getLog() );
    }
 
-   const BrookStreamFactory& brookStreamFactory = dynamic_cast<const BrookStreamFactory&> (brookPlatform.getDefaultStreamFactory() );
-   int atomStreamWidth                          = brookStreamFactory.getDefaultAtomStreamWidth();
+// ---------------------------------------------------------------------------------------
 
-   // build streams
+   // atom indices stream
 
    _atomIndicesStream    = new BrookFloatStreamInternal( BrookCommon::BondedAtomIndicesStream, nbondeds, atomStreamWidth,
                                                          BrookStreamInternal::Float4, dangleValue );
-   _atomIndicesStream->loadFromArray( atoms, BrookStreamInternal::Integer ); 
 
-   _chargeStream         = new BrookFloatStreamInternal( BrookCommon::BondedChargeStream, numberOfAtoms, atomStreamWidth,
-                                                         BrookStreamInternal::Float, dangleValue );
+   int* buffer           = new int[4*_atomIndicesStream->getStreamSize()];
+   memset( buffer, 0, sizeof( int )*4*_atomIndicesStream->getStreamSize() );
+
+   int index             = 0;
+   for( int ii = 0; ii < nbondeds; ii++ ){
+      for( int jj = 0; jj < 4; jj++ ){
+         buffer[index++] = ATOMS( ii, jj );
+//(void) fprintf( getLog(), "%s atomIndices %d %d  %d buffer=%d atoms=%d\n", methodName.c_str(), ii, jj, index, buffer[index-1], ATOMS( ii, jj ) );
+      }
+   }
+   _atomIndicesStream->loadFromArray( buffer, BrookStreamInternal::Integer ); 
+   delete[] buffer;
+
+// ---------------------------------------------------------------------------------------
+
    _chargeStream->loadFromArray( charges ); 
+
+// ---------------------------------------------------------------------------------------
+
+   // bonded parameters
 
    for( int ii = 0; ii < getNumberOfParameterStreams(); ii++ ){
       _bondedParameters[ii]  = new BrookFloatStreamInternal( BrookCommon::BondedParametersStream, nbondeds, atomStreamWidth,
                                                              BrookStreamInternal::Float4, dangleValue );
       _bondedParameters[ii]->loadFromArray( params[ii] );
    }
+
+// ---------------------------------------------------------------------------------------
 
    // debug stuff
 
@@ -1300,19 +1408,22 @@ int BrookBonded::setup( int numberOfAtoms,
 
    loadInvMaps( nbondeds, getNumberOfAtoms(), atoms, brookPlatform );
    
+// ---------------------------------------------------------------------------------------
+
    // free memory
 
    for( int ii = 0; ii < getNumberOfParameterStreams(); ii++ ){
       delete[] params[ii];
    }
+
    delete[] params;
    delete[] atoms;
    delete[] charges;
 
    // set the fudge factors
 
-   _ljScale        = (BrookOpenMMFloat) lj14Scale;
-   _coulombFactor  = (BrookOpenMMFloat) coulombScale;
+   //_ljScale        = (BrookOpenMMFloat) lj14Scale;
+   //_coulombFactor  = (BrookOpenMMFloat) coulombScale;
 
    // initialize output streams
 

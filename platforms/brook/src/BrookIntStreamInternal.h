@@ -123,11 +123,53 @@ public:
 
       void* getData( void );
 
+      /** 
+       * Get data
+       * 
+       * @param readFromBoard if set, read values on board 
+       *
+       * @return data array
+       *
+       */
+      
+      void* getData( int readFromBoard );
+      
+      /** 
+       * Get array of appropritate size for loading data
+       *
+       * @return data array -- user's responsibility to free
+       */
+      
+      void* getDataArray( void );
+      
+      /*  
+       * Get contents of object
+       *
+       *
+       * @param level   level of dump
+       *
+       * @return string containing contents
+       *
+       * */
+
+      const std::string getContentsString( int level = 0 ) const;
+
 private:
 
     int _dangleValue;
 
     int* _data;
+
+      /*  
+       * Print array to file
+       *
+       * @param log  log file
+       *
+       * @return  DefaultReturnValue
+       *
+       * */
+
+      int _bodyPrintToFile( FILE* log );
 };
 
 } // namespace OpenMM

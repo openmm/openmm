@@ -40,7 +40,7 @@ const std::string BrookStreamFactory::AtomPositions              = "atomPosition
 const std::string BrookStreamFactory::AtomVelocities             = "atomVelocities";
 const std::string BrookStreamFactory::AtomForces                 = "atomForces";
 
-const double DefaultDangleValue                                  = 1.0e+38;
+const double DefaultDangleValue                                  = 1.0e+08;
 /** 
  * BrookStreamFactory constructor
  * 
@@ -55,7 +55,7 @@ BrookStreamFactory::BrookStreamFactory( void ){
 
 // ---------------------------------------------------------------------------------------
 
-	_defaultDangleValue                      = 1.0e+38;
+	_defaultDangleValue                      = 1.0e+08;
 	_defaultAtomStreamWidth                  = DefaultStreamAtomWidth;
    _defaultStreamRandomNumberWidth          = DefaultStreamRandomNumberWidth;
    _defaultStreamRandomNumberSize           = DefaultStreamRandomNumberSize;

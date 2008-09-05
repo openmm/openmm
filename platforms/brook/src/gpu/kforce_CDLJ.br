@@ -12,7 +12,7 @@ kernel float4 scalar_force_CDLJ( float4 qq, float epsfac, float4 sig, float4 eps
  return f;
 }
 
-kernel float scalar_force_single_CDLJ( float qq, float epsfac, float sig, float eps, float r2 ){
+kernel float scalar_force_single_CDLJ( float qq, float epsfac, float sig, float eps, float r2, float4 params ) {
  float invr, invrsig2, invrsig6;
  float f;
 
@@ -409,8 +409,7 @@ kernel void knbforce_CDLJ2(
 
 }
 
-
-kernel void knbforce_CDLJ4(
+kernel void knbforce_CDLJ4Ex(
   float natoms,
   float nAtomsCeiling,
   float dupfac,
@@ -420,7 +419,8 @@ kernel void knbforce_CDLJ4(
   float fstrwidth,
   float epsfac,
   float4 params,
-  float4 posq[][],
+  float3 posq[][],
+  float  charge[][],
   float4 isigeps[][],
   float4 sigma[][],
   float4 epsilon[][],
@@ -461,6 +461,267 @@ kernel void knbforce_CDLJ4(
 
  exclconst  = float4( 2.0f, 3.0f, 5.0f, 7.0f );
 
+ outforce1  = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+ outforce2  = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+ outforce3  = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+ outforce4  = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+
+ a_iatom    = 4.0f*((indexof outforce1).x + (indexof outforce1).y * fstrwidth);
+
+ // linind     = fmod( a_iatom, natoms );
+ linind     = fmod( a_iatom, nAtomsCeiling );
+
+ iatom.x    = fmod( linind, strwidth );
+ iatom.y    = round( (linind - fmod(linind, strwidth))/strwidth );
+
+/* --------------------------------------------------------------------- */
+
+ ipos1      = posq[ iatom ];
+ qi1        = charge[ iatom ];
+
+ jstrindex  = isigeps[ iatom ];
+ isig1      = jstrindex.x;
+ ieps1      = jstrindex.y;
+
+/* --------------------------------------------------------------------- */
+
+ iatom.x   += 1;
+ ipos2      = posq[ iatom ];
+ qi2        = charge[ iatom ];
+
+ jstrindex  = isigeps[ iatom ];
+ isig2      = jstrindex.x;
+ ieps2      = jstrindex.y;
+
+/* --------------------------------------------------------------------- */
+
+ iatom.x   += 1;
+ ipos3      = posq[ iatom ];
+ qi3        = charge[ iatom ];
+
+ jstrindex  = isigeps[ iatom ];
+ isig3      = jstrindex.x;
+ ieps3      = jstrindex.y;
+
+/* --------------------------------------------------------------------- */
+
+ iatom.x   += 1;
+ ipos4      = posq[ iatom ];
+ qi4        = charge[ iatom ];
+
+ jstrindex  = isigeps[ iatom ];
+ isig4      = jstrindex.x;
+ ieps4      = jstrindex.y;
+
+/* --------------------------------------------------------------------- */
+
+ breakflag  = 1.0f;
+ jatom.y    = 0.0f;
+
+ // which_rep  = round( (a_iatom - fmod(a_iatom, natoms))/natoms );
+ which_rep  = round( (a_iatom - fmod(a_iatom, nAtomsCeiling ))/nAtomsCeiling );
+
+ jend       = 1 + round( (natoms - fmod(natoms, (dupfac * strwidth )))/(dupfac * strwidth ) );
+ jstart     = which_rep * jend;
+ if ( which_rep > dupfac - 1 - 0.5f ) {
+  jend = 1e6f;
+ }
+ jend      += jstart;
+
+ // exclind.x  = linind;
+ // exclind.y  = jstart * strwidth/4.0f;
+
+ jatom.y    = jstart;
+ while ( jatom.y < jend && breakflag > 0.0f ) {
+  jatom.x = 0;
+  while ( jatom.x < strwidth && breakflag > 0.0f ) {
+
+   //exclusions  = excl[ exclind ];
+   //exclmask    = fmod( exclusions, exclconst );
+
+   linind      = (jatom.x + jatom.y*strwidth)/4.0f;
+
+   jstrindex.y = round( (linind - fmod(linind, jstrwidth))/jstrwidth );
+   jstrindex.x = linind - jstrindex.y * jstrwidth;
+
+   /* --------------------------------------------------------------------- */
+
+   jsig        = sigma[ jstrindex ];
+   jeps        = epsilon[ jstrindex ];
+
+   jpos1       = posq[ jatom ];
+   qj.x        = charge[ jatom ];
+   jatom.x    += 1.0f;
+
+   jpos2       = posq[ jatom ];
+   qj.y        = charge[ jatom ];
+   jatom.x    += 1.0f;
+
+   jpos3       = posq[ jatom ];
+   qj.z        = charge[ jatom ];
+   jatom.x    += 1.0f;
+
+   jpos4       = posq[ jatom ];
+   qj.w        = charge[ jatom ];
+   jatom.x    += 1.0f;
+
+   /* --------------------------------------------------------------------- */
+
+   sig         = isig1 + jsig;
+   eps         = ieps1 * jeps;
+   qq          = qi1*qj;
+
+   d1          = ipos1 - jpos1;
+   d2          = ipos1 - jpos2;
+   d3          = ipos1 - jpos3;
+   d4          = ipos1 - jpos4;
+
+   r2          = get_r2_CDLJ( d1, d2, d3, d4 );
+   fs          = scalar_force_CDLJ( qq, epsfac, sig, eps, r2, params );
+
+   outforce1  += fs.x * d1;
+   outforce1  += fs.y * d2;
+   outforce1  += fs.z * d3;
+   outforce1  += fs.w * d4;
+
+   /* --------------------------------------------------------------------- */
+
+   //exclind.x  += 1.0f;
+   //exclusions  = excl[ exclind ];
+   //exclmask    = fmod( exclusions, exclconst );
+
+   sig         = isig2 + jsig;
+   eps         = ieps2 * jeps;
+   qq          = qi2 * qj;
+
+   d1          = ipos2 - jpos1;
+   d2          = ipos2 - jpos2;
+   d3          = ipos2 - jpos3;
+   d4          = ipos2 - jpos4;
+
+   r2          = get_r2_CDLJ( d1, d2, d3, d4 );
+   fs          = scalar_force_CDLJ( qq, epsfac, sig, eps, r2, params );
+
+   outforce2  += fs.x * d1;
+   outforce2  += fs.y * d2;
+   outforce2  += fs.z * d3;
+   outforce2  += fs.w * d4;
+
+   /* --------------------------------------------------------------------- */
+
+   //exclind.x  += 1.0f;
+   //exclusions  = excl[ exclind ];
+   //exclmask    = fmod( exclusions, exclconst );
+
+   sig         = isig3 + jsig;
+   eps         = ieps3 * jeps;
+   qq          = qi3   * qj;
+
+   d1          = ipos3 - jpos1;
+   d2          = ipos3 - jpos2;
+   d3          = ipos3 - jpos3;
+   d4          = ipos3 - jpos4;
+
+   r2          = get_r2_CDLJ( d1, d2, d3, d4 );
+   fs          = scalar_force_CDLJ( qq, epsfac, sig, eps, r2, params );
+
+   outforce3  += fs.x * d1;
+   outforce3  += fs.y * d2;
+   outforce3  += fs.z * d3;
+   outforce3  += fs.w * d4;
+
+   /* --------------------------------------------------------------------- */
+
+   //exclind.x  += 1.0f;
+   //exclusions  = excl[ exclind ];
+   //exclmask    = fmod( exclusions, exclconst );
+
+   sig         = isig4 + jsig;
+   eps         = ieps4 * jeps;
+   qq          = qi4   * qj;
+
+   d1          = ipos4 - jpos1;
+   d2          = ipos4 - jpos2;
+   d3          = ipos4 - jpos3;
+   d4          = ipos4 - jpos4;
+
+   r2          = get_r2_CDLJ( d1, d2, d3, d4 );
+   fs          = scalar_force_CDLJ( qq, epsfac, sig, eps, r2, params );
+
+   outforce4  += fs.x * d1;
+   outforce4  += fs.y * d2;
+   outforce4  += fs.z * d3;
+   outforce4  += fs.w * d4;
+
+   /* --------------------------------------------------------------------- */
+
+   //exclind.x  -= 3.0f;
+   //exclind.y  += 1.0f;
+
+   if ( natoms - (jatom.y*strwidth + jatom.x) < 0.9f )
+    breakflag = -1.0f;
+  }
+
+  jatom.y += 1.0f;
+ }
+
+}
+
+kernel void knbforce_CDLJ4(
+  float natoms,
+  float nAtomsCeiling,
+  float dupfac,
+  float strheight,
+  float strwidth,
+  float jstrwidth,
+  float fstrwidth,
+  float epsfac,
+  float4 params,
+  float3 posq[][],
+  float  charge[][],
+  float4 isigeps[][],
+  float4 sigma[][],
+  float4 epsilon[][],
+  float excl[][],
+  out float3 outforce1<>,
+  out float3 outforce2<>,
+  out float3 outforce3<>,
+  out float3 outforce4<> ) {
+
+ float4 jsig, jeps;
+ float3 ipos1, ipos2, ipos3, ipos4;
+ float4 jpos;
+ float3 jpos1, jpos2, jpos3, jpos4;
+ float qi1, qi2, qi3, qi4;
+
+ float isig1, isig2, isig3, isig4;
+ float ieps1, ieps2, ieps3, ieps4;
+
+ float4 qj, qq;
+ float3 d1, d2, d3, d4;
+ float2 exclind;
+ float4 sig, eps;
+ float  exclusions;
+ float4 r2;
+ float3 pad;
+ float4 exclmask;
+ float4 exclconst;
+ float2 iatom;
+ float2 jstrindex;
+ float a_iatom;
+ float linind;
+
+ float breakflag;
+ float2 jatom;
+ float4 fs;
+ float jend, jstart;
+ float which_rep;
+ float maskMultiplier;
+
+ maskMultiplier = 1.0e+06f;
+
+ exclconst  = float4( 2.0f, 3.0f, 5.0f, 7.0f );
+
  outforce1  = float3( 0.0f, 0.0f, 0.0f );
  outforce2  = float3( 0.0f, 0.0f, 0.0f );
  outforce3  = float3( 0.0f, 0.0f, 0.0f );
@@ -476,9 +737,8 @@ kernel void knbforce_CDLJ4(
 
 /* --------------------------------------------------------------------- */
 
- jpos       = posq[ iatom ];
- ipos1      = jpos.xyz;
- qi1        = jpos.w;
+ ipos1      = posq[ iatom ];
+ qi1        = charge[ iatom ];
 
  jstrindex  = isigeps[ iatom ];
  isig1      = jstrindex.x;
@@ -486,10 +746,9 @@ kernel void knbforce_CDLJ4(
 
 /* --------------------------------------------------------------------- */
 
- iatom.x   += 1.0f;
- jpos       = posq[ iatom ];
- ipos2      = jpos.xyz;
- qi2        = jpos.w;
+ iatom.x   += 1;
+ ipos2      = posq[ iatom ];
+ qi2        = charge[ iatom ];
 
  jstrindex  = isigeps[ iatom ];
  isig2      = jstrindex.x;
@@ -497,10 +756,9 @@ kernel void knbforce_CDLJ4(
 
 /* --------------------------------------------------------------------- */
 
- iatom.x   += 1.0f;
- jpos       = posq[ iatom ];
- ipos3      = jpos.xyz;
- qi3        = jpos.w;
+ iatom.x   += 1;
+ ipos3      = posq[ iatom ];
+ qi3        = charge[ iatom ];
 
  jstrindex  = isigeps[ iatom ];
  isig3      = jstrindex.x;
@@ -508,10 +766,10 @@ kernel void knbforce_CDLJ4(
 
 /* --------------------------------------------------------------------- */
 
- iatom.x   += 1.0f;
- jpos       = posq[ iatom ];
- ipos4      = jpos.xyz;
- qi4        = jpos.w;
+ iatom.x   += 1;
+ ipos4      = posq[ iatom ];
+ qi4        = charge[ iatom ];
+
 
  jstrindex  = isigeps[ iatom ];
  isig4      = jstrindex.x;
@@ -556,29 +814,21 @@ kernel void knbforce_CDLJ4(
    jsig        = sigma[ jstrindex ];
    jeps        = epsilon[ jstrindex ];
 
-   jpos        = posq[ jatom ];
-   jpos1       = jpos.xyz;
-   qj.x        = jpos.w;
+   jpos1       = posq[ jatom ];
+   qj.x        = charge[ jatom ];
    jatom.x     = floor( jatom.x + 1.2f );
-   //jatom.x    += 1.0f;
 
-   jpos        = posq[ jatom ];
-   jpos2       = jpos.xyz;
-   qj.y        = jpos.w;
+   jpos2       = posq[ jatom ];
+   qj.y        = charge[ jatom ];
    jatom.x     = floor( jatom.x + 1.2f );
-   //jatom.x    += 1.0f;
 
-   jpos        = posq[ jatom ];
-   jpos3       = jpos.xyz;
-   qj.z        = jpos.w;
+   jpos3       = posq[ jatom ];
+   qj.z        = charge[ jatom ];
    jatom.x     = floor( jatom.x + 1.2f );
-   //jatom.x    += 1.0f;
 
-   jpos        = posq[ jatom ];
-   jpos4       = jpos.xyz;
-   qj.w        = jpos.w;
+   jpos4       = posq[ jatom ];
+   qj.w        = charge[ jatom ];
    jatom.x     = floor( jatom.x + 1.2f );
-   //jatom.x    += 1.0f;
 
    /* --------------------------------------------------------------------- */
 
@@ -591,7 +841,7 @@ kernel void knbforce_CDLJ4(
    d3          = ipos1 - jpos3;
    d4          = ipos1 - jpos4;
 
-   r2          = get_r2_CDLJ( d1, d2, d3, d4 ) + exclmask*10000.0f;
+   r2          = get_r2_CDLJ( d1, d2, d3, d4 ) + (exclmask*maskMultiplier);
    fs          = scalar_force_CDLJ( qq, epsfac, sig, eps, r2, params );
 
    outforce1  += fs.x * d1;
@@ -615,7 +865,7 @@ kernel void knbforce_CDLJ4(
    d3          = ipos2 - jpos3;
    d4          = ipos2 - jpos4;
 
-   r2          = get_r2_CDLJ( d1, d2, d3, d4 ) + exclmask * 10000.0f;
+   r2          = get_r2_CDLJ( d1, d2, d3, d4 ) + (exclmask*maskMultiplier);
    fs          = scalar_force_CDLJ( qq, epsfac, sig, eps, r2, params );
 
    outforce2  += fs.x * d1;
@@ -639,7 +889,7 @@ kernel void knbforce_CDLJ4(
    d3          = ipos3 - jpos3;
    d4          = ipos3 - jpos4;
 
-   r2          = get_r2_CDLJ( d1, d2, d3, d4 ) + exclmask * 10000.0f;
+   r2          = get_r2_CDLJ( d1, d2, d3, d4 ) + (exclmask*maskMultiplier);
    fs          = scalar_force_CDLJ( qq, epsfac, sig, eps, r2, params );
 
    outforce3  += fs.x * d1;
@@ -663,7 +913,7 @@ kernel void knbforce_CDLJ4(
    d3          = ipos4 - jpos3;
    d4          = ipos4 - jpos4;
 
-   r2          = get_r2_CDLJ( d1, d2, d3, d4 ) + exclmask*10000.0f;
+   r2          = get_r2_CDLJ( d1, d2, d3, d4 ) + (exclmask*maskMultiplier);
    fs          = scalar_force_CDLJ( qq, epsfac, sig, eps, r2, params );
 
    outforce4  += fs.x * d1;
@@ -685,6 +935,210 @@ kernel void knbforce_CDLJ4(
   //jatom.y += 1.0f;
   jatom.y  = floor( jatom.y + 1.2f );
  }
+
+}
+
+kernel void knbforce_CDLJ_1(
+  float natoms,
+  float nAtomsCeiling,
+  float strwidth,
+  float epsfac,
+  float4 posq[][],
+  float2 isigeps[][],
+  float excl[][],
+  out float3 outforce<> ){
+
+ float  jsig, jeps;
+ float3 ipos;
+ float3 jpos;
+
+ float qi, qj;
+ float3 d1;
+ float sig, eps;
+ float isig, ieps;
+
+ float2 exclind;
+ float  exclusion;
+ float r2, invr, invrsig2, invrsig6;
+ float4 exclmask;
+ float2 iatom;
+ float a_iatom;
+ float linind;
+
+ float2 jatom;
+ float  fs;
+
+ outforce   = float3( 0.0f, 0.0f, 0.0f );
+
+ iatom.x    = (indexof outforce).x;
+ iatom.y    = (indexof outforce).y;
+ a_iatom    = iatom.x + iatom.y*strwidth;
+
+/* --------------------------------------------------------------------- */
+
+ ipos       = posq[ iatom ].xyz;
+ qi         = epsfac*posq[ iatom ].w; 
+
+ isig       = isigeps[ iatom ].x; 
+ ieps       = isigeps[ iatom ].y; 
+
+/* --------------------------------------------------------------------- */
+
+ jatom      = float2( 0.0f, 0.0f );
+ linind     = 0.0f;
+
+ exclind.x  = 0.0f;
+ exclind.y  = a_iatom;
+
+ while ( linind < natoms ){
+   
+    exclusion   = excl[ exclind ];
+ 
+    /* --------------------------------------------------------------------- */
+ 
+    jsig       = isigeps[ jatom ].x;
+    jeps       = isigeps[ jatom ].y;
+ 
+    jpos       = posq[ jatom ].xyz;
+    qj         = posq[ jatom ].w;
+ 
+    /* --------------------------------------------------------------------- */
+ 
+    sig         = isig + jsig;
+    eps         = ieps * jeps;
+ 
+    d1          = ipos - jpos;
+ 
+    r2          = dot( d1, d1 ) + exclusion*10000.0f;
+    invr        = rsqrt( r2 );
+    
+    invrsig2    = invr*sig;
+    invrsig2    = invrsig2*invrsig2;
+    invrsig6    = invrsig2*invrsig2*invrsig2;
+    fs          = eps* ( 12.0f*invrsig6 - 6.0f ) * invrsig6;
+ 
+    fs         += qi*qj*invr;
+ 
+    fs         *= invr*invr;
+ 
+    outforce   += fs*d1;
+ 
+    /* --------------------------------------------------------------------- */
+ 
+    exclind.x  = floor(  exclind.x  + 1.05f );
+ 
+    jatom.x   += 1.0f;
+    if( abs( jatom.x - strwidth ) < 0.1f ){
+       jatom.x  = 0.0f;
+       jatom.y += 1.0f;
+    }
+ 
+    linind += 1.0f;
+ }
+
+}
+
+
+kernel void knbforce_CDLJ_1z(
+  float natoms,
+  float nAtomsCeiling,
+  float strwidth,
+  float epsfac,
+  float4 posq[][],
+  float2 isigeps[][],
+  float excl[][],
+  out float3 outforce<> ){
+
+ float  jsig, jeps;
+ float3 ipos;
+ float3 jpos;
+
+ float qi, qj;
+ float3 d1;
+ float sig, eps;
+ float isig, ieps;
+
+ float2 exclind;
+ float  exclusion;
+ float r2, invr, invrsig2, invrsig6;
+ float4 exclmask;
+ float2 iatom;
+ float a_iatom;
+ float linind;
+
+ float2 jatom;
+ float  fs;
+
+ outforce   = float3( 0.0f, 0.0f, 0.0f );
+
+ iatom.x    = (indexof outforce).x;
+ iatom.y    = (indexof outforce).y;
+ a_iatom    = iatom.x + iatom.y*strwidth;
+
+/* --------------------------------------------------------------------- */
+
+ ipos       = posq[ iatom ].xyz;
+ qi         = epsfac*posq[ iatom ].w; 
+
+ isig       = isigeps[ iatom ].x; 
+ ieps       = isigeps[ iatom ].y; 
+
+/* --------------------------------------------------------------------- */
+
+ jatom      = float2( 0.0f, 0.0f );
+ linind     = 0.0f;
+
+ exclind.x  = 0.0f;
+ exclind.y  = a_iatom;
+
+//outforce.y = exclind.y;
+//outforce.z = a_iatom;
+
+   while ( linind < natoms ){
+   
+      exclusion   = excl[ exclind ];
+   
+      /* --------------------------------------------------------------------- */
+ 
+      jsig       = isigeps[ jatom ].x;
+      jeps       = isigeps[ jatom ].y;
+   
+      jpos       = posq[ jatom ].xyz;
+      qj         = posq[ jatom ].w;
+ 
+      /* --------------------------------------------------------------------- */
+   
+      eps         = ieps * jeps;
+   
+      d1          = ipos - jpos;
+   
+      r2          = dot( d1, d1 ) + exclusion*10000.0f;
+      invr        = rsqrt( r2 );
+      
+      invrsig2    = invr*sig;
+      invrsig2    = invrsig2*invrsig2;
+      invrsig6    = invrsig2*invrsig2*invrsig2;
+      fs          = eps* ( 12.0f*invrsig6 - 6.0f ) * invrsig6;
+   
+      fs         += qi*qj*invr;
+   
+      fs         *= invr*invr;
+   
+      outforce   += fs*d1;
+      //outforce.x += exclusion;
+   
+      /* --------------------------------------------------------------------- */
+   
+      exclind.x  = floor(  exclind.x  + 1.05f );
+   
+      jatom.x   += 1.0f;
+      if( abs( jatom.x - strwidth ) < 0.1f ){
+         jatom.x  = 0.0f;
+         jatom.y += 1.0f;
+      }
+   
+      linind += 1.0f;
+   }
 
 }
 
@@ -741,8 +1195,10 @@ kernel void knbforce_CDLJ4Debug(
  float4 zero4;
  float4 frac4;
 float sum;
+float bigValue;
 
  exclconst  = float4( 2.0f, 3.0f, 5.0f, 7.0f );
+ bigValue   = 1000000.0f;
 
  outforce1  = float3( 0.0f, 0.0f, 0.0f );
  outforce2  = float3( 0.0f, 0.0f, 0.0f );
@@ -828,7 +1284,7 @@ float sum;
 /*
 outforce1   = float3( linind, exclind.y, jstart );
 outforce2   = float3( linind, exclind.y, jend );
-outforce3   = float3( linind, exclind.y, strwidth );
+outforce3   = float3( linind, exclind.y, which_rep );
 outforce4   = float3( linind, exclind.y, exclind.y );
 */
 
@@ -883,9 +1339,13 @@ outforce4   = float3( linind, exclind.y, exclind.y );
    exclusions  = excl[ exclind ];
    exclmask    = fmod( exclusions, exclconst );
 
-   r2          = get_r2_CDLJ( d1, d2, d3, d4 ) + exclmask*10000.0f;
+   r2          = get_r2_CDLJ( d1, d2, d3, d4 );
+   r2         += exclmask*10000.0f;
    fs          = scalar_force_CDLJ( qq, epsfac, sig, eps, r2, params );
 
+//r2 = 1.0f/r2;
+//outforce1.x += r2.x + r2.y + r2.z + r2.w;
+//outforce1.y += 4.0f;
    //    outforce1  += fs.x * d1;
    //    outforce1  += fs.y * d2;
    //    outforce1  += fs.z * d3;
@@ -893,21 +1353,16 @@ outforce4   = float3( linind, exclind.y, exclind.y );
    // outforce1  += float3( 4.0, 4.0, 4.0);
    // outforce1  += 1.0/r2;
 
-    exclmask    = exclmask > frac4 ? one4 : zero4;
-    sum         = floor( exclmask.x + exclmask.y + exclmask.z + exclmask.w + 0.25f );
-/*
-    if( sum > 0.25f ){
-        outforce1.x  += 1.0f;
-        outforce1.y  += exclusions;
-        outforce1.z  += sum;
-        // outforce1.y  += exclind.x + strwidth*exclind.y;
-        //outforce1.y  += 4.0;
-    }
-*/
-   if( exclind.y < 5.9f && exclind.y > 4.1f ){
-       outforce1.y  += exclind.x + 576.0f*exclind.y;
-       outforce1.z  += exclusions;
-       outforce1.x  += exclind.y;
+   exclmask    = exclmask > frac4 ? one4 : zero4;
+   sum         = floor( exclmask.x + exclmask.y + exclmask.z + exclmask.w + 0.25f );
+
+   //if( exclind.y < 5.9f && exclind.y > 4.1f ){
+   if( sum > 0.25f ){
+       outforce1.x  += 1.0f;
+       outforce1.y  += exclusions;
+       //outforce1.y  += linind;
+       outforce1.z  += sum;
+       //outforce1.z  += exclind.x + exclind.y*576;
     }    
 
    // --------------------------------------------------------------------- 
@@ -925,22 +1380,39 @@ outforce4   = float3( linind, exclind.y, exclind.y );
    d3          = ipos2 - jpos3;
    d4          = ipos2 - jpos4;
 
-   r2          = get_r2_CDLJ( d1, d2, d3, d4 ) + exclmask*10000.0f;
+   r2          = get_r2_CDLJ( d1, d2, d3, d4 );
+   r2         += exclmask*10000.0f;
    fs          = scalar_force_CDLJ( qq, epsfac, sig, eps, r2, params );
 
-   // outforce2  += fs.x * d1;
-   // outforce2  += fs.y * d2;
-   // outforce2  += fs.z * d3;
-   // outforce2  += fs.w * d4;
+//r2 =1.0f/r2;
+//outforce2.x += r2.x + r2.y + r2.z + r2.w;
+//outforce2.y += 4.0f;
+
+//
+//   outforce2  += fs.x * d1;
+//   outforce2  += fs.y * d2;
+//   outforce2  += fs.z * d3;
+//   outforce2  += fs.w * d4;
+//
    // outforce2  += float3( 4.0f, 4.0f, 4.0f);
     exclmask    = exclmask > frac4 ? one4 : zero4;
     sum         = floor( exclmask.x + exclmask.y + exclmask.z + exclmask.w + 0.25f );
     if( sum > 0.25f ){
         outforce2.x  += 1.0f;
-        outforce2.y  += exclusions;
-        outforce2.z  += sum;
+        outforce2.y  += linind;
+       // outforce2.z  += sum;
+       outforce2.z  += exclind.x + exclind.y*576;
     }
 
+//
+//    sum         = abs( fs.x ) + abs( fs.y ) + abs( fs.z ) + abs( fs.w );
+//    if( sum > bigValue ){
+//        outforce2.x   = linind;
+//        outforce2.y   = linind1;
+//        outforce2.z   = sum;
+//    }
+//
+//
    // --------------------------------------------------------------------- 
 
    exclind.x   = floor( exclind.x + 1.2f );
@@ -956,8 +1428,13 @@ outforce4   = float3( linind, exclind.y, exclind.y );
    d3          = ipos3 - jpos3;
    d4          = ipos3 - jpos4;
 
-   r2          = get_r2_CDLJ( d1, d2, d3, d4 ) + exclmask * 10000.0f;
+   r2          = get_r2_CDLJ( d1, d2, d3, d4 );
+   r2         += exclmask * 10000.0f;
    fs          = scalar_force_CDLJ( qq, epsfac, sig, eps, r2, params );
+
+//r2 =1.0f/r2;
+//outforce3.x += r2.x + r2.y + r2.z + r2.w;
+//outforce3.y += 4.0f;
 
    // outforce3  += fs.x * d1;
    // outforce3  += fs.y * d2;
@@ -965,15 +1442,24 @@ outforce4   = float3( linind, exclind.y, exclind.y );
    // outforce3  += fs.w * d4;
    // outforce3  += float3( 4.0f, 4.0f, 4.0f);
    // outforce3  += 1.0f/r2;
+
     exclmask    = exclmask > frac4 ? one4 : zero4;
     sum         = floor( exclmask.x + exclmask.y + exclmask.z + exclmask.w + 0.25f );
     if( sum > 0.25f ){
         outforce3.x  += 1.0f;
-        outforce3.y  += exclusions;
-        outforce3.z  += sum;
-        // outforce3.y  += exclind.x + strwidth*exclind.y;
+        outforce3.y  += linind;
+        //outforce3.z  += sum;
+        outforce3.z  += exclind.x + strwidth*exclind.y;
         //outforce3.y  += 4.0;
     }
+//
+//    sum         = abs( fs.x ) + abs( fs.y ) + abs( fs.z ) + abs( fs.w );
+//    if( sum > bigValue ){
+//        outforce3.x   = linind;
+//        outforce3.y   = linind1;
+//        outforce3.z   = sum;
+//    }
+//
 
    // --------------------------------------------------------------------- 
 
@@ -990,8 +1476,13 @@ outforce4   = float3( linind, exclind.y, exclind.y );
    d3          = ipos4 - jpos3;
    d4          = ipos4 - jpos4;
 
-   r2          = get_r2_CDLJ( d1, d2, d3, d4 ) + exclmask * 10000.0f;
+   r2          = get_r2_CDLJ( d1, d2, d3, d4 );
+   r2          = exclmask * 10000.0f;
    fs          = scalar_force_CDLJ( qq, epsfac, sig, eps, r2, params );
+
+//r2 =1.0f/r2;
+//outforce4.x += r2.x + r2.y + r2.z + r2.w;
+//outforce4.y += 4.0f;
 
    // outforce4  += fs.x * d1;
    // outforce4  += fs.y * d2;
@@ -999,16 +1490,24 @@ outforce4   = float3( linind, exclind.y, exclind.y );
    // outforce4  += fs.w * d4;
    // outforce4  += float3( 4.0f, 4.0f, 4.0f);
    // outforce4  += 1.0f/r2;
-
     exclmask    = exclmask > frac4 ? one4 : zero4;
     sum         = floor( exclmask.x + exclmask.y + exclmask.z + exclmask.w + 0.25f );
     if( sum > 0.25f ){
         outforce4.x  += 1.0f;
-        outforce4.y  += exclusions;
-        outforce4.z  += sum;
-        // outforce4.y  += exclind.x + strwidth*exclind.y;
+        //outforce4.y  += exclusions;
+        outforce4.y  += linind;
+        //outforce4.z  += sum;
+        outforce4.z  += exclind.x + strwidth*exclind.y;
         //outforce4.y  += 4.0;
     }
+//
+//    sum         = abs( fs.x ) + abs( fs.y ) + abs( fs.z ) + abs( fs.w );
+//    if( sum > bigValue ){
+//        outforce4.x   = linind;
+//        outforce4.y   = linind1;
+//        outforce4.z   = sum;
+//    }
+//
 
    // --------------------------------------------------------------------- 
 
@@ -1024,9 +1523,48 @@ outforce4   = float3( linind, exclind.y, exclind.y );
 
 }
 
-kernel void kbonded_CDLJ (
-  float xstrwidth,
+kernel void kforce14_CDLJ(
+  float natoms,
+  float strwidth,
+  float epsfac,
+  float4 params,
+  float2 atoms<>,
   float4 posq[][],
+  float2 sigeps<>,
+  out float3 fi<>,
+  out float3 fj<>
+  )
+{
+ float2 ai, aj;
+ float3 d1;
+ float r2;
+ float qq, fs;
+
+ //ai.y = floor( atoms.x / strwidth );
+ ai.y = round( (atoms.x - fmod( atoms.x, strwidth ))/strwidth );
+ ai.x = atoms.x - ai.y * strwidth;
+
+ //aj.y = floor( atoms.y / strwidth );
+ aj.y = round( (atoms.y - fmod( atoms.y, strwidth ))/strwidth );
+ aj.x = atoms.y - aj.y * strwidth;
+
+ d1 = posq[ai].xyz - posq[aj].xyz;
+ qq = posq[ai].w * posq[aj].w;
+
+ r2 = dot( d1, d1 );
+
+ fs = scalar_force_single_CDLJ( qq, epsfac, sigeps.x, sigeps.y, r2, params );
+
+ fi = fs.x * d1;
+ fj = -fi;
+}
+
+kernel void kbonded_CDLJ (
+  float epsfac,
+  float xstrwidth,
+  float4 nbparams,
+  float3 posq[][],
+  float  charge[][],
   float4 atoms<>,
   float4 parm0<>,
   float4 parm1<>,
@@ -1061,12 +1599,24 @@ kernel void kbonded_CDLJ (
  float torsion_numerator;
  float theta1, costheta1, invsintheta1;
  float theta2, costheta2, invsintheta2;
- float4 posqi, posqj, posqk, posql;
+ float3 posqi, posqj, posqk, posql;
+ float  chargei, chargel;
  float sig, eps;
 
- ai.y = round( (atoms.x - fmod( atoms.x, xstrwidth ))/xstrwidth );
+
+
+
+
+
+   ai.y = round( (atoms.x - fmod( atoms.x, xstrwidth ))/xstrwidth );
  ai.x = atoms.x - ai.y * xstrwidth;
  posqi = posq[ ai ];
+ chargei = charge[ ai ];
+
+
+
+
+
 
  if ( atoms.y > -0.5f ) {
 
@@ -1091,11 +1641,13 @@ kernel void kbonded_CDLJ (
       al.y = round( (atoms.w - fmod( atoms.w, xstrwidth ))/xstrwidth );
   al.x = atoms.w - al.y * xstrwidth;
   posql = posq[ al ];
- }
- else
+  chargel = charge[ al ];
+ } else {
   posql = float4( 1.0f, 1.0f, 1.0f, 0.0f );
+  chargel = 0.0f;
+}
 
- qq = posqi.w * posql.w;
+ qq = chargei*chargel;
  rij = posqi.xyz - posqj.xyz;
  rkj = posqk.xyz - posqj.xyz;
  rkl = posqk.xyz - posql.xyz;
@@ -1218,7 +1770,7 @@ kernel void kbonded_CDLJ (
 
  if ( parm4.z > -0.5f ) {
   r2 = dot( ril, ril );
-  fs = scalar_force_single_CDLJ( qq, epsfac, parm4.z, parm4.w, r2 );
+  fs = scalar_force_single_CDLJ( qq, epsfac, parm4.z, parm4.w, r2, nbparams );
   fi_pair = fs * ril;
   fi += fi_pair;
   fl -= fi_pair;
@@ -1440,7 +1992,7 @@ kernel void kbonded_CDLJDebug (
 /*
  if ( parm4.z > -0.5f ) {
   r2 = dot( ril, ril );
-  fs = scalar_force_single_CDLJ( qq, epsfac, parm4.z, parm4.w, r2 );
+  fs = scalar_force_single_CDLJ( qq, epsfac, parm4.z, parm4.w, r2, nbparams );
   fi_pair = fs * ril;
 //fi_pair = float3( posqi.w + posql.w, posqi.w, posql.w );
 //fi_pair = float3( posqi.w + posql.w, posqi.w, posql.w );

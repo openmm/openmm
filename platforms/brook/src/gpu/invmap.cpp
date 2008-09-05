@@ -57,6 +57,9 @@ gpuCalcInvMap(
 	//This will hold the number of imaps actually used
 	*nimaps = -1;
 
+   printf( "gpuCalcInvMap: posflag=%d niatoms=%d nints=%d natoms=%d nmaps=%d\n",
+           posflag, niatoms, nints, natoms, nmaps );
+
 	//Now note down the positions where each atom occurs
 	for ( i = 0; i < nints; i++ ) {
 		//This is our atom
@@ -94,6 +97,9 @@ gpuCalcInvMap(
 		}
 		
 		counts[atom]++;
+
+printf( "Atom %d count=%d max %d mapcomp=%d val=%d mapnum=%d\n", atom,  counts[atom],
+        nmaps * 4, mapcomp, i, mapnum );
 	}
 
 	(*nimaps)++;

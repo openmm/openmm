@@ -195,6 +195,24 @@ void BrookIntStreamInternal::fillWithValue( void* value ){
 }
 
 /** 
+ * Get array of appropritate size for loading data
+ *
+ * @return data array -- user's responsibility to free
+ */
+
+void* BrookIntStreamInternal::getDataArray( void ){
+
+// ---------------------------------------------------------------------------------------
+
+   //static const std::string methodName      = "BrookIntStreamInternal::getDataArray";
+
+// ---------------------------------------------------------------------------------------
+
+   int totalSize                          = getStreamSize()*getWidth();
+   return new int[totalSize];
+}  
+
+/** 
  * Get data
  * 
  * @return data ptr
@@ -204,4 +222,120 @@ void BrookIntStreamInternal::fillWithValue( void* value ){
 void* BrookIntStreamInternal::getData( void ){
    return _data;
 }
+
+/** 
+ * Get data
+ * 
+ * @param readFromBoard if set, read values on board 
+ *
+ * @return data array
+ *
+ */
+
+void* BrookIntStreamInternal::getData( int readFromBoard ){
+
+// ---------------------------------------------------------------------------------------
+
+   // static const std::string methodName      = "BrookIntStreamInternal::getData";
+
+// ---------------------------------------------------------------------------------------
+
+   if( readFromBoard ){
+      _aStream.write( _data );
+   }
+
+   return (void*) _data;
+}
+
+/* 
+ * Print array contents of object to file
+ *
+ * @param log         file to print to
+ *
+ * @return DefaultReturnValue
+ *
+ * */
+
+int BrookIntStreamInternal::_bodyPrintToFile( FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+   //static const std::string methodName      = "BrookIntStreamInternal::_bodyPrintToFile";
+
+// ---------------------------------------------------------------------------------------
+
+   void* dataArrayV = getDataArray( );
+   saveToArray( dataArrayV );
+
+   int streamSize   = getStreamSize();
+   int width        = getWidth();
+   int index        = 0;
+   int* dataArray   = (int*) dataArrayV;
+   for( int ii = 0; ii < streamSize; ii++ ){
+      std::stringstream message;
+      message.width( 10 );
+      message << ii << " [ ";
+      for( int jj = 0; jj < width; jj++ ){
+         message << dataArray[index++] << " ";
+      }   
+      message << "]\n";
+      (void) fprintf( log, "%s", message.str().c_str() );    
+   }   
+
+   delete[] dataArrayV;
+
+   return DefaultReturnValue;
+
+}
+
+/* 
+ * Get contents of object
+ *
+ * @param level   level of dump
+ *
+ * @return string containing contents
+ *
+ * */
+
+const std::string BrookIntStreamInternal::getContentsString( int level ) const {
+
+// ---------------------------------------------------------------------------------------
+
+   // static const std::string methodName      = "BrookIntStreamInternal::getContentsString";
+
+   static const unsigned int MAX_LINE_CHARS = 256;
+   char value[MAX_LINE_CHARS];
+   //static const char* Set                   = "Set";
+   //static const char* NotSet                = "Not set";
+
+
+// ---------------------------------------------------------------------------------------
+
+   std::stringstream message;
+   std::string tab   = "   ";
+
+#ifdef WIN32
+#define LOCAL_SPRINTF(a,b,c) sprintf_s( (a), MAX_LINE_CHARS, (b), (c) );   
+#else
+#define LOCAL_SPRINTF(a,b,c) sprintf( (a), (b), (c) );   
+#endif
+
+   (void) LOCAL_SPRINTF( value, "%s", getName().c_str() );
+   message << _getLine( tab, "Name:", value );
+
+   (void) LOCAL_SPRINTF( value, "%d", getWidth() );
+   message << _getLine( tab, "Width:", value );
+
+   (void) LOCAL_SPRINTF( value, "%d", getStreamSize() );
+   message << _getLine( tab, "Stream size:", value );
+
+   (void) LOCAL_SPRINTF( value, "%d", getStreamWidth() );
+   message << _getLine( tab, "Stream width:", value );
+
+   (void) LOCAL_SPRINTF( value, "%d", getStreamHeight() );
+   message << _getLine( tab, "Stream height:", value );
+
+   return message.str();
+}
+
 

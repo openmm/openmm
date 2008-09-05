@@ -187,6 +187,15 @@ class BrookBonded : public BrookCommon {
       BrookFloatStreamInternal* getAtomIndicesStream( void ) const;
       
       /** 
+       * Get bonded charge stream
+       * 
+       * @return  charge stream
+       *
+       */
+      
+      BrookFloatStreamInternal* getChargeStream( void ) const;
+      
+      /** 
        * Get array of bonded parameter streams
        * 
        * @return  array of bonded parameter streams

@@ -391,7 +391,7 @@ class BrookNonBonded : public BrookCommon {
        *
        * */
       
-      int initializeExclusionStreamSize( int atomStreamSize, int atomStreamWidth );
+      int _initializeExclusionStreamSize( int atomStreamSize, int atomStreamWidth );
       
       /** 
        * Initialize exclusion stream dimensions and stream
@@ -402,7 +402,7 @@ class BrookNonBonded : public BrookCommon {
        *
        */
       
-      int initializeExclusionStream( const Platform& platform );
+      int _initializeExclusionStream( const Platform& platform );
             
       /** 
        * Set exclusion (4x4)
@@ -416,7 +416,7 @@ class BrookNonBonded : public BrookCommon {
        *
        */
       
-      int setExclusion( int i, int j, int exclusionStreamWidth, BrookOpenMMFloat* exclusion );
+      int _setExclusion( int i, int j, int exclusionStreamWidth, BrookOpenMMFloat* exclusion );
       
       /** 
        * Initialize exclusions
@@ -428,7 +428,7 @@ class BrookNonBonded : public BrookCommon {
        *
        */
       
-      int initializeExclusions( const std::vector<std::set<int> >& exclusionsVector, const Platform& platform );
+      int _initializeExclusions( const std::vector<std::set<int> >& exclusionsVector, const Platform& platform );
 
       /** 
        * Initialize stream dimensions
@@ -440,7 +440,7 @@ class BrookNonBonded : public BrookCommon {
        *
        */
       
-      int initializeStreamSizes( int numberOfAtoms, const Platform& platform );
+      int _initializeStreamSizes( int numberOfAtoms, const Platform& platform );
       
       /** 
        * Initialize stream dimensions and streams
@@ -451,7 +451,7 @@ class BrookNonBonded : public BrookCommon {
        *
        */
       
-      int initializeStreams( const Platform& platform );
+      int _initializeStreams( const Platform& platform );
       
       /* 
        * Setup of j-stream dimensions
@@ -465,7 +465,7 @@ class BrookNonBonded : public BrookCommon {
        *
        * */
       
-      int initializeJStreamSize( int atomStreamSize, int atomStreamWidth );
+      int _initializeJStreamSize( int atomStreamSize, int atomStreamWidth );
 
       /* 
        * Setup of outer vdw stream size
@@ -479,7 +479,7 @@ class BrookNonBonded : public BrookCommon {
        *
        * */
       
-      int initializeOuterVdwStreamSize( int atomStreamSize, int atomStreamWidth );
+      int _initializeOuterVdwStreamSize( int atomStreamSize, int atomStreamWidth );
 
       /** 
        * Set sigma & epsilon given c6 & c12 (geometric rule)
@@ -493,7 +493,7 @@ class BrookNonBonded : public BrookCommon {
        *
        */
       
-      int setSigmaEpsilon( double c6, double c12, double* sigma , double* epsilon );
+      int _setSigmaEpsilon( double c6, double c12, double* sigma , double* epsilon );
 
       /** 
        * Initialize vdw & charge
@@ -505,7 +505,19 @@ class BrookNonBonded : public BrookCommon {
        *
        */
       
-      int initializeVdwAndCharge( const std::vector<std::vector<double> >& nonbondedParameters, const Platform& platform );
+      int _initializeVdwAndCharge( const std::vector<std::vector<double> >& nonbondedParameters, const Platform& platform );
+      
+      /** 
+       * Initialize vdw & charge
+       * 
+       * @param exclusions                vector of sets containing exclusions (1 set entry for every atom)
+       * @param platform                  platform
+       *
+       * @return nonzero value if error
+       *
+       */
+      
+      int _initializeJStreamVdw( const std::vector<std::vector<double> >& nonbondedParameters, const Platform& platform );
       
       /* 
        * Setup of stream dimensions for partial force streams
@@ -517,7 +529,7 @@ class BrookNonBonded : public BrookCommon {
        *
        * */
       
-      int initializePartialForceStreamSize( int atomStreamSize, int atomStreamWidth );
+      int _initializePartialForceStreamSize( int atomStreamSize, int atomStreamWidth );
       
 };
 

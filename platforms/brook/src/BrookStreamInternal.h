@@ -50,6 +50,13 @@ class BrookStreamInternal {
         */
       enum DataType { Float, Float2, Float3, Float4, Double, Double2, Double3, Double4, Integer, Integer2, Integer3, Integer4, Unknown };
 
+      // return values
+
+      static const int DefaultReturnValue = 0;
+      static const int ErrorReturnValue   = -1; 
+
+      // ---------------------------------------------------------------------------------------
+
       /**
        * BrookStreamInternal constructor
        * 
@@ -101,7 +108,7 @@ class BrookStreamInternal {
        * the values should be packed into a single array: all the values for the first element, followed by all the values
        * for the next element, etc.
        */
-      virtual void loadFromArray(const void* array) = 0;
+      virtual void loadFromArray( const void* array ) = 0;
   
       /**
        * Copy the contents of an array into this stream.
@@ -121,14 +128,14 @@ class BrookStreamInternal {
        * the values should be packed into a single array: all the values for the first element, followed by all the values
        * for the next element, etc.
        */
-      virtual void saveToArray(void* array) = 0;
+      virtual void saveToArray( void* array ) = 0;
   
       /**
        * Set every element of this stream to the same value.
        * 
        * @param a pointer to the value.  It is assumed to be of the correct data type for this stream.
        */
-      virtual void fillWithValue(void* value) = 0;
+      virtual void fillWithValue( void* value ) = 0;
   
       /**
        * Get data
@@ -136,6 +143,22 @@ class BrookStreamInternal {
        * @return data array
        */
       virtual void* getData( void ) = 0;
+  
+      /**
+       * Get data
+       *
+       * @param readFromBoard  read data from board
+       * 
+       * @return data array
+       */
+      virtual void* getData( int readFromBoard ) = 0;
+  
+      /**
+       * Get array of appropritate size for loading data
+       *
+       * @return data array -- user's responsibility to free
+       */
+      virtual void* getDataArray( void ) = 0;
   
       /** 
        * Get type string
@@ -200,6 +223,17 @@ class BrookStreamInternal {
 
       const std::string getContentsString( int level = 0 ) const;
 
+      /* 
+       * Print to file
+       *
+       * @param log  log file
+       *
+       * @return  DefaultReturnValue
+       *
+       * */
+
+      int printToFile( FILE* log );
+
    protected:
 
       std::string _name;
@@ -229,6 +263,16 @@ class BrookStreamInternal {
       std::string _getLine( const std::string& tab, const std::string& description, 
                             const std::string& value ) const;
       
+      /* 
+       * Print array to file
+       *
+       * @param log  log file
+       *
+       * @return  DefaultReturnValue
+       *
+       * */
+
+      virtual int _bodyPrintToFile( FILE* log ) = 0;
 };
 
 } // namespace OpenMM

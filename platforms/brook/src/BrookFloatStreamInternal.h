@@ -133,6 +133,13 @@ class BrookFloatStreamInternal : public BrookStreamInternal {
       void* getData( int readFromBoard );
 
       /** 
+       * Get array of appropritate size for loading data
+       *
+       * @return data array -- user's responsibility to free
+       */
+      void* getDataArray( void );
+  
+      /** 
        * Get dangle value
        * 
        * @return  dangle value
@@ -163,6 +170,16 @@ class BrookFloatStreamInternal : public BrookStreamInternal {
       void _loadDanglingValues( void  );
       void _loadDanglingValues( float );
 
+      /*  
+       * Print array to file
+       *
+       * @param log  log file
+       *
+       * @return  DefaultReturnValue
+       *
+       * */
+
+      int _bodyPrintToFile( FILE* log );
 };
 
 } // namespace OpenMM

@@ -86,7 +86,7 @@ class BrookIntegrateLangevinStepKernel : public IntegrateLangevinStepKernel {
        *
        */
 
-      void execute( Stream& positions, Stream& velocities, const Stream& forces, double temperature, double friction, double stepSize);
+      void execute( Stream& positions, Stream& velocities, const Stream& forces, double temperature, double friction, double stepSize );
 
    protected:
 
