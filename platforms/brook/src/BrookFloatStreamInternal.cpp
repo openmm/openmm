@@ -522,17 +522,20 @@ int BrookFloatStreamInternal::_bodyPrintToFile( FILE* log ){
 
 // ---------------------------------------------------------------------------------------
 
-   void* dataArrayV = getDataArray( );
-   saveToArray( dataArrayV );
+   assert( log );
 
-   int streamSize   = getStreamSize();
-   int width        = getWidth();
-   int index        = 0;
-    float* dataArray = (float*) dataArrayV;
+   void* dataArrayV = getData( 1 );
+   //void* dataArrayV = getDataArray( );
+   //saveToArray( dataArrayV );
+
+   int streamSize         = getStreamSize();
+   int width              = getWidth();
+   int index              = 0;
+   const float* dataArray = (float*) dataArrayV;
    for( int ii = 0; ii < streamSize; ii++ ){
       std::stringstream message;
       message.width( 15 );
-      message.precision( 5 );
+      message.precision( 8 );
       message << ii << " [ ";
       for( int jj = 0; jj < width; jj++ ){
          message << dataArray[index++] << " ";
@@ -541,7 +544,7 @@ int BrookFloatStreamInternal::_bodyPrintToFile( FILE* log ){
       (void) fprintf( log, "%s", message.str().c_str() );    
    }
 
-   delete[] dataArrayV;
+   //delete[] dataArrayV;
 
    return DefaultReturnValue;
 

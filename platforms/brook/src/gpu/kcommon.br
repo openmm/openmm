@@ -24,3 +24,12 @@ kernel void kzerof4( out float4 outstr<> ) {
 kernel void ksetf4( float4 val, out float4 outstr<> ) {
 	outstr = val;
 }
+
+kernel void ksetStr3( float3 instr<>, out float3 outstr<> ) {
+	outstr = instr;
+}
+
+kernel void kadd3( float3 val<>, out float3 outstr<> ) { 
+   outstr += val;
+}
+

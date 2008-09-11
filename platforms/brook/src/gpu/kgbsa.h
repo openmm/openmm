@@ -75,28 +75,6 @@ void kAddAndMergeFloat4_4(
       ::brook::stream outputStream 
                  );
 
-void kPostObcLoop2( 
-      const float repfac, 
-      const float atomStrWidth, 
-      const float pforceStrWidth,
-      const float natoms,
-      const float roundNatoms,
-      const float iUnroll,
-      const float conversion,
-      const float mergeNonObcForces,
-      ::brook::stream inObcForces, 
-      ::brook::stream nonObcForces, 
-      ::brook::stream stream1, 
-      ::brook::stream stream2, 
-      ::brook::stream stream3, 
-      ::brook::stream stream4, 
-      ::brook::stream atomicRadii,
-      ::brook::stream bornRadii,
-      ::brook::stream obcChain,
-      ::brook::stream outputStream 
-                 );
-
-
 void kPostObcLoop2_nobranch( 
       const float repfac, 
       const float atomStrWidth, 
@@ -472,7 +450,6 @@ void kObcLoop2(
       float fstreamWidth,
       ::brook::stream posq, 
       ::brook::stream atomicRadii, 
-      ::brook::stream scaledAtomicRadii, 
       ::brook::stream bornForceFactor, 
       ::brook::stream bornForce1,
       ::brook::stream bornForce2,

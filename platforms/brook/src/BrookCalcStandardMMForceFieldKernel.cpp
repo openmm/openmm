@@ -231,7 +231,6 @@ void BrookCalcStandardMMForceFieldKernel::executeForces( const Stream& positions
 
 // ---------------------------------------------------------------------------------------
 
-   // ---------------------------------------------------------------------------------------
 
    const BrookStreamImpl& positionStreamC              = dynamic_cast<const BrookStreamImpl&> (positions.getImpl());
    BrookStreamImpl& positionStream                     = const_cast<BrookStreamImpl&>         (positionStreamC);
@@ -278,7 +277,7 @@ nonbondedForceStreams[3]->fillWithValue( &zerof );
 
    // diagnostics
 
-   if( PrintOn ){
+   if( 1 && PrintOn ){
       (void) fprintf( getLog(), "\nPost knbforce_CDLJ4: atoms=%6d ceiling=%3d dupFac=%3d", _brookNonBonded->getNumberOfAtoms(),  
                                                                                            _brookNonBonded->getAtomSizeCeiling(),
                                                                                            _brookNonBonded->getDuplicationFactor()  );
@@ -309,6 +308,8 @@ nonbondedForceStreams[3]->fillWithValue( &zerof );
       }
    }
 
+// ---------------------------------------------------------------------------------------
+
    // gather forces
 
    kMergeFloat3_4_nobranch( (float) _brookNonBonded->getDuplicationFactor(),
@@ -322,6 +323,18 @@ nonbondedForceStreams[3]->fillWithValue( &zerof );
                             nonbondedForceStreams[2]->getBrookStream(),
                             nonbondedForceStreams[3]->getBrookStream(),
                             forceStream.getBrookStream() );
+
+   // diagnostics
+
+   if( 0 && PrintOn ){
+
+      (void) fprintf( getLog(), "\nNB forces" );
+      BrookStreamInternal* brookStreamInternalF   = forceStream.getBrookStreamImpl();
+      brookStreamInternalF->printToFile( getLog() );
+
+   }
+
+// ---------------------------------------------------------------------------------------
 
    // bonded
 
@@ -377,7 +390,14 @@ nonbondedForceStreams[3]->fillWithValue( &zerof );
          (void) fprintf( getLog(), "\nForce stream %d\n", ii );
          bondedForceStreams[ii]->printToFile( getLog() );
       }
-      (void) fprintf( getLog(), "\nInverse map streams\n" );
+
+/*
+      (void) fprintf( getLog(), "\nNB1 forces" );
+      BrookStreamInternal* brookStreamInternalF   = forceStream.getBrookStreamImpl();
+      brookStreamInternalF->printToFile( getLog() );
+*/
+
+      (void) fprintf( getLog(), "\nInverse map streams -- K_Stream cnt=%d\n", _brookBonded->getInverseMapStreamCount( K_Stream ) );
       for( int ii = 0; ii < 4; ii++ ){
          for( int jj = 0; jj < countPrintInvMap[ii]; jj++ ){
             (void) fprintf( getLog(), "\n   Inverse map streams index=%d %d\n", ii, jj );
@@ -389,7 +409,7 @@ nonbondedForceStreams[3]->fillWithValue( &zerof );
    // gather forces
 
    if( _brookBonded->getInverseMapStreamCount( K_Stream ) <= 4 ){
-      // kinvmap_gather3_4( (float) bp->width, bp->strInvMapi[0], bp->strInvMapi[1], bp->strInvMapi[2], bp->fi, bp->strInvMapk[0], bp->strInvMapk[1], bp->strInvMapk[2], bp->strInvMapk[3], bp->fk, gpu->strF, gpu->strF );
+
       kinvmap_gather3_4( width,
 
                          inverseStreamMaps[I_Stream][0]->getBrookStream(),
@@ -406,7 +426,6 @@ nonbondedForceStreams[3]->fillWithValue( &zerof );
                          forceStream.getBrookStream(), forceStream.getBrookStream() );
 
    } else if( _brookBonded->getInverseMapStreamCount( K_Stream ) == 5 ){
-      // kinvmap_gather3_5( (float) bp->width, bp->strInvMapi[0], bp->strInvMapi[1], bp->strInvMapi[2], bp->fi, bp->strInvMapk[0], bp->strInvMapk[1], bp->strInvMapk[2], bp->strInvMapk[3], bp->strInvMapk[4], bp->fk, gpu->strF, gpu->strF );
 
       kinvmap_gather3_5( width,
                          inverseStreamMaps[I_Stream][0]->getBrookStream(),
@@ -436,6 +455,16 @@ nonbondedForceStreams[3]->fillWithValue( &zerof );
 
    }
 
+   // diagnostics
+
+   if( 0 && PrintOn ){
+
+      (void) fprintf( getLog(), "\nPost 3_4/3_5 && NB forces" );
+      BrookStreamInternal* brookStreamInternalF   = forceStream.getBrookStreamImpl();
+      brookStreamInternalF->printToFile( getLog() );
+
+   }
+
    //kinvmap_gather5_2( (float) bp->width, bp->strInvMapj[0], bp->strInvMapj[1], bp->strInvMapj[2], bp->strInvMapj[3], bp->strInvMapj[4],  bp->fj,
    //                   bp->strInvMapl[0], bp->strInvMapl[1], bp->fl, gpu->strF, gpu->strF );
    kinvmap_gather5_2( width,
@@ -449,6 +478,24 @@ nonbondedForceStreams[3]->fillWithValue( &zerof );
                       inverseStreamMaps[L_Stream][1]->getBrookStream(),
                       bondedForceStreams[L_Stream]->getBrookStream(),
                       forceStream.getBrookStream(), forceStream.getBrookStream() );
+
+   // diagnostics
+
+   if( 1 && PrintOn ){
+
+      (void) fprintf( getLog(), "\nFinal NB & bonded forces" );
+      BrookStreamInternal* brookStreamInternalF   = forceStream.getBrookStreamImpl();
+      brookStreamInternalF->printToFile( getLog() );
+/*
+      void* dataV = brookStreamInternalF->getData(1);
+      float* data = (float*) dataV;
+      (void) fprintf( getLog(), "\nFinal NB & bonded forces RAW\n" );
+      for( int ii = 0; ii < _brookNonBonded->getNumberOfAtoms()*3; ii += 3 ){
+         (void) fprintf( getLog(), "%d [%.6e %.6e %.6e]\n", ii, data[ii], data[ii+1], data[ii+2] );
+      }
+*/
+
+   }
 
    // ---------------------------------------------------------------------------------------
 }

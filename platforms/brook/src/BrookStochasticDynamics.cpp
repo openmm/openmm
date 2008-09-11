@@ -36,6 +36,7 @@
 #include "BrookStreamImpl.h"
 #include "kshakeh.h"
 #include "kupdatesd.h"
+#include "kcommon.h"
 
 // use random number generator
 
@@ -222,13 +223,15 @@ int BrookStochasticDynamics::_setStepSize( BrookOpenMMFloat stepSize ){
  * 
  * @return  DefaultReturnValue
  *
+ * @throw   if tau too small
+ *
  */
 
 int BrookStochasticDynamics::_updateDerivedParameters( void ){
 
    // ---------------------------------------------------------------------------------------
 
-   // static const char* methodName = "\nBrookStochasticDynamics::_updateDerivedParameters";
+   static const char* methodName = "\nBrookStochasticDynamics::_updateDerivedParameters";
 
    static const BrookOpenMMFloat zero       =  0.0;
    static const BrookOpenMMFloat one        =  1.0;
@@ -237,11 +240,20 @@ int BrookStochasticDynamics::_updateDerivedParameters( void ){
    static const BrookOpenMMFloat four       =  4.0;
    static const BrookOpenMMFloat half       =  0.5;
 
+   float epsilon                            = 1.0e-08f;
+
    // ---------------------------------------------------------------------------------------
 
    BrookOpenMMFloat tau         = getTau();
    BrookOpenMMFloat temperature = getTemperature();
    BrookOpenMMFloat stepSize    = getStepSize();
+
+   if(  fabsf( float( tau ) ) < epsilon ){
+      std::stringstream message;
+      message << methodName << " tau=" << tau << " too small.";
+      throw OpenMMException( message.str() );
+   }   
+
 
    _derivedParameters[GDT]      = stepSize/tau;
 
@@ -293,7 +305,7 @@ int BrookStochasticDynamics::_updateDerivedParameters( void ){
        
    return DefaultReturnValue;
 
-};
+}
 
 /** 
  * Update parameters -- only way parameters can be set
@@ -310,16 +322,28 @@ int BrookStochasticDynamics::updateParameters( double temperature, double fricti
 
    // ---------------------------------------------------------------------------------------
 
-   // static const char* methodName = "\nBrookStochasticDynamics::updateParameters";
+   static int showUpdate         = 1;
+   static int maxShowUpdate      = 3;
+   static const char* methodName = "\nBrookStochasticDynamics::updateParameters";
 
    // ---------------------------------------------------------------------------------------
 
    _setStepSize(    (BrookOpenMMFloat)  stepSize );
    _setFriction(    (BrookOpenMMFloat)  friction );
+   //_setTau(    (BrookOpenMMFloat)  friction );
    _setTemperature( (BrookOpenMMFloat)  temperature );
 
    _updateDerivedParameters( );
    _updateSdStreams( );
+
+   // show update
+
+   if( showUpdate && getLog() && (showUpdate++ < maxShowUpdate) ){
+      std::string contents = getContentsString( );
+      (void) fprintf( getLog(), "%s contents %s", methodName, contents.c_str() );
+      (void) fflush( getLog() );
+
+   }
 
    return DefaultReturnValue;
 
@@ -343,51 +367,103 @@ int BrookStochasticDynamics::update( Stream& positions, Stream& velocities,
                                      BrookShakeAlgorithm& brookShakeAlgorithm,
                                      BrookRandomNumberGenerator& brookRandomNumberGenerator ){
 
-   // ---------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------
 
-      // unused Shake parameter
+   // unused Shake parameter
 
-      float omega                   = 1.0f;
+   float omega                   = 1.0f;
 
-   // static const char* methodName = "\nBrookStochasticDynamics::update";
+   static const char* methodName = "\nBrookStochasticDynamics::update";
 
-   // ---------------------------------------------------------------------------------------
+   static const int PrintOn      = 0;
 
-      const BrookOpenMMFloat* derivedParameters           = getDerivedParameters();
+// ---------------------------------------------------------------------------------------
 
-      BrookStreamImpl& positionStream                     = dynamic_cast<BrookStreamImpl&>       (positions.getImpl());
-      BrookStreamImpl& velocityStream                     = dynamic_cast<BrookStreamImpl&>       (velocities.getImpl());
-      const BrookStreamImpl& forceStreamC                 = dynamic_cast<const BrookStreamImpl&> (forces.getImpl());
-      BrookStreamImpl& forceStream                        = const_cast<BrookStreamImpl&> (forceStreamC);
+   const BrookOpenMMFloat* derivedParameters           = getDerivedParameters();
 
-      // first integration step
+   BrookStreamImpl& positionStream                     = dynamic_cast<BrookStreamImpl&>       (positions.getImpl());
+   BrookStreamImpl& velocityStream                     = dynamic_cast<BrookStreamImpl&>       (velocities.getImpl());
+   const BrookStreamImpl& forceStreamC                 = dynamic_cast<const BrookStreamImpl&> (forces.getImpl());
+   BrookStreamImpl& forceStream                        = const_cast<BrookStreamImpl&> (forceStreamC);
 
-      kupdate_sd1_fix1(
-            (float) getStochasticDynamicsAtomStreamWidth(),
-            (float) brookRandomNumberGenerator.getRandomNumberStreamWidth(),
-            (float) brookRandomNumberGenerator.getRvStreamOffset(),
-            derivedParameters[EM],
-            derivedParameters[Sd1pc1],
-            derivedParameters[Sd1pc2],
-            derivedParameters[Sd1pc3],
-            getSDPC1Stream()->getBrookStream(),
-            brookRandomNumberGenerator.getRandomNumberStream( brookRandomNumberGenerator.getRvStreamIndex() )->getBrookStream(),
-            getSD2XStream()->getBrookStream(),
-            positionStream.getBrookStream(),
-            forceStream.getBrookStream(),
-            velocityStream.getBrookStream(),
-            getInverseMassStream()->getBrookStream(),
-            getSD1VStream()->getBrookStream(),
-            getVPrimeStream()->getBrookStream(),
-            getXPrimeStream()->getBrookStream() 
-            );
+   if( PrintOn && getLog() ){
+      (void) fprintf( getLog(), "%s shake=%d\n", methodName, brookShakeAlgorithm.getNumberOfConstraints() );
+      (void) fflush( getLog() );
+
+   }
+
+   // first integration step
+
+   kupdate_sd1_fix1(
+         (float) getStochasticDynamicsAtomStreamWidth(),
+         (float) brookRandomNumberGenerator.getRandomNumberStreamWidth(),
+         (float) brookRandomNumberGenerator.getRvStreamOffset(),
+         derivedParameters[EM],
+         derivedParameters[Sd1pc1],
+         derivedParameters[Sd1pc2],
+         derivedParameters[Sd1pc3],
+         getSDPC1Stream()->getBrookStream(),
+         brookRandomNumberGenerator.getRandomNumberStream( brookRandomNumberGenerator.getRvStreamIndex() )->getBrookStream(),
+         getSD2XStream()->getBrookStream(),
+         positionStream.getBrookStream(),
+         forceStream.getBrookStream(),
+         velocityStream.getBrookStream(),
+         getInverseMassStream()->getBrookStream(),
+         getSD1VStream()->getBrookStream(),
+         getVPrimeStream()->getBrookStream(),
+         getXPrimeStream()->getBrookStream() 
+         );
  
-      // advance random number cursor
+   // diagnostics
 
-      brookRandomNumberGenerator.advanceGVCursor( 2*getNumberOfAtoms() );
+   if( PrintOn ){
+      (void) fprintf( getLog(), "\nPost kupdate_sd1_fix1: atomStrW=%3d rngStrW=%3d rngOff=%3d"
+                                "EM=%12.5e Sd1pc[]=[%12.5e %12.5e %12.5e]",
+                                getStochasticDynamicsAtomStreamWidth(),
+                                brookRandomNumberGenerator.getRandomNumberStreamWidth(),
+                                brookRandomNumberGenerator.getRvStreamOffset(),
+                                derivedParameters[EM], derivedParameters[Sd1pc1], derivedParameters[Sd1pc2], derivedParameters[Sd1pc3] );
 
-      // first Shake step
+      (void) fprintf( getLog(), "\nSDPC1Stream\n" );
+      getSDPC1Stream()->printToFile( getLog() );
 
+      (void) fprintf( getLog(), "\nSD2XStream\n" );
+      getSD2XStream()->printToFile( getLog() );
+
+      (void) fprintf( getLog(), "\nInverseMassStream\n" );
+      getInverseMassStream()->printToFile( getLog() );
+
+      //StreamImpl& positionStreamImpl               = positionStream.getImpl();
+      //const BrookStreamImpl brookPositions         = dynamic_cast<BrookStreamImpl&> (positionStreamImpl);
+      BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamImpl();
+      (void) fprintf( getLog(), "\nPositionStream\n" );
+      brookStreamInternalPos->printToFile( getLog() );
+
+      (void) fprintf( getLog(), "\nForceStream\n" );
+      BrookStreamInternal* brookStreamInternalF   = forceStream.getBrookStreamImpl();
+      brookStreamInternalF->printToFile( getLog() );
+
+      BrookStreamInternal* brookStreamInternalV   = velocityStream.getBrookStreamImpl();
+      (void) fprintf( getLog(), "\nVelocityStream\n" );
+      brookStreamInternalV->printToFile( getLog() );
+
+      (void) fprintf( getLog(), "\nSD1VStream\n" );
+      getSD1VStream()->printToFile( getLog() );
+
+      (void) fprintf( getLog(), "\nVPrimeStream\n" );
+      getVPrimeStream()->printToFile( getLog() );
+
+      (void) fprintf( getLog(), "\nXPrimeStream\n" );
+      getXPrimeStream()->printToFile( getLog() ); 
+   }   
+
+   // advance random number cursor
+
+   brookRandomNumberGenerator.advanceGVCursor( 2*getNumberOfAtoms() );
+
+   // first Shake step
+
+   if( brookShakeAlgorithm.getNumberOfConstraints() > 0 ){
       kshakeh_fix1( 
                     10.0f,
                     (float) getStochasticDynamicsAtomStreamWidth(),
@@ -401,9 +477,9 @@ int BrookStochasticDynamics::update( Stream& positions, Stream& velocities,
                     brookShakeAlgorithm.getShakeXCons1Stream()->getBrookStream(),
                     brookShakeAlgorithm.getShakeXCons2Stream()->getBrookStream(),
                     brookShakeAlgorithm.getShakeXCons3Stream()->getBrookStream() );
-
+   
       // first Shake gather
-
+   
       kshakeh_update1_fix1(
                     (float) getStochasticDynamicsAtomStreamWidth(),
                     derivedParameters[Sd2pc1],
@@ -416,32 +492,34 @@ int BrookStochasticDynamics::update( Stream& positions, Stream& velocities,
                     brookShakeAlgorithm.getShakeXCons2Stream()->getBrookStream(),
                     brookShakeAlgorithm.getShakeXCons3Stream()->getBrookStream(),
                     getXPrimeStream()->getBrookStream() );
+   }
 
-      // second integration step
+   // second integration step
 
-      kupdate_sd2_fix1(
-            (float) getStochasticDynamicsAtomStreamWidth(),
-            (float) brookRandomNumberGenerator.getRandomNumberStreamWidth(),
-            (float) brookRandomNumberGenerator.getRvStreamOffset(),
-            derivedParameters[Sd2pc1],
-            derivedParameters[Sd2pc2],
-            getSDPC2Stream()->getBrookStream(),
-            brookRandomNumberGenerator.getRandomNumberStream( brookRandomNumberGenerator.getRvStreamIndex() )->getBrookStream(),
-            getSD1VStream()->getBrookStream(),
-            positionStream.getBrookStream(),
-            getXPrimeStream()->getBrookStream(), 
-            getVPrimeStream()->getBrookStream(),
-            getSD2XStream()->getBrookStream(),
-            velocityStream.getBrookStream(),
-            getXPrimeStream()->getBrookStream() 
-            );
+   kupdate_sd2_fix1(
+         (float) getStochasticDynamicsAtomStreamWidth(),
+         (float) brookRandomNumberGenerator.getRandomNumberStreamWidth(),
+         (float) brookRandomNumberGenerator.getRvStreamOffset(),
+         derivedParameters[Sd2pc1],
+         derivedParameters[Sd2pc2],
+         getSDPC2Stream()->getBrookStream(),
+         brookRandomNumberGenerator.getRandomNumberStream( brookRandomNumberGenerator.getRvStreamIndex() )->getBrookStream(),
+         getSD1VStream()->getBrookStream(),
+         positionStream.getBrookStream(),
+         getXPrimeStream()->getBrookStream(), 
+         getVPrimeStream()->getBrookStream(),
+         getSD2XStream()->getBrookStream(),
+         velocityStream.getBrookStream(),
+         getXPrimeStream()->getBrookStream() 
+         );
 
-      // advance random number cursor
+   // advance random number cursor
 
-      brookRandomNumberGenerator.advanceGVCursor( 2*getNumberOfAtoms() );
+   brookRandomNumberGenerator.advanceGVCursor( 2*getNumberOfAtoms() );
 
-      // second Shake step
+   // second Shake step
 
+   if( brookShakeAlgorithm.getNumberOfConstraints() > 0 ){
       kshakeh_fix1( 
                     10.0f,
                     (float) getStochasticDynamicsAtomStreamWidth(),
@@ -455,22 +533,9 @@ int BrookStochasticDynamics::update( Stream& positions, Stream& velocities,
                     brookShakeAlgorithm.getShakeXCons1Stream()->getBrookStream(),
                     brookShakeAlgorithm.getShakeXCons2Stream()->getBrookStream(),
                     brookShakeAlgorithm.getShakeXCons3Stream()->getBrookStream() );
-
+   
       // second Shake gather
-
-      kshakeh_update1_fix1(
-                    (float) getStochasticDynamicsAtomStreamWidth(),
-                    derivedParameters[Sd2pc1],
-                    brookShakeAlgorithm.getShakeInverseMapStream()->getBrookStream(),
-                    positionStream.getBrookStream(),
-                    getXPrimeStream()->getBrookStream(),
-                    getVPrimeStream()->getBrookStream(),
-                    brookShakeAlgorithm.getShakeXCons0Stream()->getBrookStream(),
-                    brookShakeAlgorithm.getShakeXCons1Stream()->getBrookStream(),
-                    brookShakeAlgorithm.getShakeXCons2Stream()->getBrookStream(),
-                    brookShakeAlgorithm.getShakeXCons3Stream()->getBrookStream(),
-                    getXPrimeStream()->getBrookStream() );
-
+   
       kshakeh_update2_fix1( 
                     (float) getStochasticDynamicsAtomStreamWidth(),
                     brookShakeAlgorithm.getShakeInverseMapStream()->getBrookStream(),
@@ -481,6 +546,11 @@ int BrookStochasticDynamics::update( Stream& positions, Stream& velocities,
                     brookShakeAlgorithm.getShakeXCons2Stream()->getBrookStream(),
                     brookShakeAlgorithm.getShakeXCons3Stream()->getBrookStream(),
                     positionStream.getBrookStream() );
+   
+   } else {
+      //kadd3( getXPrimeStream()->getBrookStream(), positionStream.getBrookStream() );
+      ksetStr3( getXPrimeStream()->getBrookStream(), positionStream.getBrookStream() );
+   }
 
    return DefaultReturnValue;
 
@@ -813,6 +883,8 @@ int BrookStochasticDynamics::_updateSdStreams( void ){
       sdpc[ii] = new BrookOpenMMFloat[2*sdAtomStreamSize];
       memset( sdpc[ii], 0, 2*sdAtomStreamSize*sizeof( BrookOpenMMFloat ) ); 
    }
+   BrookOpenMMFloat* inverseMass = new BrookOpenMMFloat[sdAtomStreamSize];
+   memset( inverseMass, 0, sdAtomStreamSize*sizeof( BrookOpenMMFloat ) ); 
 
    const BrookOpenMMFloat* derivedParameters = getDerivedParameters( );
    int numberOfAtoms                         = getNumberOfAtoms();
@@ -825,14 +897,18 @@ int BrookStochasticDynamics::_updateSdStreams( void ){
       sdpc[1][index]      = _inverseSqrtMasses[ii]*( static_cast<BrookOpenMMFloat> (derivedParameters[Yx]) );
       sdpc[1][index+1]    = _inverseSqrtMasses[ii]*( static_cast<BrookOpenMMFloat> (derivedParameters[X])  );
 
+      inverseMass[ii]     = _inverseSqrtMasses[ii]*_inverseSqrtMasses[ii];
+
    }
 
    _sdStreams[SDPC1Stream]->loadFromArray( sdpc[0] );
    _sdStreams[SDPC2Stream]->loadFromArray( sdpc[1] );
+   _sdStreams[InverseMassStream]->loadFromArray( inverseMass );
 
    for( int ii = 0; ii < 2; ii++ ){
       delete[] sdpc[ii];
    }
+   delete[] inverseMass;
 
    // initialize SD2X
 
@@ -907,6 +983,9 @@ int BrookStochasticDynamics::setup( const std::vector<double>& masses, const Pla
    static const std::string methodName      = "BrookStochasticDynamics::setup";
 
 // ---------------------------------------------------------------------------------------
+
+   const BrookPlatform brookPlatform            = dynamic_cast<const BrookPlatform&> (platform);
+   setLog( brookPlatform.getLog() );
 
    int numberOfAtoms  = (int) masses.size();
    setNumberOfAtoms( numberOfAtoms );

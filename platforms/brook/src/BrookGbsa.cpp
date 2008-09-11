@@ -223,6 +223,7 @@ int BrookGbsa::getAtomSizeCeiling( void ) const {
       if( localThis->_atomSizeCeiling ){
          localThis->_atomSizeCeiling = localThis->getOuterLoopUnroll() - localThis->_atomSizeCeiling;
       }   
+      localThis->_atomSizeCeiling += localThis->getNumberOfAtoms();
    }
 
    return _atomSizeCeiling;
@@ -442,6 +443,7 @@ int BrookGbsa::calculateBornRadii( const Stream& positions ){
 // ---------------------------------------------------------------------------------------
 
    static const std::string methodName                 = "BrookGbsa::calculateBornRadii";
+   static const int PrintOn                            = 1;
 
 // ---------------------------------------------------------------------------------------
 
@@ -463,11 +465,15 @@ int BrookGbsa::calculateBornRadii( const Stream& positions ){
    RealOpenMM* bornRadii                               = new RealOpenMM[streamSize];
    memset( bornRadii, 0, sizeof( RealOpenMM )*streamSize );
 
-   int index = 0;
+   RealOpenMM* obcChain                                = new RealOpenMM[streamSize];
+   memset( obcChain, 0, sizeof( RealOpenMM )*streamSize );
+
+   int index                                           = 0;
+   RealOpenMM* atomCoordinatesBlkPtr                   = atomCoordinatesBlk;
    for( int ii = 0; ii < numberOfAtoms; ii++ ){
 
-      atomCoordinates[ii]    = atomCoordinatesBlk;
-      atomCoordinatesBlk    += 3;
+      atomCoordinates[ii]    = atomCoordinatesBlkPtr;
+      atomCoordinatesBlkPtr += 3;
 
       atomCoordinates[ii][0] = coordinates[index++];
       atomCoordinates[ii][1] = coordinates[index++];
@@ -477,11 +483,23 @@ int BrookGbsa::calculateBornRadii( const Stream& positions ){
 
    // calculate Born radii
 
-   _cpuObc->computeBornRadii( atomCoordinates, bornRadii );
+   _cpuObc->computeBornRadii( atomCoordinates, bornRadii, obcChain );
 
+   // diagnostics
+
+   if( PrintOn ){
+
+      (void) fprintf( getLog(), "\n%s: atms=%d\n", methodName.c_str(), numberOfAtoms );
+      for( int ii = 0; ii < numberOfAtoms; ii++ ){
+         (void) fprintf( getLog(), "%d coord=[%.5e %.5e %.5e]  bR=%.5e obcChain=%.6e\n", ii,
+                         atomCoordinates[ii][0], atomCoordinates[ii][1], atomCoordinates[ii][2], bornRadii[ii], obcChain[ii] );
+      }
+   }
+  
    // write radii to board and set flag to indicate radii calculated once
 
    _gbsaStreams[ObcBornRadiiStream]->loadFromArray( bornRadii );
+   _gbsaStreams[ObcChainStream]->loadFromArray( obcChain );
    _bornRadiiInitialized   = 1;
 
    // free memory
@@ -489,6 +507,7 @@ int BrookGbsa::calculateBornRadii( const Stream& positions ){
    delete[] atomCoordinatesBlk;
    delete[] atomCoordinates;
    delete[] bornRadii;
+   delete[] obcChain;
 
    return DefaultReturnValue;
 }
@@ -573,9 +592,9 @@ int BrookGbsa::initializeStreams( const Platform& platform ){
 
     _gbsaStreams[ObcIntermediateForceStream]                    = new BrookFloatStreamInternal( BrookCommon::ObcIntermediateForceStream,
                                                                                                 gbsaAtomStreamSize, gbsaAtomStreamWidth,
-                                                                                                BrookStreamInternal::Float, dangleValue );
+                                                                                                BrookStreamInternal::Float4, dangleValue );
 
-   // Born2 radii
+   // Obc chain
 
     _gbsaStreams[ObcChainStream]                                = new BrookFloatStreamInternal( BrookCommon::ObcChainStream,
                                                                                                 gbsaAtomStreamSize, gbsaAtomStreamWidth,
@@ -613,7 +632,7 @@ int BrookGbsa::setup( const std::vector<std::vector<double> >& vectorOfAtomParam
     
 // ---------------------------------------------------------------------------------------
 
-   static const int atomParametersSize      = 4; 
+   static const int atomParametersSize      = 3; 
    static const int maxErrors               = 20; 
    static const std::string methodName      = "BrookGbsa::setup";
 
@@ -822,13 +841,6 @@ std::string BrookGbsa::getContentsString( int level ) const {
    message << _getLine( tab, "Partial force stream size:", value ); 
 
    message << _getLine( tab, "Log:",                  (getLog()                ? Set : NotSet) ); 
-/*
-   message << _getLine( tab, "ExclusionStream:",      (getExclusionStream()    ? Set : NotSet) ); 
-   message << _getLine( tab, "VdwStream:",            (getOuterVdwStream()     ? Set : NotSet) ); 
-   message << _getLine( tab, "ChargeStream:",         (getChargeStream()       ? Set : NotSet) ); 
-   message << _getLine( tab, "SigmaStream:",          (getInnerSigmaStream()   ? Set : NotSet) ); 
-   message << _getLine( tab, "EpsilonStream:",        (getInnerEpsilonStream() ? Set : NotSet) ); 
-*/
  
    for( int ii = 0; ii < LastStreamIndex; ii++ ){
       message << std::endl;

@@ -166,6 +166,14 @@ class BrookStreamImpl : public StreamImpl {
 
       //const std::string getContentsString( int level = 0 ) const;
 
+      /** 
+       * Get Brook stream impl 
+       * 
+       * @return Brook stream impl
+       */
+
+      BrookStreamInternal* getBrookStreamImpl( void ) const;
+
    protected:
 
       BrookStreamInternal* _brookStreamInternal; 

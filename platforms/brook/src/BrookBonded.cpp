@@ -1056,6 +1056,7 @@ int BrookBonded::loadInvMaps( int nbondeds, int natoms, int *atoms, const BrookP
 // ---------------------------------------------------------------------------------------
 
    static const std::string methodName = "BrookBonded::loadInvMaps";
+   static const int PrintOn            = 0;
    double dangleValue                  = 0.0;
 
 // ---------------------------------------------------------------------------------------
@@ -1100,7 +1101,7 @@ int BrookBonded::loadInvMaps( int nbondeds, int natoms, int *atoms, const BrookP
       }
    }
 
-   if( getLog() ){
+   if( PrintOn && getLog() ){
       (void) fprintf( getLog(), "%s force stream strms=%d nbondeds=%d max counts=[%d %d %d %d] strSz&Wd=%d %d\n", methodName.c_str(), getNumberOfForceStreams(),
                       nbondeds, getMaxInverseMapStreamCount(0), getMaxInverseMapStreamCount(1), getMaxInverseMapStreamCount(2), getMaxInverseMapStreamCount(3),
                       atomStreamSize, atomStreamWidth );
@@ -1110,21 +1111,24 @@ int BrookBonded::loadInvMaps( int nbondeds, int natoms, int *atoms, const BrookP
    // load data
 
    for( int ii = 0; ii < getNumberOfForceStreams(); ii++ ){
+      for( int jj = 0; jj < 4*getMaxInverseMapStreamCount()*atomStreamSize; jj++ ){
+         block[jj] = -1.0f;
+      }
       gpuCalcInvMap( ii, 4, nbondeds, natoms, atoms, getInverseMapStreamCount( ii ), counts, invmaps, &(_inverseMapStreamCount[ii]) );
 //gpuPrintInvMaps( _inverseMapStreamCount[ii], natoms, counts, invmaps, getLog() );
       validateInverseMapStreamCount( ii, _inverseMapStreamCount[ii] ); 
       for( int jj = 0; jj < _inverseMapStreamCount[ii]; jj++ ){
          _inverseStreamMaps[ii][jj]->loadFromArray( invmaps[jj] );
 
-         (void) fprintf( getLog(), "%s inverseMap stream strms=%d count=%d index=%d %d InverseMapStreamCount[ii]=%d max=%d\n",
-                         methodName.c_str(), getNumberOfForceStreams(), _inverseMapStreamCount[ii], ii, jj,
-                         getInverseMapStreamCount( ii ), getMaxInverseMapStreamCount( ii ) );
+         if( PrintOn && getLog() ){
+            (void) fprintf( getLog(), "%s inverseMap stream strms=%d count=%d index=%d %d InverseMapStreamCount[ii]=%d max=%d\n",
+                            methodName.c_str(), getNumberOfForceStreams(), _inverseMapStreamCount[ii], ii, jj,
+                            getInverseMapStreamCount( ii ), getMaxInverseMapStreamCount( ii ) );
 
-/*
-         for( int kk = 0; kk < atomStreamSize; kk++ ){
-            (void) fprintf( getLog(), "%8d [ %.1f %.1f %.1f %.1f]\n", kk, invmaps[jj][kk].x, invmaps[jj][kk].y, invmaps[jj][kk].z, invmaps[jj][kk].w  );
+            for( int kk = 0; kk < atomStreamSize; kk++ ){
+               (void) fprintf( getLog(), "%8d [ %.1f %.1f %.1f %.1f]\n", kk, invmaps[jj][kk].x, invmaps[jj][kk].y, invmaps[jj][kk].z, invmaps[jj][kk].w  );
+            }
          }
-*/
 
       }    
 
@@ -1144,7 +1148,7 @@ int BrookBonded::loadInvMaps( int nbondeds, int natoms, int *atoms, const BrookP
 
    // diagnostics 
 
-   if( getLog() ){
+   if( PrintOn && getLog() ){
       (void) fprintf( getLog(), "%s done\n", methodName.c_str() );
       (void) fflush( getLog() );
    }
@@ -1199,6 +1203,7 @@ int BrookBonded::setup( int numberOfAtoms,
 // ---------------------------------------------------------------------------------------
 
    static const std::string methodName = "BrookBonded::setup";
+   static const int PrintOn            = 0;
    double dangleValue                  = 0.0;
 
 // ---------------------------------------------------------------------------------------
@@ -1213,7 +1218,7 @@ int BrookBonded::setup( int numberOfAtoms,
       std::stringstream message;
       message << methodName << " number of harmonic bond atom indices=" << bondIndices.size() << " does not equal number of harmonic bond parameter entries=" << bondParameters.size();
       throw OpenMMException( message.str() );
-   } else if( getLog() ){
+   } else if( PrintOn && getLog() ){
       (void) fprintf( getLog(), "%s harmonic bonds=%d\n", methodName.c_str(), bondIndices.size() );
       (void) fflush( getLog() );
    }
@@ -1222,7 +1227,7 @@ int BrookBonded::setup( int numberOfAtoms,
       std::stringstream message;
       message << methodName << " number of angle atom indices=" << angleIndices.size() << " does not equal number of angle parameter entries=" << angleParameters.size();
       throw OpenMMException( message.str() );
-   } else if( getLog() ){
+   } else if( PrintOn && getLog() ){
       (void) fprintf( getLog(), "%s angle bonds=%d\n", methodName.c_str(), angleIndices.size() );
       (void) fflush( getLog() );
    }
@@ -1231,7 +1236,7 @@ int BrookBonded::setup( int numberOfAtoms,
       std::stringstream message;
       message << methodName << " number of periodicTorsion atom indices=" << periodicTorsionIndices.size() << " does not equal number of periodicTorsion parameter entries=" << periodicTorsionParameters.size();
       throw OpenMMException( message.str() );
-   } else if( getLog() ){
+   } else if( PrintOn && getLog() ){
       (void) fprintf( getLog(), "%s periodicTorsion bonds=%d\n", methodName.c_str(), periodicTorsionIndices.size() );
       (void) fflush( getLog() );
    }
@@ -1240,7 +1245,7 @@ int BrookBonded::setup( int numberOfAtoms,
       std::stringstream message;
       message << methodName << " number of rbTorsion atom indices=" << rbTorsionIndices.size() << " does not equal number of rbTorsion parameter entries=" << rbTorsionParameters.size();
       throw OpenMMException( message.str() );
-   } else if( getLog() ){
+   } else if( PrintOn && getLog() ){
       (void) fprintf( getLog(), "%s rbTorsion bonds=%d\n", methodName.c_str(), rbTorsionIndices.size() );
       (void) fflush( getLog() );
    }
@@ -1249,7 +1254,7 @@ int BrookBonded::setup( int numberOfAtoms,
       std::stringstream message;
       message << methodName << " number atoms=" << numberOfAtoms << " does not equal number of nb parameter entries=" << nonbondedParameters.size();
       throw OpenMMException( message.str() );
-   } else if( getLog() ){
+   } else if( PrintOn && getLog() ){
       (void) fprintf( getLog(), "%s LJ 14 ixns=%d\n", methodName.c_str(), bonded14Indices.size() );
       (void) fflush( getLog() );
    }
@@ -1321,7 +1326,7 @@ int BrookBonded::setup( int numberOfAtoms,
       std::stringstream message;
       message << methodName << " number of bonds=" << nbondeds << " is greater than maxBonds=" << maxBonds;
       throw OpenMMException( message.str() );
-   } else if( getLog() ){
+   } else if( PrintOn && getLog() ){
       (void) fprintf( getLog(), "%s atoms=%d number of bonds=%d maxBonds=%d\n", methodName.c_str(), numberOfAtoms, nbondeds, maxBonds );
       (void) fflush( getLog() );
    }
@@ -1364,7 +1369,7 @@ int BrookBonded::setup( int numberOfAtoms,
 
    // debug stuff
 
-   if( 1 && getLog() ){
+   if( PrintOn && getLog() ){
 
       (void) fprintf( getLog(), "%s nbondeds=%d strDim [%d %d ] sz=%d\n", methodName.c_str(), nbondeds,
                       _atomIndicesStream->getStreamWidth(),

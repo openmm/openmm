@@ -281,3 +281,12 @@ brook::stream& BrookStreamImpl::getBrookStream( void ){
    return _brookStreamInternal->getBrookStream( );
 }
 
+/** 
+ * Get Brook stream impl 
+ * 
+ * @return Brook stream impl
+ */
+
+BrookStreamInternal* BrookStreamImpl::getBrookStreamImpl( void ) const {
+   return _brookStreamInternal;
+}

@@ -80,6 +80,8 @@ void BrookIntegrateLangevinStepKernel::initialize( const vector<double>& masses,
    _brookShakeAlgorithm          = new BrookShakeAlgorithm( );
    _brookShakeAlgorithm->setup( masses, constraintIndices, constraintLengths, getPlatform() );
 
+   // assert( (_brookShakeAlgorithm->getNumberOfConstraints() > 0) );
+
    _brookRandomNumberGenerator   = new BrookRandomNumberGenerator( );
    _brookRandomNumberGenerator->setup( (int) masses.size(), getPlatform() );
 }
@@ -118,19 +120,12 @@ void BrookIntegrateLangevinStepKernel::execute( Stream& positions, Stream& veloc
    differences[0] = temperature - (double) _brookStochasticDynamics->getTemperature();
    differences[1] = friction    - (double) _brookStochasticDynamics->getFriction();
    differences[2] = stepSize    - (double) _brookStochasticDynamics->getStepSize();
-   if( fabs( differences[0] ) < epsilon || fabs( differences[1] ) < epsilon || fabs( differences[2] ) < epsilon ){
+   if( fabs( differences[0] ) > epsilon || fabs( differences[1] ) > epsilon || fabs( differences[2] ) > epsilon ){
+//printf( "%s calling updateParameters\n", methodName.c_str() );
       _brookStochasticDynamics->updateParameters( temperature, friction, stepSize );
-   } 
-
-   assert( _brookShakeAlgorithm );
-/*
-   if( _brookShakeAlgorithm == NULL ){
-      std::stringstream message;
-      message << methodName << " _brookShakeAlgorithm is not set -- case not handled.";
-      throw OpenMMException( message.str() );
-      return NULL;
-   }
-*/
+   } else {
+//printf( "%s NOT calling updateParameters\n", methodName.c_str() );
+}
 
    _brookStochasticDynamics->update( positions, velocities, forces, *_brookShakeAlgorithm, *_brookRandomNumberGenerator );
 

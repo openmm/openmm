@@ -169,7 +169,8 @@ void BrookCalcGBSAOBCForceFieldKernel::executeForces( const Stream& positions, S
 
 // ---------------------------------------------------------------------------------------
 
-   static const std::string methodName      = "BrookCalcGBSAOBCForceFieldKernel::executeForces";
+   static const std::string methodName   = "BrookCalcGBSAOBCForceFieldKernel::executeForces";
+   static const int PrintOn              = 1; 
 
 // ---------------------------------------------------------------------------------------
 
@@ -184,7 +185,7 @@ void BrookCalcGBSAOBCForceFieldKernel::executeForces( const Stream& positions, S
 
    // calculate Born radii first time thru and initialize on board
 
-   if( _brookGbsa->haveBornRadiiBeenInitialized() ){
+   if( !_brookGbsa->haveBornRadiiBeenInitialized() ){
       _brookGbsa->calculateBornRadii( positions );  
    }
 
@@ -210,6 +211,40 @@ void BrookCalcGBSAOBCForceFieldKernel::executeForces( const Stream& positions, S
               gbsaForceStreams[3]->getBrookStream()
             );
 
+// ---------------------------------------------------------------------------------------
+
+   // diagnostics
+
+   if( 1 && PrintOn ){
+
+      (void) fprintf( getLog(), "\nPost kObcLoop1: atms=%d ceil=%d dup=%d atomStrW=%3d prtlF=%3d diel=%.3f %.3f ACE=%.1f\n",
+                      _brookGbsa->getNumberOfAtoms(),
+                      _brookGbsa->getAtomSizeCeiling(),
+                      _brookGbsa->getDuplicationFactor(),
+                      _brookGbsa->getAtomStreamWidth( ),
+                      _brookGbsa->getPartialForceStreamWidth( ),
+                      _brookGbsa->getSoluteDielectric(),
+                      _brookGbsa->getSolventDielectric(), includeAce );
+
+      BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamImpl();
+      (void) fprintf( getLog(), "\nPositionStream\n" );
+      brookStreamInternalPos->printToFile( getLog() );
+
+      (void) fprintf( getLog(), "\nBornR\n" );
+      _brookGbsa->getObcBornRadii()->printToFile( getLog() );
+
+      (void) fprintf( getLog(), "\nAtomR\n" );
+      _brookGbsa->getObcAtomicRadii()->printToFile( getLog() );
+
+      (void) fprintf( getLog(), "\nForceStreams output\n" );
+      for( int ii = 0; ii < 4; ii++ ){
+         gbsaForceStreams[ii]->printToFile( getLog() );
+      }
+
+   }
+
+// ---------------------------------------------------------------------------------------
+
    // gather for first loop
 
    kPostObcLoop1_nobranch(
@@ -228,6 +263,45 @@ void BrookCalcGBSAOBCForceFieldKernel::executeForces( const Stream& positions, S
               _brookGbsa->getObcIntermediateForce()->getBrookStream(),
               _brookGbsa->getObcBornRadii2()->getBrookStream() );
  
+// ---------------------------------------------------------------------------------------
+
+   // diagnostics
+
+   if( PrintOn ){
+
+      (void) fprintf( getLog(), "\nPost kPostObcLoop1_nobranch: dup=%d aStrW=%d pStrW=%d no.atms=%3d ceil=%3d Unroll=%1d\n",
+                      _brookGbsa->getDuplicationFactor(),
+                      _brookGbsa->getAtomStreamWidth( ),
+                      _brookGbsa->getPartialForceStreamWidth( ),
+                      _brookGbsa->getNumberOfAtoms(),
+                      _brookGbsa->getAtomSizeCeiling(),
+                      _brookGbsa->getInnerLoopUnroll() );
+
+      (void) fprintf( getLog(), "\nForceStreams output\n" );
+      for( int ii = 0; ii < 4; ii++ ){
+         gbsaForceStreams[ii]->printToFile( getLog() );
+      }
+
+      (void) fprintf( getLog(), "\nObcChain\n" );
+      _brookGbsa->getObcChain()->printToFile( getLog() );
+
+      (void) fprintf( getLog(), "\nBornR\n" );
+      _brookGbsa->getObcBornRadii()->printToFile( getLog() );
+
+      // output
+
+      (void) fprintf( getLog(), "\nObcIntermediateForce output\n" );
+      _brookGbsa->getObcIntermediateForce()->printToFile( getLog() );
+
+      // output
+
+      (void) fprintf( getLog(), "\ngetObcBornRadii2 output\n" );
+      _brookGbsa->getObcBornRadii2()->printToFile( getLog() );
+
+   }
+
+// ---------------------------------------------------------------------------------------
+
    // second major loop
 
    kObcLoop2( (float) _brookGbsa->getNumberOfAtoms(),
@@ -236,7 +310,6 @@ void BrookCalcGBSAOBCForceFieldKernel::executeForces( const Stream& positions, S
               (float) _brookGbsa->getAtomStreamWidth( ),
               (float) _brookGbsa->getPartialForceStreamWidth( ),
               positionStream.getBrookStream(),
-              _brookGbsa->getObcAtomicRadiiWithDielectricOffset()->getBrookStream(),
               _brookGbsa->getObcScaledAtomicRadii()->getBrookStream(),
               _brookGbsa->getObcBornRadii2()->getBrookStream(),
               gbsaForceStreams[0]->getBrookStream(),
@@ -244,6 +317,38 @@ void BrookCalcGBSAOBCForceFieldKernel::executeForces( const Stream& positions, S
               gbsaForceStreams[2]->getBrookStream(),
               gbsaForceStreams[3]->getBrookStream()
             );
+
+// ---------------------------------------------------------------------------------------
+
+   // diagnostics
+
+   if( PrintOn ){
+
+      (void) fprintf( getLog(), "\nPost kObcLoop2: no.atms=%5d ceil=%3d dup=%3d strW=%3d pStrW=%3d\n",
+                      _brookGbsa->getNumberOfAtoms(),
+                      _brookGbsa->getAtomSizeCeiling(),
+                      _brookGbsa->getDuplicationFactor(),
+                      _brookGbsa->getAtomStreamWidth( ),
+                      _brookGbsa->getPartialForceStreamWidth( ) );
+
+      BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamImpl();
+      (void) fprintf( getLog(), "\nPositionStream\n" );
+      brookStreamInternalPos->printToFile( getLog() );
+
+      (void) fprintf( getLog(), "\nObcScaledAtomicRadii\n" );
+      _brookGbsa->getObcScaledAtomicRadii()->printToFile( getLog() );
+
+      (void) fprintf( getLog(), "\ngetObcBornRadii2\n" );
+      _brookGbsa->getObcBornRadii2()->printToFile( getLog() );
+
+      (void) fprintf( getLog(), "\nForceStreams\n" );
+      for( int ii = 0; ii < 4; ii++ ){
+         gbsaForceStreams[ii]->printToFile( getLog() );
+      }
+
+   }
+
+// ---------------------------------------------------------------------------------------
 
    // gather for second loop
 
@@ -269,6 +374,37 @@ void BrookCalcGBSAOBCForceFieldKernel::executeForces( const Stream& positions, S
               _brookGbsa->getObcChain()->getBrookStream(),
               forceStream.getBrookStream()
            );
+
+// ---------------------------------------------------------------------------------------
+
+   // diagnostics
+
+   if( PrintOn ){
+
+      (void) fprintf( getLog(), "\nPost kObcLoop2: atms=%d ceil=%d dup=%d atomStrW=%3d prtlF=%3d diel=%.3f %.3f ACE=%.1f\n",
+                      _brookGbsa->getNumberOfAtoms(),
+                      _brookGbsa->getAtomSizeCeiling(),
+                      _brookGbsa->getDuplicationFactor(),
+                      _brookGbsa->getAtomStreamWidth( ),
+                      _brookGbsa->getPartialForceStreamWidth( ),
+                      _brookGbsa->getSoluteDielectric(),
+                      _brookGbsa->getSolventDielectric(), includeAce );
+
+      BrookStreamInternal* brookStreamInternalF  = forceStream.getBrookStreamImpl();
+      (void) fprintf( getLog(), "\nForceStream\n" );
+      brookStreamInternalF->printToFile( getLog() );
+
+      (void) fprintf( getLog(), "\nChain\n" );
+      _brookGbsa->getObcChain()->printToFile( getLog() );
+
+      (void) fprintf( getLog(), "\nBornR\n" );
+      _brookGbsa->getObcBornRadii()->printToFile( getLog() );
+
+      (void) fprintf( getLog(), "\nPartialForceStreams\n" );
+      for( int ii = 0; ii < 4; ii++ ){
+         gbsaForceStreams[ii]->printToFile( getLog() );
+      }
+   }
 
    // ---------------------------------------------------------------------------------------
 }
