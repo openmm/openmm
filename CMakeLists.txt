@@ -22,7 +22,7 @@ ENDIF( NOT PROJECT_NAME )
 
 INCLUDE(Dart)
 
-SUBDIRS (tests platforms/reference/tests)
+SUBDIRS (tests platforms/reference/tests platforms/cuda)
 
 ADD_DEFINITIONS(-DOPENMM_BUILDING_SHARED_LIBRARY)
 

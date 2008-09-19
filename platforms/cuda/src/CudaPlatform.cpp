@@ -36,16 +36,6 @@
 #include "kernels/gpuTypes.h"
 #include "System.h"
 
-extern "C" gpuContext
-gpuInit( 
-        int natoms,
-        int atomstrwidth,
-        int testmode,
-        FILE *log
-        );
-extern "C"
-void gpuShutDown(gpuContext gpu);
-
 using namespace OpenMM;
 
 CudaPlatform::CudaPlatform() {
@@ -70,7 +60,7 @@ const StreamFactory& CudaPlatform::getDefaultStreamFactory() const {
 
 void CudaPlatform::contextCreated(OpenMMContextImpl& context) const {
     int numAtoms = context.getSystem().getNumAtoms();
-    _gpuContext* gpu = gpuInit(numAtoms, 0 /* ignored? */, 0, stdout);
+    _gpuContext* gpu = (_gpuContext*) gpuInit(numAtoms);
     context.setPlatformData(gpu);
 }
 

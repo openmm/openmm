@@ -26,8 +26,8 @@
 #  DEALINGS IN THE SOFTWARE.
 #
 # This script locates the Nvidia Compute Unified Driver Architecture (CUDA) 
-# tools. It should on both linux and windows, and should be reasonably up to 
-# date with cuda releases.
+# tools. It should work on linux, windows, and mac and should be reasonably 
+# up to date with cuda releases.
 #
 # The script will prompt the user to specify CUDA_INSTALL_PREFIX if the 
 # prefix cannot be determined by the location of nvcc in the system path. To
@@ -39,10 +39,8 @@
 # _DEVICEEMU is defined in "Emulation" mode.
 #
 # Set CUDA_BUILD_CUBIN to "ON" or "OFF" to enable and extra compilation pass
-# with the -cubin option in Device mode. 
-#
-# The output is parsed and register, shared memory usage is printed during 
-# build. Default ON.
+# with the -cubin option in Device mode. The output is parsed and register, 
+# shared memory usage is printed during build. Default ON.
 # 
 # The script creates the following macros:
 # CUDA_INCLUDE_DIRECTORIES( path0 path1 ... )
@@ -53,7 +51,7 @@
 # CUDA_ADD_LIBRARY( cuda_target file0 file1 ... )
 # -- Creates a shared library "cuda_target" which contains all of the source 
 #    (*.c, *.cc, etc.) specified and all of the nvcc'ed .cu files specified.
-#    All of the specified source files and generated .c files are compiled 
+#    All of the specified source files and generated .cpp files are compiled 
 #    using the standard CMake compiler, so the normal INCLUDE_DIRECTORIES, 
 #    LINK_DIRECTORIES, and TARGET_LINK_LIBRARIES can be used to affect their
 #    build and link.
@@ -61,6 +59,10 @@
 # CUDA_ADD_EXECUTABLE( cuda_target file0 file1 ... )
 # -- Same as CUDA_ADD_LIBRARY except that an exectuable is created.
 #
+# CUDA_COMPILE( cuda_files file0 file1 ... )
+# -- Returns a list of build commands in the first argument to be used with 
+#    ADD_LIBRARY or ADD_EXECUTABLE.
+# 
 # The script defines the following variables:
 #
 # ( Note CUDA_ADD_* macros setup cuda/cut library dependencies automatically. 
@@ -74,6 +76,11 @@
 # CUDA_NVCC_FLAGS      -- Additional NVCC command line arguments. NOTE: 
 #                         multiple arguments must be semi-colon delimited 
 #                         e.g. --compiler-options;-Wall
+# CUBLAS_TARGET_LINK-- cublas library name.
+# CUFFT_TARGET_LINK -- cubfft library name.
+# 
+# The nvcc flag "--host-compilation;c++" should be used if functions declared
+# as __host__ contain C++ code.
 #
 # It might be necessary to set CUDA_INSTALL_PATH manually on certain platforms,
 # or to use a cuda runtime not installed in the default location. In newer 
@@ -85,8 +92,7 @@
 ###############################################################################
 
 # FindCuda.cmake
-
-SET(CMAKE_BACKWARDS_COMPATIBILITY 2.2)
+CMAKE_MINIMUM_REQUIRED(VERSION 2.4)
 
 INCLUDE(${CMAKE_CURRENT_SOURCE_DIR}/cuda-cmake/CudaDependency.cmake)
 
@@ -261,6 +267,40 @@ IF(NOT CUDA_CUT_TARGET_LINK)
       FOUND_CUT
       )
   ENDIF(FOUND_CUT)
+
+# Add variables for cufft and cublas target link
+FIND_LIBRARY(FOUND_CUFFTEMU
+  cufftemu
+  PATHS ${CUDA_INSTALL_PREFIX}/lib $ENV{CUDA_LIB_PATH}
+  DOC "\"cufftemu\" library"
+  )
+FIND_LIBRARY(FOUND_CUBLASEMU
+  cublasemu
+  PATHS ${CUDA_INSTALL_PREFIX}/lib $ENV{CUDA_LIB_PATH}
+  DOC "\"cublasemu\" library"
+  )
+FIND_LIBRARY(FOUND_CUFFT
+  cufft
+  PATHS ${CUDA_INSTALL_PREFIX}/lib $ENV{CUDA_LIB_PATH}
+  DOC "\"cufft\" library"
+  )
+FIND_LIBRARY(FOUND_CUBLAS
+  cublas
+  PATHS ${CUDA_INSTALL_PREFIX}/lib $ENV{CUDA_LIB_PATH}
+  DOC "\"cublas\" library"
+  )
+
+IF (CUDA_BUILD_TYPE MATCHES "Emulation")
+  SET(CUFFT_TARGET_LINK  ${FOUND_CUFFTEMU})
+  SET(CUBLAS_TARGET_LINK ${FOUND_CUBLASEMU})
+ELSE(CUDA_BUILD_TYPE MATCHES "Emulation")
+  SET(CUFFT_TARGET_LINK  ${FOUND_CUFFT})
+  SET(CUBLAS_TARGET_LINK ${FOUND_CUBLAS})
+ENDIF(CUDA_BUILD_TYPE MATCHES "Emulation")
+
+
+
+
 ENDIF(NOT CUDA_CUT_TARGET_LINK)
 
 
@@ -277,7 +317,7 @@ ENDMACRO(CUDA_INCLUDE_DIRECTORIES)
 ##############################################################################
 # This helper macro populates the following variables and setups up custom commands and targets to
 # invoke the nvcc compiler. The compiler is invoked once with -M to generate a dependency file and
-# a second time with -cuda to generate a .c file
+# a second time with -cuda to generate a .cpp file
 # ${target_srcs}
 # ${cuda_cu_sources}
 ##############################################################################
@@ -293,16 +333,13 @@ MACRO(CUDA_add_custom_commands cuda_target)
   FOREACH(file ${ARGN})
     IF(${file} MATCHES ".*\\.cu$")
     
-    # Add a custom target to generate a cpp file.
-    SET(generated_file  "${CMAKE_BINARY_DIR}/src/cuda/${file}_${cuda_target}_generated.cc")
+    # Add a custom target to generate a c file.
+    SET(generated_file  "${CMAKE_BINARY_DIR}/src/cuda/${file}_${cuda_target}_generated.cpp")
     SET(generated_target "${file}_target")
     
     FILE(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/src/cuda)
 
-    SET(source_file ${file})
-
-    # Note that -cuda generates a .c file not a c++ file.
-    SET_SOURCE_FILES_PROPERTIES(${source_file} PROPERTIES CPLUSPLUS ON)
+    SET(source_file ${CMAKE_CURRENT_SOURCE_DIR}/${file})
 
     # MESSAGE("${CUDA_NVCC} ${source_file} ${CUDA_NVCC_FLAGS} ${nvcc_flags} -cuda -o ${generated_file} ${CUDA_NVCC_INCLUDE_ARGS}")
     
@@ -341,7 +378,7 @@ MACRO(CUDA_add_custom_commands cuda_target)
 
 
 
-	    COMMENT "Building NVCC -cubin File: ${NVCC_generated_cubin_file}\n"
+	    COMMENT "Building (${CUDA_BUILD_TYPE}) NVCC -cubin File: ${NVCC_generated_cubin_file}\n"
       )
   ELSE (CUDA_BUILD_TYPE MATCHES "Device" AND CUDA_BUILD_CUBIN)
     # Depend on something that will exist.
@@ -362,7 +399,7 @@ MACRO(CUDA_add_custom_commands cuda_target)
       # MAIN_DEPENDENCY ${source_file}
       DEPENDS ${source_file}
       DEPENDS ${CUDA_NVCC_DEPEND}
-	  COMMENT "Building NVCC Dependency File: ${NVCC_generated_dependency_file}\n"
+	  COMMENT "Building (${CUDA_BUILD_TYPE}) NVCC Dependency File: ${NVCC_generated_dependency_file}\n"
     )
     
     # Build the CMake readible dependency file
@@ -391,7 +428,7 @@ MACRO(CUDA_add_custom_commands cuda_target)
            --keep
            -cuda -o ${generated_file} 
            ${CUDA_NVCC_INCLUDE_ARGS}
-       COMMENT "Building NVCC ${source_file}: ${generated_file}\n"
+       COMMENT "Building (${CUDA_BUILD_TYPE}) NVCC ${source_file}: ${generated_file}\n"
       )
     	
     SET(cuda_cu_sources ${cuda_cu_sources} ${source_file})
@@ -455,3 +492,16 @@ MACRO(CUDA_ADD_EXECUTABLE cuda_target)
 
 ENDMACRO(CUDA_ADD_EXECUTABLE cuda_target)
 
+###############################################################################
+###############################################################################
+# ADD EXECUTABLE
+###############################################################################
+###############################################################################
+MACRO(CUDA_COMPILE file_variable)
+  
+  # Create custom commands and targets for each file.
+  CUDA_add_custom_commands( cuda_compile ${ARGN} )
+  
+  SET(file_variable ${target_srcs} ${cuda_cu_sources})
+
+ENDMACRO(CUDA_COMPILE)

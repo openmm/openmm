@@ -41,7 +41,6 @@ using namespace OpenMM;
 using namespace std;
 
 void testGaussian() {
-    mt_init(0);
     const int numValues = 10000000;
     double mean = 0.0;
     double var = 0.0;
