@@ -78,8 +78,8 @@ ReferenceLJCoulomb14::~ReferenceLJCoulomb14( ){
     
     cutoff = true;
     cutoffDistance = distance;
-    krf = pow(cutoffDistance, -3.0)*(solventDielectric-1.0)/(2.0*solventDielectric+1.0);
-    crf = (1.0/cutoffDistance)*(3.0*solventDielectric)/(2.0*solventDielectric+1.0);
+    krf = pow(cutoffDistance, -3.0f)*(solventDielectric-1.0f)/(2.0f*solventDielectric+1.0f);
+    crf = (1.0f/cutoffDistance)*(3.0f*solventDielectric)/(2.0f*solventDielectric+1.0f);
             
     return ReferenceForce::DefaultReturn;
   }
@@ -202,7 +202,7 @@ int ReferenceLJCoulomb14::calculateBondIxn( int* atomIndices, RealOpenMM** atomC
 
    RealOpenMM dEdR      = parameters[1]*( twelve*sig6 - six )*sig6;
               if (cutoff)
-                  dEdR += parameters[2]*(inverseR-2.0*krf*r2);
+                  dEdR += parameters[2]*(inverseR-2.0f*krf*r2);
               else
                   dEdR += parameters[2]*inverseR;
               dEdR     *= inverseR*inverseR;

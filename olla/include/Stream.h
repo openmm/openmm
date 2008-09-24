@@ -68,7 +68,7 @@ class OPENMM_EXPORT StreamImpl;
  * may choose to implement it internally with single precision values.
  */
 
-class Stream {
+class OPENMM_EXPORT Stream {
 public:
     Stream();
     Stream(const Stream& copy);

@@ -70,8 +70,8 @@ void CudaCalcStandardMMForceFieldKernel::initialize(const vector<vector<int> >& 
         psBondID->_pSysStream[0][i].y        = bondIndices[i][1];
         psBondID->_pSysStream[0][i].z        = gpu->pOutputBufferCounter[psBondID->_pSysStream[0][i].x]++;
         psBondID->_pSysStream[0][i].w        = gpu->pOutputBufferCounter[psBondID->_pSysStream[0][i].y]++;
-        psBondParameter->_pSysStream[0][i].x = bondParameters[i][0];
-        psBondParameter->_pSysStream[0][i].y = bondParameters[i][1];
+        psBondParameter->_pSysStream[0][i].x = (float) bondParameters[i][0];
+        psBondParameter->_pSysStream[0][i].y = (float) bondParameters[i][1];
     }
     psBondID->Upload();
     psBondParameter->Upload();
@@ -95,8 +95,8 @@ void CudaCalcStandardMMForceFieldKernel::initialize(const vector<vector<int> >& 
         psBondAngleID1->_pSysStream[0][i].w         = gpu->pOutputBufferCounter[psBondAngleID1->_pSysStream[0][i].x]++;
         psBondAngleID2->_pSysStream[0][i].x         = gpu->pOutputBufferCounter[psBondAngleID1->_pSysStream[0][i].y]++;
         psBondAngleID2->_pSysStream[0][i].y         = gpu->pOutputBufferCounter[psBondAngleID1->_pSysStream[0][i].z]++;
-        psBondAngleParameter->_pSysStream[0][i].x   = angleParameters[i][0]*180.0/M_PI;
-        psBondAngleParameter->_pSysStream[0][i].y   = angleParameters[i][1];
+        psBondAngleParameter->_pSysStream[0][i].x   = (float) (angleParameters[i][0]*180.0/3.14159265);
+        psBondAngleParameter->_pSysStream[0][i].y   = (float) angleParameters[i][1];
     }
     psBondAngleID1->Upload();
     psBondAngleID2->Upload();
@@ -123,9 +123,9 @@ void CudaCalcStandardMMForceFieldKernel::initialize(const vector<vector<int> >& 
         psDihedralID2->_pSysStream[0][i].y              = gpu->pOutputBufferCounter[psDihedralID1->_pSysStream[0][i].y]++;
         psDihedralID2->_pSysStream[0][i].z              = gpu->pOutputBufferCounter[psDihedralID1->_pSysStream[0][i].z]++;
         psDihedralID2->_pSysStream[0][i].w              = gpu->pOutputBufferCounter[psDihedralID1->_pSysStream[0][i].w]++;
-        psDihedralParameter->_pSysStream[0][i].x        = periodicTorsionParameters[i][0];
-        psDihedralParameter->_pSysStream[0][i].y        = periodicTorsionParameters[i][1];
-        psDihedralParameter->_pSysStream[0][i].z        = periodicTorsionParameters[i][2];
+        psDihedralParameter->_pSysStream[0][i].x        = (float) periodicTorsionParameters[i][0];
+        psDihedralParameter->_pSysStream[0][i].y        = (float) periodicTorsionParameters[i][1];
+        psDihedralParameter->_pSysStream[0][i].z        = (float) periodicTorsionParameters[i][2];
         psDihedralParameter->_pSysStream[0][i].w        = 0.0f;
     }
     psDihedralID1->Upload();
@@ -156,12 +156,12 @@ void CudaCalcStandardMMForceFieldKernel::initialize(const vector<vector<int> >& 
         psRbDihedralID2->_pSysStream[0][i].y            = gpu->pOutputBufferCounter[psRbDihedralID1->_pSysStream[0][i].y]++;
         psRbDihedralID2->_pSysStream[0][i].z            = gpu->pOutputBufferCounter[psRbDihedralID1->_pSysStream[0][i].z]++;
         psRbDihedralID2->_pSysStream[0][i].w            = gpu->pOutputBufferCounter[psRbDihedralID1->_pSysStream[0][i].w]++;
-        psRbDihedralParameter1->_pSysStream[0][i].x     = rbTorsionParameters[i][0];
-        psRbDihedralParameter1->_pSysStream[0][i].y     = rbTorsionParameters[i][1];
-        psRbDihedralParameter1->_pSysStream[0][i].z     = rbTorsionParameters[i][2];
-        psRbDihedralParameter1->_pSysStream[0][i].w     = rbTorsionParameters[i][3];
-        psRbDihedralParameter2->_pSysStream[0][i].x     = rbTorsionParameters[i][4];
-        psRbDihedralParameter2->_pSysStream[0][i].y     = rbTorsionParameters[i][5];
+        psRbDihedralParameter1->_pSysStream[0][i].x     = (float) rbTorsionParameters[i][0];
+        psRbDihedralParameter1->_pSysStream[0][i].y     = (float) rbTorsionParameters[i][1];
+        psRbDihedralParameter1->_pSysStream[0][i].z     = (float) rbTorsionParameters[i][2];
+        psRbDihedralParameter1->_pSysStream[0][i].w     = (float) rbTorsionParameters[i][3];
+        psRbDihedralParameter2->_pSysStream[0][i].x     = (float) rbTorsionParameters[i][4];
+        psRbDihedralParameter2->_pSysStream[0][i].y     = (float) rbTorsionParameters[i][5];
     }
     psRbDihedralID1->Upload();
     psRbDihedralID2->Upload();
@@ -171,9 +171,9 @@ void CudaCalcStandardMMForceFieldKernel::initialize(const vector<vector<int> >& 
     // Initialize nonbonded interactions.
     
     for (int i = 0; i < numAtoms; i++) {
-        gpu->psPosq4->_pSysStream[0][i].w = nonbondedParameters[i][0];
-        gpu->psSigEps2->_pSysStream[0][i].x = nonbondedParameters[i][1];
-        gpu->psSigEps2->_pSysStream[0][i].y = nonbondedParameters[i][2];
+        gpu->psPosq4->_pSysStream[0][i].w = (float) nonbondedParameters[i][0];
+        gpu->psSigEps2->_pSysStream[0][i].x = (float) nonbondedParameters[i][1];
+        gpu->psSigEps2->_pSysStream[0][i].y = (float) nonbondedParameters[i][2];
     }
     gpu->psPosq4->Upload();
     gpu->psSigEps2->Upload();
@@ -197,9 +197,9 @@ void CudaCalcStandardMMForceFieldKernel::initialize(const vector<vector<int> >& 
         psLJ14ID->_pSysStream[0][i].y          = atom2;
         psLJ14ID->_pSysStream[0][i].z          = gpu->pOutputBufferCounter[psLJ14ID->_pSysStream[0][i].x]++;
         psLJ14ID->_pSysStream[0][i].w          = gpu->pOutputBufferCounter[psLJ14ID->_pSysStream[0][i].y]++;
-        psLJ14Parameter->_pSysStream[0][i].x   = atom1params[0]+atom2params[0];
-        psLJ14Parameter->_pSysStream[0][i].y   = lj14Scale*(atom1params[1]*atom2params[1]);
-        psLJ14Parameter->_pSysStream[0][i].z   = coulomb14Scale*(atom1params[2]*atom2params[2]);
+        psLJ14Parameter->_pSysStream[0][i].x   = (float) (atom1params[0]+atom2params[0]);
+        psLJ14Parameter->_pSysStream[0][i].y   = (float) (lj14Scale*(atom1params[1]*atom2params[1]));
+        psLJ14Parameter->_pSysStream[0][i].z   = (float) (coulomb14Scale*(atom1params[2]*atom2params[2]));
     }
     psLJ14ID->Upload();
     psLJ14Parameter->Upload();
@@ -217,6 +217,7 @@ void CudaCalcStandardMMForceFieldKernel::executeForces(const Stream& positions, 
 }
 
 double CudaCalcStandardMMForceFieldKernel::executeEnergy(const Stream& positions) {
+	return 0.0;
 }
 
 //CudaCalcGBSAOBCForceFieldKernel::~CudaCalcGBSAOBCForceFieldKernel() {

@@ -70,7 +70,7 @@ ReferenceForce::~ReferenceForce( ){
 
 RealOpenMM ReferenceForce::periodicDifference(RealOpenMM val1, RealOpenMM val2, RealOpenMM period) {
     RealOpenMM diff = val1-val2;
-    RealOpenMM base = floor(diff/period+0.5)*period;
+    RealOpenMM base = (RealOpenMM) (floor(diff/period+0.5)*period);
     return diff-base;
 
 }

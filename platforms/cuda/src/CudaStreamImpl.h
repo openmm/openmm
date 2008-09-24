@@ -141,15 +141,15 @@ void CudaStreamImpl<T>::loadFromArray(const void* array) {
         double* arrayData = (double*) array;
         for (int i = 0; i < getSize(); ++i)
             for (int j = 0; j < width; ++j)
-                data[i*rowOffset+j] = arrayData[i*width+j];
+                data[i*rowOffset+j] = (float) arrayData[i*width+j];
     }
     else {
         int* arrayData = (int*) array;
         for (int i = 0; i < getSize(); ++i)
             for (int j = 0; j < width; ++j)
-                data[i*rowOffset+j] = arrayData[i*width+j];
+                data[i*rowOffset+j] = (float) arrayData[i*width+j];
     }
-    for (int i = getSize(); i < stream->_length; ++i)
+    for (int i = getSize(); i < (int) stream->_length; ++i)
         for (int j = 0; j < rowOffset; ++j)
             data[i*rowOffset+j] = paddingValues[j];
     stream->Upload();
@@ -174,7 +174,7 @@ void CudaStreamImpl<T>::saveToArray(void* array) {
         int* arrayData = (int*) array;
         for (int i = 0; i < getSize(); ++i)
             for (int j = 0; j < width; ++j)
-                arrayData[i*width+j] = data[i*rowOffset+j];
+                arrayData[i*width+j] = (int) data[i*rowOffset+j];
     }
     stream->Download();
 }
@@ -192,15 +192,15 @@ void CudaStreamImpl<T>::fillWithValue(void* value) {
         double valueData = *((double*) value);
         for (int i = 0; i < getSize(); ++i)
             for (int j = 0; j < width; ++j)
-                data[i*rowOffset+j] = valueData;
+                data[i*rowOffset+j] = (float) valueData;
     }
     else {
         int valueData = *((int*) value);
         for (int i = 0; i < getSize(); ++i)
             for (int j = 0; j < width; ++j)
-                data[i*rowOffset+j] = valueData;
+                data[i*rowOffset+j] = (float) valueData;
     }
-    for (int i = getSize(); i < stream->_length; ++i)
+    for (int i = getSize(); i < (int) stream->_length; ++i)
         for (int j = 0; j < rowOffset; ++j)
             data[i*rowOffset+j] = paddingValues[j];
     stream->Upload();

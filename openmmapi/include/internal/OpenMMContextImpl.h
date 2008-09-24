@@ -49,7 +49,7 @@ class System;
  * This is the internal implementation of an OpenMMContext.
  */
 
-class OpenMMContextImpl {
+class OPENMM_EXPORT OpenMMContextImpl {
 public:
     /**
      * Create an OpenMMContextImpl for an OpenMMContext;

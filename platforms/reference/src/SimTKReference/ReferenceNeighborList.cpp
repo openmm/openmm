@@ -3,6 +3,7 @@
 #include <map>
 #include <cmath>
 #include <iostream>
+#include <cassert>
 
 using namespace std;
 
@@ -34,7 +35,7 @@ static double compPairDistanceSquared(const RealOpenMM* pos1, const RealOpenMM* 
 
 // Ridiculous O(n^2) version of neighbor list
 // for pedagogical purposes and simplicity
-void computeNeighborListNaive(
+void OPENMM_EXPORT computeNeighborListNaive(
                               NeighborList& neighborList,
                               int nAtoms,
                               const AtomLocationList& atomLocations, 
@@ -50,9 +51,9 @@ void computeNeighborListNaive(
     double maxDistanceSquared = maxDistance * maxDistance;
     double minDistanceSquared = minDistance * minDistance;
 
-    for (AtomIndex atomI = 0; atomI < (nAtoms - 1); ++atomI)
+    for (AtomIndex atomI = 0; atomI < (AtomIndex) (nAtoms - 1); ++atomI)
     {
-        for (AtomIndex atomJ = atomI + 1; atomJ < nAtoms; ++atomJ)
+        for (AtomIndex atomJ = atomI + 1; atomJ < (AtomIndex) nAtoms; ++atomJ)
         {
             double pairDistanceSquared = compPairDistanceSquared(atomLocations[atomI], atomLocations[atomJ], periodicBoxSize);
             if ( (pairDistanceSquared <= maxDistanceSquared)  && (pairDistanceSquared >= minDistanceSquared))
@@ -97,9 +98,9 @@ public:
     VoxelHash(double vsx, double vsy, double vsz, const RealOpenMM* periodicBoxSize) :
             voxelSizeX(vsx), voxelSizeY(vsy), voxelSizeZ(vsz), periodicBoxSize(periodicBoxSize) {
         if (periodicBoxSize != NULL) {
-            nx = floor(periodicBoxSize[0]/voxelSizeX+0.5);
-            ny = floor(periodicBoxSize[1]/voxelSizeY+0.5);
-            nz = floor(periodicBoxSize[2]/voxelSizeZ+0.5);
+            nx = (int) floor(periodicBoxSize[0]/voxelSizeX+0.5);
+            ny = (int) floor(periodicBoxSize[1]/voxelSizeY+0.5);
+            nz = (int) floor(periodicBoxSize[2]/voxelSizeZ+0.5);
         }
     }
 
@@ -213,7 +214,7 @@ private:
 
 
 // O(n) neighbor list method using voxel hash data structure
-void computeNeighborListVoxelHash(
+void OPENMM_EXPORT computeNeighborListVoxelHash(
                               NeighborList& neighborList,
                               int nAtoms,
                               const AtomLocationList& atomLocations, 
@@ -235,7 +236,7 @@ void computeNeighborListVoxelHash(
         edgeSizeZ = periodicBoxSize[2]/floor(periodicBoxSize[2]/maxDistance);
     }
     VoxelHash voxelHash(edgeSizeX, edgeSizeY, edgeSizeZ, periodicBoxSize);
-    for (AtomIndex atomJ = 0; atomJ < nAtoms; ++atomJ) // use "j", because j > i for pairs
+    for (AtomIndex atomJ = 0; atomJ < (AtomIndex) nAtoms; ++atomJ) // use "j", because j > i for pairs
     {
         // 1) Find other atoms that are close to this one
         const RealOpenMM* location = atomLocations[atomJ];

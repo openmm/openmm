@@ -13,7 +13,7 @@ void testNeighborList()
     atomList[0] = new RealOpenMM[3];
     atomList[1] = new RealOpenMM[3];
     atomList[2] = new RealOpenMM[3];
-    atomList[0][0] = 13.6;
+    atomList[0][0] = 13.6f;
     atomList[0][1] = 0;
     atomList[0][2] = 0;
     atomList[1][0] = 0;
@@ -54,7 +54,7 @@ double distance2(RealOpenMM* pos1, RealOpenMM* pos2, const RealOpenMM* periodicB
 }
 
 void verifyNeighborList(NeighborList& list, int numAtoms, RealOpenMM** positions, const RealOpenMM* periodicBoxSize, double cutoff) {
-    for (int i = 0; i < list.size(); i++) {
+    for (int i = 0; i < (int) list.size(); i++) {
         int atom1 = list[i].first;
         int atom2 = list[i].second;
         ASSERT(distance2(positions[atom1], positions[atom2], periodicBoxSize) <= cutoff*cutoff);
@@ -75,9 +75,9 @@ void testPeriodic() {
     init_gen_rand(0);
     for (int i = 0; i <numAtoms; i++) {
         atomList[i] = new RealOpenMM[3];
-        atomList[i][0] = genrand_real2()*periodicBoxSize[0]*3;
-        atomList[i][1] = genrand_real2()*periodicBoxSize[1]*3;
-        atomList[i][2] = genrand_real2()*periodicBoxSize[2]*3;
+        atomList[i][0] = (RealOpenMM) (genrand_real2()*periodicBoxSize[0]*3);
+        atomList[i][1] = (RealOpenMM) (genrand_real2()*periodicBoxSize[1]*3);
+        atomList[i][2] = (RealOpenMM) (genrand_real2()*periodicBoxSize[2]*3);
     }
     vector<set<int> > exclusions(numAtoms);
     NeighborList neighborList;

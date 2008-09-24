@@ -40,7 +40,7 @@ namespace OpenMM {
  * This StreamFactory creates all streams for CudaPlatform.
  */
 
-class CudaStreamFactory : public StreamFactory {
+class OPENMM_EXPORT CudaStreamFactory : public StreamFactory {
 public:
     StreamImpl* createStreamImpl(std::string name, int size, Stream::DataType type, const Platform& platform, OpenMMContextImpl& context) const;
 };

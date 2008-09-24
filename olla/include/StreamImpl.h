@@ -43,7 +43,7 @@ namespace OpenMM {
  * A StreamImpl defines the internal implementation of a Stream object.
  */
 
-class StreamImpl {
+class OPENMM_EXPORT StreamImpl {
 public:
     /**
      * Create a StreamImpl.

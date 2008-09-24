@@ -71,16 +71,16 @@ void testStream(Stream::DataType type, T scale) {
         array[i] = 0;
     stream.saveToArray(array);
     for (int i = 0; i < length; ++i)
-        ASSERT_EQUAL_TOL((i*scale), array[i], TOL);
-    ASSERT_EQUAL_TOL(0, array[length], TOL);
+        ASSERT_EQUAL_TOL((double) (i*scale), array[i], TOL);
+    ASSERT_EQUAL_TOL(0.0, (double) array[length], TOL);
 }
 
 int main() {
     try {
-        testStream<float, 1>(Stream::Float, 0.1);
-        testStream<float, 2>(Stream::Float2, 0.1);
-        testStream<float, 3>(Stream::Float3, 0.1);
-        testStream<float, 4>(Stream::Float4, 0.1);
+        testStream<float, 1>(Stream::Float, 0.1f);
+        testStream<float, 2>(Stream::Float2, 0.1f);
+        testStream<float, 3>(Stream::Float3, 0.1f);
+        testStream<float, 4>(Stream::Float4, 0.1f);
         testStream<double, 1>(Stream::Double, 0.1);
         testStream<double, 2>(Stream::Double2, 0.1);
         testStream<double, 3>(Stream::Double3, 0.1);

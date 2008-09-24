@@ -41,7 +41,7 @@ namespace OpenMM {
  * This Platform subclass uses CUDA implementations of the OpenMM kernels to run on NVidia GPUs.
  */
 
-class CudaPlatform : public Platform {
+class OPENMM_EXPORT CudaPlatform : public Platform {
 public:
     CudaPlatform();
     std::string getName() const {
