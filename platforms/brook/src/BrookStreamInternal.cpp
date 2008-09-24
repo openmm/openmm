@@ -60,6 +60,9 @@ BrookStreamInternal::~BrookStreamInternal( ){
    //static const std::string methodName      = "BrookStreamInternal::~BrookStreamInternal";
 
 // ---------------------------------------------------------------------------------------
+
+   // _aStream is not ptr
+   // delete _aStream;
    
 }
 

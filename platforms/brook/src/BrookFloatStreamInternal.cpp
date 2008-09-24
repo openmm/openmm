@@ -173,8 +173,6 @@ BrookFloatStreamInternal::~BrookFloatStreamInternal( ){
 
 // ---------------------------------------------------------------------------------------
 
-   //delete _aStream;
-
 //printf( "%s %s data=%u stream=%d [%d %d] width=%d\n", methodName.c_str(), getName().c_str(), (unsigned int) _data, getStreamSize(), _streamHeight, _streamWidth, _width );
 //fflush( stdout );
 

@@ -337,6 +337,19 @@ class BrookGbsa : public BrookCommon {
       
       std::string getContentsString( int level = 0 ) const;
 
+      /*  
+       * Calculate energy
+       *
+       * @param atomPositions        atom positions
+      
+       * @return energy
+       *
+       * @throw OpenMMException if _cpuObc or charges are not set
+       *
+       * */
+              
+      double getEnergy( const Stream& atomPositions );
+      
    private:
    
       // fixed number of force streams
@@ -400,6 +413,10 @@ class BrookGbsa : public BrookCommon {
       BrookFloatStreamInternal* _gbsaForceStreams[NumberOfForceStreams];
 
       int _bornRadiiInitialized;
+
+      // atom charges
+
+      RealOpenMM* _charges;
 
       // CpuObc reference
 

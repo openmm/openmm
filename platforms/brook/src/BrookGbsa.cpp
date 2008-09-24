@@ -68,7 +68,7 @@ BrookGbsa::BrookGbsa(  ){
    _includeAce                = 1;
    _solventDielectric         = 78.3;
    _soluteDielectric          = 1.0;
-   _dielectricOffset          = 0.09;
+   _dielectricOffset          = 0.009;
 
    for( int ii = 0; ii < LastStreamIndex; ii++ ){
       _gbsaStreams[ii] = NULL;
@@ -80,6 +80,8 @@ BrookGbsa::BrookGbsa(  ){
 
    _bornRadiiInitialized      = 0;
    _cpuObc                    = NULL;
+   _charges                   = NULL;
+
 }   
  
 /** 
@@ -104,6 +106,8 @@ BrookGbsa::~BrookGbsa( ){
    }
 
    delete _cpuObc;
+
+   delete[] _charges;
 
 }
 
@@ -443,7 +447,7 @@ int BrookGbsa::calculateBornRadii( const Stream& positions ){
 // ---------------------------------------------------------------------------------------
 
    static const std::string methodName                 = "BrookGbsa::calculateBornRadii";
-   static const int PrintOn                            = 1;
+   static const int PrintOn                            = 0;
 
 // ---------------------------------------------------------------------------------------
 
@@ -487,7 +491,7 @@ int BrookGbsa::calculateBornRadii( const Stream& positions ){
 
    // diagnostics
 
-   if( PrintOn ){
+   if( PrintOn && getLog() ){
 
       (void) fprintf( getLog(), "\n%s: atms=%d\n", methodName.c_str(), numberOfAtoms );
       for( int ii = 0; ii < numberOfAtoms; ii++ ){
@@ -533,6 +537,26 @@ int BrookGbsa::initializeStreamSizes( int numberOfAtoms, const Platform& platfor
    _gbsaAtomStreamSize     = getAtomStreamSize( platform );
    _gbsaAtomStreamWidth    = getAtomStreamWidth( platform );
    _gbsaAtomStreamHeight   = getAtomStreamHeight( platform );
+
+   int innerUnroll         = getInnerLoopUnroll();
+   if( innerUnroll < 1 ){ 
+      std::stringstream message;
+      message << methodName << " innerUnrolls=" << innerUnroll << " is less than 1.";
+      throw OpenMMException( message.str() );
+      return ErrorReturnValue;
+   }
+
+   if( _partialForceStreamWidth < 1 ){ 
+      std::stringstream message;
+      message << methodName << " partial force stream width=" << _partialForceStreamWidth << " is less than 1.";
+      throw OpenMMException( message.str() );
+      return ErrorReturnValue;
+   }
+
+   _partialForceStreamSize    = _gbsaAtomStreamSize*getDuplicationFactor()/innerUnroll;
+   _partialForceStreamHeight  = _partialForceStreamSize/_partialForceStreamWidth;
+   _partialForceStreamHeight += ( (_partialForceStreamSize % _partialForceStreamWidth) ? 1 : 0);
+   _partialForceStreamSize    = _partialForceStreamHeight*_partialForceStreamWidth;
 
    return DefaultReturnValue;
 }
@@ -607,7 +631,7 @@ int BrookGbsa::initializeStreams( const Platform& platform ){
       std::stringstream name;
       name << partialForceStream << ii;
       _gbsaForceStreams[ii] = new BrookFloatStreamInternal( name.str(), getPartialForceStreamSize(),
-                                                                 getPartialForceStreamWidth(), BrookStreamInternal::Float4, dangleValue );
+                                                            getPartialForceStreamWidth(), BrookStreamInternal::Float4, dangleValue );
    }
 
    return DefaultReturnValue;
@@ -649,8 +673,13 @@ int BrookGbsa::setup( const std::vector<std::vector<double> >& vectorOfAtomParam
    initializeStreamSizes( numberOfAtoms, platform );
    initializeStreams( platform );
 
-   BrookOpenMMFloat* radiiAndCharge         = new BrookOpenMMFloat[getNumberOfAtoms()*2];
-   BrookOpenMMFloat* scaledRadiiAndOffset   = new BrookOpenMMFloat[getNumberOfAtoms()*2];
+   int atomStreamSize                       = getGbsaAtomStreamSize();
+   BrookOpenMMFloat* radiiAndCharge         = new BrookOpenMMFloat[atomStreamSize*2];
+   BrookOpenMMFloat* scaledRadiiAndOffset   = new BrookOpenMMFloat[atomStreamSize*2];
+   memset( radiiAndCharge, 0, atomStreamSize*2*sizeof( BrookOpenMMFloat ) );
+   memset( scaledRadiiAndOffset, 0, atomStreamSize*2*sizeof( BrookOpenMMFloat ) );
+
+   _charges                                 = new RealOpenMM[atomStreamSize];
 
    // used by CpuObc to calculate initial Born radii
 
@@ -688,12 +717,16 @@ int BrookGbsa::setup( const std::vector<std::vector<double> >& vectorOfAtomParam
 
          atomicRadii[vectorIndex]                 = static_cast<RealOpenMM> (radius);
          scaleFactors[vectorIndex]                = static_cast<RealOpenMM> (scalingFactor);
+         _charges[vectorIndex]                    = static_cast<RealOpenMM> (charge);
 
          radiiAndCharge[streamIndex]              = static_cast<BrookOpenMMFloat> (radius);
          radiiAndCharge[streamIndex+1]            = static_cast<BrookOpenMMFloat> (charge);
 
-         scaledRadiiAndOffset[streamIndex]        = static_cast<BrookOpenMMFloat> (radius*scalingFactor);
          scaledRadiiAndOffset[streamIndex+1]      = static_cast<BrookOpenMMFloat> (radius - dielectricOffset);
+         scaledRadiiAndOffset[streamIndex]        = static_cast<BrookOpenMMFloat> (scaledRadiiAndOffset[streamIndex+1]*scalingFactor);
+
+//         scaledRadiiAndOffset[streamIndex]        = static_cast<BrookOpenMMFloat> (radius - dielectricOffset);
+//         scaledRadiiAndOffset[streamIndex+1]      = static_cast<BrookOpenMMFloat> (scaledRadiiAndOffset[streamIndex]*scalingFactor);
 
       }
 
@@ -714,10 +747,10 @@ int BrookGbsa::setup( const std::vector<std::vector<double> >& vectorOfAtomParam
    delete[] radiiAndCharge;
    delete[] scaledRadiiAndOffset;
 
-   // setup for Born radii
+   // setup for Born radii calculation
 
    ObcParameters* obcParameters  = new ObcParameters( numberOfAtoms, ObcParameters::ObcTypeII );
-   obcParameters->setAtomicRadii( atomicRadii, SimTKOpenMMCommon::MdUnits);
+   obcParameters->setAtomicRadii( atomicRadii);
 
    obcParameters->setScaledRadiusFactors( scaleFactors );
    obcParameters->setSolventDielectric( static_cast<RealOpenMM>(solventDielectric) );
@@ -867,4 +900,54 @@ std::string BrookGbsa::getContentsString( int level ) const {
 #undef LOCAL_SPRINTF
 
    return message.str();
+}
+
+/*  
+ * Calculate OBC energy
+ *
+ * @param atomPositions        atom positions
+
+ * @return energy
+ *
+ * @throw OpenMMException if _cpuObc or charges are not set
+ *
+ * */
+    
+double BrookGbsa::getEnergy( const Stream& atomPositions ){
+    
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName      = "BrookGbsa::getEnergy";
+
+// ---------------------------------------------------------------------------------------
+
+   // validate initialization
+
+   if( _cpuObc == NULL ){
+      std::stringstream message;
+      message << methodName << " _cpuObc not set.";
+      throw OpenMMException( message.str() );
+      return ErrorReturnValue;
+   }   
+
+   if( _charges == NULL ){
+      std::stringstream message;
+      message << methodName << " charges not set.";
+      throw OpenMMException( message.str() );
+      return ErrorReturnValue;
+   }   
+
+   const BrookStreamImpl& positionStreamC              = dynamic_cast<const BrookStreamImpl&> (atomPositions.getImpl());
+   BrookStreamImpl& positionStream                     = const_cast<BrookStreamImpl&>         (positionStreamC);
+   BrookOpenMMFloat* positionsF                        = (BrookOpenMMFloat*) positionStream.getData();
+
+   RealOpenMM** positions                              = copy1DArrayTo2DArray( positionStream.getSize(), 3, positionsF );
+   RealOpenMM** forces                                 = allocateRealArray( positionStream.getSize(), 3 ); 
+
+   _cpuObc->computeImplicitSolventForces( positions, _charges, forces, 1 ); 
+
+   disposeRealArray( forces );
+   disposeRealArray( positions );
+
+   return _cpuObc->getEnergy();
 }

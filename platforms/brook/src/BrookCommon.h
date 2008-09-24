@@ -270,6 +270,42 @@ class BrookCommon {
        */
       
       static void getStreamDimensions( int streamSize, int *streamWidth, int *streamHeight );
+
+      /* 
+       * Allocate array
+       *
+       * @param length        length of array
+       * @param width         width  of array
+       *
+       * @return ptr to array
+       *
+       */
+      
+      RealOpenMM** allocateRealArray( int length, int width ) const;
+      
+      /* 
+       * Free array
+       *
+       * @param array         array to be freed (assumed allocated using BrookCommon::allocateRealArray
+       *
+       * @return DefaultReturnValue
+       *
+       */
+      
+      int disposeRealArray( RealOpenMM** array ) const;
+
+      /* 
+       * Copy 1D BrookOpenMMFloat* array to 2D array of RealOpenMM
+       *
+       * @param length        length of array
+       * @param width         width  of array
+       * @param array1D       array to copy
+       *
+       * @return ptr to array
+       *
+       */
+      
+      RealOpenMM** copy1DArrayTo2DArray( int length, int width, BrookOpenMMFloat* array1D ) const;
       
    protected:
    

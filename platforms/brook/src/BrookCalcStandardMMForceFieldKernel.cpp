@@ -38,6 +38,10 @@
 #include "BrookCalcStandardMMForceFieldKernel.h"
 #include "kforce.h"
 #include "kinvmap_gather.h"
+#include "ReferencePlatform.h"
+#include "ReferenceFloatStreamImpl.h"
+#include "VerletIntegrator.h"
+#include "StandardMMForceField.h"
 
 using namespace OpenMM;
 using namespace std;
@@ -59,9 +63,10 @@ BrookCalcStandardMMForceFieldKernel::BrookCalcStandardMMForceFieldKernel( std::s
 
 // ---------------------------------------------------------------------------------------
 
-   _numberOfAtoms                    = 0;
-   _brookBonded                      = NULL;
-   _brookNonBonded                   = NULL;
+   _numberOfAtoms                           = 0;
+   _brookBonded                             = NULL;
+   _brookNonBonded                          = NULL;
+   _refForceField                           = NULL;
 
    const BrookPlatform brookPlatform = dynamic_cast<const BrookPlatform&> (platform);
    if( brookPlatform.getLog() != NULL ){
@@ -85,6 +90,10 @@ BrookCalcStandardMMForceFieldKernel::~BrookCalcStandardMMForceFieldKernel( ){
 
    delete _brookBonded;
    delete _brookNonBonded;
+
+   // deleted w/ kernel delete? If activated, program crashes
+
+   //delete _refForceField;
 }
 
 /** 
@@ -201,7 +210,94 @@ void BrookCalcStandardMMForceFieldKernel::initialize(
    }
 
    // ---------------------------------------------------------------------------------------
-    
+
+   // used for calculating energy
+
+/*
+   _referenceCalcStandardMMForceFieldKernel = new ReferenceCalcStandardMMForceFieldKernel( getName(), getPlatform() );
+   _referenceCalcStandardMMForceFieldKernel->initialize( bondIndices,            bondParameters, 
+                                                         angleIndices,           angleParameters,
+                                                         periodicTorsionIndices, periodicTorsionParameters,
+                                                         rbTorsionIndices,       rbTorsionParameters,
+                                                         bonded14Indices,        lj14Scale, coulomb14Scale,
+                                                         exclusions, nonbondedParameters,
+                                                         nonbondedMethod, nonbondedCutoff, periodicBoxSize );
+*/
+   _refForceField = new StandardMMForceField( _numberOfAtoms, bondIndices.size(), angleIndices.size(), 
+                                              periodicTorsionIndices.size(),  rbTorsionIndices.size() );
+
+   // bonds
+
+   vector<vector<int> >::const_iterator bondI_it    = bondIndices.begin();
+   vector<vector<double> >::const_iterator bondP_it = bondParameters.begin();
+   for( unsigned int ii = 0; ii < bondIndices.size(); ii++, bondI_it++, bondP_it++ ){
+      const vector<int>    bondInd = *bondI_it;
+      const vector<double> bondPrm = *bondP_it;
+      _refForceField->setBondParameters( ii, bondInd[0], bondInd[1], bondPrm[0], bondPrm[1] );
+   }
+
+   // angles
+
+   vector<vector<int> >::const_iterator angleI_it    = angleIndices.begin();
+   vector<vector<double> >::const_iterator angleP_it = angleParameters.begin();
+   for( unsigned int ii = 0; ii < angleIndices.size(); ii++, angleI_it++, angleP_it++ ){
+      const vector<int>    angleInd = *angleI_it;
+      const vector<double> anglePrm = *angleP_it;
+      _refForceField->setAngleParameters( ii, angleInd[0], angleInd[1], angleInd[2], anglePrm[0], anglePrm[1] );
+   }
+
+   // periodicTorsions
+
+   vector<vector<int> >::const_iterator periodicTorsionI_it    = periodicTorsionIndices.begin();
+   vector<vector<double> >::const_iterator periodicTorsionP_it = periodicTorsionParameters.begin();
+   for( unsigned int ii = 0; ii < periodicTorsionIndices.size(); ii++, periodicTorsionI_it++, periodicTorsionP_it++ ){
+      const vector<int>    periodicTorsionInd = *periodicTorsionI_it;
+      const vector<double> periodicTorsionPrm = *periodicTorsionP_it;
+      _refForceField->setPeriodicTorsionParameters( ii, periodicTorsionInd[0], periodicTorsionInd[1], periodicTorsionInd[2], periodicTorsionInd[3],
+                                                    periodicTorsionPrm[2], periodicTorsionPrm[1], periodicTorsionPrm[0] );
+/*
+printf( "PeriodicTor: [%d %d %d %d] [%.5e %.5e %.5e]\n", periodicTorsionInd[0], periodicTorsionInd[1], periodicTorsionInd[2], periodicTorsionInd[3],
+                                                         periodicTorsionPrm[2], periodicTorsionPrm[1], periodicTorsionPrm[0] ); fflush( stdout );
+*/
+   }
+
+   // rbTorsions
+
+   vector<vector<int> >::const_iterator rbTorsionI_it    = rbTorsionIndices.begin();
+   vector<vector<double> >::const_iterator rbTorsionP_it = rbTorsionParameters.begin();
+   for( unsigned int ii = 0; ii < rbTorsionIndices.size(); ii++, rbTorsionI_it++, rbTorsionP_it++ ){
+      const vector<int>    rbTorsionInd = *rbTorsionI_it;
+      const vector<double> rbTorsionPrm = *rbTorsionP_it;
+      _refForceField->setRBTorsionParameters( ii, rbTorsionInd[0], rbTorsionInd[1], rbTorsionInd[2], rbTorsionInd[3],
+                                              rbTorsionPrm[0], rbTorsionPrm[1], rbTorsionPrm[2], rbTorsionPrm[3], 
+                                              rbTorsionPrm[4], rbTorsionPrm[5] );
+
+/*
+printf( "RbTor: [%d %d %d %d] [%.5e %.5e %.5e %.5e %.5e %.5e]\n", rbTorsionInd[0], rbTorsionInd[1], rbTorsionInd[2], rbTorsionInd[3],
+                                                         rbTorsionPrm[0], rbTorsionPrm[1], rbTorsionPrm[2], rbTorsionPrm[3], rbTorsionPrm[4], rbTorsionPrm[5] ); fflush( stdout );
+*/
+   }
+
+   // nonbonded
+
+   for( unsigned int ii = 0; ii < nonbondedParameters.size(); ii++ ){
+
+      vector<double> nonbondedParameterVector 
+                                     = nonbondedParameters[ii];
+
+      double c6                      = nonbondedParameterVector[1];
+      double c12                     = nonbondedParameterVector[2];
+      double charge                  = nonbondedParameterVector[0];
+
+      // int index, double charge, double radius, double depth
+
+      _refForceField->setAtomParameters( ii, charge, c6, c12 );
+
+   }
+
+   // ---------------------------------------------------------------------------------------
+
+   return;
 }
 
 /** 
@@ -408,7 +504,23 @@ nonbondedForceStreams[3]->fillWithValue( &zerof );
 
    // gather forces
 
-   if( _brookBonded->getInverseMapStreamCount( K_Stream ) <= 4 ){
+   if( _brookBonded->getInverseMapStreamCount( I_Stream ) == 3 && _brookBonded->getInverseMapStreamCount( K_Stream ) == 3 ){
+
+      kinvmap_gather3_3( width,
+
+                         inverseStreamMaps[I_Stream][0]->getBrookStream(),
+                         inverseStreamMaps[I_Stream][1]->getBrookStream(),
+                         inverseStreamMaps[I_Stream][2]->getBrookStream(),
+                         bondedForceStreams[I_Stream]->getBrookStream(),
+
+                         inverseStreamMaps[K_Stream][0]->getBrookStream(),
+                         inverseStreamMaps[K_Stream][1]->getBrookStream(),
+                         inverseStreamMaps[K_Stream][2]->getBrookStream(),
+                         bondedForceStreams[K_Stream]->getBrookStream(),
+
+                         forceStream.getBrookStream(), forceStream.getBrookStream() );
+
+   } else if( _brookBonded->getInverseMapStreamCount( I_Stream ) == 3 && _brookBonded->getInverseMapStreamCount( K_Stream ) == 4 ){
 
       kinvmap_gather3_4( width,
 
@@ -425,7 +537,7 @@ nonbondedForceStreams[3]->fillWithValue( &zerof );
 
                          forceStream.getBrookStream(), forceStream.getBrookStream() );
 
-   } else if( _brookBonded->getInverseMapStreamCount( K_Stream ) == 5 ){
+   } else if( _brookBonded->getInverseMapStreamCount( I_Stream ) == 3 && _brookBonded->getInverseMapStreamCount( K_Stream ) == 5 ){
 
       kinvmap_gather3_5( width,
                          inverseStreamMaps[I_Stream][0]->getBrookStream(),
@@ -445,13 +557,31 @@ nonbondedForceStreams[3]->fillWithValue( &zerof );
       // case not handled -- throw an exception
 
       if( _brookBonded->getLog() ){
-         (void) fprintf( _brookBonded->getLog(), "%s nkmaps=%d -- not handled.", methodName.c_str(), _brookBonded->getInverseMapStreamCount( K_Stream ) );
+         (void) fprintf( _brookBonded->getLog(), "%s case: I-map=%d K-map=%d -- not handled.\n",
+                          methodName.c_str(), _brookBonded->getInverseMapStreamCount( I_Stream ),
+                                              _brookBonded->getInverseMapStreamCount( K_Stream ) );
          (void) fflush(  _brookBonded->getLog() );
       }
 
+      kinvmap_gather3_3( width,
+
+                         inverseStreamMaps[I_Stream][0]->getBrookStream(),
+                         inverseStreamMaps[I_Stream][1]->getBrookStream(),
+                         inverseStreamMaps[I_Stream][2]->getBrookStream(),
+                         bondedForceStreams[I_Stream]->getBrookStream(),
+
+                         inverseStreamMaps[K_Stream][0]->getBrookStream(),
+                         inverseStreamMaps[K_Stream][1]->getBrookStream(),
+                         inverseStreamMaps[K_Stream][2]->getBrookStream(),
+                         bondedForceStreams[K_Stream]->getBrookStream(),
+
+                         forceStream.getBrookStream(), forceStream.getBrookStream() );
+/*
       std::stringstream message;
-      message << methodName << "K-maps=" << _brookBonded->getInverseMapStreamCount( K_Stream ) << " not handled.";
+      message << methodName << "I-maps=" << _brookBonded->getInverseMapStreamCount( I_Stream ) << " and " << 
+                               "K-maps=" << _brookBonded->getInverseMapStreamCount( K_Stream ) << " not handled.";
       throw OpenMMException( message.str() );
+*/
 
    }
 
@@ -465,19 +595,49 @@ nonbondedForceStreams[3]->fillWithValue( &zerof );
 
    }
 
-   //kinvmap_gather5_2( (float) bp->width, bp->strInvMapj[0], bp->strInvMapj[1], bp->strInvMapj[2], bp->strInvMapj[3], bp->strInvMapj[4],  bp->fj,
-   //                   bp->strInvMapl[0], bp->strInvMapl[1], bp->fl, gpu->strF, gpu->strF );
-   kinvmap_gather5_2( width,
-                      inverseStreamMaps[J_Stream][0]->getBrookStream(),
-                      inverseStreamMaps[J_Stream][1]->getBrookStream(),
-                      inverseStreamMaps[J_Stream][2]->getBrookStream(),
-                      inverseStreamMaps[J_Stream][3]->getBrookStream(),
-                      inverseStreamMaps[J_Stream][4]->getBrookStream(),
-                      bondedForceStreams[J_Stream]->getBrookStream(),
-                      inverseStreamMaps[L_Stream][0]->getBrookStream(),
-                      inverseStreamMaps[L_Stream][1]->getBrookStream(),
-                      bondedForceStreams[L_Stream]->getBrookStream(),
-                      forceStream.getBrookStream(), forceStream.getBrookStream() );
+   if( _brookBonded->getInverseMapStreamCount( J_Stream ) == 5 && _brookBonded->getInverseMapStreamCount( L_Stream ) == 2 ){
+      kinvmap_gather5_2( width,
+                         inverseStreamMaps[J_Stream][0]->getBrookStream(),
+                         inverseStreamMaps[J_Stream][1]->getBrookStream(),
+                         inverseStreamMaps[J_Stream][2]->getBrookStream(),
+                         inverseStreamMaps[J_Stream][3]->getBrookStream(),
+                         inverseStreamMaps[J_Stream][4]->getBrookStream(),
+                         bondedForceStreams[J_Stream]->getBrookStream(),
+                         inverseStreamMaps[L_Stream][0]->getBrookStream(),
+                         inverseStreamMaps[L_Stream][1]->getBrookStream(),
+                         bondedForceStreams[L_Stream]->getBrookStream(),
+                         forceStream.getBrookStream(), forceStream.getBrookStream() );
+   
+   } else {
+
+      // case not handled -- throw an exception
+
+      if( _brookBonded->getLog() ){
+         (void) fprintf( _brookBonded->getLog(), "%s case: J-map=%d L-map=%d -- not handled.\n",
+                          methodName.c_str(), _brookBonded->getInverseMapStreamCount( J_Stream ),
+                                              _brookBonded->getInverseMapStreamCount( L_Stream ) );
+         (void) fflush(  _brookBonded->getLog() );
+      }
+
+      kinvmap_gather5_2( width,
+                         inverseStreamMaps[J_Stream][0]->getBrookStream(),
+                         inverseStreamMaps[J_Stream][1]->getBrookStream(),
+                         inverseStreamMaps[J_Stream][2]->getBrookStream(),
+                         inverseStreamMaps[J_Stream][3]->getBrookStream(),
+                         inverseStreamMaps[J_Stream][4]->getBrookStream(),
+                         bondedForceStreams[J_Stream]->getBrookStream(),
+                         inverseStreamMaps[L_Stream][0]->getBrookStream(),
+                         inverseStreamMaps[L_Stream][1]->getBrookStream(),
+                         bondedForceStreams[L_Stream]->getBrookStream(),
+                         forceStream.getBrookStream(), forceStream.getBrookStream() );
+/*
+      std::stringstream message;
+      message << methodName << "J-maps=" << _brookBonded->getInverseMapStreamCount( J_Stream ) << " and " << 
+                               "L-maps=" << _brookBonded->getInverseMapStreamCount( L_Stream ) << " not handled.";
+      throw OpenMMException( message.str() );
+*/
+
+   }
 
    // diagnostics
 
@@ -510,8 +670,7 @@ nonbondedForceStreams[3]->fillWithValue( &zerof );
  *
  */
 
-
-double BrookCalcStandardMMForceFieldKernel::executeEnergy( const Stream& positions ){
+double BrookCalcStandardMMForceFieldKernel::executeEnergy( const Stream& atomPositions ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -519,5 +678,32 @@ double BrookCalcStandardMMForceFieldKernel::executeEnergy( const Stream& positio
 
 // ---------------------------------------------------------------------------------------
 
-    return 0.0;
+   const BrookStreamImpl& positionStreamC              = dynamic_cast<const BrookStreamImpl&> (atomPositions.getImpl());
+   BrookStreamImpl& positionStream                     = const_cast<BrookStreamImpl&>         (positionStreamC);
+   BrookOpenMMFloat* positionsF                        = (BrookOpenMMFloat*) positionStream.getData();
+
+   ReferencePlatform refPlatform;
+   System system( atomPositions.getSize(), 0); 
+   VerletIntegrator integrator( 0.01 );
+
+   system.addForce( _refForceField );
+
+   OpenMMContext context(system, integrator, refPlatform);
+
+   vector<Vec3> positions( positionStream.getSize() );
+   int index = 0;
+   for( int ii = 0; ii < positionStream.getSize(); ii++, index += 3 ){
+      positions[ii] = Vec3( positionsF[index], positionsF[index+1], positionsF[index+2] );
+   }
+   context.setPositions(positions);
+
+   State state     = context.getState( State::Energy );
+   double energy   = state.getPotentialEnergy();
+
+   //delete forceField;
+
+// (void) fprintf( stdout, "BrookCalcStandardMMForceFieldKernel::executeEnergy E=%.5e\n", energy ); fflush( stdout );
+
+   return energy;
+
 }

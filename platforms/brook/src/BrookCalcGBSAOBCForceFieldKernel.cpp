@@ -64,6 +64,7 @@ BrookCalcGBSAOBCForceFieldKernel::BrookCalcGBSAOBCForceFieldKernel( std::string 
 
    _numberOfAtoms                    = 0;
    _brookGbsa                        = NULL;
+   _log                              = NULL;
 
    const BrookPlatform brookPlatform = dynamic_cast<const BrookPlatform&> (platform);
    if( brookPlatform.getLog() != NULL ){
@@ -170,7 +171,7 @@ void BrookCalcGBSAOBCForceFieldKernel::executeForces( const Stream& positions, S
 // ---------------------------------------------------------------------------------------
 
    static const std::string methodName   = "BrookCalcGBSAOBCForceFieldKernel::executeForces";
-   static const int PrintOn              = 1; 
+   static const int PrintOn              = 0; 
 
 // ---------------------------------------------------------------------------------------
 
@@ -215,7 +216,7 @@ void BrookCalcGBSAOBCForceFieldKernel::executeForces( const Stream& positions, S
 
    // diagnostics
 
-   if( 1 && PrintOn ){
+   if( 1 && PrintOn && getLog() ){
 
       (void) fprintf( getLog(), "\nPost kObcLoop1: atms=%d ceil=%d dup=%d atomStrW=%3d prtlF=%3d diel=%.3f %.3f ACE=%.1f\n",
                       _brookGbsa->getNumberOfAtoms(),
@@ -267,7 +268,7 @@ void BrookCalcGBSAOBCForceFieldKernel::executeForces( const Stream& positions, S
 
    // diagnostics
 
-   if( PrintOn ){
+   if( PrintOn && getLog()){
 
       (void) fprintf( getLog(), "\nPost kPostObcLoop1_nobranch: dup=%d aStrW=%d pStrW=%d no.atms=%3d ceil=%3d Unroll=%1d\n",
                       _brookGbsa->getDuplicationFactor(),
@@ -277,7 +278,7 @@ void BrookCalcGBSAOBCForceFieldKernel::executeForces( const Stream& positions, S
                       _brookGbsa->getAtomSizeCeiling(),
                       _brookGbsa->getInnerLoopUnroll() );
 
-      (void) fprintf( getLog(), "\nForceStreams output\n" );
+      (void) fprintf( getLog(), "\nForceStreams\n" );
       for( int ii = 0; ii < 4; ii++ ){
          gbsaForceStreams[ii]->printToFile( getLog() );
       }
@@ -295,7 +296,7 @@ void BrookCalcGBSAOBCForceFieldKernel::executeForces( const Stream& positions, S
 
       // output
 
-      (void) fprintf( getLog(), "\ngetObcBornRadii2 output\n" );
+      (void) fprintf( getLog(), "\nObcBornRadii2 output\n" );
       _brookGbsa->getObcBornRadii2()->printToFile( getLog() );
 
    }
@@ -322,7 +323,7 @@ void BrookCalcGBSAOBCForceFieldKernel::executeForces( const Stream& positions, S
 
    // diagnostics
 
-   if( PrintOn ){
+   if( PrintOn && getLog() ){
 
       (void) fprintf( getLog(), "\nPost kObcLoop2: no.atms=%5d ceil=%3d dup=%3d strW=%3d pStrW=%3d\n",
                       _brookGbsa->getNumberOfAtoms(),
@@ -379,9 +380,9 @@ void BrookCalcGBSAOBCForceFieldKernel::executeForces( const Stream& positions, S
 
    // diagnostics
 
-   if( PrintOn ){
+   if( PrintOn && getLog() ){
 
-      (void) fprintf( getLog(), "\nPost kObcLoop2: atms=%d ceil=%d dup=%d atomStrW=%3d prtlF=%3d diel=%.3f %.3f ACE=%.1f\n",
+      (void) fprintf( getLog(), "\nPost kPostObcLoop2_nobranch: atms=%d ceil=%d dup=%d atomStrW=%3d prtlF=%3d diel=%.3f %.3f ACE=%.1f\n",
                       _brookGbsa->getNumberOfAtoms(),
                       _brookGbsa->getAtomSizeCeiling(),
                       _brookGbsa->getDuplicationFactor(),
@@ -389,6 +390,11 @@ void BrookCalcGBSAOBCForceFieldKernel::executeForces( const Stream& positions, S
                       _brookGbsa->getPartialForceStreamWidth( ),
                       _brookGbsa->getSoluteDielectric(),
                       _brookGbsa->getSolventDielectric(), includeAce );
+
+      (void) fprintf( getLog(), "\nPartialForceStreams\n" );
+      for( int ii = 0; ii < 4; ii++ ){
+         gbsaForceStreams[ii]->printToFile( getLog() );
+      }
 
       BrookStreamInternal* brookStreamInternalF  = forceStream.getBrookStreamImpl();
       (void) fprintf( getLog(), "\nForceStream\n" );
@@ -400,22 +406,17 @@ void BrookCalcGBSAOBCForceFieldKernel::executeForces( const Stream& positions, S
       (void) fprintf( getLog(), "\nBornR\n" );
       _brookGbsa->getObcBornRadii()->printToFile( getLog() );
 
-      (void) fprintf( getLog(), "\nPartialForceStreams\n" );
-      for( int ii = 0; ii < 4; ii++ ){
-         gbsaForceStreams[ii]->printToFile( getLog() );
-      }
    }
 
    // ---------------------------------------------------------------------------------------
 }
 
 /**
- * Execute the kernel to calculate the energy.
+ * Execute the kernel to calculate the OBC energy
  * 
  * @param positions   atom positions
  *
- * @return  potential energy due to the StandardMMForceField
- * Currently always return 0.0 since energies not calculated on gpu
+ * @return  potential energy due to the OBC forces
  *
  */
 
@@ -427,5 +428,6 @@ double BrookCalcGBSAOBCForceFieldKernel::executeEnergy( const Stream& positions 
 
 // ---------------------------------------------------------------------------------------
 
-    return 0.0;
+   return (double) _brookGbsa->getEnergy( positions );
+
 }

@@ -486,4 +486,83 @@ void BrookCommon::getStreamDimensions( int streamSize, int *streamWidth, int *st
 	return;
 }
 
+/* 
+ * Allocate array
+ *
+ * @param length        length of array
+ * @param width         width  of array
+ *
+ * @return ptr to array
+ *
+ */
+
+RealOpenMM** BrookCommon::allocateRealArray( int length, int width ) const {
+
+// ---------------------------------------------------------------------------------------
+
+   //static const std::string methodName      = "BrookCommon::allocateRealArray";
+
+// ---------------------------------------------------------------------------------------
+
+   RealOpenMM** array  = new RealOpenMM*[length];
+   RealOpenMM*  buffer = new RealOpenMM[length*width];
+   for( int ii = 0; ii < length; ii++ ){
+      array[ii] = buffer;
+      buffer   += width;
+   }
+   return array;
+}
+
+/* 
+ * Free array
+ *
+ * @param array         array to be freed (assumed allocated using BrookCommon::allocateRealArray
+ *
+ * @return DefaultReturnValue
+ *
+ */
+
+int BrookCommon::disposeRealArray( RealOpenMM** array ) const {
+
+// ---------------------------------------------------------------------------------------
+
+   //static const std::string methodName      = "BrookCommon::disposeRealArray";
+
+// ---------------------------------------------------------------------------------------
+
+   delete[] array[0];
+   delete[] array;
+
+   return DefaultReturnValue;
+}
+
+/* 
+ * Copy 1D BrookOpenMMFloat* array to 2D array of RealOpenMM
+ *
+ * @param length        length of array
+ * @param width         width  of array
+ * @param array1D       array to copy
+ *
+ * @return ptr to array
+ *
+ */
+
+RealOpenMM** BrookCommon::copy1DArrayTo2DArray( int length, int width, BrookOpenMMFloat* array1D ) const {
+
+// ---------------------------------------------------------------------------------------
+
+   //static const std::string methodName      = "BrookCommon::copy1DArrayTo2DArray";
+
+// ---------------------------------------------------------------------------------------
+
+   RealOpenMM** array  = allocateRealArray( length, width );
+   int index           = 0;
+   for( int ii = 0; ii < length; ii++ ){
+     for( int jj = 0; jj < width; jj++ ){
+        array[ii][jj] = static_cast<RealOpenMM> (array1D[index++]);
+     }
+   }
+
+   return array;
+}
 

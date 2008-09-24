@@ -36,6 +36,7 @@
 #include "SimTKUtilities/SimTKOpenMMRealType.h"
 #include "BrookBonded.h"
 #include "BrookNonBonded.h"
+#include "StandardMMForceField.h"
 
 namespace OpenMM {
 
@@ -150,6 +151,10 @@ class BrookCalcStandardMMForceFieldKernel : public CalcStandardMMForceFieldKerne
 
        BrookBonded* _brookBonded;
        BrookNonBonded* _brookNonBonded;
+
+       // used to calculate energy
+
+       StandardMMForceField* _refForceField;
 
 };
 
