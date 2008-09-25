@@ -421,6 +421,58 @@ class BrookBonded : public BrookCommon {
 
       int validateInverseMapStreamCount( int index, int count ) const;
       
+      /*
+       * Helper functions for building inverse maps for 
+       * torsions, impropers and angles.
+       * 
+       * For each atom, calculates the positions at which it's
+       * forces are to be picked up from and stores the position
+       * in the appropriate index.
+       *
+       * Input: number of dihedrals, the atom indices, and a flag indicating
+       *        whether we're doing i(0), j(1), k(2) or l(3)
+       * Output: an array of counts per atom
+       *         arrays of inversemaps
+       *         nimaps - the number of invmaps actually used.
+       *
+       * @param posflag       0-niatoms-1
+       * @param niatoms       3 for angles, 4 for torsions, impropers
+       * @param nints         number of interactions
+       * @param natoms        number of atoms
+       * @param *atoms        gromacs interaction list
+       * @param nmaps         maximum number of inverse maps
+       * @param   counts[]    output counts of how many places each atom occurs
+       * @param *invmaps[]    output array of nmaps inverse maps
+       * @param *nimaps,      output max number of inverse maps actually used
+       *
+       * @return DefaultReturnValue, unless error in which case exits w/ OpenMM exception
+       *
+       **/
+      
+      int gpuCalcInvMap( int posflag, int niatoms, int nints, int natoms,
+                          int *atoms, int nmaps, int counts[], float4 *invmaps[],
+                          int *nimaps );
+      
+      void gpuPrintInvMaps( int nmaps, int natoms, int counts[], float4 *invmap[], FILE* logFile );
+      
+      /* We are still plagued by kernel call overheads. This is for a big fat
+       * merged inverse gather kernel:
+       * Since we have 32 bit floats, we have 23 bits of mantissa or the largest
+       * integer we can represent is 2^23. So it should be quite safe to add 
+       * 100000 * n to the index where n is the stream in which we should do the
+       * lookup. This assumes that nints < 100000, preferably nints << 100000
+       * which should always be true
+       * */
+      int gpuCalcInvMap_merged( int nints, int natoms, int *atoms, int nmaps, int counts[], float4 *invmaps[], int *nimaps );
+      
+      /* Repacks the invmap streams for more efficient access in the
+       * merged inverse gather kernel
+       *
+       * buf should be nimaps * natoms large.
+       * */
+      int gpuRepackInvMap_merged( int natoms, int nmaps, int *counts, float4 *invmaps[], float4 *buf );
+      
+        
 };
 
 } // namespace OpenMM

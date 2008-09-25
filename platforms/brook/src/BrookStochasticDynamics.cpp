@@ -34,13 +34,13 @@
 #include "BrookPlatform.h"
 #include "OpenMMException.h"
 #include "BrookStreamImpl.h"
-#include "kshakeh.h"
-#include "kupdatesd.h"
-#include "kcommon.h"
+#include "gpu/kshakeh.h"
+#include "gpu/kupdatesd.h"
+#include "gpu/kcommon.h"
 
 // use random number generator
 
-#include "SimTKOpenMMUtilities.h"
+#include "../../reference/src/SimTKUtilities/SimTKOpenMMUtilities.h"
 
 using namespace OpenMM;
 using namespace std;

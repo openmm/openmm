@@ -99,3 +99,53 @@ kernel void kMergeFloat3_4(
    }
 }
 
+
+kernel void kMergeFloat3_4_nobranch( 
+      float repfac, 
+      float atomStreamWidth, 
+      float pStreamWidth,
+      float natoms,
+      float roundNatoms,
+      float iUnroll,
+      float3 pstream1[][], 
+      float3 pstream2[][], 
+      float3 pstream3[][], 
+      float3 pstream4[][], 
+      out float3 outstream<> )
+{
+   float atomIndex, forceIndex, qIndex, qOff;
+   float2 pindex;
+   float i;
+   float3 o1,o2,o3,o4;
+   float3 tmp;
+   
+   // given atom index find force indices and streams
+
+   pindex      = indexof( outstream );
+   atomIndex   = pindex.x + pindex.y*atomStreamWidth;
+   forceIndex  = atomIndex;
+
+   outstream   = float3( 0.0f, 0.0f, 0.0f );
+   
+   for( i = 0.0f; i < repfac; i += 1.0f ){
+
+      qIndex            = round( (forceIndex - fmod( forceIndex, iUnroll))/iUnroll );
+      qOff              = forceIndex - iUnroll*qIndex;
+      pindex.y          = round( (qIndex - fmod( qIndex, pStreamWidth ))/pStreamWidth );
+      pindex.x          = qIndex - pindex.y*pStreamWidth;
+
+      o1 = pstream1[ pindex ];
+      o2 = pstream2[ pindex ];
+      o3 = pstream3[ pindex ];
+      o4 = pstream4[ pindex ];
+      
+      tmp = qOff < 0.5f ? o1 : o2;
+      tmp = qOff < 1.5f ? tmp : o3;
+      tmp = qOff < 2.5f ? tmp : o4;
+
+      outstream += tmp;
+      
+      forceIndex += roundNatoms;
+   }
+}
+

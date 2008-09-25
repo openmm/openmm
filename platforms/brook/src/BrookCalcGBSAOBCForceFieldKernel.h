@@ -33,7 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "kernels.h"
-#include "SimTKUtilities/SimTKOpenMMRealType.h"
+#include "../../reference/src/SimTKUtilities/SimTKOpenMMRealType.h"
 #include "BrookGbsa.h"
 
 namespace OpenMM {

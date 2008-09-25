@@ -33,7 +33,7 @@
 #include "BrookKernelFactory.h"
 #include "OpenMMException.h"
 #include "kernels.h"
-#include "SimTKUtilities/SimTKOpenMMRealType.h"
+#include "../../reference/src/SimTKUtilities/SimTKOpenMMRealType.h"
 #include <brook/brook.hpp>
 #include <stdlib.h>
 #include <sstream>
@@ -83,10 +83,20 @@ BrookPlatform::BrookPlatform( ){
 
    // get Brook runtime
 
+#ifdef WIN32
+   char* runtime;
+   size_t numberOfEnv;
+    _dupenv_s( &runtime, &numberOfEnv, "brt_runtime" );
+#else
    char* runtime     = getenv( "brt_runtime" );
+#endif
 
    _initializeKernelFactory( );
    _setBrookRuntime( runtime );
+
+#ifdef WIN32
+   free( runtime );
+#endif
 }
 
 /** 

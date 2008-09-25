@@ -35,10 +35,6 @@
 #include "OpenMMException.h"
 #include "BrookStreamImpl.h"
 
-// use random number generator
-
-#include "SimTKOpenMMUtilities.h"
-
 using namespace OpenMM;
 using namespace std;
 

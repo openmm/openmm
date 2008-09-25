@@ -36,10 +36,9 @@
 
 #include "BrookStreamImpl.h"
 #include "BrookCalcStandardMMForceFieldKernel.h"
-#include "kforce.h"
-#include "kinvmap_gather.h"
+#include "gpu/kforce.h"
+#include "gpu/kinvmap_gather.h"
 #include "ReferencePlatform.h"
-#include "ReferenceFloatStreamImpl.h"
 #include "VerletIntegrator.h"
 #include "StandardMMForceField.h"
 
@@ -254,7 +253,7 @@ void BrookCalcStandardMMForceFieldKernel::initialize(
       const vector<int>    periodicTorsionInd = *periodicTorsionI_it;
       const vector<double> periodicTorsionPrm = *periodicTorsionP_it;
       _refForceField->setPeriodicTorsionParameters( ii, periodicTorsionInd[0], periodicTorsionInd[1], periodicTorsionInd[2], periodicTorsionInd[3],
-                                                    periodicTorsionPrm[2], periodicTorsionPrm[1], periodicTorsionPrm[0] );
+                                                    (int) (periodicTorsionPrm[2] + 0.001), periodicTorsionPrm[1], periodicTorsionPrm[0] );
 /*
 printf( "PeriodicTor: [%d %d %d %d] [%.5e %.5e %.5e]\n", periodicTorsionInd[0], periodicTorsionInd[1], periodicTorsionInd[2], periodicTorsionInd[3],
                                                          periodicTorsionPrm[2], periodicTorsionPrm[1], periodicTorsionPrm[0] ); fflush( stdout );

@@ -34,7 +34,7 @@
 
 #include "BrookPlatform.h"
 #include "BrookStreamInternal.h"
-#include "SimTKUtilities/SimTKOpenMMRealType.h"
+#include "../../reference/src/SimTKUtilities/SimTKOpenMMRealType.h"
 
 namespace OpenMM {
 

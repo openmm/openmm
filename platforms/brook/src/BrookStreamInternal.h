@@ -33,7 +33,6 @@
  * -------------------------------------------------------------------------- */
 
 #include <brook/brook.hpp>
-#include "SimTKUtilities/SimTKOpenMMRealType.h"
 
 namespace OpenMM {
 

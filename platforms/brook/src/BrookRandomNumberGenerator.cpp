@@ -32,11 +32,7 @@
 #include <sstream>
 #include "BrookRandomNumberGenerator.h"
 #include "OpenMMException.h"
-#include "kupdatesd.h"
-
-// use random number generator
-
-#include "SimTKOpenMMUtilities.h"
+#include "gpu/kupdatesd.h"
 
 using namespace OpenMM;
 using namespace std;
@@ -244,7 +240,7 @@ inline int MaxInt( unsigned int x, unsigned int y ){ return x > y ? x : y; }
  */
 
 void BrookRandomNumberGenerator::_generateRandomsKiss( float* randomV1, float* randomV2, float* randomV3, 
-                                                           unsigned int state[4] ){
+                                                       unsigned int state[4] ){
     
    // ---------------------------------------------------------------------------------------
 
