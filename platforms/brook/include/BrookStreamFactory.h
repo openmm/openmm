@@ -33,6 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "StreamFactory.h"
+#include "Platform.h"
 
 namespace OpenMM {
 
@@ -41,8 +42,140 @@ namespace OpenMM {
  */
 
 class BrookStreamFactory : public StreamFactory {
-public:
-    StreamImpl* createStreamImpl(std::string name, int size, Stream::DataType type, int streamWidth, const Platform& platform, OpenMMContextImpl& context) const;
+
+   public:
+
+      BrookStreamFactory( );
+	  ~BrookStreamFactory( );
+
+      // 'external' streams 
+
+      static const std::string AtomPositions;
+      static const std::string AtomVelocities;
+      static const std::string AtomForces;
+
+      /** 
+       * Create StreamImpl
+       *
+       * @param name     stream name
+       * @param size     stream size
+       * @param type     data type (float, float2, ...)
+       * @param platform platform reference
+       * @param context  context (currently ignored)
+       * 
+       * @return StreamImpl
+       */
+      
+      StreamImpl* createStreamImpl( std::string name, int size, Stream::DataType type, const Platform& platform, OpenMMContextImpl& context ) const;
+
+      /** 
+       * Get atom stream width
+       * 
+       * @return atom stream width
+       *
+       *
+       */
+
+      int getDefaultAtomStreamWidth( void ) const;
+
+      /** 
+       * Set atom stream width
+       * 
+       * @param atomStreamWidth  atom stream width
+       *
+       * @return DefaultReturnValue
+       *
+       * @throw OpenMMException if atomStreamWidth < 1
+       *
+       */
+
+      int setDefaultAtomStreamWidth( int atomStreamWidth );
+
+      /** 
+       * Get randomNumber stream width
+       * 
+       * @return randomNumber stream width
+       *
+       *
+       */
+
+      int getDefaultRandomNumberStreamWidth( void ) const;
+
+      /** 
+       * Set randomNumber stream width
+       * 
+       * @param randomNumberStreamWidth  randomNumber stream width
+       *
+       * @return DefaultReturnValue
+       *
+       * @throw OpenMMException if randomNumberStreamWidth < 1
+       *
+       */
+
+      int setDefaultRandomNumberStreamWidth( int randomNumberStreamWidth );
+
+      /** 
+       * Get randomNumber stream size
+       * 
+       * @return randomNumber stream size
+       *
+       *
+       */
+
+      int getDefaultRandomNumberStreamSize( void ) const;
+
+      /** 
+       * Set randomNumber stream size
+       * 
+       * @param randomNumberStreamSize  randomNumber stream size
+       *
+       * @return DefaultReturnValue
+       *
+       * @throw OpenMMException if randomNumberStreamSize < 1
+       *
+       */
+
+      int setDefaultRandomNumberStreamSize( int randomNumberStreamSize );
+
+      /** 
+       * Get default dangle value
+       * 
+       * @return default dangle value
+       *
+       */
+
+      double getDefaultDangleValue( void ) const;
+
+      /** 
+       * Set default dangle value
+       * 
+       * @param DefaultDangleValue default dangle value
+       *
+       * @return DefaultReturnValue
+       *
+       */
+
+      int setDefaultDangleValue( double defaultDangleValue );
+
+   private:
+
+      static const int DefaultStreamAtomWidth             = 32;
+
+      static const int DefaultStreamRandomNumberWidth     = 32;
+      static const int DefaultStreamRandomNumberSize      = 1024;
+
+      static const double DefaultDangleValue;
+
+      static const int DefaultReturnValue                 = 0;
+      static const int ErrorReturnValue                   = -1; 
+
+      int _defaultAtomStreamWidth;
+
+      int _defaultStreamRandomNumberWidth;
+      int _defaultStreamRandomNumberSize;
+
+      double _defaultDangleValue;
+
 };
 
 } // namespace OpenMM
