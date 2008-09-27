@@ -50,9 +50,11 @@
 #include "GBSAOBCForceField.h"
 #include "System.h"
 #include "LangevinIntegrator.h"
+#include "VerletIntegrator.h"
 #include "BrookRandomNumberGenerator.h"
 #include "BrookShakeAlgorithm.h"
 #include "BrookStochasticDynamics.h"
+#include "BrookVerletDynamics.h"
 #include "../src/sfmt/SFMT.h"
 #include <iostream>
 #include <vector>
@@ -1730,13 +1732,13 @@ static OpenMMContext* testObcForceFileSetup( std::string fileName, int brookCont
 
       StringVectorI ii          = tokens.begin();
       ii++;
-      float coordX              = atof( (*ii).c_str() ); ii++;
-      float coordY              = atof( (*ii).c_str() ); ii++;
-      float coordZ              = atof( (*ii).c_str() ); ii++;
-      float radius              = atof( (*ii).c_str() ); ii++;
-      float scalingFactor       = atof( (*ii).c_str() ); ii++;
-      float charge              = atof( (*ii).c_str() ); ii++;
-      float bornRadi            = atof( (*ii).c_str() ); ii++;
+      float coordX              = (float) atof( (*ii).c_str() ); ii++;
+      float coordY              = (float) atof( (*ii).c_str() ); ii++;
+      float coordZ              = (float) atof( (*ii).c_str() ); ii++;
+      float radius              = (float) atof( (*ii).c_str() ); ii++;
+      float scalingFactor       = (float) atof( (*ii).c_str() ); ii++;
+      float charge              = (float) atof( (*ii).c_str() ); ii++;
+      float bornRadi            = (float) atof( (*ii).c_str() ); ii++;
    
       positions[index++]        = Vec3( coordX, coordY, coordZ );
       // charge radius scalingFactor
@@ -1780,7 +1782,6 @@ void testObcForce() {
    OpenMMContext* brookContext = testObcForceFileSetup( std::string( "ObcInfo.txt" ), 1, &numAtoms );
    //OpenMMContext* brookContext = NULL;
    
-   State* state;
    vector<Vec3> forces;
    if( context ){
       State state      = context->getState( State::Forces );
@@ -2134,20 +2135,22 @@ void testLangevinSingleBond() {
        langevinIntegrator->step(1);
    }
    
+   (void) fprintf( log, "%s 1 ok\n", methodName.c_str() ); fflush( log );
+
    // Not set the friction to a tiny value and see if it conserves energy.
    
-/*
-   integrator.setFriction(5e-5);
-   context.setPositions(positions);
-   State state = context.getState(State::Energy);
+   langevinIntegrator->setFriction(5e-5);
+//   context.setPositions(positions);
+   State state = context->getState(State::Energy);
    double initialEnergy = state.getKineticEnergy()+state.getPotentialEnergy();
    for (int i = 0; i < 1000; ++i) {
-       state = context.getState(State::Energy);
+       state = context->getState(State::Energy);
        double energy = state.getKineticEnergy()+state.getPotentialEnergy();
        ASSERT_EQUAL_TOL(initialEnergy, energy, 0.01);
-       integrator.step(1);
+       langevinIntegrator->step(1);
    }
-*/
+
+   (void) fprintf( log, "%s 2 ok\n", methodName.c_str() ); fflush( log );
 
    delete langevinIntegrator;
    delete context;
@@ -2161,7 +2164,7 @@ void testLangevinTemperature() {
    static const int debug                   = 1;
    FILE* log                                = stdout;
    
-   int numberOfAtoms                        = 2;
+   const int numberOfAtoms                  = 8;
    RealOpenMM mass                          = 2.0; 
 
 // ---------------------------------------------------------------------------------------
@@ -2172,38 +2175,45 @@ void testLangevinTemperature() {
    BrookPlatform platform( 32, "cal", log );
    // ReferencePlatform platform;
 
-    const int numAtoms = 8;
     const double temp = 100.0;
     //ReferencePlatform platform;
-    System system(numAtoms, 0);
+    System system(numberOfAtoms, 0);
     LangevinIntegrator integrator(temp, 2.0, 0.01);
-    StandardMMForceField* forceField = new StandardMMForceField(numAtoms, 0, 0, 0, 0);
-    for (int i = 0; i < numAtoms; ++i) {
+    StandardMMForceField* forceField = new StandardMMForceField(numberOfAtoms, 0, 0, 0, 0);
+    for (int i = 0; i < numberOfAtoms; ++i){
         system.setAtomMass(i, 2.0);
         forceField->setAtomParameters(i, (i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
     }
     system.addForce(forceField);
     OpenMMContext context(system, integrator, platform);
-    vector<Vec3> positions(numAtoms);
-    for (int i = 0; i < numAtoms; ++i)
+    vector<Vec3> positions(numberOfAtoms);
+    for (int i = 0; i < numberOfAtoms; ++i)
         positions[i] = Vec3((i%2 == 0 ? 2 : -2), (i%4 < 2 ? 2 : -2), (i < 4 ? 2 : -2));
     context.setPositions(positions);
     
     // Let it equilibrate.
     
-    integrator.step(10000);
+    integrator.step(10);
+exit(0);
+    //integrator.step(10000);
     
     // Now run it for a while and see if the temperature is correct.
     
     double ke = 0.0;
     for (int i = 0; i < 1000; ++i) {
-        State state = context.getState(State::Energy);
-        ke += state.getKineticEnergy();
+        State state  = context.getState(State::Energy);
+        ke          += state.getKineticEnergy();
+        if( debug ){
+           (void) fprintf( log, "%s %d KE=%12.5e ttl=%12.5e\n", methodName.c_str(), i, state.getKineticEnergy(), ke ); fflush( log );
+        }
         integrator.step(1);
     }
     ke /= 1000;
-    double expected = 0.5*numAtoms*3*BOLTZ*temp;
+    double expected = 0.5*numberOfAtoms*3*BOLTZ*temp;
     ASSERT_EQUAL_TOL(expected, ke, 3*expected/std::sqrt(1000.0));
+
+   (void) fprintf( log, "%s ok\n", methodName.c_str() ); fflush( log );
+
 }
 
 void testLangevinConstraints() {
@@ -2260,7 +2270,105 @@ void testLangevinConstraints() {
        }
        integrator.step(1);
    }
+
+   (void) fprintf( log, "%s ok\n", methodName.c_str() ); fflush( log );
 }
+
+void testVerletSingleBond( void ){
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName      = "testVerletSingleBond";
+   static const int debug                   = 0;
+   FILE* log                                = stdout;
+   
+   int numberOfAtoms                        = 2;
+   RealOpenMM mass                          = 2.0; 
+
+// ---------------------------------------------------------------------------------------
+
+    BrookPlatform platform( 32, "cal", log );
+
+    System system( numberOfAtoms, 0 ); 
+    system.setAtomMass(0, 2.0);
+    system.setAtomMass(1, 2.0);
+
+    VerletIntegrator integrator(0.01);
+
+    StandardMMForceField* forceField = new StandardMMForceField(2, 1, 0, 0, 0); 
+    forceField->setBondParameters(0, 0, 1, 1.5, 1); 
+    system.addForce(forceField);
+
+    OpenMMContext context(system, integrator, platform);
+    vector<Vec3> positions(2);
+    positions[0] = Vec3(-1, 0, 0); 
+    positions[1] = Vec3(1, 0, 0); 
+    context.setPositions(positions);
+       
+    // This is simply a harmonic oscillator, so compare it to the analytical solution.
+       
+    const double freq = 1.0;;
+    State state = context.getState(State::Energy);
+    const double initialEnergy = state.getKineticEnergy()+state.getPotentialEnergy();
+    if( debug ){
+       (void) fprintf( log, "%s Energy initialEnergy=%12.5e KE=%12.5e PE=%12.5e\n",
+                       methodName.c_str(), initialEnergy,
+                       state.getKineticEnergy(), state.getPotentialEnergy() );
+        (void) fflush( log );
+    }
+
+
+    for (int i = 0; i < 1000; ++i) {
+
+        state = context.getState(State::Positions | State::Velocities | State::Energy);
+        double time = state.getTime();
+        double expectedDist = 1.5+0.5*std::cos(freq*time);
+
+        Vec3 position0 = state.getPositions()[0];
+        Vec3 position1 = state.getPositions()[1];
+        if( debug ){
+           (void) fprintf( log, "%s %d Pos expected=[%12.5e 0 0] actual=[%12.5e %12.5e %12.5e] [%12.5e %12.5e %12.5e]\n",
+                           methodName.c_str(), i, -0.5*expectedDist, 
+                           position0[0], position0[1], position0[2],
+                           position1[0], position1[1], position1[2] );
+           (void) fflush( log );
+        }
+
+        ASSERT_EQUAL_VEC(Vec3(-0.5*expectedDist, 0, 0), state.getPositions()[0], 0.02);
+        ASSERT_EQUAL_VEC(Vec3(0.5*expectedDist, 0, 0), state.getPositions()[1], 0.02);
+
+        double expectedSpeed = -0.5*freq*std::sin(freq*time);
+
+        Vec3 velocity0 = state.getVelocities()[0];
+        Vec3 velocity1 = state.getVelocities()[1];
+        if( debug ){
+           (void) fprintf( log, "%s %d Vel expected=[%12.5e 0 0] actual=[%12.5e %12.5e %12.5e] [%12.5e %12.5e %12.5e]\n",
+                           methodName.c_str(), i, -0.5*expectedSpeed, 
+                           velocity0[0], velocity0[1], velocity0[2],
+                           velocity1[0], velocity1[1], velocity1[2] );
+           (void) fflush( log );
+        }
+
+        ASSERT_EQUAL_VEC(Vec3(-0.5*expectedSpeed, 0, 0), state.getVelocities()[0], 0.02);
+        ASSERT_EQUAL_VEC(Vec3(0.5*expectedSpeed, 0, 0), state.getVelocities()[1], 0.02);
+
+        double energy = state.getKineticEnergy()+state.getPotentialEnergy();
+
+        if( debug ){
+           (void) fprintf( log, "%s %d Energy initialEnergy=%12.5e actual=%12.5e KE=%12.5e PE=%12.5e\n",
+                           methodName.c_str(), i, initialEnergy, energy,
+                           state.getKineticEnergy(), state.getPotentialEnergy() );
+           (void) fflush( log );
+        }
+
+        ASSERT_EQUAL_TOL(initialEnergy, energy, 0.01);
+        integrator.step(1);
+    }   
+
+   (void) fprintf( log, "%s ok\n", methodName.c_str() );
+   (void) fflush( log );
+}
+
 
 int main( ){
 
@@ -2271,6 +2379,7 @@ int main( ){
 
 //      testBrookNonBonded( );
 
+/*
       testBrookStreams( 50 );
       testBrookStreams( 63 );
       testBrookStreams( 64 );
@@ -2283,14 +2392,18 @@ int main( ){
       testBrookCoulomb();
       testBrookLJ();
       testBrookExclusionsAnd14();
-
       testLangevinSingleBond();
+*/
+      testLangevinTemperature();
+
+/*
       testObcForce();
       testObcSingleAtom();
       testObcEConsistentForce();
+      testVerletSingleBond();
+*/
 
 
-      //testForce(platform);
     }  catch( const exception& e ){
       cout << "exception: " << e.what() << endl;
       return 1;
