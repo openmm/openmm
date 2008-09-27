@@ -37,6 +37,10 @@
 #include "BrookBonded.h"
 #include "BrookNonBonded.h"
 #include "StandardMMForceField.h"
+#include "OpenMMContext.h"
+#include "System.h"
+#include "ReferencePlatform.h"
+#include "VerletIntegrator.h"
 
 namespace OpenMM {
 
@@ -105,7 +109,20 @@ class BrookCalcStandardMMForceFieldKernel : public CalcStandardMMForceFieldKerne
        */
 
       double executeEnergy( const Stream& positions );
+      double executeEnergyOld( const Stream& positions );
 
+      /**
+       * Get reference Context
+       * 
+       * @param numberOfAtoms  number of atoms
+       *
+       * @return  OpenMMContext
+       *
+       */
+      
+      OpenMMContext* getReferenceOpenMMContext( int numberOfAtoms );
+      
+      
       /** 
        * Set log file reference
        * 
@@ -155,6 +172,10 @@ class BrookCalcStandardMMForceFieldKernel : public CalcStandardMMForceFieldKerne
        // used to calculate energy
 
        StandardMMForceField* _refForceField;
+       System*               _refSystem;
+       OpenMMContext*        _refOpenMMContext;
+       ReferencePlatform*    _referencePlatform;
+       VerletIntegrator*     _refVerletIntegrator;
 
 };
 

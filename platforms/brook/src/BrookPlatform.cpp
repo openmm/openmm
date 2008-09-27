@@ -155,7 +155,7 @@ void BrookPlatform::_initializeKernelFactory( void ){
 
    registerKernelFactory( CalcStandardMMForceFieldKernel::Name(), factory);
    registerKernelFactory( CalcGBSAOBCForceFieldKernel::Name(),    factory);
-   //registerKernelFactory( IntegrateVerletStepKernel::Name(),      factory);
+   registerKernelFactory( IntegrateVerletStepKernel::Name(),      factory);
    registerKernelFactory( IntegrateLangevinStepKernel::Name(),    factory);
    //registerKernelFactory( IntegrateBrownianStepKernel::Name(),    factory);
    //registerKernelFactory( ApplyAndersenThermostatKernel::Name(),  factory);

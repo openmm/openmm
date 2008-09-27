@@ -35,6 +35,14 @@
 using namespace OpenMM;
 using namespace std;
 
+      /** 
+       * BrookIntegrateLangevinStepKernel constructor
+       * 
+       * @param name        name of the stream to create
+       * @param platform    platform
+       *
+       */
+
 BrookIntegrateLangevinStepKernel::BrookIntegrateLangevinStepKernel( std::string name, const Platform& platform ) :
                                   IntegrateLangevinStepKernel( name, platform ){
 
@@ -50,6 +58,11 @@ BrookIntegrateLangevinStepKernel::BrookIntegrateLangevinStepKernel( std::string 
 
 }
 
+/** 
+ * BrookIntegrateVerletStepKernel destructor
+ * 
+ */
+  
 BrookIntegrateLangevinStepKernel::~BrookIntegrateLangevinStepKernel( ){
 
 // ---------------------------------------------------------------------------------------
@@ -63,6 +76,15 @@ BrookIntegrateLangevinStepKernel::~BrookIntegrateLangevinStepKernel( ){
    delete _brookRandomNumberGenerator;
 
 }
+
+/** 
+ * Initialize the kernel, setting up all parameters related to integrator.
+ * 
+ * @param masses             the mass of each atom
+ * @param constraintIndices  each element contains the indices of two atoms whose distance should be constrained
+ * @param constraintLengths  the required distance between each pair of constrained atoms
+ *
+ */
 
 void BrookIntegrateLangevinStepKernel::initialize( const vector<double>& masses,
                                                    const vector<vector<int> >& constraintIndices,
@@ -121,7 +143,7 @@ void BrookIntegrateLangevinStepKernel::execute( Stream& positions, Stream& veloc
    differences[1] = friction    - (double) _brookStochasticDynamics->getFriction();
    differences[2] = stepSize    - (double) _brookStochasticDynamics->getStepSize();
    if( fabs( differences[0] ) > epsilon || fabs( differences[1] ) > epsilon || fabs( differences[2] ) > epsilon ){
-//printf( "%s calling updateParameters\n", methodName.c_str() );
+printf( "%s calling updateParameters\n", methodName.c_str() );
       _brookStochasticDynamics->updateParameters( temperature, friction, stepSize );
    } else {
 //printf( "%s NOT calling updateParameters\n", methodName.c_str() );

@@ -33,6 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "kernels.h"
+#include "BrookFloatStreamInternal.h"
 
 namespace OpenMM {
 
@@ -79,6 +80,10 @@ class BrookCalcKineticEnergyKernel : public CalcKineticEnergyKernel {
       double execute( const Stream& velocities );
 
    private:
+
+      // masses
+
+      BrookOpenMMFloat* _masses;
 
 };
 

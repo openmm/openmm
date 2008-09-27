@@ -35,6 +35,14 @@
 using namespace OpenMM;
 using namespace std;
 
+/** 
+ * BrookIntegrateVerletStepKernel constructor
+ * 
+ * @param name        name of the stream to create
+ * @param platform    platform
+ *
+ */
+
 BrookIntegrateVerletStepKernel::BrookIntegrateVerletStepKernel( std::string name, const Platform& platform ) :
                                 IntegrateVerletStepKernel( name, platform ){
 
@@ -44,8 +52,15 @@ BrookIntegrateVerletStepKernel::BrookIntegrateVerletStepKernel( std::string name
 
 // ---------------------------------------------------------------------------------------
    
+   _brookVerletDynamics   = NULL;
+   _brookShakeAlgorithm   = NULL;
 }
 
+/** 
+ * BrookIntegrateVerletStepKernel destructor
+ * 
+ */
+  
 BrookIntegrateVerletStepKernel::~BrookIntegrateVerletStepKernel( ){
 
 // ---------------------------------------------------------------------------------------
@@ -53,20 +68,20 @@ BrookIntegrateVerletStepKernel::~BrookIntegrateVerletStepKernel( ){
    // static const std::string methodName      = "BrookIntegrateVerletStepKernel::~BrookIntegrateVerletStepKernel";
 
 // ---------------------------------------------------------------------------------------
+
+   delete _brookVerletDynamics;
+   delete _brookShakeAlgorithm;
    
-/*
-    if (dynamics)
-        delete dynamics;
-    if (shake)
-        delete shake;
-    if (masses)
-        delete[] masses;
-    if (constraintIndices)
-        disposeIntArray(constraintIndices, numConstraints);
-    if (shakeParameters)
-        disposeRealArray(shakeParameters, numConstraints);
-*/
 }
+
+/** 
+ * Initialize the kernel, setting up all parameters related to integrator.
+ * 
+ * @param masses             the mass of each atom
+ * @param constraintIndices  each element contains the indices of two atoms whose distance should be constrained
+ * @param constraintLengths  the required distance between each pair of constrained atoms
+ *
+ */
 
 void BrookIntegrateVerletStepKernel::initialize( const vector<double>& masses,
                                                  const vector<vector<int> >& constraintIndices,
@@ -78,47 +93,47 @@ void BrookIntegrateVerletStepKernel::initialize( const vector<double>& masses,
 
 // ---------------------------------------------------------------------------------------
    
-/*
-    this->masses = new RealOpenMM[masses.size()];
-    for (size_t i = 0; i < masses.size(); ++i)
-        this->masses[i] = static_cast<RealOpenMM>( masses[i] );
-    numConstraints = constraintIndices.size();
-    this->constraintIndices = allocateIntArray(numConstraints, 2);
-    for (int i = 0; i < numConstraints; ++i) {
-        this->constraintIndices[i][0] = constraintIndices[i][0];
-        this->constraintIndices[i][1] = constraintIndices[i][1];
-    }
-    shakeParameters = allocateRealArray(constraintLengths.size(), 1);
-    for (size_t i = 0; i < constraintLengths.size(); ++i)
-        shakeParameters[i][0] = static_cast<RealOpenMM>( constraintLengths[i] );
-*/
+   _brookVerletDynamics          = new BrookVerletDynamics( );
+   _brookVerletDynamics->setup( masses, getPlatform() );
+
+   _brookShakeAlgorithm          = new BrookShakeAlgorithm( );
+   _brookShakeAlgorithm->setup( masses, constraintIndices, constraintLengths, getPlatform() );
+
 }
+
+/** 
+ * Execute kernel
+ * 
+ * @param positions          atom coordinates
+ * @param velocities         atom velocities
+ * @param forces             atom forces
+ * @param stepSize           integration step size
+ *
+ */
 
 void BrookIntegrateVerletStepKernel::execute( Stream& positions, Stream& velocities,
                                               const Stream& forces, double stepSize ){
-// ---------------------------------------------------------------------------------------
-
-   // static const std::string methodName      = "BrookIntegrateVerletStepKernel::execute";
 
 // ---------------------------------------------------------------------------------------
-   
-/*
-    RealOpenMM** posData = ((BrookFloatStreamImpl&) positions.getImpl()).getData();
-    RealOpenMM** velData = ((BrookFloatStreamImpl&) velocities.getImpl()).getData();
-    RealOpenMM** forceData = const_cast<RealOpenMM**>(((BrookFloatStreamImpl&) forces.getImpl()).getData()); // Brook code needs to be made const correct
-    if (dynamics == 0 || stepSize != prevStepSize) {
-        // Recreate the computation objects with the new parameters.
-        
-        if (dynamics) {
-            delete dynamics;
-            delete shake;
-        }
-        dynamics = new BrookVerletDynamics(positions.getSize(), static_cast<RealOpenMM>(stepSize) );
-        shake = new BrookShakeAlgorithm(numConstraints, constraintIndices, shakeParameters);
-        dynamics->setBrookShakeAlgorithm(shake);
-        prevStepSize = stepSize;
-    }
-    dynamics->update(positions.getSize(), posData, velData, forceData, masses);
-*/
+
+   double epsilon                           = 1.0e-04;
+   static const std::string methodName      = "BrookIntegrateVerletStepKernel::execute";
+
+// ---------------------------------------------------------------------------------------
+
+   // first time through initialize _brookVerletDynamics
+
+   // for each subsequent call, check if parameters need to be updated due to a change
+   // in the step size
+
+   // take step
+
+   double difference = stepSize - (double) _brookVerletDynamics->getStepSize();
+   if( fabs( difference ) > epsilon ){
+//printf( "%s calling updateParameters\n", methodName.c_str() );
+      _brookVerletDynamics->updateParameters( stepSize );
+   }
+   _brookVerletDynamics->update( positions, velocities, forces, *_brookShakeAlgorithm );
+
 }
 

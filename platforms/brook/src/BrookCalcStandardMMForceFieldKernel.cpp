@@ -38,8 +38,6 @@
 #include "BrookCalcStandardMMForceFieldKernel.h"
 #include "gpu/kforce.h"
 #include "gpu/kinvmap_gather.h"
-#include "ReferencePlatform.h"
-#include "VerletIntegrator.h"
 #include "StandardMMForceField.h"
 
 using namespace OpenMM;
@@ -66,6 +64,13 @@ BrookCalcStandardMMForceFieldKernel::BrookCalcStandardMMForceFieldKernel( std::s
    _brookBonded                             = NULL;
    _brookNonBonded                          = NULL;
    _refForceField                           = NULL;
+   _log                                     = NULL;
+
+   _refForceField                           = NULL;
+   _refSystem                               = NULL;
+   _refOpenMMContext                        = NULL;
+   _referencePlatform                       = NULL;
+   _refVerletIntegrator                     = NULL;
 
    const BrookPlatform brookPlatform = dynamic_cast<const BrookPlatform&> (platform);
    if( brookPlatform.getLog() != NULL ){
@@ -93,6 +98,12 @@ BrookCalcStandardMMForceFieldKernel::~BrookCalcStandardMMForceFieldKernel( ){
    // deleted w/ kernel delete? If activated, program crashes
 
    //delete _refForceField;
+/*
+   delete _refSystem;
+   delete _refOpenMMContext;
+   delete _referencePlatform;
+   delete _refVerletIntegrator;
+*/
 }
 
 /** 
@@ -319,6 +330,8 @@ void BrookCalcStandardMMForceFieldKernel::executeForces( const Stream& positions
    static const int L_Stream                = 3;
 
    static const int PrintOn                 = 0;
+   static const int MaxErrorMessages        = 2;
+   static       int ErrorMessages           = 0;
 
    static const float4 dummyParameters( 0.0, 0.0, 0.0, 0.0 );
 
@@ -555,7 +568,7 @@ nonbondedForceStreams[3]->fillWithValue( &zerof );
 
       // case not handled -- throw an exception
 
-      if( _brookBonded->getLog() ){
+      if( _brookBonded->getLog() && ErrorMessages++ < MaxErrorMessages ){
          (void) fprintf( _brookBonded->getLog(), "%s case: I-map=%d K-map=%d -- not handled.\n",
                           methodName.c_str(), _brookBonded->getInverseMapStreamCount( I_Stream ),
                                               _brookBonded->getInverseMapStreamCount( K_Stream ) );
@@ -611,7 +624,7 @@ nonbondedForceStreams[3]->fillWithValue( &zerof );
 
       // case not handled -- throw an exception
 
-      if( _brookBonded->getLog() ){
+      if( _brookBonded->getLog() && ErrorMessages++ < MaxErrorMessages ){
          (void) fprintf( _brookBonded->getLog(), "%s case: J-map=%d L-map=%d -- not handled.\n",
                           methodName.c_str(), _brookBonded->getInverseMapStreamCount( J_Stream ),
                                               _brookBonded->getInverseMapStreamCount( L_Stream ) );
@@ -681,13 +694,85 @@ double BrookCalcStandardMMForceFieldKernel::executeEnergy( const Stream& atomPos
    BrookStreamImpl& positionStream                     = const_cast<BrookStreamImpl&>         (positionStreamC);
    BrookOpenMMFloat* positionsF                        = (BrookOpenMMFloat*) positionStream.getData();
 
+   OpenMMContext* context                              = getReferenceOpenMMContext( atomPositions.getSize() );
+
+   vector<Vec3> positions( positionStream.getSize() );
+   int index = 0;
+   for( int ii = 0; ii < positionStream.getSize(); ii++, index += 3 ){
+      positions[ii] = Vec3( positionsF[index], positionsF[index+1], positionsF[index+2] );
+   }
+   context->setPositions(positions);
+
+   State state     = context->getState( State::Energy );
+   double energy   = state.getPotentialEnergy();
+
+// (void) fprintf( stdout, "BrookCalcStandardMMForceFieldKernel::executeEnergy E=%.5e\n", energy ); fflush( stdout );
+
+   return energy;
+
+}
+
+/**
+ * Get reference Context
+ * 
+ * @param numberOfAtoms  number of atoms
+ *
+ * @return  OpenMMContext
+ *
+ */
+
+OpenMMContext* BrookCalcStandardMMForceFieldKernel::getReferenceOpenMMContext( int numberOfAtoms ){
+
+// ---------------------------------------------------------------------------------------
+
+   //static const std::string methodName      = "BrookCalcStandardMMForceFieldKernel::getReferenceOpenMMContext";
+
+// ---------------------------------------------------------------------------------------
+
+   if( _refOpenMMContext == NULL ){
+      
+      _referencePlatform       = new ReferencePlatform();
+      _refSystem               = new System( numberOfAtoms, 0 ); 
+      _refVerletIntegrator     = new VerletIntegrator( 0.01 );
+
+      _refSystem->addForce( _refForceField );
+
+      _refOpenMMContext        = new OpenMMContext( *_refSystem, *_refVerletIntegrator, *_referencePlatform );
+   }
+
+   return _refOpenMMContext;
+
+}
+
+/**
+ * Execute the kernel to calculate the energy.
+ * 
+ * @param positions   atom positions
+ *
+ * @return  potential energy due to the StandardMMForceField
+ * Currently always return 0.0 since energies not calculated on gpu
+ *
+ */
+
+double BrookCalcStandardMMForceFieldKernel::executeEnergyOld( const Stream& atomPositions ){
+
+// ---------------------------------------------------------------------------------------
+
+   //static const std::string methodName      = "BrookCalcStandardMMForceFieldKernel::executeEnergy";
+
+// ---------------------------------------------------------------------------------------
+
+   const BrookStreamImpl& positionStreamC              = dynamic_cast<const BrookStreamImpl&> (atomPositions.getImpl());
+   BrookStreamImpl& positionStream                     = const_cast<BrookStreamImpl&>         (positionStreamC);
+   BrookOpenMMFloat* positionsF                        = (BrookOpenMMFloat*) positionStream.getData();
+
    ReferencePlatform refPlatform;
    System system( atomPositions.getSize(), 0); 
    VerletIntegrator integrator( 0.01 );
 
    system.addForce( _refForceField );
 
-   OpenMMContext context(system, integrator, refPlatform);
+   OpenMMContext context( system, integrator, refPlatform );
 
    vector<Vec3> positions( positionStream.getSize() );
    int index = 0;

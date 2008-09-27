@@ -29,8 +29,10 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include <sstream>
+#include "OpenMMException.h"
 #include "BrookCalcKineticEnergyKernel.h"
-#include "BrookStreamInternal.h"
+#include "BrookStreamImpl.h"
 
 using namespace OpenMM;
 using namespace std;
@@ -52,6 +54,8 @@ BrookCalcKineticEnergyKernel::BrookCalcKineticEnergyKernel( std::string name, co
 
 // ---------------------------------------------------------------------------------------
 
+   _masses   = NULL;
+
 }
 
 /** 
@@ -67,19 +71,7 @@ BrookCalcKineticEnergyKernel::~BrookCalcKineticEnergyKernel( ){
 
 // ---------------------------------------------------------------------------------------
 
-/*
-    if (dynamics)
-        delete dynamics;
-    if (shake)
-        delete shake;
-    if (masses)
-        delete[] masses;
-    if (constraintIndices)
-        disposeIntArray(constraintIndices, numConstraints);
-    if (shakeParameters)
-        disposeRealArray(shakeParameters, numConstraints);
-*/
-
+   delete[] _masses;
 }
 
 /** 
@@ -97,7 +89,17 @@ void BrookCalcKineticEnergyKernel::initialize( const vector<double>& masses ){
 
 // ---------------------------------------------------------------------------------------
 
-    // this->masses = masses;
+   // masses
+
+   if( _masses ){
+      delete[] _masses;
+   }
+
+   _masses = new BrookOpenMMFloat[masses.size()];
+
+   for( unsigned int ii = 0; ii < masses.size(); ii++ ){
+      _masses[ii]  = static_cast<BrookOpenMMFloat> (masses[ii]);
+   }
 
    return;
 }
@@ -115,17 +117,35 @@ double BrookCalcKineticEnergyKernel::execute( const Stream& velocities ){
 
 // ---------------------------------------------------------------------------------------
 
-   // static const std::string methodName      = "BrookCalcKineticEnergyKernel::execute";
+   static const std::string methodName      = "BrookCalcKineticEnergyKernel::execute";
 
 // ---------------------------------------------------------------------------------------
 
+   const BrookStreamImpl& velocityStreamC = dynamic_cast<const BrookStreamImpl&> (velocities.getImpl());
+         BrookStreamImpl& velocityStream  = const_cast<BrookStreamImpl&> (velocityStreamC);
+   void* dataV                            = velocityStream.getData( );
+   float* velocity                        = (float*) dataV;
+
+   double energy                          = 0.0;
+   int index                              = 0;
+
+   if( _masses == NULL ){
+      std::stringstream message;
+      message << methodName << " masses not set.";
+      throw OpenMMException( message.str() );
+   }    
+
 /*
-    RealOpenMM** velData = const_cast<RealOpenMM**>(((BrookFloatStreamImpl&) velocities.getImpl()).getData()); // Brook code needs to be made const correct
-    double energy = 0.0;
-    for (size_t i = 0; i < masses.size(); ++i)
-        energy += masses[i]*(velData[i][0]*velData[i][0]+velData[i][1]*velData[i][1]+velData[i][2]*velData[i][2]);
-    return 0.5*energy;
+printf( "   BrookCalcKineticEnergyKernel Masses=%12.5e %12.5e", _masses[0], _masses[1] );
+printf( " [%12.5e %12.5e %12.5e]", velocity[index], velocity[index+1], velocity[index+2] );
+index += 3;
+printf( " [%12.5e %12.5e %12.5e]\n", velocity[index], velocity[index+1], velocity[index+2] );
+index = 0;
 */
 
-   return 0.0;
+   for ( int ii = 0; ii < velocityStream.getSize(); ii++, index += 3 ){
+      energy += _masses[ii]*(velocity[index]*velocity[index] + velocity[index + 1]*velocity[index + 1] + velocity[index + 2]*velocity[index + 2]);
+   }
+
+   return 0.5*energy;
 }

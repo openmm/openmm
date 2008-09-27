@@ -5,6 +5,19 @@
 * Copyright (C) Pande Group, Stanford, 2006
 *****************************************************************/
 
+kernel void kupdate_md_verlet( 
+		float dt,
+		float3 posq<>, 
+		float3 v<>, 
+		float3 f<>,
+		float invmass<>,
+		out float3 vnew<>, 
+		out float3 posqp<> ){
+
+	vnew   = v + f*invmass*dt;
+	posqp  = posq + vnew*dt;
+}
+
 kernel void kupdate_md1_berendsen( 
 		float dt,
 		float3 lg, //Berendsen coupling, assuming only one group

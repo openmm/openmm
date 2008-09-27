@@ -375,7 +375,7 @@ int BrookStochasticDynamics::update( Stream& positions, Stream& velocities,
 
    static const char* methodName = "\nBrookStochasticDynamics::update";
 
-   static const int PrintOn      = 0;
+   static const int PrintOn      = 1;
 
 // ---------------------------------------------------------------------------------------
 

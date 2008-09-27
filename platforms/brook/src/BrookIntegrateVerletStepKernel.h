@@ -1,5 +1,5 @@
-#ifndef OPENMM_BROOK_INTEGRATE_KERNELS_H_
-#define OPENMM_BROOK_INTEGRATE_KERNELS_H_
+#ifndef OPENMM_BROOK_INTEGRATE_VERLET_STEP_KERNEL_H_
+#define OPENMM_BROOK_INTEGRATE_VERLET_STEP_KERNEL_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -33,6 +33,8 @@
  * -------------------------------------------------------------------------- */
 
 #include "kernels.h"
+#include "BrookVerletDynamics.h"
+#include "BrookShakeAlgorithm.h"
 
 namespace OpenMM {
 
@@ -72,23 +74,24 @@ class BrookIntegrateVerletStepKernel : public IntegrateVerletStepKernel {
       void initialize( const std::vector<double>& masses, const std::vector<std::vector<int> >& constraintIndices,
                        const std::vector<double>& constraintLengths );
       /** 
-       * Execute the kernel.
+       * Execute kernel
        * 
-       * @param positions          a Stream of type Double3 containing the position (x, y, z) of each atom
-       * @param velocities         a Stream of type Double3 containing the velocity (x, y, z) of each atom
-       * @param forces             a Stream of type Double3 containing the force (x, y, z) on each atom
-       * @param stepSize           the integration step size
+       * @param positions          atom coordinates
+       * @param velocities         atom velocities
+       * @param forces             atom forces
+       * @param stepSize           integration step size
        *
        */
-
+      
       void execute( Stream& positions, Stream& velocities, const Stream& forces, double stepSize );
 
    protected:
 
-  
-  
+      BrookVerletDynamics*      _brookVerletDynamics;
+      BrookShakeAlgorithm*      _brookShakeAlgorithm;
+ 
 };
 
 } // namespace OpenMM
 
-#endif /* OPENMM_BROOK_INTEGRATE_KERNELS_H_ */
+#endif /* OPENMM_BROOK_INTEGRATE_VERLET_STEP_KERNEL_H_ */
