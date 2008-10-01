@@ -48,7 +48,7 @@ class BrookRandomNumberGenerator : public BrookCommon {
   
       // toggle between original rng & Kiss (Nvidia) code
 
-      static const int UseOriginalRng = 1;
+      static const int UseOriginalRng = 0;
 
       /** 
        * Constructor
@@ -204,6 +204,28 @@ class BrookRandomNumberGenerator : public BrookCommon {
        */
       
       int getRvStreamOffset( void ) const;
+      
+      /* 
+       * Get statistics
+       *
+       * @param statistics   array of size 7:
+       *                       0: mean
+       *                       1: std dev
+       *                       2: 3rd moment (not normalized)
+       *                       3: kurtosis
+       *                       4: count 
+       *                       5: min
+       *                       6: max
+       *
+       * @param streamIndex  stream index to analyze
+       *
+       * @return DefaultReturnValue
+       *
+       * */
+      
+      int getStatistics( double statistics[7], int streamIndex ) const;
+      
+      // ---------------------------------------------------------------------------------------
       
    private:
    

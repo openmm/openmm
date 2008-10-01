@@ -93,6 +93,11 @@ const std::string BrookCommon::ShakeInverseMapStream                            
 
 const std::string BrookCommon::ShuffleStream                                      = "ShuffleStream";
 
+// Random number streams
+
+const std::string BrookCommon::BrookVelocityCenterOfMassRemovalWorkStream         = "VelocityCenterOfMassRemovalWorkStream";
+const std::string BrookCommon::BrookVelocityCenterOfMassRemovalMassStream         = "VelocityCenterOfMassRemovalMassStream";
+
 /** 
  * Constructor
  * 

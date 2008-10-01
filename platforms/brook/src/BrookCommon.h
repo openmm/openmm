@@ -108,6 +108,11 @@ class BrookCommon {
 
       static const std::string ShuffleStream;
 
+      // BrookVelocityCenterOfMassRemoval streams
+
+      static const std::string BrookVelocityCenterOfMassRemovalWorkStream;
+      static const std::string BrookVelocityCenterOfMassRemovalMassStream;
+
       // ---------------------------------------------------------------------------------------
 
      /** 

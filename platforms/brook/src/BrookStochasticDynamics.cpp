@@ -91,6 +91,8 @@ BrookStochasticDynamics::BrookStochasticDynamics( ){
 
    _randomNumberSeed  = 1393;
 
+   _brookVelocityCenterOfMassRemoval = NULL;
+
    //_randomNumberSeed = randomNumberSeed ? randomNumberSeed : 1393;
    //SimTKOpenMMUtilities::setRandomNumberSeed( randomNumberSeed );
 }   
@@ -113,6 +115,8 @@ BrookStochasticDynamics::~BrookStochasticDynamics( ){
    }
 
    delete[] _inverseSqrtMasses;
+
+   delete _brookVelocityCenterOfMassRemoval;
 
 }
 
@@ -375,7 +379,7 @@ int BrookStochasticDynamics::update( Stream& positions, Stream& velocities,
 
    static const char* methodName = "\nBrookStochasticDynamics::update";
 
-   static const int PrintOn      = 1;
+   static const int PrintOn      = 0;
 
 // ---------------------------------------------------------------------------------------
 
@@ -386,10 +390,26 @@ int BrookStochasticDynamics::update( Stream& positions, Stream& velocities,
    const BrookStreamImpl& forceStreamC                 = dynamic_cast<const BrookStreamImpl&> (forces.getImpl());
    BrookStreamImpl& forceStream                        = const_cast<BrookStreamImpl&> (forceStreamC);
 
-   if( PrintOn && getLog() ){
-      (void) fprintf( getLog(), "%s shake=%d\n", methodName, brookShakeAlgorithm.getNumberOfConstraints() );
-      (void) fflush( getLog() );
+   if( (1 || PrintOn) && getLog() ){
 
+      static int showAux = 1;
+
+      if( PrintOn ){
+         (void) fprintf( getLog(), "%s shake=%d\n", methodName, brookShakeAlgorithm.getNumberOfConstraints() );
+         (void) fflush( getLog() );
+      }
+
+      // show update
+   
+      if( showAux ){
+         showAux = 0;
+         std::string contents = _brookVelocityCenterOfMassRemoval->getContentsString( );
+         (void) fprintf( getLog(), "%s VelocityCenterOfMassRemoval contents\n%s", methodName, contents.c_str() );
+         contents             = brookRandomNumberGenerator.getContentsString( );
+         (void) fprintf( getLog(), "%s RNG contents\n%s", methodName, contents.c_str() );
+         brookRandomNumberGenerator.getRandomNumberStream( brookRandomNumberGenerator.getRvStreamIndex() )->printToFile( getLog() ); 
+         (void) fflush( getLog() );
+      }
    }
 
    // first integration step
@@ -417,7 +437,7 @@ int BrookStochasticDynamics::update( Stream& positions, Stream& velocities,
    // diagnostics
 
    if( PrintOn ){
-      (void) fprintf( getLog(), "\nPost kupdate_sd1_fix1: atomStrW=%3d rngStrW=%3d rngOff=%3d"
+      (void) fprintf( getLog(), "\nPost kupdate_sd1_fix1: atomStrW=%3d rngStrW=%3d rngOff=%5d "
                                 "EM=%12.5e Sd1pc[]=[%12.5e %12.5e %12.5e]",
                                 getStochasticDynamicsAtomStreamWidth(),
                                 brookRandomNumberGenerator.getRandomNumberStreamWidth(),
@@ -455,6 +475,9 @@ int BrookStochasticDynamics::update( Stream& positions, Stream& velocities,
 
       (void) fprintf( getLog(), "\nXPrimeStream\n" );
       getXPrimeStream()->printToFile( getLog() ); 
+
+      (void) fprintf( getLog(), "\nRvStreamIndex=%d\n", brookRandomNumberGenerator.getRvStreamIndex() );
+      // brookRandomNumberGenerator.getRandomNumberStream( brookRandomNumberGenerator.getRvStreamIndex() )->printToFile( getLog() ); 
    }   
 
    // advance random number cursor
@@ -513,6 +536,43 @@ int BrookStochasticDynamics::update( Stream& positions, Stream& velocities,
          getXPrimeStream()->getBrookStream() 
          );
 
+   // diagnostics
+
+   if( PrintOn ){
+      (void) fprintf( getLog(), "\nPost kupdate_sd2_fix1: atomStrW=%3d rngStrW=%3d rngOff=%5d "
+                                "Sd2pc[]=[%12.5e %12.5e]",
+                                getStochasticDynamicsAtomStreamWidth(),
+                                brookRandomNumberGenerator.getRandomNumberStreamWidth(),
+                                brookRandomNumberGenerator.getRvStreamOffset(),
+                                derivedParameters[Sd2pc1], derivedParameters[Sd2pc2] );
+
+      (void) fprintf( getLog(), "\nSDPC2Stream\n" );
+      getSDPC2Stream()->printToFile( getLog() );
+
+      (void) fprintf( getLog(), "\nSD2XStream\n" );
+      getSD1VStream()->printToFile( getLog() );
+
+      BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamImpl();
+      (void) fprintf( getLog(), "\nPositionStream\n" );
+      brookStreamInternalPos->printToFile( getLog() );
+
+      (void) fprintf( getLog(), "\nVPrimeStream\n" );
+      getVPrimeStream()->printToFile( getLog() );
+
+      (void) fprintf( getLog(), "\nXPrimeStream\n" );
+      getXPrimeStream()->printToFile( getLog() ); 
+
+      (void) fprintf( getLog(), "\ngetSD2XStream\n" );
+      getSD2XStream()->printToFile( getLog() );
+
+      BrookStreamInternal* brookStreamInternalVel  = velocityStream.getBrookStreamImpl();
+      (void) fprintf( getLog(), "\nVelocityStream\n" );
+      brookStreamInternalVel->printToFile( getLog() );
+
+      (void) fprintf( getLog(), "\nRvStreamIndex=%d\n", brookRandomNumberGenerator.getRvStreamIndex() );
+//      brookRandomNumberGenerator.getRandomNumberStream( brookRandomNumberGenerator.getRvStreamIndex() )->printToFile( getLog() ); 
+   }   
+
    // advance random number cursor
 
    brookRandomNumberGenerator.advanceGVCursor( 2*getNumberOfAtoms() );
@@ -551,6 +611,8 @@ int BrookStochasticDynamics::update( Stream& positions, Stream& velocities,
       //kadd3( getXPrimeStream()->getBrookStream(), positionStream.getBrookStream() );
       ksetStr3( getXPrimeStream()->getBrookStream(), positionStream.getBrookStream() );
    }
+
+   _brookVelocityCenterOfMassRemoval->removeVelocityCenterOfMass( velocities );
 
    return DefaultReturnValue;
 
@@ -996,6 +1058,9 @@ int BrookStochasticDynamics::setup( const std::vector<double>& masses, const Pla
    _initializeStreams( platform );
 
    _setInverseSqrtMasses( masses );
+
+   _brookVelocityCenterOfMassRemoval = new BrookVelocityCenterOfMassRemoval();
+   _brookVelocityCenterOfMassRemoval->setup( masses, platform );
 
    return DefaultReturnValue;
 }

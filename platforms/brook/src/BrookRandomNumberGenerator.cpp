@@ -723,13 +723,6 @@ BrookFloatStreamInternal* BrookRandomNumberGenerator::getRandomNumberStream( int
       return NULL;
    }
 
-   if( index < 0 || index >= _numberOfRandomNumberStreams ){
-      std::stringstream message;
-      message << methodName << " index=" << index << " is out of range: [0," << _numberOfRandomNumberStreams;
-      throw OpenMMException( message.str() );
-      return NULL;
-   }
-
    if( _randomNumberGeneratorStreams == NULL ){
       std::stringstream message;
       message << methodName << " rv streams not initialized; input index=" << index;
@@ -888,6 +881,11 @@ int BrookRandomNumberGenerator::setup( int numberOfAtoms,  const Platform& platf
 
    _initializeStreamSizes( numberOfAtoms, platform );
    _initializeStreams( platform );
+   if( UseOriginalRng ){
+      _loadGVStreamsOriginal( );
+   } else {
+      _loadRandomNumberStreamsKiss( );
+   }
 
    return DefaultReturnValue;
 }
@@ -926,8 +924,8 @@ std::string BrookRandomNumberGenerator::getContentsString( int level ) const {
    (void) LOCAL_SPRINTF( value, "%s", (UseOriginalRng ? "Original Rng" : "Kiss Rng") );
    message << _getLine( tab, "Random number generator:", value ); 
 
-   (void) LOCAL_SPRINTF( value, "%d", getRandomNumberStreamWidth() );
-   message << _getLine( tab, "RandomNumber stream width:", value ); 
+   (void) LOCAL_SPRINTF( value, "%d", getRandomNumberStreamSize() );
+   message << _getLine( tab, "RandomNumber stream size:", value ); 
 
    (void) LOCAL_SPRINTF( value, "%d", getRandomNumberStreamWidth() );
    message << _getLine( tab, "RandomNumber stream width:", value ); 
@@ -957,6 +955,29 @@ std::string BrookRandomNumberGenerator::getContentsString( int level ) const {
 
    message << _getLine( tab, "Shuffle:",              (_getShuffleStream()      ? Set : NotSet) ); 
  
+   message << "\n   Statistics:\n";
+
+   double statistics[7];
+   getStatistics( statistics, -1 );
+
+   (void) LOCAL_SPRINTF( value, "%.5e", statistics[4] );
+   message << _getLine( tab, "Count:",  value ); 
+
+   (void) LOCAL_SPRINTF( value, "%.5e", statistics[0] );
+   message << _getLine( tab, "Average:",  value ); 
+
+   (void) LOCAL_SPRINTF( value, "%.5e", statistics[1] );
+   message << _getLine( tab, "StdDev:",  value ); 
+
+   (void) LOCAL_SPRINTF( value, "%.5e", statistics[3] );
+   message << _getLine( tab, "Kurtosis:",  value ); 
+
+   (void) LOCAL_SPRINTF( value, "%.5e", statistics[5] );
+   message << _getLine( tab, "Min:",  value ); 
+
+   (void) LOCAL_SPRINTF( value, "%.6e", statistics[6] );
+   message << _getLine( tab, "Max:",  value ); 
+
    for( int ii = 0; ii < LastStreamIndex; ii++ ){
       message << std::endl;
       if( _auxiliaryStreams[ii] ){
@@ -967,4 +988,76 @@ std::string BrookRandomNumberGenerator::getContentsString( int level ) const {
 #undef LOCAL_SPRINTF
 
    return message.str();
+}
+
+/* 
+ * Get statistics
+ *
+ * @param statistics   array of size 5:
+ *                       0: mean
+ *                       1: std dev
+ *                       2: 3rd moment (not normalized)
+ *                       3: kurtosis
+ *                       4: count 
+ *                       5: min
+ *                       6: max
+ *
+ * @param streamIndex  stream index to analyze
+ *
+ * @return DefaultReturnValue
+ *
+ * */
+
+int BrookRandomNumberGenerator::getStatistics( double statistics[7], int streamIndex ) const {
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName      = "BrookRandomNumberGenerator::";
+
+// ---------------------------------------------------------------------------------------
+
+   statistics[0] = 0.0;
+   statistics[1] = 0.0;
+   statistics[2] = 0.0;
+   statistics[3] = 0.0;
+   statistics[4] = 0.0;
+   statistics[5] =  1.0e+99;
+   statistics[6] = -1.0e+99;
+
+   for( int ii = 0; ii < _numberOfRandomNumberStreams; ii++ ){
+      if( streamIndex < 0 || ii == streamIndex ){
+         void* dataArrayV       = _randomNumberGeneratorStreams[ii]->getData( 1 );
+         int streamSize         = _randomNumberGeneratorStreams[ii]->getStreamSize();
+         int index              = 0;
+         const float* dataArray = (float*) dataArrayV;
+         for( int ii = 0; ii < streamSize; ii++, index++ ){
+
+             statistics[0] += dataArray[index];
+
+             double rv2     = dataArray[index]*dataArray[index];
+             statistics[1] += rv2;
+             statistics[2] += rv2*dataArray[index];
+             statistics[3] += rv2*rv2;
+
+             if( statistics[5] > dataArray[index] ){
+                statistics[5] = dataArray[index];
+             }
+             if( statistics[6] < dataArray[index] ){
+                statistics[6] = dataArray[index];
+             }
+         } 
+         statistics[4] += (double) index;
+      }   
+   }   
+
+   if( statistics[4] > 0.0 ){ 
+      statistics[0] /= statistics[4];
+      statistics[1]  = statistics[1] - statistics[4]*statistics[0]*statistics[0];
+      if( statistics[4] > 1.0 ){
+         statistics[1] = sqrt( statistics[1]/( statistics[4] - 1.0 ) );
+      }
+      statistics[3]  = (statistics[3]/(statistics[4]*statistics[1]*statistics[1]) ) - 3.0;
+   }
+
+   return DefaultReturnValue;
 }
