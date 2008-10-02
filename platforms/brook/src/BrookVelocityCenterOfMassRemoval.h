@@ -90,19 +90,27 @@ class BrookVelocityCenterOfMassRemoval : public BrookCommon {
       int getComAtomStreamSize( void ) const; 
 
       /** 
-       * Update
+       * Remove velocity center-of-mass
        * 
-       * @param  positions                   atom positions
        * @param  velocities                  atom velocities
-       * @param  forces                      atom forces
-       * @param  brookShakeAlgorithm         BrookShakeAlgorithm reference
-       * @param  brookRandomNumberGenerator  BrookRandomNumberGenerator reference
        *
        * @return  DefaultReturnValue
        *
        */
       
       int removeVelocityCenterOfMass( Stream& velocities );
+
+      /** 
+       * Get velocity center-of-mass
+       * 
+       * @param  velocities                  atom velocities
+       * @param  velocityCom                 output velocity com
+       *
+       * @return  DefaultReturnValue
+       *
+       */
+      
+      int getVelocityCenterOfMass( Stream& velocities, BrookOpenMMFloat velocityCom[3] );
 
       /* 
        * Setup of  parameters

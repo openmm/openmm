@@ -193,13 +193,13 @@ kshakeh_fix1(
 		float invmH,    //inverse mass of hydrogen
 		float omega,    //parameter from gromacs, possibly unused
 		float4 atoms<>, //heavy0, h1, h2, h3
-		float4 posq[][], //positions before update
-		float4 posqp[][], //changes to positions
+		float3 posq[][], //positions before update
+		float3 posqp[][], //changes to positions
 		float4 params<>, // (1/m0, mu/2, blensq, 0.0f )
-		out float4 cposq0<>, //constrained position for heavy atom
-		out float4 cposq1<>, //ditto for h1
-		out float4 cposq2<>, //ditto for h2
-		out float4 cposq3<> //ditto for h3
+		out float3 cposq0<>, //constrained position for heavy atom
+		out float3 cposq1<>, //ditto for h1
+		out float3 cposq2<>, //ditto for h2
+		out float3 cposq3<> //ditto for h3
 		) {
 	float2 ai, aj1, aj2, aj3; //2d indices, can be precalc.
 	float i; //iteration count
@@ -246,16 +246,15 @@ kshakeh_fix1(
 		mask3 = 0.0f;
 	}
 
-
 	cposq0 = posq[ai];
 	cposq1 = posq[aj1];
 	cposq2 = posq[aj2];
 	cposq3 = posq[aj3];
 	
-	xi  = cposq0.xyz;
-	xj1 = cposq1.xyz;
-	xj2 = cposq2.xyz;
-	xj3 = cposq3.xyz;
+	xi  = cposq0;
+	xj1 = cposq1;
+	xj2 = cposq2;
+	xj3 = cposq3;
 	
 	rij1 = xi - xj1;
 	rij2 = xi - xj2;
@@ -270,17 +269,17 @@ kshakeh_fix1(
 	ld3 = params.z - rij3sq;
 
 /*
-	xpi  = posqp[ai].xyz;
-	xpj1 = posqp[aj1].xyz;
-	xpj2 = posqp[aj2].xyz;
-	xpj3 = posqp[aj3].xyz;
+	xpi  = posqp[ai];
+	xpj1 = posqp[aj1];
+	xpj2 = posqp[aj2];
+	xpj3 = posqp[aj3];
 */
 
 
-	xpi  = posqp[ai].xyz   - xi;
-	xpj1 = posqp[aj1].xyz  - xj1;
-	xpj2 = posqp[aj2].xyz  - xj2;
-	xpj3 = posqp[aj3].xyz  - xj3;
+	xpi  = posqp[ai]   - xi;
+	xpj1 = posqp[aj1]  - xj1;
+	xpj2 = posqp[aj2]  - xj2;
+	xpj3 = posqp[aj3]  - xj3;
 
 
 // XXX
@@ -342,10 +341,10 @@ kshakeh_fix1(
 	}
 
 	//Output modified delta's
-	cposq0.xyz = xpi;
-	cposq1.xyz = xpj1;
-	cposq2.xyz = xpj2;
-	cposq3.xyz = xpj3;
+	cposq0 = xpi;
+	cposq1 = xpj1;
+	cposq2 = xpj2;
+	cposq3 = xpj3;
 
 }
 
@@ -356,13 +355,13 @@ kshakeh_fix2(
 		float invmH,    //inverse mass of hydrogen
 		float omega,    //parameter from gromacs, possibly unused
 		float4 atoms<>, //heavy0, h1, h2, h3
-		float4 posq[][], //positions before update
-		float4 posqp[][], //changes to positions
+		float3 posq[][], //positions before update
+		float3 posqp[][], //changes to positions
 		float4 params<>, // (1/m0, mu/2, blensq, 0.0f )
-		out float4 cposq0<>, //constrained position for heavy atom
-		out float4 cposq1<>, //ditto for h1
-		out float4 cposq2<>, //ditto for h2
-		out float4 cposq3<> //ditto for h3
+		out float3 cposq0<>, //constrained position for heavy atom
+		out float3 cposq1<>, //ditto for h1
+		out float3 cposq2<>, //ditto for h2
+		out float3 cposq3<> //ditto for h3
 		) {
 	float2 ai, aj1, aj2, aj3; //2d indices, can be precalc.
 	float i; //iteration count
@@ -415,10 +414,10 @@ kshakeh_fix2(
 	cposq2 = posq[aj2];
 	cposq3 = posq[aj3];
 	
-	xi  = cposq0.xyz;
-	xj1 = cposq1.xyz;
-	xj2 = cposq2.xyz;
-	xj3 = cposq3.xyz;
+	xi  = cposq0;
+	xj1 = cposq1;
+	xj2 = cposq2;
+	xj3 = cposq3;
 	
 	rij1 = xi - xj1;
 	rij2 = xi - xj2;
@@ -432,17 +431,17 @@ kshakeh_fix2(
 	ld2 = params.z - rij2sq;
 	ld3 = params.z - rij3sq;
 
-	xpi  = posqp[ai].xyz;
-	xpj1 = posqp[aj1].xyz;
-	xpj2 = posqp[aj2].xyz;
-	xpj3 = posqp[aj3].xyz;
+	xpi  = posqp[ai];
+	xpj1 = posqp[aj1];
+	xpj2 = posqp[aj2];
+	xpj3 = posqp[aj3];
 
 
 /*
-	xpi  = posqp[ai].xyz   - xi;
-	xpj1 = posqp[aj1].xyz  - xj1;
-	xpj2 = posqp[aj2].xyz  - xj2;
-	xpj3 = posqp[aj3].xyz  - xj3;
+	xpi  = posqp[ai]   - xi;
+	xpj1 = posqp[aj1]  - xj1;
+	xpj2 = posqp[aj2]  - xj2;
+	xpj3 = posqp[aj3]  - xj3;
 
 */
 
@@ -505,10 +504,10 @@ kshakeh_fix2(
 	}
 
 	//Output modified delta's
-	cposq0.xyz = xpi;
-	cposq1.xyz = xpj1;
-	cposq2.xyz = xpj2;
-	cposq3.xyz = xpj3;
+	cposq0 = xpi;
+	cposq1 = xpj1;
+	cposq2 = xpj2;
+	cposq3 = xpj3;
 
 }
 
@@ -518,12 +517,12 @@ kshakeh_fix2(
 kernel void kshakeh_update1_fix1Old( 
 		float strwidth, //width of cposq streams
 		float2 invmap<>,    //shakeh inverse map
-		float4 posq<>,     //constrained deltas
-		float4 cposq0[][], //constrained delta for heavy atom
-		float4 cposq1[][], //ditto for h1
-		float4 cposq2[][], //ditto for h2
-		float4 cposq3[][], //ditto for h3
-		out float4 oposq<> //updated deltas
+		float3 posq<>,     //constrained deltas
+		float3 cposq0[][], //constrained delta for heavy atom
+		float3 cposq1[][], //ditto for h1
+		float3 cposq2[][], //ditto for h2
+		float3 cposq3[][], //ditto for h3
+		out float3 oposq<> //updated deltas
 		){
 	float2 atom;
 	
@@ -546,13 +545,13 @@ kernel void kshakeh_update1_fix1Old(
 kernel void kshakeh_update2_fix1( 
 		float strwidth, //width of cposq streams
 		float2 invmap<>,    //shakeh inverse map
-		float4 posq<>,     //old positions
-		float4 posqp<>,    //deltas from sd2
-		float4 cposq0[][], //constrained delta for heavy atom
-		float4 cposq1[][], //ditto for h1
-		float4 cposq2[][], //ditto for h2
-		float4 cposq3[][], //ditto for h3
-		out float4 oposq<> //updated deltas
+		float3 posq<>,     //old positions
+		float3 posqp<>,    //deltas from sd2
+		float3 cposq0[][], //constrained delta for heavy atom
+		float3 cposq1[][], //ditto for h1
+		float3 cposq2[][], //ditto for h2
+		float3 cposq3[][], //ditto for h3
+		out float3 oposq<> //updated deltas
 		){
 	float2 atom;
 	
@@ -561,8 +560,7 @@ kernel void kshakeh_update2_fix1(
 	atom.x = invmap.x - atom.y * strwidth;
 	
 	if ( invmap.y < 0 ){
-		oposq.w = posq.w;
-		oposq.xyz = posqp.xyz - posq.xyz;
+		oposq = posqp - posq;
 	} else if ( invmap.y < 0.5f ) 
 		oposq = cposq0[ atom ];
 	else if ( invmap.y < 1.5f)
@@ -572,21 +570,21 @@ kernel void kshakeh_update2_fix1(
 	else if ( invmap.y < 3.5f )
 		oposq = cposq3[ atom ];
 
-	oposq.xyz += posq.xyz;
+	oposq += posq;
 }
 
 kernel void kshakeh_update1_fix1( 
 		float strwidth, //width of cposq streams
       float sdFactor,
 		float2 invmap<>,    //shakeh inverse map
-		float4 posq<>,     //old positions
-		float4 posqp<>,    //deltas from sd2
+		float3 posq<>,     //old positions
+		float3 posqp<>,    //deltas from sd2
 		float3 vp<>,    //deltas from sd2
-		float4 cposq0[][], //constrained delta for heavy atom
-		float4 cposq1[][], //ditto for h1
-		float4 cposq2[][], //ditto for h2
-		float4 cposq3[][], //ditto for h3
-		out float4 oposq<> //updated deltas
+		float3 cposq0[][], //constrained delta for heavy atom
+		float3 cposq1[][], //ditto for h1
+		float3 cposq2[][], //ditto for h2
+		float3 cposq3[][], //ditto for h3
+		out float3 oposq<> //updated deltas
 		){
 	float2 atom;
 	
@@ -598,12 +596,12 @@ kernel void kshakeh_update1_fix1(
 	if ( invmap.y < 0 ){
 		oposq = posqp;
 	} else if ( invmap.y < 0.5f ) 
-		oposq.xyz += cposq0[ atom ].xyz;
+		oposq += cposq0[ atom ];
 	else if ( invmap.y < 1.5f )
-		oposq.xyz += cposq1[ atom ].xyz;
+		oposq += cposq1[ atom ];
 	else if ( invmap.y < 2.5f )
-		oposq.xyz += cposq2[ atom ].xyz;
+		oposq += cposq2[ atom ];
 	else if ( invmap.y < 3.5f )
-		oposq.xyz += cposq3[ atom ].xyz;
+		oposq += cposq3[ atom ];
 
 }

@@ -91,8 +91,6 @@ BrookStochasticDynamics::BrookStochasticDynamics( ){
 
    _randomNumberSeed  = 1393;
 
-   _brookVelocityCenterOfMassRemoval = NULL;
-
    //_randomNumberSeed = randomNumberSeed ? randomNumberSeed : 1393;
    //SimTKOpenMMUtilities::setRandomNumberSeed( randomNumberSeed );
 }   
@@ -115,8 +113,6 @@ BrookStochasticDynamics::~BrookStochasticDynamics( ){
    }
 
    delete[] _inverseSqrtMasses;
-
-   delete _brookVelocityCenterOfMassRemoval;
 
 }
 
@@ -344,7 +340,7 @@ int BrookStochasticDynamics::updateParameters( double temperature, double fricti
 
    if( showUpdate && getLog() && (showUpdate++ < maxShowUpdate) ){
       std::string contents = getContentsString( );
-      (void) fprintf( getLog(), "%s contents %s", methodName, contents.c_str() );
+      (void) fprintf( getLog(), "%s contents\n%s", methodName, contents.c_str() );
       (void) fflush( getLog() );
 
    }
@@ -403,11 +399,14 @@ int BrookStochasticDynamics::update( Stream& positions, Stream& velocities,
    
       if( showAux ){
          showAux = 0;
-         std::string contents = _brookVelocityCenterOfMassRemoval->getContentsString( );
-         (void) fprintf( getLog(), "%s VelocityCenterOfMassRemoval contents\n%s", methodName, contents.c_str() );
-         contents             = brookRandomNumberGenerator.getContentsString( );
+
+         std::string contents             = brookRandomNumberGenerator.getContentsString( );
          (void) fprintf( getLog(), "%s RNG contents\n%s", methodName, contents.c_str() );
-         brookRandomNumberGenerator.getRandomNumberStream( brookRandomNumberGenerator.getRvStreamIndex() )->printToFile( getLog() ); 
+         // brookRandomNumberGenerator.getRandomNumberStream( brookRandomNumberGenerator.getRvStreamIndex() )->printToFile( getLog() ); 
+
+         contents             = brookShakeAlgorithm.getContentsString( );
+         (void) fprintf( getLog(), "%s Shake contents\n%s", methodName, contents.c_str() );
+
          (void) fflush( getLog() );
       }
    }
@@ -611,8 +610,6 @@ int BrookStochasticDynamics::update( Stream& positions, Stream& velocities,
       //kadd3( getXPrimeStream()->getBrookStream(), positionStream.getBrookStream() );
       ksetStr3( getXPrimeStream()->getBrookStream(), positionStream.getBrookStream() );
    }
-
-   _brookVelocityCenterOfMassRemoval->removeVelocityCenterOfMass( velocities );
 
    return DefaultReturnValue;
 
@@ -1058,9 +1055,6 @@ int BrookStochasticDynamics::setup( const std::vector<double>& masses, const Pla
    _initializeStreams( platform );
 
    _setInverseSqrtMasses( masses );
-
-   _brookVelocityCenterOfMassRemoval = new BrookVelocityCenterOfMassRemoval();
-   _brookVelocityCenterOfMassRemoval->setup( masses, platform );
 
    return DefaultReturnValue;
 }

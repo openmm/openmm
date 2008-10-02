@@ -331,19 +331,19 @@ int BrookShakeAlgorithm::_initializeStreams( const Platform& platform ){
 
     _shakeStreams[ShakeXCons0Stream]         = new BrookFloatStreamInternal( BrookCommon::ShakeXCons0Stream,
                                                                              shakeConstraintStreamSize, shakeConstraintStreamWidth,
-                                                                             BrookStreamInternal::Float4, dangleValue );
+                                                                             BrookStreamInternal::Float3, dangleValue );
 
     _shakeStreams[ShakeXCons1Stream]         = new BrookFloatStreamInternal( BrookCommon::ShakeXCons1Stream,
                                                                              shakeConstraintStreamSize, shakeConstraintStreamWidth,
-                                                                             BrookStreamInternal::Float4, dangleValue );
+                                                                             BrookStreamInternal::Float3, dangleValue );
 
     _shakeStreams[ShakeXCons2Stream]         = new BrookFloatStreamInternal( BrookCommon::ShakeXCons2Stream,
                                                                              shakeConstraintStreamSize, shakeConstraintStreamWidth,
-                                                                             BrookStreamInternal::Float4, dangleValue );
+                                                                             BrookStreamInternal::Float3, dangleValue );
 
     _shakeStreams[ShakeXCons3Stream]         = new BrookFloatStreamInternal( BrookCommon::ShakeXCons3Stream,
                                                                              shakeConstraintStreamSize, shakeConstraintStreamWidth,
-                                                                             BrookStreamInternal::Float4, dangleValue );
+                                                                             BrookStreamInternal::Float3, dangleValue );
 
     _shakeStreams[ShakeInverseMapStream]     = new BrookFloatStreamInternal( BrookCommon::ShakeInverseMapStream,
                                                                              shakeAtomStreamSize, shakeAtomStreamWidth,
@@ -402,6 +402,7 @@ int BrookShakeAlgorithm::_setShakeStreams( const std::vector<double>& masses, co
    std::vector<double>::const_iterator distanceIterator         = constraintLengths.begin();
 
    int constraintIndex                = 0;
+   _numberOfConstraints               = 0;
    while( atomIterator != constraintIndices.end() ){
 
       std::vector<int> atomVector = *atomIterator;
@@ -434,6 +435,21 @@ int BrookShakeAlgorithm::_setShakeStreams( const std::vector<double>& masses, co
          }
       }
 
+      // skip negative indices
+
+      if( atomIndex1 < 0 || atomIndex2 < 0 ){
+         atomIterator++;
+         distanceIterator++;
+         continue;
+      }
+
+      if( atomIndex1 >= (int) masses.size() || atomIndex2 >= (int) masses.size() ){
+         std::stringstream message;
+         message << methodName << " constraint indices=[" << atomIndex1 << ", " << atomIndex2 << "] greater than mass array size=" << masses.size();
+         throw OpenMMException( message.str() );
+         return ErrorReturnValue;
+      }   
+
       // insure heavy atom is first
 
       if( masses[atomIndex1] < masses[atomIndex2] ){
@@ -460,6 +476,7 @@ int BrookShakeAlgorithm::_setShakeStreams( const std::vector<double>& masses, co
       atomIterator++;
       distanceIterator++;
       constraintIndex += 4;
+      _numberOfConstraints++;
    }
 
    // write entries to board

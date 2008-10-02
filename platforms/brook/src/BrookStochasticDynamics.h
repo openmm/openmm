@@ -38,7 +38,6 @@
 #include "BrookFloatStreamInternal.h"
 #include "BrookShakeAlgorithm.h"
 #include "BrookRandomNumberGenerator.h"
-#include "BrookVelocityCenterOfMassRemoval.h"
 #include "BrookPlatform.h"
 #include "BrookCommon.h"
 
@@ -323,10 +322,6 @@ class BrookStochasticDynamics : public BrookCommon {
       // inverse sqrt masses
 
       BrookOpenMMFloat* _inverseSqrtMasses;
-
-      // remove com
-
-      BrookVelocityCenterOfMassRemoval* _brookVelocityCenterOfMassRemoval;
 
       // internal streams
 

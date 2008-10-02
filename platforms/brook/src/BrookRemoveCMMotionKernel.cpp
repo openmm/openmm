@@ -52,6 +52,8 @@ BrookRemoveCMMotionKernel::BrookRemoveCMMotionKernel( std::string name, const Pl
 
 // ---------------------------------------------------------------------------------------
 
+   _brookVelocityCenterOfMassRemoval = NULL;
+
 }
 
 /** 
@@ -67,6 +69,7 @@ BrookRemoveCMMotionKernel::~BrookRemoveCMMotionKernel( ){
 
 // ---------------------------------------------------------------------------------------
 
+   delete _brookVelocityCenterOfMassRemoval;
 }
 
 /** 
@@ -84,11 +87,8 @@ void BrookRemoveCMMotionKernel::initialize( const vector<double>& masses ){
 
 // ---------------------------------------------------------------------------------------
 
-/*
-    this->masses.resize(masses.size());
-    for (size_t i = 0; i < masses.size(); ++i)
-        this->masses[i] = masses[i];
-*/
+   _brookVelocityCenterOfMassRemoval = new BrookVelocityCenterOfMassRemoval();
+   _brookVelocityCenterOfMassRemoval->setup( masses, getPlatform() );
 
    return;
 
@@ -109,28 +109,7 @@ void BrookRemoveCMMotionKernel::execute( Stream& velocities ){
 
 // ---------------------------------------------------------------------------------------
 
-/*
-    RealOpenMM** velData = ((BrookFloatStreamImpl&) velocities.getImpl()).getData();
-    
-    // Calculate the center of mass momentum.
-    
-    RealOpenMM momentum[] = {0.0, 0.0, 0.0};
-    for (size_t i = 0; i < masses.size(); ++i) {
-        momentum[0] += static_cast<RealOpenMM>( masses[i]*velData[i][0] );
-        momentum[1] += static_cast<RealOpenMM>( masses[i]*velData[i][1] );
-        momentum[2] += static_cast<RealOpenMM>( masses[i]*velData[i][2] );
-    }
-    
-    // Adjust the atom velocities.
-    
-    momentum[0] /= static_cast<RealOpenMM>( masses.size() );
-    momentum[1] /= static_cast<RealOpenMM>( masses.size() );
-    momentum[2] /= static_cast<RealOpenMM>( masses.size() );
-    for (size_t i = 0; i < masses.size(); ++i) {
-        velData[i][0] -= static_cast<RealOpenMM>( momentum[0]/masses[i] );
-        velData[i][1] -= static_cast<RealOpenMM>( momentum[1]/masses[i] );
-        velData[i][2] -= static_cast<RealOpenMM>( momentum[2]/masses[i] );
-    }
-*/
+   _brookVelocityCenterOfMassRemoval->removeVelocityCenterOfMass( velocities );
+
    return;
 }

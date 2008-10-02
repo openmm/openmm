@@ -144,7 +144,7 @@ void BrookIntegrateLangevinStepKernel::execute( Stream& positions, Stream& veloc
    differences[1] = friction    - (double) _brookStochasticDynamics->getFriction();
    differences[2] = stepSize    - (double) _brookStochasticDynamics->getStepSize();
    if( fabs( differences[0] ) > epsilon || fabs( differences[1] ) > epsilon || fabs( differences[2] ) > epsilon ){
-printf( "%s calling updateParameters\n", methodName.c_str() );
+//printf( "%s calling updateParameters\n", methodName.c_str() );
       _brookStochasticDynamics->updateParameters( temperature, friction, stepSize );
    } else {
 //printf( "%s NOT calling updateParameters\n", methodName.c_str() );

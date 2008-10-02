@@ -35,6 +35,7 @@
 #include "BrookIntegrateVerletStepKernel.h"
 #include "BrookCalcKineticEnergyKernel.h"
 #include "BrookCalcGBSAOBCForceFieldKernel.h"
+#include "BrookRemoveCMMotionKernel.h"
 
 using namespace OpenMM;
 
@@ -70,7 +71,7 @@ KernelImpl* BrookKernelFactory::createKernelImpl( std::string name, const Platfo
 
       // return new BrookIntegrateBrownianStepKernel( name, platform );
 
-   //  Andersen thermostat
+   // Andersen thermostat
 
 	} else if( name == ApplyAndersenThermostatKernel::Name() ){
 
@@ -81,6 +82,12 @@ KernelImpl* BrookKernelFactory::createKernelImpl( std::string name, const Platfo
 	} else if( name == IntegrateLangevinStepKernel::Name() ){
 
       return new BrookIntegrateLangevinStepKernel( name, platform );
+
+   // Remove com
+
+	} else if( name == RemoveCMMotionKernel::Name() ){
+
+      return new BrookRemoveCMMotionKernel( name, platform );
 
    // KE calculator
 

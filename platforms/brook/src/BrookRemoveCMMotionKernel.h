@@ -33,6 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "kernels.h"
+#include "BrookVelocityCenterOfMassRemoval.h"
 
 namespace OpenMM {
 
@@ -80,6 +81,7 @@ class BrookRemoveCMMotionKernel : public RemoveCMMotionKernel {
 
    private:
 
+      BrookVelocityCenterOfMassRemoval* _brookVelocityCenterOfMassRemoval;
 };
 
 } // namespace OpenMM
