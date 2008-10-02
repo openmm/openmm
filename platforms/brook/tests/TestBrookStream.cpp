@@ -46,6 +46,7 @@
 #include "BrookNonBonded.h"
 
 #include "OpenMMContext.h"
+#include "CMMotionRemover.h"
 #include "StandardMMForceField.h"
 #include "GBSAOBCForceField.h"
 #include "System.h"
@@ -2176,15 +2177,16 @@ void testLangevinTemperature() {
    // ReferencePlatform platform;
 
     const double temp = 100.0;
-    //ReferencePlatform platform;
     System system(numberOfAtoms, 0);
-    LangevinIntegrator integrator(temp, 2.0, 0.01);
+    LangevinIntegrator integrator(temp, 2.0, 0.001);
     StandardMMForceField* forceField = new StandardMMForceField(numberOfAtoms, 0, 0, 0, 0);
     for (int i = 0; i < numberOfAtoms; ++i){
         system.setAtomMass(i, 2.0);
         forceField->setAtomParameters(i, (i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
     }
     system.addForce(forceField);
+    CMMotionRemover* remover = new CMMotionRemover();
+    system.addForce(remover);
     OpenMMContext context(system, integrator, platform);
     vector<Vec3> positions(numberOfAtoms);
     for (int i = 0; i < numberOfAtoms; ++i)
@@ -2193,26 +2195,43 @@ void testLangevinTemperature() {
     
     // Let it equilibrate.
     
-    integrator.step(10);
-exit(0);
-    //integrator.step(10000);
+    integrator.step(10000);
     
     // Now run it for a while and see if the temperature is correct.
     
     double ke = 0.0;
     for (int i = 0; i < 1000; ++i) {
-        State state  = context.getState(State::Energy);
+        State state  = context.getState(State::Positions | State::Velocities | State::Energy);
         ke          += state.getKineticEnergy();
         if( debug ){
-           (void) fprintf( log, "%s %d KE=%12.5e ttl=%12.5e\n", methodName.c_str(), i, state.getKineticEnergy(), ke ); fflush( log );
+           (void) fprintf( log, "%s %d KE=%12.5e ttl=%12.5e\n",
+                           methodName.c_str(), i, state.getKineticEnergy(), ke );
+/*
+           vector<Vec3> positions  = state.getPositions(); 
+           vector<Vec3> velocities = state.getVelocities(); 
+           for( int ii = 0; ii < numberOfAtoms; ii++ ){
+              (void) fprintf( log, "   %d q[%12.5e %12.5e %12.5e] v[%12.5e %12.5e %12.5e]\n", ii,
+                                    positions[ii][0],  positions[ii][1],  positions[ii][2], 
+                                   velocities[ii][0], velocities[ii][1], velocities[ii][2] );
+           }
+*/
+           (void)fflush( log );
         }
         integrator.step(1);
     }
     ke /= 1000;
     double expected = 0.5*numberOfAtoms*3*BOLTZ*temp;
-    ASSERT_EQUAL_TOL(expected, ke, 3*expected/std::sqrt(1000.0));
+    double tol      = 3*expected/std::sqrt(1000.0);
 
-   (void) fprintf( log, "%s ok\n", methodName.c_str() ); fflush( log );
+    (void) fprintf( log, "%s expected=%12.5e found=%12.5e tol=%12.5e ok\n", methodName.c_str(), expected, ke, tol ); fflush( log );
+
+/*
+/tests/AssertionUtilities.h
+#define ASSERT_EQUAL_TOL(expected, found, tol){ 
+   double _scale_ = std::fabs(expected) > 1.0 ? std::fabs(expected) : 1.0;
+   if (std::fabs((expected)-(found))/_scale_ > (t    ol)) {std::stringstream details; details << "Expected "<<(expected)<<", found "<<(found); throwException(__FILE__, __LINE__, details.str());}};
+    ASSERT_EQUAL_TOL(expected, ke, tol );
+*/
 
 }
 
@@ -2221,11 +2240,11 @@ void testLangevinConstraints() {
 // ---------------------------------------------------------------------------------------
 
    static const std::string methodName      = "LangevinConstraints";
-   static const int debug                   = 1;
+   static const int debug                   = 0;
    FILE* log                                = stdout;
    
    int numberOfAtoms                        = 2;
-   RealOpenMM mass                          = 2.0; 
+   RealOpenMM mass                          = 1.0; 
 
 // ---------------------------------------------------------------------------------------
 
@@ -2238,15 +2257,19 @@ void testLangevinConstraints() {
    const double temp = 100.0;
    //ReferencePlatform platform;
    System system(numAtoms, numAtoms-1);
-   LangevinIntegrator integrator(temp, 2.0, 0.01);
+   LangevinIntegrator integrator(temp, 2.0, 0.001);
    StandardMMForceField* forceField = new StandardMMForceField(numAtoms, 0, 0, 0, 0);
    for (int i = 0; i < numAtoms; ++i) {
-       system.setAtomMass(i, 10.0);
+       system.setAtomMass(i, mass);
        forceField->setAtomParameters(i, (i%2 == 0 ? 0.2 : -0.2), 0.5, 5.0);
    }
    for (int i = 0; i < numAtoms-1; ++i)
        system.setConstraintParameters(i, i, i+1, 1.0);
    system.addForce(forceField);
+
+   CMMotionRemover* remover = new CMMotionRemover();
+   system.addForce(remover);
+
    OpenMMContext context(system, integrator, platform);
    vector<Vec3> positions(numAtoms);
    vector<Vec3> velocities(numAtoms);
@@ -2266,6 +2289,9 @@ void testLangevinConstraints() {
            Vec3 p1 = state.getPositions()[j];
            Vec3 p2 = state.getPositions()[j+1];
            double dist = std::sqrt((p1[0]-p2[0])*(p1[0]-p2[0])+(p1[1]-p2[1])*(p1[1]-p2[1])+(p1[2]-p2[2])*(p1[2]-p2[2]));
+           if( debug ){
+              (void) fprintf( log, "%s %d %d dist=%12.5e %12.5e ok\n", methodName.c_str(), i, j, dist, fabs(dist-1.0) ); fflush( log );
+           }
            ASSERT_EQUAL_TOL(1.0, dist, 2e-4);
        }
        integrator.step(1);
@@ -2298,6 +2324,9 @@ void testVerletSingleBond( void ){
     StandardMMForceField* forceField = new StandardMMForceField(2, 1, 0, 0, 0); 
     forceField->setBondParameters(0, 0, 1, 1.5, 1); 
     system.addForce(forceField);
+
+    CMMotionRemover* remover = new CMMotionRemover();
+    system.addForce(remover);
 
     OpenMMContext context(system, integrator, platform);
     vector<Vec3> positions(2);
@@ -2369,6 +2398,82 @@ void testVerletSingleBond( void ){
    (void) fflush( log );
 }
 
+void testVerletConstraints() {
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName      = "testVerletConstraints";
+   static const int debug                   = 1;
+   FILE* log                                = stdout;
+   
+   const int numAtoms                       = 8;
+   RealOpenMM mass                          = 2.0; 
+
+// ---------------------------------------------------------------------------------------
+
+   //BrookPlatform platform( 32, "cal", log );
+
+   ReferencePlatform platform;
+   System system(numAtoms, numAtoms/2);
+   VerletIntegrator integrator(0.0005);
+   StandardMMForceField* forceField = new StandardMMForceField(numAtoms, 0, 0, 0, 0); 
+   for (int i = 0; i < numAtoms; ++i) {
+       system.setAtomMass(i, 1.0);
+       forceField->setAtomParameters(i, (i%2 == 0 ? 0.2 : -0.2), 0.5, 5.0);
+   }   
+
+   int index = 0;
+   for (int i = 0; i < numAtoms-1; i += 2){
+//(void) fprintf( log, "%s %d %d %d\n", methodName.c_str(), index, i, i+1 ); fflush( log );
+       //system.setConstraintParameters(i, i, i+1, 1.0);
+       system.setConstraintParameters( index++, i, i+1, 1.0);
+   }
+   system.addForce(forceField);
+   CMMotionRemover* remover = new CMMotionRemover();
+   system.addForce(remover);
+
+   OpenMMContext context(system, integrator, platform);
+   vector<Vec3> positions(numAtoms);
+   vector<Vec3> velocities(numAtoms);
+   init_gen_rand(0);
+   double scale = 0.01;
+   for (int i = 0; i < numAtoms; ++i) {
+       positions[i] = Vec3(i/2, (i+1)/2, 0); 
+       velocities[i] = Vec3( scale*(genrand_real2()-0.5), scale*(genrand_real2()-0.5), scale*(genrand_real2()-0.5) );
+   }   
+   context.setPositions(positions);
+   context.setVelocities(velocities);
+   
+   // Simulate it and see whether the constraints remain satisfied.
+   
+   double initialEnergy = 0.0;
+   for (int i = 0; i < 1000; ++i) {
+       State state = context.getState(State::Positions | State::Energy);
+       for (int j = 0; j < numAtoms; j += 2) {
+           Vec3 p1 = state.getPositions()[j];
+           Vec3 p2 = state.getPositions()[j+1];
+           double dist = std::sqrt((p1[0]-p2[0])*(p1[0]-p2[0])+(p1[1]-p2[1])*(p1[1]-p2[1])+(p1[2]-p2[2])*(p1[2]-p2[2]));
+           if( debug ){
+              (void) fprintf( log, "%s %d %d dist=%12.5e diff=%12.5e\n", methodName.c_str(), i, j, dist, fabs( dist - 1.0) );
+              (void) fflush( log );
+           }
+
+           ASSERT_EQUAL_TOL(1.0, dist, 2e-4);
+       }
+       double energy = state.getKineticEnergy()+state.getPotentialEnergy();
+       if (i == 1){
+           initialEnergy = energy;
+       } else if (i > 0){
+           if( debug ){
+              (void) fprintf( log, "%s %d E=%12.5e Ecalc=%12.5e\n", methodName.c_str(), i, initialEnergy, energy );
+           }
+           ASSERT_EQUAL_TOL(initialEnergy, energy, 0.01);
+       }
+       integrator.step(1);
+   }   
+   (void) fprintf( log, "%s ok\n", methodName.c_str() );
+   (void) fflush( log );
+}
 
 int main( ){
 
@@ -2393,15 +2498,18 @@ int main( ){
       testBrookLJ();
       testBrookExclusionsAnd14();
       testLangevinSingleBond();
-*/
       testLangevinTemperature();
+      testLangevinConstraints();
 
-/*
       testObcForce();
       testObcSingleAtom();
       testObcEConsistentForce();
+
       testVerletSingleBond();
+      testLangevinConstraints();
 */
+      //testVerletSingleBond();
+      testVerletConstraints();
 
 
     }  catch( const exception& e ){
