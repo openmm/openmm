@@ -1,5 +1,5 @@
-#ifndef OPENMM_BROOK_STOCHASTIC_DYNAMCIS_H_
-#define OPENMM_BROOK_STOCHASTIC_DYNAMCIS_H_
+#ifndef OPENMM_BROOK_LANGEVIN_DYNAMICS_H_
+#define OPENMM_BROOK_LANGEVIN_DYNAMICS_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -49,7 +49,7 @@ namespace OpenMM {
  *
  */
 
-class BrookStochasticDynamics : public BrookCommon {
+class BrookLangevinDynamics : public BrookCommon {
 
    public:
   
@@ -58,14 +58,14 @@ class BrookStochasticDynamics : public BrookCommon {
        * 
        */
       
-      BrookStochasticDynamics(  );
+      BrookLangevinDynamics(  );
   
       /** 
        * Destructor
        * 
        */
       
-      ~BrookStochasticDynamics();
+      ~BrookLangevinDynamics();
   
       /**
        * Get tau
@@ -110,28 +110,28 @@ class BrookStochasticDynamics : public BrookCommon {
       const BrookOpenMMFloat* getDerivedParameters( void ) const;
       
       /**
-       * Get StochasticDynamics atom stream width
+       * Get LangevinDynamics atom stream width
        *
        * @return atom stream width
        */
 
-      int getStochasticDynamicsAtomStreamWidth( void ) const; 
+      int getLangevinDynamicsAtomStreamWidth( void ) const; 
 
       /**
-       * Get StochasticDynamics atom stream height
+       * Get LangevinDynamics atom stream height
        *
        * @return atom stream height
        */
 
-      int getStochasticDynamicsAtomStreamHeight( void ) const;
+      int getLangevinDynamicsAtomStreamHeight( void ) const;
 
       /**
-       * Get StochasticDynamics atom stream size
+       * Get LangevinDynamics atom stream size
        * 
        * @return atom stream size
        */
 
-      int getStochasticDynamicsAtomStreamSize( void ) const; 
+      int getLangevinDynamicsAtomStreamSize( void ) const; 
 
       /** 
        * Update parameters
@@ -163,7 +163,7 @@ class BrookStochasticDynamics : public BrookCommon {
                   const Stream& forces, BrookShakeAlgorithm& brookShakeAlgorithm,
                   BrookRandomNumberGenerator& brookRandomNumberGenerator );
       /** 
-       * Get array of StochasticDynamics streams 
+       * Get array of LangevinDynamics streams 
        *
        * @return  array ofstreams
        *
@@ -172,7 +172,7 @@ class BrookStochasticDynamics : public BrookCommon {
       BrookFloatStreamInternal** getStreams( void );
       
       /* 
-       * Setup of StochasticDynamics parameters
+       * Setup of LangevinDynamics parameters
        *
        * @param masses                atom masses
        * @param platform              Brook platform
@@ -266,7 +266,7 @@ class BrookStochasticDynamics : public BrookCommon {
 
       // streams indices
 
-      enum BrookStochasticDynamicsStreams { 
+      enum BrookLangevinDynamicsStreams { 
               SDPC1Stream,
               SDPC2Stream,
               SD2XStream,
@@ -298,7 +298,7 @@ class BrookStochasticDynamics : public BrookCommon {
        *
        */
 
-      //std::string _getDerivedParametersString( BrookStochasticDynamics::DerivedParameters ) const;
+      //std::string _getDerivedParametersString( BrookLangevinDynamics::DerivedParameters ) const;
       std::string _getDerivedParametersString( int id ) const;
 
       /** 
@@ -419,4 +419,4 @@ class BrookStochasticDynamics : public BrookCommon {
 
 } // namespace OpenMM
 
-#endif /* OPENMM_BROOK_STOCHASTIC_DYNAMCIS_H_ */
+#endif /* OPENMM_BROOK_LANGEVIN_DYNAMICS_H_ */

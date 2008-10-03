@@ -29,14 +29,52 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-/* pre-tests, known to be right */
+/*
+ * Brownian dynamics integration
+ *
+ * @param xstrwidth      atom stream width
+ * @param gstrwidth      Gaussian stream width
+ * @param goffset        Gaussian offset into stream
+ * @param forceScale     force scale factor
+ * @param noiseAmplitude noise amplitude
+ * @param fgauss         random numbers
+ * @param pos            atom positions
+ * @param force          force
+ * @param posp           delta positions
+ *
+ **/
+ 
+void kintegrate_bd( const float xstrwidth, const float gstrwidth, const float goffset,
+                    const float forceScale, const float noiseAmplitude, 
+                    ::brook::stream fgauss, ::brook::stream posq, 
+                    ::brook::stream force, ::brook::stream posp );
 
-kernel void pre_test0( float input<>, out float output<> )
-{
-  output = input;
-}
+/*
+ * Brownian dynamics update
+ *
+ * @param velocityScale  velocity scale
+ * @param posp           atom positions
+ * @param posIn          atom positions
+ * @param velocity       velocity
+ * @param posp           delta positions
+ *
+ **/
 
-kernel void pre_test1( float input<>, out float output<> )
-{
-  output = ( input * input ) + input;
-}
+void kupdate_bd( const float velocityScale, ::brook::stream posp, ::brook::stream posIn, 
+                 ::brook::stream velocity, ::brook::stream posOut );
+
+
+/*
+ * Brownian dynamics update
+ *
+ * @param velocityScale  velocity scale
+ * @param posp           atom positions
+ * @param velocity       velocity
+ * @param posp           delta positions
+ *
+ **/
+
+void kupdate_bd2( const float velocityScale, ::brook::stream posp,
+                  ::brook::stream posIn, ::brook::stream velocity, ::brook::stream posOut );
+
+

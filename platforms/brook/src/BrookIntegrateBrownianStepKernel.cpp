@@ -29,30 +29,30 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "BrookIntegrateLangevinStepKernel.h"
+#include "BrookIntegrateBrownianStepKernel.h"
 #include "BrookStreamInternal.h"
 
 using namespace OpenMM;
 using namespace std;
 
-      /** 
-       * BrookIntegrateLangevinStepKernel constructor
-       * 
-       * @param name        name of the stream to create
-       * @param platform    platform
-       *
-       */
+/** 
+ * BrookIntegrateBrownianStepKernel constructor
+ * 
+ * @param name        name of the stream to create
+ * @param platform    platform
+ *
+ */
 
-BrookIntegrateLangevinStepKernel::BrookIntegrateLangevinStepKernel( std::string name, const Platform& platform ) :
-                                  IntegrateLangevinStepKernel( name, platform ){
-
-// ---------------------------------------------------------------------------------------
-
-   // static const std::string methodName      = "BrookIntegrateLangevinStepKernel::BrookIntegrateLangevinStepKernel";
+BrookIntegrateBrownianStepKernel::BrookIntegrateBrownianStepKernel( std::string name, const Platform& platform ) :
+                                  IntegrateBrownianStepKernel( name, platform ){
 
 // ---------------------------------------------------------------------------------------
 
-   _brookLangevinDynamics        = NULL;
+   // static const std::string methodName      = "BrookIntegrateBrownianStepKernel::BrookIntegrateBrownianStepKernel";
+
+// ---------------------------------------------------------------------------------------
+
+   _brookBrownianDynamics          = NULL;
    _brookShakeAlgorithm            = NULL;
    _brookRandomNumberGenerator     = NULL;
 
@@ -63,15 +63,15 @@ BrookIntegrateLangevinStepKernel::BrookIntegrateLangevinStepKernel( std::string 
  * 
  */
   
-BrookIntegrateLangevinStepKernel::~BrookIntegrateLangevinStepKernel( ){
+BrookIntegrateBrownianStepKernel::~BrookIntegrateBrownianStepKernel( ){
 
 // ---------------------------------------------------------------------------------------
 
-   // static const std::string methodName      = "BrookIntegrateLangevinStepKernel::~BrookIntegrateLangevinStepKernel";
+   // static const std::string methodName      = "BrookIntegrateBrownianStepKernel::~BrookIntegrateBrownianStepKernel";
 
 // ---------------------------------------------------------------------------------------
    
-   delete _brookLangevinDynamics;
+   delete _brookBrownianDynamics;
    delete _brookShakeAlgorithm;
    delete _brookRandomNumberGenerator;
 
@@ -86,18 +86,18 @@ BrookIntegrateLangevinStepKernel::~BrookIntegrateLangevinStepKernel( ){
  *
  */
 
-void BrookIntegrateLangevinStepKernel::initialize( const vector<double>& masses,
+void BrookIntegrateBrownianStepKernel::initialize( const vector<double>& masses,
                                                    const vector<vector<int> >& constraintIndices,
                                                    const vector<double>& constraintLengths ){
 
 // ---------------------------------------------------------------------------------------
 
-   // static const std::string methodName      = "BrookIntegrateLangevinStepKernel::initialize";
+   // static const std::string methodName      = "BrookIntegrateBrownianStepKernel::initialize";
 
 // ---------------------------------------------------------------------------------------
    
-   _brookLangevinDynamics      = new BrookLangevinDynamics( );
-   _brookLangevinDynamics->setup( masses, getPlatform() );
+   _brookBrownianDynamics        = new BrookBrownianDynamics( );
+   _brookBrownianDynamics->setup( masses, getPlatform() );
 
    _brookShakeAlgorithm          = new BrookShakeAlgorithm( );
    _brookShakeAlgorithm->setup( masses, constraintIndices, constraintLengths, getPlatform() );
@@ -121,18 +121,18 @@ void BrookIntegrateLangevinStepKernel::initialize( const vector<double>& masses,
  *
  */
 
-void BrookIntegrateLangevinStepKernel::execute( Stream& positions, Stream& velocities,
+void BrookIntegrateBrownianStepKernel::execute( Stream& positions, Stream& velocities,
                                                 const Stream& forces, double temperature,
                                                 double friction, double stepSize ){
 
 // ---------------------------------------------------------------------------------------
 
-   double epsilon = 1.0e-04;
-   static const std::string methodName      = "BrookIntegrateLangevinStepKernel::execute";
+   double epsilon                           = 1.0e-04;
+   static const std::string methodName      = "BrookIntegrateBrownianStepKernel::execute";
 
 // ---------------------------------------------------------------------------------------
    
-   // first time through initialize _brookLangevinDynamics
+   // first time through initialize _brookBrownianDynamics
 
    // for each subsequent call, check if parameters need to be updated due to a change
    // in T, gamma, or the step size
@@ -140,16 +140,16 @@ void BrookIntegrateLangevinStepKernel::execute( Stream& positions, Stream& veloc
    // take step
 
    double differences[3];
-   differences[0] = temperature - (double) _brookLangevinDynamics->getTemperature();
-   differences[1] = friction    - (double) _brookLangevinDynamics->getFriction();
-   differences[2] = stepSize    - (double) _brookLangevinDynamics->getStepSize();
+   differences[0] = temperature - (double) _brookBrownianDynamics->getTemperature();
+   differences[1] = friction    - (double) _brookBrownianDynamics->getFriction();
+   differences[2] = stepSize    - (double) _brookBrownianDynamics->getStepSize();
    if( fabs( differences[0] ) > epsilon || fabs( differences[1] ) > epsilon || fabs( differences[2] ) > epsilon ){
 //printf( "%s calling updateParameters\n", methodName.c_str() );
-      _brookLangevinDynamics->updateParameters( temperature, friction, stepSize );
+      _brookBrownianDynamics->updateParameters( temperature, friction, stepSize );
    } else {
 //printf( "%s NOT calling updateParameters\n", methodName.c_str() );
-}
+   }
 
-   _brookLangevinDynamics->update( positions, velocities, forces, *_brookShakeAlgorithm, *_brookRandomNumberGenerator );
+   _brookBrownianDynamics->update( positions, velocities, forces, *_brookShakeAlgorithm, *_brookRandomNumberGenerator );
 
 }

@@ -30,7 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 #include <sstream>
-#include "BrookStochasticDynamics.h"
+#include "BrookLangevinDynamics.h"
 #include "BrookPlatform.h"
 #include "OpenMMException.h"
 #include "BrookStreamImpl.h"
@@ -51,11 +51,11 @@ using namespace std;
  * 
  */
 
-BrookStochasticDynamics::BrookStochasticDynamics( ){
+BrookLangevinDynamics::BrookLangevinDynamics( ){
 
 // ---------------------------------------------------------------------------------------
 
-   //static const std::string methodName      = "BrookStochasticDynamics::BrookStochasticDynamics";
+   //static const std::string methodName      = "BrookLangevinDynamics::BrookLangevinDynamics";
 
    BrookOpenMMFloat zero                    = (BrookOpenMMFloat)  0.0;
    BrookOpenMMFloat one                     = (BrookOpenMMFloat)  1.0;
@@ -100,11 +100,11 @@ BrookStochasticDynamics::BrookStochasticDynamics( ){
  * 
  */
 
-BrookStochasticDynamics::~BrookStochasticDynamics( ){
+BrookLangevinDynamics::~BrookLangevinDynamics( ){
 
 // ---------------------------------------------------------------------------------------
 
-   //static const std::string methodName      = "BrookStochasticDynamics::~BrookStochasticDynamics";
+   //static const std::string methodName      = "BrookLangevinDynamics::~BrookLangevinDynamics";
 
 // ---------------------------------------------------------------------------------------
 
@@ -123,7 +123,7 @@ BrookStochasticDynamics::~BrookStochasticDynamics( ){
  *
  */
 
-BrookOpenMMFloat BrookStochasticDynamics::getTau( void ) const {
+BrookOpenMMFloat BrookLangevinDynamics::getTau( void ) const {
    return _tau;
 }
 
@@ -134,7 +134,7 @@ BrookOpenMMFloat BrookStochasticDynamics::getTau( void ) const {
  *
  */
 
-BrookOpenMMFloat BrookStochasticDynamics::getFriction( void ) const {
+BrookOpenMMFloat BrookLangevinDynamics::getFriction( void ) const {
    static const BrookOpenMMFloat zero = (BrookOpenMMFloat) 0.0; 
    static const BrookOpenMMFloat one  = (BrookOpenMMFloat) 1.0; 
    return ( (_tau == zero) ? zero : (one/_tau) );
@@ -147,7 +147,7 @@ BrookOpenMMFloat BrookStochasticDynamics::getFriction( void ) const {
  *
  */
 
-BrookOpenMMFloat BrookStochasticDynamics::getTemperature( void ) const {
+BrookOpenMMFloat BrookLangevinDynamics::getTemperature( void ) const {
    return _temperature;
 }
 
@@ -158,7 +158,7 @@ BrookOpenMMFloat BrookStochasticDynamics::getTemperature( void ) const {
  *
  */
 
-BrookOpenMMFloat BrookStochasticDynamics::getStepSize( void ) const {
+BrookOpenMMFloat BrookLangevinDynamics::getStepSize( void ) const {
    return _stepSize;
 }
 
@@ -171,7 +171,7 @@ BrookOpenMMFloat BrookStochasticDynamics::getStepSize( void ) const {
  *
  */
 
-int BrookStochasticDynamics::_setTau( BrookOpenMMFloat tau ){
+int BrookLangevinDynamics::_setTau( BrookOpenMMFloat tau ){
    _tau = tau;
    return DefaultReturnValue;
 }
@@ -185,7 +185,7 @@ int BrookStochasticDynamics::_setTau( BrookOpenMMFloat tau ){
  *
  */
 
-int BrookStochasticDynamics::_setFriction( BrookOpenMMFloat friction ){
+int BrookLangevinDynamics::_setFriction( BrookOpenMMFloat friction ){
    _tau   = (BrookOpenMMFloat) ( (friction != 0.0) ? 1.0/friction : 0.0);
    return DefaultReturnValue;
 }
@@ -199,7 +199,7 @@ int BrookStochasticDynamics::_setFriction( BrookOpenMMFloat friction ){
  *
  */
 
-int BrookStochasticDynamics::_setTemperature( BrookOpenMMFloat temperature ){
+int BrookLangevinDynamics::_setTemperature( BrookOpenMMFloat temperature ){
    _temperature = temperature;
    return DefaultReturnValue;
 }
@@ -213,7 +213,7 @@ int BrookStochasticDynamics::_setTemperature( BrookOpenMMFloat temperature ){
  *
  */
 
-int BrookStochasticDynamics::_setStepSize( BrookOpenMMFloat stepSize ){
+int BrookLangevinDynamics::_setStepSize( BrookOpenMMFloat stepSize ){
    _stepSize = stepSize;
    return DefaultReturnValue;
 }
@@ -227,11 +227,11 @@ int BrookStochasticDynamics::_setStepSize( BrookOpenMMFloat stepSize ){
  *
  */
 
-int BrookStochasticDynamics::_updateDerivedParameters( void ){
+int BrookLangevinDynamics::_updateDerivedParameters( void ){
 
    // ---------------------------------------------------------------------------------------
 
-   static const char* methodName = "\nBrookStochasticDynamics::_updateDerivedParameters";
+   static const char* methodName = "\nBrookLangevinDynamics::_updateDerivedParameters";
 
    static const BrookOpenMMFloat zero       =  0.0;
    static const BrookOpenMMFloat one        =  1.0;
@@ -318,13 +318,13 @@ int BrookStochasticDynamics::_updateDerivedParameters( void ){
  *
  */
 
-int BrookStochasticDynamics::updateParameters( double temperature, double friction, double stepSize ){
+int BrookLangevinDynamics::updateParameters( double temperature, double friction, double stepSize ){
 
    // ---------------------------------------------------------------------------------------
 
    static int showUpdate         = 1;
    static int maxShowUpdate      = 3;
-   static const char* methodName = "\nBrookStochasticDynamics::updateParameters";
+   static const char* methodName = "\nBrookLangevinDynamics::updateParameters";
 
    // ---------------------------------------------------------------------------------------
 
@@ -362,7 +362,7 @@ int BrookStochasticDynamics::updateParameters( double temperature, double fricti
  *
  */
 
-int BrookStochasticDynamics::update( Stream& positions, Stream& velocities,
+int BrookLangevinDynamics::update( Stream& positions, Stream& velocities,
                                      const Stream& forces,
                                      BrookShakeAlgorithm& brookShakeAlgorithm,
                                      BrookRandomNumberGenerator& brookRandomNumberGenerator ){
@@ -373,7 +373,7 @@ int BrookStochasticDynamics::update( Stream& positions, Stream& velocities,
 
    float omega                   = 1.0f;
 
-   static const char* methodName = "\nBrookStochasticDynamics::update";
+   static const char* methodName = "\nBrookLangevinDynamics::update";
 
    static const int PrintOn      = 0;
 
@@ -414,7 +414,7 @@ int BrookStochasticDynamics::update( Stream& positions, Stream& velocities,
    // first integration step
 
    kupdate_sd1_fix1(
-         (float) getStochasticDynamicsAtomStreamWidth(),
+         (float) getLangevinDynamicsAtomStreamWidth(),
          (float) brookRandomNumberGenerator.getRandomNumberStreamWidth(),
          (float) brookRandomNumberGenerator.getRvStreamOffset(),
          derivedParameters[EM],
@@ -438,7 +438,7 @@ int BrookStochasticDynamics::update( Stream& positions, Stream& velocities,
    if( PrintOn ){
       (void) fprintf( getLog(), "\nPost kupdate_sd1_fix1: atomStrW=%3d rngStrW=%3d rngOff=%5d "
                                 "EM=%12.5e Sd1pc[]=[%12.5e %12.5e %12.5e]",
-                                getStochasticDynamicsAtomStreamWidth(),
+                                getLangevinDynamicsAtomStreamWidth(),
                                 brookRandomNumberGenerator.getRandomNumberStreamWidth(),
                                 brookRandomNumberGenerator.getRvStreamOffset(),
                                 derivedParameters[EM], derivedParameters[Sd1pc1], derivedParameters[Sd1pc2], derivedParameters[Sd1pc3] );
@@ -488,7 +488,7 @@ int BrookStochasticDynamics::update( Stream& positions, Stream& velocities,
    if( brookShakeAlgorithm.getNumberOfConstraints() > 0 ){
       kshakeh_fix1( 
                     10.0f,
-                    (float) getStochasticDynamicsAtomStreamWidth(),
+                    (float) getLangevinDynamicsAtomStreamWidth(),
                     brookShakeAlgorithm.getInverseHydrogenMass(),
                     omega, 
                     brookShakeAlgorithm.getShakeAtomIndicesStream()->getBrookStream(),
@@ -503,7 +503,7 @@ int BrookStochasticDynamics::update( Stream& positions, Stream& velocities,
       // first Shake gather
    
       kshakeh_update1_fix1(
-                    (float) getStochasticDynamicsAtomStreamWidth(),
+                    (float) getLangevinDynamicsAtomStreamWidth(),
                     derivedParameters[Sd2pc1],
                     brookShakeAlgorithm.getShakeInverseMapStream()->getBrookStream(),
                     positionStream.getBrookStream(),
@@ -519,7 +519,7 @@ int BrookStochasticDynamics::update( Stream& positions, Stream& velocities,
    // second integration step
 
    kupdate_sd2_fix1(
-         (float) getStochasticDynamicsAtomStreamWidth(),
+         (float) getLangevinDynamicsAtomStreamWidth(),
          (float) brookRandomNumberGenerator.getRandomNumberStreamWidth(),
          (float) brookRandomNumberGenerator.getRvStreamOffset(),
          derivedParameters[Sd2pc1],
@@ -540,7 +540,7 @@ int BrookStochasticDynamics::update( Stream& positions, Stream& velocities,
    if( PrintOn ){
       (void) fprintf( getLog(), "\nPost kupdate_sd2_fix1: atomStrW=%3d rngStrW=%3d rngOff=%5d "
                                 "Sd2pc[]=[%12.5e %12.5e]",
-                                getStochasticDynamicsAtomStreamWidth(),
+                                getLangevinDynamicsAtomStreamWidth(),
                                 brookRandomNumberGenerator.getRandomNumberStreamWidth(),
                                 brookRandomNumberGenerator.getRvStreamOffset(),
                                 derivedParameters[Sd2pc1], derivedParameters[Sd2pc2] );
@@ -581,7 +581,7 @@ int BrookStochasticDynamics::update( Stream& positions, Stream& velocities,
    if( brookShakeAlgorithm.getNumberOfConstraints() > 0 ){
       kshakeh_fix1( 
                     10.0f,
-                    (float) getStochasticDynamicsAtomStreamWidth(),
+                    (float) getLangevinDynamicsAtomStreamWidth(),
                     brookShakeAlgorithm.getInverseHydrogenMass(),
                     omega, 
                     brookShakeAlgorithm.getShakeAtomIndicesStream()->getBrookStream(),
@@ -596,7 +596,7 @@ int BrookStochasticDynamics::update( Stream& positions, Stream& velocities,
       // second Shake gather
    
       kshakeh_update2_fix1( 
-                    (float) getStochasticDynamicsAtomStreamWidth(),
+                    (float) getLangevinDynamicsAtomStreamWidth(),
                     brookShakeAlgorithm.getShakeInverseMapStream()->getBrookStream(),
                     positionStream.getBrookStream(),
                     getXPrimeStream()->getBrookStream(),
@@ -623,11 +623,11 @@ int BrookStochasticDynamics::update( Stream& positions, Stream& velocities,
  *
  */
    
-const BrookOpenMMFloat* BrookStochasticDynamics::getDerivedParameters( void ) const {
+const BrookOpenMMFloat* BrookLangevinDynamics::getDerivedParameters( void ) const {
 
    // ---------------------------------------------------------------------------------------
 
-   // static const char* methodName  = "\nBrookStochasticDynamics::getDerivedParameters";
+   // static const char* methodName  = "\nBrookLangevinDynamics::getDerivedParameters";
 
    // ---------------------------------------------------------------------------------------
 
@@ -641,7 +641,7 @@ const BrookOpenMMFloat* BrookStochasticDynamics::getDerivedParameters( void ) co
  *
  */
 
-int BrookStochasticDynamics::getStochasticDynamicsAtomStreamSize( void ) const {
+int BrookLangevinDynamics::getLangevinDynamicsAtomStreamSize( void ) const {
    return _sdAtomStreamSize;
 }
 
@@ -652,7 +652,7 @@ int BrookStochasticDynamics::getStochasticDynamicsAtomStreamSize( void ) const {
  *
  */
 
-int BrookStochasticDynamics::getStochasticDynamicsAtomStreamWidth( void ) const {
+int BrookLangevinDynamics::getLangevinDynamicsAtomStreamWidth( void ) const {
    return _sdAtomStreamWidth;
 }
 
@@ -662,7 +662,7 @@ int BrookStochasticDynamics::getStochasticDynamicsAtomStreamWidth( void ) const 
  * @return atom stream height
  */
 
-int BrookStochasticDynamics::getStochasticDynamicsAtomStreamHeight( void ) const {
+int BrookLangevinDynamics::getLangevinDynamicsAtomStreamHeight( void ) const {
    return _sdAtomStreamHeight;
 }
 
@@ -673,7 +673,7 @@ int BrookStochasticDynamics::getStochasticDynamicsAtomStreamHeight( void ) const
  *
  */
 
-BrookFloatStreamInternal* BrookStochasticDynamics::getSDPC1Stream( void ) const {
+BrookFloatStreamInternal* BrookLangevinDynamics::getSDPC1Stream( void ) const {
    return _sdStreams[SDPC1Stream];
 }
 
@@ -684,7 +684,7 @@ BrookFloatStreamInternal* BrookStochasticDynamics::getSDPC1Stream( void ) const 
  *
  */
 
-BrookFloatStreamInternal* BrookStochasticDynamics::getSDPC2Stream( void ) const {
+BrookFloatStreamInternal* BrookLangevinDynamics::getSDPC2Stream( void ) const {
    return _sdStreams[SDPC2Stream];
 }
 
@@ -695,7 +695,7 @@ BrookFloatStreamInternal* BrookStochasticDynamics::getSDPC2Stream( void ) const 
  *
  */
 
-BrookFloatStreamInternal* BrookStochasticDynamics::getSD2XStream( void ) const {
+BrookFloatStreamInternal* BrookLangevinDynamics::getSD2XStream( void ) const {
    return _sdStreams[SD2XStream];
 }
 
@@ -706,7 +706,7 @@ BrookFloatStreamInternal* BrookStochasticDynamics::getSD2XStream( void ) const {
  *
  */
 
-BrookFloatStreamInternal* BrookStochasticDynamics::getSD1VStream( void ) const {
+BrookFloatStreamInternal* BrookLangevinDynamics::getSD1VStream( void ) const {
    return _sdStreams[SD1VStream];
 }
 
@@ -717,7 +717,7 @@ BrookFloatStreamInternal* BrookStochasticDynamics::getSD1VStream( void ) const {
  *
  */
 
-BrookFloatStreamInternal* BrookStochasticDynamics::getVPrimeStream( void ) const {
+BrookFloatStreamInternal* BrookLangevinDynamics::getVPrimeStream( void ) const {
    return _sdStreams[VPrimeStream];
 }
 
@@ -728,7 +728,7 @@ BrookFloatStreamInternal* BrookStochasticDynamics::getVPrimeStream( void ) const
  *
  */
 
-BrookFloatStreamInternal* BrookStochasticDynamics::getXPrimeStream( void ) const {
+BrookFloatStreamInternal* BrookLangevinDynamics::getXPrimeStream( void ) const {
    return _sdStreams[XPrimeStream];
 }
 
@@ -739,7 +739,7 @@ BrookFloatStreamInternal* BrookStochasticDynamics::getXPrimeStream( void ) const
  *
  */
 
-BrookFloatStreamInternal* BrookStochasticDynamics::getInverseMassStream( void ) const {
+BrookFloatStreamInternal* BrookLangevinDynamics::getInverseMassStream( void ) const {
    return _sdStreams[InverseMassStream];
 }
 
@@ -753,11 +753,11 @@ BrookFloatStreamInternal* BrookStochasticDynamics::getInverseMassStream( void ) 
  *
  */
 
-int BrookStochasticDynamics::_initializeStreamSizes( int numberOfAtoms, const Platform& platform ){
+int BrookLangevinDynamics::_initializeStreamSizes( int numberOfAtoms, const Platform& platform ){
 
 // ---------------------------------------------------------------------------------------
 
-   //static const std::string methodName      = "BrookStochasticDynamics::_initializeStreamSizes";
+   //static const std::string methodName      = "BrookLangevinDynamics::_initializeStreamSizes";
 
 // ---------------------------------------------------------------------------------------
 
@@ -778,12 +778,12 @@ int BrookStochasticDynamics::_initializeStreamSizes( int numberOfAtoms, const Pl
  *
  */
 
-//std::string BrookStochasticDynamics::_getDerivedParametersString( BrookStochasticDynamics::DerivedParameters  derivedParametersIndex ) const {
-std::string BrookStochasticDynamics::_getDerivedParametersString( int derivedParametersIndex ) const {
+//std::string BrookLangevinDynamics::_getDerivedParametersString( BrookLangevinDynamics::DerivedParameters  derivedParametersIndex ) const {
+std::string BrookLangevinDynamics::_getDerivedParametersString( int derivedParametersIndex ) const {
 
 // ---------------------------------------------------------------------------------------
 
-   //static const std::string methodName      = "BrookStochasticDynamics::_getDerivedParametersString";
+   //static const std::string methodName      = "BrookLangevinDynamics::_getDerivedParametersString";
 
 // ---------------------------------------------------------------------------------------
 
@@ -876,18 +876,18 @@ std::string BrookStochasticDynamics::_getDerivedParametersString( int derivedPar
  *
  */
 
-int BrookStochasticDynamics::_initializeStreams( const Platform& platform ){
+int BrookLangevinDynamics::_initializeStreams( const Platform& platform ){
 
 // ---------------------------------------------------------------------------------------
 
-   //static const std::string methodName      = "BrookStochasticDynamics::_initializeStreams";
+   //static const std::string methodName      = "BrookLangevinDynamics::_initializeStreams";
 
    BrookOpenMMFloat dangleValue            = (BrookOpenMMFloat) 0.0;
 
 // ---------------------------------------------------------------------------------------
 
-   int sdAtomStreamSize             = getStochasticDynamicsAtomStreamSize();
-   int sdAtomStreamWidth            = getStochasticDynamicsAtomStreamWidth();
+   int sdAtomStreamSize             = getLangevinDynamicsAtomStreamSize();
+   int sdAtomStreamWidth            = getLangevinDynamicsAtomStreamWidth();
 
     _sdStreams[SDPC1Stream]         = new BrookFloatStreamInternal( BrookCommon::SDPC1Stream,
                                                                     sdAtomStreamSize, sdAtomStreamWidth,
@@ -927,15 +927,15 @@ int BrookStochasticDynamics::_initializeStreams( const Platform& platform ){
  *
  */
 
-int BrookStochasticDynamics::_updateSdStreams( void ){
+int BrookLangevinDynamics::_updateSdStreams( void ){
 
 // ---------------------------------------------------------------------------------------
 
-   static const std::string methodName       = "BrookStochasticDynamics::_updateSdStreams";
+   static const std::string methodName       = "BrookLangevinDynamics::_updateSdStreams";
 
 // ---------------------------------------------------------------------------------------
 
-   int sdAtomStreamSize                      = getStochasticDynamicsAtomStreamSize();
+   int sdAtomStreamSize                      = getLangevinDynamicsAtomStreamSize();
 
    BrookOpenMMFloat* sdpc[2];
    for( int ii = 0; ii < 2; ii++ ){
@@ -998,11 +998,11 @@ int BrookStochasticDynamics::_updateSdStreams( void ){
  *
  */
 
-int BrookStochasticDynamics::_setInverseSqrtMasses( const std::vector<double>& masses ){
+int BrookLangevinDynamics::_setInverseSqrtMasses( const std::vector<double>& masses ){
 
 // ---------------------------------------------------------------------------------------
 
-   //static const std::string methodName      = "BrookStochasticDynamics::_setInverseSqrtMasses";
+   //static const std::string methodName      = "BrookLangevinDynamics::_setInverseSqrtMasses";
 
    BrookOpenMMFloat zero                    = (BrookOpenMMFloat)  0.0;
    BrookOpenMMFloat one                     = (BrookOpenMMFloat)  1.0;
@@ -1026,7 +1026,7 @@ int BrookStochasticDynamics::_setInverseSqrtMasses( const std::vector<double>& m
 }   
  
 /*  
- * Setup of StochasticDynamics parameters
+ * Setup of LangevinDynamics parameters
  *
  * @param masses                masses
  * @param platform              Brook platform
@@ -1035,11 +1035,11 @@ int BrookStochasticDynamics::_setInverseSqrtMasses( const std::vector<double>& m
  *
  * */
     
-int BrookStochasticDynamics::setup( const std::vector<double>& masses, const Platform& platform ){
+int BrookLangevinDynamics::setup( const std::vector<double>& masses, const Platform& platform ){
     
 // ---------------------------------------------------------------------------------------
 
-   static const std::string methodName      = "BrookStochasticDynamics::setup";
+   static const std::string methodName      = "BrookLangevinDynamics::setup";
 
 // ---------------------------------------------------------------------------------------
 
@@ -1068,11 +1068,11 @@ int BrookStochasticDynamics::setup( const std::vector<double>& masses, const Pla
  *
  * */
 
-std::string BrookStochasticDynamics::getContentsString( int level ) const {
+std::string BrookLangevinDynamics::getContentsString( int level ) const {
 
 // ---------------------------------------------------------------------------------------
 
-   static const std::string methodName      = "BrookStochasticDynamics::getContentsString";
+   static const std::string methodName      = "BrookLangevinDynamics::getContentsString";
 
    static const unsigned int MAX_LINE_CHARS = 256;
    char value[MAX_LINE_CHARS];

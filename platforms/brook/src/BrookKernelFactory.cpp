@@ -33,6 +33,7 @@
 #include "BrookCalcStandardMMForceFieldKernel.h"
 #include "BrookIntegrateLangevinStepKernel.h"
 #include "BrookIntegrateVerletStepKernel.h"
+#include "BrookIntegrateBrownianStepKernel.h"
 #include "BrookCalcKineticEnergyKernel.h"
 #include "BrookCalcGBSAOBCForceFieldKernel.h"
 #include "BrookRemoveCMMotionKernel.h"
@@ -69,7 +70,7 @@ KernelImpl* BrookKernelFactory::createKernelImpl( std::string name, const Platfo
 
 	} else if( name == IntegrateBrownianStepKernel::Name() ){
 
-      // return new BrookIntegrateBrownianStepKernel( name, platform );
+      return new BrookIntegrateBrownianStepKernel( name, platform );
 
    // Andersen thermostat
 

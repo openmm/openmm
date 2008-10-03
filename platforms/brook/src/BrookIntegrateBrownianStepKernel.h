@@ -1,5 +1,5 @@
-#ifndef OPENMM_BROOK_INTEGRATE_LANGEVIN_STEP_KERNEL_H_
-#define OPENMM_BROOK_INTEGRATE_LANGEVIN_STEP_KERNEL_H_
+#ifndef OPENMM_BROOK_INTEGRATE_BROWNIAN_STEP_KERNEL_H_
+#define OPENMM_BROOK_INTEGRATE_BROWNIAN_STEP_KERNEL_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -33,7 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "kernels.h"
-#include "BrookLangevinDynamics.h"
+#include "BrookBrownianDynamics.h"
 #include "BrookShakeAlgorithm.h"
 #include "BrookRandomNumberGenerator.h"
 
@@ -43,7 +43,7 @@ namespace OpenMM {
  * This is the base class of Float and Double streams in the Brook Platform.
  */
 
-class BrookIntegrateLangevinStepKernel : public IntegrateLangevinStepKernel {
+class BrookIntegrateBrownianStepKernel : public IntegrateBrownianStepKernel {
 
    public:
 
@@ -53,21 +53,21 @@ class BrookIntegrateLangevinStepKernel : public IntegrateLangevinStepKernel {
       static const int ErrorReturnValue   = -1; 
 
       /**
-       * BrookIntegrateLangevinStepKernel constructor
+       * BrookIntegrateBrownianStepKernel constructor
        * 
        * @param name        name of the stream to create
        * @param platform    platform
        *
        */
   
-      BrookIntegrateLangevinStepKernel( std::string name, const Platform& platform );
+      BrookIntegrateBrownianStepKernel( std::string name, const Platform& platform );
 
       /**
-       * BrookIntegrateLangevinStepKernel destructor
+       * BrookIntegrateBrownianStepKernel destructor
        * 
        */
   
-      ~BrookIntegrateLangevinStepKernel();
+      ~BrookIntegrateBrownianStepKernel();
 
       /** 
        * Initialize the kernel, setting up all parameters related to integrator.
@@ -79,6 +79,7 @@ class BrookIntegrateLangevinStepKernel : public IntegrateLangevinStepKernel {
 
       void initialize( const std::vector<double>& masses, const std::vector<std::vector<int> >& constraintIndices,
                        const std::vector<double>& constraintLengths );
+
       /** 
        * Execute kernel
        * 
@@ -95,7 +96,7 @@ class BrookIntegrateLangevinStepKernel : public IntegrateLangevinStepKernel {
 
    protected:
 
-      BrookLangevinDynamics*      _brookLangevinDynamics;
+      BrookBrownianDynamics*        _brookBrownianDynamics;
       BrookShakeAlgorithm*          _brookShakeAlgorithm;
       BrookRandomNumberGenerator*   _brookRandomNumberGenerator;
 
@@ -103,4 +104,4 @@ class BrookIntegrateLangevinStepKernel : public IntegrateLangevinStepKernel {
 
 } // namespace OpenMM
 
-#endif /* OPENMM_BROOK_INTEGRATE_LANGEVIN_STEP_KERNEL_H_ */
+#endif /* OPENMM_BROOK_INTEGRATE_BROWNIAN_STEP_KERNEL_H_ */
