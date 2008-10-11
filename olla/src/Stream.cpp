@@ -75,7 +75,7 @@ void Stream::loadFromArray(const void* array) {
     impl->loadFromArray(array);
 }
 
-void Stream::saveToArray(void* array) {
+void Stream::saveToArray(void* array) const {
     impl->saveToArray(array);
 }
 

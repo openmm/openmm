@@ -157,6 +157,7 @@ void CudaStreamImpl<T>::loadFromArray(const void* array) {
 
 template <class T>
 void CudaStreamImpl<T>::saveToArray(void* array) {
+    stream->Download();
     float* data = reinterpret_cast<float*>(stream->_pSysData);
     if (baseType == Stream::Float) {
         float* arrayData = (float*) array;
@@ -176,7 +177,6 @@ void CudaStreamImpl<T>::saveToArray(void* array) {
             for (int j = 0; j < width; ++j)
                 arrayData[i*width+j] = (int) data[i*rowOffset+j];
     }
-    stream->Download();
 }
 
 template <class T>

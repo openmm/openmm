@@ -38,19 +38,19 @@ using namespace OpenMM;
 KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform& platform, OpenMMContextImpl& context) const {
     _gpuContext* gpu = static_cast<_gpuContext*>(context.getPlatformData());
     if (name == CalcStandardMMForceFieldKernel::Name())
-        return new CudaCalcStandardMMForceFieldKernel(name, platform, gpu);
+        return new CudaCalcStandardMMForceFieldKernel(name, platform, gpu, context.getSystem());
 //    if (name == CalcGBSAOBCForceFieldKernel::Name())
 //        return new CudaCalcGBSAOBCForceFieldKernel(name, platform);
 //    if (name == IntegrateVerletStepKernel::Name())
 //        return new CudaIntegrateVerletStepKernel(name, platform);
-//    if (name == IntegrateLangevinStepKernel::Name())
-//        return new CudaIntegrateLangevinStepKernel(name, platform);
+    if (name == IntegrateLangevinStepKernel::Name())
+        return new CudaIntegrateLangevinStepKernel(name, platform, gpu);
 //    if (name == IntegrateBrownianStepKernel::Name())
 //        return new CudaIntegrateBrownianStepKernel(name, platform);
 //    if (name == ApplyAndersenThermostatKernel::Name())
 //        return new CudaApplyAndersenThermostatKernel(name, platform);
-//    if (name == CalcKineticEnergyKernel::Name())
-//        return new CudaCalcKineticEnergyKernel(name, platform);
+    if (name == CalcKineticEnergyKernel::Name())
+        return new CudaCalcKineticEnergyKernel(name, platform);
 //    if (name == RemoveCMMotionKernel::Name())
 //        return new CudaRemoveCMMotionKernel(name, platform);
 }

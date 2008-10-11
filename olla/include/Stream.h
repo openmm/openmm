@@ -107,7 +107,7 @@ public:
      * the values should be packed into a single array: all the values for the first element, followed by all the values
      * for the next element, etc.
      */
-    void saveToArray(void* array);
+    void saveToArray(void* array) const;
     /**
      * Set every element of this stream to the same value.
      * 

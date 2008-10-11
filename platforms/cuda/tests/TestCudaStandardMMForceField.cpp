@@ -35,10 +35,10 @@
 
 #include "../../../tests/AssertionUtilities.h"
 #include "OpenMMContext.h"
-#include "ReferencePlatform.h"
+#include "CudaPlatform.h"
 #include "StandardMMForceField.h"
 #include "System.h"
-#include "VerletIntegrator.h"
+#include "LangevinIntegrator.h"
 #include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
 #include <iostream>
 #include <vector>
@@ -49,9 +49,9 @@ using namespace std;
 const double TOL = 1e-5;
 
 void testBonds() {
-    ReferencePlatform platform;
+    CudaPlatform platform;
     System system(3, 0);
-    VerletIntegrator integrator(0.01);
+    LangevinIntegrator integrator(0.0, 0.1, 0.01);
     StandardMMForceField* forceField = new StandardMMForceField(3, 2, 0, 0, 0);
     forceField->setBondParameters(0, 0, 1, 1.5, 0.8);
     forceField->setBondParameters(1, 1, 2, 1.2, 0.7);
@@ -71,9 +71,9 @@ void testBonds() {
 }
 
 void testAngles() {
-    ReferencePlatform platform;
+    CudaPlatform platform;
     System system(4, 0);
-    VerletIntegrator integrator(0.01);
+    LangevinIntegrator integrator(0.0, 0.1, 0.01);
     StandardMMForceField* forceField = new StandardMMForceField(4, 0, 2, 0, 0);
     forceField->setAngleParameters(0, 0, 1, 2, PI_M/3, 1.1);
     forceField->setAngleParameters(1, 1, 2, 3, PI_M/2, 1.2);
@@ -96,9 +96,9 @@ void testAngles() {
 }
 
 void testPeriodicTorsions() {
-    ReferencePlatform platform;
+    CudaPlatform platform;
     System system(4, 0);
-    VerletIntegrator integrator(0.01);
+    LangevinIntegrator integrator(0.0, 0.1, 0.01);
     StandardMMForceField* forceField = new StandardMMForceField(4, 0, 0, 1, 0);
     forceField->setPeriodicTorsionParameters(0, 0, 1, 2, 3, 2, PI_M/3, 1.1);
     system.addForce(forceField);
@@ -119,9 +119,9 @@ void testPeriodicTorsions() {
 }
 
 void testRBTorsions() {
-    ReferencePlatform platform;
+    CudaPlatform platform;
     System system(4, 0);
-    VerletIntegrator integrator(0.01);
+    LangevinIntegrator integrator(0.0, 0.1, 0.01);
     StandardMMForceField* forceField = new StandardMMForceField(4, 0, 0, 0, 1);
     forceField->setRBTorsionParameters(0, 0, 1, 2, 3, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6);
     system.addForce(forceField);
@@ -152,9 +152,9 @@ void testRBTorsions() {
 }
 
 void testCoulomb() {
-    ReferencePlatform platform;
+    CudaPlatform platform;
     System system(2, 0);
-    VerletIntegrator integrator(0.01);
+    LangevinIntegrator integrator(0.0, 0.1, 0.01);
     StandardMMForceField* forceField = new StandardMMForceField(2, 0, 0, 0, 0);
     forceField->setAtomParameters(0, 0.5, 1, 0);
     forceField->setAtomParameters(1, -1.5, 1, 0);
@@ -173,9 +173,9 @@ void testCoulomb() {
 }
 
 void testLJ() {
-    ReferencePlatform platform;
+    CudaPlatform platform;
     System system(2, 0);
-    VerletIntegrator integrator(0.01);
+    LangevinIntegrator integrator(0.0, 0.1, 0.01);
     StandardMMForceField* forceField = new StandardMMForceField(2, 0, 0, 0, 0);
     forceField->setAtomParameters(0, 0, 1.2, 1);
     forceField->setAtomParameters(1, 0, 1.4, 2);
@@ -196,16 +196,15 @@ void testLJ() {
 }
 
 void testExclusionsAnd14() {
-    ReferencePlatform platform;
+    CudaPlatform platform;
     System system(5, 0);
-    VerletIntegrator integrator(0.01);
+    LangevinIntegrator integrator(0.0, 0.1, 0.01);
     StandardMMForceField* forceField = new StandardMMForceField(5, 4, 0, 0, 0);
     forceField->setBondParameters(0, 0, 1, 1, 0);
     forceField->setBondParameters(1, 1, 2, 1, 0);
     forceField->setBondParameters(2, 2, 3, 1, 0);
     forceField->setBondParameters(3, 3, 4, 1, 0);
     system.addForce(forceField);
-    OpenMMContext context(system, integrator, platform);
     for (int i = 1; i < 5; ++i) {
  
         // Test LJ forces
@@ -219,7 +218,7 @@ void testExclusionsAnd14() {
         forceField->setAtomParameters(0, 0, 1.5, 1);
         forceField->setAtomParameters(i, 0, 1.5, 1);
         positions[i] = Vec3(r, 0, 0);
-        context.reinitialize();
+        OpenMMContext context(system, integrator, platform);
         context.setPositions(positions);
         State state = context.getState(State::Forces | State::Energy);
         const vector<Vec3>& forces = state.getForces();
@@ -243,9 +242,9 @@ void testExclusionsAnd14() {
         
         forceField->setAtomParameters(0, 2, 1.5, 0);
         forceField->setAtomParameters(i, 2, 1.5, 0);
-        context.reinitialize();
-        context.setPositions(positions);
-        state = context.getState(State::Forces | State::Energy);
+        OpenMMContext context2(system, integrator, platform);
+        context2.setPositions(positions);
+        state = context2.getState(State::Forces | State::Energy);
         const vector<Vec3>& forces2 = state.getForces();
         force = 138.935485*4/(r*r);
         energy = 138.935485*4/r;
@@ -264,9 +263,9 @@ void testExclusionsAnd14() {
 }
 
 void testCutoff() {
-    ReferencePlatform platform;
+    CudaPlatform platform;
     System system(3, 0);
-    VerletIntegrator integrator(0.01);
+    LangevinIntegrator integrator(0.0, 0.1, 0.01);
     StandardMMForceField* forceField = new StandardMMForceField(3, 0, 0, 0, 0);
     forceField->setAtomParameters(0, 1.0, 1, 0);
     forceField->setAtomParameters(1, 1.0, 1, 0);
@@ -297,9 +296,9 @@ void testCutoff() {
 }
 
 void testCutoff14() {
-    ReferencePlatform platform;
+    CudaPlatform platform;
     System system(5, 0);
-    VerletIntegrator integrator(0.01);
+    LangevinIntegrator integrator(0.0, 0.1, 0.01);
     StandardMMForceField* forceField = new StandardMMForceField(5, 4, 0, 0, 0);
     forceField->setBondParameters(0, 0, 1, 1, 0);
     forceField->setBondParameters(1, 1, 2, 1, 0);
@@ -374,9 +373,9 @@ void testCutoff14() {
 }
 
 void testPeriodic() {
-    ReferencePlatform platform;
+    CudaPlatform platform;
     System system(3, 0);
-    VerletIntegrator integrator(0.01);
+    LangevinIntegrator integrator(0.0, 0.1, 0.01);
     StandardMMForceField* forceField = new StandardMMForceField(3, 1, 0, 0, 0);
     forceField->setAtomParameters(0, 1.0, 1, 0);
     forceField->setAtomParameters(1, 1.0, 1, 0);
@@ -414,9 +413,9 @@ int main() {
         testCoulomb();
         testLJ();
         testExclusionsAnd14();
-        testCutoff();
-        testCutoff14();
-        testPeriodic();
+//        testCutoff();
+//        testCutoff14();
+//        testPeriodic();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

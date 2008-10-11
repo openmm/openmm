@@ -34,6 +34,7 @@
 
 #include "kernels.h"
 #include "kernels/gpuTypes.h"
+#include "System.h"
 
 class CudaAndersenThermostat;
 class CudaBrownianDynamics;
@@ -48,7 +49,7 @@ namespace OpenMM {
  */
 class CudaCalcStandardMMForceFieldKernel : public CalcStandardMMForceFieldKernel {
 public:
-    CudaCalcStandardMMForceFieldKernel(std::string name, const Platform& platform, _gpuContext* gpu) : CalcStandardMMForceFieldKernel(name, platform), gpu(gpu) {
+    CudaCalcStandardMMForceFieldKernel(std::string name, const Platform& platform, _gpuContext* gpu, System& system) : CalcStandardMMForceFieldKernel(name, platform), gpu(gpu), system(system) {
     }
     ~CudaCalcStandardMMForceFieldKernel();
     /**
@@ -96,8 +97,7 @@ public:
 private:
     _gpuContext* gpu;
     int numAtoms, numBonds, numAngles, numPeriodicTorsions, numRBTorsions, num14;
-//    int **bondIndexArray, **angleIndexArray, **periodicTorsionIndexArray, **rbTorsionIndexArray, **exclusionArray, **bonded14IndexArray;
-//    RealOpenMM **bondParamArray, **angleParamArray, **periodicTorsionParamArray, **rbTorsionParamArray, **atomParamArray, **bonded14ParamArray;
+    System& system;
 };
 
 ///**
@@ -172,45 +172,39 @@ private:
 //    int numConstraints;
 //    double prevStepSize;
 //};
-//
-///**
-// * This kernel is invoked by LangevinIntegrator to take one time step.
-// */
-//class CudaIntegrateLangevinStepKernel : public IntegrateLangevinStepKernel {
-//public:
-//    CudaIntegrateLangevinStepKernel(std::string name, const Platform& platform) : IntegrateLangevinStepKernel(name, platform),
-//        dynamics(0), shake(0), masses(0), shakeParameters(0), constraintIndices(0) {
-//    }
-//    ~CudaIntegrateLangevinStepKernel();
-//    /**
-//     * Initialize the kernel, setting up all parameters related to integrator.
-//     * 
-//     * @param masses             the mass of each atom
-//     * @param constraintIndices  each element contains the indices of two atoms whose distance should be constrained
-//     * @param constraintLengths  the required distance between each pair of constrained atoms
-//     */
-//    void initialize(const std::vector<double>& masses, const std::vector<std::vector<int> >& constraintIndices,
-//            const std::vector<double>& constraintLengths);
-//    /**
-//     * Execute the kernel.
-//     * 
-//     * @param positions          a Stream of type Double3 containing the position (x, y, z) of each atom
-//     * @param velocities         a Stream of type Double3 containing the velocity (x, y, z) of each atom
-//     * @param forces             a Stream of type Double3 containing the force (x, y, z) on each atom
-//     * @param temperature        the temperature of the heat bath
-//     * @param friction           the friction coefficient coupling the system to the heat bath
-//     * @param stepSize           the integration step size
-//     */
-//    void execute(Stream& positions, Stream& velocities, const Stream& forces, double temperature, double friction, double stepSize);
-//private:
-//    CudaStochasticDynamics* dynamics;
-//    CudaShakeAlgorithm* shake;
-//    RealOpenMM* masses;
-//    RealOpenMM** shakeParameters;
-//    int** constraintIndices;
-//    int numConstraints;
-//    double prevTemp, prevFriction, prevStepSize;
-//};
+
+/**
+ * This kernel is invoked by LangevinIntegrator to take one time step.
+ */
+class CudaIntegrateLangevinStepKernel : public IntegrateLangevinStepKernel {
+public:
+    CudaIntegrateLangevinStepKernel(std::string name, const Platform& platform, _gpuContext* gpu) : IntegrateLangevinStepKernel(name, platform), gpu(gpu) {
+    }
+    ~CudaIntegrateLangevinStepKernel();
+    /**
+     * Initialize the kernel, setting up all parameters related to integrator.
+     * 
+     * @param masses             the mass of each atom
+     * @param constraintIndices  each element contains the indices of two atoms whose distance should be constrained
+     * @param constraintLengths  the required distance between each pair of constrained atoms
+     */
+    void initialize(const std::vector<double>& masses, const std::vector<std::vector<int> >& constraintIndices,
+            const std::vector<double>& constraintLengths);
+    /**
+     * Execute the kernel.
+     * 
+     * @param positions          a Stream of type Double3 containing the position (x, y, z) of each atom
+     * @param velocities         a Stream of type Double3 containing the velocity (x, y, z) of each atom
+     * @param forces             a Stream of type Double3 containing the force (x, y, z) on each atom
+     * @param temperature        the temperature of the heat bath
+     * @param friction           the friction coefficient coupling the system to the heat bath
+     * @param stepSize           the integration step size
+     */
+    void execute(Stream& positions, Stream& velocities, const Stream& forces, double temperature, double friction, double stepSize);
+private:
+    _gpuContext* gpu;
+    double prevTemp, prevFriction, prevStepSize;
+};
 //
 ///**
 // * This kernel is invoked by BrownianIntegrator to take one time step.
@@ -278,30 +272,30 @@ private:
 //    CudaAndersenThermostat* thermostat;
 //    RealOpenMM* masses;
 //};
-//
-///**
-// * This kernel is invoked to calculate the kinetic energy of the system.
-// */
-//class CudaCalcKineticEnergyKernel : public CalcKineticEnergyKernel {
-//public:
-//    CudaCalcKineticEnergyKernel(std::string name, const Platform& platform) : CalcKineticEnergyKernel(name, platform) {
-//    }
-//    /**
-//     * Initialize the kernel, setting up the atomic masses.
-//     * 
-//     * @param masses the mass of each atom
-//     */
-//    void initialize(const std::vector<double>& masses);
-//    /**
-//     * Execute the kernel.
-//     * 
-//     * @param velocities a Stream of type Double3 containing the velocity (x, y, z) of each atom
-//     * @return the kinetic energy of the system
-//     */
-//    double execute(const Stream& velocities);
-//private:
-//    std::vector<double> masses;
-//};
+
+/**
+ * This kernel is invoked to calculate the kinetic energy of the system.
+ */
+class CudaCalcKineticEnergyKernel : public CalcKineticEnergyKernel {
+public:
+    CudaCalcKineticEnergyKernel(std::string name, const Platform& platform) : CalcKineticEnergyKernel(name, platform) {
+    }
+    /**
+     * Initialize the kernel, setting up the atomic masses.
+     * 
+     * @param masses the mass of each atom
+     */
+    void initialize(const std::vector<double>& masses);
+    /**
+     * Execute the kernel.
+     * 
+     * @param velocities a Stream of type Double3 containing the velocity (x, y, z) of each atom
+     * @return the kinetic energy of the system
+     */
+    double execute(const Stream& velocities);
+private:
+    std::vector<double> masses;
+};
 //
 ///**
 // * This kernel is invoked to remove center of mass motion from the system.
