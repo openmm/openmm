@@ -699,8 +699,7 @@ int CpuImplicitSolvent::computeImplicitSolventForces( RealOpenMM** atomCoordinat
 
    // compute forces
 
-   computeBornEnergyForces( getBornRadii(), atomCoordinates,
-                                                partialCharges, forces );
+   computeBornEnergyForces( getBornRadii(), atomCoordinates, partialCharges, forces );
 
    // diagnostics
 

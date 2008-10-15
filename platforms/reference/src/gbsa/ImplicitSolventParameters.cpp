@@ -478,14 +478,12 @@ int ImplicitSolventParameters::setAtomicRadii( RealOpenMM* atomicRadii ){
    Set AtomicRadii array
 
    @param atomicRadii array of atomic radii
-   @param units       units flag: SimTKOpenMMCommon::KcalAngUnits or
-                                  SimTKOpenMMCommon::MdUnits 
 
    @return SimTKOpenMMCommon::DefaultReturn
 
    --------------------------------------------------------------------------------------- */
 
-int ImplicitSolventParameters::setAtomicRadii( const RealOpenMMVector& atomicRadii, int units ){
+int ImplicitSolventParameters::setAtomicRadii( const RealOpenMMVector& atomicRadii ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -511,17 +509,8 @@ int ImplicitSolventParameters::setAtomicRadii( const RealOpenMMVector& atomicRad
       numberOfAtoms = numberOfAtoms < (int) atomicRadii.size() ? numberOfAtoms : (int) atomicRadii.size();
    }
 
-   // force kcal/A units
-
-   if( units == SimTKOpenMMCommon::MdUnits ){
-      RealOpenMM ten = (RealOpenMM) 10.0;
-      for( int ii = 0; ii < numberOfAtoms; ii++ ){
-         _atomicRadii[ii] = ten*atomicRadii[ii];
-      }
-   } else {
-      for( int ii = 0; ii < numberOfAtoms; ii++ ){
-         _atomicRadii[ii] = atomicRadii[ii];
-      }
+   for( int ii = 0; ii < numberOfAtoms; ii++ ){
+      _atomicRadii[ii] = atomicRadii[ii];
    }
 
    return SimTKOpenMMCommon::DefaultReturn;
@@ -532,14 +521,12 @@ int ImplicitSolventParameters::setAtomicRadii( const RealOpenMMVector& atomicRad
    Set AtomicRadii array
 
    @param atomicRadii array of atomic radii
-   @param units       units flag: SimTKOpenMMCommon::KcalAngUnits or
-                                  SimTKOpenMMCommon::MdUnits 
 
    @return SimTKOpenMMCommon::DefaultReturn
 
    --------------------------------------------------------------------------------------- */
-
-int ImplicitSolventParameters::setAtomicRadii( RealOpenMM* atomicRadii, int units ){
+/*
+int ImplicitSolventParameters::setAtomicRadii( RealOpenMM* atomicRadii ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -559,19 +546,12 @@ int ImplicitSolventParameters::setAtomicRadii( RealOpenMM* atomicRadii, int unit
    
    // force kcal/A units
 
-   if( units == SimTKOpenMMCommon::MdUnits ){
-      RealOpenMM ten = (RealOpenMM) 10.0;
-      for( int ii = 0; ii < numberOfAtoms; ii++ ){
-         _atomicRadii[ii] = ten*atomicRadii[ii];
-      }
-   } else {
-      for( int ii = 0; ii < numberOfAtoms; ii++ ){
-         _atomicRadii[ii] = atomicRadii[ii];
-      }
+   for( int ii = 0; ii < numberOfAtoms; ii++ ){
+      _atomicRadii[ii] = atomicRadii[ii];
    }
 
    return SimTKOpenMMCommon::DefaultReturn;
-}
+} */
 
 /**---------------------------------------------------------------------------------------
 
@@ -656,13 +636,16 @@ void ImplicitSolventParameters::_initializeImplicitSolventConstants( void ){
    _soluteDielectric        = (RealOpenMM)    1.0;
    _solventDielectric       = (RealOpenMM)   78.3;
    _kcalA_To_kJNm           = (RealOpenMM)    0.4184;
-   _probeRadius             = (RealOpenMM)    1.4;
+   _probeRadius             = (RealOpenMM)    0.14;
    _electricConstant        = (RealOpenMM) -166.02691;
 
-   // _pi4Asolv                = (RealOpenMM) PI_M*4.0*0.0049*1000.0;
+   //_pi4Asolv                = (RealOpenMM) PI_M*4.0*0.0049*1000.0;
    //_pi4Asolv                = (RealOpenMM) PI_M*19.6;
-   // _pi4Asolv                = (RealOpenMM) PI_M*4.0*0.0054;
-   _pi4Asolv                = (RealOpenMM) (PI_M*0.0216);
+   //_pi4Asolv                = (RealOpenMM) PI_M*4.0*0.0054;
+   _pi4Asolv                = (RealOpenMM) (PI_M*0.0216*1000.0);
+   //_pi4Asolv                = (RealOpenMM) -400.71504079;
+   //_pi4Asolv                = (RealOpenMM) 0.0;
+
    
    _resetPreFactor();
 }
@@ -771,7 +754,7 @@ int ImplicitSolventParameters::isNotReady( void ) const {
                                              &stdDev, &minValue, &minIndex,
                                              &maxValue, &maxIndex );
 
-   if( average < 1.0 || average > 10.0 || minValue < 0.5 ){
+   if( average < 0.1 || average > 1.0 || minValue < 0.05 ){
       errors++;
       message << "\n   atomic radii appear not to be set correctly -- radii should be in Angstroms";
       message << "\n   average radius=" << average << " min radius=" << minValue << " at atom index=" << minIndex;
@@ -822,6 +805,7 @@ int ImplicitSolventParameters::isNotReady( void ) const {
       warning++;
       message << "\n   Warning: probe radius=" << getProbeRadius() << " is large.";
    }
+/*
 
    if( getPi4Asolv() <= 0.0 ){
       errors++;
@@ -832,6 +816,7 @@ int ImplicitSolventParameters::isNotReady( void ) const {
       warning++;
       message << "\n   Warning: Pi4Asolv=" << getPi4Asolv() << " is large.";
    }
+*/
 
    if( errors || warning ){
       message << std::endl;

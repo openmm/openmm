@@ -86,7 +86,7 @@ cpuSetObcParameters( int numberOfAtoms, RealOpenMM* atomicRadii, RealOpenMM* obc
 
    ObcParameters* obcParameters  = new ObcParameters( numberOfAtoms, ObcParameters::ObcTypeII );
    obcParameters->setScaledRadiusFactors( obcScaleFactors );
-   obcParameters->setAtomicRadii( atomicRadii, SimTKOpenMMCommon::KcalAngUnits );
+   obcParameters->setAtomicRadii( atomicRadii );
 
    // dielectric constants
 

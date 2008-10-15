@@ -310,29 +310,24 @@ class ImplicitSolventParameters {
          Set AtomicRadii array
       
          @param atomicRadii vector of atomic radii
-         @param units       units flag SimTKOpenMMCommon::MdUnits or
-                                       SimTKOpenMMCommon::KcalAngUnits
       
          @return SimTKOpenMMCommon::DefaultReturn
       
          --------------------------------------------------------------------------------------- */
 
-      virtual int setAtomicRadii( const RealOpenMMVector& atomicRadii,
-                                  int units = SimTKOpenMMCommon::MdUnits );
+      virtual int setAtomicRadii( const RealOpenMMVector& atomicRadii );
       
       /**---------------------------------------------------------------------------------------
       
          Set AtomicRadii array
       
          @param atomicRadii array of atomic radii
-         @param units       units flag: SimTKOpenMMCommon::KcalAngUnits or
-                                        SimTKOpenMMCommon::MdUnits 
       
          @return SimTKOpenMMCommon::DefaultReturn
       
          --------------------------------------------------------------------------------------- */
       
-      virtual int setAtomicRadii( RealOpenMM* atomicRadii, int units );
+      //virtual int setAtomicRadii( RealOpenMM* atomicRadii );
       
       /**---------------------------------------------------------------------------------------
       
@@ -354,7 +349,6 @@ class ImplicitSolventParameters {
          Print state to log file (Simbios)
          
          @param title               title (optional)
-         @param log                 print state to log file
             
          @return SimTKOpenMMCommon::DefaultReturn
             

@@ -225,7 +225,7 @@ int CpuObc::computeBornRadii( RealOpenMM** atomCoordinates, RealOpenMM* bornRadi
    static const RealOpenMM half    = (RealOpenMM) 0.5;
    static const RealOpenMM fourth  = (RealOpenMM) 0.25;
 
-   // static const char* methodName = "\nCpuObc::computeBornRadii";
+   static const char* methodName = "\nCpuObc::computeBornRadii";
 
    // ---------------------------------------------------------------------------------------
 
@@ -320,8 +320,7 @@ if( logFile && atomI == 0 ){
 if( logFile && atomI >= 0 ){
    (void) fprintf( logFile, "\nRRQ %d sum=%12.6e tanhS=%12.6e radI=%.5f %.5f born=%12.6e obc=%12.6e",
                    atomI, sum, tanhSum, radiusI, offsetRadiusI, bornRadii[atomI], obcChain[atomI] );
-} 
-*/
+} */
 
    }
 
@@ -381,7 +380,6 @@ int CpuObc::computeBornEnergyForces( RealOpenMM* bornRadii, RealOpenMM** atomCoo
    // constants
 
    const RealOpenMM preFactor           = obcParameters->getPreFactor();
-   const RealOpenMM electricConstant    = obcParameters->getElectricConstant();
    const RealOpenMM dielectricOffset    = obcParameters->getDielectricOffset();
 
    // ---------------------------------------------------------------------------------------
@@ -594,7 +592,15 @@ int CpuObc::computeBornEnergyForces( RealOpenMM* bornRadii, RealOpenMM** atomCoo
       obcChainTemp[atomI]        = (one - tanhSum*tanhSum)*obcChainTemp[atomI]/radiusI;
    }
 
-   setEnergy( obcEnergy );
+   // cal to Joule conversion
+
+   RealOpenMM conversion = 0.4184;  
+   for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
+      forces[atomI][0] *= conversion;
+      forces[atomI][1] *= conversion;
+      forces[atomI][2] *= conversion;
+   }
+   setEnergy( obcEnergy*conversion );
 
    // copy new Born radii and obcChain values into permanent array
 
@@ -882,9 +888,9 @@ int CpuObc::computeBornEnergyForcesPrint( RealOpenMM* bornRadii, RealOpenMM** at
 #pragma warning(disable:4996)
 #endif
 
-//FILE* logFile = NULL;
+FILE* logFile = NULL;
 //FILE* logFile = SimTKOpenMMLog::getSimTKOpenMMLogFile( );
-FILE* logFile = fopen( "bF", "w" );
+//FILE* logFile = fopen( "bF", "w" );
 
 #if defined(_MSC_VER)
 #pragma warning(pop)
@@ -895,7 +901,6 @@ FILE* logFile = fopen( "bF", "w" );
    // constants
 
    const RealOpenMM preFactor           = obcParameters->getPreFactor();
-   const RealOpenMM electricConstant    = obcParameters->getElectricConstant();
    const RealOpenMM dielectricOffset    = obcParameters->getDielectricOffset();
 
    // ---------------------------------------------------------------------------------------
@@ -919,6 +924,14 @@ FILE* logFile = fopen( "bF", "w" );
     
    if( includeAceApproximation() ){
       computeAceNonPolarForce( obcParameters, bornRadii, &obcEnergy, bornForces );
+
+      if( logFile ){
+         (void) fprintf( logFile, "\nACE E=%.5e\n", obcEnergy );
+         for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
+            (void) fprintf( logFile, "   %d bR=%.6e bF=%.6e\n", atomI, bornRadii[atomI], bornForces[atomI] );
+         }
+      }
+
    }
 
    // ---------------------------------------------------------------------------------------
@@ -989,7 +1002,9 @@ FILE* logFile = fopen( "bF", "w" );
          obcEnergy         += Gpol;
          bornForces[atomI] += dGpol_dalpha2_ij*bornRadii[atomJ];
 
-if( logFile && (atomI == -1 || atomJ == -1) ){
+/*
+if( logFile ){
+//if( logFile && (atomI == -1 || atomJ == -1) ){
 //   (void) fprintf( logFile, "\nWWX %d %d F[%.6e %.6e %.6e] bF=[%.6e %.6e] Gpl[%.6e %.6e %.6e] rb[%6.4f %7.4f] rs[%6.4f %7.4f] ",
 //                    atomI, atomJ,
 //                    forces[atomI][0],  forces[atomI][1],  forces[atomI][2],
@@ -1004,16 +1019,17 @@ if( logFile && (atomI == -1 || atomJ == -1) ){
                     bornRadii[atomI], bornRadii[atomJ],
                     dGpol_dalpha2_ij*bornRadii[atomJ], dGpol_dalpha2_ij*bornRadii[atomI] );
 }
+*/
       }
 
 
    }
 
 if( logFile ){
-   (void) fprintf( logFile, "\nWXX bF & F E=%.8e", obcEnergy );
+   (void) fprintf( logFile, "\nWXX bF & F E=%.8e preFactor=%.5f", obcEnergy, preFactor );
    for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
-      (void) fprintf( logFile, "\nWXX %d %.6e q=%.3f F[%.6e %.6e %.6e] ",
-                      atomI, partialCharges[atomI],  bornForces[atomI], forces[atomI][0],  forces[atomI][1],  forces[atomI][2] );
+      (void) fprintf( logFile, "\nWXX %d q=%.4f bR=%.5e bF=%.3f F[%.6e %.6e %.6e] ",
+                      atomI, partialCharges[atomI], bornRadii[atomI],  bornForces[atomI], forces[atomI][0],  forces[atomI][1],  forces[atomI][2] );
    }
 }
 
@@ -1187,7 +1203,13 @@ if( logFile && atomI >= 0 ){
 
    }
 
-   setEnergy( obcEnergy );
+   RealOpenMM conversion = 0.4184;  
+   for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
+      forces[atomI][0] *= conversion;
+      forces[atomI][1] *= conversion;
+      forces[atomI][2] *= conversion;
+   }
+   setEnergy( obcEnergy*conversion );
 
    if( 0 ){
 

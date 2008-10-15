@@ -232,28 +232,24 @@ class ObcParameters : public ImplicitSolventParameters {
          Set AtomicRadii array
       
          @param atomicRadii array of atomic radii
-         @param units       units flag: SimTKOpenMMCommon::KcalAngUnits or
-                                        SimTKOpenMMCommon::MdUnits 
       
          @return SimTKOpenMMCommon::DefaultReturn
       
          --------------------------------------------------------------------------------------- */
 
-      int setAtomicRadii( RealOpenMM* atomicRadii, int units = SimTKOpenMMCommon::MdUnits  );
+      int setAtomicRadii( RealOpenMM* atomicRadii );
 
       /**---------------------------------------------------------------------------------------
       
          Set AtomicRadii array
       
          @param atomicRadii vector of atomic radii
-         @param units       units flag: SimTKOpenMMCommon::KcalAngUnits or
-                                        SimTKOpenMMCommon::MdUnits 
       
          @return SimTKOpenMMCommon::DefaultReturn
       
          --------------------------------------------------------------------------------------- */
 
-      int setAtomicRadii( const RealOpenMMVector& atomicRadii, int units = SimTKOpenMMCommon::MdUnits );
+      int setAtomicRadii( const RealOpenMMVector& atomicRadii );
 
       /**---------------------------------------------------------------------------------------
       

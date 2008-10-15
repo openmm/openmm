@@ -110,7 +110,7 @@ ObcParameters::ObcParameters( int numberOfAtoms, ObcParameters::ObcType obcType 
    // ---------------------------------------------------------------------------------------
 
    _obcType                      = obcType;
-   _dielectricOffset             = 0.09f;
+   _dielectricOffset             = 0.009f;
    _ownScaledRadiusFactors       = 0;
    _scaledRadiusFactors          = NULL;
 
@@ -315,14 +315,12 @@ RealOpenMM* ObcParameters::getAtomicRadii( void ) const {
    Set AtomicRadii array
 
    @param atomicRadii array of atomic radii
-   @param units       units flag: SimTKOpenMMCommon::KcalAngUnits or
-                                  SimTKOpenMMCommon::MdUnits 
 
    @return SimTKOpenMMCommon::DefaultReturn
 
    --------------------------------------------------------------------------------------- */
 
-int ObcParameters::setAtomicRadii( RealOpenMM* atomicRadii, int units ){
+int ObcParameters::setAtomicRadii( RealOpenMM* atomicRadii ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -330,7 +328,7 @@ int ObcParameters::setAtomicRadii( RealOpenMM* atomicRadii, int units ){
 
    // ---------------------------------------------------------------------------------------
 
-   return ImplicitSolventParameters::setAtomicRadii( atomicRadii, units );
+   return ImplicitSolventParameters::setAtomicRadii( atomicRadii );
 }
 
 /**---------------------------------------------------------------------------------------
@@ -338,14 +336,12 @@ int ObcParameters::setAtomicRadii( RealOpenMM* atomicRadii, int units ){
    Set AtomicRadii array
 
    @param atomicRadii vector of atomic radii
-   @param units       units flag: SimTKOpenMMCommon::KcalAngUnits or
-                                  SimTKOpenMMCommon::MdUnits 
 
    @return SimTKOpenMMCommon::DefaultReturn
 
    --------------------------------------------------------------------------------------- */
 
-int ObcParameters::setAtomicRadii( const RealOpenMMVector& atomicRadii, int units ){
+int ObcParameters::setAtomicRadii( const RealOpenMMVector& atomicRadii ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -353,7 +349,7 @@ int ObcParameters::setAtomicRadii( const RealOpenMMVector& atomicRadii, int unit
 
    // ---------------------------------------------------------------------------------------
 
-   return ImplicitSolventParameters::setAtomicRadii( atomicRadii, units );
+   return ImplicitSolventParameters::setAtomicRadii( atomicRadii );
 }
 
 /**---------------------------------------------------------------------------------------
@@ -646,7 +642,7 @@ int ObcParameters::isNotReady( void ) const {
 
    if( average < 0.3 || average > 2.0 || minValue < 0.1 ){
       errors++;
-      message << "\n   scale factors for atomic radii appear not to be set correctly -- radii should be in Angstroms";
+      message << "\n   scale factors for atomic radii appear not to be set correctly -- radii should be in nm";
       message << "\n   average radius=" << average << " min radius=" << minValue << " at atom index=" << minIndex;
    }   
 
