@@ -32,6 +32,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include "CudaPlatform.h"
 #include "kernels.h"
 #include "kernels/gpuTypes.h"
 #include "System.h"
@@ -49,7 +50,7 @@ namespace OpenMM {
  */
 class CudaCalcStandardMMForceFieldKernel : public CalcStandardMMForceFieldKernel {
 public:
-    CudaCalcStandardMMForceFieldKernel(std::string name, const Platform& platform, _gpuContext* gpu, System& system) : CalcStandardMMForceFieldKernel(name, platform), gpu(gpu), system(system) {
+    CudaCalcStandardMMForceFieldKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data, System& system) : CalcStandardMMForceFieldKernel(name, platform), data(data), system(system) {
     }
     ~CudaCalcStandardMMForceFieldKernel();
     /**
@@ -95,46 +96,45 @@ public:
      */
     double executeEnergy(const Stream& positions);
 private:
-    _gpuContext* gpu;
+    CudaPlatform::PlatformData& data;
     int numAtoms, numBonds, numAngles, numPeriodicTorsions, numRBTorsions, num14;
     System& system;
 };
 
-///**
-// * This kernel is invoked by GBSAOBCForceField to calculate the forces acting on the system.
-// */
-//class CudaCalcGBSAOBCForceFieldKernel : public CalcGBSAOBCForceFieldKernel {
-//public:
-//    CudaCalcGBSAOBCForceFieldKernel(std::string name, const Platform& platform) : CalcGBSAOBCForceFieldKernel(name, platform) {
-//    }
-//    ~CudaCalcGBSAOBCForceFieldKernel();
-//    /**
-//     * Initialize the kernel, setting up the values of all the force field parameters.
-//     * 
-//     * @param atomParameters      the force parameters (charge, atomic radius, scaling factor) for each atom
-//     * @param solventDielectric   the dielectric constant of the solvent
-//     * @param soluteDielectric    the dielectric constant of the solute
-//     */
-//    void initialize(const std::vector<std::vector<double> >& atomParameters, double solventDielectric, double soluteDielectric);
-//    /**
-//     * Execute the kernel to calculate the forces.
-//     * 
-//     * @param positions   a Stream of type Double3 containing the position (x, y, z) of each atom
-//     * @param forces      a Stream of type Double3 containing the force (x, y, z) on each atom.  On entry, this contains the forces that
-//     *                    have been calculated so far.  The kernel should add its own forces to the values already in the stream.
-//     */
-//    void executeForces(const Stream& positions, Stream& forces);
-//    /**
-//     * Execute the kernel to calculate the energy.
-//     * 
-//     * @param positions   a Stream of type Double3 containing the position (x, y, z) of each atom
-//     * @return the potential energy due to the GBSAOBCForceField
-//     */
-//    double executeEnergy(const Stream& positions);
-//private:
-//    CpuObc* obc;
-//    std::vector<RealOpenMM> charges;
-//};
+/**
+ * This kernel is invoked by GBSAOBCForceField to calculate the forces acting on the system.
+ */
+class CudaCalcGBSAOBCForceFieldKernel : public CalcGBSAOBCForceFieldKernel {
+public:
+    CudaCalcGBSAOBCForceFieldKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data) : CalcGBSAOBCForceFieldKernel(name, platform), data(data) {
+    }
+    ~CudaCalcGBSAOBCForceFieldKernel();
+    /**
+     * Initialize the kernel, setting up the values of all the force field parameters.
+     * 
+     * @param atomParameters      the force parameters (charge, atomic radius, scaling factor) for each atom
+     * @param solventDielectric   the dielectric constant of the solvent
+     * @param soluteDielectric    the dielectric constant of the solute
+     */
+    void initialize(const std::vector<std::vector<double> >& atomParameters, double solventDielectric, double soluteDielectric);
+    /**
+     * Execute the kernel to calculate the forces.
+     * 
+     * @param positions   a Stream of type Double3 containing the position (x, y, z) of each atom
+     * @param forces      a Stream of type Double3 containing the force (x, y, z) on each atom.  On entry, this contains the forces that
+     *                    have been calculated so far.  The kernel should add its own forces to the values already in the stream.
+     */
+    void executeForces(const Stream& positions, Stream& forces);
+    /**
+     * Execute the kernel to calculate the energy.
+     * 
+     * @param positions   a Stream of type Double3 containing the position (x, y, z) of each atom
+     * @return the potential energy due to the GBSAOBCForceField
+     */
+    double executeEnergy(const Stream& positions);
+private:
+    CudaPlatform::PlatformData& data;
+};
 //
 ///**
 // * This kernel is invoked by VerletIntegrator to take one time step.
@@ -178,7 +178,7 @@ private:
  */
 class CudaIntegrateLangevinStepKernel : public IntegrateLangevinStepKernel {
 public:
-    CudaIntegrateLangevinStepKernel(std::string name, const Platform& platform, _gpuContext* gpu) : IntegrateLangevinStepKernel(name, platform), gpu(gpu) {
+    CudaIntegrateLangevinStepKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data) : IntegrateLangevinStepKernel(name, platform), data(data) {
     }
     ~CudaIntegrateLangevinStepKernel();
     /**
@@ -202,7 +202,7 @@ public:
      */
     void execute(Stream& positions, Stream& velocities, const Stream& forces, double temperature, double friction, double stepSize);
 private:
-    _gpuContext* gpu;
+    CudaPlatform::PlatformData& data;
     double prevTemp, prevFriction, prevStepSize;
 };
 //
@@ -296,29 +296,29 @@ public:
 private:
     std::vector<double> masses;
 };
-//
-///**
-// * This kernel is invoked to remove center of mass motion from the system.
-// */
-//class CudaRemoveCMMotionKernel : public RemoveCMMotionKernel {
-//public:
-//    CudaRemoveCMMotionKernel(std::string name, const Platform& platform) : RemoveCMMotionKernel(name, platform) {
-//    }
-//    /**
-//     * Initialize the kernel, setting up the atomic masses.
-//     * 
-//     * @param masses the mass of each atom
-//     */
-//    void initialize(const std::vector<double>& masses);
-//    /**
-//     * Execute the kernel.
-//     * 
-//     * @param velocities a Stream of type Double3 containing the velocity (x, y, z) of each atom
-//     */
-//    void execute(Stream& velocities);
-//private:
-//    std::vector<double> masses;
-//};
+
+/**
+ * This kernel is invoked to remove center of mass motion from the system.
+ */
+class CudaRemoveCMMotionKernel : public RemoveCMMotionKernel {
+public:
+    CudaRemoveCMMotionKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data) : RemoveCMMotionKernel(name, platform), data(data) {
+    }
+    /**
+     * Initialize the kernel, setting up the atomic masses.
+     * 
+     * @param masses the mass of each atom
+     */
+    void initialize(const std::vector<double>& masses);
+    /**
+     * Execute the kernel.
+     * 
+     * @param velocities a Stream of type Double3 containing the velocity (x, y, z) of each atom
+     */
+    void execute(Stream& velocities);
+private:
+    CudaPlatform::PlatformData& data;
+};
 
 } // namespace OpenMM
 

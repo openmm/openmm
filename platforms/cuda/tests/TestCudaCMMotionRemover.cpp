@@ -30,13 +30,14 @@
  * -------------------------------------------------------------------------- */
 
 /**
- * This tests the reference implementation of GBSAOBCForceField.
+ * This tests the Cuda implementation of AndersenThermostat.
  */
 
 #include "../../../tests/AssertionUtilities.h"
+#include "CMMotionRemover.h"
 #include "OpenMMContext.h"
-#include "ReferencePlatform.h"
-#include "GBSAOBCForceField.h"
+#include "CudaPlatform.h"
+#include "StandardMMForceField.h"
 #include "System.h"
 #include "LangevinIntegrator.h"
 #include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
@@ -47,76 +48,59 @@
 using namespace OpenMM;
 using namespace std;
 
-const double TOL = 1e-5;
-
-void testSingleAtom() {
-    ReferencePlatform platform;
-    System system(1, 0);
-    system.setAtomMass(0, 2.0);
-    LangevinIntegrator integrator(0, 0.1, 0.01);
-    GBSAOBCForceField* forceField = new GBSAOBCForceField(1);
-    forceField->setAtomParameters(0, 0.5, 0.15, 1);
-    system.addForce(forceField);
-    OpenMMContext context(system, integrator, platform);
-    vector<Vec3> positions(1);
-    positions[0] = Vec3(0, 0, 0);
-    context.setPositions(positions);
-    State state = context.getState(State::Energy);
-    double bornRadius = 0.15-0.09; // dielectric offset
-    double eps0 = EPSILON0;
-    double bornEnergy = (-0.5*0.5/(8*PI_M*eps0))*(1.0/forceField->getSoluteDielectric()-1.0/forceField->getSolventDielectric())/bornRadius;
-    double extendedRadius = bornRadius+0.14; // probe radius
-    double nonpolarEnergy = CAL2JOULE*PI_M*0.0216*(10*extendedRadius)*(10*extendedRadius)*std::pow(0.15/bornRadius, 6.0); // Where did this formula come from?  Just copied it from CpuImplicitSolvent.cpp
-    ASSERT_EQUAL_TOL((bornEnergy+nonpolarEnergy), state.getPotentialEnergy(), 0.01);
+Vec3 calcCM(const vector<Vec3>& values, System& system) {
+    Vec3 cm;
+    for (int j = 0; j < system.getNumAtoms(); ++j) {
+        cm[0] += values[j][0]*system.getAtomMass(j);
+        cm[1] += values[j][1]*system.getAtomMass(j);
+        cm[2] += values[j][2]*system.getAtomMass(j);
+    }
+    return cm;
 }
 
-void testForce() {
-    ReferencePlatform platform;
-    const int numAtoms = 10;
+void testMotionRemoval() {
+    const int numAtoms = 8;
+    CudaPlatform platform;
     System system(numAtoms, 0);
-    LangevinIntegrator integrator(0, 0.1, 0.01);
-    GBSAOBCForceField* forceField = new GBSAOBCForceField(numAtoms);
-    for (int i = 0; i < numAtoms; ++i)
-        forceField->setAtomParameters(i, i%2 == 0 ? -1 : 1, 0.15, 1);
+    LangevinIntegrator integrator(0.0, 1e-5, 0.01);
+    StandardMMForceField* forceField = new StandardMMForceField(numAtoms, 1, 0, 0, 0);
+    for (int i = 0; i < numAtoms; ++i) {
+        system.setAtomMass(i, i+1);
+        forceField->setAtomParameters(i, (i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
+    }
+    forceField->setBondParameters(0, 2, 3, 2.0, 0.5);
     system.addForce(forceField);
+    CMMotionRemover* remover = new CMMotionRemover();
+    system.addForce(remover);
     OpenMMContext context(system, integrator, platform);
-    
-    // Set random positions for all the atoms.
-    
     vector<Vec3> positions(numAtoms);
+    vector<Vec3> velocities(numAtoms);
     init_gen_rand(0);
-    for (int i = 0; i < numAtoms; ++i)
-        positions[i] = Vec3(5.0*genrand_real2(), 5.0*genrand_real2(), 5.0*genrand_real2());
-    context.setPositions(positions);
-    State state = context.getState(State::Forces | State::Energy);
-    
-    // Take a small step in the direction of the energy gradient.
-    
-    double norm = 0.0;
     for (int i = 0; i < numAtoms; ++i) {
-        Vec3 f = state.getForces()[i];
-        norm += f[0]*f[0] + f[1]*f[1] + f[2]*f[2];
-    }
-    norm = std::sqrt(norm);
-    const double delta = 1e-3;
-    double step = delta/norm;
-    for (int i = 0; i < numAtoms; ++i) {
-        Vec3 p = positions[i];
-        Vec3 f = state.getForces()[i];
-        positions[i] = Vec3(p[0]-f[0]*step, p[1]-f[1]*step, p[2]-f[2]*step);
+        positions[i] = Vec3((i%2 == 0 ? 2 : -2), (i%4 < 2 ? 2 : -2), (i < 4 ? 2 : -2));
+        velocities[i] = Vec3(genrand_real2()-0.5, genrand_real2()-0.5, genrand_real2()-0.5);
     }
     context.setPositions(positions);
+    context.setVelocities(velocities);
     
-    // See whether the potential energy changed by the expected amount.
+    // Now run it for a while and see if the center of mass remains fixed.
     
-    State state2 = context.getState(State::Energy);
-    ASSERT_EQUAL_TOL(norm, (state2.getPotentialEnergy()-state.getPotentialEnergy())/delta, 0.01)
+    Vec3 cmPos = calcCM(context.getState(State::Positions).getPositions(), system);
+    for (int i = 0; i < 1000; ++i) {
+        integrator.step(1);
+        State state = context.getState(State::Positions | State::Velocities);
+        Vec3 pos = calcCM(state.getPositions(), system);
+        ASSERT_EQUAL_VEC(cmPos, pos, 1e-2);
+        Vec3 vel = calcCM(state.getVelocities(), system);
+        if (i > 0) {
+            ASSERT_EQUAL_VEC(Vec3(0, 0, 0), vel, 1e-2);
+        }
+    }
 }
 
 int main() {
     try {
-        testSingleAtom();
-        testForce();
+        testMotionRemoval();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

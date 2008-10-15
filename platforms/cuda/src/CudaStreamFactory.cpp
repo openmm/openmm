@@ -29,6 +29,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include "CudaPlatform.h"
 #include "CudaStreamFactory.h"
 #include "CudaStreamImpl.h"
 #include "OpenMMException.h"
@@ -39,19 +40,19 @@ using namespace OpenMM;
 
 StreamImpl* CudaStreamFactory::createStreamImpl(std::string name, int size, Stream::DataType type, const Platform& platform, OpenMMContextImpl& context) const {
     if (name == "atomPositions") {
-        _gpuContext& gpu = *reinterpret_cast<_gpuContext*>(context.getPlatformData());
+        CudaPlatform::PlatformData& data = *static_cast<CudaPlatform::PlatformData*>(context.getPlatformData());
         float padding[] = {100000.0f, 100000.0f, 100000.0f, 0.2f};
-        return new CudaStreamImpl<float4>(name, size, type, platform, gpu.psPosq4, 4, padding);
+        return new CudaStreamImpl<float4>(name, size, type, platform, data.gpu->psPosq4, 4, padding);
     }
     if (name == "atomVelocities") {
-        _gpuContext& gpu = *reinterpret_cast<_gpuContext*>(context.getPlatformData());
+        CudaPlatform::PlatformData& data = *static_cast<CudaPlatform::PlatformData*>(context.getPlatformData());
         float padding[] = {0.0f, 0.0f, 0.0f, 0.0f};
-        return new CudaStreamImpl<float4>(name, size, type, platform, gpu.psVelm4, 4, padding);
+        return new CudaStreamImpl<float4>(name, size, type, platform, data.gpu->psVelm4, 4, padding);
     }
     if (name == "atomForces") {
-        _gpuContext& gpu = *reinterpret_cast<_gpuContext*>(context.getPlatformData());
+        CudaPlatform::PlatformData& data = *static_cast<CudaPlatform::PlatformData*>(context.getPlatformData());
         float padding[] = {0.0f, 0.0f, 0.0f, 0.0f};
-        return new CudaStreamImpl<float4>(name, size, type, platform, gpu.psForce4, 4, padding);
+        return new CudaStreamImpl<float4>(name, size, type, platform, data.gpu->psForce4, 4, padding);
     }
     switch (type) {
     case Stream::Float:

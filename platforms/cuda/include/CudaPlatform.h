@@ -35,6 +35,8 @@
 #include "Platform.h"
 #include "CudaStreamFactory.h"
 
+class _gpuContext;
+
 namespace OpenMM {
 
 /**
@@ -43,6 +45,7 @@ namespace OpenMM {
 
 class OPENMM_EXPORT CudaPlatform : public Platform {
 public:
+    class PlatformData;
     CudaPlatform();
     std::string getName() const {
         return "Cuda";
@@ -56,6 +59,15 @@ public:
     void contextDestroyed(OpenMMContextImpl& context) const;
 private:
     CudaStreamFactory defaultStreamFactory;
+};
+
+class CudaPlatform::PlatformData {
+public:
+    PlatformData(_gpuContext* gpu) : gpu(gpu), removeCM(false), useOBC(false) {
+    }
+    _gpuContext* gpu;
+    bool removeCM;
+    bool useOBC;
 };
 
 } // namespace OpenMM

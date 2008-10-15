@@ -61,6 +61,7 @@ void CudaCalcStandardMMForceFieldKernel::initialize(const vector<vector<int> >& 
     numRBTorsions = rbTorsionIndices.size();
     num14 = bonded14Indices.size();
     const float RadiansToDegrees = 180.0/3.14159265;
+    _gpuContext* gpu = data.gpu;
     
     // Initialize bonds.
     
@@ -187,20 +188,19 @@ void CudaCalcStandardMMForceFieldKernel::initialize(const vector<vector<int> >& 
         }
         gpuSetLJ14Parameters(gpu, 138.935485f, (float) coulomb14Scale, atom1, atom2, c6, c12, q1, q2);
     }
-    
-    // Finish initialization.
-    
-    gpuBuildThreadBlockWorkList(gpu);
-    gpuBuildExclusionList(gpu);
-    gpuBuildOutputBuffers(gpu);
-    gpuSetConstants(gpu);
-    kClearBornForces(gpu);
-    kClearForces(gpu);
 }
 
 void CudaCalcStandardMMForceFieldKernel::executeForces(const Stream& positions, Stream& forces) {
-    kClearForces(gpu);
-    kCalculateCDLJForces(gpu);
+    _gpuContext* gpu = data.gpu;
+    if (data.useOBC) {
+        kCalculateCDLJObcGbsaForces1(gpu);
+        kReduceObcGbsaBornForces(gpu);
+        kCalculateObcGbsaForces2(gpu);
+    }
+    else {
+        kClearForces(gpu);
+        kCalculateCDLJForces(gpu);
+    }
     kCalculateLocalForces(gpu);
     kReduceBornSumAndForces(gpu);
 }
@@ -222,18 +222,30 @@ double CudaCalcStandardMMForceFieldKernel::executeEnergy(const Stream& positions
     return context.getState(State::Energy).getPotentialEnergy();
 }
 
-//CudaCalcGBSAOBCForceFieldKernel::~CudaCalcGBSAOBCForceFieldKernel() {
-//}
-//
-//void CudaCalcGBSAOBCForceFieldKernel::initialize(const vector<vector<double> >& atomParameters, double solventDielectric, double soluteDielectric) {
-//}
-//
-//void CudaCalcGBSAOBCForceFieldKernel::executeForces(const Stream& positions, Stream& forces) {
-//}
-//
-//double CudaCalcGBSAOBCForceFieldKernel::executeEnergy(const Stream& positions) {
-//}
-//
+CudaCalcGBSAOBCForceFieldKernel::~CudaCalcGBSAOBCForceFieldKernel() {
+}
+
+void CudaCalcGBSAOBCForceFieldKernel::initialize(const vector<vector<double> >& atomParameters, double solventDielectric, double soluteDielectric) {
+    int numAtoms = atomParameters.size();
+    _gpuContext* gpu = data.gpu;
+    vector<int> atom(numAtoms);
+    vector<float> radius(numAtoms);
+    vector<float> scale(numAtoms);
+    for (int i = 0; i < numAtoms; i++) {
+        atom[i] = i;
+        radius[i] = (float) atomParameters[i][1];
+        scale[i] = (float) atomParameters[i][2];
+    }
+    gpuSetObcParameters(gpu, soluteDielectric, solventDielectric, atom, radius, scale);
+    data.useOBC = true;
+}
+
+void CudaCalcGBSAOBCForceFieldKernel::executeForces(const Stream& positions, Stream& forces) {
+}
+
+double CudaCalcGBSAOBCForceFieldKernel::executeEnergy(const Stream& positions) {
+}
+
 //CudaIntegrateVerletStepKernel::~CudaIntegrateVerletStepKernel() {
 //}
 //
@@ -251,6 +263,7 @@ void CudaIntegrateLangevinStepKernel::initialize(const vector<double>& masses, c
     
     // Set masses.
     
+    _gpuContext* gpu = data.gpu;
     vector<float> mass(masses.size());
     for (int i = 0; i < (int) mass.size(); i++)
         mass[i] = (float) masses[i];
@@ -272,11 +285,20 @@ void CudaIntegrateLangevinStepKernel::initialize(const vector<double>& masses, c
         invMass2[i] = 1.0f/mass[atom2[i]];
     }
     gpuSetShakeParameters(gpu, atom1, atom2, distance, invMass1, invMass2);
+    gpuBuildThreadBlockWorkList(gpu);
+    gpuBuildExclusionList(gpu);
+    gpuBuildOutputBuffers(gpu);
     gpuSetConstants(gpu);
+    kCalculateObcGbsaBornSum(gpu);
+    kReduceObcGbsaBornSum(gpu);
+    kClearBornForces(gpu);
+    kClearForces(gpu);
+    cudaThreadSynchronize();
     prevStepSize = -1.0;
 }
 
 void CudaIntegrateLangevinStepKernel::execute(Stream& positions, Stream& velocities, const Stream& forces, double temperature, double friction, double stepSize) {
+    _gpuContext* gpu = data.gpu;
     if (temperature != prevTemp || friction != prevFriction || stepSize != prevStepSize) {
         // Initialize the GPU parameters.
         
@@ -290,6 +312,8 @@ void CudaIntegrateLangevinStepKernel::execute(Stream& positions, Stream& velocit
     }
     kUpdatePart1(gpu);
     kApplyFirstShake(gpu);
+    if (data.removeCM)
+        gpu->bCalculateCM = true;
     kUpdatePart2(gpu);
     kApplySecondShake(gpu);
 }
@@ -329,9 +353,10 @@ double CudaCalcKineticEnergyKernel::execute(const Stream& velocities) {
     delete v;
     return 0.5*energy;
 }
-//
-//void CudaRemoveCMMotionKernel::initialize(const vector<double>& masses) {
-//}
-//
-//void CudaRemoveCMMotionKernel::execute(Stream& velocities) {
-//}
+
+void CudaRemoveCMMotionKernel::initialize(const vector<double>& masses) {
+    data.removeCM = true;
+}
+
+void CudaRemoveCMMotionKernel::execute(Stream& velocities) {
+}

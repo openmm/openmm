@@ -30,17 +30,18 @@
  * -------------------------------------------------------------------------- */
 
 /**
- * This tests the reference implementation of GBSAOBCForceField.
+ * This tests the Cuda implementation of GBSAOBCForceField.
  */
 
 #include "../../../tests/AssertionUtilities.h"
 #include "OpenMMContext.h"
-#include "ReferencePlatform.h"
+#include "CudaPlatform.h"
 #include "GBSAOBCForceField.h"
 #include "System.h"
 #include "LangevinIntegrator.h"
 #include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
 #include "../src/sfmt/SFMT.h"
+#include "StandardMMForceField.h"
 #include <iostream>
 #include <vector>
 
@@ -50,13 +51,14 @@ using namespace std;
 const double TOL = 1e-5;
 
 void testSingleAtom() {
-    ReferencePlatform platform;
+    CudaPlatform platform;
     System system(1, 0);
     system.setAtomMass(0, 2.0);
     LangevinIntegrator integrator(0, 0.1, 0.01);
     GBSAOBCForceField* forceField = new GBSAOBCForceField(1);
     forceField->setAtomParameters(0, 0.5, 0.15, 1);
     system.addForce(forceField);
+    system.addForce(new StandardMMForceField(1, 0, 0, 0, 0));
     OpenMMContext context(system, integrator, platform);
     vector<Vec3> positions(1);
     positions[0] = Vec3(0, 0, 0);
@@ -71,7 +73,7 @@ void testSingleAtom() {
 }
 
 void testForce() {
-    ReferencePlatform platform;
+    CudaPlatform platform;
     const int numAtoms = 10;
     System system(numAtoms, 0);
     LangevinIntegrator integrator(0, 0.1, 0.01);
@@ -79,6 +81,7 @@ void testForce() {
     for (int i = 0; i < numAtoms; ++i)
         forceField->setAtomParameters(i, i%2 == 0 ? -1 : 1, 0.15, 1);
     system.addForce(forceField);
+    system.addForce(new StandardMMForceField(numAtoms, 0, 0, 0, 0));
     OpenMMContext context(system, integrator, platform);
     
     // Set random positions for all the atoms.

@@ -41,13 +41,13 @@ using namespace OpenMM;
 CudaPlatform::CudaPlatform() {
     CudaKernelFactory* factory = new CudaKernelFactory();
     registerKernelFactory(CalcStandardMMForceFieldKernel::Name(), factory);
-//    registerKernelFactory(CalcGBSAOBCForceFieldKernel::Name(), factory);
+    registerKernelFactory(CalcGBSAOBCForceFieldKernel::Name(), factory);
 //    registerKernelFactory(IntegrateVerletStepKernel::Name(), factory);
     registerKernelFactory(IntegrateLangevinStepKernel::Name(), factory);
 //    registerKernelFactory(IntegrateBrownianStepKernel::Name(), factory);
 //    registerKernelFactory(ApplyAndersenThermostatKernel::Name(), factory);
     registerKernelFactory(CalcKineticEnergyKernel::Name(), factory);
-//    registerKernelFactory(RemoveCMMotionKernel::Name(), factory);
+    registerKernelFactory(RemoveCMMotionKernel::Name(), factory);
 }
 
 bool CudaPlatform::supportsDoublePrecision() const {
@@ -61,10 +61,11 @@ const StreamFactory& CudaPlatform::getDefaultStreamFactory() const {
 void CudaPlatform::contextCreated(OpenMMContextImpl& context) const {
     int numAtoms = context.getSystem().getNumAtoms();
     _gpuContext* gpu = (_gpuContext*) gpuInit(numAtoms);
-    context.setPlatformData(gpu);
+    context.setPlatformData(new PlatformData(gpu));
 }
 
 void CudaPlatform::contextDestroyed(OpenMMContextImpl& context) const {
-    _gpuContext* data = reinterpret_cast<_gpuContext*>(context.getPlatformData());
-    gpuShutDown(data);
+    PlatformData* data = reinterpret_cast<PlatformData*>(context.getPlatformData());
+    gpuShutDown(data->gpu);
+    delete data;
 }

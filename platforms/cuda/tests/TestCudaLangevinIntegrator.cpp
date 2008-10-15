@@ -130,7 +130,7 @@ void testTemperature() {
 
 void testConstraints() {
     const int numAtoms = 8;
-    const int numConstraints = numAtoms-1;
+    const int numConstraints = 4;
     const double temp = 100.0;
     CudaPlatform platform;
     System system(numAtoms, numConstraints);
@@ -141,7 +141,7 @@ void testConstraints() {
         forceField->setAtomParameters(i, (i%2 == 0 ? 0.2 : -0.2), 0.5, 5.0);
     }
     for (int i = 0; i < numConstraints; ++i)
-        system.setConstraintParameters(i, i, i+1, 1.0);
+        system.setConstraintParameters(i, 2*i, 2*i+1, 1.0);
     system.addForce(forceField);
     OpenMMContext context(system, integrator, platform);
     vector<Vec3> positions(numAtoms);
@@ -159,10 +159,13 @@ void testConstraints() {
     for (int i = 0; i < 1000; ++i) {
         State state = context.getState(State::Positions);
         for (int j = 0; j < numConstraints; ++j) {
-            Vec3 p1 = state.getPositions()[j];
-            Vec3 p2 = state.getPositions()[j+1];
+            int atom1, atom2;
+            double distance;
+            system.getConstraintParameters(j, atom1, atom2, distance);
+            Vec3 p1 = state.getPositions()[atom1];
+            Vec3 p2 = state.getPositions()[atom2];
             double dist = std::sqrt((p1[0]-p2[0])*(p1[0]-p2[0])+(p1[1]-p2[1])*(p1[1]-p2[1])+(p1[2]-p2[2])*(p1[2]-p2[2]));
-            ASSERT_EQUAL_TOL(1.0, dist, 2e-4);
+            ASSERT_EQUAL_TOL(distance, dist, 2e-4);
         }
         integrator.step(1);
     }
