@@ -48,21 +48,7 @@ LangevinIntegrator::LangevinIntegrator(double temperature, double frictionCoeff,
 void LangevinIntegrator::initialize(OpenMMContextImpl& contextRef) {
     context = &contextRef;
     kernel = context->getPlatform().createKernel(IntegrateLangevinStepKernel::Name(), contextRef);
-    const System& system = context->getSystem();
-    vector<double> masses(system.getNumAtoms());
-    vector<std::vector<int> > constraintIndices(system.getNumConstraints());
-    vector<double> constraintLengths(system.getNumConstraints());
-    for (int i = 0; i < system.getNumAtoms(); ++i)
-        masses[i] = system.getAtomMass(i);
-    for (int i = 0; i < system.getNumConstraints(); ++i) {
-        int atom1, atom2;
-        double distance;
-        system.getConstraintParameters(i, atom1, atom2, distance);
-        constraintIndices[i].push_back(atom1);
-        constraintIndices[i].push_back(atom2);
-        constraintLengths[i] = distance;
-    }
-    dynamic_cast<IntegrateLangevinStepKernel&>(kernel.getImpl()).initialize(masses, constraintIndices, constraintLengths);
+    dynamic_cast<IntegrateLangevinStepKernel&>(kernel.getImpl()).initialize(contextRef.getSystem(), *this);
 }
 
 vector<string> LangevinIntegrator::getKernelNames() {
@@ -75,8 +61,7 @@ void LangevinIntegrator::step(int steps) {
     for (int i = 0; i < steps; ++i) {
         context->updateContextState();
         context->calcForces();
-        dynamic_cast<IntegrateLangevinStepKernel&>(kernel.getImpl()).execute(context->getPositions(), context->getVelocities(), context->getForces(), temperature,
-                friction, getStepSize());
+        dynamic_cast<IntegrateLangevinStepKernel&>(kernel.getImpl()).execute(*context, *this);
         context->setTime(context->getTime()+getStepSize());
     }
 }

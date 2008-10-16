@@ -140,19 +140,13 @@ class DummyForceKernel : public CalcStandardMMForceFieldKernel {
 public:
     DummyForceKernel(string name, const Platform& platform) : CalcStandardMMForceFieldKernel(name, platform) {
     }
-    void initialize(const vector<vector<int> >& bondIndices, const vector<vector<double> >& bondParameters,
-            const vector<vector<int> >& angleIndices, const vector<vector<double> >& angleParameters,
-            const vector<vector<int> >& periodicTorsionIndices, const vector<vector<double> >& periodicTorsionParameters,
-            const vector<vector<int> >& rbTorsionIndices, const vector<vector<double> >& rbTorsionParameters,
-            const vector<vector<int> >& bonded14Indices, double lj14Scale, double coulomb14Scale,
-            const vector<set<int> >& exclusions, const vector<vector<double> >& nonbondedParameters,
-            NonbondedMethod nonbondedMethod, double nonbondedCutoff, double periodicBoxSize[3]) {
+    void initialize(const System& system, const StandardMMForceField& force, const std::vector<std::set<int> >& exclusions) {
         verifyExclusions(exclusions);
-        verify14(bonded14Indices);
+//        verify14(bonded14Indices);
     }
-    void executeForces(const Stream& positions, Stream& forces) {
+    void executeForces(OpenMMContextImpl& context) {
     }
-    double executeEnergy(const Stream& positions) {
+    double executeEnergy(OpenMMContextImpl& context) {
 		return 0.0;
     }
 };
@@ -161,9 +155,9 @@ class DummyIntegratorKernel : public IntegrateVerletStepKernel {
 public:
     DummyIntegratorKernel(string name, const Platform& platform) : IntegrateVerletStepKernel(name, platform) {
     }
-    void initialize(const vector<double>& masses, const vector<vector<int> >& constraintIndices, const vector<double>& constraintLengths) {
+    void initialize(const System& system, const VerletIntegrator& integrator) {
     }
-    void execute(Stream& positions, Stream& velocities, const Stream& forces, double stepSize) {
+    void execute(OpenMMContextImpl& context, const VerletIntegrator& integrator) {
     }
 };
 
@@ -171,9 +165,9 @@ class DummyKEKernel : public CalcKineticEnergyKernel {
 public:
     DummyKEKernel(string name, const Platform& platform) : CalcKineticEnergyKernel(name, platform) {
     }
-    void initialize(const vector<double>& masses) {
+    void initialize(const System& system) {
     }
-    double execute(const Stream& positions) {
+    double execute(OpenMMContextImpl& context) {
         return 0.0;
     }
 };
@@ -238,7 +232,7 @@ int main() {
         DummyPlatform platform;
         System system(NUM_ATOMS, 0);
         VerletIntegrator integrator(0.01);
-        StandardMMForceField* forces = new StandardMMForceField(NUM_ATOMS, NUM_ATOMS-1, 0, 0, 0);
+        StandardMMForceField* forces = new StandardMMForceField(NUM_ATOMS, NUM_ATOMS-1, 0, 0, 0, 0);
         
         // loop over all main-chain atoms (even numbered atoms)
         for (int i = 0; i < NUM_ATOMS-1; i += 2) 

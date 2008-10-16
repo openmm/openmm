@@ -54,50 +54,28 @@ public:
     }
     ~ReferenceCalcStandardMMForceFieldKernel();
     /**
-     * Initialize the kernel, setting up the values of all the force field parameters.
+     * Initialize the kernel.
      * 
-     * @param bondIndices               the two atoms connected by each bond term
-     * @param bondParameters            the force parameters (length, k) for each bond term
-     * @param angleIndices              the three atoms connected by each angle term
-     * @param angleParameters           the force parameters (angle, k) for each angle term
-     * @param periodicTorsionIndices    the four atoms connected by each periodic torsion term
-     * @param periodicTorsionParameters the force parameters (k, phase, periodicity) for each periodic torsion term
-     * @param rbTorsionIndices          the four atoms connected by each Ryckaert-Bellemans torsion term
-     * @param rbTorsionParameters       the coefficients (in order of increasing powers) for each Ryckaert-Bellemans torsion term
-     * @param bonded14Indices           each element contains the indices of two atoms whose nonbonded interactions should be reduced since
-     *                                  they form a bonded 1-4 pair
-     * @param lj14Scale                 the factor by which van der Waals interactions should be reduced for bonded 1-4 pairs
-     * @param coulomb14Scale            the factor by which Coulomb interactions should be reduced for bonded 1-4 pairs
-     * @param exclusions                the i'th element lists the indices of all atoms with which the i'th atom should not interact through
-     *                                  nonbonded forces.  Bonded 1-4 pairs are also included in this list, since they should be omitted from
-     *                                  the standard nonbonded calculation.
-     * @param nonbondedParameters       the nonbonded force parameters (charge, sigma, epsilon) for each atom
-     * @param nonbondedMethod           the method to use for handling long range nonbonded interactions
-     * @param nonbondedCutoff           the cutoff distance for nonbonded interactions (if nonbondedMethod involves a cutoff)
-     * @param periodicBoxSize           the size of the periodic box (if nonbondedMethod involves a periodic boundary conditions)
+     * @param system     the System this kernel will be applied to
+     * @param force      the StandardMMForceField this kernel will be used for
+     * @param exclusions the i'th element lists the indices of all atoms with which the i'th atom should not interact through
+     *                   nonbonded forces.  Bonded 1-4 pairs are also included in this list, since they should be omitted from
+     *                   the standard nonbonded calculation.
      */
-    void initialize(const std::vector<std::vector<int> >& bondIndices, const std::vector<std::vector<double> >& bondParameters,
-            const std::vector<std::vector<int> >& angleIndices, const std::vector<std::vector<double> >& angleParameters,
-            const std::vector<std::vector<int> >& periodicTorsionIndices, const std::vector<std::vector<double> >& periodicTorsionParameters,
-            const std::vector<std::vector<int> >& rbTorsionIndices, const std::vector<std::vector<double> >& rbTorsionParameters,
-            const std::vector<std::vector<int> >& bonded14Indices, double lj14Scale, double coulomb14Scale,
-            const std::vector<std::set<int> >& exclusions, const std::vector<std::vector<double> >& nonbondedParameters,
-            NonbondedMethod nonbondedMethod, double nonbondedCutoff, double periodicBoxSize[3]);
+    void initialize(const System& system, const StandardMMForceField& force, const std::vector<std::set<int> >& exclusions);
     /**
      * Execute the kernel to calculate the forces.
      * 
-     * @param positions   a Stream of type Double3 containing the position (x, y, z) of each atom
-     * @param forces      a Stream of type Double3 containing the force (x, y, z) on each atom.  On entry, this contains the forces that
-     *                    have been calculated so far.  The kernel should add its own forces to the values already in the stream.
+     * @param context    the context in which to execute this kernel
      */
-    void executeForces(const Stream& positions, Stream& forces);
+    void executeForces(OpenMMContextImpl& context);
     /**
      * Execute the kernel to calculate the energy.
      * 
-     * @param positions   a Stream of type Double3 containing the position (x, y, z) of each atom
+     * @param context    the context in which to execute this kernel
      * @return the potential energy due to the StandardMMForceField
      */
-    double executeEnergy(const Stream& positions);
+    double executeEnergy(OpenMMContextImpl& context);
 private:
     int numAtoms, numBonds, numAngles, numPeriodicTorsions, numRBTorsions, num14;
     int **bondIndexArray, **angleIndexArray, **periodicTorsionIndexArray, **rbTorsionIndexArray, **exclusionArray, **bonded14IndexArray;
@@ -117,28 +95,25 @@ public:
     }
     ~ReferenceCalcGBSAOBCForceFieldKernel();
     /**
-     * Initialize the kernel, setting up the values of all the force field parameters.
+     * Initialize the kernel.
      * 
-     * @param atomParameters      the force parameters (charge, atomic radius, scaling factor) for each atom
-     * @param solventDielectric   the dielectric constant of the solvent
-     * @param soluteDielectric    the dielectric constant of the solute
+     * @param system     the System this kernel will be applied to
+     * @param force      the GBSAOBCForceField this kernel will be used for
      */
-    void initialize(const std::vector<std::vector<double> >& atomParameters, double solventDielectric, double soluteDielectric);
+    void initialize(const System& system, const GBSAOBCForceField& force);
     /**
      * Execute the kernel to calculate the forces.
      * 
-     * @param positions   a Stream of type Double3 containing the position (x, y, z) of each atom
-     * @param forces      a Stream of type Double3 containing the force (x, y, z) on each atom.  On entry, this contains the forces that
-     *                    have been calculated so far.  The kernel should add its own forces to the values already in the stream.
+     * @param context    the context in which to execute this kernel
      */
-    void executeForces(const Stream& positions, Stream& forces);
+    void executeForces(OpenMMContextImpl& context);
     /**
      * Execute the kernel to calculate the energy.
      * 
-     * @param positions   a Stream of type Double3 containing the position (x, y, z) of each atom
+     * @param context    the context in which to execute this kernel
      * @return the potential energy due to the GBSAOBCForceField
      */
-    double executeEnergy(const Stream& positions);
+    double executeEnergy(OpenMMContextImpl& context);
 private:
     CpuObc* obc;
     std::vector<RealOpenMM> charges;
@@ -154,23 +129,19 @@ public:
     }
     ~ReferenceIntegrateVerletStepKernel();
     /**
-     * Initialize the kernel, setting up all parameters related to integrator.
+     * Initialize the kernel.
      * 
-     * @param masses             the mass of each atom
-     * @param constraintIndices  each element contains the indices of two atoms whose distance should be constrained
-     * @param constraintLengths  the required distance between each pair of constrained atoms
+     * @param system     the System this kernel will be applied to
+     * @param integrator the VerletIntegrator this kernel will be used for
      */
-    void initialize(const std::vector<double>& masses, const std::vector<std::vector<int> >& constraintIndices,
-            const std::vector<double>& constraintLengths);
+    void initialize(const System& system, const VerletIntegrator& integrator);
     /**
      * Execute the kernel.
      * 
-     * @param positions          a Stream of type Double3 containing the position (x, y, z) of each atom
-     * @param velocities         a Stream of type Double3 containing the velocity (x, y, z) of each atom
-     * @param forces             a Stream of type Double3 containing the force (x, y, z) on each atom
-     * @param stepSize           the integration step size
+     * @param context    the context in which to execute this kernel
+     * @param integrator the VerletIntegrator this kernel is being used for
      */
-    void execute(Stream& positions, Stream& velocities, const Stream& forces, double stepSize);
+    void execute(OpenMMContextImpl& context, const VerletIntegrator& integrator);
 private:
     ReferenceVerletDynamics* dynamics;
     ReferenceShakeAlgorithm* shake;
@@ -191,25 +162,19 @@ public:
     }
     ~ReferenceIntegrateLangevinStepKernel();
     /**
-     * Initialize the kernel, setting up all parameters related to integrator.
+     * Initialize the kernel, setting up the atomic masses.
      * 
-     * @param masses             the mass of each atom
-     * @param constraintIndices  each element contains the indices of two atoms whose distance should be constrained
-     * @param constraintLengths  the required distance between each pair of constrained atoms
+     * @param system     the System this kernel will be applied to
+     * @param integrator the LangevinIntegrator this kernel will be used for
      */
-    void initialize(const std::vector<double>& masses, const std::vector<std::vector<int> >& constraintIndices,
-            const std::vector<double>& constraintLengths);
+    void initialize(const System& system, const LangevinIntegrator& integrator);
     /**
      * Execute the kernel.
      * 
-     * @param positions          a Stream of type Double3 containing the position (x, y, z) of each atom
-     * @param velocities         a Stream of type Double3 containing the velocity (x, y, z) of each atom
-     * @param forces             a Stream of type Double3 containing the force (x, y, z) on each atom
-     * @param temperature        the temperature of the heat bath
-     * @param friction           the friction coefficient coupling the system to the heat bath
-     * @param stepSize           the integration step size
+     * @param context    the context in which to execute this kernel
+     * @param integrator the LangevinIntegrator this kernel is being used for
      */
-    void execute(Stream& positions, Stream& velocities, const Stream& forces, double temperature, double friction, double stepSize);
+    void execute(OpenMMContextImpl& context, const LangevinIntegrator& integrator);
 private:
     ReferenceStochasticDynamics* dynamics;
     ReferenceShakeAlgorithm* shake;
@@ -230,25 +195,19 @@ public:
     }
     ~ReferenceIntegrateBrownianStepKernel();
     /**
-     * Initialize the kernel, setting up all parameters related to integrator.
+     * Initialize the kernel.
      * 
-     * @param masses             the mass of each atom
-     * @param constraintIndices  each element contains the indices of two atoms whose distance should be constrained
-     * @param constraintLengths  the required distance between each pair of constrained atoms
+     * @param system     the System this kernel will be applied to
+     * @param integrator the BrownianIntegrator this kernel will be used for
      */
-    void initialize(const std::vector<double>& masses, const std::vector<std::vector<int> >& constraintIndices,
-            const std::vector<double>& constraintLengths);
+    void initialize(const System& system, const BrownianIntegrator& integrator);
     /**
      * Execute the kernel.
      * 
-     * @param positions          a Stream of type Double3 containing the position (x, y, z) of each atom
-     * @param velocities         a Stream of type Double3 containing the velocity (x, y, z) of each atom
-     * @param forces             a Stream of type Double3 containing the force (x, y, z) on each atom
-     * @param temperature        the temperature of the heat bath
-     * @param friction           the friction coefficient coupling the system to the heat bath
-     * @param stepSize           the integration step size
+     * @param context    the context in which to execute this kernel
+     * @param integrator the BrownianIntegrator this kernel is being used for
      */
-    void execute(Stream& positions, Stream& velocities, const Stream& forces, double temperature, double friction, double stepSize);
+    void execute(OpenMMContextImpl& context, const BrownianIntegrator& integrator);
 private:
     ReferenceBrownianDynamics* dynamics;
     ReferenceShakeAlgorithm* shake;
@@ -268,20 +227,18 @@ public:
     }
     ~ReferenceApplyAndersenThermostatKernel();
     /**
-     * Initialize the kernel, setting up the values of unchanging parameters.
+     * Initialize the kernel.
      * 
-     * @param masses the mass of each atom
+     * @param system     the System this kernel will be applied to
+     * @param thermostat the AndersenThermostat this kernel will be used for
      */
-    void initialize(const std::vector<double>& masses);
+    void initialize(const System& system, const AndersenThermostat& thermostat);
     /**
      * Execute the kernel.
      * 
-     * @param velocities         a Stream of type Double3 containing the velocity (x, y, z) of each atom
-     * @param temperature        the temperature of the heat bath
-     * @param collisionFrequency the frequency at which atom collide with particles in the heat bath
-     * @param stepSize           the integration step size
+     * @param context    the context in which to execute this kernel
      */
-    void execute(Stream& velocities, double temperature, double collisionFrequency, double stepSize);
+    void execute(OpenMMContextImpl& context);
 private:
     ReferenceAndersenThermostat* thermostat;
     RealOpenMM* masses;
@@ -295,18 +252,17 @@ public:
     ReferenceCalcKineticEnergyKernel(std::string name, const Platform& platform) : CalcKineticEnergyKernel(name, platform) {
     }
     /**
-     * Initialize the kernel, setting up the atomic masses.
+     * Initialize the kernel.
      * 
-     * @param masses the mass of each atom
+     * @param system     the System this kernel will be applied to
      */
-    void initialize(const std::vector<double>& masses);
+    void initialize(const System& system);
     /**
      * Execute the kernel.
      * 
-     * @param velocities a Stream of type Double3 containing the velocity (x, y, z) of each atom
-     * @return the kinetic energy of the system
+     * @param context    the context in which to execute this kernel
      */
-    double execute(const Stream& velocities);
+    double execute(OpenMMContextImpl& context);
 private:
     std::vector<double> masses;
 };
@@ -321,17 +277,19 @@ public:
     /**
      * Initialize the kernel, setting up the atomic masses.
      * 
-     * @param masses the mass of each atom
+     * @param system     the System this kernel will be applied to
+     * @param force      the CMMotionRemover this kernel will be used for
      */
-    void initialize(const std::vector<double>& masses);
+    void initialize(const System& system, const CMMotionRemover& force);
     /**
      * Execute the kernel.
      * 
-     * @param velocities a Stream of type Double3 containing the velocity (x, y, z) of each atom
+     * @param context    the context in which to execute this kernel
      */
-    void execute(Stream& velocities);
+    void execute(OpenMMContextImpl& context);
 private:
     std::vector<double> masses;
+    int frequency;
 };
 
 } // namespace OpenMM

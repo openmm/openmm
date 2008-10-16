@@ -48,9 +48,23 @@ public:
     /**
      * Create a CMMotionRemover.
      */
-    CMMotionRemover();
+    CMMotionRemover(int frequency = 1);
+    /**
+     * Get the frequency (in time steps) at which center of mass motion should be removed
+     */
+    int getFrequency() const {
+        return frequency;
+    }
+    /**
+     * Set the frequency (in time steps) at which center of mass motion should be removed
+     */
+    void setFrequency(int freq) {
+        frequency = freq;
+    }
 protected:
     ForceImpl* createImpl();
+private:
+    int frequency;
 };
 
 } // namespace OpenMM

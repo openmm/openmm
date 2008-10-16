@@ -70,7 +70,7 @@ OpenMMContextImpl::OpenMMContextImpl(OpenMMContext& owner, System& system, Integ
     vector<double> masses(system.getNumAtoms());
     for (size_t i = 0; i < masses.size(); ++i)
         masses[i] = system.getAtomMass(i);
-    dynamic_cast<CalcKineticEnergyKernel&>(kineticEnergyKernel.getImpl()).initialize(masses);
+    dynamic_cast<CalcKineticEnergyKernel&>(kineticEnergyKernel.getImpl()).initialize(system);
     for (size_t i = 0; i < forceImpls.size(); ++i)
         forceImpls[i]->initialize(*this);
     integrator.initialize(*this);
@@ -107,7 +107,7 @@ void OpenMMContextImpl::calcForces() {
 }
 
 double OpenMMContextImpl::calcKineticEnergy() {
-    return dynamic_cast<CalcKineticEnergyKernel&>(kineticEnergyKernel.getImpl()).execute(velocities);
+    return dynamic_cast<CalcKineticEnergyKernel&>(kineticEnergyKernel.getImpl()).execute(*this);
 }
 
 double OpenMMContextImpl::calcPotentialEnergy() {

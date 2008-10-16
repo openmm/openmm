@@ -62,7 +62,7 @@ void BrownianIntegrator::initialize(OpenMMContextImpl& contextRef) {
         constraintIndices[i].push_back(atom2);
         constraintLengths[i] = distance;
     }
-    dynamic_cast<IntegrateBrownianStepKernel&>(kernel.getImpl()).initialize(masses, constraintIndices, constraintLengths);
+    dynamic_cast<IntegrateBrownianStepKernel&>(kernel.getImpl()).initialize(system, *this);
 }
 
 vector<string> BrownianIntegrator::getKernelNames() {
@@ -75,8 +75,7 @@ void BrownianIntegrator::step(int steps) {
     for (int i = 0; i < steps; ++i) {
         context->updateContextState();
         context->calcForces();
-        dynamic_cast<IntegrateBrownianStepKernel&>(kernel.getImpl()).execute(context->getPositions(), context->getVelocities(), context->getForces(), temperature,
-                friction, getStepSize());
+        dynamic_cast<IntegrateBrownianStepKernel&>(kernel.getImpl()).execute(*context, *this);
         context->setTime(context->getTime()+getStepSize());
     }
 }

@@ -36,13 +36,13 @@
 
 using namespace OpenMM;
 
-StandardMMForceField::StandardMMForceField(int numAtoms, int numBonds, int numAngles, int numPeriodicTorsions, int numRBTorsions) :
-        atoms(numAtoms), bonds(numBonds), angles(numAngles), periodicTorsions(numPeriodicTorsions), rbTorsions(numRBTorsions),
+StandardMMForceField::StandardMMForceField(int numAtoms, int numBonds, int numAngles, int numPeriodicTorsions, int numRBTorsions, int numNonbonded14) :
+        atoms(numAtoms), bonds(numBonds), angles(numAngles), periodicTorsions(numPeriodicTorsions), rbTorsions(numRBTorsions), nb14s(numNonbonded14),
         nonbondedMethod(NoCutoff), cutoffDistance(1.0) {
     periodicBoxSize[0] = periodicBoxSize[1] = periodicBoxSize[2] = 2.0;
 }
 
-StandardMMForceField::NonbondedMethod StandardMMForceField::getNonbondedMethod() {
+StandardMMForceField::NonbondedMethod StandardMMForceField::getNonbondedMethod() const {
     return nonbondedMethod;
 }
 
@@ -50,7 +50,7 @@ void StandardMMForceField::setNonbondedMethod(NonbondedMethod method) {
     nonbondedMethod = method;
 }
 
-double StandardMMForceField::getCutoffDistance() {
+double StandardMMForceField::getCutoffDistance() const {
     return cutoffDistance;
 }
 
@@ -58,7 +58,7 @@ void StandardMMForceField::setCutoffDistance(double distance) {
     cutoffDistance = distance;
 }
 
-void StandardMMForceField::getPeriodicBoxSize(double& x, double& y, double& z) {
+void StandardMMForceField::getPeriodicBoxSize(double& x, double& y, double& z) const {
     x = periodicBoxSize[0];
     y = periodicBoxSize[1];
     z = periodicBoxSize[2];
@@ -156,6 +156,22 @@ void StandardMMForceField::setRBTorsionParameters(int index, int atom1, int atom
     rbTorsions[index].c[3] = c3;
     rbTorsions[index].c[4] = c4;
     rbTorsions[index].c[5] = c5;
+}
+
+void StandardMMForceField::getNonbonded14Parameters(int index, int& atom1, int& atom2, double& charge, double& radius, double& depth) const {
+    atom1 = nb14s[index].atom1;
+    atom2 = nb14s[index].atom2;
+    charge = nb14s[index].charge;
+    radius = nb14s[index].radius;
+    depth = nb14s[index].depth;
+}
+
+void StandardMMForceField::setNonbonded14Parameters(int index, int atom1, int atom2, double charge, double radius, double depth) {
+    nb14s[index].atom1 = atom1;
+    nb14s[index].atom2 = atom2;
+    nb14s[index].charge = charge;
+    nb14s[index].radius = radius;
+    nb14s[index].depth = depth;
 }
 
 ForceImpl* StandardMMForceField::createImpl() {

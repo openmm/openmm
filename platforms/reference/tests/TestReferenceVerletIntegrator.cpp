@@ -55,7 +55,7 @@ void testSingleBond() {
     system.setAtomMass(0, 2.0);
     system.setAtomMass(1, 2.0);
     VerletIntegrator integrator(0.01);
-    StandardMMForceField* forceField = new StandardMMForceField(2, 1, 0, 0, 0);
+    StandardMMForceField* forceField = new StandardMMForceField(2, 1, 0, 0, 0, 0);
     forceField->setBondParameters(0, 0, 1, 1.5, 1);
     system.addForce(forceField);
     OpenMMContext context(system, integrator, platform);
@@ -90,7 +90,7 @@ void testConstraints() {
     ReferencePlatform platform;
     System system(numAtoms, numAtoms-1);
     VerletIntegrator integrator(0.002);
-    StandardMMForceField* forceField = new StandardMMForceField(numAtoms, 0, 0, 0, 0);
+    StandardMMForceField* forceField = new StandardMMForceField(numAtoms, 0, 0, 0, 0, 0);
     for (int i = 0; i < numAtoms; ++i) {
         system.setAtomMass(i, 10.0);
         forceField->setAtomParameters(i, (i%2 == 0 ? 0.2 : -0.2), 0.5, 5.0);

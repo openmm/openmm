@@ -42,23 +42,15 @@ GBSAOBCForceFieldImpl::GBSAOBCForceFieldImpl(GBSAOBCForceField& owner) : owner(o
 
 void GBSAOBCForceFieldImpl::initialize(OpenMMContextImpl& context) {
     kernel = context.getPlatform().createKernel(CalcGBSAOBCForceFieldKernel::Name(), context);
-    vector<vector<double> > atomParameters(owner.getNumAtoms());
-    for (int i = 0; i < owner.getNumAtoms(); ++i) {
-        double charge, radius, scalingFactor;
-        owner.getAtomParameters(i, charge, radius, scalingFactor);
-        atomParameters[i].push_back(charge);
-        atomParameters[i].push_back(radius);
-        atomParameters[i].push_back(scalingFactor);
-    }
-    dynamic_cast<CalcGBSAOBCForceFieldKernel&>(kernel.getImpl()).initialize(atomParameters, owner.getSolventDielectric(), owner.getSoluteDielectric());
+    dynamic_cast<CalcGBSAOBCForceFieldKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
 
 void GBSAOBCForceFieldImpl::calcForces(OpenMMContextImpl& context, Stream& forces) {
-    dynamic_cast<CalcGBSAOBCForceFieldKernel&>(kernel.getImpl()).executeForces(context.getPositions(), forces);
+    dynamic_cast<CalcGBSAOBCForceFieldKernel&>(kernel.getImpl()).executeForces(context);
 }
 
 double GBSAOBCForceFieldImpl::calcEnergy(OpenMMContextImpl& context) {
-    return dynamic_cast<CalcGBSAOBCForceFieldKernel&>(kernel.getImpl()).executeEnergy(context.getPositions());
+    return dynamic_cast<CalcGBSAOBCForceFieldKernel&>(kernel.getImpl()).executeEnergy(context);
 }
 
 std::vector<std::string> GBSAOBCForceFieldImpl::getKernelNames() {

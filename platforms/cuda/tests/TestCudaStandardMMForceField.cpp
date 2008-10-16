@@ -52,7 +52,7 @@ void testBonds() {
     CudaPlatform platform;
     System system(3, 0);
     LangevinIntegrator integrator(0.0, 0.1, 0.01);
-    StandardMMForceField* forceField = new StandardMMForceField(3, 2, 0, 0, 0);
+    StandardMMForceField* forceField = new StandardMMForceField(3, 2, 0, 0, 0, 0);
     forceField->setBondParameters(0, 0, 1, 1.5, 0.8);
     forceField->setBondParameters(1, 1, 2, 1.2, 0.7);
     system.addForce(forceField);
@@ -74,7 +74,7 @@ void testAngles() {
     CudaPlatform platform;
     System system(4, 0);
     LangevinIntegrator integrator(0.0, 0.1, 0.01);
-    StandardMMForceField* forceField = new StandardMMForceField(4, 0, 2, 0, 0);
+    StandardMMForceField* forceField = new StandardMMForceField(4, 0, 2, 0, 0, 0);
     forceField->setAngleParameters(0, 0, 1, 2, PI_M/3, 1.1);
     forceField->setAngleParameters(1, 1, 2, 3, PI_M/2, 1.2);
     system.addForce(forceField);
@@ -99,7 +99,7 @@ void testPeriodicTorsions() {
     CudaPlatform platform;
     System system(4, 0);
     LangevinIntegrator integrator(0.0, 0.1, 0.01);
-    StandardMMForceField* forceField = new StandardMMForceField(4, 0, 0, 1, 0);
+    StandardMMForceField* forceField = new StandardMMForceField(4, 0, 0, 1, 0, 0);
     forceField->setPeriodicTorsionParameters(0, 0, 1, 2, 3, 2, PI_M/3, 1.1);
     system.addForce(forceField);
     OpenMMContext context(system, integrator, platform);
@@ -122,7 +122,7 @@ void testRBTorsions() {
     CudaPlatform platform;
     System system(4, 0);
     LangevinIntegrator integrator(0.0, 0.1, 0.01);
-    StandardMMForceField* forceField = new StandardMMForceField(4, 0, 0, 0, 1);
+    StandardMMForceField* forceField = new StandardMMForceField(4, 0, 0, 0, 1, 0);
     forceField->setRBTorsionParameters(0, 0, 1, 2, 3, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6);
     system.addForce(forceField);
     OpenMMContext context(system, integrator, platform);
@@ -155,7 +155,7 @@ void testCoulomb() {
     CudaPlatform platform;
     System system(2, 0);
     LangevinIntegrator integrator(0.0, 0.1, 0.01);
-    StandardMMForceField* forceField = new StandardMMForceField(2, 0, 0, 0, 0);
+    StandardMMForceField* forceField = new StandardMMForceField(2, 0, 0, 0, 0, 0);
     forceField->setAtomParameters(0, 0.5, 1, 0);
     forceField->setAtomParameters(1, -1.5, 1, 0);
     system.addForce(forceField);
@@ -176,7 +176,7 @@ void testLJ() {
     CudaPlatform platform;
     System system(2, 0);
     LangevinIntegrator integrator(0.0, 0.1, 0.01);
-    StandardMMForceField* forceField = new StandardMMForceField(2, 0, 0, 0, 0);
+    StandardMMForceField* forceField = new StandardMMForceField(2, 0, 0, 0, 0, 0);
     forceField->setAtomParameters(0, 0, 1.2, 1);
     forceField->setAtomParameters(1, 0, 1.4, 2);
     system.addForce(forceField);
@@ -199,7 +199,7 @@ void testExclusionsAnd14() {
     CudaPlatform platform;
     System system(5, 0);
     LangevinIntegrator integrator(0.0, 0.1, 0.01);
-    StandardMMForceField* forceField = new StandardMMForceField(5, 4, 0, 0, 0);
+    StandardMMForceField* forceField = new StandardMMForceField(5, 4, 0, 0, 0, 2);
     forceField->setBondParameters(0, 0, 1, 1, 0);
     forceField->setBondParameters(1, 1, 2, 1, 0);
     forceField->setBondParameters(2, 2, 3, 1, 0);
@@ -217,6 +217,8 @@ void testExclusionsAnd14() {
         }
         forceField->setAtomParameters(0, 0, 1.5, 1);
         forceField->setAtomParameters(i, 0, 1.5, 1);
+        forceField->setNonbonded14Parameters(0, 0, 3, 0, 1.5, i == 3 ? 0.5 : 0.0);
+        forceField->setNonbonded14Parameters(1, 1, 4, 0, 1.5, 0.0);
         positions[i] = Vec3(r, 0, 0);
         OpenMMContext context(system, integrator, platform);
         context.setPositions(positions);
@@ -242,6 +244,8 @@ void testExclusionsAnd14() {
         
         forceField->setAtomParameters(0, 2, 1.5, 0);
         forceField->setAtomParameters(i, 2, 1.5, 0);
+        forceField->setNonbonded14Parameters(0, 0, 3, i == 3 ? 4/1.2 : 0, 1.5, 0);
+        forceField->setNonbonded14Parameters(1, 1, 4, 0, 1.5, 0);
         OpenMMContext context2(system, integrator, platform);
         context2.setPositions(positions);
         state = context2.getState(State::Forces | State::Energy);
@@ -266,7 +270,7 @@ void testCutoff() {
     CudaPlatform platform;
     System system(3, 0);
     LangevinIntegrator integrator(0.0, 0.1, 0.01);
-    StandardMMForceField* forceField = new StandardMMForceField(3, 0, 0, 0, 0);
+    StandardMMForceField* forceField = new StandardMMForceField(3, 0, 0, 0, 0, 0);
     forceField->setAtomParameters(0, 1.0, 1, 0);
     forceField->setAtomParameters(1, 1.0, 1, 0);
     forceField->setAtomParameters(2, 1.0, 1, 0);
@@ -299,7 +303,7 @@ void testCutoff14() {
     CudaPlatform platform;
     System system(5, 0);
     LangevinIntegrator integrator(0.0, 0.1, 0.01);
-    StandardMMForceField* forceField = new StandardMMForceField(5, 4, 0, 0, 0);
+    StandardMMForceField* forceField = new StandardMMForceField(5, 4, 0, 0, 0, 2);
     forceField->setBondParameters(0, 0, 1, 1, 0);
     forceField->setBondParameters(1, 1, 2, 1, 0);
     forceField->setBondParameters(2, 2, 3, 1, 0);
@@ -323,6 +327,8 @@ void testCutoff14() {
         for (int j = 1; j < 5; ++j)
             forceField->setAtomParameters(j, 0, 1.5, 0);
         forceField->setAtomParameters(i, 0, 1.5, 1);
+        forceField->setNonbonded14Parameters(0, 0, 3, 0, 1.5, i == 3 ? 0.5 : 0.0);
+        forceField->setNonbonded14Parameters(1, 1, 4, 0, 1.5, 0.0);
         context.reinitialize();
         context.setPositions(positions);
         State state = context.getState(State::Forces | State::Energy);
@@ -349,6 +355,8 @@ void testCutoff14() {
         const double q = 0.7;
         forceField->setAtomParameters(0, q, 1.5, 0);
         forceField->setAtomParameters(i, q, 1.5, 0);
+        forceField->setNonbonded14Parameters(0, 0, 3, i == 3 ? q*q/1.2 : 0, 1.5, 0);
+        forceField->setNonbonded14Parameters(1, 1, 4, 0, 1.5, 0);
         context.reinitialize();
         context.setPositions(positions);
         state = context.getState(State::Forces | State::Energy);
@@ -376,7 +384,7 @@ void testPeriodic() {
     CudaPlatform platform;
     System system(3, 0);
     LangevinIntegrator integrator(0.0, 0.1, 0.01);
-    StandardMMForceField* forceField = new StandardMMForceField(3, 1, 0, 0, 0);
+    StandardMMForceField* forceField = new StandardMMForceField(3, 1, 0, 0, 0, 0);
     forceField->setAtomParameters(0, 1.0, 1, 0);
     forceField->setAtomParameters(1, 1.0, 1, 0);
     forceField->setAtomParameters(2, 1.0, 1, 0);

@@ -44,16 +44,11 @@ AndersenThermostatImpl::AndersenThermostatImpl(AndersenThermostat& owner) : owne
 
 void AndersenThermostatImpl::initialize(OpenMMContextImpl& context) {
     kernel = context.getPlatform().createKernel(ApplyAndersenThermostatKernel::Name(), context);
-    const System& system = context.getSystem();
-    vector<double> masses(system.getNumAtoms());
-    for (int i = 0; i < system.getNumAtoms(); ++i)
-        masses[i] = system.getAtomMass(i);
-    dynamic_cast<ApplyAndersenThermostatKernel&>(kernel.getImpl()).initialize(masses);
+    dynamic_cast<ApplyAndersenThermostatKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
 
 void AndersenThermostatImpl::updateContextState(OpenMMContextImpl& context) {
-    dynamic_cast<ApplyAndersenThermostatKernel&>(kernel.getImpl()).execute(context.getVelocities(), context.getParameter(AndersenThermostat::Temperature),
-            context.getParameter(AndersenThermostat::CollisionFrequency), context.getIntegrator().getStepSize());
+    dynamic_cast<ApplyAndersenThermostatKernel&>(kernel.getImpl()).execute(context);
 }
 
 std::map<std::string, double> AndersenThermostatImpl::getDefaultParameters() {

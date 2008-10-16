@@ -46,91 +46,26 @@ StandardMMForceFieldImpl::~StandardMMForceFieldImpl() {
 
 void StandardMMForceFieldImpl::initialize(OpenMMContextImpl& context) {
     kernel = context.getPlatform().createKernel(CalcStandardMMForceFieldKernel::Name(), context);
-    vector<vector<int> > bondIndices(owner.getNumBonds());
-    vector<vector<double> > bondParameters(owner.getNumBonds());
-    vector<vector<int> > angleIndices(owner.getNumAngles());
-    vector<vector<double> > angleParameters(owner.getNumAngles());
-    vector<vector<int> > periodicTorsionIndices(owner.getNumPeriodicTorsions());
-    vector<vector<double> > periodicTorsionParameters(owner.getNumPeriodicTorsions());
-    vector<vector<int> > rbTorsionIndices(owner.getNumRBTorsions());
-    vector<vector<double> > rbTorsionParameters(owner.getNumRBTorsions());
-    vector<vector<int> > bonded14Indices;
     vector<set<int> > exclusions(owner.getNumAtoms());
-    vector<vector<double> > nonbondedParameters(owner.getNumAtoms());
+    vector<vector<int> > bondIndices(owner.getNumBonds());
+    set<pair<int, int> > bonded14set;
     for (int i = 0; i < owner.getNumBonds(); ++i) {
         int atom1, atom2;
         double length, k;
         owner.getBondParameters(i, atom1, atom2, length, k);
         bondIndices[i].push_back(atom1);
         bondIndices[i].push_back(atom2);
-        bondParameters[i].push_back(length);
-        bondParameters[i].push_back(k);
     }
-    for (int i = 0; i < owner.getNumAngles(); ++i) {
-        int atom1, atom2, atom3;
-        double angle, k;
-        owner.getAngleParameters(i, atom1, atom2, atom3, angle, k);
-        angleIndices[i].push_back(atom1);
-        angleIndices[i].push_back(atom2);
-        angleIndices[i].push_back(atom3);
-        angleParameters[i].push_back(angle);
-        angleParameters[i].push_back(k);
-    }
-    for (int i = 0; i < owner.getNumPeriodicTorsions(); ++i) {
-        int atom1, atom2, atom3, atom4, periodicity;
-        double phase, k;
-        owner.getPeriodicTorsionParameters(i, atom1, atom2, atom3, atom4, periodicity, phase, k);
-        periodicTorsionIndices[i].push_back(atom1);
-        periodicTorsionIndices[i].push_back(atom2);
-        periodicTorsionIndices[i].push_back(atom3);
-        periodicTorsionIndices[i].push_back(atom4);
-        periodicTorsionParameters[i].push_back(k);
-        periodicTorsionParameters[i].push_back(phase);
-        periodicTorsionParameters[i].push_back(periodicity);
-    }
-    for (int i = 0; i < owner.getNumRBTorsions(); ++i) {
-        int atom1, atom2, atom3, atom4;
-        double c0, c1, c2, c3, c4, c5;
-        owner.getRBTorsionParameters(i, atom1, atom2, atom3, atom4, c0, c1, c2, c3, c4, c5);
-        rbTorsionIndices[i].push_back(atom1);
-        rbTorsionIndices[i].push_back(atom2);
-        rbTorsionIndices[i].push_back(atom3);
-        rbTorsionIndices[i].push_back(atom4);
-        rbTorsionParameters[i].push_back(c0);
-        rbTorsionParameters[i].push_back(c1);
-        rbTorsionParameters[i].push_back(c2);
-        rbTorsionParameters[i].push_back(c3);
-        rbTorsionParameters[i].push_back(c4);
-        rbTorsionParameters[i].push_back(c5);
-    }
-    for (int i = 0; i < owner.getNumAtoms(); ++i) {
-        double charge, radius, depth;
-        owner.getAtomParameters(i, charge, radius, depth);
-        nonbondedParameters[i].push_back(charge);
-        nonbondedParameters[i].push_back(radius);
-        nonbondedParameters[i].push_back(depth);
-    }
-    set<pair<int, int> > bonded14set;
     findExclusions(bondIndices, exclusions, bonded14set);
-    bonded14Indices.resize(bonded14set.size());
-    int index = 0;
-    for (set<pair<int, int> >::const_iterator iter = bonded14set.begin(); iter != bonded14set.end(); ++iter) {
-        bonded14Indices[index].push_back(iter->first);
-        bonded14Indices[index++].push_back(iter->second);
-    }
-    double boxSize[3];
-    owner.getPeriodicBoxSize(boxSize[0], boxSize[1], boxSize[2]);
-    dynamic_cast<CalcStandardMMForceFieldKernel&>(kernel.getImpl()).initialize(bondIndices, bondParameters, angleIndices, angleParameters,
-            periodicTorsionIndices, periodicTorsionParameters, rbTorsionIndices, rbTorsionParameters, bonded14Indices, 0.5, 1.0/1.2, exclusions,
-            nonbondedParameters, CalcStandardMMForceFieldKernel::NonbondedMethod(owner.getNonbondedMethod()), owner.getCutoffDistance(), boxSize);
+    dynamic_cast<CalcStandardMMForceFieldKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner, exclusions);
 }
 
 void StandardMMForceFieldImpl::calcForces(OpenMMContextImpl& context, Stream& forces) {
-    dynamic_cast<CalcStandardMMForceFieldKernel&>(kernel.getImpl()).executeForces(context.getPositions(), forces);
+    dynamic_cast<CalcStandardMMForceFieldKernel&>(kernel.getImpl()).executeForces(context);
 }
 
 double StandardMMForceFieldImpl::calcEnergy(OpenMMContextImpl& context) {
-    return dynamic_cast<CalcStandardMMForceFieldKernel&>(kernel.getImpl()).executeEnergy(context.getPositions());
+    return dynamic_cast<CalcStandardMMForceFieldKernel&>(kernel.getImpl()).executeEnergy(context);
 }
 
 std::vector<std::string> StandardMMForceFieldImpl::getKernelNames() {

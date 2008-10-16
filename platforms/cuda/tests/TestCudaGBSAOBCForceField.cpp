@@ -58,7 +58,7 @@ void testSingleAtom() {
     GBSAOBCForceField* forceField = new GBSAOBCForceField(1);
     forceField->setAtomParameters(0, 0.5, 0.15, 1);
     system.addForce(forceField);
-    system.addForce(new StandardMMForceField(1, 0, 0, 0, 0));
+    system.addForce(new StandardMMForceField(1, 0, 0, 0, 0, 0));
     OpenMMContext context(system, integrator, platform);
     vector<Vec3> positions(1);
     positions[0] = Vec3(0, 0, 0);
@@ -81,7 +81,7 @@ void testForce() {
     for (int i = 0; i < numAtoms; ++i)
         forceField->setAtomParameters(i, i%2 == 0 ? -1 : 1, 0.15, 1);
     system.addForce(forceField);
-    system.addForce(new StandardMMForceField(numAtoms, 0, 0, 0, 0));
+    system.addForce(new StandardMMForceField(numAtoms, 0, 0, 0, 0, 0));
     OpenMMContext context(system, integrator, platform);
     
     // Set random positions for all the atoms.

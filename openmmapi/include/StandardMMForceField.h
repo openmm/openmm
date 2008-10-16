@@ -80,8 +80,9 @@ public:
      * @param numAngles           the number of harmonic bond angle terms in the potential function
      * @param numPeriodicTorsions the number of periodic torsion terms in the potential function
      * @param numRBTorsions       the number of Ryckaert-Bellemans torsion terms in the potential function
+     * @param numNonbonded14      the number of nonbonded 1-4 terms in the potential function
      */
-    StandardMMForceField(int numAtoms, int numBonds, int numAngles, int numPeriodicTorsions, int numRBTorsions);
+    StandardMMForceField(int numAtoms, int numBonds, int numAngles, int numPeriodicTorsions, int numRBTorsions, int numNonbonded14);
     /**
      * Get the number of atoms in the system.
      */
@@ -113,9 +114,15 @@ public:
         return rbTorsions.size();
     }
     /**
+     * Get the number of nonbonded 1-4 terms in the potential function
+     */
+    int getNumNonbonded14() const {
+        return nb14s.size();
+    }
+    /**
      * Get the method used for handling long range nonbonded interactions.
      */
-    NonbondedMethod getNonbondedMethod();
+    NonbondedMethod getNonbondedMethod() const;
     /**
      * Set the method used for handling long range nonbonded interactions.
      */
@@ -124,7 +131,7 @@ public:
      * Get the cutoff distance (in nm) being used for nonbonded interactions.  If the NonbondedMethod in use
      * does not use cutoffs, this value will have no effect.
      */
-    double getCutoffDistance();
+    double getCutoffDistance() const;
     /**
      * Set the cutoff distance (in nm) being used for nonbonded interactions.  If the NonbondedMethod in use
      * does not use cutoffs, this value will have no effect.
@@ -138,7 +145,7 @@ public:
      * @param y      on exit, this contains the width of the periodic box along the y axis
      * @param z      on exit, this contains the width of the periodic box along the z axis
      */
-    void getPeriodicBoxSize(double& x, double& y, double& z);
+    void getPeriodicBoxSize(double& x, double& y, double& z) const;
     /**
      * Set the dimensions of the periodic box (in nm).  If the NonbondedMethod in use does not use periodic
      * boundary conditions, these values will have no effect.
@@ -266,6 +273,28 @@ public:
      * @param c5           the coefficient of the 5th order term
      */
     void setRBTorsionParameters(int index, int atom1, int atom2, int atom3, int atom4, double c0, double c1, double c2, double c3, double c4, double c5);
+    /**
+     * Get the force field parameters for a nonbonded 1-4 term.
+     * 
+     * @param index     the index of the interaction for which to get parameters
+     * @param atom1     the index of the first atom involved in the interaction
+     * @param atom2     the index of the second atom involved in the interaction
+     * @param charge    the scaled product of the atomic charges (i.e. the strength of the Coulomb interaction), measured in units of the proton charge
+     * @param radius    the van der Waals radius of the atom (sigma in the Lennard Jones potential), measured in nm
+     * @param depth     the well depth of the van der Waals interaction (epsilon in the Lennard Jones potential), measured in kJ/mol
+     */
+    void getNonbonded14Parameters(int index, int& atom1, int& atom2, double& charge, double& radius, double& depth) const;
+    /**
+     * Set the force field parameters for a nonbonded 1-4 term.
+     * 
+     * @param index     the index of the interaction for which to get parameters
+     * @param atom1     the index of the first atom involved in the interaction
+     * @param atom2     the index of the second atom involved in the interaction
+     * @param charge    the scaled product of the atomic charges (i.e. the strength of the Coulomb interaction), measured in units of the proton charge
+     * @param radius    the van der Waals radius of the atom (sigma in the Lennard Jones potential), measured in nm
+     * @param depth     the well depth of the van der Waals interaction (epsilon in the Lennard Jones potential), measured in kJ/mol
+     */
+    void setNonbonded14Parameters(int index, int atom1, int atom2, double charge, double radius, double depth);
 protected:
     ForceImpl* createImpl();
 private:
@@ -274,6 +303,7 @@ private:
     class AngleInfo;
     class PeriodicTorsionInfo;
     class RBTorsionInfo;
+    class NB14Info;
     NonbondedMethod nonbondedMethod;
     double cutoffDistance;
     double periodicBoxSize[3];
@@ -291,6 +321,7 @@ private:
     std::vector<AngleInfo> angles;
     std::vector<PeriodicTorsionInfo> periodicTorsions;
     std::vector<RBTorsionInfo> rbTorsions;
+    std::vector<NB14Info> nb14s;
 
 #if defined(_MSC_VER)
 #pragma warning(pop)
@@ -344,6 +375,16 @@ public:
     BondInfo() {
         atom1 = atom2 = -1;
         length = k = 0.0;
+    }
+};
+
+class StandardMMForceField::NB14Info {
+public:
+    int atom1, atom2;
+    double charge, radius, depth;
+    NB14Info() {
+        atom1 = atom2 = -1;
+        charge = radius = depth = 0.0;
     }
 };
 

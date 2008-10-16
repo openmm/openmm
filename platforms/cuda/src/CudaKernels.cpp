@@ -35,6 +35,7 @@
 #include "CudaStreamImpl.h"
 #include "LangevinIntegrator.h"
 #include "ReferencePlatform.h"
+#include "internal/OpenMMContextImpl.h"
 #include "kernels/gputypes.h"
 #include "kernels/cudaKernels.h"
 #include <cmath>
@@ -47,19 +48,13 @@ using namespace std;
 CudaCalcStandardMMForceFieldKernel::~CudaCalcStandardMMForceFieldKernel() {
 }
 
-void CudaCalcStandardMMForceFieldKernel::initialize(const vector<vector<int> >& bondIndices, const vector<vector<double> >& bondParameters,
-        const vector<vector<int> >& angleIndices, const vector<vector<double> >& angleParameters,
-        const vector<vector<int> >& periodicTorsionIndices, const vector<vector<double> >& periodicTorsionParameters,
-        const vector<vector<int> >& rbTorsionIndices, const vector<vector<double> >& rbTorsionParameters,
-        const vector<vector<int> >& bonded14Indices, double lj14Scale, double coulomb14Scale,
-        const vector<set<int> >& exclusions, const vector<vector<double> >& nonbondedParameters,
-        NonbondedMethod nonbondedMethod, double nonbondedCutoff, double periodicBoxSize[3]) {
-    numAtoms = nonbondedParameters.size();
-    numBonds = bondIndices.size();
-    numAngles = angleIndices.size();
-    numPeriodicTorsions = periodicTorsionIndices.size();
-    numRBTorsions = rbTorsionIndices.size();
-    num14 = bonded14Indices.size();
+void CudaCalcStandardMMForceFieldKernel::initialize(const System& system, const StandardMMForceField& force, const std::vector<std::set<int> >& exclusions) {
+    numAtoms = force.getNumAtoms();
+    numBonds = force.getNumBonds();
+    numAngles = force.getNumAngles();
+    numPeriodicTorsions = force.getNumPeriodicTorsions();
+    numRBTorsions = force.getNumRBTorsions();
+    num14 = force.getNumNonbonded14();
     const float RadiansToDegrees = 180.0/3.14159265;
     _gpuContext* gpu = data.gpu;
     
@@ -71,10 +66,10 @@ void CudaCalcStandardMMForceFieldKernel::initialize(const vector<vector<int> >& 
         vector<float> length(numBonds);
         vector<float> k(numBonds);
         for (int i = 0; i < numBonds; i++) {
-            atom1[i] = bondIndices[i][0];
-            atom2[i] = bondIndices[i][1];
-            length[i] = (float) bondParameters[i][0];
-            k[i] = (float) bondParameters[i][1];
+            double lengthValue, kValue;
+            force.getBondParameters(i, atom1[i], atom2[i], lengthValue, kValue);
+            length[i] = (float) lengthValue;
+            k[i] = (float) kValue;
         }
         gpuSetBondParameters(gpu, atom1, atom2, length, k);
     }
@@ -88,11 +83,10 @@ void CudaCalcStandardMMForceFieldKernel::initialize(const vector<vector<int> >& 
         vector<float> angle(numAngles);
         vector<float> k(numAngles);
         for (int i = 0; i < numAngles; i++) {
-            atom1[i] = angleIndices[i][0];
-            atom2[i] = angleIndices[i][1];
-            atom3[i] = angleIndices[i][2];
-            angle[i] = (float) (angleParameters[i][0]*RadiansToDegrees);
-            k[i] = (float) angleParameters[i][1];
+            double angleValue, kValue;
+            force.getAngleParameters(i, atom1[i], atom2[i], atom3[i], angleValue, kValue);
+            angle[i] = (float) (angleValue*RadiansToDegrees);
+            k[i] = (float) kValue;
         }
         gpuSetBondAngleParameters(gpu, atom1, atom2, atom3, angle, k);
     }
@@ -108,13 +102,10 @@ void CudaCalcStandardMMForceFieldKernel::initialize(const vector<vector<int> >& 
         vector<float> phase(numPeriodicTorsions);
         vector<int> periodicity(numPeriodicTorsions);
         for (int i = 0; i < numPeriodicTorsions; i++) {
-            atom1[i] = periodicTorsionIndices[i][0];
-            atom2[i] = periodicTorsionIndices[i][1];
-            atom3[i] = periodicTorsionIndices[i][2];
-            atom4[i] = periodicTorsionIndices[i][3];
-            k[i] = (float) periodicTorsionParameters[i][0];
-            phase[i] = (float) (periodicTorsionParameters[i][1]*RadiansToDegrees);
-            periodicity[i] = (int) periodicTorsionParameters[i][2];
+            double kValue, phaseValue;
+            force.getPeriodicTorsionParameters(i, atom1[i], atom2[i], atom3[i], atom4[i], periodicity[i], phaseValue, kValue);
+            k[i] = (float) kValue;
+            phase[i] = (float) (phaseValue*RadiansToDegrees);
         }
         gpuSetDihedralParameters(gpu, atom1, atom2, atom3, atom4, k, phase, periodicity);
     }
@@ -133,16 +124,14 @@ void CudaCalcStandardMMForceFieldKernel::initialize(const vector<vector<int> >& 
         vector<float> c4(numRBTorsions);
         vector<float> c5(numRBTorsions);
         for (int i = 0; i < numRBTorsions; i++) {
-            atom1[i] = rbTorsionIndices[i][0];
-            atom2[i] = rbTorsionIndices[i][1];
-            atom3[i] = rbTorsionIndices[i][2];
-            atom4[i] = rbTorsionIndices[i][3];
-            c0[i] = (float) rbTorsionParameters[i][0];
-            c1[i] = (float) rbTorsionParameters[i][1];
-            c2[i] = (float) rbTorsionParameters[i][2];
-            c3[i] = (float) rbTorsionParameters[i][3];
-            c4[i] = (float) rbTorsionParameters[i][4];
-            c5[i] = (float) rbTorsionParameters[i][5];
+            double c[6];
+            force.getRBTorsionParameters(i, atom1[i], atom2[i], atom3[i], atom4[i], c[0], c[1], c[2], c[3], c[4], c[5]);
+            c0[i] = (float) c[0];
+            c1[i] = (float) c[1];
+            c2[i] = (float) c[2];
+            c3[i] = (float) c[3];
+            c4[i] = (float) c[4];
+            c5[i] = (float) c[5];
         }
         gpuSetRbDihedralParameters(gpu, atom1, atom2, atom3, atom4, c0, c1, c2, c3, c4, c5);
     }
@@ -157,10 +146,12 @@ void CudaCalcStandardMMForceFieldKernel::initialize(const vector<vector<int> >& 
         vector<char> symbol;
         vector<vector<int> > exclusionList(numAtoms);
         for (int i = 0; i < numAtoms; i++) {
+            double charge, radius, depth;
+            force.getAtomParameters(i, charge, radius, depth);
             atom[i] = i;
-            q[i] = (float) nonbondedParameters[i][0];
-            c6[i] = (float) (4*nonbondedParameters[i][2]*pow(nonbondedParameters[i][1], 6.0));
-            c12[i] = (float) (4*nonbondedParameters[i][2]*pow(nonbondedParameters[i][1], 12.0));
+            q[i] = (float) charge;
+            c6[i] = (float) (4*depth*pow(radius, 6.0));
+            c12[i] = (float) (4*depth*pow(radius, 12.0));
             exclusionList[i] = vector<int>(exclusions[i].begin(), exclusions[i].end());
             exclusionList[i].push_back(i);
         }
@@ -177,20 +168,19 @@ void CudaCalcStandardMMForceFieldKernel::initialize(const vector<vector<int> >& 
         vector<float> q1(num14);
         vector<float> q2(num14);
         for (int i = 0; i < num14; i++) {
-            atom1[i] = bonded14Indices[i][0];
-            atom2[i] = bonded14Indices[i][1];
-            double sig = 0.5*(nonbondedParameters[atom1[i]][1]+nonbondedParameters[atom2[i]][1]);
-            double eps = sqrt(nonbondedParameters[atom1[i]][2]*nonbondedParameters[atom2[i]][2]);
-            c6[i] = (float) (4*eps*pow(sig, 6.0)*lj14Scale);
-            c12[i] = (float) (4*eps*pow(sig, 12.0)*lj14Scale);
-            q1[i] = (float) nonbondedParameters[atom1[i]][0];
-            q2[i] = (float) nonbondedParameters[atom2[i]][0];
+            double charge, sig, eps;
+            force.getNonbonded14Parameters(i, atom1[i], atom2[i], charge, sig, eps);
+            c6[i] = (float) (4*eps*pow(sig, 6.0));
+            c12[i] = (float) (4*eps*pow(sig, 12.0));
+            float q = (float) std::sqrt(charge);
+            q1[i] = q;
+            q2[i] = q;
         }
-        gpuSetLJ14Parameters(gpu, 138.935485f, (float) coulomb14Scale, atom1, atom2, c6, c12, q1, q2);
+        gpuSetLJ14Parameters(gpu, 138.935485f, 1.0f, atom1, atom2, c6, c12, q1, q2);
     }
 }
 
-void CudaCalcStandardMMForceFieldKernel::executeForces(const Stream& positions, Stream& forces) {
+void CudaCalcStandardMMForceFieldKernel::executeForces(OpenMMContextImpl& context) {
     _gpuContext* gpu = data.gpu;
     if (data.useOBC) {
         kCalculateCDLJObcGbsaForces1(gpu);
@@ -205,84 +195,90 @@ void CudaCalcStandardMMForceFieldKernel::executeForces(const Stream& positions, 
     kReduceBornSumAndForces(gpu);
 }
 
-double CudaCalcStandardMMForceFieldKernel::executeEnergy(const Stream& positions) {
+double CudaCalcStandardMMForceFieldKernel::executeEnergy(OpenMMContextImpl& context) {
     // We don't currently have GPU kernels to calculate energy, so instead we have the reference
     // platform do it.  This is VERY slow.
     
     LangevinIntegrator integrator(0.0, 1.0, 0.0);
     ReferencePlatform platform;
-    OpenMMContext context(system, integrator, platform);
+    OpenMMContext refContext(system, integrator, platform);
+    const Stream& positions = context.getPositions();
     double* posData = new double[positions.getSize()*3];
     positions.saveToArray(posData);
     vector<Vec3> pos(positions.getSize());
     for (int i = 0; i < pos.size(); i++)
         pos[i] = Vec3(posData[3*i], posData[3*i+1], posData[3*i+2]);
     delete[] posData;
-    context.setPositions(pos);
-    return context.getState(State::Energy).getPotentialEnergy();
+    refContext.setPositions(pos);
+    return refContext.getState(State::Energy).getPotentialEnergy();
 }
 
 CudaCalcGBSAOBCForceFieldKernel::~CudaCalcGBSAOBCForceFieldKernel() {
 }
 
-void CudaCalcGBSAOBCForceFieldKernel::initialize(const vector<vector<double> >& atomParameters, double solventDielectric, double soluteDielectric) {
-    int numAtoms = atomParameters.size();
+void CudaCalcGBSAOBCForceFieldKernel::initialize(const System& system, const GBSAOBCForceField& force) {
+    int numAtoms = system.getNumAtoms();
     _gpuContext* gpu = data.gpu;
     vector<int> atom(numAtoms);
     vector<float> radius(numAtoms);
     vector<float> scale(numAtoms);
     for (int i = 0; i < numAtoms; i++) {
+        double charge, atomRadius, scalingFactor;
+        force.getAtomParameters(i, charge, atomRadius, scalingFactor);
         atom[i] = i;
-        radius[i] = (float) atomParameters[i][1];
-        scale[i] = (float) atomParameters[i][2];
+        radius[i] = (float) atomRadius;
+        scale[i] = (float) scalingFactor;
     }
-    gpuSetObcParameters(gpu, soluteDielectric, solventDielectric, atom, radius, scale);
+    gpuSetObcParameters(gpu, force.getSoluteDielectric(), force.getSolventDielectric(), atom, radius, scale);
     data.useOBC = true;
 }
 
-void CudaCalcGBSAOBCForceFieldKernel::executeForces(const Stream& positions, Stream& forces) {
+void CudaCalcGBSAOBCForceFieldKernel::executeForces(OpenMMContextImpl& context) {
 }
 
-double CudaCalcGBSAOBCForceFieldKernel::executeEnergy(const Stream& positions) {
+double CudaCalcGBSAOBCForceFieldKernel::executeEnergy(OpenMMContextImpl& context) {
 }
 
 //CudaIntegrateVerletStepKernel::~CudaIntegrateVerletStepKernel() {
 //}
 //
-//void CudaIntegrateVerletStepKernel::initialize(const vector<double>& masses, const vector<vector<int> >& constraintIndices,
+//void CudaIntegrateVerletStepKernel::initialize(const System& system, const VerletIntegrator& integrator) {
 //}
 //
-//void CudaIntegrateVerletStepKernel::execute(Stream& positions, Stream& velocities, const Stream& forces, double stepSize) {
+//void CudaIntegrateVerletStepKernel::execute(OpenMMContextImpl& context, const VerletIntegrator& integrator) {
 //}
 
 CudaIntegrateLangevinStepKernel::~CudaIntegrateLangevinStepKernel() {
 }
 
-void CudaIntegrateLangevinStepKernel::initialize(const vector<double>& masses, const vector<vector<int> >& constraintIndices,
-        const vector<double>& constraintLengths) {
+void CudaIntegrateLangevinStepKernel::initialize(const System& system, const LangevinIntegrator& integrator) {
     
     // Set masses.
     
     _gpuContext* gpu = data.gpu;
-    vector<float> mass(masses.size());
-    for (int i = 0; i < (int) mass.size(); i++)
-        mass[i] = (float) masses[i];
+    int numAtoms = system.getNumAtoms();
+    vector<float> mass(numAtoms);
+    for (int i = 0; i < numAtoms; i++)
+        mass[i] = (float) system.getAtomMass(i);
     gpuSetMass(gpu, mass);
     
     // Set constraints.
     
-    int numConstraints = constraintLengths.size();
+    int numConstraints = system.getNumConstraints();
     vector<int> atom1(numConstraints);
     vector<int> atom2(numConstraints);
     vector<float> distance(numConstraints);
     vector<float> invMass1(numConstraints);
     vector<float> invMass2(numConstraints);
     for (int i = 0; i < numConstraints; i++) {
-        atom1[i] = constraintIndices[i][0];
-        atom2[i] = constraintIndices[i][1];
-        distance[i] = (float) constraintLengths[i];
-        invMass1[i] = 1.0f/mass[atom1[i]];
-        invMass2[i] = 1.0f/mass[atom2[i]];
+        int atom1Index, atom2Index;
+        double constraintDistance;
+        system.getConstraintParameters(i, atom1Index, atom2Index, constraintDistance);
+        atom1[i] = atom1Index;
+        atom2[i] = atom2Index;
+        distance[i] = (float) constraintDistance;
+        invMass1[i] = 1.0f/mass[atom1Index];
+        invMass2[i] = 1.0f/mass[atom2Index];
     }
     gpuSetShakeParameters(gpu, atom1, atom2, distance, invMass1, invMass2);
     gpuBuildThreadBlockWorkList(gpu);
@@ -297,8 +293,11 @@ void CudaIntegrateLangevinStepKernel::initialize(const vector<double>& masses, c
     prevStepSize = -1.0;
 }
 
-void CudaIntegrateLangevinStepKernel::execute(Stream& positions, Stream& velocities, const Stream& forces, double temperature, double friction, double stepSize) {
+void CudaIntegrateLangevinStepKernel::execute(OpenMMContextImpl& context, const LangevinIntegrator& integrator) {
     _gpuContext* gpu = data.gpu;
+    double temperature = integrator.getTemperature();
+    double friction = integrator.getFriction();
+    double stepSize = integrator.getStepSize();
     if (temperature != prevTemp || friction != prevFriction || stepSize != prevStepSize) {
         // Initialize the GPU parameters.
         
@@ -312,8 +311,11 @@ void CudaIntegrateLangevinStepKernel::execute(Stream& positions, Stream& velocit
     }
     kUpdatePart1(gpu);
     kApplyFirstShake(gpu);
-    if (data.removeCM)
-        gpu->bCalculateCM = true;
+    if (data.removeCM) {
+        int step = context.getTime()/stepSize;
+        if (step%data.cmMotionFrequency == 0)
+            gpu->bCalculateCM = true;
+    }
     kUpdatePart2(gpu);
     kApplySecondShake(gpu);
 }
@@ -321,30 +323,33 @@ void CudaIntegrateLangevinStepKernel::execute(Stream& positions, Stream& velocit
 //CudaIntegrateBrownianStepKernel::~CudaIntegrateBrownianStepKernel() {
 //}
 //
-//void CudaIntegrateBrownianStepKernel::initialize(const vector<double>& masses, const vector<vector<int> >& constraintIndices,
-//        const vector<double>& constraintLengths) {
+//void CudaIntegrateBrownianStepKernel::initialize(const System& system, const BrownianIntegrator& integrator) {
 //}
 //
-//void CudaIntegrateBrownianStepKernel::execute(Stream& positions, Stream& velocities, const Stream& forces, double temperature, double friction, double stepSize) {
+//void CudaIntegrateBrownianStepKernel::execute(OpenMMContextImpl& context, const BrownianIntegrator& integrator) {
 //}
 //
 //CudaApplyAndersenThermostatKernel::~CudaApplyAndersenThermostatKernel() {
 //}
 //
-//void CudaApplyAndersenThermostatKernel::initialize(const vector<double>& masses) {
+//void CudaApplyAndersenThermostatKernel::initialize(const System& system, const AndersenThermostat& thermostat) {
 //}
 //
-//void CudaApplyAndersenThermostatKernel::execute(Stream& velocities, double temperature, double collisionFrequency, double stepSize) {
+//void CudaApplyAndersenThermostatKernel::execute(OpenMMContextImpl& context) {
 //}
 
-void CudaCalcKineticEnergyKernel::initialize(const vector<double>& masses) {
-    this->masses = masses;
+void CudaCalcKineticEnergyKernel::initialize(const System& system) {
+    int numAtoms = system.getNumAtoms();
+    masses.resize(numAtoms);
+    for (size_t i = 0; i < numAtoms; ++i)
+        masses[i] = system.getAtomMass(i);
 }
 
-double CudaCalcKineticEnergyKernel::execute(const Stream& velocities) {
+double CudaCalcKineticEnergyKernel::execute(OpenMMContextImpl& context) {
     // We don't currently have a GPU kernel to do this, so we retrieve the velocities and calculate the energy
     // on the CPU.
     
+    const Stream& velocities = context.getVelocities();
     double* v = new double[velocities.getSize()*3];
     velocities.saveToArray(v);
     double energy = 0.0;
@@ -354,9 +359,10 @@ double CudaCalcKineticEnergyKernel::execute(const Stream& velocities) {
     return 0.5*energy;
 }
 
-void CudaRemoveCMMotionKernel::initialize(const vector<double>& masses) {
+void CudaRemoveCMMotionKernel::initialize(const System& system, const CMMotionRemover& force) {
     data.removeCM = true;
+    data.cmMotionFrequency = force.getFrequency();
 }
 
-void CudaRemoveCMMotionKernel::execute(Stream& velocities) {
+void CudaRemoveCMMotionKernel::execute(OpenMMContextImpl& context) {
 }

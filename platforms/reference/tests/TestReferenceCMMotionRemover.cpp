@@ -65,7 +65,7 @@ void testMotionRemoval() {
     ReferencePlatform platform;
     System system(numAtoms, 0);
     VerletIntegrator integrator(0.01);
-    StandardMMForceField* forceField = new StandardMMForceField(numAtoms, 1, 0, 0, 0);
+    StandardMMForceField* forceField = new StandardMMForceField(numAtoms, 1, 0, 0, 0, 0);
     for (int i = 0; i < numAtoms; ++i) {
         system.setAtomMass(i, i+1);
         forceField->setAtomParameters(i, (i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);

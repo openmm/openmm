@@ -68,6 +68,7 @@ public:
     _gpuContext* gpu;
     bool removeCM;
     bool useOBC;
+    int cmMotionFrequency;
 };
 
 } // namespace OpenMM
