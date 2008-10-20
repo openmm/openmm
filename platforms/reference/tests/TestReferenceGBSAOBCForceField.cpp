@@ -62,7 +62,7 @@ void testSingleAtom() {
     positions[0] = Vec3(0, 0, 0);
     context.setPositions(positions);
     State state = context.getState(State::Energy);
-    double bornRadius = 0.15-0.09; // dielectric offset
+    double bornRadius = 0.15-0.009; // dielectric offset
     double eps0 = EPSILON0;
     double bornEnergy = (-0.5*0.5/(8*PI_M*eps0))*(1.0/forceField->getSoluteDielectric()-1.0/forceField->getSolventDielectric())/bornRadius;
     double extendedRadius = bornRadius+0.14; // probe radius

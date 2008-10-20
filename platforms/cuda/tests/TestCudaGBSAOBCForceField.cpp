@@ -56,15 +56,17 @@ void testSingleAtom() {
     system.setAtomMass(0, 2.0);
     LangevinIntegrator integrator(0, 0.1, 0.01);
     GBSAOBCForceField* forceField = new GBSAOBCForceField(1);
+    StandardMMForceField* standard = new StandardMMForceField(1, 0, 0, 0, 0, 0);
     forceField->setAtomParameters(0, 0.5, 0.15, 1);
+    standard->setAtomParameters(0, 0.5, 1, 0);
     system.addForce(forceField);
-    system.addForce(new StandardMMForceField(1, 0, 0, 0, 0, 0));
+    system.addForce(standard);
     OpenMMContext context(system, integrator, platform);
     vector<Vec3> positions(1);
     positions[0] = Vec3(0, 0, 0);
     context.setPositions(positions);
     State state = context.getState(State::Energy);
-    double bornRadius = 0.15-0.09; // dielectric offset
+    double bornRadius = 0.15-0.009; // dielectric offset
     double eps0 = EPSILON0;
     double bornEnergy = (-0.5*0.5/(8*PI_M*eps0))*(1.0/forceField->getSoluteDielectric()-1.0/forceField->getSolventDielectric())/bornRadius;
     double extendedRadius = bornRadius+0.14; // probe radius
@@ -78,10 +80,14 @@ void testForce() {
     System system(numAtoms, 0);
     LangevinIntegrator integrator(0, 0.1, 0.01);
     GBSAOBCForceField* forceField = new GBSAOBCForceField(numAtoms);
-    for (int i = 0; i < numAtoms; ++i)
-        forceField->setAtomParameters(i, i%2 == 0 ? -1 : 1, 0.15, 1);
+    StandardMMForceField* standard = new StandardMMForceField(numAtoms, 0, 0, 0, 0, 0);
+    for (int i = 0; i < numAtoms; ++i) {
+        double charge = i%2 == 0 ? -1 : 1;
+        forceField->setAtomParameters(i, charge, 0.15, 1);
+        standard->setAtomParameters(i, charge, 1, 0);
+    }
     system.addForce(forceField);
-    system.addForce(new StandardMMForceField(numAtoms, 0, 0, 0, 0, 0));
+    system.addForce(standard);
     OpenMMContext context(system, integrator, platform);
     
     // Set random positions for all the atoms.
