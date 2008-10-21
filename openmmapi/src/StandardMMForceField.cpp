@@ -39,7 +39,9 @@ using namespace OpenMM;
 StandardMMForceField::StandardMMForceField(int numAtoms, int numBonds, int numAngles, int numPeriodicTorsions, int numRBTorsions, int numNonbonded14) :
         atoms(numAtoms), bonds(numBonds), angles(numAngles), periodicTorsions(numPeriodicTorsions), rbTorsions(numRBTorsions), nb14s(numNonbonded14),
         nonbondedMethod(NoCutoff), cutoffDistance(1.0) {
-    periodicBoxSize[0] = periodicBoxSize[1] = periodicBoxSize[2] = 2.0;
+    periodicBoxVectors[0] = Vec3(2, 0, 0);
+    periodicBoxVectors[1] = Vec3(0, 2, 0);
+    periodicBoxVectors[2] = Vec3(0, 0, 2);
 }
 
 StandardMMForceField::NonbondedMethod StandardMMForceField::getNonbondedMethod() const {
@@ -58,16 +60,22 @@ void StandardMMForceField::setCutoffDistance(double distance) {
     cutoffDistance = distance;
 }
 
-void StandardMMForceField::getPeriodicBoxSize(double& x, double& y, double& z) const {
-    x = periodicBoxSize[0];
-    y = periodicBoxSize[1];
-    z = periodicBoxSize[2];
+void StandardMMForceField::getPeriodicBoxVectors(Vec3& a, Vec3& b, Vec3& c) const {
+    a = periodicBoxVectors[0];
+    b = periodicBoxVectors[1];
+    c = periodicBoxVectors[2];
 }
 
-void StandardMMForceField::setPeriodicBoxSize(double x, double y, double z) {
-    periodicBoxSize[0] = x;
-    periodicBoxSize[1] = y;
-    periodicBoxSize[2] = z;
+void StandardMMForceField::setPeriodicBoxVectors(Vec3 a, Vec3 b, Vec3 c) {
+    if (a[1] != 0.0 || a[2] != 0.0)
+        throw OpenMMException("First periodic box vector must be parallel to x.");
+    if (b[0] != 0.0 || b[2] != 0.0)
+        throw OpenMMException("Second periodic box vector must be parallel to y.");
+    if (c[0] != 0.0 || c[1] != 0.0)
+        throw OpenMMException("Third periodic box vector must be parallel to z.");
+    periodicBoxVectors[0] = a;
+    periodicBoxVectors[1] = b;
+    periodicBoxVectors[2] = c;
 }
 
 void StandardMMForceField::getAtomParameters(int index, double& charge, double& radius, double& depth) const {

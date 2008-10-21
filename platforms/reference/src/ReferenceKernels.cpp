@@ -217,11 +217,11 @@ void ReferenceCalcStandardMMForceFieldKernel::initialize(const System& system, c
     }
     nonbondedMethod = CalcStandardMMForceFieldKernel::NonbondedMethod(force.getNonbondedMethod());
     nonbondedCutoff = (RealOpenMM) force.getCutoffDistance();
-    double boxSize[3];
-    force.getPeriodicBoxSize(boxSize[0], boxSize[1], boxSize[2]);
-    periodicBoxSize[0] = (RealOpenMM) boxSize[0];
-    periodicBoxSize[1] = (RealOpenMM) boxSize[1];
-    periodicBoxSize[2] = (RealOpenMM) boxSize[2];
+    Vec3 boxVectors[3];
+    force.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+    periodicBoxSize[0] = (RealOpenMM) boxVectors[0][0];
+    periodicBoxSize[1] = (RealOpenMM) boxVectors[1][1];
+    periodicBoxSize[2] = (RealOpenMM) boxVectors[2][2];
     if (nonbondedMethod == NoCutoff)
         neighborList = NULL;
     else

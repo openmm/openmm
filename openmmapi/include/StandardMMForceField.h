@@ -33,6 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "Force.h"
+#include "Vec3.h"
 #include <map>
 #include <vector>
 #include "internal/windowsExport.h"
@@ -138,23 +139,29 @@ public:
      */
     void setCutoffDistance(double distance);
     /**
-     * Get the dimensions of the periodic box (in nm).  If the NonbondedMethod in use does not use periodic
-     * boundary conditions, these values will have no effect.
+     * Get the vectors which define the axes of the periodic box (measured in nm).  If the NonbondedMethod
+     * in use does not use periodic boundary conditions, these values will have no effect.
      *
-     * @param x      on exit, this contains the width of the periodic box along the x axis
-     * @param y      on exit, this contains the width of the periodic box along the y axis
-     * @param z      on exit, this contains the width of the periodic box along the z axis
+     * Currently, only rectangular boxes are supported.  This means that a, b, and c must be aligned with the
+     * x, y, and z axes respectively.  Future releases may support arbitrary triclinic boxes.
+     *
+     * @param a      on exit, this contains the vector defining the first edge of the periodic box
+     * @param b      on exit, this contains the vector defining the second edge of the periodic box
+     * @param c      on exit, this contains the vector defining the third edge of the periodic box
      */
-    void getPeriodicBoxSize(double& x, double& y, double& z) const;
+    void getPeriodicBoxVectors(Vec3& a, Vec3& b, Vec3& c) const;
     /**
-     * Set the dimensions of the periodic box (in nm).  If the NonbondedMethod in use does not use periodic
-     * boundary conditions, these values will have no effect.
+     * Set the vectors which define the axes of the periodic box (measured in nm).  If the NonbondedMethod
+     * in use does not use periodic boundary conditions, these values will have no effect.
      *
-     * @param x      the width of the periodic box along the x axis
-     * @param y      the width of the periodic box along the y axis
-     * @param z      the width of the periodic box along the z axis
+     * Currently, only rectangular boxes are supported.  This means that a, b, and c must be aligned with the
+     * x, y, and z axes respectively.  Future releases may support arbitrary triclinic boxes.
+     *
+     * @param a      the vector defining the first edge of the periodic box
+     * @param b      the vector defining the second edge of the periodic box
+     * @param c      the vector defining the third edge of the periodic box
      */
-    void setPeriodicBoxSize(double x, double y, double z);
+    void setPeriodicBoxVectors(Vec3 a, Vec3 b, Vec3 c);
     /**
      * Get the nonbonded force parameters for an atom.
      * 
@@ -306,7 +313,7 @@ private:
     class NB14Info;
     NonbondedMethod nonbondedMethod;
     double cutoffDistance;
-    double periodicBoxSize[3];
+    Vec3 periodicBoxVectors[3];
 
 // Retarded visual studio compiler complains about being unable to 
 // export private stl class members.

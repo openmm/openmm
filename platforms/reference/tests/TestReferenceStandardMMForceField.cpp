@@ -393,7 +393,7 @@ void testPeriodic() {
     forceField->setNonbondedMethod(StandardMMForceField::CutoffPeriodic);
     const double cutoff = 2.0;
     forceField->setCutoffDistance(cutoff);
-    forceField->setPeriodicBoxSize(4.0, 4.0, 4.0);
+    forceField->setPeriodicBoxVectors(Vec3(4, 0, 0), Vec3(0, 4, 0), Vec3(0, 0, 4));
     system.addForce(forceField);
     OpenMMContext context(system, integrator, platform);
     vector<Vec3> positions(3);
