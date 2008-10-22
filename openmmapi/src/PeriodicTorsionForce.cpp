@@ -1,6 +1,3 @@
-#ifndef OPENMM_CUDAPLATFORM_H_
-#define OPENMM_CUDAPLATFORM_H_
-
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -32,49 +29,36 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "Platform.h"
-#include "CudaStreamFactory.h"
+#include "Force.h"
+#include "OpenMMException.h"
+#include "PeriodicTorsionForce.h"
+#include "internal/PeriodicTorsionForceImpl.h"
 
-class _gpuContext;
+using namespace OpenMM;
 
-namespace OpenMM {
-    
-class KernelImpl;
+PeriodicTorsionForce::PeriodicTorsionForce(int numTorsions) : periodicTorsions(numTorsions) {
+}
 
-/**
- * This Platform subclass uses CUDA implementations of the OpenMM kernels to run on NVidia GPUs.
- */
+void PeriodicTorsionForce::getTorsionParameters(int index, int& atom1, int& atom2, int& atom3, int& atom4, int& periodicity, double& phase, double& k) const {
+    atom1 = periodicTorsions[index].atom1;
+    atom2 = periodicTorsions[index].atom2;
+    atom3 = periodicTorsions[index].atom3;
+    atom4 = periodicTorsions[index].atom4;
+    periodicity = periodicTorsions[index].periodicity;
+    phase = periodicTorsions[index].phase;
+    k = periodicTorsions[index].k;
+}
 
-class OPENMM_EXPORT CudaPlatform : public Platform {
-public:
-    class PlatformData;
-    CudaPlatform();
-    std::string getName() const {
-        return "Cuda";
-    }
-    double getSpeed() const {
-        return 100;
-    }
-    bool supportsDoublePrecision() const;
-    const StreamFactory& getDefaultStreamFactory() const;
-    void contextCreated(OpenMMContextImpl& context) const;
-    void contextDestroyed(OpenMMContextImpl& context) const;
-private:
-    CudaStreamFactory defaultStreamFactory;
-};
+void PeriodicTorsionForce::setTorsionParameters(int index, int atom1, int atom2, int atom3, int atom4, int periodicity, double phase, double k) {
+    periodicTorsions[index].atom1 = atom1;
+    periodicTorsions[index].atom2 = atom2;
+    periodicTorsions[index].atom3 = atom3;
+    periodicTorsions[index].atom4 = atom4;
+    periodicTorsions[index].periodicity = periodicity;
+    periodicTorsions[index].phase = phase;
+    periodicTorsions[index].k = k;
+}
 
-class CudaPlatform::PlatformData {
-public:
-    PlatformData(_gpuContext* gpu) : gpu(gpu), removeCM(false), useOBC(false), hasBonds(false), hasAngles(false),
-            hasPeriodicTorsions(false), hasRB(false), hasNonbonded(false), primaryKernel(NULL) {
-    }
-    _gpuContext* gpu;
-    KernelImpl* primaryKernel;
-    bool removeCM, useOBC;
-    bool hasBonds, hasAngles, hasPeriodicTorsions, hasRB, hasNonbonded;
-    int cmMotionFrequency;
-};
-
-} // namespace OpenMM
-
-#endif /*OPENMM_CUDAPLATFORM_H_*/
+ForceImpl* PeriodicTorsionForce::createImpl() {
+    return new PeriodicTorsionForceImpl(*this);
+}

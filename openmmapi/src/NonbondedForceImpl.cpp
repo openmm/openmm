@@ -30,7 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "internal/OpenMMContextImpl.h"
-#include "internal/StandardMMForceFieldImpl.h"
+#include "internal/NonbondedForceImpl.h"
 #include "kernels.h"
 
 using namespace OpenMM;
@@ -38,43 +38,52 @@ using std::pair;
 using std::vector;
 using std::set;
 
-StandardMMForceFieldImpl::StandardMMForceFieldImpl(StandardMMForceField& owner) : owner(owner) {
+NonbondedForceImpl::NonbondedForceImpl(NonbondedForce& owner) : owner(owner) {
 }
 
-StandardMMForceFieldImpl::~StandardMMForceFieldImpl() {
+NonbondedForceImpl::~NonbondedForceImpl() {
 }
 
-void StandardMMForceFieldImpl::initialize(OpenMMContextImpl& context) {
-    kernel = context.getPlatform().createKernel(CalcStandardMMForceFieldKernel::Name(), context);
+void NonbondedForceImpl::initialize(OpenMMContextImpl& context) {
+    kernel = context.getPlatform().createKernel(CalcNonbondedForceKernel::Name(), context);
+    
+    // See if the system contains a HarmonicBondForce.  If so, use it to identify exclusions.
+    
+    System& system = context.getSystem();
     vector<set<int> > exclusions(owner.getNumAtoms());
-    vector<vector<int> > bondIndices(owner.getNumBonds());
-    set<pair<int, int> > bonded14set;
-    for (int i = 0; i < owner.getNumBonds(); ++i) {
-        int atom1, atom2;
-        double length, k;
-        owner.getBondParameters(i, atom1, atom2, length, k);
-        bondIndices[i].push_back(atom1);
-        bondIndices[i].push_back(atom2);
+    for (int i = 0; i < system.getNumForces(); i++) {
+        if (dynamic_cast<HarmonicBondForce*>(&system.getForce(i)) != NULL) {
+            const HarmonicBondForce& force = dynamic_cast<const HarmonicBondForce&>(system.getForce(i));
+            vector<vector<int> > bondIndices(force.getNumBonds());
+            set<pair<int, int> > bonded14set;
+            for (int i = 0; i < force.getNumBonds(); ++i) {
+                int atom1, atom2;
+                double length, k;
+                force.getBondParameters(i, atom1, atom2, length, k);
+                bondIndices[i].push_back(atom1);
+                bondIndices[i].push_back(atom2);
+            }
+            findExclusions(bondIndices, exclusions, bonded14set);
+        }
     }
-    findExclusions(bondIndices, exclusions, bonded14set);
-    dynamic_cast<CalcStandardMMForceFieldKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner, exclusions);
+            dynamic_cast<CalcNonbondedForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner, exclusions);
 }
 
-void StandardMMForceFieldImpl::calcForces(OpenMMContextImpl& context, Stream& forces) {
-    dynamic_cast<CalcStandardMMForceFieldKernel&>(kernel.getImpl()).executeForces(context);
+void NonbondedForceImpl::calcForces(OpenMMContextImpl& context, Stream& forces) {
+    dynamic_cast<CalcNonbondedForceKernel&>(kernel.getImpl()).executeForces(context);
 }
 
-double StandardMMForceFieldImpl::calcEnergy(OpenMMContextImpl& context) {
-    return dynamic_cast<CalcStandardMMForceFieldKernel&>(kernel.getImpl()).executeEnergy(context);
+double NonbondedForceImpl::calcEnergy(OpenMMContextImpl& context) {
+    return dynamic_cast<CalcNonbondedForceKernel&>(kernel.getImpl()).executeEnergy(context);
 }
 
-std::vector<std::string> StandardMMForceFieldImpl::getKernelNames() {
+std::vector<std::string> NonbondedForceImpl::getKernelNames() {
     std::vector<std::string> names;
-    names.push_back(CalcStandardMMForceFieldKernel::Name());
+    names.push_back(CalcNonbondedForceKernel::Name());
     return names;
 }
 
-void StandardMMForceFieldImpl::findExclusions(const vector<vector<int> >& bondIndices, vector<set<int> >& exclusions, set<pair<int, int> >& bonded14Indices) const {
+void NonbondedForceImpl::findExclusions(const vector<vector<int> >& bondIndices, vector<set<int> >& exclusions, set<pair<int, int> >& bonded14Indices) const {
     vector<set<int> > bonded12(exclusions.size());
     for (int i = 0; i < (int) bondIndices.size(); ++i) {
         bonded12[bondIndices[i][0]].insert(bondIndices[i][1]);
@@ -91,7 +100,7 @@ void StandardMMForceFieldImpl::findExclusions(const vector<vector<int> >& bondIn
     }
 }
 
-void StandardMMForceFieldImpl::addExclusionsToSet(const vector<set<int> >& bonded12, set<int>& exclusions, int baseAtom, int fromAtom, int currentLevel) const {
+void NonbondedForceImpl::addExclusionsToSet(const vector<set<int> >& bonded12, set<int>& exclusions, int baseAtom, int fromAtom, int currentLevel) const {
     for (set<int>::const_iterator iter = bonded12[fromAtom].begin(); iter != bonded12[fromAtom].end(); ++iter) {
         if (*iter != baseAtom)
             exclusions.insert(*iter);

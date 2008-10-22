@@ -35,28 +35,28 @@
 #include <sstream>
 
 #include "BrookStreamImpl.h"
-#include "BrookCalcStandardMMForceFieldKernel.h"
+#include "BrookCalcNonbondedForceKernel.h"
 #include "gpu/kforce.h"
 #include "gpu/kinvmap_gather.h"
-#include "StandardMMForceField.h"
+#include "NonbondedForce.h"
 
 using namespace OpenMM;
 using namespace std;
 
 /** 
- * BrookCalcStandardMMForceFieldKernel constructor
+ * BrookCalcNonbondedForceKernel constructor
  * 
  * @param name                      kernel name
  * @param platform                  platform
  *
  */
 
-BrookCalcStandardMMForceFieldKernel::BrookCalcStandardMMForceFieldKernel( std::string name, const Platform& platform ) :
-                     CalcStandardMMForceFieldKernel( name, platform ){
+BrookCalcNonbondedForceKernel::BrookCalcNonbondedForceKernel( std::string name, const Platform& platform ) :
+                     CalcNonbondedForceKernel( name, platform ){
 
 // ---------------------------------------------------------------------------------------
 
-   // static const std::string methodName      = "BrookCalcStandardMMForceFieldKernel::BrookCalcStandardMMForceFieldKernel";
+   // static const std::string methodName      = "BrookCalcNonbondedForceKernel::BrookCalcNonbondedForceKernel";
 
 // ---------------------------------------------------------------------------------------
 
@@ -80,15 +80,15 @@ BrookCalcStandardMMForceFieldKernel::BrookCalcStandardMMForceFieldKernel( std::s
 }   
 
 /** 
- * BrookCalcStandardMMForceFieldKernel destructor
+ * BrookCalcNonbondedForceKernel destructor
  * 
  */
 
-BrookCalcStandardMMForceFieldKernel::~BrookCalcStandardMMForceFieldKernel( ){
+BrookCalcNonbondedForceKernel::~BrookCalcNonbondedForceKernel( ){
 
 // ---------------------------------------------------------------------------------------
 
-   // static const std::string methodName      = "BrookCalcStandardMMForceFieldKernel::BrookCalcStandardMMForceFieldKernel";
+   // static const std::string methodName      = "BrookCalcNonbondedForceKernel::BrookCalcNonbondedForceKernel";
 
 // ---------------------------------------------------------------------------------------
 
@@ -113,7 +113,7 @@ BrookCalcStandardMMForceFieldKernel::~BrookCalcStandardMMForceFieldKernel( ){
  *
  */
 
-FILE* BrookCalcStandardMMForceFieldKernel::getLog( void ) const {
+FILE* BrookCalcNonbondedForceKernel::getLog( void ) const {
    return _log;
 }
 
@@ -126,7 +126,7 @@ FILE* BrookCalcStandardMMForceFieldKernel::getLog( void ) const {
  *
  */
 
-int BrookCalcStandardMMForceFieldKernel::setLog( FILE* log ){
+int BrookCalcNonbondedForceKernel::setLog( FILE* log ){
    _log = log;
    return BrookCommon::DefaultReturnValue;
 }
@@ -155,7 +155,7 @@ int BrookCalcStandardMMForceFieldKernel::setLog( FILE* log ){
  * @param periodicBoxSize           the size of the periodic box (if nonbondedMethod involves a periodic boundary conditions)
  */
  
-void BrookCalcStandardMMForceFieldKernel::initialize( 
+void BrookCalcNonbondedForceKernel::initialize( 
         const vector<vector<int> >& bondIndices,            const vector<vector<double> >& bondParameters,
         const vector<vector<int> >& angleIndices,           const vector<vector<double> >& angleParameters,
         const vector<vector<int> >& periodicTorsionIndices, const vector<vector<double> >& periodicTorsionParameters,
@@ -166,7 +166,7 @@ void BrookCalcStandardMMForceFieldKernel::initialize(
 
 // ---------------------------------------------------------------------------------------
 
-   static const std::string methodName      = "BrookCalcStandardMMForceFieldKernel::initialize";
+   static const std::string methodName      = "BrookCalcNonbondedForceKernel::initialize";
 
 // ---------------------------------------------------------------------------------------
 
@@ -224,8 +224,8 @@ void BrookCalcStandardMMForceFieldKernel::initialize(
    // used for calculating energy
 
 /*
-   _referenceCalcStandardMMForceFieldKernel = new ReferenceCalcStandardMMForceFieldKernel( getName(), getPlatform() );
-   _referenceCalcStandardMMForceFieldKernel->initialize( bondIndices,            bondParameters, 
+   _referenceCalcNonbondedForceKernel = new ReferenceCalcNonbondedForceKernel( getName(), getPlatform() );
+   _referenceCalcNonbondedForceKernel->initialize( bondIndices,            bondParameters, 
                                                          angleIndices,           angleParameters,
                                                          periodicTorsionIndices, periodicTorsionParameters,
                                                          rbTorsionIndices,       rbTorsionParameters,
@@ -233,7 +233,7 @@ void BrookCalcStandardMMForceFieldKernel::initialize(
                                                          exclusions, nonbondedParameters,
                                                          nonbondedMethod, nonbondedCutoff, periodicBoxSize );
 */
-   _refForceField = new StandardMMForceField( _numberOfAtoms, bondIndices.size(), angleIndices.size(), 
+   _refForceField = new NonbondedForce( _numberOfAtoms, bondIndices.size(), angleIndices.size(), 
                                               periodicTorsionIndices.size(),  rbTorsionIndices.size() );
 
    // bonds
@@ -318,11 +318,11 @@ printf( "RbTor: [%d %d %d %d] [%.5e %.5e %.5e %.5e %.5e %.5e]\n", rbTorsionInd[0
  *                    have been calculated so far.  The kernel should add its own forces to the values already in the stream.
  */
 
-void BrookCalcStandardMMForceFieldKernel::executeForces( const Stream& positions, Stream& forces ){
+void BrookCalcNonbondedForceKernel::executeForces( const Stream& positions, Stream& forces ){
 
 // ---------------------------------------------------------------------------------------
 
-   static const std::string methodName      = "BrookCalcStandardMMForceFieldKernel::executeForces";
+   static const std::string methodName      = "BrookCalcNonbondedForceKernel::executeForces";
 
    static const int I_Stream                = 0;
    static const int J_Stream                = 1;
@@ -677,16 +677,16 @@ nonbondedForceStreams[3]->fillWithValue( &zerof );
  * 
  * @param positions   atom positions
  *
- * @return  potential energy due to the StandardMMForceField
+ * @return  potential energy due to the NonbondedForce
  * Currently always return 0.0 since energies not calculated on gpu
  *
  */
 
-double BrookCalcStandardMMForceFieldKernel::executeEnergy( const Stream& atomPositions ){
+double BrookCalcNonbondedForceKernel::executeEnergy( const Stream& atomPositions ){
 
 // ---------------------------------------------------------------------------------------
 
-   //static const std::string methodName      = "BrookCalcStandardMMForceFieldKernel::executeEnergy";
+   //static const std::string methodName      = "BrookCalcNonbondedForceKernel::executeEnergy";
 
 // ---------------------------------------------------------------------------------------
 
@@ -706,7 +706,7 @@ double BrookCalcStandardMMForceFieldKernel::executeEnergy( const Stream& atomPos
    State state     = context->getState( State::Energy );
    double energy   = state.getPotentialEnergy();
 
-// (void) fprintf( stdout, "BrookCalcStandardMMForceFieldKernel::executeEnergy E=%.5e\n", energy ); fflush( stdout );
+// (void) fprintf( stdout, "BrookCalcNonbondedForceKernel::executeEnergy E=%.5e\n", energy ); fflush( stdout );
 
    return energy;
 
@@ -721,11 +721,11 @@ double BrookCalcStandardMMForceFieldKernel::executeEnergy( const Stream& atomPos
  *
  */
 
-OpenMMContext* BrookCalcStandardMMForceFieldKernel::getReferenceOpenMMContext( int numberOfAtoms ){
+OpenMMContext* BrookCalcNonbondedForceKernel::getReferenceOpenMMContext( int numberOfAtoms ){
 
 // ---------------------------------------------------------------------------------------
 
-   //static const std::string methodName      = "BrookCalcStandardMMForceFieldKernel::getReferenceOpenMMContext";
+   //static const std::string methodName      = "BrookCalcNonbondedForceKernel::getReferenceOpenMMContext";
 
 // ---------------------------------------------------------------------------------------
 
@@ -749,16 +749,16 @@ OpenMMContext* BrookCalcStandardMMForceFieldKernel::getReferenceOpenMMContext( i
  * 
  * @param positions   atom positions
  *
- * @return  potential energy due to the StandardMMForceField
+ * @return  potential energy due to the NonbondedForce
  * Currently always return 0.0 since energies not calculated on gpu
  *
  */
 
-double BrookCalcStandardMMForceFieldKernel::executeEnergyOld( const Stream& atomPositions ){
+double BrookCalcNonbondedForceKernel::executeEnergyOld( const Stream& atomPositions ){
 
 // ---------------------------------------------------------------------------------------
 
-   //static const std::string methodName      = "BrookCalcStandardMMForceFieldKernel::executeEnergy";
+   //static const std::string methodName      = "BrookCalcNonbondedForceKernel::executeEnergy";
 
 // ---------------------------------------------------------------------------------------
 
@@ -786,7 +786,7 @@ double BrookCalcStandardMMForceFieldKernel::executeEnergyOld( const Stream& atom
 
    //delete forceField;
 
-// (void) fprintf( stdout, "BrookCalcStandardMMForceFieldKernel::executeEnergy E=%.5e\n", energy ); fflush( stdout );
+// (void) fprintf( stdout, "BrookCalcNonbondedForceKernel::executeEnergy E=%.5e\n", energy ); fflush( stdout );
 
    return energy;
 

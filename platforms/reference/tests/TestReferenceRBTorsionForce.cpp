@@ -1,6 +1,3 @@
-#ifndef OPENMM_STANDARDMMFORCEFIELDIMPL_H_
-#define OPENMM_STANDARDMMFORCEFIELDIMPL_H_
-
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -32,43 +29,66 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "ForceImpl.h"
-#include "StandardMMForceField.h"
-#include "Kernel.h"
-#include <utility>
-#include <set>
-#include <string>
-
-namespace OpenMM {
-
 /**
- * This is the internal implementation of StandardMMForceField.
+ * This tests all the different force terms in the reference implementation of RBTorsionForce.
  */
 
-class StandardMMForceFieldImpl : public ForceImpl {
-public:
-    StandardMMForceFieldImpl(StandardMMForceField& owner);
-    ~StandardMMForceFieldImpl();
-    void initialize(OpenMMContextImpl& context);
-    StandardMMForceField& getOwner() {
-        return owner;
-    }
-    void updateContextState(OpenMMContextImpl& context) {
-        // This force field doesn't update the state directly.
-    }
-    void calcForces(OpenMMContextImpl& context, Stream& forces);
-    double calcEnergy(OpenMMContextImpl& context);
-    std::map<std::string, double> getDefaultParameters() {
-        return std::map<std::string, double>(); // This force field doesn't define any parameters.
-    }
-    std::vector<std::string> getKernelNames();
-private:
-    void findExclusions(const std::vector<std::vector<int> >& bondIndices, std::vector<std::set<int> >& exclusions, std::set<std::pair<int, int> >& bonded14Indices) const;
-    void addExclusionsToSet(const std::vector<std::set<int> >& bonded12, std::set<int>& exclusions, int baseAtom, int fromAtom, int currentLevel) const;
-    StandardMMForceField& owner;
-    Kernel kernel;
-};
+#include "../../../tests/AssertionUtilities.h"
+#include "OpenMMContext.h"
+#include "ReferencePlatform.h"
+#include "RBTorsionForce.h"
+#include "System.h"
+#include "VerletIntegrator.h"
+#include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
+#include <iostream>
+#include <vector>
 
-} // namespace OpenMM
+using namespace OpenMM;
+using namespace std;
 
-#endif /*OPENMM_STANDARDMMFORCEFIELDIMPL_H_*/
+const double TOL = 1e-5;
+
+void testRBTorsions() {
+    ReferencePlatform platform;
+    System system(4, 0);
+    VerletIntegrator integrator(0.01);
+    RBTorsionForce* forceField = new RBTorsionForce(1);
+    forceField->setTorsionParameters(0, 0, 1, 2, 3, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6);
+    system.addForce(forceField);
+    OpenMMContext context(system, integrator, platform);
+    vector<Vec3> positions(4);
+    positions[0] = Vec3(0, 1, 0);
+    positions[1] = Vec3(0, 0, 0);
+    positions[2] = Vec3(1, 0, 0);
+    positions[3] = Vec3(1, 1, 1);
+    context.setPositions(positions);
+    State state = context.getState(State::Forces | State::Energy);
+    const vector<Vec3>& forces = state.getForces();
+    double psi = 0.25*PI_M - PI_M;
+    double torque = 0.0;
+    for (int i = 1; i < 6; ++i) {
+        double c = 0.1*(i+1);
+        torque += -c*i*std::pow(std::cos(psi), i-1)*std::sin(psi);
+    }
+    ASSERT_EQUAL_VEC(Vec3(0, 0, torque), forces[0], TOL);
+    ASSERT_EQUAL_VEC(Vec3(0, 0.5*torque, -0.5*torque), forces[3], TOL);
+    ASSERT_EQUAL_VEC(Vec3(forces[0][0]+forces[1][0]+forces[2][0]+forces[3][0], forces[0][1]+forces[1][1]+forces[2][1]+forces[3][1], forces[0][2]+forces[1][2]+forces[2][2]+forces[3][2]), Vec3(0, 0, 0), TOL);
+    double energy = 0.0;
+    for (int i = 0; i < 6; ++i) {
+        double c = 0.1*(i+1);
+        energy += c*std::pow(std::cos(psi), i);
+    }
+    ASSERT_EQUAL_TOL(energy, state.getPotentialEnergy(), TOL);
+}
+
+int main() {
+    try {
+        testRBTorsions();
+    }
+    catch(const exception& e) {
+        cout << "exception: " << e.what() << endl;
+        return 1;
+    }
+    cout << "Done" << endl;
+    return 0;
+}

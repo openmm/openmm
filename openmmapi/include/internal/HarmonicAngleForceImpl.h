@@ -1,5 +1,5 @@
-#ifndef OPENMM_CUDAPLATFORM_H_
-#define OPENMM_CUDAPLATFORM_H_
+#ifndef OPENMM_HARMONICANGLEFORCEIMPL_H_
+#define OPENMM_HARMONICANGLEFORCEIMPL_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -32,49 +32,41 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "Platform.h"
-#include "CudaStreamFactory.h"
-
-class _gpuContext;
+#include "ForceImpl.h"
+#include "HarmonicAngleForce.h"
+#include "Kernel.h"
+#include <utility>
+#include <set>
+#include <string>
 
 namespace OpenMM {
-    
-class KernelImpl;
 
 /**
- * This Platform subclass uses CUDA implementations of the OpenMM kernels to run on NVidia GPUs.
+ * This is the internal implementation of HarmonicAngleForce.
  */
 
-class OPENMM_EXPORT CudaPlatform : public Platform {
+class HarmonicAngleForceImpl : public ForceImpl {
 public:
-    class PlatformData;
-    CudaPlatform();
-    std::string getName() const {
-        return "Cuda";
+    HarmonicAngleForceImpl(HarmonicAngleForce& owner);
+    ~HarmonicAngleForceImpl();
+    void initialize(OpenMMContextImpl& context);
+    HarmonicAngleForce& getOwner() {
+        return owner;
     }
-    double getSpeed() const {
-        return 100;
+    void updateContextState(OpenMMContextImpl& context) {
+        // This force field doesn't update the state directly.
     }
-    bool supportsDoublePrecision() const;
-    const StreamFactory& getDefaultStreamFactory() const;
-    void contextCreated(OpenMMContextImpl& context) const;
-    void contextDestroyed(OpenMMContextImpl& context) const;
+    void calcForces(OpenMMContextImpl& context, Stream& forces);
+    double calcEnergy(OpenMMContextImpl& context);
+    std::map<std::string, double> getDefaultParameters() {
+        return std::map<std::string, double>(); // This force field doesn't define any parameters.
+    }
+    std::vector<std::string> getKernelNames();
 private:
-    CudaStreamFactory defaultStreamFactory;
-};
-
-class CudaPlatform::PlatformData {
-public:
-    PlatformData(_gpuContext* gpu) : gpu(gpu), removeCM(false), useOBC(false), hasBonds(false), hasAngles(false),
-            hasPeriodicTorsions(false), hasRB(false), hasNonbonded(false), primaryKernel(NULL) {
-    }
-    _gpuContext* gpu;
-    KernelImpl* primaryKernel;
-    bool removeCM, useOBC;
-    bool hasBonds, hasAngles, hasPeriodicTorsions, hasRB, hasNonbonded;
-    int cmMotionFrequency;
+    HarmonicAngleForce& owner;
+    Kernel kernel;
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_CUDAPLATFORM_H_*/
+#endif /*OPENMM_HARMONICANGLEFORCEIMPL_H_*/

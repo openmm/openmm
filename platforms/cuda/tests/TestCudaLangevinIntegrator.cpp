@@ -36,7 +36,8 @@
 #include "../../../tests/AssertionUtilities.h"
 #include "OpenMMContext.h"
 #include "CudaPlatform.h"
-#include "StandardMMForceField.h"
+#include "HarmonicBondForce.h"
+#include "NonbondedForce.h"
 #include "System.h"
 #include "LangevinIntegrator.h"
 #include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
@@ -55,7 +56,7 @@ void testSingleBond() {
     system.setAtomMass(0, 2.0);
     system.setAtomMass(1, 2.0);
     LangevinIntegrator integrator(0, 0.1, 0.01);
-    StandardMMForceField* forceField = new StandardMMForceField(2, 1, 0, 0, 0, 0);
+    HarmonicBondForce* forceField = new HarmonicBondForce(1);
     forceField->setBondParameters(0, 0, 1, 1.5, 1);
     system.addForce(forceField);
     OpenMMContext context(system, integrator, platform);
@@ -99,7 +100,7 @@ void testTemperature() {
     CudaPlatform platform;
     System system(numAtoms, 0);
     LangevinIntegrator integrator(temp, 2.0, 0.01);
-    StandardMMForceField* forceField = new StandardMMForceField(numAtoms, 0, 0, 0, 0, 0);
+    NonbondedForce* forceField = new NonbondedForce(numAtoms, 0);
     for (int i = 0; i < numAtoms; ++i) {
         system.setAtomMass(i, 2.0);
         forceField->setAtomParameters(i, (i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
@@ -135,7 +136,7 @@ void testConstraints() {
     CudaPlatform platform;
     System system(numAtoms, numConstraints);
     LangevinIntegrator integrator(temp, 2.0, 0.01);
-    StandardMMForceField* forceField = new StandardMMForceField(numAtoms, 0, 0, 0, 0, 0);
+    NonbondedForce* forceField = new NonbondedForce(numAtoms, 0);
     for (int i = 0; i < numAtoms; ++i) {
         system.setAtomMass(i, 10.0);
         forceField->setAtomParameters(i, (i%2 == 0 ? 0.2 : -0.2), 0.5, 5.0);

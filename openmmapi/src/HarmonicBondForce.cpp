@@ -1,6 +1,3 @@
-#ifndef OPENMM_CUDAPLATFORM_H_
-#define OPENMM_CUDAPLATFORM_H_
-
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -32,49 +29,30 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "Platform.h"
-#include "CudaStreamFactory.h"
+#include "Force.h"
+#include "OpenMMException.h"
+#include "HarmonicBondForce.h"
+#include "internal/HarmonicBondForceImpl.h"
 
-class _gpuContext;
+using namespace OpenMM;
 
-namespace OpenMM {
-    
-class KernelImpl;
+HarmonicBondForce::HarmonicBondForce(int numBonds) : bonds(numBonds) {
+}
 
-/**
- * This Platform subclass uses CUDA implementations of the OpenMM kernels to run on NVidia GPUs.
- */
+void HarmonicBondForce::getBondParameters(int index, int& atom1, int& atom2, double& length, double& k) const {
+    atom1 = bonds[index].atom1;
+    atom2 = bonds[index].atom2;
+    length = bonds[index].length;
+    k = bonds[index].k;
+}
 
-class OPENMM_EXPORT CudaPlatform : public Platform {
-public:
-    class PlatformData;
-    CudaPlatform();
-    std::string getName() const {
-        return "Cuda";
-    }
-    double getSpeed() const {
-        return 100;
-    }
-    bool supportsDoublePrecision() const;
-    const StreamFactory& getDefaultStreamFactory() const;
-    void contextCreated(OpenMMContextImpl& context) const;
-    void contextDestroyed(OpenMMContextImpl& context) const;
-private:
-    CudaStreamFactory defaultStreamFactory;
-};
+void HarmonicBondForce::setBondParameters(int index, int atom1, int atom2, double length, double k) {
+    bonds[index].atom1 = atom1;
+    bonds[index].atom2 = atom2;
+    bonds[index].length = length;
+    bonds[index].k = k;
+}
 
-class CudaPlatform::PlatformData {
-public:
-    PlatformData(_gpuContext* gpu) : gpu(gpu), removeCM(false), useOBC(false), hasBonds(false), hasAngles(false),
-            hasPeriodicTorsions(false), hasRB(false), hasNonbonded(false), primaryKernel(NULL) {
-    }
-    _gpuContext* gpu;
-    KernelImpl* primaryKernel;
-    bool removeCM, useOBC;
-    bool hasBonds, hasAngles, hasPeriodicTorsions, hasRB, hasNonbonded;
-    int cmMotionFrequency;
-};
-
-} // namespace OpenMM
-
-#endif /*OPENMM_CUDAPLATFORM_H_*/
+ForceImpl* HarmonicBondForce::createImpl() {
+    return new HarmonicBondForceImpl(*this);
+}

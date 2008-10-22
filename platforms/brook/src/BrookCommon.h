@@ -42,7 +42,7 @@
 namespace OpenMM {
 
 /**
- * This kernel is invoked by StandardMMForceField to calculate the forces acting on the system.
+ * This kernel is invoked by NonbondedForce to calculate the forces acting on the system.
  */
 class BrookCommon {
 

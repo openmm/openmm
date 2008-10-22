@@ -37,8 +37,16 @@ using namespace OpenMM;
 
 KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform& platform, OpenMMContextImpl& context) const {
     CudaPlatform::PlatformData& data = *static_cast<CudaPlatform::PlatformData*>(context.getPlatformData());
-    if (name == CalcStandardMMForceFieldKernel::Name())
-        return new CudaCalcStandardMMForceFieldKernel(name, platform, data, context.getSystem());
+    if (name == CalcHarmonicBondForceKernel::Name())
+        return new CudaCalcHarmonicBondForceKernel(name, platform, data, context.getSystem());
+    if (name == CalcHarmonicAngleForceKernel::Name())
+        return new CudaCalcHarmonicAngleForceKernel(name, platform, data, context.getSystem());
+    if (name == CalcPeriodicTorsionForceKernel::Name())
+        return new CudaCalcPeriodicTorsionForceKernel(name, platform, data, context.getSystem());
+    if (name == CalcRBTorsionForceKernel::Name())
+        return new CudaCalcRBTorsionForceKernel(name, platform, data, context.getSystem());
+    if (name == CalcNonbondedForceKernel::Name())
+        return new CudaCalcNonbondedForceKernel(name, platform, data, context.getSystem());
     if (name == CalcGBSAOBCForceFieldKernel::Name())
         return new CudaCalcGBSAOBCForceFieldKernel(name, platform, data);
 //    if (name == IntegrateVerletStepKernel::Name())

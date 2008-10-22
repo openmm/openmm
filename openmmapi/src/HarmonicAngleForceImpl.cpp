@@ -1,6 +1,3 @@
-#ifndef OPENMM_CUDAPLATFORM_H_
-#define OPENMM_CUDAPLATFORM_H_
-
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -32,49 +29,36 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "Platform.h"
-#include "CudaStreamFactory.h"
+#include "internal/OpenMMContextImpl.h"
+#include "internal/HarmonicAngleForceImpl.h"
+#include "kernels.h"
 
-class _gpuContext;
+using namespace OpenMM;
+using std::pair;
+using std::vector;
+using std::set;
 
-namespace OpenMM {
-    
-class KernelImpl;
+HarmonicAngleForceImpl::HarmonicAngleForceImpl(HarmonicAngleForce& owner) : owner(owner) {
+}
 
-/**
- * This Platform subclass uses CUDA implementations of the OpenMM kernels to run on NVidia GPUs.
- */
+HarmonicAngleForceImpl::~HarmonicAngleForceImpl() {
+}
 
-class OPENMM_EXPORT CudaPlatform : public Platform {
-public:
-    class PlatformData;
-    CudaPlatform();
-    std::string getName() const {
-        return "Cuda";
-    }
-    double getSpeed() const {
-        return 100;
-    }
-    bool supportsDoublePrecision() const;
-    const StreamFactory& getDefaultStreamFactory() const;
-    void contextCreated(OpenMMContextImpl& context) const;
-    void contextDestroyed(OpenMMContextImpl& context) const;
-private:
-    CudaStreamFactory defaultStreamFactory;
-};
+void HarmonicAngleForceImpl::initialize(OpenMMContextImpl& context) {
+    kernel = context.getPlatform().createKernel(CalcHarmonicAngleForceKernel::Name(), context);
+    dynamic_cast<CalcHarmonicAngleForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
+}
 
-class CudaPlatform::PlatformData {
-public:
-    PlatformData(_gpuContext* gpu) : gpu(gpu), removeCM(false), useOBC(false), hasBonds(false), hasAngles(false),
-            hasPeriodicTorsions(false), hasRB(false), hasNonbonded(false), primaryKernel(NULL) {
-    }
-    _gpuContext* gpu;
-    KernelImpl* primaryKernel;
-    bool removeCM, useOBC;
-    bool hasBonds, hasAngles, hasPeriodicTorsions, hasRB, hasNonbonded;
-    int cmMotionFrequency;
-};
+void HarmonicAngleForceImpl::calcForces(OpenMMContextImpl& context, Stream& forces) {
+    dynamic_cast<CalcHarmonicAngleForceKernel&>(kernel.getImpl()).executeForces(context);
+}
 
-} // namespace OpenMM
+double HarmonicAngleForceImpl::calcEnergy(OpenMMContextImpl& context) {
+    return dynamic_cast<CalcHarmonicAngleForceKernel&>(kernel.getImpl()).executeEnergy(context);
+}
 
-#endif /*OPENMM_CUDAPLATFORM_H_*/
+std::vector<std::string> HarmonicAngleForceImpl::getKernelNames() {
+    std::vector<std::string> names;
+    names.push_back(CalcHarmonicAngleForceKernel::Name());
+    return names;
+}

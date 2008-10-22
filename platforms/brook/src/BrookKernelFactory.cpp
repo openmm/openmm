@@ -30,7 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "BrookKernelFactory.h"
-#include "BrookCalcStandardMMForceFieldKernel.h"
+#include "BrookCalcNonbondedForceKernel.h"
 #include "BrookIntegrateLangevinStepKernel.h"
 #include "BrookIntegrateVerletStepKernel.h"
 #include "BrookIntegrateBrownianStepKernel.h"
@@ -50,9 +50,9 @@ KernelImpl* BrookKernelFactory::createKernelImpl( std::string name, const Platfo
 
    // StandardMM
 
-	if( name == CalcStandardMMForceFieldKernel::Name() ){
+	if( name == CalcNonbondedForceKernel::Name() ){
 
-      return new BrookCalcStandardMMForceFieldKernel( name, platform );
+      return new BrookCalcNonbondedForceKernel( name, platform );
 
    // GBSA OBC
 

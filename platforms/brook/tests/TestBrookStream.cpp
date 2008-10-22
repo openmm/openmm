@@ -47,7 +47,7 @@
 
 #include "OpenMMContext.h"
 #include "CMMotionRemover.h"
-#include "StandardMMForceField.h"
+#include "NonbondedForce.h"
 #include "GBSAOBCForceField.h"
 #include "System.h"
 #include "LangevinIntegrator.h"
@@ -1070,7 +1070,7 @@ void testBrookBonds( void ){
 
    // int numAtoms, int numBonds, int numAngles, int numPeriodicTorsions, int numRBTorsions
 
-   StandardMMForceField* forceField = new StandardMMForceField( 3, 2, 0, 0, 0 ); 
+   NonbondedForce* forceField = new NonbondedForce( 3, 2, 0, 0, 0 ); 
 
    // ( index, atom1, atom2, length, k )
    forceField->setBondParameters(0, 0, 1, 1.5, 0.8);
@@ -1133,7 +1133,7 @@ void testBrookAngles( void ){
 
    // int numAtoms, int numBonds, int numAngles, int numPeriodicTorsions, int numRBTorsions
 
-   StandardMMForceField* forceField = new StandardMMForceField( numberOfAtoms, 0, 2, 0, 0 ); 
+   NonbondedForce* forceField = new NonbondedForce( numberOfAtoms, 0, 2, 0, 0 ); 
 
    // int index, int atom1, int atom2, int atom3, double angle, double k
    forceField->setAngleParameters(0, 0, 1, 2, PI_M/3, 1.1);
@@ -1202,7 +1202,7 @@ void testBrookPeriodicTorsions( void ){
 
    // int numAtoms, int numBonds, int numAngles, int numPeriodicTorsions, int numRBTorsions
 
-   StandardMMForceField* forceField = new StandardMMForceField( numberOfAtoms, 0, 0, 1, 0 ); 
+   NonbondedForce* forceField = new NonbondedForce( numberOfAtoms, 0, 0, 1, 0 ); 
 
    // int index, int atom1, int atom2, int atom3, double angle, double k
    forceField->setPeriodicTorsionParameters(0, 0, 1, 2, 3, 2, PI_M/3, 1.1);
@@ -1274,7 +1274,7 @@ void testBrookRBTorsions( void ){
 
    // int numAtoms, int numBonds, int numAngles, int numPeriodicTorsions, int numRBTorsions
 
-   StandardMMForceField* forceField = new StandardMMForceField( numberOfAtoms, 0, 0, 0, 1 ); 
+   NonbondedForce* forceField = new NonbondedForce( numberOfAtoms, 0, 0, 0, 1 ); 
 
    for( int ii = 0; ii < numberOfAtoms; ii++ ){
       forceField->setAtomParameters( ii, 0.0, 1, 0);
@@ -1356,7 +1356,7 @@ void testBrookCoulomb( void ){
 
    // int index, double charge, double radius, double depth
 
-   StandardMMForceField* forceField = new StandardMMForceField( numberOfAtoms, 0, 0, 0, 0 ); 
+   NonbondedForce* forceField = new NonbondedForce( numberOfAtoms, 0, 0, 0, 0 ); 
    forceField->setAtomParameters(0, 0.5, 1, 0);
    forceField->setAtomParameters(1, -1.5, 1, 0);
    system.addForce(forceField);
@@ -1418,7 +1418,7 @@ void testBrookLJ( void ){
 
    // int index, double charge, double radius, double depth
 
-   StandardMMForceField* forceField = new StandardMMForceField( numberOfAtoms, 0, 0, 0, 0 ); 
+   NonbondedForce* forceField = new NonbondedForce( numberOfAtoms, 0, 0, 0, 0 ); 
    forceField->setAtomParameters(0, 0, 1.2, 1); 
    forceField->setAtomParameters(1, 0, 1.4, 2); 
    system.addForce(forceField);
@@ -1481,7 +1481,7 @@ void testBrookExclusionsAnd14( void ){
 
    // int index, double charge, double radius, double depth
 
-   StandardMMForceField* forceField = new StandardMMForceField( numberOfAtoms, numberOfAtoms-1, 0, 0, 0 ); 
+   NonbondedForce* forceField = new NonbondedForce( numberOfAtoms, numberOfAtoms-1, 0, 0, 0 ); 
    for( int ii = 1; ii < numberOfAtoms; ii++ ){
       forceField->setBondParameters(ii-1, ii-1, ii, 1, 0);
    }
@@ -2086,7 +2086,7 @@ static OpenMMContext* testLangevinSingleBondSetup( int brookContext, LangevinInt
    LangevinIntegrator* integrator = new LangevinIntegrator(0, 0.1, 0.01);
    *outIntegrator                 = integrator;
 
-   StandardMMForceField* forceField = new StandardMMForceField(2, 1, 0, 0, 0);
+   NonbondedForce* forceField = new NonbondedForce(2, 1, 0, 0, 0);
    forceField->setBondParameters(0, 0, 1, 1.5, 1);
    system->addForce(forceField);
    OpenMMContext* context = new OpenMMContext( *system, *integrator, *platform );
@@ -2179,7 +2179,7 @@ void testLangevinTemperature() {
     const double temp = 100.0;
     System system(numberOfAtoms, 0);
     LangevinIntegrator integrator(temp, 2.0, 0.001);
-    StandardMMForceField* forceField = new StandardMMForceField(numberOfAtoms, 0, 0, 0, 0);
+    NonbondedForce* forceField = new NonbondedForce(numberOfAtoms, 0, 0, 0, 0);
     for (int i = 0; i < numberOfAtoms; ++i){
         system.setAtomMass(i, 2.0);
         forceField->setAtomParameters(i, (i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
@@ -2258,7 +2258,7 @@ void testLangevinConstraints() {
    //ReferencePlatform platform;
    System system(numAtoms, numAtoms-1);
    LangevinIntegrator integrator(temp, 2.0, 0.001);
-   StandardMMForceField* forceField = new StandardMMForceField(numAtoms, 0, 0, 0, 0);
+   NonbondedForce* forceField = new NonbondedForce(numAtoms, 0, 0, 0, 0);
    for (int i = 0; i < numAtoms; ++i) {
        system.setAtomMass(i, mass);
        forceField->setAtomParameters(i, (i%2 == 0 ? 0.2 : -0.2), 0.5, 5.0);
@@ -2321,7 +2321,7 @@ void testVerletSingleBond( void ){
 
     VerletIntegrator integrator(0.01);
 
-    StandardMMForceField* forceField = new StandardMMForceField(2, 1, 0, 0, 0); 
+    NonbondedForce* forceField = new NonbondedForce(2, 1, 0, 0, 0); 
     forceField->setBondParameters(0, 0, 1, 1.5, 1); 
     system.addForce(forceField);
 
@@ -2416,7 +2416,7 @@ void testVerletConstraints() {
    ReferencePlatform platform;
    System system(numAtoms, numAtoms/2);
    VerletIntegrator integrator(0.0005);
-   StandardMMForceField* forceField = new StandardMMForceField(numAtoms, 0, 0, 0, 0); 
+   NonbondedForce* forceField = new NonbondedForce(numAtoms, 0, 0, 0, 0); 
    for (int i = 0; i < numAtoms; ++i) {
        system.setAtomMass(i, 1.0);
        forceField->setAtomParameters(i, (i%2 == 0 ? 0.2 : -0.2), 0.5, 5.0);

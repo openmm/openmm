@@ -41,7 +41,7 @@
 #include "LangevinIntegrator.h"
 #include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
 #include "../src/sfmt/SFMT.h"
-#include "StandardMMForceField.h"
+#include "NonbondedForce.h"
 #include <iostream>
 #include <vector>
 
@@ -56,7 +56,7 @@ void testSingleAtom() {
     system.setAtomMass(0, 2.0);
     LangevinIntegrator integrator(0, 0.1, 0.01);
     GBSAOBCForceField* forceField = new GBSAOBCForceField(1);
-    StandardMMForceField* standard = new StandardMMForceField(1, 0, 0, 0, 0, 0);
+    NonbondedForce* standard = new NonbondedForce(1, 0);
     forceField->setAtomParameters(0, 0.5, 0.15, 1);
     standard->setAtomParameters(0, 0.5, 1, 0);
     system.addForce(forceField);
@@ -80,7 +80,7 @@ void testForce() {
     System system(numAtoms, 0);
     LangevinIntegrator integrator(0, 0.1, 0.01);
     GBSAOBCForceField* forceField = new GBSAOBCForceField(numAtoms);
-    StandardMMForceField* standard = new StandardMMForceField(numAtoms, 0, 0, 0, 0, 0);
+    NonbondedForce* standard = new NonbondedForce(numAtoms, 0);
     for (int i = 0; i < numAtoms; ++i) {
         double charge = i%2 == 0 ? -1 : 1;
         forceField->setAtomParameters(i, charge, 0.15, 1);

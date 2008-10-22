@@ -45,24 +45,22 @@ class CudaVerletDynamics;
 
 namespace OpenMM {
 
+
 /**
- * This kernel is invoked by StandardMMForceField to calculate the forces acting on the system.
+ * This kernel is invoked by HarmonicBondForce to calculate the forces acting on the system and the energy of the system.
  */
-class CudaCalcStandardMMForceFieldKernel : public CalcStandardMMForceFieldKernel {
+class CudaCalcHarmonicBondForceKernel : public CalcHarmonicBondForceKernel {
 public:
-    CudaCalcStandardMMForceFieldKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data, System& system) : CalcStandardMMForceFieldKernel(name, platform), data(data), system(system) {
+    CudaCalcHarmonicBondForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data, System& system) : CalcHarmonicBondForceKernel(name, platform), data(data), system(system) {
     }
-    ~CudaCalcStandardMMForceFieldKernel();
+    ~CudaCalcHarmonicBondForceKernel();
     /**
      * Initialize the kernel.
      * 
      * @param system     the System this kernel will be applied to
-     * @param force      the StandardMMForceField this kernel will be used for
-     * @param exclusions the i'th element lists the indices of all atoms with which the i'th atom should not interact through
-     *                   nonbonded forces.  Bonded 1-4 pairs are also included in this list, since they should be omitted from
-     *                   the standard nonbonded calculation.
+     * @param force      the HarmonicBondForce this kernel will be used for
      */
-    void initialize(const System& system, const StandardMMForceField& force, const std::vector<std::set<int> >& exclusions);
+    void initialize(const System& system, const HarmonicBondForce& force);
     /**
      * Execute the kernel to calculate the forces.
      * 
@@ -73,12 +71,151 @@ public:
      * Execute the kernel to calculate the energy.
      * 
      * @param context    the context in which to execute this kernel
-     * @return the potential energy due to the StandardMMForceField
+     * @return the potential energy due to the HarmonicBondForce
+     */
+    double executeEnergy(OpenMMContextImpl& context);
+private:
+    int numBonds;
+    CudaPlatform::PlatformData& data;
+    System& system;
+};
+
+/**
+ * This kernel is invoked by HarmonicAngleForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CudaCalcHarmonicAngleForceKernel : public CalcHarmonicAngleForceKernel {
+public:
+    CudaCalcHarmonicAngleForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data, System& system) : CalcHarmonicAngleForceKernel(name, platform), data(data), system(system) {
+    }
+    ~CudaCalcHarmonicAngleForceKernel();
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param force      the HarmonicAngleForce this kernel will be used for
+     */
+    void initialize(const System& system, const HarmonicAngleForce& force);
+    /**
+     * Execute the kernel to calculate the forces.
+     * 
+     * @param context    the context in which to execute this kernel
+     */
+    void executeForces(OpenMMContextImpl& context);
+    /**
+     * Execute the kernel to calculate the energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @return the potential energy due to the HarmonicAngleForce
+     */
+    double executeEnergy(OpenMMContextImpl& context);
+private:
+    int numAngles;
+    CudaPlatform::PlatformData& data;
+    System& system;
+};
+
+/**
+ * This kernel is invoked by PeriodicTorsionForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CudaCalcPeriodicTorsionForceKernel : public CalcPeriodicTorsionForceKernel {
+public:
+    CudaCalcPeriodicTorsionForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data, System& system) : CalcPeriodicTorsionForceKernel(name, platform), data(data), system(system) {
+    }
+    ~CudaCalcPeriodicTorsionForceKernel();
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param force      the PeriodicTorsionForce this kernel will be used for
+     */
+    void initialize(const System& system, const PeriodicTorsionForce& force);
+    /**
+     * Execute the kernel to calculate the forces.
+     * 
+     * @param context    the context in which to execute this kernel
+     */
+    void executeForces(OpenMMContextImpl& context);
+    /**
+     * Execute the kernel to calculate the energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @return the potential energy due to the PeriodicTorsionForce
+     */
+    double executeEnergy(OpenMMContextImpl& context);
+private:
+    int numTorsions;
+    CudaPlatform::PlatformData& data;
+    System& system;
+};
+
+/**
+ * This kernel is invoked by RBTorsionForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CudaCalcRBTorsionForceKernel : public CalcRBTorsionForceKernel {
+public:
+    CudaCalcRBTorsionForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data, System& system) : CalcRBTorsionForceKernel(name, platform), data(data), system(system) {
+    }
+    ~CudaCalcRBTorsionForceKernel();
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param force      the RBTorsionForce this kernel will be used for
+     */
+    void initialize(const System& system, const RBTorsionForce& force);
+    /**
+     * Execute the kernel to calculate the forces.
+     * 
+     * @param context    the context in which to execute this kernel
+     */
+    void executeForces(OpenMMContextImpl& context);
+    /**
+     * Execute the kernel to calculate the energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @return the potential energy due to the RBTorsionForce
+     */
+    double executeEnergy(OpenMMContextImpl& context);
+private:
+    int numTorsions;
+    CudaPlatform::PlatformData& data;
+    System& system;
+};
+
+/**
+ * This kernel is invoked by NonbondedForce to calculate the forces acting on the system.
+ */
+class CudaCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
+public:
+    CudaCalcNonbondedForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data, System& system) : CalcNonbondedForceKernel(name, platform), data(data), system(system) {
+    }
+    ~CudaCalcNonbondedForceKernel();
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param force      the NonbondedForce this kernel will be used for
+     * @param exclusions the i'th element lists the indices of all atoms with which the i'th atom should not interact through
+     *                   nonbonded forces.  Bonded 1-4 pairs are also included in this list, since they should be omitted from
+     *                   the standard nonbonded calculation.
+     */
+    void initialize(const System& system, const NonbondedForce& force, const std::vector<std::set<int> >& exclusions);
+    /**
+     * Execute the kernel to calculate the forces.
+     * 
+     * @param context    the context in which to execute this kernel
+     */
+    void executeForces(OpenMMContextImpl& context);
+    /**
+     * Execute the kernel to calculate the energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @return the potential energy due to the NonbondedForce
      */
     double executeEnergy(OpenMMContextImpl& context);
 private:
     CudaPlatform::PlatformData& data;
-    int numAtoms, numBonds, numAngles, numPeriodicTorsions, numRBTorsions, num14;
+    int numAtoms, num14;
     System& system;
 };
 

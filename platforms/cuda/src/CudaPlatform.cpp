@@ -40,7 +40,11 @@ using namespace OpenMM;
 
 CudaPlatform::CudaPlatform() {
     CudaKernelFactory* factory = new CudaKernelFactory();
-    registerKernelFactory(CalcStandardMMForceFieldKernel::Name(), factory);
+    registerKernelFactory(CalcHarmonicBondForceKernel::Name(), factory);
+    registerKernelFactory(CalcHarmonicAngleForceKernel::Name(), factory);
+    registerKernelFactory(CalcPeriodicTorsionForceKernel::Name(), factory);
+    registerKernelFactory(CalcRBTorsionForceKernel::Name(), factory);
+    registerKernelFactory(CalcNonbondedForceKernel::Name(), factory);
     registerKernelFactory(CalcGBSAOBCForceFieldKernel::Name(), factory);
 //    registerKernelFactory(IntegrateVerletStepKernel::Name(), factory);
     registerKernelFactory(IntegrateLangevinStepKernel::Name(), factory);

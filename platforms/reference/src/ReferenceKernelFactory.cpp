@@ -36,8 +36,18 @@
 using namespace OpenMM;
 
 KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name, const Platform& platform, OpenMMContextImpl& context) const {
-    if (name == CalcStandardMMForceFieldKernel::Name())
-        return new ReferenceCalcStandardMMForceFieldKernel(name, platform);
+    if (name == CalcNonbondedForceKernel::Name())
+        return new ReferenceCalcNonbondedForceKernel(name, platform);
+    else if (name == CalcHarmonicBondForceKernel::Name())
+        return new ReferenceCalcHarmonicBondForceKernel(name, platform);
+    else if (name == CalcHarmonicAngleForceKernel::Name())
+        return new ReferenceCalcHarmonicAngleForceKernel(name, platform);
+    else if (name == CalcHarmonicAngleForceKernel::Name())
+        return new ReferenceCalcHarmonicAngleForceKernel(name, platform);
+    else if (name == CalcPeriodicTorsionForceKernel::Name())
+        return new ReferenceCalcPeriodicTorsionForceKernel(name, platform);
+    else if (name == CalcRBTorsionForceKernel::Name())
+        return new ReferenceCalcRBTorsionForceKernel(name, platform);
     else if (name == CalcGBSAOBCForceFieldKernel::Name())
         return new ReferenceCalcGBSAOBCForceFieldKernel(name, platform);
     else if (name == IntegrateVerletStepKernel::Name())
@@ -52,7 +62,7 @@ KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name, const Pla
         return new ReferenceCalcKineticEnergyKernel(name, platform);
     else if (name == RemoveCMMotionKernel::Name())
         return new ReferenceRemoveCMMotionKernel(name, platform);
-	else {
-		throw OpenMMException( (std::string("Tried to create kernel with illegal kernel name '") + name + "'").c_str() );
-	}
+    else {
+        throw OpenMMException( (std::string("Tried to create kernel with illegal kernel name '") + name + "'").c_str() );
+    }
 }

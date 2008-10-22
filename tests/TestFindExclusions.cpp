@@ -30,7 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 /**
- * This tests the findExclusions() method of StandardMMForceFieldImpl, which identifies pairs of atoms
+ * This tests the findExclusions() method of NonbondedForceImpl, which identifies pairs of atoms
  * whose nonbonded atoms are either excluded or decreased.  The test system is a chain with branches:
  * 
  * 1  3  5  7  9  11  13  15  17  19
@@ -43,7 +43,7 @@
 #include "KernelFactory.h"
 #include "OpenMMContext.h"
 #include "Platform.h"
-#include "StandardMMForceField.h"
+#include "NonbondedForce.h"
 #include "Stream.h"
 #include "StreamFactory.h"
 #include "System.h"
@@ -136,18 +136,31 @@ void verify14(const vector<vector<int> >& bonded14Indices) {
  * to the initialize() methods.
  */
 
-class DummyForceKernel : public CalcStandardMMForceFieldKernel {
+class DummyBondedKernel : public CalcHarmonicBondForceKernel {
 public:
-    DummyForceKernel(string name, const Platform& platform) : CalcStandardMMForceFieldKernel(name, platform) {
+    DummyBondedKernel(string name, const Platform& platform) : CalcHarmonicBondForceKernel(name, platform) {
     }
-    void initialize(const System& system, const StandardMMForceField& force, const std::vector<std::set<int> >& exclusions) {
+    void initialize(const System& system, const HarmonicBondForce& force) {
+    }
+    void executeForces(OpenMMContextImpl& context) {
+    }
+    double executeEnergy(OpenMMContextImpl& context) {
+        return 0.0;
+    }
+};
+
+class DummyNonbondedKernel : public CalcNonbondedForceKernel {
+public:
+    DummyNonbondedKernel(string name, const Platform& platform) : CalcNonbondedForceKernel(name, platform) {
+    }
+    void initialize(const System& system, const NonbondedForce& force, const std::vector<std::set<int> >& exclusions) {
         verifyExclusions(exclusions);
 //        verify14(bonded14Indices);
     }
     void executeForces(OpenMMContextImpl& context) {
     }
     double executeEnergy(OpenMMContextImpl& context) {
-		return 0.0;
+        return 0.0;
     }
 };
 
@@ -187,8 +200,10 @@ public:
 class DummyKernelFactory : public KernelFactory {
 public:
     KernelImpl* createKernelImpl(string name, const Platform& platform, OpenMMContextImpl& context) const {
-        if (name == CalcStandardMMForceFieldKernel::Name())
-            return new DummyForceKernel(name, platform);
+        if (name == CalcHarmonicBondForceKernel::Name())
+            return new DummyBondedKernel(name, platform);
+        if (name == CalcNonbondedForceKernel::Name())
+            return new DummyNonbondedKernel(name, platform);
         if (name == IntegrateVerletStepKernel::Name())
             return new DummyIntegratorKernel(name, platform);
         if (name == CalcKineticEnergyKernel::Name())
@@ -207,7 +222,8 @@ public:
 class DummyPlatform : public Platform {
 public:
     DummyPlatform() {
-        registerKernelFactory(CalcStandardMMForceFieldKernel::Name(), new DummyKernelFactory());
+        registerKernelFactory(CalcHarmonicBondForceKernel::Name(), new DummyKernelFactory());
+        registerKernelFactory(CalcNonbondedForceKernel::Name(), new DummyKernelFactory());
         registerKernelFactory(IntegrateVerletStepKernel::Name(), new DummyKernelFactory());
         registerKernelFactory(CalcKineticEnergyKernel::Name(), new DummyKernelFactory());
     }
@@ -232,20 +248,22 @@ int main() {
         DummyPlatform platform;
         System system(NUM_ATOMS, 0);
         VerletIntegrator integrator(0.01);
-        StandardMMForceField* forces = new StandardMMForceField(NUM_ATOMS, NUM_ATOMS-1, 0, 0, 0, 0);
+        HarmonicBondForce* bonds = new HarmonicBondForce(NUM_ATOMS-1);
+        NonbondedForce* nonbonded = new NonbondedForce(NUM_ATOMS, 0);
         
         // loop over all main-chain atoms (even numbered atoms)
         for (int i = 0; i < NUM_ATOMS-1; i += 2) 
         {
         	// side-chain bonds
-        	forces->setBondParameters(i, i, i+1, 1.0, 1.0);
+        	bonds->setBondParameters(i, i, i+1, 1.0, 1.0);
 
         	// main-chain bonds
             if (i < NUM_ATOMS-2) // penultimate atom (NUM_ATOMS-2) has no subsequent main-chain atom
-                forces->setBondParameters(i+1, i, i+2, 1.0, 1.0);
+                bonds->setBondParameters(i+1, i, i+2, 1.0, 1.0);
         }
         
-        system.addForce(forces);
+        system.addForce(bonds);
+        system.addForce(nonbonded);
         OpenMMContext context(system, integrator, platform);
     }
     catch(const exception& e) {

@@ -153,7 +153,7 @@ void BrookPlatform::_initializeKernelFactory( void ){
 
    BrookKernelFactory* factory = new BrookKernelFactory();
 
-   registerKernelFactory( CalcStandardMMForceFieldKernel::Name(), factory);
+   registerKernelFactory( CalcNonbondedForceKernel::Name(), factory);
    registerKernelFactory( CalcGBSAOBCForceFieldKernel::Name(),    factory);
    registerKernelFactory( IntegrateVerletStepKernel::Name(),      factory);
    registerKernelFactory( IntegrateLangevinStepKernel::Name(),    factory);

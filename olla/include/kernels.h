@@ -36,9 +36,13 @@
 #include "BrownianIntegrator.h"
 #include "CMMotionRemover.h"
 #include "GBSAOBCForceField.h"
+#include "HarmonicAngleForce.h"
+#include "HarmonicBondForce.h"
 #include "KernelImpl.h"
 #include "LangevinIntegrator.h"
-#include "StandardMMForceField.h"
+#include "PeriodicTorsionForce.h"
+#include "RBTorsionForce.h"
+#include "NonbondedForce.h"
 #include "Stream.h"
 #include "System.h"
 #include "VerletIntegrator.h"
@@ -49,30 +53,22 @@
 namespace OpenMM {
 
 /**
- * This kernel is invoked by StandardMMForceField to calculate the forces acting on the system and the energy of the system.
+ * This kernel is invoked by HarmonicBondForce to calculate the forces acting on the system and the energy of the system.
  */
-class CalcStandardMMForceFieldKernel : public KernelImpl {
+class CalcHarmonicBondForceKernel : public KernelImpl {
 public:
-    enum NonbondedMethod {
-        NoCutoff = 0,
-        CutoffNonPeriodic = 1,
-        CutoffPeriodic = 2
-    };
     static std::string Name() {
-        return "CalcStandardMMForceField";
+        return "CalcHarmonicBondForce";
     }
-    CalcStandardMMForceFieldKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    CalcHarmonicBondForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
     /**
      * Initialize the kernel.
      * 
      * @param system     the System this kernel will be applied to
-     * @param force      the StandardMMForceField this kernel will be used for
-     * @param exclusions the i'th element lists the indices of all atoms with which the i'th atom should not interact through
-     *                   nonbonded forces.  Bonded 1-4 pairs are also included in this list, since they should be omitted from
-     *                   the standard nonbonded calculation.
+     * @param force      the HarmonicBondForce this kernel will be used for
      */
-    virtual void initialize(const System& system, const StandardMMForceField& force, const std::vector<std::set<int> >& exclusions) = 0;
+    virtual void initialize(const System& system, const HarmonicBondForce& force) = 0;
     /**
      * Execute the kernel to calculate the forces.
      * 
@@ -83,7 +79,143 @@ public:
      * Execute the kernel to calculate the energy.
      * 
      * @param context    the context in which to execute this kernel
-     * @return the potential energy due to the StandardMMForceField
+     * @return the potential energy due to the HarmonicBondForce
+     */
+    virtual double executeEnergy(OpenMMContextImpl& context) = 0;
+};
+
+/**
+ * This kernel is invoked by HarmonicAngleForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CalcHarmonicAngleForceKernel : public KernelImpl {
+public:
+    static std::string Name() {
+        return "CalcHarmonicAngleForce";
+    }
+    CalcHarmonicAngleForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param force      the HarmonicAngleForce this kernel will be used for
+     */
+    virtual void initialize(const System& system, const HarmonicAngleForce& force) = 0;
+    /**
+     * Execute the kernel to calculate the forces.
+     * 
+     * @param context    the context in which to execute this kernel
+     */
+    virtual void executeForces(OpenMMContextImpl& context) = 0;
+    /**
+     * Execute the kernel to calculate the energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @return the potential energy due to the HarmonicAngleForce
+     */
+    virtual double executeEnergy(OpenMMContextImpl& context) = 0;
+};
+
+/**
+ * This kernel is invoked by PeriodicTorsionForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CalcPeriodicTorsionForceKernel : public KernelImpl {
+public:
+    static std::string Name() {
+        return "CalcPeriodicTorsionForce";
+    }
+    CalcPeriodicTorsionForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param force      the PeriodicTorsionForce this kernel will be used for
+     */
+    virtual void initialize(const System& system, const PeriodicTorsionForce& force) = 0;
+    /**
+     * Execute the kernel to calculate the forces.
+     * 
+     * @param context    the context in which to execute this kernel
+     */
+    virtual void executeForces(OpenMMContextImpl& context) = 0;
+    /**
+     * Execute the kernel to calculate the energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @return the potential energy due to the PeriodicTorsionForce
+     */
+    virtual double executeEnergy(OpenMMContextImpl& context) = 0;
+};
+
+/**
+ * This kernel is invoked by RBTorsionForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CalcRBTorsionForceKernel : public KernelImpl {
+public:
+    static std::string Name() {
+        return "CalcRBTorsionForce";
+    }
+    CalcRBTorsionForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param force      the RBTorsionForce this kernel will be used for
+     */
+    virtual void initialize(const System& system, const RBTorsionForce& force) = 0;
+    /**
+     * Execute the kernel to calculate the forces.
+     * 
+     * @param context    the context in which to execute this kernel
+     */
+    virtual void executeForces(OpenMMContextImpl& context) = 0;
+    /**
+     * Execute the kernel to calculate the energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @return the potential energy due to the RBTorsionForce
+     */
+    virtual double executeEnergy(OpenMMContextImpl& context) = 0;
+};
+
+/**
+ * This kernel is invoked by NonbondedForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CalcNonbondedForceKernel : public KernelImpl {
+public:
+    enum NonbondedMethod {
+        NoCutoff = 0,
+        CutoffNonPeriodic = 1,
+        CutoffPeriodic = 2
+    };
+    static std::string Name() {
+        return "CalcNonbondedForce";
+    }
+    CalcNonbondedForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param force      the NonbondedForce this kernel will be used for
+     * @param exclusions the i'th element lists the indices of all atoms with which the i'th atom should not interact through
+     *                   nonbonded forces.  Bonded 1-4 pairs are also included in this list, since they should be omitted from
+     *                   the standard nonbonded calculation.
+     */
+    virtual void initialize(const System& system, const NonbondedForce& force, const std::vector<std::set<int> >& exclusions) = 0;
+    /**
+     * Execute the kernel to calculate the forces.
+     * 
+     * @param context    the context in which to execute this kernel
+     */
+    virtual void executeForces(OpenMMContextImpl& context) = 0;
+    /**
+     * Execute the kernel to calculate the energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @return the potential energy due to the NonbondedForce
      */
     virtual double executeEnergy(OpenMMContextImpl& context) = 0;
 };

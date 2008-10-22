@@ -1,6 +1,3 @@
-#ifndef OPENMM_CUDAPLATFORM_H_
-#define OPENMM_CUDAPLATFORM_H_
-
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -32,49 +29,58 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "Platform.h"
-#include "CudaStreamFactory.h"
-
-class _gpuContext;
-
-namespace OpenMM {
-    
-class KernelImpl;
-
 /**
- * This Platform subclass uses CUDA implementations of the OpenMM kernels to run on NVidia GPUs.
+ * This tests the Cuda implementation of HarmonicAngleForce.
  */
 
-class OPENMM_EXPORT CudaPlatform : public Platform {
-public:
-    class PlatformData;
-    CudaPlatform();
-    std::string getName() const {
-        return "Cuda";
-    }
-    double getSpeed() const {
-        return 100;
-    }
-    bool supportsDoublePrecision() const;
-    const StreamFactory& getDefaultStreamFactory() const;
-    void contextCreated(OpenMMContextImpl& context) const;
-    void contextDestroyed(OpenMMContextImpl& context) const;
-private:
-    CudaStreamFactory defaultStreamFactory;
-};
+#include "../../../tests/AssertionUtilities.h"
+#include "OpenMMContext.h"
+#include "CudaPlatform.h"
+#include "HarmonicAngleForce.h"
+#include "System.h"
+#include "LangevinIntegrator.h"
+#include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
+#include <iostream>
+#include <vector>
 
-class CudaPlatform::PlatformData {
-public:
-    PlatformData(_gpuContext* gpu) : gpu(gpu), removeCM(false), useOBC(false), hasBonds(false), hasAngles(false),
-            hasPeriodicTorsions(false), hasRB(false), hasNonbonded(false), primaryKernel(NULL) {
+using namespace OpenMM;
+using namespace std;
+
+const double TOL = 1e-5;
+
+void testAngles() {
+    CudaPlatform platform;
+    System system(4, 0);
+    LangevinIntegrator integrator(0.0, 0.1, 0.01);
+    HarmonicAngleForce* forceField = new HarmonicAngleForce(2);
+    forceField->setAngleParameters(0, 0, 1, 2, PI_M/3, 1.1);
+    forceField->setAngleParameters(1, 1, 2, 3, PI_M/2, 1.2);
+    system.addForce(forceField);
+    OpenMMContext context(system, integrator, platform);
+    vector<Vec3> positions(4);
+    positions[0] = Vec3(0, 1, 0);
+    positions[1] = Vec3(0, 0, 0);
+    positions[2] = Vec3(1, 0, 0);
+    positions[3] = Vec3(2, 1, 0);
+    context.setPositions(positions);
+    State state = context.getState(State::Forces | State::Energy);
+    const vector<Vec3>& forces = state.getForces();
+    double torque1 = 1.1*PI_M/6;
+    double torque2 = 1.2*PI_M/4;
+    ASSERT_EQUAL_VEC(Vec3(torque1, 0, 0), forces[0], TOL);
+    ASSERT_EQUAL_VEC(Vec3(-0.5*torque2, 0.5*torque2, 0), forces[3], TOL); // reduced by sqrt(2) due to the bond length, another sqrt(2) due to the angle
+    ASSERT_EQUAL_VEC(Vec3(forces[0][0]+forces[1][0]+forces[2][0]+forces[3][0], forces[0][1]+forces[1][1]+forces[2][1]+forces[3][1], forces[0][2]+forces[1][2]+forces[2][2]+forces[3][2]), Vec3(0, 0, 0), TOL);
+    ASSERT_EQUAL_TOL(0.5*1.1*(PI_M/6)*(PI_M/6) + 0.5*1.2*(PI_M/4)*(PI_M/4), state.getPotentialEnergy(), TOL);
+}
+
+int main() {
+    try {
+        testAngles();
     }
-    _gpuContext* gpu;
-    KernelImpl* primaryKernel;
-    bool removeCM, useOBC;
-    bool hasBonds, hasAngles, hasPeriodicTorsions, hasRB, hasNonbonded;
-    int cmMotionFrequency;
-};
-
-} // namespace OpenMM
-
-#endif /*OPENMM_CUDAPLATFORM_H_*/
+    catch(const exception& e) {
+        cout << "exception: " << e.what() << endl;
+        return 1;
+    }
+    cout << "Done" << endl;
+    return 0;
+}

@@ -1,6 +1,3 @@
-#ifndef OPENMM_CUDAPLATFORM_H_
-#define OPENMM_CUDAPLATFORM_H_
-
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -32,49 +29,42 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "Platform.h"
-#include "CudaStreamFactory.h"
+#include "Force.h"
+#include "OpenMMException.h"
+#include "RBTorsionForce.h"
+#include "internal/RBTorsionForceImpl.h"
 
-class _gpuContext;
+using namespace OpenMM;
 
-namespace OpenMM {
-    
-class KernelImpl;
+RBTorsionForce::RBTorsionForce(int numTorsions) : rbTorsions(numTorsions) {
+}
 
-/**
- * This Platform subclass uses CUDA implementations of the OpenMM kernels to run on NVidia GPUs.
- */
+void RBTorsionForce::getTorsionParameters(int index, int& atom1, int& atom2, int& atom3, int& atom4, double& c0, double& c1, double& c2, double& c3, double& c4, double& c5) const {
+    atom1 = rbTorsions[index].atom1;
+    atom2 = rbTorsions[index].atom2;
+    atom3 = rbTorsions[index].atom3;
+    atom4 = rbTorsions[index].atom4;
+    c0 = rbTorsions[index].c[0];
+    c1 = rbTorsions[index].c[1];
+    c2 = rbTorsions[index].c[2];
+    c3 = rbTorsions[index].c[3];
+    c4 = rbTorsions[index].c[4];
+    c5 = rbTorsions[index].c[5];
+}
 
-class OPENMM_EXPORT CudaPlatform : public Platform {
-public:
-    class PlatformData;
-    CudaPlatform();
-    std::string getName() const {
-        return "Cuda";
-    }
-    double getSpeed() const {
-        return 100;
-    }
-    bool supportsDoublePrecision() const;
-    const StreamFactory& getDefaultStreamFactory() const;
-    void contextCreated(OpenMMContextImpl& context) const;
-    void contextDestroyed(OpenMMContextImpl& context) const;
-private:
-    CudaStreamFactory defaultStreamFactory;
-};
+void RBTorsionForce::setTorsionParameters(int index, int atom1, int atom2, int atom3, int atom4, double c0, double c1, double c2, double c3, double c4, double c5) {
+    rbTorsions[index].atom1 = atom1;
+    rbTorsions[index].atom2 = atom2;
+    rbTorsions[index].atom3 = atom3;
+    rbTorsions[index].atom4 = atom4;
+    rbTorsions[index].c[0] = c0;
+    rbTorsions[index].c[1] = c1;
+    rbTorsions[index].c[2] = c2;
+    rbTorsions[index].c[3] = c3;
+    rbTorsions[index].c[4] = c4;
+    rbTorsions[index].c[5] = c5;
+}
 
-class CudaPlatform::PlatformData {
-public:
-    PlatformData(_gpuContext* gpu) : gpu(gpu), removeCM(false), useOBC(false), hasBonds(false), hasAngles(false),
-            hasPeriodicTorsions(false), hasRB(false), hasNonbonded(false), primaryKernel(NULL) {
-    }
-    _gpuContext* gpu;
-    KernelImpl* primaryKernel;
-    bool removeCM, useOBC;
-    bool hasBonds, hasAngles, hasPeriodicTorsions, hasRB, hasNonbonded;
-    int cmMotionFrequency;
-};
-
-} // namespace OpenMM
-
-#endif /*OPENMM_CUDAPLATFORM_H_*/
+ForceImpl* RBTorsionForce::createImpl() {
+    return new RBTorsionForceImpl(*this);
+}

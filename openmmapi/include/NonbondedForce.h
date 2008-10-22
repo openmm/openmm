@@ -1,5 +1,5 @@
-#ifndef OPENMM_STANDARDMMFORCEFIELD_H_
-#define OPENMM_STANDARDMMFORCEFIELD_H_
+#ifndef OPENMM_NONBONDEDFORCE_H_
+#define OPENMM_NONBONDEDFORCE_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -41,16 +41,22 @@
 namespace OpenMM {
 
 /**
- * This class can be used for a variety of standard molecular mechanics force fields.  It includes
- * terms for Coulomb and Lennard-Jones nonbonded interactions, and harmonic terms for the following
- * types of bonded interactions: bond length, bond angle, and torsion (both periodic and Ryckaert-Bellemans).
+ * This class implements nonbonded interactions between particles, including a Coulomb force to represent
+ * electrostatics and a Lennard-Jones force to represent van der Waals interactions.  It optionally supports
+ * periodic boundary conditions and cutoffs for long range interactions.
  * 
- * To create a StandardMMForceField, you specify the number of atoms and the number of each type
- * of bonded term to the constructor.  Then loop over them and call the appropriate setXXXParameter()
- * method to set the force field parameters for each one.
+ * If the System also contains a HarmonicBondForce, nonbonded interactions are automatically excluded between
+ * particles which are separated by three or fewer bonds.  Most molecular force fields omit Coulomb and
+ * Lennard-Jones interactions between particles separated by one or two bonds, while using modified parameters
+ * for those separated by three bonds (known as "1-4 interactions").  This class lets you provide a list of
+ * 1-4 interactions to include in the potential, along with the parameters to use for each one.
+ * 
+ * When creating a NonbondedForce, you specify the number of atoms and the number of 1-4 interactions as
+ * arguments to the constructor.  You then loop over them and call setAtomParameters() for each atom and
+ * setNonbond14Parameters() for each 1-4 interaction.
  */
 
-class OPENMM_EXPORT StandardMMForceField : public Force {
+class OPENMM_EXPORT NonbondedForce : public Force {
 public:
     /**
      * This is an enumeration of the different methods that may be used for handling long range nonbonded forces.
@@ -58,61 +64,33 @@ public:
     enum NonbondedMethod {
         /**
          * No cutoff is applied to nonbonded interactions.  The full set of N^2 interactions is computed exactly.
-         * This necessarily means that periodic boundary conditions cannot be used.
+         * This necessarily means that periodic boundary conditions cannot be used.  This is the default.
          */
         NoCutoff = 0,
         /**
          * Interactions beyond the cutoff distance are ignored.  Coulomb interactions closer than the cutoff distance
-         * are modified based using the reaction field method.
+         * are modified using the reaction field method.
          */
         CutoffNonPeriodic = 1,
         /**
          * Periodic boundary conditions are used, so that each atom interacts only with the nearest periodic copy of
          * each other atom.  Interactions beyond the cutoff distance are ignored.  Coulomb interactions closer than the
-         * cutoff distance are modified based using the reaction field method.
+         * cutoff distance are modified using the reaction field method.
          */
         CutoffPeriodic = 2
     };
     /**
-     * Create a StandardMMForceField.
+     * Create a NonbondedForce.
      * 
      * @param numAtoms            the number of atoms in the system
-     * @param numBonds            the number of harmonic bond stretch terms in the potential function
-     * @param numAngles           the number of harmonic bond angle terms in the potential function
-     * @param numPeriodicTorsions the number of periodic torsion terms in the potential function
-     * @param numRBTorsions       the number of Ryckaert-Bellemans torsion terms in the potential function
      * @param numNonbonded14      the number of nonbonded 1-4 terms in the potential function
      */
-    StandardMMForceField(int numAtoms, int numBonds, int numAngles, int numPeriodicTorsions, int numRBTorsions, int numNonbonded14);
+    NonbondedForce(int numAtoms, int numNonbonded14);
     /**
      * Get the number of atoms in the system.
      */
     int getNumAtoms() const {
         return atoms.size();
-    }
-    /**
-     * Get the number of harmonic bond stretch terms in the potential function
-     */
-    int getNumBonds() const {
-        return bonds.size();
-    }
-    /**
-     * Get the number of harmonic bond angle terms in the potential function
-     */
-    int getNumAngles() const {
-        return angles.size();
-    }
-    /**
-     * Get the number of periodic torsion terms in the potential function
-     */
-    int getNumPeriodicTorsions() const {
-        return periodicTorsions.size();
-    }
-    /**
-     * Get the number of Ryckaert-Bellemans torsion terms in the potential function
-     */
-    int getNumRBTorsions() const {
-        return rbTorsions.size();
     }
     /**
      * Get the number of nonbonded 1-4 terms in the potential function
@@ -181,106 +159,6 @@ public:
      */
     void setAtomParameters(int index, double charge, double radius, double depth);
     /**
-     * Get the force field parameters for a bond term.
-     * 
-     * @param index     the index of the bond for which to get parameters
-     * @param atom1     the index of the first atom connected by the bond
-     * @param atom2     the index of the second atom connected by the bond
-     * @param length    the equilibrium length of the bond, measured in nm
-     * @param k         the harmonic force constant for the bond
-     */
-    void getBondParameters(int index, int& atom1, int& atom2, double& length, double& k) const;
-    /**
-     * Set the force field parameters for a bond term.
-     * 
-     * @param index     the index of the bond for which to set parameters
-     * @param atom1     the index of the first atom connected by the bond
-     * @param atom2     the index of the second atom connected by the bond
-     * @param length    the equilibrium length of the bond, measured in nm
-     * @param k         the harmonic force constant for the bond
-     */
-    void setBondParameters(int index, int atom1, int atom2, double length, double k);
-    /**
-     * Get the force field parameters for an angle term.
-     * 
-     * @param index     the index of the angle for which to get parameters
-     * @param atom1     the index of the first atom forming the angle
-     * @param atom2     the index of the second atom forming the angle
-     * @param atom3     the index of the third atom forming the angle
-     * @param length    the equilibrium angle, measured in radians
-     * @param k         the harmonic force constant for the angle
-     */
-    void getAngleParameters(int index, int& atom1, int& atom2, int& atom3, double& angle, double& k) const;
-    /**
-     * Set the force field parameters for an angle term.
-     * 
-     * @param index     the index of the angle for which to set parameters
-     * @param atom1     the index of the first atom forming the angle
-     * @param atom2     the index of the second atom forming the angle
-     * @param atom3     the index of the third atom forming the angle
-     * @param length    the equilibrium angle, measured in radians
-     * @param k         the harmonic force constant for the angle
-     */
-    void setAngleParameters(int index, int atom1, int atom2, int atom3, double angle, double k);
-    /**
-     * Get the force field parameters for a periodic torsion term.
-     * 
-     * @param index        the index of the torsion for which to get parameters
-     * @param atom1        the index of the first atom forming the torsion
-     * @param atom2        the index of the second atom forming the torsion
-     * @param atom3        the index of the third atom forming the torsion
-     * @param atom3        the index of the fourth atom forming the torsion
-     * @param periodicity  the periodicity of the torsion
-     * @param phase        the phase offset of the torsion, measured in radians
-     * @param k            the force constant for the torsion
-     */
-    void getPeriodicTorsionParameters(int index, int& atom1, int& atom2, int& atom3, int& atom4, int& periodicity, double& phase, double& k) const;
-    /**
-     * Set the force field parameters for a periodic torsion term.
-     * 
-     * @param index        the index of the torsion for which to set parameters
-     * @param atom1        the index of the first atom forming the torsion
-     * @param atom2        the index of the second atom forming the torsion
-     * @param atom3        the index of the third atom forming the torsion
-     * @param atom3        the index of the fourth atom forming the torsion
-     * @param periodicity  the periodicity of the torsion
-     * @param phase        the phase offset of the torsion, measured in radians
-     * @param k            the force constant for the torsion
-     */
-    void setPeriodicTorsionParameters(int index, int atom1, int atom2, int atom3, int atom4, int periodicity, double phase, double k);
-    /**
-     * Get the force field parameters for a Ryckaert-Bellemans torsion term.
-     * 
-     * @param index        the index of the torsion for which to get parameters
-     * @param atom1        the index of the first atom forming the torsion
-     * @param atom2        the index of the second atom forming the torsion
-     * @param atom3        the index of the third atom forming the torsion
-     * @param atom3        the index of the fourth atom forming the torsion
-     * @param c0           the coefficient of the constant term
-     * @param c1           the coefficient of the 1st order term
-     * @param c2           the coefficient of the 2nd order term
-     * @param c3           the coefficient of the 3rd order term
-     * @param c4           the coefficient of the 4th order term
-     * @param c5           the coefficient of the 5th order term
-     */
-    void getRBTorsionParameters(int index, int& atom1, int& atom2, int& atom3, int& atom4, double& c0, double& c1, double& c2, double& c3, double& c4, double& c5) const;
-    /**
-     * Set the force field parameters for a Ryckaert-Bellemans torsion term.
-     * 
-     * @param index        the index of the torsion for which to set parameters
-     * @param atom1        the index of the first atom forming the torsion
-     * @param atom2        the index of the second atom forming the torsion
-     * @param atom3        the index of the third atom forming the torsion
-     * @param atom3        the index of the fourth atom forming the torsion
-     * @param c0           the coefficient of the constant term
-     * @param c1           the coefficient of the 1st order term
-     * @param c2           the coefficient of the 2nd order term
-     * @param c3           the coefficient of the 3rd order term
-     * @param c4           the coefficient of the 4th order term
-     * @param c5           the coefficient of the 5th order term
-     */
-    void setRBTorsionParameters(int index, int atom1, int atom2, int atom3, int atom4, double c0, double c1, double c2, double c3, double c4, double c5);
-    /**
      * Get the force field parameters for a nonbonded 1-4 term.
      * 
      * @param index     the index of the interaction for which to get parameters
@@ -306,10 +184,6 @@ protected:
     ForceImpl* createImpl();
 private:
     class AtomInfo;
-    class BondInfo;
-    class AngleInfo;
-    class PeriodicTorsionInfo;
-    class RBTorsionInfo;
     class NB14Info;
     NonbondedMethod nonbondedMethod;
     double cutoffDistance;
@@ -322,21 +196,15 @@ private:
 #pragma warning(push)
 #pragma warning(disable:4251)
 #endif
-
     std::vector<AtomInfo> atoms;
-    std::vector<BondInfo> bonds;
-    std::vector<AngleInfo> angles;
-    std::vector<PeriodicTorsionInfo> periodicTorsions;
-    std::vector<RBTorsionInfo> rbTorsions;
     std::vector<NB14Info> nb14s;
-
 #if defined(_MSC_VER)
 #pragma warning(pop)
 #endif
 
 };
 
-class StandardMMForceField::AtomInfo {
+class NonbondedForce::AtomInfo {
 public:
     double charge, radius, depth;
     AtomInfo() {
@@ -344,48 +212,7 @@ public:
     }
 };
 
-class StandardMMForceField::AngleInfo {
-public:
-    int atom1, atom2, atom3;
-    double angle, k;
-    AngleInfo() {
-        atom1 = atom2 = atom3 = -1;
-        angle = k = 0.0;
-    }
-};
-
-class StandardMMForceField::PeriodicTorsionInfo {
-public:
-    int atom1, atom2, atom3, atom4, periodicity;
-    double phase, k;
-    PeriodicTorsionInfo() {
-        atom1 = atom2 = atom3 = atom4 = -1;
-        periodicity = 1;
-        phase = k = 0.0;
-    }
-};
-
-class StandardMMForceField::RBTorsionInfo {
-public:
-    int atom1, atom2, atom3, atom4;
-    double c[6];
-    RBTorsionInfo() {
-        atom1 = atom2 = atom3 = atom4 = -1;
-        c[0] = c[1] = c[2] = c[3] = c[4] = c[5] = 0.0;
-    }
-};
-
-class StandardMMForceField::BondInfo {
-public:
-    int atom1, atom2;
-    double length, k;
-    BondInfo() {
-        atom1 = atom2 = -1;
-        length = k = 0.0;
-    }
-};
-
-class StandardMMForceField::NB14Info {
+class NonbondedForce::NB14Info {
 public:
     int atom1, atom2;
     double charge, radius, depth;
@@ -397,4 +224,4 @@ public:
 
 } // namespace OpenMM
 
-#endif /*OPENMM_STANDARDMMFORCEFIELD_H_*/
+#endif /*OPENMM_NONBONDEDFORCE_H_*/

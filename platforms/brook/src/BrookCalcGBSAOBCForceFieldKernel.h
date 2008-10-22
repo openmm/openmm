@@ -39,7 +39,7 @@
 namespace OpenMM {
 
 /**
- * This kernel is invoked by StandardMMForceField to calculate the forces acting on the system.
+ * This kernel is invoked by NonbondedForce to calculate the forces acting on the system.
  */
 class BrookCalcGBSAOBCForceFieldKernel : public CalcGBSAOBCForceFieldKernel {
 
@@ -83,7 +83,7 @@ class BrookCalcGBSAOBCForceFieldKernel : public CalcGBSAOBCForceFieldKernel {
        * 
        * @param positions   atom positions
        *
-       * @return  potential energy due to the StandardMMForceField
+       * @return  potential energy due to the NonbondedForce
        * Currently always return 0.0 since energies not calculated on gpu
        *
        */

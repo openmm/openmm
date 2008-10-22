@@ -29,9 +29,6 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "System.h"
-
-
 #include "ReferenceKernels.h"
 #include "ReferenceFloatStreamImpl.h"
 #include "gbsa/CpuObc.h"
@@ -107,41 +104,15 @@ void disposeRealArray(RealOpenMM** array, int size) {
     }
 }
 
-ReferenceCalcStandardMMForceFieldKernel::~ReferenceCalcStandardMMForceFieldKernel() {
+ReferenceCalcHarmonicBondForceKernel::~ReferenceCalcHarmonicBondForceKernel() {
     disposeIntArray(bondIndexArray, numBonds);
     disposeRealArray(bondParamArray, numBonds);
-    disposeIntArray(angleIndexArray, numAngles);
-    disposeRealArray(angleParamArray, numAngles);
-    disposeIntArray(periodicTorsionIndexArray, numPeriodicTorsions);
-    disposeRealArray(periodicTorsionParamArray, numPeriodicTorsions);
-    disposeIntArray(rbTorsionIndexArray, numRBTorsions);
-    disposeRealArray(rbTorsionParamArray, numRBTorsions);
-    disposeRealArray(atomParamArray, numAtoms);
-    disposeIntArray(exclusionArray, numAtoms);
-    disposeIntArray(bonded14IndexArray, num14);
-    disposeRealArray(bonded14ParamArray, num14);
-    if (neighborList != NULL)
-        delete neighborList;
 }
 
-void ReferenceCalcStandardMMForceFieldKernel::initialize(const System& system, const StandardMMForceField& force, const std::vector<std::set<int> >& exclusions) {
-    numAtoms = force.getNumAtoms();
+void ReferenceCalcHarmonicBondForceKernel::initialize(const System& system, const HarmonicBondForce& force) {
     numBonds = force.getNumBonds();
-    numAngles = force.getNumAngles();
-    numPeriodicTorsions = force.getNumPeriodicTorsions();
-    numRBTorsions = force.getNumRBTorsions();
-    num14 = force.getNumNonbonded14();
     bondIndexArray = allocateIntArray(numBonds, 2);
     bondParamArray = allocateRealArray(numBonds, 2);
-    angleIndexArray = allocateIntArray(numAngles, 3);
-    angleParamArray = allocateRealArray(numAngles, 2);
-    periodicTorsionIndexArray = allocateIntArray(numPeriodicTorsions, 4);
-    periodicTorsionParamArray = allocateRealArray(numPeriodicTorsions, 3);
-    rbTorsionIndexArray = allocateIntArray(numRBTorsions, 4);
-    rbTorsionParamArray = allocateRealArray(numRBTorsions, 6);
-    bonded14IndexArray = allocateIntArray(num14, 2);
-    bonded14ParamArray = allocateRealArray(num14, 3);
-    atomParamArray = allocateRealArray(numAtoms, 3);
     for (int i = 0; i < force.getNumBonds(); ++i) {
         int atom1, atom2;
         double length, k;
@@ -151,6 +122,40 @@ void ReferenceCalcStandardMMForceFieldKernel::initialize(const System& system, c
         bondParamArray[i][0] = length;
         bondParamArray[i][1] = k;
     }
+}
+
+void ReferenceCalcHarmonicBondForceKernel::executeForces(OpenMMContextImpl& context) {
+    RealOpenMM** posData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData()); // Reference code needs to be made const correct
+    RealOpenMM** forceData = ((ReferenceFloatStreamImpl&) context.getForces().getImpl()).getData();
+    ReferenceBondForce refBondForce;
+    ReferenceHarmonicBondIxn harmonicBond;
+    refBondForce.calculateForce(numBonds, bondIndexArray, posData, bondParamArray, forceData, 0, 0, 0, harmonicBond);
+}
+
+double ReferenceCalcHarmonicBondForceKernel::executeEnergy(OpenMMContextImpl& context) {
+    RealOpenMM** posData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData()); // Reference code needs to be made const correct
+    RealOpenMM** forceData = allocateRealArray(context.getSystem().getNumAtoms(), 3);
+    RealOpenMM* energyArray = new RealOpenMM[numBonds];
+    RealOpenMM energy = 0;
+    ReferenceBondForce refBondForce;
+    ReferenceHarmonicBondIxn harmonicBond;
+    for (int i = 0; i < numBonds; ++i)
+        energyArray[i] = 0;
+    refBondForce.calculateForce(numBonds, bondIndexArray, posData, bondParamArray, forceData, energyArray, 0, &energy, harmonicBond);
+    disposeRealArray(forceData, context.getSystem().getNumAtoms());
+    delete[] energyArray;
+    return energy;
+}
+
+ReferenceCalcHarmonicAngleForceKernel::~ReferenceCalcHarmonicAngleForceKernel() {
+    disposeIntArray(angleIndexArray, numAngles);
+    disposeRealArray(angleParamArray, numAngles);
+}
+
+void ReferenceCalcHarmonicAngleForceKernel::initialize(const System& system, const HarmonicAngleForce& force) {
+    numAngles = force.getNumAngles();
+    angleIndexArray = allocateIntArray(numAngles, 3);
+    angleParamArray = allocateRealArray(numAngles, 2);
     for (int i = 0; i < force.getNumAngles(); ++i) {
         int atom1, atom2, atom3;
         double angle, k;
@@ -161,33 +166,141 @@ void ReferenceCalcStandardMMForceFieldKernel::initialize(const System& system, c
         angleParamArray[i][0] = angle;
         angleParamArray[i][1] = k;
     }
-    for (int i = 0; i < force.getNumPeriodicTorsions(); ++i) {
+}
+
+void ReferenceCalcHarmonicAngleForceKernel::executeForces(OpenMMContextImpl& context) {
+    RealOpenMM** posData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData()); // Reference code needs to be made const correct
+    RealOpenMM** forceData = ((ReferenceFloatStreamImpl&) context.getForces().getImpl()).getData();
+    ReferenceBondForce refBondForce;
+    ReferenceAngleBondIxn angleBond;
+    refBondForce.calculateForce(numAngles, angleIndexArray, posData, angleParamArray, forceData, 0, 0, 0, angleBond);
+}
+
+double ReferenceCalcHarmonicAngleForceKernel::executeEnergy(OpenMMContextImpl& context) {
+    RealOpenMM** posData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData()); // Reference code needs to be made const correct
+    RealOpenMM** forceData = allocateRealArray(context.getSystem().getNumAtoms(), 3);
+    RealOpenMM* energyArray = new RealOpenMM[numAngles];
+    RealOpenMM energy = 0;
+    ReferenceBondForce refBondForce;
+    ReferenceAngleBondIxn angleBond;
+    for (int i = 0; i < numAngles; ++i)
+        energyArray[i] = 0;
+    refBondForce.calculateForce(numAngles, angleIndexArray, posData, angleParamArray, forceData, energyArray, 0, &energy, angleBond);
+    disposeRealArray(forceData, context.getSystem().getNumAtoms());
+    delete[] energyArray;
+    return energy;
+}
+
+ReferenceCalcPeriodicTorsionForceKernel::~ReferenceCalcPeriodicTorsionForceKernel() {
+    disposeIntArray(torsionIndexArray, numTorsions);
+    disposeRealArray(torsionParamArray, numTorsions);
+}
+
+void ReferenceCalcPeriodicTorsionForceKernel::initialize(const System& system, const PeriodicTorsionForce& force) {
+    numTorsions = force.getNumTorsions();
+    torsionIndexArray = allocateIntArray(numTorsions, 4);
+    torsionParamArray = allocateRealArray(numTorsions, 3);
+    for (int i = 0; i < force.getNumTorsions(); ++i) {
         int atom1, atom2, atom3, atom4, periodicity;
         double phase, k;
-        force.getPeriodicTorsionParameters(i, atom1, atom2, atom3, atom4, periodicity, phase, k);
-        periodicTorsionIndexArray[i][0] = atom1;
-        periodicTorsionIndexArray[i][1] = atom2;
-        periodicTorsionIndexArray[i][2] = atom3;
-        periodicTorsionIndexArray[i][3] = atom4;
-        periodicTorsionParamArray[i][0] = k;
-        periodicTorsionParamArray[i][1] = phase;
-        periodicTorsionParamArray[i][2] = periodicity;
+        force.getTorsionParameters(i, atom1, atom2, atom3, atom4, periodicity, phase, k);
+        torsionIndexArray[i][0] = atom1;
+        torsionIndexArray[i][1] = atom2;
+        torsionIndexArray[i][2] = atom3;
+        torsionIndexArray[i][3] = atom4;
+        torsionParamArray[i][0] = k;
+        torsionParamArray[i][1] = phase;
+        torsionParamArray[i][2] = periodicity;
     }
-    for (int i = 0; i < force.getNumRBTorsions(); ++i) {
+}
+
+void ReferenceCalcPeriodicTorsionForceKernel::executeForces(OpenMMContextImpl& context) {
+    RealOpenMM** posData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData()); // Reference code needs to be made const correct
+    RealOpenMM** forceData = ((ReferenceFloatStreamImpl&) context.getForces().getImpl()).getData();
+    ReferenceBondForce refBondForce;
+    ReferenceProperDihedralBond periodicTorsionBond;
+    refBondForce.calculateForce(numTorsions, torsionIndexArray, posData, torsionParamArray, forceData, 0, 0, 0, periodicTorsionBond);
+}
+
+double ReferenceCalcPeriodicTorsionForceKernel::executeEnergy(OpenMMContextImpl& context) {
+    RealOpenMM** posData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData()); // Reference code needs to be made const correct
+    RealOpenMM** forceData = allocateRealArray(context.getSystem().getNumAtoms(), 3);
+    RealOpenMM* energyArray = new RealOpenMM[numTorsions];
+    RealOpenMM energy = 0;
+    ReferenceBondForce refBondForce;
+    ReferenceProperDihedralBond periodicTorsionBond;
+    for (int i = 0; i < numTorsions; ++i)
+        energyArray[i] = 0;
+    refBondForce.calculateForce(numTorsions, torsionIndexArray, posData, torsionParamArray, forceData, energyArray, 0, &energy, periodicTorsionBond);
+    disposeRealArray(forceData, context.getSystem().getNumAtoms());
+    delete[] energyArray;
+    return energy;
+}
+
+ReferenceCalcRBTorsionForceKernel::~ReferenceCalcRBTorsionForceKernel() {
+    disposeIntArray(torsionIndexArray, numTorsions);
+    disposeRealArray(torsionParamArray, numTorsions);
+}
+
+void ReferenceCalcRBTorsionForceKernel::initialize(const System& system, const RBTorsionForce& force) {
+    numTorsions = force.getNumTorsions();
+    torsionIndexArray = allocateIntArray(numTorsions, 4);
+    torsionParamArray = allocateRealArray(numTorsions, 6);
+    for (int i = 0; i < force.getNumTorsions(); ++i) {
         int atom1, atom2, atom3, atom4;
         double c0, c1, c2, c3, c4, c5;
-        force.getRBTorsionParameters(i, atom1, atom2, atom3, atom4, c0, c1, c2, c3, c4, c5);
-        rbTorsionIndexArray[i][0] = atom1;
-        rbTorsionIndexArray[i][1] = atom2;
-        rbTorsionIndexArray[i][2] = atom3;
-        rbTorsionIndexArray[i][3] = atom4;
-        rbTorsionParamArray[i][0] = c0;
-        rbTorsionParamArray[i][1] = c1;
-        rbTorsionParamArray[i][2] = c2;
-        rbTorsionParamArray[i][3] = c3;
-        rbTorsionParamArray[i][4] = c4;
-        rbTorsionParamArray[i][5] = c5;
+        force.getTorsionParameters(i, atom1, atom2, atom3, atom4, c0, c1, c2, c3, c4, c5);
+        torsionIndexArray[i][0] = atom1;
+        torsionIndexArray[i][1] = atom2;
+        torsionIndexArray[i][2] = atom3;
+        torsionIndexArray[i][3] = atom4;
+        torsionParamArray[i][0] = c0;
+        torsionParamArray[i][1] = c1;
+        torsionParamArray[i][2] = c2;
+        torsionParamArray[i][3] = c3;
+        torsionParamArray[i][4] = c4;
+        torsionParamArray[i][5] = c5;
     }
+}
+
+void ReferenceCalcRBTorsionForceKernel::executeForces(OpenMMContextImpl& context) {
+    RealOpenMM** posData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData()); // Reference code needs to be made const correct
+    RealOpenMM** forceData = ((ReferenceFloatStreamImpl&) context.getForces().getImpl()).getData();
+    ReferenceBondForce refBondForce;
+    ReferenceRbDihedralBond rbTorsionBond;
+    refBondForce.calculateForce(numTorsions, torsionIndexArray, posData, torsionParamArray, forceData, 0, 0, 0, rbTorsionBond);
+}
+
+double ReferenceCalcRBTorsionForceKernel::executeEnergy(OpenMMContextImpl& context) {
+    RealOpenMM** posData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData()); // Reference code needs to be made const correct
+    RealOpenMM** forceData = allocateRealArray(context.getSystem().getNumAtoms(), 3);
+    RealOpenMM* energyArray = new RealOpenMM[numTorsions];
+    RealOpenMM energy = 0;
+    ReferenceBondForce refBondForce;
+    ReferenceRbDihedralBond rbTorsionBond;
+    for (int i = 0; i < numTorsions; ++i)
+        energyArray[i] = 0;
+    refBondForce.calculateForce(numTorsions, torsionIndexArray, posData, torsionParamArray, forceData, energyArray, 0, &energy, rbTorsionBond);
+    disposeRealArray(forceData, context.getSystem().getNumAtoms());
+    delete[] energyArray;
+    return energy;
+}
+
+ReferenceCalcNonbondedForceKernel::~ReferenceCalcNonbondedForceKernel() {
+    disposeRealArray(atomParamArray, numAtoms);
+    disposeIntArray(exclusionArray, numAtoms);
+    disposeIntArray(bonded14IndexArray, num14);
+    disposeRealArray(bonded14ParamArray, num14);
+    if (neighborList != NULL)
+        delete neighborList;
+}
+
+void ReferenceCalcNonbondedForceKernel::initialize(const System& system, const NonbondedForce& force, const std::vector<std::set<int> >& exclusions) {
+    numAtoms = force.getNumAtoms();
+    num14 = force.getNumNonbonded14();
+    bonded14IndexArray = allocateIntArray(num14, 2);
+    bonded14ParamArray = allocateRealArray(num14, 3);
+    atomParamArray = allocateRealArray(numAtoms, 3);
     RealOpenMM sqrtEps = static_cast<RealOpenMM>( std::sqrt(138.935485) );
     for (int i = 0; i < numAtoms; ++i) {
         double charge, radius, depth;
@@ -215,7 +328,7 @@ void ReferenceCalcStandardMMForceFieldKernel::initialize(const System& system, c
         bonded14ParamArray[i][1] = static_cast<RealOpenMM>(4.0*depth);
         bonded14ParamArray[i][2] = static_cast<RealOpenMM>(charge*sqrtEps*sqrtEps);
     }
-    nonbondedMethod = CalcStandardMMForceFieldKernel::NonbondedMethod(force.getNonbondedMethod());
+    nonbondedMethod = CalcNonbondedForceKernel::NonbondedMethod(force.getNonbondedMethod());
     nonbondedCutoff = (RealOpenMM) force.getCutoffDistance();
     Vec3 boxVectors[3];
     force.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
@@ -229,18 +342,9 @@ void ReferenceCalcStandardMMForceFieldKernel::initialize(const System& system, c
         
 }
 
-void ReferenceCalcStandardMMForceFieldKernel::executeForces(OpenMMContextImpl& context) {
+void ReferenceCalcNonbondedForceKernel::executeForces(OpenMMContextImpl& context) {
     RealOpenMM** posData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData()); // Reference code needs to be made const correct
     RealOpenMM** forceData = ((ReferenceFloatStreamImpl&) context.getForces().getImpl()).getData();
-    ReferenceBondForce refBondForce;
-    ReferenceHarmonicBondIxn harmonicBond;
-    refBondForce.calculateForce(numBonds, bondIndexArray, posData, bondParamArray, forceData, 0, 0, 0, harmonicBond);
-    ReferenceAngleBondIxn angleBond;
-    refBondForce.calculateForce(numAngles, angleIndexArray, posData, angleParamArray, forceData, 0, 0, 0, angleBond);
-    ReferenceProperDihedralBond periodicTorsionBond;
-    refBondForce.calculateForce(numPeriodicTorsions, periodicTorsionIndexArray, posData, periodicTorsionParamArray, forceData, 0, 0, 0, periodicTorsionBond);
-    ReferenceRbDihedralBond rbTorsionBond;
-    refBondForce.calculateForce(numRBTorsions, rbTorsionIndexArray, posData, rbTorsionParamArray, forceData, 0, 0, 0, rbTorsionBond);
     ReferenceLJCoulombIxn clj;
     bool periodic = (nonbondedMethod == CutoffPeriodic);
     if (nonbondedMethod != NoCutoff) {
@@ -250,35 +354,17 @@ void ReferenceCalcStandardMMForceFieldKernel::executeForces(OpenMMContextImpl& c
     if (periodic)
         clj.setPeriodic(periodicBoxSize);
     clj.calculatePairIxn(numAtoms, posData, atomParamArray, exclusionArray, 0, forceData, 0, 0);
+    ReferenceBondForce refBondForce;
     ReferenceLJCoulomb14 nonbonded14;
     if (nonbondedMethod != NoCutoff)
         nonbonded14.setUseCutoff(nonbondedCutoff, 78.3f);
     refBondForce.calculateForce(num14, bonded14IndexArray, posData, bonded14ParamArray, forceData, 0, 0, 0, nonbonded14);
 }
 
-double ReferenceCalcStandardMMForceFieldKernel::executeEnergy(OpenMMContextImpl& context) {
+double ReferenceCalcNonbondedForceKernel::executeEnergy(OpenMMContextImpl& context) {
     RealOpenMM** posData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData()); // Reference code needs to be made const correct
     RealOpenMM** forceData = allocateRealArray(numAtoms, 3);
-    int arraySize = max(max(max(max(numAtoms, numBonds), numAngles), numPeriodicTorsions), numRBTorsions);
-    RealOpenMM* energyArray = new RealOpenMM[arraySize];
     RealOpenMM energy = 0;
-    ReferenceBondForce refBondForce;
-    ReferenceHarmonicBondIxn harmonicBond;
-    for (int i = 0; i < arraySize; ++i)
-        energyArray[i] = 0;
-    refBondForce.calculateForce(numBonds, bondIndexArray, posData, bondParamArray, forceData, energyArray, 0, &energy, harmonicBond);
-    ReferenceAngleBondIxn angleBond;
-    for (int i = 0; i < arraySize; ++i)
-        energyArray[i] = 0;
-    refBondForce.calculateForce(numAngles, angleIndexArray, posData, angleParamArray, forceData, energyArray, 0, &energy, angleBond);
-    ReferenceProperDihedralBond periodicTorsionBond;
-    for (int i = 0; i < arraySize; ++i)
-        energyArray[i] = 0;
-    refBondForce.calculateForce(numPeriodicTorsions, periodicTorsionIndexArray, posData, periodicTorsionParamArray, forceData, energyArray, 0, &energy, periodicTorsionBond);
-    ReferenceRbDihedralBond rbTorsionBond;
-    for (int i = 0; i < arraySize; ++i)
-        energyArray[i] = 0;
-    refBondForce.calculateForce(numRBTorsions, rbTorsionIndexArray, posData, rbTorsionParamArray, forceData, energyArray, 0, &energy, rbTorsionBond);
     ReferenceLJCoulombIxn clj;
     bool periodic = (nonbondedMethod == CutoffPeriodic);
     if (nonbondedMethod != NoCutoff) {
@@ -288,10 +374,12 @@ double ReferenceCalcStandardMMForceFieldKernel::executeEnergy(OpenMMContextImpl&
     if (periodic)
         clj.setPeriodic(periodicBoxSize);
     clj.calculatePairIxn(numAtoms, posData, atomParamArray, exclusionArray, 0, forceData, 0, &energy);
+    ReferenceBondForce refBondForce;
     ReferenceLJCoulomb14 nonbonded14;
     if (nonbondedMethod != NoCutoff)
         nonbonded14.setUseCutoff(nonbondedCutoff, 78.3f);
-    for (int i = 0; i < arraySize; ++i)
+    RealOpenMM* energyArray = new RealOpenMM[numAtoms];
+    for (int i = 0; i < numAtoms; ++i)
         energyArray[i] = 0;
     refBondForce.calculateForce(num14, bonded14IndexArray, posData, bonded14ParamArray, forceData, energyArray, 0, &energy, nonbonded14);
     disposeRealArray(forceData, numAtoms);

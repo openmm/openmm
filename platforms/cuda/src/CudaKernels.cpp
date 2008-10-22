@@ -45,96 +45,193 @@ extern "C" int gpuSetConstants( gpuContext gpu );
 using namespace OpenMM;
 using namespace std;
 
-CudaCalcStandardMMForceFieldKernel::~CudaCalcStandardMMForceFieldKernel() {
+static void calcForces(OpenMMContextImpl& context, CudaPlatform::PlatformData& data) {
+    _gpuContext* gpu = data.gpu;
+    if (data.useOBC) {
+        kCalculateCDLJObcGbsaForces1(gpu);
+        kReduceObcGbsaBornForces(gpu);
+        kCalculateObcGbsaForces2(gpu);
+    }
+    else {
+        kClearForces(gpu);
+        kCalculateCDLJForces(gpu);
+    }
+    kCalculateLocalForces(gpu);
+    kReduceBornSumAndForces(gpu);
 }
 
-void CudaCalcStandardMMForceFieldKernel::initialize(const System& system, const StandardMMForceField& force, const std::vector<std::set<int> >& exclusions) {
-    numAtoms = force.getNumAtoms();
-    numBonds = force.getNumBonds();
-    numAngles = force.getNumAngles();
-    numPeriodicTorsions = force.getNumPeriodicTorsions();
-    numRBTorsions = force.getNumRBTorsions();
-    num14 = force.getNumNonbonded14();
-    const float RadiansToDegrees = 180.0/3.14159265;
-    _gpuContext* gpu = data.gpu;
+static double calcEnergy(OpenMMContextImpl& context, System& system) {
+    // We don't currently have GPU kernels to calculate energy, so instead we have the reference
+    // platform do it.  This is VERY slow.
     
-    // Initialize bonds.
-    
-    {
-        vector<int> atom1(numBonds);
-        vector<int> atom2(numBonds);
-        vector<float> length(numBonds);
-        vector<float> k(numBonds);
-        for (int i = 0; i < numBonds; i++) {
-            double lengthValue, kValue;
-            force.getBondParameters(i, atom1[i], atom2[i], lengthValue, kValue);
-            length[i] = (float) lengthValue;
-            k[i] = (float) kValue;
-        }
-        gpuSetBondParameters(gpu, atom1, atom2, length, k);
-    }
-    
-    // Initialize angles.
-    
-    {
-        vector<int> atom1(numAngles);
-        vector<int> atom2(numAngles);
-        vector<int> atom3(numAngles);
-        vector<float> angle(numAngles);
-        vector<float> k(numAngles);
-        for (int i = 0; i < numAngles; i++) {
-            double angleValue, kValue;
-            force.getAngleParameters(i, atom1[i], atom2[i], atom3[i], angleValue, kValue);
-            angle[i] = (float) (angleValue*RadiansToDegrees);
-            k[i] = (float) kValue;
-        }
-        gpuSetBondAngleParameters(gpu, atom1, atom2, atom3, angle, k);
-    }
+    LangevinIntegrator integrator(0.0, 1.0, 0.0);
+    ReferencePlatform platform;
+    OpenMMContext refContext(system, integrator, platform);
+    const Stream& positions = context.getPositions();
+    double* posData = new double[positions.getSize()*3];
+    positions.saveToArray(posData);
+    vector<Vec3> pos(positions.getSize());
+    for (int i = 0; i < pos.size(); i++)
+        pos[i] = Vec3(posData[3*i], posData[3*i+1], posData[3*i+2]);
+    delete[] posData;
+    refContext.setPositions(pos);
+    return refContext.getState(State::Energy).getPotentialEnergy();
+}
 
-    // Initialize periodic torsions.
-    
-    {
-        vector<int> atom1(numPeriodicTorsions);
-        vector<int> atom2(numPeriodicTorsions);
-        vector<int> atom3(numPeriodicTorsions);
-        vector<int> atom4(numPeriodicTorsions);
-        vector<float> k(numPeriodicTorsions);
-        vector<float> phase(numPeriodicTorsions);
-        vector<int> periodicity(numPeriodicTorsions);
-        for (int i = 0; i < numPeriodicTorsions; i++) {
-            double kValue, phaseValue;
-            force.getPeriodicTorsionParameters(i, atom1[i], atom2[i], atom3[i], atom4[i], periodicity[i], phaseValue, kValue);
-            k[i] = (float) kValue;
-            phase[i] = (float) (phaseValue*RadiansToDegrees);
-        }
-        gpuSetDihedralParameters(gpu, atom1, atom2, atom3, atom4, k, phase, periodicity);
+CudaCalcHarmonicBondForceKernel::~CudaCalcHarmonicBondForceKernel() {
+}
+
+void CudaCalcHarmonicBondForceKernel::initialize(const System& system, const HarmonicBondForce& force) {
+    if (data.primaryKernel == NULL)
+        data.primaryKernel = this;
+    data.hasBonds = true;
+    numBonds = force.getNumBonds();
+    vector<int> atom1(numBonds);
+    vector<int> atom2(numBonds);
+    vector<float> length(numBonds);
+    vector<float> k(numBonds);
+    for (int i = 0; i < numBonds; i++) {
+        double lengthValue, kValue;
+        force.getBondParameters(i, atom1[i], atom2[i], lengthValue, kValue);
+        length[i] = (float) lengthValue;
+        k[i] = (float) kValue;
     }
-    
-    // Initialize Ryckaert-Bellemans torsions.
-    
-    {
-        vector<int> atom1(numRBTorsions);
-        vector<int> atom2(numRBTorsions);
-        vector<int> atom3(numRBTorsions);
-        vector<int> atom4(numRBTorsions);
-        vector<float> c0(numRBTorsions);
-        vector<float> c1(numRBTorsions);
-        vector<float> c2(numRBTorsions);
-        vector<float> c3(numRBTorsions);
-        vector<float> c4(numRBTorsions);
-        vector<float> c5(numRBTorsions);
-        for (int i = 0; i < numRBTorsions; i++) {
-            double c[6];
-            force.getRBTorsionParameters(i, atom1[i], atom2[i], atom3[i], atom4[i], c[0], c[1], c[2], c[3], c[4], c[5]);
-            c0[i] = (float) c[0];
-            c1[i] = (float) c[1];
-            c2[i] = (float) c[2];
-            c3[i] = (float) c[3];
-            c4[i] = (float) c[4];
-            c5[i] = (float) c[5];
-        }
-        gpuSetRbDihedralParameters(gpu, atom1, atom2, atom3, atom4, c0, c1, c2, c3, c4, c5);
+    gpuSetBondParameters(data.gpu, atom1, atom2, length, k);
+}
+
+void CudaCalcHarmonicBondForceKernel::executeForces(OpenMMContextImpl& context) {
+    if (data.primaryKernel == this)
+        calcForces(context, data);
+}
+
+double CudaCalcHarmonicBondForceKernel::executeEnergy(OpenMMContextImpl& context) {
+    if (data.primaryKernel == this)
+        return calcEnergy(context, system);
+    return 0.0;
+}
+
+CudaCalcHarmonicAngleForceKernel::~CudaCalcHarmonicAngleForceKernel() {
+}
+
+void CudaCalcHarmonicAngleForceKernel::initialize(const System& system, const HarmonicAngleForce& force) {
+    if (data.primaryKernel == NULL)
+        data.primaryKernel = this;
+    data.hasAngles = true;
+    numAngles = force.getNumAngles();
+    const float RadiansToDegrees = 180.0/3.14159265;
+    vector<int> atom1(numAngles);
+    vector<int> atom2(numAngles);
+    vector<int> atom3(numAngles);
+    vector<float> angle(numAngles);
+    vector<float> k(numAngles);
+    for (int i = 0; i < numAngles; i++) {
+        double angleValue, kValue;
+        force.getAngleParameters(i, atom1[i], atom2[i], atom3[i], angleValue, kValue);
+        angle[i] = (float) (angleValue*RadiansToDegrees);
+        k[i] = (float) kValue;
     }
+    gpuSetBondAngleParameters(data.gpu, atom1, atom2, atom3, angle, k);
+}
+
+void CudaCalcHarmonicAngleForceKernel::executeForces(OpenMMContextImpl& context) {
+    if (data.primaryKernel == this)
+        calcForces(context, data);
+}
+
+double CudaCalcHarmonicAngleForceKernel::executeEnergy(OpenMMContextImpl& context) {
+    if (data.primaryKernel == this)
+        return calcEnergy(context, system);
+    return 0.0;
+}
+
+CudaCalcPeriodicTorsionForceKernel::~CudaCalcPeriodicTorsionForceKernel() {
+}
+
+void CudaCalcPeriodicTorsionForceKernel::initialize(const System& system, const PeriodicTorsionForce& force) {
+    if (data.primaryKernel == NULL)
+        data.primaryKernel = this;
+    data.hasPeriodicTorsions = true;
+    numTorsions = force.getNumTorsions();
+    const float RadiansToDegrees = 180.0/3.14159265;
+    vector<int> atom1(numTorsions);
+    vector<int> atom2(numTorsions);
+    vector<int> atom3(numTorsions);
+    vector<int> atom4(numTorsions);
+    vector<float> k(numTorsions);
+    vector<float> phase(numTorsions);
+    vector<int> periodicity(numTorsions);
+    for (int i = 0; i < numTorsions; i++) {
+        double kValue, phaseValue;
+        force.getTorsionParameters(i, atom1[i], atom2[i], atom3[i], atom4[i], periodicity[i], phaseValue, kValue);
+        k[i] = (float) kValue;
+        phase[i] = (float) (phaseValue*RadiansToDegrees);
+    }
+    gpuSetDihedralParameters(data.gpu, atom1, atom2, atom3, atom4, k, phase, periodicity);
+}
+
+void CudaCalcPeriodicTorsionForceKernel::executeForces(OpenMMContextImpl& context) {
+    if (data.primaryKernel == this)
+        calcForces(context, data);
+}
+
+double CudaCalcPeriodicTorsionForceKernel::executeEnergy(OpenMMContextImpl& context) {
+    if (data.primaryKernel == this)
+        return calcEnergy(context, system);
+    return 0.0;
+}
+
+CudaCalcRBTorsionForceKernel::~CudaCalcRBTorsionForceKernel() {
+}
+
+void CudaCalcRBTorsionForceKernel::initialize(const System& system, const RBTorsionForce& force) {
+    if (data.primaryKernel == NULL)
+        data.primaryKernel = this;
+    data.hasRB = true;
+    numTorsions = force.getNumTorsions();
+    vector<int> atom1(numTorsions);
+    vector<int> atom2(numTorsions);
+    vector<int> atom3(numTorsions);
+    vector<int> atom4(numTorsions);
+    vector<float> c0(numTorsions);
+    vector<float> c1(numTorsions);
+    vector<float> c2(numTorsions);
+    vector<float> c3(numTorsions);
+    vector<float> c4(numTorsions);
+    vector<float> c5(numTorsions);
+    for (int i = 0; i < numTorsions; i++) {
+        double c[6];
+        force.getTorsionParameters(i, atom1[i], atom2[i], atom3[i], atom4[i], c[0], c[1], c[2], c[3], c[4], c[5]);
+        c0[i] = (float) c[0];
+        c1[i] = (float) c[1];
+        c2[i] = (float) c[2];
+        c3[i] = (float) c[3];
+        c4[i] = (float) c[4];
+        c5[i] = (float) c[5];
+    }
+    gpuSetRbDihedralParameters(data.gpu, atom1, atom2, atom3, atom4, c0, c1, c2, c3, c4, c5);
+}
+
+void CudaCalcRBTorsionForceKernel::executeForces(OpenMMContextImpl& context) {
+    if (data.primaryKernel == this)
+        calcForces(context, data);
+}
+
+double CudaCalcRBTorsionForceKernel::executeEnergy(OpenMMContextImpl& context) {
+    if (data.primaryKernel == this)
+        return calcEnergy(context, system);
+    return 0.0;
+}
+
+CudaCalcNonbondedForceKernel::~CudaCalcNonbondedForceKernel() {
+}
+
+void CudaCalcNonbondedForceKernel::initialize(const System& system, const NonbondedForce& force, const std::vector<std::set<int> >& exclusions) {
+    if (data.primaryKernel == NULL)
+        data.primaryKernel = this;
+    data.hasNonbonded = true;
+    numAtoms = force.getNumAtoms();
+    num14 = force.getNumNonbonded14();
+    _gpuContext* gpu = data.gpu;
     
     // Initialize nonbonded interactions.
     
@@ -180,37 +277,15 @@ void CudaCalcStandardMMForceFieldKernel::initialize(const System& system, const 
     }
 }
 
-void CudaCalcStandardMMForceFieldKernel::executeForces(OpenMMContextImpl& context) {
-    _gpuContext* gpu = data.gpu;
-    if (data.useOBC) {
-        kCalculateCDLJObcGbsaForces1(gpu);
-        kReduceObcGbsaBornForces(gpu);
-        kCalculateObcGbsaForces2(gpu);
-    }
-    else {
-        kClearForces(gpu);
-        kCalculateCDLJForces(gpu);
-    }
-    kCalculateLocalForces(gpu);
-    kReduceBornSumAndForces(gpu);
+void CudaCalcNonbondedForceKernel::executeForces(OpenMMContextImpl& context) {
+    if (data.primaryKernel == this)
+        calcForces(context, data);
 }
 
-double CudaCalcStandardMMForceFieldKernel::executeEnergy(OpenMMContextImpl& context) {
-    // We don't currently have GPU kernels to calculate energy, so instead we have the reference
-    // platform do it.  This is VERY slow.
-    
-    LangevinIntegrator integrator(0.0, 1.0, 0.0);
-    ReferencePlatform platform;
-    OpenMMContext refContext(system, integrator, platform);
-    const Stream& positions = context.getPositions();
-    double* posData = new double[positions.getSize()*3];
-    positions.saveToArray(posData);
-    vector<Vec3> pos(positions.getSize());
-    for (int i = 0; i < pos.size(); i++)
-        pos[i] = Vec3(posData[3*i], posData[3*i+1], posData[3*i+2]);
-    delete[] posData;
-    refContext.setPositions(pos);
-    return refContext.getState(State::Energy).getPotentialEnergy();
+double CudaCalcNonbondedForceKernel::executeEnergy(OpenMMContextImpl& context) {
+    if (data.primaryKernel == this)
+        return calcEnergy(context, system);
+    return 0.0;
 }
 
 CudaCalcGBSAOBCForceFieldKernel::~CudaCalcGBSAOBCForceFieldKernel() {
@@ -281,6 +356,25 @@ void CudaIntegrateLangevinStepKernel::initialize(const System& system, const Lan
         invMass2[i] = 1.0f/mass[atom2Index];
     }
     gpuSetShakeParameters(gpu, atom1, atom2, distance, invMass1, invMass2);
+    
+    // Initialize any terms that haven't already been handled by a Force.
+    
+    if (!data.hasBonds)
+        gpuSetBondParameters(gpu, vector<int>(), vector<int>(), vector<float>(), vector<float>());
+    if (!data.hasAngles)
+        gpuSetBondAngleParameters(gpu, vector<int>(), vector<int>(), vector<int>(), vector<float>(), vector<float>());
+    if (!data.hasPeriodicTorsions)
+        gpuSetDihedralParameters(gpu, vector<int>(), vector<int>(), vector<int>(), vector<int>(), vector<float>(), vector<float>(), vector<int>());
+    if (!data.hasRB)
+        gpuSetRbDihedralParameters(gpu, vector<int>(), vector<int>(), vector<int>(), vector<int>(), vector<float>(), vector<float>(),
+                vector<float>(), vector<float>(), vector<float>(), vector<float>());
+    if (!data.hasNonbonded) {
+        gpuSetCoulombParameters(gpu, 138.935485f, vector<int>(), vector<float>(), vector<float>(), vector<float>(), vector<char>(), vector<vector<int> >());
+        gpuSetLJ14Parameters(gpu, 138.935485f, 1.0f, vector<int>(), vector<int>(), vector<float>(), vector<float>(), vector<float>(), vector<float>());
+    }
+    
+    // Finish initialization.
+    
     gpuBuildThreadBlockWorkList(gpu);
     gpuBuildExclusionList(gpu);
     gpuBuildOutputBuffers(gpu);

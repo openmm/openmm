@@ -36,7 +36,7 @@
 #include "../../reference/src/SimTKUtilities/SimTKOpenMMRealType.h"
 #include "BrookBonded.h"
 #include "BrookNonBonded.h"
-#include "StandardMMForceField.h"
+#include "NonbondedForce.h"
 #include "OpenMMContext.h"
 #include "System.h"
 #include "ReferencePlatform.h"
@@ -45,15 +45,15 @@
 namespace OpenMM {
 
 /**
- * This kernel is invoked by StandardMMForceField to calculate the forces acting on the system.
+ * This kernel is invoked by NonbondedForce to calculate the forces acting on the system.
  */
-class BrookCalcStandardMMForceFieldKernel : public CalcStandardMMForceFieldKernel {
+class BrookCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
 
    public:
   
-      BrookCalcStandardMMForceFieldKernel( std::string name, const Platform& platform );
+      BrookCalcNonbondedForceKernel( std::string name, const Platform& platform );
   
-      ~BrookCalcStandardMMForceFieldKernel();
+      ~BrookCalcNonbondedForceKernel();
   
       /**
        * Initialize the kernel, setting up the values of all the force field parameters.
@@ -103,7 +103,7 @@ class BrookCalcStandardMMForceFieldKernel : public CalcStandardMMForceFieldKerne
        * 
        * @param positions   a Stream of type Double3 containing the position (x, y, z) of each atom
        *
-       * @return the potential energy due to the StandardMMForceField
+       * @return the potential energy due to the NonbondedForce
        *
        * Currently always return 0.0 since energies not calculated on gpu
        */
@@ -171,7 +171,7 @@ class BrookCalcStandardMMForceFieldKernel : public CalcStandardMMForceFieldKerne
 
        // used to calculate energy
 
-       StandardMMForceField* _refForceField;
+       NonbondedForce* _refForceField;
        System*               _refSystem;
        OpenMMContext*        _refOpenMMContext;
        ReferencePlatform*    _referencePlatform;
