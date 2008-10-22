@@ -66,7 +66,7 @@ Integrator& OpenMMContext::getIntegrator() {
 }
 
 State OpenMMContext::getState(int types) const {
-    State state(impl->getTime(), impl->getSystem().getNumAtoms(), State::DataType(types));
+    State state(impl->getTime(), impl->getSystem().getNumParticles(), State::DataType(types));
     if (types&State::Energy)
         state.setEnergy(impl->calcKineticEnergy(), impl->calcPotentialEnergy());
     if (types&State::Forces) {
@@ -93,13 +93,13 @@ void OpenMMContext::setTime(double time) {
 }
 
 void OpenMMContext::setPositions(const vector<Vec3>& positions) {
-    if ((int) positions.size() != impl->getSystem().getNumAtoms())
+    if ((int) positions.size() != impl->getSystem().getNumParticles())
         throw OpenMMException("Called setPositions() on an OpenMMContext with the wrong number of positions");
     impl->getPositions().loadFromArray(&positions[0]);
 }
 
 void OpenMMContext::setVelocities(const vector<Vec3>& velocities) {
-    if ((int) velocities.size() != impl->getSystem().getNumAtoms())
+    if ((int) velocities.size() != impl->getSystem().getNumParticles())
         throw OpenMMException("Called setVelocities() on an OpenMMContext with the wrong number of velocities");
     impl->getVelocities().loadFromArray(&velocities[0]);
 }

@@ -53,8 +53,8 @@ const double TOL = 1e-5;
 void testSingleBond() {
     CudaPlatform platform;
     System system(2, 0);
-    system.setAtomMass(0, 2.0);
-    system.setAtomMass(1, 2.0);
+    system.setParticleMass(0, 2.0);
+    system.setParticleMass(1, 2.0);
     LangevinIntegrator integrator(0, 0.1, 0.01);
     HarmonicBondForce* forceField = new HarmonicBondForce(1);
     forceField->setBondParameters(0, 0, 1, 1.5, 1);
@@ -95,20 +95,20 @@ void testSingleBond() {
 }
 
 void testTemperature() {
-    const int numAtoms = 8;
+    const int numParticles = 8;
     const double temp = 100.0;
     CudaPlatform platform;
-    System system(numAtoms, 0);
+    System system(numParticles, 0);
     LangevinIntegrator integrator(temp, 2.0, 0.01);
-    NonbondedForce* forceField = new NonbondedForce(numAtoms, 0);
-    for (int i = 0; i < numAtoms; ++i) {
-        system.setAtomMass(i, 2.0);
-        forceField->setAtomParameters(i, (i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
+    NonbondedForce* forceField = new NonbondedForce(numParticles, 0);
+    for (int i = 0; i < numParticles; ++i) {
+        system.setParticleMass(i, 2.0);
+        forceField->setParticleParameters(i, (i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
     }
     system.addForce(forceField);
     OpenMMContext context(system, integrator, platform);
-    vector<Vec3> positions(numAtoms);
-    for (int i = 0; i < numAtoms; ++i)
+    vector<Vec3> positions(numParticles);
+    for (int i = 0; i < numParticles; ++i)
         positions[i] = Vec3((i%2 == 0 ? 2 : -2), (i%4 < 2 ? 2 : -2), (i < 4 ? 2 : -2));
     context.setPositions(positions);
     
@@ -125,30 +125,30 @@ void testTemperature() {
         integrator.step(1);
     }
     ke /= 1000;
-    double expected = 0.5*numAtoms*3*BOLTZ*temp;
+    double expected = 0.5*numParticles*3*BOLTZ*temp;
     ASSERT_EQUAL_TOL(expected, ke, 3*expected/std::sqrt(1000.0));
 }
 
 void testConstraints() {
-    const int numAtoms = 8;
+    const int numParticles = 8;
     const int numConstraints = 4;
     const double temp = 100.0;
     CudaPlatform platform;
-    System system(numAtoms, numConstraints);
+    System system(numParticles, numConstraints);
     LangevinIntegrator integrator(temp, 2.0, 0.01);
-    NonbondedForce* forceField = new NonbondedForce(numAtoms, 0);
-    for (int i = 0; i < numAtoms; ++i) {
-        system.setAtomMass(i, 10.0);
-        forceField->setAtomParameters(i, (i%2 == 0 ? 0.2 : -0.2), 0.5, 5.0);
+    NonbondedForce* forceField = new NonbondedForce(numParticles, 0);
+    for (int i = 0; i < numParticles; ++i) {
+        system.setParticleMass(i, 10.0);
+        forceField->setParticleParameters(i, (i%2 == 0 ? 0.2 : -0.2), 0.5, 5.0);
     }
     for (int i = 0; i < numConstraints; ++i)
         system.setConstraintParameters(i, 2*i, 2*i+1, 1.0);
     system.addForce(forceField);
     OpenMMContext context(system, integrator, platform);
-    vector<Vec3> positions(numAtoms);
-    vector<Vec3> velocities(numAtoms);
+    vector<Vec3> positions(numParticles);
+    vector<Vec3> velocities(numParticles);
     init_gen_rand(0);
-    for (int i = 0; i < numAtoms; ++i) {
+    for (int i = 0; i < numParticles; ++i) {
         positions[i] = Vec3(i/2, (i+1)/2, 0);
         velocities[i] = Vec3(genrand_real2()-0.5, genrand_real2()-0.5, genrand_real2()-0.5);
     }
@@ -160,11 +160,11 @@ void testConstraints() {
     for (int i = 0; i < 1000; ++i) {
         State state = context.getState(State::Positions);
         for (int j = 0; j < numConstraints; ++j) {
-            int atom1, atom2;
+            int particle1, particle2;
             double distance;
-            system.getConstraintParameters(j, atom1, atom2, distance);
-            Vec3 p1 = state.getPositions()[atom1];
-            Vec3 p2 = state.getPositions()[atom2];
+            system.getConstraintParameters(j, particle1, particle2, distance);
+            Vec3 p1 = state.getPositions()[particle1];
+            Vec3 p2 = state.getPositions()[particle2];
             double dist = std::sqrt((p1[0]-p2[0])*(p1[0]-p2[0])+(p1[1]-p2[1])*(p1[1]-p2[1])+(p1[2]-p2[2])*(p1[2]-p2[2]));
             ASSERT_EQUAL_TOL(distance, dist, 2e-4);
         }

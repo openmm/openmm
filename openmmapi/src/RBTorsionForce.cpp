@@ -39,11 +39,11 @@ using namespace OpenMM;
 RBTorsionForce::RBTorsionForce(int numTorsions) : rbTorsions(numTorsions) {
 }
 
-void RBTorsionForce::getTorsionParameters(int index, int& atom1, int& atom2, int& atom3, int& atom4, double& c0, double& c1, double& c2, double& c3, double& c4, double& c5) const {
-    atom1 = rbTorsions[index].atom1;
-    atom2 = rbTorsions[index].atom2;
-    atom3 = rbTorsions[index].atom3;
-    atom4 = rbTorsions[index].atom4;
+void RBTorsionForce::getTorsionParameters(int index, int& particle1, int& particle2, int& particle3, int& particle4, double& c0, double& c1, double& c2, double& c3, double& c4, double& c5) const {
+    particle1 = rbTorsions[index].particle1;
+    particle2 = rbTorsions[index].particle2;
+    particle3 = rbTorsions[index].particle3;
+    particle4 = rbTorsions[index].particle4;
     c0 = rbTorsions[index].c[0];
     c1 = rbTorsions[index].c[1];
     c2 = rbTorsions[index].c[2];
@@ -52,11 +52,11 @@ void RBTorsionForce::getTorsionParameters(int index, int& atom1, int& atom2, int
     c5 = rbTorsions[index].c[5];
 }
 
-void RBTorsionForce::setTorsionParameters(int index, int atom1, int atom2, int atom3, int atom4, double c0, double c1, double c2, double c3, double c4, double c5) {
-    rbTorsions[index].atom1 = atom1;
-    rbTorsions[index].atom2 = atom2;
-    rbTorsions[index].atom3 = atom3;
-    rbTorsions[index].atom4 = atom4;
+void RBTorsionForce::setTorsionParameters(int index, int particle1, int particle2, int particle3, int particle4, double c0, double c1, double c2, double c3, double c4, double c5) {
+    rbTorsions[index].particle1 = particle1;
+    rbTorsions[index].particle2 = particle2;
+    rbTorsions[index].particle3 = particle3;
+    rbTorsions[index].particle4 = particle4;
     rbTorsions[index].c[0] = c0;
     rbTorsions[index].c[1] = c1;
     rbTorsions[index].c[2] = c2;

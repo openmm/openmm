@@ -50,15 +50,15 @@ using namespace std;
 
 const double TOL = 1e-5;
 
-void testSingleAtom() {
+void testSingleParticle() {
     CudaPlatform platform;
     System system(1, 0);
-    system.setAtomMass(0, 2.0);
+    system.setParticleMass(0, 2.0);
     LangevinIntegrator integrator(0, 0.1, 0.01);
     GBSAOBCForceField* forceField = new GBSAOBCForceField(1);
     NonbondedForce* standard = new NonbondedForce(1, 0);
-    forceField->setAtomParameters(0, 0.5, 0.15, 1);
-    standard->setAtomParameters(0, 0.5, 1, 0);
+    forceField->setParticleParameters(0, 0.5, 0.15, 1);
+    standard->setParticleParameters(0, 0.5, 1, 0);
     system.addForce(forceField);
     system.addForce(standard);
     OpenMMContext context(system, integrator, platform);
@@ -76,25 +76,25 @@ void testSingleAtom() {
 
 void testForce() {
     CudaPlatform platform;
-    const int numAtoms = 10;
-    System system(numAtoms, 0);
+    const int numParticles = 10;
+    System system(numParticles, 0);
     LangevinIntegrator integrator(0, 0.1, 0.01);
-    GBSAOBCForceField* forceField = new GBSAOBCForceField(numAtoms);
-    NonbondedForce* standard = new NonbondedForce(numAtoms, 0);
-    for (int i = 0; i < numAtoms; ++i) {
+    GBSAOBCForceField* forceField = new GBSAOBCForceField(numParticles);
+    NonbondedForce* standard = new NonbondedForce(numParticles, 0);
+    for (int i = 0; i < numParticles; ++i) {
         double charge = i%2 == 0 ? -1 : 1;
-        forceField->setAtomParameters(i, charge, 0.15, 1);
-        standard->setAtomParameters(i, charge, 1, 0);
+        forceField->setParticleParameters(i, charge, 0.15, 1);
+        standard->setParticleParameters(i, charge, 1, 0);
     }
     system.addForce(forceField);
     system.addForce(standard);
     OpenMMContext context(system, integrator, platform);
     
-    // Set random positions for all the atoms.
+    // Set random positions for all the particles.
     
-    vector<Vec3> positions(numAtoms);
+    vector<Vec3> positions(numParticles);
     init_gen_rand(0);
-    for (int i = 0; i < numAtoms; ++i)
+    for (int i = 0; i < numParticles; ++i)
         positions[i] = Vec3(5.0*genrand_real2(), 5.0*genrand_real2(), 5.0*genrand_real2());
     context.setPositions(positions);
     State state = context.getState(State::Forces | State::Energy);
@@ -102,14 +102,14 @@ void testForce() {
     // Take a small step in the direction of the energy gradient.
     
     double norm = 0.0;
-    for (int i = 0; i < numAtoms; ++i) {
+    for (int i = 0; i < numParticles; ++i) {
         Vec3 f = state.getForces()[i];
         norm += f[0]*f[0] + f[1]*f[1] + f[2]*f[2];
     }
     norm = std::sqrt(norm);
     const double delta = 1e-3;
     double step = delta/norm;
-    for (int i = 0; i < numAtoms; ++i) {
+    for (int i = 0; i < numParticles; ++i) {
         Vec3 p = positions[i];
         Vec3 f = state.getForces()[i];
         positions[i] = Vec3(p[0]-f[0]*step, p[1]-f[1]*step, p[2]-f[2]*step);
@@ -124,7 +124,7 @@ void testForce() {
 
 int main() {
     try {
-        testSingleAtom();
+        testSingleParticle();
         testForce();
     }
     catch(const exception& e) {

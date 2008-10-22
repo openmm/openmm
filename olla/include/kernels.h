@@ -200,7 +200,7 @@ public:
      * 
      * @param system     the System this kernel will be applied to
      * @param force      the NonbondedForce this kernel will be used for
-     * @param exclusions the i'th element lists the indices of all atoms with which the i'th atom should not interact through
+     * @param exclusions the i'th element lists the indices of all particles with which the i'th particle should not interact through
      *                   nonbonded forces.  Bonded 1-4 pairs are also included in this list, since they should be omitted from
      *                   the standard nonbonded calculation.
      */
@@ -331,7 +331,7 @@ public:
 };
 
 /**
- * This kernel is invoked by AndersenThermostat at the start of each time step to adjust the atom velocities.
+ * This kernel is invoked by AndersenThermostat at the start of each time step to adjust the particle velocities.
  */
 class ApplyAndersenThermostatKernel : public KernelImpl {
 public:

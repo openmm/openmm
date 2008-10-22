@@ -194,7 +194,7 @@ public:
      * 
      * @param system     the System this kernel will be applied to
      * @param force      the NonbondedForce this kernel will be used for
-     * @param exclusions the i'th element lists the indices of all atoms with which the i'th atom should not interact through
+     * @param exclusions the i'th element lists the indices of all particles with which the i'th particle should not interact through
      *                   nonbonded forces.  Bonded 1-4 pairs are also included in this list, since they should be omitted from
      *                   the standard nonbonded calculation.
      */
@@ -213,9 +213,9 @@ public:
      */
     double executeEnergy(OpenMMContextImpl& context);
 private:
-    int numAtoms, num14;
+    int numParticles, num14;
     int **exclusionArray, **bonded14IndexArray;
-    RealOpenMM **atomParamArray, **bonded14ParamArray;
+    RealOpenMM **particleParamArray, **bonded14ParamArray;
     RealOpenMM nonbondedCutoff, periodicBoxSize[3];
     std::vector<std::set<int> > exclusions;
     NonbondedMethod nonbondedMethod;
@@ -298,7 +298,7 @@ public:
     }
     ~ReferenceIntegrateLangevinStepKernel();
     /**
-     * Initialize the kernel, setting up the atomic masses.
+     * Initialize the kernel, setting up the particle masses.
      * 
      * @param system     the System this kernel will be applied to
      * @param integrator the LangevinIntegrator this kernel will be used for
@@ -355,7 +355,7 @@ private:
 };
 
 /**
- * This kernel is invoked by AndersenThermostat at the start of each time step to adjust the atom velocities.
+ * This kernel is invoked by AndersenThermostat at the start of each time step to adjust the particle velocities.
  */
 class ReferenceApplyAndersenThermostatKernel : public ApplyAndersenThermostatKernel {
 public:
@@ -411,7 +411,7 @@ public:
     ReferenceRemoveCMMotionKernel(std::string name, const Platform& platform) : RemoveCMMotionKernel(name, platform) {
     }
     /**
-     * Initialize the kernel, setting up the atomic masses.
+     * Initialize the kernel, setting up the particle masses.
      * 
      * @param system     the System this kernel will be applied to
      * @param force      the CMMotionRemover this kernel will be used for

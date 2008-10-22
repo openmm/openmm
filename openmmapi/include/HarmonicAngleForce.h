@@ -41,7 +41,7 @@
 namespace OpenMM {
 
 /**
- * This class implements an interaction between groups of three atoms that varies harmonically with the angle
+ * This class implements an interaction between groups of three particles that varies harmonically with the angle
  * between them.  When creating a HarmonicAngleForce, you specify the number of angle as an argument to the
  * constructor, then loop over them and call setAngleParameters() to set the force field parameters for each one.
  */
@@ -64,24 +64,24 @@ public:
      * Get the force field parameters for an angle term.
      * 
      * @param index     the index of the angle for which to get parameters
-     * @param atom1     the index of the first atom forming the angle
-     * @param atom2     the index of the second atom forming the angle
-     * @param atom3     the index of the third atom forming the angle
+     * @param particle1 the index of the first particle forming the angle
+     * @param particle2 the index of the second particle forming the angle
+     * @param particle3 the index of the third particle forming the angle
      * @param length    the equilibrium angle, measured in radians
      * @param k         the harmonic force constant for the angle
      */
-    void getAngleParameters(int index, int& atom1, int& atom2, int& atom3, double& angle, double& k) const;
+    void getAngleParameters(int index, int& particle1, int& particle2, int& particle3, double& angle, double& k) const;
     /**
      * Set the force field parameters for an angle term.
      * 
      * @param index     the index of the angle for which to set parameters
-     * @param atom1     the index of the first atom forming the angle
-     * @param atom2     the index of the second atom forming the angle
-     * @param atom3     the index of the third atom forming the angle
+     * @param particle1 the index of the first particle forming the angle
+     * @param particle2 the index of the second particle forming the angle
+     * @param particle3 the index of the third particle forming the angle
      * @param length    the equilibrium angle, measured in radians
      * @param k         the harmonic force constant for the angle
      */
-    void setAngleParameters(int index, int atom1, int atom2, int atom3, double angle, double k);
+    void setAngleParameters(int index, int particle1, int particle2, int particle3, double angle, double k);
 protected:
     ForceImpl* createImpl();
 private:
@@ -103,10 +103,10 @@ private:
 
 class HarmonicAngleForce::AngleInfo {
 public:
-    int atom1, atom2, atom3;
+    int particle1, particle2, particle3;
     double angle, k;
     AngleInfo() {
-        atom1 = atom2 = atom3 = -1;
+        particle1 = particle2 = particle3 = -1;
         angle = k = 0.0;
     }
 };

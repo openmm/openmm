@@ -50,15 +50,15 @@ class Platform;
  * 
  * <ul>
  * <li>The current time</li>
- * <li>The position of each atom</li>
- * <li>The velocity of each atom</li>
+ * <li>The position of each particle</li>
+ * <li>The velocity of each particle</li>
  * <li>The values of configurable parameters defined by Force objects in the System</li>
  * </ul>
  * 
  * You can retrieve a snapshot of the current state at any time by calling getState().  This
  * allows you to record the state of the simulation at various points, either for analysis
  * or for checkpointing.  getState() can also be used to retrieve the current forces on each
- * atom and the current energy of the System.
+ * particle and the current energy of the System.
  */
 
 class OPENMM_EXPORT OpenMMContext {
@@ -112,17 +112,17 @@ public:
      */
     void setTime(double time);
     /**
-     * Set the positions of all atoms in the System (measured in nm).
+     * Set the positions of all particles in the System (measured in nm).
      * 
-     * @param a vector whose length equals the number of atoms in the System.  The i'th element
-     * contains the position of the i'th atom.
+     * @param positions   a vector whose length equals the number of particles in the System.  The i'th element
+     * contains the position of the i'th particle.
      */
     void setPositions(const std::vector<Vec3>& positions);
     /**
-     * Set the velocities of all atoms in the System (measured in nm/picosecond).
+     * Set the velocities of all particles in the System (measured in nm/picosecond).
      * 
-     * @param a vector whose length equals the number of atoms in the System.  The i'th element
-     * contains the velocity of the i'th atom.
+     * @param velocities  a vector whose length equals the number of particles in the System.  The i'th element
+     * contains the velocity of the i'th particle.
      */
     void setVelocities(const std::vector<Vec3>& velocities);
     /**

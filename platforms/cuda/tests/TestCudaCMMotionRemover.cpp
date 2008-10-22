@@ -51,35 +51,35 @@ using namespace std;
 
 Vec3 calcCM(const vector<Vec3>& values, System& system) {
     Vec3 cm;
-    for (int j = 0; j < system.getNumAtoms(); ++j) {
-        cm[0] += values[j][0]*system.getAtomMass(j);
-        cm[1] += values[j][1]*system.getAtomMass(j);
-        cm[2] += values[j][2]*system.getAtomMass(j);
+    for (int j = 0; j < system.getNumParticles(); ++j) {
+        cm[0] += values[j][0]*system.getParticleMass(j);
+        cm[1] += values[j][1]*system.getParticleMass(j);
+        cm[2] += values[j][2]*system.getParticleMass(j);
     }
     return cm;
 }
 
 void testMotionRemoval() {
-    const int numAtoms = 8;
+    const int numParticles = 8;
     CudaPlatform platform;
-    System system(numAtoms, 0);
+    System system(numParticles, 0);
     LangevinIntegrator integrator(0.0, 1e-5, 0.01);
     HarmonicBondForce* bonds = new HarmonicBondForce(1);
     bonds->setBondParameters(0, 2, 3, 2.0, 0.5);
     system.addForce(bonds);
-    NonbondedForce* nonbonded = new NonbondedForce(numAtoms, 0);
-    for (int i = 0; i < numAtoms; ++i) {
-        system.setAtomMass(i, i+1);
-        nonbonded->setAtomParameters(i, (i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
+    NonbondedForce* nonbonded = new NonbondedForce(numParticles, 0);
+    for (int i = 0; i < numParticles; ++i) {
+        system.setParticleMass(i, i+1);
+        nonbonded->setParticleParameters(i, (i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
     }
     system.addForce(nonbonded);
     CMMotionRemover* remover = new CMMotionRemover();
     system.addForce(remover);
     OpenMMContext context(system, integrator, platform);
-    vector<Vec3> positions(numAtoms);
-    vector<Vec3> velocities(numAtoms);
+    vector<Vec3> positions(numParticles);
+    vector<Vec3> velocities(numParticles);
     init_gen_rand(0);
-    for (int i = 0; i < numAtoms; ++i) {
+    for (int i = 0; i < numParticles; ++i) {
         positions[i] = Vec3((i%2 == 0 ? 2 : -2), (i%4 < 2 ? 2 : -2), (i < 4 ? 2 : -2));
         velocities[i] = Vec3(genrand_real2()-0.5, genrand_real2()-0.5, genrand_real2()-0.5);
     }

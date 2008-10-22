@@ -39,18 +39,18 @@ using namespace OpenMM;
 HarmonicAngleForce::HarmonicAngleForce(int numAngles) : angles(numAngles) {
 }
 
-void HarmonicAngleForce::getAngleParameters(int index, int& atom1, int& atom2, int& atom3, double& angle, double& k) const {
-    atom1 = angles[index].atom1;
-    atom2 = angles[index].atom2;
-    atom3 = angles[index].atom3;
+void HarmonicAngleForce::getAngleParameters(int index, int& particle1, int& particle2, int& particle3, double& angle, double& k) const {
+    particle1 = angles[index].particle1;
+    particle2 = angles[index].particle2;
+    particle3 = angles[index].particle3;
     angle = angles[index].angle;
     k = angles[index].k;
 }
 
-void HarmonicAngleForce::setAngleParameters(int index, int atom1, int atom2, int atom3, double angle, double k) {
-    angles[index].atom1 = atom1;
-    angles[index].atom2 = atom2;
-    angles[index].atom3 = atom3;
+void HarmonicAngleForce::setAngleParameters(int index, int particle1, int particle2, int particle3, double angle, double k) {
+    angles[index].particle1 = particle1;
+    angles[index].particle2 = particle2;
+    angles[index].particle3 = particle3;
     angles[index].angle = angle;
     angles[index].k = k;
 }

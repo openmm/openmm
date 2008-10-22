@@ -195,7 +195,7 @@ public:
      * 
      * @param system     the System this kernel will be applied to
      * @param force      the NonbondedForce this kernel will be used for
-     * @param exclusions the i'th element lists the indices of all atoms with which the i'th atom should not interact through
+     * @param exclusions the i'th element lists the indices of all particles with which the i'th particle should not interact through
      *                   nonbonded forces.  Bonded 1-4 pairs are also included in this list, since they should be omitted from
      *                   the standard nonbonded calculation.
      */
@@ -215,7 +215,7 @@ public:
     double executeEnergy(OpenMMContextImpl& context);
 private:
     CudaPlatform::PlatformData& data;
-    int numAtoms, num14;
+    int numParticles, num14;
     System& system;
 };
 
@@ -293,7 +293,7 @@ public:
     }
     ~CudaIntegrateLangevinStepKernel();
     /**
-     * Initialize the kernel, setting up the atomic masses.
+     * Initialize the kernel, setting up the particle masses.
      * 
      * @param system     the System this kernel will be applied to
      * @param integrator the LangevinIntegrator this kernel will be used for
@@ -345,7 +345,7 @@ private:
 //};
 //
 ///**
-// * This kernel is invoked by AndersenThermostat at the start of each time step to adjust the atom velocities.
+// * This kernel is invoked by AndersenThermostat at the start of each time step to adjust the particle velocities.
 // */
 //class CudaApplyAndersenThermostatKernel : public ApplyAndersenThermostatKernel {
 //public:
@@ -401,7 +401,7 @@ public:
     CudaRemoveCMMotionKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data) : RemoveCMMotionKernel(name, platform), data(data) {
     }
     /**
-     * Initialize the kernel, setting up the atomic masses.
+     * Initialize the kernel, setting up the particle masses.
      * 
      * @param system     the System this kernel will be applied to
      * @param force      the CMMotionRemover this kernel will be used for

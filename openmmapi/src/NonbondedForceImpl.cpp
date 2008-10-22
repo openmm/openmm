@@ -50,23 +50,23 @@ void NonbondedForceImpl::initialize(OpenMMContextImpl& context) {
     // See if the system contains a HarmonicBondForce.  If so, use it to identify exclusions.
     
     System& system = context.getSystem();
-    vector<set<int> > exclusions(owner.getNumAtoms());
+    vector<set<int> > exclusions(owner.getNumParticles());
     for (int i = 0; i < system.getNumForces(); i++) {
         if (dynamic_cast<HarmonicBondForce*>(&system.getForce(i)) != NULL) {
             const HarmonicBondForce& force = dynamic_cast<const HarmonicBondForce&>(system.getForce(i));
             vector<vector<int> > bondIndices(force.getNumBonds());
             set<pair<int, int> > bonded14set;
             for (int i = 0; i < force.getNumBonds(); ++i) {
-                int atom1, atom2;
+                int particle1, particle2;
                 double length, k;
-                force.getBondParameters(i, atom1, atom2, length, k);
-                bondIndices[i].push_back(atom1);
-                bondIndices[i].push_back(atom2);
+                force.getBondParameters(i, particle1, particle2, length, k);
+                bondIndices[i].push_back(particle1);
+                bondIndices[i].push_back(particle2);
             }
             findExclusions(bondIndices, exclusions, bonded14set);
         }
     }
-            dynamic_cast<CalcNonbondedForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner, exclusions);
+    dynamic_cast<CalcNonbondedForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner, exclusions);
 }
 
 void NonbondedForceImpl::calcForces(OpenMMContextImpl& context, Stream& forces) {
@@ -100,12 +100,12 @@ void NonbondedForceImpl::findExclusions(const vector<vector<int> >& bondIndices,
     }
 }
 
-void NonbondedForceImpl::addExclusionsToSet(const vector<set<int> >& bonded12, set<int>& exclusions, int baseAtom, int fromAtom, int currentLevel) const {
-    for (set<int>::const_iterator iter = bonded12[fromAtom].begin(); iter != bonded12[fromAtom].end(); ++iter) {
-        if (*iter != baseAtom)
+void NonbondedForceImpl::addExclusionsToSet(const vector<set<int> >& bonded12, set<int>& exclusions, int baseParticle, int fromParticle, int currentLevel) const {
+    for (set<int>::const_iterator iter = bonded12[fromParticle].begin(); iter != bonded12[fromParticle].end(); ++iter) {
+        if (*iter != baseParticle)
             exclusions.insert(*iter);
         if (currentLevel > 0)
-            addExclusionsToSet(bonded12, exclusions, baseAtom, *iter, currentLevel-1);
+            addExclusionsToSet(bonded12, exclusions, baseParticle, *iter, currentLevel-1);
     }
 }
 

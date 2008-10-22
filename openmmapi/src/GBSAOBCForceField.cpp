@@ -36,19 +36,19 @@
 
 using namespace OpenMM;
 
-GBSAOBCForceField::GBSAOBCForceField(int numAtoms) : atoms(numAtoms), solventDielectric(78.3), soluteDielectric(1.0) {
+GBSAOBCForceField::GBSAOBCForceField(int numParticles) : particles(numParticles), solventDielectric(78.3), soluteDielectric(1.0) {
 }
 
-void GBSAOBCForceField::getAtomParameters(int index, double& charge, double& radius, double& scalingFactor) const {
-    charge = atoms[index].charge;
-    radius = atoms[index].radius;
-    scalingFactor = atoms[index].scalingFactor;
+void GBSAOBCForceField::getParticleParameters(int index, double& charge, double& radius, double& scalingFactor) const {
+    charge = particles[index].charge;
+    radius = particles[index].radius;
+    scalingFactor = particles[index].scalingFactor;
 }
 
-void GBSAOBCForceField::setAtomParameters(int index, double charge, double radius, double scalingFactor) {
-    atoms[index].charge = charge;
-    atoms[index].radius = radius;
-    atoms[index].scalingFactor = scalingFactor;
+void GBSAOBCForceField::setParticleParameters(int index, double charge, double radius, double scalingFactor) {
+    particles[index].charge = charge;
+    particles[index].radius = radius;
+    particles[index].scalingFactor = scalingFactor;
 }
 
 ForceImpl* GBSAOBCForceField::createImpl() {

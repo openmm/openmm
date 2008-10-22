@@ -51,7 +51,7 @@ public:
     }
     void updateContextState(OpenMMContextImpl& context);
     void calcForces(OpenMMContextImpl& context, Stream& forces) {
-        // This force doesn't apply forces to atoms.
+        // This force doesn't apply forces to particles.
     }
     double calcEnergy(OpenMMContextImpl& context) {
         return 0.0; // This force doesn't contribute to the potential energy.

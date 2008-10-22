@@ -39,16 +39,16 @@ using namespace OpenMM;
 HarmonicBondForce::HarmonicBondForce(int numBonds) : bonds(numBonds) {
 }
 
-void HarmonicBondForce::getBondParameters(int index, int& atom1, int& atom2, double& length, double& k) const {
-    atom1 = bonds[index].atom1;
-    atom2 = bonds[index].atom2;
+void HarmonicBondForce::getBondParameters(int index, int& particle1, int& particle2, double& length, double& k) const {
+    particle1 = bonds[index].particle1;
+    particle2 = bonds[index].particle2;
     length = bonds[index].length;
     k = bonds[index].k;
 }
 
-void HarmonicBondForce::setBondParameters(int index, int atom1, int atom2, double length, double k) {
-    bonds[index].atom1 = atom1;
-    bonds[index].atom2 = atom2;
+void HarmonicBondForce::setBondParameters(int index, int particle1, int particle2, double length, double k) {
+    bonds[index].particle1 = particle1;
+    bonds[index].particle2 = particle2;
     bonds[index].length = length;
     bonds[index].k = k;
 }

@@ -39,17 +39,17 @@
 using namespace OpenMM;
 
 StreamImpl* CudaStreamFactory::createStreamImpl(std::string name, int size, Stream::DataType type, const Platform& platform, OpenMMContextImpl& context) const {
-    if (name == "atomPositions") {
+    if (name == "particlePositions") {
         CudaPlatform::PlatformData& data = *static_cast<CudaPlatform::PlatformData*>(context.getPlatformData());
         float padding[] = {100000.0f, 100000.0f, 100000.0f, 0.2f};
         return new CudaStreamImpl<float4>(name, size, type, platform, data.gpu->psPosq4, 4, padding);
     }
-    if (name == "atomVelocities") {
+    if (name == "particleVelocities") {
         CudaPlatform::PlatformData& data = *static_cast<CudaPlatform::PlatformData*>(context.getPlatformData());
         float padding[] = {0.0f, 0.0f, 0.0f, 0.0f};
         return new CudaStreamImpl<float4>(name, size, type, platform, data.gpu->psVelm4, 4, padding);
     }
-    if (name == "atomForces") {
+    if (name == "particleForces") {
         CudaPlatform::PlatformData& data = *static_cast<CudaPlatform::PlatformData*>(context.getPlatformData());
         float padding[] = {0.0f, 0.0f, 0.0f, 0.0f};
         return new CudaStreamImpl<float4>(name, size, type, platform, data.gpu->psForce4, 4, padding);

@@ -44,14 +44,14 @@ class OPENMM_EXPORT Force;
  * three elements:
  * 
  * <ol>
- * <li>The set of atoms in the system</li>
+ * <li>The set of particles in the system</li>
  * <li>The forces acting on them</li>
- * <li>Pairs of atoms whose separation should be connstrained to a fixed value</li>
+ * <li>Pairs of particles whose separation should be connstrained to a fixed value</li>
  * </ol>
  * 
- * The atoms and constraints are defined directly by the System object.
+ * The particles and constraints are defined directly by the System object.
  * The forces are defined by objects that extend the Force class.  The System
- * stores a list of Force objects that determine the motion of the atoms.
+ * stores a list of Force objects that determine the motion of the particles.
  */
 
 class OPENMM_EXPORT System {
@@ -59,32 +59,32 @@ public:
     /**
      * Create a new System.
      * 
-     * @param numAtoms       the number of atoms in the System
+     * @param numParticles   the number of particles in the System
      * @param numConstraints the number of distance constraints in the System.
      */
-    System(int numAtoms, int numConstraints);
+    System(int numParticles, int numConstraints);
     ~System();
     /**
-     * Get the number of atoms in this System.
+     * Get the number of particles in this System.
      */
-    int getNumAtoms() const {
+    int getNumParticles() const {
         return masses.size();
     }
     /**
-     * Get the mass (in atomic mass units) of an atom.
+     * Get the mass (in atomic mass units) of a particle.
      * 
-     * @param index the index of the atom for which to get the mass
+     * @param index the index of the particle for which to get the mass
      */
-    double getAtomMass(int index) const {
+    double getParticleMass(int index) const {
         return masses[index];
     }
     /**
-     * Set the mass (in atomic mass units) of an atom.
+     * Set the mass (in atomic mass units) of a particle.
      * 
-     * @param index  the index of the atom for which to set the mass
-     * @param mass   the mass of the atom
+     * @param index  the index of the particle for which to set the mass
+     * @param mass   the mass of the particle
      */
-    void setAtomMass(int index, double mass) {
+    void setParticleMass(int index, double mass) {
         masses[index] = mass;
     }
     /**
@@ -97,20 +97,20 @@ public:
      * Get the parameters defining a distance constraint.
      * 
      * @param index     the index of the constraint for which to get parameters
-     * @param atom1     the index of the first atom involved in the constraint
-     * @param atom2     the index of the second atom involved in the constraint
-     * @param distance  the required distance between the two atoms, measured in nm
+     * @param particle1 the index of the first particle involved in the constraint
+     * @param particle2 the index of the second particle involved in the constraint
+     * @param distance  the required distance between the two particles, measured in nm
      */
-    void getConstraintParameters(int index, int& atom1, int& atom2, double& distance) const;
+    void getConstraintParameters(int index, int& particle1, int& particle2, double& distance) const;
     /**
      * Set the parameters defining a distance constraint.
      * 
      * @param index     the index of the constraint for which to set parameters
-     * @param atom1     the index of the first atom involved in the constraint
-     * @param atom2     the index of the second atom involved in the constraint
-     * @param distance  the required distance between the two atoms, measured in nm
+     * @param particle1 the index of the first particle involved in the constraint
+     * @param particle2 the index of the second particle involved in the constraint
+     * @param distance  the required distance between the two particles, measured in nm
      */
-    void setConstraintParameters(int index, int atom1, int atom2, double distance);
+    void setConstraintParameters(int index, int particle1, int particle2, double distance);
     /**
      * Add a Force to the System.  The Force should have been created on the heap with the
      * "new" operator.  The System takes over ownership of it, and deletes the Force when the
@@ -144,7 +144,7 @@ private:
 #pragma warning(disable:4251)
 #endif
 
-	std::vector<double> masses;
+    std::vector<double> masses;
     std::vector<ConstraintInfo> constraints;
     std::vector<Force*> forces;
 
@@ -156,10 +156,10 @@ private:
 
 class System::ConstraintInfo {
 public:
-    int atom1, atom2;
+    int particle1, particle2;
     double distance;
     ConstraintInfo() {
-        atom1 = atom2 = -1;
+        particle1 = particle2 = -1;
         distance = 0.0;
     }
 };

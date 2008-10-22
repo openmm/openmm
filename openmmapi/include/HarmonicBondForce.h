@@ -41,7 +41,7 @@
 namespace OpenMM {
 
 /**
- * This class implements an interaction between pairs of atoms that varies harmonically with the distance
+ * This class implements an interaction between pairs of particles that varies harmonically with the distance
  * between them.  When creating a HarmonicBondForce, you specify the number of bonds as an argument to the
  * constructor, then loop over them and call setBondParameters() to set the force field parameters for each one.
  */
@@ -64,22 +64,22 @@ public:
      * Get the force field parameters for a bond term.
      * 
      * @param index     the index of the bond for which to get parameters
-     * @param atom1     the index of the first atom connected by the bond
-     * @param atom2     the index of the second atom connected by the bond
+     * @param particle1 the index of the first particle connected by the bond
+     * @param particle2 the index of the second particle connected by the bond
      * @param length    the equilibrium length of the bond, measured in nm
      * @param k         the harmonic force constant for the bond
      */
-    void getBondParameters(int index, int& atom1, int& atom2, double& length, double& k) const;
+    void getBondParameters(int index, int& particle1, int& particle2, double& length, double& k) const;
     /**
      * Set the force field parameters for a bond term.
      * 
      * @param index     the index of the bond for which to set parameters
-     * @param atom1     the index of the first atom connected by the bond
-     * @param atom2     the index of the second atom connected by the bond
+     * @param particle1 the index of the first particle connected by the bond
+     * @param particle2 the index of the second particle connected by the bond
      * @param length    the equilibrium length of the bond, measured in nm
      * @param k         the harmonic force constant for the bond
      */
-    void setBondParameters(int index, int atom1, int atom2, double length, double k);
+    void setBondParameters(int index, int particle1, int particle2, double length, double k);
 protected:
     ForceImpl* createImpl();
 private:
@@ -101,10 +101,10 @@ private:
 
 class HarmonicBondForce::BondInfo {
 public:
-    int atom1, atom2;
+    int particle1, particle2;
     double length, k;
     BondInfo() {
-        atom1 = atom2 = -1;
+        particle1 = particle2 = -1;
         length = k = 0.0;
     }
 };

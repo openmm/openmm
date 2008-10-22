@@ -62,15 +62,15 @@ public:
      */
     double getTime() const;
     /**
-     * Get the position of each atom.  If this State does not contain positions, this will throw an exception.
+     * Get the position of each particle.  If this State does not contain positions, this will throw an exception.
      */
     const std::vector<Vec3>& getPositions() const;
     /**
-     * Get the velocity of each atom.  If this State does not contain velocities, this will throw an exception.
+     * Get the velocity of each particle.  If this State does not contain velocities, this will throw an exception.
      */
     const std::vector<Vec3>& getVelocities() const;
     /**
-     * Get the force acting on each atom.  If this State does not contain forces, this will throw an exception.
+     * Get the force acting on each particle.  If this State does not contain forces, this will throw an exception.
      */
     const std::vector<Vec3>& getForces() const;
     /**
@@ -87,7 +87,7 @@ public:
     const std::map<std::string, double>& getParameters() const;
 private:
     friend class OpenMMContext;
-    State(double time, int numAtoms, DataType types);
+    State(double time, int numParticles, DataType types);
 
 // Retarded visual studio compiler complains about being unable to 
 // export private stl class members.

@@ -40,7 +40,7 @@ namespace OpenMM {
 
 /**
  * This class prevents the center of mass of a System from drifting.  At each time step, it calculates the
- * center of mass momentum, then adjusts the individual atom velocities to make it zero.
+ * center of mass momentum, then adjusts the individual particle velocities to make it zero.
  */
 
 class OPENMM_EXPORT CMMotionRemover : public Force {

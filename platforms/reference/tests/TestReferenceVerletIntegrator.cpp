@@ -53,8 +53,8 @@ const double TOL = 1e-5;
 void testSingleBond() {
     ReferencePlatform platform;
     System system(2, 0);
-    system.setAtomMass(0, 2.0);
-    system.setAtomMass(1, 2.0);
+    system.setParticleMass(0, 2.0);
+    system.setParticleMass(1, 2.0);
     VerletIntegrator integrator(0.01);
     HarmonicBondForce* forceField = new HarmonicBondForce(1);
     forceField->setBondParameters(0, 0, 1, 1.5, 1);
@@ -86,24 +86,24 @@ void testSingleBond() {
 }
 
 void testConstraints() {
-    const int numAtoms = 8;
+    const int numParticles = 8;
     const double temp = 100.0;
     ReferencePlatform platform;
-    System system(numAtoms, numAtoms-1);
+    System system(numParticles, numParticles-1);
     VerletIntegrator integrator(0.002);
-    NonbondedForce* forceField = new NonbondedForce(numAtoms, 0);
-    for (int i = 0; i < numAtoms; ++i) {
-        system.setAtomMass(i, 10.0);
-        forceField->setAtomParameters(i, (i%2 == 0 ? 0.2 : -0.2), 0.5, 5.0);
+    NonbondedForce* forceField = new NonbondedForce(numParticles, 0);
+    for (int i = 0; i < numParticles; ++i) {
+        system.setParticleMass(i, 10.0);
+        forceField->setParticleParameters(i, (i%2 == 0 ? 0.2 : -0.2), 0.5, 5.0);
     }
-    for (int i = 0; i < numAtoms-1; ++i)
+    for (int i = 0; i < numParticles-1; ++i)
         system.setConstraintParameters(i, i, i+1, 1.0);
     system.addForce(forceField);
     OpenMMContext context(system, integrator, platform);
-    vector<Vec3> positions(numAtoms);
-    vector<Vec3> velocities(numAtoms);
+    vector<Vec3> positions(numParticles);
+    vector<Vec3> velocities(numParticles);
     init_gen_rand(0);
-    for (int i = 0; i < numAtoms; ++i) {
+    for (int i = 0; i < numParticles; ++i) {
         positions[i] = Vec3(i/2, (i+1)/2, 0);
         velocities[i] = Vec3(genrand_real2()-0.5, genrand_real2()-0.5, genrand_real2()-0.5);
     }
@@ -115,7 +115,7 @@ void testConstraints() {
     double initialEnergy = 0.0;
     for (int i = 0; i < 1000; ++i) {
         State state = context.getState(State::Positions | State::Energy);
-        for (int j = 0; j < numAtoms-1; ++j) {
+        for (int j = 0; j < numParticles-1; ++j) {
             Vec3 p1 = state.getPositions()[j];
             Vec3 p2 = state.getPositions()[j+1];
             double dist = std::sqrt((p1[0]-p2[0])*(p1[0]-p2[0])+(p1[1]-p2[1])*(p1[1]-p2[1])+(p1[2]-p2[2])*(p1[2]-p2[2]));

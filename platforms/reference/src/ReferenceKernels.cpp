@@ -114,11 +114,11 @@ void ReferenceCalcHarmonicBondForceKernel::initialize(const System& system, cons
     bondIndexArray = allocateIntArray(numBonds, 2);
     bondParamArray = allocateRealArray(numBonds, 2);
     for (int i = 0; i < force.getNumBonds(); ++i) {
-        int atom1, atom2;
+        int particle1, particle2;
         double length, k;
-        force.getBondParameters(i, atom1, atom2, length, k);
-        bondIndexArray[i][0] = atom1;
-        bondIndexArray[i][1] = atom2;
+        force.getBondParameters(i, particle1, particle2, length, k);
+        bondIndexArray[i][0] = particle1;
+        bondIndexArray[i][1] = particle2;
         bondParamArray[i][0] = length;
         bondParamArray[i][1] = k;
     }
@@ -134,7 +134,7 @@ void ReferenceCalcHarmonicBondForceKernel::executeForces(OpenMMContextImpl& cont
 
 double ReferenceCalcHarmonicBondForceKernel::executeEnergy(OpenMMContextImpl& context) {
     RealOpenMM** posData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData()); // Reference code needs to be made const correct
-    RealOpenMM** forceData = allocateRealArray(context.getSystem().getNumAtoms(), 3);
+    RealOpenMM** forceData = allocateRealArray(context.getSystem().getNumParticles(), 3);
     RealOpenMM* energyArray = new RealOpenMM[numBonds];
     RealOpenMM energy = 0;
     ReferenceBondForce refBondForce;
@@ -142,7 +142,7 @@ double ReferenceCalcHarmonicBondForceKernel::executeEnergy(OpenMMContextImpl& co
     for (int i = 0; i < numBonds; ++i)
         energyArray[i] = 0;
     refBondForce.calculateForce(numBonds, bondIndexArray, posData, bondParamArray, forceData, energyArray, 0, &energy, harmonicBond);
-    disposeRealArray(forceData, context.getSystem().getNumAtoms());
+    disposeRealArray(forceData, context.getSystem().getNumParticles());
     delete[] energyArray;
     return energy;
 }
@@ -157,12 +157,12 @@ void ReferenceCalcHarmonicAngleForceKernel::initialize(const System& system, con
     angleIndexArray = allocateIntArray(numAngles, 3);
     angleParamArray = allocateRealArray(numAngles, 2);
     for (int i = 0; i < force.getNumAngles(); ++i) {
-        int atom1, atom2, atom3;
+        int particle1, particle2, particle3;
         double angle, k;
-        force.getAngleParameters(i, atom1, atom2, atom3, angle, k);
-        angleIndexArray[i][0] = atom1;
-        angleIndexArray[i][1] = atom2;
-        angleIndexArray[i][2] = atom3;
+        force.getAngleParameters(i, particle1, particle2, particle3, angle, k);
+        angleIndexArray[i][0] = particle1;
+        angleIndexArray[i][1] = particle2;
+        angleIndexArray[i][2] = particle3;
         angleParamArray[i][0] = angle;
         angleParamArray[i][1] = k;
     }
@@ -178,7 +178,7 @@ void ReferenceCalcHarmonicAngleForceKernel::executeForces(OpenMMContextImpl& con
 
 double ReferenceCalcHarmonicAngleForceKernel::executeEnergy(OpenMMContextImpl& context) {
     RealOpenMM** posData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData()); // Reference code needs to be made const correct
-    RealOpenMM** forceData = allocateRealArray(context.getSystem().getNumAtoms(), 3);
+    RealOpenMM** forceData = allocateRealArray(context.getSystem().getNumParticles(), 3);
     RealOpenMM* energyArray = new RealOpenMM[numAngles];
     RealOpenMM energy = 0;
     ReferenceBondForce refBondForce;
@@ -186,7 +186,7 @@ double ReferenceCalcHarmonicAngleForceKernel::executeEnergy(OpenMMContextImpl& c
     for (int i = 0; i < numAngles; ++i)
         energyArray[i] = 0;
     refBondForce.calculateForce(numAngles, angleIndexArray, posData, angleParamArray, forceData, energyArray, 0, &energy, angleBond);
-    disposeRealArray(forceData, context.getSystem().getNumAtoms());
+    disposeRealArray(forceData, context.getSystem().getNumParticles());
     delete[] energyArray;
     return energy;
 }
@@ -201,13 +201,13 @@ void ReferenceCalcPeriodicTorsionForceKernel::initialize(const System& system, c
     torsionIndexArray = allocateIntArray(numTorsions, 4);
     torsionParamArray = allocateRealArray(numTorsions, 3);
     for (int i = 0; i < force.getNumTorsions(); ++i) {
-        int atom1, atom2, atom3, atom4, periodicity;
+        int particle1, particle2, particle3, particle4, periodicity;
         double phase, k;
-        force.getTorsionParameters(i, atom1, atom2, atom3, atom4, periodicity, phase, k);
-        torsionIndexArray[i][0] = atom1;
-        torsionIndexArray[i][1] = atom2;
-        torsionIndexArray[i][2] = atom3;
-        torsionIndexArray[i][3] = atom4;
+        force.getTorsionParameters(i, particle1, particle2, particle3, particle4, periodicity, phase, k);
+        torsionIndexArray[i][0] = particle1;
+        torsionIndexArray[i][1] = particle2;
+        torsionIndexArray[i][2] = particle3;
+        torsionIndexArray[i][3] = particle4;
         torsionParamArray[i][0] = k;
         torsionParamArray[i][1] = phase;
         torsionParamArray[i][2] = periodicity;
@@ -224,7 +224,7 @@ void ReferenceCalcPeriodicTorsionForceKernel::executeForces(OpenMMContextImpl& c
 
 double ReferenceCalcPeriodicTorsionForceKernel::executeEnergy(OpenMMContextImpl& context) {
     RealOpenMM** posData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData()); // Reference code needs to be made const correct
-    RealOpenMM** forceData = allocateRealArray(context.getSystem().getNumAtoms(), 3);
+    RealOpenMM** forceData = allocateRealArray(context.getSystem().getNumParticles(), 3);
     RealOpenMM* energyArray = new RealOpenMM[numTorsions];
     RealOpenMM energy = 0;
     ReferenceBondForce refBondForce;
@@ -232,7 +232,7 @@ double ReferenceCalcPeriodicTorsionForceKernel::executeEnergy(OpenMMContextImpl&
     for (int i = 0; i < numTorsions; ++i)
         energyArray[i] = 0;
     refBondForce.calculateForce(numTorsions, torsionIndexArray, posData, torsionParamArray, forceData, energyArray, 0, &energy, periodicTorsionBond);
-    disposeRealArray(forceData, context.getSystem().getNumAtoms());
+    disposeRealArray(forceData, context.getSystem().getNumParticles());
     delete[] energyArray;
     return energy;
 }
@@ -247,13 +247,13 @@ void ReferenceCalcRBTorsionForceKernel::initialize(const System& system, const R
     torsionIndexArray = allocateIntArray(numTorsions, 4);
     torsionParamArray = allocateRealArray(numTorsions, 6);
     for (int i = 0; i < force.getNumTorsions(); ++i) {
-        int atom1, atom2, atom3, atom4;
+        int particle1, particle2, particle3, particle4;
         double c0, c1, c2, c3, c4, c5;
-        force.getTorsionParameters(i, atom1, atom2, atom3, atom4, c0, c1, c2, c3, c4, c5);
-        torsionIndexArray[i][0] = atom1;
-        torsionIndexArray[i][1] = atom2;
-        torsionIndexArray[i][2] = atom3;
-        torsionIndexArray[i][3] = atom4;
+        force.getTorsionParameters(i, particle1, particle2, particle3, particle4, c0, c1, c2, c3, c4, c5);
+        torsionIndexArray[i][0] = particle1;
+        torsionIndexArray[i][1] = particle2;
+        torsionIndexArray[i][2] = particle3;
+        torsionIndexArray[i][3] = particle4;
         torsionParamArray[i][0] = c0;
         torsionParamArray[i][1] = c1;
         torsionParamArray[i][2] = c2;
@@ -273,7 +273,7 @@ void ReferenceCalcRBTorsionForceKernel::executeForces(OpenMMContextImpl& context
 
 double ReferenceCalcRBTorsionForceKernel::executeEnergy(OpenMMContextImpl& context) {
     RealOpenMM** posData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData()); // Reference code needs to be made const correct
-    RealOpenMM** forceData = allocateRealArray(context.getSystem().getNumAtoms(), 3);
+    RealOpenMM** forceData = allocateRealArray(context.getSystem().getNumParticles(), 3);
     RealOpenMM* energyArray = new RealOpenMM[numTorsions];
     RealOpenMM energy = 0;
     ReferenceBondForce refBondForce;
@@ -281,14 +281,14 @@ double ReferenceCalcRBTorsionForceKernel::executeEnergy(OpenMMContextImpl& conte
     for (int i = 0; i < numTorsions; ++i)
         energyArray[i] = 0;
     refBondForce.calculateForce(numTorsions, torsionIndexArray, posData, torsionParamArray, forceData, energyArray, 0, &energy, rbTorsionBond);
-    disposeRealArray(forceData, context.getSystem().getNumAtoms());
+    disposeRealArray(forceData, context.getSystem().getNumParticles());
     delete[] energyArray;
     return energy;
 }
 
 ReferenceCalcNonbondedForceKernel::~ReferenceCalcNonbondedForceKernel() {
-    disposeRealArray(atomParamArray, numAtoms);
-    disposeIntArray(exclusionArray, numAtoms);
+    disposeRealArray(particleParamArray, numParticles);
+    disposeIntArray(exclusionArray, numParticles);
     disposeIntArray(bonded14IndexArray, num14);
     disposeRealArray(bonded14ParamArray, num14);
     if (neighborList != NULL)
@@ -296,22 +296,22 @@ ReferenceCalcNonbondedForceKernel::~ReferenceCalcNonbondedForceKernel() {
 }
 
 void ReferenceCalcNonbondedForceKernel::initialize(const System& system, const NonbondedForce& force, const std::vector<std::set<int> >& exclusions) {
-    numAtoms = force.getNumAtoms();
+    numParticles = force.getNumParticles();
     num14 = force.getNumNonbonded14();
     bonded14IndexArray = allocateIntArray(num14, 2);
     bonded14ParamArray = allocateRealArray(num14, 3);
-    atomParamArray = allocateRealArray(numAtoms, 3);
+    particleParamArray = allocateRealArray(numParticles, 3);
     RealOpenMM sqrtEps = static_cast<RealOpenMM>( std::sqrt(138.935485) );
-    for (int i = 0; i < numAtoms; ++i) {
+    for (int i = 0; i < numParticles; ++i) {
         double charge, radius, depth;
-        force.getAtomParameters(i, charge, radius, depth);
-        atomParamArray[i][0] = static_cast<RealOpenMM>(0.5*radius);
-        atomParamArray[i][1] = static_cast<RealOpenMM>(2.0*sqrt(depth));
-        atomParamArray[i][2] = static_cast<RealOpenMM>(charge*sqrtEps);
+        force.getParticleParameters(i, charge, radius, depth);
+        particleParamArray[i][0] = static_cast<RealOpenMM>(0.5*radius);
+        particleParamArray[i][1] = static_cast<RealOpenMM>(2.0*sqrt(depth));
+        particleParamArray[i][2] = static_cast<RealOpenMM>(charge*sqrtEps);
     }
     this->exclusions = exclusions;
-    exclusionArray = new int*[numAtoms];
-    for (int i = 0; i < numAtoms; ++i) {
+    exclusionArray = new int*[numParticles];
+    for (int i = 0; i < numParticles; ++i) {
         exclusionArray[i] = new int[exclusions[i].size()+1];
         exclusionArray[i][0] = exclusions[i].size();
         int index = 0;
@@ -319,11 +319,11 @@ void ReferenceCalcNonbondedForceKernel::initialize(const System& system, const N
             exclusionArray[i][++index] = *iter;
     }
     for (int i = 0; i < num14; ++i) {
-        int atom1, atom2;
+        int particle1, particle2;
         double charge, radius, depth;
-        force.getNonbonded14Parameters(i, atom1, atom2, charge, radius, depth);
-        bonded14IndexArray[i][0] = atom1;
-        bonded14IndexArray[i][1] = atom2;
+        force.getNonbonded14Parameters(i, particle1, particle2, charge, radius, depth);
+        bonded14IndexArray[i][0] = particle1;
+        bonded14IndexArray[i][1] = particle2;
         bonded14ParamArray[i][0] = static_cast<RealOpenMM>(radius);
         bonded14ParamArray[i][1] = static_cast<RealOpenMM>(4.0*depth);
         bonded14ParamArray[i][2] = static_cast<RealOpenMM>(charge*sqrtEps*sqrtEps);
@@ -348,12 +348,12 @@ void ReferenceCalcNonbondedForceKernel::executeForces(OpenMMContextImpl& context
     ReferenceLJCoulombIxn clj;
     bool periodic = (nonbondedMethod == CutoffPeriodic);
     if (nonbondedMethod != NoCutoff) {
-        computeNeighborListVoxelHash(*neighborList, numAtoms, posData, exclusions, periodic ? periodicBoxSize : NULL, nonbondedCutoff, 0.0);
+        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, periodic ? periodicBoxSize : NULL, nonbondedCutoff, 0.0);
         clj.setUseCutoff(nonbondedCutoff, *neighborList, 78.3f);
     }
     if (periodic)
         clj.setPeriodic(periodicBoxSize);
-    clj.calculatePairIxn(numAtoms, posData, atomParamArray, exclusionArray, 0, forceData, 0, 0);
+    clj.calculatePairIxn(numParticles, posData, particleParamArray, exclusionArray, 0, forceData, 0, 0);
     ReferenceBondForce refBondForce;
     ReferenceLJCoulomb14 nonbonded14;
     if (nonbondedMethod != NoCutoff)
@@ -363,26 +363,26 @@ void ReferenceCalcNonbondedForceKernel::executeForces(OpenMMContextImpl& context
 
 double ReferenceCalcNonbondedForceKernel::executeEnergy(OpenMMContextImpl& context) {
     RealOpenMM** posData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData()); // Reference code needs to be made const correct
-    RealOpenMM** forceData = allocateRealArray(numAtoms, 3);
+    RealOpenMM** forceData = allocateRealArray(numParticles, 3);
     RealOpenMM energy = 0;
     ReferenceLJCoulombIxn clj;
     bool periodic = (nonbondedMethod == CutoffPeriodic);
     if (nonbondedMethod != NoCutoff) {
-        computeNeighborListVoxelHash(*neighborList, numAtoms, posData, exclusions, periodic ? periodicBoxSize : NULL, nonbondedCutoff, 0.0);
+        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, periodic ? periodicBoxSize : NULL, nonbondedCutoff, 0.0);
         clj.setUseCutoff(nonbondedCutoff, *neighborList, 78.3f);
     }
     if (periodic)
         clj.setPeriodic(periodicBoxSize);
-    clj.calculatePairIxn(numAtoms, posData, atomParamArray, exclusionArray, 0, forceData, 0, &energy);
+    clj.calculatePairIxn(numParticles, posData, particleParamArray, exclusionArray, 0, forceData, 0, &energy);
     ReferenceBondForce refBondForce;
     ReferenceLJCoulomb14 nonbonded14;
     if (nonbondedMethod != NoCutoff)
         nonbonded14.setUseCutoff(nonbondedCutoff, 78.3f);
-    RealOpenMM* energyArray = new RealOpenMM[numAtoms];
-    for (int i = 0; i < numAtoms; ++i)
+    RealOpenMM* energyArray = new RealOpenMM[numParticles];
+    for (int i = 0; i < numParticles; ++i)
         energyArray[i] = 0;
     refBondForce.calculateForce(num14, bonded14IndexArray, posData, bonded14ParamArray, forceData, energyArray, 0, &energy, nonbonded14);
-    disposeRealArray(forceData, numAtoms);
+    disposeRealArray(forceData, numParticles);
     delete[] energyArray;
     return energy;
 }
@@ -395,18 +395,18 @@ ReferenceCalcGBSAOBCForceFieldKernel::~ReferenceCalcGBSAOBCForceFieldKernel() {
 }
 
 void ReferenceCalcGBSAOBCForceFieldKernel::initialize(const System& system, const GBSAOBCForceField& force) {
-    int numAtoms = system.getNumAtoms();
-    charges.resize(numAtoms);
-    vector<RealOpenMM> atomicRadii(numAtoms);
-    vector<RealOpenMM> scaleFactors(numAtoms);
-    for (int i = 0; i < numAtoms; ++i) {
+    int numParticles = system.getNumParticles();
+    charges.resize(numParticles);
+    vector<RealOpenMM> atomicRadii(numParticles);
+    vector<RealOpenMM> scaleFactors(numParticles);
+    for (int i = 0; i < numParticles; ++i) {
         double charge, radius, scalingFactor;
-        force.getAtomParameters(i, charge, radius, scalingFactor);
+        force.getParticleParameters(i, charge, radius, scalingFactor);
         charges[i] = static_cast<RealOpenMM>(charge);
         atomicRadii[i] = static_cast<RealOpenMM>(radius);
         scaleFactors[i] = static_cast<RealOpenMM>(scalingFactor);
     }
-    ObcParameters* obcParameters  = new ObcParameters(numAtoms, ObcParameters::ObcTypeII);
+    ObcParameters* obcParameters  = new ObcParameters(numParticles, ObcParameters::ObcTypeII);
     obcParameters->setAtomicRadii(atomicRadii);
     obcParameters->setScaledRadiusFactors(scaleFactors);
     obcParameters->setSolventDielectric( static_cast<RealOpenMM>(force.getSolventDielectric()) );
@@ -423,9 +423,9 @@ void ReferenceCalcGBSAOBCForceFieldKernel::executeForces(OpenMMContextImpl& cont
 
 double ReferenceCalcGBSAOBCForceFieldKernel::executeEnergy(OpenMMContextImpl& context) {
     RealOpenMM** posData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData()); // Reference code needs to be made const correct
-    RealOpenMM** forceData = allocateRealArray(context.getSystem().getNumAtoms(), 3);
+    RealOpenMM** forceData = allocateRealArray(context.getSystem().getNumParticles(), 3);
     obc->computeImplicitSolventForces(posData, &charges[0], forceData, 1);
-    disposeRealArray(forceData, context.getSystem().getNumAtoms());
+    disposeRealArray(forceData, context.getSystem().getNumParticles());
     return obc->getEnergy();
 }
 
@@ -443,19 +443,19 @@ ReferenceIntegrateVerletStepKernel::~ReferenceIntegrateVerletStepKernel() {
 }
 
 void ReferenceIntegrateVerletStepKernel::initialize(const System& system, const VerletIntegrator& integrator) {
-    int numAtoms = system.getNumAtoms();
-    masses = new RealOpenMM[numAtoms];
-    for (size_t i = 0; i < numAtoms; ++i)
-        masses[i] = static_cast<RealOpenMM>(system.getAtomMass(i));
+    int numParticles = system.getNumParticles();
+    masses = new RealOpenMM[numParticles];
+    for (size_t i = 0; i < numParticles; ++i)
+        masses[i] = static_cast<RealOpenMM>(system.getParticleMass(i));
     numConstraints = system.getNumConstraints();
     constraintIndices = allocateIntArray(numConstraints, 2);
     shakeParameters = allocateRealArray(numConstraints, 1);
     for (int i = 0; i < numConstraints; ++i) {
-        int atom1, atom2;
+        int particle1, particle2;
         double distance;
-        system.getConstraintParameters(i, atom1, atom2, distance);
-        constraintIndices[i][0] = atom1;
-        constraintIndices[i][1] = atom2;
+        system.getConstraintParameters(i, particle1, particle2, distance);
+        constraintIndices[i][0] = particle1;
+        constraintIndices[i][1] = particle2;
         shakeParameters[i][0] = static_cast<RealOpenMM>(distance);
     }
 }
@@ -472,12 +472,12 @@ void ReferenceIntegrateVerletStepKernel::execute(OpenMMContextImpl& context, con
             delete dynamics;
             delete shake;
         }
-        dynamics = new ReferenceVerletDynamics(context.getSystem().getNumAtoms(), static_cast<RealOpenMM>(stepSize) );
+        dynamics = new ReferenceVerletDynamics(context.getSystem().getNumParticles(), static_cast<RealOpenMM>(stepSize) );
         shake = new ReferenceShakeAlgorithm(numConstraints, constraintIndices, shakeParameters);
         dynamics->setReferenceShakeAlgorithm(shake);
         prevStepSize = stepSize;
     }
-    dynamics->update(context.getSystem().getNumAtoms(), posData, velData, forceData, masses);
+    dynamics->update(context.getSystem().getNumParticles(), posData, velData, forceData, masses);
 }
 
 ReferenceIntegrateLangevinStepKernel::~ReferenceIntegrateLangevinStepKernel() {
@@ -494,19 +494,19 @@ ReferenceIntegrateLangevinStepKernel::~ReferenceIntegrateLangevinStepKernel() {
 }
 
 void ReferenceIntegrateLangevinStepKernel::initialize(const System& system, const LangevinIntegrator& integrator) {
-    int numAtoms = system.getNumAtoms();
-    masses = new RealOpenMM[numAtoms];
-    for (size_t i = 0; i < numAtoms; ++i)
-        masses[i] = static_cast<RealOpenMM>(system.getAtomMass(i));
+    int numParticles = system.getNumParticles();
+    masses = new RealOpenMM[numParticles];
+    for (size_t i = 0; i < numParticles; ++i)
+        masses[i] = static_cast<RealOpenMM>(system.getParticleMass(i));
     numConstraints = system.getNumConstraints();
     constraintIndices = allocateIntArray(numConstraints, 2);
     shakeParameters = allocateRealArray(numConstraints, 1);
     for (int i = 0; i < numConstraints; ++i) {
-        int atom1, atom2;
+        int particle1, particle2;
         double distance;
-        system.getConstraintParameters(i, atom1, atom2, distance);
-        constraintIndices[i][0] = atom1;
-        constraintIndices[i][1] = atom2;
+        system.getConstraintParameters(i, particle1, particle2, distance);
+        constraintIndices[i][0] = particle1;
+        constraintIndices[i][1] = particle2;
         shakeParameters[i][0] = static_cast<RealOpenMM>(distance);
     }
 }
@@ -527,7 +527,7 @@ void ReferenceIntegrateLangevinStepKernel::execute(OpenMMContextImpl& context, c
         }
         RealOpenMM tau = static_cast<RealOpenMM>( friction == 0.0 ? 0.0 : 1.0/friction );
         dynamics = new ReferenceStochasticDynamics(
-				context.getSystem().getNumAtoms(), 
+				context.getSystem().getNumParticles(), 
 				static_cast<RealOpenMM>(stepSize), 
 				static_cast<RealOpenMM>(tau), 
 				static_cast<RealOpenMM>(temperature) );
@@ -537,7 +537,7 @@ void ReferenceIntegrateLangevinStepKernel::execute(OpenMMContextImpl& context, c
         prevFriction = friction;
         prevStepSize = stepSize;
     }
-    dynamics->update(context.getSystem().getNumAtoms(), posData, velData, forceData, masses);
+    dynamics->update(context.getSystem().getNumParticles(), posData, velData, forceData, masses);
 }
 
 ReferenceIntegrateBrownianStepKernel::~ReferenceIntegrateBrownianStepKernel() {
@@ -554,19 +554,19 @@ ReferenceIntegrateBrownianStepKernel::~ReferenceIntegrateBrownianStepKernel() {
 }
 
 void ReferenceIntegrateBrownianStepKernel::initialize(const System& system, const BrownianIntegrator& integrator) {
-    int numAtoms = system.getNumAtoms();
-    masses = new RealOpenMM[numAtoms];
-    for (size_t i = 0; i < numAtoms; ++i)
-        masses[i] = static_cast<RealOpenMM>(system.getAtomMass(i));
+    int numParticles = system.getNumParticles();
+    masses = new RealOpenMM[numParticles];
+    for (size_t i = 0; i < numParticles; ++i)
+        masses[i] = static_cast<RealOpenMM>(system.getParticleMass(i));
     numConstraints = system.getNumConstraints();
     constraintIndices = allocateIntArray(numConstraints, 2);
     shakeParameters = allocateRealArray(numConstraints, 1);
     for (int i = 0; i < numConstraints; ++i) {
-        int atom1, atom2;
+        int particle1, particle2;
         double distance;
-        system.getConstraintParameters(i, atom1, atom2, distance);
-        constraintIndices[i][0] = atom1;
-        constraintIndices[i][1] = atom2;
+        system.getConstraintParameters(i, particle1, particle2, distance);
+        constraintIndices[i][0] = particle1;
+        constraintIndices[i][1] = particle2;
         shakeParameters[i][0] = static_cast<RealOpenMM>(distance);
     }
 }
@@ -586,7 +586,7 @@ void ReferenceIntegrateBrownianStepKernel::execute(OpenMMContextImpl& context, c
             delete shake;
         }
         dynamics = new ReferenceBrownianDynamics(
-				context.getSystem().getNumAtoms(), 
+				context.getSystem().getNumParticles(), 
 				static_cast<RealOpenMM>(stepSize), 
 				static_cast<RealOpenMM>(friction), 
 				static_cast<RealOpenMM>(temperature) );
@@ -596,7 +596,7 @@ void ReferenceIntegrateBrownianStepKernel::execute(OpenMMContextImpl& context, c
         prevFriction = friction;
         prevStepSize = stepSize;
     }
-    dynamics->update(context.getSystem().getNumAtoms(), posData, velData, forceData, masses);
+    dynamics->update(context.getSystem().getNumParticles(), posData, velData, forceData, masses);
 }
 
 ReferenceApplyAndersenThermostatKernel::~ReferenceApplyAndersenThermostatKernel() {
@@ -607,10 +607,10 @@ ReferenceApplyAndersenThermostatKernel::~ReferenceApplyAndersenThermostatKernel(
 }
 
 void ReferenceApplyAndersenThermostatKernel::initialize(const System& system, const AndersenThermostat& thermostat) {
-    int numAtoms = system.getNumAtoms();
-    masses = new RealOpenMM[numAtoms];
-    for (size_t i = 0; i < numAtoms; ++i)
-        masses[i] = static_cast<RealOpenMM>(system.getAtomMass(i));
+    int numParticles = system.getNumParticles();
+    masses = new RealOpenMM[numParticles];
+    for (size_t i = 0; i < numParticles; ++i)
+        masses[i] = static_cast<RealOpenMM>(system.getParticleMass(i));
     this->thermostat = new ReferenceAndersenThermostat();
 }
 
@@ -626,10 +626,10 @@ void ReferenceApplyAndersenThermostatKernel::execute(OpenMMContextImpl& context)
 }
 
 void ReferenceCalcKineticEnergyKernel::initialize(const System& system) {
-    int numAtoms = system.getNumAtoms();
-    masses.resize(numAtoms);
-    for (size_t i = 0; i < numAtoms; ++i)
-        masses[i] = system.getAtomMass(i);
+    int numParticles = system.getNumParticles();
+    masses.resize(numParticles);
+    for (size_t i = 0; i < numParticles; ++i)
+        masses[i] = system.getParticleMass(i);
 }
 
 double ReferenceCalcKineticEnergyKernel::execute(OpenMMContextImpl& context) {
@@ -642,9 +642,9 @@ double ReferenceCalcKineticEnergyKernel::execute(OpenMMContextImpl& context) {
 
 void ReferenceRemoveCMMotionKernel::initialize(const System& system, const CMMotionRemover& force) {
     frequency = force.getFrequency();
-    masses.resize(system.getNumAtoms());
+    masses.resize(system.getNumParticles());
     for (size_t i = 0; i < masses.size(); ++i)
-        masses[i] = system.getAtomMass(i);
+        masses[i] = system.getParticleMass(i);
 }
 
 void ReferenceRemoveCMMotionKernel::execute(OpenMMContextImpl& context) {
@@ -662,7 +662,7 @@ void ReferenceRemoveCMMotionKernel::execute(OpenMMContextImpl& context) {
         momentum[2] += static_cast<RealOpenMM>( masses[i]*velData[i][2] );
     }
     
-    // Adjust the atom velocities.
+    // Adjust the particle velocities.
     
     momentum[0] /= static_cast<RealOpenMM>( masses.size() );
     momentum[1] /= static_cast<RealOpenMM>( masses.size() );

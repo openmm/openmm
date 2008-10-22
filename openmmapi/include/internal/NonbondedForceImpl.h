@@ -64,7 +64,7 @@ public:
     std::vector<std::string> getKernelNames();
 private:
     void findExclusions(const std::vector<std::vector<int> >& bondIndices, std::vector<std::set<int> >& exclusions, std::set<std::pair<int, int> >& bonded14Indices) const;
-    void addExclusionsToSet(const std::vector<std::set<int> >& bonded12, std::set<int>& exclusions, int baseAtom, int fromAtom, int currentLevel) const;
+    void addExclusionsToSet(const std::vector<std::set<int> >& bonded12, std::set<int>& exclusions, int baseParticle, int fromParticle, int currentLevel) const;
     NonbondedForce& owner;
     Kernel kernel;
 };

@@ -54,8 +54,8 @@ void testCoulomb() {
     System system(2, 0);
     VerletIntegrator integrator(0.01);
     NonbondedForce* forceField = new NonbondedForce(2, 0);
-    forceField->setAtomParameters(0, 0.5, 1, 0);
-    forceField->setAtomParameters(1, -1.5, 1, 0);
+    forceField->setParticleParameters(0, 0.5, 1, 0);
+    forceField->setParticleParameters(1, -1.5, 1, 0);
     system.addForce(forceField);
     OpenMMContext context(system, integrator, platform);
     vector<Vec3> positions(2);
@@ -75,8 +75,8 @@ void testLJ() {
     System system(2, 0);
     VerletIntegrator integrator(0.01);
     NonbondedForce* forceField = new NonbondedForce(2, 0);
-    forceField->setAtomParameters(0, 0, 1.2, 1);
-    forceField->setAtomParameters(1, 0, 1.4, 2);
+    forceField->setParticleParameters(0, 0, 1.2, 1);
+    forceField->setParticleParameters(1, 0, 1.4, 2);
     system.addForce(forceField);
     OpenMMContext context(system, integrator, platform);
     vector<Vec3> positions(2);
@@ -113,11 +113,11 @@ void testExclusionsAnd14() {
         vector<Vec3> positions(5);
         const double r = 1.0;
         for (int j = 0; j < 5; ++j) {
-            nonbonded->setAtomParameters(j, 0, 1.5, 0);
+            nonbonded->setParticleParameters(j, 0, 1.5, 0);
             positions[j] = Vec3(0, j, 0);
         }
-        nonbonded->setAtomParameters(0, 0, 1.5, 1);
-        nonbonded->setAtomParameters(i, 0, 1.5, 1);
+        nonbonded->setParticleParameters(0, 0, 1.5, 1);
+        nonbonded->setParticleParameters(i, 0, 1.5, 1);
         nonbonded->setNonbonded14Parameters(0, 0, 3, 0, 1.5, i == 3 ? 0.5 : 0.0);
         nonbonded->setNonbonded14Parameters(1, 1, 4, 0, 1.5, 0.0);
         positions[i] = Vec3(r, 0, 0);
@@ -143,8 +143,8 @@ void testExclusionsAnd14() {
 
         // Test Coulomb forces
         
-        nonbonded->setAtomParameters(0, 2, 1.5, 0);
-        nonbonded->setAtomParameters(i, 2, 1.5, 0);
+        nonbonded->setParticleParameters(0, 2, 1.5, 0);
+        nonbonded->setParticleParameters(i, 2, 1.5, 0);
         nonbonded->setNonbonded14Parameters(0, 0, 3, i == 3 ? 4/1.2 : 0, 1.5, 0);
         nonbonded->setNonbonded14Parameters(1, 1, 4, 0, 1.5, 0);
         context.reinitialize();
@@ -172,9 +172,9 @@ void testCutoff() {
     System system(3, 0);
     VerletIntegrator integrator(0.01);
     NonbondedForce* forceField = new NonbondedForce(3, 0);
-    forceField->setAtomParameters(0, 1.0, 1, 0);
-    forceField->setAtomParameters(1, 1.0, 1, 0);
-    forceField->setAtomParameters(2, 1.0, 1, 0);
+    forceField->setParticleParameters(0, 1.0, 1, 0);
+    forceField->setParticleParameters(1, 1.0, 1, 0);
+    forceField->setParticleParameters(2, 1.0, 1, 0);
     forceField->setNonbondedMethod(NonbondedForce::CutoffNonPeriodic);
     const double cutoff = 2.9;
     forceField->setCutoffDistance(cutoff);
@@ -226,10 +226,10 @@ void testCutoff14() {
  
         // Test LJ forces
         
-        nonbonded->setAtomParameters(0, 0, 1.5, 1);
+        nonbonded->setParticleParameters(0, 0, 1.5, 1);
         for (int j = 1; j < 5; ++j)
-            nonbonded->setAtomParameters(j, 0, 1.5, 0);
-        nonbonded->setAtomParameters(i, 0, 1.5, 1);
+            nonbonded->setParticleParameters(j, 0, 1.5, 0);
+        nonbonded->setParticleParameters(i, 0, 1.5, 1);
         nonbonded->setNonbonded14Parameters(0, 0, 3, 0, 1.5, i == 3 ? 0.5 : 0.0);
         nonbonded->setNonbonded14Parameters(1, 1, 4, 0, 1.5, 0.0);
         context.reinitialize();
@@ -256,8 +256,8 @@ void testCutoff14() {
         // Test Coulomb forces
         
         const double q = 0.7;
-        nonbonded->setAtomParameters(0, q, 1.5, 0);
-        nonbonded->setAtomParameters(i, q, 1.5, 0);
+        nonbonded->setParticleParameters(0, q, 1.5, 0);
+        nonbonded->setParticleParameters(i, q, 1.5, 0);
         nonbonded->setNonbonded14Parameters(0, 0, 3, i == 3 ? q*q/1.2 : 0, 1.5, 0);
         nonbonded->setNonbonded14Parameters(1, 1, 4, 0, 1.5, 0);
         context.reinitialize();
@@ -291,9 +291,9 @@ void testPeriodic() {
     bonds->setBondParameters(0, 0, 1, 1, 0);
     system.addForce(bonds);
     NonbondedForce* nonbonded = new NonbondedForce(3, 0);
-    nonbonded->setAtomParameters(0, 1.0, 1, 0);
-    nonbonded->setAtomParameters(1, 1.0, 1, 0);
-    nonbonded->setAtomParameters(2, 1.0, 1, 0);
+    nonbonded->setParticleParameters(0, 1.0, 1, 0);
+    nonbonded->setParticleParameters(1, 1.0, 1, 0);
+    nonbonded->setParticleParameters(2, 1.0, 1, 0);
     nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
     const double cutoff = 2.0;
     nonbonded->setCutoffDistance(cutoff);

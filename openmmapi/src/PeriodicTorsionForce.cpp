@@ -39,21 +39,21 @@ using namespace OpenMM;
 PeriodicTorsionForce::PeriodicTorsionForce(int numTorsions) : periodicTorsions(numTorsions) {
 }
 
-void PeriodicTorsionForce::getTorsionParameters(int index, int& atom1, int& atom2, int& atom3, int& atom4, int& periodicity, double& phase, double& k) const {
-    atom1 = periodicTorsions[index].atom1;
-    atom2 = periodicTorsions[index].atom2;
-    atom3 = periodicTorsions[index].atom3;
-    atom4 = periodicTorsions[index].atom4;
+void PeriodicTorsionForce::getTorsionParameters(int index, int& particle1, int& particle2, int& particle3, int& particle4, int& periodicity, double& phase, double& k) const {
+    particle1 = periodicTorsions[index].particle1;
+    particle2 = periodicTorsions[index].particle2;
+    particle3 = periodicTorsions[index].particle3;
+    particle4 = periodicTorsions[index].particle4;
     periodicity = periodicTorsions[index].periodicity;
     phase = periodicTorsions[index].phase;
     k = periodicTorsions[index].k;
 }
 
-void PeriodicTorsionForce::setTorsionParameters(int index, int atom1, int atom2, int atom3, int atom4, int periodicity, double phase, double k) {
-    periodicTorsions[index].atom1 = atom1;
-    periodicTorsions[index].atom2 = atom2;
-    periodicTorsions[index].atom3 = atom3;
-    periodicTorsions[index].atom4 = atom4;
+void PeriodicTorsionForce::setTorsionParameters(int index, int particle1, int particle2, int particle3, int particle4, int periodicity, double phase, double k) {
+    periodicTorsions[index].particle1 = particle1;
+    periodicTorsions[index].particle2 = particle2;
+    periodicTorsions[index].particle3 = particle3;
+    periodicTorsions[index].particle4 = particle4;
     periodicTorsions[index].periodicity = periodicity;
     periodicTorsions[index].phase = phase;
     periodicTorsions[index].k = k;

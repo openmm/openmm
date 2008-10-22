@@ -47,33 +47,33 @@ public:
     /*
      * Create a GBSAOBCForceField.
      * 
-     * @param numAtoms    the number of atoms in the system
+     * @param numParticles    the number of particles in the system
      */
-    GBSAOBCForceField(int numAtoms);
+    GBSAOBCForceField(int numParticles);
     /**
-     * Get the number of atoms in the system.
+     * Get the number of particles in the system.
      */
-    int getNumAtoms() const {
-        return atoms.size();
+    int getNumParticles() const {
+        return particles.size();
     }
     /**
-     * Get the force field parameters for an atom.
+     * Get the force field parameters for a particle.
      * 
-     * @param index          the index of the atom for which to get parameters
-     * @param charge         the charge of the atom, measured in units of the proton charge
-     * @param radius         the GBSA radius of the atom, measured in nm
-     * @param scalingFactor  the OBC scaling factor for the atom
+     * @param index          the index of the particle for which to get parameters
+     * @param charge         the charge of the particle, measured in units of the proton charge
+     * @param radius         the GBSA radius of the particle, measured in nm
+     * @param scalingFactor  the OBC scaling factor for the particle
      */
-    void getAtomParameters(int index, double& charge, double& radius, double& scalingFactor) const;
+    void getParticleParameters(int index, double& charge, double& radius, double& scalingFactor) const;
     /**
-     * Set the force field parameters for an atom.
+     * Set the force field parameters for a particle.
      * 
-     * @param index          the index of the atom for which to set parameters
-     * @param charge         the charge of the atom, measured in units of the proton charge
-     * @param radius         the GBSA radius of the atom, measured in nm
-     * @param scalingFactor  the OBC scaling factor for the atom
+     * @param index          the index of the particle for which to set parameters
+     * @param charge         the charge of the particle, measured in units of the proton charge
+     * @param radius         the GBSA radius of the particle, measured in nm
+     * @param scalingFactor  the OBC scaling factor for the particle
      */
-    void setAtomParameters(int index, double charge, double radius, double scalingFactor);
+    void setParticleParameters(int index, double charge, double radius, double scalingFactor);
     /**
      * Get the dielectric constant for the solvent.
      */
@@ -101,7 +101,7 @@ public:
 protected:
     ForceImpl* createImpl();
 private:
-    class AtomInfo;
+    class ParticleInfo;
     double solventDielectric, soluteDielectric;
 
 // Retarded visual studio compiler complains about being unable to 
@@ -112,7 +112,7 @@ private:
 #pragma warning(disable:4251)
 #endif
 
-    std::vector<AtomInfo> atoms;
+    std::vector<ParticleInfo> particles;
 
 #if defined(_MSC_VER)
 #pragma warning(pop)
@@ -120,10 +120,10 @@ private:
 
 };
 
-class GBSAOBCForceField::AtomInfo {
+class GBSAOBCForceField::ParticleInfo {
 public:
     double charge, radius, scalingFactor;
-    AtomInfo() {
+    ParticleInfo() {
         charge = radius = scalingFactor = 0.0;
     }
 };

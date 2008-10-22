@@ -41,7 +41,7 @@
 namespace OpenMM {
 
 /**
- * This class implements an interaction between groups of four atoms that varies periodically with the torsion angle
+ * This class implements an interaction between groups of four particles that varies periodically with the torsion angle
  * between them.  When creating a PeriodicTorsionForce, you specify the number of torsions as an argument to the
  * constructor, then loop over them and call setTorsionParameters() to set the force field parameters for each one.
  */
@@ -64,43 +64,28 @@ public:
      * Get the force field parameters for a periodic torsion term.
      * 
      * @param index        the index of the torsion for which to get parameters
-     * @param atom1        the index of the first atom forming the torsion
-     * @param atom2        the index of the second atom forming the torsion
-     * @param atom3        the index of the third atom forming the torsion
-     * @param atom3        the index of the fourth atom forming the torsion
+     * @param particle1    the index of the first particle forming the torsion
+     * @param particle2    the index of the second particle forming the torsion
+     * @param particle3    the index of the third particle forming the torsion
+     * @param particle3    the index of the fourth particle forming the torsion
      * @param periodicity  the periodicity of the torsion
      * @param phase        the phase offset of the torsion, measured in radians
      * @param k            the force constant for the torsion
      */
-    void getTorsionParameters(int index, int& atom1, int& atom2, int& atom3, int& atom4, int& periodicity, double& phase, double& k) const;
+    void getTorsionParameters(int index, int& particle1, int& particle2, int& particle3, int& particle4, int& periodicity, double& phase, double& k) const;
     /**
      * Set the force field parameters for a periodic torsion term.
      * 
      * @param index        the index of the torsion for which to set parameters
-     * @param atom1        the index of the first atom forming the torsion
-     * @param atom2        the index of the second atom forming the torsion
-     * @param atom3        the index of the third atom forming the torsion
-     * @param atom3        the index of the fourth atom forming the torsion
+     * @param particle1    the index of the first particle forming the torsion
+     * @param particle2    the index of the second particle forming the torsion
+     * @param particle3    the index of the third particle forming the torsion
+     * @param particle3    the index of the fourth particle forming the torsion
      * @param periodicity  the periodicity of the torsion
      * @param phase        the phase offset of the torsion, measured in radians
      * @param k            the force constant for the torsion
      */
-    void setTorsionParameters(int index, int atom1, int atom2, int atom3, int atom4, int periodicity, double phase, double k);
-    /**
-     * Get the force field parameters for a Ryckaert-Bellemans torsion term.
-     * 
-     * @param index        the index of the torsion for which to get parameters
-     * @param atom1        the index of the first atom forming the torsion
-     * @param atom2        the index of the second atom forming the torsion
-     * @param atom3        the index of the third atom forming the torsion
-     * @param atom3        the index of the fourth atom forming the torsion
-     * @param c0           the coefficient of the constant term
-     * @param c1           the coefficient of the 1st order term
-     * @param c2           the coefficient of the 2nd order term
-     * @param c3           the coefficient of the 3rd order term
-     * @param c4           the coefficient of the 4th order term
-     * @param c5           the coefficient of the 5th order term
-     */
+    void setTorsionParameters(int index, int particle1, int particle2, int particle3, int particle4, int periodicity, double phase, double k);
 protected:
     ForceImpl* createImpl();
 private:
@@ -122,10 +107,10 @@ private:
 
 class PeriodicTorsionForce::PeriodicTorsionInfo {
 public:
-    int atom1, atom2, atom3, atom4, periodicity;
+    int particle1, particle2, particle3, particle4, periodicity;
     double phase, k;
     PeriodicTorsionInfo() {
-        atom1 = atom2 = atom3 = atom4 = -1;
+        particle1 = particle2 = particle3 = particle4 = -1;
         periodicity = 1;
         phase = k = 0.0;
     }

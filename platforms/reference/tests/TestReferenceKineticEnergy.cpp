@@ -50,7 +50,7 @@ void testCalcKE() {
     ReferencePlatform platform;
     System system(4, 0);
     for (int i = 0; i < 4; ++i)
-        system.setAtomMass(i, i+1);
+        system.setParticleMass(i, i+1);
     VerletIntegrator integrator(0.01);
     OpenMMContext context(system, integrator, platform);
     vector<Vec3> velocities(4);

@@ -39,15 +39,15 @@ namespace OpenMM {
 class ForceImpl;
 
 /**
- * Force objects apply forces to the atoms in a System, or alter their behavior in other
+ * Force objects apply forces to the particles in a System, or alter their behavior in other
  * ways.  This is an abstract class.  Subclasses define particular forces.
  * 
  * More specifically, a Force object can do any or all of the following:
  * 
  * <ul>
- * <li>Add a contribution to the force on each atom</li>
+ * <li>Add a contribution to the force on each particle</li>
  * <li>Add a contribution to the potential energy of the System</li>
- * <li>Modify the positions and velocities of atoms at the start of each time step</li>
+ * <li>Modify the positions and velocities of particles at the start of each time step</li>
  * <li>Define parameters which are stored in the OpenMMContext and can be modified by the user</li>
  * <li>Change the values of parameters defined by other Force objects at the start of each time step</li>
  * </ul>

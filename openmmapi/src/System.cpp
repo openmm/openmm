@@ -34,8 +34,8 @@
 
 using namespace OpenMM;
 
-System::System(int numAtoms, int numConstraints) : masses(numAtoms), constraints(numConstraints), forces(0) {
-    for (int i = 0; i < numAtoms; ++i)
+System::System(int numParticles, int numConstraints) : masses(numParticles), constraints(numConstraints), forces(0) {
+    for (int i = 0; i < numParticles; ++i)
         masses[i] = 0.0;
 }
 
@@ -44,14 +44,14 @@ System::~System() {
         delete forces[i];
 }
 
-void System::getConstraintParameters(int index, int& atom1, int& atom2, double& distance) const {
-    atom1 = constraints[index].atom1;
-    atom2 = constraints[index].atom2;
+void System::getConstraintParameters(int index, int& particle1, int& particle2, double& distance) const {
+    particle1 = constraints[index].particle1;
+    particle2 = constraints[index].particle2;
     distance = constraints[index].distance;
 }
 
-void System::setConstraintParameters(int index, int atom1, int atom2, double distance) {
-    constraints[index].atom1 = atom1;
-    constraints[index].atom2 = atom2;
+void System::setConstraintParameters(int index, int particle1, int particle2, double distance) {
+    constraints[index].particle1 = particle1;
+    constraints[index].particle2 = particle2;
     constraints[index].distance = distance;
 }

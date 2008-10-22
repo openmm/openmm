@@ -67,16 +67,16 @@ OpenMMContextImpl::OpenMMContextImpl(OpenMMContext& owner, System& system, Integ
         throw OpenMMException("Specified a Platform for an OpenMMContext which does not support all required kernels");
     platform->contextCreated(*this);
     kineticEnergyKernel = platform->createKernel(CalcKineticEnergyKernel::Name(), *this);
-    vector<double> masses(system.getNumAtoms());
+    vector<double> masses(system.getNumParticles());
     for (size_t i = 0; i < masses.size(); ++i)
-        masses[i] = system.getAtomMass(i);
+        masses[i] = system.getParticleMass(i);
     dynamic_cast<CalcKineticEnergyKernel&>(kineticEnergyKernel.getImpl()).initialize(system);
     for (size_t i = 0; i < forceImpls.size(); ++i)
         forceImpls[i]->initialize(*this);
     integrator.initialize(*this);
-    positions = platform->createStream("atomPositions", system.getNumAtoms(), Stream::Double3, *this);
-    velocities = platform->createStream("atomVelocities", system.getNumAtoms(), Stream::Double3, *this);
-    forces = platform->createStream("atomForces", system.getNumAtoms(), Stream::Double3, *this);
+    positions = platform->createStream("particlePositions", system.getNumParticles(), Stream::Double3, *this);
+    velocities = platform->createStream("particleVelocities", system.getNumParticles(), Stream::Double3, *this);
+    forces = platform->createStream("particleForces", system.getNumParticles(), Stream::Double3, *this);
     double zero[] = {0.0, 0.0, 0.0};
     velocities.fillWithValue(&zero);
 }

@@ -81,19 +81,19 @@ public:
         return *platform;
     }
     /**
-     * Get the Stream containing the current position of each atom.
+     * Get the Stream containing the current position of each particle.
      */
     Stream& getPositions() {
         return positions;
     }
     /**
-     * Get the Stream containing the current velocity of each atom.
+     * Get the Stream containing the current velocity of each particle.
      */
     Stream& getVelocities() {
         return velocities;
     }
     /**
-     * Get the Stream containing the force on each atom that was calculated by
+     * Get the Stream containing the force on each particle that was calculated by
      * the most recent call to calcForces().
      */
     Stream& getForces() {

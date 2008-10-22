@@ -36,7 +36,7 @@
 
 using namespace OpenMM;
 
-NonbondedForce::NonbondedForce(int numAtoms, int numNonbonded14) : atoms(numAtoms), nb14s(numNonbonded14),
+NonbondedForce::NonbondedForce(int numParticles, int numNonbonded14) : particles(numParticles), nb14s(numNonbonded14),
         nonbondedMethod(NoCutoff), cutoffDistance(1.0) {
     periodicBoxVectors[0] = Vec3(2, 0, 0);
     periodicBoxVectors[1] = Vec3(0, 2, 0);
@@ -77,29 +77,29 @@ void NonbondedForce::setPeriodicBoxVectors(Vec3 a, Vec3 b, Vec3 c) {
     periodicBoxVectors[2] = c;
 }
 
-void NonbondedForce::getAtomParameters(int index, double& charge, double& radius, double& depth) const {
-    charge = atoms[index].charge;
-    radius = atoms[index].radius;
-    depth = atoms[index].depth;
+void NonbondedForce::getParticleParameters(int index, double& charge, double& radius, double& depth) const {
+    charge = particles[index].charge;
+    radius = particles[index].radius;
+    depth = particles[index].depth;
 }
 
-void NonbondedForce::setAtomParameters(int index, double charge, double radius, double depth) {
-    atoms[index].charge = charge;
-    atoms[index].radius = radius;
-    atoms[index].depth = depth;
+void NonbondedForce::setParticleParameters(int index, double charge, double radius, double depth) {
+    particles[index].charge = charge;
+    particles[index].radius = radius;
+    particles[index].depth = depth;
 }
 
-void NonbondedForce::getNonbonded14Parameters(int index, int& atom1, int& atom2, double& charge, double& radius, double& depth) const {
-    atom1 = nb14s[index].atom1;
-    atom2 = nb14s[index].atom2;
+void NonbondedForce::getNonbonded14Parameters(int index, int& particle1, int& particle2, double& charge, double& radius, double& depth) const {
+    particle1 = nb14s[index].particle1;
+    particle2 = nb14s[index].particle2;
     charge = nb14s[index].charge;
     radius = nb14s[index].radius;
     depth = nb14s[index].depth;
 }
 
-void NonbondedForce::setNonbonded14Parameters(int index, int atom1, int atom2, double charge, double radius, double depth) {
-    nb14s[index].atom1 = atom1;
-    nb14s[index].atom2 = atom2;
+void NonbondedForce::setNonbonded14Parameters(int index, int particle1, int particle2, double charge, double radius, double depth) {
+    nb14s[index].particle1 = particle1;
+    nb14s[index].particle2 = particle2;
     nb14s[index].charge = charge;
     nb14s[index].radius = radius;
     nb14s[index].depth = depth;

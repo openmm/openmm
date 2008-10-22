@@ -49,23 +49,23 @@ using namespace OpenMM;
 using namespace std;
 
 void testTemperature() {
-    const int numAtoms = 8;
+    const int numParticles = 8;
     const double temp = 100.0;
     const double collisionFreq = 10.0;
     ReferencePlatform platform;
-    System system(numAtoms, 0);
+    System system(numParticles, 0);
     VerletIntegrator integrator(0.01);
-    NonbondedForce* forceField = new NonbondedForce(numAtoms, 0);
-    for (int i = 0; i < numAtoms; ++i) {
-        system.setAtomMass(i, 2.0);
-        forceField->setAtomParameters(i, (i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
+    NonbondedForce* forceField = new NonbondedForce(numParticles, 0);
+    for (int i = 0; i < numParticles; ++i) {
+        system.setParticleMass(i, 2.0);
+        forceField->setParticleParameters(i, (i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
     }
     system.addForce(forceField);
     AndersenThermostat* thermstat = new AndersenThermostat(temp, collisionFreq);
     system.addForce(thermstat);
     OpenMMContext context(system, integrator, platform);
-    vector<Vec3> positions(numAtoms);
-    for (int i = 0; i < numAtoms; ++i)
+    vector<Vec3> positions(numParticles);
+    for (int i = 0; i < numParticles; ++i)
         positions[i] = Vec3((i%2 == 0 ? 2 : -2), (i%4 < 2 ? 2 : -2), (i < 4 ? 2 : -2));
     context.setPositions(positions);
     
@@ -82,7 +82,7 @@ void testTemperature() {
         integrator.step(1);
     }
     ke /= 1000;
-    double expected = 0.5*numAtoms*3*BOLTZ*temp;
+    double expected = 0.5*numParticles*3*BOLTZ*temp;
     ASSERT_EQUAL_TOL(expected, ke, 3*expected/std::sqrt(1000.0));
 }
 
