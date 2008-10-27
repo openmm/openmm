@@ -53,8 +53,8 @@ KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform
 //        return new CudaIntegrateVerletStepKernel(name, platform);
     if (name == IntegrateLangevinStepKernel::Name())
         return new CudaIntegrateLangevinStepKernel(name, platform, data);
-//    if (name == IntegrateBrownianStepKernel::Name())
-//        return new CudaIntegrateBrownianStepKernel(name, platform);
+    if (name == IntegrateBrownianStepKernel::Name())
+        return new CudaIntegrateBrownianStepKernel(name, platform, data);
 //    if (name == ApplyAndersenThermostatKernel::Name())
 //        return new CudaApplyAndersenThermostatKernel(name, platform);
     if (name == CalcKineticEnergyKernel::Name())

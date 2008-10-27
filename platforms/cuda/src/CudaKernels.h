@@ -310,39 +310,33 @@ private:
     CudaPlatform::PlatformData& data;
     double prevTemp, prevFriction, prevStepSize;
 };
-//
-///**
-// * This kernel is invoked by BrownianIntegrator to take one time step.
-// */
-//class CudaIntegrateBrownianStepKernel : public IntegrateBrownianStepKernel {
-//public:
-//    CudaIntegrateBrownianStepKernel(std::string name, const Platform& platform) : IntegrateBrownianStepKernel(name, platform),
-//        dynamics(0), shake(0), masses(0), shakeParameters(0), constraintIndices(0) {
-//    }
-//    ~CudaIntegrateBrownianStepKernel();
-//    /**
-//     * Initialize the kernel.
-//     * 
-//     * @param system     the System this kernel will be applied to
-//     * @param integrator the BrownianIntegrator this kernel will be used for
-//     */
-//    void initialize(const System& system, const BrownianIntegrator& integrator);
-//    /**
-//     * Execute the kernel.
-//     * 
-//     * @param context    the context in which to execute this kernel
-//     * @param integrator the BrownianIntegrator this kernel is being used for
-//     */
-//    void execute(OpenMMContextImpl& context, const BrownianIntegrator& integrator);
-//private:
-//    CudaBrownianDynamics* dynamics;
-//    CudaShakeAlgorithm* shake;
-//    RealOpenMM* masses;
-//    RealOpenMM** shakeParameters;
-//    int** constraintIndices;
-//    int numConstraints;
-//    double prevTemp, prevFriction, prevStepSize;
-//};
+
+/**
+ * This kernel is invoked by BrownianIntegrator to take one time step.
+ */
+class CudaIntegrateBrownianStepKernel : public IntegrateBrownianStepKernel {
+public:
+    CudaIntegrateBrownianStepKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data) : IntegrateBrownianStepKernel(name, platform), data(data) {
+    }
+    ~CudaIntegrateBrownianStepKernel();
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param integrator the BrownianIntegrator this kernel will be used for
+     */
+    void initialize(const System& system, const BrownianIntegrator& integrator);
+    /**
+     * Execute the kernel.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the BrownianIntegrator this kernel is being used for
+     */
+    void execute(OpenMMContextImpl& context, const BrownianIntegrator& integrator);
+private:
+    CudaPlatform::PlatformData& data;
+    double prevTemp, prevFriction, prevStepSize;
+};
 //
 ///**
 // * This kernel is invoked by AndersenThermostat at the start of each time step to adjust the particle velocities.

@@ -29,47 +29,68 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "CudaPlatform.h"
-#include "CudaKernelFactory.h"
-#include "CudaKernels.h"
-#include "internal/OpenMMContextImpl.h"
-#include "kernels/gpuTypes.h"
-#include "System.h"
+/**
+ * This tests the Cuda implementation of random number generation.
+ */
+
+#include "../../../tests/AssertionUtilities.h"
+#include "../src/kernels/gpuTypes.h"
+#include "../src/kernels/cudaKernels.h"
+#include <iostream>
 
 using namespace OpenMM;
+using namespace std;
 
-CudaPlatform::CudaPlatform() {
-    CudaKernelFactory* factory = new CudaKernelFactory();
-    registerKernelFactory(CalcHarmonicBondForceKernel::Name(), factory);
-    registerKernelFactory(CalcHarmonicAngleForceKernel::Name(), factory);
-    registerKernelFactory(CalcPeriodicTorsionForceKernel::Name(), factory);
-    registerKernelFactory(CalcRBTorsionForceKernel::Name(), factory);
-    registerKernelFactory(CalcNonbondedForceKernel::Name(), factory);
-    registerKernelFactory(CalcGBSAOBCForceFieldKernel::Name(), factory);
-//    registerKernelFactory(IntegrateVerletStepKernel::Name(), factory);
-    registerKernelFactory(IntegrateLangevinStepKernel::Name(), factory);
-    registerKernelFactory(IntegrateBrownianStepKernel::Name(), factory);
-//    registerKernelFactory(ApplyAndersenThermostatKernel::Name(), factory);
-    registerKernelFactory(CalcKineticEnergyKernel::Name(), factory);
-    registerKernelFactory(RemoveCMMotionKernel::Name(), factory);
+static const float KILO                     =    1e3;                      // Thousand
+static const float BOLTZMANN                =    1.380658e-23f;            // (J/K)    
+static const float AVOGADRO                 =    6.0221367e23f;            // ()        
+static const float RGAS                     =    BOLTZMANN * AVOGADRO;     // (J/(mol K))
+static const float BOLTZ                    =    (RGAS / KILO);            // (kJ/(mol K)) 
+
+void testGaussian() {
+    _gpuContext* gpu = (_gpuContext*) gpuInit(1000);
+    gpu->sim.Yv = 1.0;
+    gpu->sim.Yx = 1.0;
+    gpu->sim.V = 1.0;
+    gpu->sim.X = 1.0;
+    gpuSetConstants(gpu);
+    kGenerateRandoms(gpu);
+    const int numValues = 4*gpu->psRandom4->_length;
+    gpu->psRandom4->Download();
+    float* data = reinterpret_cast<float*>(gpu->psRandom4->_pSysData);
+    double mean = 0.0;
+    double var = 0.0;
+    double skew = 0.0;
+    double kurtosis = 0.0;
+    for (int i = 0; i < numValues; i++) {
+        double value = data[i];
+        mean += value;
+        var += value*value;
+        skew += value*value*value;
+        kurtosis += value*value*value*value;
+    }
+    gpuShutDown(gpu);
+    mean /= numValues;
+    var /= numValues;
+    skew /= numValues;
+    kurtosis /= numValues;
+    double c2 = var-mean*mean;
+    double c3 = skew-3*var*mean+2*mean*mean*mean;
+    double c4 = kurtosis-4*skew*mean-3*var*var+12*var*mean*mean-6*mean*mean*mean*mean;
+    ASSERT_EQUAL_TOL(0.0, mean, 0.01);
+    ASSERT_EQUAL_TOL(1.0, c2, 0.01);
+    ASSERT_EQUAL_TOL(0.0, c3, 0.01);
+    ASSERT_EQUAL_TOL(0.0, c4, 0.01);
 }
 
-bool CudaPlatform::supportsDoublePrecision() const {
-    return false;
-}
-
-const StreamFactory& CudaPlatform::getDefaultStreamFactory() const {
-    return defaultStreamFactory;
-}
-
-void CudaPlatform::contextCreated(OpenMMContextImpl& context) const {
-    int numParticles = context.getSystem().getNumParticles();
-    _gpuContext* gpu = (_gpuContext*) gpuInit(numParticles);
-    context.setPlatformData(new PlatformData(gpu));
-}
-
-void CudaPlatform::contextDestroyed(OpenMMContextImpl& context) const {
-    PlatformData* data = reinterpret_cast<PlatformData*>(context.getPlatformData());
-    gpuShutDown(data->gpu);
-    delete data;
+int main() {
+    try {
+        testGaussian();
+    }
+    catch(const exception& e) {
+        cout << "exception: " << e.what() << endl;
+        return 1;
+    }
+    cout << "Done" << endl;
+    return 0;
 }

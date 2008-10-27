@@ -29,13 +29,16 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include "System.h"
+
+
 /**
- * This tests the reference implementation of BrownianIntegrator.
+ * This tests the Cuda implementation of BrownianIntegrator.
  */
 
 #include "../../../tests/AssertionUtilities.h"
 #include "OpenMMContext.h"
-#include "ReferencePlatform.h"
+#include "CudaPlatform.h"
 #include "HarmonicBondForce.h"
 #include "NonbondedForce.h"
 #include "System.h"
@@ -51,7 +54,7 @@ using namespace std;
 const double TOL = 1e-5;
 
 void testSingleBond() {
-    ReferencePlatform platform;
+    CudaPlatform platform;
     System system(2, 0);
     system.setParticleMass(0, 2.0);
     system.setParticleMass(1, 2.0);
@@ -88,13 +91,12 @@ void testTemperature() {
     const int numParticles = 8;
     const int numBonds = numParticles-1;
     const double temp = 100.0;
-    ReferencePlatform platform;
+    CudaPlatform platform;
     System system(numParticles, 0);
     BrownianIntegrator integrator(temp, 2.0, 0.01);
     HarmonicBondForce* forceField = new HarmonicBondForce(numBonds);
-    for (int i = 0; i < numParticles; ++i) {
+    for (int i = 0; i < numParticles; ++i)
         system.setParticleMass(i, 2.0);
-    }
     for (int i = 0; i < numBonds; ++i)
         forceField->setBondParameters(i, i, i+1, 1.0, i+1);
     system.addForce(forceField);
@@ -111,7 +113,7 @@ void testTemperature() {
     // Now run it for a while and see if the temperature is correct.
     
     double pe = 0.0;
-    const int steps = 50000;
+    const int steps = 10000;
     for (int i = 0; i < steps; ++i) {
         State state = context.getState(State::Energy);
         pe += state.getPotentialEnergy();
@@ -125,24 +127,25 @@ void testTemperature() {
 
 void testConstraints() {
     const int numParticles = 8;
-    const double temp = 100.0;
-    ReferencePlatform platform;
-    System system(numParticles, numParticles-1);
+    const int numConstraints = numParticles/2;
+    const double temp = 20.0;
+    CudaPlatform platform;
+    System system(numParticles, numConstraints);
     BrownianIntegrator integrator(temp, 2.0, 0.001);
     NonbondedForce* forceField = new NonbondedForce(numParticles, 0);
     for (int i = 0; i < numParticles; ++i) {
         system.setParticleMass(i, 10.0);
         forceField->setParticleParameters(i, (i%2 == 0 ? 0.2 : -0.2), 0.5, 5.0);
     }
-    for (int i = 0; i < numParticles-1; ++i)
-        system.setConstraintParameters(i, i, i+1, 1.0);
+    for (int i = 0; i < numConstraints; ++i)
+        system.setConstraintParameters(i, 2*i, 2*i+1, 1.0);
     system.addForce(forceField);
     OpenMMContext context(system, integrator, platform);
     vector<Vec3> positions(numParticles);
     vector<Vec3> velocities(numParticles);
     init_gen_rand(0);
     for (int i = 0; i < numParticles; ++i) {
-        positions[i] = Vec3(i/2, (i+1)/2, 0);
+        positions[i] = Vec3(i, 0, 0);
         velocities[i] = Vec3(genrand_real2()-0.5, genrand_real2()-0.5, genrand_real2()-0.5);
     }
     context.setPositions(positions);
@@ -152,11 +155,14 @@ void testConstraints() {
     
     for (int i = 0; i < 1000; ++i) {
         State state = context.getState(State::Positions);
-        for (int j = 0; j < numParticles-1; ++j) {
-            Vec3 p1 = state.getPositions()[j];
-            Vec3 p2 = state.getPositions()[j+1];
+        for (int j = 0; j < numConstraints; ++j) {
+            int particle1, particle2;
+            double distance;
+            system.getConstraintParameters(j, particle1, particle2, distance);
+            Vec3 p1 = state.getPositions()[particle1];
+            Vec3 p2 = state.getPositions()[particle2];
             double dist = std::sqrt((p1[0]-p2[0])*(p1[0]-p2[0])+(p1[1]-p2[1])*(p1[1]-p2[1])+(p1[2]-p2[2])*(p1[2]-p2[2]));
-            ASSERT_EQUAL_TOL(1.0, dist, 2e-4);
+            ASSERT_EQUAL_TOL(distance, dist, 2e-4);
         }
         integrator.step(1);
     }
