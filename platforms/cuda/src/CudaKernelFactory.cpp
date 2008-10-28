@@ -49,8 +49,8 @@ KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform
         return new CudaCalcNonbondedForceKernel(name, platform, data, context.getSystem());
     if (name == CalcGBSAOBCForceFieldKernel::Name())
         return new CudaCalcGBSAOBCForceFieldKernel(name, platform, data);
-//    if (name == IntegrateVerletStepKernel::Name())
-//        return new CudaIntegrateVerletStepKernel(name, platform);
+    if (name == IntegrateVerletStepKernel::Name())
+        return new CudaIntegrateVerletStepKernel(name, platform, data);
     if (name == IntegrateLangevinStepKernel::Name())
         return new CudaIntegrateLangevinStepKernel(name, platform, data);
     if (name == IntegrateBrownianStepKernel::Name())

@@ -311,22 +311,7 @@ void CudaCalcGBSAOBCForceFieldKernel::initialize(const System& system, const GBS
 void CudaCalcGBSAOBCForceFieldKernel::executeForces(OpenMMContextImpl& context) {
 }
 
-double CudaCalcGBSAOBCForceFieldKernel::executeEnergy(OpenMMContextImpl& context) {
-}
-
-//CudaIntegrateVerletStepKernel::~CudaIntegrateVerletStepKernel() {
-//}
-//
-//void CudaIntegrateVerletStepKernel::initialize(const System& system, const VerletIntegrator& integrator) {
-//}
-//
-//void CudaIntegrateVerletStepKernel::execute(OpenMMContextImpl& context, const VerletIntegrator& integrator) {
-//}
-
-CudaIntegrateLangevinStepKernel::~CudaIntegrateLangevinStepKernel() {
-}
-
-void CudaIntegrateLangevinStepKernel::initialize(const System& system, const LangevinIntegrator& integrator) {
+static void initializeIntegration(const System& system, CudaPlatform::PlatformData& data) {
     
     // Set masses.
     
@@ -384,6 +369,45 @@ void CudaIntegrateLangevinStepKernel::initialize(const System& system, const Lan
     kClearBornForces(gpu);
     kClearForces(gpu);
     cudaThreadSynchronize();
+}
+
+double CudaCalcGBSAOBCForceFieldKernel::executeEnergy(OpenMMContextImpl& context) {
+}
+
+CudaIntegrateVerletStepKernel::~CudaIntegrateVerletStepKernel() {
+}
+
+void CudaIntegrateVerletStepKernel::initialize(const System& system, const VerletIntegrator& integrator) {
+    initializeIntegration(system, data);
+    prevStepSize = -1.0;
+}
+
+void CudaIntegrateVerletStepKernel::execute(OpenMMContextImpl& context, const VerletIntegrator& integrator) {
+    _gpuContext* gpu = data.gpu;
+    double stepSize = integrator.getStepSize();
+    if (stepSize != prevStepSize) {
+        // Initialize the GPU parameters.
+        
+        gpuSetVerletIntegrationParameters(gpu, stepSize);
+        gpuSetConstants(gpu);
+        kGenerateRandoms(gpu);
+        prevStepSize = stepSize;
+    }
+    kVerletUpdatePart1(gpu);
+    kApplyFirstShake(gpu);
+    if (data.removeCM) {
+        int step = context.getTime()/stepSize;
+        if (step%data.cmMotionFrequency == 0)
+            gpu->bCalculateCM = true;
+    }
+    kVerletUpdatePart2(gpu);
+}
+
+CudaIntegrateLangevinStepKernel::~CudaIntegrateLangevinStepKernel() {
+}
+
+void CudaIntegrateLangevinStepKernel::initialize(const System& system, const LangevinIntegrator& integrator) {
+    initializeIntegration(system, data);
     prevStepSize = -1.0;
 }
 
@@ -418,63 +442,7 @@ CudaIntegrateBrownianStepKernel::~CudaIntegrateBrownianStepKernel() {
 }
 
 void CudaIntegrateBrownianStepKernel::initialize(const System& system, const BrownianIntegrator& integrator) {
-    
-    // Set masses.
-    
-    _gpuContext* gpu = data.gpu;
-    int numParticles = system.getNumParticles();
-    vector<float> mass(numParticles);
-    for (int i = 0; i < numParticles; i++)
-        mass[i] = (float) system.getParticleMass(i);
-    gpuSetMass(gpu, mass);
-    
-    // Set constraints.
-    
-    int numConstraints = system.getNumConstraints();
-    vector<int> particle1(numConstraints);
-    vector<int> particle2(numConstraints);
-    vector<float> distance(numConstraints);
-    vector<float> invMass1(numConstraints);
-    vector<float> invMass2(numConstraints);
-    for (int i = 0; i < numConstraints; i++) {
-        int particle1Index, particle2Index;
-        double constraintDistance;
-        system.getConstraintParameters(i, particle1Index, particle2Index, constraintDistance);
-        particle1[i] = particle1Index;
-        particle2[i] = particle2Index;
-        distance[i] = (float) constraintDistance;
-        invMass1[i] = 1.0f/mass[particle1Index];
-        invMass2[i] = 1.0f/mass[particle2Index];
-    }
-    gpuSetShakeParameters(gpu, particle1, particle2, distance, invMass1, invMass2);
-    
-    // Initialize any terms that haven't already been handled by a Force.
-    
-    if (!data.hasBonds)
-        gpuSetBondParameters(gpu, vector<int>(), vector<int>(), vector<float>(), vector<float>());
-    if (!data.hasAngles)
-        gpuSetBondAngleParameters(gpu, vector<int>(), vector<int>(), vector<int>(), vector<float>(), vector<float>());
-    if (!data.hasPeriodicTorsions)
-        gpuSetDihedralParameters(gpu, vector<int>(), vector<int>(), vector<int>(), vector<int>(), vector<float>(), vector<float>(), vector<int>());
-    if (!data.hasRB)
-        gpuSetRbDihedralParameters(gpu, vector<int>(), vector<int>(), vector<int>(), vector<int>(), vector<float>(), vector<float>(),
-                vector<float>(), vector<float>(), vector<float>(), vector<float>());
-    if (!data.hasNonbonded) {
-        gpuSetCoulombParameters(gpu, 138.935485f, vector<int>(), vector<float>(), vector<float>(), vector<float>(), vector<char>(), vector<vector<int> >());
-        gpuSetLJ14Parameters(gpu, 138.935485f, 1.0f, vector<int>(), vector<int>(), vector<float>(), vector<float>(), vector<float>(), vector<float>());
-    }
-    
-    // Finish initialization.
-    
-    gpuBuildThreadBlockWorkList(gpu);
-    gpuBuildExclusionList(gpu);
-    gpuBuildOutputBuffers(gpu);
-    gpuSetConstants(gpu);
-    kCalculateObcGbsaBornSum(gpu);
-    kReduceObcGbsaBornSum(gpu);
-    kClearBornForces(gpu);
-    kClearForces(gpu);
-    cudaThreadSynchronize();
+    initializeIntegration(system, data);
     prevStepSize = -1.0;
 }
 

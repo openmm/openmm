@@ -250,39 +250,33 @@ public:
 private:
     CudaPlatform::PlatformData& data;
 };
-//
-///**
-// * This kernel is invoked by VerletIntegrator to take one time step.
-// */
-//class CudaIntegrateVerletStepKernel : public IntegrateVerletStepKernel {
-//public:
-//    CudaIntegrateVerletStepKernel(std::string name, const Platform& platform) : IntegrateVerletStepKernel(name, platform),
-//        dynamics(0), shake(0), masses(0), shakeParameters(0), constraintIndices(0) {
-//    }
-//    ~CudaIntegrateVerletStepKernel();
-//    /**
-//     * Initialize the kernel.
-//     * 
-//     * @param system     the System this kernel will be applied to
-//     * @param integrator the VerletIntegrator this kernel will be used for
-//     */
-//    void initialize(const System& system, const VerletIntegrator& integrator);
-//    /**
-//     * Execute the kernel.
-//     * 
-//     * @param context    the context in which to execute this kernel
-//     * @param integrator the VerletIntegrator this kernel is being used for
-//     */
-//    void execute(OpenMMContextImpl& context, const VerletIntegrator& integrator);
-//private:
-//    CudaVerletDynamics* dynamics;
-//    CudaShakeAlgorithm* shake;
-//    RealOpenMM* masses;
-//    RealOpenMM** shakeParameters;
-//    int** constraintIndices;
-//    int numConstraints;
-//    double prevStepSize;
-//};
+
+/**
+ * This kernel is invoked by VerletIntegrator to take one time step.
+ */
+class CudaIntegrateVerletStepKernel : public IntegrateVerletStepKernel {
+public:
+    CudaIntegrateVerletStepKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data) : IntegrateVerletStepKernel(name, platform), data(data) {
+    }
+    ~CudaIntegrateVerletStepKernel();
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param integrator the VerletIntegrator this kernel will be used for
+     */
+    void initialize(const System& system, const VerletIntegrator& integrator);
+    /**
+     * Execute the kernel.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @param integrator the VerletIntegrator this kernel is being used for
+     */
+    void execute(OpenMMContextImpl& context, const VerletIntegrator& integrator);
+private:
+    CudaPlatform::PlatformData& data;
+    double prevStepSize;
+};
 
 /**
  * This kernel is invoked by LangevinIntegrator to take one time step.

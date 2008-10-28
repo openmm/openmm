@@ -30,17 +30,15 @@
  * -------------------------------------------------------------------------- */
 
 /**
- * This tests the Cuda implementation of AndersenThermostat.
+ * This tests the Cuda implementation of VerletIntegrator.
  */
 
 #include "../../../tests/AssertionUtilities.h"
-#include "CMMotionRemover.h"
 #include "OpenMMContext.h"
 #include "CudaPlatform.h"
 #include "HarmonicBondForce.h"
 #include "NonbondedForce.h"
 #include "System.h"
-#include "LangevinIntegrator.h"
 #include "VerletIntegrator.h"
 #include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
 #include "../src/sfmt/SFMT.h"
@@ -50,63 +48,96 @@
 using namespace OpenMM;
 using namespace std;
 
-Vec3 calcCM(const vector<Vec3>& values, System& system) {
-    Vec3 cm;
-    for (int j = 0; j < system.getNumParticles(); ++j) {
-        cm[0] += values[j][0]*system.getParticleMass(j);
-        cm[1] += values[j][1]*system.getParticleMass(j);
-        cm[2] += values[j][2]*system.getParticleMass(j);
+const double TOL = 1e-5;
+
+void testSingleBond() {
+    CudaPlatform platform;
+    System system(2, 0);
+    system.setParticleMass(0, 2.0);
+    system.setParticleMass(1, 2.0);
+    VerletIntegrator integrator(0.01);
+    HarmonicBondForce* forceField = new HarmonicBondForce(1);
+    forceField->setBondParameters(0, 0, 1, 1.5, 1);
+    system.addForce(forceField);
+    OpenMMContext context(system, integrator, platform);
+    vector<Vec3> positions(2);
+    positions[0] = Vec3(-1, 0, 0);
+    positions[1] = Vec3(1, 0, 0);
+    context.setPositions(positions);
+    
+    // This is simply a harmonic oscillator, so compare it to the analytical solution.
+    
+    const double freq = 1.0;;
+    State state = context.getState(State::Energy);
+    const double initialEnergy = state.getKineticEnergy()+state.getPotentialEnergy();
+    for (int i = 0; i < 1000; ++i) {
+        state = context.getState(State::Positions | State::Velocities | State::Energy);
+        double time = state.getTime();
+        double expectedDist = 1.5+0.5*std::cos(freq*time);
+        ASSERT_EQUAL_VEC(Vec3(-0.5*expectedDist, 0, 0), state.getPositions()[0], 0.02);
+        ASSERT_EQUAL_VEC(Vec3(0.5*expectedDist, 0, 0), state.getPositions()[1], 0.02);
+        double expectedSpeed = -0.5*freq*std::sin(freq*time);
+        ASSERT_EQUAL_VEC(Vec3(-0.5*expectedSpeed, 0, 0), state.getVelocities()[0], 0.02);
+        ASSERT_EQUAL_VEC(Vec3(0.5*expectedSpeed, 0, 0), state.getVelocities()[1], 0.02);
+        double energy = state.getKineticEnergy()+state.getPotentialEnergy();
+        ASSERT_EQUAL_TOL(initialEnergy, energy, 0.01);
+        integrator.step(1);
     }
-    return cm;
 }
 
-void testMotionRemoval(Integrator& integrator) {
+void testConstraints() {
     const int numParticles = 8;
+    const int numConstraints = numParticles/2;
+    const double temp = 100.0;
     CudaPlatform platform;
-    System system(numParticles, 0);
-    HarmonicBondForce* bonds = new HarmonicBondForce(1);
-    bonds->setBondParameters(0, 2, 3, 2.0, 0.5);
-    system.addForce(bonds);
-    NonbondedForce* nonbonded = new NonbondedForce(numParticles, 0);
+    System system(numParticles, numConstraints);
+    VerletIntegrator integrator(0.001);
+    NonbondedForce* forceField = new NonbondedForce(numParticles, 0);
     for (int i = 0; i < numParticles; ++i) {
-        system.setParticleMass(i, i+1);
-        nonbonded->setParticleParameters(i, (i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
+        system.setParticleMass(i, 10.0);
+        forceField->setParticleParameters(i, (i%2 == 0 ? 0.2 : -0.2), 0.5, 5.0);
     }
-    system.addForce(nonbonded);
-    CMMotionRemover* remover = new CMMotionRemover();
-    system.addForce(remover);
+    for (int i = 0; i < numConstraints; ++i)
+        system.setConstraintParameters(i, 2*i, 2*i+1, 1.0);
+    system.addForce(forceField);
     OpenMMContext context(system, integrator, platform);
     vector<Vec3> positions(numParticles);
     vector<Vec3> velocities(numParticles);
     init_gen_rand(0);
     for (int i = 0; i < numParticles; ++i) {
-        positions[i] = Vec3((i%2 == 0 ? 2 : -2), (i%4 < 2 ? 2 : -2), (i < 4 ? 2 : -2));
+        positions[i] = Vec3(i/2, (i+1)/2, 0);
         velocities[i] = Vec3(genrand_real2()-0.5, genrand_real2()-0.5, genrand_real2()-0.5);
     }
     context.setPositions(positions);
     context.setVelocities(velocities);
     
-    // Now run it for a while and see if the center of mass remains fixed.
+    // Simulate it and see whether the constraints remain satisfied.
     
-    Vec3 cmPos = calcCM(context.getState(State::Positions).getPositions(), system);
+    double initialEnergy = 0.0;
     for (int i = 0; i < 1000; ++i) {
-        integrator.step(1);
-        State state = context.getState(State::Positions | State::Velocities);
-        Vec3 pos = calcCM(state.getPositions(), system);
-        ASSERT_EQUAL_VEC(cmPos, pos, 1e-2);
-        Vec3 vel = calcCM(state.getVelocities(), system);
-        if (i > 0) {
-            ASSERT_EQUAL_VEC(Vec3(0, 0, 0), vel, 1e-2);
+        State state = context.getState(State::Positions | State::Energy);
+        for (int j = 0; j < numConstraints; ++j) {
+            int particle1, particle2;
+            double distance;
+            system.getConstraintParameters(j, particle1, particle2, distance);
+            Vec3 p1 = state.getPositions()[particle1];
+            Vec3 p2 = state.getPositions()[particle2];
+            double dist = std::sqrt((p1[0]-p2[0])*(p1[0]-p2[0])+(p1[1]-p2[1])*(p1[1]-p2[1])+(p1[2]-p2[2])*(p1[2]-p2[2]));
+            ASSERT_EQUAL_TOL(distance, dist, 2e-4);
         }
+        double energy = state.getKineticEnergy()+state.getPotentialEnergy();
+        if (i == 1)
+            initialEnergy = energy;
+        else if (i > 1)
+            ASSERT_EQUAL_TOL(initialEnergy, energy, 0.02);
+        integrator.step(1);
     }
 }
 
 int main() {
     try {
-        LangevinIntegrator langevin(0.0, 1e-5, 0.01);
-        testMotionRemoval(langevin);
-        VerletIntegrator verlet(0.01);
-        testMotionRemoval(verlet);
+        testSingleBond();
+        testConstraints();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;
