@@ -331,32 +331,32 @@ private:
     CudaPlatform::PlatformData& data;
     double prevTemp, prevFriction, prevStepSize;
 };
-//
-///**
-// * This kernel is invoked by AndersenThermostat at the start of each time step to adjust the particle velocities.
-// */
-//class CudaApplyAndersenThermostatKernel : public ApplyAndersenThermostatKernel {
-//public:
-//    CudaApplyAndersenThermostatKernel(std::string name, const Platform& platform) : ApplyAndersenThermostatKernel(name, platform), thermostat(0) {
-//    }
-//    ~CudaApplyAndersenThermostatKernel();
-//    /**
-//     * Initialize the kernel.
-//     * 
-//     * @param system     the System this kernel will be applied to
-//     * @param thermostat the AndersenThermostat this kernel will be used for
-//     */
-//    void initialize(const System& system, const AndersenThermostat& thermostat);
-//    /**
-//     * Execute the kernel.
-//     * 
-//     * @param context    the context in which to execute this kernel
-//     */
-//    void execute(OpenMMContextImpl& context);
-//private:
-//    CudaAndersenThermostat* thermostat;
-//    RealOpenMM* masses;
-//};
+
+/**
+ * This kernel is invoked by AndersenThermostat at the start of each time step to adjust the particle velocities.
+ */
+class CudaApplyAndersenThermostatKernel : public ApplyAndersenThermostatKernel {
+public:
+    CudaApplyAndersenThermostatKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data) : ApplyAndersenThermostatKernel(name, platform), data(data) {
+    }
+    ~CudaApplyAndersenThermostatKernel();
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param thermostat the AndersenThermostat this kernel will be used for
+     */
+    void initialize(const System& system, const AndersenThermostat& thermostat);
+    /**
+     * Execute the kernel.
+     * 
+     * @param context    the context in which to execute this kernel
+     */
+    void execute(OpenMMContextImpl& context);
+private:
+    CudaPlatform::PlatformData& data;
+    double prevTemp, prevFrequency, prevStepSize;
+};
 
 /**
  * This kernel is invoked to calculate the kinetic energy of the system.

@@ -87,7 +87,7 @@ void testSingleBond() {
 void testTemperature() {
     const int numParticles = 8;
     const int numBonds = numParticles-1;
-    const double temp = 100.0;
+    const double temp = 10.0;
     ReferencePlatform platform;
     System system(numParticles, 0);
     BrownianIntegrator integrator(temp, 2.0, 0.01);
@@ -96,7 +96,7 @@ void testTemperature() {
         system.setParticleMass(i, 2.0);
     }
     for (int i = 0; i < numBonds; ++i)
-        forceField->setBondParameters(i, i, i+1, 1.0, i+1);
+        forceField->setBondParameters(i, i, i+1, 1.0, 5.0);
     system.addForce(forceField);
     OpenMMContext context(system, integrator, platform);
     vector<Vec3> positions(numParticles);
@@ -106,7 +106,7 @@ void testTemperature() {
     
     // Let it equilibrate.
     
-    integrator.step(1000);
+    integrator.step(10000);
     
     // Now run it for a while and see if the temperature is correct.
     
@@ -119,8 +119,7 @@ void testTemperature() {
     }
     pe /= steps;
     double expected = 0.5*numBonds*BOLTZ*temp;
-    expected *= sqrt(2.0);
-    ASSERT_EQUAL_TOL(expected, pe, 4*expected/std::sqrt(steps));
+    ASSERT_EQUAL_TOL(expected, pe, 20*expected/std::sqrt(steps));
 }
 
 void testConstraints() {

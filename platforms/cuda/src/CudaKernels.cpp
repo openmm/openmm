@@ -471,15 +471,31 @@ void CudaIntegrateBrownianStepKernel::execute(OpenMMContextImpl& context, const 
     }
     kBrownianUpdatePart2(gpu);
 }
-//
-//CudaApplyAndersenThermostatKernel::~CudaApplyAndersenThermostatKernel() {
-//}
-//
-//void CudaApplyAndersenThermostatKernel::initialize(const System& system, const AndersenThermostat& thermostat) {
-//}
-//
-//void CudaApplyAndersenThermostatKernel::execute(OpenMMContextImpl& context) {
-//}
+
+CudaApplyAndersenThermostatKernel::~CudaApplyAndersenThermostatKernel() {
+}
+
+void CudaApplyAndersenThermostatKernel::initialize(const System& system, const AndersenThermostat& thermostat) {
+    prevStepSize = -1.0;
+}
+
+void CudaApplyAndersenThermostatKernel::execute(OpenMMContextImpl& context) {
+    _gpuContext* gpu = data.gpu;
+    double temperature = context.getParameter(AndersenThermostat::Temperature);
+    double frequency = context.getParameter(AndersenThermostat::CollisionFrequency);
+    double stepSize = context.getIntegrator().getStepSize();
+    if (temperature != prevTemp || frequency != prevFrequency || stepSize != prevStepSize) {
+        // Initialize the GPU parameters.
+        
+        gpuSetAndersenThermostatParameters(gpu, temperature, frequency*stepSize);
+        gpuSetConstants(gpu);
+        kGenerateRandoms(gpu);
+        prevTemp = temperature;
+        prevFrequency = frequency;
+        prevStepSize = stepSize;
+    }
+    kCalculateAndersenThermostat(gpu);
+}
 
 void CudaCalcKineticEnergyKernel::initialize(const System& system) {
     int numParticles = system.getNumParticles();
