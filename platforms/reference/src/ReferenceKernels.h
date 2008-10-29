@@ -223,20 +223,20 @@ private:
 };
 
 /**
- * This kernel is invoked by GBSAOBCForceField to calculate the forces acting on the system.
+ * This kernel is invoked by GBSAOBCForce to calculate the forces acting on the system.
  */
-class ReferenceCalcGBSAOBCForceFieldKernel : public CalcGBSAOBCForceFieldKernel {
+class ReferenceCalcGBSAOBCForceKernel : public CalcGBSAOBCForceKernel {
 public:
-    ReferenceCalcGBSAOBCForceFieldKernel(std::string name, const Platform& platform) : CalcGBSAOBCForceFieldKernel(name, platform) {
+    ReferenceCalcGBSAOBCForceKernel(std::string name, const Platform& platform) : CalcGBSAOBCForceKernel(name, platform) {
     }
-    ~ReferenceCalcGBSAOBCForceFieldKernel();
+    ~ReferenceCalcGBSAOBCForceKernel();
     /**
      * Initialize the kernel.
      * 
      * @param system     the System this kernel will be applied to
-     * @param force      the GBSAOBCForceField this kernel will be used for
+     * @param force      the GBSAOBCForce this kernel will be used for
      */
-    void initialize(const System& system, const GBSAOBCForceField& force);
+    void initialize(const System& system, const GBSAOBCForce& force);
     /**
      * Execute the kernel to calculate the forces.
      * 
@@ -247,7 +247,7 @@ public:
      * Execute the kernel to calculate the energy.
      * 
      * @param context    the context in which to execute this kernel
-     * @return the potential energy due to the GBSAOBCForceField
+     * @return the potential energy due to the GBSAOBCForce
      */
     double executeEnergy(OpenMMContextImpl& context);
 private:

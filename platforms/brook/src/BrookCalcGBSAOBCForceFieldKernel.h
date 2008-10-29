@@ -41,21 +41,21 @@ namespace OpenMM {
 /**
  * This kernel is invoked by NonbondedForce to calculate the forces acting on the system.
  */
-class BrookCalcGBSAOBCForceFieldKernel : public CalcGBSAOBCForceFieldKernel {
+class BrookCalcGBSAOBCForceKernel : public CalcGBSAOBCForceKernel {
 
    public:
   
       /**
-       * BrookCalcGBSAOBCForceFieldKernel constructor
+       * BrookCalcGBSAOBCForceKernel constructor
        */
 
-      BrookCalcGBSAOBCForceFieldKernel( std::string name, const Platform& platform );
+      BrookCalcGBSAOBCForceKernel( std::string name, const Platform& platform );
   
       /**
-       * BrookCalcGBSAOBCForceFieldKernel destructor
+       * BrookCalcGBSAOBCForceKernel destructor
        */
 
-      ~BrookCalcGBSAOBCForceFieldKernel();
+      ~BrookCalcGBSAOBCForceKernel();
   
       /**
        * Initialize the kernel, setting up the values of all the force field parameters.

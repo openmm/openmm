@@ -288,10 +288,10 @@ double CudaCalcNonbondedForceKernel::executeEnergy(OpenMMContextImpl& context) {
     return 0.0;
 }
 
-CudaCalcGBSAOBCForceFieldKernel::~CudaCalcGBSAOBCForceFieldKernel() {
+CudaCalcGBSAOBCForceKernel::~CudaCalcGBSAOBCForceKernel() {
 }
 
-void CudaCalcGBSAOBCForceFieldKernel::initialize(const System& system, const GBSAOBCForceField& force) {
+void CudaCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOBCForce& force) {
     int numParticles = system.getNumParticles();
     _gpuContext* gpu = data.gpu;
     vector<int> particle(numParticles);
@@ -308,7 +308,7 @@ void CudaCalcGBSAOBCForceFieldKernel::initialize(const System& system, const GBS
     data.useOBC = true;
 }
 
-void CudaCalcGBSAOBCForceFieldKernel::executeForces(OpenMMContextImpl& context) {
+void CudaCalcGBSAOBCForceKernel::executeForces(OpenMMContextImpl& context) {
 }
 
 static void initializeIntegration(const System& system, CudaPlatform::PlatformData& data) {
@@ -371,7 +371,7 @@ static void initializeIntegration(const System& system, CudaPlatform::PlatformDa
     cudaThreadSynchronize();
 }
 
-double CudaCalcGBSAOBCForceFieldKernel::executeEnergy(OpenMMContextImpl& context) {
+double CudaCalcGBSAOBCForceKernel::executeEnergy(OpenMMContextImpl& context) {
 }
 
 CudaIntegrateVerletStepKernel::~CudaIntegrateVerletStepKernel() {

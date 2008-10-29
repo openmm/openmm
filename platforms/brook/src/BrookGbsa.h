@@ -44,7 +44,7 @@ namespace OpenMM {
 
 /**
  *
- * Used by BrookCalcGBSAOBCForceFieldKernel kernel to execute OBC algorithm on GPU
+ * Used by BrookCalcGBSAOBCForceKernel kernel to execute OBC algorithm on GPU
  *
  */
 

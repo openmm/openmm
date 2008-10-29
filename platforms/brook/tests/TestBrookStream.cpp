@@ -48,7 +48,7 @@
 #include "OpenMMContext.h"
 #include "CMMotionRemover.h"
 #include "NonbondedForce.h"
-#include "GBSAOBCForceField.h"
+#include "GBSAOBCForce.h"
 #include "System.h"
 #include "LangevinIntegrator.h"
 #include "VerletIntegrator.h"
@@ -1589,7 +1589,7 @@ static OpenMMContext* testObcForceSetup( int numAtoms, int brookContext ){
 
    System* system                 = new System( numAtoms, 0 );
    LangevinIntegrator* integrator = new LangevinIntegrator(0, 0.1, 0.01);
-   GBSAOBCForceField* forceField  = new GBSAOBCForceField(numAtoms);
+   GBSAOBCForce* forceField  = new GBSAOBCForce(numAtoms);
 
    for (int i = 0; i < numAtoms; ++i){
        // charge radius scalingFactor
@@ -1715,7 +1715,7 @@ static OpenMMContext* testObcForceFileSetup( std::string fileName, int brookCont
    lineCount++;
 
    System* system                 = new System( *numAtoms, 0 );
-   GBSAOBCForceField* forceField  = new GBSAOBCForceField(numberOfAtoms);
+   GBSAOBCForce* forceField  = new GBSAOBCForce(numberOfAtoms);
 
    vector<Vec3> positions(numberOfAtoms);
    int index                      = 0;
@@ -1855,7 +1855,7 @@ void testObcSingleAtom() {
     System system(1, 0);
     system.setAtomMass(0, 2.0);
     LangevinIntegrator integrator(0, 0.1, 0.01);
-    GBSAOBCForceField* forceField = new GBSAOBCForceField(1);
+    GBSAOBCForce* forceField = new GBSAOBCForce(1);
     forceField->setAtomParameters(0, 0.5, 0.15, 1);
     system.addForce(forceField);
     OpenMMContext context(system, integrator, platform);
@@ -1888,7 +1888,7 @@ void testObcEConsistentForce() {
     const int numAtoms = 10; 
     System system(numAtoms, 0); 
     LangevinIntegrator integrator(0, 0.1, 0.01);
-    GBSAOBCForceField* forceField = new GBSAOBCForceField(numAtoms);
+    GBSAOBCForce* forceField = new GBSAOBCForce(numAtoms);
     for (int i = 0; i < numAtoms; ++i)
         forceField->setAtomParameters(i, i%2 == 0 ? -1 : 1, 0.15, 1); 
     system.addForce(forceField);

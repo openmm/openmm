@@ -1,3 +1,6 @@
+#ifndef OPENMM_GBSAOBCFORCEFIELDIMPL_H_
+#define OPENMM_GBSAOBCFORCEFIELDIMPL_H_
+
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -29,32 +32,38 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "internal/GBSAOBCForceFieldImpl.h"
-#include "internal/OpenMMContextImpl.h"
-#include "kernels.h"
-#include <vector>
+#include "ForceImpl.h"
+#include "GBSAOBCForce.h"
+#include "Kernel.h"
+#include <string>
 
-using namespace OpenMM;
-using std::vector;
+namespace OpenMM {
 
-GBSAOBCForceFieldImpl::GBSAOBCForceFieldImpl(GBSAOBCForceField& owner) : owner(owner) {
-}
+/**
+ * This is the internal implementation of GBSAOBCForce.
+ */
 
-void GBSAOBCForceFieldImpl::initialize(OpenMMContextImpl& context) {
-    kernel = context.getPlatform().createKernel(CalcGBSAOBCForceFieldKernel::Name(), context);
-    dynamic_cast<CalcGBSAOBCForceFieldKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
-}
+class GBSAOBCForceImpl : public ForceImpl {
+public:
+    GBSAOBCForceImpl(GBSAOBCForce& owner);
+    void initialize(OpenMMContextImpl& context);
+    GBSAOBCForce& getOwner() {
+        return owner;
+    }
+    void updateContextState(OpenMMContextImpl& context) {
+        // This force field doesn't update the state directly.
+    }
+    void calcForces(OpenMMContextImpl& context, Stream& forces);
+    double calcEnergy(OpenMMContextImpl& context);
+    std::map<std::string, double> getDefaultParameters() {
+        return std::map<std::string, double>(); // This force field doesn't define any parameters.
+    }
+    std::vector<std::string> getKernelNames();
+private:
+    GBSAOBCForce& owner;
+    Kernel kernel;
+};
 
-void GBSAOBCForceFieldImpl::calcForces(OpenMMContextImpl& context, Stream& forces) {
-    dynamic_cast<CalcGBSAOBCForceFieldKernel&>(kernel.getImpl()).executeForces(context);
-}
+} // namespace OpenMM
 
-double GBSAOBCForceFieldImpl::calcEnergy(OpenMMContextImpl& context) {
-    return dynamic_cast<CalcGBSAOBCForceFieldKernel&>(kernel.getImpl()).executeEnergy(context);
-}
-
-std::vector<std::string> GBSAOBCForceFieldImpl::getKernelNames() {
-    std::vector<std::string> names;
-    names.push_back(CalcGBSAOBCForceFieldKernel::Name());
-    return names;
-}
+#endif /*OPENMM_GBSAOBCFORCEFIELDIMPL_H_*/

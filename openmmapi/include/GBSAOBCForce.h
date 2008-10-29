@@ -42,14 +42,14 @@ namespace OpenMM {
  * This class implements an implicit solvation force using the GBSA-OBC model.
  */
 
-class OPENMM_EXPORT GBSAOBCForceField : public Force {
+class OPENMM_EXPORT GBSAOBCForce : public Force {
 public:
     /*
-     * Create a GBSAOBCForceField.
+     * Create a GBSAOBCForce.
      * 
      * @param numParticles    the number of particles in the system
      */
-    GBSAOBCForceField(int numParticles);
+    GBSAOBCForce(int numParticles);
     /**
      * Get the number of particles in the system.
      */
@@ -120,7 +120,7 @@ private:
 
 };
 
-class GBSAOBCForceField::ParticleInfo {
+class GBSAOBCForce::ParticleInfo {
 public:
     double charge, radius, scalingFactor;
     ParticleInfo() {

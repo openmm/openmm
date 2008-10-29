@@ -387,14 +387,14 @@ double ReferenceCalcNonbondedForceKernel::executeEnergy(OpenMMContextImpl& conte
     return energy;
 }
 
-ReferenceCalcGBSAOBCForceFieldKernel::~ReferenceCalcGBSAOBCForceFieldKernel() {
+ReferenceCalcGBSAOBCForceKernel::~ReferenceCalcGBSAOBCForceKernel() {
     if (obc) {
         // delete obc->getObcParameters();
         delete obc;
     }
 }
 
-void ReferenceCalcGBSAOBCForceFieldKernel::initialize(const System& system, const GBSAOBCForceField& force) {
+void ReferenceCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOBCForce& force) {
     int numParticles = system.getNumParticles();
     charges.resize(numParticles);
     vector<RealOpenMM> atomicRadii(numParticles);
@@ -415,13 +415,13 @@ void ReferenceCalcGBSAOBCForceFieldKernel::initialize(const System& system, cons
     obc->setIncludeAceApproximation(true);
 }
 
-void ReferenceCalcGBSAOBCForceFieldKernel::executeForces(OpenMMContextImpl& context) {
+void ReferenceCalcGBSAOBCForceKernel::executeForces(OpenMMContextImpl& context) {
     RealOpenMM** posData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData()); // Reference code needs to be made const correct
     RealOpenMM** forceData = ((ReferenceFloatStreamImpl&) context.getForces().getImpl()).getData();
     obc->computeImplicitSolventForces(posData, &charges[0], forceData, 0);
 }
 
-double ReferenceCalcGBSAOBCForceFieldKernel::executeEnergy(OpenMMContextImpl& context) {
+double ReferenceCalcGBSAOBCForceKernel::executeEnergy(OpenMMContextImpl& context) {
     RealOpenMM** posData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData()); // Reference code needs to be made const correct
     RealOpenMM** forceData = allocateRealArray(context.getSystem().getNumParticles(), 3);
     obc->computeImplicitSolventForces(posData, &charges[0], forceData, 1);

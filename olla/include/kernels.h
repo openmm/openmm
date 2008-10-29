@@ -35,7 +35,7 @@
 #include "AndersenThermostat.h"
 #include "BrownianIntegrator.h"
 #include "CMMotionRemover.h"
-#include "GBSAOBCForceField.h"
+#include "GBSAOBCForce.h"
 #include "HarmonicAngleForce.h"
 #include "HarmonicBondForce.h"
 #include "KernelImpl.h"
@@ -221,22 +221,22 @@ public:
 };
 
 /**
- * This kernel is invoked by GBSAOBCForceField to calculate the forces acting on the system and the energy of the system.
+ * This kernel is invoked by GBSAOBCForce to calculate the forces acting on the system and the energy of the system.
  */
-class CalcGBSAOBCForceFieldKernel : public KernelImpl {
+class CalcGBSAOBCForceKernel : public KernelImpl {
 public:
     static std::string Name() {
         return "CalcGBSAOBCForces";
     }
-    CalcGBSAOBCForceFieldKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    CalcGBSAOBCForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
     /**
      * Initialize the kernel.
      * 
      * @param system     the System this kernel will be applied to
-     * @param force      the GBSAOBCForceField this kernel will be used for
+     * @param force      the GBSAOBCForce this kernel will be used for
      */
-    virtual void initialize(const System& system, const GBSAOBCForceField& force) = 0;
+    virtual void initialize(const System& system, const GBSAOBCForce& force) = 0;
     /**
      * Execute the kernel to calculate the forces.
      * 
@@ -247,7 +247,7 @@ public:
      * Execute the kernel to calculate the energy.
      * 
      * @param context    the context in which to execute this kernel
-     * @return the potential energy due to the GBSAOBCForceField
+     * @return the potential energy due to the GBSAOBCForce
      */
     virtual double executeEnergy(OpenMMContextImpl& context) = 0;
 };

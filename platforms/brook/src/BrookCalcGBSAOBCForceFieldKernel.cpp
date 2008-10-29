@@ -35,7 +35,7 @@
 #include <sstream>
 
 #include "BrookStreamImpl.h"
-#include "BrookCalcGBSAOBCForceFieldKernel.h"
+#include "BrookCalcGBSAOBCForceKernel.h"
 #include "gpu/kgbsa.h"
 #include "gpu/kforce.h"
 #include "math.h"
@@ -44,19 +44,19 @@ using namespace OpenMM;
 using namespace std;
 
 /** 
- * BrookCalcGBSAOBCForceFieldKernel constructor
+ * BrookCalcGBSAOBCForceKernel constructor
  * 
  * @param name                      kernel name
  * @param platform                  platform
  *
  */
 
-BrookCalcGBSAOBCForceFieldKernel::BrookCalcGBSAOBCForceFieldKernel( std::string name, const Platform& platform ) :
-                     CalcGBSAOBCForceFieldKernel( name, platform ){
+BrookCalcGBSAOBCForceKernel::BrookCalcGBSAOBCForceKernel( std::string name, const Platform& platform ) :
+                     CalcGBSAOBCForceKernel( name, platform ){
 
 // ---------------------------------------------------------------------------------------
 
-   // static const std::string methodName      = "BrookCalcGBSAOBCForceFieldKernel::BrookCalcGBSAOBCForceFieldKernel";
+   // static const std::string methodName      = "BrookCalcGBSAOBCForceKernel::BrookCalcGBSAOBCForceKernel";
    // static const int debug                   = 1;
 
 // ---------------------------------------------------------------------------------------
@@ -73,15 +73,15 @@ BrookCalcGBSAOBCForceFieldKernel::BrookCalcGBSAOBCForceFieldKernel( std::string 
 }   
 
 /** 
- * BrookCalcGBSAOBCForceFieldKernel destructor
+ * BrookCalcGBSAOBCForceKernel destructor
  * 
  */
 
-BrookCalcGBSAOBCForceFieldKernel::~BrookCalcGBSAOBCForceFieldKernel( ){
+BrookCalcGBSAOBCForceKernel::~BrookCalcGBSAOBCForceKernel( ){
 
 // ---------------------------------------------------------------------------------------
 
-   // static const std::string methodName      = "BrookCalcGBSAOBCForceFieldKernel::BrookCalcGBSAOBCForceFieldKernel";
+   // static const std::string methodName      = "BrookCalcGBSAOBCForceKernel::BrookCalcGBSAOBCForceKernel";
    // static const int debug                   = 1;
 
 // ---------------------------------------------------------------------------------------
@@ -96,7 +96,7 @@ BrookCalcGBSAOBCForceFieldKernel::~BrookCalcGBSAOBCForceFieldKernel( ){
  *
  */
 
-FILE* BrookCalcGBSAOBCForceFieldKernel::getLog( void ) const {
+FILE* BrookCalcGBSAOBCForceKernel::getLog( void ) const {
    return _log;
 }
 
@@ -109,7 +109,7 @@ FILE* BrookCalcGBSAOBCForceFieldKernel::getLog( void ) const {
  *
  */
 
-int BrookCalcGBSAOBCForceFieldKernel::setLog( FILE* log ){
+int BrookCalcGBSAOBCForceKernel::setLog( FILE* log ){
    _log = log;
    return BrookCommon::DefaultReturnValue;
 }
@@ -123,12 +123,12 @@ int BrookCalcGBSAOBCForceFieldKernel::setLog( FILE* log ){
  *
  */
 
-void BrookCalcGBSAOBCForceFieldKernel::initialize( const std::vector<std::vector<double> >& atomParameters, 
+void BrookCalcGBSAOBCForceKernel::initialize( const std::vector<std::vector<double> >& atomParameters, 
                                                    double solventDielectric, double soluteDielectric ){
 
 // ---------------------------------------------------------------------------------------
 
-   static const std::string methodName      = "BrookCalcGBSAOBCForceFieldKernel::initialize";
+   static const std::string methodName      = "BrookCalcGBSAOBCForceKernel::initialize";
 
 // ---------------------------------------------------------------------------------------
 
@@ -165,11 +165,11 @@ void BrookCalcGBSAOBCForceFieldKernel::initialize( const std::vector<std::vector
  *
  */
 
-void BrookCalcGBSAOBCForceFieldKernel::executeForces( const Stream& positions, Stream& forces ){
+void BrookCalcGBSAOBCForceKernel::executeForces( const Stream& positions, Stream& forces ){
 
 // ---------------------------------------------------------------------------------------
 
-   static const std::string methodName   = "BrookCalcGBSAOBCForceFieldKernel::executeForces";
+   static const std::string methodName   = "BrookCalcGBSAOBCForceKernel::executeForces";
    static const int PrintOn              = 0; 
 
 // ---------------------------------------------------------------------------------------
@@ -419,11 +419,11 @@ void BrookCalcGBSAOBCForceFieldKernel::executeForces( const Stream& positions, S
  *
  */
 
-double BrookCalcGBSAOBCForceFieldKernel::executeEnergy( const Stream& positions ){
+double BrookCalcGBSAOBCForceKernel::executeEnergy( const Stream& positions ){
 
 // ---------------------------------------------------------------------------------------
 
-   //static const std::string methodName      = "BrookCalcGBSAOBCForceFieldKernel::executeEnergy";
+   //static const std::string methodName      = "BrookCalcGBSAOBCForceKernel::executeEnergy";
 
 // ---------------------------------------------------------------------------------------
 

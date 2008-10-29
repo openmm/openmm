@@ -35,7 +35,7 @@
 #include "BrookIntegrateVerletStepKernel.h"
 #include "BrookIntegrateBrownianStepKernel.h"
 #include "BrookCalcKineticEnergyKernel.h"
-#include "BrookCalcGBSAOBCForceFieldKernel.h"
+#include "BrookCalcGBSAOBCForceKernel.h"
 #include "BrookRemoveCMMotionKernel.h"
 
 using namespace OpenMM;
@@ -56,9 +56,9 @@ KernelImpl* BrookKernelFactory::createKernelImpl( std::string name, const Platfo
 
    // GBSA OBC
 
-	} else if( name == CalcGBSAOBCForceFieldKernel::Name() ){
+	} else if( name == CalcGBSAOBCForceKernel::Name() ){
 
-      return new BrookCalcGBSAOBCForceFieldKernel(name, platform);
+      return new BrookCalcGBSAOBCForceKernel(name, platform);
 
    // Verlet integrator
 

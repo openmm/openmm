@@ -30,13 +30,13 @@
  * -------------------------------------------------------------------------- */
 
 /**
- * This tests the reference implementation of GBSAOBCForceField.
+ * This tests the reference implementation of GBSAOBCForce.
  */
 
 #include "../../../tests/AssertionUtilities.h"
 #include "OpenMMContext.h"
 #include "ReferencePlatform.h"
-#include "GBSAOBCForceField.h"
+#include "GBSAOBCForce.h"
 #include "System.h"
 #include "LangevinIntegrator.h"
 #include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
@@ -54,7 +54,7 @@ void testSingleParticle() {
     System system(1, 0);
     system.setParticleMass(0, 2.0);
     LangevinIntegrator integrator(0, 0.1, 0.01);
-    GBSAOBCForceField* forceField = new GBSAOBCForceField(1);
+    GBSAOBCForce* forceField = new GBSAOBCForce(1);
     forceField->setParticleParameters(0, 0.5, 0.15, 1);
     system.addForce(forceField);
     OpenMMContext context(system, integrator, platform);
@@ -75,7 +75,7 @@ void testForce() {
     const int numParticles = 10;
     System system(numParticles, 0);
     LangevinIntegrator integrator(0, 0.1, 0.01);
-    GBSAOBCForceField* forceField = new GBSAOBCForceField(numParticles);
+    GBSAOBCForce* forceField = new GBSAOBCForce(numParticles);
     for (int i = 0; i < numParticles; ++i)
         forceField->setParticleParameters(i, i%2 == 0 ? -1 : 1, 0.15, 1);
     system.addForce(forceField);

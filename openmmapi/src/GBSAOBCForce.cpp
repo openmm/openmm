@@ -31,26 +31,26 @@
 
 #include "Force.h"
 #include "OpenMMException.h"
-#include "GBSAOBCForceField.h"
-#include "internal/GBSAOBCForceFieldImpl.h"
+#include "GBSAOBCForce.h"
+#include "internal/GBSAOBCForceImpl.h"
 
 using namespace OpenMM;
 
-GBSAOBCForceField::GBSAOBCForceField(int numParticles) : particles(numParticles), solventDielectric(78.3), soluteDielectric(1.0) {
+GBSAOBCForce::GBSAOBCForce(int numParticles) : particles(numParticles), solventDielectric(78.3), soluteDielectric(1.0) {
 }
 
-void GBSAOBCForceField::getParticleParameters(int index, double& charge, double& radius, double& scalingFactor) const {
+void GBSAOBCForce::getParticleParameters(int index, double& charge, double& radius, double& scalingFactor) const {
     charge = particles[index].charge;
     radius = particles[index].radius;
     scalingFactor = particles[index].scalingFactor;
 }
 
-void GBSAOBCForceField::setParticleParameters(int index, double charge, double radius, double scalingFactor) {
+void GBSAOBCForce::setParticleParameters(int index, double charge, double radius, double scalingFactor) {
     particles[index].charge = charge;
     particles[index].radius = radius;
     particles[index].scalingFactor = scalingFactor;
 }
 
-ForceImpl* GBSAOBCForceField::createImpl() {
-    return new GBSAOBCForceFieldImpl(*this);
+ForceImpl* GBSAOBCForce::createImpl() {
+    return new GBSAOBCForceImpl(*this);
 }

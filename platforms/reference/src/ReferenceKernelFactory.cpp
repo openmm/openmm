@@ -48,8 +48,8 @@ KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name, const Pla
         return new ReferenceCalcPeriodicTorsionForceKernel(name, platform);
     else if (name == CalcRBTorsionForceKernel::Name())
         return new ReferenceCalcRBTorsionForceKernel(name, platform);
-    else if (name == CalcGBSAOBCForceFieldKernel::Name())
-        return new ReferenceCalcGBSAOBCForceFieldKernel(name, platform);
+    else if (name == CalcGBSAOBCForceKernel::Name())
+        return new ReferenceCalcGBSAOBCForceKernel(name, platform);
     else if (name == IntegrateVerletStepKernel::Name())
         return new ReferenceIntegrateVerletStepKernel(name, platform);
     else if (name == IntegrateLangevinStepKernel::Name())

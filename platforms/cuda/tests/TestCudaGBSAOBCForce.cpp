@@ -30,13 +30,13 @@
  * -------------------------------------------------------------------------- */
 
 /**
- * This tests the Cuda implementation of GBSAOBCForceField.
+ * This tests the Cuda implementation of GBSAOBCForce.
  */
 
 #include "../../../tests/AssertionUtilities.h"
 #include "OpenMMContext.h"
 #include "CudaPlatform.h"
-#include "GBSAOBCForceField.h"
+#include "GBSAOBCForce.h"
 #include "System.h"
 #include "LangevinIntegrator.h"
 #include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
@@ -55,7 +55,7 @@ void testSingleParticle() {
     System system(1, 0);
     system.setParticleMass(0, 2.0);
     LangevinIntegrator integrator(0, 0.1, 0.01);
-    GBSAOBCForceField* forceField = new GBSAOBCForceField(1);
+    GBSAOBCForce* forceField = new GBSAOBCForce(1);
     NonbondedForce* standard = new NonbondedForce(1, 0);
     forceField->setParticleParameters(0, 0.5, 0.15, 1);
     standard->setParticleParameters(0, 0.5, 1, 0);
@@ -79,7 +79,7 @@ void testForce() {
     const int numParticles = 10;
     System system(numParticles, 0);
     LangevinIntegrator integrator(0, 0.1, 0.01);
-    GBSAOBCForceField* forceField = new GBSAOBCForceField(numParticles);
+    GBSAOBCForce* forceField = new GBSAOBCForce(numParticles);
     NonbondedForce* standard = new NonbondedForce(numParticles, 0);
     for (int i = 0; i < numParticles; ++i) {
         double charge = i%2 == 0 ? -1 : 1;
