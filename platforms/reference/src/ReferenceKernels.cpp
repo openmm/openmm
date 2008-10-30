@@ -648,7 +648,7 @@ void ReferenceRemoveCMMotionKernel::initialize(const System& system, const CMMot
 }
 
 void ReferenceRemoveCMMotionKernel::execute(OpenMMContextImpl& context) {
-    int step = std::floor(context.getTime()/context.getIntegrator().getStepSize());
+    int step = (int)std::floor(context.getTime()/context.getIntegrator().getStepSize());
     if (step%frequency != 0)
         return;
     RealOpenMM** velData = ((ReferenceFloatStreamImpl&) context.getVelocities().getImpl()).getData();

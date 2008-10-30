@@ -93,7 +93,7 @@ FOREACH(subdir ${OPENMM_SOURCE_SUBDIRS})
     FILE(GLOB src_files ${CMAKE_CURRENT_SOURCE_DIR}/${subdir}/src/*.cu  ${CMAKE_CURRENT_SOURCE_DIR}/${subdir}/src/*/*.cu)
     FOREACH(file ${src_files})
         FILE(RELATIVE_PATH file ${CMAKE_CURRENT_SOURCE_DIR} ${file})
-        MESSAGE(${file})
+        # MESSAGE(${file})
         SET(SOURCE_FILES         ${SOURCE_FILES}         ${file})   #append
     ENDFOREACH(file)
     CUDA_INCLUDE_DIRECTORIES(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/${subdir}/include)

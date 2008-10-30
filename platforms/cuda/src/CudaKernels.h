@@ -34,7 +34,7 @@
 
 #include "CudaPlatform.h"
 #include "kernels.h"
-#include "kernels/gpuTypes.h"
+#include "kernels/gputypes.h"
 #include "System.h"
 
 class CudaAndersenThermostat;

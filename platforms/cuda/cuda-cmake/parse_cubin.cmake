@@ -98,8 +98,8 @@ IF (${file_text} MATCHES ".+")
 
   ENDFOREACH(line) 
 
-ELSE(${depend_text} MATCHES ".+") 
+ELSE(${file_text} MATCHES ".+") 
   # MESSAGE("FOUND NO DEPENDS")
-ENDIF(${depend_text} MATCHES ".+")
+ENDIF(${file_text} MATCHES ".+")
 
 

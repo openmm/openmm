@@ -33,7 +33,7 @@
 #include "CudaKernelFactory.h"
 #include "CudaKernels.h"
 #include "internal/OpenMMContextImpl.h"
-#include "kernels/gpuTypes.h"
+#include "kernels/gputypes.h"
 #include "System.h"
 
 using namespace OpenMM;

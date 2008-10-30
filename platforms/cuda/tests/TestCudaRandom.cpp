@@ -34,7 +34,7 @@
  */
 
 #include "../../../tests/AssertionUtilities.h"
-#include "../src/kernels/gpuTypes.h"
+#include "../src/kernels/gputypes.h"
 #include "../src/kernels/cudaKernels.h"
 #include <iostream>
 

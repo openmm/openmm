@@ -14,6 +14,9 @@
 #   libOpenMM_static[_d].a
 #----------------------------------------------------
 
+# On Linux it appears that cmake 2.4 does not work with Cuda cmake rules
+CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
+
 # Don't create a new project name if this is part of a mega-build from the
 # parent directory
 IF( NOT PROJECT_NAME )
@@ -22,7 +25,7 @@ ENDIF( NOT PROJECT_NAME )
 
 INCLUDE(Dart)
 
-SUBDIRS (tests platforms/reference/tests platforms/cuda)
+SUBDIRS (platforms/reference/tests platforms/cuda)
 
 ADD_DEFINITIONS(-DOPENMM_BUILDING_SHARED_LIBRARY)
 
