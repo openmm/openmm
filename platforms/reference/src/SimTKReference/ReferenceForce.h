@@ -99,7 +99,7 @@ class ReferenceForce {
 
          --------------------------------------------------------------------------------------- */
 
-      static int ReferenceForce::getDeltaRPeriodic( const RealOpenMM* atomCoordinatesI, const RealOpenMM* atomCoordinatesJ,
+      static int getDeltaRPeriodic( const RealOpenMM* atomCoordinatesI, const RealOpenMM* atomCoordinatesJ,
                                              const RealOpenMM* boxSize, RealOpenMM* deltaR );
 
     /**---------------------------------------------------------------------------------------
