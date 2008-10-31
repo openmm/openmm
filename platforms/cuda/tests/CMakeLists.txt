@@ -4,6 +4,9 @@
 
 ENABLE_TESTING()
 
+INCLUDE(${CMAKE_SOURCE_DIR}/platforms/cuda/cuda-cmake/FindCuda.cmake)
+INCLUDE_DIRECTORIES(${CUDA_INCLUDE})
+
 # Automatically create tests using files named "Test*.cpp"
 FILE(GLOB TEST_PROGS "*Test*.cpp")
 FOREACH(TEST_PROG ${TEST_PROGS})
@@ -11,14 +14,14 @@ FOREACH(TEST_PROG ${TEST_PROGS})
 
 
     # Link with shared library
-    ADD_EXECUTABLE(${TEST_ROOT} ${TEST_PROG})
+    CUDA_ADD_EXECUTABLE(${TEST_ROOT} ${TEST_PROG})
     TARGET_LINK_LIBRARIES(${TEST_ROOT} ${SHARED_TARGET})
     ADD_TEST(${TEST_ROOT} ${EXECUTABLE_OUTPUT_PATH}/${TEST_ROOT})
 
 
     # Link with static library
 #    SET(TEST_STATIC ${TEST_ROOT}Static)
-#    ADD_EXECUTABLE(${TEST_STATIC} ${TEST_PROG})
+#    CUDA_ADD_EXECUTABLE(${TEST_STATIC} ${TEST_PROG})
 #    SET_TARGET_PROPERTIES(${TEST_STATIC}
 #                PROPERTIES
 #                COMPILE_FLAGS "-DOPENMM_USE_STATIC_LIBRARIES"

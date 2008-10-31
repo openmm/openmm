@@ -94,7 +94,7 @@
 # FindCuda.cmake
 CMAKE_MINIMUM_REQUIRED(VERSION 2.4)
 
-INCLUDE(${CMAKE_CURRENT_SOURCE_DIR}/cuda-cmake/CudaDependency.cmake)
+INCLUDE(${FINDCUDA_DIR}/CudaDependency.cmake)
 
 ###############################################################################
 ###############################################################################
@@ -339,7 +339,7 @@ MACRO(CUDA_add_custom_commands cuda_target)
     
     FILE(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/src/cuda)
 
-    SET(source_file ${CMAKE_CURRENT_SOURCE_DIR}/${file})
+    SET(source_file ${CMAKE_CURRENT_SOURCE_DIR}/../${file})
 
     # MESSAGE("${CUDA_NVCC} ${source_file} ${CUDA_NVCC_FLAGS} ${nvcc_flags} -cuda -o ${generated_file} ${CUDA_NVCC_INCLUDE_ARGS}")
     
@@ -369,7 +369,7 @@ MACRO(CUDA_add_custom_commands cuda_target)
       COMMAND  ${CMAKE_COMMAND}
       ARGS 
       -D input_file="${NVCC_generated_cubin_file}"
-      -P "${CMAKE_CURRENT_SOURCE_DIR}/cuda-cmake/parse_cubin.cmake"
+      -P "${FINDCUDA_DIR}/parse_cubin.cmake"
 
 
       # MAIN_DEPENDENCY ${source_file}
@@ -409,7 +409,7 @@ MACRO(CUDA_add_custom_commands cuda_target)
       ARGS 
       -D input_file="${NVCC_generated_dependency_file}"
       -D output_file="${cmake_dependency_file}"
-      -P "${CMAKE_CURRENT_SOURCE_DIR}/cuda-cmake/make2cmake.cmake"
+      -P "${FINDCUDA_DIR}/make2cmake.cmake"
       MAIN_DEPENDENCY ${NVCC_generated_dependency_file}
       COMMENT "Converting NVCC dependency to CMake (${cmake_dependency_file})"
     )
