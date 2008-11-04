@@ -122,8 +122,8 @@ SET(CUDA_NVCC_FLAGS "" CACHE STRING "Semi-colon delimit multiple arguments.")
 # Search for the cuda distribution.
 IF(NOT CUDA_INSTALL_PREFIX)
   FIND_PATH(CUDA_INSTALL_PREFIX
-    NAMES nvcc
-    PATHS /usr/local/cuda
+    NAMES nvcc nvcc.exe
+    PATHS /usr/local/cuda C:/CUDA
     PATH_SUFFIXES bin
     ENV CUDA_BIN_PATH
     DOC "Toolkit location."
