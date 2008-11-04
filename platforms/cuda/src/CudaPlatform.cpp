@@ -32,11 +32,16 @@
 #include "CudaPlatform.h"
 #include "CudaKernelFactory.h"
 #include "CudaKernels.h"
+#include "PluginInitializer.h"
 #include "internal/OpenMMContextImpl.h"
 #include "kernels/gputypes.h"
 #include "System.h"
 
 using namespace OpenMM;
+
+extern "C" void initOpenMMPlugin() {
+    Platform::registerPlatform(new CudaPlatform());
+}
 
 CudaPlatform::CudaPlatform() {
     CudaKernelFactory* factory = new CudaKernelFactory();

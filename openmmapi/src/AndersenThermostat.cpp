@@ -34,9 +34,6 @@
 
 using namespace OpenMM;
 
-const std::string AndersenThermostat::Temperature = "AndersenTemperature";
-const std::string AndersenThermostat::CollisionFrequency = "AndersenCollisionFrequency";
-
 AndersenThermostat::AndersenThermostat(double defaultTemperature, double defaultCollisionFrequency) :
     defaultTemp(defaultTemperature), defaultFreq(defaultCollisionFrequency) {
 }

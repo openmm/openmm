@@ -118,7 +118,7 @@ void CudaCalcHarmonicAngleForceKernel::initialize(const System& system, const Ha
         data.primaryKernel = this;
     data.hasAngles = true;
     numAngles = force.getNumAngles();
-    const float RadiansToDegrees = 180.0/3.14159265;
+    const float RadiansToDegrees = (float) (180.0/3.14159265);
     vector<int> particle1(numAngles);
     vector<int> particle2(numAngles);
     vector<int> particle3(numAngles);
@@ -304,7 +304,7 @@ void CudaCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOBCF
         radius[i] = (float) particleRadius;
         scale[i] = (float) scalingFactor;
     }
-    gpuSetObcParameters(gpu, force.getSoluteDielectric(), force.getSolventDielectric(), particle, radius, scale);
+    gpuSetObcParameters(gpu, (float) force.getSoluteDielectric(), (float) force.getSolventDielectric(), particle, radius, scale);
     data.useOBC = true;
 }
 
@@ -372,6 +372,7 @@ static void initializeIntegration(const System& system, CudaPlatform::PlatformDa
 }
 
 double CudaCalcGBSAOBCForceKernel::executeEnergy(OpenMMContextImpl& context) {
+	return 0.0;
 }
 
 CudaIntegrateVerletStepKernel::~CudaIntegrateVerletStepKernel() {
@@ -388,7 +389,7 @@ void CudaIntegrateVerletStepKernel::execute(OpenMMContextImpl& context, const Ve
     if (stepSize != prevStepSize) {
         // Initialize the GPU parameters.
         
-        gpuSetVerletIntegrationParameters(gpu, stepSize);
+        gpuSetVerletIntegrationParameters(gpu, (float) stepSize);
         gpuSetConstants(gpu);
         kGenerateRandoms(gpu);
         prevStepSize = stepSize;
@@ -396,7 +397,7 @@ void CudaIntegrateVerletStepKernel::execute(OpenMMContextImpl& context, const Ve
     kVerletUpdatePart1(gpu);
     kApplyFirstShake(gpu);
     if (data.removeCM) {
-        int step = context.getTime()/stepSize;
+        int step = (int) (context.getTime()/stepSize);
         if (step%data.cmMotionFrequency == 0)
             gpu->bCalculateCM = true;
     }
@@ -420,7 +421,7 @@ void CudaIntegrateLangevinStepKernel::execute(OpenMMContextImpl& context, const 
         // Initialize the GPU parameters.
         
         double tau = (friction == 0.0 ? 0.0 : 1.0/friction);
-        gpuSetIntegrationParameters(gpu, tau, stepSize, temperature);
+        gpuSetIntegrationParameters(gpu, (float) tau, (float) stepSize, (float) temperature);
         gpuSetConstants(gpu);
         kGenerateRandoms(gpu);
         prevTemp = temperature;
@@ -430,7 +431,7 @@ void CudaIntegrateLangevinStepKernel::execute(OpenMMContextImpl& context, const 
     kUpdatePart1(gpu);
     kApplyFirstShake(gpu);
     if (data.removeCM) {
-        int step = context.getTime()/stepSize;
+        int step = (int) (context.getTime()/stepSize);
         if (step%data.cmMotionFrequency == 0)
             gpu->bCalculateCM = true;
     }
@@ -455,7 +456,7 @@ void CudaIntegrateBrownianStepKernel::execute(OpenMMContextImpl& context, const 
         // Initialize the GPU parameters.
         
         double tau = (friction == 0.0 ? 0.0 : 1.0/friction);
-        gpuSetBrownianIntegrationParameters(gpu, tau, stepSize, temperature);
+        gpuSetBrownianIntegrationParameters(gpu, (float) tau, (float) stepSize, (float) temperature);
         gpuSetConstants(gpu);
         kGenerateRandoms(gpu);
         prevTemp = temperature;
@@ -465,7 +466,7 @@ void CudaIntegrateBrownianStepKernel::execute(OpenMMContextImpl& context, const 
     kBrownianUpdatePart1(gpu);
     kApplyFirstShake(gpu);
     if (data.removeCM) {
-        int step = context.getTime()/stepSize;
+        int step = (int) (context.getTime()/stepSize);
         if (step%data.cmMotionFrequency == 0)
             gpu->bCalculateCM = true;
     }
@@ -481,13 +482,13 @@ void CudaApplyAndersenThermostatKernel::initialize(const System& system, const A
 
 void CudaApplyAndersenThermostatKernel::execute(OpenMMContextImpl& context) {
     _gpuContext* gpu = data.gpu;
-    double temperature = context.getParameter(AndersenThermostat::Temperature);
-    double frequency = context.getParameter(AndersenThermostat::CollisionFrequency);
+    double temperature = context.getParameter(AndersenThermostat::Temperature());
+    double frequency = context.getParameter(AndersenThermostat::CollisionFrequency());
     double stepSize = context.getIntegrator().getStepSize();
     if (temperature != prevTemp || frequency != prevFrequency || stepSize != prevStepSize) {
         // Initialize the GPU parameters.
         
-        gpuSetAndersenThermostatParameters(gpu, temperature, frequency*stepSize);
+        gpuSetAndersenThermostatParameters(gpu, (float) temperature, (float) (frequency*stepSize));
         gpuSetConstants(gpu);
         kGenerateRandoms(gpu);
         prevTemp = temperature;
@@ -500,7 +501,7 @@ void CudaApplyAndersenThermostatKernel::execute(OpenMMContextImpl& context) {
 void CudaCalcKineticEnergyKernel::initialize(const System& system) {
     int numParticles = system.getNumParticles();
     masses.resize(numParticles);
-    for (size_t i = 0; i < numParticles; ++i)
+    for (int i = 0; i < numParticles; ++i)
         masses[i] = system.getParticleMass(i);
 }
 

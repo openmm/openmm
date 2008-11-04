@@ -48,11 +48,15 @@ public:
      * This is the name of the parameter which stores the current temperature of the
      * heat bath (in Kelvin).
      */
-    static const std::string Temperature;
+    static std::string Temperature() {
+        return "AndersenTemperature";
+    }
     /**
      * This is the name of the parameter which store the current collision frequency (in 1/ps).
      */
-    static const std::string CollisionFrequency;
+    static std::string CollisionFrequency() {
+        return "AndersenCollisionFrequency";
+    }
     /**
      * Create an AndersenThermostat.
      * 

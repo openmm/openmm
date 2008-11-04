@@ -119,7 +119,7 @@ void testTemperature() {
     }
     pe /= steps;
     double expected = 0.5*numBonds*BOLTZ*temp;
-    ASSERT_EQUAL_TOL(expected, pe, 20*expected/std::sqrt(steps));
+    ASSERT_EQUAL_TOL(expected, pe, 20*expected/std::sqrt((double) steps));
 }
 
 void testConstraints() {

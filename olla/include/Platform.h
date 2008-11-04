@@ -168,6 +168,19 @@ public:
      * Platform exists which supports all of them, this will throw an exception.
      */
     static Platform& findPlatform(std::vector<std::string> kernelNames);
+    /**
+     * Load a dynamic library (DLL) which contains an OpenMM plugin.  Typically, each Platform
+     * is distributed as a separate dynamic library.  This method can then be called at runtime
+     * to load each available library.  Each library should contain an initializer function to
+     * register any Platforms and KernelFactories that it contains.
+     *
+     * If the file does not exist or cannot be loaded, an exception is thrown.
+     *
+     * @param file   the path to the dynamic library file.  This is interpreted using the operating
+     *               system's rules for loading libraries.  Typically it may be either an absolute path
+     *               or relative to a set of standard locations.
+     */
+    static void loadPluginLibrary(std::string file);
 private:
 
 // Retarded visual studio compiler complains about being unable to 
@@ -180,7 +193,7 @@ private:
 
     std::map<std::string, KernelFactory*> kernelFactories;
     std::map<std::string, StreamFactory*> streamFactories;
-    static std::vector<Platform*> platforms;
+    static std::vector<Platform*>& getPlatforms();
 
 #if defined(_MSC_VER)
 #pragma warning(pop)

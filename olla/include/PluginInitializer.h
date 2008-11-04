@@ -1,5 +1,5 @@
-#ifndef OPENMM_PLATFORMEXCEPTION_H_
-#define OPENMM_PLATFORMEXCEPTION_H_
+#ifndef OPENMM_PLUGININITIALIZER_H_
+#define OPENMM_PLUGININITIALIZER_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -32,28 +32,28 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include <exception>
-#include <string>
-
-namespace OpenMM {
-
 /**
- * This class represents an exception thrown by a platform implementation.
+ * This file should be included once in each dynamic library that contains an OpenMM
+ * plugin.  The library should define a function with the signature
+ *
+ * extern "C" void initOpenMMPlugin();
+ *
+ * that registers any Platforms and KernelFactories it contains.  Including this file
+ * will cause that function to be invoked when the library is loaded.
  */
 
-class PlatformException : public std::exception {
-public:
-    PlatformException(std::string message) : message(message) {
-    }
-    ~PlatformException() throw() {
-    }
-    const char* what() const throw() {
-        return message.c_str();
-    }
-private:
-    std::string message;
-};
+#if defined(OPENMM_BUILDING_SHARED_LIBRARY)
+    #if defined(WIN32)
+		#include <windows.h>
+        extern "C" void initOpenMMPlugin();
+        BOOL WINAPI DllMain(HANDLE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved) {
+            if (ul_reason_for_call == DLL_PROCESS_ATTACH)
+                initOpenMMPlugin();
+            return TRUE;
+        }
+    #else
+        extern "C" void __attribute__((constructor)) initOpenMMPlugin();
+    #endif
+#endif
 
-} // namespace OpenMM
-
-#endif /*OPENMM_PLATFORMEXCEPTION_H_*/
+#endif /*OPENMM_PLUGININITIALIZER_H_*/

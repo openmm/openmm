@@ -30,19 +30,23 @@
  * -------------------------------------------------------------------------- */
 
 #include "Platform.h"
-#include "PlatformException.h"
+#include "OpenMMException.h"
 #include "Kernel.h"
 #include "Stream.h"
 #include "KernelFactory.h"
 #include "StreamFactory.h"
+#ifdef WIN32
+#include <windows.h>
+#include <sstream>
+#else
+#include <dlfcn.h>
+#endif
 #include <set>
 
 #include "ReferencePlatform.h"
 
 using namespace OpenMM;
 using namespace std;
-
-std::vector<Platform*> Platform::platforms;
 
 static int registerPlatforms() {
 
@@ -74,47 +78,53 @@ void Platform::contextCreated(OpenMMContextImpl& context) const {
 void Platform::contextDestroyed(OpenMMContextImpl& context) const {
 }
 
-void Platform::registerKernelFactory(std::string name, KernelFactory* factory) {
+void Platform::registerKernelFactory(string name, KernelFactory* factory) {
     kernelFactories[name] = factory;
 }
 
-void Platform::registerStreamFactory(std::string name, StreamFactory* factory) {
+void Platform::registerStreamFactory(string name, StreamFactory* factory) {
     streamFactories[name] = factory;
 }
 
-bool Platform::supportsKernels(std::vector<std::string> kernelNames) const {
+bool Platform::supportsKernels(vector<string> kernelNames) const {
     for (int i = 0; i < (int) kernelNames.size(); ++i)
         if (kernelFactories.find(kernelNames[i]) == kernelFactories.end())
             return false;
     return true;
 }
 
-Kernel Platform::createKernel(std::string name, OpenMMContextImpl& context) const {
+Kernel Platform::createKernel(string name, OpenMMContextImpl& context) const {
     if (kernelFactories.find(name) == kernelFactories.end())
-        throw PlatformException("Called createKernel() on a Platform which does not support the requested kernel");
+        throw OpenMMException("Called createKernel() on a Platform which does not support the requested kernel");
     return Kernel(kernelFactories.find(name)->second->createKernelImpl(name, *this, context));
 }
 
-Stream Platform::createStream(std::string name, int size, Stream::DataType type, OpenMMContextImpl& context) const {
+Stream Platform::createStream(string name, int size, Stream::DataType type, OpenMMContextImpl& context) const {
     if (streamFactories.find(name) == streamFactories.end())
         return Stream(getDefaultStreamFactory().createStreamImpl(name, size, type, *this, context));
     return Stream(streamFactories.find(name)->second->createStreamImpl(name, size, type, *this, context));
 }
 
+vector<Platform*>& Platform::getPlatforms() {
+    static vector<Platform*> platforms;
+    return platforms;
+}
+
 void Platform::registerPlatform(Platform* platform) {
-    platforms.push_back(platform);
+    getPlatforms().push_back(platform);
 }
 
 int Platform::getNumPlatforms() {
-    return platforms.size();
+    return getPlatforms().size();
 }
 
 Platform& Platform::getPlatform(int index) {
-    return *platforms[index];
+    return *getPlatforms()[index];
 }
 
-Platform& Platform::findPlatform(std::vector<std::string> kernelNames) {
+Platform& Platform::findPlatform(vector<string> kernelNames) {
     Platform* best = 0;
+    vector<Platform*>& platforms = getPlatforms();
     double speed = 0.0;
     for (int i = 0; i < (int) platforms.size(); ++i) {
         if (platforms[i]->supportsKernels(kernelNames) && platforms[i]->getSpeed() > speed) {
@@ -123,6 +133,21 @@ Platform& Platform::findPlatform(std::vector<std::string> kernelNames) {
         }
     }
     if (best == 0)
-        throw PlatformException("No Platform supports all the requested kernels");
+        throw OpenMMException("No Platform supports all the requested kernels");
     return *best;
+}
+
+void Platform::loadPluginLibrary(string file) {
+#ifdef WIN32
+    HMODULE handle = LoadLibrary(file.c_str());
+	if (handle == NULL) {
+		string message;
+		stringstream(message) << "Error loading library " << file << ": " << GetLastError();
+        throw OpenMMException(message);
+	}
+#else
+    void *handle = dlopen(file.c_str(), RTLD_LAZY | RTLD_GLOBAL);
+    if (handle == NULL)
+        throw OpenMMException("Error loading library "+file+": "+dlerror());
+#endif
 }

@@ -119,8 +119,8 @@ void ReferenceCalcHarmonicBondForceKernel::initialize(const System& system, cons
         force.getBondParameters(i, particle1, particle2, length, k);
         bondIndexArray[i][0] = particle1;
         bondIndexArray[i][1] = particle2;
-        bondParamArray[i][0] = length;
-        bondParamArray[i][1] = k;
+        bondParamArray[i][0] = (RealOpenMM) length;
+        bondParamArray[i][1] = (RealOpenMM) k;
     }
 }
 
@@ -163,8 +163,8 @@ void ReferenceCalcHarmonicAngleForceKernel::initialize(const System& system, con
         angleIndexArray[i][0] = particle1;
         angleIndexArray[i][1] = particle2;
         angleIndexArray[i][2] = particle3;
-        angleParamArray[i][0] = angle;
-        angleParamArray[i][1] = k;
+        angleParamArray[i][0] = (RealOpenMM) angle;
+        angleParamArray[i][1] = (RealOpenMM) k;
     }
 }
 
@@ -208,9 +208,9 @@ void ReferenceCalcPeriodicTorsionForceKernel::initialize(const System& system, c
         torsionIndexArray[i][1] = particle2;
         torsionIndexArray[i][2] = particle3;
         torsionIndexArray[i][3] = particle4;
-        torsionParamArray[i][0] = k;
-        torsionParamArray[i][1] = phase;
-        torsionParamArray[i][2] = periodicity;
+        torsionParamArray[i][0] = (RealOpenMM) k;
+        torsionParamArray[i][1] = (RealOpenMM) phase;
+        torsionParamArray[i][2] = (RealOpenMM) periodicity;
     }
 }
 
@@ -254,12 +254,12 @@ void ReferenceCalcRBTorsionForceKernel::initialize(const System& system, const R
         torsionIndexArray[i][1] = particle2;
         torsionIndexArray[i][2] = particle3;
         torsionIndexArray[i][3] = particle4;
-        torsionParamArray[i][0] = c0;
-        torsionParamArray[i][1] = c1;
-        torsionParamArray[i][2] = c2;
-        torsionParamArray[i][3] = c3;
-        torsionParamArray[i][4] = c4;
-        torsionParamArray[i][5] = c5;
+        torsionParamArray[i][0] = (RealOpenMM) c0;
+        torsionParamArray[i][1] = (RealOpenMM) c1;
+        torsionParamArray[i][2] = (RealOpenMM) c2;
+        torsionParamArray[i][3] = (RealOpenMM) c3;
+        torsionParamArray[i][4] = (RealOpenMM) c4;
+        torsionParamArray[i][5] = (RealOpenMM) c5;
     }
 }
 
@@ -445,7 +445,7 @@ ReferenceIntegrateVerletStepKernel::~ReferenceIntegrateVerletStepKernel() {
 void ReferenceIntegrateVerletStepKernel::initialize(const System& system, const VerletIntegrator& integrator) {
     int numParticles = system.getNumParticles();
     masses = new RealOpenMM[numParticles];
-    for (size_t i = 0; i < numParticles; ++i)
+    for (int i = 0; i < numParticles; ++i)
         masses[i] = static_cast<RealOpenMM>(system.getParticleMass(i));
     numConstraints = system.getNumConstraints();
     constraintIndices = allocateIntArray(numConstraints, 2);
@@ -496,7 +496,7 @@ ReferenceIntegrateLangevinStepKernel::~ReferenceIntegrateLangevinStepKernel() {
 void ReferenceIntegrateLangevinStepKernel::initialize(const System& system, const LangevinIntegrator& integrator) {
     int numParticles = system.getNumParticles();
     masses = new RealOpenMM[numParticles];
-    for (size_t i = 0; i < numParticles; ++i)
+    for (int i = 0; i < numParticles; ++i)
         masses[i] = static_cast<RealOpenMM>(system.getParticleMass(i));
     numConstraints = system.getNumConstraints();
     constraintIndices = allocateIntArray(numConstraints, 2);
@@ -556,7 +556,7 @@ ReferenceIntegrateBrownianStepKernel::~ReferenceIntegrateBrownianStepKernel() {
 void ReferenceIntegrateBrownianStepKernel::initialize(const System& system, const BrownianIntegrator& integrator) {
     int numParticles = system.getNumParticles();
     masses = new RealOpenMM[numParticles];
-    for (size_t i = 0; i < numParticles; ++i)
+    for (int i = 0; i < numParticles; ++i)
         masses[i] = static_cast<RealOpenMM>(system.getParticleMass(i));
     numConstraints = system.getNumConstraints();
     constraintIndices = allocateIntArray(numConstraints, 2);
@@ -609,7 +609,7 @@ ReferenceApplyAndersenThermostatKernel::~ReferenceApplyAndersenThermostatKernel(
 void ReferenceApplyAndersenThermostatKernel::initialize(const System& system, const AndersenThermostat& thermostat) {
     int numParticles = system.getNumParticles();
     masses = new RealOpenMM[numParticles];
-    for (size_t i = 0; i < numParticles; ++i)
+    for (int i = 0; i < numParticles; ++i)
         masses[i] = static_cast<RealOpenMM>(system.getParticleMass(i));
     this->thermostat = new ReferenceAndersenThermostat();
 }
@@ -620,15 +620,15 @@ void ReferenceApplyAndersenThermostatKernel::execute(OpenMMContextImpl& context)
 			context.getVelocities().getSize(), 
 			velData, 
 			masses, 
-			static_cast<RealOpenMM>(context.getParameter(AndersenThermostat::Temperature)), 
-			static_cast<RealOpenMM>(context.getParameter(AndersenThermostat::CollisionFrequency)), 
+			static_cast<RealOpenMM>(context.getParameter(AndersenThermostat::Temperature())), 
+			static_cast<RealOpenMM>(context.getParameter(AndersenThermostat::CollisionFrequency())), 
 			static_cast<RealOpenMM>(context.getIntegrator().getStepSize()) );
 }
 
 void ReferenceCalcKineticEnergyKernel::initialize(const System& system) {
     int numParticles = system.getNumParticles();
     masses.resize(numParticles);
-    for (size_t i = 0; i < numParticles; ++i)
+    for (int i = 0; i < numParticles; ++i)
         masses[i] = system.getParticleMass(i);
 }
 

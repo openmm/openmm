@@ -53,8 +53,8 @@ void AndersenThermostatImpl::updateContextState(OpenMMContextImpl& context) {
 
 std::map<std::string, double> AndersenThermostatImpl::getDefaultParameters() {
     std::map<std::string, double> parameters;
-    parameters[AndersenThermostat::Temperature] = getOwner().getDefaultTemperature();
-    parameters[AndersenThermostat::CollisionFrequency] = getOwner().getDefaultCollisionFrequency();
+    parameters[AndersenThermostat::Temperature()] = getOwner().getDefaultTemperature();
+    parameters[AndersenThermostat::CollisionFrequency()] = getOwner().getDefaultCollisionFrequency();
     return parameters;
 }
 
