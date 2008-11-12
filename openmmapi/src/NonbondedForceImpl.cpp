@@ -51,21 +51,35 @@ void NonbondedForceImpl::initialize(OpenMMContextImpl& context) {
     
     System& system = context.getSystem();
     vector<set<int> > exclusions(owner.getNumParticles());
+    vector<vector<int> > bondIndices;
+    set<pair<int, int> > bonded14set;
     for (int i = 0; i < system.getNumForces(); i++) {
         if (dynamic_cast<HarmonicBondForce*>(&system.getForce(i)) != NULL) {
             const HarmonicBondForce& force = dynamic_cast<const HarmonicBondForce&>(system.getForce(i));
-            vector<vector<int> > bondIndices(force.getNumBonds());
-            set<pair<int, int> > bonded14set;
-            for (int i = 0; i < force.getNumBonds(); ++i) {
+            bondIndices.resize(force.getNumBonds());
+            for (int j = 0; j < force.getNumBonds(); ++j) {
                 int particle1, particle2;
                 double length, k;
-                force.getBondParameters(i, particle1, particle2, length, k);
-                bondIndices[i].push_back(particle1);
-                bondIndices[i].push_back(particle2);
+                force.getBondParameters(j, particle1, particle2, length, k);
+                bondIndices[j].push_back(particle1);
+                bondIndices[j].push_back(particle2);
             }
-            findExclusions(bondIndices, exclusions, bonded14set);
+            break;
         }
     }
+
+    // Also treat constrained distances as bonds.
+
+    int numBonds = bondIndices.size();
+    bondIndices.resize(numBonds+system.getNumConstraints());
+    for (int j = 0; j < system.getNumConstraints(); j++) {
+        int particle1, particle2;
+        double distance;
+        system.getConstraintParameters(j, particle1, particle2, distance);
+        bondIndices[j+numBonds].push_back(particle1);
+        bondIndices[j+numBonds].push_back(particle2);
+    }
+    findExclusions(bondIndices, exclusions, bonded14set);
     dynamic_cast<CalcNonbondedForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner, exclusions);
 }
 

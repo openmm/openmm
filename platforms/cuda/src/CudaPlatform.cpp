@@ -40,7 +40,8 @@
 using namespace OpenMM;
 
 extern "C" void initOpenMMPlugin() {
-    Platform::registerPlatform(new CudaPlatform());
+    if (gpuIsAvailable())
+        Platform::registerPlatform(new CudaPlatform());
 }
 
 CudaPlatform::CudaPlatform() {

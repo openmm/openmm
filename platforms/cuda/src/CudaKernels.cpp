@@ -269,9 +269,8 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
             force.getNonbonded14Parameters(i, particle1[i], particle2[i], charge, sig, eps);
             c6[i] = (float) (4*eps*pow(sig, 6.0));
             c12[i] = (float) (4*eps*pow(sig, 12.0));
-            float q = (float) std::sqrt(charge);
-            q1[i] = q;
-            q2[i] = q;
+            q1[i] = (float) charge;
+            q2[i] = 1.0f;
         }
         gpuSetLJ14Parameters(gpu, 138.935485f, 1.0f, particle1, particle2, c6, c12, q1, q2);
     }

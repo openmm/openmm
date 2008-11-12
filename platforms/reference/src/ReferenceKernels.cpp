@@ -378,8 +378,8 @@ double ReferenceCalcNonbondedForceKernel::executeEnergy(OpenMMContextImpl& conte
     ReferenceLJCoulomb14 nonbonded14;
     if (nonbondedMethod != NoCutoff)
         nonbonded14.setUseCutoff(nonbondedCutoff, 78.3f);
-    RealOpenMM* energyArray = new RealOpenMM[numParticles];
-    for (int i = 0; i < numParticles; ++i)
+    RealOpenMM* energyArray = new RealOpenMM[num14];
+    for (int i = 0; i < num14; ++i)
         energyArray[i] = 0;
     refBondForce.calculateForce(num14, bonded14IndexArray, posData, bonded14ParamArray, forceData, energyArray, 0, &energy, nonbonded14);
     disposeRealArray(forceData, numParticles);

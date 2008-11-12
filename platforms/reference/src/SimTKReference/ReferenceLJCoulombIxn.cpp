@@ -243,7 +243,7 @@ int ReferenceLJCoulombIxn::calculatePairIxn( int numberOfAtoms, RealOpenMM** ato
 
      --------------------------------------------------------------------------------------- */
 
-  int ReferenceLJCoulombIxn::calculateOneIxn( int ii, int jj, RealOpenMM** atomCoordinates,
+int ReferenceLJCoulombIxn::calculateOneIxn( int ii, int jj, RealOpenMM** atomCoordinates,
                         RealOpenMM** atomParameters, RealOpenMM** forces,
                         RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const {
 
@@ -294,7 +294,7 @@ int ReferenceLJCoulombIxn::calculatePairIxn( int numberOfAtoms, RealOpenMM** ato
                else
                    dEdR += atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*inverseR;
                dEdR     *= inverseR*inverseR;
-         
+               
     // accumulate forces
 
     for( int kk = 0; kk < 3; kk++ ){
