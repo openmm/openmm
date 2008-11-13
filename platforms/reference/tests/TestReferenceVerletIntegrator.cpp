@@ -125,7 +125,7 @@ void testConstraints() {
         if (i == 1)
             initialEnergy = energy;
         else if (i > 1)
-            ASSERT_EQUAL_TOL(initialEnergy, energy, 0.01);
+            ASSERT_EQUAL_TOL(initialEnergy, energy, 0.05);
         integrator.step(1);
     }
 }

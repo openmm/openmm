@@ -116,20 +116,20 @@ void testConstraints() {
     double initialEnergy = 0.0;
     for (int i = 0; i < 1000; ++i) {
         State state = context.getState(State::Positions | State::Energy);
-        for (int j = 0; j < numConstraints; ++j) {
-            int particle1, particle2;
-            double distance;
-            system.getConstraintParameters(j, particle1, particle2, distance);
-            Vec3 p1 = state.getPositions()[particle1];
-            Vec3 p2 = state.getPositions()[particle2];
-            double dist = std::sqrt((p1[0]-p2[0])*(p1[0]-p2[0])+(p1[1]-p2[1])*(p1[1]-p2[1])+(p1[2]-p2[2])*(p1[2]-p2[2]));
-            ASSERT_EQUAL_TOL(distance, dist, 2e-4);
-        }
+            for (int j = 0; j < numConstraints; ++j) {
+                int particle1, particle2;
+                double distance;
+                system.getConstraintParameters(j, particle1, particle2, distance);
+                Vec3 p1 = state.getPositions()[particle1];
+                Vec3 p2 = state.getPositions()[particle2];
+                double dist = std::sqrt((p1[0]-p2[0])*(p1[0]-p2[0])+(p1[1]-p2[1])*(p1[1]-p2[1])+(p1[2]-p2[2])*(p1[2]-p2[2]));
+                ASSERT_EQUAL_TOL(distance, dist, 2e-4);
+            }
         double energy = state.getKineticEnergy()+state.getPotentialEnergy();
         if (i == 1)
             initialEnergy = energy;
         else if (i > 1)
-            ASSERT_EQUAL_TOL(initialEnergy, energy, 0.02);
+            ASSERT_EQUAL_TOL(initialEnergy, energy, 0.05);
         integrator.step(1);
     }
 }
