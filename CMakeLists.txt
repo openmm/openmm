@@ -23,6 +23,29 @@ IF( NOT PROJECT_NAME )
     PROJECT (OpenMM)
 ENDIF( NOT PROJECT_NAME )
 
+# Where to install
+IF(${CMAKE_C_COMPILER} MATCHES "gcc")
+    IF(NOT OPENMM_INSTALL_PREFIX)
+        SET(OPENMM_INSTALL_PREFIX "/usr/local/openmm" CACHE PATH "Where to install OpenMM")
+    ENDIF(NOT OPENMM_INSTALL_PREFIX)
+ELSE(${CMAKE_C_COMPILER} MATCHES "gcc")
+    IF(NOT OPENMM_INSTALL_PREFIX)
+        SET(OPENMM_INSTALL_PREFIX "C:/Program Files/OpenMM" CACHE PATH "Where to install OpenMM")
+    ENDIF(NOT OPENMM_INSTALL_PREFIX)
+ENDIF(${CMAKE_C_COMPILER} MATCHES "gcc")
+MARK_AS_ADVANCED(OPENMM_INSTALL_PREFIX)
+
+# It seems that on linux and mac, everything is trying to be installed in /usr/local/openmm
+# But if every install target is prefixed with /openmm/, on Windows the install files
+# end up in C:/Program Files/OpenMM/openmm/ which is ugly.
+# Better to set CMAKE_INSTALL_PREFIX to /usr/local/openmm and leave /openmm/ off the 
+# install target names.  Plus, the user now has the opportunity to install into /usr/local/
+# if she so chooses.  --cmb
+IF(${CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT})
+  SET(CMAKE_INSTALL_PREFIX ${OPENMM_INSTALL_PREFIX} CACHE PATH "Where to install OpenMM" FORCE)
+ENDIF(${CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT})
+
+
 INCLUDE(Dart)
 
 SUBDIRS (platforms/reference/tests platforms/cuda)
@@ -219,12 +242,13 @@ INCLUDE_DIRECTORIES(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 ADD_LIBRARY(${SHARED_TARGET} SHARED ${SOURCE_FILES} ${SOURCE_INCLUDE_FILES} ${API_ABS_INCLUDE_FILES})
 ADD_LIBRARY(${STATIC_TARGET} STATIC ${SOURCE_FILES} ${SOURCE_INCLUDE_FILES} ${API_ABS_INCLUDE_FILES})
 
-INSTALL_TARGETS(/openmm/lib RUNTIME_DIRECTORY /openmm/lib ${SHARED_TARGET})
-INSTALL_TARGETS(/openmm/lib RUNTIME_DIRECTORY /openmm/lib ${STATIC_TARGET})
+
+INSTALL_TARGETS(/lib RUNTIME_DIRECTORY /lib ${SHARED_TARGET})
+INSTALL_TARGETS(/lib RUNTIME_DIRECTORY /lib ${STATIC_TARGET})
 FILE(GLOB CORE_HEADERS     include/*.h          */include/*.h)
 FILE(GLOB INTERNAL_HEADERS include/internal/*.h */include/internal/*.h)
-INSTALL_FILES(/openmm/include/         FILES ${CORE_HEADERS})
-INSTALL_FILES(/openmm/include/internal FILES ${INTERNAL_HEADERS})
+INSTALL_FILES(/include/         FILES ${CORE_HEADERS})
+INSTALL_FILES(/include/internal FILES ${INTERNAL_HEADERS})
 
 #
 # Allow automated build and dashboard.

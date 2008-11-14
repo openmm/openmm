@@ -104,7 +104,7 @@ INCLUDE(${FINDCUDA_DIR}/CudaDependency.cmake)
 
 # Parse CUDA build type.
 IF (NOT CUDA_BUILD_TYPE)
-  SET(CUDA_BUILD_TYPE "Emulation" CACHE STRING "Cuda build type: Emulation or Device")
+  SET(CUDA_BUILD_TYPE "Device" CACHE STRING "Cuda build type: Emulation or Device")
 ENDIF(NOT CUDA_BUILD_TYPE)
 
 # Emulation if the card isn't present.
