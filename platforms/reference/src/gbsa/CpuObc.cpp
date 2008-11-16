@@ -316,19 +316,17 @@ if( logFile && atomI == 0 ){
       obcChain[atomI]       = offsetRadiusI*( alphaObc - two*betaObc*sum + three*gammaObc*sum2 );
       obcChain[atomI]       = (one - tanhSum*tanhSum)*obcChain[atomI]/radiusI;
 
-/*
-if( logFile && atomI >= 0 ){
-   (void) fprintf( logFile, "\nRRQ %d sum=%12.6e tanhS=%12.6e radI=%.5f %.5f born=%12.6e obc=%12.6e",
+/* if( logFile && atomI >= 0 ){
+   (void) fprintf( logFile, "\nRRQ %d sum %12.6e tanhS %12.6e radI %.5f %.5f born %18.10e obc %12.6e",
                    atomI, sum, tanhSum, radiusI, offsetRadiusI, bornRadii[atomI], obcChain[atomI] );
 } */
 
    }
-
 /*
    if( logFile ){
       (void) fclose( logFile );
    }
-*/
+	*/
 
    return SimTKOpenMMCommon::DefaultReturn;
 
@@ -351,7 +349,7 @@ if( logFile && atomI >= 0 ){
    --------------------------------------------------------------------------------------- */
 
 int CpuObc::computeBornEnergyForces( RealOpenMM* bornRadii, RealOpenMM** atomCoordinates,
-                                     const RealOpenMM* partialCharges, RealOpenMM** forces ){
+                                     const RealOpenMM* partialCharges, RealOpenMM** inputForces ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -389,8 +387,13 @@ int CpuObc::computeBornEnergyForces( RealOpenMM* bornRadii, RealOpenMM** atomCoo
    RealOpenMM obcEnergy                 = zero;
    const unsigned int arraySzInBytes    = sizeof( RealOpenMM )*numberOfAtoms;
 
+   RealOpenMM** forces  = (RealOpenMM**) malloc( sizeof( RealOpenMM* )*numberOfAtoms );
+   RealOpenMM*  block   = (RealOpenMM*)  malloc( sizeof( RealOpenMM )*numberOfAtoms*3 );
+	memset( block, 0, sizeof( RealOpenMM )*numberOfAtoms*3 );
+	RealOpenMM* blockPtr = block;
    for( int ii = 0; ii < numberOfAtoms; ii++ ){
-      memset( forces[ii], 0, 3*sizeof( RealOpenMM ) );
+      forces[ii] = blockPtr;
+		blockPtr  += 3;
    }
 
    RealOpenMM* bornForces = getBornForce();
@@ -473,6 +476,7 @@ int CpuObc::computeBornEnergyForces( RealOpenMM* bornRadii, RealOpenMM** atomCoo
 
       }
    }
+
 
    //obcEnergy *= getEnergyConversionFactor();
 
@@ -596,9 +600,9 @@ int CpuObc::computeBornEnergyForces( RealOpenMM* bornRadii, RealOpenMM** atomCoo
 
    RealOpenMM conversion = 0.4184;  
    for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
-      forces[atomI][0] *= conversion;
-      forces[atomI][1] *= conversion;
-      forces[atomI][2] *= conversion;
+      inputForces[atomI][0] += conversion*forces[atomI][0];
+      inputForces[atomI][1] += conversion*forces[atomI][1];
+      inputForces[atomI][2] += conversion*forces[atomI][2];
    }
    setEnergy( obcEnergy*conversion );
 
@@ -606,6 +610,9 @@ int CpuObc::computeBornEnergyForces( RealOpenMM* bornRadii, RealOpenMM** atomCoo
 
    memcpy( bornRadii, bornRadiiTemp, arraySzInBytes );
    memcpy( obcChain, obcChainTemp, arraySzInBytes );
+
+	free( (char*) block );
+	free( (char*) forces );
 
    return SimTKOpenMMCommon::DefaultReturn;
 
@@ -821,18 +828,24 @@ int CpuObc::writeForceLoop( int numberOfAtoms, const IntVector& chunkSizes,
    for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
 
       std::stringstream line;
-      line << (atomI+1) << " ";
+		char buffer[128];
+
+		(void) sprintf( buffer, "%4d ", atomI );
+		line << buffer;
 
       int index = 0;
       for( RealOpenMMPtrPtrVectorCI ii = realRealOpenMMVector.begin(); ii != realRealOpenMMVector.end(); ii++ ){
          RealOpenMM** forces = *ii;
-         SimTKOpenMMUtilities::formatRealStringStream( line, forces[atomI], chunks[index++] );
-         line << " ";
+			(void) sprintf( buffer, "%11.5f %11.5f %11.5f ", forces[atomI][0], forces[atomI][1], forces[atomI][2] );
+			line << buffer;
+//         SimTKOpenMMUtilities::formatRealStringStream( line, forces[atomI], chunks[index++] );
+//         line << " ";
       }
 
       for( RealOpenMMPtrVectorCI ii = realVector.begin(); ii != realVector.end(); ii++ ){
          RealOpenMM* array = *ii;
-         line << array[atomI] << " ";
+			(void) sprintf( buffer, "%11.5f ", array[atomI] );
+         line << buffer;
       }
 
       lineVector.push_back( line.str() );
@@ -858,7 +871,7 @@ int CpuObc::writeForceLoop( int numberOfAtoms, const IntVector& chunkSizes,
    --------------------------------------------------------------------------------------- */
 
 int CpuObc::computeBornEnergyForcesPrint( RealOpenMM* bornRadii, RealOpenMM** atomCoordinates,
-                                         const RealOpenMM* partialCharges, RealOpenMM** forces ){
+                                          const RealOpenMM* partialCharges, RealOpenMM** forces ){
  
    // ---------------------------------------------------------------------------------------
 
@@ -913,6 +926,7 @@ FILE* logFile = NULL;
    for( int ii = 0; ii < numberOfAtoms; ii++ ){
       memset( forces[ii], 0, 3*sizeof( RealOpenMM ) );
    }
+	
 
    RealOpenMM* bornForces = getBornForce();
    memset( bornForces, 0, arraySzInBytes );
@@ -1002,8 +1016,6 @@ FILE* logFile = NULL;
          obcEnergy         += Gpol;
          bornForces[atomI] += dGpol_dalpha2_ij*bornRadii[atomJ];
 
-/*
-if( logFile ){
 //if( logFile && (atomI == -1 || atomJ == -1) ){
 //   (void) fprintf( logFile, "\nWWX %d %d F[%.6e %.6e %.6e] bF=[%.6e %.6e] Gpl[%.6e %.6e %.6e] rb[%6.4f %7.4f] rs[%6.4f %7.4f] ",
 //                    atomI, atomJ,
@@ -1012,16 +1024,14 @@ if( logFile ){
 //                    Gpol,dGpol_dr,dGpol_dalpha2_ij,
 //                    bornRadii[atomI],bornRadii[atomJ],atomicRadii[atomI],atomicRadii[atomJ] );
 //
-   (void) fprintf( logFile, "\nWWX %d %d %.1f r2=%.4f q=%.2f bF=[%.6e %.6e] Gpl[%.6e %.6e %.6e] rb[%.5f %.5f] add[%.6e %.6e] ",
-                    atomI, atomJ, preFactor, r2, partialCharges[atomJ],
-                    bornForces[atomI], bornForces[atomJ],
-                    Gpol,dGpol_dr,dGpol_dalpha2_ij,
-                    bornRadii[atomI], bornRadii[atomJ],
-                    dGpol_dalpha2_ij*bornRadii[atomJ], dGpol_dalpha2_ij*bornRadii[atomI] );
-}
-*/
+//   (void) fprintf( logFile, "\nWWX %d %d %.1f r2=%.4f q=%.2f bF=[%.6e %.6e] Gpl[%.6e %.6e %.6e] rb[%.5f %.5f] add[%.6e %.6e] ",
+//                    atomI, atomJ, preFactor, r2, partialCharges[atomJ],
+//                    bornForces[atomI], bornForces[atomJ],
+//                    Gpol,dGpol_dr,dGpol_dalpha2_ij,
+//                    bornRadii[atomI], bornRadii[atomJ],
+//                    dGpol_dalpha2_ij*bornRadii[atomJ], dGpol_dalpha2_ij*bornRadii[atomI] );
+//}
       }
-
 
    }
 
@@ -1033,7 +1043,8 @@ if( logFile ){
    }
 }
 
-   if( 0 ){
+
+   if( 1 ){
       std::string outputFileName = "Loop1Cpu.txt";
       CpuObc::writeForceLoop1( numberOfAtoms, forces, bornForces, outputFileName );
 /*
@@ -1070,7 +1081,7 @@ if( logFile ){
       bornForces[atomI] *= bornRadii[atomI]*bornRadii[atomI]*obcChain[atomI];      
    }
 
-   if( 0 ){
+   if( 1 ){
 
       std::string outputFileName = "PostLoop1Cpu.txt";
 
@@ -1081,9 +1092,9 @@ if( logFile ){
       realPtrPtrVector.push_back( forces );
 
       RealOpenMMPtrVector realPtrVector;
-      realPtrVector.push_back( obcChain );
       realPtrVector.push_back( bornRadii );
       realPtrVector.push_back( bornForces );
+      realPtrVector.push_back( obcChain );
 
       CpuObc::writeForceLoop( numberOfAtoms, chunkVector, realPtrPtrVector, realPtrVector, outputFileName );
    }
@@ -1211,7 +1222,7 @@ if( logFile && atomI >= 0 ){
    }
    setEnergy( obcEnergy*conversion );
 
-   if( 0 ){
+   if( 1 ){
 
       std::string outputFileName = "Loop2Cpu.txt";
 

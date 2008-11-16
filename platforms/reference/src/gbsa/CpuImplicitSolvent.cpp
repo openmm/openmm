@@ -806,6 +806,7 @@ int CpuImplicitSolvent::computeAceNonPolarForce( const ImplicitSolventParameters
 
    const RealOpenMM probeRadius          = implicitSolventParameters->getProbeRadius();
    const RealOpenMM surfaceAreaFactor    = implicitSolventParameters->getPi4Asolv();
+
    const RealOpenMM* atomicRadii         = implicitSolventParameters->getAtomicRadii();
    int numberOfAtoms                     = implicitSolventParameters->getNumberOfAtoms();
 
