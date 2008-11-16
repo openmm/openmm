@@ -291,6 +291,7 @@ CudaCalcGBSAOBCForceKernel::~CudaCalcGBSAOBCForceKernel() {
 }
 
 void CudaCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOBCForce& force) {
+
     int numParticles = system.getNumParticles();
     _gpuContext* gpu = data.gpu;
     vector<int> particle(numParticles);
@@ -363,8 +364,6 @@ static void initializeIntegration(const System& system, CudaPlatform::PlatformDa
     gpuBuildExclusionList(gpu);
     gpuBuildOutputBuffers(gpu);
     gpuSetConstants(gpu);
-    kCalculateObcGbsaBornSum(gpu);
-    kReduceObcGbsaBornSum(gpu);
     kClearBornForces(gpu);
     kClearForces(gpu);
     cudaThreadSynchronize();

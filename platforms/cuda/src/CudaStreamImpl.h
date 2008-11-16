@@ -44,8 +44,8 @@ namespace OpenMM {
 template <class T>
 class CudaStreamImpl : public StreamImpl {
 public:
-    CudaStreamImpl(std::string name, int size, Stream::DataType type, const Platform& platform, int substreams);
-    CudaStreamImpl(std::string name, int size, Stream::DataType type, const Platform& platform, CUDAStream<T>* stream, int rowOffset, float* padding);
+    CudaStreamImpl(std::string name, int size, Stream::DataType type, const Platform& platform, int substreams, _gpuContext* gpu);
+    CudaStreamImpl(std::string name, int size, Stream::DataType type, const Platform& platform, CUDAStream<T>* stream, int rowOffset, float* padding, _gpuContext* gpu);
     ~CudaStreamImpl();
     void loadFromArray(const void* array);
     void saveToArray(void* array);
@@ -55,6 +55,7 @@ public:
 private:
     void initType();
     CUDAStream<T>* stream;
+	 _gpuContext* gpu;
     bool ownStream;
     int width, rowOffset;
     float paddingValues[4];
@@ -62,15 +63,15 @@ private:
 };
 
 template <class T>
-CudaStreamImpl<T>::CudaStreamImpl(std::string name, int size, Stream::DataType type, const Platform& platform, int substreams) :
-        StreamImpl(name, size, type, platform), stream(new CUDAStream<T>(size, substreams)), ownStream(true) {
+CudaStreamImpl<T>::CudaStreamImpl(std::string name, int size, Stream::DataType type, const Platform& platform, int substreams, _gpuContext* gpu) :
+        StreamImpl(name, size, type, platform), stream(new CUDAStream<T>(size, substreams)), ownStream(true), gpu(gpu) {
     initType();
     rowOffset = width;
 };
 
 template <class T>
-CudaStreamImpl<T>::CudaStreamImpl(std::string name, int size, Stream::DataType type, const Platform& platform, CUDAStream<T>* stream, int rowOffset, float* padding) :
-        StreamImpl(name, size, type, platform), stream(stream), rowOffset(rowOffset), ownStream(false) {
+CudaStreamImpl<T>::CudaStreamImpl(std::string name, int size, Stream::DataType type, const Platform& platform, CUDAStream<T>* stream, int rowOffset, float* padding, _gpuContext* gpu) :
+        StreamImpl(name, size, type, platform), stream(stream), rowOffset(rowOffset), ownStream(false), gpu(gpu) {
     initType();
     for (int i = 0; i < 4; ++i)
         paddingValues[i] = padding[i];
@@ -153,6 +154,13 @@ void CudaStreamImpl<T>::loadFromArray(const void* array) {
         for (int j = 0; j < rowOffset; ++j)
             data[i*rowOffset+j] = paddingValues[j];
     stream->Upload();
+
+	 // VisualStudio compiler did not like stream == gpu->psPosq4 
+	 //if( gpu && stream == gpu->psPosq4 ){
+
+	 if( gpu && getName() == "particlePositions" ){
+	    gpu->bRecalculateBornRadii = true;
+	 }
 }
 
 template <class T>
