@@ -33,7 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "StreamImpl.h"
-#include "kernels/cudatypes.h"
+#include "kernels/gputypes.h"
 
 namespace OpenMM {
 

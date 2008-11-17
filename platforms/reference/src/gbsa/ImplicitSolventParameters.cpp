@@ -756,7 +756,7 @@ int ImplicitSolventParameters::isNotReady( void ) const {
 
    if( average < 0.1 || average > 1.0 || minValue < 0.05 ){
       errors++;
-      message << "\n   atomic radii appear not to be set correctly -- radii should be in Angstroms";
+      message << "\n   atomic radii appear not to be set correctly -- radii should be in nanometers";
       message << "\n   average radius=" << average << " min radius=" << minValue << " at atom index=" << minIndex;
    }
 
