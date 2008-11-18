@@ -67,6 +67,18 @@ public:
         stepSize = size;
     }
     /**
+     * Get the distance tolerance within which constraints are maintained, measured in nm.
+     */
+    double getConstraintTolerance() const {
+        return constraintTol;
+    }
+    /**
+     * Set the distance tolerance within which constraints are maintained, measured in nm.
+     */
+    void setConstraintTolerance(double tol) {
+        constraintTol = tol;
+    }
+    /**
      * Advance a simulation through time by taking a series of time steps.
      * 
      * @param steps   the number of time steps to take
@@ -85,7 +97,7 @@ protected:
      */
     virtual std::vector<std::string> getKernelNames() = 0;
 private:
-    double stepSize;
+    double stepSize, constraintTol;
 };
 
 } // namespace OpenMM

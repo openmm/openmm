@@ -43,26 +43,13 @@ BrownianIntegrator::BrownianIntegrator(double temperature, double frictionCoeff,
     setTemperature(temperature);
     setFriction(frictionCoeff);
     setStepSize(stepSize);
+    setConstraintTolerance(1e-4);
 }
 
 void BrownianIntegrator::initialize(OpenMMContextImpl& contextRef) {
     context = &contextRef;
     kernel = context->getPlatform().createKernel(IntegrateBrownianStepKernel::Name(), contextRef);
-    const System& system = context->getSystem();
-    vector<double> masses(system.getNumParticles());
-    vector<std::vector<int> > constraintIndices(system.getNumConstraints());
-    vector<double> constraintLengths(system.getNumConstraints());
-    for (int i = 0; i < system.getNumParticles(); ++i)
-        masses[i] = system.getParticleMass(i);
-    for (int i = 0; i < system.getNumConstraints(); ++i) {
-        int particle1, particle2;
-        double distance;
-        system.getConstraintParameters(i, particle1, particle2, distance);
-        constraintIndices[i].push_back(particle1);
-        constraintIndices[i].push_back(particle2);
-        constraintLengths[i] = distance;
-    }
-    dynamic_cast<IntegrateBrownianStepKernel&>(kernel.getImpl()).initialize(system, *this);
+    dynamic_cast<IntegrateBrownianStepKernel&>(kernel.getImpl()).initialize(contextRef.getSystem(), *this);
 }
 
 vector<string> BrownianIntegrator::getKernelNames() {

@@ -41,6 +41,7 @@ using std::vector;
 
 VerletIntegrator::VerletIntegrator(double stepSize) {
     setStepSize(stepSize);
+    setConstraintTolerance(1e-4);
 }
 
 void VerletIntegrator::initialize(OpenMMContextImpl& contextRef) {

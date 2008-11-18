@@ -43,6 +43,7 @@ LangevinIntegrator::LangevinIntegrator(double temperature, double frictionCoeff,
     setTemperature(temperature);
     setFriction(frictionCoeff);
     setStepSize(stepSize);
+    setConstraintTolerance(1e-4);
 }
 
 void LangevinIntegrator::initialize(OpenMMContextImpl& contextRef) {

@@ -46,7 +46,7 @@ class OPENMM_EXPORT Force;
  * <ol>
  * <li>The set of particles in the system</li>
  * <li>The forces acting on them</li>
- * <li>Pairs of particles whose separation should be connstrained to a fixed value</li>
+ * <li>Pairs of particles whose separation should be constrained to a fixed value</li>
  * </ol>
  * 
  * The particles and constraints are defined directly by the System object.

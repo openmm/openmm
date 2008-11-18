@@ -311,7 +311,7 @@ void CudaCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOBCF
 void CudaCalcGBSAOBCForceKernel::executeForces(OpenMMContextImpl& context) {
 }
 
-static void initializeIntegration(const System& system, CudaPlatform::PlatformData& data) {
+static void initializeIntegration(const System& system, CudaPlatform::PlatformData& data, const Integrator& integrator) {
     
     // Set masses.
     
@@ -340,7 +340,7 @@ static void initializeIntegration(const System& system, CudaPlatform::PlatformDa
         invMass1[i] = 1.0f/mass[particle1Index];
         invMass2[i] = 1.0f/mass[particle2Index];
     }
-    gpuSetShakeParameters(gpu, particle1, particle2, distance, invMass1, invMass2);
+    gpuSetShakeParameters(gpu, particle1, particle2, distance, invMass1, invMass2, integrator.getConstraintTolerance());
     
     // Initialize any terms that haven't already been handled by a Force.
     
@@ -377,7 +377,7 @@ CudaIntegrateVerletStepKernel::~CudaIntegrateVerletStepKernel() {
 }
 
 void CudaIntegrateVerletStepKernel::initialize(const System& system, const VerletIntegrator& integrator) {
-    initializeIntegration(system, data);
+    initializeIntegration(system, data, integrator);
     prevStepSize = -1.0;
 }
 
@@ -406,7 +406,7 @@ CudaIntegrateLangevinStepKernel::~CudaIntegrateLangevinStepKernel() {
 }
 
 void CudaIntegrateLangevinStepKernel::initialize(const System& system, const LangevinIntegrator& integrator) {
-    initializeIntegration(system, data);
+    initializeIntegration(system, data, integrator);
     prevStepSize = -1.0;
 }
 
@@ -441,7 +441,7 @@ CudaIntegrateBrownianStepKernel::~CudaIntegrateBrownianStepKernel() {
 }
 
 void CudaIntegrateBrownianStepKernel::initialize(const System& system, const BrownianIntegrator& integrator) {
-    initializeIntegration(system, data);
+    initializeIntegration(system, data, integrator);
     prevStepSize = -1.0;
 }
 

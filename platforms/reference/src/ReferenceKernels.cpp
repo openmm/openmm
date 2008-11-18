@@ -477,6 +477,7 @@ void ReferenceIntegrateVerletStepKernel::execute(OpenMMContextImpl& context, con
         dynamics->setReferenceShakeAlgorithm(shake);
         prevStepSize = stepSize;
     }
+    shake->setTolerance(integrator.getConstraintTolerance());
     dynamics->update(context.getSystem().getNumParticles(), posData, velData, forceData, masses);
 }
 
@@ -537,6 +538,7 @@ void ReferenceIntegrateLangevinStepKernel::execute(OpenMMContextImpl& context, c
         prevFriction = friction;
         prevStepSize = stepSize;
     }
+    shake->setTolerance(integrator.getConstraintTolerance());
     dynamics->update(context.getSystem().getNumParticles(), posData, velData, forceData, masses);
 }
 
@@ -596,6 +598,7 @@ void ReferenceIntegrateBrownianStepKernel::execute(OpenMMContextImpl& context, c
         prevFriction = friction;
         prevStepSize = stepSize;
     }
+    shake->setTolerance(integrator.getConstraintTolerance());
     dynamics->update(context.getSystem().getNumParticles(), posData, velData, forceData, masses);
 }
 
