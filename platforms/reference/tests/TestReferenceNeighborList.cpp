@@ -12,7 +12,7 @@ void testNeighborList()
     RealOpenMM* particleList[2];
     particleList[0] = new RealOpenMM[3];
     particleList[1] = new RealOpenMM[3];
-    particleList[2] = new RealOpenMM[3];
+    // particleList[2] = new RealOpenMM[3];
     particleList[0][0] = 13.6f;
     particleList[0][1] = 0;
     particleList[0][2] = 0;
@@ -37,7 +37,7 @@ void testNeighborList()
     
     delete[] particleList[0];
     delete[] particleList[1];
-    delete[] particleList[2];
+    // delete[] particleList[2];
 }
 
 double periodicDifference(double val1, double val2, double period) {
