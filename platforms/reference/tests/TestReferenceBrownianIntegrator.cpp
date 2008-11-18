@@ -128,6 +128,7 @@ void testConstraints() {
     ReferencePlatform platform;
     System system(numParticles, numParticles-1);
     BrownianIntegrator integrator(temp, 2.0, 0.001);
+    integrator.setConstraintTolerance(1e-5);
     NonbondedForce* forceField = new NonbondedForce(numParticles, 0);
     for (int i = 0; i < numParticles; ++i) {
         system.setParticleMass(i, 10.0);
@@ -155,7 +156,7 @@ void testConstraints() {
             Vec3 p1 = state.getPositions()[j];
             Vec3 p2 = state.getPositions()[j+1];
             double dist = std::sqrt((p1[0]-p2[0])*(p1[0]-p2[0])+(p1[1]-p2[1])*(p1[1]-p2[1])+(p1[2]-p2[2])*(p1[2]-p2[2]));
-            ASSERT_EQUAL_TOL(1.0, dist, 2e-4);
+            ASSERT_EQUAL_TOL(1.0, dist, 2e-5);
         }
         integrator.step(1);
     }

@@ -107,7 +107,7 @@ void testForce() {
         norm += f[0]*f[0] + f[1]*f[1] + f[2]*f[2];
     }
     norm = std::sqrt(norm);
-    const double delta = 1e-3;
+    const double delta = 1e-2;
     double step = delta/norm;
     for (int i = 0; i < numParticles; ++i) {
         Vec3 p = positions[i];
@@ -119,7 +119,7 @@ void testForce() {
     // See whether the potential energy changed by the expected amount.
     
     State state2 = context.getState(State::Energy);
-    ASSERT_EQUAL_TOL(norm, (state2.getPotentialEnergy()-state.getPotentialEnergy())/delta, 0.01)
+    ASSERT_EQUAL_TOL(norm, (state2.getPotentialEnergy()-state.getPotentialEnergy())/delta, 0.02)
 }
 
 int main() {

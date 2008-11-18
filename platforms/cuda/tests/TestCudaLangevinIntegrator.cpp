@@ -136,6 +136,7 @@ void testConstraints() {
     CudaPlatform platform;
     System system(numParticles, numConstraints);
     LangevinIntegrator integrator(temp, 2.0, 0.01);
+    integrator.setConstraintTolerance(1e-5);
     NonbondedForce* forceField = new NonbondedForce(numParticles, 0);
     for (int i = 0; i < numParticles; ++i) {
         system.setParticleMass(i, 10.0);
@@ -166,7 +167,7 @@ void testConstraints() {
             Vec3 p1 = state.getPositions()[particle1];
             Vec3 p2 = state.getPositions()[particle2];
             double dist = std::sqrt((p1[0]-p2[0])*(p1[0]-p2[0])+(p1[1]-p2[1])*(p1[1]-p2[1])+(p1[2]-p2[2])*(p1[2]-p2[2]));
-            ASSERT_EQUAL_TOL(distance, dist, 2e-4);
+            ASSERT_EQUAL_TOL(distance, dist, 2e-5);
         }
         integrator.step(1);
     }
