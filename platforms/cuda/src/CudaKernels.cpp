@@ -48,6 +48,7 @@ using namespace std;
 static void calcForces(OpenMMContextImpl& context, CudaPlatform::PlatformData& data) {
     _gpuContext* gpu = data.gpu;
     if (data.useOBC) {
+        gpu->bRecalculateBornRadii = true;
         kCalculateCDLJObcGbsaForces1(gpu);
         kReduceObcGbsaBornForces(gpu);
         kCalculateObcGbsaForces2(gpu);

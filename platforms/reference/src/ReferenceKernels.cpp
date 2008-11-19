@@ -418,7 +418,7 @@ void ReferenceCalcGBSAOBCForceKernel::initialize(const System& system, const GBS
 void ReferenceCalcGBSAOBCForceKernel::executeForces(OpenMMContextImpl& context) {
     RealOpenMM** posData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData()); // Reference code needs to be made const correct
     RealOpenMM** forceData = ((ReferenceFloatStreamImpl&) context.getForces().getImpl()).getData();
-    obc->computeImplicitSolventForces(posData, &charges[0], forceData, 0);
+    obc->computeImplicitSolventForces(posData, &charges[0], forceData, 1);
 }
 
 double ReferenceCalcGBSAOBCForceKernel::executeEnergy(OpenMMContextImpl& context) {
