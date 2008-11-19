@@ -166,7 +166,7 @@ private:
     std::map<std::string, double> parameters;
     Platform* platform;
     Stream positions, velocities, forces;
-    Kernel kineticEnergyKernel;
+    Kernel initializeForcesKernel, kineticEnergyKernel;
     void* platformData;
 };
 

@@ -79,6 +79,12 @@ static double calcEnergy(OpenMMContextImpl& context, System& system) {
     return refContext.getState(State::Energy).getPotentialEnergy();
 }
 
+void CudaInitializeForcesKernel::initialize(const System& system) {
+}
+
+double CudaInitializeForcesKernel::execute(OpenMMContextImpl& context) {
+}
+
 CudaCalcHarmonicBondForceKernel::~CudaCalcHarmonicBondForceKernel() {
 }
 

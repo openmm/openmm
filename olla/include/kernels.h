@@ -53,6 +53,30 @@
 namespace OpenMM {
 
 /**
+ * This kernel is invoked at the start of each force evaluation to clear the forces.
+ */
+class InitializeForcesKernel : public KernelImpl {
+public:
+    static std::string Name() {
+        return "InitializeForces";
+    }
+    InitializeForcesKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     */
+    virtual void initialize(const System& system) = 0;
+    /**
+     * Execute the kernel.
+     * 
+     * @param context    the context in which to execute this kernel
+     */
+    virtual double execute(OpenMMContextImpl& context) = 0;
+};
+
+/**
  * This kernel is invoked by HarmonicBondForce to calculate the forces acting on the system and the energy of the system.
  */
 class CalcHarmonicBondForceKernel : public KernelImpl {

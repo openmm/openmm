@@ -52,6 +52,7 @@ OpenMMContextImpl::OpenMMContextImpl(OpenMMContext& owner, System& system, Integ
 {
     vector<string> kernelNames;
     kernelNames.push_back(CalcKineticEnergyKernel::Name());
+    kernelNames.push_back(InitializeForcesKernel::Name());
     for (int i = 0; i < system.getNumForces(); ++i) {
         forceImpls.push_back(system.getForce(i).createImpl());
         map<string, double> forceParameters = forceImpls[forceImpls.size()-1]->getDefaultParameters();
@@ -66,10 +67,9 @@ OpenMMContextImpl::OpenMMContextImpl(OpenMMContext& owner, System& system, Integ
     else if (!platform->supportsKernels(kernelNames))
         throw OpenMMException("Specified a Platform for an OpenMMContext which does not support all required kernels");
     platform->contextCreated(*this);
+    initializeForcesKernel = platform->createKernel(InitializeForcesKernel::Name(), *this);
+    dynamic_cast<InitializeForcesKernel&>(initializeForcesKernel.getImpl()).initialize(system);
     kineticEnergyKernel = platform->createKernel(CalcKineticEnergyKernel::Name(), *this);
-    vector<double> masses(system.getNumParticles());
-    for (size_t i = 0; i < masses.size(); ++i)
-        masses[i] = system.getParticleMass(i);
     dynamic_cast<CalcKineticEnergyKernel&>(kineticEnergyKernel.getImpl()).initialize(system);
     for (size_t i = 0; i < forceImpls.size(); ++i)
         forceImpls[i]->initialize(*this);
@@ -100,8 +100,7 @@ void OpenMMContextImpl::setParameter(std::string name, double value) {
 }
 
 void OpenMMContextImpl::calcForces() {
-    double zero[] = {0.0, 0.0, 0.0};
-    forces.fillWithValue(zero);
+    dynamic_cast<InitializeForcesKernel&>(initializeForcesKernel.getImpl()).execute(*this);
     for (int i = 0; i < (int) forceImpls.size(); ++i)
         forceImpls[i]->calcForces(*this, forces);
 }

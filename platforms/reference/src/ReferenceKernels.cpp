@@ -104,6 +104,14 @@ void disposeRealArray(RealOpenMM** array, int size) {
     }
 }
 
+void ReferenceInitializeForcesKernel::initialize(const System& system) {
+}
+
+double ReferenceInitializeForcesKernel::execute(OpenMMContextImpl& context) {
+    double zero[] = {0.0, 0.0, 0.0};
+    context.getForces().fillWithValue(zero);
+}
+
 ReferenceCalcHarmonicBondForceKernel::~ReferenceCalcHarmonicBondForceKernel() {
     disposeIntArray(bondIndexArray, numBonds);
     disposeRealArray(bondParamArray, numBonds);

@@ -36,7 +36,9 @@
 using namespace OpenMM;
 
 KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name, const Platform& platform, OpenMMContextImpl& context) const {
-    if (name == CalcNonbondedForceKernel::Name())
+    if (name == InitializeForcesKernel::Name())
+        return new ReferenceInitializeForcesKernel(name, platform);
+    else if (name == CalcNonbondedForceKernel::Name())
         return new ReferenceCalcNonbondedForceKernel(name, platform);
     else if (name == CalcHarmonicBondForceKernel::Name())
         return new ReferenceCalcHarmonicBondForceKernel(name, platform);

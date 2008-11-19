@@ -38,6 +38,7 @@ using namespace OpenMM;
 
 ReferencePlatform::ReferencePlatform() {
     ReferenceKernelFactory* factory = new ReferenceKernelFactory();
+    registerKernelFactory(InitializeForcesKernel::Name(), factory);
     registerKernelFactory(CalcHarmonicBondForceKernel::Name(), factory);
     registerKernelFactory(CalcHarmonicAngleForceKernel::Name(), factory);
     registerKernelFactory(CalcPeriodicTorsionForceKernel::Name(), factory);

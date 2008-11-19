@@ -45,6 +45,26 @@ class CudaVerletDynamics;
 
 namespace OpenMM {
 
+/**
+ * This kernel is invoked at the start of each force evaluation to clear the forces.
+ */
+class CudaInitializeForcesKernel : public InitializeForcesKernel {
+public:
+    CudaInitializeForcesKernel(std::string name, const Platform& platform) : InitializeForcesKernel(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     */
+    void initialize(const System& system);
+    /**
+     * Execute the kernel.
+     * 
+     * @param context    the context in which to execute this kernel
+     */
+    double execute(OpenMMContextImpl& context);
+};
 
 /**
  * This kernel is invoked by HarmonicBondForce to calculate the forces acting on the system and the energy of the system.
