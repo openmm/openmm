@@ -63,7 +63,7 @@ public:
      * 
      * @param context    the context in which to execute this kernel
      */
-    double execute(OpenMMContextImpl& context);
+    void execute(OpenMMContextImpl& context);
 };
 
 /**

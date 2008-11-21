@@ -82,7 +82,7 @@ static double calcEnergy(OpenMMContextImpl& context, System& system) {
 void CudaInitializeForcesKernel::initialize(const System& system) {
 }
 
-double CudaInitializeForcesKernel::execute(OpenMMContextImpl& context) {
+void CudaInitializeForcesKernel::execute(OpenMMContextImpl& context) {
 }
 
 CudaCalcHarmonicBondForceKernel::~CudaCalcHarmonicBondForceKernel() {
