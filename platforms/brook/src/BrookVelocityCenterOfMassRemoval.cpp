@@ -55,13 +55,13 @@ BrookVelocityCenterOfMassRemoval::BrookVelocityCenterOfMassRemoval( ){
 
 // ---------------------------------------------------------------------------------------
 
-   _numberOfAtoms           = -1;
+   _numberOfParticles           = -1;
 
    // mark stream dimension variables as unset
 
-   _atomStreamWidth         = -1;
-   _atomStreamHeight        = -1;
-   _atomStreamSize          = -1;
+   _particleStreamWidth         = -1;
+   _particleStreamHeight        = -1;
+   _particleStreamSize          = -1;
 
    _totalInverseMass        = zero;
 
@@ -148,9 +148,7 @@ int BrookVelocityCenterOfMassRemoval::removeVelocityCenterOfMass( Stream& veloci
    // ---------------------------------------------------------------------------------------
 
    static const char* methodName  = "BrookVelocityCenterOfMassRemoval::removeVelocityCenterOfMass";
-
-   static int debug               = 0;
-   float zero                     = 0.0f;
+   static const int debug         = 1;
 
    // ---------------------------------------------------------------------------------------
 
@@ -158,6 +156,19 @@ int BrookVelocityCenterOfMassRemoval::removeVelocityCenterOfMass( Stream& veloci
       BrookOpenMMFloat com[3];
       getVelocityCenterOfMass( velocities, com );
       (void) fprintf( getLog(), "\n%s Pre removal com: [%12.5e %12.5e %12.5e]\n", methodName, com[0], com[1], com[2] );
+      BrookStreamImpl& v1                  = dynamic_cast<BrookStreamImpl&> (velocities.getImpl());
+      BrookStreamInternal* velocityStream  = dynamic_cast<BrookStreamInternal*> (v1.getBrookStreamImpl());
+
+      void* velV                       = velocityStream->getData( 1 );
+      const float* vArray              = (float*) velV;
+
+      int index                        = 0;
+      for( int ii = 0; ii < getNumberOfParticles(); ii++, index += 3 ){
+         (void) fprintf( getLog(), "V %d [%12.5e %12.5e %12.5e]\n", ii, vArray[index], vArray[index+1], vArray[index+2] );
+
+      }
+
+      (void) fflush( getLog() );
    }
 
    // calculate linear momentum via reduction
@@ -166,17 +177,20 @@ int BrookVelocityCenterOfMassRemoval::removeVelocityCenterOfMass( Stream& veloci
    BrookStreamImpl& velocityStream  = dynamic_cast<BrookStreamImpl&> (velocities.getImpl());
 
    kCalculateLinearMomentum( getMassStream()->getBrookStream(), velocityStream.getBrookStream(), getWorkStream()->getBrookStream() );
-   kSumLinearMomentum( (float) getComAtomStreamWidth(), (float) getNumberOfAtoms(), getWorkStream()->getBrookStream(), getLinearMomentumStream()->getBrookStream() );
+   kSumLinearMomentum( (float) getComParticleStreamWidth(), (float) getNumberOfParticles(), getWorkStream()->getBrookStream(), getLinearMomentumStream()->getBrookStream() );
    kScale( (float) getTotalInverseMass(), getLinearMomentumStream()->getBrookStream(), getLinearMomentumStream()->getBrookStream() );
    kRemoveLinearMomentum( getLinearMomentumStream()->getBrookStream(), velocityStream.getBrookStream(), velocityStream.getBrookStream() );
 
    if( (0 || debug) && getLog() ){
       BrookOpenMMFloat com[3];
       getVelocityCenterOfMass( velocities, com );
-      (void) fprintf( getLog(), "\n%s strW=%d iatm=%d Post removal com: [%12.5e %12.5e %12.5e]\n", methodName,
-                      getComAtomStreamWidth(), getNumberOfAtoms(),  com[0], com[1], com[2] );
-/*
-      (void) fprintf( getLog(), "LM [%12.5e %12.5e %12.5e]\n", com[0], com[1], com[2] );
+      (void) fprintf( getLog(), "%s strW=%d iatm=%d Post removal com: [%12.5e %12.5e %12.5e]", methodName,
+                      getComParticleStreamWidth(), getNumberOfParticles(),  com[0], com[1], com[2] );
+
+      void* linMoV = getLinearMomentumStream()->getData( 1 );
+      float* linMo = (float*) linMoV;
+      (void) fprintf( getLog(), "LM [%12.5e %12.5e %12.5e]\n", linMo[0], linMo[1], linMo[2] );
+
       BrookStreamImpl& v1                  = dynamic_cast<BrookStreamImpl&> (velocities.getImpl());
       BrookStreamInternal* velocityStream  = dynamic_cast<BrookStreamInternal*> (v1.getBrookStreamImpl());
 
@@ -187,12 +201,14 @@ int BrookVelocityCenterOfMassRemoval::removeVelocityCenterOfMass( Stream& veloci
       const float* w2                 = (float*) w1;
 
       int index                        = 0;
-      for( int ii = 0; ii < getNumberOfAtoms(); ii++, index += 3 ){
+      for( int ii = 0; ii < getNumberOfParticles(); ii++, index += 3 ){
          (void) fprintf( getLog(), "V %d [%12.5e %12.5e %12.5e] [%12.5e %12.5e %12.5e]\n", ii,
                          vArray[index], vArray[index+1], vArray[index+2], w2[index], w2[index+1], w2[index+2] );
+
       }
+
       (void) fflush( getLog() );
-*/
+
 //exit(0);
    }
 
@@ -232,12 +248,12 @@ int BrookVelocityCenterOfMassRemoval::getVelocityCenterOfMass( Stream& velocitie
    void* massV                          = getMassStream()->getData( 1);
    const float* mArray                  = (float*) massV;
 
-   int numberOfAtoms                    = getNumberOfAtoms();
+   int numberOfParticles                    = getNumberOfParticles();
    int index                            = 0;
 
    velocityCom[0] = velocityCom[1] = velocityCom[2] = zero;
 
-   for( int ii = 0; ii < numberOfAtoms; ii++, index += 3 ){
+   for( int ii = 0; ii < numberOfParticles; ii++, index += 3 ){
       velocityCom[0] += mArray[ii]*vArray[index];
       velocityCom[1] += mArray[ii]*vArray[index+1];
       velocityCom[2] += mArray[ii]*vArray[index+2];
@@ -247,48 +263,48 @@ int BrookVelocityCenterOfMassRemoval::getVelocityCenterOfMass( Stream& velocitie
 }
 
 /** 
- * Get Atom stream size
+ * Get Particle stream size
  *
- * @return  Atom stream size
+ * @return  Particle stream size
  *
  */
 
-int BrookVelocityCenterOfMassRemoval::getComAtomStreamSize( void ) const {
-   return _atomStreamSize;
+int BrookVelocityCenterOfMassRemoval::getComParticleStreamSize( void ) const {
+   return _particleStreamSize;
 }
 
 /** 
- * Get atom stream width
+ * Get particle stream width
  *
- * @return  atom stream width
+ * @return  particle stream width
  *
  */
 
-int BrookVelocityCenterOfMassRemoval::getComAtomStreamWidth( void ) const {
-   return _atomStreamWidth;
+int BrookVelocityCenterOfMassRemoval::getComParticleStreamWidth( void ) const {
+   return _particleStreamWidth;
 }
 
 /** 
- * Get atom stream height
+ * Get particle stream height
  *
- * @return atom stream height
+ * @return particle stream height
  */
 
-int BrookVelocityCenterOfMassRemoval::getComAtomStreamHeight( void ) const {
-   return _atomStreamHeight;
+int BrookVelocityCenterOfMassRemoval::getComParticleStreamHeight( void ) const {
+   return _particleStreamHeight;
 }
 
 /** 
  * Initialize stream dimensions
  * 
- * @param numberOfAtoms             number of atoms
+ * @param numberOfParticles             number of particles
  * @param platform                  platform
  *      
  * @return ErrorReturnValue if error, else DefaultReturnValue
  *
  */
 
-int BrookVelocityCenterOfMassRemoval::_initializeStreamSizes( int numberOfAtoms, const Platform& platform ){
+int BrookVelocityCenterOfMassRemoval::_initializeStreamSizes( int numberOfParticles, const Platform& platform ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -296,9 +312,9 @@ int BrookVelocityCenterOfMassRemoval::_initializeStreamSizes( int numberOfAtoms,
 
 // ---------------------------------------------------------------------------------------
 
-   _atomStreamSize     = getAtomStreamSize( platform );
-   _atomStreamWidth    = getAtomStreamWidth( platform );
-   _atomStreamHeight   = getAtomStreamHeight( platform );
+   _particleStreamSize     = getParticleStreamSize( platform );
+   _particleStreamWidth    = getParticleStreamWidth( platform );
+   _particleStreamHeight   = getParticleStreamHeight( platform );
 
    return DefaultReturnValue;
 }
@@ -322,16 +338,16 @@ int BrookVelocityCenterOfMassRemoval::_initializeStreams( const Platform& platfo
 
 // ---------------------------------------------------------------------------------------
 
-   int atomStreamSize               = getComAtomStreamSize();
-   int atomStreamWidth              = getComAtomStreamWidth();
+   int particleStreamSize               = getComParticleStreamSize();
+   int particleStreamWidth              = getComParticleStreamWidth();
 
     _streams[WorkStream]            = new BrookFloatStreamInternal( BrookCommon::BrookVelocityCenterOfMassRemovalWorkStream,
-                                                                    atomStreamSize, atomStreamWidth,
+                                                                    particleStreamSize, particleStreamWidth,
                                                                     BrookStreamInternal::Float3, dangleValue );
 
 
     _streams[MassStream]            = new BrookFloatStreamInternal( BrookCommon::BrookVelocityCenterOfMassRemovalMassStream,
-                                                                    atomStreamSize, atomStreamWidth,
+                                                                    particleStreamSize, particleStreamWidth,
                                                                     BrookStreamInternal::Float, dangleValue );
 
 
@@ -345,7 +361,7 @@ int BrookVelocityCenterOfMassRemoval::_initializeStreams( const Platform& platfo
 /** 
  * Set masses & _totalInverseMass 
  * 
- * @param masses             atomic masses
+ * @param masses             particle masses
  *
  */
 
@@ -362,16 +378,16 @@ int BrookVelocityCenterOfMassRemoval::_setMasses( const std::vector<double>& mas
 
    // check that masses vector is not larger than expected
 
-   if( (int) masses.size() > getComAtomStreamSize() ){
+   if( (int) masses.size() > getComParticleStreamSize() ){
       std::stringstream message;
-      message << methodName << " mass array size=" << masses.size() << " is larger than stream size=" << getComAtomStreamSize();
+      message << methodName << " mass array size=" << masses.size() << " is larger than stream size=" << getComParticleStreamSize();
       throw OpenMMException( message.str() );
    }
 
    // setup masses
 
-   BrookOpenMMFloat* localMasses = new BrookOpenMMFloat[getComAtomStreamSize()];
-   memset( localMasses, 0, sizeof( BrookOpenMMFloat )*getComAtomStreamSize() );
+   BrookOpenMMFloat* localMasses = new BrookOpenMMFloat[getComParticleStreamSize()];
+   memset( localMasses, 0, sizeof( BrookOpenMMFloat )*getComParticleStreamSize() );
 
    int index          = 0;
    _totalInverseMass  = (BrookOpenMMFloat) 0.0;
@@ -419,12 +435,12 @@ int BrookVelocityCenterOfMassRemoval::setup( const std::vector<double>& masses, 
    const BrookPlatform brookPlatform        = dynamic_cast<const BrookPlatform&> (platform);
    setLog( brookPlatform.getLog() );
 
-   int numberOfAtoms  = (int) masses.size();
-   setNumberOfAtoms( numberOfAtoms );
+   int numberOfParticles  = (int) masses.size();
+   setNumberOfParticles( numberOfParticles );
 
    // set stream sizes and then create streams
 
-   _initializeStreamSizes( numberOfAtoms, platform );
+   _initializeStreamSizes( numberOfParticles, platform );
    _initializeStreams( platform );
 
    _setMasses( masses );
@@ -463,17 +479,17 @@ std::string BrookVelocityCenterOfMassRemoval::getContentsString( int level ) con
 #define LOCAL_SPRINTF(a,b,c) sprintf( (a), (b), (c) );   
 #endif
 
-   (void) LOCAL_SPRINTF( value, "%d", getNumberOfAtoms() );
-   message << _getLine( tab, "Number of atoms:", value ); 
+   (void) LOCAL_SPRINTF( value, "%d", getNumberOfParticles() );
+   message << _getLine( tab, "Number of particles:", value ); 
 
-   (void) LOCAL_SPRINTF( value, "%d", getComAtomStreamWidth() );
-   message << _getLine( tab, "Atom stream width:", value ); 
+   (void) LOCAL_SPRINTF( value, "%d", getComParticleStreamWidth() );
+   message << _getLine( tab, "Particle stream width:", value ); 
 
-   (void) LOCAL_SPRINTF( value, "%d", getComAtomStreamHeight() );
-   message << _getLine( tab, "Atom stream height:", value ); 
+   (void) LOCAL_SPRINTF( value, "%d", getComParticleStreamHeight() );
+   message << _getLine( tab, "Particle stream height:", value ); 
 
-   (void) LOCAL_SPRINTF( value, "%d", getComAtomStreamSize() );
-   message << _getLine( tab, "Atom stream size:", value ); 
+   (void) LOCAL_SPRINTF( value, "%d", getComParticleStreamSize() );
+   message << _getLine( tab, "Particle stream size:", value ); 
 
    (void) LOCAL_SPRINTF( value, "%.5f", getTotalInverseMass() );
    message << _getLine( tab, "TotalInverseMass:", value ); 

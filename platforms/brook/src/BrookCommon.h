@@ -59,7 +59,7 @@ class BrookCommon {
      
       // bonded stream names
 
-      static const std::string BondedAtomIndicesStream;
+      static const std::string BondedParticleIndicesStream;
       static const std::string BondedParametersStream;
       static const std::string UnrolledForceStream;
       static const std::string BondedChargeStream;
@@ -76,9 +76,9 @@ class BrookCommon {
 
       // OBC Gbsa streams
 
-      static const std::string ObcAtomicRadiiStream;
-      static const std::string ObcScaledAtomicRadiiStream;
-      static const std::string ObcAtomicRadiiWithDielectricOffsetStream;
+      static const std::string ObcParticleRadiiStream;
+      static const std::string ObcScaledParticleRadiiStream;
+      static const std::string ObcParticleRadiiWithDielectricOffsetStream;
       static const std::string ObcBornRadiiStream;
       static const std::string ObcBornRadii2Stream;
       static const std::string ObcIntermediateForceStream;
@@ -96,8 +96,8 @@ class BrookCommon {
 
       // Shake streams
 
-      static const std::string ShakeAtomIndicesStream;
-      static const std::string ShakeAtomParameterStream;
+      static const std::string ShakeParticleIndicesStream;
+      static const std::string ShakeParticleParameterStream;
       static const std::string ShakeXCons0Stream;
       static const std::string ShakeXCons1Stream;
       static const std::string ShakeXCons2Stream;
@@ -130,76 +130,76 @@ class BrookCommon {
       ~BrookCommon();
   
       /**
-       * Return number of atoms
+       * Return number of particles
        * 
-       * @return number of atoms
+       * @return number of particles
        *
        */
 
-      int getNumberOfAtoms( void ) const; 
+      int getNumberOfParticles( void ) const; 
 
       /** 
-       * Get atom ceiling parameter
+       * Get particle ceiling parameter
        * 
-       * @return atom ceiling parameter
+       * @return particle ceiling parameter
        *
        */
       
-      int getAtomSizeCeiling( void ) const;
+      int getParticleSizeCeiling( void ) const;
       
       /**
-       * Get atom stream width
+       * Get particle stream width
        *
        * @param platform platform reference
        *
-       * @return atom stream width
+       * @return particle stream width
        */
 
-      int getAtomStreamWidth( const Platform& platform ); 
+      int getParticleStreamWidth( const Platform& platform ); 
 
       /**
-       * Get atom stream width
+       * Get particle stream width
        *
-       * @return atom stream width
+       * @return particle stream width
        */
 
-      int getAtomStreamWidth( void ) const; 
+      int getParticleStreamWidth( void ) const; 
 
       /**
-       * Get atom stream height
+       * Get particle stream height
        *
        * @param platform platform reference
        *
-       * @return atom stream height
+       * @return particle stream height
        */
 
-      int getAtomStreamHeight( const Platform& platform ); 
+      int getParticleStreamHeight( const Platform& platform ); 
 
       /**
-       * Get atom stream height
+       * Get particle stream height
        *
-       * @return atom stream height
+       * @return particle stream height
        */
 
-      int getAtomStreamHeight( void ) const;
+      int getParticleStreamHeight( void ) const;
 
       /**
-       * Get atom stream size
+       * Get particle stream size
        * 
        * @param platform platform reference
        *
-       * @return atom stream size
+       * @return particle stream size
        */
 
-      int getAtomStreamSize( const Platform& platform ); 
+      int getParticleStreamSize( const Platform& platform ); 
 
       /**
-       * Get atom stream size
+       * Get particle stream size
        * 
-       * @return atom stream size
+       * @return particle stream size
        */
 
-      int getAtomStreamSize( void ) const; 
+      int getParticleStreamSize( void ) const; 
 
       /** 
        * Set log file reference
@@ -314,19 +314,19 @@ class BrookCommon {
       
    protected:
    
-      // number of atoms
+      // number of particles
 
-      int _numberOfAtoms;
+      int _numberOfParticles;
 
-      // atom stream dimensions
+      // particle stream dimensions
 
-      int _atomStreamWidth;
-      int _atomStreamHeight;
-      int _atomStreamSize;
+      int _particleStreamWidth;
+      int _particleStreamHeight;
+      int _particleStreamSize;
 
-      // atom size mod
+      // particle size mod
 
-      int _atomSizeModified;
+      int _particleSizeModified;
 
       // log file reference
 
@@ -337,22 +337,22 @@ class BrookCommon {
       int _verbosity;
 
       /**
-       * Set number of atoms
+       * Set number of particles
        * 
-       * @param numberOfAtoms number of atoms
+       * @param numberOfParticles number of particles
        *
        */
 
-      int setNumberOfAtoms( int numberOfAtoms ); 
+      int setNumberOfParticles( int numberOfParticles ); 
 
       /** 
-       * Get atom stream dimensions
+       * Get particle stream dimensions
        * 
        * @param platform                  platform
        *
        */
       
-      void _getAtomStreamDimensions( const Platform& platform );
+      void _getParticleStreamDimensions( const Platform& platform );
       
       /* 
        * Get line

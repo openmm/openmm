@@ -44,7 +44,7 @@ using namespace std;
 
 // bonded streams
     
-const std::string BrookCommon::BondedAtomIndicesStream                            = "BondedAtomIndicesStream";
+const std::string BrookCommon::BondedParticleIndicesStream                        = "BondedParticleIndicesStream";
 const std::string BrookCommon::BondedParametersStream                             = "BondedParametersStream";
 const std::string BrookCommon::UnrolledForceStream                                = "UnrolledForceStream";
 const std::string BrookCommon::BondedChargeStream                                 = "BondedChargeStream";
@@ -61,9 +61,9 @@ const std::string BrookCommon::PartialForceStream                               
 
 // OBC Gbsa streams
 
-const std::string BrookCommon::ObcAtomicRadiiStream                               = "ObcAtomicRadiiStream";
-const std::string BrookCommon::ObcScaledAtomicRadiiStream                         = "ObcScaledAtomicRadiiStream";
-const std::string BrookCommon::ObcAtomicRadiiWithDielectricOffsetStream           = "ObcAtomicRadiiWithDielectricOffsetStream";
+const std::string BrookCommon::ObcParticleRadiiStream                             = "ObcParticleRadiiStream";
+const std::string BrookCommon::ObcScaledParticleRadiiStream                       = "ObcScaledParticleRadiiStream";
+const std::string BrookCommon::ObcParticleRadiiWithDielectricOffsetStream         = "ObcParticleRadiiWithDielectricOffsetStream";
 const std::string BrookCommon::ObcBornRadiiStream                                 = "ObcBornRadiiStream";
 const std::string BrookCommon::ObcBornRadii2Stream                                = "ObcBornRadii2Stream";
 const std::string BrookCommon::ObcIntermediateForceStream                         = "ObcIntermediateForceStream";
@@ -81,8 +81,8 @@ const std::string BrookCommon::InverseMassStream                                
 
 // Shake streams
 
-const std::string BrookCommon::ShakeAtomIndicesStream                             = "ShakeAtomIndicesStream";
-const std::string BrookCommon::ShakeAtomParameterStream                           = "ShakeAtomParameterStream";
+const std::string BrookCommon::ShakeParticleIndicesStream                         = "ShakeParticleIndicesStream";
+const std::string BrookCommon::ShakeParticleParameterStream                       = "ShakeParticleParameterStream";
 const std::string BrookCommon::ShakeXCons0Stream                                  = "ShakeXCons0Stream";
 const std::string BrookCommon::ShakeXCons1Stream                                  = "ShakeXCons1Stream";
 const std::string BrookCommon::ShakeXCons2Stream                                  = "ShakeXCons2Stream";
@@ -112,15 +112,15 @@ BrookCommon::BrookCommon(  ){
 
 // ---------------------------------------------------------------------------------------
 
-   _numberOfAtoms             = 0;
-   _atomSizeModified          = 0;
+   _numberOfParticles             = 0;
+   _particleSizeModified          = 0;
 
-   _atomStreamWidth           = -1;
-   _atomStreamHeight          = -1; 
-   _atomStreamSize            = -1;
+   _particleStreamWidth           = -1;
+   _particleStreamHeight          = -1; 
+   _particleStreamSize            = -1;
 
-   _log                       = NULL;
-   _verbosity                 = 0;
+   _log                           = NULL;
+   _verbosity                     = 0;
 
 }   
  
@@ -141,182 +141,182 @@ BrookCommon::~BrookCommon( ){
 }
 
 /** 
- * Get number of atoms
+ * Get number of particles
  * 
- * @return  number of atoms
+ * @return  number of particles
  *
  */
 
-int BrookCommon::getNumberOfAtoms( void ) const {
-   return _numberOfAtoms;
+int BrookCommon::getNumberOfParticles( void ) const {
+   return _numberOfParticles;
 }
 
 /** 
- * Get number of atoms
+ * Get number of particles
  * 
- * @param  numberOfAtoms number of atoms
- * @return  number of atoms
+ * @param  numberOfParticles number of particles
+ * @return  number of particles
  *
  */
 
-int BrookCommon::setNumberOfAtoms( int numberOfAtoms ){
-   if( numberOfAtoms != _numberOfAtoms ){
-      _atomSizeModified = numberOfAtoms;
+int BrookCommon::setNumberOfParticles( int numberOfParticles ){
+   if( numberOfParticles != _numberOfParticles ){
+      _particleSizeModified = numberOfParticles;
    }
-   _numberOfAtoms = numberOfAtoms;
-   return _numberOfAtoms;
+   _numberOfParticles = numberOfParticles;
+   return _numberOfParticles;
 }
 
 /** 
- * Get atom stream width
+ * Get particle stream width
  * 
  * @param platform  platform
  *
- * @return  atom stream width
+ * @return  particle stream width
  *
  */
 
-int BrookCommon::getAtomStreamWidth( const Platform& platform ){
+int BrookCommon::getParticleStreamWidth( const Platform& platform ){
 
 // ---------------------------------------------------------------------------------------
 
-   // static const std::string methodName      = "BrookCommon::getAtomStreamWidth";
+   // static const std::string methodName      = "BrookCommon::getParticleStreamWidth";
    // static const int debug                   = 1;
 
 // ---------------------------------------------------------------------------------------
 
-   // get atom stream width
+   // get particle stream width
 
-   if( _atomStreamWidth < 0 ){
-      _getAtomStreamDimensions( platform );
+   if( _particleStreamWidth < 0 ){
+      _getParticleStreamDimensions( platform );
    }
-   return _atomStreamWidth;
+   return _particleStreamWidth;
 }
 
 /** 
- * Get atom stream width
+ * Get particle stream width
  * 
- * @return  atom stream width
+ * @return  particle stream width
  *
  */
 
-int BrookCommon::getAtomStreamWidth( void ) const {
+int BrookCommon::getParticleStreamWidth( void ) const {
 
 // ---------------------------------------------------------------------------------------
 
-   // static const std::string methodName      = "BrookCommon::getAtomStreamWidth";
+   // static const std::string methodName      = "BrookCommon::getParticleStreamWidth";
    // static const int debug                   = 1;
 
 // ---------------------------------------------------------------------------------------
 
-   return _atomStreamWidth;
+   return _particleStreamWidth;
 }
 
 /** 
- * Get atom stream height
+ * Get particle stream height
  * 
  * @param platform platform
  *
- * @return  atom stream height 
+ * @return  particle stream height 
  *
  */
 
-int BrookCommon::getAtomStreamHeight( const Platform& platform ){
+int BrookCommon::getParticleStreamHeight( const Platform& platform ){
 
 // ---------------------------------------------------------------------------------------
 
-   // static const std::string methodName      = "BrookCommon::getAtomStreamHeight";
+   // static const std::string methodName      = "BrookCommon::getParticleStreamHeight";
    // static const int debug                   = 1;
 
 // ---------------------------------------------------------------------------------------
 
-   // get atom stream height
+   // get particle stream height
 
-   if( _atomStreamHeight < 0 ){
-      _getAtomStreamDimensions( platform );
+   if( _particleStreamHeight < 0 ){
+      _getParticleStreamDimensions( platform );
    }
-   return _atomStreamHeight;
+   return _particleStreamHeight;
 }
 
 /** 
- * Get atom stream height
+ * Get particle stream height
  * 
- * @return  atom stream height 
+ * @return  particle stream height 
  *
  */
 
-int BrookCommon::getAtomStreamHeight( void ) const {
+int BrookCommon::getParticleStreamHeight( void ) const {
 
 // ---------------------------------------------------------------------------------------
 
-   // static const std::string methodName      = "BrookCommon::getAtomStreamHeight";
+   // static const std::string methodName      = "BrookCommon::getParticleStreamHeight";
    // static const int debug                   = 1;
 
 // ---------------------------------------------------------------------------------------
 
-   return _atomStreamHeight;
+   return _particleStreamHeight;
 }
 
 /** 
- * Get atom stream size
+ * Get particle stream size
  * 
  * @param platform  platform
  *
- * @return  atom stream size
+ * @return  particle stream size
  *
  */
 
-int BrookCommon::getAtomStreamSize( const Platform& platform ){
+int BrookCommon::getParticleStreamSize( const Platform& platform ){
 
 // ---------------------------------------------------------------------------------------
 
-   // static const std::string methodName      = "BrookCommon::getAtomStreamSize";
+   // static const std::string methodName      = "BrookCommon::getParticleStreamSize";
    // static const int debug                   = 1;
 
 // ---------------------------------------------------------------------------------------
 
-   // get atom stream size
+   // get particle stream size
 
-   if( _atomStreamSize < 0 ){
-      _getAtomStreamDimensions( platform );
+   if( _particleStreamSize < 0 ){
+      _getParticleStreamDimensions( platform );
    }
-   return _atomStreamSize;
+   return _particleStreamSize;
 }
 
 /** 
- * Get atom stream size
+ * Get particle stream size
  * 
- * @return  atom stream size
+ * @return  particle stream size
  *
  */
 
-int BrookCommon::getAtomStreamSize( void ) const {
-   return _atomStreamSize;
+int BrookCommon::getParticleStreamSize( void ) const {
+   return _particleStreamSize;
 }
 
 /** 
- * Get atom stream dimensions
+ * Get particle stream dimensions
  * 
  * @param platform                  platform
  *
  */
 
-void BrookCommon::_getAtomStreamDimensions( const Platform& platform ){
+void BrookCommon::_getParticleStreamDimensions( const Platform& platform ){
 
 // ---------------------------------------------------------------------------------------
 
-   // static const std::string methodName      = "BrookCommon::_getAtomStreamDimensions";
+   // static const std::string methodName      = "BrookCommon::_getParticleStreamDimensions";
    // static const int debug                   = 1;
 
 // ---------------------------------------------------------------------------------------
 
-   // get atom stream size
+   // get particle stream size
 
    const BrookPlatform brookPlatform            = dynamic_cast<const BrookPlatform&> (platform);
    const BrookStreamFactory& brookStreamFactory = dynamic_cast<const BrookStreamFactory&> (platform.getDefaultStreamFactory() );
-   _atomStreamWidth                             = brookStreamFactory.getDefaultAtomStreamWidth();
-   _atomStreamSize                              = brookPlatform.getStreamSize( getNumberOfAtoms(), _atomStreamWidth, NULL );
-   _atomStreamHeight                            = (int) ( ((float) _atomStreamSize)/( (float) _atomStreamWidth) + 0.001);
+   _particleStreamWidth                         = brookStreamFactory.getDefaultParticleStreamWidth();
+   _particleStreamSize                          = brookPlatform.getStreamSize( getNumberOfParticles(), _particleStreamWidth, NULL );
+   _particleStreamHeight                        = (int) ( ((float) _particleStreamSize)/( (float) _particleStreamWidth) + 0.001);
 
    return;
 }

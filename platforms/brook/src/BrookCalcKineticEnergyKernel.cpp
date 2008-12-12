@@ -77,7 +77,7 @@ BrookCalcKineticEnergyKernel::~BrookCalcKineticEnergyKernel( ){
 /** 
  * Initialize the kernel
  * 
- * @param masses   mass of each atom
+ * @param masses   mass of each particle
  *
  */
 
@@ -107,7 +107,7 @@ void BrookCalcKineticEnergyKernel::initialize( const vector<double>& masses ){
 /** 
  * Execute kernel
  * 
- * @param velocities  stream of atom velocities
+ * @param velocities  stream of particle velocities
  *
  * @return kinetic energy of the system
  *

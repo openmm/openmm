@@ -1,39 +1,6 @@
 #ifndef __KGBSA_H__
 #define __KGBSA_H__
 
-/* -------------------------------------------------------------------------- *
- *                                   OpenMM                                   *
- * -------------------------------------------------------------------------- *
- * This is part of the OpenMM molecular simulation toolkit originating from   *
- * Simbios, the NIH National Center for Physics-Based Simulation of           *
- * Biological Structures at Stanford, funded under the NIH Roadmap for        *
- * Medical Research, grant U54 GM072970. See https://simtk.org.               *
- *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
- * Authors: Peter Eastman, Mark Friedrichs, Chris Bruns                       *
- * Contributors:                                                              *
- *                                                                            *
- * Permission is hereby granted, free of charge, to any person obtaining a    *
- * copy of this software and associated documentation files (the "Software"), *
- * to deal in the Software without restriction, including without limitation  *
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,   *
- * and/or sell copies of the Software, and to permit persons to whom the      *
- * Software is furnished to do so, subject to the following conditions:       *
- *                                                                            *
- * The above copyright notice and this permission notice shall be included in *
- * all copies or substantial portions of the Software.                        *
- *                                                                            *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR *
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,   *
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL    *
- * THE AUTHORS, CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,    *
- * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR      *
- * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE  *
- * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
- * -------------------------------------------------------------------------- */
-
-
-
 void kMergeFloat4( 
       const float repfac, 
       const float atomStrWidth, 
@@ -108,6 +75,28 @@ void kAddAndMergeFloat4_4(
       ::brook::stream outputStream 
                  );
 
+void kPostObcLoop2( 
+      const float repfac, 
+      const float atomStrWidth, 
+      const float pforceStrWidth,
+      const float natoms,
+      const float roundNatoms,
+      const float iUnroll,
+      const float conversion,
+      const float mergeNonObcForces,
+      ::brook::stream inObcForces, 
+      ::brook::stream nonObcForces, 
+      ::brook::stream stream1, 
+      ::brook::stream stream2, 
+      ::brook::stream stream3, 
+      ::brook::stream stream4, 
+      ::brook::stream atomicRadii,
+      ::brook::stream bornRadii,
+      ::brook::stream obcChain,
+      ::brook::stream outputStream 
+                 );
+
+
 void kPostObcLoop2_nobranch( 
       const float repfac, 
       const float atomStrWidth, 
@@ -127,6 +116,21 @@ void kPostObcLoop2_nobranch(
       ::brook::stream bornRadii,
       ::brook::stream obcChain,
       ::brook::stream outputStream 
+                 );
+
+void kPostCalculateBornRadii_nobranch( 
+      const float repfac, 
+      const float atomStrWidth, 
+      const float pforceStrWidth,
+      const float natoms,
+      const float roundNatoms,
+      const float iUnroll,
+      const float conversion,
+      const float mergeNonObcForces,
+      ::brook::stream stream1, 
+      ::brook::stream atomicRadii,
+      ::brook::stream bornRadii,
+      ::brook::stream obcChain
                  );
 
 void kPreGbsaForce2( 
@@ -483,11 +487,24 @@ void kObcLoop2(
       float fstreamWidth,
       ::brook::stream posq, 
       ::brook::stream atomicRadii, 
+      ::brook::stream scaledAtomicRadii, 
       ::brook::stream bornForceFactor, 
       ::brook::stream bornForce1,
       ::brook::stream bornForce2,
       ::brook::stream bornForce3,
       ::brook::stream bornForce4
+      );
+
+void kCalculateBornRadii(
+      float numberOfAtoms, 
+      float roundNatoms,
+      float duplicationFactor, 
+      float streamWidth, 
+      float fstreamWidth,
+      ::brook::stream posq, 
+      ::brook::stream atomicRadii, 
+      ::brook::stream scaledAtomicRadii, 
+      ::brook::stream bornForce1
       );
 
 void kObcBornRadii(
@@ -506,6 +523,22 @@ void kAceNonPolar(
       ::brook::stream bornRadii, 
       ::brook::stream vdwRadii, 
       ::brook::stream bornForce
+      );
+
+void kCalculateBornRadii(
+      float numberOfAtoms, 
+      float roundNatoms,
+      float duplicationFactor, 
+      float streamWidth, 
+      float fstreamWidth,
+      ::brook::stream posq, 
+      ::brook::stream atomicRadii, 
+      ::brook::stream scaledAtomicRadii, 
+      ::brook::stream bornForceFactor, 
+      ::brook::stream bornForce1,
+      ::brook::stream bornForce2,
+      ::brook::stream bornForce3,
+      ::brook::stream bornForce4
       );
 
 void kZeroFloat4( ::brook::stream bornForce );

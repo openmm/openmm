@@ -64,13 +64,13 @@ BrookBrownianDynamics::BrookBrownianDynamics( ){
 
 // ---------------------------------------------------------------------------------------
 
-   _numberOfAtoms             = -1;
+   _numberOfParticles             = -1;
 
    // mark stream dimension variables as unset
 
-   _bdAtomStreamWidth         = -1;
-   _bdAtomStreamHeight        = -1;
-   _bdAtomStreamSize          = -1;
+   _bdParticleStreamWidth         = -1;
+   _bdParticleStreamHeight        = -1;
+   _bdParticleStreamSize          = -1;
 
    for( int ii = 0; ii < LastStreamIndex; ii++ ){
       _streams[ii]   = NULL;
@@ -376,9 +376,9 @@ int BrookBrownianDynamics::updateParameters( double temperature, double friction
 /** 
  * Update
  * 
- * @param  positions                   atom positions
- * @param  velocities                  atom velocities
- * @param  forces                      atom forces
+ * @param  positions                   particle positions
+ * @param  velocities                  particle velocities
+ * @param  forces                      particle forces
  * @param  brookShakeAlgorithm         BrookShakeAlgorithm reference
  * @param  brookRandomNumberGenerator  BrookRandomNumberGenerator reference
  *
@@ -413,7 +413,7 @@ int BrookBrownianDynamics::update( Stream& positions, Stream& velocities,
 
       static int showAux = 1;
 
-      if( PrintOn ){
+      if( showAux ){
          (void) fprintf( getLog(), "%s shake=%d\n", methodName, brookShakeAlgorithm.getNumberOfConstraints() );
          (void) fflush( getLog() );
       }
@@ -434,10 +434,51 @@ int BrookBrownianDynamics::update( Stream& positions, Stream& velocities,
       }
    }
 
+   // diagnostics
+
+   if( (1 || PrintOn) ){
+      (void) fprintf( getLog(), "\nPre kintegrate_bd: %d rngStrW=%3d rngOff=%5d "
+                                "ForceScale=%12.5e NoiseAmplitude=%12.5e\n",
+                                getBrownianDynamicsParticleStreamWidth(),
+                                brookRandomNumberGenerator.getRandomNumberStreamWidth(),
+                                brookRandomNumberGenerator.getRvStreamOffset(),
+                                getForceScale(),  getNoiseAmplitude() );
+
+      // (void) fprintf( getLog(), "\nInverseMassStream\n" );
+      //getInverseMassStream()->printToFile( getLog() );
+
+      //StreamImpl& positionStreamImpl               = positionStream.getImpl();
+      //const BrookStreamImpl brookPositions         = dynamic_cast<BrookStreamImpl&> (positionStreamImpl);
+/*
+      BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamImpl();
+      (void) fprintf( getLog(), "\nPositionStream\n" );
+      brookStreamInternalPos->printToFile( getLog() );
+*/
+
+      double forceSum[3];
+      BrookStreamInternal* brookStreamInternalFF       = forceStream.getBrookStreamImpl();
+      BrookFloatStreamInternal* brookStreamInternalF   = dynamic_cast<BrookFloatStreamInternal*> (brookStreamInternalFF);
+      brookStreamInternalF->sumByDimension( getNumberOfParticles(), forceSum );
+      (void) fprintf( getLog(), "\nForceStream [%18.10e %18.10e %18.10e]\n", forceSum[0], forceSum[1], forceSum[2] );
+      brookStreamInternalF->printToFile( getLog() );
+/*
+
+      (void) fprintf( getLog(), "\nXPrimeStream\n" );
+      getXPrimeStream()->printToFile( getLog() ); 
+
+      (void) fprintf( getLog(), "\nRvStreamIndex=%d\n", brookRandomNumberGenerator.getRvStreamIndex() );
+*/
+      // brookRandomNumberGenerator.getRandomNumberStream( brookRandomNumberGenerator.getRvStreamIndex() )->printToFile( getLog() ); 
+
+         BrookStreamInternal* brookStreamInternalVel  = velocityStream.getBrookStreamImpl();
+         (void) fprintf( getLog(), "\nVelocityStream\n" );
+         brookStreamInternalVel->printToFile( getLog() ); 
+   }   
+
    // integration step -- deltas returned in XPrime
 
    kintegrate_bd(
-         (float) getBrownianDynamicsAtomStreamWidth(),
+         (float) getBrownianDynamicsParticleStreamWidth(),
          (float) brookRandomNumberGenerator.getRandomNumberStreamWidth(),
          (float) brookRandomNumberGenerator.getRvStreamOffset(),
          getForceScale(), getNoiseAmplitude(),
@@ -450,7 +491,7 @@ int BrookBrownianDynamics::update( Stream& positions, Stream& velocities,
    if( PrintOn ){
       (void) fprintf( getLog(), "\nPost kintegrate_bd: %d rngStrW=%3d rngOff=%5d "
                                 "ForceScale=%12.5e NoiseAmplitude=%12.5e\n",
-                                getBrownianDynamicsAtomStreamWidth(),
+                                getBrownianDynamicsParticleStreamWidth(),
                                 brookRandomNumberGenerator.getRandomNumberStreamWidth(),
                                 brookRandomNumberGenerator.getRvStreamOffset(),
                                 getForceScale(),  getNoiseAmplitude() );
@@ -477,20 +518,20 @@ int BrookBrownianDynamics::update( Stream& positions, Stream& velocities,
 
    // advance random number cursor
 
-   brookRandomNumberGenerator.advanceGVCursor( getNumberOfAtoms() );
+   brookRandomNumberGenerator.advanceGVCursor( getNumberOfParticles() );
 
    // Shake
 
    if( brookShakeAlgorithm.getNumberOfConstraints() > 0 ){
       kshakeh_fix1( 
                     10.0f,
-                    (float) getBrownianDynamicsAtomStreamWidth(),
+                    (float) getBrownianDynamicsParticleStreamWidth(),
                     brookShakeAlgorithm.getInverseHydrogenMass(),
                     omega, 
-                    brookShakeAlgorithm.getShakeAtomIndicesStream()->getBrookStream(),
+                    brookShakeAlgorithm.getShakeParticleIndicesStream()->getBrookStream(),
                     positionStream.getBrookStream(),
                     getXPrimeStream()->getBrookStream(),
-                    brookShakeAlgorithm.getShakeAtomParameterStream()->getBrookStream(),
+                    brookShakeAlgorithm.getShakeParticleParameterStream()->getBrookStream(),
                     brookShakeAlgorithm.getShakeXCons0Stream()->getBrookStream(),
                     brookShakeAlgorithm.getShakeXCons1Stream()->getBrookStream(),
                     brookShakeAlgorithm.getShakeXCons2Stream()->getBrookStream(),
@@ -499,7 +540,7 @@ int BrookBrownianDynamics::update( Stream& positions, Stream& velocities,
       // second Shake gather
    
       kshakeh_update2_fix1( 
-                    (float) getBrownianDynamicsAtomStreamWidth(),
+                    (float) getBrownianDynamicsParticleStreamWidth(),
                     brookShakeAlgorithm.getShakeInverseMapStream()->getBrookStream(),
                     positionStream.getBrookStream(),
                     getXPrimeStream()->getBrookStream(),
@@ -539,10 +580,10 @@ int BrookBrownianDynamics::update( Stream& positions, Stream& velocities,
 
       // diagnostics
    
-      if( PrintOn ){
+      if( (1 || PrintOn) ){
    
          (void) fprintf( getLog(), "\nPost kupdate_bd2: velocityScale=%12.5e\n", velocityScale );
-   
+
          (void) fprintf( getLog(), "\nXPrimeStream\n" );
          getXPrimeStream()->printToFile( getLog() ); 
 
@@ -563,35 +604,35 @@ int BrookBrownianDynamics::update( Stream& positions, Stream& velocities,
 };
 
 /** 
- * Get Atom stream size
+ * Get Particle stream size
  *
- * @return  Atom stream size
+ * @return  Particle stream size
  *
  */
 
-int BrookBrownianDynamics::getBrownianDynamicsAtomStreamSize( void ) const {
-   return _bdAtomStreamSize;
+int BrookBrownianDynamics::getBrownianDynamicsParticleStreamSize( void ) const {
+   return _bdParticleStreamSize;
 }
 
 /** 
- * Get atom stream width
+ * Get particle stream width
  *
- * @return  atom stream width
+ * @return  particle stream width
  *
  */
 
-int BrookBrownianDynamics::getBrownianDynamicsAtomStreamWidth( void ) const {
-   return _bdAtomStreamWidth;
+int BrookBrownianDynamics::getBrownianDynamicsParticleStreamWidth( void ) const {
+   return _bdParticleStreamWidth;
 }
 
 /** 
- * Get atom stream height
+ * Get particle stream height
  *
- * @return atom stream height
+ * @return particle stream height
  */
 
-int BrookBrownianDynamics::getBrownianDynamicsAtomStreamHeight( void ) const {
-   return _bdAtomStreamHeight;
+int BrookBrownianDynamics::getBrownianDynamicsParticleStreamHeight( void ) const {
+   return _bdParticleStreamHeight;
 }
 
 /** 
@@ -619,14 +660,14 @@ BrookFloatStreamInternal* BrookBrownianDynamics::getInverseMassStream( void ) co
 /** 
  * Initialize stream dimensions
  * 
- * @param numberOfAtoms             number of atoms
+ * @param numberOfParticles             number of particles
  * @param platform                  platform
  *      
  * @return ErrorReturnValue if error, else DefaultReturnValue
  *
  */
 
-int BrookBrownianDynamics::_initializeStreamSizes( int numberOfAtoms, const Platform& platform ){
+int BrookBrownianDynamics::_initializeStreamSizes( int numberOfParticles, const Platform& platform ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -634,9 +675,9 @@ int BrookBrownianDynamics::_initializeStreamSizes( int numberOfAtoms, const Plat
 
 // ---------------------------------------------------------------------------------------
 
-   _bdAtomStreamSize     = getAtomStreamSize( platform );
-   _bdAtomStreamWidth    = getAtomStreamWidth( platform );
-   _bdAtomStreamHeight   = getAtomStreamHeight( platform );
+   _bdParticleStreamSize     = getParticleStreamSize( platform );
+   _bdParticleStreamWidth    = getParticleStreamWidth( platform );
+   _bdParticleStreamHeight   = getParticleStreamHeight( platform );
 
    return DefaultReturnValue;
 }
@@ -660,19 +701,19 @@ int BrookBrownianDynamics::_initializeStreams( const Platform& platform ){
 
 // ---------------------------------------------------------------------------------------
 
-   int sdAtomStreamSize             = getBrownianDynamicsAtomStreamSize();
-   int sdAtomStreamWidth            = getBrownianDynamicsAtomStreamWidth();
+   int sdParticleStreamSize             = getBrownianDynamicsParticleStreamSize();
+   int sdParticleStreamWidth            = getBrownianDynamicsParticleStreamWidth();
 
     _streams[VPrimeStream]          = new BrookFloatStreamInternal( BrookCommon::VPrimeStream,
-                                                                    sdAtomStreamSize, sdAtomStreamWidth,
+                                                                    sdParticleStreamSize, sdParticleStreamWidth,
                                                                     BrookStreamInternal::Float3, dangleValue );
 
     _streams[XPrimeStream]          = new BrookFloatStreamInternal( BrookCommon::XPrimeStream,
-                                                                    sdAtomStreamSize, sdAtomStreamWidth,
+                                                                    sdParticleStreamSize, sdParticleStreamWidth,
                                                                     BrookStreamInternal::Float3, dangleValue );
 
     _streams[InverseMassStream]     = new BrookFloatStreamInternal( BrookCommon::InverseMassStream,
-                                                                    sdAtomStreamSize, sdAtomStreamWidth,
+                                                                    sdParticleStreamSize, sdParticleStreamWidth,
                                                                     BrookStreamInternal::Float, dangleValue );
 
    return DefaultReturnValue;
@@ -693,7 +734,7 @@ int BrookBrownianDynamics::_updateStreams( void ){
 
 // ---------------------------------------------------------------------------------------
 
-   //int atomStreamSize                        = getBrownianDynamicsAtomStreamSize();
+   //int particleStreamSize                        = getBrownianDynamicsParticleStreamSize();
 
    return DefaultReturnValue;
 
@@ -702,7 +743,7 @@ int BrookBrownianDynamics::_updateStreams( void ){
 /** 
  * Set masses 
  * 
- * @param masses             atomic masses
+ * @param masses             particle masses
  *
  */
 
@@ -754,12 +795,12 @@ int BrookBrownianDynamics::setup( const std::vector<double>& masses, const Platf
    const BrookPlatform brookPlatform            = dynamic_cast<const BrookPlatform&> (platform);
    setLog( brookPlatform.getLog() );
 
-   int numberOfAtoms  = (int) masses.size();
-   setNumberOfAtoms( numberOfAtoms );
+   int numberOfParticles  = (int) masses.size();
+   setNumberOfParticles( numberOfParticles );
 
    // set stream sizes and then create streams
 
-   _initializeStreamSizes( numberOfAtoms, platform );
+   _initializeStreamSizes( numberOfParticles, platform );
    _initializeStreams( platform );
 
    _setInverseSqrtMasses( masses );
@@ -798,17 +839,17 @@ std::string BrookBrownianDynamics::getContentsString( int level ) const {
 #define LOCAL_SPRINTF(a,b,c) sprintf( (a), (b), (c) );   
 #endif
 
-   (void) LOCAL_SPRINTF( value, "%d", getNumberOfAtoms() );
-   message << _getLine( tab, "Number of atoms:", value ); 
+   (void) LOCAL_SPRINTF( value, "%d", getNumberOfParticles() );
+   message << _getLine( tab, "Number of particles:", value ); 
 
-   (void) LOCAL_SPRINTF( value, "%d", getAtomStreamWidth() );
-   message << _getLine( tab, "Atom stream width:", value ); 
+   (void) LOCAL_SPRINTF( value, "%d", getParticleStreamWidth() );
+   message << _getLine( tab, "Particle stream width:", value ); 
 
-   (void) LOCAL_SPRINTF( value, "%d", getAtomStreamHeight() );
-   message << _getLine( tab, "Atom stream height:", value ); 
+   (void) LOCAL_SPRINTF( value, "%d", getParticleStreamHeight() );
+   message << _getLine( tab, "Particle stream height:", value ); 
 
-   (void) LOCAL_SPRINTF( value, "%d", getAtomStreamSize() );
-   message << _getLine( tab, "Atom stream size:", value ); 
+   (void) LOCAL_SPRINTF( value, "%d", getParticleStreamSize() );
+   message << _getLine( tab, "Particle stream size:", value ); 
 
    (void) LOCAL_SPRINTF( value, "%.5f", getTau() );
    message << _getLine( tab, "Tau:", value ); 
@@ -819,10 +860,10 @@ std::string BrookBrownianDynamics::getContentsString( int level ) const {
    (void) LOCAL_SPRINTF( value, "%.5f", getStepSize() );
    message << _getLine( tab, "Step size:", value ); 
 
-   (void) LOCAL_SPRINTF( value, "%.5f", getForceScale() );
+   (void) LOCAL_SPRINTF( value, "%.5e", getForceScale() );
    message << _getLine( tab, "Force scale:", value ); 
 
-   (void) LOCAL_SPRINTF( value, "%.5f", getNoiseAmplitude() );
+   (void) LOCAL_SPRINTF( value, "%.5e", getNoiseAmplitude() );
    message << _getLine( tab, "Noise amplitude:", value ); 
 
    (void) LOCAL_SPRINTF( value, "%.5f", getTemperature() );

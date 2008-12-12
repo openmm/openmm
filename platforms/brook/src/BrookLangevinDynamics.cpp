@@ -63,13 +63,13 @@ BrookLangevinDynamics::BrookLangevinDynamics( ){
 
 // ---------------------------------------------------------------------------------------
 
-   _numberOfAtoms             = -1;
+   _numberOfParticles             = -1;
 
    // mark stream dimension variables as unset
 
-   _sdAtomStreamWidth         = -1;
-   _sdAtomStreamHeight        = -1;
-   _sdAtomStreamSize          = -1;
+   _sdParticleStreamWidth         = -1;
+   _sdParticleStreamHeight        = -1;
+   _sdParticleStreamSize          = -1;
 
    for( int ii = 0; ii < LastStreamIndex; ii++ ){
       _sdStreams[ii]   = NULL;
@@ -352,9 +352,9 @@ int BrookLangevinDynamics::updateParameters( double temperature, double friction
 /** 
  * Update
  * 
- * @param  positions                   atom positions
- * @param  velocities                  atom velocities
- * @param  forces                      atom forces
+ * @param  positions                   particle positions
+ * @param  velocities                  particle velocities
+ * @param  forces                      particle forces
  * @param  brookShakeAlgorithm         BrookShakeAlgorithm reference
  * @param  brookRandomNumberGenerator  BrookRandomNumberGenerator reference
  *
@@ -414,7 +414,7 @@ int BrookLangevinDynamics::update( Stream& positions, Stream& velocities,
    // first integration step
 
    kupdate_sd1_fix1(
-         (float) getLangevinDynamicsAtomStreamWidth(),
+         (float) getLangevinDynamicsParticleStreamWidth(),
          (float) brookRandomNumberGenerator.getRandomNumberStreamWidth(),
          (float) brookRandomNumberGenerator.getRvStreamOffset(),
          derivedParameters[EM],
@@ -436,9 +436,9 @@ int BrookLangevinDynamics::update( Stream& positions, Stream& velocities,
    // diagnostics
 
    if( PrintOn ){
-      (void) fprintf( getLog(), "\nPost kupdate_sd1_fix1: atomStrW=%3d rngStrW=%3d rngOff=%5d "
+      (void) fprintf( getLog(), "\nPost kupdate_sd1_fix1: particleStrW=%3d rngStrW=%3d rngOff=%5d "
                                 "EM=%12.5e Sd1pc[]=[%12.5e %12.5e %12.5e]",
-                                getLangevinDynamicsAtomStreamWidth(),
+                                getLangevinDynamicsParticleStreamWidth(),
                                 brookRandomNumberGenerator.getRandomNumberStreamWidth(),
                                 brookRandomNumberGenerator.getRvStreamOffset(),
                                 derivedParameters[EM], derivedParameters[Sd1pc1], derivedParameters[Sd1pc2], derivedParameters[Sd1pc3] );
@@ -481,20 +481,20 @@ int BrookLangevinDynamics::update( Stream& positions, Stream& velocities,
 
    // advance random number cursor
 
-   brookRandomNumberGenerator.advanceGVCursor( 2*getNumberOfAtoms() );
+   brookRandomNumberGenerator.advanceGVCursor( 2*getNumberOfParticles() );
 
    // first Shake step
 
    if( brookShakeAlgorithm.getNumberOfConstraints() > 0 ){
       kshakeh_fix1( 
                     10.0f,
-                    (float) getLangevinDynamicsAtomStreamWidth(),
+                    (float) getLangevinDynamicsParticleStreamWidth(),
                     brookShakeAlgorithm.getInverseHydrogenMass(),
                     omega, 
-                    brookShakeAlgorithm.getShakeAtomIndicesStream()->getBrookStream(),
+                    brookShakeAlgorithm.getShakeParticleIndicesStream()->getBrookStream(),
                     positionStream.getBrookStream(),
                     getXPrimeStream()->getBrookStream(),
-                    brookShakeAlgorithm.getShakeAtomParameterStream()->getBrookStream(),
+                    brookShakeAlgorithm.getShakeParticleParameterStream()->getBrookStream(),
                     brookShakeAlgorithm.getShakeXCons0Stream()->getBrookStream(),
                     brookShakeAlgorithm.getShakeXCons1Stream()->getBrookStream(),
                     brookShakeAlgorithm.getShakeXCons2Stream()->getBrookStream(),
@@ -503,7 +503,7 @@ int BrookLangevinDynamics::update( Stream& positions, Stream& velocities,
       // first Shake gather
    
       kshakeh_update1_fix1(
-                    (float) getLangevinDynamicsAtomStreamWidth(),
+                    (float) getLangevinDynamicsParticleStreamWidth(),
                     derivedParameters[Sd2pc1],
                     brookShakeAlgorithm.getShakeInverseMapStream()->getBrookStream(),
                     positionStream.getBrookStream(),
@@ -519,7 +519,7 @@ int BrookLangevinDynamics::update( Stream& positions, Stream& velocities,
    // second integration step
 
    kupdate_sd2_fix1(
-         (float) getLangevinDynamicsAtomStreamWidth(),
+         (float) getLangevinDynamicsParticleStreamWidth(),
          (float) brookRandomNumberGenerator.getRandomNumberStreamWidth(),
          (float) brookRandomNumberGenerator.getRvStreamOffset(),
          derivedParameters[Sd2pc1],
@@ -538,9 +538,9 @@ int BrookLangevinDynamics::update( Stream& positions, Stream& velocities,
    // diagnostics
 
    if( PrintOn ){
-      (void) fprintf( getLog(), "\nPost kupdate_sd2_fix1: atomStrW=%3d rngStrW=%3d rngOff=%5d "
+      (void) fprintf( getLog(), "\nPost kupdate_sd2_fix1: particleStrW=%3d rngStrW=%3d rngOff=%5d "
                                 "Sd2pc[]=[%12.5e %12.5e]",
-                                getLangevinDynamicsAtomStreamWidth(),
+                                getLangevinDynamicsParticleStreamWidth(),
                                 brookRandomNumberGenerator.getRandomNumberStreamWidth(),
                                 brookRandomNumberGenerator.getRvStreamOffset(),
                                 derivedParameters[Sd2pc1], derivedParameters[Sd2pc2] );
@@ -574,20 +574,20 @@ int BrookLangevinDynamics::update( Stream& positions, Stream& velocities,
 
    // advance random number cursor
 
-   brookRandomNumberGenerator.advanceGVCursor( 2*getNumberOfAtoms() );
+   brookRandomNumberGenerator.advanceGVCursor( 2*getNumberOfParticles() );
 
    // second Shake step
 
    if( brookShakeAlgorithm.getNumberOfConstraints() > 0 ){
       kshakeh_fix1( 
                     10.0f,
-                    (float) getLangevinDynamicsAtomStreamWidth(),
+                    (float) getLangevinDynamicsParticleStreamWidth(),
                     brookShakeAlgorithm.getInverseHydrogenMass(),
                     omega, 
-                    brookShakeAlgorithm.getShakeAtomIndicesStream()->getBrookStream(),
+                    brookShakeAlgorithm.getShakeParticleIndicesStream()->getBrookStream(),
                     positionStream.getBrookStream(),
                     getXPrimeStream()->getBrookStream(),
-                    brookShakeAlgorithm.getShakeAtomParameterStream()->getBrookStream(),
+                    brookShakeAlgorithm.getShakeParticleParameterStream()->getBrookStream(),
                     brookShakeAlgorithm.getShakeXCons0Stream()->getBrookStream(),
                     brookShakeAlgorithm.getShakeXCons1Stream()->getBrookStream(),
                     brookShakeAlgorithm.getShakeXCons2Stream()->getBrookStream(),
@@ -596,7 +596,7 @@ int BrookLangevinDynamics::update( Stream& positions, Stream& velocities,
       // second Shake gather
    
       kshakeh_update2_fix1( 
-                    (float) getLangevinDynamicsAtomStreamWidth(),
+                    (float) getLangevinDynamicsParticleStreamWidth(),
                     brookShakeAlgorithm.getShakeInverseMapStream()->getBrookStream(),
                     positionStream.getBrookStream(),
                     getXPrimeStream()->getBrookStream(),
@@ -635,35 +635,35 @@ const BrookOpenMMFloat* BrookLangevinDynamics::getDerivedParameters( void ) cons
 }
 
 /** 
- * Get Atom stream size
+ * Get Particle stream size
  *
- * @return  Atom stream size
+ * @return  Particle stream size
  *
  */
 
-int BrookLangevinDynamics::getLangevinDynamicsAtomStreamSize( void ) const {
-   return _sdAtomStreamSize;
+int BrookLangevinDynamics::getLangevinDynamicsParticleStreamSize( void ) const {
+   return _sdParticleStreamSize;
 }
 
 /** 
- * Get atom stream width
+ * Get particle stream width
  *
- * @return  atom stream width
+ * @return  particle stream width
  *
  */
 
-int BrookLangevinDynamics::getLangevinDynamicsAtomStreamWidth( void ) const {
-   return _sdAtomStreamWidth;
+int BrookLangevinDynamics::getLangevinDynamicsParticleStreamWidth( void ) const {
+   return _sdParticleStreamWidth;
 }
 
 /** 
- * Get atom stream height
+ * Get particle stream height
  *
- * @return atom stream height
+ * @return particle stream height
  */
 
-int BrookLangevinDynamics::getLangevinDynamicsAtomStreamHeight( void ) const {
-   return _sdAtomStreamHeight;
+int BrookLangevinDynamics::getLangevinDynamicsParticleStreamHeight( void ) const {
+   return _sdParticleStreamHeight;
 }
 
 /** 
@@ -746,14 +746,14 @@ BrookFloatStreamInternal* BrookLangevinDynamics::getInverseMassStream( void ) co
 /** 
  * Initialize stream dimensions
  * 
- * @param numberOfAtoms             number of atoms
+ * @param numberOfParticles         number of particles
  * @param platform                  platform
  *      
  * @return ErrorReturnValue if error, else DefaultReturnValue
  *
  */
 
-int BrookLangevinDynamics::_initializeStreamSizes( int numberOfAtoms, const Platform& platform ){
+int BrookLangevinDynamics::_initializeStreamSizes( int numberOfParticles, const Platform& platform ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -761,9 +761,9 @@ int BrookLangevinDynamics::_initializeStreamSizes( int numberOfAtoms, const Plat
 
 // ---------------------------------------------------------------------------------------
 
-   _sdAtomStreamSize     = getAtomStreamSize( platform );
-   _sdAtomStreamWidth    = getAtomStreamWidth( platform );
-   _sdAtomStreamHeight   = getAtomStreamHeight( platform );
+   _sdParticleStreamSize     = getParticleStreamSize( platform );
+   _sdParticleStreamWidth    = getParticleStreamWidth( platform );
+   _sdParticleStreamHeight   = getParticleStreamHeight( platform );
 
    return DefaultReturnValue;
 }
@@ -771,7 +771,7 @@ int BrookLangevinDynamics::_initializeStreamSizes( int numberOfAtoms, const Plat
 /** 
  * Initialize stream dimensions
  * 
- * @param numberOfAtoms             number of atoms
+ * @param numberOfParticles         number of particles
  * @param platform                  platform
  *
  * @return ErrorReturnValue if error, else DefaultReturnValue
@@ -886,35 +886,35 @@ int BrookLangevinDynamics::_initializeStreams( const Platform& platform ){
 
 // ---------------------------------------------------------------------------------------
 
-   int sdAtomStreamSize             = getLangevinDynamicsAtomStreamSize();
-   int sdAtomStreamWidth            = getLangevinDynamicsAtomStreamWidth();
+   int sdParticleStreamSize         = getLangevinDynamicsParticleStreamSize();
+   int sdParticleStreamWidth        = getLangevinDynamicsParticleStreamWidth();
 
     _sdStreams[SDPC1Stream]         = new BrookFloatStreamInternal( BrookCommon::SDPC1Stream,
-                                                                    sdAtomStreamSize, sdAtomStreamWidth,
+                                                                    sdParticleStreamSize, sdParticleStreamWidth,
                                                                     BrookStreamInternal::Float2, dangleValue );
 
     _sdStreams[SDPC2Stream]         = new BrookFloatStreamInternal( BrookCommon::SDPC2Stream,
-                                                                    sdAtomStreamSize, sdAtomStreamWidth,
+                                                                    sdParticleStreamSize, sdParticleStreamWidth,
                                                                     BrookStreamInternal::Float2, dangleValue );
 
     _sdStreams[SD2XStream]          = new BrookFloatStreamInternal( BrookCommon::SD2XStream,
-                                                                    sdAtomStreamSize, sdAtomStreamWidth,
+                                                                    sdParticleStreamSize, sdParticleStreamWidth,
                                                                     BrookStreamInternal::Float3, dangleValue );
 
     _sdStreams[SD1VStream]          = new BrookFloatStreamInternal( BrookCommon::SD1VStream,
-                                                                    sdAtomStreamSize, sdAtomStreamWidth,
+                                                                    sdParticleStreamSize, sdParticleStreamWidth,
                                                                     BrookStreamInternal::Float3, dangleValue );
 
     _sdStreams[VPrimeStream]        = new BrookFloatStreamInternal( BrookCommon::VPrimeStream,
-                                                                    sdAtomStreamSize, sdAtomStreamWidth,
+                                                                    sdParticleStreamSize, sdParticleStreamWidth,
                                                                     BrookStreamInternal::Float3, dangleValue );
 
     _sdStreams[XPrimeStream]        = new BrookFloatStreamInternal( BrookCommon::XPrimeStream,
-                                                                    sdAtomStreamSize, sdAtomStreamWidth,
+                                                                    sdParticleStreamSize, sdParticleStreamWidth,
                                                                     BrookStreamInternal::Float3, dangleValue );
 
     _sdStreams[InverseMassStream]   = new BrookFloatStreamInternal( BrookCommon::InverseMassStream,
-                                                                    sdAtomStreamSize, sdAtomStreamWidth,
+                                                                    sdParticleStreamSize, sdParticleStreamWidth,
                                                                     BrookStreamInternal::Float, dangleValue );
 
    return DefaultReturnValue;
@@ -935,20 +935,20 @@ int BrookLangevinDynamics::_updateSdStreams( void ){
 
 // ---------------------------------------------------------------------------------------
 
-   int sdAtomStreamSize                      = getLangevinDynamicsAtomStreamSize();
+   int sdParticleStreamSize                      = getLangevinDynamicsParticleStreamSize();
 
    BrookOpenMMFloat* sdpc[2];
    for( int ii = 0; ii < 2; ii++ ){
-      sdpc[ii] = new BrookOpenMMFloat[2*sdAtomStreamSize];
-      memset( sdpc[ii], 0, 2*sdAtomStreamSize*sizeof( BrookOpenMMFloat ) ); 
+      sdpc[ii] = new BrookOpenMMFloat[2*sdParticleStreamSize];
+      memset( sdpc[ii], 0, 2*sdParticleStreamSize*sizeof( BrookOpenMMFloat ) ); 
    }
-   BrookOpenMMFloat* inverseMass = new BrookOpenMMFloat[sdAtomStreamSize];
-   memset( inverseMass, 0, sdAtomStreamSize*sizeof( BrookOpenMMFloat ) ); 
+   BrookOpenMMFloat* inverseMass = new BrookOpenMMFloat[sdParticleStreamSize];
+   memset( inverseMass, 0, sdParticleStreamSize*sizeof( BrookOpenMMFloat ) ); 
 
    const BrookOpenMMFloat* derivedParameters = getDerivedParameters( );
-   int numberOfAtoms                         = getNumberOfAtoms();
+   int numberOfParticles                         = getNumberOfParticles();
    int index                                 = 0;
-   for( int ii = 0; ii < numberOfAtoms; ii++, index += 2 ){
+   for( int ii = 0; ii < numberOfParticles; ii++, index += 2 ){
 
       sdpc[0][index]      = _inverseSqrtMasses[ii]*( static_cast<BrookOpenMMFloat> (derivedParameters[Yv]) );
       sdpc[0][index+1]    = _inverseSqrtMasses[ii]*( static_cast<BrookOpenMMFloat> (derivedParameters[V])  );
@@ -971,13 +971,13 @@ int BrookLangevinDynamics::_updateSdStreams( void ){
 
    // initialize SD2X
 
-   BrookOpenMMFloat* sd2x = new BrookOpenMMFloat[3*sdAtomStreamSize];
+   BrookOpenMMFloat* sd2x = new BrookOpenMMFloat[3*sdParticleStreamSize];
    //SimTKOpenMMUtilities::setRandomNumberSeed( (uint32_t) getRandomNumberSeed() );
 
-   memset( sd2x, 0, 3*sdAtomStreamSize*sizeof( BrookOpenMMFloat ) ); 
+   memset( sd2x, 0, 3*sdParticleStreamSize*sizeof( BrookOpenMMFloat ) ); 
 
    index = 0;
-   for( int ii = 0; ii < numberOfAtoms; ii++, index += 3 ){
+   for( int ii = 0; ii < numberOfParticles; ii++, index += 3 ){
       sd2x[index]        = _inverseSqrtMasses[ii]*derivedParameters[X]*( static_cast<BrookOpenMMFloat> (SimTKOpenMMUtilities::getNormallyDistributedRandomNumber()) );
       sd2x[index+1]      = _inverseSqrtMasses[ii]*derivedParameters[X]*( static_cast<BrookOpenMMFloat> (SimTKOpenMMUtilities::getNormallyDistributedRandomNumber()) );
       sd2x[index+2]      = _inverseSqrtMasses[ii]*derivedParameters[X]*( static_cast<BrookOpenMMFloat> (SimTKOpenMMUtilities::getNormallyDistributedRandomNumber()) );
@@ -994,7 +994,7 @@ int BrookLangevinDynamics::_updateSdStreams( void ){
 /** 
  * Set masses 
  * 
- * @param masses             atomic masses
+ * @param masses             particle masses
  *
  */
 
@@ -1046,12 +1046,12 @@ int BrookLangevinDynamics::setup( const std::vector<double>& masses, const Platf
    const BrookPlatform brookPlatform            = dynamic_cast<const BrookPlatform&> (platform);
    setLog( brookPlatform.getLog() );
 
-   int numberOfAtoms  = (int) masses.size();
-   setNumberOfAtoms( numberOfAtoms );
+   int numberOfParticles  = (int) masses.size();
+   setNumberOfParticles( numberOfParticles );
 
    // set stream sizes and then create streams
 
-   _initializeStreamSizes( numberOfAtoms, platform );
+   _initializeStreamSizes( numberOfParticles, platform );
    _initializeStreams( platform );
 
    _setInverseSqrtMasses( masses );
@@ -1090,17 +1090,17 @@ std::string BrookLangevinDynamics::getContentsString( int level ) const {
 #define LOCAL_SPRINTF(a,b,c) sprintf( (a), (b), (c) );   
 #endif
 
-   (void) LOCAL_SPRINTF( value, "%d", getNumberOfAtoms() );
-   message << _getLine( tab, "Number of atoms:", value ); 
+   (void) LOCAL_SPRINTF( value, "%d", getNumberOfParticles() );
+   message << _getLine( tab, "Number of particles:", value ); 
 
-   (void) LOCAL_SPRINTF( value, "%d", getAtomStreamWidth() );
-   message << _getLine( tab, "Atom stream width:", value ); 
+   (void) LOCAL_SPRINTF( value, "%d", getParticleStreamWidth() );
+   message << _getLine( tab, "Particle stream width:", value ); 
 
-   (void) LOCAL_SPRINTF( value, "%d", getAtomStreamHeight() );
-   message << _getLine( tab, "Atom stream height:", value ); 
+   (void) LOCAL_SPRINTF( value, "%d", getParticleStreamHeight() );
+   message << _getLine( tab, "Particle stream height:", value ); 
 
-   (void) LOCAL_SPRINTF( value, "%d", getAtomStreamSize() );
-   message << _getLine( tab, "Atom stream size:", value ); 
+   (void) LOCAL_SPRINTF( value, "%d", getParticleStreamSize() );
+   message << _getLine( tab, "Particle stream size:", value ); 
 
    (void) LOCAL_SPRINTF( value, "%.5f", getTau() );
    message << _getLine( tab, "Tau:", value ); 

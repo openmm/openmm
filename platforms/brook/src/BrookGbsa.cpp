@@ -34,6 +34,8 @@
 #include "BrookPlatform.h"
 #include "OpenMMException.h"
 #include "BrookStreamImpl.h"
+#include "gpu/kgbsa.h"
+#include "gpu/kforce.h"
 
 using namespace OpenMM;
 using namespace std;
@@ -51,7 +53,7 @@ BrookGbsa::BrookGbsa(  ){
 
 // ---------------------------------------------------------------------------------------
 
-   _atomSizeCeiling           = -1;
+   _particleSizeCeiling       = -1;
    _outerUnroll               =  4;
    _innerUnroll               =  4;
 
@@ -59,9 +61,9 @@ BrookGbsa::BrookGbsa(  ){
    _partialForceStreamHeight  = -1;
    _partialForceStreamSize    = -1;
 
-   _gbsaAtomStreamWidth       = -1;
-   _gbsaAtomStreamHeight      = -1;
-   _gbsaAtomStreamSize        = -1;
+   _gbsaParticleStreamWidth   = -1;
+   _gbsaParticleStreamHeight  = -1;
+   _gbsaParticleStreamSize    = -1;
 
    _duplicationFactor         =  4;
 
@@ -200,37 +202,37 @@ float BrookGbsa::getDielectricOffset( void ) const {
 
 int BrookGbsa::setOuterLoopUnroll( int outerUnroll ){
    if( outerUnroll != _outerUnroll ){
-      _atomSizeCeiling = -1;
+      _particleSizeCeiling = -1;
    }
    _outerUnroll = _outerUnroll;
    return _outerUnroll;
 }
 
 /** 
- * Get atom ceiling parameter
+ * Get particle ceiling parameter
  * 
- * @return atom ceiling parameter
+ * @return particle ceiling parameter
  *
  */
 
-int BrookGbsa::getAtomSizeCeiling( void ) const {
+int BrookGbsa::getParticleSizeCeiling( void ) const {
 
 // ---------------------------------------------------------------------------------------
 
-   //static const std::string methodName      = "BrookGbsa::getAtomSizeCeiling";
+   //static const std::string methodName      = "BrookGbsa::getParticleSizeCeiling";
 
 // ---------------------------------------------------------------------------------------
 
-   if( _atomSizeCeiling < 0 ){
+   if( _particleSizeCeiling < 0 ){
       BrookGbsa* localThis = const_cast<BrookGbsa* const>(this);
-      localThis->_atomSizeCeiling = localThis->getNumberOfAtoms() % localThis->getOuterLoopUnroll();
-      if( localThis->_atomSizeCeiling ){
-         localThis->_atomSizeCeiling = localThis->getOuterLoopUnroll() - localThis->_atomSizeCeiling;
+      localThis->_particleSizeCeiling = localThis->getNumberOfParticles() % localThis->getOuterLoopUnroll();
+      if( localThis->_particleSizeCeiling ){
+         localThis->_particleSizeCeiling = localThis->getOuterLoopUnroll() - localThis->_particleSizeCeiling;
       }   
-      localThis->_atomSizeCeiling += localThis->getNumberOfAtoms();
+      localThis->_particleSizeCeiling += localThis->getNumberOfParticles();
    }
 
-   return _atomSizeCeiling;
+   return _particleSizeCeiling;
 }
 
 /** 
@@ -293,68 +295,68 @@ int BrookGbsa::getPartialForceStreamSize( void ) const {
 }
 
 /** 
- * Get Atom stream size
+ * Get Particle stream size
  *
- * @return  Atom stream size
+ * @return  Particle stream size
  *
  */
 
-int BrookGbsa::getGbsaAtomStreamSize( void ) const {
-   return _gbsaAtomStreamSize;
+int BrookGbsa::getGbsaParticleStreamSize( void ) const {
+   return _gbsaParticleStreamSize;
 }
 
 /** 
- * Get atom stream width
+ * Get particle stream width
  *
- * @return  atom stream width
+ * @return  particle stream width
  *
  */
 
-int BrookGbsa::getGbsaAtomStreamWidth( void ) const {
-   return _gbsaAtomStreamWidth;
+int BrookGbsa::getGbsaParticleStreamWidth( void ) const {
+   return _gbsaParticleStreamWidth;
 }
 
 /** 
- * Get atom stream height
+ * Get particle stream height
  *
- * @return atom stream height
+ * @return particle stream height
  */
 
-int BrookGbsa::getGbsaAtomStreamHeight( void ) const {
-   return _gbsaAtomStreamHeight;
+int BrookGbsa::getGbsaParticleStreamHeight( void ) const {
+   return _gbsaParticleStreamHeight;
 }
 
 /** 
- * Get Obc atomic radii stream 
+ * Get Obc particle radii stream 
  *
- * @return  Obc atomic radii stream
+ * @return  Obc particle radii stream
  *
  */
 
-BrookFloatStreamInternal* BrookGbsa::getObcAtomicRadii( void ) const {
-   return _gbsaStreams[ObcAtomicRadiiStream];
+BrookFloatStreamInternal* BrookGbsa::getObcParticleRadii( void ) const {
+   return _gbsaStreams[ObcParticleRadiiStream];
 }
 
 /** 
- * Get Obc scaled atomic radii stream 
+ * Get Obc scaled particle radii stream 
  *
- * @return  Obc scaled atomic radii stream
+ * @return  Obc scaled particle radii stream
  *
  */
 
-BrookFloatStreamInternal* BrookGbsa::getObcScaledAtomicRadii( void ) const {
-   return _gbsaStreams[ObcScaledAtomicRadiiStream];
+BrookFloatStreamInternal* BrookGbsa::getObcScaledParticleRadii( void ) const {
+   return _gbsaStreams[ObcScaledParticleRadiiStream];
 }
 
 /** 
- * Get Obc atomic radii w/ dielectric offset
+ * Get Obc particle radii w/ dielectric offset
  *
- * @return  Obc atomic radii w/ dielectric offset
+ * @return  Obc particle radii w/ dielectric offset
  *
  */
 
-BrookFloatStreamInternal* BrookGbsa::getObcAtomicRadiiWithDielectricOffset( void ) const {
-   return _gbsaStreams[ObcAtomicRadiiWithDielectricOffsetStream];
+BrookFloatStreamInternal* BrookGbsa::getObcParticleRadiiWithDielectricOffset( void ) const {
+   return _gbsaStreams[ObcParticleRadiiWithDielectricOffsetStream];
 }
 
 /** 
@@ -457,15 +459,15 @@ int BrookGbsa::calculateBornRadii( const Stream& positions ){
 
    // load coordinates into RealOpenMM 2d array
 
-   int numberOfAtoms                                   = getNumberOfAtoms();
+   int numberOfParticles                               = getNumberOfParticles();
 
-   RealOpenMM** atomCoordinates                        = new RealOpenMM*[numberOfAtoms];
-   RealOpenMM* atomCoordinatesBlk                      = new RealOpenMM[3*numberOfAtoms];
+   RealOpenMM** particleCoordinates                    = new RealOpenMM*[numberOfParticles];
+   RealOpenMM* particleCoordinatesBlk                  = new RealOpenMM[3*numberOfParticles];
 
    // Born radii array size needs to match stream size since it will
    // be written down to board
 
-   int streamSize                                      = getGbsaAtomStreamSize();
+   int streamSize                                      = getGbsaParticleStreamSize();
    RealOpenMM* bornRadii                               = new RealOpenMM[streamSize];
    memset( bornRadii, 0, sizeof( RealOpenMM )*streamSize );
 
@@ -473,30 +475,30 @@ int BrookGbsa::calculateBornRadii( const Stream& positions ){
    memset( obcChain, 0, sizeof( RealOpenMM )*streamSize );
 
    int index                                           = 0;
-   RealOpenMM* atomCoordinatesBlkPtr                   = atomCoordinatesBlk;
-   for( int ii = 0; ii < numberOfAtoms; ii++ ){
+   RealOpenMM* particleCoordinatesBlkPtr               = particleCoordinatesBlk;
+   for( int ii = 0; ii < numberOfParticles; ii++ ){
 
-      atomCoordinates[ii]    = atomCoordinatesBlkPtr;
-      atomCoordinatesBlkPtr += 3;
+      particleCoordinates[ii]    = particleCoordinatesBlkPtr;
+      particleCoordinatesBlkPtr += 3;
 
-      atomCoordinates[ii][0] = coordinates[index++];
-      atomCoordinates[ii][1] = coordinates[index++];
-      atomCoordinates[ii][2] = coordinates[index++];
+      particleCoordinates[ii][0] = coordinates[index++];
+      particleCoordinates[ii][1] = coordinates[index++];
+      particleCoordinates[ii][2] = coordinates[index++];
 
    }
 
    // calculate Born radii
 
-   _cpuObc->computeBornRadii( atomCoordinates, bornRadii, obcChain );
+   _cpuObc->computeBornRadii( particleCoordinates, bornRadii, obcChain );
 
    // diagnostics
 
    if( PrintOn && getLog() ){
 
-      (void) fprintf( getLog(), "\n%s: atms=%d\n", methodName.c_str(), numberOfAtoms );
-      for( int ii = 0; ii < numberOfAtoms; ii++ ){
+      (void) fprintf( getLog(), "\n%s: atms=%d\n", methodName.c_str(), numberOfParticles );
+      for( int ii = 0; ii < numberOfParticles; ii++ ){
          (void) fprintf( getLog(), "%d coord=[%.5e %.5e %.5e]  bR=%.5e obcChain=%.6e\n", ii,
-                         atomCoordinates[ii][0], atomCoordinates[ii][1], atomCoordinates[ii][2], bornRadii[ii], obcChain[ii] );
+                         particleCoordinates[ii][0], particleCoordinates[ii][1], particleCoordinates[ii][2], bornRadii[ii], obcChain[ii] );
       }
    }
   
@@ -508,8 +510,8 @@ int BrookGbsa::calculateBornRadii( const Stream& positions ){
 
    // free memory
 
-   delete[] atomCoordinatesBlk;
-   delete[] atomCoordinates;
+   delete[] particleCoordinatesBlk;
+   delete[] particleCoordinates;
    delete[] bornRadii;
    delete[] obcChain;
 
@@ -519,14 +521,14 @@ int BrookGbsa::calculateBornRadii( const Stream& positions ){
 /** 
  * Initialize stream dimensions
  * 
- * @param numberOfAtoms             number of atoms
+ * @param numberOfParticles         number of particles
  * @param platform                  platform
  *
  * @return ErrorReturnValue if error, else DefaultReturnValue
  *
  */
 
-int BrookGbsa::initializeStreamSizes( int numberOfAtoms, const Platform& platform ){
+int BrookGbsa::initializeStreamSizes( int numberOfParticles, const Platform& platform ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -534,9 +536,9 @@ int BrookGbsa::initializeStreamSizes( int numberOfAtoms, const Platform& platfor
 
 // ---------------------------------------------------------------------------------------
 
-   _gbsaAtomStreamSize     = getAtomStreamSize( platform );
-   _gbsaAtomStreamWidth    = getAtomStreamWidth( platform );
-   _gbsaAtomStreamHeight   = getAtomStreamHeight( platform );
+   _gbsaParticleStreamSize     = getParticleStreamSize( platform );
+   _gbsaParticleStreamWidth    = getParticleStreamWidth( platform );
+   _gbsaParticleStreamHeight   = getParticleStreamHeight( platform );
 
    int innerUnroll         = getInnerLoopUnroll();
    if( innerUnroll < 1 ){ 
@@ -553,7 +555,7 @@ int BrookGbsa::initializeStreamSizes( int numberOfAtoms, const Platform& platfor
       return ErrorReturnValue;
    }
 
-   _partialForceStreamSize    = _gbsaAtomStreamSize*getDuplicationFactor()/innerUnroll;
+   _partialForceStreamSize    = _gbsaParticleStreamSize*getDuplicationFactor()/innerUnroll;
    _partialForceStreamHeight  = _partialForceStreamSize/_partialForceStreamWidth;
    _partialForceStreamHeight += ( (_partialForceStreamSize % _partialForceStreamWidth) ? 1 : 0);
    _partialForceStreamSize    = _partialForceStreamHeight*_partialForceStreamWidth;
@@ -579,49 +581,49 @@ int BrookGbsa::initializeStreams( const Platform& platform ){
 
 // ---------------------------------------------------------------------------------------
 
-   int gbsaAtomStreamSize   = getGbsaAtomStreamSize();
-   int gbsaAtomStreamWidth  = getGbsaAtomStreamWidth();
+   int gbsaParticleStreamSize   = getGbsaParticleStreamSize();
+   int gbsaParticleStreamWidth  = getGbsaParticleStreamWidth();
 
-   // atomic radii & charge
+   // particle radii & charge
 
-    _gbsaStreams[ObcAtomicRadiiStream]                          = new BrookFloatStreamInternal( BrookCommon::ObcAtomicRadiiStream,
-                                                                                                gbsaAtomStreamSize, gbsaAtomStreamWidth,
+    _gbsaStreams[ObcParticleRadiiStream]                        = new BrookFloatStreamInternal( BrookCommon::ObcParticleRadiiStream,
+                                                                                                gbsaParticleStreamSize, gbsaParticleStreamWidth,
                                                                                                 BrookStreamInternal::Float2, dangleValue );
 
-   // scaled atomic radii
+   // scaled particle radii
 
-    _gbsaStreams[ObcScaledAtomicRadiiStream]                    = new BrookFloatStreamInternal( BrookCommon::ObcScaledAtomicRadiiStream,
-                                                                                                gbsaAtomStreamSize, gbsaAtomStreamWidth,
+    _gbsaStreams[ObcScaledParticleRadiiStream]                  = new BrookFloatStreamInternal( BrookCommon::ObcScaledParticleRadiiStream,
+                                                                                                gbsaParticleStreamSize, gbsaParticleStreamWidth,
                                                                                                 BrookStreamInternal::Float2, dangleValue );
 
-   // atomic radii w/ DielectricOffset
+   // particle radii w/ DielectricOffset
 
-    _gbsaStreams[ObcAtomicRadiiWithDielectricOffsetStream]      = new BrookFloatStreamInternal( BrookCommon::ObcAtomicRadiiWithDielectricOffsetStream,
-                                                                                                gbsaAtomStreamSize, gbsaAtomStreamWidth,
+    _gbsaStreams[ObcParticleRadiiWithDielectricOffsetStream]    = new BrookFloatStreamInternal( BrookCommon::ObcParticleRadiiWithDielectricOffsetStream,
+                                                                                                gbsaParticleStreamSize, gbsaParticleStreamWidth,
                                                                                                 BrookStreamInternal::Float, dangleValue );
 
    // Born radii
 
     _gbsaStreams[ObcBornRadiiStream]                            = new BrookFloatStreamInternal( BrookCommon::ObcBornRadiiStream,
-                                                                                                gbsaAtomStreamSize, gbsaAtomStreamWidth,
+                                                                                                gbsaParticleStreamSize, gbsaParticleStreamWidth,
                                                                                                 BrookStreamInternal::Float, dangleValue );
 
    // Born2 radii
 
     _gbsaStreams[ObcBornRadii2Stream]                           = new BrookFloatStreamInternal( BrookCommon::ObcBornRadii2Stream,
-                                                                                                gbsaAtomStreamSize, gbsaAtomStreamWidth,
+                                                                                                gbsaParticleStreamSize, gbsaParticleStreamWidth,
                                                                                                 BrookStreamInternal::Float, dangleValue );
 
    // IntermediateForce
 
     _gbsaStreams[ObcIntermediateForceStream]                    = new BrookFloatStreamInternal( BrookCommon::ObcIntermediateForceStream,
-                                                                                                gbsaAtomStreamSize, gbsaAtomStreamWidth,
+                                                                                                gbsaParticleStreamSize, gbsaParticleStreamWidth,
                                                                                                 BrookStreamInternal::Float4, dangleValue );
 
    // Obc chain
 
     _gbsaStreams[ObcChainStream]                                = new BrookFloatStreamInternal( BrookCommon::ObcChainStream,
-                                                                                                gbsaAtomStreamSize, gbsaAtomStreamWidth,
+                                                                                                gbsaParticleStreamSize, gbsaParticleStreamWidth,
                                                                                                 BrookStreamInternal::Float, dangleValue );
 
    // partial force streams
@@ -640,9 +642,9 @@ int BrookGbsa::initializeStreams( const Platform& platform ){
 /*  
  * Setup of Gbsa parameters
  *
- * @param atomParameters        vector of OBC parameters [atomI][0=charge]
- *                                                       [atomI][1=radius]
- *                                                       [atomI][2=scaling factor]
+ * @param particleParameters        vector of OBC parameters [particleI][0=charge]
+ *                                                           [particleI][1=radius]
+ *                                                           [particleI][2=scaling factor]
  * @param solventDielectric     solvent dielectric
  * @param soluteDielectric      solute dielectric
  * @param platform              Brook platform
@@ -651,44 +653,44 @@ int BrookGbsa::initializeStreams( const Platform& platform ){
  *
  * */
     
-int BrookGbsa::setup( const std::vector<std::vector<double> >& vectorOfAtomParameters, 
+int BrookGbsa::setup( const std::vector<std::vector<double> >& vectorOfParticleParameters, 
                       double solventDielectric, double soluteDielectric, const Platform& platform ){
     
 // ---------------------------------------------------------------------------------------
 
-   static const int atomParametersSize      = 3; 
+   static const int particleParametersSize  = 3; 
    static const int maxErrors               = 20; 
    static const std::string methodName      = "BrookGbsa::setup";
 
 // ---------------------------------------------------------------------------------------
 
-   int numberOfAtoms  = (int) vectorOfAtomParameters.size();
-   setNumberOfAtoms( numberOfAtoms );
+   int numberOfParticles  = (int) vectorOfParticleParameters.size();
+   setNumberOfParticles( numberOfParticles );
 
    _solventDielectric = solventDielectric;
    _soluteDielectric  = soluteDielectric;
 
    // initialize stream sizes and then Brook streams
 
-   initializeStreamSizes( numberOfAtoms, platform );
+   initializeStreamSizes( numberOfParticles, platform );
    initializeStreams( platform );
 
-   int atomStreamSize                       = getGbsaAtomStreamSize();
-   BrookOpenMMFloat* radiiAndCharge         = new BrookOpenMMFloat[atomStreamSize*2];
-   BrookOpenMMFloat* scaledRadiiAndOffset   = new BrookOpenMMFloat[atomStreamSize*2];
-   memset( radiiAndCharge, 0, atomStreamSize*2*sizeof( BrookOpenMMFloat ) );
-   memset( scaledRadiiAndOffset, 0, atomStreamSize*2*sizeof( BrookOpenMMFloat ) );
+   int particleStreamSize                   = getGbsaParticleStreamSize();
+   BrookOpenMMFloat* radiiAndCharge         = new BrookOpenMMFloat[particleStreamSize*2];
+   BrookOpenMMFloat* scaledRadiiAndOffset   = new BrookOpenMMFloat[particleStreamSize*2];
+   memset( radiiAndCharge, 0, particleStreamSize*2*sizeof( BrookOpenMMFloat ) );
+   memset( scaledRadiiAndOffset, 0, particleStreamSize*2*sizeof( BrookOpenMMFloat ) );
 
-   _charges                                 = new RealOpenMM[atomStreamSize];
+   _charges                                 = new RealOpenMM[particleStreamSize];
 
    // used by CpuObc to calculate initial Born radii
 
-   vector<RealOpenMM> atomicRadii(numberOfAtoms);
-   vector<RealOpenMM> scaleFactors(numberOfAtoms);
+   vector<RealOpenMM> particleRadii(numberOfParticles);
+   vector<RealOpenMM> scaleFactors(numberOfParticles);
 
    float dielectricOffset                  = getDielectricOffset();
 
-   // loop over atom parameters
+   // loop over particle parameters
    // track any errors and then throw exception
    //    check parameter vector is right size
    // set parameter entries or board and arrays used by CpuObc
@@ -700,22 +702,22 @@ int BrookGbsa::setup( const std::vector<std::vector<double> >& vectorOfAtomParam
    typedef std::vector< std::vector<double> > VectorOfDoubleVectors;
    typedef VectorOfDoubleVectors::const_iterator VectorOfDoubleVectorsCI;
 
-   for( VectorOfDoubleVectorsCI ii = vectorOfAtomParameters.begin(); ii != vectorOfAtomParameters.end(); ii++ ){
+   for( VectorOfDoubleVectorsCI ii = vectorOfParticleParameters.begin(); ii != vectorOfParticleParameters.end(); ii++ ){
 
-      std::vector<double> atomParameters = *ii;
+      std::vector<double> particleParameters = *ii;
 
-      if( atomParameters.size() != atomParametersSize && errors < maxErrors ){
-         message << methodName << " parameter size=" << atomParameters.size() << " for parameter vector index=" << vectorIndex << " is less than expected.\n";
+      if( particleParameters.size() != particleParametersSize && errors < maxErrors ){
+         message << methodName << " parameter size=" << particleParameters.size() << " for parameter vector index=" << vectorIndex << " is less than expected.\n";
          errors++;
       } else {
 
-         double charge                            = atomParameters[0];     
-         double radius                            = atomParameters[1];     
-         double scalingFactor                     = atomParameters[2];     
+         double charge                            = particleParameters[0];     
+         double radius                            = particleParameters[1];     
+         double scalingFactor                     = particleParameters[2];     
 
          int streamIndex                          = 2*vectorIndex;
 
-         atomicRadii[vectorIndex]                 = static_cast<RealOpenMM> (radius);
+         particleRadii[vectorIndex]                 = static_cast<RealOpenMM> (radius);
          scaleFactors[vectorIndex]                = static_cast<RealOpenMM> (scalingFactor);
          _charges[vectorIndex]                    = static_cast<RealOpenMM> (charge);
 
@@ -741,16 +743,16 @@ int BrookGbsa::setup( const std::vector<std::vector<double> >& vectorOfAtomParam
 
    // load streams
 
-   _gbsaStreams[ObcAtomicRadiiStream]->loadFromArray( radiiAndCharge );
-   _gbsaStreams[ObcScaledAtomicRadiiStream]->loadFromArray( scaledRadiiAndOffset );
+   _gbsaStreams[ObcParticleRadiiStream]->loadFromArray( radiiAndCharge );
+   _gbsaStreams[ObcScaledParticleRadiiStream]->loadFromArray( scaledRadiiAndOffset );
 
    delete[] radiiAndCharge;
    delete[] scaledRadiiAndOffset;
 
    // setup for Born radii calculation
 
-   ObcParameters* obcParameters  = new ObcParameters( numberOfAtoms, ObcParameters::ObcTypeII );
-   obcParameters->setAtomicRadii( atomicRadii);
+   ObcParameters* obcParameters  = new ObcParameters( numberOfParticles, ObcParameters::ObcTypeII );
+   obcParameters->setAtomicRadii( particleRadii);
 
    obcParameters->setScaledRadiusFactors( scaleFactors );
    obcParameters->setSolventDielectric( static_cast<RealOpenMM>(solventDielectric) );
@@ -765,14 +767,14 @@ int BrookGbsa::setup( const std::vector<std::vector<double> >& vectorOfAtomParam
 /* 
  * Setup of stream dimensions for partial force streams
  *
- * @param atomStreamSize        atom stream size
- * @param atomStreamWidth       atom stream width
+ * @param particleStreamSize        particle stream size
+ * @param particleStreamWidth       particle stream width
  *
  * @return ErrorReturnValue if error, else DefaultReturnValue
  *
  * */
 
-int BrookGbsa::initializePartialForceStreamSize( int atomStreamSize, int atomStreamWidth ){
+int BrookGbsa::initializePartialForceStreamSize( int particleStreamSize, int particleStreamWidth ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -796,7 +798,7 @@ int BrookGbsa::initializePartialForceStreamSize( int atomStreamSize, int atomStr
       return ErrorReturnValue;
    }
 
-   _partialForceStreamSize    = atomStreamSize*getDuplicationFactor()/innerUnroll;
+   _partialForceStreamSize    = particleStreamSize*getDuplicationFactor()/innerUnroll;
    _partialForceStreamHeight  = _partialForceStreamSize/_partialForceStreamWidth;
    _partialForceStreamHeight += ( (_partialForceStreamSize % _partialForceStreamWidth) ? 1 : 0);
 
@@ -837,8 +839,8 @@ std::string BrookGbsa::getContentsString( int level ) const {
 #define LOCAL_SPRINTF(a,b,c) sprintf( (a), (b), (c) );   
 #endif
 
-   (void) LOCAL_SPRINTF( value, "%d", getNumberOfAtoms() );
-   message << _getLine( tab, "Number of atoms:", value ); 
+   (void) LOCAL_SPRINTF( value, "%d", getNumberOfParticles() );
+   message << _getLine( tab, "Number of particles:", value ); 
 
    (void) LOCAL_SPRINTF( value, "%d", getNumberOfForceStreams() );
    message << _getLine( tab, "Number of force streams:", value ); 
@@ -852,17 +854,17 @@ std::string BrookGbsa::getContentsString( int level ) const {
    (void) LOCAL_SPRINTF( value, "%d", getOuterLoopUnroll() )
    message << _getLine( tab, "Outer loop unroll:", value ); 
 
-   (void) LOCAL_SPRINTF( value, "%d", getAtomSizeCeiling() );
-   message << _getLine( tab, "Atom ceiling:", value ); 
+   (void) LOCAL_SPRINTF( value, "%d", getParticleSizeCeiling() );
+   message << _getLine( tab, "Particle ceiling:", value ); 
 
-   (void) LOCAL_SPRINTF( value, "%d", getAtomStreamWidth() );
-   message << _getLine( tab, "Atom stream width:", value ); 
+   (void) LOCAL_SPRINTF( value, "%d", getParticleStreamWidth() );
+   message << _getLine( tab, "Particle stream width:", value ); 
 
-   (void) LOCAL_SPRINTF( value, "%d", getAtomStreamHeight() );
-   message << _getLine( tab, "Atom stream height:", value ); 
+   (void) LOCAL_SPRINTF( value, "%d", getParticleStreamHeight() );
+   message << _getLine( tab, "Particle stream height:", value ); 
 
-   (void) LOCAL_SPRINTF( value, "%d", getAtomStreamSize() );
-   message << _getLine( tab, "Atom stream size:", value ); 
+   (void) LOCAL_SPRINTF( value, "%d", getParticleStreamSize() );
+   message << _getLine( tab, "Particle stream size:", value ); 
 
    (void) LOCAL_SPRINTF( value, "%d", getPartialForceStreamWidth() );
    message << _getLine( tab, "Partial force stream width:", value ); 
@@ -905,7 +907,7 @@ std::string BrookGbsa::getContentsString( int level ) const {
 /*  
  * Calculate OBC energy
  *
- * @param atomPositions        atom positions
+ * @param particlePositions        particle positions
 
  * @return energy
  *
@@ -913,7 +915,7 @@ std::string BrookGbsa::getContentsString( int level ) const {
  *
  * */
     
-double BrookGbsa::getEnergy( const Stream& atomPositions ){
+double BrookGbsa::getEnergy( const Stream& particlePositions ){
     
 // ---------------------------------------------------------------------------------------
 
@@ -937,7 +939,7 @@ double BrookGbsa::getEnergy( const Stream& atomPositions ){
       return ErrorReturnValue;
    }   
 
-   const BrookStreamImpl& positionStreamC              = dynamic_cast<const BrookStreamImpl&> (atomPositions.getImpl());
+   const BrookStreamImpl& positionStreamC              = dynamic_cast<const BrookStreamImpl&> (particlePositions.getImpl());
    BrookStreamImpl& positionStream                     = const_cast<BrookStreamImpl&>         (positionStreamC);
    BrookOpenMMFloat* positionsF                        = (BrookOpenMMFloat*) positionStream.getData();
 
@@ -950,4 +952,278 @@ double BrookGbsa::getEnergy( const Stream& atomPositions ){
    disposeRealArray( positions );
 
    return _cpuObc->getEnergy();
+}
+
+/** 
+ * Compute forces
+ * 
+ */
+
+void BrookGbsa::computeForces( BrookStreamImpl& positionStream, BrookStreamImpl& forceStream ){
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName   = "BrookGbsa::executeForces";
+   static const int PrintOn              = 0; 
+   float mergeNonObcForces               = 1.0f;
+   float kcalMolTokJNM                   = -0.4184f;
+
+// ---------------------------------------------------------------------------------------
+
+   float includeAceTerm                                = (float) (includeAce());
+   BrookFloatStreamInternal**  gbsaForceStreams        = getForceStreams();
+
+   // calculate Born radii 
+
+(void) fprintf( getLog(), "\nPost kCalculateBornRadii: obcParticleRadiiWithDielectricOffset & obcScaledParticleRadii not set correctly!!!!!\n" );
+
+   kCalculateBornRadii(   (float) getNumberOfParticles(),
+                          (float) getParticleSizeCeiling(),
+                          (float) getDuplicationFactor(),
+                          (float) getParticleStreamWidth( ),
+                          (float) getPartialForceStreamWidth( ),
+                          positionStream.getBrookStream(),
+                          getObcParticleRadii()->getBrookStream(),
+                          getObcScaledParticleRadii()->getBrookStream(),
+// NOTE: obcParticleRadiiWithDielectricOffset & obcScaledParticleRadii may be wrong!! or br files need editing
+//                 gpuObc->getBrookStreamWrapperAtIndex( GpuObc::obcParticleRadiiWithDielectricOffset )->getStream(),
+//                 gpuObc->getBrookStreamWrapperAtIndex( GpuObc::obcScaledParticleRadii )->getStream(),
+                          gbsaForceStreams[0]->getBrookStream() );
+
+   kPostCalculateBornRadii_nobranch(
+                          (float) getDuplicationFactor(),
+                          (float) getParticleStreamWidth( ),
+                          (float) getPartialForceStreamWidth( ),
+                          (float) getNumberOfParticles(),
+                          (float) getParticleSizeCeiling(),
+                          (float) getInnerLoopUnroll(),
+                          kcalMolTokJNM,
+                          (float) mergeNonObcForces,
+                          gbsaForceStreams[0]->getBrookStream(),
+                          getObcParticleRadii()->getBrookStream(),
+                          getObcBornRadii()->getBrookStream(),
+                          getObcChain()->getBrookStream() );   
+
+// ---------------------------------------------------------------------------------------
+
+   // seecond major loop
+
+   kObcLoop1( (float) getNumberOfParticles(),
+              (float) getParticleSizeCeiling(),
+              (float) getDuplicationFactor(),
+              (float) getParticleStreamWidth( ),
+              (float) getPartialForceStreamWidth( ),
+              getSoluteDielectric(),
+              getSolventDielectric(),
+              includeAceTerm,
+
+              positionStream.getBrookStream(),
+
+              getObcBornRadii()->getBrookStream(),
+              getObcParticleRadii()->getBrookStream(),
+
+              gbsaForceStreams[0]->getBrookStream(),
+              gbsaForceStreams[1]->getBrookStream(),
+              gbsaForceStreams[2]->getBrookStream(),
+              gbsaForceStreams[3]->getBrookStream()
+            );
+
+// ---------------------------------------------------------------------------------------
+
+   // diagnostics
+
+   if( 1 && PrintOn && getLog() ){
+
+      (void) fprintf( getLog(), "\nPost kObcLoop1: atms=%d ceil=%d dup=%d particleStrW=%3d prtlF=%3d diel=%.3f %.3f ACE=%.1f\n",
+                      getNumberOfParticles(),
+                      getParticleSizeCeiling(),
+                      getDuplicationFactor(),
+                      getParticleStreamWidth( ),
+                      getPartialForceStreamWidth( ),
+                      getSoluteDielectric(),
+                      getSolventDielectric(), includeAceTerm );
+
+      BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamImpl();
+      (void) fprintf( getLog(), "\nPositionStream\n" );
+      brookStreamInternalPos->printToFile( getLog() );
+
+      (void) fprintf( getLog(), "\nBornR\n" );
+      getObcBornRadii()->printToFile( getLog() );
+
+      (void) fprintf( getLog(), "\nParticleR\n" );
+      getObcParticleRadii()->printToFile( getLog() );
+
+      (void) fprintf( getLog(), "\nForceStreams output\n" );
+      for( int ii = 0; ii < 4; ii++ ){
+         gbsaForceStreams[ii]->printToFile( getLog() );
+      }
+
+   }
+
+// ---------------------------------------------------------------------------------------
+
+   // gather for first loop
+
+   kPostObcLoop1_nobranch(
+              (float) getDuplicationFactor(),
+              (float) getParticleStreamWidth( ),
+              (float) getPartialForceStreamWidth( ),
+              (float) getNumberOfParticles(),
+              (float) getParticleSizeCeiling(),
+              (float) getInnerLoopUnroll(),
+              gbsaForceStreams[0]->getBrookStream(),
+              gbsaForceStreams[1]->getBrookStream(),
+              gbsaForceStreams[2]->getBrookStream(),
+              gbsaForceStreams[3]->getBrookStream(),
+              getObcChain()->getBrookStream(),
+              getObcBornRadii()->getBrookStream(),
+              getObcIntermediateForce()->getBrookStream(),
+              getObcBornRadii2()->getBrookStream() );
+ 
+// ---------------------------------------------------------------------------------------
+
+   // diagnostics
+
+   if( PrintOn && getLog()){
+
+      (void) fprintf( getLog(), "\nPost kPostObcLoop1_nobranch: dup=%d aStrW=%d pStrW=%d no.atms=%3d ceil=%3d Unroll=%1d\n",
+                      getDuplicationFactor(),
+                      getParticleStreamWidth( ),
+                      getPartialForceStreamWidth( ),
+                      getNumberOfParticles(),
+                      getParticleSizeCeiling(),
+                      getInnerLoopUnroll() );
+
+      (void) fprintf( getLog(), "\nForceStreams\n" );
+      for( int ii = 0; ii < 4; ii++ ){
+         gbsaForceStreams[ii]->printToFile( getLog() );
+      }
+
+      (void) fprintf( getLog(), "\nObcChain\n" );
+      getObcChain()->printToFile( getLog() );
+
+      (void) fprintf( getLog(), "\nBornR\n" );
+      getObcBornRadii()->printToFile( getLog() );
+
+      // output
+
+      (void) fprintf( getLog(), "\nObcIntermediateForce output\n" );
+      getObcIntermediateForce()->printToFile( getLog() );
+
+      // output
+
+      (void) fprintf( getLog(), "\nObcBornRadii2 output\n" );
+      getObcBornRadii2()->printToFile( getLog() );
+
+   }
+
+// ---------------------------------------------------------------------------------------
+
+   // second major loop
+
+(void) fprintf( getLog(), "\nkObcLoop2 messed up see /home/friedrim/src/openmmWork/trunk/OpenMM/platforms/brook/src/gpu/kObcBaseD2.br\n" );
+
+   kObcLoop2( (float) getNumberOfParticles(),
+              (float) getParticleSizeCeiling(),
+              (float) getDuplicationFactor(),
+              (float) getParticleStreamWidth( ),
+              (float) getPartialForceStreamWidth( ),
+              positionStream.getBrookStream(),
+              getObcScaledParticleRadii()->getBrookStream(),
+              getObcBornRadii2()->getBrookStream(),
+              getObcBornRadii2()->getBrookStream(),
+              gbsaForceStreams[0]->getBrookStream(),
+              gbsaForceStreams[1]->getBrookStream(),
+              gbsaForceStreams[2]->getBrookStream(),
+              gbsaForceStreams[3]->getBrookStream()
+            );
+
+// ---------------------------------------------------------------------------------------
+
+   // diagnostics
+
+   if( PrintOn && getLog() ){
+
+      (void) fprintf( getLog(), "\nPost kObcLoop2: no.atms=%5d ceil=%3d dup=%3d strW=%3d pStrW=%3d\n",
+                      getNumberOfParticles(),
+                      getParticleSizeCeiling(),
+                      getDuplicationFactor(),
+                      getParticleStreamWidth( ),
+                      getPartialForceStreamWidth( ) );
+
+      BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamImpl();
+      (void) fprintf( getLog(), "\nPositionStream\n" );
+      brookStreamInternalPos->printToFile( getLog() );
+
+      (void) fprintf( getLog(), "\nObcScaledParticleRadii\n" );
+      getObcScaledParticleRadii()->printToFile( getLog() );
+
+      (void) fprintf( getLog(), "\ngetObcBornRadii2\n" );
+      getObcBornRadii2()->printToFile( getLog() );
+
+      (void) fprintf( getLog(), "\nForceStreams\n" );
+      for( int ii = 0; ii < 4; ii++ ){
+         gbsaForceStreams[ii]->printToFile( getLog() );
+      }
+
+   }
+
+// ---------------------------------------------------------------------------------------
+
+   // gather for second loop
+
+    kPostObcLoop2_nobranch(
+              (float) getDuplicationFactor(),
+              (float) getParticleStreamWidth( ),
+              (float) getPartialForceStreamWidth( ),
+              (float) getNumberOfParticles(),
+              (float) getParticleSizeCeiling(),
+              (float) getInnerLoopUnroll(),
+              kcalMolTokJNM,
+              mergeNonObcForces,
+              getObcIntermediateForce()->getBrookStream(),
+              forceStream.getBrookStream(),
+              gbsaForceStreams[0]->getBrookStream(),
+              gbsaForceStreams[1]->getBrookStream(),
+              gbsaForceStreams[2]->getBrookStream(),
+              gbsaForceStreams[3]->getBrookStream(),
+              getObcParticleRadii()->getBrookStream(),
+              getObcBornRadii()->getBrookStream(),
+              getObcChain()->getBrookStream(),
+              forceStream.getBrookStream()
+           );
+
+// ---------------------------------------------------------------------------------------
+
+   // diagnostics
+
+   if( PrintOn && getLog() ){
+
+      (void) fprintf( getLog(), "\nPost kPostObcLoop2_nobranch: atms=%d ceil=%d dup=%d particleStrW=%3d prtlF=%3d diel=%.3f %.3f ACE=%.1f\n",
+                      getNumberOfParticles(),
+                      getParticleSizeCeiling(),
+                      getDuplicationFactor(),
+                      getParticleStreamWidth( ),
+                      getPartialForceStreamWidth( ),
+                      getSoluteDielectric(),
+                      getSolventDielectric(), includeAceTerm );
+
+      (void) fprintf( getLog(), "\nPartialForceStreams\n" );
+      for( int ii = 0; ii < 4; ii++ ){
+         gbsaForceStreams[ii]->printToFile( getLog() );
+      }
+
+      BrookStreamInternal* brookStreamInternalF  = forceStream.getBrookStreamImpl();
+      (void) fprintf( getLog(), "\nForceStream\n" );
+      brookStreamInternalF->printToFile( getLog() );
+
+      (void) fprintf( getLog(), "\nChain\n" );
+      getObcChain()->printToFile( getLog() );
+
+      (void) fprintf( getLog(), "\nBornR\n" );
+      getObcBornRadii()->printToFile( getLog() );
+
+   }
+
+   // ---------------------------------------------------------------------------------------
 }

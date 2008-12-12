@@ -1,35 +1,13 @@
 
-/* -------------------------------------------------------------------------- *
- *                                   OpenMM                                   *
- * -------------------------------------------------------------------------- *
- * This is part of the OpenMM molecular simulation toolkit originating from   *
- * Simbios, the NIH National Center for Physics-Based Simulation of           *
- * Biological Structures at Stanford, funded under the NIH Roadmap for        *
- * Medical Research, grant U54 GM072970. See https://simtk.org.               *
- *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
- * Authors: Peter Eastman, Mark Friedrichs, Chris Bruns                       *
- * Contributors:                                                              *
- *                                                                            *
- * Permission is hereby granted, free of charge, to any person obtaining a    *
- * copy of this software and associated documentation files (the "Software"), *
- * to deal in the Software without restriction, including without limitation  *
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,   *
- * and/or sell copies of the Software, and to permit persons to whom the      *
- * Software is furnished to do so, subject to the following conditions:       *
- *                                                                            *
- * The above copyright notice and this permission notice shall be included in *
- * all copies or substantial portions of the Software.                        *
- *                                                                            *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR *
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,   *
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL    *
- * THE AUTHORS, CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,    *
- * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR      *
- * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE  *
- * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
- * -------------------------------------------------------------------------- */
-
+/****************************************************************
+* This file is part of the gpu acceleration library for gromacs.
+* Author: Mark Friedrichs
+* 
+* This kernel was developed in collaboration with
+* 
+* Copyright (C) Pande Group, Stanford, 2006
+*****************************************************************/
+//96 : 228 Flops
 kernel void loop1Internal( float3 d1, float3 d2, float3 d3, float3 d4, float4 jBornR,
                            float4 jQ, float iBornR, float iQ, out float4 dGpol_dr<>,
                            out float4 dGpol_dalpha2_ij<> ){
@@ -40,16 +18,16 @@ kernel void loop1Internal( float3 d1, float3 d2, float3 d3, float3 d4, float4 jB
 
    // ---------------------------------------------------------------------------------------
 
-   r2                 = float4( dot(d1, d1), dot( d2, d2 ), dot( d3, d3 ), dot( d4, d4 ) );
-   alpha2_ij          = jBornR*iBornR;
-   D_ij               = r2/(4.0f*alpha2_ij);
-   expTerm            = exp( -D_ij );
-   denominator2       = r2 + alpha2_ij*expTerm; 
-   denominator        = sqrt( denominator2 ); 
-   Gpol               = jQ/denominator; 
-   Gpol              *= iQ;
-   dGpol_dr           = -Gpol*( 1.0f - 0.25f*expTerm )/denominator2;  
-   dGpol_dalpha2_ij   = -0.5f*Gpol*expTerm*( 1.0f + D_ij )*jBornR/denominator2;
+   r2                 = float4( dot(d1, d1), dot( d2, d2 ), dot( d3, d3 ), dot( d4, d4 ) ); //20
+   alpha2_ij          = jBornR*iBornR; //4
+   D_ij               = r2/(4.0f*alpha2_ij); //8
+   expTerm            = exp( -D_ij ); //4 : 80
+   denominator2       = r2 + alpha2_ij*expTerm; //8 
+   denominator        = sqrt( denominator2 ); //4 : 60
+   Gpol               = jQ/denominator; //4
+   Gpol              *= iQ;//4
+   dGpol_dr           = -Gpol*( 1.0f - 0.25f*expTerm )/denominator2;  //16
+   dGpol_dalpha2_ij   = -0.5f*Gpol*expTerm*( 1.0f + D_ij )*jBornR/denominator2; //24
 
 }
 
@@ -82,9 +60,9 @@ kernel void kAceNonPolarLoop1( float iBornRadius, float iVdwRadius, float duplic
 
    const float probeRadius       = 0.14f;
 
-   // PI*4*6*0.0054*1000 (0.0054=asolv from Tinker)
+   // PI*24*0.0f049 (0.0f054=asolv from Tinker)
    //const float PI_24_aI          = -0.3694512961;
-   const float PI_24_aI          = -407.1504079f;
+   const float PI_24_aI          = -400.71504079f;
 
    // ---------------------------------------------------------------------------------------
 
@@ -129,11 +107,11 @@ kernel void kAceNonPolarLoop1( float iBornRadius, float iVdwRadius, float duplic
    bornForce4:          i-unroll second force component, including dBornR/dr in .w 
 
    --------------------------------------------------------------------------------------- */
-
+//FLOPS = 544
 kernel void kObcLoop1( float numberOfAtoms, float roundedUpAtoms, float duplicationFactor, 
                        float streamWidth, float fstreamWidth, float soluteDielectric,
                        float solventDielectric, float includeAce,
-                       float3 posq[][], float  bornRadii[][], float2  atomicRadii[][], 
+                       float4 posq[][], float  bornRadii[][], float  atomicRadii[][], 
                        out float4 bornForce1<>, out float4 bornForce2<>,
                        out float4 bornForce3<>, out float4 bornForce4<> ){
 
@@ -214,11 +192,11 @@ kernel void kObcLoop1( float numberOfAtoms, float roundedUpAtoms, float duplicat
    // etch i1 position and partial charge
 
    jQ                            = posq[          iAtom ];
-   i1Pos                         = jQ.xyz;
-   i1Q                           = atomicRadii[   iAtom ].y;
-   i1Q                          *= preFactor;
    i1BornR                       = bornRadii[     iAtom ];
-   i1AtomicR                     = atomicRadii[   iAtom ].x;
+   i1AtomicR                     = atomicRadii[   iAtom ];
+   i1Pos                         = jQ.xyz;
+   i1Q                           = jQ.w;
+   i1Q                          *= preFactor;
    kAceNonPolarLoop1( i1BornR, i1AtomicR, duplicationFactor, aceForce );
    bornForce1.xyz                = zero3;
    bornForce1.w                  = includeAce > 0.5f ? aceForce : 0.0f;
@@ -229,11 +207,11 @@ kernel void kObcLoop1( float numberOfAtoms, float roundedUpAtoms, float duplicat
 
    iAtom.x                      += 1;
    jQ                            = posq[          iAtom ];
-   i2Pos                         = jQ.xyz;
-   i2Q                           = atomicRadii[   iAtom ].y;
-   i2Q                          *= preFactor;
    i2BornR                       = bornRadii[     iAtom ];
-   i2AtomicR                     = atomicRadii[   iAtom ].x;
+   i2AtomicR                     = atomicRadii[   iAtom ];
+   i2Pos                         = jQ.xyz;
+   i2Q                           = jQ.w;
+   i2Q                          *= preFactor;
    kAceNonPolarLoop1( i2BornR, i2AtomicR, duplicationFactor, aceForce );
    bornForce2.xyz                = zero3;
    bornForce2.w                  = includeAce > 0.5f ? aceForce : 0.0f;
@@ -244,11 +222,11 @@ kernel void kObcLoop1( float numberOfAtoms, float roundedUpAtoms, float duplicat
 
    iAtom.x                      += 1;
    jQ                            = posq[          iAtom ];
-   i3Pos                         = jQ.xyz;
-   i3Q                           = atomicRadii[   iAtom ].y;
-   i3Q                          *= preFactor;
    i3BornR                       = bornRadii[     iAtom ];
-   i3AtomicR                     = atomicRadii[   iAtom ].x;
+   i3AtomicR                     = atomicRadii[   iAtom ];
+   i3Pos                         = jQ.xyz;
+   i3Q                           = jQ.w;
+   i3Q                          *= preFactor;
    kAceNonPolarLoop1( i3BornR, i3AtomicR, duplicationFactor, aceForce );
    bornForce3.xyz                = zero3;
    bornForce3.w                  = includeAce > 0.5f ? aceForce : 0.0f;
@@ -260,11 +238,11 @@ kernel void kObcLoop1( float numberOfAtoms, float roundedUpAtoms, float duplicat
    iAtom.x                      += 1;
 
    jQ                            = posq[          iAtom ];
-   i4Pos                         = jQ.xyz;
-   i4Q                           = atomicRadii[   iAtom ].y;
-   i4Q                          *= preFactor;
    i4BornR                       = bornRadii[     iAtom ];
-   i4AtomicR                     = atomicRadii[   iAtom ].x;
+   i4AtomicR                     = atomicRadii[   iAtom ];
+   i4Pos                         = jQ.xyz;
+   i4Q                           = jQ.w;
+   i4Q                          *= preFactor;
    kAceNonPolarLoop1( i4BornR, i4AtomicR, duplicationFactor, aceForce );
    bornForce4.xyz                = zero3;
    bornForce4.w                  = includeAce > 0.5f ? aceForce : 0.0f;
@@ -286,8 +264,11 @@ kernel void kObcLoop1( float numberOfAtoms, float roundedUpAtoms, float duplicat
    
    tmp = fmod(forceIndex, roundedUpAtoms);
    whichRep = round((forceIndex - tmp)/roundedUpAtoms);
+
+   //jBlock                        = 1 + floor( numberOfAtoms/(duplicationFactor*streamWidth ) );
+   tmp = fmod( numberOfAtoms, (duplicationFactor*streamWidth ) );   
+   jBlock                       = 1 + round( (numberOfAtoms-tmp)/(duplicationFactor*streamWidth ));
    
-   jBlock                       = 1 + floor( numberOfAtoms/(duplicationFactor*streamWidth ) );
    jStart                       = whichRep*jBlock;
 
    jEnd                         = ( whichRep > duplicationFactor - 1.5f ) ? 999999.0f : (jStart + jBlock);
@@ -305,23 +286,27 @@ kernel void kObcLoop1( float numberOfAtoms, float roundedUpAtoms, float duplicat
 
          // gather required values
 
-         j1Pos              = posq[      jAtom ];
-         j1Q                = atomicRadii[   jAtom ].y;
+         j1PosQ             = posq[      jAtom ];
+         j1Pos              = j1PosQ.xyz;
+         j1Q                = j1PosQ.w;
          j1BornR            = bornRadii[ jAtom ];
          jAtom.x           += 1.0f;
 
-         j2Pos              = posq[      jAtom ];
-         j2Q                = atomicRadii[   jAtom ].y;
+         j2PosQ             = posq[      jAtom ];
+         j2Pos              = j2PosQ.xyz;
+         j2Q                = j2PosQ.w;
          j2BornR            = bornRadii[ jAtom ];
          jAtom.x           += 1.0f;
 
-         j3Pos              = posq[      jAtom ];
-         j3Q                = atomicRadii[   jAtom ].y;
+         j3PosQ             = posq[      jAtom ];
+         j3Pos              = j3PosQ.xyz;
+         j3Q                = j3PosQ.w;
          j3BornR            = bornRadii[ jAtom ];
          jAtom.x           += 1.0f;
 
-         j4Pos              = posq[      jAtom ];
-         j4Q                = atomicRadii[   jAtom ].y;
+         j4PosQ             = posq[      jAtom ];
+         j4Pos              = j4PosQ.xyz;
+         j4Q                = j4PosQ.w;
          j4BornR            = bornRadii[ jAtom ];
          jAtom.x           += 1.0f;
 
@@ -332,73 +317,73 @@ kernel void kObcLoop1( float numberOfAtoms, float roundedUpAtoms, float duplicat
 
          // i == 1
 
-         d1                 = i1Pos - j1Pos;
-         d2                 = i1Pos - j2Pos;
-         d3                 = i1Pos - j3Pos;
-         d4                 = i1Pos - j4Pos;
+         d1                 = i1Pos - j1Pos; //3
+         d2                 = i1Pos - j2Pos; //3
+         d3                 = i1Pos - j3Pos; //3
+         d4                 = i1Pos - j4Pos; //3
 
-         loop1Internal( d1, d2, d3, d4, jBornR, jQ, i1BornR, i1Q, dGpol_dr, dGpol_dalpha2_ij );
+         loop1Internal( d1, d2, d3, d4, jBornR, jQ, i1BornR, i1Q, dGpol_dr, dGpol_dalpha2_ij ); //96 : 228
  
-         bornForce1.xyz    += dGpol_dr.x*d1; 
-         bornForce1.xyz    += dGpol_dr.y*d2; 
-         bornForce1.xyz    += dGpol_dr.z*d3; 
-         bornForce1.xyz    += dGpol_dr.w*d4; 
+         bornForce1.xyz    += dGpol_dr.x*d1; //6
+         bornForce1.xyz    += dGpol_dr.y*d2; //6
+         bornForce1.xyz    += dGpol_dr.z*d3; //6
+         bornForce1.xyz    += dGpol_dr.w*d4; //6
 
-         bornForce1.w      += dGpol_dalpha2_ij.x + dGpol_dalpha2_ij.y + dGpol_dalpha2_ij.z + dGpol_dalpha2_ij.w;
+         bornForce1.w      += dGpol_dalpha2_ij.x + dGpol_dalpha2_ij.y + dGpol_dalpha2_ij.z + dGpol_dalpha2_ij.w; //4
 
          // ---------------------------------------------------------------------------------------
 
          // i == 2
 
-         d1                 = i2Pos - j1Pos;
-         d2                 = i2Pos - j2Pos;
-         d3                 = i2Pos - j3Pos;
-         d4                 = i2Pos - j4Pos;
+         d1                 = i2Pos - j1Pos; //3
+         d2                 = i2Pos - j2Pos; //3
+         d3                 = i2Pos - j3Pos; //3
+         d4                 = i2Pos - j4Pos; //3
 
-         loop1Internal( d1, d2, d3, d4, jBornR, jQ, i2BornR, i2Q, dGpol_dr, dGpol_dalpha2_ij );
+         loop1Internal( d1, d2, d3, d4, jBornR, jQ, i2BornR, i2Q, dGpol_dr, dGpol_dalpha2_ij ); //96 : 228
 
-         bornForce2.xyz    += dGpol_dr.x*d1; 
-         bornForce2.xyz    += dGpol_dr.y*d2; 
-         bornForce2.xyz    += dGpol_dr.z*d3; 
-         bornForce2.xyz    += dGpol_dr.w*d4; 
+         bornForce2.xyz    += dGpol_dr.x*d1; //6
+         bornForce2.xyz    += dGpol_dr.y*d2; //6
+         bornForce2.xyz    += dGpol_dr.z*d3; //6
+         bornForce2.xyz    += dGpol_dr.w*d4; //6
 
-         bornForce2.w      += dGpol_dalpha2_ij.x + dGpol_dalpha2_ij.y + dGpol_dalpha2_ij.z + dGpol_dalpha2_ij.w;
+         bornForce2.w      += dGpol_dalpha2_ij.x + dGpol_dalpha2_ij.y + dGpol_dalpha2_ij.z + dGpol_dalpha2_ij.w; //4
 
          // ---------------------------------------------------------------------------------------
 
          // i == 3
 
-         d1                 = i3Pos - j1Pos;
-         d2                 = i3Pos - j2Pos;
-         d3                 = i3Pos - j3Pos;
-         d4                 = i3Pos - j4Pos;
+         d1                 = i3Pos - j1Pos; //3
+         d2                 = i3Pos - j2Pos; //3
+         d3                 = i3Pos - j3Pos; //3
+         d4                 = i3Pos - j4Pos; //3
 
-         loop1Internal( d1, d2, d3, d4, jBornR, jQ, i3BornR, i3Q, dGpol_dr, dGpol_dalpha2_ij );
+         loop1Internal( d1, d2, d3, d4, jBornR, jQ, i3BornR, i3Q, dGpol_dr, dGpol_dalpha2_ij ); //96 : 228
 
-         bornForce3.xyz    += dGpol_dr.x*d1; 
-         bornForce3.xyz    += dGpol_dr.y*d2; 
-         bornForce3.xyz    += dGpol_dr.z*d3; 
-         bornForce3.xyz    += dGpol_dr.w*d4; 
+         bornForce3.xyz    += dGpol_dr.x*d1; //6
+         bornForce3.xyz    += dGpol_dr.y*d2; //6
+         bornForce3.xyz    += dGpol_dr.z*d3; //6
+         bornForce3.xyz    += dGpol_dr.w*d4; //6 
 
-         bornForce3.w      += dGpol_dalpha2_ij.x + dGpol_dalpha2_ij.y + dGpol_dalpha2_ij.z + dGpol_dalpha2_ij.w;
+         bornForce3.w      += dGpol_dalpha2_ij.x + dGpol_dalpha2_ij.y + dGpol_dalpha2_ij.z + dGpol_dalpha2_ij.w; //4
 
          // ---------------------------------------------------------------------------------------
 
          // i == 4
 
-         d1                 = i4Pos - j1Pos;
-         d2                 = i4Pos - j2Pos;
-         d3                 = i4Pos - j3Pos;
-         d4                 = i4Pos - j4Pos;
+         d1                 = i4Pos - j1Pos; //3
+         d2                 = i4Pos - j2Pos; //3
+         d3                 = i4Pos - j3Pos; //3
+         d4                 = i4Pos - j4Pos; //3
 
-         loop1Internal( d1, d2, d3, d4, jBornR, jQ, i4BornR, i4Q, dGpol_dr, dGpol_dalpha2_ij );
+         loop1Internal( d1, d2, d3, d4, jBornR, jQ, i4BornR, i4Q, dGpol_dr, dGpol_dalpha2_ij ); //96 : 228
 
-         bornForce4.xyz    += dGpol_dr.x*d1; 
-         bornForce4.xyz    += dGpol_dr.y*d2; 
-         bornForce4.xyz    += dGpol_dr.z*d3; 
-         bornForce4.xyz    += dGpol_dr.w*d4; 
+         bornForce4.xyz    += dGpol_dr.x*d1; //6 
+         bornForce4.xyz    += dGpol_dr.y*d2; //6 
+         bornForce4.xyz    += dGpol_dr.z*d3; //6 
+         bornForce4.xyz    += dGpol_dr.w*d4; //6 
 
-         bornForce4.w      += dGpol_dalpha2_ij.x + dGpol_dalpha2_ij.y + dGpol_dalpha2_ij.z + dGpol_dalpha2_ij.w;
+         bornForce4.w      += dGpol_dalpha2_ij.x + dGpol_dalpha2_ij.y + dGpol_dalpha2_ij.z + dGpol_dalpha2_ij.w; //4
 
          // ---------------------------------------------------------------------------------------
 

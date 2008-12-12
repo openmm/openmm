@@ -159,6 +159,19 @@ class BrookFloatStreamInternal : public BrookStreamInternal {
 
       const std::string getContentsString( int level = 0 ) const;
 
+      /** 
+       * Sum over stream dimensions
+       * 
+       * @param stopIndex                 index to stop sum
+       * @param sum                       array of size=getWidth()
+       *
+       * @return DefaultReturnValue
+       *
+       * @throw exception if stopIndex is too large
+       */
+      
+      int sumByDimension( int stopIndex, double* sum );
+      
    private:
 
       BrookOpenMMFloat _defaultDangleValue;

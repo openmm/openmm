@@ -35,8 +35,7 @@
 #include <vector>
 #include <set>
 
-#include "BrookFloatStreamInternal.h"
-#include "BrookIntStreamInternal.h"
+#include "BrookStreamImpl.h"
 #include "BrookPlatform.h"
 #include "BrookCommon.h"
 
@@ -72,13 +71,13 @@ class BrookNonBonded : public BrookCommon {
       int getDuplicationFactor( void ) const;
       
       /** 
-       * Get atom ceiling parameter
+       * Get particle ceiling parameter
        * 
-       * @return atom ceiling parameter
+       * @return particle ceiling parameter
        *
        */
          
-      int getAtomSizeCeiling( void ) const;
+      int getParticleSizeCeiling( void ) const;
  
       /** 
        * Get outer loop unroll
@@ -293,6 +292,13 @@ class BrookNonBonded : public BrookCommon {
       BrookFloatStreamInternal** getForceStreams( void );
       
       /** 
+       * Compute forces
+       * 
+       */
+      
+      void computeForces( BrookStreamImpl& positionStream, BrookStreamImpl& forceStream );
+      
+      /** 
        * Return true if force[index] stream is set 
        *
        * @return  true  if index is valid && force[index] stream is set; else false
@@ -304,17 +310,17 @@ class BrookNonBonded : public BrookCommon {
       /* 
        * Setup of nonbonded ixns
        *
-       * @param numberOfAtoms         number of atoms
-       * @param nonbondedParameters   vector of nonbonded parameters [atomI][0=c6]
-       *                                                             [atomI][1=c12]
-       *                                                             [atomI][2=charge]
+       * @param numberOfParticles         number of particles
+       * @param nonbondedParameters   vector of nonbonded parameters [particleI][0=c6]
+       *                                                             [particleI][1=c12]
+       *                                                             [particleI][2=charge]
        * @param platform              Brook platform
        * @param log                   optional Log file reference
        *
        * @return nonzero value if error
        * */
       
-      int setup( int numberOfAtoms, const std::vector<std::vector<double> >& nonbondedParameters,
+      int setup( int numberOfParticles, const std::vector<std::vector<double> >& nonbondedParameters,
                  const std::vector<std::set<int> >& exclusions,  const Platform& platform );
       
       /* 
@@ -345,9 +351,9 @@ class BrookNonBonded : public BrookCommon {
               LastStreamIndex
            };
 
-      // atom ceiling
+      // particle ceiling
 
-      int _atomSizeCeiling;
+      int _particleSizeCeiling;
 
       // unroll in i/j dimensions
 
@@ -384,14 +390,14 @@ class BrookNonBonded : public BrookCommon {
       /* 
        * Setup of stream dimensions for exclusion stream
        *
-       * @param atomStreamSize        atom stream size
-       * @param atomStreamWidth       atom stream width
+       * @param particleStreamSize        particle stream size
+       * @param particleStreamWidth       particle stream width
        *
        * @return ErrorReturnValue if error, else DefaultReturnValue
        *
        * */
       
-      int _initializeExclusionStreamSize( int atomStreamSize, int atomStreamWidth );
+      int _initializeExclusionStreamSize( int particleStreamSize, int particleStreamWidth );
       
       /** 
        * Initialize exclusion stream dimensions and stream
@@ -407,8 +413,8 @@ class BrookNonBonded : public BrookCommon {
       /** 
        * Set exclusion (4x4)
        * 
-       * @param i                         atom i index
-       * @param j                         atom j index
+       * @param i                         particle i index
+       * @param j                         particle j index
        * @param exclusionStreamWidth      exclusion stream width
        * @param exclusion                 array of packed exclusions
        *
@@ -421,7 +427,7 @@ class BrookNonBonded : public BrookCommon {
       /** 
        * Initialize exclusions
        * 
-       * @param exclusions                vector of sets containing exclusions (1 set entry for every atom)
+       * @param exclusions                vector of sets containing exclusions (1 set entry for every particle)
        * @param platform                  platform
        *
        * @return nonzero value if error
@@ -433,14 +439,14 @@ class BrookNonBonded : public BrookCommon {
       /** 
        * Initialize stream dimensions
        * 
-       * @param numberOfAtoms             number of atoms
+       * @param numberOfParticles             number of particles
        * @param platform                  platform
        *
        * @return ErrorReturnValue if error, else DefaultReturnValue
        *
        */
       
-      int _initializeStreamSizes( int numberOfAtoms, const Platform& platform );
+      int _initializeStreamSizes( int numberOfParticles, const Platform& platform );
       
       /** 
        * Initialize stream dimensions and streams
@@ -456,8 +462,8 @@ class BrookNonBonded : public BrookCommon {
       /* 
        * Setup of j-stream dimensions
        *
-       * @param atomStreamSize        atom stream size
-       * @param atomStreamWidth       atom stream width
+       * @param particleStreamSize        particle stream size
+       * @param particleStreamWidth       particle stream width
        *
        * @return ErrorReturnValue if error, else DefaultReturnValue
        *
@@ -465,13 +471,13 @@ class BrookNonBonded : public BrookCommon {
        *
        * */
       
-      int _initializeJStreamSize( int atomStreamSize, int atomStreamWidth );
+      int _initializeJStreamSize( int particleStreamSize, int particleStreamWidth );
 
       /* 
        * Setup of outer vdw stream size
        *
-       * @param atomStreamSize        atom stream size
-       * @param atomStreamWidth       atom stream width
+       * @param particleStreamSize        particle stream size
+       * @param particleStreamWidth       particle stream width
        *
        * @return ErrorReturnValue if error, else DefaultReturnValue
        *
@@ -479,7 +485,7 @@ class BrookNonBonded : public BrookCommon {
        *
        * */
       
-      int _initializeOuterVdwStreamSize( int atomStreamSize, int atomStreamWidth );
+      int _initializeOuterVdwStreamSize( int particleStreamSize, int particleStreamWidth );
 
       /** 
        * Set sigma & epsilon given c6 & c12 (geometric rule)
@@ -498,7 +504,7 @@ class BrookNonBonded : public BrookCommon {
       /** 
        * Initialize vdw & charge
        * 
-       * @param exclusions                vector of sets containing exclusions (1 set entry for every atom)
+       * @param exclusions                vector of sets containing exclusions (1 set entry for every particle)
        * @param platform                  platform
        *
        * @return nonzero value if error
@@ -510,7 +516,7 @@ class BrookNonBonded : public BrookCommon {
       /** 
        * Initialize vdw & charge
        * 
-       * @param exclusions                vector of sets containing exclusions (1 set entry for every atom)
+       * @param exclusions                vector of sets containing exclusions (1 set entry for every particle)
        * @param platform                  platform
        *
        * @return nonzero value if error
@@ -522,14 +528,14 @@ class BrookNonBonded : public BrookCommon {
       /* 
        * Setup of stream dimensions for partial force streams
        *
-       * @param atomStreamSize        atom stream size
-       * @param atomStreamWidth       atom stream width
+       * @param particleStreamSize        particle stream size
+       * @param particleStreamWidth       particle stream width
        *
        * @return ErrorReturnValue if error, else DefaultReturnValue
        *
        * */
       
-      int _initializePartialForceStreamSize( int atomStreamSize, int atomStreamWidth );
+      int _initializePartialForceStreamSize( int particleStreamSize, int particleStreamWidth );
       
 };
 

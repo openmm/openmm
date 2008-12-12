@@ -85,28 +85,28 @@ class BrookVerletDynamics : public BrookCommon {
       const BrookOpenMMFloat* getDerivedParameters( void ) const;
       
       /**
-       * Get VerletDynamics atom stream width
+       * Get VerletDynamics particle stream width
        *
-       * @return atom stream width
+       * @return particle stream width
        */
 
-      int getVerletDynamicsAtomStreamWidth( void ) const; 
+      int getVerletDynamicsParticleStreamWidth( void ) const; 
 
       /**
-       * Get VerletDynamics atom stream height
+       * Get VerletDynamics particle stream height
        *
-       * @return atom stream height
+       * @return particle stream height
        */
 
-      int getVerletDynamicsAtomStreamHeight( void ) const;
+      int getVerletDynamicsParticleStreamHeight( void ) const;
 
       /**
-       * Get VerletDynamics atom stream size
+       * Get VerletDynamics particle stream size
        * 
-       * @return atom stream size
+       * @return particle stream size
        */
 
-      int getVerletDynamicsAtomStreamSize( void ) const; 
+      int getVerletDynamicsParticleStreamSize( void ) const; 
 
       /** 
        * Update parameters
@@ -122,9 +122,9 @@ class BrookVerletDynamics : public BrookCommon {
       /** 
        * Update
        * 
-       * @param  positions                   atom positions
-       * @param  velocities                  atom velocities
-       * @param  forces                      atom forces
+       * @param  positions                   particle positions
+       * @param  velocities                  particle velocities
+       * @param  forces                      particle forces
        * @param  brookShakeAlgorithm         BrookShakeAlgorithm reference
        *
        * @return  DefaultReturnValue
@@ -146,7 +146,7 @@ class BrookVerletDynamics : public BrookCommon {
       /* 
        * Setup of VerletDynamics parameters
        *
-       * @param masses                atom masses
+       * @param masses                particle masses
        * @param platform              Brook platform
        *
        * @return ErrorReturnValue value if error, else DefaultReturnValue
@@ -206,11 +206,11 @@ class BrookVerletDynamics : public BrookCommon {
 
       BrookOpenMMFloat _stepSize;
 
-      // Atom stream dimensions
+      // Particle stream dimensions
 
-      int _verletAtomStreamWidth;
-      int _verletAtomStreamHeight;
-      int _verletAtomStreamSize;
+      int _verletParticleStreamWidth;
+      int _verletParticleStreamHeight;
+      int _verletParticleStreamSize;
 
       /*
        * Update streams
@@ -243,26 +243,26 @@ class BrookVerletDynamics : public BrookCommon {
       /* 
        * Setup of stream dimensions
        *
-       * @param atomStreamSize        atom stream size
-       * @param atomStreamWidth       atom stream width
+       * @param particleStreamSize        particle stream size
+       * @param particleStreamWidth       particle stream width
        *
        * @return ErrorReturnValue if error, else DefaultReturnValue
        *
        * */
       
-      int _initializeStreamSizes( int atomStreamSize, int atomStreamWidth );
+      int _initializeStreamSizes( int particleStreamSize, int particleStreamWidth );
 
       /** 
        * Initialize stream dimensions
        * 
-       * @param numberOfAtoms             number of atoms
+       * @param numberOfParticles         number of particles
        * @param platform                  platform
        *
        * @return ErrorReturnValue if error, else DefaultReturnValue
        *
        */
       
-      int _initializeStreamSizes( int numberOfAtoms, const Platform& platform );
+      int _initializeStreamSizes( int numberOfParticles, const Platform& platform );
       
       /** 
        * Initialize stream dimensions and streams
@@ -278,7 +278,7 @@ class BrookVerletDynamics : public BrookCommon {
       /** 
        * Set masses 
        * 
-       * @param masses             atomic masses
+       * @param masses             particle masses
        *
        */
       

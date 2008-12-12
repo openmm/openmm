@@ -30,13 +30,15 @@
  * -------------------------------------------------------------------------- */
 
 #include "BrookKernelFactory.h"
+#include "BrookCalcHarmonicAngleForceKernel.h"
 #include "BrookCalcNonbondedForceKernel.h"
 #include "BrookIntegrateLangevinStepKernel.h"
 #include "BrookIntegrateVerletStepKernel.h"
 #include "BrookIntegrateBrownianStepKernel.h"
 #include "BrookCalcKineticEnergyKernel.h"
-#include "BrookCalcGBSAOBCForceKernel.h"
+//#include "BrookCalcGBSAOBCForceKernel.h"
 #include "BrookRemoveCMMotionKernel.h"
+#include "internal/OpenMMContextImpl.h"
 
 using namespace OpenMM;
 
@@ -48,52 +50,78 @@ KernelImpl* BrookKernelFactory::createKernelImpl( std::string name, const Platfo
 
 // ---------------------------------------------------------------------------------------
 
-   // StandardMM
+   OpenMMBrookInterface& openMMBrookInterface = *static_cast<OpenMMBrookInterface*>(context.getPlatformData());
 
-	if( name == CalcNonbondedForceKernel::Name() ){
+   // harmonic bonds 
 
-      return new BrookCalcNonbondedForceKernel( name, platform );
+	if( name == CalcHarmonicBondForceKernel::Name() ){
+
+//      return new BrookCalcHarmonicBondForceKernel( name, platform, openMMBrookInterface, context.getSystem() );
+
+   // angle bonds
+
+	} else if( name == CalcHarmonicAngleForceKernel::Name() ){
+
+      return new BrookCalcHarmonicAngleForceKernel( name, platform, openMMBrookInterface, context.getSystem() );
+
+   // periodic torsion bonds
+
+	} else if( name == CalcPeriodicTorsionForceKernel::Name() ){
+
+//      return new BrookCalcPeriodicTorsionForceKernel( name, platform, openMMBrookInterface, context.getSystem() );
+
+   // RB torsion bonds
+
+	} else if( name == CalcRBTorsionForceKernel::Name() ){
+
+//      return new BrookCalcRBTorsionForceKernel( name, platform, openMMBrookInterface, context.getSystem() );
+
+   // nonbonded 
+
+	} else if( name == CalcNonbondedForceKernel::Name() ){
+
+//      return new BrookCalcNonbondedForceKernel( name, platform, openMMBrookInterface, context.getSystem() );
 
    // GBSA OBC
 
 	} else if( name == CalcGBSAOBCForceKernel::Name() ){
 
-      return new BrookCalcGBSAOBCForceKernel(name, platform);
+//      return new BrookCalcGBSAOBCForceFieldKernel( name, platform, openMMBrookInterface, context.getSystem() );
 
    // Verlet integrator
 
 	} else if( name == IntegrateVerletStepKernel::Name() ){
 
-      return new BrookIntegrateVerletStepKernel( name, platform );
+//      return new BrookIntegrateVerletStepKernel( name, platform, openMMBrookInterface );
 
    // Brownian integrator
 
 	} else if( name == IntegrateBrownianStepKernel::Name() ){
 
-      return new BrookIntegrateBrownianStepKernel( name, platform );
+//      return new BrookIntegrateBrownianStepKernel( name, platform, openMMBrookInterface );
 
    // Andersen thermostat
 
 	} else if( name == ApplyAndersenThermostatKernel::Name() ){
 
-      // return new BrookIntegrateAndersenThermostatKernel( name, platform );
+      // return new BrookIntegrateAndersenThermostatKernel( name, platform, openMMBrookInterface );
 
    // Langevin integrator
 
 	} else if( name == IntegrateLangevinStepKernel::Name() ){
 
-      return new BrookIntegrateLangevinStepKernel( name, platform );
+//      return new BrookIntegrateLangevinStepKernel( name, platform, openMMBrookInterface );
 
    // Remove com
 
 	} else if( name == RemoveCMMotionKernel::Name() ){
 
-      return new BrookRemoveCMMotionKernel( name, platform );
+//      return new BrookRemoveCMMotionKernel( name, platform, openMMBrookInterface );
 
    // KE calculator
 
    } else if( name == CalcKineticEnergyKernel::Name() ){
-      return new BrookCalcKineticEnergyKernel( name, platform );
+//      return new BrookCalcKineticEnergyKernel( name, platform, openMMBrookInterface );
 	} 
 
    (void) fprintf( stderr, "createKernelImpl: name=<%s> not found.", methodName.c_str(), name.c_str() );

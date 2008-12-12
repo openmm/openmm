@@ -1,5 +1,5 @@
-#ifndef OPENMM_BROOK_CALC_RB_DIHEDRAL_FORCE_KERNEL_H_
-#define OPENMM_BROOK_CALC_RB_DIHEDRAL_FORCE_KERNEL_H_
+#ifndef OPENMM_BROOK_CALC_HARMONIC_BOND_FORCE_KERNEL_H_
+#define OPENMM_BROOK_CALC_HARMONIC_BOND_FORCE_KERNEL_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -43,36 +43,36 @@ namespace OpenMM {
  * This kernel is invoked to calculate the harmonic angle forces acting on the system.
  */
 
-class BrookCalcRbDihedralForceKernel : public CalcRBTorsionForceKernel {
+class BrookCalcHarmonicBondForceKernel : public CalcHarmonicBondForceKernel {
 
    public:
   
       /**
-       * BrookCalcRbDihedralForceKernel constructor
+       * BrookCalcHarmonicBondForceKernel constructor
        */
 
-      BrookCalcRbDihedralForceKernel( std::string name, const Platform& platform, OpenMMBrookInterface& openMMBrookInterface, System& system );
+      BrookCalcHarmonicBondForceKernel( std::string name, const Platform& platform, OpenMMBrookInterface& openMMBrookInterface, System& system );
   
       /**
-       * BrookCalcRbDihedralForceKernel destructor
+       * BrookCalcHarmonicBondForceKernel destructor
        */
 
-      ~BrookCalcRbDihedralForceKernel();
+      ~BrookCalcHarmonicBondForceKernel();
   
       /**
        * Initialize the kernel, setting up the values to calculate harmonic bond force & energy
        * 
        * @param system                    System reference
-       * @param force                     RbDihedralForce reference
+       * @param force                     HarmonicBondForce reference
        *
        */
 
-      void initialize( const System& system, const RBTorsionForce& force );
+      void initialize( const System& system, const HarmonicBondForce& force );
   
       /**
        * Execute the kernel to calculate the forces.
        * 
-       * @param positions   atom coordiantes
+       * @param positions   particle coordiantes
        * @param forces      output forces
        *
        */
@@ -133,7 +133,7 @@ class BrookCalcRbDihedralForceKernel : public CalcRBTorsionForceKernel {
       /** 
        * Get indices/parameters
        * 
-       * @return  BrookBondParameters containing atom indices/parameters
+       * @return  BrookBondParameters containing particle indices/parameters
        *
        */
       
@@ -141,7 +141,7 @@ class BrookCalcRbDihedralForceKernel : public CalcRBTorsionForceKernel {
       
    private:
    
-      static const int NumberOfAtomsInBond      = 3;
+      static const int NumberOfParticlesInBond  = 2;
       static const int NumberOfParametersInBond = 2;
 
       // bond name
@@ -151,7 +151,6 @@ class BrookCalcRbDihedralForceKernel : public CalcRBTorsionForceKernel {
       // log file reference
 
       FILE* _log;
-
 
       // Brook bond parameters
 
@@ -169,4 +168,4 @@ class BrookCalcRbDihedralForceKernel : public CalcRBTorsionForceKernel {
 
 } // namespace OpenMM
 
-#endif /* OPENMM_BROOK_CALC_RB_DIHEDRAL_FORCE_KERNEL_H_ */
+#endif /* OPENMM_BROOK_CALC_HARMONIC_BOND_FORCE_KERNEL_H_ */

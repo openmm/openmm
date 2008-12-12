@@ -66,9 +66,9 @@ class BrookIntegrateVerletStepKernel : public IntegrateVerletStepKernel {
       /** 
        * Initialize the kernel, setting up all parameters related to integrator.
        * 
-       * @param masses             the mass of each atom
-       * @param constraintIndices  each element contains the indices of two atoms whose distance should be constrained
-       * @param constraintLengths  the required distance between each pair of constrained atoms
+       * @param masses             the mass of each particle
+       * @param constraintIndices  each element contains the indices of two particles whose distance should be constrained
+       * @param constraintLengths  the required distance between each pair of constrained particles
        *
        */
       void initialize( const std::vector<double>& masses, const std::vector<std::vector<int> >& constraintIndices,
@@ -76,9 +76,9 @@ class BrookIntegrateVerletStepKernel : public IntegrateVerletStepKernel {
       /** 
        * Execute kernel
        * 
-       * @param positions          atom coordinates
-       * @param velocities         atom velocities
-       * @param forces             atom forces
+       * @param positions          particle coordinates
+       * @param velocities         particle velocities
+       * @param forces             particle forces
        * @param stepSize           integration step size
        *
        */

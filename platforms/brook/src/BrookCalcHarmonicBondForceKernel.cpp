@@ -31,15 +31,15 @@
 
 #include "OpenMMException.h"
 #include <sstream>
-#include "BrookCalcProperDihedralForceKernel.h"
+#include "BrookCalcHarmonicBondForceKernel.h"
 
 using namespace OpenMM;
 using namespace std;
 
-const std::string BrookCalcProperDihedralForceKernel::BondName = "ProperDihedral";
+const std::string BrookCalcHarmonicBondForceKernel::BondName = "HarmonicBond";
 
 /** 
- * BrookCalcProperDihedralForceKernel constructor
+ * BrookCalcHarmonicBondForceKernel constructor
  * 
  * @param name                      kernel name
  * @param platform                  platform
@@ -48,13 +48,13 @@ const std::string BrookCalcProperDihedralForceKernel::BondName = "ProperDihedral
  *
  */
 
-BrookCalcProperDihedralForceKernel::BrookCalcProperDihedralForceKernel( std::string name, const Platform& platform,
+BrookCalcHarmonicBondForceKernel::BrookCalcHarmonicBondForceKernel( std::string name, const Platform& platform,
                                                                       OpenMMBrookInterface& openMMBrookInterface, System& system ) :
-                     CalcProperDihedralForceKernel( name, platform ), _openMMBrookInterface( openMMBrookInterface ), _system( system ){
+                     CalcHarmonicBondForceKernel( name, platform ), _openMMBrookInterface( openMMBrookInterface ), _system( system ){
 
 // ---------------------------------------------------------------------------------------
 
-   // static const std::string methodName      = "BrookCalcProperDihedralForceKernel::BrookCalcProperDihedralForceKernel";
+   // static const std::string methodName      = "BrookCalcHarmonicBondForceKernel::BrookCalcHarmonicBondForceKernel";
    // static const int debug                   = 1;
 
 // ---------------------------------------------------------------------------------------
@@ -70,15 +70,15 @@ BrookCalcProperDihedralForceKernel::BrookCalcProperDihedralForceKernel( std::str
 }   
 
 /** 
- * BrookCalcProperDihedralForceKernel destructor
+ * BrookCalcHarmonicBondForceKernel destructor
  * 
  */
 
-BrookCalcProperDihedralForceKernel::~BrookCalcProperDihedralForceKernel( ){
+BrookCalcHarmonicBondForceKernel::~BrookCalcHarmonicBondForceKernel( ){
 
 // ---------------------------------------------------------------------------------------
 
-   // static const std::string methodName      = "BrookCalcProperDihedralForceKernel::BrookCalcProperDihedralForceKernel";
+   // static const std::string methodName      = "BrookCalcHarmonicBondForceKernel::BrookCalcHarmonicBondForceKernel";
    // static const int debug                   = 1;
 
 // ---------------------------------------------------------------------------------------
@@ -93,7 +93,7 @@ BrookCalcProperDihedralForceKernel::~BrookCalcProperDihedralForceKernel( ){
  *
  */
 
-FILE* BrookCalcProperDihedralForceKernel::getLog( void ) const {
+FILE* BrookCalcHarmonicBondForceKernel::getLog( void ) const {
    return _log;
 }
 
@@ -106,7 +106,7 @@ FILE* BrookCalcProperDihedralForceKernel::getLog( void ) const {
  *
  */
 
-int BrookCalcProperDihedralForceKernel::setLog( FILE* log ){
+int BrookCalcHarmonicBondForceKernel::setLog( FILE* log ){
    _log = log;
    return BrookCommon::DefaultReturnValue;
 }
@@ -115,15 +115,15 @@ int BrookCalcProperDihedralForceKernel::setLog( FILE* log ){
  * Initialize the kernel, setting up the values of all the force field parameters.
  * 
  * @param system                    System reference
- * @param force                     ProperDihedralForce reference
+ * @param force                     HarmonicBondForce reference
  *
  */
 
-void BrookCalcProperDihedralForceKernel::initialize( const System& system, const ProperDihedralForce& force ){
+void BrookCalcHarmonicBondForceKernel::initialize( const System& system, const HarmonicBondForce& force ){
 
 // ---------------------------------------------------------------------------------------
 
-   static const std::string methodName      = "BrookCalcProperDihedralForceKernel::initialize";
+   static const std::string methodName      = "BrookCalcHarmonicBondForceKernel::initialize";
 
 // ---------------------------------------------------------------------------------------
 
@@ -131,40 +131,39 @@ void BrookCalcProperDihedralForceKernel::initialize( const System& system, const
 
    // ---------------------------------------------------------------------------------------
 
-   // create _brookBondParameters object containing atom indices/parameters
+   // create _brookBondParameters object containing particle indices/parameters
 
-   int numberOfBonds         = force.getNumAngles();
+   int numberOfBonds         = force.getNumBonds();
 
    if( _brookBondParameters ){
       delete _brookBondParameters;
    }
-   _brookBondParameters = new BrookBondParameters( BondName, NumberOfAtomsInBond, NumberOfParametersInBond, numberOfBonds, getLog() );
+   _brookBondParameters = new BrookBondParameters( BondName, NumberOfParticlesInBond, NumberOfParametersInBond, numberOfBonds, getLog() );
 
    for( int ii = 0; ii < numberOfBonds; ii++ ){
 
-      int particle1, particle2, particle3;
-      double angle, k;
+      int particle1, particle2;
+      double length, k;
 
-      int particles[NumberOfAtomsInBond];
+      int particles[NumberOfParticlesInBond];
       double parameters[NumberOfParametersInBond];
 
-      force.getAngleParameters( ii, particle1, particle2, particle3, angle, k ); 
+      force.getBondParameters( ii, particle1, particle2, length, k ); 
       particles[0]    = particle1;
       particles[1]    = particle2;
-      particles[2]    = particle3;
  
-      parameters[0]   = angle;
+      parameters[0]   = length;
       parameters[1]   = k;
 
       _brookBondParameters->setBond( ii, particles, parameters );
    }   
-   _openMMBrookInterface.setProperDihedralForceParameters( _brookBondParameters );
+   _openMMBrookInterface.setHarmonicBondForceParameters( _brookBondParameters );
    _openMMBrookInterface.setTriggerForceKernel( this );
    _openMMBrookInterface.setTriggerEnergyKernel( this );
 
    if( log ){
       std::string contents = _brookBondParameters->getContentsString( ); 
-      (void) fprintf( log, "%s brookGbsa::contents\n%s", methodName.c_str(), contents.c_str() );
+      (void) fprintf( log, "%s contents\n%s", methodName.c_str(), contents.c_str() );
       (void) fflush( log );
    }
 
@@ -173,17 +172,17 @@ void BrookCalcProperDihedralForceKernel::initialize( const System& system, const
 }
 
 /** 
- * Compute forces given atom coordinates
+ * Compute forces given particle coordinates
  * 
  * @param context OpenMMContextImpl context
  *
  */
 
-void BrookCalcProperDihedralForceKernel::executeForces( OpenMMContextImpl& context ){
+void BrookCalcHarmonicBondForceKernel::executeForces( OpenMMContextImpl& context ){
 
 // ---------------------------------------------------------------------------------------
 
-   //static const std::string methodName   = "BrookCalcProperDihedralForceKernel::executeForces";
+   //static const std::string methodName   = "BrookCalcHarmonicBondForceKernel::executeForces";
 
 // ---------------------------------------------------------------------------------------
 
@@ -205,11 +204,11 @@ void BrookCalcProperDihedralForceKernel::executeForces( OpenMMContextImpl& conte
  *
  */
 
-double BrookCalcProperDihedralForceKernel::executeEnergy( OpenMMContextImpl& context ){
+double BrookCalcHarmonicBondForceKernel::executeEnergy( OpenMMContextImpl& context ){
 
 // ---------------------------------------------------------------------------------------
 
-   //static const std::string methodName      = "BrookCalcProperDihedralForceKernel::executeEnergy";
+   //static const std::string methodName      = "BrookCalcHarmonicBondForceKernel::executeEnergy";
 
 // ---------------------------------------------------------------------------------------
 

@@ -33,14 +33,17 @@
 #include "OpenMMException.h"
 #include "BrookStreamFactory.h"
 #include "BrookStreamImpl.h"
+#include "internal/OpenMMContextImpl.h"
+#include "OpenMMBrookInterface.h"
 
 using namespace OpenMM;
 
-const std::string BrookStreamFactory::AtomPositions              = "atomPositions";
-const std::string BrookStreamFactory::AtomVelocities             = "atomVelocities";
-const std::string BrookStreamFactory::AtomForces                 = "atomForces";
+const std::string BrookStreamFactory::ParticlePositions              = "particlePositions";
+const std::string BrookStreamFactory::ParticleVelocities             = "particleVelocities";
+const std::string BrookStreamFactory::ParticleForces                 = "particleForces";
 
-const double DefaultDangleValue                                  = 1.0e+08;
+const double DefaultDangleValue                                      = 1.0e+08;
+
 /** 
  * BrookStreamFactory constructor
  * 
@@ -56,7 +59,7 @@ BrookStreamFactory::BrookStreamFactory( void ){
 // ---------------------------------------------------------------------------------------
 
 	_defaultDangleValue                      = 1.0e+08;
-	_defaultAtomStreamWidth                  = DefaultStreamAtomWidth;
+	_defaultParticleStreamWidth              = DefaultStreamParticleWidth;
    _defaultStreamRandomNumberWidth          = DefaultStreamRandomNumberWidth;
    _defaultStreamRandomNumberSize           = DefaultStreamRandomNumberSize;
 
@@ -71,52 +74,52 @@ BrookStreamFactory::~BrookStreamFactory( void ){
 }
 
 /** 
- * Get atom stream width
+ * Get particle stream width
  * 
- * @return atomStreamWidth
+ * @return particleStreamWidth
  *
  */
 
-int BrookStreamFactory::getDefaultAtomStreamWidth( void ) const {
+int BrookStreamFactory::getDefaultParticleStreamWidth( void ) const {
 
 // ---------------------------------------------------------------------------------------
 
-   //static const std::string methodName      = "BrookStreamFactory::getDefaultAtomStreamWidth";
+   //static const std::string methodName      = "BrookStreamFactory::getDefaultParticleStreamWidth";
 
 // ---------------------------------------------------------------------------------------
 
-   return _defaultAtomStreamWidth;
+   return _defaultParticleStreamWidth;
 }
 
 /** 
- * Set atom stream width
+ * Set particle stream width
  * 
- * @param atomStreamWidth  atom stream width
+ * @param particleStreamWidth  particle stream width
  *
  * @return DefaultReturnValue
  *
- * @throw OpenMMException if atomStreamWidth < 1
+ * @throw OpenMMException if particleStreamWidth < 1
  *
  */
 
-int BrookStreamFactory::setDefaultAtomStreamWidth( int atomStreamWidth ){
+int BrookStreamFactory::setDefaultParticleStreamWidth( int particleStreamWidth ){
 
 // ---------------------------------------------------------------------------------------
 
-   static const std::string methodName      = "BrookStreamFactory::setDefaultAtomStreamWidth";
+   static const std::string methodName      = "BrookStreamFactory::setDefaultParticleStreamWidth";
 
 // ---------------------------------------------------------------------------------------
 
-   // validate atom stream width
+   // validate particle stream width
 
-   if( atomStreamWidth < 1 ){
+   if( particleStreamWidth < 1 ){
       std::stringstream message;
-      message << methodName << " atomStreamWidth=" << atomStreamWidth << " is less than 1.";
+      message << methodName << " particleStreamWidth=" << particleStreamWidth << " is less than 1.";
       throw OpenMMException( message.str() );
       return ErrorReturnValue;
    }
 
-   _defaultAtomStreamWidth = atomStreamWidth;
+   _defaultParticleStreamWidth = particleStreamWidth;
 
    return DefaultReturnValue;
 
@@ -289,10 +292,22 @@ StreamImpl* BrookStreamFactory::createStreamImpl( std::string name, int size, St
 // ---------------------------------------------------------------------------------------
 
 
-   // stream width hould be based on name & value set in platform; for now only atom stream types
+   // stream width hould be based on name & value set in platform; for now only particle stream types
 
-   int streamWidth = getDefaultAtomStreamWidth();
+   int streamWidth = getDefaultParticleStreamWidth();
 
-   return new BrookStreamImpl( name, size, streamWidth, type, platform );
+   BrookStreamImpl* brookStreamImpl            = new BrookStreamImpl( name, size, streamWidth, type, platform );
+
+   OpenMMBrookInterface& openMMBrookInterface  = *static_cast<OpenMMBrookInterface*>(context.getPlatformData());
+
+   if( name == ParticlePositions ){
+      openMMBrookInterface.setParticlePositions( brookStreamImpl );
+   } else if( name == ParticleVelocities ){
+      openMMBrookInterface.setParticleVelocities( brookStreamImpl );
+   } else if( name == ParticleForces ){
+      openMMBrookInterface.setParticleForces( brookStreamImpl );
+   }
+
+   return brookStreamImpl;
 
 }

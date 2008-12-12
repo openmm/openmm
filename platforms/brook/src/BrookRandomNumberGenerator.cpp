@@ -65,7 +65,8 @@ BrookRandomNumberGenerator::BrookRandomNumberGenerator( ){
    _rvStreamIndex                   = 0;
    _rvStreamOffset                  = 0;
    _numberOfShuffles                = 0;
-   _maxShuffles                     = 100;
+   _maxShuffles                     = 3;
+   //_maxShuffles                     = 100;
 
    _loadBuffer                      = NULL;
    _shuffleIndices                  = NULL;
@@ -617,7 +618,7 @@ int BrookRandomNumberGenerator::_shuffleGVStreams( void ){
 }
 
 /** 
- * Advances the current position by 2*gpu->natoms
+ * Advances the current position by 2*gpu->particles
  * If we run out of rand numbers, we shuffle and 
  * reuse a few times before reloading from the cpu
  *
@@ -630,7 +631,9 @@ int BrookRandomNumberGenerator::advanceGVCursor( int numberOfRandomValuesConsume
 
    // ---------------------------------------------------------------------------------------
 
-   // static const char* methodName = "\nBrookRandomNumberGenerator::advanceGVCursor";
+   static const char* methodName = "\nBrookRandomNumberGenerator::advanceGVCursor";
+
+   static const int PrintOn      = 1;
 
    // ---------------------------------------------------------------------------------------
 	
@@ -644,12 +647,15 @@ int BrookRandomNumberGenerator::advanceGVCursor( int numberOfRandomValuesConsume
 
 	if ( _rvStreamOffset > rvStreamSize - numberOfRandomValuesConsumedPerIteration ){
 
+      char* action;
+
 		// next one if available
 
       _rvStreamOffset = 0;
 
 		if ( _rvStreamIndex < _numberOfRandomNumberStreams - 1 ){
          _rvStreamIndex++;
+         action = "incremented stream index";
 		} else {
 
 			//No more textures, need to shuffle
@@ -658,18 +664,26 @@ int BrookRandomNumberGenerator::advanceGVCursor( int numberOfRandomValuesConsume
 
 				_shuffleGVStreams( );
             _numberOfShuffles++;
+            action = "shuffled streams";
 
 			} else { //Need to refresh random numbers from cpu
 
             if( UseOriginalRng ){
+               action = "loaded new values from GPU using original rng";
                _loadGVStreamsOriginal( );
             } else {
                _loadRandomNumberStreamsKiss( );
+               action = "loaded new values from GPU using KISS rng";
             }
             _numberOfShuffles  = 0;
 			}
          _rvStreamIndex = 0;
 		}
+
+      if( PrintOn && getLog() ){
+         (void) fprintf( getLog(), "%s StrmIdx=%d action=%s", methodName, _rvStreamIndex, action );
+         (void) fflush( getLog() );
+      }
 	}
 
    return DefaultReturnValue;
@@ -700,7 +714,7 @@ BrookFloatStreamInternal* BrookRandomNumberGenerator::_getShuffleStream( void ) 
 /** 
  * Get random number stream 
  *
- * @param index random number stream index     
+ * @param index     random number stream index     
  *
  * @return  random number stream
  *
@@ -780,14 +794,14 @@ int BrookRandomNumberGenerator::_getNumberOfShuffles( void ) const {
 /** 
  * Initialize stream dimensions
  * 
- * @param numberOfAtoms             number of atoms
+ * @param numberOfParticles         number of particles
  * @param platform                  platform
  *      
  * @return ErrorReturnValue if error, else DefaultReturnValue
  *
  */
 
-int BrookRandomNumberGenerator::_initializeStreamSizes( int numberOfAtoms, const Platform& platform ){
+int BrookRandomNumberGenerator::_initializeStreamSizes( int numberOfParticles, const Platform& platform ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -795,7 +809,7 @@ int BrookRandomNumberGenerator::_initializeStreamSizes( int numberOfAtoms, const
 
 // ---------------------------------------------------------------------------------------
 
-   setNumberOfAtoms( numberOfAtoms );
+   setNumberOfParticles( numberOfParticles );
 
    // get randomNumber stream dimensions
 
@@ -862,14 +876,14 @@ int BrookRandomNumberGenerator::_initializeStreams( const Platform& platform ){
 /*  
  * Setup of StochasticDynamics parameters
  *
- * @param numberOfAtoms             number of atoms
+ * @param numberOfParticles     number of particles
  * @param platform              Brook platform
  *
  * @return nonzero value if error
  *
  * */
     
-int BrookRandomNumberGenerator::setup( int numberOfAtoms,  const Platform& platform ){
+int BrookRandomNumberGenerator::setup( int numberOfParticles,  const Platform& platform ){
     
 // ---------------------------------------------------------------------------------------
 
@@ -877,9 +891,12 @@ int BrookRandomNumberGenerator::setup( int numberOfAtoms,  const Platform& platf
 
 // ---------------------------------------------------------------------------------------
 
+   const BrookPlatform brookPlatform            = dynamic_cast<const BrookPlatform&> (platform);
+   setLog( brookPlatform.getLog() );
+
    // set stream sizes and then create streams
 
-   _initializeStreamSizes( numberOfAtoms, platform );
+   _initializeStreamSizes( numberOfParticles, platform );
    _initializeStreams( platform );
    if( UseOriginalRng ){
       _loadGVStreamsOriginal( );

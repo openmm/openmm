@@ -72,7 +72,7 @@ class BrookCalcRBTorsionForceKernel : public CalcRBTorsionForceKernel {
       /**
        * Execute the kernel to calculate the forces.
        * 
-       * @param positions   atom coordiantes
+       * @param positions   particle coordiantes
        * @param forces      output forces
        *
        */
@@ -133,7 +133,7 @@ class BrookCalcRBTorsionForceKernel : public CalcRBTorsionForceKernel {
       /** 
        * Get indices/parameters
        * 
-       * @return  BrookBondParameters containing atom indices/parameters
+       * @return  BrookBondParameters containing particle indices/parameters
        *
        */
       
@@ -141,7 +141,7 @@ class BrookCalcRBTorsionForceKernel : public CalcRBTorsionForceKernel {
       
    private:
    
-      static const int NumberOfAtomsInBond      = 4;
+      static const int NumberOfParticlesInBond  = 4;
       static const int NumberOfParametersInBond = 6;
 
       // bond name

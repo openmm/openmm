@@ -1,34 +1,13 @@
 
-/* -------------------------------------------------------------------------- *
- *                                   OpenMM                                   *
- * -------------------------------------------------------------------------- *
- * This is part of the OpenMM molecular simulation toolkit originating from   *
- * Simbios, the NIH National Center for Physics-Based Simulation of           *
- * Biological Structures at Stanford, funded under the NIH Roadmap for        *
- * Medical Research, grant U54 GM072970. See https://simtk.org.               *
- *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
- * Authors: Peter Eastman, Mark Friedrichs, Chris Bruns                       *
- * Contributors:                                                              *
- *                                                                            *
- * Permission is hereby granted, free of charge, to any person obtaining a    *
- * copy of this software and associated documentation files (the "Software"), *
- * to deal in the Software without restriction, including without limitation  *
- * the rights to use, copy, modify, merge, publish, distribute, sublicense,   *
- * and/or sell copies of the Software, and to permit persons to whom the      *
- * Software is furnished to do so, subject to the following conditions:       *
- *                                                                            *
- * The above copyright notice and this permission notice shall be included in *
- * all copies or substantial portions of the Software.                        *
- *                                                                            *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR *
- * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,   *
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL    *
- * THE AUTHORS, CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,    *
- * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR      *
- * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE  *
- * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
- * -------------------------------------------------------------------------- */
+/****************************************************************
+ //Linear index of i particle, divided by 2 because we unroll i by 2
+* This file is part of the gpu acceleration library for gromacs.
+* Author: Mark Friedrichs
+* 
+* This kernel was developed in collaboration with
+* 
+* Copyright (C) Pande Group, Stanford, 2006
+*****************************************************************/
 
 /* After forces above, we have the forces for even numbered particles
  * in one stream, odd numbered particles in another.
@@ -733,7 +712,6 @@ kernel void kPostObcLoop2(
 
 }
 
-
 kernel void kPostObcLoop2_nobranch( 
       float repfac, 
       float atomStreamWidth, 
@@ -860,6 +838,217 @@ kernel void kPostObcLoop2_nobranch(
 
 }
 
+kernel void kPostCalculateBornRadii_nobranch( 
+      float repfac, 
+      float atomStreamWidth, 
+      float pStreamWidth,
+      float natoms,
+      float roundNatoms,
+      float iUnroll,
+      float conversion,
+      float mergeNonObcForces,
+      float4 pstream1[][], 
+      float  atomicRadii<>,
+      out float bornRadii<>,
+      out float obcChain<> ){
+
+   // ---------------------------------------------------------------------------------------
+
+   float atomIndex, forceIndex, qIndex, qOff;
+   float2 pindex;
+   float i;
+   float sum2, sum3, bornSum, tanhSum, atomicRadiiOffset, obcIntermediate;
+   float4 o1;
+   float tmp;
+
+   float2 iAtom; 
+   float4 forces;
+   float expPlus, expMinus;
+
+   // ---------------------------------------------------------------------------------------
+
+   // constants -- OBC Type II
+
+   const float alphaObc          = 1.0f;
+   const float betaObc           = 0.8f;
+   const float gammaObc          = 4.85f;
+   const float dielectricOffset  = 0.009f;
+
+   // ---------------------------------------------------------------------------------------
+   
+   // given atom index find force indices and streams
+
+   pindex      = indexof( obcChain );
+   atomIndex   = pindex.x + pindex.y*atomStreamWidth;
+   forceIndex  = atomIndex;
+
+   // add current forces in inStream to forces stored in pstreams
+   // the .w entry is Born sum values; it will be used to calculate the
+   // Born radii and obcChain term
+
+   bornSum  = 0.0f;
+   
+   // sum over j-loop 'duplications' by gathering from pstreams
+
+   for( i = 0.0f; i < repfac; i += 1.0f ){
+
+      qIndex            = round( (forceIndex - fmod( forceIndex, iUnroll))/iUnroll );
+      qOff              = forceIndex - iUnroll*qIndex;
+      pindex.y          = round( (qIndex - fmod( qIndex, pStreamWidth ))/pStreamWidth );
+      pindex.x          = qIndex - pindex.y*pStreamWidth;
+
+      o1                = pstream1[ pindex ];
+      
+      tmp               = qOff < 0.5f ? o1.x : o1.y;
+      tmp               = qOff < 1.5f ? tmp : o1.z;
+      tmp               = qOff < 2.5f ? tmp : o1.w;
+      
+      bornSum          += tmp;
+        
+      forceIndex       += roundNatoms;
+      
+   }
+
+   // compute Born radii and ObcChain
+
+   atomicRadiiOffset            = atomicRadii - dielectricOffset;
+
+   bornSum                     *= 0.5f*atomicRadiiOffset;
+
+   sum2                         = bornSum*bornSum;
+   sum3                         = bornSum*sum2;
+
+   // Tanh does not exist? 
+   // calculate [ exp(x) - exp(-x) ]/[ exp(x) + exp(-x) ]
+
+   // tanhSum                      = tanh( bornSum - betaObc*sum2 + gammaObc*sum3 );
+
+   tanhSum                      = bornSum - betaObc*sum2 + gammaObc*sum3;
+   expPlus                      = exp( tanhSum );
+   expMinus                     = 1.0f/expPlus;
+   tanhSum                      = ( expPlus - expMinus )/( expPlus + expMinus );
+    
+   bornRadii                    = 1.0f/( (1.0f/(atomicRadiiOffset)) - tanhSum/atomicRadii );  
+ 
+   obcIntermediate              = atomicRadiiOffset*( alphaObc - 2.0f*betaObc*bornSum + 3.0f*gammaObc*sum2 );
+   obcChain                     = (1.0f - tanhSum*tanhSum)*obcIntermediate/atomicRadii;
+   if( atomIndex >= natoms ){
+      bornRadii = 0.0f;
+      obcChain  = 0.0f;
+   }
+
+}
+
+kernel void kPostCalculateBornRadii_nobranchOk( 
+      float repfac, 
+      float atomStreamWidth, 
+      float pStreamWidth,
+      float natoms,
+      float roundNatoms,
+      float iUnroll,
+      float conversion,
+      float mergeNonObcForces,
+      float4 inObcForces<>, 
+      float4 pstream1[][], 
+      float4 pstream2[][], 
+      float4 pstream3[][], 
+      float4 pstream4[][], 
+      float  atomicRadii<>,
+      out float bornRadii<>,
+      out float obcChain<> ){
+
+   // ---------------------------------------------------------------------------------------
+
+   float atomIndex, forceIndex, qIndex, qOff;
+   float2 pindex;
+   float i;
+   float sum2, sum3, bornSum, tanhSum, atomicRadiiOffset, obcIntermediate;
+   float4 o1,o2,o3,o4;
+   float4 tmp;
+
+   float2 iAtom; 
+   float4 forces;
+   float expPlus, expMinus;
+
+   // ---------------------------------------------------------------------------------------
+
+   // constants -- OBC Type II
+
+   const float alphaObc          = 1.0f;
+   const float betaObc           = 0.8f;
+   const float gammaObc          = 4.85f;
+   const float dielectricOffset  = 0.009f;
+
+   // ---------------------------------------------------------------------------------------
+   
+   // given atom index find force indices and streams
+
+   pindex      = indexof( obcChain );
+   atomIndex   = pindex.x + pindex.y*atomStreamWidth;
+   forceIndex  = atomIndex;
+
+   // add current forces in inStream to forces stored in pstreams
+   // the .w entry is Born sum values; it will be used to calculate the
+   // Born radii and obcChain term
+
+   forces   = inObcForces;
+   forces.w = 0.0f;
+//forces   = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+   
+   // sum over j-loop 'duplications' by gathering from pstreams
+
+   for( i = 0.0f; i < repfac; i += 1.0f ){
+
+      qIndex            = round( (forceIndex - fmod( forceIndex, iUnroll))/iUnroll );
+      qOff              = forceIndex - iUnroll*qIndex;
+      pindex.y          = round( (qIndex - fmod( qIndex, pStreamWidth ))/pStreamWidth );
+      pindex.x          = qIndex - pindex.y*pStreamWidth;
+
+      o1 = pstream1[ pindex ];
+      o2 = pstream2[ pindex ];
+      o3 = pstream3[ pindex ];
+      o4 = pstream4[ pindex ];
+      
+      tmp = qOff < 0.5f ? o1 : o2;
+      tmp = qOff < 1.5f ? tmp : o3;
+      tmp = qOff < 2.5f ? tmp : o4;
+      
+      forces     += tmp;
+        
+      forceIndex += roundNatoms;
+      
+   }
+
+   // compute Born radii and ObcChain
+
+   atomicRadiiOffset            = atomicRadii - dielectricOffset;
+
+   bornSum                      = forces.w;
+   bornSum                     *= 0.5f*atomicRadiiOffset;
+
+   sum2                         = bornSum*bornSum;
+   sum3                         = bornSum*sum2;
+
+   // Tanh does not exist? 
+   // calculate [ exp(x) - exp(-x) ]/[ exp(x) + exp(-x) ]
+
+   // tanhSum                      = tanh( bornSum - betaObc*sum2 + gammaObc*sum3 );
+
+   tanhSum                      = bornSum - betaObc*sum2 + gammaObc*sum3;
+   expPlus                      = exp( tanhSum );
+   expMinus                     = 1.0f/expPlus;
+   tanhSum                      = ( expPlus - expMinus )/( expPlus + expMinus );
+    
+   bornRadii                    = 1.0f/( (1.0f/(atomicRadiiOffset)) - tanhSum/atomicRadii );  
+ 
+   obcIntermediate              = atomicRadiiOffset*( alphaObc - 2.0f*betaObc*bornSum + 3.0f*gammaObc*sum2 );
+   obcChain                     = (1.0f - tanhSum*tanhSum)*obcIntermediate/atomicRadii;
+   if( atomIndex >= natoms ){
+      bornRadii = 0.0f;
+      obcChain  = 0.0f;
+   }
+
+}
 
 /* After forces above, we have the forces for even numbered particles
  * in one stream, odd numbered particles in another.

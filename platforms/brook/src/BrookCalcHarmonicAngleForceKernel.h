@@ -1,5 +1,5 @@
-#ifndef OPENMM_BROOK_CALC_PROPER_DIHEDRAL_FORCE_KERNEL_H_
-#define OPENMM_BROOK_CALC_PROPER_DIHEDRAL_FORCE_KERNEL_H_
+#ifndef OPENMM_BROOK_CALC_HARMONIC_ANGLE_FORCE_KERNEL_H_
+#define OPENMM_BROOK_CALC_HARMONIC_ANGLE_FORCE_KERNEL_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -43,36 +43,36 @@ namespace OpenMM {
  * This kernel is invoked to calculate the harmonic angle forces acting on the system.
  */
 
-class BrookCalcProperDihedralForceKernel : public CalcProperDihedralForceKernel {
+class BrookCalcHarmonicAngleForceKernel : public CalcHarmonicAngleForceKernel {
 
    public:
   
       /**
-       * BrookCalcProperDihedralForceKernel constructor
+       * BrookCalcHarmonicAngleForceKernel constructor
        */
 
-      BrookCalcProperDihedralForceKernel( std::string name, const Platform& platform, OpenMMBrookInterface& openMMBrookInterface, System& system );
+      BrookCalcHarmonicAngleForceKernel( std::string name, const Platform& platform, OpenMMBrookInterface& openMMBrookInterface, System& system );
   
       /**
-       * BrookCalcProperDihedralForceKernel destructor
+       * BrookCalcHarmonicAngleForceKernel destructor
        */
 
-      ~BrookCalcProperDihedralForceKernel();
+      ~BrookCalcHarmonicAngleForceKernel();
   
       /**
        * Initialize the kernel, setting up the values to calculate harmonic bond force & energy
        * 
        * @param system                    System reference
-       * @param force                     ProperDihedralForce reference
+       * @param force                     HarmonicAngleForce reference
        *
        */
 
-      void initialize( const System& system, const ProperDihedralForce& force );
+      void initialize( const System& system, const HarmonicAngleForce& force );
   
       /**
        * Execute the kernel to calculate the forces.
        * 
-       * @param positions   atom coordiantes
+       * @param positions   particle coordiantes
        * @param forces      output forces
        *
        */
@@ -133,7 +133,7 @@ class BrookCalcProperDihedralForceKernel : public CalcProperDihedralForceKernel 
       /** 
        * Get indices/parameters
        * 
-       * @return  BrookBondParameters containing atom indices/parameters
+       * @return  BrookBondParameters containing particle indices/parameters
        *
        */
       
@@ -141,7 +141,7 @@ class BrookCalcProperDihedralForceKernel : public CalcProperDihedralForceKernel 
       
    private:
    
-      static const int NumberOfAtomsInBond      = 3;
+      static const int NumberOfParticlesInBond  = 3;
       static const int NumberOfParametersInBond = 2;
 
       // bond name
@@ -169,4 +169,4 @@ class BrookCalcProperDihedralForceKernel : public CalcProperDihedralForceKernel 
 
 } // namespace OpenMM
 
-#endif /* OPENMM_BROOK_CALC_PROPER_DIHEDRAL_FORCE_KERNEL_H_ */
+#endif /* OPENMM_BROOK_CALC_HARMONIC_ANGLE_FORCE_KERNEL_H_ */

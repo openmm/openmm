@@ -1,5 +1,5 @@
-#ifndef OPENMM_BROOK_CALC_PROPER_DIHEDRAL_FORCE_KERNEL_H_
-#define OPENMM_BROOK_CALC_PROPER_DIHEDRAL_FORCE_KERNEL_H_
+#ifndef OPENMM_BROOK_CALC_PERIODIC_TORSION_FORCE_KERNEL_H_
+#define OPENMM_BROOK_CALC_PERIODIC_TORSION_FORCE_KERNEL_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -72,7 +72,7 @@ class BrookCalcPeriodicTorsionForceKernel : public CalcPeriodicTorsionForceKerne
       /**
        * Execute the kernel to calculate the forces.
        * 
-       * @param positions   atom coordiantes
+       * @param positions   particle coordiantes
        * @param forces      output forces
        *
        */
@@ -133,7 +133,7 @@ class BrookCalcPeriodicTorsionForceKernel : public CalcPeriodicTorsionForceKerne
       /** 
        * Get indices/parameters
        * 
-       * @return  BrookBondParameters containing atom indices/parameters
+       * @return  BrookBondParameters containing particle indices/parameters
        *
        */
       
@@ -141,7 +141,7 @@ class BrookCalcPeriodicTorsionForceKernel : public CalcPeriodicTorsionForceKerne
       
    private:
    
-      static const int NumberOfAtomsInBond      = 4;
+      static const int NumberOfParticlesInBond  = 4;
       static const int NumberOfParametersInBond = 3;
 
       // bond name
@@ -169,4 +169,4 @@ class BrookCalcPeriodicTorsionForceKernel : public CalcPeriodicTorsionForceKerne
 
 } // namespace OpenMM
 
-#endif /* OPENMM_BROOK_CALC_PROPER_DIHEDRAL_FORCE_KERNEL_H_ */
+#endif /* OPENMM_BROOK_CALC_PERIODIC_TORSION_FORCE_KERNEL_H_ */

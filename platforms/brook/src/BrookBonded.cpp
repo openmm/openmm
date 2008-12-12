@@ -35,13 +35,14 @@
 #include "BrookPlatform.h"
 #include "BrookStreamFactory.h"
 #include "OpenMMException.h"
+#include "gpu/kinvmap_gather.h"
 #include "gpu/invmap.h"
 #include "gpu/kforce.h"
 
 using namespace OpenMM;
 using namespace std;
 
-#define ATOMS(X,Y) (atoms[ 5*(X) + (Y) + 1 ])
+#define ATOMS(X,Y) (particles[ 5*(X) + (Y) + 1 ])
 #define PARAMS(X,Y,Z) (params[(Y)][4*(X) + Z])
 
 /** 
@@ -58,12 +59,12 @@ BrookBonded::BrookBonded( ){
 
 // ---------------------------------------------------------------------------------------
 
-   _numberOfAtoms             = 0;
+   _numberOfParticles         = 0;
    _ljScale                   = (BrookOpenMMFloat) 0.83333333;
    //_coulombFactor             = 332.0;
    _coulombFactor             = (BrookOpenMMFloat) 138.935485;
 
-   _atomIndicesStream         = NULL;
+   _particleIndicesStream     = NULL;
    _chargeStream              = NULL;
 
    // parameter streams
@@ -118,7 +119,7 @@ BrookBonded::~BrookBonded( ){
 
 // ---------------------------------------------------------------------------------------
 
-   delete _atomIndicesStream;
+   delete _particleIndicesStream;
    delete _chargeStream;
 
    for( int ii = 0; ii < getNumberOfParameterStreams(); ii++ ){
@@ -338,21 +339,21 @@ int BrookBonded::getInverseMapStreamCount( int index ) const {
 }
 
 /** 
- * Get bonded atom indices stream
+ * Get bonded particle indices stream
  * 
- * @return  atom indices stream
+ * @return  particle indices stream
  *
  */
 
-BrookFloatStreamInternal* BrookBonded::getAtomIndicesStream( void ) const {
+BrookFloatStreamInternal* BrookBonded::getParticleIndicesStream( void ) const {
 
 // ---------------------------------------------------------------------------------------
 
-   // static const std::string methodName = "BrookBonded::getAtomIndicesStream";
+   // static const std::string methodName = "BrookBonded::getParticleIndicesStream";
 
 // ---------------------------------------------------------------------------------------
 
-   return _atomIndicesStream;
+   return _particleIndicesStream;
 }
 
 /** 
@@ -450,7 +451,7 @@ BrookFloatStreamInternal** BrookBonded::getInverseStreamMapsStreams( int index )
 
 /*Flips i,j,k,l to l,k,j,i while correctly shuffling the params */
 
-void BrookBonded::flipQuartet( int ibonded, int *atoms ){
+void BrookBonded::flipQuartet( int ibonded, int *particles ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -473,7 +474,7 @@ void BrookBonded::flipQuartet( int ibonded, int *atoms ){
 
 }
 
-int BrookBonded::matchTorsion( int i, int j, int k, int l, int nbondeds, int *atoms ){
+int BrookBonded::matchTorsion( int i, int j, int k, int l, int nbondeds, int *particles ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -512,12 +513,12 @@ int BrookBonded::matchTorsion( int i, int j, int k, int l, int nbondeds, int *at
  * all dihedrals. But I think there are force fields that don't 
  * use all dihedrals.
  *
- * @return ErrorReturnValue if error; else atom index
+ * @return ErrorReturnValue if error; else particle index
  *
  **/
 
 int BrookBonded::matchAngle( int i, int j, int k, int nbondeds, 
-                             int *atoms, int *flag ){
+                             int *particles, int *flag ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -572,7 +573,7 @@ int BrookBonded::matchAngle( int i, int j, int k, int nbondeds,
  *
  * */
 
-int BrookBonded::matchBond( int i, int j, int nbondeds, int *atoms, int *flag ){
+int BrookBonded::matchBond( int i, int j, int nbondeds, int *particles, int *flag ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -638,7 +639,7 @@ int BrookBonded::matchBond( int i, int j, int nbondeds, int *atoms, int *flag ){
    return ErrorReturnValue;
 }
 
-int BrookBonded::matchPair( int i, int j, int nbondeds, int *atoms ){
+int BrookBonded::matchPair( int i, int j, int nbondeds, int *particles ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -652,7 +653,7 @@ int BrookBonded::matchPair( int i, int j, int nbondeds, int *atoms ){
 
       if( ATOMS(n, 0) == -1 ){
 
-         //If one of i,j matches the l atom
+         //If one of i,j matches the l particle
 
          if( ATOMS(n, 3) == i ){
             ATOMS(n, 0) = j;
@@ -664,7 +665,7 @@ int BrookBonded::matchPair( int i, int j, int nbondeds, int *atoms ){
          }
       }
 
-      //If the l-atom is available
+      //If the l-particle is available
       if( ATOMS(n, 3) == -1 ){
          if( ATOMS(n, 0) == i ){
             ATOMS(n, 3) = j;
@@ -686,12 +687,12 @@ int BrookBonded::matchPair( int i, int j, int nbondeds, int *atoms ){
 }
 
 /** 
- * Setup Ryckaert-Bellemans parameters/atom indices
+ * Setup Ryckaert-Bellemans parameters/particle indices
  * 
  * @param nbondeds                  number of bonded entries
- * @param atoms                     array of atom indices
+ * @param particles                     array of particle indices
  * @param params                    arrays of bond parameters
- * @param rbTorsionIndices          the four atoms connected by each Ryckaert-Bellemans torsion term
+ * @param rbTorsionIndices          the four particles connected by each Ryckaert-Bellemans torsion term
  * @param rbTorsionParameters       the coefficients (in order of increasing powers) for each Ryckaert-Bellemans torsion term
  * @param log                       log reference
  *
@@ -699,7 +700,7 @@ int BrookBonded::matchPair( int i, int j, int nbondeds, int *atoms ){
  *
  */
 
-int BrookBonded::addRBDihedrals( int *nbondeds, int *atoms, float *params[], 
+int BrookBonded::addRBDihedrals( int *nbondeds, int *particles, float *params[], 
                                  const vector<vector<int> >& rbTorsionIndices, 
                                  const vector<vector<double> >& rbTorsionParameters ){
 
@@ -716,16 +717,16 @@ int BrookBonded::addRBDihedrals( int *nbondeds, int *atoms, float *params[],
 
    for( unsigned int ii = 0; ii < rbTorsionIndices.size(); ii++ ){
 
-      vector<int> atomsIndices      = rbTorsionIndices[ii];
+      vector<int> particlesIndices      = rbTorsionIndices[ii];
       vector<double> rbParameters   = rbTorsionParameters[ii];
 
       int index = 0;
-      int i     = atomsIndices[index++];
-      int j     = atomsIndices[index++];
-      int k     = atomsIndices[index++];
-      int l     = atomsIndices[index++];
+      int i     = particlesIndices[index++];
+      int j     = particlesIndices[index++];
+      int k     = particlesIndices[index++];
+      int l     = particlesIndices[index++];
       
-      int ibonded = matchTorsion( i, j, k, l, *nbondeds, atoms );
+      int ibonded = matchTorsion( i, j, k, l, *nbondeds, particles );
       
       if( ibonded < 0 ){
          ibonded             = *nbondeds;
@@ -754,12 +755,12 @@ int BrookBonded::addRBDihedrals( int *nbondeds, int *atoms, float *params[],
 }
 
 /**
- * Setup periodic torsion parameters/atom indices
+ * Setup periodic torsion parameters/particle indices
  * 
  * @param nbondeds                  number of bonded entries
- * @param atoms                     array of atom indices
+ * @param particles                     array of particle indices
  * @param params                    arrays of bond parameters
- * @param periodicTorsionIndices    the four atoms connected by each periodic torsion term
+ * @param periodicTorsionIndices    the four particles connected by each periodic torsion term
  * @param periodicTorsionParameters the force parameters (k, phase, periodicity) for each periodic torsion term
  * @param log                       log reference
  *
@@ -767,7 +768,7 @@ int BrookBonded::addRBDihedrals( int *nbondeds, int *atoms, float *params[],
  *
  */
 
-int BrookBonded::addPDihedrals( int *nbondeds, int *atoms, BrookOpenMMFloat* params[],
+int BrookBonded::addPDihedrals( int *nbondeds, int *particles, BrookOpenMMFloat* params[],
                                 const vector<vector<int> >& periodicTorsionIndices, 
                                 const vector<vector<double> >& periodicTorsionParameters ){
 
@@ -784,16 +785,16 @@ int BrookBonded::addPDihedrals( int *nbondeds, int *atoms, BrookOpenMMFloat* par
 
    for( unsigned int ii = 0; ii < periodicTorsionIndices.size(); ii++ ){
 
-      vector<int> atomsIndices      = periodicTorsionIndices[ii];
+      vector<int> particlesIndices      = periodicTorsionIndices[ii];
       vector<double> pTParameters   = periodicTorsionParameters[ii];
 
       int index = 0;
-      int i     = atomsIndices[index++];
-      int j     = atomsIndices[index++];
-      int k     = atomsIndices[index++];
-      int l     = atomsIndices[index++];
+      int i     = particlesIndices[index++];
+      int j     = particlesIndices[index++];
+      int k     = particlesIndices[index++];
+      int l     = particlesIndices[index++];
 
-      int ibonded = matchTorsion( i, j, k, l, *nbondeds, atoms );
+      int ibonded = matchTorsion( i, j, k, l, *nbondeds, particles );
       
       if( ibonded < 0 ){
          ibonded = *nbondeds;
@@ -817,12 +818,12 @@ int BrookBonded::addPDihedrals( int *nbondeds, int *atoms, BrookOpenMMFloat* par
 }
 
 /**
- * Setup angle bond parameters/atom indices
+ * Setup angle bond parameters/particle indices
  * 
  * @param nbondeds                  number of bonded entries
- * @param atoms                     array of atom indices
+ * @param particles                     array of particle indices
  * @param params                    arrays of bond parameters
- * @param angleIndices              the angle bond atom indices
+ * @param angleIndices              the angle bond particle indices
  * @param angleParameters           the angle parameters (angle in radians, force constant)
  * @param log                       log reference
  *
@@ -830,7 +831,7 @@ int BrookBonded::addPDihedrals( int *nbondeds, int *atoms, BrookOpenMMFloat* par
  *
  */
 
-int BrookBonded::addAngles( int *nbondeds, int *atoms, float *params[], const std::vector<std::vector<int> >& angleIndices,
+int BrookBonded::addAngles( int *nbondeds, int *particles, float *params[], const std::vector<std::vector<int> >& angleIndices,
                             const std::vector<std::vector<double> >& angleParameters ){
 
 // ---------------------------------------------------------------------------------------
@@ -848,16 +849,16 @@ int BrookBonded::addAngles( int *nbondeds, int *atoms, float *params[], const st
 
    for( unsigned int ii = 0; ii < angleIndices.size(); ii++ ){
 
-      vector<int> atomsIndices       = angleIndices[ii];
+      vector<int> particlesIndices       = angleIndices[ii];
       vector<double> angParameters   = angleParameters[ii];
 
       int index = 0;
-      int i     = atomsIndices[index++];
-      int j     = atomsIndices[index++];
-      int k     = atomsIndices[index++];
+      int i     = particlesIndices[index++];
+      int j     = particlesIndices[index++];
+      int k     = particlesIndices[index++];
  
       int flag;
-      int ibonded = matchAngle( i, j, k, *nbondeds, atoms, &flag );
+      int ibonded = matchAngle( i, j, k, *nbondeds, particles, &flag );
       if( ibonded < 0 ){
          ibonded = *nbondeds;
          ATOMS( ibonded, 0 ) = i;
@@ -879,12 +880,12 @@ int BrookBonded::addAngles( int *nbondeds, int *atoms, float *params[], const st
 }
 
 /**
- * Setup harmonic bond parameters/atom indices
+ * Setup harmonic bond parameters/particle indices
  * 
  * @param nbondeds                  number of bonded entries
- * @param atoms                     array of atom indices
+ * @param particles                     array of particle indices
  * @param params                    arrays of bond parameters
- * @param bondIndices               two harmonic bond atom indices
+ * @param bondIndices               two harmonic bond particle indices
  * @param bondParameters            the force parameters (distance, k)
  * @param log                       log reference
  *
@@ -892,7 +893,7 @@ int BrookBonded::addAngles( int *nbondeds, int *atoms, float *params[], const st
  *
  */
 
-int BrookBonded::addBonds( int *nbondeds, int *atoms, float *params[], const vector<vector<int> >& bondIndices,
+int BrookBonded::addBonds( int *nbondeds, int *particles, float *params[], const vector<vector<int> >& bondIndices,
                            const vector<vector<double> >& bondParameters ){
 
 // ---------------------------------------------------------------------------------------
@@ -910,12 +911,12 @@ int BrookBonded::addBonds( int *nbondeds, int *atoms, float *params[], const vec
 
    for( unsigned int ii = 0; ii < bondIndices.size(); ii++ ){
 
-      vector<int> atomsIndices       = bondIndices[ii];
+      vector<int> particlesIndices       = bondIndices[ii];
       vector<double> bndParameters   = bondParameters[ii];
 
       int index = 0;
-      int i     = atomsIndices[index++];
-      int j     = atomsIndices[index++];
+      int i     = particlesIndices[index++];
+      int j     = particlesIndices[index++];
 
       // insure i < j
 
@@ -926,7 +927,7 @@ int BrookBonded::addBonds( int *nbondeds, int *atoms, float *params[], const vec
       }
 
       int flag;
-      int ibonded = matchBond( i, j, *nbondeds, atoms, &flag );
+      int ibonded = matchBond( i, j, *nbondeds, particles, &flag );
 int saveIbond = ibonded;
       if( ibonded < 0 ){
          ibonded = *nbondeds;
@@ -954,15 +955,15 @@ int saveIbond = ibonded;
 }
 
 /**
- * Setup LJ/Coulomb 1-4 parameters/atom indices
+ * Setup LJ/Coulomb 1-4 parameters/particle indices
  * 
  * @param nbondeds                  number of bonded entries
- * @param atoms                     array of atom indices
+ * @param particles                     array of particle indices
  * @param params                    arrays of bond parameters
  * @param charges                   array of charges
- * @param bonded14Indices           each element contains the indices of two atoms whose nonbonded interactions should be reduced since
+ * @param bonded14Indices           each element contains the indices of two particles whose nonbonded interactions should be reduced since
  *                                  they form a bonded 1-4 pair
- * @param nonbondedParameters       the nonbonded force parameters (charge, sigma, epsilon) for each atom
+ * @param nonbondedParameters       the nonbonded force parameters (charge, sigma, epsilon) for each particle
  * @param lj14Scale                 the factor by which van der Waals interactions should be reduced for bonded 1-4 pairs
  * @param log                       log reference
  *
@@ -970,7 +971,7 @@ int saveIbond = ibonded;
  *
  */
 
-int BrookBonded::addPairs( int *nbondeds, int *atoms, BrookOpenMMFloat* params[],
+int BrookBonded::addPairs( int *nbondeds, int *particles, BrookOpenMMFloat* params[],
                            BrookOpenMMFloat* charges,
                            const std::vector<std::vector<int> >& bonded14Indices,
                            const std::vector<std::vector<double> >& nonbondedParameters,
@@ -990,13 +991,13 @@ int BrookBonded::addPairs( int *nbondeds, int *atoms, BrookOpenMMFloat* params[]
 
    for( unsigned int ii = 0; ii < bonded14Indices.size(); ii++ ){
 
-      std::vector<int> atomsIndices        = bonded14Indices[ii];
+      std::vector<int> particlesIndices        = bonded14Indices[ii];
 
       int index = 0;
-      int i     = atomsIndices[index++];
-      int j     = atomsIndices[index++];
+      int i     = particlesIndices[index++];
+      int j     = particlesIndices[index++];
 
-      int ibonded = matchPair( i, j, *nbondeds, atoms );
+      int ibonded = matchPair( i, j, *nbondeds, particles );
       if( ibonded < 0 ){
          ibonded = *nbondeds;
          ATOMS(ibonded, 0) = i;
@@ -1042,8 +1043,8 @@ int BrookBonded::addPairs( int *nbondeds, int *atoms, BrookOpenMMFloat* params[]
  * Create and load inverse maps for bonded ixns
  * 
  * @param nbondeds                  number of bonded entries
- * @param natoms                    number of atoms
- * @param atoms                     arrays of atom indices (atoms[numberOfBonds][4])
+ * @param nparticles                    number of particles
+ * @param particles                     arrays of particle indices (particles[numberOfBonds][4])
  * @param platform                  BrookPlatform reference
  * @param log                       log file reference (optional)
  *
@@ -1051,7 +1052,7 @@ int BrookBonded::addPairs( int *nbondeds, int *atoms, BrookOpenMMFloat* params[]
  *
  */
 
-int BrookBonded::loadInvMaps( int nbondeds, int natoms, int *atoms, const BrookPlatform& brookPlatform ){
+int BrookBonded::loadInvMaps( int nbondeds, int nparticles, int *particles, const BrookPlatform& brookPlatform ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -1061,28 +1062,28 @@ int BrookBonded::loadInvMaps( int nbondeds, int natoms, int *atoms, const BrookP
 
 // ---------------------------------------------------------------------------------------
 
-   // get atom stream size
+   // get particle stream size
 
    const BrookStreamFactory& brookStreamFactory = dynamic_cast<const BrookStreamFactory&> (brookPlatform.getDefaultStreamFactory() );
-   int atomStreamWidth                          = brookStreamFactory.getDefaultAtomStreamWidth();
-   int atomStreamSize                           = brookPlatform.getStreamSize( getNumberOfAtoms(), atomStreamWidth, NULL );
-   _inverseMapStreamWidth                       = atomStreamWidth;
+   int particleStreamWidth                          = brookStreamFactory.getDefaultParticleStreamWidth();
+   int particleStreamSize                           = brookPlatform.getStreamSize( getNumberOfParticles(), particleStreamWidth, NULL );
+   _inverseMapStreamWidth                       = particleStreamWidth;
    
 // ---------------------------------------------------------------------------------------
 
    // allocate temp memory
 
    float4** invmaps = new float4*[getMaxInverseMapStreamCount()];
-   float* block     = new float[4*getMaxInverseMapStreamCount()*atomStreamSize];
+   float* block     = new float[4*getMaxInverseMapStreamCount()*particleStreamSize];
 
-   //memset( block, 0, 4*getMaxInverseMapStreamCount()*atomStreamSize*sizeof( float ) );
+   //memset( block, 0, 4*getMaxInverseMapStreamCount()*particleStreamSize*sizeof( float ) );
 
    float* blockPtr = block;
    for( int ii = 0; ii < getMaxInverseMapStreamCount(); ii++ ){
       invmaps[ii]  = (float4*) blockPtr;
-      blockPtr    += 4*atomStreamSize;
+      blockPtr    += 4*particleStreamSize;
    }
-   int* counts = new int[atomStreamSize];
+   int* counts = new int[particleStreamSize];
 
 // ---------------------------------------------------------------------------------------
 
@@ -1096,26 +1097,26 @@ int BrookBonded::loadInvMaps( int nbondeds, int natoms, int *atoms, const BrookP
 
    for( int ii = 0; ii < getNumberOfForceStreams(); ii++ ){
       for( int jj = 0; jj < getMaxInverseMapStreamCount(ii); jj++ ){
-         _inverseStreamMaps[ii][jj] = new BrookFloatStreamInternal( BrookCommon::BondedInverseMapStreams, atomStreamSize,
-                                                                    atomStreamWidth, BrookStreamInternal::Float4, dangleValue );
+         _inverseStreamMaps[ii][jj] = new BrookFloatStreamInternal( BrookCommon::BondedInverseMapStreams, particleStreamSize,
+                                                                    particleStreamWidth, BrookStreamInternal::Float4, dangleValue );
       }
    }
 
    if( PrintOn && getLog() ){
       (void) fprintf( getLog(), "%s force stream strms=%d nbondeds=%d max counts=[%d %d %d %d] strSz&Wd=%d %d\n", methodName.c_str(), getNumberOfForceStreams(),
                       nbondeds, getMaxInverseMapStreamCount(0), getMaxInverseMapStreamCount(1), getMaxInverseMapStreamCount(2), getMaxInverseMapStreamCount(3),
-                      atomStreamSize, atomStreamWidth );
+                      particleStreamSize, particleStreamWidth );
       (void) fflush( getLog() );
    }
 
    // load data
 
    for( int ii = 0; ii < getNumberOfForceStreams(); ii++ ){
-      for( int jj = 0; jj < 4*getMaxInverseMapStreamCount()*atomStreamSize; jj++ ){
+      for( int jj = 0; jj < 4*getMaxInverseMapStreamCount()*particleStreamSize; jj++ ){
          block[jj] = -1.0f;
       }
-      gpuCalcInvMap( ii, 4, nbondeds, natoms, atoms, getInverseMapStreamCount( ii ), counts, invmaps, &(_inverseMapStreamCount[ii]) );
-//gpuPrintInvMaps( _inverseMapStreamCount[ii], natoms, counts, invmaps, getLog() );
+      gpuCalcInvMap( ii, 4, nbondeds, nparticles, particles, getInverseMapStreamCount( ii ), counts, invmaps, &(_inverseMapStreamCount[ii]) );
+//gpuPrintInvMaps( _inverseMapStreamCount[ii], nparticles, counts, invmaps, getLog() );
       validateInverseMapStreamCount( ii, _inverseMapStreamCount[ii] ); 
       for( int jj = 0; jj < _inverseMapStreamCount[ii]; jj++ ){
          _inverseStreamMaps[ii][jj]->loadFromArray( invmaps[jj] );
@@ -1125,7 +1126,7 @@ int BrookBonded::loadInvMaps( int nbondeds, int natoms, int *atoms, const BrookP
                             methodName.c_str(), getNumberOfForceStreams(), _inverseMapStreamCount[ii], ii, jj,
                             getInverseMapStreamCount( ii ), getMaxInverseMapStreamCount( ii ) );
 
-            for( int kk = 0; kk < atomStreamSize; kk++ ){
+            for( int kk = 0; kk < particleStreamSize; kk++ ){
                (void) fprintf( getLog(), "%8d [ %.1f %.1f %.1f %.1f]\n", kk, invmaps[jj][kk].x, invmaps[jj][kk].y, invmaps[jj][kk].z, invmaps[jj][kk].w  );
             }
          }
@@ -1136,7 +1137,7 @@ int BrookBonded::loadInvMaps( int nbondeds, int natoms, int *atoms, const BrookP
       // keep invalid entries from being included in forces
 
       if( _inverseMapStreamCount[ii] < getMaxInverseMapStreamCount( ii ) ){
-         for( int jj = 0; jj < 4*atomStreamSize; jj++ ){
+         for( int jj = 0; jj < 4*particleStreamSize; jj++ ){
             block[jj] = -1.0f;
          }
          for( int jj = _inverseMapStreamCount[ii]; jj < getMaxInverseMapStreamCount( ii ); jj++ ){
@@ -1165,16 +1166,16 @@ int BrookBonded::loadInvMaps( int nbondeds, int natoms, int *atoms, const BrookP
 /* 
  * Setup for bonded ixns
  *
- * @param numberOfAtoms                number of atoms
- * @param bondIndices                  vector of vector of harmonic                   bond indices    -- one entry each bond (2 atoms     )
+ * @param numberOfParticles            number of particles
+ * @param bondIndices                  vector of vector of harmonic                   bond indices    -- one entry each bond (2 particles     )
  * @param bondParameters               vector of vector of harmonic                   bond parameters -- one entry each bond (2 parameters)
- * @param angleIndices                 vector of vector of angle                      bond indices    -- one entry each bond (3 atoms     )
+ * @param angleIndices                 vector of vector of angle                      bond indices    -- one entry each bond (3 particles     )
  * @param angleParameters              vector of vector of angle                      bond parameters -- one entry each bond (2 parameters)
- * @param periodicTorsionIndices       vector of vector of periodicTorsionIndices     bond indices    -- one entry each bond (4 atoms     )
+ * @param periodicTorsionIndices       vector of vector of periodicTorsionIndices     bond indices    -- one entry each bond (4 particles     )
  * @param periodicTorsionParameters    vector of vector of periodicTorsionParameters  bond parameters -- one entry each bond (3 parameters)
- * @param rbTorsionIndices             vector of vector of rb torsion                 bond indices    -- one entry each bond (4 atoms     )
+ * @param rbTorsionIndices             vector of vector of rb torsion                 bond indices    -- one entry each bond (4 particles     )
  * @param rbTorsionParameters          vector of vector of rb torsion                 bond parameters -- one entry each bond (5 parameters)
- * @param bonded14Indices              vector of vector of Lennard-Jones 14           atom indices    -- one entry each bond (2 atoms     )
+ * @param bonded14Indices              vector of vector of Lennard-Jones 14           particle indices    -- one entry each bond (2 particles     )
  * @param nonbondedParameters          vector of vector of Lennard-Jones 14           parameters      -- one entry each bond (3 parameters)
  * @param lj14Scale                    scaling factor for 1-4 ixns
  * @param coulombScale                 Coulomb scaling factor for 1-4 ixns
@@ -1192,7 +1193,7 @@ int BrookBonded::loadInvMaps( int nbondeds, int natoms, int *atoms, const BrookP
  * the optimal fit, but should not be too bad. 
  * */
 
-int BrookBonded::setup( int numberOfAtoms,
+int BrookBonded::setup( int numberOfParticles,
                         const vector<vector<int> >& bondIndices,            const vector<vector<double> >& bondParameters,
                         const vector<vector<int> >& angleIndices,           const vector<vector<double> >& angleParameters,
                         const vector<vector<int> >& periodicTorsionIndices, const vector<vector<double> >& periodicTorsionParameters,
@@ -1208,15 +1209,15 @@ int BrookBonded::setup( int numberOfAtoms,
 
 // ---------------------------------------------------------------------------------------
 
-   _numberOfAtoms = numberOfAtoms;
+   _numberOfParticles = numberOfParticles;
 
    const BrookPlatform& brookPlatform = dynamic_cast<const BrookPlatform&> (platform);
 
-   // check that atom indices & parameters agree
+   // check that particle indices & parameters agree
 
    if( bondIndices.size() != bondParameters.size() ){
       std::stringstream message;
-      message << methodName << " number of harmonic bond atom indices=" << bondIndices.size() << " does not equal number of harmonic bond parameter entries=" << bondParameters.size();
+      message << methodName << " number of harmonic bond particle indices=" << bondIndices.size() << " does not equal number of harmonic bond parameter entries=" << bondParameters.size();
       throw OpenMMException( message.str() );
    } else if( PrintOn && getLog() ){
       (void) fprintf( getLog(), "%s harmonic bonds=%d\n", methodName.c_str(), bondIndices.size() );
@@ -1225,7 +1226,7 @@ int BrookBonded::setup( int numberOfAtoms,
 
    if( angleIndices.size() != angleParameters.size() ){
       std::stringstream message;
-      message << methodName << " number of angle atom indices=" << angleIndices.size() << " does not equal number of angle parameter entries=" << angleParameters.size();
+      message << methodName << " number of angle particle indices=" << angleIndices.size() << " does not equal number of angle parameter entries=" << angleParameters.size();
       throw OpenMMException( message.str() );
    } else if( PrintOn && getLog() ){
       (void) fprintf( getLog(), "%s angle bonds=%d\n", methodName.c_str(), angleIndices.size() );
@@ -1234,7 +1235,7 @@ int BrookBonded::setup( int numberOfAtoms,
 
    if( periodicTorsionIndices.size() != periodicTorsionParameters.size() ){
       std::stringstream message;
-      message << methodName << " number of periodicTorsion atom indices=" << periodicTorsionIndices.size() << " does not equal number of periodicTorsion parameter entries=" << periodicTorsionParameters.size();
+      message << methodName << " number of periodicTorsion particle indices=" << periodicTorsionIndices.size() << " does not equal number of periodicTorsion parameter entries=" << periodicTorsionParameters.size();
       throw OpenMMException( message.str() );
    } else if( PrintOn && getLog() ){
       (void) fprintf( getLog(), "%s periodicTorsion bonds=%d\n", methodName.c_str(), periodicTorsionIndices.size() );
@@ -1243,16 +1244,16 @@ int BrookBonded::setup( int numberOfAtoms,
 
    if( rbTorsionIndices.size() != rbTorsionParameters.size() ){
       std::stringstream message;
-      message << methodName << " number of rbTorsion atom indices=" << rbTorsionIndices.size() << " does not equal number of rbTorsion parameter entries=" << rbTorsionParameters.size();
+      message << methodName << " number of rbTorsion particle indices=" << rbTorsionIndices.size() << " does not equal number of rbTorsion parameter entries=" << rbTorsionParameters.size();
       throw OpenMMException( message.str() );
    } else if( PrintOn && getLog() ){
       (void) fprintf( getLog(), "%s rbTorsion bonds=%d\n", methodName.c_str(), rbTorsionIndices.size() );
       (void) fflush( getLog() );
    }
 
-   if( (numberOfAtoms != (int) nonbondedParameters.size()) && bonded14Indices.size() > 0 ){
+   if( (numberOfParticles != (int) nonbondedParameters.size()) && bonded14Indices.size() > 0 ){
       std::stringstream message;
-      message << methodName << " number atoms=" << numberOfAtoms << " does not equal number of nb parameter entries=" << nonbondedParameters.size();
+      message << methodName << " number particles=" << numberOfParticles << " does not equal number of nb parameter entries=" << nonbondedParameters.size();
       throw OpenMMException( message.str() );
    } else if( PrintOn && getLog() ){
       (void) fprintf( getLog(), "%s LJ 14 ixns=%d\n", methodName.c_str(), bonded14Indices.size() );
@@ -1261,8 +1262,8 @@ int BrookBonded::setup( int numberOfAtoms,
 
    // allocate temp memory
 
-   int maxBonds = 10*numberOfAtoms;
-   int* atoms   = new int[5*maxBonds];
+   int maxBonds = 10*numberOfParticles;
+   int* particles   = new int[5*maxBonds];
 
    BrookOpenMMFloat** params = new BrookOpenMMFloat*[getNumberOfParameterStreams()];
    for( int ii = 0; ii < getNumberOfParameterStreams(); ii++ ){
@@ -1274,9 +1275,9 @@ int BrookBonded::setup( int numberOfAtoms,
    // build streams
 
    const BrookStreamFactory& brookStreamFactory = dynamic_cast<const BrookStreamFactory&> (brookPlatform.getDefaultStreamFactory() );
-   int atomStreamWidth                          = brookStreamFactory.getDefaultAtomStreamWidth();
+   int particleStreamWidth                          = brookStreamFactory.getDefaultParticleStreamWidth();
 
-   // Initialize all atom indices to -1 to indicate empty slots
+   // Initialize all particle indices to -1 to indicate empty slots
    // All parameters must be initialized to values that will 
    // produce zero for the corresponding force. 
 
@@ -1300,25 +1301,25 @@ int BrookBonded::setup( int numberOfAtoms,
 
    // nbondeds tracks number of ixn
    int nbondeds = 0;
-   addRBDihedrals( &nbondeds, atoms, params, rbTorsionIndices,       rbTorsionParameters       );
-   addPDihedrals ( &nbondeds, atoms, params, periodicTorsionIndices, periodicTorsionParameters );
-   addAngles(      &nbondeds, atoms, params, angleIndices,           angleParameters           );
-   addBonds(       &nbondeds, atoms, params, bondIndices,            bondParameters            );
+   addRBDihedrals( &nbondeds, particles, params, rbTorsionIndices,       rbTorsionParameters       );
+   addPDihedrals ( &nbondeds, particles, params, periodicTorsionIndices, periodicTorsionParameters );
+   addAngles(      &nbondeds, particles, params, angleIndices,           angleParameters           );
+   addBonds(       &nbondeds, particles, params, bondIndices,            bondParameters            );
 
 // ---------------------------------------------------------------------------------------
 
    // charge stream
 
-   _chargeStream         = new BrookFloatStreamInternal( BrookCommon::BondedChargeStream, numberOfAtoms, atomStreamWidth,
+   _chargeStream         = new BrookFloatStreamInternal( BrookCommon::BondedChargeStream, numberOfParticles, particleStreamWidth,
                                                          BrookStreamInternal::Float, dangleValue );
    BrookOpenMMFloat* charges = new BrookOpenMMFloat[_chargeStream->getStreamSize()];
    memset( charges, 0, _chargeStream->getStreamSize()*sizeof( BrookOpenMMFloat ) );
 
 // ---------------------------------------------------------------------------------------
 
-//(void) fprintf( getLog(), "%s Post addBonds atoms=%d number of bonds=%d maxBonds=%d\n", methodName.c_str(), numberOfAtoms, nbondeds, maxBonds );
+//(void) fprintf( getLog(), "%s Post addBonds particles=%d number of bonds=%d maxBonds=%d\n", methodName.c_str(), numberOfParticles, nbondeds, maxBonds );
 
-   addPairs( &nbondeds, atoms, params, charges, bonded14Indices, nonbondedParameters, lj14Scale, coulombScale );
+   addPairs( &nbondeds, particles, params, charges, bonded14Indices, nonbondedParameters, lj14Scale, coulombScale );
 
    // check that number of bonds not too large for memory allocated
 
@@ -1327,28 +1328,28 @@ int BrookBonded::setup( int numberOfAtoms,
       message << methodName << " number of bonds=" << nbondeds << " is greater than maxBonds=" << maxBonds;
       throw OpenMMException( message.str() );
    } else if( PrintOn && getLog() ){
-      (void) fprintf( getLog(), "%s atoms=%d number of bonds=%d maxBonds=%d\n", methodName.c_str(), numberOfAtoms, nbondeds, maxBonds );
+      (void) fprintf( getLog(), "%s particles=%d number of bonds=%d maxBonds=%d\n", methodName.c_str(), numberOfParticles, nbondeds, maxBonds );
       (void) fflush( getLog() );
    }
 
 // ---------------------------------------------------------------------------------------
 
-   // atom indices stream
+   // particle indices stream
 
-   _atomIndicesStream    = new BrookFloatStreamInternal( BrookCommon::BondedAtomIndicesStream, nbondeds, atomStreamWidth,
-                                                         BrookStreamInternal::Float4, dangleValue );
+   _particleIndicesStream    = new BrookFloatStreamInternal( BrookCommon::BondedParticleIndicesStream, nbondeds, particleStreamWidth,
+                                                             BrookStreamInternal::Float4, dangleValue );
 
-   int* buffer           = new int[4*_atomIndicesStream->getStreamSize()];
-   memset( buffer, 0, sizeof( int )*4*_atomIndicesStream->getStreamSize() );
+   int* buffer           = new int[4*_particleIndicesStream->getStreamSize()];
+   memset( buffer, 0, sizeof( int )*4*_particleIndicesStream->getStreamSize() );
 
    int index             = 0;
    for( int ii = 0; ii < nbondeds; ii++ ){
       for( int jj = 0; jj < 4; jj++ ){
          buffer[index++] = ATOMS( ii, jj );
-//(void) fprintf( getLog(), "%s atomIndices %d %d  %d buffer=%d atoms=%d\n", methodName.c_str(), ii, jj, index, buffer[index-1], ATOMS( ii, jj ) );
+//(void) fprintf( getLog(), "%s particleIndices %d %d  %d buffer=%d particles=%d\n", methodName.c_str(), ii, jj, index, buffer[index-1], ATOMS( ii, jj ) );
       }
    }
-   _atomIndicesStream->loadFromArray( buffer, BrookStreamInternal::Integer ); 
+   _particleIndicesStream->loadFromArray( buffer, BrookStreamInternal::Integer ); 
    delete[] buffer;
 
 // ---------------------------------------------------------------------------------------
@@ -1360,7 +1361,7 @@ int BrookBonded::setup( int numberOfAtoms,
    // bonded parameters
 
    for( int ii = 0; ii < getNumberOfParameterStreams(); ii++ ){
-      _bondedParameters[ii]  = new BrookFloatStreamInternal( BrookCommon::BondedParametersStream, nbondeds, atomStreamWidth,
+      _bondedParameters[ii]  = new BrookFloatStreamInternal( BrookCommon::BondedParametersStream, nbondeds, particleStreamWidth,
                                                              BrookStreamInternal::Float4, dangleValue );
       _bondedParameters[ii]->loadFromArray( params[ii] );
    }
@@ -1372,9 +1373,9 @@ int BrookBonded::setup( int numberOfAtoms,
    if( PrintOn && getLog() ){
 
       (void) fprintf( getLog(), "%s nbondeds=%d strDim [%d %d ] sz=%d\n", methodName.c_str(), nbondeds,
-                      _atomIndicesStream->getStreamWidth(),
-                      _atomIndicesStream->getStreamHeight(), 
-                      _atomIndicesStream->getStreamSize() );
+                      _particleIndicesStream->getStreamWidth(),
+                      _particleIndicesStream->getStreamHeight(), 
+                      _particleIndicesStream->getStreamSize() );
 
       int kIndex = 0;
       int jIndex = 1;
@@ -1411,7 +1412,7 @@ int BrookBonded::setup( int numberOfAtoms,
 
    // load inverse maps to streams
 
-   loadInvMaps( nbondeds, getNumberOfAtoms(), atoms, brookPlatform );
+   loadInvMaps( nbondeds, getNumberOfParticles(), particles, brookPlatform );
    
 // ---------------------------------------------------------------------------------------
 
@@ -1422,7 +1423,7 @@ int BrookBonded::setup( int numberOfAtoms,
    }
 
    delete[] params;
-   delete[] atoms;
+   delete[] particles;
    delete[] charges;
 
    // set the fudge factors
@@ -1433,7 +1434,7 @@ int BrookBonded::setup( int numberOfAtoms,
    // initialize output streams
 
    for( int ii = 0; ii < getNumberOfForceStreams(); ii++ ){
-      _bondedForceStreams[ii] = new BrookFloatStreamInternal( BrookCommon::UnrolledForceStream, nbondeds, atomStreamWidth, 
+      _bondedForceStreams[ii] = new BrookFloatStreamInternal( BrookCommon::UnrolledForceStream, nbondeds, particleStreamWidth, 
                                                               BrookStreamInternal::Float3, dangleValue );
    }
 
@@ -1474,8 +1475,8 @@ std::string BrookBonded::getContentsString( int level ) const {
 #define LOCAL_2_SPRINTF(a,b,c,d) sprintf( (a), (b), (c), (d) );   
 #endif
 
-   (void) LOCAL_SPRINTF( value, "%d", getNumberOfAtoms() );
-   message << _getLine( tab, "Number of atoms:", value ); 
+   (void) LOCAL_SPRINTF( value, "%d", getNumberOfParticles() );
+   message << _getLine( tab, "Number of particles:", value ); 
 
    (void) LOCAL_SPRINTF( value, "%.5f", getLJ_14Scale() );
    message << _getLine( tab, "LJ 14 scaling:", value ); 
@@ -1487,14 +1488,14 @@ std::string BrookBonded::getContentsString( int level ) const {
    message << _getLine( tab, "Inverse map stream width:", value ); 
 
 /*
-   (void) LOCAL_SPRINTF( value, "%d", getAtomStreamWidth() );
-   message << _getLine( tab, "Atom stream width:", value ); 
+   (void) LOCAL_SPRINTF( value, "%d", getParticleStreamWidth() );
+   message << _getLine( tab, "Particle stream width:", value ); 
 
-   (void) LOCAL_SPRINTF( value, "%d", getAtomStreamHeight() );
-   message << _getLine( tab, "Atom stream height:", value ); 
+   (void) LOCAL_SPRINTF( value, "%d", getParticleStreamHeight() );
+   message << _getLine( tab, "Particle stream height:", value ); 
 
-   (void) LOCAL_SPRINTF( value, "%d", getAtomStreamSize() );
-   message << _getLine( tab, "Atom stream size:", value ); 
+   (void) LOCAL_SPRINTF( value, "%d", getParticleStreamSize() );
+   message << _getLine( tab, "Particle stream size:", value ); 
 */
 
    (void) LOCAL_SPRINTF( value, "%d", getNumberOfParameterStreams() );
@@ -1518,7 +1519,7 @@ std::string BrookBonded::getContentsString( int level ) const {
    }
 
    message << _getLine( tab, "Log:",                 (getLog()               ? Set : NotSet) ); 
-   message << _getLine( tab, "Atom indices stream:", (getAtomIndicesStream() ? Set : NotSet) ); 
+   message << _getLine( tab, "Particle indices stream:", (getParticleIndicesStream() ? Set : NotSet) ); 
    //message << _getLine( tab, "Charge stream:",        (getChargeStream()      ? Set : NotSet) ); 
  
    (void) LOCAL_SPRINTF( value, "%d", getNumberOfForceStreams() );
@@ -1540,23 +1541,23 @@ std::string BrookBonded::getContentsString( int level ) const {
  * Helper functions for building inverse maps for 
  * torsions, impropers and angles.
  * 
- * For each atom, calculates the positions at which it's
+ * For each particle, calculates the positions at which it's
  * forces are to be picked up from and stores the position
  * in the appropriate index.
  *
- * Input: number of dihedrals, the atom indices, and a flag indicating
+ * Input: number of dihedrals, the particle indices, and a flag indicating
  *        whether we're doing i(0), j(1), k(2) or l(3)
- * Output: an array of counts per atom
+ * Output: an array of counts per particle
  *         arrays of inversemaps
  *         nimaps - the number of invmaps actually used.
  *
- * @param posflag       0-niatoms-1
- * @param niatoms       3 for angles, 4 for torsions, impropers
+ * @param posflag       0-niparticles-1
+ * @param niparticles       3 for angles, 4 for torsions, impropers
  * @param nints         number of interactions
- * @param natoms        number of atoms
- * @param *atoms        gromacs interaction list
+ * @param nparticles        number of particles
+ * @param *particles        gromacs interaction list
  * @param nmaps         maximum number of inverse maps
- * @param   counts[]    output counts of how many places each atom occurs
+ * @param   counts[]    output counts of how many places each particle occurs
  * @param *invmaps[]    output array of nmaps inverse maps
  * @param *nimaps,      output max number of inverse maps actually used
  *
@@ -1564,14 +1565,14 @@ std::string BrookBonded::getContentsString( int level ) const {
  *
  **/
 
-int BrookBonded::gpuCalcInvMap( int posflag, int niatoms, int nints, int natoms,
-                                int *atoms, int nmaps, int counts[], float4 *invmaps[],
+int BrookBonded::gpuCalcInvMap( int posflag, int niparticles, int nints, int nparticles,
+                                int *particles, int nmaps, int counts[], float4 *invmaps[],
                                 int *nimaps ){
 
 // ---------------------------------------------------------------------------------------
 
    int i, j;
-   int atom;
+   int particle;
    int mapnum, mapcomp;
 
    static const std::string methodName      = "BrookBonded::gpuCalcInvMap";
@@ -1584,10 +1585,10 @@ int BrookBonded::gpuCalcInvMap( int posflag, int niatoms, int nints, int natoms,
 
 // ---------------------------------------------------------------------------------------
 
-   memset( counts, 0, sizeof( int )*natoms );
+   memset( counts, 0, sizeof( int )*nparticles );
 
    for( i = 0; i < nmaps; i++ ){
-      for( j = 0; j < natoms; j++ ){
+      for( j = 0; j < nparticles; j++ ){
          invmaps[i][j] = float4( -1.0, -1.0, -1.0, -1.0 );
       }
    }
@@ -1596,61 +1597,61 @@ int BrookBonded::gpuCalcInvMap( int posflag, int niatoms, int nints, int natoms,
 
    *nimaps = -1;
 
-   //Now note down the positions where each atom occurs
+   //Now note down the positions where each particle occurs
 
    if( PrintOn && getLog() ){
-      (void) fprintf( getLog(), "%s: pos=%d ni=%d nints=%d natoms=%d nmaps=<%d>\n", methodName.c_str(), posflag, niatoms, nints, natoms, nmaps ); 
+      (void) fprintf( getLog(), "%s: pos=%d ni=%d nints=%d nparticles=%d nmaps=<%d>\n", methodName.c_str(), posflag, niparticles, nints, nparticles, nmaps ); 
       (void) fflush( getLog() );
    }
 
-int atomRange[2]   = { 90000000, -90000000 };
+int particleRange[2]   = { 90000000, -90000000 };
 int mapnumRange[2] = { 90000000, -90000000 };
 
    for(  i = 0; i < nints; i++ ){
-      //This is our atom
-      atom = atoms[ (niatoms + 1) * i + posflag + 1 ];
+      //This is our particle
+      particle = particles[ (niparticles + 1) * i + posflag + 1 ];
 
       //Special for merged bondeds
-      if ( atom == -1 ){
+      if ( particle == -1 ){
          continue;
       }
 
-if( atom < atomRange[0] ){
-   atomRange[0] = atom;
+if( particle < particleRange[0] ){
+   particleRange[0] = particle;
 }
-if( atom > atomRange[1] ){
-   atomRange[1] = atom;
+if( particle > particleRange[1] ){
+   particleRange[1] = particle;
 }
       //Check to make sure we're inside the limits
-      if ( counts[atom] > nmaps * 4 ){
+      if ( counts[particle] > nmaps * 4 ){
          if( PrintOn && getLog() ){
-            (void) fprintf( getLog(), "%s Atom %d has too many proper dihedrals(%d, max %d)\n",
-                            methodName.c_str(), atom, counts[atom], nmaps*4 );
+            (void) fprintf( getLog(), "%s Particle %d has too many proper dihedrals(%d, max %d)\n",
+                            methodName.c_str(), particle, counts[particle], nmaps*4 );
             (void) fflush( getLog() );
          }
          std::stringstream message;
-         message << methodName << " Atom " << atom << " has too many proper dihedrals; valid range:(" << counts[atom] << ", " << nmaps*4 << ")";
+         message << methodName << " Particle " << particle << " has too many proper dihedrals; valid range:(" << counts[particle] << ", " << nmaps*4 << ")";
          throw OpenMMException( message.str() );
       }
       
       //Which invmap will this go into
 
-      mapnum = counts[atom] / 4;
+      mapnum = counts[particle] / 4;
 
       if ( mapnum > *nimaps )
          *nimaps = mapnum;
 
       //Which component will it be
-      mapcomp = counts[atom] % 4;
+      mapcomp = counts[particle] % 4;
 
       //Set it
       //This is silly, but otherwise I have to declare it as float*
       //and things get even more confusing. :)
       switch (mapcomp){
-         case 0: invmaps[mapnum][atom].x = (float) i; break;
-         case 1: invmaps[mapnum][atom].y = (float) i; break;
-         case 2: invmaps[mapnum][atom].z = (float) i; break;
-         case 3: invmaps[mapnum][atom].w = (float) i; break;
+         case 0: invmaps[mapnum][particle].x = (float) i; break;
+         case 1: invmaps[mapnum][particle].y = (float) i; break;
+         case 2: invmaps[mapnum][particle].z = (float) i; break;
+         case 3: invmaps[mapnum][particle].w = (float) i; break;
          default:
             if( PrintOn && getLog() ){
                (void) fprintf( getLog(), "mapcomp %d invalid -- impossible!\n", mapcomp );
@@ -1662,7 +1663,7 @@ if( atom > atomRange[1] ){
             break;
       }
       
-      counts[atom]++;
+      counts[particle]++;
 
 if( mapnum < mapnumRange[0] ){
    mapnumRange[0] = mapnum;
@@ -1671,15 +1672,15 @@ if( mapnum > mapnumRange[1] ){
    mapnumRange[1] = mapnum;
 }
 
-//fprintf( gpu->log, "%d atom=%d  mapcomp=%d counts[]=%d mapnum=%d\n", i, atom, mapcomp, counts[atom], mapnum );
+//fprintf( gpu->log, "%d particle=%d  mapcomp=%d counts[]=%d mapnum=%d\n", i, particle, mapcomp, counts[particle], mapnum );
 
    }
 
    (*nimaps)++;
 
 if( PrintOn && getLog() ){
-   (void) fprintf( getLog(), "%s mnmaps=%d Ranges: atom [%d %d] mapnum [%d %d]\n",
-                   methodName.c_str(), *nimaps, atomRange[0], atomRange[1], mapnumRange[0], mapnumRange[1] );
+   (void) fprintf( getLog(), "%s mnmaps=%d Ranges: particle [%d %d] mapnum [%d %d]\n",
+                   methodName.c_str(), *nimaps, particleRange[0], particleRange[1], mapnumRange[0], mapnumRange[1] );
    (void) fflush( getLog() );
 }
 
@@ -1687,10 +1688,10 @@ if( PrintOn && getLog() ){
 }
 
 
-void BrookBonded::gpuPrintInvMaps( int nmaps, int natoms, int counts[], float4 *invmap[], FILE* logFile ){
+void BrookBonded::gpuPrintInvMaps( int nmaps, int nparticles, int counts[], float4 *invmap[], FILE* logFile ){
    int i;
    int j;
-   for(  i = 0; i < natoms; i++ ){
+   for(  i = 0; i < nparticles; i++ ){
       fprintf( logFile, "%d %d ", i, counts[i] );
       for(  j = 0; j < nmaps; j++ ){
          fprintf( logFile, "%6.0f %6.0f %6.0f %6.0f", invmap[j][i].x, invmap[j][i].y, 
@@ -1708,25 +1709,26 @@ void BrookBonded::gpuPrintInvMaps( int nmaps, int natoms, int counts[], float4 *
  * lookup. This assumes that nints < 100000, preferably nints << 100000
  * which should always be true
  * */
+
 int BrookBonded::gpuCalcInvMap_merged( 
       int nints,    //number of interactions
-      int natoms,   //number of atoms
-      int *atoms,   //ijkl,ijkl,ijkl...
+      int nparticles,   //number of particles
+      int *particles,   //ijkl,ijkl,ijkl...
       int nmaps,      //maximum number of inverse maps
-        int counts[],   //output counts of how many places each atom occurs
+        int counts[],   //output counts of how many places each particle occurs
       float4 *invmaps[], //output array of nmaps inverse maps
       int *nimaps        //output max number of inverse maps actually used
       ){
    int i, j;
-   int atom;
+   int particle;
    int mapnum, mapcomp;
    int pos;
    
-   for(  i = 0; i < natoms; i++ )
+   for(  i = 0; i < nparticles; i++ )
       counts[i] = 0;
 
    for(  i = 0; i < nmaps; i++ ){
-      for(  j = 0; j < natoms; j++ ){
+      for(  j = 0; j < nparticles; j++ ){
          invmaps[i][j] = float4( -1.0, -1.0, -1.0, -1.0 );
       }
    }
@@ -1734,24 +1736,24 @@ int BrookBonded::gpuCalcInvMap_merged(
    //This will hold the number of imaps actually used
    *nimaps = -1;
 
-   //For each atom
+   //For each particle
    for(  i = 0; i < nints; i++ ){
       for(  j = 0; j < 4; j++ ){
          
-         atom = atoms[ i * 4 + j ];
+         particle = particles[ i * 4 + j ];
          
-         if ( atom == -1 ){
-         	//Nothing to be done for this atom, go to next
+         if ( particle == -1 ){
+         	//Nothing to be done for this particle, go to next
          	continue;
          }
          
          //Which map
-         mapnum = counts[ atom ] / 4;
+         mapnum = counts[ particle ] / 4;
          
          //Make sure we have space
          if ( mapnum >= nmaps ){
-         	printf( "Atom %d has too many bondeds(%d, max %d)\n",
-         			 atom, counts[atom], nmaps * 4 );
+         	printf( "Particle %d has too many bondeds(%d, max %d)\n",
+         			 particle, counts[particle], nmaps * 4 );
          	return 0;
          }
          	
@@ -1760,19 +1762,19 @@ int BrookBonded::gpuCalcInvMap_merged(
          }
 
          //Which component
-         mapcomp = counts[ atom ] % 4;
+         mapcomp = counts[ particle ] % 4;
          
          //Encode target stream and position
          pos = 100000 * j + i;
 
          switch ( mapcomp ){
-         	case 0: invmaps[mapnum][atom].x = (float) pos; break;
-         	case 1: invmaps[mapnum][atom].y = (float) pos; break;
-         	case 2: invmaps[mapnum][atom].z = (float) pos; break;
-         	case 3: invmaps[mapnum][atom].w = (float) pos; break;
+         	case 0: invmaps[mapnum][particle].x = (float) pos; break;
+         	case 1: invmaps[mapnum][particle].y = (float) pos; break;
+         	case 2: invmaps[mapnum][particle].z = (float) pos; break;
+         	case 3: invmaps[mapnum][particle].w = (float) pos; break;
          }
 
-         counts[ atom ]++;
+         counts[ particle ]++;
 
       }
    }
@@ -1784,28 +1786,282 @@ int BrookBonded::gpuCalcInvMap_merged(
 /* Repacks the invmap streams for more efficient access in the
  * merged inverse gather kernel
  *
- * buf should be nimaps * natoms large.
+ * buf should be nimaps * nparticles large.
  * */
-int BrookBonded::gpuRepackInvMap_merged( int natoms, int nmaps, int *counts, 
+int BrookBonded::gpuRepackInvMap_merged( int nparticles, int nmaps, int *counts, 
                                          float4 *invmaps[], float4 *buf ){
    int i, j;
    int nmaps_i;
 
-   for(  i = 0; i < natoms; i++ ){
+   for(  i = 0; i < nparticles; i++ ){
       for(  j = 0; j < nmaps; j++ ){
-         buf[ i + j*natoms ] = float4( -1.0f, -1.0f, -1.0f, -1.0f );
+         buf[ i + j*nparticles ] = float4( -1.0f, -1.0f, -1.0f, -1.0f );
       }
    }
    
-   for(  i = 0; i < natoms; i++ ){
+   for(  i = 0; i < nparticles; i++ ){
       
       nmaps_i = counts[i] / 4;
       if ( counts[i] % 4 ) 
          nmaps_i++;
       
       for(  j = 0; j < nmaps_i; j++ ){
-         buf[ i + j * natoms ] = invmaps[j][i];
+         buf[ i + j * nparticles ] = invmaps[j][i];
       }
    }
    return 1;
+}
+
+/** 
+ * Compute forces
+ * 
+ */
+
+void BrookBonded::computeForces( BrookStreamImpl& positionStream, BrookStreamImpl& forceStream ){
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName      = "BrookBonded::computeForces";
+
+   static const int I_Stream                = 0;
+   static const int J_Stream                = 1;
+   static const int K_Stream                = 2;
+   static const int L_Stream                = 3;
+
+   static const int PrintOn                 = 0;
+   static const int MaxErrorMessages        = 2;
+   static       int ErrorMessages           = 0;
+
+   static const float4 dummyParameters( 0.0, 0.0, 0.0, 0.0 );
+
+   // static const int debug                   = 1;
+
+// ---------------------------------------------------------------------------------------
+
+   // bonded
+
+   float epsfac                                        = (float) (getLJ_14Scale()*getCoulombFactor());
+   float width                                         = (float) (getInverseMapStreamWidth());
+
+   // bonded forces
+
+   BrookFloatStreamInternal**  bondedParameters        = getBondedParameterStreams();
+   BrookFloatStreamInternal**  bondedForceStreams      = getBondedForceStreams();
+
+   BrookFloatStreamInternal**  inverseStreamMaps[4];
+   inverseStreamMaps[0]                                = getInverseStreamMapsStreams( 0 );
+   inverseStreamMaps[1]                                = getInverseStreamMapsStreams( 1 );
+   inverseStreamMaps[2]                                = getInverseStreamMapsStreams( 2 );
+   inverseStreamMaps[3]                                = getInverseStreamMapsStreams( 3 );
+
+   kbonded_CDLJ( epsfac, 
+                 (float) bondedForceStreams[0]->getStreamWidth(),
+                 dummyParameters,
+                 positionStream.getBrookStream(),
+                 getChargeStream()->getBrookStream(),
+                 getParticleIndicesStream()->getBrookStream(),
+                 bondedParameters[0]->getBrookStream(),
+                 bondedParameters[1]->getBrookStream(),
+                 bondedParameters[2]->getBrookStream(),
+                 bondedParameters[3]->getBrookStream(),
+                 bondedParameters[4]->getBrookStream(),
+                 bondedForceStreams[0]->getBrookStream(),
+                 bondedForceStreams[1]->getBrookStream(),
+                 bondedForceStreams[2]->getBrookStream(),
+                 bondedForceStreams[3]->getBrookStream() );
+
+
+   // diagnostics
+
+   if( 1 && PrintOn ){
+
+      int countPrintInvMap[4] = { 3, 5, 2, 4 }; 
+
+      (void) fprintf( getLog(), "\nPost kbonded_CDLJ: epsFac=%.6f %.6f %.6f", epsfac, getLJ_14Scale(), getCoulombFactor());
+      (void) fprintf( getLog(), "\nParticle indices stream\n" );
+      getParticleIndicesStream()->printToFile( getLog() );
+
+      (void) fprintf( getLog(), "\nCharge stream\n" );
+      getChargeStream()->printToFile( getLog() );
+
+      for( int ii = 0; ii < 5; ii++ ){
+         (void) fprintf( getLog(), "\nParam stream %d\n", ii );
+         bondedParameters[ii]->printToFile( getLog() );
+      }
+      for( int ii = 0; ii < 4; ii++ ){
+         (void) fprintf( getLog(), "\nForce stream %d\n", ii );
+         bondedForceStreams[ii]->printToFile( getLog() );
+      }
+
+/*
+      (void) fprintf( getLog(), "\nNB1 forces" );
+      BrookStreamInternal* brookStreamInternalF   = forceStream.getBrookStreamImpl();
+      brookStreamInternalF->printToFile( getLog() );
+*/
+
+      (void) fprintf( getLog(), "\nInverse map streams -- K_Stream cnt=%d\n", getInverseMapStreamCount( K_Stream ) );
+      for( int ii = 0; ii < 4; ii++ ){
+         for( int jj = 0; jj < countPrintInvMap[ii]; jj++ ){
+            (void) fprintf( getLog(), "\n   Inverse map streams index=%d %d\n", ii, jj );
+            inverseStreamMaps[ii][jj]->printToFile( getLog() );
+         }
+      }
+   }
+
+   // gather forces
+
+   if( getInverseMapStreamCount( I_Stream ) == 3 && getInverseMapStreamCount( K_Stream ) == 3 ){
+
+      kinvmap_gather3_3( width,
+
+                         inverseStreamMaps[I_Stream][0]->getBrookStream(),
+                         inverseStreamMaps[I_Stream][1]->getBrookStream(),
+                         inverseStreamMaps[I_Stream][2]->getBrookStream(),
+                         bondedForceStreams[I_Stream]->getBrookStream(),
+
+                         inverseStreamMaps[K_Stream][0]->getBrookStream(),
+                         inverseStreamMaps[K_Stream][1]->getBrookStream(),
+                         inverseStreamMaps[K_Stream][2]->getBrookStream(),
+                         bondedForceStreams[K_Stream]->getBrookStream(),
+
+                         forceStream.getBrookStream(), forceStream.getBrookStream() );
+
+   } else if( getInverseMapStreamCount( I_Stream ) == 3 && getInverseMapStreamCount( K_Stream ) == 4 ){
+
+      kinvmap_gather3_4( width,
+
+                         inverseStreamMaps[I_Stream][0]->getBrookStream(),
+                         inverseStreamMaps[I_Stream][1]->getBrookStream(),
+                         inverseStreamMaps[I_Stream][2]->getBrookStream(),
+                         bondedForceStreams[I_Stream]->getBrookStream(),
+
+                         inverseStreamMaps[K_Stream][0]->getBrookStream(),
+                         inverseStreamMaps[K_Stream][1]->getBrookStream(),
+                         inverseStreamMaps[K_Stream][2]->getBrookStream(),
+                         inverseStreamMaps[K_Stream][3]->getBrookStream(),
+                         bondedForceStreams[K_Stream]->getBrookStream(),
+
+                         forceStream.getBrookStream(), forceStream.getBrookStream() );
+
+   } else if( getInverseMapStreamCount( I_Stream ) == 3 && getInverseMapStreamCount( K_Stream ) == 5 ){
+
+      kinvmap_gather3_5( width,
+                         inverseStreamMaps[I_Stream][0]->getBrookStream(),
+                         inverseStreamMaps[I_Stream][1]->getBrookStream(),
+                         inverseStreamMaps[I_Stream][2]->getBrookStream(),
+                         bondedForceStreams[I_Stream]->getBrookStream(),
+                         inverseStreamMaps[K_Stream][0]->getBrookStream(),
+                         inverseStreamMaps[K_Stream][1]->getBrookStream(),
+                         inverseStreamMaps[K_Stream][2]->getBrookStream(),
+                         inverseStreamMaps[K_Stream][3]->getBrookStream(),
+                         inverseStreamMaps[K_Stream][4]->getBrookStream(),
+                         bondedForceStreams[K_Stream]->getBrookStream(),
+                         forceStream.getBrookStream(), forceStream.getBrookStream() );
+
+   } else {
+
+      // case not handled -- throw an exception
+
+      if( getLog() && ErrorMessages++ < MaxErrorMessages ){
+         (void) fprintf( getLog(), "%s case: I-map=%d K-map=%d -- not handled.\n",
+                          methodName.c_str(), getInverseMapStreamCount( I_Stream ),
+                                              getInverseMapStreamCount( K_Stream ) );
+         (void) fflush(  getLog() );
+      }
+
+      kinvmap_gather3_3( width,
+
+                         inverseStreamMaps[I_Stream][0]->getBrookStream(),
+                         inverseStreamMaps[I_Stream][1]->getBrookStream(),
+                         inverseStreamMaps[I_Stream][2]->getBrookStream(),
+                         bondedForceStreams[I_Stream]->getBrookStream(),
+
+                         inverseStreamMaps[K_Stream][0]->getBrookStream(),
+                         inverseStreamMaps[K_Stream][1]->getBrookStream(),
+                         inverseStreamMaps[K_Stream][2]->getBrookStream(),
+                         bondedForceStreams[K_Stream]->getBrookStream(),
+
+                         forceStream.getBrookStream(), forceStream.getBrookStream() );
+/*
+      std::stringstream message;
+      message << methodName << "I-maps=" << getInverseMapStreamCount( I_Stream ) << " and " << 
+                               "K-maps=" << getInverseMapStreamCount( K_Stream ) << " not handled.";
+      throw OpenMMException( message.str() );
+*/
+
+   }
+
+   // diagnostics
+
+   if( 0 && PrintOn ){
+
+      (void) fprintf( getLog(), "\nPost 3_4/3_5 && NB forces" );
+      BrookStreamInternal* brookStreamInternalF   = forceStream.getBrookStreamImpl();
+      brookStreamInternalF->printToFile( getLog() );
+
+   }
+
+   if( getInverseMapStreamCount( J_Stream ) == 5 && getInverseMapStreamCount( L_Stream ) == 2 ){
+      kinvmap_gather5_2( width,
+                         inverseStreamMaps[J_Stream][0]->getBrookStream(),
+                         inverseStreamMaps[J_Stream][1]->getBrookStream(),
+                         inverseStreamMaps[J_Stream][2]->getBrookStream(),
+                         inverseStreamMaps[J_Stream][3]->getBrookStream(),
+                         inverseStreamMaps[J_Stream][4]->getBrookStream(),
+                         bondedForceStreams[J_Stream]->getBrookStream(),
+                         inverseStreamMaps[L_Stream][0]->getBrookStream(),
+                         inverseStreamMaps[L_Stream][1]->getBrookStream(),
+                         bondedForceStreams[L_Stream]->getBrookStream(),
+                         forceStream.getBrookStream(), forceStream.getBrookStream() );
+   
+   } else {
+
+      // case not handled -- throw an exception
+
+      if( getLog() && ErrorMessages++ < MaxErrorMessages ){
+         (void) fprintf( getLog(), "%s case: J-map=%d L-map=%d -- not handled.\n",
+                          methodName.c_str(), getInverseMapStreamCount( J_Stream ),
+                                              getInverseMapStreamCount( L_Stream ) );
+         (void) fflush(  getLog() );
+      }
+
+      kinvmap_gather5_2( width,
+                         inverseStreamMaps[J_Stream][0]->getBrookStream(),
+                         inverseStreamMaps[J_Stream][1]->getBrookStream(),
+                         inverseStreamMaps[J_Stream][2]->getBrookStream(),
+                         inverseStreamMaps[J_Stream][3]->getBrookStream(),
+                         inverseStreamMaps[J_Stream][4]->getBrookStream(),
+                         bondedForceStreams[J_Stream]->getBrookStream(),
+                         inverseStreamMaps[L_Stream][0]->getBrookStream(),
+                         inverseStreamMaps[L_Stream][1]->getBrookStream(),
+                         bondedForceStreams[L_Stream]->getBrookStream(),
+                         forceStream.getBrookStream(), forceStream.getBrookStream() );
+/*
+      std::stringstream message;
+      message << methodName << "J-maps=" << getInverseMapStreamCount( J_Stream ) << " and " << 
+                               "L-maps=" << getInverseMapStreamCount( L_Stream ) << " not handled.";
+      throw OpenMMException( message.str() );
+*/
+
+   }
+
+   // diagnostics
+
+   if( 1 && PrintOn ){
+
+      (void) fprintf( getLog(), "\nFinal NB & bonded forces" );
+      BrookStreamInternal* brookStreamInternalF   = forceStream.getBrookStreamImpl();
+      brookStreamInternalF->printToFile( getLog() );
+/*
+      void* dataV = brookStreamInternalF->getData(1);
+      float* data = (float*) dataV;
+      (void) fprintf( getLog(), "\nFinal NB & bonded forces RAW\n" );
+      for( int ii = 0; ii < _brookNonBonded->getNumberOfParticles()*3; ii += 3 ){
+         (void) fprintf( getLog(), "%d [%.6e %.6e %.6e]\n", ii, data[ii], data[ii+1], data[ii+2] );
+      }
+*/
+
+   }
+
+   // ---------------------------------------------------------------------------------------
 }

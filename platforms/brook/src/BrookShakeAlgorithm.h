@@ -1,5 +1,5 @@
-#ifndef OPENMM_BROOK_SHAKE_H_
-#define OPENMM_BROOK_SHAKE_H_
+#ifndef OPENMM_BROOK_SHAKE_ALGORITHM_H_
+#define OPENMM_BROOK_SHAKE_ALGORITHM_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -83,28 +83,28 @@ class BrookShakeAlgorithm : public BrookCommon {
       BrookOpenMMFloat getInverseHydrogenMass( void ) const; 
 
       /**
-       * Get Shake atom stream width
+       * Get Shake particle stream width
        *
-       * @return atom stream width
+       * @return particle stream width
        */
 
-      int getShakeAtomStreamWidth( void ) const; 
+      int getShakeParticleStreamWidth( void ) const; 
 
       /**
-       * Get Shake atom stream height
+       * Get Shake particle stream height
        *
-       * @return atom stream height
+       * @return particle stream height
        */
 
-      int getShakeAtomStreamHeight( void ) const;
+      int getShakeParticleStreamHeight( void ) const;
 
       /**
-       * Get Shake atom stream size
+       * Get Shake particle stream size
        * 
-       * @return atom stream size
+       * @return particle stream size
        */
 
-      int getShakeAtomStreamSize( void ) const; 
+      int getShakeParticleStreamSize( void ) const; 
 
       /**
        * Get Shake constraint stream width
@@ -143,7 +143,7 @@ class BrookShakeAlgorithm : public BrookCommon {
        * Setup of Shake parameters
        *
        * @param masses                masses
-       * @param constraintIndices     constraint atom indices
+       * @param constraintIndices     constraint particle indices
        * @param constraintLengths     constraint lengths
        * @param platform              Brook platform
        *
@@ -166,22 +166,22 @@ class BrookShakeAlgorithm : public BrookCommon {
       std::string getContentsString( int level = 0 ) const;
 
       /** 
-       * Get Shake atom indices stream
+       * Get Shake particle indices stream
        *
-       * @return  Shake atom indices stream
+       * @return  Shake particle indices stream
        *
        */
       
-      BrookFloatStreamInternal* getShakeAtomIndicesStream( void ) const;
+      BrookFloatStreamInternal* getShakeParticleIndicesStream( void ) const;
       
       /** 
-       * Get  Shake atom parameter stream
+       * Get  Shake particle parameter stream
        *
-       * @return   Shake atom parameter stream
+       * @return   Shake particle parameter stream
        *
        */
       
-      BrookFloatStreamInternal* getShakeAtomParameterStream( void ) const;
+      BrookFloatStreamInternal* getShakeParticleParameterStream( void ) const;
       
       /** 
        * Get XCons0 stream
@@ -233,8 +233,8 @@ class BrookShakeAlgorithm : public BrookCommon {
       // streams indices
 
       enum BrookShakeAlgorithmStreams { 
-              ShakeAtomIndicesStream,
-              ShakeAtomParameterStream,
+              ShakeParticleIndicesStream,
+              ShakeParticleParameterStream,
               ShakeXCons0Stream,
               ShakeXCons1Stream,
               ShakeXCons2Stream,
@@ -251,11 +251,11 @@ class BrookShakeAlgorithm : public BrookCommon {
 
       BrookOpenMMFloat _inverseHydrogenMass;
 
-      // atom stream dimensions
+      // particle stream dimensions
 
-      int _shakeAtomStreamWidth;
-      int _shakeAtomStreamHeight;
-      int _shakeAtomStreamSize;
+      int _shakeParticleStreamWidth;
+      int _shakeParticleStreamHeight;
+      int _shakeParticleStreamSize;
 
       // constraint stream dimensions
 
@@ -274,19 +274,19 @@ class BrookShakeAlgorithm : public BrookCommon {
       /* 
        * Setup of stream dimensions
        *
-       * @param atomStreamSize        atom stream size
-       * @param atomStreamWidth       atom stream width
+       * @param particleStreamSize        particle stream size
+       * @param particleStreamWidth       particle stream width
        *
        * @return ErrorReturnValue if error, else DefaultReturnValueValue
        *
        * */
       
-      int _initializeStreamSizes( int atomStreamSize, int atomStreamWidth );
+      int _initializeStreamSizes( int particleStreamSize, int particleStreamWidth );
 
       /** 
        * Initialize stream dimensions
        * 
-       * @param numberOfAtoms             number of atoms
+       * @param numberOfParticles         number of particles
        * @param numberOfConstraints       number of constraints
        * @param platform                  platform
        *
@@ -294,7 +294,7 @@ class BrookShakeAlgorithm : public BrookCommon {
        *
        */
       
-      int _initializeStreamSizes( int numberOfAtoms, int numberOfConstraints, const Platform& platform );
+      int _initializeStreamSizes( int numberOfParticles, int numberOfConstraints, const Platform& platform );
       
       /** 
        * Initialize stream dimensions and streams
@@ -311,7 +311,7 @@ class BrookShakeAlgorithm : public BrookCommon {
        * Set Shake streams
        *
        * @param masses                masses
-       * @param constraintIndices     constraint atom indices
+       * @param constraintIndices     constraint particle indices
        * @param constraintLengths     constraint lengths
        *
        * @return ErrorReturnValue if error
@@ -327,4 +327,4 @@ class BrookShakeAlgorithm : public BrookCommon {
 
 } // namespace OpenMM
 
-#endif /* OPENMM_BROOK_SHAKE_H_ */
+#endif /* OPENMM_BROOK_SHAKE_ALGORITHM_H_ */

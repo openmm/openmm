@@ -53,7 +53,7 @@ BrookNonBonded::BrookNonBonded(  ){
 
 // ---------------------------------------------------------------------------------------
 
-   _atomSizeCeiling           = -1;
+   _particleSizeCeiling       = -1;
    _outerUnroll               =  4;
    _innerUnroll               =  4;
 
@@ -149,37 +149,37 @@ int BrookNonBonded::getOuterLoopUnroll( void ) const {
 
 int BrookNonBonded::setOuterLoopUnroll( int outerUnroll ){
    if( outerUnroll != _outerUnroll ){
-      _atomSizeCeiling = -1;
+      _particleSizeCeiling = -1;
    }
    _outerUnroll = _outerUnroll;
    return _outerUnroll;
 }
 
 /** 
- * Get atom ceiling parameter
+ * Get particle ceiling parameter
  * 
- * @return atom ceiling parameter
+ * @return particle ceiling parameter
  *
  */
 
-int BrookNonBonded::getAtomSizeCeiling( void ) const {
+int BrookNonBonded::getParticleSizeCeiling( void ) const {
 
 // ---------------------------------------------------------------------------------------
 
-   //static const std::string methodName      = "BrookNonBonded::getAtomSizeCeiling";
+   //static const std::string methodName      = "BrookNonBonded::getParticleSizeCeiling";
 
 // ---------------------------------------------------------------------------------------
 
-   if( _atomSizeCeiling < 0 ){
+   if( _particleSizeCeiling < 0 ){
       BrookNonBonded* localThis = const_cast<BrookNonBonded* const>(this);
-      localThis->_atomSizeCeiling = localThis->getNumberOfAtoms() % localThis->getOuterLoopUnroll();
-      if( localThis->_atomSizeCeiling ){
-         localThis->_atomSizeCeiling = localThis->getOuterLoopUnroll() - localThis->_atomSizeCeiling;
+      localThis->_particleSizeCeiling = localThis->getNumberOfParticles() % localThis->getOuterLoopUnroll();
+      if( localThis->_particleSizeCeiling ){
+         localThis->_particleSizeCeiling = localThis->getOuterLoopUnroll() - localThis->_particleSizeCeiling;
       }   
-      localThis->_atomSizeCeiling += localThis->getNumberOfAtoms();
+      localThis->_particleSizeCeiling += localThis->getNumberOfParticles();
    }
 
-   return _atomSizeCeiling;
+   return _particleSizeCeiling;
 }
 
 /** 
@@ -465,14 +465,14 @@ int BrookNonBonded::isForceStreamSet( int index ) const {
 /** 
  * Initialize stream dimensions
  * 
- * @param numberOfAtoms             number of atoms
+ * @param numberOfParticles         number of particles
  * @param platform                  platform
  *
  * @return ErrorReturnValue if error, else DefaultReturnValue
  *
  */
 
-int BrookNonBonded::_initializeStreamSizes( int numberOfAtoms, const Platform& platform ){
+int BrookNonBonded::_initializeStreamSizes( int numberOfParticles, const Platform& platform ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -481,13 +481,13 @@ int BrookNonBonded::_initializeStreamSizes( int numberOfAtoms, const Platform& p
 
 // ---------------------------------------------------------------------------------------
 
-   int atomStreamSize                  = getAtomStreamSize( platform );
-   int atomStreamWidth                 = getAtomStreamWidth( platform );
+   int particleStreamSize                  = getParticleStreamSize( platform );
+   int particleStreamWidth                 = getParticleStreamWidth( platform );
 
-   _initializeExclusionStreamSize( atomStreamSize, atomStreamWidth );
-   _initializeJStreamSize( atomStreamSize, atomStreamWidth );
-   _initializeOuterVdwStreamSize( atomStreamSize, atomStreamWidth );
-   _initializePartialForceStreamSize( atomStreamSize, atomStreamWidth );
+   _initializeExclusionStreamSize( particleStreamSize, particleStreamWidth );
+   _initializeJStreamSize( particleStreamSize, particleStreamWidth );
+   _initializeOuterVdwStreamSize( particleStreamSize, particleStreamWidth );
+   _initializePartialForceStreamSize( particleStreamSize, particleStreamWidth );
 
    return DefaultReturnValue;
 }
@@ -521,8 +521,8 @@ int BrookNonBonded::_initializeStreams( const Platform& platform ){
 
    // outer vdw
 
-   _nonbondedStreams[OuterVdwStream]            = new BrookFloatStreamInternal( BrookCommon::OuterVdwStream, getAtomStreamSize(), 
-                                                                                getAtomStreamWidth(), BrookStreamInternal::Float2, dangleValue );
+   _nonbondedStreams[OuterVdwStream]            = new BrookFloatStreamInternal( BrookCommon::OuterVdwStream, getParticleStreamSize(), 
+                                                                                getParticleStreamWidth(), BrookStreamInternal::Float2, dangleValue );
 
    // inner sigma & epsilon
 
@@ -534,8 +534,8 @@ int BrookNonBonded::_initializeStreams( const Platform& platform ){
 
    // charge stream
 
-   _nonbondedStreams[ChargeStream]              = new BrookFloatStreamInternal( BrookCommon::NonBondedChargeStream, getAtomStreamSize(),
-                                                                                getAtomStreamWidth(), BrookStreamInternal::Float, dangleValue );
+   _nonbondedStreams[ChargeStream]              = new BrookFloatStreamInternal( BrookCommon::NonBondedChargeStream, getParticleStreamSize(),
+                                                                                getParticleStreamWidth(), BrookStreamInternal::Float, dangleValue );
 
    
    // partial force streams
@@ -554,8 +554,8 @@ int BrookNonBonded::_initializeStreams( const Platform& platform ){
 /** 
  * Set exclusion (4x4)
  * 
- * @param i                         atom i index
- * @param j                         atom j index
+ * @param i                         particle i index
+ * @param j                         particle j index
  * @param exclusionStreamWidth      exclusion stream width
  * @param exclusion                 array of packed exclusions
  *
@@ -603,7 +603,7 @@ int BrookNonBonded::_setExclusion( int i, int j, int exclusionStreamWidth, Brook
 /** 
  * Initialize exclusions
  * 
- * @param exclusions            vector of sets containing exclusions (1 set entry for every atom)
+ * @param exclusions            vector of sets containing exclusions (1 set entry for every particle)
  * @param platform              Brook platform
  * @param log                   optional Log file reference
  *
@@ -642,17 +642,17 @@ int BrookNonBonded::_initializeExclusions( const std::vector<std::set<int> >& ex
    // pack in values
 
    int  exclusionStreamWidth = getExclusionStreamWidth();
-   int  numberOfAtoms        = getNumberOfAtoms();
-   int  atomStreamSize       = getAtomStreamSize();
+   int  numberOfParticles    = getNumberOfParticles();
+   int  particleStreamSize       = getParticleStreamSize();
    for( unsigned int ii = 0; ii < exclusionsVector.size(); ii++ ){
 
       set<int> exclusionIndices  = exclusionsVector[ii];
 
-//(void) fprintf( getLog(), "%s atoms=%d excludeSz=%d\n", methodName.c_str(), ii, exclusionIndices.size() );
+//(void) fprintf( getLog(), "%s particles=%d excludeSz=%d\n", methodName.c_str(), ii, exclusionIndices.size() );
 
       int hitII = 0;
       for( set<int>::const_iterator jj = exclusionIndices.begin(); jj != exclusionIndices.end(); jj++ ){
-//(void) fprintf( getLog(), "%s atoms=%d exclude=%d\n", methodName.c_str(), ii, *jj );
+//(void) fprintf( getLog(), "%s particles=%d exclude=%d\n", methodName.c_str(), ii, *jj );
          _setExclusion( ii, *jj, exclusionStreamWidth, exclusions );
          if( *jj == ii )hitII = 1;
       }
@@ -660,16 +660,16 @@ int BrookNonBonded::_initializeExclusions( const std::vector<std::set<int> >& ex
          _setExclusion( ii, ii, exclusionStreamWidth, exclusions );
       }
 
-      // explicitly exclude junk atoms from interacting w/ atom ii
-      for( int jj = numberOfAtoms; jj < atomStreamSize; jj++ ){
+      // explicitly exclude junk particles from interacting w/ particle ii
+      for( int jj = numberOfParticles; jj < particleStreamSize; jj++ ){
          _setExclusion( ii, jj, exclusionStreamWidth, exclusions );
       }
    }
 
-   // explicitly exclude junk atoms from interacting w/ all atoms
+   // explicitly exclude junk particles from interacting w/ all particles
 
-   for( int ii = numberOfAtoms; ii < atomStreamSize; ii++ ){
-      for( int jj = 0; jj < atomStreamSize; jj++ ){
+   for( int ii = numberOfParticles; ii < particleStreamSize; ii++ ){
+      for( int jj = 0; jj < particleStreamSize; jj++ ){
          _setExclusion( ii, jj, exclusionStreamWidth, exclusions );
       }
    }
@@ -678,8 +678,8 @@ int BrookNonBonded::_initializeExclusions( const std::vector<std::set<int> >& ex
 
    if( 1 && debug && getLog() ){
       FILE* log = getLog();
-      (void) fprintf( log, "%s atoms=%d excl=%d exStrSz=%d w=%d atmStrSz=%d\n", methodName.c_str(), numberOfAtoms, exclusionsVector.size(), 
-                      exclusionStreamSize, exclusionStreamWidth, atomStreamSize );
+      (void) fprintf( log, "%s particles=%d excl=%d exStrSz=%d w=%d atmStrSz=%d\n", methodName.c_str(), numberOfParticles, exclusionsVector.size(), 
+                      exclusionStreamSize, exclusionStreamWidth, particleStreamSize );
 /*
       for( int ii = 0; ii < exclusionStreamSize; ii++ ){
 int index  = ii/exclusionStreamWidth;
@@ -688,17 +688,17 @@ int offset = ii - index*exclusionStreamWidth;
       }
 */
 
-      for( int ii = 0; ii < numberOfAtoms; ii++ ){
+      for( int ii = 0; ii < numberOfParticles; ii++ ){
          (void) fprintf( log, "%6d ", ii );
          int count = 0;
-         for( int jj = 0; jj <= numberOfAtoms/4; jj++ ){
+         for( int jj = 0; jj <= numberOfParticles/4; jj++ ){
             int index = jj*exclusionStreamWidth + ii;
             (void) fprintf( log, " [%4d %4d] %5.1f", jj*4, jj*4+3, exclusions[index] );
             int excludeValue = (int) (exclusions[index] + 0.01);
             if( (excludeValue % 2) )count++;
-            if( (jj*4+1) < numberOfAtoms && (excludeValue % 3) )count++;
-            if( (jj*4+2) < numberOfAtoms && (excludeValue % 5) )count++;
-            if( (jj*4+3) < numberOfAtoms && (excludeValue % 7) )count++;
+            if( (jj*4+1) < numberOfParticles && (excludeValue % 3) )count++;
+            if( (jj*4+2) < numberOfParticles && (excludeValue % 5) )count++;
+            if( (jj*4+3) < numberOfParticles && (excludeValue % 7) )count++;
          }
          (void) fprintf( log, " TtlExcl=%d\n", count );
       }
@@ -750,7 +750,7 @@ int BrookNonBonded::_setSigmaEpsilon( double c6, double c12, double* sigma , dou
 /** 
  * Initialize vdw & charge
  * 
- * @param exclusions                vector of sets containing exclusions (1 set entry for every atom)
+ * @param exclusions                vector of sets containing exclusions (1 set entry for every particle)
  * @param platform                  platform
  *
  * @return ErrorReturnValue if error, else DefaultReturnValue
@@ -770,22 +770,22 @@ int BrookNonBonded::_initializeVdwAndCharge( const vector<vector<double> >& nonb
       (void) fprintf( getLog(), "%s nonbonded vector size=%d\n", methodName.c_str(), nonbondedParameters.size() );
    }
 
-   int atomStreamSize        = getAtomStreamSize();
+   int particleStreamSize        = getParticleStreamSize();
 
    // allocate and initialize vdw & charge array
 
-   unsigned int vdwParametersSize  = 2*atomStreamSize;
+   unsigned int vdwParametersSize  = 2*particleStreamSize;
    BrookOpenMMFloat* vdwParameters = new BrookOpenMMFloat[vdwParametersSize];
    memset( vdwParameters, 0, sizeof( BrookOpenMMFloat )*vdwParametersSize );
    
-   BrookOpenMMFloat* charges       = new BrookOpenMMFloat[atomStreamSize];
-   memset( charges, 0, sizeof( BrookOpenMMFloat )*atomStreamSize );
+   BrookOpenMMFloat* charges       = new BrookOpenMMFloat[particleStreamSize];
+   memset( charges, 0, sizeof( BrookOpenMMFloat )*particleStreamSize );
    
 // ---------------------------------------------------------------------------------------
 
    // pack in values
 
-   int  numberOfAtoms        = getNumberOfAtoms();
+   int  numberOfParticles    = getNumberOfParticles();
    int trackingIndex         = 0;
    double sigma, epsilon;
    for( unsigned int ii = 0; ii < nonbondedParameters.size(); ii++ ){
@@ -813,9 +813,9 @@ int BrookNonBonded::_initializeVdwAndCharge( const vector<vector<double> >& nonb
          
    }
 
-   // set outlier atoms
+   // set outlier particles
 
-   for( unsigned int ii = nonbondedParameters.size(); ii < (unsigned int) atomStreamSize; ii++ ){
+   for( unsigned int ii = nonbondedParameters.size(); ii < (unsigned int) particleStreamSize; ii++ ){
       vdwParameters[trackingIndex++] = (BrookOpenMMFloat) 1.0;
       vdwParameters[trackingIndex++] = (BrookOpenMMFloat) 0.0;
    }
@@ -832,8 +832,8 @@ int BrookNonBonded::_initializeVdwAndCharge( const vector<vector<double> >& nonb
    if( 1 && debug && getLog() ){
       FILE* log = getLog();
       int trackingIndex         = 0;
-      (void) fprintf( log, "%s atoms=%d strSz=%d\n   vdw[Sig Eps] Q\n", methodName.c_str(), numberOfAtoms, atomStreamSize );
-      for( int ii = 0; ii < atomStreamSize; ii++, trackingIndex += 2 ){
+      (void) fprintf( log, "%s particles=%d strSz=%d\n   vdw[Sig Eps] Q\n", methodName.c_str(), numberOfParticles, particleStreamSize );
+      for( int ii = 0; ii < particleStreamSize; ii++, trackingIndex += 2 ){
          (void) fprintf( log, "   %d %10.3f %10.3f %10.3f\n", ii, vdwParameters[trackingIndex], vdwParameters[trackingIndex+1], charges[ii] );
       }
       (void) fflush( log );
@@ -849,7 +849,7 @@ int BrookNonBonded::_initializeVdwAndCharge( const vector<vector<double> >& nonb
 /** 
  * Initialize vdw & charge
  * 
- * @param exclusions                vector of sets containing exclusions (1 set entry for every atom)
+ * @param exclusions                vector of sets containing exclusions (1 set entry for every particle)
  * @param platform                  platform
  *
  * @return ErrorReturnValue if error, else DefaultReturnValue
@@ -885,7 +885,7 @@ int BrookNonBonded::_initializeJStreamVdw( const vector<vector<double> >& nonbon
 
    // pack in values
 
-   int  numberOfAtoms        = getNumberOfAtoms();
+   int  numberOfParticles    = getNumberOfParticles();
    int trackingIndex         = 0;
    double sigma, epsilon;
    for( unsigned int ii = 0; ii < nonbondedParameters.size(); ii++ ){
@@ -908,7 +908,7 @@ int BrookNonBonded::_initializeJStreamVdw( const vector<vector<double> >& nonbon
          
    }
 
-   // set outlier atoms
+   // set outlier particles
 
    for( unsigned int ii = nonbondedParameters.size(); ii < (unsigned int) jParametersSize; ii++ ){
       sigmaParameters[ii]   = (BrookOpenMMFloat) 1.0;
@@ -927,7 +927,7 @@ int BrookNonBonded::_initializeJStreamVdw( const vector<vector<double> >& nonbon
    if( 1 && debug && getLog() ){
       FILE* log = getLog();
       int trackingIndex         = 0;
-      (void) fprintf( log, "%s atoms=%d strSz=%d\n   Innervdw[Sig Eps]\n", methodName.c_str(), numberOfAtoms, jStreamSize );
+      (void) fprintf( log, "%s particles=%d strSz=%d\n   Innervdw[Sig Eps]\n", methodName.c_str(), numberOfParticles, jStreamSize );
       for( unsigned int ii = 0; ii < jParametersSize; ii++ ){
          (void) fprintf( log, "   %d %10.3f %10.3f\n", ii, sigmaParameters[ii], epsilonParameters[ii] );
       }
@@ -943,17 +943,17 @@ int BrookNonBonded::_initializeJStreamVdw( const vector<vector<double> >& nonbon
 /* 
  * Setup of nonbonded ixns
  *
- * @param numberOfAtoms         number of atoms
- * @param nonbondedParameters   vector of nonbonded parameters [atomI][0=c6]
- *                                                             [atomI][1=c12]
- *                                                             [atomI][2=charge]
+ * @param numberOfParticles     number of particles
+ * @param nonbondedParameters   vector of nonbonded parameters [particleI][0=c6]
+ *                                                             [particleI][1=c12]
+ *                                                             [particleI][2=charge]
  * @param platform              Brook platform
  *
  * @return ErrorReturnValue if error, else DefaultReturnValue
  *
  * */
 
-int BrookNonBonded::setup( int numberOfAtoms, const std::vector<std::vector<double> >& nonbondedParameters,
+int BrookNonBonded::setup( int numberOfParticles, const std::vector<std::vector<double> >& nonbondedParameters,
                            const std::vector<std::set<int> >& exclusions, const Platform& platform ){
 
 // ---------------------------------------------------------------------------------------
@@ -963,9 +963,9 @@ int BrookNonBonded::setup( int numberOfAtoms, const std::vector<std::vector<doub
 
 // ---------------------------------------------------------------------------------------
 
-   setNumberOfAtoms( numberOfAtoms );
+   setNumberOfParticles( numberOfParticles );
 
-   _initializeStreamSizes( numberOfAtoms, platform );
+   _initializeStreamSizes( numberOfParticles, platform );
    _initializeStreams( platform );
 
    _initializeExclusions( exclusions, platform );
@@ -978,14 +978,14 @@ int BrookNonBonded::setup( int numberOfAtoms, const std::vector<std::vector<doub
 /* 
  * Setup of stream dimensions for exclusion stream
  *
- * @param atomStreamSize        atom stream size
- * @param atomStreamWidth       atom stream width
+ * @param particleStreamSize        particle stream size
+ * @param particleStreamWidth       particle stream width
  *
  * @return ErrorReturnValue if error, else DefaultReturnValue
  *
  * */
 
-int BrookNonBonded::_initializeExclusionStreamSize( int atomStreamSize, int atomStreamWidth ){
+int BrookNonBonded::_initializeExclusionStreamSize( int particleStreamSize, int particleStreamWidth ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -994,7 +994,7 @@ int BrookNonBonded::_initializeExclusionStreamSize( int atomStreamSize, int atom
 
 // ---------------------------------------------------------------------------------------
 
-   _exclusionStreamWidth     = atomStreamSize;
+   _exclusionStreamWidth     = particleStreamSize;
    int innerUnroll           = getInnerLoopUnroll();
    if( innerUnroll < 1 ){
       std::stringstream message;
@@ -1012,8 +1012,8 @@ int BrookNonBonded::_initializeExclusionStreamSize( int atomStreamSize, int atom
 /* 
  * Setup of j-stream dimensions
  *
- * @param atomStreamSize        atom stream size
- * @param atomStreamWidth       atom stream width
+ * @param particleStreamSize        particle stream size
+ * @param particleStreamWidth       particle stream width
  *
  * @return ErrorReturnValue if error, else DefaultReturnValue
  *
@@ -1021,7 +1021,7 @@ int BrookNonBonded::_initializeExclusionStreamSize( int atomStreamSize, int atom
  *
  * */
 
-int BrookNonBonded::_initializeJStreamSize( int atomStreamSize, int atomStreamWidth ){
+int BrookNonBonded::_initializeJStreamSize( int particleStreamSize, int particleStreamWidth ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -1049,7 +1049,7 @@ int BrookNonBonded::_initializeJStreamSize( int atomStreamSize, int atomStreamWi
 
    // set dimesnions
 
-   _jStreamSize                                 = atomStreamSize/innerUnroll;
+   _jStreamSize                                 = particleStreamSize/innerUnroll;
    _jStreamHeight                               = _jStreamSize/jStreamWidth; 
    _jStreamHeight                              += ( (_jStreamSize % _jStreamWidth) ? 1 : 0 ); 
    _jStreamSize                                 = jStreamWidth*_jStreamHeight;
@@ -1060,8 +1060,8 @@ int BrookNonBonded::_initializeJStreamSize( int atomStreamSize, int atomStreamWi
 /* 
  * Setup of outer vdw stream size
  *
- * @param atomStreamSize        atom stream size
- * @param atomStreamWidth       atom stream width
+ * @param particleStreamSize        particle stream size
+ * @param particleStreamWidth       particle stream width
  *
  * @return ErrorReturnValue if error, else DefaultReturnValue
  *
@@ -1069,7 +1069,7 @@ int BrookNonBonded::_initializeJStreamSize( int atomStreamSize, int atomStreamWi
  *
  * */
 
-int BrookNonBonded::_initializeOuterVdwStreamSize( int atomStreamSize, int atomStreamWidth ){
+int BrookNonBonded::_initializeOuterVdwStreamSize( int particleStreamSize, int particleStreamWidth ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -1097,7 +1097,7 @@ int BrookNonBonded::_initializeOuterVdwStreamSize( int atomStreamSize, int atomS
 
    // set dimesnions
 
-   _jStreamSize                                 = atomStreamSize/innerUnroll;
+   _jStreamSize                                 = particleStreamSize/innerUnroll;
    _jStreamHeight                               = _jStreamSize/jStreamWidth; 
    _jStreamHeight                              += ( (_jStreamSize % _jStreamWidth) ? 1 : 0 ); 
    _jStreamSize                                 = jStreamWidth*_jStreamHeight;
@@ -1109,14 +1109,14 @@ int BrookNonBonded::_initializeOuterVdwStreamSize( int atomStreamSize, int atomS
 /* 
  * Setup of stream dimensions for partial force streams
  *
- * @param atomStreamSize        atom stream size
- * @param atomStreamWidth       atom stream width
+ * @param particleStreamSize        particle stream size
+ * @param particleStreamWidth       particle stream width
  *
  * @return ErrorReturnValue if error, else DefaultReturnValue
  *
  * */
 
-int BrookNonBonded::_initializePartialForceStreamSize( int atomStreamSize, int atomStreamWidth ){
+int BrookNonBonded::_initializePartialForceStreamSize( int particleStreamSize, int particleStreamWidth ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -1139,7 +1139,7 @@ int BrookNonBonded::_initializePartialForceStreamSize( int atomStreamSize, int a
       return ErrorReturnValue;
    }
 
-   _partialForceStreamSize    = atomStreamSize*getDuplicationFactor()/innerUnroll;
+   _partialForceStreamSize    = particleStreamSize*getDuplicationFactor()/innerUnroll;
    _partialForceStreamHeight  = _partialForceStreamSize/_partialForceStreamWidth;
    _partialForceStreamHeight += ( (_partialForceStreamSize % _partialForceStreamWidth) ? 1 : 0);
 
@@ -1177,8 +1177,8 @@ std::string BrookNonBonded::getContentsString( int level ) const {
 #define LOCAL_SPRINTF(a,b,c) sprintf( (a), (b), (c) );   
 #endif
 
-   (void) LOCAL_SPRINTF( value, "%d", getNumberOfAtoms() );
-   message << _getLine( tab, "Number of atoms:", value ); 
+   (void) LOCAL_SPRINTF( value, "%d", getNumberOfParticles() );
+   message << _getLine( tab, "Number of particles:", value ); 
 
    (void) LOCAL_SPRINTF( value, "%d", getNumberOfForceStreams() );
    message << _getLine( tab, "Number of force streams:", value ); 
@@ -1192,17 +1192,17 @@ std::string BrookNonBonded::getContentsString( int level ) const {
    (void) LOCAL_SPRINTF( value, "%d", getOuterLoopUnroll() )
    message << _getLine( tab, "Outer loop unroll:", value ); 
 
-   (void) LOCAL_SPRINTF( value, "%d", getAtomSizeCeiling() );
-   message << _getLine( tab, "Atom ceiling:", value ); 
+   (void) LOCAL_SPRINTF( value, "%d", getParticleSizeCeiling() );
+   message << _getLine( tab, "Particle ceiling:", value ); 
 
-   (void) LOCAL_SPRINTF( value, "%d", getAtomStreamWidth() );
-   message << _getLine( tab, "Atom stream width:", value ); 
+   (void) LOCAL_SPRINTF( value, "%d", getParticleStreamWidth() );
+   message << _getLine( tab, "Particle stream width:", value ); 
 
-   (void) LOCAL_SPRINTF( value, "%d", getAtomStreamHeight() );
-   message << _getLine( tab, "Atom stream height:", value ); 
+   (void) LOCAL_SPRINTF( value, "%d", getParticleStreamHeight() );
+   message << _getLine( tab, "Particle stream height:", value ); 
 
-   (void) LOCAL_SPRINTF( value, "%d", getAtomStreamSize() );
-   message << _getLine( tab, "Atom stream size:", value ); 
+   (void) LOCAL_SPRINTF( value, "%d", getParticleStreamSize() );
+   message << _getLine( tab, "Particle stream size:", value ); 
 
    (void) LOCAL_SPRINTF( value, "%d", getJStreamWidth() );
    message << _getLine( tab, "J-stream width:", value ); 
@@ -1263,4 +1263,124 @@ std::string BrookNonBonded::getContentsString( int level ) const {
 #undef LOCAL_SPRINTF
 
    return message.str();
+}
+
+/** 
+ * Compute forces
+ * 
+ * @param context OpenMMContextImpl context
+ *
+ */
+
+void BrookNonBonded::computeForces( BrookStreamImpl& positionStream, BrookStreamImpl& forceStream ){
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName      = "BrookNonBonded::computeForces";
+
+   static const int PrintOn                 = 0;
+   static const int MaxErrorMessages        = 2;
+   static       int ErrorMessages           = 0;
+
+   static const float4 dummyParameters( 0.0, 0.0, 0.0, 0.0 );
+
+   // static const int debug                   = 1;
+
+// ---------------------------------------------------------------------------------------
+
+   // nonbonded forces
+
+   float epsfac                                      = 138.935485f;
+   BrookFloatStreamInternal**  nonbondedForceStreams = getForceStreams();
+
+   knbforce_CDLJ4(
+             (float) getNumberOfParticles(),
+             (float) getParticleSizeCeiling(),
+             (float) getDuplicationFactor(),
+             (float) getParticleStreamHeight( ),
+             (float) getParticleStreamWidth( ),
+             (float) getJStreamWidth( ),
+             (float) getPartialForceStreamWidth( ),
+             epsfac,
+             dummyParameters,
+             positionStream.getBrookStream(),
+             getChargeStream()->getBrookStream(),
+             getOuterVdwStream()->getBrookStream(),
+             getInnerSigmaStream()->getBrookStream(),
+             getInnerEpsilonStream()->getBrookStream(),
+             getExclusionStream()->getBrookStream(),
+             nonbondedForceStreams[0]->getBrookStream(),
+             nonbondedForceStreams[1]->getBrookStream(),
+             nonbondedForceStreams[2]->getBrookStream(),
+             nonbondedForceStreams[3]->getBrookStream()
+           );
+
+/*
+float zerof = 0.0f;
+nonbondedForceStreams[0]->fillWithValue( &zerof );
+nonbondedForceStreams[1]->fillWithValue( &zerof );
+nonbondedForceStreams[2]->fillWithValue( &zerof );
+nonbondedForceStreams[3]->fillWithValue( &zerof );
+*/
+
+   // diagnostics
+
+   if( 1 && PrintOn ){
+      (void) fprintf( getLog(), "\nPost knbforce_CDLJ4: particles=%6d ceiling=%3d dupFac=%3d", getNumberOfParticles(),  
+                                                                                               getParticleSizeCeiling(),
+                                                                                               getDuplicationFactor()  );
+
+      (void) fprintf( getLog(), "\n                      hght=%6d   width=%3d   jWid=%3d", getParticleStreamHeight( ),
+                                                                                           getParticleStreamWidth( ),
+                                                                                           getJStreamWidth( ) );
+      (void) fprintf( getLog(), "\n                      pFrc=%6d     eps=%12.5e\n",       getPartialForceStreamWidth( ), epsfac );
+
+      (void) fprintf( getLog(), "\nOuterVdwStreamd\n" );
+      getOuterVdwStream()->printToFile( getLog() );
+
+      (void) fprintf( getLog(), "\nInnerSigmaStream\n" );
+      getInnerSigmaStream()->printToFile( getLog() );
+
+      (void) fprintf( getLog(), "\nInnerEpsilonStream\n" );
+      getInnerEpsilonStream()->printToFile( getLog() );
+
+      (void) fprintf( getLog(), "\nExclusionStream\n" );
+      getExclusionStream()->printToFile( getLog() );
+
+      (void) fprintf( getLog(), "\nChargeStream\n" );
+      getChargeStream()->printToFile( getLog() );
+
+      for( int ii = 0; ii < 4; ii++ ){
+         (void) fprintf( getLog(), "\nForce stream %d\n", ii );
+         nonbondedForceStreams[ii]->printToFile( getLog() );
+      }
+   }
+
+// ---------------------------------------------------------------------------------------
+
+   // gather forces
+
+   kMergeFloat3_4_nobranch( (float) getDuplicationFactor(),
+                            (float) getParticleStreamWidth(),
+                            (float) getPartialForceStreamWidth(),
+                            (float) getNumberOfParticles(),
+                            (float) getParticleSizeCeiling(),
+                            (float) getOuterLoopUnroll(),
+                            nonbondedForceStreams[0]->getBrookStream(),
+                            nonbondedForceStreams[1]->getBrookStream(),
+                            nonbondedForceStreams[2]->getBrookStream(),
+                            nonbondedForceStreams[3]->getBrookStream(),
+                            forceStream.getBrookStream() );
+
+   // diagnostics
+
+   if( 0 && PrintOn ){
+
+      (void) fprintf( getLog(), "\nNB forces" );
+      BrookStreamInternal* brookStreamInternalF   = forceStream.getBrookStreamImpl();
+      brookStreamInternalF->printToFile( getLog() );
+
+   }
+
+   return;
 }

@@ -65,7 +65,7 @@ class BrookRemoveCMMotionKernel : public RemoveCMMotionKernel {
       /** 
        * Initialize the kernel
        * 
-       * @param masses   mass of each atom
+       * @param masses   mass of each particle
        *
        */
       void initialize( const std::vector<double>& masses );
@@ -73,7 +73,7 @@ class BrookRemoveCMMotionKernel : public RemoveCMMotionKernel {
       /** 
        * Execute the kernel.
        * 
-       * @param velocities  stream of atom velocities
+       * @param velocities  stream of particle velocities
        *
        */
 

@@ -63,19 +63,19 @@ BrookVerletDynamics::BrookVerletDynamics( ){
 
 // ---------------------------------------------------------------------------------------
 
-   _numberOfAtoms                 = -1;
+   _numberOfParticles                 = -1;
 
    // mark stream dimension variables as unset
 
-   _verletAtomStreamWidth         = -1;
-   _verletAtomStreamHeight        = -1;
-   _verletAtomStreamSize          = -1;
+   _verletParticleStreamWidth         = -1;
+   _verletParticleStreamHeight        = -1;
+   _verletParticleStreamSize          = -1;
 
    for( int ii = 0; ii < LastStreamIndex; ii++ ){
       _verletStreams[ii]   = NULL;
    }
 
-   _stepSize                      = oneMinus;
+   _stepSize                          = oneMinus;
 
    // setup inverse sqrt masses
 
@@ -167,9 +167,9 @@ int BrookVerletDynamics::updateParameters( double stepSize ){
 /** 
  * Update
  * 
- * @param  positions                   atom positions
- * @param  velocities                  atom velocities
- * @param  forces                      atom forces
+ * @param  positions                   particle positions
+ * @param  velocities                  particle velocities
+ * @param  forces                      particle forces
  * @param  brookShakeAlgorithm         BrookShakeAlgorithm reference
  * @param  brookRandomNumberGenerator  BrookRandomNumberGenerator reference
  *
@@ -234,8 +234,8 @@ int BrookVerletDynamics::update( Stream& positions, Stream& velocities,
    // diagnostics
 
    if( PrintOn && getLog() ){
-      (void) fprintf( getLog(), "\nPost kupdate_md_verlet: atomStrW=%3d step=%.5f",
-                                getVerletDynamicsAtomStreamWidth(), getStepSize() );
+      (void) fprintf( getLog(), "\nPost kupdate_md_verlet: particleStrW=%3d step=%.5f",
+                                getVerletDynamicsParticleStreamWidth(), getStepSize() );
 
       (void) fprintf( getLog(), "\nInverseMassStream\n" );
       getInverseMassStream()->printToFile( getLog() );
@@ -262,13 +262,13 @@ int BrookVerletDynamics::update( Stream& positions, Stream& velocities,
 
       kshakeh_fix1( 
                     10.0f,
-                    (float) getVerletDynamicsAtomStreamWidth(),
+                    (float) getVerletDynamicsParticleStreamWidth(),
                     brookShakeAlgorithm.getInverseHydrogenMass(),
                     omega, 
-                    brookShakeAlgorithm.getShakeAtomIndicesStream()->getBrookStream(),
+                    brookShakeAlgorithm.getShakeParticleIndicesStream()->getBrookStream(),
                     positionStream.getBrookStream(),
                     getXPrimeStream()->getBrookStream(),
-                    brookShakeAlgorithm.getShakeAtomParameterStream()->getBrookStream(),
+                    brookShakeAlgorithm.getShakeParticleParameterStream()->getBrookStream(),
                     brookShakeAlgorithm.getShakeXCons0Stream()->getBrookStream(),
                     brookShakeAlgorithm.getShakeXCons1Stream()->getBrookStream(),
                     brookShakeAlgorithm.getShakeXCons2Stream()->getBrookStream(),
@@ -276,11 +276,11 @@ int BrookVerletDynamics::update( Stream& positions, Stream& velocities,
    
       if( (1|| PrintOn) && getLog() ){
 
-         (void) fprintf( getLog(), "\nPost kshakeh_fix1: atomStrW=%3d invMass_H=%.5f",
-                                   getVerletDynamicsAtomStreamWidth(), brookShakeAlgorithm.getInverseHydrogenMass() );
+         (void) fprintf( getLog(), "\nPost kshakeh_fix1: particleStrW=%3d invMass_H=%.5f",
+                                   getVerletDynamicsParticleStreamWidth(), brookShakeAlgorithm.getInverseHydrogenMass() );
    
-         (void) fprintf( getLog(), "\nShakeAtomIndicesStream\n" );
-         brookShakeAlgorithm.getShakeAtomIndicesStream()->printToFile( getLog() );
+         (void) fprintf( getLog(), "\nShakeParticleIndicesStream\n" );
+         brookShakeAlgorithm.getShakeParticleIndicesStream()->printToFile( getLog() );
    
          BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamImpl();
          (void) fprintf( getLog(), "\nPositionStream\n" );
@@ -289,8 +289,8 @@ int BrookVerletDynamics::update( Stream& positions, Stream& velocities,
          (void) fprintf( getLog(), "\nXPrimeStream\n" );
          getXPrimeStream()->printToFile( getLog() ); 
 
-         (void) fprintf( getLog(), "\nShakeAtomParameterStream\n" );
-         brookShakeAlgorithm.getShakeAtomParameterStream()->printToFile( getLog() ); 
+         (void) fprintf( getLog(), "\nShakeParticleParameterStream\n" );
+         brookShakeAlgorithm.getShakeParticleParameterStream()->printToFile( getLog() ); 
 
          (void) fprintf( getLog(), "\nShakeXCons0\n" );
          brookShakeAlgorithm.getShakeXCons0Stream()->printToFile( getLog() ); 
@@ -309,7 +309,7 @@ int BrookVerletDynamics::update( Stream& positions, Stream& velocities,
       // second Shake gather
    
       kshakeh_update2_fix1( 
-                    (float) getVerletDynamicsAtomStreamWidth(),
+                    (float) getVerletDynamicsParticleStreamWidth(),
                     brookShakeAlgorithm.getShakeInverseMapStream()->getBrookStream(),
                     positionStream.getBrookStream(),
                     getXPrimeStream()->getBrookStream(),
@@ -321,8 +321,8 @@ int BrookVerletDynamics::update( Stream& positions, Stream& velocities,
    
       if( ( 1 || PrintOn) && getLog() ){
 
-         (void) fprintf( getLog(), "\nPost kshakeh_update2_fix1: atomStrW=%3d",
-                                   getVerletDynamicsAtomStreamWidth() );
+         (void) fprintf( getLog(), "\nPost kshakeh_update2_fix1: particleStrW=%3d",
+                                   getVerletDynamicsParticleStreamWidth() );
    
          (void) fprintf( getLog(), "\nShakeInverseMapStream\n" );
          brookShakeAlgorithm.getShakeInverseMapStream()->printToFile( getLog() );
@@ -360,35 +360,35 @@ int BrookVerletDynamics::update( Stream& positions, Stream& velocities,
 };
 
 /** 
- * Get Atom stream size
+ * Get Particle stream size
  *
- * @return  Atom stream size
+ * @return  Particle stream size
  *
  */
 
-int BrookVerletDynamics::getVerletDynamicsAtomStreamSize( void ) const {
-   return _verletAtomStreamSize;
+int BrookVerletDynamics::getVerletDynamicsParticleStreamSize( void ) const {
+   return _verletParticleStreamSize;
 }
 
 /** 
- * Get atom stream width
+ * Get particle stream width
  *
- * @return  atom stream width
+ * @return  particle stream width
  *
  */
 
-int BrookVerletDynamics::getVerletDynamicsAtomStreamWidth( void ) const {
-   return _verletAtomStreamWidth;
+int BrookVerletDynamics::getVerletDynamicsParticleStreamWidth( void ) const {
+   return _verletParticleStreamWidth;
 }
 
 /** 
- * Get atom stream height
+ * Get particle stream height
  *
- * @return atom stream height
+ * @return particle stream height
  */
 
-int BrookVerletDynamics::getVerletDynamicsAtomStreamHeight( void ) const {
-   return _verletAtomStreamHeight;
+int BrookVerletDynamics::getVerletDynamicsParticleStreamHeight( void ) const {
+   return _verletParticleStreamHeight;
 }
 
 /** 
@@ -427,14 +427,14 @@ BrookFloatStreamInternal* BrookVerletDynamics::getInverseMassStream( void ) cons
 /** 
  * Initialize stream dimensions
  * 
- * @param numberOfAtoms             number of atoms
+ * @param numberOfParticles             number of particles
  * @param platform                  platform
  *      
  * @return ErrorReturnValue if error, else DefaultReturnValue
  *
  */
 
-int BrookVerletDynamics::_initializeStreamSizes( int numberOfAtoms, const Platform& platform ){
+int BrookVerletDynamics::_initializeStreamSizes( int numberOfParticles, const Platform& platform ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -442,9 +442,9 @@ int BrookVerletDynamics::_initializeStreamSizes( int numberOfAtoms, const Platfo
 
 // ---------------------------------------------------------------------------------------
 
-   _verletAtomStreamSize     = getAtomStreamSize( platform );
-   _verletAtomStreamWidth    = getAtomStreamWidth( platform );
-   _verletAtomStreamHeight   = getAtomStreamHeight( platform );
+   _verletParticleStreamSize     = getParticleStreamSize( platform );
+   _verletParticleStreamWidth    = getParticleStreamWidth( platform );
+   _verletParticleStreamHeight   = getParticleStreamHeight( platform );
 
    return DefaultReturnValue;
 }
@@ -464,24 +464,24 @@ int BrookVerletDynamics::_initializeStreams( const Platform& platform ){
 
    //static const std::string methodName      = "BrookVerletDynamics::_initializeStreams";
 
-   BrookOpenMMFloat dangleValue            = (BrookOpenMMFloat) 0.0;
+   BrookOpenMMFloat dangleValue         = (BrookOpenMMFloat) 0.0;
 
 // ---------------------------------------------------------------------------------------
 
-   int sdAtomStreamSize             = getVerletDynamicsAtomStreamSize();
-   int sdAtomStreamWidth            = getVerletDynamicsAtomStreamWidth();
+   int sdParticleStreamSize             = getVerletDynamicsParticleStreamSize();
+   int sdParticleStreamWidth            = getVerletDynamicsParticleStreamWidth();
 
     _verletStreams[VPrimeStream]        = new BrookFloatStreamInternal( BrookCommon::VPrimeStream,
-                                                                    sdAtomStreamSize, sdAtomStreamWidth,
-                                                                    BrookStreamInternal::Float3, dangleValue );
+                                                                        sdParticleStreamSize, sdParticleStreamWidth,
+                                                                        BrookStreamInternal::Float3, dangleValue );
 
     _verletStreams[XPrimeStream]        = new BrookFloatStreamInternal( BrookCommon::XPrimeStream,
-                                                                    sdAtomStreamSize, sdAtomStreamWidth,
-                                                                    BrookStreamInternal::Float3, dangleValue );
+                                                                        sdParticleStreamSize, sdParticleStreamWidth,
+                                                                        BrookStreamInternal::Float3, dangleValue );
 
     _verletStreams[InverseMassStream]   = new BrookFloatStreamInternal( BrookCommon::InverseMassStream,
-                                                                    sdAtomStreamSize, sdAtomStreamWidth,
-                                                                    BrookStreamInternal::Float, dangleValue );
+                                                                        sdParticleStreamSize, sdParticleStreamWidth,
+                                                                        BrookStreamInternal::Float, dangleValue );
 
    return DefaultReturnValue;
 }
@@ -501,13 +501,13 @@ int BrookVerletDynamics::_updateVerletStreams( void ){
 
 // ---------------------------------------------------------------------------------------
 
-   int atomStreamSize                      = getVerletDynamicsAtomStreamSize();
+   int particleStreamSize                    = getVerletDynamicsParticleStreamSize();
 
-   BrookOpenMMFloat* inverseMass = new BrookOpenMMFloat[atomStreamSize];
-   memset( inverseMass, 0, atomStreamSize*sizeof( BrookOpenMMFloat ) ); 
+   BrookOpenMMFloat* inverseMass = new BrookOpenMMFloat[particleStreamSize];
+   memset( inverseMass, 0, particleStreamSize*sizeof( BrookOpenMMFloat ) ); 
 
-   int numberOfAtoms                         = getNumberOfAtoms();
-   for( int ii = 0; ii < numberOfAtoms; ii++ ){
+   int numberOfParticles                         = getNumberOfParticles();
+   for( int ii = 0; ii < numberOfParticles; ii++ ){
       inverseMass[ii]  = _inverseMasses[ii];
    }
 
@@ -522,7 +522,7 @@ int BrookVerletDynamics::_updateVerletStreams( void ){
 /** 
  * Set masses 
  * 
- * @param masses             atomic masses
+ * @param masses             particle masses
  *
  */
 
@@ -574,12 +574,12 @@ int BrookVerletDynamics::setup( const std::vector<double>& masses, const Platfor
    const BrookPlatform brookPlatform            = dynamic_cast<const BrookPlatform&> (platform);
    setLog( brookPlatform.getLog() );
 
-   int numberOfAtoms  = (int) masses.size();
-   setNumberOfAtoms( numberOfAtoms );
+   int numberOfParticles  = (int) masses.size();
+   setNumberOfParticles( numberOfParticles );
 
    // set stream sizes and then create streams
 
-   _initializeStreamSizes( numberOfAtoms, platform );
+   _initializeStreamSizes( numberOfParticles, platform );
    _initializeStreams( platform );
 
    _setInverseMasses( masses );
@@ -618,17 +618,17 @@ std::string BrookVerletDynamics::getContentsString( int level ) const {
 #define LOCAL_SPRINTF(a,b,c) sprintf( (a), (b), (c) );   
 #endif
 
-   (void) LOCAL_SPRINTF( value, "%d", getNumberOfAtoms() );
-   message << _getLine( tab, "Number of atoms:", value ); 
+   (void) LOCAL_SPRINTF( value, "%d", getNumberOfParticles() );
+   message << _getLine( tab, "Number of particles:", value ); 
 
-   (void) LOCAL_SPRINTF( value, "%d", getAtomStreamWidth() );
-   message << _getLine( tab, "Atom stream width:", value ); 
+   (void) LOCAL_SPRINTF( value, "%d", getParticleStreamWidth() );
+   message << _getLine( tab, "Particle stream width:", value ); 
 
-   (void) LOCAL_SPRINTF( value, "%d", getAtomStreamHeight() );
-   message << _getLine( tab, "Atom stream height:", value ); 
+   (void) LOCAL_SPRINTF( value, "%d", getParticleStreamHeight() );
+   message << _getLine( tab, "Particle stream height:", value ); 
 
-   (void) LOCAL_SPRINTF( value, "%d", getAtomStreamSize() );
-   message << _getLine( tab, "Atom stream size:", value ); 
+   (void) LOCAL_SPRINTF( value, "%d", getParticleStreamSize() );
+   message << _getLine( tab, "Particle stream size:", value ); 
 
    (void) LOCAL_SPRINTF( value, "%.5f", getStepSize() );
    message << _getLine( tab, "Step size:", value ); 

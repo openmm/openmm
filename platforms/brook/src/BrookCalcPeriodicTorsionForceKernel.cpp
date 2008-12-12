@@ -131,21 +131,21 @@ void BrookCalcPeriodicTorsionForceKernel::initialize( const System& system, cons
 
    // ---------------------------------------------------------------------------------------
 
-   // create _brookBondParameters object containing atom indices/parameters
+   // create _brookBondParameters object containing particle indices/parameters
 
    int numberOfBonds         = force.getNumTorsions();
 
    if( _brookBondParameters ){
       delete _brookBondParameters;
    }
-   _brookBondParameters = new BrookBondParameters( BondName, NumberOfAtomsInBond, NumberOfParametersInBond, numberOfBonds, getLog() );
+   _brookBondParameters = new BrookBondParameters( BondName, NumberOfParticlesInBond, NumberOfParametersInBond, numberOfBonds, getLog() );
 
    for( int ii = 0; ii < numberOfBonds; ii++ ){
 
       int particle1, particle2, particle3, particle4, periodicity;
       double phase, k;
 
-      int particles[NumberOfAtomsInBond];
+      int particles[NumberOfParticlesInBond];
       double parameters[NumberOfParametersInBond];
 
       force.getTorsionParameters( ii, particle1, particle2, particle3, particle4, periodicity, phase, k ); 
@@ -175,7 +175,7 @@ void BrookCalcPeriodicTorsionForceKernel::initialize( const System& system, cons
 }
 
 /** 
- * Compute forces given atom coordinates
+ * Compute forces given particle coordinates
  * 
  * @param context OpenMMContextImpl context
  *

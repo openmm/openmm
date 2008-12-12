@@ -1,5 +1,5 @@
-#ifndef OPENMM_BROOK_CALC_LJ14_FORCE_KERNEL_H_
-#define OPENMM_BROOK_CALC_LJ14_FORCE_KERNEL_H_
+#ifndef OPENMM_BROOK_BOND_PARAMETERS_H_
+#define OPENMM_BROOK_BOND_PARAMETERS_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -32,64 +32,24 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "kernels.h"
-#include "BrookPlatform.h"
-#include "BrookBondParameters.h"
-#include "OpenMMBrookInterface.h"
-
 namespace OpenMM {
 
 /**
- * This kernel is invoked to calculate the harmonic angle forces acting on the system.
+ * Container for bond parameters
  */
-
-class BrookCalcHarmonicLJ14ForceKernel : public CalcHarmonicLJ14ForceKernel {
+class BrookBondParameters {
 
    public:
   
-      /**
-       * BrookCalcHarmonicLJ14ForceKernel constructor
-       */
+     // return values
 
-      BrookCalcHarmonicLJ14ForceKernel( std::string name, const Platform& platform, OpenMMBrookInterface& openMMBrookInterface, System& system );
+      static const int DefaultReturnValue = 0;
+      static const int ErrorReturnValue   = -1; 
+
+      BrookBondParameters( std::string bondName, int numberOfParticlesInBond, int numberOfParametersInBond, int numberOfBonds, FILE* log );
   
-      /**
-       * BrookCalcHarmonicLJ14ForceKernel destructor
-       */
-
-      ~BrookCalcHarmonicLJ14ForceKernel();
+      ~BrookBondParameters();
   
-      /**
-       * Initialize the kernel, setting up the values to calculate harmonic bond force & energy
-       * 
-       * @param system                    System reference
-       * @param force                     HarmonicLJ14Force reference
-       *
-       */
-
-      void initialize( const System& system, const HarmonicLJ14Force& force );
-  
-      /**
-       * Execute the kernel to calculate the forces.
-       * 
-       * @param positions   atom coordiantes
-       * @param forces      output forces
-       *
-       */
-
-      void executeForces( OpenMMContextImpl& context );
-  
-      /**
-       * Execute the kernel to calculate the energy.
-       * 
-       * @param context    the context in which to execute this kernel
-       *
-       * @return  potential energy associated with the harmonic angle force
-       *
-       */
-
-      double executeEnergy( OpenMMContextImpl& context );
-
       /** 
        * Set log file reference
        * 
@@ -122,51 +82,116 @@ class BrookCalcHarmonicLJ14ForceKernel : public CalcHarmonicLJ14ForceKernel {
       FILE* getLog( void ) const;
       
       /** 
-       * Get number of bonds
+       * Set bond info
        * 
-       * @return  number of bonds
+       * @param bondIndex       index of bond
+       * @param particleIndices array of particle indices
+       * @param bondParameters  array of bond parameters
+       *
+       * @return  DefaultReturnValue
+       *
+       * @throw OpenMMException exeception if bond index is invalid
+       *
+       */
+      
+      int setBond( int bondIndex, int* particleIndices, double* bondParameters );
+      
+      /** 
+       * Get bond name
+       * 
+       * @return  bond name
+       *
+       */
+      
+      std::string getBondName( void ) const;
+      
+      /** 
+       * Set bond name
+       * 
+       * @param bondName       bond name
+       *
+       * @return  DefaultReturnValue
+       *
+       */
+      
+      //int setBondName( std::string bondName );
+      
+      /** 
+       * Get NumberOfParticlesInBond
+       * 
+       * @return NumberOfParticlesInBond
+       *
+       */
+      
+      int getNumberOfParticlesInBond( void ) const;
+      
+      /** 
+       * Get NumberOfParametersInBond
+       * 
+       * @return NumberOfParametersInBond
+       *
+       */
+      
+      int getNumberOfParametersInBond( void ) const;
+      
+      /** 
+       * Get NumberOfBonds
+       * 
+       * @return NumberOfBonds
        *
        */
       
       int getNumberOfBonds( void ) const;
       
-      /** 
-       * Get indices/parameters
-       * 
-       * @return  BrookBondParameters containing atom indices/parameters
+      /*  
+       * Get contents of object
        *
-       */
-      
-      BrookBondParameters* getBrookBondParameters( void ) const;
-      
+       *
+       * @param level   level of dump
+       *
+       * @return string containing contents
+       *
+       * */
+    
+      std::string getContentsString( int level = 0 ) const;
+
    private:
    
-      static const int NumberOfAtomsInBond      = 3;
-      static const int NumberOfParametersInBond = 2;
-
-      // bond name
-
-      static const std::string BondName;
-
       // log file reference
 
       FILE* _log;
 
+      // bond name
 
-      // Brook bond parameters
+      std::string _bondName;
 
-      BrookBondParameters* _brookBondParameters;
+      // number of bonds
 
-      // interface
+      int _numberOfBonds;
+      int _numberOfParticlesInBond;
+      int _numberOfParametersInBond;
+   
+      // particle indices and parameters
 
-      OpenMMBrookInterface& _openMMBrookInterface;
+      int** _particleIndices;
+      double** _bondParameters;
 
-      // System reference
-
-      System& _system;
-
+      /* 
+       * Get contents of object
+       *
+       * @param tab         tab
+       * @param description description
+       * @param value       value
+       *
+       * @return string containing contents
+       *
+       * */
+      
+      std::string _getLine( const std::string& tab, const std::string& description,
+                            const std::string& value ) const;
+      
 };
 
 } // namespace OpenMM
 
-#endif /* OPENMM_BROOK_CALC_LJ14_FORCE_KERNEL_H_ */
+#endif /* OPENMM_BROOK_BOND_PARAMETERS_H_ */

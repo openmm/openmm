@@ -116,28 +116,28 @@ class BrookBrownianDynamics : public BrookCommon {
       BrookOpenMMFloat getForceScale( void ) const; 
 
       /**
-       * Get BrownianDynamics atom stream width
+       * Get BrownianDynamics particle stream width
        *
-       * @return atom stream width
+       * @return particle stream width
        */
 
-      int getBrownianDynamicsAtomStreamWidth( void ) const; 
+      int getBrownianDynamicsParticleStreamWidth( void ) const; 
 
       /**
-       * Get BrownianDynamics atom stream height
+       * Get BrownianDynamics particle stream height
        *
-       * @return atom stream height
+       * @return particle stream height
        */
 
-      int getBrownianDynamicsAtomStreamHeight( void ) const;
+      int getBrownianDynamicsParticleStreamHeight( void ) const;
 
       /**
-       * Get BrownianDynamics atom stream size
+       * Get BrownianDynamics particle stream size
        * 
-       * @return atom stream size
+       * @return particle stream size
        */
 
-      int getBrownianDynamicsAtomStreamSize( void ) const; 
+      int getBrownianDynamicsParticleStreamSize( void ) const; 
 
       /** 
        * Update parameters
@@ -155,9 +155,9 @@ class BrookBrownianDynamics : public BrookCommon {
       /** 
        * Update
        * 
-       * @param  positions                   atom positions
-       * @param  velocities                  atom velocities
-       * @param  forces                      atom forces
+       * @param  positions                   particle positions
+       * @param  velocities                  particle velocities
+       * @param  forces                      particle forces
        * @param  brookShakeAlgorithm         BrookShakeAlgorithm reference
        * @param  brookRandomNumberGenerator  BrookRandomNumberGenerator reference
        *
@@ -181,7 +181,7 @@ class BrookBrownianDynamics : public BrookCommon {
       /* 
        * Setup of BrownianDynamics parameters
        *
-       * @param masses                atom masses
+       * @param masses                particle masses
        * @param platform              Brook platform
        *
        * @return ErrorReturnValue value if error, else DefaultReturnValue
@@ -240,11 +240,11 @@ class BrookBrownianDynamics : public BrookCommon {
       BrookOpenMMFloat _forceScale;
       BrookOpenMMFloat _noiseAmplitude;
 
-      // Atom stream dimensions
+      // Particle stream dimensions
 
-      int _bdAtomStreamWidth;
-      int _bdAtomStreamHeight;
-      int _bdAtomStreamSize;
+      int _bdParticleStreamWidth;
+      int _bdParticleStreamHeight;
+      int _bdParticleStreamSize;
 
       /*
        * Update streams
@@ -328,26 +328,26 @@ class BrookBrownianDynamics : public BrookCommon {
       /* 
        * Setup of stream dimensions
        *
-       * @param atomStreamSize        atom stream size
-       * @param atomStreamWidth       atom stream width
+       * @param particleStreamSize        particle stream size
+       * @param particleStreamWidth       particle stream width
        *
        * @return ErrorReturnValue if error, else DefaultReturnValue
        *
        * */
       
-      int _initializeStreamSizes( int atomStreamSize, int atomStreamWidth );
+      int _initializeStreamSizes( int particleStreamSize, int particleStreamWidth );
 
       /** 
        * Initialize stream dimensions
        * 
-       * @param numberOfAtoms             number of atoms
+       * @param numberOfParticles             number of particles
        * @param platform                  platform
        *
        * @return ErrorReturnValue if error, else DefaultReturnValue
        *
        */
       
-      int _initializeStreamSizes( int numberOfAtoms, const Platform& platform );
+      int _initializeStreamSizes( int numberOfParticles, const Platform& platform );
       
       /** 
        * Initialize stream dimensions and streams
@@ -363,7 +363,7 @@ class BrookBrownianDynamics : public BrookCommon {
       /** 
        * Set masses 
        * 
-       * @param masses             atomic masses
+       * @param masses             particleic masses
        *
        */
       

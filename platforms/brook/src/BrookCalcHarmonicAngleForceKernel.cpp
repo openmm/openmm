@@ -31,15 +31,15 @@
 
 #include "OpenMMException.h"
 #include <sstream>
-#include "BrookCalcHarmonicLJ14ForceKernel.h"
+#include "BrookCalcHarmonicAngleForceKernel.h"
 
 using namespace OpenMM;
 using namespace std;
 
-const std::string BrookCalcHarmonicLJ14ForceKernel::BondName = "HarmonicLJ14";
+const std::string BrookCalcHarmonicAngleForceKernel::BondName = "HarmonicAngle";
 
 /** 
- * BrookCalcHarmonicLJ14ForceKernel constructor
+ * BrookCalcHarmonicAngleForceKernel constructor
  * 
  * @param name                      kernel name
  * @param platform                  platform
@@ -48,13 +48,13 @@ const std::string BrookCalcHarmonicLJ14ForceKernel::BondName = "HarmonicLJ14";
  *
  */
 
-BrookCalcHarmonicLJ14ForceKernel::BrookCalcHarmonicLJ14ForceKernel( std::string name, const Platform& platform,
+BrookCalcHarmonicAngleForceKernel::BrookCalcHarmonicAngleForceKernel( std::string name, const Platform& platform,
                                                                       OpenMMBrookInterface& openMMBrookInterface, System& system ) :
-                     CalcHarmonicLJ14ForceKernel( name, platform ), _openMMBrookInterface( openMMBrookInterface ), _system( system ){
+                     CalcHarmonicAngleForceKernel( name, platform ), _openMMBrookInterface( openMMBrookInterface ), _system( system ){
 
 // ---------------------------------------------------------------------------------------
 
-   // static const std::string methodName      = "BrookCalcHarmonicLJ14ForceKernel::BrookCalcHarmonicLJ14ForceKernel";
+   // static const std::string methodName      = "BrookCalcHarmonicAngleForceKernel::BrookCalcHarmonicAngleForceKernel";
    // static const int debug                   = 1;
 
 // ---------------------------------------------------------------------------------------
@@ -70,15 +70,15 @@ BrookCalcHarmonicLJ14ForceKernel::BrookCalcHarmonicLJ14ForceKernel( std::string 
 }   
 
 /** 
- * BrookCalcHarmonicLJ14ForceKernel destructor
+ * BrookCalcHarmonicAngleForceKernel destructor
  * 
  */
 
-BrookCalcHarmonicLJ14ForceKernel::~BrookCalcHarmonicLJ14ForceKernel( ){
+BrookCalcHarmonicAngleForceKernel::~BrookCalcHarmonicAngleForceKernel( ){
 
 // ---------------------------------------------------------------------------------------
 
-   // static const std::string methodName      = "BrookCalcHarmonicLJ14ForceKernel::BrookCalcHarmonicLJ14ForceKernel";
+   // static const std::string methodName      = "BrookCalcHarmonicAngleForceKernel::BrookCalcHarmonicAngleForceKernel";
    // static const int debug                   = 1;
 
 // ---------------------------------------------------------------------------------------
@@ -93,7 +93,7 @@ BrookCalcHarmonicLJ14ForceKernel::~BrookCalcHarmonicLJ14ForceKernel( ){
  *
  */
 
-FILE* BrookCalcHarmonicLJ14ForceKernel::getLog( void ) const {
+FILE* BrookCalcHarmonicAngleForceKernel::getLog( void ) const {
    return _log;
 }
 
@@ -106,7 +106,7 @@ FILE* BrookCalcHarmonicLJ14ForceKernel::getLog( void ) const {
  *
  */
 
-int BrookCalcHarmonicLJ14ForceKernel::setLog( FILE* log ){
+int BrookCalcHarmonicAngleForceKernel::setLog( FILE* log ){
    _log = log;
    return BrookCommon::DefaultReturnValue;
 }
@@ -115,15 +115,15 @@ int BrookCalcHarmonicLJ14ForceKernel::setLog( FILE* log ){
  * Initialize the kernel, setting up the values of all the force field parameters.
  * 
  * @param system                    System reference
- * @param force                     HarmonicLJ14Force reference
+ * @param force                     HarmonicAngleForce reference
  *
  */
 
-void BrookCalcHarmonicLJ14ForceKernel::initialize( const System& system, const HarmonicLJ14Force& force ){
+void BrookCalcHarmonicAngleForceKernel::initialize( const System& system, const HarmonicAngleForce& force ){
 
 // ---------------------------------------------------------------------------------------
 
-   static const std::string methodName      = "BrookCalcHarmonicLJ14ForceKernel::initialize";
+   static const std::string methodName      = "BrookCalcHarmonicAngleForceKernel::initialize";
 
 // ---------------------------------------------------------------------------------------
 
@@ -131,24 +131,24 @@ void BrookCalcHarmonicLJ14ForceKernel::initialize( const System& system, const H
 
    // ---------------------------------------------------------------------------------------
 
-   // create _brookBondParameters object containing atom indices/parameters
+   // create _brookBondParameters object containing particle indices/parameters
 
-   int numberOfBonds         = force.getNumLJ14s();
+   int numberOfBonds         = force.getNumAngles();
 
    if( _brookBondParameters ){
       delete _brookBondParameters;
    }
-   _brookBondParameters = new BrookBondParameters( BondName, NumberOfAtomsInBond, NumberOfParametersInBond, numberOfBonds, getLog() );
+   _brookBondParameters = new BrookBondParameters( BondName, NumberOfParticlesInBond, NumberOfParametersInBond, numberOfBonds, getLog() );
 
    for( int ii = 0; ii < numberOfBonds; ii++ ){
 
       int particle1, particle2, particle3;
       double angle, k;
 
-      int particles[NumberOfAtomsInBond];
+      int particles[NumberOfParticlesInBond];
       double parameters[NumberOfParametersInBond];
 
-      force.getLJ14Parameters( ii, particle1, particle2, particle3, angle, k ); 
+      force.getAngleParameters( ii, particle1, particle2, particle3, angle, k ); 
       particles[0]    = particle1;
       particles[1]    = particle2;
       particles[2]    = particle3;
@@ -158,7 +158,7 @@ void BrookCalcHarmonicLJ14ForceKernel::initialize( const System& system, const H
 
       _brookBondParameters->setBond( ii, particles, parameters );
    }   
-   _openMMBrookInterface.setHarmonicLJ14ForceParameters( _brookBondParameters );
+   _openMMBrookInterface.setHarmonicAngleForceParameters( _brookBondParameters );
    _openMMBrookInterface.setTriggerForceKernel( this );
    _openMMBrookInterface.setTriggerEnergyKernel( this );
 
@@ -173,17 +173,17 @@ void BrookCalcHarmonicLJ14ForceKernel::initialize( const System& system, const H
 }
 
 /** 
- * Compute forces given atom coordinates
+ * Compute forces given particle coordinates
  * 
  * @param context OpenMMContextImpl context
  *
  */
 
-void BrookCalcHarmonicLJ14ForceKernel::executeForces( OpenMMContextImpl& context ){
+void BrookCalcHarmonicAngleForceKernel::executeForces( OpenMMContextImpl& context ){
 
 // ---------------------------------------------------------------------------------------
 
-   //static const std::string methodName   = "BrookCalcHarmonicLJ14ForceKernel::executeForces";
+   //static const std::string methodName   = "BrookCalcHarmonicAngleForceKernel::executeForces";
 
 // ---------------------------------------------------------------------------------------
 
@@ -205,11 +205,11 @@ void BrookCalcHarmonicLJ14ForceKernel::executeForces( OpenMMContextImpl& context
  *
  */
 
-double BrookCalcHarmonicLJ14ForceKernel::executeEnergy( OpenMMContextImpl& context ){
+double BrookCalcHarmonicAngleForceKernel::executeEnergy( OpenMMContextImpl& context ){
 
 // ---------------------------------------------------------------------------------------
 
-   //static const std::string methodName      = "BrookCalcHarmonicLJ14ForceKernel::executeEnergy";
+   //static const std::string methodName      = "BrookCalcHarmonicAngleForceKernel::executeEnergy";
 
 // ---------------------------------------------------------------------------------------
 

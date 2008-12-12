@@ -1,5 +1,5 @@
-#ifndef OPENMM_BROOK__CALCL_GBSAOBC_FORCEFIELD_KERNEL_H_
-#define OPENMM_BROOK__CALCL_GBSAOBC_FORCEFIELD_KERNEL_H_
+#ifndef OPENMM_BROOK_CALC_GBSAOBC_FORCE_KERNEL_H_
+#define OPENMM_BROOK_CALC_GBSAOBC_FORCE_KERNEL_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -35,12 +35,14 @@
 #include "kernels.h"
 #include "../../reference/src/SimTKUtilities/SimTKOpenMMRealType.h"
 #include "BrookGbsa.h"
+#include "OpenMMBrookInterface.h"
 
 namespace OpenMM {
 
 /**
- * This kernel is invoked by NonbondedForce to calculate the forces acting on the system.
+ * This kernel is invoked to calculate the OBC forces acting on the system.
  */
+
 class BrookCalcGBSAOBCForceKernel : public CalcGBSAOBCForceKernel {
 
    public:
@@ -49,7 +51,7 @@ class BrookCalcGBSAOBCForceKernel : public CalcGBSAOBCForceKernel {
        * BrookCalcGBSAOBCForceKernel constructor
        */
 
-      BrookCalcGBSAOBCForceKernel( std::string name, const Platform& platform );
+      BrookCalcGBSAOBCForceKernel( std::string name, const Platform& platform, OpenMMBrookInterface& openMMBrookInterface, System& system );
   
       /**
        * BrookCalcGBSAOBCForceKernel destructor
@@ -60,35 +62,34 @@ class BrookCalcGBSAOBCForceKernel : public CalcGBSAOBCForceKernel {
       /**
        * Initialize the kernel, setting up the values of all the force field parameters.
        * 
-       * @param atomParameters            vector containing atom index, charge, radius, scalingFactor
-       * @param solventDielectric         solvent dielectric
-       * @param soluteDielectric          solute dielectric
+       * @param system     system this kernel will be applied to
+       * @param force      GBSAOBCForce this kernel will be used for
        *
        */
 
-      void initialize( const std::vector<std::vector<double> >& atomParameters, double solventDielectric, double soluteDielectric );
+      void initialize( const System& system, const GBSAOBCForce& force );
   
       /**
        * Execute the kernel to calculate the forces.
        * 
-       * @param positions   atom coordiantes
+       * @param positions   particle coordiantes
        * @param forces      output forces
        *
        */
 
-      void executeForces( const Stream& positions, Stream& forces );
+      void executeForces( OpenMMContextImpl& context );
   
       /**
        * Execute the kernel to calculate the energy.
        * 
-       * @param positions   atom positions
+       * @param positions   particle positions
        *
        * @return  potential energy due to the NonbondedForce
        * Currently always return 0.0 since energies not calculated on gpu
        *
        */
 
-      double executeEnergy( const Stream& positions );
+      double executeEnergy( OpenMMContextImpl& context );
 
       /** 
        * Set log file reference
@@ -127,16 +128,24 @@ class BrookCalcGBSAOBCForceKernel : public CalcGBSAOBCForceKernel {
 
       FILE* _log;
 
-      // number of atoms
+      // number of particles
 
-      int _numberOfAtoms;
+      int _numberOfParticles;
    
       // Brook Gbsa
 
       BrookGbsa* _brookGbsa;
 
+      // interface
+
+      OpenMMBrookInterface& _openMMBrookInterface;
+
+      // System reference
+
+      System& _system;
+
 };
 
 } // namespace OpenMM
 
-#endif /* OPENMM_BROOK__CALCL_GBSAOBC_FORCEFIELD_KERNEL_H_ */
+#endif /* OPENMM_BROOK_CALC_GBSAOBC_FORCE_KERNEL_H_ */

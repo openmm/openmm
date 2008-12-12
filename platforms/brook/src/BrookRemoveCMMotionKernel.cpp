@@ -75,7 +75,7 @@ BrookRemoveCMMotionKernel::~BrookRemoveCMMotionKernel( ){
 /** 
  * Initialize the kernel
  * 
- * @param masses   array of atom masses
+ * @param masses   array of particle masses
  *
  */
 
@@ -97,7 +97,7 @@ void BrookRemoveCMMotionKernel::initialize( const vector<double>& masses ){
 /** 
  * Execute kernel
  * 
- * @param velocities  array of atom velocities
+ * @param velocities  array of particle velocities
  *
  */
 

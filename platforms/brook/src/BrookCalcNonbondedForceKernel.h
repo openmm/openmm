@@ -1,5 +1,5 @@
-#ifndef OPENMM_BROOK_CALC_LJ14_FORCE_KERNEL_H_
-#define OPENMM_BROOK_CALC_LJ14_FORCE_KERNEL_H_
+#ifndef OPENMM_BROOK_CALC_NONBONDED_FORCE_KERNEL_H_
+#define OPENMM_BROOK_CALC_NONBONDED_FORCE_KERNEL_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -33,48 +33,58 @@
  * -------------------------------------------------------------------------- */
 
 #include "kernels.h"
-#include "BrookPlatform.h"
-#include "BrookBondParameters.h"
+//#include "../../reference/src/SimTKUtilities/SimTKOpenMMRealType.h"
 #include "OpenMMBrookInterface.h"
+#include "NonbondedForce.h"
 
 namespace OpenMM {
 
 /**
- * This kernel is invoked to calculate the harmonic angle forces acting on the system.
+ * This kernel is invoked by NonbondedForce to calculate the forces acting on the system.
  */
-
-class BrookCalcHarmonicLJ14ForceKernel : public CalcHarmonicLJ14ForceKernel {
+class BrookCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
 
    public:
   
-      /**
-       * BrookCalcHarmonicLJ14ForceKernel constructor
-       */
-
-      BrookCalcHarmonicLJ14ForceKernel( std::string name, const Platform& platform, OpenMMBrookInterface& openMMBrookInterface, System& system );
+      BrookCalcNonbondedForceKernel( std::string name, const Platform& platform, OpenMMBrookInterface& openMMBrookInterface, System& system );
   
-      /**
-       * BrookCalcHarmonicLJ14ForceKernel destructor
-       */
-
-      ~BrookCalcHarmonicLJ14ForceKernel();
+      ~BrookCalcNonbondedForceKernel();
   
-      /**
-       * Initialize the kernel, setting up the values to calculate harmonic bond force & energy
+      /** 
+       * Initialize the kernel
        * 
-       * @param system                    System reference
-       * @param force                     HarmonicLJ14Force reference
-       *
+       * @param system     the System this kernel will be applied to
+       * @param force      the NonbondedForce this kernel will be used for
+       * @param exclusions the i'th element lists the indices of all particles with which the i'th particle should not interact through
+       *                   nonbonded forces.  Bonded 1-4 pairs are also included in this list, since they should be omitted from
+       *                   the standard nonbonded calculation.
        */
 
-      void initialize( const System& system, const HarmonicLJ14Force& force );
+      void initialize( const System& system, const NonbondedForce& force, const std::vector<std::set<int> >& exclusions );
+  
+      /** 
+       * Initialize the 14 ixns 
+       * 
+       * @param system     the System this kernel will be applied to
+       * @param force      the NonbondedForce this kernel will be used for
+       */
+
+      void initialize14Interactions( const System& system, const NonbondedForce& force );
   
       /**
        * Execute the kernel to calculate the forces.
        * 
-       * @param positions   atom coordiantes
-       * @param forces      output forces
-       *
+       * @param positions   a Stream of type Double3 containing the position (x, y, z) of each particle
+       * @param forces      a Stream of type Double3 containing the force (x, y, z) on each particle.  On entry, this contains the forces that
+       *                    have been calculated so far.  The kernel should add its own forces to the values already in the stream.
+       */
+
+      void executeForces( const Stream& positions, Stream& forces );
+
+      /** 
+       * Execute the kernel to calculate the forces.
+       * 
+       * @param context    the context in which to execute this kernel
        */
 
       void executeForces( OpenMMContextImpl& context );
@@ -82,14 +92,35 @@ class BrookCalcHarmonicLJ14ForceKernel : public CalcHarmonicLJ14ForceKernel {
       /**
        * Execute the kernel to calculate the energy.
        * 
-       * @param context    the context in which to execute this kernel
+       * @param positions   a Stream of type Double3 containing the position (x, y, z) of each particle
        *
-       * @return  potential energy associated with the harmonic angle force
+       * @return the potential energy due to the NonbondedForce
        *
+       * Currently always return 0.0 since energies not calculated on gpu
        */
 
+      double executeEnergy( const Stream& positions );
+
+      /** 
+       * Execute the kernel to calculate the energy.
+       * 
+       * @param context    the context in which to execute this kernel
+       * @return the potential energy due to the NonbondedForce
+       */
+  
       double executeEnergy( OpenMMContextImpl& context );
 
+      /**
+       * Get reference Context
+       * 
+       * @param numberOfParticles  number of particles
+       *
+       * @return  OpenMMContext
+       *
+       */
+      
+      OpenMMContext* getReferenceOpenMMContext( int numberOfParticles );
+      
       /** 
        * Set log file reference
        * 
@@ -121,52 +152,42 @@ class BrookCalcHarmonicLJ14ForceKernel : public CalcHarmonicLJ14ForceKernel {
       
       FILE* getLog( void ) const;
       
-      /** 
-       * Get number of bonds
-       * 
-       * @return  number of bonds
-       *
-       */
-      
-      int getNumberOfBonds( void ) const;
-      
-      /** 
-       * Get indices/parameters
-       * 
-       * @return  BrookBondParameters containing atom indices/parameters
-       *
-       */
-      
-      BrookBondParameters* getBrookBondParameters( void ) const;
-      
    private:
    
-      static const int NumberOfAtomsInBond      = 3;
-      static const int NumberOfParametersInBond = 2;
-
-      // bond name
+      // LJ14 'bond' name
 
       static const std::string BondName;
+
+      static const int NumberOfParticlesInBond  = 2;
+      static const int NumberOfParametersInBond = 3;
 
       // log file reference
 
       FILE* _log;
 
+       // number of particles
 
-      // Brook bond parameters
+       int _numberOfParticles;
+   
+       // Brook nonbonded
 
-      BrookBondParameters* _brookBondParameters;
+       BrookNonBonded* _brookNonBonded;
 
-      // interface
+       OpenMMBrookInterface& _openMMBrookInterface;
+       System& _system;
 
-      OpenMMBrookInterface& _openMMBrookInterface;
+       BrookBondParameters* _brookBondParameters;
 
-      // System reference
+       // used to calculate energy
 
-      System& _system;
+       NonbondedForce* _refForceField;
+       System*               _refSystem;
+       OpenMMContext*        _refOpenMMContext;
+       ReferencePlatform*    _referencePlatform;
+       VerletIntegrator*     _refVerletIntegrator;
 
 };
 
 } // namespace OpenMM
 
-#endif /* OPENMM_BROOK_CALC_LJ14_FORCE_KERNEL_H_ */
+#endif /* OPENMM_BROOK_CALC_NONBONDED_FORCE_KERNEL_H_ */

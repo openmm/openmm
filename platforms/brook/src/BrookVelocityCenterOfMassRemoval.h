@@ -66,33 +66,33 @@ class BrookVelocityCenterOfMassRemoval : public BrookCommon {
       ~BrookVelocityCenterOfMassRemoval( );
   
       /**
-       * Get  atom stream width
+       * Get  particle stream width
        *
-       * @return atom stream width
+       * @return particle stream width
        */
 
-      int getComAtomStreamWidth( void ) const; 
+      int getComParticleStreamWidth( void ) const; 
 
       /**
-       * Get  atom stream height
+       * Get  particle stream height
        *
-       * @return atom stream height
+       * @return particle stream height
        */
 
-      int getComAtomStreamHeight( void ) const;
+      int getComParticleStreamHeight( void ) const;
 
       /**
-       * Get  atom stream size
+       * Get  particle stream size
        * 
-       * @return atom stream size
+       * @return particle stream size
        */
 
-      int getComAtomStreamSize( void ) const; 
+      int getComParticleStreamSize( void ) const; 
 
       /** 
        * Remove velocity center-of-mass
        * 
-       * @param  velocities                  atom velocities
+       * @param  velocities                  particle velocities
        *
        * @return  DefaultReturnValue
        *
@@ -103,7 +103,7 @@ class BrookVelocityCenterOfMassRemoval : public BrookCommon {
       /** 
        * Get velocity center-of-mass
        * 
-       * @param  velocities                  atom velocities
+       * @param  velocities                  particle velocities
        * @param  velocityCom                 output velocity com
        *
        * @return  DefaultReturnValue
@@ -115,7 +115,7 @@ class BrookVelocityCenterOfMassRemoval : public BrookCommon {
       /* 
        * Setup of  parameters
        *
-       * @param masses                atom masses
+       * @param masses                particle masses
        * @param platform              Brook platform
        *
        * @return ErrorReturnValue value if error, else DefaultReturnValue
@@ -184,11 +184,11 @@ class BrookVelocityCenterOfMassRemoval : public BrookCommon {
 
       BrookOpenMMFloat _totalInverseMass;
 
-      // Atom stream dimensions
+      // Particle stream dimensions
 
-      int _atomStreamWidth;
-      int _atomStreamHeight;
-      int _atomStreamSize;
+      int _particleStreamWidth;
+      int _particleStreamHeight;
+      int _particleStreamSize;
 
       // internal streams
 
@@ -197,26 +197,26 @@ class BrookVelocityCenterOfMassRemoval : public BrookCommon {
       /* 
        * Setup of stream dimensions
        *
-       * @param atomStreamSize        atom stream size
-       * @param atomStreamWidth       atom stream width
+       * @param particleStreamSize        particle stream size
+       * @param particleStreamWidth       particle stream width
        *
        * @return ErrorReturnValue if error, else DefaultReturnValue
        *
        * */
       
-      int _initializeStreamSizes( int atomStreamSize, int atomStreamWidth );
+      int _initializeStreamSizes( int particleStreamSize, int particleStreamWidth );
 
       /** 
        * Initialize stream dimensions
        * 
-       * @param numberOfAtoms             number of atoms
+       * @param numberOfParticles         number of particles
        * @param platform                  platform
        *
        * @return ErrorReturnValue if error, else DefaultReturnValue
        *
        */
       
-      int _initializeStreamSizes( int numberOfAtoms, const Platform& platform );
+      int _initializeStreamSizes( int numberOfParticles, const Platform& platform );
       
       /** 
        * Initialize stream dimensions and streams
@@ -232,7 +232,7 @@ class BrookVelocityCenterOfMassRemoval : public BrookCommon {
       /** 
        * Set inverse masses 
        * 
-       * @param masses             atomic masses
+       * @param masses             particle masses
        *
        */
       

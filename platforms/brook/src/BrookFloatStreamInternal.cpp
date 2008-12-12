@@ -46,6 +46,8 @@ using namespace OpenMM;
  * @param inputStreamWidth          stream width
  * @param inputDefaultDangleValue   default dangle value
  *
+ * @throw exception if stream type not recognized or stream width < 1
+ *
  */
 
 BrookFloatStreamInternal::BrookFloatStreamInternal( const std::string& name, int size, int streamWidth, BrookStreamInternal::DataType type,
@@ -277,6 +279,18 @@ void BrookFloatStreamInternal::loadFromArray( const void* array, BrookStreamInte
 
    _aStream.read( _data );
 }
+
+/** 
+ * Save data to input array
+ * 
+ * @param  array a pointer to the start of the array.  The array is assumed to have the same length as this stream,
+ * and to contain elements of the correct _data type for this stream.  If the stream has a compound _data type, all
+ * the values should be packed into a single array: all the values for the first element, followed by all the values
+ * for the next element, etc.
+ *
+ * @throw exception if baseType not float, double, or integer
+ *
+ */
 
 void BrookFloatStreamInternal::saveToArray( void* array ){
 
@@ -569,5 +583,55 @@ void* BrookFloatStreamInternal::getDataArray( void ){
       totalSize *= 2;
    }
    return new float[totalSize];
+}
+
+/** 
+ * BrookFloatStreamInternal constructor
+ * 
+ * @param stopIndex                 index to stop sum
+ * @param sum                       array of size=getWidth()
+ *
+ * @return DefaultReturnValue
+ *
+ * @throw exception if stopIndex is too large
+ */
+
+int BrookFloatStreamInternal::sumByDimension( int stopIndex, double* sum ){
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName      = "BrookFloatStreamInternal::sumByDimension";
+
+// ---------------------------------------------------------------------------------------
+
+   if( stopIndex > getSize() ){
+      std::stringstream message;
+      message << methodName << " stream=" << getName() << " input topIndex" << stopIndex << " is too large: stream size=" << getSize();
+      throw OpenMMException( message.str() );
+   }
+   
+   // get _data from GPU
+
+   _aStream.write( _data );
+
+   int width                                 = getWidth();
+   int widthM1                               = getWidth() - 1;
+   stopIndex                                *= width;
+
+   for( int ii = 0; ii < width; ii++ ){
+      sum[ii] = 0.0;
+   }
+
+   int index = 0;
+   for( int ii = 0; ii < stopIndex; ii++ ){
+      sum[index] += (double) _data[ii];
+      if( index == widthM1 ){
+         index = 0;
+      } else {
+         index++;
+      }
+   }
+
+   return DefaultReturnValue;
 }
 

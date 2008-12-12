@@ -109,14 +109,14 @@ class BrookRandomNumberGenerator : public BrookCommon {
       /* 
        * Setup of RNG parameters
        *
-       * @param numberOfAtoms        number of atoms
+       * @param numberOfParticles    number of particles
        * @param platform             Brook platform
        *
        * @return ErrorReturnValue value if error, else DefaultReturnValue
        *
        * */
       
-      int setup( int numberOfAtoms,  const Platform& platform  );
+      int setup( int numberOfParticles,  const Platform& platform  );
       
       /* 
        * Get contents of object
@@ -266,26 +266,26 @@ class BrookRandomNumberGenerator : public BrookCommon {
       /* 
        * Setup of stream dimensions
        *
-       * @param atomStreamSize        atom stream size
-       * @param atomStreamWidth       atom stream width
+       * @param particleStreamSize        particle stream size
+       * @param particleStreamWidth       particle stream width
        *
        * @return ErrorReturnValue if error, else DefaultReturnValue
        *
        * */
       
-      int _initializeStreamSizes( int atomStreamSize, int atomStreamWidth );
+      int _initializeStreamSizes( int particleStreamSize, int particleStreamWidth );
 
       /** 
        * Initialize stream dimensions
        * 
-       * @param numberOfAtoms             number of atoms
+       * @param numberOfParticles         number of particles
        * @param platform                  platform
        *
        * @return ErrorReturnValue if error, else DefaultReturnValue
        *
        */
       
-      int _initializeStreamSizes(  int numberOfAtoms, const Platform& platform );
+      int _initializeStreamSizes(  int numberOfParticles, const Platform& platform );
       
       /** 
        * Initialize stream dimensions and streams

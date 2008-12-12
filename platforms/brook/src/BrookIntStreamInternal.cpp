@@ -338,4 +338,52 @@ const std::string BrookIntStreamInternal::getContentsString( int level ) const {
    return message.str();
 }
 
+/** 
+ * BrookFloatStreamInternal constructor
+ * 
+ * @param stopIndex                 index to stop sum
+ * @param sum                       array of size=getWidth()
+ *
+ * @return DefaultReturnValue
+ *
+ * @throw exception if stopIndex is too large
+ */
 
+int BrookIntStreamInternal::sumByDimension( int stopIndex, double* sum ){
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName      = "BrookIntStreamInternal::sumByDimension";
+
+// ---------------------------------------------------------------------------------------
+
+   if( stopIndex > getSize() ){
+      std::stringstream message;
+      message << methodName << " stream=" << getName() << " input topIndex" << stopIndex << " is too large: stream size=" << getSize();
+      throw OpenMMException( message.str() );
+   }   
+   
+   // get _data from GPU
+
+   _aStream.write( _data );
+
+   int width                                 = getWidth();
+   int widthM1                               = getWidth() - 1;
+   stopIndex                                *= width;
+
+   for( int ii = 0; ii < width; ii++ ){
+      sum[ii] = 0.0;
+   }   
+
+   int index = 0;
+   for( int ii = 0; ii < stopIndex; ii++ ){
+      sum[index] += (double) _data[ii];
+      if( index == widthM1 ){
+         index = 0;
+      } else {
+         index++;
+      }   
+   }   
+
+   return DefaultReturnValue;
+}

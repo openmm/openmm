@@ -233,6 +233,19 @@ class BrookStreamInternal {
 
       int printToFile( FILE* log );
 
+      /** 
+       * Sum over stream dimensions
+       * 
+       * @param stopIndex                 index to stop sum
+       * @param sum                       array of size=getWidth()
+       *
+       * @return DefaultReturnValue
+       *
+       * @throw exception if stopIndex is too large
+       */
+      
+      int sumByDimension( int stopIndex, double* sum );
+      
    protected:
 
       std::string _name;

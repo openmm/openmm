@@ -72,9 +72,9 @@ class BrookIntegrateBrownianStepKernel : public IntegrateBrownianStepKernel {
       /** 
        * Initialize the kernel, setting up all parameters related to integrator.
        * 
-       * @param masses             atom masses
-       * @param constraintIndices  each element contains the indices of two atoms whose distance should be constrained
-       * @param constraintLengths  required distance between each pair of constrained atoms
+       * @param masses             particle masses
+       * @param constraintIndices  each element contains the indices of two particles whose distance should be constrained
+       * @param constraintLengths  required distance between each pair of constrained particles
        */
 
       void initialize( const std::vector<double>& masses, const std::vector<std::vector<int> >& constraintIndices,

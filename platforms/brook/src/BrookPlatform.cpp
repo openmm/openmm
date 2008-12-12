@@ -31,6 +31,8 @@
 
 #include "BrookPlatform.h"
 #include "BrookKernelFactory.h"
+#include "OpenMMBrookInterface.h"
+#include "internal/OpenMMContextImpl.h"
 #include "OpenMMException.h"
 #include "kernels.h"
 #include "../../reference/src/SimTKUtilities/SimTKOpenMMRealType.h"
@@ -41,6 +43,121 @@
 #include <algorithm>
 
 using namespace OpenMM;
+
+
+/** 
+ * BrookPlatformData constructor
+ *
+ */
+
+BrookPlatformData::BrookPlatformData( void ){
+
+// ---------------------------------------------------------------------------------------
+
+   // static const std::string methodName      = "BrookPlatformData::BrookPlatformData";
+
+// ---------------------------------------------------------------------------------------
+
+      //_forceKernel                 = NULL;
+
+      _removeCOM                   = 0;
+      _useOBC                      = 0;
+      _hasBonds                    = 0;
+      _hasAngles                   = 0;
+      _hasPeriodicTorsions         = 0;
+      _hasRB                       = 0;
+      _hasNonbonded                = 0;
+      _cmMotionFrequency           = 0;
+
+}
+
+/** 
+ * Get _removeCOM flag
+ * 
+ * @return  _removeCOM
+ *
+ */
+
+int BrookPlatformData::removeCOM( void ) const {
+   return _removeCOM;
+}
+
+/** 
+ * Get _useOBC flag
+ * 
+ * @return  _useOBC
+ *
+ */
+
+int BrookPlatformData::useOBC( void ) const {
+   return _useOBC;
+}
+
+/** 
+ * Get _hasBonds flag
+ * 
+ * @return  _hasBonds 
+ *
+ */
+
+int BrookPlatformData::hasBonds( void ) const {
+   return _hasBonds;
+}
+
+/** 
+ * Get _hasAngles
+ * 
+ * @return  _hasAngles
+ *
+ */
+
+int BrookPlatformData::hasAngles( void ) const {
+   return _hasAngles;
+}
+
+/** 
+ * Get _hasPeriodicTorsions
+ * 
+ * @return  _hasPeriodicTorsions
+ *
+ */
+
+int BrookPlatformData::hasPeriodicTorsions( void ) const {
+   return _hasPeriodicTorsions;
+}
+
+/** 
+ * Get _hasRB
+ * 
+ * @return  _hasRB
+ *
+ */
+
+int BrookPlatformData::hasRB( void ) const {
+   return _hasRB;
+}
+
+/** 
+ * Get _hasNonbonded
+ * 
+ * @return  _hasNonbonded
+ *
+ */
+
+int BrookPlatformData::hasNonbonded( void ) const {
+   return _hasNonbonded;
+}
+
+/** 
+ * Get _cmMotionFrequency
+ * 
+ * @return  _cmMotionFrequency
+ *
+ */
+
+int BrookPlatformData::cmMotionFrequency( void ) const {
+   return _cmMotionFrequency;
+}
 
 /** 
  * Register BrookPlatform
@@ -78,8 +195,9 @@ BrookPlatform::BrookPlatform( ){
 
 // ---------------------------------------------------------------------------------------
 
-   _atomStreamWidth  = DefaultAtomStreamWidth;
-   _log              = NULL;
+   _particleStreamWidth  = DefaultParticleStreamWidth;
+   _log                  = NULL;
+   _openMMBrookInterface = NULL;
 
    // get Brook runtime
 
@@ -102,13 +220,13 @@ BrookPlatform::BrookPlatform( ){
 /** 
  * BrookPlatform constructor
  *
- * @param defaultAtomStreamWidth  stream width
- * @param runtime                 Brook runtime (cal/cpu)
- * @param log                     log file reference
+ * @param defaultParticleStreamWidth  stream width
+ * @param runtime                     Brook runtime (cal/cpu)
+ * @param log                         log file reference
  *
  */
 
-BrookPlatform::BrookPlatform( int atomStreamWidth, const std::string& runtime, FILE* log ){
+BrookPlatform::BrookPlatform( int particleStreamWidth, const std::string& runtime, FILE* log ) : _particleStreamWidth( particleStreamWidth ), _log( log ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -116,8 +234,8 @@ BrookPlatform::BrookPlatform( int atomStreamWidth, const std::string& runtime, F
 
 // ---------------------------------------------------------------------------------------
 
-   _log              = log;
-   _atomStreamWidth  = atomStreamWidth;
+   _openMMBrookInterface = NULL;
+
    _initializeKernelFactory( );
    _setBrookRuntime( runtime );
 
@@ -153,8 +271,8 @@ void BrookPlatform::_initializeKernelFactory( void ){
 
    BrookKernelFactory* factory = new BrookKernelFactory();
 
-   registerKernelFactory( CalcNonbondedForceKernel::Name(), factory);
-   registerKernelFactory( CalcGBSAOBCForceKernel::Name(),    factory);
+   registerKernelFactory( CalcNonbondedForceKernel::Name(),       factory);
+   registerKernelFactory( CalcGBSAOBCForceKernel::Name(),         factory);
    registerKernelFactory( IntegrateVerletStepKernel::Name(),      factory);
    registerKernelFactory( IntegrateLangevinStepKernel::Name(),    factory);
    registerKernelFactory( IntegrateBrownianStepKernel::Name(),    factory);
@@ -183,7 +301,10 @@ void BrookPlatform::_setBrookRuntime( const std::string& runtime ){
    // set & validate runtime
 
    _runtime = runtime;
-   std::transform( _runtime.begin(), _runtime.end(), _runtime.begin(), tolower);
+
+   // lower case
+
+   std::transform( _runtime.begin(), _runtime.end(), _runtime.begin(), tolower );
    if(  _runtime != "cal" && _runtime != "cpu" ){
       std::stringstream message;
       message << methodName << " Brook runtime=" << _runtime << " not recognized.";
@@ -306,3 +427,38 @@ int BrookPlatform::setLog( FILE* log ){
    return BrookPlatform::DefaultErrorValue;
 }
 
+/** 
+ *
+ * This is called whenever a new OpenMMContext is created.  It gives the Platform a chance to initialize
+ * the context and store platform-specific data in it.
+ *
+ */
+void BrookPlatform::contextCreated( OpenMMContextImpl& context ) const {
+
+// ---------------------------------------------------------------------------------------
+
+   // static const std::string methodName      = "BrookPlatform::contextCreated";
+
+// ---------------------------------------------------------------------------------------
+
+   context.setPlatformData( new OpenMMBrookInterface() );
+}
+
+/** 
+ *
+ * This is called whenever an OpenMMContext is deleted.  It gives the Platform a chance to clean up
+ * any platform-specific data that was stored in it.
+ *
+ */
+
+void BrookPlatform::contextDestroyed( OpenMMContextImpl& context ) const {
+
+// ---------------------------------------------------------------------------------------
+
+   // static const std::string methodName      = "BrookPlatform::contextDestroyed";
+
+// ---------------------------------------------------------------------------------------
+
+   delete _openMMBrookInterface;
+
+}

@@ -29,17 +29,22 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include <cmath>
+#include <limits>
 #include "OpenMMException.h"
 #include <sstream>
-#include "BrookCalcRBDihedralBondForceKernel.h"
+
+#include "BrookStreamImpl.h"
+#include "BrookCalcGBSAOBCForceKernel.h"
+#include "gpu/kgbsa.h"
+#include "gpu/kforce.h"
+#include "math.h"
 
 using namespace OpenMM;
 using namespace std;
 
-const std::string BrookCalcRbDihedralForceKernel::BondName = "RbDihedral";
-
 /** 
- * BrookCalcRbDihedralForceKernel constructor
+ * BrookCalcGBSAOBCForceKernel constructor
  * 
  * @param name                      kernel name
  * @param platform                  platform
@@ -48,18 +53,18 @@ const std::string BrookCalcRbDihedralForceKernel::BondName = "RbDihedral";
  *
  */
 
-BrookCalcRbDihedralForceKernel::BrookCalcRbDihedralForceKernel( std::string name, const Platform& platform,
-                                                                      OpenMMBrookInterface& openMMBrookInterface, System& system ) :
-                     CalcRbDihedralForceKernel( name, platform ), _openMMBrookInterface( openMMBrookInterface ), _system( system ){
+BrookCalcGBSAOBCForceKernel::BrookCalcGBSAOBCForceKernel( std::string name, const Platform& platform, OpenMMBrookInterface& openMMBrookInterface, System& system ) :
+                             CalcGBSAOBCForceKernel( name, platform ), _openMMBrookInterface( openMMBrookInterface ), _system( system ){
 
 // ---------------------------------------------------------------------------------------
 
-   // static const std::string methodName      = "BrookCalcRbDihedralForceKernel::BrookCalcRbDihedralForceKernel";
+   // static const std::string methodName      = "BrookCalcGBSAOBCForceKernel::BrookCalcGBSAOBCForceKernel";
    // static const int debug                   = 1;
 
 // ---------------------------------------------------------------------------------------
 
-   _brookBondParameters              = NULL;
+   _numberOfParticles                = 0;
+   _brookGbsa                        = NULL;
    _log                              = NULL;
 
    const BrookPlatform brookPlatform = dynamic_cast<const BrookPlatform&> (platform);
@@ -70,20 +75,20 @@ BrookCalcRbDihedralForceKernel::BrookCalcRbDihedralForceKernel( std::string name
 }   
 
 /** 
- * BrookCalcRbDihedralForceKernel destructor
+ * BrookCalcGBSAOBCForceKernel destructor
  * 
  */
 
-BrookCalcRbDihedralForceKernel::~BrookCalcRbDihedralForceKernel( ){
+BrookCalcGBSAOBCForceKernel::~BrookCalcGBSAOBCForceKernel( ){
 
 // ---------------------------------------------------------------------------------------
 
-   // static const std::string methodName      = "BrookCalcRbDihedralForceKernel::BrookCalcRbDihedralForceKernel";
+   // static const std::string methodName      = "BrookCalcGBSAOBCForceKernel::BrookCalcGBSAOBCForceKernel";
    // static const int debug                   = 1;
 
 // ---------------------------------------------------------------------------------------
 
-   delete _brookBondParameters;
+   delete _brookGbsa;
 }
 
 /** 
@@ -93,7 +98,7 @@ BrookCalcRbDihedralForceKernel::~BrookCalcRbDihedralForceKernel( ){
  *
  */
 
-FILE* BrookCalcRbDihedralForceKernel::getLog( void ) const {
+FILE* BrookCalcGBSAOBCForceKernel::getLog( void ) const {
    return _log;
 }
 
@@ -106,7 +111,7 @@ FILE* BrookCalcRbDihedralForceKernel::getLog( void ) const {
  *
  */
 
-int BrookCalcRbDihedralForceKernel::setLog( FILE* log ){
+int BrookCalcGBSAOBCForceKernel::setLog( FILE* log ){
    _log = log;
    return BrookCommon::DefaultReturnValue;
 }
@@ -114,16 +119,16 @@ int BrookCalcRbDihedralForceKernel::setLog( FILE* log ){
 /** 
  * Initialize the kernel, setting up the values of all the force field parameters.
  * 
- * @param system                    System reference
- * @param force                     RbDihedralForce reference
+ * @param system     system this kernel will be applied to
+ * @param force      GBSAOBCForce this kernel will be used for
  *
  */
 
-void BrookCalcRbDihedralForceKernel::initialize( const System& system, const RbDihedralForce& force ){
+void BrookCalcGBSAOBCForceKernel::initialize( const System& system, const GBSAOBCForce& force ){
 
 // ---------------------------------------------------------------------------------------
 
-   static const std::string methodName      = "BrookCalcRbDihedralForceKernel::initialize";
+   static const std::string methodName      = "BrookCalcGBSAOBCForceKernel::initialize";
 
 // ---------------------------------------------------------------------------------------
 
@@ -131,39 +136,36 @@ void BrookCalcRbDihedralForceKernel::initialize( const System& system, const RbD
 
    // ---------------------------------------------------------------------------------------
 
-   // create _brookBondParameters object containing atom indices/parameters
-
-   int numberOfBonds         = force.getNumAngles();
-
-   if( _brookBondParameters ){
-      delete _brookBondParameters;
+   if( _brookGbsa ){
+      delete _brookGbsa;
    }
-   _brookBondParameters = new BrookBondParameters( BondName, NumberOfAtomsInBond, NumberOfParametersInBond, numberOfBonds, getLog() );
+   _brookGbsa              = new BrookGbsa();
+   _brookGbsa->setLog( log );
+    
+   // get parameters from force object
+   // and initialize brookGbsa
 
-   for( int ii = 0; ii < numberOfBonds; ii++ ){
+   _numberOfParticles = system.getNumParticles();
+   std::vector<std::vector<double> > particleParameters;
+   for( int ii = 0; ii < _numberOfParticles; ii++ ){
 
-      int particle1, particle2, particle3;
-      double angle, k;
+      double charge, radius, scalingFactor;
+      force.getParticleParameters( ii, charge, radius, scalingFactor );
 
-      int particles[NumberOfAtomsInBond];
-      double parameters[NumberOfParametersInBond];
-
-      force.getAngleParameters( ii, particle1, particle2, particle3, angle, k ); 
-      particles[0]    = particle1;
-      particles[1]    = particle2;
-      particles[2]    = particle3;
- 
-      parameters[0]   = angle;
-      parameters[1]   = k;
-
-      _brookBondParameters->setBond( ii, particles, parameters );
+      std::vector<double> parameters;
+      particleParameters[ii] = parameters;
+       
+      parameters[0]      = charge;
+      parameters[1]      = radius;
+      parameters[2]      = scalingFactor;
    }   
-   _openMMBrookInterface.setRbDihedralForceParameters( _brookBondParameters );
+   _brookGbsa->setup( particleParameters, force.getSolventDielectric(), force.getSoluteDielectric(), getPlatform() );
+
    _openMMBrookInterface.setTriggerForceKernel( this );
    _openMMBrookInterface.setTriggerEnergyKernel( this );
 
    if( log ){
-      std::string contents = _brookBondParameters->getContentsString( ); 
+      std::string contents = _brookGbsa->getContentsString( ); 
       (void) fprintf( log, "%s brookGbsa::contents\n%s", methodName.c_str(), contents.c_str() );
       (void) fflush( log );
    }
@@ -173,43 +175,40 @@ void BrookCalcRbDihedralForceKernel::initialize( const System& system, const RbD
 }
 
 /** 
- * Compute forces given atom coordinates
+ * Compute forces given particle coordinates
  * 
  * @param context OpenMMContextImpl context
  *
  */
 
-void BrookCalcRbDihedralForceKernel::executeForces( OpenMMContextImpl& context ){
+void BrookCalcGBSAOBCForceKernel::executeForces( OpenMMContextImpl& context ){
 
 // ---------------------------------------------------------------------------------------
 
-   //static const std::string methodName   = "BrookCalcRbDihedralForceKernel::executeForces";
+   //static const std::string methodName   = "BrookCalcGBSAOBCForceKernel::executeForces";
 
 // ---------------------------------------------------------------------------------------
 
    if( _openMMBrookInterface.getTriggerForceKernel() == this ){
       _openMMBrookInterface.computeForces( context );
-   }
+   }   
 
-   return;
-
-   // ---------------------------------------------------------------------------------------
 }
 
 /**
- * Execute the kernel to calculate the energy
+ * Execute the kernel to calculate the OBC energy
  * 
  * @param context OpenMMContextImpl context
  *
- * @return  potential energy
+ * @return energy
  *
  */
 
-double BrookCalcRbDihedralForceKernel::executeEnergy( OpenMMContextImpl& context ){
+double BrookCalcGBSAOBCForceKernel::executeEnergy( OpenMMContextImpl& context ){
 
 // ---------------------------------------------------------------------------------------
 
-   //static const std::string methodName      = "BrookCalcRbDihedralForceKernel::executeEnergy";
+   //static const std::string methodName      = "BrookCalcGBSAOBCForceKernel::executeEnergy";
 
 // ---------------------------------------------------------------------------------------
 

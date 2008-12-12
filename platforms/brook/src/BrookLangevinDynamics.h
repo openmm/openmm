@@ -110,28 +110,28 @@ class BrookLangevinDynamics : public BrookCommon {
       const BrookOpenMMFloat* getDerivedParameters( void ) const;
       
       /**
-       * Get LangevinDynamics atom stream width
+       * Get LangevinDynamics particle stream width
        *
-       * @return atom stream width
+       * @return particle stream width
        */
 
-      int getLangevinDynamicsAtomStreamWidth( void ) const; 
+      int getLangevinDynamicsParticleStreamWidth( void ) const; 
 
       /**
-       * Get LangevinDynamics atom stream height
+       * Get LangevinDynamics particle stream height
        *
-       * @return atom stream height
+       * @return particle stream height
        */
 
-      int getLangevinDynamicsAtomStreamHeight( void ) const;
+      int getLangevinDynamicsParticleStreamHeight( void ) const;
 
       /**
-       * Get LangevinDynamics atom stream size
+       * Get LangevinDynamics particle stream size
        * 
-       * @return atom stream size
+       * @return particle stream size
        */
 
-      int getLangevinDynamicsAtomStreamSize( void ) const; 
+      int getLangevinDynamicsParticleStreamSize( void ) const; 
 
       /** 
        * Update parameters
@@ -149,9 +149,9 @@ class BrookLangevinDynamics : public BrookCommon {
       /** 
        * Update
        * 
-       * @param  positions                   atom positions
-       * @param  velocities                  atom velocities
-       * @param  forces                      atom forces
+       * @param  positions                   particle positions
+       * @param  velocities                  particle velocities
+       * @param  forces                      particle forces
        * @param  brookShakeAlgorithm         BrookShakeAlgorithm reference
        * @param  brookRandomNumberGenerator  BrookRandomNumberGenerator reference
        *
@@ -174,7 +174,7 @@ class BrookLangevinDynamics : public BrookCommon {
       /* 
        * Setup of LangevinDynamics parameters
        *
-       * @param masses                atom masses
+       * @param masses                particle masses
        * @param platform              Brook platform
        *
        * @return ErrorReturnValue value if error, else DefaultReturnValue
@@ -285,11 +285,11 @@ class BrookLangevinDynamics : public BrookCommon {
       BrookOpenMMFloat _temperature;
       BrookOpenMMFloat _stepSize;
 
-      // Atom stream dimensions
+      // Particle stream dimensions
 
-      int _sdAtomStreamWidth;
-      int _sdAtomStreamHeight;
-      int _sdAtomStreamSize;
+      int _sdParticleStreamWidth;
+      int _sdParticleStreamHeight;
+      int _sdParticleStreamSize;
 
       /** 
        * Get derived parameter string
@@ -374,26 +374,26 @@ class BrookLangevinDynamics : public BrookCommon {
       /* 
        * Setup of stream dimensions
        *
-       * @param atomStreamSize        atom stream size
-       * @param atomStreamWidth       atom stream width
+       * @param particleStreamSize        particle stream size
+       * @param particleStreamWidth       particle stream width
        *
        * @return ErrorReturnValue if error, else DefaultReturnValue
        *
        * */
       
-      int _initializeStreamSizes( int atomStreamSize, int atomStreamWidth );
+      int _initializeStreamSizes( int particleStreamSize, int particleStreamWidth );
 
       /** 
        * Initialize stream dimensions
        * 
-       * @param numberOfAtoms             number of atoms
+       * @param numberOfParticles             number of particles
        * @param platform                  platform
        *
        * @return ErrorReturnValue if error, else DefaultReturnValue
        *
        */
       
-      int _initializeStreamSizes( int numberOfAtoms, const Platform& platform );
+      int _initializeStreamSizes( int numberOfParticles, const Platform& platform );
       
       /** 
        * Initialize stream dimensions and streams
@@ -409,7 +409,7 @@ class BrookLangevinDynamics : public BrookCommon {
       /** 
        * Set masses 
        * 
-       * @param masses             atomic masses
+       * @param masses             particle masses
        *
        */
       

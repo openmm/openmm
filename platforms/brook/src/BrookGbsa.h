@@ -35,7 +35,7 @@
 #include <vector>
 #include <set>
 
-#include "BrookFloatStreamInternal.h"
+#include "BrookStreamImpl.h"
 #include "BrookPlatform.h"
 #include "BrookCommon.h"
 #include "../../../platforms/reference/src/gbsa/CpuObc.h"
@@ -85,13 +85,13 @@ class BrookGbsa : public BrookCommon {
       int getDuplicationFactor( void ) const;
       
       /** 
-       * Get atom ceiling parameter
+       * Get particle ceiling parameter
        * 
-       * @return atom ceiling parameter
+       * @return particle ceiling parameter
        *
        */
          
-      int getAtomSizeCeiling( void ) const;
+      int getParticleSizeCeiling( void ) const;
  
       /** 
        * Get outer loop unroll
@@ -154,28 +154,28 @@ class BrookGbsa : public BrookCommon {
       int getPartialForceStreamSize( void ) const; 
 
       /**
-       * Get Gbsa atom stream width
+       * Get Gbsa particle stream width
        *
-       * @return atom stream width
+       * @return particle stream width
        */
 
-      int getGbsaAtomStreamWidth( void ) const; 
+      int getGbsaParticleStreamWidth( void ) const; 
 
       /**
-       * Get Gbsa atom stream height
+       * Get Gbsa particle stream height
        *
-       * @return atom stream height
+       * @return particle stream height
        */
 
-      int getGbsaAtomStreamHeight( void ) const;
+      int getGbsaParticleStreamHeight( void ) const;
 
       /**
-       * Get Gbsa atom stream size
+       * Get Gbsa particle stream size
        * 
-       * @return atom stream size
+       * @return particle stream size
        */
 
-      int getGbsaAtomStreamSize( void ) const; 
+      int getGbsaParticleStreamSize( void ) const; 
 
       /**
        * Get solute dielectric
@@ -202,31 +202,31 @@ class BrookGbsa : public BrookCommon {
       float getDielectricOffset( void ) const; 
 
       /** 
-       * Get atomic radii
+       * Get particle radii
        *
-       * @return   atomic radii stream
+       * @return   particle radii stream
        *
        */
       
-      BrookFloatStreamInternal* getObcAtomicRadii( void ) const;
+      BrookFloatStreamInternal* getObcParticleRadii( void ) const;
       
       /** 
-       * Get scaled atomic radii
+       * Get scaled particle radii
        *
-       * @return   scaled atomic radii stream
+       * @return   scaled particle radii stream
        *
        */
       
-      BrookFloatStreamInternal* getObcScaledAtomicRadii( void ) const;
+      BrookFloatStreamInternal* getObcScaledParticleRadii( void ) const;
       
       /** 
-       * Get atomic radii w/ dielectric offset
+       * Get particle radii w/ dielectric offset
        *
-       * @return   atomic radii w/ dielectric offset stream
+       * @return   particle radii w/ dielectric offset stream
        *
        */
       
-      BrookFloatStreamInternal* getObcAtomicRadiiWithDielectricOffset( void ) const;
+      BrookFloatStreamInternal* getObcParticleRadiiWithDielectricOffset( void ) const;
       
       /** 
        * Get Born radii stream 
@@ -312,9 +312,9 @@ class BrookGbsa : public BrookCommon {
       /* 
        * Setup of Gbsa parameters
        *
-       * @param atomParameters        vector of OBC parameters [atomI][0=charge]
-       *                                                       [atomI][1=radius]
-       *                                                       [atomI][2=scaling factor]
+       * @param particleParameters        vector of OBC parameters [particleI][0=charge]
+       *                                                       [particleI][1=radius]
+       *                                                       [particleI][2=scaling factor]
        * @param solventDielectric     solvent dielectric
        * @param soluteDielectric      solute dielectric
        * @param platform              Brook platform
@@ -323,7 +323,7 @@ class BrookGbsa : public BrookCommon {
        *
        * */
       
-      int setup( const std::vector<std::vector<double> >& atomParameters, 
+      int setup( const std::vector<std::vector<double> >& particleParameters, 
                  double solventDielectric, double soluteDielectric, const Platform& platform  );
       
       /* 
@@ -340,7 +340,7 @@ class BrookGbsa : public BrookCommon {
       /*  
        * Calculate energy
        *
-       * @param atomPositions        atom positions
+       * @param particlePositions        particle positions
       
        * @return energy
        *
@@ -348,7 +348,14 @@ class BrookGbsa : public BrookCommon {
        *
        * */
               
-      double getEnergy( const Stream& atomPositions );
+      double getEnergy( const Stream& particlePositions );
+
+      /** 
+       * Compute forces
+       * 
+       */
+      
+      void computeForces( BrookStreamImpl& positionStream, BrookStreamImpl& forceStream );
       
    private:
    
@@ -359,9 +366,9 @@ class BrookGbsa : public BrookCommon {
       // streams indices
 
       enum { 
-              ObcAtomicRadiiStream,
-              ObcScaledAtomicRadiiStream,
-              ObcAtomicRadiiWithDielectricOffsetStream,
+              ObcParticleRadiiStream,
+              ObcScaledParticleRadiiStream,
+              ObcParticleRadiiWithDielectricOffsetStream,
               ObcBornRadiiStream,
               ObcBornRadii2Stream,
               ObcIntermediateForceStream,
@@ -369,9 +376,9 @@ class BrookGbsa : public BrookCommon {
               LastStreamIndex
            };
 
-      // atom ceiling
+      // particle ceiling
 
-      int _atomSizeCeiling;
+      int _particleSizeCeiling;
 
       // unroll in i/j dimensions
 
@@ -392,11 +399,11 @@ class BrookGbsa : public BrookCommon {
       int _partialForceStreamHeight;
       int _partialForceStreamSize;
 
-      // Atom stream dimensions
+      // Particle stream dimensions
 
-      int _gbsaAtomStreamWidth;
-      int _gbsaAtomStreamHeight;
-      int _gbsaAtomStreamSize;
+      int _gbsaParticleStreamWidth;
+      int _gbsaParticleStreamHeight;
+      int _gbsaParticleStreamSize;
 
       // dielectrics
 
@@ -414,7 +421,7 @@ class BrookGbsa : public BrookCommon {
 
       int _bornRadiiInitialized;
 
-      // atom charges
+      // particle charges
 
       RealOpenMM* _charges;
 
@@ -425,26 +432,26 @@ class BrookGbsa : public BrookCommon {
       /* 
        * Setup of stream dimensions
        *
-       * @param atomStreamSize        atom stream size
-       * @param atomStreamWidth       atom stream width
+       * @param particleStreamSize        particle stream size
+       * @param particleStreamWidth       particle stream width
        *
        * @return ErrorReturnValue if error, else DefaultReturnValue
        *
        * */
       
-      int initializeStreamSizes( int atomStreamSize, int atomStreamWidth );
+      int initializeStreamSizes( int particleStreamSize, int particleStreamWidth );
 
       /** 
        * Initialize stream dimensions
        * 
-       * @param numberOfAtoms             number of atoms
+       * @param numberOfParticles         number of particles
        * @param platform                  platform
        *
        * @return ErrorReturnValue if error, else DefaultReturnValue
        *
        */
       
-      int initializeStreamSizes( int numberOfAtoms, const Platform& platform );
+      int initializeStreamSizes( int numberOfParticles, const Platform& platform );
       
       /** 
        * Initialize stream dimensions and streams
@@ -460,14 +467,14 @@ class BrookGbsa : public BrookCommon {
       /* 
        * Setup of stream dimensions for partial force streams
        *
-       * @param atomStreamSize        atom stream size
-       * @param atomStreamWidth       atom stream width
+       * @param particleStreamSize        particle stream size
+       * @param particleStreamWidth       particle stream width
        *
        * @return ErrorReturnValue if error, else DefaultReturnValue
        *
        * */
       
-      int initializePartialForceStreamSize( int atomStreamSize, int atomStreamWidth );
+      int initializePartialForceStreamSize( int particleStreamSize, int particleStreamWidth );
       
 };
 

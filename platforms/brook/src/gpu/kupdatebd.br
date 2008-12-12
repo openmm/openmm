@@ -78,6 +78,11 @@ kernel void kintegrate_bd( float xstrwidth, float gstrwidth, float goffset,
  * @param velocity       velocity
  * @param posp           delta positions
  *
+    rfac     = sqrt(2.0*BOLTZ*temp/(fr*dt));
+    invfr    = 1.0/fr;
+ vn          = invfr*f[n][d] + rfac*fgauss(&jran);
+v[n][d]      = vn;
+xprime[n][d] = x[n][d]+vn*dt;
  **/
 
 kernel void kupdate_bd( float velocityScale,
@@ -92,7 +97,7 @@ kernel void kupdate_bd( float velocityScale,
 }
 
 /*
- * Brownian dynamics update
+ * Brownian dynamics update (no Shake)
  *
  * @param velocityScale  velocity scale
  * @param posp           atom positions

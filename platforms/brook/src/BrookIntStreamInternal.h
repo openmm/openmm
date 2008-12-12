@@ -154,6 +154,19 @@ public:
 
       const std::string getContentsString( int level = 0 ) const;
 
+      /** 
+       * BrookFloatStreamInternal constructor
+       * 
+       * @param stopIndex                 index to stop sum
+       * @param sum                       array of size=getWidth()
+       *
+       * @return DefaultReturnValue
+       *
+       * @throw exception if stopIndex is too large
+       */
+      
+      int sumByDimension( int stopIndex, double* sum );
+      
 private:
 
     int _dangleValue;

@@ -34,8 +34,7 @@
 
 #include <vector>
 
-#include "BrookFloatStreamInternal.h"
-#include "BrookIntStreamInternal.h"
+#include "BrookStreamImpl.h"
 #include "BrookPlatform.h"
 #include "BrookCommon.h"
 #include "OpenMMContext.h"
@@ -68,17 +67,17 @@ class BrookBonded : public BrookCommon {
       /**
        * Initialize the kernel, setting up the values of all the force field parameters.
        * 
-       * @param bondIndices               the two atoms connected by each bond term
+       * @param bondIndices               the two particles connected by each bond term
        * @param bondParameters            the force parameters (length, k) for each bond term
-       * @param angleIndices              the three atoms connected by each angle term
+       * @param angleIndices              the three particles connected by each angle term
        * @param angleParameters           the force parameters (angle, k) for each angle term
-       * @param periodicTorsionIndices    the four atoms connected by each periodic torsion term
+       * @param periodicTorsionIndices    the four particles connected by each periodic torsion term
        * @param periodicTorsionParameters the force parameters (k, phase, periodicity) for each periodic torsion term
-       * @param rbTorsionIndices          the four atoms connected by each Ryckaert-Bellemans torsion term
+       * @param rbTorsionIndices          the four particles connected by each Ryckaert-Bellemans torsion term
        * @param rbTorsionParameters       the coefficients (in order of increasing powers) for each Ryckaert-Bellemans torsion term
-       * @param bonded14Indices           each element contains the indices of two atoms whose nonbonded interactions should be reduced since
+       * @param bonded14Indices           each element contains the indices of two particles whose nonbonded interactions should be reduced since
        *                                  they form a bonded 1-4 pair
-       * @param nonbondedParameters       the nonbonded force parameters (charge, sigma, epsilon) for each atom
+       * @param nonbondedParameters       the nonbonded force parameters (charge, sigma, epsilon) for each particle
        * @param lj14Scale                 the factor by which van der Waals interactions should be reduced for bonded 1-4 pairs
        * @param coulomb14Scale            the factor by which Coulomb interactions should be reduced for bonded 1-4 pairs
        * @param log                       log reference
@@ -87,7 +86,7 @@ class BrookBonded : public BrookCommon {
        *
        */
 
-      int setup( int numberOfAtoms, 
+      int setup( int numberOfParticles, 
                  const std::vector<std::vector<int> >& bondIndices,            const std::vector<std::vector<double> >& bondParameters,
                  const std::vector<std::vector<int> >& angleIndices,           const std::vector<std::vector<double> >& angleParameters,
                  const std::vector<std::vector<int> >& periodicTorsionIndices, const std::vector<std::vector<double> >& periodicTorsionParameters,
@@ -157,7 +156,7 @@ class BrookBonded : public BrookCommon {
        * @return 
        */
 
-      BrookFloatStreamInternal* getBrookAtomIndices( void ) const; 
+      BrookFloatStreamInternal* getBrookParticleIndices( void ) const; 
 
       /**
        * Get LJ 14 scale factor
@@ -178,13 +177,13 @@ class BrookBonded : public BrookCommon {
       BrookOpenMMFloat getCoulombFactor( void ) const;
 
       /** 
-       * Get bonded atom indices stream
+       * Get bonded particle indices stream
        * 
-       * @return  atom indices stream
+       * @return  particle indices stream
        *
        */
       
-      BrookFloatStreamInternal* getAtomIndicesStream( void ) const;
+      BrookFloatStreamInternal* getParticleIndicesStream( void ) const;
       
       /** 
        * Get bonded charge stream
@@ -268,6 +267,14 @@ class BrookBonded : public BrookCommon {
       
       std::string getContentsString( int level = 0 ) const;
 
+      /** 
+       * Compute forces
+       * 
+       */
+      
+      void computeForces( BrookStreamImpl& positionStream, BrookStreamImpl& forceStream );
+   
+   
    private:
    
       static const int NumberOfParameterStreams = 5;
@@ -291,7 +298,7 @@ class BrookBonded : public BrookCommon {
 
       // streams
 
-      BrookFloatStreamInternal* _atomIndicesStream;
+      BrookFloatStreamInternal* _particleIndicesStream;
       BrookFloatStreamInternal* _bondedParameters[NumberOfParameterStreams];
       BrookFloatStreamInternal* _bondedForceStreams[NumberOfForceStreams];
       BrookFloatStreamInternal* _chargeStream;
@@ -302,93 +309,93 @@ class BrookBonded : public BrookCommon {
 
       // helper methods in setup of parameters
 
-      void flipQuartet( int ibonded, int *atoms );
-      int matchTorsion( int i, int j, int k, int l, int nbondeds, int *atoms );
-      int matchAngle( int i, int j, int k, int nbondeds, int *atoms, int *flag );
-      int matchBond( int i, int j, int nbondeds, int *atoms, int *flag );
-      int matchPair( int i, int j, int nbondeds, int *atoms );
+      void flipQuartet( int ibonded, int *particles );
+      int matchTorsion( int i, int j, int k, int l, int nbondeds, int *particles );
+      int matchAngle( int i, int j, int k, int nbondeds, int *particles, int *flag );
+      int matchBond( int i, int j, int nbondeds, int *particles, int *flag );
+      int matchPair( int i, int j, int nbondeds, int *particles );
 
       /**
-       * Setup Ryckaert-Bellemans parameters/atom indices
+       * Setup Ryckaert-Bellemans parameters/particle indices
        * 
        * @param nbondeds                  number of bonded entries
-       * @param atoms                     array of atom indices
+       * @param particles                     array of particle indices
        * @param params                    arrays of bond parameters
-       * @param rbTorsionIndices          the four atoms connected by each Ryckaert-Bellemans torsion term
+       * @param rbTorsionIndices          the four particles connected by each Ryckaert-Bellemans torsion term
        * @param rbTorsionParameters       the coefficients (in order of increasing powers) for each Ryckaert-Bellemans torsion term
        *
        * @return nonzero value if error
        *
        */
 
-      int addRBDihedrals( int *nbondeds, int *atoms, BrookOpenMMFloat* params[], const std::vector<std::vector<int> >& rbTorsionIndices,  
+      int addRBDihedrals( int *nbondeds, int *particles, BrookOpenMMFloat* params[], const std::vector<std::vector<int> >& rbTorsionIndices,  
                           const std::vector<std::vector<double> >& rbTorsionParameters );
 
       /**
-       * Setup periodic torsion parameters/atom indices
+       * Setup periodic torsion parameters/particle indices
        * 
        * @param nbondeds                  number of bonded entries
-       * @param atoms                     array of atom indices
+       * @param particles                     array of particle indices
        * @param params                    arrays of bond parameters
-       * @param periodicTorsionIndices    the four atoms connected by each periodic torsion term
+       * @param periodicTorsionIndices    the four particles connected by each periodic torsion term
        * @param periodicTorsionParameters the force parameters (k, phase, periodicity) for each periodic torsion term
        *
        * @return nonzero value if error
        *
        */
 
-      int addPDihedrals( int *nbondeds, int *atoms, BrookOpenMMFloat* params[], const std::vector<std::vector<int> >& periodicTorsionIndices,  
+      int addPDihedrals( int *nbondeds, int *particles, BrookOpenMMFloat* params[], const std::vector<std::vector<int> >& periodicTorsionIndices,  
                           const std::vector<std::vector<double> >& periodicTorsionParameters );
 
       /**
-       * Setup angle bond parameters/atom indices
+       * Setup angle bond parameters/particle indices
        * 
        * @param nbondeds                  number of bonded entries
-       * @param atoms                     array of atom indices
+       * @param particles                     array of particle indices
        * @param params                    arrays of bond parameters
-       * @param angleIndices              the angle bond atom indices
+       * @param angleIndices              the angle bond particle indices
        * @param angleParameters           the angle parameters (angle in radians, force constant)
        *
        * @return nonzero value if error
        *
        */
 
-      int addAngles( int *nbondeds, int *atoms, BrookOpenMMFloat* params[], const std::vector<std::vector<int> >& angleIndices,
+      int addAngles( int *nbondeds, int *particles, BrookOpenMMFloat* params[], const std::vector<std::vector<int> >& angleIndices,
                      const std::vector<std::vector<double> >& angleParameters );
 
       /**
-       * Setup harmonic bond parameters/atom indices
+       * Setup harmonic bond parameters/particle indices
        * 
        * @param nbondeds                  number of bonded entries
-       * @param atoms                     array of atom indices
+       * @param particles                     array of particle indices
        * @param params                    arrays of bond parameters
-       * @param bondIndices               two harmonic bond atom indices
+       * @param bondIndices               two harmonic bond particle indices
        * @param bondParameters            the force parameters (distance, k)
        *
        * @return nonzero value if error
        *
        */
 
-      int addBonds( int *nbondeds, int *atoms, BrookOpenMMFloat* params[], const std::vector<std::vector<int> >& bondIndices,
+      int addBonds( int *nbondeds, int *particles, BrookOpenMMFloat* params[], const std::vector<std::vector<int> >& bondIndices,
                     const std::vector<std::vector<double> >& bondParameters );
 
       /**
-       * Setup LJ/Coulomb 1-4 parameters/atom indices
+       * Setup LJ/Coulomb 1-4 parameters/particle indices
        * 
        * @param nbondeds                  number of bonded entries
-       * @param atoms                     array of atom indices
+       * @param particles                     array of particle indices
        * @param params                    arrays of bond parameters
        * @param charges                   array of charges
-       * @param bonded14Indices           each element contains the indices of two atoms whose nonbonded interactions should be reduced since
+       * @param bonded14Indices           each element contains the indices of two particles whose nonbonded interactions should be reduced since
        *                                  they form a bonded 1-4 pair
-       * @param nonbondedParameters       the nonbonded force parameters (charge, sigma, epsilon) for each atom
+       * @param nonbondedParameters       the nonbonded force parameters (charge, sigma, epsilon) for each particle
        * @param lj14Scale                 the factor by which van der Waals interactions should be reduced for bonded 1-4 pairs
        *
        * @return nonzero value if error
        *
        */
 
-      int addPairs( int *nbondeds, int *atoms, BrookOpenMMFloat* params[], BrookOpenMMFloat* charges,
+      int addPairs( int *nbondeds, int *particles, BrookOpenMMFloat* params[], BrookOpenMMFloat* charges,
                     const std::vector<std::vector<int> >& bonded14Indices, const std::vector<std::vector<double> >& nonbondedParameters,
                     double lj14Scale, double coulombScale );
       
@@ -396,8 +403,8 @@ class BrookBonded : public BrookCommon {
        * Create and load inverse maps for bonded ixns
        * 
        * @param nbondeds                  number of bonded entries
-       * @param natoms                    number of atoms
-       * @param atoms                     arrays of atom indices (atoms[numberOfBonds][4])
+       * @param nparticles                    number of particles
+       * @param particles                     arrays of particle indices (particles[numberOfBonds][4])
        * @param platform                  BrookPlatform reference
        * @param log                       log file reference (optional)
        *
@@ -405,7 +412,7 @@ class BrookBonded : public BrookCommon {
        *
        */
 
-      int loadInvMaps( int nbondeds, int natoms, int *atoms, const BrookPlatform& platform );
+      int loadInvMaps( int nbondeds, int nparticles, int *particles, const BrookPlatform& platform );
       
       /**
        * Validate inverse map count
@@ -425,23 +432,23 @@ class BrookBonded : public BrookCommon {
        * Helper functions for building inverse maps for 
        * torsions, impropers and angles.
        * 
-       * For each atom, calculates the positions at which it's
+       * For each particle, calculates the positions at which it's
        * forces are to be picked up from and stores the position
        * in the appropriate index.
        *
-       * Input: number of dihedrals, the atom indices, and a flag indicating
+       * Input: number of dihedrals, the particle indices, and a flag indicating
        *        whether we're doing i(0), j(1), k(2) or l(3)
-       * Output: an array of counts per atom
+       * Output: an array of counts per particle
        *         arrays of inversemaps
        *         nimaps - the number of invmaps actually used.
        *
-       * @param posflag       0-niatoms-1
-       * @param niatoms       3 for angles, 4 for torsions, impropers
+       * @param posflag       0-niparticles-1
+       * @param niparticles       3 for angles, 4 for torsions, impropers
        * @param nints         number of interactions
-       * @param natoms        number of atoms
-       * @param *atoms        gromacs interaction list
+       * @param nparticles        number of particles
+       * @param *particles        gromacs interaction list
        * @param nmaps         maximum number of inverse maps
-       * @param   counts[]    output counts of how many places each atom occurs
+       * @param   counts[]    output counts of how many places each particle occurs
        * @param *invmaps[]    output array of nmaps inverse maps
        * @param *nimaps,      output max number of inverse maps actually used
        *
@@ -449,11 +456,11 @@ class BrookBonded : public BrookCommon {
        *
        **/
       
-      int gpuCalcInvMap( int posflag, int niatoms, int nints, int natoms,
-                          int *atoms, int nmaps, int counts[], float4 *invmaps[],
+      int gpuCalcInvMap( int posflag, int niparticles, int nints, int nparticles,
+                          int *particles, int nmaps, int counts[], float4 *invmaps[],
                           int *nimaps );
       
-      void gpuPrintInvMaps( int nmaps, int natoms, int counts[], float4 *invmap[], FILE* logFile );
+      void gpuPrintInvMaps( int nmaps, int nparticles, int counts[], float4 *invmap[], FILE* logFile );
       
       /* We are still plagued by kernel call overheads. This is for a big fat
        * merged inverse gather kernel:
@@ -463,14 +470,14 @@ class BrookBonded : public BrookCommon {
        * lookup. This assumes that nints < 100000, preferably nints << 100000
        * which should always be true
        * */
-      int gpuCalcInvMap_merged( int nints, int natoms, int *atoms, int nmaps, int counts[], float4 *invmaps[], int *nimaps );
+      int gpuCalcInvMap_merged( int nints, int nparticles, int *particles, int nmaps, int counts[], float4 *invmaps[], int *nimaps );
       
       /* Repacks the invmap streams for more efficient access in the
        * merged inverse gather kernel
        *
-       * buf should be nimaps * natoms large.
+       * buf should be nimaps * nparticles large.
        * */
-      int gpuRepackInvMap_merged( int natoms, int nmaps, int *counts, float4 *invmaps[], float4 *buf );
+      int gpuRepackInvMap_merged( int nparticles, int nmaps, int *counts, float4 *invmaps[], float4 *buf );
       
         
 };

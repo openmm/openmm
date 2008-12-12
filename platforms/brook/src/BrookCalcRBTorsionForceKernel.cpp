@@ -49,7 +49,7 @@ const std::string BrookCalcRBTorsionForceKernel::BondName = "RbDihedral";
  */
 
 BrookCalcRBTorsionForceKernel::BrookCalcRBTorsionForceKernel( std::string name, const Platform& platform,
-                                                                      OpenMMBrookInterface& openMMBrookInterface, System& system ) :
+                                                              OpenMMBrookInterface& openMMBrookInterface, System& system ) :
                      CalcRBTorsionForceKernel( name, platform ), _openMMBrookInterface( openMMBrookInterface ), _system( system ){
 
 // ---------------------------------------------------------------------------------------
@@ -131,21 +131,21 @@ void BrookCalcRBTorsionForceKernel::initialize( const System& system, const RBTo
 
    // ---------------------------------------------------------------------------------------
 
-   // create _brookBondParameters object containing atom indices/parameters
+   // create _brookBondParameters object containing particle indices/parameters
 
    int numberOfBonds         = force.getNumTorsions();
 
    if( _brookBondParameters ){
       delete _brookBondParameters;
    }
-   _brookBondParameters = new BrookBondParameters( BondName, NumberOfAtomsInBond, NumberOfParametersInBond, numberOfBonds, getLog() );
+   _brookBondParameters = new BrookBondParameters( BondName, NumberOfParticlesInBond, NumberOfParametersInBond, numberOfBonds, getLog() );
 
    for( int ii = 0; ii < numberOfBonds; ii++ ){
 
       int particle1, particle2, particle3, particle4;
       double c0, c1, c2, c3, c4, c5;
 
-      int particles[NumberOfAtomsInBond];
+      int particles[NumberOfParticlesInBond];
       double parameters[NumberOfParametersInBond];
 
       force.getTorsionParameters( ii, particle1, particle2, particle3, particle4, c0, c1, c2, c3, c4, c5 ); 
@@ -178,7 +178,7 @@ void BrookCalcRBTorsionForceKernel::initialize( const System& system, const RBTo
 }
 
 /** 
- * Compute forces given atom coordinates
+ * Compute forces given particle coordinates
  * 
  * @param context OpenMMContextImpl context
  *

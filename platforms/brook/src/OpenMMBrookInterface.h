@@ -34,15 +34,15 @@
 
 #include "kernels.h"
 #include "../../reference/src/SimTKUtilities/SimTKOpenMMRealType.h"
+#include "BrookBondParameters.h"
 #include "BrookBonded.h"
 #include "BrookNonBonded.h"
+#include "BrookGbsa.h"
 #include "NonbondedForce.h"
 #include "OpenMMContext.h"
 #include "System.h"
 #include "ReferencePlatform.h"
 #include "VerletIntegrator.h"
-
-class BrookBondParameters;
 
 namespace OpenMM {
 
@@ -58,75 +58,15 @@ class OpenMMBrookInterface {
       ~OpenMMBrookInterface();
   
       /**
-       * Initialize the kernel, setting up the values of all the force field parameters.
-       * 
-       * @param bondIndices               the two atoms connected by each bond term
-       * @param bondParameters            the force parameters (length, k) for each bond term
-       * @param angleIndices              the three atoms connected by each angle term
-       * @param angleParameters           the force parameters (angle, k) for each angle term
-       * @param periodicTorsionIndices    the four atoms connected by each periodic torsion term
-       * @param periodicTorsionParameters the force parameters (k, phase, periodicity) for each periodic torsion term
-       * @param rbTorsionIndices          the four atoms connected by each Ryckaert-Bellemans torsion term
-       * @param rbTorsionParameters       the coefficients (in order of increasing powers) for each Ryckaert-Bellemans torsion term
-       * @param bonded14Indices           each element contains the indices of two atoms whose nonbonded interactions should be reduced since
-       *                                  they form a bonded 1-4 pair
-       * @param lj14Scale                 the factor by which van der Waals interactions should be reduced for bonded 1-4 pairs
-       * @param coulomb14Scale            the factor by which Coulomb interactions should be reduced for bonded 1-4 pairs
-       * @param exclusions                the i'th element lists the indices of all atoms with which the i'th atom should not interact through
-       *                                  nonbonded forces.  Bonded 1-4 pairs are also included in this list, since they should be omitted from
-       *                                  the standard nonbonded calculation.
-       * @param nonbondedParameters       the nonbonded force parameters (charge, sigma, epsilon) for each atom
-       * @param nonbondedMethod           the method to use for handling long range nonbonded interactions
-       * @param nonbondedCutoff           the cutoff distance for nonbonded interactions (if nonbondedMethod involves a cutoff)
-       * @param periodicBoxSize           the size of the periodic box (if nonbondedMethod involves a periodic boundary conditions)
-       *
-       */
-
-
-      void initialize( const std::vector<std::vector<int> >& bondIndices,      const std::vector<std::vector<double> >& bondParameters,
-                       const std::vector<std::vector<int> >& angleIndices,     const std::vector<std::vector<double> >& angleParameters,
-                       const std::vector<std::vector<int> >& periodicTorsionIndices, const std::vector<std::vector<double> >& periodicTorsionParameters,
-                       const std::vector<std::vector<int> >& rbTorsionIndices, const std::vector<std::vector<double> >& rbTorsionParameters,
-                       const std::vector<std::vector<int> >& bonded14Indices,  double lj14Scale, double coulomb14Scale,
-                       const std::vector<std::set   <int> >& exclusions,       const std::vector<std::vector<double> >& nonbondedParameters,
-                       //NonbondedMethod nonbondedMethod,
-                       double nonbondedCutoff, double periodicBoxSize[3] );
-
-  
-      /**
-       * Execute the kernel to calculate the forces.
-       * 
-       * @param positions   a Stream of type Double3 containing the position (x, y, z) of each atom
-       * @param forces      a Stream of type Double3 containing the force (x, y, z) on each atom.  On entry, this contains the forces that
-       *                    have been calculated so far.  The kernel should add its own forces to the values already in the stream.
-       */
-
-      void executeForces( const Stream& positions, Stream& forces );
-  
-      /**
-       * Execute the kernel to calculate the energy.
-       * 
-       * @param positions   a Stream of type Double3 containing the position (x, y, z) of each atom
-       *
-       * @return the potential energy due to the NonbondedForce
-       *
-       * Currently always return 0.0 since energies not calculated on gpu
-       */
-
-      double executeEnergy( const Stream& positions );
-      double executeEnergyOld( const Stream& positions );
-
-      /**
        * Get reference Context
        * 
-       * @param numberOfAtoms  number of atoms
+       * @param numberOfParticles  number of particles
        *
        * @return  OpenMMContext
        *
        */
       
-      OpenMMContext* getReferenceOpenMMContext( int numberOfAtoms );
-      
+      OpenMMContext* getReferenceOpenMMContext( int numberOfParticles );
       
       /** 
        * Set log file reference
@@ -266,26 +206,96 @@ class OpenMMBrookInterface {
        *
        */
       
-      int setLJ14( BrookBondParameters* brookBondParameters );
+      int setNonBonded14ForceParameters( BrookBondParameters* brookBondParameters );
       
+      /** 
+       * Get positions stream
+       * 
+       * @return particle positions 
+       *
+       */
+         
+      BrookStreamImpl* getParticlePositions( void );
+      
+      /** 
+       * Set positions stream
+       * 
+       * @param positions Brook stream containing particle positions
+       *
+       * @return  DefaultReturnValue
+       *
+       */
+      
+      int setParticlePositions( BrookStreamImpl* positions );
+      
+      /** 
+       * Get velocities stream
+       * 
+       * @return particle velocities
+       *
+       */
+             
+      BrookStreamImpl* getParticleVelocities( void );
+       
+      /** 
+       * Set velocities stream
+       * 
+       * @param velocities Brook stream containing particle velocities
+       *
+       * @return  DefaultReturnValue
+       *
+       */
+      
+      int setParticleVelocities( BrookStreamImpl* velocities );
+      
+      /** 
+       * Get forces stream
+       * 
+       * @return ParticleForces
+       *
+       */
+             
+      BrookStreamImpl* getParticleForces( void );
+
+      /** 
+       * Set forces stream
+       * 
+       * @param forces Brook stream containing particle forces
+       *
+       * @return  DefaultReturnValue
+       *
+       */
+      
+      int setParticleForces( BrookStreamImpl* forces );
+
    private:
    
+      static const int DefaultReturnValue = 0;
+      static const int ErrorReturnValue   = -1;
+
       enum BondParameterIndices { HarmonicBondIndex, HarmonicAngleIndex, PeriodicTorsionForceIndex, RbTorsionForceIndex, LJ14Index, LastBondForce };
 
       // log file reference
 
       FILE* _log;
 
-       // number of atoms
+       // number of particles
 
-       int _numberOfAtoms;
+       int _numberOfParticles;
    
-       // Brook bonded & nonbonded
+       // Brook bonded, nonbonded, Gbsa
 
        BrookBonded* _brookBonded;
        BrookNonBonded* _brookNonBonded;
+       BrookGbsa* _brookGbsa;
 
        BrookBondParameters* _bondParameters[LastBondForce];
+
+       // context-related fields
+
+       BrookStreamImpl* _positions;
+       BrookStreamImpl* _velocities;
+       BrookStreamImpl* _forces;
 
        // used to calculate energy
 
