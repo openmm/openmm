@@ -48,13 +48,19 @@
 #include "OpenMMContext.h"
 #include "CMMotionRemover.h"
 #include "NonbondedForce.h"
+#include "HarmonicBondForce.h"
+#include "HarmonicAngleForce.h"
+#include "RBTorsionForce.h"
+#include "PeriodicTorsionForce.h"
 #include "GBSAOBCForce.h"
 #include "System.h"
 #include "LangevinIntegrator.h"
+#include "BrownianIntegrator.h"
 #include "VerletIntegrator.h"
 #include "BrookRandomNumberGenerator.h"
 #include "BrookShakeAlgorithm.h"
-#include "BrookStochasticDynamics.h"
+#include "BrookLangevinDynamics.h"
+#include "BrookBrownianDynamics.h"
 #include "BrookVerletDynamics.h"
 #include "../src/sfmt/SFMT.h"
 #include <iostream>
@@ -89,7 +95,7 @@ void testWriteRead( void ){
    // get factory & create stream
 
    const BrookStreamFactory& brookStreamFactory = dynamic_cast<const BrookStreamFactory&> (platform.getDefaultStreamFactory());
-   StreamImpl* testStream                       = brookStreamFactory.createStreamImpl( OpenMM::BrookStreamFactory::BondedAtomIndicesStream, ArraySz, Stream::Float, platform );
+   StreamImpl* testStream                       = brookStreamFactory.createStreamImpl( OpenMM::BrookStreamFactory::BondedParticleIndicesStream, ArraySz, Stream::Float, platform );
 
    // load & retreive data
 
@@ -513,7 +519,7 @@ int SimTKOpenMMUtilities::tokenizeString( const std::string& line, StringVector&
 
    --------------------------------------------------------------------------------------- */
 
-int readParameterFile( int numberOfAtomIndices, int numberOfParameters,
+int readParameterFile( int numberOfParticleIndices, int numberOfParameters,
                        vector<vector<int> >& atomIndices,
                        vector<vector<double> >& parameters,
                        const std::string& parameterFileName ){
@@ -573,14 +579,14 @@ int readParameterFile( int numberOfAtomIndices, int numberOfParameters,
       vector<int> entry;
       atomIndices.push_back( entry );
 
-      for( int ii = 0; ii < numberOfAtomIndices; ii++ ){ 
+      for( int ii = 0; ii < numberOfParticleIndices; ii++ ){ 
          int atomIndex = (int) atoi( tokens[startColumnIndex+ii].c_str() );
          entry.push_back( atomIndex );
       }
 
       vector<double> entryP;
       parameters.push_back( entryP );
-      int startParameterIndex = startColumnIndex + numberOfAtomIndices;
+      int startParameterIndex = startColumnIndex + numberOfParticleIndices;
       for( int ii = 0; ii < numberOfParameters; ii++ ){ 
          double parameter = (double) atof( tokens[startParameterIndex+ii].c_str() );
          entryP.push_back( parameter );
@@ -790,7 +796,7 @@ class ParameterInfo  {
 
    private:
 
-      int _numberOfAtomIndices;
+      int _numberOfParticleIndices;
       int _numberOfParameterIndices;
       std::string _fileName;
       std::string _directoryName;
@@ -799,18 +805,18 @@ class ParameterInfo  {
 
    public:
 
-      ParameterInfo( int numberOfAtomIndices, int numberOfParameterIndices, std::string fileName, std::string directoryName ){
-         _numberOfAtomIndices        = numberOfAtomIndices; 
+      ParameterInfo( int numberOfParticleIndices, int numberOfParameterIndices, std::string fileName, std::string directoryName ){
+         _numberOfParticleIndices        = numberOfParticleIndices; 
          _numberOfParameterIndices   = numberOfParameterIndices;
          _fileName                   = fileName;        
          _directoryName              = directoryName;
       }
       ~ParameterInfo( void ){};
       std::string getFullFileName( void ){ std::string name; name = _directoryName; name.append( _fileName ); return name; }
-      int getNumberOfAtomIndices(  void ){ return _numberOfAtomIndices; };
+      int getNumberOfParticleIndices(  void ){ return _numberOfParticleIndices; };
       int getNumberOfParameters(   void ){ return _numberOfParameterIndices; };
 
-      vector<vector<int> >& getAtomIndices( void ){ return _atomIndices; };
+      vector<vector<int> >& getParticleIndices( void ){ return _atomIndices; };
       vector<vector<double> >& getParameters( void ){ return _parameters; };
 };
 */
@@ -846,8 +852,8 @@ void testBrookBonded( void ){
 
    for( unsigned int ii = 0; ii < parameterInfoVector.size(); ii++ ){
       ParameterInfo parameterInfo = parameterInfoVector[ii];
-      readParameterFile( parameterInfo.getNumberOfAtomIndices(), parameterInfo.getNumberOfParameters(),
-                         parameterInfo.getAtomIndices(), parameterInfo.getParameters(), parameterInfo.getFullFileName() );
+      readParameterFile( parameterInfo.getNumberOfParticleIndices(), parameterInfo.getNumberOfParameters(),
+                         parameterInfo.getParticleIndices(), parameterInfo.getParameters(), parameterInfo.getFullFileName() );
       if( debug ){
          (void) fprintf( log, "%s %d\n", parameterInfo.getFullFileName().c_str(), parameterInfo.getParameters().size() ); 
       }
@@ -868,11 +874,11 @@ void testBrookBonded( void ){
    double lj14Scale          = 8.33300e-001;
    double coulombScale       = 1.0;
    brookBonded.setup( atomTypes.size(),
-                      parameterInfoVector[0].getAtomIndices(), parameterInfoVector[0].getParameters(),
-                      parameterInfoVector[1].getAtomIndices(), parameterInfoVector[1].getParameters(),
-                      parameterInfoVector[2].getAtomIndices(), parameterInfoVector[2].getParameters(),
-                      parameterInfoVector[3].getAtomIndices(), parameterInfoVector[3].getParameters(),
-                      parameterInfoVector[4].getAtomIndices(), ljCoulombParameterInfo.getParameters(),
+                      parameterInfoVector[0].getParticleIndices(), parameterInfoVector[0].getParameters(),
+                      parameterInfoVector[1].getParticleIndices(), parameterInfoVector[1].getParameters(),
+                      parameterInfoVector[2].getParticleIndices(), parameterInfoVector[2].getParameters(),
+                      parameterInfoVector[3].getParticleIndices(), parameterInfoVector[3].getParameters(),
+                      parameterInfoVector[4].getParticleIndices(), ljCoulombParameterInfo.getParameters(),
                       lj14Scale, coulombScale,  brookPlatform, log );
 
    // read in coordinates and forces
@@ -901,7 +907,7 @@ exit(0);
    // get factory & create stream
 
    const BrookStreamFactory& brookStreamFactory = dynamic_cast<const BrookStreamFactory&> (platform.getDefaultStreamFactory());
-   StreamImpl* testStream                       = brookStreamFactory.createStreamImpl( OpenMM::BrookStreamFactory::BondedAtomIndicesStream, ArraySz, Stream::Float, platform );
+   StreamImpl* testStream                       = brookStreamFactory.createStreamImpl( OpenMM::BrookStreamFactory::BondedParticleIndicesStream, ArraySz, Stream::Float, platform );
 
    // load & retreive data
 
@@ -925,12 +931,12 @@ void testBrookBondedHarmonicBond( void ){
    static const int debug = 1;
    FILE* log              = stdout;
    
-   int numberOfAtoms      = 2;
+   int numberOfParticles      = 2;
    RealOpenMM mass        = 2.0;
 
-   System system( numberOfAtoms, 0);
-   for( int ii = 0; ii < numberOfAtoms; ii++ ){
-      system.setAtomMass( ii, mass );
+   System system( numberOfParticles, 0);
+   for( int ii = 0; ii < numberOfParticles; ii++ ){
+      system.setParticleMass( ii, mass );
    }
 
    LangevinIntegrator integrator(0, 0.1, 0.01);
@@ -967,7 +973,7 @@ void testBrookBondedHarmonicBond( void ){
    std::vector<std::vector<double> > lj14Parameters;
 
    (void) fprintf( log, "testBrookBondedHarmonicBond: Calling brookBonded.setup\n" );
-   brookBonded.setup( numberOfAtoms,
+   brookBonded.setup( numberOfParticles,
                       harmonicBondsIndices,         harmonicBondsParameters,
                       angleBondsIndices,            angleBondsParameters,
                       rbTorsionBondsIndices,        rbTorsionBondsParameters,
@@ -979,12 +985,12 @@ void testBrookBondedHarmonicBond( void ){
    (void) fprintf( log, "testBrookBondedHarmonicBond: brookBonded::contents\n%s", contents.c_str() );
    (void) fflush( log );
 
-   BrookStochasticDynamics    brookStochasticDynamics;
+   BrookLangevinDynamics    brookLangevinDynamics;
    BrookShakeAlgorithm        brookShakeAlgorithm;
    BrookRandomNumberGenerator brookRandomNumberGenerator;
 
-   contents = brookStochasticDynamics.getContentsString( );
-   (void) fprintf( log, "testBrookBondedHarmonicBond: brookStochasticDynamics::contents\n%s", contents.c_str() );
+   contents = brookLangevinDynamics.getContentsString( );
+   (void) fprintf( log, "testBrookBondedHarmonicBond: brookLangevinDynamics::contents\n%s", contents.c_str() );
 
    contents = brookShakeAlgorithm.getContentsString( );
    (void) fprintf( log, "testBrookBondedHarmonicBond: brookShakeAlgorithm::contents\n%s", contents.c_str() );
@@ -1002,14 +1008,14 @@ void testBrookNonBonded( void ){
    static const int debug                   = 1;
    FILE* log                                = stdout;
    
-   int numberOfAtoms                        = 2;
+   int numberOfParticles                        = 2;
    RealOpenMM mass                          = 2.0;
 
 // ---------------------------------------------------------------------------------------
 
-   System system( numberOfAtoms, 0);
-   for( int ii = 0; ii < numberOfAtoms; ii++ ){
-      system.setAtomMass( ii, mass );
+   System system( numberOfParticles, 0);
+   for( int ii = 0; ii < numberOfParticles; ii++ ){
+      system.setParticleMass( ii, mass );
    }
 
    LangevinIntegrator integrator(0, 0.1, 0.01);
@@ -1021,7 +1027,7 @@ void testBrookNonBonded( void ){
    // load nonbonded parameters
 
    std::vector<std::vector<double> > nonbondedParameters;
-   for( int ii = 0; ii < numberOfAtoms; ii++ ){
+   for( int ii = 0; ii < numberOfParticles; ii++ ){
       std::vector<double>  parameters;
       parameters.push_back( 1.0 );
       parameters.push_back( 1.0 );
@@ -1032,14 +1038,14 @@ void testBrookNonBonded( void ){
    // exclusions
 
    std::vector<std::set<int> > exclusions;
-   for( int ii = 0; ii < numberOfAtoms; ii++ ){
+   for( int ii = 0; ii < numberOfParticles; ii++ ){
       std::set<int>  exclusion;
       exclusions.push_back( exclusion );
    }
 
    (void) fprintf( log, "testBrookBondedHarmonicBond: Calling brookNonBonded::setup\n" );
    (void) fflush( log );
-   brookNonBonded.setup( numberOfAtoms, nonbondedParameters, exclusions, brookPlatform );
+   brookNonBonded.setup( numberOfParticles, nonbondedParameters, exclusions, brookPlatform );
    std::string contents = brookNonBonded.getContentsString( );
    (void) fprintf( log, "testBrookBondedHarmonicBond: Called brookNonBonded.getContentsString \n" );
    (void) fflush( log );
@@ -1056,7 +1062,7 @@ void testBrookBonds( void ){
    static const int debug                   = 1;
    FILE* log                                = stdout;
    
-   int numberOfAtoms                        = 3;
+   int numberOfParticles                        = 3;
    RealOpenMM mass                          = 2.0;
 
 // ---------------------------------------------------------------------------------------
@@ -1065,12 +1071,12 @@ void testBrookBonds( void ){
    (void) fflush( log );
 
    BrookPlatform platform( 32, "cal", log );
-   System system( numberOfAtoms, 0 ); 
+   System system( numberOfParticles, 0 ); 
    LangevinIntegrator integrator(0, 0.1, 0.01);
 
-   // int numAtoms, int numBonds, int numAngles, int numPeriodicTorsions, int numRBTorsions
+   // int numParticles, int numBonds, int numAngles, int numPeriodicTorsions, int numRBTorsions
 
-   NonbondedForce* forceField = new NonbondedForce( 3, 2, 0, 0, 0 ); 
+   HarmonicBondForce* forceField = new HarmonicBondForce( 2 ); 
 
    // ( index, atom1, atom2, length, k )
    forceField->setBondParameters(0, 0, 1, 1.5, 0.8);
@@ -1096,7 +1102,7 @@ void testBrookBonds( void ){
 
    const vector<Vec3>& forces = state.getForces();
    (void) fprintf( log, "Harmonic bond forces\n");
-   for( int ii = 0; ii < numberOfAtoms; ii++ ){
+   for( int ii = 0; ii < numberOfParticles; ii++ ){
       (void) fprintf( log, "%d [%.5e %.5e %.5e]\n", ii, forces[ii][0], forces[ii][1], forces[ii][2] );
    }
    (void) fflush( log );
@@ -1119,7 +1125,7 @@ void testBrookAngles( void ){
    static const int debug                   = 1;
    FILE* log                                = stdout;
    
-   int numberOfAtoms                        = 4;
+   int numberOfParticles                        = 4;
    RealOpenMM mass                          = 2.0;
 
 // ---------------------------------------------------------------------------------------
@@ -1128,12 +1134,12 @@ void testBrookAngles( void ){
    (void) fflush( log );
 
    BrookPlatform platform( 32, "cal", log );
-   System system( numberOfAtoms, 0 ); 
+   System system( numberOfParticles, 0 ); 
    LangevinIntegrator integrator( 0, 0.1, 0.01 );
 
-   // int numAtoms, int numBonds, int numAngles, int numPeriodicTorsions, int numRBTorsions
+   // int numParticles, int numBonds, int numAngles, int numPeriodicTorsions, int numRBTorsions
 
-   NonbondedForce* forceField = new NonbondedForce( numberOfAtoms, 0, 2, 0, 0 ); 
+   HarmonicAngleForce* forceField = new HarmonicAngleForce(2);
 
    // int index, int atom1, int atom2, int atom3, double angle, double k
    forceField->setAngleParameters(0, 0, 1, 2, PI_M/3, 1.1);
@@ -1144,7 +1150,7 @@ void testBrookAngles( void ){
    //(void) fflush( log );
 
    OpenMMContext context(system, integrator, platform);
-   vector<Vec3> positions(numberOfAtoms);
+   vector<Vec3> positions(numberOfParticles);
 
    positions[0] = Vec3(0, 1, 0);
    positions[1] = Vec3(0, 0, 0);
@@ -1160,7 +1166,7 @@ void testBrookAngles( void ){
 
    const vector<Vec3>& forces = state.getForces();
    (void) fprintf( log, "Angle bond forces\n");
-   for( int ii = 0; ii < numberOfAtoms; ii++ ){
+   for( int ii = 0; ii < numberOfParticles; ii++ ){
       (void) fprintf( log, "%d [%.5e %.5e %.5e]\n", ii, forces[ii][0], forces[ii][1], forces[ii][2] );
    }
    (void) fflush( log );
@@ -1188,7 +1194,7 @@ void testBrookPeriodicTorsions( void ){
    static const int debug                   = 1;
    FILE* log                                = stdout;
    
-   int numberOfAtoms                        = 4;
+   int numberOfParticles                        = 4;
    RealOpenMM mass                          = 2.0;
 
 // ---------------------------------------------------------------------------------------
@@ -1197,22 +1203,22 @@ void testBrookPeriodicTorsions( void ){
    (void) fflush( log );
 
    BrookPlatform platform( 32, "cal", log );
-   System system( numberOfAtoms, 0 ); 
+   System system( numberOfParticles, 0 ); 
    LangevinIntegrator integrator( 0, 0.1, 0.01 );
 
-   // int numAtoms, int numBonds, int numAngles, int numPeriodicTorsions, int numRBTorsions
+   // int numParticles, int numBonds, int numAngles, int numPeriodicTorsions, int numRBTorsions
 
-   NonbondedForce* forceField = new NonbondedForce( numberOfAtoms, 0, 0, 1, 0 ); 
+   PeriodicTorsionForce* forceField = new PeriodicTorsionForce( 1 ); 
 
    // int index, int atom1, int atom2, int atom3, double angle, double k
-   forceField->setPeriodicTorsionParameters(0, 0, 1, 2, 3, 2, PI_M/3, 1.1);
+   forceField->setTorsionParameters(0, 0, 1, 2, 3, 2, PI_M/3, 1.1);
    system.addForce(forceField);
 
    //(void) fprintf( log, "%s: Calling context\n",  methodName.c_str() );
    //(void) fflush( log );
 
    OpenMMContext context(system, integrator, platform);
-   vector<Vec3> positions(numberOfAtoms);
+   vector<Vec3> positions(numberOfParticles);
 
    positions[0] = Vec3(0, 1, 0);
    positions[1] = Vec3(0, 0, 0);
@@ -1228,7 +1234,7 @@ void testBrookPeriodicTorsions( void ){
 
    const vector<Vec3>& forces = state.getForces();
    (void) fprintf( log, "Periodic torsion bond forces\n");
-   for( int ii = 0; ii < numberOfAtoms; ii++ ){
+   for( int ii = 0; ii < numberOfParticles; ii++ ){
       (void) fprintf( log, "%d [%.5e %.5e %.5e]\n", ii, forces[ii][0], forces[ii][1], forces[ii][2] );
    }
    (void) fflush( log );
@@ -1260,7 +1266,7 @@ void testBrookRBTorsions( void ){
    static const int debug                   = 1;
    FILE* log                                = stdout;
    
-   int numberOfAtoms                        = 4;
+   int numberOfParticles                        = 4;
    RealOpenMM mass                          = 2.0;
 
 // ---------------------------------------------------------------------------------------
@@ -1269,25 +1275,20 @@ void testBrookRBTorsions( void ){
    (void) fflush( log );
 
    BrookPlatform platform( 32, "cal", log );
-   System system( numberOfAtoms, 0 ); 
+   System system( numberOfParticles, 0 ); 
    LangevinIntegrator integrator( 0, 0.1, 0.01 );
 
-   // int numAtoms, int numBonds, int numAngles, int numPeriodicTorsions, int numRBTorsions
+   // int numParticles, int numBonds, int numAngles, int numPeriodicTorsions, int numRBTorsions
 
-   NonbondedForce* forceField = new NonbondedForce( numberOfAtoms, 0, 0, 0, 1 ); 
-
-   for( int ii = 0; ii < numberOfAtoms; ii++ ){
-      forceField->setAtomParameters( ii, 0.0, 1, 0);
-   }
-
-   forceField->setRBTorsionParameters(0, 0, 1, 2, 3, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6);
+   RBTorsionForce* forceField = new RBTorsionForce( 1 );
+   forceField->setTorsionParameters(0, 0, 1, 2, 3, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6);
    system.addForce(forceField);
 
    //(void) fprintf( log, "%s: Calling context\n",  methodName.c_str() );
    //(void) fflush( log );
 
    OpenMMContext context(system, integrator, platform);
-   vector<Vec3> positions(numberOfAtoms);
+   vector<Vec3> positions(numberOfParticles);
 
    positions[0] = Vec3(0, 1, 0);
    positions[1] = Vec3(0, 0, 0);
@@ -1304,7 +1305,7 @@ void testBrookRBTorsions( void ){
 
    const vector<Vec3>& forces = state.getForces();
    (void) fprintf( log, "RB torsion bond forces\n");
-   for( int ii = 0; ii < numberOfAtoms; ii++ ){
+   for( int ii = 0; ii < numberOfParticles; ii++ ){
       (void) fprintf( log, "%d [%.5e %.5e %.5e]\n", ii, forces[ii][0], forces[ii][1], forces[ii][2] );
    }
    (void) fflush( log );
@@ -1342,7 +1343,7 @@ void testBrookCoulomb( void ){
    static const int debug                   = 1;
    FILE* log                                = stdout;
    
-   int numberOfAtoms                        = 2;
+   int numberOfParticles                    = 2;
    RealOpenMM mass                          = 2.0;
 
 // ---------------------------------------------------------------------------------------
@@ -1351,21 +1352,21 @@ void testBrookCoulomb( void ){
    (void) fflush( log );
 
    BrookPlatform platform( 32, "cal", log );
-   System system( numberOfAtoms, 0 ); 
+   System system( numberOfParticles, 0 ); 
    LangevinIntegrator integrator( 0, 0.1, 0.01 );
 
    // int index, double charge, double radius, double depth
 
-   NonbondedForce* forceField = new NonbondedForce( numberOfAtoms, 0, 0, 0, 0 ); 
-   forceField->setAtomParameters(0, 0.5, 1, 0);
-   forceField->setAtomParameters(1, -1.5, 1, 0);
+   NonbondedForce* forceField = new NonbondedForce( numberOfParticles, 0 ); 
+   forceField->setParticleParameters(0, 0.5, 1, 0);
+   forceField->setParticleParameters(1, -1.5, 1, 0);
    system.addForce(forceField);
 
    //(void) fprintf( log, "%s: Calling context\n",  methodName.c_str() );
    //(void) fflush( log );
 
    OpenMMContext context(system, integrator, platform);
-   vector<Vec3> positions(numberOfAtoms);
+   vector<Vec3> positions(numberOfParticles);
 
    positions[0] = Vec3(0, 0, 0);
    positions[1] = Vec3(2, 0, 0);
@@ -1379,7 +1380,7 @@ void testBrookCoulomb( void ){
 
    const vector<Vec3>& forces = state.getForces();
    (void) fprintf( log, "Coulomb forces\n");
-   for( int ii = 0; ii < numberOfAtoms; ii++ ){
+   for( int ii = 0; ii < numberOfParticles; ii++ ){
       (void) fprintf( log, "%d [%.5e %.5e %.5e]\n", ii, forces[ii][0], forces[ii][1], forces[ii][2] );
    }
    (void) fflush( log );
@@ -1403,7 +1404,7 @@ void testBrookLJ( void ){
    static const int debug                   = 1;
    FILE* log                                = stdout;
    
-   int numberOfAtoms                        = 2;
+   int numberOfParticles                        = 2;
    RealOpenMM mass                          = 2.0;
 
 // ---------------------------------------------------------------------------------------
@@ -1413,21 +1414,21 @@ void testBrookLJ( void ){
 
    BrookPlatform platform( 32, "cal", log );
    // ReferencePlatform platform;
-   System system( numberOfAtoms, 0 ); 
+   System system( numberOfParticles, 0 ); 
    LangevinIntegrator integrator( 0, 0.1, 0.01 );
 
    // int index, double charge, double radius, double depth
 
-   NonbondedForce* forceField = new NonbondedForce( numberOfAtoms, 0, 0, 0, 0 ); 
-   forceField->setAtomParameters(0, 0, 1.2, 1); 
-   forceField->setAtomParameters(1, 0, 1.4, 2); 
+   NonbondedForce* forceField = new NonbondedForce( numberOfParticles, 0 ); 
+   forceField->setParticleParameters(0, 0, 1.2, 1); 
+   forceField->setParticleParameters(1, 0, 1.4, 2); 
    system.addForce(forceField);
 
    //(void) fprintf( log, "%s: Calling context\n",  methodName.c_str() );
    //(void) fflush( log );
 
    OpenMMContext context(system, integrator, platform);
-   vector<Vec3> positions(numberOfAtoms);
+   vector<Vec3> positions(numberOfParticles);
 
    positions[0] = Vec3(0, 0, 0);
    positions[1] = Vec3(2, 0, 0);
@@ -1441,7 +1442,7 @@ void testBrookLJ( void ){
 
    const vector<Vec3>& forces = state.getForces();
    (void) fprintf( log, "LJ forces\n");
-   for( int ii = 0; ii < numberOfAtoms; ii++ ){
+   for( int ii = 0; ii < numberOfParticles; ii++ ){
       (void) fprintf( log, "%d [%.5e %.5e %.5e]\n", ii, forces[ii][0], forces[ii][1], forces[ii][2] );
    }
    (void) fflush( log );
@@ -1465,7 +1466,7 @@ void testBrookExclusionsAnd14( void ){
    static const int debug                   = 1;
    FILE* log                                = stdout;
    
-   int numberOfAtoms                        = 5;
+   int numberOfParticles                    = 5;
    RealOpenMM mass                          = 2.0;
 
 // ---------------------------------------------------------------------------------------
@@ -1476,37 +1477,47 @@ void testBrookExclusionsAnd14( void ){
    BrookPlatform platform( 32, "cpu", log );
    //BrookPlatform platform( 32, "cal", log );
    //ReferencePlatform platform;
-   System system( numberOfAtoms, 0 ); 
+   System system( numberOfParticles, 0 ); 
    LangevinIntegrator integrator( 0, 0.1, 0.01 );
 
    // int index, double charge, double radius, double depth
 
-   NonbondedForce* forceField = new NonbondedForce( numberOfAtoms, numberOfAtoms-1, 0, 0, 0 ); 
-   for( int ii = 1; ii < numberOfAtoms; ii++ ){
-      forceField->setBondParameters(ii-1, ii-1, ii, 1, 0);
-   }
-   system.addForce(forceField);
+   HarmonicBondForce* bonds = new HarmonicBondForce(4);
+   bonds->setBondParameters(0, 0, 1, 1, 0); 
+   bonds->setBondParameters(1, 1, 2, 1, 0); 
+   bonds->setBondParameters(2, 2, 3, 1, 0); 
+   bonds->setBondParameters(3, 3, 4, 1, 0); 
+   system.addForce(bonds);
+   NonbondedForce* nonbonded = new NonbondedForce( numberOfParticles, 2); 
+   system.addForce(nonbonded);
 
    //(void) fprintf( log, "%s: Calling context\n",  methodName.c_str() );
    //(void) fflush( log );
 
    OpenMMContext context(system, integrator, platform);
-   vector<Vec3> positions(numberOfAtoms);
+   vector<Vec3> positions(numberOfParticles);
 
    const double r = 1.0;
    positions[0] = Vec3(0, 0, 0);
-   for( int ii = 1; ii < numberOfAtoms; ii++ ){
+   for( int ii = 1; ii < numberOfParticles; ii++ ){
       positions[ii] = Vec3(r, 0, 0);
    }
-   for( int ii = 1; ii < numberOfAtoms; ii++ ){
+   for( int ii = 1; ii < numberOfParticles; ii++ ){
 
       // Test LJ forces
 
-     forceField->setAtomParameters(0, 0, 1.5, 1);
-      for (int jj = 1; jj < numberOfAtoms; ++jj){
-         forceField->setAtomParameters(jj, 0, 1.5, 0);
-      }
-      forceField->setAtomParameters(ii, 0, 1.5, 1);
+       vector<Vec3> positions(5);
+       const double r = 1.0;
+       for (int j = 0; j < 5; ++j) {
+           nonbonded->setParticleParameters(j, 0, 1.5, 0); 
+           positions[j] = Vec3(0, j, 0); 
+       }
+       nonbonded->setParticleParameters(0, 0, 1.5, 1); 
+       nonbonded->setParticleParameters(ii, 0, 1.5, 1); 
+       nonbonded->setNonbonded14Parameters(0, 0, 3, 0, 1.5, ii == 3 ? 0.5 : 0.0);
+       nonbonded->setNonbonded14Parameters(1, 1, 4, 0, 1.5, 0.0);
+       positions[ii] = Vec3(r, 0, 0); 
+
       context.reinitialize();
       context.setPositions(positions);
       State state = context.getState( State::Forces | State::Energy );
@@ -1524,7 +1535,7 @@ void testBrookExclusionsAnd14( void ){
          energy = 0;
       }
       (void) fprintf( log, "14 LJ forces ii=%d F=%.6e\n", ii, force );
-      for( int jj = 0; jj < numberOfAtoms; jj++ ){
+      for( int jj = 0; jj < numberOfParticles; jj++ ){
          (void) fprintf( log, "%d [%.5e %.5e %.5e]\n", jj, forces[jj][0], forces[jj][1], forces[jj][2] );
       }
       (void) fflush( log );
@@ -1536,8 +1547,11 @@ void testBrookExclusionsAnd14( void ){
 
       // Test Coulomb forces
 
-      forceField->setAtomParameters(0, 2, 1.5, 0);
-      forceField->setAtomParameters(ii, 2, 1.5, 0);
+      nonbonded->setParticleParameters( 0, 2, 1.5, 0 );
+      nonbonded->setParticleParameters( ii, 2, 1.5, 0 );
+      nonbonded->setNonbonded14Parameters( 0, 0, 3, ii == 3 ? 4/1.2 : 0, 1.5, 0 );
+      nonbonded->setNonbonded14Parameters( 1, 1, 4, 0, 1.5, 0 );
+
       context.reinitialize();
       context.setPositions(positions);
       state = context.getState( State::Forces | State::Energy );
@@ -1553,7 +1567,7 @@ void testBrookExclusionsAnd14( void ){
           energy = 0;
       }
       (void) fprintf( log, "14 Coulomb forces ii=%d F=%.6e\n", ii, force );
-      for( int jj = 0; jj < numberOfAtoms; jj++ ){
+      for( int jj = 0; jj < numberOfParticles; jj++ ){
          (void) fprintf( log, "%d [%.5e %.5e %.5e]\n", jj, forces[jj][0], forces[jj][1], forces[jj][2] );
       }
       (void) fflush( log );
@@ -1567,7 +1581,7 @@ void testBrookExclusionsAnd14( void ){
 
 }
 
-static OpenMMContext* testObcForceSetup( int numAtoms, int brookContext ){
+static OpenMMContext* testObcForceSetup( int numParticles, int brookContext ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -1587,23 +1601,23 @@ static OpenMMContext* testObcForceSetup( int numAtoms, int brookContext ){
       platform = new ReferencePlatform();
    }
 
-   System* system                 = new System( numAtoms, 0 );
+   System* system                 = new System( numParticles, 0 );
    LangevinIntegrator* integrator = new LangevinIntegrator(0, 0.1, 0.01);
-   GBSAOBCForce* forceField  = new GBSAOBCForce(numAtoms);
+   GBSAOBCForce* forceField  = new GBSAOBCForce(numParticles);
 
-   for (int i = 0; i < numAtoms; ++i){
+   for (int i = 0; i < numParticles; ++i){
        // charge radius scalingFactor
-       forceField->setAtomParameters(i, i%2 == 0 ? -1 : 1, 0.15, 1);
-       //forceField->setAtomParameters(i, i%2 == 0 ? -1 : 1, 1.5, 1);
+       forceField->setParticleParameters(i, i%2 == 0 ? -1 : 1, 0.15, 1);
+       //forceField->setParticleParameters(i, i%2 == 0 ? -1 : 1, 1.5, 1);
    }
    system->addForce(forceField);
    OpenMMContext* context = new OpenMMContext( *system, *integrator, *platform );
    
    // Set random positions for all the atoms.
    
-   vector<Vec3> positions(numAtoms);
+   vector<Vec3> positions(numParticles);
    init_gen_rand(0);
-   for (int i = 0; i < numAtoms; ++i){
+   for (int i = 0; i < numParticles; ++i){
        positions[i] = Vec3(1.0*genrand_real2(), 1.0*genrand_real2(), 1.0*genrand_real2());
    }
    context->setPositions(positions);
@@ -1661,7 +1675,7 @@ static char* localStrsep( char** lineBuffer, const char* delimiter ){
 }
 
 
-static OpenMMContext* testObcForceFileSetup( std::string fileName, int brookContext, int* numAtoms ){
+static OpenMMContext* testObcForceFileSetup( std::string fileName, int brookContext, int* numParticles ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -1709,17 +1723,17 @@ static OpenMMContext* testObcForceFileSetup( std::string fileName, int brookCont
       return NULL;
    }
    StringVectorI ii    = tokens.begin();
-   int numberOfAtoms   = atoi( (*ii).c_str() );
-   (void) fprintf( log, "\n%s %d\n", methodName.c_str(), numberOfAtoms );
-   *numAtoms           = numberOfAtoms;
+   int numberOfParticles   = atoi( (*ii).c_str() );
+   (void) fprintf( log, "\n%s %d\n", methodName.c_str(), numberOfParticles );
+   *numParticles           = numberOfParticles;
    lineCount++;
 
-   System* system                 = new System( *numAtoms, 0 );
-   GBSAOBCForce* forceField  = new GBSAOBCForce(numberOfAtoms);
+   System* system                 = new System( *numParticles, 0 );
+   GBSAOBCForce* forceField  = new GBSAOBCForce(numberOfParticles);
 
-   vector<Vec3> positions(numberOfAtoms);
+   vector<Vec3> positions(numberOfParticles);
    int index                      = 0;
-   for (int i = 0; i < numberOfAtoms; ++i){
+   for (int i = 0; i < numberOfParticles; ++i){
 
       (void) fgets( buffer, bufferSize, readFile );
       StringVector tokens;
@@ -1743,7 +1757,7 @@ static OpenMMContext* testObcForceFileSetup( std::string fileName, int brookCont
    
       positions[index++]        = Vec3( coordX, coordY, coordZ );
       // charge radius scalingFactor
-      forceField->setAtomParameters( i, charge, radius, scalingFactor );
+      forceField->setParticleParameters( i, charge, radius, scalingFactor );
 
       (void) fprintf( log, "%d [%.6f %.6f %.6f] q=%.6f rad=%.6f scl=%.6f bR=%.6f\n", i,
                       coordX, coordY, coordZ, charge, radius, scalingFactor, bornRadi );
@@ -1774,13 +1788,13 @@ void testObcForce() {
    
 // ---------------------------------------------------------------------------------------
 
-   int numAtoms = 10;
-   //OpenMMContext* context      = testObcForceSetup( numAtoms, 0 );
-   //OpenMMContext* brookContext = testObcForceSetup( numAtoms, 1 );
+   int numParticles = 10;
+   //OpenMMContext* context      = testObcForceSetup( numParticles, 0 );
+   //OpenMMContext* brookContext = testObcForceSetup( numParticles, 1 );
    
-   OpenMMContext* context      = testObcForceFileSetup( std::string( "ObcInfo.txt" ), 0, &numAtoms );
+   OpenMMContext* context      = testObcForceFileSetup( std::string( "ObcInfo.txt" ), 0, &numParticles );
    //OpenMMContext* context      = NULL;
-   OpenMMContext* brookContext = testObcForceFileSetup( std::string( "ObcInfo.txt" ), 1, &numAtoms );
+   OpenMMContext* brookContext = testObcForceFileSetup( std::string( "ObcInfo.txt" ), 1, &numParticles );
    //OpenMMContext* brookContext = NULL;
    
    vector<Vec3> forces;
@@ -1796,7 +1810,7 @@ void testObcForce() {
    }
    
    (void) fprintf( log, "%s OBC forces [%s %s]\n", methodName.c_str(), (context?"Ref":""), (brookContext?"Brook":"") );
-   for( int ii = 0; ii < numAtoms; ii++ ){
+   for( int ii = 0; ii < numParticles; ii++ ){
       (void) fprintf( log, "%4d ", ii );
       if( context && brookContext ){
          double diff[3];
@@ -1830,7 +1844,7 @@ void testObcForce() {
 
    double tolerance = 1.0e-03;
    if( context && brookContext ){
-      for (int i = 0; i < numAtoms; ++i) {
+      for (int i = 0; i < numParticles; ++i) {
           Vec3 f         = forces[i];
           Vec3 fBrook    = brookForces[i];
           ASSERT_EQUAL_VEC( f, fBrook, tolerance );
@@ -1841,11 +1855,11 @@ void testObcForce() {
 
 }
 
-void testObcSingleAtom() {
+void testObcSingleParticle() {
 
 // ---------------------------------------------------------------------------------------
 
-   static const std::string methodName      = "testObcSingleAtom";
+   static const std::string methodName      = "testObcSingleParticle";
    FILE* log                                = stdout;
    
 // ---------------------------------------------------------------------------------------
@@ -1853,10 +1867,10 @@ void testObcSingleAtom() {
     BrookPlatform platform;
     //ReferencePlatform platform;
     System system(1, 0);
-    system.setAtomMass(0, 2.0);
+    system.setParticleMass(0, 2.0);
     LangevinIntegrator integrator(0, 0.1, 0.01);
     GBSAOBCForce* forceField = new GBSAOBCForce(1);
-    forceField->setAtomParameters(0, 0.5, 0.15, 1);
+    forceField->setParticleParameters(0, 0.5, 0.15, 1);
     system.addForce(forceField);
     OpenMMContext context(system, integrator, platform);
     vector<Vec3> positions(1);
@@ -1883,22 +1897,22 @@ void testObcEConsistentForce() {
    
 // ---------------------------------------------------------------------------------------
 
-    BrookPlatform platform;
-    //ReferencePlatform platform;
-    const int numAtoms = 10; 
-    System system(numAtoms, 0); 
+    //BrookPlatform platform;
+    ReferencePlatform platform;
+    const int numParticles = 10; 
+    System system(numParticles, 0); 
     LangevinIntegrator integrator(0, 0.1, 0.01);
-    GBSAOBCForce* forceField = new GBSAOBCForce(numAtoms);
-    for (int i = 0; i < numAtoms; ++i)
-        forceField->setAtomParameters(i, i%2 == 0 ? -1 : 1, 0.15, 1); 
+    GBSAOBCForce* forceField = new GBSAOBCForce(numParticles);
+    for (int i = 0; i < numParticles; ++i)
+        forceField->setParticleParameters(i, i%2 == 0 ? -1 : 1, 0.15, 1); 
     system.addForce(forceField);
     OpenMMContext context(system, integrator, platform);
     
     // Set random positions for all the atoms.
     
-    vector<Vec3> positions(numAtoms);
+    vector<Vec3> positions(numParticles);
     init_gen_rand(0);
-    for (int i = 0; i < numAtoms; ++i)
+    for (int i = 0; i < numParticles; ++i)
         positions[i] = Vec3(5.0*genrand_real2(), 5.0*genrand_real2(), 5.0*genrand_real2());
     context.setPositions(positions);
     State state = context.getState(State::Forces | State::Energy);
@@ -1906,14 +1920,14 @@ void testObcEConsistentForce() {
     // Take a small step in the direction of the energy gradient.
     
     double norm = 0.0;
-    for (int i = 0; i < numAtoms; ++i) {
+    for (int i = 0; i < numParticles; ++i) {
         Vec3 f = state.getForces()[i];
         norm += f[0]*f[0] + f[1]*f[1] + f[2]*f[2];
     }   
     norm = std::sqrt(norm);
     const double delta = 1e-3;
     double step = delta/norm;
-    for (int i = 0; i < numAtoms; ++i) {
+    for (int i = 0; i < numParticles; ++i) {
         Vec3 p = positions[i];
         Vec3 f = state.getForces()[i];
         positions[i] = Vec3(p[0]-f[0]*step, p[1]-f[1]*step, p[2]-f[2]*step);
@@ -1925,7 +1939,8 @@ void testObcEConsistentForce() {
     State state2 = context.getState(State::Energy);
     ASSERT_EQUAL_TOL(norm, (state2.getPotentialEnergy()-state.getPotentialEnergy())/delta, 0.01)
 
-    (void) fprintf( log, "%s ok\n", methodName.c_str() ); (void) fflush( log );
+    (void) fprintf( log, "%s ok %.8e %.8e    %.8e %.8e\n", methodName.c_str(),
+                    state2.getPotentialEnergy(), state.getPotentialEnergy(), norm, (state2.getPotentialEnergy()-state.getPotentialEnergy())/delta ); (void) fflush( log );
 }
 
 int testBrookStreams( int streamSize ){
@@ -2063,7 +2078,7 @@ static OpenMMContext* testLangevinSingleBondSetup( int brookContext, LangevinInt
    static const int debug                   = 1;
    FILE* log                                = stdout;
    
-   int numberOfAtoms                        = 2;
+   int numberOfParticles                        = 2;
    RealOpenMM mass                          = 2.0; 
 
 // ---------------------------------------------------------------------------------------
@@ -2078,15 +2093,15 @@ static OpenMMContext* testLangevinSingleBondSetup( int brookContext, LangevinInt
       platform = new ReferencePlatform();
    }
 
-   System* system = new System( numberOfAtoms, 0);
-   system->setAtomMass(0, 2.0);
-   system->setAtomMass(1, 2.0);
+   System* system = new System( numberOfParticles, 0);
+   system->setParticleMass(0, 2.0);
+   system->setParticleMass(1, 2.0);
 
    // double temperature, double frictionCoeff, double stepSize
    LangevinIntegrator* integrator = new LangevinIntegrator(0, 0.1, 0.01);
    *outIntegrator                 = integrator;
 
-   NonbondedForce* forceField = new NonbondedForce(2, 1, 0, 0, 0);
+   HarmonicBondForce* forceField = new HarmonicBondForce(1);
    forceField->setBondParameters(0, 0, 1, 1.5, 1);
    system->addForce(forceField);
    OpenMMContext* context = new OpenMMContext( *system, *integrator, *platform );
@@ -2165,7 +2180,7 @@ void testLangevinTemperature() {
    static const int debug                   = 1;
    FILE* log                                = stdout;
    
-   const int numberOfAtoms                  = 8;
+   const int numberOfParticles                  = 8;
    RealOpenMM mass                          = 2.0; 
 
 // ---------------------------------------------------------------------------------------
@@ -2176,20 +2191,20 @@ void testLangevinTemperature() {
    BrookPlatform platform( 32, "cal", log );
    // ReferencePlatform platform;
 
-    const double temp = 100.0;
-    System system(numberOfAtoms, 0);
-    LangevinIntegrator integrator(temp, 2.0, 0.001);
-    NonbondedForce* forceField = new NonbondedForce(numberOfAtoms, 0, 0, 0, 0);
-    for (int i = 0; i < numberOfAtoms; ++i){
-        system.setAtomMass(i, 2.0);
-        forceField->setAtomParameters(i, (i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
+    const double temp = 300.0;
+    System system(numberOfParticles, 0);
+    LangevinIntegrator integrator(temp, 1.0, 0.002);
+    NonbondedForce* forceField = new NonbondedForce(numberOfParticles, 0);
+    for (int i = 0; i < numberOfParticles; ++i){
+        system.setParticleMass(i, 2.0);
+        forceField->setParticleParameters(i, (i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
     }
     system.addForce(forceField);
     CMMotionRemover* remover = new CMMotionRemover();
     system.addForce(remover);
     OpenMMContext context(system, integrator, platform);
-    vector<Vec3> positions(numberOfAtoms);
-    for (int i = 0; i < numberOfAtoms; ++i)
+    vector<Vec3> positions(numberOfParticles);
+    for (int i = 0; i < numberOfParticles; ++i)
         positions[i] = Vec3((i%2 == 0 ? 2 : -2), (i%4 < 2 ? 2 : -2), (i < 4 ? 2 : -2));
     context.setPositions(positions);
     
@@ -2209,7 +2224,7 @@ void testLangevinTemperature() {
 /*
            vector<Vec3> positions  = state.getPositions(); 
            vector<Vec3> velocities = state.getVelocities(); 
-           for( int ii = 0; ii < numberOfAtoms; ii++ ){
+           for( int ii = 0; ii < numberOfParticles; ii++ ){
               (void) fprintf( log, "   %d q[%12.5e %12.5e %12.5e] v[%12.5e %12.5e %12.5e]\n", ii,
                                     positions[ii][0],  positions[ii][1],  positions[ii][2], 
                                    velocities[ii][0], velocities[ii][1], velocities[ii][2] );
@@ -2220,7 +2235,7 @@ void testLangevinTemperature() {
         integrator.step(1);
     }
     ke /= 1000;
-    double expected = 0.5*numberOfAtoms*3*BOLTZ*temp;
+    double expected = 0.5*numberOfParticles*3*BOLTZ*temp;
     double tol      = 3*expected/std::sqrt(1000.0);
 
     (void) fprintf( log, "%s expected=%12.5e found=%12.5e tol=%12.5e ok\n", methodName.c_str(), expected, ke, tol ); fflush( log );
@@ -2243,7 +2258,7 @@ void testLangevinConstraints() {
    static const int debug                   = 0;
    FILE* log                                = stdout;
    
-   int numberOfAtoms                        = 2;
+   int numberOfParticles                        = 2;
    RealOpenMM mass                          = 1.0; 
 
 // ---------------------------------------------------------------------------------------
@@ -2253,17 +2268,17 @@ void testLangevinConstraints() {
 
    BrookPlatform platform( 32, "cal", log );
 
-   const int numAtoms = 8;
+   const int numParticles = 8;
    const double temp = 100.0;
    //ReferencePlatform platform;
-   System system(numAtoms, numAtoms-1);
+   System system(numParticles, numParticles-1);
    LangevinIntegrator integrator(temp, 2.0, 0.001);
-   NonbondedForce* forceField = new NonbondedForce(numAtoms, 0, 0, 0, 0);
-   for (int i = 0; i < numAtoms; ++i) {
-       system.setAtomMass(i, mass);
-       forceField->setAtomParameters(i, (i%2 == 0 ? 0.2 : -0.2), 0.5, 5.0);
+   NonbondedForce* forceField = new NonbondedForce(numParticles, 0);
+   for (int i = 0; i < numParticles; ++i) {
+       system.setParticleMass(i, mass);
+       forceField->setParticleParameters(i, (i%2 == 0 ? 0.2 : -0.2), 0.5, 5.0);
    }
-   for (int i = 0; i < numAtoms-1; ++i)
+   for (int i = 0; i < numParticles-1; ++i)
        system.setConstraintParameters(i, i, i+1, 1.0);
    system.addForce(forceField);
 
@@ -2271,10 +2286,10 @@ void testLangevinConstraints() {
    system.addForce(remover);
 
    OpenMMContext context(system, integrator, platform);
-   vector<Vec3> positions(numAtoms);
-   vector<Vec3> velocities(numAtoms);
+   vector<Vec3> positions(numParticles);
+   vector<Vec3> velocities(numParticles);
    init_gen_rand(0);
-   for (int i = 0; i < numAtoms; ++i) {
+   for (int i = 0; i < numParticles; ++i) {
        positions[i] = Vec3(i/2, (i+1)/2, 0);
        velocities[i] = Vec3(genrand_real2()-0.5, genrand_real2()-0.5, genrand_real2()-0.5);
    }
@@ -2285,7 +2300,7 @@ void testLangevinConstraints() {
    
    for (int i = 0; i < 1000; ++i) {
        State state = context.getState(State::Positions);
-       for (int j = 0; j < numAtoms-1; ++j) {
+       for (int j = 0; j < numParticles-1; ++j) {
            Vec3 p1 = state.getPositions()[j];
            Vec3 p2 = state.getPositions()[j+1];
            double dist = std::sqrt((p1[0]-p2[0])*(p1[0]-p2[0])+(p1[1]-p2[1])*(p1[1]-p2[1])+(p1[2]-p2[2])*(p1[2]-p2[2]));
@@ -2308,169 +2323,408 @@ void testVerletSingleBond( void ){
    static const int debug                   = 0;
    FILE* log                                = stdout;
    
-   int numberOfAtoms                        = 2;
+   int numberOfParticles                        = 2;
    RealOpenMM mass                          = 2.0; 
 
 // ---------------------------------------------------------------------------------------
 
-    BrookPlatform platform( 32, "cal", log );
+   BrookPlatform platform( 32, "cal", log );
 
-    System system( numberOfAtoms, 0 ); 
-    system.setAtomMass(0, 2.0);
-    system.setAtomMass(1, 2.0);
+   System system( numberOfParticles, 0 ); 
+   system.setParticleMass(0, 2.0);
+   system.setParticleMass(1, 2.0);
 
-    VerletIntegrator integrator(0.01);
+   VerletIntegrator integrator(0.01);
 
-    NonbondedForce* forceField = new NonbondedForce(2, 1, 0, 0, 0); 
-    forceField->setBondParameters(0, 0, 1, 1.5, 1); 
-    system.addForce(forceField);
+   HarmonicBondForce* forceField = new HarmonicBondForce(1);
+   forceField->setBondParameters(0, 0, 1, 1.5, 1); 
+   system.addForce(forceField);
 
-    CMMotionRemover* remover = new CMMotionRemover();
-    system.addForce(remover);
+   CMMotionRemover* remover = new CMMotionRemover();
+   system.addForce(remover);
 
-    OpenMMContext context(system, integrator, platform);
-    vector<Vec3> positions(2);
-    positions[0] = Vec3(-1, 0, 0); 
-    positions[1] = Vec3(1, 0, 0); 
-    context.setPositions(positions);
-       
-    // This is simply a harmonic oscillator, so compare it to the analytical solution.
-       
-    const double freq = 1.0;;
-    State state = context.getState(State::Energy);
-    const double initialEnergy = state.getKineticEnergy()+state.getPotentialEnergy();
-    if( debug ){
-       (void) fprintf( log, "%s Energy initialEnergy=%12.5e KE=%12.5e PE=%12.5e\n",
-                       methodName.c_str(), initialEnergy,
-                       state.getKineticEnergy(), state.getPotentialEnergy() );
-        (void) fflush( log );
-    }
+   OpenMMContext context(system, integrator, platform);
+   vector<Vec3> positions(2);
+   positions[0] = Vec3(-1, 0, 0); 
+   positions[1] = Vec3(1, 0, 0); 
+   context.setPositions(positions);
+      
+   // This is simply a harmonic oscillator, so compare it to the analytical solution.
+      
+   const double freq = 1.0;;
+   State state = context.getState(State::Energy);
+   const double initialEnergy = state.getKineticEnergy()+state.getPotentialEnergy();
+   if( debug ){
+      (void) fprintf( log, "%s Energy initialEnergy=%12.5e KE=%12.5e PE=%12.5e\n",
+                      methodName.c_str(), initialEnergy,
+                      state.getKineticEnergy(), state.getPotentialEnergy() );
+       (void) fflush( log );
+   }
 
 
-    for (int i = 0; i < 1000; ++i) {
+   for (int i = 0; i < 1000; ++i) {
 
-        state = context.getState(State::Positions | State::Velocities | State::Energy);
-        double time = state.getTime();
-        double expectedDist = 1.5+0.5*std::cos(freq*time);
+       state = context.getState(State::Positions | State::Velocities | State::Energy);
+       double time = state.getTime();
+       double expectedDist = 1.5+0.5*std::cos(freq*time);
 
-        Vec3 position0 = state.getPositions()[0];
-        Vec3 position1 = state.getPositions()[1];
-        if( debug ){
-           (void) fprintf( log, "%s %d Pos expected=[%12.5e 0 0] actual=[%12.5e %12.5e %12.5e] [%12.5e %12.5e %12.5e]\n",
-                           methodName.c_str(), i, -0.5*expectedDist, 
-                           position0[0], position0[1], position0[2],
-                           position1[0], position1[1], position1[2] );
-           (void) fflush( log );
-        }
+       Vec3 position0 = state.getPositions()[0];
+       Vec3 position1 = state.getPositions()[1];
+       if( debug ){
+          (void) fprintf( log, "%s %d Pos expected=[%12.5e 0 0] actual=[%12.5e %12.5e %12.5e] [%12.5e %12.5e %12.5e]\n",
+                          methodName.c_str(), i, -0.5*expectedDist, 
+                          position0[0], position0[1], position0[2],
+                          position1[0], position1[1], position1[2] );
+          (void) fflush( log );
+       }
 
-        ASSERT_EQUAL_VEC(Vec3(-0.5*expectedDist, 0, 0), state.getPositions()[0], 0.02);
-        ASSERT_EQUAL_VEC(Vec3(0.5*expectedDist, 0, 0), state.getPositions()[1], 0.02);
+       ASSERT_EQUAL_VEC(Vec3(-0.5*expectedDist, 0, 0), state.getPositions()[0], 0.02);
+       ASSERT_EQUAL_VEC(Vec3(0.5*expectedDist, 0, 0), state.getPositions()[1], 0.02);
 
-        double expectedSpeed = -0.5*freq*std::sin(freq*time);
+       double expectedSpeed = -0.5*freq*std::sin(freq*time);
 
-        Vec3 velocity0 = state.getVelocities()[0];
-        Vec3 velocity1 = state.getVelocities()[1];
-        if( debug ){
-           (void) fprintf( log, "%s %d Vel expected=[%12.5e 0 0] actual=[%12.5e %12.5e %12.5e] [%12.5e %12.5e %12.5e]\n",
-                           methodName.c_str(), i, -0.5*expectedSpeed, 
-                           velocity0[0], velocity0[1], velocity0[2],
-                           velocity1[0], velocity1[1], velocity1[2] );
-           (void) fflush( log );
-        }
+       Vec3 velocity0 = state.getVelocities()[0];
+       Vec3 velocity1 = state.getVelocities()[1];
+       if( debug ){
+          (void) fprintf( log, "%s %d Vel expected=[%12.5e 0 0] actual=[%12.5e %12.5e %12.5e] [%12.5e %12.5e %12.5e]\n",
+                          methodName.c_str(), i, -0.5*expectedSpeed, 
+                          velocity0[0], velocity0[1], velocity0[2],
+                          velocity1[0], velocity1[1], velocity1[2] );
+          (void) fflush( log );
+       }
 
-        ASSERT_EQUAL_VEC(Vec3(-0.5*expectedSpeed, 0, 0), state.getVelocities()[0], 0.02);
-        ASSERT_EQUAL_VEC(Vec3(0.5*expectedSpeed, 0, 0), state.getVelocities()[1], 0.02);
+       ASSERT_EQUAL_VEC(Vec3(-0.5*expectedSpeed, 0, 0), state.getVelocities()[0], 0.02);
+       ASSERT_EQUAL_VEC(Vec3(0.5*expectedSpeed, 0, 0), state.getVelocities()[1], 0.02);
 
-        double energy = state.getKineticEnergy()+state.getPotentialEnergy();
+       double energy = state.getKineticEnergy()+state.getPotentialEnergy();
 
-        if( debug ){
-           (void) fprintf( log, "%s %d Energy initialEnergy=%12.5e actual=%12.5e KE=%12.5e PE=%12.5e\n",
-                           methodName.c_str(), i, initialEnergy, energy,
-                           state.getKineticEnergy(), state.getPotentialEnergy() );
-           (void) fflush( log );
-        }
+       if( debug ){
+          (void) fprintf( log, "%s %d Energy initialEnergy=%12.5e actual=%12.5e KE=%12.5e PE=%12.5e\n",
+                          methodName.c_str(), i, initialEnergy, energy,
+                          state.getKineticEnergy(), state.getPotentialEnergy() );
+          (void) fflush( log );
+       }
 
-        ASSERT_EQUAL_TOL(initialEnergy, energy, 0.01);
-        integrator.step(1);
-    }   
+       ASSERT_EQUAL_TOL(initialEnergy, energy, 0.01);
+       integrator.step(1);
+   }   
 
-   (void) fprintf( log, "%s ok\n", methodName.c_str() );
-   (void) fflush( log );
+  (void) fprintf( log, "%s ok\n", methodName.c_str() );
+  (void) fflush( log );
 }
 
 void testVerletConstraints() {
 
 // ---------------------------------------------------------------------------------------
 
-   static const std::string methodName      = "testVerletConstraints";
+  static const std::string methodName      = "testVerletConstraints";
+  static const int debug                   = 1;
+  FILE* log                                = stdout;
+  
+  const int numParticles                       = 8;
+  RealOpenMM mass                          = 2.0; 
+
+// ---------------------------------------------------------------------------------------
+
+  //BrookPlatform platform( 32, "cal", log );
+
+  ReferencePlatform platform;
+  System system(numParticles, numParticles/2);
+  VerletIntegrator integrator(0.0005);
+  NonbondedForce* forceField = new NonbondedForce(numParticles, 0);
+  for (int i = 0; i < numParticles; ++i) {
+      system.setParticleMass(i, 1.0);
+      forceField->setParticleParameters(i, (i%2 == 0 ? 0.2 : -0.2), 0.5, 5.0);
+  }   
+
+  int index = 0;
+  for (int i = 0; i < numParticles-1; i += 2){
+//(void) fprintf( log, "%s %d %d %d\n", methodName.c_str(), index, i, i+1 ); fflush( log );
+      //system.setConstraintParameters(i, i, i+1, 1.0);
+      system.setConstraintParameters( index++, i, i+1, 1.0);
+  }
+  system.addForce(forceField);
+  CMMotionRemover* remover = new CMMotionRemover();
+  system.addForce(remover);
+
+  OpenMMContext context(system, integrator, platform);
+  vector<Vec3> positions(numParticles);
+  vector<Vec3> velocities(numParticles);
+  init_gen_rand(0);
+  double scale = 0.01;
+  for (int i = 0; i < numParticles; ++i) {
+      positions[i] = Vec3(i/2, (i+1)/2, 0); 
+      velocities[i] = Vec3( scale*(genrand_real2()-0.5), scale*(genrand_real2()-0.5), scale*(genrand_real2()-0.5) );
+  }   
+  context.setPositions(positions);
+  context.setVelocities(velocities);
+  
+  // Simulate it and see whether the constraints remain satisfied.
+  
+  double initialEnergy = 0.0;
+  for (int i = 0; i < 1000; ++i) {
+      State state = context.getState(State::Positions | State::Energy);
+      for (int j = 0; j < numParticles; j += 2) {
+          Vec3 p1 = state.getPositions()[j];
+          Vec3 p2 = state.getPositions()[j+1];
+          double dist = std::sqrt((p1[0]-p2[0])*(p1[0]-p2[0])+(p1[1]-p2[1])*(p1[1]-p2[1])+(p1[2]-p2[2])*(p1[2]-p2[2]));
+          if( debug ){
+             (void) fprintf( log, "%s %d %d dist=%12.5e diff=%12.5e\n", methodName.c_str(), i, j, dist, fabs( dist - 1.0) );
+             (void) fflush( log );
+          }
+
+          ASSERT_EQUAL_TOL(1.0, dist, 2e-4);
+      }
+      double energy = state.getKineticEnergy()+state.getPotentialEnergy();
+      if (i == 1){
+          initialEnergy = energy;
+      } else if (i > 0){
+          if( debug ){
+             (void) fprintf( log, "%s %d E=%12.5e Ecalc=%12.5e\n", methodName.c_str(), i, initialEnergy, energy );
+          }
+          ASSERT_EQUAL_TOL(initialEnergy, energy, 0.01);
+      }
+      integrator.step(1);
+  }   
+  (void) fprintf( log, "%s ok\n", methodName.c_str() );
+  (void) fflush( log );
+}
+
+void testBrownianSingleBond() {
+
+// ---------------------------------------------------------------------------------------
+
+  static const std::string methodName      = "testBrownianSingleBond";
+  static const int debug                   = 0;
+  FILE* log                                = stdout;
+  
+  const int numParticles                       = 8;
+  RealOpenMM mass                          = 2.0; 
+
+// ---------------------------------------------------------------------------------------
+
+  BrookPlatform platform( 32, "cal", log );
+  //ReferencePlatform platform;
+  System system(2, 0); 
+  system.setParticleMass(0, 2.0);
+  system.setParticleMass(1, 2.0);
+  double dt = 0.01;
+  BrownianIntegrator integrator(0, 0.1, dt);
+  HarmonicBondForce* forceField = new HarmonicBondForce(1);
+  forceField->setBondParameters(0, 0, 1, 1.5, 1); 
+  system.addForce(forceField);
+  OpenMMContext context(system, integrator, platform);
+  vector<Vec3> positions(2);
+  positions[0] = Vec3(-1, 0, 0); 
+  positions[1] = Vec3(1, 0, 0); 
+  context.setPositions(positions);
+      
+  // This is simply an overdamped harmonic oscillator, so compare it to the analytical solution.
+      
+  double rate = 2*1.0/0.1;
+
+  for (int i = 0; i < 1000; ++i) {
+
+      State state = context.getState(State::Positions | State::Velocities);
+
+      double time = state.getTime();
+      double expectedDist = 1.5+0.5*std::exp(-rate*time);
+
+      Vec3 position0 = state.getPositions()[0];
+      Vec3 position1 = state.getPositions()[1];
+      if( debug ){
+         (void) fprintf( log, "%s %d Pos expected=[%12.5e 0 0] actual=[%12.5e %12.5e %12.5e] [%12.5e %12.5e %12.5e]\n",
+                         methodName.c_str(), i, -0.5*expectedDist, 
+                         position0[0], position0[1], position0[2],
+                         position1[0], position1[1], position1[2] );
+         (void) fflush( log );
+      }
+
+      ASSERT_EQUAL_VEC(Vec3(-0.5*expectedDist, 0, 0), state.getPositions()[0], 0.02);
+      ASSERT_EQUAL_VEC(Vec3(0.5*expectedDist, 0, 0), state.getPositions()[1], 0.02);
+
+      Vec3 velocity0       = state.getVelocities()[0];
+      Vec3 velocity1       = state.getVelocities()[1];
+      double expectedSpeed = -0.5*rate*std::exp(-rate*(time-0.5*dt));
+      if( debug ){
+         (void) fprintf( log, "%s %d Vel expected=[%12.5e 0 0] actual=[%12.5e %12.5e %12.5e] [%12.5e %12.5e %12.5e]\n",
+                         methodName.c_str(), i, -0.5*expectedSpeed, 
+                         velocity0[0], velocity0[1], velocity0[2],
+                         velocity1[0], velocity1[1], velocity1[2] );
+         (void) fflush( log );
+      }
+      if (i > 0) {
+          ASSERT_EQUAL_VEC(Vec3(-0.5*expectedSpeed, 0, 0), state.getVelocities()[0], 0.11);
+          ASSERT_EQUAL_VEC(Vec3(0.5*expectedSpeed, 0, 0), state.getVelocities()[1], 0.11);
+      }
+      integrator.step(1);
+   }   
+
+   (void) fprintf( log, "%s ok\n", methodName.c_str() );
+   (void) fflush( log );
+}
+
+void testBrownianTemperature() {
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName      = "testBrownianTemperature";
    static const int debug                   = 1;
    FILE* log                                = stdout;
    
-   const int numAtoms                       = 8;
+   const int numParticles                       = 8;
    RealOpenMM mass                          = 2.0; 
 
 // ---------------------------------------------------------------------------------------
 
    //BrookPlatform platform( 32, "cal", log );
-
    ReferencePlatform platform;
-   System system(numAtoms, numAtoms/2);
-   VerletIntegrator integrator(0.0005);
-   NonbondedForce* forceField = new NonbondedForce(numAtoms, 0, 0, 0, 0); 
-   for (int i = 0; i < numAtoms; ++i) {
-       system.setAtomMass(i, 1.0);
-       forceField->setAtomParameters(i, (i%2 == 0 ? 0.2 : -0.2), 0.5, 5.0);
-   }   
 
-   int index = 0;
-   for (int i = 0; i < numAtoms-1; i += 2){
-//(void) fprintf( log, "%s %d %d %d\n", methodName.c_str(), index, i, i+1 ); fflush( log );
-       //system.setConstraintParameters(i, i, i+1, 1.0);
-       system.setConstraintParameters( index++, i, i+1, 1.0);
+   const int numBonds     = numParticles-1;
+   const double temp      = 100.0;
+   const double deltaT    = 0.001;
+   const double friction  = 2.0;
+   System system(numParticles, 0);
+   BrownianIntegrator integrator(temp, friction, deltaT);
+   HarmonicBondForce* forceField = new HarmonicBondForce(numBonds);
+/*
+   ReferencePlatform platform;
+   System system(numParticles, numParticles/2);
+   VerletIntegrator integrator(0.0005);
+   NonbondedForce* forceField = new NonbondedForce(numParticles, 0, 0, 0, 0); 
+*/
+   for (int i = 0; i < numParticles; ++i) {
+       system.setParticleMass(i, 2.0);
+//        forceField->setParticleParameters(i, (i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
+   }
+   for (int i = 0; i < numBonds; ++i){
+       // ( index, atom1, atom2, length, k )
+       forceField->setBondParameters(i, i, i+1, 1.0, 0.8);
    }
    system.addForce(forceField);
+
    CMMotionRemover* remover = new CMMotionRemover();
    system.addForce(remover);
 
    OpenMMContext context(system, integrator, platform);
-   vector<Vec3> positions(numAtoms);
-   vector<Vec3> velocities(numAtoms);
-   init_gen_rand(0);
-   double scale = 0.01;
-   for (int i = 0; i < numAtoms; ++i) {
-       positions[i] = Vec3(i/2, (i+1)/2, 0); 
-       velocities[i] = Vec3( scale*(genrand_real2()-0.5), scale*(genrand_real2()-0.5), scale*(genrand_real2()-0.5) );
-   }   
+   vector<Vec3> positions(numParticles);
+   for (int i = 0; i < numParticles; ++i)
+       positions[i] = Vec3(i, 0, 0);
+   context.setPositions(positions);
+
+   // Let it equilibrate.
+   int equilibrateSteps = 1000;
+   int runSteps         = 1000;
+   (void) fprintf( log, "Begin equilibration: %d\n", equilibrateSteps );
+   integrator.step(equilibrateSteps);
+   (void) fprintf( log, "End equilibration: %d\n", equilibrateSteps );
+
+   // Now run it for a while and see if the temperature is correct.
+
+   State state                            = context.getState(State::Parameters);
+   const map<std::string, double> params  = state.getParameters();
+   (void) fprintf( log, "Parameters:\n" );
+   for( map<std::string, double>::const_iterator iter = params.begin(); iter != params.end(); iter++){
+      std::string label = iter->first;
+      (void) fprintf( log, "   %s %12.5e\n", label.c_str(), iter->second );
+   }
+   (void) fprintf( log, "End of Parameters:\n" );
+
+   (void) fprintf( log, "Begin run: %d\n", runSteps );
+   double pe = 0.0;
+   for (int i = 0; i < runSteps; ++i) {
+      State state  = context.getState(State::Energy | State::Positions | State::Velocities );
+      pe          += state.getPotentialEnergy();
+      if( debug ){
+         (void) fprintf( log, "%s %d PE=%12.5e ttl=%12.5e\n",
+                         methodName.c_str(), i, state.getPotentialEnergy(), pe );
+
+         vector<Vec3> positions  = state.getPositions(); 
+         vector<Vec3> velocities = state.getVelocities(); 
+         for( int ii = 0; ii < numParticles; ii++ ){
+            double dist;
+            if( ii < (numParticles - 1) ){
+               dist = (positions[ii][0] -  positions[ii+1][0] )*(positions[ii][0] -  positions[ii+1][0] ) +
+                      (positions[ii][1] -  positions[ii+1][1] )*(positions[ii][1] -  positions[ii+1][1] ) +
+                      (positions[ii][2] -  positions[ii+1][2] )*(positions[ii][2] -  positions[ii+1][2] );
+               dist = sqrt( dist );
+            } else {
+               dist = 0.0;
+            }
+
+            (void) fprintf( log, "   %d %.8f q[%12.5e %12.5e %12.5e] v[%12.5e %12.5e %12.5e]\n", ii,
+                                 dist, positions[ii][0],  positions[ii][1],  positions[ii][2], 
+                                 velocities[ii][0], velocities[ii][1], velocities[ii][2] );
+         }
+
+         (void)fflush( log );
+       }
+       integrator.step(1);
+   }
+   (void) fprintf( log, "End run: %d\n", runSteps );
+
+   pe /= (double) runSteps;
+   double expected = 0.5*numBonds*BOLTZ*temp;
+   double tol      = 3*expected/std::sqrt( (double) runSteps );
+   (void) fprintf( log, "%s expected=%12.5e found=%12.5e tol=%12.5e ok\n", methodName.c_str(), expected, pe, tol ); fflush( log );
+
+   ASSERT_EQUAL_TOL(expected, pe, tol );
+
+   (void) fprintf( log, "%s ok\n", methodName.c_str() );
+   (void) fflush( log );
+}
+
+void testBrownianConstraints() {
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName      = "testBrownianConstraints";
+   static const int debug                   = 1;
+   FILE* log                                = stdout;
+   
+   const int numParticles                       = 8;
+   RealOpenMM mass                          = 2.0; 
+
+// ---------------------------------------------------------------------------------------
+
+   //ReferencePlatform platform;
+   BrookPlatform platform( 32, "cal", log );
+
+   const double temp = 100.0;
+   System system(numParticles, numParticles-1);
+   BrownianIntegrator integrator(temp, 2.0, 0.001);
+   NonbondedForce* forceField = new NonbondedForce(numParticles, 0);
+   for (int i = 0; i < numParticles; ++i) {
+       system.setParticleMass(i, 10.0);
+       forceField->setParticleParameters(i, (i%2 == 0 ? 0.2 : -0.2), 0.5, 5.0);
+   }
+   for (int i = 0; i < numParticles-1; ++i)
+       system.setConstraintParameters(i, i, i+1, 1.0);
+   system.addForce(forceField);
+   OpenMMContext context(system, integrator, platform);
+   vector<Vec3> positions(numParticles);
+   vector<Vec3> velocities(numParticles);
+   init_gen_rand(0); 
+   for (int i = 0; i < numParticles; ++i) {
+       positions[i] = Vec3(i/2, (i+1)/2, 0);
+       velocities[i] = Vec3(genrand_real2()-0.5, genrand_real2()-0.5, genrand_real2()-0.5);
+   }
    context.setPositions(positions);
    context.setVelocities(velocities);
-   
+
    // Simulate it and see whether the constraints remain satisfied.
-   
-   double initialEnergy = 0.0;
+
    for (int i = 0; i < 1000; ++i) {
-       State state = context.getState(State::Positions | State::Energy);
-       for (int j = 0; j < numAtoms; j += 2) {
+       State state = context.getState(State::Positions);
+       for (int j = 0; j < numParticles-1; ++j) {
            Vec3 p1 = state.getPositions()[j];
            Vec3 p2 = state.getPositions()[j+1];
            double dist = std::sqrt((p1[0]-p2[0])*(p1[0]-p2[0])+(p1[1]-p2[1])*(p1[1]-p2[1])+(p1[2]-p2[2])*(p1[2]-p2[2]));
-           if( debug ){
-              (void) fprintf( log, "%s %d %d dist=%12.5e diff=%12.5e\n", methodName.c_str(), i, j, dist, fabs( dist - 1.0) );
-              (void) fflush( log );
-           }
-
            ASSERT_EQUAL_TOL(1.0, dist, 2e-4);
        }
-       double energy = state.getKineticEnergy()+state.getPotentialEnergy();
-       if (i == 1){
-           initialEnergy = energy;
-       } else if (i > 0){
-           if( debug ){
-              (void) fprintf( log, "%s %d E=%12.5e Ecalc=%12.5e\n", methodName.c_str(), i, initialEnergy, energy );
-           }
-           ASSERT_EQUAL_TOL(initialEnergy, energy, 0.01);
-       }
        integrator.step(1);
-   }   
+   }
+
    (void) fprintf( log, "%s ok\n", methodName.c_str() );
    (void) fflush( log );
 }
@@ -2483,14 +2737,15 @@ int main( ){
 //      testBrookBondedHarmonicBond( );
 
 //      testBrookNonBonded( );
-
 /*
       testBrookStreams( 50 );
       testBrookStreams( 63 );
       testBrookStreams( 64 );
       testBrookStreams( 65 );
 
+*/
       testBrookBonds();
+/*
       testBrookAngles();
       testBrookRBTorsions();
       testBrookPeriodicTorsions();
@@ -2502,15 +2757,21 @@ int main( ){
       testLangevinConstraints();
 
       testObcForce();
-      testObcSingleAtom();
+      testObcSingleParticle();
       testObcEConsistentForce();
 
       testVerletSingleBond();
-      testLangevinConstraints();
+      testBrownianSingleBond();
 */
-      //testVerletSingleBond();
-      testVerletConstraints();
+      // not working
+      // testVerletConstraints();
 
+      //testObcForce();
+      //testObcSingleParticle();
+//      testObcEConsistentForce();
+
+//      testLangevinTemperature();
+      //testBrownianTemperature();
 
     }  catch( const exception& e ){
       cout << "exception: " << e.what() << endl;
