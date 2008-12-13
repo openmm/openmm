@@ -362,10 +362,10 @@ int BrookLangevinDynamics::updateParameters( double temperature, double friction
  *
  */
 
-int BrookLangevinDynamics::update( Stream& positions, Stream& velocities,
-                                     const Stream& forces,
-                                     BrookShakeAlgorithm& brookShakeAlgorithm,
-                                     BrookRandomNumberGenerator& brookRandomNumberGenerator ){
+int BrookLangevinDynamics::update( BrookStreamImpl& positionStream, BrookStreamImpl& velocityStream,
+                                   BrookStreamImpl& forceStream,
+                                   BrookShakeAlgorithm& brookShakeAlgorithm,
+                                   BrookRandomNumberGenerator& brookRandomNumberGenerator ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -380,11 +380,6 @@ int BrookLangevinDynamics::update( Stream& positions, Stream& velocities,
 // ---------------------------------------------------------------------------------------
 
    const BrookOpenMMFloat* derivedParameters           = getDerivedParameters();
-
-   BrookStreamImpl& positionStream                     = dynamic_cast<BrookStreamImpl&>       (positions.getImpl());
-   BrookStreamImpl& velocityStream                     = dynamic_cast<BrookStreamImpl&>       (velocities.getImpl());
-   const BrookStreamImpl& forceStreamC                 = dynamic_cast<const BrookStreamImpl&> (forces.getImpl());
-   BrookStreamImpl& forceStream                        = const_cast<BrookStreamImpl&> (forceStreamC);
 
    if( (1 || PrintOn) && getLog() ){
 

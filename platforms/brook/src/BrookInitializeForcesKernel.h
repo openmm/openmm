@@ -1,5 +1,5 @@
-#ifndef OPENMM_BROOK_CALC_KINETIC_ENERGY_KERNEL_H_
-#define OPENMM_BROOK_CALC_KINETIC_ENERGY_KERNEL_H_
+#ifndef OPENMM_BROOK_INITIALIZE_FORCES_KERNEL_H_
+#define OPENMM_BROOK_INITIALIZE_FORCES_KERNEL_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -9,12 +9,12 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright ( c ) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008 Stanford University and the Authors.           *
  * Authors: Peter Eastman, Mark Friedrichs                                    *
  * Contributors:                                                              *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
- * copy of this software and associated documentation files ( the "Software" ), *
+ * copy of this software and associated documentation files (the "Software"), *
  * to deal in the Software without restriction, including without limitation  *
  * the rights to use, copy, modify, merge, publish, distribute, sublicense,   *
  * and/or sell copies of the Software, and to permit persons to whom the      *
@@ -33,74 +33,83 @@
  * -------------------------------------------------------------------------- */
 
 #include "kernels.h"
-#include "BrookFloatStreamInternal.h"
 #include "OpenMMBrookInterface.h"
 
 namespace OpenMM {
 
 /**
- * Brook class for calculating kinetic energy
+ * This kernel initializes the forces
  */
-
-class BrookCalcKineticEnergyKernel : public CalcKineticEnergyKernel {
+class BrookInitializeForcesKernel : public InitializeForcesKernel {
 
    public:
-
-      /**
-       * BrookCalcKineticEnergyKernel constructor
-       * 
-       * @param name                      name of the stream to create
-       * @param platform                  platform
-       * @param OpenMMBrookInterface      OpenMM-Brook interface
-       * @param System                    System reference
-       */
   
-      BrookCalcKineticEnergyKernel( std::string name, const Platform& platform, OpenMMBrookInterface& openMMBrookInterface, System& system );
-
-      /**
-       * BrookCalcKineticEnergyKernel destructor
-       * 
-       */
+      BrookInitializeForcesKernel( std::string name, const Platform& platform, OpenMMBrookInterface& openMMBrookInterface, System& system );
   
-      ~BrookCalcKineticEnergyKernel();
-
+      ~BrookInitializeForcesKernel();
+  
       /** 
        * Initialize the kernel
        * 
-       * @param system  System reference
+       * @param system     the System this kernel will be applied to
+       */
+
+      void initialize( const System& system );
+  
+      /** 
+       * Execute the kernel to calculate the forces.
+       * 
+       * @param context    the context in which to execute this kernel
+       */
+
+      void execute( OpenMMContextImpl& context );
+  
+      /** 
+       * Set log file reference
+       * 
+       * @param  log file reference
+       *
+       * @return DefaultReturnValue
        *
        */
-      void initialize( const System& system );
+      
+      int setLog( FILE* log );
+
+      /* 
+       * Get contents of object
+       *
+       * @param level of dump
+       *
+       * @return string containing contents
+       *
+       * */
+      
+      std::string getContents( int level ) const;
 
       /** 
-       * Execute the kernel.
+       * Get log file reference
        * 
-       * @param context OpenMMContextImpl reference
+       * @return  log file reference
        *
        */
-
-      double execute( OpenMMContextImpl& context );
-
+      
+      FILE* getLog( void ) const;
+      
    private:
+   
+      // log file reference
+
+      FILE* _log;
+
+      // number of particles
 
       int _numberOfParticles;
-
-      // masses
-
-      BrookOpenMMFloat* _masses;
-
-      // interface
-
+   
       OpenMMBrookInterface& _openMMBrookInterface;
-
-      // System reference
-
       System& _system;
-
-
 
 };
 
 } // namespace OpenMM
 
-#endif /* OPENMM_BROOK_CALC_KINETIC_ENERGY_KERNEL_H_ */
+#endif /* OPENMM_BROOK_INITIALIZE_FORCES_KERNEL_H_ */

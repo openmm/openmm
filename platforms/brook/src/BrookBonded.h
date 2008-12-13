@@ -35,9 +35,10 @@
 #include <vector>
 
 #include "BrookStreamImpl.h"
-#include "BrookPlatform.h"
+//#include "BrookPlatform.h"
 #include "BrookCommon.h"
 #include "OpenMMContext.h"
+#include "BrookBondParameters.h"
 
 namespace OpenMM {
 
@@ -86,6 +87,7 @@ class BrookBonded : public BrookCommon {
        *
        */
 
+/*
       int setup( int numberOfParticles, 
                  const std::vector<std::vector<int> >& bondIndices,            const std::vector<std::vector<double> >& bondParameters,
                  const std::vector<std::vector<int> >& angleIndices,           const std::vector<std::vector<double> >& angleParameters,
@@ -93,6 +95,14 @@ class BrookBonded : public BrookCommon {
                  const std::vector<std::vector<int> >& rbTorsionIndices,       const std::vector<std::vector<double> >& rbTorsionParameters,
                  const std::vector<std::vector<int> >& bonded14Indices,        const std::vector<std::vector<double> >& nonbondedParameters,
                  double lj14Scale, double coulomb14Scale, const Platform& platform );
+*/
+
+      int setup( int numberOfParticles,
+                 BrookBondParameters* harmonicBondBrookBondParameters,
+                 BrookBondParameters* harmonicAngleBrookBondParameters,
+                 BrookBondParameters* periodicTorsionBrookBondParameters,
+                 BrookBondParameters* rbTorsionBrookBondParameters,
+                 BrookBondParameters* nonBonded14ForceParameters,  double lj14Scale, double coulombScale, int particleStreamWidth, int particleStreamSize );
 
       /**
        * Get inverse map stream width
@@ -274,6 +284,13 @@ class BrookBonded : public BrookCommon {
       
       void computeForces( BrookStreamImpl& positionStream, BrookStreamImpl& forceStream );
    
+      /** 
+       * Return SetupCompleted flag
+       *
+       * @return SetupCompleted flag
+       */
+      
+      int isSetupCompleted( void ) const;
    
    private:
    
@@ -282,6 +299,8 @@ class BrookBonded : public BrookCommon {
       static const int MaxNumberOfInverseMaps   = 9;
 
       enum { StreamI, StreamJ, StreamK, StreamL, StreamMax };
+
+      int _setupCompleted;
 
       // inverse map stream width
 
@@ -412,7 +431,8 @@ class BrookBonded : public BrookCommon {
        *
        */
 
-      int loadInvMaps( int nbondeds, int nparticles, int *particles, const BrookPlatform& platform );
+      //int loadInvMaps( int nbondeds, int nparticles, int *particles, const BrookPlatform& platform );
+      int loadInvMaps( int nbondeds, int nparticles, int *particles, int particleStreamWidth, int particleStreamSize );
       
       /**
        * Validate inverse map count
@@ -479,7 +499,6 @@ class BrookBonded : public BrookCommon {
        * */
       int gpuRepackInvMap_merged( int nparticles, int nmaps, int *counts, float4 *invmaps[], float4 *buf );
       
-        
 };
 
 } // namespace OpenMM

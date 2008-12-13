@@ -35,7 +35,7 @@
 #include <vector>
 #include <set>
 
-#include "BrookFloatStreamInternal.h"
+#include "BrookStreamImpl.h"
 #include "BrookShakeAlgorithm.h"
 #include "BrookRandomNumberGenerator.h"
 #include "BrookPlatform.h"
@@ -159,8 +159,9 @@ class BrookLangevinDynamics : public BrookCommon {
        *
        */
       
-      int update( Stream& positions, Stream& velocities,
-                  const Stream& forces, BrookShakeAlgorithm& brookShakeAlgorithm,
+      int update( BrookStreamImpl& positionStream, BrookStreamImpl& velocityStream,
+                  BrookStreamImpl& forceStream,
+                  BrookShakeAlgorithm& brookShakeAlgorithm,
                   BrookRandomNumberGenerator& brookRandomNumberGenerator );
       /** 
        * Get array of LangevinDynamics streams 

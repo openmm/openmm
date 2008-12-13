@@ -33,6 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "kernels.h"
+#include "OpenMMBrookInterface.h"
 #include "BrookLangevinDynamics.h"
 #include "BrookShakeAlgorithm.h"
 #include "BrookRandomNumberGenerator.h"
@@ -40,7 +41,7 @@
 namespace OpenMM {
 
 /**
- * This is the base class of Float and Double streams in the Brook Platform.
+ * Performs Langevin integration step
  */
 
 class BrookIntegrateLangevinStepKernel : public IntegrateLangevinStepKernel {
@@ -60,7 +61,7 @@ class BrookIntegrateLangevinStepKernel : public IntegrateLangevinStepKernel {
        *
        */
   
-      BrookIntegrateLangevinStepKernel( std::string name, const Platform& platform );
+      BrookIntegrateLangevinStepKernel( std::string name, const Platform& platform, OpenMMBrookInterface& openMMBrookInterface, System& system );
 
       /**
        * BrookIntegrateLangevinStepKernel destructor
@@ -72,32 +73,35 @@ class BrookIntegrateLangevinStepKernel : public IntegrateLangevinStepKernel {
       /** 
        * Initialize the kernel, setting up all parameters related to integrator.
        * 
-       * @param masses             particle masses
-       * @param constraintIndices  each element contains the indices of two particles whose distance should be constrained
-       * @param constraintLengths  required distance between each pair of constrained particles
+       * @param system             System reference
+       * @param integrator         LangevinIntegrator reference
        */
 
-      void initialize( const std::vector<double>& masses, const std::vector<std::vector<int> >& constraintIndices,
-                       const std::vector<double>& constraintLengths );
+      void initialize( const System& system, const LangevinIntegrator& integrator );
+
       /** 
        * Execute kernel
        * 
-       * @param positions          coordinates
-       * @param velocities         velocities
-       * @param forces             forces
-       * @param temperature        heat bath temperature
-       * @param friction           friction coefficient coupling the system to the heat bath
-       * @param stepSize           step size
+       * @param context            OpenMMContextImpl reference
+       * @param integrator         LangevinIntegrator reference
        *
        */
 
-      void execute( Stream& positions, Stream& velocities, const Stream& forces, double temperature, double friction, double stepSize );
+      void execute( OpenMMContextImpl& context, const LangevinIntegrator& integrator );
 
    protected:
 
-      BrookLangevinDynamics*      _brookLangevinDynamics;
+      BrookLangevinDynamics*        _brookLangevinDynamics;
       BrookShakeAlgorithm*          _brookShakeAlgorithm;
       BrookRandomNumberGenerator*   _brookRandomNumberGenerator;
+
+      // interface
+
+      OpenMMBrookInterface& _openMMBrookInterface;
+
+      // System reference
+
+      System& _system;
 
 };
 

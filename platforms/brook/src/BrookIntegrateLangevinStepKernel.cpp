@@ -35,16 +35,19 @@
 using namespace OpenMM;
 using namespace std;
 
-      /** 
-       * BrookIntegrateLangevinStepKernel constructor
-       * 
-       * @param name        name of the stream to create
-       * @param platform    platform
-       *
-       */
+/** 
+ * BrookIntegrateLangevinStepKernel constructor
+ * 
+ * @param name                  name of the stream to create
+ * @param platform              platform
+ * @param openMMBrookInterface  OpenMMBrookInterface reference
+ * @param system                System reference  
+ *
+ */
 
-BrookIntegrateLangevinStepKernel::BrookIntegrateLangevinStepKernel( std::string name, const Platform& platform ) :
-                                  IntegrateLangevinStepKernel( name, platform ){
+BrookIntegrateLangevinStepKernel::BrookIntegrateLangevinStepKernel( std::string name, const Platform& platform,
+                                  OpenMMBrookInterface& openMMBrookInterface, System& system ) :
+                                  IntegrateLangevinStepKernel( name, platform ), _openMMBrookInterface( openMMBrookInterface ), _system( system ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -80,15 +83,12 @@ BrookIntegrateLangevinStepKernel::~BrookIntegrateLangevinStepKernel( ){
 /** 
  * Initialize the kernel, setting up all parameters related to integrator.
  * 
- * @param masses             the mass of each particle
- * @param constraintIndices  each element contains the indices of two particles whose distance should be constrained
- * @param constraintLengths  the required distance between each pair of constrained particles
+ * @param system                System reference  
+ * @param integrator            LangevinIntegrator reference
  *
  */
 
-void BrookIntegrateLangevinStepKernel::initialize( const vector<double>& masses,
-                                                   const vector<vector<int> >& constraintIndices,
-                                                   const vector<double>& constraintLengths ){
+void BrookIntegrateLangevinStepKernel::initialize( const System& system, const LangevinIntegrator& integrator ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -96,38 +96,68 @@ void BrookIntegrateLangevinStepKernel::initialize( const vector<double>& masses,
 
 // ---------------------------------------------------------------------------------------
    
-   _brookLangevinDynamics      = new BrookLangevinDynamics( );
+   int numberOfParticles = system.getNumParticles();
+
+   // masses
+
+   std::vector<double> masses;
+   masses.resize( numberOfParticles );
+
+   for( int ii = 0; ii < numberOfParticles; ii++ ){
+      masses[ii] = static_cast<RealOpenMM>(system.getParticleMass(ii));
+   }
+
+   // constraints
+
+   int numberOfConstraints = system.getNumConstraints();
+
+   std::vector<std::vector<int> > constraintIndicesVector;
+   constraintIndicesVector.resize( numberOfConstraints );
+
+   std::vector<double> constraintLengths;
+   constraintLengths.resize( numberOfConstraints );
+
+   for( int ii = 0; ii < numberOfConstraints; ii++ ){
+
+      int particle1, particle2;
+      double distance;
+
+      system.getConstraintParameters( ii, particle1, particle2, distance );
+      std::vector<int> constraintIndices;
+      constraintIndicesVector[ii]  = constraintIndices;
+
+      constraintIndices[0]         = particle1;
+      constraintIndices[1]         = particle2;
+      constraintLengths[ii]        = static_cast<RealOpenMM>(distance);
+   }
+
+   _brookLangevinDynamics        = new BrookLangevinDynamics( );
    _brookLangevinDynamics->setup( masses, getPlatform() );
 
    _brookShakeAlgorithm          = new BrookShakeAlgorithm( );
-   _brookShakeAlgorithm->setup( masses, constraintIndices, constraintLengths, getPlatform() );
+   _brookShakeAlgorithm->setup( masses, constraintIndicesVector, constraintLengths, getPlatform() );
 
    // assert( (_brookShakeAlgorithm->getNumberOfConstraints() > 0) );
 
    _brookRandomNumberGenerator   = new BrookRandomNumberGenerator( );
    _brookRandomNumberGenerator->setup( (int) masses.size(), getPlatform() );
    _brookRandomNumberGenerator->setVerbosity( 1 );
+
 }
 
 /** 
  * Execute kernel
  * 
- * @param positions          particle coordinates
- * @param velocities         particle velocities
- * @param forces             particle forces
- * @param temperature        heat bath temperature
- * @param friction           friction coefficient coupling the system to the heat bath
- * @param stepSize           integration step size
+ * @param context            OpenMMContextImpl reference
+ * @param integrator         LangevinIntegrator reference
  *
  */
 
-void BrookIntegrateLangevinStepKernel::execute( Stream& positions, Stream& velocities,
-                                                const Stream& forces, double temperature,
-                                                double friction, double stepSize ){
+void BrookIntegrateLangevinStepKernel::execute( OpenMMContextImpl& context, const LangevinIntegrator& integrator ){
 
 // ---------------------------------------------------------------------------------------
 
-   double epsilon = 1.0e-04;
+   double epsilon                           = 1.0e-04;
    static const std::string methodName      = "BrookIntegrateLangevinStepKernel::execute";
 
 // ---------------------------------------------------------------------------------------
@@ -140,16 +170,17 @@ void BrookIntegrateLangevinStepKernel::execute( Stream& positions, Stream& veloc
    // take step
 
    double differences[3];
-   differences[0] = temperature - (double) _brookLangevinDynamics->getTemperature();
-   differences[1] = friction    - (double) _brookLangevinDynamics->getFriction();
-   differences[2] = stepSize    - (double) _brookLangevinDynamics->getStepSize();
+   differences[0] = integrator.getTemperature() - (double) _brookLangevinDynamics->getTemperature();
+   differences[1] = integrator.getFriction()    - (double) _brookLangevinDynamics->getFriction();
+   differences[2] = integrator.getStepSize()    - (double) _brookLangevinDynamics->getStepSize();
    if( fabs( differences[0] ) > epsilon || fabs( differences[1] ) > epsilon || fabs( differences[2] ) > epsilon ){
 //printf( "%s calling updateParameters\n", methodName.c_str() );
-      _brookLangevinDynamics->updateParameters( temperature, friction, stepSize );
+      _brookLangevinDynamics->updateParameters( integrator.getTemperature(), integrator.getFriction(), integrator.getStepSize() );
    } else {
 //printf( "%s NOT calling updateParameters\n", methodName.c_str() );
 }
 
-   _brookLangevinDynamics->update( positions, velocities, forces, *_brookShakeAlgorithm, *_brookRandomNumberGenerator );
+   _brookLangevinDynamics->update( *(_openMMBrookInterface.getParticlePositions()), *(_openMMBrookInterface.getParticleVelocities()), 
+                                   *(_openMMBrookInterface.getParticleForces()), *_brookShakeAlgorithm, *_brookRandomNumberGenerator );
 
 }

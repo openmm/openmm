@@ -36,9 +36,7 @@
 
 #include "BrookStreamImpl.h"
 #include "OpenMMBrookInterface.h"
-#include "gpu/kforce.h"
-#include "gpu/kinvmap_gather.h"
-#include "NonbondedForce.h"
+#include "gpu/kcommon.h"
 
 using namespace OpenMM;
 using namespace std;
@@ -61,6 +59,9 @@ OpenMMBrookInterface::OpenMMBrookInterface( void ){
    _brookBonded                             = NULL;
    _brookNonBonded                          = NULL;
    _brookGbsa                               = NULL;
+
+   _triggerForceKernel                      = NULL;
+   _triggerEnergyKernel                     = NULL;
 
    _positions                               = NULL;
    _velocities                              = NULL;
@@ -285,6 +286,73 @@ int OpenMMBrookInterface::setParticleForces( BrookStreamImpl* forces ){
 }
 
 /** 
+ * Set trigger Force Kernel
+ *
+ * @param triggerForceKernel kernel to calculate force
+ *
+ */
+    
+void OpenMMBrookInterface::setTriggerForceKernel( void* triggerForceKernel ){
+   _triggerForceKernel = triggerForceKernel;
+}
+    
+/** 
+ * Get trigger Force Kernel
+ *
+ * @return triggerForceKernel kernel to calculate force
+ *
+ */
+    
+void* OpenMMBrookInterface::getTriggerForceKernel( void ) const {
+   return _triggerForceKernel;
+}
+
+/** 
+ * Set trigger Energy Kernel
+ *
+ * @param triggerEnergyKernel kernel to calculate force
+ *
+ */
+    
+void OpenMMBrookInterface::setTriggerEnergyKernel( void* triggerEnergyKernel ){
+   _triggerEnergyKernel = triggerEnergyKernel;
+}
+    
+/** 
+ * Get trigger Energy Kernel
+ *
+ * @return triggerEnergyKernel kernel to calculate force
+ *
+ */
+    
+void* OpenMMBrookInterface::getTriggerEnergyKernel( void ) const {
+   return _triggerEnergyKernel;
+}
+
+/** 
+ * Zero forces
+ * 
+ * @param context     context
+ *
+ */
+
+void OpenMMBrookInterface::zeroForces( OpenMMContextImpl& context ){
+
+// ---------------------------------------------------------------------------------------
+
+   //static const std::string methodName      = "OpenMMBrookInterface::zeroForces";
+
+// ---------------------------------------------------------------------------------------
+
+   // zero forces
+
+   BrookStreamImpl* forces  = getParticleForces();
+   kzerof3( forces->getBrookStream() );
+
+   // ---------------------------------------------------------------------------------------
+}
+
+/** 
  * Compute forces
  * 
  * @param context     context
@@ -348,6 +416,33 @@ void OpenMMBrookInterface::computeForces( OpenMMContextImpl& context ){
    if( _brookGbsa ){
       _brookGbsa->computeForces( *positions, *forces );
    }
+
+   // ---------------------------------------------------------------------------------------
+}
+
+/** 
+ * Compute energy
+ * 
+ * @param context     context
+ *
+ */
+
+double OpenMMBrookInterface::computeEnergy( OpenMMContextImpl& context ){
+
+// ---------------------------------------------------------------------------------------
+
+/*
+   static const std::string methodName      = "OpenMMBrookInterface::computeEnergy";
+
+   static const int PrintOn                 = 0;
+   static const int MaxErrorMessages        = 2;
+   static       int ErrorMessages           = 0;
+*/
+   // static const int debug                   = 1;
+
+// ---------------------------------------------------------------------------------------
+
+   return 0.0;
 
    // ---------------------------------------------------------------------------------------
 }

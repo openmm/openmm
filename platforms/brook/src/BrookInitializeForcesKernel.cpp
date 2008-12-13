@@ -7,7 +7,7 @@
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
  * Portions copyright (c) 2008 Stanford University and the Authors.           *
- * Authors: Peter Eastman                                                     *
+ * Authors: Peter Eastman, Mark Friedrichs                                    *
  * Contributors:                                                              *
  *                                                                            *
  * Permission is hereby granted, free of charge, to any person obtaining a    *
@@ -29,126 +29,124 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include <sstream>
+#include <cmath>
+#include <limits>
 #include "OpenMMException.h"
-#include "BrookCalcKineticEnergyKernel.h"
+#include <sstream>
+
 #include "BrookStreamImpl.h"
+#include "BrookInitializeForcesKernel.h"
 
 using namespace OpenMM;
 using namespace std;
 
 /** 
- * BrookCalcKineticEnergyKernel constructor
+ * BrookInitializeForcesKernel constructor
  * 
- * @param name                      name of the stream to create
+ * @param name                      kernel name
  * @param platform                  platform
- * @param OpenMMBrookInterface      OpenMM-Brook interface
- * @param System                    System reference
+ * @param openMMBrookInterface      OpenMMBrookInterface reference
+ * @param system                    System reference
  *
  */
 
-BrookCalcKineticEnergyKernel::BrookCalcKineticEnergyKernel( std::string name, const Platform& platform, OpenMMBrookInterface& openMMBrookInterface, System& system ) :
-                              CalcKineticEnergyKernel( name, platform ), _openMMBrookInterface( openMMBrookInterface ), _system( system ){
+BrookInitializeForcesKernel::BrookInitializeForcesKernel( std::string name, const Platform& platform,
+                                                          OpenMMBrookInterface& openMMBrookInterface, System& system ) :
+                     InitializeForcesKernel( name, platform ), _openMMBrookInterface( openMMBrookInterface ), _system( system ){
 
 // ---------------------------------------------------------------------------------------
 
-   // static const std::string methodName      = "BrookCalcKineticEnergyKernel::BrookCalcKineticEnergyKernel";
+   // static const std::string methodName      = "BrookInitializeForcesKernel::BrookInitializeForcesKernel";
 
 // ---------------------------------------------------------------------------------------
 
-   _numberOfParticles  = 0;
-   _masses             = NULL;
+   _numberOfParticles                       = 0;
+   _log                                     = NULL;
+
+   const BrookPlatform brookPlatform        = dynamic_cast<const BrookPlatform&> (platform);
+   if( brookPlatform.getLog() != NULL ){
+      setLog( brookPlatform.getLog() );
+   }
+      
+}   
+
+/** 
+ * BrookInitializeForcesKernel destructor
+ * 
+ */
+
+BrookInitializeForcesKernel::~BrookInitializeForcesKernel( ){
+
+// ---------------------------------------------------------------------------------------
+
+   // static const std::string methodName      = "BrookInitializeForcesKernel::BrookInitializeForcesKernel";
+
+// ---------------------------------------------------------------------------------------
+}
+
+/** 
+ * Get log file reference
+ * 
+ * @return  log file reference
+ *
+ */
+
+FILE* BrookInitializeForcesKernel::getLog( void ) const {
+   return _log;
+}
+
+/** 
+ * Set log file reference
+ * 
+ * @param  log file reference
+ *
+ * @return  DefaultReturnValue
+ *
+ */
+
+int BrookInitializeForcesKernel::setLog( FILE* log ){
+   _log = log;
+   return BrookCommon::DefaultReturnValue;
+}
+
+/** 
+ * Initialize 
+ * 
+ * @param  system System reference
+ *
+ * @return  DefaultReturnValue
+ *
+ */
+
+void BrookInitializeForcesKernel::initialize( const System& system ){
+
+// ---------------------------------------------------------------------------------------
+
+   //static const std::string methodName      = "BrookInitializeForcesKernel::initialize";
+
+// ---------------------------------------------------------------------------------------
+
+    //FILE* log                 = getLog();
 
 }
 
 /** 
- * BrookCalcKineticEnergyKernel destructor
+ * Zero forces
  * 
- */
-  
-BrookCalcKineticEnergyKernel::~BrookCalcKineticEnergyKernel( ){
-
-// ---------------------------------------------------------------------------------------
-
-   // static const std::string methodName      = "BrookCalcKineticEnergyKernel::~BrookCalcKineticEnergyKernel";
-
-// ---------------------------------------------------------------------------------------
-
-   delete[] _masses;
-}
-
-/** 
- * Initialize the kernel
- * 
- * @param system  System reference
+ * @param context OpenMMContextImpl context
  *
  */
 
-void BrookCalcKineticEnergyKernel::initialize( const System& system ){
+void BrookInitializeForcesKernel::execute( OpenMMContextImpl& context ){
 
 // ---------------------------------------------------------------------------------------
 
-   // static const std::string methodName      = "BrookCalcKineticEnergyKernel::initialize";
+   //static const std::string methodName      = "BrookInitializeForcesKernel::execute";
 
 // ---------------------------------------------------------------------------------------
 
-   _numberOfParticles  = system.getNumParticles();
+   _openMMBrookInterface.zeroForces( context );
 
-   // load masses
-
-   if( _masses ){
-      delete[] _masses;
-   }
-
-   _masses = new BrookOpenMMFloat[_numberOfParticles];
-
-   for( unsigned int ii = 0; ii < (unsigned int) _numberOfParticles; ii++ ){
-      _masses[ii]  =  static_cast<BrookOpenMMFloat>(system.getParticleMass(ii));
-   }
-
-   return;
+   // ---------------------------------------------------------------------------------------
 }
 
-/** 
- * Calculate kinetic energy
- * 
- * @param context OpenMMContextImpl reference
- *
- * @return kinetic energy of the system
- *
- */
-
-double BrookCalcKineticEnergyKernel::execute( OpenMMContextImpl& context ){
-
-// ---------------------------------------------------------------------------------------
-
-   static const std::string methodName      = "BrookCalcKineticEnergyKernel::execute";
-
-// ---------------------------------------------------------------------------------------
-
-   void* dataV                            = _openMMBrookInterface.getParticleVelocities()->getData( );
-   float* velocity                        = (float*) dataV;
-
-   double energy                          = 0.0;
-   int index                              = 0;
-
-   if( _masses == NULL ){
-      std::stringstream message;
-      message << methodName << " masses not set.";
-      throw OpenMMException( message.str() );
-   }    
-
-/*
-printf( "   BrookCalcKineticEnergyKernel Masses=%12.5e %12.5e", _masses[0], _masses[1] );
-printf( " [%12.5e %12.5e %12.5e]", velocity[index], velocity[index+1], velocity[index+2] );
-index += 3;
-printf( " [%12.5e %12.5e %12.5e]\n", velocity[index], velocity[index+1], velocity[index+2] );
-index = 0;
-*/
-
-   for ( int ii = 0; ii < _numberOfParticles; ii++, index += 3 ){
-      energy += _masses[ii]*(velocity[index]*velocity[index] + velocity[index + 1]*velocity[index + 1] + velocity[index + 2]*velocity[index + 2]);
-   }
-
-   return 0.5*energy;
-}

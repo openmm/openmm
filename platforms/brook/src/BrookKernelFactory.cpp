@@ -30,13 +30,17 @@
  * -------------------------------------------------------------------------- */
 
 #include "BrookKernelFactory.h"
+#include "BrookInitializeForcesKernel.h"
+#include "BrookCalcHarmonicBondForceKernel.h"
 #include "BrookCalcHarmonicAngleForceKernel.h"
+#include "BrookCalcPeriodicTorsionForceKernel.h"
+#include "BrookCalcRBTorsionForceKernel.h"
 #include "BrookCalcNonbondedForceKernel.h"
 #include "BrookIntegrateLangevinStepKernel.h"
 #include "BrookIntegrateVerletStepKernel.h"
 #include "BrookIntegrateBrownianStepKernel.h"
 #include "BrookCalcKineticEnergyKernel.h"
-//#include "BrookCalcGBSAOBCForceKernel.h"
+#include "BrookCalcGBSAOBCForceKernel.h"
 #include "BrookRemoveCMMotionKernel.h"
 #include "internal/OpenMMContextImpl.h"
 
@@ -52,11 +56,17 @@ KernelImpl* BrookKernelFactory::createKernelImpl( std::string name, const Platfo
 
    OpenMMBrookInterface& openMMBrookInterface = *static_cast<OpenMMBrookInterface*>(context.getPlatformData());
 
+   // initialize forces
+
+	if( name == InitializeForcesKernel::Name() ){
+
+      return new BrookInitializeForcesKernel( name, platform, openMMBrookInterface, context.getSystem() );
+
    // harmonic bonds 
 
-	if( name == CalcHarmonicBondForceKernel::Name() ){
+	} else if( name == CalcHarmonicBondForceKernel::Name() ){
 
-//      return new BrookCalcHarmonicBondForceKernel( name, platform, openMMBrookInterface, context.getSystem() );
+      return new BrookCalcHarmonicBondForceKernel( name, platform, openMMBrookInterface, context.getSystem() );
 
    // angle bonds
 
@@ -68,25 +78,25 @@ KernelImpl* BrookKernelFactory::createKernelImpl( std::string name, const Platfo
 
 	} else if( name == CalcPeriodicTorsionForceKernel::Name() ){
 
-//      return new BrookCalcPeriodicTorsionForceKernel( name, platform, openMMBrookInterface, context.getSystem() );
+      return new BrookCalcPeriodicTorsionForceKernel( name, platform, openMMBrookInterface, context.getSystem() );
 
    // RB torsion bonds
 
 	} else if( name == CalcRBTorsionForceKernel::Name() ){
 
-//      return new BrookCalcRBTorsionForceKernel( name, platform, openMMBrookInterface, context.getSystem() );
+      return new BrookCalcRBTorsionForceKernel( name, platform, openMMBrookInterface, context.getSystem() );
 
    // nonbonded 
 
 	} else if( name == CalcNonbondedForceKernel::Name() ){
 
-//      return new BrookCalcNonbondedForceKernel( name, platform, openMMBrookInterface, context.getSystem() );
+      return new BrookCalcNonbondedForceKernel( name, platform, openMMBrookInterface, context.getSystem() );
 
    // GBSA OBC
 
 	} else if( name == CalcGBSAOBCForceKernel::Name() ){
 
-//      return new BrookCalcGBSAOBCForceFieldKernel( name, platform, openMMBrookInterface, context.getSystem() );
+      return new BrookCalcGBSAOBCForceKernel( name, platform, openMMBrookInterface, context.getSystem() );
 
    // Verlet integrator
 
@@ -110,7 +120,7 @@ KernelImpl* BrookKernelFactory::createKernelImpl( std::string name, const Platfo
 
 	} else if( name == IntegrateLangevinStepKernel::Name() ){
 
-//      return new BrookIntegrateLangevinStepKernel( name, platform, openMMBrookInterface );
+      return new BrookIntegrateLangevinStepKernel( name, platform, openMMBrookInterface, context.getSystem() );
 
    // Remove com
 
@@ -121,10 +131,10 @@ KernelImpl* BrookKernelFactory::createKernelImpl( std::string name, const Platfo
    // KE calculator
 
    } else if( name == CalcKineticEnergyKernel::Name() ){
-//      return new BrookCalcKineticEnergyKernel( name, platform, openMMBrookInterface );
+      return new BrookCalcKineticEnergyKernel( name, platform, openMMBrookInterface, context.getSystem() );
 	} 
 
-   (void) fprintf( stderr, "createKernelImpl: name=<%s> not found.", methodName.c_str(), name.c_str() );
+   (void) fprintf( stderr, "%s: name=<%s> not found.", methodName.c_str(), name.c_str() );
    (void) fflush( stderr );
 
 	return NULL;

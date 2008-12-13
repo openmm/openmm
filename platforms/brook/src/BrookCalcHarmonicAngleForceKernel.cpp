@@ -138,7 +138,7 @@ void BrookCalcHarmonicAngleForceKernel::initialize( const System& system, const 
    if( _brookBondParameters ){
       delete _brookBondParameters;
    }
-   _brookBondParameters = new BrookBondParameters( BondName, NumberOfParticlesInBond, NumberOfParametersInBond, numberOfBonds, getLog() );
+   _brookBondParameters = new BrookBondParameters( BrookCalcHarmonicAngleForceKernel::BondName, NumberOfParticlesInBond, NumberOfParametersInBond, numberOfBonds, getLog() );
 
    for( int ii = 0; ii < numberOfBonds; ii++ ){
 

@@ -39,7 +39,7 @@ using namespace std;
 /** 
  * BrookBondParameters constructor
  * 
- * @param numberOfParticlesInBond       no. of particles in each bond
+ * @param numberOfParticlesInBond   no. of particles in each bond
  * @param numberOfParametersInBond  no. of parameters in each bond
  * @param numberOfBonds             no. of bonds
  * @param log                       optional log reference
@@ -59,19 +59,8 @@ BrookBondParameters::BrookBondParameters( std::string bondName, int numberOfPart
 
    // allocate memory for particle indices/parameters
 
-   int* particleIndicesBlock                    = new int[numberOfParticlesInBond*numberOfBonds];
-   double* parametersBlock                  = new double[numberOfParametersInBond*numberOfBonds];
-   _particleIndices                             = new int*[numberOfBonds];
-   _bondParameters                          = new double*[numberOfBonds];
-
-   for( int ii = 0; ii < numberOfBonds; ii++ ){
-
-      _particleIndices[ii]                      = particleIndicesBlock; 
-      particleIndicesBlock                     += numberOfParticlesInBond;
-
-      _bondParameters[ii]                   = parametersBlock;
-      parametersBlock                      += numberOfParametersInBond;
-   }
+   _bondParameters.resize( numberOfBonds );
+   _particleIndices.resize( numberOfBonds );
 
 }   
 
@@ -88,14 +77,30 @@ BrookBondParameters::~BrookBondParameters( ){
 
 // ---------------------------------------------------------------------------------------
 
-   delete[] _particleIndices[0];
-   delete[] _particleIndices;
-
-   delete[] _bondParameters[0];
-   delete[] _bondParameters;
-
 }
 
+/** 
+ * Get particle indices
+ * 
+ * @return particle indices
+ *
+ */
+    
+const std::vector<std::vector<int>>& BrookBondParameters::getParticleIndices( void ) const {
+   return _particleIndices;
+}
+    
+/** 
+ * Get bond parameters
+ * 
+ * @return parameters
+ *
+ */
+    
+const std::vector<std::vector<double>>& BrookBondParameters::getBondParameters( void ) const {
+   return _bondParameters;
+}
+    
 /** 
  * Get log file reference
  * 
@@ -107,6 +112,17 @@ FILE* BrookBondParameters::getLog( void ) const {
    return _log;
 }
 
+/** 
+ * Get bond name
+ * 
+ * @return  bond name
+ *
+ */
+    
+std::string BrookBondParameters::getBondName( void ) const {
+   return _bondName;
+}
+ 
 /** 
  * Set log file reference
  * 
@@ -196,13 +212,21 @@ int BrookBondParameters::setBond( int bondIndex, int* particleIndices, double* b
    // load'em up
 
    int numberOfParticlesInBond = getNumberOfParticlesInBond();
+   std::vector<int> indices;
+   _particleIndices[bondIndex] = indices; 
+   indices.resize( numberOfParticlesInBond );
+
    for( int ii = 0; ii < numberOfParticlesInBond; ii++ ){
-      _particleIndices[bondIndex][ii] = particleIndices[ii];
+      indices[ii] = particleIndices[ii];
    }
 
    int numberOfParametersInBond = getNumberOfParametersInBond();
+
+   std::vector<double> parameters;
+   _bondParameters[bondIndex] = parameters; 
+   parameters.resize( numberOfParametersInBond );
    for( int ii = 0; ii < numberOfParametersInBond; ii++ ){
-      _bondParameters[bondIndex][ii] = bondParameters[ii];
+      parameters[ii] = bondParameters[ii];
    }
 
    // ---------------------------------------------------------------------------------------
@@ -281,7 +305,7 @@ std::string BrookBondParameters::getContentsString( int level ) const {
 #define LOCAL_2_SPRINTF(a,b,c,d) sprintf( (a), (b), (c), (d) );   
 #endif
 
-   (void) LOCAL_SPRINTF( value, "%s", getBondName() );
+   (void) LOCAL_SPRINTF( value, "%s", getBondName().c_str() );
    message << _getLine( tab, "Bond name:", value ); 
 
    (void) LOCAL_SPRINTF( value, "%d", getNumberOfBonds() );
@@ -295,12 +319,28 @@ std::string BrookBondParameters::getContentsString( int level ) const {
 
    message << "Bonds:"  << std::endl; 
    for( int ii = 0; ii < getNumberOfBonds(); ii++ ){
+      const static size_t descriptionSz = 256;
       char description[256];
       char buffer[256];
       (void) LOCAL_SPRINTF( description, "%6d [", ii );
 
       // particle indices
 
+#ifdef WIN32
+      for( int jj = 0; jj < getNumberOfParticlesInBond(); jj++ ){
+         (void) LOCAL_SPRINTF( buffer, "%6d ", _particleIndices[ii][jj] );
+         (void) strcat_s( description, descriptionSz, buffer );
+      }
+      (void) strcat_s( description, descriptionSz, "] [" );
+
+      // parameters
+
+      for( int jj = 0; jj < getNumberOfParametersInBond(); jj++ ){
+         (void) LOCAL_SPRINTF( buffer, "%18.10e ", _bondParameters[ii][jj] );
+         (void) strcat_s( description, descriptionSz, buffer );
+      }
+      (void) strcat_s( description, descriptionSz, "]" );
+#else
       for( int jj = 0; jj < getNumberOfParticlesInBond(); jj++ ){
          (void) LOCAL_SPRINTF( buffer, "%6d ", _particleIndices[ii][jj] );
          (void) strcat( description, buffer );
@@ -314,6 +354,7 @@ std::string BrookBondParameters::getContentsString( int level ) const {
          (void) strcat( description, buffer );
       }
       (void) strcat( description, "]" );
+#endif
       message << _getLine( tab, "", description );
    }
  

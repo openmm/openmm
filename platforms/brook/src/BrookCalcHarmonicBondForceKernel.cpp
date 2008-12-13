@@ -49,7 +49,7 @@ const std::string BrookCalcHarmonicBondForceKernel::BondName = "HarmonicBond";
  */
 
 BrookCalcHarmonicBondForceKernel::BrookCalcHarmonicBondForceKernel( std::string name, const Platform& platform,
-                                                                      OpenMMBrookInterface& openMMBrookInterface, System& system ) :
+                                                                    OpenMMBrookInterface& openMMBrookInterface, System& system ) :
                      CalcHarmonicBondForceKernel( name, platform ), _openMMBrookInterface( openMMBrookInterface ), _system( system ){
 
 // ---------------------------------------------------------------------------------------
@@ -138,7 +138,7 @@ void BrookCalcHarmonicBondForceKernel::initialize( const System& system, const H
    if( _brookBondParameters ){
       delete _brookBondParameters;
    }
-   _brookBondParameters = new BrookBondParameters( BondName, NumberOfParticlesInBond, NumberOfParametersInBond, numberOfBonds, getLog() );
+   _brookBondParameters = new BrookBondParameters( BrookCalcHarmonicBondForceKernel::BondName, NumberOfParticlesInBond, NumberOfParametersInBond, numberOfBonds, getLog() );
 
    for( int ii = 0; ii < numberOfBonds; ii++ ){
 

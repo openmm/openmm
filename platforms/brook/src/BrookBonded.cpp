@@ -59,6 +59,7 @@ BrookBonded::BrookBonded( ){
 
 // ---------------------------------------------------------------------------------------
 
+   _setupCompleted            = 0;
    _numberOfParticles         = 0;
    _ljScale                   = (BrookOpenMMFloat) 0.83333333;
    //_coulombFactor             = 332.0;
@@ -225,6 +226,16 @@ int BrookBonded::isForceStreamSet( int index ) const {
    return (index >= 0 && index < getNumberOfForceStreams() && _bondedForceStreams[index]) ? 1 : 0;
 }
 
+/** 
+ * Return SetupCompleted flag
+ *
+ * @return SetupCompleted flag
+ */
+          
+int BrookBonded::isSetupCompleted( void ) const {
+   return _setupCompleted;
+}
+   
 /** 
  * Return string showing if all inverse map streams are set
  *
@@ -690,7 +701,7 @@ int BrookBonded::matchPair( int i, int j, int nbondeds, int *particles ){
  * Setup Ryckaert-Bellemans parameters/particle indices
  * 
  * @param nbondeds                  number of bonded entries
- * @param particles                     array of particle indices
+ * @param particles                 array of particle indices
  * @param params                    arrays of bond parameters
  * @param rbTorsionIndices          the four particles connected by each Ryckaert-Bellemans torsion term
  * @param rbTorsionParameters       the coefficients (in order of increasing powers) for each Ryckaert-Bellemans torsion term
@@ -717,7 +728,7 @@ int BrookBonded::addRBDihedrals( int *nbondeds, int *particles, float *params[],
 
    for( unsigned int ii = 0; ii < rbTorsionIndices.size(); ii++ ){
 
-      vector<int> particlesIndices      = rbTorsionIndices[ii];
+      vector<int> particlesIndices  = rbTorsionIndices[ii];
       vector<double> rbParameters   = rbTorsionParameters[ii];
 
       int index = 0;
@@ -758,7 +769,7 @@ int BrookBonded::addRBDihedrals( int *nbondeds, int *particles, float *params[],
  * Setup periodic torsion parameters/particle indices
  * 
  * @param nbondeds                  number of bonded entries
- * @param particles                     array of particle indices
+ * @param particles                 array of particle indices
  * @param params                    arrays of bond parameters
  * @param periodicTorsionIndices    the four particles connected by each periodic torsion term
  * @param periodicTorsionParameters the force parameters (k, phase, periodicity) for each periodic torsion term
@@ -821,7 +832,7 @@ int BrookBonded::addPDihedrals( int *nbondeds, int *particles, BrookOpenMMFloat*
  * Setup angle bond parameters/particle indices
  * 
  * @param nbondeds                  number of bonded entries
- * @param particles                     array of particle indices
+ * @param particles                 array of particle indices
  * @param params                    arrays of bond parameters
  * @param angleIndices              the angle bond particle indices
  * @param angleParameters           the angle parameters (angle in radians, force constant)
@@ -849,7 +860,7 @@ int BrookBonded::addAngles( int *nbondeds, int *particles, float *params[], cons
 
    for( unsigned int ii = 0; ii < angleIndices.size(); ii++ ){
 
-      vector<int> particlesIndices       = angleIndices[ii];
+      vector<int> particlesIndices   = angleIndices[ii];
       vector<double> angParameters   = angleParameters[ii];
 
       int index = 0;
@@ -883,7 +894,7 @@ int BrookBonded::addAngles( int *nbondeds, int *particles, float *params[], cons
  * Setup harmonic bond parameters/particle indices
  * 
  * @param nbondeds                  number of bonded entries
- * @param particles                     array of particle indices
+ * @param particles                 array of particle indices
  * @param params                    arrays of bond parameters
  * @param bondIndices               two harmonic bond particle indices
  * @param bondParameters            the force parameters (distance, k)
@@ -911,7 +922,7 @@ int BrookBonded::addBonds( int *nbondeds, int *particles, float *params[], const
 
    for( unsigned int ii = 0; ii < bondIndices.size(); ii++ ){
 
-      vector<int> particlesIndices       = bondIndices[ii];
+      vector<int> particlesIndices   = bondIndices[ii];
       vector<double> bndParameters   = bondParameters[ii];
 
       int index = 0;
@@ -958,7 +969,7 @@ int saveIbond = ibonded;
  * Setup LJ/Coulomb 1-4 parameters/particle indices
  * 
  * @param nbondeds                  number of bonded entries
- * @param particles                     array of particle indices
+ * @param particles                 array of particle indices
  * @param params                    arrays of bond parameters
  * @param charges                   array of charges
  * @param bonded14Indices           each element contains the indices of two particles whose nonbonded interactions should be reduced since
@@ -1043,8 +1054,8 @@ int BrookBonded::addPairs( int *nbondeds, int *particles, BrookOpenMMFloat* para
  * Create and load inverse maps for bonded ixns
  * 
  * @param nbondeds                  number of bonded entries
- * @param nparticles                    number of particles
- * @param particles                     arrays of particle indices (particles[numberOfBonds][4])
+ * @param nparticles                number of particles
+ * @param particles                 arrays of particle indices (particles[numberOfBonds][4])
  * @param platform                  BrookPlatform reference
  * @param log                       log file reference (optional)
  *
@@ -1052,7 +1063,7 @@ int BrookBonded::addPairs( int *nbondeds, int *particles, BrookOpenMMFloat* para
  *
  */
 
-int BrookBonded::loadInvMaps( int nbondeds, int nparticles, int *particles, const BrookPlatform& brookPlatform ){
+int BrookBonded::loadInvMaps( int nbondeds, int nparticles, int *particles, int particleStreamWidth, int particleStreamSize ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -1064,9 +1075,11 @@ int BrookBonded::loadInvMaps( int nbondeds, int nparticles, int *particles, cons
 
    // get particle stream size
 
+/*
    const BrookStreamFactory& brookStreamFactory = dynamic_cast<const BrookStreamFactory&> (brookPlatform.getDefaultStreamFactory() );
-   int particleStreamWidth                          = brookStreamFactory.getDefaultParticleStreamWidth();
-   int particleStreamSize                           = brookPlatform.getStreamSize( getNumberOfParticles(), particleStreamWidth, NULL );
+   int particleStreamWidth                      = brookStreamFactory.getDefaultParticleStreamWidth();
+   int particleStreamSize                       = brookPlatform.getStreamSize( getNumberOfParticles(), particleStreamWidth, NULL );
+*/
    _inverseMapStreamWidth                       = particleStreamWidth;
    
 // ---------------------------------------------------------------------------------------
@@ -1194,12 +1207,12 @@ int BrookBonded::loadInvMaps( int nbondeds, int nparticles, int *particles, cons
  * */
 
 int BrookBonded::setup( int numberOfParticles,
-                        const vector<vector<int> >& bondIndices,            const vector<vector<double> >& bondParameters,
-                        const vector<vector<int> >& angleIndices,           const vector<vector<double> >& angleParameters,
-                        const vector<vector<int> >& periodicTorsionIndices, const vector<vector<double> >& periodicTorsionParameters,
-                        const vector<vector<int> >& rbTorsionIndices,       const vector<vector<double> >& rbTorsionParameters,
-                        const vector<vector<int> >& bonded14Indices,        const vector<vector<double> >& nonbondedParameters,
-                        double lj14Scale, double coulombScale,  const Platform& platform ){
+                        BrookBondParameters* harmonicBondBrookBondParameters,
+                        BrookBondParameters* harmonicAngleBrookBondParameters,
+                        BrookBondParameters* periodicTorsionBrookBondParameters,
+                        BrookBondParameters* rbTorsionBrookBondParameters,
+                        BrookBondParameters* nonBonded14ForceParameters,  
+                        double lj14Scale, double coulombScale, int particleStreamWidth, int particleStreamSize ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -1211,54 +1224,7 @@ int BrookBonded::setup( int numberOfParticles,
 
    _numberOfParticles = numberOfParticles;
 
-   const BrookPlatform& brookPlatform = dynamic_cast<const BrookPlatform&> (platform);
-
    // check that particle indices & parameters agree
-
-   if( bondIndices.size() != bondParameters.size() ){
-      std::stringstream message;
-      message << methodName << " number of harmonic bond particle indices=" << bondIndices.size() << " does not equal number of harmonic bond parameter entries=" << bondParameters.size();
-      throw OpenMMException( message.str() );
-   } else if( PrintOn && getLog() ){
-      (void) fprintf( getLog(), "%s harmonic bonds=%d\n", methodName.c_str(), bondIndices.size() );
-      (void) fflush( getLog() );
-   }
-
-   if( angleIndices.size() != angleParameters.size() ){
-      std::stringstream message;
-      message << methodName << " number of angle particle indices=" << angleIndices.size() << " does not equal number of angle parameter entries=" << angleParameters.size();
-      throw OpenMMException( message.str() );
-   } else if( PrintOn && getLog() ){
-      (void) fprintf( getLog(), "%s angle bonds=%d\n", methodName.c_str(), angleIndices.size() );
-      (void) fflush( getLog() );
-   }
-
-   if( periodicTorsionIndices.size() != periodicTorsionParameters.size() ){
-      std::stringstream message;
-      message << methodName << " number of periodicTorsion particle indices=" << periodicTorsionIndices.size() << " does not equal number of periodicTorsion parameter entries=" << periodicTorsionParameters.size();
-      throw OpenMMException( message.str() );
-   } else if( PrintOn && getLog() ){
-      (void) fprintf( getLog(), "%s periodicTorsion bonds=%d\n", methodName.c_str(), periodicTorsionIndices.size() );
-      (void) fflush( getLog() );
-   }
-
-   if( rbTorsionIndices.size() != rbTorsionParameters.size() ){
-      std::stringstream message;
-      message << methodName << " number of rbTorsion particle indices=" << rbTorsionIndices.size() << " does not equal number of rbTorsion parameter entries=" << rbTorsionParameters.size();
-      throw OpenMMException( message.str() );
-   } else if( PrintOn && getLog() ){
-      (void) fprintf( getLog(), "%s rbTorsion bonds=%d\n", methodName.c_str(), rbTorsionIndices.size() );
-      (void) fflush( getLog() );
-   }
-
-   if( (numberOfParticles != (int) nonbondedParameters.size()) && bonded14Indices.size() > 0 ){
-      std::stringstream message;
-      message << methodName << " number particles=" << numberOfParticles << " does not equal number of nb parameter entries=" << nonbondedParameters.size();
-      throw OpenMMException( message.str() );
-   } else if( PrintOn && getLog() ){
-      (void) fprintf( getLog(), "%s LJ 14 ixns=%d\n", methodName.c_str(), bonded14Indices.size() );
-      (void) fflush( getLog() );
-   }
 
    // allocate temp memory
 
@@ -1274,8 +1240,8 @@ int BrookBonded::setup( int numberOfParticles,
 
    // build streams
 
-   const BrookStreamFactory& brookStreamFactory = dynamic_cast<const BrookStreamFactory&> (brookPlatform.getDefaultStreamFactory() );
-   int particleStreamWidth                          = brookStreamFactory.getDefaultParticleStreamWidth();
+//   const BrookStreamFactory& brookStreamFactory = dynamic_cast<const BrookStreamFactory&> (brookPlatform.getDefaultStreamFactory() );
+//   int particleStreamWidth                      = brookStreamFactory.getDefaultParticleStreamWidth();
 
    // Initialize all particle indices to -1 to indicate empty slots
    // All parameters must be initialized to values that will 
@@ -1300,11 +1266,13 @@ int BrookBonded::setup( int numberOfParticles,
    }
 
    // nbondeds tracks number of ixn
+
    int nbondeds = 0;
-   addRBDihedrals( &nbondeds, particles, params, rbTorsionIndices,       rbTorsionParameters       );
-   addPDihedrals ( &nbondeds, particles, params, periodicTorsionIndices, periodicTorsionParameters );
-   addAngles(      &nbondeds, particles, params, angleIndices,           angleParameters           );
-   addBonds(       &nbondeds, particles, params, bondIndices,            bondParameters            );
+
+   addRBDihedrals( &nbondeds, particles, params, rbTorsionBrookBondParameters->getParticleIndices(),        rbTorsionBrookBondParameters->getBondParameters() );
+   addPDihedrals ( &nbondeds, particles, params, periodicTorsionBrookBondParameters->getParticleIndices(),  periodicTorsionBrookBondParameters->getBondParameters() );
+   addAngles(      &nbondeds, particles, params, harmonicAngleBrookBondParameters->getParticleIndices(),    harmonicAngleBrookBondParameters->getBondParameters() );
+   addBonds(       &nbondeds, particles, params, harmonicBondBrookBondParameters->getParticleIndices(),     harmonicBondBrookBondParameters->getBondParameters() );
 
 // ---------------------------------------------------------------------------------------
 
@@ -1319,7 +1287,7 @@ int BrookBonded::setup( int numberOfParticles,
 
 //(void) fprintf( getLog(), "%s Post addBonds particles=%d number of bonds=%d maxBonds=%d\n", methodName.c_str(), numberOfParticles, nbondeds, maxBonds );
 
-   addPairs( &nbondeds, particles, params, charges, bonded14Indices, nonbondedParameters, lj14Scale, coulombScale );
+   addPairs( &nbondeds, particles, params, charges, nonBonded14ForceParameters->getParticleIndices(), nonBonded14ForceParameters->getBondParameters(), lj14Scale, coulombScale );
 
    // check that number of bonds not too large for memory allocated
 
@@ -1412,7 +1380,7 @@ int BrookBonded::setup( int numberOfParticles,
 
    // load inverse maps to streams
 
-   loadInvMaps( nbondeds, getNumberOfParticles(), particles, brookPlatform );
+   loadInvMaps( nbondeds, getNumberOfParticles(), particles, particleStreamWidth, particleStreamSize );
    
 // ---------------------------------------------------------------------------------------
 
@@ -1437,6 +1405,8 @@ int BrookBonded::setup( int numberOfParticles,
       _bondedForceStreams[ii] = new BrookFloatStreamInternal( BrookCommon::UnrolledForceStream, nbondeds, particleStreamWidth, 
                                                               BrookStreamInternal::Float3, dangleValue );
    }
+
+   _setupCompleted = 1;
 
    return DefaultReturnValue;
 }

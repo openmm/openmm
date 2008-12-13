@@ -32,6 +32,8 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include <vector>
+
 namespace OpenMM {
 
 /**
@@ -143,6 +145,24 @@ class BrookBondParameters {
       
       int getNumberOfBonds( void ) const;
       
+      /** 
+       * Get particle indices
+       * 
+       * @return particle indices
+       *
+       */
+      
+      const std::vector<std::vector<int>>& getParticleIndices( void ) const;
+      
+      /** 
+       * Get parameters
+       * 
+       * @return parameters
+       *
+       */
+      
+      const std::vector<std::vector<double>>& getBondParameters( void ) const;
+      
       /*  
        * Get contents of object
        *
@@ -173,8 +193,8 @@ class BrookBondParameters {
    
       // particle indices and parameters
 
-      int** _particleIndices;
-      double** _bondParameters;
+      std::vector<std::vector<int>>    _particleIndices;
+      std::vector<std::vector<double>> _bondParameters;
 
       /* 
        * Get contents of object

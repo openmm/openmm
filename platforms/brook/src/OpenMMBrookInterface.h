@@ -100,6 +100,15 @@ class OpenMMBrookInterface {
       FILE* getLog( void ) const;
       
       /** 
+       * Zero forces
+       *
+       * @param context OpenMMContextImpl context 
+       *
+       */
+      
+      void zeroForces( OpenMMContextImpl& context );
+      
+      /** 
        * Compute forces
        *
        * @param context OpenMMContextImpl context 
@@ -115,7 +124,7 @@ class OpenMMBrookInterface {
        *
        */
       
-      float computeEnergy( OpenMMContextImpl& context );
+      double computeEnergy( OpenMMContextImpl& context );
       
       /** 
        * Set trigger Force Kernel
@@ -124,16 +133,7 @@ class OpenMMBrookInterface {
        *
        */
       
-      void setTriggerForceKernel( KernelImpl* triggerForceKernel );
-      
-      /** 
-       * Set trigger Energy Kernel
-       *
-       * @param triggerEnergyKernel kernel to calculate energy
-       *
-       */
-      
-      void setTriggerEnergyKernel( KernelImpl* triggerForceKernel );
+      void setTriggerForceKernel( void* triggerForceKernel );
       
       /** 
        * Get trigger Force Kernel
@@ -142,27 +142,54 @@ class OpenMMBrookInterface {
        *
        */
       
-      KernelImpl* getTriggerForceKernel( void ) const;
+      void* getTriggerForceKernel( void ) const;
+      
+      /** 
+       * Set trigger Energy Kernel
+       *
+       * @param triggerEnergyKernel kernel to calculate force
+       *
+       */
+      
+      void setTriggerEnergyKernel( void* triggerEnergyKernel );
       
       /** 
        * Get trigger Energy Kernel
        *
-       * @return triggerEnergyKernel kernel to calculate energy
+       * @return triggerEnergyKernel kernel to calculate force
        *
        */
       
-      KernelImpl* getTriggerEnergyKernel( void ) const;
+      void* getTriggerEnergyKernel( void ) const;
       
       /** 
-       * Set BrookBondParameters for harmonic angle force
+       * Get BrookBondParameters for harmonic bond force
        * 
-       * @param brookBondParameters brookBondParameters for BrookBondParameters for harmonic angle force
+       * @return brookBondParameters for BrookBondParameters for harmonic bond force
+       *
+       */
+      
+      BrookBondParameters* getHarmonicBondForceParameters( void );
+      
+      /** 
+       * Set BrookBondParameters for harmonic bond force
+       * 
+       * @param brookBondParameters BrookBondParameters for harmonic bond force
        *
        * @return DefaultReturnValue
        *
        */
       
       int setHarmonicBondForceParameters( BrookBondParameters* brookBondParameters );
+      
+      /** 
+       * Get BrookBondParameters for harmonic angle force
+       * 
+       * @return brookBondParameters for BrookBondParameters for harmonic angle force
+       *
+       */
+      
+      BrookBondParameters* getHarmonicAngleForceParameters( void );
       
       /** 
        * Set BrookBondParameters for harmonic angle force
@@ -176,9 +203,18 @@ class OpenMMBrookInterface {
       int setHarmonicAngleForceParameters( BrookBondParameters* brookBondParameters );
       
       /** 
-       * Set BrookBondParameters for proper dihedral force
+       * Get BrookBondParameters for periodic torsion force
        * 
-       * @param brookBondParameters brookBondParameters for proper dihedral force
+       * @return brookBondParameters for BrookBondParameters for periodic torsion force
+       *
+       */
+      
+      BrookBondParameters* getPeriodicTorsionForceParameters( void );
+
+      /** 
+       * Set BrookBondParameters for periodic torsion force
+       * 
+       * @param brookBondParameters for periodic torsion force
        *
        * @return  DefaultReturnValue
        *
@@ -187,9 +223,18 @@ class OpenMMBrookInterface {
       int setPeriodicTorsionForceParameters( BrookBondParameters* brookBondParameters );
       
       /** 
-       * Set BrookBondParameters for RB dihedral force
+       * Get BrookBondParameters for RB torsion force
        * 
-       * @param brookBondParameters brookBondParameters for RB force
+       * @return brookBondParameters for BrookBondParameters for RB torsion force
+       *
+       */
+      
+      BrookBondParameters* getRBTorsionForceParameters( void );
+
+      /** 
+       * Set BrookBondParameters for RB torsion force
+       * 
+       * @param brookBondParameters brookBondParameters for RB torsion force
        *
        * @return  DefaultReturnValue
        *
@@ -197,6 +242,15 @@ class OpenMMBrookInterface {
       
       int setRBTorsionForceParameters( BrookBondParameters* brookBondParameters );
       
+      /** 
+       * Get BrookBondParameters for LJ 14 forces
+       * 
+       * @return brookBondParameters for BrookBondParameters for LJ 14 forces
+       *
+       */
+      
+      BrookBondParameters* getNonBonded14ForceParameters( void );
+
       /** 
        * Set BrookBondParameters for LJ 14 force
        * 
@@ -288,6 +342,9 @@ class OpenMMBrookInterface {
        BrookBonded* _brookBonded;
        BrookNonBonded* _brookNonBonded;
        BrookGbsa* _brookGbsa;
+
+       void* _triggerForceKernel;
+       void* _triggerEnergyKernel;
 
        BrookBondParameters* _bondParameters[LastBondForce];
 

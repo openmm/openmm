@@ -271,14 +271,19 @@ void BrookPlatform::_initializeKernelFactory( void ){
 
    BrookKernelFactory* factory = new BrookKernelFactory();
 
-   registerKernelFactory( CalcNonbondedForceKernel::Name(),       factory);
-   registerKernelFactory( CalcGBSAOBCForceKernel::Name(),         factory);
-   registerKernelFactory( IntegrateVerletStepKernel::Name(),      factory);
-   registerKernelFactory( IntegrateLangevinStepKernel::Name(),    factory);
-   registerKernelFactory( IntegrateBrownianStepKernel::Name(),    factory);
-   //registerKernelFactory( ApplyAndersenThermostatKernel::Name(),  factory);
-   registerKernelFactory( CalcKineticEnergyKernel::Name(),        factory);
-   registerKernelFactory( RemoveCMMotionKernel::Name(),           factory);
+   registerKernelFactory( InitializeForcesKernel::Name(),         factory );
+   registerKernelFactory( CalcHarmonicBondForceKernel::Name(),    factory );
+   registerKernelFactory( CalcHarmonicAngleForceKernel::Name(),   factory );
+   registerKernelFactory( CalcPeriodicTorsionForceKernel::Name(), factory );
+   registerKernelFactory( CalcRBTorsionForceKernel::Name(),       factory );
+   registerKernelFactory( CalcNonbondedForceKernel::Name(),       factory );
+   registerKernelFactory( CalcGBSAOBCForceKernel::Name(),         factory );
+   registerKernelFactory( IntegrateVerletStepKernel::Name(),      factory );
+   registerKernelFactory( IntegrateLangevinStepKernel::Name(),    factory );
+   registerKernelFactory( IntegrateBrownianStepKernel::Name(),    factory );
+   //registerKernelFactory( ApplyAndersenThermostatKernel::Name(),  factory );
+   registerKernelFactory( CalcKineticEnergyKernel::Name(),        factory );
+   registerKernelFactory( RemoveCMMotionKernel::Name(),           factory );
    
 }
 
