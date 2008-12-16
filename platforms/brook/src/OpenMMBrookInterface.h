@@ -53,7 +53,7 @@ class OpenMMBrookInterface {
 
    public:
   
-      OpenMMBrookInterface( void );
+      OpenMMBrookInterface( int streamWidth );
   
       ~OpenMMBrookInterface();
   
@@ -89,6 +89,51 @@ class OpenMMBrookInterface {
        * */
       
       std::string getContents( int level ) const;
+
+      /** 
+       * Get number of particles
+       * 
+       * @return   number of particles
+       *
+       */
+      
+      int getNumberOfParticles( void ) const;
+      
+      /** 
+       * Get particle stream width
+       * 
+       * @return    particle stream width
+       *
+       */
+      
+      int getParticleStreamWidth( void ) const;
+      
+      /** 
+       * Get particle stream size
+       * 
+       * @return    particle stream size
+       *
+       */
+      
+      int getParticleStreamSize( void ) const;
+      
+      /** 
+       * Get LJ-14 scale factor
+       * 
+       * @return    LJ-14 scale factor
+       *
+       */
+      
+      double getLj14Scale( void ) const;
+      
+      /** 
+       * Get Coulomb scale factor
+       * 
+       * @return    Coulomb scale factor
+       *
+       */
+      
+      double getCoulomb14Scale( void ) const;
 
       /** 
        * Get log file reference
@@ -169,7 +214,7 @@ class OpenMMBrookInterface {
        *
        */
       
-      BrookBondParameters* getHarmonicBondForceParameters( void );
+      BrookBondParameters* getHarmonicBondForceParameters( void ) const;
       
       /** 
        * Set BrookBondParameters for harmonic bond force
@@ -189,7 +234,7 @@ class OpenMMBrookInterface {
        *
        */
       
-      BrookBondParameters* getHarmonicAngleForceParameters( void );
+      BrookBondParameters* getHarmonicAngleForceParameters( void ) const;
       
       /** 
        * Set BrookBondParameters for harmonic angle force
@@ -209,7 +254,7 @@ class OpenMMBrookInterface {
        *
        */
       
-      BrookBondParameters* getPeriodicTorsionForceParameters( void );
+      BrookBondParameters* getPeriodicTorsionForceParameters( void ) const;
 
       /** 
        * Set BrookBondParameters for periodic torsion force
@@ -229,7 +274,7 @@ class OpenMMBrookInterface {
        *
        */
       
-      BrookBondParameters* getRBTorsionForceParameters( void );
+      BrookBondParameters* getRBTorsionForceParameters( void ) const;
 
       /** 
        * Set BrookBondParameters for RB torsion force
@@ -249,18 +294,20 @@ class OpenMMBrookInterface {
        *
        */
       
-      BrookBondParameters* getNonBonded14ForceParameters( void );
+      BrookBondParameters* getNonBonded14ForceParameters( void ) const;
 
       /** 
        * Set BrookBondParameters for LJ 14 force
        * 
        * @param brookBondParameters brookBondParameters for LJ 14 force
+       * @param lj14Scale           LJ 14 scale factor
+       * @param coulomb14Scale        Coulomb 14 scale factor
        *
        * @return  DefaultReturnValue
        *
        */
       
-      int setNonBonded14ForceParameters( BrookBondParameters* brookBondParameters );
+      int setNonBonded14ForceParameters( BrookBondParameters* brookBondParameters, double lj14Scale, double coulomb14Scale );
       
       /** 
        * Get positions stream
@@ -333,10 +380,16 @@ class OpenMMBrookInterface {
 
       FILE* _log;
 
+      int _particleStreamWidth;
+      int _particleStreamSize;
+
        // number of particles
 
        int _numberOfParticles;
    
+       double _lj14Scale;
+       double _coulomb14Scale;
+
        // Brook bonded, nonbonded, Gbsa
 
        BrookBonded* _brookBonded;
@@ -373,6 +426,17 @@ class OpenMMBrookInterface {
        */
       
       int _setBondParameters( BondParameterIndices index, BrookBondParameters* brookBondParameters );
+      
+      /** 
+       * Get BrookBondParameters at specified index
+       * 
+       * @param   index
+       *
+       * @return  BrookBondParameters* object
+       *
+       */
+      
+      BrookBondParameters* _getBondParameters( BondParameterIndices index ) const;
       
 };
 

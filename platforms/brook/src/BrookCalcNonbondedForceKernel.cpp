@@ -251,7 +251,7 @@ void BrookCalcNonbondedForceKernel::initialize14Interactions( const System& syst
 
       _brookBondParameters->setBond( ii, particles, parameters );
    }   
-   _openMMBrookInterface.setNonBonded14ForceParameters( _brookBondParameters );
+   _openMMBrookInterface.setNonBonded14ForceParameters( _brookBondParameters, 1.0, 1.0 );
 
    if( log ){
       std::string contents = _brookBondParameters->getContentsString( ); 

@@ -346,6 +346,16 @@ double BrookPlatform::getSpeed() const {
 }   
 
 /** 
+ * Return particle stream width
+ *
+ * @return particle stream width
+ */
+    
+int BrookPlatform::getParticleStreamWidth() const {
+  return _particleStreamWidth;
+}   
+
+/** 
  * Return true if BrookPlatform supports double precison
  *
  * @return true if BrookPlatform supports double precison
@@ -393,7 +403,7 @@ int BrookPlatform::getStreamSize( int size, int streamWidth, int* outputHeight )
 
 // ---------------------------------------------------------------------------------------
 
-   if( streamWidth < 1 || size < 1){
+   if( streamWidth < 1 || size < 1 ){
       return -1;
    }
 
@@ -446,7 +456,7 @@ void BrookPlatform::contextCreated( OpenMMContextImpl& context ) const {
 
 // ---------------------------------------------------------------------------------------
 
-   context.setPlatformData( new OpenMMBrookInterface() );
+   context.setPlatformData( new OpenMMBrookInterface( getParticleStreamWidth() ) );
 }
 
 /** 

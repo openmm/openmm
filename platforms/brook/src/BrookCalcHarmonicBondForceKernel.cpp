@@ -131,6 +131,8 @@ void BrookCalcHarmonicBondForceKernel::initialize( const System& system, const H
 
    // ---------------------------------------------------------------------------------------
 
+//(void) fprintf( getLog(), "%s\n", methodName.c_str() ); (void) fflush( getLog() );
+
    // create _brookBondParameters object containing particle indices/parameters
 
    int numberOfBonds         = force.getNumBonds();
@@ -182,7 +184,7 @@ void BrookCalcHarmonicBondForceKernel::executeForces( OpenMMContextImpl& context
 
 // ---------------------------------------------------------------------------------------
 
-   //static const std::string methodName   = "BrookCalcHarmonicBondForceKernel::executeForces";
+   static const std::string methodName   = "BrookCalcHarmonicBondForceKernel::executeForces";
 
 // ---------------------------------------------------------------------------------------
 
