@@ -169,10 +169,6 @@ class BrookCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
 
        int _numberOfParticles;
    
-       // Brook nonbonded
-
-       BrookNonBonded* _brookNonBonded;
-
        OpenMMBrookInterface& _openMMBrookInterface;
        System& _system;
 

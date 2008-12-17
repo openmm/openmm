@@ -120,7 +120,7 @@ BrookCommon::BrookCommon(  ){
    _particleStreamSize            = -1;
 
    _log                           = NULL;
-   _verbosity                     = 0;
+   _isActive                      = 0;
 
 }   
  
@@ -347,27 +347,27 @@ int BrookCommon::setLog( FILE* log ){
 }
 
 /** 
- * Get verbosity 
+ * Get flag signalling whether active
  * 
- * @return   verbosity
+ * @return  flag signalling whether active
  *
  */
 
-int BrookCommon::getVerbosity( void ) const {
-   return _verbosity;
+int BrookCommon::isActive( void ) const {
+   return _isActive;
 }
 
 /** 
- * Set verbosity
+ * Set flag signalling whether active
  * 
- * @param  verbosity
+ * @param  flag signalling whether active
  *
  * @return  DefaultReturnValue
  *
  */
 
-int BrookCommon::setVerbosity( int verbosity ){
-   _verbosity = verbosity;
+int BrookCommon::setIsActive( int isActive ){
+   _isActive= isActive;
    return BrookCommon::DefaultReturnValue;
 }
 

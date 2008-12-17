@@ -34,6 +34,12 @@
 #include "OpenMMException.h"
 #include <sstream>
 
+// used for energy calculartion
+
+#include "LangevinIntegrator.h"
+#include "ReferencePlatform.h"
+#include "internal/OpenMMContextImpl.h"
+
 #include "BrookStreamImpl.h"
 #include "OpenMMBrookInterface.h"
 #include "gpu/kcommon.h"
@@ -55,10 +61,6 @@ OpenMMBrookInterface::OpenMMBrookInterface( int streamWidth ) : _particleStreamW
 // ---------------------------------------------------------------------------------------
 
    _numberOfParticles                       = 0;
-
-   _brookBonded                             = NULL;
-   _brookNonBonded                          = NULL;
-   _brookGbsa                               = NULL;
 
    _triggerForceKernel                      = NULL;
    _triggerEnergyKernel                     = NULL;
@@ -99,9 +101,6 @@ OpenMMBrookInterface::~OpenMMBrookInterface( ){
 
 // ---------------------------------------------------------------------------------------
 
-   delete _brookBonded;
-   delete _brookNonBonded;
-   delete _brookGbsa;
    for( int ii = 0; ii < LastBondForce; ii++ ){
       delete _bondParameters[ii];
    }
@@ -126,6 +125,18 @@ OpenMMBrookInterface::~OpenMMBrookInterface( ){
 
 int OpenMMBrookInterface::getNumberOfParticles( void ) const {
    return _numberOfParticles;
+}
+
+/** 
+ * Set number of particles
+ * 
+ * @param numberOfParticles number of particles
+ *
+ */
+
+int OpenMMBrookInterface::setNumberOfParticles( int numberOfParticles ){
+   _numberOfParticles = numberOfParticles;
+   return BrookCommon::DefaultReturnValue;
 }
 
 /** 
@@ -197,7 +208,10 @@ FILE* OpenMMBrookInterface::getLog( void ) const {
  */
 
 int OpenMMBrookInterface::setLog( FILE* log ){
-   _log = log;
+   _log          = log;
+   _brookBonded.setLog( log );
+   _brookNonBonded.setLog( log );
+   _brookGbsa.setLog( log );
    return BrookCommon::DefaultReturnValue;
 }
 
@@ -225,7 +239,20 @@ BrookBondParameters* OpenMMBrookInterface::_getBondParameters( BondParameterIndi
  */
 
 int OpenMMBrookInterface::_setBondParameters( BondParameterIndices index, BrookBondParameters* brookBondParameters ){
+
+   if( brookBondParameters && brookBondParameters->getNumberOfBonds() > 0 ){
+      _brookBonded.setIsActive( 1 );
+   }
+
    _bondParameters[index] = brookBondParameters;
+
+   if( !brookBondParameters || brookBondParameters->getNumberOfBonds() < 1 ){
+      int isActive = 0;
+      for( int ii = 0; ii < LastBondForce && !isActive; ii++ ){
+         isActive = (_bondParameters[ii] != NULL && brookBondParameters->getNumberOfBonds() > 0) ? 1 : 0;
+      }
+       _brookBonded.setIsActive( isActive );
+   }
    return BrookCommon::DefaultReturnValue;
 }
 
@@ -474,6 +501,28 @@ void* OpenMMBrookInterface::getTriggerEnergyKernel( void ) const {
 }
 
 /** 
+ * Get Brook non bonded
+ *
+ * @return BrookNonBonded reference
+ *
+ */
+    
+BrookNonBonded& OpenMMBrookInterface::getBrookNonBonded( void ){
+   return _brookNonBonded;
+}
+
+/** 
+ * Get Brook GBSA
+ *
+ * @return BrookGbsa reference
+ *
+ */
+    
+BrookGbsa& OpenMMBrookInterface::getBrookGbsa( void ){
+   return _brookGbsa;
+}
+
+/** 
  * Zero forces
  * 
  * @param context     context
@@ -517,8 +566,6 @@ void OpenMMBrookInterface::computeForces( OpenMMContextImpl& context ){
 
    // static const int debug                   = 1;
 
-(void) fprintf( stderr, "%s ", methodName.c_str() ); (void) fflush( stderr );
-
 // ---------------------------------------------------------------------------------------
 
    // nonbonded forces
@@ -526,27 +573,27 @@ void OpenMMBrookInterface::computeForces( OpenMMContextImpl& context ){
    BrookStreamImpl* positions = getParticlePositions();
    BrookStreamImpl* forces    = getParticleForces();
 
-   if( _brookNonBonded ){
-      _brookNonBonded->computeForces( *positions, *forces );
+   if( _brookNonBonded.isActive() ){
+      _brookNonBonded.computeForces( *positions, *forces );
    }
 
 // ---------------------------------------------------------------------------------------
 
    // bonded forces
 
-   if( _brookBonded ){
+   if( _brookBonded.isActive() ){
 
-(void) fprintf( stderr, "%s Bonded", methodName.c_str() ); (void) fflush( stderr );
+//(void) fprintf( stderr, "%s Bonded\n", methodName.c_str() ); (void) fflush( stderr );
       // perform setup first time through
 
-      if( _brookBonded->isSetupCompleted() == 0 ){
-         _brookBonded->setup( getNumberOfParticles(), getHarmonicBondForceParameters(), getHarmonicAngleForceParameters(),
+      if( _brookBonded.isSetupCompleted() == 0 ){
+         _brookBonded.setup( getNumberOfParticles(), getHarmonicBondForceParameters(), getHarmonicAngleForceParameters(),
                               getPeriodicTorsionForceParameters(), getRBTorsionForceParameters(),
                               getNonBonded14ForceParameters(),
                               getLj14Scale(), getCoulomb14Scale(), getParticleStreamWidth(), getParticleStreamSize() );
       }
 
-      _brookBonded->computeForces( *positions, *forces );
+      _brookBonded.computeForces( *positions, *forces );
    
       // diagnostics
    
@@ -569,8 +616,8 @@ void OpenMMBrookInterface::computeForces( OpenMMContextImpl& context ){
 
    // GBSA OBC forces
 
-   if( _brookGbsa ){
-      _brookGbsa->computeForces( *positions, *forces );
+   if( _brookGbsa.isActive() ){
+      _brookGbsa.computeForces( *positions, *forces );
    }
 
    // ---------------------------------------------------------------------------------------
@@ -580,25 +627,36 @@ void OpenMMBrookInterface::computeForces( OpenMMContextImpl& context ){
  * Compute energy
  * 
  * @param context     context
+ * @param system      system reference
  *
  */
 
-double OpenMMBrookInterface::computeEnergy( OpenMMContextImpl& context ){
+double OpenMMBrookInterface::computeEnergy( OpenMMContextImpl& context, System& system ){
 
 // ---------------------------------------------------------------------------------------
 
-/*
-   static const std::string methodName      = "OpenMMBrookInterface::computeEnergy";
-
-   static const int PrintOn                 = 0;
-   static const int MaxErrorMessages        = 2;
-   static       int ErrorMessages           = 0;
-*/
-   // static const int debug                   = 1;
+   //static const std::string methodName      = "OpenMMBrookInterface::computeEnergy";
 
 // ---------------------------------------------------------------------------------------
 
-   return 0.0;
+   // We don't currently have GPU kernels to calculate energy, so instead we have the reference
+   // platform do it.  This is VERY slow.
+    
+   LangevinIntegrator integrator(0.0, 1.0, 0.0);
+   ReferencePlatform platform;
+   OpenMMContext refContext( system, integrator, platform );
 
-   // ---------------------------------------------------------------------------------------
+   const Stream& positions = context.getPositions();
+   double* posData         = new double[positions.getSize()*3];
+   positions.saveToArray(posData);
+   vector<Vec3> pos(positions.getSize());
+
+   for( int ii = 0; ii < pos.size(); ii++ ){
+      pos[ii] = Vec3(posData[3*ii], posData[3*ii+1], posData[3*ii+2]);
+   }
+   delete[] posData;
+   refContext.setPositions(pos);
+
+   return refContext.getState(State::Energy).getPotentialEnergy();
+
 }

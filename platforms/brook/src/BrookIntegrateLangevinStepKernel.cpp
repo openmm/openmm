@@ -141,7 +141,7 @@ void BrookIntegrateLangevinStepKernel::initialize( const System& system, const L
 
    _brookRandomNumberGenerator   = new BrookRandomNumberGenerator( );
    _brookRandomNumberGenerator->setup( (int) masses.size(), getPlatform() );
-   _brookRandomNumberGenerator->setVerbosity( 1 );
+//   _brookRandomNumberGenerator->setVerbosity( 1 );
 
 }
 

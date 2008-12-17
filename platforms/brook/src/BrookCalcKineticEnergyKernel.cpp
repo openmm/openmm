@@ -56,7 +56,8 @@ BrookCalcKineticEnergyKernel::BrookCalcKineticEnergyKernel( std::string name, co
 
 // ---------------------------------------------------------------------------------------
 
-   _numberOfParticles  = 0;
+   _openMMBrookInterface.setNumberOfParticles( system.getNumParticles() );
+   _numberOfParticles  =  system.getNumParticles();
    _masses             = NULL;
 
 }

@@ -100,6 +100,17 @@ class OpenMMBrookInterface {
       int getNumberOfParticles( void ) const;
       
       /** 
+       * Set number of particles
+       * 
+       * @param numberOfParticles number of particles
+       *
+       * @return DefaultReturnValue
+       *
+       */
+      
+      int setNumberOfParticles( int numberOfParticles );
+      
+      /** 
        * Get particle stream width
        * 
        * @return    particle stream width
@@ -166,10 +177,13 @@ class OpenMMBrookInterface {
        * Compute energy
        *
        * @param context OpenMMContextImpl context 
+       * @param system  system reference
+       *
+       * @return potential energy
        *
        */
       
-      double computeEnergy( OpenMMContextImpl& context );
+      double computeEnergy( OpenMMContextImpl& context, System& system );
       
       /** 
        * Set trigger Force Kernel
@@ -206,6 +220,24 @@ class OpenMMBrookInterface {
        */
       
       void* getTriggerEnergyKernel( void ) const;
+      
+      /** 
+       * Get BrookNonBonded reference
+       * 
+       * @return BrookNonBonded reference
+       *
+       */
+      
+      BrookNonBonded& getBrookNonBonded( void );
+      
+      /** 
+       * Get BrookGbsa reference
+       * 
+       * @return BrookGbsa reference
+       *
+       */
+      
+      BrookGbsa& getBrookGbsa( void );
       
       /** 
        * Get BrookBondParameters for harmonic bond force
@@ -392,9 +424,9 @@ class OpenMMBrookInterface {
 
        // Brook bonded, nonbonded, Gbsa
 
-       BrookBonded* _brookBonded;
-       BrookNonBonded* _brookNonBonded;
-       BrookGbsa* _brookGbsa;
+       BrookBonded     _brookBonded;
+       BrookNonBonded  _brookNonBonded;
+       BrookGbsa       _brookGbsa;
 
        void* _triggerForceKernel;
        void* _triggerEnergyKernel;

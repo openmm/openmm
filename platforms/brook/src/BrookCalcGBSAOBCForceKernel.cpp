@@ -64,7 +64,6 @@ BrookCalcGBSAOBCForceKernel::BrookCalcGBSAOBCForceKernel( std::string name, cons
 // ---------------------------------------------------------------------------------------
 
    _numberOfParticles                = 0;
-   _brookGbsa                        = NULL;
    _log                              = NULL;
 
    const BrookPlatform brookPlatform = dynamic_cast<const BrookPlatform&> (platform);
@@ -72,6 +71,7 @@ BrookCalcGBSAOBCForceKernel::BrookCalcGBSAOBCForceKernel( std::string name, cons
       setLog( brookPlatform.getLog() );
    }
       
+   _openMMBrookInterface.setNumberOfParticles( system.getNumParticles() );
 }   
 
 /** 
@@ -88,7 +88,6 @@ BrookCalcGBSAOBCForceKernel::~BrookCalcGBSAOBCForceKernel( ){
 
 // ---------------------------------------------------------------------------------------
 
-   delete _brookGbsa;
 }
 
 /** 
@@ -136,11 +135,7 @@ void BrookCalcGBSAOBCForceKernel::initialize( const System& system, const GBSAOB
 
    // ---------------------------------------------------------------------------------------
 
-   if( _brookGbsa ){
-      delete _brookGbsa;
-   }
-   _brookGbsa              = new BrookGbsa();
-   _brookGbsa->setLog( log );
+   BrookGbsa& brookGbsa      = _openMMBrookInterface.getBrookGbsa();
     
    // get parameters from force object
    // and initialize brookGbsa
@@ -159,13 +154,13 @@ void BrookCalcGBSAOBCForceKernel::initialize( const System& system, const GBSAOB
       parameters[1]      = radius;
       parameters[2]      = scalingFactor;
    }   
-   _brookGbsa->setup( particleParameters, force.getSolventDielectric(), force.getSoluteDielectric(), getPlatform() );
+   brookGbsa.setup( particleParameters, force.getSolventDielectric(), force.getSoluteDielectric(), getPlatform() );
 
    _openMMBrookInterface.setTriggerForceKernel( this );
    _openMMBrookInterface.setTriggerEnergyKernel( this );
 
    if( log ){
-      std::string contents = _brookGbsa->getContentsString( ); 
+      std::string contents = brookGbsa.getContentsString( ); 
       (void) fprintf( log, "%s brookGbsa::contents\n%s", methodName.c_str(), contents.c_str() );
       (void) fflush( log );
    }
@@ -213,7 +208,7 @@ double BrookCalcGBSAOBCForceKernel::executeEnergy( OpenMMContextImpl& context ){
 // ---------------------------------------------------------------------------------------
 
    if( _openMMBrookInterface.getTriggerEnergyKernel() == this ){
-      return (double) _openMMBrookInterface.computeEnergy( context );
+      return (double) _openMMBrookInterface.computeEnergy( context, _system );
    } else {
       return 0.0;
    }

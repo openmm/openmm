@@ -66,6 +66,8 @@ BrookCalcHarmonicBondForceKernel::BrookCalcHarmonicBondForceKernel( std::string 
    if( brookPlatform.getLog() != NULL ){
       setLog( brookPlatform.getLog() );
    }
+
+   _openMMBrookInterface.setNumberOfParticles( system.getNumParticles() );
       
 }   
 
@@ -215,7 +217,7 @@ double BrookCalcHarmonicBondForceKernel::executeEnergy( OpenMMContextImpl& conte
 // ---------------------------------------------------------------------------------------
 
    if( _openMMBrookInterface.getTriggerEnergyKernel() == this ){
-      return (double) _openMMBrookInterface.computeEnergy( context );
+      return (double) _openMMBrookInterface.computeEnergy( context, _system );
    } else {
       return 0.0;
    }

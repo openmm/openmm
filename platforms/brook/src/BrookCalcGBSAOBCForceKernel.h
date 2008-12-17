@@ -122,6 +122,15 @@ class BrookCalcGBSAOBCForceKernel : public CalcGBSAOBCForceKernel {
       
       FILE* getLog( void ) const;
       
+      /** 
+       * Get Brook GBSA reference
+       * 
+       * @return  Brook GBSA reference
+       *
+       */
+      
+      BrookGbsa& getBrookGbsa( void ) const;
+      
    private:
    
       // log file reference
@@ -132,10 +141,6 @@ class BrookCalcGBSAOBCForceKernel : public CalcGBSAOBCForceKernel {
 
       int _numberOfParticles;
    
-      // Brook Gbsa
-
-      BrookGbsa* _brookGbsa;
-
       // interface
 
       OpenMMBrookInterface& _openMMBrookInterface;

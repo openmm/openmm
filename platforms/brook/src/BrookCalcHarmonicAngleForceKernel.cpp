@@ -66,6 +66,7 @@ BrookCalcHarmonicAngleForceKernel::BrookCalcHarmonicAngleForceKernel( std::strin
    if( brookPlatform.getLog() != NULL ){
       setLog( brookPlatform.getLog() );
    }
+   _openMMBrookInterface.setNumberOfParticles( system.getNumParticles() );
       
 }   
 
@@ -214,7 +215,7 @@ double BrookCalcHarmonicAngleForceKernel::executeEnergy( OpenMMContextImpl& cont
 // ---------------------------------------------------------------------------------------
 
    if( _openMMBrookInterface.getTriggerEnergyKernel() == this ){
-      return (double) _openMMBrookInterface.computeEnergy( context );
+      return (double) _openMMBrookInterface.computeEnergy( context, _system );
    } else {
       return 0.0;
    }

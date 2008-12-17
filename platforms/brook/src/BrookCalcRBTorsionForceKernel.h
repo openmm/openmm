@@ -63,7 +63,7 @@ class BrookCalcRBTorsionForceKernel : public CalcRBTorsionForceKernel {
        * Initialize the kernel, setting up the values to calculate harmonic bond force & energy
        * 
        * @param system                    System reference
-       * @param force                     RbDihedralForce reference
+       * @param force                     RbTorsionForce reference
        *
        */
 

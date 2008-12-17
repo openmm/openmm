@@ -63,7 +63,7 @@ class BrookCalcPeriodicTorsionForceKernel : public CalcPeriodicTorsionForceKerne
        * Initialize the kernel, setting up the values to calculate harmonic bond force & energy
        * 
        * @param system                    System reference
-       * @param force                     ProperDihedralForce reference
+       * @param force                     ProperTorsionForce reference
        *
        */
 

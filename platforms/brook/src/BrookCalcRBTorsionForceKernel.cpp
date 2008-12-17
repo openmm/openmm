@@ -36,7 +36,7 @@
 using namespace OpenMM;
 using namespace std;
 
-const std::string BrookCalcRBTorsionForceKernel::BondName = "RbDihedral";
+const std::string BrookCalcRBTorsionForceKernel::BondName = "RbTorsion";
 
 /** 
  * BrookCalcRBTorsionForceKernel constructor
@@ -61,6 +61,7 @@ BrookCalcRBTorsionForceKernel::BrookCalcRBTorsionForceKernel( std::string name, 
 
    _brookBondParameters              = NULL;
    _log                              = NULL;
+   _openMMBrookInterface.setNumberOfParticles( system.getNumParticles() );
 
    const BrookPlatform brookPlatform = dynamic_cast<const BrookPlatform&> (platform);
    if( brookPlatform.getLog() != NULL ){
@@ -115,7 +116,7 @@ int BrookCalcRBTorsionForceKernel::setLog( FILE* log ){
  * Initialize the kernel, setting up the values of all the force field parameters.
  * 
  * @param system                    System reference
- * @param force                     RbDihedralForce reference
+ * @param force                     RbTorsionForce reference
  *
  */
 
@@ -219,7 +220,7 @@ double BrookCalcRBTorsionForceKernel::executeEnergy( OpenMMContextImpl& context 
 // ---------------------------------------------------------------------------------------
 
    if( _openMMBrookInterface.getTriggerEnergyKernel() == this ){
-      return (double) _openMMBrookInterface.computeEnergy( context );
+      return (double) _openMMBrookInterface.computeEnergy( context, _system );
    } else {
       return 0.0;
    }

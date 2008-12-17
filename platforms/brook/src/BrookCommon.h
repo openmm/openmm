@@ -201,6 +201,24 @@ class BrookCommon {
 
       int getParticleStreamSize( void ) const; 
 
+      /**
+       * Get flag signalling whether active
+       * 
+       * @return flag signalling whether active
+       */
+
+      int isActive( void ) const; 
+
+      /**
+       * Set flag signalling whether active
+       * 
+       * @param isActive  flag signalling whether active
+       *
+       * @return DefaultReturnValue
+       */
+
+      int setIsActive( int isActive ); 
+
       /** 
        * Set log file reference
        * 
@@ -231,24 +249,6 @@ class BrookCommon {
        */
       
       FILE* getLog( void ) const;
-
-      /** 
-       * Get verbose flag
-       *
-       * @return  verbosity flag
-       *
-       */
-    
-      int getVerbosity( void ) const;
-
-      /** 
-       * Set verbosity flag
-       *
-       * @param verbosity flag
-       *
-       */
-    
-      int setVerbosity( int verbosity );
 
       /* 
        * Given number of stream elements and width, returns the appropriate
@@ -332,9 +332,9 @@ class BrookCommon {
 
       FILE* _log;
 
-      // verbosity
+      // active flag 
 
-      int _verbosity;
+      int _isActive;
 
       /**
        * Set number of particles

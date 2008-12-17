@@ -106,7 +106,7 @@ void BrookIntegrateBrownianStepKernel::initialize( const vector<double>& masses,
 
    _brookRandomNumberGenerator   = new BrookRandomNumberGenerator( );
    _brookRandomNumberGenerator->setup( (int) masses.size(), getPlatform() );
-   _brookRandomNumberGenerator->setVerbosity( 1 );
+//   _brookRandomNumberGenerator->setVerbosity( 1 );
 }
 
 /** 

@@ -121,6 +121,15 @@ void  kinvmap_gather3_5 (const float  strwidth,
 		::brook::stream outforce);
 
 
+void  kinvmap_gather1_1 (const float  strwidth,
+		::brook::stream invmap3_1,
+		::brook::stream forces3,
+		::brook::stream invmap5_1,
+		::brook::stream forces5,
+		::brook::stream inforce,
+		::brook::stream outforce);
+
+
 void  kinvmap_gather5_2 (const float  strwidth,
 		::brook::stream invmap5_1,
 		::brook::stream invmap5_2,

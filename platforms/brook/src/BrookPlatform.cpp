@@ -456,7 +456,9 @@ void BrookPlatform::contextCreated( OpenMMContextImpl& context ) const {
 
 // ---------------------------------------------------------------------------------------
 
-   context.setPlatformData( new OpenMMBrookInterface( getParticleStreamWidth() ) );
+   OpenMMBrookInterface* openMMBrookInterface = new OpenMMBrookInterface( getParticleStreamWidth() );
+   openMMBrookInterface->setLog( stderr );
+   context.setPlatformData( openMMBrookInterface );
 }
 
 /** 

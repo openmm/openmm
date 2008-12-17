@@ -347,7 +347,7 @@ class BrookBonded : public BrookCommon {
        *
        */
 
-      int addRBDihedrals( int *nbondeds, int *particles, BrookOpenMMFloat* params[], const std::vector<std::vector<int> >& rbTorsionIndices,  
+      int addRBTorsions( int *nbondeds, int *particles, BrookOpenMMFloat* params[], const std::vector<std::vector<int> >& rbTorsionIndices,  
                           const std::vector<std::vector<double> >& rbTorsionParameters );
 
       /**
@@ -363,7 +363,7 @@ class BrookBonded : public BrookCommon {
        *
        */
 
-      int addPDihedrals( int *nbondeds, int *particles, BrookOpenMMFloat* params[], const std::vector<std::vector<int> >& periodicTorsionIndices,  
+      int addPTorsions( int *nbondeds, int *particles, BrookOpenMMFloat* params[], const std::vector<std::vector<int> >& periodicTorsionIndices,  
                           const std::vector<std::vector<double> >& periodicTorsionParameters );
 
       /**
@@ -456,7 +456,7 @@ class BrookBonded : public BrookCommon {
        * forces are to be picked up from and stores the position
        * in the appropriate index.
        *
-       * Input: number of dihedrals, the particle indices, and a flag indicating
+       * Input: number of torsions, the particle indices, and a flag indicating
        *        whether we're doing i(0), j(1), k(2) or l(3)
        * Output: an array of counts per particle
        *         arrays of inversemaps

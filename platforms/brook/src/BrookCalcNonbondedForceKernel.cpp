@@ -61,8 +61,9 @@ BrookCalcNonbondedForceKernel::BrookCalcNonbondedForceKernel( std::string name, 
 
 // ---------------------------------------------------------------------------------------
 
-   _numberOfParticles                       = 0;
-   _brookNonBonded                          = NULL;
+   _numberOfParticles                       = system.getNumParticles();
+   _openMMBrookInterface.setNumberOfParticles( system.getNumParticles() );
+
    _brookBondParameters                     = NULL;
 
    _log                                     = NULL;
@@ -94,7 +95,6 @@ BrookCalcNonbondedForceKernel::~BrookCalcNonbondedForceKernel( ){
 // ---------------------------------------------------------------------------------------
 
    //delete _brookBondParameters;
-   delete _brookNonBonded;
 
    // deleted w/ kernel delete? If activated, program crashes
 
@@ -168,11 +168,7 @@ void BrookCalcNonbondedForceKernel::initialize( const System& system, const Nonb
 
    // nonbonded
 
-   if( _brookNonBonded ){
-      delete _brookNonBonded;
-   }
-   _brookNonBonded           = new BrookNonBonded();
-   _brookNonBonded->setLog( log );
+   BrookNonBonded& brookNonBonded = _openMMBrookInterface.getBrookNonBonded();
 
    // charge & LJ parameters
 
@@ -187,15 +183,14 @@ void BrookCalcNonbondedForceKernel::initialize( const System& system, const Nonb
       particleParamArray[2]   = charge;
    }   
 
-   _brookNonBonded->setup( _numberOfParticles, nonbondedParameters, exclusions, getPlatform() );
+   brookNonBonded.setup( _numberOfParticles, nonbondedParameters, exclusions, getPlatform() );
    _openMMBrookInterface.setTriggerForceKernel( this );
    _openMMBrookInterface.setTriggerEnergyKernel( this );
-
 
    // echo contents
 
    if( log ){
-      std::string contents = _brookNonBonded->getContentsString( );
+      std::string contents = brookNonBonded.getContentsString( );
       (void) fprintf( log, "%s brookNonBonded::contents\n%s", methodName.c_str(), contents.c_str() );
       (void) fflush( log );
    }
@@ -303,7 +298,7 @@ double BrookCalcNonbondedForceKernel::executeEnergy( OpenMMContextImpl& context 
 // ---------------------------------------------------------------------------------------
 
    if( _openMMBrookInterface.getTriggerEnergyKernel() == this ){
-      return (double) _openMMBrookInterface.computeEnergy( context );
+      return (double) _openMMBrookInterface.computeEnergy( context, _system );
    } else {
       return 0.0;
    }   

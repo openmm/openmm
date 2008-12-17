@@ -375,7 +375,7 @@ int BrookRandomNumberGenerator::_loadRandomNumberStreamsKiss( void ){
       state[2] = rand();
       state[3] = rand();
 
-      if( getVerbosity() && getLog() ){
+      if( getLog() ){
          (void) fprintf( getLog(), "LoadGVStreamsKiss: reset state seeds stateInitialized=%d reseed=%d\n",
                          stateInitialized, reseed );
          (void) fflush( getLog() );
@@ -395,7 +395,7 @@ state[3] = 27587;
 
    float* loadBuffer = _getLoadBuffer();
 
-   if( getVerbosity() && getLog() ){
+   if( getLog() ){
 	   static float count   = 0.0f;
       float block          = (float) (3*getRandomNumberStreamSize() );
       count               += 1.0f;

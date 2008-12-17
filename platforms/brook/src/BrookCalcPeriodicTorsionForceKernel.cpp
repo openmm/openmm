@@ -36,7 +36,7 @@
 using namespace OpenMM;
 using namespace std;
 
-const std::string BrookCalcPeriodicTorsionForceKernel::BondName = "ProperDihedral";
+const std::string BrookCalcPeriodicTorsionForceKernel::BondName = "ProperTorsion";
 
 /** 
  * BrookCalcPeriodicTorsionForceKernel constructor
@@ -61,6 +61,7 @@ BrookCalcPeriodicTorsionForceKernel::BrookCalcPeriodicTorsionForceKernel( std::s
 
    _brookBondParameters              = NULL;
    _log                              = NULL;
+   _openMMBrookInterface.setNumberOfParticles( system.getNumParticles() );
 
    const BrookPlatform brookPlatform = dynamic_cast<const BrookPlatform&> (platform);
    if( brookPlatform.getLog() != NULL ){
@@ -115,7 +116,7 @@ int BrookCalcPeriodicTorsionForceKernel::setLog( FILE* log ){
  * Initialize the kernel, setting up the values of all the force field parameters.
  * 
  * @param system                    System reference
- * @param force                     ProperDihedralForce reference
+ * @param force                     ProperTorsionForce reference
  *
  */
 
@@ -216,7 +217,7 @@ double BrookCalcPeriodicTorsionForceKernel::executeEnergy( OpenMMContextImpl& co
 // ---------------------------------------------------------------------------------------
 
    if( _openMMBrookInterface.getTriggerEnergyKernel() == this ){
-      return (double) _openMMBrookInterface.computeEnergy( context );
+      return (double) _openMMBrookInterface.computeEnergy( context, _system );
    } else {
       return 0.0;
    }
