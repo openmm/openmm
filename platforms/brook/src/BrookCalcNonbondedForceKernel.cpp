@@ -48,6 +48,8 @@ const std::string BrookCalcNonbondedForceKernel::BondName = "LJ14";
  * 
  * @param name                      kernel name
  * @param platform                  platform
+ * @param openMMBrookInterface      OpenMMBrookInterface reference
+ * @param system                    System reference 
  *
  */
 
@@ -67,12 +69,6 @@ BrookCalcNonbondedForceKernel::BrookCalcNonbondedForceKernel( std::string name, 
    _brookBondParameters                     = NULL;
 
    _log                                     = NULL;
-
-   _refForceField                           = NULL;
-   _refSystem                               = NULL;
-   _refOpenMMContext                        = NULL;
-   _referencePlatform                       = NULL;
-   _refVerletIntegrator                     = NULL;
 
    const BrookPlatform brookPlatform        = dynamic_cast<const BrookPlatform&> (platform);
    if( brookPlatform.getLog() != NULL ){
@@ -94,17 +90,8 @@ BrookCalcNonbondedForceKernel::~BrookCalcNonbondedForceKernel( ){
 
 // ---------------------------------------------------------------------------------------
 
-   //delete _brookBondParameters;
+   delete _brookBondParameters;
 
-   // deleted w/ kernel delete? If activated, program crashes
-
-   //delete _refForceField;
-/*
-   delete _refSystem;
-   delete _refOpenMMContext;
-   delete _referencePlatform;
-   delete _refVerletIntegrator;
-*/
 }
 
 /** 
@@ -133,9 +120,11 @@ int BrookCalcNonbondedForceKernel::setLog( FILE* log ){
 }
 
 /** 
- * Set log file reference
+ * Initialize object 
  * 
- * @param  log file reference
+ * @param  system     System reference (currently not used)
+ * @param  force      NonbondedForce reference -- extract charge, and vdw parameters from this object
+ * @param  exclusions list of execlusions
  *
  * @return  DefaultReturnValue
  *
@@ -150,6 +139,8 @@ void BrookCalcNonbondedForceKernel::initialize( const System& system, const Nonb
 // ---------------------------------------------------------------------------------------
 
     FILE* log                 = getLog();
+(void) fprintf( log, "%s begin\n", methodName.c_str() ); fflush( log );
+
     _numberOfParticles        = force.getNumParticles();
 /*
     nonbondedMethod = CalcNonbondedForceKernel::NonbondedMethod(force.getNonbondedMethod());
@@ -173,14 +164,13 @@ void BrookCalcNonbondedForceKernel::initialize( const System& system, const Nonb
    // charge & LJ parameters
 
    std::vector<std::vector<double> > nonbondedParameters;
+   nonbondedParameters.resize( _numberOfParticles );
    for( int ii = 0; ii < _numberOfParticles; ii++ ){
       double charge, radius, depth;
       force.getParticleParameters( ii, charge, radius, depth );
-      std::vector<double> particleParamArray;
-      nonbondedParameters[ii] = particleParamArray;
-      particleParamArray[0]   = radius;
-      particleParamArray[1]   = depth;
-      particleParamArray[2]   = charge;
+      nonbondedParameters[ii].push_back( charge  );
+      nonbondedParameters[ii].push_back( radius  );
+      nonbondedParameters[ii].push_back( depth   );
    }   
 
    brookNonBonded.setup( _numberOfParticles, nonbondedParameters, exclusions, getPlatform() );
@@ -219,44 +209,53 @@ void BrookCalcNonbondedForceKernel::initialize14Interactions( const System& syst
 
    FILE* log                 = getLog();
 
+//(void) fprintf( log, "%s begin\n", methodName.c_str() ); fflush( log );
+
    // ---------------------------------------------------------------------------------------
 
    // create _brookBondParameters object containing particle indices/parameters
 
    int numberOf14Forces         = force.getNumNonbonded14();
+   if( numberOf14Forces > 0 ){
 
-   //delete _brookBondParameters;
-   _brookBondParameters = new BrookBondParameters( BondName, NumberOfParticlesInBond, NumberOfParametersInBond, numberOf14Forces, getLog() );
-
-   for( int ii = 0; ii < numberOf14Forces; ii++ ){
-
-      int particle1, particle2;
-      double  charge, radius, depth;
-
-      int particles[NumberOfParticlesInBond];
-      double parameters[NumberOfParametersInBond];
-
-      force.getNonbonded14Parameters( ii, particle1, particle2,  charge, radius, depth ); 
-      particles[0]    = particle1;
-      particles[1]    = particle2;
- 
-      parameters[0]   = charge;
-      parameters[1]   = radius;
-      parameters[2]   = depth;
-
-      _brookBondParameters->setBond( ii, particles, parameters );
-   }   
-   _openMMBrookInterface.setNonBonded14ForceParameters( _brookBondParameters, 1.0, 1.0 );
-
-   if( log ){
-      std::string contents = _brookBondParameters->getContentsString( ); 
-      (void) fprintf( log, "%s contents:\n%s", methodName.c_str(), contents.c_str() );
+      _brookBondParameters         = new BrookBondParameters( BondName, NumberOfParticlesInBond, NumberOfParametersInBond, numberOf14Forces, getLog() );
+   
+      for( int ii = 0; ii < numberOf14Forces; ii++ ){
+   
+         int particle1, particle2;
+         double  charge, radius, depth;
+   
+         int particles[NumberOfParticlesInBond];
+         double parameters[NumberOfParametersInBond];
+   
+         force.getNonbonded14Parameters( ii, particle1, particle2, charge, radius, depth ); 
+   
+(void) fprintf( log, "%s idx=%d [%d %d] [%f %f %f]\n", methodName.c_str(), ii, particle1, particle2, charge, radius, depth );
+         particles[0]    = particle1;
+         particles[1]    = particle2;
+    
+         parameters[0]   = charge;
+         parameters[1]   = radius;
+         parameters[2]   = depth;
+   
+         _brookBondParameters->setBond( ii, particles, parameters );
+      }   
+      _openMMBrookInterface.setNonBonded14ForceParameters( _brookBondParameters, 1.0, 1.0 );
+   
+      if( log ){
+         std::string contents = _brookBondParameters->getContentsString( ); 
+         (void) fprintf( log, "%s contents:\n%s", methodName.c_str(), contents.c_str() );
+         (void) fflush( log );
+      }
+   } else if( log ){
+      (void) fprintf( log, "%s no 14 ixns\n", methodName.c_str() );
       (void) fflush( log );
    }
 
    // ---------------------------------------------------------------------------------------
     
 }
+
 /** 
  * Execute the kernel to calculate the nonbonded forces
  * 
@@ -302,37 +301,5 @@ double BrookCalcNonbondedForceKernel::executeEnergy( OpenMMContextImpl& context 
    } else {
       return 0.0;
    }   
-
-}
-
-/**
- * Get reference Context
- * 
- * @param numberOfParticles  number of particles
- *
- * @return  OpenMMContext
- *
- */
-
-OpenMMContext* BrookCalcNonbondedForceKernel::getReferenceOpenMMContext( int numberOfParticles ){
-
-// ---------------------------------------------------------------------------------------
-
-   //static const std::string methodName      = "BrookCalcNonbondedForceKernel::getReferenceOpenMMContext";
-
-// ---------------------------------------------------------------------------------------
-
-   if( _refOpenMMContext == NULL ){
-      
-      _referencePlatform       = new ReferencePlatform();
-      _refSystem               = new System( numberOfParticles, 0 ); 
-		_refVerletIntegrator     = new VerletIntegrator( 0.01 );
-
-      _refSystem->addForce( _refForceField );
-
-      _refOpenMMContext        = new OpenMMContext( *_refSystem, *_refVerletIntegrator, *_referencePlatform );
-   }
-
-   return _refOpenMMContext;
 
 }

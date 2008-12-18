@@ -33,7 +33,6 @@
  * -------------------------------------------------------------------------- */
 
 #include "kernels.h"
-//#include "../../reference/src/SimTKUtilities/SimTKOpenMMRealType.h"
 #include "OpenMMBrookInterface.h"
 #include "NonbondedForce.h"
 
@@ -110,17 +109,6 @@ class BrookCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
   
       double executeEnergy( OpenMMContextImpl& context );
 
-      /**
-       * Get reference Context
-       * 
-       * @param numberOfParticles  number of particles
-       *
-       * @return  OpenMMContext
-       *
-       */
-      
-      OpenMMContext* getReferenceOpenMMContext( int numberOfParticles );
-      
       /** 
        * Set log file reference
        * 
@@ -158,6 +146,8 @@ class BrookCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
 
       static const std::string BondName;
 
+      // number of LJ14 particles/parameters in 'bond'
+
       static const int NumberOfParticlesInBond  = 2;
       static const int NumberOfParametersInBond = 3;
 
@@ -173,14 +163,6 @@ class BrookCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
        System& _system;
 
        BrookBondParameters* _brookBondParameters;
-
-       // used to calculate energy
-
-       NonbondedForce* _refForceField;
-       System*               _refSystem;
-       OpenMMContext*        _refOpenMMContext;
-       ReferencePlatform*    _referencePlatform;
-       VerletIntegrator*     _refVerletIntegrator;
 
 };
 

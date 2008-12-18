@@ -583,7 +583,7 @@ kernel void kbonded_CDLJ (
   float xstrwidth,
   float4 nbparams,
   float3 posq[][],
-  float  charge[][],
+  float  charge<>,
   float4 atoms<>,
   float4 parm0<>,
   float4 parm1<>,
@@ -596,6 +596,7 @@ kernel void kbonded_CDLJ (
   out float3 fl<>
   )
 {
+
  float3 rij, rkj, rkl, ril;
  float2 ai, aj, ak, al;
  float3 m, n;
@@ -619,23 +620,11 @@ kernel void kbonded_CDLJ (
  float theta1, costheta1, invsintheta1;
  float theta2, costheta2, invsintheta2;
  float3 posqi, posqj, posqk, posql;
- float  chargei, chargel;
  float sig, eps;
 
-
-
-
-
-
-   ai.y = round( (atoms.x - fmod( atoms.x, xstrwidth ))/xstrwidth );
+ ai.y = round( (atoms.x - fmod( atoms.x, xstrwidth ))/xstrwidth );
  ai.x = atoms.x - ai.y * xstrwidth;
  posqi = posq[ ai ];
- chargei = charge[ ai ];
-
-
-
-
-
 
  if ( atoms.y > -0.5f ) {
 
@@ -656,17 +645,13 @@ kernel void kbonded_CDLJ (
   posqk = float4( 0.0f, 1.0f, 1.0f, 0.0f );
 
  if ( atoms.w > -0.5f ) {
-
-      al.y = round( (atoms.w - fmod( atoms.w, xstrwidth ))/xstrwidth );
+  al.y = round( (atoms.w - fmod( atoms.w, xstrwidth ))/xstrwidth );
   al.x = atoms.w - al.y * xstrwidth;
   posql = posq[ al ];
-  chargel = charge[ al ];
  } else {
   posql = float4( 1.0f, 1.0f, 1.0f, 0.0f );
-  chargel = 0.0f;
-}
+ }
 
- qq = chargei*chargel;
  rij = posqi.xyz - posqj.xyz;
  rkj = posqk.xyz - posqj.xyz;
  rkl = posqk.xyz - posql.xyz;
@@ -789,7 +774,7 @@ kernel void kbonded_CDLJ (
 
  if ( parm4.z > -0.5f ) {
   r2 = dot( ril, ril );
-  fs = scalar_force_single_CDLJ( qq, epsfac, parm4.z, parm4.w, r2, nbparams );
+  fs = scalar_force_single_CDLJ( charge, epsfac, parm4.z, parm4.w, r2, nbparams );
   fi_pair = fs * ril;
   fi += fi_pair;
   fl -= fi_pair;

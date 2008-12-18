@@ -219,6 +219,7 @@ int BrookBondParameters::setBond( int bondIndex, int* particleIndices, double* b
 
    int numberOfParametersInBond = getNumberOfParametersInBond();
    for( int ii = 0; ii < numberOfParametersInBond; ii++ ){
+//fprintf( stderr, "Param %s %d %e\n", getBondName().c_str(), ii, bondParameters[ii] );
       _bondParameters[bondIndex].push_back( bondParameters[ii] );
    }
 

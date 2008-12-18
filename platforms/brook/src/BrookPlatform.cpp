@@ -197,7 +197,6 @@ BrookPlatform::BrookPlatform( ){
 
    _particleStreamWidth  = DefaultParticleStreamWidth;
    _log                  = NULL;
-   _openMMBrookInterface = NULL;
 
    // get Brook runtime
 
@@ -233,8 +232,6 @@ BrookPlatform::BrookPlatform( int particleStreamWidth, const std::string& runtim
    // static const std::string methodName      = "BrookPlatform::BrookPlatform(2)";
 
 // ---------------------------------------------------------------------------------------
-
-   _openMMBrookInterface = NULL;
 
    _initializeKernelFactory( );
    _setBrookRuntime( runtime );
@@ -475,7 +472,5 @@ void BrookPlatform::contextDestroyed( OpenMMContextImpl& context ) const {
    // static const std::string methodName      = "BrookPlatform::contextDestroyed";
 
 // ---------------------------------------------------------------------------------------
-
-   delete _openMMBrookInterface;
 
 }

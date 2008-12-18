@@ -45,7 +45,7 @@ using namespace std;
  * 
  */
 
-BrookNonBonded::BrookNonBonded(  ){
+BrookNonBonded::BrookNonBonded( ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -958,8 +958,7 @@ int BrookNonBonded::setup( int numberOfParticles, const std::vector<std::vector<
 
 // ---------------------------------------------------------------------------------------
 
-   static const std::string methodName      = "BrookNonBonded::setup";
-   static const int debug                   = 1;
+   //static const std::string methodName      = "BrookNonBonded::setup";
 
 // ---------------------------------------------------------------------------------------
 
@@ -971,6 +970,8 @@ int BrookNonBonded::setup( int numberOfParticles, const std::vector<std::vector<
    _initializeExclusions( exclusions, platform );
    _initializeVdwAndCharge( nonbondedParameters, platform );
    _initializeJStreamVdw( nonbondedParameters, platform );
+
+   setIsActive( 1 );
 
    return DefaultReturnValue;
 }
@@ -1325,35 +1326,38 @@ nonbondedForceStreams[3]->fillWithValue( &zerof );
 
    // diagnostics
 
-   if( 1 && PrintOn ){
-      (void) fprintf( getLog(), "\nPost knbforce_CDLJ4: particles=%6d ceiling=%3d dupFac=%3d", getNumberOfParticles(),  
+   if( 1 && PrintOn && getLog() ){
+      FILE* log = getLog();
+      (void) fprintf( log, "%s\n", methodName.c_str() ); (void) fflush( log );
+      (void) fprintf( log, "\nPost knbforce_CDLJ4: particles=%6d ceiling=%3d dupFac=%3d", getNumberOfParticles(),  
                                                                                                getParticleSizeCeiling(),
                                                                                                getDuplicationFactor()  );
 
-      (void) fprintf( getLog(), "\n                      hght=%6d   width=%3d   jWid=%3d", getParticleStreamHeight( ),
+      (void) fprintf( log, "\n                      hght=%6d   width=%3d   jWid=%3d", getParticleStreamHeight( ),
                                                                                            getParticleStreamWidth( ),
                                                                                            getJStreamWidth( ) );
-      (void) fprintf( getLog(), "\n                      pFrc=%6d     eps=%12.5e\n",       getPartialForceStreamWidth( ), epsfac );
+      (void) fprintf( log, "\n                      pFrc=%6d     eps=%12.5e\n",       getPartialForceStreamWidth( ), epsfac );
 
-      (void) fprintf( getLog(), "\nOuterVdwStreamd\n" );
-      getOuterVdwStream()->printToFile( getLog() );
+      (void) fprintf( log, "\nOuterVdwStreamd\n" );
+      getOuterVdwStream()->printToFile( log );
 
-      (void) fprintf( getLog(), "\nInnerSigmaStream\n" );
-      getInnerSigmaStream()->printToFile( getLog() );
+      (void) fprintf( log, "\nInnerSigmaStream\n" );
+      getInnerSigmaStream()->printToFile( log );
 
-      (void) fprintf( getLog(), "\nInnerEpsilonStream\n" );
-      getInnerEpsilonStream()->printToFile( getLog() );
+      (void) fprintf( log, "\nInnerEpsilonStream\n" );
+      getInnerEpsilonStream()->printToFile( log );
 
-      (void) fprintf( getLog(), "\nExclusionStream\n" );
-      getExclusionStream()->printToFile( getLog() );
+      (void) fprintf( log, "\nExclusionStream\n" );
+      getExclusionStream()->printToFile( log );
 
-      (void) fprintf( getLog(), "\nChargeStream\n" );
-      getChargeStream()->printToFile( getLog() );
+      (void) fprintf( log, "\nChargeStream\n" );
+      getChargeStream()->printToFile( log );
 
       for( int ii = 0; ii < 4; ii++ ){
-         (void) fprintf( getLog(), "\nForce stream %d\n", ii );
-         nonbondedForceStreams[ii]->printToFile( getLog() );
+         (void) fprintf( log, "\nForce stream %d\n", ii );
+         nonbondedForceStreams[ii]->printToFile( log );
       }
+      (void) fflush( log );
    }
 
 // ---------------------------------------------------------------------------------------
@@ -1374,11 +1378,12 @@ nonbondedForceStreams[3]->fillWithValue( &zerof );
 
    // diagnostics
 
-   if( 0 && PrintOn ){
+   if( PrintOn && getLog() ){
 
-      (void) fprintf( getLog(), "\nNB forces" );
-      BrookStreamInternal* brookStreamInternalF   = forceStream.getBrookStreamImpl();
-      brookStreamInternalF->printToFile( getLog() );
+      FILE* log = getLog();
+      (void) fprintf( log, "\n%s NB forces", methodName.c_str() ); (void) fflush( log );
+//      forceStream.printToFile( log );
+      (void) fprintf( log, "\n%s Done", methodName.c_str() ); (void) fflush( log );
 
    }
 

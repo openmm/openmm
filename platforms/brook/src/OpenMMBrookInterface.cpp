@@ -581,19 +581,22 @@ void OpenMMBrookInterface::computeForces( OpenMMContextImpl& context ){
 
    // bonded forces
 
+(void) fprintf( stderr, "%s done nonbonded: bonded=%d completed=%d\n", methodName.c_str(), _brookBonded.isActive(), _brookBonded.isSetupCompleted() ); (void) fflush( stderr );
    if( _brookBonded.isActive() ){
 
 //(void) fprintf( stderr, "%s Bonded\n", methodName.c_str() ); (void) fflush( stderr );
       // perform setup first time through
 
-      if( _brookBonded.isSetupCompleted() == 0 ){
+      if( _brookBonded.isSetupCompleted() >= -1 ){
          _brookBonded.setup( getNumberOfParticles(), getHarmonicBondForceParameters(), getHarmonicAngleForceParameters(),
-                              getPeriodicTorsionForceParameters(), getRBTorsionForceParameters(),
-                              getNonBonded14ForceParameters(),
-                              getLj14Scale(), getCoulomb14Scale(), getParticleStreamWidth(), getParticleStreamSize() );
+                             getPeriodicTorsionForceParameters(), getRBTorsionForceParameters(),
+                             getNonBonded14ForceParameters(),
+                             getLj14Scale(), getCoulomb14Scale(), getParticleStreamWidth(), getParticleStreamSize() );
       }
 
+(void) fprintf( stderr, "%s done setup bonded=%d completed=%d\n", methodName.c_str(), _brookBonded.isActive(), _brookBonded.isSetupCompleted() ); (void) fflush( stderr );
       _brookBonded.computeForces( *positions, *forces );
+(void) fprintf( stderr, "%s done forces bonded=%d completed=%d\n", methodName.c_str(), _brookBonded.isActive(), _brookBonded.isSetupCompleted() ); (void) fflush( stderr );
    
       // diagnostics
    

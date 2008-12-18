@@ -61,8 +61,11 @@ BrookBonded::BrookBonded( ){
 
    _setupCompleted            = 0;
    _numberOfParticles         = 0;
-   _ljScale                   = (BrookOpenMMFloat) 0.83333333;
+
+   //_ljScale                   = (BrookOpenMMFloat) 0.83333333;
+   _ljScale                   = 1.0;
    //_coulombFactor             = 332.0;
+
    _coulombFactor             = (BrookOpenMMFloat) 138.935485;
 
    _particleIndicesStream     = NULL;
@@ -1000,16 +1003,13 @@ int BrookBonded::addPairs( int *nbondeds, int *particles, BrookOpenMMFloat* para
 // ---------------------------------------------------------------------------------------
 
    if( debug && getLog() ){
-      (void) fprintf( getLog(), "%s npairs=%d\n", methodName.c_str(), bonded14Indices.size() );
+      (void) fprintf( getLog(), "%s npairs=%d sz=%u %u\n", methodName.c_str(), bonded14Indices.size(), bonded14Indices.size(), nonbondedParameters.size() ); fflush( getLog() );
    }
 
    for( unsigned int ii = 0; ii < bonded14Indices.size(); ii++ ){
 
-      std::vector<int> particlesIndices        = bonded14Indices[ii];
-
-      int index = 0;
-      int i     = particlesIndices[index++];
-      int j     = particlesIndices[index++];
+      int i     = bonded14Indices[ii][0];
+      int j     = bonded14Indices[ii][1];
 
       int ibonded = matchPair( i, j, *nbondeds, particles );
       if( ibonded < 0 ){
@@ -1019,13 +1019,12 @@ int BrookBonded::addPairs( int *nbondeds, int *particles, BrookOpenMMFloat* para
          (*nbondeds)++;
       }
 
-      vector<double> iParameters  = nonbondedParameters[i];
-      vector<double> jParameters  = nonbondedParameters[j];
+//(void) fprintf( getLog(), "%s   %d %ibonded=%d done\n", methodName.c_str(), ii, ibonded ); fflush( getLog() );
 
-      double c6                   = 0.5*(iParameters[1] + jParameters[1]);
-      //double c12                  = lj14Scale*(iParameters[2] * jParameters[2]);
-      double c12                  = 2.0*(iParameters[2] * jParameters[2]);
-
+      vector<double> iParameters  = nonbondedParameters[ii];
+/*
+      double c6                   = iParameters[1];
+      double c12                  = 4.0*iParameters[2];
       double sig, eps;
       if( c12 != 0.0 ){
          //eps = c6*c6/c12;
@@ -1036,17 +1035,17 @@ int BrookBonded::addPairs( int *nbondeds, int *particles, BrookOpenMMFloat* para
          eps = 0.0;
          sig = 1.0;
       }
+*/
 
-      PARAMS( ibonded, 4, 2 ) = (BrookOpenMMFloat) sig;
-      PARAMS( ibonded, 4, 3 ) = (BrookOpenMMFloat) eps;
+      PARAMS( ibonded, 4, 2 ) = (BrookOpenMMFloat) iParameters[1];
+      PARAMS( ibonded, 4, 3 ) = (BrookOpenMMFloat) (4.0*iParameters[2]);
 
       // a little wasteful, but ...
 
-      charges[i] = (BrookOpenMMFloat) iParameters[0];
-      charges[j] = (BrookOpenMMFloat) jParameters[0];
+      charges[ibonded] = (BrookOpenMMFloat) iParameters[0];
 
       if( debug ){
-         (void) fprintf( getLog(), "   %d [%d %d ] %.3e %.3e\n", ibonded, i, j, sig, eps );
+         (void) fprintf( getLog(), "   %d [%d %d ] %.3e %.3e q=%.4f\n", ibonded, i, j, iParameters[1], iParameters[2], charges[ibonded] );
       }
    }
 
@@ -1220,10 +1219,17 @@ int BrookBonded::setup( int numberOfParticles,
 // ---------------------------------------------------------------------------------------
 
    static const std::string methodName = "BrookBonded::setup";
-   static const int PrintOn            = 0;
+   static const int PrintOn            = 1;
    double dangleValue                  = 0.0;
 
 // ---------------------------------------------------------------------------------------
+
+   if( PrintOn && getLog() ){
+      (void) fprintf( getLog(), "%s particles=%d\n   [%p %p %p %p %p] (bond, angle, pd, rb, 14)\n"
+                      "14Scale=%f %f StreamW=%d StreamSz=%d\n", methodName.c_str(), numberOfParticles, harmonicBondBrookBondParameters, harmonicAngleBrookBondParameters,
+                      periodicTorsionBrookBondParameters, rbTorsionBrookBondParameters, nonBonded14ForceParameters, lj14Scale,coulombScale,
+                      particleStreamWidth, particleStreamSize ); fflush( getLog() );
+   }
 
    _numberOfParticles = numberOfParticles;
 
@@ -1233,6 +1239,7 @@ int BrookBonded::setup( int numberOfParticles,
 
    int maxBonds     = 10*numberOfParticles;
    int* particles   = new int[5*maxBonds];
+   float* charges   = new BrookOpenMMFloat[maxBonds];
 
    BrookOpenMMFloat** params = new BrookOpenMMFloat*[getNumberOfParameterStreams()];
    for( int ii = 0; ii < getNumberOfParameterStreams(); ii++ ){
@@ -1250,6 +1257,7 @@ int BrookBonded::setup( int numberOfParticles,
    // All parameters must be initialized to values that will 
    // produce zero for the corresponding force. 
 
+   memset( charges, 0, maxBonds*sizeof( BrookOpenMMFloat ) );
    for( int ii = 0; ii < maxBonds; ii++ ){
 
       ATOMS( ii, 0 ) = -1;
@@ -1273,34 +1281,22 @@ int BrookBonded::setup( int numberOfParticles,
    int nbondeds = 0;
 
    if( rbTorsionBrookBondParameters ){
-      addRBTorsions( &nbondeds, particles, params, rbTorsionBrookBondParameters->getParticleIndices(),          rbTorsionBrookBondParameters->getBondParameters() );
+      addRBTorsions( &nbondeds, particles, params, rbTorsionBrookBondParameters->getParticleIndices(),         rbTorsionBrookBondParameters->getBondParameters() );
    }
    if( periodicTorsionBrookBondParameters ){
-      addPTorsions( &nbondeds, particles, params, periodicTorsionBrookBondParameters->getParticleIndices(),     periodicTorsionBrookBondParameters->getBondParameters() );
+      addPTorsions(  &nbondeds, particles, params, periodicTorsionBrookBondParameters->getParticleIndices(),   periodicTorsionBrookBondParameters->getBondParameters() );
    }
    if( harmonicAngleBrookBondParameters ){
-      addAngles(      &nbondeds, particles, params, harmonicAngleBrookBondParameters->getParticleIndices(),    harmonicAngleBrookBondParameters->getBondParameters() );
+      addAngles(     &nbondeds, particles, params, harmonicAngleBrookBondParameters->getParticleIndices(),     harmonicAngleBrookBondParameters->getBondParameters() );
    }
    if( harmonicBondBrookBondParameters ){
-      addBonds(       &nbondeds, particles, params, harmonicBondBrookBondParameters->getParticleIndices(),     harmonicBondBrookBondParameters->getBondParameters() );
+      addBonds(      &nbondeds, particles, params, harmonicBondBrookBondParameters->getParticleIndices(),      harmonicBondBrookBondParameters->getBondParameters() );
    }
-
-// ---------------------------------------------------------------------------------------
-
-   // charge stream
-
-   _chargeStream             = new BrookFloatStreamInternal( BrookCommon::BondedChargeStream, numberOfParticles, particleStreamWidth,
-                                                             BrookStreamInternal::Float, dangleValue );
-   BrookOpenMMFloat* charges = new BrookOpenMMFloat[_chargeStream->getStreamSize()];
-   memset( charges, 0, _chargeStream->getStreamSize()*sizeof( BrookOpenMMFloat ) );
-
-// ---------------------------------------------------------------------------------------
-
-//(void) fprintf( getLog(), "%s Post addBonds particles=%d number of bonds=%d maxBonds=%d\n", methodName.c_str(), numberOfParticles, nbondeds, maxBonds );
-
    if( nonBonded14ForceParameters ){
-      addPairs( &nbondeds, particles, params, charges, nonBonded14ForceParameters->getParticleIndices(), nonBonded14ForceParameters->getBondParameters(), lj14Scale, coulombScale );
+      addPairs(      &nbondeds, particles, params, charges, nonBonded14ForceParameters->getParticleIndices(), nonBonded14ForceParameters->getBondParameters(), lj14Scale, coulombScale );
    }
+
+// ---------------------------------------------------------------------------------------
 
    // check that number of bonds not too large for memory allocated
 
@@ -1308,10 +1304,26 @@ int BrookBonded::setup( int numberOfParticles,
       std::stringstream message;
       message << methodName << " number of bonds=" << nbondeds << " is greater than maxBonds=" << maxBonds << " numberOfParticles=" << numberOfParticles;
       throw OpenMMException( message.str() );
+
+   } else if( nbondeds < 1 ){
+
+      // return if no bonds
+
+      (void) fprintf( getLog(), "%s WARNING: particles=%d number of bonds=%d maxBonds=%d\n", methodName.c_str(), numberOfParticles, nbondeds, maxBonds );
+      _setupCompleted = 1;
+      return DefaultReturnValue;
+
    } else if( PrintOn && getLog() ){
       (void) fprintf( getLog(), "%s particles=%d number of bonds=%d maxBonds=%d\n", methodName.c_str(), numberOfParticles, nbondeds, maxBonds );
       (void) fflush( getLog() );
    }
+
+// ---------------------------------------------------------------------------------------
+
+   // charge stream
+
+   _chargeStream             = new BrookFloatStreamInternal( BrookCommon::BondedChargeStream, nbondeds, particleStreamWidth,
+                                                             BrookStreamInternal::Float, dangleValue );
 
 // ---------------------------------------------------------------------------------------
 
@@ -1381,13 +1393,13 @@ int BrookBonded::setup( int numberOfParticles,
                               "    phi[%10.6f %6.1f %5.1f]\n"
                               "    ang[%6.3f %8.2f] [%6.3f %8.2f]\n"
                               "      h[%8.5f %14.6e] [%8.5f %14.6e] [%8.5f %14.6e]\n"
-                              "     14[%15.6e %15.6e]\n", index,
+                              "     14[%15.6e %15.6e] q14=%15.6e\n", index,
                          ATOMS(index, 0), ATOMS(index, 1), ATOMS(index, 2), ATOMS(index, 3),
                          params[kIndex][ii], params[kIndex][ii+1], params[kIndex][ii+2], params[kIndex][ii+3], params[jIndex][ii],
                          params[jIndex][ii+1], params[jIndex][ii+2], params[jIndex][ii+3],
                          params[iIndex][ii], params[iIndex][ii+1], params[iIndex][ii+2], params[iIndex][ii+3], 
                          params[lIndex][ii], params[lIndex][ii+1], params[lIndex][ii+2], params[lIndex][ii+3],
-                         params[mIndex][ii], params[mIndex][ii+1], params[mIndex][ii+2], params[mIndex][ii+3] );
+                         params[mIndex][ii], params[mIndex][ii+1], params[mIndex][ii+2], params[mIndex][ii+3], charges[index] );
       }
    }
 
