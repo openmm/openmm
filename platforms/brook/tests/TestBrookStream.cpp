@@ -972,6 +972,7 @@ void testBrookBondedHarmonicBond( void ){
    std::vector<std::vector<int> >    lj14Indices;
    std::vector<std::vector<double> > lj14Parameters;
 
+/*
    (void) fprintf( log, "testBrookBondedHarmonicBond: Calling brookBonded.setup\n" );
    brookBonded.setup( numberOfParticles,
                       harmonicBondsIndices,         harmonicBondsParameters,
@@ -997,6 +998,7 @@ void testBrookBondedHarmonicBond( void ){
 
    contents = brookRandomNumberGenerator.getContentsString( );
    (void) fprintf( log, "testBrookBondedHarmonicBond: brookRandomNumberGenerator::contents\n%s", contents.c_str() );
+*/
 
 }
 
@@ -1043,14 +1045,14 @@ void testBrookNonBonded( void ){
       exclusions.push_back( exclusion );
    }
 
-   (void) fprintf( log, "testBrookBondedHarmonicBond: Calling brookNonBonded::setup\n" );
+   (void) fprintf( log, "testBrookNonBonded: Calling brookNonBonded::setup\n" );
    (void) fflush( log );
    brookNonBonded.setup( numberOfParticles, nonbondedParameters, exclusions, brookPlatform );
    std::string contents = brookNonBonded.getContentsString( );
-   (void) fprintf( log, "testBrookBondedHarmonicBond: Called brookNonBonded.getContentsString \n" );
+   (void) fprintf( log, "testBrookNonBonded: Called brookNonBonded.getContentsString \n" );
    (void) fflush( log );
-   (void) fprintf( log, "testBrookBondedHarmonicBond: brookNonBonded::contents\n%s", contents.c_str() );
-   (void) fprintf( log, "testBrookBondedHarmonicBond: exiting\n" );
+   (void) fprintf( log, "testBrookNonBonded: brookNonBonded::contents\n%s", contents.c_str() );
+   (void) fprintf( log, "testBrookNonBonded: exiting\n" );
    (void) fflush( log );
 }
 
@@ -1062,7 +1064,7 @@ void testBrookBonds( void ){
    static const int debug                   = 1;
    FILE* log                                = stdout;
    
-   int numberOfParticles                        = 3;
+   int numberOfParticles                    = 3;
    RealOpenMM mass                          = 2.0;
 
 // ---------------------------------------------------------------------------------------
@@ -1111,9 +1113,10 @@ void testBrookBonds( void ){
    ASSERT_EQUAL_VEC(Vec3(0.7*0.2, 0, 0), forces[2], TOL);
    ASSERT_EQUAL_VEC(Vec3(-forces[0][0]-forces[2][0], -forces[0][1]-forces[2][1], -forces[0][2]-forces[2][2]), forces[1], TOL);
 
+   (void) fprintf( log, "Harmonic bond forces ok -- checking energy\n");
    ASSERT_EQUAL_TOL( 0.5*0.8*0.5*0.5 + 0.5*0.7*0.2*0.2, state.getPotentialEnergy(), TOL);
 
-   (void) fprintf( log, "Harmonic bond forces ok\n");
+   (void) fprintf( log, "Harmonic bond energy ok\n");
 
 }
 
@@ -1194,7 +1197,7 @@ void testBrookPeriodicTorsions( void ){
    static const int debug                   = 1;
    FILE* log                                = stdout;
    
-   int numberOfParticles                        = 4;
+   int numberOfParticles                    = 4;
    RealOpenMM mass                          = 2.0;
 
 // ---------------------------------------------------------------------------------------
@@ -1214,9 +1217,6 @@ void testBrookPeriodicTorsions( void ){
    forceField->setTorsionParameters(0, 0, 1, 2, 3, 2, PI_M/3, 1.1);
    system.addForce(forceField);
 
-   //(void) fprintf( log, "%s: Calling context\n",  methodName.c_str() );
-   //(void) fflush( log );
-
    OpenMMContext context(system, integrator, platform);
    vector<Vec3> positions(numberOfParticles);
 
@@ -1226,9 +1226,6 @@ void testBrookPeriodicTorsions( void ){
    positions[3] = Vec3(1, 0, 2);
 
    context.setPositions(positions);
-
-   //(void) fprintf( log, "%s :Calling getState\n", methodName.c_str() );
-   //(void) fflush( log );
 
    State state = context.getState( State::Forces | State::Energy );
 
@@ -1379,7 +1376,7 @@ void testBrookCoulomb( void ){
    State state = context.getState( State::Forces | State::Energy );
 
    const vector<Vec3>& forces = state.getForces();
-   (void) fprintf( log, "Coulomb forces\n");
+   (void) fprintf( log, "\nCoulomb forces\n");
    for( int ii = 0; ii < numberOfParticles; ii++ ){
       (void) fprintf( log, "%d [%.5e %.5e %.5e]\n", ii, forces[ii][0], forces[ii][1], forces[ii][2] );
    }
@@ -1518,8 +1515,13 @@ void testBrookExclusionsAnd14( void ){
        nonbonded->setNonbonded14Parameters(1, 1, 4, 0, 1.5, 0.0);
        positions[ii] = Vec3(r, 0, 0); 
 
+(void) fprintf( log, "%s: Calling reinitialize\n",  methodName.c_str() ); (void) fflush( log );
+
       context.reinitialize();
       context.setPositions(positions);
+
+(void) fprintf( log, "%s: Calling getState\n",  methodName.c_str() ); (void) fflush( log );
+
       State state = context.getState( State::Forces | State::Energy );
       const vector<Vec3>& forces = state.getForces();
       double x = 1.5/r;
@@ -2745,10 +2747,13 @@ int main( ){
 
 */
       testBrookBonds();
-/*
       testBrookAngles();
-      testBrookRBTorsions();
       testBrookPeriodicTorsions();
+      testBrookRBTorsions();
+
+// working on this
+//      testLangevinSingleBond();
+/*
       testBrookCoulomb();
       testBrookLJ();
       testBrookExclusionsAnd14();
