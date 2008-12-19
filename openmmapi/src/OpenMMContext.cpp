@@ -113,5 +113,9 @@ void OpenMMContext::setParameter(string name, double value) {
 }
 
 void OpenMMContext::reinitialize() {
-    impl->reinitialize();
+    System& system = impl->getSystem();
+    Integrator& integrator = impl->getIntegrator();
+    Platform& platform = impl->getPlatform();
+    delete impl;
+    impl = new OpenMMContextImpl(*this, system, integrator, &platform);
 }

@@ -145,10 +145,6 @@ public:
      */
     void updateContextState();
     /**
-     * Delete all ForceImpl objects that have been created and create new ones.
-     */
-    void reinitialize();
-    /**
      * Get the platform-specific data stored in this context.
      */
     void* getPlatformData();

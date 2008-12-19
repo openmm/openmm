@@ -39,7 +39,7 @@
 namespace OpenMM {
 
 /**
- * This is an Integrator which simulates a System using the leap-frog Verlet algorithm.
+ * This is an Integrator which simulates a System using the velocity Verlet algorithm.
  */
 
 class OPENMM_EXPORT VerletIntegrator : public Integrator {

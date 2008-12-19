@@ -121,17 +121,6 @@ void OpenMMContextImpl::updateContextState() {
         forceImpls[i]->updateContextState(*this);
 }
 
-void OpenMMContextImpl::reinitialize() {
-    for (int i = 0; i < (int) forceImpls.size(); ++i)
-        delete forceImpls[i];
-    forceImpls.resize(0);
-    for (int i = 0; i < system.getNumForces(); ++i) {
-        forceImpls.push_back(system.getForce(i).createImpl());
-        forceImpls[i]->initialize(*this);
-    }
-    integrator.initialize(*this);
-}
-
 void* OpenMMContextImpl::getPlatformData() {
     return platformData;
 }
