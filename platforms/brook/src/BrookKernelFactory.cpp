@@ -126,7 +126,7 @@ KernelImpl* BrookKernelFactory::createKernelImpl( std::string name, const Platfo
 
 	} else if( name == RemoveCMMotionKernel::Name() ){
 
-//      return new BrookRemoveCMMotionKernel( name, platform, openMMBrookInterface );
+      return new BrookRemoveCMMotionKernel( name, platform, openMMBrookInterface, context.getSystem() );
 
    // KE calculator
 

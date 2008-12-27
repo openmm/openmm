@@ -185,11 +185,11 @@ int BrookVerletDynamics::update( Stream& positions, Stream& velocities,
 
    // unused Shake parameter
 
-   float omega                   = 1.0f;
+   float numberOfIterations       = 25.0f;
 
-   static const char* methodName = "\nBrookVerletDynamics::update";
+   static const char* methodName  = "\nBrookVerletDynamics::update";
 
-   static const int PrintOn      = 0;
+   static const int PrintOn       = 0;
 
 // ---------------------------------------------------------------------------------------
 
@@ -261,10 +261,9 @@ int BrookVerletDynamics::update( Stream& positions, Stream& velocities,
    if( brookShakeAlgorithm.getNumberOfConstraints() > 0 ){
 
       kshakeh_fix1( 
-                    10.0f,
+                    25.0f,
                     (float) getVerletDynamicsParticleStreamWidth(),
                     brookShakeAlgorithm.getInverseHydrogenMass(),
-                    omega, 
                     brookShakeAlgorithm.getShakeParticleIndicesStream()->getBrookStream(),
                     positionStream.getBrookStream(),
                     getXPrimeStream()->getBrookStream(),

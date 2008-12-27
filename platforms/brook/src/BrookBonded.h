@@ -79,8 +79,6 @@ class BrookBonded : public BrookCommon {
        * @param bonded14Indices           each element contains the indices of two particles whose nonbonded interactions should be reduced since
        *                                  they form a bonded 1-4 pair
        * @param nonbondedParameters       the nonbonded force parameters (charge, sigma, epsilon) for each particle
-       * @param lj14Scale                 the factor by which van der Waals interactions should be reduced for bonded 1-4 pairs
-       * @param coulomb14Scale            the factor by which Coulomb interactions should be reduced for bonded 1-4 pairs
        * @param log                       log reference
        *
        * @return nonzero value if error
@@ -94,7 +92,7 @@ class BrookBonded : public BrookCommon {
                  const std::vector<std::vector<int> >& periodicTorsionIndices, const std::vector<std::vector<double> >& periodicTorsionParameters,
                  const std::vector<std::vector<int> >& rbTorsionIndices,       const std::vector<std::vector<double> >& rbTorsionParameters,
                  const std::vector<std::vector<int> >& bonded14Indices,        const std::vector<std::vector<double> >& nonbondedParameters,
-                 double lj14Scale, double coulomb14Scale, const Platform& platform );
+                 const Platform& platform );
 */
 
       int setup( int numberOfParticles,
@@ -102,7 +100,7 @@ class BrookBonded : public BrookCommon {
                  BrookBondParameters* harmonicAngleBrookBondParameters,
                  BrookBondParameters* periodicTorsionBrookBondParameters,
                  BrookBondParameters* rbTorsionBrookBondParameters,
-                 BrookBondParameters* nonBonded14ForceParameters,  double lj14Scale, double coulombScale, int particleStreamWidth, int particleStreamSize );
+                 BrookBondParameters* nonBonded14ForceParameters,  int particleStreamWidth, int particleStreamSize );
 
       /**
        * Get inverse map stream width
@@ -167,15 +165,6 @@ class BrookBonded : public BrookCommon {
        */
 
       BrookFloatStreamInternal* getBrookParticleIndices( void ) const; 
-
-      /**
-       * Get LJ 14 scale factor
-       *
-       * @return  LJ 14 scaling (fudge) factor
-       * 
-       */
-
-       BrookOpenMMFloat getLJ_14Scale( void ) const;
 
       /** 
        * Get Coulomb factor
@@ -312,7 +301,6 @@ class BrookBonded : public BrookCommon {
 
       // scale factors for 1-4 ixn
 
-      BrookOpenMMFloat _ljScale;
       BrookOpenMMFloat _coulombFactor;
 
       // streams
@@ -408,15 +396,13 @@ class BrookBonded : public BrookCommon {
        * @param bonded14Indices           each element contains the indices of two particles whose nonbonded interactions should be reduced since
        *                                  they form a bonded 1-4 pair
        * @param nonbondedParameters       the nonbonded force parameters (charge, sigma, epsilon) for each particle
-       * @param lj14Scale                 the factor by which van der Waals interactions should be reduced for bonded 1-4 pairs
        *
        * @return nonzero value if error
        *
        */
 
       int addPairs( int *nbondeds, int *particles, BrookOpenMMFloat* params[], BrookOpenMMFloat* charges,
-                    const std::vector<std::vector<int> >& bonded14Indices, const std::vector<std::vector<double> >& nonbondedParameters,
-                    double lj14Scale, double coulombScale );
+                    const std::vector<std::vector<int> >& bonded14Indices, const std::vector<std::vector<double> >& nonbondedParameters );
       
       /**
        * Create and load inverse maps for bonded ixns

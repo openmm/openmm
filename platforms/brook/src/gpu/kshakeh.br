@@ -43,169 +43,6 @@
  * to avoid stalling
  * *************************************************************/
 
-/*
-kernel void
-kshakeh(
-		float nit,      //number of iterations
-		float strwidth, //stream width of posq
-		float invmH,    //inverse mass of hydrogen
-		float omega,    //parameter from gromacs, possibly unused
-		float4 atoms<>, //heavy0, h1, h2, h3
-		float4 posq[][], //positions before update
-		float4 posqp[][], //positions after update
-		float4 params<>, // (1/m0, mu/2, blensq, 0.0f )
-		out float4 cposq0<>, //constrained position for heavy atom
-		out float4 cposq1<>, //ditto for h1
-		out float4 cposq2<>, //ditto for h2
-		out float4 cposq3<> //ditto for h3
-		) {
-	float2 ai, aj1, aj2, aj3; //2d indices, can be precalc.
-	float i; //iteration count
-	float3 xi, xj1, xj2, xj3; //coordinates
-	float3 xpi, xpj1, xpj2, xpj3; //coordinates
-	float3 rij1, rij2, rij3, rpij, dr;
-	float rpsqij, rrpr, acor;
-	float mask2, mask3;
-	float diff;
-	
-	ai.y  = floor( atoms.x / strwidth );
-	ai.x  = atoms.x - ai.y * strwidth;
-
-	aj1.y = floor( atoms.y / strwidth );
-	aj1.x = atoms.y - aj1.y * strwidth;
-
-	//If further hydrogens are absent,
-	//just set to the coordinates of the first
-	//so we don't have any junk memory accesses
-	//or nans/infs in the calcs.	
-	if ( atoms.z > -0.5f ) {
-		aj2.y = floor( atoms.z / strwidth );
-		aj2.x = atoms.z - aj2.y * strwidth;
-		mask2 = 1.0f;
-	}
-	else {
-		aj2 = aj1; 
-		mask2 = 0.0f;
-	}
-
-	if ( atoms.w > -0.5f ) {	
-		aj3.y = floor( atoms.w / strwidth );
-		aj3.x = atoms.w - aj3.y * strwidth;
-		mask3 = 1.0f;
-	}
-	else {
-		aj3 = aj1;
-		mask3 = 0.0f;
-	}
-
-
-	cposq0 = posq[ai];
-	cposq1 = posq[aj1];
-	cposq2 = posq[aj2];
-	cposq3 = posq[aj3];
-	
-	
-	xi  = cposq0.xyz;
-	xj1 = cposq1.xyz;
-	xj2 = cposq2.xyz;
-	xj3 = cposq3.xyz;
-	
-	rij1 = xi - xj1;
-	rij2 = xi - xj2;
-	rij3 = xi - xj3;
-
-	xpi  = posqp[ai].xyz;
-	xpj1 = posqp[aj1].xyz;
-	xpj2 = posqp[aj2].xyz;
-	xpj3 = posqp[aj3].xyz;
-
-	i = 0.0f;
-	while ( i < 15.0f ) {
-		//First hydrogen
-		rpij   = xpi - xpj1;
-		rpsqij = dot( rpij, rpij );
-		rrpr   = dot( rij1, rpij );
-		//for debugging only
-		diff = abs( params.z - rpsqij ) / (params.z * 2 * 1e-4 );
-		if ( diff < 1.0f )
-			acor = 0.0f;
-		else
-			//params.y = mu/2, params.z = blen*blen
-			acor = omega * ( params.z - rpsqij ) * params.y / rrpr ;
-		dr   = rij1 * acor;
-		xpi  += dr * params.x;
-		xpj1 -= dr * invmH;
-
-		//Second hydrogen
-		rpij   = xpi - xpj2;
-		rpsqij = dot( rpij, rpij );
-		rrpr   = dot( rij2, rpij );
-		//for debugging only
-		diff = abs( params.z - rpsqij ) / (params.z * 2 * 1e-4 );
-		if ( diff < 1.0f )
-			acor = 0.0f;
-		else
-			//params.y = mu/2, params.z = blen*blen
-			acor = mask2 * omega * ( params.z - rpsqij ) * params.y / rrpr ;
-		dr   = rij2 * acor;
-		xpi  += dr * params.x;
-		xpj2 -= dr * invmH;
-
-		//Third hydrogen
-		rpij   = xpi - xpj3;
-		rpsqij = dot( rpij, rpij );
-		rrpr   = dot( rij3, rpij );
-		//for debugging only
-		diff = abs( params.z - rpsqij ) / (params.z * 2 * 1e-4 );
-		if ( diff < 1.0f )
-			acor = 0.0f;
-		else
-			//params.y = mu/2, params.z = blen*blen
-			acor = mask3 * omega * ( params.z - rpsqij ) * params.y / rrpr ;
-		dr   = rij3 * acor;
-		xpi  += dr * params.x;
-		xpj3 -= dr * invmH;
-		
-		i += 1.0f;
-	}
-
-	cposq0.xyz = xpi;
-	cposq1.xyz = xpj1;
-	cposq2.xyz = xpj2;
-	cposq3.xyz = xpj3;
-} */
-
-/*Applies the updated positions
- *Each atom occurs at one and only one position
- * */
-/*
-kernel void kshakeh_update( 
-		float strwidth, //width of cposq streams
-		float2 invmap<>,    //shakeh inverse map
-		float4 posq<>,     //untouched positions
-		float4 cposq0[][], //constrained position for heavy atom
-		float4 cposq1[][], //ditto for h1
-		float4 cposq2[][], //ditto for h2
-		float4 cposq3[][], //ditto for h3
-		out float4 oposq<> //updated positions
-		){
-	float2 atom;
-	
-	atom.y = floor( invmap.x / strwidth );
-	atom.x = invmap.x - atom.y * strwidth;
-	
-	if ( invmap.y < 0 )
-		oposq = posq;
-	else if ( invmap.y < 0.5f ) 
-		oposq = cposq0[ atom ];
-	else if ( invmap.y < 1.5f )
-		oposq = cposq1[ atom ];
-	else if ( invmap.y < 2.5f )
-		oposq = cposq2[ atom ];
-	else if ( invmap.y < 3.5f )
-		oposq = cposq3[ atom ];
-} */
-
 /* Fix for precision of terms first order in dt
  * To be used with corresponding update kernels
  * The input posqp is now changes to posq rather than
@@ -216,7 +53,6 @@ kshakeh_fix1(
 		float nit,      //number of iterations
 		float strwidth, //stream width of posq
 		float invmH,    //inverse mass of hydrogen
-		float omega,    //parameter from gromacs, possibly unused
 		float4 atoms<>, //heavy0, h1, h2, h3
 		float3 posq[][], //positions before update
 		float3 posqp[][], //changes to positions
@@ -329,7 +165,7 @@ kshakeh_fix1(
 		if ( diff < 1.0f )
 		  acor = 0.0f;
 		 else
-			acor = omega * ( ld1 - 2 * rrpr - rpsqij ) * params.y / ( rrpr + rij1sq ) ;
+			acor = ( ld1 - 2 * rrpr - rpsqij ) * params.y / ( rrpr + rij1sq ) ;
 		dr   = rij1 * acor;
 		xpi  += dr * params.x;
 		xpj1 -= dr * invmH;
@@ -343,7 +179,7 @@ kshakeh_fix1(
 		if ( diff < 1.0f )
 			acor = 0.0f;
 		else
-			acor = mask2 * omega * ( ld2 - 2 * rrpr - rpsqij ) * params.y / ( rrpr + rij2sq ) ;
+			acor = mask2 * ( ld2 - 2 * rrpr - rpsqij ) * params.y / ( rrpr + rij2sq ) ;
 		dr   = rij2 * acor;
 		xpi  += dr * params.x;
 		xpj2 -= dr * invmH;
@@ -357,7 +193,7 @@ kshakeh_fix1(
 		if ( diff < 1.0f )
 			 acor = 0.0f;
 		else
-			acor = mask3 * omega * ( ld3 - 2 * rrpr - rpsqij ) * params.y / ( rrpr + rij3sq ) ;
+			acor = mask3 * ( ld3 - 2 * rrpr - rpsqij ) * params.y / ( rrpr + rij3sq ) ;
 		dr   = rij3 * acor;
 		xpi  += dr * params.x;
 		xpj3 -= dr * invmH;
@@ -378,7 +214,6 @@ kshakeh_fix2(
 		float nit,      //number of iterations
 		float strwidth, //stream width of posq
 		float invmH,    //inverse mass of hydrogen
-		float omega,    //parameter from gromacs, possibly unused
 		float4 atoms<>, //heavy0, h1, h2, h3
 		float3 posq[][], //positions before update
 		float3 posqp[][], //changes to positions
@@ -492,7 +327,7 @@ kshakeh_fix2(
 		if ( diff < 1.0f )
 		  acor = 0.0f;
 		 else
-			acor = omega * ( ld1 - 2 * rrpr - rpsqij ) * params.y / ( rrpr + rij1sq ) ;
+			acor = ( ld1 - 2 * rrpr - rpsqij ) * params.y / ( rrpr + rij1sq ) ;
 		dr   = rij1 * acor;
 		xpi  += dr * params.x;
 		xpj1 -= dr * invmH;
@@ -506,7 +341,7 @@ kshakeh_fix2(
 		if ( diff < 1.0f )
 			acor = 0.0f;
 		else
-			acor = mask2 * omega * ( ld2 - 2 * rrpr - rpsqij ) * params.y / ( rrpr + rij2sq ) ;
+			acor = mask2 * ( ld2 - 2 * rrpr - rpsqij ) * params.y / ( rrpr + rij2sq ) ;
 		dr   = rij2 * acor;
 		xpi  += dr * params.x;
 		xpj2 -= dr * invmH;
@@ -520,7 +355,7 @@ kshakeh_fix2(
 		if ( diff < 1.0f )
 			 acor = 0.0f;
 		else
-			acor = mask3 * omega * ( ld3 - 2 * rrpr - rpsqij ) * params.y / ( rrpr + rij3sq ) ;
+			acor = mask3 * ( ld3 - 2 * rrpr - rpsqij ) * params.y / ( rrpr + rij3sq ) ;
 		dr   = rij3 * acor;
 		xpi  += dr * params.x;
 		xpj3 -= dr * invmH;
@@ -536,36 +371,6 @@ kshakeh_fix2(
 
 }
 
-/*Applies the updated delta's
- *Each atom occurs at one and only one position
- * */
-kernel void kshakeh_update1_fix1Old( 
-		float strwidth, //width of cposq streams
-		float2 invmap<>,    //shakeh inverse map
-		float3 posq<>,     //constrained deltas
-		float3 cposq0[][], //constrained delta for heavy atom
-		float3 cposq1[][], //ditto for h1
-		float3 cposq2[][], //ditto for h2
-		float3 cposq3[][], //ditto for h3
-		out float3 oposq<> //updated deltas
-		){
-	float2 atom;
-	
-	//atom.y = floor( invmap.x / strwidth );
-   atom.y  = round( (invmap.x - fmod( invmap.x, strwidth ))/strwidth );
-	atom.x = invmap.x - atom.y * strwidth;
-	
-	if ( invmap.y < 0 )
-		oposq = posq;
-	else if ( invmap.y < 0.5f ) 
-		oposq = cposq0[ atom ];
-	else if ( invmap.y < 1.5f )
-		oposq = cposq1[ atom ];
-	else if ( invmap.y < 2.5f )
-		oposq = cposq2[ atom ];
-	else if ( invmap.y < 3.5f )
-		oposq = cposq3[ atom ];
-}
 
 kernel void kshakeh_update2_fix1( 
 		float strwidth, //width of cposq streams

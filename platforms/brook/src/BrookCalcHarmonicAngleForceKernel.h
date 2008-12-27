@@ -152,7 +152,6 @@ class BrookCalcHarmonicAngleForceKernel : public CalcHarmonicAngleForceKernel {
 
       FILE* _log;
 
-
       // Brook bond parameters
 
       BrookBondParameters* _brookBondParameters;

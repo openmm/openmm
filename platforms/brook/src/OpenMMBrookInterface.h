@@ -129,24 +129,6 @@ class OpenMMBrookInterface {
       int getParticleStreamSize( void ) const;
       
       /** 
-       * Get LJ-14 scale factor
-       * 
-       * @return    LJ-14 scale factor
-       *
-       */
-      
-      double getLj14Scale( void ) const;
-      
-      /** 
-       * Get Coulomb scale factor
-       * 
-       * @return    Coulomb scale factor
-       *
-       */
-      
-      double getCoulomb14Scale( void ) const;
-
-      /** 
        * Get log file reference
        * 
        * @return  log file reference
@@ -332,14 +314,12 @@ class OpenMMBrookInterface {
        * Set BrookBondParameters for LJ 14 force
        * 
        * @param brookBondParameters brookBondParameters for LJ 14 force
-       * @param lj14Scale           LJ 14 scale factor
-       * @param coulomb14Scale        Coulomb 14 scale factor
        *
        * @return  DefaultReturnValue
        *
        */
       
-      int setNonBonded14ForceParameters( BrookBondParameters* brookBondParameters, double lj14Scale, double coulomb14Scale );
+      int setNonBonded14ForceParameters( BrookBondParameters* brookBondParameters );
       
       /** 
        * Get positions stream
@@ -419,9 +399,6 @@ class OpenMMBrookInterface {
 
        int _numberOfParticles;
    
-       double _lj14Scale;
-       double _coulomb14Scale;
-
        // Brook bonded, nonbonded, Gbsa
 
        BrookBonded     _brookBonded;

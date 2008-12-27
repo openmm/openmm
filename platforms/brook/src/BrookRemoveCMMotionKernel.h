@@ -33,6 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "kernels.h"
+#include "OpenMMBrookInterface.h"
 #include "BrookVelocityCenterOfMassRemoval.h"
 
 namespace OpenMM {
@@ -48,12 +49,14 @@ class BrookRemoveCMMotionKernel : public RemoveCMMotionKernel {
       /**
        * BrookRemoveCMMotionKernel constructor
        * 
-       * @param name        name of the stream to create
-       * @param platform    platform
+       * @param name                      name of the stream to create
+       * @param platform                  platform
+       * @param openMMBrookInterface      OpenMM-Brook interface
+       * @param System                    System reference
        *
        */
   
-      BrookRemoveCMMotionKernel( std::string name, const Platform& platform );
+      BrookRemoveCMMotionKernel( std::string name, const Platform& platform, OpenMMBrookInterface& openMMBrookInterface, System& system );
 
       /**
        * BrookRemoveCMMotionKernel destructor
@@ -63,25 +66,81 @@ class BrookRemoveCMMotionKernel : public RemoveCMMotionKernel {
       ~BrookRemoveCMMotionKernel();
 
       /** 
-       * Initialize the kernel
+       * Get COM removal frequency
        * 
-       * @param masses   mass of each particle
+       * @return frequency 
        *
        */
-      void initialize( const std::vector<double>& masses );
+      
+      int getFrequency( void ) const;
+       
+      /** 
+       * Set log file reference
+       * 
+       * @param  log file reference
+       *
+       * @return DefaultReturnValue
+       *
+       */
+ 
+      int setLog( FILE* log );
+
+      /*  
+       * Get contents of object
+       *
+       * @param level of dump
+       *
+       * @return string containing contents
+       *
+       * */
+          
+      std::string getContents( int level ) const;
+
+      /** 
+       * Get log file reference
+       * 
+       * @return  log file reference
+       *
+       */
+    
+      FILE* getLog( void ) const;
+
+      /** 
+       * Initialize the kernel
+       * 
+       * @param system   System reference
+       * @param force    CMMotionRemover reference
+       *
+       */
+      void initialize( const System& system, const CMMotionRemover& force );
 
       /** 
        * Execute the kernel.
        * 
-       * @param velocities  stream of particle velocities
+       * @param context  OpenMMContextImpl reference
        *
        */
 
-      void execute( Stream& velocities );
+      void execute( OpenMMContextImpl& context );
 
    private:
 
+      int _frequency;
+
+      // log file reference
+
+      FILE* _log;
+
       BrookVelocityCenterOfMassRemoval* _brookVelocityCenterOfMassRemoval;
+
+      // interface
+
+      OpenMMBrookInterface& _openMMBrookInterface;
+
+      // System reference
+
+      System& _system;
+
 };
 
 } // namespace OpenMM

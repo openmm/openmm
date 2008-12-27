@@ -35,7 +35,8 @@
 #include <vector>
 #include <set>
 
-#include "BrookFloatStreamInternal.h"
+#include "BrookStreamImpl.h"
+//#include "BrookFloatStreamInternal.h"
 #include "BrookPlatform.h"
 #include "BrookCommon.h"
 
@@ -98,7 +99,7 @@ class BrookVelocityCenterOfMassRemoval : public BrookCommon {
        *
        */
       
-      int removeVelocityCenterOfMass( Stream& velocities );
+      int removeVelocityCenterOfMass( BrookStreamImpl& velocityStream );
 
       /** 
        * Get velocity center-of-mass
@@ -110,7 +111,7 @@ class BrookVelocityCenterOfMassRemoval : public BrookCommon {
        *
        */
       
-      int getVelocityCenterOfMass( Stream& velocities, BrookOpenMMFloat velocityCom[3] );
+      int getVelocityCenterOfMass( BrookStreamImpl& vStream, BrookOpenMMFloat velocityCom[3] );
 
       /* 
        * Setup of  parameters

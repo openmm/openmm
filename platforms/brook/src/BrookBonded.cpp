@@ -62,10 +62,6 @@ BrookBonded::BrookBonded( ){
    _setupCompleted            = 0;
    _numberOfParticles         = 0;
 
-   //_ljScale                   = (BrookOpenMMFloat) 0.83333333;
-   _ljScale                   = 1.0;
-   //_coulombFactor             = 332.0;
-
    _coulombFactor             = (BrookOpenMMFloat) 138.935485;
 
    _particleIndicesStream     = NULL;
@@ -193,17 +189,6 @@ int BrookBonded::getMaxInverseMapStreamCount( int index ) const {
 
 int BrookBonded::getInverseMapStreamWidth( void ) const {
    return _inverseMapStreamWidth;
-}
-
-/** 
- * Get LJ 14 scaling parameter
- * 
- * @return LJ 14 scaling parameter
- *
- */
-
-BrookOpenMMFloat BrookBonded::getLJ_14Scale( void ) const {
-   return _ljScale;
 }
 
 /** 
@@ -981,7 +966,6 @@ int saveIbond = ibonded;
  * @param bonded14Indices           each element contains the indices of two particles whose nonbonded interactions should be reduced since
  *                                  they form a bonded 1-4 pair
  * @param nonbondedParameters       the nonbonded force parameters (charge, sigma, epsilon) for each particle
- * @param lj14Scale                 the factor by which van der Waals interactions should be reduced for bonded 1-4 pairs
  * @param log                       log reference
  *
  * @return nonzero value if error
@@ -991,8 +975,7 @@ int saveIbond = ibonded;
 int BrookBonded::addPairs( int *nbondeds, int *particles, BrookOpenMMFloat* params[],
                            BrookOpenMMFloat* charges,
                            const std::vector<std::vector<int> >& bonded14Indices,
-                           const std::vector<std::vector<double> >& nonbondedParameters,
-                           double lj14Scale, double coulombScale ){
+                           const std::vector<std::vector<double> >& nonbondedParameters ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -1192,8 +1175,6 @@ int BrookBonded::loadInvMaps( int nbondeds, int nparticles, int *particles, int 
  * @param rbTorsionParameters          vector of vector of rb torsion                 bond parameters -- one entry each bond (5 parameters)
  * @param bonded14Indices              vector of vector of Lennard-Jones 14           particle indices    -- one entry each bond (2 particles     )
  * @param nonbondedParameters          vector of vector of Lennard-Jones 14           parameters      -- one entry each bond (3 parameters)
- * @param lj14Scale                    scaling factor for 1-4 ixns
- * @param coulombScale                 Coulomb scaling factor for 1-4 ixns
  * @param platform                     Brook platform reference
  *
  * @return always 1
@@ -1214,7 +1195,7 @@ int BrookBonded::setup( int numberOfParticles,
                         BrookBondParameters* periodicTorsionBrookBondParameters,
                         BrookBondParameters* rbTorsionBrookBondParameters,
                         BrookBondParameters* nonBonded14ForceParameters,  
-                        double lj14Scale, double coulombScale, int particleStreamWidth, int particleStreamSize ){
+                        int particleStreamWidth, int particleStreamSize ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -1226,8 +1207,9 @@ int BrookBonded::setup( int numberOfParticles,
 
    if( PrintOn && getLog() ){
       (void) fprintf( getLog(), "%s particles=%d\n   [%p %p %p %p %p] (bond, angle, pd, rb, 14)\n"
-                      "14Scale=%f %f StreamW=%d StreamSz=%d\n", methodName.c_str(), numberOfParticles, harmonicBondBrookBondParameters, harmonicAngleBrookBondParameters,
-                      periodicTorsionBrookBondParameters, rbTorsionBrookBondParameters, nonBonded14ForceParameters, lj14Scale,coulombScale,
+                      "StreamW=%d StreamSz=%d\n", methodName.c_str(), numberOfParticles, harmonicBondBrookBondParameters,
+                      harmonicAngleBrookBondParameters,
+                      periodicTorsionBrookBondParameters, rbTorsionBrookBondParameters, nonBonded14ForceParameters,
                       particleStreamWidth, particleStreamSize ); fflush( getLog() );
    }
 
@@ -1293,7 +1275,7 @@ int BrookBonded::setup( int numberOfParticles,
       addBonds(      &nbondeds, particles, params, harmonicBondBrookBondParameters->getParticleIndices(),      harmonicBondBrookBondParameters->getBondParameters() );
    }
    if( nonBonded14ForceParameters ){
-      addPairs(      &nbondeds, particles, params, charges, nonBonded14ForceParameters->getParticleIndices(), nonBonded14ForceParameters->getBondParameters(), lj14Scale, coulombScale );
+      addPairs(      &nbondeds, particles, params, charges, nonBonded14ForceParameters->getParticleIndices(), nonBonded14ForceParameters->getBondParameters() );
    }
 
 // ---------------------------------------------------------------------------------------
@@ -1419,11 +1401,6 @@ int BrookBonded::setup( int numberOfParticles,
    delete[] particles;
    delete[] charges;
 
-   // set the fudge factors
-
-   //_ljScale        = (BrookOpenMMFloat) lj14Scale;
-   //_coulombFactor  = (BrookOpenMMFloat) coulombScale;
-
    // initialize output streams
 
    for( int ii = 0; ii < getNumberOfForceStreams(); ii++ ){
@@ -1472,12 +1449,6 @@ std::string BrookBonded::getContentsString( int level ) const {
 
    (void) LOCAL_SPRINTF( value, "%d", getNumberOfParticles() );
    message << _getLine( tab, "Number of particles:", value ); 
-
-   (void) LOCAL_SPRINTF( value, "%.5f", getLJ_14Scale() );
-   message << _getLine( tab, "LJ 14 scaling:", value ); 
-
-   (void) LOCAL_SPRINTF( value, "%.5f", getCoulombFactor() );
-   message << _getLine( tab, "Coulomb factor:", value ); 
 
    (void) LOCAL_SPRINTF( value, "%d", getInverseMapStreamWidth() );
    message << _getLine( tab, "Inverse map stream width:", value ); 
@@ -1835,7 +1806,7 @@ void BrookBonded::computeForces( BrookStreamImpl& positionStream, BrookStreamImp
 
    // bonded
 
-   float epsfac                                        = (float) (getLJ_14Scale()*getCoulombFactor());
+   float epsfac                                        = (float) (getCoulombFactor());
    float width                                         = (float) (getInverseMapStreamWidth());
 
    // bonded forces
@@ -1872,7 +1843,7 @@ void BrookBonded::computeForces( BrookStreamImpl& positionStream, BrookStreamImp
 
       int countPrintInvMap[4] = { 3, 5, 2, 4 }; 
 
-      (void) fprintf( getLog(), "\nPost kbonded_CDLJ: epsFac=%.6f %.6f %.6f", epsfac, getLJ_14Scale(), getCoulombFactor());
+      (void) fprintf( getLog(), "\nPost kbonded_CDLJ: epsFac=%.6f %.6f", epsfac, getCoulombFactor());
       (void) fprintf( getLog(), "\nParticle indices stream\n" );
       getParticleIndicesStream()->printToFile( getLog() );
 
@@ -1918,6 +1889,20 @@ void BrookBonded::computeForces( BrookStreamImpl& positionStream, BrookStreamImp
                          inverseStreamMaps[K_Stream][0]->getBrookStream(),
                          inverseStreamMaps[K_Stream][1]->getBrookStream(),
                          inverseStreamMaps[K_Stream][2]->getBrookStream(),
+                         bondedForceStreams[K_Stream]->getBrookStream(),
+
+                         forceStream.getBrookStream(), forceStream.getBrookStream() );
+
+   } else if( getInverseMapStreamCount( I_Stream ) == 2 && getInverseMapStreamCount( K_Stream ) == 2 ){
+
+      kinvmap_gather2_2( width,
+
+                         inverseStreamMaps[I_Stream][0]->getBrookStream(),
+                         inverseStreamMaps[I_Stream][1]->getBrookStream(),
+                         bondedForceStreams[I_Stream]->getBrookStream(),
+
+                         inverseStreamMaps[K_Stream][0]->getBrookStream(),
+                         inverseStreamMaps[K_Stream][1]->getBrookStream(),
                          bondedForceStreams[K_Stream]->getBrookStream(),
 
                          forceStream.getBrookStream(), forceStream.getBrookStream() );

@@ -55,9 +55,15 @@ BrookIntegrateLangevinStepKernel::BrookIntegrateLangevinStepKernel( std::string 
 
 // ---------------------------------------------------------------------------------------
 
-   _brookLangevinDynamics        = NULL;
+   _brookLangevinDynamics          = NULL;
    _brookShakeAlgorithm            = NULL;
    _brookRandomNumberGenerator     = NULL;
+   _log                            = NULL;
+
+   const BrookPlatform brookPlatform        = dynamic_cast<const BrookPlatform&> (platform);
+   if( brookPlatform.getLog() != NULL ){
+      setLog( brookPlatform.getLog() );
+   }
 
 }
 
@@ -81,6 +87,31 @@ BrookIntegrateLangevinStepKernel::~BrookIntegrateLangevinStepKernel( ){
 }
 
 /** 
+ * Get log file reference
+ * 
+ * @return  log file reference
+ *
+ */
+
+FILE* BrookIntegrateLangevinStepKernel::getLog( void ) const {
+   return _log;
+}
+
+/** 
+ * Set log file reference
+ * 
+ * @param  log file reference
+ *
+ * @return  DefaultReturnValue
+ *
+ */
+
+int BrookIntegrateLangevinStepKernel::setLog( FILE* log ){
+   _log = log;
+   return DefaultReturnValue;
+}
+
+/** 
  * Initialize the kernel, setting up all parameters related to integrator.
  * 
  * @param system                System reference  
@@ -92,10 +123,17 @@ void BrookIntegrateLangevinStepKernel::initialize( const System& system, const L
 
 // ---------------------------------------------------------------------------------------
 
-   // static const std::string methodName      = "BrookIntegrateLangevinStepKernel::initialize";
+   static const int printOn                  = 1;
+   static const std::string methodName       = "BrookIntegrateLangevinStepKernel::initialize";
 
 // ---------------------------------------------------------------------------------------
    
+   FILE* log             = getLog();
+   if( printOn && log ){
+      (void) fprintf( log, "%s\n", methodName.c_str() );
+      (void) fflush( log );
+   }
+
    int numberOfParticles = system.getNumParticles();
 
    // masses
@@ -103,13 +141,23 @@ void BrookIntegrateLangevinStepKernel::initialize( const System& system, const L
    std::vector<double> masses;
    masses.resize( numberOfParticles );
 
+   if( printOn && log ){
+      (void) fprintf( log, "%s %d\n", methodName.c_str(), numberOfParticles );
+      (void) fflush( log );
+   }
+
    for( int ii = 0; ii < numberOfParticles; ii++ ){
-      masses[ii] = static_cast<RealOpenMM>(system.getParticleMass(ii));
+      masses[ii] = static_cast<double>(system.getParticleMass(ii));
    }
 
    // constraints
 
    int numberOfConstraints = system.getNumConstraints();
+
+   if( printOn && log ){
+      (void) fprintf( log, "%s const=%d\n", methodName.c_str(), numberOfConstraints );
+      (void) fflush( log );
+   }
 
    std::vector<std::vector<int> > constraintIndicesVector;
    constraintIndicesVector.resize( numberOfConstraints );
@@ -122,13 +170,15 @@ void BrookIntegrateLangevinStepKernel::initialize( const System& system, const L
       int particle1, particle2;
       double distance;
 
+(void) fprintf( log, "%s shake setup const=%d ", methodName.c_str(), ii ); fflush( log );
       system.getConstraintParameters( ii, particle1, particle2, distance );
-      std::vector<int> constraintIndices;
       constraintIndicesVector[ii]  = constraintIndices;
 
-      constraintIndices[0]         = particle1;
-      constraintIndices[1]         = particle2;
-      constraintLengths[ii]        = static_cast<RealOpenMM>(distance);
+(void) fprintf( log, "[ %d %d %f]\n", methodName.c_str(), particle1, particle2, distance ); fflush( log );
+      constraintIndicesVector[ii].push_back( particle1 );
+      constraintIndicesVector[ii].push_back([particle2 );
+      constraintIndicesVector[ii].push_back([particle2 );
+      constraintLengths.push_back( distance );
    }
 
    _brookLangevinDynamics        = new BrookLangevinDynamics( );
@@ -139,9 +189,13 @@ void BrookIntegrateLangevinStepKernel::initialize( const System& system, const L
 
    // assert( (_brookShakeAlgorithm->getNumberOfConstraints() > 0) );
 
+   if( printOn && log ){
+      (void) fprintf( log, "%s done shake setup const=%d\n", methodName.c_str(), numberOfConstraints );
+      (void) fflush( log );
+   }
+
    _brookRandomNumberGenerator   = new BrookRandomNumberGenerator( );
    _brookRandomNumberGenerator->setup( (int) masses.size(), getPlatform() );
-//   _brookRandomNumberGenerator->setVerbosity( 1 );
 
 }
 
@@ -174,10 +228,10 @@ void BrookIntegrateLangevinStepKernel::execute( OpenMMContextImpl& context, cons
    differences[1] = integrator.getFriction()    - (double) _brookLangevinDynamics->getFriction();
    differences[2] = integrator.getStepSize()    - (double) _brookLangevinDynamics->getStepSize();
    if( fabs( differences[0] ) > epsilon || fabs( differences[1] ) > epsilon || fabs( differences[2] ) > epsilon ){
-//printf( "%s calling updateParameters\n", methodName.c_str() );
+printf( "%s calling updateParameters\n", methodName.c_str() );
       _brookLangevinDynamics->updateParameters( integrator.getTemperature(), integrator.getFriction(), integrator.getStepSize() );
    } else {
-//printf( "%s NOT calling updateParameters\n", methodName.c_str() );
+printf( "%s NOT calling updateParameters\n", methodName.c_str() );
 }
 
    _brookLangevinDynamics->update( *(_openMMBrookInterface.getParticlePositions()), *(_openMMBrookInterface.getParticleVelocities()), 

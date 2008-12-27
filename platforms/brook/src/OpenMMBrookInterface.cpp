@@ -78,9 +78,6 @@ OpenMMBrookInterface::OpenMMBrookInterface( int streamWidth ) : _particleStreamW
    _referencePlatform                       = NULL;
    _refVerletIntegrator                     = NULL;
 
-   _lj14Scale                               = 1.0;
-   _coulomb14Scale                          = 1.0;
-
    _particleStreamSize                      = -1;
 
    for( int ii = 0; ii < LastBondForce; ii++ ){
@@ -163,28 +160,6 @@ int OpenMMBrookInterface::getParticleStreamSize( void ) const {
       localThis->_particleStreamSize = BrookPlatform::getStreamSize( _numberOfParticles, _particleStreamWidth, NULL );
    }
    return _particleStreamSize;
-}
-
-/** 
- * Get LJ-14 scale factor
- * 
- * @return    LJ-14 scale factor
- *
- */
-
-double OpenMMBrookInterface::getLj14Scale( void ) const {
-   return _lj14Scale;
-}
-
-/** 
- * Get Coulomb scale factor
- * 
- * @return    Coulomb scale factor
- *
- */
-
-double OpenMMBrookInterface::getCoulomb14Scale( void ) const {
-   return _coulomb14Scale;
 }
 
 /** 
@@ -367,17 +342,12 @@ BrookBondParameters* OpenMMBrookInterface::getNonBonded14ForceParameters( void )
  * Set BrookBondParameters for LJ 14 force
  * 
  * @param brookBondParameters brookBondParameters for LJ 14 force
- * @param lj14Scale           LJ 14 scale factor
- * @param coulomb14Scale        Coulomb 14 scale factor
  *
  * @return  DefaultReturnValue
  *
  */
 
-int OpenMMBrookInterface::setNonBonded14ForceParameters( BrookBondParameters* brookBondParameters, 
-                                                         double lj14Scale, double coulomb14Scale ){
-   _lj14Scale        = lj14Scale;
-   _coulomb14Scale   = coulomb14Scale;
+int OpenMMBrookInterface::setNonBonded14ForceParameters( BrookBondParameters* brookBondParameters ){
    return _setBondParameters( LJ14Index, brookBondParameters );
 }
 
@@ -584,19 +554,17 @@ void OpenMMBrookInterface::computeForces( OpenMMContextImpl& context ){
 (void) fprintf( stderr, "%s done nonbonded: bonded=%d completed=%d\n", methodName.c_str(), _brookBonded.isActive(), _brookBonded.isSetupCompleted() ); (void) fflush( stderr );
    if( _brookBonded.isActive() ){
 
-//(void) fprintf( stderr, "%s Bonded\n", methodName.c_str() ); (void) fflush( stderr );
       // perform setup first time through
 
+      //if( _brookBonded.isSetupCompleted() == 0 ){
       if( _brookBonded.isSetupCompleted() >= -1 ){
          _brookBonded.setup( getNumberOfParticles(), getHarmonicBondForceParameters(), getHarmonicAngleForceParameters(),
                              getPeriodicTorsionForceParameters(), getRBTorsionForceParameters(),
                              getNonBonded14ForceParameters(),
-                             getLj14Scale(), getCoulomb14Scale(), getParticleStreamWidth(), getParticleStreamSize() );
+                             getParticleStreamWidth(), getParticleStreamSize() );
       }
 
-(void) fprintf( stderr, "%s done setup bonded=%d completed=%d\n", methodName.c_str(), _brookBonded.isActive(), _brookBonded.isSetupCompleted() ); (void) fflush( stderr );
       _brookBonded.computeForces( *positions, *forces );
-(void) fprintf( stderr, "%s done forces bonded=%d completed=%d\n", methodName.c_str(), _brookBonded.isActive(), _brookBonded.isSetupCompleted() ); (void) fflush( stderr );
    
       // diagnostics
    

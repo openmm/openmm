@@ -89,7 +89,40 @@ class BrookIntegrateLangevinStepKernel : public IntegrateLangevinStepKernel {
 
       void execute( OpenMMContextImpl& context, const LangevinIntegrator& integrator );
 
+      /** 
+       * Set log file reference
+       * 
+       * @param  log file reference
+       *
+       * @return DefaultReturnValue
+       *
+       */
+          
+      int setLog( FILE* log );
+
+      /*  
+       * Get contents of object
+       *
+       * @param level of dump
+       *
+       * @return string containing contents
+       *
+       * */
+          
+      std::string getContents( int level ) const;
+
+      /** 
+       * Get log file reference
+       * 
+       * @return  log file reference
+       *
+       */
+          
+      FILE* getLog( void ) const;
+
    protected:
+
+      FILE* _log;
 
       BrookLangevinDynamics*        _brookLangevinDynamics;
       BrookShakeAlgorithm*          _brookShakeAlgorithm;

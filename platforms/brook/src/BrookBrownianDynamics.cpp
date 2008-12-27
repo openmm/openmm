@@ -524,10 +524,9 @@ int BrookBrownianDynamics::update( Stream& positions, Stream& velocities,
 
    if( brookShakeAlgorithm.getNumberOfConstraints() > 0 ){
       kshakeh_fix1( 
-                    10.0f,
+                    25.0f,
                     (float) getBrownianDynamicsParticleStreamWidth(),
                     brookShakeAlgorithm.getInverseHydrogenMass(),
-                    omega, 
                     brookShakeAlgorithm.getShakeParticleIndicesStream()->getBrookStream(),
                     positionStream.getBrookStream(),
                     getXPrimeStream()->getBrookStream(),

@@ -29,6 +29,8 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include "internal/OpenMMContextImpl.h"
+#include "System.h"
 #include "BrookRemoveCMMotionKernel.h"
 #include "BrookStreamInternal.h"
 
@@ -40,11 +42,13 @@ using namespace std;
  * 
  * @param name        name of the stream to create
  * @param platform    platform
+ * @param openMMBrookInterface      OpenMM-Brook interface
+ * @param System                    System reference
  *
  */
-
-BrookRemoveCMMotionKernel::BrookRemoveCMMotionKernel( std::string name, const Platform& platform ) :
-                              RemoveCMMotionKernel( name, platform ){
+  
+BrookRemoveCMMotionKernel::BrookRemoveCMMotionKernel( std::string name, const Platform& platform, OpenMMBrookInterface& openMMBrookInterface, System& system ) :
+                              RemoveCMMotionKernel( name, platform ), _openMMBrookInterface( openMMBrookInterface ), _system( system ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -52,7 +56,15 @@ BrookRemoveCMMotionKernel::BrookRemoveCMMotionKernel( std::string name, const Pl
 
 // ---------------------------------------------------------------------------------------
 
+   _frequency                        = 0;
+   _log                              = NULL;
    _brookVelocityCenterOfMassRemoval = NULL;
+
+   const BrookPlatform brookPlatform = dynamic_cast<const BrookPlatform&> (platform);
+   if( brookPlatform.getLog() != NULL ){
+      setLog( brookPlatform.getLog() );
+   }   
+   _openMMBrookInterface.setNumberOfParticles( system.getNumParticles() );
 
 }
 
@@ -75,17 +87,25 @@ BrookRemoveCMMotionKernel::~BrookRemoveCMMotionKernel( ){
 /** 
  * Initialize the kernel
  * 
- * @param masses   array of particle masses
+ * @param system   System reference
+ * @param force    CMMotionRemover reference
  *
  */
 
-void BrookRemoveCMMotionKernel::initialize( const vector<double>& masses ){
+void BrookRemoveCMMotionKernel::initialize( const System& system, const CMMotionRemover& force ){
 
 // ---------------------------------------------------------------------------------------
 
    // static const std::string methodName      = "BrookRemoveCMMotionKernel::initialize";
 
 // ---------------------------------------------------------------------------------------
+
+   _frequency = force.getFrequency();
+   std::vector<double> masses;
+   masses.resize( system.getNumParticles() );
+   for( size_t ii = 0; ii < masses.size(); ii++ ){
+      masses[ii] = system.getParticleMass(ii);
+   }
 
    _brookVelocityCenterOfMassRemoval = new BrookVelocityCenterOfMassRemoval();
    _brookVelocityCenterOfMassRemoval->setup( masses, getPlatform() );
@@ -95,13 +115,50 @@ void BrookRemoveCMMotionKernel::initialize( const vector<double>& masses ){
 }
 
 /** 
- * Execute kernel
+ * Get log file reference
  * 
- * @param velocities  array of particle velocities
+ * @return  log file reference
  *
  */
 
-void BrookRemoveCMMotionKernel::execute( Stream& velocities ){
+FILE* BrookRemoveCMMotionKernel::getLog( void ) const {
+   return _log;
+}
+
+/** 
+ * Set log file reference
+ * 
+ * @param  log file reference
+ *
+ * @return  DefaultReturnValue
+ *
+ */
+
+int BrookRemoveCMMotionKernel::setLog( FILE* log ){
+   _log = log;
+   return BrookCommon::DefaultReturnValue;
+}
+
+
+/** 
+ * Get COM removal frequency
+ * 
+ * @return frequency 
+ *
+ */
+
+int BrookRemoveCMMotionKernel::getFrequency( void ) const {
+   return _frequency;
+}
+
+/** 
+ * Execute kernel
+ * 
+ * @param context    OpenMMContextImpl reference
+ *
+ */
+
+void BrookRemoveCMMotionKernel::execute( OpenMMContextImpl& context ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -109,7 +166,14 @@ void BrookRemoveCMMotionKernel::execute( Stream& velocities ){
 
 // ---------------------------------------------------------------------------------------
 
-   _brookVelocityCenterOfMassRemoval->removeVelocityCenterOfMass( velocities );
+   int step      = (int) floor( context.getTime()/context.getIntegrator().getStepSize() );
+   int frequency = getFrequency();
+   if( frequency <= 0 || (step % frequency) != 0 ){
+        return;
+   }
+
+   BrookStreamImpl* velocities = _openMMBrookInterface.getParticleVelocities();
+   _brookVelocityCenterOfMassRemoval->removeVelocityCenterOfMass( *velocities );
 
    return;
 }
