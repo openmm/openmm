@@ -551,13 +551,17 @@ void OpenMMBrookInterface::computeForces( OpenMMContextImpl& context ){
 
    // bonded forces
 
-(void) fprintf( stderr, "%s done nonbonded: bonded=%d completed=%d\n", methodName.c_str(), _brookBonded.isActive(), _brookBonded.isSetupCompleted() ); (void) fflush( stderr );
+   if( PrintOn && getLog() ){
+      (void) fprintf( getLog(), "%s done nonbonded: bonded=%d completed=%d\n", methodName.c_str(),
+                      _brookBonded.isActive(), _brookBonded.isSetupCompleted() ); 
+      (void) fflush( getLog() );
+   }
+
    if( _brookBonded.isActive() ){
 
       // perform setup first time through
 
-      //if( _brookBonded.isSetupCompleted() == 0 ){
-      if( _brookBonded.isSetupCompleted() >= -1 ){
+      if( _brookBonded.isSetupCompleted() == 0 ){
          _brookBonded.setup( getNumberOfParticles(), getHarmonicBondForceParameters(), getHarmonicAngleForceParameters(),
                              getPeriodicTorsionForceParameters(), getRBTorsionForceParameters(),
                              getNonBonded14ForceParameters(),

@@ -161,24 +161,21 @@ void BrookIntegrateLangevinStepKernel::initialize( const System& system, const L
 
    std::vector<std::vector<int> > constraintIndicesVector;
    constraintIndicesVector.resize( numberOfConstraints );
-
    std::vector<double> constraintLengths;
-   constraintLengths.resize( numberOfConstraints );
 
    for( int ii = 0; ii < numberOfConstraints; ii++ ){
 
       int particle1, particle2;
       double distance;
 
-(void) fprintf( log, "%s shake setup const=%d ", methodName.c_str(), ii ); fflush( log );
       system.getConstraintParameters( ii, particle1, particle2, distance );
-      constraintIndicesVector[ii]  = constraintIndices;
 
-(void) fprintf( log, "[ %d %d %f]\n", methodName.c_str(), particle1, particle2, distance ); fflush( log );
       constraintIndicesVector[ii].push_back( particle1 );
-      constraintIndicesVector[ii].push_back([particle2 );
-      constraintIndicesVector[ii].push_back([particle2 );
+      constraintIndicesVector[ii].push_back( particle2 );
       constraintLengths.push_back( distance );
+
+//(void) fprintf( log, "%s shake setup const=%d ", methodName.c_str(), ii ); fflush( log );
+//(void) fprintf( log, "[ %d %d %f]\n", particle1, particle2, distance ); fflush( log );
    }
 
    _brookLangevinDynamics        = new BrookLangevinDynamics( );
@@ -186,6 +183,13 @@ void BrookIntegrateLangevinStepKernel::initialize( const System& system, const L
 
    _brookShakeAlgorithm          = new BrookShakeAlgorithm( );
    _brookShakeAlgorithm->setup( masses, constraintIndicesVector, constraintLengths, getPlatform() );
+
+   // tolerance
+
+   BrookOpenMMFloat tolerance = static_cast<BrookOpenMMFloat>( integrator.getConstraintTolerance() );
+   _brookShakeAlgorithm->setShakeTolerance( tolerance );
+   _brookShakeAlgorithm->setMaxIterations( 30 );
+   _brookShakeAlgorithm->setLog( log );
 
    // assert( (_brookShakeAlgorithm->getNumberOfConstraints() > 0) );
 
@@ -211,7 +215,7 @@ void BrookIntegrateLangevinStepKernel::execute( OpenMMContextImpl& context, cons
 
 // ---------------------------------------------------------------------------------------
 
-   double epsilon                           = 1.0e-04;
+   double epsilon                           = 1.0e-06;
    static const std::string methodName      = "BrookIntegrateLangevinStepKernel::execute";
 
 // ---------------------------------------------------------------------------------------
@@ -228,11 +232,11 @@ void BrookIntegrateLangevinStepKernel::execute( OpenMMContextImpl& context, cons
    differences[1] = integrator.getFriction()    - (double) _brookLangevinDynamics->getFriction();
    differences[2] = integrator.getStepSize()    - (double) _brookLangevinDynamics->getStepSize();
    if( fabs( differences[0] ) > epsilon || fabs( differences[1] ) > epsilon || fabs( differences[2] ) > epsilon ){
-printf( "%s calling updateParameters\n", methodName.c_str() );
+//printf( "%s calling updateParameters\n", methodName.c_str() );
       _brookLangevinDynamics->updateParameters( integrator.getTemperature(), integrator.getFriction(), integrator.getStepSize() );
    } else {
-printf( "%s NOT calling updateParameters\n", methodName.c_str() );
-}
+//printf( "%s NOT calling updateParameters\n", methodName.c_str() );
+   }
 
    _brookLangevinDynamics->update( *(_openMMBrookInterface.getParticlePositions()), *(_openMMBrookInterface.getParticleVelocities()), 
                                    *(_openMMBrookInterface.getParticleForces()), *_brookShakeAlgorithm, *_brookRandomNumberGenerator );

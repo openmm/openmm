@@ -369,13 +369,9 @@ int BrookLangevinDynamics::update( BrookStreamImpl& positionStream, BrookStreamI
 
 // ---------------------------------------------------------------------------------------
 
-   // unused Shake parameter
-
-   float numberOfIterations      = 25.0f;
-
    static const char* methodName = "\nBrookLangevinDynamics::update";
 
-   static const int PrintOn      = 1;
+   static const int PrintOn      = 0;
 
 // ---------------------------------------------------------------------------------------
 
@@ -482,9 +478,10 @@ int BrookLangevinDynamics::update( BrookStreamImpl& positionStream, BrookStreamI
 
    if( brookShakeAlgorithm.getNumberOfConstraints() > 0 ){
       kshakeh_fix1( 
-                    numberOfIterations,
+                    (float) brookShakeAlgorithm.getMaxIterations(),
                     (float) getLangevinDynamicsParticleStreamWidth(),
                     brookShakeAlgorithm.getInverseHydrogenMass(),
+                    brookShakeAlgorithm.getShakeTolerance(),
                     brookShakeAlgorithm.getShakeParticleIndicesStream()->getBrookStream(),
                     positionStream.getBrookStream(),
                     getXPrimeStream()->getBrookStream(),
@@ -498,11 +495,9 @@ int BrookLangevinDynamics::update( BrookStreamImpl& positionStream, BrookStreamI
    
       kshakeh_update1_fix1(
                     (float) getLangevinDynamicsParticleStreamWidth(),
-                    derivedParameters[Sd2pc1],
                     brookShakeAlgorithm.getShakeInverseMapStream()->getBrookStream(),
                     positionStream.getBrookStream(),
                     getXPrimeStream()->getBrookStream(),
-                    getVPrimeStream()->getBrookStream(),
                     brookShakeAlgorithm.getShakeXCons0Stream()->getBrookStream(),
                     brookShakeAlgorithm.getShakeXCons1Stream()->getBrookStream(),
                     brookShakeAlgorithm.getShakeXCons2Stream()->getBrookStream(),
@@ -574,9 +569,10 @@ int BrookLangevinDynamics::update( BrookStreamImpl& positionStream, BrookStreamI
 
    if( brookShakeAlgorithm.getNumberOfConstraints() > 0 ){
       kshakeh_fix1( 
-                    numberOfIterations,
+                    (float) brookShakeAlgorithm.getMaxIterations(),
                     (float) getLangevinDynamicsParticleStreamWidth(),
                     brookShakeAlgorithm.getInverseHydrogenMass(),
+                    brookShakeAlgorithm.getShakeTolerance(),
                     brookShakeAlgorithm.getShakeParticleIndicesStream()->getBrookStream(),
                     positionStream.getBrookStream(),
                     getXPrimeStream()->getBrookStream(),

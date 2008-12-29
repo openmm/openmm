@@ -74,6 +74,46 @@ class BrookShakeAlgorithm : public BrookCommon {
       
       int getNumberOfConstraints( void ) const;
       
+      /** 
+       * Get max iterations
+       * 
+       * @return   max iterations
+       *
+       */
+      
+      int getMaxIterations( void ) const;
+      
+      /** 
+       * Set  max iterations
+       * 
+       * @param   max iterations
+       *
+       * @return DefaultReturnValue
+       *
+       */
+      
+      int setMaxIterations( int maxIterations );
+      
+      /** 
+       * Get SHAKE tolerance
+       * 
+       * @return  SHAKE tolerance  
+       *
+       */
+      
+      BrookOpenMMFloat getShakeTolerance( void ) const;
+      
+      /** 
+       * Set SHAKE tolerance
+       * 
+       * @param  SHAKE tolerance  
+       *
+       * @return DefaultReturnValue
+       *
+       */
+      
+      int setShakeTolerance( BrookOpenMMFloat tolerance );
+      
       /**
        * Get inverse of hydrogen mass
        *
@@ -247,6 +287,10 @@ class BrookShakeAlgorithm : public BrookCommon {
 
       int _numberOfConstraints;
 
+      // max iterations
+
+      int _maxIterations;
+
       // inverse of H mass
 
       BrookOpenMMFloat _inverseHydrogenMass;
@@ -262,6 +306,10 @@ class BrookShakeAlgorithm : public BrookCommon {
       int _shakeConstraintStreamSize;
       int _shakeConstraintStreamWidth;
       int _shakeConstraintStreamHeight;
+
+      // SHAKE tolerance
+
+      BrookOpenMMFloat _shakeTolerance;
 
       // inverse sqrt masses
 

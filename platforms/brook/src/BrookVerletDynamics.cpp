@@ -260,10 +260,12 @@ int BrookVerletDynamics::update( Stream& positions, Stream& velocities,
 
    if( brookShakeAlgorithm.getNumberOfConstraints() > 0 ){
 
+/*
       kshakeh_fix1( 
-                    25.0f,
+                    (float) brookShakeAlgorithm.getMaxIterations(),
                     (float) getVerletDynamicsParticleStreamWidth(),
                     brookShakeAlgorithm.getInverseHydrogenMass(),
+                    brookShakeAlgorithm.getShakeTolerance(),
                     brookShakeAlgorithm.getShakeParticleIndicesStream()->getBrookStream(),
                     positionStream.getBrookStream(),
                     getXPrimeStream()->getBrookStream(),
@@ -272,6 +274,8 @@ int BrookVerletDynamics::update( Stream& positions, Stream& velocities,
                     brookShakeAlgorithm.getShakeXCons1Stream()->getBrookStream(),
                     brookShakeAlgorithm.getShakeXCons2Stream()->getBrookStream(),
                     brookShakeAlgorithm.getShakeXCons3Stream()->getBrookStream() );
+*/
+fprintf( stderr, "\nVerlet shake off!!\n" );
    
       if( (1|| PrintOn) && getLog() ){
 

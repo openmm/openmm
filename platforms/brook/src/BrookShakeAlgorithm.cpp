@@ -57,6 +57,8 @@ BrookShakeAlgorithm::BrookShakeAlgorithm( ){
 
    _numberOfParticles            = -1;
    _numberOfConstraints          = -1;
+   _maxIterations                = 25;
+   _shakeTolerance               = static_cast<BrookOpenMMFloat>(1.0e-04);
 
    // mark stream dimension variables as unset
 
@@ -112,6 +114,56 @@ int BrookShakeAlgorithm::getNumberOfConstraints( void ) const {
    return _numberOfConstraints;
 }
 
+/** 
+ * Get max iterations
+ * 
+ * @return  max iterations
+ *
+ */
+         
+int BrookShakeAlgorithm::getMaxIterations( void ) const {
+   return _maxIterations;
+}
+         
+/** 
+ * Set max iterations
+ * 
+ * @param  max iterations
+ *
+ * @return DefaultReturnValue
+ *
+ */
+         
+int BrookShakeAlgorithm::setMaxIterations( int maxIterations ){
+   _maxIterations = maxIterations;
+   return DefaultReturnValue;
+}
+    
+/** 
+ * Get SHAKE tolerance
+ * 
+ * @return  SHAKE tolerance  
+ *
+ */
+         
+BrookOpenMMFloat BrookShakeAlgorithm::getShakeTolerance( void ) const {
+   return _shakeTolerance;
+}
+         
+/** 
+ * Set SHAKE tolerance
+ * 
+ * @param  SHAKE tolerance  
+ *
+ * @return DefaultReturnValue
+ *
+ */
+         
+int BrookShakeAlgorithm::setShakeTolerance( BrookOpenMMFloat tolerance ){
+   _shakeTolerance = tolerance;
+   return DefaultReturnValue;
+}
+    
 /** 
  * Get inverse of hydrogen mass
  * 
@@ -584,6 +636,12 @@ std::string BrookShakeAlgorithm::getContentsString( int level ) const {
 
    (void) LOCAL_SPRINTF( value, "%d", getNumberOfParticles() );
    message << _getLine( tab, "Number of particles:", value ); 
+
+   (void) LOCAL_SPRINTF( value, "%d", getMaxIterations() );
+   message << _getLine( tab, "Max iterations:", value ); 
+
+   (void) LOCAL_SPRINTF( value, "%2e", getShakeTolerance() );
+   message << _getLine( tab, "Tolerance:", value ); 
 
    (void) LOCAL_SPRINTF( value, "%d", getParticleStreamWidth() );
    message << _getLine( tab, "Particle stream width:", value ); 

@@ -523,10 +523,12 @@ int BrookBrownianDynamics::update( Stream& positions, Stream& velocities,
    // Shake
 
    if( brookShakeAlgorithm.getNumberOfConstraints() > 0 ){
+/*
       kshakeh_fix1( 
-                    25.0f,
+                    (float) brookShakeAlgorithm.getMaxIterations(),
                     (float) getBrownianDynamicsParticleStreamWidth(),
                     brookShakeAlgorithm.getInverseHydrogenMass(),
+                    brookShakeAlgorithm.getShakeTolerance(),
                     brookShakeAlgorithm.getShakeParticleIndicesStream()->getBrookStream(),
                     positionStream.getBrookStream(),
                     getXPrimeStream()->getBrookStream(),
@@ -549,7 +551,8 @@ int BrookBrownianDynamics::update( Stream& positions, Stream& velocities,
                     brookShakeAlgorithm.getShakeXCons3Stream()->getBrookStream(),
                     positionStream.getBrookStream() );
    
-
+*/
+fprintf( stderr, "\nBrownian shake off!!\n" );
       // diagnostics
    
       if( PrintOn ){
