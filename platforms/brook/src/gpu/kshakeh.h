@@ -29,9 +29,11 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-void  kshakeh_fix1 (const float  nit,
+void  kshakeh_fix1 (
+      const float  maxIterations,
 		const float  strwidth,
 		const float  invmH,
+		const float  tolerance,
 		::brook::stream atoms,
 		::brook::stream posq,
 		::brook::stream posqp,
@@ -43,11 +45,9 @@ void  kshakeh_fix1 (const float  nit,
 
 void  kshakeh_update1_fix1 (
       const float  strwidth,
-      const float  sdpc1,
 		::brook::stream invmap,
 		::brook::stream posq,
 		::brook::stream posqp,
-		::brook::stream vPrime,
 		::brook::stream cposq0,
 		::brook::stream cposq1,
 		::brook::stream cposq2,
