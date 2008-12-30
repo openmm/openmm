@@ -272,6 +272,17 @@ void* BrookStreamImpl::getData( void ){
 }
 
 /** 
+ * Set every element of this stream to the same value.
+ *
+ * @param readFromBoard if set, read data from board 
+ *
+ * @return data array
+ */
+void* BrookStreamImpl::getData( int readFromBoard ){
+   return _brookStreamInternal->getData( readFromBoard );
+}
+
+/** 
  * Get Brook stream
  * 
  * @return Brook stream reference

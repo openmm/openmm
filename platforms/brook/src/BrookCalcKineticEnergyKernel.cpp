@@ -127,29 +127,33 @@ double BrookCalcKineticEnergyKernel::execute( OpenMMContextImpl& context ){
 
 // ---------------------------------------------------------------------------------------
 
-   void* dataV                            = _openMMBrookInterface.getParticleVelocities()->getData( );
-   float* velocity                        = (float*) dataV;
-
-   double energy                          = 0.0;
-   int index                              = 0;
-
    if( _masses == NULL ){
       std::stringstream message;
       message << methodName << " masses not set.";
       throw OpenMMException( message.str() );
    }    
 
-/*
-printf( "   BrookCalcKineticEnergyKernel Masses=%12.5e %12.5e", _masses[0], _masses[1] );
-printf( " [%12.5e %12.5e %12.5e]", velocity[index], velocity[index+1], velocity[index+2] );
-index += 3;
-printf( " [%12.5e %12.5e %12.5e]\n", velocity[index], velocity[index+1], velocity[index+2] );
+   void* dataV                            = _openMMBrookInterface.getParticleVelocities()->getData( 1 );
+   float* velocity                        = (float*) dataV;
+   double energy                          = 0.0;
+   int index                              = 0;
+
+printf( "BrookCalcKineticEnergyKernel:\n" );
+double com[3] = { 0.0, 0.0, 0.0 };
+for ( int ii = 0; ii < _numberOfParticles; ii++, index += 3 ){
+   com[0] += velocity[index];
+   com[1] += velocity[index+1];
+   com[2] += velocity[index+2];
+   printf( "  %d %.3f [%12.5e %12.5e %12.5e]\n", ii, _masses[ii], velocity[index], velocity[index+1], velocity[index+2] );
+}
+printf( "Com [%12.5e %12.5e %12.5e]\n", com[0], com[1], com[2] );
+
 index = 0;
-*/
 
    for ( int ii = 0; ii < _numberOfParticles; ii++, index += 3 ){
       energy += _masses[ii]*(velocity[index]*velocity[index] + velocity[index + 1]*velocity[index + 1] + velocity[index + 2]*velocity[index + 2]);
    }
 
+printf( " Ke=%12.5e\n", 0.5*energy );
    return 0.5*energy;
 }

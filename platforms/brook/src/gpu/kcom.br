@@ -85,7 +85,7 @@ reduce void kReduceLinearMomentum( float3 momentum<>, reduce float3 linearMoment
 
    --------------------------------------------------------------------------------------- */
 
-kernel void kSumLinearMomentum( float atomStrWidth, float numberOfAtoms, float3 momentum[][],
+kernel void kSumLinearMomentum( float atomStrWidth, float numberOfAtoms, float scale, float3 momentum[][],
                                 out float3 linearMomentum<> ){
 
    float atomCount;
@@ -108,6 +108,7 @@ kernel void kSumLinearMomentum( float atomStrWidth, float numberOfAtoms, float3 
 
       atomCount += 1.0f;
    } 
+   linearMomentum *= scale;
 }
 
 /**---------------------------------------------------------------------------------------

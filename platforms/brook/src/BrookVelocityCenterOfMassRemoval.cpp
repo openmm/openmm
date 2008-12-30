@@ -174,15 +174,16 @@ int BrookVelocityCenterOfMassRemoval::removeVelocityCenterOfMass( BrookStreamImp
    // subtract it (/totalMass) from velocities
 
    kCalculateLinearMomentum( getMassStream()->getBrookStream(), velocityStream.getBrookStream(), getWorkStream()->getBrookStream() );
-   kSumLinearMomentum( (float) getComParticleStreamWidth(), (float) getNumberOfParticles(), getWorkStream()->getBrookStream(), getLinearMomentumStream()->getBrookStream() );
-   kScale( (float) getTotalInverseMass(), getLinearMomentumStream()->getBrookStream(), getLinearMomentumStream()->getBrookStream() );
+   kSumLinearMomentum( (float) getComParticleStreamWidth(), (float) getNumberOfParticles(), (float) getTotalInverseMass(),
+                        getWorkStream()->getBrookStream(), getLinearMomentumStream()->getBrookStream() );
+//   kScale( (float) getTotalInverseMass(), getLinearMomentumStream()->getBrookStream(), getLinearMomentumStream()->getBrookStream() );
    kRemoveLinearMomentum( getLinearMomentumStream()->getBrookStream(), velocityStream.getBrookStream(), velocityStream.getBrookStream() );
 
    if( (0 || debug) && getLog() ){
       BrookOpenMMFloat com[3];
       getVelocityCenterOfMass( velocityStream, com );
-      (void) fprintf( getLog(), "%s strW=%d iatm=%d Post removal com: [%12.5e %12.5e %12.5e]", methodName,
-                      getComParticleStreamWidth(), getNumberOfParticles(),  com[0], com[1], com[2] );
+      (void) fprintf( getLog(), "%s strW=%d iatm=%d invMass=%.4e Post removal com: [%12.5e %12.5e %12.5e]", methodName,
+                      getComParticleStreamWidth(), getNumberOfParticles(), getTotalInverseMass(),  com[0], com[1], com[2] );
 
       void* linMoV = getLinearMomentumStream()->getData( 1 );
       float* linMo = (float*) linMoV;
@@ -227,7 +228,6 @@ int BrookVelocityCenterOfMassRemoval::getVelocityCenterOfMass( BrookStreamImpl& 
 
    // static const char* methodName  = "\nBrookVelocityCenterOfMassRemoval::getVelocityCenterOfMass";
 
-   static int debug         = 0;
    BrookOpenMMFloat zero    = (BrookOpenMMFloat) 0.0;
 
    // ---------------------------------------------------------------------------------------
@@ -240,10 +240,10 @@ int BrookVelocityCenterOfMassRemoval::getVelocityCenterOfMass( BrookStreamImpl& 
    void* velV                           = velocityStream->getData( 1 );
    const float* vArray                  = (float*) velV;
 
-   void* massV                          = getMassStream()->getData( 1);
+   void* massV                          = getMassStream()->getData( 1 );
    const float* mArray                  = (float*) massV;
 
-   int numberOfParticles                    = getNumberOfParticles();
+   int numberOfParticles                = getNumberOfParticles();
    int index                            = 0;
 
    velocityCom[0] = velocityCom[1] = velocityCom[2] = zero;
@@ -329,12 +329,12 @@ int BrookVelocityCenterOfMassRemoval::_initializeStreams( const Platform& platfo
 
    //static const std::string methodName      = "BrookVelocityCenterOfMassRemoval::_initializeStreams";
 
-   BrookOpenMMFloat dangleValue            = (BrookOpenMMFloat) 0.0;
+   BrookOpenMMFloat dangleValue     = (BrookOpenMMFloat) 0.0;
 
 // ---------------------------------------------------------------------------------------
 
-   int particleStreamSize               = getComParticleStreamSize();
-   int particleStreamWidth              = getComParticleStreamWidth();
+   int particleStreamSize           = getComParticleStreamSize();
+   int particleStreamWidth          = getComParticleStreamWidth();
 
     _streams[WorkStream]            = new BrookFloatStreamInternal( BrookCommon::BrookVelocityCenterOfMassRemovalWorkStream,
                                                                     particleStreamSize, particleStreamWidth,
@@ -440,6 +440,12 @@ int BrookVelocityCenterOfMassRemoval::setup( const std::vector<double>& masses, 
 
    _setMasses( masses );
 
+   if( 1 && getLog() ){
+      std::string contents = getContentsString( 0 );
+      (void) fprintf( getLog(), "%s contents:\n%s\n", methodName.c_str(), contents.c_str() );
+      (void) fflush( getLog() );
+   }
+   
    return DefaultReturnValue;
 }
 

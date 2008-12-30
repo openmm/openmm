@@ -42,11 +42,12 @@ void kSum( ::brook::stream array, ::brook::stream sum );
 
    @param atomStrWidth   atom stream width
    @param numberOfAtoms  number of atoms
+   @param scale          sum of inverse masses
    @param momentum       momentum
    @param linearMomentum total momentum
 
    --------------------------------------------------------------------------------------- */
 
-void kSumLinearMomentum( float atomStrWidth, float numberOfAtoms, ::brook::stream momentum, ::brook::stream linearMomentum );
+void kSumLinearMomentum( float atomStrWidth, float numberOfAtoms, float scale, ::brook::stream momentum, ::brook::stream linearMomentum );
 
 

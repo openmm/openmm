@@ -114,7 +114,8 @@ class BrookStreamImpl : public StreamImpl {
        * @return data array
        */
       void* getData( void );
-  
+      void* getData( int readFromBoard );
+
       /**
        * Get Brook stream
        * 
