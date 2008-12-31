@@ -38,13 +38,16 @@ using namespace std;
 /** 
  * BrookIntegrateVerletStepKernel constructor
  * 
- * @param name        name of the stream to create
- * @param platform    platform
+ * @param name                  name of the kernel
+ * @param platform              platform
+ * @param openMMBrookInterface  OpenMMBrookInterface reference
+ * @param system                System reference  
  *
  */
 
-BrookIntegrateVerletStepKernel::BrookIntegrateVerletStepKernel( std::string name, const Platform& platform ) :
-                                IntegrateVerletStepKernel( name, platform ){
+BrookIntegrateVerletStepKernel::BrookIntegrateVerletStepKernel( std::string name, const Platform& platform,
+                                  OpenMMBrookInterface& openMMBrookInterface, System& system ) : 
+                                  IntegrateVerletStepKernel( name, platform ), _openMMBrookInterface( openMMBrookInterface ), _system( system ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -54,6 +57,14 @@ BrookIntegrateVerletStepKernel::BrookIntegrateVerletStepKernel( std::string name
    
    _brookVerletDynamics   = NULL;
    _brookShakeAlgorithm   = NULL;
+
+   const BrookPlatform brookPlatform = dynamic_cast<const BrookPlatform&> (platform);
+   if( brookPlatform.getLog() != NULL ){
+      setLog( brookPlatform.getLog() );
+   } else {
+      _log                = NULL;
+   }
+
 }
 
 /** 
@@ -75,44 +86,106 @@ BrookIntegrateVerletStepKernel::~BrookIntegrateVerletStepKernel( ){
 }
 
 /** 
- * Initialize the kernel, setting up all parameters related to integrator.
+ * Get log file reference
  * 
- * @param masses             the mass of each particle
- * @param constraintIndices  each element contains the indices of two particles whose distance should be constrained
- * @param constraintLengths  the required distance between each pair of constrained particles
+ * @return  log file reference
  *
  */
 
-void BrookIntegrateVerletStepKernel::initialize( const vector<double>& masses,
-                                                 const vector<vector<int> >& constraintIndices,
-                                                 const vector<double>& constraintLengths ){
+FILE* BrookIntegrateVerletStepKernel::getLog( void ) const {
+   return _log;
+}
+
+/** 
+ * Set log file reference
+ * 
+ * @param  log file reference
+ *
+ * @return  DefaultReturnValue
+ *
+ */
+
+int BrookIntegrateVerletStepKernel::setLog( FILE* log ){
+   _log = log;
+   return DefaultReturnValue;
+}
+
+/** 
+ * Initialize the kernel, setting up all parameters related to integrator.
+ * 
+ * @param system                System reference  
+ * @param integrator            VerletIntegrator reference
+ *
+ */
+
+void BrookIntegrateVerletStepKernel::initialize(  const System& system, const VerletIntegrator& integrator  ){
 
 // ---------------------------------------------------------------------------------------
 
-   // static const std::string methodName      = "BrookIntegrateVerletStepKernel::initialize";
+   int printOn                              = 1;
+   static const std::string methodName      = "BrookIntegrateVerletStepKernel::initialize";
 
 // ---------------------------------------------------------------------------------------
    
+   FILE* log             = getLog();
+   int numberOfParticles = system.getNumParticles();
+
+   // masses
+
+   std::vector<double> masses;
+   masses.resize( numberOfParticles );
+
+   for( int ii = 0; ii < numberOfParticles; ii++ ){
+      masses[ii] = static_cast<double>(system.getParticleMass(ii));
+   }
+
+   // constraints
+
+   int numberOfConstraints = system.getNumConstraints();
+
+   std::vector<std::vector<int> > constraintIndicesVector;
+   constraintIndicesVector.resize( numberOfConstraints );
+   std::vector<double> constraintLengths;
+   for( int ii = 0; ii < numberOfConstraints; ii++ ){
+
+      int particle1, particle2;
+      double distance;
+
+      system.getConstraintParameters( ii, particle1, particle2, distance );
+
+      constraintIndicesVector[ii].push_back( particle1 );
+      constraintIndicesVector[ii].push_back( particle2 );
+      constraintLengths.push_back( distance );
+   }
+
    _brookVerletDynamics          = new BrookVerletDynamics( );
    _brookVerletDynamics->setup( masses, getPlatform() );
+   _brookVerletDynamics->setLog( log );
 
    _brookShakeAlgorithm          = new BrookShakeAlgorithm( );
-   _brookShakeAlgorithm->setup( masses, constraintIndices, constraintLengths, getPlatform() );
+   _brookShakeAlgorithm->setup( masses, constraintIndicesVector, constraintLengths, getPlatform() );
+
+   BrookOpenMMFloat tolerance = static_cast<BrookOpenMMFloat>( integrator.getConstraintTolerance() );
+   _brookShakeAlgorithm->setShakeTolerance( tolerance );
+   _brookShakeAlgorithm->setMaxIterations( 30 );
+   _brookShakeAlgorithm->setLog( log );
+
+   if( printOn && log ){
+      (void) fprintf( log, "%s done w/ setup: particles=%d const=%d\n", methodName.c_str(), numberOfParticles, numberOfConstraints );
+      (void) fflush( log );
+   }
 
 }
 
 /** 
  * Execute kernel
  * 
- * @param positions          particle coordinates
- * @param velocities         particle velocities
- * @param forces             particle forces
- * @param stepSize           integration step size
+ * @param context            OpenMMContextImpl reference
+ * @param integrator         VerletIntegrator reference
  *
  */
 
-void BrookIntegrateVerletStepKernel::execute( Stream& positions, Stream& velocities,
-                                              const Stream& forces, double stepSize ){
+void BrookIntegrateVerletStepKernel::execute( OpenMMContextImpl& context, const VerletIntegrator& integrator ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -121,19 +194,19 @@ void BrookIntegrateVerletStepKernel::execute( Stream& positions, Stream& velocit
 
 // ---------------------------------------------------------------------------------------
 
-   // first time through initialize _brookVerletDynamics
-
    // for each subsequent call, check if parameters need to be updated due to a change
    // in the step size
 
    // take step
 
+   double stepSize   = integrator.getStepSize();
    double difference = stepSize - (double) _brookVerletDynamics->getStepSize();
    if( fabs( difference ) > epsilon ){
-//printf( "%s calling updateParameters\n", methodName.c_str() );
       _brookVerletDynamics->updateParameters( stepSize );
    }
-   _brookVerletDynamics->update( positions, velocities, forces, *_brookShakeAlgorithm );
+
+   _brookVerletDynamics->update( *(_openMMBrookInterface.getParticlePositions()), *(_openMMBrookInterface.getParticleVelocities()),
+                                 *(_openMMBrookInterface.getParticleForces()), *_brookShakeAlgorithm );
+
 
 }
-

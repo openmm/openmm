@@ -148,7 +148,7 @@ int BrookVelocityCenterOfMassRemoval::removeVelocityCenterOfMass( BrookStreamImp
    // ---------------------------------------------------------------------------------------
 
    static const char* methodName  = "BrookVelocityCenterOfMassRemoval::removeVelocityCenterOfMass";
-   static const int debug         = 1;
+   static const int debug         = 0;
 
    // ---------------------------------------------------------------------------------------
 
@@ -162,9 +162,10 @@ int BrookVelocityCenterOfMassRemoval::removeVelocityCenterOfMass( BrookStreamImp
       const float* vArray              = (float*) velV;
 
       int index                        = 0;
-      for( int ii = 0; ii < getNumberOfParticles(); ii++, index += 3 ){
-         (void) fprintf( getLog(), "V %d [%12.5e %12.5e %12.5e]\n", ii, vArray[index], vArray[index+1], vArray[index+2] );
-
+      if( debug > 1 ){
+         for( int ii = 0; ii < getNumberOfParticles(); ii++, index += 3 ){
+            (void) fprintf( getLog(), "V %d [%12.5e %12.5e %12.5e]\n", ii, vArray[index], vArray[index+1], vArray[index+2] );
+         }
       }
 
       (void) fflush( getLog() );
@@ -197,11 +198,13 @@ int BrookVelocityCenterOfMassRemoval::removeVelocityCenterOfMass( BrookStreamImp
       void* w1                        = getWorkStream()->getData( 1 );
       const float* w2                 = (float*) w1;
 
-      int index                        = 0;
-      for( int ii = 0; ii < getNumberOfParticles(); ii++, index += 3 ){
-         (void) fprintf( getLog(), "V %d [%12.5e %12.5e %12.5e] [%12.5e %12.5e %12.5e]\n", ii,
-                         vArray[index], vArray[index+1], vArray[index+2], w2[index], w2[index+1], w2[index+2] );
-
+      if( debug > 1 ){
+         int index                        = 0;
+         for( int ii = 0; ii < getNumberOfParticles(); ii++, index += 3 ){
+            (void) fprintf( getLog(), "V %d [%12.5e %12.5e %12.5e] [%12.5e %12.5e %12.5e]\n", ii,
+                            vArray[index], vArray[index+1], vArray[index+2], w2[index], w2[index+1], w2[index+2] );
+   
+         }
       }
 
       (void) fflush( getLog() );

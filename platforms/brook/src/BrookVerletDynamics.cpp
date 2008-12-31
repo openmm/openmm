@@ -171,32 +171,23 @@ int BrookVerletDynamics::updateParameters( double stepSize ){
  * @param  velocities                  particle velocities
  * @param  forces                      particle forces
  * @param  brookShakeAlgorithm         BrookShakeAlgorithm reference
- * @param  brookRandomNumberGenerator  BrookRandomNumberGenerator reference
  *
  * @return  DefaultReturnValue
  *
  */
 
-int BrookVerletDynamics::update( Stream& positions, Stream& velocities,
-                                 const Stream& forces,
+int BrookVerletDynamics::update( BrookStreamImpl& positionStream, BrookStreamImpl& velocityStream,
+                                 const BrookStreamImpl& forceStreamC,
                                  BrookShakeAlgorithm& brookShakeAlgorithm ){
 
 // ---------------------------------------------------------------------------------------
 
-   // unused Shake parameter
-
-   float numberOfIterations       = 25.0f;
-
    static const char* methodName  = "\nBrookVerletDynamics::update";
-
-   static const int PrintOn       = 0;
+   static const int PrintOn       = 1;
 
 // ---------------------------------------------------------------------------------------
 
-   BrookStreamImpl& positionStream                     = dynamic_cast<BrookStreamImpl&>       (positions.getImpl());
-   BrookStreamImpl& velocityStream                     = dynamic_cast<BrookStreamImpl&>       (velocities.getImpl());
-   const BrookStreamImpl& forceStreamC                 = dynamic_cast<const BrookStreamImpl&> (forces.getImpl());
-   BrookStreamImpl& forceStream                        = const_cast<BrookStreamImpl&> (forceStreamC);
+   BrookStreamImpl& forceStream = const_cast<BrookStreamImpl&> (forceStreamC);
 
    if( (1 || PrintOn) && getLog() ){
 
@@ -220,47 +211,45 @@ int BrookVerletDynamics::update( Stream& positions, Stream& velocities,
 
    }
 
-   // integration step
-
-   kupdate_md_verlet( (float) getStepSize(),
-                       positionStream.getBrookStream(),
-                       velocityStream.getBrookStream(),
-                       forceStream.getBrookStream(),
-                       getInverseMassStream()->getBrookStream(),
-                       velocityStream.getBrookStream(),
-                       getXPrimeStream()->getBrookStream() 
-                    );
- 
-   // diagnostics
-
-   if( PrintOn && getLog() ){
-      (void) fprintf( getLog(), "\nPost kupdate_md_verlet: particleStrW=%3d step=%.5f",
-                                getVerletDynamicsParticleStreamWidth(), getStepSize() );
-
-      (void) fprintf( getLog(), "\nInverseMassStream\n" );
-      getInverseMassStream()->printToFile( getLog() );
-
-      BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamImpl();
-      (void) fprintf( getLog(), "\nPositionStream\n" );
-      brookStreamInternalPos->printToFile( getLog() );
-
-      (void) fprintf( getLog(), "\nForceStream\n" );
-      BrookStreamInternal* brookStreamInternalF   = forceStream.getBrookStreamImpl();
-      brookStreamInternalF->printToFile( getLog() );
-
-      BrookStreamInternal* brookStreamInternalV   = velocityStream.getBrookStreamImpl();
-      (void) fprintf( getLog(), "\nVelocityStream\n" );
-      brookStreamInternalV->printToFile( getLog() );
-
-      (void) fprintf( getLog(), "\nXPrimeStream\n" );
-      getXPrimeStream()->printToFile( getLog() ); 
-   }   
-
-   // second Shake step
+   // Shake step
 
    if( brookShakeAlgorithm.getNumberOfConstraints() > 0 ){
 
-/*
+      // integration step
+   
+      kupdate_md1( (float) getStepSize(),
+                   positionStream.getBrookStream(),
+                   velocityStream.getBrookStream(),
+                   forceStream.getBrookStream(),
+                   getInverseMassStream()->getBrookStream(),
+                   getXPrimeStream()->getBrookStream() 
+                 );
+    
+      // diagnostics
+   
+      if( PrintOn && getLog() ){
+         (void) fprintf( getLog(), "\nPost kupdate_md_verlet: particleStrW=%3d step=%.5f",
+                                   getVerletDynamicsParticleStreamWidth(), getStepSize() );
+   
+         (void) fprintf( getLog(), "\nInverseMassStream\n" );
+         getInverseMassStream()->printToFile( getLog() );
+   
+         BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamImpl();
+         (void) fprintf( getLog(), "\nPositionStream\n" );
+         brookStreamInternalPos->printToFile( getLog() );
+   
+         (void) fprintf( getLog(), "\nForceStream\n" );
+         BrookStreamInternal* brookStreamInternalF   = forceStream.getBrookStreamImpl();
+         brookStreamInternalF->printToFile( getLog() );
+   
+         BrookStreamInternal* brookStreamInternalV   = velocityStream.getBrookStreamImpl();
+         (void) fprintf( getLog(), "\nVelocityStream\n" );
+         brookStreamInternalV->printToFile( getLog() );
+   
+         (void) fprintf( getLog(), "\nXPrimeStream\n" );
+         getXPrimeStream()->printToFile( getLog() ); 
+      }   
+
       kshakeh_fix1( 
                     (float) brookShakeAlgorithm.getMaxIterations(),
                     (float) getVerletDynamicsParticleStreamWidth(),
@@ -274,8 +263,6 @@ int BrookVerletDynamics::update( Stream& positions, Stream& velocities,
                     brookShakeAlgorithm.getShakeXCons1Stream()->getBrookStream(),
                     brookShakeAlgorithm.getShakeXCons2Stream()->getBrookStream(),
                     brookShakeAlgorithm.getShakeXCons3Stream()->getBrookStream() );
-*/
-fprintf( stderr, "\nVerlet shake off!!\n" );
    
       if( (1|| PrintOn) && getLog() ){
 
@@ -351,9 +338,22 @@ fprintf( stderr, "\nVerlet shake off!!\n" );
 
       }   
 
+      // second integration step
+      kupdate_md2( (float) getStepSize(),
+                   getXPrimeStream()->getBrookStream(), 
+                   positionStream.getBrookStream(),
+                   velocityStream.getBrookStream(),
+                   positionStream.getBrookStream() );
    } else {
-      //kadd3( getXPrimeStream()->getBrookStream(), positionStream.getBrookStream() );
-      ksetStr3( getXPrimeStream()->getBrookStream(), positionStream.getBrookStream() );
+      //ksetStr3( getXPrimeStream()->getBrookStream(), positionStream.getBrookStream() );
+      float inverseStepSize = 1.0f/getStepSize();
+      kupdateMdNoShake( inverseStepSize,
+                        positionStream.getBrookStream(),
+                        velocityStream.getBrookStream(),
+                        forceStream.getBrookStream(),
+                        getInverseMassStream()->getBrookStream(),
+                        velocityStream.getBrookStream(),
+                        positionStream.getBrookStream() );
    }
 
 //_brookVelocityCenterOfMassRemoval->removeVelocityCenterOfMass( velocities );

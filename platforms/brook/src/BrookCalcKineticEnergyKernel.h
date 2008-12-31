@@ -36,6 +36,8 @@
 #include "BrookFloatStreamInternal.h"
 #include "OpenMMBrookInterface.h"
 
+#include "BrookVelocityCenterOfMassRemoval.h"
+
 namespace OpenMM {
 
 /**
@@ -97,6 +99,7 @@ class BrookCalcKineticEnergyKernel : public CalcKineticEnergyKernel {
 
       System& _system;
 
+BrookVelocityCenterOfMassRemoval* _brookVelocityCenterOfMassRemoval;
 
 
 };

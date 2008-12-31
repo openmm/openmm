@@ -46,10 +46,10 @@ class BrookRandomNumberGenerator : public BrookCommon {
 
    public:
   
-      // toggle between original rng & Kiss (Nvidia) code
+      // toggle between original, Mersenne, & Kiss (Nvidia) random generators
 
-      static const int UseOriginalRng = 0;
-
+      enum Rngs { Original, Kiss, Mersenne };
+ 
       /** 
        * Constructor
        * 
@@ -128,6 +128,15 @@ class BrookRandomNumberGenerator : public BrookCommon {
        * */
       
       std::string getContentsString( int level = 0 ) const;
+
+      /* 
+       * Get stats
+       *
+       * @return string containing stats
+       *
+       * */
+      
+      std::string getStatisticsString( void ) const;
 
       /** 
        * Get random number stream 
@@ -218,12 +227,13 @@ class BrookRandomNumberGenerator : public BrookCommon {
        *                       6: max
        *
        * @param streamIndex  stream index to analyze
+       * @param cumulativeStatistics accumulate stats array entries  same as statistics
        *
        * @return DefaultReturnValue
        *
-       * */
+       **/
       
-      int getStatistics( double statistics[7], int streamIndex ) const;
+      int getStatistics( double statistics[7], int streamIndex, double cumulativeStatistics[7] ) const;
       
       // ---------------------------------------------------------------------------------------
       
@@ -262,6 +272,8 @@ class BrookRandomNumberGenerator : public BrookCommon {
 
       float* _loadBuffer;
       int*   _shuffleIndices;
+
+      Rngs _randomNumberGenerator;
 
       /* 
        * Setup of stream dimensions
@@ -351,6 +363,15 @@ class BrookRandomNumberGenerator : public BrookCommon {
       
       int _loadRandomNumberStreamsKiss( void );
 
+      /** 
+       * Load random number streams using Mersenne algorithm
+       * 
+       *
+       * @return DefaultReturnValue;
+       */
+      
+      int _loadRandomNumberStreamsMersenne( void );
+      
       /** 
        * Load random number streams using original gpu algorithm
        * 

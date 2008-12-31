@@ -35,7 +35,7 @@
 #include <vector>
 #include <set>
 
-#include "BrookFloatStreamInternal.h"
+#include "BrookStreamImpl.h"
 #include "BrookShakeAlgorithm.h"
 #include "BrookPlatform.h"
 #include "BrookCommon.h"
@@ -131,8 +131,8 @@ class BrookVerletDynamics : public BrookCommon {
        *
        */
       
-      int update( Stream& positions, Stream& velocities,
-                  const Stream& forces, BrookShakeAlgorithm& brookShakeAlgorithm );
+      int update( BrookStreamImpl& positions, BrookStreamImpl& velocities,
+                  const BrookStreamImpl& forces, BrookShakeAlgorithm& brookShakeAlgorithm );
 
       /** 
        * Get array of VerletDynamics streams 

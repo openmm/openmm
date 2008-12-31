@@ -33,6 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "kernels.h"
+#include "OpenMMBrookInterface.h"
 #include "BrookVerletDynamics.h"
 #include "BrookShakeAlgorithm.h"
 
@@ -46,6 +47,11 @@ class BrookIntegrateVerletStepKernel : public IntegrateVerletStepKernel {
 
    public:
 
+      // return values
+
+      static const int DefaultReturnValue = 0;
+      static const int ErrorReturnValue   = -1; 
+
       /**
        * BrookIntegrateVerletStepKernel constructor
        * 
@@ -54,7 +60,7 @@ class BrookIntegrateVerletStepKernel : public IntegrateVerletStepKernel {
        *
        */
   
-      BrookIntegrateVerletStepKernel( std::string name, const Platform& platform );
+      BrookIntegrateVerletStepKernel( std::string name, const Platform& platform, OpenMMBrookInterface& openMMBrookInterface, System& system  );
 
       /**
        * BrookIntegrateVerletStepKernel destructor
@@ -66,30 +72,68 @@ class BrookIntegrateVerletStepKernel : public IntegrateVerletStepKernel {
       /** 
        * Initialize the kernel, setting up all parameters related to integrator.
        * 
-       * @param masses             the mass of each particle
-       * @param constraintIndices  each element contains the indices of two particles whose distance should be constrained
-       * @param constraintLengths  the required distance between each pair of constrained particles
-       *
+       * @param system             System reference
+       * @param integrator         VerletIntegrator reference
        */
-      void initialize( const std::vector<double>& masses, const std::vector<std::vector<int> >& constraintIndices,
-                       const std::vector<double>& constraintLengths );
+
+      void initialize( const System& system, const VerletIntegrator& integrator );
+
       /** 
        * Execute kernel
        * 
-       * @param positions          particle coordinates
-       * @param velocities         particle velocities
-       * @param forces             particle forces
-       * @param stepSize           integration step size
+       * @param context            OpenMMContextImpl reference
+       * @param integrator         VerletIntegrator reference
        *
        */
-      
-      void execute( Stream& positions, Stream& velocities, const Stream& forces, double stepSize );
 
-   protected:
+      void execute( OpenMMContextImpl& context, const VerletIntegrator& integrator );
+
+      /** 
+       * Set log file reference
+       * 
+       * @param  log file reference
+       *
+       * @return DefaultReturnValue
+       *
+       */
+    
+      int setLog( FILE* log );
+
+      /*  
+       * Get contents of object
+       *
+       * @param level of dump
+       *
+       * @return string containing contents
+       *
+       * */
+    
+      std::string getContents( int level ) const;
+
+      /** 
+       * Get log file reference
+       * 
+       * @return  log file reference
+       *
+       */
+    
+      FILE* getLog( void ) const;
+
+   private:
+
+      FILE* _log;
 
       BrookVerletDynamics*      _brookVerletDynamics;
       BrookShakeAlgorithm*      _brookShakeAlgorithm;
  
+      // interface
+
+      OpenMMBrookInterface& _openMMBrookInterface;
+
+      // System reference
+
+      System& _system;
+
 };
 
 } // namespace OpenMM

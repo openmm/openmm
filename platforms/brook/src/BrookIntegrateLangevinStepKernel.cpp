@@ -191,15 +191,17 @@ void BrookIntegrateLangevinStepKernel::initialize( const System& system, const L
    _brookShakeAlgorithm->setMaxIterations( 30 );
    _brookShakeAlgorithm->setLog( log );
 
-   // assert( (_brookShakeAlgorithm->getNumberOfConstraints() > 0) );
-
-   if( printOn && log ){
-      (void) fprintf( log, "%s done shake setup const=%d\n", methodName.c_str(), numberOfConstraints );
-      (void) fflush( log );
-   }
+   // random number generator
 
    _brookRandomNumberGenerator   = new BrookRandomNumberGenerator( );
    _brookRandomNumberGenerator->setup( (int) masses.size(), getPlatform() );
+
+   if( printOn && log ){
+      (void) fprintf( log, "%s done setup:\nBrookShakeAlgorithm:\n%s\nBrookRandomNumberGenerator:\n%s\n\n", methodName.c_str(),
+                      _brookShakeAlgorithm->getContentsString().c_str(), 
+                      _brookRandomNumberGenerator->getContentsString().c_str() );
+      (void) fflush( log );
+   }
 
 }
 

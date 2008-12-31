@@ -102,7 +102,7 @@ KernelImpl* BrookKernelFactory::createKernelImpl( std::string name, const Platfo
 
 	} else if( name == IntegrateVerletStepKernel::Name() ){
 
-//      return new BrookIntegrateVerletStepKernel( name, platform, openMMBrookInterface );
+      return new BrookIntegrateVerletStepKernel( name, platform, openMMBrookInterface, context.getSystem() );
 
    // Brownian integrator
 
