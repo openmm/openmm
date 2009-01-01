@@ -52,12 +52,11 @@ kernel void
 kshakeh_fix1(
 		float maxIterations,      //number of iterations
 		float strwidth, //stream width of posq
-		float invmH,    //inverse mass of hydrogen
 		float inputTolerance,    //tolerance
 		float4 atoms<>, //heavy0, h1, h2, h3
 		float3 posq[][], //positions before update
 		float3 posqp[][], //changes to positions
-		float4 params<>, // (1/m0, mu/2, blensq, 0.0f )
+		float4 params<>, // (1/m0, mu/2, blensq, 1/m1 )
 		out float3 cposq0<>, //constrained position for heavy atom
 		out float3 cposq1<>, //ditto for h1
 		out float3 cposq2<>, //ditto for h2
@@ -88,22 +87,20 @@ kshakeh_fix1(
 	//or nans/infs in the calcs.	
 
 	if( atoms.z > -0.5f ){
-		// aj2.y = floor( atoms.z / strwidth );
 		aj2.y = round( (atoms.z - fmod( atoms.z, strwidth ))/strwidth );
 		aj2.x = atoms.z - aj2.y * strwidth;
 		mask2 = 1.0f;
 	} else {
-		aj2 = aj1; 
+		aj2   = aj1; 
 		mask2 = 0.0f;
 	}
 
 	if( atoms.w > -0.5f ){	
-		// aj3.y = floor( atoms.w / strwidth );
 		aj3.y = round( (atoms.w - fmod( atoms.w, strwidth ))/strwidth );
 		aj3.x = atoms.w - aj3.y * strwidth;
 		mask3 = 1.0f;
 	} else {
-		aj3 = aj1;
+		aj3   = aj1;
 		mask3 = 0.0f;
 	}
 
@@ -129,10 +126,10 @@ kshakeh_fix1(
 	ld2          = params.z - rij2sq;
 	ld3          = params.z - rij3sq;
 
-	xpi          = posqp[ai]   - xi;
-	xpj1         = posqp[aj1]  - xj1;
-	xpj2         = posqp[aj2]  - xj2;
-	xpj3         = posqp[aj3]  - xj3;
+	xpi          = posqp[ai];
+	xpj1         = posqp[aj1];
+	xpj2         = posqp[aj2];
+	xpj3         = posqp[aj3];
 
 
 	i           = 0.0f;
@@ -152,7 +149,7 @@ kshakeh_fix1(
 
 		dr         = rij1 * acor;
 		xpi       += dr * params.x;
-		xpj1      -= dr * invmH;
+		xpj1      -= dr * params.w;
 
 		//Second hydrogen
 
@@ -167,7 +164,7 @@ kshakeh_fix1(
 
 		dr         = rij2 * acor;
 		xpi       += dr * params.x;
-		xpj2      -= dr * invmH;
+		xpj2      -= dr * params.w;
 
 		//Third hydrogen
 
@@ -181,7 +178,7 @@ kshakeh_fix1(
 
 		dr         = rij3 * acor;
 		xpi       += dr * params.x;
-		xpj3      -= dr * invmH;
+		xpj3      -= dr * params.w;
 		
 		i += 1.0f;
 	}
@@ -193,38 +190,6 @@ kshakeh_fix1(
 	cposq2 = xpj2;
 	cposq3 = xpj3;
 
-}
-
-kernel void kshakeh_update2_fix1( 
-		float strwidth, //width of cposq streams
-		float2 invmap<>,    //shakeh inverse map
-		float3 posq<>,     //old positions
-		float3 posqp<>,    //deltas from sd2
-		float3 cposq0[][], //constrained delta for heavy atom
-		float3 cposq1[][], //ditto for h1
-		float3 cposq2[][], //ditto for h2
-		float3 cposq3[][], //ditto for h3
-		out float3 oposq<> //updated deltas
-		){
-	float2 atom;
-	
-	// atom.y = floor( invmap.x / strwidth );
-   atom.y  = round( (invmap.x - fmod( invmap.x, strwidth ))/strwidth );
-	atom.x = invmap.x - atom.y * strwidth;
-	
-	if ( invmap.y < 0 ){
-		oposq = posqp - posq;
-	} else if ( invmap.y < 0.5f ){ 
-		oposq = cposq0[ atom ];
-	} else if ( invmap.y < 1.5f){
-		oposq = cposq1[ atom ];
-	} else if ( invmap.y < 2.5f ){
-		oposq = cposq2[ atom ];
-	} else if ( invmap.y < 3.5f ){
-		oposq = cposq3[ atom ];
-   }
-
-	oposq += posq;
 }
 
 kernel void kshakeh_update1_fix1( 
@@ -240,11 +205,10 @@ kernel void kshakeh_update1_fix1(
 		){
 	float2 atom;
 	
-	// atom.y = floor( invmap.x / strwidth );
    atom.y  = round( (invmap.x - fmod( invmap.x, strwidth ))/strwidth );
-	atom.x = invmap.x - atom.y * strwidth;
+	atom.x  = invmap.x - atom.y * strwidth;
 	
-	oposq = posq;
+//	oposq = posq;
 	if ( invmap.y < 0 ){
 		oposq = posqp;
 	} else if ( invmap.y < 0.5f ){
@@ -257,4 +221,36 @@ kernel void kshakeh_update1_fix1(
 		oposq += cposq3[ atom ];
    }
 
+}
+
+kernel void kshakeh_update2_fix1( 
+		float strwidth, //width of cposq streams
+		float2 invmap<>,    //shakeh inverse map
+		float3 posq<>,     //old positions
+		float3 posqp<>,    //deltas from sd2
+		float3 cposq0[][], //constrained delta for heavy atom
+		float3 cposq1[][], //ditto for h1
+		float3 cposq2[][], //ditto for h2
+		float3 cposq3[][], //ditto for h3
+		out float3 oposq<> //updated deltas
+		){
+
+	float2 atom;
+	
+   atom.y  = round( (invmap.x - fmod( invmap.x, strwidth ))/strwidth );
+	atom.x  = invmap.x - atom.y * strwidth;
+	
+	if ( invmap.y < 0 ){
+		oposq = posqp;
+	} else if ( invmap.y < 0.5f ){ 
+		oposq = cposq0[ atom ];
+	} else if ( invmap.y < 1.5f){
+		oposq = cposq1[ atom ];
+	} else if ( invmap.y < 2.5f ){
+		oposq = cposq2[ atom ];
+	} else if ( invmap.y < 3.5f ){
+		oposq = cposq3[ atom ];
+   }
+
+	oposq += posq;
 }

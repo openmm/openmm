@@ -115,14 +115,6 @@ class BrookShakeAlgorithm : public BrookCommon {
       int setShakeTolerance( BrookOpenMMFloat tolerance );
       
       /**
-       * Get inverse of hydrogen mass
-       *
-       * @return inverse of hydrogen mass
-       */
-
-      BrookOpenMMFloat getInverseHydrogenMass( void ) const; 
-
-      /**
        * Get Shake particle stream width
        *
        * @return particle stream width
@@ -291,10 +283,6 @@ class BrookShakeAlgorithm : public BrookCommon {
 
       int _maxIterations;
 
-      // inverse of H mass
-
-      BrookOpenMMFloat _inverseHydrogenMass;
-
       // particle stream dimensions
 
       int _shakeParticleStreamWidth;
@@ -361,6 +349,7 @@ class BrookShakeAlgorithm : public BrookCommon {
        * @param masses                masses
        * @param constraintIndices     constraint particle indices
        * @param constraintLengths     constraint lengths
+       * @param platform              platform reference
        *
        * @return ErrorReturnValue if error
        *
@@ -369,7 +358,7 @@ class BrookShakeAlgorithm : public BrookCommon {
        */
            
       int _setShakeStreams( const std::vector<double>& masses, const std::vector< std::vector<int> >& constraintIndices,
-                            const std::vector<double>& constraintLengths );
+                            const std::vector<double>& constraintLengths, const Platform& platform );
           
 };
 

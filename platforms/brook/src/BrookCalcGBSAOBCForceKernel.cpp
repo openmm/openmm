@@ -141,20 +141,19 @@ void BrookCalcGBSAOBCForceKernel::initialize( const System& system, const GBSAOB
    // and initialize brookGbsa
 
    _numberOfParticles = system.getNumParticles();
-   std::vector<std::vector<double> > particleParameters;
+   std::vector<std::vector<double> > particleParameters( _numberOfParticles );
+
    for( int ii = 0; ii < _numberOfParticles; ii++ ){
 
       double charge, radius, scalingFactor;
       force.getParticleParameters( ii, charge, radius, scalingFactor );
 
-      std::vector<double> parameters;
-      particleParameters[ii] = parameters;
-       
-      parameters[0]      = charge;
-      parameters[1]      = radius;
-      parameters[2]      = scalingFactor;
+      particleParameters[ii].push_back( charge );
+      particleParameters[ii].push_back( radius );
+      particleParameters[ii].push_back( scalingFactor );
    }   
    brookGbsa.setup( particleParameters, force.getSolventDielectric(), force.getSoluteDielectric(), getPlatform() );
+   brookGbsa.setIsActive( 1 );
 
    _openMMBrookInterface.setTriggerForceKernel( this );
    _openMMBrookInterface.setTriggerEnergyKernel( this );

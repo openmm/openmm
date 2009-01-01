@@ -502,7 +502,6 @@ void kCalculateBornRadii(
       float streamWidth, 
       float fstreamWidth,
       ::brook::stream posq, 
-      ::brook::stream atomicRadii, 
       ::brook::stream scaledAtomicRadii, 
       ::brook::stream bornForce1
       );

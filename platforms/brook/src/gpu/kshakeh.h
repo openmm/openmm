@@ -32,7 +32,6 @@
 void  kshakeh_fix1 (
       const float  maxIterations,
 		const float  strwidth,
-		const float  invmH,
 		const float  tolerance,
 		::brook::stream atoms,
 		::brook::stream posq,

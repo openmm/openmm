@@ -370,7 +370,6 @@ int BrookLangevinDynamics::update( BrookStreamImpl& positionStream, BrookStreamI
 // ---------------------------------------------------------------------------------------
 
    static const char* methodName = "\nBrookLangevinDynamics::update";
-
    static const int PrintOn      = 0;
 
 // ---------------------------------------------------------------------------------------
@@ -427,8 +426,8 @@ int BrookLangevinDynamics::update( BrookStreamImpl& positionStream, BrookStreamI
    // diagnostics
 
    if( PrintOn ){
-      (void) fprintf( getLog(), "\nPost kupdate_sd1_fix1: particleStrW=%3d rngStrW=%3d rngOff=%5d "
-                                "EM=%12.5e Sd1pc[]=[%12.5e %12.5e %12.5e]",
+      (void) fprintf( getLog(), "\n%s Post kupdate_sd1_fix1: particleStrW=%3d rngStrW=%3d rngOff=%5d "
+                                "EM=%12.5e Sd1pc[]=[%12.5e %12.5e %12.5e]", methodName,
                                 getLangevinDynamicsParticleStreamWidth(),
                                 brookRandomNumberGenerator.getRandomNumberStreamWidth(),
                                 brookRandomNumberGenerator.getRvStreamOffset(),
@@ -477,10 +476,10 @@ int BrookLangevinDynamics::update( BrookStreamImpl& positionStream, BrookStreamI
    // first Shake step
 
    if( brookShakeAlgorithm.getNumberOfConstraints() > 0 ){
+
       kshakeh_fix1( 
                     (float) brookShakeAlgorithm.getMaxIterations(),
                     (float) getLangevinDynamicsParticleStreamWidth(),
-                    brookShakeAlgorithm.getInverseHydrogenMass(),
                     brookShakeAlgorithm.getShakeTolerance(),
                     brookShakeAlgorithm.getShakeParticleIndicesStream()->getBrookStream(),
                     positionStream.getBrookStream(),
@@ -503,6 +502,37 @@ int BrookLangevinDynamics::update( BrookStreamImpl& positionStream, BrookStreamI
                     brookShakeAlgorithm.getShakeXCons2Stream()->getBrookStream(),
                     brookShakeAlgorithm.getShakeXCons3Stream()->getBrookStream(),
                     getXPrimeStream()->getBrookStream() );
+
+      if( ( 0 || PrintOn) && getLog() ){
+
+         (void) fprintf( getLog(), "\n%s Post kshakeh_update2_fix1: particleStrW=%3d",
+                                   methodName, getLangevinDynamicsParticleStreamWidth() );
+   
+         (void) fprintf( getLog(), "\nShakeInverseMapStream\n" );
+         brookShakeAlgorithm.getShakeInverseMapStream()->printToFile( getLog() );
+   
+         BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamImpl();
+         (void) fprintf( getLog(), "\nPositionStream\n" );
+         brookStreamInternalPos->printToFile( getLog() );
+   
+         (void) fprintf( getLog(), "\nXPrimeStream\n" );
+         getXPrimeStream()->printToFile( getLog() );  
+
+         (void) fprintf( getLog(), "\nShakeXCons0\n" );
+         brookShakeAlgorithm.getShakeXCons0Stream()->printToFile( getLog() );  
+
+         (void) fprintf( getLog(), "\nShakeXCons1\n" );
+         brookShakeAlgorithm.getShakeXCons1Stream()->printToFile( getLog() );  
+
+         (void) fprintf( getLog(), "\nShakeXCons2\n" );
+         brookShakeAlgorithm.getShakeXCons2Stream()->printToFile( getLog() );  
+
+         (void) fprintf( getLog(), "\nShakeXCons3\n" );
+         brookShakeAlgorithm.getShakeXCons3Stream()->printToFile( getLog() );  
+
+      }   
+
+
    }
 
    // second integration step
@@ -527,8 +557,8 @@ int BrookLangevinDynamics::update( BrookStreamImpl& positionStream, BrookStreamI
    // diagnostics
 
    if( PrintOn ){
-      (void) fprintf( getLog(), "\nPost kupdate_sd2_fix1: particleStrW=%3d rngStrW=%3d rngOff=%5d "
-                                "Sd2pc[]=[%12.5e %12.5e]",
+      (void) fprintf( getLog(), "\n%s Post kupdate_sd2_fix1: particleStrW=%3d rngStrW=%3d rngOff=%5d "
+                                "Sd2pc[]=[%12.5e %12.5e]", methodName,
                                 getLangevinDynamicsParticleStreamWidth(),
                                 brookRandomNumberGenerator.getRandomNumberStreamWidth(),
                                 brookRandomNumberGenerator.getRvStreamOffset(),
@@ -568,10 +598,10 @@ int BrookLangevinDynamics::update( BrookStreamImpl& positionStream, BrookStreamI
    // second Shake step
 
    if( brookShakeAlgorithm.getNumberOfConstraints() > 0 ){
+
       kshakeh_fix1( 
                     (float) brookShakeAlgorithm.getMaxIterations(),
                     (float) getLangevinDynamicsParticleStreamWidth(),
-                    brookShakeAlgorithm.getInverseHydrogenMass(),
                     brookShakeAlgorithm.getShakeTolerance(),
                     brookShakeAlgorithm.getShakeParticleIndicesStream()->getBrookStream(),
                     positionStream.getBrookStream(),
@@ -595,6 +625,31 @@ int BrookLangevinDynamics::update( BrookStreamImpl& positionStream, BrookStreamI
                     brookShakeAlgorithm.getShakeXCons3Stream()->getBrookStream(),
                     positionStream.getBrookStream() );
    
+      // diagnostics
+   
+      if( PrintOn ){
+         (void) fprintf( getLog(), "\n%s Post kshakeh_update2_fix1: particleStrW=%3d rngStrW=%3d rngOff=%5d "
+                                   "Sd2pc[]=[%12.5e %12.5e]", methodName,
+                                   getLangevinDynamicsParticleStreamWidth(),
+                                   brookRandomNumberGenerator.getRandomNumberStreamWidth(),
+                                   brookRandomNumberGenerator.getRvStreamOffset(),
+                                   derivedParameters[Sd2pc1], derivedParameters[Sd2pc2] );
+   
+         BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamImpl();
+         (void) fprintf( getLog(), "\nPositionStream\n" );
+         brookStreamInternalPos->printToFile( getLog() );
+   
+         brookStreamInternalPos  = velocityStream.getBrookStreamImpl();
+         (void) fprintf( getLog(), "\nVelocityStream\n" );
+         brookStreamInternalPos->printToFile( getLog() );
+   
+         (void) fprintf( getLog(), "\nXPrimeStream\n" );
+         getXPrimeStream()->printToFile( getLog() ); 
+   
+   
+//      brookRandomNumberGenerator.getRandomNumberStream( brookRandomNumberGenerator.getRvStreamIndex() )->printToFile( getLog() ); 
+   }   
+
    } else {
       //kadd3( getXPrimeStream()->getBrookStream(), positionStream.getBrookStream() );
       ksetStr3( getXPrimeStream()->getBrookStream(), positionStream.getBrookStream() );

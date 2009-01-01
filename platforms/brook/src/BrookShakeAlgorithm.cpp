@@ -38,6 +38,39 @@
 using namespace OpenMM;
 using namespace std;
 
+struct ShakeCluster {
+
+   int _centralID;
+   int _peripheralID[3];
+   int _size;
+   float _distance;
+   float _centralInvMass, _peripheralInvMass;
+
+   ShakeCluster(){};
+   ShakeCluster( int centralID, float invMass) : _centralID(centralID), _centralInvMass(invMass), _size(0) {};
+
+   void addAtom( int id, float dist, float invMass){
+      if( _size == 3 ){
+          std::stringstream message;
+          message << "ShakeCluster::addAtom: " << "atom " << id << " has more than 3 constraints!." << std::endl; 
+          throw OpenMMException( message.str() );
+      }
+      if( _size > 0 && dist != _distance ){
+          std::stringstream message;
+          message << "ShakeCluster::addAtom: " << "atom " << id << " has different constraint distances: " <<  dist << " and " << _distance << std::endl; 
+          throw OpenMMException( message.str() );
+      }
+      if( _size > 0 && invMass != _peripheralInvMass ){
+          std::stringstream message;
+          message << "ShakeCluster::addAtom: " << " constrainted atoms associated w/ atom " << id << " have different masses: " <<  invMass << " and " << _peripheralInvMass << std::endl; 
+          throw OpenMMException( message.str() );
+      }
+      _peripheralID[_size++]  = id;
+      _distance              = dist;
+      _peripheralInvMass     = invMass;
+   }
+};
+
 /** 
  *
  * Constructor
@@ -73,8 +106,6 @@ BrookShakeAlgorithm::BrookShakeAlgorithm( ){
    for( int ii = 0; ii < LastStreamIndex; ii++ ){
       _shakeStreams[ii]   = NULL;
    }
-
-   _inverseHydrogenMass    = one/( (BrookOpenMMFloat) 1.008);
 
    // setup inverse sqrt masses
 
@@ -164,17 +195,6 @@ int BrookShakeAlgorithm::setShakeTolerance( BrookOpenMMFloat tolerance ){
    return DefaultReturnValue;
 }
     
-/** 
- * Get inverse of hydrogen mass
- * 
- * @return  inverse of hydrogen mass
- *
- */
-
-BrookOpenMMFloat BrookShakeAlgorithm::getInverseHydrogenMass( void ) const {
-   return _inverseHydrogenMass;
-}
-
 /** 
  * Get Particle stream size
  *
@@ -412,6 +432,7 @@ int BrookShakeAlgorithm::_initializeStreams( const Platform& platform ){
  * @param masses                masses
  * @param constraintIndices     constraint particle indices
  * @param constraintLengths     constraint lengths
+ * @param platform              platform reference
  *
  * @return ErrorReturnValue if error
  *
@@ -420,7 +441,7 @@ int BrookShakeAlgorithm::_initializeStreams( const Platform& platform ){
  */
     
 int BrookShakeAlgorithm::_setShakeStreams( const std::vector<double>& masses, const std::vector< std::vector<int> >& constraintIndices,
-                                           const std::vector<double>& constraintLengths ){
+                                           const std::vector<double>& constraintLengths, const Platform& platform ){
     
 // ---------------------------------------------------------------------------------------
 
@@ -431,9 +452,7 @@ int BrookShakeAlgorithm::_setShakeStreams( const std::vector<double>& masses, co
 
 // ---------------------------------------------------------------------------------------
 
-   int shakeParticleStreamSize               = getShakeParticleStreamSize();
-   int shakeConstraintStreamSize             = getShakeConstraintStreamSize();
-
+   FILE* log = getLog();
    // check that number of constraints for two input vectors is consistent
 
    if( constraintIndices.size() != constraintLengths.size() ){
@@ -443,94 +462,127 @@ int BrookShakeAlgorithm::_setShakeStreams( const std::vector<double>& masses, co
       return ErrorReturnValue;
    }   
 
-   // allocate arrays to be read down to board
+   // get constraint count for each atom
 
-   BrookOpenMMFloat* particleIndices  = new BrookOpenMMFloat[4*shakeConstraintStreamSize];
-   BrookOpenMMFloat* shakeParameters  = new BrookOpenMMFloat[4*shakeConstraintStreamSize];
-   for( int ii = 0; ii < 4*shakeConstraintStreamSize; ii++ ){
-      particleIndices[ii] = (BrookOpenMMFloat) -1;
-   }
-   memset( shakeParameters, 0, 4*shakeConstraintStreamSize*sizeof( BrookOpenMMFloat ) ); 
-
+   vector<int> constraintCount( masses.size(), 0);
    std::vector< std::vector<int> >::const_iterator particleIterator = constraintIndices.begin();
-   std::vector<double>::const_iterator distanceIterator             = constraintLengths.begin();
-
-   int constraintIndex                = 0;
-   _numberOfConstraints               = 0;
    while( particleIterator != constraintIndices.end() ){
 
       std::vector<int> particleVector = *particleIterator;
+      int atomI                       = particleVector[0]; 
+      int atomJ                       = particleVector[1]; 
 
-      // check that array of indices is not too small or large
+      // check that atom indices are not out of range
 
-      if( particleVector.size() < 2 ){
+      if( atomI < 0 || atomI > (int) masses.size() ){
          std::stringstream message;
-         message << methodName << " particleIndices size=" << particleVector.size() << " is too small at constraintIndex=" << (constraintIndex/4);
+         message << methodName << " constraint I-index=" << atomI << " is  out of range [0, " << masses.size() << "]" << std::endl;
          throw OpenMMException( message.str() );
          return ErrorReturnValue;
-      }   
-   
-      if( particleVector.size() > 4 ){
+      }
+
+      if( atomJ < 0 || atomJ > (int) masses.size() ){
          std::stringstream message;
-         message << methodName << " particleIndices size=" << particleVector.size() << " is too large at constraintIndex=" << (constraintIndex/4);
+         message << methodName << " constraint J-index=" << atomJ << " is out of range [0, " << masses.size() << "]" << std::endl;
          throw OpenMMException( message.str() );
          return ErrorReturnValue;
-      }   
-   
-      int index                    = 0;
-      int particleIndex1           = -1;
-      int particleIndex2           = -1;
-      for( std::vector<int>::const_iterator ii = particleVector.begin(); ii != particleVector.end(); ii++, index++ ){
-         particleIndices[constraintIndex + index]   = (BrookOpenMMFloat) *ii;
-         if( index == 0 ){
-            particleIndex1 = *ii;
-         } else if( index == 1 ){
-            particleIndex2 = *ii;
-         }
       }
 
-      // skip negative indices
-
-      if( particleIndex1 < 0 || particleIndex2 < 0 ){
-         particleIterator++;
-         distanceIterator++;
-         continue;
-      }
-
-      if( particleIndex1 >= (int) masses.size() || particleIndex2 >= (int) masses.size() ){
-         std::stringstream message;
-         message << methodName << " constraint indices=[" << particleIndex1 << ", " << particleIndex2 << "] greater than mass array size=" << masses.size();
-         throw OpenMMException( message.str() );
-         return ErrorReturnValue;
-      }   
-
-      // insure heavy particle is first
-
-      if( masses[particleIndex1] < masses[particleIndex2] ){
-
-         BrookOpenMMFloat swap               = particleIndices[constraintIndex];
-         particleIndices[constraintIndex]    = particleIndices[constraintIndex+1];
-         particleIndices[constraintIndex+1]  = swap;
-
-         int swapI                           = particleIndex1;
-         particleIndex1                      = particleIndex2;
-         particleIndex2                      = swapI;
-      }
-
-      // set parameters:
-
-      //    (1) 1/(heavy particle mass)
-      //    (2) 0.5/(heavy particle mass+hydrogen mass)
-      //    (3) constraint distance**2
-
-      shakeParameters[constraintIndex]    = one/( (BrookOpenMMFloat) masses[particleIndex1] );
-      shakeParameters[constraintIndex+1]  = half/( (BrookOpenMMFloat) (masses[particleIndex1] + masses[particleIndex2]) );
-      shakeParameters[constraintIndex+2]  = (BrookOpenMMFloat) ( (*distanceIterator)*(*distanceIterator) );
+      constraintCount[atomI]++;
+      constraintCount[atomJ]++;
 
       particleIterator++;
+   }
+   
+   // Find clusters consisting of a central atom with up to three peripheral atoms.
+   
+   map<int, ShakeCluster> clusters;
+   particleIterator                                     = constraintIndices.begin();
+   std::vector<double>::const_iterator distanceIterator = constraintLengths.begin();
+   while( particleIterator != constraintIndices.end() ){
+
+      float distance                  = static_cast<float>( *distanceIterator );
+      std::vector<int> particleVector = *particleIterator;
+      int atomI                       = particleVector[0]; 
+      int atomJ                       = particleVector[1]; 
+
+      // Determine the central atom.
+       
+      bool firstIsCentral;
+      if( constraintCount[atomI] > 1 ){
+         firstIsCentral = true;
+      } else if (constraintCount[atomJ] > 1 ){
+         firstIsCentral = false;
+      } else if( atomI < atomJ ){
+         firstIsCentral = true;
+      } else {
+         firstIsCentral = false;
+      }
+      int centralID, peripheralID;
+      float centralInvMass, peripheralInvMass;
+      if( firstIsCentral ){
+         centralID         = atomI;
+         peripheralID      = atomJ;
+         centralInvMass    = static_cast<float>( masses[atomI] );
+         peripheralInvMass = static_cast<float>( masses[atomJ] );
+      } else {
+         centralID         = atomJ;
+         peripheralID      = atomI;
+         centralInvMass    = static_cast<float>( masses[atomJ] );
+         peripheralInvMass = static_cast<float>( masses[atomI] );
+      }
+      if( constraintCount[peripheralID] != 1 ){
+          throw OpenMMException("Only bonds to hydrogens may be constrained");
+      }
+       
+      // Add it to the cluster
+       
+      if( clusters.find(centralID) == clusters.end() ){
+         clusters[centralID] = ShakeCluster( centralID, centralInvMass );
+      }
+      clusters[centralID].addAtom( peripheralID, distance, peripheralInvMass );
+ 
+      particleIterator++;
       distanceIterator++;
+   }
+    
+   // allocate space for streams
+
+   _initializeStreamSizes( (int) masses.size(), (int) clusters.size(), platform );
+   _initializeStreams( platform );
+
+   int shakeParticleStreamSize               = getShakeParticleStreamSize();
+   int shakeConstraintStreamSize             = getShakeConstraintStreamSize();
+
+   // allocate arrays to be read down to board and initialize
+
+   BrookOpenMMFloat* particleIndices  = new BrookOpenMMFloat[4*shakeConstraintStreamSize];
+   BrookOpenMMFloat* shakeParameters  = new BrookOpenMMFloat[4*shakeConstraintStreamSize];
+   BrookOpenMMFloat minusOne          = static_cast<BrookOpenMMFloat>(-1.0);
+   for( int ii = 0; ii < 4*shakeConstraintStreamSize; ii++ ){
+      particleIndices[ii] = minusOne;
+   }
+   memset( shakeParameters, 0, 4*shakeConstraintStreamSize*sizeof( BrookOpenMMFloat ) ); 
+
+   // load indices & parameters
+
+   int constraintIndex                   = 0;
+   _numberOfConstraints                  = static_cast<int>(clusters.size());
+   for( map<int, ShakeCluster>::const_iterator iter = clusters.begin(); iter != clusters.end(); ++iter ){
+
+      const ShakeCluster& cluster        = iter->second;
+
+      particleIndices[constraintIndex]   = static_cast<BrookOpenMMFloat>( cluster._centralID );
+      for( int ii = 0; ii < cluster._size; ii++ ){
+         particleIndices[constraintIndex+ii+1] = static_cast<BrookOpenMMFloat>( cluster._peripheralID[ii] );
+      }
+
+      shakeParameters[constraintIndex]    = one/( static_cast<BrookOpenMMFloat>( cluster._centralInvMass ) );
+      shakeParameters[constraintIndex+1]  = half/( static_cast<BrookOpenMMFloat>(cluster._centralInvMass + cluster._peripheralInvMass) );
+      shakeParameters[constraintIndex+2]  = static_cast<BrookOpenMMFloat>( cluster._distance*cluster._distance );
+      shakeParameters[constraintIndex+3]  = one/( static_cast<BrookOpenMMFloat>( cluster._peripheralInvMass ) );
+
       constraintIndex += 4;
-      _numberOfConstraints++;
    }
 
    // write entries to board
@@ -593,12 +645,7 @@ int BrookShakeAlgorithm::setup( const std::vector<double>& masses, const std::ve
    int numberOfParticles  = (int) masses.size();
    setNumberOfParticles( numberOfParticles );
 
-   // set stream sizes and then create streams
-
-   _initializeStreamSizes( numberOfParticles, (int) constraintIndices.size(), platform );
-   _initializeStreams( platform );
-
-   _setShakeStreams( masses, constraintIndices, constraintLengths );
+   _setShakeStreams( masses, constraintIndices, constraintLengths, platform );
 
    return DefaultReturnValue;
 }
@@ -634,6 +681,9 @@ std::string BrookShakeAlgorithm::getContentsString( int level ) const {
 #define LOCAL_SPRINTF(a,b,c) sprintf( (a), (b), (c) );   
 #endif
 
+   (void) LOCAL_SPRINTF( value, "%d", getNumberOfConstraints() );
+   message << _getLine( tab, "Number of constraints:", value ); 
+
    (void) LOCAL_SPRINTF( value, "%d", getNumberOfParticles() );
    message << _getLine( tab, "Number of particles:", value ); 
 
@@ -652,9 +702,6 @@ std::string BrookShakeAlgorithm::getContentsString( int level ) const {
    (void) LOCAL_SPRINTF( value, "%d", getParticleStreamSize() );
    message << _getLine( tab, "Particle stream size:", value ); 
 
-   (void) LOCAL_SPRINTF( value, "%d", getNumberOfConstraints() );
-   message << _getLine( tab, "Number of constraints:", value ); 
-
    (void) LOCAL_SPRINTF( value, "%d", getShakeConstraintStreamWidth() );
    message << _getLine( tab, "Constraint stream width:", value ); 
 
@@ -663,9 +710,6 @@ std::string BrookShakeAlgorithm::getContentsString( int level ) const {
 
    (void) LOCAL_SPRINTF( value, "%d", getShakeConstraintStreamSize() );
    message << _getLine( tab, "Constraint stream size:", value ); 
-
-   (void) LOCAL_SPRINTF( value, "%.5f", 1.0f/getInverseHydrogenMass() );
-   message << _getLine( tab, "H-mass:", value ); 
 
    message << _getLine( tab, "Log:",                  (getLog()                          ? Set : NotSet) ); 
 

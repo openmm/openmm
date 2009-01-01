@@ -286,11 +286,11 @@ int BrookBonded::isParameterStreamSet( int index ) const {
  *
  */
 
-int BrookBonded::validateInverseMapStreamCount( int index, int count ) const {
+int BrookBonded::_validateInverseMapStreamCount( int index, int count ) const {
 
 // ---------------------------------------------------------------------------------------
 
-   static const std::string methodName = "BrookBonded::validateInverseMapStreamCount";
+   static const std::string methodName = "BrookBonded::_validateInverseMapStreamCount";
 
 // ---------------------------------------------------------------------------------------
 
@@ -450,11 +450,11 @@ BrookFloatStreamInternal** BrookBonded::getInverseStreamMapsStreams( int index )
 
 /*Flips i,j,k,l to l,k,j,i while correctly shuffling the params */
 
-void BrookBonded::flipQuartet( int ibonded, int *particles ){
+void BrookBonded::_flipQuartet( int ibonded, int *particles ){
 
 // ---------------------------------------------------------------------------------------
 
-   // static const std::string methodName = "BrookBonded::flipQuartet";
+   // static const std::string methodName = "BrookBonded::_flipQuartet";
 
 // ---------------------------------------------------------------------------------------
 
@@ -473,11 +473,11 @@ void BrookBonded::flipQuartet( int ibonded, int *particles ){
 
 }
 
-int BrookBonded::matchTorsion( int i, int j, int k, int l, int nbondeds, int *particles ){
+int BrookBonded::_matchTorsion( int i, int j, int k, int l, int nbondeds, int *particles ){
 
 // ---------------------------------------------------------------------------------------
 
-   // static const std::string methodName = "BrookBonded::matchTorsion";
+   // static const std::string methodName = "BrookBonded::_matchTorsion";
 
 // ---------------------------------------------------------------------------------------
 
@@ -516,13 +516,13 @@ int BrookBonded::matchTorsion( int i, int j, int k, int l, int nbondeds, int *pa
  *
  **/
 
-int BrookBonded::matchAngle( int i, int j, int k, int nbondeds, 
-                             int *particles, int *flag ){
+int BrookBonded::_matchAngle( int i, int j, int k, int nbondeds, 
+                              int *particles, int *flag ){
 
 // ---------------------------------------------------------------------------------------
 
    int n;
-   static const std::string methodName = "BrookBonded::matchAngle";
+   static const std::string methodName = "BrookBonded::_matchAngle";
 
 // ---------------------------------------------------------------------------------------
 
@@ -572,11 +572,11 @@ int BrookBonded::matchAngle( int i, int j, int k, int nbondeds,
  *
  * */
 
-int BrookBonded::matchBond( int i, int j, int nbondeds, int *particles, int *flag ){
+int BrookBonded::_matchBond( int i, int j, int nbondeds, int *particles, int *flag ){
 
 // ---------------------------------------------------------------------------------------
 
-   static const std::string methodName = "BrookBonded::matchBond";
+   static const std::string methodName = "BrookBonded::_matchBond";
 
 // ---------------------------------------------------------------------------------------
 
@@ -638,11 +638,11 @@ int BrookBonded::matchBond( int i, int j, int nbondeds, int *particles, int *fla
    return ErrorReturnValue;
 }
 
-int BrookBonded::matchPair( int i, int j, int nbondeds, int *particles ){
+int BrookBonded::_matchPair( int i, int j, int nbondeds, int *particles ){
 
 // ---------------------------------------------------------------------------------------
 
-   //static const std::string methodName = "BrookBonded::matchPair";
+   //static const std::string methodName = "BrookBonded::_matchPair";
 
 // ---------------------------------------------------------------------------------------
 
@@ -699,13 +699,13 @@ int BrookBonded::matchPair( int i, int j, int nbondeds, int *particles ){
  *
  */
 
-int BrookBonded::addRBTorsions( int *nbondeds, int *particles, float *params[], 
-                                const vector<vector<int> >& rbTorsionIndices, 
-                                const vector<vector<double> >& rbTorsionParameters ){
+int BrookBonded::_addRBTorsions( int *nbondeds, int *particles, float *params[], 
+                                 const vector<vector<int> >& rbTorsionIndices, 
+                                 const vector<vector<double> >& rbTorsionParameters ){
 
 // ---------------------------------------------------------------------------------------
 
-   static const std::string methodName = "BrookBonded::BrookBonded";
+   static const std::string methodName = "BrookBonded::_addRBTorsions";
    static const int debug              = 0;
 
 // ---------------------------------------------------------------------------------------
@@ -725,7 +725,7 @@ int BrookBonded::addRBTorsions( int *nbondeds, int *particles, float *params[],
       int k     = particlesIndices[index++];
       int l     = particlesIndices[index++];
       
-      int ibonded = matchTorsion( i, j, k, l, *nbondeds, particles );
+      int ibonded = _matchTorsion( i, j, k, l, *nbondeds, particles );
       
       if( ibonded < 0 ){
          ibonded             = *nbondeds;
@@ -767,13 +767,13 @@ int BrookBonded::addRBTorsions( int *nbondeds, int *particles, float *params[],
  *
  */
 
-int BrookBonded::addPTorsions( int *nbondeds, int *particles, BrookOpenMMFloat* params[],
-                               const vector<vector<int> >& periodicTorsionIndices, 
-                               const vector<vector<double> >& periodicTorsionParameters ){
+int BrookBonded::_addPTorsions( int *nbondeds, int *particles, BrookOpenMMFloat* params[],
+                                const vector<vector<int> >& periodicTorsionIndices, 
+                                const vector<vector<double> >& periodicTorsionParameters ){
 
 // ---------------------------------------------------------------------------------------
 
-   static const std::string methodName = "BrookBonded::addPTorsion";
+   static const std::string methodName = "BrookBonded::_addPTorsion";
    static const int debug              = 0;
 
 // ---------------------------------------------------------------------------------------
@@ -793,7 +793,7 @@ int BrookBonded::addPTorsions( int *nbondeds, int *particles, BrookOpenMMFloat* 
       int k     = particlesIndices[index++];
       int l     = particlesIndices[index++];
 
-      int ibonded = matchTorsion( i, j, k, l, *nbondeds, particles );
+      int ibonded = _matchTorsion( i, j, k, l, *nbondeds, particles );
       
       if( ibonded < 0 ){
          ibonded = *nbondeds;
@@ -833,12 +833,12 @@ int BrookBonded::addPTorsions( int *nbondeds, int *particles, BrookOpenMMFloat* 
  *
  */
 
-int BrookBonded::addAngles( int *nbondeds, int *particles, float *params[], const std::vector<std::vector<int> >& angleIndices,
-                            const std::vector<std::vector<double> >& angleParameters ){
+int BrookBonded::_addAngles( int *nbondeds, int *particles, float *params[], const std::vector<std::vector<int> >& angleIndices,
+                             const std::vector<std::vector<double> >& angleParameters ){
 
 // ---------------------------------------------------------------------------------------
 
-   static const std::string methodName = "BrookBonded::addAngles";
+   static const std::string methodName = "BrookBonded::_addAngles";
    static const int debug              = 0;
 
 // ---------------------------------------------------------------------------------------
@@ -860,7 +860,7 @@ int BrookBonded::addAngles( int *nbondeds, int *particles, float *params[], cons
       int k     = particlesIndices[index++];
  
       int flag;
-      int ibonded = matchAngle( i, j, k, *nbondeds, particles, &flag );
+      int ibonded = _matchAngle( i, j, k, *nbondeds, particles, &flag );
       if( ibonded < 0 ){
          ibonded = *nbondeds;
          ATOMS( ibonded, 0 ) = i;
@@ -895,12 +895,12 @@ int BrookBonded::addAngles( int *nbondeds, int *particles, float *params[], cons
  *
  */
 
-int BrookBonded::addBonds( int *nbondeds, int *particles, float *params[], const vector<vector<int> >& bondIndices,
-                           const vector<vector<double> >& bondParameters ){
+int BrookBonded::_addBonds( int *nbondeds, int *particles, float *params[], const vector<vector<int> >& bondIndices,
+                            const vector<vector<double> >& bondParameters ){
 
 // ---------------------------------------------------------------------------------------
 
-   static const std::string methodName = "BrookBonded::addBonds";
+   static const std::string methodName = "BrookBonded::_addBonds";
    static const int debug              = 0;
 
 // ---------------------------------------------------------------------------------------
@@ -929,7 +929,7 @@ int BrookBonded::addBonds( int *nbondeds, int *particles, float *params[], const
       }
 
       int flag;
-      int ibonded = matchBond( i, j, *nbondeds, particles, &flag );
+      int ibonded = _matchBond( i, j, *nbondeds, particles, &flag );
 int saveIbond = ibonded;
       if( ibonded < 0 ){
          ibonded = *nbondeds;
@@ -972,14 +972,14 @@ int saveIbond = ibonded;
  *
  */
 
-int BrookBonded::addPairs( int *nbondeds, int *particles, BrookOpenMMFloat* params[],
-                           BrookOpenMMFloat* charges,
-                           const std::vector<std::vector<int> >& bonded14Indices,
-                           const std::vector<std::vector<double> >& nonbondedParameters ){
+int BrookBonded::_addPairs( int *nbondeds, int *particles, BrookOpenMMFloat* params[],
+                            BrookOpenMMFloat* charges,
+                            const std::vector<std::vector<int> >& bonded14Indices,
+                            const std::vector<std::vector<double> >& nonbondedParameters ){
 
 // ---------------------------------------------------------------------------------------
 
-   static const std::string methodName = "BrookBonded::addPairs";
+   static const std::string methodName = "BrookBonded::_addPairs";
    static const double oneSixth        = 1.0/6.0;
    static const int debug              = 1;
 
@@ -994,7 +994,7 @@ int BrookBonded::addPairs( int *nbondeds, int *particles, BrookOpenMMFloat* para
       int i     = bonded14Indices[ii][0];
       int j     = bonded14Indices[ii][1];
 
-      int ibonded = matchPair( i, j, *nbondeds, particles );
+      int ibonded = _matchPair( i, j, *nbondeds, particles );
       if( ibonded < 0 ){
          ibonded = *nbondeds;
          ATOMS(ibonded, 0) = i;
@@ -1048,11 +1048,11 @@ int BrookBonded::addPairs( int *nbondeds, int *particles, BrookOpenMMFloat* para
  *
  */
 
-int BrookBonded::loadInvMaps( int nbondeds, int nparticles, int *particles, int particleStreamWidth, int particleStreamSize ){
+int BrookBonded::_loadInvMaps( int nbondeds, int nparticles, int *particles, int particleStreamWidth, int particleStreamSize ){
 
 // ---------------------------------------------------------------------------------------
 
-   static const std::string methodName = "BrookBonded::loadInvMaps";
+   static const std::string methodName = "BrookBonded::_loadInvMaps";
    static const int PrintOn            = 0;
    double dangleValue                  = 0.0;
 
@@ -1113,9 +1113,9 @@ int BrookBonded::loadInvMaps( int nbondeds, int nparticles, int *particles, int 
       for( int jj = 0; jj < 4*getMaxInverseMapStreamCount()*particleStreamSize; jj++ ){
          block[jj] = -1.0f;
       }
-      gpuCalcInvMap( ii, 4, nbondeds, nparticles, particles, getInverseMapStreamCount( ii ), counts, invmaps, &(_inverseMapStreamCount[ii]) );
+      _gpuCalcInvMap( ii, 4, nbondeds, nparticles, particles, getInverseMapStreamCount( ii ), counts, invmaps, &(_inverseMapStreamCount[ii]) );
 //gpuPrintInvMaps( _inverseMapStreamCount[ii], nparticles, counts, invmaps, getLog() );
-      validateInverseMapStreamCount( ii, _inverseMapStreamCount[ii] ); 
+      _validateInverseMapStreamCount( ii, _inverseMapStreamCount[ii] ); 
       for( int jj = 0; jj < _inverseMapStreamCount[ii]; jj++ ){
          _inverseStreamMaps[ii][jj]->loadFromArray( invmaps[jj] );
 
@@ -1263,19 +1263,19 @@ int BrookBonded::setup( int numberOfParticles,
    int nbondeds = 0;
 
    if( rbTorsionBrookBondParameters ){
-      addRBTorsions( &nbondeds, particles, params, rbTorsionBrookBondParameters->getParticleIndices(),         rbTorsionBrookBondParameters->getBondParameters() );
+      _addRBTorsions( &nbondeds, particles, params, rbTorsionBrookBondParameters->getParticleIndices(),         rbTorsionBrookBondParameters->getBondParameters() );
    }
    if( periodicTorsionBrookBondParameters ){
-      addPTorsions(  &nbondeds, particles, params, periodicTorsionBrookBondParameters->getParticleIndices(),   periodicTorsionBrookBondParameters->getBondParameters() );
+      _addPTorsions(  &nbondeds, particles, params, periodicTorsionBrookBondParameters->getParticleIndices(),   periodicTorsionBrookBondParameters->getBondParameters() );
    }
    if( harmonicAngleBrookBondParameters ){
-      addAngles(     &nbondeds, particles, params, harmonicAngleBrookBondParameters->getParticleIndices(),     harmonicAngleBrookBondParameters->getBondParameters() );
+      _addAngles(     &nbondeds, particles, params, harmonicAngleBrookBondParameters->getParticleIndices(),     harmonicAngleBrookBondParameters->getBondParameters() );
    }
    if( harmonicBondBrookBondParameters ){
-      addBonds(      &nbondeds, particles, params, harmonicBondBrookBondParameters->getParticleIndices(),      harmonicBondBrookBondParameters->getBondParameters() );
+      _addBonds(      &nbondeds, particles, params, harmonicBondBrookBondParameters->getParticleIndices(),      harmonicBondBrookBondParameters->getBondParameters() );
    }
    if( nonBonded14ForceParameters ){
-      addPairs(      &nbondeds, particles, params, charges, nonBonded14ForceParameters->getParticleIndices(), nonBonded14ForceParameters->getBondParameters() );
+      _addPairs(      &nbondeds, particles, params, charges, nonBonded14ForceParameters->getParticleIndices(), nonBonded14ForceParameters->getBondParameters() );
    }
 
 // ---------------------------------------------------------------------------------------
@@ -1387,7 +1387,7 @@ int BrookBonded::setup( int numberOfParticles,
 
    // load inverse maps to streams
 
-   loadInvMaps( nbondeds, getNumberOfParticles(), particles, particleStreamWidth, particleStreamSize );
+   _loadInvMaps( nbondeds, getNumberOfParticles(), particles, particleStreamWidth, particleStreamSize );
    
 // ---------------------------------------------------------------------------------------
 
@@ -1531,9 +1531,9 @@ std::string BrookBonded::getContentsString( int level ) const {
  *
  **/
 
-int BrookBonded::gpuCalcInvMap( int posflag, int niparticles, int nints, int nparticles,
-                                int *particles, int nmaps, int counts[], float4 *invmaps[],
-                                int *nimaps ){
+int BrookBonded::_gpuCalcInvMap( int posflag, int niparticles, int nints, int nparticles,
+                                 int *particles, int nmaps, int counts[], float4 *invmaps[],
+                                 int *nimaps ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -1541,7 +1541,7 @@ int BrookBonded::gpuCalcInvMap( int posflag, int niparticles, int nints, int npa
    int particle;
    int mapnum, mapcomp;
 
-   static const std::string methodName      = "BrookBonded::gpuCalcInvMap";
+   static const std::string methodName      = "BrookBonded::_gpuCalcInvMap";
 
    static const unsigned int MAX_LINE_CHARS = 256;
    //char value[MAX_LINE_CHARS];
@@ -1654,7 +1654,7 @@ if( PrintOn && getLog() ){
 }
 
 
-void BrookBonded::gpuPrintInvMaps( int nmaps, int nparticles, int counts[], float4 *invmap[], FILE* logFile ){
+void BrookBonded::_gpuPrintInvMaps( int nmaps, int nparticles, int counts[], float4 *invmap[], FILE* logFile ){
    int i;
    int j;
    for(  i = 0; i < nparticles; i++ ){
@@ -1676,7 +1676,7 @@ void BrookBonded::gpuPrintInvMaps( int nmaps, int nparticles, int counts[], floa
  * which should always be true
  * */
 
-int BrookBonded::gpuCalcInvMap_merged( 
+int BrookBonded::_gpuCalcInvMap_merged( 
       int nints,    //number of interactions
       int nparticles,   //number of particles
       int *particles,   //ijkl,ijkl,ijkl...
@@ -1754,8 +1754,8 @@ int BrookBonded::gpuCalcInvMap_merged(
  *
  * buf should be nimaps * nparticles large.
  * */
-int BrookBonded::gpuRepackInvMap_merged( int nparticles, int nmaps, int *counts, 
-                                         float4 *invmaps[], float4 *buf ){
+int BrookBonded::_gpuRepackInvMap_merged( int nparticles, int nmaps, int *counts, 
+                                          float4 *invmaps[], float4 *buf ){
    int i, j;
    int nmaps_i;
 

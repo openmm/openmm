@@ -107,12 +107,14 @@ void BrookCalcKineticEnergyKernel::initialize( const System& system ){
       _masses[ii]  =  static_cast<BrookOpenMMFloat>(system.getParticleMass(ii));
    }
 
+/*
 std::vector<double> masses;
 for( unsigned int ii = 0; ii < (unsigned int) _numberOfParticles; ii++ ){
    masses.push_back( system.getParticleMass(ii) );
 }
 _brookVelocityCenterOfMassRemoval = new BrookVelocityCenterOfMassRemoval();
 _brookVelocityCenterOfMassRemoval->setup( masses, getPlatform() );
+*/
 
    return;
 }
@@ -130,7 +132,7 @@ double BrookCalcKineticEnergyKernel::execute( OpenMMContextImpl& context ){
 
 // ---------------------------------------------------------------------------------------
 
-   static const std::string methodName      = "BrookCalcKineticEnergyKernel::execute";
+   static const std::string methodName    = "BrookCalcKineticEnergyKernel::execute";
 
 // ---------------------------------------------------------------------------------------
 
@@ -166,10 +168,11 @@ printf( "NewCom [%12.5e %12.5e %12.5e]\n", newcom[0], newcom[1], newcom[2] );
 index = 0;
 */
 
+
    for( int ii = 0; ii < _numberOfParticles; ii++, index += 3 ){
       energy += _masses[ii]*(velocity[index]*velocity[index] + velocity[index + 1]*velocity[index + 1] + velocity[index + 2]*velocity[index + 2]);
    }
 
-//printf( " KQ=%12.5e\n", 0.5*energy );
+printf( " KQ=%12.5e\n", 0.5*energy );
    return 0.5*energy;
 }

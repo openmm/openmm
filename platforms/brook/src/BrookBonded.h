@@ -35,7 +35,6 @@
 #include <vector>
 
 #include "BrookStreamImpl.h"
-//#include "BrookPlatform.h"
 #include "BrookCommon.h"
 #include "OpenMMContext.h"
 #include "BrookBondParameters.h"
@@ -43,7 +42,7 @@
 namespace OpenMM {
 
 /**
- * This kernel is invoked by NonbondedForce to calculate the forces acting on the system.
+ * Calculate Brook bonded forces
  */
 class BrookBonded : public BrookCommon {
 
@@ -68,32 +67,18 @@ class BrookBonded : public BrookCommon {
       /**
        * Initialize the kernel, setting up the values of all the force field parameters.
        * 
-       * @param bondIndices               the two particles connected by each bond term
-       * @param bondParameters            the force parameters (length, k) for each bond term
-       * @param angleIndices              the three particles connected by each angle term
-       * @param angleParameters           the force parameters (angle, k) for each angle term
-       * @param periodicTorsionIndices    the four particles connected by each periodic torsion term
-       * @param periodicTorsionParameters the force parameters (k, phase, periodicity) for each periodic torsion term
-       * @param rbTorsionIndices          the four particles connected by each Ryckaert-Bellemans torsion term
-       * @param rbTorsionParameters       the coefficients (in order of increasing powers) for each Ryckaert-Bellemans torsion term
-       * @param bonded14Indices           each element contains the indices of two particles whose nonbonded interactions should be reduced since
-       *                                  they form a bonded 1-4 pair
-       * @param nonbondedParameters       the nonbonded force parameters (charge, sigma, epsilon) for each particle
-       * @param log                       log reference
+       * @param numberOfParticles                   numberOfParticles
+       * @param harmonicBondBrookBondParameters     force parameters (length, k) for each bond term
+       * @param harmonicAngleBrookBondParameters    force parameters (angle, k) for each angle term
+       * @param periodicTorsionBrookBondParameters  force parameters (k, phase, periodicity) for each periodic torsion term
+       * @param rbTorsionBrookBondParameters        coefficients (in order of increasing powers) for each Ryckaert-Bellemans torsion term
+       * @param nonBonded14ForceParameters          nonbonded 14 force parameters (charge, sigma, epsilon) for each particle
+       * @param particleStreamWidth                 stream width
+       * @param particleStreamSize                  stream size
        *
        * @return nonzero value if error
        *
        */
-
-/*
-      int setup( int numberOfParticles, 
-                 const std::vector<std::vector<int> >& bondIndices,            const std::vector<std::vector<double> >& bondParameters,
-                 const std::vector<std::vector<int> >& angleIndices,           const std::vector<std::vector<double> >& angleParameters,
-                 const std::vector<std::vector<int> >& periodicTorsionIndices, const std::vector<std::vector<double> >& periodicTorsionParameters,
-                 const std::vector<std::vector<int> >& rbTorsionIndices,       const std::vector<std::vector<double> >& rbTorsionParameters,
-                 const std::vector<std::vector<int> >& bonded14Indices,        const std::vector<std::vector<double> >& nonbondedParameters,
-                 const Platform& platform );
-*/
 
       int setup( int numberOfParticles,
                  BrookBondParameters* harmonicBondBrookBondParameters,
@@ -316,11 +301,12 @@ class BrookBonded : public BrookCommon {
 
       // helper methods in setup of parameters
 
-      void flipQuartet( int ibonded, int *particles );
-      int matchTorsion( int i, int j, int k, int l, int nbondeds, int *particles );
-      int matchAngle( int i, int j, int k, int nbondeds, int *particles, int *flag );
-      int matchBond( int i, int j, int nbondeds, int *particles, int *flag );
-      int matchPair( int i, int j, int nbondeds, int *particles );
+      void _flipQuartet( int ibonded, int *particles );
+
+      int _matchTorsion( int i, int j, int k, int l, int nbondeds, int *particles );
+      int _matchAngle(   int i, int j, int k, int nbondeds, int *particles, int *flag );
+      int _matchBond(    int i, int j, int nbondeds, int *particles, int *flag );
+      int _matchPair(    int i, int j, int nbondeds, int *particles );
 
       /**
        * Setup Ryckaert-Bellemans parameters/particle indices
@@ -335,7 +321,7 @@ class BrookBonded : public BrookCommon {
        *
        */
 
-      int addRBTorsions( int *nbondeds, int *particles, BrookOpenMMFloat* params[], const std::vector<std::vector<int> >& rbTorsionIndices,  
+      int _addRBTorsions( int *nbondeds, int *particles, BrookOpenMMFloat* params[], const std::vector<std::vector<int> >& rbTorsionIndices,  
                           const std::vector<std::vector<double> >& rbTorsionParameters );
 
       /**
@@ -351,7 +337,7 @@ class BrookBonded : public BrookCommon {
        *
        */
 
-      int addPTorsions( int *nbondeds, int *particles, BrookOpenMMFloat* params[], const std::vector<std::vector<int> >& periodicTorsionIndices,  
+      int _addPTorsions( int *nbondeds, int *particles, BrookOpenMMFloat* params[], const std::vector<std::vector<int> >& periodicTorsionIndices,  
                           const std::vector<std::vector<double> >& periodicTorsionParameters );
 
       /**
@@ -367,8 +353,8 @@ class BrookBonded : public BrookCommon {
        *
        */
 
-      int addAngles( int *nbondeds, int *particles, BrookOpenMMFloat* params[], const std::vector<std::vector<int> >& angleIndices,
-                     const std::vector<std::vector<double> >& angleParameters );
+      int _addAngles( int *nbondeds, int *particles, BrookOpenMMFloat* params[], const std::vector<std::vector<int> >& angleIndices,
+                      const std::vector<std::vector<double> >& angleParameters );
 
       /**
        * Setup harmonic bond parameters/particle indices
@@ -383,8 +369,8 @@ class BrookBonded : public BrookCommon {
        *
        */
 
-      int addBonds( int *nbondeds, int *particles, BrookOpenMMFloat* params[], const std::vector<std::vector<int> >& bondIndices,
-                    const std::vector<std::vector<double> >& bondParameters );
+      int  _addBonds( int *nbondeds, int *particles, BrookOpenMMFloat* params[], const std::vector<std::vector<int> >& bondIndices,
+                     const std::vector<std::vector<double> >& bondParameters );
 
       /**
        * Setup LJ/Coulomb 1-4 parameters/particle indices
@@ -401,8 +387,8 @@ class BrookBonded : public BrookCommon {
        *
        */
 
-      int addPairs( int *nbondeds, int *particles, BrookOpenMMFloat* params[], BrookOpenMMFloat* charges,
-                    const std::vector<std::vector<int> >& bonded14Indices, const std::vector<std::vector<double> >& nonbondedParameters );
+      int _addPairs( int *nbondeds, int *particles, BrookOpenMMFloat* params[], BrookOpenMMFloat* charges,
+                     const std::vector<std::vector<int> >& bonded14Indices, const std::vector<std::vector<double> >& nonbondedParameters );
       
       /**
        * Create and load inverse maps for bonded ixns
@@ -418,7 +404,7 @@ class BrookBonded : public BrookCommon {
        */
 
       //int loadInvMaps( int nbondeds, int nparticles, int *particles, const BrookPlatform& platform );
-      int loadInvMaps( int nbondeds, int nparticles, int *particles, int particleStreamWidth, int particleStreamSize );
+      int _loadInvMaps( int nbondeds, int nparticles, int *particles, int particleStreamWidth, int particleStreamSize );
       
       /**
        * Validate inverse map count
@@ -432,7 +418,7 @@ class BrookBonded : public BrookCommon {
        *
        */
 
-      int validateInverseMapStreamCount( int index, int count ) const;
+      int _validateInverseMapStreamCount( int index, int count ) const;
       
       /*
        * Helper functions for building inverse maps for 
@@ -462,28 +448,31 @@ class BrookBonded : public BrookCommon {
        *
        **/
       
-      int gpuCalcInvMap( int posflag, int niparticles, int nints, int nparticles,
-                          int *particles, int nmaps, int counts[], float4 *invmaps[],
-                          int *nimaps );
+      int _gpuCalcInvMap( int posflag, int niparticles, int nints, int nparticles,
+                          int *particles, int nmaps, int counts[], float4 *invmaps[], int *nimaps );
       
-      void gpuPrintInvMaps( int nmaps, int nparticles, int counts[], float4 *invmap[], FILE* logFile );
+      void _gpuPrintInvMaps( int nmaps, int nparticles, int counts[], float4 *invmap[], FILE* logFile );
       
-      /* We are still plagued by kernel call overheads. This is for a big fat
+      /* 
+       * We are still plagued by kernel call overheads. This is for a big fat
        * merged inverse gather kernel:
        * Since we have 32 bit floats, we have 23 bits of mantissa or the largest
        * integer we can represent is 2^23. So it should be quite safe to add 
        * 100000 * n to the index where n is the stream in which we should do the
        * lookup. This assumes that nints < 100000, preferably nints << 100000
        * which should always be true
-       * */
-      int gpuCalcInvMap_merged( int nints, int nparticles, int *particles, int nmaps, int counts[], float4 *invmaps[], int *nimaps );
+       *
+       **/
+      int _gpuCalcInvMap_merged( int nints, int nparticles, int *particles, int nmaps, int counts[], float4 *invmaps[], int *nimaps );
       
-      /* Repacks the invmap streams for more efficient access in the
+      /* 
+       * Repacks the invmap streams for more efficient access in the
        * merged inverse gather kernel
        *
        * buf should be nimaps * nparticles large.
-       * */
-      int gpuRepackInvMap_merged( int nparticles, int nmaps, int *counts, float4 *invmaps[], float4 *buf );
+       *
+       **/
+      int _gpuRepackInvMap_merged( int nparticles, int nmaps, int *counts, float4 *invmaps[], float4 *buf );
       
 };
 
