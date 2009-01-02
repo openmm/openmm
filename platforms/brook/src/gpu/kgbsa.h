@@ -486,7 +486,6 @@ void kObcLoop2(
       float streamWidth, 
       float fstreamWidth,
       ::brook::stream posq, 
-      ::brook::stream atomicRadii, 
       ::brook::stream scaledAtomicRadii, 
       ::brook::stream bornForceFactor, 
       ::brook::stream bornForce1,

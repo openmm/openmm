@@ -1,0 +1,1586 @@
+
+/* -------------------------------------------------------------------------- *
+ *                                   OpenMM                                   *
+ * -------------------------------------------------------------------------- *
+ * This is part of the OpenMM molecular simulation toolkit originating from   *
+ * Simbios, the NIH National Center for Physics-Based Simulation of           *
+ * Biological Structures at Stanford, funded under the NIH Roadmap for        *
+ * Medical Research, grant U54 GM072970. See https://simtk.org.               *
+ *                                                                            *
+ * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Authors: Peter Eastman, Mark Friedrichs, Chris Bruns                       *
+ * Contributors:                                                              *
+ *                                                                            *
+ * Permission is hereby granted, free of charge, to any person obtaining a    *
+ * copy of this software and associated documentation files (the "Software"), *
+ * to deal in the Software without restriction, including without limitation  *
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,   *
+ * and/or sell copies of the Software, and to permit persons to whom the      *
+ * Software is furnished to do so, subject to the following conditions:       *
+ *                                                                            *
+ * The above copyright notice and this permission notice shall be included in *
+ * all copies or substantial portions of the Software.                        *
+ *                                                                            *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR *
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,   *
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL    *
+ * THE AUTHORS, CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,    *
+ * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR      *
+ * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE  *
+ * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
+ * -------------------------------------------------------------------------- */
+
+//124 FLOPS [??? total]
+kernel void bornSumInternal( float3 d1, float3 d2, float3 d3, float3 d4, float4 jAtomicRadiiScaled,
+                             float iAtomicRadii, out float4 bornSum<> ){
+
+   // ---------------------------------------------------------------------------------------
+
+   float4 r, rInverse, r2, r2Inverse;
+   float4 l_ij, l_ij2;
+   float4 u_ij, u_ij2;
+   float4 t3;
+   float4 logRatio, scaledRadiusJ2, rPlusScaledJ, rMinusScaledJ, rMinusScaledJAbs;
+   float4 iAtomicRadii4;
+   float4 diff_u2_l2;
+
+   const float bigValue      = 1000000.0f;
+   const float4 bigValue4    = float4( bigValue, bigValue, bigValue, bigValue );
+
+   const float smallValue    = 0.000001f;
+   const float4 smallValue4  = float4(  smallValue, smallValue, smallValue, smallValue );
+
+   const float4 zero4        = float4(  0.0f,  0.0f,  0.0f,  0.0f  );
+   const float4 one4         = float4(  1.0f,  1.0f,  1.0f,  1.0f  );
+
+   float4 mask;
+
+   // ---------------------------------------------------------------------------------------
+
+   iAtomicRadii4      = float4( iAtomicRadii, iAtomicRadii, iAtomicRadii, iAtomicRadii );
+
+   r2                 = float4( dot(d1, d1), dot( d2, d2 ), dot( d3, d3 ), dot( d4, d4 ) ); //20
+
+   // ---------------------------------------------------------------------------------------
+
+   // not needed for force calculation since deltaX = deltaY = deltaZ = 0, if r = 0
+   // r2 not masked -- assume for i = j, that 0 * infinity i 0; appears to work
+
+   mask               = r2 < smallValue4 ? zero4     : one4;
+ 
+   // ---------------------------------------------------------------------------------------
+
+   r                  = sqrt( r2 ); //4
+   rInverse           = rsqrt( r2 ); //8
+
+   rPlusScaledJ       = r + jAtomicRadiiScaled; //4
+   rMinusScaledJ      = r - jAtomicRadiiScaled; //4
+   rMinusScaledJAbs   = abs( rMinusScaledJ ); 
+
+//40
+   // ---------------------------------------------------------------------------------------
+
+   mask               = iAtomicRadii4 >= rPlusScaledJ     ? zero4         : mask;
+   l_ij               = iAtomicRadii4 >  rMinusScaledJAbs ? iAtomicRadii4 : rMinusScaledJAbs;
+
+   // ---------------------------------------------------------------------------------------
+
+   l_ij               = 1.0f/l_ij; //4
+   l_ij2              = l_ij*l_ij; //4
+
+   u_ij               = 1.0f/rPlusScaledJ; //4
+   u_ij2              = u_ij*u_ij; //4
+   diff_u2_l2         = u_ij2 - l_ij2; //4
+
+   logRatio           = log(u_ij/l_ij); //4
+//24
+
+   // ---------------------------------------------------------------------------------------
+
+   // terms associated w/ dL/dr & dU/dr are zero and not included
+
+   // Born radius term
+
+   bornSum            =   l_ij - u_ij + 0.5f*rInverse*logRatio + 0.25f*( r - jAtomicRadiiScaled*jAtomicRadiiScaled*rInverse)*diff_u2_l2; //10*4
+
+   t3                 = ( iAtomicRadii4 < (jAtomicRadiiScaled - r) ) ? 2.0f*( (1.0f/iAtomicRadii) - l_ij) : zero4; //12 for true, but don't know how to average so saying 0
+   bornSum           += t3; //4
+   bornSum           *= mask; //4
+
+//60
+}
+
+//???? FLOPS 
+kernel void kCalculateBornRadii( float numberOfAtoms, float roundedUpAtoms, float duplicationFactor, 
+                                 float streamWidth, float fstreamWidth, float3 posq[][], 
+                                 float2 scaledAtomicRadii[][], 
+                                 out float4 bornForce<> ){
+
+   // ---------------------------------------------------------------------------------------
+
+   // atomic radii: radius - dielectric offset 
+
+   float i1AtomicRadii, i2AtomicRadii, i3AtomicRadii, i4AtomicRadii;
+
+   // scaled atomic radii: scaleFactor*( radius - dielectric offset )
+
+   float  j1ScaledAtomicRadii, j2ScaledAtomicRadii, j3ScaledAtomicRadii, j4ScaledAtomicRadii;
+   float4 jScaledAtomicRadii;
+
+   // (Born radii**2)*BornForce*ObcChainForce
+
+   // i,j coordinates
+
+   float3 i1pos, i2pos, i3pos, i4pos; 
+   float3 j1pos, j2pos, j3pos, j4pos;
+
+   // delta coordinates
+
+   float3 d1, d2, d3, d4;
+
+   // indices
+
+   float2 iAtom; 
+
+   float forceIndex;
+
+   //This is forceIndex mod numberOfAtoms, the true i index
+
+   float4 de, bornSum;
+
+   float iAtomLinearIndex, jLinind; 
+   
+   float2 jAtom;
+   float jEnd, jStart, jBlock;
+   float whichRep;
+   float tmp;
+   float tmp2;
+
+
+   // ---------------------------------------------------------------------------------------
+
+   // constants
+
+   const float I_Unroll          = 4.0f;
+
+   // ---------------------------------------------------------------------------------------
+
+   // set linear index
+
+   iAtom                         = indexof( bornForce );
+   forceIndex                    = I_Unroll*( iAtom.x + iAtom.y*fstreamWidth );
+
+   iAtomLinearIndex              = fmod( forceIndex, roundedUpAtoms );
+
+   // ---------------------------------------------------------------------------------------
+
+   // set gather coordinates
+
+   iAtom.x                       = fmod(  iAtomLinearIndex, streamWidth );
+   iAtom.y                       = round( (iAtomLinearIndex - iAtom.x)/streamWidth );
+   
+   // ---------------------------------------------------------------------------------------
+
+   // fetch position, (atomic radius - dielectric offset )
+
+   i1pos                         = posq[                    iAtom ];
+   i1AtomicRadii                 = scaledAtomicRadii[       iAtom ].y;
+
+   iAtom.x                      += 1;
+   i2pos                         = posq[                    iAtom ];
+   i2AtomicRadii                 = scaledAtomicRadii[       iAtom ].y;
+
+   iAtom.x                      += 1;
+   i3pos                         = posq[                    iAtom ];
+   i3AtomicRadii                 = scaledAtomicRadii[       iAtom ].y;
+
+   iAtom.x                      += 1;
+   i4pos                         = posq[                    iAtom ];
+   i4AtomicRadii                 = scaledAtomicRadii[       iAtom ].y;
+
+   bornForce                     = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+
+   // inner loop indices setup
+   //changed the following instruction for rounding issues on some ASICs
+   //whichRep                      = floor( forceIndex / roundedUpAtoms );
+
+   tmp                           = fmod(forceIndex, roundedUpAtoms);
+   whichRep                      = round((forceIndex - tmp)/roundedUpAtoms);
+   
+   jBlock                        = 1 + round( (numberOfAtoms-fmod( numberOfAtoms, (duplicationFactor*streamWidth) )) / (duplicationFactor*streamWidth) );
+   
+   jStart                        = whichRep*jBlock;
+
+   jEnd                          = ( whichRep > duplicationFactor - 1.5f ) ? 999999.0f : (jStart + jBlock);
+
+   jAtom.y                       = jStart;
+   jLinind                       = jAtom.y*streamWidth;
+
+   // ---------------------------------------------------------------------------------------
+
+   while ( jAtom.y < jEnd && ( numberOfAtoms - jLinind )  > 0.9f ){
+      jAtom.x = 0.0f;
+      while ( jAtom.x < streamWidth && ( numberOfAtoms - jLinind ) > 0.9f ){ 
+
+      // ---------------------------------------------------------------------------------------
+
+      // gather required values
+          
+         j1ScaledAtomicRadii  = scaledAtomicRadii[       jAtom ].x;
+         j1pos                = posq[                    jAtom ];
+         jAtom.x             += 1.0f;
+
+         j2ScaledAtomicRadii  = scaledAtomicRadii[       jAtom ].x;
+         j2pos                = posq[                    jAtom ];
+         jAtom.x             += 1.0f;
+
+         j3ScaledAtomicRadii  = scaledAtomicRadii[       jAtom ].x;
+         j3pos                = posq[                    jAtom ];
+         jAtom.x             += 1.0f;
+
+         j4ScaledAtomicRadii  = scaledAtomicRadii[       jAtom ].x;
+         j4pos                = posq[                    jAtom ];
+         jAtom.x             += 1.0f;
+         
+         jScaledAtomicRadii   = float4( j1ScaledAtomicRadii,  j2ScaledAtomicRadii, j3ScaledAtomicRadii, j4ScaledAtomicRadii );
+   
+         // ---------------------------------------------------------------------------------------
+   
+         // First set of 4 -- i == 1
+   
+         d1                 = j1pos - i1pos; //3
+         d2                 = j2pos - i1pos; //3
+         d3                 = j3pos - i1pos; //3
+         d4                 = j4pos - i1pos; //3
+   
+         // i = 1
+
+         bornSumInternal( d1, d2, d3, d4, jScaledAtomicRadii, i1AtomicRadii, bornSum ); //112 : 368(?)
+   
+         bornForce.x       += bornSum.x + bornSum.y + bornSum.z + bornSum.w; //4
+   
+         // ---------------------------------------------------------------------------------------
+
+         // i = 2
+
+         d1                 = j1pos - i2pos; //3
+         d2                 = j2pos - i2pos; //3
+         d3                 = j3pos - i2pos; //3
+         d4                 = j4pos - i2pos; //3
+   
+         bornSumInternal( d1, d2, d3, d4, jScaledAtomicRadii, i2AtomicRadii, bornSum );//112 : 368(?)
+  
+         bornForce.y       += bornSum.x + bornSum.y + bornSum.z + bornSum.w; //4
+   
+         // ---------------------------------------------------------------------------------------
+
+         // i = 3
+
+         d1                 = j1pos - i3pos; //3
+         d2                 = j2pos - i3pos; //3
+         d3                 = j3pos - i3pos; //3
+         d4                 = j4pos - i3pos; //3
+
+         bornSumInternal( d1, d2, d3, d4, jScaledAtomicRadii, i3AtomicRadii, bornSum );//112 : 368(?)
+   
+         bornForce.z       += bornSum.x + bornSum.y + bornSum.z + bornSum.w; //4
+   
+         // ---------------------------------------------------------------------------------------
+
+         // i = 4
+
+         d1                 = j1pos - i4pos; //3
+         d2                 = j2pos - i4pos; //3
+         d3                 = j3pos - i4pos; //3
+         d4                 = j4pos - i4pos; //3
+
+         bornSumInternal( d1, d2, d3, d4, jScaledAtomicRadii, i4AtomicRadii, bornSum );//112 : 368(?)
+   
+         bornForce.w       += bornSum.x + bornSum.y + bornSum.z + bornSum.w; //4
+
+         // ---------------------------------------------------------------------------------------
+   
+         // increment linear index by 4   
+   
+         jLinind           += 4.0f;
+   
+      }
+      jAtom.y       += 1.0f;
+   }
+}
+
+kernel void kPostCalculateBornRadii_nobranch( 
+      float repfac, 
+      float atomStreamWidth, 
+      float pStreamWidth,
+      float natoms,
+      float roundNatoms,
+      float iUnroll,
+      float conversion,
+      float mergeNonObcForces,
+      float4 pstream1[][], 
+      float  atomicRadii<>,
+      out float bornRadii<>,
+      out float obcChain<> ){
+
+   // ---------------------------------------------------------------------------------------
+
+   float atomIndex, forceIndex, qIndex, qOff;
+   float2 pindex;
+   float i;
+   float sum2, sum3, bornSum, tanhSum, atomicRadiiOffset, obcIntermediate;
+   float4 o1;
+   float tmp;
+
+   float2 iAtom; 
+   float4 forces;
+   float expPlus, expMinus;
+
+   // ---------------------------------------------------------------------------------------
+
+   // constants -- OBC Type II
+
+   const float alphaObc          = 1.0f;
+   const float betaObc           = 0.8f;
+   const float gammaObc          = 4.85f;
+   const float dielectricOffset  = 0.009f;
+
+   // ---------------------------------------------------------------------------------------
+   
+   // given atom index find force indices and streams
+
+   pindex      = indexof( obcChain );
+   atomIndex   = pindex.x + pindex.y*atomStreamWidth;
+   forceIndex  = atomIndex;
+
+   // add current forces in inStream to forces stored in pstreams
+   // the .w entry is Born sum values; it will be used to calculate the
+   // Born radii and obcChain term
+
+   bornSum  = 0.0f;
+   
+   // sum over j-loop 'duplications' by gathering from pstreams
+
+   for( i = 0.0f; i < repfac; i += 1.0f ){
+
+      qIndex            = round( (forceIndex - fmod( forceIndex, iUnroll))/iUnroll );
+      qOff              = forceIndex - iUnroll*qIndex;
+      pindex.y          = round( (qIndex - fmod( qIndex, pStreamWidth ))/pStreamWidth );
+      pindex.x          = qIndex - pindex.y*pStreamWidth;
+
+      o1                = pstream1[ pindex ];
+      
+      tmp               = qOff < 0.5f ? o1.x : o1.y;
+      tmp               = qOff < 1.5f ? tmp : o1.z;
+      tmp               = qOff < 2.5f ? tmp : o1.w;
+      
+      bornSum          += tmp;
+        
+      forceIndex       += roundNatoms;
+      
+   }
+
+   // compute Born radii and ObcChain
+
+   atomicRadiiOffset            = atomicRadii - dielectricOffset;
+
+   bornSum                     *= 0.5f*atomicRadiiOffset;
+
+   sum2                         = bornSum*bornSum;
+   sum3                         = bornSum*sum2;
+
+   // Tanh does not exist? 
+   // calculate [ exp(x) - exp(-x) ]/[ exp(x) + exp(-x) ]
+
+   // tanhSum                      = tanh( bornSum - betaObc*sum2 + gammaObc*sum3 );
+
+   tanhSum                      = bornSum - betaObc*sum2 + gammaObc*sum3;
+   expPlus                      = exp( tanhSum );
+   expMinus                     = 1.0f/expPlus;
+   tanhSum                      = ( expPlus - expMinus )/( expPlus + expMinus );
+    
+   bornRadii                    = 1.0f/( (1.0f/(atomicRadiiOffset)) - tanhSum/atomicRadii );  
+ 
+   obcIntermediate              = atomicRadiiOffset*( alphaObc - 2.0f*betaObc*bornSum + 3.0f*gammaObc*sum2 );
+   obcChain                     = (1.0f - tanhSum*tanhSum)*obcIntermediate/atomicRadii;
+   if( atomIndex >= natoms ){
+      bornRadii = 0.0f;
+      obcChain  = 0.0f;
+   }
+
+}
+
+kernel void loop1Internal( float3 d1, float3 d2, float3 d3, float3 d4, float4 jBornR,
+                           float4 jQ, float iBornR, float iQ, out float4 dGpol_dr<>,
+                           out float4 dGpol_dalpha2_ij<> ){
+ 
+   // ---------------------------------------------------------------------------------------
+
+   float4 r2, alpha2_ij, D_ij, expTerm, denominator2, denominator, Gpol;
+
+   // ---------------------------------------------------------------------------------------
+
+   r2                 = float4( dot(d1, d1), dot( d2, d2 ), dot( d3, d3 ), dot( d4, d4 ) );
+   alpha2_ij          = jBornR*iBornR;
+   D_ij               = r2/(4.0f*alpha2_ij);
+   expTerm            = exp( -D_ij );
+   denominator2       = r2 + alpha2_ij*expTerm; 
+   denominator        = sqrt( denominator2 ); 
+   Gpol               = jQ/denominator; 
+   Gpol              *= iQ;
+   dGpol_dr           = -Gpol*( 1.0f - 0.25f*expTerm )/denominator2;  
+   dGpol_dalpha2_ij   = -0.5f*Gpol*expTerm*( 1.0f + D_ij )*jBornR/denominator2;
+
+}
+
+/* ---------------------------------------------------------------------------------------
+
+   Calculate nonpolar ACE term (Simbios) 
+
+   bornRadius:          Born radius
+   vdwRadius:           Vdw radius
+   duplicationFactor:   duplication factor
+   aceForce:            ACE term
+
+   --------------------------------------------------------------------------------------- */
+
+kernel void kAceNonPolarLoop1( float iBornRadius, float iVdwRadius, float duplicationFactor,
+                                out float aceForce<> ){
+
+   // ---------------------------------------------------------------------------------------
+
+   // nonpolar term
+
+   float iSurface;
+   float iAceTerm;
+
+   // ---------------------------------------------------------------------------------------
+
+   // constants
+
+   // solvent radius
+
+   const float probeRadius       = 0.14f;
+
+   // PI*4*6*0.0054*1000 (0.0054=asolv from Tinker)
+   //const float PI_24_aI          = -0.3694512961;
+   const float PI_24_aI          = -407.1504079f;
+
+   // ---------------------------------------------------------------------------------------
+
+   // etch i position and partial charge
+
+   // e = ai * term * (ri+probe)**2 * (ri/rb)**6
+   // (drbi) = drb(i) - 6.0fd0*e/rb
+
+   // (rI+probe)**2
+
+   iSurface                     = (iVdwRadius+probeRadius);
+   iSurface                     = iSurface*iSurface;
+
+   // (rI/rB)**6
+
+   iAceTerm                     = iVdwRadius/iBornRadius;
+   iAceTerm                     = iAceTerm*iAceTerm*iAceTerm;
+   iAceTerm                     = iAceTerm*iAceTerm;
+   aceForce                     = iSurface*iAceTerm*PI_24_aI/(duplicationFactor*iBornRadius);
+
+}
+
+/* ---------------------------------------------------------------------------------------
+
+   Calculate first loop force terms  (Simbios) 
+
+   numberOfAtoms:       no. of atoms
+   roundedUpAtoms:      rounded up number of atoms -- accounts for unrolling
+   duplicationFactor:   number of threads for inner loop
+   streamWidth:         atom stream width
+   fstreamWidth:        force stream width (output -- i-unroll)
+   soluteDielectric:    solute dielectric
+   solventDielectric:   solvent dielectric
+   includeAce:          include ACE term 
+   posq:                atom positions and charge
+   bornRadii:           Born radii
+   nonpolarForce:       nonpolar force (0 if nonpolar not included, else
+                        ACE value)
+   bornForce1:          i-unroll first force component, including dBornR/dr in .w
+   bornForce2:          i-unroll second force component, including dBornR/dr in .w 
+   bornForce3:          i-unroll first force component, including dBornR/dr in .w
+   bornForce4:          i-unroll second force component, including dBornR/dr in .w 
+
+   --------------------------------------------------------------------------------------- */
+
+kernel void kObcLoop1( float numberOfAtoms, float roundedUpAtoms, float duplicationFactor, 
+                       float streamWidth, float fstreamWidth, float soluteDielectric,
+                       float solventDielectric, float includeAce,
+                       float3 posq[][], float  bornRadii[][], float2  atomicRadii[][], 
+                       out float4 bornForce1<>, out float4 bornForce2<>,
+                       out float4 bornForce3<>, out float4 bornForce4<> ){
+
+   // ---------------------------------------------------------------------------------------
+
+   // Born radii
+
+   float i1BornR, i2BornR, i3BornR, i4BornR;
+   float j1BornR, j2BornR, j3BornR, j4BornR;
+   float4 jBornR;
+
+   // atomic radii
+
+   float i1AtomicR, i2AtomicR, i3AtomicR, i4AtomicR;
+
+   // i,j coordinates
+
+   float3 i1Pos, i2Pos, i3Pos, i4Pos; 
+   float3 j1Pos, j2Pos, j3Pos, j4Pos;
+   float4 j1PosQ, j2PosQ, j3PosQ, j4PosQ;
+
+   // i, j partial charges
+
+   float i1Q, i2Q, i3Q, i4Q;
+   float j1Q, j2Q, j3Q, j4Q;
+   float4 jQ;
+
+   float aceForce;
+  
+   // delta coordinates
+
+   float3 d1, d2, d3, d4;
+
+   // intermediate terms
+
+   float4 dGpol_dr, dGpol_dalpha2_ij;
+
+   // indices
+
+   float2 iAtom; 
+   float forceIndex;
+
+   // This is forceIndex mod numberOfAtoms, the true i index
+
+   float iAtomLinearIndex, jLinind; 
+
+   float2 jAtom;
+   float jEnd, jStart, jBlock;
+   float whichRep;
+   float tmp; 
+
+   // ---------------------------------------------------------------------------------------
+
+   // electricConstant           = -166.0f2691;
+   // preFactor                  = 2.0f*electricConstant*(1.0f - (1.0f/waterDielectric))
+   float preFactor               = -332.05382f;
+   const float I_Unroll          = 4.0f;
+   const float3 zero3            = float3( 0.0f, 0.0f, 0.0f );
+
+   // ---------------------------------------------------------------------------------------
+
+   preFactor                    *= ( (1.0f/soluteDielectric) - (1.0f/solventDielectric) );
+
+   iAtom                         = indexof( bornForce1 );
+   forceIndex                    = I_Unroll*( iAtom.x + iAtom.y*fstreamWidth );
+
+   iAtomLinearIndex              = fmod( forceIndex, roundedUpAtoms );
+
+   // ---------------------------------------------------------------------------------------
+
+   // set gather index
+
+   iAtom.x                       = fmod(  iAtomLinearIndex, streamWidth );
+   iAtom.y                       = round( (iAtomLinearIndex - fmod(iAtomLinearIndex, streamWidth ))/streamWidth );
+
+   // ---------------------------------------------------------------------------------------
+
+   // etch i1 position and partial charge
+
+   jQ                            = posq[          iAtom ];
+   i1Pos                         = jQ.xyz;
+   i1Q                           = atomicRadii[   iAtom ].y;
+   i1Q                          *= preFactor;
+   i1BornR                       = bornRadii[     iAtom ];
+   i1AtomicR                     = atomicRadii[   iAtom ].x;
+   kAceNonPolarLoop1( i1BornR, i1AtomicR, duplicationFactor, aceForce );
+   bornForce1.xyz                = zero3;
+   bornForce1.w                  = includeAce > 0.5f ? aceForce : 0.0f;
+
+   // ---------------------------------------------------------------------------------------
+
+   // etch i2 position and partial charge
+
+   iAtom.x                      += 1;
+   jQ                            = posq[          iAtom ];
+   i2Pos                         = jQ.xyz;
+   i2Q                           = atomicRadii[   iAtom ].y;
+   i2Q                          *= preFactor;
+   i2BornR                       = bornRadii[     iAtom ];
+   i2AtomicR                     = atomicRadii[   iAtom ].x;
+   kAceNonPolarLoop1( i2BornR, i2AtomicR, duplicationFactor, aceForce );
+   bornForce2.xyz                = zero3;
+   bornForce2.w                  = includeAce > 0.5f ? aceForce : 0.0f;
+
+   // ---------------------------------------------------------------------------------------
+
+   // etch i3 position and partial charge
+
+   iAtom.x                      += 1;
+   jQ                            = posq[          iAtom ];
+   i3Pos                         = jQ.xyz;
+   i3Q                           = atomicRadii[   iAtom ].y;
+   i3Q                          *= preFactor;
+   i3BornR                       = bornRadii[     iAtom ];
+   i3AtomicR                     = atomicRadii[   iAtom ].x;
+   kAceNonPolarLoop1( i3BornR, i3AtomicR, duplicationFactor, aceForce );
+   bornForce3.xyz                = zero3;
+   bornForce3.w                  = includeAce > 0.5f ? aceForce : 0.0f;
+
+   // ---------------------------------------------------------------------------------------
+
+   // etch i4 position and partial charge
+
+   iAtom.x                      += 1;
+
+   jQ                            = posq[          iAtom ];
+   i4Pos                         = jQ.xyz;
+   i4Q                           = atomicRadii[   iAtom ].y;
+   i4Q                          *= preFactor;
+   i4BornR                       = bornRadii[     iAtom ];
+   i4AtomicR                     = atomicRadii[   iAtom ].x;
+   kAceNonPolarLoop1( i4BornR, i4AtomicR, duplicationFactor, aceForce );
+   bornForce4.xyz                = zero3;
+   bornForce4.w                  = includeAce > 0.5f ? aceForce : 0.0f;
+
+   // ---------------------------------------------------------------------------------------
+
+   // inner loop setup
+
+   // if dupFac == 4, I_UnRoll =2, then breaking inner loop into two segments
+   // to increase number of threads in flight
+
+   // forceStreamSz = N*RepFac/I_UnRoll
+   // forceIndex       = I_UnRoll*( a.x + a.y*forceStreamSz )
+   // whichRep      = 0 or 1
+   // jBlock        = 1 + floor[ N/(duplicationFactor*streamWidth) ]
+
+   //changed the following instruction for rounding issues on some ASICs
+   //whichRep                     = floor( forceIndex / roundedUpAtoms );
+   
+   tmp = fmod(forceIndex, roundedUpAtoms);
+   whichRep = round((forceIndex - tmp)/roundedUpAtoms);
+   
+   jBlock                       = 1 + floor( numberOfAtoms/(duplicationFactor*streamWidth ) );
+   jStart                       = whichRep*jBlock;
+
+   jEnd                         = ( whichRep > duplicationFactor - 1.5f ) ? 999999.0f : (jStart + jBlock);
+
+   jAtom.y                      = jStart;
+   jLinind                      = jAtom.y*streamWidth;
+
+   // ---------------------------------------------------------------------------------------
+
+   while ( jAtom.y < jEnd && ( numberOfAtoms - jLinind )  > 0.9f ){
+      jAtom.x = 0.0f;
+      while ( jAtom.x < streamWidth && ( numberOfAtoms - jLinind ) > 0.9f ) {
+
+         // ---------------------------------------------------------------------------------------
+
+         // gather required values
+
+         j1Pos              = posq[      jAtom ];
+         j1Q                = atomicRadii[   jAtom ].y;
+         j1BornR            = bornRadii[ jAtom ];
+         jAtom.x           += 1.0f;
+
+         j2Pos              = posq[      jAtom ];
+         j2Q                = atomicRadii[   jAtom ].y;
+         j2BornR            = bornRadii[ jAtom ];
+         jAtom.x           += 1.0f;
+
+         j3Pos              = posq[      jAtom ];
+         j3Q                = atomicRadii[   jAtom ].y;
+         j3BornR            = bornRadii[ jAtom ];
+         jAtom.x           += 1.0f;
+
+         j4Pos              = posq[      jAtom ];
+         j4Q                = atomicRadii[   jAtom ].y;
+         j4BornR            = bornRadii[ jAtom ];
+         jAtom.x           += 1.0f;
+
+         jBornR             = float4( j1BornR, j2BornR, j3BornR, j4BornR );
+         jQ                 = float4( j1Q, j2Q, j3Q, j4Q );
+
+         // ---------------------------------------------------------------------------------------
+
+         // i == 1
+
+         d1                 = i1Pos - j1Pos;
+         d2                 = i1Pos - j2Pos;
+         d3                 = i1Pos - j3Pos;
+         d4                 = i1Pos - j4Pos;
+
+         loop1Internal( d1, d2, d3, d4, jBornR, jQ, i1BornR, i1Q, dGpol_dr, dGpol_dalpha2_ij );
+ 
+         bornForce1.xyz    += dGpol_dr.x*d1; 
+         bornForce1.xyz    += dGpol_dr.y*d2; 
+         bornForce1.xyz    += dGpol_dr.z*d3; 
+         bornForce1.xyz    += dGpol_dr.w*d4; 
+
+         bornForce1.w      += dGpol_dalpha2_ij.x + dGpol_dalpha2_ij.y + dGpol_dalpha2_ij.z + dGpol_dalpha2_ij.w;
+
+         // ---------------------------------------------------------------------------------------
+
+         // i == 2
+
+         d1                 = i2Pos - j1Pos;
+         d2                 = i2Pos - j2Pos;
+         d3                 = i2Pos - j3Pos;
+         d4                 = i2Pos - j4Pos;
+
+         loop1Internal( d1, d2, d3, d4, jBornR, jQ, i2BornR, i2Q, dGpol_dr, dGpol_dalpha2_ij );
+
+         bornForce2.xyz    += dGpol_dr.x*d1; 
+         bornForce2.xyz    += dGpol_dr.y*d2; 
+         bornForce2.xyz    += dGpol_dr.z*d3; 
+         bornForce2.xyz    += dGpol_dr.w*d4; 
+
+         bornForce2.w      += dGpol_dalpha2_ij.x + dGpol_dalpha2_ij.y + dGpol_dalpha2_ij.z + dGpol_dalpha2_ij.w;
+
+         // ---------------------------------------------------------------------------------------
+
+         // i == 3
+
+         d1                 = i3Pos - j1Pos;
+         d2                 = i3Pos - j2Pos;
+         d3                 = i3Pos - j3Pos;
+         d4                 = i3Pos - j4Pos;
+
+         loop1Internal( d1, d2, d3, d4, jBornR, jQ, i3BornR, i3Q, dGpol_dr, dGpol_dalpha2_ij );
+
+         bornForce3.xyz    += dGpol_dr.x*d1; 
+         bornForce3.xyz    += dGpol_dr.y*d2; 
+         bornForce3.xyz    += dGpol_dr.z*d3; 
+         bornForce3.xyz    += dGpol_dr.w*d4; 
+
+         bornForce3.w      += dGpol_dalpha2_ij.x + dGpol_dalpha2_ij.y + dGpol_dalpha2_ij.z + dGpol_dalpha2_ij.w;
+
+         // ---------------------------------------------------------------------------------------
+
+         // i == 4
+
+         d1                 = i4Pos - j1Pos;
+         d2                 = i4Pos - j2Pos;
+         d3                 = i4Pos - j3Pos;
+         d4                 = i4Pos - j4Pos;
+
+         loop1Internal( d1, d2, d3, d4, jBornR, jQ, i4BornR, i4Q, dGpol_dr, dGpol_dalpha2_ij );
+
+         bornForce4.xyz    += dGpol_dr.x*d1; 
+         bornForce4.xyz    += dGpol_dr.y*d2; 
+         bornForce4.xyz    += dGpol_dr.z*d3; 
+         bornForce4.xyz    += dGpol_dr.w*d4; 
+
+         bornForce4.w      += dGpol_dalpha2_ij.x + dGpol_dalpha2_ij.y + dGpol_dalpha2_ij.z + dGpol_dalpha2_ij.w;
+
+         // ---------------------------------------------------------------------------------------
+
+         jLinind    += 4.0f;
+      }
+      jAtom.y       += 1.0f;      
+   }
+
+}
+
+// The inner loop by definition creates divergent paths.  Chances are
+// fair that we will take all sides of the branch anyway, so this
+// verion uses manual predication
+
+kernel void kPostObcLoop1_nobranch( 
+    float repfac, 
+    float atomStreamWidth, 
+    float pStreamWidth,
+    float natoms,
+    float roundNatoms,
+    float iUnroll,
+    float4 pstream1[][], 
+    float4 pstream2[][], 
+    float4 pstream3[][], 
+    float4 pstream4[][], 
+    float obcChain<>, 
+    float bornRadii<>, 
+    out float4 outstream<>,
+    out float bornRadii2Force<> )
+{
+    
+    // ---------------------------------------------------------------------------------------
+    
+    float atomIndex, forceIndex, qIndex, qOff;
+    float2 pindex;
+    float i;
+    float4 o1,o2,o3,o4;
+    float4 tmp;
+    
+    // given atom index find force indices and streams
+    
+    pindex      = indexof( outstream );
+    atomIndex   = pindex.x + pindex.y*atomStreamWidth;
+    forceIndex  = atomIndex;
+    
+    outstream  = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+    
+    for( i = 0.0f; i < repfac; i += 1.0f ){
+        
+        // qIndex            = floor( forceIndex/iUnroll );
+        qIndex            = round( (forceIndex - fmod( forceIndex, iUnroll))/iUnroll );
+        
+        qOff              = forceIndex - iUnroll*qIndex;
+        
+        // pindex.y          = floor( qIndex/ pStreamWidth );
+        pindex.y          = round( (qIndex - fmod( qIndex, pStreamWidth ))/pStreamWidth );
+        
+        // pindex.x          = qIndex - pindex.y*pStreamWidth + qOff;
+        pindex.x          = qIndex - pindex.y*pStreamWidth;
+
+        o1 = pstream1[ pindex ];
+        o2 = pstream2[ pindex ];
+        o3 = pstream3[ pindex ];
+        o4 = pstream4[ pindex ];
+
+        tmp = qOff < 0.5f ? o1 : o2;
+        tmp = qOff < 1.5f ? tmp : o3;
+        tmp = qOff < 2.5f ? tmp : o4;
+        
+        outstream += tmp;
+        
+        forceIndex += roundNatoms;
+    }
+    
+    bornRadii2Force  = obcChain*bornRadii*bornRadii*outstream.w;
+}
+
+
+//156 FLOPS [172 total]
+kernel void loop2Internal( float3 d1, float3 d2, float3 d3, float3 d4, float4 jAtomicRadiiScaled,
+                           float bornForce, float iAtomicRadii, out float4 de<> ){
+
+   // ---------------------------------------------------------------------------------------
+
+   float4 r, rInverse, r2, r2Inverse;
+   float4 l_ij, l_ij2;
+   float4 u_ij, u_ij2;
+   float4 t3;
+   float4 logRatio, scaledRadiusJ2, rPlusScaledJ, rMinusScaledJ, rMinusScaledJAbs;
+   float4 iAtomicRadii4;
+   float4 diff_u2_l2;
+
+   const float bigValue      = 1000000.0f;
+   const float4 bigValue4    = float4( bigValue, bigValue, bigValue, bigValue );
+
+   const float smallValue    = 0.000001f;
+   const float4 smallValue4  = float4(  smallValue, smallValue, smallValue, smallValue );
+
+   const float4 zero4        = float4(  0.0f,  0.0f,  0.0f,  0.0f  );
+   const float4 one4         = float4(  1.0f,  1.0f,  1.0f,  1.0f  );
+
+   float4 mask;
+
+   // ---------------------------------------------------------------------------------------
+
+   iAtomicRadii4      = float4( iAtomicRadii, iAtomicRadii, iAtomicRadii, iAtomicRadii );
+
+   r2                 = float4( dot(d1, d1), dot( d2, d2 ), dot( d3, d3 ), dot( d4, d4 ) ); //20
+
+   // ---------------------------------------------------------------------------------------
+
+   // not needed for force calculation since deltaX = deltaY = deltaZ = 0, if r = 0
+   // r2 not masked -- assume for i = j, that 0 * infinity i 0; appears to work
+
+   mask               = r2 < smallValue4 ? zero4     : one4;
+   // r2                 = r2 < smallValue4 ? bigValue4 : r2;
+ 
+   // ---------------------------------------------------------------------------------------
+
+   r                  = sqrt( r2 ); //4
+   rInverse           = rsqrt( r2 ); //8
+   r2Inverse          = rInverse*rInverse; //4
+
+   rPlusScaledJ       = r + jAtomicRadiiScaled; //4
+   rMinusScaledJ      = r - jAtomicRadiiScaled; //4
+   rMinusScaledJAbs   = abs( rMinusScaledJ ); 
+
+   // ---------------------------------------------------------------------------------------
+
+   mask               = iAtomicRadii4 >= rPlusScaledJ     ? zero4         : mask;
+   l_ij               = iAtomicRadii4 >  rMinusScaledJAbs ? iAtomicRadii4 : rMinusScaledJAbs;
+
+   // ---------------------------------------------------------------------------------------
+
+   l_ij               = 1.0f/l_ij; //4
+   l_ij2              = l_ij*l_ij; //4
+
+   u_ij               = 1.0f/rPlusScaledJ; //4
+   u_ij2              = u_ij*u_ij; //4
+   diff_u2_l2         = u_ij2 - l_ij2; //4
+
+   scaledRadiusJ2     = jAtomicRadiiScaled*jAtomicRadiiScaled; //4
+   logRatio           = log(u_ij/l_ij); //4
+
+   // terms associated w/ dL/dr & dU/dr are zero and not included
+
+   t3                 = -0.125f*(1.0f + scaledRadiusJ2*r2Inverse)*diff_u2_l2 + 0.25f*logRatio*r2Inverse; //7*4
+
+   de                 = mask*bornForce*t3*rInverse; //12
+
+// de = float4( 1.0f, 1.0f, 1.0f, 1.0f );
+// de = scaledRadiusJ2;
+// de = mask*t3;
+// de = mask*rPlusScaledJ;
+// de = mask*r2;
+// de = mask;
+// de = mask*rInverse;
+// de = mask*bornForce;
+
+   // Born radius term
+
+   // bornSum            =   l_ij - u_ij + 0.25*r*diff_u2_l2 + 0.5f*rInverse*logRatio - (0.25*jAtomicRadiiScaled*jAtomicRadiiScaled*rInverse)*diff_u2_l2;
+/*
+   bornSum            =   l_ij - u_ij + 0.5f*rInverse*logRatio + 0.25f*( r - jAtomicRadiiScaled*jAtomicRadiiScaled*rInverse)*diff_u2_l2; //10*4
+
+   t3                 = ( iAtomicRadii4 < (jAtomicRadiiScaled - r) ) ? 2.0f*( (1.0f/iAtomicRadii) - l_ij) : zero4; //12 for true, but don't know how to average so saying 0
+   bornSum           += t3; //4
+   bornSum           *= mask; //4
+*/
+
+}
+
+kernel void loop2InternalR2( float4 r2, float4 jAtomicRadiiScaled,
+                             float bornForce, float iAtomicRadii, out float4 de<>, out float4 bornSum<> ){
+
+   // ---------------------------------------------------------------------------------------
+
+   float4 r, rInverse, r2Inverse;
+   float4 l_ij, l_ij2;
+   float4 u_ij, u_ij2;
+   float4 t3;
+   float4 logRatio, scaledRadiusJ2, rPlusScaledJ, rMinusScaledJ, rMinusScaledJAbs;
+   float4 iAtomicRadii4;
+   float4 diff_u2_l2;
+
+   const float bigValue      = 1000000.0f;
+   const float4 bigValue4    = float4( bigValue, bigValue, bigValue, bigValue );
+
+   const float smallValue    = 0.000001f;
+   const float4 smallValue4  = float4(  smallValue, smallValue, smallValue, smallValue );
+
+   const float4 zero4        = float4(  0.0f,  0.0f,  0.0f,  0.0f  );
+   const float4 one4         = float4(  1.0f,  1.0f,  1.0f,  1.0f  );
+
+   float4 mask;
+
+   // ---------------------------------------------------------------------------------------
+
+   iAtomicRadii4      = float4( iAtomicRadii, iAtomicRadii, iAtomicRadii, iAtomicRadii );
+
+   // ---------------------------------------------------------------------------------------
+
+   // not needed for force calculation since deltaX = deltaY = deltaZ = 0, if r = 0
+   // r2 not masked -- assume for i = j, that 0 * infinity i 0; appears to work
+
+   mask               = r2 < smallValue4 ? zero4     : one4;
+   // r2                 = r2 < smallValue4 ? bigValue4 : r2;
+ 
+   // ---------------------------------------------------------------------------------------
+
+   r                  = sqrt( r2 );
+   rInverse           = rsqrt( r2 );
+   r2Inverse          = rInverse*rInverse;
+
+   rPlusScaledJ       = r + jAtomicRadiiScaled;
+   rMinusScaledJ      = r - jAtomicRadiiScaled;
+   rMinusScaledJAbs   = abs( rMinusScaledJ );
+
+   // ---------------------------------------------------------------------------------------
+
+   mask               = iAtomicRadii4 >= rPlusScaledJ     ? zero4         : mask;
+   l_ij               = iAtomicRadii4 >  rMinusScaledJAbs ? iAtomicRadii4 : rMinusScaledJAbs;
+
+   // ---------------------------------------------------------------------------------------
+
+   l_ij               = 1.0f/l_ij;
+   l_ij2              = l_ij*l_ij;
+
+   u_ij               = 1.0f/rPlusScaledJ;
+   u_ij2              = u_ij*u_ij;
+   diff_u2_l2         = u_ij2 - l_ij2;
+
+   scaledRadiusJ2     = jAtomicRadiiScaled*jAtomicRadiiScaled;
+   logRatio           = log(u_ij/l_ij);
+
+   // terms associated w/ dL/dr & dU/dr are zero and not included
+
+   t3                 = -0.125f*(1.0f + scaledRadiusJ2*r2Inverse)*diff_u2_l2 + 0.25f*logRatio*r2Inverse;
+
+   de                 = mask*bornForce*t3*rInverse;
+
+// de = float4( 1.0f, 1.0f, 1.0f, 1.0f );
+// de = scaledRadiusJ2;
+// de = mask*t3;
+// de = mask*rPlusScaledJ;
+// de = mask*r2;
+// de = mask;
+// de = mask*rInverse;
+// de = mask*bornForce;
+
+   // Born radius term
+
+   // bornSum            =   l_ij - u_ij + 0.25*r*diff_u2_l2 + 0.5f*rInverse*logRatio - (0.25*jAtomicRadiiScaled*jAtomicRadiiScaled*rInverse)*diff_u2_l2;
+   bornSum            =   l_ij - u_ij + 0.5f*rInverse*logRatio + 0.25f*( r - jAtomicRadiiScaled*jAtomicRadiiScaled*rInverse)*diff_u2_l2;
+
+   t3                 = ( iAtomicRadii4 < (jAtomicRadiiScaled - r) ) ? 2.0f*( (1.0f/iAtomicRadii) - l_ij) : zero4;
+   bornSum           += t3;
+   bornSum           *= mask;
+
+}
+
+/* This is a copy of loop2Internal(), but w/ the calculation of bornSum removed */
+
+//112 FLOPS
+kernel void loop2InternalNoSum( float3 d1, float3 d2, float3 d3, float3 d4, float4 jAtomicRadiiScaled,
+                                float bornForce, float iAtomicRadii, out float4 de<> ){
+
+   // ---------------------------------------------------------------------------------------
+
+   float4 r, rInverse, r2, r2Inverse;
+   float4 l_ij, l_ij2;
+   float4 u_ij, u_ij2;
+   float4 t3;
+   float4 logRatio, scaledRadiusJ2, rPlusScaledJ, rMinusScaledJ, rMinusScaledJAbs;
+   float4 iAtomicRadii4;
+
+   const float bigValue      = 1000000.0f;
+   const float4 bigValue4    = float4( bigValue, bigValue, bigValue, bigValue );
+
+   const float smallValue   = 0.000001f;
+   const float4 smallValue4 = float4(  smallValue, smallValue, smallValue, smallValue );
+   
+   const float4 zero4        = float4(  0.0f,  0.0f,  0.0f,  0.0f  );
+   const float4 one4         = float4(  1.0f,  1.0f,  1.0f,  1.0f  );
+   
+   float4 mask;
+
+   // ---------------------------------------------------------------------------------------
+
+   iAtomicRadii4      = float4( iAtomicRadii, iAtomicRadii, iAtomicRadii, iAtomicRadii );
+
+   r2                 = float4( dot(d1, d1), dot( d2, d2 ), dot( d3, d3 ), dot( d4, d4 ) ); //20
+
+   // ---------------------------------------------------------------------------------------
+
+   // not needed for force calculation since deltaX = deltaY = deltaZ = 0, if r = 0
+
+   // mask               = r2 < smallValue4 ? zero4     : one4;
+   // r2                 = r2 < smallValue4 ? bigValue4 : r2;
+ 
+   // ---------------------------------------------------------------------------------------
+
+   r                  = sqrt( r2 ); //4
+   rInverse           = rsqrt( r2 ); //8
+   r2Inverse          = rInverse*rInverse; //4
+
+   rPlusScaledJ       = r + jAtomicRadiiScaled; //4
+   rMinusScaledJ      = r - jAtomicRadiiScaled; //4
+   rMinusScaledJAbs   = abs( rMinusScaledJ );
+
+   // ---------------------------------------------------------------------------------------
+
+   // mask               = iAtomicRadii4 >= rPlusScaledJ     ? zero4         : mask;
+   mask               = iAtomicRadii4 >= rPlusScaledJ     ? zero4         : one4;
+
+   l_ij               = iAtomicRadii4 >  rMinusScaledJAbs ? iAtomicRadii4 : rMinusScaledJAbs;
+
+   // ---------------------------------------------------------------------------------------
+
+   l_ij               = 1.0f/l_ij; //4
+   l_ij2              = l_ij*l_ij; //4
+
+   u_ij               = 1.0f/rPlusScaledJ; //4
+   u_ij2              = u_ij*u_ij; //4
+
+   scaledRadiusJ2     = jAtomicRadiiScaled*jAtomicRadiiScaled; //4
+   logRatio           = log(u_ij/l_ij); //4
+
+   // terms associated w/ dL/dr & dU/dr are zero and not included
+
+   t3                 = 0.125f*(1.0f + scaledRadiusJ2*r2Inverse)*(l_ij2 - u_ij2) + 0.25f*logRatio*r2Inverse; //8*4
+
+   de                 = mask*bornForce*t3*rInverse; //12
+
+}
+
+/* ---------------------------------------------------------------------------------------
+
+   Calculate Loop 2 OBC forces (Simbios) 
+
+   numberOfAtoms:       no. of atoms
+   roundedUpAtoms:      rounded up number of atoms based on unroll
+   duplicationFactor:              ?
+   strheight:           atom stream height
+   streamWidth:         atom stream width
+   fstreamWidth:        force stream width (output -- i-unroll)
+   posq:                atom positions and charge
+   atomicRadii:         atomic radii
+   scaledAtomicRadii:   scaled atomic radii
+   bornForceFactor:     (Born radii)**2*bornForce*Obcforce
+   bornForce1:          i-unroll first force component, including dBorn_r/dr in .w
+   bornForce2:          i-unroll second force component, including dBorn_r/dr in .w 
+   bornForce3:          i-unroll third force component, including dBorn_r/dr in .w 
+   bornForce4:          i-unroll fourth force component, including dBorn_r/dr in .w 
+#endif
+
+   --------------------------------------------------------------------------------------- */
+
+//1376 FLOPS 
+kernel void kObcLoop2( float numberOfAtoms, float roundedUpAtoms, float duplicationFactor, 
+                       float streamWidth, float fstreamWidth, float3 posq[][], 
+                       float  scaledAtomicRadii[][], float bornForceFactor[][], 
+                       out float4 bornForce1<>, out float4 bornForce2<>,
+                       out float4 bornForce3<>, out float4 bornForce4<> ){
+
+   // ---------------------------------------------------------------------------------------
+
+   // atomic radii: radius - dielectric offset 
+
+   float i1AtomicRadii, i2AtomicRadii, i3AtomicRadii, i4AtomicRadii;
+   float j1AtomicRadii, j2AtomicRadii, j3AtomicRadii, j4AtomicRadii;
+   float4 iAtomicRadii, jAtomicRadii;
+
+   // scaled atomic radii: scaleFactor*( radius - dielectric offset )
+
+   float  i1ScaledAtomicRadii, i2ScaledAtomicRadii, i3ScaledAtomicRadii, i4ScaledAtomicRadii;
+   float  j1ScaledAtomicRadii, j2ScaledAtomicRadii, j3ScaledAtomicRadii, j4ScaledAtomicRadii;
+   float4 iScaledAtomicRadii, jScaledAtomicRadii;
+
+   // (Born radii**2)*BornForce*ObcChainForce
+
+   float i1BornForceFactor, i2BornForceFactor, i3BornForceFactor, i4BornForceFactor;
+   float j1BornForceFactor, j2BornForceFactor, j3BornForceFactor, j4BornForceFactor;
+   //float4 iBornForceFactor;
+   //float4 jBornForceFactor;
+
+   // i,j coordinates
+
+   float3 i1pos, i2pos, i3pos, i4pos; 
+   float3 j1pos, j2pos, j3pos, j4pos;
+
+   // delta coordinates
+
+   float3 d1, d2, d3, d4;
+
+   // indices
+
+   float2 iAtom; 
+
+   float forceIndex;
+
+   //This is forceIndex mod numberOfAtoms, the true i index
+
+   float4 de, bornSum;
+
+   float iAtomLinearIndex, jLinind; 
+   
+   float2 jAtom;
+   float jEnd, jStart, jBlock;
+   float whichRep;
+   float tmp;
+   float tmp2;
+
+
+   // ---------------------------------------------------------------------------------------
+
+   // constants
+
+   const float I_Unroll          = 4.0f;
+
+   // ---------------------------------------------------------------------------------------
+
+   // set linear index
+
+   iAtom                         = indexof( bornForce1 );
+   forceIndex                    = I_Unroll*( iAtom.x + iAtom.y*fstreamWidth );
+
+   iAtomLinearIndex              = fmod( forceIndex, roundedUpAtoms );
+
+   // ---------------------------------------------------------------------------------------
+
+   // set gather coordinates
+
+   iAtom.x                       = fmod(  iAtomLinearIndex, streamWidth );
+   iAtom.y                       = round( (iAtomLinearIndex - iAtom.x)/streamWidth );
+   
+   // ---------------------------------------------------------------------------------------
+
+   // etch i1 position, Born prefactor, atomic radius
+
+   i1pos                         = posq[                    iAtom ];
+   i1BornForceFactor             = bornForceFactor[         iAtom ];
+   //i1AtomicRadii                 = atomicRadii[             iAtom ];
+   i1AtomicRadii                 = scaledAtomicRadii[       iAtom ].y;
+   i1ScaledAtomicRadii           = scaledAtomicRadii[       iAtom ].x;
+   bornForce1                    = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+
+   // etch i2 position, Born prefactor, atomic radius
+
+   iAtom.x                      += 1;
+   i2pos                         = posq[                    iAtom ];
+   i2BornForceFactor             = bornForceFactor[         iAtom ];
+   //i2AtomicRadii                 = atomicRadii[             iAtom ];
+   i2AtomicRadii                 = scaledAtomicRadii[       iAtom ].y;
+   i2ScaledAtomicRadii           = scaledAtomicRadii[       iAtom ].x;
+   bornForce2                    = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+
+   // etch i3 position, Born prefactor, atomic radius
+
+   iAtom.x                      += 1;
+   i3pos                         = posq[                    iAtom ];
+   i3BornForceFactor             = bornForceFactor[         iAtom ];
+   //i3AtomicRadii                 = atomicRadii[             iAtom ];
+   i3AtomicRadii                 = scaledAtomicRadii[       iAtom ].y;
+   i3ScaledAtomicRadii           = scaledAtomicRadii[       iAtom ].x;
+   bornForce3                    = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+
+   // etch i4 position, Born prefactor, atomic radius
+
+   iAtom.x                      += 1;
+   i4pos                         = posq[                    iAtom ];
+   i4BornForceFactor             = bornForceFactor[         iAtom ];
+   //i4AtomicRadii                 = atomicRadii[             iAtom ];
+   i4AtomicRadii                 = scaledAtomicRadii[       iAtom ].y;
+   i4ScaledAtomicRadii           = scaledAtomicRadii[       iAtom ].x;
+   bornForce4                    = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+
+   // create float4 for main vars
+
+   //iBornForceFactor              = float4( i1BornForceFactor,    i2BornForceFactor,   i3BornForceFactor,   i4BornForceFactor );
+   iAtomicRadii                  = float4( i1AtomicRadii,        i2AtomicRadii,       i3AtomicRadii,       i4AtomicRadii );
+   iScaledAtomicRadii            = float4( i1ScaledAtomicRadii,  i2ScaledAtomicRadii, i3ScaledAtomicRadii, i4ScaledAtomicRadii );
+
+   // inner loop indices setup
+   //changed the following instruction for rounding issues on some ASICs
+   //whichRep                      = floor( forceIndex / roundedUpAtoms );
+   tmp                           = fmod(forceIndex, roundedUpAtoms);
+   whichRep                      = round((forceIndex - tmp)/roundedUpAtoms);
+   
+   //jBlock                        = 1 + floor( numberOfAtoms/(duplicationFactor*streamWidth ) );
+   jBlock                        = 1 + round( (numberOfAtoms-fmod( numberOfAtoms, (duplicationFactor*streamWidth) )) / (duplicationFactor*streamWidth) );
+   
+   jStart                        = whichRep*jBlock;
+
+   jEnd                          = ( whichRep > duplicationFactor - 1.5f ) ? 999999.0f : (jStart + jBlock);
+
+   jAtom.y                       = jStart;
+   jLinind                       = jAtom.y*streamWidth;
+
+   // ---------------------------------------------------------------------------------------
+
+   while ( jAtom.y < jEnd && ( numberOfAtoms - jLinind )  > 0.9f ){
+      jAtom.x = 0.0f;
+      while ( jAtom.x < streamWidth && ( numberOfAtoms - jLinind ) > 0.9f ){ 
+
+      // ---------------------------------------------------------------------------------------
+
+      // gather required values
+      
+          
+         j1BornForceFactor    = bornForceFactor[         jAtom ];
+         j1AtomicRadii        = scaledAtomicRadii[       jAtom ].y;
+         j1ScaledAtomicRadii  = scaledAtomicRadii[       jAtom ].x;
+         j1pos                = posq[                    jAtom ];
+         jAtom.x             += 1.0f;
+
+         j2BornForceFactor    = bornForceFactor[         jAtom ];
+         j2AtomicRadii        = scaledAtomicRadii[       jAtom ].y;
+         j2ScaledAtomicRadii  = scaledAtomicRadii[       jAtom ].x;
+         j2pos                = posq[                    jAtom ];
+         jAtom.x             += 1.0f;
+
+         j3BornForceFactor    = bornForceFactor[         jAtom ];
+         j3AtomicRadii        = scaledAtomicRadii[       jAtom ].y;
+         j3ScaledAtomicRadii  = scaledAtomicRadii[       jAtom ].x;
+         j3pos                = posq[                    jAtom ];
+         jAtom.x             += 1.0f;
+
+         j4BornForceFactor    = bornForceFactor[         jAtom ];
+         j4AtomicRadii        = scaledAtomicRadii[       jAtom ].y;
+         j4ScaledAtomicRadii  = scaledAtomicRadii[       jAtom ].x;
+         j4pos                = posq[                    jAtom ];
+         jAtom.x             += 1.0f;
+         
+   
+         //jBornForceFactor     = float4( j1BornForceFactor,    j2BornForceFactor,   j3BornForceFactor,   j4BornForceFactor   );
+         jAtomicRadii         = float4( j1AtomicRadii,        j2AtomicRadii,       j3AtomicRadii,       j4AtomicRadii       );
+         jScaledAtomicRadii   = float4( j1ScaledAtomicRadii,  j2ScaledAtomicRadii, j3ScaledAtomicRadii, j4ScaledAtomicRadii );
+   
+         // ---------------------------------------------------------------------------------------
+   
+         // First set of 4 -- i == 1
+   
+         d1                 = j1pos - i1pos; //3
+         d2                 = j2pos - i1pos; //3
+         d3                 = j3pos - i1pos; //3
+         d4                 = j4pos - i1pos; //3
+   
+         // i = 1
+
+         loop2Internal( d1, d2, d3, d4, jScaledAtomicRadii, i1BornForceFactor, i1AtomicRadii, de ); //156 : 368
+   
+         bornForce1.xyz    += de.x*d1; //3*2=6
+         bornForce1.xyz    += de.y*d2; //3*2=6
+         bornForce1.xyz    += de.z*d3; //3*2=6
+         bornForce1.xyz    += de.w*d4; //3*2=6
+   
+         // ---------------------------------------------------------------------------------------
+
+         // i = 2
+
+         d1                 = j1pos - i2pos; //3
+         d2                 = j2pos - i2pos; //3
+         d3                 = j3pos - i2pos; //3
+         d4                 = j4pos - i2pos; //3
+   
+         loop2Internal( d1, d2, d3, d4, jScaledAtomicRadii, i2BornForceFactor, i2AtomicRadii, de );//156 : 368
+   
+         bornForce2.xyz    += de.x*d1; //3*2=6
+         bornForce2.xyz    += de.y*d2; //3*2=6
+         bornForce2.xyz    += de.z*d3; //3*2=6
+         bornForce2.xyz    += de.w*d4; //3*2=6
+   
+         // ---------------------------------------------------------------------------------------
+
+         // i = 3
+
+         d1                 = j1pos - i3pos; //3
+         d2                 = j2pos - i3pos; //3
+         d3                 = j3pos - i3pos; //3
+         d4                 = j4pos - i3pos; //3
+
+         loop2Internal( d1, d2, d3, d4, jScaledAtomicRadii, i3BornForceFactor, i3AtomicRadii, de );//156 : 368
+   
+         bornForce3.xyz    += de.x*d1; //3*2=6
+         bornForce3.xyz    += de.y*d2; //3*2=6
+         bornForce3.xyz    += de.z*d3; //3*2=6
+         bornForce3.xyz    += de.w*d4; //3*2=6
+   
+         // ---------------------------------------------------------------------------------------
+
+         // i = 4
+
+         d1                 = j1pos - i4pos; //3
+         d2                 = j2pos - i4pos; //3
+         d3                 = j3pos - i4pos; //3
+         d4                 = j4pos - i4pos; //3
+
+         loop2Internal( d1, d2, d3, d4, jScaledAtomicRadii, i4BornForceFactor, i4AtomicRadii, de );//156 : 366
+   
+         bornForce4.xyz    += de.x*d1; //3*2=6
+         bornForce4.xyz    += de.y*d2; //3*2=6
+         bornForce4.xyz    += de.z*d3; //3*2=6
+         bornForce4.xyz    += de.w*d4; //3*2=6
+
+         // ---------------------------------------------------------------------------------------
+
+         // j = 1
+
+         d1                 = j1pos - i1pos; //3
+         d2                 = j1pos - i2pos; //3
+         d3                 = j1pos - i3pos; //3
+         d4                 = j1pos - i4pos; //3
+   
+         loop2InternalNoSum( d1, d2, d3, d4, iScaledAtomicRadii, j1BornForceFactor, j1AtomicRadii, de ); //112 : 304
+   
+         bornForce1.xyz    += de.x*d1; //3*2=6
+         bornForce2.xyz    += de.y*d2; //3*2=6
+         bornForce3.xyz    += de.z*d3; //3*2=6
+         bornForce4.xyz    += de.w*d4; //3*2=6
+
+         // ---------------------------------------------------------------------------------------
+
+         // j = 2
+
+         d1                 = j2pos - i1pos; //3
+         d2                 = j2pos - i2pos; //3
+         d3                 = j2pos - i3pos; //3
+         d4                 = j2pos - i4pos; //3
+   
+         loop2InternalNoSum( d1, d2, d3, d4, iScaledAtomicRadii, j2BornForceFactor, j2AtomicRadii, de ); //112 : 304
+   
+         bornForce1.xyz    += de.x*d1; //3*2=6
+         bornForce2.xyz    += de.y*d2; //3*2=6
+         bornForce3.xyz    += de.z*d3; //3*2=6
+         bornForce4.xyz    += de.w*d4; //3*2=6
+
+         // ---------------------------------------------------------------------------------------
+
+         // j = 3
+
+         d1                 = j3pos - i1pos; //3
+         d2                 = j3pos - i2pos; //3
+         d3                 = j3pos - i3pos; //3
+         d4                 = j3pos - i4pos; //3
+   
+         loop2InternalNoSum( d1, d2, d3, d4, iScaledAtomicRadii, j3BornForceFactor, j3AtomicRadii, de ); //112 : 304
+   
+         bornForce1.xyz    += de.x*d1; //3*2=6
+         bornForce2.xyz    += de.y*d2; //3*2=6
+         bornForce3.xyz    += de.z*d3; //3*2=6
+         bornForce4.xyz    += de.w*d4; //3*2=6
+
+         // ---------------------------------------------------------------------------------------
+
+         // j = 4
+
+         d1                 = j4pos - i1pos; //3
+         d2                 = j4pos - i2pos; //3
+         d3                 = j4pos - i3pos; //3
+         d4                 = j4pos - i4pos; //3
+   
+         loop2InternalNoSum( d1, d2, d3, d4, iScaledAtomicRadii, j4BornForceFactor, j4AtomicRadii, de ); //112 : 304
+   
+         bornForce1.xyz    += de.x*d1; //3*2=6
+         bornForce2.xyz    += de.y*d2; //3*2=6
+         bornForce3.xyz    += de.z*d3; //3*2=6
+         bornForce4.xyz    += de.w*d4; //3*2=6
+
+         // ---------------------------------------------------------------------------------------
+   
+         // increment linear index by 4   
+   
+         jLinind           += 4.0f;
+   
+      }
+      jAtom.y       += 1.0f;
+   }
+}
+
+kernel void kPostObcLoop2_nobranch( 
+      float repfac, 
+      float atomStreamWidth, 
+      float pStreamWidth,
+      float natoms,
+      float roundNatoms,
+      float iUnroll,
+      float conversion,
+      float mergeNonObcForces,
+      float4 inObcForces<>, 
+      float3 nonObcForces<>, 
+      float4 pstream1[][], 
+      float4 pstream2[][], 
+      float4 pstream3[][], 
+      float4 pstream4[][], 
+      float  atomicRadii<>,
+      out float bornRadii<>,
+      out float obcChain<>,
+      out float3 outForces<> ){
+
+   // ---------------------------------------------------------------------------------------
+
+   float atomIndex, forceIndex, qIndex, qOff;
+   float2 pindex;
+   float i;
+   float sum2, sum3, bornSum, tanhSum, atomicRadiiOffset, obcIntermediate;
+   float4 o1,o2,o3,o4;
+   float4 tmp;
+
+   float2 iAtom; 
+   float4 forces;
+   float expPlus, expMinus;
+
+   // ---------------------------------------------------------------------------------------
+
+   // constants -- OBC Type II
+
+   const float alphaObc          = 1.0f;
+   const float betaObc           = 0.8f;
+   const float gammaObc          = 4.85f;
+   const float dielectricOffset  = 0.009f;
+
+   // ---------------------------------------------------------------------------------------
+   
+   // given atom index find force indices and streams
+
+   pindex      = indexof( outForces );
+   atomIndex   = pindex.x + pindex.y*atomStreamWidth;
+   forceIndex  = atomIndex;
+
+   // add current forces in inStream to forces stored in pstreams
+   // the .w entry is Born sum values; it will be used to calculate the
+   // Born radii and obcChain term
+
+   forces   = inObcForces;
+   forces.w = 0.0f;
+//forces   = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+   
+   // sum over j-loop 'duplications' by gathering from pstreams
+
+   for( i = 0.0f; i < repfac; i += 1.0f ){
+
+      // qIndex            = floor( forceIndex/iUnroll );
+      qIndex            = round( (forceIndex - fmod( forceIndex, iUnroll))/iUnroll );
+
+      qOff              = forceIndex - iUnroll*qIndex;
+
+      // pindex.y          = floor( qIndex/ pStreamWidth );
+      pindex.y          = round( (qIndex - fmod( qIndex, pStreamWidth ))/pStreamWidth );
+
+      // pindex.x          = qIndex - pindex.y*pStreamWidth + qOff;
+      pindex.x          = qIndex - pindex.y*pStreamWidth;
+
+      o1 = pstream1[ pindex ];
+      o2 = pstream2[ pindex ];
+      o3 = pstream3[ pindex ];
+      o4 = pstream4[ pindex ];
+      
+      tmp = qOff < 0.5f ? o1 : o2;
+      tmp = qOff < 1.5f ? tmp : o3;
+      tmp = qOff < 2.5f ? tmp : o4;
+      
+      forces += tmp;
+        
+      forceIndex += roundNatoms;
+      
+   }
+
+   // compute Born radii and ObcChain
+
+   atomicRadiiOffset            = atomicRadii - dielectricOffset;
+
+   bornSum                      = forces.w;
+   bornSum                     *= 0.5f*atomicRadiiOffset;
+
+   sum2                         = bornSum*bornSum;
+   sum3                         = bornSum*sum2;
+
+   // Tanh does not exist? 
+   // calculate [ exp(x) - exp(-x) ]/[ exp(x) + exp(-x) ]
+
+   // tanhSum                      = tanh( bornSum - betaObc*sum2 + gammaObc*sum3 );
+
+   tanhSum                      = bornSum - betaObc*sum2 + gammaObc*sum3;
+   expPlus                      = exp( tanhSum );
+   expMinus                     = 1.0f/expPlus;
+   tanhSum                      = ( expPlus - expMinus )/( expPlus + expMinus );
+    
+   bornRadii                    = 1.0f/( (1.0f/(atomicRadiiOffset)) - tanhSum/atomicRadii );  
+ 
+   obcIntermediate              = atomicRadiiOffset*( alphaObc - 2.0f*betaObc*bornSum + 3.0f*gammaObc*sum2 );
+   obcChain                     = (1.0f - tanhSum*tanhSum)*obcIntermediate/atomicRadii;
+   if( atomIndex >= natoms ){
+      bornRadii = 0.0f;
+      obcChain  = 0.0f;
+   }
+
+   // add converted new forces to non-Obc forces
+
+   outForces = conversion*forces.xyz;
+   if( mergeNonObcForces > 0.1f ){
+      outForces += nonObcForces; 
+   }
+
+}
