@@ -126,14 +126,13 @@ void BrookCalcHarmonicBondForceKernel::initialize( const System& system, const H
 // ---------------------------------------------------------------------------------------
 
    static const std::string methodName      = "BrookCalcHarmonicBondForceKernel::initialize";
+   static const int PrintOn                 = 0;
 
 // ---------------------------------------------------------------------------------------
 
    FILE* log                 = getLog();
 
    // ---------------------------------------------------------------------------------------
-
-//(void) fprintf( getLog(), "%s\n", methodName.c_str() ); (void) fflush( getLog() );
 
    // create _brookBondParameters object containing particle indices/parameters
 
@@ -165,7 +164,7 @@ void BrookCalcHarmonicBondForceKernel::initialize( const System& system, const H
    _openMMBrookInterface.setTriggerForceKernel( this );
    _openMMBrookInterface.setTriggerEnergyKernel( this );
 
-   if( log ){
+   if( PrintOn && log ){
       std::string contents = _brookBondParameters->getContentsString( ); 
       (void) fprintf( log, "%s contents\n%s", methodName.c_str(), contents.c_str() );
       (void) fflush( log );

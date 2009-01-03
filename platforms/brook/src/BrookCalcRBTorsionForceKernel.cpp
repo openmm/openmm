@@ -128,7 +128,7 @@ void BrookCalcRBTorsionForceKernel::initialize( const System& system, const RBTo
 
 // ---------------------------------------------------------------------------------------
 
-   FILE* log                 = getLog();
+   FILE* log                                = getLog();
 
    // ---------------------------------------------------------------------------------------
 
@@ -150,6 +150,7 @@ void BrookCalcRBTorsionForceKernel::initialize( const System& system, const RBTo
       double parameters[NumberOfParametersInBond];
 
       force.getTorsionParameters( ii, particle1, particle2, particle3, particle4, c0, c1, c2, c3, c4, c5 ); 
+
       particles[0]    = particle1;
       particles[1]    = particle2;
       particles[2]    = particle3;
@@ -170,7 +171,7 @@ void BrookCalcRBTorsionForceKernel::initialize( const System& system, const RBTo
 
    if( log ){
       std::string contents = _brookBondParameters->getContentsString( ); 
-      (void) fprintf( log, "%s brookGbsa::contents\n%s", methodName.c_str(), contents.c_str() );
+      (void) fprintf( log, "%s contents\n%s", methodName.c_str(), contents.c_str() );
       (void) fflush( log );
    }
 

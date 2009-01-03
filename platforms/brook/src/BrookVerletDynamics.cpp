@@ -138,9 +138,9 @@ int BrookVerletDynamics::updateParameters( double stepSize ){
 
    // ---------------------------------------------------------------------------------------
 
-   static int showUpdate         = 1;
-   static int maxShowUpdate      = 3;
-   static const char* methodName = "\nBrookVerletDynamics::updateParameters";
+   static int showUpdate               = 1;
+   static int maxShowUpdate            = 3;
+   static const std::string methodName = "\nBrookVerletDynamics::updateParameters";
 
    // ---------------------------------------------------------------------------------------
 

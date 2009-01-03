@@ -33,7 +33,6 @@
  * -------------------------------------------------------------------------- */
 
 #include <vector>
-#include <set>
 
 #include "BrookStreamImpl.h"
 #include "BrookPlatform.h"
@@ -307,12 +306,12 @@ class BrookGbsa : public BrookCommon {
        *
        */
       
-      int calculateBornRadii( const Stream& positions );
+      // int calculateBornRadii( const Stream& positions );
       
       /* 
        * Setup of Gbsa parameters
        *
-       * @param particleParameters        vector of OBC parameters [particleI][0=charge]
+       * @param particleParameters    vector of OBC parameters [particleI][0=charge]
        *                                                       [particleI][1=radius]
        *                                                       [particleI][2=scaling factor]
        * @param solventDielectric     solvent dielectric
@@ -336,19 +335,6 @@ class BrookGbsa : public BrookCommon {
        * */
       
       std::string getContentsString( int level = 0 ) const;
-
-      /*  
-       * Calculate energy
-       *
-       * @param particlePositions        particle positions
-      
-       * @return energy
-       *
-       * @throw OpenMMException if _cpuObc or charges are not set
-       *
-       * */
-              
-      double getEnergy( const Stream& particlePositions );
 
       /** 
        * Compute forces
@@ -421,13 +407,10 @@ class BrookGbsa : public BrookCommon {
 
       int _bornRadiiInitialized;
 
-      // particle charges
+      // CpuObc reference -- was used to calculate initial Born radii
+      // no longer used -- to be removed?
 
-      RealOpenMM* _charges;
-
-      // CpuObc reference
-
-      CpuObc* _cpuObc;
+      // CpuObc* _cpuObc;
 
       /* 
        * Setup of stream dimensions
@@ -439,7 +422,7 @@ class BrookGbsa : public BrookCommon {
        *
        * */
       
-      int initializeStreamSizes( int particleStreamSize, int particleStreamWidth );
+      int _initializeStreamSizes( int particleStreamSize, int particleStreamWidth );
 
       /** 
        * Initialize stream dimensions
@@ -451,7 +434,7 @@ class BrookGbsa : public BrookCommon {
        *
        */
       
-      int initializeStreamSizes( int numberOfParticles, const Platform& platform );
+      int _initializeStreamSizes( int numberOfParticles, const Platform& platform );
       
       /** 
        * Initialize stream dimensions and streams
@@ -462,7 +445,7 @@ class BrookGbsa : public BrookCommon {
        *
        */
       
-      int initializeStreams( const Platform& platform );
+      int _initializeStreams( const Platform& platform );
       
       /* 
        * Setup of stream dimensions for partial force streams
@@ -474,7 +457,7 @@ class BrookGbsa : public BrookCommon {
        *
        * */
       
-      int initializePartialForceStreamSize( int particleStreamSize, int particleStreamWidth );
+      int _initializePartialForceStreamSize( int particleStreamSize, int particleStreamWidth );
       
 };
 

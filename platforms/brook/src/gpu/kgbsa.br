@@ -824,33 +824,28 @@ kernel void kPostObcLoop1_nobranch(
     atomIndex   = pindex.x + pindex.y*atomStreamWidth;
     forceIndex  = atomIndex;
     
-    outstream  = float4( 0.0f, 0.0f, 0.0f, 0.0f );
+    outstream   = float4( 0.0f, 0.0f, 0.0f, 0.0f );
     
     for( i = 0.0f; i < repfac; i += 1.0f ){
         
-        // qIndex            = floor( forceIndex/iUnroll );
-        qIndex            = round( (forceIndex - fmod( forceIndex, iUnroll))/iUnroll );
+        qIndex         = round( (forceIndex - fmod( forceIndex, iUnroll))/iUnroll );
+        qOff           = forceIndex - iUnroll*qIndex;
         
-        qOff              = forceIndex - iUnroll*qIndex;
-        
-        // pindex.y          = floor( qIndex/ pStreamWidth );
-        pindex.y          = round( (qIndex - fmod( qIndex, pStreamWidth ))/pStreamWidth );
-        
-        // pindex.x          = qIndex - pindex.y*pStreamWidth + qOff;
-        pindex.x          = qIndex - pindex.y*pStreamWidth;
+        pindex.y       = round( (qIndex - fmod( qIndex, pStreamWidth ))/pStreamWidth );
+        pindex.x       = qIndex - pindex.y*pStreamWidth;
 
-        o1 = pstream1[ pindex ];
-        o2 = pstream2[ pindex ];
-        o3 = pstream3[ pindex ];
-        o4 = pstream4[ pindex ];
+        o1             = pstream1[ pindex ];
+        o2             = pstream2[ pindex ];
+        o3             = pstream3[ pindex ];
+        o4             = pstream4[ pindex ];
 
-        tmp = qOff < 0.5f ? o1 : o2;
-        tmp = qOff < 1.5f ? tmp : o3;
-        tmp = qOff < 2.5f ? tmp : o4;
+        tmp            = qOff < 0.5f ? o1  : o2;
+        tmp            = qOff < 1.5f ? tmp : o3;
+        tmp            = qOff < 2.5f ? tmp : o4;
         
-        outstream += tmp;
+        outstream     += tmp;
         
-        forceIndex += roundNatoms;
+        forceIndex    += roundNatoms;
     }
     
     bornRadii2Force  = obcChain*bornRadii*bornRadii*outstream.w;
@@ -1140,7 +1135,7 @@ kernel void loop2InternalNoSum( float3 d1, float3 d2, float3 d3, float3 d4, floa
 //1376 FLOPS 
 kernel void kObcLoop2( float numberOfAtoms, float roundedUpAtoms, float duplicationFactor, 
                        float streamWidth, float fstreamWidth, float3 posq[][], 
-                       float  scaledAtomicRadii[][], float bornForceFactor[][], 
+                       float2 scaledAtomicRadii[][], float bornForceFactor[][], 
                        out float4 bornForce1<>, out float4 bornForce2<>,
                        out float4 bornForce3<>, out float4 bornForce4<> ){
 
@@ -1221,7 +1216,6 @@ kernel void kObcLoop2( float numberOfAtoms, float roundedUpAtoms, float duplicat
 
    i1pos                         = posq[                    iAtom ];
    i1BornForceFactor             = bornForceFactor[         iAtom ];
-   //i1AtomicRadii                 = atomicRadii[             iAtom ];
    i1AtomicRadii                 = scaledAtomicRadii[       iAtom ].y;
    i1ScaledAtomicRadii           = scaledAtomicRadii[       iAtom ].x;
    bornForce1                    = float4( 0.0f, 0.0f, 0.0f, 0.0f );
@@ -1231,7 +1225,6 @@ kernel void kObcLoop2( float numberOfAtoms, float roundedUpAtoms, float duplicat
    iAtom.x                      += 1;
    i2pos                         = posq[                    iAtom ];
    i2BornForceFactor             = bornForceFactor[         iAtom ];
-   //i2AtomicRadii                 = atomicRadii[             iAtom ];
    i2AtomicRadii                 = scaledAtomicRadii[       iAtom ].y;
    i2ScaledAtomicRadii           = scaledAtomicRadii[       iAtom ].x;
    bornForce2                    = float4( 0.0f, 0.0f, 0.0f, 0.0f );
@@ -1241,7 +1234,6 @@ kernel void kObcLoop2( float numberOfAtoms, float roundedUpAtoms, float duplicat
    iAtom.x                      += 1;
    i3pos                         = posq[                    iAtom ];
    i3BornForceFactor             = bornForceFactor[         iAtom ];
-   //i3AtomicRadii                 = atomicRadii[             iAtom ];
    i3AtomicRadii                 = scaledAtomicRadii[       iAtom ].y;
    i3ScaledAtomicRadii           = scaledAtomicRadii[       iAtom ].x;
    bornForce3                    = float4( 0.0f, 0.0f, 0.0f, 0.0f );
@@ -1251,24 +1243,22 @@ kernel void kObcLoop2( float numberOfAtoms, float roundedUpAtoms, float duplicat
    iAtom.x                      += 1;
    i4pos                         = posq[                    iAtom ];
    i4BornForceFactor             = bornForceFactor[         iAtom ];
-   //i4AtomicRadii                 = atomicRadii[             iAtom ];
    i4AtomicRadii                 = scaledAtomicRadii[       iAtom ].y;
    i4ScaledAtomicRadii           = scaledAtomicRadii[       iAtom ].x;
    bornForce4                    = float4( 0.0f, 0.0f, 0.0f, 0.0f );
 
    // create float4 for main vars
 
-   //iBornForceFactor              = float4( i1BornForceFactor,    i2BornForceFactor,   i3BornForceFactor,   i4BornForceFactor );
    iAtomicRadii                  = float4( i1AtomicRadii,        i2AtomicRadii,       i3AtomicRadii,       i4AtomicRadii );
    iScaledAtomicRadii            = float4( i1ScaledAtomicRadii,  i2ScaledAtomicRadii, i3ScaledAtomicRadii, i4ScaledAtomicRadii );
 
    // inner loop indices setup
    //changed the following instruction for rounding issues on some ASICs
    //whichRep                      = floor( forceIndex / roundedUpAtoms );
+
    tmp                           = fmod(forceIndex, roundedUpAtoms);
    whichRep                      = round((forceIndex - tmp)/roundedUpAtoms);
    
-   //jBlock                        = 1 + floor( numberOfAtoms/(duplicationFactor*streamWidth ) );
    jBlock                        = 1 + round( (numberOfAtoms-fmod( numberOfAtoms, (duplicationFactor*streamWidth) )) / (duplicationFactor*streamWidth) );
    
    jStart                        = whichRep*jBlock;
@@ -1314,7 +1304,6 @@ kernel void kObcLoop2( float numberOfAtoms, float roundedUpAtoms, float duplicat
          jAtom.x             += 1.0f;
          
    
-         //jBornForceFactor     = float4( j1BornForceFactor,    j2BornForceFactor,   j3BornForceFactor,   j4BornForceFactor   );
          jAtomicRadii         = float4( j1AtomicRadii,        j2AtomicRadii,       j3AtomicRadii,       j4AtomicRadii       );
          jScaledAtomicRadii   = float4( j1ScaledAtomicRadii,  j2ScaledAtomicRadii, j3ScaledAtomicRadii, j4ScaledAtomicRadii );
    

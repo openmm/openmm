@@ -173,6 +173,6 @@ index = 0;
       energy += _masses[ii]*(velocity[index]*velocity[index] + velocity[index + 1]*velocity[index + 1] + velocity[index + 2]*velocity[index + 2]);
    }
 
-printf( " KQ=%12.5e\n", 0.5*energy );
+//printf( " KQ=%12.5e\n", 0.5*energy );
    return 0.5*energy;
 }

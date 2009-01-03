@@ -123,7 +123,7 @@ void BrookIntegrateLangevinStepKernel::initialize( const System& system, const L
 
 // ---------------------------------------------------------------------------------------
 
-   static const int printOn                  = 1;
+   static const int printOn                  = 0;
    static const std::string methodName       = "BrookIntegrateLangevinStepKernel::initialize";
 
 // ---------------------------------------------------------------------------------------

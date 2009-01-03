@@ -349,7 +349,7 @@ int BrookBrownianDynamics::updateParameters( double temperature, double friction
 
    static int showUpdate         = 1;
    static int maxShowUpdate      = 3;
-   static const char* methodName = "\nBrookBrownianDynamics::updateParameters";
+   static const std::string methodName = "\nBrookBrownianDynamics::updateParameters";
 
    // ---------------------------------------------------------------------------------------
 
@@ -393,14 +393,12 @@ int BrookBrownianDynamics::update( Stream& positions, Stream& velocities,
 
 // ---------------------------------------------------------------------------------------
 
-   // unused Shake parameter
+   float omega                           = 1.0f;
+   float one                             = 1.0f;
 
-   float omega                   = 1.0f;
-   float one                     = 1.0f;
+   static const std::string methodName   = "\nBrookBrownianDynamics::update";
 
-   static const char* methodName = "\nBrookBrownianDynamics::update";
-
-   static const int PrintOn      = 0;
+   static const int PrintOn              = 0;
 
 // ---------------------------------------------------------------------------------------
 
@@ -794,7 +792,7 @@ int BrookBrownianDynamics::setup( const std::vector<double>& masses, const Platf
 
 // ---------------------------------------------------------------------------------------
 
-   const BrookPlatform brookPlatform            = dynamic_cast<const BrookPlatform&> (platform);
+   const BrookPlatform brookPlatform        = dynamic_cast<const BrookPlatform&> (platform);
    setLog( brookPlatform.getLog() );
 
    int numberOfParticles  = (int) masses.size();

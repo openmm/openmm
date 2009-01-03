@@ -736,7 +736,10 @@ int BrookBonded::_addRBTorsions( int *nbondeds, int *particles, float *params[],
          (*nbondeds)++;
       }
 
-      index                   = 0;
+      // note -- we are starting w/ index c1 not c0 -- c0 is not used
+      // to calculate the forces!
+
+      index                   = 1;
       PARAMS( ibonded, 0, 0 ) = (BrookOpenMMFloat) rbParameters[index++];
       PARAMS( ibonded, 0, 1 ) = (BrookOpenMMFloat) rbParameters[index++];
       PARAMS( ibonded, 0, 2 ) = (BrookOpenMMFloat) rbParameters[index++];
@@ -746,7 +749,7 @@ int BrookBonded::_addRBTorsions( int *nbondeds, int *particles, float *params[],
       if( debug && getLog() ){
          (void) fprintf( getLog(), "   %d [%d %d %d %d] %.3e %.3e %.3e %.3e\n", ibonded, i, j, k, l,
                          rbParameters[0], rbParameters[1],
-                         rbParameters[2], rbParameters[3], rbParameters[4] );
+                         rbParameters[2], rbParameters[3], rbParameters[4], rbParameters[5] );
       }
    }
 
@@ -1200,7 +1203,7 @@ int BrookBonded::setup( int numberOfParticles,
 // ---------------------------------------------------------------------------------------
 
    static const std::string methodName = "BrookBonded::setup";
-   static const int PrintOn            = 1;
+   static const int PrintOn            = 0;
    double dangleValue                  = 0.0;
 
 // ---------------------------------------------------------------------------------------
@@ -1991,7 +1994,17 @@ void BrookBonded::computeForces( BrookStreamImpl& positionStream, BrookStreamImp
 
    }
 
-   if( getInverseMapStreamCount( J_Stream ) == 5 && getInverseMapStreamCount( L_Stream ) == 2 ){
+   if( getInverseMapStreamCount( J_Stream ) == 1 && getInverseMapStreamCount( L_Stream ) == 1 ){
+
+      kinvmap_gather1_1( width,
+                         inverseStreamMaps[J_Stream][0]->getBrookStream(),
+                         bondedForceStreams[J_Stream]->getBrookStream(),
+                         inverseStreamMaps[L_Stream][0]->getBrookStream(),
+                         bondedForceStreams[L_Stream]->getBrookStream(),
+                         forceStream.getBrookStream(), forceStream.getBrookStream() );
+   
+   } else if( getInverseMapStreamCount( J_Stream ) == 5 && getInverseMapStreamCount( L_Stream ) == 2 ){
+
       kinvmap_gather5_2( width,
                          inverseStreamMaps[J_Stream][0]->getBrookStream(),
                          inverseStreamMaps[J_Stream][1]->getBrookStream(),

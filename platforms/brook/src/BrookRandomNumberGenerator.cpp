@@ -66,8 +66,8 @@ BrookRandomNumberGenerator::BrookRandomNumberGenerator( ){
    _rvStreamIndex                   = 0;
    _rvStreamOffset                  = 0;
    _numberOfShuffles                = 0;
-   _maxShuffles                     = 0;
-   //_maxShuffles                     = 100;
+   //_maxShuffles                     = 0;
+   _maxShuffles                     = 100;
 
    _loadBuffer                      = NULL;
    _shuffleIndices                  = NULL;
@@ -79,10 +79,9 @@ BrookRandomNumberGenerator::BrookRandomNumberGenerator( ){
    // set randomNumber seed 
 
    _randomNumberSeed      = 1393;
-   _randomNumberGenerator = Mersenne;
+   //_randomNumberGenerator = Mersenne;
    _randomNumberGenerator = Kiss;
 
-   //_randomNumberSeed = randomNumberSeed ? randomNumberSeed : 1393;
    //SimTKOpenMMUtilities::setRandomNumberSeed( randomNumberSeed );
 }   
  
@@ -191,7 +190,7 @@ BrookOpenMMFloat BrookRandomNumberGenerator::_generateGromacsRandomNumber( unsig
 
    // ---------------------------------------------------------------------------------------
 
-   // static const char* methodName = "\nBrookRandomNumberGenerator::_generateGromacsRandomNumber";
+   // static const std::string methodName = "\nBrookRandomNumberGenerator::_generateGromacsRandomNumber";
 
    int  irand;
  
@@ -248,7 +247,7 @@ void BrookRandomNumberGenerator::_generateRandomsKiss( float* randomV1, float* r
     
    // ---------------------------------------------------------------------------------------
 
-   // static const char* methodName = "\nBrookRandomNumberGenerator::_generateRandomsKiss";
+   // static const std::string methodName = "\nBrookRandomNumberGenerator::_generateRandomsKiss";
 
    unsigned int carry          = 0;
 
@@ -363,9 +362,10 @@ int BrookRandomNumberGenerator::_loadRandomNumberStreamsKiss( void ){
 
    static unsigned int state[4];
    static int stateInitialized    = 0;
+   static int PrintOn             = 0;
    static const int reseed        = 10000;
  
-   // static const char* methodName = "\nBrookRandomNumberGenerator::_loadRandomNumberStreamsKiss";
+   static std::string methodName  = "\nBrookRandomNumberGenerator::_loadRandomNumberStreamsKiss";
 
    // ---------------------------------------------------------------------------------------
    
@@ -378,9 +378,9 @@ int BrookRandomNumberGenerator::_loadRandomNumberStreamsKiss( void ){
       state[2] = rand();
       state[3] = rand();
 
-      if( getLog() ){
-         (void) fprintf( getLog(), "LoadGVStreamsKiss: reset state seeds stateInitialized=%d reseed=%d [%u %u %u %u]\n",
-                         stateInitialized, reseed,  state[0], state[1], state[2], state[3] );
+      if( PrintOn && getLog() ){
+         (void) fprintf( getLog(), "%s reset state seeds stateInitialized=%d reseed=%d [%u %u %u %u]\n",
+                         methodName.c_str(), stateInitialized, reseed,  state[0], state[1], state[2], state[3] );
          (void) fflush( getLog() );
       }
 
@@ -398,11 +398,11 @@ state[3] = 27587;
 
    float* loadBuffer = _getLoadBuffer();
 
-   if( getLog() ){
+   if( PrintOn && getLog() ){
 	   static float count   = 0.0f;
       float block          = (float) (3*getRandomNumberStreamSize() );
       count               += 1.0f;
-      (void) fprintf( getLog(), "LoadGVStreamsKiss: count=%.1f ttl=%.3e no./count=%.1f %d %d\n",
+      (void) fprintf( getLog(), "%s: count=%.1f ttl=%.3e no./count=%.1f %d %d\n", methodName.c_str(),
                       count, block*count, block, getRandomNumberStreamSize(), getNumberOfRandomNumberStreams() );
       (void) fflush( getLog() );
    }
@@ -418,8 +418,8 @@ state[3] = 27587;
 	   getRandomNumberStream( jj )->loadFromArray( loadBuffer );
    }
 
-   if( getLog() ){
-      (void) fprintf( getLog(), "LoadGVStreamsKiss: stats\n%s\n", getStatisticsString().c_str() );
+   if( PrintOn && getLog() ){
+      (void) fprintf( getLog(), "%s: stats\n%s\n", methodName.c_str(), getStatisticsString().c_str() );
       (void) fflush( getLog() );
    }
 
@@ -438,7 +438,8 @@ int BrookRandomNumberGenerator::_loadRandomNumberStreamsMersenne( void ){
 
    // ---------------------------------------------------------------------------------------
 
-   // static const char* methodName = "\nBrookRandomNumberGenerator::_loadRandomNumberStreamsMersenne";
+   static const std::string methodName  = "\nBrookRandomNumberGenerator::_loadRandomNumberStreamsMersenne";
+   static int PrintOn                   = 0;
 
    // ---------------------------------------------------------------------------------------
    
@@ -455,8 +456,8 @@ int BrookRandomNumberGenerator::_loadRandomNumberStreamsMersenne( void ){
 	   getRandomNumberStream( jj )->loadFromArray( loadBuffer );
    }
 
-   if( getLog() ){
-      (void) fprintf( getLog(), "_loadRandomNumberStreamsMersenne: stats\n%s\n", getStatisticsString().c_str() );
+   if( PrintOn && getLog() ){
+      (void) fprintf( getLog(), "%s: stats\n%s\n", methodName.c_str(), getStatisticsString().c_str() );
       (void) fflush( getLog() );
    }
 
@@ -476,17 +477,15 @@ int BrookRandomNumberGenerator::_loadGVStreamsOriginal( void ){
 
 	unsigned long int jran;
 
-   // static const char* methodName = "\nBrookRandomNumberGenerator::_loadGVStreamsOriginal";
+   // static const std::string methodName = "\nBrookRandomNumberGenerator::_loadGVStreamsOriginal";
 
    // ---------------------------------------------------------------------------------------
 	
    float* loadBuffer = _getLoadBuffer();
-	
-	jran = getRandomNumberSeed();
+	jran              = getRandomNumberSeed();
 	
    for( int jj = 0; jj < getNumberOfRandomNumberStreams(); jj++ ){
       for( int ii = 0; ii < 3*getRandomNumberStreamSize(); ii++ ){
-			//loadBuffer[i] = sdp->fgauss( &jran );
 			loadBuffer[ii] = _generateGromacsRandomNumber( &jran );
 		}
 	   getRandomNumberStream( jj )->loadFromArray( loadBuffer );
@@ -510,7 +509,7 @@ float* BrookRandomNumberGenerator::_getLoadBuffer( void ){
 
    // ---------------------------------------------------------------------------------------
 
-   static const char* methodName = "\nBrookRandomNumberGenerator::_getLoadBuffer";
+   static const std::string methodName = "\nBrookRandomNumberGenerator::_getLoadBuffer";
 
    // ---------------------------------------------------------------------------------------
 	
@@ -542,7 +541,7 @@ int* BrookRandomNumberGenerator::_getShuffleIndices( int size ){
 
    // ---------------------------------------------------------------------------------------
 
-   static const char* methodName = "\nBrookRandomNumberGenerator::_getShuffleIndices";
+   static const std::string methodName = "\nBrookRandomNumberGenerator::_getShuffleIndices";
 
    // ---------------------------------------------------------------------------------------
 	
@@ -587,7 +586,7 @@ int BrookRandomNumberGenerator::_loadGVShuffle( void ){
 	const int np  = sizeof(p) / sizeof(p[0]);
    const int pmax = p[np-1];
 
-   // static const char* methodName = "\nBrookRandomNumberGenerator::loadGVShuffle";
+   // static const std::string methodName = "\nBrookRandomNumberGenerator::loadGVShuffle";
 
    // ---------------------------------------------------------------------------------------
 	
@@ -641,7 +640,7 @@ int BrookRandomNumberGenerator::_shuffleGVStreams( void ){
 
    // ---------------------------------------------------------------------------------------
 
-   // static const char* methodName = "\nBrookRandomNumberGenerator::_shuffleGVStreams";
+   // static const std::string methodName = "\nBrookRandomNumberGenerator::_shuffleGVStreams";
 
    // ---------------------------------------------------------------------------------------
 	
@@ -676,7 +675,7 @@ int BrookRandomNumberGenerator::advanceGVCursor( int numberOfRandomValuesConsume
 
    // ---------------------------------------------------------------------------------------
 
-   static const char* methodName = "BrookRandomNumberGenerator::advanceGVCursor";
+   static const std::string methodName = "BrookRandomNumberGenerator::advanceGVCursor";
    static const int PrintOn      = 0;
 
    // ---------------------------------------------------------------------------------------
@@ -773,7 +772,7 @@ BrookFloatStreamInternal* BrookRandomNumberGenerator::getRandomNumberStream( int
 
    // ---------------------------------------------------------------------------------------
 
-   static const char* methodName = "\nBrookRandomNumberGenerator::getRandomNumberStream";
+   static const std::string methodName = "\nBrookRandomNumberGenerator::getRandomNumberStream";
 
    // ---------------------------------------------------------------------------------------
 	
@@ -896,7 +895,6 @@ int BrookRandomNumberGenerator::_initializeStreams( const Platform& platform ){
    _auxiliaryStreams[ShuffleStream]         = new BrookFloatStreamInternal( BrookCommon::ShuffleStream,
                                                                             randomNumberStreamSize, randomNumberStreamWidth,
                                                                             BrookStreamInternal::Float, dangleValue );
-
 
    // insure number of random number streams is > 0
    // delete if already allocated and then initialize

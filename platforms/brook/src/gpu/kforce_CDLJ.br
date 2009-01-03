@@ -578,207 +578,356 @@ kernel void kforce14_CDLJ(
  fj = -fi;
 }
 
+kernel void kAcosV( float x<>, out float acosVal<> ){
+
+   float x2, x3, x5, x7, x9, x11, x13, x15, x17, x19;
+
+   float pi2           = 1.57079632679489661923f;
+   float coefficient3  = 1.0f/6.0f;
+   float coefficient5  = 3.0f/40.0f;
+   float coefficient7  = 5.0f/112.0f;
+   float coefficient9  = 35.0f/1152.0f;
+   float coefficient11 = 63.0f/2816.0f;
+   float coefficient13 = 231.0f/13312.0f;
+   float coefficient15 = 143.0f/10240.0f;
+   float coefficient17 = 6435.0f/557056.0f;
+   float coefficient19 = 12155.0f/1245184.0f;
+ 
+   // ---------------------------------------------------------------------------------------
+
+   x2             =  x*x;
+   x3             =  x*x2;
+   x5             = x3*x2;
+   x7             = x5*x2;
+   x9             = x7*x2;
+   x11            = x9*x2;
+   x13            = x11*x2;
+   x15            = x13*x2;
+   x17            = x15*x2;
+   x19            = x17*x2;
+
+   acosVal        = x19*coefficient19;
+   acosVal       += x17*coefficient17;
+   acosVal       += x15*coefficient15;
+   acosVal       += x13*coefficient13;
+   acosVal       += x11*coefficient11;
+   acosVal       += x9*coefficient9;
+   acosVal       += x7*coefficient7;
+   acosVal       += x5*coefficient5;
+   acosVal       += x3*coefficient3 + x;
+   acosVal        = pi2 - acosVal;
+
+}
+
+kernel void kAcosTanV( float xIn<>, out float acosVal<> ){
+
+   const float c1             = 48.70107004404898384f;
+   const float c2             = 49.5326263772254345f;
+   const float c3             = 9.40604244231624f;
+   const float c4             = 48.70107004404996166f;
+   const float c5             = 65.7663163908956299f;
+   const float c6             = 21.587934067020262f;
+   const float tantwelfthpi   = 0.26794919243112270647255365849413f;
+   const float tansixthpi     = 0.57735026918962576450914878050196f;
+   const float sixthpi        = 0.52359877559829887307710723054658f;
+   const float halfpi         = 1.5707963267948966192313216916398f;
+
+   float x2, y, x;
+   float sign, complement, region;
+
+   // ---------------------------------------------------------------------------------------
+
+   complement                 = 0.0f;
+   region                     = 0.0f;
+
+   x                          = xIn;
+   y                          = rsqrt( (1.0f + x)*(1.0f  - x) );
+   x                         *= y;
+   if( x < 0.0f ){
+      x     = -x;
+      sign  = -1.0f;
+   } else {
+      sign  =  1.0f;
+   }
+
+   if( x > 1.0f ){
+      x           = 1.0f/x;
+      complement  = 1.0f;
+   } else {
+      complement  = 0.0f;
+   }
+
+   if( x > tantwelfthpi ){
+      x        = (x-tansixthpi)/(1.0f + tansixthpi*x);
+      region   = sixthpi;
+   } else {
+      region   = 0.0f;
+   }
+
+   x2          = x*x;
+   y           = (x*(c1 + x2*(c2 + x2*c3))/(c4 + x2*(c5 + x2*(c6 + x2))));
+
+   y          += region;
+
+   y           = (complement > 0.0f) ? (halfpi- y) : y;
+   acosVal     = halfpi - sign*y;
+
+}
+
+kernel void kAcos( float xIn, out float acosVal<> ){
+
+   const float c1             = 48.70107004404898384f;
+   const float c2             = 49.5326263772254345f;
+   const float c3             = 9.40604244231624f;
+   const float c4             = 48.70107004404996166f;
+   const float c5             = 65.7663163908956299f;
+   const float c6             = 21.587934067020262f;
+   const float tantwelfthpi   = 0.26794919243112270647255365849413f;
+   const float tansixthpi     = 0.57735026918962576450914878050196f;
+   const float sixthpi        = 0.52359877559829887307710723054658f;
+   const float halfpi         = 1.5707963267948966192313216916398f;
+
+   float x2, y, x;
+   float sign, complement, region;
+
+   // ---------------------------------------------------------------------------------------
+
+   // acos(x) = atan(x/sqrt(1-x**2))
+
+   x        = xIn;
+   y        = rsqrt( (1.0f + x)*(1.0f - x) );
+   x        *= y;
+
+   if( x < 0.0f ){
+      x     = -x;
+      sign  = -1.0f;
+   } else {
+      sign  =  1.0f;
+   }
+
+   if( x > 1.0f ){
+      x           = 1.0f/x;
+      complement  = 1.0f;
+   } else {
+      complement  = 0.0f;
+   }
+
+   if( x > tantwelfthpi ){
+      x        = (x - tansixthpi)/(1.0f + tansixthpi*x);
+      region   = sixthpi;
+   } else {
+      region   = 0.0f;
+   }
+
+   x2          = x*x;
+   y           = (x*(c1 + x2*(c2 + x2*c3))/(c4 + x2*(c5 + x2*(c6 + x2))));
+
+   y          += region;
+
+   y           = (complement > 0.0f) ? (halfpi- y) : y;
+   acosVal     = halfpi - sign*y;
+
+}
+
 kernel void kbonded_CDLJ (
-  float epsfac,
-  float xstrwidth,
-  float4 nbparams,
-  float3 posq[][],
-  float  charge<>,
-  float4 atoms<>,
-  float4 parm0<>,
-  float4 parm1<>,
-  float4 parm2<>,
-  float4 parm3<>,
-  float4 parm4<>,
-  out float3 fi<>,
-  out float3 fj<>,
-  out float3 fk<>,
-  out float3 fl<>
-  )
-{
+      float epsfac,
+      float xstrwidth,
+      float4 nbparams,
+      float3 posq[][],
+      float  charge<>,
+      float4 atoms<>,
+      float4 parm0<>,
+      float4 parm1<>,
+      float4 parm2<>,
+      float4 parm3<>,
+      float4 parm4<>,
+      out float3 fi<>,
+      out float3 fj<>,
+      out float3 fk<>,
+      out float3 fl<>
+   ){
+  
+   float3 rij, rkj, rkl, ril;
+   float2 ai, aj, ak, al;
+   float3 m, n;
+   float sgnphi;
+   float cosfac;
+   float ddphi, ddphi_rb;
+   float3 u, v, s;
+   float invlkj, invlij, invlkl, msq, nsq, cos_phi, sin_phi;
+   float3 uij, ukj, ukl;
+   float phi, mdphi;
+   float rij_d_ukj, ukj_d_rkl;
+   float normfac;
+   float qq;
+   float3 fi_ang, fj_ang, fk_ang;
+   float3 fi_bond;
+   float cii, ckk, cik;
+   float fs, st, sth;
+   float3 fi_pair;
+   float r2 ;
+   float torsion_numerator;
+   float theta1, costheta1, invsintheta1;
+   float theta2, costheta2, invsintheta2;
+   float3 posqi, posqj, posqk, posql;
+   float sig, eps;
+  
+   // i-coordinates
 
- float3 rij, rkj, rkl, ril;
- float2 ai, aj, ak, al;
- float3 m, n;
- float sgnphi;
- float cosfac;
- float ddphi, ddphi_rb;
- float3 u, v, s;
- float invlkj, invlij, invlkl, msq, nsq, cos_phi, sin_phi;
- float3 uij, ukj, ukl;
- float phi, mdphi;
- float rij_d_ukj, ukj_d_rkl;
- float normfac;
- float qq;
- float3 fi_ang, fj_ang, fk_ang;
- float3 fi_bond;
- float cii, ckk, cik;
- float fs, st, sth;
- float3 fi_pair;
- float r2 ;
- float torsion_numerator;
- float theta1, costheta1, invsintheta1;
- float theta2, costheta2, invsintheta2;
- float3 posqi, posqj, posqk, posql;
- float sig, eps;
+   ai.y  = round( (atoms.x - fmod( atoms.x, xstrwidth ))/xstrwidth );
+   ai.x  = atoms.x - ai.y * xstrwidth;
+   posqi = posq[ ai ];
+  
+   // j-coordinates
 
- ai.y = round( (atoms.x - fmod( atoms.x, xstrwidth ))/xstrwidth );
- ai.x = atoms.x - ai.y * xstrwidth;
- posqi = posq[ ai ];
+   if ( atoms.y > -0.5f ) {
+      aj.y  = round( (atoms.y - fmod( atoms.y, xstrwidth ))/xstrwidth );
+      aj.x  = atoms.y - aj.y * xstrwidth;
+      posqj = posq[ aj ];
+   } else {
+      posqj = float3( 0.0f, 1.0f, 0.0f );
+   }
+  
+   // k-coordinates
 
- if ( atoms.y > -0.5f ) {
-
-      aj.y = round( (atoms.y - fmod( atoms.y, xstrwidth ))/xstrwidth );
-  aj.x = atoms.y - aj.y * xstrwidth;
-  posqj = posq[ aj ];
- }
- else
-  posqj = float4( 0.0f, 0.0f, 1.0f, 0.0f );
-
- if ( atoms.z > -0.5f ) {
-
+   if ( atoms.z > -0.5f ) {
       ak.y = round( (atoms.z - fmod( atoms.z, xstrwidth ))/xstrwidth );
-  ak.x = atoms.z - ak.y * xstrwidth;
-  posqk = posq[ ak ];
- }
- else
-  posqk = float4( 0.0f, 1.0f, 1.0f, 0.0f );
+      ak.x = atoms.z - ak.y * xstrwidth;
+      posqk = posq[ ak ];
+   } else { 
+      posqk = float3( 1.0f, 1.0f, 0.0f );
+   }
+  
+   // l-coordinates
 
- if ( atoms.w > -0.5f ) {
-  al.y = round( (atoms.w - fmod( atoms.w, xstrwidth ))/xstrwidth );
-  al.x = atoms.w - al.y * xstrwidth;
-  posql = posq[ al ];
- } else {
-  posql = float4( 1.0f, 1.0f, 1.0f, 0.0f );
- }
-
- rij = posqi.xyz - posqj.xyz;
- rkj = posqk.xyz - posqj.xyz;
- rkl = posqk.xyz - posql.xyz;
- ril = posqi.xyz - posql.xyz;
-
-
-
- invlij = rsqrt( dot( rij, rij ) );
- invlkj = rsqrt( dot( rkj, rkj ) );
- invlkl = rsqrt( dot( rkl, rkl ) );
-
- uij = rij * invlij;
- ukj = rkj * invlkj;
- ukl = rkl * invlkl;
-
-
- rij_d_ukj = dot( rij, ukj );
- ukj_d_rkl = dot( ukj, rkl );
-
- m = cross( uij, ukj );
- n = cross( ukj, ukl );
-
-
- costheta1 = clamp( rij_d_ukj * invlij, -1.0f, 1.0f );
- theta1 = acos( costheta1 );
- invsintheta1 = rsqrt( 1.0f - costheta1 * costheta1 );
-
-
- costheta2 = clamp( ukj_d_rkl * invlkl, -1.0f, 1.0f );
- theta2 = acos( costheta2 );
- invsintheta2 = rsqrt( 1.0f - costheta2 * costheta2 );
-
- cos_phi = clamp( dot(m,n) * invsintheta1 * invsintheta2, -1.0f, 1.0f );
-
- sgnphi = sign( dot(rij, n) );
-
-
- phi   = sgnphi * acos( cos_phi );
- mdphi = parm1.w * phi - parm1.z;
- ddphi = -parm1.y * parm1.w * sin( mdphi );
-
-
- cos_phi = -cos_phi;
- sin_phi = -sgnphi*sqrt( clamp( 1.0f - cos_phi * cos_phi, 0.0f, 1.0f) );
-
- ddphi_rb = 5.0f * parm1.x;
- ddphi_rb = 4.0f * parm0.w + ddphi_rb * cos_phi;
- ddphi_rb = 3.0f * parm0.z + ddphi_rb * cos_phi;
- ddphi_rb = 2.0f * parm0.y + ddphi_rb * cos_phi;
- ddphi_rb = parm0.x + ddphi_rb * cos_phi;
- ddphi_rb = -ddphi_rb * sin_phi;
-
-
- ddphi += ddphi_rb;
-
- fi = (-ddphi * invlij * invsintheta1 * invsintheta1 ) * m;
- fl = ( ddphi * invlkl * invsintheta2 * invsintheta2 ) * n;
-
-
- u = rij_d_ukj * invlkj * fi;
- v = ukj_d_rkl * invlkj * fl;
- s = u - v;
-
- fj = s - fi;
- fk = -(s + fl);
-
-
-
-
-
- fs = -parm2.y * ( theta1 - parm2.x );
- st = fs * invsintheta1;
- st = clamp( st, -100000.0f, 100000.0f );
-
- sth = st * costheta1;
-
- cik = st * invlkj * invlij;
- cii = sth * invlij;
- ckk = sth * invlkj;
-
- fi_ang = -( cik * rkj - cii * uij );
- fk_ang = -( cik * rij - ckk * ukj );
- fj_ang = -fi_ang - fk_ang;
-
- fi += fi_ang;
- fj += fj_ang;
- fk += fk_ang;
- fs = -parm2.w * ( theta2 - parm2.z );
- st = fs * invsintheta2;
- st = clamp( st, -100000.0f, 100000.0f );
-
- sth = st * costheta2;
-
- cik = st * invlkj * invlkl;
- cii = sth * invlkj;
- ckk = sth * invlkl;
-
- fi_ang = ( cik * rkl - cii * ukj );
- fk_ang = ( cik * rkj - ckk * ukl );
- fj_ang = -fi_ang - fk_ang;
-
- fj += fi_ang;
- fk += fj_ang;
- fl += fk_ang;
-
-
- fi_bond = -parm3.y * ( 1.0f - parm3.x * invlij ) * rij;
- fi += fi_bond;
- fj += -fi_bond;
-
-
- fi_bond = parm3.w * ( 1.0f - parm3.z * invlkj ) * rkj;
- fj += fi_bond;
- fk += -fi_bond;
-
-
- fi_bond = -parm4.y * ( 1.0f - parm4.x * invlkl ) * rkl;
- fk += fi_bond;
- fl += -fi_bond;
-
- if ( parm4.z > -0.5f ) {
-  r2 = dot( ril, ril );
-  fs = scalar_force_single_CDLJ( charge, epsfac, parm4.z, parm4.w, r2, nbparams );
-  fi_pair = fs * ril;
-  fi += fi_pair;
-  fl -= fi_pair;
- }
+   if ( atoms.w > -0.5f ) {
+      al.y  = round( (atoms.w - fmod( atoms.w, xstrwidth ))/xstrwidth );
+      al.x  = atoms.w - al.y * xstrwidth;
+      posql = posq[ al ];
+   } else {
+      posql = float3( 1.0f, 1.0f, 1.0f );
+   }
+  
+   rij             = posqi - posqj;
+   rkj             = posqk - posqj;
+   rkl             = posqk - posql;
+   ril             = posqi - posql;
+  
+   invlij          = rsqrt( dot( rij, rij ) );
+   invlkj          = rsqrt( dot( rkj, rkj ) );
+   invlkl          = rsqrt( dot( rkl, rkl ) );
+  
+   uij             = rij * invlij;
+   ukj             = rkj * invlkj;
+   ukl             = rkl * invlkl;
+  
+   rij_d_ukj       = dot( rij, ukj );
+   ukj_d_rkl       = dot( ukj, rkl );
+  
+   m               = cross( uij, ukj );
+   n               = cross( ukj, ukl );
+  
+   costheta1       = clamp( rij_d_ukj * invlij, -1.0f, 1.0f );
+   //theta1          = acos( costheta1 );
+   kAcos( costheta1, theta1 );
+   invsintheta1    = rsqrt( (1.0f - costheta1) * (1.0f + costheta1) );
+  
+   costheta2       = clamp( ukj_d_rkl * invlkl, -1.0f, 1.0f );
+   //theta2          = acos( costheta2 );
+   kAcos( costheta2, theta2 );
+   invsintheta2    = rsqrt( (1.0f - costheta2) * (1.0f + costheta2) );
+  
+   cos_phi         = clamp( dot(m,n) * invsintheta1 * invsintheta2, -1.0f, 1.0f );
+   sgnphi          = sign( dot(rij, n) );
+  
+   phi             = sgnphi * acos( cos_phi );
+   mdphi           = parm1.w * phi - parm1.z;
+   ddphi           = -parm1.y * parm1.w * sin( mdphi );
+  
+   cos_phi         = -cos_phi;
+   sin_phi         = -sgnphi*sqrt( (1.0f - cos_phi) * (1.0f + cos_phi) );
+  
+   ddphi_rb        = 5.0f * parm1.x;
+   ddphi_rb        = 4.0f * parm0.w + ddphi_rb * cos_phi;
+   ddphi_rb        = 3.0f * parm0.z + ddphi_rb * cos_phi;
+   ddphi_rb        = 2.0f * parm0.y + ddphi_rb * cos_phi;
+   ddphi_rb        = parm0.x + ddphi_rb * cos_phi;
+   ddphi_rb        = -ddphi_rb * sin_phi;
+  
+   ddphi          += ddphi_rb;
+/*
+fi = float3( cos_phi, sgnphi, ddphi_rb );
+fj = float3( sin_phi, parm1.x, parm0.w );
+fk = float3( parm0.z, parm0.y, parm0.x );
+fl = float3( ddphi, 0.0f, 0.0f );
+*/
+  
+   fi              = (-ddphi * invlij * invsintheta1 * invsintheta1 ) * m;
+   fl              = ( ddphi * invlkl * invsintheta2 * invsintheta2 ) * n;
+  
+   u               = rij_d_ukj * invlkj * fi;
+   v               = ukj_d_rkl * invlkj * fl;
+   s               = u - v;
+  
+   fj              = s - fi;
+   fk              = -(s + fl);
+  
+  
+   fs              = -parm2.y * ( theta1 - parm2.x );
+   st              = fs * invsintheta1;
+   st              = clamp( st, -100000.0f, 100000.0f );
+  
+   sth             = st * costheta1;
+  
+   cik             = st * invlkj * invlij;
+   cii             = sth * invlij;
+   ckk             = sth * invlkj;
+  
+   fi_ang          = -( cik * rkj - cii * uij );
+   fk_ang          = -( cik * rij - ckk * ukj );
+   fj_ang          = -fi_ang - fk_ang;
+  
+   fi             += fi_ang;
+   fj             += fj_ang;
+   fk             += fk_ang;
+   fs              = -parm2.w * ( theta2 - parm2.z );
+   st              = fs * invsintheta2;
+   st              = clamp( st, -100000.0f, 100000.0f );
+  
+   sth             = st * costheta2;
+  
+   cik             = st * invlkj * invlkl;
+   cii             = sth * invlkj;
+   ckk             = sth * invlkl;
+  
+   fi_ang          = ( cik * rkl - cii * ukj );
+   fk_ang          = ( cik * rkj - ckk * ukl );
+   fj_ang          = -fi_ang - fk_ang;
+  
+   fj             += fi_ang;
+   fk             += fj_ang;
+   fl             += fk_ang;
+  
+  
+   fi_bond         = -parm3.y * ( 1.0f - parm3.x * invlij ) * rij;
+   fi             += fi_bond;
+   fj             += -fi_bond;
+  
+   fi_bond         = parm3.w * ( 1.0f - parm3.z * invlkj ) * rkj;
+   fj             += fi_bond;
+   fk             += -fi_bond;
+  
+   fi_bond         = -parm4.y * ( 1.0f - parm4.x * invlkl ) * rkl;
+   fk             += fi_bond;
+   fl             += -fi_bond;
+  
+   if( parm4.z > -0.5f ){
+      r2        = dot( ril, ril );
+      fs        = scalar_force_single_CDLJ( charge, epsfac, parm4.z, parm4.w, r2, nbparams );
+      fi_pair   = fs * ril;
+      fi       += fi_pair;
+      fl       -= fi_pair;
+   }
 
 }
 

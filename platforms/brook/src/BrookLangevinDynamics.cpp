@@ -231,7 +231,7 @@ int BrookLangevinDynamics::_updateDerivedParameters( void ){
 
    // ---------------------------------------------------------------------------------------
 
-   static const char* methodName = "\nBrookLangevinDynamics::_updateDerivedParameters";
+   static const std::string methodName      = "\nBrookLangevinDynamics::_updateDerivedParameters";
 
    static const BrookOpenMMFloat zero       =  0.0;
    static const BrookOpenMMFloat one        =  1.0;
@@ -322,9 +322,9 @@ int BrookLangevinDynamics::updateParameters( double temperature, double friction
 
    // ---------------------------------------------------------------------------------------
 
-   static int showUpdate         = 1;
-   static int maxShowUpdate      = 3;
-   static const char* methodName = "\nBrookLangevinDynamics::updateParameters";
+   static int showUpdate               = 1;
+   static int maxShowUpdate            = 3;
+   static const std::string methodName = "\nBrookLangevinDynamics::updateParameters";
 
    // ---------------------------------------------------------------------------------------
 
@@ -369,8 +369,8 @@ int BrookLangevinDynamics::update( BrookStreamImpl& positionStream, BrookStreamI
 
 // ---------------------------------------------------------------------------------------
 
-   static const char* methodName = "\nBrookLangevinDynamics::update";
-   static const int PrintOn      = 0;
+   static const std::string methodName = "\nBrookLangevinDynamics::update";
+   static const int PrintOn            = 0;
 
 // ---------------------------------------------------------------------------------------
 
@@ -671,7 +671,7 @@ const BrookOpenMMFloat* BrookLangevinDynamics::getDerivedParameters( void ) cons
 
    // ---------------------------------------------------------------------------------------
 
-   // static const char* methodName  = "\nBrookLangevinDynamics::getDerivedParameters";
+   // static const std::string methodName  = "\nBrookLangevinDynamics::getDerivedParameters";
 
    // ---------------------------------------------------------------------------------------
 
@@ -979,7 +979,7 @@ int BrookLangevinDynamics::_updateSdStreams( void ){
 
 // ---------------------------------------------------------------------------------------
 
-   int sdParticleStreamSize                      = getLangevinDynamicsParticleStreamSize();
+   int sdParticleStreamSize                  = getLangevinDynamicsParticleStreamSize();
 
    BrookOpenMMFloat* sdpc[2];
    for( int ii = 0; ii < 2; ii++ ){
@@ -1087,7 +1087,7 @@ int BrookLangevinDynamics::setup( const std::vector<double>& masses, const Platf
 
 // ---------------------------------------------------------------------------------------
 
-   const BrookPlatform brookPlatform            = dynamic_cast<const BrookPlatform&> (platform);
+   const BrookPlatform brookPlatform        = dynamic_cast<const BrookPlatform&> (platform);
    setLog( brookPlatform.getLog() );
 
    int numberOfParticles  = (int) masses.size();

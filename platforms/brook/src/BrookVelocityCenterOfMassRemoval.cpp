@@ -147,8 +147,8 @@ int BrookVelocityCenterOfMassRemoval::removeVelocityCenterOfMass( BrookStreamImp
 
    // ---------------------------------------------------------------------------------------
 
-   static const char* methodName  = "BrookVelocityCenterOfMassRemoval::removeVelocityCenterOfMass";
-   static const int debug         = 0;
+   static const std::string methodName  = "BrookVelocityCenterOfMassRemoval::removeVelocityCenterOfMass";
+   static const int debug               = 0;
 
    // ---------------------------------------------------------------------------------------
 
@@ -229,7 +229,7 @@ int BrookVelocityCenterOfMassRemoval::getVelocityCenterOfMass( BrookStreamImpl& 
 
    // ---------------------------------------------------------------------------------------
 
-   // static const char* methodName  = "\nBrookVelocityCenterOfMassRemoval::getVelocityCenterOfMass";
+   // static const std::string methodName  = "\nBrookVelocityCenterOfMassRemoval::getVelocityCenterOfMass";
 
    BrookOpenMMFloat zero    = (BrookOpenMMFloat) 0.0;
 
