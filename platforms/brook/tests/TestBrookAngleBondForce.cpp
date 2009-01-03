@@ -33,13 +33,14 @@
  * This tests the Brook harmonic angle bond force/energy
  */
 
+#include <vector>
+
 #include "../../../tests/AssertionUtilities.h"
 #include "BrookPlatform.h"
 #include "OpenMMContext.h"
 #include "HarmonicAngleForce.h"
 #include "System.h"
 #include "LangevinIntegrator.h"
-#include <vector>
 
 #define PI_M               3.141592653589
 
