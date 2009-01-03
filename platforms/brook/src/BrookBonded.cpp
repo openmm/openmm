@@ -225,6 +225,19 @@ int BrookBonded::isSetupCompleted( void ) const {
 }
    
 /** 
+ * Set SetupCompleted flag
+ *
+ * @param  setupCompleted flag
+ *
+ * @return SetupCompleted flag
+ */
+          
+int BrookBonded::setupCompleted( int setupCompleted ){
+   _setupCompleted = setupCompleted;
+   return _setupCompleted;
+}
+   
+/** 
  * Return string showing if all inverse map streams are set
  *
  * @param    index into inverse map stream array
@@ -1798,6 +1811,7 @@ void BrookBonded::computeForces( BrookStreamImpl& positionStream, BrookStreamImp
    static const int L_Stream                = 3;
 
    static const int PrintOn                 = 0;
+
    static const int MaxErrorMessages        = 2;
    static       int ErrorMessages           = 0;
 

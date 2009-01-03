@@ -252,6 +252,7 @@ BrookBondParameters* OpenMMBrookInterface::getHarmonicBondForceParameters( void 
  */
 
 int OpenMMBrookInterface::setHarmonicBondForceParameters( BrookBondParameters* brookBondParameters ){
+   _brookBonded.setupCompleted( 0 );
    return _setBondParameters( HarmonicBondIndex, brookBondParameters );
 }
 
@@ -276,6 +277,7 @@ BrookBondParameters* OpenMMBrookInterface::getHarmonicAngleForceParameters( void
  */
 
 int OpenMMBrookInterface::setHarmonicAngleForceParameters( BrookBondParameters* brookBondParameters ){
+   _brookBonded.setupCompleted( 0 );
    return _setBondParameters( HarmonicAngleIndex, brookBondParameters );
 }
 
@@ -300,6 +302,7 @@ BrookBondParameters* OpenMMBrookInterface::getPeriodicTorsionForceParameters( vo
  */
 
 int OpenMMBrookInterface::setPeriodicTorsionForceParameters( BrookBondParameters* brookBondParameters ){
+   _brookBonded.setupCompleted( 0 );
    return _setBondParameters( PeriodicTorsionForceIndex, brookBondParameters );
 }
 
@@ -324,6 +327,7 @@ BrookBondParameters* OpenMMBrookInterface::getRBTorsionForceParameters( void ) c
  */
 
 int OpenMMBrookInterface::setRBTorsionForceParameters( BrookBondParameters* brookBondParameters ){
+   _brookBonded.setupCompleted( 0 );
    return _setBondParameters( RbTorsionForceIndex, brookBondParameters );
 }
 
@@ -348,6 +352,7 @@ BrookBondParameters* OpenMMBrookInterface::getNonBonded14ForceParameters( void )
  */
 
 int OpenMMBrookInterface::setNonBonded14ForceParameters( BrookBondParameters* brookBondParameters ){
+   _brookBonded.setupCompleted( 0 );
    return _setBondParameters( LJ14Index, brookBondParameters );
 }
 

@@ -266,6 +266,16 @@ class BrookBonded : public BrookCommon {
       
       int isSetupCompleted( void ) const;
    
+      /** 
+       * Set SetupCompleted flag
+       *
+       * @param SetupCompleted flag
+       *
+       * @return SetupCompleted flag
+       */
+      
+      int setupCompleted( int isSetupCompleted );
+   
    private:
    
       static const int NumberOfParameterStreams = 5;

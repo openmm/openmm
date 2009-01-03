@@ -927,6 +927,15 @@ fl = float3( ddphi, 0.0f, 0.0f );
       fi_pair   = fs * ril;
       fi       += fi_pair;
       fl       -= fi_pair;
+//fi = float3( charge, parm4.z, parm4.w );
+//fj = float3( 1.0f, 2.f, 3.0f );
+/*
+   } else {
+      fi = float3( 0.0f, 0.f, 0.0f );
+      fj = float3( 0.0f, 0.f, 0.0f );
+      fk = float3( 0.0f, 0.f, 0.0f );
+      fl = float3( 0.0f, 0.f, 0.0f );
+*/
    }
 
 }
