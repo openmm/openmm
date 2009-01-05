@@ -141,34 +141,48 @@ double BrookCalcKineticEnergyKernel::execute( OpenMMContextImpl& context ){
 
    void* dataV                            = _openMMBrookInterface.getParticleVelocities()->getData( 1 );
    float* velocity                        = (float*) dataV;
-   double energy                          = 0.0;
-   int index                              = 0;
 
-/*
+if( 0 && _numberOfParticles ){
 printf( "BrookCalcKineticEnergyKernel:\n" );
-float com[3] = { 0.0, 0.0, 0.0 };
-for ( int ii = 0; ii < _numberOfParticles; ii++, index += 3 ){
-   com[0] += velocity[index];
-   com[1] += velocity[index+1];
-   com[2] += velocity[index+2];
-   printf( "  %d %.3f [%12.5e %12.5e %12.5e]\n", ii, _masses[ii], velocity[index], velocity[index+1], velocity[index+2] );
+float com[3]      = { 0.0, 0.0, 0.0 };
+float localEnergy = 0.0f;
+int localIndex    = 0;
+float massSum     = 0.0f;
+for ( int ii = 0; ii < _numberOfParticles; ii++, localIndex += 3 ){
+
+   com[0]      += _masses[ii]*velocity[localIndex];
+   com[1]      += _masses[ii]*velocity[localIndex+1];
+   com[2]      += _masses[ii]*velocity[localIndex+2];
+   localEnergy += _masses[ii]*(velocity[localIndex]*velocity[localIndex] + velocity[localIndex + 1]*velocity[localIndex + 1] + velocity[localIndex + 2]*velocity[localIndex + 2]);
+
+   massSum  += _masses[ii];
+
+   printf( "  %d %.3f [%12.5e %12.5e %12.5e]\n", ii, _masses[ii], velocity[localIndex], velocity[localIndex+1], velocity[localIndex+2] );
 }
-printf( "Com [%12.5e %12.5e %12.5e]\n", com[0], com[1], com[2] );
-index = 0;
+float inverseTotalMass = 1.0f/massSum;
+com[0] *= inverseTotalMass;
+com[1] *= inverseTotalMass;
+com[2] *= inverseTotalMass;
+printf( "KE raw=%.5e Com [%12.5e %12.5e %12.5e]\n", 0.5f*localEnergy, com[0], com[1], com[2] );
+
+
 float newcom[3] = { 0.0, 0.0, 0.0 };
-for ( int ii = 0; ii < _numberOfParticles; ii++, index += 3 ){
-   velocity[index]   -= com[0];
-   velocity[index+1] -= com[1];
-   velocity[index+2] -= com[2];
-   newcom[0]         += velocity[index];
-   newcom[1]         += velocity[index+1];
-   newcom[2]         += velocity[index+2];
+localIndex      = 0;
+for ( int ii = 0; ii < _numberOfParticles; ii++, localIndex += 3 ){
+   velocity[localIndex]   -= com[0];
+   velocity[localIndex+1] -= com[1];
+   velocity[localIndex+2] -= com[2];
+   newcom[0]              += velocity[localIndex];
+   newcom[1]              += velocity[localIndex+1];
+   newcom[2]              += velocity[localIndex+2];
+   printf( "  %d %.3f [%12.5e %12.5e %12.5e]\n", ii, _masses[ii], velocity[localIndex], velocity[localIndex+1], velocity[localIndex+2] );
 }
 printf( "NewCom [%12.5e %12.5e %12.5e]\n", newcom[0], newcom[1], newcom[2] );
-index = 0;
-*/
 
+}
 
+   int index                              = 0;
+   double energy                          = 0.0;
    for( int ii = 0; ii < _numberOfParticles; ii++, index += 3 ){
       energy += _masses[ii]*(velocity[index]*velocity[index] + velocity[index + 1]*velocity[index + 1] + velocity[index + 2]*velocity[index + 2]);
    }

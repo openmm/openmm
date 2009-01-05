@@ -30,31 +30,29 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-//Inverse of above
-kernel void kgetxyz( float4 instr<>, out float3 outstr<> ) {
+kernel void kgetxyz( float4 instr<>, out float3 outstr<> ){
 	outstr = instr.xyz;
 }
 
-
 //Zeroes out a stream
-kernel void kzerof3( out float3 outstr<> ) {
+kernel void kzerof3( out float3 outstr<> ){
 	outstr = float3( 0.0f, 0.0f, 0.0f );
 }
 
 //Zeros out a stream
-kernel void kzerof4( out float4 outstr<> ) {
+kernel void kzerof4( out float4 outstr<> ){
 	outstr = float4( 0.0f, 0.0f, 0.0f, 0.0f );
 }
 
-kernel void ksetf4( float4 val, out float4 outstr<> ) {
+kernel void ksetf4( float4 val, out float4 outstr<> ){
 	outstr = val;
 }
 
-kernel void ksetStr3( float3 instr<>, out float3 outstr<> ) {
-	outstr = instr;
+kernel void ksetStr3( float3 instr<>, out float3 outstr<> ){
+	outstr  = instr;
 }
 
-kernel void kadd3( float3 val<>, out float3 outstr<> ) { 
-   outstr += val;
+kernel void kadd3( float3 in1<>, float3 in2<>, out float3 outstr<> ){ 
+   outstr  = in1 + in2;
 }
 

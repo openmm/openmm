@@ -145,7 +145,7 @@ kshakeh_fix1(
       acor       = ( ld1 - 2 * rrpr - rpsqij ) * params.y / ( rrpr + rij1sq ) ; 
       diff       = abs( ld1 - 2 * rrpr - rpsqij ) / (params.z * tolerance );
       acor       = (diff < 1.0f) ? 0.0f : acor;
-      converged  = acor;
+      converged  = abs( acor );
 
 		dr         = rij1 * acor;
 		xpi       += dr * params.x;
@@ -160,7 +160,7 @@ kshakeh_fix1(
       diff       = abs( ld2 - 2.0f * rrpr - rpsqij ) / (params.z * tolerance );
       acor       = mask2 * ( ld2 - 2.0f * rrpr - rpsqij ) * params.y / ( rrpr + rij2sq ) ; 
       acor       = (diff < 1.0f) ? 0.0f : acor;
-      converged += acor;
+      converged += abs( acor );
 
 		dr         = rij2 * acor;
 		xpi       += dr * params.x;
@@ -174,7 +174,7 @@ kshakeh_fix1(
       diff       = abs( ld3 - 2.0f * rrpr - rpsqij ) / (params.z * tolerance );
       acor       = mask3 * ( ld3 - 2.0f * rrpr - rpsqij ) * params.y / ( rrpr + rij3sq ) ;
       acor       = (diff < 1.0f) ? 0.0f : acor;
-      converged += acor;
+      converged += abs( acor );
 
 		dr         = rij3 * acor;
 		xpi       += dr * params.x;
@@ -195,7 +195,6 @@ kshakeh_fix1(
 kernel void kshakeh_update1_fix1( 
 		float strwidth, //width of cposq streams
 		float2 invmap<>,    //shakeh inverse map
-		float3 posq<>,     //old positions
 		float3 posqp<>,    //deltas from sd2
 		float3 cposq0[][], //constrained delta for heavy atom
 		float3 cposq1[][], //ditto for h1

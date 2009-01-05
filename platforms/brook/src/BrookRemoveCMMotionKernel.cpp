@@ -96,7 +96,9 @@ void BrookRemoveCMMotionKernel::initialize( const System& system, const CMMotion
 
 // ---------------------------------------------------------------------------------------
 
-   // static const std::string methodName      = "BrookRemoveCMMotionKernel::initialize";
+   static const std::string methodName      = "BrookRemoveCMMotionKernel::initialize";
+   static const int PrintOn                 = 0;
+   FILE* log                                = getLog();
 
 // ---------------------------------------------------------------------------------------
 
@@ -109,6 +111,11 @@ void BrookRemoveCMMotionKernel::initialize( const System& system, const CMMotion
 
    _brookVelocityCenterOfMassRemoval = new BrookVelocityCenterOfMassRemoval();
    _brookVelocityCenterOfMassRemoval->setup( masses, getPlatform() );
+
+   if( PrintOn && log ){
+      (void) fprintf( log, "%s\n", methodName.c_str() );
+      (void) fflush( log );
+   }
 
    return;
 
@@ -162,7 +169,7 @@ void BrookRemoveCMMotionKernel::execute( OpenMMContextImpl& context ){
 
 // ---------------------------------------------------------------------------------------
 
-   // static const std::string methodName      = "BrookRemoveCMMotionKernel::execute";
+   static const std::string methodName      = "BrookRemoveCMMotionKernel::execute";
 
 // ---------------------------------------------------------------------------------------
 

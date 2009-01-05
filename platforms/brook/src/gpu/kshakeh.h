@@ -45,7 +45,6 @@ void  kshakeh_fix1 (
 void  kshakeh_update1_fix1 (
       const float  strwidth,
 		::brook::stream invmap,
-		::brook::stream posq,
 		::brook::stream posqp,
 		::brook::stream cposq0,
 		::brook::stream cposq1,

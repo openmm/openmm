@@ -48,8 +48,8 @@ kernel void kupdate_md2(
 		out float3 vnew<>, //Corrected velocities
 		out float3 posqnew<> //equal to posqp, avoids an extra call to copy
 		){
-   posqnew     = posq  + posqp;
    vnew        = posqp * dtinv;
+   posqnew     = posq  + posqp;
 }
 
 kernel void kupdateMdNoShake(
@@ -64,4 +64,3 @@ kernel void kupdateMdNoShake(
    outv      = v + dt*invmass*f;
    posqp    += dt*outv;
 }  
-

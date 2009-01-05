@@ -1805,12 +1805,12 @@ void BrookBonded::computeForces( BrookStreamImpl& positionStream, BrookStreamImp
 
    static const std::string methodName      = "BrookBonded::computeForces";
 
+   static const int PrintOn                 = 0;
+
    static const int I_Stream                = 0;
    static const int J_Stream                = 1;
    static const int K_Stream                = 2;
    static const int L_Stream                = 3;
-
-   static const int PrintOn                 = 0;
 
    static const int MaxErrorMessages        = 2;
    static       int ErrorMessages           = 0;

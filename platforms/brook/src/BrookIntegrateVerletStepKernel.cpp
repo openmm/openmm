@@ -118,7 +118,7 @@ int BrookIntegrateVerletStepKernel::setLog( FILE* log ){
  *
  */
 
-void BrookIntegrateVerletStepKernel::initialize(  const System& system, const VerletIntegrator& integrator  ){
+void BrookIntegrateVerletStepKernel::initialize(  const System& system, const VerletIntegrator& integrator ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -166,9 +166,9 @@ void BrookIntegrateVerletStepKernel::initialize(  const System& system, const Ve
    _brookShakeAlgorithm->setLog( log );
    _brookShakeAlgorithm->setup( masses, constraintIndicesVector, constraintLengths, getPlatform() );
 
-   BrookOpenMMFloat tolerance = static_cast<BrookOpenMMFloat>( integrator.getConstraintTolerance() );
+   BrookOpenMMFloat tolerance    = static_cast<BrookOpenMMFloat>( integrator.getConstraintTolerance() );
    _brookShakeAlgorithm->setShakeTolerance( tolerance );
-   _brookShakeAlgorithm->setMaxIterations( 30 );
+   _brookShakeAlgorithm->setMaxIterations( 40 );
 
    if( printOn && log ){
       (void) fprintf( log, "%s done w/ setup: particles=%d const=%d\n", methodName.c_str(), numberOfParticles, numberOfConstraints );
