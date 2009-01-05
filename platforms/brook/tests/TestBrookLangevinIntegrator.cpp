@@ -375,8 +375,8 @@ int main( ){
    (void) fflush( stdout );
    (void) fflush( stderr );
    try {
-      testLangevinSingleBond( log );
-      testLangevinConstraints( log );
+//      testLangevinSingleBond( log );
+//      testLangevinConstraints( log );
       testLangevinTemperature( log );
     } catch( const exception& e ){
       (void) fprintf( log, "Exception %s %.s\n", methodName.c_str(),  e.what() ); (void) fflush( log );

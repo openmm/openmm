@@ -37,6 +37,7 @@
 
 #include "../../../tests/AssertionUtilities.h"
 #include "BrookPlatform.h"
+#include "ReferencePlatform.h"
 #include "OpenMMContext.h"
 #include "HarmonicBondForce.h"
 #include "NonbondedForce.h"
@@ -167,8 +168,7 @@ void testVerletConstraints( FILE* log ){
   
   const int numParticles                   = 8;
   const int numConstraints                 = numParticles/2;
-  double mass                              = 2.0; 
-  const double temp                        = 100.0;
+  double mass                              = 10.0; 
 
 // ---------------------------------------------------------------------------------------
 
@@ -185,15 +185,16 @@ void testVerletConstraints( FILE* log ){
    integrator.setConstraintTolerance(1e-5);
    NonbondedForce* forceField = new NonbondedForce(numParticles, 0);
    for (int i = 0; i < numParticles; ++i) {
-       system.setParticleMass(i, 10.0);
+       system.setParticleMass(i, mass );
        forceField->setParticleParameters(i, (i%2 == 0 ? 0.2 : -0.2), 0.5, 5.0);
    }
-   for (int i = 0; i < numConstraints; ++i)
+   for (int i = 0; i < numConstraints; ++i){
        system.setConstraintParameters(i, 2*i, 2*i+1, 1.0);
+   }
    system.addForce(forceField);
 
-   CMMotionRemover* remover = new CMMotionRemover();
-   system.addForce(remover);
+   //CMMotionRemover* remover = new CMMotionRemover();
+   //system.addForce(remover);
 
    OpenMMContext context(system, integrator, platform);
    vector<Vec3> positions(numParticles);
@@ -209,6 +210,8 @@ void testVerletConstraints( FILE* log ){
    // Simulate it and see whether the constraints remain satisfied.
    
    double initialEnergy = 0.0;
+   double tolerance     = 0.002;
+   double maxDiff       = -1.0;
    for (int i = 0; i < 1000; ++i) {
       State state = context.getState(State::Positions | State::Energy);
       for (int j = 0; j < numConstraints; ++j) {
@@ -218,27 +221,32 @@ void testVerletConstraints( FILE* log ){
          Vec3 p1 = state.getPositions()[particle1];
          Vec3 p2 = state.getPositions()[particle2];
          double dist = std::sqrt((p1[0]-p2[0])*(p1[0]-p2[0])+(p1[1]-p2[1])*(p1[1]-p2[1])+(p1[2]-p2[2])*(p1[2]-p2[2]));
-          if( PrintOn ){
-             (void) fprintf( log, "%s step=%d constraint=%d p[%d %d] d=%.5e exptd=%.5e [%.5e %.5e %.5e] [%.5e %.5e %.5e]e\n", 
-                             methodName.c_str(), i, j, particle1, particle2, dist, distance,
-                             p1[0], p1[1], p1[2], p2[0], p2[1], p2[2]); (void) fflush( log );
+         double diff =  fabs( distance - dist );
+         if( diff > maxDiff ){
+            maxDiff = diff;
          }
-         ASSERT_EQUAL_TOL(distance, dist, 2e-2);
+         if( PrintOn > 1 || diff > tolerance ){
+            (void) fprintf( log, "%s step=%d cnstrnt=%d p[%d %d] d=%.5e exptd=%.5e dif=%.5e [%.5e %.5e %.5e] [%.5e %.5e %.5e] mxDff=%.5e\n", 
+                            methodName.c_str(), i, j, particle1, particle2, dist, distance, diff,
+                            p1[0], p1[1], p1[2], p2[0], p2[1], p2[2], maxDiff); (void) fflush( log );
+         }
+         ASSERT_EQUAL_TOL(distance, dist, tolerance );
        }
 
        double energy = state.getKineticEnergy()+state.getPotentialEnergy();
-       if( PrintOn ){
+       if( PrintOn > 1 ){
           (void) fprintf( log, "%s %d e[%.5e %.5e] ke=%.5e pe=%.5e\n", 
                           methodName.c_str(), i, initialEnergy, energy, state.getKineticEnergy(), state.getPotentialEnergy() ); (void) fflush( log );
        }
-       if (i == 1)
+       if( i == 1 ){
            initialEnergy = energy;
-       else if (i > 1)
+       } else if( i > 1 ){
            ASSERT_EQUAL_TOL(initialEnergy, energy, 0.5);
+       }
        integrator.step(1);
    }
    if( PrintOn ){
-      (void) fprintf( log, "%s ok\n", methodName.c_str() );
+      (void) fprintf( log, "%s ok maxShakeDiff=%.5e tolerance=%.5e\n", methodName.c_str(), maxDiff, tolerance );
       (void) fflush( log );
    }
 }
