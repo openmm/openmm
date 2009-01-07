@@ -745,13 +745,14 @@ int BrookGbsa::setup( const std::vector<std::vector<double> >& vectorOfParticleP
 
    // setup for Born radii calculation
 
+/*
    ObcParameters* obcParameters  = new ObcParameters( numberOfParticles, ObcParameters::ObcTypeII );
    obcParameters->setAtomicRadii( particleRadii);
 
    obcParameters->setScaledRadiusFactors( scaleFactors );
    obcParameters->setSolventDielectric( static_cast<RealOpenMM>(solventDielectric) );
    obcParameters->setSoluteDielectric(  static_cast<RealOpenMM>(soluteDielectric)  );
-
+*/
    //_cpuObc  = new CpuObc(obcParameters);
    //_cpuObc->setIncludeAceApproximation( true );
 

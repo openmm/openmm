@@ -616,7 +616,7 @@ int BrookNonBonded::_initializeExclusions( const std::vector<std::set<int> >& ex
 // ---------------------------------------------------------------------------------------
 
    static const std::string methodName      = "BrookNonBonded::_initializeExclusions";
-   static const int debug                   = 1;
+   static const int debug                   = 0;
 
 // ---------------------------------------------------------------------------------------
 
@@ -762,7 +762,7 @@ int BrookNonBonded::_initializeVdwAndCharge( const vector<vector<double> >& nonb
 // ---------------------------------------------------------------------------------------
 
    static const std::string methodName      = "BrookNonBonded::_initializeVdwAndCharge";
-   static const int debug                   = 1;
+   static const int debug                   = 0;
 
 // ---------------------------------------------------------------------------------------
 
@@ -861,7 +861,7 @@ int BrookNonBonded::_initializeJStreamVdw( const vector<vector<double> >& nonbon
 // ---------------------------------------------------------------------------------------
 
    static const std::string methodName      = "BrookNonBonded::_initializeJStreamVdw";
-   static const int debug                   = 1;
+   static const int debug                   = 0;
 
 // ---------------------------------------------------------------------------------------
 
@@ -1279,7 +1279,7 @@ void BrookNonBonded::computeForces( BrookStreamImpl& positionStream, BrookStream
 
    static const std::string methodName      = "BrookNonBonded::computeForces";
 
-   static const int PrintOn                 = 0;
+   static       int PrintOn                 = 1;
    static const int MaxErrorMessages        = 2;
    static       int ErrorMessages           = 0;
 
@@ -1288,6 +1288,8 @@ void BrookNonBonded::computeForces( BrookStreamImpl& positionStream, BrookStream
    // static const int debug                   = 1;
 
 // ---------------------------------------------------------------------------------------
+
+    PrintOn = (PrintOn && getLog()) ? 1 : 0;
 
    // nonbonded forces
 
@@ -1326,18 +1328,24 @@ nonbondedForceStreams[3]->fillWithValue( &zerof );
 
    // diagnostics
 
-   if( 1 && PrintOn && getLog() ){
-      FILE* log = getLog();
+   //if( 1 && PrintOn ){
+   if( 1 ){
+      //FILE* log = getLog();
+      FILE* log = stderr;
       (void) fprintf( log, "%s\n", methodName.c_str() ); (void) fflush( log );
       (void) fprintf( log, "\nPost knbforce_CDLJ4: particles=%6d ceiling=%3d dupFac=%3d", getNumberOfParticles(),  
-                                                                                               getParticleSizeCeiling(),
-                                                                                               getDuplicationFactor()  );
+                                                                                          getParticleSizeCeiling(),
+                                                                                          getDuplicationFactor()  );
 
       (void) fprintf( log, "\n                      hght=%6d   width=%3d   jWid=%3d", getParticleStreamHeight( ),
-                                                                                           getParticleStreamWidth( ),
-                                                                                           getJStreamWidth( ) );
+                                                                                      getParticleStreamWidth( ),
+                                                                                      getJStreamWidth( ) );
       (void) fprintf( log, "\n                      pFrc=%6d     eps=%12.5e\n",       getPartialForceStreamWidth( ), epsfac );
 
+      (void) fprintf( log, "\nFinal NB & bonded forces" );
+      BrookStreamInternal* brookStreamInternalF   = forceStream.getBrookStreamImpl();
+      brookStreamInternalF->printToFile( log );
+ 
       (void) fprintf( log, "\nOuterVdwStreamd\n" );
       getOuterVdwStream()->printToFile( log );
 
@@ -1347,8 +1355,8 @@ nonbondedForceStreams[3]->fillWithValue( &zerof );
       (void) fprintf( log, "\nInnerEpsilonStream\n" );
       getInnerEpsilonStream()->printToFile( log );
 
-      (void) fprintf( log, "\nExclusionStream\n" );
-      getExclusionStream()->printToFile( log );
+//      (void) fprintf( log, "\nExclusionStream\n" );
+//      getExclusionStream()->printToFile( log );
 
       (void) fprintf( log, "\nChargeStream\n" );
       getChargeStream()->printToFile( log );
@@ -1378,11 +1386,13 @@ nonbondedForceStreams[3]->fillWithValue( &zerof );
 
    // diagnostics
 
-   if( PrintOn && getLog() ){
+   if( PrintOn ){
 
-      FILE* log = getLog();
-      (void) fprintf( log, "\n%s NB forces", methodName.c_str() ); (void) fflush( log );
-//      forceStream.printToFile( log );
+      //FILE* log = getLog();
+      FILE* log = stderr;
+      (void) fprintf( log, "\n%s NB forces", methodName.c_str() );
+      BrookStreamInternal* brookStreamInternalF   = forceStream.getBrookStreamImpl();
+      brookStreamInternalF->printToFile( log );
       (void) fprintf( log, "\n%s Done", methodName.c_str() ); (void) fflush( log );
 
    }

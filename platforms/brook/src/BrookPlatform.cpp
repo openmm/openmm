@@ -197,6 +197,7 @@ BrookPlatform::BrookPlatform( ){
 
    _particleStreamWidth  = DefaultParticleStreamWidth;
    _log                  = NULL;
+//_log                  = stderr;
 
    // get Brook runtime
 
@@ -454,7 +455,7 @@ void BrookPlatform::contextCreated( OpenMMContextImpl& context ) const {
 // ---------------------------------------------------------------------------------------
 
    OpenMMBrookInterface* openMMBrookInterface = new OpenMMBrookInterface( getParticleStreamWidth() );
-   openMMBrookInterface->setLog( stderr );
+//   openMMBrookInterface->setLog( stderr );
    context.setPlatformData( openMMBrookInterface );
 }
 

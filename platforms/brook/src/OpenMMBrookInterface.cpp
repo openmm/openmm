@@ -533,7 +533,7 @@ void OpenMMBrookInterface::computeForces( OpenMMContextImpl& context ){
 
    static const std::string methodName      = "OpenMMBrookInterface::executeForces";
 
-   static const int PrintOn                 = 0;
+   static       int PrintOn                 = 1;
    static const int MaxErrorMessages        = 2;
    static       int ErrorMessages           = 0;
 
@@ -542,6 +542,8 @@ void OpenMMBrookInterface::computeForces( OpenMMContextImpl& context ){
    // static const int debug                   = 1;
 
 // ---------------------------------------------------------------------------------------
+
+   PrintOn = (PrintOn && getLog()) ? 1 : 0;
 
    // nonbonded forces
 
@@ -556,10 +558,12 @@ void OpenMMBrookInterface::computeForces( OpenMMContextImpl& context ){
 
    // bonded forces
 
-   if( PrintOn && getLog() ){
-      (void) fprintf( getLog(), "%s done nonbonded: bonded=%d completed=%d\n", methodName.c_str(),
+   //if( PrintOn ){
+   if( 1 ){
+      FILE* log = stderr;
+      (void) fprintf( log, "%s done nonbonded: bonded=%d completed=%d\n", methodName.c_str(),
                       _brookBonded.isActive(), _brookBonded.isSetupCompleted() ); 
-      (void) fflush( getLog() );
+      (void) fflush( log );
    }
 
    if( _brookBonded.isActive() ){
@@ -573,11 +577,24 @@ void OpenMMBrookInterface::computeForces( OpenMMContextImpl& context ){
                              getParticleStreamWidth(), getParticleStreamSize() );
       }
 
+/*
+(void) fprintf( getLog(), "%s done nonbonded: bonded=%d completed=%d\n", methodName.c_str(),
+                _brookBonded.isActive(), _brookBonded.isSetupCompleted() ); 
+(void) fflush( getLog() );
+*/
+
       _brookBonded.computeForces( *positions, *forces );
    
       // diagnostics
    
-      if( 1 && PrintOn ){
+      //if( 1 && PrintOn ){
+      if( 1 ){
+         FILE* log = stderr;
+         static int step           = 0;
+         static const int stopStep = 10;
+         (void) fprintf( log, "%s done bonded computeForces\n", methodName.c_str(),
+                         _brookBonded.isActive(), _brookBonded.isSetupCompleted() ); 
+         (void) fflush( log );
    
    /*
          (void) fprintf( getLog(), "\nFinal NB & bonded forces" );
@@ -591,8 +608,13 @@ void OpenMMBrookInterface::computeForces( OpenMMContextImpl& context ){
          }
    */
    
+         if( step++ >= stopStep ){
+            exit(0);
+         }
       }
+
    }
+
 
    // GBSA OBC forces
 

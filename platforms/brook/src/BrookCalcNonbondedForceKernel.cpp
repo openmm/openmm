@@ -67,7 +67,6 @@ BrookCalcNonbondedForceKernel::BrookCalcNonbondedForceKernel( std::string name, 
    _openMMBrookInterface.setNumberOfParticles( system.getNumParticles() );
 
    _brookBondParameters                     = NULL;
-
    _log                                     = NULL;
 
    const BrookPlatform brookPlatform        = dynamic_cast<const BrookPlatform&> (platform);
@@ -139,7 +138,9 @@ void BrookCalcNonbondedForceKernel::initialize( const System& system, const Nonb
 // ---------------------------------------------------------------------------------------
 
     FILE* log                 = getLog();
-(void) fprintf( log, "%s begin\n", methodName.c_str() ); fflush( log );
+    if( log ){
+       (void) fprintf( log, "%s begin\n", methodName.c_str() ); fflush( log );
+    }
 
     _numberOfParticles        = force.getNumParticles();
 /*
@@ -230,7 +231,7 @@ void BrookCalcNonbondedForceKernel::initialize14Interactions( const System& syst
    
          force.getNonbonded14Parameters( ii, particle1, particle2, charge, radius, depth ); 
    
-(void) fprintf( log, "%s idx=%d [%d %d] [%f %f %f]\n", methodName.c_str(), ii, particle1, particle2, charge, radius, depth );
+//(void) fprintf( log, "%s idx=%d [%d %d] [%f %f %f]\n", methodName.c_str(), ii, particle1, particle2, charge, radius, depth );
          particles[0]    = particle1;
          particles[1]    = particle2;
     
