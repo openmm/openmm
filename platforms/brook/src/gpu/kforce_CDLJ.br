@@ -43,7 +43,7 @@ kernel float4 scalar_force_CDLJ( float4 qq, float epsfac, float4 sig, float4 eps
  return f;
 }
 
-kernel float scalar_force_single_CDLJ( float qq, float epsfac, float sig, float eps, float r2, float4 params ) {
+kernel float scalar_force_single_CDLJ( float qq, float epsfac, float sig, float eps, float r2 ) {
  float invr, invrsig2, invrsig6;
  float f;
 
@@ -572,7 +572,7 @@ kernel void kforce14_CDLJ(
 
  r2 = dot( d1, d1 );
 
- fs = scalar_force_single_CDLJ( qq, epsfac, sigeps.x, sigeps.y, r2, params );
+ fs = scalar_force_single_CDLJ( qq, epsfac, sigeps.x, sigeps.y, r2 );
 
  fi = fs.x * d1;
  fj = -fi;
@@ -732,7 +732,6 @@ kernel void kAcos( float xIn, out float acosVal<> ){
 kernel void kbonded_CDLJ (
       float epsfac,
       float xstrwidth,
-      float4 nbparams,
       float3 posq[][],
       float  charge<>,
       float4 atoms<>,
@@ -923,7 +922,7 @@ fl = float3( ddphi, 0.0f, 0.0f );
   
    if( parm4.z > -0.5f ){
       r2        = dot( ril, ril );
-      fs        = scalar_force_single_CDLJ( charge, epsfac, parm4.z, parm4.w, r2, nbparams );
+      fs        = scalar_force_single_CDLJ( charge, epsfac, parm4.z, parm4.w, r2 );
       fi_pair   = fs * ril;
       fi       += fi_pair;
       fl       -= fi_pair;

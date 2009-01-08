@@ -1329,7 +1329,8 @@ nonbondedForceStreams[3]->fillWithValue( &zerof );
    // diagnostics
 
    //if( 1 && PrintOn ){
-   if( 1 ){
+static int step = 0;
+   if( step++ < 1 ){
       //FILE* log = getLog();
       FILE* log = stderr;
       (void) fprintf( log, "%s\n", methodName.c_str() ); (void) fflush( log );
@@ -1386,7 +1387,8 @@ nonbondedForceStreams[3]->fillWithValue( &zerof );
 
    // diagnostics
 
-   if( PrintOn ){
+   //if( PrintOn ){
+   if( 1 ){
 
       //FILE* log = getLog();
       FILE* log = stderr;

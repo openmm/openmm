@@ -34,8 +34,6 @@
 #include "OpenMMException.h"
 #include <sstream>
 
-// used for energy calculartion
-
 #include "LangevinIntegrator.h"
 #include "ReferencePlatform.h"
 #include "internal/OpenMMContextImpl.h"
@@ -533,22 +531,27 @@ void OpenMMBrookInterface::computeForces( OpenMMContextImpl& context ){
 
    static const std::string methodName      = "OpenMMBrookInterface::executeForces";
 
-   static       int PrintOn                 = 1;
+   static       int printOn                 = 0;
    static const int MaxErrorMessages        = 2;
    static       int ErrorMessages           = 0;
-
-   static const float4 dummyParameters( 0.0, 0.0, 0.0, 0.0 );
-
-   // static const int debug                   = 1;
+   FILE* log;
 
 // ---------------------------------------------------------------------------------------
 
-   PrintOn = (PrintOn && getLog()) ? 1 : 0;
-
-   // nonbonded forces
+//setLog( stderr );
+   printOn = (printOn && getLog()) ? printOn : 0;
 
    BrookStreamImpl* positions = getParticlePositions();
    BrookStreamImpl* forces    = getParticleForces();
+
+   // info
+
+   //if( printOn > 1 ){
+   if( 1 ){
+      printForcesToFile( context );
+   }
+
+   // nonbonded forces
 
    if( _brookNonBonded.isActive() ){
       _brookNonBonded.computeForces( *positions, *forces );
@@ -558,9 +561,8 @@ void OpenMMBrookInterface::computeForces( OpenMMContextImpl& context ){
 
    // bonded forces
 
-   //if( PrintOn ){
-   if( 1 ){
-      FILE* log = stderr;
+   if( printOn ){
+      log = getLog();
       (void) fprintf( log, "%s done nonbonded: bonded=%d completed=%d\n", methodName.c_str(),
                       _brookBonded.isActive(), _brookBonded.isSetupCompleted() ); 
       (void) fflush( log );
@@ -587,13 +589,11 @@ void OpenMMBrookInterface::computeForces( OpenMMContextImpl& context ){
    
       // diagnostics
    
-      //if( 1 && PrintOn ){
-      if( 1 ){
+      if( printOn ){
          FILE* log = stderr;
          static int step           = 0;
          static const int stopStep = 10;
-         (void) fprintf( log, "%s done bonded computeForces\n", methodName.c_str(),
-                         _brookBonded.isActive(), _brookBonded.isSetupCompleted() ); 
+         (void) fprintf( log, "%s done bonded computeForces\n", methodName.c_str() );
          (void) fflush( log );
    
    /*
@@ -626,6 +626,120 @@ void OpenMMBrookInterface::computeForces( OpenMMContextImpl& context ){
 }
 
 /** 
+ * Print forces to file 
+ * 
+ * @param context     context
+ *
+ */
+
+void OpenMMBrookInterface::printForcesToFile( OpenMMContextImpl& context ){
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName      = "OpenMMBrookInterface::printForcesToFile";
+   float zero                               = 0.0f;
+   static int step                          = 0;
+
+// ---------------------------------------------------------------------------------------
+
+   // first step only?
+
+   if( step > 0 ){
+      return;
+   }
+
+   std::stringstream fileNameBaseS;
+   //fileNameBase << "Brook_" << context.getTime() << "_"; 
+   fileNameBaseS << "Brook_" << step++ << "_"; 
+   std::string fileNameBase = fileNameBaseS.str();
+
+   // create vector of streams for output
+
+   BrookStreamImpl* positions = getParticlePositions();
+   BrookStreamImpl* forces    = getParticleForces();
+
+   std::vector<BrookStreamImpl*> streams;
+   streams.push_back( positions );
+   streams.push_back( forces );
+
+// ---------------------------------------------------------------------------------------
+
+   // nonbonded forces
+
+   if( _brookNonBonded.isActive() ){
+      forces->fillWithValue( &zero );
+      _brookNonBonded.computeForces( *positions, *forces );
+      std::string fileName = fileNameBase + "NonBonded.txt";
+      printStreamsToFile( fileName, streams );
+   }
+
+// ---------------------------------------------------------------------------------------
+
+   // bonded forces
+
+   if( _brookBonded.isActive() ){
+
+      // perform setup first time through
+
+      if( _brookBonded.isSetupCompleted() == 0 ){
+
+         _brookBonded.setup( getNumberOfParticles(), getHarmonicBondForceParameters(), getHarmonicAngleForceParameters(),
+                             getPeriodicTorsionForceParameters(), getRBTorsionForceParameters(),
+                             getNonBonded14ForceParameters(),
+                             getParticleStreamWidth(), getParticleStreamSize() );
+      }
+
+      forces->fillWithValue( &zero );
+      _brookBonded.computeForces( *positions, *forces );
+      std::string fileName = fileNameBase + "Bonded.txt";
+      printStreamsToFile( fileName, streams );
+   
+   }
+
+// ---------------------------------------------------------------------------------------
+
+   // GBSA OBC forces
+
+   if( _brookGbsa.isActive() ){
+
+      forces->fillWithValue( &zero );
+
+      _brookGbsa.computeForces( *positions, *forces );
+
+      std::string fileName = fileNameBase + "Obc.txt";
+      printStreamsToFile( fileName, streams );
+
+   }
+   forces->fillWithValue( &zero );
+
+// ---------------------------------------------------------------------------------------
+
+   // all forces
+
+   if( 1 ){
+
+      if( _brookNonBonded.isActive() ){
+         _brookNonBonded.computeForces( *positions, *forces );
+      }
+
+      if( _brookBonded.isActive() ){
+         _brookBonded.computeForces( *positions, *forces );
+      }
+
+      if( _brookGbsa.isActive() ){
+         _brookGbsa.computeForces( *positions, *forces );
+      }
+
+      std::string fileName = fileNameBase + "AllF.txt";
+      printStreamsToFile( fileName, streams );
+   }
+
+   forces->fillWithValue( &zero );
+
+   // ---------------------------------------------------------------------------------------
+}
+
+/** 
  * Compute energy
  * 
  * @param context     context
@@ -653,7 +767,7 @@ double OpenMMBrookInterface::computeEnergy( OpenMMContextImpl& context, System& 
    positions.saveToArray(posData);
    vector<Vec3> pos(positions.getSize());
 
-   for( int ii = 0; ii < pos.size(); ii++ ){
+   for( unsigned int ii = 0; ii < pos.size(); ii++ ){
       pos[ii] = Vec3(posData[3*ii], posData[3*ii+1], posData[3*ii+2]);
    }
    delete[] posData;
@@ -662,3 +776,113 @@ double OpenMMBrookInterface::computeEnergy( OpenMMContextImpl& context, System& 
    return refContext.getState(State::Energy).getPotentialEnergy();
 
 }
+
+/* 
+ * Print contents of object to file
+ *
+ * @param fileName     file name
+ * @param streams      streams to print
+ *
+ * @return DefaultReturnValue
+ *
+ * */
+
+int OpenMMBrookInterface::printStreamsToFile( std::string fileName, std::vector<BrookStreamImpl*>& streams ){
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName      = "OpenMMBrookInterface::printStreamsToFile";
+
+// ---------------------------------------------------------------------------------------
+
+   FILE* filePtr = fopen( fileName.c_str(), "w" );
+   if( !filePtr ){
+      (void) fprintf( stderr, "%s coud not open file=<%s>\n", methodName.c_str(), fileName.c_str() );
+      (void) fflush( stderr );
+      return ErrorReturnValue;
+   }
+
+   // gather arrays, widths for eah stream, and set index for each stream
+   // also set minimum of stream sizes
+
+   int minIndex    = 10000000;
+   float** arrays  = new float*[streams.size()];
+   float** sums    = new float*[streams.size()];
+   int* widths     = new int[streams.size()];
+   int* indices    = new int[streams.size()];
+   for( unsigned int ii = 0; ii < streams.size(); ii++ ){
+      BrookStreamImpl* stream  = streams[ii];
+      void* dataArrayV         = stream->getData( 1 );
+      arrays[ii]               = (float*) dataArrayV;
+      widths[ii]               =  stream->getWidth();
+      indices[ii]              = 0;
+      sums[ii]                 = new float[4];
+      sums[ii][0] = sums[ii][1] = sums[ii][2] = sums[ii][3] = 0.0f;
+      if( minIndex > stream->getStreamSize() ){
+         minIndex = stream->getStreamSize();
+      }
+   }
+
+   // sum columns 
+
+   for( int ii = 0; ii < minIndex; ii++ ){
+      for( unsigned int kk = 0; kk < streams.size(); kk++ ){
+         for( int jj = 0; jj < widths[kk]; jj++ ){
+            sums[kk][jj] += arrays[kk][indices[kk]++];
+         }
+      }
+   }
+
+   // reinitialize indices
+
+   for( unsigned int kk = 0; kk < streams.size(); kk++ ){
+      indices[kk] = 0;
+   }
+
+   // show column sums
+
+   for( unsigned int kk = 0; kk < streams.size(); kk++ ){
+      (void) fprintf( filePtr, "Sms " );
+      for( int jj = 0; jj < widths[kk]; jj++ ){
+         (void) fprintf( filePtr, "%12.5e ", sums[kk][jj] );
+      }
+   }
+   (void) fprintf( filePtr, "\n" );
+
+   for( int ii = 0; ii < minIndex; ii++ ){
+      (void) fprintf( filePtr, "%d ", ii );
+
+      // streams
+
+      for( unsigned int kk = 0; kk < streams.size(); kk++ ){
+
+//         (void) fprintf( filePtr, "[ " );
+ 
+         // ii elements of stream kk
+
+         for( int jj = 0; jj < widths[kk]; jj++ ){
+            (void) fprintf( filePtr, "%12.5e ", arrays[kk][indices[kk]++] );
+         }
+
+ //        (void) fprintf( filePtr, " ]", ii );
+      }
+      (void) fprintf( filePtr, "\n", ii );
+   }
+
+
+   // cleanup
+
+   (void) fclose( filePtr );
+
+   delete[] arrays;
+   delete[] widths;
+   delete[] indices;
+   for( int ii = 0; ii < 4; ii++ ){
+      delete[] sums[ii];
+   }
+   delete[] sums;
+
+   return DefaultReturnValue;
+
+}
+

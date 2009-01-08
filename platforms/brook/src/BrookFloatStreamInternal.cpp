@@ -59,6 +59,9 @@ BrookFloatStreamInternal::BrookFloatStreamInternal( const std::string& name, int
 
 // ---------------------------------------------------------------------------------------
 
+//fprintf( stderr,"%s %s\n", methodName.c_str(), getName().c_str() );
+//fflush( stderr );
+
    // set base type (currently only FLOAT supported)
 
    switch( type ){

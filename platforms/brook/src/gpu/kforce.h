@@ -317,7 +317,6 @@ typedef void (*gpuBondedFunction)(
 
 void  kbonded_CDLJ (const float  epsfac,
 		const float  xstrwidth,
-		const float4 params,
 		::brook::stream posq,
 		::brook::stream charge,
 		::brook::stream atoms,
