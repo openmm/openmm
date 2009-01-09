@@ -128,11 +128,16 @@ void BrookCalcGBSAOBCForceKernel::initialize( const System& system, const GBSAOB
 // ---------------------------------------------------------------------------------------
 
    static const std::string methodName      = "BrookCalcGBSAOBCForceKernel::initialize";
-   const int PrintOn                        = 0;
+   int printOn                              = 0;
+   FILE* log;
 
 // ---------------------------------------------------------------------------------------
 
-   FILE* log                 = getLog();
+   if( printOn && getLog() ){
+       log = getLog();
+   } else {
+      printOn = 0;
+   } 
 
    // ---------------------------------------------------------------------------------------
 
@@ -159,7 +164,7 @@ void BrookCalcGBSAOBCForceKernel::initialize( const System& system, const GBSAOB
    _openMMBrookInterface.setTriggerForceKernel( this );
    _openMMBrookInterface.setTriggerEnergyKernel( this );
 
-   if( log && PrintOn ){
+   if( printOn ){
       std::string contents = brookGbsa.getContentsString( ); 
       (void) fprintf( log, "%s brookGbsa::contents\n%s", methodName.c_str(), contents.c_str() );
       (void) fflush( log );

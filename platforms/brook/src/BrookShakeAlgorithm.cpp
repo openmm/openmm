@@ -560,7 +560,7 @@ int BrookShakeAlgorithm::_setShakeStreams( const std::vector<double>& masses, co
 
    BrookOpenMMFloat* inverseMap = new BrookOpenMMFloat[2*shakeParticleStreamSize];
    for( int ii = 0; ii < shakeParticleStreamSize*2; ii++ ){
-      inverseMap[ii] = -1;
+      inverseMap[ii] = static_cast<BrookOpenMMFloat>(-1.0);
    }
    
    // build inverse map
@@ -568,7 +568,7 @@ int BrookShakeAlgorithm::_setShakeStreams( const std::vector<double>& masses, co
    for( int ii = 0; ii < shakeConstraintStreamSize; ii++ ){
       int ii4 = ii << 2;
       for( int jj = 0; jj < 4; jj++ ){
-         if( particleIndices[ii4+jj] != -1 ){
+         if( particleIndices[ii4+jj] > -1.0f ){
             int particleIndex             = (int) (particleIndices[ii4+jj] + 0.001);
             inverseMap[particleIndex*2]   = (float) ii;
             inverseMap[particleIndex*2+1] = (float) jj;

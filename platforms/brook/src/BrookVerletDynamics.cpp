@@ -467,19 +467,19 @@ int BrookVerletDynamics::update( BrookStreamImpl& positionStream, BrookStreamImp
 // ---------------------------------------------------------------------------------------
 
    static std::string methodName  = "\nBrookVerletDynamics::update";
-   static int printOn             = 1;
+   static int printOn             = 0;
    FILE* log;
 
 // ---------------------------------------------------------------------------------------
 
    _internalStepCount++;
 
-setLog( stderr );
+//setLog( stderr );
    printOn = (printOn && getLog()) ? printOn : 0; 
 
    BrookStreamImpl& forceStream = const_cast<BrookStreamImpl&> (forceStreamC);
 
-   if( (1 || printOn) ){
+   if( printOn ){
 
       static int showAux = 1;
       log                = getLog();
@@ -598,7 +598,7 @@ setLog( stderr );
       // Shake gather
    
       kshakeh_update1_fix1( 
-                    (float) getVerletDynamicsParticleStreamWidth(),
+                    (float) brookShakeAlgorithm.getShakeConstraintStreamWidth(),
                     brookShakeAlgorithm.getShakeInverseMapStream()->getBrookStream(),
                     getXPrimeStream()->getBrookStream(),
                     brookShakeAlgorithm.getShakeXCons0Stream()->getBrookStream(),
@@ -608,10 +608,10 @@ setLog( stderr );
                     getXPrimeStream()->getBrookStream() );
                     //positionStream.getBrookStream() );
    
-      if( 0 && printOn ){
+      if( printOn ){
 
-         (void) fprintf( log, "\n%s Post kshakeh_update2_fix1: particleStrW=%3d",
-                                   methodName.c_str(), getVerletDynamicsParticleStreamWidth() );
+         (void) fprintf( log, "\n%s Post kshakeh_update1_fix1: step=%d ShakeConstraintStreamWidth=%3d",
+                                   methodName.c_str(), _internalStepCount, brookShakeAlgorithm.getShakeConstraintStreamWidth() );
    
          (void) fprintf( log, "\nShakeInverseMapStream %d\n", _internalStepCount );
          brookShakeAlgorithm.getShakeInverseMapStream()->printToFile( log );
@@ -652,9 +652,10 @@ setLog( stderr );
                                    methodName.c_str(), _internalStepCount, inverseStepSize );
    
          BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamImpl();
+         brookShakeAlgorithm.checkConstraints( brookStreamInternalPos, log, 0.0001f );
          (void) fprintf( log, "\nPositionStream %d\n", _internalStepCount );
          brookStreamInternalPos->printToFile( log );
-   
+
          (void) fprintf( log, "\nXPrimeStream %d\n", _internalStepCount );
          getXPrimeStream()->printToFile( log ); 
 

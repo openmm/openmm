@@ -538,11 +538,7 @@ void OpenMMBrookInterface::computeForces( OpenMMContextImpl& context ){
 
 // ---------------------------------------------------------------------------------------
 
-(void) fprintf( stderr, "%s done nonbonded & bonded=%d completed=%d\n", methodName.c_str(),
-                _brookBonded.isActive(), _brookBonded.isSetupCompleted() ); 
-(void) fflush( stderr );
-
-setLog( stderr );
+//setLog( stderr );
    printOn = (printOn && getLog()) ? printOn : 0;
 
    BrookStreamImpl* positions = getParticlePositions();
@@ -550,14 +546,9 @@ setLog( stderr );
 
    // info
 
-   //if( printOn > 1 ){
-   if( 0 ){
+   if( printOn > 1 ){
       printForcesToFile( context );
    }
-
-(void) fprintf( stderr, "%s x1 done nonbonded & bonded=%d completed=%d\n", methodName.c_str(),
-                _brookBonded.isActive(), _brookBonded.isSetupCompleted() ); 
-(void) fflush( stderr );
 
    // nonbonded forces
 
@@ -587,16 +578,11 @@ setLog( stderr );
                              getParticleStreamWidth(), getParticleStreamSize() );
       }
 
-(void) fprintf( stderr, "%s done nonbonded & bonded=%d completed=%d\n", methodName.c_str(),
-                _brookBonded.isActive(), _brookBonded.isSetupCompleted() ); 
-(void) fflush( stderr );
-
       _brookBonded.computeForces( *positions, *forces );
    
       // diagnostics
    
       if( printOn ){
-         FILE* log = stderr;
          static int step           = 0;
          static const int stopStep = 10;
          (void) fprintf( log, "%s done bonded computeForces\n", methodName.c_str() );
@@ -621,15 +607,11 @@ setLog( stderr );
 
    }
 
-
    // GBSA OBC forces
 
    if( _brookGbsa.isActive() ){
       _brookGbsa.computeForces( *positions, *forces );
    }
-
-(void) fprintf( stderr, "%s done computeForces\n", methodName.c_str() );
-(void) fflush( stderr );
 
    // ---------------------------------------------------------------------------------------
 }

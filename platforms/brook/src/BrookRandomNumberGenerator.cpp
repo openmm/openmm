@@ -362,13 +362,20 @@ int BrookRandomNumberGenerator::_loadRandomNumberStreamsKiss( void ){
 
    static unsigned int state[4];
    static int stateInitialized    = 0;
-   static int PrintOn             = 0;
+   int printOn                    = 0;
+   FILE* log;
    static const int reseed        = 10000;
  
    static std::string methodName  = "\nBrookRandomNumberGenerator::_loadRandomNumberStreamsKiss";
 
    // ---------------------------------------------------------------------------------------
    
+   if( printOn && getLog() ){
+       log = getLog();
+   } else {
+      printOn = 0;
+   }   
+
    // periodically reset seeds
 
    if( !stateInitialized || !(stateInitialized % reseed) ){
@@ -378,10 +385,10 @@ int BrookRandomNumberGenerator::_loadRandomNumberStreamsKiss( void ){
       state[2] = rand();
       state[3] = rand();
 
-      if( PrintOn && getLog() ){
-         (void) fprintf( getLog(), "%s reset state seeds stateInitialized=%d reseed=%d [%u %u %u %u]\n",
+      if( printOn ){
+         (void) fprintf( log, "%s reset state seeds stateInitialized=%d reseed=%d [%u %u %u %u]\n",
                          methodName.c_str(), stateInitialized, reseed,  state[0], state[1], state[2], state[3] );
-         (void) fflush( getLog() );
+         (void) fflush( log );
       }
 
 /*
@@ -398,13 +405,13 @@ state[3] = 27587;
 
    float* loadBuffer = _getLoadBuffer();
 
-   if( PrintOn && getLog() ){
+   if( printOn ){
 	   static float count   = 0.0f;
       float block          = (float) (3*getRandomNumberStreamSize() );
       count               += 1.0f;
-      (void) fprintf( getLog(), "%s: count=%.1f ttl=%.3e no./count=%.1f %d %d\n", methodName.c_str(),
+      (void) fprintf( log, "%s: count=%.1f ttl=%.3e no./count=%.1f %d %d\n", methodName.c_str(),
                       count, block*count, block, getRandomNumberStreamSize(), getNumberOfRandomNumberStreams() );
-      (void) fflush( getLog() );
+      (void) fflush( log );
    }
 	
    for( int jj = 0; jj < getNumberOfRandomNumberStreams(); jj++ ){
@@ -418,9 +425,9 @@ state[3] = 27587;
 	   getRandomNumberStream( jj )->loadFromArray( loadBuffer );
    }
 
-   if( PrintOn && getLog() ){
-      (void) fprintf( getLog(), "%s: stats\n%s\n", methodName.c_str(), getStatisticsString().c_str() );
-      (void) fflush( getLog() );
+   if( printOn ){
+      (void) fprintf( log, "%s: stats\n%s\n", methodName.c_str(), getStatisticsString().c_str() );
+      (void) fflush( log );
    }
 
    return DefaultReturnValue;
@@ -439,7 +446,8 @@ int BrookRandomNumberGenerator::_loadRandomNumberStreamsMersenne( void ){
    // ---------------------------------------------------------------------------------------
 
    static const std::string methodName  = "\nBrookRandomNumberGenerator::_loadRandomNumberStreamsMersenne";
-   static int PrintOn                   = 0;
+   int printOn                          = 0;
+   FILE* log;
 
    // ---------------------------------------------------------------------------------------
    
@@ -456,9 +464,9 @@ int BrookRandomNumberGenerator::_loadRandomNumberStreamsMersenne( void ){
 	   getRandomNumberStream( jj )->loadFromArray( loadBuffer );
    }
 
-   if( PrintOn && getLog() ){
-      (void) fprintf( getLog(), "%s: stats\n%s\n", methodName.c_str(), getStatisticsString().c_str() );
-      (void) fflush( getLog() );
+   if( printOn ){
+      (void) fprintf( log, "%s: stats\n%s\n", methodName.c_str(), getStatisticsString().c_str() );
+      (void) fflush( log );
    }
 
    return DefaultReturnValue;
@@ -676,10 +684,17 @@ int BrookRandomNumberGenerator::advanceGVCursor( int numberOfRandomValuesConsume
    // ---------------------------------------------------------------------------------------
 
    static const std::string methodName = "BrookRandomNumberGenerator::advanceGVCursor";
-   static const int PrintOn      = 0;
+   int printOn                         = 0;
+   FILE* log;
 
    // ---------------------------------------------------------------------------------------
 	
+   if( printOn && getLog() ){
+       log = getLog();
+   } else {
+      printOn = 0;
+   }   
+
    int rvStreamSize  = getRandomNumberStreamSize();
 
    // use 2 random values per sd 
@@ -726,9 +741,9 @@ int BrookRandomNumberGenerator::advanceGVCursor( int numberOfRandomValuesConsume
          _rvStreamIndex = 0;
 		}
 
-      if( PrintOn && getLog() ){
-         (void) fprintf( getLog(), "%s StrmIdx=%d action=%s\n", methodName, _rvStreamIndex, action );
-         (void) fflush( getLog() );
+      if( printOn ){
+         (void) fprintf( log, "%s StrmIdx=%d action=%s\n", methodName, _rvStreamIndex, action );
+         (void) fflush( log );
       }
 	}
 
@@ -1023,7 +1038,7 @@ std::string BrookRandomNumberGenerator::getContentsString( int level ) const {
    (void) LOCAL_SPRINTF( value, "%d", getMaxShuffles() );
    message << _getLine( tab, "Max number of rv stream shuffles:", value ); 
 
-   message << _getLine( tab, "Log:",                  (getLog()                ? Set : NotSet) ); 
+   message << _getLine( tab, "Log:",                  (getLog()                 ? Set : NotSet) ); 
 
    message << _getLine( tab, "Shuffle:",              (_getShuffleStream()      ? Set : NotSet) ); 
  

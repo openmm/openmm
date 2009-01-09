@@ -126,11 +126,16 @@ void BrookCalcHarmonicBondForceKernel::initialize( const System& system, const H
 // ---------------------------------------------------------------------------------------
 
    static const std::string methodName      = "BrookCalcHarmonicBondForceKernel::initialize";
-   static const int PrintOn                 = 0;
+   int printOn                              = 0;
+   FILE* log;
 
 // ---------------------------------------------------------------------------------------
 
-   FILE* log                 = getLog();
+   if( printOn && getLog() ){
+       log = getLog();
+   } else {
+      printOn = 0;
+   }   
 
    // ---------------------------------------------------------------------------------------
 
@@ -164,7 +169,7 @@ void BrookCalcHarmonicBondForceKernel::initialize( const System& system, const H
    _openMMBrookInterface.setTriggerForceKernel( this );
    _openMMBrookInterface.setTriggerEnergyKernel( this );
 
-   if( PrintOn && log ){
+   if( printOn ){
       std::string contents = _brookBondParameters->getContentsString( ); 
       (void) fprintf( log, "%s contents\n%s", methodName.c_str(), contents.c_str() );
       (void) fflush( log );

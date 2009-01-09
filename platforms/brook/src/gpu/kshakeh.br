@@ -203,22 +203,23 @@ kernel void kshakeh_update1_fix1(
 		float3 cposq3[][], //ditto for h3
 		out float3 oposq<> //updated deltas
 		){
+
 	float2 atom;
 	
    atom.y  = round( (invmap.x - fmod( invmap.x, strwidth ))/strwidth );
 	atom.x  = invmap.x - atom.y * strwidth;
 	
 //	oposq = posq;
-	if ( invmap.y < 0 ){
-		oposq = posqp;
-	} else if ( invmap.y < 0.5f ){
-		oposq += cposq0[ atom ];
-	} else if ( invmap.y < 1.5f ){
-		oposq += cposq1[ atom ];
-	} else if ( invmap.y < 2.5f ){
-		oposq += cposq2[ atom ];
-	} else if ( invmap.y < 3.5f ){
-		oposq += cposq3[ atom ];
+	if( invmap.y < 0 ){
+		oposq  = posqp;
+	} else if( invmap.y < 0.5f ){
+		oposq  = cposq0[ atom ];
+	} else if( invmap.y < 1.5f ){
+		oposq  = cposq1[ atom ];
+	} else if( invmap.y < 2.5f ){
+		oposq  = cposq2[ atom ];
+	} else if( invmap.y < 3.5f ){
+		oposq  = cposq3[ atom ];
    }
 
 }

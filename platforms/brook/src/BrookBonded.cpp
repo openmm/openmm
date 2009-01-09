@@ -1073,10 +1073,11 @@ int BrookBonded::_loadInvMaps( int nbondeds, int nparticles, int *particles, int
    static const std::string methodName = "BrookBonded::_loadInvMaps";
    static       int printOn            = 0;
    double dangleValue                  = 0.0;
+   FILE* log                           = NULL;
 
 // ---------------------------------------------------------------------------------------
 
-   printOn = (printOn && getLog()) ? 1 : 0;
+   printOn = (printOn && getLog()) ? printOn : 0;
 
    // get particle stream size
 
@@ -1121,10 +1122,11 @@ int BrookBonded::_loadInvMaps( int nbondeds, int nparticles, int *particles, int
    }
 
    if( printOn ){
-      (void) fprintf( getLog(), "%s force stream strms=%d nbondeds=%d max counts=[%d %d %d %d] strSz&Wd=%d %d\n", methodName.c_str(), getNumberOfForceStreams(),
+      log = getLog();
+      (void) fprintf( log, "%s force stream strms=%d nbondeds=%d max counts=[%d %d %d %d] strSz&Wd=%d %d\n", methodName.c_str(), getNumberOfForceStreams(),
                       nbondeds, getMaxInverseMapStreamCount(0), getMaxInverseMapStreamCount(1), getMaxInverseMapStreamCount(2), getMaxInverseMapStreamCount(3),
                       particleStreamSize, particleStreamWidth );
-      (void) fflush( getLog() );
+      (void) fflush( log );
    }
 
    // load data
@@ -1134,18 +1136,17 @@ int BrookBonded::_loadInvMaps( int nbondeds, int nparticles, int *particles, int
          block[jj] = -1.0f;
       }
 
-(void) fprintf( stderr, "%s _gpuCalcInvMap %d getInverseMapStreamCount=%d\n", methodName.c_str(), ii, getInverseMapStreamCount( ii ) ); (void) fflush( getLog() );
+//(void) fprintf( stderr, "%s _gpuCalcInvMap %d getInverseMapStreamCount=%d\n", methodName.c_str(), ii, getInverseMapStreamCount( ii ) ); (void) fflush( log );
 
       _gpuCalcInvMap( ii, 4, nbondeds, nparticles, particles, getMaxInverseMapStreamCount( ii ), counts, invmaps, &(_inverseMapStreamCount[ii]) );
 
-_gpuPrintInvMaps( _inverseMapStreamCount[ii], nparticles, counts, invmaps, stderr );
+//_gpuPrintInvMaps( _inverseMapStreamCount[ii], nparticles, counts, invmaps, stderr );
 
       _validateInverseMapStreamCount( ii, _inverseMapStreamCount[ii] ); 
       for( int jj = 0; jj < _inverseMapStreamCount[ii]; jj++ ){
          _inverseStreamMaps[ii][jj]->loadFromArray( invmaps[jj] );
 
-         //if( printOn ){
-         if( 1 ){
+         if( printOn ){
             FILE* log = stderr;
             (void) fprintf( log, "%s inverseMap stream strms=%d count=%d index=%d %d InverseMapStreamCount[ii]=%d max=%d\n",
                             methodName.c_str(), getNumberOfForceStreams(), _inverseMapStreamCount[ii], ii, jj,
@@ -1175,8 +1176,8 @@ _gpuPrintInvMaps( _inverseMapStreamCount[ii], nparticles, counts, invmaps, stder
    // diagnostics 
 
    if( printOn ){
-      (void) fprintf( getLog(), "%s done\n", methodName.c_str() );
-      (void) fflush( getLog() );
+      (void) fprintf( log, "%s done\n", methodName.c_str() );
+      (void) fflush( log );
    }
 
    // free memory
@@ -1587,12 +1588,19 @@ int BrookBonded::_gpuCalcInvMap( int posflag, int niparticles, int nints, int np
    //char value[MAX_LINE_CHARS];
    static const char* Set                   = "Set";
    static const char* NotSet                = "Not set";
-   static const int printOn                 = 0;
+   int printOn                              = 0;
+   FILE* log;
 
    int particleRange[2]                     = { 90000000, -90000000 };
    int mapnumRange[2]                       = { 90000000, -90000000 };
 
 // ---------------------------------------------------------------------------------------
+
+   if( printOn && getLog() ){
+       log = getLog();
+   } else {
+      printOn = 0;
+   }   
 
    memset( counts, 0, sizeof( int )*nparticles );
 
@@ -1608,9 +1616,9 @@ int BrookBonded::_gpuCalcInvMap( int posflag, int niparticles, int nints, int np
 
    //Now note down the positions where each particle occurs
 
-   if( printOn && getLog() ){
-      (void) fprintf( getLog(), "%s: pos=%d ni=%d nints=%d nparticles=%d nmaps=<%d>\n", methodName.c_str(), posflag, niparticles, nints, nparticles, nmaps ); 
-      (void) fflush( getLog() );
+   if( printOn ){
+      (void) fprintf( log, "%s: pos=%d ni=%d nints=%d nparticles=%d nmaps=<%d>\n", methodName.c_str(), posflag, niparticles, nints, nparticles, nmaps ); 
+      (void) fflush( log );
    }
 
    for(  i = 0; i < nints; i++ ){
@@ -1622,18 +1630,19 @@ int BrookBonded::_gpuCalcInvMap( int posflag, int niparticles, int nints, int np
          continue;
       }
 
-if( particle < particleRange[0] ){
-   particleRange[0] = particle;
-}
-if( particle > particleRange[1] ){
-   particleRange[1] = particle;
-}
+      if( particle < particleRange[0] ){
+         particleRange[0] = particle;
+      }
+      if( particle > particleRange[1] ){
+         particleRange[1] = particle;
+      }
+
       //Check to make sure we're inside the limits
       if ( counts[particle] > nmaps * 4 ){
-         if( printOn && getLog() ){
-            (void) fprintf( getLog(), "%s Particle %d has too many proper torsions (%d, max %d)\n",
+         if( printOn ){
+            (void) fprintf( log, "%s Particle %d has too many proper torsions (%d, max %d)\n",
                             methodName.c_str(), particle, counts[particle], nmaps*4 );
-            (void) fflush( getLog() );
+            (void) fflush( log );
          }
          std::stringstream message;
          message << methodName << " Particle " << particle << " has too many proper torsions; valid range:(" << counts[particle] << ", " << nmaps*4 << ")";
@@ -1659,9 +1668,9 @@ if( particle > particleRange[1] ){
          case 2: invmaps[mapnum][particle].z = (float) i; break;
          case 3: invmaps[mapnum][particle].w = (float) i; break;
          default:
-            if( printOn && getLog() ){
-               (void) fprintf( getLog(), "mapcomp %d invalid -- impossible!\n", mapcomp );
-               (void) fflush( getLog() );
+            if( printOn ){
+               (void) fprintf( log, "mapcomp %d invalid -- impossible!\n", mapcomp );
+               (void) fflush( log );
             }
             std::stringstream message;
             message << methodName << " mapcomp " << mapcomp << " invalid -- actually impossible!";
@@ -1671,12 +1680,12 @@ if( particle > particleRange[1] ){
       
       counts[particle]++;
 
-if( mapnum < mapnumRange[0] ){
-   mapnumRange[0] = mapnum;
-}
-if( mapnum > mapnumRange[1] ){
-   mapnumRange[1] = mapnum;
-}
+      if( mapnum < mapnumRange[0] ){
+         mapnumRange[0] = mapnum;
+      }
+      if( mapnum > mapnumRange[1] ){
+         mapnumRange[1] = mapnum;
+      }
 
 //fprintf( gpu->log, "%d particle=%d  mapcomp=%d counts[]=%d mapnum=%d\n", i, particle, mapcomp, counts[particle], mapnum );
 
@@ -1684,11 +1693,11 @@ if( mapnum > mapnumRange[1] ){
 
    (*nimaps)++;
 
-if( printOn && getLog() ){
-   (void) fprintf( getLog(), "%s mnmaps=%d Ranges: particle [%d %d] mapnum [%d %d]\n",
-                   methodName.c_str(), *nimaps, particleRange[0], particleRange[1], mapnumRange[0], mapnumRange[1] );
-   (void) fflush( getLog() );
-}
+   if( printOn ){
+      (void) fprintf( log, "%s mnmaps=%d Ranges: particle [%d %d] mapnum [%d %d]\n",
+                      methodName.c_str(), *nimaps, particleRange[0], particleRange[1], mapnumRange[0], mapnumRange[1] );
+      (void) fflush( log );
+   }
 
    return DefaultReturnValue;	
 }
@@ -1830,6 +1839,7 @@ void BrookBonded::computeForces( BrookStreamImpl& positionStream, BrookStreamImp
    static const std::string methodName      = "BrookBonded::computeForces";
 
    static int printOn                       = 0;
+   FILE* log;
 
    static const int I_Stream                = 0;
    static const int J_Stream                = 1;
@@ -1878,7 +1888,7 @@ void BrookBonded::computeForces( BrookStreamImpl& positionStream, BrookStreamImp
    // diagnostics
 
    if( printOn ){
-      FILE* log = getLog();
+      log = getLog();
       //FILE* log = stderr;
 
       int countPrintInvMap[4] = { 3, 5, 2, 4 }; 
@@ -2025,12 +2035,9 @@ void BrookBonded::computeForces( BrookStreamImpl& positionStream, BrookStreamImp
    // diagnostics
 
    if( printOn ){
-
-      FILE* log =  getLog() ?  getLog() : stderr;
-      (void) fprintf( log, "\nPost 3_4/3_5 && NB forces" );
+      (void) fprintf( log, "%s Post 3_4/3_5 forces\n", methodName.c_str() );
       BrookStreamInternal* brookStreamInternalF   = forceStream.getBrookStreamImpl();
       brookStreamInternalF->printToFile( log );
-
    }
 
    if( getInverseMapStreamCount( J_Stream ) == 1 && getInverseMapStreamCount( L_Stream ) == 1 ){
@@ -2095,20 +2102,9 @@ void BrookBonded::computeForces( BrookStreamImpl& positionStream, BrookStreamImp
    // diagnostics
 
    if( printOn ){
-
-      FILE* log =  getLog() ?  getLog() : stderr;
-      (void) fprintf( log, "\nFinal NB & bonded forces" );
+      (void) fprintf( log, "%s Final forces", methodName.c_str() );
       BrookStreamInternal* brookStreamInternalF   = forceStream.getBrookStreamImpl();
       brookStreamInternalF->printToFile( log );
-/*
-      void* dataV = brookStreamInternalF->getData(1);
-      float* data = (float*) dataV;
-      (void) fprintf( getLog(), "\nFinal NB & bonded forces RAW\n" );
-      for( int ii = 0; ii < _brookNonBonded->getNumberOfParticles()*3; ii += 3 ){
-         (void) fprintf( getLog(), "%d [%.6e %.6e %.6e]\n", ii, data[ii], data[ii+1], data[ii+2] );
-      }
-*/
-
    }
 
    // ---------------------------------------------------------------------------------------

@@ -950,19 +950,19 @@ int BrookLangevinDynamics::update( BrookStreamImpl& positionStream, BrookStreamI
 // ---------------------------------------------------------------------------------------
 
    static const std::string methodName = "\nBrookLangevinDynamics::update";
-   int printOn                         = 1;
+   int printOn                         = 0;
    FILE* log;
 
 // ---------------------------------------------------------------------------------------
 
    _internalStepCount++;
 
-setLog( stderr );
+//setLog( stderr );
    printOn = (printOn && getLog()) ? printOn : 0;
 
    const BrookOpenMMFloat* derivedParameters           = getDerivedParameters();
 
-   if( (0 || printOn) ){
+   if( printOn ){
 
       log = getLog();
       static int showAux = 1;
@@ -1031,8 +1031,6 @@ setLog( stderr );
    
       }
 
-      //StreamImpl& positionStreamImpl               = positionStream.getImpl();
-      //const BrookStreamImpl brookPositions         = dynamic_cast<BrookStreamImpl&> (positionStreamImpl);
       BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamImpl();
       (void) fprintf( log, "\nPositionStream %d\n", _internalStepCount );
       brookStreamInternalPos->printToFile( log );
@@ -1082,7 +1080,7 @@ setLog( stderr );
       // first Shake gather
    
       kshakeh_update1_fix1(
-                    (float) getLangevinDynamicsParticleStreamWidth(),
+                    (float) brookShakeAlgorithm.getShakeConstraintStreamWidth(),
                     brookShakeAlgorithm.getShakeInverseMapStream()->getBrookStream(),
                     getXPrimeStream()->getBrookStream(),
                     brookShakeAlgorithm.getShakeXCons0Stream()->getBrookStream(),
@@ -1093,8 +1091,8 @@ setLog( stderr );
 
       if( 0 && printOn ){
 
-         (void) fprintf( log, "\n%s Post kshakeh_update2_fix1: particleStrW=%3d",
-                                   methodName.c_str(), getLangevinDynamicsParticleStreamWidth() );
+         (void) fprintf( log, "\n%s Post kshakeh_update2_fix1: ShakeConstraintStreamWidth=%3d",
+                                   methodName.c_str(), brookShakeAlgorithm.getShakeConstraintStreamWidth() );
    
          if( _internalStepCount == 1 ){
             (void) fprintf( log, "\nShakeInverseMapStream %d\n" );
@@ -1204,7 +1202,7 @@ setLog( stderr );
       // second Shake gather
    
       kshakeh_update2_fix1( 
-                    (float) getLangevinDynamicsParticleStreamWidth(),
+                    (float) brookShakeAlgorithm.getShakeConstraintStreamWidth(),
                     brookShakeAlgorithm.getShakeInverseMapStream()->getBrookStream(),
                     positionStream.getBrookStream(),
                     getXPrimeStream()->getBrookStream(),
@@ -1217,12 +1215,12 @@ setLog( stderr );
       // diagnostics
    
       if( printOn ){
-         (void) fprintf( log, "\n%s step=%d Post kshakeh_update2_fix1: particleStrW=%3d rngStrW=%3d rngOff=%5d "
-                                   "Sd2pc[]=[%12.5e %12.5e]\n", methodName.c_str(), _internalStepCount,
-                                   getLangevinDynamicsParticleStreamWidth(),
-                                   brookRandomNumberGenerator.getRandomNumberStreamWidth(),
-                                   brookRandomNumberGenerator.getRvStreamOffset(),
-                                   derivedParameters[Sd2pc1], derivedParameters[Sd2pc2] );
+         (void) fprintf( log, "\n%s step=%d Post kshakeh_update2_fix1: ShakeConstraintStreamWidth=%3d rngStrW=%3d rngOff=%5d "
+                              "Sd2pc[]=[%12.5e %12.5e]\n", methodName.c_str(), _internalStepCount,
+                              brookShakeAlgorithm.getShakeConstraintStreamWidth(),
+                              brookRandomNumberGenerator.getRandomNumberStreamWidth(),
+                              brookRandomNumberGenerator.getRvStreamOffset(),
+                              derivedParameters[Sd2pc1], derivedParameters[Sd2pc2] );
    
          BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamImpl();
          brookShakeAlgorithm.checkConstraints( brookStreamInternalPos, log, 0.0001f );
