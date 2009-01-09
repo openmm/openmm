@@ -123,13 +123,17 @@ void BrookIntegrateLangevinStepKernel::initialize( const System& system, const L
 
 // ---------------------------------------------------------------------------------------
 
-   static const int printOn                  = 0;
+   int printOn                               = 1;
    static const std::string methodName       = "BrookIntegrateLangevinStepKernel::initialize";
+   FILE* log                                 = NULL;
 
 // ---------------------------------------------------------------------------------------
    
-   FILE* log             = getLog();
-   if( printOn && log ){
+setLog( stderr );
+   printOn               = (printOn && getLog()) ? printOn : 0;
+
+   if( printOn ){
+      log = getLog();
       (void) fprintf( log, "%s\n", methodName.c_str() );
       (void) fflush( log );
    }
@@ -141,7 +145,7 @@ void BrookIntegrateLangevinStepKernel::initialize( const System& system, const L
    std::vector<double> masses;
    masses.resize( numberOfParticles );
 
-   if( printOn && log ){
+   if( printOn ){
       (void) fprintf( log, "%s %d\n", methodName.c_str(), numberOfParticles );
       (void) fflush( log );
    }
@@ -154,7 +158,7 @@ void BrookIntegrateLangevinStepKernel::initialize( const System& system, const L
 
    int numberOfConstraints = system.getNumConstraints();
 
-   if( printOn && log ){
+   if( printOn ){
       (void) fprintf( log, "%s const=%d\n", methodName.c_str(), numberOfConstraints );
       (void) fflush( log );
    }
@@ -188,15 +192,17 @@ void BrookIntegrateLangevinStepKernel::initialize( const System& system, const L
 
    BrookOpenMMFloat tolerance = static_cast<BrookOpenMMFloat>( integrator.getConstraintTolerance() );
    _brookShakeAlgorithm->setShakeTolerance( tolerance );
-   _brookShakeAlgorithm->setMaxIterations( 30 );
-   _brookShakeAlgorithm->setLog( log );
+   _brookShakeAlgorithm->setMaxIterations( 40 );
+   if( log ){
+      _brookShakeAlgorithm->setLog( log );
+   }
 
    // random number generator
 
    _brookRandomNumberGenerator   = new BrookRandomNumberGenerator( );
    _brookRandomNumberGenerator->setup( (int) masses.size(), getPlatform() );
 
-   if( printOn && log ){
+   if( printOn ){
       (void) fprintf( log, "%s done setup:\nBrookShakeAlgorithm:\n%s\nBrookRandomNumberGenerator:\n%s\n\n", methodName.c_str(),
                       _brookShakeAlgorithm->getContentsString().c_str(), 
                       _brookRandomNumberGenerator->getContentsString().c_str() );
@@ -234,10 +240,7 @@ void BrookIntegrateLangevinStepKernel::execute( OpenMMContextImpl& context, cons
    differences[1] = integrator.getFriction()    - (double) _brookLangevinDynamics->getFriction();
    differences[2] = integrator.getStepSize()    - (double) _brookLangevinDynamics->getStepSize();
    if( fabs( differences[0] ) > epsilon || fabs( differences[1] ) > epsilon || fabs( differences[2] ) > epsilon ){
-//printf( "%s calling updateParameters\n", methodName.c_str() );
       _brookLangevinDynamics->updateParameters( integrator.getTemperature(), integrator.getFriction(), integrator.getStepSize() );
-   } else {
-//printf( "%s NOT calling updateParameters\n", methodName.c_str() );
    }
 
    _brookLangevinDynamics->update( *(_openMMBrookInterface.getParticlePositions()), *(_openMMBrookInterface.getParticleVelocities()), 

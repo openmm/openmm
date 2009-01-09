@@ -182,7 +182,7 @@ private:
        *
        * */
 
-      int _bodyPrintToFile( FILE* log );
+      int _bodyPrintToFile( FILE* log, int maxPrint );
 };
 
 } // namespace OpenMM

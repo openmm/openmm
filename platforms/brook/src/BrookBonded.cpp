@@ -826,7 +826,7 @@ int BrookBonded::_addPTorsions( int *nbondeds, int *particles, BrookOpenMMFloat*
       // note: parameters 0 & 2 switched
 
       PARAMS( ibonded, 1, 1 ) = (BrookOpenMMFloat) pTParameters[2];
-      PARAMS( ibonded, 1, 2 ) = (BrookOpenMMFloat) pTParameters[1]*DEG2RAD;
+      PARAMS( ibonded, 1, 2 ) = (BrookOpenMMFloat) pTParameters[1];
       PARAMS( ibonded, 1, 3 ) = (BrookOpenMMFloat) pTParameters[0];
 
       if( debug ){

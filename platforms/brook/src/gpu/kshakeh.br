@@ -134,7 +134,8 @@ kshakeh_fix1(
 
 	i           = 0.0f;
    converged   = 1.0f;
-   tolerance   = 2.0f*inputTolerance;
+   //tolerance   = 2.0f*inputTolerance;
+   tolerance   = inputTolerance;
 	while( i < maxIterations && converged > 0.0f ){
 
 		//First hydrogen

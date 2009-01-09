@@ -1279,17 +1279,17 @@ void BrookNonBonded::computeForces( BrookStreamImpl& positionStream, BrookStream
 
    static const std::string methodName      = "BrookNonBonded::computeForces";
 
-   static       int PrintOn                 = 1;
+   static       int printOn                 = 0;
    static const int MaxErrorMessages        = 2;
    static       int ErrorMessages           = 0;
 
-   static const float4 dummyParameters( 0.0, 0.0, 0.0, 0.0 );
+   FILE* log;
 
    // static const int debug                   = 1;
 
 // ---------------------------------------------------------------------------------------
 
-    PrintOn = (PrintOn && getLog()) ? 1 : 0;
+    printOn = (printOn && getLog()) ? printOn : 0;
 
    // nonbonded forces
 
@@ -1305,7 +1305,6 @@ void BrookNonBonded::computeForces( BrookStreamImpl& positionStream, BrookStream
              (float) getJStreamWidth( ),
              (float) getPartialForceStreamWidth( ),
              epsfac,
-             dummyParameters,
              positionStream.getBrookStream(),
              getChargeStream()->getBrookStream(),
              getOuterVdwStream()->getBrookStream(),
@@ -1328,7 +1327,7 @@ nonbondedForceStreams[3]->fillWithValue( &zerof );
 
    // diagnostics
 
-   //if( 1 && PrintOn ){
+   //if( 1 && printOn ){
 static int step = 0;
    if( step++ < 1 ){
       //FILE* log = getLog();
@@ -1387,15 +1386,12 @@ static int step = 0;
 
    // diagnostics
 
-   //if( PrintOn ){
-   if( 1 ){
+   if( printOn ){
 
-      //FILE* log = getLog();
-      FILE* log = stderr;
-      (void) fprintf( log, "\n%s NB forces", methodName.c_str() );
+      (void) fprintf( log, "\n%s NB forces\n", methodName.c_str() );
       BrookStreamInternal* brookStreamInternalF   = forceStream.getBrookStreamImpl();
       brookStreamInternalF->printToFile( log );
-      (void) fprintf( log, "\n%s Done", methodName.c_str() ); (void) fflush( log );
+      (void) fprintf( log, "\n%s Done\n", methodName.c_str() ); (void) fflush( log );
 
    }
 

@@ -204,6 +204,10 @@ class BrookVerletDynamics : public BrookCommon {
               LastStreamIndex
            };
 
+      // track step (diagnostics)
+
+      int _internalStepCount;
+
       BrookOpenMMFloat _stepSize;
 
       // Particle stream dimensions

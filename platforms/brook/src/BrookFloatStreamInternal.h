@@ -172,6 +172,15 @@ class BrookFloatStreamInternal : public BrookStreamInternal {
       
       int sumByDimension( int stopIndex, double* sum );
       
+      /*  
+       * Get stats
+       *
+       * @return statistics vector
+       *
+       * */
+     
+      int getStatistics( std::vector<std::vector<double>>&, int maxScan );
+
    private:
 
       BrookOpenMMFloat _defaultDangleValue;
@@ -192,7 +201,7 @@ class BrookFloatStreamInternal : public BrookStreamInternal {
        *
        * */
 
-      int _bodyPrintToFile( FILE* log );
+      int _bodyPrintToFile( FILE* log, int maxPrint );
 };
 
 } // namespace OpenMM

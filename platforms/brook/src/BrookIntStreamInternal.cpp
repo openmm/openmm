@@ -256,7 +256,7 @@ void* BrookIntStreamInternal::getData( int readFromBoard ){
  *
  * */
 
-int BrookIntStreamInternal::_bodyPrintToFile( FILE* log ){
+int BrookIntStreamInternal::_bodyPrintToFile( FILE* log, int maxPrint ){
 
 // ---------------------------------------------------------------------------------------
 

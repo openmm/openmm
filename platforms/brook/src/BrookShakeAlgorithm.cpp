@@ -29,47 +29,12 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include <sstream>
 #include "BrookShakeAlgorithm.h"
 #include "BrookPlatform.h"
-#include "OpenMMException.h"
 #include "BrookStreamImpl.h"
 
 using namespace OpenMM;
 using namespace std;
-
-struct ShakeCluster {
-
-   int _centralID;
-   int _peripheralID[3];
-   int _size;
-   float _distance;
-   float _centralInvMass, _peripheralInvMass;
-
-   ShakeCluster(){};
-   ShakeCluster( int centralID, float invMass) : _centralID(centralID), _centralInvMass(invMass), _size(0) {};
-
-   void addAtom( int id, float dist, float invMass){
-      if( _size == 3 ){
-          std::stringstream message;
-          message << "ShakeCluster::addAtom: " << "atom " << id << " has more than 3 constraints!." << std::endl; 
-          throw OpenMMException( message.str() );
-      }
-      if( _size > 0 && dist != _distance ){
-          std::stringstream message;
-          message << "ShakeCluster::addAtom: " << "atom " << id << " has different constraint distances: " <<  dist << " and " << _distance << std::endl; 
-          throw OpenMMException( message.str() );
-      }
-      if( _size > 0 && invMass != _peripheralInvMass ){
-          std::stringstream message;
-          message << "ShakeCluster::addAtom: " << " constrainted atoms associated w/ atom " << id << " have different masses: " <<  invMass << " and " << _peripheralInvMass << std::endl; 
-          throw OpenMMException( message.str() );
-      }
-      _peripheralID[_size++]  = id;
-      _distance              = dist;
-      _peripheralInvMass     = invMass;
-   }
-};
 
 /** 
  *
@@ -496,7 +461,6 @@ int BrookShakeAlgorithm::_setShakeStreams( const std::vector<double>& masses, co
    
    // Find clusters consisting of a central atom with up to three peripheral atoms.
    
-   map<int, ShakeCluster> clusters;
    particleIterator                                     = constraintIndices.begin();
    std::vector<double>::const_iterator distanceIterator = constraintLengths.begin();
    while( particleIterator != constraintIndices.end() ){
@@ -537,10 +501,10 @@ int BrookShakeAlgorithm::_setShakeStreams( const std::vector<double>& masses, co
        
       // Add it to the cluster
        
-      if( clusters.find(centralID) == clusters.end() ){
-         clusters[centralID] = ShakeCluster( centralID, centralInvMass );
+      if( _clusters.find(centralID) == _clusters.end() ){
+         _clusters[centralID] = ShakeCluster( centralID, 1.0f/centralInvMass );
       }
-      clusters[centralID].addAtom( peripheralID, distance, peripheralInvMass );
+      _clusters[centralID].addAtom( peripheralID, distance, 1.0f/peripheralInvMass );
  
       particleIterator++;
       distanceIterator++;
@@ -548,7 +512,7 @@ int BrookShakeAlgorithm::_setShakeStreams( const std::vector<double>& masses, co
     
    // allocate space for streams
 
-   _initializeStreamSizes( (int) masses.size(), (int) clusters.size(), platform );
+   _initializeStreamSizes( (int) masses.size(), (int) _clusters.size(), platform );
    _initializeStreams( platform );
 
    int shakeParticleStreamSize               = getShakeParticleStreamSize();
@@ -567,8 +531,8 @@ int BrookShakeAlgorithm::_setShakeStreams( const std::vector<double>& masses, co
    // load indices & parameters
 
    int constraintIndex                   = 0;
-   _numberOfConstraints                  = static_cast<int>(clusters.size());
-   for( map<int, ShakeCluster>::const_iterator iter = clusters.begin(); iter != clusters.end(); ++iter ){
+   _numberOfConstraints                  = static_cast<int>(_clusters.size());
+   for( map<int, ShakeCluster>::const_iterator iter = _clusters.begin(); iter != _clusters.end(); ++iter ){
 
       const ShakeCluster& cluster        = iter->second;
 
@@ -577,10 +541,10 @@ int BrookShakeAlgorithm::_setShakeStreams( const std::vector<double>& masses, co
          particleIndices[constraintIndex+ii+1] = static_cast<BrookOpenMMFloat>( cluster._peripheralID[ii] );
       }
 
-      shakeParameters[constraintIndex]    = one/( static_cast<BrookOpenMMFloat>( cluster._centralInvMass ) );
-      shakeParameters[constraintIndex+1]  = half/( static_cast<BrookOpenMMFloat>(cluster._centralInvMass + cluster._peripheralInvMass) );
+      shakeParameters[constraintIndex]    = static_cast<BrookOpenMMFloat>(  cluster._centralInvMass );
+      shakeParameters[constraintIndex+1]  = half/( static_cast<BrookOpenMMFloat>( cluster._centralInvMass + cluster._peripheralInvMass) );
       shakeParameters[constraintIndex+2]  = static_cast<BrookOpenMMFloat>( cluster._distance*cluster._distance );
-      shakeParameters[constraintIndex+3]  = one/( static_cast<BrookOpenMMFloat>( cluster._peripheralInvMass ) );
+      shakeParameters[constraintIndex+3]  = static_cast<BrookOpenMMFloat>(  cluster._peripheralInvMass );
 
       constraintIndex += 4;
    }
@@ -650,6 +614,106 @@ int BrookShakeAlgorithm::setup( const std::vector<double>& masses, const std::ve
    return DefaultReturnValue;
 }
 
+/*  
+ * Check constraints
+ *
+ * @param positions             atom positions
+ * @param log                   file to print to (can be NULL)
+ * @param tolerance             tolerance to compare (if < 0, then use algorithm tolerance
+ *
+ * @return number of errors
+ *
+ */
+    
+int BrookShakeAlgorithm::checkConstraints( BrookStreamInternal* positions, FILE* log, float tolerance ) const {
+    
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName      = "BrookShakeAlgorithm::checkConstraints";
+   static const int maxErrorToPrint         = -10;
+
+// ---------------------------------------------------------------------------------------
+
+   void* posArrayV           = positions->getData( 1 );
+   const float* posArray     = (float*) posArrayV; 
+
+/*
+fprintf( log, "ShakeCoords\n" );
+for( int ii = 0; ii < 30; ii++ ){
+if( !(ii % 3 ) )fprintf( log, "%d [", ii );
+fprintf( log, "%16.7e ", posArray[ii] );
+if( !(ii % 2 ) )fprintf( log, "]\n", posArray[ii] );
+} */
+
+   // loop over constraints checking if distances are satisfied
+   // build up message string if errors are detected
+   // also track max difference in case all constraints satisfied
+   // to within specified tolerance
+
+   std::stringstream message;
+   int errors                 = 0;
+   float maxDiff              = -1.0f;
+   int maxDiffCentralIndex    = -1;
+   int maxDiffPeripheralIndex = -1;
+   tolerance                  = tolerance > 0.0f ? tolerance : _shakeTolerance;
+   for( map<int, ShakeCluster>::const_iterator iter = _clusters.begin(); iter != _clusters.end(); ++iter ){
+
+      const ShakeCluster& cluster        = iter->second;
+
+      // multiply by 3 to get index into 1d array
+
+      int centralAtomIndex = 3*cluster._centralID;
+      for( int ii = 0; ii < cluster._size; ii++ ){
+
+         int peripheralAtomIndex = 3*cluster._peripheralID[ii];
+         if( peripheralAtomIndex > -1 && centralAtomIndex > -1 ){
+
+            float distance = sqrtf( 
+                               (posArray[centralAtomIndex]   - posArray[peripheralAtomIndex]  )*(posArray[centralAtomIndex]   - posArray[peripheralAtomIndex]  ) +
+                               (posArray[centralAtomIndex+1] - posArray[peripheralAtomIndex+1])*(posArray[centralAtomIndex+1] - posArray[peripheralAtomIndex+1]) +
+                               (posArray[centralAtomIndex+2] - posArray[peripheralAtomIndex+2])*(posArray[centralAtomIndex+2] - posArray[peripheralAtomIndex+2]) );
+
+            float diff = fabsf( distance - cluster._distance );
+            if( diff > tolerance && (errors++ < maxErrorToPrint || maxErrorToPrint < 0) ){
+               char value[1024];
+#ifdef WIN32
+               sprintf_s( value, 1024, "Error: Atom [%6d %6d] d[%16.7e %16.7e] diff=%16.7e [%16.7e %16.7e %16.7e] [%16.7e %16.7e %16.7e]\n",
+                          centralAtomIndex/3, peripheralAtomIndex/3,  distance, cluster._distance, diff,
+                          posArray[centralAtomIndex], posArray[centralAtomIndex+1], posArray[centralAtomIndex+2],
+                          posArray[peripheralAtomIndex], posArray[peripheralAtomIndex+1], posArray[peripheralAtomIndex+2] );
+#else
+               sprintf( value, "Error: Atom [%6d %6d] diff=%16.7e d[%16.7e %16.7e] [%16.7e %16.7e %16.7e] [%16.7e %16.7e %16.7e]\n",
+                          centralAtomIndex/3, peripheralAtomIndex/3, diff, distance, cluster._distance,
+                          posArray[centralAtomIndex][0], posArray[centralAtomIndex][1], posArray[centralAtomIndex][2],
+                          posArray[peripheralAtomIndex][0], posArray[peripheralAtomIndex][1], posArray[peripheralAtomIndex][2] );
+#endif
+               message << value;
+            }
+            if( diff > maxDiff ){
+               maxDiffCentralIndex     = centralAtomIndex/3;
+               maxDiffPeripheralIndex  = peripheralAtomIndex/3;
+               maxDiff                 = diff;
+            }
+         }
+      }
+
+   }
+
+   // report findings
+
+   if( errors && log ){
+      (void) fprintf( log, "Shake errors=%d tolerance=%.3e max diff=%.3e atoms[%d %d]", errors, tolerance, maxDiff, maxDiffCentralIndex, maxDiffPeripheralIndex );
+      if( errors >= maxErrorToPrint ){
+         (void) fprintf( log, " only printing first %d errors", maxErrorToPrint );
+      }
+      (void) fprintf( log, "\n%s", message.str().c_str() );
+   } else if( log ){
+      (void) fprintf( log, "Shake no errors: tolerance=%.3e max diff=%.3e", tolerance, maxDiff );
+   }
+
+   return errors;
+}
+
 /* 
  * Get contents of object
  *
@@ -710,7 +774,23 @@ std::string BrookShakeAlgorithm::getContentsString( int level ) const {
 
    (void) LOCAL_SPRINTF( value, "%d", getShakeConstraintStreamSize() );
    message << _getLine( tab, "Constraint stream size:", value ); 
+   message << _getLine( tab, "Constraints:", " " ); 
 
+   int index = 0;
+   for( map<int, ShakeCluster>::const_iterator iter = _clusters.begin(); iter != _clusters.end(); ++iter ){
+
+      char buffer[1024];
+      const ShakeCluster& cluster        = iter->second;
+
+#ifdef WIN32
+      sprintf_s( buffer, 1024, "%5d %6d [%6d %6d %6d] d=%.3f m[%12.5f %12.5f]", index++, cluster._centralID,
+                 cluster._peripheralID[0], cluster._peripheralID[1], cluster._peripheralID[2], 
+                 cluster._distance, cluster._centralInvMass, cluster._peripheralInvMass );
+
+#endif
+
+      message << _getLine( tab, "   ", buffer ); 
+   }
    message << _getLine( tab, "Log:",                  (getLog()                          ? Set : NotSet) ); 
 
    message << _getLine( tab, "ParticleIndices:",      (getShakeParticleIndicesStream()   ? Set : NotSet) ); 

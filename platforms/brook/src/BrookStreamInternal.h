@@ -231,7 +231,7 @@ class BrookStreamInternal {
        *
        * */
 
-      int printToFile( FILE* log );
+      int printToFile( FILE* log, int maxPrint = -1 );
 
       /** 
        * Sum over stream dimensions
@@ -245,6 +245,27 @@ class BrookStreamInternal {
        */
       
       int sumByDimension( int stopIndex, double* sum );
+  
+      /*  
+       * Get stats
+       *
+       * @return statistics vector
+       *
+       * */
+     
+      virtual int getStatistics( std::vector<std::vector<double>>&, int maxScan );
+
+      /* 
+       * Get stat string
+       *
+       * @param         tag    id tag
+       * @param  statistics    stat vector
+       *
+       * @return stat string
+       *
+       * */
+      
+      std::string printStatistics( std::string tag, std::vector<std::vector<double> >& statistics ) const;
       
    protected:
 
@@ -284,7 +305,7 @@ class BrookStreamInternal {
        *
        * */
 
-      virtual int _bodyPrintToFile( FILE* log ) = 0;
+      virtual int _bodyPrintToFile( FILE* log,  int maxPrint ) = 0;
 };
 
 } // namespace OpenMM

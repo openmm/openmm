@@ -538,7 +538,11 @@ void OpenMMBrookInterface::computeForces( OpenMMContextImpl& context ){
 
 // ---------------------------------------------------------------------------------------
 
-//setLog( stderr );
+(void) fprintf( stderr, "%s done nonbonded & bonded=%d completed=%d\n", methodName.c_str(),
+                _brookBonded.isActive(), _brookBonded.isSetupCompleted() ); 
+(void) fflush( stderr );
+
+setLog( stderr );
    printOn = (printOn && getLog()) ? printOn : 0;
 
    BrookStreamImpl* positions = getParticlePositions();
@@ -547,9 +551,13 @@ void OpenMMBrookInterface::computeForces( OpenMMContextImpl& context ){
    // info
 
    //if( printOn > 1 ){
-   if( 1 ){
+   if( 0 ){
       printForcesToFile( context );
    }
+
+(void) fprintf( stderr, "%s x1 done nonbonded & bonded=%d completed=%d\n", methodName.c_str(),
+                _brookBonded.isActive(), _brookBonded.isSetupCompleted() ); 
+(void) fflush( stderr );
 
    // nonbonded forces
 
@@ -579,11 +587,9 @@ void OpenMMBrookInterface::computeForces( OpenMMContextImpl& context ){
                              getParticleStreamWidth(), getParticleStreamSize() );
       }
 
-/*
-(void) fprintf( getLog(), "%s done nonbonded: bonded=%d completed=%d\n", methodName.c_str(),
+(void) fprintf( stderr, "%s done nonbonded & bonded=%d completed=%d\n", methodName.c_str(),
                 _brookBonded.isActive(), _brookBonded.isSetupCompleted() ); 
-(void) fflush( getLog() );
-*/
+(void) fflush( stderr );
 
       _brookBonded.computeForces( *positions, *forces );
    
@@ -622,6 +628,9 @@ void OpenMMBrookInterface::computeForces( OpenMMContextImpl& context ){
       _brookGbsa.computeForces( *positions, *forces );
    }
 
+(void) fprintf( stderr, "%s done computeForces\n", methodName.c_str() );
+(void) fflush( stderr );
+
    // ---------------------------------------------------------------------------------------
 }
 
@@ -644,7 +653,7 @@ void OpenMMBrookInterface::printForcesToFile( OpenMMContextImpl& context ){
 
    // first step only?
 
-   if( step > 0 ){
+   if( step > 20 ){
       return;
    }
 
@@ -734,6 +743,8 @@ void OpenMMBrookInterface::printForcesToFile( OpenMMContextImpl& context ){
       printStreamsToFile( fileName, streams );
    }
 
+(void) fprintf( stderr, "%s done computeForces\n", methodName.c_str() );
+(void) fflush( stderr );
    forces->fillWithValue( &zero );
 
    // ---------------------------------------------------------------------------------------
@@ -822,6 +833,7 @@ int OpenMMBrookInterface::printStreamsToFile( std::string fileName, std::vector<
          minIndex = stream->getStreamSize();
       }
    }
+   minIndex = minIndex > getNumberOfParticles() ? getNumberOfParticles() : minIndex;
 
    // sum columns 
 

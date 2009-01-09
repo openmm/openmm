@@ -258,6 +258,17 @@ class BrookLangevinDynamics : public BrookCommon {
       
       BrookFloatStreamInternal* getInverseMassStream( void ) const;
 
+
+      /** 
+       * Get T
+       * 
+       * @return   T
+       *
+       */
+      
+      float getTemperature( BrookStreamInternal* velocities, BrookFloatStreamInternal* inverseMassStream, 
+                            BrookShakeAlgorithm& brookShakeAlgorithm ) const;
+
    private:
    
       enum DerivedParameters { GDT, EPH, EMH, EP, EM, B, C, D, V, X, Yv, Yx,
@@ -285,6 +296,10 @@ class BrookLangevinDynamics : public BrookCommon {
       BrookOpenMMFloat _tau;
       BrookOpenMMFloat _temperature;
       BrookOpenMMFloat _stepSize;
+
+      // internal step count
+
+      int _internalStepCount;
 
       // Particle stream dimensions
 

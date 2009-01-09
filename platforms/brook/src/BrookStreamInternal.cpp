@@ -293,7 +293,7 @@ std::string BrookStreamInternal::_getLine( const std::string& tab,
  *
  * */
 
-int BrookStreamInternal::printToFile( FILE* log ){
+int BrookStreamInternal::printToFile( FILE* log, int maxPrint ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -307,7 +307,7 @@ int BrookStreamInternal::printToFile( FILE* log ){
    std::string contents = getContentsString();
    (void) fprintf( log, "%s\n", contents.c_str() );
 
-   _bodyPrintToFile( log );
+   _bodyPrintToFile( log, maxPrint );
 
    return DefaultReturnValue;
 
@@ -326,7 +326,7 @@ const std::string BrookStreamInternal::getContentsString( int level ) const {
 
 // ---------------------------------------------------------------------------------------
 
-   // static const std::string methodName      = "BrookIntStreamInternal::getContentsString";
+   // static const std::string methodName      = "BrookStreamInternal::getContentsString";
 
    static const unsigned int MAX_LINE_CHARS = 256;
    char value[MAX_LINE_CHARS];
@@ -363,3 +363,88 @@ const std::string BrookStreamInternal::getContentsString( int level ) const {
    return message.str();
 }
 
+/* 
+ * Get stats
+ *
+ * @return statistics vector
+ *
+ * */
+
+int BrookStreamInternal::getStatistics( std::vector<std::vector<double> >& statistics, int maxScan ){
+   return 0;
+}
+
+/* 
+ * Get stat string
+ *
+ * @param         tag    id tag
+ * @param  statistics    stat vector
+ * @return stat string
+ *
+ * */
+
+std::string BrookStreamInternal::printStatistics( std::string tag, std::vector<std::vector<double> >& statistics ) const {
+   
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName      = "BrookStreamInternal::getContentsString";
+
+   static const unsigned int MAX_LINE_CHARS = 256;
+   char value[MAX_LINE_CHARS];
+   std::string tab                          = "   ";
+
+   static int initialized                   = 0;
+   static std::vector<std::string> header;
+
+// ---------------------------------------------------------------------------------------
+
+   // row headers
+
+   if( !initialized ){
+      initialized = 1;
+      header.push_back( "Average" );
+      header.push_back( "StdDev" );
+      header.push_back( "|Average|" );
+      header.push_back( "RawSum" );
+      header.push_back( "Min" );
+      header.push_back( "MinIndex" );
+      header.push_back( "Max" );
+      header.push_back( "MaxIndex" );
+      header.push_back( "Count" );
+   }
+
+#ifdef WIN32
+#define LOCAL_SPRINTF(a,b,c) sprintf_s( (a), MAX_LINE_CHARS, (b), (c) );   
+#else
+#define LOCAL_SPRINTF(a,b,c) sprintf( (a), (b), (c) );   
+#endif
+
+   std::stringstream message;
+
+   // loop over rows (Average, StdDev, ... )
+   // building message string: tag + header + tab + values
+
+   for( unsigned int ii = 0; ii < statistics.size(); ii++ ){
+
+      std::vector<double> row = statistics[ii];
+
+      std::stringstream head;
+      std::stringstream valueString;
+      head << tag << " ";
+      if( ii < header.size() ){
+         head << header[ii];
+      }
+      head << " ";
+
+      valueString << "[ ";
+      for( unsigned int jj = 0; jj < row.size(); jj++ ){
+         (void) LOCAL_SPRINTF( value, "%16.7e ", row[jj] );
+         valueString << value;
+      }   
+      valueString << "]";
+
+      message << _getLine( tab, head.str(), valueString.str() );
+   }
+
+   return message.str();
+}

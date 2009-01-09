@@ -529,37 +529,131 @@ const std::string BrookFloatStreamInternal::getContentsString( int level ) const
  *
  * */
 
-int BrookFloatStreamInternal::_bodyPrintToFile( FILE* log ){
+int BrookFloatStreamInternal::_bodyPrintToFile( FILE* log, int maxPrint ){
 
 // ---------------------------------------------------------------------------------------
 
    //static const std::string methodName      = "BrookStreamInternal::_bodyPrintToFile";
+   static const unsigned int MAX_LINE_CHARS = 256;
+   char value[MAX_LINE_CHARS];
+
 
 // ---------------------------------------------------------------------------------------
 
    assert( log );
 
    void* dataArrayV = getData( 1 );
-   //void* dataArrayV = getDataArray( );
-   //saveToArray( dataArrayV );
+
+#ifdef WIN32
+#define LOCAL_SPRINTF(a,b,c) sprintf_s( (a), MAX_LINE_CHARS, (b), (c) );   
+#else
+#define LOCAL_SPRINTF(a,b,c) sprintf( (a), (b), (c) );   
+#endif
 
    int streamSize         = getStreamSize();
    int width              = getWidth();
    int index              = 0;
+   maxPrint               = maxPrint < 0 ? streamSize : maxPrint;
+   maxPrint              *= width;
    const float* dataArray = (float*) dataArrayV;
-   for( int ii = 0; ii < streamSize; ii++ ){
+   for( int ii = 0; ii < streamSize && ii < maxPrint; ii++ ){
+
       std::stringstream message;
-      message.width( 15 );
-      message.precision( 8 );
-      message << ii << " [ ";
-      for( int jj = 0; jj < width; jj++ ){
-         message << dataArray[index++] << " ";
-      }
+      (void) LOCAL_SPRINTF( value, "%6d ", ii );
+      message << value << " [ ";
+
+      for( unsigned int jj = 0; jj < width; jj++ ){
+         (void) LOCAL_SPRINTF( value, "%16.7e ", dataArray[index++] );
+         message << value;
+      }   
       message << "]\n";
+      if( index == (_size+1)*width ){
+         (void) fprintf( log, "\n" );
+      }
       (void) fprintf( log, "%s", message.str().c_str() );    
    }
 
-   //delete[] dataArrayV;
+   return DefaultReturnValue;
+
+}
+
+/* 
+ * Get stats
+ *
+ * @return statistics vector
+ *
+ * */
+
+int  BrookFloatStreamInternal::getStatistics( std::vector<std::vector<double> >& statistics, int maxScan ){
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName      = "BrookStreamInternal::getStatistics";
+   static const int MinIndex                = 4;
+   static const int MinIndexIndex           = 5;
+   static const int MaxIndex                = 6;
+   static const int MaxIndexIndex           = 7;
+   static const int CountIndex              = 8;
+   static const int vectorSize              = CountIndex + 1;
+   static const double bigValue             = 1.0e+10;
+
+// ---------------------------------------------------------------------------------------
+
+   void* dataArrayV = getData( 1 );
+
+   statistics.resize( vectorSize );
+   int streamSize         = getStreamSize();
+   int width              = getWidth();
+   int index              = 0;
+   const float* dataArray = (float*) dataArrayV;
+   
+   for( int ii = 0; ii < vectorSize; ii++ ){
+      for( int jj = 0; jj < width; jj++ ){
+         if( ii == MinIndex ){
+            statistics[ii].push_back( bigValue );
+         } else if( ii == MaxIndex ){
+            statistics[ii].push_back( -bigValue );
+         } else {
+            statistics[ii].push_back( 0.0 );
+         }
+      }
+   }
+
+   for( int ii = 0; ii < streamSize && ii < maxScan; ii++ ){
+      for( int jj = 0; jj < width; jj++ ){
+
+         double value                  =  (double) dataArray[index++];
+
+         statistics[0][jj]            += value;
+         statistics[1][jj]            += value*value;
+
+         statistics[2][jj]            += fabs( value );
+
+         statistics[CountIndex][jj]   += 1.0;
+         if( value < statistics[MinIndex][jj] ){
+            statistics[MinIndex][jj]       = value;
+            statistics[MinIndexIndex][jj]  = ii;
+         }
+
+         if( value > statistics[MaxIndex][jj] ){
+            statistics[MaxIndex][jj]       = value;
+            statistics[MaxIndexIndex][jj]  = ii;
+         }
+      }
+   }
+
+
+   for( int jj = 0; jj < width; jj++ ){
+      if( statistics[CountIndex][jj] > 0.0 ){
+         statistics[3][jj]   = statistics[0][jj];
+         statistics[0][jj]  /= statistics[CountIndex][jj];
+         statistics[2][jj]  /= statistics[CountIndex][jj];
+         statistics[1][jj]   = statistics[1][jj] - statistics[0][jj]*statistics[0][jj]*statistics[CountIndex][jj];
+         if( statistics[CountIndex][jj] > 1.0 ){
+            statistics[1][jj] = sqrt( statistics[1][jj]/( statistics[CountIndex][jj] - 1.0 ) );
+         }
+      }
+   }
 
    return DefaultReturnValue;
 

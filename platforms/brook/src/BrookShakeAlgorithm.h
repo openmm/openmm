@@ -34,12 +34,49 @@
 
 #include <vector>
 #include <set>
+#include <sstream>
 
 #include "BrookFloatStreamInternal.h"
 #include "BrookPlatform.h"
 #include "BrookCommon.h"
+#include "OpenMMException.h"
 
 namespace OpenMM {
+
+struct ShakeCluster {
+
+   int _centralID;
+   int _peripheralID[3];
+   int _size;
+   float _distance;
+   float _centralInvMass, _peripheralInvMass;
+
+   ShakeCluster(){};
+   ShakeCluster( int centralID, float invMass) : _centralID(centralID), _centralInvMass(invMass), _size(0) {
+      _peripheralID[0] = _peripheralID[1] = _peripheralID[2] = -1;
+   }; 
+
+   void addAtom( int id, float dist, float invMass){
+      if( _size == 3 ){
+          std::stringstream message;
+          message << "ShakeCluster::addAtom: " << "atom " << id << " has more than 3 constraints!." << std::endl; 
+          throw OpenMMException( message.str() );
+      }   
+      if( _size > 0 && dist != _distance ){
+          std::stringstream message;
+          message << "ShakeCluster::addAtom: " << "atom " << id << " has different constraint distances: " <<  dist << " and " << _distance << std::endl; 
+          throw OpenMMException( message.str() );
+      }   
+      if( _size > 0 && invMass != _peripheralInvMass ){
+          std::stringstream message;
+          message << "ShakeCluster::addAtom: " << " constrainted atoms associated w/ atom " << id << " have different masses: " <<  invMass << " and " << _peripheralInvMass << std::endl; 
+          throw OpenMMException( message.str() );
+      }   
+      _peripheralID[_size++]  = id; 
+      _distance              = dist;
+      _peripheralInvMass     = invMass;
+   }   
+};
 
 /**
  *
@@ -260,6 +297,19 @@ class BrookShakeAlgorithm : public BrookCommon {
       
       BrookFloatStreamInternal* getShakeInverseMapStream( void ) const;
 
+      /*  
+       * Check constraints
+       *
+       * @param positions             atom positions
+       * @param log                   file to print to (can be NULL)
+       * @param tolerance             tolerance to compare (if < 0, then use algorithm tolerance
+       *
+       * @return number of errors
+       *
+       */
+              
+      int checkConstraints( BrookStreamInternal* positions, FILE* log, float tolerance ) const;
+              
    private:
    
       // streams indices
@@ -306,6 +356,10 @@ class BrookShakeAlgorithm : public BrookCommon {
       // internal streams
 
       BrookFloatStreamInternal* _shakeStreams[LastStreamIndex];
+
+      // Shake cluster (used for debugging)
+
+      std::map<int, ShakeCluster> _clusters;
 
       /* 
        * Setup of stream dimensions

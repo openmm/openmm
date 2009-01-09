@@ -29,7 +29,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-kernel float4 scalar_force_CDLJ( float4 qq, float epsfac, float4 sig, float4 eps, float4 r2, float4 params ) {
+kernel float4 scalar_force_CDLJ( float4 qq, float epsfac, float4 sig, float4 eps, float4 r2 ) {
  float4 invr, invrsig2, invrsig6;
  float4 f;
 
@@ -196,7 +196,7 @@ kernel void knbforce_CDLJ (
 
 
    r2 = get_r2_CDLJ( d1, d2, d3, d4 ) + exclmask * 10000.0f;
-   fs = scalar_force_CDLJ( qq, epsfac, sig, eps, r2, params );
+   fs = scalar_force_CDLJ( qq, epsfac, sig, eps, r2 );
 
    outforce1 += fs.x * d1;
    outforce1 += fs.y * d2;
@@ -233,7 +233,7 @@ if( exclmask.w > 0.5f ){
    d4 = ipos2 - jpos4;
 
    r2 = get_r2_CDLJ( d1, d2, d3, d4 ) + exclmask * 10000.0f;
-   fs = scalar_force_CDLJ( qq, epsfac, sig, eps, r2, params );
+   fs = scalar_force_CDLJ( qq, epsfac, sig, eps, r2 );
 
    outforce2 += fs.x * d1;
    outforce2 += fs.y * d2;
@@ -280,7 +280,6 @@ kernel void knbforce_CDLJ4(
   float jstrwidth,
   float fstrwidth,
   float epsfac,
-  float4 params,
   float3 posq[][],
   float  charge[][],
   float4 isigeps[][],
@@ -446,7 +445,7 @@ kernel void knbforce_CDLJ4(
    d4          = ipos1 - jpos4;
 
    r2          = get_r2_CDLJ( d1, d2, d3, d4 ) + (exclmask*maskMultiplier);
-   fs          = scalar_force_CDLJ( qq, epsfac, sig, eps, r2, params );
+   fs          = scalar_force_CDLJ( qq, epsfac, sig, eps, r2 );
 
    outforce1  += fs.x * d1;
    outforce1  += fs.y * d2;
@@ -470,7 +469,7 @@ kernel void knbforce_CDLJ4(
    d4          = ipos2 - jpos4;
 
    r2          = get_r2_CDLJ( d1, d2, d3, d4 ) + (exclmask*maskMultiplier);
-   fs          = scalar_force_CDLJ( qq, epsfac, sig, eps, r2, params );
+   fs          = scalar_force_CDLJ( qq, epsfac, sig, eps, r2 );
 
    outforce2  += fs.x * d1;
    outforce2  += fs.y * d2;
@@ -494,7 +493,7 @@ kernel void knbforce_CDLJ4(
    d4          = ipos3 - jpos4;
 
    r2          = get_r2_CDLJ( d1, d2, d3, d4 ) + (exclmask*maskMultiplier);
-   fs          = scalar_force_CDLJ( qq, epsfac, sig, eps, r2, params );
+   fs          = scalar_force_CDLJ( qq, epsfac, sig, eps, r2 );
 
    outforce3  += fs.x * d1;
    outforce3  += fs.y * d2;
@@ -518,7 +517,7 @@ kernel void knbforce_CDLJ4(
    d4          = ipos4 - jpos4;
 
    r2          = get_r2_CDLJ( d1, d2, d3, d4 ) + (exclmask*maskMultiplier);
-   fs          = scalar_force_CDLJ( qq, epsfac, sig, eps, r2, params );
+   fs          = scalar_force_CDLJ( qq, epsfac, sig, eps, r2 );
 
    outforce4  += fs.x * d1;
    outforce4  += fs.y * d2;
