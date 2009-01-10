@@ -258,17 +258,31 @@ class BrookLangevinDynamics : public BrookCommon {
       
       BrookFloatStreamInternal* getInverseMassStream( void ) const;
 
-
       /** 
-       * Get T
+       * Get Temperature
        * 
-       * @return   T
+       * @param velocities             velocities
+       * @param inverseMassStream      inverse masses
+       * @param numberOfConstraints    number of constraints
+       *
+       * @return temperature
        *
        */
       
       float getTemperature( BrookStreamInternal* velocities, BrookFloatStreamInternal* inverseMassStream, 
-                            BrookShakeAlgorithm& brookShakeAlgorithm ) const;
+                            int numberOfConstraints ) const;
 
+      /** 
+       * Remove velocity com
+       * 
+       * @param velocities             velocities
+       * @param inverseMassStream      inverse masses
+       *
+       * @return DefaultReturnValue  
+       */
+      
+      int removeCom( BrookStreamInternal* velocities, BrookFloatStreamInternal* inverseMassStream ) const;
+      
    private:
    
       enum DerivedParameters { GDT, EPH, EMH, EP, EM, B, C, D, V, X, Yv, Yx,

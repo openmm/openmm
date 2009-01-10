@@ -463,6 +463,7 @@ int BrookShakeAlgorithm::_setShakeStreams( const std::vector<double>& masses, co
    
    particleIterator                                     = constraintIndices.begin();
    std::vector<double>::const_iterator distanceIterator = constraintLengths.begin();
+   _numberOfConstraints                                 = static_cast<int>(constraintIndices.size());
    while( particleIterator != constraintIndices.end() ){
 
       float distance                  = static_cast<float>( *distanceIterator );
@@ -475,7 +476,7 @@ int BrookShakeAlgorithm::_setShakeStreams( const std::vector<double>& masses, co
       bool firstIsCentral;
       if( constraintCount[atomI] > 1 ){
          firstIsCentral = true;
-      } else if (constraintCount[atomJ] > 1 ){
+      } else if( constraintCount[atomJ] > 1 ){
          firstIsCentral = false;
       } else if( atomI < atomJ ){
          firstIsCentral = true;
@@ -531,7 +532,6 @@ int BrookShakeAlgorithm::_setShakeStreams( const std::vector<double>& masses, co
    // load indices & parameters
 
    int constraintIndex                   = 0;
-   _numberOfConstraints                  = static_cast<int>(_clusters.size());
    for( map<int, ShakeCluster>::const_iterator iter = _clusters.begin(); iter != _clusters.end(); ++iter ){
 
       const ShakeCluster& cluster        = iter->second;

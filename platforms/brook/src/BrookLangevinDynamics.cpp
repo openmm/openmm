@@ -249,7 +249,7 @@ int BrookLangevinDynamics::_updateDerivedParameters( void ){
    BrookOpenMMFloat temperature = getTemperature();
    BrookOpenMMFloat stepSize    = getStepSize();
 
-   if(  fabsf( float( tau ) ) < epsilon ){
+   if( fabsf( (float) tau ) < epsilon ){
       std::stringstream message;
       message << methodName << " tau=" << tau << " too small.";
       throw OpenMMException( message.str() );
@@ -809,18 +809,18 @@ int BrookLangevinDynamics::setup( const std::vector<double>& masses, const Platf
    return DefaultReturnValue;
 }
 
-/*  
- * Setup of LangevinDynamics parameters
+/** 
+ * Get T
+ * 
+ * @param velocities             velocities
+ * @param inverseMassStream      inverse masses
+ * @param numberOfConstraints    number of constraints
  *
- * @param masses                masses
- * @param platform              Brook platform
- *
- * @return nonzero value if error
- *
- * */
-    
+ * @return   temperature
+ */
+
 float BrookLangevinDynamics::getTemperature( BrookStreamInternal* velocities, BrookFloatStreamInternal* inverseMassStream,
-                                             BrookShakeAlgorithm& brookShakeAlgorithm ) const {
+                                             int numberOfConstraints ) const {
     
 // ---------------------------------------------------------------------------------------
 
@@ -838,15 +838,96 @@ float BrookLangevinDynamics::getTemperature( BrookStreamInternal* velocities, Br
    int index                  = 0;
 
    for( int ii = 0; ii < getNumberOfParticles(); ii++ ){
-      ke    += (velocitiesI[index]*velocitiesI[index] +  velocitiesI[index+1]*velocitiesI[index+1] +  velocitiesI[index+2]*velocitiesI[index+2] )/inverseMassStreamI[ii];
+      ke    += (velocitiesI[index]*velocitiesI[index] + velocitiesI[index+1]*velocitiesI[index+1] + velocitiesI[index+2]*velocitiesI[index+2] )/inverseMassStreamI[ii];
+//(void) fprintf( stderr, "%s %d Velocities[%14.5e %14.5e %14.5e]\n", methodName.c_str(), index/3, velocitiesI[index], velocitiesI[index+1], velocitiesI[index+2] ); 
       index += 3;
    }
 
-   int degreesOfFreedom = 3*getNumberOfParticles() - brookShakeAlgorithm.getNumberOfConstraints();
+   int degreesOfFreedom = 3*getNumberOfParticles() - numberOfConstraints;
 
+(void) fprintf( stderr, "%s ke=%.5e dof=%d\n", methodName.c_str(), ke, degreesOfFreedom ); 
    ke /= ((float) BOLTZ)*((float) ( degreesOfFreedom ));
 
-   return ke;
+   return 0.5f*ke;
+}
+
+/** 
+ * Remove velocity com
+ * 
+ * @param velocities             velocities
+ * @param inverseMassStream      inverse masses
+ *
+ * @return DefaultReturnValue  
+ */
+
+int BrookLangevinDynamics::removeCom( BrookStreamInternal* velocities, BrookFloatStreamInternal* inverseMassStream ) const {
+    
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName      = "BrookLangevinDynamics::removeCom";
+
+// ---------------------------------------------------------------------------------------
+
+ //  (void) fprintf( stderr, "%s\n", methodName.c_str() ); fflush( stderr );
+
+   void* dataArrayV           = velocities->getData( 1 );
+   float* velocitiesI         = (float*) dataArrayV;
+
+   void* inverseMassStreamV   = inverseMassStream->getData( 1 );
+   float* inverseMassStreamI  = (float*) inverseMassStreamV;
+
+   float totalMass            = 0.0f;
+   float com[3]               = { 0.0f, 0.0f, 0.0f };
+   int index                  = 0;
+
+//(void) fprintf( stderr, "%s strm %d %d\n", methodName.c_str(), velocities->getStreamSize(),velocities->getWidth() ); fflush( stderr );
+   for( int ii = 0; ii < getNumberOfParticles(); ii++ ){
+      float mass   = 1.0f/inverseMassStreamI[ii];
+      totalMass   += mass;
+      com[0]      += mass*velocitiesI[index];
+      com[1]      += mass*velocitiesI[index+1];
+      com[2]      += mass*velocitiesI[index+2];
+      index       += 3;
+   }
+   totalMass   = 1.0f/totalMass;
+   com[0]     *= totalMass;
+   com[1]     *= totalMass;
+   com[2]     *= totalMass;
+
+   index                = 0;
+   double* newVelocities = new double[velocities->getStreamSize()*velocities->getWidth()];
+   memset( newVelocities, 0, sizeof( double )*velocities->getStreamSize()*velocities->getWidth() );
+   for( int ii = 0; ii < getNumberOfParticles(); ii++ ){
+      newVelocities[index]    = (double) velocitiesI[index]   - com[0];
+      newVelocities[index+1]  = (double) velocitiesI[index+1] - com[1];
+      newVelocities[index+2]  = (double) velocitiesI[index+2] - com[2];
+      index                  += 3;
+   }
+
+/*
+   (void) fprintf( stderr, "%s com[%14.5e %14.5e %14.5e]\n", methodName.c_str(), com[0], com[1], com[2] ); 
+   for( int ii = 0; ii < velocities->getStreamSize()*3; ii += 3 ){
+      (void) fprintf( stderr, "%s %d newVelocities[%14.5e %14.5e %14.5e]\n", methodName.c_str(), ii/3, newVelocities[ii], newVelocities[ii+1], newVelocities[ii+2] ); 
+   }
+*/
+
+   velocities->loadFromArray( newVelocities );
+
+   dataArrayV           = velocities->getData( 1 );
+   velocitiesI         = (float*) dataArrayV;
+
+/*
+   (void) fprintf( stderr, "%s readback\n", methodName.c_str() );
+   for( int ii = 0; ii < velocities->getStreamSize()*3; ii += 3 ){
+      (void) fprintf( stderr, "%s %d velocitiesI[%14.5e %14.5e %14.5e]\n", methodName.c_str(), ii/3, velocitiesI[ii], velocitiesI[ii+1], velocitiesI[ii+2] ); 
+   }
+*/
+
+   velocities->loadFromArray( newVelocities );
+
+   delete[] newVelocities;
+
+   return DefaultReturnValue;
 }
 
 /* 
@@ -950,21 +1031,25 @@ int BrookLangevinDynamics::update( BrookStreamImpl& positionStream, BrookStreamI
 // ---------------------------------------------------------------------------------------
 
    static const std::string methodName = "\nBrookLangevinDynamics::update";
-   int printOn                         = 0;
+   int printOn                         = 1;
    FILE* log;
 
 // ---------------------------------------------------------------------------------------
 
    _internalStepCount++;
 
-//setLog( stderr );
-   printOn = (printOn && getLog()) ? printOn : 0;
+// setLog( stderr );
+
+   if( printOn && getLog() ){
+      log = getLog();
+   } else { 
+      printOn = 0;
+   }
 
    const BrookOpenMMFloat* derivedParameters           = getDerivedParameters();
 
    if( printOn ){
 
-      log = getLog();
       static int showAux = 1;
 
       if( printOn ){
@@ -977,7 +1062,10 @@ int BrookLangevinDynamics::update( BrookStreamImpl& positionStream, BrookStreamI
       if( showAux ){
          showAux = 0;
 
-         std::string contents             = brookRandomNumberGenerator.getContentsString( );
+         std::string contents             = getContentsString( );
+         (void) fprintf( log, "%s step=%d contents\n%s", methodName.c_str(), _internalStepCount, contents.c_str() );
+
+         contents             = brookRandomNumberGenerator.getContentsString( );
          (void) fprintf( log, "%s step=%d RNG contents\n%s", methodName.c_str(), _internalStepCount, contents.c_str() );
          // brookRandomNumberGenerator.getRandomNumberStream( brookRandomNumberGenerator.getRvStreamIndex() )->printToFile( log ); 
 
@@ -985,6 +1073,15 @@ int BrookLangevinDynamics::update( BrookStreamImpl& positionStream, BrookStreamI
          (void) fprintf( log, "%s step=%d Shake contents\n%s", methodName.c_str(), _internalStepCount, contents.c_str() );
          (void) fflush( log );
       }
+   }
+
+   if( 1 || (_internalStepCount % 10) == 0 ){
+      FILE*	log1 = stderr;
+      BrookStreamInternal* brookStreamInternalPos  = velocityStream.getBrookStreamImpl();
+      float temperature = getTemperature( brookStreamInternalPos, getInverseMassStream(), brookShakeAlgorithm.getNumberOfConstraints() );
+//      removeCom( brookStreamInternalPos, getInverseMassStream() );
+      float temperaturePost = getTemperature( brookStreamInternalPos, getInverseMassStream(), brookShakeAlgorithm.getNumberOfConstraints() );
+      (void) fprintf( log1, "\nVelocityStream %d Tp=%.3f %.3f\n", _internalStepCount, temperature, temperaturePost );
    }
 
    // first integration step
@@ -1011,7 +1108,7 @@ int BrookLangevinDynamics::update( BrookStreamImpl& positionStream, BrookStreamI
  
    // diagnostics
 
-   if( 0 && printOn ){
+   if( printOn ){
       (void) fprintf( log, "\n%s step=%d Post kupdate_sd1_fix1: particleStrW=%3d rngStrW=%3d rngOff=%5d "
                                 "EM=%12.5e Sd1pc[]=[%12.5e %12.5e %12.5e]", methodName.c_str(), _internalStepCount,
                                 getLangevinDynamicsParticleStreamWidth(),
@@ -1143,7 +1240,7 @@ int BrookLangevinDynamics::update( BrookStreamImpl& positionStream, BrookStreamI
 
    // diagnostics
 
-   if( 0 && printOn ){
+   if( printOn ){
       (void) fprintf( log, "\n%s step=%d Post kupdate_sd2_fix1: particleStrW=%3d rngStrW=%3d rngOff=%5d "
                                 "Sd2pc[]=[%12.5e %12.5e]", methodName.c_str(), _internalStepCount,
                                 getLangevinDynamicsParticleStreamWidth(),
@@ -1167,7 +1264,7 @@ int BrookLangevinDynamics::update( BrookStreamImpl& positionStream, BrookStreamI
       (void) fprintf( log, "\nXPrimeStream %d \n", _internalStepCount );
       getXPrimeStream()->printToFile( log ); 
 
-      (void) fprintf( log, "\ngetSD2XStream %d \n", _internalStepCount );
+      (void) fprintf( log, "\nSD2XStream %d \n", _internalStepCount );
       getSD2XStream()->printToFile( log );
 
       BrookStreamInternal* brookStreamInternalVel  = velocityStream.getBrookStreamImpl();
@@ -1244,7 +1341,7 @@ int BrookLangevinDynamics::update( BrookStreamImpl& positionStream, BrookStreamI
          tagV << _internalStepCount << " Vxx "; 
          stats = brookStreamInternalPos->printStatistics( tagV.str(), velocityStatistics );
          (void) fprintf( log, "\nStep %d Velocity stats:\n%s", _internalStepCount, stats.c_str() );
-         float temperature = getTemperature( brookStreamInternalPos, getInverseMassStream(), brookShakeAlgorithm );
+         float temperature = getTemperature( brookStreamInternalPos, getInverseMassStream(), brookShakeAlgorithm.getNumberOfConstraints() );
          (void) fprintf( log, "\nVelocityStream %d T=%.3f\n", _internalStepCount, temperature );
          brookStreamInternalPos->printToFile( log );
    
@@ -1285,6 +1382,20 @@ int BrookLangevinDynamics::update( BrookStreamImpl& positionStream, BrookStreamI
    
 //      brookRandomNumberGenerator.getRandomNumberStream( brookRandomNumberGenerator.getRvStreamIndex() )->printToFile( log ); 
       }   
+   }
+
+   if( (_internalStepCount % 10) == 0 ){
+      FILE*	log1 = stderr;
+      BrookStreamInternal* brookStreamInternalPos  = velocityStream.getBrookStreamImpl();
+      std::vector<std::vector<double> > velocityStatistics;
+      brookStreamInternalPos->getStatistics( velocityStatistics, getNumberOfParticles() );
+      std::stringstream tagV;
+      tagV << _internalStepCount << " Vxx "; 
+      std::string stats = brookStreamInternalPos->printStatistics( tagV.str(), velocityStatistics );
+      (void) fprintf( log1, "\nStep %d Velocity stats:\n%s", _internalStepCount, stats.c_str() );
+      float temperature = getTemperature( brookStreamInternalPos, getInverseMassStream(), brookShakeAlgorithm.getNumberOfConstraints() );
+      //removeCom( brookStreamInternalPos, getInverseMassStream() );
+      (void) fprintf( log1, "\nVelocityStream %d T=%.3f\n", _internalStepCount, temperature );
    }
 
    return DefaultReturnValue;

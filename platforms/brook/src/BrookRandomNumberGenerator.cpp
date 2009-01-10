@@ -426,6 +426,7 @@ state[3] = 27587;
    }
 
    if( printOn ){
+      FILE* log = getLog() ? getLog() : stderr;
       (void) fprintf( log, "%s: stats\n%s\n", methodName.c_str(), getStatisticsString().c_str() );
       (void) fflush( log );
    }
@@ -447,7 +448,6 @@ int BrookRandomNumberGenerator::_loadRandomNumberStreamsMersenne( void ){
 
    static const std::string methodName  = "\nBrookRandomNumberGenerator::_loadRandomNumberStreamsMersenne";
    int printOn                          = 0;
-   FILE* log;
 
    // ---------------------------------------------------------------------------------------
    
@@ -465,6 +465,7 @@ int BrookRandomNumberGenerator::_loadRandomNumberStreamsMersenne( void ){
    }
 
    if( printOn ){
+      FILE* log = getLog() ? getLog() : stderr;
       (void) fprintf( log, "%s: stats\n%s\n", methodName.c_str(), getStatisticsString().c_str() );
       (void) fflush( log );
    }
@@ -689,8 +690,9 @@ int BrookRandomNumberGenerator::advanceGVCursor( int numberOfRandomValuesConsume
 
    // ---------------------------------------------------------------------------------------
 	
+//setLog( stderr );
    if( printOn && getLog() ){
-       log = getLog();
+      log = getLog();
    } else {
       printOn = 0;
    }   
@@ -703,9 +705,8 @@ int BrookRandomNumberGenerator::advanceGVCursor( int numberOfRandomValuesConsume
 
 	//Check if we've used up this texture
 
+   char* action = "none";
 	if ( _rvStreamOffset > rvStreamSize - numberOfRandomValuesConsumedPerIteration ){
-
-      char* action;
 
 		// next one if available
 
@@ -742,9 +743,27 @@ int BrookRandomNumberGenerator::advanceGVCursor( int numberOfRandomValuesConsume
 		}
 
       if( printOn ){
-         (void) fprintf( log, "%s StrmIdx=%d action=%s\n", methodName, _rvStreamIndex, action );
+         (void) fprintf( log, "%s StrmIdx=%d action=%s\n", methodName.c_str(), _rvStreamIndex, action );
          (void) fflush( log );
       }
+
+/*
+      // check rng distribution
+
+      static int count = 0;
+      if( count++ < 2 ){
+
+         // accumulate rng -- stats will be in cumulative fields in stat string
+
+         int testIterations = 1000;
+         for( int ii = 0; ii < testIterations; ii++ ){
+            //_loadRandomNumberStreamsKiss( );
+            _loadRandomNumberStreamsMersenne( );
+            getStatisticsString();
+         }
+         (void) fprintf( log, "%s: stats\n%s\n", methodName.c_str(), getStatisticsString().c_str() );
+      }
+*/
 	}
 
    return DefaultReturnValue;

@@ -546,7 +546,8 @@ void OpenMMBrookInterface::computeForces( OpenMMContextImpl& context ){
 
    // info
 
-   if( printOn > 1 ){
+   //if( printOn > 1 ){
+   if( 1 ){
       printForcesToFile( context );
    }
 

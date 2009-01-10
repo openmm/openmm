@@ -242,6 +242,12 @@ void BrookFloatStreamInternal::loadFromArray( const void* array, BrookStreamInte
    int totalSize                           = getSize()*getWidth();
    //int totalSize                           = getSize();
 
+/*
+fprintf( stderr, "%s %s data=%p stream=%d [%d %d] width=%d type=%d\n",
+          methodName.c_str(), getName().c_str(), _data, getStreamSize(), _streamHeight, _streamWidth, _width, baseType );
+fflush( stderr );
+*/
+
    if( baseType == BrookStreamInternal::Float ){
 
       memcpy( _data, array, sizeof( float )*totalSize );
