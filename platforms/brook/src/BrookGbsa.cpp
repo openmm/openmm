@@ -965,7 +965,7 @@ void BrookGbsa::computeForces( BrookStreamImpl& positionStream, BrookStreamImpl&
                       getParticleStreamWidth( ),
                       getPartialForceStreamWidth( ) );
 
-      BrookStreamInternal* brookStreamInternalF  = positionStream.getBrookStreamImpl();
+      BrookStreamInternal* brookStreamInternalF  = positionStream.getBrookStreamInternal();
       (void) fprintf( log, "\nPositionStream\n" );
       brookStreamInternalF->printToFile( log );
 
@@ -1006,7 +1006,7 @@ void BrookGbsa::computeForces( BrookStreamImpl& positionStream, BrookStreamImpl&
                       getParticleStreamWidth( ),
                       getPartialForceStreamWidth( ) );
 
-      BrookStreamInternal* brookStreamInternalF  = positionStream.getBrookStreamImpl();
+      BrookStreamInternal* brookStreamInternalF  = positionStream.getBrookStreamInternal();
       (void) fprintf( log, "\nPositionStream\n" );
       brookStreamInternalF->printToFile( log );
 
@@ -1060,7 +1060,7 @@ void BrookGbsa::computeForces( BrookStreamImpl& positionStream, BrookStreamImpl&
                       getSoluteDielectric(),
                       getSolventDielectric(), includeAceTerm );
 
-      BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamImpl();
+      BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamInternal();
       (void) fprintf( log, "\nPost kObcLoop1 PositionStream\n" );
       brookStreamInternalPos->printToFile( log );
 
@@ -1167,7 +1167,7 @@ void BrookGbsa::computeForces( BrookStreamImpl& positionStream, BrookStreamImpl&
                       getParticleStreamWidth( ),
                       getPartialForceStreamWidth( ) );
 
-      BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamImpl();
+      BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamInternal();
       (void) fprintf( log, "\nPost kObcLoop2: PositionStream\n" );
       brookStreamInternalPos->printToFile( log );
 
@@ -1230,7 +1230,7 @@ void BrookGbsa::computeForces( BrookStreamImpl& positionStream, BrookStreamImpl&
          gbsaForceStreams[ii]->printToFile( log );
       }
 
-      BrookStreamInternal* brookStreamInternalF  = forceStream.getBrookStreamImpl();
+      BrookStreamInternal* brookStreamInternalF  = forceStream.getBrookStreamInternal();
       (void) fprintf( log, "\nPost kPostObcLoop2_nobranch:  ForceStream\n" );
       brookStreamInternalF->printToFile( log );
 

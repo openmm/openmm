@@ -46,9 +46,9 @@ class BrookRandomNumberGenerator : public BrookCommon {
 
    public:
   
-      // toggle between original, Mersenne, & Kiss (Nvidia) random generators
+      // toggle between original, Mersenne, & Kiss (Nvidia), fixed value random generators
 
-      enum Rngs { Original, Kiss, Mersenne };
+      enum Rngs { Original, Kiss, Mersenne, FixedValue };
  
       /** 
        * Constructor
@@ -147,7 +147,7 @@ class BrookRandomNumberGenerator : public BrookCommon {
        *
        */
       
-      BrookFloatStreamInternal* getRandomNumberStream( int index ) const;
+      BrookFloatStreamInternal* getRandomNumberStream( int index );
       
       /** 
        * Get random number seed
@@ -380,6 +380,16 @@ class BrookRandomNumberGenerator : public BrookCommon {
        */
       
       int _loadGVStreamsOriginal( void );
+      
+      /** 
+       * Load fixed value 'random number' streams using original gpu algorithm
+       * used for diagnostics
+       * 
+       *
+       * @return DefaultReturnValue;
+       */
+      
+      int _loadRandomNumberStreamsFixedValue( void );
       
       /** 
        * Loads a permutation of indices from 0 to gvSize-1 in

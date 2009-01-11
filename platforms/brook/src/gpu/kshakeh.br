@@ -62,6 +62,7 @@ kshakeh_fix1(
 		out float3 cposq2<>, //ditto for h2
 		out float3 cposq3<> //ditto for h3
 		) {
+
 	float2 ai, aj1, aj2, aj3; //2d indices, can be precalc.
 	float i; //iteration count
 	float3 xi, xj1, xj2, xj3; //coordinates
@@ -209,7 +210,6 @@ kernel void kshakeh_update1_fix1(
    atom.y  = round( (invmap.x - fmod( invmap.x, strwidth ))/strwidth );
 	atom.x  = invmap.x - atom.y * strwidth;
 	
-//	oposq = posq;
 	if( invmap.y < 0 ){
 		oposq  = posqp;
 	} else if( invmap.y < 0.5f ){

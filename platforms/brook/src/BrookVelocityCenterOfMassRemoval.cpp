@@ -144,7 +144,7 @@ BrookFloatStreamInternal* BrookVelocityCenterOfMassRemoval::getLinearMomentumStr
  *
  */
    
-int BrookVelocityCenterOfMassRemoval::getVelocityCenterOfMass( BrookStreamImpl& vStream, BrookOpenMMFloat velocityCom[3] ){
+int BrookVelocityCenterOfMassRemoval::getVelocityCenterOfMass( BrookStreamImpl& vStream, BrookOpenMMFloat velocityCom[3], BrookOpenMMFloat* ke ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -157,7 +157,8 @@ int BrookVelocityCenterOfMassRemoval::getVelocityCenterOfMass( BrookStreamImpl& 
    // calculate linear momentum via reduction
    // subtract it (/totalMass) from velocities
 
-   BrookStreamInternal* velocityStream  = dynamic_cast<BrookStreamInternal*> (vStream.getBrookStreamImpl());
+   BrookStreamInternal* velocityStream  = dynamic_cast<BrookStreamInternal*> (vStream.getBrookStreamInternal());
+   *ke                                  = static_cast<BrookOpenMMFloat>(0.0);
 
    void* velV                           = velocityStream->getData( 1 );
    const float* vArray                  = (float*) velV;
@@ -174,10 +175,13 @@ int BrookVelocityCenterOfMassRemoval::getVelocityCenterOfMass( BrookStreamImpl& 
       velocityCom[0] += mArray[ii]*vArray[index];
       velocityCom[1] += mArray[ii]*vArray[index+1];
       velocityCom[2] += mArray[ii]*vArray[index+2];
-if( ii < 10 ){
-fprintf( stderr, "getVelocityCenterOfMass %d %d m=%15.6e v[%15.6e %15.6e %15.6e ]\n", ii, index, mArray[ii], vArray[index], vArray[index+1], vArray[index+2] );
+                 *ke += mArray[ii]*( vArray[index]*vArray[index] + vArray[index+1]*vArray[index+1] + vArray[index+2]*vArray[index+2] );
+if( ii < 3 ){
+fprintf( stderr, "getVelocityCenterOfMass %5d %5d m=%15.6e v[%15.6e %15.6e %15.6e ] %d\n", ii, index, mArray[ii], vArray[index], vArray[index+1], vArray[index+2], numberOfParticles );
 }
    }
+
+   *ke *= static_cast<BrookOpenMMFloat>(0.5);
 
    return DefaultReturnValue;
 }
@@ -316,7 +320,6 @@ int BrookVelocityCenterOfMassRemoval::_setMasses( const std::vector<double>& mas
          BrookOpenMMFloat value    = static_cast<BrookOpenMMFloat>(*ii);
          localMasses[index]        = value;
          _totalInverseMass        += value;
-fprintf( stderr, "%s %d mass=%.3f\n", methodName.c_str(), index, value );
       }
    }
 
@@ -455,15 +458,19 @@ int BrookVelocityCenterOfMassRemoval::removeVelocityCenterOfMass( BrookStreamImp
 
    static const std::string methodName  = "BrookVelocityCenterOfMassRemoval::removeVelocityCenterOfMass";
    static const int debug               = 1;
+   static const double boltz            = 8.3145112119486e-03;
+   BrookOpenMMFloat ke;
 
    // ---------------------------------------------------------------------------------------
 
 setLog( stderr );
    if( debug && getLog() ){
       BrookOpenMMFloat com[3];
-      getVelocityCenterOfMass( velocityStream, com );
-      (void) fprintf( getLog(), "%s Pre removal com: [%12.5e %12.5e %12.5e]\n", methodName.c_str(), com[0], com[1], com[2] );
-      BrookStreamInternal* outputVelocityStream = dynamic_cast<BrookStreamInternal*> (velocityStream.getBrookStreamImpl());
+      getVelocityCenterOfMass( velocityStream, com, &ke );
+      BrookOpenMMFloat denomiator = (( (float) 3*getNumberOfParticles()))*boltz;
+      (void) fprintf( getLog(), "%s Pre removal com: [%12.5e %12.5e %12.5e] ke=%.3f ~T=%.3f\n", 
+                      methodName.c_str(), com[0], com[1], com[2], ke, ke/denomiator );
+      BrookStreamInternal* outputVelocityStream = dynamic_cast<BrookStreamInternal*> (velocityStream.getBrookStreamInternal());
 
       void* velV                       = outputVelocityStream->getData( 1 );
       const float* vArray              = (float*) velV;
@@ -483,20 +490,22 @@ setLog( stderr );
    kCalculateLinearMomentum( getMassStream()->getBrookStream(), velocityStream.getBrookStream(), getWorkStream()->getBrookStream() );
    kSumLinearMomentum( (float) getComParticleStreamWidth(), (float) getNumberOfParticles(), (float) getTotalInverseMass(),
                         getWorkStream()->getBrookStream(), getLinearMomentumStream()->getBrookStream() );
-//   kScale( (float) getTotalInverseMass(), getLinearMomentumStream()->getBrookStream(), getLinearMomentumStream()->getBrookStream() );
    kRemoveLinearMomentum( getLinearMomentumStream()->getBrookStream(), velocityStream.getBrookStream(), velocityStream.getBrookStream() );
 
    if( (0 || debug) && getLog() ){
       BrookOpenMMFloat com[3];
-      getVelocityCenterOfMass( velocityStream, com );
-      (void) fprintf( getLog(), "%s strW=%d iatm=%d invMass=%.4e Post removal com: [%12.5e %12.5e %12.5e]", methodName.c_str(),
-                      getComParticleStreamWidth(), getNumberOfParticles(), getTotalInverseMass(),  com[0], com[1], com[2] );
+      getVelocityCenterOfMass( velocityStream, com, &ke );
+      BrookOpenMMFloat denomiator = (( (float) 3*getNumberOfParticles()))*boltz;
+      (void) fprintf( getLog(), "%s strW=%d iatm=%d invMass=%.4e\n   Post removal com: [%12.5e %12.5e %12.5e]  ke=%.3f ~T=%.3f\n",
+                      methodName.c_str(),
+                      getComParticleStreamWidth(), getNumberOfParticles(), getTotalInverseMass(),  com[0], com[1], com[2],
+                      ke, ke/denomiator );
 
       void* linMoV = getLinearMomentumStream()->getData( 1 );
       float* linMo = (float*) linMoV;
-      (void) fprintf( getLog(), "LM [%12.5e %12.5e %12.5e]\n", linMo[0], linMo[1], linMo[2] );
+      (void) fprintf( getLog(), "   LM [%12.5e %12.5e %12.5e]\n", linMo[0], linMo[1], linMo[2] );
 
-      BrookStreamInternal* outputVelocityStream = dynamic_cast<BrookStreamInternal*> (velocityStream.getBrookStreamImpl());
+      BrookStreamInternal* outputVelocityStream = dynamic_cast<BrookStreamInternal*> (velocityStream.getBrookStreamInternal());
 
       void* velV                       = outputVelocityStream->getData( 1 );
       const float* vArray              = (float*) velV;

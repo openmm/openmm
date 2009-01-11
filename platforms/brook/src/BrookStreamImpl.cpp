@@ -298,6 +298,6 @@ brook::stream& BrookStreamImpl::getBrookStream( void ){
  * @return Brook stream impl
  */
 
-BrookStreamInternal* BrookStreamImpl::getBrookStreamImpl( void ) const {
+BrookStreamInternal* BrookStreamImpl::getBrookStreamInternal( void ) const {
    return _brookStreamInternal;
 }

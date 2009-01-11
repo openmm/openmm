@@ -1,6 +1,6 @@
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
- * -------------------------------------------------------------------------- *
+ * -i------------------------------------------------------------------------- *
  * This is part of the OpenMM molecular simulation toolkit originating from   *
  * Simbios, the NIH National Center for Physics-Based Simulation of           *
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
@@ -727,10 +727,31 @@ int BrookLangevinDynamics::_updateSdStreams( void ){
    memset( sd2x, 0, 3*sdParticleStreamSize*sizeof( BrookOpenMMFloat ) ); 
 
    index = 0;
-   for( int ii = 0; ii < numberOfParticles; ii++, index += 3 ){
-      sd2x[index]        = _inverseSqrtMasses[ii]*derivedParameters[X]*( static_cast<BrookOpenMMFloat> (SimTKOpenMMUtilities::getNormallyDistributedRandomNumber()) );
-      sd2x[index+1]      = _inverseSqrtMasses[ii]*derivedParameters[X]*( static_cast<BrookOpenMMFloat> (SimTKOpenMMUtilities::getNormallyDistributedRandomNumber()) );
-      sd2x[index+2]      = _inverseSqrtMasses[ii]*derivedParameters[X]*( static_cast<BrookOpenMMFloat> (SimTKOpenMMUtilities::getNormallyDistributedRandomNumber()) );
+   int useFixedRandomValue = 0;
+   if( useFixedRandomValue ){
+
+      // diagnostics only!
+
+      BrookOpenMMFloat fixedRandomValue = static_cast<BrookOpenMMFloat>( 0.1 );
+      for( int ii = 0; ii < numberOfParticles; ii++, index += 3 ){
+         BrookOpenMMFloat value = _inverseSqrtMasses[ii]*derivedParameters[X]*fixedRandomValue;
+         sd2x[index]            = value;
+         sd2x[index+1]          = value;
+         sd2x[index+2]          = value;
+      }
+
+      // print message letting user know non-random value being used
+
+      FILE* log = getLog() ? getLog() : stderr;
+      (void) fprintf( log, "%s using fixed 'random value'=%.3f to initialize sd2x\n", methodName.c_str(), fixedRandomValue );
+
+   } else {
+
+      for( int ii = 0; ii < numberOfParticles; ii++, index += 3 ){
+         sd2x[index]        = _inverseSqrtMasses[ii]*derivedParameters[X]*( static_cast<BrookOpenMMFloat> (SimTKOpenMMUtilities::getNormallyDistributedRandomNumber()) );
+         sd2x[index+1]      = _inverseSqrtMasses[ii]*derivedParameters[X]*( static_cast<BrookOpenMMFloat> (SimTKOpenMMUtilities::getNormallyDistributedRandomNumber()) );
+         sd2x[index+2]      = _inverseSqrtMasses[ii]*derivedParameters[X]*( static_cast<BrookOpenMMFloat> (SimTKOpenMMUtilities::getNormallyDistributedRandomNumber()) );
+      }
    }
    
    _sdStreams[SD2XStream]->loadFromArray( sd2x );
@@ -837,18 +858,24 @@ float BrookLangevinDynamics::getTemperature( BrookStreamInternal* velocities, Br
    float ke                   = 0.0f;
    int index                  = 0;
 
-   for( int ii = 0; ii < getNumberOfParticles(); ii++ ){
+   int numberOfParticles      = getNumberOfParticles();
+   for( int ii = 0; ii < numberOfParticles; ii++, index += 3 ){
       ke    += (velocitiesI[index]*velocitiesI[index] + velocitiesI[index+1]*velocitiesI[index+1] + velocitiesI[index+2]*velocitiesI[index+2] )/inverseMassStreamI[ii];
-//(void) fprintf( stderr, "%s %d Velocities[%14.5e %14.5e %14.5e]\n", methodName.c_str(), index/3, velocitiesI[index], velocitiesI[index+1], velocitiesI[index+2] ); 
-      index += 3;
+
+/*
+if( ii < 3 || ii >= (numberOfParticles - 3) ){
+(void) fprintf( stderr, "%s %6d m=%14.5e v[%14.5e %14.5e %14.5e]\n", methodName.c_str(), ii, 1.0/inverseMassStreamI[ii],
+                velocitiesI[index], velocitiesI[index+1], velocitiesI[index+2] ); 
+} */
+
    }
 
    int degreesOfFreedom = 3*getNumberOfParticles() - numberOfConstraints;
+   float denominator    = 1.0f/( ((float) BOLTZ)*((float) ( degreesOfFreedom )) );
+//(void) fprintf( stderr, "%s ke=%.5e T=%.3f dof=%d\n", methodName.c_str(), ke, (ke*denominator),  degreesOfFreedom ); 
+   ke *= denominator;
 
-(void) fprintf( stderr, "%s ke=%.5e dof=%d\n", methodName.c_str(), ke, degreesOfFreedom ); 
-   ke /= ((float) BOLTZ)*((float) ( degreesOfFreedom ));
-
-   return 0.5f*ke;
+   return ke;
 }
 
 /** 
@@ -922,6 +949,41 @@ int BrookLangevinDynamics::removeCom( BrookStreamInternal* velocities, BrookFloa
       (void) fprintf( stderr, "%s %d velocitiesI[%14.5e %14.5e %14.5e]\n", methodName.c_str(), ii/3, velocitiesI[ii], velocitiesI[ii+1], velocitiesI[ii+2] ); 
    }
 */
+
+   velocities->loadFromArray( newVelocities );
+
+   delete[] newVelocities;
+
+   return DefaultReturnValue;
+}
+
+/** 
+ * Reset velocities (diagnostics)
+ * 
+ * @param velocities             velocities
+ *
+ * @return DefaultReturnValue  
+ */
+
+int BrookLangevinDynamics::resetVelocities( BrookStreamInternal* velocities ) const {
+    
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName      = "BrookLangevinDynamics::resetVelocities";
+
+// ---------------------------------------------------------------------------------------
+
+(void) fprintf( stderr, "%s\n", methodName.c_str() ); fflush( stderr );
+
+   // resset v to determinisitic values
+
+   double* newVelocities = new double[velocities->getStreamSize()*velocities->getWidth()];
+   memset( newVelocities, 0, sizeof( double )*velocities->getStreamSize()*velocities->getWidth() );
+   for( int ii = 1; ii <= 3*getNumberOfParticles(); ii++ ){
+      int jj                = ii % 10;
+      double sign           = jj % 2 ? 0.1 : -0.1;
+      newVelocities[ii-1]   = sign*( (double) jj); 
+   }
 
    velocities->loadFromArray( newVelocities );
 
@@ -1031,14 +1093,14 @@ int BrookLangevinDynamics::update( BrookStreamImpl& positionStream, BrookStreamI
 // ---------------------------------------------------------------------------------------
 
    static const std::string methodName = "\nBrookLangevinDynamics::update";
-   int printOn                         = 1;
+   int printOn                         = 0;
    FILE* log;
 
 // ---------------------------------------------------------------------------------------
 
    _internalStepCount++;
 
-// setLog( stderr );
+//setLog( stderr );
 
    if( printOn && getLog() ){
       log = getLog();
@@ -1075,13 +1137,34 @@ int BrookLangevinDynamics::update( BrookStreamImpl& positionStream, BrookStreamI
       }
    }
 
-   if( 1 || (_internalStepCount % 10) == 0 ){
+   if( 0 && _internalStepCount == 1 ){ 
+      //resetVelocities( velocityStream.getBrookStreamInternal() );
+      std::string velocityFileName = "kupdate_sd1_strV.in";
+      std::string rvName0          = "kupdate_sd1_0.fgauss.in";
+      std::string rvName1          = "kupdate_sd1_1.fgauss.in";
+      std::string sd2xName         = "kupdate_sd1_strSD2X.in";
+      velocityStream.getBrookStreamInternal()->loadStreamGivenFileName( velocityFileName );
+      brookRandomNumberGenerator.getRandomNumberStream( 0 )->loadStreamGivenFileName( rvName0 );
+      brookRandomNumberGenerator.getRandomNumberStream( 1 )->loadStreamGivenFileName( rvName1 );
+      getSD2XStream()->loadStreamGivenFileName( sd2xName );
+   }
+
+   if( 0 && (_internalStepCount % 10) == 0 ){
       FILE*	log1 = stderr;
-      BrookStreamInternal* brookStreamInternalPos  = velocityStream.getBrookStreamImpl();
+      (void) fprintf( log1, "\nVelocityStream %d XX\n", _internalStepCount ); fflush( log1 );
+      BrookStreamInternal* brookStreamInternalPos  = velocityStream.getBrookStreamInternal();
       float temperature = getTemperature( brookStreamInternalPos, getInverseMassStream(), brookShakeAlgorithm.getNumberOfConstraints() );
 //      removeCom( brookStreamInternalPos, getInverseMassStream() );
       float temperaturePost = getTemperature( brookStreamInternalPos, getInverseMassStream(), brookShakeAlgorithm.getNumberOfConstraints() );
       (void) fprintf( log1, "\nVelocityStream %d Tp=%.3f %.3f\n", _internalStepCount, temperature, temperaturePost );
+      (void) fprintf( log1, "\n%s step=%d Post kupdate_sd1_fix1: particleStrW=%3d rngStrW=%3d rngOff=%5d "
+                                "EM=%12.5e Sd1pc[]=[%12.5e %12.5e %12.5e]", methodName.c_str(), _internalStepCount,
+                                getLangevinDynamicsParticleStreamWidth(),
+                                brookRandomNumberGenerator.getRandomNumberStreamWidth(),
+                                brookRandomNumberGenerator.getRvStreamOffset(),
+                                derivedParameters[EM], derivedParameters[Sd1pc1], derivedParameters[Sd1pc2], derivedParameters[Sd1pc3] );
+      (void) fprintf( log1, "\nRvStreamIndex=%d step=%d\n", brookRandomNumberGenerator.getRvStreamIndex(), _internalStepCount );
+      fflush( log1 );
    }
 
    // first integration step
@@ -1103,8 +1186,7 @@ int BrookLangevinDynamics::update( BrookStreamImpl& positionStream, BrookStreamI
          getInverseMassStream()->getBrookStream(),
          getSD1VStream()->getBrookStream(),
          getVPrimeStream()->getBrookStream(),
-         getXPrimeStream()->getBrookStream() 
-         );
+         getXPrimeStream()->getBrookStream() );
  
    // diagnostics
 
@@ -1117,38 +1199,46 @@ int BrookLangevinDynamics::update( BrookStreamImpl& positionStream, BrookStreamI
                                 derivedParameters[EM], derivedParameters[Sd1pc1], derivedParameters[Sd1pc2], derivedParameters[Sd1pc3] );
 
       if( _internalStepCount == 1 ){
-         (void) fprintf( log, "\nSDPC1Stream %d\n", _internalStepCount );
+         (void) fprintf( log, "\nSDPC1Stream fixed input sd1 step=%d\n", _internalStepCount );
          getSDPC1Stream()->printToFile( log );
    
-         (void) fprintf( log, "\nSD2XStream %d\n", _internalStepCount );
+         (void) fprintf( log, "\nSD2XStream fixed input sd1 step=%d\n", _internalStepCount );
          getSD2XStream()->printToFile( log );
    
-         (void) fprintf( log, "\nInverseMassStream %d\n", _internalStepCount );
+         (void) fprintf( log, "\nInverseMassStream fixed input sd1 step=%d\n", _internalStepCount );
          getInverseMassStream()->printToFile( log );
    
       }
 
-      BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamImpl();
-      (void) fprintf( log, "\nPositionStream %d\n", _internalStepCount );
+      BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamInternal();
+      (void) fprintf( log, "\nPositionStream input sd1 step=%d\n", _internalStepCount );
       brookStreamInternalPos->printToFile( log );
 
-      (void) fprintf( log, "\nForceStream %d\n", _internalStepCount );
-      BrookStreamInternal* brookStreamInternalF   = forceStream.getBrookStreamImpl();
+      (void) fprintf( log, "\nForceStream input sd1 step=%d\n", _internalStepCount );
+      BrookStreamInternal* brookStreamInternalF   = forceStream.getBrookStreamInternal();
       brookStreamInternalF->printToFile( log );
 
-      BrookStreamInternal* brookStreamInternalV   = velocityStream.getBrookStreamImpl();
-      (void) fprintf( log, "\nVelocityStream %d\n", _internalStepCount );
+      BrookStreamInternal* brookStreamInternalV   = velocityStream.getBrookStreamInternal();
+      (void) fprintf( log, "\nVelocityStream input sd1 step=%d\n", _internalStepCount );
       brookStreamInternalV->printToFile( log );
 
-      (void) fprintf( log, "\nSD1VStream %d\n", _internalStepCount );
+      (void) fprintf( log, "\nSD1VStream output sd1 step=%d\n", _internalStepCount );
       getSD1VStream()->printToFile( log );
 
-      (void) fprintf( log, "\nVPrimeStream %d\n", _internalStepCount );
+      (void) fprintf( log, "\nVPrimeStream output sd1 step=%d\n", _internalStepCount );
       getVPrimeStream()->printToFile( log );
 
-      (void) fprintf( log, "\nXPrimeStream %d\n", _internalStepCount );
+      (void) fprintf( log, "\nXPrimeStream output sd1 step=%d\n", _internalStepCount );
       getXPrimeStream()->printToFile( log ); 
 
+      if( _internalStepCount == 1 ){
+            std::vector<BrookStreamInternal*> streams;
+            streams.push_back( brookStreamInternalPos );
+            streams.push_back( getXPrimeStream() );
+            std::stringstream fileNameBaseS;
+            fileNameBaseS << "Brook_Sd1PreShk_" << _internalStepCount << ".txt"; 
+            BrookStreamInternal::printStreamsToFile( fileNameBaseS.str(), streams );
+      }
       (void) fprintf( log, "\nRvStreamIndex=%d step=%d\n", brookRandomNumberGenerator.getRvStreamIndex(), _internalStepCount );
       // brookRandomNumberGenerator.getRandomNumberStream( brookRandomNumberGenerator.getRvStreamIndex() )->printToFile( log ); 
    }   
@@ -1186,35 +1276,45 @@ int BrookLangevinDynamics::update( BrookStreamImpl& positionStream, BrookStreamI
                     brookShakeAlgorithm.getShakeXCons3Stream()->getBrookStream(),
                     getXPrimeStream()->getBrookStream() );
 
-      if( 0 && printOn ){
+      if( printOn ){
 
-         (void) fprintf( log, "\n%s Post kshakeh_update2_fix1: ShakeConstraintStreamWidth=%3d",
-                                   methodName.c_str(), brookShakeAlgorithm.getShakeConstraintStreamWidth() );
+         (void) fprintf( log, "\n%s Post kshakeh_update1: sw=%d ShkCnstStrW=%3d tol=%.3f maxIt=%d",
+                         methodName.c_str(), getLangevinDynamicsParticleStreamWidth(),
+                         brookShakeAlgorithm.getShakeConstraintStreamWidth(),
+                         brookShakeAlgorithm.getShakeTolerance(), brookShakeAlgorithm.getMaxIterations() );
    
          if( _internalStepCount == 1 ){
-            (void) fprintf( log, "\nShakeInverseMapStream %d\n" );
+            (void) fprintf( log, "\nShakeInverseMapStream fixed input sd shake1 at step=%d\n" );
             brookShakeAlgorithm.getShakeInverseMapStream()->printToFile( log );
          }
    
-         BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamImpl();
-         (void) fprintf( log, "\nPositionStream %d\n", _internalStepCount );
+         BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamInternal();
+         (void) fprintf( log, "\nPositionStream input sd shake1 at step=%d\n", _internalStepCount );
          brookStreamInternalPos->printToFile( log );
    
-         (void) fprintf( log, "\nXPrimeStream %d\n", _internalStepCount );
+         (void) fprintf( log, "\nXPrimeStream output sd shake1 at step=%d\n", _internalStepCount );
          getXPrimeStream()->printToFile( log );  
 
-         (void) fprintf( log, "\nShakeXCons0 %d\n", _internalStepCount );
+         (void) fprintf( log, "\nShakeXCons0 output sd shake1 at step=%d\n", _internalStepCount );
          brookShakeAlgorithm.getShakeXCons0Stream()->printToFile( log );  
 
-         (void) fprintf( log, "\nShakeXCons1 %d\n", _internalStepCount );
+         (void) fprintf( log, "\nShakeXCons1 output sd shake1 at step=%d\n", _internalStepCount );
          brookShakeAlgorithm.getShakeXCons1Stream()->printToFile( log );  
 
-         (void) fprintf( log, "\nShakeXCons2 %d\n", _internalStepCount );
+         (void) fprintf( log, "\nShakeXCons2 output sd shake1 at step=%d\n", _internalStepCount );
          brookShakeAlgorithm.getShakeXCons2Stream()->printToFile( log );  
 
-         (void) fprintf( log, "\nShakeXCons3 %d\n", _internalStepCount );
+         (void) fprintf( log, "\nShakeXCons3 output sd shake1 at step=%d\n", _internalStepCount );
          brookShakeAlgorithm.getShakeXCons3Stream()->printToFile( log );  
 
+         if( _internalStepCount < 2 ){
+            std::vector<BrookStreamInternal*> streams;
+            streams.push_back( brookStreamInternalPos );
+            streams.push_back( getXPrimeStream() );
+            std::stringstream fileNameBaseS;
+            fileNameBaseS << "Brook_Sd1PostShk_" << _internalStepCount << ".txt"; 
+            BrookStreamInternal::printStreamsToFile( fileNameBaseS.str(), streams );
+         }
       }   
 
    }
@@ -1248,31 +1348,40 @@ int BrookLangevinDynamics::update( BrookStreamImpl& positionStream, BrookStreamI
                                 brookRandomNumberGenerator.getRvStreamOffset(),
                                 derivedParameters[Sd2pc1], derivedParameters[Sd2pc2] );
 
-      (void) fprintf( log, "\nSDPC2Stream %d \n", _internalStepCount );
+      (void) fprintf( log, "\nSDPC2Stream input sd2 step=%d\n", _internalStepCount );
       getSDPC2Stream()->printToFile( log );
 
-      (void) fprintf( log, "\nSD2XStream %d \n", _internalStepCount );
+      (void) fprintf( log, "\ngetSD1VStream input sd2 step=%d\n", _internalStepCount );
       getSD1VStream()->printToFile( log );
 
-      BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamImpl();
-      (void) fprintf( log, "\nPositionStream %d \n", _internalStepCount );
+      BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamInternal();
+      (void) fprintf( log, "\nPositionStream input sd2 step=%d \n", _internalStepCount );
       brookStreamInternalPos->printToFile( log );
 
-      (void) fprintf( log, "\nVPrimeStream %d \n", _internalStepCount );
+      (void) fprintf( log, "\nVPrimeStream input sd2 step=%d\n", _internalStepCount );
       getVPrimeStream()->printToFile( log );
 
-      (void) fprintf( log, "\nXPrimeStream %d \n", _internalStepCount );
+      (void) fprintf( log, "\nXPrimeStream output sd2 step=%d\n", _internalStepCount );
       getXPrimeStream()->printToFile( log ); 
 
-      (void) fprintf( log, "\nSD2XStream %d \n", _internalStepCount );
+      (void) fprintf( log, "\nSD2XStream output sd2 step=%d\n", _internalStepCount );
       getSD2XStream()->printToFile( log );
 
-      BrookStreamInternal* brookStreamInternalVel  = velocityStream.getBrookStreamImpl();
-      (void) fprintf( log, "\nVelocityStream %d \n", _internalStepCount );
+      BrookStreamInternal* brookStreamInternalVel = velocityStream.getBrookStreamInternal();
+      (void) fprintf( log, "\nVelocityStream output sd2 step=%d\n", _internalStepCount );
       brookStreamInternalVel->printToFile( log );
 
       (void) fprintf( log, "\nRvStreamIndex=%d step=%d\n", brookRandomNumberGenerator.getRvStreamIndex(), _internalStepCount );
 //      brookRandomNumberGenerator.getRandomNumberStream( brookRandomNumberGenerator.getRvStreamIndex() )->printToFile( log ); 
+ 
+      if( _internalStepCount < 3 ){
+         std::vector<BrookStreamInternal*> streams;
+         streams.push_back( brookStreamInternalVel );
+         streams.push_back( getXPrimeStream() );
+         std::stringstream fileNameBaseS;
+         fileNameBaseS << "Brook_Sd2Out_" << _internalStepCount << ".txt"; 
+         BrookStreamInternal::printStreamsToFile( fileNameBaseS.str(), streams );
+      }
    }   
 
    // advance random number cursor
@@ -1319,12 +1428,12 @@ int BrookLangevinDynamics::update( BrookStreamImpl& positionStream, BrookStreamI
                               brookRandomNumberGenerator.getRvStreamOffset(),
                               derivedParameters[Sd2pc1], derivedParameters[Sd2pc2] );
    
-         BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamImpl();
+         BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamInternal();
          brookShakeAlgorithm.checkConstraints( brookStreamInternalPos, log, 0.0001f );
-         (void) fprintf( log, "\nPositionStream\n" );
+         (void) fprintf( log, "\nPositionStream output sd shake2 step=%d\n", _internalStepCount );
          brookStreamInternalPos->printToFile( log );
    
-         BrookStreamInternal* brookStreamInternalF   = forceStream.getBrookStreamImpl();
+         BrookStreamInternal* brookStreamInternalF   = forceStream.getBrookStreamInternal();
          std::vector<std::vector<double> > forceStatistics;
          brookStreamInternalF->getStatistics( forceStatistics, getNumberOfParticles() );
 
@@ -1334,7 +1443,7 @@ int BrookLangevinDynamics::update( BrookStreamImpl& positionStream, BrookStreamI
          (void) fprintf( log, "\nStep %d Force stats:\n%s", _internalStepCount, stats.c_str() );
          brookStreamInternalF->printToFile( log );
 
-         brookStreamInternalPos  = velocityStream.getBrookStreamImpl();
+         brookStreamInternalPos  = velocityStream.getBrookStreamInternal();
          std::vector<std::vector<double> > velocityStatistics;
          brookStreamInternalPos->getStatistics( velocityStatistics, getNumberOfParticles() );
          std::stringstream tagV;
@@ -1345,7 +1454,7 @@ int BrookLangevinDynamics::update( BrookStreamImpl& positionStream, BrookStreamI
          (void) fprintf( log, "\nVelocityStream %d T=%.3f\n", _internalStepCount, temperature );
          brookStreamInternalPos->printToFile( log );
    
-         (void) fprintf( log, "\nXPrimeStream\n" );
+         (void) fprintf( log, "\nXPrimeStream input sd shake2 step=%d\n", _internalStepCount );
          getXPrimeStream()->printToFile( log ); 
    
 //      brookRandomNumberGenerator.getRandomNumberStream( brookRandomNumberGenerator.getRvStreamIndex() )->printToFile( log ); 
@@ -1360,7 +1469,7 @@ int BrookLangevinDynamics::update( BrookStreamImpl& positionStream, BrookStreamI
 //         (void) fprintf( log, "\nXPrimeStream\n" );
 //         getXPrimeStream()->printToFile( log );
    
-         BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamImpl();
+         BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamInternal();
          (void) fprintf( log, "\nPositionStream\n" );
          brookStreamInternalPos->printToFile( log );
       }
@@ -1376,7 +1485,7 @@ int BrookLangevinDynamics::update( BrookStreamImpl& positionStream, BrookStreamI
          (void) fprintf( log, "\nXPrimeStream\n" );
          getXPrimeStream()->printToFile( log );
    
-         BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamImpl();
+         BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamInternal();
          (void) fprintf( log, "\nPositionStream\n" );
          brookStreamInternalPos->printToFile( log );
    
@@ -1384,15 +1493,17 @@ int BrookLangevinDynamics::update( BrookStreamImpl& positionStream, BrookStreamI
       }   
    }
 
-   if( (_internalStepCount % 10) == 0 ){
+   if( (_internalStepCount % 400) == 0 ){
       FILE*	log1 = stderr;
-      BrookStreamInternal* brookStreamInternalPos  = velocityStream.getBrookStreamImpl();
+      BrookStreamInternal* brookStreamInternalPos  = velocityStream.getBrookStreamInternal();
+/*
       std::vector<std::vector<double> > velocityStatistics;
       brookStreamInternalPos->getStatistics( velocityStatistics, getNumberOfParticles() );
       std::stringstream tagV;
       tagV << _internalStepCount << " Vxx "; 
       std::string stats = brookStreamInternalPos->printStatistics( tagV.str(), velocityStatistics );
       (void) fprintf( log1, "\nStep %d Velocity stats:\n%s", _internalStepCount, stats.c_str() );
+*/
       float temperature = getTemperature( brookStreamInternalPos, getInverseMassStream(), brookShakeAlgorithm.getNumberOfConstraints() );
       //removeCom( brookStreamInternalPos, getInverseMassStream() );
       (void) fprintf( log1, "\nVelocityStream %d T=%.3f\n", _internalStepCount, temperature );

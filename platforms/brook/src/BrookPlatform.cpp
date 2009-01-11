@@ -44,7 +44,6 @@
 
 using namespace OpenMM;
 
-
 /** 
  * BrookPlatformData constructor
  *
@@ -314,9 +313,12 @@ void BrookPlatform::_setBrookRuntime( const std::string& runtime ){
       throw OpenMMException( message.str() );
    }
 
-   if( getLog() ){
-      (void) fprintf( getLog(), "%s Brook initializing to runtime=<%s>\n", methodName.c_str(), _runtime.c_str() ); 
-      (void) fflush( getLog() );
+   // let user know runtime setting
+
+   if( 1 ){
+      FILE* log = getLog() ? getLog() : stderr;
+      (void) fprintf( log, "%s Brook initializing to runtime=<%s>\n", methodName.c_str(), _runtime.c_str() ); 
+      (void) fflush( log );
    }
 
    brook::initialize( _runtime.c_str(), NULL );

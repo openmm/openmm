@@ -1911,7 +1911,7 @@ void BrookBonded::computeForces( BrookStreamImpl& positionStream, BrookStreamImp
 
 /*
       (void) fprintf( log, "\nNB1 forces" );
-      BrookStreamInternal* brookStreamInternalF   = forceStream.getBrookStreamImpl();
+      BrookStreamInternal* brookStreamInternalF   = forceStream.getBrookStreamInternal();
       brookStreamInternalF->printToFile( log );
 */
 
@@ -2036,7 +2036,7 @@ void BrookBonded::computeForces( BrookStreamImpl& positionStream, BrookStreamImp
 
    if( printOn ){
       (void) fprintf( log, "%s Post 3_4/3_5 forces\n", methodName.c_str() );
-      BrookStreamInternal* brookStreamInternalF   = forceStream.getBrookStreamImpl();
+      BrookStreamInternal* brookStreamInternalF   = forceStream.getBrookStreamInternal();
       brookStreamInternalF->printToFile( log );
    }
 
@@ -2103,7 +2103,7 @@ void BrookBonded::computeForces( BrookStreamImpl& positionStream, BrookStreamImp
 
    if( printOn ){
       (void) fprintf( log, "%s Final forces", methodName.c_str() );
-      BrookStreamInternal* brookStreamInternalF   = forceStream.getBrookStreamImpl();
+      BrookStreamInternal* brookStreamInternalF   = forceStream.getBrookStreamInternal();
       brookStreamInternalF->printToFile( log );
    }
 

@@ -107,6 +107,7 @@ class BrookCommon {
       // Random number generator streams
 
       static const std::string ShuffleStream;
+      static const std::string RandomValuesStream;
 
       // BrookVelocityCenterOfMassRemoval streams
 

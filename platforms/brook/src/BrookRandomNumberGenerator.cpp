@@ -81,6 +81,7 @@ BrookRandomNumberGenerator::BrookRandomNumberGenerator( ){
    _randomNumberSeed      = 1393;
    //_randomNumberGenerator = Mersenne;
    _randomNumberGenerator = Kiss;
+   //_randomNumberGenerator = FixedValue;
 
    //SimTKOpenMMUtilities::setRandomNumberSeed( randomNumberSeed );
 }   
@@ -474,6 +475,38 @@ int BrookRandomNumberGenerator::_loadRandomNumberStreamsMersenne( void ){
 }
 
 /** 
+ * Load random number streams w/ fixed value
+ * 
+ *
+ * @return DefaultReturnValue;
+ */
+
+int BrookRandomNumberGenerator::_loadRandomNumberStreamsFixedValue( void ){
+
+   // ---------------------------------------------------------------------------------------
+
+   static const std::string methodName  = "\nBrookRandomNumberGenerator::_loadRandomNumberStreamsFixedValue";
+   int printOn                          = 1;
+
+   // ---------------------------------------------------------------------------------------
+   
+   // load fixed value
+
+   float fixedValue  = 0.1f;
+   for( int jj = 0; jj < getNumberOfRandomNumberStreams(); jj++ ){
+	   getRandomNumberStream( jj )->fillWithValue( &fixedValue );
+   }
+
+   if( printOn ){
+      FILE* log = getLog() ? getLog() : stderr;
+      (void) fprintf( log, "%s: stats\n%s\n", methodName.c_str(), getStatisticsString().c_str() );
+      (void) fflush( log );
+   }
+
+   return DefaultReturnValue;
+}
+
+/** 
  * Load random number streams using original gpu algorithm
  * 
  *
@@ -595,7 +628,8 @@ int BrookRandomNumberGenerator::_loadGVShuffle( void ){
 	const int np  = sizeof(p) / sizeof(p[0]);
    const int pmax = p[np-1];
 
-   // static const std::string methodName = "\nBrookRandomNumberGenerator::loadGVShuffle";
+   static const std::string methodName  = "\nBrookRandomNumberGenerator::loadGVShuffle";
+   int printOn                          = 0;
 
    // ---------------------------------------------------------------------------------------
 	
@@ -636,6 +670,25 @@ int BrookRandomNumberGenerator::_loadGVShuffle( void ){
 	}
    _getShuffleStream()->loadFromArray( loadBuffer );
 	
+   if( printOn ){
+      FILE* log = getLog() ? getLog() : stderr;
+      (void) fprintf( log, "%s: sz=%d pmax=%d np=%d sample indices:\n", methodName.c_str(), rvSize, pmax, np );
+      float maxIdx = -1.0f;
+      float minIdx =  (float) (rvSize)*2.0f;
+      for( int ii = 0; ii < rvSize; ii++ ){
+         if( ii < 30 || ii > (rvSize-30) ){
+            (void) fprintf( log, "  %d %.8f\n", ii, loadBuffer[ii] );
+         }
+         if( loadBuffer[ii] < minIdx ){
+            minIdx = loadBuffer[ii];
+         }
+         if( loadBuffer[ii] > maxIdx ){
+            maxIdx = loadBuffer[ii];
+         }
+      }
+      (void) fprintf( log, "%s: min-max indices: %.8f %.8f\n", methodName.c_str(), minIdx, maxIdx );
+   }
+      
    return DefaultReturnValue;
 }
 
@@ -685,12 +738,12 @@ int BrookRandomNumberGenerator::advanceGVCursor( int numberOfRandomValuesConsume
    // ---------------------------------------------------------------------------------------
 
    static const std::string methodName = "BrookRandomNumberGenerator::advanceGVCursor";
-   int printOn                         = 0;
+   int printOn                         = 1;
    FILE* log;
 
    // ---------------------------------------------------------------------------------------
 	
-//setLog( stderr );
+setLog( stderr );
    if( printOn && getLog() ){
       log = getLog();
    } else {
@@ -728,14 +781,17 @@ int BrookRandomNumberGenerator::advanceGVCursor( int numberOfRandomValuesConsume
 			} else { //Need to refresh random numbers from cpu
 
             if( _randomNumberGenerator == Mersenne ){
-               action = "loaded new values from GPU using Mersenne rng";
+               action = "loaded new values to GPU using Mersenne rng";
                _loadRandomNumberStreamsMersenne( );
             } else if( _randomNumberGenerator == Kiss ){
-               action = "loaded new values from GPU using KISS rng";
+               action = "loaded new values to GPU using KISS rng";
                _loadRandomNumberStreamsKiss( );
             } else if( _randomNumberGenerator == Original ){
-               action = "loaded new values from GPU using original Gromac's rng";
+               action = "loaded new values to GPU using original Gromac's rng";
                _loadGVStreamsOriginal( );
+            } else if( _randomNumberGenerator == FixedValue ){
+               action = "loaded new fixed values to GPU";
+               _loadRandomNumberStreamsFixedValue( );
             }
             _numberOfShuffles  = 0;
 			}
@@ -743,7 +799,9 @@ int BrookRandomNumberGenerator::advanceGVCursor( int numberOfRandomValuesConsume
 		}
 
       if( printOn ){
-         (void) fprintf( log, "%s StrmIdx=%d action=%s\n", methodName.c_str(), _rvStreamIndex, action );
+         (void) fprintf( log, "%s offset=%d consume/itr=%d StrmSz=%d idx=%d shffle=%d action=%s\n",
+                         methodName.c_str(), _rvStreamOffset, numberOfRandomValuesConsumedPerIteration,
+                         rvStreamSize, _rvStreamIndex, _numberOfShuffles, action );
          (void) fflush( log );
       }
 
@@ -802,7 +860,7 @@ BrookFloatStreamInternal* BrookRandomNumberGenerator::_getShuffleStream( void ) 
  *
  */
 
-BrookFloatStreamInternal* BrookRandomNumberGenerator::getRandomNumberStream( int index ) const {
+BrookFloatStreamInternal* BrookRandomNumberGenerator::getRandomNumberStream( int index ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -944,16 +1002,20 @@ int BrookRandomNumberGenerator::_initializeStreams( const Platform& platform ){
    _randomNumberGeneratorStreams = new BrookFloatStreamInternal*[_numberOfRandomNumberStreams];
 
    for( int ii = 0; ii < _numberOfRandomNumberStreams; ii++ ){
-      _randomNumberGeneratorStreams[ii]    = new BrookFloatStreamInternal( BrookCommon::ShuffleStream,
+      _randomNumberGeneratorStreams[ii]    = new BrookFloatStreamInternal( BrookCommon::RandomValuesStream,
                                                                            randomNumberStreamSize, randomNumberStreamWidth,
                                                                            BrookStreamInternal::Float3, dangleValue );
    }
+
+   // create shuffle stream
+
+   _loadGVShuffle();
 
    return DefaultReturnValue;
 }
 
 /*  
- * Setup of StochasticDynamics parameters
+ * Setup of streams, ... associated w/ random number generator
  *
  * @param numberOfParticles     number of particles
  * @param platform              Brook platform
@@ -962,7 +1024,7 @@ int BrookRandomNumberGenerator::_initializeStreams( const Platform& platform ){
  *
  * */
     
-int BrookRandomNumberGenerator::setup( int numberOfParticles,  const Platform& platform ){
+int BrookRandomNumberGenerator::setup( int numberOfParticles, const Platform& platform ){
     
 // ---------------------------------------------------------------------------------------
 
@@ -984,6 +1046,8 @@ int BrookRandomNumberGenerator::setup( int numberOfParticles,  const Platform& p
       _loadRandomNumberStreamsKiss( );
    } else if( _randomNumberGenerator == Original ){
       _loadGVStreamsOriginal( );
+   } else if( _randomNumberGenerator == FixedValue ){
+      _loadRandomNumberStreamsFixedValue( );
    }
 
    return DefaultReturnValue;
@@ -1027,6 +1091,8 @@ std::string BrookRandomNumberGenerator::getContentsString( int level ) const {
       (void) LOCAL_SPRINTF( value, "%s", "Kiss Rng");
    } else if( _randomNumberGenerator == Original ){
       (void) LOCAL_SPRINTF( value, "%s", "Original Gromacs Rng");
+   } else if( _randomNumberGenerator == FixedValue ){
+      (void) LOCAL_SPRINTF( value, "%s", "Fixed value Rng");
    }
    message << _getLine( tab, "Random number generator:", value ); 
 
@@ -1061,6 +1127,8 @@ std::string BrookRandomNumberGenerator::getContentsString( int level ) const {
 
    message << _getLine( tab, "Shuffle:",              (_getShuffleStream()      ? Set : NotSet) ); 
  
+   // show stats
+
    message << getStatisticsString( );
 
    for( int ii = 0; ii < LastStreamIndex; ii++ ){
@@ -1070,6 +1138,12 @@ std::string BrookRandomNumberGenerator::getContentsString( int level ) const {
       }
    }
 
+   for( int ii = 0; ii < _numberOfRandomNumberStreams; ii++ ){
+      message << std::endl;
+      if( _randomNumberGeneratorStreams[ii] ){
+         message <<  _randomNumberGeneratorStreams[ii]->getContentsString();
+      }
+   }
 #undef LOCAL_SPRINTF
 
    return message.str();
@@ -1201,28 +1275,29 @@ int BrookRandomNumberGenerator::getStatistics( double statistics[7], int streamI
    for( int ii = 0; ii < _numberOfRandomNumberStreams; ii++ ){
       if( streamIndex < 0 || ii == streamIndex ){
          void* dataArrayV       = _randomNumberGeneratorStreams[ii]->getData( 1 );
-         int streamSize         = _randomNumberGeneratorStreams[ii]->getStreamSize();
-         int index              = 0;
+         int numberOfValues     = _randomNumberGeneratorStreams[ii]->getStreamSize()*_randomNumberGeneratorStreams[ii]->getWidth();
          const float* dataArray = (float*) dataArrayV;
-         for( int ii = 0; ii < streamSize; ii++, index++ ){
+         for( int ii = 0; ii < numberOfValues; ii++ ){
 
-             statistics[0] += dataArray[index];
+             statistics[0] += dataArray[ii];
 
-             double rv2     = dataArray[index]*dataArray[index];
+             double rv2     = dataArray[ii]*dataArray[ii];
              statistics[1] += rv2;
-             statistics[2] += rv2*dataArray[index];
+             statistics[2] += rv2*dataArray[ii];
              statistics[3] += rv2*rv2;
 
-             if( statistics[5] > dataArray[index] ){
-                statistics[5] = dataArray[index];
+             if( statistics[5] > dataArray[ii] ){
+                statistics[5] = dataArray[ii];
              }
-             if( statistics[6] < dataArray[index] ){
-                statistics[6] = dataArray[index];
+             if( statistics[6] < dataArray[ii] ){
+                statistics[6] = dataArray[ii];
              }
          } 
-         statistics[4] += (double) index;
+         statistics[4] += (double) numberOfValues;
       }   
    }   
+
+   // accumulate moments, ... in cumulativeStatistics array
 
    for( int ii = 0; ii < 5; ii++ ){
       cumulativeStatistics[ii] += statistics[ii];

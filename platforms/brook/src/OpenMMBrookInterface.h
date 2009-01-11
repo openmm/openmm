@@ -390,18 +390,6 @@ class OpenMMBrookInterface {
       
       void printForcesToFile( OpenMMContextImpl& context );
       
-      /* 
-       * Print contents of object to file
-       *
-       * @param fileName     file name
-       * @param streams      streams to print
-       *
-       * @return DefaultReturnValue
-       *
-       * */
-      
-      int printStreamsToFile( std::string fileName, std::vector<BrookStreamImpl*>& streams );
-      
    private:
    
       static const int DefaultReturnValue = 0;

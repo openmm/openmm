@@ -263,9 +263,32 @@ class BrookStreamInternal {
        *
        * @return stat string
        *
-       * */
+       **/
       
       std::string printStatistics( std::string tag, std::vector<std::vector<double> >& statistics ) const;
+      
+      /* 
+       * Read stream from file
+       *
+       * @param fileName     file name
+       *
+       * @return DefaultReturnValue or ErrorReturnValue if problems
+       *
+       **/
+      
+      int loadStreamGivenFileName( std::string& filename );
+      
+      /* 
+       * Print streams to file
+       *
+       * @param fileName     file name
+       * @param streams      streams to print
+       *
+       * @return DefaultReturnValue
+       *
+       **/
+       
+      static int printStreamsToFile( std::string fileName, std::vector<BrookStreamInternal*>& streams );
       
    protected:
 

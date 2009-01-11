@@ -448,3 +448,222 @@ std::string BrookStreamInternal::printStatistics( std::string tag, std::vector<s
 
    return message.str();
 }
+
+/* 
+ * Print streams to file
+ *
+ * @param fileName     file name
+ * @param streams      streams to print
+ *
+ * @return DefaultReturnValue
+ *
+ * */
+
+int BrookStreamInternal::printStreamsToFile( std::string fileName, std::vector<BrookStreamInternal*>& streams ){
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName      = "BrookStreamInternal::printStreamsToFile";
+
+// ---------------------------------------------------------------------------------------
+
+   FILE* filePtr = fopen( fileName.c_str(), "w" );
+   if( !filePtr ){
+      (void) fprintf( stderr, "%s could not open file=<%s>\n", methodName.c_str(), fileName.c_str() );
+      (void) fflush( stderr );
+      return ErrorReturnValue;
+   }
+
+   // gather arrays, widths for eah stream, and set index for each stream
+   // also set minimum of stream sizes
+
+   int minIndex    = 10000000;
+   float** arrays  = new float*[streams.size()];
+   float** sums    = new float*[streams.size()];
+   int* widths     = new int[streams.size()];
+   int* indices    = new int[streams.size()];
+   for( unsigned int ii = 0; ii < streams.size(); ii++ ){
+      BrookStreamInternal* stream  = streams[ii];
+      void* dataArrayV         = stream->getData( 1 );
+      arrays[ii]               = (float*) dataArrayV;
+      widths[ii]               =  stream->getWidth();
+      indices[ii]              = 0;
+      sums[ii]                 = new float[4];
+      sums[ii][0] = sums[ii][1] = sums[ii][2] = sums[ii][3] = 0.0f;
+      if( minIndex > stream->getSize() ){
+         minIndex = stream->getSize();
+      }
+   }
+
+   // sum columns 
+
+   for( int ii = 0; ii < minIndex; ii++ ){
+      for( unsigned int kk = 0; kk < streams.size(); kk++ ){
+         for( int jj = 0; jj < widths[kk]; jj++ ){
+            sums[kk][jj] += arrays[kk][indices[kk]++];
+         }
+      }
+   }
+
+   // reinitialize indices
+
+   for( unsigned int kk = 0; kk < streams.size(); kk++ ){
+      indices[kk] = 0;
+   }
+
+   // show column sums
+
+   for( unsigned int kk = 0; kk < streams.size(); kk++ ){
+      (void) fprintf( filePtr, "Sms " );
+      for( int jj = 0; jj < widths[kk]; jj++ ){
+         (void) fprintf( filePtr, "%15.5e ", sums[kk][jj] );
+      }
+   }
+   (void) fprintf( filePtr, "\n" );
+
+   for( int ii = 0; ii < minIndex; ii++ ){
+      (void) fprintf( filePtr, "%6d ", ii );
+
+      // streams
+
+      for( unsigned int kk = 0; kk < streams.size(); kk++ ){
+
+//         (void) fprintf( filePtr, "[ " );
+ 
+         // ii elements of stream kk
+
+         for( int jj = 0; jj < widths[kk]; jj++ ){
+            (void) fprintf( filePtr, "%15.5e ", arrays[kk][indices[kk]++] );
+         }
+
+ //        (void) fprintf( filePtr, " ]", ii );
+      }
+      (void) fprintf( filePtr, "\n", ii );
+   }
+
+
+   // cleanup
+
+   (void) fclose( filePtr );
+
+   delete[] arrays;
+   delete[] widths;
+   delete[] indices;
+   for( int ii = 0; ii < 4; ii++ ){
+      delete[] sums[ii];
+   }
+   delete[] sums;
+
+   return DefaultReturnValue;
+
+}
+
+typedef struct {
+  unsigned int type;
+  unsigned int dimensions;
+  unsigned int dims[4];
+} STREAM_HEADER;
+
+#include <winsock.h>
+#include <stdarg.h>
+#include <limits>
+#include <set>
+
+int BrookStreamInternal::loadStreamGivenFileName( std::string& filename ){
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName      = "BrookStreamInternal::loadStreamGivenFileName";
+
+// ---------------------------------------------------------------------------------------
+
+   FILE* log = stderr;
+   
+   /* open file, read header */
+
+   FILE * filePtr = fopen( filename.c_str(), "rb" );
+   if(  filePtr == NULL ){
+      (void) fprintf( log, "%s Unable to open/read %s for stream creation\n", methodName.c_str(), filename.c_str() );
+      return ErrorReturnValue;
+   }
+
+   STREAM_HEADER header;
+   if( 1 != fread( &header, sizeof( header ), 1, filePtr ) ){
+      (void) fprintf( log, "%s Unable to read %s header for stream %s\n", methodName.c_str(), filename.c_str() );
+      (void) fclose( filePtr );
+      return ErrorReturnValue;
+   }
+ 
+   /* fix endian */
+
+//   header.type = ntohl( header.type );
+//  header.dimensions = ntohl( header.dimensions );
+/*
+   for( int ii = 0; ii < 4; ii++ ){
+   //   header.dims[ii] = ntohl( header.dims[ii] );
+      (void) fprintf( log, "%s header %d %d for stream %s from %s\n", methodName.c_str(), ii, header.dims[ii], getName().c_str(), filename.c_str() );
+   }
+
+   (void) fflush( log );
+*/
+/*
+   if( header.dimensions[0]
+     (unsigned int) header.dimensions, (const ::brook::StreamType *) &type,
+     (bool) false );
+*/
+ 
+   /* ok, load in the data */
+
+/*
+   if( getStreamSize()*getWidth() != header.dims[0]*header.dims[1] ){
+      (void) fprintf( log, "%s dimension inconsistency for stream %s from %s dim:[%d %d %d %d] sz=%d != sz=%d containerW=%d\n", 
+                      methodName.c_str(), getName().c_str(), filename.c_str(),
+                      header.dims[0], header.dims[1], header.dims[2], header.dims[3], header.dims[0]*header.dims[1],
+                      getStreamSize(), getWidth() );
+      (void) fclose( filePtr );
+      return ErrorReturnValue;
+   }
+*/
+
+   // always float
+
+   int bytesToRead   = getStreamSize()*getWidth()*sizeof( float );
+   void* dataBuffer  = (void*) malloc( bytesToRead );
+
+   if( dataBuffer == NULL ){
+      (void) fprintf( log, "%s Memory Error for file=%s\n", methodName.c_str(), filename.c_str() );
+      (void) fclose( filePtr );
+      return ErrorReturnValue;
+   }
+
+   size_t bytesRead = fread( dataBuffer, bytesToRead, 1, filePtr );
+   if( bytesRead != 1 ){
+      (void) fprintf( log, "%s Unable to read %d bytes=%d stream from %s\n", methodName.c_str(), bytesRead, bytesToRead, filename.c_str() );
+      free( dataBuffer );
+      (void) fclose( filePtr );
+      return ErrorReturnValue;
+   }
+
+   // float/integer case -- nothing more to do but load; if double, then convert float to double
+
+   if( getBaseDataType() == Float || getBaseDataType() == Integer ){
+      loadFromArray( dataBuffer );
+   } else {
+      double* loadBuffer  = (double*) malloc( bytesToRead*2 );
+      float* readBuffer   = (float*) dataBuffer;
+      for( int ii = 0; ii < getStreamSize()*getWidth(); ii++ ){
+         loadBuffer[ii] = (double) readBuffer[ii];
+      }
+      loadFromArray( loadBuffer );
+      free( loadBuffer );
+   }
+         
+   (void) fclose( filePtr );
+   free( dataBuffer );
+ 
+   (void) fprintf( log, "%s read %d bytes for stream %s from %s dim:[%d %d %d %d] container=%d %d\n", methodName.c_str(), bytesToRead, getName().c_str(), filename.c_str(),
+                   header.dims[0], header.dims[0], header.dims[0], header.dims[0], getStreamSize(), getWidth() );
+   (void) fflush( log );
+
+   return DefaultReturnValue;
+}

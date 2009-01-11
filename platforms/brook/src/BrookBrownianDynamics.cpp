@@ -448,13 +448,13 @@ int BrookBrownianDynamics::update( Stream& positions, Stream& velocities,
       //StreamImpl& positionStreamImpl               = positionStream.getImpl();
       //const BrookStreamImpl brookPositions         = dynamic_cast<BrookStreamImpl&> (positionStreamImpl);
 /*
-      BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamImpl();
+      BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamInternal();
       (void) fprintf( getLog(), "\nPositionStream\n" );
       brookStreamInternalPos->printToFile( getLog() );
 */
 
       double forceSum[3];
-      BrookStreamInternal* brookStreamInternalFF       = forceStream.getBrookStreamImpl();
+      BrookStreamInternal* brookStreamInternalFF       = forceStream.getBrookStreamInternal();
       BrookFloatStreamInternal* brookStreamInternalF   = dynamic_cast<BrookFloatStreamInternal*> (brookStreamInternalFF);
       brookStreamInternalF->sumByDimension( getNumberOfParticles(), forceSum );
       (void) fprintf( getLog(), "\nForceStream [%18.10e %18.10e %18.10e]\n", forceSum[0], forceSum[1], forceSum[2] );
@@ -468,7 +468,7 @@ int BrookBrownianDynamics::update( Stream& positions, Stream& velocities,
 */
       // brookRandomNumberGenerator.getRandomNumberStream( brookRandomNumberGenerator.getRvStreamIndex() )->printToFile( getLog() ); 
 
-         BrookStreamInternal* brookStreamInternalVel  = velocityStream.getBrookStreamImpl();
+         BrookStreamInternal* brookStreamInternalVel  = velocityStream.getBrookStreamInternal();
          (void) fprintf( getLog(), "\nVelocityStream\n" );
          brookStreamInternalVel->printToFile( getLog() ); 
    }   
@@ -499,12 +499,12 @@ int BrookBrownianDynamics::update( Stream& positions, Stream& velocities,
 
       //StreamImpl& positionStreamImpl               = positionStream.getImpl();
       //const BrookStreamImpl brookPositions         = dynamic_cast<BrookStreamImpl&> (positionStreamImpl);
-      BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamImpl();
+      BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamInternal();
       (void) fprintf( getLog(), "\nPositionStream\n" );
       brookStreamInternalPos->printToFile( getLog() );
 
       (void) fprintf( getLog(), "\nForceStream\n" );
-      BrookStreamInternal* brookStreamInternalF   = forceStream.getBrookStreamImpl();
+      BrookStreamInternal* brookStreamInternalF   = forceStream.getBrookStreamInternal();
       brookStreamInternalF->printToFile( getLog() );
 
       (void) fprintf( getLog(), "\nXPrimeStream\n" );
@@ -557,14 +557,14 @@ fprintf( stderr, "\nBrownian shake off!!\n" );
    
          (void) fprintf( getLog(), "\nPost kupdate_bd:\n" );
    
-         BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamImpl();
+         BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamInternal();
          (void) fprintf( getLog(), "\nPositionStream\n" );
          brookStreamInternalPos->printToFile( getLog() );
    
          (void) fprintf( getLog(), "\nXPrimeStream\n" );
          getXPrimeStream()->printToFile( getLog() ); 
    
-         BrookStreamInternal* brookStreamInternalVel  = velocityStream.getBrookStreamImpl();
+         BrookStreamInternal* brookStreamInternalVel  = velocityStream.getBrookStreamInternal();
          (void) fprintf( getLog(), "\nVelocityStream\n" );
          brookStreamInternalVel->printToFile( getLog() ); 
    
@@ -587,11 +587,11 @@ fprintf( stderr, "\nBrownian shake off!!\n" );
          (void) fprintf( getLog(), "\nXPrimeStream\n" );
          getXPrimeStream()->printToFile( getLog() ); 
 
-         BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamImpl();
+         BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamInternal();
          (void) fprintf( getLog(), "\nPositionStream\n" );
          brookStreamInternalPos->printToFile( getLog() );
    
-         BrookStreamInternal* brookStreamInternalVel  = velocityStream.getBrookStreamImpl();
+         BrookStreamInternal* brookStreamInternalVel  = velocityStream.getBrookStreamInternal();
          (void) fprintf( getLog(), "\nVelocityStream\n" );
          brookStreamInternalVel->printToFile( getLog() ); 
    

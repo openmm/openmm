@@ -129,9 +129,9 @@ kernel void kupdate_sd1_fix1(
 	igauss.x       = linind_gauss - igauss.y * gstrwidth;
 	fg2            = fgauss[ igauss ];
 
-	Vmh            = sd2X * pc3 + sdpc.x * fg1;
-	sd1V           = sdpc.y * fg2;
-	vnew           = v * cem + invmass * f * pc1 + sd1V - Vmh * cem;
+	Vmh            = (sd2X*pc3) + (sdpc.x*fg1);
+	sd1V           = sdpc.y*fg2;
+	vnew           = (v*cem) + (invmass*f*pc1) + sd1V - (Vmh*cem);
 	posqp          = vnew * pc2;
 }
 

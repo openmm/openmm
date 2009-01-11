@@ -591,7 +591,7 @@ void OpenMMBrookInterface::computeForces( OpenMMContextImpl& context ){
    
    /*
          (void) fprintf( getLog(), "\nFinal NB & bonded forces" );
-         BrookStreamInternal* brookStreamInternalF   = forceStream.getBrookStreamImpl();
+         BrookStreamInternal* brookStreamInternalF   = forceStream.getBrookStreamInternal();
          brookStreamInternalF->printToFile( getLog() );
          void* dataV = brookStreamInternalF->getData(1);
          float* data = (float*) dataV;
@@ -636,7 +636,7 @@ void OpenMMBrookInterface::printForcesToFile( OpenMMContextImpl& context ){
 
    // first step only?
 
-   if( step > 20 ){
+   if( step > 0 ){
       return;
    }
 
@@ -650,9 +650,9 @@ void OpenMMBrookInterface::printForcesToFile( OpenMMContextImpl& context ){
    BrookStreamImpl* positions = getParticlePositions();
    BrookStreamImpl* forces    = getParticleForces();
 
-   std::vector<BrookStreamImpl*> streams;
-   streams.push_back( positions );
-   streams.push_back( forces );
+   std::vector<BrookStreamInternal*> streams;
+   streams.push_back( positions->getBrookStreamInternal() );
+   streams.push_back( forces->getBrookStreamInternal() );
 
 // ---------------------------------------------------------------------------------------
 
@@ -662,7 +662,7 @@ void OpenMMBrookInterface::printForcesToFile( OpenMMContextImpl& context ){
       forces->fillWithValue( &zero );
       _brookNonBonded.computeForces( *positions, *forces );
       std::string fileName = fileNameBase + "NonBonded.txt";
-      printStreamsToFile( fileName, streams );
+      BrookStreamInternal::printStreamsToFile( fileName, streams );
    }
 
 // ---------------------------------------------------------------------------------------
@@ -684,7 +684,7 @@ void OpenMMBrookInterface::printForcesToFile( OpenMMContextImpl& context ){
       forces->fillWithValue( &zero );
       _brookBonded.computeForces( *positions, *forces );
       std::string fileName = fileNameBase + "Bonded.txt";
-      printStreamsToFile( fileName, streams );
+      BrookStreamInternal::printStreamsToFile( fileName, streams );
    
    }
 
@@ -699,7 +699,7 @@ void OpenMMBrookInterface::printForcesToFile( OpenMMContextImpl& context ){
       _brookGbsa.computeForces( *positions, *forces );
 
       std::string fileName = fileNameBase + "Obc.txt";
-      printStreamsToFile( fileName, streams );
+      BrookStreamInternal::printStreamsToFile( fileName, streams );
 
    }
    forces->fillWithValue( &zero );
@@ -723,7 +723,7 @@ void OpenMMBrookInterface::printForcesToFile( OpenMMContextImpl& context ){
       }
 
       std::string fileName = fileNameBase + "AllF.txt";
-      printStreamsToFile( fileName, streams );
+      BrookStreamInternal::printStreamsToFile( fileName, streams );
    }
 
 (void) fprintf( stderr, "%s done computeForces\n", methodName.c_str() );
@@ -770,114 +770,3 @@ double OpenMMBrookInterface::computeEnergy( OpenMMContextImpl& context, System& 
    return refContext.getState(State::Energy).getPotentialEnergy();
 
 }
-
-/* 
- * Print contents of object to file
- *
- * @param fileName     file name
- * @param streams      streams to print
- *
- * @return DefaultReturnValue
- *
- * */
-
-int OpenMMBrookInterface::printStreamsToFile( std::string fileName, std::vector<BrookStreamImpl*>& streams ){
-
-// ---------------------------------------------------------------------------------------
-
-   static const std::string methodName      = "OpenMMBrookInterface::printStreamsToFile";
-
-// ---------------------------------------------------------------------------------------
-
-   FILE* filePtr = fopen( fileName.c_str(), "w" );
-   if( !filePtr ){
-      (void) fprintf( stderr, "%s coud not open file=<%s>\n", methodName.c_str(), fileName.c_str() );
-      (void) fflush( stderr );
-      return ErrorReturnValue;
-   }
-
-   // gather arrays, widths for eah stream, and set index for each stream
-   // also set minimum of stream sizes
-
-   int minIndex    = 10000000;
-   float** arrays  = new float*[streams.size()];
-   float** sums    = new float*[streams.size()];
-   int* widths     = new int[streams.size()];
-   int* indices    = new int[streams.size()];
-   for( unsigned int ii = 0; ii < streams.size(); ii++ ){
-      BrookStreamImpl* stream  = streams[ii];
-      void* dataArrayV         = stream->getData( 1 );
-      arrays[ii]               = (float*) dataArrayV;
-      widths[ii]               =  stream->getWidth();
-      indices[ii]              = 0;
-      sums[ii]                 = new float[4];
-      sums[ii][0] = sums[ii][1] = sums[ii][2] = sums[ii][3] = 0.0f;
-      if( minIndex > stream->getStreamSize() ){
-         minIndex = stream->getStreamSize();
-      }
-   }
-   minIndex = minIndex > getNumberOfParticles() ? getNumberOfParticles() : minIndex;
-
-   // sum columns 
-
-   for( int ii = 0; ii < minIndex; ii++ ){
-      for( unsigned int kk = 0; kk < streams.size(); kk++ ){
-         for( int jj = 0; jj < widths[kk]; jj++ ){
-            sums[kk][jj] += arrays[kk][indices[kk]++];
-         }
-      }
-   }
-
-   // reinitialize indices
-
-   for( unsigned int kk = 0; kk < streams.size(); kk++ ){
-      indices[kk] = 0;
-   }
-
-   // show column sums
-
-   for( unsigned int kk = 0; kk < streams.size(); kk++ ){
-      (void) fprintf( filePtr, "Sms " );
-      for( int jj = 0; jj < widths[kk]; jj++ ){
-         (void) fprintf( filePtr, "%12.5e ", sums[kk][jj] );
-      }
-   }
-   (void) fprintf( filePtr, "\n" );
-
-   for( int ii = 0; ii < minIndex; ii++ ){
-      (void) fprintf( filePtr, "%d ", ii );
-
-      // streams
-
-      for( unsigned int kk = 0; kk < streams.size(); kk++ ){
-
-//         (void) fprintf( filePtr, "[ " );
- 
-         // ii elements of stream kk
-
-         for( int jj = 0; jj < widths[kk]; jj++ ){
-            (void) fprintf( filePtr, "%12.5e ", arrays[kk][indices[kk]++] );
-         }
-
- //        (void) fprintf( filePtr, " ]", ii );
-      }
-      (void) fprintf( filePtr, "\n", ii );
-   }
-
-
-   // cleanup
-
-   (void) fclose( filePtr );
-
-   delete[] arrays;
-   delete[] widths;
-   delete[] indices;
-   for( int ii = 0; ii < 4; ii++ ){
-      delete[] sums[ii];
-   }
-   delete[] sums;
-
-   return DefaultReturnValue;
-
-}
-

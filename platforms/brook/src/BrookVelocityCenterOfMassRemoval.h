@@ -102,16 +102,17 @@ class BrookVelocityCenterOfMassRemoval : public BrookCommon {
       int removeVelocityCenterOfMass( BrookStreamImpl& velocityStream );
 
       /** 
-       * Get velocity center-of-mass
+       * Get velocity center-of-mass and kinetic energy (used for diagnostics)
        * 
        * @param  velocities                  particle velocities
        * @param  velocityCom                 output velocity com
+       * @param  ke                          output kinetic energy
        *
        * @return  DefaultReturnValue
        *
        */
       
-      int getVelocityCenterOfMass( BrookStreamImpl& vStream, BrookOpenMMFloat velocityCom[3] );
+      int getVelocityCenterOfMass( BrookStreamImpl& vStream, BrookOpenMMFloat velocityCom[3], BrookOpenMMFloat* ke );
 
       /* 
        * Setup of  parameters

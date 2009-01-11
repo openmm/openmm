@@ -519,12 +519,12 @@ int BrookVerletDynamics::update( BrookStreamImpl& positionStream, BrookStreamImp
          (void) fprintf( log, "\nInverseMassStream %d\n", _internalStepCount );
          getInverseMassStream()->printToFile( log );
    
-         BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamImpl();
+         BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamInternal();
          (void) fprintf( log, "\nPositionStream %d\n", _internalStepCount );
          brookStreamInternalPos->printToFile( log );
    
          (void) fprintf( log, "\nForceStream %d\n", _internalStepCount );
-         BrookStreamInternal* brookStreamInternalF   = forceStream.getBrookStreamImpl();
+         BrookStreamInternal* brookStreamInternalF   = forceStream.getBrookStreamInternal();
          std::vector<std::vector<double> > forceStatistics;
          brookStreamInternalF->getStatistics( forceStatistics, getNumberOfParticles() );
 
@@ -535,7 +535,7 @@ int BrookVerletDynamics::update( BrookStreamImpl& positionStream, BrookStreamImp
 
          brookStreamInternalF->printToFile( log );
    
-         BrookStreamInternal* brookStreamInternalV   = velocityStream.getBrookStreamImpl();
+         BrookStreamInternal* brookStreamInternalV   = velocityStream.getBrookStreamInternal();
          std::vector<std::vector<double> > velocityStatistics;
          brookStreamInternalV->getStatistics( velocityStatistics, getNumberOfParticles() );
          std::stringstream tagV;
@@ -571,7 +571,7 @@ int BrookVerletDynamics::update( BrookStreamImpl& positionStream, BrookStreamImp
          (void) fprintf( log, "\nShakeParticleIndicesStream %d\n", _internalStepCount );
          brookShakeAlgorithm.getShakeParticleIndicesStream()->printToFile( log );
    
-         BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamImpl();
+         BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamInternal();
          (void) fprintf( log, "\nPositionStream %d\n", _internalStepCount );
          brookStreamInternalPos->printToFile( log );
    
@@ -616,7 +616,7 @@ int BrookVerletDynamics::update( BrookStreamImpl& positionStream, BrookStreamImp
          (void) fprintf( log, "\nShakeInverseMapStream %d\n", _internalStepCount );
          brookShakeAlgorithm.getShakeInverseMapStream()->printToFile( log );
    
-         BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamImpl();
+         BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamInternal();
          (void) fprintf( log, "\nPositionStream %d\n", _internalStepCount );
          brookStreamInternalPos->printToFile( log );
    
@@ -651,7 +651,7 @@ int BrookVerletDynamics::update( BrookStreamImpl& positionStream, BrookStreamImp
          (void) fprintf( log, "\n%s step=%d Post kupdate_md2: inverseStepSize=%3e",
                                    methodName.c_str(), _internalStepCount, inverseStepSize );
    
-         BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamImpl();
+         BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamInternal();
          brookShakeAlgorithm.checkConstraints( brookStreamInternalPos, log, 0.0001f );
          (void) fprintf( log, "\nPositionStream %d\n", _internalStepCount );
          brookStreamInternalPos->printToFile( log );
@@ -659,7 +659,7 @@ int BrookVerletDynamics::update( BrookStreamImpl& positionStream, BrookStreamImp
          (void) fprintf( log, "\nXPrimeStream %d\n", _internalStepCount );
          getXPrimeStream()->printToFile( log ); 
 
-         brookStreamInternalPos = velocityStream.getBrookStreamImpl();
+         brookStreamInternalPos = velocityStream.getBrookStreamInternal();
          (void) fprintf( log, "\nVelocityStream %d\n", _internalStepCount );
          brookStreamInternalPos->printToFile( log ); 
       }   

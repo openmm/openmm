@@ -173,7 +173,7 @@ class BrookStreamImpl : public StreamImpl {
        * @return Brook stream impl
        */
 
-      BrookStreamInternal* getBrookStreamImpl( void ) const;
+      BrookStreamInternal* getBrookStreamInternal( void ) const;
 
    protected:
 

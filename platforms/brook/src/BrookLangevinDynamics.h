@@ -283,6 +283,16 @@ class BrookLangevinDynamics : public BrookCommon {
       
       int removeCom( BrookStreamInternal* velocities, BrookFloatStreamInternal* inverseMassStream ) const;
       
+      /** 
+       * Reset velocities (diagnostics)
+       * 
+       * @param velocities             velocities
+       *
+       * @return DefaultReturnValue  
+       */
+      
+      int resetVelocities( BrookStreamInternal* velocities ) const;
+      
    private:
    
       enum DerivedParameters { GDT, EPH, EMH, EP, EM, B, C, D, V, X, Yv, Yx,

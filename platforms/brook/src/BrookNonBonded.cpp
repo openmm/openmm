@@ -1341,7 +1341,7 @@ nonbondedForceStreams[3]->fillWithValue( &zerof );
       (void) fprintf( log, "\n                      pFrc=%6d     eps=%12.5e\n",       getPartialForceStreamWidth( ), epsfac );
 
       (void) fprintf( log, "\nFinal NB & bonded forces" );
-      BrookStreamInternal* brookStreamInternalF   = forceStream.getBrookStreamImpl();
+      BrookStreamInternal* brookStreamInternalF   = forceStream.getBrookStreamInternal();
       brookStreamInternalF->printToFile( log );
  
       (void) fprintf( log, "\nOuterVdwStreamd\n" );
@@ -1387,7 +1387,7 @@ nonbondedForceStreams[3]->fillWithValue( &zerof );
    if( printOn ){
 
       (void) fprintf( log, "\n%s NB forces\n", methodName.c_str() );
-      BrookStreamInternal* brookStreamInternalF   = forceStream.getBrookStreamImpl();
+      BrookStreamInternal* brookStreamInternalF   = forceStream.getBrookStreamInternal();
       brookStreamInternalF->printToFile( log );
       (void) fprintf( log, "\n%s Done\n", methodName.c_str() ); (void) fflush( log );
 
