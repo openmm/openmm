@@ -50,9 +50,9 @@ class BrookStreamFactory : public StreamFactory {
 
       // 'external' streams 
 
-      static const std::string AtomPositions;
-      static const std::string AtomVelocities;
-      static const std::string AtomForces;
+      static const std::string ParticlePositions;
+      static const std::string ParticleVelocities;
+      static const std::string ParticleForces;
 
       /** 
        * Create StreamImpl
@@ -69,27 +69,27 @@ class BrookStreamFactory : public StreamFactory {
       StreamImpl* createStreamImpl( std::string name, int size, Stream::DataType type, const Platform& platform, OpenMMContextImpl& context ) const;
 
       /** 
-       * Get atom stream width
+       * Get particle stream width
        * 
-       * @return atom stream width
+       * @return particle stream width
        *
        *
        */
 
-      int getDefaultAtomStreamWidth( void ) const;
+      int getDefaultParticleStreamWidth( void ) const;
 
       /** 
-       * Set atom stream width
+       * Set particle stream width
        * 
-       * @param atomStreamWidth  atom stream width
+       * @param particleStreamWidth  particle stream width
        *
        * @return DefaultReturnValue
        *
-       * @throw OpenMMException if atomStreamWidth < 1
+       * @throw OpenMMException if particleStreamWidth < 1
        *
        */
 
-      int setDefaultAtomStreamWidth( int atomStreamWidth );
+      int setDefaultParticleStreamWidth( int particleStreamWidth );
 
       /** 
        * Get randomNumber stream width
@@ -159,17 +159,17 @@ class BrookStreamFactory : public StreamFactory {
 
    private:
 
-      static const int DefaultStreamAtomWidth             = 32;
+      static const int DefaultStreamParticleWidth         = 32;
 
-      static const int DefaultStreamRandomNumberWidth     = 32;
-      static const int DefaultStreamRandomNumberSize      = 1024;
+      static const int DefaultStreamRandomNumberWidth     = 1024;
+      static const int DefaultStreamRandomNumberSize      = 1024*1024;
 
       static const double DefaultDangleValue;
 
       static const int DefaultReturnValue                 = 0;
       static const int ErrorReturnValue                   = -1; 
 
-      int _defaultAtomStreamWidth;
+      int _defaultParticleStreamWidth;
 
       int _defaultStreamRandomNumberWidth;
       int _defaultStreamRandomNumberSize;

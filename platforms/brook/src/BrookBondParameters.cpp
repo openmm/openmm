@@ -39,6 +39,7 @@ using namespace std;
 /** 
  * BrookBondParameters constructor
  * 
+ * @param bondName                  bond name
  * @param numberOfParticlesInBond   no. of particles in each bond
  * @param numberOfParametersInBond  no. of parameters in each bond
  * @param numberOfBonds             no. of bonds
@@ -189,10 +190,7 @@ int BrookBondParameters::setBond( int bondIndex, int* particleIndices, double* b
 // ---------------------------------------------------------------------------------------
 
    static const std::string methodName      = "BrookBondParameters::setBond";
-
-// ---------------------------------------------------------------------------------------
-
-   FILE* log                 = getLog();
+   FILE* log                                = getLog();
 
    // ---------------------------------------------------------------------------------------
 
@@ -229,7 +227,7 @@ int BrookBondParameters::setBond( int bondIndex, int* particleIndices, double* b
 }
 
 /* 
- * Get contents of object
+ * Format line
  *
  * @param tab         tab
  * @param description description
@@ -246,7 +244,6 @@ std::string BrookBondParameters::_getLine( const std::string& tab,
 // ---------------------------------------------------------------------------------------
 
    static const std::string methodName      = "BrookStreamInternal::_getLine";
-
    static const unsigned int MAX_LINE_CHARS = 256;
    char line[MAX_LINE_CHARS];
 
@@ -267,7 +264,6 @@ std::string BrookBondParameters::_getLine( const std::string& tab,
 
 /* 
  * Get contents of object
- *
  *
  * @param level   level of dump
  *
@@ -310,8 +306,6 @@ std::string BrookBondParameters::getContentsString( int level ) const {
 
    (void) LOCAL_SPRINTF( value, "%d", getNumberOfParametersInBond() );
    message << _getLine( tab, "Parameters/bond:", value ); 
-
-//(void) fprintf( getLog(), "%s %s QQQ1\n", methodName.c_str(), message.str().c_str() ); (void) fflush( getLog() );
 
    message << "Bonds:"  << std::endl; 
    for( int ii = 0; ii < getNumberOfBonds(); ii++ ){
@@ -364,4 +358,3 @@ std::string BrookBondParameters::getContentsString( int level ) const {
 
    return message.str();
 }
-

@@ -48,6 +48,17 @@ class BrookBondParameters {
       static const int DefaultReturnValue = 0;
       static const int ErrorReturnValue   = -1; 
 
+      /** 
+       * BrookBondParameters constructor
+       * 
+       * @param bondName                  bond name
+       * @param numberOfParticlesInBond   no. of particles in each bond
+       * @param numberOfParametersInBond  no. of parameters in each bond
+       * @param numberOfBonds             no. of bonds
+       * @param log                       optional log reference
+       *
+       */
+      
       BrookBondParameters( std::string bondName, int numberOfParticlesInBond, int numberOfParametersInBond, int numberOfBonds, FILE* log );
   
       ~BrookBondParameters();

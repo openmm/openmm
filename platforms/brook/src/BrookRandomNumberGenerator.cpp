@@ -76,7 +76,7 @@ BrookRandomNumberGenerator::BrookRandomNumberGenerator( ){
       _auxiliaryStreams[ii]   = NULL;
    }
 
-   // set randomNumber seed 
+   // set randomNumber seed & generator
 
    _randomNumberSeed      = 1393;
    //_randomNumberGenerator = Mersenne;
@@ -391,14 +391,6 @@ int BrookRandomNumberGenerator::_loadRandomNumberStreamsKiss( void ){
                          methodName.c_str(), stateInitialized, reseed,  state[0], state[1], state[2], state[3] );
          (void) fflush( log );
       }
-
-/*
-state[0] = 9578;
-state[1] = 29245;
-state[2] = 16266;
-state[3] = 27587;
-*/
-
    }
    stateInitialized++;
 
@@ -434,7 +426,6 @@ state[3] = 27587;
 
    return DefaultReturnValue;
 }
-
 
 /** 
  * Load random number streams using Mersenne algorithm
@@ -708,7 +699,7 @@ int BrookRandomNumberGenerator::_shuffleGVStreams( void ){
 	
    int numberOfRvStreams = getNumberOfRandomNumberStreams();
 
-	for( int ii = 0; ii < numberOfRvStreams - 1; ii++ ){
+	for( int ii = 0; ii < (numberOfRvStreams - 1); ii++ ){
 		kpermute_vectors( (float) getRandomNumberStreamWidth(),
                          _getShuffleStream()->getBrookStream(),
                          getRandomNumberStream( ii + 1 )->getBrookStream(), 

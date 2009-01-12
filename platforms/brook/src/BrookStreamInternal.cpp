@@ -33,6 +33,15 @@
 #include "OpenMMException.h"
 #include "BrookStreamInternal.h"
 
+#ifdef _WIN32
+
+#include <float.h>
+#define isnan _isnan
+#define isinf !_finite
+
+#endif
+
+
 
 using namespace OpenMM;
 using namespace std;
@@ -288,6 +297,7 @@ std::string BrookStreamInternal::_getLine( const std::string& tab,
  * Print contents of object to file
  *
  * @param log         file to print to
+ * @param maxPrint    max values to print; if < 0, then all values printed; default value is -1
  *
  * @return DefaultReturnValue
  *
@@ -304,6 +314,7 @@ int BrookStreamInternal::printToFile( FILE* log, int maxPrint ){
    if( log == NULL ){
       log = stderr;
    }
+
    std::string contents = getContentsString();
    (void) fprintf( log, "%s\n", contents.c_str() );
 
@@ -364,9 +375,12 @@ const std::string BrookStreamInternal::getContentsString( int level ) const {
 }
 
 /* 
- * Get stats
+ * Get stats (virtual method -- only BrookStreamInternalFloat implemented for now)
  *
- * @return statistics vector
+ * @param statistics  output vector of stats
+ * @param maxScan     number of points to use in computing stats
+ *
+ * @return 0
  *
  * */
 
@@ -379,6 +393,7 @@ int BrookStreamInternal::getStatistics( std::vector<std::vector<double> >& stati
  *
  * @param         tag    id tag
  * @param  statistics    stat vector
+ *
  * @return stat string
  *
  * */
@@ -457,7 +472,7 @@ std::string BrookStreamInternal::printStatistics( std::string tag, std::vector<s
  *
  * @return DefaultReturnValue
  *
- * */
+ **/
 
 int BrookStreamInternal::printStreamsToFile( std::string fileName, std::vector<BrookStreamInternal*>& streams ){
 
@@ -557,6 +572,15 @@ int BrookStreamInternal::printStreamsToFile( std::string fileName, std::vector<B
    return DefaultReturnValue;
 
 }
+
+/* 
+ * Load data into stream from file
+ *
+ * @param fileName     file name
+ *
+ * @return DefaultReturnValue
+ *
+ **/
 
 typedef struct {
   unsigned int type;
@@ -664,6 +688,72 @@ int BrookStreamInternal::loadStreamGivenFileName( std::string& filename ){
    (void) fprintf( log, "%s read %d bytes for stream %s from %s dim:[%d %d %d %d] container=%d %d\n", methodName.c_str(), bytesToRead, getName().c_str(), filename.c_str(),
                    header.dims[0], header.dims[0], header.dims[0], header.dims[0], getStreamSize(), getWidth() );
    (void) fflush( log );
+
+   return DefaultReturnValue;
+}
+
+/* 
+ * Check for NANs
+ *
+ * @return number of Nans found
+ *
+ **/
+
+int BrookStreamInternal::checkForNans( void ){
+
+// ---------------------------------------------------------------------------------------
+
+   //static const std::string methodName      = "BrookStreamInternal::checkForNans";
+
+// ---------------------------------------------------------------------------------------
+
+   int numberOfNans     = 0;
+   void* dataArrayV     = getData( 1 );
+   float* array         = static_cast<float*>( dataArrayV );
+   int width            = getWidth();
+   int streamSize       = getSize();
+   for( int ii = 0; ii < width*streamSize; ii++ ){
+      if( isnan( array[ii] ) || isinf( array[ii] ) ){
+         numberOfNans++;
+      }
+   }
+
+   return numberOfNans;
+}
+
+/* 
+ * Sum columns
+ *
+ * @param  sums   output vector of column sums
+ *
+ * @return DefaultReturnValue
+ *
+ **/
+
+int BrookStreamInternal::sumColumns( std::vector<float>& sums ){
+
+// ---------------------------------------------------------------------------------------
+
+   //static const std::string methodName      = "BrookStreamInternal::sumColumns";
+
+// ---------------------------------------------------------------------------------------
+
+   void* dataArrayV     = getData( 1 );
+   float* array         = static_cast<float*>( dataArrayV );
+
+   int width            = getWidth();
+   sums.resize( width );
+   for( int ii = 0; ii < width; ii++ ){
+      sums[ii] = 0.0f;
+   }
+
+   int streamSize       = getSize();
+   int index            = 0;
+   for( int ii = 0; ii < streamSize; ii++ ){
+      for( int jj = 0; jj < width; jj++ ){
+         sums[jj] += array[index++];
+      }
+   }
 
    return DefaultReturnValue;
 }

@@ -618,14 +618,14 @@ int BrookShakeAlgorithm::setup( const std::vector<double>& masses, const std::ve
  * Check constraints
  *
  * @param positions             atom positions
- * @param log                   file to print to (can be NULL)
+ * @param outputString          output message
  * @param tolerance             tolerance to compare (if < 0, then use algorithm tolerance
  *
  * @return number of errors
  *
  */
     
-int BrookShakeAlgorithm::checkConstraints( BrookStreamInternal* positions, FILE* log, float tolerance ) const {
+int BrookShakeAlgorithm::checkConstraints( BrookStreamInternal* positions, std::string& outputString, float tolerance ) const {
     
 // ---------------------------------------------------------------------------------------
 
@@ -701,15 +701,41 @@ if( !(ii % 2 ) )fprintf( log, "]\n", posArray[ii] );
 
    // report findings
 
-   if( errors && log ){
-      (void) fprintf( log, "Shake errors=%d tolerance=%.3e max diff=%.3e atoms[%d %d]", errors, tolerance, maxDiff, maxDiffCentralIndex, maxDiffPeripheralIndex );
+   std::stringstream outputMessage;
+   char text[1024];
+   if( errors ){
+
+#ifdef WIN32
+      (void) sprintf_s( text, 1024, "Shake errors=%d tol=%.3e mxDff=%.3e atoms[%d %d]", errors, tolerance, maxDiff, maxDiffCentralIndex, maxDiffPeripheralIndex );
+#else
+      (void) sprintf( text, "Shake errors=%d tol=%.3e mxDff=%.3e atoms[%d %d]", errors, tolerance, maxDiff, maxDiffCentralIndex, maxDiffPeripheralIndex );
+#endif
+      outputMessage << text;
+
       if( errors >= maxErrorToPrint ){
-         (void) fprintf( log, " only printing first %d errors", maxErrorToPrint );
+
+#ifdef WIN32
+         (void) sprintf_s( text, 1024, " only printing first %d errors", maxErrorToPrint );
+#else
+         (void) sprintf( text, " only printing first %d errors", maxErrorToPrint );
+#endif
+         outputMessage << text;
       }
-      (void) fprintf( log, "\n%s", message.str().c_str() );
-   } else if( log ){
-      (void) fprintf( log, "Shake no errors: tolerance=%.3e max diff=%.3e", tolerance, maxDiff );
+
+      outputMessage << message.str();
+
+   } else {
+
+#ifdef WIN32
+      (void) sprintf_s( text, 1024, "Shake no errors: tol=%.3e mxDff=%.3e", tolerance, maxDiff );
+#else
+      (void) sprintf( text, "Shake no errors: tol=%.3e mxDff=%.3e", tolerance, maxDiff );
+#endif
+      
+      outputMessage << text;
    }
+
+   outputString = outputMessage.str();
 
    return errors;
 }

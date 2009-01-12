@@ -568,7 +568,7 @@ int BrookFloatStreamInternal::_bodyPrintToFile( FILE* log, int maxPrint ){
       (void) LOCAL_SPRINTF( value, "%6d ", ii );
       message << value << " [ ";
 
-      for( unsigned int jj = 0; jj < width; jj++ ){
+      for( int jj = 0; jj < width; jj++ ){
          (void) LOCAL_SPRINTF( value, "%16.7e ", dataArray[index++] );
          message << value;
       }   

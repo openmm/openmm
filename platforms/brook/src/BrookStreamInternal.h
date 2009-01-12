@@ -225,7 +225,8 @@ class BrookStreamInternal {
       /* 
        * Print to file
        *
-       * @param log  log file
+       * @param log         log file
+       * @param maxPrint    max values to print; if < 0, then all values printed; default value is -1
        *
        * @return  DefaultReturnValue
        *
@@ -249,11 +250,14 @@ class BrookStreamInternal {
       /*  
        * Get stats
        *
+       * @param statistics  output vector of stats
+       * @param maxScan     number of points to use in computing stats
+       *
        * @return statistics vector
        *
        * */
      
-      virtual int getStatistics( std::vector<std::vector<double>>&, int maxScan );
+      virtual int getStatistics( std::vector<std::vector<double>>& statVector, int maxScan );
 
       /* 
        * Get stat string
@@ -289,6 +293,27 @@ class BrookStreamInternal {
        **/
        
       static int printStreamsToFile( std::string fileName, std::vector<BrookStreamInternal*>& streams );
+
+      /* 
+       * Check for NANs
+       *
+       * @return number of Nans found
+       *
+       **/
+      
+      int checkForNans( void );
+      
+      /* 
+       * Sum columns
+       *
+       * @param  sums   output vector of column sums
+       *
+       * @return DefaultReturnValue
+       *
+       **/
+      
+      int sumColumns( std::vector<float>& sums );
+      
       
    protected:
 

@@ -301,14 +301,14 @@ class BrookShakeAlgorithm : public BrookCommon {
        * Check constraints
        *
        * @param positions             atom positions
-       * @param log                   file to print to (can be NULL)
+       * @param outputString          output message
        * @param tolerance             tolerance to compare (if < 0, then use algorithm tolerance
        *
        * @return number of errors
        *
        */
               
-      int checkConstraints( BrookStreamInternal* positions, FILE* log, float tolerance ) const;
+      int checkConstraints( BrookStreamInternal* positions, std::string& outputString, float tolerance ) const;
               
    private:
    

@@ -652,7 +652,9 @@ int BrookVerletDynamics::update( BrookStreamImpl& positionStream, BrookStreamImp
                                    methodName.c_str(), _internalStepCount, inverseStepSize );
    
          BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamInternal();
-         brookShakeAlgorithm.checkConstraints( brookStreamInternalPos, log, 0.0001f );
+         std::string violationString;
+         brookShakeAlgorithm.checkConstraints( brookStreamInternalPos, violationString, 0.0001f );
+         (void) fprintf( log, "Shake: %s\n", violationString.c_str() );
          (void) fprintf( log, "\nPositionStream %d\n", _internalStepCount );
          brookStreamInternalPos->printToFile( log );
 

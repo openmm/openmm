@@ -41,11 +41,116 @@
 
 namespace OpenMM {
 
+class KernelImpl;
+class OpenMMBrookInterface;
+
+class BrookPlatformData {
+
+   public:
+
+      /** 
+       * Constructor
+       * 
+       */
+      
+      BrookPlatformData( void );
+
+      /** 
+       * Destructor
+       * 
+       */
+      
+      ~BrookPlatformData( void );
+
+      /** 
+       * Get _removeCOM flag
+       * 
+       * @return  _removeCOM
+       *
+       */
+      
+      int removeCOM( void ) const;
+
+      /** 
+       * Get _useOBC flag
+       * 
+       * @return  _useOBC
+       *
+       */
+      
+      int useOBC( void ) const;
+      
+      /** 
+       * Get _hasBonds flag
+       * 
+       * @return  _hasBonds 
+       *
+       */
+      
+      int hasBonds( void ) const;
+      
+      /** 
+       * Get _hasAngles
+       * 
+       * @return  _hasAngles
+       *
+       */
+      
+      int hasAngles( void ) const;
+      
+      /** 
+       * Get _hasPeriodicTorsions
+       * 
+       * @return  _hasPeriodicTorsions
+       *
+       */
+      
+      int hasPeriodicTorsions( void ) const;
+      
+      /** 
+       * Get _hasRB
+       * 
+       * @return  _hasRB
+       *
+       */
+      
+      int hasRB( void ) const;
+      
+      /** 
+       * Get _hasNonbonded
+       * 
+       * @return  _hasNonbonded
+       *
+       */
+      
+      int hasNonbonded( void ) const;
+      
+      /** 
+       * Get _cmMotionFrequency
+       * 
+       * @return  _cmMotionFrequency
+       *
+       */
+      
+      int cmMotionFrequency( void ) const;
+
+   private:
+
+      int _removeCOM;
+      int _useOBC;
+      int _hasBonds;
+      int _hasAngles;
+      int _hasPeriodicTorsions;
+      int _hasRB;
+      int _hasNonbonded;
+      int _cmMotionFrequency;
+};
+
 /**
  * This Platform subclass uses the Brook implementations of all the OpenMM kernels.
  */
 
-class BrookPlatform : public Platform {
+class OPENMM_EXPORT BrookPlatform : public Platform {
 
    public:
 
@@ -53,6 +158,7 @@ class BrookPlatform : public Platform {
 
       static const int DefaultReturnValue = 0;
       static const int DefaultErrorValue  = -1;
+
       /** 
        * BrookPlatform constructor
        *
@@ -63,13 +169,13 @@ class BrookPlatform : public Platform {
       /** 
        * BrookPlatform constructor
        *
-       * @param defaultAtomStreamWidth  stream width
+       * @param defaultParticleStreamWidth  stream width
        * @param runtime                 Brook runtime (cal/cpu)
        * @param log                     log file reference
        *
        */
       
-      BrookPlatform( int atomStreamWdith, const std::string& runtime, FILE* log = NULL );
+      BrookPlatform( int particleStreamWdith, const std::string& runtime, FILE* log = NULL );
 
       /** 
        * BrookPlatform destructor
@@ -102,6 +208,12 @@ class BrookPlatform : public Platform {
       
       bool supportsDoublePrecision( void ) const;
 
+      /** 
+       * Return default Brook stream factory
+       *
+       * @return Brook stream factory
+       */
+      
       const StreamFactory& getDefaultStreamFactory( void ) const;
   
       /**
@@ -130,7 +242,7 @@ class BrookPlatform : public Platform {
        * @return default stream width
        */
 
-      int getAtomStreamWidth( void ) const;
+      int getParticleStreamWidth( void ) const;
 
       /** 
        * Set log file reference
@@ -163,6 +275,19 @@ class BrookPlatform : public Platform {
       
       FILE* getLog( void ) const;
       
+      /** 
+       * This is called whenever a new OpenMMContext is created.  It gives the Platform a chance to initialize
+       * the context and store platform-specific data in it.
+       */
+      void contextCreated( OpenMMContextImpl& context ) const;
+
+      /** 
+       * This is called whenever an OpenMMContext is deleted.  It gives the Platform a chance to clean up
+       * any platform-specific data that was stored in it.
+       */
+
+      void contextDestroyed( OpenMMContextImpl& context ) const;
+
    private:
 
       // log file reference
@@ -173,11 +298,11 @@ class BrookPlatform : public Platform {
 
       // default stream width
 
-      static const int DefaultAtomStreamWidth   = 32;
+      static const int DefaultParticleStreamWidth   = 32;
 
-      // atom streamwidth
+      // particle streamwidth
 
-      int _atomStreamWidth;
+      int _particleStreamWidth;
 
       // Brook runtime
 
@@ -187,7 +312,7 @@ class BrookPlatform : public Platform {
        * Initialize kernel factory
        *
        */
-      
+
       void _initializeKernelFactory( void );
 
       /** 
@@ -201,6 +326,7 @@ class BrookPlatform : public Platform {
       void _setBrookRuntime( const std::string& runtime );
       
 };
+
 
 } // namespace OpenMM
 

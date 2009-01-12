@@ -40,7 +40,8 @@ FIND_PROGRAM(BROOK_CC brcc
 
 FIND_LIBRARY(BROOK_brook_LIBRARY 
    NAMES  
-      ${sub_lib} 
+      brook
+      brook_d
    PATHS 
       $ENV{BROOKDIR}/lib 
       $ENV{BROOKDIR}/bin 
@@ -67,6 +68,8 @@ IF(LOG)
    FILE( APPEND ${LOG_FILE} "BROOK_INCLUDE_DIR=${BROOK_INCLUDE_DIR}\n" )
    FILE( APPEND ${LOG_FILE} "BROOK_CC=${BROOK_CC}\n" )
    FILE( APPEND ${LOG_FILE} "BROOK_brook_LIBRARY=${BROOK_brook_LIBRARY}\n" )
+   FILE( APPEND ${LOG_FILE} "BROOKROOT=<$ENV{BROOKROOT}>\n" )
+   FILE( APPEND ${LOG_FILE} "sub_lib=<${sub_lib}>\n" )
 ENDIF(LOG)
 
 # ----------------------------------------------------------------------------
@@ -138,7 +141,8 @@ IF (BROOK_INCLUDE_DIR AND BROOK_brook_LIBRARY AND BROOK_CC)
       SET(BROOK_CPP_FILES ${BROOK_CPP_FILES} ${OUTFILE})
 
    ENDMACRO(BROOK_FILE) 
-    
+ELSE (BROOK_INCLUDE_DIR AND BROOK_brook_LIBRARY AND BROOK_CC) 
+   SET(BROOK_FOUND FALSE) 
 ENDIF (BROOK_INCLUDE_DIR AND BROOK_brook_LIBRARY AND BROOK_CC) 
 
 # Some verbosity 
@@ -151,7 +155,7 @@ ENDIF (NOT BROOK_FOUND)
 
 # ----------------------------------------------------------------------------
 IF(LOG)
-   FILE( APPEND ${LOG_FILE} "BROOK_FOUND=${BROOK_FOUND}\n" )
+   FILE( APPEND ${LOG_FILE} "BROOK_FOUND=<${BROOK_FOUND}>\n" )
    FILE( APPEND ${LOG_FILE} "\nLeaving FindBrook.cmake\n" )
 ENDIF(LOG)
 # ----------------------------------------------------------------------------
