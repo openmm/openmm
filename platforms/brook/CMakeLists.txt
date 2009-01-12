@@ -25,6 +25,23 @@ IF(LOG)
    FILE( WRITE ${LOG_FILE} "In Brook Cmake\n")
 ENDIF(LOG)
 
+# ----------------------------------------------------------------------------
+
+IF(LOG)
+   MACRO(LOG_DIR LOG_FILE DIR_LIST DIRS1 )
+   
+      FILE( APPEND ${LOG_FILE} "\n${DIR_LIST}\n")
+      FOREACH(currentFile ${ARGN})
+         FILE( APPEND ${LOG_FILE} "   ${currentFile}\n" )
+      ENDFOREACH(currentFile)
+   
+   ENDMACRO(LOG_DIR) 
+   
+   LOG_DIR( ${LOG_FILE} "API_INCLUDE_DIRS" ${API_INCLUDE_DIRS} )
+ENDIF(LOG)
+
+# ----------------------------------------------------------------------------
+
 # The source is organized into subdirectories, but we handle them all from
 # this CMakeLists file rather than letting CMake visit them as SUBDIRS.
 SET(OPENMM_SOURCE_SUBDIRS .)
