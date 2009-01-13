@@ -677,6 +677,67 @@ int BrookVerletDynamics::update( BrookStreamImpl& positionStream, BrookStreamImp
                         positionStream.getBrookStream() );
    }
 
+   // diagnostics
+
+   if( (_internalStepCount % 1) == 0 ){
+      FILE*	log1     = stderr;
+      float  epsilon = 1.0e-01f;
+
+      BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamInternal();
+      BrookStreamInternal* brookStreamInternalVel  = velocityStream.getBrookStreamInternal();
+      BrookStreamInternal* brookStreamInternalFrc  = forceStream.getBrookStreamInternal();
+
+      // check for nan and infinities
+
+      int coordinateNans                           = brookStreamInternalPos->checkForNans( );
+      int velocityNans                             = brookStreamInternalVel->checkForNans( );
+      int forceNans                                = brookStreamInternalFrc->checkForNans( );
+      int abort                                    = abs( coordinateNans ) + abs( velocityNans ) + abs( forceNans );
+
+      // Shake violations
+
+      std::string violationString;
+      int constraintViolations                     = brookShakeAlgorithm.checkConstraints( brookStreamInternalPos, violationString, 0.0001f );
+
+      abort                                       += abs( constraintViolations );
+
+      // force sums ~ 0?
+      std::vector<float> sums;
+      brookStreamInternalFrc->sumColumns( sums );
+
+      // check if should abort
+
+      (void) fprintf( log1, "%d Nans: x=%d v=%d f=%d ", _internalStepCount, coordinateNans, velocityNans, forceNans );
+      (void) fprintf( log1, " Fsum[" );
+      for( int ii = 0; ii < 3; ii++ ){
+         if( fabsf( sums[ii] ) > epsilon ){
+            abort++;
+         }
+         (void) fprintf( log1, "%12.4e ", sums[ii] );
+      }
+      (void) fprintf( log1, "] %s abort=%d\n", violationString.c_str(), abort );
+      (void) fflush( log1 );
+      if( abort ){
+
+         (void) fprintf( log1, "Aborting:\n" );
+
+         brookStreamInternalPos->printToFile( log1 );
+         brookStreamInternalVel->printToFile( log1 );
+         brookStreamInternalFrc->printToFile( log1 );
+
+         exit(1);
+      }
+  
+/*
+      std::vector<std::vector<double> > velocityStatistics;
+      brookStreamInternalPos->getStatistics( velocityStatistics, getNumberOfParticles() );
+      std::stringstream tagV;
+      tagV << _internalStepCount << " Vxx "; 
+      std::string stats = brookStreamInternalPos->printStatistics( tagV.str(), velocityStatistics );
+      (void) fprintf( log1, "\nStep %d Velocity stats:\n%s", _internalStepCount, stats.c_str() );
+*/
+      //removeCom( brookStreamInternalPos, getInverseMassStream() );
+   }
 //_brookVelocityCenterOfMassRemoval->removeVelocityCenterOfMass( velocities );
 
    return DefaultReturnValue;

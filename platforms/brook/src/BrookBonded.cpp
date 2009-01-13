@@ -42,6 +42,9 @@
 using namespace OpenMM;
 using namespace std;
 
+// 'defines' used to format paramater and atom index arrays 
+// carry over from original code
+
 #define ATOMS(X,Y) (particles[ 5*(X) + (Y) + 1 ])
 #define PARAMS(X,Y,Z) (params[(Y)][4*(X) + Z])
 
@@ -62,7 +65,7 @@ BrookBonded::BrookBonded( ){
    _setupCompleted            = 0;
    _numberOfParticles         = 0;
 
-   _coulombFactor             = (BrookOpenMMFloat) 138.935485;
+   _coulombFactor             = static_cast<BrookOpenMMFloat>( 138.935485 );
 
    _particleIndicesStream     = NULL;
    _chargeStream              = NULL;
@@ -476,6 +479,8 @@ void BrookBonded::_flipQuartet( int ibonded, int *particles ){
    //For now, simply flip the indices
    //we're just studying the packing
 
+   // see 'defines' at top of file
+
    tmp = ATOMS( ibonded, 0 );
    ATOMS( ibonded, 0 ) = ATOMS( ibonded, 3 );
    ATOMS( ibonded, 3 ) = ATOMS( ibonded, 0 );
@@ -496,7 +501,9 @@ int BrookBonded::_matchTorsion( int i, int j, int k, int l, int nbondeds, int *p
 
    int tmp;
    if( j > k ){
+
       //swap into order
+
       tmp = i;
       i = l;
       l = tmp;
@@ -580,7 +587,8 @@ int BrookBonded::_matchAngle( int i, int j, int k, int nbondeds,
    return ErrorReturnValue;
 }
 
-/*flag = 0 means match i-j, 1 means j-k and 2 means k-l
+/*
+ * flag = 0 means match i-j, 1 means j-k and 2 means k-l
  * Again, like above, if we have uninitialized slots, we take em
  *
  * */
@@ -631,6 +639,7 @@ int BrookBonded::_matchBond( int i, int j, int nbondeds, int *particles, int *fl
       }
       
       //Try third spot
+
       if( ATOMS(n, 3) == -1 ){
          if( i == ATOMS(n, 2) ){
             ATOMS(n, 3) = j;
@@ -678,6 +687,7 @@ int BrookBonded::_matchPair( int i, int j, int nbondeds, int *particles ){
       }
 
       //If the l-particle is available
+
       if( ATOMS(n, 3) == -1 ){
          if( ATOMS(n, 0) == i ){
             ATOMS(n, 3) = j;
@@ -690,6 +700,7 @@ int BrookBonded::_matchPair( int i, int j, int nbondeds, int *particles ){
       }
 
       //Both are unavailable, both much match
+
       if(   ( i == ATOMS(n, 0) && j == ATOMS(n, 3) ) 
           || ( i == ATOMS(n, 3) && j == ATOMS(n, 0) ) ){
          return n;
@@ -718,11 +729,11 @@ int BrookBonded::_addRBTorsions( int *nbondeds, int *particles, float *params[],
 // ---------------------------------------------------------------------------------------
 
    static const std::string methodName = "BrookBonded::_addRBTorsions";
-   static const int debug              = 0;
+   static const int printOn            = 0;
 
 // ---------------------------------------------------------------------------------------
 
-   if( debug && getLog() ){
+   if( printOn && getLog() ){
       (void) fprintf( getLog(), "%s number of bonds=%d\n", methodName.c_str(), rbTorsionIndices.size() );
    }
 
@@ -752,13 +763,13 @@ int BrookBonded::_addRBTorsions( int *nbondeds, int *particles, float *params[],
       // to calculate the forces!
 
       index                   = 1;
-      PARAMS( ibonded, 0, 0 ) = (BrookOpenMMFloat) rbParameters[index++];
-      PARAMS( ibonded, 0, 1 ) = (BrookOpenMMFloat) rbParameters[index++];
-      PARAMS( ibonded, 0, 2 ) = (BrookOpenMMFloat) rbParameters[index++];
-      PARAMS( ibonded, 0, 3 ) = (BrookOpenMMFloat) rbParameters[index++];
-      PARAMS( ibonded, 1, 0 ) = (BrookOpenMMFloat) rbParameters[index++];
+      PARAMS( ibonded, 0, 0 ) = static_cast<BrookOpenMMFloat>( rbParameters[index++] );
+      PARAMS( ibonded, 0, 1 ) = static_cast<BrookOpenMMFloat>( rbParameters[index++] );
+      PARAMS( ibonded, 0, 2 ) = static_cast<BrookOpenMMFloat>( rbParameters[index++] );
+      PARAMS( ibonded, 0, 3 ) = static_cast<BrookOpenMMFloat>( rbParameters[index++] );
+      PARAMS( ibonded, 1, 0 ) = static_cast<BrookOpenMMFloat>( rbParameters[index++] );
 
-      if( debug && getLog() ){
+      if( printOn && getLog() ){
          (void) fprintf( getLog(), "   %d [%d %d %d %d] %.3e %.3e %.3e %.3e\n", ibonded, i, j, k, l,
                          rbParameters[0], rbParameters[1],
                          rbParameters[2], rbParameters[3], rbParameters[4], rbParameters[5] );
@@ -790,12 +801,12 @@ int BrookBonded::_addPTorsions( int *nbondeds, int *particles, BrookOpenMMFloat*
    static const BrookOpenMMFloat DEG2RAD =  (BrookOpenMMFloat) (M_PI/180.0);
 
    static const std::string methodName   = "BrookBonded::_addPTorsion";
-   static const int debug                = 0;
+   static const int printOn              = 0;
 
 // ---------------------------------------------------------------------------------------
 
    FILE* log = getLog();
-   if( debug ){
+   if( printOn ){
       log = log ? log : stderr;
       (void) fprintf( log, "%s npdih=%d\n", methodName.c_str(), periodicTorsionIndices.size() );
       (void) fflush( log );
@@ -825,11 +836,11 @@ int BrookBonded::_addPTorsions( int *nbondeds, int *particles, BrookOpenMMFloat*
 
       // note: parameters 0 & 2 switched
 
-      PARAMS( ibonded, 1, 1 ) = (BrookOpenMMFloat) pTParameters[2];
-      PARAMS( ibonded, 1, 2 ) = (BrookOpenMMFloat) pTParameters[1];
-      PARAMS( ibonded, 1, 3 ) = (BrookOpenMMFloat) pTParameters[0];
+      PARAMS( ibonded, 1, 1 ) = static_cast<BrookOpenMMFloat>( pTParameters[2] );
+      PARAMS( ibonded, 1, 2 ) = static_cast<BrookOpenMMFloat>( pTParameters[1] );
+      PARAMS( ibonded, 1, 3 ) = static_cast<BrookOpenMMFloat>( pTParameters[0] );
 
-      if( debug ){
+      if( printOn ){
          (void) fprintf( log, "   %d [%d %d %d %d] %.3e %.3e %.3e\n", ibonded, i, j, k, l,
                          pTParameters[0], pTParameters[1], pTParameters[2] );
         (void) fflush( log );
@@ -858,11 +869,11 @@ int BrookBonded::_addAngles( int *nbondeds, int *particles, float *params[], con
 // ---------------------------------------------------------------------------------------
 
    static const std::string methodName = "BrookBonded::_addAngles";
-   static const int debug              = 0;
+   static const int printOn            = 0;
 
 // ---------------------------------------------------------------------------------------
 
-   if( debug && getLog() ){
+   if( printOn && getLog() ){
       (void) fprintf( getLog(), "%s nang=%d\n", methodName.c_str(), angleIndices.size() );
    }
 
@@ -888,10 +899,10 @@ int BrookBonded::_addAngles( int *nbondeds, int *particles, float *params[], con
          flag = 0;
          (*nbondeds)++;
       }
-      PARAMS( ibonded, 2, flag*2 )     = (BrookOpenMMFloat) angParameters[0];
-      PARAMS( ibonded, 2, flag*2 + 1 ) = (BrookOpenMMFloat) angParameters[1];
+      PARAMS( ibonded, 2, flag*2 )     = static_cast<BrookOpenMMFloat>( angParameters[0] );
+      PARAMS( ibonded, 2, flag*2 + 1 ) = static_cast<BrookOpenMMFloat>( angParameters[1] );
       
-      if( debug && getLog() ){
+      if( printOn && getLog() ){
          (void) fprintf( getLog(), "   %d [%d %d %d ] %.6e %.6e\n", ibonded, i, j, k,
                          angParameters[0], angParameters[1] );
       }
@@ -919,11 +930,11 @@ int BrookBonded::_addBonds( int *nbondeds, int *particles, float *params[], cons
 // ---------------------------------------------------------------------------------------
 
    static const std::string methodName = "BrookBonded::_addBonds";
-   static const int debug              = 0;
+   static const int printOn            = 0;
 
 // ---------------------------------------------------------------------------------------
 
-   if( debug && getLog() ){
+   if( printOn && getLog() ){
       (void) fprintf( getLog(), "%s nbonds=%d\n", methodName.c_str(), bondIndices.size() );
    }
 
@@ -958,14 +969,14 @@ int saveIbond = ibonded;
       }
 
       if( flag < 2 ){
-         PARAMS( ibonded, 3, flag*2 )     = (BrookOpenMMFloat) bndParameters[0];
-         PARAMS( ibonded, 3, flag*2 + 1 ) = (BrookOpenMMFloat) bndParameters[1];
+         PARAMS( ibonded, 3, flag*2 )     = static_cast<BrookOpenMMFloat>( bndParameters[0] );
+         PARAMS( ibonded, 3, flag*2 + 1 ) = static_cast<BrookOpenMMFloat>( bndParameters[1] );
       } else {
-         PARAMS( ibonded, 4, 0 )          = (BrookOpenMMFloat) bndParameters[0];
-         PARAMS( ibonded, 4, 1 )          = (BrookOpenMMFloat) bndParameters[1];
+         PARAMS( ibonded, 4, 0 )          = static_cast<BrookOpenMMFloat>( bndParameters[0] );
+         PARAMS( ibonded, 4, 1 )          = static_cast<BrookOpenMMFloat>( bndParameters[1] );
       }
 
-      if( debug && getLog() ){
+      if( printOn && getLog() ){
          (void) fprintf( getLog(), "   %d (%5d) [%6d %6d ] flag=%2d %.3e %.3e\n", ibonded, saveIbond, i, j, flag,
                          bndParameters[0], bndParameters[1] );
       }
@@ -999,11 +1010,11 @@ int BrookBonded::_addPairs( int *nbondeds, int *particles, BrookOpenMMFloat* par
 
    static const std::string methodName = "BrookBonded::_addPairs";
    static const double oneSixth        = 1.0/6.0;
-   static const int debug              = 0;
+   static const int printOn            = 0;
 
 // ---------------------------------------------------------------------------------------
 
-   if( debug && getLog() ){
+   if( printOn && getLog() ){
       (void) fprintf( getLog(), "%s npairs=%d sz=%u %u\n", methodName.c_str(), bonded14Indices.size(), bonded14Indices.size(), nonbondedParameters.size() ); fflush( getLog() );
    }
 
@@ -1020,32 +1031,16 @@ int BrookBonded::_addPairs( int *nbondeds, int *particles, BrookOpenMMFloat* par
          (*nbondeds)++;
       }
 
-//(void) fprintf( getLog(), "%s   %d %ibonded=%d done\n", methodName.c_str(), ii, ibonded ); fflush( getLog() );
-
       vector<double> iParameters  = nonbondedParameters[ii];
-/*
-      double c6                   = iParameters[1];
-      double c12                  = 4.0*iParameters[2];
-      double sig, eps;
-      if( c12 != 0.0 ){
-         //eps = c6*c6/c12;
-         //sig = pow( c12/c6, oneSixth );
-         eps = c12;
-         sig = c6;
-      } else {
-         eps = 0.0;
-         sig = 1.0;
-      }
-*/
 
-      PARAMS( ibonded, 4, 2 ) = (BrookOpenMMFloat) iParameters[1];
-      PARAMS( ibonded, 4, 3 ) = (BrookOpenMMFloat) (4.0*iParameters[2]);
+      PARAMS( ibonded, 4, 2 ) = static_cast<BrookOpenMMFloat>( iParameters[1] );
+      PARAMS( ibonded, 4, 3 ) = static_cast<BrookOpenMMFloat>( (4.0*iParameters[2]) );
 
       // a little wasteful, but ...
 
       charges[ibonded] = (BrookOpenMMFloat) iParameters[0];
 
-      if( debug ){
+      if( printOn ){
          (void) fprintf( getLog(), "   %d [%d %d ] %.3e %.3e q=%.4f\n", ibonded, i, j, iParameters[1], iParameters[2], charges[ibonded] );
       }
    }
@@ -1379,7 +1374,7 @@ int BrookBonded::setup( int numberOfParticles,
 
 // ---------------------------------------------------------------------------------------
 
-   // debug stuff
+   // printOn stuff
 
    if( printOn ){
 
@@ -1851,7 +1846,11 @@ void BrookBonded::computeForces( BrookStreamImpl& positionStream, BrookStreamImp
 
 // ---------------------------------------------------------------------------------------
 
-   printOn = (printOn && getLog()) ? printOn : 0;
+   if( printOn && getLog() ){
+      log     = getLog();
+   } else {
+      printOn = 0;
+   }
 
    // bonded
 
@@ -1888,7 +1887,6 @@ void BrookBonded::computeForces( BrookStreamImpl& positionStream, BrookStreamImp
    // diagnostics
 
    if( printOn ){
-      log = getLog();
       //FILE* log = stderr;
 
       int countPrintInvMap[4] = { 3, 5, 2, 4 }; 

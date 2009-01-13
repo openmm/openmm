@@ -1500,7 +1500,7 @@ int BrookLangevinDynamics::update( BrookStreamImpl& positionStream, BrookStreamI
       std::string violationString;
       int constraintViolations                     = brookShakeAlgorithm.checkConstraints( brookStreamInternalPos, violationString, 0.0001f );
 
-      abort += abs( constraintViolations );
+      abort                                       += abs( constraintViolations );
 
       // check T consistent w/ specified value
 
@@ -1532,11 +1532,11 @@ int BrookLangevinDynamics::update( BrookStreamImpl& positionStream, BrookStreamI
          nans[1] = brookRandomNumberGenerator.getRandomNumberStream( 1 )->checkForNans();
          (void) fprintf( log1, "Aborting: Nans rng: active index=%d %d %d\n", brookRandomNumberGenerator.getRvStreamIndex(), nans[0], nans[1] );
 
-         brookStreamInternalPos->printToFile( log );
-         brookStreamInternalVel->printToFile( log );
-         brookStreamInternalFrc->printToFile( log );
+         brookStreamInternalPos->printToFile( log1 );
+         brookStreamInternalVel->printToFile( log1 );
+         brookStreamInternalFrc->printToFile( log1 );
 
-         brookRandomNumberGenerator.getRandomNumberStream( brookRandomNumberGenerator.getRvStreamIndex() )->printToFile( log );
+         brookRandomNumberGenerator.getRandomNumberStream( brookRandomNumberGenerator.getRvStreamIndex() )->printToFile( log1 );
 
          exit(1);
       }
