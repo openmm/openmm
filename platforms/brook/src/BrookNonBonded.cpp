@@ -1287,7 +1287,11 @@ void BrookNonBonded::computeForces( BrookStreamImpl& positionStream, BrookStream
 
 // ---------------------------------------------------------------------------------------
 
-    printOn = (printOn && getLog()) ? printOn : 0;
+    if( printOn && getLog() ){
+       log = getLog();
+    } else {
+       printOn = 0;
+    }
 
    // nonbonded forces
 
