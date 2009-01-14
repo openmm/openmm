@@ -109,17 +109,18 @@ kernel void kupdate_sd1_fix1(
 		out float3 vnew<>,
 		out float3 posqp<>
 		){
+   float  c1;
 	float3 Vmh;
 	float3 fg1, fg2;
 	float linind_gauss; //linear index into the random numbers
 	float2 igauss;      //2d index
 
-	igauss         = indexof( posq );
+	igauss         = indexof( posq ).xy;
 	linind_gauss   = igauss.y * xstrwidth + igauss.x;
 
 	//2 random vectors used in each fragment
 
-	linind_gauss   = 2 * linind_gauss + goffset; 	
+	linind_gauss   = 2.0f * linind_gauss + goffset; 	
    igauss.y       = round( (linind_gauss - fmod( linind_gauss, gstrwidth))/gstrwidth);
 	igauss.x       = linind_gauss - igauss.y * gstrwidth;
 	fg1            = fgauss[ igauss ];
@@ -129,10 +130,27 @@ kernel void kupdate_sd1_fix1(
 	igauss.x       = linind_gauss - igauss.y * gstrwidth;
 	fg2            = fgauss[ igauss ];
 
-	Vmh            = (sd2X*pc3) + (sdpc.x*fg1);
-	sd1V           = sdpc.y*fg2;
-	vnew           = (v*cem) + (invmass*f*pc1) + sd1V - (Vmh*cem);
-	posqp          = vnew * pc2;
+	//Vmh            = (sd2X*pc3) + (sdpc.x*fg1);
+
+	Vmh.x          = pc3*sd2X.x + sdpc.x*fg1.x;
+	Vmh.y          = pc3*sd2X.y + sdpc.x*fg1.y;
+	Vmh.z          = pc3*sd2X.z + sdpc.x*fg1.z;
+
+	//sd1V           = sdpc.y*fg2;
+   sd1V.x         = sdpc.y*fg2.x;
+   sd1V.y         = sdpc.y*fg2.y;
+   sd1V.z         = sdpc.y*fg2.z;
+  
+	//vnew           = (v*cem) + (invmass*f*pc1) + sd1V - (Vmh*cem);
+   c1             = invmass*pc1;
+   vnew.x         = cem*(v.x - Vmh.x) + c1*f.x + sd1V.x;
+   vnew.y         = cem*(v.y - Vmh.y) + c1*f.y + sd1V.y;
+   vnew.z         = cem*(v.z - Vmh.z) + c1*f.z + sd1V.z;
+
+	posqp.x        = pc2*vnew.x;
+	posqp.y        = pc2*vnew.y;
+	posqp.z        = pc2*vnew.z;
+
 }
 
 kernel void kupdate_sd2_fix1(
@@ -167,9 +185,9 @@ kernel void kupdate_sd2_fix1(
 	float3 fg1, fg2;
 	float3 Xmh;
 
-	igauss            = indexof( posq );
+	igauss            = indexof( posq ).xy;
 	linind_gauss      = igauss.y * xstrwidth + igauss.x;
-	linind_gauss      = 2 * linind_gauss + goffset; 	
+	linind_gauss      = 2.0f * linind_gauss + goffset; 	
 	
    igauss.y          = round( (linind_gauss - fmod( linind_gauss, gstrwidth))/gstrwidth); 
 	igauss.x          = linind_gauss - igauss.y * gstrwidth;
@@ -180,8 +198,19 @@ kernel void kupdate_sd2_fix1(
 	igauss.x          = linind_gauss - igauss.y * gstrwidth;
 	fg2               = fgauss[ igauss ];
 			
-	v                 = pc1 * posqp;
-	Xmh               = sd1V * pc2 + sdpc.x * fg1;
-	sd2X              = sdpc.y * fg2;
+	v.x               = pc1*posqp.x;
+	v.y               = pc1*posqp.y;
+	v.z               = pc1*posqp.z;
+
+	//Xmh               = sd1V * pc2 + sdpc.x * fg1;
+	Xmh.x             = pc2*sd1V.x + sdpc.x*fg1.x;
+	Xmh.y             = pc2*sd1V.y + sdpc.x*fg1.y;
+	Xmh.z             = pc2*sd1V.z + sdpc.x*fg1.z;
+
+	//sd2X              = sdpc.y * fg2;
+	sd2X.x            = sdpc.y*fg2.x;
+	sd2X.y            = sdpc.y*fg2.y;
+	sd2X.z            = sdpc.y*fg2.z;
+
 	posqp2            = posqp + sd2X - Xmh;
 }

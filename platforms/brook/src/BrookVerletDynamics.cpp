@@ -474,12 +474,12 @@ int BrookVerletDynamics::update( BrookStreamImpl& positionStream, BrookStreamImp
 
    _internalStepCount++;
 
-//setLog( stderr );
+setLog( stderr );
    printOn = (printOn && getLog()) ? printOn : 0; 
 
    BrookStreamImpl& forceStream = const_cast<BrookStreamImpl&> (forceStreamC);
 
-   if( printOn ){
+   if( 1 || printOn ){
 
       static int showAux = 1;
       log                = getLog();
@@ -490,7 +490,8 @@ int BrookVerletDynamics::update( BrookStreamImpl& positionStream, BrookStreamImp
          std::string contents = _brookVelocityCenterOfMassRemoval->getContentsString( );
          (void) fprintf( log, "%s VelocityCenterOfMassRemoval contents\n%s", methodName, contents.c_str() );
 */
-         (void) fprintf( log, "%s step=%d Shake contents\n%s", methodName.c_str(), _internalStepCount, brookShakeAlgorithm.getContentsString().c_str() );
+         (void) fprintf( log, "%s step=%d \n%s\n\nShake contents\n%s", methodName.c_str(), _internalStepCount, getContentsString().c_str(),
+                         brookShakeAlgorithm.getContentsString().c_str() );
          (void) fflush( log );
       }    
 
@@ -679,7 +680,7 @@ int BrookVerletDynamics::update( BrookStreamImpl& positionStream, BrookStreamImp
 
    // diagnostics
 
-   if( (_internalStepCount % 1) == 0 ){
+   if( (_internalStepCount % 10000) == 0 ){
       FILE*	log1     = stderr;
       float  epsilon = 1.0e-01f;
 

@@ -48,8 +48,8 @@ BrookShakeAlgorithm::BrookShakeAlgorithm( ){
 
    //static const std::string methodName      = "BrookShakeAlgorithm::BrookShakeAlgorithm";
 
-   BrookOpenMMFloat zero                    = (BrookOpenMMFloat)  0.0;
-   BrookOpenMMFloat one                     = (BrookOpenMMFloat)  1.0;
+   BrookOpenMMFloat zero                    = static_cast<BrookOpenMMFloat>( 0.0 );
+   BrookOpenMMFloat one                     = static_cast<BrookOpenMMFloat>( 1.0 );
 
 // ---------------------------------------------------------------------------------------
 
@@ -348,7 +348,7 @@ int BrookShakeAlgorithm::_initializeStreams( const Platform& platform ){
 
    //static const std::string methodName      = "BrookShakeAlgorithm::_initializeStreams";
 
-   BrookOpenMMFloat dangleValue              = (BrookOpenMMFloat) 0.0;
+   BrookOpenMMFloat dangleValue              = static_cast<BrookOpenMMFloat>( 0.0 );
 
 // ---------------------------------------------------------------------------------------
 
@@ -405,19 +405,22 @@ int BrookShakeAlgorithm::_initializeStreams( const Platform& platform ){
  *
  */
     
-int BrookShakeAlgorithm::_setShakeStreams( const std::vector<double>& masses, const std::vector< std::vector<int> >& constraintIndices,
-                                           const std::vector<double>& constraintLengths, const Platform& platform ){
+int BrookShakeAlgorithm::_setShakeStreams( const std::vector<double>& masses, 
+                                           const std::vector< std::vector<int> >& constraintIndices,
+                                           const std::vector<double>& constraintLengths,
+                                           const Platform& platform ){
     
 // ---------------------------------------------------------------------------------------
 
-   BrookOpenMMFloat one                      = (BrookOpenMMFloat)  1.0;
-   BrookOpenMMFloat half                     = (BrookOpenMMFloat)  0.5;
+   BrookOpenMMFloat one                      = static_cast<BrookOpenMMFloat>( 1.0 );
+   BrookOpenMMFloat half                     = static_cast<BrookOpenMMFloat>( 0.5 );
 
    static const std::string methodName       = "BrookShakeAlgorithm::_updateSdStreams";
 
 // ---------------------------------------------------------------------------------------
 
    FILE* log = getLog();
+
    // check that number of constraints for two input vectors is consistent
 
    if( constraintIndices.size() != constraintLengths.size() ){
@@ -542,7 +545,7 @@ int BrookShakeAlgorithm::_setShakeStreams( const std::vector<double>& masses, co
       }
 
       shakeParameters[constraintIndex]    = static_cast<BrookOpenMMFloat>(  cluster._centralInvMass );
-      shakeParameters[constraintIndex+1]  = half/( static_cast<BrookOpenMMFloat>( cluster._centralInvMass + cluster._peripheralInvMass) );
+      shakeParameters[constraintIndex+1]  = half/( static_cast<BrookOpenMMFloat>( cluster._centralInvMass + cluster._peripheralInvMass ) );
       shakeParameters[constraintIndex+2]  = static_cast<BrookOpenMMFloat>( cluster._distance*cluster._distance );
       shakeParameters[constraintIndex+3]  = static_cast<BrookOpenMMFloat>(  cluster._peripheralInvMass );
 

@@ -38,7 +38,7 @@
 #include "BrookCalcNonbondedForceKernel.h"
 #include "BrookIntegrateLangevinStepKernel.h"
 #include "BrookIntegrateVerletStepKernel.h"
-#include "BrookIntegrateBrownianStepKernel.h"
+//#include "BrookIntegrateBrownianStepKernel.h"
 #include "BrookCalcKineticEnergyKernel.h"
 #include "BrookCalcGBSAOBCForceKernel.h"
 #include "BrookRemoveCMMotionKernel.h"

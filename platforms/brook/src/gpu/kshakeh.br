@@ -135,8 +135,7 @@ kshakeh_fix1(
 
 	i           = 0.0f;
    converged   = 1.0f;
-   //tolerance   = 2.0f*inputTolerance;
-   tolerance   = inputTolerance;
+   tolerance   = 2.0f*inputTolerance;
 	while( i < maxIterations && converged > 0.0f ){
 
 		//First hydrogen
@@ -144,8 +143,8 @@ kshakeh_fix1(
 		rpij       = xpi - xpj1; //This is really rpij - rij
 		rpsqij     = dot( rpij, rpij ); //This is really deltar ^ 2
 		rrpr       = dot( rij1, rpij ); //This is r.deltar
-      acor       = ( ld1 - 2 * rrpr - rpsqij ) * params.y / ( rrpr + rij1sq ) ; 
-      diff       = abs( ld1 - 2 * rrpr - rpsqij ) / (params.z * tolerance );
+      acor       = ( ld1 - 2.0f * rrpr - rpsqij ) * params.y / ( rrpr + rij1sq ) ; 
+      diff       = abs( ld1 - 2.0f * rrpr - rpsqij ) / (params.z * tolerance );
       acor       = (diff < 1.0f) ? 0.0f : acor;
       converged  = abs( acor );
 
