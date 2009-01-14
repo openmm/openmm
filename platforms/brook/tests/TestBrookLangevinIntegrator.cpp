@@ -223,8 +223,10 @@ void testLangevinTemperature( FILE* log ){
       forceField->setParticleParameters(i, (i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
    }
    system.addForce(forceField);
-   CMMotionRemover* remover = new CMMotionRemover();
+
+   CMMotionRemover* remover = new CMMotionRemover( 10 );
    system.addForce(remover);
+
    OpenMMContext context(system, integrator, platform);
    vector<Vec3> positions(numberOfParticles);
    for (int i = 0; i < numberOfParticles; ++i){
@@ -232,7 +234,7 @@ void testLangevinTemperature( FILE* log ){
    }
    context.setPositions(positions);
     
-   // Let it oquilibrate.
+   // Let it equilibrate.
    
    integrator.step(10000);
    
@@ -375,9 +377,9 @@ int main( ){
    (void) fflush( stdout );
    (void) fflush( stderr );
    try {
-//      testLangevinSingleBond( log );
-//      testLangevinConstraints( log );
       testLangevinTemperature( log );
+      testLangevinSingleBond( log );
+      testLangevinConstraints( log );
     } catch( const exception& e ){
       (void) fprintf( log, "Exception %s %.s\n", methodName.c_str(),  e.what() ); (void) fflush( log );
       return 1;

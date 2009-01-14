@@ -93,7 +93,7 @@ void testMotionRemoval( FILE* log ) {
        nonbonded->setParticleParameters(i, (i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
    }
    system.addForce(nonbonded);
-   CMMotionRemover* remover = new CMMotionRemover();
+   CMMotionRemover* remover = new CMMotionRemover( 1 );
    system.addForce(remover);
    OpenMMContext context(system, integrator, platform);
    vector<Vec3> positions(numberOfParticles);
