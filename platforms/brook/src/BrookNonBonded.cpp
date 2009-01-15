@@ -34,8 +34,8 @@
 #include "BrookPlatform.h"
 #include "BrookStreamFactory.h"
 #include "OpenMMException.h"
-#include "gpu/invmap.h"
-#include "gpu/kforce.h"
+//#include "kernels/invmap.h"
+#include "kernels/kforce.h"
 
 using namespace OpenMM;
 using namespace std;

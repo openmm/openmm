@@ -41,8 +41,6 @@
 
 #endif
 
-
-
 using namespace OpenMM;
 using namespace std;
 
@@ -564,7 +562,7 @@ int BrookStreamInternal::printStreamsToFile( std::string fileName, std::vector<B
    delete[] arrays;
    delete[] widths;
    delete[] indices;
-   for( int ii = 0; ii < 4; ii++ ){
+   for( int ii = 0; ii <  streams.size(); ii++ ){
       delete[] sums[ii];
    }
    delete[] sums;

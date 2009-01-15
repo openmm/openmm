@@ -40,7 +40,7 @@
 
 #include "BrookStreamImpl.h"
 #include "OpenMMBrookInterface.h"
-#include "gpu/kcommon.h"
+#include "kernels/kcommon.h"
 
 using namespace OpenMM;
 using namespace std;
@@ -539,15 +539,20 @@ void OpenMMBrookInterface::computeForces( OpenMMContextImpl& context ){
 // ---------------------------------------------------------------------------------------
 
 //setLog( stderr );
-   printOn = (printOn && getLog()) ? printOn : 0;
+
+   if( printOn && getLog() ){
+      log     = getLog();
+   } else {
+      printOn = 0;
+   }
 
    BrookStreamImpl* positions = getParticlePositions();
    BrookStreamImpl* forces    = getParticleForces();
 
    // info
 
-   //if( printOn > 1 ){
-   if( 1 ){
+   if( printOn > 1 ){
+   //if( 1 ){
       printForcesToFile( context );
    }
 
@@ -562,7 +567,6 @@ void OpenMMBrookInterface::computeForces( OpenMMContextImpl& context ){
    // bonded forces
 
    if( printOn ){
-      log = getLog();
       (void) fprintf( log, "%s done nonbonded: bonded=%d completed=%d\n", methodName.c_str(),
                       _brookBonded.isActive(), _brookBonded.isSetupCompleted() ); 
       (void) fflush( log );
@@ -636,7 +640,7 @@ void OpenMMBrookInterface::printForcesToFile( OpenMMContextImpl& context ){
 
    // first step only?
 
-   if( step > 0 ){
+   if( step > 1 ){
       return;
    }
 
@@ -695,20 +699,20 @@ void OpenMMBrookInterface::printForcesToFile( OpenMMContextImpl& context ){
    if( _brookGbsa.isActive() ){
 
       forces->fillWithValue( &zero );
-
       _brookGbsa.computeForces( *positions, *forces );
 
       std::string fileName = fileNameBase + "Obc.txt";
       BrookStreamInternal::printStreamsToFile( fileName, streams );
 
    }
-   forces->fillWithValue( &zero );
 
 // ---------------------------------------------------------------------------------------
 
    // all forces
 
    if( 1 ){
+
+      forces->fillWithValue( &zero );
 
       if( _brookNonBonded.isActive() ){
          _brookNonBonded.computeForces( *positions, *forces );
@@ -726,8 +730,6 @@ void OpenMMBrookInterface::printForcesToFile( OpenMMContextImpl& context ){
       BrookStreamInternal::printStreamsToFile( fileName, streams );
    }
 
-(void) fprintf( stderr, "%s done computeForces\n", methodName.c_str() );
-(void) fflush( stderr );
    forces->fillWithValue( &zero );
 
    // ---------------------------------------------------------------------------------------

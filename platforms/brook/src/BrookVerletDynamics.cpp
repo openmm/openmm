@@ -34,9 +34,9 @@
 #include "BrookPlatform.h"
 #include "OpenMMException.h"
 #include "BrookStreamImpl.h"
-#include "gpu/kshakeh.h"
-#include "gpu/kupdatemd.h"
-#include "gpu/kcommon.h"
+#include "kernels/kshakeh.h"
+#include "kernels/kupdatemd.h"
+#include "kernels/kcommon.h"
 
 using namespace OpenMM;
 using namespace std;
@@ -448,6 +448,7 @@ std::string BrookVerletDynamics::getContentsString( int level ) const {
 
    return message.str();
 }
+
 /** 
  * Update
  * 
@@ -467,22 +468,25 @@ int BrookVerletDynamics::update( BrookStreamImpl& positionStream, BrookStreamImp
 // ---------------------------------------------------------------------------------------
 
    static std::string methodName  = "\nBrookVerletDynamics::update";
-   static int printOn             = 0;
+   static int printOn             = 1;
    FILE* log;
 
 // ---------------------------------------------------------------------------------------
 
    _internalStepCount++;
 
-setLog( stderr );
-   printOn = (printOn && getLog()) ? printOn : 0; 
+//setLog( stderr );
+   if( printOn && getLog() ){
+       log    = getLog();; 
+   } else {
+      printOn = 0;
+   }
 
    BrookStreamImpl& forceStream = const_cast<BrookStreamImpl&> (forceStreamC);
 
-   if( 1 || printOn ){
+   if( printOn ){
 
       static int showAux = 1;
-      log                = getLog();
       if( showAux ){
          showAux = 0; 
 
@@ -680,7 +684,7 @@ setLog( stderr );
 
    // diagnostics
 
-   if( (_internalStepCount % 10000) == 0 ){
+   if( (_internalStepCount % 100) == 0 ){
       FILE*	log1     = stderr;
       float  epsilon = 1.0e-01f;
 
@@ -698,9 +702,12 @@ setLog( stderr );
       // Shake violations
 
       std::string violationString;
-      int constraintViolations                     = brookShakeAlgorithm.checkConstraints( brookStreamInternalPos, violationString, 0.0001f );
-
-      abort                                       += abs( constraintViolations );
+      if( brookShakeAlgorithm.getNumberOfConstraints() > 0 ){
+         int constraintViolations                     = brookShakeAlgorithm.checkConstraints( brookStreamInternalPos, violationString, 0.0001f );
+         abort                                       += abs( constraintViolations );
+      } else {
+         violationString                              = "Shake not active";
+      }
 
       // force sums ~ 0?
       std::vector<float> sums;

@@ -33,7 +33,7 @@
 #include "BrookRandomNumberGenerator.h"
 #include "../../reference/src/SimTKUtilities/SimTKOpenMMUtilities.h"
 #include "OpenMMException.h"
-#include "gpu/kupdatesd.h"
+#include "kernels/kupdatesd.h"
 
 using namespace OpenMM;
 using namespace std;
@@ -729,12 +729,12 @@ int BrookRandomNumberGenerator::advanceGVCursor( int numberOfRandomValuesConsume
    // ---------------------------------------------------------------------------------------
 
    static const std::string methodName = "BrookRandomNumberGenerator::advanceGVCursor";
-   int printOn                         = 1;
+   int printOn                         = 0;
    FILE* log;
 
    // ---------------------------------------------------------------------------------------
 	
-setLog( stderr );
+//setLog( stderr );
    if( printOn && getLog() ){
       log = getLog();
    } else {

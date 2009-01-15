@@ -70,7 +70,7 @@ BrookStreamFactory::BrookStreamFactory( void ){
  * 
  */
 
-BrookStreamFactory::~BrookStreamFactory( void ){
+BrookStreamFactory::~BrookStreamFactory( ){
 }
 
 /** 
@@ -291,10 +291,9 @@ StreamImpl* BrookStreamFactory::createStreamImpl( std::string name, int size, St
 
 // ---------------------------------------------------------------------------------------
 
-
    // stream width hould be based on name & value set in platform; for now only particle stream types
 
-   int streamWidth = getDefaultParticleStreamWidth();
+   int streamWidth                             = getDefaultParticleStreamWidth();
 
    BrookStreamImpl* brookStreamImpl            = new BrookStreamImpl( name, size, streamWidth, type, platform );
 

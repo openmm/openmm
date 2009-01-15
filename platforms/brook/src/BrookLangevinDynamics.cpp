@@ -34,9 +34,9 @@
 #include "BrookPlatform.h"
 #include "OpenMMException.h"
 #include "BrookStreamImpl.h"
-#include "gpu/kshakeh.h"
-#include "gpu/kupdatesd.h"
-#include "gpu/kcommon.h"
+#include "kernels/kshakeh.h"
+#include "kernels/kupdatesd.h"
+#include "kernels/kcommon.h"
 
 // use random number generator
 
@@ -1480,7 +1480,7 @@ int BrookLangevinDynamics::update( BrookStreamImpl& positionStream, BrookStreamI
 
    // diagnostics
 
-   if( (_internalStepCount % 10) == 0 ){
+   if( (_internalStepCount % 1000) == 0 ){
       FILE*	log1     = stderr;
       float  epsilon = 1.0e-01f;
 

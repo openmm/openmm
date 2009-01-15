@@ -41,8 +41,19 @@
 #include <sstream>
 #include <cctype>
 #include <algorithm>
+//#include "/cygdrive/c/Program\ Files/Amd/AMD\ CAL\ 1.2.1_beta/include/cal.h"
 
 using namespace OpenMM;
+
+extern "C" void initOpenMMPlugin() {
+/*
+   CALuint numberOfDevices = 0;
+   // validateCALRuntime()
+   if( calDeviceGetCount( &numberOfDevices ) == CAL_RESULT_OK && numberOfDevices > 0 ){
+      Platform::registerPlatform(new BrookPlatform());
+   }
+*/
+}
 
 /** 
  * BrookPlatformData constructor

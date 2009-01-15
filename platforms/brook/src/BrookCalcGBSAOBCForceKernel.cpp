@@ -36,8 +36,8 @@
 
 #include "BrookStreamImpl.h"
 #include "BrookCalcGBSAOBCForceKernel.h"
-#include "gpu/kgbsa.h"
-#include "gpu/kforce.h"
+#include "kernels/kgbsa.h"
+#include "kernels/kforce.h"
 #include "math.h"
 
 using namespace OpenMM;
