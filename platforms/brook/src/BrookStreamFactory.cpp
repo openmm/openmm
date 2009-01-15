@@ -310,3 +310,33 @@ StreamImpl* BrookStreamFactory::createStreamImpl( std::string name, int size, St
    return brookStreamImpl;
 
 }
+
+/** 
+ * Create StreamInternal
+ *
+ * @param name     stream name
+ * @param size     stream size
+ * @param type     data type (float, float2, ...)
+ * @param platform platform reference
+ * 
+ * @return StreamInternal
+ */
+
+StreamImpl* BrookStreamFactory::createStreamImpl( std::string name, int size, Stream::DataType type,
+                                                  const Platform& platform ) const {
+
+// ---------------------------------------------------------------------------------------
+
+   //static const std::string methodName      = "BrookStreamFactory::createStreamImpl";
+
+// ---------------------------------------------------------------------------------------
+
+   // stream width hould be based on name & value set in platform; for now only particle stream types
+
+   int streamWidth                             = getDefaultParticleStreamWidth();
+
+   BrookStreamImpl* brookStreamImpl            = new BrookStreamImpl( name, size, streamWidth, type, platform );
+
+   return brookStreamImpl;
+
+}

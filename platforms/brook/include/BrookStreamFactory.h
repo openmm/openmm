@@ -41,11 +41,22 @@ namespace OpenMM {
  * This StreamFactory creates all streams for BrookPlatform.
  */
 
-class BrookStreamFactory : public StreamFactory {
+class OPENMM_EXPORT BrookStreamFactory : public StreamFactory {
 
    public:
 
+      /** 
+       * BrookStreamFactory constructor
+       * 
+       */
+      
       BrookStreamFactory( );
+
+      /** 
+       * BrookStreamFactory destructor
+       * 
+       */
+      
 	  ~BrookStreamFactory( );
 
       // 'external' streams 
@@ -67,6 +78,19 @@ class BrookStreamFactory : public StreamFactory {
        */
       
       StreamImpl* createStreamImpl( std::string name, int size, Stream::DataType type, const Platform& platform, OpenMMContextImpl& context ) const;
+
+      /** 
+       * Create StreamImpl
+       *
+       * @param name     stream name
+       * @param size     stream size
+       * @param type     data type (float, float2, ...)
+       * @param platform platform reference
+       * 
+       * @return StreamImpl
+       */
+      
+      StreamImpl* createStreamImpl( std::string name, int size, Stream::DataType type, const Platform& platform ) const;
 
       /** 
        * Get particle stream width

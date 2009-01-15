@@ -132,15 +132,15 @@ LINK_DIRECTORIES(${${BROOK_brook_LIBRARY}})
 
 # get *br files
 
-FILE(GLOB BROOK_SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/gpu/*.br)
-FILE(GLOB BROOK_INCLUDE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/gpu/*.h)
+FILE(GLOB BROOK_SRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/kernels/*.br)
+FILE(GLOB BROOK_INCLUDE_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/kernels/*.h)
  
 FILE( APPEND ${LOG_FILE} "BROOK_SRC_FILES=${BROOK_SRC_FILES}\n" )
 
 # ----------------------------------------------------------------------------
 IF(LOG)
-   LOG_DIR( ${LOG_FILE} "Brook src" ${BROOK_SRC_FILES} )
-   LOG_DIR( ${LOG_FILE} "Brook include" ${BROOK_INCLUDE_FILES} )
+#  LOG_DIR( ${LOG_FILE} "Brook src" ${BROOK_SRC_FILES} )
+#  LOG_DIR( ${LOG_FILE} "Brook include" ${BROOK_INCLUDE_FILES} )
 ENDIF(LOG)
 # ----------------------------------------------------------------------------
 
@@ -153,7 +153,7 @@ ENDFOREACH(brookFile)
 
 # ----------------------------------------------------------------------------
 IF(LOG)
-   LOG_DIR( ${LOG_FILE} "Brook cpp" ${BROOK_CPP_FILES} )
+#  LOG_DIR( ${LOG_FILE} "Brook cpp" ${BROOK_CPP_FILES} )
 ENDIF(LOG)
 # ----------------------------------------------------------------------------
   
@@ -170,16 +170,28 @@ IF(LOG)
 ENDIF(LOG)
 # ----------------------------------------------------------------------------
 
+# shared
+
 TARGET_LINK_LIBRARIES(${SHARED_BROOK_TARGET} debug ${OPENMM_LIBRARY_NAME}_d optimized ${OPENMM_LIBRARY_NAME})
-TARGET_LINK_LIBRARIES(${SHARED_BROOK_TARGET} debug brook_d optimized brook )
-TARGET_LINK_LIBRARIES(${SHARED_BROOK_TARGET} ${SHARED_TARGET} )
+
+# the line below does not work for some reason
+# using the following 3 lines in its place until understand more fully source of problem
+
+# TARGET_LINK_LIBRARIES(${SHARED_BROOK_TARGET} debug brook_d optimized brook)
+SET(BrookLib  ${BROOK_LIB_PATH}/brook.lib)
+SET(BrookDebugLib  ${BROOK_LIB_PATH}/brook_d.lib)
+TARGET_LINK_LIBRARIES(${SHARED_BROOK_TARGET} debug ${BrookDebugLib} optimized ${BrookLib})
 
 LINK_DIRECTORIES(${SHARED_BROOK_TARGET} ${BROOK_LIB_PATH})
 LINK_DIRECTORIES(${SHARED_BROOK_TARGET} ${PROJECT_BINARY_DIR})
+
+# ----------------------------------------------------------------------------
+
+#static 
 
 TARGET_LINK_LIBRARIES(${STATIC_BROOK_TARGET} debug ${OPENMM_LIBRARY_NAME}_static_d optimized ${OPENMM_LIBRARY_NAME}_static)
 TARGET_LINK_LIBRARIES(${STATIC_BROOK_TARGET} debug brook_d optimized brook)
 TARGET_LINK_LIBRARIES(${STATIC_BROOK_TARGET} ${STATIC_TARGET})
 LINK_DIRECTORIES(${STATIC_BROOK_TARGET} ${BROOK_LIB_PATH})
 
-#---------------------------------------------------
+# ----------------------------------------------------------------------------

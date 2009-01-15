@@ -294,6 +294,8 @@ class OPENMM_EXPORT BrookPlatform : public Platform {
 
       FILE* _log;
 
+      // default stream factory
+
       BrookStreamFactory _defaultStreamFactory;
 
       // default stream width

@@ -12,26 +12,12 @@
 
 # ----------------------------------------------------------------------------
 
-FIND_PATH(BROOK_INCLUDE_DIR brook 
-   $ENV{BROOKDIR}/include 
-   $ENV{BROOKROOT}/sdk/include 
-   /usr/include/ 
-   /usr/local/include/  
-   ~/src/cvs/brook/include 
-   ~/src/brook/include 
-   ~/brook/include) 
+FIND_PATH(BROOK_INCLUDE_DIR brook $ENV{BROOKROOT}/sdk/include) 
 
 SET(BROOK_CXXFLAGS "-I${BROOK_INCLUDE_DIR}") 
 SET(BROOK_CFLAGS "${BROOK_CXXFLAGS}") 
 
-FIND_PROGRAM(BROOK_CC brcc 
-   $ENV{BROOKDIR}/bin 
-   $ENV{BROOKROOT}/sdk/bin 
-   /usr/bin/ 
-   /usr/local/bin/ 
-   ~/src/cvs/brook/bin 
-   ~/src/brook/bin 
-   ~/brook/bin) 
+FIND_PROGRAM(BROOK_CC brcc $ENV{BROOKROOT}/sdk/bin) 
 
 # Search for all libraries 
 # - both BASE and RUNTIME TARGETS 
@@ -43,13 +29,7 @@ FIND_LIBRARY(BROOK_brook_LIBRARY
       brook
       brook_d
    PATHS 
-      $ENV{BROOKDIR}/lib 
-      $ENV{BROOKDIR}/bin 
-      $ENV{BROOKROOT}/sdk/lib 
-      /usr/lib 
-      /usr/local/lib 
-      ~/src/brook/bin 
-      ~/brook/bin) 
+      $ENV{BROOKROOT}/sdk/lib)
 
 # if found, add to list 
 
@@ -76,7 +56,7 @@ ENDIF(LOG)
 
 # check if includes and main lib are here 
 
-IF (BROOK_INCLUDE_DIR AND BROOK_brook_LIBRARY AND BROOK_CC) 
+# IF (BROOK_INCLUDE_DIR AND BROOK_brook_LIBRARY AND BROOK_CC) 
 
    SET(BROOK_FOUND TRUE) 
 
@@ -102,7 +82,7 @@ IF (BROOK_INCLUDE_DIR AND BROOK_brook_LIBRARY AND BROOK_CC)
 
       # File names 
 
-      SET(OUTPATH "${CMAKE_CURRENT_BINARY_DIR}/src/gpu") 
+      SET(OUTPATH "${CMAKE_CURRENT_BINARY_DIR}/src/kernels") 
       SET(BROOK_PREFIX "${OUTPATH}/${HEAD}") 
       SET(OUTFILE "${BROOK_PREFIX}.cpp") # file produced by Brook 
       # SET(INFILE "${CMAKE_CURRENT_SOURCE_DIR}/${FILENAME}") # canonical input name 
@@ -141,9 +121,9 @@ IF (BROOK_INCLUDE_DIR AND BROOK_brook_LIBRARY AND BROOK_CC)
       SET(BROOK_CPP_FILES ${BROOK_CPP_FILES} ${OUTFILE})
 
    ENDMACRO(BROOK_FILE) 
-ELSE (BROOK_INCLUDE_DIR AND BROOK_brook_LIBRARY AND BROOK_CC) 
-   SET(BROOK_FOUND FALSE) 
-ENDIF (BROOK_INCLUDE_DIR AND BROOK_brook_LIBRARY AND BROOK_CC) 
+# ELSE (BROOK_INCLUDE_DIR AND BROOK_brook_LIBRARY AND BROOK_CC) 
+#   SET(BROOK_FOUND FALSE) 
+#ENDIF (BROOK_INCLUDE_DIR AND BROOK_brook_LIBRARY AND BROOK_CC) 
 
 # Some verbosity 
 
