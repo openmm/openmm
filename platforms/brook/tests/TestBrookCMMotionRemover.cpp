@@ -87,12 +87,14 @@ void testMotionRemoval( FILE* log ) {
    HarmonicBondForce* bonds = new HarmonicBondForce(1);
    bonds->setBondParameters(0, 2, 3, 2.0, 0.5);
    system.addForce(bonds);
+
    NonbondedForce* nonbonded = new NonbondedForce(numberOfParticles, 0);
    for (int i = 0; i < numberOfParticles; ++i) {
        system.setParticleMass(i, (double) (i+1) );
        nonbonded->setParticleParameters(i, (i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
    }
    system.addForce(nonbonded);
+
    CMMotionRemover* remover = new CMMotionRemover( 1 );
    system.addForce(remover);
    OpenMMContext context(system, integrator, platform);
