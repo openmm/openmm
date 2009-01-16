@@ -12,12 +12,16 @@
 
 # ----------------------------------------------------------------------------
 
-FIND_PATH(BROOK_INCLUDE_DIR brook/brook.hpp $ENV{BROOKROOT}/sdk/include) 
+# Call find twice, so BROOKROOT takes precedence, but system path is a fallback
+FIND_PATH(BROOK_INCLUDE_DIR brook/brook.hpp $ENV{BROOKROOT}/sdk/include NO_DEFAULT_PATH) 
+FIND_PATH(BROOK_INCLUDE_DIR brook/brook.hpp) 
 
 SET(BROOK_CXXFLAGS "-I${BROOK_INCLUDE_DIR}") 
 SET(BROOK_CFLAGS "${BROOK_CXXFLAGS}") 
 
-FIND_PROGRAM(BROOK_CC brcc $ENV{BROOKROOT}/sdk/bin) 
+# Call find twice, so BROOKROOT takes precedence, but system path is a fallback
+FIND_PROGRAM(BROOK_CC brcc $ENV{BROOKROOT}/sdk/bin NO_DEFAULT_PATH) 
+FIND_PROGRAM(BROOK_CC brcc) 
 
 # Search for all libraries 
 # - both BASE and RUNTIME TARGETS 
