@@ -48,14 +48,13 @@ ENDIF(${CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT})
 
 INCLUDE(Dart)
 
-SUBDIRS (platforms/reference/tests platforms/cuda)
+# SUBDIRS (platforms/reference/tests platforms/cuda)
 
 ADD_DEFINITIONS(-DOPENMM_BUILDING_SHARED_LIBRARY)
 
 # The source is organized into subdirectories, but we handle them all from
 # this CMakeLists file rather than letting CMake visit them as SUBDIRS.
 SET(OPENMM_SOURCE_SUBDIRS . openmmapi olla platforms/reference)
-
 
 # The build system will set ARCH64 for 64 bit builds, which require
 # use of the lib64/ library directories rather than lib/.
@@ -248,6 +247,21 @@ IF(DL_LIBRARY)
   TARGET_LINK_LIBRARIES(${SHARED_TARGET} ${DL_LIBRARY})
   TARGET_LINK_LIBRARIES(${STATIC_TARGET} ${DL_LIBRARY})
 ENDIF(DL_LIBRARY)
+
+ADD_SUBDIRECTORY(platforms/reference/tests)
+
+# Which hardware platforms to build
+
+SET(OPENMM_BUILD_CUDA_LIB ON CACHE BOOL "Build OpenMMCuda library for Nvidia GPUs")
+IF(OPENMM_BUILD_CUDA_LIB)
+    ADD_SUBDIRECTORY(platforms/cuda)
+ENDIF(OPENMM_BUILD_CUDA_LIB)
+
+SET(OPENMM_BUILD_BROOK_LIB ON CACHE BOOL "Build OpenMMBrook library for ATI GPUs")
+IF(OPENMM_BUILD_BROOK_LIB)
+    ADD_SUBDIRECTORY(platforms/brook)
+ENDIF(OPENMM_BUILD_BROOK_LIB)
+
 
 INSTALL_TARGETS(/lib RUNTIME_DIRECTORY /lib ${SHARED_TARGET})
 INSTALL_TARGETS(/lib RUNTIME_DIRECTORY /lib ${STATIC_TARGET})

@@ -12,7 +12,7 @@
 
 # ----------------------------------------------------------------------------
 
-FIND_PATH(BROOK_INCLUDE_DIR brook $ENV{BROOKROOT}/sdk/include) 
+FIND_PATH(BROOK_INCLUDE_DIR brook/brook.hpp $ENV{BROOKROOT}/sdk/include) 
 
 SET(BROOK_CXXFLAGS "-I${BROOK_INCLUDE_DIR}") 
 SET(BROOK_CFLAGS "${BROOK_CXXFLAGS}") 
