@@ -172,7 +172,8 @@ ENDIF(LOG)
 
 # shared
 
-TARGET_LINK_LIBRARIES(${SHARED_BROOK_TARGET} debug ${OPENMM_LIBRARY_NAME}_d optimized ${OPENMM_LIBRARY_NAME})
+# TARGET_LINK_LIBRARIES(${SHARED_BROOK_TARGET} debug ${OPENMM_LIBRARY_NAME}_d optimized ${OPENMM_LIBRARY_NAME})
+TARGET_LINK_LIBRARIES(${SHARED_BROOK_TARGET} ${SHARED_TARGET})
 
 # the line below does not work for some reason
 # using the following 3 lines in its place until understand more fully source of problem
