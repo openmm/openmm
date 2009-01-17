@@ -67,14 +67,7 @@ OpenMMBrookInterface::OpenMMBrookInterface( int streamWidth ) : _particleStreamW
    _velocities                              = NULL;
    _forces                                  = NULL;
 
-   _refForceField                           = NULL;
    _log                                     = NULL;
-
-   _refForceField                           = NULL;
-   _refSystem                               = NULL;
-   _refOpenMMContext                        = NULL;
-   _referencePlatform                       = NULL;
-   _refVerletIntegrator                     = NULL;
 
    _particleStreamSize                      = -1;
 
@@ -100,15 +93,6 @@ OpenMMBrookInterface::~OpenMMBrookInterface( ){
       delete _bondParameters[ii];
    }
 
-   // deleted w/ kernel delete? If activated, program crashes
-
-   //delete _refForceField;
-/*
-   delete _refSystem;
-   delete _refOpenMMContext;
-   delete _referencePlatform;
-   delete _refVerletIntegrator;
-*/
 }
 
 /** 

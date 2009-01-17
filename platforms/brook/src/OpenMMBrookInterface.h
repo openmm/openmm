@@ -41,8 +41,6 @@
 #include "NonbondedForce.h"
 #include "OpenMMContext.h"
 #include "System.h"
-#include "ReferencePlatform.h"
-#include "VerletIntegrator.h"
 
 namespace OpenMM {
 
@@ -424,14 +422,6 @@ class OpenMMBrookInterface {
        BrookStreamImpl* _positions;
        BrookStreamImpl* _velocities;
        BrookStreamImpl* _forces;
-
-       // used to calculate energy
-
-       NonbondedForce*       _refForceField;
-       System*               _refSystem;
-       OpenMMContext*        _refOpenMMContext;
-       ReferencePlatform*    _referencePlatform;
-       VerletIntegrator*     _refVerletIntegrator;
 
       /** 
        * Set BrookBondParameters 
