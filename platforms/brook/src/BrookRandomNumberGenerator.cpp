@@ -477,7 +477,7 @@ int BrookRandomNumberGenerator::_loadRandomNumberStreamsFixedValue( void ){
    // ---------------------------------------------------------------------------------------
 
    static const std::string methodName  = "\nBrookRandomNumberGenerator::_loadRandomNumberStreamsFixedValue";
-   int printOn                          = 1;
+   int printOn                          = 0;
 
    // ---------------------------------------------------------------------------------------
    

@@ -122,7 +122,7 @@ void BrookIntegrateVerletStepKernel::initialize(  const System& system, const Ve
 
 // ---------------------------------------------------------------------------------------
 
-   int printOn                              = 1;
+   int printOn                              = 0;
    static const std::string methodName      = "BrookIntegrateVerletStepKernel::initialize";
 
 // ---------------------------------------------------------------------------------------

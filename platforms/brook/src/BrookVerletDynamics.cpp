@@ -468,7 +468,7 @@ int BrookVerletDynamics::update( BrookStreamImpl& positionStream, BrookStreamImp
 // ---------------------------------------------------------------------------------------
 
    static std::string methodName  = "\nBrookVerletDynamics::update";
-   static int printOn             = 1;
+   static int printOn             = 0;
    FILE* log;
 
 // ---------------------------------------------------------------------------------------
@@ -684,7 +684,7 @@ int BrookVerletDynamics::update( BrookStreamImpl& positionStream, BrookStreamImp
 
    // diagnostics
 
-   if( (_internalStepCount % 100) == 0 ){
+   if( 0 && (_internalStepCount % 100) == 0 ){
       FILE*	log1     = stderr;
       float  epsilon = 1.0e-01f;
 

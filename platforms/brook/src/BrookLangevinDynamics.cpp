@@ -1480,7 +1480,7 @@ int BrookLangevinDynamics::update( BrookStreamImpl& positionStream, BrookStreamI
 
    // diagnostics
 
-   if( (_internalStepCount % 1000) == 0 ){
+   if( 0 && (_internalStepCount % 1000) == 0 ){
       FILE*	log1     = stderr;
       float  epsilon = 1.0e-01f;
 
