@@ -97,6 +97,14 @@ public:
      */
     Integrator& getIntegrator();
     /**
+     * Get the Platform being used for calculations.
+     */
+    const Platform& getPlatform() const;
+    /**
+     * Get the Platform being used for calculations.
+     */
+    Platform& getPlatform();
+    /**
      * Get a State object recording the current state information stored in this context.
      * 
      * @param types the set of data types which should be stored in the State object.  This

@@ -57,12 +57,18 @@ System& OpenMMContext::getSystem() {
 
 const Integrator& OpenMMContext::getIntegrator() const {
     return impl->getIntegrator();
-
 }
 
 Integrator& OpenMMContext::getIntegrator() {
     return impl->getIntegrator();
+}
 
+const Platform& OpenMMContext::getPlatform() const {
+    return impl->getPlatform();
+}
+
+Platform& OpenMMContext::getPlatform() {
+    return impl->getPlatform();
 }
 
 State OpenMMContext::getState(int types) const {
