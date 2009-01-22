@@ -480,7 +480,13 @@ int BrookStreamInternal::printStreamsToFile( std::string fileName, std::vector<B
 
 // ---------------------------------------------------------------------------------------
 
-   FILE* filePtr = fopen( fileName.c_str(), "w" );
+   FILE* filePtr;
+#ifdef WIN32
+   fopen_s( &filePtr, fileName.c_str(), "w" );
+#else
+   filePtr = fopen( fileName.c_str(), "w" );
+#endif
+
    if( !filePtr ){
       (void) fprintf( stderr, "%s could not open file=<%s>\n", methodName.c_str(), fileName.c_str() );
       (void) fflush( stderr );
@@ -562,7 +568,7 @@ int BrookStreamInternal::printStreamsToFile( std::string fileName, std::vector<B
    delete[] arrays;
    delete[] widths;
    delete[] indices;
-   for( int ii = 0; ii <  streams.size(); ii++ ){
+   for( unsigned int ii = 0; ii < streams.size(); ii++ ){
       delete[] sums[ii];
    }
    delete[] sums;
@@ -591,7 +597,7 @@ typedef struct {
 #include <limits>
 #include <set>
 
-int BrookStreamInternal::loadStreamGivenFileName( std::string& filename ){
+int BrookStreamInternal::loadStreamGivenFileName( std::string& fileName ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -603,15 +609,21 @@ int BrookStreamInternal::loadStreamGivenFileName( std::string& filename ){
    
    /* open file, read header */
 
-   FILE * filePtr = fopen( filename.c_str(), "rb" );
+   FILE* filePtr;
+#ifdef WIN32
+   fopen_s( &filePtr, fileName.c_str(), "rb" );
+#else
+   filePtr = fopen( fileName.c_str(), "rb" );
+#endif
+
    if(  filePtr == NULL ){
-      (void) fprintf( log, "%s Unable to open/read %s for stream creation\n", methodName.c_str(), filename.c_str() );
+      (void) fprintf( log, "%s Unable to open/read %s for stream creation\n", methodName.c_str(), fileName.c_str() );
       return ErrorReturnValue;
    }
 
    STREAM_HEADER header;
    if( 1 != fread( &header, sizeof( header ), 1, filePtr ) ){
-      (void) fprintf( log, "%s Unable to read %s header for stream %s\n", methodName.c_str(), filename.c_str() );
+      (void) fprintf( log, "%s Unable to read %s header for stream %s\n", methodName.c_str(), fileName.c_str() );
       (void) fclose( filePtr );
       return ErrorReturnValue;
    }
@@ -653,14 +665,14 @@ int BrookStreamInternal::loadStreamGivenFileName( std::string& filename ){
    void* dataBuffer  = (void*) malloc( bytesToRead );
 
    if( dataBuffer == NULL ){
-      (void) fprintf( log, "%s Memory Error for file=%s\n", methodName.c_str(), filename.c_str() );
+      (void) fprintf( log, "%s Memory Error for file=%s\n", methodName.c_str(), fileName.c_str() );
       (void) fclose( filePtr );
       return ErrorReturnValue;
    }
 
    size_t bytesRead = fread( dataBuffer, bytesToRead, 1, filePtr );
    if( bytesRead != 1 ){
-      (void) fprintf( log, "%s Unable to read %d bytes=%d stream from %s\n", methodName.c_str(), bytesRead, bytesToRead, filename.c_str() );
+      (void) fprintf( log, "%s Unable to read %d bytes=%d stream from %s\n", methodName.c_str(), bytesRead, bytesToRead, fileName.c_str() );
       free( dataBuffer );
       (void) fclose( filePtr );
       return ErrorReturnValue;
@@ -683,7 +695,7 @@ int BrookStreamInternal::loadStreamGivenFileName( std::string& filename ){
    (void) fclose( filePtr );
    free( dataBuffer );
  
-   (void) fprintf( log, "%s read %d bytes for stream %s from %s dim:[%d %d %d %d] container=%d %d\n", methodName.c_str(), bytesToRead, getName().c_str(), filename.c_str(),
+   (void) fprintf( log, "%s read %d bytes for stream %s from %s dim:[%d %d %d %d] container=%d %d\n", methodName.c_str(), bytesToRead, getName().c_str(), fileName.c_str(),
                    header.dims[0], header.dims[0], header.dims[0], header.dims[0], getStreamSize(), getWidth() );
    (void) fflush( log );
 
