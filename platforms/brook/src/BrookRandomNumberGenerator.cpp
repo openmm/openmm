@@ -942,7 +942,7 @@ int BrookRandomNumberGenerator::_initializeStreamSizes( int numberOfParticles, c
 
    // get randomNumber stream dimensions
 
-   const BrookPlatform brookPlatform            = dynamic_cast<const BrookPlatform&> (platform);
+   const BrookPlatform& brookPlatform            = dynamic_cast<const BrookPlatform&> (platform);
    const BrookStreamFactory& brookStreamFactory = dynamic_cast<const BrookStreamFactory&> (platform.getDefaultStreamFactory() );
    _randomNumberStreamWidth                     = brookStreamFactory.getDefaultRandomNumberStreamWidth();
    _randomNumberStreamSize                      = brookStreamFactory.getDefaultRandomNumberStreamSize();
@@ -1023,7 +1023,7 @@ int BrookRandomNumberGenerator::setup( int numberOfParticles, const Platform& pl
 
 // ---------------------------------------------------------------------------------------
 
-   const BrookPlatform brookPlatform            = dynamic_cast<const BrookPlatform&> (platform);
+   const BrookPlatform& brookPlatform            = dynamic_cast<const BrookPlatform&> (platform);
    setLog( brookPlatform.getLog() );
 
    // set stream sizes and then create streams

@@ -190,7 +190,7 @@ BrookPlatform* registerBrookPlatform( void ){
    return platform;
 }
 
-BrookPlatform* staticPlatform = registerBrookPlatform( );
+// BrookPlatform* staticPlatform = registerBrookPlatform( );
 
 /** 
  * BrookPlatform constructor

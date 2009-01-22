@@ -313,7 +313,7 @@ void BrookCommon::_getParticleStreamDimensions( const Platform& platform ){
 
    // get particle stream size
 
-   const BrookPlatform brookPlatform            = dynamic_cast<const BrookPlatform&> (platform);
+   const BrookPlatform& brookPlatform            = dynamic_cast<const BrookPlatform&> (platform);
    const BrookStreamFactory& brookStreamFactory = dynamic_cast<const BrookStreamFactory&> (platform.getDefaultStreamFactory() );
    _particleStreamWidth                         = brookStreamFactory.getDefaultParticleStreamWidth();
    _particleStreamSize                          = brookPlatform.getStreamSize( getNumberOfParticles(), _particleStreamWidth, NULL );

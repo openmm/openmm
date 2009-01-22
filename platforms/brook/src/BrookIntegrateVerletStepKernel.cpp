@@ -58,7 +58,7 @@ BrookIntegrateVerletStepKernel::BrookIntegrateVerletStepKernel( std::string name
    _brookVerletDynamics   = NULL;
    _brookShakeAlgorithm   = NULL;
 
-   const BrookPlatform brookPlatform = dynamic_cast<const BrookPlatform&> (platform);
+   const BrookPlatform& brookPlatform = dynamic_cast<const BrookPlatform&> (platform);
    if( brookPlatform.getLog() != NULL ){
       setLog( brookPlatform.getLog() );
    } else {

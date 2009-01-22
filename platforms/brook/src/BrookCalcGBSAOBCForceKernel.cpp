@@ -66,7 +66,7 @@ BrookCalcGBSAOBCForceKernel::BrookCalcGBSAOBCForceKernel( std::string name, cons
    _numberOfParticles                = 0;
    _log                              = NULL;
 
-   const BrookPlatform brookPlatform = dynamic_cast<const BrookPlatform&> (platform);
+   const BrookPlatform& brookPlatform = dynamic_cast<const BrookPlatform&> (platform);
    if( brookPlatform.getLog() != NULL ){
       setLog( brookPlatform.getLog() );
    }

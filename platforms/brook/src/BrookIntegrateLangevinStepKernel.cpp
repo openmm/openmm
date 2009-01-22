@@ -60,7 +60,7 @@ BrookIntegrateLangevinStepKernel::BrookIntegrateLangevinStepKernel( std::string 
    _brookRandomNumberGenerator     = NULL;
    _log                            = NULL;
 
-   const BrookPlatform brookPlatform        = dynamic_cast<const BrookPlatform&> (platform);
+   const BrookPlatform& brookPlatform        = dynamic_cast<const BrookPlatform&> (platform);
    if( brookPlatform.getLog() != NULL ){
       setLog( brookPlatform.getLog() );
    }
