@@ -815,7 +815,7 @@ int BrookLangevinDynamics::setup( const std::vector<double>& masses, const Platf
 
 // ---------------------------------------------------------------------------------------
 
-   const BrookPlatform& brookPlatform        = dynamic_cast<const BrookPlatform&> (platform);
+   const BrookPlatform& brookPlatform       = dynamic_cast<const BrookPlatform&> (platform);
    setLog( brookPlatform.getLog() );
 
    int numberOfParticles  = (int) masses.size();

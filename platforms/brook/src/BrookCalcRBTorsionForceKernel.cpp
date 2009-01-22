@@ -59,8 +59,8 @@ BrookCalcRBTorsionForceKernel::BrookCalcRBTorsionForceKernel( std::string name, 
 
 // ---------------------------------------------------------------------------------------
 
-   _brookBondParameters              = NULL;
-   _log                              = NULL;
+   _brookBondParameters               = NULL;
+   _log                               = NULL;
    _openMMBrookInterface.setNumberOfParticles( system.getNumParticles() );
 
    const BrookPlatform& brookPlatform = dynamic_cast<const BrookPlatform&> (platform);

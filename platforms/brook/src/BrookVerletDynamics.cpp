@@ -53,9 +53,9 @@ BrookVerletDynamics::BrookVerletDynamics( ){
 
    //static const std::string methodName      = "BrookVerletDynamics::BrookVerletDynamics";
 
-   BrookOpenMMFloat zero                    = (BrookOpenMMFloat)  0.0;
-   BrookOpenMMFloat one                     = (BrookOpenMMFloat)  1.0;
-   BrookOpenMMFloat oneMinus                = (BrookOpenMMFloat) -1.0;
+   BrookOpenMMFloat zero                    = static_cast<BrookOpenMMFloat>(  0.0 );
+   BrookOpenMMFloat one                     = static_cast<BrookOpenMMFloat>(  1.0 );
+   BrookOpenMMFloat oneMinus                = static_cast<BrookOpenMMFloat>( -1.0 );
 
 // ---------------------------------------------------------------------------------------
 
@@ -373,7 +373,7 @@ int BrookVerletDynamics::setup( const std::vector<double>& masses, const Platfor
 
 // ---------------------------------------------------------------------------------------
 
-   const BrookPlatform& brookPlatform            = dynamic_cast<const BrookPlatform&> (platform);
+   const BrookPlatform& brookPlatform       = dynamic_cast<const BrookPlatform&> (platform);
    setLog( brookPlatform.getLog() );
 
    int numberOfParticles  = (int) masses.size();

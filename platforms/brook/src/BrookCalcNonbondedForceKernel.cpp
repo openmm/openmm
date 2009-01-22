@@ -69,7 +69,7 @@ BrookCalcNonbondedForceKernel::BrookCalcNonbondedForceKernel( std::string name, 
    _brookBondParameters                     = NULL;
    _log                                     = NULL;
 
-   const BrookPlatform& brookPlatform        = dynamic_cast<const BrookPlatform&> (platform);
+   const BrookPlatform& brookPlatform       = dynamic_cast<const BrookPlatform&> (platform);
    if( brookPlatform.getLog() != NULL ){
       setLog( brookPlatform.getLog() );
    }

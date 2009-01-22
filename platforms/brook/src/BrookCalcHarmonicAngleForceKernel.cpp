@@ -59,8 +59,8 @@ BrookCalcHarmonicAngleForceKernel::BrookCalcHarmonicAngleForceKernel( std::strin
 
 // ---------------------------------------------------------------------------------------
 
-   _brookBondParameters              = NULL;
-   _log                              = NULL;
+   _brookBondParameters               = NULL;
+   _log                               = NULL;
 
    const BrookPlatform& brookPlatform = dynamic_cast<const BrookPlatform&> (platform);
    if( brookPlatform.getLog() != NULL ){

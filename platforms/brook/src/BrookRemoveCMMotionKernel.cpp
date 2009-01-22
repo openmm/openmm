@@ -56,11 +56,11 @@ BrookRemoveCMMotionKernel::BrookRemoveCMMotionKernel( std::string name, const Pl
 
 // ---------------------------------------------------------------------------------------
 
-   _frequency                        = 0;
-   _log                              = NULL;
-   _brookVelocityCenterOfMassRemoval = NULL;
+   _frequency                           = 0;
+   _log                                 = NULL;
+   _brookVelocityCenterOfMassRemoval    = NULL;
 
-   const BrookPlatform& brookPlatform = dynamic_cast<const BrookPlatform&> (platform);
+   const BrookPlatform& brookPlatform   = dynamic_cast<const BrookPlatform&> (platform);
    if( brookPlatform.getLog() != NULL ){
       setLog( brookPlatform.getLog() );
    }   

@@ -219,6 +219,12 @@ BrookPlatform::BrookPlatform( ){
    char* runtime     = getenv( "brt_runtime" );
 #endif
 
+   // if environment variable brt_runtime not set, default to cal
+
+   if( runtime == NULL ){
+      runtime = _strdup( "cal" );
+   }
+
    _initializeKernelFactory( );
    _setBrookRuntime( runtime );
 
