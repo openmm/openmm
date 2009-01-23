@@ -330,7 +330,7 @@ static OpenMMContext* testObcForceFileSetup( std::string fileName, int brookCont
    return context;
 }
 
-void testObcForce( FILE* log ){
+void testObcForce( FILE* log, char* testInputFileName ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -349,9 +349,9 @@ void testObcForce( FILE* log ){
    //OpenMMContext* context      = testObcForceSetup( numParticles, 0, log );
    //OpenMMContext* brookContext = testObcForceSetup( numParticles, 1, log );
    
-   OpenMMContext* context      = testObcForceFileSetup( std::string( "ObcInfo.txt" ), 0, &numParticles, log );
+   OpenMMContext* context      = testObcForceFileSetup( std::string( testInputFileName ), 0, &numParticles, log );
    //OpenMMContext* context      = NULL;
-   OpenMMContext* brookContext = testObcForceFileSetup( std::string( "ObcInfo.txt" ), 1, &numParticles, log );
+   OpenMMContext* brookContext = testObcForceFileSetup( std::string( testInputFileName ), 1, &numParticles, log );
    //OpenMMContext* brookContext = NULL;
    
    vector<Vec3> forces;
@@ -516,7 +516,7 @@ void testObcEConsistentForce( FILE* log ){
 
 }
 
-int main( ){
+int main( int argc, char* argv[] ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -525,13 +525,23 @@ int main( ){
 
 // ---------------------------------------------------------------------------------------
 
-   (void) fflush( stdout );
-   (void) fflush( stderr );
+   (void) fflush( stdout ); (void) fflush( stderr );
+
    try {
-      testObcForce( log );
+
+      if( argc > 1 ){
+         testObcForce( log, argv[1] );
+      } else {
+         (void) fprintf( log, "%s missing input file (=ObcInfo.txt?): skipping testObcForce() argc=%d\n", methodName.c_str(), argc );
+         for( int ii = 0; ii < argc; ii++ ){
+            (void) fprintf( log, "%d <%s>\n", ii, argv[ii] );
+         }
+         (void) fflush( log );
+      }
+
       testObcSingleParticle( log );
       testObcEConsistentForce( log );
-    } catch( const exception& e ){
+   } catch( const exception& e ){
       (void) fprintf( log, "Exception %s %.s\n", methodName.c_str(),  e.what() ); (void) fflush( log );
       return 1;
    }   

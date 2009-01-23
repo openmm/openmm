@@ -5,6 +5,10 @@ ENABLE_TESTING()
 
 # ----------------------------------------------------------------------------
    
+# include static brook
+
+SET(INCLUDE_BROOK_STATIC 0)
+
 # logging
 
 SET(LOG TRUE)
@@ -24,7 +28,9 @@ SET(BROOK_LIB brookStatic)
 SET(OpenMM_BROOK_LIBRARY_NAME OpenMM_Brook)
   
 SET(SHARED_BROOK_TARGET ${OpenMM_BROOK_LIBRARY_NAME})
-SET(STATIC_BROOK_TARGET ${OpenMM_BROOK_LIBRARY_NAME}_static)
+IF(INCLUDE_BROOK_STATIC)
+   SET(STATIC_BROOK_TARGET ${OpenMM_BROOK_LIBRARY_NAME}_static)
+ENDIF(INCLUDE_BROOK_STATIC)
 
 # Automatically create tests using files named "Test*.cpp"
 
@@ -53,29 +59,35 @@ FOREACH(TEST_PROG ${TEST_PROGS})
 
     # Link with static library
 
-#    SET(TEST_STATIC ${TEST_ROOT}Static)
-#    ADD_EXECUTABLE(${TEST_STATIC} ${TEST_PROG})
-#    SET_TARGET_PROPERTIES(${TEST_STATIC}
-#                 PROPERTIES
-#                 COMPILE_FLAGS "-DOPENMM_USE_STATIC_LIBRARIES"
-#                 )
+    SET(TEST_STATIC ${TEST_ROOT}Static)
+    IF(INCLUDE_BROOK_STATIC)
+       ADD_EXECUTABLE(${TEST_STATIC} ${TEST_PROG})
+       SET_TARGET_PROPERTIES(${TEST_STATIC}
+                             PROPERTIES
+                             COMPILE_FLAGS "-DOPENMM_USE_STATIC_LIBRARIES"
+                             )
+       TARGET_LINK_LIBRARIES(${TEST_STATIC} ${STATIC_TARGET} ${STATIC_BROOK_TARGET} ${BROOK_LIB})
+       ADD_TEST(${TEST_STATIC} ${EXECUTABLE_OUTPUT_PATH}/${TEST_STATIC})
+    ENDIF(INCLUDE_BROOK_STATIC)
  
-#  TARGET_LINK_LIBRARIES(${TEST_STATIC} ${STATIC_TARGET} ${STATIC_BROOK_TARGET} ${BROOK_LIB})
-   # ADD_TEST(${TEST_STATIC} ${EXECUTABLE_OUTPUT_PATH}/${TEST_STATIC})
-
    # ----------------------------------------------------------------------------
-#  IF(LOG)
-#     FILE( APPEND ${LOG_FILE} "Static: TARGET_LINK_LIBRARIES: TEST_STATIC=${TEST_STATIC} STATIC_TARGET=${STATIC_TARGET} STATIC_BROOK_TARGET=${STATIC_BROOK_TARGET} BROOK_LIB=${BROOK_LIB}\n\n")
-#  ENDIF(LOG)
+   IF(LOG)
+      FILE( APPEND ${LOG_FILE} "Static: TARGET_LINK_LIBRARIES: TEST_STATIC=${TEST_STATIC} STATIC_TARGET=${STATIC_TARGET} STATIC_BROOK_TARGET=${STATIC_BROOK_TARGET} BROOK_LIB=${BROOK_LIB}\n\n")
+   ENDIF(LOG)
    # ----------------------------------------------------------------------------
-
-#  ADD_TEST(${TEST_STATIC} ${EXECUTABLE_OUTPUT_PATH}/${TEST_STATIC})
 
 ENDFOREACH(TEST_PROG ${TEST_PROGS})
+
+# TestBrookGBSAOBCForce customized w/ command-line argument (input file name used in test) 
+ADD_EXECUTABLE(TestBrookGBSAOBCForce TstBrookGBSAOBCForce.cpp)
+TARGET_LINK_LIBRARIES(TestBrookGBSAOBCForce ${SHARED_TARGET} ${OpenMM_BROOK_LIBRARY_NAME})
+ADD_TEST(TestBrookGBSAOBCForce "${EXECUTABLE_OUTPUT_PATH}/TestBrookGBSAOBCForce" "${CMAKE_CURRENT_SOURCE_DIR}/ObcInfo.txt")
+IF(LOG)
+   FILE( APPEND ${LOG_FILE} "TestBrookGBSAOBCForce ${EXECUTABLE_OUTPUT_PATH}/TestBrookGBSAOBCForce "${CMAKE_CURRENT_SOURCE_DIR}/ObcInfo.txt"\n\n")
+ENDIF(LOG)
 
 # ----------------------------------------------------------------------------
 
 IF(LOG)
    FILE( APPEND ${LOG_FILE} "Leaving Brook Test Cmake\n")
 ENDIF(LOG)
-
