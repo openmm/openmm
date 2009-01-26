@@ -615,11 +615,11 @@ int BrookRandomNumberGenerator::_loadGVShuffle( void ){
 
    // ---------------------------------------------------------------------------------------
 
-	const int p[] = { 2, 3, 5, 7, 11 };
-	const int np  = sizeof(p) / sizeof(p[0]);
-   const int pmax = p[np-1];
+	const int p[]   = { 2, 3, 5, 7, 11 };
+	const int np    = sizeof(p) / sizeof(p[0]);
+   const int pmax  = p[np-1];
 
-   static const std::string methodName  = "\nBrookRandomNumberGenerator::loadGVShuffle";
+   static const std::string methodName  = "BrookRandomNumberGenerator::loadGVShuffle";
    int printOn                          = 0;
 
    // ---------------------------------------------------------------------------------------
