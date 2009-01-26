@@ -529,6 +529,9 @@ int main( int argc, char* argv[] ){
 
    try {
 
+      // skip test if input file name is not provided
+      // but let user know
+
       if( argc > 1 ){
          testObcForce( log, argv[1] );
       } else {
@@ -541,6 +544,7 @@ int main( int argc, char* argv[] ){
 
       testObcSingleParticle( log );
       testObcEConsistentForce( log );
+
    } catch( const exception& e ){
       (void) fprintf( log, "Exception %s %.s\n", methodName.c_str(),  e.what() ); (void) fflush( log );
       return 1;
