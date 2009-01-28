@@ -2,7 +2,7 @@
 /****************************************************************
  //Linear index of i particle, divided by 2 because we unroll i by 2
 * This file is part of the gpu acceleration library for gromacs.
-* Author: Mark Friedrichs
+* Author: Mark Friedrichs, Mike Houston
 * 
 * This kernel was developed in collaboration with
 * 
