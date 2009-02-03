@@ -252,12 +252,12 @@ ADD_SUBDIRECTORY(platforms/reference/tests)
 
 # Which hardware platforms to build
 
-SET(OPENMM_BUILD_CUDA_LIB ON CACHE BOOL "Build OpenMMCuda library for Nvidia GPUs")
+SET(OPENMM_BUILD_CUDA_LIB OFF CACHE BOOL "Build OpenMMCuda library for Nvidia GPUs")
 IF(OPENMM_BUILD_CUDA_LIB)
     ADD_SUBDIRECTORY(platforms/cuda)
 ENDIF(OPENMM_BUILD_CUDA_LIB)
 
-SET(OPENMM_BUILD_BROOK_LIB ON CACHE BOOL "Build OpenMMBrook library for ATI GPUs")
+SET(OPENMM_BUILD_BROOK_LIB OFF CACHE BOOL "Build OpenMMBrook library for ATI GPUs")
 IF(OPENMM_BUILD_BROOK_LIB)
     ADD_SUBDIRECTORY(platforms/brook)
 ENDIF(OPENMM_BUILD_BROOK_LIB)
