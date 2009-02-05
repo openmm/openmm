@@ -1346,21 +1346,33 @@ nonbondedForceStreams[3]->fillWithValue( &zerof );
    if( printOn ){
    //static int step = 0;
    //if( step++ < 1 ){
-      //FILE* log = getLog();
-      FILE* log = stderr;
+      FILE* log = getLog();
+      //FILE* log = stderr;
       (void) fprintf( log, "%s\n", methodName.c_str() ); (void) fflush( log );
-      (void) fprintf( log, "\nPost knbforce_CDLJ4: particles=%6d ceiling=%3d dupFac=%3d", getNumberOfParticles(),  
+      (void) fprintf( log, "Post knbforce_CDLJ4: particles=%6d ceiling=%3d dupFac=%3d\n", getNumberOfParticles(),  
                                                                                           getParticleSizeCeiling(),
                                                                                           getDuplicationFactor()  );
 
-      (void) fprintf( log, "\n                      hght=%6d   width=%3d   jWid=%3d", getParticleStreamHeight( ),
-                                                                                      getParticleStreamWidth( ),
-                                                                                      getJStreamWidth( ) );
-      (void) fprintf( log, "\n                      pFrc=%6d     eps=%12.5e\n",       getPartialForceStreamWidth( ), epsfac );
+      (void) fprintf( log, "                        hght=%6d   width=%3d   jWid=%3d\n", getParticleStreamHeight( ),
+                                                                                        getParticleStreamWidth( ),
+                                                                                        getJStreamWidth( ) );
+      (void) fprintf( log, "                        pFrc=%6d     eps=%12.5e\n",         getPartialForceStreamWidth( ), epsfac );
 
-      (void) fprintf( log, "\nFinal NB & bonded forces" );
+      (void) fprintf( log, "%s Final NB & bonded forces\n", methodName.c_str() );
+      (void) fprintf( log, "Forces here should be zero (pregather)\n" );
       BrookStreamInternal* brookStreamInternalF   = forceStream.getBrookStreamInternal();
       brookStreamInternalF->printToFile( log );
+ 
+      (void) fprintf( log, "Coords\n" );
+      brookStreamInternalF   = positionStream.getBrookStreamInternal();
+      brookStreamInternalF->printToFile( log );
+/*
+void* dataArrayV = brookStreamInternalF->getData( 1 );
+float* ddd = (float*) dataArrayV;
+int idx1 = 0;
+int idx2 = 3;
+      (void) fprintf( log, "%d %d %.5e\n", idx1/3, idx2/3, computeDistance( idx1, idx2, ddd ) );
+*/
  
       (void) fprintf( log, "\nOuterVdwStreamd\n" );
       getOuterVdwStream()->printToFile( log );
@@ -1412,4 +1424,33 @@ nonbondedForceStreams[3]->fillWithValue( &zerof );
    }
 
    return;
+}
+
+/*  
+ * Utility to compute distances between two points
+ *
+ * @param idx1       index of point1 into array 
+ * @param idx2       index of point2 into array 
+ * @param coords     array of points p1={coord[0], coord[1], coord[2] },
+ *                                   p2={coord[3], coord[4], coord[5] },
+ *                                   p3={coord[6], coord[7], coord[8] }
+ *
+ * @return distance
+ *
+ **/
+    
+
+float BrookNonBonded::_computeDistance( int idx1, int idx2, float* coords ){
+
+// ---------------------------------------------------------------------------------------
+
+   //static const std::string methodName      = "BrookNonBonded::_computeDistance";
+
+   float d1 = sqrtf( 
+                      (coords[idx1]-coords[idx2])*(coords[idx1]-coords[idx2]) +
+                      (coords[idx1+1]-coords[idx2+1])*(coords[idx1+1]-coords[idx2+1]) +
+                      (coords[idx1+2]-coords[idx2+2])*(coords[idx1+2]-coords[idx2+2]) );
+   return d1;
+
+// ---------------------------------------------------------------------------------------
 }

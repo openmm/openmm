@@ -548,6 +548,20 @@ class BrookNonBonded : public BrookCommon {
       
       int _initializePartialForceStreamSize( int particleStreamSize, int particleStreamWidth );
       
+      /* 
+       * Utility to compute distances between two points
+       *
+       * @param idx1       index of point1 into array 
+       * @param idx2       index of point2 into array 
+       * @param coord      array of points p1={coord[0], coord[1], coord[2] },
+       *                                   p2={coord[3], coord[4], coord[5] },
+       *                                   p3={coord[6], coord[7], coord[8] }
+       *
+       * @return distance
+       *
+       * */
+      
+      float _computeDistance( int idx1, int idx2, float* coord );
 };
 
 } // namespace OpenMM

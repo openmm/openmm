@@ -208,7 +208,6 @@ BrookPlatform::BrookPlatform( ){
    _particleStreamWidth  = DefaultParticleStreamWidth;
    _minSuggestedThreads  = -1;
    _log                  = NULL;
-//_log                  = stderr;
 
    // get Brook runtime
 
@@ -386,13 +385,18 @@ int BrookPlatform::getDuplicationFactor( int numberOfParticles ) const {
 
 // ---------------------------------------------------------------------------------------
 
-   // static const std::string methodName      = "BrookPlatform::getDuplicationFactor";
+   static const std::string methodName      = "BrookPlatform::getDuplicationFactor";
 
 // ---------------------------------------------------------------------------------------
 
    // default value
 
    int duplicationFactor = 4;
+   if( numberOfParticles < 65 ){
+      duplicationFactor = 1;
+      (void) fprintf( stderr, "%s forcing duplicationFactor=%d since number of particles=%d < 65\n",
+                      methodName.c_str(), duplicationFactor, numberOfParticles );
+   }
 
    // set only if _minSuggestedThreads is available from board
 /*

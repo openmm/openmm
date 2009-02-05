@@ -167,7 +167,7 @@ void BrookCalcPeriodicTorsionForceKernel::initialize( const System& system, cons
 
    if( log ){
       std::string contents = _brookBondParameters->getContentsString( ); 
-      (void) fprintf( log, "%s brookGbsa::contents\n%s", methodName.c_str(), contents.c_str() );
+      (void) fprintf( log, "%s contents\n%s", methodName.c_str(), contents.c_str() );
       (void) fflush( log );
    }
 

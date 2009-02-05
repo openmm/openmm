@@ -68,6 +68,7 @@ OpenMMBrookInterface::OpenMMBrookInterface( int streamWidth, int duplicationFact
    _forces                                  = NULL;
 
    _log                                     = NULL;
+//_log = stderr;
 
    _particleStreamSize                      = -1;
 
