@@ -206,6 +206,7 @@ BrookPlatform::BrookPlatform( ){
 // ---------------------------------------------------------------------------------------
 
    _particleStreamWidth  = DefaultParticleStreamWidth;
+   _minSuggestedThreads  = -1;
    _log                  = NULL;
 //_log                  = stderr;
 
@@ -330,15 +331,36 @@ void BrookPlatform::_setBrookRuntime( const std::string& runtime ){
       throw OpenMMException( message.str() );
    }
 
-   // let user know runtime setting
-
    if( 1 ){
+
+      //When compiling with cygwin/cl combo, doesn't
+      //always work from the environment, so I'm 
+      //hardcoding it here. An alternative might be to getenv() in
+      //the gromacs code and pass it here. The cygwin getenv() hopefully
+      //will work more deterministically.
+
+      char* info_string = NULL;
+      int minSuggestedThreads;
+
+      brook::initialize(  _runtime.c_str(), NULL, &info_string, &minSuggestedThreads );
+
+      FILE* log = getLog() ? getLog() : stderr;
+      (void) fprintf( log, "Using runtime %s; initializing Brook\n", _runtime.c_str() );
+      fprintf( log, "############\n\nBrook info_string:\n%s\n############\n", info_string );
+      (void) fflush( log );
+
+      if( minSuggestedThreads > 0 ){
+         _minSuggestedThreads = minSuggestedThreads;
+      }
+   
+   } else {
+
       FILE* log = getLog() ? getLog() : stderr;
       (void) fprintf( log, "%s Brook initializing to runtime=<%s>\n", methodName.c_str(), _runtime.c_str() ); 
       (void) fflush( log );
-   }
+      brook::initialize( _runtime.c_str(), NULL );
 
-   brook::initialize( _runtime.c_str(), NULL );
+   }
 
 }
 
@@ -350,6 +372,46 @@ void BrookPlatform::_setBrookRuntime( const std::string& runtime ){
     
 std::string BrookPlatform::getName() const {
   return "Brook";
+}   
+
+/** 
+ * Get DuplicationFactor 
+ *
+ * @param numberOfParticles number of particles
+ *
+ * @return DuplicationFactor
+ */
+    
+int BrookPlatform::getDuplicationFactor( int numberOfParticles ) const {
+
+// ---------------------------------------------------------------------------------------
+
+   // static const std::string methodName      = "BrookPlatform::getDuplicationFactor";
+
+// ---------------------------------------------------------------------------------------
+
+   // default value
+
+   int duplicationFactor = 4;
+
+   // set only if _minSuggestedThreads is available from board
+
+   if( _minSuggestedThreads > 0 ){
+      float threads   = static_cast<float>( _minSuggestedThreads );
+      float numP      = static_cast<float>( numberOfParticles );
+      float iUnroll   = 4.0f;
+      float factor    = (threads*iUnroll)/numP;
+      if( (factor*numP) < (threads*iUnroll) ){
+         factor += 1.0f;
+      }
+      if( factor <= 1.0f ){
+         duplicationFactor   = 1;
+      } else {
+         duplicationFactor   = static_cast<int>( ceil( factor*0.25f ) ); 
+         duplicationFactor  *= 4; 
+      }
+   }
+   return duplicationFactor;
 }   
 
 /** 
@@ -473,8 +535,10 @@ void BrookPlatform::contextCreated( OpenMMContextImpl& context ) const {
 
 // ---------------------------------------------------------------------------------------
 
-   OpenMMBrookInterface* openMMBrookInterface = new OpenMMBrookInterface( getParticleStreamWidth() );
+   int particles = context.getSystem().getNumParticles();
+   OpenMMBrookInterface* openMMBrookInterface = new OpenMMBrookInterface( getParticleStreamWidth(), getDuplicationFactor( particles ) );
 //   openMMBrookInterface->setLog( stderr );
+ 
    context.setPlatformData( openMMBrookInterface );
 }
 

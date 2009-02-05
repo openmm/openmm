@@ -1955,6 +1955,21 @@ void BrookBonded::computeForces( BrookStreamImpl& positionStream, BrookStreamImp
 
                          forceStream.getBrookStream(), forceStream.getBrookStream() );
 
+   } else if( getInverseMapStreamCount( I_Stream ) == 2 && getInverseMapStreamCount( K_Stream ) == 3 ){
+
+      kinvmap_gather2_3( width,
+
+                         inverseStreamMaps[I_Stream][0]->getBrookStream(),
+                         inverseStreamMaps[I_Stream][1]->getBrookStream(),
+                         bondedForceStreams[I_Stream]->getBrookStream(),
+
+                         inverseStreamMaps[K_Stream][0]->getBrookStream(),
+                         inverseStreamMaps[K_Stream][1]->getBrookStream(),
+                         inverseStreamMaps[K_Stream][2]->getBrookStream(),
+                         bondedForceStreams[K_Stream]->getBrookStream(),
+
+                         forceStream.getBrookStream(), forceStream.getBrookStream() );
+
    } else if( getInverseMapStreamCount( I_Stream ) == 3 && getInverseMapStreamCount( K_Stream ) == 4 ){
 
       kinvmap_gather3_4( width,
@@ -1984,6 +1999,66 @@ void BrookBonded::computeForces( BrookStreamImpl& positionStream, BrookStreamImp
                          inverseStreamMaps[K_Stream][2]->getBrookStream(),
                          inverseStreamMaps[K_Stream][3]->getBrookStream(),
                          inverseStreamMaps[K_Stream][4]->getBrookStream(),
+                         bondedForceStreams[K_Stream]->getBrookStream(),
+                         forceStream.getBrookStream(), forceStream.getBrookStream() );
+
+   } else if( getInverseMapStreamCount( I_Stream ) == 3 && getInverseMapStreamCount( K_Stream ) == 2 ){
+
+      kinvmap_gather3_2( width,
+                         inverseStreamMaps[I_Stream][0]->getBrookStream(),
+                         inverseStreamMaps[I_Stream][1]->getBrookStream(),
+                         inverseStreamMaps[I_Stream][2]->getBrookStream(),
+                         bondedForceStreams[I_Stream]->getBrookStream(),
+                         inverseStreamMaps[K_Stream][0]->getBrookStream(),
+                         inverseStreamMaps[K_Stream][1]->getBrookStream(),
+                         bondedForceStreams[K_Stream]->getBrookStream(),
+                         forceStream.getBrookStream(), forceStream.getBrookStream() );
+
+   } else if( getInverseMapStreamCount( I_Stream ) == 3 && getInverseMapStreamCount( K_Stream ) == 1 ){
+
+      kinvmap_gather3_1( width,
+                         inverseStreamMaps[I_Stream][0]->getBrookStream(),
+                         inverseStreamMaps[I_Stream][1]->getBrookStream(),
+                         inverseStreamMaps[I_Stream][2]->getBrookStream(),
+                         bondedForceStreams[I_Stream]->getBrookStream(),
+                         inverseStreamMaps[K_Stream][0]->getBrookStream(),
+                         bondedForceStreams[K_Stream]->getBrookStream(),
+                         forceStream.getBrookStream(), forceStream.getBrookStream() );
+
+   } else if( getInverseMapStreamCount( I_Stream ) == 2 && getInverseMapStreamCount( K_Stream ) == 4 ){
+
+      kinvmap_gather2_4( width,
+                         inverseStreamMaps[I_Stream][0]->getBrookStream(),
+                         inverseStreamMaps[I_Stream][1]->getBrookStream(),
+                         bondedForceStreams[I_Stream]->getBrookStream(),
+                         inverseStreamMaps[K_Stream][0]->getBrookStream(),
+                         inverseStreamMaps[K_Stream][1]->getBrookStream(),
+                         inverseStreamMaps[K_Stream][2]->getBrookStream(),
+                         inverseStreamMaps[K_Stream][3]->getBrookStream(),
+                         bondedForceStreams[K_Stream]->getBrookStream(),
+                         forceStream.getBrookStream(), forceStream.getBrookStream() );
+
+   } else if( getInverseMapStreamCount( I_Stream ) == 2 && getInverseMapStreamCount( K_Stream ) == 5 ){
+
+      kinvmap_gather2_5( width,
+                         inverseStreamMaps[I_Stream][0]->getBrookStream(),
+                         inverseStreamMaps[I_Stream][1]->getBrookStream(),
+                         bondedForceStreams[I_Stream]->getBrookStream(),
+                         inverseStreamMaps[K_Stream][0]->getBrookStream(),
+                         inverseStreamMaps[K_Stream][1]->getBrookStream(),
+                         inverseStreamMaps[K_Stream][2]->getBrookStream(),
+                         inverseStreamMaps[K_Stream][3]->getBrookStream(),
+                         inverseStreamMaps[K_Stream][4]->getBrookStream(),
+                         bondedForceStreams[K_Stream]->getBrookStream(),
+                         forceStream.getBrookStream(), forceStream.getBrookStream() );
+
+   } else if( getInverseMapStreamCount( I_Stream ) == 2 && getInverseMapStreamCount( K_Stream ) == 1 ){
+
+      kinvmap_gather2_1( width,
+                         inverseStreamMaps[I_Stream][0]->getBrookStream(),
+                         inverseStreamMaps[I_Stream][1]->getBrookStream(),
+                         bondedForceStreams[I_Stream]->getBrookStream(),
+                         inverseStreamMaps[K_Stream][0]->getBrookStream(),
                          bondedForceStreams[K_Stream]->getBrookStream(),
                          forceStream.getBrookStream(), forceStream.getBrookStream() );
 
@@ -2061,13 +2136,88 @@ void BrookBonded::computeForces( BrookStreamImpl& positionStream, BrookStreamImp
                          bondedForceStreams[L_Stream]->getBrookStream(),
                          forceStream.getBrookStream(), forceStream.getBrookStream() );
    
+   } else if( getInverseMapStreamCount( J_Stream ) == 4 && getInverseMapStreamCount( L_Stream ) == 2 ){
+
+      kinvmap_gather4_2( width,
+                         inverseStreamMaps[J_Stream][0]->getBrookStream(),
+                         inverseStreamMaps[J_Stream][1]->getBrookStream(),
+                         inverseStreamMaps[J_Stream][2]->getBrookStream(),
+                         inverseStreamMaps[J_Stream][3]->getBrookStream(),
+                         bondedForceStreams[J_Stream]->getBrookStream(),
+                         inverseStreamMaps[L_Stream][0]->getBrookStream(),
+                         inverseStreamMaps[L_Stream][1]->getBrookStream(),
+                         bondedForceStreams[L_Stream]->getBrookStream(),
+                         forceStream.getBrookStream(), forceStream.getBrookStream() );
+   
+   } else if( getInverseMapStreamCount( J_Stream ) == 3 && getInverseMapStreamCount( L_Stream ) == 2 ){
+
+      kinvmap_gather3_2( width,
+                         inverseStreamMaps[J_Stream][0]->getBrookStream(),
+                         inverseStreamMaps[J_Stream][1]->getBrookStream(),
+                         inverseStreamMaps[J_Stream][2]->getBrookStream(),
+                         bondedForceStreams[J_Stream]->getBrookStream(),
+                         inverseStreamMaps[L_Stream][0]->getBrookStream(),
+                         inverseStreamMaps[L_Stream][1]->getBrookStream(),
+                         bondedForceStreams[L_Stream]->getBrookStream(),
+                         forceStream.getBrookStream(), forceStream.getBrookStream() );
+   
+   } else if( getInverseMapStreamCount( J_Stream ) == 2 && getInverseMapStreamCount( L_Stream ) == 2 ){
+
+      kinvmap_gather2_2( width,
+                         inverseStreamMaps[J_Stream][0]->getBrookStream(),
+                         inverseStreamMaps[J_Stream][1]->getBrookStream(),
+                         bondedForceStreams[J_Stream]->getBrookStream(),
+                         inverseStreamMaps[L_Stream][0]->getBrookStream(),
+                         inverseStreamMaps[L_Stream][1]->getBrookStream(),
+                         bondedForceStreams[L_Stream]->getBrookStream(),
+                         forceStream.getBrookStream(), forceStream.getBrookStream() );
+   
+   } else if( getInverseMapStreamCount( J_Stream ) == 1 && getInverseMapStreamCount( L_Stream ) == 2 ){
+
+      kinvmap_gather1_2( width,
+                         inverseStreamMaps[J_Stream][0]->getBrookStream(),
+                         bondedForceStreams[J_Stream]->getBrookStream(),
+                         inverseStreamMaps[L_Stream][0]->getBrookStream(),
+                         inverseStreamMaps[L_Stream][1]->getBrookStream(),
+                         bondedForceStreams[L_Stream]->getBrookStream(),
+                         forceStream.getBrookStream(), forceStream.getBrookStream() );
+   
+   } else if( getInverseMapStreamCount( J_Stream ) == 5 && getInverseMapStreamCount( L_Stream ) == 3 ){
+
+      kinvmap_gather5_3( width,
+                         inverseStreamMaps[J_Stream][0]->getBrookStream(),
+                         inverseStreamMaps[J_Stream][1]->getBrookStream(),
+                         inverseStreamMaps[J_Stream][2]->getBrookStream(),
+                         inverseStreamMaps[J_Stream][3]->getBrookStream(),
+                         inverseStreamMaps[J_Stream][4]->getBrookStream(),
+                         bondedForceStreams[J_Stream]->getBrookStream(),
+                         inverseStreamMaps[L_Stream][0]->getBrookStream(),
+                         inverseStreamMaps[L_Stream][1]->getBrookStream(),
+                         inverseStreamMaps[L_Stream][2]->getBrookStream(),
+                         bondedForceStreams[L_Stream]->getBrookStream(),
+                         forceStream.getBrookStream(), forceStream.getBrookStream() );
+   
+   } else if( getInverseMapStreamCount( J_Stream ) == 4 && getInverseMapStreamCount( L_Stream ) == 3 ){
+
+      kinvmap_gather4_3( width,
+                         inverseStreamMaps[J_Stream][0]->getBrookStream(),
+                         inverseStreamMaps[J_Stream][1]->getBrookStream(),
+                         inverseStreamMaps[J_Stream][2]->getBrookStream(),
+                         inverseStreamMaps[J_Stream][3]->getBrookStream(),
+                         bondedForceStreams[J_Stream]->getBrookStream(),
+                         inverseStreamMaps[L_Stream][0]->getBrookStream(),
+                         inverseStreamMaps[L_Stream][1]->getBrookStream(),
+                         inverseStreamMaps[L_Stream][2]->getBrookStream(),
+                         bondedForceStreams[L_Stream]->getBrookStream(),
+                         forceStream.getBrookStream(), forceStream.getBrookStream() );
+   
    } else {
 
       // case not handled -- throw an exception
 
       FILE* log =  getLog() ?  getLog() : stderr;
       if( ErrorMessages++ < MaxErrorMessages && getInverseMapStreamCount( J_Stream ) > 0 && getInverseMapStreamCount( L_Stream ) > 0 ){
-         (void) fprintf( log, "%s case: J-map=%d L-map=%d -- not handled.\n",
+         (void) fprintf( log, "%s case: J-map=%d L-map=%d -- not handled -- contact OpenMM developers.\n",
                           methodName.c_str(), getInverseMapStreamCount( J_Stream ),
                                               getInverseMapStreamCount( L_Stream ) );
          (void) fflush(  log );

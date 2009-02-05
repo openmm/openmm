@@ -51,7 +51,7 @@ class OpenMMBrookInterface {
 
    public:
   
-      OpenMMBrookInterface( int streamWidth );
+      OpenMMBrookInterface( int streamWidth, int duplicationFactor );
   
       ~OpenMMBrookInterface();
   

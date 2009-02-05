@@ -250,6 +250,27 @@ kernel void kinvmap_gather6(
 
 
 //Takes three + four inverse maps
+kernel void kinvmap_gather2_1(
+		float strwidth,    //stream width of the dihedral forces
+		float4 invmap3_1<>,   //indices into the dihedral forces
+		float4 invmap3_2<>,   //indices into the dihedral forces
+		float3 forces3[][], //dihedral forces
+		float4 invmap4_1<>,   //indices into the dihedral forces
+		float3 forces4[][], //dihedral forces
+		float3 inforce<>,  //particle forces before
+		out float3 outforce<> //particle forces after
+		)
+{
+	outforce = inforce;
+
+	outforce += do_gather_nobranch( strwidth, invmap3_1, forces3 );
+	outforce += do_gather_nobranch( strwidth, invmap3_2, forces3 );
+    
+	outforce += do_gather_nobranch( strwidth, invmap4_1, forces4 );
+}
+
+
+//Takes three + four inverse maps
 kernel void kinvmap_gather2_2(
 		float strwidth,    //stream width of the dihedral forces
 		float4 invmap3_1<>,   //indices into the dihedral forces
@@ -271,6 +292,132 @@ kernel void kinvmap_gather2_2(
 	outforce += do_gather_nobranch( strwidth, invmap4_2, forces4 );
 }
 
+
+//Takes three + four inverse maps
+kernel void kinvmap_gather2_3(
+		float strwidth,    //stream width of the dihedral forces
+		float4 invmap3_1<>,   //indices into the dihedral forces
+		float4 invmap3_2<>,   //indices into the dihedral forces
+		float3 forces3[][], //dihedral forces
+		float4 invmap4_1<>,   //indices into the dihedral forces
+		float4 invmap4_2<>,   //indices into the dihedral forces
+		float4 invmap4_3<>,
+		float3 forces4[][], //dihedral forces
+		float3 inforce<>,  //particle forces before
+		out float3 outforce<> //particle forces after
+		)
+{
+	outforce = inforce;
+
+	outforce += do_gather_nobranch( strwidth, invmap3_1, forces3 );
+	outforce += do_gather_nobranch( strwidth, invmap3_2, forces3 );
+    
+	outforce += do_gather_nobranch( strwidth, invmap4_1, forces4 );
+	outforce += do_gather_nobranch( strwidth, invmap4_2, forces4 );
+	outforce += do_gather_nobranch( strwidth, invmap4_3, forces4 );
+}
+
+
+//Takes three + four inverse maps
+kernel void kinvmap_gather2_4(
+		float strwidth,    //stream width of the dihedral forces
+		float4 invmap3_1<>,   //indices into the dihedral forces
+		float4 invmap3_2<>,   //indices into the dihedral forces
+		float3 forces3[][], //dihedral forces
+		float4 invmap4_1<>,   //indices into the dihedral forces
+		float4 invmap4_2<>,   //indices into the dihedral forces
+		float4 invmap4_3<>,
+		float4 invmap4_4<>,
+		float3 forces4[][], //dihedral forces
+		float3 inforce<>,  //particle forces before
+		out float3 outforce<> //particle forces after
+		)
+{
+	outforce = inforce;
+
+	outforce += do_gather_nobranch( strwidth, invmap3_1, forces3 );
+	outforce += do_gather_nobranch( strwidth, invmap3_2, forces3 );
+    
+	outforce += do_gather_nobranch( strwidth, invmap4_1, forces4 );
+	outforce += do_gather_nobranch( strwidth, invmap4_2, forces4 );
+	outforce += do_gather_nobranch( strwidth, invmap4_3, forces4 );
+	outforce += do_gather_nobranch( strwidth, invmap4_4, forces4 );
+}
+
+
+//Takes three + four inverse maps
+kernel void kinvmap_gather2_5(
+		float strwidth,    //stream width of the dihedral forces
+		float4 invmap3_1<>,   //indices into the dihedral forces
+		float4 invmap3_2<>,   //indices into the dihedral forces
+		float3 forces3[][], //dihedral forces
+		float4 invmap4_1<>,   //indices into the dihedral forces
+		float4 invmap4_2<>,   //indices into the dihedral forces
+		float4 invmap4_3<>,
+		float4 invmap4_4<>,
+		float4 invmap4_5<>,
+		float3 forces4[][], //dihedral forces
+		float3 inforce<>,  //particle forces before
+		out float3 outforce<> //particle forces after
+		)
+{
+	outforce = inforce;
+
+	outforce += do_gather_nobranch( strwidth, invmap3_1, forces3 );
+	outforce += do_gather_nobranch( strwidth, invmap3_2, forces3 );
+    
+	outforce += do_gather_nobranch( strwidth, invmap4_1, forces4 );
+	outforce += do_gather_nobranch( strwidth, invmap4_2, forces4 );
+	outforce += do_gather_nobranch( strwidth, invmap4_3, forces4 );
+	outforce += do_gather_nobranch( strwidth, invmap4_4, forces4 );
+	outforce += do_gather_nobranch( strwidth, invmap4_5, forces4 );
+}
+
+//Takes three + four inverse maps
+kernel void kinvmap_gather3_1(
+		float strwidth,    //stream width of the dihedral forces
+		float4 invmap3_1<>,   //indices into the dihedral forces
+		float4 invmap3_2<>,   //indices into the dihedral forces
+		float4 invmap3_3<>,
+		float3 forces3[][], //dihedral forces
+		float4 invmap4_1<>,   //indices into the dihedral forces
+		float3 forces4[][], //dihedral forces
+		float3 inforce<>,  //particle forces before
+		out float3 outforce<> //particle forces after
+		)
+{
+	outforce = inforce;
+
+	outforce += do_gather_nobranch( strwidth, invmap3_1, forces3 );
+	outforce += do_gather_nobranch( strwidth, invmap3_2, forces3 );
+	outforce += do_gather_nobranch( strwidth, invmap3_3, forces3 );
+    
+	outforce += do_gather_nobranch( strwidth, invmap4_1, forces4 );
+}
+
+//Takes three + four inverse maps
+kernel void kinvmap_gather3_2(
+		float strwidth,    //stream width of the dihedral forces
+		float4 invmap3_1<>,   //indices into the dihedral forces
+		float4 invmap3_2<>,   //indices into the dihedral forces
+		float4 invmap3_3<>,
+		float3 forces3[][], //dihedral forces
+		float4 invmap4_1<>,   //indices into the dihedral forces
+		float4 invmap4_2<>,   //indices into the dihedral forces
+		float3 forces4[][], //dihedral forces
+		float3 inforce<>,  //particle forces before
+		out float3 outforce<> //particle forces after
+		)
+{
+	outforce = inforce;
+
+	outforce += do_gather_nobranch( strwidth, invmap3_1, forces3 );
+	outforce += do_gather_nobranch( strwidth, invmap3_2, forces3 );
+	outforce += do_gather_nobranch( strwidth, invmap3_3, forces3 );
+    
+	outforce += do_gather_nobranch( strwidth, invmap4_1, forces4 );
+	outforce += do_gather_nobranch( strwidth, invmap4_2, forces4 );
+}
 
 //Takes three + four inverse maps
 kernel void kinvmap_gather3_3(
@@ -297,7 +444,6 @@ kernel void kinvmap_gather3_3(
 	outforce += do_gather_nobranch( strwidth, invmap4_2, forces4 );
 	outforce += do_gather_nobranch( strwidth, invmap4_3, forces4 );
 }
-
 
 //Takes three + four inverse maps
 kernel void kinvmap_gather3_4(
@@ -406,6 +552,86 @@ kernel void kinvmap_gather5_2(
 	outforce += do_gather_nobranch( strwidth, invmap2_2, forces2 );
 }
 
+
+//Takes five + two inverse maps
+kernel void kinvmap_gather5_3(
+		float strwidth,    //stream width of the dihedral forces
+		float4 invmap5_1<>,   //indices into the dihedral forces
+		float4 invmap5_2<>,   //indices into the dihedral forces
+		float4 invmap5_3<>,
+		float4 invmap5_4<>,
+		float4 invmap5_5<>,
+		float3 forces5[][], //dihedral forces
+		float4 invmap2_1<>,   //indices into the dihedral forces
+		float4 invmap2_2<>,   //indices into the dihedral forces
+		float4 invmap2_3<>,   //indices into the dihedral forces
+		float3 forces2[][], //dihedral forces
+		float3 inforce<>,  //particle forces before
+		out float3 outforce<> //particle forces after
+		)
+{
+	outforce = inforce;
+
+	outforce += do_gather_nobranch( strwidth, invmap5_1, forces5 );
+	outforce += do_gather_nobranch( strwidth, invmap5_2, forces5 );
+	outforce += do_gather_nobranch( strwidth, invmap5_3, forces5 );
+	outforce += do_gather_nobranch( strwidth, invmap5_4, forces5 );
+	outforce += do_gather_nobranch( strwidth, invmap5_5, forces5 );
+    
+	outforce += do_gather_nobranch( strwidth, invmap2_1, forces2 );
+	outforce += do_gather_nobranch( strwidth, invmap2_2, forces2 );
+	outforce += do_gather_nobranch( strwidth, invmap2_3, forces2 );
+}
+
+
+//Takes five + two inverse maps
+kernel void kinvmap_gather4_3(
+		float strwidth,    //stream width of the dihedral forces
+		float4 invmap5_1<>,   //indices into the dihedral forces
+		float4 invmap5_2<>,   //indices into the dihedral forces
+		float4 invmap5_3<>,
+		float4 invmap5_4<>,
+		float3 forces5[][], //dihedral forces
+		float4 invmap2_1<>,   //indices into the dihedral forces
+		float4 invmap2_2<>,   //indices into the dihedral forces
+		float4 invmap2_3<>,   //indices into the dihedral forces
+		float3 forces2[][], //dihedral forces
+		float3 inforce<>,  //particle forces before
+		out float3 outforce<> //particle forces after
+		)
+{
+	outforce = inforce;
+
+	outforce += do_gather_nobranch( strwidth, invmap5_1, forces5 );
+	outforce += do_gather_nobranch( strwidth, invmap5_2, forces5 );
+	outforce += do_gather_nobranch( strwidth, invmap5_3, forces5 );
+	outforce += do_gather_nobranch( strwidth, invmap5_4, forces5 );
+    
+	outforce += do_gather_nobranch( strwidth, invmap2_1, forces2 );
+	outforce += do_gather_nobranch( strwidth, invmap2_2, forces2 );
+	outforce += do_gather_nobranch( strwidth, invmap2_3, forces2 );
+}
+
+
+//Takes five + two inverse maps
+kernel void kinvmap_gather1_2(
+		float strwidth,    //stream width of the dihedral forces
+		float4 invmap5_1<>,   //indices into the dihedral forces
+		float3 forces5[][], //dihedral forces
+		float4 invmap2_1<>,   //indices into the dihedral forces
+		float4 invmap2_2<>,   //indices into the dihedral forces
+		float3 forces2[][], //dihedral forces
+		float3 inforce<>,  //particle forces before
+		out float3 outforce<> //particle forces after
+		)
+{
+	outforce = inforce;
+
+	outforce += do_gather_nobranch( strwidth, invmap5_1, forces5 );
+    
+	outforce += do_gather_nobranch( strwidth, invmap2_1, forces2 );
+	outforce += do_gather_nobranch( strwidth, invmap2_2, forces2 );
+}
 
 //Takes five + two inverse maps
 kernel void kinvmap_gather4_2(

@@ -194,6 +194,20 @@ int BrookNonBonded::getDuplicationFactor( void ) const {
 }
 
 /** 
+ * Set duplication factor
+ * 
+ * @param   duplication factor
+ *
+ * @return  DefaultReturnValue
+ *
+ */
+
+int BrookNonBonded::setDuplicationFactor( int duplicationFactor ){
+   _duplicationFactor = duplicationFactor;
+   return DefaultReturnValue;
+}
+
+/** 
  * Get j-stream width
  * 
  * @return  j-stream width

@@ -206,7 +206,9 @@ class OPENMM_EXPORT BrookPlatform : public Platform {
        * @return true if BrookPlatform supports double precison
        */
       
-      bool supportsDoublePrecision( void ) const;
+// w/ FAH bool is redefined as int; causes problem w/ Platform::bool supportsDoublePrecision() const;
+#define bool bool
+	  bool supportsDoublePrecision( void ) const;
 
       /** 
        * Return default Brook stream factory
@@ -288,6 +290,18 @@ class OPENMM_EXPORT BrookPlatform : public Platform {
 
       void contextDestroyed( OpenMMContextImpl& context ) const;
 
+      /** 
+       * Get minSuggestedThreads
+       */
+
+      int getMinSuggestedThreads( void ) const;
+
+      /** 
+       * Get duplicationFactor
+       */
+
+      int getDuplicationFactor( int numberOfParticles ) const;
+
    private:
 
       // log file reference
@@ -309,6 +323,10 @@ class OPENMM_EXPORT BrookPlatform : public Platform {
       // Brook runtime
 
       std::string _runtime;
+
+      // min suggested threads
+
+      int _minSuggestedThreads;
 
       /** 
        * Initialize kernel factory

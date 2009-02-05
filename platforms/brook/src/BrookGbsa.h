@@ -84,6 +84,17 @@ class BrookGbsa : public BrookCommon {
       int getDuplicationFactor( void ) const;
       
       /** 
+       * Set duplication factor
+       * 
+       * @param   duplication factor
+       *
+       * @return  DefaultReturnValue
+       *
+       */
+     
+      int setDuplicationFactor( int duplicationFactor );
+ 
+      /** 
        * Get particle ceiling parameter
        * 
        * @return particle ceiling parameter

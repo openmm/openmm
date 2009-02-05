@@ -50,7 +50,7 @@ using namespace std;
  * 
  */
 
-OpenMMBrookInterface::OpenMMBrookInterface( int streamWidth ) : _particleStreamWidth(streamWidth){
+OpenMMBrookInterface::OpenMMBrookInterface( int streamWidth, int duplicationFactor ) : _particleStreamWidth(streamWidth){
 
 // ---------------------------------------------------------------------------------------
 
@@ -74,6 +74,12 @@ OpenMMBrookInterface::OpenMMBrookInterface( int streamWidth ) : _particleStreamW
    for( int ii = 0; ii < LastBondForce; ii++ ){
       _bondParameters[ii] = NULL;
    }
+
+   if( duplicationFactor < 1 ){
+      duplicationFactor = 4;
+   }
+   _brookNonBonded.setDuplicationFactor( duplicationFactor );
+   _brookGbsa.setDuplicationFactor( duplicationFactor );
 }   
 
 /** 

@@ -189,6 +189,20 @@ float BrookGbsa::getDielectricOffset( void ) const {
 }
 
 /** 
+ * Set duplication factor
+ * 
+ * @param   duplication factor
+ *
+ * @return  DefaultReturnValue
+ *
+ */
+
+int BrookGbsa::setDuplicationFactor( int duplicationFactor ){
+   _duplicationFactor = duplicationFactor;
+   return DefaultReturnValue;
+}
+
+/** 
  * Set outer loop unroll
  * 
  * @param  outer loop unroll (fixed value)

@@ -91,6 +91,81 @@ void  kinvmap_gather2_2 (const float  strwidth,
 		::brook::stream inforce,
 		::brook::stream outforce);
 
+void  kinvmap_gather2_1 (const float  strwidth,
+		::brook::stream invmap3_1,
+		::brook::stream invmap3_2,
+		::brook::stream forces3,
+		::brook::stream invmap4_1,
+		::brook::stream forces4,
+		::brook::stream inforce,
+		::brook::stream outforce);
+
+void  kinvmap_gather2_3 (const float  strwidth,
+		::brook::stream invmap3_1,
+		::brook::stream invmap3_2,
+		::brook::stream forces3,
+		::brook::stream invmap4_1,
+		::brook::stream invmap4_2,
+		::brook::stream invmap4_3,
+		::brook::stream forces4,
+		::brook::stream inforce,
+		::brook::stream outforce);
+
+void  kinvmap_gather1_2 (const float  strwidth,
+		::brook::stream invmap3_1,
+		::brook::stream forces3,
+		::brook::stream invmap4_1,
+		::brook::stream invmap4_2,
+		::brook::stream forces4,
+		::brook::stream inforce,
+		::brook::stream outforce);
+
+void  kinvmap_gather2_4 (const float  strwidth,
+		::brook::stream invmap3_1,
+		::brook::stream invmap3_2,
+		::brook::stream forces3,
+		::brook::stream invmap4_1,
+		::brook::stream invmap4_2,
+		::brook::stream invmap4_3,
+		::brook::stream invmap4_4,
+		::brook::stream forces4,
+		::brook::stream inforce,
+		::brook::stream outforce);
+
+void  kinvmap_gather2_5 (const float  strwidth,
+		::brook::stream invmap3_1,
+		::brook::stream invmap3_2,
+		::brook::stream forces3,
+		::brook::stream invmap4_1,
+		::brook::stream invmap4_2,
+		::brook::stream invmap4_3,
+		::brook::stream invmap4_4,
+		::brook::stream invmap4_5,
+		::brook::stream forces4,
+		::brook::stream inforce,
+		::brook::stream outforce);
+
+void  kinvmap_gather3_2 (const float  strwidth,
+		::brook::stream invmap3_1,
+		::brook::stream invmap3_2,
+		::brook::stream invmap3_3,
+		::brook::stream forces3,
+		::brook::stream invmap4_1,
+		::brook::stream invmap4_2,
+		::brook::stream forces4,
+		::brook::stream inforce,
+		::brook::stream outforce);
+
+void  kinvmap_gather3_1 (const float  strwidth,
+		::brook::stream invmap3_1,
+		::brook::stream invmap3_2,
+		::brook::stream invmap3_3,
+		::brook::stream forces3,
+		::brook::stream invmap4_1,
+		::brook::stream forces4,
+		::brook::stream inforce,
+		::brook::stream outforce);
+
 void  kinvmap_gather3_3 (const float  strwidth,
 		::brook::stream invmap3_1,
 		::brook::stream invmap3_2,
@@ -149,6 +224,35 @@ void  kinvmap_gather5_2 (const float  strwidth,
 		::brook::stream forces5,
 		::brook::stream invmap2_1,
 		::brook::stream invmap2_2,
+		::brook::stream forces2,
+		::brook::stream inforce,
+		::brook::stream outforce);
+
+
+void  kinvmap_gather5_3 (const float  strwidth,
+		::brook::stream invmap5_1,
+		::brook::stream invmap5_2,
+		::brook::stream invmap5_3,
+		::brook::stream invmap5_4,
+		::brook::stream invmap5_5,
+		::brook::stream forces5,
+		::brook::stream invmap2_1,
+		::brook::stream invmap2_2,
+		::brook::stream invmap2_3,
+		::brook::stream forces2,
+		::brook::stream inforce,
+		::brook::stream outforce);
+
+
+void  kinvmap_gather4_3 (const float  strwidth,
+		::brook::stream invmap5_1,
+		::brook::stream invmap5_2,
+		::brook::stream invmap5_3,
+		::brook::stream invmap5_4,
+		::brook::stream forces5,
+		::brook::stream invmap2_1,
+		::brook::stream invmap2_2,
+		::brook::stream invmap2_3,
 		::brook::stream forces2,
 		::brook::stream inforce,
 		::brook::stream outforce);

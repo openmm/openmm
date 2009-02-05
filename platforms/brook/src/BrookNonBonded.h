@@ -323,6 +323,17 @@ class BrookNonBonded : public BrookCommon {
       int setup( int numberOfParticles, const std::vector<std::vector<double> >& nonbondedParameters,
                  const std::vector<std::set<int> >& exclusions,  const Platform& platform );
       
+      /** 
+       * Set duplication factor
+       * 
+       * @param   duplication factor
+       *
+       * @return  DefaultReturnValue
+       *
+       */
+      
+      int setDuplicationFactor( int duplicationFactor );
+      
       /* 
        * Get contents of object
        *
