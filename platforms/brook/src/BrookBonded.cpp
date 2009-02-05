@@ -2210,7 +2210,6 @@ void BrookBonded::computeForces( BrookStreamImpl& positionStream, BrookStreamImp
                          inverseStreamMaps[L_Stream][2]->getBrookStream(),
                          bondedForceStreams[L_Stream]->getBrookStream(),
                          forceStream.getBrookStream(), forceStream.getBrookStream() );
-   
    } else {
 
       // case not handled -- throw an exception

@@ -395,7 +395,7 @@ int BrookPlatform::getDuplicationFactor( int numberOfParticles ) const {
    int duplicationFactor = 4;
 
    // set only if _minSuggestedThreads is available from board
-
+/*
    if( _minSuggestedThreads > 0 ){
       float threads   = static_cast<float>( _minSuggestedThreads );
       float numP      = static_cast<float>( numberOfParticles );
@@ -411,6 +411,7 @@ int BrookPlatform::getDuplicationFactor( int numberOfParticles ) const {
          duplicationFactor  *= 4; 
       }
    }
+*/
    return duplicationFactor;
 }   
 
