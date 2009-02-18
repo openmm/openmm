@@ -201,6 +201,8 @@ void BrookIntegrateLangevinStepKernel::initialize( const System& system, const L
 
    _brookRandomNumberGenerator   = new BrookRandomNumberGenerator( );
    _brookRandomNumberGenerator->setup( (int) masses.size(), getPlatform() );
+   unsigned long int seed        = static_cast<unsigned long int>( integrator.getRandomNumberSeed() );
+   _brookRandomNumberGenerator->setRandomNumberSeed( seed );
 
    if( printOn ){
       (void) fprintf( log, "%s done setup:\nBrookShakeAlgorithm:\n%s\nBrookRandomNumberGenerator:\n%s\n\n", methodName.c_str(),
