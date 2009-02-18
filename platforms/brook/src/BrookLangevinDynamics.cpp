@@ -1098,7 +1098,7 @@ int BrookLangevinDynamics::update( BrookStreamImpl& positionStream, BrookStreamI
 
       static int showAux = 1;
 
-      if( printOn ){
+      if( printOn && showAux ){
          (void) fprintf( log, "%s step=%d shake=%d\n", methodName.c_str(), _internalStepCount, brookShakeAlgorithm.getNumberOfConstraints() );
          (void) fflush( log );
       }
@@ -1119,6 +1119,7 @@ int BrookLangevinDynamics::update( BrookStreamImpl& positionStream, BrookStreamI
          (void) fprintf( log, "%s step=%d Shake contents\n%s", methodName.c_str(), _internalStepCount, contents.c_str() );
          (void) fflush( log );
       }
+
    }
 
    // diagnostics
@@ -1178,7 +1179,7 @@ int BrookLangevinDynamics::update( BrookStreamImpl& positionStream, BrookStreamI
  
    // diagnostics
 
-   if( printOn ){
+   if( 0 && printOn ){
       (void) fprintf( log, "\n%s step=%d Post kupdate_sd1_fix1: particleStrW=%3d rngStrW=%3d rngOff=%5d "
                                 "EM=%12.5e Sd1pc[]=[%12.5e %12.5e %12.5e]", methodName.c_str(), _internalStepCount,
                                 getLangevinDynamicsParticleStreamWidth(),
@@ -1264,7 +1265,7 @@ int BrookLangevinDynamics::update( BrookStreamImpl& positionStream, BrookStreamI
                     brookShakeAlgorithm.getShakeXCons3Stream()->getBrookStream(),
                     getXPrimeStream()->getBrookStream() );
 
-      if( printOn ){
+      if( 0 && printOn ){
 
          (void) fprintf( log, "\n%s Post kshakeh_update1: sw=%d ShkCnstStrW=%3d tol=%.3f maxIt=%d",
                          methodName.c_str(), getLangevinDynamicsParticleStreamWidth(),
@@ -1328,7 +1329,7 @@ int BrookLangevinDynamics::update( BrookStreamImpl& positionStream, BrookStreamI
 
    // diagnostics
 
-   if( printOn ){
+   if( 0 && printOn ){
       (void) fprintf( log, "\n%s step=%d Post kupdate_sd2_fix1: particleStrW=%3d rngStrW=%3d rngOff=%5d "
                                 "Sd2pc[]=[%12.5e %12.5e]", methodName.c_str(), _internalStepCount,
                                 getLangevinDynamicsParticleStreamWidth(),
@@ -1408,7 +1409,7 @@ int BrookLangevinDynamics::update( BrookStreamImpl& positionStream, BrookStreamI
    
       // diagnostics
    
-      if( printOn ){
+      if( 0 && printOn ){
          (void) fprintf( log, "\n%s step=%d Post kshakeh_update2_fix1: ShakeConstraintStreamWidth=%3d rngStrW=%3d rngOff=%5d "
                               "Sd2pc[]=[%12.5e %12.5e]\n", methodName.c_str(), _internalStepCount,
                               brookShakeAlgorithm.getShakeConstraintStreamWidth(),
@@ -1453,7 +1454,7 @@ int BrookLangevinDynamics::update( BrookStreamImpl& positionStream, BrookStreamI
 
       // no constraints
 
-      if( printOn ){
+      if( 0 && printOn ){
          (void) fprintf( log, "\n%s Pre ksetStr3 (no constraints)", methodName.c_str() );
          BrookStreamInternal* brookStreamInternalPos  = positionStream.getBrookStreamInternal();
          (void) fprintf( log, "\nPositionStream\n" );

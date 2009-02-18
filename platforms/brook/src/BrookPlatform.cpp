@@ -394,12 +394,12 @@ int BrookPlatform::getDuplicationFactor( int numberOfParticles ) const {
    int duplicationFactor = 4;
    if( numberOfParticles < 65 ){
       duplicationFactor = 1;
-      (void) fprintf( stderr, "%s forcing duplicationFactor=%d since number of particles=%d < 65\n",
+      (void) fprintf( stderr, "%s forcing optimization parameter 'duplicationFactor' to %d since number of particles=%d < 65\n",
                       methodName.c_str(), duplicationFactor, numberOfParticles );
    }
 
    // set only if _minSuggestedThreads is available from board
-/*
+
    if( _minSuggestedThreads > 0 ){
       float threads   = static_cast<float>( _minSuggestedThreads );
       float numP      = static_cast<float>( numberOfParticles );
@@ -414,8 +414,9 @@ int BrookPlatform::getDuplicationFactor( int numberOfParticles ) const {
          duplicationFactor   = static_cast<int>( ceil( factor*0.25f ) ); 
          duplicationFactor  *= 4; 
       }
+      // (void) fprintf( stderr, "getDuplicationFactor %.1f numiP=%.1f factor=%.1f duplicationFactor=%d\n", threads, numP, factor, duplicationFactor );
    }
-*/
+
    return duplicationFactor;
 }   
 

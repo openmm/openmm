@@ -31,6 +31,7 @@
 
 #include "BrookIntegrateLangevinStepKernel.h"
 #include "BrookStreamInternal.h"
+#include <ctime>
 
 using namespace OpenMM;
 using namespace std;
@@ -201,13 +202,20 @@ void BrookIntegrateLangevinStepKernel::initialize( const System& system, const L
 
    _brookRandomNumberGenerator   = new BrookRandomNumberGenerator( );
    _brookRandomNumberGenerator->setup( (int) masses.size(), getPlatform() );
-   unsigned long int seed        = static_cast<unsigned long int>( integrator.getRandomNumberSeed() );
+
+   unsigned long int seed;
+   if( integrator.getRandomNumberSeed() <= 1 ){
+      seed        = static_cast<unsigned long int>(time(NULL) & 0x000fffff);
+   } else {
+      seed        = static_cast<unsigned long int>( integrator.getRandomNumberSeed() );
+   }
    _brookRandomNumberGenerator->setRandomNumberSeed( seed );
 
    if( printOn ){
       (void) fprintf( log, "%s done setup:\nBrookShakeAlgorithm:\n%s\nBrookRandomNumberGenerator:\n%s\n\n", methodName.c_str(),
                       _brookShakeAlgorithm->getContentsString().c_str(), 
                       _brookRandomNumberGenerator->getContentsString().c_str() );
+      (void) fprintf( log, "LangevinIntegrator seed=%d\n", integrator.getRandomNumberSeed() );
       (void) fflush( log );
    }
 
