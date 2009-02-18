@@ -79,6 +79,18 @@ public:
         friction = coeff;
     }
     /**
+     * Get the random number seed
+     */
+    int getRandomNumberSeed(void ) const {
+        return randomNumberSeed;
+    }
+    /**
+     * Set the random number seed
+     */
+    void setRandomNumberSeed(int inputRandomNumberSeed) {
+        randomNumberSeed = inputRandomNumberSeed;
+    }
+    /**
      * Advance a simulation through time by taking a series of time steps.
      * 
      * @param steps   the number of time steps to take
@@ -97,6 +109,7 @@ protected:
     std::vector<std::string> getKernelNames();
 private:
     double temperature, friction;
+    int randomNumberSeed;
     OpenMMContextImpl* context;
     Kernel kernel;
 };
