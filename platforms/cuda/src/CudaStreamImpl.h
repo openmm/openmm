@@ -55,7 +55,7 @@ public:
 private:
     void initType();
     CUDAStream<T>* stream;
-	 _gpuContext* gpu;
+    _gpuContext* gpu;
     bool ownStream;
     int width, rowOffset;
     float paddingValues[4];
@@ -132,58 +132,60 @@ CudaStreamImpl<T>::~CudaStreamImpl() {
 template <class T>
 void CudaStreamImpl<T>::loadFromArray(const void* array) {
     float* data = reinterpret_cast<float*>(stream->_pSysData);
+    int* order = gpu->psAtomIndex->_pSysData;
     if (baseType == Stream::Float) {
         float* arrayData = (float*) array;
         for (int i = 0; i < getSize(); ++i)
             for (int j = 0; j < width; ++j)
-                data[i*rowOffset+j] = arrayData[i*width+j];
+                data[i*rowOffset+j] = arrayData[order[i]*width+j];
     }
     else if (baseType == Stream::Double) {
         double* arrayData = (double*) array;
         for (int i = 0; i < getSize(); ++i)
             for (int j = 0; j < width; ++j)
-                data[i*rowOffset+j] = (float) arrayData[i*width+j];
+                data[i*rowOffset+j] = (float) arrayData[order[i]*width+j];
     }
     else {
         int* arrayData = (int*) array;
         for (int i = 0; i < getSize(); ++i)
             for (int j = 0; j < width; ++j)
-                data[i*rowOffset+j] = (float) arrayData[i*width+j];
+                data[i*rowOffset+j] = (float) arrayData[order[i]*width+j];
     }
     for (int i = getSize(); i < (int) stream->_length; ++i)
         for (int j = 0; j < rowOffset; ++j)
             data[i*rowOffset+j] = paddingValues[j];
     stream->Upload();
 
-	 // VisualStudio compiler did not like stream == gpu->psPosq4 
-	 //if( gpu && stream == gpu->psPosq4 ){
+    // VisualStudio compiler did not like stream == gpu->psPosq4
+    //if( gpu && stream == gpu->psPosq4 ){
 
-	 if( gpu && getName() == "particlePositions" ){
-	    gpu->bRecalculateBornRadii = true;
-	 }
+    if( gpu && getName() == "particlePositions" ){
+        gpu->bRecalculateBornRadii = true;
+    }
 }
 
 template <class T>
 void CudaStreamImpl<T>::saveToArray(void* array) {
     stream->Download();
     float* data = reinterpret_cast<float*>(stream->_pSysData);
+    int* order = gpu->psAtomIndex->_pSysData;
     if (baseType == Stream::Float) {
         float* arrayData = (float*) array;
         for (int i = 0; i < getSize(); ++i)
             for (int j = 0; j < width; ++j)
-                arrayData[i*width+j] = data[i*rowOffset+j];
+                arrayData[order[i]*width+j] = data[i*rowOffset+j];
     }
     else if (baseType == Stream::Double) {
         double* arrayData = (double*) array;
         for (int i = 0; i < getSize(); ++i)
             for (int j = 0; j < width; ++j)
-                arrayData[i*width+j] = data[i*rowOffset+j];
+                arrayData[order[i]*width+j] = data[i*rowOffset+j];
     }
     else {
         int* arrayData = (int*) array;
         for (int i = 0; i < getSize(); ++i)
             for (int j = 0; j < width; ++j)
-                arrayData[i*width+j] = (int) data[i*rowOffset+j];
+                arrayData[order[i]*width+j] = (int) data[i*rowOffset+j];
     }
 }
 

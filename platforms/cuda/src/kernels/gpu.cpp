@@ -30,6 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 #include <stdio.h>
+#include <string.h>
 #include <cuda.h>
 #include <vector_functions.h>
 #include <cstdlib>
@@ -40,6 +41,7 @@
 #include <ctime>
 #include <cmath>
 #include <map>
+#include <algorithm>
 #ifdef WIN32
   #include <windows.h>
 #else
@@ -146,6 +148,23 @@ struct ShakeCluster {
         distance = dist;
         peripheralInvMass = invMass;
     }
+};
+
+struct Constraint
+{
+    Constraint(int atom1, int atom2, float distance2) : atom1(atom1), atom2(atom2), distance2(distance2) {
+    }
+    int atom1, atom2;
+    float distance2;
+};
+
+struct Molecule {
+    vector<int> atoms;
+    vector<int> bonds;
+    vector<int> angles;
+    vector<int> periodicTorsions;
+    vector<int> rbTorsions;
+    vector<int> constraints;
 };
 
 static const float dielectricOffset         =    0.009f;
@@ -793,7 +812,7 @@ int gpuReadCoulombParameters(gpuContext gpu, char* fname)
                 }
         }
         cout << total_exclusions << " total exclusions.\n";
-        gpuSetCoulombParameters(gpu, epsfac, atom, c6, c12, q, symbol, exclusions);
+        gpuSetCoulombParameters(gpu, epsfac, atom, c6, c12, q, symbol, exclusions, NO_CUTOFF);
         gpuSetObcParameters(gpu, defaultInnerDielectric, defaultSolventDielectric, atom, radius, scale);
         return coulombs;
     }
@@ -807,11 +826,12 @@ int gpuReadCoulombParameters(gpuContext gpu, char* fname)
 
 extern "C"
 void gpuSetCoulombParameters(gpuContext gpu, float epsfac, const vector<int>& atom, const vector<float>& c6, const vector<float>& c12, const vector<float>& q,
-        const vector<char>& symbol, const vector<vector<int> >& exclusions)
+        const vector<char>& symbol, const vector<vector<int> >& exclusions, CudaNonbondedMethod method)
 {
     unsigned int coulombs = atom.size();
     gpu->sim.epsfac = epsfac;
-    unsigned int total_exclusions = 0;
+    gpu->sim.nonbondedMethod = method;
+    gpu->exclusions = exclusions;
 
     for (unsigned int i = 0; i < coulombs; i++)
     {
@@ -827,34 +847,6 @@ void gpuSetCoulombParameters(gpuContext gpu, float epsfac, const vector<int>& at
             gpu->psPosq4->_pSysStream[0][i].w = p0;
             gpu->psSigEps2->_pSysStream[0][i].x = p1;
             gpu->psSigEps2->_pSysStream[0][i].y = p2;
-
-#if (DUMP_PARAMETERS == 1)
-        cout << 
-            i << " " << 
-            gpu->psPosq4->_pSysStream[0][i].w << " " << 
-            gpu->psSigEps2->_pSysStream[0][i].x << " " <<
-            gpu->psSigEps2->_pSysStream[0][i].y << " " << 
-            p0 << " " <<
-            p1 << " " <<
-            p2 << " " <<
-            exclusions;
-#endif
-            for (int j = 0; j < (int) exclusions[i].size(); j++)
-            {
-#if (DUMP_PARAMETERS == 1)
-                cout << " " << exclusions[i][j];
-#endif
-
-                gpu->pExclusion[i * gpu->sim.paddedNumberOfAtoms + exclusions[i][j]] = 0;
-                if (i >= (int) exclusions[i][j])
-                {
-                    total_exclusions++;
-                }
-            }
-#if (DUMP_PARAMETERS == 1)
-            cout << endl;
-#endif
-
     }
 
     // Dummy out extra atom data
@@ -868,36 +860,31 @@ void gpuSetCoulombParameters(gpuContext gpu, float epsfac, const vector<int>& at
         gpu->psSigEps2->_pSysStream[0][i].y     = 0.0f;   
     }
 
-    // Add in remaining exclusions
-    for (unsigned int i = coulombs; i < gpu->sim.paddedNumberOfAtoms; i++)
-    {
-        for (unsigned int j = 0; j < gpu->sim.paddedNumberOfAtoms; j++)
-        {
-            gpu->pExclusion[i * gpu->sim.paddedNumberOfAtoms + j] = 0;
-            gpu->pExclusion[j * gpu->sim.paddedNumberOfAtoms + i] = 0;
-        }
-    }
-
     gpu->psPosq4->Upload();
     gpu->psSigEps2->Upload();
+}
 
-    // Check for exclusion consistency
-    for (unsigned int i = 0; i < coulombs; i++)
-    {
-        for (unsigned int j = i; j < coulombs; j++)
-        {
+extern "C"
+void gpuSetNonbondedCutoff(gpuContext gpu, float cutoffDistance, float solventDielectric)
+{
+    gpu->sim.nonbondedCutoffSqr = cutoffDistance*cutoffDistance;
+    gpu->sim.reactionFieldK = pow(cutoffDistance, -3.0f)*(solventDielectric-1.0f)/(2.0f*solventDielectric+1.0f);
+}
 
-            if (gpu->pExclusion[i * gpu->sim.paddedNumberOfAtoms + j] != gpu->pExclusion[j * gpu->sim.paddedNumberOfAtoms + i])
-                cout << "Warning: inconsistent exclusion betweens atoms " << i << " and " << j << endl;
-        }
-    }
+extern "C"
+void gpuSetPeriodicBoxSize(gpuContext gpu, float xsize, float ysize, float zsize)
+{
+    gpu->sim.periodicBoxSizeX = xsize;
+    gpu->sim.periodicBoxSizeY = ysize;
+    gpu->sim.periodicBoxSizeZ = zsize;
 }
 
 extern "C"
 void gpuSetObcParameters(gpuContext gpu, float innerDielectric, float solventDielectric, const vector<int>& atom, const vector<float>& radius, const vector<float>& scale)
 {
     unsigned int atoms = atom.size();
-    
+
+    gpu->bIncludeGBSA = true;
     for (unsigned int i = 0; i < atoms; i++)
     {
             gpu->psObcData->_pSysStream[0][i].x = radius[i] - dielectricOffset;
@@ -973,11 +960,91 @@ void gpuSetShakeParameters(gpuContext gpu, const vector<int>& atom1, const vecto
         constraintCount[atom1[i]]++;
         constraintCount[atom2[i]]++;
     }
-    
+
+    // Identify clusters of three atoms that can be treated with SETTLE.  First, for every
+    // atom that might be part of such a cluster, make a list of the two other atoms it is
+    // connected to.
+
+    vector<map<int, float> > settleConstraints(gpu->natoms);
+    for (int i = 0; i < atom1.size(); i++) {
+        if (constraintCount[atom1[i]] == 2 && constraintCount[atom2[i]] == 2) {
+            settleConstraints[atom1[i]][atom2[i]] = distance[i];
+            settleConstraints[atom2[i]][atom1[i]] = distance[i];
+        }
+    }
+
+    // Now remove the ones that don't actually form closed loops of three atoms.
+
+    vector<int> settleClusters;
+    for (int i = 0; i < settleConstraints.size(); i++) {
+        if (settleConstraints[i].size() == 2) {
+            int partner1 = settleConstraints[i].begin()->first;
+            int partner2 = (++settleConstraints[i].begin())->first;
+            if (settleConstraints[partner1].size() != 2 || settleConstraints[partner2].size() != 2 ||
+                    settleConstraints[partner1].find(partner2) == settleConstraints[partner1].end())
+                settleConstraints[i].clear();
+            else if (i < partner1 && i < partner2)
+                settleClusters.push_back(i);
+        }
+        else
+            settleConstraints[i].clear();
+    }
+
+    // Record the actual SETTLE clusters.
+
+    CUDAStream<int4>* psSettleID          = new CUDAStream<int4>((int) settleClusters.size(), 1);
+    gpu->psSettleID                       = psSettleID;
+    gpu->sim.pSettleID                    = psSettleID->_pDevStream[0];
+    CUDAStream<float2>* psSettleParameter = new CUDAStream<float2>((int) settleClusters.size(), 1);
+    gpu->psSettleParameter                = psSettleParameter;
+    gpu->sim.pSettleParameter             = psSettleParameter->_pDevStream[0];
+    gpu->sim.settleConstraints            = settleClusters.size();
+    for (int i = 0; i < settleClusters.size(); i++) {
+        int atom1 = settleClusters[i];
+        int atom2 = settleConstraints[atom1].begin()->first;
+        int atom3 = (++settleConstraints[atom1].begin())->first;
+        float dist12 = settleConstraints[atom1].find(atom2)->second;
+        float dist13 = settleConstraints[atom1].find(atom3)->second;
+        float dist23 = settleConstraints[atom2].find(atom3)->second;
+        if (dist12 == dist13) { // atom1 is the central atom
+            psSettleID->_pSysData[i].x = atom1;
+            psSettleID->_pSysData[i].y = atom2;
+            psSettleID->_pSysData[i].z = atom3;
+            psSettleParameter->_pSysData[i].x = dist12;
+            psSettleParameter->_pSysData[i].y = dist23;
+        }
+        else if (dist12 == dist23) { // atom2 is the central atom
+            psSettleID->_pSysData[i].x = atom2;
+            psSettleID->_pSysData[i].y = atom1;
+            psSettleID->_pSysData[i].z = atom3;
+            psSettleParameter->_pSysData[i].x = dist12;
+            psSettleParameter->_pSysData[i].y = dist13;
+        }
+        else if (dist13 == dist23) { // atom3 is the central atom
+            psSettleID->_pSysData[i].x = atom3;
+            psSettleID->_pSysData[i].y = atom1;
+            psSettleID->_pSysData[i].z = atom2;
+            psSettleParameter->_pSysData[i].x = dist13;
+            psSettleParameter->_pSysData[i].y = dist12;
+        }
+        else
+            throw OpenMMException("Two of the three distances constrained with SETTLE must be the same.");
+    }
+    psSettleID->Upload();
+    psSettleParameter->Upload();
+    gpu->sim.settle_threads_per_block     = (gpu->sim.settleConstraints + gpu->sim.blocks - 1) / gpu->sim.blocks;
+    if (gpu->sim.settle_threads_per_block > gpu->sim.max_shake_threads_per_block)
+        gpu->sim.settle_threads_per_block = gpu->sim.max_shake_threads_per_block;
+    if (gpu->sim.settle_threads_per_block < 1)
+        gpu->sim.settle_threads_per_block = 1;
+
     // Find clusters consisting of a central atom with up to three peripheral atoms.
     
     map<int, ShakeCluster> clusters;
     for (int i = 0; i < atom1.size(); i++) {
+        if (settleConstraints[atom1[i]].size() == 2)
+            continue; // This is being taken care of with SETTLE.
+
         // Determine which is the central atom.
         
         bool firstIsCentral;
@@ -1096,9 +1163,6 @@ int gpuAllocateInitialBuffers(gpuContext gpu)
     gpu->sim.degreesOfFreedom           = 3 * gpu->sim.atoms - 6;
     gpu->gpAtomTable                    = NULL;
     gpu->gAtomTypes                     = 0;
-    gpu->sim.nonbondOutputBuffers       = gpu->sim.paddedNumberOfAtoms / GRID;
-    gpu->sim.totalNonbondOutputBuffers  = 2 * gpu->sim.nonbondOutputBuffers;
-    gpu->sim.outputBuffers              = gpu->sim.totalNonbondOutputBuffers;
     gpu->psPosq4                        = new CUDAStream<float4>(gpu->sim.paddedNumberOfAtoms, 1);
     gpu->sim.stride                     = gpu->psPosq4->_stride;
     gpu->sim.stride2                    = gpu->sim.stride * 2;
@@ -1129,10 +1193,14 @@ int gpuAllocateInitialBuffers(gpuContext gpu)
     gpu->psObcData                      = new CUDAStream<float2>(gpu->sim.paddedNumberOfAtoms, 1);
     gpu->sim.pObcData                   = gpu->psObcData->_pDevStream[0];
     gpu->pAtomSymbol                    = new unsigned char[gpu->natoms];
-
+    gpu->psAtomIndex                    = new CUDAStream<int>(gpu->sim.paddedNumberOfAtoms, 1);
+    gpu->sim.pAtomIndex                 = gpu->psAtomIndex->_pDevStream[0];
+    for (int i = 0; i < (int) gpu->sim.paddedNumberOfAtoms; i++)
+        gpu->psAtomIndex->_pSysStream[0][i] = i;
+    gpu->psAtomIndex->Upload();
     // Determine randoms
     gpu->seed                           = (unsigned long)time(NULL) & 0x000fffff;
-    gpu->sim.randomFrames               = 995;
+    gpu->sim.randomFrames               = 95;
     gpu->sim.randomIterations           = gpu->sim.randomFrames;
     gpu->sim.randoms                    = gpu->sim.randomFrames * gpu->sim.paddedNumberOfAtoms - 5 * GRID;
     gpu->sim.totalRandoms               = gpu->sim.randoms + gpu->sim.paddedNumberOfAtoms;
@@ -1351,8 +1419,8 @@ void* gpuInit(int numAtoms)
     {
         sscanf(pAdapter, "%d", &device);
     }
-    cudaError_t status = cudaSetDevice(device);
-    RTERROR(status, "Error setting CUDA device")
+//    cudaError_t status = cudaSetDevice(device);
+//    RTERROR(status, "Error setting CUDA device")
 
     // Determine which core to run on
 #if 0
@@ -1445,6 +1513,8 @@ void* gpuInit(int numAtoms)
     gpu->sim.probeRadius            = probeRadius;
     gpu->sim.surfaceAreaFactor      = surfaceAreaFactor;
     gpu->sim.electricConstant       = electricConstant;
+    gpu->sim.nonbondedMethod        = NO_CUTOFF;
+    gpu->sim.nonbondedCutoffSqr     = 0.0f;
 
     gpu->sim.bigFloat               = 99999999.0f;
     gpu->sim.forceConversionFactor  = forceConversionFactor;
@@ -1461,6 +1531,7 @@ void* gpuInit(int numAtoms)
     gpu->bCalculateCM               = false;
     gpu->bRemoveCM                  = false;
     gpu->bRecalculateBornRadii      = true;
+    gpu->bIncludeGBSA               = false;
     gpuInitializeRandoms(gpu);
 
     // To be determined later
@@ -1489,18 +1560,20 @@ void* gpuInit(int numAtoms)
     gpu->psLJ14Parameter            = NULL;
     gpu->psShakeID                  = NULL;
     gpu->psShakeParameter           = NULL;
+    gpu->psSettleID                 = NULL;
+    gpu->psSettleParameter          = NULL;
     gpu->psExclusion                = NULL;
     gpu->psWorkUnit                 = NULL;
+    gpu->psInteractingWorkUnit      = NULL;
+    gpu->psInteractionFlag          = NULL;
+    gpu->psInteractionCount         = NULL;
+    gpu->psGridBoundingBox          = NULL;
+    gpu->psGridCenter               = NULL;
 
 
     // Initialize output buffer before reading parameters
     gpu->pOutputBufferCounter       = new unsigned int[gpu->sim.paddedNumberOfAtoms];
     memset(gpu->pOutputBufferCounter, 0, gpu->sim.paddedNumberOfAtoms * sizeof(unsigned int));
-    
-    // Initialize exclusion array
-    gpu->pExclusion = new unsigned int[gpu->sim.paddedNumberOfAtoms * gpu->sim.paddedNumberOfAtoms];
-    for (unsigned int i = 0; i < gpu->sim.paddedNumberOfAtoms * gpu->sim.paddedNumberOfAtoms; i++)
-        gpu->pExclusion[i] = 1;
 
     return (void*)gpu;
 }
@@ -1586,7 +1659,6 @@ void gpuShutDown(gpuContext gpu)
 {
     // Delete sysmem pointers
     delete[] gpu->pOutputBufferCounter;
-    delete[] gpu->pExclusion;
     delete[] gpu->gpAtomTable;
     delete[] gpu->pAtomSymbol;
 
@@ -1620,13 +1692,23 @@ void gpuShutDown(gpuContext gpu)
     delete gpu->psLJ14Parameter;
     delete gpu->psShakeID;
     delete gpu->psShakeParameter;
+    delete gpu->psSettleID;
+    delete gpu->psSettleParameter;
     delete gpu->psExclusion;
     delete gpu->psWorkUnit;
+    delete gpu->psInteractingWorkUnit;
+    delete gpu->psInteractionFlag;
+    delete gpu->psInteractionCount;
     delete gpu->psRandom4;
     delete gpu->psRandom2;
     delete gpu->psRandomPosition;    
     delete gpu->psRandomSeed;
     delete gpu->psLinearMomentum;
+    delete gpu->psAtomIndex;
+    delete gpu->psGridBoundingBox;
+    delete gpu->psGridCenter;
+    if (gpu->cudpp != 0)
+        cudppDestroyPlan(gpu->cudpp);
 
     // Wrap up
     delete gpu;
@@ -1636,6 +1718,19 @@ void gpuShutDown(gpuContext gpu)
 extern "C"
 int gpuBuildOutputBuffers(gpuContext gpu)
 {
+    // Select the number of output buffer to use.
+    gpu->bOutputBufferPerWarp           = true;
+    gpu->sim.nonbondOutputBuffers       = gpu->sim.nonbond_blocks * gpu->sim.nonbond_threads_per_block / GRID;
+    if (gpu->sim.nonbondOutputBuffers >= gpu->sim.paddedNumberOfAtoms/GRID)
+    {
+        // For small systems, it is more efficient to have one output buffer per block of 32 atoms instead of one per warp.
+        gpu->bOutputBufferPerWarp           = false;
+        gpu->sim.nonbondOutputBuffers       = gpu->sim.paddedNumberOfAtoms / GRID;
+    }
+    gpu->sim.totalNonbondOutputBuffers  = (gpu->bIncludeGBSA ? 2 * gpu->sim.nonbondOutputBuffers : gpu->sim.nonbondOutputBuffers);
+    gpu->sim.outputBuffers              = gpu->sim.totalNonbondOutputBuffers;
+
+
     unsigned int outputBuffers = gpu->sim.totalNonbondOutputBuffers;
     for (unsigned int i = 0; i < gpu->sim.paddedNumberOfAtoms; i++)
     {
@@ -1715,30 +1810,59 @@ int gpuBuildThreadBlockWorkList(gpuContext gpu)
     const unsigned int grid = gpu->grid;
     const unsigned int dim = (atoms + (grid - 1)) / grid;
     const unsigned int cells = dim * (dim + 1) / 2;
-    const unsigned int* pExclusion = gpu->pExclusion;
     CUDAStream<unsigned int>* psWorkUnit = new CUDAStream<unsigned int>(cells, 1u);
     unsigned int* pWorkList = psWorkUnit->_pSysStream[0];
     gpu->psWorkUnit = psWorkUnit;
     gpu->sim.pWorkUnit = psWorkUnit->_pDevStream[0];
+    CUDAStream<unsigned int>* psInteractingWorkUnit = new CUDAStream<unsigned int>(cells, 1u);
+    gpu->psInteractingWorkUnit = psInteractingWorkUnit;
+    gpu->sim.pInteractingWorkUnit = psInteractingWorkUnit->_pDevStream[0];
+    CUDAStream<unsigned int>* psInteractionFlag = new CUDAStream<unsigned int>(cells, 1u);
+    gpu->psInteractionFlag = psInteractionFlag;
+    gpu->sim.pInteractionFlag = psInteractionFlag->_pDevStream[0];
+    CUDAStream<size_t>* psInteractionCount = new CUDAStream<size_t>(1, 1u);
+    gpu->psInteractionCount = psInteractionCount;
+    gpu->sim.pInteractionCount = psInteractionCount->_pDevStream[0];
+    CUDAStream<float4>* psGridBoundingBox = new CUDAStream<float4>(dim, 1u);
+    gpu->psGridBoundingBox = psGridBoundingBox;
+    gpu->sim.pGridBoundingBox = psGridBoundingBox->_pDevStream[0];
+    CUDAStream<float4>* psGridCenter = new CUDAStream<float4>(dim, 1u);
+    gpu->psGridCenter = psGridCenter;
+    gpu->sim.pGridCenter = psGridCenter->_pDevStream[0];
     gpu->sim.nonbond_workBlock      = gpu->sim.nonbond_threads_per_block / GRID;
     gpu->sim.bornForce2_workBlock   = gpu->sim.bornForce2_threads_per_block / GRID;
     gpu->sim.workUnits = cells;
 
+    // Initialize the CUDPP workspace.
+    gpu->cudpp = 0;
+    CUDPPConfiguration config;
+    config.datatype = CUDPP_UINT;
+    config.algorithm = CUDPP_COMPACT;
+    config.options = CUDPP_OPTION_FORWARD;
+    CUDPPResult result = cudppPlan(&gpu->cudpp, config, cells, 1, 0);
+    if (CUDPP_SUCCESS != result)
+    {
+        printf("Error initializing CUDPP: %d\n", result);
+        exit(-1);
+    }
+
     // Increase block count if necessary for extra large molecules that would
     // otherwise overflow the SM workunit buffers
-    int minimumBlocks = (cells + gpu->sim.workUnitsPerSM - 1) / gpu->sim.workUnitsPerSM;
-    if ((int) gpu->sim.nonbond_blocks < minimumBlocks)
-    {
-        gpu->sim.nonbond_blocks = gpu->sim.nonbond_blocks * ((minimumBlocks + gpu->sim.nonbond_blocks - 1) / gpu->sim.nonbond_blocks);
-    }
-    if ((int) gpu->sim.bornForce2_blocks < minimumBlocks)
-    {
-        gpu->sim.bornForce2_blocks = gpu->sim.bornForce2_blocks * ((minimumBlocks + gpu->sim.bornForce2_blocks - 1) / gpu->sim.bornForce2_blocks);
-    }
+//    int minimumBlocks = (cells + gpu->sim.workUnitsPerSM - 1) / gpu->sim.workUnitsPerSM;
+//    if ((int) gpu->sim.nonbond_blocks < minimumBlocks)
+//    {
+//        gpu->sim.nonbond_blocks = gpu->sim.nonbond_blocks * ((minimumBlocks + gpu->sim.nonbond_blocks - 1) / gpu->sim.nonbond_blocks);
+//    }
+//    if ((int) gpu->sim.bornForce2_blocks < minimumBlocks)
+//    {
+//        gpu->sim.bornForce2_blocks = gpu->sim.bornForce2_blocks * ((minimumBlocks + gpu->sim.bornForce2_blocks - 1) / gpu->sim.bornForce2_blocks);
+//    }
     gpu->sim.nbWorkUnitsPerBlock            = cells / gpu->sim.nonbond_blocks;
     gpu->sim.nbWorkUnitsPerBlockRemainder   = cells - gpu->sim.nonbond_blocks * gpu->sim.nbWorkUnitsPerBlock;
     gpu->sim.bf2WorkUnitsPerBlock           = cells / gpu->sim.bornForce2_blocks;
     gpu->sim.bf2WorkUnitsPerBlockRemainder  = cells - gpu->sim.bornForce2_blocks * gpu->sim.bf2WorkUnitsPerBlock;
+    gpu->sim.interaction_threads_per_block = 64;
+    gpu->sim.interaction_blocks = (gpu->sim.workUnits + gpu->sim.interaction_threads_per_block - 1) / gpu->sim.interaction_threads_per_block;
 
     // Decrease thread count for extra small molecules to spread computation
     // across entire chip
@@ -1763,23 +1887,6 @@ int gpuBuildThreadBlockWorkList(gpuContext gpu)
         for (unsigned int x = y; x < dim; x++)
         {
             pWorkList[count] = (x << 17) | (y << 2);
-
-            // Check for exclusions
-            int exclusions = 0;
-            for (unsigned int i = y * grid; i < y * grid + grid; i++)
-            {
-                for (unsigned int j = x * grid; j < x * grid + grid; j++)
-                {
-                    if (!pExclusion[i * atoms + j])
-                    {
-                        exclusions++;
-                    }
-                }
-            }
-
-            // Signal exclusions if they exist
-            if (exclusions > 0)
-                pWorkList[count] |= 0x1;
             count++;
         }
     }
@@ -1790,42 +1897,58 @@ int gpuBuildThreadBlockWorkList(gpuContext gpu)
 }
 
 extern "C"
-int gpuBuildExclusionList(gpuContext gpu)
+void gpuBuildExclusionList(gpuContext gpu)
 {
-    unsigned int atoms = gpu->sim.paddedNumberOfAtoms;
-    CUDAStream<unsigned int>* psExclusion = new CUDAStream<unsigned int>(atoms * atoms, 1u);
+    const unsigned int atoms = gpu->sim.paddedNumberOfAtoms;
+    const unsigned int grid = gpu->grid;
+    const unsigned int dim = (atoms+(grid-1))/grid;
+    CUDAStream<unsigned int>* psExclusion = new CUDAStream<unsigned int>((atoms*atoms+grid-1) / grid, 1u);
     gpu->psExclusion = psExclusion;
     gpu->sim.pExclusion = psExclusion->_pDevStream[0];
     unsigned int* pExList = psExclusion->_pSysStream[0];
-    int exclusions = 0;
-    unsigned int pos = 0;    
+    unsigned int* pWorkList = gpu->psWorkUnit->_pSysStream[0];
+    for (int i = 0; i < psExclusion->_length; ++i)
+        pExList[i] = 0xFFFFFFFF;
 
-    for (unsigned int x = 0; x < atoms; x += gpu->grid)
+    // Fill in the exclusions.
+
+    for (int atom1 = 0; atom1 < gpu->exclusions.size(); ++atom1)
     {
-        for (unsigned int y = 0; y < atoms; y += gpu->grid)
-        {       
-            for (unsigned x1 = x; x1 < x + gpu->grid; x1++)
-            {
-                unsigned int mask = 0;
-                for (unsigned int y1 = y ; y1 < y + gpu->grid; y1++)
-                {
-                    mask >>= 1;
-                    if (gpu->pExclusion[x1 * atoms + y1] == 0)
-                    {
-                        if (x1 >= y1)
-                            exclusions++;
-                    }
-                    else
-                        mask |= 0x80000000;
-                }
-                pExList[pos++] = mask;
-            }
+        int x = atom1/grid;
+        int offset = atom1-x*grid;
+        for (int j = 0; j < gpu->exclusions[atom1].size(); ++j)
+        {
+            int atom2 = gpu->exclusions[atom1][j];
+            int y = atom2/grid;
+            int index = x*atoms+y*grid+offset;
+            pExList[index] &= 0xFFFFFFFF-(1<<(atom2-y*grid));
+            int cell = (x > y ? x+y*dim-y*(y+1)/2 : y+x*dim-x*(x+1)/2);
+            pWorkList[cell] |= 1;
+        }
+    }
+
+    // Mark all interactions that involve a padding atom as being excluded.
+
+    for (int atom1 = gpu->natoms; atom1 < atoms; ++atom1)
+    {
+        int x = atom1/grid;
+        int offset1 = atom1-x*grid;
+        for (int atom2 = 0; atom2 < atoms; ++atom2)
+        {
+            int y = atom2/grid;
+            int index = x*atoms+y*grid+offset1;
+            pExList[index] &= 0xFFFFFFFF-(1<<(atom2-y*grid));
+            int offset2 = atom2-y*grid;
+            index = y*atoms+x*grid+offset2;
+            pExList[index] &= 0xFFFFFFFF-(1<<(atom1-x*grid));
+            int cell = (x > y ? x+y*dim-y*(y+1)/2 : y+x*dim-x*(x+1)/2);
+            pWorkList[cell] |= 1;
         }
     }
     
     psExclusion->Upload();
+    gpu->psWorkUnit->Upload();
     gpuSetConstants(gpu);
-    return exclusions;
 }
 
 extern "C"
@@ -1842,14 +1965,12 @@ int gpuSetConstants(gpuContext gpu)
     SetUpdateShakeHSim(gpu);
     SetVerletUpdateSim(gpu);
     SetBrownianUpdateSim(gpu);
+    SetSettleSim(gpu);
     SetRandomSim(gpu);
 
     if (gpu->sm_version >= SM_12)
     {
-        SetCalculateCDLJForces_12Sim(gpu);
-        SetCalculateCDLJObcGbsaForces1_12Sim(gpu);
         SetCalculateObcGbsaForces1_12Sim(gpu);
-        SetCalculateObcGbsaForces2_12Sim(gpu);
     }
 
     return 1;
@@ -2704,4 +2825,330 @@ void gpuDumpObcLoop1(gpuContext gpu)
             gpu->psObcChain->_pSysStream[0][i]
         );
     }
+}
+
+static void tagAtomsInMolecule(int atom, int molecule, vector<int>& atomMolecule, vector<vector<int> >& atomBonds)
+{
+    // Recursively tag atoms as belonging to a particular molecule.
+
+    atomMolecule[atom] = molecule;
+    for (int i = 0; i < atomBonds[atom].size(); i++)
+        if (atomMolecule[atomBonds[atom][i]] == -1)
+            tagAtomsInMolecule(atomBonds[atom][i], molecule, atomMolecule, atomBonds);
+}
+
+static void findMoleculeGroups(gpuContext gpu)
+{
+    // First make a list of constraints for future use.
+
+    vector<Constraint> constraints;
+    for (int i = 0; i < gpu->sim.ShakeConstraints; i++)
+    {
+        int atom1 = gpu->psShakeID->_pSysData[i].x;
+        int atom2 = gpu->psShakeID->_pSysData[i].y;
+        int atom3 = gpu->psShakeID->_pSysData[i].z;
+        int atom4 = gpu->psShakeID->_pSysData[i].w;
+        float distance2 = gpu->psShakeParameter->_pSysData[i].z;
+        constraints.push_back(Constraint(atom1, atom2, distance2));
+        if (atom3 != -1)
+            constraints.push_back(Constraint(atom1, atom3, distance2));
+        if (atom4 != -1)
+            constraints.push_back(Constraint(atom1, atom3, distance2));
+    }
+    for (int i = 0; i < gpu->sim.settleConstraints; i++)
+    {
+        int atom1 = gpu->psSettleID->_pSysData[i].x;
+        int atom2 = gpu->psSettleID->_pSysData[i].y;
+        int atom3 = gpu->psSettleID->_pSysData[i].z;
+        float distance12 = gpu->psSettleParameter->_pSysData[i].x;
+        float distance23 = gpu->psSettleParameter->_pSysData[i].y;
+        constraints.push_back(Constraint(atom1, atom2, distance12*distance12));
+        constraints.push_back(Constraint(atom1, atom3, distance12*distance12));
+        constraints.push_back(Constraint(atom2, atom3, distance23*distance23));
+    }
+
+    // First make a list of every other atom to which each atom is connect by a bond or constraint.
+
+    int numAtoms = gpu->natoms;
+    vector<vector<int> > atomBonds(numAtoms);
+    for (int i = 0; i < gpu->sim.bonds; i++)
+    {
+        int atom1 = gpu->psBondID->_pSysData[i].x;
+        int atom2 = gpu->psBondID->_pSysData[i].y;
+        atomBonds[atom1].push_back(atom2);
+        atomBonds[atom2].push_back(atom1);
+    }
+    for (int i = 0; i < constraints.size(); i++)
+    {
+        int atom1 = constraints[i].atom1;
+        int atom2 = constraints[i].atom2;
+        atomBonds[atom1].push_back(atom2);
+        atomBonds[atom2].push_back(atom1);
+    }
+
+    // Now tag atoms by which molecule they belong to.
+
+    vector<int> atomMolecule(numAtoms, -1);
+    int numMolecules = 0;
+    for (int i = 0; i < numAtoms; i++)
+        if (atomMolecule[i] == -1)
+            tagAtomsInMolecule(i, numMolecules++, atomMolecule, atomBonds);
+    vector<vector<int> > atomIndices(numMolecules);
+    for (int i = 0; i < numAtoms; i++)
+        atomIndices[atomMolecule[i]].push_back(i);
+
+    // Construct a description of each molecule.
+
+    vector<Molecule> molecules(numMolecules);
+    for (int i = 0; i < numMolecules; i++)
+        molecules[i].atoms = atomIndices[i];
+    for (int i = 0; i < gpu->sim.bonds; i++)
+    {
+        int atom1 = gpu->psBondID->_pSysData[i].x;
+        molecules[atomMolecule[atom1]].bonds.push_back(i);
+    }
+    for (int i = 0; i < gpu->sim.bond_angles; i++)
+    {
+        int atom1 = gpu->psBondAngleID1->_pSysData[i].x;
+        molecules[atomMolecule[atom1]].angles.push_back(i);
+    }
+    for (int i = 0; i < gpu->sim.dihedrals; i++)
+    {
+        int atom1 = gpu->psDihedralID1->_pSysData[i].x;
+        molecules[atomMolecule[atom1]].periodicTorsions.push_back(i);
+    }
+    for (int i = 0; i < gpu->sim.rb_dihedrals; i++)
+    {
+        int atom1 = gpu->psRbDihedralID1->_pSysData[i].x;
+        molecules[atomMolecule[atom1]].rbTorsions.push_back(i);
+    }
+    for (int i = 0; i < constraints.size(); i++)
+    {
+        molecules[atomMolecule[constraints[i].atom1]].constraints.push_back(i);
+    }
+
+    // Sort them into groups of identical molecules.
+
+    vector<Molecule> uniqueMolecules;
+    vector<vector<int> > moleculeInstances;
+    for (int molIndex = 0; molIndex < molecules.size(); molIndex++)
+    {
+        Molecule& mol = molecules[molIndex];
+
+        // See if it is identical to another molecule.
+
+        bool isNew = true;
+        for (int j = 0; j < uniqueMolecules.size() && isNew; j++)
+        {
+            Molecule& mol2 = uniqueMolecules[j];
+            bool identical = true;
+            if (mol.atoms.size() != mol2.atoms.size() || mol.bonds.size() != mol2.bonds.size()
+                    || mol.angles.size() != mol2.angles.size() || mol.periodicTorsions.size() != mol2.periodicTorsions.size()
+                    || mol.rbTorsions.size() != mol2.rbTorsions.size() || mol.constraints.size() != mol2.constraints.size())
+                identical = false;
+            int atomOffset = mol2.atoms[0]-mol.atoms[0];
+            float4* posq = gpu->psPosq4->_pSysData;
+            float4* velm = gpu->psVelm4->_pSysData;
+            float2* sigeps = gpu->psSigEps2->_pSysData;
+            for (int i = 0; i < mol.atoms.size() && identical; i++)
+                if (mol.atoms[i] != mol2.atoms[i]-atomOffset || posq[mol.atoms[i]].w != posq[mol2.atoms[i]].w ||
+                        velm[mol.atoms[i]].w != velm[mol2.atoms[i]].w || sigeps[mol.atoms[i]].x != sigeps[mol2.atoms[i]].x ||
+                        sigeps[mol.atoms[i]].y != sigeps[mol2.atoms[i]].y)
+                    identical = false;
+            int4* bondID = gpu->psBondID->_pSysData;
+            float2* bondParam = gpu->psBondParameter->_pSysData;
+            for (int i = 0; i < mol.bonds.size() && identical; i++)
+                if (bondID[mol.bonds[i]].x != bondID[mol2.bonds[i]].x-atomOffset || bondID[mol.bonds[i]].y != bondID[mol2.bonds[i]].y-atomOffset ||
+                        bondParam[mol.bonds[i]].x != bondParam[mol2.bonds[i]].x || bondParam[mol.bonds[i]].y != bondParam[mol2.bonds[i]].y)
+                    identical = false;
+            int4* angleID = gpu->psBondAngleID1->_pSysData;
+            float2* angleParam = gpu->psBondAngleParameter->_pSysData;
+            for (int i = 0; i < mol.angles.size() && identical; i++)
+                if (angleID[mol.angles[i]].x != angleID[mol2.angles[i]].x-atomOffset ||
+                        angleID[mol.angles[i]].y != angleID[mol2.angles[i]].y-atomOffset ||
+                        angleID[mol.angles[i]].z != angleID[mol2.angles[i]].z-atomOffset ||
+                        angleParam[mol.angles[i]].x != angleParam[mol2.angles[i]].x ||
+                        angleParam[mol.angles[i]].y != angleParam[mol2.angles[i]].y)
+                    identical = false;
+            int4* periodicID = gpu->psDihedralID1->_pSysData;
+            float4* periodicParam = gpu->psDihedralParameter->_pSysData;
+            for (int i = 0; i < mol.periodicTorsions.size() && identical; i++)
+                if (periodicID[mol.periodicTorsions[i]].x != periodicID[mol2.periodicTorsions[i]].x-atomOffset ||
+                        periodicID[mol.periodicTorsions[i]].y != periodicID[mol2.periodicTorsions[i]].y-atomOffset ||
+                        periodicID[mol.periodicTorsions[i]].z != periodicID[mol2.periodicTorsions[i]].z-atomOffset ||
+                        periodicID[mol.periodicTorsions[i]].w != periodicID[mol2.periodicTorsions[i]].w-atomOffset ||
+                        periodicParam[mol.periodicTorsions[i]].x != periodicParam[mol2.periodicTorsions[i]].x ||
+                        periodicParam[mol.periodicTorsions[i]].y != periodicParam[mol2.periodicTorsions[i]].y ||
+                        periodicParam[mol.periodicTorsions[i]].z != periodicParam[mol2.periodicTorsions[i]].z)
+                    identical = false;
+            int4* rbID = gpu->psRbDihedralID1->_pSysData;
+            float4* rbParam1 = gpu->psRbDihedralParameter1->_pSysData;
+            float2* rbParam2 = gpu->psRbDihedralParameter2->_pSysData;
+            for (int i = 0; i < mol.rbTorsions.size() && identical; i++)
+                if (rbID[mol.rbTorsions[i]].x != rbID[mol2.rbTorsions[i]].x-atomOffset ||
+                        rbID[mol.rbTorsions[i]].y != rbID[mol2.rbTorsions[i]].y-atomOffset ||
+                        rbID[mol.rbTorsions[i]].z != rbID[mol2.rbTorsions[i]].z-atomOffset ||
+                        rbID[mol.rbTorsions[i]].w != rbID[mol2.rbTorsions[i]].w-atomOffset ||
+                        rbParam1[mol.rbTorsions[i]].x != rbParam1[mol2.rbTorsions[i]].x ||
+                        rbParam1[mol.rbTorsions[i]].y != rbParam1[mol2.rbTorsions[i]].y ||
+                        rbParam1[mol.rbTorsions[i]].z != rbParam1[mol2.rbTorsions[i]].z ||
+                        rbParam1[mol.rbTorsions[i]].w != rbParam1[mol2.rbTorsions[i]].w ||
+                        rbParam2[mol.rbTorsions[i]].x != rbParam2[mol2.rbTorsions[i]].x ||
+                        rbParam2[mol.rbTorsions[i]].y != rbParam2[mol2.rbTorsions[i]].y)
+                    identical = false;
+            for (int i = 0; i < mol.constraints.size() && identical; i++)
+                if (constraints[mol.constraints[i]].atom1 != constraints[mol2.constraints[i]].atom1-atomOffset ||
+                        constraints[mol.constraints[i]].atom2 != constraints[mol2.constraints[i]].atom2-atomOffset ||
+                        constraints[mol.constraints[i]].distance2 != constraints[mol2.constraints[i]].distance2)
+                    identical = false;
+            if (identical)
+            {
+                moleculeInstances[j].push_back(mol.atoms[0]);
+                isNew = false;
+            }
+        }
+        if (isNew)
+        {
+            uniqueMolecules.push_back(mol);
+            moleculeInstances.push_back(vector<int>());
+            moleculeInstances[moleculeInstances.size()-1].push_back(mol.atoms[0]);
+        }
+    }
+    gpu->moleculeGroups.resize(moleculeInstances.size());
+    for (int i = 0; i < moleculeInstances.size(); i++)
+    {
+        gpu->moleculeGroups[i].instances = moleculeInstances[i];
+        vector<int>& atoms = uniqueMolecules[i].atoms;
+        gpu->moleculeGroups[i].atoms.resize(atoms.size());
+        for (int j = 0; j < atoms.size(); j++)
+            gpu->moleculeGroups[i].atoms[j] = atoms[j]-atoms[0];
+    }
+}
+
+extern "C"
+void gpuReorderAtoms(gpuContext gpu)
+{
+    if (gpu->natoms == 0 || gpu->sim.nonbondedCutoffSqr == 0.0)
+        return;
+    if (gpu->moleculeGroups.size() == 0)
+        findMoleculeGroups(gpu);
+
+    // Find the range of positions and the number of bins along each axis.
+
+    int numAtoms = gpu->natoms;
+    gpu->psPosq4->Download();
+    gpu->psVelm4->Download();
+    float4* posq = gpu->psPosq4->_pSysData;
+    float4* velm = gpu->psVelm4->_pSysData;
+    float minx = posq[0].x, maxx = posq[0].x;
+    float miny = posq[0].y, maxy = posq[0].y;
+    float minz = posq[0].z, maxz = posq[0].z;
+    if (gpu->sim.nonbondedMethod == PERIODIC)
+    {
+        minx = miny = minz = 0.0;
+        maxx = gpu->sim.periodicBoxSizeX;
+        maxy = gpu->sim.periodicBoxSizeY;
+        maxz = gpu->sim.periodicBoxSizeZ;
+    }
+    else
+    {
+        for (int i = 1; i < numAtoms; i++)
+        {
+            minx = min(minx, posq[i].x);
+            maxx = max(maxx, posq[i].x);
+            miny = min(miny, posq[i].y);
+            maxy = max(maxy, posq[i].y);
+            minz = min(minz, posq[i].z);
+            maxz = max(maxz, posq[i].z);
+        }
+    }
+    float binWidth = 0.2*sqrt(gpu->sim.nonbondedCutoffSqr);
+    int xbins = 1 + (int) ((maxx-minx)/binWidth);
+    int ybins = 1 + (int) ((maxy-miny)/binWidth);
+    int zbins = 1 + (int) ((maxz-minz)/binWidth);
+
+    // Loop over each group of identical molecules and reorder them.
+
+    vector<int> originalIndex(numAtoms);
+    vector<float4> newPosq(numAtoms);
+    vector<float4> newVelm(numAtoms);
+    for (int group = 0; group < gpu->moleculeGroups.size(); group++)
+    {
+        // Find the center of each molecule.
+
+        gpuMoleculeGroup& mol = gpu->moleculeGroups[group];
+        int numMolecules = mol.instances.size();
+        vector<int>& atoms = mol.atoms;
+        vector<float3> molPos(numMolecules);
+        for (int i = 0; i < numMolecules; i++)
+        {
+            molPos[i].x = 0.0f;
+            molPos[i].y = 0.0f;
+            molPos[i].z = 0.0f;
+            for (int j = 0; j < atoms.size(); j++)
+            {
+                int atom = atoms[j]+mol.instances[i];
+                molPos[i].x += posq[atom].x;
+                molPos[i].y += posq[atom].y;
+                molPos[i].z += posq[atom].z;
+            }
+            molPos[i].x /= atoms.size();
+            molPos[i].y /= atoms.size();
+            molPos[i].z /= atoms.size();
+        }
+        if (gpu->sim.nonbondedMethod == PERIODIC)
+        {
+            // Move each molecule position into the same box.
+
+            for (int i = 0; i < numMolecules; i++)
+            {
+                molPos[i].x -= floor(molPos[i].x/gpu->sim.periodicBoxSizeX)*gpu->sim.periodicBoxSizeX;
+                molPos[i].y -= floor(molPos[i].y/gpu->sim.periodicBoxSizeY)*gpu->sim.periodicBoxSizeY;
+                molPos[i].z -= floor(molPos[i].z/gpu->sim.periodicBoxSizeZ)*gpu->sim.periodicBoxSizeZ;
+            }
+        }
+
+        // Select a bin for each molecule, then sort them by bin.
+
+        vector<pair<int, int> > molBins(numMolecules);
+        for (int i = 0; i < numMolecules; i++)
+        {
+            int x = (int) ((molPos[i].x-minx)/binWidth);
+            int y = (int) ((molPos[i].y-miny)/binWidth);
+            int z = (int) ((molPos[i].z-minz)/binWidth);
+            int yodd = y&1;
+            int zodd = z&1;
+            int bin = z*xbins*ybins;
+            bin += (zodd ? ybins-y : y)*xbins;
+            bin += (yodd ? xbins-x : x);
+            molBins[i] = pair<int, int>(bin, i);
+        }
+        sort(molBins.begin(), molBins.end());
+
+        // Reorder the atoms.
+
+        for (int i = 0; i < numMolecules; i++)
+        {
+            for (int j = 0; j < atoms.size(); j++)
+            {
+                int oldIndex = mol.instances[molBins[i].second]+atoms[j];
+                int newIndex = mol.instances[i]+atoms[j];
+                originalIndex[newIndex] = gpu->psAtomIndex->_pSysStream[0][oldIndex];
+                newPosq[newIndex] = posq[oldIndex];
+                newVelm[newIndex] = velm[oldIndex];
+            }
+        }
+    }
+
+    // Update the streams.
+
+    for (int i = 0; i < numAtoms; i++)
+        posq[i] = newPosq[i];
+    gpu->psPosq4->Upload();
+    for (int i = 0; i < numAtoms; i++)
+        velm[i] = newVelm[i];
+    gpu->psVelm4->Upload();
+    for (int i = 0; i < numAtoms; i++)
+        gpu->psAtomIndex->_pSysData[i] = originalIndex[i];
+    gpu->psAtomIndex->Upload();
 }

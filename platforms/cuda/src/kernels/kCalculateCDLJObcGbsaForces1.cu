@@ -33,9 +33,6 @@
 #include <cuda.h>
 #include <vector_functions.h>
 #include <cstdlib>
-#include <string>
-#include <iostream>
-#include <fstream>
 using namespace std;
 
 #include "gputypes.h"
@@ -54,14 +51,7 @@ struct Atom {
     float fy;
     float fz;
     float fb;
-    float q2;
-    float junk;
 };
-
-
-__shared__ Atom sA[G8X_NONBOND_THREADS_PER_BLOCK];
-__shared__ unsigned int sWorkUnit[G8X_NONBOND_WORKUNITS_PER_SM];
-__shared__ unsigned int sNext[GRID];
 
 static __constant__ cudaGmxSimulation cSim;
 
@@ -79,376 +69,122 @@ void GetCalculateCDLJObcGbsaForces1Sim(gpuContext gpu)
     RTERROR(status, "cudaMemcpyFromSymbol: SetSim copy from cSim failed");
 }
 
-__global__ void kCalculateCDLJObcGbsaForces1_kernel()
-{
-    // Read queue of work blocks once so the remainder of
-    // kernel can run asynchronously    
-    int pos = cSim.nbWorkUnitsPerBlock * blockIdx.x + min(blockIdx.x, cSim.nbWorkUnitsPerBlockRemainder);
-    int end = cSim.nbWorkUnitsPerBlock * (blockIdx.x + 1) + min((blockIdx.x + 1), cSim.nbWorkUnitsPerBlockRemainder);    
-    if (threadIdx.x < end - pos)
-    {
-        sWorkUnit[threadIdx.x] = cSim.pWorkUnit[pos + threadIdx.x];
-    }
-    if (threadIdx.x < GRID)
-    {
-        sNext[threadIdx.x]                  = (threadIdx.x + 1) & (GRID - 1);
-    }
-    __syncthreads();
+// Include versions of the kernel for N^2 calculations.
 
-    // Now change pos and end to reflect work queue just read
-    // into shared memory
-    end                                     = end - pos; 
-    pos                                     = end - (threadIdx.x >> GRIDBITS) - 1;
-       
-    while (pos >= 0)
-    {  
-    
-        // Extract cell coordinates from appropriate work unit
-        unsigned int x                      = sWorkUnit[pos];
-        unsigned int y                      = ((x >> 2) & 0x7fff) << GRIDBITS;
-        bool bExclusionFlag                 = (x & 0x1);
-        x                                   = (x >> 17) << GRIDBITS;
-        unsigned int tgx                    = threadIdx.x & (GRID - 1);
-        unsigned int i                      = x + tgx;
-        float4 apos                         = cSim.pPosq[i];
-        float2 a                            = cSim.pAttr[i];
-        float br                            = cSim.pBornRadii[i];        
-        unsigned int tbx                    = threadIdx.x - tgx;
-        int tj                              = tgx; 
-        Atom* psA                           = &sA[tbx];
-        if (!bExclusionFlag)
-        {
-            if (x == y) // Handle diagonals uniquely at 50% efficiency
-            { 
-                // Read fixed atom data into registers and GRF
-                sA[threadIdx.x].x           = apos.x;
-                sA[threadIdx.x].y           = apos.y;
-                sA[threadIdx.x].z           = apos.z;
-                sA[threadIdx.x].q           = cSim.epsfac * apos.w;
-                sA[threadIdx.x].q2          = cSim.preFactor * apos.w;
-                sA[threadIdx.x].sig         = a.x;
-                sA[threadIdx.x].eps         = a.y;
-                sA[threadIdx.x].br          = br; 
-                float4 af;
-                af.x                        = 0.0f;
-                af.y                        = 0.0f;
-                af.z                        = 0.0f;
-                af.w                        = 0.0f;
-                for (unsigned int j = 0; j < GRID; j++)
-                {
-                    float dx                = psA[j].x - apos.x; 
-                    float dy                = psA[j].y - apos.y; 
-                    float dz                = psA[j].z - apos.z; 
-                    float r2                = dx * dx + dy * dy + dz * dz; 
-                                     
-                    // CDLJ part
-						  
-                    float invR              = 1.0f / sqrt(r2);
-                    float sig               = a.x + psA[j].sig; 
-                    float sig2              = invR * sig; 
-                    sig2                   *= sig2;
-                    float sig6              = sig2 * sig2 * sig2; 
-                    float eps               = a.y * psA[j].eps; 
-                    float dEdR              = eps * (12.0f * sig6 - 6.0f) * sig6; 
-                    dEdR                   += apos.w * psA[j].q * invR; 
-                    dEdR                   *= invR * invR; 
-						 
-//float dEdR = 0.0f;
+#define METHOD_NAME(a, b) a##N2##b
+#include "kCalculateCDLJObcGbsaForces1.h"
+#define USE_OUTPUT_BUFFER_PER_WARP
+#undef METHOD_NAME
+#define METHOD_NAME(a, b) a##N2ByWarp##b
+#include "kCalculateCDLJObcGbsaForces1.h"
 
-                    // ObcGbsaForce1 part
-                    float alpha2_ij         = br * psA[j].br;
-                    float D_ij              = r2 / (4.0f * alpha2_ij);
-                    float expTerm           = exp(-D_ij);
-                    float denominator2      = r2 + alpha2_ij * expTerm;
-                    float denominator       = sqrt(denominator2);
-                    float Gpol              = (apos.w * psA[j].q2) / (denominator * denominator2);
-                    float dGpol_dalpha2_ij  = -0.5f * Gpol * expTerm * (1.0f + D_ij); 
-                    af.w                   += dGpol_dalpha2_ij * psA[j].br;   
-                    dEdR                   += Gpol * (1.0f - 0.25f * expTerm); 
-                    
-                    // Add Forces
-                    dx                     *= dEdR; 
-                    dy                     *= dEdR; 
-                    dz                     *= dEdR; 
-                    af.x                   -= dx; 
-                    af.y                   -= dy; 
-                    af.z                   -= dz; 
-                }
-                
-                // Write results
-                int offset                  = x + tgx + (x >> GRIDBITS) * cSim.stride;
-                cSim.pForce4a[offset]       = af;
-                cSim.pBornForce[offset]     = af.w;
-            }         
-            else        // 100% utilization
-            {
-                // Read fixed atom data into registers and GRF
-                int j                       = y + tgx;
-                float4 temp                 = cSim.pPosq[j];
-                float2 temp1                = cSim.pAttr[j];
-                sA[threadIdx.x].br          = cSim.pBornRadii[j];
-                float4 af;
-                sA[threadIdx.x].fx          = af.x = 0.0f;
-                sA[threadIdx.x].fy          = af.y = 0.0f;
-                sA[threadIdx.x].fz          = af.z = 0.0f;
-                sA[threadIdx.x].fb          = af.w = 0.0f;      
-                sA[threadIdx.x].x           = temp.x;
-                sA[threadIdx.x].y           = temp.y;
-                sA[threadIdx.x].z           = temp.z;
-                sA[threadIdx.x].q           = cSim.epsfac * temp.w;
-                sA[threadIdx.x].q2          = cSim.preFactor * temp.w;
-                sA[threadIdx.x].sig         = temp1.x;
-                sA[threadIdx.x].eps         = temp1.y;
-   
-                for (j = 0; j < GRID; j++)
-                {
-                    float dx                = psA[tj].x - apos.x; 
-                    float dy                = psA[tj].y - apos.y; 
-                    float dz                = psA[tj].z - apos.z; 
-                    float r2                = dx * dx + dy * dy + dz * dz; 
-                    
-                    // CDLJ part
-						  
-                    float invR              = 1.0f / sqrt(r2);
-                    float sig               = a.x + psA[tj].sig; 
-                    float sig2              = invR * sig; 
-                    sig2                   *= sig2;
-                    float sig6              = sig2 * sig2 * sig2; 
-                    float eps               = a.y * psA[tj].eps; 
-                    float dEdR              = eps * (12.0f * sig6 - 6.0f) * sig6; 
-                    dEdR                   += apos.w * psA[tj].q * invR; 
-                    dEdR                   *= invR * invR; 
-                  
-//float dEdR = 0.0f;
-                    // ObcGbsaForce1 part
-                    float alpha2_ij         = br * psA[tj].br;
-                    float D_ij              = r2 / (4.0f * alpha2_ij);
-                    float expTerm           = exp(-D_ij);
-                    float denominator2      = r2 + alpha2_ij * expTerm;
-                    float denominator       = sqrt(denominator2);
-                    float Gpol              = (apos.w * psA[tj].q2) / (denominator * denominator2);
-                    float dGpol_dalpha2_ij  = -0.5f * Gpol * expTerm * (1.0f + D_ij); 
-                    af.w                   += dGpol_dalpha2_ij * psA[tj].br;  
-                    psA[tj].fb             += dGpol_dalpha2_ij * br;      
-                    dEdR                   += Gpol * (1.0f - 0.25f * expTerm); 
-                    
-                    // Add forces
-                    dx                     *= dEdR; 
-                    dy                     *= dEdR; 
-                    dz                     *= dEdR; 
-                    af.x                   -= dx; 
-                    af.y                   -= dy; 
-                    af.z                   -= dz;    
-                    psA[tj].fx             += dx; 
-                    psA[tj].fy             += dy; 
-                    psA[tj].fz             += dz;
-                    tj                      = sNext[tj]; 
-                }
-                
-                // Write results
-                int offset                  = x + tgx + (y >> GRIDBITS) * cSim.stride;
-                cSim.pForce4a[offset]       = af;
-                cSim.pBornForce[offset]     = af.w;
-                af.x                        = sA[threadIdx.x].fx;
-                af.y                        = sA[threadIdx.x].fy;
-                af.z                        = sA[threadIdx.x].fz;
-                offset                      = y + tgx + (x >> GRIDBITS) * cSim.stride;
-                cSim.pForce4a[offset]       = af;
-                cSim.pBornForce[offset]     = sA[threadIdx.x].fb;
-            }
-        }
-        else  // bExclusion
-        {
-            // Read exclusion data
-            
-            if (x == y) // Handle diagonals uniquely at 50% efficiency
-            { 
-                // Read fixed atom data into registers and GRF
-                unsigned int excl           = cSim.pExclusion[x * cSim.exclusionStride + y + tgx];
-                float4 af;
-                af.x                        = 0.0f;
-                af.y                        = 0.0f;
-                af.z                        = 0.0f;
-                af.w                        = 0.0f;                                      
-                sA[threadIdx.x].x           = apos.x;
-                sA[threadIdx.x].y           = apos.y;
-                sA[threadIdx.x].z           = apos.z;
-                sA[threadIdx.x].q           = cSim.epsfac * apos.w;
-                sA[threadIdx.x].q2          = cSim.preFactor * apos.w;
-                sA[threadIdx.x].sig         = a.x;
-                sA[threadIdx.x].eps         = a.y;
-                sA[threadIdx.x].br          = br;
+// Include versions of the kernel with cutoffs.
 
-                
-                for (unsigned int j = 0; j < GRID; j++)
-                {
-                    float dx                = psA[j].x - apos.x; 
-                    float dy                = psA[j].y - apos.y; 
-                    float dz                = psA[j].z - apos.z; 
-                    float r2                = dx * dx + dy * dy + dz * dz; 
-                   
-                    // CDLJ part
-						  
-                    float invR              = 1.0f / sqrt(r2);
-                    float sig               = a.x + psA[j].sig; 
-                    float sig2              = invR * sig; 
-                    sig2                   *= sig2;
-                    float sig6              = sig2 * sig2 * sig2; 
-                    float eps               = a.y * psA[j].eps; 
-                    float dEdR              = eps * (12.0f * sig6 - 6.0f) * sig6; 
-                    dEdR                   += apos.w * psA[j].q * invR; 
-                    dEdR                   *= invR * invR;
-                    if (!(excl & 0x1))
-                    {
-                        dEdR = 0.0f;
-                    } 
-						  
-                  
-//float dEdR = 0.0f;
+#undef METHOD_NAME
+#undef USE_OUTPUT_BUFFER_PER_WARP
+#define USE_CUTOFF
+#define METHOD_NAME(a, b) a##Cutoff##b
+#include "kCalculateCDLJObcGbsaForces1.h"
+#define USE_OUTPUT_BUFFER_PER_WARP
+#undef METHOD_NAME
+#define METHOD_NAME(a, b) a##CutoffByWarp##b
+#include "kCalculateCDLJObcGbsaForces1.h"
 
-                    // ObcGbsaForce1 part
-                    float alpha2_ij         = br * psA[j].br;
-                    float D_ij              = r2 / (4.0f * alpha2_ij);
-                    float expTerm           = exp(-D_ij);
-                    float denominator2      = r2 + alpha2_ij * expTerm;
-                    float denominator       = sqrt(denominator2);
-                    float Gpol              = (apos.w * psA[j].q2) / (denominator * denominator2);
-                    float dGpol_dalpha2_ij  = -0.5f * Gpol * expTerm * (1.0f + D_ij); 
-                    af.w                   += dGpol_dalpha2_ij * psA[j].br;   
-                    dEdR                   += Gpol * (1.0f - 0.25f * expTerm); 
+// Include versions of the kernel with periodic boundary conditions.
 
-                    // Add Forces
-                    dx                     *= dEdR; 
-                    dy                     *= dEdR; 
-                    dz                     *= dEdR; 
-                    af.x                   -= dx; 
-                    af.y                   -= dy; 
-                    af.z                   -= dz; 
-                    excl                  >>= 1;               
-                }
-                
-                // Write results
-                int offset                  = x + tgx + (x >> GRIDBITS) * cSim.stride;
-                cSim.pForce4a[offset]       = af;
-                cSim.pBornForce[offset]     = af.w;
-            }         
-            else        // 100% utilization
-            {
-                // Read fixed atom data into registers and GRF        
-                unsigned int excl           = cSim.pExclusion[x * cSim.exclusionStride + y + tgx];
-                float4 af;
-                sA[threadIdx.x].fx          = af.x = 0.0f;
-                sA[threadIdx.x].fy          = af.y = 0.0f;
-                sA[threadIdx.x].fz          = af.z = 0.0f;
-                sA[threadIdx.x].fb          = af.w = 0.0f;
-                int j                       = y + tgx;
-                float4 temp                 = cSim.pPosq[j];
-                float2 temp1                = cSim.pAttr[j];
-                sA[threadIdx.x].br          = cSim.pBornRadii[j];
-                excl                        = (excl >> tgx) | (excl << (GRID - tgx));                
-                sA[threadIdx.x].x           = temp.x;
-                sA[threadIdx.x].y           = temp.y;
-                sA[threadIdx.x].z           = temp.z;
-                sA[threadIdx.x].q           = cSim.epsfac * temp.w;
-                sA[threadIdx.x].q2          = cSim.preFactor * temp.w;
-                sA[threadIdx.x].sig         = temp1.x;
-                sA[threadIdx.x].eps         = temp1.y;
-                
-                for (j = 0; j < GRID; j++)
-                {
-                    float dx                = psA[tj].x - apos.x; 
-                    float dy                = psA[tj].y - apos.y; 
-                    float dz                = psA[tj].z - apos.z; 
-                    float r2                = dx * dx + dy * dy + dz * dz; 
-                    
-                    // CDLJ part
-                    float invR              = 1.0f / sqrt(r2);
-                    float sig               = a.x + psA[tj].sig; 
-                    float sig2              = invR * sig; 
-                    sig2                   *= sig2;
-                    float sig6              = sig2 * sig2 * sig2; 
-                    float eps               = a.y * psA[tj].eps; 
-						  
-                    float dEdR              = eps * (12.0f * sig6 - 6.0f) * sig6; 
-                    dEdR                   += apos.w * psA[tj].q * invR; 
-                    dEdR                   *= invR * invR;
-                    if (!(excl & 0x1))
-                    {
-                        dEdR = 0.0f;
-                    } 
-						
-   
-//float dEdR = 0.0f;
-                    // ObcGbsaForce1 part
-                    float alpha2_ij         = br * psA[tj].br;
-                    float D_ij              = r2 / (4.0f * alpha2_ij);
-                    float expTerm           = exp(-D_ij);
-                    float denominator2      = r2 + alpha2_ij * expTerm;
-                    float denominator       = sqrt(denominator2);
-                    float Gpol              = (apos.w * psA[tj].q2) / (denominator * denominator2);
-                    float dGpol_dalpha2_ij  = -0.5f * Gpol * expTerm * (1.0f + D_ij); 
-                    af.w                   += dGpol_dalpha2_ij * psA[tj].br;  
-                    psA[tj].fb             += dGpol_dalpha2_ij * br;      
-                    dEdR                   += Gpol * (1.0f - 0.25f * expTerm); 
-                   
-                    // Add forces
-                    dx                     *= dEdR; 
-                    dy                     *= dEdR; 
-                    dz                     *= dEdR; 
-                    af.x                   -= dx; 
-                    af.y                   -= dy; 
-                    af.z                   -= dz;    
-                    psA[tj].fx             += dx; 
-                    psA[tj].fy             += dy; 
-                    psA[tj].fz             += dz;
-                    excl                  >>= 1;
-                    tj                      = sNext[tj]; 
-                }
-                
-                // Write results
-                int offset                  = x + tgx + (y >> GRIDBITS) * cSim.stride;
-                cSim.pForce4a[offset]       = af;
-                cSim.pBornForce[offset]     = af.w;
-                offset                      = y + tgx + (x >> GRIDBITS) * cSim.stride;
-                af.x                        = sA[threadIdx.x].fx;
-                af.y                        = sA[threadIdx.x].fy;
-                af.z                        = sA[threadIdx.x].fz;
-                cSim.pForce4a[offset]       = af;
-                cSim.pBornForce[offset]     = sA[threadIdx.x].fb;
-            }
-        }
+#undef METHOD_NAME
+#undef USE_OUTPUT_BUFFER_PER_WARP
+#define USE_PERIODIC
+#define METHOD_NAME(a, b) a##Periodic##b
+#include "kCalculateCDLJObcGbsaForces1.h"
+#define USE_OUTPUT_BUFFER_PER_WARP
+#undef METHOD_NAME
+#define METHOD_NAME(a, b) a##PeriodicByWarp##b
+#include "kCalculateCDLJObcGbsaForces1.h"
 
-        pos -= cSim.nonbond_workBlock;     
-    }
-}
-
-__global__ extern void kCalculateCDLJObcGbsaForces1_12_kernel();
+extern __global__ void kFindBlockBoundsCutoff_kernel();
+extern __global__ void kFindBlockBoundsPeriodic_kernel();
+extern __global__ void kFindBlocksWithInteractionsCutoff_kernel();
+extern __global__ void kFindBlocksWithInteractionsPeriodic_kernel();
 
 void kCalculateCDLJObcGbsaForces1(gpuContext gpu)
 {
-    //printf("In kCalculateCDLJObcGbsaForces1 QQQ\n");
+//    printf("kCalculateCDLJObcGbsaForces1\n");
 
     // check if Born radii need to be calculated
 
-    if( gpu->bRecalculateBornRadii ){
-	    kCalculateObcGbsaBornSum(gpu);
-		 kReduceObcGbsaBornSum(gpu);
-	 }
-
-    if (gpu->sm_version < SM_12)
-        kCalculateCDLJObcGbsaForces1_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block>>>();
-    else
-        kCalculateCDLJObcGbsaForces1_12_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block>>>();
-
-if( 0 ){
-   static int step = 0;
-//   int numPrint    = -1;
-   step++;
-   //WriteArrayToFile1( gpu, "ObcGbsaBornBRad", step, gpu->psBornRadii, numPrint );
-   //gpuDumpCoordinates( gpu );
-	kReduceBornSumAndForces( gpu );
-   gpuDumpObcLoop1( gpu );
-}
-
-    LAUNCHERROR("kCalculateCDLJObcGbsaForces1");
+    kClearBornForces(gpu);
+    CUDPPResult result;
+    size_t numWithInteractions;
+    switch (gpu->sim.nonbondedMethod)
+    {
+        case NO_CUTOFF:
+            if (gpu->bRecalculateBornRadii)
+            {
+                kCalculateObcGbsaBornSum(gpu);
+                kReduceObcGbsaBornSum(gpu);
+            }
+            if (gpu->bOutputBufferPerWarp)
+                kCalculateCDLJObcGbsaN2ByWarpForces1_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                        sizeof(Atom)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pWorkUnit, gpu->sim.workUnits);
+            else
+                kCalculateCDLJObcGbsaN2Forces1_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                        sizeof(Atom)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pWorkUnit, gpu->sim.workUnits);
+            LAUNCHERROR("kCalculateCDLJObcGbsaN2Forces1");
+            break;
+        case CUTOFF:
+            kFindBlockBoundsCutoff_kernel<<<(gpu->psGridBoundingBox->_length+63)/64, 64>>>();
+            LAUNCHERROR("kFindBlockBoundsCutoff");
+            kFindBlocksWithInteractionsCutoff_kernel<<<gpu->sim.interaction_blocks, gpu->sim.interaction_threads_per_block>>>();
+            LAUNCHERROR("kFindBlocksWithInteractionsCutoff");
+            result = cudppCompact(gpu->cudpp, gpu->sim.pInteractingWorkUnit, gpu->sim.pInteractionCount,
+                    gpu->sim.pWorkUnit, gpu->sim.pInteractionFlag, gpu->sim.workUnits);
+            if (result != CUDPP_SUCCESS)
+            {
+                printf("Error in cudppCompact: %d\n", result);
+                exit(-1);
+            }
+            gpu->psInteractionCount->Download();
+            if (gpu->bRecalculateBornRadii)
+            {
+                kCalculateObcGbsaBornSum(gpu);
+                kReduceObcGbsaBornSum(gpu);
+            }
+            numWithInteractions = gpu->psInteractionCount->_pSysData[0];
+            if (gpu->bOutputBufferPerWarp)
+                kCalculateCDLJObcGbsaCutoffByWarpForces1_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                        sizeof(Atom)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
+            else
+                kCalculateCDLJObcGbsaCutoffForces1_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                        sizeof(Atom)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
+            LAUNCHERROR("kCalculateCDLJCutoffForces");
+            break;
+        case PERIODIC:
+            kFindBlockBoundsPeriodic_kernel<<<(gpu->psGridBoundingBox->_length+63)/64, 64>>>();
+            LAUNCHERROR("kFindBlockBoundsPeriodic");
+            kFindBlocksWithInteractionsPeriodic_kernel<<<gpu->sim.interaction_blocks, gpu->sim.interaction_threads_per_block>>>();
+            LAUNCHERROR("kFindBlocksWithInteractionsPeriodic");
+            result = cudppCompact(gpu->cudpp, gpu->sim.pInteractingWorkUnit, gpu->sim.pInteractionCount,
+                    gpu->sim.pWorkUnit, gpu->sim.pInteractionFlag, gpu->sim.workUnits);
+            if (result != CUDPP_SUCCESS)
+            {
+                printf("Error in cudppCompact: %d\n", result);
+                exit(-1);
+            }
+            gpu->psInteractionCount->Download();
+            if (gpu->bRecalculateBornRadii)
+            {
+                kCalculateObcGbsaBornSum(gpu);
+                kReduceObcGbsaBornSum(gpu);
+            }
+            numWithInteractions = gpu->psInteractionCount->_pSysData[0];
+            if (gpu->bOutputBufferPerWarp)
+                kCalculateCDLJObcGbsaPeriodicByWarpForces1_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                        sizeof(Atom)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
+            else
+                kCalculateCDLJObcGbsaPeriodicForces1_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                        sizeof(Atom)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
+            LAUNCHERROR("kCalculateCDLJPeriodicForces");
+            break;
+    }
 }

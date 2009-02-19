@@ -33,12 +33,18 @@
  * -------------------------------------------------------------------------- */
 
 #include "cudatypes.h"
+#include "cudpp.h"
 #include <vector>
 
 struct gpuAtomType {
-    string name;
+    std::string name;
     char symbol;
     float r;
+};
+
+struct gpuMoleculeGroup {
+    std::vector<int> atoms;
+    std::vector<int> instances;
 };
 
 enum SM_VERSION
@@ -61,8 +67,9 @@ struct _gpuContext {
     int gAtomTypes;
     cudaGmxSimulation sim;
     unsigned int* pOutputBufferCounter;
-    unsigned int* pExclusion;
+    std::vector<std::vector<int> > exclusions;
     unsigned char* pAtomSymbol;
+    std::vector<gpuMoleculeGroup> moleculeGroups;
     float iterations;
     float epsfac;
     float solventDielectric;
@@ -70,9 +77,12 @@ struct _gpuContext {
     int grid;
     bool bCalculateCM;
     bool bRemoveCM;
-	 bool bRecalculateBornRadii;
+    bool bRecalculateBornRadii;
+    bool bOutputBufferPerWarp;
+    bool bIncludeGBSA;
     unsigned long seed;
     SM_VERSION sm_version;
+    CUDPPHandle cudpp;
     CUDAStream<float4>* psPosq4;
     CUDAStream<float4>* psPosqP4;
     CUDAStream<float4>* psOldPosq4;
@@ -103,15 +113,21 @@ struct _gpuContext {
     CUDAStream<int>* psNonShakeID;
     CUDAStream<int4>* psShakeID;
     CUDAStream<float4>* psShakeParameter;
+    CUDAStream<int4>* psSettleID;
+    CUDAStream<float2>* psSettleParameter;
     CUDAStream<unsigned int>* psExclusion;
     CUDAStream<unsigned int>* psWorkUnit;
+    CUDAStream<unsigned int>* psInteractingWorkUnit;
+    CUDAStream<unsigned int>* psInteractionFlag;
+    CUDAStream<size_t>* psInteractionCount;
     CUDAStream<float4>* psRandom4;          // Pointer to sets of 4 random numbers for MD integration
     CUDAStream<float2>* psRandom2;          // Pointer to sets of 2 random numbers for MD integration
     CUDAStream<uint4>* psRandomSeed;        // Pointer to each random seed
     CUDAStream<int>* psRandomPosition;      // Pointer to random number positions
     CUDAStream<float4>* psLinearMomentum;   // Pointer to total linear momentum per CTA
-   
-
+    CUDAStream<int>* psAtomIndex;           // The original index of each atom
+    CUDAStream<float4>* psGridBoundingBox;  // The size of each grid cell
+    CUDAStream<float4>* psGridCenter;       // The center and radius for each grid cell
 };
 
 typedef struct _gpuContext *gpuContext;
@@ -156,10 +172,10 @@ void gpuSetLJ14Parameters(gpuContext gpu, float epsfac, float fudge, const std::
         const std::vector<float>& c6, const std::vector<float>& c12, const std::vector<float>& q1, const std::vector<float>& q2);
 
 extern "C"
-float gpuGetAtomicRadius(gpuContext gpu, string s);
+float gpuGetAtomicRadius(gpuContext gpu, std::string s);
 
 extern "C"
-unsigned char gpuGetAtomicSymbol(gpuContext gpu, string s);
+unsigned char gpuGetAtomicSymbol(gpuContext gpu, std::string s);
 
 extern "C"
 int gpuReadAtomicParameters(gpuContext gpu, char* fname);
@@ -169,7 +185,13 @@ int gpuReadCoulombParameters(gpuContext gpu, char* fname);
 
 extern "C"
 void gpuSetCoulombParameters(gpuContext gpu, float epsfac, const std::vector<int>& atom, const std::vector<float>& c6, const std::vector<float>& c12, const std::vector<float>& q,
-        const std::vector<char>& symbol, const std::vector<vector<int> >& exclusions);
+        const std::vector<char>& symbol, const std::vector<std::vector<int> >& exclusions, CudaNonbondedMethod method);
+
+extern "C"
+void gpuSetNonbondedCutoff(gpuContext gpu, float cutoffDistance, float solventDielectric);
+
+extern "C"
+void gpuSetPeriodicBoxSize(gpuContext gpu, float xsize, float ysize, float zsize);
 
 extern "C"
 void gpuSetObcParameters(gpuContext gpu, float innerDielectric, float solventDielectric, const std::vector<int>& atom, const std::vector<float>& radius, const std::vector<float>& scale);
@@ -227,7 +249,7 @@ extern "C"
 int gpuBuildThreadBlockWorkList(gpuContext gpu);
 
 extern "C"
-int gpuBuildExclusionList(gpuContext gpu);
+void gpuBuildExclusionList(gpuContext gpu);
 
 extern "C"
 int gpuSetConstants(gpuContext gpu);
@@ -273,5 +295,8 @@ void gpuDumpObcInfo(gpuContext gpu);
 
 extern "C"
 void gpuDumpObcLoop1(gpuContext gpu); 
+
+extern "C"
+void gpuReorderAtoms(gpuContext gpu);
 
 #endif //__GPUTYPES_H__

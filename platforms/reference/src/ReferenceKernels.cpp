@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -419,6 +419,26 @@ void ReferenceCalcGBSAOBCForceKernel::initialize(const System& system, const GBS
     obcParameters->setScaledRadiusFactors(scaleFactors);
     obcParameters->setSolventDielectric( static_cast<RealOpenMM>(force.getSolventDielectric()) );
     obcParameters->setSoluteDielectric( static_cast<RealOpenMM>(force.getSoluteDielectric()) );
+
+    // If there is a NonbondedForce in this system, use it to initialize cutoffs and periodic boundary conditions.
+
+    for (int i = 0; i < system.getNumForces(); i++) {
+        const NonbondedForce* nonbonded = dynamic_cast<const NonbondedForce*>(&system.getForce(i));
+        if (nonbonded != NULL) {
+            if (nonbonded->getNonbondedMethod() != NonbondedForce::NoCutoff)
+                obcParameters->setUseCutoff(nonbonded->getCutoffDistance());
+            if (nonbonded->getNonbondedMethod() == NonbondedForce::CutoffPeriodic) {
+                Vec3 boxVectors[3];
+                nonbonded->getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+                RealOpenMM periodicBoxSize[3];
+                periodicBoxSize[0] = (RealOpenMM) boxVectors[0][0];
+                periodicBoxSize[1] = (RealOpenMM) boxVectors[1][1];
+                periodicBoxSize[2] = (RealOpenMM) boxVectors[2][2];
+                obcParameters->setPeriodic(periodicBoxSize);
+            }
+            break;
+        }
+    }
     obc = new CpuObc(obcParameters);
     obc->setIncludeAceApproximation(true);
 }

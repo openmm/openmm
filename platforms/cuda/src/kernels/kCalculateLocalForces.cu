@@ -440,48 +440,154 @@ __global__ void kCalculateLocalForces_kernel()
         pos += blockDim.x * gridDim.x;
     }   
 
-    while (pos < cSim.LJ14_offset)
-    {  
-        unsigned int pos1       = pos - cSim.rb_dihedral_offset;
-        if (pos1 < cSim.LJ14s)
+    if (cSim.nonbondedMethod == NO_CUTOFF)
+    {
+        while (pos < cSim.LJ14_offset)
         {
-            int4 atom               = cSim.pLJ14ID[pos1];
-            float4 LJ14             = cSim.pLJ14Parameter[pos1];
-            float4 a1               = cSim.pPosq[atom.x];
-            float4 a2               = cSim.pPosq[atom.y];
-            float3 d;
-            d.x                     = a1.x - a2.x;
-            d.y                     = a1.y - a2.y;
-            d.z                     = a1.z - a2.z;
-            float r2                = DOT3(d, d);
-            float inverseR          = 1.0f / sqrt(r2);
-            float sig2              = inverseR * LJ14.y;
-            sig2                   *= sig2;
-            float sig6              = sig2 * sig2 * sig2;
-            float dEdR              = LJ14.x * (12.0f * sig6 - 6.0f) * sig6;
-            dEdR                   += LJ14.z * inverseR;
-            dEdR                   *= inverseR * inverseR;
-            unsigned int offsetA    = atom.x + atom.z * cSim.stride;
-            unsigned int offsetB    = atom.y + atom.w * cSim.stride;
-            float4 forceA           = {0.0f, 0.0f, 0.0f, 0.0f}; 
-            if (atom.z < cSim.totalNonbondOutputBuffers)
-                forceA              = cSim.pForce4[offsetA]; 
-            float4 forceB           = {0.0f, 0.0f, 0.0f, 0.0f}; 
-            if (atom.w < cSim.totalNonbondOutputBuffers)
-                forceB              = cSim.pForce4[offsetB]; 
-            d.x                    *= dEdR;
-            d.y                    *= dEdR;
-            d.z                    *= dEdR;
-            forceA.x               += d.x;
-            forceA.y               += d.y;
-            forceA.z               += d.z;
-            forceB.x               -= d.x;
-            forceB.y               -= d.y;
-            forceB.z               -= d.z;        
-            cSim.pForce4[offsetA]   = forceA;
-            cSim.pForce4[offsetB]   = forceB;
-        }        
-        pos                    += blockDim.x * gridDim.x;
+            unsigned int pos1       = pos - cSim.rb_dihedral_offset;
+            if (pos1 < cSim.LJ14s)
+            {
+                int4 atom               = cSim.pLJ14ID[pos1];
+                float4 LJ14             = cSim.pLJ14Parameter[pos1];
+                float4 a1               = cSim.pPosq[atom.x];
+                float4 a2               = cSim.pPosq[atom.y];
+                float3 d;
+                d.x                     = a1.x - a2.x;
+                d.y                     = a1.y - a2.y;
+                d.z                     = a1.z - a2.z;
+                float r2                = DOT3(d, d);
+                float inverseR          = 1.0f / sqrt(r2);
+                float sig2              = inverseR * LJ14.y;
+                sig2                   *= sig2;
+                float sig6              = sig2 * sig2 * sig2;
+                float dEdR              = LJ14.x * (12.0f * sig6 - 6.0f) * sig6;
+                dEdR                   += LJ14.z * inverseR;
+                dEdR                   *= inverseR * inverseR;
+                unsigned int offsetA    = atom.x + atom.z * cSim.stride;
+                unsigned int offsetB    = atom.y + atom.w * cSim.stride;
+                float4 forceA           = {0.0f, 0.0f, 0.0f, 0.0f};
+                if (atom.z < cSim.totalNonbondOutputBuffers)
+                    forceA              = cSim.pForce4[offsetA];
+                float4 forceB           = {0.0f, 0.0f, 0.0f, 0.0f};
+                if (atom.w < cSim.totalNonbondOutputBuffers)
+                    forceB              = cSim.pForce4[offsetB];
+                d.x                    *= dEdR;
+                d.y                    *= dEdR;
+                d.z                    *= dEdR;
+                forceA.x               += d.x;
+                forceA.y               += d.y;
+                forceA.z               += d.z;
+                forceB.x               -= d.x;
+                forceB.y               -= d.y;
+                forceB.z               -= d.z;
+                cSim.pForce4[offsetA]   = forceA;
+                cSim.pForce4[offsetB]   = forceB;
+            }
+            pos                    += blockDim.x * gridDim.x;
+        }
+    }
+    else if (cSim.nonbondedMethod == CUTOFF)
+    {
+        while (pos < cSim.LJ14_offset)
+        {
+            unsigned int pos1       = pos - cSim.rb_dihedral_offset;
+            if (pos1 < cSim.LJ14s)
+            {
+                int4 atom               = cSim.pLJ14ID[pos1];
+                float4 LJ14             = cSim.pLJ14Parameter[pos1];
+                float4 a1               = cSim.pPosq[atom.x];
+                float4 a2               = cSim.pPosq[atom.y];
+                float3 d;
+                d.x                     = a1.x - a2.x;
+                d.y                     = a1.y - a2.y;
+                d.z                     = a1.z - a2.z;
+                float r2                = DOT3(d, d);
+                float inverseR          = 1.0f / sqrt(r2);
+                float sig2              = inverseR * LJ14.y;
+                sig2                   *= sig2;
+                float sig6              = sig2 * sig2 * sig2;
+                float dEdR              = LJ14.x * (12.0f * sig6 - 6.0f) * sig6;
+                dEdR                   += LJ14.z * (inverseR - 2.0f * cSim.reactionFieldK * r2);
+                dEdR                   *= inverseR * inverseR;
+                if (r2 > cSim.nonbondedCutoffSqr)
+                {
+                    dEdR = 0.0f;
+                }
+                unsigned int offsetA    = atom.x + atom.z * cSim.stride;
+                unsigned int offsetB    = atom.y + atom.w * cSim.stride;
+                float4 forceA           = {0.0f, 0.0f, 0.0f, 0.0f};
+                if (atom.z < cSim.totalNonbondOutputBuffers)
+                    forceA              = cSim.pForce4[offsetA];
+                float4 forceB           = {0.0f, 0.0f, 0.0f, 0.0f};
+                if (atom.w < cSim.totalNonbondOutputBuffers)
+                    forceB              = cSim.pForce4[offsetB];
+                d.x                    *= dEdR;
+                d.y                    *= dEdR;
+                d.z                    *= dEdR;
+                forceA.x               += d.x;
+                forceA.y               += d.y;
+                forceA.z               += d.z;
+                forceB.x               -= d.x;
+                forceB.y               -= d.y;
+                forceB.z               -= d.z;
+                cSim.pForce4[offsetA]   = forceA;
+                cSim.pForce4[offsetB]   = forceB;
+            }
+            pos                    += blockDim.x * gridDim.x;
+        }
+    }
+    else if (cSim.nonbondedMethod == PERIODIC)
+    {
+        while (pos < cSim.LJ14_offset)
+        {
+            unsigned int pos1       = pos - cSim.rb_dihedral_offset;
+            if (pos1 < cSim.LJ14s)
+            {
+                int4 atom               = cSim.pLJ14ID[pos1];
+                float4 LJ14             = cSim.pLJ14Parameter[pos1];
+                float4 a1               = cSim.pPosq[atom.x];
+                float4 a2               = cSim.pPosq[atom.y];
+                float3 d;
+                d.x                     = a1.x - a2.x;
+                d.y                     = a1.y - a2.y;
+                d.z                     = a1.z - a2.z;
+                d.x                     -= floor(d.x/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                d.y                     -= floor(d.x/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                d.z                     -= floor(d.x/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                float r2                = DOT3(d, d);
+                float inverseR          = 1.0f / sqrt(r2);
+                float sig2              = inverseR * LJ14.y;
+                sig2                   *= sig2;
+                float sig6              = sig2 * sig2 * sig2;
+                float dEdR              = LJ14.x * (12.0f * sig6 - 6.0f) * sig6;
+                dEdR                   += LJ14.z * (inverseR - 2.0f * cSim.reactionFieldK * r2);
+                dEdR                   *= inverseR * inverseR;
+                if (r2 > cSim.nonbondedCutoffSqr)
+                {
+                    dEdR = 0.0f;
+                }
+                unsigned int offsetA    = atom.x + atom.z * cSim.stride;
+                unsigned int offsetB    = atom.y + atom.w * cSim.stride;
+                float4 forceA           = {0.0f, 0.0f, 0.0f, 0.0f};
+                if (atom.z < cSim.totalNonbondOutputBuffers)
+                    forceA              = cSim.pForce4[offsetA];
+                float4 forceB           = {0.0f, 0.0f, 0.0f, 0.0f};
+                if (atom.w < cSim.totalNonbondOutputBuffers)
+                    forceB              = cSim.pForce4[offsetB];
+                d.x                    *= dEdR;
+                d.y                    *= dEdR;
+                d.z                    *= dEdR;
+                forceA.x               += d.x;
+                forceA.y               += d.y;
+                forceA.z               += d.z;
+                forceB.x               -= d.x;
+                forceB.y               -= d.y;
+                forceB.z               -= d.z;
+                cSim.pForce4[offsetA]   = forceA;
+                cSim.pForce4[offsetB]   = forceB;
+            }
+            pos                    += blockDim.x * gridDim.x;
+        }
     }
 
 }

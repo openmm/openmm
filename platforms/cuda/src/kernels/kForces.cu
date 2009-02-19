@@ -61,9 +61,9 @@ void GetForcesSim(gpuContext gpu)
 __global__ void kClearForces_kernel()
 {
     unsigned int pos = blockIdx.x * blockDim.x + threadIdx.x;
-    while (pos < cSim.stride4 * cSim.outputBuffers)
+    while (pos < cSim.stride * cSim.outputBuffers)
     {
-        ((float*)cSim.pForce4)[pos] = 0.0f;
+        cSim.pForce4[pos] = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
         pos += gridDim.x * blockDim.x;
     }
 }

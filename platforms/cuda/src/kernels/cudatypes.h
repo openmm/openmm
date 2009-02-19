@@ -36,11 +36,12 @@
 #include <limits>
 #include <iostream>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string>
 #include <cuda.h>
 #include <cuda_runtime_api.h>
 #include <builtin_types.h>
 #include <vector_functions.h>
-using namespace std;
 
 #define RTERROR(status, s) \
     if (status != cudaSuccess) { \
@@ -122,7 +123,7 @@ CUDAStream<T>::~CUDAStream()
 template <typename T>
 void CUDAStream<T>::Allocate()
 {
-     cudaError_t status;
+    cudaError_t status;
     _pSysStream =   new T*[_subStreams];
     _pDevStream =   new T*[_subStreams];
     _pSysData =     new T[_subStreams * _stride];
@@ -228,6 +229,12 @@ static const int GT2XX_RANDOM_THREADS_PER_BLOCK         = 384;
 static const int G8X_NONBOND_WORKUNITS_PER_SM           = 220;
 static const int GT2XX_NONBOND_WORKUNITS_PER_SM         = 256;
 
+enum CudaNonbondedMethod
+{
+    NO_CUTOFF,
+    CUTOFF,
+    PERIODIC
+};
 
 struct cudaGmxSimulation {
     // Constants
@@ -236,6 +243,7 @@ struct cudaGmxSimulation {
     unsigned int    blocks;                         // Number of blocks to launch across linear kernels
     unsigned int    nonbond_blocks;                 // Number of blocks to launch across CDLJ and Born Force Part1
     unsigned int    bornForce2_blocks;              // Number of blocks to launch across Born Force 2
+    unsigned int    interaction_blocks;             // Number of blocks to launch when identifying interacting tiles
     unsigned int    threads_per_block;              // Threads per block to launch
     unsigned int    nonbond_threads_per_block;      // Threads per block in nonbond kernel calls
     unsigned int    bornForce2_threads_per_block;   // Threads per block in nonbond kernel calls
@@ -245,12 +253,17 @@ struct cudaGmxSimulation {
     unsigned int    bsf_reduce_threads_per_block;   // Threads per block in Born Sum And Forces reduction calls
     unsigned int    max_shake_threads_per_block;    // Maximum threads per block in shake kernel calls
     unsigned int    shake_threads_per_block;        // Threads per block in shake kernel calls
+    unsigned int    settle_threads_per_block;       // Threads per block in SETTLE kernel calls
     unsigned int    nonshake_threads_per_block;     // Threads per block in nonshaking kernel call
     unsigned int    max_localForces_threads_per_block;  // Threads per block in local forces kernel calls
     unsigned int    localForces_threads_per_block;  // Threads per block in local forces kernel calls
     unsigned int    random_threads_per_block;       // Threads per block in RNG kernel calls
+    unsigned int    interaction_threads_per_block;  // Threads per block when identifying interacting tiles
     unsigned int    workUnits;                      // Number of work units
     unsigned int*   pWorkUnit;                      // Pointer to work units
+    unsigned int*   pInteractingWorkUnit;           // Pointer to work units that have interactions
+    unsigned int*   pInteractionFlag;               // Flags for which work units have interactions
+    size_t*         pInteractionCount;              // A count of the number of work units which have interactions
     unsigned int    nonbond_workBlock;              // Number of work units running simultaneously per block in CDLJ and Born Force Part 1
     unsigned int    bornForce2_workBlock;           // Number of work units running second half of Born Forces calculation
     unsigned int    workUnitsPerSM;                 // Number of workblocks per SM
@@ -270,6 +283,12 @@ struct cudaGmxSimulation {
     unsigned int    outputBuffers;                  // Number of output buffers
     float           bigFloat;                       // Floating point value used as a flag for Shaken atoms 
     float           epsfac;                         // Epsilon factor for CDLJ calculations
+    CudaNonbondedMethod nonbondedMethod;            // How to handle nonbonded interactions
+    float           nonbondedCutoffSqr;             // Cutoff distance for CDLJ calculations
+    float           periodicBoxSizeX;               // The X dimension of the periodic box
+    float           periodicBoxSizeY;               // The Y dimension of the periodic box
+    float           periodicBoxSizeZ;               // The Z dimension of the periodic box
+    float           reactionFieldK;                 // Constant for reaction field correction
     float           probeRadius;                    // SASA probe radius
     float           surfaceAreaFactor;              // ACE approximation surface area factor
     float           electricConstant;               // ACE approximation electric constant
@@ -326,6 +345,7 @@ struct cudaGmxSimulation {
     float4*         pLJ14Parameter;                 // Lennard Jones 1-4 parameters
     float           inverseTotalMass;               // Used in linear momentum removal
     unsigned int    ShakeConstraints;               // Total number of Shake constraints
+    unsigned int    settleConstraints;              // Total number of Settle constraints
     unsigned int    NonShakeConstraints;            // Total number of NonShake atoms
     unsigned int    maxShakeIterations;             // Maximum shake iterations
     unsigned int    degreesOfFreedom;               // Number of degrees of freedom in system
@@ -334,12 +354,17 @@ struct cudaGmxSimulation {
     int*            pNonShakeID;                    // Not Shaking atoms
     int4*           pShakeID;                       // Shake atoms and phase
     float4*         pShakeParameter;                // Shake parameters
+    int4*           pSettleID;                      // Settle atoms
+    float2*         pSettleParameter;               // Settle parameters
     unsigned int*   pExclusion;                     // Nonbond exclusion data
     unsigned int    bond_offset;                    // Offset to end of bonds
     unsigned int    bond_angle_offset;              // Offset to end of bond angles
     unsigned int    dihedral_offset;                // Offset to end of dihedrals
     unsigned int    rb_dihedral_offset;             // Offset to end of Ryckaert Bellemans dihedrals
     unsigned int    LJ14_offset;                    // Offset to end of Lennard Jones 1-4 parameters
+    int*            pAtomIndex;                     // The original index of each atom
+    float4*         pGridBoundingBox;               // The size of each grid cell
+    float4*         pGridCenter;                    // The center of each grid cell
 
     // Mutable stuff
     float4*         pPosq;                          // Pointer to atom positions and charges

@@ -61,7 +61,6 @@ void GetVerletUpdateSim(gpuContext gpu)
 __global__ void kVerletUpdatePart1_kernel()
 {
     unsigned int pos    = threadIdx.x + blockIdx.x * blockDim.x;
-    __syncthreads();
     
     while (pos < cSim.atoms)
     {
@@ -175,7 +174,6 @@ void kVerletUpdatePart1(gpuContext gpu)
 __global__ void kVerletUpdatePart2_kernel()
 {
     unsigned int pos            = threadIdx.x + blockIdx.x * blockDim.x;
-    __syncthreads();
     
     while (pos < cSim.atoms)
     {
@@ -208,7 +206,6 @@ __global__ void kVerletUpdatePart2CM_kernel()
     extern __shared__ float3 sCM[];
     unsigned int pos            = threadIdx.x + blockIdx.x * blockDim.x;
     float3 CM                   = {0.0f, 0.0f, 0.0f};
-    __syncthreads();
     
     while (pos < cSim.atoms)
     {
