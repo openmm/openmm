@@ -65,14 +65,16 @@ private:
 
 class CudaPlatform::PlatformData {
 public:
-    PlatformData(_gpuContext* gpu) : gpu(gpu), removeCM(false), useOBC(false), hasBonds(false), hasAngles(false),
-            hasPeriodicTorsions(false), hasRB(false), hasNonbonded(false), primaryKernel(NULL) {
+    PlatformData(_gpuContext* gpu) : gpu(gpu), removeCM(false), nonbondedMethod(0), hasBonds(false), hasAngles(false),
+            hasPeriodicTorsions(false), hasRB(false), hasNonbonded(false), primaryKernel(NULL), stepCount(0) {
     }
     _gpuContext* gpu;
     KernelImpl* primaryKernel;
-    bool removeCM, useOBC;
+    bool removeCM;
     bool hasBonds, hasAngles, hasPeriodicTorsions, hasRB, hasNonbonded;
+    int nonbondedMethod;
     int cmMotionFrequency;
+    int stepCount;
 };
 
 } // namespace OpenMM

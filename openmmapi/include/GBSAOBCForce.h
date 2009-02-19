@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -40,6 +40,9 @@ namespace OpenMM {
 
 /**
  * This class implements an implicit solvation force using the GBSA-OBC model.
+ * <p>
+ * If the System also contains a NonbondedForce, this force will use the cutoffs
+ * and periodic boundary conditions specified in it.
  */
 
 class OPENMM_EXPORT GBSAOBCForce : public Force {

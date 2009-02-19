@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -47,24 +47,30 @@ using namespace std;
 
 static void calcForces(OpenMMContextImpl& context, CudaPlatform::PlatformData& data) {
     _gpuContext* gpu = data.gpu;
-    if (data.useOBC) {
+    if (data.stepCount%100 == 0)
+        gpuReorderAtoms(gpu);
+    data.stepCount++;
+    kClearForces(gpu);
+    if (gpu->bIncludeGBSA) {
         gpu->bRecalculateBornRadii = true;
         kCalculateCDLJObcGbsaForces1(gpu);
         kReduceObcGbsaBornForces(gpu);
         kCalculateObcGbsaForces2(gpu);
     }
-    else {
-        kClearForces(gpu);
+    else if (data.hasNonbonded) {
         kCalculateCDLJForces(gpu);
     }
     kCalculateLocalForces(gpu);
-    kReduceBornSumAndForces(gpu);
+    if (gpu->bIncludeGBSA)
+        kReduceBornSumAndForces(gpu);
+    else
+        kReduceForces(gpu);
 }
 
 static double calcEnergy(OpenMMContextImpl& context, System& system) {
     // We don't currently have GPU kernels to calculate energy, so instead we have the reference
     // platform do it.  This is VERY slow.
-    
+
     LangevinIntegrator integrator(0.0, 1.0, 0.0);
     ReferencePlatform platform;
     OpenMMContext refContext(system, integrator, platform);
@@ -259,7 +265,19 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
             exclusionList[i] = vector<int>(exclusions[i].begin(), exclusions[i].end());
             exclusionList[i].push_back(i);
         }
-        gpuSetCoulombParameters(gpu, 138.935485f, particle, c6, c12, q, symbol, exclusionList);
+        CudaNonbondedMethod method = NO_CUTOFF;
+        if (force.getNonbondedMethod() != NonbondedForce::NoCutoff) {
+            gpuSetNonbondedCutoff(gpu, force.getCutoffDistance(), 78.3f);
+            method = CUTOFF;
+        }
+        if (force.getNonbondedMethod() == NonbondedForce::CutoffPeriodic) {
+            Vec3 boxVectors[3];
+            force.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+            gpuSetPeriodicBoxSize(gpu, boxVectors[0][0], boxVectors[1][1], boxVectors[2][2]);
+            method = PERIODIC;
+        }
+        data.nonbondedMethod = method;
+        gpuSetCoulombParameters(gpu, 138.935485f, particle, c6, c12, q, symbol, exclusionList, method);
     }
 
     // Initialize 1-4 nonbonded interactions.
@@ -312,7 +330,6 @@ void CudaCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOBCF
         scale[i] = (float) scalingFactor;
     }
     gpuSetObcParameters(gpu, (float) force.getSoluteDielectric(), (float) force.getSolventDielectric(), particle, radius, scale);
-    data.useOBC = true;
 }
 
 void CudaCalcGBSAOBCForceKernel::executeForces(OpenMMContextImpl& context) {
@@ -361,12 +378,12 @@ static void initializeIntegration(const System& system, CudaPlatform::PlatformDa
         gpuSetRbDihedralParameters(gpu, vector<int>(), vector<int>(), vector<int>(), vector<int>(), vector<float>(), vector<float>(),
                 vector<float>(), vector<float>(), vector<float>(), vector<float>());
     if (!data.hasNonbonded) {
-        gpuSetCoulombParameters(gpu, 138.935485f, vector<int>(), vector<float>(), vector<float>(), vector<float>(), vector<char>(), vector<vector<int> >());
+        gpuSetCoulombParameters(gpu, 138.935485f, vector<int>(), vector<float>(), vector<float>(), vector<float>(), vector<char>(), vector<vector<int> >(), NO_CUTOFF);
         gpuSetLJ14Parameters(gpu, 138.935485f, 1.0f, vector<int>(), vector<int>(), vector<float>(), vector<float>(), vector<float>(), vector<float>());
     }
     
     // Finish initialization.
-    
+
     gpuBuildThreadBlockWorkList(gpu);
     gpuBuildExclusionList(gpu);
     gpuBuildOutputBuffers(gpu);
@@ -401,6 +418,7 @@ void CudaIntegrateVerletStepKernel::execute(OpenMMContextImpl& context, const Ve
     }
     kVerletUpdatePart1(gpu);
     kApplyFirstShake(gpu);
+    kApplyFirstSettle(gpu);
     if (data.removeCM) {
         int step = (int) (context.getTime()/stepSize);
         if (step%data.cmMotionFrequency == 0)
@@ -415,7 +433,7 @@ CudaIntegrateLangevinStepKernel::~CudaIntegrateLangevinStepKernel() {
 void CudaIntegrateLangevinStepKernel::initialize(const System& system, const LangevinIntegrator& integrator) {
     initializeIntegration(system, data, integrator);
 
-    // if LangevinIntegrator seed does not equal default value or is less than/equal to 0, then 
+    // if LangevinIntegrator seed does not equal default value or is less than/equal to 0, then
     // set gpu seed and redo random values
 
     if( integrator.getRandomNumberSeed() <= 1 ){
@@ -444,6 +462,7 @@ void CudaIntegrateLangevinStepKernel::execute(OpenMMContextImpl& context, const 
     }
     kUpdatePart1(gpu);
     kApplyFirstShake(gpu);
+    kApplyFirstSettle(gpu);
     if (data.removeCM) {
         int step = (int) (context.getTime()/stepSize);
         if (step%data.cmMotionFrequency == 0)
@@ -451,6 +470,7 @@ void CudaIntegrateLangevinStepKernel::execute(OpenMMContextImpl& context, const 
     }
     kUpdatePart2(gpu);
     kApplySecondShake(gpu);
+    kApplySecondSettle(gpu);
 }
 
 CudaIntegrateBrownianStepKernel::~CudaIntegrateBrownianStepKernel() {
@@ -479,6 +499,7 @@ void CudaIntegrateBrownianStepKernel::execute(OpenMMContextImpl& context, const 
     }
     kBrownianUpdatePart1(gpu);
     kApplyFirstShake(gpu);
+    kApplyFirstSettle(gpu);
     if (data.removeCM) {
         int step = (int) (context.getTime()/stepSize);
         if (step%data.cmMotionFrequency == 0)

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -39,6 +39,7 @@
 #include "GBSAOBCForce.h"
 #include "System.h"
 #include "LangevinIntegrator.h"
+#include "NonbondedForce.h"
 #include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
 #include "../src/sfmt/SFMT.h"
 #include <iostream>
@@ -68,6 +69,56 @@ void testSingleParticle() {
     double extendedRadius = bornRadius+0.14; // probe radius
     double nonpolarEnergy = CAL2JOULE*PI_M*0.0216*(10*extendedRadius)*(10*extendedRadius)*std::pow(0.15/bornRadius, 6.0); // Where did this formula come from?  Just copied it from CpuImplicitSolvent.cpp
     ASSERT_EQUAL_TOL((bornEnergy+nonpolarEnergy), state.getPotentialEnergy(), 0.01);
+}
+
+void testCutoffAndPeriodic() {
+    ReferencePlatform platform;
+    System system(2, 0);
+    LangevinIntegrator integrator(0, 0.1, 0.01);
+    GBSAOBCForce* gbsa = new GBSAOBCForce(2);
+    NonbondedForce* nonbonded = new NonbondedForce(2, 0);
+    gbsa->setParticleParameters(0, -1, 0.15, 1);
+    nonbonded->setParticleParameters(0, -1, 1, 0);
+    gbsa->setParticleParameters(1, 1, 0.15, 1);
+    nonbonded->setParticleParameters(1, 1, 1, 0);
+    const double cutoffDistance = 3.0;
+    const double boxSize = 10.0;
+    nonbonded->setCutoffDistance(cutoffDistance);
+    nonbonded->setPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    system.addForce(gbsa);
+    system.addForce(nonbonded);
+    vector<Vec3> positions(2);
+    positions[0] = Vec3(0, 0, 0);
+    positions[1] = Vec3(2, 0, 0);
+
+    // Calculate the forces for both cutoff and periodic with two different atom positions.
+
+    nonbonded->setNonbondedMethod(NonbondedForce::CutoffNonPeriodic);
+    OpenMMContext context(system, integrator, platform);
+    context.setPositions(positions);
+    State state1 = context.getState(State::Forces);
+    nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    context.reinitialize();
+    context.setPositions(positions);
+    State state2 = context.getState(State::Forces);
+    positions[1][0]+= boxSize;
+    nonbonded->setNonbondedMethod(NonbondedForce::CutoffNonPeriodic);
+    context.reinitialize();
+    context.setPositions(positions);
+    State state3 = context.getState(State::Forces);
+    nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    context.reinitialize();
+    context.setPositions(positions);
+    State state4 = context.getState(State::Forces);
+
+    // All forces should be identical, exception state3 which should be zero.
+
+    ASSERT_EQUAL_VEC(state1.getForces()[0], state2.getForces()[0], 0.01);
+    ASSERT_EQUAL_VEC(state1.getForces()[1], state2.getForces()[1], 0.01);
+    ASSERT_EQUAL_VEC(state1.getForces()[0], state4.getForces()[0], 0.01);
+    ASSERT_EQUAL_VEC(state1.getForces()[1], state4.getForces()[1], 0.01);
+    ASSERT_EQUAL_VEC(state3.getForces()[0], Vec3(0, 0, 0), 0.01);
+    ASSERT_EQUAL_VEC(state3.getForces()[1], Vec3(0, 0, 0), 0.01);
 }
 
 void testForce() {
@@ -116,6 +167,7 @@ void testForce() {
 int main() {
     try {
         testSingleParticle();
+        testCutoffAndPeriodic();
         testForce();
     }
     catch(const exception& e) {

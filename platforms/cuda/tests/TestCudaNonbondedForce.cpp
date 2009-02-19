@@ -36,11 +36,16 @@
 #include "../../../tests/AssertionUtilities.h"
 #include "OpenMMContext.h"
 #include "CudaPlatform.h"
+#include "ReferencePlatform.h"
 #include "HarmonicBondForce.h"
 #include "NonbondedForce.h"
 #include "System.h"
 #include "LangevinIntegrator.h"
+#include "VerletIntegrator.h"
+#include "internal/OpenMMContextImpl.h"
+#include "kernels/gputypes.h"
 #include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
+#include "../src/sfmt/SFMT.h"
 #include <iostream>
 #include <vector>
 
@@ -211,6 +216,8 @@ void testCutoff14() {
     system.addForce(bonds);
     NonbondedForce* nonbonded = new NonbondedForce(5, 2);
     nonbonded->setNonbondedMethod(NonbondedForce::CutoffNonPeriodic);
+    nonbonded->setNonbonded14Parameters(0, 0, 3, 0, 1.5, 0.0);
+    nonbonded->setNonbonded14Parameters(1, 1, 4, 0, 1.5, 0.0);
     const double cutoff = 3.5;
     nonbonded->setCutoffDistance(cutoff);
     system.addForce(nonbonded);
@@ -316,14 +323,219 @@ void testPeriodic() {
     ASSERT_EQUAL_TOL(2*138.935485*(1.0)*(1.0+krf*1.0-crf), state.getPotentialEnergy(), TOL);
 }
 
+void testLargeSystem() {
+    const int numMolecules = 600;
+    const int numParticles = numMolecules*2;
+    const double cutoff = 2.0;
+    const double boxSize = 10.0;
+    const double tol = 1e-3;
+    CudaPlatform cuda;
+    ReferencePlatform reference;
+    System system(numParticles, 0);
+    VerletIntegrator integrator(0.01);
+    NonbondedForce* nonbonded = new NonbondedForce(numParticles, 0);
+    HarmonicBondForce* bonds = new HarmonicBondForce(numMolecules);
+    vector<Vec3> positions(numParticles);
+    vector<Vec3> velocities(numParticles);
+    init_gen_rand(0);
+    for (int i = 0; i < numMolecules; i++) {
+        if (i < numMolecules/2) {
+            nonbonded->setParticleParameters(2*i, 1.0, 0.2, 0.1);
+            nonbonded->setParticleParameters(2*i+1, 1.0, 0.1, 0.1);
+        }
+        else {
+            nonbonded->setParticleParameters(2*i, 1.0, 0.2, 0.2);
+            nonbonded->setParticleParameters(2*i+1, 1.0, 0.1, 0.2);
+        }
+        positions[2*i] = Vec3(boxSize*genrand_real2(), boxSize*genrand_real2(), boxSize*genrand_real2());
+        positions[2*i+1] = Vec3(positions[2*i][0]+1.0, positions[2*i][1], positions[2*i][2]);
+        velocities[2*i] = Vec3(genrand_real2(), genrand_real2(), genrand_real2());
+        velocities[2*i+1] = Vec3(genrand_real2(), genrand_real2(), genrand_real2());
+        bonds->setBondParameters(i, 2*i, 2*i+1, 1.0, 0.1);
+    }
+
+    // Try with cutoffs but not periodic boundary conditions, and make sure the Cuda and Reference
+    // platforms agree.
+
+    nonbonded->setNonbondedMethod(NonbondedForce::CutoffNonPeriodic);
+    nonbonded->setCutoffDistance(cutoff);
+    system.addForce(nonbonded);
+    system.addForce(bonds);
+    OpenMMContext cudaContext(system, integrator, cuda);
+    OpenMMContext referenceContext(system, integrator, reference);
+    cudaContext.setPositions(positions);
+    cudaContext.setVelocities(velocities);
+    referenceContext.setPositions(positions);
+    referenceContext.setVelocities(velocities);
+    State cudaState = cudaContext.getState(State::Positions | State::Velocities | State::Forces);
+    State referenceState = referenceContext.getState(State::Positions | State::Velocities | State::Forces);
+    for (int i = 0; i < numParticles; i++) {
+        ASSERT_EQUAL_VEC(cudaState.getPositions()[i], referenceState.getPositions()[i], tol);
+        ASSERT_EQUAL_VEC(cudaState.getVelocities()[i], referenceState.getVelocities()[i], tol);
+        ASSERT_EQUAL_VEC(cudaState.getForces()[i], referenceState.getForces()[i], tol);
+    }
+
+    // Now do the same thing with periodic boundary conditions.
+
+    nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    nonbonded->setPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    cudaContext.reinitialize();
+    referenceContext.reinitialize();
+    cudaContext.setPositions(positions);
+    cudaContext.setVelocities(velocities);
+    referenceContext.setPositions(positions);
+    referenceContext.setVelocities(velocities);
+    cudaState = cudaContext.getState(State::Positions | State::Velocities | State::Forces);
+    referenceState = referenceContext.getState(State::Positions | State::Velocities | State::Forces);
+    for (int i = 0; i < numParticles; i++) {
+        ASSERT_EQUAL_VEC(cudaState.getPositions()[i], referenceState.getPositions()[i], tol);
+        ASSERT_EQUAL_VEC(cudaState.getVelocities()[i], referenceState.getVelocities()[i], tol);
+        ASSERT_EQUAL_VEC(cudaState.getForces()[i], referenceState.getForces()[i], tol);
+    }
+}
+
+void testBlockInteractions(bool periodic) {
+    const int blockSize = 32;
+    const int numBlocks = 100;
+    const int numParticles = blockSize*numBlocks;
+    const double cutoff = 1.0;
+    const double boxSize = (periodic ? 5.1 : 1.1);
+    CudaPlatform cuda;
+    System system(numParticles, 0);
+    VerletIntegrator integrator(0.01);
+    NonbondedForce* nonbonded = new NonbondedForce(numParticles, 0);
+    vector<Vec3> positions(numParticles);
+    init_gen_rand(0);
+    for (int i = 0; i < numParticles; i++) {
+        nonbonded->setParticleParameters(i, 1.0, 0.2, 0.2);
+        positions[i] = Vec3(boxSize*(3*genrand_real2()-1), boxSize*(3*genrand_real2()-1), boxSize*(3*genrand_real2()-1));
+    }
+    nonbonded->setNonbondedMethod(periodic ? NonbondedForce::CutoffPeriodic : NonbondedForce::CutoffNonPeriodic);
+    nonbonded->setCutoffDistance(cutoff);
+    nonbonded->setPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    system.addForce(nonbonded);
+    OpenMMContext context(system, integrator, cuda);
+    context.setPositions(positions);
+    State state = context.getState(State::Positions | State::Velocities | State::Forces);
+    OpenMMContextImpl* contextImpl = *reinterpret_cast<OpenMMContextImpl**>(&context);
+    CudaPlatform::PlatformData& data = *static_cast<CudaPlatform::PlatformData*>(contextImpl->getPlatformData());
+    
+    // Verify that the bounds of each block were calculated correctly.
+
+    data.gpu->psPosq4->Download();
+    data.gpu->psGridBoundingBox->Download();
+    data.gpu->psGridCenter->Download();
+    for (int i = 0; i < numBlocks; i++) {
+        float4 gridSize = data.gpu->psGridBoundingBox->_pSysData[i];
+        float4 center = data.gpu->psGridCenter->_pSysData[i];
+        if (periodic) {
+            ASSERT(gridSize.x < 0.5*boxSize);
+            ASSERT(gridSize.y < 0.5*boxSize);
+            ASSERT(gridSize.z < 0.5*boxSize);
+        }
+        float minx = 0.0, maxx = 0.0, miny = 0.0, maxy = 0.0, minz = 0.0, maxz = 0.0, radius = 0.0;
+        for (int j = 0; j < blockSize; j++) {
+            float4 pos = data.gpu->psPosq4->_pSysData[i*blockSize+j];
+            float dx = pos.x-center.x;
+            float dy = pos.y-center.y;
+            float dz = pos.z-center.z;
+            if (periodic) {
+                dx -= floor(0.5+dx/boxSize)*boxSize;
+                dy -= floor(0.5+dy/boxSize)*boxSize;
+                dz -= floor(0.5+dz/boxSize)*boxSize;
+            }
+            ASSERT(abs(dx) < gridSize.x+TOL);
+            ASSERT(abs(dy) < gridSize.y+TOL);
+            ASSERT(abs(dz) < gridSize.z+TOL);
+            minx = min(minx, dx);
+            maxx = max(maxx, dx);
+            miny = min(miny, dy);
+            maxy = max(maxy, dy);
+            minz = min(minz, dz);
+            maxz = max(maxz, dz);
+        }
+        ASSERT_EQUAL_TOL(-minx, gridSize.x, TOL);
+        ASSERT_EQUAL_TOL(maxx, gridSize.x, TOL);
+        ASSERT_EQUAL_TOL(-miny, gridSize.y, TOL);
+        ASSERT_EQUAL_TOL(maxy, gridSize.y, TOL);
+        ASSERT_EQUAL_TOL(-minz, gridSize.z, TOL);
+        ASSERT_EQUAL_TOL(maxz, gridSize.z, TOL);
+    }
+
+    // Verify that interactions were identified correctly.
+
+    data.gpu->psInteractionCount->Download();
+    int numWithInteractions = data.gpu->psInteractionCount->_pSysData[0];
+    vector<bool> hasInteractions(data.gpu->sim.workUnits, false);
+    data.gpu->psInteractingWorkUnit->Download();
+    data.gpu->psInteractionFlag->Download();
+    const unsigned int atoms = data.gpu->sim.paddedNumberOfAtoms;
+    const unsigned int grid = data.gpu->grid;
+    const unsigned int dim = (atoms+(grid-1))/grid;
+    for (int i = 0; i < numWithInteractions; i++) {
+        unsigned int workUnit = data.gpu->psInteractingWorkUnit->_pSysData[i];
+        unsigned int x = (workUnit >> 17);
+        unsigned int y = ((workUnit >> 2) & 0x7fff);
+        int tile = (x > y ? x+y*dim-y*(y+1)/2 : y+x*dim-x*(x+1)/2);
+        hasInteractions[tile] = true;
+
+        // Make sure this tile really should have been flagged based on bounding volumes.
+
+        float4 gridSize1 = data.gpu->psGridBoundingBox->_pSysData[x];
+        float4 gridSize2 = data.gpu->psGridBoundingBox->_pSysData[y];
+        float4 center1 = data.gpu->psGridCenter->_pSysData[x];
+        float4 center2 = data.gpu->psGridCenter->_pSysData[y];
+        float dx = center1.x-center2.x;
+        float dy = center1.y-center2.y;
+        float dz = center1.z-center2.z;
+        if (periodic) {
+            dx -= floor(0.5+dx/boxSize)*boxSize;
+            dy -= floor(0.5+dy/boxSize)*boxSize;
+            dz -= floor(0.5+dz/boxSize)*boxSize;
+        }
+        dx = max(0.0f, abs(dx)-gridSize1.x-gridSize2.x);
+        dy = max(0.0f, abs(dy)-gridSize1.y-gridSize2.y);
+        dz = max(0.0f, abs(dz)-gridSize1.z-gridSize2.z);
+        ASSERT(sqrt(dx*dx+dy*dy+dz*dz) < cutoff+TOL);
+    }
+
+    // Check the tiles that did not have interactions to make sure all atoms are beyond the cutoff.
+
+    data.gpu->psWorkUnit->Download();
+    for (int i = 0; i < hasInteractions.size(); i++)
+        if (!hasInteractions[i]) {
+            unsigned int workUnit = data.gpu->psWorkUnit->_pSysData[i];
+            unsigned int x = (workUnit >> 17);
+            unsigned int y = ((workUnit >> 2) & 0x7fff);
+            for (int atom1 = 0; atom1 < blockSize; ++atom1) {
+                float4 pos1 = data.gpu->psPosq4->_pSysData[x*blockSize+atom1];
+                for (int atom2 = 0; atom2 < blockSize; ++atom2) {
+                    float4 pos2 = data.gpu->psPosq4->_pSysData[y*blockSize+atom2];
+                    float dx = pos1.x-pos2.x;
+                    float dy = pos1.y-pos2.y;
+                    float dz = pos1.z-pos2.z;
+                    if (periodic) {
+                        dx -= floor(0.5+dx/boxSize)*boxSize;
+                        dy -= floor(0.5+dy/boxSize)*boxSize;
+                        dz -= floor(0.5+dz/boxSize)*boxSize;
+                    }
+                    ASSERT(dx*dx+dy*dy+dz*dz > cutoff*cutoff);
+                }
+            }
+        }
+}
+
 int main() {
     try {
         testCoulomb();
         testLJ();
         testExclusionsAnd14();
-//        testCutoff();
-//        testCutoff14();
-//        testPeriodic();
+        testCutoff();
+        testCutoff14();
+        testPeriodic();
+        testLargeSystem();
+        testBlockInteractions(false);
+        testBlockInteractions(true);
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

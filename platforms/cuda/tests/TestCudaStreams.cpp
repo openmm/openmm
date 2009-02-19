@@ -35,7 +35,9 @@
 
 #include "../../../tests/AssertionUtilities.h"
 #include "CudaPlatform.h"
+#include "OpenMMContext.h"
 #include "Stream.h"
+#include "VerletIntegrator.h"
 #include <iostream>
 
 using namespace OpenMM;
@@ -47,7 +49,10 @@ template <class T, int WIDTH>
 void testStream(Stream::DataType type, T scale) {
     const int size = 100;
     CudaPlatform platform;
-    OpenMMContextImpl* impl = 0; // We need to pass an OpenMMContextImpl to createStream, but it will be ignored.
+    System system(size, 0);
+    VerletIntegrator integrator(0.01);
+    OpenMMContext context(system, integrator, platform);
+    OpenMMContextImpl* impl = *reinterpret_cast<OpenMMContextImpl**>(&context);
     Stream stream = platform.createStream("", size, type, *impl);
     const int length = size*WIDTH;
     T array[size*WIDTH+1];

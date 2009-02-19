@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2009 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -101,7 +101,7 @@ const std::string ObcParameters::ParameterFileName = std::string( "params.agb" )
 
    --------------------------------------------------------------------------------------- */
 
-ObcParameters::ObcParameters( int numberOfAtoms, ObcParameters::ObcType obcType ) : ImplicitSolventParameters( numberOfAtoms ){
+ObcParameters::ObcParameters( int numberOfAtoms, ObcParameters::ObcType obcType ) : ImplicitSolventParameters( numberOfAtoms ), cutoff(false), periodic(false) {
 
    // ---------------------------------------------------------------------------------------
 
@@ -656,3 +656,84 @@ int ObcParameters::isNotReady( void ) const {
    return errors;
 }
 
+/**---------------------------------------------------------------------------------------
+
+     Set the force to use a cutoff.
+
+     @param distance            the cutoff distance
+
+     @return ReferenceForce::DefaultReturn
+
+     --------------------------------------------------------------------------------------- */
+
+int ObcParameters::setUseCutoff( RealOpenMM distance ) {
+
+    cutoff = true;
+    cutoffDistance = distance;
+    return SimTKOpenMMCommon::DefaultReturn;
+}
+
+/**---------------------------------------------------------------------------------------
+
+     Get whether to use a cutoff.
+
+     --------------------------------------------------------------------------------------- */
+
+bool ObcParameters::getUseCutoff() {
+    return cutoff;
+}
+
+/**---------------------------------------------------------------------------------------
+
+     Get the cutoff distance.
+
+     --------------------------------------------------------------------------------------- */
+
+RealOpenMM ObcParameters::getCutoffDistance() {
+    return cutoffDistance;
+}
+
+/**---------------------------------------------------------------------------------------
+
+     Set the force to use periodic boundary conditions.  This requires that a cutoff has
+     also been set, and the smallest side of the periodic box is at least twice the cutoff
+     distance.
+
+     @param boxSize             the X, Y, and Z widths of the periodic box
+
+     @return ReferenceForce::DefaultReturn
+
+     --------------------------------------------------------------------------------------- */
+
+int ObcParameters::setPeriodic( RealOpenMM* boxSize ) {
+
+    assert(cutoff);
+    assert(boxSize[0] >= 2.0*cutoffDistance);
+    assert(boxSize[1] >= 2.0*cutoffDistance);
+    assert(boxSize[2] >= 2.0*cutoffDistance);
+    periodic = true;
+    periodicBoxSize[0] = boxSize[0];
+    periodicBoxSize[1] = boxSize[1];
+    periodicBoxSize[2] = boxSize[2];
+    return SimTKOpenMMCommon::DefaultReturn;
+}
+
+/**---------------------------------------------------------------------------------------
+
+     Get whether to use periodic boundary conditions.
+
+     --------------------------------------------------------------------------------------- */
+
+bool ObcParameters::getPeriodic() {
+    return periodic;
+}
+
+/**---------------------------------------------------------------------------------------
+
+     Get the periodic box dimension
+
+     --------------------------------------------------------------------------------------- */
+
+const RealOpenMM* ObcParameters::getPeriodicBox() {
+    return periodicBoxSize;
+}

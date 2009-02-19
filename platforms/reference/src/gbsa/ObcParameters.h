@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2009 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -54,6 +54,14 @@ class ObcParameters : public ImplicitSolventParameters {
 
       int _ownScaledRadiusFactors;
       RealOpenMM* _scaledRadiusFactors;
+
+      // cutoff and periodic boundary conditions
+      
+      bool cutoff;
+      bool periodic;
+      RealOpenMM periodicBoxSize[3];
+      RealOpenMM cutoffDistance;
+
 
       /**---------------------------------------------------------------------------------------
       
@@ -285,7 +293,65 @@ class ObcParameters : public ImplicitSolventParameters {
          --------------------------------------------------------------------------------------- */
        
       int isNotReady( void ) const;
-      
+
+      /**---------------------------------------------------------------------------------------
+
+         Set the force to use a cutoff.
+
+         @param distance            the cutoff distance
+
+         @return SimTKOpenMMCommon::DefaultReturn
+
+         --------------------------------------------------------------------------------------- */
+
+      int setUseCutoff( RealOpenMM distance );
+
+      /**---------------------------------------------------------------------------------------
+
+         Get whether to use a cutoff.
+
+         --------------------------------------------------------------------------------------- */
+
+      bool getUseCutoff();
+
+      /**---------------------------------------------------------------------------------------
+
+         Get the cutoff distance.
+
+         --------------------------------------------------------------------------------------- */
+
+      RealOpenMM getCutoffDistance();
+
+      /**---------------------------------------------------------------------------------------
+
+         Set the force to use periodic boundary conditions.  This requires that a cutoff has
+         already been set, and the smallest side of the periodic box is at least twice the cutoff
+         distance.
+
+         @param boxSize             the X, Y, and Z widths of the periodic box
+
+         @return SimTKOpenMMCommon::DefaultReturn
+
+         --------------------------------------------------------------------------------------- */
+
+      int setPeriodic( RealOpenMM* boxSize );
+
+      /**---------------------------------------------------------------------------------------
+
+         Get whether to use periodic boundary conditions.
+
+         --------------------------------------------------------------------------------------- */
+
+      bool getPeriodic();
+
+      /**---------------------------------------------------------------------------------------
+
+         Get the periodic box dimension
+
+         --------------------------------------------------------------------------------------- */
+
+      const RealOpenMM* getPeriodicBox();
+
 };
    
 /**---------------------------------------------------------------------------------------

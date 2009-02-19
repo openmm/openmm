@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2009 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -29,6 +29,7 @@
 #include "../SimTKUtilities/SimTKOpenMMLog.h"
 #include "../SimTKUtilities/SimTKOpenMMUtilities.h"
 #include "CpuObc.h"
+#include "../SimTKReference/ReferenceForce.h"
 #include <math.h>
 
 /**---------------------------------------------------------------------------------------
@@ -265,12 +266,14 @@ int CpuObc::computeBornRadii( RealOpenMM** atomCoordinates, RealOpenMM* bornRadi
 
          if( atomJ != atomI ){
 
-            RealOpenMM deltaX          = atomCoordinates[atomJ][0] - atomCoordinates[atomI][0];
-            RealOpenMM deltaY          = atomCoordinates[atomJ][1] - atomCoordinates[atomI][1];
-            RealOpenMM deltaZ          = atomCoordinates[atomJ][2] - atomCoordinates[atomI][2];
- 
-            RealOpenMM r2              = deltaX*deltaX + deltaY*deltaY + deltaZ*deltaZ;
-            RealOpenMM r               = SQRT( r2 );
+            RealOpenMM deltaR[ReferenceForce::LastDeltaRIndex];
+            if (_obcParameters->getPeriodic())
+                ReferenceForce::getDeltaRPeriodic( atomCoordinates[atomI], atomCoordinates[atomJ], _obcParameters->getPeriodicBox(), deltaR );
+            else
+                ReferenceForce::getDeltaR( atomCoordinates[atomI], atomCoordinates[atomJ], deltaR );
+            RealOpenMM r               = deltaR[ReferenceForce::RIndex];
+            if (_obcParameters->getUseCutoff() && r > _obcParameters->getCutoffDistance())
+                continue;
             RealOpenMM offsetRadiusJ   = atomicRadii[atomJ] - dielectricOffset; 
             RealOpenMM scaledRadiusJ   = offsetRadiusJ*scaledRadiusFactor[atomJ];
             RealOpenMM rScaledRadiusJ  = r + scaledRadiusJ;
@@ -417,15 +420,17 @@ int CpuObc::computeBornEnergyForces( RealOpenMM* bornRadii, RealOpenMM** atomCoo
       RealOpenMM partialChargeI = preFactor*partialCharges[atomI];
       for( int atomJ = atomI; atomJ < numberOfAtoms; atomJ++ ){
 
-         // 3 FLOP
-
-         RealOpenMM deltaX             = atomCoordinates[atomJ][0] - atomCoordinates[atomI][0];
-         RealOpenMM deltaY             = atomCoordinates[atomJ][1] - atomCoordinates[atomI][1];
-         RealOpenMM deltaZ             = atomCoordinates[atomJ][2] - atomCoordinates[atomI][2];
- 
-         // 5 FLOP
-
-         RealOpenMM r2                 = deltaX*deltaX + deltaY*deltaY + deltaZ*deltaZ;
+         RealOpenMM deltaR[ReferenceForce::LastDeltaRIndex];
+         if (_obcParameters->getPeriodic())
+             ReferenceForce::getDeltaRPeriodic( atomCoordinates[atomI], atomCoordinates[atomJ], _obcParameters->getPeriodicBox(), deltaR );
+         else
+             ReferenceForce::getDeltaR( atomCoordinates[atomI], atomCoordinates[atomJ], deltaR );
+         if (_obcParameters->getUseCutoff() && deltaR[ReferenceForce::RIndex] > _obcParameters->getCutoffDistance())
+             continue;
+         RealOpenMM r2                 = deltaR[ReferenceForce::R2Index];
+         RealOpenMM deltaX             = deltaR[ReferenceForce::XIndex];
+         RealOpenMM deltaY             = deltaR[ReferenceForce::YIndex];
+         RealOpenMM deltaZ             = deltaR[ReferenceForce::ZIndex];
 
          // 3 FLOP
 
@@ -957,15 +962,17 @@ FILE* logFile = NULL;
       RealOpenMM partialChargeI = preFactor*partialCharges[atomI];
       for( int atomJ = atomI; atomJ < numberOfAtoms; atomJ++ ){
 
-         // 3 FLOP
-
-         RealOpenMM deltaX             = atomCoordinates[atomJ][0] - atomCoordinates[atomI][0];
-         RealOpenMM deltaY             = atomCoordinates[atomJ][1] - atomCoordinates[atomI][1];
-         RealOpenMM deltaZ             = atomCoordinates[atomJ][2] - atomCoordinates[atomI][2];
- 
-         // 5 FLOP
-
-         RealOpenMM r2                 = deltaX*deltaX + deltaY*deltaY + deltaZ*deltaZ;
+         RealOpenMM deltaR[ReferenceForce::LastDeltaRIndex];
+         if (_obcParameters->getPeriodic())
+             ReferenceForce::getDeltaRPeriodic( atomCoordinates[atomI], atomCoordinates[atomJ], _obcParameters->getPeriodicBox(), deltaR );
+         else
+             ReferenceForce::getDeltaR( atomCoordinates[atomI], atomCoordinates[atomJ], deltaR );
+         if (_obcParameters->getUseCutoff() && deltaR[ReferenceForce::RIndex] > _obcParameters->getCutoffDistance())
+             continue;
+         RealOpenMM r2                 = deltaR[ReferenceForce::R2Index];
+         RealOpenMM deltaX             = deltaR[ReferenceForce::XIndex];
+         RealOpenMM deltaY             = deltaR[ReferenceForce::YIndex];
+         RealOpenMM deltaZ             = deltaR[ReferenceForce::ZIndex];
 
          // 3 FLOP
 

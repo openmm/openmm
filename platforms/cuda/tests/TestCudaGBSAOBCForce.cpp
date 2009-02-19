@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -36,6 +36,7 @@
 #include "../../../tests/AssertionUtilities.h"
 #include "OpenMMContext.h"
 #include "CudaPlatform.h"
+#include "ReferencePlatform.h"
 #include "GBSAOBCForce.h"
 #include "System.h"
 #include "LangevinIntegrator.h"
@@ -55,12 +56,12 @@ void testSingleParticle() {
     System system(1, 0);
     system.setParticleMass(0, 2.0);
     LangevinIntegrator integrator(0, 0.1, 0.01);
-    GBSAOBCForce* forceField = new GBSAOBCForce(1);
-    NonbondedForce* standard = new NonbondedForce(1, 0);
-    forceField->setParticleParameters(0, 0.5, 0.15, 1);
-    standard->setParticleParameters(0, 0.5, 1, 0);
-    system.addForce(forceField);
-    system.addForce(standard);
+    GBSAOBCForce* gbsa = new GBSAOBCForce(1);
+    NonbondedForce* nonbonded = new NonbondedForce(1, 0);
+    gbsa->setParticleParameters(0, 0.5, 0.15, 1);
+    nonbonded->setParticleParameters(0, 0.5, 1, 0);
+    system.addForce(gbsa);
+    system.addForce(nonbonded);
     OpenMMContext context(system, integrator, platform);
     vector<Vec3> positions(1);
     positions[0] = Vec3(0, 0, 0);
@@ -68,64 +69,145 @@ void testSingleParticle() {
     State state = context.getState(State::Energy);
     double bornRadius = 0.15-0.009; // dielectric offset
     double eps0 = EPSILON0;
-    double bornEnergy = (-0.5*0.5/(8*PI_M*eps0))*(1.0/forceField->getSoluteDielectric()-1.0/forceField->getSolventDielectric())/bornRadius;
+    double bornEnergy = (-0.5*0.5/(8*PI_M*eps0))*(1.0/gbsa->getSoluteDielectric()-1.0/gbsa->getSolventDielectric())/bornRadius;
     double extendedRadius = bornRadius+0.14; // probe radius
     double nonpolarEnergy = CAL2JOULE*PI_M*0.0216*(10*extendedRadius)*(10*extendedRadius)*std::pow(0.15/bornRadius, 6.0); // Where did this formula come from?  Just copied it from CpuImplicitSolvent.cpp
     ASSERT_EQUAL_TOL((bornEnergy+nonpolarEnergy), state.getPotentialEnergy(), 0.01);
 }
 
-void testForce() {
-    CudaPlatform platform;
-    const int numParticles = 10;
+void testCutoffAndPeriodic() {
+    CudaPlatform cuda;
+    System system(2, 0);
+    LangevinIntegrator integrator(0, 0.1, 0.01);
+    GBSAOBCForce* gbsa = new GBSAOBCForce(2);
+    NonbondedForce* nonbonded = new NonbondedForce(2, 0);
+    gbsa->setParticleParameters(0, -1, 0.15, 1);
+    nonbonded->setParticleParameters(0, -1, 1, 0);
+    gbsa->setParticleParameters(1, 1, 0.15, 1);
+    nonbonded->setParticleParameters(1, 1, 1, 0);
+    const double cutoffDistance = 3.0;
+    const double boxSize = 10.0;
+    nonbonded->setCutoffDistance(cutoffDistance);
+    nonbonded->setPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    system.addForce(gbsa);
+    system.addForce(nonbonded);
+    vector<Vec3> positions(2);
+    positions[0] = Vec3(0, 0, 0);
+    positions[1] = Vec3(2, 0, 0);
+
+    // Calculate the forces for both cutoff and periodic with two different atom positions.
+
+    nonbonded->setNonbondedMethod(NonbondedForce::CutoffNonPeriodic);
+    OpenMMContext context(system, integrator, cuda);
+    context.setPositions(positions);
+    State state1 = context.getState(State::Forces);
+    nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    context.reinitialize();
+    context.setPositions(positions);
+    State state2 = context.getState(State::Forces);
+    positions[1][0]+= boxSize;
+    nonbonded->setNonbondedMethod(NonbondedForce::CutoffNonPeriodic);
+    context.reinitialize();
+    context.setPositions(positions);
+    State state3 = context.getState(State::Forces);
+    nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    context.reinitialize();
+    context.setPositions(positions);
+    State state4 = context.getState(State::Forces);
+
+    // All forces should be identical, exception state3 which should be zero.
+
+    ASSERT_EQUAL_VEC(state1.getForces()[0], state2.getForces()[0], 0.01);
+    ASSERT_EQUAL_VEC(state1.getForces()[1], state2.getForces()[1], 0.01);
+    ASSERT_EQUAL_VEC(state1.getForces()[0], state4.getForces()[0], 0.01);
+    ASSERT_EQUAL_VEC(state1.getForces()[1], state4.getForces()[1], 0.01);
+    ASSERT_EQUAL_VEC(state3.getForces()[0], Vec3(0, 0, 0), 0.01);
+    ASSERT_EQUAL_VEC(state3.getForces()[1], Vec3(0, 0, 0), 0.01);
+}
+
+void testForce(int numParticles, NonbondedForce::NonbondedMethod method) {
+    CudaPlatform cuda;
+    ReferencePlatform reference;
     System system(numParticles, 0);
     LangevinIntegrator integrator(0, 0.1, 0.01);
-    GBSAOBCForce* forceField = new GBSAOBCForce(numParticles);
-    NonbondedForce* standard = new NonbondedForce(numParticles, 0);
+    GBSAOBCForce* gbsa = new GBSAOBCForce(numParticles);
+    NonbondedForce* nonbonded = new NonbondedForce(numParticles, 0);
     for (int i = 0; i < numParticles; ++i) {
         double charge = i%2 == 0 ? -1 : 1;
-        forceField->setParticleParameters(i, charge, 0.15, 1);
-        standard->setParticleParameters(i, charge, 1, 0);
+        gbsa->setParticleParameters(i, charge, 0.15, 1);
+        nonbonded->setParticleParameters(i, charge, 1, 0);
     }
-    system.addForce(forceField);
-    system.addForce(standard);
-    OpenMMContext context(system, integrator, platform);
+    nonbonded->setNonbondedMethod(method);
+    nonbonded->setCutoffDistance(3.0);
+    int grid = (int) floor(0.5+pow(numParticles, 1.0/3.0));
+    if (method == NonbondedForce::CutoffPeriodic) {
+        double boxSize = (grid+1)*2.0;
+        nonbonded->setPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    }
+    system.addForce(gbsa);
+    system.addForce(nonbonded);
+    OpenMMContext context(system, integrator, cuda);
+    OpenMMContext refContext(system, integrator, reference);
     
-    // Set random positions for all the particles.
+    // Set random (but uniformly distributed) positions for all the particles.
     
     vector<Vec3> positions(numParticles);
     init_gen_rand(0);
+    for (int i = 0; i < grid; i++)
+        for (int j = 0; j < grid; j++)
+            for (int k = 0; k < grid; k++)
+                positions[i*grid*grid+j*grid+k] = Vec3(i*2.0, j*2.0, k*2.0);
     for (int i = 0; i < numParticles; ++i)
-        positions[i] = Vec3(5.0*genrand_real2(), 5.0*genrand_real2(), 5.0*genrand_real2());
+        positions[i] = positions[i] + Vec3(0.5*genrand_real2(), 0.5*genrand_real2(), 0.5*genrand_real2());
     context.setPositions(positions);
+    refContext.setPositions(positions);
     State state = context.getState(State::Forces | State::Energy);
-    
-    // Take a small step in the direction of the energy gradient.
-    
+    State refState = refContext.getState(State::Forces | State::Energy);
+
+    // Make sure the Cuda and Reference platforms agree.
+
     double norm = 0.0;
+    double diff = 0.0;
     for (int i = 0; i < numParticles; ++i) {
         Vec3 f = state.getForces()[i];
         norm += f[0]*f[0] + f[1]*f[1] + f[2]*f[2];
+        Vec3 delta = f-refState.getForces()[i];
+        diff += delta[0]*delta[0] + delta[1]*delta[1] + delta[2]*delta[2];
     }
     norm = std::sqrt(norm);
-    const double delta = 1e-2;
-    double step = delta/norm;
-    for (int i = 0; i < numParticles; ++i) {
-        Vec3 p = positions[i];
-        Vec3 f = state.getForces()[i];
-        positions[i] = Vec3(p[0]-f[0]*step, p[1]-f[1]*step, p[2]-f[2]*step);
+    diff = std::sqrt(diff);
+    ASSERT_EQUAL_TOL(0.0, diff, 0.001*norm); 
+
+    // Take a small step in the direction of the energy gradient.  (This doesn't work with cutoffs, since the energy
+    // changes discontinuously at the cutoff distance.)
+
+    if (method == NonbondedForce::NoCutoff)
+    {
+        const double delta = 1e-2;
+        double step = delta/norm;
+        for (int i = 0; i < numParticles; ++i) {
+            Vec3 p = positions[i];
+            Vec3 f = state.getForces()[i];
+            positions[i] = Vec3(p[0]-f[0]*step, p[1]-f[1]*step, p[2]-f[2]*step);
+        }
+        context.setPositions(positions);
+
+        // See whether the potential energy changed by the expected amount.
+
+        State state2 = context.getState(State::Energy);
+        ASSERT_EQUAL_TOL(norm, (state2.getPotentialEnergy()-state.getPotentialEnergy())/delta, 1e-3*abs(state.getPotentialEnergy()));
     }
-    context.setPositions(positions);
-    
-    // See whether the potential energy changed by the expected amount.
-    
-    State state2 = context.getState(State::Energy);
-    ASSERT_EQUAL_TOL(norm, (state2.getPotentialEnergy()-state.getPotentialEnergy())/delta, 0.02)
 }
 
 int main() {
     try {
         testSingleParticle();
-        testForce();
+        testCutoffAndPeriodic();
+        for (int i = 2; i < 11; i++) {
+            testForce(i*i*i, NonbondedForce::NoCutoff);
+            testForce(i*i*i, NonbondedForce::CutoffNonPeriodic);
+            testForce(i*i*i, NonbondedForce::CutoffPeriodic);
+        }
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;
