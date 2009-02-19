@@ -418,7 +418,7 @@ void CudaIntegrateLangevinStepKernel::initialize(const System& system, const Lan
     // if LangevinIntegrator seed does not equal default value or is less than/equal to 0, then 
     // set gpu seed and redo random values
 
-    if( integrator.getRandomNumberSeed() < 1 ){
+    if( integrator.getRandomNumberSeed() <= 1 ){
        _gpuContext* gpu = data.gpu;
        gpu->seed        = static_cast<unsigned long>( integrator.getRandomNumberSeed() );
        gpuInitializeRandoms( gpu );
