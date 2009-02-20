@@ -48,6 +48,7 @@
 #include "System.h"
 #include "internal/OpenMMContextImpl.h"
 #include "Integrator.h"
+#include "SimTKUtilities/SimTKOpenMMUtilities.h"
 #include <cmath>
 #include <limits>
 
@@ -538,6 +539,7 @@ void ReferenceIntegrateLangevinStepKernel::initialize(const System& system, cons
         constraintIndices[i][1] = particle2;
         shakeParameters[i][0] = static_cast<RealOpenMM>(distance);
     }
+    SimTKOpenMMUtilities::setRandomNumberSeed((unsigned int) integrator.getRandomNumberSeed());
 }
 
 void ReferenceIntegrateLangevinStepKernel::execute(OpenMMContextImpl& context, const LangevinIntegrator& integrator) {
@@ -599,6 +601,7 @@ void ReferenceIntegrateBrownianStepKernel::initialize(const System& system, cons
         constraintIndices[i][1] = particle2;
         shakeParameters[i][0] = static_cast<RealOpenMM>(distance);
     }
+    SimTKOpenMMUtilities::setRandomNumberSeed((unsigned int) integrator.getRandomNumberSeed());
 }
 
 void ReferenceIntegrateBrownianStepKernel::execute(OpenMMContextImpl& context, const BrownianIntegrator& integrator) {
@@ -643,6 +646,7 @@ void ReferenceApplyAndersenThermostatKernel::initialize(const System& system, co
     for (int i = 0; i < numParticles; ++i)
         masses[i] = static_cast<RealOpenMM>(system.getParticleMass(i));
     this->thermostat = new ReferenceAndersenThermostat();
+    SimTKOpenMMUtilities::setRandomNumberSeed((unsigned int) thermostat.getRandomNumberSeed());
 }
 
 void ReferenceApplyAndersenThermostatKernel::execute(OpenMMContextImpl& context) {

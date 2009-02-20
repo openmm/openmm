@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2009 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -34,6 +34,8 @@
 
 uint32_t SimTKOpenMMUtilities::_randomNumberSeed = 0;
 bool SimTKOpenMMUtilities::_randomInitialized = false;
+bool SimTKOpenMMUtilities::nextGaussianIsValid = false;
+RealOpenMM SimTKOpenMMUtilities::nextGaussian = 0;
 
 /* ---------------------------------------------------------------------------------------
 
@@ -1428,15 +1430,14 @@ int SimTKOpenMMUtilities::addTwoDimArray( int dimension1, int dimension2,
    --------------------------------------------------------------------------------------- */
 
 RealOpenMM SimTKOpenMMUtilities::getNormallyDistributedRandomNumber( void ) {
-    static bool nextValueIsValid = false;
-    static RealOpenMM nextValue = 0;
-    if (nextValueIsValid) {
-        nextValueIsValid = false;
-        return nextValue;
+    if (nextGaussianIsValid) {
+        nextGaussianIsValid = false;
+        return nextGaussian;
     }
     if (!_randomInitialized) {
         init_gen_rand(_randomNumberSeed);
         _randomInitialized = true;
+        nextGaussianIsValid = false;
     }
     
     // Use the polar form of the Box-Muller transformation to generate two Gaussian random numbers.
@@ -1448,8 +1449,8 @@ RealOpenMM SimTKOpenMMUtilities::getNormallyDistributedRandomNumber( void ) {
         r2 = x*x + y*y;
     } while (r2 >= 1.0 || r2 == 0.0);
     RealOpenMM multiplier = static_cast<RealOpenMM>( sqrt((-2.0*log(r2))/r2) );
-    nextValue = y*multiplier;
-    nextValueIsValid = true;
+    nextGaussian = y*multiplier;
+    nextGaussianIsValid = true;
     return x*multiplier;
 }
 
@@ -1465,8 +1466,10 @@ RealOpenMM SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber( void ) {
     if (!_randomInitialized) {
         init_gen_rand(_randomNumberSeed);
         _randomInitialized = true;
+        nextGaussianIsValid = false;
     }
-    return static_cast<RealOpenMM>( genrand_real2() );
+    RealOpenMM value = static_cast<RealOpenMM>( genrand_real2() );
+    return value;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -1507,5 +1510,5 @@ void SimTKOpenMMUtilities::setRandomNumberSeed( uint32_t seed ) {
    // ---------------------------------------------------------------------------------------
 
    _randomNumberSeed = seed;
-   init_gen_rand(_randomNumberSeed);
+   _randomInitialized = false;
 }

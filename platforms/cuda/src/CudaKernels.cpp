@@ -432,15 +432,9 @@ CudaIntegrateLangevinStepKernel::~CudaIntegrateLangevinStepKernel() {
 
 void CudaIntegrateLangevinStepKernel::initialize(const System& system, const LangevinIntegrator& integrator) {
     initializeIntegration(system, data, integrator);
-
-    // if LangevinIntegrator seed does not equal default value or is less than/equal to 0, then
-    // set gpu seed and redo random values
-
-    if( integrator.getRandomNumberSeed() <= 1 ){
-       _gpuContext* gpu = data.gpu;
-       gpu->seed        = static_cast<unsigned long>( integrator.getRandomNumberSeed() );
-       gpuInitializeRandoms( gpu );
-    }
+    _gpuContext* gpu = data.gpu;
+    gpu->seed = (unsigned long) integrator.getRandomNumberSeed();
+    gpuInitializeRandoms(gpu);
     prevStepSize = -1.0;
 }
 
@@ -478,6 +472,9 @@ CudaIntegrateBrownianStepKernel::~CudaIntegrateBrownianStepKernel() {
 
 void CudaIntegrateBrownianStepKernel::initialize(const System& system, const BrownianIntegrator& integrator) {
     initializeIntegration(system, data, integrator);
+    _gpuContext* gpu = data.gpu;
+    gpu->seed = (unsigned long) integrator.getRandomNumberSeed();
+    gpuInitializeRandoms(gpu);
     prevStepSize = -1.0;
 }
 
@@ -512,6 +509,9 @@ CudaApplyAndersenThermostatKernel::~CudaApplyAndersenThermostatKernel() {
 }
 
 void CudaApplyAndersenThermostatKernel::initialize(const System& system, const AndersenThermostat& thermostat) {
+    _gpuContext* gpu = data.gpu;
+    gpu->seed = (unsigned long) thermostat.getRandomNumberSeed();
+    gpuInitializeRandoms(gpu);
     prevStepSize = -1.0;
 }
 

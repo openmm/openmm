@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -168,11 +168,71 @@ void testConstraints() {
     }
 }
 
+void testRandomSeed() {
+    const int numParticles = 8;
+    const double temp = 100.0;
+    const double collisionFreq = 10.0;
+    CudaPlatform platform;
+    System system(numParticles, 0);
+    BrownianIntegrator integrator(temp, 2.0, 0.001);
+    NonbondedForce* forceField = new NonbondedForce(numParticles, 0);
+    for (int i = 0; i < numParticles; ++i) {
+        system.setParticleMass(i, 2.0);
+        forceField->setParticleParameters(i, (i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
+    }
+    system.addForce(forceField);
+    vector<Vec3> positions(numParticles);
+    vector<Vec3> velocities(numParticles);
+    for (int i = 0; i < numParticles; ++i) {
+        positions[i] = Vec3((i%2 == 0 ? 2 : -2), (i%4 < 2 ? 2 : -2), (i < 4 ? 2 : -2));
+        velocities[i] = Vec3(0, 0, 0);
+    }
+
+    // Try twice with the same random seed.
+
+    integrator.setRandomNumberSeed(5);
+    OpenMMContext context(system, integrator, platform);
+    context.setPositions(positions);
+    context.setVelocities(velocities);
+    integrator.step(10);
+    State state1 = context.getState(State::Positions);
+    context.reinitialize();
+    context.setPositions(positions);
+    context.setVelocities(velocities);
+    integrator.step(10);
+    State state2 = context.getState(State::Positions);
+
+    // Try twice with a different random seed.
+
+    integrator.setRandomNumberSeed(10);
+    context.reinitialize();
+    context.setPositions(positions);
+    context.setVelocities(velocities);
+    integrator.step(10);
+    State state3 = context.getState(State::Positions);
+    context.reinitialize();
+    context.setPositions(positions);
+    context.setVelocities(velocities);
+    integrator.step(10);
+    State state4 = context.getState(State::Positions);
+
+    // Compare the results.
+
+    for (int i = 0; i < numParticles; i++) {
+        for (int j = 0; j < 3; j++) {
+            ASSERT(state1.getPositions()[i][j] == state2.getPositions()[i][j]);
+            ASSERT(state3.getPositions()[i][j] == state4.getPositions()[i][j]);
+            ASSERT(state1.getPositions()[i][j] != state3.getPositions()[i][j]);
+        }
+    }
+}
+
 int main() {
     try {
         testSingleBond();
         testTemperature();
         testConstraints();
+        testRandomSeed();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

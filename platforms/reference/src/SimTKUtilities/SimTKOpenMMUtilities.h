@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2009 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -58,6 +58,8 @@ class OPENMM_EXPORT SimTKOpenMMUtilities {
 
        static uint32_t _randomNumberSeed;
        static bool _randomInitialized;
+       static bool nextGaussianIsValid;
+       static RealOpenMM nextGaussian;
 
    public:
 

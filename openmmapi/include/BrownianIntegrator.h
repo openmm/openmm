@@ -79,6 +79,23 @@ public:
         friction = coeff;
     }
     /**
+     * Get the random number seed.  See setRandomNumberSeed() for details.
+     */
+    int getRandomNumberSeed() const {
+        return randomNumberSeed;
+    }
+    /**
+     * Set the random number seed.  The precise meaning of this parameter is undefined, and is left up
+     * to each Platform to interpret in an appropriate way.  It is guaranteed that if two simulations
+     * are run with different random number seeds, the sequence of random forces will be different.  On
+     * the other hand, no guarantees are made about the behavior of simulations that use the same seed.
+     * In particular, Platforms are permitted to use non-deterministic algorithms which produce different
+     * results on successive runs, even if those runs were initialized identically.
+     */
+    void setRandomNumberSeed(int seed) {
+        randomNumberSeed = seed;
+    }
+    /**
      * Advance a simulation through time by taking a series of time steps.
      * 
      * @param steps   the number of time steps to take
@@ -97,6 +114,7 @@ protected:
     std::vector<std::string> getKernelNames();
 private:
     double temperature, friction;
+    int randomNumberSeed;
     OpenMMContextImpl* context;
     Kernel kernel;
 };

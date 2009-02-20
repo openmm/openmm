@@ -33,6 +33,7 @@
 #include "OpenMMContext.h"
 #include "internal/OpenMMContextImpl.h"
 #include "kernels.h"
+#include <ctime>
 #include <string>
 
 using namespace OpenMM;
@@ -44,6 +45,7 @@ BrownianIntegrator::BrownianIntegrator(double temperature, double frictionCoeff,
     setFriction(frictionCoeff);
     setStepSize(stepSize);
     setConstraintTolerance(1e-4);
+    setRandomNumberSeed((int) time(NULL));
 }
 
 void BrownianIntegrator::initialize(OpenMMContextImpl& contextRef) {

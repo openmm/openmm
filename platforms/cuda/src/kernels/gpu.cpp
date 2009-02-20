@@ -38,7 +38,6 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
-#include <ctime>
 #include <cmath>
 #include <map>
 #include <algorithm>
@@ -1199,7 +1198,7 @@ int gpuAllocateInitialBuffers(gpuContext gpu)
         gpu->psAtomIndex->_pSysStream[0][i] = i;
     gpu->psAtomIndex->Upload();
     // Determine randoms
-    gpu->seed                           = (unsigned long)time(NULL) & 0x000fffff;
+    gpu->seed                           = 1;
     gpu->sim.randomFrames               = 95;
     gpu->sim.randomIterations           = gpu->sim.randomFrames;
     gpu->sim.randoms                    = gpu->sim.randomFrames * gpu->sim.paddedNumberOfAtoms - 5 * GRID;
@@ -1215,35 +1214,6 @@ int gpuAllocateInitialBuffers(gpuContext gpu)
     gpu->sim.pRandom2b                  = gpu->psRandom2->_pDevStream[0] + gpu->sim.totalRandoms;
     gpu->sim.pRandomPosition            = gpu->psRandomPosition->_pDevStream[0];
     gpu->sim.pRandomSeed                = gpu->psRandomSeed->_pDevStream[0];
-    for (int i = 0; i < (int) gpu->sim.blocks; i++)
-    {
-        gpu->psRandomPosition->_pSysStream[0][i] = 0;
-    }
-    int seed = gpu->seed | ((gpu->seed ^ 0xffffffff) << 16);
-    srand(seed);
-    for (int i = 0; i < (int) (gpu->sim.blocks * gpu->sim.random_threads_per_block); i++)
-    {
-        gpu->psRandomSeed->_pSysStream[0][i].x = rand();
-        gpu->psRandomSeed->_pSysStream[0][i].y = rand();
-        gpu->psRandomSeed->_pSysStream[0][i].z = rand();
-        gpu->psRandomSeed->_pSysStream[0][i].w = rand();
-    }
-
-    float randomValue = 0.0f;
-    for (int i = 0; i < (int) gpu->sim.totalRandomsTimesTwo; i++)
-    {
-        gpu->psRandom4->_pSysStream[0][i].x         = randomValue;
-        gpu->psRandom4->_pSysStream[0][i].y         = randomValue;
-        gpu->psRandom4->_pSysStream[0][i].z         = randomValue;
-        gpu->psRandom4->_pSysStream[0][i].w         = randomValue;
-        gpu->psRandom2->_pSysStream[0][i].x         = randomValue;
-        gpu->psRandom2->_pSysStream[0][i].y         = randomValue;
-    }
-
-    gpu->psRandomSeed->Upload();
-    gpu->psRandom4->Upload();
-    gpu->psRandom2->Upload();
-    gpu->psRandomPosition->Upload();
 
     // Allocate and clear linear momentum buffer
     gpu->psLinearMomentum = new CUDAStream<float4>(gpu->sim.blocks, 1);

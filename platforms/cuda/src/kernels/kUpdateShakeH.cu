@@ -720,12 +720,11 @@ void kUpdatePart2(gpuContext gpu)
     }
     
     // Update randoms if necessary
-    static int iteration = 0;
-    iteration++;
-    if (iteration == gpu->sim.randomIterations)
+    gpu->iterations++;
+    if (gpu->iterations == gpu->sim.randomIterations)
     {
         kGenerateRandoms(gpu);
-        iteration = 0;
+        gpu->iterations = 0;
     }
 }
 
