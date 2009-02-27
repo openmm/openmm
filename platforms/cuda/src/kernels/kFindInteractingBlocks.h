@@ -61,9 +61,9 @@ __global__ void METHOD_NAME(kFindBlockBounds, _kernel)()
         {
             apos = cSim.pPosq[base+i];
 #ifdef USE_PERIODIC
-            apos.x -= floor((apos.x-firstPoint.x)/cSim.periodicBoxSizeX+0.5)*cSim.periodicBoxSizeX;
-            apos.y -= floor((apos.y-firstPoint.y)/cSim.periodicBoxSizeY+0.5)*cSim.periodicBoxSizeY;
-            apos.z -= floor((apos.z-firstPoint.z)/cSim.periodicBoxSizeZ+0.5)*cSim.periodicBoxSizeZ;
+            apos.x -= floor((apos.x-firstPoint.x)/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+            apos.y -= floor((apos.y-firstPoint.y)/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+            apos.z -= floor((apos.z-firstPoint.z)/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
             minx = min(minx, apos.x);
             maxx = max(maxx, apos.x);
@@ -87,7 +87,7 @@ __global__ void METHOD_NAME(kFindBlocksWithInteractions, _kernel)()
     if (pos < cSim.workUnits)
     {
         // Extract cell coordinates from appropriate work unit
-        
+
         unsigned int x = cSim.pWorkUnit[pos];
         unsigned int y = ((x >> 2) & 0x7fff);
         x = (x >> 17);
