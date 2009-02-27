@@ -277,7 +277,6 @@ struct cudaGmxSimulation {
     unsigned int    stride2;                        // Atomic attributes stride x 2
     unsigned int    stride3;                        // Atomic attributes stride x 3
     unsigned int    stride4;                        // Atomic attributes stride x 4
-    unsigned int    exclusionStride;                // Exclusion list stride = stride / GRID
     unsigned int	nonbondOutputBuffers;           // Nonbond output buffers per nonbond call
     unsigned int    totalNonbondOutputBuffers;      // Total nonbond output buffers
     unsigned int    outputBuffers;                  // Number of output buffers
@@ -357,6 +356,7 @@ struct cudaGmxSimulation {
     int4*           pSettleID;                      // Settle atoms
     float2*         pSettleParameter;               // Settle parameters
     unsigned int*   pExclusion;                     // Nonbond exclusion data
+    unsigned int*   pExclusionIndex;                // Index of exclusion data for each work unit
     unsigned int    bond_offset;                    // Offset to end of bonds
     unsigned int    bond_angle_offset;              // Offset to end of bond angles
     unsigned int    dihedral_offset;                // Offset to end of dihedrals

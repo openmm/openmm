@@ -116,6 +116,7 @@ struct _gpuContext {
     CUDAStream<int4>* psSettleID;
     CUDAStream<float2>* psSettleParameter;
     CUDAStream<unsigned int>* psExclusion;
+    CUDAStream<unsigned int>* psExclusionIndex;
     CUDAStream<unsigned int>* psWorkUnit;
     CUDAStream<unsigned int>* psInteractingWorkUnit;
     CUDAStream<unsigned int>* psInteractionFlag;

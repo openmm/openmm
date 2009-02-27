@@ -1172,7 +1172,6 @@ int gpuAllocateInitialBuffers(gpuContext gpu)
     gpu->sim.stride2                    = 2 * gpu->sim.stride;
     gpu->sim.stride3                    = 3 * gpu->sim.stride;
     gpu->sim.stride4                    = 4 * gpu->sim.stride;
-    gpu->sim.exclusionStride            = gpu->sim.stride / GRID;
     gpu->psPosqP4                       = new CUDAStream<float4>(gpu->sim.paddedNumberOfAtoms, 1);
     gpu->sim.pPosqP                     = gpu->psPosqP4->_pDevStream[0];
     gpu->psOldPosq4                     = new CUDAStream<float4>(gpu->sim.paddedNumberOfAtoms, 1);
@@ -1533,6 +1532,7 @@ void* gpuInit(int numAtoms)
     gpu->psSettleID                 = NULL;
     gpu->psSettleParameter          = NULL;
     gpu->psExclusion                = NULL;
+    gpu->psExclusionIndex           = NULL;
     gpu->psWorkUnit                 = NULL;
     gpu->psInteractingWorkUnit      = NULL;
     gpu->psInteractionFlag          = NULL;
@@ -1665,6 +1665,7 @@ void gpuShutDown(gpuContext gpu)
     delete gpu->psSettleID;
     delete gpu->psSettleParameter;
     delete gpu->psExclusion;
+    delete gpu->psExclusionIndex;
     delete gpu->psWorkUnit;
     delete gpu->psInteractingWorkUnit;
     delete gpu->psInteractionFlag;
@@ -1871,29 +1872,72 @@ void gpuBuildExclusionList(gpuContext gpu)
 {
     const unsigned int atoms = gpu->sim.paddedNumberOfAtoms;
     const unsigned int grid = gpu->grid;
-    const unsigned int dim = (atoms+(grid-1))/grid;
-    CUDAStream<unsigned int>* psExclusion = new CUDAStream<unsigned int>((atoms*atoms+grid-1) / grid, 1u);
-    gpu->psExclusion = psExclusion;
-    gpu->sim.pExclusion = psExclusion->_pDevStream[0];
-    unsigned int* pExList = psExclusion->_pSysStream[0];
+    const unsigned int dim = atoms/grid;
     unsigned int* pWorkList = gpu->psWorkUnit->_pSysStream[0];
-    for (int i = 0; i < psExclusion->_length; ++i)
-        pExList[i] = 0xFFFFFFFF;
 
-    // Fill in the exclusions.
+    // Mark which work units have exclusions.
 
     for (int atom1 = 0; atom1 < gpu->exclusions.size(); ++atom1)
     {
         int x = atom1/grid;
-        int offset = atom1-x*grid;
         for (int j = 0; j < gpu->exclusions[atom1].size(); ++j)
         {
             int atom2 = gpu->exclusions[atom1][j];
             int y = atom2/grid;
-            int index = x*atoms+y*grid+offset;
-            pExList[index] &= 0xFFFFFFFF-(1<<(atom2-y*grid));
             int cell = (x > y ? x+y*dim-y*(y+1)/2 : y+x*dim-x*(x+1)/2);
             pWorkList[cell] |= 1;
+        }
+    }
+    if (gpu->sim.paddedNumberOfAtoms > gpu->natoms)
+    {
+        int lastBlock = gpu->natoms/grid;
+        for (int i = 0; i < gpu->sim.workUnits; ++i)
+        {
+            int x = pWorkList[i]>>17;
+            int y = (pWorkList[i]>>2)&0x7FFF;
+            if (x == lastBlock || y == lastBlock)
+                pWorkList[i] |= 1;
+        }
+    }
+
+    // Build a list of indexes for the work units with exclusions.
+
+    CUDAStream<unsigned int>* psExclusionIndex = new CUDAStream<unsigned int>(gpu->sim.workUnits, 1u);
+    gpu->psExclusionIndex = psExclusionIndex;
+    unsigned int* pExclusionIndex = psExclusionIndex->_pSysData;
+    gpu->sim.pExclusionIndex = psExclusionIndex->_pDevData;
+    int numWithExclusions = 0;
+    for (int i = 0; i < psExclusionIndex->_length; ++i)
+        if ((pWorkList[i]&1) == 1)
+            pExclusionIndex[i] = (numWithExclusions++)*grid;
+
+    // Record the exclusion data.
+
+    CUDAStream<unsigned int>* psExclusion = new CUDAStream<unsigned int>(numWithExclusions*grid, 1u);
+    gpu->psExclusion = psExclusion;
+    unsigned int* pExclusion = psExclusion->_pSysData;
+    gpu->sim.pExclusion = psExclusion->_pDevData;
+    for (int i = 0; i < psExclusion->_length; ++i)
+        pExclusion[i] = 0xFFFFFFFF;
+    for (int atom1 = 0; atom1 < gpu->exclusions.size(); ++atom1)
+    {
+        int x = atom1/grid;
+        int offset1 = atom1-x*grid;
+        for (int j = 0; j < gpu->exclusions[atom1].size(); ++j)
+        {
+            int atom2 = gpu->exclusions[atom1][j];
+            int y = atom2/grid;
+            int offset2 = atom2-y*grid;
+            if (x > y)
+            {
+                int cell = x+y*dim-y*(y+1)/2;
+                pExclusion[pExclusionIndex[cell]+offset1] &= 0xFFFFFFFF-(1<<offset2);
+            }
+            else
+            {
+                int cell = y+x*dim-x*(x+1)/2;
+                pExclusion[pExclusionIndex[cell]+offset2] &= 0xFFFFFFFF-(1<<offset1);
+            }
         }
     }
 
@@ -1907,16 +1951,22 @@ void gpuBuildExclusionList(gpuContext gpu)
         {
             int y = atom2/grid;
             int index = x*atoms+y*grid+offset1;
-            pExList[index] &= 0xFFFFFFFF-(1<<(atom2-y*grid));
             int offset2 = atom2-y*grid;
-            index = y*atoms+x*grid+offset2;
-            pExList[index] &= 0xFFFFFFFF-(1<<(atom1-x*grid));
-            int cell = (x > y ? x+y*dim-y*(y+1)/2 : y+x*dim-x*(x+1)/2);
-            pWorkList[cell] |= 1;
+            if (x >= y)
+            {
+                int cell = x+y*dim-y*(y+1)/2;
+                pExclusion[pExclusionIndex[cell]+offset1] &= 0xFFFFFFFF-(1<<offset2);
+            }
+            if (y >= x)
+            {
+                int cell = y+x*dim-x*(x+1)/2;
+                pExclusion[pExclusionIndex[cell]+offset2] &= 0xFFFFFFFF-(1<<offset1);
+            }
         }
     }
     
     psExclusion->Upload();
+    psExclusionIndex->Upload();
     gpu->psWorkUnit->Upload();
     gpuSetConstants(gpu);
 }

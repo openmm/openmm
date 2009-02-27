@@ -126,7 +126,9 @@ __global__ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUni
             }
             else  // bExclusion
             {
-                unsigned int excl = cSim.pExclusion[x * cSim.exclusionStride + y + tgx];
+                unsigned int xi   = x>>GRIDBITS;
+                int cell          = xi+xi*cSim.paddedNumberOfAtoms/GRID-xi*(xi+1)/2;
+                unsigned int excl = cSim.pExclusion[cSim.pExclusionIndex[cell]+tgx];
                 for (unsigned int j = 0; j < GRID; j++)
                 {
                     dx              = psA[j].x - apos.x;
@@ -253,8 +255,11 @@ __global__ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUni
             else  // bExclusion
             {
                 // Read fixed atom data into registers and GRF
-                unsigned int excl       = cSim.pExclusion[x * cSim.exclusionStride + y + tgx];
-                excl                    = (excl >> tgx) | (excl << (GRID - tgx));
+                unsigned int xi   = x>>GRIDBITS;
+                unsigned int yi   = y>>GRIDBITS;
+                int cell          = xi+yi*cSim.paddedNumberOfAtoms/GRID-yi*(yi+1)/2;
+                unsigned int excl = cSim.pExclusion[cSim.pExclusionIndex[cell]+tgx];
+                excl              = (excl >> tgx) | (excl << (GRID - tgx));
                 for (unsigned int j = 0; j < GRID; j++)
                 {
                     dx              = psA[tj].x - apos.x;

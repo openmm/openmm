@@ -134,7 +134,9 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int*
             }
             else  // bExclusion
             {
-                unsigned int excl           = cSim.pExclusion[x * cSim.exclusionStride + y + tgx];
+                unsigned int xi   = x>>GRIDBITS;
+                int cell          = xi+xi*cSim.paddedNumberOfAtoms/GRID-xi*(xi+1)/2;
+                unsigned int excl = cSim.pExclusion[cSim.pExclusionIndex[cell]+tgx];
                 for (unsigned int j = 0; j < GRID; j++)
                 {
                     float dx                = psA[j].x - apos.x;
@@ -299,8 +301,11 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int*
             }
             else  // bExclusion
             {
-                unsigned int excl           = cSim.pExclusion[x * cSim.exclusionStride + y + tgx];
-                excl                        = (excl >> tgx) | (excl << (GRID - tgx));
+                unsigned int xi   = x>>GRIDBITS;
+                unsigned int yi   = y>>GRIDBITS;
+                int cell          = xi+yi*cSim.paddedNumberOfAtoms/GRID-yi*(yi+1)/2;
+                unsigned int excl = cSim.pExclusion[cSim.pExclusionIndex[cell]+tgx];
+                excl              = (excl >> tgx) | (excl << (GRID - tgx));
                 for (int j = 0; j < GRID; j++)
                 {
                     float dx                = psA[tj].x - apos.x;
