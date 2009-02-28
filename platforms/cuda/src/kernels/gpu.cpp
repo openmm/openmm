@@ -1198,7 +1198,7 @@ int gpuAllocateInitialBuffers(gpuContext gpu)
     gpu->psAtomIndex->Upload();
     // Determine randoms
     gpu->seed                           = 1;
-    gpu->sim.randomFrames               = 95;
+    gpu->sim.randomFrames               = 20;
     gpu->sim.randomIterations           = gpu->sim.randomFrames;
     gpu->sim.randoms                    = gpu->sim.randomFrames * gpu->sim.paddedNumberOfAtoms - 5 * GRID;
     gpu->sim.totalRandoms               = gpu->sim.randoms + gpu->sim.paddedNumberOfAtoms;

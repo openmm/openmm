@@ -48,7 +48,7 @@ static const float RGAS                     =    BOLTZMANN * AVOGADRO;     // (J
 static const float BOLTZ                    =    (RGAS / KILO);            // (kJ/(mol K)) 
 
 void testGaussian() {
-    _gpuContext* gpu = (_gpuContext*) gpuInit(1000);
+    _gpuContext* gpu = (_gpuContext*) gpuInit(5000);
     gpu->sim.Yv = 1.0;
     gpu->sim.Yx = 1.0;
     gpu->sim.V = 1.0;
