@@ -50,6 +50,7 @@ using namespace std;
 
 #include "gputypes.h"
 #include "cudaKernels.h"
+#include "hilbert.h"
 #include "OpenMMException.h"
 
 using OpenMM::OpenMMException;
@@ -2873,7 +2874,7 @@ static void findMoleculeGroups(gpuContext gpu)
         if (atom3 != -1)
             constraints.push_back(Constraint(atom1, atom3, distance2));
         if (atom4 != -1)
-            constraints.push_back(Constraint(atom1, atom3, distance2));
+            constraints.push_back(Constraint(atom1, atom4, distance2));
     }
     for (int i = 0; i < gpu->sim.settleConstraints; i++)
     {
@@ -3082,10 +3083,6 @@ void gpuReorderAtoms(gpuContext gpu)
             maxz = max(maxz, posq[i].z);
         }
     }
-    float binWidth = 0.2*sqrt(gpu->sim.nonbondedCutoffSqr);
-    int xbins = 1 + (int) ((maxx-minx)/binWidth);
-    int ybins = 1 + (int) ((maxy-miny)/binWidth);
-    int zbins = 1 + (int) ((maxz-minz)/binWidth);
 
     // Loop over each group of identical molecules and reorder them.
 
@@ -3130,17 +3127,37 @@ void gpuReorderAtoms(gpuContext gpu)
 
         // Select a bin for each molecule, then sort them by bin.
 
+        bool useHilbert = (numMolecules > 5000); // For small systems, a simple zigzag curve works better than a Hilbert curve.
+        float binWidth;
+        if (useHilbert)
+        binWidth = max(max(maxx-minx, maxy-miny), maxz-minz)/255.0;
+        else
+            binWidth = 0.2*sqrt(gpu->sim.nonbondedCutoffSqr);
+        int xbins = 1 + (int) ((maxx-minx)/binWidth);
+        int ybins = 1 + (int) ((maxy-miny)/binWidth);
         vector<pair<int, int> > molBins(numMolecules);
+        bitmask_t coords[3];
         for (int i = 0; i < numMolecules; i++)
         {
             int x = (int) ((molPos[i].x-minx)/binWidth);
             int y = (int) ((molPos[i].y-miny)/binWidth);
             int z = (int) ((molPos[i].z-minz)/binWidth);
-            int yodd = y&1;
-            int zodd = z&1;
-            int bin = z*xbins*ybins;
-            bin += (zodd ? ybins-y : y)*xbins;
-            bin += (yodd ? xbins-x : x);
+            int bin;
+            if (useHilbert)
+            {
+                coords[0] = x;
+                coords[1] = y;
+                coords[2] = z;
+                bin = (int) hilbert_c2i(3, 8, coords);
+            }
+            else
+            {
+                int yodd = y&1;
+                int zodd = z&1;
+                bin = z*xbins*ybins;
+                bin += (zodd ? ybins-y : y)*xbins;
+                bin += (yodd ? xbins-x : x);
+            }
             molBins[i] = pair<int, int>(bin, i);
         }
         sort(molBins.begin(), molBins.end());

@@ -47,7 +47,7 @@ using namespace std;
 
 static void calcForces(OpenMMContextImpl& context, CudaPlatform::PlatformData& data) {
     _gpuContext* gpu = data.gpu;
-    if (data.stepCount%200 == 0)
+    if (data.stepCount%100 == 0)
         gpuReorderAtoms(gpu);
     data.stepCount++;
     kClearForces(gpu);
