@@ -43,6 +43,9 @@ __global__ void METHOD_NAME(kCalculateObcGbsa, BornSum_kernel)(unsigned int* wor
 #ifdef USE_OUTPUT_BUFFER_PER_WARP
     unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
 #endif
+#ifdef USE_CUTOFF
+    float* tempBuffer = (float*) &sA[cSim.nonbond_threads_per_block];
+#endif
 
     while (pos >= 0)
     {
@@ -107,8 +110,8 @@ __global__ void METHOD_NAME(kCalculateObcGbsa, BornSum_kernel)(unsigned int* wor
                                          (0.50f * rInverse * ratio) +
                                          (0.25f * psA[j].sr * psA[j].sr * rInverse) *
                                          (l_ij2 - u_ij2);
-
-                        if (ar.x < (psA[j].r - r))
+                        float rj = psA[j].r;
+                        if (ar.x < (rj - r))
                         {
                             apos.w += 2.0f * ((1.0f / ar.x) - l_ij);
                         }
@@ -142,69 +145,169 @@ __global__ void METHOD_NAME(kCalculateObcGbsa, BornSum_kernel)(unsigned int* wor
             sA[threadIdx.x].sr              = temp1.y;
             sA[threadIdx.x].sum = apos.w    = 0.0f;
 
-            for (unsigned int j = 0; j < GRID; j++)
+#ifdef USE_CUTOFF
+            unsigned int flags = cSim.pInteractionFlag[pos + (blockIdx.x*workUnits)/gridDim.x];
+            if (flags == 0)
             {
-                dx                      = psA[tj].x - apos.x;
-                dy                      = psA[tj].y - apos.y;
-                dz                      = psA[tj].z - apos.z;
-#ifdef USE_PERIODIC
-                dx -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                dy -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                dz -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                // No interactions in this block.
+            }
+            else if (flags == 0xFFFFFFFF)
 #endif
-                r2                      = dx * dx + dy * dy + dz * dz;
-#ifdef USE_PERIODIC
-                if (i < cSim.atoms && y+tj < cSim.atoms && r2 < cSim.nonbondedCutoffSqr)
-#elif defined USE_CUTOFF
-                if (r2 < cSim.nonbondedCutoffSqr)
-#endif
-                {
-                    r                       = sqrt(r2);
-                    float rInverse          = 1.0f / r;
-                    float rScaledRadiusJ    = r + psA[tj].sr;
-                    if (ar.x < rScaledRadiusJ)
-                    {
-                        float l_ij     = 1.0f / max(ar.x, fabs(r - psA[tj].sr));
-                        float u_ij     = 1.0f / rScaledRadiusJ;
-                        float l_ij2    = l_ij * l_ij;
-                        float u_ij2    = u_ij * u_ij;
-                        float ratio    = log(u_ij / l_ij);
-                        float term     = l_ij -
-                                         u_ij +
-                                         0.25f * r * (u_ij2 - l_ij2) +
-                                         (0.50f * rInverse * ratio) +
-                                         (0.25f * psA[tj].sr * psA[tj].sr * rInverse) *
-                                         (l_ij2 - u_ij2);
-                        if (ar.x < (psA[tj].sr - r))
-                        {
-                            term += 2.0f * ((1.0f / ar.x) - l_ij);
-                        }
-                        apos.w        += term;
-                    }
-                    float rScaledRadiusI    = r + ar.y;
-                    if (psA[tj].r < rScaledRadiusI)
-                    {
-                        float l_ij     = 1.0f / max(psA[tj].r, fabs(r - ar.y));
-                        float u_ij     = 1.0f / rScaledRadiusI;
-                        float l_ij2    = l_ij * l_ij;
-                        float u_ij2    = u_ij * u_ij;
-                        float ratio    = log(u_ij / l_ij);
-                        float term     = l_ij -
-                                         u_ij +
-                                         0.25f * r * (u_ij2 - l_ij2) +
-                                         (0.50f * rInverse * ratio) +
-                                         (0.25f * ar.y * ar.y * rInverse) *
-                                         (l_ij2 - u_ij2);
+            {
+                // Compute all interactions within this block.
 
-                        if (psA[tj].r < (ar.y - r))
+                for (unsigned int j = 0; j < GRID; j++)
+                {
+                    dx                      = psA[tj].x - apos.x;
+                    dy                      = psA[tj].y - apos.y;
+                    dz                      = psA[tj].z - apos.z;
+#ifdef USE_PERIODIC
+                    dx -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                    dy -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                    dz -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+#endif
+                    r2                      = dx * dx + dy * dy + dz * dz;
+#ifdef USE_PERIODIC
+                    if (i < cSim.atoms && y+tj < cSim.atoms && r2 < cSim.nonbondedCutoffSqr)
+#elif defined USE_CUTOFF
+                    if (r2 < cSim.nonbondedCutoffSqr)
+#endif
+                    {
+                        r                       = sqrt(r2);
+                        float rInverse          = 1.0f / r;
+                        float rScaledRadiusJ    = r + psA[tj].sr;
+                        if (ar.x < rScaledRadiusJ)
                         {
-                            term += 2.0f * ((1.0f / psA[tj].r) - l_ij);
+                            float l_ij     = 1.0f / max(ar.x, fabs(r - psA[tj].sr));
+                            float u_ij     = 1.0f / rScaledRadiusJ;
+                            float l_ij2    = l_ij * l_ij;
+                            float u_ij2    = u_ij * u_ij;
+                            float ratio    = log(u_ij / l_ij);
+                            float term     = l_ij -
+                                             u_ij +
+                                             0.25f * r * (u_ij2 - l_ij2) +
+                                             (0.50f * rInverse * ratio) +
+                                             (0.25f * psA[tj].sr * psA[tj].sr * rInverse) *
+                                             (l_ij2 - u_ij2);
+                            float srj = psA[tj].sr;
+                            if (ar.x < (srj - r))
+                            {
+                                term += 2.0f * ((1.0f / ar.x) - l_ij);
+                            }
+                            apos.w        += term;
                         }
-                        psA[tj].sum    += term;
+                        float rScaledRadiusI    = r + ar.y;
+                        if (psA[tj].r < rScaledRadiusI)
+                        {
+                            float l_ij     = 1.0f / max(psA[tj].r, fabs(r - ar.y));
+                            float u_ij     = 1.0f / rScaledRadiusI;
+                            float l_ij2    = l_ij * l_ij;
+                            float u_ij2    = u_ij * u_ij;
+                            float ratio    = log(u_ij / l_ij);
+                            float term     = l_ij -
+                                             u_ij +
+                                             0.25f * r * (u_ij2 - l_ij2) +
+                                             (0.50f * rInverse * ratio) +
+                                             (0.25f * ar.y * ar.y * rInverse) *
+                                             (l_ij2 - u_ij2);
+                            float rj = psA[tj].r;
+                            if (rj < (ar.y - r))
+                            {
+                                term += 2.0f * ((1.0f / psA[tj].r) - l_ij);
+                            }
+                            psA[tj].sum    += term;
+                        }
+                    }
+                    tj = (tj - 1) & (GRID - 1);
+                }
+            }
+#ifdef USE_CUTOFF
+            else
+            {
+                // Compute only a subset of the interactions in this block.
+
+                for (unsigned int j = 0; j < GRID; j++)
+                {
+                    if ((flags&(1<<j)) != 0)
+                    {
+                        tempBuffer[threadIdx.x] = 0.0f;
+                        dx                      = psA[j].x - apos.x;
+                        dy                      = psA[j].y - apos.y;
+                        dz                      = psA[j].z - apos.z;
+#ifdef USE_PERIODIC
+                        dx -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                        dy -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                        dz -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+#endif
+                        r2                      = dx * dx + dy * dy + dz * dz;
+#ifdef USE_PERIODIC
+                        if (i < cSim.atoms && y+j < cSim.atoms && r2 < cSim.nonbondedCutoffSqr)
+#elif defined USE_CUTOFF
+                        if (r2 < cSim.nonbondedCutoffSqr)
+#endif
+                        {
+                            r                       = sqrt(r2);
+                            float rInverse          = 1.0f / r;
+                            float rScaledRadiusJ    = r + psA[j].sr;
+                            if (ar.x < rScaledRadiusJ)
+                            {
+                                float l_ij     = 1.0f / max(ar.x, fabs(r - psA[j].sr));
+                                float u_ij     = 1.0f / rScaledRadiusJ;
+                                float l_ij2    = l_ij * l_ij;
+                                float u_ij2    = u_ij * u_ij;
+                                float ratio    = log(u_ij / l_ij);
+                                float term     = l_ij -
+                                                 u_ij +
+                                                 0.25f * r * (u_ij2 - l_ij2) +
+                                                 (0.50f * rInverse * ratio) +
+                                                 (0.25f * psA[j].sr * psA[j].sr * rInverse) *
+                                                 (l_ij2 - u_ij2);
+                                float srj = psA[j].sr;
+                                if (ar.x < (srj - r))
+                                {
+                                    term += 2.0f * ((1.0f / ar.x) - l_ij);
+                                }
+                                apos.w        += term;
+                            }
+                            float rScaledRadiusI    = r + ar.y;
+                            if (psA[j].r < rScaledRadiusI)
+                            {
+                                float l_ij     = 1.0f / max(psA[j].r, fabs(r - ar.y));
+                                float u_ij     = 1.0f / rScaledRadiusI;
+                                float l_ij2    = l_ij * l_ij;
+                                float u_ij2    = u_ij * u_ij;
+                                float ratio    = log(u_ij / l_ij);
+                                float term     = l_ij -
+                                                 u_ij +
+                                                 0.25f * r * (u_ij2 - l_ij2) +
+                                                 (0.50f * rInverse * ratio) +
+                                                 (0.25f * ar.y * ar.y * rInverse) *
+                                                 (l_ij2 - u_ij2);
+                                float rj = psA[j].r;
+                                if (rj < (ar.y - r))
+                                {
+                                    term += 2.0f * ((1.0f / psA[j].r) - l_ij);
+                                }
+                                tempBuffer[threadIdx.x] = term;
+                            }
+                        }
+
+                        // Sum the terms.
+
+                        if (tgx % 2 == 0)
+                            tempBuffer[threadIdx.x] += tempBuffer[threadIdx.x+1];
+                        if (tgx % 4 == 0)
+                            tempBuffer[threadIdx.x] += tempBuffer[threadIdx.x+2];
+                        if (tgx % 8 == 0)
+                            tempBuffer[threadIdx.x] += tempBuffer[threadIdx.x+4];
+                        if (tgx % 16 == 0)
+                            tempBuffer[threadIdx.x] += tempBuffer[threadIdx.x+8];
+                        if (tgx == 0)
+                            psA[j].sum += tempBuffer[threadIdx.x] + tempBuffer[threadIdx.x+16];
                     }
                 }
-                tj = (tj - 1) & (GRID - 1);
             }
+#endif
 
             // Write results
 #ifdef USE_OUTPUT_BUFFER_PER_WARP

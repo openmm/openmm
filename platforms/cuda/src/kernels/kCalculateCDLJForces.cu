@@ -140,12 +140,14 @@ void kCalculateCDLJForces(gpuContext gpu)
             }
             gpu->psInteractionCount->Download();
             numWithInteractions = gpu->psInteractionCount->_pSysData[0];
+            kFindInteractionsWithinBlocksCutoff_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                    sizeof(unsigned int)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
             if (gpu->bOutputBufferPerWarp)
                 kCalculateCDLJCutoffByWarpForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                        sizeof(Atom)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
+                        (sizeof(Atom)+sizeof(float3))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
             else
                 kCalculateCDLJCutoffForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                        sizeof(Atom)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
+                        (sizeof(Atom)+sizeof(float3))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
             LAUNCHERROR("kCalculateCDLJCutoffForces");
             break;
         case PERIODIC:
@@ -162,12 +164,14 @@ void kCalculateCDLJForces(gpuContext gpu)
             }
             gpu->psInteractionCount->Download();
             numWithInteractions = gpu->psInteractionCount->_pSysData[0];
+            kFindInteractionsWithinBlocksPeriodic_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                    sizeof(unsigned int)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
             if (gpu->bOutputBufferPerWarp)
                 kCalculateCDLJPeriodicByWarpForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                        sizeof(Atom)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
+                        (sizeof(Atom)+sizeof(float3))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
             else
                 kCalculateCDLJPeriodicForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                        sizeof(Atom)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
+                        (sizeof(Atom)+sizeof(float3))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
             LAUNCHERROR("kCalculateCDLJPeriodicForces");
     }
 }

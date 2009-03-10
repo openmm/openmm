@@ -3127,10 +3127,10 @@ void gpuReorderAtoms(gpuContext gpu)
 
         // Select a bin for each molecule, then sort them by bin.
 
-        bool useHilbert = (numMolecules > 5000); // For small systems, a simple zigzag curve works better than a Hilbert curve.
+        bool useHilbert = (numMolecules > 5000 || atoms.size() > 8); // For small systems, a simple zigzag curve works better than a Hilbert curve.
         float binWidth;
         if (useHilbert)
-        binWidth = max(max(maxx-minx, maxy-miny), maxz-minz)/255.0;
+            binWidth = max(max(maxx-minx, maxy-miny), maxz-minz)/255.0;
         else
             binWidth = 0.2*sqrt(gpu->sim.nonbondedCutoffSqr);
         int xbins = 1 + (int) ((maxx-minx)/binWidth);

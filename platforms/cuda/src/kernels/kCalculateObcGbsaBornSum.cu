@@ -187,19 +187,19 @@ void kCalculateObcGbsaBornSum(gpuContext gpu)
             numWithInteractions = gpu->psInteractionCount->_pSysData[0];
             if (gpu->bOutputBufferPerWarp)
                 kCalculateObcGbsaCutoffByWarpBornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                        sizeof(Atom)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
+                        (sizeof(Atom)+sizeof(float))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
             else
                 kCalculateObcGbsaCutoffBornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                        sizeof(Atom)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
+                        (sizeof(Atom)+sizeof(float))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
             break;
         case PERIODIC:
             numWithInteractions = gpu->psInteractionCount->_pSysData[0];
             if (gpu->bOutputBufferPerWarp)
                 kCalculateObcGbsaPeriodicByWarpBornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                        sizeof(Atom)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
+                        (sizeof(Atom)+sizeof(float))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
             else
                 kCalculateObcGbsaPeriodicBornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                        sizeof(Atom)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
+                        (sizeof(Atom)+sizeof(float))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
             break;
     }
     LAUNCHERROR("kCalculateBornSum");

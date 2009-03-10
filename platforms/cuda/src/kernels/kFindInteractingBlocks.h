@@ -112,3 +112,88 @@ __global__ void METHOD_NAME(kFindBlocksWithInteractions, _kernel)()
         cSim.pInteractionFlag[pos] = (dx*dx+dy*dy+dz*dz > cSim.nonbondedCutoffSqr ? 0 : 1);
     }
 }
+
+/**
+ * Compare each atom in one block to the bounding box of another block, and set
+ * flags for which ones are interacting.
+ */
+__global__ void METHOD_NAME(kFindInteractionsWithinBlocks, _kernel)(unsigned int* workUnit, int numWorkUnits)
+{
+    extern __shared__ unsigned int flags[];
+    unsigned int totalWarps = cSim.nonbond_blocks*cSim.nonbond_threads_per_block/GRID;
+    unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
+    int pos = warp*numWorkUnits/totalWarps;
+    int end = (warp+1)*numWorkUnits/totalWarps;
+    unsigned int index = threadIdx.x & (GRID - 1);
+
+    int lasty = -1;
+    float4 apos;
+    while (pos < end)
+    {
+        // Extract cell coordinates from appropriate work unit
+        unsigned int x = workUnit[pos];
+        unsigned int y = ((x >> 2) & 0x7fff);
+        bool bExclusionFlag = (x & 0x1);
+        x = (x >> 17);
+        if (x == y || bExclusionFlag)
+        {
+            // Assume this block will be dense.
+
+            if (index == 0)
+                cSim.pInteractionFlag[pos] = 0xFFFFFFFF;
+        }
+        else
+        {
+            // Load the bounding box for x and the atom positions for y.
+
+            float4 center = cSim.pGridCenter[x];
+            float4 boxSize = cSim.pGridBoundingBox[x];
+            if (y != lasty)
+            {
+                apos = cSim.pPosq[(y<<GRIDBITS)+index];
+            }
+
+            // Find the distance of the atom from the bounding box.
+
+            float dx = apos.x-center.x;
+            float dy = apos.y-center.y;
+            float dz = apos.z-center.z;
+#ifdef USE_PERIODIC
+            dx -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+            dy -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+            dz -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+#endif
+            dx = max(0.0f, abs(dx)-boxSize.x);
+            dy = max(0.0f, abs(dy)-boxSize.y);
+            dz = max(0.0f, abs(dz)-boxSize.z);
+            flags[threadIdx.x] = (dx*dx+dy*dy+dz*dz > cSim.nonbondedCutoffSqr ? 0 : 1 << index);
+
+            // Sum the flags.
+
+            if (index % 2 == 0)
+                flags[threadIdx.x] += flags[threadIdx.x+1];
+            if (index % 4 == 0)
+                flags[threadIdx.x] += flags[threadIdx.x+2];
+            if (index % 8 == 0)
+                flags[threadIdx.x] += flags[threadIdx.x+4];
+            if (index % 16 == 0)
+                flags[threadIdx.x] += flags[threadIdx.x+8];
+            if (index == 0)
+            {
+                unsigned int allFlags = flags[threadIdx.x] + flags[threadIdx.x+16];
+
+                // Count how many flags are set, and based on that decide whether to compute all interactions
+                // or only a fraction of them.
+
+                unsigned int bits = (allFlags&0x55555555) + ((allFlags>>1)&0x55555555);
+                bits = (bits&0x33333333) + ((bits>>2)&0x33333333);
+                bits = (bits&0x0F0F0F0F) + ((bits>>4)&0x0F0F0F0F);
+                bits = (bits&0x00FF00FF) + ((bits>>8)&0x00FF00FF);
+                bits = (bits&0x0000FFFF) + ((bits>>16)&0x0000FFFF);
+                cSim.pInteractionFlag[pos] = (bits > 12 ? 0xFFFFFFFF : allFlags);
+            }
+            lasty = y;
+        }
+        pos++;
+    }
+}

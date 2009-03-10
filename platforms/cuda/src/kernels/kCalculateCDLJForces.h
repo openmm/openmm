@@ -42,6 +42,9 @@ __global__ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUni
     unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
     int pos = warp*numWorkUnits/totalWarps;
     int end = (warp+1)*numWorkUnits/totalWarps;
+#ifdef USE_CUTOFF
+    float3* tempBuffer = (float3*) &sA[cSim.nonbond_threads_per_block];
+#endif
 
     int lasty = -1;
     while (pos < end)
@@ -210,47 +213,142 @@ __global__ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUni
             apos.w                 *= cSim.epsfac;
             if (!bExclusionFlag)
             {
-                for (unsigned int j = 0; j < GRID; j++)
+#ifdef USE_CUTOFF
+                unsigned int flags = cSim.pInteractionFlag[pos];
+                if (flags == 0)
                 {
-                    dx              = psA[tj].x - apos.x;
-                    dy              = psA[tj].y - apos.y;
-                    dz              = psA[tj].z - apos.z;
-#ifdef USE_PERIODIC
-                    dx -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                    dy -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                    dz -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
-#endif
-                    r2              = dx * dx + dy * dy + dz * dz;
-                    invR            = 1.0f / sqrt(r2);
-                    sig             = a.x + psA[tj].sig;
-                    sig2            = invR * sig;
-                    sig2           *= sig2;
-                    sig6            = sig2 * sig2 * sig2;
-                    eps             = a.y * psA[tj].eps;
-                    dEdR            = eps * (12.0f * sig6 - 6.0f) * sig6;
-#ifdef USE_CUTOFF
-                    dEdR           += apos.w * psA[tj].q * (invR - 2.0f * cSim.reactionFieldK * r2);
-#else
-                    dEdR           += apos.w * psA[tj].q * invR;
-#endif
-                    dEdR           *= invR * invR;
-#ifdef USE_CUTOFF
-                    if (r2 > cSim.nonbondedCutoffSqr)
-                    {
-                        dEdR = 0.0f;
-                    }
-#endif
-                    dx             *= dEdR;
-                    dy             *= dEdR;
-                    dz             *= dEdR;
-                    af.x           -= dx;
-                    af.y           -= dy;
-                    af.z           -= dz;
-                    psA[tj].fx     += dx;
-                    psA[tj].fy     += dy;
-                    psA[tj].fz     += dz;
-                    tj              = (tj + 1) & (GRID - 1);
+                    // No interactions in this block.
                 }
+                else if (flags == 0xFFFFFFFF)
+#endif
+                {
+                    // Compute all interactions within this block.
+
+                    for (unsigned int j = 0; j < GRID; j++)
+                    {
+                        dx              = psA[tj].x - apos.x;
+                        dy              = psA[tj].y - apos.y;
+                        dz              = psA[tj].z - apos.z;
+#ifdef USE_PERIODIC
+                        dx -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                        dy -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                        dz -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+#endif
+                        r2              = dx * dx + dy * dy + dz * dz;
+                        invR            = 1.0f / sqrt(r2);
+                        sig             = a.x + psA[tj].sig;
+                        sig2            = invR * sig;
+                        sig2           *= sig2;
+                        sig6            = sig2 * sig2 * sig2;
+                        eps             = a.y * psA[tj].eps;
+                        dEdR            = eps * (12.0f * sig6 - 6.0f) * sig6;
+#ifdef USE_CUTOFF
+                        dEdR           += apos.w * psA[tj].q * (invR - 2.0f * cSim.reactionFieldK * r2);
+#else
+                        dEdR           += apos.w * psA[tj].q * invR;
+#endif
+                        dEdR           *= invR * invR;
+#ifdef USE_CUTOFF
+                        if (r2 > cSim.nonbondedCutoffSqr)
+                        {
+                            dEdR = 0.0f;
+                        }
+#endif
+                        dx             *= dEdR;
+                        dy             *= dEdR;
+                        dz             *= dEdR;
+                        af.x           -= dx;
+                        af.y           -= dy;
+                        af.z           -= dz;
+                        psA[tj].fx     += dx;
+                        psA[tj].fy     += dy;
+                        psA[tj].fz     += dz;
+                        tj              = (tj + 1) & (GRID - 1);
+                    }
+                }
+#ifdef USE_CUTOFF
+                else
+                {
+                    // Compute only a subset of the interactions in this block.
+
+                    for (unsigned int j = 0; j < GRID; j++)
+                    {
+                        if ((flags&(1<<j)) != 0)
+                        {
+                            dx              = psA[j].x - apos.x;
+                            dy              = psA[j].y - apos.y;
+                            dz              = psA[j].z - apos.z;
+#ifdef USE_PERIODIC
+                            dx -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                            dy -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                            dz -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+#endif
+                            r2              = dx * dx + dy * dy + dz * dz;
+                            invR            = 1.0f / sqrt(r2);
+                            sig             = a.x + psA[j].sig;
+                            sig2            = invR * sig;
+                            sig2           *= sig2;
+                            sig6            = sig2 * sig2 * sig2;
+                            eps             = a.y * psA[j].eps;
+                            dEdR            = eps * (12.0f * sig6 - 6.0f) * sig6;
+#ifdef USE_CUTOFF
+                            dEdR           += apos.w * psA[j].q * (invR - 2.0f * cSim.reactionFieldK * r2);
+#else
+                            dEdR           += apos.w * psA[j].q * invR;
+#endif
+                            dEdR           *= invR * invR;
+#ifdef USE_CUTOFF
+                            if (r2 > cSim.nonbondedCutoffSqr)
+                            {
+                                dEdR = 0.0f;
+                            }
+#endif
+                            dx             *= dEdR;
+                            dy             *= dEdR;
+                            dz             *= dEdR;
+                            af.x           -= dx;
+                            af.y           -= dy;
+                            af.z           -= dz;
+                            tempBuffer[threadIdx.x].x = dx;
+                            tempBuffer[threadIdx.x].y = dy;
+                            tempBuffer[threadIdx.x].z = dz;
+
+                            // Sum the forces on atom j.
+
+                            if (tgx % 2 == 0)
+                            {
+                                tempBuffer[threadIdx.x].x += tempBuffer[threadIdx.x+1].x;
+                                tempBuffer[threadIdx.x].y += tempBuffer[threadIdx.x+1].y;
+                                tempBuffer[threadIdx.x].z += tempBuffer[threadIdx.x+1].z;
+                            }
+                            if (tgx % 4 == 0)
+                            {
+                                tempBuffer[threadIdx.x].x += tempBuffer[threadIdx.x+2].x;
+                                tempBuffer[threadIdx.x].y += tempBuffer[threadIdx.x+2].y;
+                                tempBuffer[threadIdx.x].z += tempBuffer[threadIdx.x+2].z;
+                            }
+                            if (tgx % 8 == 0)
+                            {
+                                tempBuffer[threadIdx.x].x += tempBuffer[threadIdx.x+4].x;
+                                tempBuffer[threadIdx.x].y += tempBuffer[threadIdx.x+4].y;
+                                tempBuffer[threadIdx.x].z += tempBuffer[threadIdx.x+4].z;
+                            }
+                            if (tgx % 16 == 0)
+                            {
+                                tempBuffer[threadIdx.x].x += tempBuffer[threadIdx.x+8].x;
+                                tempBuffer[threadIdx.x].y += tempBuffer[threadIdx.x+8].y;
+                                tempBuffer[threadIdx.x].z += tempBuffer[threadIdx.x+8].z;
+                            }
+                            if (tgx == 0)
+                            {
+                                psA[j].fx += tempBuffer[threadIdx.x].x + tempBuffer[threadIdx.x+16].x;
+                                psA[j].fy += tempBuffer[threadIdx.x].y + tempBuffer[threadIdx.x+16].y;
+                                psA[j].fz += tempBuffer[threadIdx.x].z + tempBuffer[threadIdx.x+16].z;
+                            }
+                        }
+                    }
+                }
+#endif
             }
             else  // bExclusion
             {

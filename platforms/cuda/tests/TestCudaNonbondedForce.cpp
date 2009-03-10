@@ -497,6 +497,36 @@ void testBlockInteractions(bool periodic) {
         dy = max(0.0f, abs(dy)-gridSize1.y-gridSize2.y);
         dz = max(0.0f, abs(dz)-gridSize1.z-gridSize2.z);
         ASSERT(sqrt(dx*dx+dy*dy+dz*dz) < cutoff+TOL);
+
+        // Check the interaction flags.
+
+        unsigned int flags = data.gpu->psInteractionFlag->_pSysData[i];
+        for (int atom2 = 0; atom2 < 32; atom2++) {
+            if ((flags & 1) == 0) {
+                float4 pos2 = data.gpu->psPosq4->_pSysData[y*blockSize+atom2];
+                for (int atom1 = 0; atom1 < blockSize; ++atom1) {
+                    float4 pos1 = data.gpu->psPosq4->_pSysData[x*blockSize+atom1];
+                    float dx = pos2.x-pos1.x;
+                    float dy = pos2.y-pos1.y;
+                    float dz = pos2.z-pos1.z;
+                    if (periodic) {
+                        dx -= floor(0.5+dx/boxSize)*boxSize;
+                        dy -= floor(0.5+dy/boxSize)*boxSize;
+                        dz -= floor(0.5+dz/boxSize)*boxSize;
+                    }
+                    if (dx*dx+dy*dy+dz*dz < cutoff*cutoff) {
+                        dx = pos2.x-center1.x;
+                        dy = pos2.y-center1.y;
+                        dz = pos2.z-center1.z;
+                        dx = max(0.0f, abs(dx)-gridSize1.x);
+                        dy = max(0.0f, abs(dy)-gridSize1.y);
+                        dz = max(0.0f, abs(dz)-gridSize1.z);
+                    }
+                    ASSERT(dx*dx+dy*dy+dz*dz > cutoff*cutoff);
+                }
+            }
+            flags >>= 1;
+        }
     }
 
     // Check the tiles that did not have interactions to make sure all atoms are beyond the cutoff.

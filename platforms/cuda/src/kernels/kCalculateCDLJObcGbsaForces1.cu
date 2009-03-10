@@ -106,6 +106,8 @@ extern __global__ void kFindBlockBoundsCutoff_kernel();
 extern __global__ void kFindBlockBoundsPeriodic_kernel();
 extern __global__ void kFindBlocksWithInteractionsCutoff_kernel();
 extern __global__ void kFindBlocksWithInteractionsPeriodic_kernel();
+extern __global__ void kFindInteractionsWithinBlocksCutoff_kernel(unsigned int*, int);
+extern __global__ void kFindInteractionsWithinBlocksPeriodic_kernel(unsigned int*, int);
 
 void kCalculateCDLJObcGbsaForces1(gpuContext gpu)
 {
@@ -145,19 +147,21 @@ void kCalculateCDLJObcGbsaForces1(gpuContext gpu)
                 exit(-1);
             }
             gpu->psInteractionCount->Download();
+            numWithInteractions = gpu->psInteractionCount->_pSysData[0];
+            kFindInteractionsWithinBlocksCutoff_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                    sizeof(unsigned int)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
             if (gpu->bRecalculateBornRadii)
             {
                 kCalculateObcGbsaBornSum(gpu);
                 kReduceObcGbsaBornSum(gpu);
             }
-            numWithInteractions = gpu->psInteractionCount->_pSysData[0];
             if (gpu->bOutputBufferPerWarp)
                 kCalculateCDLJObcGbsaCutoffByWarpForces1_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                        sizeof(Atom)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
+                        (sizeof(Atom)+sizeof(float))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
             else
                 kCalculateCDLJObcGbsaCutoffForces1_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                        sizeof(Atom)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
-            LAUNCHERROR("kCalculateCDLJCutoffForces");
+                        (sizeof(Atom)+sizeof(float))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
+            LAUNCHERROR("kCalculateCDLJObcGbsaCutoffForces1");
             break;
         case PERIODIC:
             kFindBlockBoundsPeriodic_kernel<<<(gpu->psGridBoundingBox->_length+63)/64, 64>>>();
@@ -172,19 +176,21 @@ void kCalculateCDLJObcGbsaForces1(gpuContext gpu)
                 exit(-1);
             }
             gpu->psInteractionCount->Download();
+            numWithInteractions = gpu->psInteractionCount->_pSysData[0];
+            kFindInteractionsWithinBlocksPeriodic_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                    sizeof(unsigned int)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
             if (gpu->bRecalculateBornRadii)
             {
                 kCalculateObcGbsaBornSum(gpu);
                 kReduceObcGbsaBornSum(gpu);
             }
-            numWithInteractions = gpu->psInteractionCount->_pSysData[0];
             if (gpu->bOutputBufferPerWarp)
                 kCalculateCDLJObcGbsaPeriodicByWarpForces1_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                        sizeof(Atom)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
+                        (sizeof(Atom)+sizeof(float))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
             else
                 kCalculateCDLJObcGbsaPeriodicForces1_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                        sizeof(Atom)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
-            LAUNCHERROR("kCalculateCDLJPeriodicForces");
+                        (sizeof(Atom)+sizeof(float))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
+            LAUNCHERROR("kCalculateCDLJObcGbsaPeriodicForces1");
             break;
     }
 }

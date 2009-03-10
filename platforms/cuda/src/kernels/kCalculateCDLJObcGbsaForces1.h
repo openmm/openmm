@@ -42,6 +42,9 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int*
     unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
     int pos = warp*numWorkUnits/totalWarps;
     int end = (warp+1)*numWorkUnits/totalWarps;
+#ifdef USE_CUTOFF
+    float* tempBuffer = (float*) &sA[cSim.nonbond_threads_per_block];
+#endif
 
     int lasty = -1;
     while (pos < end)
@@ -241,63 +244,184 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int*
             apos.w                     *= cSim.epsfac;
             if (!bExclusionFlag)
             {
-                for (int j = 0; j < GRID; j++)
+#ifdef USE_CUTOFF
+                unsigned int flags = cSim.pInteractionFlag[pos];
+                if (flags == 0)
                 {
-                    float dx                = psA[tj].x - apos.x;
-                    float dy                = psA[tj].y - apos.y;
-                    float dz                = psA[tj].z - apos.z;
-#ifdef USE_PERIODIC
-                    dx -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                    dy -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                    dz -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
-#endif
-                    float r2                = dx * dx + dy * dy + dz * dz;
-
-                    // CDLJ part
-                    float invR              = 1.0f / sqrt(r2);
-                    float sig               = a.x + psA[tj].sig;
-                    float sig2              = invR * sig;
-                    sig2                   *= sig2;
-                    float sig6              = sig2 * sig2 * sig2;
-                    float eps               = a.y * psA[tj].eps;
-                    float dEdR              = eps * (12.0f * sig6 - 6.0f) * sig6;
-#ifdef USE_CUTOFF
-                    dEdR                   += apos.w * psA[tj].q * (invR - 2.0f * cSim.reactionFieldK * r2);
-#else
-                    dEdR                   += apos.w * psA[tj].q * invR;
-#endif
-                    dEdR                   *= invR * invR;
-
-                    // ObcGbsaForce1 part
-                    float alpha2_ij         = br * psA[tj].br;
-                    float D_ij              = r2 / (4.0f * alpha2_ij);
-                    float expTerm           = exp(-D_ij);
-                    float denominator2      = r2 + alpha2_ij * expTerm;
-                    float denominator       = sqrt(denominator2);
-                    float Gpol              = (q2 * psA[tj].q) / (denominator * denominator2);
-                    float dGpol_dalpha2_ij  = -0.5f * Gpol * expTerm * (1.0f + D_ij);
-                    af.w                   += dGpol_dalpha2_ij * psA[tj].br;
-                    psA[tj].fb             += dGpol_dalpha2_ij * br;
-                    dEdR                   += Gpol * (1.0f - 0.25f * expTerm);
-#ifdef USE_CUTOFF
-                    if (r2 > cSim.nonbondedCutoffSqr)
-                    {
-                        dEdR = 0.0f;
-                    }
-#endif
-
-                    // Add forces
-                    dx                     *= dEdR;
-                    dy                     *= dEdR;
-                    dz                     *= dEdR;
-                    af.x                   -= dx;
-                    af.y                   -= dy;
-                    af.z                   -= dz;
-                    psA[tj].fx             += dx;
-                    psA[tj].fy             += dy;
-                    psA[tj].fz             += dz;
-                    tj                      = (tj + 1) & (GRID - 1);
+                    // No interactions in this block.
                 }
+                else if (flags == 0xFFFFFFFF)
+#endif
+                {
+                    // Compute all interactions within this block.
+
+                    for (int j = 0; j < GRID; j++)
+                    {
+                        float dx                = psA[tj].x - apos.x;
+                        float dy                = psA[tj].y - apos.y;
+                        float dz                = psA[tj].z - apos.z;
+#ifdef USE_PERIODIC
+                        dx -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                        dy -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                        dz -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+#endif
+                        float r2                = dx * dx + dy * dy + dz * dz;
+
+                        // CDLJ part
+                        float invR              = 1.0f / sqrt(r2);
+                        float sig               = a.x + psA[tj].sig;
+                        float sig2              = invR * sig;
+                        sig2                   *= sig2;
+                        float sig6              = sig2 * sig2 * sig2;
+                        float eps               = a.y * psA[tj].eps;
+                        float dEdR              = eps * (12.0f * sig6 - 6.0f) * sig6;
+#ifdef USE_CUTOFF
+                        dEdR                   += apos.w * psA[tj].q * (invR - 2.0f * cSim.reactionFieldK * r2);
+#else
+                        dEdR                   += apos.w * psA[tj].q * invR;
+#endif
+                        dEdR                   *= invR * invR;
+
+                        // ObcGbsaForce1 part
+                        float alpha2_ij         = br * psA[tj].br;
+                        float D_ij              = r2 / (4.0f * alpha2_ij);
+                        float expTerm           = exp(-D_ij);
+                        float denominator2      = r2 + alpha2_ij * expTerm;
+                        float denominator       = sqrt(denominator2);
+                        float Gpol              = (q2 * psA[tj].q) / (denominator * denominator2);
+                        float dGpol_dalpha2_ij  = -0.5f * Gpol * expTerm * (1.0f + D_ij);
+                        af.w                   += dGpol_dalpha2_ij * psA[tj].br;
+                        psA[tj].fb             += dGpol_dalpha2_ij * br;
+                        dEdR                   += Gpol * (1.0f - 0.25f * expTerm);
+#ifdef USE_CUTOFF
+                        if (r2 > cSim.nonbondedCutoffSqr)
+                        {
+                            dEdR = 0.0f;
+                        }
+#endif
+
+                        // Add forces
+                        dx                     *= dEdR;
+                        dy                     *= dEdR;
+                        dz                     *= dEdR;
+                        af.x                   -= dx;
+                        af.y                   -= dy;
+                        af.z                   -= dz;
+                        psA[tj].fx             += dx;
+                        psA[tj].fy             += dy;
+                        psA[tj].fz             += dz;
+                        tj                      = (tj + 1) & (GRID - 1);
+                    }
+                }
+#ifdef USE_CUTOFF
+                else
+                {
+                    // Compute only a subset of the interactions in this block.
+
+                    for (int j = 0; j < GRID; j++)
+                    {
+                        if ((flags&(1<<j)) != 0)
+                        {
+                            float dx                = psA[j].x - apos.x;
+                            float dy                = psA[j].y - apos.y;
+                            float dz                = psA[j].z - apos.z;
+#ifdef USE_PERIODIC
+                            dx -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                            dy -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                            dz -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+#endif
+                            float r2                = dx * dx + dy * dy + dz * dz;
+
+                            // CDLJ part
+                            float invR              = 1.0f / sqrt(r2);
+                            float sig               = a.x + psA[j].sig;
+                            float sig2              = invR * sig;
+                            sig2                   *= sig2;
+                            float sig6              = sig2 * sig2 * sig2;
+                            float eps               = a.y * psA[j].eps;
+                            float dEdR              = eps * (12.0f * sig6 - 6.0f) * sig6;
+#ifdef USE_CUTOFF
+                            dEdR                   += apos.w * psA[j].q * (invR - 2.0f * cSim.reactionFieldK * r2);
+#else
+                            dEdR                   += apos.w * psA[j].q * invR;
+#endif
+                            dEdR                   *= invR * invR;
+
+                            // ObcGbsaForce1 part
+                            float alpha2_ij         = br * psA[j].br;
+                            float D_ij              = r2 / (4.0f * alpha2_ij);
+                            float expTerm           = exp(-D_ij);
+                            float denominator2      = r2 + alpha2_ij * expTerm;
+                            float denominator       = sqrt(denominator2);
+                            float Gpol              = (q2 * psA[j].q) / (denominator * denominator2);
+                            float dGpol_dalpha2_ij  = -0.5f * Gpol * expTerm * (1.0f + D_ij);
+                            af.w                   += dGpol_dalpha2_ij * psA[j].br;
+                            dEdR                   += Gpol * (1.0f - 0.25f * expTerm);
+
+                            // Sum the Born forces.
+
+                            tempBuffer[threadIdx.x] = dGpol_dalpha2_ij * br;
+                            if (tgx % 2 == 0)
+                                tempBuffer[threadIdx.x] += tempBuffer[threadIdx.x+1];
+                            if (tgx % 4 == 0)
+                                tempBuffer[threadIdx.x] += tempBuffer[threadIdx.x+2];
+                            if (tgx % 8 == 0)
+                                tempBuffer[threadIdx.x] += tempBuffer[threadIdx.x+4];
+                            if (tgx % 16 == 0)
+                                tempBuffer[threadIdx.x] += tempBuffer[threadIdx.x+8];
+                            if (tgx == 0)
+                                psA[j].fb += tempBuffer[threadIdx.x] + tempBuffer[threadIdx.x+16];
+#ifdef USE_CUTOFF
+                            if (r2 > cSim.nonbondedCutoffSqr)
+                            {
+                                dEdR = 0.0f;
+                            }
+#endif
+
+                            // Add forces
+                            dx                     *= dEdR;
+                            dy                     *= dEdR;
+                            dz                     *= dEdR;
+                            af.x                   -= dx;
+                            af.y                   -= dy;
+                            af.z                   -= dz;
+                            tempBuffer[threadIdx.x] = dx;
+                            if (tgx % 2 == 0)
+                                tempBuffer[threadIdx.x] += tempBuffer[threadIdx.x+1];
+                            if (tgx % 4 == 0)
+                                tempBuffer[threadIdx.x] += tempBuffer[threadIdx.x+2];
+                            if (tgx % 8 == 0)
+                                tempBuffer[threadIdx.x] += tempBuffer[threadIdx.x+4];
+                            if (tgx % 16 == 0)
+                                tempBuffer[threadIdx.x] += tempBuffer[threadIdx.x+8];
+                            if (tgx == 0)
+                                psA[j].fx += tempBuffer[threadIdx.x] + tempBuffer[threadIdx.x+16];
+                            tempBuffer[threadIdx.x] = dy;
+                            if (tgx % 2 == 0)
+                                tempBuffer[threadIdx.x] += tempBuffer[threadIdx.x+1];
+                            if (tgx % 4 == 0)
+                                tempBuffer[threadIdx.x] += tempBuffer[threadIdx.x+2];
+                            if (tgx % 8 == 0)
+                                tempBuffer[threadIdx.x] += tempBuffer[threadIdx.x+4];
+                            if (tgx % 16 == 0)
+                                tempBuffer[threadIdx.x] += tempBuffer[threadIdx.x+8];
+                            if (tgx == 0)
+                                psA[j].fy += tempBuffer[threadIdx.x] + tempBuffer[threadIdx.x+16];
+                            tempBuffer[threadIdx.x] = dz;
+                            if (tgx % 2 == 0)
+                                tempBuffer[threadIdx.x] += tempBuffer[threadIdx.x+1];
+                            if (tgx % 4 == 0)
+                                tempBuffer[threadIdx.x] += tempBuffer[threadIdx.x+2];
+                            if (tgx % 8 == 0)
+                                tempBuffer[threadIdx.x] += tempBuffer[threadIdx.x+4];
+                            if (tgx % 16 == 0)
+                                tempBuffer[threadIdx.x] += tempBuffer[threadIdx.x+8];
+                            if (tgx == 0)
+                                psA[j].fz += tempBuffer[threadIdx.x] + tempBuffer[threadIdx.x+16];
+                        }
+                    }
+                }
+#endif
             }
             else  // bExclusion
             {

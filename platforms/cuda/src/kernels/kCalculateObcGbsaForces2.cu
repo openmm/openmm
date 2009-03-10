@@ -47,7 +47,6 @@ struct Atom {
     float z;
     float r;
     float sr;
-    float sr2;
     float fx;
     float fy;
     float fz;
@@ -123,19 +122,19 @@ void kCalculateObcGbsaForces2(gpuContext gpu)
             numWithInteractions = gpu->psInteractionCount->_pSysData[0];
             if (gpu->bOutputBufferPerWarp)
                 kCalculateObcGbsaCutoffByWarpForces2_kernel<<<gpu->sim.bornForce2_blocks, gpu->sim.bornForce2_threads_per_block,
-                        sizeof(Atom)*gpu->sim.bornForce2_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
+                        (sizeof(Atom)+sizeof(float3))*gpu->sim.bornForce2_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
             else
                 kCalculateObcGbsaCutoffForces2_kernel<<<gpu->sim.bornForce2_blocks, gpu->sim.bornForce2_threads_per_block,
-                        sizeof(Atom)*gpu->sim.bornForce2_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
+                        (sizeof(Atom)+sizeof(float3))*gpu->sim.bornForce2_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
             break;
         case PERIODIC:
             numWithInteractions = gpu->psInteractionCount->_pSysData[0];
             if (gpu->bOutputBufferPerWarp)
                 kCalculateObcGbsaPeriodicByWarpForces2_kernel<<<gpu->sim.bornForce2_blocks, gpu->sim.bornForce2_threads_per_block,
-                        sizeof(Atom)*gpu->sim.bornForce2_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
+                        (sizeof(Atom)+sizeof(float3))*gpu->sim.bornForce2_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
             else
                 kCalculateObcGbsaPeriodicForces2_kernel<<<gpu->sim.bornForce2_blocks, gpu->sim.bornForce2_threads_per_block,
-                        sizeof(Atom)*gpu->sim.bornForce2_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
+                        (sizeof(Atom)+sizeof(float3))*gpu->sim.bornForce2_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
             break;
     }
     LAUNCHERROR("kCalculateObcGbsaForces2");

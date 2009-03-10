@@ -38,10 +38,13 @@
 __global__ void METHOD_NAME(kCalculateObcGbsa, Forces2_kernel)(unsigned int* workUnit, int numWorkUnits)
 {
     extern __shared__ Atom sA[];
-    unsigned int totalWarps = cSim.nonbond_blocks*cSim.nonbond_threads_per_block/GRID;
+    unsigned int totalWarps = cSim.bornForce2_blocks*cSim.bornForce2_threads_per_block/GRID;
     unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
     int pos = warp*numWorkUnits/totalWarps;
     int end = (warp+1)*numWorkUnits/totalWarps;
+#ifdef USE_CUTOFF
+    float3* tempBuffer = (float3*) &sA[cSim.bornForce2_threads_per_block];
+#endif
 
     int lasty = -1;
     while (pos < end)
@@ -72,7 +75,6 @@ __global__ void METHOD_NAME(kCalculateObcGbsa, Forces2_kernel)(unsigned int* wor
             sA[threadIdx.x].z           = apos.z;
             sA[threadIdx.x].r           = a.x;
             sA[threadIdx.x].sr          = a.y;
-            sA[threadIdx.x].sr2         = a.y * a.y;
             sA[threadIdx.x].fb          = fb;
 
             for (unsigned int j = (tgx+1)&(GRID-1); j != tgx; j = (j+1)&(GRID-1))
@@ -105,7 +107,7 @@ __global__ void METHOD_NAME(kCalculateObcGbsa, Forces2_kernel)(unsigned int* wor
 
                 // Born Forces term
                 float term          =  0.125f *
-                                      (1.000f + psA[j].sr2 * r2Inverse) * t3 +
+                                      (1.000f + psA[j].sr * psA[j].sr * r2Inverse) * t3 +
                                        0.250f * t1 * r2Inverse;
                 float dE            = fb * term;
 
@@ -162,98 +164,242 @@ __global__ void METHOD_NAME(kCalculateObcGbsa, Forces2_kernel)(unsigned int* wor
                 sA[threadIdx.x].z           = temp.z;
                 sA[threadIdx.x].r           = temp1.x;
                 sA[threadIdx.x].sr          = temp1.y;
-                sA[threadIdx.x].sr2         = temp1.y * temp1.y;
             }
             float sr2                   = a.y * a.y;
-            for (int j = 0; j < GRID; j++)
+#ifdef USE_CUTOFF
+            unsigned int flags = cSim.pInteractionFlag[pos];
+            if (flags == 0)
             {
-                float dx                = psA[tj].x - apos.x;
-                float dy                = psA[tj].y - apos.y;
-                float dz                = psA[tj].z - apos.z;
-#ifdef USE_PERIODIC
-                dx -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                dy -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                dz -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                // No interactions in this block.
+            }
+            else if (flags == 0xFFFFFFFF)
 #endif
-                float r2                = dx * dx + dy * dy + dz * dz;
-                float r                 = sqrt(r2);
+            {
+                // Compute all interactions within this block.
 
-                // Interleaved Atom I and J Born Forces and sum components
-                float r2Inverse         = 1.0f / r2;
-                float rScaledRadiusJ    = r + psA[tj].sr;
-                float rScaledRadiusI    = r + a.y;
-                float rInverse          = 1.0f / r;
-                float l_ijJ             = 1.0f / max(a.x, fabs(r - psA[tj].sr));
-                float l_ijI             = 1.0f / max(psA[tj].r, fabs(r - a.y));
-                float u_ijJ             = 1.0f / rScaledRadiusJ;
-                float u_ijI             = 1.0f / rScaledRadiusI;
-                float l_ij2J            = l_ijJ * l_ijJ;
-                float l_ij2I            = l_ijI * l_ijI;
-                float u_ij2J            = u_ijJ * u_ijJ;
-                float u_ij2I            = u_ijI * u_ijI;
-                float t1J               = log (u_ijJ / l_ijJ);
-                float t1I               = log (u_ijI / l_ijI);
-                float t2J               = (l_ij2J - u_ij2J);
-                float t2I               = (l_ij2I - u_ij2I);
-                float t3J               = t2J * rInverse;
-                float t3I               = t2I * rInverse;
-                t1J                    *= rInverse;
-                t1I                    *= rInverse;
+                for (int j = 0; j < GRID; j++)
+                {
+                    float dx                = psA[tj].x - apos.x;
+                    float dy                = psA[tj].y - apos.y;
+                    float dz                = psA[tj].z - apos.z;
+#ifdef USE_PERIODIC
+                    dx -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                    dy -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                    dz -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+#endif
+                    float r2                = dx * dx + dy * dy + dz * dz;
+                    float r                 = sqrt(r2);
 
-                // Born Forces term
-                float term              =  0.125f *
-                                          (1.000f + psA[tj].sr2 * r2Inverse) * t3J +
-                                           0.250f * t1J * r2Inverse;
-                float dE                = fb * term;
+                    // Interleaved Atom I and J Born Forces and sum components
+                    float r2Inverse         = 1.0f / r2;
+                    float rScaledRadiusJ    = r + psA[tj].sr;
+                    float rScaledRadiusI    = r + a.y;
+                    float rInverse          = 1.0f / r;
+                    float l_ijJ             = 1.0f / max(a.x, fabs(r - psA[tj].sr));
+                    float l_ijI             = 1.0f / max(psA[tj].r, fabs(r - a.y));
+                    float u_ijJ             = 1.0f / rScaledRadiusJ;
+                    float u_ijI             = 1.0f / rScaledRadiusI;
+                    float l_ij2J            = l_ijJ * l_ijJ;
+                    float l_ij2I            = l_ijI * l_ijI;
+                    float u_ij2J            = u_ijJ * u_ijJ;
+                    float u_ij2I            = u_ijI * u_ijI;
+                    float t1J               = log (u_ijJ / l_ijJ);
+                    float t1I               = log (u_ijI / l_ijI);
+                    float t2J               = (l_ij2J - u_ij2J);
+                    float t2I               = (l_ij2I - u_ij2I);
+                    float t3J               = t2J * rInverse;
+                    float t3I               = t2I * rInverse;
+                    t1J                    *= rInverse;
+                    t1I                    *= rInverse;
+
+                    // Born Forces term
+                    float term              =  0.125f *
+                                              (1.000f + psA[tj].sr * psA[tj].sr * r2Inverse) * t3J +
+                                               0.250f * t1J * r2Inverse;
+                    float dE                = fb * term;
 
 #if defined USE_PERIODIC
-                if (a.x >= rScaledRadiusJ || i >= cSim.atoms || y+tj >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)
+                    if (a.x >= rScaledRadiusJ || i >= cSim.atoms || y+tj >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)
 #elif defined USE_CUTOFF
-                if (a.x >= rScaledRadiusJ || r2 > cSim.nonbondedCutoffSqr)
+                    if (a.x >= rScaledRadiusJ || r2 > cSim.nonbondedCutoffSqr)
 #else
-                if (a.x >= rScaledRadiusJ)
+                    if (a.x >= rScaledRadiusJ)
 #endif
-                {
-                    dE                  = 0.0f;
-                }
+                    {
+                        dE                  = 0.0f;
+                    }
 
-                float d                 = dx * dE;
-                af.x                   -= d;
-                psA[tj].fx             += d;
-                d                       = dy * dE;
-                af.y                   -= d;
-                psA[tj].fy             += d;
-                d                       = dz * dE;
-                af.z                   -= d;
-                psA[tj].fz             += d;
+                    float d                 = dx * dE;
+                    af.x                   -= d;
+                    psA[tj].fx             += d;
+                    d                       = dy * dE;
+                    af.y                   -= d;
+                    psA[tj].fy             += d;
+                    d                       = dz * dE;
+                    af.z                   -= d;
+                    psA[tj].fz             += d;
 
-                // Atom J Born sum term
-                term                    =  0.125f *
-                                          (1.000f + sr2 * r2Inverse) * t3I +
-                                           0.250f * t1I * r2Inverse;
-                dE                      = psA[tj].fb * term;
+                    // Atom J Born sum term
+                    term                    =  0.125f *
+                                              (1.000f + sr2 * r2Inverse) * t3I +
+                                               0.250f * t1I * r2Inverse;
+                    dE                      = psA[tj].fb * term;
 
+                    float rj = psA[tj].r;
 #ifdef USE_PERIODIC
-                if (psA[tj].r >= rScaledRadiusI || i >= cSim.atoms || y+tj >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)
+                    if (rj >= rScaledRadiusI || i >= cSim.atoms || y+tj >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)
 #elif defined USE_CUTOFF
-                if (psA[tj].r >= rScaledRadiusI || r2 > cSim.nonbondedCutoffSqr)
+                    if (rj >= rScaledRadiusI || r2 > cSim.nonbondedCutoffSqr)
 #else
-                if (psA[tj].r >= rScaledRadiusI)
+                    if (rj >= rScaledRadiusI)
 #endif
-                {
-                    dE                  = 0.0f;
+                    {
+                        dE                  = 0.0f;
+                    }
+                    dx                     *= dE;
+                    dy                     *= dE;
+                    dz                     *= dE;
+                    psA[tj].fx             += dx;
+                    psA[tj].fy             += dy;
+                    psA[tj].fz             += dz;
+                    af.x                   -= dx;
+                    af.y                   -= dy;
+                    af.z                   -= dz;
+                    tj                      = (tj + 1) & (GRID - 1);
                 }
-                dx                     *= dE;
-                dy                     *= dE;
-                dz                     *= dE;
-                psA[tj].fx             += dx;
-                psA[tj].fy             += dy;
-                psA[tj].fz             += dz;
-                af.x                   -= dx;
-                af.y                   -= dy;
-                af.z                   -= dz;
-                tj                      = (tj + 1) & (GRID - 1);
             }
+#ifdef USE_CUTOFF
+            else
+            {
+                // Compute only a subset of the interactions in this block.
+
+                for (int j = 0; j < GRID; j++)
+                {
+                    if ((flags&(1<<j)) != 0)
+                    {
+                        float dx                = psA[j].x - apos.x;
+                        float dy                = psA[j].y - apos.y;
+                        float dz                = psA[j].z - apos.z;
+    #ifdef USE_PERIODIC
+                        dx -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                        dy -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                        dz -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+    #endif
+                        float r2                = dx * dx + dy * dy + dz * dz;
+                        float r                 = sqrt(r2);
+
+                        // Interleaved Atom I and J Born Forces and sum components
+                        float r2Inverse         = 1.0f / r2;
+                        float rScaledRadiusJ    = r + psA[j].sr;
+                        float rScaledRadiusI    = r + a.y;
+                        float rInverse          = 1.0f / r;
+                        float l_ijJ             = 1.0f / max(a.x, fabs(r - psA[j].sr));
+                        float l_ijI             = 1.0f / max(psA[j].r, fabs(r - a.y));
+                        float u_ijJ             = 1.0f / rScaledRadiusJ;
+                        float u_ijI             = 1.0f / rScaledRadiusI;
+                        float l_ij2J            = l_ijJ * l_ijJ;
+                        float l_ij2I            = l_ijI * l_ijI;
+                        float u_ij2J            = u_ijJ * u_ijJ;
+                        float u_ij2I            = u_ijI * u_ijI;
+                        float t1J               = log (u_ijJ / l_ijJ);
+                        float t1I               = log (u_ijI / l_ijI);
+                        float t2J               = (l_ij2J - u_ij2J);
+                        float t2I               = (l_ij2I - u_ij2I);
+                        float t3J               = t2J * rInverse;
+                        float t3I               = t2I * rInverse;
+                        t1J                    *= rInverse;
+                        t1I                    *= rInverse;
+
+                        // Born Forces term
+                        float term              =  0.125f *
+                                                  (1.000f + psA[j].sr * psA[j].sr * r2Inverse) * t3J +
+                                                   0.250f * t1J * r2Inverse;
+                        float dE                = fb * term;
+
+    #if defined USE_PERIODIC
+                        if (a.x >= rScaledRadiusJ || i >= cSim.atoms || y+j >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)
+    #elif defined USE_CUTOFF
+                        if (a.x >= rScaledRadiusJ || r2 > cSim.nonbondedCutoffSqr)
+    #else
+                        if (a.x >= rScaledRadiusJ)
+    #endif
+                        {
+                            dE                  = 0.0f;
+                        }
+
+                        float d                 = dx * dE;
+                        af.x                   -= d;
+                        tempBuffer[threadIdx.x].x = d;
+                        d                       = dy * dE;
+                        af.y                   -= d;
+                        tempBuffer[threadIdx.x].y = d;
+                        d                       = dz * dE;
+                        af.z                   -= d;
+                        tempBuffer[threadIdx.x].z = d;
+
+                        // Atom J Born sum term
+                        term                    =  0.125f *
+                                                  (1.000f + sr2 * r2Inverse) * t3I +
+                                                   0.250f * t1I * r2Inverse;
+                        dE                      = psA[j].fb * term;
+
+                        float rj = psA[j].r;
+    #ifdef USE_PERIODIC
+                        if (rj >= rScaledRadiusI || i >= cSim.atoms || y+j >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)
+    #elif defined USE_CUTOFF
+                        if (rj >= rScaledRadiusI || r2 > cSim.nonbondedCutoffSqr)
+    #else
+                        if (rj >= rScaledRadiusI)
+    #endif
+                        {
+                            dE                  = 0.0f;
+                        }
+                        dx                     *= dE;
+                        dy                     *= dE;
+                        dz                     *= dE;
+                        tempBuffer[threadIdx.x].x += dx;
+                        tempBuffer[threadIdx.x].y += dy;
+                        tempBuffer[threadIdx.x].z += dz;
+                        af.x                   -= dx;
+                        af.y                   -= dy;
+                        af.z                   -= dz;
+
+                        // Sum the forces on atom j.
+
+                        if (tgx % 2 == 0)
+                        {
+                            tempBuffer[threadIdx.x].x += tempBuffer[threadIdx.x+1].x;
+                            tempBuffer[threadIdx.x].y += tempBuffer[threadIdx.x+1].y;
+                            tempBuffer[threadIdx.x].z += tempBuffer[threadIdx.x+1].z;
+                        }
+                        if (tgx % 4 == 0)
+                        {
+                            tempBuffer[threadIdx.x].x += tempBuffer[threadIdx.x+2].x;
+                            tempBuffer[threadIdx.x].y += tempBuffer[threadIdx.x+2].y;
+                            tempBuffer[threadIdx.x].z += tempBuffer[threadIdx.x+2].z;
+                        }
+                        if (tgx % 8 == 0)
+                        {
+                            tempBuffer[threadIdx.x].x += tempBuffer[threadIdx.x+4].x;
+                            tempBuffer[threadIdx.x].y += tempBuffer[threadIdx.x+4].y;
+                            tempBuffer[threadIdx.x].z += tempBuffer[threadIdx.x+4].z;
+                        }
+                        if (tgx % 16 == 0)
+                        {
+                            tempBuffer[threadIdx.x].x += tempBuffer[threadIdx.x+8].x;
+                            tempBuffer[threadIdx.x].y += tempBuffer[threadIdx.x+8].y;
+                            tempBuffer[threadIdx.x].z += tempBuffer[threadIdx.x+8].z;
+                        }
+                        if (tgx == 0)
+                        {
+                            psA[j].fx += tempBuffer[threadIdx.x].x + tempBuffer[threadIdx.x+16].x;
+                            psA[j].fy += tempBuffer[threadIdx.x].y + tempBuffer[threadIdx.x+16].y;
+                            psA[j].fz += tempBuffer[threadIdx.x].z + tempBuffer[threadIdx.x+16].z;
+                        }
+                    }
+                }
+            }
+#endif
 
             // Write results
             float4 of;
