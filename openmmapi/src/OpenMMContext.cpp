@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -36,10 +36,12 @@
 using namespace OpenMM;
 using namespace std;
 
-OpenMMContext::OpenMMContext(System& system, Integrator& integrator) : impl(new OpenMMContextImpl(*this, system, integrator, 0)) {
+OpenMMContext::OpenMMContext(System& system, Integrator& integrator) {
+    impl = new OpenMMContextImpl(*this, system, integrator, 0);
 }
 
-OpenMMContext::OpenMMContext(System& system, Integrator& integrator, Platform& platform) : impl(new OpenMMContextImpl(*this, system, integrator, &platform)) {
+OpenMMContext::OpenMMContext(System& system, Integrator& integrator, Platform& platform) {
+    impl = new OpenMMContextImpl(*this, system, integrator, &platform);
 }
 
 OpenMMContext::~OpenMMContext() {
