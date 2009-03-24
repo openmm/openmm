@@ -1699,9 +1699,22 @@ void gpuReorderAtoms(gpuContext gpu)
 
             for (int i = 0; i < numMolecules; i++)
             {
-                molPos[i].x -= floor(molPos[i].x/gpu->sim.periodicBoxSizeX)*gpu->sim.periodicBoxSizeX;
-                molPos[i].y -= floor(molPos[i].y/gpu->sim.periodicBoxSizeY)*gpu->sim.periodicBoxSizeY;
-                molPos[i].z -= floor(molPos[i].z/gpu->sim.periodicBoxSizeZ)*gpu->sim.periodicBoxSizeZ;
+                float dx = floor(molPos[i].x/gpu->sim.periodicBoxSizeX)*gpu->sim.periodicBoxSizeX;
+                float dy = floor(molPos[i].y/gpu->sim.periodicBoxSizeY)*gpu->sim.periodicBoxSizeY;
+                float dz = floor(molPos[i].z/gpu->sim.periodicBoxSizeZ)*gpu->sim.periodicBoxSizeZ;
+                if (dx != 0.0f || dy != 0.0f || dz != 0.0f)
+                {
+                    molPos[i].x -= dx;
+                    molPos[i].y -= dy;
+                    molPos[i].z -= dz;
+                    for (int j = 0; j < atoms.size(); j++)
+                    {
+                        int atom = atoms[j]+mol.instances[i];
+                        posq[atom].x -= dx;
+                        posq[atom].y -= dy;
+                        posq[atom].z -= dz;
+                    }
+                }
             }
         }
 

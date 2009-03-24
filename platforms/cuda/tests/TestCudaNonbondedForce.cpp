@@ -388,7 +388,9 @@ void testLargeSystem() {
     cudaState = cudaContext.getState(State::Positions | State::Velocities | State::Forces);
     referenceState = referenceContext.getState(State::Positions | State::Velocities | State::Forces);
     for (int i = 0; i < numParticles; i++) {
-        ASSERT_EQUAL_VEC(cudaState.getPositions()[i], referenceState.getPositions()[i], tol);
+        ASSERT_EQUAL_TOL(fmod(cudaState.getPositions()[i][0]-referenceState.getPositions()[i][0], boxSize), 0, tol);
+        ASSERT_EQUAL_TOL(fmod(cudaState.getPositions()[i][1]-referenceState.getPositions()[i][1], boxSize), 0, tol);
+        ASSERT_EQUAL_TOL(fmod(cudaState.getPositions()[i][2]-referenceState.getPositions()[i][2], boxSize), 0, tol);
         ASSERT_EQUAL_VEC(cudaState.getVelocities()[i], referenceState.getVelocities()[i], tol);
         ASSERT_EQUAL_VEC(cudaState.getForces()[i], referenceState.getForces()[i], tol);
     }
