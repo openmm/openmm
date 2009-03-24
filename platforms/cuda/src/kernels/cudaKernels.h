@@ -39,10 +39,7 @@ extern void kGenerateRandoms(gpuContext gpu);
 
 // Main loop
 extern void kCalculateCDLJObcGbsaForces1(gpuContext gpu);
-extern void kCalculateCDLJObcGbsaForces1_12(gpuContext gpu);
 extern void kCalculateCDLJForces(gpuContext gpu);
-extern void kCalculateObcGbsaForces1(gpuContext gpu);
-extern void kCalculateObcGbsaForces1_12(gpuContext gpu);
 extern void kReduceObcGbsaBornForces(gpuContext gpu);
 extern void kCalculateObcGbsaForces2(gpuContext gpu);
 extern void kCalculateLocalForces(gpuContext gpu);
@@ -72,10 +69,6 @@ extern void SetCalculateLocalForcesSim(gpuContext gpu);
 extern void GetCalculateLocalForcesSim(gpuContext gpu);
 extern void SetCalculateObcGbsaBornSumSim(gpuContext gpu);
 extern void GetCalculateObcGbsaBornSumSim(gpuContext gpu);
-extern void SetCalculateObcGbsaForces1Sim(gpuContext gpu);
-extern void GetCalculateObcGbsaForces1Sim(gpuContext gpu);
-extern void SetCalculateObcGbsaForces1_12Sim(gpuContext gpu);
-extern void GetCalculateObcGbsaForces1_12Sim(gpuContext gpu);
 extern void SetCalculateObcGbsaForces2Sim(gpuContext gpu);
 extern void GetCalculateObcGbsaForces2Sim(gpuContext gpu);
 extern void SetCalculateAndersenThermostatSim(gpuContext gpu);

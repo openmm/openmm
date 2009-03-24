@@ -152,18 +152,6 @@ void kReduceObcGbsaBornSum(gpuContext gpu)
 //    printf("kReduceObcGbsaBornSum\n");
     kReduceObcGbsaBornSum_kernel<<<gpu->sim.blocks, 384>>>();
     gpu->bRecalculateBornRadii = false;
-
-if( 0 ){
-   static int step = 0;
-   int numPrint    = -1;
-   step++;
-   WriteArrayToFile1( gpu, "ObcGbsaBornBRad", step, gpu->psBornRadii, numPrint );
-   WriteArrayToFile1( gpu, "ObcGbsaBornSum", step, gpu->psBornSum, numPrint );
-   WriteArrayToFile2( gpu, "ObcGbsaObcData", step, gpu->psObcData, numPrint );
-   WriteArrayToFile4( gpu, "ObcGbsaBornPos", step, gpu->psPosq4, numPrint );
-   //gpuDumpCoordinates( gpu );
-   gpuDumpObcInfo( gpu );
-}
     LAUNCHERROR("kReduceObcGbsaBornSum");
 }
 

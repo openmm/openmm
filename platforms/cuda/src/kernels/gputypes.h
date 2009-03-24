@@ -139,50 +139,23 @@ extern "C"
 bool gpuIsAvailable();
 
 extern "C"
-int gpuReadBondParameters(gpuContext gpu, char* fname);
-
-extern "C"
 void gpuSetBondParameters(gpuContext gpu, const std::vector<int>& atom1, const std::vector<int>& atom2, const std::vector<float>& length, const std::vector<float>& k);
-
-extern "C"
-int gpuReadBondAngleParameters(gpuContext gpu, char* fname);
 
 extern "C"
 void gpuSetBondAngleParameters(gpuContext gpu, const std::vector<int>& atom1, const std::vector<int>& atom2, const std::vector<int>& atom3,
         const std::vector<float>& angle, const std::vector<float>& k);
 
 extern "C"
-int gpuReadDihedralParameters(gpuContext gpu, char* fname);
-
-extern "C"
 void gpuSetDihedralParameters(gpuContext gpu, const std::vector<int>& atom1, const std::vector<int>& atom2, const std::vector<int>& atom3, const std::vector<int>& atom4,
         const std::vector<float>& k, const std::vector<float>& phase, const std::vector<int>& periodicity);
-
-extern "C"
-int gpuReadRbDihedralParameters(gpuContext gpu, char* fname);
 
 extern "C"
 void gpuSetRbDihedralParameters(gpuContext gpu, const std::vector<int>& atom1, const std::vector<int>& atom2, const std::vector<int>& atom3, const std::vector<int>& atom4,
         const std::vector<float>& c0, const std::vector<float>& c1, const std::vector<float>& c2, const std::vector<float>& c3, const std::vector<float>& c4, const std::vector<float>& c5);
 
 extern "C"
-int gpuReadLJ14Parameters(gpuContext gpu, char* fname);
-
-extern "C"
 void gpuSetLJ14Parameters(gpuContext gpu, float epsfac, float fudge, const std::vector<int>& atom1, const std::vector<int>& atom2,
         const std::vector<float>& c6, const std::vector<float>& c12, const std::vector<float>& q1, const std::vector<float>& q2);
-
-extern "C"
-float gpuGetAtomicRadius(gpuContext gpu, std::string s);
-
-extern "C"
-unsigned char gpuGetAtomicSymbol(gpuContext gpu, std::string s);
-
-extern "C"
-int gpuReadAtomicParameters(gpuContext gpu, char* fname);
-
-extern "C"
-int gpuReadCoulombParameters(gpuContext gpu, char* fname);
 
 extern "C"
 void gpuSetCoulombParameters(gpuContext gpu, float epsfac, const std::vector<int>& atom, const std::vector<float>& c6, const std::vector<float>& c12, const std::vector<float>& q,
@@ -198,17 +171,11 @@ extern "C"
 void gpuSetObcParameters(gpuContext gpu, float innerDielectric, float solventDielectric, const std::vector<int>& atom, const std::vector<float>& radius, const std::vector<float>& scale);
 
 extern "C"
-int gpuReadShakeParameters(gpuContext gpu, char* fname);
-
-extern "C"
 void gpuSetShakeParameters(gpuContext gpu, const std::vector<int>& atom1, const std::vector<int>& atom2, const std::vector<float>& distance,
         const std::vector<float>& invMass1, const std::vector<float>& invMass2, float tolerance);
 
 extern "C"
 int gpuAllocateInitialBuffers(gpuContext gpu);
-
-extern "C"
-void gpuReadCoordinates(gpuContext gpu, char* fname);
 
 extern "C"
 void gpuSetPositions(gpuContext gpu, const std::vector<float>& x, const std::vector<float>& y, const std::vector<float>& z);
@@ -221,9 +188,6 @@ void gpuSetMass(gpuContext gpu, const std::vector<float>& mass);
 
 extern "C"
 void gpuInitializeRandoms(gpuContext gpu);
-
-extern "C"
-void* gpuInitFromFile(char* fname);
 
 extern "C"
 void* gpuInit(int numAtoms);
@@ -254,48 +218,6 @@ void gpuBuildExclusionList(gpuContext gpu);
 
 extern "C"
 int gpuSetConstants(gpuContext gpu);
-
-extern "C"
-void gpuDumpCoordinates(gpuContext gpu);
-
-extern "C"
-void gpuDumpPrimeCoordinates(gpuContext gpu);
-
-extern "C"
-void gpuDumpForces(gpuContext gpu);
-
-extern "C"
-void gpuDumpAtomData(gpuContext gpu);
-
-extern "C"
-bool gpuCheckData(gpuContext gpu);
-
-extern "C"
-void gpuSetup(void* pVoid);
-
-extern "C"
-void kCPUCalculate14(gpuContext gpu);
-
-extern "C"
-void kCPUCalculateLocalForces(gpuContext gpu);
-
-extern "C"
-void WriteArrayToFile1( gpuContext gpu, char* fname, int step, CUDAStream<float>*  psPos, int numPrint );
-
-extern "C"
-void WriteArrayToFile2( gpuContext gpu, char* fname, int step, CUDAStream<float2>* psPos, int numPrint );
-
-extern "C"
-void WriteArrayToFile3( gpuContext gpu, char* fname, int step, CUDAStream<float3>* psPos, int numPrint );
-
-extern "C"
-void WriteArrayToFile4( gpuContext gpu, char* fname, int step, CUDAStream<float4>* psPos, int numPrint );
-
-extern "C"
-void gpuDumpObcInfo(gpuContext gpu);
-
-extern "C"
-void gpuDumpObcLoop1(gpuContext gpu); 
 
 extern "C"
 void gpuReorderAtoms(gpuContext gpu);
