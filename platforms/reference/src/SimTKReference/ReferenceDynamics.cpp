@@ -63,8 +63,8 @@ ReferenceDynamics::ReferenceDynamics( int numberOfAtoms,  RealOpenMM deltaT, Rea
    _oneDTempArrays       = 0;
    _oneDTempArrays       = NULL;
 
-   _ownReferenceShake    = false;
-   _referenceShake       = NULL;
+   _ownReferenceConstraint = false;
+   _referenceConstraint    = NULL;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -84,8 +84,8 @@ ReferenceDynamics::~ReferenceDynamics( ){
    _freeTwoDArrays();
    _freeOneDArrays();
 
-   if( _ownReferenceShake ){
-      delete _referenceShake;
+   if( _ownReferenceConstraint ){
+      delete _referenceConstraint;
    }
 }
 
@@ -383,49 +383,49 @@ RealOpenMM ReferenceDynamics::getTemperature( void ) const {
 
 /**---------------------------------------------------------------------------------------
 
-   Get ReferenceShake
+   Get ReferenceConstraint
 
-   @return referenceShake  object
+   @return ReferenceConstraint  object
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceShakeAlgorithm* ReferenceDynamics::getReferenceShakeAlgorithm( void ) const {
+ReferenceConstraintAlgorithm* ReferenceDynamics::getReferenceConstraintAlgorithm( void ) const {
 
    // ---------------------------------------------------------------------------------------
 
-   // static const char* methodName  = "\nReferenceDynamics::getReferenceShake";
+   // static const char* methodName  = "\nReferenceDynamics::getReferenceConstraint";
 
    // ---------------------------------------------------------------------------------------
 
-   return _referenceShake;
+   return _referenceConstraint;
 }
 
 /**---------------------------------------------------------------------------------------
 
-   Set ReferenceShake
+   Set ReferenceConstraint
 
-   @param referenceShake  referenceShake object
+   @param referenceConstraint  ReferenceConstraint object
 
    @return ReferenceDynamics::DefaultReturn
 
    --------------------------------------------------------------------------------------- */
 
-int ReferenceDynamics::setReferenceShakeAlgorithm( ReferenceShakeAlgorithm* referenceShake ){
+int ReferenceDynamics::setReferenceConstraintAlgorithm( ReferenceConstraintAlgorithm* referenceConstraint ){
 
    // ---------------------------------------------------------------------------------------
 
-   // static const char* methodName  = "\nReferenceDynamics::setReferenceShake";
+   // static const char* methodName  = "\nReferenceDynamics::setReferenceConstraint";
 
    // ---------------------------------------------------------------------------------------
 
    // delete if own
 
-   if( _referenceShake && _ownReferenceShake ){
-      delete _referenceShake;
+   if( _referenceConstraint && _ownReferenceConstraint ){
+      delete _referenceConstraint;
    }
 
-   _referenceShake     = referenceShake;
-   _ownReferenceShake  = 0;
+   _referenceConstraint = referenceConstraint;
+   _ownReferenceConstraint = 0;
 
    return ReferenceDynamics::DefaultReturn;
 }

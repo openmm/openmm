@@ -129,6 +129,18 @@ struct _gpuContext {
     CUDAStream<int>* psAtomIndex;           // The original index of each atom
     CUDAStream<float4>* psGridBoundingBox;  // The size of each grid cell
     CUDAStream<float4>* psGridCenter;       // The center and radius for each grid cell
+    CUDAStream<int2>* psLincsAtoms;         // The atoms connected by each LINCS constraint
+    CUDAStream<float4>* psLincsDistance;    // The displacement vector (x, y, z) and constraint distance (w) for each LINCS constraint
+    CUDAStream<int>* psLincsConnections;    // The indices of constraints that other constraints are connected to
+    CUDAStream<int>* psLincsConnectionsIndex; // The index in psLincsConnections at which the connections for a particular constraint start
+    CUDAStream<int>* psLincsAtomConstraints; // The indices of constraints involving each atom
+    CUDAStream<int>* psLincsAtomConstraintsIndex; // The index in psLincsAtomConstraints at which the constraints for a particular atom start
+    CUDAStream<float>* psLincsS;            // S matrix for LINCS
+    CUDAStream<float>* psLincsCoupling;     // Coupling matrix for LINCS
+    CUDAStream<float>* psLincsRhs1;         // Workspace for LINCS
+    CUDAStream<float>* psLincsRhs2;         // Workspace for LINCS
+    CUDAStream<float>* psLincsSolution;     // Workspace for LINCS
+    CUDAStream<unsigned int>* psSyncCounter;// Used for global thread synchronization
 };
 
 typedef struct _gpuContext *gpuContext;

@@ -203,9 +203,9 @@ int ReferenceBrownianDynamics::update( int numberOfAtoms, RealOpenMM** atomCoord
            xPrime[i][j] = atomCoordinates[i][j] + forceScale*forces[i][j] + noiseAmplitude*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
        }
    }
-   ReferenceShakeAlgorithm* referenceShakeAlgorithm = getReferenceShakeAlgorithm();
-   if( referenceShakeAlgorithm )
-      referenceShakeAlgorithm->applyShake( numberOfAtoms, atomCoordinates, xPrime, inverseMasses );
+   ReferenceConstraintAlgorithm* referenceConstraintAlgorithm = getReferenceConstraintAlgorithm();
+   if( referenceConstraintAlgorithm )
+      referenceConstraintAlgorithm->apply( numberOfAtoms, atomCoordinates, xPrime, inverseMasses );
    
    // Update the positions and velocities.
    

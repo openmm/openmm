@@ -40,7 +40,7 @@ class CpuObc;
 class ReferenceAndersenThermostat;
 class ReferenceBrownianDynamics;
 class ReferenceStochasticDynamics;
-class ReferenceShakeAlgorithm;
+class ReferenceConstraintAlgorithm;
 class ReferenceVerletDynamics;
 
 namespace OpenMM {
@@ -282,7 +282,7 @@ private:
 class ReferenceIntegrateVerletStepKernel : public IntegrateVerletStepKernel {
 public:
     ReferenceIntegrateVerletStepKernel(std::string name, const Platform& platform) : IntegrateVerletStepKernel(name, platform),
-        dynamics(0), shake(0), masses(0), shakeParameters(0), constraintIndices(0) {
+        dynamics(0), constraints(0), masses(0), constraintDistances(0), constraintIndices(0) {
     }
     ~ReferenceIntegrateVerletStepKernel();
     /**
@@ -301,9 +301,9 @@ public:
     void execute(OpenMMContextImpl& context, const VerletIntegrator& integrator);
 private:
     ReferenceVerletDynamics* dynamics;
-    ReferenceShakeAlgorithm* shake;
+    ReferenceConstraintAlgorithm* constraints;
     RealOpenMM* masses;
-    RealOpenMM** shakeParameters;
+    RealOpenMM* constraintDistances;
     int** constraintIndices;
     int numConstraints;
     double prevStepSize;
@@ -315,7 +315,7 @@ private:
 class ReferenceIntegrateLangevinStepKernel : public IntegrateLangevinStepKernel {
 public:
     ReferenceIntegrateLangevinStepKernel(std::string name, const Platform& platform) : IntegrateLangevinStepKernel(name, platform),
-        dynamics(0), shake(0), masses(0), shakeParameters(0), constraintIndices(0) {
+        dynamics(0), constraints(0), masses(0), constraintDistances(0), constraintIndices(0) {
     }
     ~ReferenceIntegrateLangevinStepKernel();
     /**
@@ -334,9 +334,9 @@ public:
     void execute(OpenMMContextImpl& context, const LangevinIntegrator& integrator);
 private:
     ReferenceStochasticDynamics* dynamics;
-    ReferenceShakeAlgorithm* shake;
+    ReferenceConstraintAlgorithm* constraints;
     RealOpenMM* masses;
-    RealOpenMM** shakeParameters;
+    RealOpenMM* constraintDistances;
     int** constraintIndices;
     int numConstraints;
     double prevTemp, prevFriction, prevStepSize;
@@ -348,7 +348,7 @@ private:
 class ReferenceIntegrateBrownianStepKernel : public IntegrateBrownianStepKernel {
 public:
     ReferenceIntegrateBrownianStepKernel(std::string name, const Platform& platform) : IntegrateBrownianStepKernel(name, platform),
-        dynamics(0), shake(0), masses(0), shakeParameters(0), constraintIndices(0) {
+        dynamics(0), constraints(0), masses(0), constraintDistances(0), constraintIndices(0) {
     }
     ~ReferenceIntegrateBrownianStepKernel();
     /**
@@ -367,9 +367,9 @@ public:
     void execute(OpenMMContextImpl& context, const BrownianIntegrator& integrator);
 private:
     ReferenceBrownianDynamics* dynamics;
-    ReferenceShakeAlgorithm* shake;
+    ReferenceConstraintAlgorithm* constraints;
     RealOpenMM* masses;
-    RealOpenMM** shakeParameters;
+    RealOpenMM* constraintDistances;
     int** constraintIndices;
     int numConstraints;
     double prevTemp, prevFriction, prevStepSize;

@@ -25,7 +25,7 @@
 #ifndef __ReferenceDynamics_H__
 #define __ReferenceDynamics_H__
 
-#include "ReferenceShakeAlgorithm.h"
+#include "ReferenceConstraintAlgorithm.h"
 #include "../SimTKUtilities/SimTKOpenMMCommon.h"
 #include <cstddef>
 
@@ -68,8 +68,8 @@ class ReferenceDynamics {
       int _numberOf1DTempArrays;
       RealOpenMM** _oneDTempArrays;
 
-      int _ownReferenceShake;
-      ReferenceShakeAlgorithm* _referenceShake;
+      int _ownReferenceConstraint;
+      ReferenceConstraintAlgorithm* _referenceConstraint;
 
       /**---------------------------------------------------------------------------------------
       
@@ -261,25 +261,25 @@ class ReferenceDynamics {
 
       /**---------------------------------------------------------------------------------------
       
-         Get ReferenceShake
+         Get ReferenceConstraint
       
-         @return referenceShake  object
+         @return referenceConstraint  object
       
          --------------------------------------------------------------------------------------- */
       
-      ReferenceShakeAlgorithm* getReferenceShakeAlgorithm( void ) const;
+      ReferenceConstraintAlgorithm* getReferenceConstraintAlgorithm( void ) const;
       
       /**---------------------------------------------------------------------------------------
       
-         Set ReferenceShake
+         Set ReferenceConstraint
       
-         @param referenceShake  referenceShake object
+         @param referenceConstraint  referenceConstraint object
       
          @return ReferenceDynamics::DefaultReturn
       
          --------------------------------------------------------------------------------------- */
       
-      int setReferenceShakeAlgorithm( ReferenceShakeAlgorithm* referenceShake );
+      int setReferenceConstraintAlgorithm( ReferenceConstraintAlgorithm* referenceConstraint );
       
       /**---------------------------------------------------------------------------------------
       

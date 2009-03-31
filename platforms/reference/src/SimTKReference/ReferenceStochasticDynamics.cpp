@@ -498,17 +498,17 @@ int ReferenceStochasticDynamics::update( int numberOfAtoms, RealOpenMM** atomCoo
 
    //writeState( numberOfAtoms, atomCoordinates, velocities, forces, masses, -1 , "Sd1" );
 
-   ReferenceShakeAlgorithm* referenceShakeAlgorithm = getReferenceShakeAlgorithm();
-   if( referenceShakeAlgorithm ){
+   ReferenceConstraintAlgorithm* referenceConstraintAlgorithm = getReferenceConstraintAlgorithm();
+   if( referenceConstraintAlgorithm ){
 
 /*
       std::stringstream message;
       message << methodName;
-      message << " calling shake1\n";
+      message << " calling constrain1\n";
       SimTKOpenMMLog::printMessage( message );
 */
 
-      referenceShakeAlgorithm->applyShake( numberOfAtoms, atomCoordinates, xPrime,
+      referenceConstraintAlgorithm->apply( numberOfAtoms, atomCoordinates, xPrime,
                                            inverseMasses );
 
    }
@@ -556,16 +556,16 @@ int ReferenceStochasticDynamics::update( int numberOfAtoms, RealOpenMM** atomCoo
       SimTKOpenMMLog::printMessage( message );
    }
 
-   if( referenceShakeAlgorithm ){
+   if( referenceConstraintAlgorithm ){
 
 /*
       std::stringstream message;
       message << methodName;
-      message << " calling shake2\n";
+      message << " calling constrain2\n";
       SimTKOpenMMLog::printMessage( message );
 */
 
-      referenceShakeAlgorithm->applyShake( numberOfAtoms, atomCoordinates, xPrime,
+      referenceConstraintAlgorithm->apply( numberOfAtoms, atomCoordinates, xPrime,
                                            inverseMasses );
    }
 

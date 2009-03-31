@@ -1,5 +1,4 @@
-
-/* Portions copyright (c) 2006 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2009 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -22,149 +21,125 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __ReferenceShakeAlgorithm_H__
-#define __ReferenceShakeAlgorithm_H__
+#ifndef __ReferenceLincsAlgorithm_H__
+#define __ReferenceLincsAlgorithm_H__
 
 #include "ReferenceConstraintAlgorithm.h"
+#include "Vec3.h"
+#include <vector>
 
 // ---------------------------------------------------------------------------------------
 
-class ReferenceShakeAlgorithm : public ReferenceConstraintAlgorithm {
+class ReferenceLincsAlgorithm : public ReferenceConstraintAlgorithm {
 
    protected:
 
-      int _maximumNumberOfIterations;
-      RealOpenMM _tolerance;
-
+      int _numTerms;
       int _numberOfConstraints;
       int** _atomIndices;
       RealOpenMM* _distance;
 
-      RealOpenMM** _r_ij;
-      RealOpenMM* _d_ij2;
-      RealOpenMM* _distanceTolerance;
-      RealOpenMM* _reducedMasses;
-      bool _hasInitializedMasses;
-      
+      bool _hasInitialized;
+      std::vector<std::vector<int> > _linkedConstraints;
+      std::vector<RealOpenMM> _sMatrix;
+      std::vector<RealOpenMM> _rhs1;
+      std::vector<RealOpenMM> _rhs2;
+      std::vector<RealOpenMM> _solution;
+      std::vector<std::vector<RealOpenMM> > _couplingMatrix;
+      std::vector<OpenMM::Vec3> _constraintDir;
+
+
+      /**---------------------------------------------------------------------------------------
+
+         Set the number of terms to use in the series expansion
+
+         @param numberOfAtoms    number of atoms
+         @param inverseMasses    1/mass
+
+         --------------------------------------------------------------------------------------- */
+
+      void initialize(int numberOfAtoms, RealOpenMM* inverseMasses);
+
+      /**---------------------------------------------------------------------------------------
+
+         Solve the matrix equation
+
+         --------------------------------------------------------------------------------------- */
+
+      void solveMatrix();
+
+      /**---------------------------------------------------------------------------------------
+
+         Update the atom position based on the solution to the matrix equation.
+
+         @param numberOfAtoms    number of atoms
+         @param atomCoordinates  atom coordinates
+         @param inverseMasses    1/mass
+
+         --------------------------------------------------------------------------------------- */
+
+      void updateAtomPositions(int numberOfAtoms, RealOpenMM** atomCoordinates, RealOpenMM* inverseMasses);
+
    public:
 
       /**---------------------------------------------------------------------------------------
-      
-         ReferenceShakeAlgorithm constructor
-      
-         @param numberOfConstraints      number of constraints 
+
+         ReferenceLincsAlgorithm constructor
+
+         @param numberOfConstraints      number of constraints
          @param atomIndices              atom indices for contraints
          @param distance                 distances for constraints
-      
-         --------------------------------------------------------------------------------------- */
-      
-      ReferenceShakeAlgorithm( int numberOfConstraints, int** atomIndices, RealOpenMM* distance );
 
-      /**---------------------------------------------------------------------------------------
-      
-         Destructor
-      
          --------------------------------------------------------------------------------------- */
 
-       ~ReferenceShakeAlgorithm( );
+      ReferenceLincsAlgorithm( int numberOfConstraints, int** atomIndices, RealOpenMM* distance );
 
       /**---------------------------------------------------------------------------------------
-      
+
          Get number of constraints
-      
+
          @return number of constraints
-      
+
          --------------------------------------------------------------------------------------- */
-      
+
       int getNumberOfConstraints( void ) const;
-      
-      /**---------------------------------------------------------------------------------------
-      
-         Get maximum number of iterations
-      
-         @return maximum number of iterations
-      
-         --------------------------------------------------------------------------------------- */
-      
-      int getMaximumNumberOfIterations( void ) const;
-      
-      /**---------------------------------------------------------------------------------------
-      
-         Set maximum number of iterations
-      
-         @param maximumNumberOfIterations   new maximum number of iterations
-         @return ReferenceDynamics::DefaultReturn
-      
-         --------------------------------------------------------------------------------------- */
-      
-      int setMaximumNumberOfIterations( int maximumNumberOfIterations );
-      
-      /**---------------------------------------------------------------------------------------
-      
-         Get tolerance
-      
-         @return tolerance
-      
-         --------------------------------------------------------------------------------------- */
-      
-      RealOpenMM getTolerance( void ) const;
-      
-      /**---------------------------------------------------------------------------------------
-      
-         Set tolerance
-      
-         @param tolerance new tolerance
-
-         @return tolerance
-      
-         --------------------------------------------------------------------------------------- */
-      
-      int setTolerance( RealOpenMM tolerance );
-      
-      /**---------------------------------------------------------------------------------------
-      
-         Print parameters
-      
-         @param message message
-
-         @return ReferenceShakeAlgorithm::DefaultReturn
-      
-         --------------------------------------------------------------------------------------- */
-          
-      int printParameters( std::stringstream& message ) const;
 
       /**---------------------------------------------------------------------------------------
-      
-         Apply Shake algorithm
-      
+
+         Get the number of terms to use in the series expansion
+
+         @return terms
+
+         --------------------------------------------------------------------------------------- */
+
+      int getNumTerms( void ) const;
+
+      /**---------------------------------------------------------------------------------------
+
+         Set the number of terms to use in the series expansion
+
+         --------------------------------------------------------------------------------------- */
+
+      void setNumTerms( int terms );
+
+      /**---------------------------------------------------------------------------------------
+
+         Apply Lincs algorithm
+
          @param numberOfAtoms    number of atoms
          @param atomCoordinates  atom coordinates
          @param atomCoordinatesP atom coordinates prime
          @param inverseMasses    1/mass
-      
-         @return ReferenceDynamics::DefaultReturn if converge; else 
+
+         @return ReferenceDynamics::DefaultReturn if converge; else
           return ReferenceDynamics::ErrorReturn
-      
+
          --------------------------------------------------------------------------------------- */
-      
+
       int apply( int numberOfAtoms, RealOpenMM** atomCoordinates,
                        RealOpenMM** atomCoordinatesP, RealOpenMM* inverseMasses );
-      
-      /**---------------------------------------------------------------------------------------
-      
-         Report any violated constraints
-      
-         @param numberOfAtoms    number of atoms
-         @param atomCoordinates  atom coordinates
-         @param message          report
-      
-         @return number of violated constraints
-      
-         --------------------------------------------------------------------------------------- */
-      
-      int reportShake( int numberOfAtoms, RealOpenMM** atomCoordinates, std::stringstream& message );
 };
 
 // ---------------------------------------------------------------------------------------
 
-#endif // __ReferenceShakeAlgorithm_H__
+#endif // __ReferenceLincsAlgorithm_H__

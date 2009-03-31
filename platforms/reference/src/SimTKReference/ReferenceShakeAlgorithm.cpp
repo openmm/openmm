@@ -43,7 +43,7 @@
 
 ReferenceShakeAlgorithm::ReferenceShakeAlgorithm( int numberOfConstraints,
                                                   int** atomIndices,
-                                                  RealOpenMM** shakeParameters ){
+                                                  RealOpenMM* distance ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -61,7 +61,7 @@ ReferenceShakeAlgorithm::ReferenceShakeAlgorithm( int numberOfConstraints,
 
    _numberOfConstraints        = numberOfConstraints;
    _atomIndices                = atomIndices;
-   _shakeParameters            = shakeParameters;
+   _distance                   = distance;
 
    _maximumNumberOfIterations  = 15;
    _tolerance                  = (RealOpenMM) 1.0e-04;
@@ -221,13 +221,13 @@ int ReferenceShakeAlgorithm::setTolerance( RealOpenMM tolerance ){
 
    --------------------------------------------------------------------------------------- */
 
-int ReferenceShakeAlgorithm::applyShake( int numberOfAtoms, RealOpenMM** atomCoordinates,
+int ReferenceShakeAlgorithm::apply( int numberOfAtoms, RealOpenMM** atomCoordinates,
                                          RealOpenMM** atomCoordinatesP,
                                          RealOpenMM* inverseMasses ){
 
    // ---------------------------------------------------------------------------------------
 
-   static const char* methodName = "\nReferenceShakeAlgorithm::applyShake";
+   static const char* methodName = "\nReferenceShakeAlgorithm::apply";
 
    static const RealOpenMM zero        =  0.0;
    static const RealOpenMM one         =  1.0;
@@ -298,7 +298,7 @@ int ReferenceShakeAlgorithm::applyShake( int numberOfAtoms, RealOpenMM** atomCoo
          }
 
          RealOpenMM rp2  = DOT3( rp_ij, rp_ij );
-         RealOpenMM dist2= _shakeParameters[ii][0]*_shakeParameters[ii][0];
+         RealOpenMM dist2= _distance[ii]*_distance[ii];
          RealOpenMM diff = dist2 - rp2;
          int iconv       = (int) ( FABS( diff )*distanceTolerance[ii] );
          if( iconv ){
@@ -409,9 +409,9 @@ int ReferenceShakeAlgorithm::reportShake( int numberOfAtoms, RealOpenMM** atomCo
       for( int jj = 0; jj < 3; jj++ ){
          rp2 += (atomCoordinates[atomI][jj] - atomCoordinates[atomJ][jj])*(atomCoordinates[atomI][jj] - atomCoordinates[atomJ][jj]); 
       }
-      RealOpenMM diff = FABS( rp2 - (_shakeParameters[ii][0]*_shakeParameters[ii][0]) );
+      RealOpenMM diff = FABS( rp2 - (_distance[ii]*_distance[ii]) );
       if( diff > tolerance ){
-         message << ii << " constraint violated: " << atomI << " " << atomJ << "] d=" << SQRT( rp2 ) << " " << rp2 << " d0=" << _shakeParameters[ii][0];
+         message << ii << " constraint violated: " << atomI << " " << atomJ << "] d=" << SQRT( rp2 ) << " " << rp2 << " d0=" << _distance[ii];
          message << " diff=" << diff;
          message << " [" << atomCoordinates[atomI][0] << " " << atomCoordinates[atomI][1] << " " << atomCoordinates[atomI][2] << "] ";
          message << " [" << atomCoordinates[atomJ][0] << " " << atomCoordinates[atomJ][1] << " " << atomCoordinates[atomJ][2] << "] ";

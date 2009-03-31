@@ -37,6 +37,7 @@
 #include "SimTKReference/ReferenceBondForce.h"
 #include "SimTKReference/ReferenceBrownianDynamics.h"
 #include "SimTKReference/ReferenceHarmonicBondIxn.h"
+#include "SimTKReference/ReferenceLincsAlgorithm.h"
 #include "SimTKReference/ReferenceLJCoulomb14.h"
 #include "SimTKReference/ReferenceLJCoulombIxn.h"
 #include "SimTKReference/ReferenceProperDihedralBond.h"
@@ -461,14 +462,14 @@ double ReferenceCalcGBSAOBCForceKernel::executeEnergy(OpenMMContextImpl& context
 ReferenceIntegrateVerletStepKernel::~ReferenceIntegrateVerletStepKernel() {
     if (dynamics)
         delete dynamics;
-    if (shake)
-        delete shake;
+    if (constraints)
+        delete constraints;
     if (masses)
         delete[] masses;
     if (constraintIndices)
         disposeIntArray(constraintIndices, numConstraints);
-    if (shakeParameters)
-        disposeRealArray(shakeParameters, numConstraints);
+    if (constraintDistances)
+        delete[] constraintDistances;
 }
 
 void ReferenceIntegrateVerletStepKernel::initialize(const System& system, const VerletIntegrator& integrator) {
@@ -478,14 +479,14 @@ void ReferenceIntegrateVerletStepKernel::initialize(const System& system, const 
         masses[i] = static_cast<RealOpenMM>(system.getParticleMass(i));
     numConstraints = system.getNumConstraints();
     constraintIndices = allocateIntArray(numConstraints, 2);
-    shakeParameters = allocateRealArray(numConstraints, 1);
+    constraintDistances = new RealOpenMM[numConstraints];
     for (int i = 0; i < numConstraints; ++i) {
         int particle1, particle2;
         double distance;
         system.getConstraintParameters(i, particle1, particle2, distance);
         constraintIndices[i][0] = particle1;
         constraintIndices[i][1] = particle2;
-        shakeParameters[i][0] = static_cast<RealOpenMM>(distance);
+        constraintDistances[i] = static_cast<RealOpenMM>(distance);
     }
 }
 
@@ -499,28 +500,28 @@ void ReferenceIntegrateVerletStepKernel::execute(OpenMMContextImpl& context, con
         
         if (dynamics) {
             delete dynamics;
-            delete shake;
+            delete constraints;
         }
         dynamics = new ReferenceVerletDynamics(context.getSystem().getNumParticles(), static_cast<RealOpenMM>(stepSize) );
-        shake = new ReferenceShakeAlgorithm(numConstraints, constraintIndices, shakeParameters);
-        dynamics->setReferenceShakeAlgorithm(shake);
+        constraints = new ReferenceShakeAlgorithm(numConstraints, constraintIndices, constraintDistances);
+        dynamics->setReferenceConstraintAlgorithm(constraints);
         prevStepSize = stepSize;
     }
-    shake->setTolerance(integrator.getConstraintTolerance());
+//    shake->setTolerance(integrator.getConstraintTolerance());
     dynamics->update(context.getSystem().getNumParticles(), posData, velData, forceData, masses);
 }
 
 ReferenceIntegrateLangevinStepKernel::~ReferenceIntegrateLangevinStepKernel() {
     if (dynamics)
         delete dynamics;
-    if (shake)
-        delete shake;
+    if (constraints)
+        delete constraints;
     if (masses)
         delete[] masses;
     if (constraintIndices)
         disposeIntArray(constraintIndices, numConstraints);
-    if (shakeParameters)
-        disposeRealArray(shakeParameters, numConstraints);
+    if (constraintDistances)
+        delete[] constraintDistances;
 }
 
 void ReferenceIntegrateLangevinStepKernel::initialize(const System& system, const LangevinIntegrator& integrator) {
@@ -530,14 +531,14 @@ void ReferenceIntegrateLangevinStepKernel::initialize(const System& system, cons
         masses[i] = static_cast<RealOpenMM>(system.getParticleMass(i));
     numConstraints = system.getNumConstraints();
     constraintIndices = allocateIntArray(numConstraints, 2);
-    shakeParameters = allocateRealArray(numConstraints, 1);
+    constraintDistances = new RealOpenMM[numConstraints];
     for (int i = 0; i < numConstraints; ++i) {
         int particle1, particle2;
         double distance;
         system.getConstraintParameters(i, particle1, particle2, distance);
         constraintIndices[i][0] = particle1;
         constraintIndices[i][1] = particle2;
-        shakeParameters[i][0] = static_cast<RealOpenMM>(distance);
+        constraintDistances[i] = static_cast<RealOpenMM>(distance);
     }
     SimTKOpenMMUtilities::setRandomNumberSeed((unsigned int) integrator.getRandomNumberSeed());
 }
@@ -554,7 +555,7 @@ void ReferenceIntegrateLangevinStepKernel::execute(OpenMMContextImpl& context, c
         
         if (dynamics) {
             delete dynamics;
-            delete shake;
+            delete constraints;
         }
         RealOpenMM tau = static_cast<RealOpenMM>( friction == 0.0 ? 0.0 : 1.0/friction );
         dynamics = new ReferenceStochasticDynamics(
@@ -562,27 +563,28 @@ void ReferenceIntegrateLangevinStepKernel::execute(OpenMMContextImpl& context, c
 				static_cast<RealOpenMM>(stepSize), 
 				static_cast<RealOpenMM>(tau), 
 				static_cast<RealOpenMM>(temperature) );
-        shake = new ReferenceShakeAlgorithm(numConstraints, constraintIndices, shakeParameters);
-        dynamics->setReferenceShakeAlgorithm(shake);
+        constraints = new ReferenceLincsAlgorithm(numConstraints, constraintIndices, constraintDistances);
+//        shake = new ReferenceShakeAlgorithm(numConstraints, constraintIndices, shakeParameters);
+        dynamics->setReferenceConstraintAlgorithm(constraints);
         prevTemp = temperature;
         prevFriction = friction;
         prevStepSize = stepSize;
     }
-    shake->setTolerance(integrator.getConstraintTolerance());
+//    shake->setTolerance(integrator.getConstraintTolerance());
     dynamics->update(context.getSystem().getNumParticles(), posData, velData, forceData, masses);
 }
 
 ReferenceIntegrateBrownianStepKernel::~ReferenceIntegrateBrownianStepKernel() {
     if (dynamics)
         delete dynamics;
-    if (shake)
-        delete shake;
+    if (constraints)
+        delete constraints;
     if (masses)
         delete[] masses;
     if (constraintIndices)
         disposeIntArray(constraintIndices, numConstraints);
-    if (shakeParameters)
-        disposeRealArray(shakeParameters, numConstraints);
+    if (constraintDistances)
+        delete[] constraintDistances;
 }
 
 void ReferenceIntegrateBrownianStepKernel::initialize(const System& system, const BrownianIntegrator& integrator) {
@@ -592,14 +594,14 @@ void ReferenceIntegrateBrownianStepKernel::initialize(const System& system, cons
         masses[i] = static_cast<RealOpenMM>(system.getParticleMass(i));
     numConstraints = system.getNumConstraints();
     constraintIndices = allocateIntArray(numConstraints, 2);
-    shakeParameters = allocateRealArray(numConstraints, 1);
+    constraintDistances = new RealOpenMM[numConstraints];
     for (int i = 0; i < numConstraints; ++i) {
         int particle1, particle2;
         double distance;
         system.getConstraintParameters(i, particle1, particle2, distance);
         constraintIndices[i][0] = particle1;
         constraintIndices[i][1] = particle2;
-        shakeParameters[i][0] = static_cast<RealOpenMM>(distance);
+        constraintDistances[i] = static_cast<RealOpenMM>(distance);
     }
     SimTKOpenMMUtilities::setRandomNumberSeed((unsigned int) integrator.getRandomNumberSeed());
 }
@@ -616,20 +618,20 @@ void ReferenceIntegrateBrownianStepKernel::execute(OpenMMContextImpl& context, c
         
         if (dynamics) {
             delete dynamics;
-            delete shake;
+            delete constraints;
         }
         dynamics = new ReferenceBrownianDynamics(
 				context.getSystem().getNumParticles(), 
 				static_cast<RealOpenMM>(stepSize), 
 				static_cast<RealOpenMM>(friction), 
 				static_cast<RealOpenMM>(temperature) );
-        shake = new ReferenceShakeAlgorithm(numConstraints, constraintIndices, shakeParameters);
-        dynamics->setReferenceShakeAlgorithm(shake);
+        constraints = new ReferenceShakeAlgorithm(numConstraints, constraintIndices, constraintDistances);
+        dynamics->setReferenceConstraintAlgorithm(constraints);
         prevTemp = temperature;
         prevFriction = friction;
         prevStepSize = stepSize;
     }
-    shake->setTolerance(integrator.getConstraintTolerance());
+//    shake->setTolerance(integrator.getConstraintTolerance());
     dynamics->update(context.getSystem().getNumParticles(), posData, velData, forceData, masses);
 }
 
