@@ -73,9 +73,9 @@ __device__ void kSyncAllThreads_kernel(unsigned int* syncCounter)
     } while (counterValue > 0);
 }
 
-__device__ void kSolveMatrix_kernel(int numTerms, unsigned int* syncCounter)
+__device__ void kSolveMatrix_kernel(unsigned int numTerms, unsigned int* syncCounter)
 {
-    for (int iteration = 0; iteration < numTerms; iteration++) {
+    for (unsigned int iteration = 0; iteration < numTerms; iteration++) {
         float* rhs1 = (iteration%2 == 0 ? cSim.pLincsRhs1 : cSim.pLincsRhs2);
         float* rhs2 = (iteration%2 == 0 ? cSim.pLincsRhs2 : cSim.pLincsRhs1);
         unsigned int pos = threadIdx.x + blockIdx.x * blockDim.x;
@@ -121,7 +121,7 @@ __device__ void kUpdateAtomPositions_kernel(float4* atomPositions)
     }
 }
 
-__global__ void kApplyLincs_kernel(int numTerms, float4* atomPositions, bool addOldPosition)
+__global__ void kApplyLincs_kernel(unsigned int numTerms, float4* atomPositions, bool addOldPosition)
 {
    // Calculate the direction of each constraint, along with the initial RHS and solution vectors.
 
@@ -221,13 +221,6 @@ __global__ void kApplyLincs_kernel(int numTerms, float4* atomPositions, bool add
     kUpdateAtomPositions_kernel(atomPositions);
 }
 
-void printDist(float4 v1, float4 v2)
-{
-    float dx = v1.x-v2.x;
-    float dy = v1.y-v2.y;
-    float dz = v1.z-v2.z;
-    printf("%f ", sqrt(dx*dx+dy*dy+dz*dz));
-}
 void kApplyFirstLincs(gpuContext gpu)
 {
 //    printf("kApplyFirstLincs\n");

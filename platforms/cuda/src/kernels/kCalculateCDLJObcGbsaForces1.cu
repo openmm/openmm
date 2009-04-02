@@ -106,8 +106,8 @@ extern __global__ void kFindBlockBoundsCutoff_kernel();
 extern __global__ void kFindBlockBoundsPeriodic_kernel();
 extern __global__ void kFindBlocksWithInteractionsCutoff_kernel();
 extern __global__ void kFindBlocksWithInteractionsPeriodic_kernel();
-extern __global__ void kFindInteractionsWithinBlocksCutoff_kernel(unsigned int*, int);
-extern __global__ void kFindInteractionsWithinBlocksPeriodic_kernel(unsigned int*, int);
+extern __global__ void kFindInteractionsWithinBlocksCutoff_kernel(unsigned int*, unsigned int);
+extern __global__ void kFindInteractionsWithinBlocksPeriodic_kernel(unsigned int*, unsigned int);
 
 void kCalculateCDLJObcGbsaForces1(gpuContext gpu)
 {

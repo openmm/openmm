@@ -210,8 +210,8 @@ void CUDAStream<T>::Collapse(unsigned int newstreams, unsigned int interleave)
     delete[] pTemp;
 }
 
-static const int GRID = 32;
-static const int GRIDBITS = 5;
+static const unsigned int GRID = 32;
+static const unsigned int GRIDBITS = 5;
 static const int G8X_NONBOND_THREADS_PER_BLOCK          = 256;
 static const int GT2XX_NONBOND_THREADS_PER_BLOCK        = 320;
 static const int G8X_BORNFORCE2_THREADS_PER_BLOCK       = 256;

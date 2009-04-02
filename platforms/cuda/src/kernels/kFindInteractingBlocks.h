@@ -117,16 +117,16 @@ __global__ void METHOD_NAME(kFindBlocksWithInteractions, _kernel)()
  * Compare each atom in one block to the bounding box of another block, and set
  * flags for which ones are interacting.
  */
-__global__ void METHOD_NAME(kFindInteractionsWithinBlocks, _kernel)(unsigned int* workUnit, int numWorkUnits)
+__global__ void METHOD_NAME(kFindInteractionsWithinBlocks, _kernel)(unsigned int* workUnit, unsigned int numWorkUnits)
 {
     extern __shared__ unsigned int flags[];
     unsigned int totalWarps = cSim.nonbond_blocks*cSim.nonbond_threads_per_block/GRID;
     unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
-    int pos = warp*numWorkUnits/totalWarps;
-    int end = (warp+1)*numWorkUnits/totalWarps;
+    unsigned int pos = warp*numWorkUnits/totalWarps;
+    unsigned int end = (warp+1)*numWorkUnits/totalWarps;
     unsigned int index = threadIdx.x & (GRID - 1);
 
-    int lasty = -1;
+    unsigned int lasty = 0xFFFFFFFF;
     float4 apos;
     while (pos < end)
     {

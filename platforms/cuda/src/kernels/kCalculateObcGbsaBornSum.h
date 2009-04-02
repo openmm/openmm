@@ -35,7 +35,7 @@
  * different versions of the kernels.
  */
 
-__global__ void METHOD_NAME(kCalculateObcGbsa, BornSum_kernel)(unsigned int* workUnit, int workUnits)
+__global__ void METHOD_NAME(kCalculateObcGbsa, BornSum_kernel)(unsigned int* workUnit, unsigned int workUnits)
 {
     extern __shared__ Atom sA[];
     int end = workUnits / gridDim.x;
@@ -61,7 +61,7 @@ __global__ void METHOD_NAME(kCalculateObcGbsa, BornSum_kernel)(unsigned int* wor
 
         unsigned int tgx = threadIdx.x & (GRID - 1);
         unsigned int tbx = threadIdx.x - tgx;
-        int tj = tgx;
+        unsigned int tj = tgx;
         Atom* psA = &sA[tbx];
 
         if (x == y) // Handle diagonals uniquely at 50% efficiency
@@ -121,17 +121,17 @@ __global__ void METHOD_NAME(kCalculateObcGbsa, BornSum_kernel)(unsigned int* wor
 
             // Write results
 #ifdef USE_OUTPUT_BUFFER_PER_WARP
-            int offset = x + tgx + warp*cSim.stride;
+            unsigned int offset = x + tgx + warp*cSim.stride;
             cSim.pBornSum[offset] += apos.w;
 #else
-            int offset = x + tgx + (x >> GRIDBITS) * cSim.stride;
+            unsigned int offset = x + tgx + (x >> GRIDBITS) * cSim.stride;
             cSim.pBornSum[offset] = apos.w;
 #endif
         }
         else        // 100% utilization
         {
             // Read fixed atom data into registers and GRF
-            int j                           = y + tgx;
+            unsigned int j                           = y + tgx;
             unsigned int i                  = x + tgx;
 
             float4 temp                     = cSim.pPosq[j];
@@ -311,12 +311,12 @@ __global__ void METHOD_NAME(kCalculateObcGbsa, BornSum_kernel)(unsigned int* wor
 
             // Write results
 #ifdef USE_OUTPUT_BUFFER_PER_WARP
-            int offset = x + tgx + warp*cSim.stride;
+            unsigned int offset = x + tgx + warp*cSim.stride;
             cSim.pBornSum[offset] += apos.w;
             offset = y + tgx + warp*cSim.stride;
             cSim.pBornSum[offset] += sA[threadIdx.x].sum;
 #else
-            int offset = x + tgx + (y >> GRIDBITS) * cSim.stride;
+            unsigned int offset = x + tgx + (y >> GRIDBITS) * cSim.stride;
             cSim.pBornSum[offset] = apos.w;
             offset = y + tgx + (x >> GRIDBITS) * cSim.stride;
             cSim.pBornSum[offset] = sA[threadIdx.x].sum;

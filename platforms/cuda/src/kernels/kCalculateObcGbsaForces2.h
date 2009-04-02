@@ -35,18 +35,18 @@
  * different versions of the kernels.
  */
 
-__global__ void METHOD_NAME(kCalculateObcGbsa, Forces2_kernel)(unsigned int* workUnit, int numWorkUnits)
+__global__ void METHOD_NAME(kCalculateObcGbsa, Forces2_kernel)(unsigned int* workUnit, unsigned int numWorkUnits)
 {
     extern __shared__ Atom sA[];
     unsigned int totalWarps = cSim.bornForce2_blocks*cSim.bornForce2_threads_per_block/GRID;
     unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
-    int pos = warp*numWorkUnits/totalWarps;
-    int end = (warp+1)*numWorkUnits/totalWarps;
+    unsigned int pos = warp*numWorkUnits/totalWarps;
+    unsigned int end = (warp+1)*numWorkUnits/totalWarps;
 #ifdef USE_CUTOFF
     float3* tempBuffer = (float3*) &sA[cSim.bornForce2_threads_per_block];
 #endif
 
-    int lasty = -1;
+    unsigned int lasty = -0xFFFFFFFF;
     while (pos < end)
     {
 
@@ -60,7 +60,7 @@ __global__ void METHOD_NAME(kCalculateObcGbsa, Forces2_kernel)(unsigned int* wor
         float2 a                        = cSim.pObcData[i];
         float fb                        = cSim.pBornForce[i];
         unsigned int tbx                = threadIdx.x - tgx;
-        int tj                          = tgx;
+        unsigned int tj                 = tgx;
         Atom* psA                       = &sA[tbx];
         float3 af;
         sA[threadIdx.x].fx = af.x   = 0.0f;
@@ -135,14 +135,14 @@ __global__ void METHOD_NAME(kCalculateObcGbsa, Forces2_kernel)(unsigned int* wor
             // Write results
             float4 of;
 #ifdef USE_OUTPUT_BUFFER_PER_WARP
-            int offset                  = x + tgx + warp*cSim.stride;
+            unsigned int offset         = x + tgx + warp*cSim.stride;
             of                          = cSim.pForce4b[offset];
             of.x                       += af.x + sA[threadIdx.x].fx;
             of.y                       += af.y + sA[threadIdx.x].fy;
             of.z                       += af.z + sA[threadIdx.x].fz;
             cSim.pForce4b[offset]       = of;
 #else
-            int offset                  = x + tgx + (x >> GRIDBITS) * cSim.stride;
+            unsigned int offset         = x + tgx + (x >> GRIDBITS) * cSim.stride;
             of.x                        = af.x + sA[threadIdx.x].fx;
             of.y                        = af.y + sA[threadIdx.x].fy;
             of.z                        = af.z + sA[threadIdx.x].fz;
@@ -155,7 +155,7 @@ __global__ void METHOD_NAME(kCalculateObcGbsa, Forces2_kernel)(unsigned int* wor
             // Read fixed atom data into registers and GRF
             if (lasty != y)
             {
-                int j                       = y + tgx;
+                unsigned int j              = y + tgx;
                 float4 temp                 = cSim.pPosq[j];
                 float2 temp1                = cSim.pObcData[j];
                 sA[threadIdx.x].fb          = cSim.pBornForce[j];
@@ -177,7 +177,7 @@ __global__ void METHOD_NAME(kCalculateObcGbsa, Forces2_kernel)(unsigned int* wor
             {
                 // Compute all interactions within this block.
 
-                for (int j = 0; j < GRID; j++)
+                for (unsigned int j = 0; j < GRID; j++)
                 {
                     float dx                = psA[tj].x - apos.x;
                     float dy                = psA[tj].y - apos.y;
@@ -273,7 +273,7 @@ __global__ void METHOD_NAME(kCalculateObcGbsa, Forces2_kernel)(unsigned int* wor
             {
                 // Compute only a subset of the interactions in this block.
 
-                for (int j = 0; j < GRID; j++)
+                for (unsigned int j = 0; j < GRID; j++)
                 {
                     if ((flags&(1<<j)) != 0)
                     {
@@ -404,7 +404,7 @@ __global__ void METHOD_NAME(kCalculateObcGbsa, Forces2_kernel)(unsigned int* wor
             // Write results
             float4 of;
 #ifdef USE_OUTPUT_BUFFER_PER_WARP
-            int offset                  = x + tgx + warp*cSim.stride;
+            unsigned int offset         = x + tgx + warp*cSim.stride;
             of                          = cSim.pForce4b[offset];
             of.x                       += af.x;
             of.y                       += af.y;
@@ -417,7 +417,7 @@ __global__ void METHOD_NAME(kCalculateObcGbsa, Forces2_kernel)(unsigned int* wor
             of.z                       += sA[threadIdx.x].fz;
             cSim.pForce4b[offset]       = of;
 #else
-            int offset                  = x + tgx + (y >> GRIDBITS) * cSim.stride;
+            unsigned int offset         = x + tgx + (y >> GRIDBITS) * cSim.stride;
             of.x                        = af.x;
             of.y                        = af.y;
             of.z                        = af.z;

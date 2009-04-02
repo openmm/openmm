@@ -35,18 +35,18 @@
  * different versions of the kernels.
  */
 
-__global__ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUnit, int numWorkUnits)
+__global__ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUnit, unsigned int numWorkUnits)
 {
     extern __shared__ Atom sA[];
     unsigned int totalWarps = cSim.nonbond_blocks*cSim.nonbond_threads_per_block/GRID;
     unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
-    int pos = warp*numWorkUnits/totalWarps;
-    int end = (warp+1)*numWorkUnits/totalWarps;
+    unsigned int pos = warp*numWorkUnits/totalWarps;
+    unsigned int end = (warp+1)*numWorkUnits/totalWarps;
 #ifdef USE_CUTOFF
     float3* tempBuffer = (float3*) &sA[cSim.nonbond_threads_per_block];
 #endif
 
-    int lasty = -1;
+    unsigned int lasty = 0xFFFFFFFF;
     while (pos < end)
     {
 
@@ -69,7 +69,7 @@ __global__ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUni
         float dEdR;
         unsigned int tgx = threadIdx.x & (GRID - 1);
         unsigned int tbx = threadIdx.x - tgx;
-        int tj = tgx;
+        unsigned int tj = tgx;
         Atom* psA = &sA[tbx];
         unsigned int i      = x + tgx;
         apos                = cSim.pPosq[i];
@@ -130,7 +130,7 @@ __global__ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUni
             else  // bExclusion
             {
                 unsigned int xi   = x>>GRIDBITS;
-                int cell          = xi+xi*cSim.paddedNumberOfAtoms/GRID-xi*(xi+1)/2;
+                unsigned int cell          = xi+xi*cSim.paddedNumberOfAtoms/GRID-xi*(xi+1)/2;
                 unsigned int excl = cSim.pExclusion[cSim.pExclusionIndex[cell]+tgx];
                 for (unsigned int j = 0; j < GRID; j++)
                 {
@@ -177,7 +177,7 @@ __global__ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUni
             // Write results
             float4 of;
 #ifdef USE_OUTPUT_BUFFER_PER_WARP
-            int offset                          = x + tgx + warp*cSim.stride;
+            unsigned int offset                          = x + tgx + warp*cSim.stride;
             of                                  = cSim.pForce4a[offset];
             of.x                               += af.x;
             of.y                               += af.y;
@@ -188,7 +188,7 @@ __global__ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUni
             of.y                                = af.y;
             of.z                                = af.z;
             of.w                                = 0.0f;
-            int offset                          = x + tgx + (x >> GRIDBITS) * cSim.stride;
+            unsigned int offset                          = x + tgx + (x >> GRIDBITS) * cSim.stride;
             cSim.pForce4a[offset]               = of;
 #endif
         }
@@ -197,7 +197,7 @@ __global__ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUni
             // Read fixed atom data into registers and GRF
             if (lasty != y)
             {
-                int j                   = y + tgx;
+                unsigned int j                   = y + tgx;
                 float4 temp             = cSim.pPosq[j];
                 float2 temp1            = cSim.pAttr[j];
                 sA[threadIdx.x].x       = temp.x;
@@ -355,7 +355,7 @@ __global__ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUni
                 // Read fixed atom data into registers and GRF
                 unsigned int xi   = x>>GRIDBITS;
                 unsigned int yi   = y>>GRIDBITS;
-                int cell          = xi+yi*cSim.paddedNumberOfAtoms/GRID-yi*(yi+1)/2;
+                unsigned int cell          = xi+yi*cSim.paddedNumberOfAtoms/GRID-yi*(yi+1)/2;
                 unsigned int excl = cSim.pExclusion[cSim.pExclusionIndex[cell]+tgx];
                 excl              = (excl >> tgx) | (excl << (GRID - tgx));
                 for (unsigned int j = 0; j < GRID; j++)
@@ -407,7 +407,7 @@ __global__ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUni
             // Write results
             float4 of;
 #ifdef USE_OUTPUT_BUFFER_PER_WARP
-            int offset                          = x + tgx + warp*cSim.stride;
+            unsigned int offset                          = x + tgx + warp*cSim.stride;
             of                                  = cSim.pForce4a[offset];
             of.x                               += af.x;
             of.y                               += af.y;
@@ -424,7 +424,7 @@ __global__ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUni
             of.y                                = af.y;
             of.z                                = af.z;
             of.w                                = 0.0f;
-            int offset                          = x + tgx + (y >> GRIDBITS) * cSim.stride;
+            unsigned int offset                          = x + tgx + (y >> GRIDBITS) * cSim.stride;
             cSim.pForce4a[offset]               = of;
             of.x                                = sA[threadIdx.x].fx;
             of.y                                = sA[threadIdx.x].fy;
