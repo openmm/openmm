@@ -276,6 +276,14 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
             gpuSetPeriodicBoxSize(gpu, boxVectors[0][0], boxVectors[1][1], boxVectors[2][2]);
             method = PERIODIC;
         }
+
+        if (force.getNonbondedMethod() == NonbondedForce::Ewald) {
+            Vec3 boxVectors[3];
+            force.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+            gpuSetPeriodicBoxSize(gpu, boxVectors[0][0], boxVectors[1][1], boxVectors[2][2]);
+            method = EWALD;
+
+        }
         data.nonbondedMethod = method;
         gpuSetCoulombParameters(gpu, 138.935485f, particle, c6, c12, q, symbol, exclusionList, method);
     }

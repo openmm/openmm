@@ -233,7 +233,8 @@ enum CudaNonbondedMethod
 {
     NO_CUTOFF,
     CUTOFF,
-    PERIODIC
+    PERIODIC,
+    EWALD
 };
 
 struct cudaGmxSimulation {

@@ -107,6 +107,8 @@ void GetCalculateCDLJForcesSim(gpuContext gpu)
 #define METHOD_NAME(a, b) a##PeriodicByWarp##b
 #include "kCalculateCDLJForces.h"
 
+// Include version of the kernel with Ewald method
+#include "kCalculateEwald.h"
 
 __global__ extern void kCalculateCDLJCutoffForces_12_kernel();
 
@@ -173,5 +175,30 @@ void kCalculateCDLJForces(gpuContext gpu)
                 kCalculateCDLJPeriodicForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                         (sizeof(Atom)+sizeof(float3))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
             LAUNCHERROR("kCalculateCDLJPeriodicForces");
+            break;
+        case EWALD:
+            kFindBlockBoundsPeriodic_kernel<<<(gpu->psGridBoundingBox->_length+63)/64, 64>>>();
+            LAUNCHERROR("kFindBlockBoundsPeriodic");
+            kFindBlocksWithInteractionsPeriodic_kernel<<<gpu->sim.interaction_blocks, gpu->sim.interaction_threads_per_block>>>();
+            LAUNCHERROR("kFindBlocksWithInteractionsPeriodic");
+            result = cudppCompact(gpu->cudpp, gpu->sim.pInteractingWorkUnit, gpu->sim.pInteractionCount,
+                    gpu->sim.pWorkUnit, gpu->sim.pInteractionFlag, gpu->sim.workUnits);
+            if (result != CUDPP_SUCCESS)
+            {
+                printf("Error in cudppCompact: %d\n", result);
+                exit(-1);
+            }
+            gpu->psInteractionCount->Download();
+            numWithInteractions = gpu->psInteractionCount->_pSysData[0];
+            kFindInteractionsWithinBlocksPeriodic_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                    sizeof(unsigned int)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
+            if (gpu->bOutputBufferPerWarp)
+                kCalculateCDLJPeriodicByWarpForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                        (sizeof(Atom)+sizeof(float3))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
+            else
+                kCalculateCDLJEwaldForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                        (sizeof(Atom)+sizeof(float3))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, numWithInteractions);
+            LAUNCHERROR("kCalculateCDLJPeriodicForces");
+
     }
 }

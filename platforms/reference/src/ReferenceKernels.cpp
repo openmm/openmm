@@ -357,13 +357,20 @@ void ReferenceCalcNonbondedForceKernel::executeForces(OpenMMContextImpl& context
     RealOpenMM** forceData = ((ReferenceFloatStreamImpl&) context.getForces().getImpl()).getData();
     ReferenceLJCoulombIxn clj;
     bool periodic = (nonbondedMethod == CutoffPeriodic);
+    bool ewald  = (nonbondedMethod == Ewald);
     if (nonbondedMethod != NoCutoff) {
-        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, periodic ? periodicBoxSize : NULL, nonbondedCutoff, 0.0);
+        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, (periodic || ewald) ? periodicBoxSize : NULL, nonbondedCutoff, 0.0);
         clj.setUseCutoff(nonbondedCutoff, *neighborList, 78.3f);
     }
-    if (periodic)
+    if (periodic||ewald)
         clj.setPeriodic(periodicBoxSize);
-    clj.calculatePairIxn(numParticles, posData, particleParamArray, exclusionArray, 0, forceData, 0, 0);
+    if (ewald) {
+        clj.setRecipVectors();
+        clj.calculateEwaldIxn(numParticles, posData, particleParamArray, exclusionArray, 0, forceData, 0, 0);
+    }
+    else {
+        clj.calculatePairIxn(numParticles, posData, particleParamArray, exclusionArray, 0, forceData, 0, 0);
+    }
     ReferenceBondForce refBondForce;
     ReferenceLJCoulomb14 nonbonded14;
     if (nonbondedMethod != NoCutoff)
@@ -377,13 +384,20 @@ double ReferenceCalcNonbondedForceKernel::executeEnergy(OpenMMContextImpl& conte
     RealOpenMM energy = 0;
     ReferenceLJCoulombIxn clj;
     bool periodic = (nonbondedMethod == CutoffPeriodic);
+    bool ewald  = (nonbondedMethod == Ewald);
     if (nonbondedMethod != NoCutoff) {
-        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, periodic ? periodicBoxSize : NULL, nonbondedCutoff, 0.0);
+        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, (periodic || ewald) ? periodicBoxSize : NULL, nonbondedCutoff, 0.0);
         clj.setUseCutoff(nonbondedCutoff, *neighborList, 78.3f);
     }
-    if (periodic)
+    if (periodic || ewald)
         clj.setPeriodic(periodicBoxSize);
-    clj.calculatePairIxn(numParticles, posData, particleParamArray, exclusionArray, 0, forceData, 0, &energy);
+    if (ewald) {
+        clj.setRecipVectors();
+        clj.calculateEwaldIxn(numParticles, posData, particleParamArray, exclusionArray, 0, forceData, 0, &energy);
+    }
+    else {
+        clj.calculatePairIxn(numParticles, posData, particleParamArray, exclusionArray, 0, forceData, 0, &energy);
+    }
     ReferenceBondForce refBondForce;
     ReferenceLJCoulomb14 nonbonded14;
     if (nonbondedMethod != NoCutoff)

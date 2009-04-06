@@ -77,7 +77,11 @@ public:
          * each other particle.  Interactions beyond the cutoff distance are ignored.  Coulomb interactions closer than the
          * cutoff distance are modified using the reaction field method.
          */
-        CutoffPeriodic = 2
+        CutoffPeriodic = 2,
+        /**
+         * Using Ewald summation method for long-range electrostatics.
+         */
+        Ewald = 3
     };
     /**
      * Create a NonbondedForce.

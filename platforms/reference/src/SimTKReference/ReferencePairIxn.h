@@ -72,7 +72,30 @@ class ReferencePairIxn {
                             RealOpenMM** atomParameters, int** exclusions,
                             RealOpenMM* fixedParameters, RealOpenMM** forces,
                             RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const = 0;
+ 
+      /**---------------------------------------------------------------------------------------
       
+         Calculate Ewald ixn
+      
+         @param numberOfAtoms    number of atoms
+         @param atomCoordinates  atom coordinates
+         @param atomParameters   atom parameters (charges, c6, c12, ...)     atomParameters[atomIndex][paramterIndex]
+         @param exclusions       atom exclusion indices                      exclusions[atomIndex][atomToExcludeIndex]
+         @param fixedParameters  non-atom parameters
+         @param forces           force array (forces added)
+         @param energyByAtom     atom energy
+         @param totalEnergy      total energy
+      
+         @return ReferenceForce::DefaultReturn
+            
+         --------------------------------------------------------------------------------------- */
+          
+      virtual int calculateEwaldIxn( int numberOfAtoms, RealOpenMM** atomCoordinates,
+                            RealOpenMM** atomParameters, int** exclusions,
+                            RealOpenMM* fixedParameters, RealOpenMM** forces,
+                            RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const = 0;
+      
+     
 };
 
 // ---------------------------------------------------------------------------------------
