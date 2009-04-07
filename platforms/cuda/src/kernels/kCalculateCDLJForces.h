@@ -46,6 +46,12 @@ __global__ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUni
     float3* tempBuffer = (float3*) &sA[cSim.nonbond_threads_per_block];
 #endif
 
+#ifdef USE_EWALD
+    float alphaEwald       =  3.123413;
+    float PI = 3.14159265358979323846f;
+    float SQRT_PI  = sqrt(PI);
+#endif
+
     unsigned int lasty = 0xFFFFFFFF;
     while (pos < end)
     {
@@ -108,7 +114,13 @@ __global__ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUni
                     eps             = a.y * psA[j].eps;
                     dEdR            = eps * (12.0f * sig6 - 6.0f) * sig6;
 #ifdef USE_CUTOFF
+    #ifdef USE_EWALD
+                    float r               = sqrt(r2);
+                    float alphaR    = alphaEwald * r;
+                    dEdR += apos.w * psA[tj].q * invR * invR * invR * (erfc(alphaR) + 2.0 * alphaR * exp ( - alphaR * alphaR) / SQRT_PI );
+    #else
                     dEdR           += apos.w * psA[j].q * (invR - 2.0f * cSim.reactionFieldK * r2);
+    #endif
 #else
                     dEdR           += apos.w * psA[j].q * invR;
 #endif
@@ -151,7 +163,13 @@ __global__ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUni
                     eps             = a.y * psA[j].eps;
                     dEdR            = eps * (12.0f * sig6 - 6.0f) * sig6;
 #ifdef USE_CUTOFF
+    #ifdef USE_EWALD
+                    float r               = sqrt(r2);
+                    float alphaR    = alphaEwald * r;
+                    dEdR += apos.w * psA[tj].q * invR * invR * invR * (erfc(alphaR) + 2.0 * alphaR * exp ( - alphaR * alphaR) / SQRT_PI );
+    #else
                     dEdR           += apos.w * psA[j].q * (invR - 2.0f * cSim.reactionFieldK * r2);
+    #endif
 #else
                     dEdR           += apos.w * psA[j].q * invR;
 #endif
@@ -243,7 +261,13 @@ __global__ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUni
                         eps             = a.y * psA[tj].eps;
                         dEdR            = eps * (12.0f * sig6 - 6.0f) * sig6;
 #ifdef USE_CUTOFF
+    #ifdef USE_EWALD
+                    float r               = sqrt(r2);
+                    float alphaR    = alphaEwald * r;
+                    dEdR += apos.w * psA[tj].q * invR * invR * invR * (erfc(alphaR) + 2.0 * alphaR * exp ( - alphaR * alphaR) / SQRT_PI );
+    #else
                         dEdR           += apos.w * psA[tj].q * (invR - 2.0f * cSim.reactionFieldK * r2);
+    #endif
 #else
                         dEdR           += apos.w * psA[tj].q * invR;
 #endif
@@ -292,7 +316,13 @@ __global__ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUni
                             eps             = a.y * psA[j].eps;
                             dEdR            = eps * (12.0f * sig6 - 6.0f) * sig6;
 #ifdef USE_CUTOFF
+    #ifdef USE_EWALD
+                    float r               = sqrt(r2);
+                    float alphaR    = alphaEwald * r;
+                    dEdR += apos.w * psA[tj].q * invR * invR * invR * (erfc(alphaR) + 2.0 * alphaR * exp ( - alphaR * alphaR) / SQRT_PI );
+    #else
                             dEdR           += apos.w * psA[j].q * (invR - 2.0f * cSim.reactionFieldK * r2);
+    #endif
 #else
                             dEdR           += apos.w * psA[j].q * invR;
 #endif
@@ -377,7 +407,13 @@ __global__ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUni
                     eps             = a.y * psA[tj].eps;
                     dEdR            = eps * (12.0f * sig6 - 6.0f) * sig6;
 #ifdef USE_CUTOFF
+    #ifdef USE_EWALD
+                    float r               = sqrt(r2);
+                    float alphaR    = alphaEwald * r;
+                    dEdR += apos.w * psA[tj].q * invR * invR * invR * (erfc(alphaR) + 2.0 * alphaR * exp ( - alphaR * alphaR) / SQRT_PI );
+    #else
                     dEdR           += apos.w * psA[tj].q * (invR - 2.0f * cSim.reactionFieldK * r2);
+    #endif
 #else
                     dEdR           += apos.w * psA[tj].q * invR;
 #endif
