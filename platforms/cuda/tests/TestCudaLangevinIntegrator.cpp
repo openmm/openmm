@@ -131,7 +131,7 @@ void testTemperature() {
 
 void testConstraints() {
     const int numParticles = 8;
-    const int numConstraints = 7;
+    const int numConstraints = 5;
     const double temp = 100.0;
     CudaPlatform platform;
     System system(numParticles, numConstraints);
@@ -142,8 +142,11 @@ void testConstraints() {
         system.setParticleMass(i, 10.0);
         forceField->setParticleParameters(i, (i%2 == 0 ? 0.2 : -0.2), 0.5, 5.0);
     }
-    for (int i = 0; i < numConstraints; ++i)
-        system.setConstraintParameters(i, i, i+1, 1.0);
+    system.setConstraintParameters(0, 0, 1, 1.0);
+    system.setConstraintParameters(1, 1, 2, 1.0);
+    system.setConstraintParameters(2, 2, 3, 1.0);
+    system.setConstraintParameters(3, 4, 5, 1.0);
+    system.setConstraintParameters(4, 6, 7, 1.0);
     system.addForce(forceField);
     OpenMMContext context(system, integrator, platform);
     vector<Vec3> positions(numParticles);
@@ -241,7 +244,7 @@ int main() {
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;
-//        return 1;
+        return 1;
     }
     cout << "Done" << endl;
     return 0;

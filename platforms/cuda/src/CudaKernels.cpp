@@ -372,7 +372,7 @@ static void initializeIntegration(const System& system, CudaPlatform::PlatformDa
         invMass1[i] = 1.0f/mass[particle1Index];
         invMass2[i] = 1.0f/mass[particle2Index];
     }
-    gpuSetShakeParameters(gpu, particle1, particle2, distance, invMass1, invMass2, integrator.getConstraintTolerance());
+    gpuSetConstraintParameters(gpu, particle1, particle2, distance, invMass1, invMass2, integrator.getConstraintTolerance(), 4);
     
     // Initialize any terms that haven't already been handled by a Force.
     

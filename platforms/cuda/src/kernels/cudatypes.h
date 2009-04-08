@@ -352,6 +352,7 @@ struct cudaGmxSimulation {
     unsigned int    maxShakeIterations;             // Maximum shake iterations
     unsigned int    degreesOfFreedom;               // Number of degrees of freedom in system
     float           shakeTolerance;                 // Shake tolerance
+    unsigned int    lincsTerms;                     // Number of terms in the matrix expansion for LINCS
     float           InvMassJ;                       // Shake inverse mass for hydrogens
     int*            pNonShakeID;                    // Not Shaking atoms
     int4*           pShakeID;                       // Shake atoms and phase

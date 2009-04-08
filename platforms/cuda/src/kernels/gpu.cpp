@@ -59,22 +59,21 @@ struct ShakeCluster {
     int centralID;
     int peripheralID[3];
     int size;
+    bool valid;
     float distance;
     float centralInvMass, peripheralInvMass;
-    ShakeCluster() {
+    ShakeCluster() : valid(true) {
     }
-    ShakeCluster(int centralID, float invMass) : centralID(centralID), centralInvMass(invMass), size(0) {
+    ShakeCluster(int centralID, float invMass) : centralID(centralID), centralInvMass(invMass), size(0), valid(true) {
     }
     void addAtom(int id, float dist, float invMass) {
-        if (size == 3)
-            throw OpenMMException("A single atom may only have three constraints");
-        if (size > 0 && dist != distance)
-            throw OpenMMException("All constraints for a central atom must have the same distance");
-        if (size > 0 && invMass != peripheralInvMass)
-            throw OpenMMException("All constraints for a central atom must have the same mass");
-        peripheralID[size++] = id;
-        distance = dist;
-        peripheralInvMass = invMass;
+        if (size == 3 || (size > 0 && dist != distance) || (size > 0 && invMass != peripheralInvMass))
+            valid = false;
+        else {
+            peripheralID[size++] = id;
+            distance = dist;
+            peripheralInvMass = invMass;
+        }
     }
 };
 
@@ -457,10 +456,26 @@ void gpuSetObcParameters(gpuContext gpu, float innerDielectric, float solventDie
     gpu->sim.preFactor = 2.0f*electricConstant*((1.0f/innerDielectric)-(1.0f/solventDielectric))*gpu->sim.forceConversionFactor;
 }
 
-extern "C"
-void gpuSetShakeParameters(gpuContext gpu, const vector<int>& atom1, const vector<int>& atom2, const vector<float>& distance,
-        const vector<float>& invMass1, const vector<float>& invMass2, float tolerance)
+void markShakeClusterInvalid(ShakeCluster& cluster, map<int, ShakeCluster>& allClusters, vector<bool>& invalidForShake)
 {
+    cluster.valid = false;
+    invalidForShake[cluster.centralID] = true;
+    for (int i = 0; i < cluster.size; i++) {
+        invalidForShake[cluster.peripheralID[i]] = true;
+        map<int, ShakeCluster>::iterator otherCluster = allClusters.find(cluster.peripheralID[i]);
+        if (otherCluster != allClusters.end() && otherCluster->second.valid)
+            markShakeClusterInvalid(otherCluster->second, allClusters, invalidForShake);
+    }
+}
+
+extern "C"
+void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const vector<int>& atom2, const vector<float>& distance,
+        const vector<float>& invMass1, const vector<float>& invMass2, float shakeTolerance, unsigned int lincsTerms)
+{
+    // Create a vector for recording which atoms are handled by SHAKE (or SETTLE).
+
+    vector<bool> isShakeAtom(gpu->natoms, false);
+
     // Find how many constraints each atom is involved in.
     
     vector<int> constraintCount(gpu->natoms, 0);
@@ -507,7 +522,7 @@ void gpuSetShakeParameters(gpuContext gpu, const vector<int>& atom1, const vecto
     gpu->psSettleParameter                = psSettleParameter;
     gpu->sim.pSettleParameter             = psSettleParameter->_pDevStream[0];
     gpu->sim.settleConstraints            = settleClusters.size();
-    for (int i = 0; i < settleClusters.size(); i++) {
+      for (int i = 0; i < settleClusters.size(); i++) {
         int atom1 = settleClusters[i];
         int atom2 = settleConstraints[atom1].begin()->first;
         int atom3 = (++settleConstraints[atom1].begin())->first;
@@ -537,6 +552,9 @@ void gpuSetShakeParameters(gpuContext gpu, const vector<int>& atom1, const vecto
         }
         else
             throw OpenMMException("Two of the three distances constrained with SETTLE must be the same.");
+        isShakeAtom[atom1] = true;
+        isShakeAtom[atom2] = true;
+        isShakeAtom[atom3] = true;
     }
     psSettleID->Upload();
     psSettleParameter->Upload();
@@ -546,11 +564,111 @@ void gpuSetShakeParameters(gpuContext gpu, const vector<int>& atom1, const vecto
     if (gpu->sim.settle_threads_per_block < 1)
         gpu->sim.settle_threads_per_block = 1;
 
+    // Find clusters consisting of a central atom with up to three peripheral atoms.
+
+    map<int, ShakeCluster> clusters;
+    vector<bool> invalidForShake(gpu->natoms, false);
+    for (int i = 0; i < atom1.size(); i++) {
+        if (isShakeAtom[atom1[i]])
+            continue; // This is being taken care of with SETTLE.
+
+        // Determine which is the central atom.
+
+        bool firstIsCentral;
+        if (constraintCount[atom1[i]] > 1)
+            firstIsCentral = true;
+        else if (constraintCount[atom2[i]] > 1)
+            firstIsCentral = false;
+        else if (atom1[i] < atom2[i])
+            firstIsCentral = true;
+        else
+            firstIsCentral = false;
+        int centralID, peripheralID;
+        float centralInvMass, peripheralInvMass;
+        if (firstIsCentral) {
+            centralID = atom1[i];
+            peripheralID = atom2[i];
+            centralInvMass = invMass1[i];
+            peripheralInvMass = invMass2[i];
+        }
+        else {
+            centralID = atom2[i];
+            peripheralID = atom1[i];
+            centralInvMass = invMass2[i];
+            peripheralInvMass = invMass1[i];
+        }
+
+        // Add it to the cluster.
+
+        if (clusters.find(centralID) == clusters.end()) {
+            clusters[centralID] = ShakeCluster(centralID, centralInvMass);
+        }
+        ShakeCluster& cluster = clusters[centralID];
+        cluster.addAtom(peripheralID, distance[i], peripheralInvMass);
+        if (constraintCount[peripheralID] != 1 || invalidForShake[atom1[i]] || invalidForShake[atom2[i]]) {
+            markShakeClusterInvalid(cluster, clusters, invalidForShake);
+            map<int, ShakeCluster>::iterator otherCluster = clusters.find(peripheralID);
+            if (otherCluster != clusters.end() && otherCluster->second.valid)
+                markShakeClusterInvalid(otherCluster->second, clusters, invalidForShake);
+        }
+    }
+    int validShakeClusters = 0;
+    for (map<int, ShakeCluster>::iterator iter = clusters.begin(); iter != clusters.end(); ++iter) {
+        ShakeCluster& cluster = iter->second;
+        if (cluster.valid) {
+            cluster.valid = !invalidForShake[cluster.centralID];
+            for (int i = 0; i < cluster.size; i++)
+                if (invalidForShake[cluster.peripheralID[i]])
+                    cluster.valid = false;
+            if (cluster.valid)
+                ++validShakeClusters;
+        }
+    }
+
+    // Fill in the Cuda streams.
+
+    CUDAStream<int4>* psShakeID             = new CUDAStream<int4>(validShakeClusters, 1);
+    gpu->psShakeID                          = psShakeID;
+    gpu->sim.pShakeID                       = psShakeID->_pDevStream[0];
+    CUDAStream<float4>* psShakeParameter    = new CUDAStream<float4>(validShakeClusters, 1);
+    gpu->psShakeParameter                   = psShakeParameter;
+    gpu->sim.pShakeParameter                = psShakeParameter->_pDevStream[0];
+    gpu->sim.ShakeConstraints               = validShakeClusters;
+    int index = 0;
+    for (map<int, ShakeCluster>::const_iterator iter = clusters.begin(); iter != clusters.end(); ++iter) {
+        const ShakeCluster& cluster = iter->second;
+        if (!cluster.valid)
+            continue;
+        psShakeID->_pSysStream[0][index].x = cluster.centralID;
+        psShakeID->_pSysStream[0][index].y = cluster.peripheralID[0];
+        psShakeID->_pSysStream[0][index].z = cluster.size > 1 ? cluster.peripheralID[1] : -1;
+        psShakeID->_pSysStream[0][index].w = cluster.size > 2 ? cluster.peripheralID[2] : -1;
+        psShakeParameter->_pSysStream[0][index].x = cluster.centralInvMass;
+        psShakeParameter->_pSysStream[0][index].y = 0.5f/(cluster.centralInvMass+cluster.peripheralInvMass);
+        psShakeParameter->_pSysStream[0][index].z = cluster.distance*cluster.distance;
+        psShakeParameter->_pSysStream[0][index].w = cluster.peripheralInvMass;
+        isShakeAtom[cluster.centralID] = true;
+        isShakeAtom[cluster.peripheralID[0]] = true;
+        if (cluster.size > 1)
+            isShakeAtom[cluster.peripheralID[1]] = true;
+        if (cluster.size > 2)
+            isShakeAtom[cluster.peripheralID[2]] = true;
+        ++index;
+    }
+    psShakeID->Upload();
+    psShakeParameter->Upload();
+    gpu->sim.shakeTolerance = shakeTolerance;
+    gpu->sim.shake_threads_per_block     = (gpu->sim.ShakeConstraints + gpu->sim.blocks - 1) / gpu->sim.blocks;
+    if (gpu->sim.shake_threads_per_block > gpu->sim.max_shake_threads_per_block)
+        gpu->sim.shake_threads_per_block = gpu->sim.max_shake_threads_per_block;
+    if (gpu->sim.shake_threads_per_block < 1)
+        gpu->sim.shake_threads_per_block = 1;
+
     // Find connected constraints for LINCS.
 
     vector<int> lincsConstraints;
     for (unsigned int i = 0; i < atom1.size(); i++)
-        if (settleConstraints[atom1[i]].size() != 2)
+        if (!isShakeAtom[atom1[i]])
             lincsConstraints.push_back(i);
     vector<vector<int> > atomConstraints(gpu->natoms);
     for (unsigned int i = 0; i < lincsConstraints.size(); i++) {
@@ -606,11 +724,11 @@ void gpuSetShakeParameters(gpuContext gpu, const vector<int>& atom1, const vecto
     CUDAStream<float>* psLincsSolution = new CUDAStream<float>((int) lincsConstraints.size(), 1);
     gpu->psLincsSolution             = psLincsSolution;
     gpu->sim.pLincsSolution          = psLincsSolution->_pDevData;
-    CUDAStream<unsigned int>* psSyncCounter = new CUDAStream<unsigned int>(100, 1);
+    CUDAStream<unsigned int>* psSyncCounter = new CUDAStream<unsigned int>(2*lincsTerms+2, 1);
     gpu->psSyncCounter                      = psSyncCounter;
     gpu->sim.pSyncCounter                   = psSyncCounter->_pDevData;
     gpu->sim.lincsConstraints = lincsConstraints.size();
-    int index = 0;
+    index = 0;
     for (unsigned int i = 0; i < lincsConstraints.size(); i++) {
         int c = lincsConstraints[i];
         psLincsAtoms->_pSysData[i].x = atom1[c];
@@ -639,92 +757,19 @@ void gpuSetShakeParameters(gpuContext gpu, const vector<int>& atom1, const vecto
     psLincsAtomConstraints->Upload();
     psLincsAtomConstraintsIndex->Upload();
     psSyncCounter->Upload();
+    gpu->sim.lincsTerms = lincsTerms;
     gpu->sim.lincs_threads_per_block = (gpu->sim.lincsConstraints + gpu->sim.blocks - 1) / gpu->sim.blocks;
     if (gpu->sim.lincs_threads_per_block > gpu->sim.max_shake_threads_per_block)
         gpu->sim.lincs_threads_per_block = gpu->sim.max_shake_threads_per_block;
     if (gpu->sim.lincs_threads_per_block < 1)
         gpu->sim.lincs_threads_per_block = 1;
 
-/*
-    // Find clusters consisting of a central atom with up to three peripheral atoms.
-    
-    map<int, ShakeCluster> clusters;
-    for (int i = 0; i < atom1.size(); i++) {
-        if (settleConstraints[atom1[i]].size() == 2)
-            continue; // This is being taken care of with SETTLE.
 
-        // Determine which is the central atom.
-        
-        bool firstIsCentral;
-        if (constraintCount[atom1[i]] > 1)
-            firstIsCentral = true;
-        else if (constraintCount[atom2[i]] > 1)
-            firstIsCentral = false;
-        else if (atom1[i] < atom2[i])
-            firstIsCentral = true;
-        else
-            firstIsCentral = false;
-        int centralID, peripheralID;
-        float centralInvMass, peripheralInvMass;
-        if (firstIsCentral) {
-            centralID = atom1[i];
-            peripheralID = atom2[i];
-            centralInvMass = invMass1[i];
-            peripheralInvMass = invMass2[i];
-        }
-        else {
-            centralID = atom2[i];
-            peripheralID = atom1[i];
-            centralInvMass = invMass2[i];
-            peripheralInvMass = invMass1[i];
-        }
-        if (constraintCount[peripheralID] != 1)
-            throw OpenMMException("Only bonds to hydrogens may be constrained");
-        
-        // Add it to the cluster.
-        
-        if (clusters.find(centralID) == clusters.end()) {
-            clusters[centralID] = ShakeCluster(centralID, centralInvMass);
-        }
-        clusters[centralID].addAtom(peripheralID, distance[i], peripheralInvMass);
-    }
-    
-    // Fill in the Cuda streams.
-
-    CUDAStream<int4>* psShakeID             = new CUDAStream<int4>((int) clusters.size(), 1);
-    gpu->psShakeID                          = psShakeID;
-    gpu->sim.pShakeID                       = psShakeID->_pDevStream[0]; 
-    CUDAStream<float4>* psShakeParameter    = new CUDAStream<float4>((int) clusters.size(), 1);
-    gpu->psShakeParameter                   = psShakeParameter;
-    gpu->sim.pShakeParameter                = psShakeParameter->_pDevStream[0];
-    gpu->sim.ShakeConstraints               = clusters.size();
-    int index = 0;
-    for (map<int, ShakeCluster>::const_iterator iter = clusters.begin(); iter != clusters.end(); ++iter) {
-        const ShakeCluster& cluster = iter->second;
-        psShakeID->_pSysStream[0][index].x = cluster.centralID;
-        psShakeID->_pSysStream[0][index].y = cluster.peripheralID[0];
-        psShakeID->_pSysStream[0][index].z = cluster.size > 1 ? cluster.peripheralID[1] : -1;
-        psShakeID->_pSysStream[0][index].w = cluster.size > 2 ? cluster.peripheralID[2] : -1;
-        psShakeParameter->_pSysStream[0][index].x = cluster.centralInvMass;
-        psShakeParameter->_pSysStream[0][index].y = 0.5f/(cluster.centralInvMass+cluster.peripheralInvMass);
-        psShakeParameter->_pSysStream[0][index].z = cluster.distance*cluster.distance;
-        psShakeParameter->_pSysStream[0][index].w = cluster.peripheralInvMass;
-        ++index;
-    }
-    psShakeID->Upload();
-    psShakeParameter->Upload();
-    gpu->sim.shakeTolerance = tolerance;
-*/
+    gpu->psLincsConnectionsIndex->Download();
+    gpu->psLincsConnections->Download();
+    gpu->psLincsCoupling->Download();
 
 
-    gpu->sim.ShakeConstraints = 0;
-
-
-    gpu->sim.shake_threads_per_block     = (gpu->sim.ShakeConstraints + gpu->sim.blocks - 1) / gpu->sim.blocks; 
-    if (gpu->sim.shake_threads_per_block > gpu->sim.max_shake_threads_per_block)
-        gpu->sim.shake_threads_per_block = gpu->sim.max_shake_threads_per_block;
-    if (gpu->sim.shake_threads_per_block < 1)
-        gpu->sim.shake_threads_per_block = 1;
 
 #ifdef DeltaShake
 
@@ -732,7 +777,7 @@ void gpuSetShakeParameters(gpuContext gpu, const vector<int>& atom1, const vecto
 
     int count = 0;
     for (int i = 0; i < gpu->natoms; i++)
-//       if (constraintCount[i] == 0)
+       if (!isShakeAtom[i])
           count++;
 
     // Allocate NonShake parameters
@@ -756,9 +801,9 @@ void gpuSetShakeParameters(gpuContext gpu, const vector<int>& atom1, const vecto
 
        count = 0;
        for (int i = 0; i < gpu->natoms; i++){
-//          if (constraintCount[i] == 0){
+          if (!isShakeAtom[i]){
              psNonShakeID->_pSysStream[0][count++] = i;
-//          }
+          }
        }
        psNonShakeID->Upload();
 

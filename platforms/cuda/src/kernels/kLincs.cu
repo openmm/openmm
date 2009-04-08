@@ -73,9 +73,9 @@ __device__ void kSyncAllThreads_kernel(unsigned int* syncCounter)
     } while (counterValue > 0);
 }
 
-__device__ void kSolveMatrix_kernel(unsigned int numTerms, unsigned int* syncCounter)
+__device__ void kSolveMatrix_kernel(unsigned int* syncCounter)
 {
-    for (unsigned int iteration = 0; iteration < numTerms; iteration++) {
+    for (unsigned int iteration = 0; iteration < cSim.lincsTerms; iteration++) {
         float* rhs1 = (iteration%2 == 0 ? cSim.pLincsRhs1 : cSim.pLincsRhs2);
         float* rhs2 = (iteration%2 == 0 ? cSim.pLincsRhs2 : cSim.pLincsRhs1);
         unsigned int pos = threadIdx.x + blockIdx.x * blockDim.x;
@@ -121,7 +121,7 @@ __device__ void kUpdateAtomPositions_kernel(float4* atomPositions)
     }
 }
 
-__global__ void kApplyLincs_kernel(unsigned int numTerms, float4* atomPositions, bool addOldPosition)
+__global__ void kApplyLincs_kernel(float4* atomPositions, bool addOldPosition)
 {
    // Calculate the direction of each constraint, along with the initial RHS and solution vectors.
 
@@ -174,15 +174,15 @@ __global__ void kApplyLincs_kernel(unsigned int numTerms, float4* atomPositions,
             int otherConstraint = cSim.pLincsConnections[i];
             float4 dir2 = cSim.pLincsDistance[otherConstraint];
             int2 atoms2 = cSim.pLincsAtoms[otherConstraint];
-            float sign = (atoms1.x == atoms2.x || atoms1.y == atoms2.y ? -1.0f : 1.0f);
-            cSim.pLincsCoupling[i] = sign*invMass*s*(dir1.x*dir2.x+dir1.y*dir2.y+dir1.z*dir2.z)*cSim.pLincsS[otherConstraint]; // ***** Is this the correct mass? *****
+            float signedMass = (atoms1.x == atoms2.x || atoms1.y == atoms2.y ? -invMass : cSim.pVelm4[atoms1.y].w);
+            cSim.pLincsCoupling[i] = signedMass*s*(dir1.x*dir2.x+dir1.y*dir2.y+dir1.z*dir2.z)*cSim.pLincsS[otherConstraint];
         }
         pos += blockDim.x * gridDim.x;
     }
 
     // Solve the matrix equation and update the atom positions.
 
-    kSolveMatrix_kernel(numTerms, cSim.pSyncCounter+1);
+    kSolveMatrix_kernel(cSim.pSyncCounter+1);
     kUpdateAtomPositions_kernel(atomPositions);
 
     // Correct for rotational lengthening.
@@ -217,7 +217,7 @@ __global__ void kApplyLincs_kernel(unsigned int numTerms, float4* atomPositions,
 
     // Solve the matrix equation and update the atom positions.
 
-    kSolveMatrix_kernel(numTerms, cSim.pSyncCounter+numTerms+1);
+    kSolveMatrix_kernel(cSim.pSyncCounter+cSim.lincsTerms+1);
     kUpdateAtomPositions_kernel(atomPositions);
 }
 
@@ -226,7 +226,7 @@ void kApplyFirstLincs(gpuContext gpu)
 //    printf("kApplyFirstLincs\n");
     if (gpu->sim.lincsConstraints > 0)
     {
-        kApplyLincs_kernel<<<gpu->sim.blocks, gpu->sim.lincs_threads_per_block>>>(4, gpu->sim.pPosqP, true);
+        kApplyLincs_kernel<<<gpu->sim.blocks, gpu->sim.lincs_threads_per_block>>>(gpu->sim.pPosqP, true);
         LAUNCHERROR("kApplyFirstLincs");
     }
 }
@@ -236,7 +236,7 @@ void kApplySecondLincs(gpuContext gpu)
 //    printf("kApplySecondLincs\n");
     if (gpu->sim.lincsConstraints > 0)
     {
-        kApplyLincs_kernel<<<gpu->sim.blocks, gpu->sim.lincs_threads_per_block>>>(4, gpu->sim.pPosq, false);
+        kApplyLincs_kernel<<<gpu->sim.blocks, gpu->sim.lincs_threads_per_block>>>(gpu->sim.pPosq, false);
         LAUNCHERROR("kApplySecondLincs");
     }
 }

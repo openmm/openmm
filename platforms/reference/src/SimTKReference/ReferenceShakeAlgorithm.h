@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2009 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -55,10 +55,11 @@ class ReferenceShakeAlgorithm : public ReferenceConstraintAlgorithm {
          @param numberOfConstraints      number of constraints 
          @param atomIndices              atom indices for contraints
          @param distance                 distances for constraints
+         @param tolerance                constraint tolerance
       
          --------------------------------------------------------------------------------------- */
       
-      ReferenceShakeAlgorithm( int numberOfConstraints, int** atomIndices, RealOpenMM* distance );
+      ReferenceShakeAlgorithm( int numberOfConstraints, int** atomIndices, RealOpenMM* distance, RealOpenMM tolerance );
 
       /**---------------------------------------------------------------------------------------
       

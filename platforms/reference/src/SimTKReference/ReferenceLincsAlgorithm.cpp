@@ -57,7 +57,7 @@ ReferenceLincsAlgorithm::ReferenceLincsAlgorithm( int numberOfConstraints,
    _atomIndices                = atomIndices;
    _distance                   = distance;
 
-   _numTerms                   = 8;
+   _numTerms                   = 4;
    _hasInitialized             = false;
 }
 

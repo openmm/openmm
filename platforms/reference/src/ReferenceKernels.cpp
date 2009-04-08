@@ -517,11 +517,10 @@ void ReferenceIntegrateVerletStepKernel::execute(OpenMMContextImpl& context, con
             delete constraints;
         }
         dynamics = new ReferenceVerletDynamics(context.getSystem().getNumParticles(), static_cast<RealOpenMM>(stepSize) );
-        constraints = new ReferenceShakeAlgorithm(numConstraints, constraintIndices, constraintDistances);
+        constraints = new ReferenceShakeAlgorithm(numConstraints, constraintIndices, constraintDistances, integrator.getConstraintTolerance());
         dynamics->setReferenceConstraintAlgorithm(constraints);
         prevStepSize = stepSize;
     }
-//    shake->setTolerance(integrator.getConstraintTolerance());
     dynamics->update(context.getSystem().getNumParticles(), posData, velData, forceData, masses);
 }
 
@@ -577,14 +576,12 @@ void ReferenceIntegrateLangevinStepKernel::execute(OpenMMContextImpl& context, c
 				static_cast<RealOpenMM>(stepSize), 
 				static_cast<RealOpenMM>(tau), 
 				static_cast<RealOpenMM>(temperature) );
-        constraints = new ReferenceLincsAlgorithm(numConstraints, constraintIndices, constraintDistances);
-//        shake = new ReferenceShakeAlgorithm(numConstraints, constraintIndices, shakeParameters);
+        constraints = new ReferenceShakeAlgorithm(numConstraints, constraintIndices, constraintDistances, integrator.getConstraintTolerance());
         dynamics->setReferenceConstraintAlgorithm(constraints);
         prevTemp = temperature;
         prevFriction = friction;
         prevStepSize = stepSize;
     }
-//    shake->setTolerance(integrator.getConstraintTolerance());
     dynamics->update(context.getSystem().getNumParticles(), posData, velData, forceData, masses);
 }
 
@@ -639,13 +636,12 @@ void ReferenceIntegrateBrownianStepKernel::execute(OpenMMContextImpl& context, c
 				static_cast<RealOpenMM>(stepSize), 
 				static_cast<RealOpenMM>(friction), 
 				static_cast<RealOpenMM>(temperature) );
-        constraints = new ReferenceShakeAlgorithm(numConstraints, constraintIndices, constraintDistances);
+        constraints = new ReferenceShakeAlgorithm(numConstraints, constraintIndices, constraintDistances, integrator.getConstraintTolerance());
         dynamics->setReferenceConstraintAlgorithm(constraints);
         prevTemp = temperature;
         prevFriction = friction;
         prevStepSize = stepSize;
     }
-//    shake->setTolerance(integrator.getConstraintTolerance());
     dynamics->update(context.getSystem().getNumParticles(), posData, velData, forceData, masses);
 }
 

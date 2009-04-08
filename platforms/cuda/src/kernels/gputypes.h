@@ -183,8 +183,8 @@ extern "C"
 void gpuSetObcParameters(gpuContext gpu, float innerDielectric, float solventDielectric, const std::vector<int>& atom, const std::vector<float>& radius, const std::vector<float>& scale);
 
 extern "C"
-void gpuSetShakeParameters(gpuContext gpu, const std::vector<int>& atom1, const std::vector<int>& atom2, const std::vector<float>& distance,
-        const std::vector<float>& invMass1, const std::vector<float>& invMass2, float tolerance);
+void gpuSetConstraintParameters(gpuContext gpu, const std::vector<int>& atom1, const std::vector<int>& atom2, const std::vector<float>& distance,
+        const std::vector<float>& invMass1, const std::vector<float>& invMass2, float shakeTolerance, unsigned int lincsTerms);
 
 extern "C"
 int gpuAllocateInitialBuffers(gpuContext gpu);

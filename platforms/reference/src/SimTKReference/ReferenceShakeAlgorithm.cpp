@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2009 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -38,12 +38,14 @@
    @param numberOfConstraints      number of constraints
    @param atomIndices              block of atom indices
    @param shakeParameters          Shake parameters
+   @param tolerance                constraint tolerance
 
    --------------------------------------------------------------------------------------- */
 
 ReferenceShakeAlgorithm::ReferenceShakeAlgorithm( int numberOfConstraints,
                                                   int** atomIndices,
-                                                  RealOpenMM* distance ){
+                                                  RealOpenMM* distance,
+                                                  RealOpenMM tolerance){
 
    // ---------------------------------------------------------------------------------------
 
@@ -64,7 +66,7 @@ ReferenceShakeAlgorithm::ReferenceShakeAlgorithm( int numberOfConstraints,
    _distance                   = distance;
 
    _maximumNumberOfIterations  = 15;
-   _tolerance                  = (RealOpenMM) 1.0e-04;
+   _tolerance                  = tolerance;
    _hasInitializedMasses       = false;
 
    // work arrays
