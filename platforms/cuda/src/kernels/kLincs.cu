@@ -184,6 +184,7 @@ __global__ void kApplyLincs_kernel(float4* atomPositions, bool addOldPosition)
 
     kSolveMatrix_kernel(cSim.pSyncCounter+1);
     kUpdateAtomPositions_kernel(atomPositions);
+    kSyncAllThreads_kernel(cSim.pSyncCounter+cSim.lincsTerms+1);
 
     // Correct for rotational lengthening.
 
@@ -217,7 +218,7 @@ __global__ void kApplyLincs_kernel(float4* atomPositions, bool addOldPosition)
 
     // Solve the matrix equation and update the atom positions.
 
-    kSolveMatrix_kernel(cSim.pSyncCounter+cSim.lincsTerms+1);
+    kSolveMatrix_kernel(cSim.pSyncCounter+cSim.lincsTerms+2);
     kUpdateAtomPositions_kernel(atomPositions);
 }
 
