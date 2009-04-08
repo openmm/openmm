@@ -128,29 +128,29 @@ void gpuSetBondParameters(gpuContext gpu, const vector<int>& atom1, const vector
 {
     int bonds = atom1.size();
     gpu->sim.bonds                              = bonds;
-    CUDAStream<int4>* psBondID                  = new CUDAStream<int4>(bonds, 1);
+    CUDAStream<int4>* psBondID                  = new CUDAStream<int4>(bonds, 1, "BondID");
     gpu->psBondID                               = psBondID;
     gpu->sim.pBondID                            = psBondID->_pDevStream[0];
-    CUDAStream<float2>* psBondParameter         = new CUDAStream<float2>(bonds, 1);
+    CUDAStream<float2>* psBondParameter         = new CUDAStream<float2>(bonds, 1, "BondParameter");
     gpu->psBondParameter                        = psBondParameter;
     gpu->sim.pBondParameter                     = psBondParameter->_pDevStream[0];
     for (int i = 0; i < bonds; i++)
     {
-        psBondID->_pSysStream[0][i].x = atom1[i];
-        psBondID->_pSysStream[0][i].y = atom2[i];
-        psBondParameter->_pSysStream[0][i].x = length[i];
-        psBondParameter->_pSysStream[0][i].y = k[i];
-        psBondID->_pSysStream[0][i].z = gpu->pOutputBufferCounter[psBondID->_pSysStream[0][i].x]++;
-        psBondID->_pSysStream[0][i].w = gpu->pOutputBufferCounter[psBondID->_pSysStream[0][i].y]++;
+        (*psBondID)[i].x = atom1[i];
+        (*psBondID)[i].y = atom2[i];
+        (*psBondParameter)[i].x = length[i];
+        (*psBondParameter)[i].y = k[i];
+        psBondID->_pSysData[i].z = gpu->pOutputBufferCounter[psBondID->_pSysData[i].x]++;
+        psBondID->_pSysData[i].w = gpu->pOutputBufferCounter[psBondID->_pSysData[i].y]++;
 #if (DUMP_PARAMETERS == 1)                
         cout << 
             i << " " << 
-            psBondID->_pSysStream[0][i].x << " " << 
-            psBondID->_pSysStream[0][i].y << " " << 
-            psBondID->_pSysStream[0][i].z << " " << 
-            psBondID->_pSysStream[0][i].w << " " << 
-            psBondParameter->_pSysStream[0][i].x << " " << 
-            psBondParameter->_pSysStream[0][i].y << 
+            (*psBondID)[i].x << " " <<
+            (*psBondID)[i].y << " " <<
+            (*psBondID)[i].z << " " <<
+            (*psBondID)[i].w << " " <<
+            (*psBondParameter)[i].x << " " <<
+            (*psBondParameter)[i].y <<
             endl;
 #endif
     }
@@ -164,37 +164,37 @@ void gpuSetBondAngleParameters(gpuContext gpu, const vector<int>& atom1, const v
 {
     int bond_angles = atom1.size();
     gpu->sim.bond_angles                        = bond_angles;
-    CUDAStream<int4>* psBondAngleID1            = new CUDAStream<int4>(bond_angles, 1);
+    CUDAStream<int4>* psBondAngleID1            = new CUDAStream<int4>(bond_angles, 1, "BondAngleID1");
     gpu->psBondAngleID1                         = psBondAngleID1;
     gpu->sim.pBondAngleID1                      = psBondAngleID1->_pDevStream[0];
-    CUDAStream<int2>* psBondAngleID2            = new CUDAStream<int2>(bond_angles, 1);
+    CUDAStream<int2>* psBondAngleID2            = new CUDAStream<int2>(bond_angles, 1, "BondAngleID2");
     gpu->psBondAngleID2                         = psBondAngleID2;
     gpu->sim.pBondAngleID2                      = psBondAngleID2->_pDevStream[0];
-    CUDAStream<float2>* psBondAngleParameter    = new CUDAStream<float2>(bond_angles, 1);
+    CUDAStream<float2>* psBondAngleParameter    = new CUDAStream<float2>(bond_angles, 1, "BondAngleParameter");
     gpu->psBondAngleParameter                   = psBondAngleParameter;
     gpu->sim.pBondAngleParameter                = psBondAngleParameter->_pDevStream[0];        
 
     for (int i = 0; i < bond_angles; i++)
     {
-        psBondAngleID1->_pSysStream[0][i].x = atom1[i];
-        psBondAngleID1->_pSysStream[0][i].y = atom2[i];
-        psBondAngleID1->_pSysStream[0][i].z = atom3[i];
-        psBondAngleParameter->_pSysStream[0][i].x = angle[i];
-        psBondAngleParameter->_pSysStream[0][i].y = k[i];
-        psBondAngleID1->_pSysStream[0][i].w = gpu->pOutputBufferCounter[psBondAngleID1->_pSysStream[0][i].x]++;
-        psBondAngleID2->_pSysStream[0][i].x = gpu->pOutputBufferCounter[psBondAngleID1->_pSysStream[0][i].y]++;
-        psBondAngleID2->_pSysStream[0][i].y = gpu->pOutputBufferCounter[psBondAngleID1->_pSysStream[0][i].z]++;
+        (*psBondAngleID1)[i].x = atom1[i];
+        (*psBondAngleID1)[i].y = atom2[i];
+        (*psBondAngleID1)[i].z = atom3[i];
+        (*psBondAngleParameter)[i].x = angle[i];
+        (*psBondAngleParameter)[i].y = k[i];
+        psBondAngleID1->_pSysData[i].w = gpu->pOutputBufferCounter[psBondAngleID1->_pSysData[i].x]++;
+        psBondAngleID2->_pSysData[i].x = gpu->pOutputBufferCounter[psBondAngleID1->_pSysData[i].y]++;
+        psBondAngleID2->_pSysData[i].y = gpu->pOutputBufferCounter[psBondAngleID1->_pSysData[i].z]++;
 #if (DUMP_PARAMETERS == 1)
          cout << 
             i << " " << 
-            psBondAngleID1->_pSysStream[0][i].x << " " << 
-            psBondAngleID1->_pSysStream[0][i].y << " " << 
-            psBondAngleID1->_pSysStream[0][i].z << " " << 
-            psBondAngleID1->_pSysStream[0][i].w << " " << 
-            psBondAngleID2->_pSysStream[0][i].x << " " << 
-            psBondAngleID2->_pSysStream[0][i].y << " " << 
-            psBondAngleParameter->_pSysStream[0][i].x << " " << 
-            psBondAngleParameter->_pSysStream[0][i].y << 
+            (*psBondAngleID1)[i].x << " " <<
+            (*psBondAngleID1)[i].y << " " <<
+            (*psBondAngleID1)[i].z << " " <<
+            (*psBondAngleID1)[i].w << " " <<
+            (*psBondAngleID2)[i].x << " " <<
+            (*psBondAngleID2)[i].y << " " <<
+            (*psBondAngleParameter)[i].x << " " <<
+            (*psBondAngleParameter)[i].y <<
             endl;
 #endif
     }
@@ -209,42 +209,42 @@ void gpuSetDihedralParameters(gpuContext gpu, const vector<int>& atom1, const ve
 {
         int dihedrals = atom1.size();
         gpu->sim.dihedrals = dihedrals;
-        CUDAStream<int4>* psDihedralID1             = new CUDAStream<int4>(dihedrals, 1);
+        CUDAStream<int4>* psDihedralID1             = new CUDAStream<int4>(dihedrals, 1, "DihedralID1");
         gpu->psDihedralID1                          = psDihedralID1;
         gpu->sim.pDihedralID1                       = psDihedralID1->_pDevStream[0];
-        CUDAStream<int4>* psDihedralID2             = new CUDAStream<int4>(dihedrals, 1);
+        CUDAStream<int4>* psDihedralID2             = new CUDAStream<int4>(dihedrals, 1, "DihedralID2");
         gpu->psDihedralID2                          = psDihedralID2;
         gpu->sim.pDihedralID2                       = psDihedralID2->_pDevStream[0];
-        CUDAStream<float4>* psDihedralParameter     = new CUDAStream<float4>(dihedrals, 1);
+        CUDAStream<float4>* psDihedralParameter     = new CUDAStream<float4>(dihedrals, 1, "DihedralParameter");
         gpu->psDihedralParameter                    = psDihedralParameter;
         gpu->sim.pDihedralParameter                 = psDihedralParameter->_pDevStream[0];
         for (int i = 0; i < dihedrals; i++)
         {
-            psDihedralID1->_pSysStream[0][i].x = atom1[i];
-            psDihedralID1->_pSysStream[0][i].y = atom2[i];
-            psDihedralID1->_pSysStream[0][i].z = atom3[i];
-            psDihedralID1->_pSysStream[0][i].w = atom4[i];
-            psDihedralParameter->_pSysStream[0][i].x = k[i];
-            psDihedralParameter->_pSysStream[0][i].y = phase[i];
-            psDihedralParameter->_pSysStream[0][i].z = (float) periodicity[i];
-            psDihedralID2->_pSysStream[0][i].x = gpu->pOutputBufferCounter[psDihedralID1->_pSysStream[0][i].x]++;
-            psDihedralID2->_pSysStream[0][i].y = gpu->pOutputBufferCounter[psDihedralID1->_pSysStream[0][i].y]++;
-            psDihedralID2->_pSysStream[0][i].z = gpu->pOutputBufferCounter[psDihedralID1->_pSysStream[0][i].z]++;
-            psDihedralID2->_pSysStream[0][i].w = gpu->pOutputBufferCounter[psDihedralID1->_pSysStream[0][i].w]++;
+            (*psDihedralID1)[i].x = atom1[i];
+            (*psDihedralID1)[i].y = atom2[i];
+            (*psDihedralID1)[i].z = atom3[i];
+            (*psDihedralID1)[i].w = atom4[i];
+            (*psDihedralParameter)[i].x = k[i];
+            (*psDihedralParameter)[i].y = phase[i];
+            (*psDihedralParameter)[i].z = (float) periodicity[i];
+            psDihedralID2->_pSysData[i].x = gpu->pOutputBufferCounter[psDihedralID1->_pSysData[i].x]++;
+            psDihedralID2->_pSysData[i].y = gpu->pOutputBufferCounter[psDihedralID1->_pSysData[i].y]++;
+            psDihedralID2->_pSysData[i].z = gpu->pOutputBufferCounter[psDihedralID1->_pSysData[i].z]++;
+            psDihedralID2->_pSysData[i].w = gpu->pOutputBufferCounter[psDihedralID1->_pSysData[i].w]++;
 #if (DUMP_PARAMETERS == 1)
             cout << 
                 i << " " << 
-                psDihedralID1->_pSysStream[0][i].x << " " << 
-                psDihedralID1->_pSysStream[0][i].y << " " << 
-                psDihedralID1->_pSysStream[0][i].z << " " << 
-                psDihedralID1->_pSysStream[0][i].w << " " << 
-                psDihedralID2->_pSysStream[0][i].x << " " << 
-                psDihedralID2->_pSysStream[0][i].y << " " << 
-                psDihedralID2->_pSysStream[0][i].z << " " << 
-                psDihedralID2->_pSysStream[0][i].w << " " << 
-                psDihedralParameter->_pSysStream[0][i].x << " " << 
-                psDihedralParameter->_pSysStream[0][i].y << " " << 
-                psDihedralParameter->_pSysStream[0][i].z << endl;
+                (*psDihedralID1)[i].x << " " <<
+                (*psDihedralID1)[i].y << " " <<
+                (*psDihedralID1)[i].z << " " <<
+                (*psDihedralID1)[i].w << " " <<
+                (*psDihedralID2)[i].x << " " <<
+                (*psDihedralID2)[i].y << " " <<
+                (*psDihedralID2)[i].z << " " <<
+                (*psDihedralID2)[i].w << " " <<
+                (*psDihedralParameter)[i].x << " " <<
+                (*psDihedralParameter)[i].y << " " <<
+                (*psDihedralParameter)[i].z << endl;
 #endif
         }
         psDihedralID1->Upload();
@@ -258,52 +258,52 @@ void gpuSetRbDihedralParameters(gpuContext gpu, const vector<int>& atom1, const 
 {
     int rb_dihedrals = atom1.size();
     gpu->sim.rb_dihedrals = rb_dihedrals;
-    CUDAStream<int4>* psRbDihedralID1           = new CUDAStream<int4>(rb_dihedrals, 1);
+    CUDAStream<int4>* psRbDihedralID1           = new CUDAStream<int4>(rb_dihedrals, 1, "RbDihedralID1");
     gpu->psRbDihedralID1                        = psRbDihedralID1;
     gpu->sim.pRbDihedralID1                     = psRbDihedralID1->_pDevStream[0];
-    CUDAStream<int4>* psRbDihedralID2           = new CUDAStream<int4>(rb_dihedrals, 1);
+    CUDAStream<int4>* psRbDihedralID2           = new CUDAStream<int4>(rb_dihedrals, 1, "RbDihedralID2");
     gpu->psRbDihedralID2                        = psRbDihedralID2;
     gpu->sim.pRbDihedralID2                     = psRbDihedralID2->_pDevStream[0];
-    CUDAStream<float4>* psRbDihedralParameter1  = new CUDAStream<float4>(rb_dihedrals, 1);
+    CUDAStream<float4>* psRbDihedralParameter1  = new CUDAStream<float4>(rb_dihedrals, 1, "RbDihedralParameter1");
     gpu->psRbDihedralParameter1                 = psRbDihedralParameter1;
     gpu->sim.pRbDihedralParameter1              = psRbDihedralParameter1->_pDevStream[0];
-    CUDAStream<float2>* psRbDihedralParameter2  = new CUDAStream<float2>(rb_dihedrals, 1);    
+    CUDAStream<float2>* psRbDihedralParameter2  = new CUDAStream<float2>(rb_dihedrals, 1, "RbDihedralParameter2");
     gpu->psRbDihedralParameter2                 = psRbDihedralParameter2;
     gpu->sim.pRbDihedralParameter2              = psRbDihedralParameter2->_pDevStream[0];
 
     for (int i = 0; i < rb_dihedrals; i++)
     {
-        psRbDihedralID1->_pSysStream[0][i].x = atom1[i];
-        psRbDihedralID1->_pSysStream[0][i].y = atom2[i];
-        psRbDihedralID1->_pSysStream[0][i].z = atom3[i];
-        psRbDihedralID1->_pSysStream[0][i].w = atom4[i];
-        psRbDihedralParameter1->_pSysStream[0][i].x = c0[i];
-        psRbDihedralParameter1->_pSysStream[0][i].y = c1[i];
-        psRbDihedralParameter1->_pSysStream[0][i].z = c2[i];
-        psRbDihedralParameter1->_pSysStream[0][i].w = c3[i];
-        psRbDihedralParameter2->_pSysStream[0][i].x = c4[i];
-        psRbDihedralParameter2->_pSysStream[0][i].y = c5[i];
-        psRbDihedralID2->_pSysStream[0][i].x = gpu->pOutputBufferCounter[psRbDihedralID1->_pSysStream[0][i].x]++;
-        psRbDihedralID2->_pSysStream[0][i].y = gpu->pOutputBufferCounter[psRbDihedralID1->_pSysStream[0][i].y]++;
-        psRbDihedralID2->_pSysStream[0][i].z = gpu->pOutputBufferCounter[psRbDihedralID1->_pSysStream[0][i].z]++;
-        psRbDihedralID2->_pSysStream[0][i].w = gpu->pOutputBufferCounter[psRbDihedralID1->_pSysStream[0][i].w]++;
+        (*psRbDihedralID1)[i].x = atom1[i];
+        (*psRbDihedralID1)[i].y = atom2[i];
+        (*psRbDihedralID1)[i].z = atom3[i];
+        (*psRbDihedralID1)[i].w = atom4[i];
+        (*psRbDihedralParameter1)[i].x = c0[i];
+        (*psRbDihedralParameter1)[i].y = c1[i];
+        (*psRbDihedralParameter1)[i].z = c2[i];
+        (*psRbDihedralParameter1)[i].w = c3[i];
+        (*psRbDihedralParameter2)[i].x = c4[i];
+        (*psRbDihedralParameter2)[i].y = c5[i];
+        psRbDihedralID2->_pSysData[i].x = gpu->pOutputBufferCounter[psRbDihedralID1->_pSysData[i].x]++;
+        psRbDihedralID2->_pSysData[i].y = gpu->pOutputBufferCounter[psRbDihedralID1->_pSysData[i].y]++;
+        psRbDihedralID2->_pSysData[i].z = gpu->pOutputBufferCounter[psRbDihedralID1->_pSysData[i].z]++;
+        psRbDihedralID2->_pSysData[i].w = gpu->pOutputBufferCounter[psRbDihedralID1->_pSysData[i].w]++;
 #if (DUMP_PARAMETERS == 1)
         cout << 
             i << " " << 
-            psRbDihedralID1->_pSysStream[0][i].x << " " << 
-            psRbDihedralID1->_pSysStream[0][i].y << " " << 
-            psRbDihedralID1->_pSysStream[0][i].z << " " << 
-            psRbDihedralID1->_pSysStream[0][i].w <<" " << 
-            psRbDihedralID2->_pSysStream[0][i].x << " " << 
-            psRbDihedralID2->_pSysStream[0][i].y << " " << 
-            psRbDihedralID2->_pSysStream[0][i].z << " " << 
-            psRbDihedralID2->_pSysStream[0][i].w <<" " <<                 
-            psRbDihedralParameter1->_pSysStream[0][i].x << " " << 
-            psRbDihedralParameter1->_pSysStream[0][i].y << " " << 
-            psRbDihedralParameter1->_pSysStream[0][i].z << " " << 
-            psRbDihedralParameter1->_pSysStream[0][i].w << " " << 
-            psRbDihedralParameter2->_pSysStream[0][i].x << " " << 
-            psRbDihedralParameter2->_pSysStream[0][i].y << 
+            (*psRbDihedralID1)[i].x << " " <<
+            (*psRbDihedralID1)[i].y << " " <<
+            (*psRbDihedralID1)[i].z << " " <<
+            (*psRbDihedralID1)[i].w <<" " <<
+            (*psRbDihedralID2)[i].x << " " <<
+            (*psRbDihedralID2)[i].y << " " <<
+            (*psRbDihedralID2)[i].z << " " <<
+            (*psRbDihedralID2)[i].w <<" " <<
+            (*psRbDihedralParameter1)[i].x << " " <<
+            (*psRbDihedralParameter1)[i].y << " " <<
+            (*psRbDihedralParameter1)[i].z << " " <<
+            (*psRbDihedralParameter1)[i].w << " " <<
+            (*psRbDihedralParameter2)[i].x << " " <<
+            (*psRbDihedralParameter2)[i].y <<
             endl;
 #endif
     }
@@ -321,19 +321,19 @@ void gpuSetLJ14Parameters(gpuContext gpu, float epsfac, float fudge, const vecto
     float scale = epsfac * fudge;
 
     gpu->sim.LJ14s                              = LJ14s;
-    CUDAStream<int4>* psLJ14ID                  = new CUDAStream<int4>(LJ14s, 1);
+    CUDAStream<int4>* psLJ14ID                  = new CUDAStream<int4>(LJ14s, 1, "LJ14ID");
     gpu->psLJ14ID                               = psLJ14ID;
     gpu->sim.pLJ14ID                            = psLJ14ID->_pDevStream[0];
-    CUDAStream<float4>* psLJ14Parameter         = new CUDAStream<float4>(LJ14s, 1);
+    CUDAStream<float4>* psLJ14Parameter         = new CUDAStream<float4>(LJ14s, 1, "LJ14Parameter");
     gpu->psLJ14Parameter                        = psLJ14Parameter;
     gpu->sim.pLJ14Parameter                     = psLJ14Parameter->_pDevStream[0];
 
     for (int i = 0; i < LJ14s; i++)
     {
-        psLJ14ID->_pSysStream[0][i].x = atom1[i];
-        psLJ14ID->_pSysStream[0][i].y = atom2[i];
-        psLJ14ID->_pSysStream[0][i].z = gpu->pOutputBufferCounter[psLJ14ID->_pSysStream[0][i].x]++;
-        psLJ14ID->_pSysStream[0][i].w = gpu->pOutputBufferCounter[psLJ14ID->_pSysStream[0][i].y]++;
+        (*psLJ14ID)[i].x = atom1[i];
+        (*psLJ14ID)[i].y = atom2[i];
+        psLJ14ID->_pSysData[i].z = gpu->pOutputBufferCounter[psLJ14ID->_pSysData[i].x]++;
+        psLJ14ID->_pSysData[i].w = gpu->pOutputBufferCounter[psLJ14ID->_pSysData[i].y]++;
         float p0, p1, p2;
         if (c12[i] == 0.0f)
         {
@@ -346,20 +346,20 @@ void gpuSetLJ14Parameters(gpuContext gpu, float epsfac, float fudge, const vecto
             p1 = pow(c12[i] / c6[i], 1.0f / 6.0f);
         }
         p2 = scale * q1[i] * q2[i];
-        psLJ14Parameter->_pSysStream[0][i].x = p0;
-        psLJ14Parameter->_pSysStream[0][i].y = p1;
-        psLJ14Parameter->_pSysStream[0][i].z = p2;
+        (*psLJ14Parameter)[i].x = p0;
+        (*psLJ14Parameter)[i].y = p1;
+        (*psLJ14Parameter)[i].z = p2;
     }
 #if (DUMP_PARAMETERS == 1)
         cout << 
             i << " " <<
-            psLJ14ID->_pSysStream[0][i].x << " " << 
-            psLJ14ID->_pSysStream[0][i].y << " " << 
-            psLJ14ID->_pSysStream[0][i].z << " " << 
-            psLJ14ID->_pSysStream[0][i].w << " " << 
-            psLJ14Parameter->_pSysStream[0][i].x << " " << 
-            psLJ14Parameter->_pSysStream[0][i].y << " " <<
-            psLJ14Parameter->_pSysStream[0][i].z << " " << 
+            (*psLJ14ID)[i].x << " " <<
+            (*psLJ14ID)[i].y << " " <<
+            (*psLJ14ID)[i].z << " " <<
+            (*psLJ14ID)[i].w << " " <<
+            (*psLJ14Parameter)[i].x << " " <<
+            (*psLJ14Parameter)[i].y << " " <<
+            (*psLJ14Parameter)[i].z << " " <<
             p0 << " " << 
             p1 << " " << 
             p2 << " " << 
@@ -389,20 +389,20 @@ void gpuSetCoulombParameters(gpuContext gpu, float epsfac, const vector<int>& at
             }
             if (symbol.size() > 0)
                 gpu->pAtomSymbol[i] = symbol[i];
-            gpu->psPosq4->_pSysStream[0][i].w = p0;
-            gpu->psSigEps2->_pSysStream[0][i].x = p1;
-            gpu->psSigEps2->_pSysStream[0][i].y = p2;
+            (*gpu->psPosq4)[i].w = p0;
+            (*gpu->psSigEps2)[i].x = p1;
+            (*gpu->psSigEps2)[i].y = p2;
     }
 
     // Dummy out extra atom data
     for (unsigned int i = coulombs; i < gpu->sim.paddedNumberOfAtoms; i++)
     {
-        gpu->psPosq4->_pSysStream[0][i].x       = 100000.0f + i * 10.0f;
-        gpu->psPosq4->_pSysStream[0][i].y       = 100000.0f + i * 10.0f;
-        gpu->psPosq4->_pSysStream[0][i].z       = 100000.0f + i * 10.0f;
-        gpu->psPosq4->_pSysStream[0][i].w       = 0.0f;
-        gpu->psSigEps2->_pSysStream[0][i].x     = 0.0f;
-        gpu->psSigEps2->_pSysStream[0][i].y     = 0.0f;   
+        (*gpu->psPosq4)[i].x       = 100000.0f + i * 10.0f;
+        (*gpu->psPosq4)[i].y       = 100000.0f + i * 10.0f;
+        (*gpu->psPosq4)[i].z       = 100000.0f + i * 10.0f;
+        (*gpu->psPosq4)[i].w       = 0.0f;
+        (*gpu->psSigEps2)[i].x     = 0.0f;
+        (*gpu->psSigEps2)[i].y     = 0.0f;
     }
 
     gpu->psPosq4->Upload();
@@ -432,23 +432,23 @@ void gpuSetObcParameters(gpuContext gpu, float innerDielectric, float solventDie
     gpu->bIncludeGBSA = true;
     for (unsigned int i = 0; i < atoms; i++)
     {
-            gpu->psObcData->_pSysStream[0][i].x = radius[i] - dielectricOffset;
-            gpu->psObcData->_pSysStream[0][i].y = scale[i] * gpu->psObcData->_pSysStream[0][i].x;
+            (*gpu->psObcData)[i].x = radius[i] - dielectricOffset;
+            (*gpu->psObcData)[i].y = scale[i] * (*gpu->psObcData)[i].x;
 
 #if (DUMP_PARAMETERS == 1)
         cout << 
             i << " " << 
-            gpu->psObcData->_pSysStream[0][i].x << " " <<
-            gpu->psObcData->_pSysStream[0][i].y;
+            (*gpu->psObcData)[i].x << " " <<
+            (*gpu->psObcData)[i].y;
 #endif
     }
 
     // Dummy out extra atom data
     for (unsigned int i = atoms; i < gpu->sim.paddedNumberOfAtoms; i++)
     {
-        gpu->psBornRadii->_pSysStream[0][i]     = 0.2f;
-        gpu->psObcData->_pSysStream[0][i].x     = 0.01f;
-        gpu->psObcData->_pSysStream[0][i].y     = 0.01f;
+        (*gpu->psBornRadii)[i]     = 0.2f;
+        (*gpu->psObcData)[i].x     = 0.01f;
+        (*gpu->psObcData)[i].y     = 0.01f;
     }
 
     gpu->psBornRadii->Upload();
@@ -515,10 +515,10 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
 
     // Record the actual SETTLE clusters.
 
-    CUDAStream<int4>* psSettleID          = new CUDAStream<int4>((int) settleClusters.size(), 1);
+    CUDAStream<int4>* psSettleID          = new CUDAStream<int4>((int) settleClusters.size(), 1, "SettleID");
     gpu->psSettleID                       = psSettleID;
     gpu->sim.pSettleID                    = psSettleID->_pDevStream[0];
-    CUDAStream<float2>* psSettleParameter = new CUDAStream<float2>((int) settleClusters.size(), 1);
+    CUDAStream<float2>* psSettleParameter = new CUDAStream<float2>((int) settleClusters.size(), 1, "SettleParameter");
     gpu->psSettleParameter                = psSettleParameter;
     gpu->sim.pSettleParameter             = psSettleParameter->_pDevStream[0];
     gpu->sim.settleConstraints            = settleClusters.size();
@@ -530,25 +530,25 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
         float dist13 = settleConstraints[atom1].find(atom3)->second;
         float dist23 = settleConstraints[atom2].find(atom3)->second;
         if (dist12 == dist13) { // atom1 is the central atom
-            psSettleID->_pSysData[i].x = atom1;
-            psSettleID->_pSysData[i].y = atom2;
-            psSettleID->_pSysData[i].z = atom3;
-            psSettleParameter->_pSysData[i].x = dist12;
-            psSettleParameter->_pSysData[i].y = dist23;
+            (*psSettleID)[i].x = atom1;
+            (*psSettleID)[i].y = atom2;
+            (*psSettleID)[i].z = atom3;
+            (*psSettleParameter)[i].x = dist12;
+            (*psSettleParameter)[i].y = dist23;
         }
         else if (dist12 == dist23) { // atom2 is the central atom
-            psSettleID->_pSysData[i].x = atom2;
-            psSettleID->_pSysData[i].y = atom1;
-            psSettleID->_pSysData[i].z = atom3;
-            psSettleParameter->_pSysData[i].x = dist12;
-            psSettleParameter->_pSysData[i].y = dist13;
+            (*psSettleID)[i].x = atom2;
+            (*psSettleID)[i].y = atom1;
+            (*psSettleID)[i].z = atom3;
+            (*psSettleParameter)[i].x = dist12;
+            (*psSettleParameter)[i].y = dist13;
         }
         else if (dist13 == dist23) { // atom3 is the central atom
-            psSettleID->_pSysData[i].x = atom3;
-            psSettleID->_pSysData[i].y = atom1;
-            psSettleID->_pSysData[i].z = atom2;
-            psSettleParameter->_pSysData[i].x = dist13;
-            psSettleParameter->_pSysData[i].y = dist12;
+            (*psSettleID)[i].x = atom3;
+            (*psSettleID)[i].y = atom1;
+            (*psSettleID)[i].z = atom2;
+            (*psSettleParameter)[i].x = dist13;
+            (*psSettleParameter)[i].y = dist12;
         }
         else
             throw OpenMMException("Two of the three distances constrained with SETTLE must be the same.");
@@ -627,10 +627,10 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
 
     // Fill in the Cuda streams.
 
-    CUDAStream<int4>* psShakeID             = new CUDAStream<int4>(validShakeClusters, 1);
+    CUDAStream<int4>* psShakeID             = new CUDAStream<int4>(validShakeClusters, 1, "ShakeID");
     gpu->psShakeID                          = psShakeID;
     gpu->sim.pShakeID                       = psShakeID->_pDevStream[0];
-    CUDAStream<float4>* psShakeParameter    = new CUDAStream<float4>(validShakeClusters, 1);
+    CUDAStream<float4>* psShakeParameter    = new CUDAStream<float4>(validShakeClusters, 1, "ShakeParameter");
     gpu->psShakeParameter                   = psShakeParameter;
     gpu->sim.pShakeParameter                = psShakeParameter->_pDevStream[0];
     gpu->sim.ShakeConstraints               = validShakeClusters;
@@ -639,14 +639,14 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
         const ShakeCluster& cluster = iter->second;
         if (!cluster.valid)
             continue;
-        psShakeID->_pSysStream[0][index].x = cluster.centralID;
-        psShakeID->_pSysStream[0][index].y = cluster.peripheralID[0];
-        psShakeID->_pSysStream[0][index].z = cluster.size > 1 ? cluster.peripheralID[1] : -1;
-        psShakeID->_pSysStream[0][index].w = cluster.size > 2 ? cluster.peripheralID[2] : -1;
-        psShakeParameter->_pSysStream[0][index].x = cluster.centralInvMass;
-        psShakeParameter->_pSysStream[0][index].y = 0.5f/(cluster.centralInvMass+cluster.peripheralInvMass);
-        psShakeParameter->_pSysStream[0][index].z = cluster.distance*cluster.distance;
-        psShakeParameter->_pSysStream[0][index].w = cluster.peripheralInvMass;
+        (*psShakeID)[index].x = cluster.centralID;
+        (*psShakeID)[index].y = cluster.peripheralID[0];
+        (*psShakeID)[index].z = cluster.size > 1 ? cluster.peripheralID[1] : -1;
+        (*psShakeID)[index].w = cluster.size > 2 ? cluster.peripheralID[2] : -1;
+        (*psShakeParameter)[index].x = cluster.centralInvMass;
+        (*psShakeParameter)[index].y = 0.5f/(cluster.centralInvMass+cluster.peripheralInvMass);
+        (*psShakeParameter)[index].z = cluster.distance*cluster.distance;
+        (*psShakeParameter)[index].w = cluster.peripheralInvMass;
         isShakeAtom[cluster.centralID] = true;
         isShakeAtom[cluster.peripheralID[0]] = true;
         if (cluster.size > 1)
@@ -691,64 +691,64 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
 
     // Fill in the CUDA streams.
 
-    CUDAStream<int2>* psLincsAtoms = new CUDAStream<int2>((int) lincsConstraints.size(), 1);
+    CUDAStream<int2>* psLincsAtoms = new CUDAStream<int2>((int) lincsConstraints.size(), 1, "LincsAtoms");
     gpu->psLincsAtoms              = psLincsAtoms;
     gpu->sim.pLincsAtoms           = psLincsAtoms->_pDevData;
-    CUDAStream<float4>* psLincsDistance = new CUDAStream<float4>((int) lincsConstraints.size(), 1);
+    CUDAStream<float4>* psLincsDistance = new CUDAStream<float4>((int) lincsConstraints.size(), 1, "LincsDistance");
     gpu->psLincsDistance                = psLincsDistance;
     gpu->sim.pLincsDistance             = psLincsDistance->_pDevData;
-    CUDAStream<int>* psLincsConnections = new CUDAStream<int>(totalLinks, 1);
+    CUDAStream<int>* psLincsConnections = new CUDAStream<int>(totalLinks, 1, "LincsConnections");
     gpu->psLincsConnections             = psLincsConnections;
     gpu->sim.pLincsConnections          = psLincsConnections->_pDevData;
-    CUDAStream<int>* psLincsConnectionsIndex = new CUDAStream<int>((int) lincsConstraints.size()+1, 1);
+    CUDAStream<int>* psLincsConnectionsIndex = new CUDAStream<int>((int) lincsConstraints.size()+1, 1, "LincsConnectionsIndex");
     gpu->psLincsConnectionsIndex             = psLincsConnectionsIndex;
     gpu->sim.pLincsConnectionsIndex          = psLincsConnectionsIndex->_pDevData;
-    CUDAStream<int>* psLincsAtomConstraints = new CUDAStream<int>((int) lincsConstraints.size()*2, 1);
+    CUDAStream<int>* psLincsAtomConstraints = new CUDAStream<int>((int) lincsConstraints.size()*2, 1, "LincsAtomConstraints");
     gpu->psLincsAtomConstraints             = psLincsAtomConstraints;
     gpu->sim.pLincsAtomConstraints          = psLincsAtomConstraints->_pDevData;
-    CUDAStream<int>* psLincsAtomConstraintsIndex = new CUDAStream<int>(gpu->natoms+1, 1);
+    CUDAStream<int>* psLincsAtomConstraintsIndex = new CUDAStream<int>(gpu->natoms+1, 1, "LincsAtomConstraintsIndex");
     gpu->psLincsAtomConstraintsIndex             = psLincsAtomConstraintsIndex;
     gpu->sim.pLincsAtomConstraintsIndex          = psLincsAtomConstraintsIndex->_pDevData;
-    CUDAStream<float>* psLincsS = new CUDAStream<float>((int) lincsConstraints.size(), 1);
+    CUDAStream<float>* psLincsS = new CUDAStream<float>((int) lincsConstraints.size(), 1, "LincsS");
     gpu->psLincsS             = psLincsS;
     gpu->sim.pLincsS          = psLincsS->_pDevData;
-    CUDAStream<float>* psLincsCoupling = new CUDAStream<float>(totalLinks, 1);
+    CUDAStream<float>* psLincsCoupling = new CUDAStream<float>(totalLinks, 1, "LincsCoupling");
     gpu->psLincsCoupling               = psLincsCoupling;
     gpu->sim.pLincsCoupling            = psLincsCoupling->_pDevData;
-    CUDAStream<float>* psLincsRhs1 = new CUDAStream<float>((int) lincsConstraints.size(), 1);
+    CUDAStream<float>* psLincsRhs1 = new CUDAStream<float>((int) lincsConstraints.size(), 1, "LincsRhs1");
     gpu->psLincsRhs1             = psLincsRhs1;
     gpu->sim.pLincsRhs1          = psLincsRhs1->_pDevData;
-    CUDAStream<float>* psLincsRhs2 = new CUDAStream<float>((int) lincsConstraints.size(), 1);
+    CUDAStream<float>* psLincsRhs2 = new CUDAStream<float>((int) lincsConstraints.size(), 1, "LincsRhs2");
     gpu->psLincsRhs2             = psLincsRhs2;
     gpu->sim.pLincsRhs2          = psLincsRhs2->_pDevData;
-    CUDAStream<float>* psLincsSolution = new CUDAStream<float>((int) lincsConstraints.size(), 1);
+    CUDAStream<float>* psLincsSolution = new CUDAStream<float>((int) lincsConstraints.size(), 1, "LincsSolution");
     gpu->psLincsSolution             = psLincsSolution;
     gpu->sim.pLincsSolution          = psLincsSolution->_pDevData;
-    CUDAStream<unsigned int>* psSyncCounter = new CUDAStream<unsigned int>(2*lincsTerms+2, 1);
+    CUDAStream<unsigned int>* psSyncCounter = new CUDAStream<unsigned int>(2*lincsTerms+2, 1, "SyncCounter");
     gpu->psSyncCounter                      = psSyncCounter;
     gpu->sim.pSyncCounter                   = psSyncCounter->_pDevData;
     gpu->sim.lincsConstraints = lincsConstraints.size();
     index = 0;
     for (unsigned int i = 0; i < lincsConstraints.size(); i++) {
         int c = lincsConstraints[i];
-        psLincsAtoms->_pSysData[i].x = atom1[c];
-        psLincsAtoms->_pSysData[i].y = atom2[c];
-        psLincsDistance->_pSysData[i].w = distance[c];
-        psLincsS->_pSysData[i] = 1.0f/sqrt(invMass1[c]+invMass2[c]);
-        psLincsConnectionsIndex->_pSysData[i] = index;
+        (*psLincsAtoms)[i].x = atom1[c];
+        (*psLincsAtoms)[i].y = atom2[c];
+        (*psLincsDistance)[i].w = distance[c];
+        (*psLincsS)[i] = 1.0f/sqrt(invMass1[c]+invMass2[c]);
+        (*psLincsConnectionsIndex)[i] = index;
         for (unsigned int j = 0; j < linkedConstraints[i].size(); j++)
-            psLincsConnections->_pSysData[index++] = linkedConstraints[i][j];
+            (*psLincsConnections)[index++] = linkedConstraints[i][j];
     }
-    psLincsConnectionsIndex->_pSysData[lincsConstraints.size()] = index;
+    (*psLincsConnectionsIndex)[lincsConstraints.size()] = index;
     for (unsigned int i = 0; i < psSyncCounter->_length; i++)
-        psSyncCounter->_pSysData[i] = 0;
+        (*psSyncCounter)[i] = 0;
     index = 0;
     for (unsigned int i = 0; i < atomConstraints.size(); i++) {
-        psLincsAtomConstraintsIndex->_pSysData[i] = index;
+        (*psLincsAtomConstraintsIndex)[i] = index;
         for (unsigned int j = 0; j < atomConstraints[i].size(); j++)
-            psLincsAtomConstraints->_pSysData[index++] = atomConstraints[i][j];
+            (*psLincsAtomConstraints)[index++] = atomConstraints[i][j];
     }
-    psLincsAtomConstraintsIndex->_pSysData[atomConstraints.size()] = index;
+    (*psLincsAtomConstraintsIndex)[atomConstraints.size()] = index;
     psLincsAtoms->Upload();
     psLincsDistance->Upload();
     psLincsS->Upload();
@@ -785,7 +785,7 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
     gpu->sim.NonShakeConstraints                  = count;
     if( count || true ){
 
-       CUDAStream<int>* psNonShakeID              = new CUDAStream<int>(count, 1);
+       CUDAStream<int>* psNonShakeID              = new CUDAStream<int>(count, 1, "NonShakeID");
        gpu->psNonShakeID                          = psNonShakeID;
        gpu->sim.pNonShakeID                       = psNonShakeID->_pDevStream[0];
 
@@ -802,7 +802,7 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
        count = 0;
        for (int i = 0; i < gpu->natoms; i++){
           if (!isShakeAtom[i]){
-             psNonShakeID->_pSysStream[0][count++] = i;
+             (*psNonShakeID)[count++] = i;
           }
        }
        psNonShakeID->Upload();
@@ -821,7 +821,7 @@ int gpuAllocateInitialBuffers(gpuContext gpu)
     gpu->sim.degreesOfFreedom           = 3 * gpu->sim.atoms - 6;
     gpu->gpAtomTable                    = NULL;
     gpu->gAtomTypes                     = 0;
-    gpu->psPosq4                        = new CUDAStream<float4>(gpu->sim.paddedNumberOfAtoms, 1);
+    gpu->psPosq4                        = new CUDAStream<float4>(gpu->sim.paddedNumberOfAtoms, 1, "Posq");
     gpu->sim.stride                     = gpu->psPosq4->_stride;
     gpu->sim.stride2                    = gpu->sim.stride * 2;
     gpu->sim.stride3                    = gpu->sim.stride * 3;
@@ -831,29 +831,29 @@ int gpuAllocateInitialBuffers(gpuContext gpu)
     gpu->sim.stride2                    = 2 * gpu->sim.stride;
     gpu->sim.stride3                    = 3 * gpu->sim.stride;
     gpu->sim.stride4                    = 4 * gpu->sim.stride;
-    gpu->psPosqP4                       = new CUDAStream<float4>(gpu->sim.paddedNumberOfAtoms, 1);
+    gpu->psPosqP4                       = new CUDAStream<float4>(gpu->sim.paddedNumberOfAtoms, 1, "PosqP");
     gpu->sim.pPosqP                     = gpu->psPosqP4->_pDevStream[0];
-    gpu->psOldPosq4                     = new CUDAStream<float4>(gpu->sim.paddedNumberOfAtoms, 1);
+    gpu->psOldPosq4                     = new CUDAStream<float4>(gpu->sim.paddedNumberOfAtoms, 1, "OldPosq");
     gpu->sim.pOldPosq                   = gpu->psOldPosq4->_pDevStream[0];
-    gpu->psVelm4                        = new CUDAStream<float4>(gpu->sim.paddedNumberOfAtoms, 1);
+    gpu->psVelm4                        = new CUDAStream<float4>(gpu->sim.paddedNumberOfAtoms, 1, "Velm");
     gpu->sim.pVelm4                     = gpu->psVelm4->_pDevStream[0];
-    gpu->psvVector4                     = new CUDAStream<float4>(gpu->sim.paddedNumberOfAtoms, 1);
+    gpu->psvVector4                     = new CUDAStream<float4>(gpu->sim.paddedNumberOfAtoms, 1, "vVector");
     gpu->sim.pvVector4                  = gpu->psvVector4->_pDevStream[0];
-    gpu->psxVector4                     = new CUDAStream<float4>(gpu->sim.paddedNumberOfAtoms, 1);
+    gpu->psxVector4                     = new CUDAStream<float4>(gpu->sim.paddedNumberOfAtoms, 1, "xVector");
     gpu->sim.pxVector4                  = gpu->psxVector4->_pDevStream[0];
-    gpu->psBornRadii                    = new CUDAStream<float>(gpu->sim.paddedNumberOfAtoms, 1);
+    gpu->psBornRadii                    = new CUDAStream<float>(gpu->sim.paddedNumberOfAtoms, 1, "BornRadii");
     gpu->sim.pBornRadii                 = gpu->psBornRadii->_pDevStream[0];
-    gpu->psObcChain                     = new CUDAStream<float>(gpu->sim.paddedNumberOfAtoms, 1);
+    gpu->psObcChain                     = new CUDAStream<float>(gpu->sim.paddedNumberOfAtoms, 1, "ObcChain");
     gpu->sim.pObcChain                  = gpu->psObcChain->_pDevStream[0];
-    gpu->psSigEps2                      = new CUDAStream<float2>(gpu->sim.paddedNumberOfAtoms, 1);
+    gpu->psSigEps2                      = new CUDAStream<float2>(gpu->sim.paddedNumberOfAtoms, 1, "SigEps2");
     gpu->sim.pAttr                      = gpu->psSigEps2->_pDevStream[0];
-    gpu->psObcData                      = new CUDAStream<float2>(gpu->sim.paddedNumberOfAtoms, 1);
+    gpu->psObcData                      = new CUDAStream<float2>(gpu->sim.paddedNumberOfAtoms, 1, "ObcData");
     gpu->sim.pObcData                   = gpu->psObcData->_pDevStream[0];
     gpu->pAtomSymbol                    = new unsigned char[gpu->natoms];
-    gpu->psAtomIndex                    = new CUDAStream<int>(gpu->sim.paddedNumberOfAtoms, 1);
+    gpu->psAtomIndex                    = new CUDAStream<int>(gpu->sim.paddedNumberOfAtoms, 1, "AtomIndex");
     gpu->sim.pAtomIndex                 = gpu->psAtomIndex->_pDevStream[0];
     for (int i = 0; i < (int) gpu->sim.paddedNumberOfAtoms; i++)
-        gpu->psAtomIndex->_pSysStream[0][i] = i;
+        (*gpu->psAtomIndex)[i] = i;
     gpu->psAtomIndex->Upload();
     // Determine randoms
     gpu->seed                           = 1;
@@ -862,10 +862,10 @@ int gpuAllocateInitialBuffers(gpuContext gpu)
     gpu->sim.randoms                    = gpu->sim.randomFrames * gpu->sim.paddedNumberOfAtoms - 5 * GRID;
     gpu->sim.totalRandoms               = gpu->sim.randoms + gpu->sim.paddedNumberOfAtoms;
     gpu->sim.totalRandomsTimesTwo       = gpu->sim.totalRandoms * 2;
-    gpu->psRandom4                      = new CUDAStream<float4>(gpu->sim.totalRandomsTimesTwo, 1);
-    gpu->psRandom2                      = new CUDAStream<float2>(gpu->sim.totalRandomsTimesTwo, 1);
-    gpu->psRandomPosition               = new CUDAStream<int>(gpu->sim.blocks, 1);
-    gpu->psRandomSeed                   = new CUDAStream<uint4>(gpu->sim.blocks * gpu->sim.random_threads_per_block, 1);
+    gpu->psRandom4                      = new CUDAStream<float4>(gpu->sim.totalRandomsTimesTwo, 1, "Random4");
+    gpu->psRandom2                      = new CUDAStream<float2>(gpu->sim.totalRandomsTimesTwo, 1, "Random2");
+    gpu->psRandomPosition               = new CUDAStream<int>(gpu->sim.blocks, 1, "RandomPosition");
+    gpu->psRandomSeed                   = new CUDAStream<uint4>(gpu->sim.blocks * gpu->sim.random_threads_per_block, 1, "RandomSeed");
     gpu->sim.pRandom4a                  = gpu->psRandom4->_pDevStream[0];
     gpu->sim.pRandom2a                  = gpu->psRandom2->_pDevStream[0];
     gpu->sim.pRandom4b                  = gpu->psRandom4->_pDevStream[0] + gpu->sim.totalRandoms;
@@ -874,14 +874,14 @@ int gpuAllocateInitialBuffers(gpuContext gpu)
     gpu->sim.pRandomSeed                = gpu->psRandomSeed->_pDevStream[0];
 
     // Allocate and clear linear momentum buffer
-    gpu->psLinearMomentum = new CUDAStream<float4>(gpu->sim.blocks, 1);
+    gpu->psLinearMomentum = new CUDAStream<float4>(gpu->sim.blocks, 1, "LinearMomentum");
     gpu->sim.pLinearMomentum = gpu->psLinearMomentum->_pDevStream[0];
     for (int i = 0; i < (int) gpu->sim.blocks; i++)
     {
-        gpu->psLinearMomentum->_pSysStream[0][i].x = 0.0f;
-        gpu->psLinearMomentum->_pSysStream[0][i].y = 0.0f;
-        gpu->psLinearMomentum->_pSysStream[0][i].z = 0.0f;
-        gpu->psLinearMomentum->_pSysStream[0][i].w = 0.0f;
+        (*gpu->psLinearMomentum)[i].x = 0.0f;
+        (*gpu->psLinearMomentum)[i].y = 0.0f;
+        (*gpu->psLinearMomentum)[i].z = 0.0f;
+        (*gpu->psLinearMomentum)[i].w = 0.0f;
     }
     gpu->psLinearMomentum->Upload();
 
@@ -893,9 +893,9 @@ void gpuSetPositions(gpuContext gpu, const vector<float>& x, const vector<float>
 {
     for (int i = 0; i < gpu->natoms; i++)
     {
-        gpu->psPosq4->_pSysStream[0][i].x = x[i];
-        gpu->psPosq4->_pSysStream[0][i].y = y[i];
-        gpu->psPosq4->_pSysStream[0][i].z = z[i];
+        (*gpu->psPosq4)[i].x = x[i];
+        (*gpu->psPosq4)[i].y = y[i];
+        (*gpu->psPosq4)[i].z = z[i];
     }
     gpu->psPosq4->Upload();
 
@@ -909,9 +909,9 @@ void gpuSetVelocities(gpuContext gpu, const vector<float>& x, const vector<float
 {
     for (int i = 0; i < gpu->natoms; i++)
     {
-        gpu->psVelm4->_pSysStream[0][i].x = x[i];
-        gpu->psVelm4->_pSysStream[0][i].y = y[i];
-        gpu->psVelm4->_pSysStream[0][i].z = z[i];
+        (*gpu->psVelm4)[i].x = x[i];
+        (*gpu->psVelm4)[i].y = y[i];
+        (*gpu->psVelm4)[i].z = z[i];
     }
     gpu->psVelm4->Upload();
 } 
@@ -922,7 +922,7 @@ void gpuSetMass(gpuContext gpu, const vector<float>& mass)
     float totalMass = 0.0f;
     for (int i = 0; i < gpu->natoms; i++)
     {
-        gpu->psVelm4->_pSysStream[0][i].w = 1.0f/mass[i];
+        (*gpu->psVelm4)[i].w = 1.0f/mass[i];
         totalMass += mass[i];
     }
     gpu->sim.inverseTotalMass = 1.0f / totalMass;
@@ -934,16 +934,16 @@ void gpuInitializeRandoms(gpuContext gpu)
 {
     for (int i = 0; i < (int) gpu->sim.blocks; i++)
     {
-        gpu->psRandomPosition->_pSysStream[0][i] = 0;
+        (*gpu->psRandomPosition)[i] = 0;
     }
     int seed = gpu->seed | ((gpu->seed ^ 0xffffffff) << 16);
     srand(seed);
     for (int i = 0; i < (int) (gpu->sim.blocks * gpu->sim.random_threads_per_block); i++)
     {
-        gpu->psRandomSeed->_pSysStream[0][i].x = rand();
-        gpu->psRandomSeed->_pSysStream[0][i].y = rand();
-        gpu->psRandomSeed->_pSysStream[0][i].z = rand();
-        gpu->psRandomSeed->_pSysStream[0][i].w = rand();
+        (*gpu->psRandomSeed)[i].x = rand();
+        (*gpu->psRandomSeed)[i].y = rand();
+        (*gpu->psRandomSeed)[i].z = rand();
+        (*gpu->psRandomSeed)[i].w = rand();
     }
     gpu->psRandomPosition->Upload();
     gpu->psRandomSeed->Upload();
@@ -1046,10 +1046,10 @@ void* gpuInit(int numAtoms)
     gpuAllocateInitialBuffers(gpu);
     for (int i = 0; i < gpu->natoms; i++)
     {
-        gpu->psxVector4->_pSysStream[0][i].x = 0.0f;
-        gpu->psxVector4->_pSysStream[0][i].y = 0.0f;
-        gpu->psxVector4->_pSysStream[0][i].z = 0.0f;
-        gpu->psxVector4->_pSysStream[0][i].w = 0.0f;
+        (*gpu->psxVector4)[i].x = 0.0f;
+        (*gpu->psxVector4)[i].y = 0.0f;
+        (*gpu->psxVector4)[i].z = 0.0f;
+        (*gpu->psxVector4)[i].w = 0.0f;
     }
     gpu->psxVector4->Upload();
 
@@ -1323,9 +1323,9 @@ int gpuBuildOutputBuffers(gpuContext gpu)
         }
     }    
     gpu->sim.outputBuffers      = outputBuffers;
-    gpu->psForce4               = new CUDAStream<float4>(gpu->sim.paddedNumberOfAtoms, outputBuffers);
-    gpu->psBornForce            = new CUDAStream<float>(gpu->sim.paddedNumberOfAtoms, gpu->sim.nonbondOutputBuffers);
-    gpu->psBornSum              = new CUDAStream<float>(gpu->sim.paddedNumberOfAtoms, gpu->sim.nonbondOutputBuffers);
+    gpu->psForce4               = new CUDAStream<float4>(gpu->sim.paddedNumberOfAtoms, outputBuffers, "Force");
+    gpu->psBornForce            = new CUDAStream<float>(gpu->sim.paddedNumberOfAtoms, gpu->sim.nonbondOutputBuffers, "BornForce");
+    gpu->psBornSum              = new CUDAStream<float>(gpu->sim.paddedNumberOfAtoms, gpu->sim.nonbondOutputBuffers, "BornSum");
     gpu->sim.pForce4            = gpu->psForce4->_pDevStream[0];
     gpu->sim.pForce4a           = gpu->sim.pForce4;
     gpu->sim.pForce4b           = gpu->sim.pForce4 + 1 * gpu->sim.nonbondOutputBuffers * gpu->sim.stride;
@@ -1348,33 +1348,33 @@ int gpuBuildOutputBuffers(gpuContext gpu)
     int flip = outputBuffers - 1;
     for (int i = 0; i < (int) gpu->sim.bonds; i++)
     {
-        gpu->psBondID->_pSysStream[0][i].z = flip - gpu->psBondID->_pSysStream[0][i].z;
-        gpu->psBondID->_pSysStream[0][i].w = flip - gpu->psBondID->_pSysStream[0][i].w;
+        (*gpu->psBondID)[i].z = flip - (*gpu->psBondID)[i].z;
+        (*gpu->psBondID)[i].w = flip - (*gpu->psBondID)[i].w;
     }
     for (int i = 0; i < (int) gpu->sim.bond_angles; i++)
     {
-        gpu->psBondAngleID1->_pSysStream[0][i].w = flip - gpu->psBondAngleID1->_pSysStream[0][i].w;
-        gpu->psBondAngleID2->_pSysStream[0][i].x = flip - gpu->psBondAngleID2->_pSysStream[0][i].x;
-        gpu->psBondAngleID2->_pSysStream[0][i].y = flip - gpu->psBondAngleID2->_pSysStream[0][i].y;
+        (*gpu->psBondAngleID1)[i].w = flip - (*gpu->psBondAngleID1)[i].w;
+        (*gpu->psBondAngleID2)[i].x = flip - (*gpu->psBondAngleID2)[i].x;
+        (*gpu->psBondAngleID2)[i].y = flip - (*gpu->psBondAngleID2)[i].y;
     }
     for (int i = 0; i < (int) gpu->sim.dihedrals; i++)
     {
-        gpu->psDihedralID2->_pSysStream[0][i].x = flip - gpu->psDihedralID2->_pSysStream[0][i].x;
-        gpu->psDihedralID2->_pSysStream[0][i].y = flip - gpu->psDihedralID2->_pSysStream[0][i].y;
-        gpu->psDihedralID2->_pSysStream[0][i].z = flip - gpu->psDihedralID2->_pSysStream[0][i].z;
-        gpu->psDihedralID2->_pSysStream[0][i].w = flip - gpu->psDihedralID2->_pSysStream[0][i].w;
+        (*gpu->psDihedralID2)[i].x = flip - (*gpu->psDihedralID2)[i].x;
+        (*gpu->psDihedralID2)[i].y = flip - (*gpu->psDihedralID2)[i].y;
+        (*gpu->psDihedralID2)[i].z = flip - (*gpu->psDihedralID2)[i].z;
+        (*gpu->psDihedralID2)[i].w = flip - (*gpu->psDihedralID2)[i].w;
     }
     for (int i = 0; i < (int) gpu->sim.rb_dihedrals; i++)
     {
-        gpu->psRbDihedralID2->_pSysStream[0][i].x = flip - gpu->psRbDihedralID2->_pSysStream[0][i].x;
-        gpu->psRbDihedralID2->_pSysStream[0][i].y = flip - gpu->psRbDihedralID2->_pSysStream[0][i].y;
-        gpu->psRbDihedralID2->_pSysStream[0][i].z = flip - gpu->psRbDihedralID2->_pSysStream[0][i].z;
-        gpu->psRbDihedralID2->_pSysStream[0][i].w = flip - gpu->psRbDihedralID2->_pSysStream[0][i].w;
+        (*gpu->psRbDihedralID2)[i].x = flip - (*gpu->psRbDihedralID2)[i].x;
+        (*gpu->psRbDihedralID2)[i].y = flip - (*gpu->psRbDihedralID2)[i].y;
+        (*gpu->psRbDihedralID2)[i].z = flip - (*gpu->psRbDihedralID2)[i].z;
+        (*gpu->psRbDihedralID2)[i].w = flip - (*gpu->psRbDihedralID2)[i].w;
     }
     for (int i = 0; i < (int) gpu->sim.LJ14s; i++)
     {
-        gpu->psLJ14ID->_pSysStream[0][i].z = flip - gpu->psLJ14ID->_pSysStream[0][i].z;
-        gpu->psLJ14ID->_pSysStream[0][i].w = flip - gpu->psLJ14ID->_pSysStream[0][i].w;
+        (*gpu->psLJ14ID)[i].z = flip - (*gpu->psLJ14ID)[i].z;
+        (*gpu->psLJ14ID)[i].w = flip - (*gpu->psLJ14ID)[i].w;
     }
     gpu->psBondID->Upload();
     gpu->psBondAngleID1->Upload();
@@ -1393,23 +1393,23 @@ int gpuBuildThreadBlockWorkList(gpuContext gpu)
     const unsigned int grid = gpu->grid;
     const unsigned int dim = (atoms + (grid - 1)) / grid;
     const unsigned int cells = dim * (dim + 1) / 2;
-    CUDAStream<unsigned int>* psWorkUnit = new CUDAStream<unsigned int>(cells, 1u);
-    unsigned int* pWorkList = psWorkUnit->_pSysStream[0];
+    CUDAStream<unsigned int>* psWorkUnit = new CUDAStream<unsigned int>(cells, 1u, "WorkUnit");
+    unsigned int* pWorkList = psWorkUnit->_pSysData;
     gpu->psWorkUnit = psWorkUnit;
     gpu->sim.pWorkUnit = psWorkUnit->_pDevStream[0];
-    CUDAStream<unsigned int>* psInteractingWorkUnit = new CUDAStream<unsigned int>(cells, 1u);
+    CUDAStream<unsigned int>* psInteractingWorkUnit = new CUDAStream<unsigned int>(cells, 1u, "InteractingWorkUnit");
     gpu->psInteractingWorkUnit = psInteractingWorkUnit;
     gpu->sim.pInteractingWorkUnit = psInteractingWorkUnit->_pDevStream[0];
-    CUDAStream<unsigned int>* psInteractionFlag = new CUDAStream<unsigned int>(cells, 1u);
+    CUDAStream<unsigned int>* psInteractionFlag = new CUDAStream<unsigned int>(cells, 1u, "InteractionFlag");
     gpu->psInteractionFlag = psInteractionFlag;
     gpu->sim.pInteractionFlag = psInteractionFlag->_pDevStream[0];
-    CUDAStream<size_t>* psInteractionCount = new CUDAStream<size_t>(1, 1u);
+    CUDAStream<size_t>* psInteractionCount = new CUDAStream<size_t>(1, 1u, "InteractionCount");
     gpu->psInteractionCount = psInteractionCount;
     gpu->sim.pInteractionCount = psInteractionCount->_pDevStream[0];
-    CUDAStream<float4>* psGridBoundingBox = new CUDAStream<float4>(dim, 1u);
+    CUDAStream<float4>* psGridBoundingBox = new CUDAStream<float4>(dim, 1u, "GridBoundingBox");
     gpu->psGridBoundingBox = psGridBoundingBox;
     gpu->sim.pGridBoundingBox = psGridBoundingBox->_pDevStream[0];
-    CUDAStream<float4>* psGridCenter = new CUDAStream<float4>(dim, 1u);
+    CUDAStream<float4>* psGridCenter = new CUDAStream<float4>(dim, 1u, "GridCenter");
     gpu->psGridCenter = psGridCenter;
     gpu->sim.pGridCenter = psGridCenter->_pDevStream[0];
     gpu->sim.nonbond_workBlock      = gpu->sim.nonbond_threads_per_block / GRID;
@@ -1485,7 +1485,7 @@ void gpuBuildExclusionList(gpuContext gpu)
     const unsigned int atoms = gpu->sim.paddedNumberOfAtoms;
     const unsigned int grid = gpu->grid;
     const unsigned int dim = atoms/grid;
-    unsigned int* pWorkList = gpu->psWorkUnit->_pSysStream[0];
+    unsigned int* pWorkList = gpu->psWorkUnit->_pSysData;
 
     // Mark which work units have exclusions.
 
@@ -1514,7 +1514,7 @@ void gpuBuildExclusionList(gpuContext gpu)
 
     // Build a list of indexes for the work units with exclusions.
 
-    CUDAStream<unsigned int>* psExclusionIndex = new CUDAStream<unsigned int>(gpu->sim.workUnits, 1u);
+    CUDAStream<unsigned int>* psExclusionIndex = new CUDAStream<unsigned int>(gpu->sim.workUnits, 1u, "ExclusionIndex");
     gpu->psExclusionIndex = psExclusionIndex;
     unsigned int* pExclusionIndex = psExclusionIndex->_pSysData;
     gpu->sim.pExclusionIndex = psExclusionIndex->_pDevData;
@@ -1525,7 +1525,7 @@ void gpuBuildExclusionList(gpuContext gpu)
 
     // Record the exclusion data.
 
-    CUDAStream<unsigned int>* psExclusion = new CUDAStream<unsigned int>(numWithExclusions*grid, 1u);
+    CUDAStream<unsigned int>* psExclusion = new CUDAStream<unsigned int>(numWithExclusions*grid, 1u, "Exclusion");
     gpu->psExclusion = psExclusion;
     unsigned int* pExclusion = psExclusion->_pSysData;
     gpu->sim.pExclusion = psExclusion->_pDevData;
@@ -1619,11 +1619,11 @@ static void findMoleculeGroups(gpuContext gpu)
     vector<Constraint> constraints;
     for (int i = 0; i < gpu->sim.ShakeConstraints; i++)
     {
-        int atom1 = gpu->psShakeID->_pSysData[i].x;
-        int atom2 = gpu->psShakeID->_pSysData[i].y;
-        int atom3 = gpu->psShakeID->_pSysData[i].z;
-        int atom4 = gpu->psShakeID->_pSysData[i].w;
-        float distance2 = gpu->psShakeParameter->_pSysData[i].z;
+        int atom1 = (*gpu->psShakeID)[i].x;
+        int atom2 = (*gpu->psShakeID)[i].y;
+        int atom3 = (*gpu->psShakeID)[i].z;
+        int atom4 = (*gpu->psShakeID)[i].w;
+        float distance2 = (*gpu->psShakeParameter)[i].z;
         constraints.push_back(Constraint(atom1, atom2, distance2));
         if (atom3 != -1)
             constraints.push_back(Constraint(atom1, atom3, distance2));
@@ -1632,11 +1632,11 @@ static void findMoleculeGroups(gpuContext gpu)
     }
     for (int i = 0; i < gpu->sim.settleConstraints; i++)
     {
-        int atom1 = gpu->psSettleID->_pSysData[i].x;
-        int atom2 = gpu->psSettleID->_pSysData[i].y;
-        int atom3 = gpu->psSettleID->_pSysData[i].z;
-        float distance12 = gpu->psSettleParameter->_pSysData[i].x;
-        float distance23 = gpu->psSettleParameter->_pSysData[i].y;
+        int atom1 = (*gpu->psSettleID)[i].x;
+        int atom2 = (*gpu->psSettleID)[i].y;
+        int atom3 = (*gpu->psSettleID)[i].z;
+        float distance12 = (*gpu->psSettleParameter)[i].x;
+        float distance23 = (*gpu->psSettleParameter)[i].y;
         constraints.push_back(Constraint(atom1, atom2, distance12*distance12));
         constraints.push_back(Constraint(atom1, atom3, distance12*distance12));
         constraints.push_back(Constraint(atom2, atom3, distance23*distance23));
@@ -1648,8 +1648,8 @@ static void findMoleculeGroups(gpuContext gpu)
     vector<vector<int> > atomBonds(numAtoms);
     for (int i = 0; i < gpu->sim.bonds; i++)
     {
-        int atom1 = gpu->psBondID->_pSysData[i].x;
-        int atom2 = gpu->psBondID->_pSysData[i].y;
+        int atom1 = (*gpu->psBondID)[i].x;
+        int atom2 = (*gpu->psBondID)[i].y;
         atomBonds[atom1].push_back(atom2);
         atomBonds[atom2].push_back(atom1);
     }
@@ -1679,22 +1679,22 @@ static void findMoleculeGroups(gpuContext gpu)
         molecules[i].atoms = atomIndices[i];
     for (int i = 0; i < gpu->sim.bonds; i++)
     {
-        int atom1 = gpu->psBondID->_pSysData[i].x;
+        int atom1 = (*gpu->psBondID)[i].x;
         molecules[atomMolecule[atom1]].bonds.push_back(i);
     }
     for (int i = 0; i < gpu->sim.bond_angles; i++)
     {
-        int atom1 = gpu->psBondAngleID1->_pSysData[i].x;
+        int atom1 = (*gpu->psBondAngleID1)[i].x;
         molecules[atomMolecule[atom1]].angles.push_back(i);
     }
     for (int i = 0; i < gpu->sim.dihedrals; i++)
     {
-        int atom1 = gpu->psDihedralID1->_pSysData[i].x;
+        int atom1 = (*gpu->psDihedralID1)[i].x;
         molecules[atomMolecule[atom1]].periodicTorsions.push_back(i);
     }
     for (int i = 0; i < gpu->sim.rb_dihedrals; i++)
     {
-        int atom1 = gpu->psRbDihedralID1->_pSysData[i].x;
+        int atom1 = (*gpu->psRbDihedralID1)[i].x;
         molecules[atomMolecule[atom1]].rbTorsions.push_back(i);
     }
     for (int i = 0; i < constraints.size(); i++)
@@ -1937,7 +1937,7 @@ void gpuReorderAtoms(gpuContext gpu)
             {
                 int oldIndex = mol.instances[molBins[i].second]+atoms[j];
                 int newIndex = mol.instances[i]+atoms[j];
-                originalIndex[newIndex] = gpu->psAtomIndex->_pSysStream[0][oldIndex];
+                originalIndex[newIndex] = (*gpu->psAtomIndex)[oldIndex];
                 newPosq[newIndex] = posq[oldIndex];
                 newVelm[newIndex] = velm[oldIndex];
             }
@@ -1953,6 +1953,6 @@ void gpuReorderAtoms(gpuContext gpu)
         velm[i] = newVelm[i];
     gpu->psVelm4->Upload();
     for (int i = 0; i < numAtoms; i++)
-        gpu->psAtomIndex->_pSysData[i] = originalIndex[i];
+        (*gpu->psAtomIndex)[i] = originalIndex[i];
     gpu->psAtomIndex->Upload();
 }

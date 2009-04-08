@@ -76,40 +76,42 @@ struct CUDAStream : public SoADeviceObject
     T**             _pDevStream;
     T*              _pSysData;
     T*              _pDevData;
-    CUDAStream(int length, int subStreams = 1);
-    CUDAStream(unsigned int length, unsigned int subStreams = 1);
-    CUDAStream(unsigned int length, int subStreams = 1);
-    CUDAStream(int length, unsigned int subStreams = 1);
+    std::string     _name;
+    CUDAStream(int length, int subStreams = 1, std::string name="");
+    CUDAStream(unsigned int length, unsigned int subStreams = 1, std::string name="");
+    CUDAStream(unsigned int length, int subStreams = 1, std::string name="");
+    CUDAStream(int length, unsigned int subStreams = 1, std::string name="");
     virtual ~CUDAStream();
     void Allocate();
     void Deallocate();
     void Upload();
     void Download();
     void Collapse(unsigned int newstreams = 1, unsigned int interleave = 1);
+    T& operator[](int index);
 };
 
 float CompareStreams(CUDAStream<float>& s1, CUDAStream<float>& s2, float tolerance, unsigned int maxindex = 0);
 
 template <typename T>
-CUDAStream<T>::CUDAStream(int length, unsigned int subStreams) : _length(length), _subStreams(subStreams), _stride((length + 0xf) & 0xfffffff0)
+CUDAStream<T>::CUDAStream(int length, unsigned int subStreams, std::string name) : _length(length), _subStreams(subStreams), _stride((length + 0xf) & 0xfffffff0), _name(name)
 {
     Allocate();   
 }
 
 template <typename T>
-CUDAStream<T>::CUDAStream(unsigned int length, int subStreams) : _length(length), _subStreams(subStreams), _stride((length + 0xf) & 0xfffffff0)
+CUDAStream<T>::CUDAStream(unsigned int length, int subStreams, std::string name) : _length(length), _subStreams(subStreams), _stride((length + 0xf) & 0xfffffff0), _name(name)
 {
     Allocate();   
 }
 
 template <typename T>
-CUDAStream<T>::CUDAStream(unsigned int length, unsigned int subStreams) : _length(length), _subStreams(subStreams), _stride((length + 0xf) & 0xfffffff0)
+CUDAStream<T>::CUDAStream(unsigned int length, unsigned int subStreams, std::string name) : _length(length), _subStreams(subStreams), _stride((length + 0xf) & 0xfffffff0), _name(name)
 {
     Allocate();   
 }
 
 template <typename T>
-CUDAStream<T>::CUDAStream(int length, int subStreams) : _length(length), _subStreams(subStreams), _stride((length + 0xf) & 0xfffffff0)
+CUDAStream<T>::CUDAStream(int length, int subStreams, std::string name) : _length(length), _subStreams(subStreams), _stride((length + 0xf) & 0xfffffff0), _name(name)
 {
     Allocate();   
 }
@@ -129,7 +131,7 @@ void CUDAStream<T>::Allocate()
     _pSysData =     new T[_subStreams * _stride];
 
     status = cudaMalloc((void **) &_pDevData, _stride * _subStreams * sizeof(T));
-    RTERROR(status, "cudaMalloc CUDAStream::Allocate failed");
+    RTERROR(status, (_name+": cudaMalloc in CUDAStream::Allocate failed").c_str());
 
     for (unsigned int i = 0; i < _subStreams; i++)
     {
@@ -149,7 +151,7 @@ void CUDAStream<T>::Deallocate()
     delete[] _pSysData;
     _pSysData = NULL;
     status = cudaFree(_pDevData);
-    RTERROR(status, "cudaFree CUDAStream::Deallocate failed");    
+    RTERROR(status, (_name+": cudaFree in CUDAStream::Deallocate failed").c_str());
 }
 
 template <typename T>
@@ -157,7 +159,7 @@ void CUDAStream<T>::Upload()
 {
     cudaError_t status;
     status = cudaMemcpy(_pDevData, _pSysData, _stride * _subStreams * sizeof(T), cudaMemcpyHostToDevice);
-    RTERROR(status, "cudaMemcpy CUDAStream::Upload failed");
+    RTERROR(status, (_name+": cudaMemcpy in CUDAStream::Upload failed").c_str());
 }
 
 template <typename T>
@@ -165,7 +167,7 @@ void CUDAStream<T>::Download()
 {
     cudaError_t status;
     status = cudaMemcpy(_pSysData, _pDevData, _stride * _subStreams * sizeof(T), cudaMemcpyDeviceToHost);
-    RTERROR(status, "cudaMemcpy CUDAStream::Download failed");
+    RTERROR(status, (_name+": cudaMemcpy in CUDAStream::Download failed").c_str());
 }
 
 template <typename T>
@@ -208,6 +210,12 @@ void CUDAStream<T>::Collapse(unsigned int newstreams, unsigned int interleave)
     _length = newlength;
     _subStreams = newstreams;
     delete[] pTemp;
+}
+
+template <typename T>
+T& CUDAStream<T>::operator[](int index)
+{
+    return _pSysData[index];
 }
 
 static const unsigned int GRID = 32;

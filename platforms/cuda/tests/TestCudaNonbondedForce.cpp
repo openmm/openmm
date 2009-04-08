@@ -428,8 +428,8 @@ void testBlockInteractions(bool periodic) {
     data.gpu->psGridBoundingBox->Download();
     data.gpu->psGridCenter->Download();
     for (int i = 0; i < numBlocks; i++) {
-        float4 gridSize = data.gpu->psGridBoundingBox->_pSysData[i];
-        float4 center = data.gpu->psGridCenter->_pSysData[i];
+        float4 gridSize = (*data.gpu->psGridBoundingBox)[i];
+        float4 center = (*data.gpu->psGridCenter)[i];
         if (periodic) {
             ASSERT(gridSize.x < 0.5*boxSize);
             ASSERT(gridSize.y < 0.5*boxSize);
@@ -437,7 +437,7 @@ void testBlockInteractions(bool periodic) {
         }
         float minx = 0.0, maxx = 0.0, miny = 0.0, maxy = 0.0, minz = 0.0, maxz = 0.0, radius = 0.0;
         for (int j = 0; j < blockSize; j++) {
-            float4 pos = data.gpu->psPosq4->_pSysData[i*blockSize+j];
+            float4 pos = (*data.gpu->psPosq4)[i*blockSize+j];
             float dx = pos.x-center.x;
             float dy = pos.y-center.y;
             float dz = pos.z-center.z;
@@ -467,7 +467,7 @@ void testBlockInteractions(bool periodic) {
     // Verify that interactions were identified correctly.
 
     data.gpu->psInteractionCount->Download();
-    int numWithInteractions = data.gpu->psInteractionCount->_pSysData[0];
+    int numWithInteractions = (*data.gpu->psInteractionCount)[0];
     vector<bool> hasInteractions(data.gpu->sim.workUnits, false);
     data.gpu->psInteractingWorkUnit->Download();
     data.gpu->psInteractionFlag->Download();
@@ -475,7 +475,7 @@ void testBlockInteractions(bool periodic) {
     const unsigned int grid = data.gpu->grid;
     const unsigned int dim = (atoms+(grid-1))/grid;
     for (int i = 0; i < numWithInteractions; i++) {
-        unsigned int workUnit = data.gpu->psInteractingWorkUnit->_pSysData[i];
+        unsigned int workUnit = (*data.gpu->psInteractingWorkUnit)[i];
         unsigned int x = (workUnit >> 17);
         unsigned int y = ((workUnit >> 2) & 0x7fff);
         int tile = (x > y ? x+y*dim-y*(y+1)/2 : y+x*dim-x*(x+1)/2);
@@ -483,10 +483,10 @@ void testBlockInteractions(bool periodic) {
 
         // Make sure this tile really should have been flagged based on bounding volumes.
 
-        float4 gridSize1 = data.gpu->psGridBoundingBox->_pSysData[x];
-        float4 gridSize2 = data.gpu->psGridBoundingBox->_pSysData[y];
-        float4 center1 = data.gpu->psGridCenter->_pSysData[x];
-        float4 center2 = data.gpu->psGridCenter->_pSysData[y];
+        float4 gridSize1 = (*data.gpu->psGridBoundingBox)[x];
+        float4 gridSize2 = (*data.gpu->psGridBoundingBox)[y];
+        float4 center1 = (*data.gpu->psGridCenter)[x];
+        float4 center2 = (*data.gpu->psGridCenter)[y];
         float dx = center1.x-center2.x;
         float dy = center1.y-center2.y;
         float dz = center1.z-center2.z;
@@ -502,12 +502,12 @@ void testBlockInteractions(bool periodic) {
 
         // Check the interaction flags.
 
-        unsigned int flags = data.gpu->psInteractionFlag->_pSysData[i];
+        unsigned int flags = (*data.gpu->psInteractionFlag)[i];
         for (int atom2 = 0; atom2 < 32; atom2++) {
             if ((flags & 1) == 0) {
-                float4 pos2 = data.gpu->psPosq4->_pSysData[y*blockSize+atom2];
+                float4 pos2 = (*data.gpu->psPosq4)[y*blockSize+atom2];
                 for (int atom1 = 0; atom1 < blockSize; ++atom1) {
-                    float4 pos1 = data.gpu->psPosq4->_pSysData[x*blockSize+atom1];
+                    float4 pos1 = (*data.gpu->psPosq4)[x*blockSize+atom1];
                     float dx = pos2.x-pos1.x;
                     float dy = pos2.y-pos1.y;
                     float dz = pos2.z-pos1.z;
@@ -536,13 +536,13 @@ void testBlockInteractions(bool periodic) {
     data.gpu->psWorkUnit->Download();
     for (int i = 0; i < hasInteractions.size(); i++)
         if (!hasInteractions[i]) {
-            unsigned int workUnit = data.gpu->psWorkUnit->_pSysData[i];
+            unsigned int workUnit = (*data.gpu->psWorkUnit)[i];
             unsigned int x = (workUnit >> 17);
             unsigned int y = ((workUnit >> 2) & 0x7fff);
             for (int atom1 = 0; atom1 < blockSize; ++atom1) {
-                float4 pos1 = data.gpu->psPosq4->_pSysData[x*blockSize+atom1];
+                float4 pos1 = (*data.gpu->psPosq4)[x*blockSize+atom1];
                 for (int atom2 = 0; atom2 < blockSize; ++atom2) {
-                    float4 pos2 = data.gpu->psPosq4->_pSysData[y*blockSize+atom2];
+                    float4 pos2 = (*data.gpu->psPosq4)[y*blockSize+atom2];
                     float dx = pos1.x-pos2.x;
                     float dy = pos1.y-pos2.y;
                     float dz = pos1.z-pos2.z;
