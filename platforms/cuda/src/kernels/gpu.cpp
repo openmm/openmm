@@ -1641,6 +1641,13 @@ static void findMoleculeGroups(gpuContext gpu)
         constraints.push_back(Constraint(atom1, atom3, distance12*distance12));
         constraints.push_back(Constraint(atom2, atom3, distance23*distance23));
     }
+    for (int i = 0; i < gpu->sim.lincsConstraints; i++)
+    {
+        int atom1 = (*gpu->psLincsAtoms)[i].x;
+        int atom2 = (*gpu->psLincsAtoms)[i].y;
+        float distance2 = (*gpu->psLincsDistance)[i].w;
+        constraints.push_back(Constraint(atom1, atom2, distance2));
+    }
 
     // First make a list of every other atom to which each atom is connect by a bond or constraint.
 
