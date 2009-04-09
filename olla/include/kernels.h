@@ -36,6 +36,7 @@
 #include "BrownianIntegrator.h"
 #include "CMMotionRemover.h"
 #include "GBSAOBCForce.h"
+#include "GBVIForce.h"
 #include "HarmonicAngleForce.h"
 #include "HarmonicBondForce.h"
 #include "KernelImpl.h"
@@ -273,6 +274,39 @@ public:
      * 
      * @param context    the context in which to execute this kernel
      * @return the potential energy due to the GBSAOBCForce
+     */
+    virtual double executeEnergy(OpenMMContextImpl& context) = 0;
+};
+
+/**
+ * This kernel is invoked by GBVIForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CalcGBVIForceKernel : public KernelImpl {
+public:
+    static std::string Name() {
+        return "CalcGBVIForces";
+    }
+    CalcGBVIForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system      the System this kernel will be applied to
+     * @param force       the GBVIForce this kernel will be used for
+     * @param scaledRadii scaled radii
+     */
+    virtual void initialize(const System& system, const GBVIForce& force, const std::vector<double>& scaledRadii) = 0;
+    /**
+     * Execute the kernel to calculate the forces.
+     * 
+     * @param context    the context in which to execute this kernel
+     */
+    virtual void executeForces(OpenMMContextImpl& context) = 0;
+    /**
+     * Execute the kernel to calculate the energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @return the potential energy due to the GBVIForce
      */
     virtual double executeEnergy(OpenMMContextImpl& context) = 0;
 };

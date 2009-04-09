@@ -32,6 +32,7 @@
 #include "ReferenceKernels.h"
 #include "ReferenceFloatStreamImpl.h"
 #include "gbsa/CpuObc.h"
+#include "gbsa/CpuGBVI.h"
 #include "SimTKReference/ReferenceAndersenThermostat.h"
 #include "SimTKReference/ReferenceAngleBondIxn.h"
 #include "SimTKReference/ReferenceBondForce.h"
@@ -442,7 +443,7 @@ void ReferenceCalcGBSAOBCForceKernel::initialize(const System& system, const GBS
         const NonbondedForce* nonbonded = dynamic_cast<const NonbondedForce*>(&system.getForce(i));
         if (nonbonded != NULL) {
             if (nonbonded->getNonbondedMethod() != NonbondedForce::NoCutoff)
-                obcParameters->setUseCutoff(nonbonded->getCutoffDistance());
+                obcParameters->setUseCutoff(static_cast<RealOpenMM>(nonbonded->getCutoffDistance()));
             if (nonbonded->getNonbondedMethod() == NonbondedForce::CutoffPeriodic) {
                 Vec3 boxVectors[3];
                 nonbonded->getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
@@ -471,6 +472,79 @@ double ReferenceCalcGBSAOBCForceKernel::executeEnergy(OpenMMContextImpl& context
     obc->computeImplicitSolventForces(posData, &charges[0], forceData, 1);
     disposeRealArray(forceData, context.getSystem().getNumParticles());
     return obc->getEnergy();
+}
+
+ReferenceCalcGBVIForceKernel::~ReferenceCalcGBVIForceKernel() {
+    if (gbvi) {
+        delete gbvi;
+    }
+}
+
+void ReferenceCalcGBVIForceKernel::initialize(const System& system, const GBVIForce& force, const std::vector<double> & inputScaledRadii ) {
+
+    int numParticles = system.getNumParticles();
+
+    charges.resize(numParticles);
+    vector<RealOpenMM> atomicRadii(numParticles);
+    vector<RealOpenMM> scaledRadii(numParticles);
+    vector<RealOpenMM> gammas(numParticles);
+
+    for (int i = 0; i < numParticles; ++i) {
+        double charge, radius, gamma;
+        force.getParticleParameters(i, charge, radius, gamma);
+        charges[i]       = static_cast<RealOpenMM>(charge);
+        atomicRadii[i]   = static_cast<RealOpenMM>(radius);
+        gammas[i]        = static_cast<RealOpenMM>(gamma);
+        scaledRadii[i]   = static_cast<RealOpenMM>(inputScaledRadii[i]);
+    }
+
+    GBVIParameters * gBVIParameters = new GBVIParameters(numParticles);
+    gBVIParameters->setAtomicRadii(atomicRadii);
+    gBVIParameters->setGammaParameters(gammas);
+    gBVIParameters->setScaledRadii(scaledRadii);
+    gBVIParameters->setSolventDielectric( static_cast<RealOpenMM>(force.getSolventDielectric()) );
+    gBVIParameters->setSoluteDielectric( static_cast<RealOpenMM>(force.getSoluteDielectric()) );
+
+    // If there is a NonbondedForce in this system, use it to initialize cutoffs and periodic boundary conditions.
+
+    for (int i = 0; i < system.getNumForces(); i++) {
+        const NonbondedForce* nonbonded = dynamic_cast<const NonbondedForce*>(&system.getForce(i));
+        if (nonbonded != NULL) {
+            if (nonbonded->getNonbondedMethod() != NonbondedForce::NoCutoff)
+                gBVIParameters->setUseCutoff( static_cast<RealOpenMM>(nonbonded->getCutoffDistance()));
+            if (nonbonded->getNonbondedMethod() == NonbondedForce::CutoffPeriodic) {
+                Vec3 boxVectors[3];
+                nonbonded->getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+                RealOpenMM periodicBoxSize[3];
+                periodicBoxSize[0] = (RealOpenMM) boxVectors[0][0];
+                periodicBoxSize[1] = (RealOpenMM) boxVectors[1][1];
+                periodicBoxSize[2] = (RealOpenMM) boxVectors[2][2];
+                gBVIParameters->setPeriodic(periodicBoxSize);
+            }
+            break;
+        }
+    }
+    gbvi = new CpuGBVI(gBVIParameters);
+
+}
+
+void ReferenceCalcGBVIForceKernel::executeForces(OpenMMContextImpl& context) {
+
+    RealOpenMM** posData   = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData()); // Reference code needs to be made const correct
+    RealOpenMM** forceData = ((ReferenceFloatStreamImpl&) context.getForces().getImpl()).getData();
+    RealOpenMM* bornRadii  = new RealOpenMM[context.getSystem().getNumParticles()];
+    gbvi->computeBornRadii(posData, bornRadii, NULL ); 
+    gbvi->computeBornForces(bornRadii, posData, &charges[0], forceData);
+    delete[] bornRadii;
+}
+
+double ReferenceCalcGBVIForceKernel::executeEnergy(OpenMMContextImpl& context) {
+    RealOpenMM** posData  = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData()); // Reference code needs to be made const correct
+    RealOpenMM* bornRadii = new RealOpenMM[context.getSystem().getNumParticles()];
+    gbvi->computeBornRadii(posData, bornRadii, NULL ); 
+    RealOpenMM energy     = gbvi->computeBornEnergy(bornRadii ,posData, &charges[0]);
+    delete[] bornRadii;
+    return static_cast<double>(energy);
 }
 
 ReferenceIntegrateVerletStepKernel::~ReferenceIntegrateVerletStepKernel() {

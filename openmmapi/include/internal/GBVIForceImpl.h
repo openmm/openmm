@@ -1,3 +1,6 @@
+#ifndef OPENMM_GBVIFORCEFIELDIMPL_H_
+#define OPENMM_GBVIFORCEFIELDIMPL_H_
+
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -29,44 +32,44 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "ReferenceKernelFactory.h"
-#include "ReferenceKernels.h"
-#include "OpenMMException.h"
+#include "ForceImpl.h"
+#include "GBVIForce.h"
+#include "Kernel.h"
+#include <string>
 
-using namespace OpenMM;
+namespace OpenMM {
 
-KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name, const Platform& platform, OpenMMContextImpl& context) const {
-    if (name == InitializeForcesKernel::Name())
-        return new ReferenceInitializeForcesKernel(name, platform);
-    else if (name == CalcNonbondedForceKernel::Name())
-        return new ReferenceCalcNonbondedForceKernel(name, platform);
-    else if (name == CalcHarmonicBondForceKernel::Name())
-        return new ReferenceCalcHarmonicBondForceKernel(name, platform);
-    else if (name == CalcHarmonicAngleForceKernel::Name())
-        return new ReferenceCalcHarmonicAngleForceKernel(name, platform);
-    else if (name == CalcHarmonicAngleForceKernel::Name())
-        return new ReferenceCalcHarmonicAngleForceKernel(name, platform);
-    else if (name == CalcPeriodicTorsionForceKernel::Name())
-        return new ReferenceCalcPeriodicTorsionForceKernel(name, platform);
-    else if (name == CalcRBTorsionForceKernel::Name())
-        return new ReferenceCalcRBTorsionForceKernel(name, platform);
-    else if (name == CalcGBSAOBCForceKernel::Name())
-        return new ReferenceCalcGBSAOBCForceKernel(name, platform);
-    else if (name == CalcGBVIForceKernel::Name())
-        return new ReferenceCalcGBVIForceKernel(name, platform);
-    else if (name == IntegrateVerletStepKernel::Name())
-        return new ReferenceIntegrateVerletStepKernel(name, platform);
-    else if (name == IntegrateLangevinStepKernel::Name())
-        return new ReferenceIntegrateLangevinStepKernel(name, platform);
-    else if (name == IntegrateBrownianStepKernel::Name())
-        return new ReferenceIntegrateBrownianStepKernel(name, platform);
-    else if (name == ApplyAndersenThermostatKernel::Name())
-        return new ReferenceApplyAndersenThermostatKernel(name, platform);
-    else if (name == CalcKineticEnergyKernel::Name())
-        return new ReferenceCalcKineticEnergyKernel(name, platform);
-    else if (name == RemoveCMMotionKernel::Name())
-        return new ReferenceRemoveCMMotionKernel(name, platform);
-    else {
-        throw OpenMMException( (std::string("Tried to create kernel with illegal kernel name '") + name + "'").c_str() );
+/**
+ * This is the internal implementation of GBVIForce.
+ */
+
+class GBVIForceImpl : public ForceImpl {
+public:
+    GBVIForceImpl(GBVIForce& owner);
+    void initialize(OpenMMContextImpl& context);
+    GBVIForce& getOwner() {
+        return owner;
     }
-}
+    
+    // calculate scaled radii (Eq. 5 of Labute paper [JCC 29 1693-1698 2008])
+
+    void findScaledRadii( int numberOfParticles, const std::vector<std::vector<int> >& bondIndices,
+                          const std::vector<double> & bondLengths, std::vector<double> & scaledRadii) const;
+
+    void updateContextState(OpenMMContextImpl& context) {
+        // This force field doesn't update the state directly.
+    }
+    void calcForces(OpenMMContextImpl& context, Stream& forces);
+    double calcEnergy(OpenMMContextImpl& context);
+    std::map<std::string, double> getDefaultParameters() {
+        return std::map<std::string, double>(); // This force field doesn't define any parameters.
+    }
+    std::vector<std::string> getKernelNames();
+private:
+    GBVIForce& owner;
+    Kernel kernel;
+};
+
+} // namespace OpenMM
+
+#endif /*OPENMM_GBVIFORCEFIELDIMPL_H_*/

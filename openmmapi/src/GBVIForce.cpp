@@ -29,44 +29,28 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "ReferenceKernelFactory.h"
-#include "ReferenceKernels.h"
+#include "Force.h"
 #include "OpenMMException.h"
+#include "GBVIForce.h"
+#include "internal/GBVIForceImpl.h"
 
 using namespace OpenMM;
 
-KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name, const Platform& platform, OpenMMContextImpl& context) const {
-    if (name == InitializeForcesKernel::Name())
-        return new ReferenceInitializeForcesKernel(name, platform);
-    else if (name == CalcNonbondedForceKernel::Name())
-        return new ReferenceCalcNonbondedForceKernel(name, platform);
-    else if (name == CalcHarmonicBondForceKernel::Name())
-        return new ReferenceCalcHarmonicBondForceKernel(name, platform);
-    else if (name == CalcHarmonicAngleForceKernel::Name())
-        return new ReferenceCalcHarmonicAngleForceKernel(name, platform);
-    else if (name == CalcHarmonicAngleForceKernel::Name())
-        return new ReferenceCalcHarmonicAngleForceKernel(name, platform);
-    else if (name == CalcPeriodicTorsionForceKernel::Name())
-        return new ReferenceCalcPeriodicTorsionForceKernel(name, platform);
-    else if (name == CalcRBTorsionForceKernel::Name())
-        return new ReferenceCalcRBTorsionForceKernel(name, platform);
-    else if (name == CalcGBSAOBCForceKernel::Name())
-        return new ReferenceCalcGBSAOBCForceKernel(name, platform);
-    else if (name == CalcGBVIForceKernel::Name())
-        return new ReferenceCalcGBVIForceKernel(name, platform);
-    else if (name == IntegrateVerletStepKernel::Name())
-        return new ReferenceIntegrateVerletStepKernel(name, platform);
-    else if (name == IntegrateLangevinStepKernel::Name())
-        return new ReferenceIntegrateLangevinStepKernel(name, platform);
-    else if (name == IntegrateBrownianStepKernel::Name())
-        return new ReferenceIntegrateBrownianStepKernel(name, platform);
-    else if (name == ApplyAndersenThermostatKernel::Name())
-        return new ReferenceApplyAndersenThermostatKernel(name, platform);
-    else if (name == CalcKineticEnergyKernel::Name())
-        return new ReferenceCalcKineticEnergyKernel(name, platform);
-    else if (name == RemoveCMMotionKernel::Name())
-        return new ReferenceRemoveCMMotionKernel(name, platform);
-    else {
-        throw OpenMMException( (std::string("Tried to create kernel with illegal kernel name '") + name + "'").c_str() );
-    }
+GBVIForce::GBVIForce(int numParticles) : particles(numParticles), solventDielectric(78.3), soluteDielectric(1.0) {
+}
+
+void GBVIForce::getParticleParameters(int index, double& charge, double& radius, double& gamma) const {
+    charge = particles[index].charge;
+    radius = particles[index].radius;
+    gamma  = particles[index].gamma;
+}
+
+void GBVIForce::setParticleParameters(int index, double charge, double radius, double gamma) {
+    particles[index].charge = charge;
+    particles[index].radius = radius;
+    particles[index].gamma  = gamma;
+}
+
+ForceImpl* GBVIForce::createImpl() {
+    return new GBVIForceImpl(*this);
 }

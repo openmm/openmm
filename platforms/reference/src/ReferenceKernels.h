@@ -37,6 +37,7 @@
 #include "SimTKReference/ReferenceNeighborList.h"
 
 class CpuObc;
+class CpuGBVI;
 class ReferenceAndersenThermostat;
 class ReferenceBrownianDynamics;
 class ReferenceStochasticDynamics;
@@ -273,6 +274,40 @@ public:
     double executeEnergy(OpenMMContextImpl& context);
 private:
     CpuObc* obc;
+    std::vector<RealOpenMM> charges;
+};
+
+/**
+ * This kernel is invoked by GBVIForce to calculate the forces acting on the system.
+ */
+class ReferenceCalcGBVIForceKernel : public CalcGBVIForceKernel {
+public:
+    ReferenceCalcGBVIForceKernel(std::string name, const Platform& platform) : CalcGBVIForceKernel(name, platform) {
+    }
+    ~ReferenceCalcGBVIForceKernel();
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system       the System this kernel will be applied to
+     * @param force        the GBVIForce this kernel will be used for
+     * @param scaled radii the scaled radii (Eq. 5 of Labute paper)
+     */
+    void initialize(const System& system, const GBVIForce& force, const std::vector<double> & scaledRadii);
+    /**
+     * Execute the kernel to calculate the forces.
+     * 
+     * @param context    the context in which to execute this kernel
+     */
+    void executeForces(OpenMMContextImpl& context);
+    /**
+     * Execute the kernel to calculate the energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @return the potential energy due to the GBVIForce
+     */
+    double executeEnergy(OpenMMContextImpl& context);
+private:
+    CpuGBVI * gbvi;
     std::vector<RealOpenMM> charges;
 };
 
