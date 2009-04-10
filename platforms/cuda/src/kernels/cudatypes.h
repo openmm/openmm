@@ -380,14 +380,14 @@ struct cudaGmxSimulation {
     int2*           pLincsAtoms;                    // The atoms connected by each LINCS constraint
     float4*         pLincsDistance;                 // The displacement vector (x, y, z) and constraint distance (w) for each LINCS constraint
     int*            pLincsConnections;              // The indices of constraints that other constraints are connected to
-    int*            pLincsConnectionsIndex;         // The index in pLincsConnections at which the connections for a particular constraint start
+    int*            pLincsNumConnections;           // The number of other constraints that each constraint is linked to
     float*          pLincsS;                        // S matrix for LINCS
     float*          pLincsCoupling;                 // Coupling matrix for LINCS
     float*          pLincsRhs1;                     // Workspace for LINCS
     float*          pLincsRhs2;                     // Workspace for LINCS
     float*          pLincsSolution;                 // Workspace for LINCS
     int*            pLincsAtomConstraints;          // The indices of constraints involving each atom
-    int*            pLincsAtomConstraintsIndex;     // The index in psLincsAtomConstraints at which the constraints for a particular atom start
+    int*            pLincsNumAtomConstraints;       // The number of constraints involving each atom
     unsigned int*   pSyncCounter;                   // Used for global thread synchronization
 
     // Mutable stuff

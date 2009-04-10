@@ -132,9 +132,9 @@ struct _gpuContext {
     CUDAStream<int2>* psLincsAtoms;         // The atoms connected by each LINCS constraint
     CUDAStream<float4>* psLincsDistance;    // The displacement vector (x, y, z) and constraint distance (w) for each LINCS constraint
     CUDAStream<int>* psLincsConnections;    // The indices of constraints that other constraints are connected to
-    CUDAStream<int>* psLincsConnectionsIndex; // The index in psLincsConnections at which the connections for a particular constraint start
+    CUDAStream<int>* psLincsNumConnections; // The number of other constraints that each constraint is linked to
     CUDAStream<int>* psLincsAtomConstraints; // The indices of constraints involving each atom
-    CUDAStream<int>* psLincsAtomConstraintsIndex; // The index in psLincsAtomConstraints at which the constraints for a particular atom start
+    CUDAStream<int>* psLincsNumAtomConstraints; // The number of constraints involving each atom
     CUDAStream<float>* psLincsS;            // S matrix for LINCS
     CUDAStream<float>* psLincsCoupling;     // Coupling matrix for LINCS
     CUDAStream<float>* psLincsRhs1;         // Workspace for LINCS

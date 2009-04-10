@@ -61,11 +61,11 @@ __global__ void kUpdateAtomPositions_kernel(float4* atomPositions)
     {
         float4 atomPos = atomPositions[pos];
         float invMass = cSim.pVelm4[pos].w;
-        int start = cSim.pLincsAtomConstraintsIndex[pos];
-        int end = cSim.pLincsAtomConstraintsIndex[pos+1];
-        for (int i = start; i < end; i++)
+        int num = cSim.pLincsNumAtomConstraints[pos];
+        for (int i = 0; i < num; i++)
         {
-            int constraint = cSim.pLincsAtomConstraints[i];
+            int index = pos+i*cSim.atoms;
+            int constraint = cSim.pLincsAtomConstraints[index];
             float4 dir = cSim.pLincsDistance[constraint];
             float c = invMass*cSim.pLincsS[constraint]*cSim.pLincsSolution[constraint];
             c = (cSim.pLincsAtoms[constraint].x == pos ? -c : c);
@@ -88,12 +88,12 @@ __global__ void kIterateLincsMatrix_kernel(int iteration)
     while (pos < cSim.lincsConstraints)
     {
         float rhs = 0.0f;
-        int start = cSim.pLincsConnectionsIndex[pos];
-        int end = cSim.pLincsConnectionsIndex[pos+1];
-        for (int i = start; i < end; i++)
+        int num = cSim.pLincsNumConnections[pos];
+        for (int i = 0; i < num; i++)
         {
-            int otherConstraint = cSim.pLincsConnections[i];
-            rhs += cSim.pLincsCoupling[i]*rhs1[otherConstraint];
+            int index = pos+i*cSim.lincsConstraints;
+            int otherConstraint = cSim.pLincsConnections[index];
+            rhs += cSim.pLincsCoupling[index]*rhs1[otherConstraint];
         }
         rhs2[pos] = rhs;
         cSim.pLincsSolution[pos] += rhs;
@@ -147,17 +147,17 @@ __global__ void kApplyLincsPart2_kernel()
     {
         float4 dir1 = cSim.pLincsDistance[pos];
         int2 atoms1 = cSim.pLincsAtoms[pos];
-        int start = cSim.pLincsConnectionsIndex[pos];
-        int end = cSim.pLincsConnectionsIndex[pos+1];
+        int num = cSim.pLincsNumConnections[pos];
         float s = cSim.pLincsS[pos];
         float invMass = cSim.pVelm4[atoms1.x].w;
-        for (int i = start; i < end; i++)
+        for (int i = 0; i < num; i++)
         {
-            int otherConstraint = cSim.pLincsConnections[i];
+            int index = pos+i*cSim.lincsConstraints;
+            int otherConstraint = cSim.pLincsConnections[index];
             float4 dir2 = cSim.pLincsDistance[otherConstraint];
             int2 atoms2 = cSim.pLincsAtoms[otherConstraint];
             float signedMass = (atoms1.x == atoms2.x || atoms1.y == atoms2.y ? -invMass : cSim.pVelm4[atoms1.y].w);
-            cSim.pLincsCoupling[i] = signedMass*s*(dir1.x*dir2.x+dir1.y*dir2.y+dir1.z*dir2.z)*cSim.pLincsS[otherConstraint];
+            cSim.pLincsCoupling[index] = signedMass*s*(dir1.x*dir2.x+dir1.y*dir2.y+dir1.z*dir2.z)*cSim.pLincsS[otherConstraint];
         }
         pos += blockDim.x * gridDim.x;
     }
