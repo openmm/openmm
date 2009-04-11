@@ -77,32 +77,32 @@ void NonbondedForce::setPeriodicBoxVectors(Vec3 a, Vec3 b, Vec3 c) {
     periodicBoxVectors[2] = c;
 }
 
-void NonbondedForce::getParticleParameters(int index, double& charge, double& radius, double& depth) const {
+void NonbondedForce::getParticleParameters(int index, double& charge, double& sigma, double& epsilon) const {
     charge = particles[index].charge;
-    radius = particles[index].radius;
-    depth = particles[index].depth;
+    sigma = particles[index].sigma;
+    epsilon = particles[index].epsilon;
 }
 
-void NonbondedForce::setParticleParameters(int index, double charge, double radius, double depth) {
+void NonbondedForce::setParticleParameters(int index, double charge, double sigma, double epsilon) {
     particles[index].charge = charge;
-    particles[index].radius = radius;
-    particles[index].depth = depth;
+    particles[index].sigma = sigma;
+    particles[index].epsilon = epsilon;
 }
 
-void NonbondedForce::getNonbonded14Parameters(int index, int& particle1, int& particle2, double& charge, double& radius, double& depth) const {
+void NonbondedForce::getNonbonded14Parameters(int index, int& particle1, int& particle2, double& chargeProd, double& sigma, double& epsilon) const {
     particle1 = nb14s[index].particle1;
     particle2 = nb14s[index].particle2;
-    charge = nb14s[index].charge;
-    radius = nb14s[index].radius;
-    depth = nb14s[index].depth;
+    chargeProd = nb14s[index].chargeProd;
+    sigma = nb14s[index].sigma;
+    epsilon = nb14s[index].epsilon;
 }
 
-void NonbondedForce::setNonbonded14Parameters(int index, int particle1, int particle2, double charge, double radius, double depth) {
+void NonbondedForce::setNonbonded14Parameters(int index, int particle1, int particle2, double chargeProd, double sigma, double epsilon) {
     nb14s[index].particle1 = particle1;
     nb14s[index].particle2 = particle2;
-    nb14s[index].charge = charge;
-    nb14s[index].radius = radius;
-    nb14s[index].depth = depth;
+    nb14s[index].chargeProd = chargeProd;
+    nb14s[index].sigma = sigma;
+    nb14s[index].epsilon = epsilon;
 }
 
 ForceImpl* NonbondedForce::createImpl() {

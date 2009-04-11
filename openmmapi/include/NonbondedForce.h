@@ -43,7 +43,9 @@ namespace OpenMM {
 /**
  * This class implements nonbonded interactions between particles, including a Coulomb force to represent
  * electrostatics and a Lennard-Jones force to represent van der Waals interactions.  It optionally supports
- * periodic boundary conditions and cutoffs for long range interactions.
+ * periodic boundary conditions and cutoffs for long range interactions.  Lennard-Jones interactions are
+ * calculated with the Lorentz-Bertelot combining rule: it uses the arithmetic mean of the sigmas and the
+ * geometric mean of the epsilons for the two interacting particles.
  * 
  * If the System also contains a HarmonicBondForce, nonbonded interactions are automatically excluded between
  * particles which are separated by three or fewer bonds.  Most molecular force fields omit Coulomb and
@@ -86,7 +88,7 @@ public:
     /**
      * Create a NonbondedForce.
      * 
-     * @param numParticles            the number of particles in the system
+     * @param numParticles        the number of particles in the system
      * @param numNonbonded14      the number of nonbonded 1-4 terms in the potential function
      */
     NonbondedForce(int numParticles, int numNonbonded14);
@@ -149,41 +151,43 @@ public:
      * 
      * @param index     the index of the particle for which to get parameters
      * @param charge    the charge of the particle, measured in units of the proton charge
-     * @param radius    the van der Waals radius of the particle, measured in nm
-     * @param depth     the well depth of the van der Waals interaction, measured in kJ/mol
+     * @param sigma     the van der Waals radius of the particle (sigma in the Lennard Jones potential), measured in nm
+     * @param epsilon   the well depth of the van der Waals interaction (epsilon in the Lennard Jones potential), measured in kJ/mol
      */
-    void getParticleParameters(int index, double& charge, double& radius, double& depth) const;
+    void getParticleParameters(int index, double& charge, double& sigma, double& epsilon) const;
     /**
-     * Set the nonbonded force parameters for a particle.
-     * 
+     * Set the nonbonded force parameters for a particle.  When calculating the Lennard-Jones interaction between two particles,
+     * it uses the arithmetic mean of the sigmas and the geometric mean of the epsilons for the two interacting particles
+     * (the Lorentz-Bertelot combining rule).
+     *
      * @param index     the index of the particle for which to set parameters
      * @param charge    the charge of the particle, measured in units of the proton charge
-     * @param radius    the van der Waals radius of the particle (sigma in the Lennard Jones potential), measured in nm
-     * @param depth     the well depth of the van der Waals interaction (epsilon in the Lennard Jones potential), measured in kJ/mol
+     * @param sigma     the van der Waals radius of the particle (sigma in the Lennard Jones potential), measured in nm
+     * @param epsilon   the well depth of the van der Waals interaction (epsilon in the Lennard Jones potential), measured in kJ/mol
      */
-    void setParticleParameters(int index, double charge, double radius, double depth);
+    void setParticleParameters(int index, double charge, double sigma, double epsilon);
     /**
      * Get the force field parameters for a nonbonded 1-4 term.
      * 
-     * @param index     the index of the interaction for which to get parameters
-     * @param particle1 the index of the first particle involved in the interaction
-     * @param particle2 the index of the second particle involved in the interaction
-     * @param charge    the scaled product of the atomic charges (i.e. the strength of the Coulomb interaction), measured in units of the proton charge
-     * @param radius    the van der Waals radius of the particle (sigma in the Lennard Jones potential), measured in nm
-     * @param depth     the well depth of the van der Waals interaction (epsilon in the Lennard Jones potential), measured in kJ/mol
+     * @param index      the index of the interaction for which to get parameters
+     * @param particle1  the index of the first particle involved in the interaction
+     * @param particle2  the index of the second particle involved in the interaction
+     * @param chargeProd the scaled product of the atomic charges (i.e. the strength of the Coulomb interaction), measured in units of the proton charge squared
+     * @param sigma      the van der Waals radius of the particle (sigma in the Lennard Jones potential), measured in nm
+     * @param epsilon    the well depth of the van der Waals interaction (epsilon in the Lennard Jones potential), measured in kJ/mol
      */
-    void getNonbonded14Parameters(int index, int& particle1, int& particle2, double& charge, double& radius, double& depth) const;
+    void getNonbonded14Parameters(int index, int& particle1, int& particle2, double& chargeProd, double& sigma, double& epsilon) const;
     /**
      * Set the force field parameters for a nonbonded 1-4 term.
      * 
-     * @param index     the index of the interaction for which to get parameters
-     * @param particle1 the index of the first particle involved in the interaction
-     * @param particle2 the index of the second particle involved in the interaction
-     * @param charge    the scaled product of the atomic charges (i.e. the strength of the Coulomb interaction), measured in units of the proton charge
-     * @param radius    the van der Waals radius of the particle (sigma in the Lennard Jones potential), measured in nm
-     * @param depth     the well depth of the van der Waals interaction (epsilon in the Lennard Jones potential), measured in kJ/mol
+     * @param index      the index of the interaction for which to get parameters
+     * @param particle1  the index of the first particle involved in the interaction
+     * @param particle2  the index of the second particle involved in the interaction
+     * @param chargeProd the scaled product of the atomic charges (i.e. the strength of the Coulomb interaction), measured in units of the proton charge squared
+     * @param sigma      the van der Waals radius of the particle (sigma in the Lennard Jones potential), measured in nm
+     * @param epsilon    the well depth of the van der Waals interaction (epsilon in the Lennard Jones potential), measured in kJ/mol
      */
-    void setNonbonded14Parameters(int index, int particle1, int particle2, double charge, double radius, double depth);
+    void setNonbonded14Parameters(int index, int particle1, int particle2, double chargeProd, double sigma, double epsilon);
 protected:
     ForceImpl* createImpl();
 private:
@@ -210,19 +214,19 @@ private:
 
 class NonbondedForce::ParticleInfo {
 public:
-    double charge, radius, depth;
+    double charge, sigma, epsilon;
     ParticleInfo() {
-        charge = radius = depth = 0.0;
+        charge = sigma = epsilon = 0.0;
     }
 };
 
 class NonbondedForce::NB14Info {
 public:
     int particle1, particle2;
-    double charge, radius, depth;
+    double chargeProd, sigma, epsilon;
     NB14Info() {
         particle1 = particle2 = -1;
-        charge = radius = depth = 0.0;
+        chargeProd = sigma = epsilon = 0.0;
     }
 };
 
