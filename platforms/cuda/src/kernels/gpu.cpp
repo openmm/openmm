@@ -728,9 +728,9 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
     CUDAStream<float>* psLincsSolution = new CUDAStream<float>(numLincs, 1, "LincsSolution");
     gpu->psLincsSolution             = psLincsSolution;
     gpu->sim.pLincsSolution          = psLincsSolution->_pDevData;
-    CUDAStream<unsigned int>* psSyncCounter = new CUDAStream<unsigned int>(2*lincsTerms+2, 1, "SyncCounter");
-    gpu->psSyncCounter                      = psSyncCounter;
-    gpu->sim.pSyncCounter                   = psSyncCounter->_pDevData;
+    CUDAStream<short>* psSyncCounter = new CUDAStream<short>(2*gpu->sim.blocks, 1, "SyncCounter");
+    gpu->psSyncCounter               = psSyncCounter;
+    gpu->sim.pSyncCounter            = psSyncCounter->_pDevData;
     gpu->sim.lincsConstraints = numLincs;
     for (int i = 0; i < numLincs; i++) {
         int c = lincsConstraints[i];
@@ -743,7 +743,7 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
             (*psLincsConnections)[i+j*numLincs] = linkedConstraints[i][j];
     }
     for (unsigned int i = 0; i < psSyncCounter->_length; i++)
-        (*psSyncCounter)[i] = 0;
+        (*psSyncCounter)[i] = -1;
     for (unsigned int i = 0; i < atomConstraints.size(); i++) {
         (*psLincsNumAtomConstraints)[i] = atomConstraints[i].size();
         for (unsigned int j = 0; j < atomConstraints[i].size(); j++)
@@ -761,8 +761,8 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
     gpu->sim.lincs_threads_per_block = (gpu->sim.lincsConstraints + gpu->sim.blocks - 1) / gpu->sim.blocks;
     if (gpu->sim.lincs_threads_per_block > gpu->sim.max_shake_threads_per_block)
         gpu->sim.lincs_threads_per_block = gpu->sim.max_shake_threads_per_block;
-    if (gpu->sim.lincs_threads_per_block < 1)
-        gpu->sim.lincs_threads_per_block = 1;
+    if (gpu->sim.lincs_threads_per_block < gpu->sim.blocks)
+        gpu->sim.lincs_threads_per_block = gpu->sim.blocks;
 
 
     gpu->psLincsNumConnections->Download();

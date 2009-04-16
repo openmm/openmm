@@ -127,7 +127,7 @@ void testConstraints() {
                 Vec3 p1 = state.getPositions()[particle1];
                 Vec3 p2 = state.getPositions()[particle2];
                 double dist = std::sqrt((p1[0]-p2[0])*(p1[0]-p2[0])+(p1[1]-p2[1])*(p1[1]-p2[1])+(p1[2]-p2[2])*(p1[2]-p2[2]));
-                ASSERT_EQUAL_TOL(distance, dist, 2e-5);
+                ASSERT_EQUAL_TOL(distance, dist, 1e-4);
             }
         double energy = state.getKineticEnergy()+state.getPotentialEnergy();
         if (i == 1)

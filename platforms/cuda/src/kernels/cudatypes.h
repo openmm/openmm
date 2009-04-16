@@ -388,7 +388,7 @@ struct cudaGmxSimulation {
     float*          pLincsSolution;                 // Workspace for LINCS
     int*            pLincsAtomConstraints;          // The indices of constraints involving each atom
     int*            pLincsNumAtomConstraints;       // The number of constraints involving each atom
-    unsigned int*   pSyncCounter;                   // Used for global thread synchronization
+    short*          pSyncCounter;                   // Used for global thread synchronization
 
     // Mutable stuff
     float4*         pPosq;                          // Pointer to atom positions and charges

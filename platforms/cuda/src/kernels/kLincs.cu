@@ -52,8 +52,48 @@ void GetLincsSim(gpuContext gpu)
     RTERROR(status, "cudaMemcpyFromSymbol: SetSim copy from cSim failed");
 }
 
-__global__ void kUpdateAtomPositions_kernel(float4* atomPositions)
+/**
+ * Synchronize all threads across all blocks.
+ */
+__device__ void kSyncAllThreads_kernel(short* syncCounter, short newCount)
 {
+//    short* syncCounter = &cSim.pSyncCounter[newCount%2 == 0 ? 0 : gridDim.x];
+    __syncthreads();
+    if (threadIdx.x == 0)
+        syncCounter[blockIdx.x] = newCount;
+    if (threadIdx.x < gridDim.x)
+    {
+        volatile short* counter = &syncCounter[threadIdx.x];
+        do
+        {
+        } while (*counter != newCount);
+    }
+    __syncthreads();
+}
+
+__global__ void kSolveLincsMatrix_kernel(float4* atomPositions)
+{
+    for (unsigned int iteration = 0; iteration < cSim.lincsTerms; iteration++) {
+        float* rhs1 = (iteration%2 == 0 ? cSim.pLincsRhs1 : cSim.pLincsRhs2);
+        float* rhs2 = (iteration%2 == 0 ? cSim.pLincsRhs2 : cSim.pLincsRhs1);
+        unsigned int pos = threadIdx.x + blockIdx.x * blockDim.x;
+        while (pos < cSim.lincsConstraints)
+        {
+            float rhs = 0.0f;
+            int num = cSim.pLincsNumConnections[pos];
+            for (int i = 0; i < num; i++)
+            {
+                int index = pos+i*cSim.lincsConstraints;
+                int otherConstraint = cSim.pLincsConnections[index];
+                rhs += cSim.pLincsCoupling[index]*rhs1[otherConstraint];
+            }
+            rhs2[pos] = rhs;
+            cSim.pLincsSolution[pos] += rhs;
+            pos += blockDim.x * gridDim.x;
+        }
+        kSyncAllThreads_kernel(&cSim.pSyncCounter[iteration%2 == 0 ? 0 : gridDim.x], iteration);
+    }
+
     // Update the atom positions based on the solution to the matrix equations.
 
     unsigned int pos = threadIdx.x + blockIdx.x * blockDim.x;
@@ -74,29 +114,6 @@ __global__ void kUpdateAtomPositions_kernel(float4* atomPositions)
             atomPos.z += c*dir.z;
         }
         atomPositions[pos] = atomPos;
-        pos += blockDim.x * gridDim.x;
-    }
-}
-
-__global__ void kIterateLincsMatrix_kernel(int iteration)
-{
-    // Perform one iteration of inverting the matrix.
-
-    float* rhs1 = (iteration%2 == 0 ? cSim.pLincsRhs1 : cSim.pLincsRhs2);
-    float* rhs2 = (iteration%2 == 0 ? cSim.pLincsRhs2 : cSim.pLincsRhs1);
-    unsigned int pos = threadIdx.x + blockIdx.x * blockDim.x;
-    while (pos < cSim.lincsConstraints)
-    {
-        float rhs = 0.0f;
-        int num = cSim.pLincsNumConnections[pos];
-        for (int i = 0; i < num; i++)
-        {
-            int index = pos+i*cSim.lincsConstraints;
-            int otherConstraint = cSim.pLincsConnections[index];
-            rhs += cSim.pLincsCoupling[index]*rhs1[otherConstraint];
-        }
-        rhs2[pos] = rhs;
-        cSim.pLincsSolution[pos] += rhs;
         pos += blockDim.x * gridDim.x;
     }
 }
@@ -136,13 +153,11 @@ __global__ void kApplyLincsPart1_kernel(float4* atomPositions, bool addOldPositi
         cSim.pLincsSolution[pos] = diff;
         pos += blockDim.x * gridDim.x;
     }
-}
+    kSyncAllThreads_kernel(cSim.pSyncCounter, cSim.lincsTerms+1);
 
-__global__ void kApplyLincsPart2_kernel()
-{
     // Build the coupling matrix.
 
-    unsigned int pos = threadIdx.x + blockIdx.x * blockDim.x;
+    pos = threadIdx.x + blockIdx.x * blockDim.x;
     while (pos < cSim.lincsConstraints)
     {
         float4 dir1 = cSim.pLincsDistance[pos];
@@ -163,7 +178,7 @@ __global__ void kApplyLincsPart2_kernel()
     }
 }
 
-__global__ void kApplyLincsPart3_kernel(float4* atomPositions, bool addOldPosition)
+__global__ void kApplyLincsPart2_kernel(float4* atomPositions, bool addOldPosition)
 {
     // Correct for rotational lengthening.
 
@@ -200,24 +215,12 @@ static void kApplyLincs(gpuContext gpu, float4* atomPositions, bool addOldPositi
 {
     kApplyLincsPart1_kernel<<<gpu->sim.blocks, gpu->sim.lincs_threads_per_block>>>(atomPositions, addOldPosition);
     LAUNCHERROR("kApplyLincsPart1");
-    kApplyLincsPart2_kernel<<<gpu->sim.blocks, gpu->sim.lincs_threads_per_block>>>();
+    kSolveLincsMatrix_kernel<<<gpu->sim.blocks, gpu->sim.lincs_threads_per_block>>>(atomPositions);
+    LAUNCHERROR("kSolveLincsMatrix_kernel");
+    kApplyLincsPart2_kernel<<<gpu->sim.blocks, gpu->sim.lincs_threads_per_block>>>(atomPositions, addOldPosition);
     LAUNCHERROR("kApplyLincsPart2");
-    for (int i = 0; i < gpu->sim.lincsTerms; ++i)
-    {
-        kIterateLincsMatrix_kernel<<<gpu->sim.blocks, gpu->sim.lincs_threads_per_block>>>(i);
-        LAUNCHERROR("kIterateLincsMatrix_kernel");
-    }
-    kUpdateAtomPositions_kernel<<<gpu->sim.blocks, gpu->sim.lincs_threads_per_block>>>(atomPositions);
-    LAUNCHERROR("kUpdateAtomPositions");
-    kApplyLincsPart3_kernel<<<gpu->sim.blocks, gpu->sim.lincs_threads_per_block>>>(atomPositions, addOldPosition);
-    LAUNCHERROR("kApplyLincsPart3");
-    for (int i = 0; i < gpu->sim.lincsTerms; ++i)
-    {
-        kIterateLincsMatrix_kernel<<<gpu->sim.blocks, gpu->sim.lincs_threads_per_block>>>(i);
-        LAUNCHERROR("kIterateLincsMatrix_kernel");
-    }
-    kUpdateAtomPositions_kernel<<<gpu->sim.blocks, gpu->sim.lincs_threads_per_block>>>(atomPositions);
-    LAUNCHERROR("kUpdateAtomPositions");
+    kSolveLincsMatrix_kernel<<<gpu->sim.blocks, gpu->sim.lincs_threads_per_block>>>(atomPositions);
+    LAUNCHERROR("kSolveLincsMatrix_kernel");
 }
 
 void kApplyFirstLincs(gpuContext gpu)

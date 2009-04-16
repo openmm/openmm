@@ -140,7 +140,7 @@ struct _gpuContext {
     CUDAStream<float>* psLincsRhs1;         // Workspace for LINCS
     CUDAStream<float>* psLincsRhs2;         // Workspace for LINCS
     CUDAStream<float>* psLincsSolution;     // Workspace for LINCS
-    CUDAStream<unsigned int>* psSyncCounter;// Used for global thread synchronization
+    CUDAStream<short>* psSyncCounter;       // Used for global thread synchronization
 };
 
 typedef struct _gpuContext *gpuContext;
