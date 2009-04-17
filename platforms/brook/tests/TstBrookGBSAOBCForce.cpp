@@ -154,13 +154,15 @@ static OpenMMContext* testObcForceSetup( int numParticles, int brookContext, FIL
       platform = new ReferencePlatform();
    }
 
-   System* system                 = new System( numParticles, 0 );
+   System* system                 = new System();
+   for (int i = 0; i < numParticles; i++)
+       system.addParticle(1.0);
    LangevinIntegrator* integrator = new LangevinIntegrator(0, 0.1, 0.01);
-   GBSAOBCForce* forceField  = new GBSAOBCForce(numParticles);
+   GBSAOBCForce* forceField  = new GBSAOBCForce();
 
    for (int i = 0; i < numParticles; ++i){
        // charge radius scalingFactor
-       forceField->setParticleParameters(i, i%2 == 0 ? -1 : 1, 0.15, 1);
+       forceField->addParticle(i%2 == 0 ? -1 : 1, 0.15, 1);
        //forceField->setParticleParameters(i, i%2 == 0 ? -1 : 1, 1.5, 1);
    }
    system->addForce(forceField);
@@ -280,8 +282,10 @@ static OpenMMContext* testObcForceFileSetup( std::string fileName, int brookCont
    *numParticles           = numberOfParticles;
    lineCount++;
 
-   System* system                 = new System( *numParticles, 0 );
-   GBSAOBCForce* forceField       = new GBSAOBCForce(numberOfParticles);
+   System* system                 = new System();
+   for (int i = 0; i < numberOfParticles; i++)
+       system.addParticle(1.0);
+   GBSAOBCForce* forceField       = new GBSAOBCForce();
 
    vector<Vec3> positions(numberOfParticles);
    int index                      = 0;
@@ -309,7 +313,7 @@ static OpenMMContext* testObcForceFileSetup( std::string fileName, int brookCont
    
       positions[index++]        = Vec3( coordX, coordY, coordZ );
       // charge radius scalingFactor
-      forceField->setParticleParameters( i, charge, radius, scalingFactor );
+      forceField->addParticle( charge, radius, scalingFactor );
 
       if( log ){
          (void) fprintf( log, "%d [%.6f %.6f %.6f] q=%.6f rad=%.6f scl=%.6f bR=%.6f\n", i,
@@ -431,11 +435,11 @@ void testObcSingleParticle( FILE* log ){
    BrookPlatform platform( 32, "cal", log );
    //ReferencePlatform platform;
 
-   System system(1, 0);
-   system.setParticleMass(0, 2.0);
+   System system;
+   system.addParticle(2.0);
    LangevinIntegrator integrator(0, 0.1, 0.01);
-   GBSAOBCForce* forceField = new GBSAOBCForce(1);
-   forceField->setParticleParameters(0, 0.5, 0.15, 1);
+   GBSAOBCForce* forceField = new GBSAOBCForce();
+   forceField->addParticle(0.5, 0.15, 1);
    system.addForce(forceField);
    OpenMMContext context(system, integrator, platform);
    vector<Vec3> positions(1);
@@ -468,11 +472,13 @@ void testObcEConsistentForce( FILE* log ){
 
    //ReferencePlatform platform;
    const int numParticles = 10; 
-   System system(numParticles, 0); 
+   System system; 
    LangevinIntegrator integrator(0, 0.1, 0.01);
-   GBSAOBCForce* forceField = new GBSAOBCForce(numParticles);
-   for (int i = 0; i < numParticles; ++i)
-       forceField->setParticleParameters(i, i%2 == 0 ? -1 : 1, 0.15, 1); 
+   GBSAOBCForce* forceField = new GBSAOBCForce();
+   for (int i = 0; i < numParticles; ++i) {
+       system.addParticle(1.0);
+       forceField->addParticle(i%2 == 0 ? -1 : 1, 0.15, 1);
+   }
    system.addForce(forceField);
    OpenMMContext context(system, integrator, platform);
    

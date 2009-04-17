@@ -64,14 +64,14 @@ void testMotionRemoval() {
     const double temp = 100.0;
     const double collisionFreq = 10.0;
     ReferencePlatform platform;
-    System system(numParticles, 0);
+    System system;
     VerletIntegrator integrator(0.01);
-    HarmonicBondForce* bonds = new HarmonicBondForce(1);
-    bonds->setBondParameters(0, 2, 3, 2.0, 0.5);
+    HarmonicBondForce* bonds = new HarmonicBondForce();
+    bonds->addBond(2, 3, 2.0, 0.5);
     system.addForce(bonds);
     NonbondedForce* nonbonded = new NonbondedForce();
     for (int i = 0; i < numParticles; ++i) {
-        system.setParticleMass(i, i+1);
+        system.addParticle(i+1);
         nonbonded->addParticle((i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
     }
     system.addForce(nonbonded);

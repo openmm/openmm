@@ -52,12 +52,12 @@ const double TOL = 1e-5;
 
 void testSingleBond() {
     CudaPlatform platform;
-    System system(2, 0);
-    system.setParticleMass(0, 2.0);
-    system.setParticleMass(1, 2.0);
+    System system;
+    system.addParticle(2.0);
+    system.addParticle(2.0);
     LangevinIntegrator integrator(0, 0.1, 0.01);
-    HarmonicBondForce* forceField = new HarmonicBondForce(1);
-    forceField->setBondParameters(0, 0, 1, 1.5, 1);
+    HarmonicBondForce* forceField = new HarmonicBondForce();
+    forceField->addBond(0, 1, 1.5, 1);
     system.addForce(forceField);
     OpenMMContext context(system, integrator, platform);
     vector<Vec3> positions(2);
@@ -98,11 +98,11 @@ void testTemperature() {
     const int numParticles = 8;
     const double temp = 100.0;
     CudaPlatform platform;
-    System system(numParticles, 0);
+    System system;
     LangevinIntegrator integrator(temp, 2.0, 0.01);
     NonbondedForce* forceField = new NonbondedForce();
     for (int i = 0; i < numParticles; ++i) {
-        system.setParticleMass(i, 2.0);
+        system.addParticle(2.0);
         forceField->addParticle((i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
     }
     system.addForce(forceField);
@@ -134,19 +134,19 @@ void testConstraints() {
     const int numConstraints = 5;
     const double temp = 100.0;
     CudaPlatform platform;
-    System system(numParticles, numConstraints);
+    System system;
     LangevinIntegrator integrator(temp, 2.0, 0.01);
     integrator.setConstraintTolerance(1e-5);
     NonbondedForce* forceField = new NonbondedForce();
     for (int i = 0; i < numParticles; ++i) {
-        system.setParticleMass(i, 10.0);
+        system.addParticle(10.0);
         forceField->addParticle((i%2 == 0 ? 0.2 : -0.2), 0.5, 5.0);
     }
-    system.setConstraintParameters(0, 0, 1, 1.0);
-    system.setConstraintParameters(1, 1, 2, 1.0);
-    system.setConstraintParameters(2, 2, 3, 1.0);
-    system.setConstraintParameters(3, 4, 5, 1.0);
-    system.setConstraintParameters(4, 6, 7, 1.0);
+    system.addConstraint(0, 1, 1.0);
+    system.addConstraint(1, 2, 1.0);
+    system.addConstraint(2, 3, 1.0);
+    system.addConstraint(4, 5, 1.0);
+    system.addConstraint(6, 7, 1.0);
     system.addForce(forceField);
     OpenMMContext context(system, integrator, platform);
     vector<Vec3> positions(numParticles);
@@ -181,11 +181,11 @@ void testRandomSeed() {
     const double temp = 100.0;
     const double collisionFreq = 10.0;
     CudaPlatform platform;
-    System system(numParticles, 0);
+    System system;
     LangevinIntegrator integrator(temp, 2.0, 0.01);
     NonbondedForce* forceField = new NonbondedForce();
     for (int i = 0; i < numParticles; ++i) {
-        system.setParticleMass(i, 2.0);
+        system.addParticle(2.0);
         forceField->addParticle((i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
     }
     system.addForce(forceField);

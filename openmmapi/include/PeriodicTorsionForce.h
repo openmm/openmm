@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -42,24 +42,34 @@ namespace OpenMM {
 
 /**
  * This class implements an interaction between groups of four particles that varies periodically with the torsion angle
- * between them.  When creating a PeriodicTorsionForce, you specify the number of torsions as an argument to the
- * constructor, then loop over them and call setTorsionParameters() to set the force field parameters for each one.
+ * between them.  To use it, create a PeriodicTorsionForce object then call addTorsion() once for each torsion.  After
+ * a torsion has been added, you can modify its force field parameters by calling setTorsionParameters().
  */
 
 class OPENMM_EXPORT PeriodicTorsionForce : public Force {
 public:
     /**
      * Create a PeriodicTorsionForce.
-     * 
-     * @param numTorsions the number of periodic torsion terms in the potential function
      */
-    PeriodicTorsionForce(int numTorsions);
+    PeriodicTorsionForce();
     /**
      * Get the number of periodic torsion terms in the potential function
      */
     int getNumTorsions() const {
         return periodicTorsions.size();
     }
+    /**
+     * Add a periodic torsion term to the force field.
+     *
+     * @param particle1    the index of the first particle forming the torsion
+     * @param particle2    the index of the second particle forming the torsion
+     * @param particle3    the index of the third particle forming the torsion
+     * @param particle3    the index of the fourth particle forming the torsion
+     * @param periodicity  the periodicity of the torsion
+     * @param phase        the phase offset of the torsion, measured in radians
+     * @param k            the force constant for the torsion
+     */
+    void addTorsion(int particle1, int particle2, int particle3, int particle4, int periodicity, double phase, double k);
     /**
      * Get the force field parameters for a periodic torsion term.
      * 
@@ -113,6 +123,9 @@ public:
         particle1 = particle2 = particle3 = particle4 = -1;
         periodicity = 1;
         phase = k = 0.0;
+    }
+    PeriodicTorsionInfo(int particle1, int particle2, int particle3, int particle4, int periodicity, double phase, double k) :
+        particle1(particle1), particle2(particle2), particle3(particle3), particle4(particle4), periodicity(periodicity), phase(phase), k(k) {
     }
 };
 

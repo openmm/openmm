@@ -50,10 +50,14 @@ const double TOL = 1e-5;
 
 void testRBTorsions() {
     ReferencePlatform platform;
-    System system(4, 0);
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.addParticle(1.0);
     VerletIntegrator integrator(0.01);
-    RBTorsionForce* forceField = new RBTorsionForce(1);
-    forceField->setTorsionParameters(0, 0, 1, 2, 3, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6);
+    RBTorsionForce* forceField = new RBTorsionForce();
+    forceField->addTorsion(0, 1, 2, 3, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6);
     system.addForce(forceField);
     OpenMMContext context(system, integrator, platform);
     vector<Vec3> positions(4);

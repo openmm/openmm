@@ -50,11 +50,15 @@ const double TOL = 1e-5;
 
 void testAngles() {
     CudaPlatform platform;
-    System system(4, 0);
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.addParticle(1.0);
     LangevinIntegrator integrator(0.0, 0.1, 0.01);
-    HarmonicAngleForce* forceField = new HarmonicAngleForce(2);
-    forceField->setAngleParameters(0, 0, 1, 2, PI_M/3, 1.1);
-    forceField->setAngleParameters(1, 1, 2, 3, PI_M/2, 1.2);
+    HarmonicAngleForce* forceField = new HarmonicAngleForce();
+    forceField->addAngle(0, 1, 2, PI_M/3, 1.1);
+    forceField->addAngle(1, 2, 3, PI_M/2, 1.2);
     system.addForce(forceField);
     OpenMMContext context(system, integrator, platform);
     vector<Vec3> positions(4);

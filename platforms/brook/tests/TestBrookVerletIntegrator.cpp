@@ -73,14 +73,14 @@ void testVerletSingleBond( FILE* log ){
 
    BrookPlatform platform( 32, "cal", log );
 
-   System system( numberOfParticles, 0 ); 
-   system.setParticleMass(0, 2.0);
-   system.setParticleMass(1, 2.0);
+   System system; 
+   system.addParticle(2.0);
+   system.addParticle(2.0);
 
    VerletIntegrator integrator(0.001);
 
-   HarmonicBondForce* forceField = new HarmonicBondForce(1);
-   forceField->setBondParameters(0, 0, 1, 1.5, 1); 
+   HarmonicBondForce* forceField = new HarmonicBondForce();
+   forceField->addBond(0, 1, 1.5, 1);
    system.addForce(forceField);
 
 //   CMMotionRemover* remover = new CMMotionRemover();
@@ -180,16 +180,16 @@ void testVerletConstraints( FILE* log ){
 
    //ReferencePlatform platform;
    BrookPlatform platform( 32, "cal", log );
-   System system(numParticles, numConstraints);
+   System system;
    VerletIntegrator integrator(0.001);
    integrator.setConstraintTolerance(1e-5);
    NonbondedForce* forceField = new NonbondedForce();
    for (int i = 0; i < numParticles; ++i) {
-       system.setParticleMass(i, mass );
+       system.addParticle(mass);
        forceField->addParticle((i%2 == 0 ? 0.2 : -0.2), 0.5, 5.0);
    }
    for (int i = 0; i < numConstraints; ++i){
-       system.setConstraintParameters(i, 2*i, 2*i+1, 1.0);
+       system.addConstraint(2*i, 2*i+1, 1.0);
    }
    system.addForce(forceField);
 

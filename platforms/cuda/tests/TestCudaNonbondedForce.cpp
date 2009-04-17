@@ -56,7 +56,9 @@ const double TOL = 1e-5;
 
 void testCoulomb() {
     CudaPlatform platform;
-    System system(2, 0);
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
     LangevinIntegrator integrator(0.0, 0.1, 0.01);
     NonbondedForce* forceField = new NonbondedForce();
     forceField->addParticle(0.5, 1, 0);
@@ -77,7 +79,9 @@ void testCoulomb() {
 
 void testLJ() {
     CudaPlatform platform;
-    System system(2, 0);
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
     LangevinIntegrator integrator(0.0, 0.1, 0.01);
     NonbondedForce* forceField = new NonbondedForce();
     forceField->addParticle(0, 1.2, 1);
@@ -100,11 +104,13 @@ void testLJ() {
 
 void testExclusionsAnd14() {
     CudaPlatform platform;
-    System system(5, 0);
+    System system;
     LangevinIntegrator integrator(0.0, 0.1, 0.01);
     NonbondedForce* nonbonded = new NonbondedForce();
-    for (int i = 0; i < 5; ++i)
+    for (int i = 0; i < 5; ++i) {
+        system.addParticle(1.0);
         nonbonded->addParticle(0, 1.5, 0);
+    }
     vector<pair<int, int> > bonds;
     bonds.push_back(pair<int, int>(0, 1));
     bonds.push_back(pair<int, int>(1, 2));
@@ -185,7 +191,10 @@ void testExclusionsAnd14() {
 
 void testCutoff() {
     CudaPlatform platform;
-    System system(3, 0);
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.addParticle(1.0);
     LangevinIntegrator integrator(0.0, 0.1, 0.01);
     NonbondedForce* forceField = new NonbondedForce();
     forceField->addParticle(1.0, 1, 0);
@@ -218,12 +227,14 @@ void testCutoff() {
 
 void testCutoff14() {
     CudaPlatform platform;
-    System system(5, 0);
+    System system;
     LangevinIntegrator integrator(0.0, 0.1, 0.01);
     NonbondedForce* nonbonded = new NonbondedForce();
     nonbonded->setNonbondedMethod(NonbondedForce::CutoffNonPeriodic);
-    for (int i = 0; i < 5; ++i)
+    for (int i = 0; i < 5; ++i) {
+        system.addParticle(1.0);
         nonbonded->addParticle(0, 1.5, 0);
+    }
     const double cutoff = 3.5;
     nonbonded->setCutoffDistance(cutoff);
     vector<pair<int, int> > bonds;
@@ -313,7 +324,10 @@ void testCutoff14() {
 
 void testPeriodic() {
     CudaPlatform platform;
-    System system(3, 0);
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.addParticle(1.0);
     LangevinIntegrator integrator(0.0, 0.1, 0.01);
     NonbondedForce* nonbonded = new NonbondedForce();
     nonbonded->addParticle(1.0, 1, 0);
@@ -351,10 +365,12 @@ void testLargeSystem() {
     const double tol = 1e-3;
     CudaPlatform cuda;
     ReferencePlatform reference;
-    System system(numParticles, 0);
+    System system;
+    for (int i = 0; i < numParticles; i++)
+        system.addParticle(1.0);
     VerletIntegrator integrator(0.01);
     NonbondedForce* nonbonded = new NonbondedForce();
-    HarmonicBondForce* bonds = new HarmonicBondForce(numMolecules);
+    HarmonicBondForce* bonds = new HarmonicBondForce();
     vector<Vec3> positions(numParticles);
     vector<Vec3> velocities(numParticles);
     init_gen_rand(0);
@@ -371,7 +387,7 @@ void testLargeSystem() {
         positions[2*i+1] = Vec3(positions[2*i][0]+1.0, positions[2*i][1], positions[2*i][2]);
         velocities[2*i] = Vec3(genrand_real2(), genrand_real2(), genrand_real2());
         velocities[2*i+1] = Vec3(genrand_real2(), genrand_real2(), genrand_real2());
-        bonds->setBondParameters(i, 2*i, 2*i+1, 1.0, 0.1);
+        bonds->addBond(2*i, 2*i+1, 1.0, 0.1);
     }
 
     // Try with cutoffs but not periodic boundary conditions, and make sure the Cuda and Reference
@@ -423,12 +439,13 @@ void testBlockInteractions(bool periodic) {
     const double cutoff = 1.0;
     const double boxSize = (periodic ? 5.1 : 1.1);
     CudaPlatform cuda;
-    System system(numParticles, 0);
+    System system;
     VerletIntegrator integrator(0.01);
     NonbondedForce* nonbonded = new NonbondedForce();
     vector<Vec3> positions(numParticles);
     init_gen_rand(0);
     for (int i = 0; i < numParticles; i++) {
+        system.addParticle(1.0);
         nonbonded->addParticle(1.0, 0.2, 0.2);
         positions[i] = Vec3(boxSize*(3*genrand_real2()-1), boxSize*(3*genrand_real2()-1), boxSize*(3*genrand_real2()-1));
     }

@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -42,25 +42,37 @@ namespace OpenMM {
 
 /**
  * This class implements an interaction between groups of four particles that varies with the torsion angle between them
- * according to the Ryckaert-Bellemans potential.  When creating an RBTorsionForce, you specify the number of torsions
- * as an argument to the constructor, then loop over them and call setTorsionParameters() to set the force field
- * parameters for each one.
+ * according to the Ryckaert-Bellemans potential.  To use it, create an RBTorsionForce object then call addTorsion() once
+ * for each torsion.  After a torsion has been added, you can modify its force field parameters by calling setTorsionParameters().
  */
 
 class OPENMM_EXPORT RBTorsionForce : public Force {
 public:
     /**
      * Create a RBTorsionForce.
-     * 
-     * @param numTorsions the number of torsion terms in the potential function
      */
-    RBTorsionForce(int numTorsions);
+    RBTorsionForce();
     /**
      * Get the number of Ryckaert-Bellemans torsion terms in the potential function
      */
     int getNumTorsions() const {
         return rbTorsions.size();
     }
+    /**
+     * Add a Ryckaert-Bellemans torsion term to the force field.
+     *
+     * @param particle1    the index of the first particle forming the torsion
+     * @param particle2    the index of the second particle forming the torsion
+     * @param particle3    the index of the third particle forming the torsion
+     * @param particle3    the index of the fourth particle forming the torsion
+     * @param c0           the coefficient of the constant term
+     * @param c1           the coefficient of the 1st order term
+     * @param c2           the coefficient of the 2nd order term
+     * @param c3           the coefficient of the 3rd order term
+     * @param c4           the coefficient of the 4th order term
+     * @param c5           the coefficient of the 5th order term
+     */
+    void addTorsion(int particle1, int particle2, int particle3, int particle4, double c0, double c1, double c2, double c3, double c4, double c5);
     /**
      * Get the force field parameters for a Ryckaert-Bellemans torsion term.
      * 
@@ -119,6 +131,15 @@ public:
     RBTorsionInfo() {
         particle1 = particle2 = particle3 = particle4 = -1;
         c[0] = c[1] = c[2] = c[3] = c[4] = c[5] = 0.0;
+    }
+    RBTorsionInfo(int particle1, int particle2, int particle3, int particle4, double c0, double c1, double c2, double c3, double c4, double c5) :
+            particle1(particle1), particle2(particle2), particle3(particle3), particle4(particle4) {
+        c[0] = c0;
+        c[1] = c1;
+        c[2] = c2;
+        c[3] = c3;
+        c[4] = c4;
+        c[5] = c5;
     }
 };
 

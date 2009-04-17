@@ -82,15 +82,15 @@ void testMotionRemoval( FILE* log ) {
    //ReferencePlatform platform;
    BrookPlatform platform( 32, "cal", log );
 
-   System system( numberOfParticles, 0 );
+   System system;
    VerletIntegrator integrator(0.001);
-   HarmonicBondForce* bonds = new HarmonicBondForce(1);
-   bonds->setBondParameters(0, 2, 3, 2.0, 0.5);
+   HarmonicBondForce* bonds = new HarmonicBondForce();
+   bonds->addBond(2, 3, 2.0, 0.5);
    system.addForce(bonds);
 
    NonbondedForce* nonbonded = new NonbondedForce();
    for (int i = 0; i < numberOfParticles; ++i) {
-       system.setParticleMass(i, (double) (i+1) );
+       system.addParticle((double) (i+1) );
        nonbonded->addParticle((i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
    }
    system.addForce(nonbonded);

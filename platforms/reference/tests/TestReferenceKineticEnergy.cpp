@@ -48,9 +48,9 @@ const double TOL = 1e-5;
 
 void testCalcKE() {
     ReferencePlatform platform;
-    System system(4, 0);
+    System system;
     for (int i = 0; i < 4; ++i)
-        system.setParticleMass(i, i+1);
+        system.addParticle(i+1);
     VerletIntegrator integrator(0.01);
     OpenMMContext context(system, integrator, platform);
     vector<Vec3> velocities(4);

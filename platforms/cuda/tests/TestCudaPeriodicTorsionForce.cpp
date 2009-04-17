@@ -50,10 +50,14 @@ const double TOL = 1e-5;
 
 void testPeriodicTorsions() {
     CudaPlatform platform;
-    System system(4, 0);
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.addParticle(1.0);
     LangevinIntegrator integrator(0.0, 0.1, 0.01);
-    PeriodicTorsionForce* forceField = new PeriodicTorsionForce(1);
-    forceField->setTorsionParameters(0, 0, 1, 2, 3, 2, PI_M/3, 1.1);
+    PeriodicTorsionForce* forceField = new PeriodicTorsionForce();
+    forceField->addTorsion(0, 1, 2, 3, 2, PI_M/3, 1.1);
     system.addForce(forceField);
     OpenMMContext context(system, integrator, platform);
     vector<Vec3> positions(4);

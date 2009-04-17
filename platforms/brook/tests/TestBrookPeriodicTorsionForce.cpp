@@ -68,15 +68,19 @@ void testBrookPeriodicTorsions( FILE* log ){
    }   
 
    BrookPlatform platform( 32, "cal", log );
-   System system( numberOfParticles, 0 ); 
+   System system;
+   system.addParticle(1.0);
+   system.addParticle(1.0);
+   system.addParticle(1.0);
+   system.addParticle(1.0);
    LangevinIntegrator integrator( 0, 0.1, 0.01 );
 
    // int numParticles, int numBonds, int numAngles, int numPeriodicTorsions, int numRBTorsions
 
-   PeriodicTorsionForce* forceField = new PeriodicTorsionForce( 1 ); 
+   PeriodicTorsionForce* forceField = new PeriodicTorsionForce(); 
 
    // int index, int atom1, int atom2, int atom3, double angle, double k
-   forceField->setTorsionParameters(0, 0, 1, 2, 3, 2, PI_M/3, 1.1);
+   forceField->addTorsion(0, 1, 2, 3, 2, PI_M/3, 1.1);
    system.addForce(forceField);
 
    OpenMMContext context(system, integrator, platform);

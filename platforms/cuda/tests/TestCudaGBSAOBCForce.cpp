@@ -53,12 +53,12 @@ const double TOL = 1e-5;
 
 void testSingleParticle() {
     CudaPlatform platform;
-    System system(1, 0);
-    system.setParticleMass(0, 2.0);
+    System system;
+    system.addParticle(2.0);
     LangevinIntegrator integrator(0, 0.1, 0.01);
-    GBSAOBCForce* gbsa = new GBSAOBCForce(1);
+    GBSAOBCForce* gbsa = new GBSAOBCForce();
     NonbondedForce* nonbonded = new NonbondedForce();
-    gbsa->setParticleParameters(0, 0.5, 0.15, 1);
+    gbsa->addParticle( 0.5, 0.15, 1);
     nonbonded->addParticle(0.5, 1, 0);
     system.addForce(gbsa);
     system.addForce(nonbonded);
@@ -77,13 +77,15 @@ void testSingleParticle() {
 
 void testCutoffAndPeriodic() {
     CudaPlatform cuda;
-    System system(2, 0);
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
     LangevinIntegrator integrator(0, 0.1, 0.01);
-    GBSAOBCForce* gbsa = new GBSAOBCForce(2);
+    GBSAOBCForce* gbsa = new GBSAOBCForce();
     NonbondedForce* nonbonded = new NonbondedForce();
-    gbsa->setParticleParameters(0, -1, 0.15, 1);
+    gbsa->addParticle(-1, 0.15, 1);
     nonbonded->addParticle(-1, 1, 0);
-    gbsa->setParticleParameters(1, 1, 0.15, 1);
+    gbsa->addParticle(1, 0.15, 1);
     nonbonded->addParticle(1, 1, 0);
     const double cutoffDistance = 3.0;
     const double boxSize = 10.0;
@@ -128,13 +130,14 @@ void testCutoffAndPeriodic() {
 void testForce(int numParticles, NonbondedForce::NonbondedMethod method) {
     CudaPlatform cuda;
     ReferencePlatform reference;
-    System system(numParticles, 0);
+    System system;
     LangevinIntegrator integrator(0, 0.1, 0.01);
-    GBSAOBCForce* gbsa = new GBSAOBCForce(numParticles);
+    GBSAOBCForce* gbsa = new GBSAOBCForce();
     NonbondedForce* nonbonded = new NonbondedForce();
     for (int i = 0; i < numParticles; ++i) {
+        system.addParticle(1.0);
         double charge = i%2 == 0 ? -1 : 1;
-        gbsa->setParticleParameters(i, charge, 0.15, 1);
+        gbsa->addParticle(charge, 0.15, 1);
         nonbonded->addParticle(charge, 1, 0);
     }
     nonbonded->setNonbondedMethod(method);

@@ -56,7 +56,9 @@ const double TOL = 1e-5;
 
 void testEwald() {
     CudaPlatform platform;
-    System system(2, 0);
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
     VerletIntegrator integrator(0.01);
     NonbondedForce* nonbonded = new NonbondedForce();
     nonbonded->addParticle(1.0, 1, 0);
@@ -85,10 +87,13 @@ void testEwald() {
 
 void testPeriodic() {
     CudaPlatform platform;
-    System system(3, 0);
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.addParticle(1.0);
     LangevinIntegrator integrator(0.0, 0.1, 0.01);
-    HarmonicBondForce* bonds = new HarmonicBondForce(1);
-    bonds->setBondParameters(0, 0, 1, 1, 0);
+    HarmonicBondForce* bonds = new HarmonicBondForce();
+    bonds->addBond(0, 1, 1, 0);
     system.addForce(bonds);
     NonbondedForce* nonbonded = new NonbondedForce();
     nonbonded->addParticle(1.0, 1, 0);

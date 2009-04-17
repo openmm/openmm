@@ -68,7 +68,9 @@ void testBrookCoulomb( FILE* log ){
    }   
 
    BrookPlatform platform( 32, "cal", log );
-   System system( numberOfParticles, 0 ); 
+   System system;
+   system.addParticle(1.0);
+   system.addParticle(1.0);
    LangevinIntegrator integrator( 0, 0.1, 0.01 );
 
    // int index, double charge, double radius, double depth
@@ -136,7 +138,9 @@ void testBrookLJ( FILE* log ){
 
    BrookPlatform platform( 32, "cal", log );
    // ReferencePlatform platform;
-   System system( numberOfParticles, 0 ); 
+   System system;
+   system.addParticle(1.0);
+   system.addParticle(1.0);
    LangevinIntegrator integrator( 0, 0.1, 0.01 );
 
    // int index, double charge, double radius, double depth
@@ -203,14 +207,16 @@ void testBrookExclusionsAnd14( FILE* log ){
 
    BrookPlatform platform( 32, "cpu", log );
    //ReferencePlatform platform;
-   System system( numberOfParticles, 0 ); 
+   System system;
    LangevinIntegrator integrator( 0, 0.1, 0.01 );
 
    // int index, double charge, double radius, double depth
 
    NonbondedForce* nonbonded = new NonbondedForce();
-   for (int i = 0; i < numberOfParticles; i++)
+   for (int i = 0; i < numberOfParticles; i++) {
+       system.addParticle(1.0);
        nonbonded->addParticle(0, 1.5, 0)
+   }
    vector<pair<int, int> > bonds;
    bonds.push_back(pair<int, int>(0, 1));
    bonds.push_back(pair<int, int>(1, 2));

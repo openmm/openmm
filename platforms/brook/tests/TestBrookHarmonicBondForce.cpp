@@ -64,16 +64,18 @@ void testBrookBonds( FILE* log ){
    }
 
    BrookPlatform platform( 32, "cal", log );
-   System system( numberOfParticles, 0 ); 
+   System system;
+   for (int i = 0; i < numberOfParticles; i++)
+       system.addParticle(1.0);
    LangevinIntegrator integrator(0, 0.1, 0.01);
 
    // int numParticles, int numBonds, int numAngles, int numPeriodicTorsions, int numRBTorsions
 
-   HarmonicBondForce* forceField = new HarmonicBondForce( 2 ); 
+   HarmonicBondForce* forceField = new HarmonicBondForce(); 
 
    // ( index, atom1, atom2, length, k )
-   forceField->setBondParameters(0, 0, 1, 1.5, 0.8);
-   forceField->setBondParameters(1, 1, 2, 1.2, 0.7);
+   forceField->addBond(0, 1, 1.5, 0.8);
+   forceField->addBond(1, 2, 1.2, 0.7);
    system.addForce(forceField);
 
    OpenMMContext context(system, integrator, platform);

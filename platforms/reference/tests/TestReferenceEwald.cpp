@@ -51,7 +51,9 @@ const double TOL = 1e-5;
 
 void testEwald() {
     ReferencePlatform platform;
-    System system(2, 0);
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
     VerletIntegrator integrator(0.01);
     NonbondedForce* nonbonded = new NonbondedForce();
     nonbonded->addParticle(1.0, 1, 0);

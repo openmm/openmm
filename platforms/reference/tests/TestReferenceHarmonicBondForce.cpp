@@ -50,11 +50,14 @@ const double TOL = 1e-5;
 
 void testBonds() {
     ReferencePlatform platform;
-    System system(3, 0);
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.addParticle(1.0);
     VerletIntegrator integrator(0.01);
-    HarmonicBondForce* forceField = new HarmonicBondForce(2);
-    forceField->setBondParameters(0, 0, 1, 1.5, 0.8);
-    forceField->setBondParameters(1, 1, 2, 1.2, 0.7);
+    HarmonicBondForce* forceField = new HarmonicBondForce();
+    forceField->addBond(0, 1, 1.5, 0.8);
+    forceField->addBond(1, 2, 1.2, 0.7);
     system.addForce(forceField);
     OpenMMContext context(system, integrator, platform);
     vector<Vec3> positions(3);

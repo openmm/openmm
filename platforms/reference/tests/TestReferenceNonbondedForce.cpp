@@ -51,7 +51,9 @@ const double TOL = 1e-5;
 
 void testCoulomb() {
     ReferencePlatform platform;
-    System system(2, 0);
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
     VerletIntegrator integrator(0.01);
     NonbondedForce* forceField = new NonbondedForce();
     forceField->addParticle(0.5, 1, 0);
@@ -72,7 +74,9 @@ void testCoulomb() {
 
 void testLJ() {
     ReferencePlatform platform;
-    System system(2, 0);
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
     VerletIntegrator integrator(0.01);
     NonbondedForce* forceField = new NonbondedForce();
     forceField->addParticle(0, 1.2, 1);
@@ -95,11 +99,13 @@ void testLJ() {
 
 void testExclusionsAnd14() {
     ReferencePlatform platform;
-    System system(5, 0);
+    System system;
     VerletIntegrator integrator(0.01);
     NonbondedForce* nonbonded = new NonbondedForce();
-    for (int i = 0; i < 5; i++)
+    for (int i = 0; i < 5; i++) {
+        system.addParticle(1.0);
         nonbonded->addParticle(0, 1.5, 0);
+    }
     vector<pair<int, int> > bonds;
     bonds.push_back(pair<int, int>(0, 1));
     bonds.push_back(pair<int, int>(1, 2));
@@ -181,7 +187,10 @@ void testExclusionsAnd14() {
 
 void testCutoff() {
     ReferencePlatform platform;
-    System system(3, 0);
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.addParticle(1.0);
     VerletIntegrator integrator(0.01);
     NonbondedForce* forceField = new NonbondedForce();
     forceField->addParticle(1.0, 1, 0);
@@ -214,11 +223,13 @@ void testCutoff() {
 
 void testCutoff14() {
     ReferencePlatform platform;
-    System system(5, 0);
+    System system;
     VerletIntegrator integrator(0.01);
     NonbondedForce* nonbonded = new NonbondedForce();
-    for (int i = 0; i < 5; i++)
+    for (int i = 0; i < 5; i++) {
+        system.addParticle(1.0);
         nonbonded->addParticle(0, 1.5, 0);
+    }
     nonbonded->setNonbondedMethod(NonbondedForce::CutoffNonPeriodic);
     const double cutoff = 3.5;
     nonbonded->setCutoffDistance(cutoff);
@@ -309,7 +320,10 @@ void testCutoff14() {
 
 void testPeriodic() {
     ReferencePlatform platform;
-    System system(3, 0);
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.addParticle(1.0);
     VerletIntegrator integrator(0.01);
     NonbondedForce* nonbonded = new NonbondedForce();
     nonbonded->addParticle(1.0, 1, 0);

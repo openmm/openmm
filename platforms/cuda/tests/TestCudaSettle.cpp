@@ -53,20 +53,20 @@ void testConstraints() {
     const int numConstraints = numMolecules*3;
     const double temp = 100.0;
     CudaPlatform platform;
-    System system(numParticles, numConstraints);
+    System system;
     LangevinIntegrator integrator(temp, 2.0, 0.001);
     integrator.setConstraintTolerance(1e-5);
     NonbondedForce* forceField = new NonbondedForce();
     for (int i = 0; i < numMolecules; ++i) {
-        system.setParticleMass(i*3, 16.0);
-        system.setParticleMass(i*3+1, 1.0);
-        system.setParticleMass(i*3+2, 1.0);
+        system.addParticle(16.0);
+        system.addParticle(1.0);
+        system.addParticle(1.0);
         forceField->addParticle(-0.82, 0.317, 0.65);
         forceField->addParticle(0.41, 1.0, 0.0);
         forceField->addParticle(0.41, 1.0, 0.0);
-        system.setConstraintParameters(i*3, i*3, i*3+1, 0.1);
-        system.setConstraintParameters(i*3+1, i*3, i*3+2, 0.1);
-        system.setConstraintParameters(i*3+2, i*3+1, i*3+2, 0.163);
+        system.addConstraint(i*3, i*3+1, 0.1);
+        system.addConstraint(i*3, i*3+2, 0.1);
+        system.addConstraint(i*3+1, i*3+2, 0.163);
     }
     system.addForce(forceField);
     OpenMMContext context(system, integrator, platform);

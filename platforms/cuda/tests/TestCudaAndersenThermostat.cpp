@@ -53,11 +53,11 @@ void testTemperature() {
     const double temp = 100.0;
     const double collisionFreq = 10.0;
     CudaPlatform platform;
-    System system(numParticles, 0);
+    System system;
     VerletIntegrator integrator(0.01);
     NonbondedForce* forceField = new NonbondedForce();
     for (int i = 0; i < numParticles; ++i) {
-        system.setParticleMass(i, 2.0);
+        system.addParticle(2.0);
         forceField->addParticle((i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
     }
     system.addForce(forceField);
@@ -91,11 +91,11 @@ void testRandomSeed() {
     const double temp = 100.0;
     const double collisionFreq = 10.0;
     CudaPlatform platform;
-    System system(numParticles, 0);
+    System system;
     VerletIntegrator integrator(0.01);
     NonbondedForce* forceField = new NonbondedForce();
     for (int i = 0; i < numParticles; ++i) {
-        system.setParticleMass(i, 2.0);
+        system.addParticle(2.0);
         forceField->addParticle((i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
     }
     system.addForce(forceField);

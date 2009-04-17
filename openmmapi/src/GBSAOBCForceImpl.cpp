@@ -29,6 +29,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include "OpenMMException.h"
 #include "internal/GBSAOBCForceImpl.h"
 #include "internal/OpenMMContextImpl.h"
 #include "kernels.h"
@@ -42,6 +43,8 @@ GBSAOBCForceImpl::GBSAOBCForceImpl(GBSAOBCForce& owner) : owner(owner) {
 
 void GBSAOBCForceImpl::initialize(OpenMMContextImpl& context) {
     kernel = context.getPlatform().createKernel(CalcGBSAOBCForceKernel::Name(), context);
+    if (owner.getNumParticles() != context.getSystem().getNumParticles())
+        throw OpenMMException("GBSAOBCForce must have exactly as many particles as the System it belongs to.");
     dynamic_cast<CalcGBSAOBCForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
 

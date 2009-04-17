@@ -79,17 +79,17 @@ static OpenMMContext* testLangevinSingleBondSetup( int brookContext, LangevinInt
       platform = new ReferencePlatform();
    }
 
-   System* system = new System( numberOfParticles, 0);
-   system->setParticleMass(0, mass );
-   system->setParticleMass(1, mass );
+   System* system = new System;
+   system->addParticle(mass);
+   system->addParticle(mass);
 
    // double temperature, double frictionCoeff, double stepSize
    LangevinIntegrator* integrator = new LangevinIntegrator(0, 0.1, 0.001);
    integrator->setConstraintTolerance(1e-5);
    *outIntegrator                 = integrator;
 
-   HarmonicBondForce* forceField  = new HarmonicBondForce(1);
-   forceField->setBondParameters(0, 0, 1, 1.5, 1);
+   HarmonicBondForce* forceField  = new HarmonicBondForce();
+   forceField->addBond(0, 1, 1.5, 1);
    system->addForce(forceField);
 
    OpenMMContext* context         = new OpenMMContext( *system, *integrator, *platform );
@@ -215,11 +215,11 @@ void testLangevinTemperature( FILE* log ){
    BrookPlatform platform( 32, "cal", log );
    //ReferencePlatform platform;
 
-   System system(numberOfParticles, 0);
+   System system;
    LangevinIntegrator integrator(temp, 0.2, 0.002);
    NonbondedForce* forceField = new NonbondedForce();
    for (int i = 0; i < numberOfParticles; ++i){
-      system.setParticleMass(i, mass );
+      system.addParticle(mass);
       forceField->addParticle((i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
    }
    system.addForce(forceField);
@@ -312,16 +312,16 @@ void testLangevinConstraints( FILE* log ){
    const int numConstraints = 4;
    const double temp        = 100.0;
    // ReferencePlatform platform;
-   System system( numParticles, numConstraints );
+   System system;
    LangevinIntegrator integrator( temp, 2.0, 0.001 );
    integrator.setConstraintTolerance(1e-5);
    NonbondedForce* forceField = new NonbondedForce();
    for (int i = 0; i < numParticles; ++i) {
-       system.setParticleMass(i, mass);
+       system.addParticle(mass);
        forceField->addParticle((i%2 == 0 ? 0.2 : -0.2), 0.5, 5.0);
    }
    for (int i = 0; i < numConstraints; ++i){
-       system.setConstraintParameters(i, 2*i, 2*i+1, 1.0);
+       system.addConstraint(2*i, 2*i+1, 1.0);
    }
    system.addForce(forceField);
 

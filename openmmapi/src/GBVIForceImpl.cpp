@@ -44,6 +44,8 @@ GBVIForceImpl::GBVIForceImpl(GBVIForce& owner) : owner(owner) {
 
 void GBVIForceImpl::initialize(OpenMMContextImpl& context) {
     kernel = context.getPlatform().createKernel(CalcGBVIForceKernel::Name(), context);
+    if (owner.getNumParticles() != context.getSystem().getNumParticles())
+        throw OpenMMException("GBVIForce must have exactly as many particles as the System it belongs to.");
 
     // load 1-2 atom pairs along w/ bond distance using HarmonicBondForce & constraints
     

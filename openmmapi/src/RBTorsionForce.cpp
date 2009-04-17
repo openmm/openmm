@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -36,7 +36,11 @@
 
 using namespace OpenMM;
 
-RBTorsionForce::RBTorsionForce(int numTorsions) : rbTorsions(numTorsions) {
+RBTorsionForce::RBTorsionForce() {
+}
+
+void RBTorsionForce::addTorsion(int particle1, int particle2, int particle3, int particle4, double c0, double c1, double c2, double c3, double c4, double c5) {
+    rbTorsions.push_back(RBTorsionInfo(particle1, particle2, particle3, particle4, c0, c1, c2, c3, c4, c5));
 }
 
 void RBTorsionForce::getTorsionParameters(int index, int& particle1, int& particle2, int& particle3, int& particle4, double& c0, double& c1, double& c2, double& c3, double& c4, double& c5) const {

@@ -52,11 +52,11 @@ const double TOL = 1e-5;
 
 void testSingleParticle() {
     ReferencePlatform platform;
-    System system(1, 0);
-    system.setParticleMass(0, 2.0);
+    System system;
+    system.addParticle(2.0);
     LangevinIntegrator integrator(0, 0.1, 0.01);
-    GBSAOBCForce* forceField = new GBSAOBCForce(1);
-    forceField->setParticleParameters(0, 0.5, 0.15, 1);
+    GBSAOBCForce* forceField = new GBSAOBCForce();
+    forceField->addParticle(0.5, 0.15, 1);
     system.addForce(forceField);
     OpenMMContext context(system, integrator, platform);
     vector<Vec3> positions(1);
@@ -73,13 +73,15 @@ void testSingleParticle() {
 
 void testCutoffAndPeriodic() {
     ReferencePlatform platform;
-    System system(2, 0);
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
     LangevinIntegrator integrator(0, 0.1, 0.01);
-    GBSAOBCForce* gbsa = new GBSAOBCForce(2);
+    GBSAOBCForce* gbsa = new GBSAOBCForce();
     NonbondedForce* nonbonded = new NonbondedForce();
-    gbsa->setParticleParameters(0, -1, 0.15, 1);
+    gbsa->addParticle(-1, 0.15, 1);
     nonbonded->addParticle(-1, 1, 0);
-    gbsa->setParticleParameters(1, 1, 0.15, 1);
+    gbsa->addParticle(1, 0.15, 1);
     nonbonded->addParticle(1, 1, 0);
     const double cutoffDistance = 3.0;
     const double boxSize = 10.0;
@@ -124,11 +126,13 @@ void testCutoffAndPeriodic() {
 void testForce() {
     ReferencePlatform platform;
     const int numParticles = 10;
-    System system(numParticles, 0);
+    System system;
     LangevinIntegrator integrator(0, 0.1, 0.01);
-    GBSAOBCForce* forceField = new GBSAOBCForce(numParticles);
-    for (int i = 0; i < numParticles; ++i)
-        forceField->setParticleParameters(i, i%2 == 0 ? -1 : 1, 0.15, 1);
+    GBSAOBCForce* forceField = new GBSAOBCForce();
+    for (int i = 0; i < numParticles; ++i) {
+        system.addParticle(1.0);
+        forceField->addParticle(i%2 == 0 ? -1 : 1, 0.15, 1);
+    }
     system.addForce(forceField);
     OpenMMContext context(system, integrator, platform);
     

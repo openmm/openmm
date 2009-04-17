@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -36,7 +36,11 @@
 
 using namespace OpenMM;
 
-GBVIForce::GBVIForce(int numParticles) : particles(numParticles), solventDielectric(78.3), soluteDielectric(1.0) {
+GBVIForce::GBVIForce() : solventDielectric(78.3), soluteDielectric(1.0) {
+}
+
+void GBVIForce::addParticle(double charge, double radius, double gamma) {
+    particles.push_back(ParticleInfo(charge, radius, gamma));
 }
 
 void GBVIForce::getParticleParameters(int index, double& charge, double& radius, double& gamma) const {

@@ -49,26 +49,32 @@ class OPENMM_EXPORT Force;
  * <li>Pairs of particles whose separation should be constrained to a fixed value</li>
  * </ol>
  * 
- * The particles and constraints are defined directly by the System object.
- * The forces are defined by objects that extend the Force class.  The System
- * stores a list of Force objects that determine the motion of the particles.
+ * The particles and constraints are defined directly by the System object, while
+ * forces are defined by objects that extend the Force class.  After creating a
+ * System, call addParticle() once for each particle, addConstraint() for each constraint,
+ * and addForce() for each Force.
  */
 
 class OPENMM_EXPORT System {
 public:
     /**
      * Create a new System.
-     * 
-     * @param numParticles   the number of particles in the System
-     * @param numConstraints the number of distance constraints in the System.
      */
-    System(int numParticles, int numConstraints);
+    System();
     ~System();
     /**
      * Get the number of particles in this System.
      */
     int getNumParticles() const {
         return masses.size();
+    }
+    /**
+     * Add a particle to the System.
+     *
+     * @param mass   the mass of the particle (in atomic mass units)
+     */
+    void addParticle(double mass) {
+        masses.push_back(mass);
     }
     /**
      * Get the mass (in atomic mass units) of a particle.
@@ -93,6 +99,14 @@ public:
     int getNumConstraints() const {
         return constraints.size();
     }
+    /**
+     * Add a constraint to the System.
+     *
+     * @param particle1 the index of the first particle involved in the constraint
+     * @param particle2 the index of the second particle involved in the constraint
+     * @param distance  the required distance between the two particles, measured in nm
+     */
+    void addConstraint(int particle1, int particle2, double distance);
     /**
      * Get the parameters defining a distance constraint.
      * 
@@ -169,6 +183,9 @@ public:
     ConstraintInfo() {
         particle1 = particle2 = -1;
         distance = 0.0;
+    }
+    ConstraintInfo(int particle1, int particle2, double distance) :
+        particle1(particle1), particle2(particle2), distance(distance) {
     }
 };
 

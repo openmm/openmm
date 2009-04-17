@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -42,24 +42,32 @@ namespace OpenMM {
 
 /**
  * This class implements an interaction between groups of three particles that varies harmonically with the angle
- * between them.  When creating a HarmonicAngleForce, you specify the number of angle as an argument to the
- * constructor, then loop over them and call setAngleParameters() to set the force field parameters for each one.
+ * between them.  To use it, create a HarmonicAngleForce object then call addAngle() once for each angle.  After
+ * an angle has been added, you can modify its force field parameters by calling setAngleParameters().
  */
 
 class OPENMM_EXPORT HarmonicAngleForce : public Force {
 public:
     /**
      * Create a HarmonicAngleForce.
-     * 
-     * @param numAngles           the number of harmonic bond angle terms in the potential function
      */
-    HarmonicAngleForce(int numAngles);
+    HarmonicAngleForce();
     /**
      * Get the number of harmonic bond angle terms in the potential function
      */
     int getNumAngles() const {
         return angles.size();
     }
+    /**
+     * Add an angle term to the force field.
+     *
+     * @param particle1 the index of the first particle forming the angle
+     * @param particle2 the index of the second particle forming the angle
+     * @param particle3 the index of the third particle forming the angle
+     * @param length    the equilibrium angle, measured in radians
+     * @param k         the harmonic force constant for the angle
+     */
+    void addAngle(int particle1, int particle2, int particle3, double angle, double k);
     /**
      * Get the force field parameters for an angle term.
      * 
@@ -108,6 +116,9 @@ public:
     AngleInfo() {
         particle1 = particle2 = particle3 = -1;
         angle = k = 0.0;
+    }
+    AngleInfo(int particle1, int particle2, int particle3, double angle, double k) :
+        particle1(particle1), particle2(particle2), particle3(particle3), angle(angle), k(k) {
     }
 };
 

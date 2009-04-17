@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -42,24 +42,31 @@ namespace OpenMM {
 
 /**
  * This class implements an interaction between pairs of particles that varies harmonically with the distance
- * between them.  When creating a HarmonicBondForce, you specify the number of bonds as an argument to the
- * constructor, then loop over them and call setBondParameters() to set the force field parameters for each one.
+ * between them.  To use it, create a HarmonicBondForce object then call addBond() once for each bond.  After
+ * a bond has been added, you can modify its force field parameters by calling setBondParameters().
  */
 
 class OPENMM_EXPORT HarmonicBondForce : public Force {
 public:
     /**
      * Create a HarmonicBondForce.
-     * 
-     * @param numBonds            the number of harmonic bond stretch terms in the potential function
      */
-    HarmonicBondForce(int numBonds);
+    HarmonicBondForce();
     /**
      * Get the number of harmonic bond stretch terms in the potential function
      */
     int getNumBonds() const {
         return bonds.size();
     }
+    /**
+     * Add a bond term to the force field.
+     *
+     * @param particle1 the index of the first particle connected by the bond
+     * @param particle2 the index of the second particle connected by the bond
+     * @param length    the equilibrium length of the bond, measured in nm
+     * @param k         the harmonic force constant for the bond
+     */
+    void addBond(int particle1, int particle2, double length, double k);
     /**
      * Get the force field parameters for a bond term.
      * 
@@ -106,6 +113,9 @@ public:
     BondInfo() {
         particle1 = particle2 = -1;
         length = k = 0.0;
+    }
+    BondInfo(int particle1, int particle2, double length, double k) :
+        particle1(particle1), particle2(particle2), length(length), k(k) {
     }
 };
 

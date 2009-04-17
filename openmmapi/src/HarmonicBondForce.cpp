@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -36,7 +36,11 @@
 
 using namespace OpenMM;
 
-HarmonicBondForce::HarmonicBondForce(int numBonds) : bonds(numBonds) {
+HarmonicBondForce::HarmonicBondForce() {
+}
+
+void HarmonicBondForce::addBond(int particle1, int particle2, double length, double k) {
+    bonds.push_back(BondInfo(particle1, particle2, length, k));
 }
 
 void HarmonicBondForce::getBondParameters(int index, int& particle1, int& particle2, double& length, double& k) const {

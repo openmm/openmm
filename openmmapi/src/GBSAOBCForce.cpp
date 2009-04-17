@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -36,7 +36,11 @@
 
 using namespace OpenMM;
 
-GBSAOBCForce::GBSAOBCForce(int numParticles) : particles(numParticles), solventDielectric(78.3), soluteDielectric(1.0) {
+GBSAOBCForce::GBSAOBCForce() : solventDielectric(78.3), soluteDielectric(1.0) {
+}
+
+void GBSAOBCForce::addParticle(double charge, double radius, double scalingFactor) {
+    particles.push_back(ParticleInfo(charge, radius, scalingFactor));
 }
 
 void GBSAOBCForce::getParticleParameters(int index, double& charge, double& radius, double& scalingFactor) const {

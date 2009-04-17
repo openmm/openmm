@@ -41,6 +41,12 @@ namespace OpenMM {
 /**
  * This class implements an implicit solvation force using the GBSA-OBC model.
  * <p>
+ * To use this class, create a GBSAOBCForce object, then call addParticle() once for each particle in the
+ * System to define its parameters.  The number of particles for which you define GBSA parameters must
+ * be exactly equal to the number of particles in the System, or else an exception will be thrown when you
+ * try to create an OpenMMContext.  After a particle has been added, you can modify its force field parameters
+ * by calling setParticleParameters().
+ * <p>
  * If the System also contains a NonbondedForce, this force will use the cutoffs
  * and periodic boundary conditions specified in it.
  */
@@ -49,16 +55,23 @@ class OPENMM_EXPORT GBSAOBCForce : public Force {
 public:
     /*
      * Create a GBSAOBCForce.
-     * 
-     * @param numParticles    the number of particles in the system
      */
-    GBSAOBCForce(int numParticles);
+    GBSAOBCForce();
     /**
      * Get the number of particles in the system.
      */
     int getNumParticles() const {
         return particles.size();
     }
+    /**
+     * Add the GBSA parameters for a particle.  This should be called once for each particle
+     * in the System.  When it is called for the i'th time, it specifies the parameters for the i'th particle.
+     *
+     * @param charge         the charge of the particle, measured in units of the proton charge
+     * @param radius         the GBSA radius of the particle, measured in nm
+     * @param scalingFactor  the OBC scaling factor for the particle
+     */
+    void addParticle(double charge, double radius, double scalingFactor);
     /**
      * Get the force field parameters for a particle.
      * 
@@ -128,6 +141,9 @@ public:
     double charge, radius, scalingFactor;
     ParticleInfo() {
         charge = radius = scalingFactor = 0.0;
+    }
+    ParticleInfo(double charge, double radius, double scalingFactor) :
+        charge(charge), radius(radius), scalingFactor(scalingFactor) {
     }
 };
 

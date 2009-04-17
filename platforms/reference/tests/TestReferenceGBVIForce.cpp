@@ -54,16 +54,16 @@ const double TOL = 1e-5;
 
 void testSingleParticle() {
     ReferencePlatform platform;
-    System system(1, 0);
-    system.setParticleMass(0, 2.0);
+    System system;
+    system.addParticle(2.0);
     LangevinIntegrator integrator(0, 0.1, 0.01);
 
-    GBVIForce* forceField = new GBVIForce(1);
+    GBVIForce* forceField = new GBVIForce();
 
     double charge         = 0.0;
     double radius         = 0.15;
     double gamma          = 1.0;
-    forceField->setParticleParameters(0, charge, radius, gamma);
+    forceField->addParticle(charge, radius, gamma);
     system.addForce(forceField);
 
     OpenMMContext context(system, integrator, platform);
@@ -143,22 +143,22 @@ void testEnergyEthane() {
 
     ReferencePlatform platform;
     const int numParticles = 8;
-    System system(numParticles, 0);
+    System system;
     LangevinIntegrator integrator(0, 0.1, 0.01);
 
     //void HarmonicBondForce::getBondParameters(int index, int& particle1, int& particle2, double& length, double& k)
     double C_HBondDistance   = 0.1097;
     double C_CBondDistance   = 0.1504;
-    HarmonicBondForce* bonds = new HarmonicBondForce(7);
-    bonds->setBondParameters(0, 0, 1, C_HBondDistance, 0.0); 
-    bonds->setBondParameters(1, 2, 1, C_HBondDistance, 0.0); 
-    bonds->setBondParameters(2, 3, 1, C_HBondDistance, 0.0); 
+    HarmonicBondForce* bonds = new HarmonicBondForce();
+    bonds->addBond(0, 1, C_HBondDistance, 0.0);
+    bonds->addBond(2, 1, C_HBondDistance, 0.0);
+    bonds->addBond(3, 1, C_HBondDistance, 0.0);
 
-    bonds->setBondParameters(3, 1, 4, C_CBondDistance, 0.0); 
+    bonds->addBond(1, 4, C_CBondDistance, 0.0);
 
-    bonds->setBondParameters(4, 5, 4, C_HBondDistance, 0.0); 
-    bonds->setBondParameters(5, 6, 4, C_HBondDistance, 0.0); 
-    bonds->setBondParameters(6, 7, 4, C_HBondDistance, 0.0); 
+    bonds->addBond(5, 4, C_HBondDistance, 0.0);
+    bonds->addBond(6, 4, C_HBondDistance, 0.0);
+    bonds->addBond(7, 4, C_HBondDistance, 0.0);
 
     system.addForce(bonds);
 
@@ -182,20 +182,22 @@ void testEnergyEthane() {
     int VI = 1;
     if( VI ){
        (void) fprintf( stderr, "Applying GB/VI\n" );
-       GBVIForce* forceField = new GBVIForce(numParticles);
+       GBVIForce* forceField = new GBVIForce();
        for( int i = 0; i < numParticles; i++ ){
-          forceField->setParticleParameters(i, H_charge, H_radius, H_gamma);
+          system.addParticle(1.0);
+          forceField->addParticle( H_charge, H_radius, H_gamma);
        }
        forceField->setParticleParameters(1, C_charge, C_radius, C_gamma);
        forceField->setParticleParameters(4, C_charge, C_radius, C_gamma);
        system.addForce(forceField);
     } else {
        (void) fprintf( stderr, "Applying GBSA OBC\n" );
-       GBSAOBCForce* forceField = new GBSAOBCForce(numParticles);
+       GBSAOBCForce* forceField = new GBSAOBCForce();
        double H_scale           =  0.85;
        double C_scale           =  0.72;
        for( int i = 0; i < numParticles; i++ ){
-          forceField->setParticleParameters(i, H_charge, H_radius, H_scale );
+          system.addParticle(1.0);
+          forceField->addParticle(H_charge, H_radius, H_scale );
        }
        forceField->setParticleParameters(1, C_charge, C_radius, C_scale);
        forceField->setParticleParameters(4, C_charge, C_radius, C_scale);
@@ -266,13 +268,15 @@ void testEnergyTwoParticle() {
 
     ReferencePlatform platform;
     const int numParticles = 2;
-    System system(numParticles, 0);
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
     LangevinIntegrator integrator(0, 0.1, 0.01);
 
     //void HarmonicBondForce::getBondParameters(int index, int& particle1, int& particle2, double& length, double& k)
     double C_HBondDistance   = 3.0;
-    HarmonicBondForce* bonds = new HarmonicBondForce(1);
-    bonds->setBondParameters(0, 0, 1, C_HBondDistance, 0.0); 
+    HarmonicBondForce* bonds = new HarmonicBondForce();
+    bonds->addBond(0, 1, C_HBondDistance, 0.0);
     system.addForce(bonds);
 
     double C_radius, C_gamma, C_charge, H_radius, H_gamma, H_charge;
@@ -298,15 +302,15 @@ void testEnergyTwoParticle() {
     int VI = 1;
     if( VI ){
        (void) fprintf( stderr, "Applying GB/VI\n" );
-       GBVIForce* forceField = new GBVIForce(numParticles);
-       forceField->setParticleParameters(0, H_charge, H_radius, H_gamma);
-       forceField->setParticleParameters(1, C_charge, C_radius, C_gamma);
+       GBVIForce* forceField = new GBVIForce();
+       forceField->addParticle(H_charge, H_radius, H_gamma);
+       forceField->addParticle(C_charge, C_radius, C_gamma);
        system.addForce(forceField);
     } else {
        (void) fprintf( stderr, "Applying GBSA OBC\n" );
-       GBSAOBCForce* forceField = new GBSAOBCForce(numParticles);
-       forceField->setParticleParameters(0, H_charge, H_radius, 1.0);
-       forceField->setParticleParameters(1, C_charge, C_radius, 1.0);
+       GBSAOBCForce* forceField = new GBSAOBCForce();
+       forceField->addParticle(H_charge, H_radius, 1.0);
+       forceField->addParticle(C_charge, C_radius, 1.0);
        system.addForce(forceField);
     }
 

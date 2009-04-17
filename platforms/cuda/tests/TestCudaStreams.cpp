@@ -49,7 +49,9 @@ template <class T, int WIDTH>
 void testStream(Stream::DataType type, T scale) {
     const int size = 100;
     CudaPlatform platform;
-    System system(size, 0);
+    System system;
+    for (int i = 0; i < size; i++)
+        system.addParticle(1.0);
     VerletIntegrator integrator(0.01);
     OpenMMContext context(system, integrator, platform);
     OpenMMContextImpl* impl = *reinterpret_cast<OpenMMContextImpl**>(&context);
