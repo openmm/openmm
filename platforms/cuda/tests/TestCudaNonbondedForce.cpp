@@ -58,9 +58,9 @@ void testCoulomb() {
     CudaPlatform platform;
     System system(2, 0);
     LangevinIntegrator integrator(0.0, 0.1, 0.01);
-    NonbondedForce* forceField = new NonbondedForce(2, 0);
-    forceField->setParticleParameters(0, 0.5, 1, 0);
-    forceField->setParticleParameters(1, -1.5, 1, 0);
+    NonbondedForce* forceField = new NonbondedForce();
+    forceField->addParticle(0.5, 1, 0);
+    forceField->addParticle(-1.5, 1, 0);
     system.addForce(forceField);
     OpenMMContext context(system, integrator, platform);
     vector<Vec3> positions(2);
@@ -79,9 +79,9 @@ void testLJ() {
     CudaPlatform platform;
     System system(2, 0);
     LangevinIntegrator integrator(0.0, 0.1, 0.01);
-    NonbondedForce* forceField = new NonbondedForce(2, 0);
-    forceField->setParticleParameters(0, 0, 1.2, 1);
-    forceField->setParticleParameters(1, 0, 1.4, 2);
+    NonbondedForce* forceField = new NonbondedForce();
+    forceField->addParticle(0, 1.2, 1);
+    forceField->addParticle(0, 1.4, 2);
     system.addForce(forceField);
     OpenMMContext context(system, integrator, platform);
     vector<Vec3> positions(2);
@@ -102,13 +102,25 @@ void testExclusionsAnd14() {
     CudaPlatform platform;
     System system(5, 0);
     LangevinIntegrator integrator(0.0, 0.1, 0.01);
-    HarmonicBondForce* bonds = new HarmonicBondForce(4);
-    bonds->setBondParameters(0, 0, 1, 1, 0);
-    bonds->setBondParameters(1, 1, 2, 1, 0);
-    bonds->setBondParameters(2, 2, 3, 1, 0);
-    bonds->setBondParameters(3, 3, 4, 1, 0);
-    system.addForce(bonds);
-    NonbondedForce* nonbonded = new NonbondedForce(5, 2);
+    NonbondedForce* nonbonded = new NonbondedForce();
+    for (int i = 0; i < 5; ++i)
+        nonbonded->addParticle(0, 1.5, 0);
+    vector<pair<int, int> > bonds;
+    bonds.push_back(pair<int, int>(0, 1));
+    bonds.push_back(pair<int, int>(1, 2));
+    bonds.push_back(pair<int, int>(2, 3));
+    bonds.push_back(pair<int, int>(3, 4));
+    nonbonded->createExceptionsFromBonds(bonds, 0.0, 0.0);
+    int first14, second14;
+    for (int i = 0; i < nonbonded->getNumExceptions(); i++) {
+        int particle1, particle2;
+        double chargeProd, sigma, epsilon;
+        nonbonded->getExceptionParameters(i, particle1, particle2, chargeProd, sigma, epsilon);
+        if ((particle1 == 0 && particle2 == 3) || (particle1 == 3 && particle2 == 0))
+            first14 = i;
+        if ((particle1 == 1 && particle2 == 4) || (particle1 == 4 && particle2 == 1))
+            second14 = i;
+    }
     system.addForce(nonbonded);
     for (int i = 1; i < 5; ++i) {
  
@@ -122,8 +134,8 @@ void testExclusionsAnd14() {
         }
         nonbonded->setParticleParameters(0, 0, 1.5, 1);
         nonbonded->setParticleParameters(i, 0, 1.5, 1);
-        nonbonded->setNonbonded14Parameters(0, 0, 3, 0, 1.5, i == 3 ? 0.5 : 0.0);
-        nonbonded->setNonbonded14Parameters(1, 1, 4, 0, 1.5, 0.0);
+        nonbonded->setExceptionParameters(first14, 0, 3, 0, 1.5, i == 3 ? 0.5 : 0.0);
+        nonbonded->setExceptionParameters(second14, 1, 4, 0, 1.5, 0.0);
         positions[i] = Vec3(r, 0, 0);
         OpenMMContext context(system, integrator, platform);
         context.setPositions(positions);
@@ -149,8 +161,8 @@ void testExclusionsAnd14() {
         
         nonbonded->setParticleParameters(0, 2, 1.5, 0);
         nonbonded->setParticleParameters(i, 2, 1.5, 0);
-        nonbonded->setNonbonded14Parameters(0, 0, 3, i == 3 ? 4/1.2 : 0, 1.5, 0);
-        nonbonded->setNonbonded14Parameters(1, 1, 4, 0, 1.5, 0);
+        nonbonded->setExceptionParameters(first14, 0, 3, i == 3 ? 4/1.2 : 0, 1.5, 0);
+        nonbonded->setExceptionParameters(second14, 1, 4, 0, 1.5, 0);
         OpenMMContext context2(system, integrator, platform);
         context2.setPositions(positions);
         state = context2.getState(State::Forces | State::Energy);
@@ -175,10 +187,10 @@ void testCutoff() {
     CudaPlatform platform;
     System system(3, 0);
     LangevinIntegrator integrator(0.0, 0.1, 0.01);
-    NonbondedForce* forceField = new NonbondedForce(3, 0);
-    forceField->setParticleParameters(0, 1.0, 1, 0);
-    forceField->setParticleParameters(1, 1.0, 1, 0);
-    forceField->setParticleParameters(2, 1.0, 1, 0);
+    NonbondedForce* forceField = new NonbondedForce();
+    forceField->addParticle(1.0, 1, 0);
+    forceField->addParticle(1.0, 1, 0);
+    forceField->addParticle(1.0, 1, 0);
     forceField->setNonbondedMethod(NonbondedForce::CutoffNonPeriodic);
     const double cutoff = 2.9;
     forceField->setCutoffDistance(cutoff);
@@ -208,18 +220,28 @@ void testCutoff14() {
     CudaPlatform platform;
     System system(5, 0);
     LangevinIntegrator integrator(0.0, 0.1, 0.01);
-    HarmonicBondForce* bonds = new HarmonicBondForce(4);
-    bonds->setBondParameters(0, 0, 1, 1, 0);
-    bonds->setBondParameters(1, 1, 2, 1, 0);
-    bonds->setBondParameters(2, 2, 3, 1, 0);
-    bonds->setBondParameters(3, 3, 4, 1, 0);
-    system.addForce(bonds);
-    NonbondedForce* nonbonded = new NonbondedForce(5, 2);
+    NonbondedForce* nonbonded = new NonbondedForce();
     nonbonded->setNonbondedMethod(NonbondedForce::CutoffNonPeriodic);
-    nonbonded->setNonbonded14Parameters(0, 0, 3, 0, 1.5, 0.0);
-    nonbonded->setNonbonded14Parameters(1, 1, 4, 0, 1.5, 0.0);
+    for (int i = 0; i < 5; ++i)
+        nonbonded->addParticle(0, 1.5, 0);
     const double cutoff = 3.5;
     nonbonded->setCutoffDistance(cutoff);
+    vector<pair<int, int> > bonds;
+    bonds.push_back(pair<int, int>(0, 1));
+    bonds.push_back(pair<int, int>(1, 2));
+    bonds.push_back(pair<int, int>(2, 3));
+    bonds.push_back(pair<int, int>(3, 4));
+    nonbonded->createExceptionsFromBonds(bonds, 0.0, 0.0);
+    int first14, second14;
+    for (int i = 0; i < nonbonded->getNumExceptions(); i++) {
+        int particle1, particle2;
+        double chargeProd, sigma, epsilon;
+        nonbonded->getExceptionParameters(i, particle1, particle2, chargeProd, sigma, epsilon);
+        if ((particle1 == 0 && particle2 == 3) || (particle1 == 3 && particle2 == 0))
+            first14 = i;
+        if ((particle1 == 1 && particle2 == 4) || (particle1 == 4 && particle2 == 1))
+            second14 = i;
+    }
     system.addForce(nonbonded);
     OpenMMContext context(system, integrator, platform);
     vector<Vec3> positions(5);
@@ -236,8 +258,8 @@ void testCutoff14() {
         for (int j = 1; j < 5; ++j)
             nonbonded->setParticleParameters(j, 0, 1.5, 0);
         nonbonded->setParticleParameters(i, 0, 1.5, 1);
-        nonbonded->setNonbonded14Parameters(0, 0, 3, 0, 1.5, i == 3 ? 0.5 : 0.0);
-        nonbonded->setNonbonded14Parameters(1, 1, 4, 0, 1.5, 0.0);
+        nonbonded->setExceptionParameters(first14, 0, 3, 0, 1.5, i == 3 ? 0.5 : 0.0);
+        nonbonded->setExceptionParameters(second14, 1, 4, 0, 1.5, 0.0);
         context.reinitialize();
         context.setPositions(positions);
         State state = context.getState(State::Forces | State::Energy);
@@ -264,8 +286,8 @@ void testCutoff14() {
         const double q = 0.7;
         nonbonded->setParticleParameters(0, q, 1.5, 0);
         nonbonded->setParticleParameters(i, q, 1.5, 0);
-        nonbonded->setNonbonded14Parameters(0, 0, 3, i == 3 ? q*q/1.2 : 0, 1.5, 0);
-        nonbonded->setNonbonded14Parameters(1, 1, 4, 0, 1.5, 0);
+        nonbonded->setExceptionParameters(first14, 0, 3, i == 3 ? q*q/1.2 : 0, 1.5, 0);
+        nonbonded->setExceptionParameters(second14, 1, 4, 0, 1.5, 0);
         context.reinitialize();
         context.setPositions(positions);
         state = context.getState(State::Forces | State::Energy);
@@ -293,13 +315,11 @@ void testPeriodic() {
     CudaPlatform platform;
     System system(3, 0);
     LangevinIntegrator integrator(0.0, 0.1, 0.01);
-    HarmonicBondForce* bonds = new HarmonicBondForce(1);
-    bonds->setBondParameters(0, 0, 1, 1, 0);
-    system.addForce(bonds);
-    NonbondedForce* nonbonded = new NonbondedForce(3, 0);
-    nonbonded->setParticleParameters(0, 1.0, 1, 0);
-    nonbonded->setParticleParameters(1, 1.0, 1, 0);
-    nonbonded->setParticleParameters(2, 1.0, 1, 0);
+    NonbondedForce* nonbonded = new NonbondedForce();
+    nonbonded->addParticle(1.0, 1, 0);
+    nonbonded->addParticle(1.0, 1, 0);
+    nonbonded->addParticle(1.0, 1, 0);
+    nonbonded->addException(0, 1, 0.0, 1.0, 0.0);
     nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
     const double cutoff = 2.0;
     nonbonded->setCutoffDistance(cutoff);
@@ -333,19 +353,19 @@ void testLargeSystem() {
     ReferencePlatform reference;
     System system(numParticles, 0);
     VerletIntegrator integrator(0.01);
-    NonbondedForce* nonbonded = new NonbondedForce(numParticles, 0);
+    NonbondedForce* nonbonded = new NonbondedForce();
     HarmonicBondForce* bonds = new HarmonicBondForce(numMolecules);
     vector<Vec3> positions(numParticles);
     vector<Vec3> velocities(numParticles);
     init_gen_rand(0);
     for (int i = 0; i < numMolecules; i++) {
         if (i < numMolecules/2) {
-            nonbonded->setParticleParameters(2*i, 1.0, 0.2, 0.1);
-            nonbonded->setParticleParameters(2*i+1, 1.0, 0.1, 0.1);
+            nonbonded->addParticle(1.0, 0.2, 0.1);
+            nonbonded->addParticle(1.0, 0.1, 0.1);
         }
         else {
-            nonbonded->setParticleParameters(2*i, 1.0, 0.2, 0.2);
-            nonbonded->setParticleParameters(2*i+1, 1.0, 0.1, 0.2);
+            nonbonded->addParticle(1.0, 0.2, 0.2);
+            nonbonded->addParticle(1.0, 0.1, 0.2);
         }
         positions[2*i] = Vec3(boxSize*genrand_real2(), boxSize*genrand_real2(), boxSize*genrand_real2());
         positions[2*i+1] = Vec3(positions[2*i][0]+1.0, positions[2*i][1], positions[2*i][2]);
@@ -405,11 +425,11 @@ void testBlockInteractions(bool periodic) {
     CudaPlatform cuda;
     System system(numParticles, 0);
     VerletIntegrator integrator(0.01);
-    NonbondedForce* nonbonded = new NonbondedForce(numParticles, 0);
+    NonbondedForce* nonbonded = new NonbondedForce();
     vector<Vec3> positions(numParticles);
     init_gen_rand(0);
     for (int i = 0; i < numParticles; i++) {
-        nonbonded->setParticleParameters(i, 1.0, 0.2, 0.2);
+        nonbonded->addParticle(1.0, 0.2, 0.2);
         positions[i] = Vec3(boxSize*(3*genrand_real2()-1), boxSize*(3*genrand_real2()-1), boxSize*(3*genrand_real2()-1));
     }
     nonbonded->setNonbondedMethod(periodic ? NonbondedForce::CutoffPeriodic : NonbondedForce::CutoffNonPeriodic);

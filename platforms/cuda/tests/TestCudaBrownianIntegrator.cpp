@@ -132,10 +132,10 @@ void testConstraints() {
     System system(numParticles, numConstraints);
     BrownianIntegrator integrator(temp, 2.0, 0.001);
     integrator.setConstraintTolerance(1e-5);
-    NonbondedForce* forceField = new NonbondedForce(numParticles, 0);
+    NonbondedForce* forceField = new NonbondedForce();
     for (int i = 0; i < numParticles; ++i) {
         system.setParticleMass(i, 10.0);
-        forceField->setParticleParameters(i, (i%2 == 0 ? 0.2 : -0.2), 0.5, 5.0);
+        forceField->addParticle((i%2 == 0 ? 0.2 : -0.2), 0.5, 5.0);
     }
     system.setConstraintParameters(0, 0, 1, 1.0);
     system.setConstraintParameters(1, 1, 2, 1.0);
@@ -178,10 +178,10 @@ void testRandomSeed() {
     CudaPlatform platform;
     System system(numParticles, 0);
     BrownianIntegrator integrator(temp, 2.0, 0.001);
-    NonbondedForce* forceField = new NonbondedForce(numParticles, 0);
+    NonbondedForce* forceField = new NonbondedForce();
     for (int i = 0; i < numParticles; ++i) {
         system.setParticleMass(i, 2.0);
-        forceField->setParticleParameters(i, (i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
+        forceField->addParticle((i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
     }
     system.addForce(forceField);
     vector<Vec3> positions(numParticles);

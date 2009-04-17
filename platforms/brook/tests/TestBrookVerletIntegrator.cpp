@@ -183,10 +183,10 @@ void testVerletConstraints( FILE* log ){
    System system(numParticles, numConstraints);
    VerletIntegrator integrator(0.001);
    integrator.setConstraintTolerance(1e-5);
-   NonbondedForce* forceField = new NonbondedForce(numParticles, 0);
+   NonbondedForce* forceField = new NonbondedForce();
    for (int i = 0; i < numParticles; ++i) {
        system.setParticleMass(i, mass );
-       forceField->setParticleParameters(i, (i%2 == 0 ? 0.2 : -0.2), 0.5, 5.0);
+       forceField->addParticle((i%2 == 0 ? 0.2 : -0.2), 0.5, 5.0);
    }
    for (int i = 0; i < numConstraints; ++i){
        system.setConstraintParameters(i, 2*i, 2*i+1, 1.0);

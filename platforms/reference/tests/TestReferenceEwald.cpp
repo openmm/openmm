@@ -53,9 +53,9 @@ void testEwald() {
     ReferencePlatform platform;
     System system(2, 0);
     VerletIntegrator integrator(0.01);
-    NonbondedForce* nonbonded = new NonbondedForce(2, 0);
-    nonbonded->setParticleParameters(0, 1.0, 1, 0);
-    nonbonded->setParticleParameters(1, -1.0, 1, 0);
+    NonbondedForce* nonbonded = new NonbondedForce();
+    nonbonded->addParticle(1.0, 1, 0);
+    nonbonded->addParticle(-1.0, 1, 0);
     nonbonded->setNonbondedMethod(NonbondedForce::Ewald);
     const double cutoff = 2.0;
     nonbonded->setCutoffDistance(cutoff);

@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -30,7 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 /**
- * This tests the findExclusions() method of NonbondedForceImpl, which identifies pairs of atoms
+ * This tests the createExceptionsFromBonds() method of NonbondedForce, which identifies pairs of atoms
  * whose nonbonded atoms are either excluded or decreased.  The test system is a chain with branches:
  * 
  * 1  3  5  7  9  11  13  15  17  19
@@ -39,19 +39,8 @@
  */
 
 #include "AssertionUtilities.h"
-#include "Kernel.h"
-#include "KernelFactory.h"
-#include "OpenMMContext.h"
-#include "Platform.h"
 #include "NonbondedForce.h"
-#include "Stream.h"
-#include "StreamFactory.h"
-#include "System.h"
-#include "VerletIntegrator.h"
-#include "kernels.h"
-#include <algorithm>
 #include <iostream>
-#include <iterator>
 #include <set>
 #include <vector>
 
@@ -64,207 +53,73 @@ static const int NUM_ATOMS = 20;
  * Add a pair of atoms to the list of exclusions.
  */
 
-void addAtomsToExclusions(int atom1, int atom2, vector<set<int> >& exclusions) {
+void addAtomsToExclusions(int atom1, int atom2, vector<set<int> >& exclusions, int& totalExclusions) {
     if (atom2 < NUM_ATOMS) {
         exclusions[atom1].insert(atom2);
         exclusions[atom2].insert(atom1);
+        totalExclusions++;
     }
 }
-
-/**
- * Verify that the exclusions are what we expect.
- */
-
-void verifyExclusions(const vector<set<int> >& exclusions) {
-    vector<set<int> > expected(NUM_ATOMS);
-    for (int i = 0; i < NUM_ATOMS; i += 2) {
-        addAtomsToExclusions(i, i+1, expected);
-        addAtomsToExclusions(i, i+2, expected);
-        addAtomsToExclusions(i, i+3, expected);
-        addAtomsToExclusions(i, i+4, expected);
-        addAtomsToExclusions(i, i+5, expected);
-        addAtomsToExclusions(i, i+6, expected);
-        addAtomsToExclusions(i+1, i+2, expected);
-        addAtomsToExclusions(i+1, i+3, expected);
-        addAtomsToExclusions(i+1, i+4, expected);
-    }
-    ASSERT_EQUAL(expected.size(), exclusions.size());
-    for (int i = 0; i < NUM_ATOMS; ++i) {
-        ASSERT_EQUAL(expected[i].size(), exclusions[i].size());
-        vector<int> intersection(0);
-        insert_iterator<vector<int> > inserter(intersection, intersection.begin());
-        set_intersection(exclusions[i].begin(), exclusions[i].end(), expected[i].begin(), expected[i].end(), inserter);
-        ASSERT_EQUAL(expected[i].size(), intersection.size());
-    }
-}
-
-/**
- * Add a pair of atoms to the list of 1-4 pairs.
- */
-
-void addAtomsTo14List(int atom1, int atom2, set<pair<int, int> >& bonded14Indices) {
-    if (atom2 < NUM_ATOMS)
-        bonded14Indices.insert(pair<int, int>(atom1, atom2));
-}
-
-/**
- * Verify that the 1-4 pairs are what we expect.
- */
-
-void verify14(const vector<vector<int> >& bonded14Indices) {
-    set<pair<int, int> > expected, found;
-    for (int i = 0; i < NUM_ATOMS; i += 2) {
-        addAtomsTo14List(i, i+5, expected);
-        addAtomsTo14List(i, i+6, expected);
-        addAtomsTo14List(i+1, i+3, expected);
-        addAtomsTo14List(i+1, i+4, expected);
-    }
-    ASSERT_EQUAL(expected.size(), bonded14Indices.size());
-    for (size_t i = 0; i < bonded14Indices.size(); ++i) {
-        int atom1 = bonded14Indices[i][0];
-        int atom2 = bonded14Indices[i][1];
-        found.insert(pair<int, int>(min(atom1, atom2), max(atom1, atom2)));
-    }
-    vector<pair<int, int> > intersection(0);
-    insert_iterator<vector<pair<int, int> > > inserter(intersection, intersection.begin());
-    set_intersection(expected.begin(), expected.end(), found.begin(), found.end(), inserter);
-    ASSERT_EQUAL(expected.size(), intersection.size());
-}
-
-/**
- * The following classes define a Platform whose job is to check whether the correct values were passed
- * to the initialize() methods.
- */
-
-class DummyBondedKernel : public CalcHarmonicBondForceKernel {
-public:
-    DummyBondedKernel(string name, const Platform& platform) : CalcHarmonicBondForceKernel(name, platform) {
-    }
-    void initialize(const System& system, const HarmonicBondForce& force) {
-    }
-    void executeForces(OpenMMContextImpl& context) {
-    }
-    double executeEnergy(OpenMMContextImpl& context) {
-        return 0.0;
-    }
-};
-
-class DummyNonbondedKernel : public CalcNonbondedForceKernel {
-public:
-    DummyNonbondedKernel(string name, const Platform& platform) : CalcNonbondedForceKernel(name, platform) {
-    }
-    void initialize(const System& system, const NonbondedForce& force, const std::vector<std::set<int> >& exclusions) {
-        verifyExclusions(exclusions);
-//        verify14(bonded14Indices);
-    }
-    void executeForces(OpenMMContextImpl& context) {
-    }
-    double executeEnergy(OpenMMContextImpl& context) {
-        return 0.0;
-    }
-};
-
-class DummyIntegratorKernel : public IntegrateVerletStepKernel {
-public:
-    DummyIntegratorKernel(string name, const Platform& platform) : IntegrateVerletStepKernel(name, platform) {
-    }
-    void initialize(const System& system, const VerletIntegrator& integrator) {
-    }
-    void execute(OpenMMContextImpl& context, const VerletIntegrator& integrator) {
-    }
-};
-
-class DummyKEKernel : public CalcKineticEnergyKernel {
-public:
-    DummyKEKernel(string name, const Platform& platform) : CalcKineticEnergyKernel(name, platform) {
-    }
-    void initialize(const System& system) {
-    }
-    double execute(OpenMMContextImpl& context) {
-        return 0.0;
-    }
-};
-
-class DummyStreamImpl : public StreamImpl {
-public:
-    DummyStreamImpl(string name, int size, Stream::DataType type, const Platform& platform) : StreamImpl(name, size, type, platform) {
-    }
-    void loadFromArray(const void* array) {
-    }
-    void saveToArray(void* array) {
-    }
-    void fillWithValue(void* value) {
-    }
-};
-
-class DummyKernelFactory : public KernelFactory {
-public:
-    KernelImpl* createKernelImpl(string name, const Platform& platform, OpenMMContextImpl& context) const {
-        if (name == CalcHarmonicBondForceKernel::Name())
-            return new DummyBondedKernel(name, platform);
-        if (name == CalcNonbondedForceKernel::Name())
-            return new DummyNonbondedKernel(name, platform);
-        if (name == IntegrateVerletStepKernel::Name())
-            return new DummyIntegratorKernel(name, platform);
-        if (name == CalcKineticEnergyKernel::Name())
-            return new DummyKEKernel(name, platform);
-        return 0;
-    }
-};
-
-class DummyStreamFactory : public StreamFactory {
-public:
-    StreamImpl* createStreamImpl(string name, int size, Stream::DataType type, const Platform& platform, OpenMMContextImpl& context) const {
-        return new DummyStreamImpl(name, size, type, platform);
-    }
-};
-
-class DummyPlatform : public Platform {
-public:
-    DummyPlatform() {
-        registerKernelFactory(CalcHarmonicBondForceKernel::Name(), new DummyKernelFactory());
-        registerKernelFactory(CalcNonbondedForceKernel::Name(), new DummyKernelFactory());
-        registerKernelFactory(IntegrateVerletStepKernel::Name(), new DummyKernelFactory());
-        registerKernelFactory(CalcKineticEnergyKernel::Name(), new DummyKernelFactory());
-    }
-    string getName() const {
-        return "Dummy";
-    }
-    double getSpeed() const {
-        return 1.0;
-    }
-    bool supportsDoublePrecision() const {
-        return true;
-    }
-    const StreamFactory& getDefaultStreamFactory() const {
-        return streamFactory;
-    }
-private:
-    DummyStreamFactory streamFactory;
-};
 
 int main() {
     try {
-        DummyPlatform platform;
-        System system(NUM_ATOMS, 0);
-        VerletIntegrator integrator(0.01);
-        HarmonicBondForce* bonds = new HarmonicBondForce(NUM_ATOMS-1);
-        NonbondedForce* nonbonded = new NonbondedForce(NUM_ATOMS, 0);
-        
+        NonbondedForce nonbonded;
+        vector<pair<int, int> > bonds;
+        for (int i = 0; i < NUM_ATOMS; i++)
+            nonbonded.addParticle(1.0, 1.0, 2.0);
         // loop over all main-chain atoms (even numbered atoms)
         for (int i = 0; i < NUM_ATOMS-1; i += 2) 
         {
-        	// side-chain bonds
-        	bonds->setBondParameters(i, i, i+1, 1.0, 1.0);
-
-        	// main-chain bonds
+            // side-chain bonds
+            bonds.push_back(pair<int, int>(i, i+1));
+            // main-chain bonds
             if (i < NUM_ATOMS-2) // penultimate atom (NUM_ATOMS-2) has no subsequent main-chain atom
-                bonds->setBondParameters(i+1, i, i+2, 1.0, 1.0);
+                bonds.push_back(pair<int, int>(i, i+2));
         }
-        
-        system.addForce(bonds);
-        system.addForce(nonbonded);
-        OpenMMContext context(system, integrator, platform);
+        nonbonded.createExceptionsFromBonds(bonds, 0.2, 0.4);
+
+        // Build lists of the expected exclusions and 1-4s.
+
+        vector<set<int> > expectedExclusions(NUM_ATOMS);
+        int totalExclusions = 0;
+        for (int i = 0; i < NUM_ATOMS; i += 2) {
+            addAtomsToExclusions(i, i+1, expectedExclusions, totalExclusions);
+            addAtomsToExclusions(i, i+2, expectedExclusions, totalExclusions);
+            addAtomsToExclusions(i, i+3, expectedExclusions, totalExclusions);
+            addAtomsToExclusions(i, i+4, expectedExclusions, totalExclusions);
+            addAtomsToExclusions(i+1, i+2, expectedExclusions, totalExclusions);
+        }
+        vector<set<int> > expected14(NUM_ATOMS);
+        int total14 = 0;
+        for (int i = 0; i < NUM_ATOMS; i += 2) {
+            addAtomsToExclusions(i, i+5, expected14, total14);
+            addAtomsToExclusions(i, i+6, expected14, total14);
+            addAtomsToExclusions(i+1, i+3, expected14, total14);
+            addAtomsToExclusions(i+1, i+4, expected14, total14);
+        }
+
+        // Compare them to the exceptions that were generated.
+
+        ASSERT_EQUAL(totalExclusions+total14, nonbonded.getNumExceptions());
+        for (int i = 0; i < nonbonded.getNumExceptions(); i++) {
+            int particle1, particle2;
+            double chargeProd, sigma, epsilon;
+            nonbonded.getExceptionParameters(i, particle1, particle2, chargeProd, sigma, epsilon);
+            if (chargeProd == 0) {
+                // This is an exclusion.
+
+                ASSERT_EQUAL(0.0, epsilon);
+                ASSERT(expectedExclusions[particle1].find(particle2) != expectedExclusions[particle2].end());
+            }
+            else {
+                // This is a 1-4.
+
+                ASSERT_EQUAL_TOL(0.2, chargeProd, 1e-10);
+                ASSERT_EQUAL_TOL(1.0, sigma, 1e-10);
+                ASSERT_EQUAL_TOL(0.8, epsilon, 1e-10);
+                ASSERT(expected14[particle1].find(particle2) != expected14[particle2].end());
+            }
+        }
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

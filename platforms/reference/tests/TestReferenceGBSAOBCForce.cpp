@@ -76,11 +76,11 @@ void testCutoffAndPeriodic() {
     System system(2, 0);
     LangevinIntegrator integrator(0, 0.1, 0.01);
     GBSAOBCForce* gbsa = new GBSAOBCForce(2);
-    NonbondedForce* nonbonded = new NonbondedForce(2, 0);
+    NonbondedForce* nonbonded = new NonbondedForce();
     gbsa->setParticleParameters(0, -1, 0.15, 1);
-    nonbonded->setParticleParameters(0, -1, 1, 0);
+    nonbonded->addParticle(-1, 1, 0);
     gbsa->setParticleParameters(1, 1, 0.15, 1);
-    nonbonded->setParticleParameters(1, 1, 1, 0);
+    nonbonded->addParticle(1, 1, 0);
     const double cutoffDistance = 3.0;
     const double boxSize = 10.0;
     nonbonded->setCutoffDistance(cutoffDistance);

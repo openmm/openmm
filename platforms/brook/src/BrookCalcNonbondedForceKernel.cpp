@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
  * Authors: Peter Eastman, Mark Friedrichs                                    *
  * Contributors:                                                              *
  *                                                                            *
@@ -129,7 +129,7 @@ int BrookCalcNonbondedForceKernel::setLog( FILE* log ){
  *
  */
 
-void BrookCalcNonbondedForceKernel::initialize( const System& system, const NonbondedForce& force, const std::vector<std::set<int> >& exclusions ){
+void BrookCalcNonbondedForceKernel::initialize( const System& system, const NonbondedForce& force ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -172,7 +172,22 @@ void BrookCalcNonbondedForceKernel::initialize( const System& system, const Nonb
       nonbondedParameters[ii].push_back( charge  );
       nonbondedParameters[ii].push_back( radius  );
       nonbondedParameters[ii].push_back( depth   );
-   }   
+   }
+
+   // Go through the exclusions.
+
+   std::vector<std::set<int> >& exclusions(_numberOfParticles);
+   std::vector<int> nb14s;
+   for (int i = 0; i < force.getNumExceptions(); i++) {
+        int particle1, particle2;
+        double chargeProd, sigma, epsilon;
+        force.getExceptionParameters(i, particle1, particle2, chargeProd, sigma, epsilon);
+        exclusions[particle1].insert(particle2);
+        exclusions[particle2].insert(particle1);
+        exclusions.push_back(pair<int, int>(particle1, particle2));
+        if (chargeProd != 0.0 || epsilon != 0.0)
+            nb14s.push_back(i);
+   }
 
    brookNonBonded.setup( _numberOfParticles, nonbondedParameters, exclusions, getPlatform() );
    _openMMBrookInterface.setTriggerForceKernel( this );
@@ -188,7 +203,7 @@ void BrookCalcNonbondedForceKernel::initialize( const System& system, const Nonb
 
    // nonbonded 14 ixns
 
-   initialize14Interactions( system, force );
+   initialize14Interactions( system, force, nb14s );
 
 }
 
@@ -200,7 +215,7 @@ void BrookCalcNonbondedForceKernel::initialize( const System& system, const Nonb
  *
  */
 
-void BrookCalcNonbondedForceKernel::initialize14Interactions( const System& system, const NonbondedForce& force ){
+void BrookCalcNonbondedForceKernel::initialize14Interactions( const System& system, const NonbondedForce& force, const std::vector<int>& nb14s ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -216,7 +231,7 @@ void BrookCalcNonbondedForceKernel::initialize14Interactions( const System& syst
 
    // create _brookBondParameters object containing particle indices/parameters
 
-   int numberOf14Forces         = force.getNumNonbonded14();
+   int numberOf14Forces         = nb14s.size();
    if( numberOf14Forces > 0 ){
 
       _brookBondParameters         = new BrookBondParameters( BondName, NumberOfParticlesInBond, NumberOfParametersInBond, numberOf14Forces, getLog() );
@@ -229,7 +244,7 @@ void BrookCalcNonbondedForceKernel::initialize14Interactions( const System& syst
          int particles[NumberOfParticlesInBond];
          double parameters[NumberOfParametersInBond];
    
-         force.getNonbonded14Parameters( ii, particle1, particle2, charge, radius, depth ); 
+         force.getExceptionParameters( nb14s[ii], particle1, particle2, charge, radius, depth );
    
 //(void) fprintf( log, "%s idx=%d [%d %d] [%f %f %f]\n", methodName.c_str(), ii, particle1, particle2, charge, radius, depth );
          particles[0]    = particle1;

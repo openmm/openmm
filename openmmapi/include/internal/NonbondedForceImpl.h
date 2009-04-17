@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -63,8 +63,6 @@ public:
     }
     std::vector<std::string> getKernelNames();
 private:
-    void findExclusions(const std::vector<std::vector<int> >& bondIndices, std::vector<std::set<int> >& exclusions, std::set<std::pair<int, int> >& bonded14Indices) const;
-    void addExclusionsToSet(const std::vector<std::set<int> >& bonded12, std::set<int>& exclusions, int baseParticle, int fromParticle, int currentLevel) const;
     NonbondedForce& owner;
     Kernel kernel;
 };

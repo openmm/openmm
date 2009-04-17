@@ -69,10 +69,10 @@ void testMotionRemoval() {
     HarmonicBondForce* bonds = new HarmonicBondForce(1);
     bonds->setBondParameters(0, 2, 3, 2.0, 0.5);
     system.addForce(bonds);
-    NonbondedForce* nonbonded = new NonbondedForce(numParticles, 0);
+    NonbondedForce* nonbonded = new NonbondedForce();
     for (int i = 0; i < numParticles; ++i) {
         system.setParticleMass(i, i+1);
-        nonbonded->setParticleParameters(i, (i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
+        nonbonded->addParticle((i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
     }
     system.addForce(nonbonded);
     CMMotionRemover* remover = new CMMotionRemover();

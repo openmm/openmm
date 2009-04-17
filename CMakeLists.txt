@@ -47,7 +47,7 @@ ENDIF(${CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT})
 
 INCLUDE(Dart)
 
-# SUBDIRS (platforms/reference/tests platforms/cuda)
+SUBDIRS (tests)
 
 # The source is organized into subdirectories, but we handle them all from
 # this CMakeLists file rather than letting CMake visit them as SUBDIRS.

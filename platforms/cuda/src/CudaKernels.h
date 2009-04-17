@@ -215,11 +215,8 @@ public:
      * 
      * @param system     the System this kernel will be applied to
      * @param force      the NonbondedForce this kernel will be used for
-     * @param exclusions the i'th element lists the indices of all particles with which the i'th particle should not interact through
-     *                   nonbonded forces.  Bonded 1-4 pairs are also included in this list, since they should be omitted from
-     *                   the standard nonbonded calculation.
      */
-    void initialize(const System& system, const NonbondedForce& force, const std::vector<std::set<int> >& exclusions);
+    void initialize(const System& system, const NonbondedForce& force);
     /**
      * Execute the kernel to calculate the forces.
      * 

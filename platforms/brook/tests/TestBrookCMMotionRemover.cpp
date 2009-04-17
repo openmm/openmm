@@ -88,10 +88,10 @@ void testMotionRemoval( FILE* log ) {
    bonds->setBondParameters(0, 2, 3, 2.0, 0.5);
    system.addForce(bonds);
 
-   NonbondedForce* nonbonded = new NonbondedForce(numberOfParticles, 0);
+   NonbondedForce* nonbonded = new NonbondedForce();
    for (int i = 0; i < numberOfParticles; ++i) {
        system.setParticleMass(i, (double) (i+1) );
-       nonbonded->setParticleParameters(i, (i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
+       nonbonded->addParticle((i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
    }
    system.addForce(nonbonded);
 

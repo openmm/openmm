@@ -55,10 +55,10 @@ void testTemperature() {
     CudaPlatform platform;
     System system(numParticles, 0);
     VerletIntegrator integrator(0.01);
-    NonbondedForce* forceField = new NonbondedForce(numParticles, 0);
+    NonbondedForce* forceField = new NonbondedForce();
     for (int i = 0; i < numParticles; ++i) {
         system.setParticleMass(i, 2.0);
-        forceField->setParticleParameters(i, (i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
+        forceField->addParticle((i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
     }
     system.addForce(forceField);
     AndersenThermostat* thermstat = new AndersenThermostat(temp, collisionFreq);
@@ -93,10 +93,10 @@ void testRandomSeed() {
     CudaPlatform platform;
     System system(numParticles, 0);
     VerletIntegrator integrator(0.01);
-    NonbondedForce* forceField = new NonbondedForce(numParticles, 0);
+    NonbondedForce* forceField = new NonbondedForce();
     for (int i = 0; i < numParticles; ++i) {
         system.setParticleMass(i, 2.0);
-        forceField->setParticleParameters(i, (i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
+        forceField->addParticle((i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
     }
     system.addForce(forceField);
     AndersenThermostat* thermostat = new AndersenThermostat(temp, collisionFreq);

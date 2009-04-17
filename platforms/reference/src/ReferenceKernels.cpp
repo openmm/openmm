@@ -306,9 +306,26 @@ ReferenceCalcNonbondedForceKernel::~ReferenceCalcNonbondedForceKernel() {
         delete neighborList;
 }
 
-void ReferenceCalcNonbondedForceKernel::initialize(const System& system, const NonbondedForce& force, const std::vector<std::set<int> >& exclusions) {
+void ReferenceCalcNonbondedForceKernel::initialize(const System& system, const NonbondedForce& force) {
+
+    // Identify which exceptions are 1-4 interactions.
+
     numParticles = force.getNumParticles();
-    num14 = force.getNumNonbonded14();
+    exclusions.resize(numParticles);
+    vector<int> nb14s;
+    for (int i = 0; i < force.getNumExceptions(); i++) {
+        int particle1, particle2;
+        double chargeProd, sigma, epsilon;
+        force.getExceptionParameters(i, particle1, particle2, chargeProd, sigma, epsilon);
+        exclusions[particle1].insert(particle2);
+        exclusions[particle2].insert(particle1);
+        if (chargeProd != 0.0 || epsilon != 0.0)
+            nb14s.push_back(i);
+    }
+
+    // Build the arrays.
+
+    num14 = nb14s.size();
     bonded14IndexArray = allocateIntArray(num14, 2);
     bonded14ParamArray = allocateRealArray(num14, 3);
     particleParamArray = allocateRealArray(numParticles, 3);
@@ -332,7 +349,7 @@ void ReferenceCalcNonbondedForceKernel::initialize(const System& system, const N
     for (int i = 0; i < num14; ++i) {
         int particle1, particle2;
         double charge, radius, depth;
-        force.getNonbonded14Parameters(i, particle1, particle2, charge, radius, depth);
+        force.getExceptionParameters(nb14s[i], particle1, particle2, charge, radius, depth);
         bonded14IndexArray[i][0] = particle1;
         bonded14IndexArray[i][1] = particle2;
         bonded14ParamArray[i][0] = static_cast<RealOpenMM>(radius);

@@ -57,9 +57,9 @@ void testSingleParticle() {
     system.setParticleMass(0, 2.0);
     LangevinIntegrator integrator(0, 0.1, 0.01);
     GBSAOBCForce* gbsa = new GBSAOBCForce(1);
-    NonbondedForce* nonbonded = new NonbondedForce(1, 0);
+    NonbondedForce* nonbonded = new NonbondedForce();
     gbsa->setParticleParameters(0, 0.5, 0.15, 1);
-    nonbonded->setParticleParameters(0, 0.5, 1, 0);
+    nonbonded->addParticle(0.5, 1, 0);
     system.addForce(gbsa);
     system.addForce(nonbonded);
     OpenMMContext context(system, integrator, platform);
@@ -80,11 +80,11 @@ void testCutoffAndPeriodic() {
     System system(2, 0);
     LangevinIntegrator integrator(0, 0.1, 0.01);
     GBSAOBCForce* gbsa = new GBSAOBCForce(2);
-    NonbondedForce* nonbonded = new NonbondedForce(2, 0);
+    NonbondedForce* nonbonded = new NonbondedForce();
     gbsa->setParticleParameters(0, -1, 0.15, 1);
-    nonbonded->setParticleParameters(0, -1, 1, 0);
+    nonbonded->addParticle(-1, 1, 0);
     gbsa->setParticleParameters(1, 1, 0.15, 1);
-    nonbonded->setParticleParameters(1, 1, 1, 0);
+    nonbonded->addParticle(1, 1, 0);
     const double cutoffDistance = 3.0;
     const double boxSize = 10.0;
     nonbonded->setCutoffDistance(cutoffDistance);
@@ -131,11 +131,11 @@ void testForce(int numParticles, NonbondedForce::NonbondedMethod method) {
     System system(numParticles, 0);
     LangevinIntegrator integrator(0, 0.1, 0.01);
     GBSAOBCForce* gbsa = new GBSAOBCForce(numParticles);
-    NonbondedForce* nonbonded = new NonbondedForce(numParticles, 0);
+    NonbondedForce* nonbonded = new NonbondedForce();
     for (int i = 0; i < numParticles; ++i) {
         double charge = i%2 == 0 ? -1 : 1;
         gbsa->setParticleParameters(i, charge, 0.15, 1);
-        nonbonded->setParticleParameters(i, charge, 1, 0);
+        nonbonded->addParticle(charge, 1, 0);
     }
     nonbonded->setNonbondedMethod(method);
     nonbonded->setCutoffDistance(3.0);

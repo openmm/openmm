@@ -217,10 +217,10 @@ void testLangevinTemperature( FILE* log ){
 
    System system(numberOfParticles, 0);
    LangevinIntegrator integrator(temp, 0.2, 0.002);
-   NonbondedForce* forceField = new NonbondedForce(numberOfParticles, 0);
+   NonbondedForce* forceField = new NonbondedForce();
    for (int i = 0; i < numberOfParticles; ++i){
       system.setParticleMass(i, mass );
-      forceField->setParticleParameters(i, (i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
+      forceField->addParticle((i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
    }
    system.addForce(forceField);
 
@@ -315,10 +315,10 @@ void testLangevinConstraints( FILE* log ){
    System system( numParticles, numConstraints );
    LangevinIntegrator integrator( temp, 2.0, 0.001 );
    integrator.setConstraintTolerance(1e-5);
-   NonbondedForce* forceField = new NonbondedForce(numParticles, 0);
+   NonbondedForce* forceField = new NonbondedForce();
    for (int i = 0; i < numParticles; ++i) {
        system.setParticleMass(i, mass);
-       forceField->setParticleParameters(i, (i%2 == 0 ? 0.2 : -0.2), 0.5, 5.0);
+       forceField->addParticle((i%2 == 0 ? 0.2 : -0.2), 0.5, 5.0);
    }
    for (int i = 0; i < numConstraints; ++i){
        system.setConstraintParameters(i, 2*i, 2*i+1, 1.0);

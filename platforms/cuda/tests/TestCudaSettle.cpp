@@ -56,14 +56,14 @@ void testConstraints() {
     System system(numParticles, numConstraints);
     LangevinIntegrator integrator(temp, 2.0, 0.001);
     integrator.setConstraintTolerance(1e-5);
-    NonbondedForce* forceField = new NonbondedForce(numParticles, 0);
+    NonbondedForce* forceField = new NonbondedForce();
     for (int i = 0; i < numMolecules; ++i) {
         system.setParticleMass(i*3, 16.0);
         system.setParticleMass(i*3+1, 1.0);
         system.setParticleMass(i*3+2, 1.0);
-        forceField->setParticleParameters(i*3, -0.82, 0.317, 0.65);
-        forceField->setParticleParameters(i*3+1, 0.41, 1.0, 0.0);
-        forceField->setParticleParameters(i*3+2, 0.41, 1.0, 0.0);
+        forceField->addParticle(-0.82, 0.317, 0.65);
+        forceField->addParticle(0.41, 1.0, 0.0);
+        forceField->addParticle(0.41, 1.0, 0.0);
         system.setConstraintParameters(i*3, i*3, i*3+1, 0.1);
         system.setConstraintParameters(i*3+1, i*3, i*3+2, 0.1);
         system.setConstraintParameters(i*3+2, i*3+1, i*3+2, 0.163);

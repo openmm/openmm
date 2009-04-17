@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -29,14 +29,17 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include "OpenMMException.h"
 #include "internal/OpenMMContextImpl.h"
 #include "internal/NonbondedForceImpl.h"
 #include "kernels.h"
+#include <sstream>
 
 using namespace OpenMM;
 using std::pair;
 using std::vector;
 using std::set;
+using std::stringstream;
 
 NonbondedForceImpl::NonbondedForceImpl(NonbondedForce& owner) : owner(owner) {
 }
@@ -46,41 +49,41 @@ NonbondedForceImpl::~NonbondedForceImpl() {
 
 void NonbondedForceImpl::initialize(OpenMMContextImpl& context) {
     kernel = context.getPlatform().createKernel(CalcNonbondedForceKernel::Name(), context);
-    
-    // See if the system contains a HarmonicBondForce.  If so, use it to identify exclusions.
-    
+
+    // Check for errors in the specification of exceptions.
+
     System& system = context.getSystem();
-    vector<set<int> > exclusions(owner.getNumParticles());
-    vector<vector<int> > bondIndices;
-    set<pair<int, int> > bonded14set;
-    for (int i = 0; i < system.getNumForces(); i++) {
-        if (dynamic_cast<HarmonicBondForce*>(&system.getForce(i)) != NULL) {
-            const HarmonicBondForce& force = dynamic_cast<const HarmonicBondForce&>(system.getForce(i));
-            bondIndices.resize(force.getNumBonds());
-            for (int j = 0; j < force.getNumBonds(); ++j) {
-                int particle1, particle2;
-                double length, k;
-                force.getBondParameters(j, particle1, particle2, length, k);
-                bondIndices[j].push_back(particle1);
-                bondIndices[j].push_back(particle2);
-            }
-            break;
-        }
-    }
-
-    // Also treat constrained distances as bonds.
-
-    int numBonds = bondIndices.size();
-    bondIndices.resize(numBonds+system.getNumConstraints());
-    for (int j = 0; j < system.getNumConstraints(); j++) {
+    if (owner.getNumParticles() != system.getNumParticles())
+        throw OpenMMException("NonbondedForce must have exactly as many particles as the System it belongs to.");
+    vector<set<int> > exceptions(owner.getNumParticles());
+    for (int i = 0; i < owner.getNumExceptions(); i++) {
         int particle1, particle2;
-        double distance;
-        system.getConstraintParameters(j, particle1, particle2, distance);
-        bondIndices[j+numBonds].push_back(particle1);
-        bondIndices[j+numBonds].push_back(particle2);
+        double chargeProd, sigma, epsilon;
+        owner.getExceptionParameters(i, particle1, particle2, chargeProd, sigma, epsilon);
+        if (particle1 < 0 || particle1 >= owner.getNumParticles()) {
+            stringstream msg;
+            msg << "NonbondedForce: Illegal particle index for an exception: ";
+            msg << particle1;
+            throw OpenMMException(msg.str());
+        }
+        if (particle2 < 0 || particle2 >= owner.getNumParticles()) {
+            stringstream msg;
+            msg << "NonbondedForce: Illegal particle index for an exception: ";
+            msg << particle2;
+            throw OpenMMException(msg.str());
+        }
+        if (exceptions[particle1].count(particle2) > 0 || exceptions[particle2].count(particle1) > 0) {
+            stringstream msg;
+            msg << "NonbondedForce: Multiple exceptions are specified for particles ";
+            msg << particle1;
+            msg << " and ";
+            msg << particle2;
+            throw OpenMMException(msg.str());
+        }
+        exceptions[particle1].insert(particle2);
+        exceptions[particle2].insert(particle1);
     }
-    findExclusions(bondIndices, exclusions, bonded14set);
-    dynamic_cast<CalcNonbondedForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner, exclusions);
+    dynamic_cast<CalcNonbondedForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
 
 void NonbondedForceImpl::calcForces(OpenMMContextImpl& context, Stream& forces) {
@@ -96,30 +99,3 @@ std::vector<std::string> NonbondedForceImpl::getKernelNames() {
     names.push_back(CalcNonbondedForceKernel::Name());
     return names;
 }
-
-void NonbondedForceImpl::findExclusions(const vector<vector<int> >& bondIndices, vector<set<int> >& exclusions, set<pair<int, int> >& bonded14Indices) const {
-    vector<set<int> > bonded12(exclusions.size());
-    for (int i = 0; i < (int) bondIndices.size(); ++i) {
-        bonded12[bondIndices[i][0]].insert(bondIndices[i][1]);
-        bonded12[bondIndices[i][1]].insert(bondIndices[i][0]);
-    }
-    for (int i = 0; i < (int) exclusions.size(); ++i)
-        addExclusionsToSet(bonded12, exclusions[i], i, i, 2);
-    for (int i = 0; i < (int) exclusions.size(); ++i) {
-        set<int> bonded13;
-        addExclusionsToSet(bonded12, bonded13, i, i, 1);
-        for (set<int>::const_iterator iter = exclusions[i].begin(); iter != exclusions[i].end(); ++iter)
-            if (*iter < i && bonded13.find(*iter) == bonded13.end())
-                bonded14Indices.insert(pair<int, int> (*iter, i));
-    }
-}
-
-void NonbondedForceImpl::addExclusionsToSet(const vector<set<int> >& bonded12, set<int>& exclusions, int baseParticle, int fromParticle, int currentLevel) const {
-    for (set<int>::const_iterator iter = bonded12[fromParticle].begin(); iter != bonded12[fromParticle].end(); ++iter) {
-        if (*iter != baseParticle)
-            exclusions.insert(*iter);
-        if (currentLevel > 0)
-            addExclusionsToSet(bonded12, exclusions, baseParticle, *iter, currentLevel-1);
-    }
-}
-

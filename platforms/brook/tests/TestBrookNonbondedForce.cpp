@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
  * Authors: Mark Friedrichs                                                   *
  * Contributors:                                                              *
  *                                                                            *
@@ -73,9 +73,9 @@ void testBrookCoulomb( FILE* log ){
 
    // int index, double charge, double radius, double depth
 
-   NonbondedForce* forceField = new NonbondedForce( numberOfParticles, 0 ); 
-   forceField->setParticleParameters(0, 0.5, 1, 0);
-   forceField->setParticleParameters(1, -1.5, 1, 0);
+   NonbondedForce* forceField = new NonbondedForce(); 
+   forceField->addParticle(0.5, 1, 0);
+   forceField->addParticle(-1.5, 1, 0);
    system.addForce(forceField);
 
    //(void) fprintf( log, "%s: Calling context\n",  methodName.c_str() );
@@ -141,9 +141,9 @@ void testBrookLJ( FILE* log ){
 
    // int index, double charge, double radius, double depth
 
-   NonbondedForce* forceField = new NonbondedForce( numberOfParticles, 0 ); 
-   forceField->setParticleParameters(0, 0, 1.2, 1); 
-   forceField->setParticleParameters(1, 0, 1.4, 2); 
+   NonbondedForce* forceField = new NonbondedForce(); 
+   forceField->addParticle(0, 1.2, 1);
+   forceField->addParticle(0, 1.4, 2);
    system.addForce(forceField);
 
    //(void) fprintf( log, "%s: Calling context\n",  methodName.c_str() );
@@ -208,13 +208,25 @@ void testBrookExclusionsAnd14( FILE* log ){
 
    // int index, double charge, double radius, double depth
 
-   HarmonicBondForce* bonds = new HarmonicBondForce(4);
-   bonds->setBondParameters(0, 0, 1, 1, 0); 
-   bonds->setBondParameters(1, 1, 2, 1, 0); 
-   bonds->setBondParameters(2, 2, 3, 1, 0); 
-   bonds->setBondParameters(3, 3, 4, 1, 0); 
-   system.addForce(bonds);
-   NonbondedForce* nonbonded = new NonbondedForce( numberOfParticles, 2); 
+   NonbondedForce* nonbonded = new NonbondedForce();
+   for (int i = 0; i < numberOfParticles; i++)
+       nonbonded->addParticle(0, 1.5, 0)
+   vector<pair<int, int> > bonds;
+   bonds.push_back(pair<int, int>(0, 1));
+   bonds.push_back(pair<int, int>(1, 2));
+   bonds.push_back(pair<int, int>(2, 3));
+   bonds.push_back(pair<int, int>(3, 4));
+   nonbonded->createExceptionsFromBonds(bonds, 0.0, 0.0);
+   int first14, second14;
+   for (int i = 0; i < nonbonded->getNumExceptions(); i++) {
+       int particle1, particle2;
+       double chargeProd, sigma, epsilon;
+       nonbonded->getExceptionParameters(i, particle1, particle2, chargeProd, sigma, epsilon);
+       if ((particle1 == 0 && particle2 == 3) || (particle1 == 3 && particle2 == 0))
+           first14 = i;
+       if ((particle1 == 1 && particle2 == 4) || (particle1 == 4 && particle2 == 1))
+           second14 = i;
+   }
    system.addForce(nonbonded);
 
    //(void) fprintf( log, "%s: Calling context\n",  methodName.c_str() );
@@ -240,8 +252,8 @@ void testBrookExclusionsAnd14( FILE* log ){
        }
        nonbonded->setParticleParameters(0, 0, 1.5, 1); 
        nonbonded->setParticleParameters(ii, 0, 1.5, 1); 
-       nonbonded->setNonbonded14Parameters(0, 0, 3, 0, 1.5, ii == 3 ? 0.5 : 0.0);
-       nonbonded->setNonbonded14Parameters(1, 1, 4, 0, 1.5, 0.0);
+       nonbonded->setExceptionParameters(first14, 0, 3, 0, 1.5, ii == 3 ? 0.5 : 0.0);
+       nonbonded->setExceptionParameters(second14, 1, 4, 0, 1.5, 0.0);
        positions[ii] = Vec3(r, 0, 0); 
 
       context.reinitialize();
@@ -284,8 +296,8 @@ void testBrookExclusionsAnd14( FILE* log ){
 
       nonbonded->setParticleParameters( 0, 2, 1.5, 0 );
       nonbonded->setParticleParameters( ii, 2, 1.5, 0 );
-      nonbonded->setNonbonded14Parameters( 0, 0, 3, ii == 3 ? 4/1.2 : 0, 1.5, 0 );
-      nonbonded->setNonbonded14Parameters( 1, 1, 4, 0, 1.5, 0 );
+      nonbonded->setExceptionParameters( first14, 0, 3, ii == 3 ? 4/1.2 : 0, 1.5, 0 );
+      nonbonded->setExceptionParameters( second14, 1, 4, 0, 1.5, 0 );
 
       context.reinitialize();
 

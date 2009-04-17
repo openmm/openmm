@@ -238,14 +238,27 @@ double CudaCalcRBTorsionForceKernel::executeEnergy(OpenMMContextImpl& context) {
 CudaCalcNonbondedForceKernel::~CudaCalcNonbondedForceKernel() {
 }
 
-void CudaCalcNonbondedForceKernel::initialize(const System& system, const NonbondedForce& force, const std::vector<std::set<int> >& exclusions) {
+void CudaCalcNonbondedForceKernel::initialize(const System& system, const NonbondedForce& force) {
     if (data.primaryKernel == NULL)
         data.primaryKernel = this;
     data.hasNonbonded = true;
     numParticles = force.getNumParticles();
-    num14 = force.getNumNonbonded14();
     _gpuContext* gpu = data.gpu;
-    
+
+    // Identify which exceptions are 1-4 interactions.
+
+    vector<pair<int, int> > exclusions;
+    vector<int> nb14s;
+    for (int i = 0; i < force.getNumExceptions(); i++) {
+        int particle1, particle2;
+        double chargeProd, sigma, epsilon;
+        force.getExceptionParameters(i, particle1, particle2, chargeProd, sigma, epsilon);
+        exclusions.push_back(pair<int, int>(particle1, particle2));
+        if (chargeProd != 0.0 || epsilon != 0.0)
+            nb14s.push_back(i);
+    }
+    num14 = nb14s.size();
+
     // Initialize nonbonded interactions.
     
     {
@@ -262,8 +275,11 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
             q[i] = (float) charge;
             c6[i] = (float) (4*depth*pow(radius, 6.0));
             c12[i] = (float) (4*depth*pow(radius, 12.0));
-            exclusionList[i] = vector<int>(exclusions[i].begin(), exclusions[i].end());
             exclusionList[i].push_back(i);
+        }
+        for (int i = 0; i < exclusions.size(); i++) {
+            exclusionList[exclusions[i].first].push_back(exclusions[i].second);
+            exclusionList[exclusions[i].second].push_back(exclusions[i].first);
         }
         CudaNonbondedMethod method = NO_CUTOFF;
         if (force.getNonbondedMethod() != NonbondedForce::NoCutoff) {
@@ -299,7 +315,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
         vector<float> q2(num14);
         for (int i = 0; i < num14; i++) {
             double charge, sig, eps;
-            force.getNonbonded14Parameters(i, particle1[i], particle2[i], charge, sig, eps);
+            force.getExceptionParameters(nb14s[i], particle1[i], particle2[i], charge, sig, eps);
             c6[i] = (float) (4*eps*pow(sig, 6.0));
             c12[i] = (float) (4*eps*pow(sig, 12.0));
             q1[i] = (float) charge;

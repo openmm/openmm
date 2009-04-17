@@ -100,10 +100,10 @@ void testTemperature() {
     ReferencePlatform platform;
     System system(numParticles, 0);
     LangevinIntegrator integrator(temp, 2.0, 0.01);
-    NonbondedForce* forceField = new NonbondedForce(numParticles, 0);
+    NonbondedForce* forceField = new NonbondedForce();
     for (int i = 0; i < numParticles; ++i) {
         system.setParticleMass(i, 2.0);
-        forceField->setParticleParameters(i, (i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
+        forceField->addParticle((i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
     }
     system.addForce(forceField);
     OpenMMContext context(system, integrator, platform);
@@ -136,10 +136,10 @@ void testConstraints() {
     System system(numParticles, numParticles-1);
     LangevinIntegrator integrator(temp, 2.0, 0.01);
     integrator.setConstraintTolerance(1e-5);
-    NonbondedForce* forceField = new NonbondedForce(numParticles, 0);
+    NonbondedForce* forceField = new NonbondedForce();
     for (int i = 0; i < numParticles; ++i) {
         system.setParticleMass(i, 10.0);
-        forceField->setParticleParameters(i, (i%2 == 0 ? 0.2 : -0.2), 0.5, 5.0);
+        forceField->addParticle((i%2 == 0 ? 0.2 : -0.2), 0.5, 5.0);
     }
     for (int i = 0; i < numParticles-1; ++i)
         system.setConstraintParameters(i, i, i+1, 1.0);
@@ -176,10 +176,10 @@ void testRandomSeed() {
     ReferencePlatform platform;
     System system(numParticles, 0);
     LangevinIntegrator integrator(temp, 2.0, 0.01);
-    NonbondedForce* forceField = new NonbondedForce(numParticles, 0);
+    NonbondedForce* forceField = new NonbondedForce();
     for (int i = 0; i < numParticles; ++i) {
         system.setParticleMass(i, 2.0);
-        forceField->setParticleParameters(i, (i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
+        forceField->addParticle((i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
     }
     system.addForce(forceField);
     vector<Vec3> positions(numParticles);
