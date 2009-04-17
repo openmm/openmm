@@ -425,15 +425,16 @@ void gpuSetPeriodicBoxSize(gpuContext gpu, float xsize, float ysize, float zsize
 }
 
 extern "C"
-void gpuSetObcParameters(gpuContext gpu, float innerDielectric, float solventDielectric, const vector<int>& atom, const vector<float>& radius, const vector<float>& scale)
+void gpuSetObcParameters(gpuContext gpu, float innerDielectric, float solventDielectric, const vector<float>& radius, const vector<float>& scale, const vector<float>& charge)
 {
-    unsigned int atoms = atom.size();
+    unsigned int atoms = radius.size();
 
     gpu->bIncludeGBSA = true;
     for (unsigned int i = 0; i < atoms; i++)
     {
             (*gpu->psObcData)[i].x = radius[i] - dielectricOffset;
             (*gpu->psObcData)[i].y = scale[i] * (*gpu->psObcData)[i].x;
+            (*gpu->psPosq4)[i].w = charge[i];
 
 #if (DUMP_PARAMETERS == 1)
         cout << 
@@ -453,6 +454,7 @@ void gpuSetObcParameters(gpuContext gpu, float innerDielectric, float solventDie
 
     gpu->psBornRadii->Upload();
     gpu->psObcData->Upload();
+    gpu->psPosq4->Upload();
     gpu->sim.preFactor = 2.0f*electricConstant*((1.0f/innerDielectric)-(1.0f/solventDielectric))*gpu->sim.forceConversionFactor;
 }
 

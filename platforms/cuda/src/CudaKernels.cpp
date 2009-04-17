@@ -343,17 +343,17 @@ void CudaCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOBCF
 
     int numParticles = system.getNumParticles();
     _gpuContext* gpu = data.gpu;
-    vector<int> particle(numParticles);
     vector<float> radius(numParticles);
     vector<float> scale(numParticles);
+    vector<float> charge(numParticles);
     for (int i = 0; i < numParticles; i++) {
-        double charge, particleRadius, scalingFactor;
-        force.getParticleParameters(i, charge, particleRadius, scalingFactor);
-        particle[i] = i;
+        double particleCharge, particleRadius, scalingFactor;
+        force.getParticleParameters(i, particleCharge, particleRadius, scalingFactor);
         radius[i] = (float) particleRadius;
         scale[i] = (float) scalingFactor;
+        charge[i] = (float) particleCharge;
     }
-    gpuSetObcParameters(gpu, (float) force.getSoluteDielectric(), (float) force.getSolventDielectric(), particle, radius, scale);
+    gpuSetObcParameters(gpu, (float) force.getSoluteDielectric(), (float) force.getSolventDielectric(), radius, scale, charge);
 }
 
 void CudaCalcGBSAOBCForceKernel::executeForces(OpenMMContextImpl& context) {

@@ -180,7 +180,7 @@ extern "C"
 void gpuSetPeriodicBoxSize(gpuContext gpu, float xsize, float ysize, float zsize);
 
 extern "C"
-void gpuSetObcParameters(gpuContext gpu, float innerDielectric, float solventDielectric, const std::vector<int>& atom, const std::vector<float>& radius, const std::vector<float>& scale);
+void gpuSetObcParameters(gpuContext gpu, float innerDielectric, float solventDielectric, const std::vector<float>& radius, const std::vector<float>& scale, const std::vector<float>& charge);
 
 extern "C"
 void gpuSetConstraintParameters(gpuContext gpu, const std::vector<int>& atom1, const std::vector<int>& atom2, const std::vector<float>& distance,
