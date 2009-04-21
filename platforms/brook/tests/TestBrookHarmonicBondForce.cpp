@@ -35,10 +35,10 @@
 
 #include "../../../tests/AssertionUtilities.h"
 #include "BrookPlatform.h"
-#include "OpenMMContext.h"
-#include "HarmonicBondForce.h"
-#include "System.h"
-#include "LangevinIntegrator.h"
+#include "openmm/OpenMMContext.h"
+#include "openmm/HarmonicBondForce.h"
+#include "openmm/System.h"
+#include "openmm/LangevinIntegrator.h"
 #include <vector>
 
 using namespace OpenMM;

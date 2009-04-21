@@ -29,12 +29,12 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "Platform.h"
-#include "OpenMMException.h"
-#include "Kernel.h"
-#include "Stream.h"
-#include "KernelFactory.h"
-#include "StreamFactory.h"
+#include "openmm/Platform.h"
+#include "openmm/OpenMMException.h"
+#include "openmm/Kernel.h"
+#include "openmm/Stream.h"
+#include "openmm/KernelFactory.h"
+#include "openmm/StreamFactory.h"
 #ifdef WIN32
 #include <windows.h>
 #include <sstream>

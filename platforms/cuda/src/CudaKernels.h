@@ -33,9 +33,9 @@
  * -------------------------------------------------------------------------- */
 
 #include "CudaPlatform.h"
-#include "kernels.h"
+#include "openmm/kernels.h"
 #include "kernels/gputypes.h"
-#include "System.h"
+#include "openmm/System.h"
 
 class CudaAndersenThermostat;
 class CudaBrownianDynamics;

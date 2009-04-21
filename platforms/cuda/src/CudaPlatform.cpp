@@ -32,10 +32,10 @@
 #include "CudaPlatform.h"
 #include "CudaKernelFactory.h"
 #include "CudaKernels.h"
-#include "PluginInitializer.h"
-#include "internal/OpenMMContextImpl.h"
+#include "openmm/PluginInitializer.h"
+#include "openmm/internal/OpenMMContextImpl.h"
 #include "kernels/gputypes.h"
-#include "System.h"
+#include "openmm/System.h"
 
 using namespace OpenMM;
 

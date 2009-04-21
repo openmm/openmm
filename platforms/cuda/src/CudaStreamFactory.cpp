@@ -32,8 +32,8 @@
 #include "CudaPlatform.h"
 #include "CudaStreamFactory.h"
 #include "CudaStreamImpl.h"
-#include "OpenMMException.h"
-#include "internal/OpenMMContextImpl.h"
+#include "openmm/OpenMMException.h"
+#include "openmm/internal/OpenMMContextImpl.h"
 #include "kernels/gputypes.h"
 
 using namespace OpenMM;

@@ -29,7 +29,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "StreamImpl.h"
+#include "openmm/StreamImpl.h"
 
 using namespace OpenMM;
 using namespace std;

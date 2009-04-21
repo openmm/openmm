@@ -32,9 +32,9 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "kernels.h"
+#include "openmm/kernels.h"
 #include "OpenMMBrookInterface.h"
-#include "NonbondedForce.h"
+#include "openmm/NonbondedForce.h"
 
 namespace OpenMM {
 

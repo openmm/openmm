@@ -39,7 +39,7 @@
 #include "BrookFloatStreamInternal.h"
 #include "BrookPlatform.h"
 #include "BrookCommon.h"
-#include "OpenMMException.h"
+#include "openmm/OpenMMException.h"
 
 namespace OpenMM {
 

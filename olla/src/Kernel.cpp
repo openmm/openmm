@@ -29,7 +29,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "Kernel.h"
+#include "openmm/Kernel.h"
 
 using namespace OpenMM;
 using namespace std;

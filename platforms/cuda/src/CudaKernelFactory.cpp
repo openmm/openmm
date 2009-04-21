@@ -31,7 +31,7 @@
 
 #include "CudaKernelFactory.h"
 #include "CudaKernels.h"
-#include "internal/OpenMMContextImpl.h"
+#include "openmm/internal/OpenMMContextImpl.h"
 
 using namespace OpenMM;
 

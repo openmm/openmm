@@ -33,8 +33,8 @@
  * -------------------------------------------------------------------------- */
 
 #include "ForceImpl.h"
-#include "GBVIForce.h"
-#include "Kernel.h"
+#include "openmm/GBVIForce.h"
+#include "openmm/Kernel.h"
 #include <string>
 
 namespace OpenMM {

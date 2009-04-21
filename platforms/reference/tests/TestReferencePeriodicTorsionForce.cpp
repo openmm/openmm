@@ -34,11 +34,11 @@
  */
 
 #include "../../../tests/AssertionUtilities.h"
-#include "OpenMMContext.h"
+#include "openmm/OpenMMContext.h"
 #include "ReferencePlatform.h"
-#include "PeriodicTorsionForce.h"
-#include "System.h"
-#include "VerletIntegrator.h"
+#include "openmm/PeriodicTorsionForce.h"
+#include "openmm/System.h"
+#include "openmm/VerletIntegrator.h"
 #include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
 #include <iostream>
 #include <vector>

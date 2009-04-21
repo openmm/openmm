@@ -37,10 +37,10 @@
 
 #include "../../../tests/AssertionUtilities.h"
 #include "BrookPlatform.h"
-#include "OpenMMContext.h"
-#include "HarmonicAngleForce.h"
-#include "System.h"
-#include "LangevinIntegrator.h"
+#include "openmm/OpenMMContext.h"
+#include "openmm/HarmonicAngleForce.h"
+#include "openmm/System.h"
+#include "openmm/LangevinIntegrator.h"
 
 #define PI_M               3.141592653589
 

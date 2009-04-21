@@ -32,7 +32,7 @@
 #include <sstream>
 #include "BrookRandomNumberGenerator.h"
 #include "../../reference/src/SimTKUtilities/SimTKOpenMMUtilities.h"
-#include "OpenMMException.h"
+#include "openmm/OpenMMException.h"
 #include "kernels/kupdatesd.h"
 
 using namespace OpenMM;

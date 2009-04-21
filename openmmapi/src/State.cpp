@@ -29,8 +29,8 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "OpenMMException.h"
-#include "State.h"
+#include "openmm/OpenMMException.h"
+#include "openmm/State.h"
 
 using namespace OpenMM;
 using namespace std;

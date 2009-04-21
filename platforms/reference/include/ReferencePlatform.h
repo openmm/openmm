@@ -32,9 +32,9 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "Platform.h"
+#include "openmm/Platform.h"
 #include "ReferenceStreamFactory.h"
-#include "internal/windowsExport.h"
+#include "openmm/internal/windowsExport.h"
 
 namespace OpenMM {
 

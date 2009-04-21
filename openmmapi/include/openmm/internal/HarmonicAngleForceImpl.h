@@ -1,5 +1,5 @@
-#ifndef OPENMM_NONBONDEDFORCEIMPL_H_
-#define OPENMM_NONBONDEDFORCEIMPL_H_
+#ifndef OPENMM_HARMONICANGLEFORCEIMPL_H_
+#define OPENMM_HARMONICANGLEFORCEIMPL_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -33,8 +33,8 @@
  * -------------------------------------------------------------------------- */
 
 #include "ForceImpl.h"
-#include "NonbondedForce.h"
-#include "Kernel.h"
+#include "openmm/HarmonicAngleForce.h"
+#include "openmm/Kernel.h"
 #include <utility>
 #include <set>
 #include <string>
@@ -42,15 +42,15 @@
 namespace OpenMM {
 
 /**
- * This is the internal implementation of NonbondedForce.
+ * This is the internal implementation of HarmonicAngleForce.
  */
 
-class NonbondedForceImpl : public ForceImpl {
+class HarmonicAngleForceImpl : public ForceImpl {
 public:
-    NonbondedForceImpl(NonbondedForce& owner);
-    ~NonbondedForceImpl();
+    HarmonicAngleForceImpl(HarmonicAngleForce& owner);
+    ~HarmonicAngleForceImpl();
     void initialize(OpenMMContextImpl& context);
-    NonbondedForce& getOwner() {
+    HarmonicAngleForce& getOwner() {
         return owner;
     }
     void updateContextState(OpenMMContextImpl& context) {
@@ -63,10 +63,10 @@ public:
     }
     std::vector<std::string> getKernelNames();
 private:
-    NonbondedForce& owner;
+    HarmonicAngleForce& owner;
     Kernel kernel;
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_NONBONDEDFORCEIMPL_H_*/
+#endif /*OPENMM_HARMONICANGLEFORCEIMPL_H_*/

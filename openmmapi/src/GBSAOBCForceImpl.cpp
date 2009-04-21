@@ -29,10 +29,10 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "OpenMMException.h"
-#include "internal/GBSAOBCForceImpl.h"
-#include "internal/OpenMMContextImpl.h"
-#include "kernels.h"
+#include "openmm/OpenMMException.h"
+#include "openmm/internal/GBSAOBCForceImpl.h"
+#include "openmm/internal/OpenMMContextImpl.h"
+#include "openmm/kernels.h"
 #include <vector>
 
 using namespace OpenMM;

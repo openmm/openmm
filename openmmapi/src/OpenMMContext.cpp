@@ -29,9 +29,9 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "OpenMMContext.h"
-#include "internal/OpenMMContextImpl.h"
-#include "OpenMMException.h"
+#include "openmm/OpenMMContext.h"
+#include "openmm/internal/OpenMMContextImpl.h"
+#include "openmm/OpenMMException.h"
 
 using namespace OpenMM;
 using namespace std;

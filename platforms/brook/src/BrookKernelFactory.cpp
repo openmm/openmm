@@ -42,7 +42,7 @@
 #include "BrookCalcKineticEnergyKernel.h"
 #include "BrookCalcGBSAOBCForceKernel.h"
 #include "BrookRemoveCMMotionKernel.h"
-#include "internal/OpenMMContextImpl.h"
+#include "openmm/internal/OpenMMContextImpl.h"
 
 using namespace OpenMM;
 

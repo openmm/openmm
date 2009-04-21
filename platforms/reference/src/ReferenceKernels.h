@@ -32,7 +32,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "kernels.h"
+#include "openmm/kernels.h"
 #include "SimTKUtilities/SimTKOpenMMRealType.h"
 #include "SimTKReference/ReferenceNeighborList.h"
 

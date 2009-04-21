@@ -35,7 +35,7 @@
 #include "Stream.h"
 #include <map>
 #include <vector>
-#include "internal/windowsExport.h"
+#include "openmm/internal/windowsExport.h"
 
 namespace OpenMM {
 

@@ -29,10 +29,10 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "Force.h"
-#include "OpenMMException.h"
-#include "HarmonicBondForce.h"
-#include "internal/HarmonicBondForceImpl.h"
+#include "openmm/Force.h"
+#include "openmm/OpenMMException.h"
+#include "openmm/HarmonicBondForce.h"
+#include "openmm/internal/HarmonicBondForceImpl.h"
 
 using namespace OpenMM;
 

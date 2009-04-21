@@ -34,14 +34,14 @@
  */
 
 #include "../../../tests/AssertionUtilities.h"
-#include "CMMotionRemover.h"
-#include "OpenMMContext.h"
+#include "openmm/CMMotionRemover.h"
+#include "openmm/OpenMMContext.h"
 #include "CudaPlatform.h"
-#include "HarmonicBondForce.h"
-#include "NonbondedForce.h"
-#include "System.h"
-#include "LangevinIntegrator.h"
-#include "VerletIntegrator.h"
+#include "openmm/HarmonicBondForce.h"
+#include "openmm/NonbondedForce.h"
+#include "openmm/System.h"
+#include "openmm/LangevinIntegrator.h"
+#include "openmm/VerletIntegrator.h"
 #include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
 #include "../src/sfmt/SFMT.h"
 #include <iostream>

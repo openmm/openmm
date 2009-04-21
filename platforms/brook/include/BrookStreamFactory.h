@@ -32,8 +32,8 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "StreamFactory.h"
-#include "Platform.h"
+#include "openmm/StreamFactory.h"
+#include "openmm/Platform.h"
 
 namespace OpenMM {
 

@@ -33,8 +33,8 @@
  * -------------------------------------------------------------------------- */
 
 #include "ForceImpl.h"
-#include "HarmonicBondForce.h"
-#include "Kernel.h"
+#include "openmm/HarmonicBondForce.h"
+#include "openmm/Kernel.h"
 #include <utility>
 #include <set>
 #include <string>

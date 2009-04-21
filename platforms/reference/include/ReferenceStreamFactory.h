@@ -32,8 +32,8 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "StreamFactory.h"
-#include "internal/windowsExport.h"
+#include "openmm/StreamFactory.h"
+#include "openmm/internal/windowsExport.h"
 
 namespace OpenMM {
 

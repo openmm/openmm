@@ -29,7 +29,7 @@
 
 #include "SimTKOpenMMCommon.h" 
 #include "../sfmt/SFMT.h"
-#include "internal/windowsExport.h"
+#include "openmm/internal/windowsExport.h"
 
 #include <stdio.h>
 #include <string.h>

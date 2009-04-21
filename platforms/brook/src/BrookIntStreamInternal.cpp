@@ -30,7 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "BrookIntStreamInternal.h"
-#include "OpenMMException.h"
+#include "openmm/OpenMMException.h"
 #include <sstream>
 
 using namespace OpenMM;

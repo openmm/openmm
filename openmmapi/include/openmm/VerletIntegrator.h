@@ -1,5 +1,5 @@
-#ifndef OPENMM_LANGEVININTEGRATOR_H_
-#define OPENMM_LANGEVININTEGRATOR_H_
+#ifndef OPENMM_VERLETINTEGRATOR_H_
+#define OPENMM_VERLETINTEGRATOR_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -33,69 +33,24 @@
  * -------------------------------------------------------------------------- */
 
 #include "Integrator.h"
-#include "Kernel.h"
+#include "openmm/Kernel.h"
 #include "internal/windowsExport.h"
 
 namespace OpenMM {
 
 /**
- * This is an Integrator which simulates a System using Langevin dynamics.
+ * This is an Integrator which simulates a System using the velocity Verlet algorithm.
  */
 
-class OPENMM_EXPORT LangevinIntegrator : public Integrator {
+class OPENMM_EXPORT VerletIntegrator : public Integrator {
 public:
     /**
-     * Create a LangevinIntegrator.
+     * Create a VerletIntegrator.
      * 
-     * @param temperature    the temperature of the heat bath (in Kelvin)
-     * @param frictionCoeff  the friction coefficient which couples the system to the heat bath
-     * @param stepSize       the step size with which to integrator the system (in picoseconds)
+     * @param stepSize the step size with which to integrator the system (in picoseconds)
      */
-    LangevinIntegrator(double temperature, double frictionCoeff, double stepSize);
-    /**
-     * Get the temperature of the heat bath (in Kelvin).
-     */
-    double getTemperature() const {
-        return temperature;
-    }
-    /**
-     * Set the temperature of the heat bath (in Kelvin).
-     */
-    void setTemperature(double temp) {
-        temperature = temp;
-    }
-    /**
-     * Get the friction coefficient which determines how strongly the system is coupled to
-     * the heat bath.
-     */
-    double getFriction() const {
-        return friction;
-    }
-    /**
-     * Set the friction coefficient which determines how strongly the system is coupled to
-     * the heat bath.
-     */
-    void setFriction(double coeff) {
-        friction = coeff;
-    }
-    /**
-     * Get the random number seed.  See setRandomNumberSeed() for details.
-     */
-    int getRandomNumberSeed() const {
-        return randomNumberSeed;
-    }
-    /**
-     * Set the random number seed.  The precise meaning of this parameter is undefined, and is left up
-     * to each Platform to interpret in an appropriate way.  It is guaranteed that if two simulations
-     * are run with different random number seeds, the sequence of random forces will be different.  On
-     * the other hand, no guarantees are made about the behavior of simulations that use the same seed.
-     * In particular, Platforms are permitted to use non-deterministic algorithms which produce different
-     * results on successive runs, even if those runs were initialized identically.
-     */
-    void setRandomNumberSeed(int seed) {
-        randomNumberSeed = seed;
-    }
-    /**
+    VerletIntegrator(double stepSize);
+   /**
      * Advance a simulation through time by taking a series of time steps.
      * 
      * @param steps   the number of time steps to take
@@ -113,12 +68,10 @@ protected:
      */
     std::vector<std::string> getKernelNames();
 private:
-    double temperature, friction;
-    int randomNumberSeed;
     OpenMMContextImpl* context;
     Kernel kernel;
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_LANGEVININTEGRATOR_H_*/
+#endif /*OPENMM_VERLETINTEGRATOR_H_*/

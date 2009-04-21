@@ -35,9 +35,9 @@
 
 #include "../../../tests/AssertionUtilities.h"
 #include "CudaPlatform.h"
-#include "OpenMMContext.h"
-#include "Stream.h"
-#include "VerletIntegrator.h"
+#include "openmm/OpenMMContext.h"
+#include "openmm/Stream.h"
+#include "openmm/VerletIntegrator.h"
 #include <iostream>
 
 using namespace OpenMM;

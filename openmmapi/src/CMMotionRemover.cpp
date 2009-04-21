@@ -29,8 +29,8 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "CMMotionRemover.h"
-#include "internal/CMMotionRemoverImpl.h"
+#include "openmm/CMMotionRemover.h"
+#include "openmm/internal/CMMotionRemoverImpl.h"
 
 using namespace OpenMM;
 

@@ -25,7 +25,7 @@
 #define __ReferenceLincsAlgorithm_H__
 
 #include "ReferenceConstraintAlgorithm.h"
-#include "Vec3.h"
+#include "openmm/Vec3.h"
 #include <vector>
 
 // ---------------------------------------------------------------------------------------

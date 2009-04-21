@@ -34,12 +34,12 @@
  */
 
 #include "../../../tests/AssertionUtilities.h"
-#include "OpenMMContext.h"
+#include "openmm/OpenMMContext.h"
 #include "CudaPlatform.h"
-#include "HarmonicBondForce.h"
-#include "NonbondedForce.h"
-#include "System.h"
-#include "LangevinIntegrator.h"
+#include "openmm/HarmonicBondForce.h"
+#include "openmm/NonbondedForce.h"
+#include "openmm/System.h"
+#include "openmm/LangevinIntegrator.h"
 #include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
 #include "../src/sfmt/SFMT.h"
 #include <iostream>

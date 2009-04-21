@@ -33,8 +33,8 @@
  * -------------------------------------------------------------------------- */
 
 #include "ForceImpl.h"
-#include "AndersenThermostat.h"
-#include "Kernel.h"
+#include "openmm/AndersenThermostat.h"
+#include "openmm/Kernel.h"
 #include <string>
 
 namespace OpenMM {

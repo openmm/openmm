@@ -1,5 +1,5 @@
-#ifndef OPENMM_KERNEL_H_
-#define OPENMM_KERNEL_H_
+#ifndef OPENMM_CMMOTIONREMOVERIMPL_H_
+#define OPENMM_CMMOTIONREMOVERIMPL_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -32,58 +32,39 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "KernelImpl.h"
-#include "internal/windowsExport.h"
+#include "ForceImpl.h"
+#include "openmm/CMMotionRemover.h"
+#include "openmm/Kernel.h"
 
 namespace OpenMM {
 
 /**
- * A Kernel encapsulates a particular implementation of a calculation that can be performed on Streams.
- * Kernel objects are created by Platforms:
- * 
- * <pre>
- * Kernel kernel = platform.createKernel(kernelName);
- * </pre>
- * 
- * The Kernel class itself does not specify any details of what calculation is to be performed or the API
- * for calling it.  Instead, subclasses of KernelImpl will define APIs which are appropriate to particular
- * calculations.  To execute a Kernel, you therefore requests its implementation object and cast it to the
- * correct type:
- * 
- * <pre>
- * dynamic_cast<AddStreamsImpl&>(kernel.getImpl()).execute(stream1, stream2);
- * </pre>
+ * This is the internal implementation of CMMotionRemover.
  */
 
-class OPENMM_EXPORT Kernel {
+class CMMotionRemoverImpl : public ForceImpl {
 public:
-    Kernel();
-    Kernel(const Kernel& copy);
-    ~Kernel();
-    Kernel& operator=(const Kernel& copy);
-    /**
-     * Get the name of this Kernel.
-     */
-    std::string getName() const;
-    /**
-     * Get the object which implements this Kernel.
-     */
-    const KernelImpl& getImpl() const;
-    /**
-     * Get the object which implements this Kernel.
-     */
-    KernelImpl& getImpl();
+    CMMotionRemoverImpl(CMMotionRemover& owner);
+    void initialize(OpenMMContextImpl& context);
+    CMMotionRemover& getOwner() {
+        return owner;
+    }
+    void updateContextState(OpenMMContextImpl& context);
+    void calcForces(OpenMMContextImpl& context, Stream& forces) {
+        // This force doesn't apply forces to particles.
+    }
+    double calcEnergy(OpenMMContextImpl& context) {
+        return 0.0; // This force doesn't contribute to the potential energy.
+    }
+    std::map<std::string, double> getDefaultParameters() {
+        return std::map<std::string, double>(); // This force doesn't define any parameters.
+    }
+    std::vector<std::string> getKernelNames();
 private:
-    friend class Platform;
-    /**
-     * Create a KernelImpl.
-     * 
-     * @param name the name of the kernel to create
-     */
-    Kernel(KernelImpl* impl);
-    KernelImpl* impl;
+    CMMotionRemover& owner;
+    Kernel kernel;
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_KERNEL_H_*/
+#endif /*OPENMM_CMMOTIONREMOVERIMPL_H_*/

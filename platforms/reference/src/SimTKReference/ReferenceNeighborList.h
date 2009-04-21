@@ -2,7 +2,7 @@
 #define OPENMM_REFERENCE_NEIGHBORLIST_H_
 
 #include "../SimTKUtilities/SimTKOpenMMRealType.h"
-#include "internal/windowsExport.h"
+#include "openmm/internal/windowsExport.h"
 #include <set>
 #include <vector>
 

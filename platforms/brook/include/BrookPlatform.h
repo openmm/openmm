@@ -36,7 +36,7 @@
 
 #define BrookOpenMMFloat float
 
-#include "Platform.h"
+#include "openmm/Platform.h"
 #include "BrookStreamFactory.h"
 
 namespace OpenMM {

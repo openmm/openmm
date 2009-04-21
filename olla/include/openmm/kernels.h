@@ -32,21 +32,21 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "AndersenThermostat.h"
-#include "BrownianIntegrator.h"
-#include "CMMotionRemover.h"
-#include "GBSAOBCForce.h"
-#include "GBVIForce.h"
-#include "HarmonicAngleForce.h"
-#include "HarmonicBondForce.h"
-#include "KernelImpl.h"
-#include "LangevinIntegrator.h"
-#include "PeriodicTorsionForce.h"
-#include "RBTorsionForce.h"
-#include "NonbondedForce.h"
-#include "Stream.h"
-#include "System.h"
-#include "VerletIntegrator.h"
+#include "openmm/AndersenThermostat.h"
+#include "openmm/BrownianIntegrator.h"
+#include "openmm/CMMotionRemover.h"
+#include "openmm/GBSAOBCForce.h"
+#include "openmm/GBVIForce.h"
+#include "openmm/HarmonicAngleForce.h"
+#include "openmm/HarmonicBondForce.h"
+#include "openmm/KernelImpl.h"
+#include "openmm/LangevinIntegrator.h"
+#include "openmm/PeriodicTorsionForce.h"
+#include "openmm/RBTorsionForce.h"
+#include "openmm/NonbondedForce.h"
+#include "openmm/Stream.h"
+#include "openmm/System.h"
+#include "openmm/VerletIntegrator.h"
 #include <set>
 #include <string>
 #include <vector>

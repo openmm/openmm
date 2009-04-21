@@ -32,7 +32,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "Platform.h"
+#include "openmm/Platform.h"
 #include "CudaStreamFactory.h"
 
 class _gpuContext;

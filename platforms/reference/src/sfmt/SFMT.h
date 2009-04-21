@@ -32,7 +32,7 @@
 #define SFMT_H
 
 #include <stdio.h>
-#include "internal/windowsExport.h"
+#include "openmm/internal/windowsExport.h"
 
 #if defined(__STDC_VERSION__) && (__STDC_VERSION__ >= 199901L)
   #include <inttypes.h>

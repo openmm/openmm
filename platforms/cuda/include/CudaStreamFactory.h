@@ -32,7 +32,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "StreamFactory.h"
+#include "openmm/StreamFactory.h"
 
 namespace OpenMM {
 

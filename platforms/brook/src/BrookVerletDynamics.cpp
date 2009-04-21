@@ -32,7 +32,7 @@
 #include <sstream>
 #include "BrookVerletDynamics.h"
 #include "BrookPlatform.h"
-#include "OpenMMException.h"
+#include "openmm/OpenMMException.h"
 #include "BrookStreamImpl.h"
 #include "kernels/kshakeh.h"
 #include "kernels/kupdatemd.h"

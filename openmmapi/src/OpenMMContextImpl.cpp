@@ -29,13 +29,13 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "Force.h"
-#include "Integrator.h"
-#include "OpenMMException.h"
-#include "System.h"
-#include "kernels.h"
-#include "internal/ForceImpl.h"
-#include "internal/OpenMMContextImpl.h"
+#include "openmm/Force.h"
+#include "openmm/Integrator.h"
+#include "openmm/OpenMMException.h"
+#include "openmm/System.h"
+#include "openmm/kernels.h"
+#include "openmm/internal/ForceImpl.h"
+#include "openmm/internal/OpenMMContextImpl.h"
 #include <map>
 #include <vector>
 

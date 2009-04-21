@@ -1,5 +1,5 @@
-#ifndef OPENMM_HARMONICANGLEFORCEIMPL_H_
-#define OPENMM_HARMONICANGLEFORCEIMPL_H_
+#ifndef OPENMM_GBSAOBCFORCEFIELDIMPL_H_
+#define OPENMM_GBSAOBCFORCEFIELDIMPL_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -33,24 +33,21 @@
  * -------------------------------------------------------------------------- */
 
 #include "ForceImpl.h"
-#include "HarmonicAngleForce.h"
-#include "Kernel.h"
-#include <utility>
-#include <set>
+#include "openmm/GBSAOBCForce.h"
+#include "openmm/Kernel.h"
 #include <string>
 
 namespace OpenMM {
 
 /**
- * This is the internal implementation of HarmonicAngleForce.
+ * This is the internal implementation of GBSAOBCForce.
  */
 
-class HarmonicAngleForceImpl : public ForceImpl {
+class GBSAOBCForceImpl : public ForceImpl {
 public:
-    HarmonicAngleForceImpl(HarmonicAngleForce& owner);
-    ~HarmonicAngleForceImpl();
+    GBSAOBCForceImpl(GBSAOBCForce& owner);
     void initialize(OpenMMContextImpl& context);
-    HarmonicAngleForce& getOwner() {
+    GBSAOBCForce& getOwner() {
         return owner;
     }
     void updateContextState(OpenMMContextImpl& context) {
@@ -63,10 +60,10 @@ public:
     }
     std::vector<std::string> getKernelNames();
 private:
-    HarmonicAngleForce& owner;
+    GBSAOBCForce& owner;
     Kernel kernel;
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_HARMONICANGLEFORCEIMPL_H_*/
+#endif /*OPENMM_GBSAOBCFORCEFIELDIMPL_H_*/

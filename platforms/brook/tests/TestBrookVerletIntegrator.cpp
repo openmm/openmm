@@ -38,12 +38,12 @@
 #include "../../../tests/AssertionUtilities.h"
 #include "BrookPlatform.h"
 #include "ReferencePlatform.h"
-#include "OpenMMContext.h"
-#include "HarmonicBondForce.h"
-#include "NonbondedForce.h"
-#include "CMMotionRemover.h"
-#include "System.h"
-#include "VerletIntegrator.h"
+#include "openmm/OpenMMContext.h"
+#include "openmm/HarmonicBondForce.h"
+#include "openmm/NonbondedForce.h"
+#include "openmm/CMMotionRemover.h"
+#include "openmm/System.h"
+#include "openmm/VerletIntegrator.h"
 #include "../src/sfmt/SFMT.h"
 
 #define PI_M               3.141592653589

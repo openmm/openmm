@@ -36,7 +36,7 @@
  * This file provides a variety of macros useful in test cases.
  */
 
-#include "OpenMMException.h"
+#include "openmm/OpenMMException.h"
 #include <cmath>
 #include <string>
 #include <sstream>

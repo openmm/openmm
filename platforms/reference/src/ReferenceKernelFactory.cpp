@@ -31,7 +31,7 @@
 
 #include "ReferenceKernelFactory.h"
 #include "ReferenceKernels.h"
-#include "OpenMMException.h"
+#include "openmm/OpenMMException.h"
 
 using namespace OpenMM;
 

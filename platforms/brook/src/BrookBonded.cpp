@@ -34,7 +34,7 @@
 #include "BrookBonded.h"
 #include "BrookPlatform.h"
 #include "BrookStreamFactory.h"
-#include "OpenMMException.h"
+#include "openmm/OpenMMException.h"
 #include "kernels/kinvmap_gather.h"
 #include "kernels/invmap.h"
 #include "kernels/kforce.h"

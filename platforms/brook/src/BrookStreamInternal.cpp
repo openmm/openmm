@@ -30,7 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 #include <sstream>
-#include "OpenMMException.h"
+#include "openmm/OpenMMException.h"
 #include "BrookStreamInternal.h"
 
 #ifdef _WIN32

@@ -1,5 +1,5 @@
-#ifndef OPENMM_CMMOTIONREMOVERIMPL_H_
-#define OPENMM_CMMOTIONREMOVERIMPL_H_
+#ifndef OPENMM_H_
+#define OPENMM_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2009 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,39 +32,25 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "ForceImpl.h"
-#include "CMMotionRemover.h"
-#include "Kernel.h"
+#include "openmm/AndersenThermostat.h"
+#include "openmm/BrownianIntegrator.h"
+#include "openmm/CMMotionRemover.h"
+#include "openmm/Force.h"
+#include "openmm/GBSAOBCForce.h"
+#include "openmm/GBVIForce.h"
+#include "openmm/HarmonicAngleForce.h"
+#include "openmm/HarmonicBondForce.h"
+#include "openmm/Integrator.h"
+#include "openmm/LangevinIntegrator.h"
+#include "openmm/NonbondedForce.h"
+#include "openmm/OpenMMContext.h"
+#include "openmm/OpenMMException.h"
+#include "openmm/PeriodicTorsionForce.h"
+#include "openmm/RBTorsionForce.h"
+#include "openmm/State.h"
+#include "openmm/System.h"
+#include "openmm/Vec3.h"
+#include "openmm/VerletIntegrator.h"
+#include "openmm/Platform.h"
 
-namespace OpenMM {
-
-/**
- * This is the internal implementation of CMMotionRemover.
- */
-
-class CMMotionRemoverImpl : public ForceImpl {
-public:
-    CMMotionRemoverImpl(CMMotionRemover& owner);
-    void initialize(OpenMMContextImpl& context);
-    CMMotionRemover& getOwner() {
-        return owner;
-    }
-    void updateContextState(OpenMMContextImpl& context);
-    void calcForces(OpenMMContextImpl& context, Stream& forces) {
-        // This force doesn't apply forces to particles.
-    }
-    double calcEnergy(OpenMMContextImpl& context) {
-        return 0.0; // This force doesn't contribute to the potential energy.
-    }
-    std::map<std::string, double> getDefaultParameters() {
-        return std::map<std::string, double>(); // This force doesn't define any parameters.
-    }
-    std::vector<std::string> getKernelNames();
-private:
-    CMMotionRemover& owner;
-    Kernel kernel;
-};
-
-} // namespace OpenMM
-
-#endif /*OPENMM_CMMOTIONREMOVERIMPL_H_*/
+#endif /*OPENMM_H_*/

@@ -37,12 +37,12 @@
 
 #include "../../../tests/AssertionUtilities.h"
 #include "BrookPlatform.h"
-#include "OpenMMContext.h"
-#include "HarmonicBondForce.h"
-#include "NonbondedForce.h"
-#include "System.h"
-#include "VerletIntegrator.h"
-#include "CMMotionRemover.h"
+#include "openmm/OpenMMContext.h"
+#include "openmm/HarmonicBondForce.h"
+#include "openmm/NonbondedForce.h"
+#include "openmm/System.h"
+#include "openmm/VerletIntegrator.h"
+#include "openmm/CMMotionRemover.h"
 
 #include "../src/sfmt/SFMT.h"
 #include "../../reference/src/SimTKUtilities/SimTKOpenMMRealType.h"

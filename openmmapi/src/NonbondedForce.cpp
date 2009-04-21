@@ -29,10 +29,10 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "Force.h"
-#include "OpenMMException.h"
-#include "NonbondedForce.h"
-#include "internal/NonbondedForceImpl.h"
+#include "openmm/Force.h"
+#include "openmm/OpenMMException.h"
+#include "openmm/NonbondedForce.h"
+#include "openmm/internal/NonbondedForceImpl.h"
 #include <cmath>
 #include <utility>
 

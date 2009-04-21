@@ -1,5 +1,5 @@
-#ifndef OPENMM_VERLETINTEGRATOR_H_
-#define OPENMM_VERLETINTEGRATOR_H_
+#ifndef OPENMM_STREAMFACTORY_H_
+#define OPENMM_STREAMFACTORY_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -32,46 +32,32 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "Integrator.h"
-#include "Kernel.h"
-#include "internal/windowsExport.h"
+#include "StreamImpl.h"
+#include "openmm/internal/windowsExport.h"
 
 namespace OpenMM {
 
 /**
- * This is an Integrator which simulates a System using the velocity Verlet algorithm.
+ * A StreamFactory is an object that can create StreamImpls.  This is an abstract class.
+ * Each Platform maintains a list of StreamFactory objects that it uses to create
+ * StreamImpls as needed.
  */
 
-class OPENMM_EXPORT VerletIntegrator : public Integrator {
+class OPENMM_EXPORT StreamFactory {
 public:
     /**
-     * Create a VerletIntegrator.
+     * Create a StreamImpl.
      * 
-     * @param stepSize the step size with which to integrator the system (in picoseconds)
+     * @param name the name of the stream to create
+     * @param size the number of elements in the stream
+     * @param type the data type of each element in the stream
+     * @param context the context the kernel will belong to
      */
-    VerletIntegrator(double stepSize);
-   /**
-     * Advance a simulation through time by taking a series of time steps.
-     * 
-     * @param steps   the number of time steps to take
-     */
-    void step(int steps);
-protected:
-    /**
-     * This will be called by the OpenMMContext when it is created.  It informs the Integrator
-     * of what context it will be integrating, and gives it a chance to do any necessary initialization.
-     * It will also get called again if the application calls reinitialize() on the OpenMMContext.
-     */
-    void initialize(OpenMMContextImpl& context);
-    /**
-     * Get the names of all Kernels used by this Integrator.
-     */
-    std::vector<std::string> getKernelNames();
-private:
-    OpenMMContextImpl* context;
-    Kernel kernel;
+    virtual StreamImpl* createStreamImpl(std::string name, int size, Stream::DataType type, const Platform& platform, OpenMMContextImpl& context) const = 0;
+    virtual ~StreamFactory() {
+    }
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_VERLETINTEGRATOR_H_*/
+#endif /*OPENMM_STREAMFACTORY_H_*/

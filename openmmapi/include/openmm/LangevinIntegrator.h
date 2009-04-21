@@ -1,5 +1,5 @@
-#ifndef OPENMM_BROWNIANINTEGRATOR_H_
-#define OPENMM_BROWNIANINTEGRATOR_H_
+#ifndef OPENMM_LANGEVININTEGRATOR_H_
+#define OPENMM_LANGEVININTEGRATOR_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -33,25 +33,25 @@
  * -------------------------------------------------------------------------- */
 
 #include "Integrator.h"
-#include "Kernel.h"
+#include "openmm/Kernel.h"
 #include "internal/windowsExport.h"
 
 namespace OpenMM {
 
 /**
- * This is an Integrator which simulates a System using Brownian dynamics.
+ * This is an Integrator which simulates a System using Langevin dynamics.
  */
 
-class OPENMM_EXPORT BrownianIntegrator : public Integrator {
+class OPENMM_EXPORT LangevinIntegrator : public Integrator {
 public:
     /**
-     * Create a BrownianIntegrator.
+     * Create a LangevinIntegrator.
      * 
      * @param temperature    the temperature of the heat bath (in Kelvin)
      * @param frictionCoeff  the friction coefficient which couples the system to the heat bath
      * @param stepSize       the step size with which to integrator the system (in picoseconds)
      */
-    BrownianIntegrator(double temperature, double frictionCoeff, double stepSize);
+    LangevinIntegrator(double temperature, double frictionCoeff, double stepSize);
     /**
      * Get the temperature of the heat bath (in Kelvin).
      */
@@ -121,4 +121,4 @@ private:
 
 } // namespace OpenMM
 
-#endif /*OPENMM_BROWNIANINTEGRATOR_H_*/
+#endif /*OPENMM_LANGEVININTEGRATOR_H_*/

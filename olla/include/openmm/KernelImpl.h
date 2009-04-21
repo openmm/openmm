@@ -1,5 +1,5 @@
-#ifndef OPENMM_PERIODICTORSIONFORCEIMPL_H_
-#define OPENMM_PERIODICTORSIONFORCEIMPL_H_
+#ifndef OPENMM_KERNELIMPL_H_
+#define OPENMM_KERNELIMPL_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -32,41 +32,46 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "ForceImpl.h"
-#include "PeriodicTorsionForce.h"
-#include "Kernel.h"
-#include <utility>
-#include <set>
+#include "Platform.h"
 #include <string>
+#include <cassert>
+#include "openmm/internal/windowsExport.h"
 
 namespace OpenMM {
 
 /**
- * This is the internal implementation of PeriodicTorsionForce.
+ * A KernelImpl defines the internal implementation of a Kernel object.  A subclass will typically
+ * declare an abstract execute() method which defines the API for executing the kernel.  Other classes
+ * will in turn subclass it and provide concrete implementations of the execute() method.
  */
 
-class PeriodicTorsionForceImpl : public ForceImpl {
+class OPENMM_EXPORT KernelImpl {
 public:
-    PeriodicTorsionForceImpl(PeriodicTorsionForce& owner);
-    ~PeriodicTorsionForceImpl();
-    void initialize(OpenMMContextImpl& context);
-    PeriodicTorsionForce& getOwner() {
-        return owner;
+    /**
+     * Create a KernelImpl.
+     * 
+     * @param name      the name of the kernel to create
+     * @param platform  the Platform that created this kernel
+     */
+    KernelImpl(std::string name, const Platform& platform);
+    virtual ~KernelImpl() {
+        assert(referenceCount == 0);
     }
-    void updateContextState(OpenMMContextImpl& context) {
-        // This force field doesn't update the state directly.
-    }
-    void calcForces(OpenMMContextImpl& context, Stream& forces);
-    double calcEnergy(OpenMMContextImpl& context);
-    std::map<std::string, double> getDefaultParameters() {
-        return std::map<std::string, double>(); // This force field doesn't define any parameters.
-    }
-    std::vector<std::string> getKernelNames();
+    /**
+     * Get the name of this kernel.
+     */
+    std::string getName() const;
+    /**
+     * Get the Platform that created this KernelImpl.
+     */
+    const Platform& getPlatform();
 private:
-    PeriodicTorsionForce& owner;
-    Kernel kernel;
+    friend class Kernel;
+    std::string name;
+    const Platform* platform;
+    int referenceCount;
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_PERIODICTORSIONFORCEIMPL_H_*/
+#endif /*OPENMM_KERNELIMPL_H_*/

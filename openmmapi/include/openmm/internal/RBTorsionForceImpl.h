@@ -1,5 +1,5 @@
-#ifndef OPENMM_STREAMFACTORY_H_
-#define OPENMM_STREAMFACTORY_H_
+#ifndef OPENMM_RBTORSIONFORCEIMPL_H_
+#define OPENMM_RBTORSIONFORCEIMPL_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -32,32 +32,41 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "StreamImpl.h"
-#include "internal/windowsExport.h"
+#include "ForceImpl.h"
+#include "openmm/RBTorsionForce.h"
+#include "openmm/Kernel.h"
+#include <utility>
+#include <set>
+#include <string>
 
 namespace OpenMM {
 
 /**
- * A StreamFactory is an object that can create StreamImpls.  This is an abstract class.
- * Each Platform maintains a list of StreamFactory objects that it uses to create
- * StreamImpls as needed.
+ * This is the internal implementation of RBTorsionForce.
  */
 
-class OPENMM_EXPORT StreamFactory {
+class RBTorsionForceImpl : public ForceImpl {
 public:
-    /**
-     * Create a StreamImpl.
-     * 
-     * @param name the name of the stream to create
-     * @param size the number of elements in the stream
-     * @param type the data type of each element in the stream
-     * @param context the context the kernel will belong to
-     */
-    virtual StreamImpl* createStreamImpl(std::string name, int size, Stream::DataType type, const Platform& platform, OpenMMContextImpl& context) const = 0;
-    virtual ~StreamFactory() {
+    RBTorsionForceImpl(RBTorsionForce& owner);
+    ~RBTorsionForceImpl();
+    void initialize(OpenMMContextImpl& context);
+    RBTorsionForce& getOwner() {
+        return owner;
     }
+    void updateContextState(OpenMMContextImpl& context) {
+        // This force field doesn't update the state directly.
+    }
+    void calcForces(OpenMMContextImpl& context, Stream& forces);
+    double calcEnergy(OpenMMContextImpl& context);
+    std::map<std::string, double> getDefaultParameters() {
+        return std::map<std::string, double>(); // This force field doesn't define any parameters.
+    }
+    std::vector<std::string> getKernelNames();
+private:
+    RBTorsionForce& owner;
+    Kernel kernel;
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_STREAMFACTORY_H_*/
+#endif /*OPENMM_RBTORSIONFORCEIMPL_H_*/

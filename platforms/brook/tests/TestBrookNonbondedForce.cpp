@@ -37,11 +37,11 @@
 
 #include "../../../tests/AssertionUtilities.h"
 #include "BrookPlatform.h"
-#include "OpenMMContext.h"
-#include "NonbondedForce.h"
-#include "HarmonicBondForce.h"
-#include "System.h"
-#include "LangevinIntegrator.h"
+#include "openmm/OpenMMContext.h"
+#include "openmm/NonbondedForce.h"
+#include "openmm/HarmonicBondForce.h"
+#include "openmm/System.h"
+#include "openmm/LangevinIntegrator.h"
 
 #define PI_M               3.141592653589
 

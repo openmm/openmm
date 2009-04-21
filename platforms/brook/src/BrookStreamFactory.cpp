@@ -30,10 +30,10 @@
  * -------------------------------------------------------------------------- */
 
 #include <sstream>
-#include "OpenMMException.h"
+#include "openmm/OpenMMException.h"
 #include "BrookStreamFactory.h"
 #include "BrookStreamImpl.h"
-#include "internal/OpenMMContextImpl.h"
+#include "openmm/internal/OpenMMContextImpl.h"
 #include "OpenMMBrookInterface.h"
 
 using namespace OpenMM;

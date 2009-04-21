@@ -29,8 +29,8 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "internal/OpenMMContextImpl.h"
-#include "System.h"
+#include "openmm/internal/OpenMMContextImpl.h"
+#include "openmm/System.h"
 #include "BrookRemoveCMMotionKernel.h"
 #include "BrookStreamInternal.h"
 

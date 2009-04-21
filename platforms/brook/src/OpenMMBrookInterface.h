@@ -32,15 +32,15 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "kernels.h"
+#include "openmm/kernels.h"
 #include "../../reference/src/SimTKUtilities/SimTKOpenMMRealType.h"
 #include "BrookBondParameters.h"
 #include "BrookBonded.h"
 #include "BrookNonBonded.h"
 #include "BrookGbsa.h"
-#include "NonbondedForce.h"
-#include "OpenMMContext.h"
-#include "System.h"
+#include "openmm/NonbondedForce.h"
+#include "openmm/OpenMMContext.h"
+#include "openmm/System.h"
 
 namespace OpenMM {
 

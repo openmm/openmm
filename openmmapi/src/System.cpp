@@ -29,8 +29,8 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "Force.h"
-#include "System.h"
+#include "openmm/Force.h"
+#include "openmm/System.h"
 
 using namespace OpenMM;
 

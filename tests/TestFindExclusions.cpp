@@ -39,7 +39,7 @@
  */
 
 #include "AssertionUtilities.h"
-#include "NonbondedForce.h"
+#include "openmm/NonbondedForce.h"
 #include <iostream>
 #include <set>
 #include <vector>

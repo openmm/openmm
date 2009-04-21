@@ -34,12 +34,12 @@
  */
 
 #include "../../../tests/AssertionUtilities.h"
-#include "AndersenThermostat.h"
-#include "OpenMMContext.h"
+#include "openmm/AndersenThermostat.h"
+#include "openmm/OpenMMContext.h"
 #include "ReferencePlatform.h"
-#include "NonbondedForce.h"
-#include "System.h"
-#include "VerletIntegrator.h"
+#include "openmm/NonbondedForce.h"
+#include "openmm/System.h"
+#include "openmm/VerletIntegrator.h"
 #include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
 #include "../src/sfmt/SFMT.h"
 #include <iostream>

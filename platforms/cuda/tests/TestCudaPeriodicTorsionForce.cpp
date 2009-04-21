@@ -34,11 +34,11 @@
  */
 
 #include "../../../tests/AssertionUtilities.h"
-#include "OpenMMContext.h"
+#include "openmm/OpenMMContext.h"
 #include "CudaPlatform.h"
-#include "PeriodicTorsionForce.h"
-#include "System.h"
-#include "LangevinIntegrator.h"
+#include "openmm/PeriodicTorsionForce.h"
+#include "openmm/System.h"
+#include "openmm/LangevinIntegrator.h"
 #include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
 #include <iostream>
 #include <vector>

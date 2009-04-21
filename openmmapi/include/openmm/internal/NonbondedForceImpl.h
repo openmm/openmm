@@ -1,5 +1,5 @@
-#ifndef OPENMM_GBSAOBCFORCEFIELDIMPL_H_
-#define OPENMM_GBSAOBCFORCEFIELDIMPL_H_
+#ifndef OPENMM_NONBONDEDFORCEIMPL_H_
+#define OPENMM_NONBONDEDFORCEIMPL_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -33,21 +33,24 @@
  * -------------------------------------------------------------------------- */
 
 #include "ForceImpl.h"
-#include "GBSAOBCForce.h"
-#include "Kernel.h"
+#include "openmm/NonbondedForce.h"
+#include "openmm/Kernel.h"
+#include <utility>
+#include <set>
 #include <string>
 
 namespace OpenMM {
 
 /**
- * This is the internal implementation of GBSAOBCForce.
+ * This is the internal implementation of NonbondedForce.
  */
 
-class GBSAOBCForceImpl : public ForceImpl {
+class NonbondedForceImpl : public ForceImpl {
 public:
-    GBSAOBCForceImpl(GBSAOBCForce& owner);
+    NonbondedForceImpl(NonbondedForce& owner);
+    ~NonbondedForceImpl();
     void initialize(OpenMMContextImpl& context);
-    GBSAOBCForce& getOwner() {
+    NonbondedForce& getOwner() {
         return owner;
     }
     void updateContextState(OpenMMContextImpl& context) {
@@ -60,10 +63,10 @@ public:
     }
     std::vector<std::string> getKernelNames();
 private:
-    GBSAOBCForce& owner;
+    NonbondedForce& owner;
     Kernel kernel;
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_GBSAOBCFORCEFIELDIMPL_H_*/
+#endif /*OPENMM_NONBONDEDFORCEIMPL_H_*/

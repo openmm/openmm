@@ -29,7 +29,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "OpenMMException.h"
+#include "openmm/OpenMMException.h"
 #include "ReferenceStreamFactory.h"
 #include "ReferenceFloatStreamImpl.h"
 #include "ReferenceIntStreamImpl.h"

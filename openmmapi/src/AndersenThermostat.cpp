@@ -29,8 +29,8 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "AndersenThermostat.h"
-#include "internal/AndersenThermostatImpl.h"
+#include "openmm/AndersenThermostat.h"
+#include "openmm/internal/AndersenThermostatImpl.h"
 #include <ctime>
 
 using namespace OpenMM;

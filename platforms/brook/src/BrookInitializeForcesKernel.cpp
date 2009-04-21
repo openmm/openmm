@@ -31,7 +31,7 @@
 
 #include <cmath>
 #include <limits>
-#include "OpenMMException.h"
+#include "openmm/OpenMMException.h"
 #include <sstream>
 
 #include "BrookStreamImpl.h"

@@ -34,10 +34,10 @@
  */
 
 #include "../../../tests/AssertionUtilities.h"
-#include "OpenMMContext.h"
+#include "openmm/OpenMMContext.h"
 #include "ReferencePlatform.h"
-#include "System.h"
-#include "VerletIntegrator.h"
+#include "openmm/System.h"
+#include "openmm/VerletIntegrator.h"
 #include <iostream>
 #include <vector>
 

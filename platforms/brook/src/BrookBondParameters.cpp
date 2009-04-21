@@ -31,7 +31,7 @@
 
 #include <sstream>
 #include "BrookBondParameters.h"
-#include "OpenMMException.h"
+#include "openmm/OpenMMException.h"
 
 using namespace OpenMM;
 using namespace std;

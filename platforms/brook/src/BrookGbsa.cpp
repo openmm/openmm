@@ -32,7 +32,7 @@
 #include <sstream>
 #include "BrookGbsa.h"
 #include "BrookPlatform.h"
-#include "OpenMMException.h"
+#include "openmm/OpenMMException.h"
 #include "BrookStreamImpl.h"
 #include "kernels/kgbsa.h"
 #include "kernels/kforce.h"

@@ -35,10 +35,10 @@
 
 #include "../../../tests/AssertionUtilities.h"
 #include "BrookPlatform.h"
-#include "OpenMMContext.h"
-#include "PeriodicTorsionForce.h"
-#include "System.h"
-#include "LangevinIntegrator.h"
+#include "openmm/OpenMMContext.h"
+#include "openmm/PeriodicTorsionForce.h"
+#include "openmm/System.h"
+#include "openmm/LangevinIntegrator.h"
 #include <vector>
 
 #define PI_M               3.141592653589

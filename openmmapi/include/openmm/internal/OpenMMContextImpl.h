@@ -32,9 +32,9 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "Kernel.h"
-#include "Platform.h"
-#include "Stream.h"
+#include "openmm/Kernel.h"
+#include "openmm/Platform.h"
+#include "openmm/Stream.h"
 #include <map>
 #include <vector>
 

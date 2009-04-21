@@ -29,8 +29,8 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "Stream.h"
-#include "StreamImpl.h"
+#include "openmm/Stream.h"
+#include "openmm/StreamImpl.h"
 
 using namespace OpenMM;
 using namespace std;

@@ -29,10 +29,10 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "internal/GBVIForceImpl.h"
-#include "internal/OpenMMContextImpl.h"
-#include "OpenMMException.h"
-#include "kernels.h"
+#include "openmm/internal/GBVIForceImpl.h"
+#include "openmm/internal/OpenMMContextImpl.h"
+#include "openmm/OpenMMException.h"
+#include "openmm/kernels.h"
 #include <vector>
 #include <math.h>
 

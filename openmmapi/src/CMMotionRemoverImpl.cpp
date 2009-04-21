@@ -29,11 +29,11 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "internal/CMMotionRemoverImpl.h"
-#include "internal/OpenMMContextImpl.h"
-#include "Integrator.h"
-#include "System.h"
-#include "kernels.h"
+#include "openmm/internal/CMMotionRemoverImpl.h"
+#include "openmm/internal/OpenMMContextImpl.h"
+#include "openmm/Integrator.h"
+#include "openmm/System.h"
+#include "openmm/kernels.h"
 #include <vector>
 
 using namespace OpenMM;

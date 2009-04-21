@@ -29,10 +29,10 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "Force.h"
-#include "OpenMMException.h"
-#include "RBTorsionForce.h"
-#include "internal/RBTorsionForceImpl.h"
+#include "openmm/Force.h"
+#include "openmm/OpenMMException.h"
+#include "openmm/RBTorsionForce.h"
+#include "openmm/internal/RBTorsionForceImpl.h"
 
 using namespace OpenMM;
 

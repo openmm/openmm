@@ -31,12 +31,12 @@
 
 #include <cmath>
 #include <limits>
-#include "OpenMMException.h"
+#include "openmm/OpenMMException.h"
 #include <sstream>
 
 #include "BrookStreamImpl.h"
 #include "BrookCalcNonbondedForceKernel.h"
-#include "NonbondedForce.h"
+#include "openmm/NonbondedForce.h"
 
 using namespace OpenMM;
 using namespace std;

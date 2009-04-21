@@ -29,7 +29,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "System.h"
+#include "openmm/System.h"
 
 
 /**
@@ -37,12 +37,12 @@
  */
 
 #include "../../../tests/AssertionUtilities.h"
-#include "OpenMMContext.h"
+#include "openmm/OpenMMContext.h"
 #include "CudaPlatform.h"
-#include "HarmonicBondForce.h"
-#include "NonbondedForce.h"
-#include "System.h"
-#include "BrownianIntegrator.h"
+#include "openmm/HarmonicBondForce.h"
+#include "openmm/NonbondedForce.h"
+#include "openmm/System.h"
+#include "openmm/BrownianIntegrator.h"
 #include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
 #include "../src/sfmt/SFMT.h"
 #include <iostream>

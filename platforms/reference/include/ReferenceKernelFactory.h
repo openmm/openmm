@@ -32,7 +32,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "KernelFactory.h"
+#include "openmm/KernelFactory.h"
 
 namespace OpenMM {
 

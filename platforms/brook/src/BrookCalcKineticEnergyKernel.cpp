@@ -30,7 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 #include <sstream>
-#include "OpenMMException.h"
+#include "openmm/OpenMMException.h"
 #include "BrookCalcKineticEnergyKernel.h"
 #include "BrookStreamImpl.h"
 

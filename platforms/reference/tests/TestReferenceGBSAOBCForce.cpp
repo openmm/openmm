@@ -34,12 +34,12 @@
  */
 
 #include "../../../tests/AssertionUtilities.h"
-#include "OpenMMContext.h"
+#include "openmm/OpenMMContext.h"
 #include "ReferencePlatform.h"
-#include "GBSAOBCForce.h"
-#include "System.h"
-#include "LangevinIntegrator.h"
-#include "NonbondedForce.h"
+#include "openmm/GBSAOBCForce.h"
+#include "openmm/System.h"
+#include "openmm/LangevinIntegrator.h"
+#include "openmm/NonbondedForce.h"
 #include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
 #include "../src/sfmt/SFMT.h"
 #include <iostream>

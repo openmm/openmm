@@ -29,10 +29,10 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "BrownianIntegrator.h"
-#include "OpenMMContext.h"
-#include "internal/OpenMMContextImpl.h"
-#include "kernels.h"
+#include "openmm/BrownianIntegrator.h"
+#include "openmm/OpenMMContext.h"
+#include "openmm/internal/OpenMMContextImpl.h"
+#include "openmm/kernels.h"
 #include <ctime>
 #include <string>
 

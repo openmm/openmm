@@ -31,12 +31,12 @@
 
 #include <cmath>
 #include <limits>
-#include "OpenMMException.h"
+#include "openmm/OpenMMException.h"
 #include <sstream>
 
-#include "LangevinIntegrator.h"
+#include "openmm/LangevinIntegrator.h"
 #include "ReferencePlatform.h"
-#include "internal/OpenMMContextImpl.h"
+#include "openmm/internal/OpenMMContextImpl.h"
 
 #include "BrookStreamImpl.h"
 #include "OpenMMBrookInterface.h"

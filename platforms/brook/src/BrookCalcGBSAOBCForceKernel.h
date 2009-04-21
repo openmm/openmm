@@ -32,7 +32,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "kernels.h"
+#include "openmm/kernels.h"
 #include "../../reference/src/SimTKUtilities/SimTKOpenMMRealType.h"
 #include "BrookGbsa.h"
 #include "OpenMMBrookInterface.h"

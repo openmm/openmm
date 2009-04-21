@@ -46,10 +46,10 @@
 #include "SimTKReference/ReferenceStochasticDynamics.h"
 #include "SimTKReference/ReferenceShakeAlgorithm.h"
 #include "SimTKReference/ReferenceVerletDynamics.h"
-#include "CMMotionRemover.h"
-#include "System.h"
-#include "internal/OpenMMContextImpl.h"
-#include "Integrator.h"
+#include "openmm/CMMotionRemover.h"
+#include "openmm/System.h"
+#include "openmm/internal/OpenMMContextImpl.h"
+#include "openmm/Integrator.h"
 #include "SimTKUtilities/SimTKOpenMMUtilities.h"
 #include <cmath>
 #include <limits>

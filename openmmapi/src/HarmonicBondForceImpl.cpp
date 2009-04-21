@@ -29,9 +29,9 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "internal/OpenMMContextImpl.h"
-#include "internal/HarmonicBondForceImpl.h"
-#include "kernels.h"
+#include "openmm/internal/OpenMMContextImpl.h"
+#include "openmm/internal/HarmonicBondForceImpl.h"
+#include "openmm/kernels.h"
 
 using namespace OpenMM;
 using std::pair;

@@ -51,7 +51,7 @@ using namespace std;
 #include "gputypes.h"
 #include "cudaKernels.h"
 #include "hilbert.h"
-#include "OpenMMException.h"
+#include "openmm/OpenMMException.h"
 
 using OpenMM::OpenMMException;
 

@@ -32,7 +32,7 @@
 #include <sstream>
 #include "BrookVelocityCenterOfMassRemoval.h"
 #include "BrookPlatform.h"
-#include "OpenMMException.h"
+#include "openmm/OpenMMException.h"
 #include "BrookStreamImpl.h"
 #include "kernels/kcom.h"
 

@@ -32,9 +32,9 @@
 #include "BrookPlatform.h"
 #include "BrookKernelFactory.h"
 #include "OpenMMBrookInterface.h"
-#include "internal/OpenMMContextImpl.h"
-#include "OpenMMException.h"
-#include "kernels.h"
+#include "openmm/internal/OpenMMContextImpl.h"
+#include "openmm/OpenMMException.h"
+#include "openmm/kernels.h"
 #include "../../reference/src/SimTKUtilities/SimTKOpenMMRealType.h"
 #include <brook/brook.hpp>
 #include <stdlib.h>

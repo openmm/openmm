@@ -29,10 +29,10 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "Force.h"
-#include "OpenMMException.h"
-#include "PeriodicTorsionForce.h"
-#include "internal/PeriodicTorsionForceImpl.h"
+#include "openmm/Force.h"
+#include "openmm/OpenMMException.h"
+#include "openmm/PeriodicTorsionForce.h"
+#include "openmm/internal/PeriodicTorsionForceImpl.h"
 
 using namespace OpenMM;
 

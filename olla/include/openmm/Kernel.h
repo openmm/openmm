@@ -1,5 +1,5 @@
-#ifndef OPENMM_RBTORSIONFORCEIMPL_H_
-#define OPENMM_RBTORSIONFORCEIMPL_H_
+#ifndef OPENMM_KERNEL_H_
+#define OPENMM_KERNEL_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -32,41 +32,58 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "ForceImpl.h"
-#include "RBTorsionForce.h"
-#include "Kernel.h"
-#include <utility>
-#include <set>
-#include <string>
+#include "KernelImpl.h"
+#include "openmm/internal/windowsExport.h"
 
 namespace OpenMM {
 
 /**
- * This is the internal implementation of RBTorsionForce.
+ * A Kernel encapsulates a particular implementation of a calculation that can be performed on Streams.
+ * Kernel objects are created by Platforms:
+ * 
+ * <pre>
+ * Kernel kernel = platform.createKernel(kernelName);
+ * </pre>
+ * 
+ * The Kernel class itself does not specify any details of what calculation is to be performed or the API
+ * for calling it.  Instead, subclasses of KernelImpl will define APIs which are appropriate to particular
+ * calculations.  To execute a Kernel, you therefore requests its implementation object and cast it to the
+ * correct type:
+ * 
+ * <pre>
+ * dynamic_cast<AddStreamsImpl&>(kernel.getImpl()).execute(stream1, stream2);
+ * </pre>
  */
 
-class RBTorsionForceImpl : public ForceImpl {
+class OPENMM_EXPORT Kernel {
 public:
-    RBTorsionForceImpl(RBTorsionForce& owner);
-    ~RBTorsionForceImpl();
-    void initialize(OpenMMContextImpl& context);
-    RBTorsionForce& getOwner() {
-        return owner;
-    }
-    void updateContextState(OpenMMContextImpl& context) {
-        // This force field doesn't update the state directly.
-    }
-    void calcForces(OpenMMContextImpl& context, Stream& forces);
-    double calcEnergy(OpenMMContextImpl& context);
-    std::map<std::string, double> getDefaultParameters() {
-        return std::map<std::string, double>(); // This force field doesn't define any parameters.
-    }
-    std::vector<std::string> getKernelNames();
+    Kernel();
+    Kernel(const Kernel& copy);
+    ~Kernel();
+    Kernel& operator=(const Kernel& copy);
+    /**
+     * Get the name of this Kernel.
+     */
+    std::string getName() const;
+    /**
+     * Get the object which implements this Kernel.
+     */
+    const KernelImpl& getImpl() const;
+    /**
+     * Get the object which implements this Kernel.
+     */
+    KernelImpl& getImpl();
 private:
-    RBTorsionForce& owner;
-    Kernel kernel;
+    friend class Platform;
+    /**
+     * Create a KernelImpl.
+     * 
+     * @param name the name of the kernel to create
+     */
+    Kernel(KernelImpl* impl);
+    KernelImpl* impl;
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_RBTORSIONFORCEIMPL_H_*/
+#endif /*OPENMM_KERNEL_H_*/

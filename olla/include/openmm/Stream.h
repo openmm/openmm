@@ -33,7 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include <string>
-#include "internal/windowsExport.h"
+#include "openmm/internal/windowsExport.h"
 
 namespace OpenMM {
 

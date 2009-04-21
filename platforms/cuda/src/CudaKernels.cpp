@@ -29,13 +29,12 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "OpenMMContext.h"
-
 #include "CudaKernels.h"
 #include "CudaStreamImpl.h"
-#include "LangevinIntegrator.h"
+#include "openmm/LangevinIntegrator.h"
+#include "openmm/OpenMMContext.h"
 #include "ReferencePlatform.h"
-#include "internal/OpenMMContextImpl.h"
+#include "openmm/internal/OpenMMContextImpl.h"
 #include "kernels/gputypes.h"
 #include "kernels/cudaKernels.h"
 #include <cmath>
