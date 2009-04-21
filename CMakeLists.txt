@@ -266,9 +266,11 @@ ENDIF(OPENMM_BUILD_BROOK_LIB)
 INSTALL_TARGETS(/lib RUNTIME_DIRECTORY /lib ${SHARED_TARGET})
 INSTALL_TARGETS(/lib RUNTIME_DIRECTORY /lib ${STATIC_TARGET})
 FILE(GLOB CORE_HEADERS     include/*.h          */include/*.h)
-FILE(GLOB INTERNAL_HEADERS include/internal/*.h */include/internal/*.h)
-INSTALL_FILES(/include/         FILES ${CORE_HEADERS})
-INSTALL_FILES(/include/internal FILES ${INTERNAL_HEADERS})
+FILE(GLOB TOP_HEADERS      include/openmm/*.h          */include/openmm/*.h)
+FILE(GLOB INTERNAL_HEADERS include/openmm/internal/*.h */include/openmm/internal/*.h )
+INSTALL_FILES(/include                 FILES ${CORE_HEADERS})
+INSTALL_FILES(/include/openmm          FILES ${TOP_HEADERS})
+INSTALL_FILES(/include/openmm/internal FILES ${INTERNAL_HEADERS})
 
 # Set the build flags to link statically to the microsoft runtime library, unless
 # the user tells us otherwise, via the variable "USE_MSVC_RUNTIME_DLL"
