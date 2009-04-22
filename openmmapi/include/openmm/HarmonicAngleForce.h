@@ -64,7 +64,7 @@ public:
      * @param particle1 the index of the first particle forming the angle
      * @param particle2 the index of the second particle forming the angle
      * @param particle3 the index of the third particle forming the angle
-     * @param length    the equilibrium angle, measured in radians
+     * @param angle     the equilibrium angle, measured in radians
      * @param k         the harmonic force constant for the angle
      */
     void addAngle(int particle1, int particle2, int particle3, double angle, double k);
@@ -75,7 +75,7 @@ public:
      * @param particle1 the index of the first particle forming the angle
      * @param particle2 the index of the second particle forming the angle
      * @param particle3 the index of the third particle forming the angle
-     * @param length    the equilibrium angle, measured in radians
+     * @param angle     the equilibrium angle, measured in radians
      * @param k         the harmonic force constant for the angle
      */
     void getAngleParameters(int index, int& particle1, int& particle2, int& particle3, double& angle, double& k) const;
@@ -86,7 +86,7 @@ public:
      * @param particle1 the index of the first particle forming the angle
      * @param particle2 the index of the second particle forming the angle
      * @param particle3 the index of the third particle forming the angle
-     * @param length    the equilibrium angle, measured in radians
+     * @param angle     the equilibrium angle, measured in radians
      * @param k         the harmonic force constant for the angle
      */
     void setAngleParameters(int index, int particle1, int particle2, int particle3, double angle, double k);

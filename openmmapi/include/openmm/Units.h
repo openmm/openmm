@@ -1,5 +1,5 @@
-#ifndef OPENMM_H_
-#define OPENMM_H_
+#ifndef OPENMM_UNITS_H_
+#define OPENMM_UNITS_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,26 +32,58 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/AndersenThermostat.h"
-#include "openmm/BrownianIntegrator.h"
-#include "openmm/CMMotionRemover.h"
-#include "openmm/Force.h"
-#include "openmm/GBSAOBCForce.h"
-#include "openmm/GBVIForce.h"
-#include "openmm/HarmonicAngleForce.h"
-#include "openmm/HarmonicBondForce.h"
-#include "openmm/Integrator.h"
-#include "openmm/LangevinIntegrator.h"
-#include "openmm/NonbondedForce.h"
-#include "openmm/OpenMMContext.h"
-#include "openmm/OpenMMException.h"
-#include "openmm/PeriodicTorsionForce.h"
-#include "openmm/RBTorsionForce.h"
-#include "openmm/State.h"
-#include "openmm/System.h"
-#include "openmm/Units.h"
-#include "openmm/Vec3.h"
-#include "openmm/VerletIntegrator.h"
-#include "openmm/Platform.h"
+#include <cmath>
 
-#endif /*OPENMM_H_*/
+/** \file
+ * OpenMM uses the following units everywhere:
+ *
+ * length: nanometers<br/>
+ * time: picoseconds<br/>
+ * mass: atomic mass units (daltons)<br/>
+ * charge: proton charge<br/>
+ * temperature: Kelvin<br/>
+ * angle: radians<br/>
+ * energy: kJ/mol<br/>
+ * force: kJ/mol/nm<br/>
+ *
+ * Because some programs use other units (e.g. Angstroms for length or kcal/mol for energy), this file defines
+ * constants which can be used to convert to and from OpenMM's units.
+ */
+
+namespace OpenMM {
+    /**
+     * The number of nanometers in an Angstrom.
+     */
+    static const double NmPerAngstrom = 0.1;
+    /**
+     * The number of Angstroms in a nanometer.
+     */
+    static const double AngstromsPerNm = 10.0;
+    /**
+     * The number of picoseconds in a femtosecond.
+     */
+    static const double PsPerFs = 0.001;
+    /**
+     * The number of femtoseconds in a picosecond.
+     */
+    static const double FsPerPs = 1000.0;
+    /**
+     * The number of kJ in a kcal.
+     */
+    static const double KJPerKcal = 4.184;
+    /**
+     * The number of kcal in a kJ.
+     */
+    static const double KcalPerKJ = 1.0/4.184;
+    /**
+     * The number of radians in a degree.
+     */
+    static const double RadiansPerDegree = M_PI/180.0;
+    /**
+     * The number of degrees in a radian.
+     */
+    static const double DegreesPerRadian = 180.0/M_PI;
+
+} // namespace OpenMM
+
+#endif /*OPENMM_UNITS_H_*/
