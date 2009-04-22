@@ -32,6 +32,7 @@
 #include "CudaKernelFactory.h"
 #include "CudaKernels.h"
 #include "openmm/internal/OpenMMContextImpl.h"
+#include "openmm/OpenMMException.h"
 
 using namespace OpenMM;
 
@@ -63,4 +64,6 @@ KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform
         return new CudaCalcKineticEnergyKernel(name, platform);
     if (name == RemoveCMMotionKernel::Name())
         return new CudaRemoveCMMotionKernel(name, platform, data);
+    else
+        throw OpenMMException((std::string("Tried to create kernel with illegal kernel name '")+name+"'").c_str());
 }
