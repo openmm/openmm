@@ -272,6 +272,8 @@ INSTALL_FILES(/include                 FILES ${CORE_HEADERS})
 INSTALL_FILES(/include/openmm          FILES ${TOP_HEADERS})
 INSTALL_FILES(/include/openmm/internal FILES ${INTERNAL_HEADERS})
 
+
+IF(HELL_IS_FROZEN_OVER)
 # Set the build flags to link statically to the microsoft runtime library, unless
 # the user tells us otherwise, via the variable "USE_MSVC_RUNTIME_DLL"
 # It is a sore defect of cmake that makes these gymnastics necessary
@@ -340,6 +342,8 @@ IF(CMAKE_GENERATOR MATCHES "Visual Studio")
     SET(CMAKE_CXX_FLAGS_MINSIZEREL ${CMAKE_CXX_FLAGS_MINSIZEREL} CACHE STRING "" FORCE)
     
 ENDIF(CMAKE_GENERATOR MATCHES "Visual Studio")
+
+ENDIF(HELL_IS_FROZEN_OVER)
 #
 # Allow automated build and dashboard.
 #

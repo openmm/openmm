@@ -77,7 +77,7 @@ void testGaussian() {
     double c2 = var-mean*mean;
     double c3 = skew-3*var*mean+2*mean*mean*mean;
     double c4 = kurtosis-4*skew*mean-3*var*var+12*var*mean*mean-6*mean*mean*mean*mean;
-    ASSERT_EQUAL_TOL(0.0, mean, 1.0/sqrt(numValues));
+    ASSERT_EQUAL_TOL(0.0, mean, 1.0/sqrt((double)numValues));
     ASSERT_EQUAL_TOL(1.0, c2, 1.0/pow(numValues, 1.0/3.0));
     ASSERT_EQUAL_TOL(0.0, c3, 1.0/pow(numValues, 1.0/4.0));
     ASSERT_EQUAL_TOL(0.0, c4, 1.0/pow(numValues, 1.0/4.0));

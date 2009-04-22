@@ -501,7 +501,7 @@ RealOpenMM e3 = -partialChargeI2*partialCharges[atomJ]*Sgb( t )/deltaR[Reference
    (void) fflush( logFile );
 #endif
 
-   RealOpenMM conversion = CAL_TO_JOULE*gbviParameters->getTau();  
+   RealOpenMM conversion = (RealOpenMM)(CAL_TO_JOULE*gbviParameters->getTau());  
    return (conversion*energy);
  
 }
@@ -776,7 +776,7 @@ if( 0 ){
 
    // convert from cal to Joule & apply prefactor tau = (1/diel_solute - 1/diel_solvent)
 
-   RealOpenMM conversion = CAL_TO_JOULE*gbviParameters->getTau();  
+   RealOpenMM conversion = (RealOpenMM)(CAL_TO_JOULE*gbviParameters->getTau());  
    for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
       inputForces[atomI][0] = conversion*forces[atomI][0];
       inputForces[atomI][1] = conversion*forces[atomI][1];

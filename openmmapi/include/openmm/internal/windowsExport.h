@@ -23,11 +23,15 @@
  */
 
 #ifdef _MSC_VER
-#if defined(OPENMM_BUILDING_SHARED_LIBRARY)
-    #define OPENMM_EXPORT __declspec(dllexport)
-	#elif defined(OPENMM_BUILDING_STATIC_LIBRARY) || defined(OPENMM_USE_STATIC_LIBRARIES)
+    // We don't want to hear about how sprintf is "unsafe".
+    #pragma warning(disable:4996)
+    #if defined(OPENMM_BUILDING_SHARED_LIBRARY)
+        #define OPENMM_EXPORT __declspec(dllexport)
+        // Keep MS VC++ quiet about lack of dll export of private members.
+        #pragma warning(disable:4251)
+    #elif defined(OPENMM_BUILDING_STATIC_LIBRARY) || defined(OPENMM_USE_STATIC_LIBRARIES)
 		#define OPENMM_EXPORT
-	#else
+    #else
 		#define OPENMM_EXPORT __declspec(dllimport)   // i.e., a client of a shared library
     #endif
 #else
