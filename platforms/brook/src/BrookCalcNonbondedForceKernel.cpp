@@ -176,7 +176,7 @@ void BrookCalcNonbondedForceKernel::initialize( const System& system, const Nonb
 
    // Go through the exclusions.
 
-   std::vector<std::set<int> >& exclusions(_numberOfParticles);
+   std::vector<std::set<int> > exclusions(_numberOfParticles);
    std::vector<int> nb14s;
    for (int i = 0; i < force.getNumExceptions(); i++) {
         int particle1, particle2;
@@ -184,7 +184,6 @@ void BrookCalcNonbondedForceKernel::initialize( const System& system, const Nonb
         force.getExceptionParameters(i, particle1, particle2, chargeProd, sigma, epsilon);
         exclusions[particle1].insert(particle2);
         exclusions[particle2].insert(particle1);
-        exclusions.push_back(pair<int, int>(particle1, particle2));
         if (chargeProd != 0.0 || epsilon != 0.0)
             nb14s.push_back(i);
    }
@@ -212,7 +211,7 @@ void BrookCalcNonbondedForceKernel::initialize( const System& system, const Nonb
  * 
  * @param system                    System reference
  * @param force                     HarmonicLJ14Force reference
- *
+ * @param nb14s                     which of the exceptions need to be calculated
  */
 
 void BrookCalcNonbondedForceKernel::initialize14Interactions( const System& system, const NonbondedForce& force, const std::vector<int>& nb14s ){

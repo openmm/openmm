@@ -215,7 +215,7 @@ void testBrookExclusionsAnd14( FILE* log ){
    NonbondedForce* nonbonded = new NonbondedForce();
    for (int i = 0; i < numberOfParticles; i++) {
        system.addParticle(1.0);
-       nonbonded->addParticle(0, 1.5, 0)
+       nonbonded->addParticle(0, 1.5, 0);
    }
    vector<pair<int, int> > bonds;
    bonds.push_back(pair<int, int>(0, 1));

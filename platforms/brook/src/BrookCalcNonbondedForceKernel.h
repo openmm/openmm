@@ -63,9 +63,10 @@ class BrookCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
        * 
        * @param system     the System this kernel will be applied to
        * @param force      the NonbondedForce this kernel will be used for
+       * @param nb14s      which of the exceptions need to be calculated
        */
 
-      void initialize14Interactions( const System& system, const NonbondedForce& force );
+      void initialize14Interactions( const System& system, const NonbondedForce& force, const std::vector<int>& nb14s );
   
       /**
        * Execute the kernel to calculate the forces.

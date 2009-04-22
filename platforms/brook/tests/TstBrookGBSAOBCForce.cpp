@@ -156,7 +156,7 @@ static OpenMMContext* testObcForceSetup( int numParticles, int brookContext, FIL
 
    System* system                 = new System();
    for (int i = 0; i < numParticles; i++)
-       system.addParticle(1.0);
+       system->addParticle(1.0);
    LangevinIntegrator* integrator = new LangevinIntegrator(0, 0.1, 0.01);
    GBSAOBCForce* forceField  = new GBSAOBCForce();
 
@@ -284,7 +284,7 @@ static OpenMMContext* testObcForceFileSetup( std::string fileName, int brookCont
 
    System* system                 = new System();
    for (int i = 0; i < numberOfParticles; i++)
-       system.addParticle(1.0);
+       system->addParticle(1.0);
    GBSAOBCForce* forceField       = new GBSAOBCForce();
 
    vector<Vec3> positions(numberOfParticles);
