@@ -32,6 +32,8 @@
 #include "ReferenceLJCoulombIxn.h"
 #include "ReferenceForce.h"
 
+double erfc(double x);
+
 /**---------------------------------------------------------------------------------------
 
    ReferenceLJCoulombIxn constructor
@@ -240,8 +242,8 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
     int numRz = 60+1;
     int kmax = std::max(numRx, std::max(numRy,numRz));
 
-    static const RealOpenMM alphaEwald       =  3.123413;
-    RealOpenMM  factorEwald = -1.0 / (4*alphaEwald*alphaEwald);
+    static const RealOpenMM alphaEwald       =  (RealOpenMM) 3.123413;
+    RealOpenMM  factorEwald = -1 / (4*alphaEwald*alphaEwald);
 
 
     RealOpenMM SQRT_PI = sqrt(PI);
@@ -249,7 +251,7 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
     static const RealOpenMM epsilon         =  1.0;
     static const RealOpenMM one         =  1.0;
 
-    RealOpenMM recipCoeff = 4.0*M_PI/(periodicBoxSize[0] * periodicBoxSize[1] * periodicBoxSize[2]) /epsilon;
+    RealOpenMM recipCoeff = (RealOpenMM) 4.0*M_PI/(periodicBoxSize[0] * periodicBoxSize[1] * periodicBoxSize[2]) /epsilon;
 
     RealOpenMM selfEwaldEnergy = 0.0;
     RealOpenMM realSpaceEwaldEnergy = 0.0;
@@ -275,9 +277,10 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
 
 // setup K-vectors
 
-  d_complex eir[kmax][numberOfAtoms][3];
-  d_complex tab_xy[numberOfAtoms];
-  d_complex tab_qxyz[numberOfAtoms];
+  #define EIR(x, y, z) eir[(x)*numberOfAtoms*3+(y)*3+z]
+  d_complex* eir = new d_complex[kmax*numberOfAtoms*3];
+  d_complex* tab_xy = new d_complex[numberOfAtoms];
+  d_complex* tab_qxyz = new d_complex[numberOfAtoms];
   d_complex a,b,c;
 
   int  i,j,m;
@@ -290,19 +293,19 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
 
   for(i = 0; (i < numberOfAtoms); i++) {
     for(m = 0; (m < 3); m++) {
-      eir[0][i][m].real() = 1;
-      eir[0][i][m].imag() = 0;
+      EIR(0, i, m).real() = 1;
+      EIR(0, i, m).imag() = 0;
     }
 
 
     for(m=0; (m<3); m++) {
-      eir[1][i][m].real() = cos(atomCoordinates[i][m]*recipBoxSize[m]);
-      eir[1][i][m].imag() = sin(atomCoordinates[i][m]*recipBoxSize[m]);
+      EIR(1, i, m).real() = cos(atomCoordinates[i][m]*recipBoxSize[m]);
+      EIR(1, i, m).imag() = sin(atomCoordinates[i][m]*recipBoxSize[m]);
     }
 
     for(j=2; (j<kmax); j++) {
       for(m=0; (m<3); m++) {
-        eir[j][i][m] = eir[j-1][i][m] * eir[1][i][m];
+        EIR(j, i, m) = EIR(j-1, i, m) * EIR(1, i, m);
       }
     }
   }
@@ -322,13 +325,13 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
 
         if(ry >= 0) {
           for(int n = 0; n < numberOfAtoms; n++) {
-            tab_xy[n] = eir[rx][n][0] * eir[ry][n][1];
+            tab_xy[n] = EIR(rx, n, 0) * EIR(ry, n, 1);
           }
         }
 
         else {
           for(int n = 0; n < numberOfAtoms; n++) {
-            tab_xy[n]= eir[rx][n][0] * conj (eir[-ry][n][1]);
+            tab_xy[n]= EIR(rx, n, 0) * conj (EIR(-ry, n, 1));
           }
         }
 
@@ -337,16 +340,16 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
           if( rz >= 0) {
 
            for( int n = 0; n < numberOfAtoms; n++) {
-             tab_qxyz[n].real() = atomParameters[n][QIndex] * (tab_xy[n] * eir[rz][n][2]).real();
-             tab_qxyz[n].imag() = atomParameters[n][QIndex] * (tab_xy[n] * eir[rz][n][2]).imag();
+             tab_qxyz[n].real() = atomParameters[n][QIndex] * (tab_xy[n] * EIR(rz, n, 2)).real();
+             tab_qxyz[n].imag() = atomParameters[n][QIndex] * (tab_xy[n] * EIR(rz, n, 2)).imag();
            }
           }
 
           else {
 
             for( int n = 0; n < numberOfAtoms; n++) {
-              tab_qxyz[n].real() = atomParameters[n][QIndex] * (tab_xy[n] * conj(eir[-rz][n][2])).real() ;
-              tab_qxyz[n].imag() = atomParameters[n][QIndex] * (tab_xy[n] * conj(eir[-rz][n][2])).imag() ;
+              tab_qxyz[n].real() = atomParameters[n][QIndex] * (tab_xy[n] * conj(EIR(-rz, n, 2))).real() ;
+              tab_qxyz[n].imag() = atomParameters[n][QIndex] * (tab_xy[n] * conj(EIR(-rz, n, 2))).imag() ;
             }
           }
 
@@ -362,16 +365,16 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
           RealOpenMM kz = rz * recipBoxSize[2];
           RealOpenMM k2 = kx * kx + ky * ky + kz * kz;
           RealOpenMM ak = exp(k2*factorEwald) / k2;
-          RealOpenMM akv = 2.0 * ak * (1.0/k2 - factorEwald);
+          RealOpenMM akv = 2 * ak * (1/k2 - factorEwald);
 
           recipEnergy += ak * ( cs * cs + ss * ss);
           RealOpenMM vir =  akv * ( cs * cs + ss * ss);
 
           for(int n = 0; n < numberOfAtoms; n++) {
             RealOpenMM force = ak * (cs * tab_qxyz[n].imag() - ss * tab_qxyz[n].real());
-            forces[n][0] += 2.0 * recipCoeff * force * kx ;
-            forces[n][1] += 2.0 * recipCoeff * force * ky ;
-            forces[n][2] += 2.0 * recipCoeff * force * kz ;
+            forces[n][0] += 2 * recipCoeff * force * kx ;
+            forces[n][1] += 2 * recipCoeff * force * ky ;
+            forces[n][2] += 2 * recipCoeff * force * kz ;
           }
           lowrz = 1 - numRz;
         }
@@ -442,6 +445,9 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
        }
 
        delete[] exclusionIndices;
+       delete[] eir;
+       delete[] tab_xy;
+       delete[] tab_qxyz;
 
 // ***********************************************************************
 
