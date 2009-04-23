@@ -35,7 +35,7 @@
 #include "openmm/Platform.h"
 #include "CudaStreamFactory.h"
 
-class _gpuContext;
+struct _gpuContext;
 
 namespace OpenMM {
     

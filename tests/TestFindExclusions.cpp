@@ -109,7 +109,7 @@ int main() {
                 // This is an exclusion.
 
                 ASSERT_EQUAL(0.0, epsilon);
-                ASSERT(expectedExclusions[particle1].find(particle2) != expectedExclusions[particle2].end());
+                ASSERT(expectedExclusions[particle1].find(particle2) != expectedExclusions[particle1].end());
             }
             else {
                 // This is a 1-4.
@@ -117,7 +117,7 @@ int main() {
                 ASSERT_EQUAL_TOL(0.2, chargeProd, 1e-10);
                 ASSERT_EQUAL_TOL(1.0, sigma, 1e-10);
                 ASSERT_EQUAL_TOL(0.8, epsilon, 1e-10);
-                ASSERT(expected14[particle1].find(particle2) != expected14[particle2].end());
+                ASSERT(expected14[particle1].find(particle2) != expected14[particle1].end());
             }
         }
     }

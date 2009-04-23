@@ -77,7 +77,7 @@ static double calcEnergy(OpenMMContextImpl& context, System& system) {
     double* posData = new double[positions.getSize()*3];
     positions.saveToArray(posData);
     vector<Vec3> pos(positions.getSize());
-    for (int i = 0; i < pos.size(); i++)
+    for (int i = 0; i < (int)pos.size(); i++)
         pos[i] = Vec3(posData[3*i], posData[3*i+1], posData[3*i+2]);
     delete[] posData;
     refContext.setPositions(pos);
@@ -164,7 +164,7 @@ void CudaCalcPeriodicTorsionForceKernel::initialize(const System& system, const 
         data.primaryKernel = this;
     data.hasPeriodicTorsions = true;
     numTorsions = force.getNumTorsions();
-    const float RadiansToDegrees = 180.0/3.14159265;
+    const float RadiansToDegrees = (float)(180.0/3.14159265);
     vector<int> particle1(numTorsions);
     vector<int> particle2(numTorsions);
     vector<int> particle3(numTorsions);
@@ -276,26 +276,26 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
             c12[i] = (float) (4*depth*pow(radius, 12.0));
             exclusionList[i].push_back(i);
         }
-        for (int i = 0; i < exclusions.size(); i++) {
+        for (int i = 0; i < (int)exclusions.size(); i++) {
             exclusionList[exclusions[i].first].push_back(exclusions[i].second);
             exclusionList[exclusions[i].second].push_back(exclusions[i].first);
         }
         CudaNonbondedMethod method = NO_CUTOFF;
         if (force.getNonbondedMethod() != NonbondedForce::NoCutoff) {
-            gpuSetNonbondedCutoff(gpu, force.getCutoffDistance(), 78.3f);
+            gpuSetNonbondedCutoff(gpu, (float)force.getCutoffDistance(), 78.3f);
             method = CUTOFF;
         }
         if (force.getNonbondedMethod() == NonbondedForce::CutoffPeriodic) {
             Vec3 boxVectors[3];
             force.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
-            gpuSetPeriodicBoxSize(gpu, boxVectors[0][0], boxVectors[1][1], boxVectors[2][2]);
+            gpuSetPeriodicBoxSize(gpu, (float)boxVectors[0][0], (float)boxVectors[1][1], (float)boxVectors[2][2]);
             method = PERIODIC;
         }
 
         if (force.getNonbondedMethod() == NonbondedForce::Ewald) {
             Vec3 boxVectors[3];
             force.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
-            gpuSetPeriodicBoxSize(gpu, boxVectors[0][0], boxVectors[1][1], boxVectors[2][2]);
+            gpuSetPeriodicBoxSize(gpu, (float)boxVectors[0][0], (float)boxVectors[1][1], (float)boxVectors[2][2]);
             method = EWALD;
 
         }
@@ -387,7 +387,7 @@ static void initializeIntegration(const System& system, CudaPlatform::PlatformDa
         invMass1[i] = 1.0f/mass[particle1Index];
         invMass2[i] = 1.0f/mass[particle2Index];
     }
-    gpuSetConstraintParameters(gpu, particle1, particle2, distance, invMass1, invMass2, integrator.getConstraintTolerance(), 4);
+    gpuSetConstraintParameters(gpu, particle1, particle2, distance, invMass1, invMass2, (float)integrator.getConstraintTolerance(), 4);
     
     // Initialize any terms that haven't already been handled by a Force.
     

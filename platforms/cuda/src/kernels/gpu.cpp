@@ -481,7 +481,7 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
     // Find how many constraints each atom is involved in.
     
     vector<int> constraintCount(gpu->natoms, 0);
-    for (int i = 0; i < atom1.size(); i++) {
+    for (int i = 0; i < (int)atom1.size(); i++) {
         constraintCount[atom1[i]]++;
         constraintCount[atom2[i]]++;
     }
@@ -491,7 +491,7 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
     // connected to.
 
     vector<map<int, float> > settleConstraints(gpu->natoms);
-    for (int i = 0; i < atom1.size(); i++) {
+    for (int i = 0; i < (int)atom1.size(); i++) {
         if (constraintCount[atom1[i]] == 2 && constraintCount[atom2[i]] == 2) {
             settleConstraints[atom1[i]][atom2[i]] = distance[i];
             settleConstraints[atom2[i]][atom1[i]] = distance[i];
@@ -501,7 +501,7 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
     // Now remove the ones that don't actually form closed loops of three atoms.
 
     vector<int> settleClusters;
-    for (int i = 0; i < settleConstraints.size(); i++) {
+    for (int i = 0; i < (int)settleConstraints.size(); i++) {
         if (settleConstraints[i].size() == 2) {
             int partner1 = settleConstraints[i].begin()->first;
             int partner2 = (++settleConstraints[i].begin())->first;
@@ -524,7 +524,7 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
     gpu->psSettleParameter                = psSettleParameter;
     gpu->sim.pSettleParameter             = psSettleParameter->_pDevStream[0];
     gpu->sim.settleConstraints            = settleClusters.size();
-      for (int i = 0; i < settleClusters.size(); i++) {
+      for (int i = 0; i < (int)settleClusters.size(); i++) {
         int atom1 = settleClusters[i];
         int atom2 = settleConstraints[atom1].begin()->first;
         int atom3 = (++settleConstraints[atom1].begin())->first;
@@ -570,7 +570,7 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
 
     map<int, ShakeCluster> clusters;
     vector<bool> invalidForShake(gpu->natoms, false);
-    for (int i = 0; i < atom1.size(); i++) {
+    for (int i = 0; i < (int)atom1.size(); i++) {
         if (isShakeAtom[atom1[i]])
             continue; // This is being taken care of with SETTLE.
 
@@ -669,7 +669,7 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
     // Find connected constraints for LINCS.
 
     vector<int> lincsConstraints;
-    for (unsigned int i = 0; i < atom1.size(); i++)
+    for (unsigned i = 0; i < atom1.size(); i++)
         if (!isShakeAtom[atom1[i]])
             lincsConstraints.push_back(i);
     int numLincs = (int) lincsConstraints.size();
@@ -679,9 +679,9 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
         atomConstraints[atom2[lincsConstraints[i]]].push_back(i);
     }
     vector<vector<int> > linkedConstraints(numLincs);
-    for (unsigned int atom = 0; atom < atomConstraints.size(); atom++) {
-        for (unsigned int i = 0; i < atomConstraints[atom].size(); i++)
-            for (int j = 0; j < i; j++) {
+    for (unsigned atom = 0; atom < atomConstraints.size(); atom++) {
+        for (unsigned i = 0; i < atomConstraints[atom].size(); i++)
+            for (unsigned j = 0; j < i; j++) {
                 int c1 = atomConstraints[atom][i];
                 int c2 = atomConstraints[atom][j];
                 linkedConstraints[c1].push_back(c2);
@@ -689,10 +689,10 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
             }
     }
     int maxLinks = 0;
-    for (unsigned int i = 0; i < linkedConstraints.size(); i++)
+    for (unsigned i = 0; i < linkedConstraints.size(); i++)
         maxLinks = max(maxLinks, (int) linkedConstraints[i].size());
     int maxAtomConstraints = 0;
-    for (unsigned int i = 0; i < atomConstraints.size(); i++)
+    for (unsigned i = 0; i < atomConstraints.size(); i++)
         maxAtomConstraints = max(maxAtomConstraints, (int) atomConstraints[i].size());
 
     // Fill in the CUDA streams.
@@ -1491,10 +1491,10 @@ void gpuBuildExclusionList(gpuContext gpu)
 
     // Mark which work units have exclusions.
 
-    for (int atom1 = 0; atom1 < gpu->exclusions.size(); ++atom1)
+    for (int atom1 = 0; atom1 < (int)gpu->exclusions.size(); ++atom1)
     {
         int x = atom1/grid;
-        for (int j = 0; j < gpu->exclusions[atom1].size(); ++j)
+        for (int j = 0; j < (int)gpu->exclusions[atom1].size(); ++j)
         {
             int atom2 = gpu->exclusions[atom1][j];
             int y = atom2/grid;
@@ -1502,10 +1502,10 @@ void gpuBuildExclusionList(gpuContext gpu)
             pWorkList[cell] |= 1;
         }
     }
-    if (gpu->sim.paddedNumberOfAtoms > gpu->natoms)
+    if ((int)gpu->sim.paddedNumberOfAtoms > gpu->natoms)
     {
         int lastBlock = gpu->natoms/grid;
-        for (int i = 0; i < gpu->sim.workUnits; ++i)
+        for (int i = 0; i < (int)gpu->sim.workUnits; ++i)
         {
             int x = pWorkList[i]>>17;
             int y = (pWorkList[i]>>2)&0x7FFF;
@@ -1521,7 +1521,7 @@ void gpuBuildExclusionList(gpuContext gpu)
     unsigned int* pExclusionIndex = psExclusionIndex->_pSysData;
     gpu->sim.pExclusionIndex = psExclusionIndex->_pDevData;
     int numWithExclusions = 0;
-    for (int i = 0; i < psExclusionIndex->_length; ++i)
+    for (int i = 0; i < (int)psExclusionIndex->_length; ++i)
         if ((pWorkList[i]&1) == 1)
             pExclusionIndex[i] = (numWithExclusions++)*grid;
 
@@ -1531,13 +1531,13 @@ void gpuBuildExclusionList(gpuContext gpu)
     gpu->psExclusion = psExclusion;
     unsigned int* pExclusion = psExclusion->_pSysData;
     gpu->sim.pExclusion = psExclusion->_pDevData;
-    for (int i = 0; i < psExclusion->_length; ++i)
+    for (int i = 0; i < (int)psExclusion->_length; ++i)
         pExclusion[i] = 0xFFFFFFFF;
-    for (int atom1 = 0; atom1 < gpu->exclusions.size(); ++atom1)
+    for (int atom1 = 0; atom1 < (int)gpu->exclusions.size(); ++atom1)
     {
         int x = atom1/grid;
         int offset1 = atom1-x*grid;
-        for (int j = 0; j < gpu->exclusions[atom1].size(); ++j)
+        for (int j = 0; j < (int)gpu->exclusions[atom1].size(); ++j)
         {
             int atom2 = gpu->exclusions[atom1][j];
             int y = atom2/grid;
@@ -1557,11 +1557,11 @@ void gpuBuildExclusionList(gpuContext gpu)
 
     // Mark all interactions that involve a padding atom as being excluded.
 
-    for (int atom1 = gpu->natoms; atom1 < atoms; ++atom1)
+    for (int atom1 = gpu->natoms; atom1 < (int)atoms; ++atom1)
     {
         int x = atom1/grid;
         int offset1 = atom1-x*grid;
-        for (int atom2 = 0; atom2 < atoms; ++atom2)
+        for (int atom2 = 0; atom2 < (int)atoms; ++atom2)
         {
             int y = atom2/grid;
             int index = x*atoms+y*grid+offset1;
@@ -1609,7 +1609,7 @@ static void tagAtomsInMolecule(int atom, int molecule, vector<int>& atomMolecule
     // Recursively tag atoms as belonging to a particular molecule.
 
     atomMolecule[atom] = molecule;
-    for (int i = 0; i < atomBonds[atom].size(); i++)
+    for (int i = 0; i < (int)atomBonds[atom].size(); i++)
         if (atomMolecule[atomBonds[atom][i]] == -1)
             tagAtomsInMolecule(atomBonds[atom][i], molecule, atomMolecule, atomBonds);
 }
@@ -1619,7 +1619,7 @@ static void findMoleculeGroups(gpuContext gpu)
     // First make a list of constraints for future use.
 
     vector<Constraint> constraints;
-    for (int i = 0; i < gpu->sim.ShakeConstraints; i++)
+    for (int i = 0; i < (int)gpu->sim.ShakeConstraints; i++)
     {
         int atom1 = (*gpu->psShakeID)[i].x;
         int atom2 = (*gpu->psShakeID)[i].y;
@@ -1632,7 +1632,7 @@ static void findMoleculeGroups(gpuContext gpu)
         if (atom4 != -1)
             constraints.push_back(Constraint(atom1, atom4, distance2));
     }
-    for (int i = 0; i < gpu->sim.settleConstraints; i++)
+    for (int i = 0; i < (int)gpu->sim.settleConstraints; i++)
     {
         int atom1 = (*gpu->psSettleID)[i].x;
         int atom2 = (*gpu->psSettleID)[i].y;
@@ -1643,7 +1643,7 @@ static void findMoleculeGroups(gpuContext gpu)
         constraints.push_back(Constraint(atom1, atom3, distance12*distance12));
         constraints.push_back(Constraint(atom2, atom3, distance23*distance23));
     }
-    for (int i = 0; i < gpu->sim.lincsConstraints; i++)
+    for (int i = 0; i < (int)gpu->sim.lincsConstraints; i++)
     {
         int atom1 = (*gpu->psLincsAtoms)[i].x;
         int atom2 = (*gpu->psLincsAtoms)[i].y;
@@ -1655,14 +1655,14 @@ static void findMoleculeGroups(gpuContext gpu)
 
     int numAtoms = gpu->natoms;
     vector<vector<int> > atomBonds(numAtoms);
-    for (int i = 0; i < gpu->sim.bonds; i++)
+    for (int i = 0; i < (int)gpu->sim.bonds; i++)
     {
         int atom1 = (*gpu->psBondID)[i].x;
         int atom2 = (*gpu->psBondID)[i].y;
         atomBonds[atom1].push_back(atom2);
         atomBonds[atom2].push_back(atom1);
     }
-    for (int i = 0; i < constraints.size(); i++)
+    for (int i = 0; i < (int)constraints.size(); i++)
     {
         int atom1 = constraints[i].atom1;
         int atom2 = constraints[i].atom2;
@@ -1686,27 +1686,27 @@ static void findMoleculeGroups(gpuContext gpu)
     vector<Molecule> molecules(numMolecules);
     for (int i = 0; i < numMolecules; i++)
         molecules[i].atoms = atomIndices[i];
-    for (int i = 0; i < gpu->sim.bonds; i++)
+    for (int i = 0; i < (int)gpu->sim.bonds; i++)
     {
         int atom1 = (*gpu->psBondID)[i].x;
         molecules[atomMolecule[atom1]].bonds.push_back(i);
     }
-    for (int i = 0; i < gpu->sim.bond_angles; i++)
+    for (int i = 0; i < (int)gpu->sim.bond_angles; i++)
     {
         int atom1 = (*gpu->psBondAngleID1)[i].x;
         molecules[atomMolecule[atom1]].angles.push_back(i);
     }
-    for (int i = 0; i < gpu->sim.dihedrals; i++)
+    for (int i = 0; i < (int)gpu->sim.dihedrals; i++)
     {
         int atom1 = (*gpu->psDihedralID1)[i].x;
         molecules[atomMolecule[atom1]].periodicTorsions.push_back(i);
     }
-    for (int i = 0; i < gpu->sim.rb_dihedrals; i++)
+    for (int i = 0; i < (int)gpu->sim.rb_dihedrals; i++)
     {
         int atom1 = (*gpu->psRbDihedralID1)[i].x;
         molecules[atomMolecule[atom1]].rbTorsions.push_back(i);
     }
-    for (int i = 0; i < constraints.size(); i++)
+    for (int i = 0; i < (int)constraints.size(); i++)
     {
         molecules[atomMolecule[constraints[i].atom1]].constraints.push_back(i);
     }
@@ -1715,14 +1715,14 @@ static void findMoleculeGroups(gpuContext gpu)
 
     vector<Molecule> uniqueMolecules;
     vector<vector<int> > moleculeInstances;
-    for (int molIndex = 0; molIndex < molecules.size(); molIndex++)
+    for (int molIndex = 0; molIndex < (int)molecules.size(); molIndex++)
     {
         Molecule& mol = molecules[molIndex];
 
         // See if it is identical to another molecule.
 
         bool isNew = true;
-        for (int j = 0; j < uniqueMolecules.size() && isNew; j++)
+        for (int j = 0; j < (int)uniqueMolecules.size() && isNew; j++)
         {
             Molecule& mol2 = uniqueMolecules[j];
             bool identical = true;
@@ -1734,20 +1734,20 @@ static void findMoleculeGroups(gpuContext gpu)
             float4* posq = gpu->psPosq4->_pSysData;
             float4* velm = gpu->psVelm4->_pSysData;
             float2* sigeps = gpu->psSigEps2->_pSysData;
-            for (int i = 0; i < mol.atoms.size() && identical; i++)
+            for (int i = 0; i < (int)mol.atoms.size() && identical; i++)
                 if (mol.atoms[i] != mol2.atoms[i]-atomOffset || posq[mol.atoms[i]].w != posq[mol2.atoms[i]].w ||
                         velm[mol.atoms[i]].w != velm[mol2.atoms[i]].w || sigeps[mol.atoms[i]].x != sigeps[mol2.atoms[i]].x ||
                         sigeps[mol.atoms[i]].y != sigeps[mol2.atoms[i]].y)
                     identical = false;
             int4* bondID = gpu->psBondID->_pSysData;
             float2* bondParam = gpu->psBondParameter->_pSysData;
-            for (int i = 0; i < mol.bonds.size() && identical; i++)
+            for (int i = 0; i < (int)mol.bonds.size() && identical; i++)
                 if (bondID[mol.bonds[i]].x != bondID[mol2.bonds[i]].x-atomOffset || bondID[mol.bonds[i]].y != bondID[mol2.bonds[i]].y-atomOffset ||
                         bondParam[mol.bonds[i]].x != bondParam[mol2.bonds[i]].x || bondParam[mol.bonds[i]].y != bondParam[mol2.bonds[i]].y)
                     identical = false;
             int4* angleID = gpu->psBondAngleID1->_pSysData;
             float2* angleParam = gpu->psBondAngleParameter->_pSysData;
-            for (int i = 0; i < mol.angles.size() && identical; i++)
+            for (int i = 0; i < (int)mol.angles.size() && identical; i++)
                 if (angleID[mol.angles[i]].x != angleID[mol2.angles[i]].x-atomOffset ||
                         angleID[mol.angles[i]].y != angleID[mol2.angles[i]].y-atomOffset ||
                         angleID[mol.angles[i]].z != angleID[mol2.angles[i]].z-atomOffset ||
@@ -1756,7 +1756,7 @@ static void findMoleculeGroups(gpuContext gpu)
                     identical = false;
             int4* periodicID = gpu->psDihedralID1->_pSysData;
             float4* periodicParam = gpu->psDihedralParameter->_pSysData;
-            for (int i = 0; i < mol.periodicTorsions.size() && identical; i++)
+            for (int i = 0; i < (int)mol.periodicTorsions.size() && identical; i++)
                 if (periodicID[mol.periodicTorsions[i]].x != periodicID[mol2.periodicTorsions[i]].x-atomOffset ||
                         periodicID[mol.periodicTorsions[i]].y != periodicID[mol2.periodicTorsions[i]].y-atomOffset ||
                         periodicID[mol.periodicTorsions[i]].z != periodicID[mol2.periodicTorsions[i]].z-atomOffset ||
@@ -1768,7 +1768,7 @@ static void findMoleculeGroups(gpuContext gpu)
             int4* rbID = gpu->psRbDihedralID1->_pSysData;
             float4* rbParam1 = gpu->psRbDihedralParameter1->_pSysData;
             float2* rbParam2 = gpu->psRbDihedralParameter2->_pSysData;
-            for (int i = 0; i < mol.rbTorsions.size() && identical; i++)
+            for (int i = 0; i < (int)mol.rbTorsions.size() && identical; i++)
                 if (rbID[mol.rbTorsions[i]].x != rbID[mol2.rbTorsions[i]].x-atomOffset ||
                         rbID[mol.rbTorsions[i]].y != rbID[mol2.rbTorsions[i]].y-atomOffset ||
                         rbID[mol.rbTorsions[i]].z != rbID[mol2.rbTorsions[i]].z-atomOffset ||
@@ -1780,7 +1780,7 @@ static void findMoleculeGroups(gpuContext gpu)
                         rbParam2[mol.rbTorsions[i]].x != rbParam2[mol2.rbTorsions[i]].x ||
                         rbParam2[mol.rbTorsions[i]].y != rbParam2[mol2.rbTorsions[i]].y)
                     identical = false;
-            for (int i = 0; i < mol.constraints.size() && identical; i++)
+            for (int i = 0; i < (int)mol.constraints.size() && identical; i++)
                 if (constraints[mol.constraints[i]].atom1 != constraints[mol2.constraints[i]].atom1-atomOffset ||
                         constraints[mol.constraints[i]].atom2 != constraints[mol2.constraints[i]].atom2-atomOffset ||
                         constraints[mol.constraints[i]].distance2 != constraints[mol2.constraints[i]].distance2)
@@ -1799,12 +1799,12 @@ static void findMoleculeGroups(gpuContext gpu)
         }
     }
     gpu->moleculeGroups.resize(moleculeInstances.size());
-    for (int i = 0; i < moleculeInstances.size(); i++)
+    for (int i = 0; i < (int)moleculeInstances.size(); i++)
     {
         gpu->moleculeGroups[i].instances = moleculeInstances[i];
         vector<int>& atoms = uniqueMolecules[i].atoms;
         gpu->moleculeGroups[i].atoms.resize(atoms.size());
-        for (int j = 0; j < atoms.size(); j++)
+        for (int j = 0; j < (int)atoms.size(); j++)
             gpu->moleculeGroups[i].atoms[j] = atoms[j]-atoms[0];
     }
 }
@@ -1852,7 +1852,7 @@ void gpuReorderAtoms(gpuContext gpu)
     vector<int> originalIndex(numAtoms);
     vector<float4> newPosq(numAtoms);
     vector<float4> newVelm(numAtoms);
-    for (int group = 0; group < gpu->moleculeGroups.size(); group++)
+    for (int group = 0; group < (int)gpu->moleculeGroups.size(); group++)
     {
         // Find the center of each molecule.
 
@@ -1865,7 +1865,7 @@ void gpuReorderAtoms(gpuContext gpu)
             molPos[i].x = 0.0f;
             molPos[i].y = 0.0f;
             molPos[i].z = 0.0f;
-            for (int j = 0; j < atoms.size(); j++)
+            for (int j = 0; j < (int)atoms.size(); j++)
             {
                 int atom = atoms[j]+mol.instances[i];
                 molPos[i].x += posq[atom].x;
@@ -1890,7 +1890,7 @@ void gpuReorderAtoms(gpuContext gpu)
                     molPos[i].x -= dx;
                     molPos[i].y -= dy;
                     molPos[i].z -= dz;
-                    for (int j = 0; j < atoms.size(); j++)
+                    for (int j = 0; j < (int)atoms.size(); j++)
                     {
                         int atom = atoms[j]+mol.instances[i];
                         posq[atom].x -= dx;
@@ -1906,9 +1906,9 @@ void gpuReorderAtoms(gpuContext gpu)
         bool useHilbert = (numMolecules > 5000 || atoms.size() > 8); // For small systems, a simple zigzag curve works better than a Hilbert curve.
         float binWidth;
         if (useHilbert)
-            binWidth = max(max(maxx-minx, maxy-miny), maxz-minz)/255.0;
+            binWidth = (float)(max(max(maxx-minx, maxy-miny), maxz-minz)/255.0);
         else
-            binWidth = 0.2*sqrt(gpu->sim.nonbondedCutoffSqr);
+            binWidth = (float)(0.2*sqrt(gpu->sim.nonbondedCutoffSqr));
         int xbins = 1 + (int) ((maxx-minx)/binWidth);
         int ybins = 1 + (int) ((maxy-miny)/binWidth);
         vector<pair<int, int> > molBins(numMolecules);
@@ -1942,7 +1942,7 @@ void gpuReorderAtoms(gpuContext gpu)
 
         for (int i = 0; i < numMolecules; i++)
         {
-            for (int j = 0; j < atoms.size(); j++)
+            for (int j = 0; j < (int)atoms.size(); j++)
             {
                 int oldIndex = mol.instances[molBins[i].second]+atoms[j];
                 int newIndex = mol.instances[i]+atoms[j];
