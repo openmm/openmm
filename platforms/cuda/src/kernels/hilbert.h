@@ -6,10 +6,18 @@
 extern "C" {
 #endif
 
+#ifdef _MSC_VER
 /* define the bitmask_t type as an integer of sufficient size */
 typedef unsigned long long bitmask_t;
 /* define the halfmask_t type as an integer of 1/2 the size of bitmask_t */
-typedef unsigned long halfmask_t;
+typedef unsigned int halfmask_t;
+#else
+#include <stdint.h>
+/* define the bitmask_t type as an integer of sufficient size */
+typedef uint64_t bitmask_t;
+/* define the halfmask_t type as an integer of 1/2 the size of bitmask_t */
+typedef uint32_t halfmask_t;
+#endif
 
 /*****************************************************************
  * hilbert_i2c
