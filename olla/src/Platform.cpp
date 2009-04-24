@@ -40,6 +40,7 @@
 #include <sstream>
 #else
 #include <dlfcn.h>
+#include <dirent.h>
 #endif
 #include <set>
 
@@ -150,4 +151,44 @@ void Platform::loadPluginLibrary(string file) {
     if (handle == NULL)
         throw OpenMMException("Error loading library "+file+": "+dlerror());
 #endif
+}
+
+vector<string> Platform::loadPluginsFromDirectory(string directory) {
+    vector<string> files;
+    char dirSeparator;
+#ifdef _MSC_VER
+    dirSeparator = '\\';
+    WIN32_FIND_DATA fileInfo;
+    string filePattern(directory + dirSeparator + "*");
+    HANDLE findHandle = FindFirstFile(filePattern.c_str(), &fileInfo);
+    if (findHandle != INVALID_HANDLE_VALUE) {
+        do {
+            if (fileInfo.cFileName[0] != '.')
+                files.push_back(string(fileInfo.cFileName));
+        } while (FindNextFile(findHandle, &fileInfo));
+        FindClose(findHandle);
+    }
+#else
+    dirSeparator = '/';
+    DIR* dir;
+    struct dirent *entry;
+    dir = opendir(directory.c_str());
+    if (dir != NULL) {
+        while ((entry = readdir(dir)) != NULL) {
+            if (entry->d_name[0] != '.')
+                files.push_back(string(entry->d_name));
+        }
+        closedir(dir);
+    }
+#endif
+    vector<string> loadedLibraries;
+    for (unsigned int i = 0; i < files.size(); ++i) {
+        try {
+            Platform::loadPluginLibrary(directory+dirSeparator+files[i]);
+            loadedLibraries.push_back(files[i]);
+        } catch (OpenMMException ex) {
+            // Just ignore it.
+        }
+    }
+    return loadedLibraries;
 }

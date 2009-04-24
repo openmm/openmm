@@ -181,6 +181,16 @@ public:
      *               or relative to a set of standard locations.
      */
     static void loadPluginLibrary(std::string file);
+    /**
+     * Load multiple dynamic libraries (DLLs) which contain OpenMM plugins from a single directory.
+     * This method loops over every file contained in the specified directory and calls loadPluginLibrary()
+     * for each one.  If an error occurs while trying to load a particular file, that file is simply
+     * ignored.
+     *
+     * @param directory    the path to the directory containing libraries to load
+     * @return the names of all files which were successfully loaded as libraries
+     */
+    static std::vector<std::string> loadPluginsFromDirectory(std::string directory);
 private:
 
 // Retarded visual studio compiler complains about being unable to 
