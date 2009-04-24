@@ -1475,7 +1475,9 @@ int gpuBuildThreadBlockWorkList(gpuContext gpu)
             count++;
         }
     }
+    (*gpu->psInteractionCount)[0] = gpu->sim.workUnits;
 
+    gpu->psInteractionCount->Upload();
     psWorkUnit->Upload();
     gpuSetConstants(gpu);
     return cells;

@@ -35,10 +35,11 @@
  * different versions of the kernels.
  */
 
-__global__ void METHOD_NAME(kCalculateObcGbsa, BornSum_kernel)(unsigned int* workUnit, unsigned int workUnits)
+__global__ void METHOD_NAME(kCalculateObcGbsa, BornSum_kernel)(unsigned int* workUnit)
 {
     extern __shared__ Atom sA[];
-    int end = workUnits / gridDim.x;
+    unsigned int numWorkUnits = cSim.pInteractionCount[0];
+    int end = numWorkUnits / gridDim.x;
     int pos = end - (threadIdx.x >> GRIDBITS) - 1;
 #ifdef USE_OUTPUT_BUFFER_PER_WARP
     unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
@@ -50,7 +51,7 @@ __global__ void METHOD_NAME(kCalculateObcGbsa, BornSum_kernel)(unsigned int* wor
     while (pos >= 0)
     {
         // Extract cell coordinates from appropriate work unit
-        unsigned int x = workUnit[pos + (blockIdx.x*workUnits)/gridDim.x];
+        unsigned int x = workUnit[pos + (blockIdx.x*numWorkUnits)/gridDim.x];
         unsigned int y = ((x >> 2) & 0x7fff) << GRIDBITS;
         x = (x >> 17) << GRIDBITS;
         float       dx;
@@ -146,7 +147,7 @@ __global__ void METHOD_NAME(kCalculateObcGbsa, BornSum_kernel)(unsigned int* wor
             sA[threadIdx.x].sum = apos.w    = 0.0f;
 
 #ifdef USE_CUTOFF
-            unsigned int flags = cSim.pInteractionFlag[pos + (blockIdx.x*workUnits)/gridDim.x];
+            unsigned int flags = cSim.pInteractionFlag[pos + (blockIdx.x*numWorkUnits)/gridDim.x];
             if (flags == 0)
             {
                 // No interactions in this block.
