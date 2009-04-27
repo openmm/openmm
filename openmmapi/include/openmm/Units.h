@@ -32,9 +32,6 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#ifdef _MSC_VER
-#define _USE_MATH_DEFINES
-#endif
 #include <cmath>
 
 /** \file
@@ -81,11 +78,11 @@ namespace OpenMM {
     /**
      * The number of radians in a degree.
      */
-    static const double RadiansPerDegree = M_PI/180.0;
+    static const double RadiansPerDegree = 3.1415926535897932385/180.0;
     /**
      * The number of degrees in a radian.
      */
-    static const double DegreesPerRadian = 180.0/M_PI;
+    static const double DegreesPerRadian = 180.0/3.1415926535897932385;
 
 } // namespace OpenMM
 
