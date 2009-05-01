@@ -161,8 +161,9 @@ public:
      * @param charge    the charge of the particle, measured in units of the proton charge
      * @param sigma     the sigma parameter of the Lennard-Jones potential (corresponding to the van der Waals radius of the particle), measured in nm
      * @param epsilon   the epsilon parameter of the Lennard-Jones potential (corresponding to the well depth of the van der Waals interaction), measured in kJ/mol
+     * @return the index of the particle that was added
      */
-    void addParticle(double charge, double sigma, double epsilon);
+    int addParticle(double charge, double sigma, double epsilon);
     /**
      * Get the nonbonded force parameters for a particle.
      *
@@ -195,8 +196,9 @@ public:
      * @param chargeProd the scaled product of the atomic charges (i.e. the strength of the Coulomb interaction), measured in units of the proton charge squared
      * @param sigma      the sigma parameter of the Lennard-Jones potential (corresponding to the van der Waals radius of the particle), measured in nm
      * @param epsilon    the epsilon parameter of the Lennard-Jones potential (corresponding to the well depth of the van der Waals interaction), measured in kJ/mol
+     * @return the index of the exception that was added
      */
-    void addException(int particle1, int particle2, double chargeProd, double sigma, double epsilon);
+    int addException(int particle1, int particle2, double chargeProd, double sigma, double epsilon);
     /**
      * Get the force field parameters for an interaction that should be calculated differently from others.
      * 

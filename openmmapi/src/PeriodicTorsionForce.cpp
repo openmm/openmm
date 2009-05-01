@@ -39,8 +39,9 @@ using namespace OpenMM;
 PeriodicTorsionForce::PeriodicTorsionForce() {
 }
 
-void PeriodicTorsionForce::addTorsion(int particle1, int particle2, int particle3, int particle4, int periodicity, double phase, double k) {
+int PeriodicTorsionForce::addTorsion(int particle1, int particle2, int particle3, int particle4, int periodicity, double phase, double k) {
     periodicTorsions.push_back(PeriodicTorsionInfo(particle1, particle2, particle3, particle4, periodicity, phase, k));
+    return periodicTorsions.size()-1;
 }
 
 void PeriodicTorsionForce::getTorsionParameters(int index, int& particle1, int& particle2, int& particle3, int& particle4, int& periodicity, double& phase, double& k) const {

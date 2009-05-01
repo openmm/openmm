@@ -68,8 +68,9 @@ public:
      * @param periodicity  the periodicity of the torsion
      * @param phase        the phase offset of the torsion, measured in radians
      * @param k            the force constant for the torsion
+     * @return the index of the torsion that was added
      */
-    void addTorsion(int particle1, int particle2, int particle3, int particle4, int periodicity, double phase, double k);
+    int addTorsion(int particle1, int particle2, int particle3, int particle4, int periodicity, double phase, double k);
     /**
      * Get the force field parameters for a periodic torsion term.
      * 

@@ -39,8 +39,9 @@ using namespace OpenMM;
 RBTorsionForce::RBTorsionForce() {
 }
 
-void RBTorsionForce::addTorsion(int particle1, int particle2, int particle3, int particle4, double c0, double c1, double c2, double c3, double c4, double c5) {
+int RBTorsionForce::addTorsion(int particle1, int particle2, int particle3, int particle4, double c0, double c1, double c2, double c3, double c4, double c5) {
     rbTorsions.push_back(RBTorsionInfo(particle1, particle2, particle3, particle4, c0, c1, c2, c3, c4, c5));
+    return rbTorsions.size()-1;
 }
 
 void RBTorsionForce::getTorsionParameters(int index, int& particle1, int& particle2, int& particle3, int& particle4, double& c0, double& c1, double& c2, double& c3, double& c4, double& c5) const {

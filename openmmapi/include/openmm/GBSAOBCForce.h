@@ -70,8 +70,9 @@ public:
      * @param charge         the charge of the particle, measured in units of the proton charge
      * @param radius         the GBSA radius of the particle, measured in nm
      * @param scalingFactor  the OBC scaling factor for the particle
+     * @return the index of the particle that was added
      */
-    void addParticle(double charge, double radius, double scalingFactor);
+    int addParticle(double charge, double radius, double scalingFactor);
     /**
      * Get the force field parameters for a particle.
      * 

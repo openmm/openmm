@@ -42,8 +42,9 @@ System::~System() {
         delete forces[i];
 }
 
-void System::addConstraint(int particle1, int particle2, double distance) {
+int System::addConstraint(int particle1, int particle2, double distance) {
     constraints.push_back(ConstraintInfo(particle1, particle2, distance));
+    return constraints.size()-1;
 }
 
 void System::getConstraintParameters(int index, int& particle1, int& particle2, double& distance) const {

@@ -81,8 +81,9 @@ void NonbondedForce::setPeriodicBoxVectors(Vec3 a, Vec3 b, Vec3 c) {
     periodicBoxVectors[2] = c;
 }
 
-void NonbondedForce::addParticle(double charge, double sigma, double epsilon) {
+int NonbondedForce::addParticle(double charge, double sigma, double epsilon) {
     particles.push_back(ParticleInfo(charge, sigma, epsilon));
+    return particles.size()-1;
 }
 
 void NonbondedForce::getParticleParameters(int index, double& charge, double& sigma, double& epsilon) const {
@@ -97,8 +98,9 @@ void NonbondedForce::setParticleParameters(int index, double charge, double sigm
     particles[index].epsilon = epsilon;
 }
 
-void NonbondedForce::addException(int particle1, int particle2, double chargeProd, double sigma, double epsilon) {
+int NonbondedForce::addException(int particle1, int particle2, double chargeProd, double sigma, double epsilon) {
     exceptions.push_back(ExceptionInfo(particle1, particle2, chargeProd, sigma, epsilon));
+    return exceptions.size()-1;
 }
 void NonbondedForce::getExceptionParameters(int index, int& particle1, int& particle2, double& chargeProd, double& sigma, double& epsilon) const {
     particle1 = exceptions[index].particle1;

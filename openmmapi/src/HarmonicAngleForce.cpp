@@ -39,8 +39,9 @@ using namespace OpenMM;
 HarmonicAngleForce::HarmonicAngleForce() {
 }
 
-void HarmonicAngleForce::addAngle(int particle1, int particle2, int particle3, double angle, double k) {
+int HarmonicAngleForce::addAngle(int particle1, int particle2, int particle3, double angle, double k) {
     angles.push_back(AngleInfo(particle1, particle2, particle3, angle, k));
+    return angles.size()-1;
 }
 
 void HarmonicAngleForce::getAngleParameters(int index, int& particle1, int& particle2, int& particle3, double& angle, double& k) const {

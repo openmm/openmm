@@ -70,8 +70,9 @@ public:
      * @param charge         the charge of the particle, measured in units of the proton charge
      * @param radius         the GB/VI radius of the particle, measured in nm
      * @param gamma          the gamma parameter
+     * @return the index of the particle that was added
      */
-    void addParticle(double charge, double radius, double gamma);
+    int addParticle(double charge, double radius, double gamma);
     /**
      * Get the force field parameters for a particle.
      * 

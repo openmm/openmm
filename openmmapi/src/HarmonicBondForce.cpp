@@ -39,8 +39,9 @@ using namespace OpenMM;
 HarmonicBondForce::HarmonicBondForce() {
 }
 
-void HarmonicBondForce::addBond(int particle1, int particle2, double length, double k) {
+int HarmonicBondForce::addBond(int particle1, int particle2, double length, double k) {
     bonds.push_back(BondInfo(particle1, particle2, length, k));
+    return bonds.size()-1;
 }
 
 void HarmonicBondForce::getBondParameters(int index, int& particle1, int& particle2, double& length, double& k) const {

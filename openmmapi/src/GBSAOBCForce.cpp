@@ -39,8 +39,9 @@ using namespace OpenMM;
 GBSAOBCForce::GBSAOBCForce() : solventDielectric(78.3), soluteDielectric(1.0) {
 }
 
-void GBSAOBCForce::addParticle(double charge, double radius, double scalingFactor) {
+int GBSAOBCForce::addParticle(double charge, double radius, double scalingFactor) {
     particles.push_back(ParticleInfo(charge, radius, scalingFactor));
+    return particles.size()-1;
 }
 
 void GBSAOBCForce::getParticleParameters(int index, double& charge, double& radius, double& scalingFactor) const {

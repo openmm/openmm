@@ -65,8 +65,9 @@ public:
      * @param particle2 the index of the second particle connected by the bond
      * @param length    the equilibrium length of the bond, measured in nm
      * @param k         the harmonic force constant for the bond
+     * @return the index of the bond that was added
      */
-    void addBond(int particle1, int particle2, double length, double k);
+    int addBond(int particle1, int particle2, double length, double k);
     /**
      * Get the force field parameters for a bond term.
      * 

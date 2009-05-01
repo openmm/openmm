@@ -66,8 +66,9 @@ public:
      * @param particle3 the index of the third particle forming the angle
      * @param angle     the equilibrium angle, measured in radians
      * @param k         the harmonic force constant for the angle
+     * @return the index of the angle that was added
      */
-    void addAngle(int particle1, int particle2, int particle3, double angle, double k);
+    int addAngle(int particle1, int particle2, int particle3, double angle, double k);
     /**
      * Get the force field parameters for an angle term.
      * 

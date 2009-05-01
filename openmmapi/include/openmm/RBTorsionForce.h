@@ -71,8 +71,9 @@ public:
      * @param c3           the coefficient of the 3rd order term
      * @param c4           the coefficient of the 4th order term
      * @param c5           the coefficient of the 5th order term
+     * @return the index of the torsion that was added
      */
-    void addTorsion(int particle1, int particle2, int particle3, int particle4, double c0, double c1, double c2, double c3, double c4, double c5);
+    int addTorsion(int particle1, int particle2, int particle3, int particle4, double c0, double c1, double c2, double c3, double c4, double c5);
     /**
      * Get the force field parameters for a Ryckaert-Bellemans torsion term.
      * 

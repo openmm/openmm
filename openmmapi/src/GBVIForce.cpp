@@ -39,8 +39,9 @@ using namespace OpenMM;
 GBVIForce::GBVIForce() : solventDielectric(78.3), soluteDielectric(1.0) {
 }
 
-void GBVIForce::addParticle(double charge, double radius, double gamma) {
+int GBVIForce::addParticle(double charge, double radius, double gamma) {
     particles.push_back(ParticleInfo(charge, radius, gamma));
+    return particles.size()-1;
 }
 
 void GBVIForce::getParticleParameters(int index, double& charge, double& radius, double& gamma) const {

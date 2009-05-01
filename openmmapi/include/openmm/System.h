@@ -72,9 +72,11 @@ public:
      * Add a particle to the System.
      *
      * @param mass   the mass of the particle (in atomic mass units)
+     * @return the index of the particle that was added
      */
-    void addParticle(double mass) {
+    int addParticle(double mass) {
         masses.push_back(mass);
+        return masses.size()-1;
     }
     /**
      * Get the mass (in atomic mass units) of a particle.
@@ -105,8 +107,9 @@ public:
      * @param particle1 the index of the first particle involved in the constraint
      * @param particle2 the index of the second particle involved in the constraint
      * @param distance  the required distance between the two particles, measured in nm
+     * @return the index of the constraint that was added
      */
-    void addConstraint(int particle1, int particle2, double distance);
+    int addConstraint(int particle1, int particle2, double distance);
     /**
      * Get the parameters defining a distance constraint.
      * 
