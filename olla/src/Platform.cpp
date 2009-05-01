@@ -194,7 +194,7 @@ vector<string> Platform::loadPluginsFromDirectory(string directory) {
     return loadedLibraries;
 }
 
-string Platform::getDefaultPluginDirectory() {
+string Platform::getDefaultPluginsDirectory() {
     char* dir = getenv("OPENMM_PLUGIN_DIR");
 #ifdef _MSC_VER
     if (dir == NULL)

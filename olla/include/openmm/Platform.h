@@ -198,7 +198,7 @@ public:
      *
      * @return the path to the default plugin directory
      */
-    static std::string getDefaultPluginDirectory();
+    static std::string getDefaultPluginsDirectory();
 private:
 
 // Retarded visual studio compiler complains about being unable to 
