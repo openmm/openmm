@@ -199,7 +199,7 @@ void testConstrainedClusters() {
 int main() {
     try {
         testSingleBond();
-//        testConstraints();
+        testConstraints();
         testConstrainedClusters();
     }
     catch(const exception& e) {
