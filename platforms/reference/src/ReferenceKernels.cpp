@@ -44,6 +44,7 @@
 #include "SimTKReference/ReferenceProperDihedralBond.h"
 #include "SimTKReference/ReferenceRbDihedralBond.h"
 #include "SimTKReference/ReferenceStochasticDynamics.h"
+#include "SimTKReference/ReferenceRigidShakeAlgorithm.h"
 #include "SimTKReference/ReferenceShakeAlgorithm.h"
 #include "SimTKReference/ReferenceVerletDynamics.h"
 #include "openmm/CMMotionRemover.h"
@@ -608,7 +609,7 @@ void ReferenceIntegrateVerletStepKernel::execute(OpenMMContextImpl& context, con
             delete constraints;
         }
         dynamics = new ReferenceVerletDynamics(context.getSystem().getNumParticles(), static_cast<RealOpenMM>(stepSize) );
-        constraints = new ReferenceShakeAlgorithm(numConstraints, constraintIndices, constraintDistances, (RealOpenMM)integrator.getConstraintTolerance());
+        constraints = new ReferenceRigidShakeAlgorithm(context.getSystem().getNumParticles(), numConstraints, constraintIndices, constraintDistances, (RealOpenMM)integrator.getConstraintTolerance());
         dynamics->setReferenceConstraintAlgorithm(constraints);
         prevStepSize = stepSize;
     }
@@ -667,7 +668,7 @@ void ReferenceIntegrateLangevinStepKernel::execute(OpenMMContextImpl& context, c
 				static_cast<RealOpenMM>(stepSize), 
 				static_cast<RealOpenMM>(tau), 
 				static_cast<RealOpenMM>(temperature) );
-        constraints = new ReferenceShakeAlgorithm(numConstraints, constraintIndices, constraintDistances, (RealOpenMM)integrator.getConstraintTolerance());
+        constraints = new ReferenceRigidShakeAlgorithm(context.getSystem().getNumParticles(), numConstraints, constraintIndices, constraintDistances, (RealOpenMM)integrator.getConstraintTolerance());
         dynamics->setReferenceConstraintAlgorithm(constraints);
         prevTemp = temperature;
         prevFriction = friction;
@@ -727,7 +728,7 @@ void ReferenceIntegrateBrownianStepKernel::execute(OpenMMContextImpl& context, c
 				static_cast<RealOpenMM>(stepSize), 
 				static_cast<RealOpenMM>(friction), 
 				static_cast<RealOpenMM>(temperature) );
-        constraints = new ReferenceShakeAlgorithm(numConstraints, constraintIndices, constraintDistances, (RealOpenMM)integrator.getConstraintTolerance());
+        constraints = new ReferenceRigidShakeAlgorithm(context.getSystem().getNumParticles(), numConstraints, constraintIndices, constraintDistances, (RealOpenMM)integrator.getConstraintTolerance());
         dynamics->setReferenceConstraintAlgorithm(constraints);
         prevTemp = temperature;
         prevFriction = friction;
