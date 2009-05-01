@@ -191,6 +191,14 @@ public:
      * @return the names of all files which were successfully loaded as libraries
      */
     static std::vector<std::string> loadPluginsFromDirectory(std::string directory);
+    /**
+     * Get the default directory from which to load plugins.  If the environment variable
+     * OPENMM_PLUGIN_DIR is set, this returns its value.  Otherwise, it returns a platform
+     * specific default location.
+     *
+     * @return the path to the default plugin directory
+     */
+    static std::string getDefaultPluginDirectory();
 private:
 
 // Retarded visual studio compiler complains about being unable to 

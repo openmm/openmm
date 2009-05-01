@@ -41,6 +41,7 @@
 #else
 #include <dlfcn.h>
 #include <dirent.h>
+#include <cstdlib>
 #endif
 #include <set>
 
@@ -191,4 +192,19 @@ vector<string> Platform::loadPluginsFromDirectory(string directory) {
         }
     }
     return loadedLibraries;
+}
+
+string Platform::getDefaultPluginDirectory() {
+    char* dir = getenv("OPENMM_PLUGIN_DIR");
+#ifdef _MSC_VER
+    if (dir == NULL)
+        dir = getenv("PROGRAMFILES");
+    if (dir == NULL)
+        return "C:\\\\Program Files\\OpenMM\\lib\\plugins";
+    return string(dir)+"\\OpenMM\\lib\\plugins";
+#else
+    if (dir == NULL)
+        return "/usr/local/openmm/lib/plugins";
+    return string(dir);
+#endif
 }
