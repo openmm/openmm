@@ -479,9 +479,9 @@ void testBlockInteractions(bool periodic) {
             float dy = pos.y-center.y;
             float dz = pos.z-center.z;
             if (periodic) {
-                dx -= floor(0.5+dx/boxSize)*boxSize;
-                dy -= floor(0.5+dy/boxSize)*boxSize;
-                dz -= floor(0.5+dz/boxSize)*boxSize;
+                dx -= (float)(floor(0.5+dx/boxSize)*boxSize);
+                dy -= (float)(floor(0.5+dy/boxSize)*boxSize);
+                dz -= (float)(floor(0.5+dz/boxSize)*boxSize);
             }
             ASSERT(abs(dx) < gridSize.x+TOL);
             ASSERT(abs(dy) < gridSize.y+TOL);
@@ -528,9 +528,9 @@ void testBlockInteractions(bool periodic) {
         float dy = center1.y-center2.y;
         float dz = center1.z-center2.z;
         if (periodic) {
-            dx -= floor(0.5+dx/boxSize)*boxSize;
-            dy -= floor(0.5+dy/boxSize)*boxSize;
-            dz -= floor(0.5+dz/boxSize)*boxSize;
+            dx -= (float)(floor(0.5+dx/boxSize)*boxSize);
+            dy -= (float)(floor(0.5+dy/boxSize)*boxSize);
+            dz -= (float)(floor(0.5+dz/boxSize)*boxSize);
         }
         dx = max(0.0f, abs(dx)-gridSize1.x-gridSize2.x);
         dy = max(0.0f, abs(dy)-gridSize1.y-gridSize2.y);
@@ -549,9 +549,9 @@ void testBlockInteractions(bool periodic) {
                     float dy = pos2.y-pos1.y;
                     float dz = pos2.z-pos1.z;
                     if (periodic) {
-                        dx -= floor(0.5+dx/boxSize)*boxSize;
-                        dy -= floor(0.5+dy/boxSize)*boxSize;
-                        dz -= floor(0.5+dz/boxSize)*boxSize;
+                        dx -= (float)(floor(0.5+dx/boxSize)*boxSize);
+                        dy -= (float)(floor(0.5+dy/boxSize)*boxSize);
+                        dz -= (float)(floor(0.5+dz/boxSize)*boxSize);
                     }
                     if (dx*dx+dy*dy+dz*dz < cutoff*cutoff) {
                         dx = pos2.x-center1.x;
@@ -571,7 +571,7 @@ void testBlockInteractions(bool periodic) {
     // Check the tiles that did not have interactions to make sure all atoms are beyond the cutoff.
 
     data.gpu->psWorkUnit->Download();
-    for (int i = 0; i < hasInteractions.size(); i++)
+    for (int i = 0; i < (int)hasInteractions.size(); i++)
         if (!hasInteractions[i]) {
             unsigned int workUnit = (*data.gpu->psWorkUnit)[i];
             unsigned int x = (workUnit >> 17);
@@ -584,9 +584,9 @@ void testBlockInteractions(bool periodic) {
                     float dy = pos1.y-pos2.y;
                     float dz = pos1.z-pos2.z;
                     if (periodic) {
-                        dx -= floor(0.5+dx/boxSize)*boxSize;
-                        dy -= floor(0.5+dy/boxSize)*boxSize;
-                        dz -= floor(0.5+dz/boxSize)*boxSize;
+                        dx -= (float)(floor(0.5+dx/boxSize)*boxSize);
+                        dy -= (float)(floor(0.5+dy/boxSize)*boxSize);
+                        dz -= (float)(floor(0.5+dz/boxSize)*boxSize);
                     }
                     ASSERT(dx*dx+dy*dy+dz*dz > cutoff*cutoff);
                 }
