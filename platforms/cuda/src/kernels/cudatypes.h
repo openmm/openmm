@@ -389,6 +389,8 @@ struct cudaGmxSimulation {
     int*            pLincsAtomConstraints;          // The indices of constraints involving each atom
     int*            pLincsNumAtomConstraints;       // The number of constraints involving each atom
     short*          pSyncCounter;                   // Used for global thread synchronization
+    unsigned int*   pRequiredIterations;            // Used by SHAKE to communicate whether iteration has converged
+    float*          pShakeReducedMass;              // The reduced mass for each SHAKE constraint
 
     // Mutable stuff
     float4*         pPosq;                          // Pointer to atom positions and charges

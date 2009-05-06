@@ -733,6 +733,12 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
     CUDAStream<short>* psSyncCounter = new CUDAStream<short>(2*gpu->sim.blocks, 1, "SyncCounter");
     gpu->psSyncCounter               = psSyncCounter;
     gpu->sim.pSyncCounter            = psSyncCounter->_pDevData;
+    CUDAStream<unsigned int>* psRequiredIterations = new CUDAStream<unsigned int>(1, 1, "RequiredIterations");
+    gpu->psRequiredIterations               = psRequiredIterations;
+    gpu->sim.pRequiredIterations            = psRequiredIterations->_pDevData;
+    CUDAStream<float>* psShakeReducedMass = new CUDAStream<float>(numLincs, 1, "LincsSolution");
+    gpu->psShakeReducedMass             = psShakeReducedMass;
+    gpu->sim.pShakeReducedMass          = psShakeReducedMass->_pDevData;
     gpu->sim.lincsConstraints = numLincs;
     for (int i = 0; i < numLincs; i++) {
         int c = lincsConstraints[i];
@@ -740,6 +746,7 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
         (*psLincsAtoms)[i].y = atom2[c];
         (*psLincsDistance)[i].w = distance[c];
         (*psLincsS)[i] = 1.0f/sqrt(invMass1[c]+invMass2[c]);
+        (*psShakeReducedMass)[i] = 0.5f/(invMass1[c]+invMass2[c]);
         (*psLincsNumConnections)[i] = linkedConstraints[i].size();
         for (unsigned int j = 0; j < linkedConstraints[i].size(); j++)
             (*psLincsConnections)[i+j*numLincs] = linkedConstraints[i][j];
@@ -754,6 +761,7 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
     psLincsAtoms->Upload();
     psLincsDistance->Upload();
     psLincsS->Upload();
+    psShakeReducedMass->Upload();
     psLincsConnections->Upload();
     psLincsNumConnections->Upload();
     psLincsAtomConstraints->Upload();
@@ -761,8 +769,8 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
     psSyncCounter->Upload();
     gpu->sim.lincsTerms = lincsTerms;
     gpu->sim.lincs_threads_per_block = (gpu->sim.lincsConstraints + gpu->sim.blocks - 1) / gpu->sim.blocks;
-    if (gpu->sim.lincs_threads_per_block > gpu->sim.max_shake_threads_per_block)
-        gpu->sim.lincs_threads_per_block = gpu->sim.max_shake_threads_per_block;
+    if (gpu->sim.lincs_threads_per_block > gpu->sim.threads_per_block)
+        gpu->sim.lincs_threads_per_block = gpu->sim.threads_per_block;
     if (gpu->sim.lincs_threads_per_block < gpu->sim.blocks)
         gpu->sim.lincs_threads_per_block = gpu->sim.blocks;
 
@@ -1142,6 +1150,8 @@ void* gpuInit(int numAtoms)
     gpu->psLincsRhs2                = NULL;
     gpu->psLincsSolution            = NULL;
     gpu->psSyncCounter              = NULL;
+    gpu->psRequiredIterations       = NULL;
+    gpu->psShakeReducedMass         = NULL;
 
     // Initialize output buffer before reading parameters
     gpu->pOutputBufferCounter       = new unsigned int[gpu->sim.paddedNumberOfAtoms];
@@ -1292,6 +1302,8 @@ void gpuShutDown(gpuContext gpu)
     delete gpu->psLincsRhs2;
     delete gpu->psLincsSolution;
     delete gpu->psSyncCounter;
+    delete gpu->psRequiredIterations;
+    delete gpu->psShakeReducedMass;
     if (gpu->cudpp != 0)
         cudppDestroyPlan(gpu->cudpp);
 
@@ -1601,6 +1613,7 @@ int gpuSetConstants(gpuContext gpu)
     SetVerletUpdateSim(gpu);
     SetBrownianUpdateSim(gpu);
     SetSettleSim(gpu);
+    SetCShakeSim(gpu);
     SetLincsSim(gpu);
     SetRandomSim(gpu);
     return 1;

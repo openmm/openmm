@@ -141,6 +141,8 @@ struct _gpuContext {
     CUDAStream<float>* psLincsRhs2;         // Workspace for LINCS
     CUDAStream<float>* psLincsSolution;     // Workspace for LINCS
     CUDAStream<short>* psSyncCounter;       // Used for global thread synchronization
+    CUDAStream<unsigned int>* psRequiredIterations; // Used by SHAKE to communicate whether iteration has converged
+    CUDAStream<float>* psShakeReducedMass;  // The reduced mass for each SHAKE constraint
 };
 
 typedef struct _gpuContext *gpuContext;

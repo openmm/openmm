@@ -183,7 +183,7 @@ ReferenceRigidShakeAlgorithm::~ReferenceRigidShakeAlgorithm( ){
        SimTKOpenMMUtilities::freeOneDRealOpenMMArray( _distanceTolerance, "distanceTolerance" );
        SimTKOpenMMUtilities::freeOneDRealOpenMMArray( _reducedMasses, "reducedMasses" );
     }
-    for (int i = 0; i < (int)_matrices.size(); i++)
+    for (unsigned int i = 0; i < _matrices.size(); i++)
         SimTKOpenMMUtilities::freeTwoDRealOpenMMArray(_matrices[i], "");
 }
 
@@ -346,13 +346,13 @@ int ReferenceRigidShakeAlgorithm::apply( int numberOfAtoms, RealOpenMM** atomCoo
          reducedMasses[ii]  = half/( inverseMasses[atomI] + inverseMasses[atomJ] );
       }
       vector<double> temp;
-      for (int i = 0; i < (int)_rigidClusters.size(); i++) {
+      for (unsigned int i = 0; i < _rigidClusters.size(); i++) {
           // Compute the constraint coupling matrix for this cluster.
 
           const vector<int>& cluster = _rigidClusters[i];
-          int size = cluster.size();
+          unsigned int size = cluster.size();
           vector<Vec3> r(size);
-          for (int j = 0; j < (int)cluster.size(); j++) {
+          for (unsigned int j = 0; j < cluster.size(); j++) {
               int atom1 = _atomIndices[cluster[j]][0];
               int atom2 = _atomIndices[cluster[j]][1];
               r[j] = Vec3(atomCoordinates[atom1][0]-atomCoordinates[atom2][0],
@@ -397,7 +397,7 @@ int ReferenceRigidShakeAlgorithm::apply( int numberOfAtoms, RealOpenMM** atomCoo
           double singularValueCutoff = 0.01*w[0];
           for (int j = 0; j < size; j++)
               w[j] = (w[j] < singularValueCutoff ? 0.0 : 1.0/w[j]);
-          if ((int)temp.size() < size)
+          if (temp.size() < size)
               temp.resize(size);
           for (int j = 0; j < size; j++) {
               for (int k = 0; k < size; k++) {
@@ -458,7 +458,6 @@ int ReferenceRigidShakeAlgorithm::apply( int numberOfAtoms, RealOpenMM** atomCoo
          RealOpenMM diff = dist2 - rp2;
          constraintForce[ii] = zero;
          RealOpenMM rrpr  = DOT3(  rp_ij, r_ij[ii] );
-
          if( rrpr <  d_ij2[ii]*epsilon6 ){
              std::stringstream message;
              message << iterations <<" "<<atomI<<" "<<atomJ<< " Error: sign of rrpr < 0?\n";
@@ -473,11 +472,11 @@ int ReferenceRigidShakeAlgorithm::apply( int numberOfAtoms, RealOpenMM** atomCoo
       if( numberConverged == _numberOfConstraints ){
          done = true;
       }
-      for (int i = 0; i < (int)_rigidClusters.size(); i++) {
+      for (unsigned int i = 0; i < _rigidClusters.size(); i++) {
           const vector<int>& cluster = _rigidClusters[i];
           RealOpenMM** matrix = _matrices[i];
-          int size = cluster.size();
-          if (size > (int)tempForce.size())
+          unsigned int size = cluster.size();
+          if (size > tempForce.size())
               tempForce.resize(size);
           for (int j = 0; j < size; j++) {
               tempForce[j] = zero;

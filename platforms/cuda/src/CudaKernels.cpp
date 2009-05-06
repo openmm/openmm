@@ -442,7 +442,7 @@ void CudaIntegrateVerletStepKernel::execute(OpenMMContextImpl& context, const Ve
     kVerletUpdatePart1(gpu);
     kApplyFirstShake(gpu);
     kApplyFirstSettle(gpu);
-    kApplyFirstLincs(gpu);
+    kApplyFirstCShake(gpu);
     if (data.removeCM) {
         int step = (int) (context.getTime()/stepSize);
         if (step%data.cmMotionFrequency == 0)
@@ -481,7 +481,7 @@ void CudaIntegrateLangevinStepKernel::execute(OpenMMContextImpl& context, const 
     kUpdatePart1(gpu);
     kApplyFirstShake(gpu);
     kApplyFirstSettle(gpu);
-    kApplyFirstLincs(gpu);
+    kApplyFirstCShake(gpu);
     if (data.removeCM) {
         int step = (int) (context.getTime()/stepSize);
         if (step%data.cmMotionFrequency == 0)
@@ -490,7 +490,7 @@ void CudaIntegrateLangevinStepKernel::execute(OpenMMContextImpl& context, const 
     kUpdatePart2(gpu);
     kApplySecondShake(gpu);
     kApplySecondSettle(gpu);
-    kApplySecondLincs(gpu);
+    kApplySecondCShake(gpu);
 }
 
 CudaIntegrateBrownianStepKernel::~CudaIntegrateBrownianStepKernel() {
@@ -523,7 +523,7 @@ void CudaIntegrateBrownianStepKernel::execute(OpenMMContextImpl& context, const 
     kBrownianUpdatePart1(gpu);
     kApplyFirstShake(gpu);
     kApplyFirstSettle(gpu);
-    kApplyFirstLincs(gpu);
+    kApplyFirstCShake(gpu);
     if (data.removeCM) {
         int step = (int) (context.getTime()/stepSize);
         if (step%data.cmMotionFrequency == 0)
