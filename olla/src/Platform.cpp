@@ -141,7 +141,10 @@ Platform& Platform::findPlatform(vector<string> kernelNames) {
 
 void Platform::loadPluginLibrary(string file) {
 #ifdef WIN32
+    // Tell Windows not to bother the user with ugly error boxes.
+    const UINT oldErrorMode = SetErrorMode(SEM_FAILCRITICALERRORS);
     HMODULE handle = LoadLibrary(file.c_str());
+    SetErrorMode(oldErrorMode); // Restore previous error mode.
 	if (handle == NULL) {
 		string message;
 		stringstream(message) << "Error loading library " << file << ": " << GetLastError();
@@ -157,10 +160,10 @@ void Platform::loadPluginLibrary(string file) {
 vector<string> Platform::loadPluginsFromDirectory(string directory) {
     vector<string> files;
     char dirSeparator;
-#ifdef _MSC_VER
+#ifdef WIN32
     dirSeparator = '\\';
     WIN32_FIND_DATA fileInfo;
-    string filePattern(directory + dirSeparator + "*");
+    string filePattern(directory + dirSeparator + "*.dll");
     HANDLE findHandle = FindFirstFile(filePattern.c_str(), &fileInfo);
     if (findHandle != INVALID_HANDLE_VALUE) {
         do {
