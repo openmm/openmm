@@ -499,15 +499,15 @@ RealOpenMM damping = one;//(RealOpenMM) (iterations%2 == 0 ? 0.5 : 1.0);
          }
       }
    }
-   static int sum = 0;
-   static int count = 0;
-   sum += iterations;
-   count++;
-   if (count == 100) {
-       printf("%d iterations\n", sum);
-       sum = 0;
-       count = 0;
-   }
+//   static int sum = 0;
+//   static int count = 0;
+//   sum += iterations;
+//   count++;
+//   if (count == 100) {
+//       printf("%d iterations\n", sum);
+//       sum = 0;
+//       count = 0;
+//   }
 
    // diagnostics
 

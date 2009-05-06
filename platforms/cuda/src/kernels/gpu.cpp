@@ -869,7 +869,7 @@ int gpuAllocateInitialBuffers(gpuContext gpu)
     gpu->seed                           = 1;
     gpu->sim.randomFrames               = 20;
     gpu->sim.randomIterations           = gpu->sim.randomFrames;
-    gpu->sim.randoms                    = gpu->sim.randomFrames * gpu->sim.paddedNumberOfAtoms - 5 * GRID;
+    gpu->sim.randoms                    = gpu->sim.randomFrames * gpu->sim.paddedNumberOfAtoms;
     gpu->sim.totalRandoms               = gpu->sim.randoms + gpu->sim.paddedNumberOfAtoms;
     gpu->sim.totalRandomsTimesTwo       = gpu->sim.totalRandoms * 2;
     gpu->psRandom4                      = new CUDAStream<float4>(gpu->sim.totalRandomsTimesTwo, 1, "Random4");
