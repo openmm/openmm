@@ -364,8 +364,8 @@ int ReferenceRigidShakeAlgorithm::apply( int numberOfAtoms, RealOpenMM** atomCoo
               r[j][2] *= invLength;
           }
           Array2D<double> matrix(size, size);
-          for (int j = 0; j < size; j++) {
-              for (int k = 0; k < size; k++) {
+          for (int j = 0; j < (int)size; j++) {
+              for (int k = 0; k < (int)size; k++) {
                   double dot;
                   int atomj0 = _atomIndices[cluster[j]][0];
                   int atomj1 = _atomIndices[cluster[j]][1];
@@ -395,22 +395,22 @@ int ReferenceRigidShakeAlgorithm::apply( int numberOfAtoms, RealOpenMM** atomCoo
           svd.getV(v);
           svd.getSingularValues(w);
           double singularValueCutoff = 0.01*w[0];
-          for (int j = 0; j < size; j++)
+          for (int j = 0; j < (int)size; j++)
               w[j] = (w[j] < singularValueCutoff ? 0.0 : 1.0/w[j]);
           if (temp.size() < size)
               temp.resize(size);
-          for (int j = 0; j < size; j++) {
-              for (int k = 0; k < size; k++) {
+          for (int j = 0; j < (int)size; j++) {
+              for (int k = 0; k < (int)size; k++) {
                   matrix[j][k] = 0.0;
-                  for (int m = 0; m < size; m++)
+                  for (int m = 0; m < (int)size; m++)
                       matrix[j][k] += v[j][m]*w[m]*u[k][m];
               }
           }
 
           // Record the inverted matrix.
 
-          for (int j = 0; j < size; j++)
-              for (int k = 0; k < size; k++)
+          for (int j = 0; j < (int)size; j++)
+              for (int k = 0; k < (int)size; k++)
                   _matrices[i][j][k] = (RealOpenMM)matrix[j][k];
       }
    }
@@ -478,12 +478,12 @@ int ReferenceRigidShakeAlgorithm::apply( int numberOfAtoms, RealOpenMM** atomCoo
           unsigned int size = cluster.size();
           if (size > tempForce.size())
               tempForce.resize(size);
-          for (int j = 0; j < size; j++) {
+          for (int j = 0; j < (int)size; j++) {
               tempForce[j] = zero;
-              for (int k = 0; k < size; k++)
+              for (int k = 0; k < (int)size; k++)
                   tempForce[j] += matrix[j][k]*constraintForce[cluster[k]]*_distance[cluster[k]]/_distance[cluster[j]];
           }
-          for (int j = 0; j < size; j++)
+          for (int j = 0; j < (int)size; j++)
               constraintForce[cluster[j]] = tempForce[j];
 
       }
