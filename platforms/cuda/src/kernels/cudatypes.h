@@ -356,6 +356,9 @@ struct cudaGmxSimulation {
     unsigned int    ShakeConstraints;               // Total number of Shake constraints
     unsigned int    settleConstraints;              // Total number of Settle constraints
     unsigned int    lincsConstraints;               // Total number of LINCS constraints.
+    unsigned int    rigidClusters;                  // Total number of rigid clusters
+    unsigned int    maxRigidClusterSize;            // The size of the largest rigid cluster
+    unsigned int    clusterShakeBlockSize;          // The number of threads to process each rigid cluster
     unsigned int    NonShakeConstraints;            // Total number of NonShake atoms
     unsigned int    maxShakeIterations;             // Maximum shake iterations
     unsigned int    degreesOfFreedom;               // Number of degrees of freedom in system
@@ -391,6 +394,10 @@ struct cudaGmxSimulation {
     short*          pSyncCounter;                   // Used for global thread synchronization
     unsigned int*   pRequiredIterations;            // Used by SHAKE to communicate whether iteration has converged
     float*          pShakeReducedMass;              // The reduced mass for each SHAKE constraint
+    int*            pRigidClusterConstraints;       // The constraints in each rigid cluster
+    float*          pRigidClusterMatrix;            // The inverse constraint matrix for each rigid cluster
+    unsigned int*   pRigidClusterConstraintIndex;   // The index of each cluster in the stream containing cluster constraints.
+    unsigned int*   pRigidClusterMatrixIndex;       // The index of each cluster in the stream containing cluster matrices.
 
     // Mutable stuff
     float4*         pPosq;                          // Pointer to atom positions and charges

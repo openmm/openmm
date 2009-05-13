@@ -317,8 +317,6 @@ int ReferenceRigidShakeAlgorithm::apply( int numberOfAtoms, RealOpenMM** atomCoo
    static const RealOpenMM zero        =  0.0;
    static const RealOpenMM one         =  1.0;
    static const RealOpenMM two         =  2.0;
-   static const RealOpenMM three       =  3.0;
-   static const RealOpenMM oneM        = -1.0;
    static const RealOpenMM half        =  0.5;
 
    static const RealOpenMM epsilon6    = (RealOpenMM) 1.0e-06;
@@ -326,8 +324,6 @@ int ReferenceRigidShakeAlgorithm::apply( int numberOfAtoms, RealOpenMM** atomCoo
    static int debug                    = 0;
 
    // ---------------------------------------------------------------------------------------
-
-   int numberOfConstraints = getNumberOfConstraints();
 
    // temp arrays
 
@@ -345,7 +341,6 @@ int ReferenceRigidShakeAlgorithm::apply( int numberOfAtoms, RealOpenMM** atomCoo
          int atomJ          = _atomIndices[ii][1];
          reducedMasses[ii]  = half/( inverseMasses[atomI] + inverseMasses[atomJ] );
       }
-      vector<double> temp;
       for (unsigned int i = 0; i < _rigidClusters.size(); i++) {
           // Compute the constraint coupling matrix for this cluster.
 
@@ -364,8 +359,8 @@ int ReferenceRigidShakeAlgorithm::apply( int numberOfAtoms, RealOpenMM** atomCoo
               r[j][2] *= invLength;
           }
           Array2D<double> matrix(size, size);
-          for (int j = 0; j < (int)size; j++) {
-              for (int k = 0; k < (int)size; k++) {
+          for (unsigned int j = 0; j < size; j++) {
+              for (unsigned int k = 0; k < size; k++) {
                   double dot;
                   int atomj0 = _atomIndices[cluster[j]][0];
                   int atomj1 = _atomIndices[cluster[j]][1];
@@ -395,23 +390,21 @@ int ReferenceRigidShakeAlgorithm::apply( int numberOfAtoms, RealOpenMM** atomCoo
           svd.getV(v);
           svd.getSingularValues(w);
           double singularValueCutoff = 0.01*w[0];
-          for (int j = 0; j < (int)size; j++)
+          for (unsigned int j = 0; j < size; j++)
               w[j] = (w[j] < singularValueCutoff ? 0.0 : 1.0/w[j]);
-          if (temp.size() < size)
-              temp.resize(size);
-          for (int j = 0; j < (int)size; j++) {
-              for (int k = 0; k < (int)size; k++) {
+          for (unsigned int j = 0; j < size; j++) {
+              for (unsigned int k = 0; k < size; k++) {
                   matrix[j][k] = 0.0;
-                  for (int m = 0; m < (int)size; m++)
+                  for (unsigned int m = 0; m < size; m++)
                       matrix[j][k] += v[j][m]*w[m]*u[k][m];
               }
           }
 
           // Record the inverted matrix.
 
-          for (int j = 0; j < (int)size; j++)
-              for (int k = 0; k < (int)size; k++)
-                  _matrices[i][j][k] = (RealOpenMM)matrix[j][k];
+          for (unsigned int j = 0; j < size; j++)
+              for (unsigned int k = 0; k < size; k++)
+                  _matrices[i][j][k] = (RealOpenMM)matrix[j][k]*_distance[cluster[k]]/_distance[cluster[j]];
       }
    }
 
@@ -478,12 +471,12 @@ int ReferenceRigidShakeAlgorithm::apply( int numberOfAtoms, RealOpenMM** atomCoo
           unsigned int size = cluster.size();
           if (size > tempForce.size())
               tempForce.resize(size);
-          for (int j = 0; j < (int)size; j++) {
+          for (unsigned int j = 0; j < size; j++) {
               tempForce[j] = zero;
-              for (int k = 0; k < (int)size; k++)
-                  tempForce[j] += matrix[j][k]*constraintForce[cluster[k]]*_distance[cluster[k]]/_distance[cluster[j]];
+              for (unsigned int k = 0; k < size; k++)
+                  tempForce[j] += matrix[j][k]*constraintForce[cluster[k]];
           }
-          for (int j = 0; j < (int)size; j++)
+          for (unsigned int j = 0; j < size; j++)
               constraintForce[cluster[j]] = tempForce[j];
 
       }
@@ -499,15 +492,6 @@ RealOpenMM damping = one;//(RealOpenMM) (iterations%2 == 0 ? 0.5 : 1.0);
          }
       }
    }
-//   static int sum = 0;
-//   static int count = 0;
-//   sum += iterations;
-//   count++;
-//   if (count == 100) {
-//       printf("%d iterations\n", sum);
-//       sum = 0;
-//       count = 0;
-//   }
 
    // diagnostics
 
