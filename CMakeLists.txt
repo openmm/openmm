@@ -47,7 +47,7 @@ ENDIF(${CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT})
 
 INCLUDE(Dart)
 
-SUBDIRS (tests)
+SUBDIRS (tests examples)
 
 # The source is organized into subdirectories, but we handle them all from
 # this CMakeLists file rather than letting CMake visit them as SUBDIRS.
