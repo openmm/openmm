@@ -227,10 +227,10 @@ static void initInverseMatrices(gpuContext gpu)
             r[j].z *= invLength;
         }
         Array2D<double> matrix(size, size);
-        for (unsigned int j = 0; j < size; j++) {
+        for (int j = 0; j < (int)size; j++) {
             int constraintj = (*gpu->psRigidClusterConstraints)[startIndex+j];
             int2 atomsj = (*gpu->psLincsAtoms)[constraintj];
-            for (unsigned int k = 0; k < size; k++) {
+            for (int k = 0; k < (int)size; k++) {
                 int constraintk = (*gpu->psRigidClusterConstraints)[startIndex+k];
                 int2 atomsk = (*gpu->psLincsAtoms)[constraintk];
                 float invMassj0 = (*gpu->psVelm4)[atomsj.x].w;
@@ -260,12 +260,12 @@ static void initInverseMatrices(gpuContext gpu)
         svd.getV(v);
         svd.getSingularValues(w);
         double singularValueCutoff = 0.01*w[0];
-        for (unsigned int j = 0; j < size; j++)
+        for (int j = 0; j < (int)size; j++)
             w[j] = (w[j] < singularValueCutoff ? 0.0 : 1.0/w[j]);
-        for (unsigned int j = 0; j < size; j++) {
-            for (unsigned int k = 0; k < size; k++) {
+        for (int j = 0; j < (int)size; j++) {
+            for (int k = 0; k < (int)size; k++) {
                 matrix[j][k] = 0.0;
-                for (unsigned int m = 0; m < size; m++)
+                for (int m = 0; m < (int)size; m++)
                     matrix[j][k] += v[j][m]*w[m]*u[k][m];
             }
         }
@@ -273,13 +273,13 @@ static void initInverseMatrices(gpuContext gpu)
         // Record the inverted matrix.
 
         (*gpu->psRigidClusterMatrixIndex)[i] = elementIndex;
-        for (unsigned int j = 0; j < size; j++)
+        for (int j = 0; j < (int)size; j++)
         {
             float distance1 = (*gpu->psLincsDistance)[(*gpu->psRigidClusterConstraints)[startIndex+j]].w;
-            for (unsigned int k = 0; k < size; k++)
+            for (int k = 0; k < (int)size; k++)
             {
                 float distance2 = (*gpu->psLincsDistance)[(*gpu->psRigidClusterConstraints)[startIndex+k]].w;
-                (*gpu->psRigidClusterMatrix)[elementIndex++] = matrix[k][j]*distance1/distance2;
+                (*gpu->psRigidClusterMatrix)[elementIndex++] = (float)(matrix[k][j]*distance1/distance2);
             }
         }
     }

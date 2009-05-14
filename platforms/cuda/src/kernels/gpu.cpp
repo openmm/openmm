@@ -467,14 +467,14 @@ static void markShakeClusterInvalid(ShakeCluster& cluster, map<int, ShakeCluster
 static void findRigidClusters(gpuContext gpu, const vector<int>& firstAtom, const vector<int>& secondAtom, const vector<int>& constraintIndices)
 {
     vector<map<int, int> > atomConstraints(firstAtom.size());
-    for (int i = 0; i < constraintIndices.size(); i++) {
+    for (int i = 0; i < (int)constraintIndices.size(); i++) {
         atomConstraints[firstAtom[i]][secondAtom[i]] = constraintIndices[i];
         atomConstraints[secondAtom[i]][firstAtom[i]] = constraintIndices[i];
     }
     vector<vector<int> > rigidClusters;
     int totalConstraints = 0;
     int totalMatrixElements = 0;
-    for (int i = 0; i < firstAtom.size(); i++) {
+    for (int i = 0; i < (int)firstAtom.size(); i++) {
         if (atomConstraints[i].size() < 2)
             continue;
 
