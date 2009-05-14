@@ -178,3 +178,4 @@ void kGenerateRandoms(gpuContext gpu)
 {
     kGenerateRandoms_kernel<<<gpu->sim.blocks, gpu->sim.random_threads_per_block, gpu->sim.random_threads_per_block * 2 * sizeof(float3)>>>();
 }
+
