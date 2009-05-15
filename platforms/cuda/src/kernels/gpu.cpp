@@ -48,8 +48,11 @@ using namespace std;
 #include "cudaKernels.h"
 #include "hilbert.h"
 #include "openmm/OpenMMException.h"
+#include "jama_svd.h"
 
 using OpenMM::OpenMMException;
+using TNT::Array2D;
+using JAMA::SVD;
 
 struct ShakeCluster {
     int centralID;
@@ -464,7 +467,7 @@ static void markShakeClusterInvalid(ShakeCluster& cluster, map<int, ShakeCluster
     }
 }
 
-static void findRigidClusters(gpuContext gpu, const vector<int>& firstAtom, const vector<int>& secondAtom, vector<int>& constraintIndices)
+static void findRigidClusters(gpuContext gpu, const vector<int>& firstAtom, const vector<int>& secondAtom, const vector<float>& invMass1, const vector<float>& invMass2, const vector<float>& distance, vector<int>& constraintIndices)
 {
     vector<map<int, int> > atomConstraints(firstAtom.size());
     for (int i = 0; i < (int)constraintIndices.size(); i++) {
@@ -583,7 +586,97 @@ static void findRigidClusters(gpuContext gpu, const vector<int>& firstAtom, cons
     while (gpu->sim.clusterShakeBlockSize < maxClusterSize)
         gpu->sim.clusterShakeBlockSize *= 2;
     psRigidClusterConstraintIndex->Upload();
-    gpu->hasInitializedRigidClusters = false;
+
+    // Build the inverse coupling matrix for each cluster.
+
+    unsigned int elementIndex = 0;
+    for (unsigned int i = 0; i < rigidClusters.size(); i++) {
+        // Compute the constraint coupling matrix for this cluster.
+
+        const vector<int>& cluster = rigidClusters[i];
+        unsigned int size = cluster.size();
+        Array2D<double> matrix(size, size);
+        for (int j = 0; j < (int)size; j++) {
+            for (int k = 0; k < (int)size; k++) {
+                if (j == k) {
+                    matrix[j][j] = 1.0;
+                    continue;
+                }
+                double scale;
+                int atomj0 = firstAtom[cluster[j]];
+                int atomj1 = secondAtom[cluster[j]];
+                int atomk0 = firstAtom[cluster[k]];
+                int atomk1 = secondAtom[cluster[k]];
+                int atoma, atomb;
+                if (atomj0 == atomk0) {
+                    atoma = atomj1;
+                    atomb = atomk1;
+                    scale = invMass1[cluster[j]]/(invMass1[cluster[j]]+invMass2[cluster[j]]);
+                }
+                else if (atomj1 == atomk1) {
+                    atoma = atomj0;
+                    atomb = atomk0;
+                    scale = invMass2[cluster[j]]/(invMass1[cluster[j]]+invMass2[cluster[j]]);
+                }
+                else if (atomj0 == atomk1) {
+                    atoma = atomj1;
+                    atomb = atomk0;
+                    scale = invMass1[cluster[j]]/(invMass1[cluster[j]]+invMass2[cluster[j]]);
+                }
+                else if (atomj1 == atomk0) {
+                    atoma = atomj0;
+                    atomb = atomk1;
+                    scale = invMass2[cluster[j]]/(invMass1[cluster[j]]+invMass2[cluster[j]]);
+                }
+                else {
+                    matrix[j][k] = 0.0;
+                    continue; // These constraints are not connected.
+                }
+
+                // Find the third constraint forming a triangle with these two.
+
+                for (int m = 0; m < size; m++) {
+                    int other = cluster[m];
+                    if ((firstAtom[other] == atoma && secondAtom[other] == atomb) || (firstAtom[other] == atomb && secondAtom[other] == atoma)) {
+                        double d1 = distance[cluster[j]];
+                        double d2 = distance[cluster[k]];
+                        double d3 = distance[other];
+                        matrix[j][k] = scale*(d1*d1+d2*d2-d3*d3)/(2.0*d1*d2);
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Invert it using SVD.
+
+        Array2D<double> u, v;
+        Array1D<double> w;
+        SVD<double> svd(matrix);
+        svd.getU(u);
+        svd.getV(v);
+        svd.getSingularValues(w);
+        double singularValueCutoff = 0.01*w[0];
+        for (int j = 0; j < (int)size; j++)
+            w[j] = (w[j] < singularValueCutoff ? 0.0 : 1.0/w[j]);
+        for (int j = 0; j < (int)size; j++) {
+            for (int k = 0; k < (int)size; k++) {
+                matrix[j][k] = 0.0;
+                for (int m = 0; m < (int)size; m++)
+                    matrix[j][k] += v[j][m]*w[m]*u[k][m];
+            }
+        }
+
+        // Record the inverted matrix.
+
+        (*gpu->psRigidClusterMatrixIndex)[i] = elementIndex;
+        for (int j = 0; j < (int)size; j++)
+            for (int k = 0; k < (int)size; k++)
+                (*gpu->psRigidClusterMatrix)[elementIndex++] = (float)(matrix[k][j]*distance[cluster[j]]/distance[cluster[k]]);
+    }
+    (*gpu->psRigidClusterMatrixIndex)[gpu->sim.rigidClusters] = elementIndex;
+    gpu->psRigidClusterMatrix->Upload();
+    gpu->psRigidClusterMatrixIndex->Upload();
 }
 
 extern "C"
@@ -791,7 +884,7 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
 
     // Identify rigid clusters of atoms.
 
-    findRigidClusters(gpu, atom1, atom2, lincsConstraints);
+    findRigidClusters(gpu, atom1, atom2, invMass1, invMass2, distance, lincsConstraints);
 
     // Record the connections between constraints.
 

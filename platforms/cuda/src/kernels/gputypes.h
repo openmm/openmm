@@ -75,7 +75,6 @@ struct _gpuContext {
     bool bRecalculateBornRadii;
     bool bOutputBufferPerWarp;
     bool bIncludeGBSA;
-    bool hasInitializedRigidClusters;
     unsigned long seed;
     SM_VERSION sm_version;
     CUDPPHandle cudpp;

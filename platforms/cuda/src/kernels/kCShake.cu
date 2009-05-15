@@ -27,12 +27,9 @@
 #include <cuda.h>
 #include <vector_functions.h>
 #include <vector>
-#include "jama_svd.h"
 #include "gputypes.h"
 
 using namespace std;
-using TNT::Array2D;
-using JAMA::SVD;
 
 
 static __constant__ cudaGmxSimulation cSim;
@@ -204,127 +201,13 @@ __global__ void kApplyCShake_kernel(float4* atomPositions, bool addOldPosition)
         cSim.pSyncCounter[blockIdx.x] = -1;
 }
 
-static void initInverseMatrices(gpuContext gpu, bool useNewPositions)
-{
-    // Build the inverse constraint matrix for each cluster.
-
-    gpu->psPosq4->Download();
-    gpu->psVelm4->Download();
-    if (useNewPositions)
-        gpu->psPosqP4->Download();
-    unsigned int elementIndex = 0;
-    for (unsigned int i = 0; i < gpu->sim.rigidClusters; i++) {
-        // Compute the constraint coupling matrix for this cluster.
-
-        unsigned int startIndex = (*gpu->psRigidClusterConstraintIndex)[i];
-        unsigned int endIndex = (*gpu->psRigidClusterConstraintIndex)[i+1];
-        unsigned int size = endIndex-startIndex;
-        vector<float3> r(size);
-        for (unsigned int j = 0; j < size; j++) {
-            int2 atoms = (*gpu->psLincsAtoms)[startIndex+j];
-            float4 pos1, pos2;
-            if (useNewPositions) {
-                float4 oldpos1 = (*gpu->psPosq4)[atoms.x];
-                float4 oldpos2 = (*gpu->psPosq4)[atoms.y];
-                pos1 = (*gpu->psPosqP4)[atoms.x];
-                pos2 = (*gpu->psPosqP4)[atoms.y];
-                pos1.x += oldpos1.x;
-                pos1.y += oldpos1.y;
-                pos1.z += oldpos1.z;
-                pos2.x += oldpos2.x;
-                pos2.y += oldpos2.y;
-                pos2.z += oldpos2.z;
-            }
-            else {
-                pos1 = (*gpu->psPosq4)[atoms.x];
-                pos2 = (*gpu->psPosq4)[atoms.y];
-            }
-            r[j] = make_float3(pos1.x-pos2.x, pos1.y-pos2.y, pos1.z-pos2.z);
-            float invLength = 1.0f/sqrt(r[j].x*r[j].x + r[j].y*r[j].y + r[j].z*r[j].z);
-            r[j].x *= invLength;
-            r[j].y *= invLength;
-            r[j].z *= invLength;
-        }
-        Array2D<double> matrix(size, size);
-        for (int j = 0; j < (int)size; j++) {
-            int2 atomsj = (*gpu->psLincsAtoms)[startIndex+j];
-            for (int k = 0; k < (int)size; k++) {
-                int2 atomsk = (*gpu->psLincsAtoms)[startIndex+k];
-                float invMassj0 = (*gpu->psVelm4)[atomsj.x].w;
-                float invMassj1 = (*gpu->psVelm4)[atomsj.y].w;
-                double dot = r[j].x*r[k].x + r[j].y*r[k].y + r[j].z*r[k].z;
-                if (atomsj.x == atomsk.x)
-                    dot *= invMassj0/(invMassj0+invMassj1);
-                else if (atomsj.y == atomsk.y)
-                    dot *= invMassj1/(invMassj0+invMassj1);
-                else if (atomsj.x == atomsk.y)
-                    dot *= -invMassj0/(invMassj0+invMassj1);
-                else if (atomsj.y == atomsk.x)
-                    dot *= -invMassj1/(invMassj0+invMassj1);
-                else
-                    dot = 0.0;
-                matrix[j][k] = dot;
-            }
-            matrix[j][j] = 1.0;
-        }
-
-        // Invert it using SVD.
-
-        Array2D<double> u, v;
-        Array1D<double> w;
-        SVD<double> svd(matrix);
-        svd.getU(u);
-        svd.getV(v);
-        svd.getSingularValues(w);
-        double singularValueCutoff = 0.01*w[0];
-        for (int j = 0; j < (int)size; j++)
-            w[j] = (w[j] < singularValueCutoff ? 0.0 : 1.0/w[j]);
-        for (int j = 0; j < (int)size; j++) {
-            for (int k = 0; k < (int)size; k++) {
-                matrix[j][k] = 0.0;
-                for (int m = 0; m < (int)size; m++)
-                    matrix[j][k] += v[j][m]*w[m]*u[k][m];
-            }
-        }
-
-        // Record the inverted matrix.
-
-        (*gpu->psRigidClusterMatrixIndex)[i] = elementIndex;
-        for (int j = 0; j < (int)size; j++)
-        {
-            float distance1 = (*gpu->psLincsDistance)[startIndex+j].w;
-            for (int k = 0; k < (int)size; k++)
-            {
-                float distance2 = (*gpu->psLincsDistance)[startIndex+k].w;
-                (*gpu->psRigidClusterMatrix)[elementIndex++] = (float)(matrix[k][j]*distance1/distance2);
-            }
-        }
-    }
-    (*gpu->psRigidClusterMatrixIndex)[gpu->sim.rigidClusters] = elementIndex;
-    gpu->psRigidClusterMatrix->Upload();
-    gpu->psRigidClusterMatrixIndex->Upload();
-}
-
 void kApplyFirstCShake(gpuContext gpu)
 {
 //    printf("kApplyFirstCShake\n");
     if (gpu->sim.lincsConstraints > 0)
     {
-        if (!gpu->hasInitializedRigidClusters)
-        {
-            // Build preliminary constraint matrices for use on this call.
-
-            initInverseMatrices(gpu, false);
-        }
         kApplyCShake_kernel<<<gpu->sim.blocks, gpu->sim.lincs_threads_per_block, 4*gpu->sim.lincs_threads_per_block>>>(gpu->sim.pPosqP, true);
         LAUNCHERROR("kApplyCShake");
-        if (!gpu->hasInitializedRigidClusters)
-        {
-            // Rebuild the constraint matrices, now that we know all constraints are really satisfied.
-
-            initInverseMatrices(gpu, true);
-            gpu->hasInitializedRigidClusters = true;
-        }
     }
 }
 
