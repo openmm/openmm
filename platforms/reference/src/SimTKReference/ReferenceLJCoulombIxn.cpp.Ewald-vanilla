@@ -276,93 +276,65 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
            RealOpenMM recipBoxSize[3] = { TWO_PI / periodicBoxSize[0], TWO_PI / periodicBoxSize[1], TWO_PI / periodicBoxSize[2]};
 
 
-// setup K-vectors
-
-  #define EIR(x, y, z) eir[(x)*numberOfAtoms*3+(y)*3+z]
-  d_complex* eir = new d_complex[kmax*numberOfAtoms*3];
-  d_complex* tab_xy = new d_complex[numberOfAtoms];
-  d_complex* tab_qxyz = new d_complex[numberOfAtoms];
-
-  if (kmax < 1) {
-      std::stringstream message;
-      message << " kmax < 1 , Aborting" << std::endl;
-      SimTKOpenMMLog::printError( message );
-  }
-
-  for(int i = 0; (i < numberOfAtoms); i++) {
-    for(int m = 0; (m < 3); m++)
-      EIR(0, i, m) = d_complex(1,0);
-
-    for(int m=0; (m<3); m++)
-      EIR(1, i, m) = d_complex(cos(atomCoordinates[i][m]*recipBoxSize[m]),
-                               sin(atomCoordinates[i][m]*recipBoxSize[m]));
-
-    for(int j=2; (j<kmax); j++)
-      for(int m=0; (m<3); m++)
-        EIR(j, i, m) = EIR(j-1, i, m) * EIR(1, i, m);
-  }
-
 // calculate reciprocal space energy and forces
 
-    int lowry = 0;
-    int lowrz = 1;
 
-    for(int rx = 0; rx < numRx; rx++) {
+    RealOpenMM pi4eps = 11.787089;
+    RealOpenMM eps0 = 5.72765E-4;
+    RealOpenMM V = periodicBoxSize[0] * periodicBoxSize[1] * periodicBoxSize[2];
 
-      RealOpenMM kx = rx * recipBoxSize[0];
+    for( int atomID1 = 0; atomID1 < numberOfAtoms; atomID1++ ){
+     for( int atomID2 = 0; atomID2 < numberOfAtoms; atomID2++ ){
 
-      for(int ry = lowry; ry < numRy; ry++) {
+       int lowry = 0;
+       int lowrz = 1;
 
-        RealOpenMM ky = ry * recipBoxSize[1];
+       for(int rx = 0; rx < numRx; rx++) {
 
-        if(ry >= 0) {
-          for(int n = 0; n < numberOfAtoms; n++)
-            tab_xy[n] = EIR(rx, n, 0) * EIR(ry, n, 1);
-        }
+         RealOpenMM kx = rx * recipBoxSize[0];
 
-        else {
-          for(int n = 0; n < numberOfAtoms; n++)
-            tab_xy[n]= EIR(rx, n, 0) * conj (EIR(-ry, n, 1));
-        }
+         for(int ry = lowry; ry < numRy; ry++) {
 
-        for (int rz = lowrz; rz < numRz; rz++) {
+           RealOpenMM ky = ry * recipBoxSize[1];
 
-          if( rz >= 0) {
-           for( int n = 0; n < numberOfAtoms; n++)
-             tab_qxyz[n] = atomParameters[n][QIndex] * (tab_xy[n] * EIR(rz, n, 2));
-          }
+           for (int rz = lowrz; rz < numRz; rz++) {
 
-          else {
-            for( int n = 0; n < numberOfAtoms; n++)
-              tab_qxyz[n] = atomParameters[n][QIndex] * (tab_xy[n] * conj(EIR(-rz, n, 2)));
-          }
+             RealOpenMM kz = rz * recipBoxSize[2];
 
-          RealOpenMM cs = 0.0f;
-          RealOpenMM ss = 0.0f;
+             RealOpenMM k2 = kx * kx + ky * ky + kz * kz;
+             RealOpenMM ek = exp (  k2 * factorEwald);
+             RealOpenMM Qi = atomParameters[atomID1][QIndex] / pi4eps;
+             RealOpenMM Qj = atomParameters[atomID2][QIndex] / pi4eps;
 
-          for( int n = 0; n < numberOfAtoms; n++) {
-            cs += tab_qxyz[n].real();
-            ss += tab_qxyz[n].imag();
-          }
+             RealOpenMM Xi = atomCoordinates[atomID1][0];
+             RealOpenMM Yi = atomCoordinates[atomID1][1];
+             RealOpenMM Zi = atomCoordinates[atomID1][2];
+             RealOpenMM Xj = atomCoordinates[atomID2][0];
+             RealOpenMM Yj = atomCoordinates[atomID2][1];
+             RealOpenMM Zj = atomCoordinates[atomID2][2];
 
+             RealOpenMM SinI = sin ( kx * Xi + ky * Yi + kz * Zi );
+             RealOpenMM SinJ = sin ( kx * Xj + ky * Yj + kz * Zj );
+             RealOpenMM CosI = cos ( kx * Xi + ky * Yi + kz * Zi );
+             RealOpenMM CosJ = cos ( kx * Xj + ky * Yj + kz * Zj );
 
-          RealOpenMM kz = rz * recipBoxSize[2];
-          RealOpenMM k2 = kx * kx + ky * ky + kz * kz;
-          RealOpenMM ak = exp(k2*factorEwald) / k2;
+             RealOpenMM ax = (2.0 / (V * eps0 ))  * Qi * ( kx/k2) * ek * ( - SinI * Qj * CosJ + CosI * Qj * SinJ);
+             RealOpenMM ay = (2.0 / (V * eps0 ))  * Qi * ( ky/k2) * ek * ( - SinI * Qj * CosJ + CosI * Qj * SinJ);
+             RealOpenMM az = (2.0 / (V * eps0 ))  * Qi * ( kz/k2) * ek * ( - SinI * Qj * CosJ + CosI * Qj * SinJ);
 
-          recipEnergy += ak * ( cs * cs + ss * ss);
+             forces[atomID1][0] -= ax;
+             forces[atomID1][1] -= ay;
+             forces[atomID1][2] -= az;
+ 
+             lowrz = 1 - numRz;
+           }
+           lowry = 1 - numRy;
+         }
+       }
 
-          for(int n = 0; n < numberOfAtoms; n++) {
-            RealOpenMM force = ak * (cs * tab_qxyz[n].imag() - ss * tab_qxyz[n].real());
-            forces[n][0] += 2 * recipCoeff * force * kx ;
-            forces[n][1] += 2 * recipCoeff * force * ky ;
-            forces[n][2] += 2 * recipCoeff * force * kz ;
-          }
-          lowrz = 1 - numRz;
-        }
-        lowry = 1 - numRy;
-      }
+     }
     }
+
 
   recipEnergy *= recipCoeff;
 
@@ -429,9 +401,6 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
        }
 
        delete[] exclusionIndices;
-       delete[] eir;
-       delete[] tab_xy;
-       delete[] tab_qxyz;
 
 // ***********************************************************************
 

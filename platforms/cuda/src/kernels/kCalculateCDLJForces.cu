@@ -104,8 +104,7 @@ void GetCalculateCDLJForcesSim(gpuContext gpu)
 
 // Include version of the kernel with Ewald method
 
-    // Real Space Ewald uses almost the same kernels as Periodic
-    
+// Real Space Ewald summation utilizes almost the same kernel as Periodic
 #undef METHOD_NAME
 #undef USE_OUTPUT_BUFFER_PER_WARP
 #define USE_PERIODIC
@@ -118,8 +117,9 @@ void GetCalculateCDLJForcesSim(gpuContext gpu)
 #define METHOD_NAME(a, b) a##EwaldDirectByWarp##b
 #include "kCalculateCDLJForces.h"
 
-     // Reciprocal Space Ewald summation is in a separate kernel
-//#include "kCalculateEwaldReciprocal.h"
+// Reciprocal Space Ewald summation is in a separate kernel
+#include "kCalculateCDLJEwaldReciprocal.h"
+
 
 __global__ extern void kCalculateCDLJCutoffForces_12_kernel();
 
@@ -197,12 +197,20 @@ void kCalculateCDLJForces(gpuContext gpu)
             kFindInteractionsWithinBlocksEwaldDirect_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                     sizeof(unsigned int)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
             if (gpu->bOutputBufferPerWarp)
+            {
                 kCalculateCDLJEwaldDirectByWarpForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                         (sizeof(Atom)+sizeof(float3))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
+                kCalculateCDLJEwaldReciprocalForces_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
+                LAUNCHERROR("kCalculateCDLJEwaldReciprocalForces");
+            }
             else
+            {
                 kCalculateCDLJEwaldDirectForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                         (sizeof(Atom)+sizeof(float3))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
-            LAUNCHERROR("kCalculateCDLJEwaldDirectForces");
+                LAUNCHERROR("kCalculateCDLJEwaldDirectForces");
+                kCalculateCDLJEwaldReciprocalForces_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
+                LAUNCHERROR("kCalculateCDLJEwaldReciprocalForces");
+            }
 
     }
 }

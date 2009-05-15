@@ -43,9 +43,9 @@ __global__ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUni
 #endif
 
 #ifdef USE_EWALD
-    float alphaEwald       =  3.123413;
-    float PI = 3.14159265358979323846f;
-    float SQRT_PI  = sqrt(PI);
+    float alphaEwald   =  3.123413;
+    float PI           = 3.14159265358979323846f;
+    float SQRT_PI      = sqrt(PI);
 #endif
 
     unsigned int lasty = 0xFFFFFFFF;
@@ -113,7 +113,7 @@ __global__ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUni
     #ifdef USE_EWALD
                     float r               = sqrt(r2);
                     float alphaR    = alphaEwald * r;
-                    dEdR += apos.w * psA[tj].q * invR * invR * invR * (erfc(alphaR) + 2.0 * alphaR * exp ( - alphaR * alphaR) / SQRT_PI );
+                    dEdR += apos.w * psA[j].q * invR * (erfc(alphaR) + 2.0 * alphaR * exp ( - alphaR * alphaR) / SQRT_PI );
     #else
                     dEdR           += apos.w * psA[j].q * (invR - 2.0f * cSim.reactionFieldK * r2);
     #endif
@@ -162,7 +162,7 @@ __global__ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUni
     #ifdef USE_EWALD
                     float r               = sqrt(r2);
                     float alphaR    = alphaEwald * r;
-                    dEdR += apos.w * psA[tj].q * invR * invR * invR * (erfc(alphaR) + 2.0 * alphaR * exp ( - alphaR * alphaR) / SQRT_PI );
+                    dEdR += apos.w * psA[j].q * invR * (erfc(alphaR) + 2.0 * alphaR * exp ( - alphaR * alphaR) / SQRT_PI );
     #else
                     dEdR           += apos.w * psA[j].q * (invR - 2.0f * cSim.reactionFieldK * r2);
     #endif
@@ -260,7 +260,7 @@ __global__ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUni
     #ifdef USE_EWALD
                     float r               = sqrt(r2);
                     float alphaR    = alphaEwald * r;
-                    dEdR += apos.w * psA[tj].q * invR * invR * invR * (erfc(alphaR) + 2.0 * alphaR * exp ( - alphaR * alphaR) / SQRT_PI );
+                    dEdR += apos.w * psA[tj].q * invR * (erfc(alphaR) + 2.0 * alphaR * exp ( - alphaR * alphaR) / SQRT_PI );
     #else
                         dEdR           += apos.w * psA[tj].q * (invR - 2.0f * cSim.reactionFieldK * r2);
     #endif
@@ -315,7 +315,7 @@ __global__ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUni
     #ifdef USE_EWALD
                     float r               = sqrt(r2);
                     float alphaR    = alphaEwald * r;
-                    dEdR += apos.w * psA[tj].q * invR * invR * invR * (erfc(alphaR) + 2.0 * alphaR * exp ( - alphaR * alphaR) / SQRT_PI );
+                    dEdR += apos.w * psA[j].q * invR * (erfc(alphaR) + 2.0 * alphaR * exp ( - alphaR * alphaR) / SQRT_PI );
     #else
                             dEdR           += apos.w * psA[j].q * (invR - 2.0f * cSim.reactionFieldK * r2);
     #endif
@@ -406,7 +406,7 @@ __global__ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUni
     #ifdef USE_EWALD
                     float r               = sqrt(r2);
                     float alphaR    = alphaEwald * r;
-                    dEdR += apos.w * psA[tj].q * invR * invR * invR * (erfc(alphaR) + 2.0 * alphaR * exp ( - alphaR * alphaR) / SQRT_PI );
+                    dEdR += apos.w * psA[tj].q * invR * (erfc(alphaR) + 2.0 * alphaR * exp ( - alphaR * alphaR) / SQRT_PI );
     #else
                     dEdR           += apos.w * psA[tj].q * (invR - 2.0f * cSim.reactionFieldK * r2);
     #endif
