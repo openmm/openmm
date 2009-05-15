@@ -148,14 +148,13 @@ __global__ void kApplyCShake_kernel(float4* atomPositions, bool addOldPosition)
             unsigned int indexInBlock = pos-block*cSim.clusterShakeBlockSize;
             while (block < cSim.rigidClusters)
             {
-                unsigned int firstIndex = cSim.pRigidClusterConstraintIndex[block];
-                unsigned int blockSize = cSim.pRigidClusterConstraintIndex[block+1]-firstIndex;
+                unsigned int firstConstraint = cSim.pRigidClusterConstraintIndex[block];
+                unsigned int blockSize = cSim.pRigidClusterConstraintIndex[block+1]-firstConstraint;
                 if (indexInBlock < blockSize)
                 {
                     // Load the constraint forces and matrix.
 
-                    unsigned int constraint = cSim.pRigidClusterConstraints[firstIndex+indexInBlock];
-                    temp[threadIdx.x] = cSim.pLincsSolution[constraint];
+                    temp[threadIdx.x] = cSim.pLincsSolution[firstConstraint+indexInBlock];
                     unsigned int firstMatrixIndex = cSim.pRigidClusterMatrixIndex[block];
 
                     // Multiply by the matrix.
@@ -163,7 +162,7 @@ __global__ void kApplyCShake_kernel(float4* atomPositions, bool addOldPosition)
                     float sum = 0.0f;
                     for (unsigned int i = 0; i < blockSize; i++)
                         sum += temp[threadIdx.x-indexInBlock+i]*cSim.pRigidClusterMatrix[firstMatrixIndex+i*blockSize+indexInBlock];
-                    cSim.pLincsSolution[constraint] = sum;
+                    cSim.pLincsSolution[firstConstraint+indexInBlock] = sum;
                 }
                 block += (blockDim.x*gridDim.x)/cSim.clusterShakeBlockSize;
             }
@@ -173,6 +172,7 @@ __global__ void kApplyCShake_kernel(float4* atomPositions, bool addOldPosition)
         // Update the position of each atom.
 
         pos = threadIdx.x + blockIdx.x * blockDim.x;
+        float damping = (iteration < 2 ? 0.5f : 1.0f);
         while (pos < cSim.atoms)
         {
             float4 atomPos = atomPositions[pos];
@@ -182,8 +182,10 @@ __global__ void kApplyCShake_kernel(float4* atomPositions, bool addOldPosition)
             {
                 int index = pos+i*cSim.atoms;
                 int constraint = cSim.pLincsAtomConstraints[index];
-                float constraintForce = invMass*cSim.pLincsSolution[constraint];
-                constraintForce = (cSim.pLincsAtoms[constraint].x == pos ? constraintForce : -constraintForce);
+                bool forward = (constraint > 0);
+                constraint = (forward ? constraint-1 : -constraint-1);
+                float constraintForce = damping*invMass*cSim.pLincsSolution[constraint];
+                constraintForce = (forward ? constraintForce : -constraintForce);
                 float4 dir = cSim.pLincsDistance[constraint];
                 atomPos.x += constraintForce*dir.x;
                 atomPos.y += constraintForce*dir.y;
@@ -202,12 +204,14 @@ __global__ void kApplyCShake_kernel(float4* atomPositions, bool addOldPosition)
         cSim.pSyncCounter[blockIdx.x] = -1;
 }
 
-static void initInverseMatrices(gpuContext gpu)
+static void initInverseMatrices(gpuContext gpu, bool useNewPositions)
 {
     // Build the inverse constraint matrix for each cluster.
 
     gpu->psPosq4->Download();
     gpu->psVelm4->Download();
+    if (useNewPositions)
+        gpu->psPosqP4->Download();
     unsigned int elementIndex = 0;
     for (unsigned int i = 0; i < gpu->sim.rigidClusters; i++) {
         // Compute the constraint coupling matrix for this cluster.
@@ -217,9 +221,24 @@ static void initInverseMatrices(gpuContext gpu)
         unsigned int size = endIndex-startIndex;
         vector<float3> r(size);
         for (unsigned int j = 0; j < size; j++) {
-            int2 atoms = (*gpu->psLincsAtoms)[(*gpu->psRigidClusterConstraints)[startIndex+j]];
-            float4 pos1 = (*gpu->psPosq4)[atoms.x];
-            float4 pos2 = (*gpu->psPosq4)[atoms.y];
+            int2 atoms = (*gpu->psLincsAtoms)[startIndex+j];
+            float4 pos1, pos2;
+            if (useNewPositions) {
+                float4 oldpos1 = (*gpu->psPosq4)[atoms.x];
+                float4 oldpos2 = (*gpu->psPosq4)[atoms.y];
+                pos1 = (*gpu->psPosqP4)[atoms.x];
+                pos2 = (*gpu->psPosqP4)[atoms.y];
+                pos1.x += oldpos1.x;
+                pos1.y += oldpos1.y;
+                pos1.z += oldpos1.z;
+                pos2.x += oldpos2.x;
+                pos2.y += oldpos2.y;
+                pos2.z += oldpos2.z;
+            }
+            else {
+                pos1 = (*gpu->psPosq4)[atoms.x];
+                pos2 = (*gpu->psPosq4)[atoms.y];
+            }
             r[j] = make_float3(pos1.x-pos2.x, pos1.y-pos2.y, pos1.z-pos2.z);
             float invLength = 1.0f/sqrt(r[j].x*r[j].x + r[j].y*r[j].y + r[j].z*r[j].z);
             r[j].x *= invLength;
@@ -228,11 +247,9 @@ static void initInverseMatrices(gpuContext gpu)
         }
         Array2D<double> matrix(size, size);
         for (int j = 0; j < (int)size; j++) {
-            int constraintj = (*gpu->psRigidClusterConstraints)[startIndex+j];
-            int2 atomsj = (*gpu->psLincsAtoms)[constraintj];
+            int2 atomsj = (*gpu->psLincsAtoms)[startIndex+j];
             for (int k = 0; k < (int)size; k++) {
-                int constraintk = (*gpu->psRigidClusterConstraints)[startIndex+k];
-                int2 atomsk = (*gpu->psLincsAtoms)[constraintk];
+                int2 atomsk = (*gpu->psLincsAtoms)[startIndex+k];
                 float invMassj0 = (*gpu->psVelm4)[atomsj.x].w;
                 float invMassj1 = (*gpu->psVelm4)[atomsj.y].w;
                 double dot = r[j].x*r[k].x + r[j].y*r[k].y + r[j].z*r[k].z;
@@ -275,10 +292,10 @@ static void initInverseMatrices(gpuContext gpu)
         (*gpu->psRigidClusterMatrixIndex)[i] = elementIndex;
         for (int j = 0; j < (int)size; j++)
         {
-            float distance1 = (*gpu->psLincsDistance)[(*gpu->psRigidClusterConstraints)[startIndex+j]].w;
+            float distance1 = (*gpu->psLincsDistance)[startIndex+j].w;
             for (int k = 0; k < (int)size; k++)
             {
-                float distance2 = (*gpu->psLincsDistance)[(*gpu->psRigidClusterConstraints)[startIndex+k]].w;
+                float distance2 = (*gpu->psLincsDistance)[startIndex+k].w;
                 (*gpu->psRigidClusterMatrix)[elementIndex++] = (float)(matrix[k][j]*distance1/distance2);
             }
         }
@@ -286,7 +303,6 @@ static void initInverseMatrices(gpuContext gpu)
     (*gpu->psRigidClusterMatrixIndex)[gpu->sim.rigidClusters] = elementIndex;
     gpu->psRigidClusterMatrix->Upload();
     gpu->psRigidClusterMatrixIndex->Upload();
-    gpu->hasInitializedRigidClusters = true;
 }
 
 void kApplyFirstCShake(gpuContext gpu)
@@ -295,9 +311,20 @@ void kApplyFirstCShake(gpuContext gpu)
     if (gpu->sim.lincsConstraints > 0)
     {
         if (!gpu->hasInitializedRigidClusters)
-            initInverseMatrices(gpu);
+        {
+            // Build preliminary constraint matrices for use on this call.
+
+            initInverseMatrices(gpu, false);
+        }
         kApplyCShake_kernel<<<gpu->sim.blocks, gpu->sim.lincs_threads_per_block, 4*gpu->sim.lincs_threads_per_block>>>(gpu->sim.pPosqP, true);
         LAUNCHERROR("kApplyCShake");
+        if (!gpu->hasInitializedRigidClusters)
+        {
+            // Rebuild the constraint matrices, now that we know all constraints are really satisfied.
+
+            initInverseMatrices(gpu, true);
+            gpu->hasInitializedRigidClusters = true;
+        }
     }
 }
 

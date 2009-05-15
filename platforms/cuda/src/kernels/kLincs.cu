@@ -101,9 +101,11 @@ __global__ void kSolveLincsMatrix_kernel(float4* atomPositions)
         {
             int index = pos+i*cSim.atoms;
             int constraint = cSim.pLincsAtomConstraints[index];
+            bool forward = (constraint > 0);
+            constraint = (forward ? constraint-1 : -constraint-1);
             float4 dir = cSim.pLincsDistance[constraint];
             float c = invMass*cSim.pLincsS[constraint]*cSim.pLincsSolution[constraint];
-            c = (cSim.pLincsAtoms[constraint].x == pos ? -c : c);
+            c = (forward ? -c : c);
             atomPos.x += c*dir.x;
             atomPos.y += c*dir.y;
             atomPos.z += c*dir.z;

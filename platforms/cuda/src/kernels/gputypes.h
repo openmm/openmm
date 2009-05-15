@@ -139,7 +139,6 @@ struct _gpuContext {
     CUDAStream<short>* psSyncCounter;       // Used for global thread synchronization
     CUDAStream<unsigned int>* psRequiredIterations; // Used by SHAKE to communicate whether iteration has converged
     CUDAStream<float>* psShakeReducedMass;  // The reduced mass for each SHAKE constraint
-    CUDAStream<int>* psRigidClusterConstraints; // The constraints in each rigid cluster
     CUDAStream<float>* psRigidClusterMatrix;// The inverse constraint matrix for each rigid cluster
     CUDAStream<unsigned int>* psRigidClusterConstraintIndex; // The index of each cluster in the stream containing cluster constraints.
     CUDAStream<unsigned int>* psRigidClusterMatrixIndex; // The index of each cluster in the stream containing cluster matrices.

@@ -464,7 +464,7 @@ static void markShakeClusterInvalid(ShakeCluster& cluster, map<int, ShakeCluster
     }
 }
 
-static void findRigidClusters(gpuContext gpu, const vector<int>& firstAtom, const vector<int>& secondAtom, const vector<int>& constraintIndices)
+static void findRigidClusters(gpuContext gpu, const vector<int>& firstAtom, const vector<int>& secondAtom, vector<int>& constraintIndices)
 {
     vector<map<int, int> > atomConstraints(firstAtom.size());
     for (int i = 0; i < (int)constraintIndices.size(); i++) {
@@ -537,11 +537,27 @@ static void findRigidClusters(gpuContext gpu, const vector<int>& firstAtom, cons
         }
     }
 
+    // Reorder the constraints so those in a cluster are sequential.
+
+    vector<int> constraintOrder(constraintIndices.size());
+    vector<int> clusterStartIndex(rigidClusters.size());
+    set<int> inCluster;
+    int nextIndex = 0;
+    for (int i = 0; i < (int) rigidClusters.size(); ++i) {
+        clusterStartIndex[i] = nextIndex;
+        for (int j = 0; j < (int) rigidClusters[i].size(); ++j) {
+            int constraint = rigidClusters[i][j];
+            constraintOrder[nextIndex++] = constraint;
+            inCluster.insert(constraint);
+        }
+    }
+    for (int i = 0; i < (int) constraintIndices.size(); ++i)
+        if (inCluster.find(constraintIndices[i]) == inCluster.end())
+            constraintOrder[nextIndex++] = constraintIndices[i];
+    constraintIndices = constraintOrder;
+
     // Build the CUDA streams.
 
-    CUDAStream<int>* psRigidClusterConstraints = new CUDAStream<int>(totalConstraints, 1, "RigidClusterConstraints");
-    gpu->psRigidClusterConstraints             = psRigidClusterConstraints;
-    gpu->sim.pRigidClusterConstraints          = psRigidClusterConstraints->_pDevData;
     CUDAStream<unsigned int>* psRigidClusterConstraintIndex = new CUDAStream<unsigned int>((int) rigidClusters.size()+1, 1, "RigidClusterConstraintIndex");
     gpu->psRigidClusterConstraintIndex                      = psRigidClusterConstraintIndex;
     gpu->sim.pRigidClusterConstraintIndex                   = psRigidClusterConstraintIndex->_pDevData;
@@ -556,8 +572,7 @@ static void findRigidClusters(gpuContext gpu, const vector<int>& firstAtom, cons
     for (unsigned int i = 0; i < rigidClusters.size(); i++) {
         vector<int>& cluster = rigidClusters[i];
         (*psRigidClusterConstraintIndex)[i] = constraintIndex;
-        for (unsigned int j = 0; j < cluster.size(); j++)
-            (*psRigidClusterConstraints)[constraintIndex++] = cluster[j];
+        constraintIndex += cluster.size();
         if (cluster.size() > maxClusterSize)
             maxClusterSize = cluster.size();
     }
@@ -567,9 +582,6 @@ static void findRigidClusters(gpuContext gpu, const vector<int>& firstAtom, cons
     gpu->sim.clusterShakeBlockSize = 1;
     while (gpu->sim.clusterShakeBlockSize < maxClusterSize)
         gpu->sim.clusterShakeBlockSize *= 2;
-    if (gpu->sim.lincs_threads_per_block%gpu->sim.clusterShakeBlockSize != 0)
-        gpu->sim.lincs_threads_per_block += gpu->sim.clusterShakeBlockSize - gpu->sim.lincs_threads_per_block%gpu->sim.clusterShakeBlockSize;
-    psRigidClusterConstraints->Upload();
     psRigidClusterConstraintIndex->Upload();
     gpu->hasInitializedRigidClusters = false;
 }
@@ -776,6 +788,13 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
     for (unsigned i = 0; i < atom1.size(); i++)
         if (!isShakeAtom[atom1[i]])
             lincsConstraints.push_back(i);
+
+    // Identify rigid clusters of atoms.
+
+    findRigidClusters(gpu, atom1, atom2, lincsConstraints);
+
+    // Record the connections between constraints.
+
     int numLincs = (int) lincsConstraints.size();
     vector<vector<int> > atomConstraints(gpu->natoms);
     for (int i = 0; i < numLincs; i++) {
@@ -859,8 +878,10 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
         (*psSyncCounter)[i] = -1;
     for (unsigned int i = 0; i < atomConstraints.size(); i++) {
         (*psLincsNumAtomConstraints)[i] = atomConstraints[i].size();
-        for (unsigned int j = 0; j < atomConstraints[i].size(); j++)
-            (*psLincsAtomConstraints)[i+j*gpu->natoms] = atomConstraints[i][j];
+        for (unsigned int j = 0; j < atomConstraints[i].size(); j++) {
+            bool forward = (atom1[lincsConstraints[atomConstraints[i][j]]] == i);
+            (*psLincsAtomConstraints)[i+j*gpu->natoms] = (forward ? atomConstraints[i][j]+1 : -atomConstraints[i][j]-1);
+        }
     }
     psLincsAtoms->Upload();
     psLincsDistance->Upload();
@@ -877,10 +898,8 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
         gpu->sim.lincs_threads_per_block = gpu->sim.threads_per_block;
     if (gpu->sim.lincs_threads_per_block < gpu->sim.blocks)
         gpu->sim.lincs_threads_per_block = gpu->sim.blocks;
-
-    // Identify rigid clusters of atoms.
-
-    findRigidClusters(gpu, atom1, atom2, lincsConstraints);
+    if (gpu->sim.lincs_threads_per_block%gpu->sim.clusterShakeBlockSize != 0)
+        gpu->sim.lincs_threads_per_block += gpu->sim.clusterShakeBlockSize - gpu->sim.lincs_threads_per_block%gpu->sim.clusterShakeBlockSize;
 
     // count number of atoms w/o constraint
 
@@ -1250,7 +1269,6 @@ void* gpuInit(int numAtoms)
     gpu->psSyncCounter              = NULL;
     gpu->psRequiredIterations       = NULL;
     gpu->psShakeReducedMass         = NULL;
-    gpu->psRigidClusterConstraints  = NULL;
     gpu->psRigidClusterConstraintIndex = NULL;
     gpu->psRigidClusterMatrix       = NULL;
     gpu->psRigidClusterMatrixIndex  = NULL;
@@ -1406,7 +1424,6 @@ void gpuShutDown(gpuContext gpu)
     delete gpu->psSyncCounter;
     delete gpu->psRequiredIterations;
     delete gpu->psShakeReducedMass;
-    delete gpu->psRigidClusterConstraints;
     delete gpu->psRigidClusterConstraintIndex;
     delete gpu->psRigidClusterMatrix;
     delete gpu->psRigidClusterMatrixIndex;

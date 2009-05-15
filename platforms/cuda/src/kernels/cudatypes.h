@@ -389,7 +389,6 @@ struct cudaGmxSimulation {
     short*          pSyncCounter;                   // Used for global thread synchronization
     unsigned int*   pRequiredIterations;            // Used by SHAKE to communicate whether iteration has converged
     float*          pShakeReducedMass;              // The reduced mass for each SHAKE constraint
-    int*            pRigidClusterConstraints;       // The constraints in each rigid cluster
     float*          pRigidClusterMatrix;            // The inverse constraint matrix for each rigid cluster
     unsigned int*   pRigidClusterConstraintIndex;   // The index of each cluster in the stream containing cluster constraints.
     unsigned int*   pRigidClusterMatrixIndex;       // The index of each cluster in the stream containing cluster matrices.
