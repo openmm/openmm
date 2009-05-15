@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <string>
+#include <limits>
 
 using namespace OpenMM;
 
@@ -33,7 +34,7 @@ static AtomInfo atoms[] = {
 
 static const double Temperature         = 100;     // Kelvins
 static const double Friction            = 1./91.;  // picoseconds between collisions
-static const double StepSizeFs          = 0.1;     // femtoseconds
+static const double StepSizeFs          = 2;     // femtoseconds
 static const double ReportIntervalFs    = 1000;
 static const double SimulationTimePs    = 1000;  // total simulation time (ps)
 
@@ -68,6 +69,7 @@ try {
     OpenMMContext context(system, integrator);
 
     std::cout << "Will use OpenMM platform " << context.getPlatform().getName() << std::endl;
+    std::cout << "eps(float)=" << std::numeric_limits<float>::epsilon() << std::endl;
 
     // Fill in a vector of starting positions, one per atom.
     std::vector<Vec3> positions(numAtoms);
@@ -84,7 +86,7 @@ try {
     do {
         integrator.step(NumSilentSteps);
         showState(context);
-    } while (context.getTime() <= SimulationTimePs);
+    } while (context.getTime() < SimulationTimePs);
 
     } catch(const std::exception& e) {
         std::cout << "EXCEPTION: " << e.what() << std::endl;
@@ -97,11 +99,17 @@ try {
 static void
 showState(const OpenMMContext& context) {
     // Caution: at the moment asking for energy requires use of slow reference calculation.
-    const State                 state       = context.getState(State::Positions | State::Velocities | State::Energy);
+    const State                 state       = context.getState(  State::Positions | State::Velocities 
+                                                               | State::Forces    | State::Energy);
     const double                energy      = state.getPotentialEnergy() + state.getKineticEnergy();
     const std::vector<Vec3>&    positions   = state.getPositions();
+    const std::vector<Vec3>&    forces      = state.getForces();
 
     std::cout << "t=" << state.getTime() << " E=" << energy << std::endl;
-    for (unsigned i=0; i < positions.size(); ++i)
-        std::cout << i << " " << positions[i] << std::endl;
+    const double dt = StepSizeFs*PsPerFs;
+    for (unsigned i=0; i < positions.size(); ++i) {
+        const Vec3 dq = dt*dt/(2*atoms[i].mass) * forces[i];
+        std::cout << i << " " << positions[i] * AngstromsPerNm << std::endl;
+        std::cout << "f=" << forces[i] << " dq=" << dq << std::endl;
+    }
 }

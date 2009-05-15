@@ -27,20 +27,24 @@ struct AtomInfo {
 };
 
 static AtomInfo atoms[] = {
-    {"Na+", 22.99,  1, 1.8680, 0.00277, Vec3(-3,0,0)},
-    {"Cl-", 35.45, -1, 2.4700, 0.1000,  Vec3( 3,0,0)},
+    {"NA", 22.99,  1, 1.8680, 0.00277, Vec3(8,0,0)},
+    {"CL", 35.45, -1, 2.4700, 0.1000,  Vec3(-8,0,0)},
+    {"NA", 22.99,  1, 1.8680, 0.00277, Vec3(0,9,0)},
+    {"CL", 35.45, -1, 2.4700, 0.1000,  Vec3(0,-9,0)},
+    {"NA", 22.99,  1, 1.8680, 0.00277, Vec3(0,0,-10)},
+    {"CL", 35.45, -1, 2.4700, 0.1000,  Vec3( 0,0,10)},
     {""} // end of list
 };
 
-static const double Temperature         = 100;     // Kelvins
-static const double Friction            = 1./91.;  // picoseconds between collisions
-static const double StepSizeFs          = .1;     // femtoseconds
-static const double ReportIntervalFs    = 1000;
-static const double SimulationTimePs    = 1000;  // total simulation time (ps)
+static const double Temperature         = 300;    // Kelvins
+static const double Friction            = 1./91.; // picoseconds between collisions
+static const double StepSizeFs          = 2;      // femtoseconds
+static const double ReportIntervalFs    = 10;
+static const double SimulationTimePs    = 100;    // total simulation time (ps)
 
 static const double SigmaPerVdwRadius = 2*std::pow(2., -1./6.);
 
-static void showState(const OpenMMContext&);
+static void writePDB(const OpenMMContext&);
 
 int main() {
 try {
@@ -62,14 +66,14 @@ try {
     }
 
     // Create an integrator object for advancing time.
-    //LangevinIntegrator integrator(Temperature, Friction, StepSizeFs * PsPerFs);
-    VerletIntegrator integrator(StepSizeFs * PsPerFs);
+    LangevinIntegrator integrator(Temperature, Friction, StepSizeFs * PsPerFs);
+    //VerletIntegrator integrator(StepSizeFs * PsPerFs);
 
     // Create an OpenMM Context for execution; let it choose best platform.
     OpenMMContext context(system, integrator);
 
     const std::string platformName = context.getPlatform().getName();
-    std::cout << "Will use OpenMM platform " << platformName << std::endl;
+    printf( "REMARK  Using OpenMM platform %s\n", context.getPlatform().getName().c_str() );
 
     // Fill in a vector of starting positions, one per atom.
     std::vector<Vec3> positions(numAtoms);
@@ -80,13 +84,13 @@ try {
     context.setPositions(positions);
 
     // Output the initial state.
-    showState(context);
+    writePDB(context);
 
     const int NumSilentSteps = (int)(ReportIntervalFs / StepSizeFs + 0.5);
     do {
         integrator.step(NumSilentSteps);
-        showState(context);
-    } while (context.getTime() <= SimulationTimePs);
+        writePDB(context);
+    } while (context.getTime() < SimulationTimePs);
 
     } catch(const std::exception& e) {
         std::cout << "EXCEPTION: " << e.what() << std::endl;
@@ -97,7 +101,7 @@ try {
 }
 
 static void
-showState(const OpenMMContext& context) {
+writePDB(const OpenMMContext& context) {
     // Caution: at the moment asking for energy requires use of slow reference calculation.
     const State                 state       = context.getState(State::Positions | State::Velocities | State::Energy);
     const double                energy      = state.getPotentialEnergy() + state.getKineticEnergy();
@@ -108,10 +112,11 @@ showState(const OpenMMContext& context) {
     modelFrameNumber++;
     printf("MODEL     %d\n", modelFrameNumber);
     printf("REMARK 250 time=%.3f picoseconds; Energy = %.3f kilojoules/mole\n", state.getTime(), energy);
-    printf("ATOM      1 NA   SLT     1    %8.3f%8.3f%8.3f  1.00  0.00          NA\n", 
-        positions[0][0]*AngstromsPerNm, positions[0][1]*AngstromsPerNm, positions[0][2]*AngstromsPerNm);
-    printf("ATOM      2 CL   SLT     1    %8.3f%8.3f%8.3f  1.00  0.00          CL\n", 
-        positions[1][0]*AngstromsPerNm, positions[1][1]*AngstromsPerNm, positions[1][2]*AngstromsPerNm);
+    for (unsigned i=0; i < positions.size(); ++i) {
+        const Vec3 pos = positions[i] * AngstromsPerNm;
+        printf("ATOM    %3d %2s   SLT     1    %8.3f%8.3f%8.3f  1.00  0.00          %2s\n", 
+            i+1, atoms[i].symbol, pos[0], pos[1], pos[2], atoms[i].symbol);
+    }
     printf("ENDMDL\n");
 }
 
