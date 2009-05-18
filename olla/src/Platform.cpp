@@ -200,8 +200,9 @@ vector<string> Platform::loadPluginsFromDirectory(string directory) {
 string Platform::getDefaultPluginsDirectory() {
     char* dir = getenv("OPENMM_PLUGIN_DIR");
 #ifdef _MSC_VER
-    if (dir == NULL)
-        dir = getenv("PROGRAMFILES");
+    if (dir != NULL)
+        return string(dir);
+    dir = getenv("PROGRAMFILES");
     if (dir == NULL)
         return "C:\\\\Program Files\\OpenMM\\lib\\plugins";
     return string(dir)+"\\OpenMM\\lib\\plugins";
