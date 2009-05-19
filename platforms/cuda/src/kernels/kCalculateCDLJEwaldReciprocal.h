@@ -32,10 +32,7 @@
 
 __global__ void kCalculateCDLJEwaldReciprocalForces_kernel()
 {
-    float alphaEwald       =  3.123413;
-    float PI               = 3.14159265358979323846f;
-    float TWO_PI           = 2.0 * PI;
-    float SQRT_PI          = sqrt(PI);
+    float alphaEwald       = cSim.alphaEwald;
     float eps0             = 5.72765E-4;
 
     int numRx              = 20+1;
@@ -47,18 +44,13 @@ __global__ void kCalculateCDLJEwaldReciprocalForces_kernel()
     float kx, ky, kz, k2, ek;
     float Qi, Qj, SinI, SinJ, CosI, CosJ;
 
-    float factorEwald   = -1 / (4*alphaEwald*alphaEwald);
-
-    float recipBoxSizeX = TWO_PI / cSim.periodicBoxSizeX;
-    float recipBoxSizeY = TWO_PI / cSim.periodicBoxSizeY;
-    float recipBoxSizeZ = TWO_PI / cSim.periodicBoxSizeZ;
-    float V = cSim.periodicBoxSizeX * cSim.periodicBoxSizeY * cSim.periodicBoxSizeZ;
+    float V = cSim.cellVolume;
 
     float4 apos1, apos2 ;
 
     unsigned int atomID1    = threadIdx.x + blockIdx.x * blockDim.x;
 
-    while (atomID1 < cSim.atoms)
+    while (atomID1 < cSim.stride * cSim.outputBuffers)
     {
         apos1             = cSim.pPosq[atomID1];
 
@@ -72,18 +64,18 @@ __global__ void kCalculateCDLJEwaldReciprocalForces_kernel()
 
                 for(int rx = 0; rx < numRx; rx++) {
 
-                  kx = rx * recipBoxSizeX;
+                  kx = rx * cSim.recipBoxSizeX;
 
                   for(int ry = lowry; ry < numRy; ry++) {
 
-                    ky = ry * recipBoxSizeY;
+                    ky = ry * cSim.recipBoxSizeY;
 
                     for (int rz = lowrz; rz < numRz; rz++) {
 
-                      kz = rz * recipBoxSizeZ;
+                      kz = rz * cSim.recipBoxSizeZ;
 
                       k2 = kx * kx + ky * ky + kz * kz;
-                      ek = exp (  k2 * factorEwald);
+                      ek = exp (  k2 * cSim.factorEwald);
 
                       Qi = apos1.w ;
                       Qj = apos2.w ;

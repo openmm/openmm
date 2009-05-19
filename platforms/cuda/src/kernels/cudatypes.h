@@ -292,16 +292,23 @@ struct cudaGmxSimulation {
     float           periodicBoxSizeX;               // The X dimension of the periodic box
     float           periodicBoxSizeY;               // The Y dimension of the periodic box
     float           periodicBoxSizeZ;               // The Z dimension of the periodic box
+    float           recipBoxSizeX;                  // The X dimension of the reciprocal box for Ewald summation
+    float           recipBoxSizeY;                  // The Y dimension of the reciprocal box for Ewald summation
+    float           recipBoxSizeZ;                  // The Z dimension of the reciprocal box for Ewald summation
+    float           cellVolume;                     // Ewald parameter alpha (a.k.a. kappa)
+    float           alphaEwald;                     // Ewald parameter alpha (a.k.a. kappa)
+    float           factorEwald;                    // - 1 ( 4 * alphaEwald * alphaEwald)
+    float           kmax;                           // Maximum number of reciprocal vectors
     float           reactionFieldK;                 // Constant for reaction field correction
     float           probeRadius;                    // SASA probe radius
     float           surfaceAreaFactor;              // ACE approximation surface area factor
     float           electricConstant;               // ACE approximation electric constant
     float           forceConversionFactor;          // kJ to kcal force conversion factor
     float           preFactor;                      // Born electrostatic pre-factor
-    float			dielectricOffset;		        // Born dielectric offset
-    float			alphaOBC;				        // OBC alpha factor
-    float			betaOBC;				        // OBC beta factor
-    float			gammaOBC;				        // OBC gamma factor
+    float           dielectricOffset;               // Born dielectric offset
+    float           alphaOBC;                       // OBC alpha factor
+    float           betaOBC;                        // OBC beta factor
+    float           gammaOBC;                       // OBC gamma factor
     float           deltaT;                         // Molecular dynamics deltaT constant
     float           oneOverDeltaT;                  // 1/deltaT
     float           B;                              // Molecular dynamics B constant

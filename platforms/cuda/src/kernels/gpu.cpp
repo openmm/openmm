@@ -414,6 +414,26 @@ void gpuSetNonbondedCutoff(gpuContext gpu, float cutoffDistance, float solventDi
 }
 
 extern "C"
+void gpuSetEwaldParameters(gpuContext gpu)//, float alphaEwald, int kmax )
+{
+
+    // hard coded alphaEwald and kmax, no interface yet
+    float alpha            = 3.123413;
+    float PI               = 3.14159265358979323846f;
+    float TWO_PI           = 2.0 * PI;
+
+    gpu->sim.recipBoxSizeX = TWO_PI / gpu->sim.periodicBoxSizeX ;
+    gpu->sim.recipBoxSizeY = TWO_PI / gpu->sim.periodicBoxSizeY ;
+    gpu->sim.recipBoxSizeZ = TWO_PI / gpu->sim.periodicBoxSizeZ ;
+
+    gpu->sim.cellVolume        = gpu->sim.periodicBoxSizeX * gpu->sim.periodicBoxSizeY * gpu->sim.periodicBoxSizeZ;
+
+    gpu->sim.alphaEwald        = alpha;
+    gpu->sim.factorEwald       = -1 / (4*alpha*alpha);
+    gpu->sim.kmax              = 20+1;
+}
+
+extern "C"
 void gpuSetPeriodicBoxSize(gpuContext gpu, float xsize, float ysize, float zsize)
 {
     gpu->sim.periodicBoxSizeX = xsize;

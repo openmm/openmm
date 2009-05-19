@@ -291,6 +291,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
             Vec3 boxVectors[3];
             force.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
             gpuSetPeriodicBoxSize(gpu, (float)boxVectors[0][0], (float)boxVectors[1][1], (float)boxVectors[2][2]);
+            gpuSetEwaldParameters(gpu);//, (float)alphaEwald, (int)kmax);
             method = EWALD;
 
         }
