@@ -19,18 +19,18 @@ void writePdb(const OpenMMContext& context) {
 int main() {
     Platform::loadPluginsFromDirectory(Platform::getDefaultPluginsDirectory());
     System system;
-    NonbondedForce* nonbond = new NonbondedForce();
+    NonbondedForce* nonbond = new NonbondedForce(); 
     system.addForce(nonbond);
 
     // Create atoms
-    int numAtoms = 2;
+    int numAtoms = 3;
     for (int a = 0; a < numAtoms; ++a) {
         system.addParticle(39.95); // mass
         nonbond->addParticle(0.0, 0.3350, 0.001603); // charge, diameter, well depth
     }
 
     // Large step size may be required for stability with small forces
-    VerletIntegrator integrator(0.002); // step size in picoseconds
+    VerletIntegrator integrator(0.020); // step size in picoseconds
     // Let OpenMM Context choose best platform.
     OpenMMContext context(system, integrator);
     printf( "REMARK  Using OpenMM platform %s\n", context.getPlatform().getName().c_str() );

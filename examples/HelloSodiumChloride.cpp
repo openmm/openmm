@@ -47,7 +47,7 @@ static const double SigmaPerVdwRadius = 2*std::pow(2., -1./6.);
 static void writePDB(const OpenMMContext&);
 
 int main() {
-try {
+  try {
     // Load all available OpenMM plugins from their default location.
     Platform::loadPluginsFromDirectory(Platform::getDefaultPluginsDirectory());
 
@@ -92,12 +92,13 @@ try {
         writePDB(context);
     } while (context.getTime() < SimulationTimePs);
 
-    } catch(const std::exception& e) {
-        std::cout << "EXCEPTION: " << e.what() << std::endl;
-        return 1;
-    }
-
     return 0;
+
+  } catch(const std::exception& e) {
+    std::cout << "EXCEPTION: " << e.what() << std::endl;
+    return 1;
+  }
+
 }
 
 static void
