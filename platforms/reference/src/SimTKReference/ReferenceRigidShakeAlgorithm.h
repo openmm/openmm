@@ -64,7 +64,7 @@ class ReferenceRigidShakeAlgorithm : public ReferenceConstraintAlgorithm {
 
          --------------------------------------------------------------------------------------- */
 
-      ReferenceRigidShakeAlgorithm( int numberOfAtoms, int numberOfConstraints, int** atomIndices, RealOpenMM* distance, RealOpenMM tolerance );
+      ReferenceRigidShakeAlgorithm( int numberOfAtoms, int numberOfConstraints, int** atomIndices, RealOpenMM* distance, RealOpenMM* masses, RealOpenMM tolerance );
 
       /**---------------------------------------------------------------------------------------
 

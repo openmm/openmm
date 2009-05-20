@@ -57,6 +57,7 @@ ReferenceRigidShakeAlgorithm::ReferenceRigidShakeAlgorithm( int numberOfAtoms,
                                                   int numberOfConstraints,
                                                   int** atomIndices,
                                                   RealOpenMM* distance,
+                                                  RealOpenMM* masses,
                                                   RealOpenMM tolerance){
 
    // ---------------------------------------------------------------------------------------
@@ -158,7 +159,88 @@ ReferenceRigidShakeAlgorithm::ReferenceRigidShakeAlgorithm( int numberOfAtoms,
                atomConstraints[atom2->first].erase(*atom1);
            atomConstraints[*atom1].clear();
        }
+
+       // Compute the constraint coupling matrix for this cluster.
+
+       const vector<int>& cluster = _rigidClusters[i];
+       unsigned int size = cluster.size();
+       Array2D<double> matrix(size, size);
+       for (int j = 0; j < (int)size; j++) {
+           for (int k = 0; k < (int)size; k++) {
+               double scale;
+               int atomj0 = _atomIndices[cluster[j]][0];
+               int atomj1 = _atomIndices[cluster[j]][1];
+               int atomk0 = _atomIndices[cluster[k]][0];
+               int atomk1 = _atomIndices[cluster[k]][1];
+               RealOpenMM invMass0 = one/masses[atomj0];
+               RealOpenMM invMass1 = one/masses[atomj1];
+               int atoma, atomb;
+               if (atomj0 == atomk0) {
+                   atoma = atomj1;
+                   atomb = atomk1;
+                   scale = invMass0/(invMass0+invMass1);
+               }
+               else if (atomj1 == atomk1) {
+                   atoma = atomj0;
+                   atomb = atomk0;
+                   scale = invMass1/(invMass0+invMass1);
+               }
+               else if (atomj0 == atomk1) {
+                   atoma = atomj1;
+                   atomb = atomk0;
+                   scale = invMass0/(invMass0+invMass1);
+               }
+               else if (atomj1 == atomk0) {
+                   atoma = atomj0;
+                   atomb = atomk1;
+                   scale = invMass1/(invMass0+invMass1);
+               }
+               else {
+                   matrix[j][k] = 0.0;
+                   continue; // These constraints are not connected.
+               }
+
+               // Find the third constraint forming a triangle with these two.
+
+               for (int m = 0; m < size; m++) {
+                   int other = cluster[m];
+                   if ((_atomIndices[other][0] == atoma && _atomIndices[other][1] == atomb) || (_atomIndices[other][0] == atomb && _atomIndices[other][1] == atoma)) {
+                       double d1 = _distance[cluster[j]];
+                       double d2 = _distance[cluster[k]];
+                       double d3 = _distance[other];
+                       matrix[j][k] = scale*(d1*d1+d2*d2-d3*d3)/(2.0*d1*d2);
+                       break;
+                   }
+               }
+           }
+           matrix[j][j] = 1.0;
+       }
+
+       // Invert it using SVD.
+
+       Array2D<double> u, v;
+       Array1D<double> w;
+       SVD<double> svd(matrix);
+       svd.getU(u);
+       svd.getV(v);
+       svd.getSingularValues(w);
+       double singularValueCutoff = 0.01*w[0];
+       for (int j = 0; j < (int)size; j++)
+           w[j] = (w[j] < singularValueCutoff ? 0.0 : 1.0/w[j]);
+       for (int j = 0; j < (int)size; j++) {
+           for (int k = 0; k < (int)size; k++) {
+               matrix[j][k] = 0.0;
+               for (int m = 0; m < (int)size; m++)
+                   matrix[j][k] += v[j][m]*w[m]*u[k][m];
+           }
+       }
+
+       // Record the inverted matrix.
+
        _matrices.push_back(SimTKOpenMMUtilities::allocateTwoDRealOpenMMArray(constraints.size(), constraints.size(), NULL, false, 0.0, ""));
+       for (int j = 0; j < (int)size; j++)
+           for (int k = 0; k < (int)size; k++)
+               _matrices[i][j][k] = (RealOpenMM)matrix[j][k]*_distance[cluster[k]]/_distance[cluster[j]];
    }
 }
 
@@ -340,71 +422,6 @@ int ReferenceRigidShakeAlgorithm::apply( int numberOfAtoms, RealOpenMM** atomCoo
          int atomI          = _atomIndices[ii][0];
          int atomJ          = _atomIndices[ii][1];
          reducedMasses[ii]  = half/( inverseMasses[atomI] + inverseMasses[atomJ] );
-      }
-      for (unsigned int i = 0; i < _rigidClusters.size(); i++) {
-          // Compute the constraint coupling matrix for this cluster.
-
-          const vector<int>& cluster = _rigidClusters[i];
-          unsigned int size = cluster.size();
-          vector<Vec3> r(size);
-          for (unsigned int j = 0; j < cluster.size(); j++) {
-              int atom1 = _atomIndices[cluster[j]][0];
-              int atom2 = _atomIndices[cluster[j]][1];
-              r[j] = Vec3(atomCoordinates[atom1][0]-atomCoordinates[atom2][0],
-                          atomCoordinates[atom1][1]-atomCoordinates[atom2][1],
-                          atomCoordinates[atom1][2]-atomCoordinates[atom2][2]);
-              double invLength = 1.0/sqrt(r[j].dot(r[j]));
-              r[j][0] *= invLength;
-              r[j][1] *= invLength;
-              r[j][2] *= invLength;
-          }
-          Array2D<double> matrix(size, size);
-          for (int j = 0; j < (int)size; j++) {
-              for (int k = 0; k < (int)size; k++) {
-                  double dot;
-                  int atomj0 = _atomIndices[cluster[j]][0];
-                  int atomj1 = _atomIndices[cluster[j]][1];
-                  int atomk0 = _atomIndices[cluster[k]][0];
-                  int atomk1 = _atomIndices[cluster[k]][1];
-                  if (atomj0 == atomk0)
-                      dot = r[j].dot(r[k])*inverseMasses[atomj0]/(inverseMasses[atomj0]+inverseMasses[atomj1]);
-                  else if (atomj1 == atomk1)
-                      dot = r[j].dot(r[k])*inverseMasses[atomj1]/(inverseMasses[atomj0]+inverseMasses[atomj1]);
-                  else if (atomj0 == atomk1)
-                      dot = -r[j].dot(r[k])*inverseMasses[atomj0]/(inverseMasses[atomj0]+inverseMasses[atomj1]);
-                  else if (atomj1 == atomk0)
-                      dot = -r[j].dot(r[k])*inverseMasses[atomj1]/(inverseMasses[atomj0]+inverseMasses[atomj1]);
-                  else
-                      dot = 0.0;
-                  matrix[j][k] = dot;
-              }
-              matrix[j][j] = 1.0;
-          }
-
-          // Invert it using SVD.
-
-          Array2D<double> u, v;
-          Array1D<double> w;
-          SVD<double> svd(matrix);
-          svd.getU(u);
-          svd.getV(v);
-          svd.getSingularValues(w);
-          double singularValueCutoff = 0.01*w[0];
-          for (int j = 0; j < (int)size; j++)
-              w[j] = (w[j] < singularValueCutoff ? 0.0 : 1.0/w[j]);
-          for (int j = 0; j < (int)size; j++) {
-              for (int k = 0; k < (int)size; k++) {
-                  matrix[j][k] = 0.0;
-                  for (int m = 0; m < (int)size; m++)
-                      matrix[j][k] += v[j][m]*w[m]*u[k][m];
-              }
-          }
-
-          // Record the inverted matrix.
-
-          for (int j = 0; j < (int)size; j++)
-              for (int k = 0; k < (int)size; k++)
-                  _matrices[i][j][k] = (RealOpenMM)matrix[j][k]*_distance[cluster[k]]/_distance[cluster[j]];
       }
    }
 

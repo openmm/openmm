@@ -609,7 +609,7 @@ void ReferenceIntegrateVerletStepKernel::execute(OpenMMContextImpl& context, con
             delete constraints;
         }
         dynamics = new ReferenceVerletDynamics(context.getSystem().getNumParticles(), static_cast<RealOpenMM>(stepSize) );
-        constraints = new ReferenceRigidShakeAlgorithm(context.getSystem().getNumParticles(), numConstraints, constraintIndices, constraintDistances, (RealOpenMM)integrator.getConstraintTolerance());
+        constraints = new ReferenceRigidShakeAlgorithm(context.getSystem().getNumParticles(), numConstraints, constraintIndices, constraintDistances, masses, (RealOpenMM)integrator.getConstraintTolerance());
         dynamics->setReferenceConstraintAlgorithm(constraints);
         prevStepSize = stepSize;
     }
@@ -668,7 +668,7 @@ void ReferenceIntegrateLangevinStepKernel::execute(OpenMMContextImpl& context, c
 				static_cast<RealOpenMM>(stepSize), 
 				static_cast<RealOpenMM>(tau), 
 				static_cast<RealOpenMM>(temperature) );
-        constraints = new ReferenceRigidShakeAlgorithm(context.getSystem().getNumParticles(), numConstraints, constraintIndices, constraintDistances, (RealOpenMM)integrator.getConstraintTolerance());
+        constraints = new ReferenceRigidShakeAlgorithm(context.getSystem().getNumParticles(), numConstraints, constraintIndices, constraintDistances, masses, (RealOpenMM)integrator.getConstraintTolerance());
         dynamics->setReferenceConstraintAlgorithm(constraints);
         prevTemp = temperature;
         prevFriction = friction;
@@ -728,7 +728,7 @@ void ReferenceIntegrateBrownianStepKernel::execute(OpenMMContextImpl& context, c
 				static_cast<RealOpenMM>(stepSize), 
 				static_cast<RealOpenMM>(friction), 
 				static_cast<RealOpenMM>(temperature) );
-        constraints = new ReferenceRigidShakeAlgorithm(context.getSystem().getNumParticles(), numConstraints, constraintIndices, constraintDistances, (RealOpenMM)integrator.getConstraintTolerance());
+        constraints = new ReferenceRigidShakeAlgorithm(context.getSystem().getNumParticles(), numConstraints, constraintIndices, constraintDistances, masses, (RealOpenMM)integrator.getConstraintTolerance());
         dynamics->setReferenceConstraintAlgorithm(constraints);
         prevTemp = temperature;
         prevFriction = friction;
