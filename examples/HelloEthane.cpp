@@ -3,9 +3,9 @@
  * -----------------------------------------------------------------------------
  * This is a complete, self-contained "hello world" example demonstrating 
  * GPU-accelerated simulation of a system with both bonded and nonbonded forces, 
- * using ethane (H3-C-C-H3) as an example. A multi-frame PDB file is written
- * to stdout which can be read by VMD or other visualization tool to produce 
- * an animation of the resulting trajectory.
+ * using ethane (H3-C-C-H3) in a vacuum as an example. A multi-frame PDB file is 
+ * written to stdout which can be read by VMD or other visualization tool to 
+ * produce an animation of the resulting trajectory.
  *
  * Pay particular attention to the handling of units in this example. Incorrect
  * handling of units is a very common error; this example shows how you can
@@ -28,11 +28,40 @@
 
 using namespace OpenMM;
 
-// These are missing from the current version of OpenMM so we're adding them
-// temporarily here.
-Vec3 operator*(const Vec3& v, double r) {return Vec3(v[0]*r, v[1]*r, v[2]*r);}
-Vec3 operator*(double r, const Vec3& v) {return Vec3(r*v[0], r*v[1], r*v[2]);}
-static const double SigmaPerVdwRadius = 2*std::pow(2., -1./6.);
+// -----------------------------------------------------------------------------
+//                   MODELING AND SIMULATION PARAMETERS
+// -----------------------------------------------------------------------------
+const bool   UseConstraints      = false;   // Should we constrain C-H bonds?
+const double StepSizeInFs        = 2;       // integration step size (fs)
+const double ReportIntervalInFs  = 10;      // how often to generate PDB frame (fs)
+const double SimulationTimeInPs  = 100;     // total simulation time (ps)
+
+static void simulateEthane();
+static void writePDB(const OpenMMContext&); // PDB file writer; see below.
+
+
+// -----------------------------------------------------------------------------
+//                                MAIN PROGRAM
+// -----------------------------------------------------------------------------
+int main() {
+    // ALWAYS enclose all OpenMM calls with a try/catch block to make sure that
+    // usage and runtime errors are caught and reported.
+    try {
+        // Load all available OpenMM plugins from their default location.
+        Platform::loadPluginsFromDirectory(Platform::getDefaultPluginsDirectory());
+
+        simulateEthane();
+
+        return 0; // Normal return from main.
+    }
+
+    // Catch and report usage and runtime errors detected by OpenMM and fail.
+    catch(const std::exception& e) {
+        printf("EXCEPTION: %s\n", e.what());
+        return 1;
+    }
+}
+
 
 // -----------------------------------------------------------------------------
 //              FORCE FIELD DATA
@@ -83,61 +112,53 @@ const int HCCH = 0;
 // computer do that!
 const int EndOfList=-1;
 
-struct AtomInfo {
-    int type; char* pdbSymbol; Vec3 initPosInAngstroms;
-} atoms[] = {/*0*/C, "C1", Vec3( -.765,   0,   0 ),
-             /*1*/C, "C2", Vec3(  .765,   0,   0 ),
-             /*2*/H, "H1", Vec3(-1.135, 1.03,  0 ), // bonded to C1
-             /*3*/H, "H2", Vec3(-1.135, -.51, .89),
-             /*4*/H, "H3", Vec3(-1.135, -.51,-.89),
-             /*5*/H, "H4", Vec3( 1.135, 1.03,  0 ), // bonded to C2
-             /*6*/H, "H5", Vec3( 1.135, -.51, .89),
-             /*7*/H, "H6", Vec3( 1.135, -.51,-.89),
-             EndOfList};
+struct AtomInfo
+{   int type; char pdb[5]; Vec3 initPosInAngstroms;} atoms[] = 
+    {/*0*/C,    " C1 ",    Vec3( -.7605,  0,   0 ),
+     /*1*/C,    " C2 ",    Vec3(  .7605,  0,   0 ),
+     /*2*/H,    "1H1 ",    Vec3(-1.135, 1.03,  0 ), // bonded to C1
+     /*3*/H,    "2H1 ",    Vec3(-1.135, -.51, .89),
+     /*4*/H,    "3H1 ",    Vec3(-1.135, -.51,-.89),
+     /*5*/H,    "1H2 ",    Vec3( 1.135, 1.03,  0 ), // bonded to C2
+     /*6*/H,    "2H2 ",    Vec3( 1.135, -.51, .89),
+     /*7*/H,    "3H2 ",    Vec3( 1.135, -.51,-.89),
+     EndOfList};
 
-struct {int type; int a[2];} bonds[]    = {CC,0,1,CH,0,2,CH,0,3,CH,0,4,
-                                                  CH,1,5,CH,1,6,CH,1,7, 
-                                           EndOfList};
-struct {int type; int a[3];} angles[]   = {HCC,2,0,1,HCC,3,0,1,HCC,4,0,1,
-                                           HCC,5,1,0,HCC,6,1,0,HCC,7,1,0,
-                                           HCH,2,0,3,HCH,2,0,4,HCH,3,0,4,
-                                           HCH,5,1,6,HCH,5,1,7,HCH,6,1,7, 
-                                           EndOfList};
-struct {int type; int a[4];} torsions[] = {HCCH,2,0,1,5,HCCH,2,0,1,6,HCCH,2,0,1,7,
-                                           HCCH,3,0,1,5,HCCH,3,0,1,6,HCCH,3,0,1,7,
-                                           HCCH,4,0,1,5,HCCH,4,0,1,6,HCCH,4,0,1,7, 
-                                           EndOfList};
+struct {int type; int atoms[2];} bonds[] = 
+    {CC,0,1,
+     CH,0,2,CH,0,3,CH,0,4,          // C1 methyl
+     CH,1,5,CH,1,6,CH,1,7,          // C2 methyl     
+     EndOfList};
+struct {int type; int atoms[3];} angles[] = 
+    {HCC,2,0,1,HCC,3,0,1,HCC,4,0,1, // C1 methyl
+     HCH,2,0,3,HCH,2,0,4,HCH,3,0,4,
+     HCC,5,1,0,HCC,6,1,0,HCC,7,1,0, // C2 methyl
+     HCH,5,1,6,HCH,5,1,7,HCH,6,1,7,             
+     EndOfList};
+struct {int type; int atoms[4];} torsions[] = 
+    {HCCH,2,0,1,5,HCCH,2,0,1,6,HCCH,2,0,1,7,
+     HCCH,3,0,1,5,HCCH,3,0,1,6,HCCH,3,0,1,7,
+     HCCH,4,0,1,5,HCCH,4,0,1,6,HCCH,4,0,1,7,    
+     EndOfList};
+
+
+
+// Add missing scalar product operators for Vec3.
+Vec3 operator*(const Vec3& v, double r) {return Vec3(v[0]*r, v[1]*r, v[2]*r);}
+Vec3 operator*(double r, const Vec3& v) {return Vec3(r*v[0], r*v[1], r*v[2]);}
+// This is the conversion factor that takes you from a van der Waals radius
+// (defined as 1/2 the minimum energy separation) to the related Lennard Jones 
+// "sigma" parameter (defined as the zero crossing separation).
+static const double SigmaPerVdwRadius = 2*std::pow(2., -1./6.);
 
 // -----------------------------------------------------------------------------
-//              MODELING AND SIMULATION PARAMETERS
+//                            ETHANE SIMULATION
 // -----------------------------------------------------------------------------
-const bool   UseConstraints      = false;   // Should we constrain C-H bonds?
-const double Temperature         = 300;     // bath temperature in Kelvins
-const double FrictionInPs        = 1./91.;  // picoseconds between collisions
-
-const double StepSizeInFs        = 2;       // integration step size (fs)
-const double ReportIntervalInFs  = 10;      // how often to generate PDB frame (fs)
-const double SimulationTimeInPs  = 100;     // total simulation time (ps)
-
-// PDB file writer; see below.
-static void writePDB(const OpenMMContext&);
-
-// -----------------------------------------------------------------------------
-//                                MAIN PROGRAM
-// -----------------------------------------------------------------------------
-int main() {
-  // ALWAYS enclose all OpenMM calls with a try/catch block to make sure that
-  // usage and runtime errors are caught and reported.
-  try {
-
-    // -------------------------------------------------------------------------
-    // Load all available OpenMM plugins from their default location.
-    // -------------------------------------------------------------------------
-    Platform::loadPluginsFromDirectory(Platform::getDefaultPluginsDirectory());
-
+static void simulateEthane() {
     // -------------------------------------------------------------------------
     // Create a System and Force objects within the System. Retain a reference
-    // to each force object so we can fill in the forces.
+    // to each force object so we can fill in the forces. Note: OpenMM owns
+    // the objects and will take care of deleting them; don't do it yourself!
     // -------------------------------------------------------------------------
     System system;
     NonbondedForce&         nonbond     = *new NonbondedForce();
@@ -173,19 +194,19 @@ int main() {
     // -------------------------------------------------------------------------
     std::vector< std::pair<int,int> > bondPairs;
     for (int i=0; bonds[i].type != EndOfList; ++i) {
-        const int*      atoms = bonds[i].a;
-        const BondType& bond  = bondType[bonds[i].type];
+        const int*      atom = bonds[i].atoms;
+        const BondType& bond = bondType[bonds[i].type];
 
         // Note factor of 2 for stiffness below because Amber specifies the constant
         // as it is used in the harmonic energy term kx^2 with force 2kx; OpenMM wants 
         // it as used in the force term kx, with energy kx^2/2.
-        bondStretch.addBond(atoms[0], atoms[1],
+        bondStretch.addBond(atom[0], atom[1],
                             bond.nominalLengthInAngstroms    * NmPerAngstrom,
                             bond.stiffnessInKcalPerAngstrom2 * 2 * KJPerKcal * AngstromsPerNm * AngstromsPerNm);
         if (UseConstraints && bond.canConstrain)
-            system.addConstraint(atoms[0], atoms[1],
+            system.addConstraint(atom[0], atom[1],
                                  bond.nominalLengthInAngstroms * NmPerAngstrom);
-        bondPairs.push_back(std::make_pair(atoms[0], atoms[1]));
+        bondPairs.push_back(std::make_pair(atom[0], atom[1]));
     }
     // Exclude 1-2, 1-3 bonded atoms from nonbonded forces, and scale down 1-4 bonded atoms.
     nonbond.createExceptionsFromBonds(bondPairs, Coulomb14Scale, LennardJones14Scale);
@@ -194,11 +215,11 @@ int main() {
     // Create the 1-2-3 bond angle harmonic terms.
     // -------------------------------------------------------------------------
     for (int i=0; angles[i].type != EndOfList; ++i) {
-        const int*       atoms = angles[i].a;
+        const int*       atom  = angles[i].atoms;
         const AngleType& angle = angleType[angles[i].type];
 
         // See note under bond stretch above regarding the factor of 2 here.
-        bondBend.addAngle(atoms[0],atoms[1],atoms[2],
+        bondBend.addAngle(atom[0],atom[1],atom[2],
                           angle.nominalAngleInDegrees     * RadiansPerDegree,
                           angle.stiffnessInKcalPerRadian2 * 2 * KJPerKcal);
     }
@@ -207,9 +228,9 @@ int main() {
     // Create the 1-2-3-4 bond torsion (dihedral) terms.
     // -------------------------------------------------------------------------
     for (int i=0; torsions[i].type != EndOfList; ++i) {
-        const int*         atoms = torsions[i].a;
+        const int*         atom = torsions[i].atoms;
         const TorsionType& torsion = torsionType[torsions[i].type];
-        bondTorsion.addTorsion(atoms[0],atoms[1],atoms[2],atoms[3], 
+        bondTorsion.addTorsion(atom[0],atom[1],atom[2],atom[3], 
             torsion.periodicity, 
             torsion.phaseInDegrees  * RadiansPerDegree,
             torsion.amplitudeInKcal * KJPerKcal);
@@ -221,7 +242,6 @@ int main() {
     // best available Platform. Initialize the configuration from the default
     // positions we collected above. Initial velocities will be zero.
     // -------------------------------------------------------------------------
-    //LangevinIntegrator integrator(Temperature, FrictionInPs, StepSizeInFs * PsPerFs);
     VerletIntegrator integrator(StepSizeInFs * PsPerFs);
     OpenMMContext    context(system, integrator);
     context.setPositions(initialPositions);
@@ -240,18 +260,8 @@ int main() {
         integrator.step(NumSilentSteps);
         writePDB(context);
     } while (context.getTime() < SimulationTimeInPs);
-
-    // -------------------------------------------------------------------------
-    // Normal return from main.
-    // -------------------------------------------------------------------------
-    return 0;
-
-  // Catch and report usage and runtime errors detected by OpenMM and fail.
-  } catch(const std::exception& e) {
-    printf("EXCEPTION: %s\n", e.what());
-    return 1;
-  }
 }
+
 
 
 // -----------------------------------------------------------------------------
@@ -271,8 +281,8 @@ writePDB(const OpenMMContext& context) {
     printf("REMARK 250 time=%.3f picoseconds; Energy = %.3f kilojoules/mole\n", state.getTime(), energy);
     for (unsigned i=0; i < positions.size(); ++i) {
         const Vec3 pos = positions[i] * AngstromsPerNm;
-        printf("ATOM  %5d %2s   ETH     1    %8.3f%8.3f%8.3f  1.00  0.00          %2s\n", 
-            i+1, atoms[i].pdbSymbol, pos[0], pos[1], pos[2], atoms[i].pdbSymbol);
+        printf("ATOM  %5d %4s ETH     1    %8.3f%8.3f%8.3f  1.00  0.00            \n", 
+            i+1, atoms[i].pdb, pos[0], pos[1], pos[2]);
     }
     printf("ENDMDL\n");
 }
