@@ -58,21 +58,21 @@
 using namespace OpenMM;
 using namespace std;
 
-int** allocateIntArray(int length, int width) {
+static int** allocateIntArray(int length, int width) {
     int** array = new int*[length];
     for (int i = 0; i < length; ++i)
         array[i] = new int[width];
     return array;
 }
 
-RealOpenMM** allocateRealArray(int length, int width) {
+static RealOpenMM** allocateRealArray(int length, int width) {
     RealOpenMM** array = new RealOpenMM*[length];
     for (int i = 0; i < length; ++i)
         array[i] = new RealOpenMM[width];
     return array;
 }
 
-int** copyToArray(const vector<vector<int> > vec) {
+static int** copyToArray(const vector<vector<int> > vec) {
     if (vec.size() == 0)
         return new int*[0];
     int** array = allocateIntArray(vec.size(), vec[0].size());
@@ -82,7 +82,7 @@ int** copyToArray(const vector<vector<int> > vec) {
     return array;
 }
 
-RealOpenMM** copyToArray(const vector<vector<double> > vec) {
+static RealOpenMM** copyToArray(const vector<vector<double> > vec) {
     if (vec.size() == 0)
         return new RealOpenMM*[0];
     RealOpenMM** array = allocateRealArray(vec.size(), vec[0].size());
@@ -92,7 +92,7 @@ RealOpenMM** copyToArray(const vector<vector<double> > vec) {
     return array;
 }
 
-void disposeIntArray(int** array, int size) {
+static void disposeIntArray(int** array, int size) {
     if (array) {
         for (int i = 0; i < size; ++i)
             delete[] array[i];
@@ -100,11 +100,25 @@ void disposeIntArray(int** array, int size) {
     }
 }
 
-void disposeRealArray(RealOpenMM** array, int size) {
+static void disposeRealArray(RealOpenMM** array, int size) {
     if (array) {
         for (int i = 0; i < size; ++i)
             delete[] array[i];
         delete[] array;
+    }
+}
+
+static void findAnglesForShake(const System& system, vector<ReferenceRigidShakeAlgorithm::AngleInfo>& angles) {
+    for (int i = 0; i < system.getNumForces(); i++) {
+        const HarmonicAngleForce* force = dynamic_cast<const HarmonicAngleForce*>(&system.getForce(i));
+        if (force != NULL) {
+            for (int j = 0; j < force->getNumAngles(); j++) {
+                int atom1, atom2, atom3;
+                double angle, k;
+                force->getAngleParameters(j, atom1, atom2, atom3, angle, k);
+                angles.push_back(ReferenceRigidShakeAlgorithm::AngleInfo(atom1, atom2, atom3, angle));
+            }
+        }
     }
 }
 
@@ -609,7 +623,9 @@ void ReferenceIntegrateVerletStepKernel::execute(OpenMMContextImpl& context, con
             delete constraints;
         }
         dynamics = new ReferenceVerletDynamics(context.getSystem().getNumParticles(), static_cast<RealOpenMM>(stepSize) );
-        constraints = new ReferenceRigidShakeAlgorithm(context.getSystem().getNumParticles(), numConstraints, constraintIndices, constraintDistances, masses, (RealOpenMM)integrator.getConstraintTolerance());
+        vector<ReferenceRigidShakeAlgorithm::AngleInfo> angles;
+        findAnglesForShake(context.getSystem(), angles);
+        constraints = new ReferenceRigidShakeAlgorithm(context.getSystem().getNumParticles(), numConstraints, constraintIndices, constraintDistances, masses, angles, (RealOpenMM)integrator.getConstraintTolerance());
         dynamics->setReferenceConstraintAlgorithm(constraints);
         prevStepSize = stepSize;
     }
@@ -668,7 +684,9 @@ void ReferenceIntegrateLangevinStepKernel::execute(OpenMMContextImpl& context, c
 				static_cast<RealOpenMM>(stepSize), 
 				static_cast<RealOpenMM>(tau), 
 				static_cast<RealOpenMM>(temperature) );
-        constraints = new ReferenceRigidShakeAlgorithm(context.getSystem().getNumParticles(), numConstraints, constraintIndices, constraintDistances, masses, (RealOpenMM)integrator.getConstraintTolerance());
+        vector<ReferenceRigidShakeAlgorithm::AngleInfo> angles;
+        findAnglesForShake(context.getSystem(), angles);
+        constraints = new ReferenceRigidShakeAlgorithm(context.getSystem().getNumParticles(), numConstraints, constraintIndices, constraintDistances, masses, angles, (RealOpenMM)integrator.getConstraintTolerance());
         dynamics->setReferenceConstraintAlgorithm(constraints);
         prevTemp = temperature;
         prevFriction = friction;
@@ -728,7 +746,9 @@ void ReferenceIntegrateBrownianStepKernel::execute(OpenMMContextImpl& context, c
 				static_cast<RealOpenMM>(stepSize), 
 				static_cast<RealOpenMM>(friction), 
 				static_cast<RealOpenMM>(temperature) );
-        constraints = new ReferenceRigidShakeAlgorithm(context.getSystem().getNumParticles(), numConstraints, constraintIndices, constraintDistances, masses, (RealOpenMM)integrator.getConstraintTolerance());
+        vector<ReferenceRigidShakeAlgorithm::AngleInfo> angles;
+        findAnglesForShake(context.getSystem(), angles);
+        constraints = new ReferenceRigidShakeAlgorithm(context.getSystem().getNumParticles(), numConstraints, constraintIndices, constraintDistances, masses, angles, (RealOpenMM)integrator.getConstraintTolerance());
         dynamics->setReferenceConstraintAlgorithm(constraints);
         prevTemp = temperature;
         prevFriction = friction;

@@ -26,6 +26,7 @@
 #define __ReferenceQShakeAlgorithm_H__
 
 #include "ReferenceConstraintAlgorithm.h"
+#include <utility>
 #include <vector>
 #include <set>
 
@@ -47,10 +48,12 @@ class ReferenceRigidShakeAlgorithm : public ReferenceConstraintAlgorithm {
       RealOpenMM* _distanceTolerance;
       RealOpenMM* _reducedMasses;
       bool _hasInitializedMasses;
-      std::vector<std::vector<int> > _rigidClusters;
-      std::vector<RealOpenMM**> _matrices;
+//      std::vector<std::vector<int> > _rigidClusters;
+//      std::vector<RealOpenMM**> _matrices;
+      std::vector<std::vector<std::pair<int, RealOpenMM> > > _matrix;
 
    public:
+      class AngleInfo;
 
       /**---------------------------------------------------------------------------------------
 
@@ -64,7 +67,7 @@ class ReferenceRigidShakeAlgorithm : public ReferenceConstraintAlgorithm {
 
          --------------------------------------------------------------------------------------- */
 
-      ReferenceRigidShakeAlgorithm( int numberOfAtoms, int numberOfConstraints, int** atomIndices, RealOpenMM* distance, RealOpenMM* masses, RealOpenMM tolerance );
+      ReferenceRigidShakeAlgorithm( int numberOfAtoms, int numberOfConstraints, int** atomIndices, RealOpenMM* distance, RealOpenMM* masses, std::vector<AngleInfo>& angles, RealOpenMM tolerance );
 
       /**---------------------------------------------------------------------------------------
 
@@ -169,6 +172,17 @@ class ReferenceRigidShakeAlgorithm : public ReferenceConstraintAlgorithm {
          --------------------------------------------------------------------------------------- */
 
       int reportShake( int numberOfAtoms, RealOpenMM** atomCoordinates, std::stringstream& message );
+};
+
+class ReferenceRigidShakeAlgorithm::AngleInfo
+{
+public:
+    int atom1, atom2, atom3;
+    RealOpenMM angle;
+    AngleInfo(int atom1, int atom2, int atom3, RealOpenMM angle) :
+        atom1(atom1), atom2(atom2), atom3(atom3), angle(angle)
+    {
+    }
 };
 
 // ---------------------------------------------------------------------------------------
