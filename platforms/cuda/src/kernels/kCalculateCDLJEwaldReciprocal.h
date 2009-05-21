@@ -32,7 +32,6 @@
 
 __global__ void kCalculateCDLJEwaldReciprocalForces_kernel()
 {
-    float alphaEwald       = cSim.alphaEwald;
     float eps0             = 5.72765E-4;
 
     int numRx              = 20+1;
@@ -46,13 +45,15 @@ __global__ void kCalculateCDLJEwaldReciprocalForces_kernel()
 
     float V = cSim.cellVolume;
 
-    float4 apos1, apos2 ;
+    float4 apos1, apos2 ; // i nteracting atoms
+    float4 af; // atomic force
 
     unsigned int atomID1    = threadIdx.x + blockIdx.x * blockDim.x;
 
-    while (atomID1 < cSim.stride * cSim.outputBuffers)
+    while (atomID1 < cSim.atoms)
     {
         apos1             = cSim.pPosq[atomID1];
+        af                = cSim.pForce4[atomID1];
 
         unsigned int atomID2    = 0;
         while (atomID2 < cSim.atoms)
@@ -85,9 +86,9 @@ __global__ void kCalculateCDLJEwaldReciprocalForces_kernel()
                       CosI = cos ( kx * apos1.x + ky * apos1.y + kz * apos1.z );
                       CosJ = cos ( kx * apos2.x + ky * apos2.y + kz * apos2.z );
 
-                      cSim.pForce4[atomID1].x -= (2.0 / (V * eps0 ))  * Qi * ( kx/k2) * ek * ( - SinI * Qj * CosJ + CosI * Qj * SinJ);
-                      cSim.pForce4[atomID1].y -= (2.0 / (V * eps0 ))  * Qi * ( ky/k2) * ek * ( - SinI * Qj * CosJ + CosI * Qj * SinJ);
-                      cSim.pForce4[atomID1].z -= (2.0 / (V * eps0 ))  * Qi * ( kz/k2) * ek * ( - SinI * Qj * CosJ + CosI * Qj * SinJ);
+                      af.x -= (2.0 / (V * eps0 ))  * Qi * ( kx/k2) * ek * ( - SinI * Qj * CosJ + CosI * Qj * SinJ);
+                      af.y -= (2.0 / (V * eps0 ))  * Qi * ( ky/k2) * ek * ( - SinI * Qj * CosJ + CosI * Qj * SinJ);
+                      af.z -= (2.0 / (V * eps0 ))  * Qi * ( kz/k2) * ek * ( - SinI * Qj * CosJ + CosI * Qj * SinJ);
 
                       lowrz = 1 - numRz;
                     }
@@ -98,7 +99,8 @@ __global__ void kCalculateCDLJEwaldReciprocalForces_kernel()
 
                 atomID2++;
        }
-
+   
+       cSim.pForce4[atomID1]               = af;
        atomID1                            += blockDim.x * gridDim.x;
 
     }

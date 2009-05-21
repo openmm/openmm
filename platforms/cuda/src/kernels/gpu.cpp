@@ -1087,6 +1087,12 @@ int gpuAllocateInitialBuffers(gpuContext gpu)
     gpu->sim.pObcChain                  = gpu->psObcChain->_pDevStream[0];
     gpu->psSigEps2                      = new CUDAStream<float2>(gpu->sim.paddedNumberOfAtoms, 1, "SigEps2");
     gpu->sim.pAttr                      = gpu->psSigEps2->_pDevStream[0];
+    gpu->psEwaldEikr                    = new CUDAStream<float2>(gpu->sim.paddedNumberOfAtoms, 1, "EwaldEikr");
+    gpu->sim.pEikr                      = gpu->psEwaldEikr->_pDevStream[0];
+    gpu->psEwaldStructureFactor         = new CUDAStream<float2>(gpu->sim.paddedNumberOfAtoms, 1, "EwaldStructureFactor");
+    gpu->sim.pStructureFactor           = gpu->psEwaldStructureFactor->_pDevStream[0];
+    gpu->psEwaldCosSinSum               = new CUDAStream<float2>(gpu->sim.paddedNumberOfAtoms, 1, "EwaldCosSinSum");
+    gpu->sim.pCosSinSum                 = gpu->psEwaldCosSinSum->_pDevStream[0];
     gpu->psObcData                      = new CUDAStream<float2>(gpu->sim.paddedNumberOfAtoms, 1, "ObcData");
     gpu->sim.pObcData                   = gpu->psObcData->_pDevStream[0];
     gpu->pAtomSymbol                    = new unsigned char[gpu->natoms];
@@ -1486,6 +1492,9 @@ void gpuShutDown(gpuContext gpu)
     delete gpu->psxVector4;
     delete gpu->psvVector4;
     delete gpu->psSigEps2; 
+    delete gpu->psEwaldEikr; 
+    delete gpu->psEwaldStructureFactor; 
+    delete gpu->psEwaldCosSinSum; 
     delete gpu->psObcData; 
     delete gpu->psObcChain;
     delete gpu->psBornForce;

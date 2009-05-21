@@ -119,6 +119,7 @@ void GetCalculateCDLJForcesSim(gpuContext gpu)
 
 // Reciprocal Space Ewald summation is in a separate kernel
 #include "kCalculateCDLJEwaldReciprocal.h"
+#include "kCalculateCDLJEwaldFastReciprocal.h"
 
 
 __global__ extern void kCalculateCDLJCutoffForces_12_kernel();
@@ -198,6 +199,7 @@ void kCalculateCDLJForces(gpuContext gpu)
                     sizeof(unsigned int)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
             if (gpu->bOutputBufferPerWarp)
             {
+// Vanilla (N2) Ewald
                 kCalculateCDLJEwaldDirectByWarpForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                         (sizeof(Atom)+sizeof(float3))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
                 kCalculateCDLJEwaldReciprocalForces_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
@@ -205,11 +207,20 @@ void kCalculateCDLJForces(gpuContext gpu)
             }
             else
             {
+// Vanilla (N2) Ewald
                 kCalculateCDLJEwaldDirectForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                         (sizeof(Atom)+sizeof(float3))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
                 LAUNCHERROR("kCalculateCDLJEwaldDirectForces");
                 kCalculateCDLJEwaldReciprocalForces_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
                 LAUNCHERROR("kCalculateCDLJEwaldReciprocalForces");
+// If using Fast Ewald, uncomment the lines below
+
+ //               kCalculateEwaldFastEikr_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
+ //               LAUNCHERROR("kCalculateEwaldFastEikr");
+ //               kCalculateEwaldFastCosSinSums_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
+ //               LAUNCHERROR("kCalculateEwaldFastCosSinSums");
+ //               kCalculateEwaldFastForces_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
+ //               LAUNCHERROR("kCalculateEwaldFastForces");
             }
 
     }
