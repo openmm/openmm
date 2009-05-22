@@ -215,12 +215,14 @@ void kCalculateCDLJForces(gpuContext gpu)
                 LAUNCHERROR("kCalculateCDLJEwaldReciprocalForces");
 // If using Fast Ewald, uncomment the lines below
 
- //               kCalculateEwaldFastEikr_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
- //               LAUNCHERROR("kCalculateEwaldFastEikr");
- //               kCalculateEwaldFastCosSinSums_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
- //               LAUNCHERROR("kCalculateEwaldFastCosSinSums");
- //               kCalculateEwaldFastForces_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
- //               LAUNCHERROR("kCalculateEwaldFastForces");
+//                kCalculateEwaldFastEikr_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
+//                LAUNCHERROR("kCalculateEwaldFastEikr");
+//                kCalculateEwaldFastStructureFactors_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
+//                LAUNCHERROR("kCalculateEwaldFastStructureFactors_kernel");
+//                kCalculateEwaldFastCosSinSums_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
+//                LAUNCHERROR("kCalculateEwaldFastCosSinSums");
+//                kCalculateEwaldFastForces_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
+//                LAUNCHERROR("kCalculateEwaldFastForces");
             }
 
     }
