@@ -1,8 +1,13 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
+#include <cassert>
 #include "quern.h"
 #include "quern_list.h"
+
+#ifdef _WIN32
+#define copysign _copysign
+#endif
 
 struct SparseEntry
 {
