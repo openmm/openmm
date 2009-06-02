@@ -157,7 +157,8 @@ static void simulateNaCl() {
 // -----------------------------------------------------------------------------
 static void
 writePDB(const OpenMM::OpenMMContext& context) {
-    // Caution: at the moment asking for energy requires use of slow reference calculation.
+    // Caution: at the moment asking for energy requires use of slow Reference 
+    // platform calculation.
     const OpenMM::State state = context.getState(  OpenMM::State::Positions 
                                                  | OpenMM::State::Velocities 
                                                  | OpenMM::State::Energy);

@@ -21,12 +21,12 @@
 
 #include "OpenMM.h"
 
-#include <iostream>
+#include <cstdio>
 #include <string>
 #include <vector>
 #include <utility>
 
-using namespace OpenMM;
+using OpenMM::Vec3; // so we can just say "Vec3" below
 
 // -----------------------------------------------------------------------------
 //                   MODELING AND SIMULATION PARAMETERS
@@ -37,7 +37,7 @@ const double ReportIntervalInFs  = 10;      // how often to generate PDB frame (
 const double SimulationTimeInPs  = 100;     // total simulation time (ps)
 
 static void simulateEthane();
-static void writePDB(const OpenMMContext&); // PDB file writer; see below.
+static void writePDB(const OpenMM::OpenMMContext&); // PDB file writer; see below.
 
 
 // -----------------------------------------------------------------------------
@@ -48,8 +48,8 @@ int main() {
     // usage and runtime errors are caught and reported.
     try {
         // Load all available OpenMM plugins from their default location.
-        Platform::loadPluginsFromDirectory(Platform::getDefaultPluginsDirectory());
-
+        OpenMM::Platform::loadPluginsFromDirectory
+           (OpenMM::Platform::getDefaultPluginsDirectory());
         simulateEthane();
 
         return 0; // Normal return from main.
@@ -160,11 +160,11 @@ static void simulateEthane() {
     // to each force object so we can fill in the forces. Note: OpenMM owns
     // the objects and will take care of deleting them; don't do it yourself!
     // -------------------------------------------------------------------------
-    System system;
-    NonbondedForce&         nonbond     = *new NonbondedForce();
-    HarmonicBondForce&      bondStretch = *new HarmonicBondForce();
-    HarmonicAngleForce&     bondBend    = *new HarmonicAngleForce();
-    PeriodicTorsionForce&   bondTorsion = *new PeriodicTorsionForce();
+    OpenMM::System system;
+    OpenMM::NonbondedForce&         nonbond     = *new OpenMM::NonbondedForce();
+    OpenMM::HarmonicBondForce&      bondStretch = *new OpenMM::HarmonicBondForce();
+    OpenMM::HarmonicAngleForce&     bondBend    = *new OpenMM::HarmonicAngleForce();
+    OpenMM::PeriodicTorsionForce&   bondTorsion = *new OpenMM::PeriodicTorsionForce();
     system.addForce(&nonbond);
     system.addForce(&bondStretch);
     system.addForce(&bondBend);
@@ -181,9 +181,10 @@ static void simulateEthane() {
         const AtomType& atype = atomType[atoms[n].type];
         system.addParticle(atype.mass);
         nonbond.addParticle(atype.charge,
-                            atype.vdwRadiusInAngstroms * NmPerAngstrom * SigmaPerVdwRadius,
-                            atype.vdwEnergyInKcal      * KJPerKcal);
-        initialPositions.push_back(atoms[n].initPosInAngstroms * NmPerAngstrom);
+                            atype.vdwRadiusInAngstroms * OpenMM::NmPerAngstrom 
+                                                       * SigmaPerVdwRadius,
+                            atype.vdwEnergyInKcal      * OpenMM::KJPerKcal);
+        initialPositions.push_back(atoms[n].initPosInAngstroms * OpenMM::NmPerAngstrom);
     }
 
     // -------------------------------------------------------------------------
@@ -201,11 +202,14 @@ static void simulateEthane() {
         // as it is used in the harmonic energy term kx^2 with force 2kx; OpenMM wants 
         // it as used in the force term kx, with energy kx^2/2.
         bondStretch.addBond(atom[0], atom[1],
-                            bond.nominalLengthInAngstroms    * NmPerAngstrom,
-                            bond.stiffnessInKcalPerAngstrom2 * 2 * KJPerKcal * AngstromsPerNm * AngstromsPerNm);
+                            bond.nominalLengthInAngstroms    
+                                * OpenMM::NmPerAngstrom,
+                            bond.stiffnessInKcalPerAngstrom2 
+                                * 2 * OpenMM::KJPerKcal 
+                                * OpenMM::AngstromsPerNm * OpenMM::AngstromsPerNm);
         if (UseConstraints && bond.canConstrain)
             system.addConstraint(atom[0], atom[1],
-                                 bond.nominalLengthInAngstroms * NmPerAngstrom);
+                                 bond.nominalLengthInAngstroms * OpenMM::NmPerAngstrom);
         bondPairs.push_back(std::make_pair(atom[0], atom[1]));
     }
     // Exclude 1-2, 1-3 bonded atoms from nonbonded forces, and scale down 1-4 bonded atoms.
@@ -220,8 +224,8 @@ static void simulateEthane() {
 
         // See note under bond stretch above regarding the factor of 2 here.
         bondBend.addAngle(atom[0],atom[1],atom[2],
-                          angle.nominalAngleInDegrees     * RadiansPerDegree,
-                          angle.stiffnessInKcalPerRadian2 * 2 * KJPerKcal);
+                          angle.nominalAngleInDegrees     * OpenMM::RadiansPerDegree,
+                          angle.stiffnessInKcalPerRadian2 * 2 * OpenMM::KJPerKcal);
     }
 
     // -------------------------------------------------------------------------
@@ -232,8 +236,8 @@ static void simulateEthane() {
         const TorsionType& torsion = torsionType[torsions[i].type];
         bondTorsion.addTorsion(atom[0],atom[1],atom[2],atom[3], 
             torsion.periodicity, 
-            torsion.phaseInDegrees  * RadiansPerDegree,
-            torsion.amplitudeInKcal * KJPerKcal);
+            torsion.phaseInDegrees  * OpenMM::RadiansPerDegree,
+            torsion.amplitudeInKcal * OpenMM::KJPerKcal);
     }
 
     // -------------------------------------------------------------------------
@@ -242,8 +246,8 @@ static void simulateEthane() {
     // best available Platform. Initialize the configuration from the default
     // positions we collected above. Initial velocities will be zero.
     // -------------------------------------------------------------------------
-    VerletIntegrator integrator(StepSizeInFs * PsPerFs);
-    OpenMMContext    context(system, integrator);
+    OpenMM::VerletIntegrator integrator(StepSizeInFs * OpenMM::PsPerFs);
+    OpenMM::OpenMMContext    context(system, integrator);
     context.setPositions(initialPositions);
 
     // -------------------------------------------------------------------------
@@ -268,19 +272,22 @@ static void simulateEthane() {
 //                               PDB FILE WRITER
 // -----------------------------------------------------------------------------
 static void
-writePDB(const OpenMMContext& context) {
+writePDB(const OpenMM::OpenMMContext& context) {
     // Caution: at the moment asking for energy requires use of slow Reference 
     // platform calculation.
-    const State                 state       = context.getState(State::Positions | State::Velocities | State::Energy);
-    const double                energy      = state.getPotentialEnergy() + state.getKineticEnergy();
-    const std::vector<Vec3>&    positions   = state.getPositions();
+    const OpenMM::State state = context.getState(  OpenMM::State::Positions 
+                                                 | OpenMM::State::Velocities 
+                                                 | OpenMM::State::Energy);
+    const double energy = state.getPotentialEnergy() + state.getKineticEnergy();
+    const std::vector<Vec3>& positions = state.getPositions();
     static int modelFrameNumber = 0; // numbering for MODEL records in pdb output
 
     modelFrameNumber++;
     printf("MODEL     %d\n", modelFrameNumber);
-    printf("REMARK 250 time=%.3f picoseconds; Energy = %.3f kilojoules/mole\n", state.getTime(), energy);
+    printf("REMARK 250 time=%.3f picoseconds; Energy = %.3f kilojoules/mole\n", 
+           state.getTime(), energy);
     for (unsigned i=0; i < positions.size(); ++i) {
-        const Vec3 pos = positions[i] * AngstromsPerNm;
+        const Vec3 pos = positions[i] * OpenMM::AngstromsPerNm;
         printf("ATOM  %5d %4s ETH     1    %8.3f%8.3f%8.3f  1.00  0.00            \n", 
             i+1, atoms[i].pdb, pos[0], pos[1], pos[2]);
     }
