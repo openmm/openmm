@@ -113,29 +113,29 @@ const int HCCH = 0;
 const int EndOfList=-1;
 
 struct AtomInfo
-{   int type; char pdb[5]; Vec3 initPosInAngstroms;} atoms[] = 
-    {/*0*/C,    " C1 ",    Vec3( -.7605,  0,   0 ),
-     /*1*/C,    " C2 ",    Vec3(  .7605,  0,   0 ),
-     /*2*/H,    "1H1 ",    Vec3(-1.135, 1.03,  0 ), // bonded to C1
-     /*3*/H,    "2H1 ",    Vec3(-1.135, -.51, .89),
-     /*4*/H,    "3H1 ",    Vec3(-1.135, -.51,-.89),
-     /*5*/H,    "1H2 ",    Vec3( 1.135, 1.03,  0 ), // bonded to C2
-     /*6*/H,    "2H2 ",    Vec3( 1.135, -.51, .89),
-     /*7*/H,    "3H2 ",    Vec3( 1.135, -.51,-.89),
+{   int type; const char* pdb; Vec3 initPosInAngstroms;} atoms[] = 
+    {/*0*/C,       " C1 ",     Vec3( -.7605,  0,   0 ),
+     /*1*/C,       " C2 ",     Vec3(  .7605,  0,   0 ),
+     /*2*/H,       "1H1 ",     Vec3(-1.135, 1.03,  0 ), // bonded to C1
+     /*3*/H,       "2H1 ",     Vec3(-1.135, -.51, .89),
+     /*4*/H,       "3H1 ",     Vec3(-1.135, -.51,-.89),
+     /*5*/H,       "1H2 ",     Vec3( 1.135, 1.03,  0 ), // bonded to C2
+     /*6*/H,       "2H2 ",     Vec3( 1.135, -.51, .89),
+     /*7*/H,       "3H2 ",     Vec3( 1.135, -.51,-.89),
      EndOfList};
 
-struct {int type; int atoms[2];} bonds[] = 
+static struct {int type; int atoms[2];} bonds[] = 
     {CC,0,1,
      CH,0,2,CH,0,3,CH,0,4,          // C1 methyl
      CH,1,5,CH,1,6,CH,1,7,          // C2 methyl     
      EndOfList};
-struct {int type; int atoms[3];} angles[] = 
+static struct {int type; int atoms[3];} angles[] = 
     {HCC,2,0,1,HCC,3,0,1,HCC,4,0,1, // C1 methyl
      HCH,2,0,3,HCH,2,0,4,HCH,3,0,4,
      HCC,5,1,0,HCC,6,1,0,HCC,7,1,0, // C2 methyl
      HCH,5,1,6,HCH,5,1,7,HCH,6,1,7,             
      EndOfList};
-struct {int type; int atoms[4];} torsions[] = 
+static struct {int type; int atoms[4];} torsions[] = 
     {HCCH,2,0,1,5,HCCH,2,0,1,6,HCCH,2,0,1,7,
      HCCH,3,0,1,5,HCCH,3,0,1,6,HCCH,3,0,1,7,
      HCCH,4,0,1,5,HCCH,4,0,1,6,HCCH,4,0,1,7,    
