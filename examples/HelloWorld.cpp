@@ -113,3 +113,4 @@ showState(const OpenMMContext& context) {
         std::cout << "f=" << forces[i] << " dq=" << dq << std::endl;
     }
 }
+
