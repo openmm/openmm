@@ -21,8 +21,7 @@
 
 #include "OpenMM.h"
 
-#include <iostream>
-#include <iomanip>
+#include <cstdio>
 #include <string>
 
 using OpenMM::Vec3; // so we can just say "Vec3" below
@@ -120,9 +119,11 @@ static void simulateNaCl() {
         const AtomInfo& atom = atoms[n];
         system.addParticle(atom.mass);
         nonbond->addParticle(atom.charge,
-                             atom.vdwRadiusInAng  * OpenMM::NmPerAngstrom * SigmaPerVdwRadius,
+                             atom.vdwRadiusInAng  * OpenMM::NmPerAngstrom 
+                                                  * SigmaPerVdwRadius,
                              atom.vdwEnergyInKcal * OpenMM::KJPerKcal);
-        initialPositions.push_back(atoms[n].initPosInAngstroms * OpenMM::NmPerAngstrom);
+        initialPositions.push_back(atoms[n].initPosInAngstroms 
+                                                  * OpenMM::NmPerAngstrom);
     }
 
     // -------------------------------------------------------------------------
