@@ -127,7 +127,7 @@ __global__ void kApplyCShake_kernel(float4* atomPositions, bool addOldPosition)
             float rrpr  = rp_ij.x*dir.x + rp_ij.y*dir.y + rp_ij.z*dir.z;
             float d_ij2  = dir.x*dir.x + dir.y*dir.y + dir.z*dir.z;
             float reducedMass = cSim.pShakeReducedMass[pos];
-            cSim.pLincsSolution[pos] = (rrpr > d_ij2*1e-6f ? reducedMass*diff/rrpr : 0.0f);
+            cSim.pLincsRhs1[pos] = (rrpr > d_ij2*1e-6f ? reducedMass*diff/rrpr : 0.0f);
             if (requiredIterations == iteration && (rp2 < lowerTol*dist2 || rp2 > upperTol*dist2))
                 requiredIterations = iteration+1;
             pos += blockDim.x * gridDim.x;
@@ -138,33 +138,49 @@ __global__ void kApplyCShake_kernel(float4* atomPositions, bool addOldPosition)
 
         // Multiply by the inverse constraint matrix for each rigid cluster.
 
-        if (cSim.rigidClusters > 0)
+//        if (cSim.rigidClusters > 0)
+//        {
+//            pos = threadIdx.x + blockIdx.x * blockDim.x;
+//            unsigned int block = pos/cSim.clusterShakeBlockSize;
+//            unsigned int indexInBlock = pos-block*cSim.clusterShakeBlockSize;
+//            while (block < cSim.rigidClusters)
+//            {
+//                unsigned int firstConstraint = cSim.pRigidClusterConstraintIndex[block];
+//                unsigned int blockSize = cSim.pRigidClusterConstraintIndex[block+1]-firstConstraint;
+//                if (indexInBlock < blockSize)
+//                {
+//                    // Load the constraint forces and matrix.
+//
+//                    temp[threadIdx.x] = cSim.pLincsSolution[firstConstraint+indexInBlock];
+//                    unsigned int firstMatrixIndex = cSim.pRigidClusterMatrixIndex[block];
+//
+//                    // Multiply by the matrix.
+//
+//                    float sum = 0.0f;
+//                    for (unsigned int i = 0; i < blockSize; i++)
+//                        sum += temp[threadIdx.x-indexInBlock+i]*cSim.pRigidClusterMatrix[firstMatrixIndex+i*blockSize+indexInBlock];
+//                    cSim.pLincsSolution[firstConstraint+indexInBlock] = sum;
+//                }
+//                block += (blockDim.x*gridDim.x)/cSim.clusterShakeBlockSize;
+//            }
+//            kSyncAllThreads_kernel(&cSim.pSyncCounter[gridDim.x], iteration);
+//        }
+        pos = threadIdx.x + blockIdx.x * blockDim.x;
+        while (pos < cSim.lincsConstraints)
         {
-            pos = threadIdx.x + blockIdx.x * blockDim.x;
-            unsigned int block = pos/cSim.clusterShakeBlockSize;
-            unsigned int indexInBlock = pos-block*cSim.clusterShakeBlockSize;
-            while (block < cSim.rigidClusters)
+            float sum = 0.0f;
+            for (unsigned int i = 0; ; i++)
             {
-                unsigned int firstConstraint = cSim.pRigidClusterConstraintIndex[block];
-                unsigned int blockSize = cSim.pRigidClusterConstraintIndex[block+1]-firstConstraint;
-                if (indexInBlock < blockSize)
-                {
-                    // Load the constraint forces and matrix.
-
-                    temp[threadIdx.x] = cSim.pLincsSolution[firstConstraint+indexInBlock];
-                    unsigned int firstMatrixIndex = cSim.pRigidClusterMatrixIndex[block];
-
-                    // Multiply by the matrix.
-
-                    float sum = 0.0f;
-                    for (unsigned int i = 0; i < blockSize; i++)
-                        sum += temp[threadIdx.x-indexInBlock+i]*cSim.pRigidClusterMatrix[firstMatrixIndex+i*blockSize+indexInBlock];
-                    cSim.pLincsSolution[firstConstraint+indexInBlock] = sum;
-                }
-                block += (blockDim.x*gridDim.x)/cSim.clusterShakeBlockSize;
+                int index = pos+i*cSim.lincsConstraints;
+                unsigned int column = cSim.pConstraintMatrixColumn[pos+i*cSim.lincsConstraints];
+                if (column >= cSim.lincsConstraints)
+                    break;
+                sum += cSim.pLincsRhs1[column]*cSim.pConstraintMatrixValue[index];
             }
-            kSyncAllThreads_kernel(&cSim.pSyncCounter[gridDim.x], iteration);
+            cSim.pLincsSolution[pos] = sum;
+            pos += blockDim.x * gridDim.x;
         }
+        kSyncAllThreads_kernel(&cSim.pSyncCounter[gridDim.x], iteration);
 
         // Update the position of each atom.
 

@@ -49,6 +49,7 @@ using namespace std;
 #include "hilbert.h"
 #include "openmm/OpenMMException.h"
 #include "jama_svd.h"
+#include "quern.h"
 
 using OpenMM::OpenMMException;
 using TNT::Array2D;
@@ -562,22 +563,22 @@ static void findRigidClusters(gpuContext gpu, const vector<int>& firstAtom, cons
 
     // Reorder the constraints so those in a cluster are sequential.
 
-    vector<int> constraintOrder(constraintIndices.size());
-    vector<int> clusterStartIndex(rigidClusters.size());
-    set<int> inCluster;
-    int nextIndex = 0;
-    for (int i = 0; i < (int) rigidClusters.size(); ++i) {
-        clusterStartIndex[i] = nextIndex;
-        for (int j = 0; j < (int) rigidClusters[i].size(); ++j) {
-            int constraint = rigidClusters[i][j];
-            constraintOrder[nextIndex++] = constraint;
-            inCluster.insert(constraint);
-        }
-    }
-    for (int i = 0; i < (int) constraintIndices.size(); ++i)
-        if (inCluster.find(constraintIndices[i]) == inCluster.end())
-            constraintOrder[nextIndex++] = constraintIndices[i];
-    constraintIndices = constraintOrder;
+//    vector<int> constraintOrder(constraintIndices.size());
+//    vector<int> clusterStartIndex(rigidClusters.size());
+//    set<int> inCluster;
+//    int nextIndex = 0;
+//    for (int i = 0; i < (int) rigidClusters.size(); ++i) {
+//        clusterStartIndex[i] = nextIndex;
+//        for (int j = 0; j < (int) rigidClusters[i].size(); ++j) {
+//            int constraint = rigidClusters[i][j];
+//            constraintOrder[nextIndex++] = constraint;
+//            inCluster.insert(constraint);
+//        }
+//    }
+//    for (int i = 0; i < (int) constraintIndices.size(); ++i)
+//        if (inCluster.find(constraintIndices[i]) == inCluster.end())
+//            constraintOrder[nextIndex++] = constraintIndices[i];
+//    constraintIndices = constraintOrder;
 
     // Build the CUDA streams.
 
@@ -931,6 +932,132 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
     for (unsigned i = 0; i < atomConstraints.size(); i++)
         maxAtomConstraints = max(maxAtomConstraints, (int) atomConstraints[i].size());
 
+
+
+
+
+    // Compute the constraint coupling matrix
+
+    vector<vector<int> > atomAngles(gpu->natoms);
+    for (int i = 0; i < gpu->sim.bond_angles; i++)
+        atomAngles[(*gpu->psBondAngleID1)[i].y].push_back(i);
+    vector<vector<pair<int, double> > > matrix(numLincs);
+    if (numLincs > 0) {
+        for (int j = 0; j < numLincs; j++) {
+            for (int k = 0; k < numLincs; k++) {
+                if (j == k) {
+                    matrix[j].push_back(pair<int, double>(j, 1.0));
+                    continue;
+                }
+                double scale;
+                int atomj0 = atom1[j];
+                int atomj1 = atom2[j];
+                int atomk0 = atom1[k];
+                int atomk1 = atom2[k];
+                int atoma, atomb, atomc;
+                if (atomj0 == atomk0) {
+                    atoma = atomj1;
+                    atomb = atomj0;
+                    atomc = atomk1;
+                    scale = invMass1[j]/(invMass1[j]+invMass2[j]);
+                }
+                else if (atomj1 == atomk1) {
+                    atoma = atomj0;
+                    atomb = atomj1;
+                    atomc = atomk0;
+                    scale = invMass2[j]/(invMass1[j]+invMass2[j]);
+                }
+                else if (atomj0 == atomk1) {
+                    atoma = atomj1;
+                    atomb = atomj0;
+                    atomc = atomk0;
+                    scale = invMass1[j]/(invMass1[j]+invMass2[j]);
+                }
+                else if (atomj1 == atomk0) {
+                    atoma = atomj0;
+                    atomb = atomj1;
+                    atomc = atomk1;
+                    scale = invMass2[j]/(invMass1[j]+invMass2[j]);
+                }
+                else
+                    continue; // These constraints are not connected.
+
+                // Look for a third constraint forming a triangle with these two.
+
+                bool foundConstraint = false;
+                for (int other = 0; other < numLincs; other++) {
+                    if ((atom1[other] == atoma && atom2[other] == atomc) || (atom1[other] == atomc && atom2[other] == atoma)) {
+                        double d1 = distance[j];
+                        double d2 = distance[k];
+                        double d3 = distance[other];
+                        matrix[j].push_back(pair<int, double>(k, scale*(d1*d1+d2*d2-d3*d3)/(2.0*d1*d2)));
+                        foundConstraint = true;
+                        break;
+                    }
+                }
+                if (!foundConstraint) {
+                    // We didn't find one, so look for an angle force field term.
+
+                    const vector<int>& angleCandidates = atomAngles[atomb];
+                    for (vector<int>::const_iterator iter = angleCandidates.begin(); iter != angleCandidates.end(); iter++) {
+                        int4 atoms = (*gpu->psBondAngleID1)[*iter];
+                        if ((atoms.x == atoma && atoms.z == atomc) || (atoms.z == atoma && atoms.x == atomc)) {
+                            double angle = (*gpu->psBondAngleParameter)[*iter].x;
+                            matrix[j].push_back(pair<int, double>(k, scale*cos(angle*PI/180.0)));
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Invert it using QR.
+
+        vector<int> matrixRowStart;
+        vector<int> matrixColIndex;
+        vector<double> matrixValue;
+        for (int i = 0; i < numLincs; i++) {
+            matrixRowStart.push_back(matrixValue.size());
+            for (int j = 0; j < (int) matrix[i].size(); j++) {
+                pair<int, double> element = matrix[i][j];
+                matrixColIndex.push_back(element.first);
+                matrixValue.push_back(element.second);
+            }
+        }
+        matrixRowStart.push_back(matrixValue.size());
+        int *qRowStart, *qColIndex, *rRowStart, *rColIndex;
+        double *qValue, *rValue;
+        int result = QUERN_compute_qr(numLincs, numLincs, &matrixRowStart[0], &matrixColIndex[0], &matrixValue[0], NULL,
+                &qRowStart, &qColIndex, &qValue, &rRowStart, &rColIndex, &rValue);
+        vector<double> rhs(numLincs);
+        matrix.clear();
+        matrix.resize(numLincs);
+        for (int i = 0; i < numLincs; i++) {
+            // Extract column i of the inverse matrix.
+
+            for (int j = 0; j < numLincs; j++)
+                rhs[j] = (i == j ? 1.0 : 0.0);
+            result = QUERN_multiply_with_q_transpose(numLincs, qRowStart, qColIndex, qValue, &rhs[0]);
+            result = QUERN_solve_with_r(numLincs, rRowStart, rColIndex, rValue, &rhs[0], &rhs[0]);
+            for (int j = 0; j < numLincs; j++) {
+                double value = rhs[j]*distance[i]/distance[j];
+                if (abs(value) > 0.02)
+                    matrix[j].push_back(pair<int, double>(i, value));
+            }
+        }
+        QUERN_free_result(qRowStart, qColIndex, qValue);
+        QUERN_free_result(rRowStart, rColIndex, rValue);
+    }
+    int maxRowElements = 0;
+    for (unsigned i = 0; i < matrix.size(); i++)
+        maxRowElements = max(maxRowElements, (int) matrix[i].size());
+    maxRowElements++;
+
+
+
+
+
+
     // Fill in the CUDA streams.
 
     CUDAStream<int2>* psLincsAtoms = new CUDAStream<int2>(numLincs, 1, "LincsAtoms");
@@ -975,6 +1102,12 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
     CUDAStream<float>* psShakeReducedMass = new CUDAStream<float>(numLincs, 1, "LincsSolution");
     gpu->psShakeReducedMass             = psShakeReducedMass;
     gpu->sim.pShakeReducedMass          = psShakeReducedMass->_pDevData;
+    CUDAStream<unsigned int>* psConstraintMatrixColumn = new CUDAStream<unsigned int>(numLincs*maxRowElements, 1, "ConstraintMatrixColumn");
+    gpu->psConstraintMatrixColumn               = psConstraintMatrixColumn;
+    gpu->sim.pConstraintMatrixColumn            = psConstraintMatrixColumn->_pDevData;
+    CUDAStream<float>* psConstraintMatrixValue = new CUDAStream<float>(numLincs*maxRowElements, 1, "ConstraintMatrixValue");
+    gpu->psConstraintMatrixValue             = psConstraintMatrixValue;
+    gpu->sim.pConstraintMatrixValue          = psConstraintMatrixValue->_pDevData;
     gpu->sim.lincsConstraints = numLincs;
     for (int i = 0; i < numLincs; i++) {
         int c = lincsConstraints[i];
@@ -986,6 +1119,11 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
         (*psLincsNumConnections)[i] = linkedConstraints[i].size();
         for (unsigned int j = 0; j < linkedConstraints[i].size(); j++)
             (*psLincsConnections)[i+j*numLincs] = linkedConstraints[i][j];
+        for (unsigned int j = 0; j < matrix[i].size(); j++) {
+            (*psConstraintMatrixColumn)[i+j*numLincs] = matrix[i][j].first;
+            (*psConstraintMatrixValue)[i+j*numLincs] = matrix[i][j].second;
+        }
+        (*psConstraintMatrixColumn)[i+matrix[i].size()*numLincs] = numLincs;
     }
     for (unsigned int i = 0; i < psSyncCounter->_length; i++)
         (*psSyncCounter)[i] = -1;
@@ -1005,6 +1143,8 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
     psLincsAtomConstraints->Upload();
     psLincsNumAtomConstraints->Upload();
     psSyncCounter->Upload();
+    psConstraintMatrixColumn->Upload();
+    psConstraintMatrixValue->Upload();
     gpu->sim.lincsTerms = lincsTerms;
     gpu->sim.lincs_threads_per_block = (gpu->sim.lincsConstraints + gpu->sim.blocks - 1) / gpu->sim.blocks;
     if (gpu->sim.lincs_threads_per_block > gpu->sim.threads_per_block)
@@ -1391,6 +1531,8 @@ void* gpuInit(int numAtoms)
     gpu->psRigidClusterConstraintIndex = NULL;
     gpu->psRigidClusterMatrix       = NULL;
     gpu->psRigidClusterMatrixIndex  = NULL;
+    gpu->psConstraintMatrixColumn   = NULL;
+    gpu->psConstraintMatrixValue    = NULL;
 
     // Initialize output buffer before reading parameters
     gpu->pOutputBufferCounter       = new unsigned int[gpu->sim.paddedNumberOfAtoms];
@@ -1492,9 +1634,9 @@ void gpuShutDown(gpuContext gpu)
     delete gpu->psxVector4;
     delete gpu->psvVector4;
     delete gpu->psSigEps2; 
-    delete gpu->psEwaldEikr; 
-    delete gpu->psEwaldStructureFactor; 
-    delete gpu->psEwaldCosSinSum; 
+    delete gpu->psEwaldEikr;
+    delete gpu->psEwaldStructureFactor;
+    delete gpu->psEwaldCosSinSum;
     delete gpu->psObcData; 
     delete gpu->psObcChain;
     delete gpu->psBornForce;
@@ -1549,6 +1691,8 @@ void gpuShutDown(gpuContext gpu)
     delete gpu->psRigidClusterConstraintIndex;
     delete gpu->psRigidClusterMatrix;
     delete gpu->psRigidClusterMatrixIndex;
+    delete gpu->psConstraintMatrixColumn;
+    delete gpu->psConstraintMatrixValue;
     if (gpu->cudpp != 0)
         cudppDestroyPlan(gpu->cudpp);
 

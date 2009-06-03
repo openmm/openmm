@@ -144,6 +144,8 @@ struct _gpuContext {
     CUDAStream<float>* psRigidClusterMatrix;// The inverse constraint matrix for each rigid cluster
     CUDAStream<unsigned int>* psRigidClusterConstraintIndex; // The index of each cluster in the stream containing cluster constraints.
     CUDAStream<unsigned int>* psRigidClusterMatrixIndex; // The index of each cluster in the stream containing cluster matrices.
+    CUDAStream<unsigned int>* psConstraintMatrixColumn; // The column of each element in the constraint matrix.
+    CUDAStream<float>* psConstraintMatrixValue; // The value of each element in the constraint matrix.
 };
 
 typedef struct _gpuContext *gpuContext;

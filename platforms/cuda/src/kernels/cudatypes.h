@@ -402,6 +402,8 @@ struct cudaGmxSimulation {
     float*          pRigidClusterMatrix;            // The inverse constraint matrix for each rigid cluster
     unsigned int*   pRigidClusterConstraintIndex;   // The index of each cluster in the stream containing cluster constraints.
     unsigned int*   pRigidClusterMatrixIndex;       // The index of each cluster in the stream containing cluster matrices.
+    unsigned int*   pConstraintMatrixColumn;       // The column of each element in the constraint matrix.
+    float*          pConstraintMatrixValue;        // The value of each element in the constraint matrix.
 
     // Mutable stuff
     float4*         pPosq;                          // Pointer to atom positions and charges
