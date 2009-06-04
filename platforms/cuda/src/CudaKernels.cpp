@@ -355,10 +355,26 @@ void CudaCalcGBSAOBCForceKernel::executeForces(OpenMMContextImpl& context) {
 }
 
 static void initializeIntegration(const System& system, CudaPlatform::PlatformData& data, const Integrator& integrator) {
+
+    // Initialize any terms that haven't already been handled by a Force.
+
+    _gpuContext* gpu = data.gpu;
+    if (!data.hasBonds)
+        gpuSetBondParameters(gpu, vector<int>(), vector<int>(), vector<float>(), vector<float>());
+    if (!data.hasAngles)
+        gpuSetBondAngleParameters(gpu, vector<int>(), vector<int>(), vector<int>(), vector<float>(), vector<float>());
+    if (!data.hasPeriodicTorsions)
+        gpuSetDihedralParameters(gpu, vector<int>(), vector<int>(), vector<int>(), vector<int>(), vector<float>(), vector<float>(), vector<int>());
+    if (!data.hasRB)
+        gpuSetRbDihedralParameters(gpu, vector<int>(), vector<int>(), vector<int>(), vector<int>(), vector<float>(), vector<float>(),
+                vector<float>(), vector<float>(), vector<float>(), vector<float>());
+    if (!data.hasNonbonded) {
+        gpuSetCoulombParameters(gpu, 138.935485f, vector<int>(), vector<float>(), vector<float>(), vector<float>(), vector<char>(), vector<vector<int> >(), NO_CUTOFF);
+        gpuSetLJ14Parameters(gpu, 138.935485f, 1.0f, vector<int>(), vector<int>(), vector<float>(), vector<float>(), vector<float>(), vector<float>());
+    }
     
     // Set masses.
     
-    _gpuContext* gpu = data.gpu;
     int numParticles = system.getNumParticles();
     vector<float> mass(numParticles);
     for (int i = 0; i < numParticles; i++)
@@ -384,22 +400,6 @@ static void initializeIntegration(const System& system, CudaPlatform::PlatformDa
         invMass2[i] = 1.0f/mass[particle2Index];
     }
     gpuSetConstraintParameters(gpu, particle1, particle2, distance, invMass1, invMass2, (float)integrator.getConstraintTolerance(), 4);
-    
-    // Initialize any terms that haven't already been handled by a Force.
-    
-    if (!data.hasBonds)
-        gpuSetBondParameters(gpu, vector<int>(), vector<int>(), vector<float>(), vector<float>());
-    if (!data.hasAngles)
-        gpuSetBondAngleParameters(gpu, vector<int>(), vector<int>(), vector<int>(), vector<float>(), vector<float>());
-    if (!data.hasPeriodicTorsions)
-        gpuSetDihedralParameters(gpu, vector<int>(), vector<int>(), vector<int>(), vector<int>(), vector<float>(), vector<float>(), vector<int>());
-    if (!data.hasRB)
-        gpuSetRbDihedralParameters(gpu, vector<int>(), vector<int>(), vector<int>(), vector<int>(), vector<float>(), vector<float>(),
-                vector<float>(), vector<float>(), vector<float>(), vector<float>());
-    if (!data.hasNonbonded) {
-        gpuSetCoulombParameters(gpu, 138.935485f, vector<int>(), vector<float>(), vector<float>(), vector<float>(), vector<char>(), vector<vector<int> >(), NO_CUTOFF);
-        gpuSetLJ14Parameters(gpu, 138.935485f, 1.0f, vector<int>(), vector<int>(), vector<float>(), vector<float>(), vector<float>(), vector<float>());
-    }
     
     // Finish initialization.
 

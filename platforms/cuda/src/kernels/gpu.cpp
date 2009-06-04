@@ -85,6 +85,18 @@ struct Constraint
     float distance2;
 };
 
+struct ConstraintOrderer : public binary_function<int, int, bool> {
+    const vector<int>& atom1;
+    const vector<int>& atom2;
+    ConstraintOrderer(const vector<int>& atom1, const vector<int>& atom2) : atom1(atom1), atom2(atom2) {
+    }
+    bool operator()(int x, int y) {
+        if (atom1[x] != atom1[y])
+            return atom1[x] < atom1[y];
+        return atom2[x] < atom2[y];
+    }
+};
+
 struct Molecule {
     vector<int> atoms;
     vector<int> bonds;
@@ -932,10 +944,6 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
     for (unsigned i = 0; i < atomConstraints.size(); i++)
         maxAtomConstraints = max(maxAtomConstraints, (int) atomConstraints[i].size());
 
-
-
-
-
     // Compute the constraint coupling matrix
 
     vector<vector<int> > atomAngles(gpu->natoms);
@@ -950,34 +958,36 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
                     continue;
                 }
                 double scale;
-                int atomj0 = atom1[j];
-                int atomj1 = atom2[j];
-                int atomk0 = atom1[k];
-                int atomk1 = atom2[k];
+                int cj = lincsConstraints[j];
+                int ck = lincsConstraints[k];
+                int atomj0 = atom1[cj];
+                int atomj1 = atom2[cj];
+                int atomk0 = atom1[ck];
+                int atomk1 = atom2[ck];
                 int atoma, atomb, atomc;
                 if (atomj0 == atomk0) {
                     atoma = atomj1;
                     atomb = atomj0;
                     atomc = atomk1;
-                    scale = invMass1[j]/(invMass1[j]+invMass2[j]);
+                    scale = invMass1[cj]/(invMass1[cj]+invMass2[cj]);
                 }
                 else if (atomj1 == atomk1) {
                     atoma = atomj0;
                     atomb = atomj1;
                     atomc = atomk0;
-                    scale = invMass2[j]/(invMass1[j]+invMass2[j]);
+                    scale = invMass2[cj]/(invMass1[cj]+invMass2[cj]);
                 }
                 else if (atomj0 == atomk1) {
                     atoma = atomj1;
                     atomb = atomj0;
                     atomc = atomk0;
-                    scale = invMass1[j]/(invMass1[j]+invMass2[j]);
+                    scale = invMass1[cj]/(invMass1[cj]+invMass2[cj]);
                 }
                 else if (atomj1 == atomk0) {
                     atoma = atomj0;
                     atomb = atomj1;
                     atomc = atomk1;
-                    scale = invMass2[j]/(invMass1[j]+invMass2[j]);
+                    scale = invMass2[cj]/(invMass1[cj]+invMass2[cj]);
                 }
                 else
                     continue; // These constraints are not connected.
@@ -987,8 +997,8 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
                 bool foundConstraint = false;
                 for (int other = 0; other < numLincs; other++) {
                     if ((atom1[other] == atoma && atom2[other] == atomc) || (atom1[other] == atomc && atom2[other] == atoma)) {
-                        double d1 = distance[j];
-                        double d2 = distance[k];
+                        double d1 = distance[cj];
+                        double d2 = distance[ck];
                         double d3 = distance[other];
                         matrix[j].push_back(pair<int, double>(k, scale*(d1*d1+d2*d2-d3*d3)/(2.0*d1*d2)));
                         foundConstraint = true;
@@ -1040,8 +1050,8 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
             result = QUERN_multiply_with_q_transpose(numLincs, qRowStart, qColIndex, qValue, &rhs[0]);
             result = QUERN_solve_with_r(numLincs, rRowStart, rColIndex, rValue, &rhs[0], &rhs[0]);
             for (int j = 0; j < numLincs; j++) {
-                double value = rhs[j]*distance[i]/distance[j];
-                if (abs(value) > 0.02)
+                double value = rhs[j]*distance[lincsConstraints[i]]/distance[lincsConstraints[j]];
+                if (abs(value) > 0.1)
                     matrix[j].push_back(pair<int, double>(i, value));
             }
         }
@@ -1053,10 +1063,18 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
         maxRowElements = max(maxRowElements, (int) matrix[i].size());
     maxRowElements++;
 
+    // Sort the constraints.
 
-
-
-
+    vector<int> constraintOrder(numLincs);
+    for (int i = 0; i < numLincs; ++i)
+        constraintOrder[i] = i;
+    sort(constraintOrder.begin(), constraintOrder.end(), ConstraintOrderer(atom1, atom2));
+    vector<int> inverseOrder(numLincs);
+    for (int i = 0; i < numLincs; ++i)
+        inverseOrder[constraintOrder[i]] = i;
+    for (int i = 0; i < matrix.size(); ++i)
+        for (int j = 0; j < matrix[i].size(); ++j)
+            matrix[i][j].first = inverseOrder[matrix[i][j].first];
 
     // Fill in the CUDA streams.
 
@@ -1110,20 +1128,21 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
     gpu->sim.pConstraintMatrixValue          = psConstraintMatrixValue->_pDevData;
     gpu->sim.lincsConstraints = numLincs;
     for (int i = 0; i < numLincs; i++) {
-        int c = lincsConstraints[i];
+        int index = constraintOrder[i];
+        int c = lincsConstraints[index];
         (*psLincsAtoms)[i].x = atom1[c];
         (*psLincsAtoms)[i].y = atom2[c];
         (*psLincsDistance)[i].w = distance[c];
         (*psLincsS)[i] = 1.0f/sqrt(invMass1[c]+invMass2[c]);
         (*psShakeReducedMass)[i] = 0.5f/(invMass1[c]+invMass2[c]);
-        (*psLincsNumConnections)[i] = linkedConstraints[i].size();
-        for (unsigned int j = 0; j < linkedConstraints[i].size(); j++)
-            (*psLincsConnections)[i+j*numLincs] = linkedConstraints[i][j];
-        for (unsigned int j = 0; j < matrix[i].size(); j++) {
-            (*psConstraintMatrixColumn)[i+j*numLincs] = matrix[i][j].first;
-            (*psConstraintMatrixValue)[i+j*numLincs] = matrix[i][j].second;
+        (*psLincsNumConnections)[i] = linkedConstraints[index].size();
+        for (unsigned int j = 0; j < linkedConstraints[index].size(); j++)
+            (*psLincsConnections)[i+j*numLincs] = linkedConstraints[index][j];
+        for (unsigned int j = 0; j < matrix[index].size(); j++) {
+            (*psConstraintMatrixColumn)[i+j*numLincs] = matrix[index][j].first;
+            (*psConstraintMatrixValue)[i+j*numLincs] = matrix[index][j].second;
         }
-        (*psConstraintMatrixColumn)[i+matrix[i].size()*numLincs] = numLincs;
+        (*psConstraintMatrixColumn)[i+matrix[index].size()*numLincs] = numLincs;
     }
     for (unsigned int i = 0; i < psSyncCounter->_length; i++)
         (*psSyncCounter)[i] = -1;
@@ -1131,7 +1150,7 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
         (*psLincsNumAtomConstraints)[i] = atomConstraints[i].size();
         for (unsigned int j = 0; j < atomConstraints[i].size(); j++) {
             bool forward = (atom1[lincsConstraints[atomConstraints[i][j]]] == i);
-            (*psLincsAtomConstraints)[i+j*gpu->natoms] = (forward ? atomConstraints[i][j]+1 : -atomConstraints[i][j]-1);
+            (*psLincsAtomConstraints)[i+j*gpu->natoms] = (forward ? inverseOrder[atomConstraints[i][j]]+1 : -inverseOrder[atomConstraints[i][j]]-1);
         }
     }
     psLincsAtoms->Upload();

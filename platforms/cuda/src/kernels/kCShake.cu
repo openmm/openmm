@@ -68,8 +68,6 @@ __device__ void kSyncAllThreads_kernel(short* syncCounter, short newCount)
 
 __global__ void kApplyCShake_kernel(float4* atomPositions, bool addOldPosition)
 {
-    extern __shared__ float temp[];
-
     // Initialize counters used for monitoring convergence and doing global thread synchronization.
 
     __shared__ unsigned int requiredIterations;
@@ -136,43 +134,16 @@ __global__ void kApplyCShake_kernel(float4* atomPositions, bool addOldPosition)
         if (threadIdx.x == 0 && requiredIterations > iteration)
             cSim.pRequiredIterations[0] = requiredIterations;
 
-        // Multiply by the inverse constraint matrix for each rigid cluster.
+        // Multiply by the inverse constraint matrix.
 
-//        if (cSim.rigidClusters > 0)
-//        {
-//            pos = threadIdx.x + blockIdx.x * blockDim.x;
-//            unsigned int block = pos/cSim.clusterShakeBlockSize;
-//            unsigned int indexInBlock = pos-block*cSim.clusterShakeBlockSize;
-//            while (block < cSim.rigidClusters)
-//            {
-//                unsigned int firstConstraint = cSim.pRigidClusterConstraintIndex[block];
-//                unsigned int blockSize = cSim.pRigidClusterConstraintIndex[block+1]-firstConstraint;
-//                if (indexInBlock < blockSize)
-//                {
-//                    // Load the constraint forces and matrix.
-//
-//                    temp[threadIdx.x] = cSim.pLincsSolution[firstConstraint+indexInBlock];
-//                    unsigned int firstMatrixIndex = cSim.pRigidClusterMatrixIndex[block];
-//
-//                    // Multiply by the matrix.
-//
-//                    float sum = 0.0f;
-//                    for (unsigned int i = 0; i < blockSize; i++)
-//                        sum += temp[threadIdx.x-indexInBlock+i]*cSim.pRigidClusterMatrix[firstMatrixIndex+i*blockSize+indexInBlock];
-//                    cSim.pLincsSolution[firstConstraint+indexInBlock] = sum;
-//                }
-//                block += (blockDim.x*gridDim.x)/cSim.clusterShakeBlockSize;
-//            }
-//            kSyncAllThreads_kernel(&cSim.pSyncCounter[gridDim.x], iteration);
-//        }
         pos = threadIdx.x + blockIdx.x * blockDim.x;
         while (pos < cSim.lincsConstraints)
         {
             float sum = 0.0f;
             for (unsigned int i = 0; ; i++)
             {
-                int index = pos+i*cSim.lincsConstraints;
-                unsigned int column = cSim.pConstraintMatrixColumn[pos+i*cSim.lincsConstraints];
+                unsigned int index = pos+i*cSim.lincsConstraints;
+                unsigned int column = cSim.pConstraintMatrixColumn[index];
                 if (column >= cSim.lincsConstraints)
                     break;
                 sum += cSim.pLincsRhs1[column]*cSim.pConstraintMatrixValue[index];
@@ -222,7 +193,7 @@ void kApplyFirstCShake(gpuContext gpu)
 //    printf("kApplyFirstCShake\n");
     if (gpu->sim.lincsConstraints > 0)
     {
-        kApplyCShake_kernel<<<gpu->sim.blocks, gpu->sim.lincs_threads_per_block, 4*gpu->sim.lincs_threads_per_block>>>(gpu->sim.pPosqP, true);
+        kApplyCShake_kernel<<<gpu->sim.blocks, gpu->sim.lincs_threads_per_block>>>(gpu->sim.pPosqP, true);
         LAUNCHERROR("kApplyCShake");
     }
 }
@@ -232,7 +203,7 @@ void kApplySecondCShake(gpuContext gpu)
 //    printf("kApplySecondCShake\n");
     if (gpu->sim.lincsConstraints > 0)
     {
-        kApplyCShake_kernel<<<gpu->sim.blocks, gpu->sim.lincs_threads_per_block, 4*gpu->sim.lincs_threads_per_block>>>(gpu->sim.pPosq, false);
+        kApplyCShake_kernel<<<gpu->sim.blocks, gpu->sim.lincs_threads_per_block>>>(gpu->sim.pPosq, false);
         LAUNCHERROR("kApplyCShake");
     }
 }
