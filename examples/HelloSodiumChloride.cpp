@@ -97,10 +97,10 @@ myWritePDBFrame(int frameNum, double timeInPs, double energyInKcal,
     printf("MODEL     %d\n", frameNum);
     printf("REMARK 250 time=%.3f ps; energy=%.3f kcal/mole\n", 
            timeInPs, energyInKcal);
-    for (int i=0; *atoms[i].pdb; ++i)
+    for (int n=0; *atoms[n].pdb; ++n)
         printf("ATOM  %5d %4s SLT     1    %8.3f%8.3f%8.3f  1.00  0.00\n", 
-            i+1, atoms[i].pdb, 
-            atoms[i].posInAng[0], atoms[i].posInAng[1], atoms[i].posInAng[2]);
+            n+1, atoms[n].pdb, 
+            atoms[n].posInAng[0], atoms[n].posInAng[1], atoms[n].posInAng[2]);
     printf("ENDMDL\n");
 }
 
@@ -248,6 +248,7 @@ myInitializeOpenMM( const MyAtomInfo    atoms[],
                           atom.gbsaRadiusInAng * OpenMM::NmPerAngstrom,
                           atom.gbsaScaleFactor);
 
+        // Convert the initial position to nm and append to the array.
         const Vec3 posInNm(atom.initPosInAng[0] * OpenMM::NmPerAngstrom,
                            atom.initPosInAng[1] * OpenMM::NmPerAngstrom,
                            atom.initPosInAng[2] * OpenMM::NmPerAngstrom);
@@ -280,10 +281,10 @@ myGetOpenMMState(MyOpenMMData* omm, bool wantEnergy,
     int infoMask = 0;
     infoMask = OpenMM::State::Positions;
     if (wantEnergy) {
-        infoMask += OpenMM::State::Velocities; // for kinetic energy
-        infoMask += OpenMM::State::Energy;     // for potential energy (expensive)
+        infoMask += OpenMM::State::Velocities; // for kinetic energy (cheap)
+        infoMask += OpenMM::State::Energy;     // for pot. energy (expensive)
     }
-    // Forces are also available (and NOT expensive).
+    // Forces are also available (and cheap).
 
     const OpenMM::State state = omm->context->getState(infoMask);
     timeInPs = state.getTime(); // OpenMM time is in ps already
