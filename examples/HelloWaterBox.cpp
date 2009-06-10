@@ -100,6 +100,10 @@ static void simulateWaterBox() {
     OpenMM::HarmonicAngleForce&     bondBend    = *new OpenMM::HarmonicAngleForce();
     system.addForce(&bondBend);
 
+    OpenMM::AndersenThermostat&     thermostat  = *new OpenMM::AndersenThermostat(
+            300, // temperature in kelvins
+            91.0); // collision frequency in 1/picoseconds
+
     // -------------------------------------------------------------------------
     // Specify the atoms and their properties:
     //  (1) System needs to know the masses.
@@ -206,10 +210,7 @@ static void simulateWaterBox() {
     // positions we collected above. Initial velocities will be zero.
     // -------------------------------------------------------------------------
 
-    // Use LangevinIntegrator to maintain temperature
-    OpenMM::LangevinIntegrator integrator(
-            300, // temperature in kelvins
-            0.01099, // collision interval in picoseconds (1/91)
+    OpenMM::VerletIntegrator integrator(
             StepSizeInFs * OpenMM::PsPerFs);
     OpenMM::OpenMMContext    context(system, integrator);
     context.setPositions(initialPositions);
