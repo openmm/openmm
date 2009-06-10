@@ -28,8 +28,6 @@
 #include "OpenMM.h"
 using namespace OpenMM;
 
-#include <iostream>
-
 
 static inline Vec3 toVec3(const OpenMM_Vec3 src) {
     return Vec3(src[0], src[1], src[2]);
@@ -160,14 +158,12 @@ void openmm_string_set_(OpenMM_String*& os, const char* in, int len) {
     // OpenMM::Platform //
     //////////////////////
 void OpenMM_Platform_loadPluginsFromDirectory(const char* dir) {
-    printf("loadPlugins(0x%x)\n", dir);
     OpenMM::Platform::loadPluginsFromDirectory(std::string(dir));
 }
 const char* OpenMM_Platform_getDefaultPluginsDirectory() {
     static std::string dir;
     dir = OpenMM::Platform::getDefaultPluginsDirectory();
     const char* out = dir.c_str();
-    printf("def plugins dir=0x%x '%s'\n", out, out);
     return dir.c_str();
 }
 
