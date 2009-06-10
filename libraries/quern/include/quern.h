@@ -11,6 +11,8 @@
 extern "C" {
 #endif
 
+#include "openmm/internal/windowsExport.h"
+
 // Function return values: nonzero indicates an error
 #define QUERN_OK 0
 #define QUERN_INPUT_ERROR 1
@@ -21,7 +23,7 @@ extern "C" {
 // Requires A1_row_start to have room for num_columns+1 entries,
 //          A1_column_index to have room for all nonzeros,
 //      and A1_value to have room for all nonzeros.
-int QUERN_convert_column_format_to_row_format(int num_rows,
+int OPENMM_EXPORT QUERN_convert_column_format_to_row_format(int num_rows,
                                               int num_columns,
                                               const int* A0_column_start,
                                               const int* A0_row_index,
@@ -34,7 +36,7 @@ int QUERN_convert_column_format_to_row_format(int num_rows,
 // breadth-first search column ordering, suitable for incomplete QR
 // preconditioning.
 // Requires column_order to have room for n entries.
-int QUERN_get_rbfs_column_ordering(int m,
+int OPENMM_EXPORT QUERN_get_rbfs_column_ordering(int m,
                                    int n,
                                    const int* A_row_start,
                                    const int* A_column_index,
@@ -42,7 +44,7 @@ int QUERN_get_rbfs_column_ordering(int m,
 
 // Takes a length n column ordering and a compressed sparse row format m*n
 // matrix, then reorders each row accordingly.
-int QUERN_reorder_columns(int m,
+int OPENMM_EXPORT QUERN_reorder_columns(int m,
                           int n,
                           const int* column_order,
                           const int* A_row_start,
@@ -55,21 +57,21 @@ int QUERN_reorder_columns(int m,
 // This is recommended as a cheap pre-process before QR, at least if nothing
 // is known about the current structure, to improve performance.
 // Requires row_order to have room for m integers.
-int QUERN_get_profile_row_ordering(int m,
+int OPENMM_EXPORT QUERN_get_profile_row_ordering(int m,
                                    int n,
                                    const int* A_row_start,
                                    const int* A_column_index,
                                    int* row_order);
 
 // Reorders a given input vector x into an output vector y of length m.
-int QUERN_reorder_vector(int m,
+int OPENMM_EXPORT QUERN_reorder_vector(int m,
                          const int* order,
                          const double* x,
                          double* y);
 
 // Applies the inverse order to a given input vector x, saving in an output
 // vector y of length m.
-int QUERN_inverse_order_vector(int m,
+int OPENMM_EXPORT QUERN_inverse_order_vector(int m,
                                const int* order,
                                const double* x,
                                double* y);
@@ -79,7 +81,7 @@ int QUERN_inverse_order_vector(int m,
 // row_order is non-null, it should contain the order in which rows of A should be
 // taken; if it is null, the natural ordering is used. Memory for R is
 // allocated internally; use QUERN_free_result to free.
-int QUERN_compute_qr_without_q(int m,
+int OPENMM_EXPORT QUERN_compute_qr_without_q(int m,
                                int n,
                                const int* A_row_start,
                                const int* A_column_index,
@@ -96,7 +98,7 @@ int QUERN_compute_qr_without_q(int m,
 // it should contain the order in which rows of A should be taken; if it is
 // null, the natural ordering is used. Memory for Q and R is allocated
 // internally; use QUERN_free_result to free.
-int QUERN_compute_qr(int m,
+int OPENMM_EXPORT QUERN_compute_qr(int m,
                      int n,
                      const int* A_row_start,
                      const int* A_column_index,
@@ -114,7 +116,7 @@ int QUERN_compute_qr(int m,
 // sparse row format. If row_order is non-null, it should contain the order in
 // which rows of A should be taken; if it is null, the natural ordering is used.
 // Memory for R is allocated internally; use QUERN_free_result to free.
-int QUERN_compute_incomplete_qr_without_q(int m,
+int OPENMM_EXPORT QUERN_compute_incomplete_qr_without_q(int m,
                                           int n,
                                           const int* A_row_start,
                                           const int* A_column_index,
@@ -132,7 +134,7 @@ int QUERN_compute_incomplete_qr_without_q(int m,
 // it should contain the order in which rows of A should be taken; if it is
 // null, the natural ordering is used. Memory for Q and R is allocated
 // internally; use QUERN_free_result to free.
-int QUERN_compute_incomplete_qr(int m,
+int OPENMM_EXPORT QUERN_compute_incomplete_qr(int m,
                                 int n,
                                 const int* A_row_start,
                                 const int* A_column_index,
@@ -148,13 +150,13 @@ int QUERN_compute_incomplete_qr(int m,
 
 // Free the memory allocated during QR factorization (for either Q or R).
 // After calling this, do not try to access the factor again!
-void QUERN_free_result(int* row_start,
+void OPENMM_EXPORT QUERN_free_result(int* row_start,
                        int* column_index,
                        double* value);
 
 // Compute the product of an m*n CSR matrix with n-vector input in
 // m-vector result.
-int QUERN_multiply(int m,
+int OPENMM_EXPORT QUERN_multiply(int m,
                    int n,
                    const int* row_start,
                    const int* column_index,
@@ -164,7 +166,7 @@ int QUERN_multiply(int m,
 
 // Compute the product of an m*n CSR matrix transposes with m-vector input in
 // n-vector result.
-int QUERN_multiply_transpose(int m,
+int OPENMM_EXPORT QUERN_multiply_transpose(int m,
                              int n,
                              const int* row_start,
                              const int* column_index,
@@ -177,7 +179,7 @@ int QUERN_multiply_transpose(int m,
 // zeros to make it length m.
 // If a row reordering of A was involved, you probably want to
 // call QUERN_inverse_order_vector afterwards.
-int QUERN_multiply_with_q(int m,
+int OPENMM_EXPORT QUERN_multiply_with_q(int m,
                           const int* Q_row_start,
                           const int* Q_column_index,
                           const double* Q_value,
@@ -186,7 +188,7 @@ int QUERN_multiply_with_q(int m,
 // Compute the product Q^T*x in-place (Q from QR factorization).
 // If a row reordering of A was involved, you probably want to
 // call QUERN_reorder_vector first.
-int QUERN_multiply_with_q_transpose(int m,
+int OPENMM_EXPORT QUERN_multiply_with_q_transpose(int m,
                                     const int* Q_row_start,
                                     const int* Q_column_index,
                                     const double* Q_value,
@@ -194,7 +196,7 @@ int QUERN_multiply_with_q_transpose(int m,
 
 // Compute result=R^{-1}*rhs (R from QR factorization).
 // The vector result may actually be aliased to rhs, for an in-place solve.
-int QUERN_solve_with_r(int n,
+int OPENMM_EXPORT QUERN_solve_with_r(int n,
                        const int* R_row_start,
                        const int* R_column_index,
                        const double* R_value,
@@ -202,7 +204,7 @@ int QUERN_solve_with_r(int n,
                        double* result);
 
 // Compute R^{-T}*x in-place (R from QR factorization).
-int QUERN_solve_with_r_transpose_in_place(int n,
+int OPENMM_EXPORT QUERN_solve_with_r_transpose_in_place(int n,
                                           const int* R_row_start,
                                           const int* R_column_index,
                                           const double* R_value,
@@ -210,7 +212,7 @@ int QUERN_solve_with_r_transpose_in_place(int n,
 
 // CGNR solver for A^T*A*x=rhs, starting with zero initial guess,
 // with R as preconditioner.
-int QUERN_solve_with_CGNR(int m,
+int OPENMM_EXPORT QUERN_solve_with_CGNR(int m,
                           int n,
                           const int* A_row_start,
                           const int* A_column_index,
