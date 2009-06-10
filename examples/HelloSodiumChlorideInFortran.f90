@@ -8,7 +8,7 @@ implicit none
 !-------------------------------------------------------------------------------
 real*8 StepSizeInFs, ReportIntervalInFs, SimulationTimeInPs
 parameter(StepSizeInFs = 2)
-parameter(ReportIntervalInFs = 10)
+parameter(ReportIntervalInFs = 50)
 parameter(SimulationTimeInPs = 100)
 integer NumSilentSteps
 parameter(NumSilentSteps = (ReportIntervalInFs / StepSizeInFs + 0.5))

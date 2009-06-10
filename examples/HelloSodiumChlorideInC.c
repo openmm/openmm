@@ -30,7 +30,7 @@ static const double SolventDielectric   = 80.;    /*typical for water    */
 static const double SoluteDielectric    = 2.;     /*typical for protein  */
 
 static const double StepSizeInFs        = 2;      /*integration step size (fs)  */
-static const double ReportIntervalInFs  = 10;     /*how often for PDB frame (fs)*/
+static const double ReportIntervalInFs  = 50;     /*how often for PDB frame (fs)*/
 static const double SimulationTimeInPs  = 100;    /*total simulation time (ps)  */
 
 /* Currently energy calculation is not available in the GPU kernels so asking
