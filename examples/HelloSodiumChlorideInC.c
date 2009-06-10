@@ -1,189 +1,331 @@
 /* -----------------------------------------------------------------------------
- *            OpenMM(tm) HelloSodiumChloride example in C (May 2009)
+ *           OpenMM(tm) HelloSodiumChloride example in C (June 2009)
  * -----------------------------------------------------------------------------
  * This is a complete, self-contained "hello world" example demonstrating 
- * GPU-accelerated constant energy simulation of a very simple system with just 
- * nonbonded forces, consisting of several sodium (Na+) and chloride (Cl-) ions. 
- * A multi-frame PDB file is written to stdout which can be read by VMD or other 
- * visualization tool to produce an animation of the resulting trajectory.
+ * GPU-accelerated constant temperature simulation of a very simple system with
+ * just nonbonded forces, consisting of several sodium (Na+) and chloride (Cl-) 
+ * ions in implicit solvent. A multi-frame PDB file is written to stdout which 
+ * can be read by VMD or other visualization tool to produce an animation of the 
+ * resulting trajectory.
  *
  * Pay particular attention to the handling of units in this example. Incorrect
  * handling of units is a very common error; this example shows how you can
- * continue to work with Amber-style units of Angstroms and kCals while correctly
- * communicating with OpenMM in nanometers and kJoules.
+ * continue to work with Amber-style units like Angstroms, kCals, and van der
+ * Waals radii while correctly communicating with OpenMM in nm, kJ, and sigma.
  *
  * This example is written entirely in ANSI C, using a set of wrappers which
  * are NOT an official part of OpenMM.
  * -------------------------------------------------------------------------- */
-#include "wrappers/OpenMM_CWrapper.h"
+
 
 #include <stdio.h>
+#include <malloc.h>
 
-/* -----------------------------------------------------------------------------
+/* --------------------------------------------------------------------------
  *                   MODELING AND SIMULATION PARAMETERS
  * -------------------------------------------------------------------------- */
-const double StepSizeInFs        = 2;       // integration step size (fs)
-const double ReportIntervalInFs  = 10;      // how often to generate PDB frame (fs)
-const double SimulationTimeInPs  = 100;     // total simulation time (ps)
+static const double Temperature         = 300;    /*Kelvins */
+static const double FrictionInPs        = 1./91.; /*ps between collisions*/
+static const double SolventDielectric   = 80.;    /*typical for water    */
+static const double SoluteDielectric    = 2.;     /*typical for protein  */
 
-static void simulateNaCl();
-static void writePDB(const OpenMM_Context*); // PDB file writer; see below.
+static const double StepSizeInFs        = 2;      /*integration step size (fs)  */
+static const double ReportIntervalInFs  = 10;     /*how often for PDB frame (fs)*/
+static const double SimulationTimeInPs  = 100;    /*total simulation time (ps)  */
 
-/* -----------------------------------------------------------------------------
+/* Currently energy calculation is not available in the GPU kernels so asking
+   for it requires slow Reference Platform computation at reporting intervals. */
+static const int    WantEnergy          = 1;
+
+
+/* --------------------------------------------------------------------------
+ *                          ATOM AND FORCE FIELD DATA
+ * --------------------------------------------------------------------------
+ * This is not part of OpenMM; just a struct we can use to collect atom 
+ * parameters for this example. Normally atom parameters would come from the 
+ * force field's parameterization file. We're going to use data in Angstrom and 
+ * Kilocalorie units and show how to safely convert to OpenMM's internal unit 
+ * system which uses nanometers and kilojoules.
+ */
+typedef struct MyAtomInfo_s { 
+    const char* pdb; 
+    double      mass, charge, vdwRadiusInAng, vdwEnergyInKcal,
+                gbsaRadiusInAng, gbsaScaleFactor;
+    double      initPosInAng[3];
+    double      posInAng[3]; /*leave room for runtime state info*/
+} MyAtomInfo;
+static MyAtomInfo atoms[] = {
+/* pdb   mass  charge  vdwRad vdwEnergy   gbsaRad gbsaScale  initPos */
+{" NA ", 22.99,  1,    1.8680, 0.00277,    1.992,   0.8,     8, 0,  0},
+{" CL ", 35.45, -1,    2.4700, 0.1000,     1.735,   0.8,    -8, 0,  0},
+{" NA ", 22.99,  1,    1.8680, 0.00277,    1.992,   0.8,     0, 9,  0},
+{" CL ", 35.45, -1,    2.4700, 0.1000,     1.735,   0.8,     0,-9,  0},
+{" NA ", 22.99,  1,    1.8680, 0.00277,    1.992,   0.8,     0, 0,-10},
+{" CL ", 35.45, -1,    2.4700, 0.1000,     1.735,   0.8,     0, 0, 10},
+{""} // end of list
+};
+
+
+/* --------------------------------------------------------------------------
+ *                           INTERFACE TO OpenMM
+ * --------------------------------------------------------------------------
+ * These four functions and an opaque structure are used to interface our main
+ * program with OpenMM without the main program having any direct interaction
+ * with the OpenMM API. This is a clean approach for interfacing with any MD
+ * code, although the details of the interface routines will differ.
+ */
+typedef struct MyOpenMMData_s MyOpenMMData;
+static MyOpenMMData* myInitializeOpenMM(const MyAtomInfo atoms[],
+                                        double temperature,
+                                        double frictionInPs,
+                                        double solventDielectric,
+                                        double soluteDielectric,
+                                        double stepSizeInFs, 
+                                        const char** platformName);
+static void          myStepWithOpenMM(MyOpenMMData*, int numSteps);
+static void          myGetOpenMMState(MyOpenMMData*, int wantEnergy,
+                                      double* time, double* energy, 
+                                      MyAtomInfo atoms[]);
+static void          myTerminateOpenMM(MyOpenMMData*);
+
+/* --------------------------------------------------------------------------
+ *                               PDB FILE WRITER
+ * --------------------------------------------------------------------------
+ * Given state data, output a single frame (pdb "model") of the trajectory.
+ */
+static void
+myWritePDBFrame(int frameNum, double timeInPs, double energyInKcal, 
+                const MyAtomInfo atoms[]) 
+{
+    int n;
+
+    // Write out in PDB format -- printf is so much more compact than formatted cout.
+    printf("MODEL     %d\n", frameNum);
+    printf("REMARK 250 time=%.3f ps; energy=%.3f kcal/mole\n", 
+           timeInPs, energyInKcal);
+    for (n=0; *atoms[n].pdb; ++n)
+        printf("ATOM  %5d %4s SLT     1    %8.3f%8.3f%8.3f  1.00  0.00\n", 
+            n+1, atoms[n].pdb, 
+            atoms[n].posInAng[0], atoms[n].posInAng[1], atoms[n].posInAng[2]);
+    printf("ENDMDL\n");
+}
+
+
+/* --------------------------------------------------------------------------
  *                                MAIN PROGRAM
- * ----------------------------------------------------------------------------- */
+ * -------------------------------------------------------------------------- */
 int main() {
+    const int NumReports     = (int)(SimulationTimeInPs*1000 / ReportIntervalInFs + 0.5);
+    const int NumSilentSteps = (int)(ReportIntervalInFs / StepSizeInFs + 0.5);
+    int frame;
+
     /* TODO: what about thrown exceptions? */
+    double        time, energy;
+    const char*   platformName;
+
+    // Set up OpenMM data structures; returns OpenMM Platform name.
+    MyOpenMMData* omm = myInitializeOpenMM(atoms, Temperature, FrictionInPs,
+                                           SolventDielectric, SoluteDielectric,
+                                           StepSizeInFs, &platformName);
+
+    // Run the simulation:
+    //  (1) Write the first line of the PDB file and the initial configuration.
+    //  (2) Run silently entirely within OpenMM between reporting intervals.
+    //  (3) Write a PDB frame when the time comes.
+    printf("REMARK  Using OpenMM platform %s\n", platformName);
+    myGetOpenMMState(omm, WantEnergy, &time, &energy, atoms);
+    myWritePDBFrame(0, time, energy, atoms);
+
+    for (frame=1; frame <= NumReports; ++frame) {
+        myStepWithOpenMM(omm, NumSilentSteps);
+        myGetOpenMMState(omm, WantEnergy, &time, &energy, atoms);
+        myWritePDBFrame(frame, time, energy, atoms);
+    } 
+
+    // Clean up OpenMM data structures.
+    myTerminateOpenMM(omm);
+
+    return 0; // Normal return from main.
+}
+
+
+/* --------------------------------------------------------------------------
+ *                           OpenMM-USING CODE
+ * --------------------------------------------------------------------------
+ * The OpenMM C-wrapped API is visible only at this point and below. Normally 
+ * this would be in a separate compilation module; we're including it here for 
+ * simplicity. We suggest that you write them in C++ if possible; in fact you
+ * can use the implementation from the C++ version of this example if you 
+ * want. However, the methods are reimplemented in C below in case you prefer.
+ */
+#include "wrappers/OpenMM_CWrapper.h"
+
+
+struct MyOpenMMData_s {
+    OpenMM_System*      system;
+    OpenMM_Context*     context;
+    OpenMM_Integrator*  integrator;
+};
+
+/* --------------------------------------------------------------------------
+ *                      INITIALIZE OpenMM DATA STRUCTURES
+ * --------------------------------------------------------------------------
+ * We take these actions here:
+ * (1) Allocate a MyOpenMMData structure to hang on to OpenMM data structures
+ *     in a manner which is opaque to the caller.
+ * (2) Allocate the OpenMM objects which persist from call to call.
+ * (3) Fill the OpenMM::System with the force field parameters we want to
+ *     use and the particular set of atoms to be simulated.
+ * (4) Create an Integrator and a Context associating the Integrator with
+ *     the System.
+ * (5) Select the OpenMM platform to be used.
+ * (6) Return the MyOpenMMData struct and the name of the Platform in use.
+ *
+ * Note that this function must understand the calling MD code's molecule and
+ * force field data structures so will need to be customized for each MD code.
+*/
+static MyOpenMMData* 
+myInitializeOpenMM( const MyAtomInfo    atoms[],
+                    double              temperature,
+                    double              frictionInPs,
+                    double              solventDielectric,
+                    double              soluteDielectric,
+                    double              stepSizeInFs, 
+                    const char**        platformName) 
+{
+    /* Allocate space to hold OpenMM objects while we're using them. */
+    MyOpenMMData* omm = (MyOpenMMData*)malloc(sizeof(struct MyOpenMMData_s));
+    /* These are temporary OpenMM objects used and discarded here. */
+    OpenMM_Vec3Array*       initialPosInNm;
+    OpenMM_NonbondedForce*  nonbond;
+    OpenMM_GBSAOBCForce*    gbsa;
+    int n;
+
+    /* Load all available OpenMM plugins from their default location. */
     OpenMM_Platform_loadPluginsFromDirectory
        (OpenMM_Platform_getDefaultPluginsDirectory());
 
-    simulateNaCl();
+    /* Create a System and Force objects within the System. Retain a reference
+     * to each force object so we can fill in the forces. Note: the OpenMM
+     * System takes ownership of the force objects; don't delete them yourself. */
+    omm->system = OpenMM_System_create();
+    nonbond     = OpenMM_NonbondedForce_create();
+    gbsa        = OpenMM_GBSAOBCForce_create();
+    OpenMM_System_addForce(omm->system, (OpenMM_Force*)nonbond);
+    OpenMM_System_addForce(omm->system, (OpenMM_Force*)gbsa);
 
-    return 0;
-}
+    /* Specify dielectrics for GBSA implicit solvation. */
+    OpenMM_GBSAOBCForce_setSolventDielectric(gbsa, solventDielectric);
+    OpenMM_GBSAOBCForce_setSoluteDielectric(gbsa, soluteDielectric);
 
-/* -----------------------------------------------------------------------------
- *                          ATOM AND FORCE FIELD DATA
- * -----------------------------------------------------------------------------
- * This is not part of OpenMM; just a struct we can use to collect
- * atom parameters for this example. Normally atom parameters would
- * come from the force field's parameterization file.
- * We're going to use data in Angstrom and Kilocalorie units and
- * show how to safely convert to OpenMM's internal unit system
- * which uses nanometers and kilojoules.
- */
-struct AtomInfo { 
-    const char* pdb; 
-    double      mass, charge, vdwRadiusInAng, vdwEnergyInKcal;
-    OpenMM_Vec3 initPosInAngstroms;
-} atoms[] = {
-    /* pdb   mass   charge   vdwRadius  vdwEnergy   initPos */
-    {" NA ", 22.99,   1,     1.8680,    0.00277,    { 8, 0,  0}},
-    {" CL ", 35.45,  -1,     2.4700,    0.1000,     {-8, 0,  0}},
-    {" NA ", 22.99,   1,     1.8680,    0.00277,    { 0, 9,  0}},
-    {" CL ", 35.45,  -1,     2.4700,    0.1000,     { 0,-9,  0}},
-    {" NA ", 22.99,   1,     1.8680,    0.00277,    { 0, 0,-10}},
-    {" CL ", 35.45,  -1,     2.4700,    0.1000,     { 0, 0, 10}},
-    {""} /* end of list */
-};
-
-/* -----------------------------------------------------------------------------
- *                              NaCl SIMULATION
- * ----------------------------------------------------------------------------- */
-void simulateNaCl() {
-    OpenMM_Integrator*  integrator;
-    OpenMM_Context*     context;
-    OpenMM_Vec3Array*   initialPositionsInNm;
-    const OpenMM_Vec3   a = {5,0,0}, b = {0,5,0}, c = {0,0,5};
-    const int           NumSilentSteps = (int)(ReportIntervalInFs / StepSizeInFs + 0.5);
-    int n;
-    /* -------------------------------------------------------------------------
-     * Create System and Force object. Add the Force to the System. The System
-     * takes over ownership, so you should not destroy the Force object yourself.
-     * ------------------------------------------------------------------------- */
-    OpenMM_System*           system  = OpenMM_System_create();
-    OpenMM_NonbondedForce*   nonbond = OpenMM_NonbondedForce_create();
-    OpenMM_System_addForce(system, nonbond);
-
-    /* -------------------------------------------------------------------------
-     * Specify a periodic box and cutoff distance.
-     * ------------------------------------------------------------------------- */
-    OpenMM_NonbondedForce_setNonbondedMethod(nonbond, OpenMM_NonbondedForce_CutoffPeriodic);
-    OpenMM_NonbondedForce_setCutoffDistance(nonbond, 2);
-    OpenMM_NonbondedForce_setPeriodicBoxVectors(nonbond, a, b, c);
-
-    /* -------------------------------------------------------------------------
-     * Specify the atoms and their properties:
+    /* Specify the atoms and their properties:
      *  (1) System needs to know the masses.
      *  (2) NonbondedForce needs charges,van der Waals properties (in MD units!).
-     *  (3) Collect default positions for initializing the simulation later.
-     * ------------------------------------------------------------------------- */
-    initialPositionsInNm = OpenMM_Vec3Array_create(0);
+     *  (3) GBSA needs charge, radius, and scale factor.
+     *  (3) Collect default positions for initializing the simulation later. */
+    initialPosInNm = OpenMM_Vec3Array_create(0);
     for (n=0; *atoms[n].pdb; ++n) {
-        const struct AtomInfo* atom = &atoms[n];
-        OpenMM_Vec3 posInNm;
+        const MyAtomInfo* atom = &atoms[n];
+        double posInNm[3];
 
-        OpenMM_System_addParticle(system, atom->mass);
-        OpenMM_NonbondedForce_addParticle
-           (nonbond, atom->charge,
-                     atom->vdwRadiusInAng  * OpenMM_NmPerAngstrom 
-                                           * OpenMM_SigmaPerVdwRadius,
-                     atom->vdwEnergyInKcal * OpenMM_KJPerKcal);
+        OpenMM_System_addParticle(omm->system, atom->mass);
+
+        OpenMM_NonbondedForce_addParticle(nonbond,
+                                atom->charge,
+                                atom->vdwRadiusInAng  * OpenMM_NmPerAngstrom 
+                                                      * OpenMM_SigmaPerVdwRadius,
+                                atom->vdwEnergyInKcal * OpenMM_KJPerKcal);
+
+        OpenMM_GBSAOBCForce_addParticle(gbsa,
+                                atom->charge, 
+                                atom->gbsaRadiusInAng * OpenMM_NmPerAngstrom,
+                                atom->gbsaScaleFactor);
 
         /* Convert the initial position to nm and append to the array. */
-        OpenMM_Vec3_scale(atom->initPosInAngstroms, OpenMM_NmPerAngstrom, posInNm);
-        OpenMM_Vec3Array_append(initialPositionsInNm, posInNm);
+        OpenMM_Vec3_scale(atom->initPosInAng, OpenMM_NmPerAngstrom, posInNm);
+        OpenMM_Vec3Array_append(initialPosInNm, posInNm);
     }
 
-    /* -------------------------------------------------------------------------
-     * Choose an Integrator for advancing time, and a Context connecting the
+    /* Choose an Integrator for advancing time, and a Context connecting the
      * System with the Integrator for simulation. Let the Context choose the
      * best available Platform. Initialize the configuration from the default
-     * positions we collected above. Initial velocities will be zero.
-     * ------------------------------------------------------------------------- */
-    integrator = (OpenMM_Integrator*)OpenMM_VerletIntegrator_create(StepSizeInFs * OpenMM_PsPerFs);
-    context    = OpenMM_Context_create(system, integrator);
-    OpenMM_Context_setPositions(context, initialPositionsInNm);
+     * positions we collected above. Initial velocities will be zero but could
+     * have been set here. */
+    omm->integrator = (OpenMM_Integrator*)OpenMM_LangevinIntegrator_create(
+                                            temperature, frictionInPs, 
+                                            stepSizeInFs * OpenMM_PsPerFs);
+    omm->context    = OpenMM_Context_create(omm->system, omm->integrator);
+    OpenMM_Context_setPositions(omm->context, initialPosInNm);
 
-    /* -------------------------------------------------------------------------
-     * Run the simulation:
-     *  (1) Write the first line of the PDB file and the initial configuration.
-     *  (2) Run silently entirely within OpenMM between reporting intervals.
-     *  (3) Write a PDB frame when the time comes.
-     * ------------------------------------------------------------------------- */
-    printf( "REMARK  Using OpenMM platform %s\n", OpenMM_Context_getPlatform(context));
-    writePDB(context);
-
-    do {
-        OpenMM_Integrator_step(integrator, NumSilentSteps);
-        writePDB(context);
-    } while (OpenMM_Context_getTime(context) < SimulationTimeInPs);
-
-    /* Clean up top-level heap allocated objects that we're done with now. */
-    OpenMM_Vec3Array_destroy(initialPositionsInNm);
-    OpenMM_Context_destroy(context);
-    OpenMM_Integrator_destroy(integrator);
+    *platformName = OpenMM_Context_getPlatformName(omm->context);
+    return omm;
 }
 
-/* -----------------------------------------------------------------------------
- *                               PDB FILE WRITER
- * ----------------------------------------------------------------------------- */
+
+
+
+/* --------------------------------------------------------------------------
+ *                    COPY STATE BACK TO CPU FROM OPENMM
+ * -------------------------------------------------------------------------- */
 static void
-writePDB(const OpenMM_Context* context) {
-    static int modelFrameNumber = 0; /*numbering for MODEL records in pdb output*/
+myGetOpenMMState(MyOpenMMData* omm, int wantEnergy, 
+                 double* timeInPs, double* energyInKcal,
+                 MyAtomInfo atoms[])
+{
+    OpenMM_State*           state;
+    const OpenMM_Vec3Array* posArray;
+    int                     infoMask;
+    int n;
 
-    /* Caution: at the moment asking for energy requires use of slow Reference 
-       platform calculation. */
+    infoMask = OpenMM_State_Positions;
+    if (wantEnergy) {
+        infoMask += OpenMM_State_Velocities; /*for kinetic energy (cheap)*/
+        infoMask += OpenMM_State_Energy;     /*for pot. energy (expensive)*/
+    }
+    /* Forces are also available (and cheap). */
 
-    /* Don't forget to destroy this State when you're done with it. */
-    OpenMM_State* state = OpenMM_Context_createState(context,
-        OpenMM_State_Positions | OpenMM_State_Velocities | OpenMM_State_Energy);
-
-    const double energy =   OpenMM_State_getPotentialEnergy(state) 
-                          + OpenMM_State_getKineticEnergy(state);
+    /* State object is created here and must be explicitly destroyed below. */
+    state = OpenMM_Context_createState(omm->context, infoMask);
+    *timeInPs = OpenMM_State_getTime(state); /* OpenMM time is in ps already. */
 
     /* Positions are maintained as a Vec3Array inside the State. This will give
-     * us access, but don't destroy it yourself -- it will go away with the State.
-     */
-    const OpenMM_Vec3Array* posArray  = OpenMM_State_getPositions(state);
-    const OpenMM_Vec3*      positions = OpenMM_Vec3Array_getAsVec3Ptr(posArray);
-    const int               npos      = OpenMM_Vec3Array_size(posArray); 
-    int i;
-
-    /* write out in PDB format */
-    modelFrameNumber++;
-    printf("MODEL     %d\n", modelFrameNumber);
-    printf("REMARK 250 time=%.3f picoseconds; Energy = %.3f kilojoules/mole\n", 
-           OpenMM_State_getTime(state), energy);
-
-    for (i=0; i < npos; ++i) {
-        OpenMM_Vec3 pos;
-        OpenMM_Vec3_scale(positions[i], OpenMM_AngstromsPerNm, pos);
-        printf("ATOM  %5d %4s SLT     1    %8.3f%8.3f%8.3f  1.00  0.00            \n", 
-            i+1, atoms[i].pdb, pos[0], pos[1], pos[2]);
+     * us access, but don't destroy it yourself -- it will go away with the State. */
+    posArray  = OpenMM_State_getPositions(state);
+    for (n=0; *atoms[n].pdb; ++n) {
+        double posInNm[3];
+        OpenMM_Vec3Array_get(posArray, n, posInNm);
+        OpenMM_Vec3_scale(posInNm, OpenMM_AngstromsPerNm, atoms[n].posInAng);
     }
-    printf("ENDMDL\n");
+
+    /* If energy has been requested, obtain it and convert from kJ to kcal. */
+    *energyInKcal = 0;
+    if (wantEnergy) 
+        *energyInKcal = (   OpenMM_State_getPotentialEnergy(state) 
+                          + OpenMM_State_getKineticEnergy(state))
+                        * OpenMM_KcalPerKJ;
 
     OpenMM_State_destroy(state);
 }
+
+
+// -----------------------------------------------------------------------------
+//                     TAKE MULTIPLE STEPS USING OpenMM 
+// -----------------------------------------------------------------------------
+static void 
+myStepWithOpenMM(MyOpenMMData* omm, int numSteps) {
+    OpenMM_Integrator_step(omm->integrator, numSteps);
+}
+
+// -----------------------------------------------------------------------------
+//                     DEALLOCATE OpenMM OBJECTS
+// -----------------------------------------------------------------------------
+static void 
+myTerminateOpenMM(MyOpenMMData* omm) {
+    /* Clean up top-level heap allocated objects that we're done with now. */
+    OpenMM_Context_destroy(omm->context);
+    OpenMM_Integrator_destroy(omm->integrator);
+    OpenMM_System_destroy(omm->system);
+    free(omm);
+}
+
 
