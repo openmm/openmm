@@ -32,8 +32,8 @@ static AtomInfo atoms[] = {
     {""} // end of list
 };
 
-static const double Temperature         = 100;     // Kelvins
-static const double Friction            = 1./91.;  // picoseconds between collisions
+static const double Temperature         = 100;   // Kelvins
+static const double FrictionInPerPs     = 91.;   // collisions per ps
 static const double StepSizeFs          = 2;     // femtoseconds
 static const double ReportIntervalFs    = 1000;
 static const double SimulationTimePs    = 1000;  // total simulation time (ps)

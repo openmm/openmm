@@ -1,25 +1,24 @@
-// -----------------------------------------------------------------------------
-//        OpenMM(tm) example C wrapper function declarations (June 2009)
-// -----------------------------------------------------------------------------
-// This header should be included by a C main program that would like to
-// access the OpenMM API through the C wrappers. Please note that this is not
-// an official part of OpenMM; it is just an example of how the C++ API can be
-// wrapped for access from C.
-// -----------------------------------------------------------------------------
+/* --------------------------------------------------------------------------
+ *       OpenMM(tm) example C wrapper function declarations (June 2009)
+ * --------------------------------------------------------------------------
+ * This header should be included by a C main program that would like to
+ * access the OpenMM API through the C wrappers. Please note that this is not
+ * an official part of OpenMM; it is just an example of how the C++ API can
+ * be wrapped for access from C.
+ *
+ * Note: this header must be includable in both ANSI C and C++ code, because
+ * the function declarations must be common to both the users and the
+ * implementing code, which is in C++.
+ * -------------------------------------------------------------------------- */
 
-#ifndef OPENMM_CWRAPPER_H
-#define OPENMM_CWRAPPER_H
+#ifndef OPENMM_CWRAPPER_H_
+#define OPENMM_CWRAPPER_H_
 
-#if defined(__cplusplus)
-    #include <cmath>
-#else
-    #include <math.h>
-#endif
-
-/*
- * This header file is intended to be included in a C compilation unit so must
- * not use any C++ features that are not also present in ANSI C.
- */
+//#if defined(__cplusplus)
+//    #include <cmath>
+//#else
+//    #include <math.h>
+//#endif
 
 /* These incomplete types are declared so we can have unique pointer types. */
 typedef struct OpenMM_System_s      OpenMM_System;
@@ -168,7 +167,7 @@ extern OpenMM_VerletIntegrator* OpenMM_VerletIntegrator_create(double stepSzInPs
 extern void                     OpenMM_VerletIntegrator_destroy(OpenMM_VerletIntegrator*);
 extern void                     OpenMM_VerletIntegrator_step(OpenMM_VerletIntegrator*, int numSteps);
 /* OpenMM::LangevinIntegrator */
-extern OpenMM_LangevinIntegrator* OpenMM_LangevinIntegrator_create(double temperature, double frictionInPs, double stepSzInPs);
+extern OpenMM_LangevinIntegrator* OpenMM_LangevinIntegrator_create(double temperature, double frictionInPerPs, double stepSzInPs);
 extern void                       OpenMM_VLangevinIntegrator_destroy(OpenMM_LangevinIntegrator*);
 extern void                       OpenMM_LangevinIntegrator_step(OpenMM_LangevinIntegrator*, int numSteps);
 
@@ -204,7 +203,7 @@ static void OpenMM_Vec3_set(double x, double y, double z, OpenMM_Vec3 out) {
 }
 
 
-#endif /*OPENMM_CWRAPPER_H*/
+#endif /*OPENMM_CWRAPPER_H_*/
 
 
 

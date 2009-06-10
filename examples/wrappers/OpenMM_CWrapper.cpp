@@ -333,10 +333,10 @@ void openmm_verletintegrator_step_(OpenMM_VerletIntegrator* const& verlet, int& 
 
 
     // OpenMM::LangevinIntegrator
-OpenMM_LangevinIntegrator* OpenMM_LangevinIntegrator_create(double temperature, double frictionInPs, double stepSzInPs) 
-{   return (OpenMM_LangevinIntegrator*)new LangevinIntegrator(temperature, frictionInPs, stepSzInPs); }
-void openmm_langevinintegrator_create_(OpenMM_LangevinIntegrator*& langevin, double& temperature, double& frictionInPs, double& stepSzInPs)
-{   langevin = OpenMM_LangevinIntegrator_create(temperature, frictionInPs, stepSzInPs); }
+OpenMM_LangevinIntegrator* OpenMM_LangevinIntegrator_create(double temperature, double frictionInPerPs, double stepSzInPs) 
+{   return (OpenMM_LangevinIntegrator*)new LangevinIntegrator(temperature, frictionInPerPs, stepSzInPs); }
+void openmm_langevinintegrator_create_(OpenMM_LangevinIntegrator*& langevin, double& temperature, double& frictionInPerPs, double& stepSzInPs)
+{   langevin = OpenMM_LangevinIntegrator_create(temperature, frictionInPerPs, stepSzInPs); }
 
 void OpenMM_LangevinIntegrator_destroy(OpenMM_LangevinIntegrator* doomed) 
 {   delete (LangevinIntegrator*)doomed; }

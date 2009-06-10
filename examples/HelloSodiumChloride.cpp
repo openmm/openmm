@@ -24,7 +24,7 @@ using std::printf;
 //                   MODELING AND SIMULATION PARAMETERS
 // -----------------------------------------------------------------------------
 static const double Temperature         = 300;     // Kelvins
-static const double FrictionInPs        = 1./91.;  // picoseconds between collisions
+static const double FrictionInPerPs     = 91.;     // collisions per picosecond
 static const double SolventDielectric   = 80.;     // typical for water
 static const double SoluteDielectric    = 2.;      // typical for protein
 
@@ -119,7 +119,7 @@ int main() {
         std::string   platformName;
 
         // Set up OpenMM data structures; returns OpenMM Platform name.
-        MyOpenMMData* omm = myInitializeOpenMM(atoms, Temperature, FrictionInPs,
+        MyOpenMMData* omm = myInitializeOpenMM(atoms, Temperature, FrictionInPerPs,
                                                SolventDielectric, SoluteDielectric,
                                                StepSizeInFs, platformName);
 

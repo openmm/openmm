@@ -25,7 +25,7 @@
  *                   MODELING AND SIMULATION PARAMETERS
  * -------------------------------------------------------------------------- */
 static const double Temperature         = 300;    /*Kelvins */
-static const double FrictionInPs        = 1./91.; /*ps between collisions*/
+static const double FrictionInPerPs     = 91.;    /*collisions per ps*/
 static const double SolventDielectric   = 80.;    /*typical for water    */
 static const double SoluteDielectric    = 2.;     /*typical for protein  */
 
@@ -124,7 +124,7 @@ int main() {
     const char*   platformName;
 
     // Set up OpenMM data structures; returns OpenMM Platform name.
-    MyOpenMMData* omm = myInitializeOpenMM(atoms, Temperature, FrictionInPs,
+    MyOpenMMData* omm = myInitializeOpenMM(atoms, Temperature, FrictionInPerPs,
                                            SolventDielectric, SoluteDielectric,
                                            StepSizeInFs, &platformName);
 
@@ -187,7 +187,7 @@ struct MyOpenMMData_s {
 static MyOpenMMData* 
 myInitializeOpenMM( const MyAtomInfo    atoms[],
                     double              temperature,
-                    double              frictionInPs,
+                    double              frictionInPerPs,
                     double              solventDielectric,
                     double              soluteDielectric,
                     double              stepSizeInFs, 
@@ -252,7 +252,7 @@ myInitializeOpenMM( const MyAtomInfo    atoms[],
      * positions we collected above. Initial velocities will be zero but could
      * have been set here. */
     omm->integrator = (OpenMM_Integrator*)OpenMM_LangevinIntegrator_create(
-                                            temperature, frictionInPs, 
+                                            temperature, frictionInPerPs, 
                                             stepSizeInFs * OpenMM_PsPerFs);
     omm->context    = OpenMM_Context_create(omm->system, omm->integrator);
     OpenMM_Context_setPositions(omm->context, initialPosInNm);
