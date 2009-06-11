@@ -547,8 +547,8 @@ __global__ void kCalculateLocalForces_kernel()
                 d.y                     = a1.y - a2.y;
                 d.z                     = a1.z - a2.z;
                 d.x                     -= floor(d.x/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                d.y                     -= floor(d.x/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                d.z                     -= floor(d.x/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                d.y                     -= floor(d.y/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                d.z                     -= floor(d.z/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
                 float r2                = DOT3(d, d);
                 float inverseR          = 1.0f / sqrt(r2);
                 float sig2              = inverseR * LJ14.y;
