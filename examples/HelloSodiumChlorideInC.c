@@ -171,15 +171,16 @@ struct MyOpenMMData_s {
  *                      INITIALIZE OpenMM DATA STRUCTURES
  * --------------------------------------------------------------------------
  * We take these actions here:
- * (1) Allocate a MyOpenMMData structure to hang on to OpenMM data structures
+ * (1) Load any available OpenMM plugins, e.g. Cuda and Brook.
+ * (2) Allocate a MyOpenMMData structure to hang on to OpenMM data structures
  *     in a manner which is opaque to the caller.
- * (2) Allocate the OpenMM objects which persist from call to call.
  * (3) Fill the OpenMM::System with the force field parameters we want to
  *     use and the particular set of atoms to be simulated.
  * (4) Create an Integrator and a Context associating the Integrator with
  *     the System.
  * (5) Select the OpenMM platform to be used.
- * (6) Return the MyOpenMMData struct and the name of the Platform in use.
+ * (6) Return an opaque pointer to the MyOpenMMData struct and the name 
+ *     of the Platform in use.
  *
  * Note that this function must understand the calling MD code's molecule and
  * force field data structures so will need to be customized for each MD code.
@@ -222,7 +223,7 @@ myInitializeOpenMM( const MyAtomInfo    atoms[],
      *  (1) System needs to know the masses.
      *  (2) NonbondedForce needs charges,van der Waals properties (in MD units!).
      *  (3) GBSA needs charge, radius, and scale factor.
-     *  (3) Collect default positions for initializing the simulation later. */
+     *  (4) Collect default positions for initializing the simulation later. */
     initialPosInNm = OpenMM_Vec3Array_create(0);
     for (n=0; *atoms[n].pdb; ++n) {
         const MyAtomInfo* atom = &atoms[n];
