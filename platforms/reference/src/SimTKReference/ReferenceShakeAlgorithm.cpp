@@ -65,7 +65,7 @@ ReferenceShakeAlgorithm::ReferenceShakeAlgorithm( int numberOfConstraints,
    _atomIndices                = atomIndices;
    _distance                   = distance;
 
-   _maximumNumberOfIterations  = 15;
+   _maximumNumberOfIterations  = 150;
    _tolerance                  = tolerance;
    _hasInitializedMasses       = false;
 

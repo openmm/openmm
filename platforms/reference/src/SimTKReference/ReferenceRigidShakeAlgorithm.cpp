@@ -568,12 +568,11 @@ int ReferenceRigidShakeAlgorithm::apply( int numberOfAtoms, RealOpenMM** atomCoo
 
    // main loop
 
-   int done                 = 0;
    int iterations           = 0;
    int numberConverged      = 0;
    vector<RealOpenMM> constraintForce(_numberOfConstraints);
    vector<RealOpenMM> tempForce(_numberOfConstraints);
-   while( !done && iterations++ < getMaximumNumberOfIterations() ){
+   while (iterations < getMaximumNumberOfIterations()) {
       numberConverged  = 0;
       for( int ii = 0; ii < _numberOfConstraints; ii++ ){
 
@@ -600,9 +599,9 @@ int ReferenceRigidShakeAlgorithm::apply( int numberOfAtoms, RealOpenMM** atomCoo
             numberConverged++;
          }
       }
-     if( numberConverged == _numberOfConstraints ){
-         done = true;
-      }
+      if( numberConverged == _numberOfConstraints )
+         break;
+      iterations++;
 
       if (_matrix.size() > 0) {
           for (int i = 0; i < _numberOfConstraints; i++) {
@@ -646,11 +645,11 @@ RealOpenMM damping = one;//(RealOpenMM) (iterations < 2 ? 0.5 : 1.0);
 
    // diagnostics
 
-   if( debug || !done ){
+   if( debug || numberConverged < _numberOfConstraints ){
       std::stringstream message;
       message << methodName;
       message << " iterations=" << iterations << " no. converged=" << numberConverged << " out of " << _numberOfConstraints;
-      if( done ){
+      if( numberConverged == _numberOfConstraints ){
          message << " SUCCESS";
       } else {
          message << " FAILED";
@@ -664,7 +663,7 @@ RealOpenMM damping = one;//(RealOpenMM) (iterations < 2 ? 0.5 : 1.0);
       SimTKOpenMMLog::printMessage( message );
    }
 
-   return (done ? ReferenceDynamics::DefaultReturn : ReferenceDynamics::ErrorReturn);
+   return (numberConverged == _numberOfConstraints ? ReferenceDynamics::DefaultReturn : ReferenceDynamics::ErrorReturn);
 
 }
 

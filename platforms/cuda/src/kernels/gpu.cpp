@@ -1141,9 +1141,9 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
         for (unsigned int j = 0; j < matrix[index].size(); j++) {
             (*psConstraintMatrixColumn)[i+j*numLincs] = matrix[index][j].first;
             (*psConstraintMatrixValue)[i+j*numLincs] = matrix[index][j].second;
-        }
+            }
         (*psConstraintMatrixColumn)[i+matrix[index].size()*numLincs] = numLincs;
-    }
+            }
     for (unsigned int i = 0; i < psSyncCounter->_length; i++)
         (*psSyncCounter)[i] = -1;
     for (unsigned int i = 0; i < atomConstraints.size(); i++) {

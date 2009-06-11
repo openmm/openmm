@@ -101,7 +101,7 @@ __global__ void kApplyCShake_kernel(float4* atomPositions, bool addOldPosition)
     unsigned int maxIterations = 150;
     float lowerTol = 1.0f-2.0f*cSim.shakeTolerance+cSim.shakeTolerance*cSim.shakeTolerance;
     float upperTol = 1.0f+2.0f*cSim.shakeTolerance+cSim.shakeTolerance*cSim.shakeTolerance;
-    for (unsigned int iteration = 0; iteration < maxIterations && iteration == requiredIterations; iteration++)
+    for (unsigned int iteration = 0; iteration < maxIterations; iteration++)
     {
         // Calculate the constraint force for each constraint.
 
@@ -130,9 +130,12 @@ __global__ void kApplyCShake_kernel(float4* atomPositions, bool addOldPosition)
                 requiredIterations = iteration+1;
             pos += blockDim.x * gridDim.x;
         }
-        kSyncAllThreads_kernel(cSim.pSyncCounter, iteration);
+        __syncthreads();
         if (threadIdx.x == 0 && requiredIterations > iteration)
             cSim.pRequiredIterations[0] = requiredIterations;
+        kSyncAllThreads_kernel(cSim.pSyncCounter, iteration);
+        if (iteration == cSim.pRequiredIterations[0])
+            break; // All constraints have converged.
 
         // Multiply by the inverse constraint matrix.
 
@@ -178,8 +181,9 @@ __global__ void kApplyCShake_kernel(float4* atomPositions, bool addOldPosition)
             atomPositions[pos] = atomPos;
             pos += blockDim.x*gridDim.x;
         }
+        if (threadIdx.x == 0)
+            requiredIterations = iteration+1;
         kSyncAllThreads_kernel(&cSim.pSyncCounter[2*gridDim.x], iteration);
-        requiredIterations = cSim.pRequiredIterations[0];
     }
 
     // Reset the initial sync counter to be ready for the next call.
