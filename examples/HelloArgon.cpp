@@ -11,11 +11,11 @@
 #include "OpenMM.h"
 #include <cstdio>
 
-// Forward declaration of subroutine for printing atomic coordinates,
-// defined later in this source file.
+// Forward declaration of writePdb() subroutine for printing atomic 
+// coordinates, defined later in this source file.
 void writePdb(const OpenMM::OpenMMContext& context);
 
-// simulation is performed within simulateArgon() subroutine
+// simulateArgon() subroutine 
 void simulateArgon() 
 {
     // Load any shared libraries containing GPU implementations
@@ -31,12 +31,12 @@ void simulateArgon()
     std::vector<OpenMM::Vec3> initialPositions(3);
     for (int a = 0; a < 3; ++a) 
     {
-        system.addParticle(39.95); // mass
+        system.addParticle(39.95); // mass, grams per mole
 
         // charge, sigma, well depth
         nonbond->addParticle(0.0, 0.3350, 0.001603); 
 
-        initialPositions[a] = OpenMM::Vec3(0.5*a,0,0); // location
+        initialPositions[a] = OpenMM::Vec3(0.5*a,0,0); // location, nanometers
     }
 
     OpenMM::VerletIntegrator integrator(0.020); // step size in picoseconds
@@ -88,7 +88,7 @@ void writePdb(const OpenMM::OpenMMContext& context)
     {
         printf("ATOM  %5d AR    AR     1    ", a+1); // atom number
         printf("%8.3f%8.3f%8.3f  1.00  0.00          AR\n", // coordinates
-            // notice "*10" converts nanometers to Angstroms
+            // "*10" converts nanometers to Angstroms
             pos[a][0]*10, pos[a][1]*10, pos[a][2]*10);
     }
     printf("ENDMDL\n"); // end of frame
