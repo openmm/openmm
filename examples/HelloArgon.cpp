@@ -1,34 +1,35 @@
 #include "OpenMM.h"
 #include <cstdio>
 
-using namespace OpenMM;
-
 // forward declaration of subroutine defined later in this file.
-void writePdb(const OpenMMContext& context);
+void writePdb(const OpenMM::OpenMMContext& context);
 
 void simulateArgon() 
 {
     // Load any shared libraries containing GPU implementations
-    Platform::loadPluginsFromDirectory(
-        Platform::getDefaultPluginsDirectory());
+    OpenMM::Platform::loadPluginsFromDirectory(
+        OpenMM::Platform::getDefaultPluginsDirectory());
 
-    System system;
-    NonbondedForce* nonbond = new NonbondedForce(); 
+    OpenMM::System system;
+    OpenMM::NonbondedForce* nonbond = new OpenMM::NonbondedForce(); 
     system.addForce(nonbond);
 
     // Create three atoms
-    std::vector<Vec3> initialPositions(3);
+    std::vector<OpenMM::Vec3> initialPositions(3);
     for (int a = 0; a < 3; ++a) 
     {
         system.addParticle(39.95); // mass
-        nonbond->addParticle(0.0, 0.3350, 0.001603); // charge, sigma, well depth
-        initialPositions[a] = Vec3(0.5*a,0,0); // location
+
+        // charge, sigma, well depth
+        nonbond->addParticle(0.0, 0.3350, 0.001603); 
+
+        initialPositions[a] = OpenMM::Vec3(0.5*a,0,0); // location
     }
 
-    VerletIntegrator integrator(0.020); // step size in picoseconds
+    OpenMM::VerletIntegrator integrator(0.020); // step size in picoseconds
 
     // Let OpenMM Context choose best platform.
-    OpenMMContext context(system, integrator);
+    OpenMM::OpenMMContext context(system, integrator);
     printf( "REMARK  Using OpenMM platform %s\n", 
         context.getPlatform().getName().c_str() );
 
@@ -58,11 +59,11 @@ int main()
 }
 
 // writePdb() subroutine for quick-and-dirty trajectory output.
-void writePdb(const OpenMMContext& context) 
+void writePdb(const OpenMM::OpenMMContext& context) 
 {
     // Request atomic positions from OpenMM
-    const State state = context.getState(State::Positions);
-    const std::vector<Vec3>& pos = state.getPositions();
+    const OpenMM::State state = context.getState(OpenMM::State::Positions);
+    const std::vector<OpenMM::Vec3>& pos = state.getPositions();
 
     // write out in PDB format
 
