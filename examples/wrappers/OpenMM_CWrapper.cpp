@@ -32,8 +32,14 @@ using namespace OpenMM;
 static inline Vec3 toVec3(const OpenMM_Vec3 src) {
     return Vec3(src[0], src[1], src[2]);
 }
+static inline Vec3 scaleToVec3(const OpenMM_Vec3 src, double s) {
+    return Vec3(s*src[0], s*src[1], s*src[2]);
+}
 static inline void fromVec3(const Vec3& src, OpenMM_Vec3 dest) {
     dest[0] = src[0]; dest[1] = src[1]; dest[2] = src[2];
+}
+static inline void scaleFromVec3(const Vec3& src, double s, OpenMM_Vec3 dest) {
+    dest[0] = s*src[0]; dest[1] = s*src[1]; dest[2] = s*src[2];
 }
 
 extern "C" {
@@ -80,6 +86,31 @@ void OpenMM_Vec3Array_get(const OpenMM_Vec3Array* a, int i0, OpenMM_Vec3 ov3) {
 void openmm_vec3array_get_(const OpenMM_Vec3Array* const& a, const int& i1, OpenMM_Vec3 ov3)
 {   OpenMM_Vec3Array_get(a, i1-1, ov3); }
 
+// Get a single Vec3 element from the array and scale it. Index is 0-relative in C, 
+// 1-relative in Fortran.
+void OpenMM_Vec3Array_getScaled(const OpenMM_Vec3Array* a, int i0, double s, OpenMM_Vec3 ov3) {
+    scaleFromVec3((*(const std::vector<Vec3>*)a)[i0], s, ov3);
+}
+void openmm_vec3array_getscaled_(const OpenMM_Vec3Array* const& a, const int& i1, const double& s, OpenMM_Vec3 ov3)
+{   OpenMM_Vec3Array_getScaled(a, i1-1, s, ov3); }
+
+// Set a single Vec3 element in the array. Index is 0-relative in C, 1-relative in Fortran.
+void OpenMM_Vec3Array_set(OpenMM_Vec3Array* a, int i0, const OpenMM_Vec3 v3)
+{   (*(std::vector<Vec3>*)a)[i0] = toVec3(v3); }
+void openmm_vec3array_set_(OpenMM_Vec3Array* const& a, const int& i1, const OpenMM_Vec3 v3)
+{   OpenMM_Vec3Array_set(a, i1-1, v3); }
+
+// Set a single Vec3 element in the array to a scaling of the input vector. 
+// Index is 0-relative in C, 1-relative in Fortran.
+void OpenMM_Vec3Array_setScaled(OpenMM_Vec3Array* a, int i0, const OpenMM_Vec3 v3, double s)
+{   (*(std::vector<Vec3>*)a)[i0] = scaleToVec3(v3, s); }
+void openmm_vec3array_setscaled_(OpenMM_Vec3Array* const& a, const int& i1, const OpenMM_Vec3 v3, const double& s)
+{   OpenMM_Vec3Array_setScaled(a, i1-1, v3, s); }
+
+void OpenMM_Vec3_scale(const double in[3], double s, double out[3])
+{   out[0]=s*in[0]; out[1]=s*in[1]; out[2]=s*in[2]; }
+void openmm_vec3_scale_(const double in[3], const double& s, double out[3])
+{   out[0]=s*in[0]; out[1]=s*in[1]; out[2]=s*in[2]; }
 
     /////////////////
     // std::string //
@@ -439,5 +470,59 @@ const OpenMM_Vec3Array*  OpenMM_State_getVelocities(const OpenMM_State* state)
 void openmm_state_getvelocities_(const OpenMM_State* const& state, const OpenMM_Vec3Array*& velocities)
 {   velocities = OpenMM_State_getVelocities(state); }
 
+
+    ///////////////////////////
+    // OpenMM_RuntimeObjects //
+    ///////////////////////////
+OpenMM_RuntimeObjects* OpenMM_RuntimeObjects_create() {
+    OpenMM_RuntimeObjects* ommrt = new OpenMM_RuntimeObjects();
+    ommrt->system     = 0;
+    ommrt->integrator = 0;
+    ommrt->context    = 0;
+    return ommrt;
+}
+void openmm_runtimeobjects_create_(OpenMM_RuntimeObjects*& ommrt) 
+{   ommrt = OpenMM_RuntimeObjects_create(); }
+
+void OpenMM_RuntimeObjects_clear(OpenMM_RuntimeObjects* ommrt) {
+    if (!ommrt) return;
+    OpenMM_Context_destroy(ommrt->context);       ommrt->context    = 0;
+    OpenMM_Integrator_destroy(ommrt->integrator); ommrt->integrator = 0;
+    OpenMM_System_destroy(ommrt->system);         ommrt->system     = 0;
+}
+void openmm_runtimeobjects_clear_(OpenMM_RuntimeObjects*& ommrt)
+{   OpenMM_RuntimeObjects_clear(ommrt); }
+
+void OpenMM_RuntimeObjects_destroy(OpenMM_RuntimeObjects* ommrt)
+{    OpenMM_RuntimeObjects_clear(ommrt); delete ommrt; }
+void openmm_runtimeobjects_destroy_(OpenMM_RuntimeObjects*& ommrt)
+{    OpenMM_RuntimeObjects_destroy(ommrt); ommrt = 0; }
+
+void OpenMM_RuntimeObjects_setSystem(OpenMM_RuntimeObjects* ommrt, OpenMM_System* sys)
+{    OpenMM_System_destroy(ommrt->system); ommrt->system = sys; }
+void openmm_runtimeobjects_setsystem_(OpenMM_RuntimeObjects*& ommrt, OpenMM_System*& sys)
+{    OpenMM_RuntimeObjects_setSystem(ommrt, sys); }
+OpenMM_System* OpenMM_RuntimeObjects_getSystem(OpenMM_RuntimeObjects* ommrt)
+{    return ommrt->system; }
+void openmm_runtimeobjects_getsystem_(OpenMM_RuntimeObjects*& ommrt, OpenMM_System*& sys)
+{    sys = OpenMM_RuntimeObjects_getSystem(ommrt); }
+
+void OpenMM_RuntimeObjects_setIntegrator(OpenMM_RuntimeObjects* ommrt, OpenMM_Integrator* integ)
+{    OpenMM_Integrator_destroy(ommrt->integrator); ommrt->integrator = integ; }
+void openmm_runtimeobjects_setintegrator_(OpenMM_RuntimeObjects*& ommrt, OpenMM_Integrator*& integ)
+{    OpenMM_RuntimeObjects_setIntegrator(ommrt, integ); }
+OpenMM_Integrator* OpenMM_RuntimeObjects_getIntegrator(OpenMM_RuntimeObjects* ommrt)
+{    return ommrt->integrator; }
+void openmm_runtimeobjects_getintegrator_(OpenMM_RuntimeObjects*& ommrt, OpenMM_Integrator*& integ)
+{    integ = OpenMM_RuntimeObjects_getIntegrator(ommrt); }
+
+void OpenMM_RuntimeObjects_setContext(OpenMM_RuntimeObjects* ommrt, OpenMM_Context* context)
+{    OpenMM_Context_destroy(ommrt->context); ommrt->context = context; }
+void openmm_runtimeobjects_setcontext_(OpenMM_RuntimeObjects*& ommrt, OpenMM_Context*& context)
+{    OpenMM_RuntimeObjects_setContext(ommrt, context); }
+OpenMM_Context* OpenMM_RuntimeObjects_getContext(OpenMM_RuntimeObjects* ommrt)
+{    return ommrt->context; }
+void openmm_runtimeobjects_getcontext_(OpenMM_RuntimeObjects*& ommrt, OpenMM_Context*& context)
+{    context = OpenMM_RuntimeObjects_getContext(ommrt); }
 
 } // extern "C"

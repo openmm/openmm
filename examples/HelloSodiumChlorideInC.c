@@ -99,7 +99,7 @@ myWritePDBFrame(int frameNum, double timeInPs, double energyInKcal,
 {
     int n;
 
-    // Write out in PDB format -- printf is so much more compact than formatted cout.
+    /* Write out in PDB format. */
     printf("MODEL     %d\n", frameNum);
     printf("REMARK 250 time=%.3f ps; energy=%.3f kcal/mole\n", 
            timeInPs, energyInKcal);
@@ -123,15 +123,15 @@ int main() {
     double        time, energy;
     const char*   platformName;
 
-    // Set up OpenMM data structures; returns OpenMM Platform name.
+    /* Set up OpenMM data structures; returns OpenMM Platform name. */
     MyOpenMMData* omm = myInitializeOpenMM(atoms, Temperature, FrictionInPerPs,
                                            SolventDielectric, SoluteDielectric,
                                            StepSizeInFs, &platformName);
 
-    // Run the simulation:
-    //  (1) Write the first line of the PDB file and the initial configuration.
-    //  (2) Run silently entirely within OpenMM between reporting intervals.
-    //  (3) Write a PDB frame when the time comes.
+    /* Run the simulation:
+     *  (1) Write the first line of the PDB file and the initial configuration.
+     *  (2) Run silently entirely within OpenMM between reporting intervals.
+     *  (3) Write a PDB frame when the time comes. */
     printf("REMARK  Using OpenMM platform %s\n", platformName);
     myGetOpenMMState(omm, WantEnergy, &time, &energy, atoms);
     myWritePDBFrame(0, time, energy, atoms);
@@ -142,10 +142,10 @@ int main() {
         myWritePDBFrame(frame, time, energy, atoms);
     } 
 
-    // Clean up OpenMM data structures.
+    /* Clean up OpenMM data structures. */
     myTerminateOpenMM(omm);
 
-    return 0; // Normal return from main.
+    return 0; /* Normal return from main. */
 }
 
 

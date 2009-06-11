@@ -14,15 +14,27 @@
 #ifndef OPENMM_CWRAPPER_H_
 #define OPENMM_CWRAPPER_H_
 
-//#if defined(__cplusplus)
-//    #include <cmath>
-//#else
-//    #include <math.h>
-//#endif
+/* Declare incomplete types corresponding to each of the OpenMM objects that
+ * we want to make available. This allows us to have unique pointer types
+ * for each object to maintain some semblance of type safety.
+ */
 
-/* These incomplete types are declared so we can have unique pointer types. */
+/* These first three types represent the three OpenMM runtime objects that
+ * must persist from call to call during an OpenMM-powered simulation. */
 typedef struct OpenMM_System_s      OpenMM_System;
+typedef struct OpenMM_Integrator_s  OpenMM_Integrator;
 typedef struct OpenMM_Context_s     OpenMM_Context;
+
+/* This struct collects all the runtime object pointers together to 
+ * facilitate use of an opaque handle in high-level C or Fortran code 
+ * that doesn't have (or want) access to OpenMM declarations. This
+ * does not have an equivalent in the OpenMM C++ API. */
+typedef struct OpenMM_RuntimeObjects_s {
+    OpenMM_System*      system;
+    OpenMM_Integrator*  integrator;
+    OpenMM_Context*     context;
+} OpenMM_RuntimeObjects;
+
 typedef double                      OpenMM_Vec3[3];
 typedef struct OpenMM_Vec3Array_s   OpenMM_Vec3Array;
 typedef struct OpenMM_String_s      OpenMM_String;
@@ -32,7 +44,6 @@ typedef struct OpenMM_String_s      OpenMM_String;
  * specific pointer type to the generic one for communication with functions
  * that take type OpenMM_Integrator.
  */
-typedef struct OpenMM_Integrator_s         OpenMM_Integrator;
 typedef struct OpenMM_VerletIntegrator_s        OpenMM_VerletIntegrator;
 typedef struct OpenMM_LangevinIntegrator_s      OpenMM_LangevinIntegrator;
 
@@ -115,6 +126,10 @@ extern void                 OpenMM_Vec3Array_resize(OpenMM_Vec3Array*, int n);
 extern void                 OpenMM_Vec3Array_destroy(OpenMM_Vec3Array*);
 extern void                 OpenMM_Vec3Array_append(OpenMM_Vec3Array*, const double[3]);
 extern void                 OpenMM_Vec3Array_get(const OpenMM_Vec3Array*, int i, double[3]);
+extern void                 OpenMM_Vec3Array_getScaled(const OpenMM_Vec3Array*, int i, double s, double[3]);
+extern void                 OpenMM_Vec3Array_set(OpenMM_Vec3Array*, int i, const double[3]);
+extern void                 OpenMM_Vec3Array_setScaled(OpenMM_Vec3Array*, int i, const double[3], double s);
+extern void                 OpenMM_Vec3_scale(const double[3], double s, double[3]);
 
 /* OpenMM_String */
 extern OpenMM_String*       OpenMM_String_create(const char* init);
@@ -129,7 +144,6 @@ extern void OpenMM_Platform_loadPluginsFromDirectory(const char*);
 extern const char* OpenMM_Platform_getDefaultPluginsDirectory();
 
 /* OpenMM::System */
-
 extern OpenMM_System* OpenMM_System_create();
 extern void OpenMM_System_destroy (OpenMM_System*);
 extern void OpenMM_System_addForce(OpenMM_System*, OpenMM_Force*);
@@ -168,7 +182,7 @@ extern void                     OpenMM_VerletIntegrator_destroy(OpenMM_VerletInt
 extern void                     OpenMM_VerletIntegrator_step(OpenMM_VerletIntegrator*, int numSteps);
 /* OpenMM::LangevinIntegrator */
 extern OpenMM_LangevinIntegrator* OpenMM_LangevinIntegrator_create(double temperature, double frictionInPerPs, double stepSzInPs);
-extern void                       OpenMM_VLangevinIntegrator_destroy(OpenMM_LangevinIntegrator*);
+extern void                       OpenMM_LangevinIntegrator_destroy(OpenMM_LangevinIntegrator*);
 extern void                       OpenMM_LangevinIntegrator_step(OpenMM_LangevinIntegrator*, int numSteps);
 
 /* OpenMM::Context */
@@ -188,20 +202,21 @@ extern double   OpenMM_State_getKineticEnergy(const OpenMM_State*);
 extern const OpenMM_Vec3Array* OpenMM_State_getPositions(const OpenMM_State*);
 extern const OpenMM_Vec3Array* OpenMM_State_getVelocities(const OpenMM_State*);
 
+/* OpenMM_Runtime_Objects */
+extern OpenMM_RuntimeObjects* OpenMM_RuntimeObjects_create();
+extern void                   OpenMM_RuntimeObjects_clear(OpenMM_RuntimeObjects*);
+extern void                   OpenMM_RuntimeObjects_destroy(OpenMM_RuntimeObjects*);
+extern void                   OpenMM_RuntimeObjects_setSystem(OpenMM_RuntimeObjects*, OpenMM_System*);
+extern void                   OpenMM_RuntimeObjects_setIntegrator(OpenMM_RuntimeObjects*, OpenMM_Integrator*);
+extern void                   OpenMM_RuntimeObjects_setContext(OpenMM_RuntimeObjects*, OpenMM_Context*);
+extern OpenMM_System*         OpenMM_RuntimeObjects_getSystem(OpenMM_RuntimeObjects*);
+extern OpenMM_Integrator*     OpenMM_RuntimeObjects_getIntegrator(OpenMM_RuntimeObjects*);
+extern OpenMM_Context*        OpenMM_RuntimeObjects_getContext(OpenMM_RuntimeObjects*);
+
 
 #if defined(__cplusplus)
 }
 #endif
-
-
-static void OpenMM_Vec3_scale(const OpenMM_Vec3 in, double s, OpenMM_Vec3 out) {
-    out[0] = in[0]*s; out[1] = in[1]*s; out[2] = in[2]*s;
-}
-
-static void OpenMM_Vec3_set(double x, double y, double z, OpenMM_Vec3 out) {
-    out[0] = x; out[1] = y; out[2] = z;
-}
-
 
 #endif /*OPENMM_CWRAPPER_H_*/
 
