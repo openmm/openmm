@@ -15,8 +15,7 @@
 // coordinates, defined later in this source file.
 void writePdb(const OpenMM::OpenMMContext& context);
 
-// simulateArgon() subroutine 
-void simulateArgon() 
+void simulateArgon()
 {
     // Load any shared libraries containing GPU implementations
     OpenMM::Platform::loadPluginsFromDirectory(
@@ -34,12 +33,12 @@ void simulateArgon()
         system.addParticle(39.95); // mass, grams per mole
 
         // charge, sigma, well depth
-        nonbond->addParticle(0.0, 0.3350, 0.001603); 
+        nonbond->addParticle(0.0, 0.3350, 0.996); 
 
         initialPositions[a] = OpenMM::Vec3(0.5*a,0,0); // location, nanometers
     }
 
-    OpenMM::VerletIntegrator integrator(0.020); // step size in picoseconds
+    OpenMM::VerletIntegrator integrator(0.004); // step size in picoseconds
 
     // Let OpenMM Context choose best platform.
     OpenMM::OpenMMContext context(system, integrator);
@@ -50,7 +49,7 @@ void simulateArgon()
     context.setPositions(initialPositions);
 
     // Simulate
-    while(context.getTime() < 500.0) { // picoseconds
+    while(context.getTime() < 10.0) { // picoseconds
         writePdb(context); // output coordinates
         // Run 100 steps at a time, for efficient use of OpenMM
         integrator.step(100);
