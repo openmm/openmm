@@ -19,7 +19,7 @@
 
 
 #include <stdio.h>
-#include <malloc.h>
+#include <stdlib.h>
 
 /* --------------------------------------------------------------------------
  *                   MODELING AND SIMULATION PARAMETERS
