@@ -18,6 +18,7 @@
 // -----------------------------------------------------------------------------
 
 #include "OpenMM_CWrapper.h"
+#include <cstring>
 
 // Suppress irrelevant warnings from Microsoft's compiler.
 #ifdef _MSC_VER
