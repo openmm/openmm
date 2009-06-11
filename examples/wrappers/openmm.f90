@@ -6,12 +6,28 @@
 
 module OpenMM_Types
     implicit none
+
+    ! The System, Integrator, and Context must persist between calls.
+    ! They can be conveniently grouped in a RuntimeObjects structure.
     type OpenMM_System
+        character, pointer :: handle => NULL()
+    end type
+    ! This is the generic Integrator type; it represents one of 
+    ! the concrete integrators like Verlet or Langevin.
+    type OpenMM_Integrator
         character, pointer :: handle => NULL()
     end type
     type OpenMM_Context
         character, pointer :: handle => NULL()
     end type
+
+    ! This data structure can be used to hold the set of OpenMM objects
+    ! that must persist from call to call while running a simulation.
+    ! It contains an OpenMM_System, _Integrator, and _Context.
+    type OpenMM_RuntimeObjects
+        character, pointer :: handle => NULL()
+    end type
+
     type OpenMM_State
         character, pointer :: handle => NULL()
     end type
@@ -21,8 +37,7 @@ module OpenMM_Types
     type OpenMM_String
         character, pointer :: handle => NULL()
     end type
-    ! This is the generic Force type. Each concrete Force type should
-    ! be able to convert itself to this type.
+    ! This is the generic Force type.
     type OpenMM_Force
         character, pointer :: handle => NULL()
     end type
@@ -30,11 +45,6 @@ module OpenMM_Types
         character, pointer :: handle => NULL()
     end type
     type OpenMM_GBSAOBCForce
-        character, pointer :: handle => NULL()
-    end type
-    ! This is the generic Integrator type. Each concrete Integrator type should
-    ! be able to convert itself to this type.
-    type OpenMM_Integrator
         character, pointer :: handle => NULL()
     end type
     type OpenMM_VerletIntegrator
@@ -68,14 +78,6 @@ module OpenMM_Types
     parameter(OpenMM_RadiansPerDegree=3.1415926535897932385/180.0)
     parameter(OpenMM_DegreesPerRadian=180.0/3.1415926535897932385)
     parameter(OpenMM_SigmaPerVdwRadius=1.78179743628068)
-
-    ! This data structure can be used to hold the set of OpenMM objects
-    ! that must persist from call to call while running a simulation.
-    type OpenMM_Objects
-        type (OpenMM_System)     system
-        type (OpenMM_Integrator) integrator
-        type (OpenMM_Context)    context
-    end type
 
 end module OpenMM_Types
 
@@ -113,7 +115,32 @@ module OpenMM
             use OpenMM_Types
             type (OpenMM_Vec3Array) array
             integer*4 i
-            real*8 v3(3)
+            real*8, intent(out) :: v3(3)
+        end
+        subroutine OpenMM_Vec3Array_getScaled(array, i, s, v3)
+            use OpenMM_Types
+            type (OpenMM_Vec3Array) array
+            integer*4 i
+            real*8    s
+            real*8, intent(out) :: v3(3)
+        end
+        subroutine OpenMM_Vec3Array_set(array, i, v3)
+            use OpenMM_Types
+            type (OpenMM_Vec3Array) array
+            integer*4 i
+            real*8, intent(in) :: v3(3)
+        end
+        subroutine OpenMM_Vec3Array_setScaled(array, i, v3, s)
+            use OpenMM_Types
+            type (OpenMM_Vec3Array) array
+            integer*4 i
+            real*8, intent(in) :: v3(3)
+            real*8    s
+        end
+        subroutine OpenMM_Vec3_scale(v3in, s, v3out)
+            real*8, intent(in)  :: v3in(3)
+            real*8  s
+            real*8, intent(out) :: v3out(3)
         end
 
         ! OpenMM_String is an interface to std::string, with some
@@ -364,25 +391,48 @@ module OpenMM
             type (OpenMM_State) state
             type (OpenMM_Vec3Array) velocities
         end
+        subroutine OpenMM_RuntimeObjects_create(omm)
+            use OpenMM_Types
+            type (OpenMM_RuntimeObjects) omm
+        end
+        subroutine OpenMM_RuntimeObjects_clear(omm)
+            use OpenMM_Types
+            type (OpenMM_RuntimeObjects) omm
+        end
+        subroutine OpenMM_RuntimeObjects_destroy(omm)
+            use OpenMM_Types
+            type (OpenMM_RuntimeObjects) omm
+        end
+        subroutine OpenMM_RuntimeObjects_setSystem(omm,sys)
+            use OpenMM_Types
+            type (OpenMM_RuntimeObjects) omm
+            type (OpenMM_System) sys
+        end
+        subroutine OpenMM_RuntimeObjects_setIntegrator(omm,integ)
+            use OpenMM_Types
+            type (OpenMM_RuntimeObjects) omm
+            type (OpenMM_Integrator) integ
+        end
+        subroutine OpenMM_RuntimeObjects_setContext(omm,context)
+            use OpenMM_Types
+            type (OpenMM_RuntimeObjects) omm
+            type (OpenMM_Context) context
+        end
+        subroutine OpenMM_RuntimeObjects_getSystem(omm,sys)
+            use OpenMM_Types
+            type (OpenMM_RuntimeObjects) omm
+            type (OpenMM_System) sys
+        end
+        subroutine OpenMM_RuntimeObjects_getIntegrator(omm,integ)
+            use OpenMM_Types
+            type (OpenMM_RuntimeObjects) omm
+            type (OpenMM_Integrator) integ
+        end
+        subroutine OpenMM_RuntimeObjects_getContext(omm,context)
+            use OpenMM_Types
+            type (OpenMM_RuntimeObjects) omm
+            type (OpenMM_Context) context
+        end
 
     end interface
-
-    CONTAINS
-
-    subroutine OpenMM_Objects_destroy(omm)
-        use OpenMM_Types
-        type (OpenMM_Objects) omm
-        call OpenMM_Context_destroy(omm%context)
-        call OpenMM_Integrator_destroy(omm%integrator)
-        call OpenMM_System_destroy(omm%system)
-    end subroutine
-
-    subroutine OpenMM_Vec3_scale(in, s, out)
-        real*8,intent(in) :: in(3)
-        real*8,intent(out) :: out(3)
-        real*8 s
-        out(1) = in(1) * s
-        out(2) = in(2) * s
-        out(3) = in(3) * s
-    end subroutine
 end module OpenMM
