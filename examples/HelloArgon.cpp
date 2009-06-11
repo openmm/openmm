@@ -1,15 +1,28 @@
+// -----------------------------------------------------------------------------
+//           OpenMM(tm) HelloArgon example in C++ (June 2009)
+// -----------------------------------------------------------------------------
+// This program demonstrates a simple molecular simulation using the OpenMM
+// API for GPU-accelerated molecular dynamics simulation.  The system
+// represents a small collection of argon atoms in a vaccuum.
+// A multi-frame PDB file is written to stdout which  can be read by VMD or 
+// other visualization tool to produce an animation of the resulting trajectory.
+// -----------------------------------------------------------------------------
+
 #include "OpenMM.h"
 #include <cstdio>
 
-// forward declaration of subroutine defined later in this file.
+// Forward declaration of subroutine for printing atomic coordinates,
+// defined later in this source file.
 void writePdb(const OpenMM::OpenMMContext& context);
 
+// simulation is performed within simulateArgon() subroutine
 void simulateArgon() 
 {
     // Load any shared libraries containing GPU implementations
     OpenMM::Platform::loadPluginsFromDirectory(
         OpenMM::Platform::getDefaultPluginsDirectory());
 
+    // Create a system with nonbonded forces
     OpenMM::System system;
     OpenMM::NonbondedForce* nonbond = new OpenMM::NonbondedForce(); 
     system.addForce(nonbond);
@@ -74,7 +87,7 @@ void writePdb(const OpenMM::OpenMMContext& context)
     for (int a = 0; a < context.getSystem().getNumParticles(); ++a)
     {
         printf("ATOM  %5d AR    AR     1    ", a+1); // atom number
-        printf("%8.3f%8.3f%8.3f  1.00  0.00          AR\n",
+        printf("%8.3f%8.3f%8.3f  1.00  0.00          AR\n", // coordinates
             // notice "*10" converts nanometers to Angstroms
             pos[a][0]*10, pos[a][1]*10, pos[a][2]*10);
     }
