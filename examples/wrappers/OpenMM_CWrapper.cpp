@@ -299,7 +299,7 @@ void OpenMM_GBSAOBCForce_destroy(OpenMM_GBSAOBCForce* doomed)
 void openmm_gbsaobcforce_destroy_(OpenMM_GBSAOBCForce*& doomed) 
 {   OpenMM_GBSAOBCForce_destroy(doomed); doomed = 0;}
 
-// Fortran only: recast NonbondedForce as a Force.
+// Fortran only: recast GBSAOBCForce as a Force.
 void openmm_gbsaobcforce_asforce_(OpenMM_GBSAOBCForce* const& gbsa,
 							      OpenMM_Force*&              force)
 {   force = (OpenMM_Force*)gbsa; }

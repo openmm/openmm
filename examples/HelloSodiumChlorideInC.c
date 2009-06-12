@@ -184,7 +184,7 @@ struct MyOpenMMData_s {
  *
  * Note that this function must understand the calling MD code's molecule and
  * force field data structures so will need to be customized for each MD code.
-*/
+ */
 static MyOpenMMData* 
 myInitializeOpenMM( const MyAtomInfo    atoms[],
                     double              temperature,
@@ -274,7 +274,7 @@ myGetOpenMMState(MyOpenMMData* omm, int wantEnergy,
                  MyAtomInfo atoms[])
 {
     OpenMM_State*           state;
-    const OpenMM_Vec3Array* posArray;
+    const OpenMM_Vec3Array* posArrayInNm;
     int                     infoMask;
     int n;
 
@@ -291,12 +291,11 @@ myGetOpenMMState(MyOpenMMData* omm, int wantEnergy,
 
     /* Positions are maintained as a Vec3Array inside the State. This will give
      * us access, but don't destroy it yourself -- it will go away with the State. */
-    posArray  = OpenMM_State_getPositions(state);
-    for (n=0; *atoms[n].pdb; ++n) {
-        double posInNm[3];
-        OpenMM_Vec3Array_get(posArray, n, posInNm);
-        OpenMM_Vec3_scale(posInNm, OpenMM_AngstromsPerNm, atoms[n].posInAng);
-    }
+    posArrayInNm = OpenMM_State_getPositions(state);
+    for (n=0; *atoms[n].pdb; ++n)
+        /* Sets atoms[n].pos = posArray[n] * Angstroms/nm. */
+        OpenMM_Vec3Array_getScaled(posArrayInNm, n, OpenMM_AngstromsPerNm, 
+                                   atoms[n].posInAng);
 
     /* If energy has been requested, obtain it and convert from kJ to kcal. */
     *energyInKcal = 0;

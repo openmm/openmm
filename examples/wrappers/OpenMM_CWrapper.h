@@ -129,7 +129,7 @@ extern void                 OpenMM_Vec3Array_get(const OpenMM_Vec3Array*, int i,
 extern void                 OpenMM_Vec3Array_getScaled(const OpenMM_Vec3Array*, int i, double s, double[3]);
 extern void                 OpenMM_Vec3Array_set(OpenMM_Vec3Array*, int i, const double[3]);
 extern void                 OpenMM_Vec3Array_setScaled(OpenMM_Vec3Array*, int i, const double[3], double s);
-extern void                 OpenMM_Vec3_scale(const double[3], double s, double[3]);
+extern void                 OpenMM_Vec3_scale(const double in[3], double s, double out[3]);
 
 /* OpenMM_String */
 extern OpenMM_String*       OpenMM_String_create(const char* init);
