@@ -1,9 +1,30 @@
-! Define two modules
+! -----------------------------------------------------------------------------
+!                OpenMM(tm) Fortran 95 Interface (June 2009)
+! -----------------------------------------------------------------------------
+! This is a Fortran 95 interface module providing access to the OpenMM API
+! which is written in C++. At link time this module requires that the OpenMM
+! C wrapper library (or object file) is available since that provides a
+! simplified Fortran-style set of access methods that can be described
+! adequately here without using any Fortran 2003 features.
+!
+! This is experimental and is not part of the OpenMM release. Improvements in
+! substance and style would be greatly appreciated. If you have ideas (or 
+! better code) please post to the OpenMM forum on simtk.org/home/openmm or
+! if you're shy you can email Michael Sherman at msherman@stanford.edu.
+! 
+! Below we define two modules
 !    OpenMM_Types
 !    OpenMM
-! Only OpenMM need be imported into programs since
-! it will include OpenMM_Types also.
+! Only "use OpenMM" need be included in Fortran program units since 
+! that modules includes the other one.
+! -----------------------------------------------------------------------------
 
+! We use defined types containing opaque pointers as a way of getting
+! a modicum of type safety without having to expose any of the OpenMM
+! data structures here. You never have to do anything with those 
+! pointers to deal with these objects; they get created by the API
+! for you and you just pass them back to the API when you want to
+! do something with them.
 module OpenMM_Types
     implicit none
 
