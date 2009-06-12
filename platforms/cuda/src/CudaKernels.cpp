@@ -399,7 +399,7 @@ static void initializeIntegration(const System& system, CudaPlatform::PlatformDa
         invMass1[i] = 1.0f/mass[particle1Index];
         invMass2[i] = 1.0f/mass[particle2Index];
     }
-    gpuSetConstraintParameters(gpu, particle1, particle2, distance, invMass1, invMass2, (float)integrator.getConstraintTolerance(), 4);
+    gpuSetConstraintParameters(gpu, particle1, particle2, distance, invMass1, invMass2, (float)integrator.getConstraintTolerance());
     
     // Finish initialization.
 
@@ -438,7 +438,7 @@ void CudaIntegrateVerletStepKernel::execute(OpenMMContextImpl& context, const Ve
     kVerletUpdatePart1(gpu);
     kApplyFirstShake(gpu);
     kApplyFirstSettle(gpu);
-    kApplyFirstCShake(gpu);
+    kApplyFirstCCMA(gpu);
     if (data.removeCM) {
         int step = (int) (context.getTime()/stepSize);
         if (step%data.cmMotionFrequency == 0)
@@ -477,7 +477,7 @@ void CudaIntegrateLangevinStepKernel::execute(OpenMMContextImpl& context, const 
     kUpdatePart1(gpu);
     kApplyFirstShake(gpu);
     kApplyFirstSettle(gpu);
-    kApplyFirstCShake(gpu);
+    kApplyFirstCCMA(gpu);
     if (data.removeCM) {
         int step = (int) (context.getTime()/stepSize);
         if (step%data.cmMotionFrequency == 0)
@@ -486,7 +486,7 @@ void CudaIntegrateLangevinStepKernel::execute(OpenMMContextImpl& context, const 
     kUpdatePart2(gpu);
     kApplySecondShake(gpu);
     kApplySecondSettle(gpu);
-    kApplySecondCShake(gpu);
+    kApplySecondCCMA(gpu);
 }
 
 CudaIntegrateBrownianStepKernel::~CudaIntegrateBrownianStepKernel() {
@@ -519,7 +519,7 @@ void CudaIntegrateBrownianStepKernel::execute(OpenMMContextImpl& context, const 
     kBrownianUpdatePart1(gpu);
     kApplyFirstShake(gpu);
     kApplyFirstSettle(gpu);
-    kApplyFirstCShake(gpu);
+    kApplyFirstCCMA(gpu);
     if (data.removeCM) {
         int step = (int) (context.getTime()/stepSize);
         if (step%data.cmMotionFrequency == 0)

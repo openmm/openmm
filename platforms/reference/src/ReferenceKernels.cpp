@@ -38,14 +38,12 @@
 #include "SimTKReference/ReferenceBondForce.h"
 #include "SimTKReference/ReferenceBrownianDynamics.h"
 #include "SimTKReference/ReferenceHarmonicBondIxn.h"
-#include "SimTKReference/ReferenceLincsAlgorithm.h"
 #include "SimTKReference/ReferenceLJCoulomb14.h"
 #include "SimTKReference/ReferenceLJCoulombIxn.h"
 #include "SimTKReference/ReferenceProperDihedralBond.h"
 #include "SimTKReference/ReferenceRbDihedralBond.h"
 #include "SimTKReference/ReferenceStochasticDynamics.h"
-#include "SimTKReference/ReferenceRigidShakeAlgorithm.h"
-#include "SimTKReference/ReferenceShakeAlgorithm.h"
+#include "SimTKReference/ReferenceCCMAAlgorithm.h"
 #include "SimTKReference/ReferenceVerletDynamics.h"
 #include "openmm/CMMotionRemover.h"
 #include "openmm/System.h"
@@ -108,7 +106,7 @@ static void disposeRealArray(RealOpenMM** array, int size) {
     }
 }
 
-static void findAnglesForShake(const System& system, vector<ReferenceRigidShakeAlgorithm::AngleInfo>& angles) {
+static void findAnglesForCCMA(const System& system, vector<ReferenceCCMAAlgorithm::AngleInfo>& angles) {
     for (int i = 0; i < system.getNumForces(); i++) {
         const HarmonicAngleForce* force = dynamic_cast<const HarmonicAngleForce*>(&system.getForce(i));
         if (force != NULL) {
@@ -116,7 +114,7 @@ static void findAnglesForShake(const System& system, vector<ReferenceRigidShakeA
                 int atom1, atom2, atom3;
                 double angle, k;
                 force->getAngleParameters(j, atom1, atom2, atom3, angle, k);
-                angles.push_back(ReferenceRigidShakeAlgorithm::AngleInfo(atom1, atom2, atom3, angle));
+                angles.push_back(ReferenceCCMAAlgorithm::AngleInfo(atom1, atom2, atom3, angle));
             }
         }
     }
@@ -623,9 +621,9 @@ void ReferenceIntegrateVerletStepKernel::execute(OpenMMContextImpl& context, con
             delete constraints;
         }
         dynamics = new ReferenceVerletDynamics(context.getSystem().getNumParticles(), static_cast<RealOpenMM>(stepSize) );
-        vector<ReferenceRigidShakeAlgorithm::AngleInfo> angles;
-        findAnglesForShake(context.getSystem(), angles);
-        constraints = new ReferenceRigidShakeAlgorithm(context.getSystem().getNumParticles(), numConstraints, constraintIndices, constraintDistances, masses, angles, (RealOpenMM)integrator.getConstraintTolerance());
+        vector<ReferenceCCMAAlgorithm::AngleInfo> angles;
+        findAnglesForCCMA(context.getSystem(), angles);
+        constraints = new ReferenceCCMAAlgorithm(context.getSystem().getNumParticles(), numConstraints, constraintIndices, constraintDistances, masses, angles, (RealOpenMM)integrator.getConstraintTolerance());
         dynamics->setReferenceConstraintAlgorithm(constraints);
         prevStepSize = stepSize;
     }
@@ -684,9 +682,9 @@ void ReferenceIntegrateLangevinStepKernel::execute(OpenMMContextImpl& context, c
 				static_cast<RealOpenMM>(stepSize), 
 				static_cast<RealOpenMM>(tau), 
 				static_cast<RealOpenMM>(temperature) );
-        vector<ReferenceRigidShakeAlgorithm::AngleInfo> angles;
-        findAnglesForShake(context.getSystem(), angles);
-        constraints = new ReferenceRigidShakeAlgorithm(context.getSystem().getNumParticles(), numConstraints, constraintIndices, constraintDistances, masses, angles, (RealOpenMM)integrator.getConstraintTolerance());
+        vector<ReferenceCCMAAlgorithm::AngleInfo> angles;
+        findAnglesForCCMA(context.getSystem(), angles);
+        constraints = new ReferenceCCMAAlgorithm(context.getSystem().getNumParticles(), numConstraints, constraintIndices, constraintDistances, masses, angles, (RealOpenMM)integrator.getConstraintTolerance());
         dynamics->setReferenceConstraintAlgorithm(constraints);
         prevTemp = temperature;
         prevFriction = friction;
@@ -746,9 +744,9 @@ void ReferenceIntegrateBrownianStepKernel::execute(OpenMMContextImpl& context, c
 				static_cast<RealOpenMM>(stepSize), 
 				static_cast<RealOpenMM>(friction), 
 				static_cast<RealOpenMM>(temperature) );
-        vector<ReferenceRigidShakeAlgorithm::AngleInfo> angles;
-        findAnglesForShake(context.getSystem(), angles);
-        constraints = new ReferenceRigidShakeAlgorithm(context.getSystem().getNumParticles(), numConstraints, constraintIndices, constraintDistances, masses, angles, (RealOpenMM)integrator.getConstraintTolerance());
+        vector<ReferenceCCMAAlgorithm::AngleInfo> angles;
+        findAnglesForCCMA(context.getSystem(), angles);
+        constraints = new ReferenceCCMAAlgorithm(context.getSystem().getNumParticles(), numConstraints, constraintIndices, constraintDistances, masses, angles, (RealOpenMM)integrator.getConstraintTolerance());
         dynamics->setReferenceConstraintAlgorithm(constraints);
         prevTemp = temperature;
         prevFriction = friction;

@@ -258,7 +258,7 @@ struct cudaGmxSimulation {
     unsigned int    max_shake_threads_per_block;    // Maximum threads per block in shake kernel calls
     unsigned int    shake_threads_per_block;        // Threads per block in shake kernel calls
     unsigned int    settle_threads_per_block;       // Threads per block in SETTLE kernel calls
-    unsigned int    lincs_threads_per_block;        // Threads per block in LINCS kernel calls
+    unsigned int    ccma_threads_per_block;         // Threads per block in CCMA kernel calls
     unsigned int    nonshake_threads_per_block;     // Threads per block in nonshaking kernel call
     unsigned int    max_localForces_threads_per_block;  // Threads per block in local forces kernel calls
     unsigned int    localForces_threads_per_block;  // Threads per block in local forces kernel calls
@@ -360,7 +360,7 @@ struct cudaGmxSimulation {
     float           inverseTotalMass;               // Used in linear momentum removal
     unsigned int    ShakeConstraints;               // Total number of Shake constraints
     unsigned int    settleConstraints;              // Total number of Settle constraints
-    unsigned int    lincsConstraints;               // Total number of LINCS constraints.
+    unsigned int    ccmaConstraints;                // Total number of CCMA constraints.
     unsigned int    rigidClusters;                  // Total number of rigid clusters
     unsigned int    maxRigidClusterSize;            // The size of the largest rigid cluster
     unsigned int    clusterShakeBlockSize;          // The number of threads to process each rigid cluster
@@ -368,7 +368,6 @@ struct cudaGmxSimulation {
     unsigned int    maxShakeIterations;             // Maximum shake iterations
     unsigned int    degreesOfFreedom;               // Number of degrees of freedom in system
     float           shakeTolerance;                 // Shake tolerance
-    unsigned int    lincsTerms;                     // Number of terms in the matrix expansion for LINCS
     float           InvMassJ;                       // Shake inverse mass for hydrogens
     int*            pNonShakeID;                    // Not Shaking atoms
     int4*           pShakeID;                       // Shake atoms and phase
@@ -385,25 +384,17 @@ struct cudaGmxSimulation {
     int*            pAtomIndex;                     // The original index of each atom
     float4*         pGridBoundingBox;               // The size of each grid cell
     float4*         pGridCenter;                    // The center of each grid cell
-    int2*           pLincsAtoms;                    // The atoms connected by each LINCS constraint
-    float4*         pLincsDistance;                 // The displacement vector (x, y, z) and constraint distance (w) for each LINCS constraint
-    int*            pLincsConnections;              // The indices of constraints that other constraints are connected to
-    int*            pLincsNumConnections;           // The number of other constraints that each constraint is linked to
-    float*          pLincsS;                        // S matrix for LINCS
-    float*          pLincsCoupling;                 // Coupling matrix for LINCS
-    float*          pLincsRhs1;                     // Workspace for LINCS
-    float*          pLincsRhs2;                     // Workspace for LINCS
-    float*          pLincsSolution;                 // Workspace for LINCS
-    int*            pLincsAtomConstraints;          // The indices of constraints involving each atom
-    int*            pLincsNumAtomConstraints;       // The number of constraints involving each atom
+    int2*           pCcmaAtoms;                     // The atoms connected by each CCMA constraint
+    float4*         pCcmaDistance;                  // The displacement vector (x, y, z) and constraint distance (w) for each CCMA constraint
+    float*          pCcmaDelta1;                    // Workspace for CCMA
+    float*          pCcmaDelta2;                    // Workspace for CCMA
+    int*            pCcmaAtomConstraints;           // The indices of constraints involving each atom
+    int*            pCcmaNumAtomConstraints;        // The number of constraints involving each atom
     short*          pSyncCounter;                   // Used for global thread synchronization
-    unsigned int*   pRequiredIterations;            // Used by SHAKE to communicate whether iteration has converged
-    float*          pShakeReducedMass;              // The reduced mass for each SHAKE constraint
-    float*          pRigidClusterMatrix;            // The inverse constraint matrix for each rigid cluster
-    unsigned int*   pRigidClusterConstraintIndex;   // The index of each cluster in the stream containing cluster constraints.
-    unsigned int*   pRigidClusterMatrixIndex;       // The index of each cluster in the stream containing cluster matrices.
-    unsigned int*   pConstraintMatrixColumn;       // The column of each element in the constraint matrix.
-    float*          pConstraintMatrixValue;        // The value of each element in the constraint matrix.
+    unsigned int*   pRequiredIterations;            // Used by CCMA to communicate whether iteration has converged
+    float*          pCcmaReducedMass;               // The reduced mass for each CCMA constraint
+    unsigned int*   pConstraintMatrixColumn;        // The column of each element in the constraint matrix.
+    float*          pConstraintMatrixValue;         // The value of each element in the constraint matrix.
 
     // Mutable stuff
     float4*         pPosq;                          // Pointer to atom positions and charges

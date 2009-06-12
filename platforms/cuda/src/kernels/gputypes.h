@@ -127,20 +127,15 @@ struct _gpuContext {
     CUDAStream<int>* psAtomIndex;           // The original index of each atom
     CUDAStream<float4>* psGridBoundingBox;  // The size of each grid cell
     CUDAStream<float4>* psGridCenter;       // The center and radius for each grid cell
-    CUDAStream<int2>* psLincsAtoms;         // The atoms connected by each LINCS constraint
-    CUDAStream<float4>* psLincsDistance;    // The displacement vector (x, y, z) and constraint distance (w) for each LINCS constraint
-    CUDAStream<int>* psLincsConnections;    // The indices of constraints that other constraints are connected to
-    CUDAStream<int>* psLincsNumConnections; // The number of other constraints that each constraint is linked to
-    CUDAStream<int>* psLincsAtomConstraints; // The indices of constraints involving each atom
-    CUDAStream<int>* psLincsNumAtomConstraints; // The number of constraints involving each atom
-    CUDAStream<float>* psLincsS;            // S matrix for LINCS
-    CUDAStream<float>* psLincsCoupling;     // Coupling matrix for LINCS
-    CUDAStream<float>* psLincsRhs1;         // Workspace for LINCS
-    CUDAStream<float>* psLincsRhs2;         // Workspace for LINCS
-    CUDAStream<float>* psLincsSolution;     // Workspace for LINCS
+    CUDAStream<int2>* psCcmaAtoms;          // The atoms connected by each CCMA constraint
+    CUDAStream<float4>* psCcmaDistance;     // The displacement vector (x, y, z) and constraint distance (w) for each CCMA constraint
+    CUDAStream<int>* psCcmaAtomConstraints; // The indices of constraints involving each atom
+    CUDAStream<int>* psCcmaNumAtomConstraints; // The number of constraints involving each atom
+    CUDAStream<float>* psCcmaDelta1;        // Workspace for CCMA
+    CUDAStream<float>* psCcmaDelta2;        // Workspace for CCMA
     CUDAStream<short>* psSyncCounter;       // Used for global thread synchronization
     CUDAStream<unsigned int>* psRequiredIterations; // Used by SHAKE to communicate whether iteration has converged
-    CUDAStream<float>* psShakeReducedMass;  // The reduced mass for each SHAKE constraint
+    CUDAStream<float>* psCcmaReducedMass;   // The reduced mass for each SHAKE constraint
     CUDAStream<float>* psRigidClusterMatrix;// The inverse constraint matrix for each rigid cluster
     CUDAStream<unsigned int>* psRigidClusterConstraintIndex; // The index of each cluster in the stream containing cluster constraints.
     CUDAStream<unsigned int>* psRigidClusterMatrixIndex; // The index of each cluster in the stream containing cluster matrices.
@@ -192,7 +187,7 @@ void gpuSetObcParameters(gpuContext gpu, float innerDielectric, float solventDie
 
 extern "C"
 void gpuSetConstraintParameters(gpuContext gpu, const std::vector<int>& atom1, const std::vector<int>& atom2, const std::vector<float>& distance,
-        const std::vector<float>& invMass1, const std::vector<float>& invMass2, float shakeTolerance, unsigned int lincsTerms);
+        const std::vector<float>& invMass1, const std::vector<float>& invMass2, float constraintTolerance);
 
 extern "C"
 int gpuAllocateInitialBuffers(gpuContext gpu);

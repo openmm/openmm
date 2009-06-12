@@ -28,9 +28,8 @@
 #include "../SimTKUtilities/SimTKOpenMMCommon.h"
 #include "../SimTKUtilities/SimTKOpenMMUtilities.h"
 #include "../SimTKUtilities/SimTKOpenMMLog.h"
-#include "ReferenceRigidShakeAlgorithm.h"
+#include "ReferenceCCMAAlgorithm.h"
 #include "ReferenceDynamics.h"
-#include "jama_svd.h"
 #include "quern.h"
 #include "openmm/Vec3.h"
 #include <map>
@@ -40,22 +39,22 @@ using std::pair;
 using std::vector;
 using std::set;
 using OpenMM::Vec3;
-using TNT::Array2D;
-using JAMA::SVD;
 
 /**---------------------------------------------------------------------------------------
 
-   ReferenceQShakeAlgorithm constructor
+   ReferenceCCMAAlgorithm constructor
 
-   @param numberOfAtoms            number of atoms
-   @param numberOfConstraints      number of constraints
-   @param atomIndices              block of atom indices
-   @param shakeParameters          Shake parameters
-   @param tolerance                constraint tolerance
+         @param numberOfAtoms    number of atoms
+         @param numberOfConstraints      number of constraints
+         @param atomIndices              atom indices for contraints
+         @param distance                 distances for constraints
+         @param masses                   atom masses
+         @param angles                   angle force field terms
+         @param tolerance                constraint tolerance
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceRigidShakeAlgorithm::ReferenceRigidShakeAlgorithm( int numberOfAtoms,
+ReferenceCCMAAlgorithm::ReferenceCCMAAlgorithm( int numberOfAtoms,
                                                   int numberOfConstraints,
                                                   int** atomIndices,
                                                   RealOpenMM* distance,
@@ -65,7 +64,7 @@ ReferenceRigidShakeAlgorithm::ReferenceRigidShakeAlgorithm( int numberOfAtoms,
 
    // ---------------------------------------------------------------------------------------
 
-   // static const char* methodName = "\nReferenceQShakeAlgorithm::ReferenceQShakeAlgorithm";
+   // static const char* methodName = "\nReferenceCCMAAlgorithm::ReferenceCCMAAlgorithm";
 
    static const RealOpenMM zero        =  0.0;
    static const RealOpenMM one         =  1.0;
@@ -201,181 +200,26 @@ ReferenceRigidShakeAlgorithm::ReferenceRigidShakeAlgorithm( int numberOfAtoms,
            QUERN_solve_with_r(numberOfConstraints, rRowStart, rColIndex, rValue, &rhs[0], &rhs[0]);
            for (int j = 0; j < numberOfConstraints; j++) {
                double value = rhs[j]*_distance[i]/_distance[j];
-               if (abs(value) > 0.02)
+               if (FABS(value) > 0.02)
                    _matrix[j].push_back(pair<int, RealOpenMM>(i, (RealOpenMM) value));
            }
        }
        QUERN_free_result(qRowStart, qColIndex, qValue);
        QUERN_free_result(rRowStart, rColIndex, rValue);
    }
-
-
-
-
-
-
-//   // Identify rigid clusters.
-//
-//   vector<map<int, int> > atomConstraints(numberOfAtoms);
-//   for (int i = 0; i < numberOfConstraints; i++) {
-//       atomConstraints[atomIndices[i][0]][atomIndices[i][1]] = i;
-//       atomConstraints[atomIndices[i][1]][atomIndices[i][0]] = i;
-//   }
-//   for (int i = 0; i < numberOfAtoms; i++) {
-//       if (atomConstraints[i].size() < 2)
-//           continue;
-//
-//       // Begin by looking for a triangle this atom is part of.
-//
-//       set<int> atoms;
-//       atoms.insert(i);
-//       for (map<int, int>::const_iterator atom1 = atomConstraints[i].begin(); atom1 != atomConstraints[i].end() && atoms.size() == 1; ++atom1) {
-//           for (map<int, int>::const_iterator atom2 = atomConstraints[atom1->first].begin(); atom2 != atomConstraints[atom1->first].end(); ++atom2) {
-//               if (atomConstraints[i].count(atom2->first) != 0) {
-//                   atoms.insert(atom1->first);
-//                   atoms.insert(atom2->first);
-//                   break;
-//               }
-//           }
-//       }
-//       if (atoms.size() == 1)
-//           continue;
-//
-//       // We have three atoms that are part of a cluster, so look for other atoms we can add.
-//
-//       bool done = false;
-//       while (!done) {
-//           done = true;
-//           for (set<int>::const_iterator atom1 = atoms.begin(); atom1 != atoms.end(); ++atom1) {
-//               for (map<int, int>::const_iterator atom2 = atomConstraints[*atom1].begin(); atom2 != atomConstraints[*atom1].end(); ++atom2) {
-//                   if (atoms.find(atom2->first) != atoms.end())
-//                       continue; // This atom is already in the cluster.
-//
-//                   // See if this atom is linked to three other atoms in the cluster.
-//
-//                   int linkCount = 0;
-//                   for (map<int, int>::const_iterator atom3 = atomConstraints[atom2->first].begin(); atom3 != atomConstraints[atom2->first].end(); ++atom3)
-//                       if (atoms.find(atom3->first) != atoms.end())
-//                           linkCount++;
-//                   if (linkCount > 2) {
-//                       atoms.insert(atom2->first);
-//                       done = false;
-//                   }
-//               }
-//           }
-//       }
-//
-//       // Record the cluster.
-//
-//       vector<int> constraints;
-//       for (set<int>::const_iterator atom1 = atoms.begin(); atom1 != atoms.end(); ++atom1) {
-//           for (map<int, int>::const_iterator atom2 = atomConstraints[*atom1].begin(); atom2 != atomConstraints[*atom1].end(); ++atom2) {
-//               if (*atom1 < atom2->first && atoms.find(atom2->first) != atoms.end())
-//                   constraints.push_back(atom2->second);
-//           }
-//       }
-//       _rigidClusters.push_back(constraints);
-//       for (set<int>::const_iterator atom1 = atoms.begin(); atom1 != atoms.end(); ++atom1) {
-//           for (map<int, int>::const_iterator atom2 = atomConstraints[*atom1].begin(); atom2 != atomConstraints[*atom1].end(); ++atom2)
-//               atomConstraints[atom2->first].erase(*atom1);
-//           atomConstraints[*atom1].clear();
-//       }
-//
-//       // Compute the constraint coupling matrix for this cluster.
-//
-//       const vector<int>& cluster = _rigidClusters[i];
-//       unsigned int size = cluster.size();
-//       Array2D<double> matrix(size, size);
-//       for (int j = 0; j < (int)size; j++) {
-//           for (int k = 0; k < (int)size; k++) {
-//               double scale;
-//               int atomj0 = _atomIndices[cluster[j]][0];
-//               int atomj1 = _atomIndices[cluster[j]][1];
-//               int atomk0 = _atomIndices[cluster[k]][0];
-//               int atomk1 = _atomIndices[cluster[k]][1];
-//               RealOpenMM invMass0 = one/masses[atomj0];
-//               RealOpenMM invMass1 = one/masses[atomj1];
-//               int atoma, atomb;
-//               if (atomj0 == atomk0) {
-//                   atoma = atomj1;
-//                   atomb = atomk1;
-//                   scale = invMass0/(invMass0+invMass1);
-//               }
-//               else if (atomj1 == atomk1) {
-//                   atoma = atomj0;
-//                   atomb = atomk0;
-//                   scale = invMass1/(invMass0+invMass1);
-//               }
-//               else if (atomj0 == atomk1) {
-//                   atoma = atomj1;
-//                   atomb = atomk0;
-//                   scale = invMass0/(invMass0+invMass1);
-//               }
-//               else if (atomj1 == atomk0) {
-//                   atoma = atomj0;
-//                   atomb = atomk1;
-//                   scale = invMass1/(invMass0+invMass1);
-//               }
-//               else {
-//                   matrix[j][k] = 0.0;
-//                   continue; // These constraints are not connected.
-//               }
-//
-//               // Find the third constraint forming a triangle with these two.
-//
-//               for (int m = 0; m < size; m++) {
-//                   int other = cluster[m];
-//                   if ((_atomIndices[other][0] == atoma && _atomIndices[other][1] == atomb) || (_atomIndices[other][0] == atomb && _atomIndices[other][1] == atoma)) {
-//                       double d1 = _distance[cluster[j]];
-//                       double d2 = _distance[cluster[k]];
-//                       double d3 = _distance[other];
-//                       matrix[j][k] = scale*(d1*d1+d2*d2-d3*d3)/(2.0*d1*d2);
-//                       break;
-//                   }
-//               }
-//           }
-//           matrix[j][j] = 1.0;
-//       }
-//
-//       // Invert it using SVD.
-//
-//       Array2D<double> u, v;
-//       Array1D<double> w;
-//       SVD<double> svd(matrix);
-//       svd.getU(u);
-//       svd.getV(v);
-//       svd.getSingularValues(w);
-//       double singularValueCutoff = 0.01*w[0];
-//       for (int j = 0; j < (int)size; j++)
-//           w[j] = (w[j] < singularValueCutoff ? 0.0 : 1.0/w[j]);
-//       for (int j = 0; j < (int)size; j++) {
-//           for (int k = 0; k < (int)size; k++) {
-//               matrix[j][k] = 0.0;
-//               for (int m = 0; m < (int)size; m++)
-//                   matrix[j][k] += v[j][m]*w[m]*u[k][m];
-//           }
-//       }
-//
-//       // Record the inverted matrix.
-//
-//       _matrices.push_back(SimTKOpenMMUtilities::allocateTwoDRealOpenMMArray(constraints.size(), constraints.size(), NULL, false, 0.0, ""));
-//       for (int j = 0; j < (int)size; j++)
-//           for (int k = 0; k < (int)size; k++)
-//               _matrices[i][j][k] = (RealOpenMM)matrix[j][k]*_distance[cluster[k]]/_distance[cluster[j]];
-//   }
 }
 
 /**---------------------------------------------------------------------------------------
 
-   ReferenceQShakeAlgorithm destructor
+   ReferenceCCMAAlgorithm destructor
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceRigidShakeAlgorithm::~ReferenceRigidShakeAlgorithm( ){
+ReferenceCCMAAlgorithm::~ReferenceCCMAAlgorithm( ){
 
    // ---------------------------------------------------------------------------------------
 
-   // static const char* methodName = "\nReferenceQShakeAlgorithm::~ReferenceQShakeAlgorithm";
+   // static const char* methodName = "\nReferenceCCMAAlgorithm::~ReferenceCCMAAlgorithm";
 
    // ---------------------------------------------------------------------------------------
 
@@ -398,11 +242,11 @@ ReferenceRigidShakeAlgorithm::~ReferenceRigidShakeAlgorithm( ){
 
    --------------------------------------------------------------------------------------- */
 
-int ReferenceRigidShakeAlgorithm::getNumberOfConstraints( void ) const {
+int ReferenceCCMAAlgorithm::getNumberOfConstraints( void ) const {
 
    // ---------------------------------------------------------------------------------------
 
-   // static const char* methodName = "\nReferenceQShakeAlgorithm::getNumberOfConstraints";
+   // static const char* methodName = "\nReferenceCCMAAlgorithm::getNumberOfConstraints";
 
    // ---------------------------------------------------------------------------------------
 
@@ -417,11 +261,11 @@ int ReferenceRigidShakeAlgorithm::getNumberOfConstraints( void ) const {
 
    --------------------------------------------------------------------------------------- */
 
-int ReferenceRigidShakeAlgorithm::getMaximumNumberOfIterations( void ) const {
+int ReferenceCCMAAlgorithm::getMaximumNumberOfIterations( void ) const {
 
    // ---------------------------------------------------------------------------------------
 
-   // static const char* methodName = "\nReferenceQShakeAlgorithm::getMaximumNumberOfIterations";
+   // static const char* methodName = "\nReferenceCCMAAlgorithm::getMaximumNumberOfIterations";
 
    // ---------------------------------------------------------------------------------------
 
@@ -438,11 +282,11 @@ int ReferenceRigidShakeAlgorithm::getMaximumNumberOfIterations( void ) const {
 
    --------------------------------------------------------------------------------------- */
 
-int ReferenceRigidShakeAlgorithm::setMaximumNumberOfIterations( int maximumNumberOfIterations ){
+int ReferenceCCMAAlgorithm::setMaximumNumberOfIterations( int maximumNumberOfIterations ){
 
    // ---------------------------------------------------------------------------------------
 
-   // static const char* methodName = "\nReferenceQShakeAlgorithm::setMaximumNumberOfIterations";
+   // static const char* methodName = "\nReferenceCCMAAlgorithm::setMaximumNumberOfIterations";
 
    // ---------------------------------------------------------------------------------------
 
@@ -459,11 +303,11 @@ int ReferenceRigidShakeAlgorithm::setMaximumNumberOfIterations( int maximumNumbe
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM ReferenceRigidShakeAlgorithm::getTolerance( void ) const {
+RealOpenMM ReferenceCCMAAlgorithm::getTolerance( void ) const {
 
    // ---------------------------------------------------------------------------------------
 
-   // static const char* methodName = "\nReferenceQShakeAlgorithm::getTolerance";
+   // static const char* methodName = "\nReferenceCCMAAlgorithm::getTolerance";
 
    // ---------------------------------------------------------------------------------------
 
@@ -480,12 +324,12 @@ RealOpenMM ReferenceRigidShakeAlgorithm::getTolerance( void ) const {
 
    --------------------------------------------------------------------------------------- */
 
-int ReferenceRigidShakeAlgorithm::setTolerance( RealOpenMM tolerance ){
+int ReferenceCCMAAlgorithm::setTolerance( RealOpenMM tolerance ){
 
 
    // ---------------------------------------------------------------------------------------
 
-   // static const char* methodName = "\nReferenceQShakeAlgorithm::setTolerance";
+   // static const char* methodName = "\nReferenceCCMAAlgorithm::setTolerance";
 
    // ---------------------------------------------------------------------------------------
 
@@ -497,7 +341,7 @@ int ReferenceRigidShakeAlgorithm::setTolerance( RealOpenMM tolerance ){
 
 /**---------------------------------------------------------------------------------------
 
-   Apply Shake algorithm
+   Apply CCMA algorithm
 
    @param numberOfAtoms    number of atoms
    @param atomCoordinates  atom coordinates
@@ -509,13 +353,13 @@ int ReferenceRigidShakeAlgorithm::setTolerance( RealOpenMM tolerance ){
 
    --------------------------------------------------------------------------------------- */
 
-int ReferenceRigidShakeAlgorithm::apply( int numberOfAtoms, RealOpenMM** atomCoordinates,
+int ReferenceCCMAAlgorithm::apply( int numberOfAtoms, RealOpenMM** atomCoordinates,
                                          RealOpenMM** atomCoordinatesP,
                                          RealOpenMM* inverseMasses ){
 
    // ---------------------------------------------------------------------------------------
 
-   static const char* methodName = "\nReferenceQShakeAlgorithm::apply";
+   static const char* methodName = "\nReferenceCCMAAlgorithm::apply";
 
    static const RealOpenMM zero        =  0.0;
    static const RealOpenMM one         =  1.0;
@@ -570,8 +414,8 @@ int ReferenceRigidShakeAlgorithm::apply( int numberOfAtoms, RealOpenMM** atomCoo
 
    int iterations           = 0;
    int numberConverged      = 0;
-   vector<RealOpenMM> constraintForce(_numberOfConstraints);
-   vector<RealOpenMM> tempForce(_numberOfConstraints);
+   vector<RealOpenMM> constraintDelta(_numberOfConstraints);
+   vector<RealOpenMM> tempDelta(_numberOfConstraints);
    while (iterations < getMaximumNumberOfIterations()) {
       numberConverged  = 0;
       for( int ii = 0; ii < _numberOfConstraints; ii++ ){
@@ -586,14 +430,14 @@ int ReferenceRigidShakeAlgorithm::apply( int numberOfAtoms, RealOpenMM** atomCoo
          RealOpenMM rp2  = DOT3( rp_ij, rp_ij );
          RealOpenMM dist2= _distance[ii]*_distance[ii];
          RealOpenMM diff = dist2 - rp2;
-         constraintForce[ii] = zero;
+         constraintDelta[ii] = zero;
          RealOpenMM rrpr  = DOT3(  rp_ij, r_ij[ii] );
          if( rrpr <  d_ij2[ii]*epsilon6 ){
              std::stringstream message;
              message << iterations <<" "<<atomI<<" "<<atomJ<< " Error: sign of rrpr < 0?\n";
              SimTKOpenMMLog::printMessage( message );
          } else {
-             constraintForce[ii] = reducedMasses[ii]*diff/rrpr;
+             constraintDelta[ii] = reducedMasses[ii]*diff/rrpr;
          }
          if (rp2 >= lowerTol*dist2 && rp2 <= upperTol*dist2) {
             numberConverged++;
@@ -608,35 +452,18 @@ int ReferenceRigidShakeAlgorithm::apply( int numberOfAtoms, RealOpenMM** atomCoo
               RealOpenMM sum = 0.0;
               for (int j = 0; j < (int) _matrix[i].size(); j++) {
                   pair<int, RealOpenMM> element = _matrix[i][j];
-                  sum += element.second*constraintForce[element.first];
+                  sum += element.second*constraintDelta[element.first];
               }
-              tempForce[i] = sum;
+              tempDelta[i] = sum;
           }
-          constraintForce = tempForce;
+          constraintDelta = tempDelta;
       }
-      
-//      for (unsigned int i = 0; i < _rigidClusters.size(); i++) {
-//          const vector<int>& cluster = _rigidClusters[i];
-//          RealOpenMM** matrix = _matrices[i];
-//          unsigned int size = cluster.size();
-//          if (size > tempForce.size())
-//              tempForce.resize(size);
-//          for (unsigned int j = 0; j < size; j++) {
-//              tempForce[j] = zero;
-//              for (unsigned int k = 0; k < size; k++)
-//                  tempForce[j] += matrix[j][k]*constraintForce[cluster[k]];
-//          }
-//          for (unsigned int j = 0; j < size; j++)
-//              constraintForce[cluster[j]] = tempForce[j];
-//
-//      }
-RealOpenMM damping = one;//(RealOpenMM) (iterations < 2 ? 0.5 : 1.0);
       for( int ii = 0; ii < _numberOfConstraints; ii++ ){
 
          int atomI   = _atomIndices[ii][0];
          int atomJ   = _atomIndices[ii][1];
          for( int jj = 0; jj < 3; jj++ ){
-            RealOpenMM dr                = constraintForce[ii]*r_ij[ii][jj]*damping;
+            RealOpenMM dr                = constraintDelta[ii]*r_ij[ii][jj];
             atomCoordinatesP[atomI][jj] += inverseMasses[atomI]*dr;
             atomCoordinatesP[atomJ][jj] -= inverseMasses[atomJ]*dr;
          }
@@ -655,7 +482,7 @@ RealOpenMM damping = one;//(RealOpenMM) (iterations < 2 ? 0.5 : 1.0);
          message << " FAILED";
       }
       message << "\n";
-      int errors = reportShake( numberOfAtoms, atomCoordinatesP, message );
+      int errors = reportCCMA( numberOfAtoms, atomCoordinatesP, message );
       if( !errors ){
          message << "*** no errors recorded in explicit check ***";
       }
@@ -679,12 +506,12 @@ RealOpenMM damping = one;//(RealOpenMM) (iterations < 2 ? 0.5 : 1.0);
 
    --------------------------------------------------------------------------------------- */
 
-int ReferenceRigidShakeAlgorithm::reportShake( int numberOfAtoms, RealOpenMM** atomCoordinates,
+int ReferenceCCMAAlgorithm::reportCCMA( int numberOfAtoms, RealOpenMM** atomCoordinates,
                                           std::stringstream& message ){
 
    // ---------------------------------------------------------------------------------------
 
-   static const char* methodName = "\nReferenceQShakeAlgorithm::reportShake";
+   static const char* methodName = "\nReferenceCCMAAlgorithm::reportCCMA";
 
    static const RealOpenMM zero        =  0.0;
    static const RealOpenMM one         =  1.0;

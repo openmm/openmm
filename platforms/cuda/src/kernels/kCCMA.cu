@@ -34,14 +34,14 @@ using namespace std;
 
 static __constant__ cudaGmxSimulation cSim;
 
-void SetCShakeSim(gpuContext gpu)
+void SetCCMASim(gpuContext gpu)
 {
     cudaError_t status;
     status = cudaMemcpyToSymbol(cSim, &gpu->sim, sizeof(cudaGmxSimulation));
     RTERROR(status, "cudaMemcpyToSymbol: SetSim copy to cSim failed");
 }
 
-void GetCShakeSim(gpuContext gpu)
+void GetCCMASim(gpuContext gpu)
 {
     cudaError_t status;
     status = cudaMemcpyFromSymbol(&gpu->sim, cSim, sizeof(cudaGmxSimulation));
@@ -66,7 +66,7 @@ __device__ void kSyncAllThreads_kernel(short* syncCounter, short newCount)
     __syncthreads();
 }
 
-__global__ void kApplyCShake_kernel(float4* atomPositions, bool addOldPosition)
+__global__ void kApplyCCMA_kernel(float4* atomPositions, bool addOldPosition)
 {
     // Initialize counters used for monitoring convergence and doing global thread synchronization.
 
@@ -82,16 +82,16 @@ __global__ void kApplyCShake_kernel(float4* atomPositions, bool addOldPosition)
     // Calculate the direction of each constraint.
 
     unsigned int pos = threadIdx.x + blockIdx.x * blockDim.x;
-    while (pos < cSim.lincsConstraints)
+    while (pos < cSim.ccmaConstraints)
     {
-        int2 atoms = cSim.pLincsAtoms[pos];
-        float4 dir = cSim.pLincsDistance[pos];
+        int2 atoms = cSim.pCcmaAtoms[pos];
+        float4 dir = cSim.pCcmaDistance[pos];
         float4 oldPos1 = cSim.pOldPosq[atoms.x];
         float4 oldPos2 = cSim.pOldPosq[atoms.y];
         dir.x = oldPos1.x-oldPos2.x;
         dir.y = oldPos1.y-oldPos2.y;
         dir.z = oldPos1.z-oldPos2.z;
-        cSim.pLincsDistance[pos] = dir;
+        cSim.pCcmaDistance[pos] = dir;
         pos += blockDim.x*gridDim.x;
     }
     __syncthreads();
@@ -106,12 +106,12 @@ __global__ void kApplyCShake_kernel(float4* atomPositions, bool addOldPosition)
         // Calculate the constraint force for each constraint.
 
         pos = threadIdx.x + blockIdx.x * blockDim.x;
-        while (pos < cSim.lincsConstraints)
+        while (pos < cSim.ccmaConstraints)
         {
-            int2 atoms = cSim.pLincsAtoms[pos];
+            int2 atoms = cSim.pCcmaAtoms[pos];
             float4 delta1 = atomPositions[atoms.x];
             float4 delta2 = atomPositions[atoms.y];
-            float4 dir = cSim.pLincsDistance[pos];
+            float4 dir = cSim.pCcmaDistance[pos];
             float3 rp_ij = make_float3(delta1.x-delta2.x, delta1.y-delta2.y, delta1.z-delta2.z);
             if (addOldPosition)
             {
@@ -124,8 +124,8 @@ __global__ void kApplyCShake_kernel(float4* atomPositions, bool addOldPosition)
             float diff = dist2 - rp2;
             float rrpr  = rp_ij.x*dir.x + rp_ij.y*dir.y + rp_ij.z*dir.z;
             float d_ij2  = dir.x*dir.x + dir.y*dir.y + dir.z*dir.z;
-            float reducedMass = cSim.pShakeReducedMass[pos];
-            cSim.pLincsRhs1[pos] = (rrpr > d_ij2*1e-6f ? reducedMass*diff/rrpr : 0.0f);
+            float reducedMass = cSim.pCcmaReducedMass[pos];
+            cSim.pCcmaDelta1[pos] = (rrpr > d_ij2*1e-6f ? reducedMass*diff/rrpr : 0.0f);
             if (requiredIterations == iteration && (rp2 < lowerTol*dist2 || rp2 > upperTol*dist2))
                 requiredIterations = iteration+1;
             pos += blockDim.x * gridDim.x;
@@ -140,18 +140,18 @@ __global__ void kApplyCShake_kernel(float4* atomPositions, bool addOldPosition)
         // Multiply by the inverse constraint matrix.
 
         pos = threadIdx.x + blockIdx.x * blockDim.x;
-        while (pos < cSim.lincsConstraints)
+        while (pos < cSim.ccmaConstraints)
         {
             float sum = 0.0f;
             for (unsigned int i = 0; ; i++)
             {
-                unsigned int index = pos+i*cSim.lincsConstraints;
+                unsigned int index = pos+i*cSim.ccmaConstraints;
                 unsigned int column = cSim.pConstraintMatrixColumn[index];
-                if (column >= cSim.lincsConstraints)
+                if (column >= cSim.ccmaConstraints)
                     break;
-                sum += cSim.pLincsRhs1[column]*cSim.pConstraintMatrixValue[index];
+                sum += cSim.pCcmaDelta1[column]*cSim.pConstraintMatrixValue[index];
             }
-            cSim.pLincsSolution[pos] = sum;
+            cSim.pCcmaDelta2[pos] = sum;
             pos += blockDim.x * gridDim.x;
         }
         kSyncAllThreads_kernel(&cSim.pSyncCounter[gridDim.x], iteration);
@@ -164,16 +164,16 @@ __global__ void kApplyCShake_kernel(float4* atomPositions, bool addOldPosition)
         {
             float4 atomPos = atomPositions[pos];
             float invMass = cSim.pVelm4[pos].w;
-            int num = cSim.pLincsNumAtomConstraints[pos];
+            int num = cSim.pCcmaNumAtomConstraints[pos];
             for (int i = 0; i < num; i++)
             {
                 int index = pos+i*cSim.atoms;
-                int constraint = cSim.pLincsAtomConstraints[index];
+                int constraint = cSim.pCcmaAtomConstraints[index];
                 bool forward = (constraint > 0);
                 constraint = (forward ? constraint-1 : -constraint-1);
-                float constraintForce = damping*invMass*cSim.pLincsSolution[constraint];
+                float constraintForce = damping*invMass*cSim.pCcmaDelta2[constraint];
                 constraintForce = (forward ? constraintForce : -constraintForce);
-                float4 dir = cSim.pLincsDistance[constraint];
+                float4 dir = cSim.pCcmaDistance[constraint];
                 atomPos.x += constraintForce*dir.x;
                 atomPos.y += constraintForce*dir.y;
                 atomPos.z += constraintForce*dir.z;
@@ -192,22 +192,22 @@ __global__ void kApplyCShake_kernel(float4* atomPositions, bool addOldPosition)
         cSim.pSyncCounter[blockIdx.x] = -1;
 }
 
-void kApplyFirstCShake(gpuContext gpu)
+void kApplyFirstCCMA(gpuContext gpu)
 {
-//    printf("kApplyFirstCShake\n");
-    if (gpu->sim.lincsConstraints > 0)
+//    printf("kApplyFirstCCMA\n");
+    if (gpu->sim.ccmaConstraints > 0)
     {
-        kApplyCShake_kernel<<<gpu->sim.blocks, gpu->sim.lincs_threads_per_block>>>(gpu->sim.pPosqP, true);
-        LAUNCHERROR("kApplyCShake");
+        kApplyCCMA_kernel<<<gpu->sim.blocks, gpu->sim.ccma_threads_per_block>>>(gpu->sim.pPosqP, true);
+        LAUNCHERROR("kApplyCCMA");
     }
 }
 
-void kApplySecondCShake(gpuContext gpu)
+void kApplySecondCCMA(gpuContext gpu)
 {
-//    printf("kApplySecondCShake\n");
-    if (gpu->sim.lincsConstraints > 0)
+//    printf("kApplySecondCCMA\n");
+    if (gpu->sim.ccmaConstraints > 0)
     {
-        kApplyCShake_kernel<<<gpu->sim.blocks, gpu->sim.lincs_threads_per_block>>>(gpu->sim.pPosq, false);
-        LAUNCHERROR("kApplyCShake");
+        kApplyCCMA_kernel<<<gpu->sim.blocks, gpu->sim.ccma_threads_per_block>>>(gpu->sim.pPosq, false);
+        LAUNCHERROR("kApplyCCMA");
     }
 }

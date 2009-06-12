@@ -22,8 +22,8 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __ReferenceQShakeAlgorithm_H__
-#define __ReferenceQShakeAlgorithm_H__
+#ifndef __ReferenceCCMAAlgorithm_H__
+#define __ReferenceCCMAAlgorithm_H__
 
 #include "ReferenceConstraintAlgorithm.h"
 #include <utility>
@@ -32,7 +32,7 @@
 
 // ---------------------------------------------------------------------------------------
 
-class ReferenceRigidShakeAlgorithm : public ReferenceConstraintAlgorithm {
+class ReferenceCCMAAlgorithm : public ReferenceConstraintAlgorithm {
 
    protected:
 
@@ -48,8 +48,6 @@ class ReferenceRigidShakeAlgorithm : public ReferenceConstraintAlgorithm {
       RealOpenMM* _distanceTolerance;
       RealOpenMM* _reducedMasses;
       bool _hasInitializedMasses;
-//      std::vector<std::vector<int> > _rigidClusters;
-//      std::vector<RealOpenMM**> _matrices;
       std::vector<std::vector<std::pair<int, RealOpenMM> > > _matrix;
 
    public:
@@ -57,17 +55,19 @@ class ReferenceRigidShakeAlgorithm : public ReferenceConstraintAlgorithm {
 
       /**---------------------------------------------------------------------------------------
 
-         ReferenceQShakeAlgorithm constructor
+         ReferenceCCMAAlgorithm constructor
 
          @param numberOfAtoms    number of atoms
          @param numberOfConstraints      number of constraints
          @param atomIndices              atom indices for contraints
          @param distance                 distances for constraints
+         @param masses                   atom masses
+         @param angles                   angle force field terms
          @param tolerance                constraint tolerance
 
          --------------------------------------------------------------------------------------- */
 
-      ReferenceRigidShakeAlgorithm( int numberOfAtoms, int numberOfConstraints, int** atomIndices, RealOpenMM* distance, RealOpenMM* masses, std::vector<AngleInfo>& angles, RealOpenMM tolerance );
+      ReferenceCCMAAlgorithm( int numberOfAtoms, int numberOfConstraints, int** atomIndices, RealOpenMM* distance, RealOpenMM* masses, std::vector<AngleInfo>& angles, RealOpenMM tolerance );
 
       /**---------------------------------------------------------------------------------------
 
@@ -75,7 +75,7 @@ class ReferenceRigidShakeAlgorithm : public ReferenceConstraintAlgorithm {
 
          --------------------------------------------------------------------------------------- */
 
-       ~ReferenceRigidShakeAlgorithm( );
+       ~ReferenceCCMAAlgorithm( );
 
       /**---------------------------------------------------------------------------------------
 
@@ -132,19 +132,7 @@ class ReferenceRigidShakeAlgorithm : public ReferenceConstraintAlgorithm {
 
       /**---------------------------------------------------------------------------------------
 
-         Print parameters
-
-         @param message message
-
-         @return ReferenceQShakeAlgorithm::DefaultReturn
-
-         --------------------------------------------------------------------------------------- */
-
-      int printParameters( std::stringstream& message ) const;
-
-      /**---------------------------------------------------------------------------------------
-
-         Apply Shake algorithm
+         Apply CCMA algorithm
 
          @param numberOfAtoms    number of atoms
          @param atomCoordinates  atom coordinates
@@ -171,10 +159,10 @@ class ReferenceRigidShakeAlgorithm : public ReferenceConstraintAlgorithm {
 
          --------------------------------------------------------------------------------------- */
 
-      int reportShake( int numberOfAtoms, RealOpenMM** atomCoordinates, std::stringstream& message );
+      int reportCCMA( int numberOfAtoms, RealOpenMM** atomCoordinates, std::stringstream& message );
 };
 
-class ReferenceRigidShakeAlgorithm::AngleInfo
+class ReferenceCCMAAlgorithm::AngleInfo
 {
 public:
     int atom1, atom2, atom3;
@@ -187,4 +175,4 @@ public:
 
 // ---------------------------------------------------------------------------------------
 
-#endif // __ReferenceQShakeAlgorithm_H__
+#endif // __ReferenceCCMAAlgorithm_H__
