@@ -118,7 +118,9 @@ END PROGRAM
 !-------------------------------------------------------------------------------
 !                                PDB FILE WRITER
 !-------------------------------------------------------------------------------
-! Given state data, output a single frame (pdb "model") of the trajectory
+! Given state data which was written into the atoms array of the MyAtomInfo
+! module, output a single frame (pdb "model") of the trajectory. This has
+! nothing to do with OpenMM.
 SUBROUTINE myWritePDBFrame(frameNum, timeInPs, energyInKcal)
     use MyAtomInfo; implicit none
     integer frameNum; real*8 timeInPs, energyInKcal
@@ -144,7 +146,7 @@ END SUBROUTINE
 ! Fortran main program. (See the C++ version of this example program for 
 ! an implementation of very similar routines.) However, these routines are 
 ! reimplemented entirely in Fortran 95 below in case you prefer.
-!-------------------------------------------------------------------------------
+
 
 ! ------------------------------------------------------------------------------
 !                      INITIALIZE OpenMM DATA STRUCTURES
@@ -171,18 +173,16 @@ SUBROUTINE myInitializeOpenMM(ommHandle, platformName)
 
     ! This is the actual type of the opaque handle.
     type (OpenMM_RuntimeObjects) omm
-    ! These are the objects we'll create here and store in the RuntimeObjects
-    ! container for later access.
-    type (OpenMM_System)     system
-    type (OpenMM_Integrator) integrator
-    type (OpenMM_Context)    context
+    ! These are the objects we'll create here and store in the
+    ! RuntimeObjects container for later access.
+    type (OpenMM_System)             system
+    type (OpenMM_LangevinIntegrator) langevin
+    type (OpenMM_Context)            context
 
     ! These are temporary OpenMM objects used and discarded here.
-    type(OpenMM_Vec3Array)          initialPosInNm
-    type(OpenMM_NonbondedForce)     nonbond
-    type(OpenMM_GBSAOBCForce)       gbsa
-    type(OpenMM_Force)              force ! generic Force
-    type(OpenMM_LangevinIntegrator) langevin
+    type(OpenMM_Vec3Array)      initialPosInNm
+    type(OpenMM_NonbondedForce) nonbond
+    type(OpenMM_GBSAOBCForce)   gbsa
     integer n
 
     type(OpenMM_String) dir
@@ -202,10 +202,8 @@ SUBROUTINE myInitializeOpenMM(ommHandle, platformName)
     
     ! Convert specific force types to generic OpenMM_Force so that we can
     ! add them to the OpenMM_System.
-    call OpenMM_NonbondedForce_asForce(nonbond, force)
-    call OpenMM_System_addForce(system, force)
-    call OpenMM_GBSAOBCForce_asForce(gbsa, force)
-    call OpenMM_System_addForce(system, force)
+    call OpenMM_System_addForce(system, transfer(nonbond, OpenMM_Force(null())))
+    call OpenMM_System_addForce(system, transfer(gbsa,    OpenMM_Force(null())))
 
     ! Specify dielectrics for GBSA implicit solvation.
     call OpenMM_GBSAOBCForce_setSolventDielectric(gbsa, SolventDielectric)
@@ -245,8 +243,10 @@ SUBROUTINE myInitializeOpenMM(ommHandle, platformName)
     call OpenMM_LangevinIntegrator_create(langevin,                     &
                                           Temperature, FrictionInPerPs, &
                                           StepSizeInFs * OpenMM_PsPerFs)
-    call OpenMM_LangevinIntegrator_asIntegrator(langevin, integrator)
-    call OpenMM_Context_create(context, system, integrator)
+
+    ! Convert LangevinIntegrator to generic Integrator type for this call.
+    call OpenMM_Context_create(context, system,                         &
+                               transfer(langevin, OpenMM_Integrator(null())))
     call OpenMM_Context_setPositions(context, initialPosInNm)
 
     ! Get the platform name to return.
@@ -256,7 +256,8 @@ SUBROUTINE myInitializeOpenMM(ommHandle, platformName)
     ! container and return an opaque reference to the container.
     call OpenMM_RuntimeObjects_create(omm)
     call OpenMM_RuntimeObjects_setSystem(omm, system)
-    call OpenMM_RuntimeObjects_setIntegrator(omm, integrator)
+    call OpenMM_RuntimeObjects_setIntegrator(omm, &
+                               transfer(langevin, OpenMM_Integrator(null())))
     call OpenMM_RuntimeObjects_setContext(omm, context)
     ommHandle = transfer(omm, ommHandle)
 END SUBROUTINE
@@ -271,9 +272,8 @@ SUBROUTINE myGetOpenMMState(ommHandle, timeInPs, energyInKcal)
     real*8, intent(out)   :: timeInPs, energyInKcal
     
     type (OpenMM_State)     state
-    type (OpenMM_Vec3Array) posArray
+    type (OpenMM_Vec3Array) posArrayInNm
     integer                 infoMask, n
-    real*8                  posInNm(3)
 
     type (OpenMM_RuntimeObjects)  omm
     type (OpenMM_Context)         context
@@ -294,10 +294,11 @@ SUBROUTINE myGetOpenMMState(ommHandle, timeInPs, energyInKcal)
     
     ! Positions are maintained as a Vec3Array inside the State. This will give
     ! us access, but don't destroy it yourself -- it will go away with the State.
-    call OpenMM_State_getPositions(state, posArray)
+    call OpenMM_State_getPositions(state, posArrayInNm)
     do n = 1, NumAtoms
-        call OpenMM_Vec3Array_get(posArray, n, posInNm)
-        call OpenMM_Vec3_scale(posInNm, OpenMM_AngstromsPerNm, atoms(n)%posInAng)
+        ! Sets atoms(n)%pos = posArray(n) * Angstroms/nm.
+        call OpenMM_Vec3Array_getScaled(posArrayInNm, n, OpenMM_AngstromsPerNm, &
+                                        atoms(n)%posInAng)
     end do
     
     energyInKcal = 0
