@@ -33,20 +33,32 @@
 __global__ void METHOD_NAME(kCalculateObcGbsa, BornSum_kernel)(unsigned int* workUnit)
 {
     extern __shared__ Atom sA[];
+/*
     unsigned int numWorkUnits = cSim.pInteractionCount[0];
     int end = numWorkUnits / gridDim.x;
     int pos = end - (threadIdx.x >> GRIDBITS) - 1;
-#ifdef USE_OUTPUT_BUFFER_PER_WARP
+*/
+
+    unsigned int totalWarps = cSim.nonbond_blocks*cSim.nonbond_threads_per_block/GRID;
     unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
+    unsigned int numWorkUnits = cSim.pInteractionCount[0];
+    unsigned int pos = warp*numWorkUnits/totalWarps;
+    unsigned int end = (warp+1)*numWorkUnits/totalWarps;
+
+#ifdef USE_OUTPUT_BUFFER_PER_WARP
+ //   unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
 #endif
 #ifdef USE_CUTOFF
     float* tempBuffer = (float*) &sA[cSim.nonbond_threads_per_block];
 #endif
 
-    while (pos >= 0)
+    //while (pos >= 0)
+    while (pos < end)
     {
         // Extract cell coordinates from appropriate work unit
-        unsigned int x = workUnit[pos + (blockIdx.x*numWorkUnits)/gridDim.x];
+        
+        //unsigned int x = workUnit[pos + (blockIdx.x*numWorkUnits)/gridDim.x];
+        unsigned int x = workUnit[pos];
         unsigned int y = ((x >> 2) & 0x7fff) << GRIDBITS;
         x = (x >> 17) << GRIDBITS;
         float       dx;
@@ -142,7 +154,8 @@ __global__ void METHOD_NAME(kCalculateObcGbsa, BornSum_kernel)(unsigned int* wor
             sA[threadIdx.x].sum = apos.w    = 0.0f;
 
 #ifdef USE_CUTOFF
-            unsigned int flags = cSim.pInteractionFlag[pos + (blockIdx.x*numWorkUnits)/gridDim.x];
+            //unsigned int flags = cSim.pInteractionFlag[pos + (blockIdx.x*numWorkUnits)/gridDim.x];
+            unsigned int flags = cSim.pInteractionFlag[pos];
             if (flags == 0)
             {
                 // No interactions in this block.
@@ -319,6 +332,7 @@ __global__ void METHOD_NAME(kCalculateObcGbsa, BornSum_kernel)(unsigned int* wor
 #endif
         }
 
-        pos -= cSim.nonbond_workBlock;
+        //pos -= cSim.nonbond_workBlock;
+        pos++;
     }
 }

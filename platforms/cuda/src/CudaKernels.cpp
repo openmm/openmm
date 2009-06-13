@@ -55,9 +55,11 @@ static void calcForces(OpenMMContextImpl& context, CudaPlatform::PlatformData& d
         kCalculateCDLJForces(gpu);
     }
     kCalculateLocalForces(gpu);
+/*
     if (gpu->bIncludeGBSA)
         kReduceBornSumAndForces(gpu);
     else
+*/
         kReduceForces(gpu);
 }
 
