@@ -2,59 +2,73 @@
 //           OpenMM(tm) HelloArgon example in C++ (June 2009)
 // -----------------------------------------------------------------------------
 // This program demonstrates a simple molecular simulation using the OpenMM
-// API for GPU-accelerated molecular dynamics simulation.  The system
-// represents a small collection of argon atoms in a vaccuum.
+// API for GPU-accelerated molecular dynamics simulation. The primary goal is
+// to make sure you can compile, link, and run with OpenMM and view the output.
+// The example is available in C++, C, and Fortran 95.
+//
+// The system modeled here is a small number of argon atoms in a vacuum.
 // A multi-frame PDB file is written to stdout which  can be read by VMD or 
 // other visualization tool to produce an animation of the resulting trajectory.
 // -----------------------------------------------------------------------------
 
+// Suppress irrelevant warning from Microsoft's compiler.
+#ifdef _MSC_VER
+    #pragma warning(disable:4251)   // no dll interface for some classes
+#endif
+
 #include "OpenMM.h"
 #include <cstdio>
 
-// Forward declaration of writePdb() subroutine for printing atomic 
-// coordinates, defined later in this source file.
-void writePdb(const OpenMM::OpenMMContext& context);
+// Forward declaration of routine for printing one frame of the
+// trajectory, defined later in this source file.
+void writePdbFrame(int frameNum, const OpenMM::State&);
 
 void simulateArgon()
 {
-    // Load any shared libraries containing GPU implementations
+    // Load any shared libraries containing GPU implementations.
     OpenMM::Platform::loadPluginsFromDirectory(
         OpenMM::Platform::getDefaultPluginsDirectory());
 
-    // Create a system with nonbonded forces
+    // Create a system with nonbonded forces.
     OpenMM::System system;
     OpenMM::NonbondedForce* nonbond = new OpenMM::NonbondedForce(); 
     system.addForce(nonbond);
 
-    // Create three atoms
-    std::vector<OpenMM::Vec3> initialPositions(3);
+    // Create three atoms.
+    std::vector<OpenMM::Vec3> initPosInNm(3);
     for (int a = 0; a < 3; ++a) 
     {
-        system.addParticle(39.95); // mass, grams per mole
+        initPosInNm[a] = OpenMM::Vec3(a/2.,0,0); // location, nm
 
-        // charge, sigma, well depth
-        nonbond->addParticle(0.0, 0.3350, 0.996); 
+        system.addParticle(39.95); // mass of Ar, grams per mole
 
-        initialPositions[a] = OpenMM::Vec3(0.5*a,0,0); // location, nanometers
+        // charge, L-J sigma (nm), well depth (kJ)
+        nonbond->addParticle(0.0, 0.3350, 0.996); // vdWRad(Ar)=.188 nm
     }
 
-    OpenMM::VerletIntegrator integrator(0.004); // step size in picoseconds
+    OpenMM::VerletIntegrator integrator(0.004); // step size in ps
 
     // Let OpenMM Context choose best platform.
     OpenMM::OpenMMContext context(system, integrator);
     printf( "REMARK  Using OpenMM platform %s\n", 
         context.getPlatform().getName().c_str() );
 
-    // Set the starting positions of the atoms. Velocities will be zero.
-    context.setPositions(initialPositions);
+    // Set starting positions of the atoms. Leave time and velocity zero.
+    context.setPositions(initPosInNm);
 
-    // Simulate
-    while(context.getTime() < 10.0) { // picoseconds
-        writePdb(context); // output coordinates
-        // Run 100 steps at a time, for efficient use of OpenMM
-        integrator.step(100);
+    // Simulate.
+    for (int frameNum=1; ;++frameNum) {
+        // Output current state information.
+        OpenMM::State state    = context.getState(OpenMM::State::Positions);
+        const double  timeInPs = state.getTime();
+        writePdbFrame(frameNum, state); // output coordinates
+
+        if (timeInPs >= 10.)
+            break;
+
+        // Advance state many steps at a time, for efficient use of OpenMM.
+        integrator.step(10); // (use a lot more than this normally)
     }
-    writePdb(context); // output final coordinates
 }
 
 int main() 
@@ -70,25 +84,20 @@ int main()
     }
 }
 
-// writePdb() subroutine for quick-and-dirty trajectory output.
-void writePdb(const OpenMM::OpenMMContext& context) 
+// Handy homebrew PDB writer for quick-and-dirty trajectory output.
+void writePdbFrame(int frameNum, const OpenMM::State& state) 
 {
-    // Request atomic positions from OpenMM
-    const OpenMM::State state = context.getState(OpenMM::State::Positions);
-    const std::vector<OpenMM::Vec3>& pos = state.getPositions();
-
-    // write out in PDB format
+    // Reference atomic positions in the OpenMM State.
+    const std::vector<OpenMM::Vec3>& posInNm = state.getPositions();
 
     // Use PDB MODEL cards to number trajectory frames
-    static int modelFrameNumber = 0; 
-    modelFrameNumber++;
-    printf("MODEL     %d\n", modelFrameNumber); // start of frame
-    for (int a = 0; a < context.getSystem().getNumParticles(); ++a)
+    printf("MODEL     %d\n", frameNum); // start of frame
+    for (int a = 0; a < (int)posInNm.size(); ++a)
     {
-        printf("ATOM  %5d AR    AR     1    ", a+1); // atom number
-        printf("%8.3f%8.3f%8.3f  1.00  0.00          AR\n", // coordinates
+        printf("ATOM  %5d  AR   AR     1    ", a+1); // atom number
+        printf("%8.3f%8.3f%8.3f  1.00  0.00\n",      // coordinates
             // "*10" converts nanometers to Angstroms
-            pos[a][0]*10, pos[a][1]*10, pos[a][2]*10);
+            posInNm[a][0]*10, posInNm[a][1]*10, posInNm[a][2]*10);
     }
     printf("ENDMDL\n"); // end of frame
 }
