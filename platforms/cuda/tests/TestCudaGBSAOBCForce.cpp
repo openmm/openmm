@@ -144,7 +144,7 @@ void testForce(int numParticles, NonbondedForce::NonbondedMethod method) {
     nonbonded->setCutoffDistance(3.0);
     int grid = (int) floor(0.5+pow(numParticles, 1.0/3.0));
     if (method == NonbondedForce::CutoffPeriodic) {
-        double boxSize = (grid+1)*2.0;
+        double boxSize = (grid+1)*1.1;
         nonbonded->setPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
     }
     system.addForce(gbsa);
@@ -159,7 +159,7 @@ void testForce(int numParticles, NonbondedForce::NonbondedMethod method) {
     for (int i = 0; i < grid; i++)
         for (int j = 0; j < grid; j++)
             for (int k = 0; k < grid; k++)
-                positions[i*grid*grid+j*grid+k] = Vec3(i*2.0, j*2.0, k*2.0);
+                positions[i*grid*grid+j*grid+k] = Vec3(i*1.1, j*1.1, k*1.1);
     for (int i = 0; i < numParticles; ++i)
         positions[i] = positions[i] + Vec3(0.5*genrand_real2(), 0.5*genrand_real2(), 0.5*genrand_real2());
     context.setPositions(positions);
@@ -206,7 +206,7 @@ int main() {
     try {
         testSingleParticle();
         testCutoffAndPeriodic();
-        for (int i = 2; i < 11; i++) {
+        for (int i = 5; i < 11; i++) {
             testForce(i*i*i, NonbondedForce::NoCutoff);
             testForce(i*i*i, NonbondedForce::CutoffNonPeriodic);
             testForce(i*i*i, NonbondedForce::CutoffPeriodic);
