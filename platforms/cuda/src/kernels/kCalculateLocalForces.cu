@@ -136,12 +136,8 @@ __global__ void kCalculateLocalForces_kernel()
             dz                 *= dEdR;
             unsigned int offsetA                = atom.x + atom.z * cSim.stride;
             unsigned int offsetB                = atom.y + atom.w * cSim.stride;
-            float4 forceA                       = {0.0f, 0.0f, 0.0f, 0.0f};
-            if (atom.z < cSim.totalNonbondOutputBuffers)
-                forceA                          = cSim.pForce4[offsetA];
-            float4 forceB                       = {0.0f, 0.0f, 0.0f, 0.0f};
-            if (atom.w < cSim.totalNonbondOutputBuffers)
-                forceB                          = cSim.pForce4[offsetB];
+            float4 forceA                       = cSim.pForce4[offsetA];
+            float4 forceB                       = cSim.pForce4[offsetB];
             forceA.x                           += dx;
             forceA.y                           += dy;
             forceA.z                           += dz;
@@ -195,25 +191,19 @@ __global__ void kCalculateLocalForces_kernel()
             c23.z                  *= termC;
             int2 atom2              = cSim.pBondAngleID2[pos1];
             unsigned int offset     = atom1.x + atom1.w * cSim.stride;
-            float4 force            = {0.0f, 0.0f, 0.0f, 0.0f}; 
-            if (atom1.w < cSim.totalNonbondOutputBuffers)
-                force               = cSim.pForce4[offset]; 
+            float4 force            = cSim.pForce4[offset]; 
             force.x                += c21.x;
             force.y                += c21.y;
             force.z                += c21.z;
             cSim.pForce4[offset]    = force;
             offset                  = atom1.y + atom2.x * cSim.stride;
-            force.x                 = force.y = force.z = 0.0f; 
-            if (atom2.x < cSim.totalNonbondOutputBuffers)
-                force               = cSim.pForce4[offset]; 
+            force                   = cSim.pForce4[offset];
             force.x                -= (c21.x + c23.x);
             force.y                -= (c21.y + c23.y);
             force.z                -= (c21.z + c23.z);
             cSim.pForce4[offset]    = force;
             offset                  = atom1.z + atom2.y * cSim.stride;
-            force.x                 = force.y = force.z = 0.0f; 
-            if (atom2.y < cSim.totalNonbondOutputBuffers)
-                force               = cSim.pForce4[offset]; 
+            force                   = cSim.pForce4[offset];
             force.x                += c23.x;
             force.y                += c23.y;
             force.z                += c23.z;
@@ -264,9 +254,7 @@ __global__ void kCalculateLocalForces_kernel()
             
 //            printf("%4d: %9.4f %9.4f %9.4f %9.4f\n", pos1, ff.x, ff.y, ff.z, ff.w);  
             unsigned int offset                 = atom1.x + atom2.x * cSim.stride;
-            float4 force                        = {0.0f, 0.0f, 0.0f, 0.0f}; 
-            if (atom2.x < cSim.totalNonbondOutputBuffers)
-                force                           = cSim.pForce4[offset]; 
+            float4 force                        = cSim.pForce4[offset]; 
             internalF0.x                        = ff.x * cp0.x; 
             force.x                            += internalF0.x;
             internalF0.y                        = ff.x * cp0.y;
@@ -277,9 +265,7 @@ __global__ void kCalculateLocalForces_kernel()
             
             //printf("%4d - 0: %9.4f %9.4f %9.4f\n", pos1, cSim.pForce[offset], cSim.pForce[offset + cSim.stride], cSim.pForce[offset + cSim.stride2]);
             offset                              = atom1.w + atom2.w * cSim.stride;
-            force.x                             = force.y = force.z = 0.0f;  
-            if (atom2.w < cSim.totalNonbondOutputBuffers)
-                force                           = cSim.pForce4[offset]; 
+            force                               = cSim.pForce4[offset];
             internalF3.x                        = ff.w * cp1.x;
             force.x                            += internalF3.x;
             internalF3.y                        = ff.w * cp1.y;
@@ -293,9 +279,7 @@ __global__ void kCalculateLocalForces_kernel()
             s.y                                 = ff.y * internalF0.y - ff.z * internalF3.y;  
             s.z                                 = ff.y * internalF0.z - ff.z * internalF3.z;        
             offset                              = atom1.y + atom2.y * cSim.stride;
-            force.x                             = force.y = force.z = 0.0f; 
-            if (atom2.y < cSim.totalNonbondOutputBuffers)
-                force                           = cSim.pForce4[offset]; 
+            force                               = cSim.pForce4[offset];
             force.x                            += -internalF0.x + s.x;
             force.y                            += -internalF0.y + s.y;
             force.z                            += -internalF0.z + s.z;
@@ -303,9 +287,7 @@ __global__ void kCalculateLocalForces_kernel()
             
             //printf("%4d - 1: %9.4f %9.4f %9.4f\n", pos1, cSim.pForce[offset], cSim.pForce[offset + cSim.stride], cSim.pForce[offset + cSim.stride2]);
             offset                              = atom1.z + atom2.z * cSim.stride;
-            force.x                             = force.y = force.z = 0.0f; 
-            if (atom2.z < cSim.totalNonbondOutputBuffers)
-                force                           = cSim.pForce4[offset]; 
+            force                               = cSim.pForce4[offset];
             force.x                            += -internalF3.x - s.x;
             force.y                            += -internalF3.y - s.y;
             force.z                            += -internalF3.z - s.z;
@@ -320,11 +302,11 @@ __global__ void kCalculateLocalForces_kernel()
         unsigned int pos1 = pos - cSim.dihedral_offset;
         if (pos1 < cSim.rb_dihedrals)
         {
-            int4   atom1        = cSim.pRbDihedralID1[pos1];  
+            int4   atom1        = cSim.pRbDihedralID1[pos1];
             float4 atomA        = cSim.pPosq[atom1.x];
             float4 atomB        = cSim.pPosq[atom1.y];
             float4 atomC        = cSim.pPosq[atom1.z];
-            float4 atomD        = cSim.pPosq[atom1.w];            
+            float4 atomD        = cSim.pPosq[atom1.w];
             A->v0.x             = atomA.x - atomB.x;
             A->v0.y             = atomA.y - atomB.y;
             A->v0.z             = atomA.z - atomB.z;
@@ -333,18 +315,18 @@ __global__ void kCalculateLocalForces_kernel()
             A->v1.z             = atomC.z - atomB.z;
             A->v2.x             = atomC.x - atomD.x;
             A->v2.y             = atomC.y - atomD.y;
-            A->v2.z             = atomC.z - atomD.z; 
+            A->v2.z             = atomC.z - atomD.z;
             float3 cp0, cp1;
             float dihedralAngle, cosPhi;
-      //      printf("%4d - 0 : %9.4f %9.4f %9.4f\n", pos1, A->v0.x, A->v0.y, A->v0.z); 
-      //      printf("%4d - 1 : %9.4f %9.4f %9.4f\n", pos1, A->v1.x, A->v1.y, A->v1.z); 
-      //      printf("%4d - 2 : %9.4f %9.4f %9.4f\n", pos1, A->v2.x, A->v2.y, A->v2.z);  
+      //      printf("%4d - 0 : %9.4f %9.4f %9.4f\n", pos1, A->v0.x, A->v0.y, A->v0.z);
+      //      printf("%4d - 1 : %9.4f %9.4f %9.4f\n", pos1, A->v1.x, A->v1.y, A->v1.z);
+      //      printf("%4d - 2 : %9.4f %9.4f %9.4f\n", pos1, A->v2.x, A->v2.y, A->v2.z);
             GETDIHEDRALANGLECOSINEBETWEENTHREEVECTORS(A->v0, A->v1, A->v2, A->v0, cp0, cp1, dihedralAngle, cosPhi);
             if (dihedralAngle < 0.0f )
             {
                 dihedralAngle += 3.14159265f;
-            } 
-            else 
+            }
+            else
             {
                 dihedralAngle -= 3.14159265f;
             }
@@ -366,9 +348,9 @@ __global__ void kCalculateLocalForces_kernel()
             cosFactor              *= cosPhi;
             dEdAngle               -= 5.0f * dihedral2.y * cosFactor;
  //           printf("%4d - 5: %9.4f %9.4f\n", pos1, dEdAngle, cosFactor);
-            dEdAngle               *= sin(dihedralAngle);  
+            dEdAngle               *= sin(dihedralAngle);
 //            printf("%4d - f: %9.4f\n", pos1, dEdAngle);
-            
+
             float normCross1        = DOT3(cp0, cp0);
             float normBC            = sqrt(DOT3(A->v1, A->v1));
             float4 ff;
@@ -378,29 +360,25 @@ __global__ void kCalculateLocalForces_kernel()
             float dp                = 1.0f / DOT3(A->v1, A->v1);
             ff.y                    = DOT3(A->v0, A->v1) * dp;
             ff.z                    = DOT3(A->v2, A->v1) * dp;
-            int4  atom2             = cSim.pRbDihedralID2[pos1];   
+            int4  atom2             = cSim.pRbDihedralID2[pos1];
             float3 internalF0;
             float3 internalF3;
             float3 s;
-            
-//            printf("%4d: %9.4f %9.4f %9.4f %9.4f\n", pos1, ff.x, ff.y, ff.z, ff.w);  
+
+//            printf("%4d: %9.4f %9.4f %9.4f %9.4f\n", pos1, ff.x, ff.y, ff.z, ff.w);
             unsigned int offset                 = atom1.x + atom2.x * cSim.stride;
-            float4 force                        = {0.0f, 0.0f, 0.0f, 0.0f}; 
-            if (atom2.x < cSim.totalNonbondOutputBuffers)
-                force                           = cSim.pForce4[offset]; 
-            internalF0.x                        = ff.x * cp0.x; 
+            float4 force                        = cSim.pForce4[offset];
+            internalF0.x                        = ff.x * cp0.x;
             force.x                            += internalF0.x;
             internalF0.y                        = ff.x * cp0.y;
             force.y                            += internalF0.y;
-            internalF0.z                        = ff.x * cp0.z;       
+            internalF0.z                        = ff.x * cp0.z;
             force.z                            += internalF0.z;
             cSim.pForce4[offset]                = force;
-            
+
  //           printf("%4d - 0: %9.4f %9.4f %9.4f\n", pos1, cSim.pForce[offset], cSim.pForce[offset + cSim.stride], cSim.pForce[offset + cSim.stride2]);
             offset                              = atom1.w + atom2.w * cSim.stride;
-            force.x                             = force.y = force.z = 0.0f; 
-            if (atom2.w < cSim.totalNonbondOutputBuffers)
-                force                           = cSim.pForce4[offset]; 
+            force                               = cSim.pForce4[offset];
             internalF3.x                        = ff.w * cp1.x;
             force.x                            += internalF3.x;
             internalF3.y                        = ff.w * cp1.y;
@@ -408,30 +386,26 @@ __global__ void kCalculateLocalForces_kernel()
             internalF3.z                        = ff.w * cp1.z;
             force.z                            += internalF3.z;
             cSim.pForce4[offset]                = force;
-            
+
    //         printf("%4d - 3: %9.4f %9.4f %9.4f\n", pos1, cSim.pForce[offset], cSim.pForce[offset + cSim.stride], cSim.pForce[offset + cSim.stride2]);
-            s.x                                 = ff.y * internalF0.x - ff.z * internalF3.x;   
-            s.y                                 = ff.y * internalF0.y - ff.z * internalF3.y;  
-            s.z                                 = ff.y * internalF0.z - ff.z * internalF3.z;        
+            s.x                                 = ff.y * internalF0.x - ff.z * internalF3.x;
+            s.y                                 = ff.y * internalF0.y - ff.z * internalF3.y;
+            s.z                                 = ff.y * internalF0.z - ff.z * internalF3.z;
             offset                              = atom1.y + atom2.y * cSim.stride;
-            force.x                             = force.y = force.z = 0.0f; 
-            if (atom2.y < cSim.totalNonbondOutputBuffers)
-                force                           = cSim.pForce4[offset]; 
+            force                               = cSim.pForce4[offset];
             force.x                            += -internalF0.x + s.x;
             force.y                            += -internalF0.y + s.y;
             force.z                            += -internalF0.z + s.z;
             cSim.pForce4[offset]                = force;
      //       printf("%4d - 1: %9.4f %9.4f %9.4f\n", pos1, cSim.pForce[offset], cSim.pForce[offset + cSim.stride], cSim.pForce[offset + cSim.stride2]);
             offset                              = atom1.z + atom2.z * cSim.stride;
-            force.x                             = force.y = force.z = 0.0f; 
-            if (atom2.z < cSim.totalNonbondOutputBuffers)
-                force                           = cSim.pForce4[offset]; 
+            force                               = cSim.pForce4[offset];
             force.x                            += -internalF3.x - s.x;
             force.y                            += -internalF3.y - s.y;
             force.z                            += -internalF3.z - s.z;
             cSim.pForce4[offset]                = force;
      //       printf("%4d - 2: %9.4f %9.4f %9.4f\n", pos1, cSim.pForce[offset], cSim.pForce[offset + cSim.stride], cSim.pForce[offset + cSim.stride2]);
-        }            
+        }         
         pos += blockDim.x * gridDim.x;
     }   
 
@@ -460,12 +434,8 @@ __global__ void kCalculateLocalForces_kernel()
                 dEdR                   *= inverseR * inverseR;
                 unsigned int offsetA    = atom.x + atom.z * cSim.stride;
                 unsigned int offsetB    = atom.y + atom.w * cSim.stride;
-                float4 forceA           = {0.0f, 0.0f, 0.0f, 0.0f};
-                if (atom.z < cSim.totalNonbondOutputBuffers)
-                    forceA              = cSim.pForce4[offsetA];
-                float4 forceB           = {0.0f, 0.0f, 0.0f, 0.0f};
-                if (atom.w < cSim.totalNonbondOutputBuffers)
-                    forceB              = cSim.pForce4[offsetB];
+                float4 forceA           = cSim.pForce4[offsetA];
+                float4 forceB           = cSim.pForce4[offsetB];
                 d.x                    *= dEdR;
                 d.y                    *= dEdR;
                 d.z                    *= dEdR;
@@ -510,12 +480,8 @@ __global__ void kCalculateLocalForces_kernel()
                 }
                 unsigned int offsetA    = atom.x + atom.z * cSim.stride;
                 unsigned int offsetB    = atom.y + atom.w * cSim.stride;
-                float4 forceA           = {0.0f, 0.0f, 0.0f, 0.0f};
-                if (atom.z < cSim.totalNonbondOutputBuffers)
-                    forceA              = cSim.pForce4[offsetA];
-                float4 forceB           = {0.0f, 0.0f, 0.0f, 0.0f};
-                if (atom.w < cSim.totalNonbondOutputBuffers)
-                    forceB              = cSim.pForce4[offsetB];
+                float4 forceA           = cSim.pForce4[offsetA];
+                float4 forceB           = cSim.pForce4[offsetB];
                 d.x                    *= dEdR;
                 d.y                    *= dEdR;
                 d.z                    *= dEdR;
@@ -563,12 +529,8 @@ __global__ void kCalculateLocalForces_kernel()
                 }
                 unsigned int offsetA    = atom.x + atom.z * cSim.stride;
                 unsigned int offsetB    = atom.y + atom.w * cSim.stride;
-                float4 forceA           = {0.0f, 0.0f, 0.0f, 0.0f};
-                if (atom.z < cSim.totalNonbondOutputBuffers)
-                    forceA              = cSim.pForce4[offsetA];
-                float4 forceB           = {0.0f, 0.0f, 0.0f, 0.0f};
-                if (atom.w < cSim.totalNonbondOutputBuffers)
-                    forceB              = cSim.pForce4[offsetB];
+                float4 forceA           = cSim.pForce4[offsetA];
+                float4 forceB           = cSim.pForce4[offsetB];
                 d.x                    *= dEdR;
                 d.y                    *= dEdR;
                 d.z                    *= dEdR;
