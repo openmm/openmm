@@ -431,12 +431,6 @@ void openmm_context_getplatformname_(const OpenMM_Context* const& context, char*
     for (int i=0; i<minLen; ++i) buf[i] = name[i];
     for (int i=minLen; i<len; ++i) buf[i] = ' ';
 }
-	
-double OpenMM_Context_getTime(OpenMM_Context* context) {
-    return ((OpenMMContext*)context)->getTime();
-}
-double openmm_context_gettime_(OpenMM_Context* const& context)
-{   return OpenMM_Context_getTime(context); }
 
     ///////////////////
     // OpenMM::State //

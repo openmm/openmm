@@ -192,7 +192,6 @@ extern void             OpenMM_Context_setPositions(OpenMM_Context*, const OpenM
 extern void             OpenMM_Context_setVelocities(OpenMM_Context*, const OpenMM_Vec3Array*);
 extern OpenMM_State*    OpenMM_Context_createState(const OpenMM_Context*, int types);
 extern const char*      OpenMM_Context_getPlatformName(const OpenMM_Context*);
-extern double           OpenMM_Context_getTime(OpenMM_Context*);
 
 /* OpenMM::State */
 extern void     OpenMM_State_destroy(OpenMM_State*);
