@@ -129,9 +129,9 @@ int main() {
         //  (3) Write a PDB frame when the time comes.
         printf("REMARK  Using OpenMM platform %s\n", platformName.c_str());
         myGetOpenMMState(omm, WantEnergy, time, energy, atoms);
-        myWritePDBFrame(0, time, energy, atoms);
+        myWritePDBFrame(1, time, energy, atoms);
 
-        for (int frame=1; frame <= NumReports; ++frame) {
+        for (int frame=2; frame <= NumReports; ++frame) {
             myStepWithOpenMM(omm, NumSilentSteps);
             myGetOpenMMState(omm, WantEnergy, time, energy, atoms);
             myWritePDBFrame(frame, time, energy, atoms);
