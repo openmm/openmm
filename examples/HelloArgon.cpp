@@ -38,7 +38,7 @@ void simulateArgon()
     std::vector<OpenMM::Vec3> initPosInNm(3);
     for (int a = 0; a < 3; ++a) 
     {
-        initPosInNm[a] = OpenMM::Vec3(a/2.,0,0); // location, nm
+        initPosInNm[a] = OpenMM::Vec3(0.5*a,0,0); // location, nm
 
         system.addParticle(39.95); // mass of Ar, grams per mole
 

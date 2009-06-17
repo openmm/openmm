@@ -41,7 +41,7 @@ void simulateArgon()
     initPosInNm = OpenMM_Vec3Array_create(3);
     for (a = 0; a < 3; ++a) 
     {
-        const double posNm[3] = {a/2., 0, 0};     /*location, nm*/
+        const double posNm[3] = {0.5*a, 0, 0};     /*location, nm*/
         OpenMM_Vec3Array_set(initPosInNm, a, posNm);
 
         OpenMM_System_addParticle(system, 39.95); /*mass of Ar, grams/mole*/
