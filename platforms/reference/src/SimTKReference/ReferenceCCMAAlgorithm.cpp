@@ -200,7 +200,7 @@ ReferenceCCMAAlgorithm::ReferenceCCMAAlgorithm( int numberOfAtoms,
            QUERN_solve_with_r(numberOfConstraints, rRowStart, rColIndex, rValue, &rhs[0], &rhs[0]);
            for (int j = 0; j < numberOfConstraints; j++) {
                double value = rhs[j]*_distance[i]/_distance[j];
-               if (FABS(value) > 0.02)
+               if (FABS((RealOpenMM)value) > 0.02)
                    _matrix[j].push_back(pair<int, RealOpenMM>(i, (RealOpenMM) value));
            }
        }

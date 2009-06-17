@@ -114,7 +114,7 @@ static void findAnglesForCCMA(const System& system, vector<ReferenceCCMAAlgorith
                 int atom1, atom2, atom3;
                 double angle, k;
                 force->getAngleParameters(j, atom1, atom2, atom3, angle, k);
-                angles.push_back(ReferenceCCMAAlgorithm::AngleInfo(atom1, atom2, atom3, angle));
+                angles.push_back(ReferenceCCMAAlgorithm::AngleInfo(atom1, atom2, atom3, (RealOpenMM)angle));
             }
         }
     }
