@@ -156,25 +156,25 @@ static void simulateWaterBox() {
                         0.0001 * OpenMM::NmPerAngstrom * SigmaPerVdwRadius,
                         0.0000 * OpenMM::KJPerKcal);
                 
-                // Add stretch parameters for two covalent bonds
-                // Note factor of 2 for stiffness below because Amber specifies the constant
-                // as it is used in the harmonic energy term kx^2 with force 2kx; OpenMM wants 
-                // it as used in the force term kx, with energy kx^2/2.
-                bondStretch.addBond(oIndex, h1Index,
-                        0.9572 * OpenMM::NmPerAngstrom,
-                        553.0 * 2 * OpenMM::KJPerKcal 
-                            * OpenMM::AngstromsPerNm * OpenMM::AngstromsPerNm);
-                bondStretch.addBond(oIndex, h2Index,
-                        0.9572 * OpenMM::NmPerAngstrom,
-                        553.0 * 2 * OpenMM::KJPerKcal 
-                            * OpenMM::AngstromsPerNm * OpenMM::AngstromsPerNm);
-
                 // constrain O-H bond lengths
                 if (UseConstraints) {
                     system.addConstraint(oIndex, h1Index,
                                      0.9572 * OpenMM::NmPerAngstrom);
                     system.addConstraint(oIndex, h2Index,
                                      0.9572 * OpenMM::NmPerAngstrom);
+                } else {
+                    // Add stretch parameters for two covalent bonds
+                    // Note factor of 2 for stiffness below because Amber specifies the constant
+                    // as it is used in the harmonic energy term kx^2 with force 2kx; OpenMM wants 
+                    // it as used in the force term kx, with energy kx^2/2.
+                    bondStretch.addBond(oIndex, h1Index,
+                            0.9572 * OpenMM::NmPerAngstrom,
+                            553.0 * 2 * OpenMM::KJPerKcal 
+                                * OpenMM::AngstromsPerNm * OpenMM::AngstromsPerNm);
+                    bondStretch.addBond(oIndex, h2Index,
+                            0.9572 * OpenMM::NmPerAngstrom,
+                            553.0 * 2 * OpenMM::KJPerKcal 
+                                * OpenMM::AngstromsPerNm * OpenMM::AngstromsPerNm);
                 }
 
                 // Store bonds for exclusion list
