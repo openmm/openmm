@@ -290,26 +290,30 @@ myInitializeOpenMM( const MyAtomInfo    atoms[],
     }
 
     // Process the bonds:
-    //  (1) HarmonicBondForce needs bond stretch parameters (in MD units!).
-    //  (2) If we're using constraints, tell System about constrainable bonds.
-    //  (3) Create a list of bonds for generating nonbond exclusions.
+    //  (1) If we're using constraints, tell System about constrainable bonds;
+    //      otherwise, tell HarmonicBondForce the bond stretch parameters 
+    //      (tricky units!).
+    //  (2) Create a list of bonds for generating nonbond exclusions.
     std::vector< std::pair<int,int> > bondPairs;
     for (int i=0; bonds[i].type != EndOfList; ++i) {
         const int*      atom = bonds[i].atoms;
         const BondType& bond = bondType[bonds[i].type];
 
-        // Note factor of 2 for stiffness below because Amber specifies the constant
-        // as it is used in the harmonic energy term kx^2 with force 2kx; OpenMM wants 
-        // it as used in the force term kx, with energy kx^2/2.
-        bondStretch.addBond(atom[0], atom[1],
-                            bond.nominalLengthInAngstroms    
-                                * OpenMM::NmPerAngstrom,
-                            bond.stiffnessInKcalPerAngstrom2 
-                                * 2 * OpenMM::KJPerKcal 
-                                * OpenMM::AngstromsPerNm * OpenMM::AngstromsPerNm);
-        if (UseConstraints && bond.canConstrain)
+        if (UseConstraints && bond.canConstrain) {
             system.addConstraint(atom[0], atom[1],
                                  bond.nominalLengthInAngstroms * OpenMM::NmPerAngstrom);
+        } else {
+            // Note factor of 2 for stiffness below because Amber specifies the constant
+            // as it is used in the harmonic energy term kx^2 with force 2kx; OpenMM wants 
+            // it as used in the force term kx, with energy kx^2/2.
+            bondStretch.addBond(atom[0], atom[1],
+                                bond.nominalLengthInAngstroms    
+                                    * OpenMM::NmPerAngstrom,
+                                bond.stiffnessInKcalPerAngstrom2 
+                                    * 2 * OpenMM::KJPerKcal 
+                                    * OpenMM::AngstromsPerNm * OpenMM::AngstromsPerNm);
+        }
+
         bondPairs.push_back(std::make_pair(atom[0], atom[1]));
     }
     // Exclude 1-2, 1-3 bonded atoms from nonbonded forces, and scale down 1-4 bonded atoms.
