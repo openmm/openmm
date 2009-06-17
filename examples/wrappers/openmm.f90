@@ -376,11 +376,6 @@ module OpenMM
             type (OpenMM_Context) context
             character(*) platformName
         end
-        function OpenMM_Context_getTime(context)
-            use OpenMM_Types
-            type (OpenMM_Context) context
-            real*8 OpenMM_Context_getTime
-        end
 
         ! OpenMM::State
         subroutine OpenMM_State_destroy(state)
