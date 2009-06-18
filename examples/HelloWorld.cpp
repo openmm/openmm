@@ -1,3 +1,9 @@
+// Suppress irrelevant warnings from Microsoft's compiler.
+#ifdef _MSC_VER
+    #pragma warning(disable:4996)   // sprintf is unsafe 
+    #pragma warning(disable:4251)   // no dll interface for some classes
+#endif
+
 #include "OpenMM.h"
 
 #include <iostream>
@@ -40,7 +46,7 @@ static const double SimulationTimePs    = 1000;  // total simulation time (ps)
 
 static const double SigmaPerVdwRadius = 2*std::pow(2., -1./6.);
 
-static void showState(const OpenMMContext&);
+static double showState(const OpenMMContext&);
 
 int main() {
 try {
@@ -80,13 +86,13 @@ try {
     context.setPositions(positions);
 
     // Output the initial state.
-    showState(context);
+    double time = showState(context);
 
     const int NumSilentSteps = (int)(ReportIntervalFs / StepSizeFs + 0.5);
     do {
         integrator.step(NumSilentSteps);
-        showState(context);
-    } while (context.getTime() < SimulationTimePs);
+        time = showState(context);
+    } while (time < SimulationTimePs);
 
     } catch(const std::exception& e) {
         std::cout << "EXCEPTION: " << e.what() << std::endl;
@@ -96,7 +102,7 @@ try {
     return 0;
 }
 
-static void
+static double
 showState(const OpenMMContext& context) {
     // Caution: at the moment asking for energy requires use of slow reference calculation.
     const State                 state       = context.getState(  State::Positions | State::Velocities 
@@ -112,5 +118,7 @@ showState(const OpenMMContext& context) {
         std::cout << i << " " << positions[i] * AngstromsPerNm << std::endl;
         std::cout << "f=" << forces[i] << " dq=" << dq << std::endl;
     }
+
+    return state.getTime();
 }
 
