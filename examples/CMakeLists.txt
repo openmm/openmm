@@ -82,3 +82,10 @@ INSTALL(FILES ${OpenMM_FMODULE}.f90 DESTINATION examples)
 
 INSTALL(FILES README.txt DESTINATION examples)
 INSTALL(FILES Makefile DESTINATION examples)
+
+INSTALL(FILES HelloArgonVS8/HelloArgon.vcproj 
+		      HelloArgonVS8/HelloArgon.sln 
+	    DESTINATION examples/VisualStudio2005)
+INSTALL(FILES HelloArgonInCVS8/HelloArgonInC.vcproj 
+		      HelloArgonInCVS8/HelloArgonInC.sln 
+	    DESTINATION examples/VisualStudio2005)
