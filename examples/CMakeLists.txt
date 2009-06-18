@@ -89,3 +89,5 @@ INSTALL(FILES HelloArgonVS8/HelloArgon.vcproj
 INSTALL(FILES HelloArgonInCVS8/HelloArgonInC.vcproj 
 		      HelloArgonInCVS8/HelloArgonInC.sln 
 	    DESTINATION examples/VisualStudio2005)
+INSTALL(FILES HelloOpenMM.ppt 
+        DESTINATION examples)

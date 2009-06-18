@@ -1,19 +1,40 @@
 ----------------------------------------------------------------
 OpenMM(tm) Example programs and prototype C and Fortran wrappers
-June, 2009
-----------------------------------------------------------------
+for OpenMM Preview Release 3, June, 2009.
+
+See https://simtk.org/home/openmm.
+For help go to the Advanced/Public Forums tab and post to the
+"help" forum there.
+
+OpenMM is part of SimTK, the Simbios simulation Toolkit, from the Simbios National Center for Physics-based Simulation of Biological Structures funded by the National Institutes of Health
+through the NIH Roadmap for Medical Research, Grant U54 GM072970. Information on the National Centers for Biomedical Computing can be obtained here: http://nihroadmap.nih.gov/bioinformatics/.
+
+OpenMM is developed under the supervision of Simbios P.I. Vijay Pande at Stanford. Any work that uses OpenMM should cite the following paper: M. S. Friedrichs, P. Eastman, V. Vaidyanathan, M. Houston, S. LeGrand, A. L. Beberg, D. L. Ensign, C. M. Bruns, V. S. Pande. “Accelerating Molecular Dynamic Simulation on Graphics Processing Units.” J. Comp. Chem., (2009), 30(6):864-872.
 
 These simple "hello world" examples were developed by
 Christopher Bruns and Michael Sherman for the OpenMM
 workshop on June 24, 2009 at Stanford.
+----------------------------------------------------------------
 
-There are also two sets of prototype wrappers to enable C
-and Fortran 95 to call the OpenMM API. However, even if
-your calling code is in C or Fortran, please consider instead
-writing your OpenMM-calling routines in C++, using 'extern "C"'
+
+In addition to the example programs here, there are also two sets of prototype wrappers to enable C and Fortran 95 to call the OpenMM API. However, even if your calling code is in C or Fortran, please consider instead writing your OpenMM-calling routines in C++, using 'extern "C"'
 so that your main program can call them. If that isn't feasible
 for you, try out our prototype wrappers and let us know what
-troubles or better ideas you have.
+troubles or better ideas you have. (Post to the OpenMM Forum
+at the above URL.)
+
+Building the examples
+---------------------
+
+This directory includes a Makefile suitable for building the 
+examples under Mac or Linux and possibly Cygwin, using the
+gcc compiler suite. See MakefileNotes.txt for more info.
+
+There is a subdirectory here providing Visual Studio "solutions"
+for building HelloArgon in C++ or C. You will have to make your
+own for the other examples or just substitute a different source
+file for HelloArgon.cpp. We do not currently have a Visual Studio
+project for building the Fortran examples.
 
 HelloArgon (C++, C, Fortran 95)
 -------------------------------
