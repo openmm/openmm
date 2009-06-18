@@ -1,5 +1,23 @@
-# Uncomment DEBUG to use OpenMM libraries instead of release libraries
-# DEBUG=_d
+# ----------------------------------------------------------------------
+# Makefile for OpenMM Preview Release 3 workshop "hello world" examples.
+# June 24, 2009.
+# See https://simtk.org/home/openmm.
+# ----------------------------------------------------------------------
+# This assumes you have gcc compilers for whatever language you are
+# using: g++ for C++ and C, gfortran for Fortran 95.
+# 
+# Note: the C Wrappers and Fortran Module are just prototypes. They are
+# incomplete but have enough functionality to get through these examples.
+# We would like more complete and better-thought-out interfaces; if you
+# have code or ideas please post to the OpenMM forum at the above URL
+# (select "Advanced/Public Forums").
+#
+# This has had only minimal testing, although it has been known to
+# work. It is likely to work fine for C and C++. For Fortran, you
+# may need to add some of the C/C++ libraries: 
+#    -lc -lm -lstdc++ -lgcc -lgcc_s
+# but this wasn't required for these examples on Centos 5.2 using
+# gcc 4.1.2.
 
 # Check whether this is the right capitalization for your install directory.
 OpenMM_INSTALL_DIR=/usr/local/OpenMM
@@ -10,7 +28,7 @@ LIB_DIR=$(OpenMM_INSTALL_DIR)/lib
 INCLUDE_DIR=$(OpenMM_INSTALL_DIR)/include
 # assume local directory for C and Fortran wrappers
 WRAPPER_DIR=.
-LIBS= -lOpenMM$(DEBUG)
+LIBS= -lOpenMM
 
 ALL_CPP_EXAMPLES = HelloArgon HelloSodiumChloride HelloEthane HelloWaterBox
 ALL_C_EXAMPLES   = HelloArgonInC HelloSodiumChlorideInC
