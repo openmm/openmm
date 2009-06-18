@@ -1,14 +1,6 @@
 # Uncomment DEBUG to use OpenMM libraries instead of release libraries
 # DEBUG=_d
 
-# Default install directory
-#
-# Linux
-# CFLAGS = -g -m32
-#
-# Mac
-# CFLAGS = -g -m32 -bind_at_load
-
 # Check whether this is the right capitalization for your install directory.
 OpenMM_INSTALL_DIR=/usr/local/OpenMM
 CFLAGS = -g 
