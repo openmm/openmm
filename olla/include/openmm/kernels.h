@@ -78,6 +78,37 @@ public:
 };
 
 /**
+ * This kernel is invoked to get or set the current time.
+ */
+class UpdateTimeKernel : public KernelImpl {
+public:
+    static std::string Name() {
+        return "UpdateTime";
+    }
+    UpdateTimeKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     */
+    virtual void initialize(const System& system) = 0;
+    /**
+     * Get the current time (in picoseconds).
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    virtual double getTime(const OpenMMContextImpl& context) const = 0;
+    /**
+     * Set the current time (in picoseconds).
+     *
+     * @param context    the context in which to execute this kernel
+     * @param time       the time
+     */
+    virtual void setTime(OpenMMContextImpl& context, double time) = 0;
+};
+
+/**
  * This kernel is invoked by HarmonicBondForce to calculate the forces acting on the system and the energy of the system.
  */
 class CalcHarmonicBondForceKernel : public KernelImpl {

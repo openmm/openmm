@@ -42,6 +42,7 @@ extern "C" void initOpenMMPlugin() {
 CudaPlatform::CudaPlatform() {
     CudaKernelFactory* factory = new CudaKernelFactory();
     registerKernelFactory(InitializeForcesKernel::Name(), factory);
+    registerKernelFactory(UpdateTimeKernel::Name(), factory);
     registerKernelFactory(CalcHarmonicBondForceKernel::Name(), factory);
     registerKernelFactory(CalcHarmonicAngleForceKernel::Name(), factory);
     registerKernelFactory(CalcPeriodicTorsionForceKernel::Name(), factory);

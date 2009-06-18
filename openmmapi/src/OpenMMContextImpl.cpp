@@ -47,12 +47,12 @@ using std::string;
 OpenMMContextImpl::OpenMMContextImpl(OpenMMContext& owner, System& system, Integrator& integrator, Platform* platform) :
 				owner(owner), system(system), 
 				integrator(integrator), platform(platform), 
-				platformData(NULL),
-				time(0)
+				platformData(NULL)
 {
     vector<string> kernelNames;
     kernelNames.push_back(CalcKineticEnergyKernel::Name());
     kernelNames.push_back(InitializeForcesKernel::Name());
+    kernelNames.push_back(UpdateTimeKernel::Name());
     for (int i = 0; i < system.getNumForces(); ++i) {
         forceImpls.push_back(system.getForce(i).createImpl());
         map<string, double> forceParameters = forceImpls[forceImpls.size()-1]->getDefaultParameters();
@@ -71,6 +71,8 @@ OpenMMContextImpl::OpenMMContextImpl(OpenMMContext& owner, System& system, Integ
     dynamic_cast<InitializeForcesKernel&>(initializeForcesKernel.getImpl()).initialize(system);
     kineticEnergyKernel = platform->createKernel(CalcKineticEnergyKernel::Name(), *this);
     dynamic_cast<CalcKineticEnergyKernel&>(kineticEnergyKernel.getImpl()).initialize(system);
+    updateTimeKernel = platform->createKernel(UpdateTimeKernel::Name(), *this);
+    dynamic_cast<UpdateTimeKernel&>(updateTimeKernel.getImpl()).initialize(system);
     for (size_t i = 0; i < forceImpls.size(); ++i)
         forceImpls[i]->initialize(*this);
     integrator.initialize(*this);
@@ -85,6 +87,14 @@ OpenMMContextImpl::~OpenMMContextImpl() {
     for (int i = 0; i < (int) forceImpls.size(); ++i)
         delete forceImpls[i];
     platform->contextDestroyed(*this);
+}
+
+double OpenMMContextImpl::getTime() const {
+    return dynamic_cast<const UpdateTimeKernel&>(updateTimeKernel.getImpl()).getTime(*this);
+}
+
+void OpenMMContextImpl::setTime(double t) {
+    dynamic_cast<UpdateTimeKernel&>(updateTimeKernel.getImpl()).setTime(*this, t);
 }
 
 double OpenMMContextImpl::getParameter(std::string name) {

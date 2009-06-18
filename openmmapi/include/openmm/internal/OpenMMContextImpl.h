@@ -102,15 +102,11 @@ public:
     /**
      * Get the current time (in picoseconds).
      */
-    double getTime() const {
-        return time;
-    }
+    double getTime() const;
     /**
      * Set the current time (in picoseconds).
      */
-    void setTime(double t) {
-        time = t;
-    }
+    void setTime(double t);
     /**
      * Get the value of an adjustable parameter.  If there is no parameter with the specified name, this
      * throws an exception.
@@ -158,11 +154,10 @@ private:
     System& system;
     Integrator& integrator;
     std::vector<ForceImpl*> forceImpls;
-    double time;
     std::map<std::string, double> parameters;
     Platform* platform;
     Stream positions, velocities, forces;
-    Kernel initializeForcesKernel, kineticEnergyKernel;
+    Kernel initializeForcesKernel, kineticEnergyKernel, updateTimeKernel;
     void* platformData;
 };
 

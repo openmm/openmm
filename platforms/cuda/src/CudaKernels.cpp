@@ -87,6 +87,17 @@ void CudaInitializeForcesKernel::initialize(const System& system) {
 void CudaInitializeForcesKernel::execute(OpenMMContextImpl& context) {
 }
 
+void CudaUpdateTimeKernel::initialize(const System& system) {
+}
+
+double CudaUpdateTimeKernel::getTime(const OpenMMContextImpl& context) const {
+    return data.time;
+}
+
+void CudaUpdateTimeKernel::setTime(OpenMMContextImpl& context, double time) {
+    data.time = time;
+}
+
 CudaCalcHarmonicBondForceKernel::~CudaCalcHarmonicBondForceKernel() {
 }
 

@@ -112,10 +112,6 @@ public:
      */
     State getState(int types) const;
     /**
-     * Get the current time of the simulation (in picoseconds).
-     */
-    double getTime();
-    /**
      * Set the current time of the simulation (in picoseconds).
      */
     void setTime(double time);

@@ -31,42 +31,44 @@
 
 #include "ReferenceKernelFactory.h"
 #include "ReferenceKernels.h"
+#include "openmm/internal/OpenMMContextImpl.h"
 #include "openmm/OpenMMException.h"
 
 using namespace OpenMM;
 
 KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name, const Platform& platform, OpenMMContextImpl& context) const {
+    ReferencePlatform::PlatformData& data = *static_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
     if (name == InitializeForcesKernel::Name())
         return new ReferenceInitializeForcesKernel(name, platform);
-    else if (name == CalcNonbondedForceKernel::Name())
+    if (name == UpdateTimeKernel::Name())
+        return new ReferenceUpdateTimeKernel(name, platform, data);
+    if (name == CalcNonbondedForceKernel::Name())
         return new ReferenceCalcNonbondedForceKernel(name, platform);
-    else if (name == CalcHarmonicBondForceKernel::Name())
+    if (name == CalcHarmonicBondForceKernel::Name())
         return new ReferenceCalcHarmonicBondForceKernel(name, platform);
-    else if (name == CalcHarmonicAngleForceKernel::Name())
+    if (name == CalcHarmonicAngleForceKernel::Name())
         return new ReferenceCalcHarmonicAngleForceKernel(name, platform);
-    else if (name == CalcHarmonicAngleForceKernel::Name())
+    if (name == CalcHarmonicAngleForceKernel::Name())
         return new ReferenceCalcHarmonicAngleForceKernel(name, platform);
-    else if (name == CalcPeriodicTorsionForceKernel::Name())
+    if (name == CalcPeriodicTorsionForceKernel::Name())
         return new ReferenceCalcPeriodicTorsionForceKernel(name, platform);
-    else if (name == CalcRBTorsionForceKernel::Name())
+    if (name == CalcRBTorsionForceKernel::Name())
         return new ReferenceCalcRBTorsionForceKernel(name, platform);
-    else if (name == CalcGBSAOBCForceKernel::Name())
+    if (name == CalcGBSAOBCForceKernel::Name())
         return new ReferenceCalcGBSAOBCForceKernel(name, platform);
-    else if (name == CalcGBVIForceKernel::Name())
+    if (name == CalcGBVIForceKernel::Name())
         return new ReferenceCalcGBVIForceKernel(name, platform);
-    else if (name == IntegrateVerletStepKernel::Name())
+    if (name == IntegrateVerletStepKernel::Name())
         return new ReferenceIntegrateVerletStepKernel(name, platform);
-    else if (name == IntegrateLangevinStepKernel::Name())
+    if (name == IntegrateLangevinStepKernel::Name())
         return new ReferenceIntegrateLangevinStepKernel(name, platform);
-    else if (name == IntegrateBrownianStepKernel::Name())
+    if (name == IntegrateBrownianStepKernel::Name())
         return new ReferenceIntegrateBrownianStepKernel(name, platform);
-    else if (name == ApplyAndersenThermostatKernel::Name())
+    if (name == ApplyAndersenThermostatKernel::Name())
         return new ReferenceApplyAndersenThermostatKernel(name, platform);
-    else if (name == CalcKineticEnergyKernel::Name())
+    if (name == CalcKineticEnergyKernel::Name())
         return new ReferenceCalcKineticEnergyKernel(name, platform);
-    else if (name == RemoveCMMotionKernel::Name())
+    if (name == RemoveCMMotionKernel::Name())
         return new ReferenceRemoveCMMotionKernel(name, platform);
-    else {
-        throw OpenMMException( (std::string("Tried to create kernel with illegal kernel name '") + name + "'").c_str() );
-    }
+    throw OpenMMException( (std::string("Tried to create kernel with illegal kernel name '") + name + "'").c_str() );
 }

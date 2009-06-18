@@ -44,6 +44,7 @@ namespace OpenMM {
 
 class OPENMM_EXPORT ReferencePlatform : public Platform {
 public:
+    class PlatformData;
     ReferencePlatform();
     std::string getName() const {
         return "Reference";
@@ -53,10 +54,18 @@ public:
     }
     bool supportsDoublePrecision() const;
     const StreamFactory& getDefaultStreamFactory() const;
+    void contextCreated(OpenMMContextImpl& context) const;
+    void contextDestroyed(OpenMMContextImpl& context) const;
 private:
     ReferenceStreamFactory defaultStreamFactory;
 };
 
+class ReferencePlatform::PlatformData {
+public:
+    PlatformData() : time(0.0) {
+    }
+    double time;
+};
 } // namespace OpenMM
 
 #endif /*OPENMM_REFERENCEPLATFORM_H_*/

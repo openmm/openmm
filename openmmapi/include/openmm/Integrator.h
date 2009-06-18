@@ -55,13 +55,15 @@ public:
     virtual ~Integrator() {
     }
     /**
-     * Get the size of each time step, in picoseconds.
+     * Get the size of each time step, in picoseconds.  If this integrator uses variable time steps,
+     * this is the initial step size that will be attempted for the next step.
      */
     double getStepSize() const {
         return stepSize;
     }
     /**
-     * Set the size of each time step, in picoseconds.
+     * Set the size of each time step, in picoseconds.  If this integrator uses variable time steps,
+     * this is the initial step size that will be attempted for the next step.
      */
     void setStepSize(double size) {
         stepSize = size;

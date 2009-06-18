@@ -32,6 +32,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include "ReferencePlatform.h"
 #include "openmm/kernels.h"
 #include "SimTKUtilities/SimTKOpenMMRealType.h"
 #include "SimTKReference/ReferenceNeighborList.h"
@@ -65,6 +66,35 @@ public:
      * @param context    the context in which to execute this kernel
      */
     void execute(OpenMMContextImpl& context);
+};
+
+/**
+ * This kernel is invoked to get or set the current time.
+ */
+class ReferenceUpdateTimeKernel : public UpdateTimeKernel {
+public:
+    ReferenceUpdateTimeKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) : UpdateTimeKernel(name, platform), data(data) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     */
+    void initialize(const System& system);
+    /**
+     * Get the current time (in picoseconds).
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    double getTime(const OpenMMContextImpl& context) const;
+    /**
+     * Set the current time (in picoseconds).
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void setTime(OpenMMContextImpl& context, double time);
+private:
+    ReferencePlatform::PlatformData& data;
 };
 
 /**

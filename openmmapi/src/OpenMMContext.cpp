@@ -92,10 +92,6 @@ State OpenMMContext::getState(int types) const {
     return state;
 }
 
-double OpenMMContext::getTime() {
-    return impl->getTime();
-}
-
 void OpenMMContext::setTime(double time) {
     impl->setTime(time);
 }

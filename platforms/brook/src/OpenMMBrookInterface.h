@@ -102,6 +102,26 @@ class OpenMMBrookInterface {
        */
       
       int setNumberOfParticles( int numberOfParticles );
+
+      /**
+       * Get the current time
+       *
+       * @return   the current time
+       *
+       */
+
+      double getTime( void ) const;
+
+      /**
+       * Set the current time
+       *
+       * @param time the current time
+       *
+       * @return DefaultReturnValue
+       *
+       */
+
+      int setTime( double time);
       
       /** 
        * Get particle stream width
@@ -417,6 +437,7 @@ class OpenMMBrookInterface {
        BrookStreamImpl* _positions;
        BrookStreamImpl* _velocities;
        BrookStreamImpl* _forces;
+       double _time;
 
       /** 
        * Set BrookBondParameters 

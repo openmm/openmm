@@ -64,6 +64,7 @@ OpenMMBrookInterface::OpenMMBrookInterface( int streamWidth, int duplicationFact
 
    _log                                     = NULL;
 //_log = stderr;
+   _time                                    = 0.0;
 
    _particleStreamSize                      = -1;
 
@@ -118,6 +119,31 @@ int OpenMMBrookInterface::getNumberOfParticles( void ) const {
 int OpenMMBrookInterface::setNumberOfParticles( int numberOfParticles ){
    _numberOfParticles = numberOfParticles;
    return BrookCommon::DefaultReturnValue;
+}
+
+/**
+* Get the current time
+*
+* @return   the current time
+*
+*/
+
+double OpenMMBrookInterface::getTime( void ) const {
+    return _time;
+}
+
+/**
+* Set the current time
+*
+* @param time the current time
+*
+* @return DefaultReturnValue
+*
+*/
+
+int OpenMMBrookInterface::setTime( double time) {
+    _time = time;
+    return BrookCommon::DefaultReturnValue;
 }
 
 /** 

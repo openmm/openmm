@@ -32,6 +32,7 @@
 #include "ReferencePlatform.h"
 #include "ReferenceKernelFactory.h"
 #include "ReferenceKernels.h"
+#include "openmm/internal/OpenMMContextImpl.h"
 #include "SimTKUtilities/SimTKOpenMMRealType.h"
 
 using namespace OpenMM;
@@ -39,6 +40,7 @@ using namespace OpenMM;
 ReferencePlatform::ReferencePlatform() {
     ReferenceKernelFactory* factory = new ReferenceKernelFactory();
     registerKernelFactory(InitializeForcesKernel::Name(), factory);
+    registerKernelFactory(UpdateTimeKernel::Name(), factory);
     registerKernelFactory(CalcHarmonicBondForceKernel::Name(), factory);
     registerKernelFactory(CalcHarmonicAngleForceKernel::Name(), factory);
     registerKernelFactory(CalcPeriodicTorsionForceKernel::Name(), factory);
@@ -60,4 +62,13 @@ bool ReferencePlatform::supportsDoublePrecision() const {
 
 const StreamFactory& ReferencePlatform::getDefaultStreamFactory() const {
     return defaultStreamFactory;
+}
+
+void ReferencePlatform::contextCreated(OpenMMContextImpl& context) const {
+    context.setPlatformData(new PlatformData());
+}
+
+void ReferencePlatform::contextDestroyed(OpenMMContextImpl& context) const {
+    PlatformData* data = reinterpret_cast<PlatformData*>(context.getPlatformData());
+    delete data;
 }

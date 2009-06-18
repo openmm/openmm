@@ -26,6 +26,7 @@
 
 #include "BrookKernelFactory.h"
 #include "BrookInitializeForcesKernel.h"
+#include "BrookUpdateTimeKernel.h"
 #include "BrookCalcHarmonicBondForceKernel.h"
 #include "BrookCalcHarmonicAngleForceKernel.h"
 #include "BrookCalcPeriodicTorsionForceKernel.h"
@@ -57,7 +58,13 @@ KernelImpl* BrookKernelFactory::createKernelImpl( std::string name, const Platfo
 
       return new BrookInitializeForcesKernel( name, platform, openMMBrookInterface, context.getSystem() );
 
-   // harmonic bonds 
+   // update time
+
+	} else if( name == UpdateTimeKernel::Name() ){
+
+      return new BrookUpdateTimeKernel( name, platform, openMMBrookInterface );
+
+   // harmonic bonds
 
 	} else if( name == CalcHarmonicBondForceKernel::Name() ){
 

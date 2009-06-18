@@ -128,6 +128,17 @@ void ReferenceInitializeForcesKernel::execute(OpenMMContextImpl& context) {
     context.getForces().fillWithValue(zero);
 }
 
+void ReferenceUpdateTimeKernel::initialize(const System& system) {
+}
+
+double ReferenceUpdateTimeKernel::getTime(const OpenMMContextImpl& context) const {
+    return data.time;
+}
+
+void ReferenceUpdateTimeKernel::setTime(OpenMMContextImpl& context, double time) {
+    data.time = time;
+}
+
 ReferenceCalcHarmonicBondForceKernel::~ReferenceCalcHarmonicBondForceKernel() {
     disposeIntArray(bondIndexArray, numBonds);
     disposeRealArray(bondParamArray, numBonds);
