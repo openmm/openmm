@@ -1,0 +1,29 @@
+Instructions for using the Makefile provided.
+---------------------------------------------
+
+You must already have the OpenMM binaries installed from SimTK.org/home/OpenMM. Pay careful attention to the installation 
+instructions -- if you are hoping to get GPU acceleration you 
+may also have to install appropriate vendor libraries and a driver.
+
+You may need to slightly edit the Makefile to make it run on your system, depending where you installed OpenMM.
+
+Type "make" (or "make default") to get just one C++ example built
+(HelloArgon). Make sure it runs.
+
+To compile all example programs type "make all". That includes Fortran
+examples though so you will see failures unless you have gfortran
+installed. However, the C++ and C examples should compile with just
+g++.
+
+To build just one example, type "make HelloArgonInC" or whatever.
+
+Before you run the executables, remember to add the OpenMM dynamic library directory to your library path. 
+
+The simplest way to do this is to type the following commands:
+
+For linux (for the bash shell, assuming installation was done in the default location: /usr/local/openmm): 
+  $ export LD_LIBRARY_PATH=/usr/local/openmm/lib 
+
+For MAC (for the bash shell, assuming installation was done in the default location: /usr/local/openmm):
+  $ export DYLD_LIBRARY_PATH=/usr/local/openmm/lib 
+
