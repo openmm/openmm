@@ -17,7 +17,7 @@ FFLAGS = -g
 LIB_DIR=$(OpenMM_INSTALL_DIR)/lib
 INCLUDE_DIR=$(OpenMM_INSTALL_DIR)/include
 # assume local directory for C and Fortran wrappers
-WRAPPER_DIR=./wrappers
+WRAPPER_DIR=.
 LIBS= -lOpenMM$(DEBUG)
 
 ALL_CPP_EXAMPLES = HelloArgon HelloSodiumChloride HelloEthane HelloWaterBox

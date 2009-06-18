@@ -158,7 +158,7 @@ int main() {
  * can use the implementation from the C++ version of this example if you 
  * want. However, the methods are reimplemented in C below in case you prefer.
  */
-#include "wrappers/OpenMM_CWrapper.h"
+#include "OpenMM_CWrapper.h"
 
 
 struct MyOpenMMData_s {

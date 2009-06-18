@@ -11,7 +11,7 @@
  * other visualization tool to produce an animation of the resulting trajectory.
  * -------------------------------------------------------------------------- */
 
-#include "wrappers/OpenMM_CWrapper.h"
+#include "OpenMM_CWrapper.h"
 #include <stdio.h>
 
 /* Forward declaration of routine for printing one frame of the
