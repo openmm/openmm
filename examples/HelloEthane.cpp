@@ -16,7 +16,6 @@
 #include <cstdio>
 #include <string>
 #include <vector>
-#include <utility>
 
 // -----------------------------------------------------------------------------
 //                                 MOCK MD CODE
@@ -40,8 +39,6 @@ const double SimulationTimeInPs  = 100;     // total simulation time (ps)
 static const bool   WantEnergy   = true;
 
 //                            FORCE FIELD DATA
-// These data structures are not part of OpenMM; they are a model of the kinds
-// of data structures an MD code uses to hold a set of force field parameters.
 // For this example we're using a tiny subset of the Amber99 force field.
 // We want to keep the data in the original unit system to avoid conversion
 // bugs; this requires conversion on the way in and out of OpenMM.
@@ -220,12 +217,16 @@ namespace OpenMM {
 static const double SigmaPerVdwRadius = 1.78179743628068;
 }
 
+// This is our opaque "handle" class containing all the OpenMM objects that
+// must persist from call to call during a simulation. The main program gets 
+// a pointer to one of these but sees it as essentially a void* since it 
+// doesn't know the definition of this class.
 struct MyOpenMMData {
     MyOpenMMData() : system(0), context(0), integrator(0) {}
-    ~MyOpenMMData() {delete system; delete context; delete integrator;}
+    ~MyOpenMMData() {delete context; delete integrator; delete system;}
     OpenMM::System*         system;
-    OpenMM::OpenMMContext*  context;
     OpenMM::Integrator*     integrator;
+    OpenMM::OpenMMContext*  context;
 };
 
 
