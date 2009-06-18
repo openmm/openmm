@@ -10,7 +10,7 @@ TARGET_LINK_LIBRARIES(${OpenMM_CWRAPPER_LIB} ${SHARED_TARGET})
 SET_TARGET_PROPERTIES(${OpenMM_CWRAPPER_LIB} PROPERTIES
 	PROJECT_LABEL "Example - C Wrapper")
 
-# Don't install yet
-#INSTALL_TARGETS(/lib${LIB64}/plugins 
-#                RUNTIME_DIRECTORY /lib${LIB64}/plugins
-#                ${OpenMM_CWRAPPER_LIB})
+INSTALL(FILES OpenMM_CWrapper.cpp 
+              OpenMM_CWrapper.h 
+              OpenMM_Module.f90 
+        DESTINATION examples)

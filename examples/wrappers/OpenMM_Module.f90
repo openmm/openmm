@@ -1,5 +1,5 @@
 ! -----------------------------------------------------------------------------
-!                OpenMM(tm) Fortran 95 Interface (June 2009)
+!             OpenMM(tm) PROTOTYPE Fortran 95 Interface (June 2009)
 ! -----------------------------------------------------------------------------
 ! This is a Fortran 95 interface module providing access to the OpenMM API
 ! which is written in C++. At link time this module requires that the OpenMM

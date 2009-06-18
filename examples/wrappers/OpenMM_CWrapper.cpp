@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------------
-//        OpenMM(tm) example C and Fortran wrapper functions (June 2009)
+//       OpenMM(tm) PROTOTPYE C and Fortran wrapper functions (June 2009)
 // -----------------------------------------------------------------------------
 // This is the C++ implementation of the C wrappers for the OpenMM workshop.
 // The functions here convert between C types and OpenMM's C++ objects

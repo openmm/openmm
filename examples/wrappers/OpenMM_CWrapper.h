@@ -1,10 +1,16 @@
 /* --------------------------------------------------------------------------
- *       OpenMM(tm) example C wrapper function declarations (June 2009)
+ *     OpenMM(tm) PROTOTYPE C wrapper function declarations (June 2009)
  * --------------------------------------------------------------------------
  * This header should be included by a C main program that would like to
- * access the OpenMM API through the C wrappers. Please note that this is not
- * an official part of OpenMM; it is just an example of how the C++ API can
- * be wrapped for access from C.
+ * access the OpenMM API through the C wrappers. Please note that this is an
+ * experimentatl prototype, not an official part of OpenMM; it is just an 
+ * example of how the C++ API can be wrapped for access from C.
+ *
+ * This set of wrappers is incomplete. If you add more, please send them
+ * to us. Improvements in substance and style would also be greatly 
+ * appreciated. If you have ideas (or better code) please post to the OpenMM 
+ * forum on simtk.org/home/openmm or if you're shy you can email Michael 
+ * Sherman at msherman@stanford.edu.
  *
  * Note: this header must be includable in both ANSI C and C++ code, because
  * the function declarations must be common to both the users and the
