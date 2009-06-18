@@ -148,10 +148,9 @@ static void          myTerminateOpenMM(MyOpenMMData*);
 
 
 // -----------------------------------------------------------------------------
-//                                MAIN PROGRAM
+//                           ETHANE MAIN PROGRAM
 // -----------------------------------------------------------------------------
 int main() {
-
     // ALWAYS enclose all OpenMM calls with a try/catch block to make sure that
     // usage and runtime errors are caught and reported.
     try {
