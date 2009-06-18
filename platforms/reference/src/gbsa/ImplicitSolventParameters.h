@@ -120,7 +120,7 @@ class ImplicitSolventParameters {
       
          --------------------------------------------------------------------------------------- */
     
-       ~ImplicitSolventParameters( );
+       virtual ~ImplicitSolventParameters( );
 
       // override of new/delete
 

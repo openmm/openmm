@@ -152,7 +152,7 @@ class CpuImplicitSolvent {
       
          --------------------------------------------------------------------------------------- */
 
-      ~CpuImplicitSolvent( );
+      virtual ~CpuImplicitSolvent( );
 
       // override of new/delete -- used when run in PS3 framework(?)
 
