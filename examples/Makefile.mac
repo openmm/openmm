@@ -1,3 +1,6 @@
+## Compiling a Fortran main with C++ can be finicky about libraries.
+## Here FCPPLIBS is set the way we had to do it to work on a Mac.
+## (Otherwise this is just a copy of 'Makefile')
 # ----------------------------------------------------------------------
 # Makefile for OpenMM Preview Release 3 workshop "hello world" examples.
 # June 24, 2009.
@@ -27,7 +30,7 @@ FFLAGS = -g
 # Extra libraries required when gfortran links with a C++ module.
 # Uncomment this on Mac. If this doesn't work, look in /usr/lib to
 # see what versions of libstdc++.so you have and try that.
-# FCPPLIBS = -lstdc++.6
+FCPPLIBS = -lstdc++.6
 
 LIB_DIR=$(OpenMM_INSTALL_DIR)/lib
 INCLUDE_DIR=$(OpenMM_INSTALL_DIR)/include

@@ -5,7 +5,7 @@ You must already have the OpenMM binaries installed from SimTK.org/home/OpenMM. 
 instructions -- if you are hoping to get GPU acceleration you 
 may also have to install appropriate vendor libraries and a driver.
 
-You may need to slightly edit the Makefile to make it run on your system, depending where you installed OpenMM.
+You may need to slightly edit the Makefile to make it run on your system, depending where you installed OpenMM and the particular requirements of your version of gcc for mixed Fortran/C++ programming. There is a copy of the Makefile called 'Makefile.mac' which uses a library that worked for us on Mac.
 
 Type "make" (or "make default") to get just one C++ example built
 (HelloArgon). Make sure it runs.
