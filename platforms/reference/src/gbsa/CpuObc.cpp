@@ -527,12 +527,18 @@ int CpuObc::computeBornEnergyForces( RealOpenMM* bornRadii, RealOpenMM** atomCoo
 
          if( atomJ != atomI ){
 
-            RealOpenMM deltaX             = atomCoordinates[atomJ][0] - atomCoordinates[atomI][0];
-            RealOpenMM deltaY             = atomCoordinates[atomJ][1] - atomCoordinates[atomI][1];
-            RealOpenMM deltaZ             = atomCoordinates[atomJ][2] - atomCoordinates[atomI][2];
-    
-            RealOpenMM r2                 = deltaX*deltaX + deltaY*deltaY + deltaZ*deltaZ;
-            RealOpenMM r                  = SQRT( r2 );
+            RealOpenMM deltaR[ReferenceForce::LastDeltaRIndex];
+            if (_obcParameters->getPeriodic())
+               ReferenceForce::getDeltaRPeriodic( atomCoordinates[atomI], atomCoordinates[atomJ], _obcParameters->getPeriodicBox(), deltaR );
+            else 
+               ReferenceForce::getDeltaR( atomCoordinates[atomI], atomCoordinates[atomJ], deltaR );
+            if (_obcParameters->getUseCutoff() && deltaR[ReferenceForce::RIndex] > _obcParameters->getCutoffDistance())
+                   continue;
+   
+            RealOpenMM deltaX             = deltaR[ReferenceForce::XIndex];
+            RealOpenMM deltaY             = deltaR[ReferenceForce::YIndex];
+            RealOpenMM deltaZ             = deltaR[ReferenceForce::ZIndex];
+            RealOpenMM r                  = deltaR[ReferenceForce::RIndex];
  
             // radius w/ dielectric offset applied
 
@@ -969,6 +975,7 @@ FILE* logFile = NULL;
              ReferenceForce::getDeltaR( atomCoordinates[atomI], atomCoordinates[atomJ], deltaR );
          if (_obcParameters->getUseCutoff() && deltaR[ReferenceForce::RIndex] > _obcParameters->getCutoffDistance())
              continue;
+
          RealOpenMM r2                 = deltaR[ReferenceForce::R2Index];
          RealOpenMM deltaX             = deltaR[ReferenceForce::XIndex];
          RealOpenMM deltaY             = deltaR[ReferenceForce::YIndex];
@@ -1131,13 +1138,19 @@ for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
 
          if( atomJ != atomI ){
 
-            RealOpenMM deltaX             = atomCoordinates[atomJ][0] - atomCoordinates[atomI][0];
-            RealOpenMM deltaY             = atomCoordinates[atomJ][1] - atomCoordinates[atomI][1];
-            RealOpenMM deltaZ             = atomCoordinates[atomJ][2] - atomCoordinates[atomI][2];
-    
-            RealOpenMM r2                 = deltaX*deltaX + deltaY*deltaY + deltaZ*deltaZ;
-            RealOpenMM r                  = SQRT( r2 );
- 
+            RealOpenMM deltaR[ReferenceForce::LastDeltaRIndex];
+            if (_obcParameters->getPeriodic())
+               ReferenceForce::getDeltaRPeriodic( atomCoordinates[atomI], atomCoordinates[atomJ], _obcParameters->getPeriodicBox(), deltaR );
+            else 
+               ReferenceForce::getDeltaR( atomCoordinates[atomI], atomCoordinates[atomJ], deltaR );
+            if (_obcParameters->getUseCutoff() && deltaR[ReferenceForce::RIndex] > _obcParameters->getCutoffDistance())
+                   continue;
+   
+            RealOpenMM deltaX             = deltaR[ReferenceForce::XIndex];
+            RealOpenMM deltaY             = deltaR[ReferenceForce::YIndex];
+            RealOpenMM deltaZ             = deltaR[ReferenceForce::ZIndex];
+            RealOpenMM r                  = deltaR[ReferenceForce::RIndex];
+
             // radius w/ dielectric offset applied
 
             RealOpenMM radiusJ            = atomicRadii[atomJ] - dielectricOffset;
