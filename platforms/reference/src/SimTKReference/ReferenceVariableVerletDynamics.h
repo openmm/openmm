@@ -33,7 +33,7 @@ class ReferenceVariableVerletDynamics : public ReferenceDynamics {
 
    private:
 
-      enum TwoDArrayIndicies { xPrime2D, vPrime2D, Max2DArrays };
+      enum TwoDArrayIndicies { xPrime2D, Max2DArrays };
       enum OneDArrayIndicies { InverseMasses, Max1DArrays };
       RealOpenMM _accuracy, _lastStepSize;
 

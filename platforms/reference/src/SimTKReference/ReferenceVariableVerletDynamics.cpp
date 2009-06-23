@@ -167,7 +167,6 @@ int ReferenceVariableVerletDynamics::update( int numberOfAtoms, RealOpenMM** ato
     // get work arrays
 
     RealOpenMM** xPrime = get2DArrayAtIndex( xPrime2D );
-    RealOpenMM** vPrime = get2DArrayAtIndex( vPrime2D );
     RealOpenMM* inverseMasses = get1DArrayAtIndex( InverseMasses );
 
     // first-time-through initialization
@@ -208,8 +207,8 @@ int ReferenceVariableVerletDynamics::update( int numberOfAtoms, RealOpenMM** ato
         for (int i = 0; i < numberOfAtoms; ++i) {
             for (int j = 0; j < 3; ++j) {
                 RealOpenMM xref = atomCoordinates[i][j] + velocities[i][j]*getDeltaT();
-                vPrime[i][j] = velocities[i][j] + inverseMasses[i]*forces[i][j]*getDeltaT();
-                xPrime[i][j] = atomCoordinates[i][j] + vPrime[i][j]*getDeltaT();
+                RealOpenMM vPrime = velocities[i][j] + inverseMasses[i]*forces[i][j]*getDeltaT();
+                xPrime[i][j] = atomCoordinates[i][j] + vPrime*getDeltaT();
                 RealOpenMM xerror = xPrime[i][j]-xref;
                 error += xerror*xerror;
             }

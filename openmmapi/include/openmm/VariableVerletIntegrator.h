@@ -46,9 +46,9 @@ namespace OpenMM {
  * specified tolerance.  This allows it to take larger steps on average than a fixed step size
  * integrator, while still maintaining comparable accuracy and stability.
  *
- * It is best not to think of the value of the accuracy parameter as having any absolute meaning.
- * It is just an adjustable parameter that affects the step size and integration accuracy.  You
- * should try different values to find the largest value that produces a trajectory sufficiently
+ * It is best not to think of the error tolerance as having any absolute meaning.  It is just an
+ * adjustable parameter that affects the step size and integration accuracy.  You
+ * should try different values to find the largest onethat produces a trajectory sufficiently
  * accurate for your purposes.  0.001 is often a good starting point.
  *
  * Unlike a fixed step size Verlet integrator, variable step size Verlet is not symplectic.  This
@@ -64,20 +64,20 @@ public:
      * Create a VariableVerletIntegrator.
      *
      * @param stepSize the initial step size to use (in picoseconds)
-     * @param accuracy the required accuracy
+     * @param tol      the error tolerance
      */
-    VariableVerletIntegrator(double stepSize, double accuracy);
+    VariableVerletIntegrator(double stepSize, double errorTol);
     /**
-     * Get the required accuracy.
+     * Get the error tolerance.
      */
-    double getAccuracy() const {
-        return accuracy;
+    double getErrorTolerance() const {
+        return errorTol;
     }
     /**
-     * Set the required accuracy.
+     * Set the error tolerance.
      */
-    void setAccuracy(double acc) {
-        accuracy = acc;
+    void setErrorTolerance(double tol) {
+        errorTol = tol;
     }
    /**
      * Advance a simulation through time by taking a series of time steps.
@@ -97,7 +97,7 @@ protected:
      */
     std::vector<std::string> getKernelNames();
 private:
-    double accuracy;
+    double errorTol;
     OpenMMContextImpl* context;
     Kernel kernel;
 };

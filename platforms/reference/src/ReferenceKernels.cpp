@@ -803,24 +803,24 @@ void ReferenceIntegrateVariableVerletStepKernel::initialize(const System& system
 
 void ReferenceIntegrateVariableVerletStepKernel::execute(OpenMMContextImpl& context, const VariableVerletIntegrator& integrator) {
     double stepSize = integrator.getStepSize();
-    double accuracy = integrator.getAccuracy();
+    double errorTol = integrator.getErrorTolerance();
     RealOpenMM** posData = ((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData();
     RealOpenMM** velData = ((ReferenceFloatStreamImpl&) context.getVelocities().getImpl()).getData();
     RealOpenMM** forceData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getForces().getImpl()).getData()); // Reference code needs to be made const correct
-    if (dynamics == 0 || stepSize != prevStepSize || accuracy != prevAccuracy) {
+    if (dynamics == 0 || stepSize != prevStepSize || errorTol != prevErrorTol) {
         // Recreate the computation objects with the new parameters.
 
         if (dynamics) {
             delete dynamics;
             delete constraints;
         }
-        dynamics = new ReferenceVariableVerletDynamics(context.getSystem().getNumParticles(), static_cast<RealOpenMM>(stepSize), accuracy);
+        dynamics = new ReferenceVariableVerletDynamics(context.getSystem().getNumParticles(), static_cast<RealOpenMM>(stepSize), errorTol);
         vector<ReferenceCCMAAlgorithm::AngleInfo> angles;
         findAnglesForCCMA(context.getSystem(), angles);
         constraints = new ReferenceCCMAAlgorithm(context.getSystem().getNumParticles(), numConstraints, constraintIndices, constraintDistances, masses, angles, (RealOpenMM)integrator.getConstraintTolerance());
         dynamics->setReferenceConstraintAlgorithm(constraints);
         prevStepSize = stepSize;
-        prevAccuracy = accuracy;
+        prevErrorTol = errorTol;
     }
     dynamics->update(context.getSystem().getNumParticles(), posData, velData, forceData, masses);
     data.time += dynamics->getLastStepSize();
