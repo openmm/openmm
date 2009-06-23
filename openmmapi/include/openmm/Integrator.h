@@ -69,13 +69,13 @@ public:
         stepSize = size;
     }
     /**
-     * Get the distance tolerance within which constraints are maintained, measured in nm.
+     * Get the distance tolerance within which constraints are maintained, as a fraction of the constrained distance.
      */
     double getConstraintTolerance() const {
         return constraintTol;
     }
     /**
-     * Set the distance tolerance within which constraints are maintained, measured in nm.
+     * Set the distance tolerance within which constraints are maintained, as a fraction of the constrained distance.
      */
     void setConstraintTolerance(double tol) {
         constraintTol = tol;
