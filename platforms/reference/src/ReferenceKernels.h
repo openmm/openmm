@@ -43,6 +43,7 @@ class ReferenceAndersenThermostat;
 class ReferenceBrownianDynamics;
 class ReferenceStochasticDynamics;
 class ReferenceConstraintAlgorithm;
+class ReferenceVariableVerletDynamics;
 class ReferenceVerletDynamics;
 
 namespace OpenMM {
@@ -343,8 +344,8 @@ private:
  */
 class ReferenceIntegrateVerletStepKernel : public IntegrateVerletStepKernel {
 public:
-    ReferenceIntegrateVerletStepKernel(std::string name, const Platform& platform) : IntegrateVerletStepKernel(name, platform),
-        dynamics(0), constraints(0), masses(0), constraintDistances(0), constraintIndices(0) {
+    ReferenceIntegrateVerletStepKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) : IntegrateVerletStepKernel(name, platform),
+        data(data), dynamics(0), constraints(0), masses(0), constraintDistances(0), constraintIndices(0) {
     }
     ~ReferenceIntegrateVerletStepKernel();
     /**
@@ -362,6 +363,7 @@ public:
      */
     void execute(OpenMMContextImpl& context, const VerletIntegrator& integrator);
 private:
+    ReferencePlatform::PlatformData& data;
     ReferenceVerletDynamics* dynamics;
     ReferenceConstraintAlgorithm* constraints;
     RealOpenMM* masses;
@@ -376,8 +378,8 @@ private:
  */
 class ReferenceIntegrateLangevinStepKernel : public IntegrateLangevinStepKernel {
 public:
-    ReferenceIntegrateLangevinStepKernel(std::string name, const Platform& platform) : IntegrateLangevinStepKernel(name, platform),
-        dynamics(0), constraints(0), masses(0), constraintDistances(0), constraintIndices(0) {
+    ReferenceIntegrateLangevinStepKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) : IntegrateLangevinStepKernel(name, platform),
+        data(data), dynamics(0), constraints(0), masses(0), constraintDistances(0), constraintIndices(0) {
     }
     ~ReferenceIntegrateLangevinStepKernel();
     /**
@@ -395,6 +397,7 @@ public:
      */
     void execute(OpenMMContextImpl& context, const LangevinIntegrator& integrator);
 private:
+    ReferencePlatform::PlatformData& data;
     ReferenceStochasticDynamics* dynamics;
     ReferenceConstraintAlgorithm* constraints;
     RealOpenMM* masses;
@@ -409,8 +412,8 @@ private:
  */
 class ReferenceIntegrateBrownianStepKernel : public IntegrateBrownianStepKernel {
 public:
-    ReferenceIntegrateBrownianStepKernel(std::string name, const Platform& platform) : IntegrateBrownianStepKernel(name, platform),
-        dynamics(0), constraints(0), masses(0), constraintDistances(0), constraintIndices(0) {
+    ReferenceIntegrateBrownianStepKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) : IntegrateBrownianStepKernel(name, platform),
+        data(data), dynamics(0), constraints(0), masses(0), constraintDistances(0), constraintIndices(0) {
     }
     ~ReferenceIntegrateBrownianStepKernel();
     /**
@@ -428,6 +431,7 @@ public:
      */
     void execute(OpenMMContextImpl& context, const BrownianIntegrator& integrator);
 private:
+    ReferencePlatform::PlatformData& data;
     ReferenceBrownianDynamics* dynamics;
     ReferenceConstraintAlgorithm* constraints;
     RealOpenMM* masses;
@@ -435,6 +439,40 @@ private:
     int** constraintIndices;
     int numConstraints;
     double prevTemp, prevFriction, prevStepSize;
+};
+
+/**
+ * This kernel is invoked by VariableVerletIntegrator to take one time step.
+ */
+class ReferenceIntegrateVariableVerletStepKernel : public IntegrateVariableVerletStepKernel {
+public:
+    ReferenceIntegrateVariableVerletStepKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) : IntegrateVariableVerletStepKernel(name, platform),
+        data(data), dynamics(0), constraints(0), masses(0), constraintDistances(0), constraintIndices(0) {
+    }
+    ~ReferenceIntegrateVariableVerletStepKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param integrator the VerletIntegrator this kernel will be used for
+     */
+    void initialize(const System& system, const VariableVerletIntegrator& integrator);
+    /**
+     * Execute the kernel.
+     *
+     * @param context    the context in which to execute this kernel
+     * @param integrator the VerletIntegrator this kernel is being used for
+     */
+    void execute(OpenMMContextImpl& context, const VariableVerletIntegrator& integrator);
+private:
+    ReferencePlatform::PlatformData& data;
+    ReferenceVariableVerletDynamics* dynamics;
+    ReferenceConstraintAlgorithm* constraints;
+    RealOpenMM* masses;
+    RealOpenMM* constraintDistances;
+    int** constraintIndices;
+    int numConstraints;
+    double prevStepSize, prevAccuracy;
 };
 
 /**

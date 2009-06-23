@@ -33,6 +33,7 @@
 #include "ReferenceFloatStreamImpl.h"
 #include "gbsa/CpuObc.h"
 #include "gbsa/CpuGBVI.h"
+#include "SimTKReference/ReferenceVariableVerletDynamics.h"
 #include "SimTKReference/ReferenceAndersenThermostat.h"
 #include "SimTKReference/ReferenceAngleBondIxn.h"
 #include "SimTKReference/ReferenceBondForce.h"
@@ -639,6 +640,7 @@ void ReferenceIntegrateVerletStepKernel::execute(OpenMMContextImpl& context, con
         prevStepSize = stepSize;
     }
     dynamics->update(context.getSystem().getNumParticles(), posData, velData, forceData, masses);
+    data.time += stepSize;
 }
 
 ReferenceIntegrateLangevinStepKernel::~ReferenceIntegrateLangevinStepKernel() {
@@ -702,6 +704,7 @@ void ReferenceIntegrateLangevinStepKernel::execute(OpenMMContextImpl& context, c
         prevStepSize = stepSize;
     }
     dynamics->update(context.getSystem().getNumParticles(), posData, velData, forceData, masses);
+    data.time += stepSize;
 }
 
 ReferenceIntegrateBrownianStepKernel::~ReferenceIntegrateBrownianStepKernel() {
@@ -764,6 +767,63 @@ void ReferenceIntegrateBrownianStepKernel::execute(OpenMMContextImpl& context, c
         prevStepSize = stepSize;
     }
     dynamics->update(context.getSystem().getNumParticles(), posData, velData, forceData, masses);
+    data.time += stepSize;
+}
+
+ReferenceIntegrateVariableVerletStepKernel::~ReferenceIntegrateVariableVerletStepKernel() {
+    if (dynamics)
+        delete dynamics;
+    if (constraints)
+        delete constraints;
+    if (masses)
+        delete[] masses;
+    if (constraintIndices)
+        disposeIntArray(constraintIndices, numConstraints);
+    if (constraintDistances)
+        delete[] constraintDistances;
+}
+
+void ReferenceIntegrateVariableVerletStepKernel::initialize(const System& system, const VariableVerletIntegrator& integrator) {
+    int numParticles = system.getNumParticles();
+    masses = new RealOpenMM[numParticles];
+    for (int i = 0; i < numParticles; ++i)
+        masses[i] = static_cast<RealOpenMM>(system.getParticleMass(i));
+    numConstraints = system.getNumConstraints();
+    constraintIndices = allocateIntArray(numConstraints, 2);
+    constraintDistances = new RealOpenMM[numConstraints];
+    for (int i = 0; i < numConstraints; ++i) {
+        int particle1, particle2;
+        double distance;
+        system.getConstraintParameters(i, particle1, particle2, distance);
+        constraintIndices[i][0] = particle1;
+        constraintIndices[i][1] = particle2;
+        constraintDistances[i] = static_cast<RealOpenMM>(distance);
+    }
+}
+
+void ReferenceIntegrateVariableVerletStepKernel::execute(OpenMMContextImpl& context, const VariableVerletIntegrator& integrator) {
+    double stepSize = integrator.getStepSize();
+    double accuracy = integrator.getAccuracy();
+    RealOpenMM** posData = ((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData();
+    RealOpenMM** velData = ((ReferenceFloatStreamImpl&) context.getVelocities().getImpl()).getData();
+    RealOpenMM** forceData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getForces().getImpl()).getData()); // Reference code needs to be made const correct
+    if (dynamics == 0 || stepSize != prevStepSize || accuracy != prevAccuracy) {
+        // Recreate the computation objects with the new parameters.
+
+        if (dynamics) {
+            delete dynamics;
+            delete constraints;
+        }
+        dynamics = new ReferenceVariableVerletDynamics(context.getSystem().getNumParticles(), static_cast<RealOpenMM>(stepSize), accuracy);
+        vector<ReferenceCCMAAlgorithm::AngleInfo> angles;
+        findAnglesForCCMA(context.getSystem(), angles);
+        constraints = new ReferenceCCMAAlgorithm(context.getSystem().getNumParticles(), numConstraints, constraintIndices, constraintDistances, masses, angles, (RealOpenMM)integrator.getConstraintTolerance());
+        dynamics->setReferenceConstraintAlgorithm(constraints);
+        prevStepSize = stepSize;
+        prevAccuracy = accuracy;
+    }
+    dynamics->update(context.getSystem().getNumParticles(), posData, velData, forceData, masses);
+    data.time += dynamics->getLastStepSize();
 }
 
 ReferenceApplyAndersenThermostatKernel::~ReferenceApplyAndersenThermostatKernel() {

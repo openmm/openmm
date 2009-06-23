@@ -61,6 +61,5 @@ void VerletIntegrator::step(int steps) {
         context->updateContextState();
         context->calcForces();
         dynamic_cast<IntegrateVerletStepKernel&>(kernel.getImpl()).execute(*context, *this);
-        context->setTime(context->getTime()+getStepSize());
     }
 }

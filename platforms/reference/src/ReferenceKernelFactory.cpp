@@ -59,11 +59,13 @@ KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name, const Pla
     if (name == CalcGBVIForceKernel::Name())
         return new ReferenceCalcGBVIForceKernel(name, platform);
     if (name == IntegrateVerletStepKernel::Name())
-        return new ReferenceIntegrateVerletStepKernel(name, platform);
+        return new ReferenceIntegrateVerletStepKernel(name, platform, data);
     if (name == IntegrateLangevinStepKernel::Name())
-        return new ReferenceIntegrateLangevinStepKernel(name, platform);
+        return new ReferenceIntegrateLangevinStepKernel(name, platform, data);
     if (name == IntegrateBrownianStepKernel::Name())
-        return new ReferenceIntegrateBrownianStepKernel(name, platform);
+        return new ReferenceIntegrateBrownianStepKernel(name, platform, data);
+    if (name == IntegrateVariableVerletStepKernel::Name())
+        return new ReferenceIntegrateVariableVerletStepKernel(name, platform, data);
     if (name == ApplyAndersenThermostatKernel::Name())
         return new ReferenceApplyAndersenThermostatKernel(name, platform);
     if (name == CalcKineticEnergyKernel::Name())

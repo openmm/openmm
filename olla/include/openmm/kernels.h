@@ -32,6 +32,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include "openmm/VariableVerletIntegrator.h"
 #include "openmm/AndersenThermostat.h"
 #include "openmm/BrownianIntegrator.h"
 #include "openmm/CMMotionRemover.h"
@@ -415,6 +416,32 @@ public:
      * @param integrator the BrownianIntegrator this kernel is being used for
      */
     virtual void execute(OpenMMContextImpl& context, const BrownianIntegrator& integrator) = 0;
+};
+
+/**
+ * This kernel is invoked by VariableVerletIntegrator to take one time step.
+ */
+class IntegrateVariableVerletStepKernel : public KernelImpl {
+public:
+    static std::string Name() {
+        return "IntegrateVariableVerletStep";
+    }
+    IntegrateVariableVerletStepKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param integrator the VariableVerletIntegrator this kernel will be used for
+     */
+    virtual void initialize(const System& system, const VariableVerletIntegrator& integrator) = 0;
+    /**
+     * Execute the kernel.
+     *
+     * @param context    the context in which to execute this kernel
+     * @param integrator the VerletIntegrator this kernel is being used for
+     */
+    virtual void execute(OpenMMContextImpl& context, const VariableVerletIntegrator& integrator) = 0;
 };
 
 /**

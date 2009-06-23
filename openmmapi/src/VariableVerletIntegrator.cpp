@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -29,41 +29,38 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/LangevinIntegrator.h"
+#include "openmm/VariableVerletIntegrator.h"
 #include "openmm/OpenMMContext.h"
 #include "openmm/internal/OpenMMContextImpl.h"
 #include "openmm/kernels.h"
-#include <ctime>
 #include <string>
 
 using namespace OpenMM;
 using std::string;
 using std::vector;
 
-LangevinIntegrator::LangevinIntegrator(double temperature, double frictionCoeff, double stepSize) {
-    setTemperature(temperature);
-    setFriction(frictionCoeff);
+VariableVerletIntegrator::VariableVerletIntegrator(double stepSize, double accuracy) : accuracy(accuracy) {
     setStepSize(stepSize);
     setConstraintTolerance(1e-4);
-    setRandomNumberSeed((int) time(NULL));
 }
 
-void LangevinIntegrator::initialize(OpenMMContextImpl& contextRef) {
+void VariableVerletIntegrator::initialize(OpenMMContextImpl& contextRef) {
     context = &contextRef;
-    kernel = context->getPlatform().createKernel(IntegrateLangevinStepKernel::Name(), contextRef);
-    dynamic_cast<IntegrateLangevinStepKernel&>(kernel.getImpl()).initialize(contextRef.getSystem(), *this);
+    kernel = context->getPlatform().createKernel(IntegrateVariableVerletStepKernel::Name(), contextRef);
+    dynamic_cast<IntegrateVariableVerletStepKernel&>(kernel.getImpl()).initialize(contextRef.getSystem(), *this);
 }
 
-vector<string> LangevinIntegrator::getKernelNames() {
+vector<string> VariableVerletIntegrator::getKernelNames() {
     std::vector<std::string> names;
-    names.push_back(IntegrateLangevinStepKernel::Name());
+    names.push_back(IntegrateVariableVerletStepKernel::Name());
     return names;
 }
 
-void LangevinIntegrator::step(int steps) {
+void VariableVerletIntegrator::step(int steps) {
     for (int i = 0; i < steps; ++i) {
         context->updateContextState();
         context->calcForces();
-        dynamic_cast<IntegrateLangevinStepKernel&>(kernel.getImpl()).execute(*context, *this);
+        dynamic_cast<IntegrateVariableVerletStepKernel&>(kernel.getImpl()).execute(*context, *this);
     }
 }
+

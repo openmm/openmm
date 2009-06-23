@@ -32,6 +32,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include "openmm/VariableVerletIntegrator.h"
 #include "openmm/AndersenThermostat.h"
 #include "openmm/BrownianIntegrator.h"
 #include "openmm/CMMotionRemover.h"

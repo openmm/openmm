@@ -458,6 +458,7 @@ void CudaIntegrateVerletStepKernel::execute(OpenMMContextImpl& context, const Ve
             gpu->bCalculateCM = true;
     }
     kVerletUpdatePart2(gpu);
+    data.time += stepSize;
 }
 
 CudaIntegrateLangevinStepKernel::~CudaIntegrateLangevinStepKernel() {
@@ -500,6 +501,7 @@ void CudaIntegrateLangevinStepKernel::execute(OpenMMContextImpl& context, const 
     kApplySecondShake(gpu);
     kApplySecondSettle(gpu);
     kApplySecondCCMA(gpu);
+    data.time += stepSize;
 }
 
 CudaIntegrateBrownianStepKernel::~CudaIntegrateBrownianStepKernel() {
@@ -539,6 +541,7 @@ void CudaIntegrateBrownianStepKernel::execute(OpenMMContextImpl& context, const 
             gpu->bCalculateCM = true;
     }
     kBrownianUpdatePart2(gpu);
+    data.time += stepSize;
 }
 
 CudaApplyAndersenThermostatKernel::~CudaApplyAndersenThermostatKernel() {
