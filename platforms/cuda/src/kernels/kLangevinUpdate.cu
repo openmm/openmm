@@ -30,21 +30,20 @@
 #include <cstdlib>
 #include <string>
 #include <iostream>
-//#include <fstream>
 using namespace std;
 
 #include "gputypes.h"
 
 static __constant__ cudaGmxSimulation cSim;
 
-void SetVerletUpdateSim(gpuContext gpu)
+void SetLangevinUpdateSim(gpuContext gpu)
 {
     cudaError_t status;
     status = cudaMemcpyToSymbol(cSim, &gpu->sim, sizeof(cudaGmxSimulation));     
     RTERROR(status, "cudaMemcpyToSymbol: SetSim copy to cSim failed");
 }
 
-void GetVerletUpdateSim(gpuContext gpu)
+void GetLangevinUpdateSim(gpuContext gpu)
 {
     cudaError_t status;
     status = cudaMemcpyFromSymbol(&gpu->sim, cSim, sizeof(cudaGmxSimulation));     
@@ -53,40 +52,49 @@ void GetVerletUpdateSim(gpuContext gpu)
 
 // Include versions of the kernels with and with center of mass motion removal.
 
-#include "kVerletUpdate.h"
+#include "kLangevinUpdate.h"
 #define REMOVE_CM
-#include "kVerletUpdate.h"
+#include "kLangevinUpdate.h"
 
-void kVerletUpdatePart1(gpuContext gpu)
+void kLangevinUpdatePart1(gpuContext gpu)
 {
-//    printf("kVerletUpdatePart1\n");
+//    printf("kLangevinUpdatePart1\n");
     if (gpu->bRemoveCM)
     {
-        kVerletUpdatePart1CM_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block, gpu->sim.update_threads_per_block * sizeof(float3)>>>();
-        LAUNCHERROR("kVerletUpdatePart1CM");
+        kLangevinUpdatePart1CM_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block, gpu->sim.update_threads_per_block * sizeof(float3)>>>();
+        LAUNCHERROR("kLangevinUpdatePart1CM");
         gpu->bRemoveCM = false;
     }
     else
     {    
-        kVerletUpdatePart1_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
-        LAUNCHERROR("kVerletUpdatePart1");
+        kLangevinUpdatePart1_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
+        LAUNCHERROR("kLangevinUpdatePart1");
     }
 }
 
-void kVerletUpdatePart2(gpuContext gpu)
+extern void kGenerateRandoms(gpuContext gpu);
+void kLangevinUpdatePart2(gpuContext gpu)
 {
-//    printf("kVerletUpdatePart2\n");
+//    printf("kLangevinUpdatePart2\n");
     if (gpu->bCalculateCM)
     {
-        kVerletUpdatePart2CM_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block, gpu->sim.update_threads_per_block * sizeof(float3)>>>();
-        LAUNCHERROR("kVerletUpdatePart2CM");
+        kLangevinUpdatePart2CM_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block, gpu->sim.update_threads_per_block * sizeof(float3)>>>();
+        LAUNCHERROR("kLangevinUpdatePart2CM");
         gpu->bCalculateCM = false;
         gpu->bRemoveCM = true;
     }
     else
     {
-        kVerletUpdatePart2_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
-        LAUNCHERROR("kVerletUpdatePart2");
+        kLangevinUpdatePart2_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
+        LAUNCHERROR("kLangevinUpdatePart2");
+    }
+    
+    // Update randoms if necessary
+    gpu->iterations++;
+    if (gpu->iterations == gpu->sim.randomIterations)
+    {
+        kGenerateRandoms(gpu);
+        gpu->iterations = 0;
     }
 }
 

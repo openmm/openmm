@@ -1757,7 +1757,8 @@ int gpuSetConstants(gpuContext gpu)
     SetCalculateObcGbsaForces2Sim(gpu);
     SetCalculateAndersenThermostatSim(gpu);
     SetForcesSim(gpu);
-    SetUpdateShakeHSim(gpu);
+    SetShakeHSim(gpu);
+    SetLangevinUpdateSim(gpu);
     SetVerletUpdateSim(gpu);
     SetBrownianUpdateSim(gpu);
     SetSettleSim(gpu);

@@ -35,8 +35,6 @@ using namespace std;
 
 #include "gputypes.h"
 
-#define DeltaShake
-
 static __constant__ cudaGmxSimulation cSim;
 
 void SetBrownianUpdateSim(gpuContext gpu)
@@ -66,15 +64,9 @@ __global__ void kBrownianUpdatePart1_kernel()
         float4 force            = cSim.pForce4[pos];
 
         cSim.pOldPosq[pos]      = apos;
-#ifndef DeltaShake
-        apos.x                 += force.x*cSim.GDT + random4a.x;
-        apos.y                 += force.y*cSim.GDT + random4a.y;
-        apos.z                 += force.z*cSim.GDT + random4a.z;
-#else
         apos.x                  = force.x*cSim.GDT + random4a.x;
         apos.y                  = force.y*cSim.GDT + random4a.y;
         apos.z                  = force.z*cSim.GDT + random4a.z;
-#endif
         cSim.pPosqP[pos]        = apos;
         pos                    += blockDim.x * gridDim.x;
     }
@@ -99,11 +91,6 @@ __global__ void kBrownianUpdatePart2_kernel()
         float4 apos             = cSim.pPosq[pos];
         float4 xPrime           = cSim.pPosqP[pos];
 
-#ifndef DeltaShake
-        velocity.x              = cSim.oneOverDeltaT*(xPrime.x-apos.x);
-        velocity.y              = cSim.oneOverDeltaT*(xPrime.y-apos.y);
-        velocity.z              = cSim.oneOverDeltaT*(xPrime.z-apos.z);
-#else
         velocity.x              = cSim.oneOverDeltaT*(xPrime.x);
         velocity.y              = cSim.oneOverDeltaT*(xPrime.y);
         velocity.z              = cSim.oneOverDeltaT*(xPrime.z);
@@ -111,7 +98,7 @@ __global__ void kBrownianUpdatePart2_kernel()
         xPrime.x               += apos.x;
         xPrime.y               += apos.y;
         xPrime.z               += apos.z;
-#endif
+
         cSim.pPosq[pos]         = xPrime;
         cSim.pVelm4[pos]        = velocity;
          

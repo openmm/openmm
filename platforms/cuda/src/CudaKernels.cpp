@@ -488,7 +488,7 @@ void CudaIntegrateLangevinStepKernel::execute(OpenMMContextImpl& context, const 
         prevFriction = friction;
         prevStepSize = stepSize;
     }
-    kUpdatePart1(gpu);
+    kLangevinUpdatePart1(gpu);
     kApplyFirstShake(gpu);
     kApplyFirstSettle(gpu);
     kApplyFirstCCMA(gpu);
@@ -497,7 +497,7 @@ void CudaIntegrateLangevinStepKernel::execute(OpenMMContextImpl& context, const 
         if (step%data.cmMotionFrequency == 0)
             gpu->bCalculateCM = true;
     }
-    kUpdatePart2(gpu);
+    kLangevinUpdatePart2(gpu);
     kApplySecondShake(gpu);
     kApplySecondSettle(gpu);
     kApplySecondCCMA(gpu);

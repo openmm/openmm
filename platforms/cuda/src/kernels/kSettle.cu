@@ -33,8 +33,6 @@
 //#include <fstream>
 using namespace std;
 
-#define DeltaShake
-
 #include "gputypes.h"
 
 
