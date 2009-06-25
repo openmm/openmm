@@ -63,10 +63,9 @@ public:
     /**
      * Create a VariableVerletIntegrator.
      *
-     * @param stepSize the initial step size to use (in picoseconds)
      * @param tol      the error tolerance
      */
-    VariableVerletIntegrator(double stepSize, double errorTol);
+    VariableVerletIntegrator(double errorTol);
     /**
      * Get the error tolerance.
      */

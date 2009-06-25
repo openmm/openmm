@@ -39,8 +39,7 @@ using namespace OpenMM;
 using std::string;
 using std::vector;
 
-VariableVerletIntegrator::VariableVerletIntegrator(double stepSize, double errorTol) : errorTol(errorTol) {
-    setStepSize(stepSize);
+VariableVerletIntegrator::VariableVerletIntegrator(double errorTol) : errorTol(errorTol) {
     setConstraintTolerance(1e-4);
 }
 

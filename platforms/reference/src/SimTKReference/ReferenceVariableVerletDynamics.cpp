@@ -40,9 +40,8 @@
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceVariableVerletDynamics::ReferenceVariableVerletDynamics( int numberOfAtoms,
-                                                          RealOpenMM deltaT, RealOpenMM accuracy ) :
-           ReferenceDynamics( numberOfAtoms, deltaT, 0.0 ), _accuracy(accuracy) {
+ReferenceVariableVerletDynamics::ReferenceVariableVerletDynamics( int numberOfAtoms, RealOpenMM accuracy ) :
+           ReferenceDynamics( numberOfAtoms, 0.0f, 0.0f ), _accuracy(accuracy) {
 
    // ---------------------------------------------------------------------------------------
 
@@ -94,18 +93,6 @@ RealOpenMM ReferenceVariableVerletDynamics::getAccuracy( void ) const {
 
 void ReferenceVariableVerletDynamics::setAccuracy( RealOpenMM accuracy ) {
     _accuracy = accuracy;
-}
-
-/**---------------------------------------------------------------------------------------
-
-   Get the actual size of the last step that was taken
-
-   @return step size
-
-   --------------------------------------------------------------------------------------- */
-
-RealOpenMM ReferenceVariableVerletDynamics::getLastStepSize( void ) const {
-    return _lastStepSize;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -195,58 +182,34 @@ int ReferenceVariableVerletDynamics::update( int numberOfAtoms, RealOpenMM** ato
        }
     }
 
-    // Try different step sizes until the accuracy is acceptable.
-
-    bool success = false;
-    RealOpenMM maxStepSize = 5.0f*getDeltaT();
-    while (!success) {
-        // Perform the integration and estimate the error.
-
-        _lastStepSize = getDeltaT();
-        RealOpenMM error = zero;
-        for (int i = 0; i < numberOfAtoms; ++i) {
-            for (int j = 0; j < 3; ++j) {
-                RealOpenMM xref = atomCoordinates[i][j] + velocities[i][j]*getDeltaT();
-                RealOpenMM vPrime = velocities[i][j] + inverseMasses[i]*forces[i][j]*getDeltaT();
-                xPrime[i][j] = atomCoordinates[i][j] + vPrime*getDeltaT();
-                RealOpenMM xerror = xPrime[i][j]-xref;
-                error += xerror*xerror;
-            }
+    RealOpenMM error = zero;
+    for (int i = 0; i < numberOfAtoms; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            RealOpenMM xerror = inverseMasses[i]*forces[i][j];
+            error += xerror*xerror;
         }
-        error = SQRT(error/(numberOfAtoms*3));
-
-        // Select a new step size.
-
-        const RealOpenMM Safety = 0.9f, MinShrink = 0.1f;
-        const RealOpenMM HysteresisLow = 0.9f, HysteresisHigh = 1.0f, ErrorOrder = 2.0f;
-
-        RealOpenMM newStepSize = Safety*getDeltaT()*POW(getAccuracy()/error, 1.0f/ErrorOrder);
-        if (newStepSize > getDeltaT()) {
-            if (newStepSize < HysteresisHigh*getDeltaT())
-                newStepSize = getDeltaT();
+    }
+    error = SQRT(error/(numberOfAtoms*3));
+    RealOpenMM newStepSize = SQRT(getAccuracy()/error);
+    if (getDeltaT() > 0.0f)
+        newStepSize = std::min(newStepSize, getDeltaT()*2.0f); // For safety, limit how quickly dt can increase.
+    if (newStepSize > getDeltaT() && newStepSize < 1.2f*getDeltaT())
+        newStepSize = getDeltaT(); // Keeping dt constant between steps improves the behavior of the integrator.
+    RealOpenMM vstep = 0.5f*(newStepSize+getDeltaT()); // The time interval by which to advance the velocities
+    setDeltaT(newStepSize);
+    for (int i = 0; i < numberOfAtoms; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            RealOpenMM vPrime = velocities[i][j] + inverseMasses[i]*forces[i][j]*vstep;
+            xPrime[i][j] = atomCoordinates[i][j] + vPrime*getDeltaT();
         }
-        if (newStepSize < getDeltaT() && error <= getAccuracy())
-            newStepSize = getDeltaT();
-        newStepSize = std::min(newStepSize, maxStepSize);
-        newStepSize = std::max(newStepSize, MinShrink*getDeltaT());
-        if (newStepSize < getDeltaT())
-            newStepSize = std::min(newStepSize, HysteresisLow*getDeltaT());
-        success = (newStepSize >= getDeltaT());
-        if (success) {
-            ReferenceConstraintAlgorithm* referenceConstraintAlgorithm = getReferenceConstraintAlgorithm();
-            if (referenceConstraintAlgorithm)
-                success = (referenceConstraintAlgorithm->apply(numberOfAtoms, atomCoordinates, xPrime, inverseMasses) != ErrorReturn);
-            if (!success) {
-                newStepSize *= 0.5f;
-                maxStepSize = newStepSize;
-            }
-        }
-        setDeltaT(newStepSize);
-   }
+    }
+    ReferenceConstraintAlgorithm* referenceConstraintAlgorithm = getReferenceConstraintAlgorithm();
+    if (referenceConstraintAlgorithm)
+        referenceConstraintAlgorithm->apply(numberOfAtoms, atomCoordinates, xPrime, inverseMasses);
 
    // Update the positions and velocities.
 
-   RealOpenMM velocityScale = static_cast<RealOpenMM>( 1.0/_lastStepSize );
+   RealOpenMM velocityScale = one/getDeltaT();
    for (int i = 0; i < numberOfAtoms; ++i) {
        for (int j = 0; j < 3; ++j) {
            velocities[i][j] = velocityScale*(xPrime[i][j] - atomCoordinates[i][j]);

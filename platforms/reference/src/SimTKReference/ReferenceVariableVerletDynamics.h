@@ -35,7 +35,7 @@ class ReferenceVariableVerletDynamics : public ReferenceDynamics {
 
       enum TwoDArrayIndicies { xPrime2D, Max2DArrays };
       enum OneDArrayIndicies { InverseMasses, Max1DArrays };
-      RealOpenMM _accuracy, _lastStepSize;
+      RealOpenMM _accuracy;
 
    public:
 
@@ -44,12 +44,11 @@ class ReferenceVariableVerletDynamics : public ReferenceDynamics {
          Constructor
 
          @param numberOfAtoms  number of atoms
-         @param deltaT         initial delta t for dynamics
          @param accuracy       required accuracy
 
          --------------------------------------------------------------------------------------- */
 
-       ReferenceVariableVerletDynamics( int numberOfAtoms, RealOpenMM deltaT, RealOpenMM accuracy );
+       ReferenceVariableVerletDynamics( int numberOfAtoms, RealOpenMM accuracy );
 
       /**---------------------------------------------------------------------------------------
 
@@ -76,16 +75,6 @@ class ReferenceVariableVerletDynamics : public ReferenceDynamics {
          --------------------------------------------------------------------------------------- */
 
       void setAccuracy( RealOpenMM accuracy );
-
-      /**---------------------------------------------------------------------------------------
-
-         Get the actual size of the last step that was taken
-
-         @return step size
-
-         --------------------------------------------------------------------------------------- */
-
-      RealOpenMM getLastStepSize( void ) const;
 
       /**---------------------------------------------------------------------------------------
 

@@ -55,7 +55,7 @@ void testSingleBond() {
     System system;
     system.addParticle(2.0);
     system.addParticle(2.0);
-    VariableVerletIntegrator integrator(0.01, 1e-6);
+    VariableVerletIntegrator integrator(1e-6);
     HarmonicBondForce* forceField = new HarmonicBondForce();
     forceField->addBond(0, 1, 1.5, 1);
     system.addForce(forceField);
@@ -91,7 +91,7 @@ void testConstraints() {
     const double temp = 500.0;
     ReferencePlatform platform;
     System system;
-    VariableVerletIntegrator integrator(0.002, 1e-5);
+    VariableVerletIntegrator integrator(1e-5);
     integrator.setConstraintTolerance(1e-5);
     NonbondedForce* forceField = new NonbondedForce();
     for (int i = 0; i < numParticles; ++i) {
@@ -141,7 +141,7 @@ void testConstrainedClusters() {
     const double temp = 500.0;
     ReferencePlatform platform;
     System system;
-    VariableVerletIntegrator integrator(0.002, 1e-5);
+    VariableVerletIntegrator integrator(1e-5);
     integrator.setConstraintTolerance(1e-5);
     NonbondedForce* forceField = new NonbondedForce();
     for (int i = 0; i < numParticles; ++i) {

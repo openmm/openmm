@@ -814,7 +814,7 @@ void ReferenceIntegrateVariableVerletStepKernel::execute(OpenMMContextImpl& cont
             delete dynamics;
             delete constraints;
         }
-        dynamics = new ReferenceVariableVerletDynamics(context.getSystem().getNumParticles(), static_cast<RealOpenMM>(stepSize), errorTol);
+        dynamics = new ReferenceVariableVerletDynamics(context.getSystem().getNumParticles(), (RealOpenMM) errorTol);
         vector<ReferenceCCMAAlgorithm::AngleInfo> angles;
         findAnglesForCCMA(context.getSystem(), angles);
         constraints = new ReferenceCCMAAlgorithm(context.getSystem().getNumParticles(), numConstraints, constraintIndices, constraintDistances, masses, angles, (RealOpenMM)integrator.getConstraintTolerance());
@@ -823,7 +823,7 @@ void ReferenceIntegrateVariableVerletStepKernel::execute(OpenMMContextImpl& cont
         prevErrorTol = errorTol;
     }
     dynamics->update(context.getSystem().getNumParticles(), posData, velData, forceData, masses);
-    data.time += dynamics->getLastStepSize();
+    data.time += dynamics->getDeltaT();
 }
 
 ReferenceApplyAndersenThermostatKernel::~ReferenceApplyAndersenThermostatKernel() {
