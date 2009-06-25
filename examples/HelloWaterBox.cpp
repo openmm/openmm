@@ -17,6 +17,7 @@
 #include <cstdio>
 #include <string>
 #include <vector>
+#include <cstdlib>
 
 // -----------------------------------------------------------------------------
 //                                 MOCK MD CODE

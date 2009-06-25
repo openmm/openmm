@@ -30,7 +30,8 @@
 #include "../SimTKUtilities/SimTKOpenMMUtilities.h"
 #include "CpuObc.h"
 #include "../SimTKReference/ReferenceForce.h"
-#include <math.h>
+#include <cmath>
+#include <cstdio>
 
 /**---------------------------------------------------------------------------------------
 
@@ -694,7 +695,7 @@ int CpuObc::writeBornEnergyForces( RealOpenMM** atomCoordinates,
    // open file -- return if unsuccessful
 
    FILE* implicitSolventResultsFile = NULL;
-#ifdef WIN32
+#ifdef _MSC_VER
    fopen_s( &implicitSolventResultsFile, resultsFileName.c_str(), "w" );
 #else
    implicitSolventResultsFile = fopen( resultsFileName.c_str(), "w" );

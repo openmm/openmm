@@ -34,7 +34,8 @@
 #include "openmm/OpenMMException.h"
 #include "openmm/kernels.h"
 #include <vector>
-#include <math.h>
+#include <cmath>
+#include <cstdio>
 
 using namespace OpenMM;
 using std::vector;

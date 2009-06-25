@@ -30,7 +30,8 @@
 
 // fabs(), ...
 
-#include <math.h>
+#include <cmath>
+#include <cstdio>
 
 uint32_t SimTKOpenMMUtilities::_randomNumberSeed = 0;
 bool SimTKOpenMMUtilities::_randomInitialized = false;
@@ -320,7 +321,7 @@ FILE* SimTKOpenMMUtilities::writeDebugFile( int numberOfFields, const RealOpenMM
 
    // open file
 
-#ifdef WIN32
+#ifdef _MSC_VER
       fopen_s( &debugFile, debugFileName, "w" );
 #else
       debugFile = fopen( debugFileName, "w" );
@@ -800,7 +801,7 @@ void SimTKOpenMMUtilities::matrixCrossProductMatrix3( RealOpenMM* matrixX,
 
    --------------------------------------------------------------------------------------- */
      
-void* SimTKOpenMMUtilities::Xmalloc( const char* name, char* fileName, int line, unsigned int size ){
+void* SimTKOpenMMUtilities::Xmalloc( const char* name, const char* fileName, int line, unsigned int size ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -827,7 +828,7 @@ void* SimTKOpenMMUtilities::Xmalloc( const char* name, char* fileName, int line,
 
    --------------------------------------------------------------------------------------- */
      
-void SimTKOpenMMUtilities::Xfree( const char* name, char* fileName, int line, void* ptr ){
+void SimTKOpenMMUtilities::Xfree( const char* name, const char* fileName, int line, void* ptr ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -1017,7 +1018,7 @@ int SimTKOpenMMUtilities::readFileIntoStringVector( const std::string& fileName,
    // open file
 
    FILE* file = NULL;
-#ifdef WIN32
+#ifdef _MSC_VER
    fopen_s( &file, fileName.c_str(), "r" );
 #else
    file = fopen( fileName.c_str(), "r" );
@@ -1167,7 +1168,7 @@ int SimTKOpenMMUtilities::tokenizeString( const std::string& line, StringVector&
       lineBuffer = (char*) malloc( bufferSz*sizeof( char ) );
    }
 
-#ifdef WIN32
+#ifdef _MSC_VER
    (void) sprintf_s( lineBuffer, bufferSz, "%s", line.c_str() );
 #else
    (void) sprintf( lineBuffer, "%s", line.c_str() );
@@ -1280,7 +1281,7 @@ int SimTKOpenMMUtilities::writeFile( const StringVector& lineVector, const std::
    // open file
 
    FILE* file = NULL;
-#ifdef WIN32
+#ifdef _MSC_VER
    fopen_s( &file, fileName.c_str(), "w" );
 #else
    file = fopen( fileName.c_str(), "w" );

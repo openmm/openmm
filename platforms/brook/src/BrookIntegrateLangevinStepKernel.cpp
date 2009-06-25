@@ -250,5 +250,5 @@ void BrookIntegrateLangevinStepKernel::execute( OpenMMContextImpl& context, cons
 
    _brookLangevinDynamics->update( *(_openMMBrookInterface.getParticlePositions()), *(_openMMBrookInterface.getParticleVelocities()), 
                                    *(_openMMBrookInterface.getParticleForces()), *_brookShakeAlgorithm, *_brookRandomNumberGenerator );
-   _openMMBrookInterface->setTime(_openMMBrookInterface->getTime(integrator.getStepSize()));
+   _openMMBrookInterface.setTime(_openMMBrookInterface.getTime(integrator.getStepSize()));
 }

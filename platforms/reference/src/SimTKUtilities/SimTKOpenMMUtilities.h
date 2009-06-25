@@ -386,7 +386,7 @@ class OPENMM_EXPORT SimTKOpenMMUtilities {
       
          --------------------------------------------------------------------------------------- */
                
-      static void* Xmalloc( const char* name, char* fileName, int line, unsigned int size );
+      static void* Xmalloc( const char* name, const char* fileName, int line, unsigned int size );
       
       /* ---------------------------------------------------------------------------------------
       
@@ -399,7 +399,7 @@ class OPENMM_EXPORT SimTKOpenMMUtilities {
       
          --------------------------------------------------------------------------------------- */
       
-      static void Xfree( const char* name, char* fileName, int line, void* ptr );
+      static void Xfree( const char* name, const char* fileName, int line, void* ptr );
       
       /* ---------------------------------------------------------------------------------------
       

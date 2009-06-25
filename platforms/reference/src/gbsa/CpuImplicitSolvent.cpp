@@ -27,6 +27,8 @@
 #include "../SimTKUtilities/SimTKOpenMMUtilities.h"
 #include "CpuImplicitSolvent.h"
 
+#include <cstdio>
+
 //#define UseGromacsMalloc 1
 
 // Replacement new/delete w/ Gromac's smalloc() and sfree()
@@ -862,7 +864,7 @@ int CpuImplicitSolvent::writeBornEnergyForces( RealOpenMM** atomCoordinates,
    // open file -- return if unsuccessful
 
    FILE* implicitSolventResultsFile = NULL;
-#ifdef WIN32
+#ifdef _MSC_VER
    fopen_s( &implicitSolventResultsFile, resultsFileName.c_str(), "w" );
 #else
    implicitSolventResultsFile = fopen( resultsFileName.c_str(), "w" );
@@ -1023,7 +1025,7 @@ int CpuImplicitSolvent::readInfoFile( const std::string infoFileName ){
    // ---------------------------------------------------------------------------------------
 
    FILE* infoFile = NULL;
-#ifdef WIN32
+#ifdef _MSC_VER
    fopen_s( &infoFile, infoFileName.c_str(), "r" );
 #else
    infoFile = fopen( infoFileName.c_str(), "r" );
@@ -1031,7 +1033,7 @@ int CpuImplicitSolvent::readInfoFile( const std::string infoFileName ){
 
    if( infoFile == NULL ){
 
-#ifdef WIN32
+#ifdef _MSC_VER
       fopen_s( &infoFile, _defaultInfoFileName.c_str(), "r" );
 #else
       infoFile = fopen( _defaultInfoFileName.c_str(), "r" );

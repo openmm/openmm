@@ -22,13 +22,15 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include <string.h>
+#include <cstring>
 #include <sstream>
 
 #include "../SimTKUtilities/SimTKOpenMMCommon.h"
 #include "../SimTKUtilities/SimTKOpenMMLog.h"
 #include "../SimTKUtilities/SimTKOpenMMUtilities.h"
 #include "ReferenceDynamics.h"
+
+#include <cstdio>
 
 const int ReferenceDynamics::DefaultReturn      = 0;
 const int ReferenceDynamics::ErrorReturn        = -1;
@@ -656,7 +658,7 @@ int ReferenceDynamics::writeState( int numberOfAtoms, RealOpenMM** atomCoordinat
    // open file -- return if unsuccessful
 
    FILE* stateFile = NULL;
-#ifdef WIN32
+#ifdef _MSC_VER
    fopen_s( &stateFile, stateFileName.str().c_str(), "w" );
 #else
    stateFile = fopen( stateFileName.str().c_str(), "w" );

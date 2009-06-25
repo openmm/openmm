@@ -428,9 +428,9 @@ void gpuSetEwaldParameters(gpuContext gpu)//, float alphaEwald, int kmax )
 {
 
     // hard coded alphaEwald and kmax, no interface yet
-    float alpha            = 3.123413;
+    float alpha            = 3.123413f;
     float PI               = 3.14159265358979323846f;
-    float TWO_PI           = 2.0 * PI;
+    float TWO_PI           = 2.0f * PI;
 
     gpu->sim.recipBoxSizeX = TWO_PI / gpu->sim.periodicBoxSizeX ;
     gpu->sim.recipBoxSizeY = TWO_PI / gpu->sim.periodicBoxSizeY ;
@@ -728,7 +728,7 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
     // Compute the constraint coupling matrix
 
     vector<vector<int> > atomAngles(gpu->natoms);
-    for (int i = 0; i < gpu->sim.bond_angles; i++)
+    for (int i = 0; i < (int)gpu->sim.bond_angles; i++)
         atomAngles[(*gpu->psBondAngleID1)[i].y].push_back(i);
     vector<vector<pair<int, double> > > matrix(numCCMA);
     if (numCCMA > 0) {
@@ -853,8 +853,8 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
     vector<int> inverseOrder(numCCMA);
     for (int i = 0; i < numCCMA; ++i)
         inverseOrder[constraintOrder[i]] = i;
-    for (int i = 0; i < matrix.size(); ++i)
-        for (int j = 0; j < matrix[i].size(); ++j)
+    for (int i = 0; i < (int)matrix.size(); ++i)
+        for (int j = 0; j < (int)matrix[i].size(); ++j)
             matrix[i][j].first = inverseOrder[matrix[i][j].first];
 
     // Fill in the CUDA streams.
@@ -902,7 +902,7 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
         (*psCcmaReducedMass)[i] = 0.5f/(invMass1[c]+invMass2[c]);
         for (unsigned int j = 0; j < matrix[index].size(); j++) {
             (*psConstraintMatrixColumn)[i+j*numCCMA] = matrix[index][j].first;
-            (*psConstraintMatrixValue)[i+j*numCCMA] = matrix[index][j].second;
+            (*psConstraintMatrixValue)[i+j*numCCMA] = (float)matrix[index][j].second;
         }
         (*psConstraintMatrixColumn)[i+matrix[index].size()*numCCMA] = numCCMA;
     }

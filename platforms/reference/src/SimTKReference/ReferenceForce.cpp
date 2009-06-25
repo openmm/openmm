@@ -22,13 +22,15 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include <string.h>
+#include <cstring>
 #include <sstream>
 
 #include "../SimTKUtilities/SimTKOpenMMCommon.h"
 #include "../SimTKUtilities/SimTKOpenMMLog.h"
 #include "../SimTKUtilities/SimTKOpenMMUtilities.h"
 #include "ReferenceForce.h"
+
+#include <cstdio>
 
 /**---------------------------------------------------------------------------------------
 
@@ -208,7 +210,7 @@ int ReferenceForce::writeForces( int numberOfAtoms, int atomsPerBond,
    // open file -- return if unsuccessful
 
    FILE* resultsFile = NULL;
-#ifdef WIN32
+#ifdef _MSC_VER
    fopen_s( &resultsFile, resultsFileName.c_str(), "w" );
 #else
    resultsFile = fopen( resultsFileName.c_str(), "w" );
