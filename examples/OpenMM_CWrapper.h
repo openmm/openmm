@@ -3,7 +3,7 @@
  * --------------------------------------------------------------------------
  * This header should be included by a C main program that would like to
  * access the OpenMM API through the C wrappers. Please note that this is an
- * experimentatl prototype, not an official part of OpenMM; it is just an 
+ * experimental prototype, not an official part of OpenMM; it is just an 
  * example of how the C++ API can be wrapped for access from C.
  *
  * This set of wrappers is incomplete. If you add more, please send them
@@ -26,10 +26,14 @@
  */
 
 /* These first three types represent the three OpenMM runtime objects that
- * must persist from call to call during an OpenMM-powered simulation. */
+ * must persist from call to call during an OpenMM-powered simulation. 
+ * OpenMM_Integrator is the generic type of all Integrator objects. */
 typedef struct OpenMM_System_s      OpenMM_System;
 typedef struct OpenMM_Integrator_s  OpenMM_Integrator;
 typedef struct OpenMM_Context_s     OpenMM_Context;
+
+/* This is the generic type of all Force objects. */
+typedef struct OpenMM_Force_s       OpenMM_Force;
 
 /* This struct collects all the runtime object pointers together to 
  * facilitate use of an opaque handle in high-level C or Fortran code 
@@ -41,9 +45,10 @@ typedef struct OpenMM_RuntimeObjects_s {
     OpenMM_Context*     context;
 } OpenMM_RuntimeObjects;
 
-typedef double                      OpenMM_Vec3[3];
-typedef struct OpenMM_Vec3Array_s   OpenMM_Vec3Array;
-typedef struct OpenMM_String_s      OpenMM_String;
+typedef double                          OpenMM_Vec3[3];
+typedef struct OpenMM_Vec3Array_s       OpenMM_Vec3Array;
+typedef struct OpenMM_BondArray_s   OpenMM_BondArray;
+typedef struct OpenMM_String_s          OpenMM_String;
 
 /*
  * OpenMM_Integrator is the generic type for all integrators. Cast your
@@ -57,9 +62,11 @@ typedef struct OpenMM_LangevinIntegrator_s      OpenMM_LangevinIntegrator;
  * OpenMM_Force is the generic type for all Force objects. Create the
  * concrete Force object and then cast it to the generic type.
  */
-typedef struct OpenMM_Force_s               OpenMM_Force;
 typedef struct OpenMM_NonbondedForce_s          OpenMM_NonbondedForce;
 typedef struct OpenMM_GBSAOBCForce_s            OpenMM_GBSAOBCForce;
+typedef struct OpenMM_HarmonicBondForce_s       OpenMM_HarmonicBondForce;
+typedef struct OpenMM_HarmonicAngleForce_s      OpenMM_HarmonicAngleForce;
+typedef struct OpenMM_PeriodicTorsionForce_s    OpenMM_PeriodicTorsionForce;
 
 typedef enum {
     OpenMM_NonbondedForce_NoCutoff            = 0,
@@ -137,6 +144,15 @@ extern void                 OpenMM_Vec3Array_set(OpenMM_Vec3Array*, int i, const
 extern void                 OpenMM_Vec3Array_setScaled(OpenMM_Vec3Array*, int i, const double[3], double s);
 extern void                 OpenMM_Vec3_scale(const double in[3], double s, double out[3]);
 
+/* OpenMM_BondArray */
+extern OpenMM_BondArray*    OpenMM_BondArray_create(int n);
+extern int                  OpenMM_BondArray_size(const OpenMM_BondArray*);
+extern void                 OpenMM_BondArray_resize(OpenMM_BondArray*, int n);
+extern void                 OpenMM_BondArray_destroy(OpenMM_BondArray*);
+extern void                 OpenMM_BondArray_append(OpenMM_BondArray*, int p1, int p2);
+extern void                 OpenMM_BondArray_get(const OpenMM_BondArray*, int i, int* p1, int* p2);
+extern void                 OpenMM_BondArray_set(OpenMM_BondArray*, int i, int p1, int p2);
+
 /* OpenMM_String */
 extern OpenMM_String*       OpenMM_String_create(const char* init);
 extern void                 OpenMM_String_destroy(OpenMM_String*);
@@ -161,13 +177,37 @@ extern OpenMM_NonbondedForce* OpenMM_NonbondedForce_create();
 extern void OpenMM_NonbondedForce_destroy              (OpenMM_NonbondedForce*);
 extern void OpenMM_NonbondedForce_setNonbondedMethod   (OpenMM_NonbondedForce*, 
                                                         OpenMM_NonbondedForce_NonbondedMethod);
+extern OpenMM_NonbondedForce_NonbondedMethod
+            OpenMM_NonbondedForce_getNonbondedMethod   (const OpenMM_NonbondedForce*);
 extern void OpenMM_NonbondedForce_setCutoffDistance    (OpenMM_NonbondedForce*, double);
+extern double OpenMM_NonbondedForce_getCutoffDistance  (const OpenMM_NonbondedForce*);
 extern void OpenMM_NonbondedForce_setPeriodicBoxVectors(OpenMM_NonbondedForce*, 
                                                         const OpenMM_Vec3,const OpenMM_Vec3,const OpenMM_Vec3);
-extern void OpenMM_NonbondedForce_addParticle(OpenMM_NonbondedForce*,
+extern void OpenMM_NonbondedForce_getPeriodicBoxVectors(const OpenMM_NonbondedForce*, 
+                                                        OpenMM_Vec3, OpenMM_Vec3, OpenMM_Vec3);
+extern int  OpenMM_NonbondedForce_addParticle(OpenMM_NonbondedForce*,
                                               double charge,
                                               double sigmaInNm,
                                               double vdwEnergyInKJ);
+extern void OpenMM_NonbondedForce_setParticleParameters(OpenMM_NonbondedForce*, int index,
+                                                        double charge,
+                                                        double sigmaInNm,
+                                                        double vdwEnergyInKJ);
+extern void OpenMM_NonbondedForce_getParticleParameters(const OpenMM_NonbondedForce*, int index,
+                                                        double* charge,
+                                                        double* sigmaInNm,
+                                                        double* vdwEnergyInKJ);
+extern int OpenMM_NonbondedForce_getNumParticles(const OpenMM_NonbondedForce*);
+extern int OpenMM_NonbondedForce_getNumExceptions(const OpenMM_NonbondedForce*);
+extern int OpenMM_NonbondedForce_addException(OpenMM_NonbondedForce*, int p1, int p2, 
+                                              double chargeProd, double sigma, double epsilon);
+extern void OpenMM_NonbondedForce_getExceptionParameters(const OpenMM_NonbondedForce*, int index, int* p1, int* p2, 
+                                                         double* chargeProd, double* sigma, double* epsilon);
+extern void OpenMM_NonbondedForce_setExceptionParameters(OpenMM_NonbondedForce*, int index, int p1, int p2, 
+                                                         double chargeProd, double sigma, double epsilon);
+extern void OpenMM_NonbondedForces_createExceptionsFromBonds(OpenMM_NonbondedForce*, const OpenMM_BondArray*,
+                                                             double coulomb14Scale, double lj14Scale);
+
 
 /* OpenMM::GBSAOBCForce */
 extern OpenMM_GBSAOBCForce* OpenMM_GBSAOBCForce_create();
@@ -178,6 +218,33 @@ extern void OpenMM_GBSAOBCForce_addParticle(OpenMM_GBSAOBCForce*,
                                             double charge,
                                             double radiusInNm,
                                             double scalingFactor);
+
+/* OpenMM::HarmonicBondForce */
+extern OpenMM_HarmonicBondForce* OpenMM_HarmonicBondForce_create();
+extern void OpenMM_HarmonicBondForce_destroy(OpenMM_HarmonicBondForce*);
+extern int OpenMM_HarmonicBondForce_getNumBonds(const OpenMM_HarmonicBondForce*);
+extern int OpenMM_HarmonicBondForce_addBond(OpenMM_HarmonicBondForce*, int p1, int p2, double len, double k);
+extern void OpenMM_HarmonicBondForce_getBondParameters(const OpenMM_HarmonicBondForce*, int ix, int* p1, int* p2, double* len, double* k);
+extern void OpenMM_HarmonicBondForce_setBondParameters(OpenMM_HarmonicBondForce*, int ix, int p1, int p2, double len, double k);
+
+/* OpenMM::HarmonicAngleForce */
+extern OpenMM_HarmonicAngleForce* OpenMM_HarmonicAngleForce_create();
+extern void OpenMM_HarmonicAngleForce_destroy(OpenMM_HarmonicAngleForce*);
+extern int OpenMM_HarmonicAngleForce_getNumAngles(const OpenMM_HarmonicAngleForce*);
+extern int OpenMM_HarmonicAngleForce_addAngle(OpenMM_HarmonicAngleForce*, int p1, int p2, int p3, double angle, double k);
+extern void OpenMM_HarmonicAngleForce_getAngleParameters(const OpenMM_HarmonicAngleForce*, int ix, int* p1, int* p2, int* p3, double* angle, double* k);
+extern void OpenMM_HarmonicAngleForce_setAngleParameters(OpenMM_HarmonicAngleForce*, int ix, int p1, int p2, int p3, double angle, double k);
+
+/* OpenMM::PeriodicTorsionForce */
+extern OpenMM_PeriodicTorsionForce* OpenMM_PeriodicTorsionForce_create();
+extern void OpenMM_PeriodicTorsionForce_destroy(OpenMM_PeriodicTorsionForce*);
+extern int OpenMM_PeriodicTorsionForce_getNumTorsions(const OpenMM_PeriodicTorsionForce*);
+extern int OpenMM_PeriodicTorsionForce_addTorsion(OpenMM_PeriodicTorsionForce*, int p1, int p2, int p3, int p4,
+                                                int periodicity, double phase, double k);
+extern void OpenMM_PeriodicTorsionForce_getTorsionParameters(const OpenMM_PeriodicTorsionForce*, int ix, int* p1, int* p2, int* p3, int* p4,
+                                                           int* periodicity, double* phase, double* k);
+extern void OpenMM_PeriodicTorsionForce_setTorsionParameters(OpenMM_PeriodicTorsionForce*, int ix, int p1, int p2, int p3, int p4,
+                                                           int periodicity, double phase, double k);
 
 /* OpenMM::Integrator */
 extern void OpenMM_Integrator_step(OpenMM_Integrator*, int numSteps);
