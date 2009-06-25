@@ -25,9 +25,10 @@ CFLAGS = -g
 FFLAGS = -g
 
 # Extra libraries required when gfortran links with a C++ module.
-# Uncomment this on Mac. If this doesn't work, look in /usr/lib to
-# see what versions of libstdc++.so you have and try that.
-# FCPPLIBS = -lstdc++.6
+# If this doesn't work, look in /usr/lib to
+# see what versions of libstdc++.so you have and try different
+# versions.
+FCPPLIBS = -lstdc++
 
 LIB_DIR=$(OpenMM_INSTALL_DIR)/lib
 INCLUDE_DIR=$(OpenMM_INSTALL_DIR)/include
@@ -48,7 +49,7 @@ all : $(ALL_PROGS)
 # Treat all .cpp source files the same way (except the one that 
 # implements the C Wrappers).
 .cpp : 
-	g++ $(CFLAGS) $< -I$(INCLUDE_DIR) -L$(LIB_DIR) $(LIBS) -o $*
+	g++ $(CFLAGS) -I$(INCLUDE_DIR) $< -L$(LIB_DIR) $(LIBS) -o $*
 
 HelloArgonInC: HelloArgonInC.c OpenMM_CWrapper.o
 	g++ $(CFLAGS) -I$(WRAPPER_DIR) HelloArgonInC.c OpenMM_CWrapper.o \
@@ -76,5 +77,5 @@ openmm.mod:
 	gfortran -c $(FFLAGS) $(WRAPPER_DIR)/OpenMM_Module.f90
 
 clean : 
-	rm $(ALL_PROGS) *.o *.mod
+	rm $(ALL_PROGS) *.o *.mod *.obj *.exe
 
