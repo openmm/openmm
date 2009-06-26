@@ -25,9 +25,9 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/OpenMMException.h"
-#include <sstream>
-
 #include "BrookUpdateTimeKernel.h"
+
+#include <sstream>
 
 using namespace OpenMM;
 using namespace std;

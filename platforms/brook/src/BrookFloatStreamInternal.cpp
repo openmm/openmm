@@ -25,10 +25,10 @@
  * -------------------------------------------------------------------------- */
 
 
-#include <sstream>
 #include "BrookFloatStreamInternal.h"
 #include "BrookPlatform.h"
 #include "openmm/OpenMMException.h"
+#include <sstream>
 
 using namespace OpenMM;
 
@@ -495,7 +495,7 @@ const std::string BrookFloatStreamInternal::getContentsString( int level ) const
    std::stringstream message;
    std::string tab   = "   ";
  
-#ifdef WIN32
+#ifdef _MSC_VER
 #define LOCAL_SPRINTF(a,b,c) sprintf_s( (a), MAX_LINE_CHARS, (b), (c) );   
 #else
 #define LOCAL_SPRINTF(a,b,c) sprintf( (a), (b), (c) );   
@@ -546,7 +546,7 @@ int BrookFloatStreamInternal::_bodyPrintToFile( FILE* log, int maxPrint ){
 
    void* dataArrayV = getData( 1 );
 
-#ifdef WIN32
+#ifdef _MSC_VER
 #define LOCAL_SPRINTF(a,b,c) sprintf_s( (a), MAX_LINE_CHARS, (b), (c) );   
 #else
 #define LOCAL_SPRINTF(a,b,c) sprintf( (a), (b), (c) );   

@@ -24,14 +24,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include <cmath>
-#include <limits>
 #include "openmm/OpenMMException.h"
-#include <sstream>
-
 #include "BrookStreamImpl.h"
 #include "BrookCalcNonbondedForceKernel.h"
 #include "openmm/NonbondedForce.h"
+
+#include <cmath>
+#include <limits>
+#include <sstream>
 
 using namespace OpenMM;
 using namespace std;

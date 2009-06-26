@@ -24,18 +24,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include <cmath>
-#include <limits>
-#include "openmm/OpenMMException.h"
-#include <sstream>
-
 #include "openmm/LangevinIntegrator.h"
 #include "ReferencePlatform.h"
 #include "openmm/internal/OpenMMContextImpl.h"
+#include "openmm/OpenMMException.h"
 
 #include "BrookStreamImpl.h"
 #include "OpenMMBrookInterface.h"
 #include "kernels/kcommon.h"
+
+#include <cmath>
+#include <limits>
+#include <sstream>
 
 using namespace OpenMM;
 using namespace std;

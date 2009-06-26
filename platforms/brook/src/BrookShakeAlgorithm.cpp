@@ -675,7 +675,7 @@ if( !(ii % 2 ) )fprintf( log, "]\n", posArray[ii] );
             float diff = fabsf( distance - cluster._distance );
             if( diff > tolerance && (errors++ < maxErrorToPrint || maxErrorToPrint < 0) ){
                char value[1024];
-#ifdef WIN32
+#ifdef _MSC_VER
                sprintf_s( value, 1024, "Error: Atom [%6d %6d] d[%16.7e %16.7e] diff=%16.7e [%16.7e %16.7e %16.7e] [%16.7e %16.7e %16.7e]\n",
                           centralAtomIndex/3, peripheralAtomIndex/3,  distance, cluster._distance, diff,
                           posArray[centralAtomIndex], posArray[centralAtomIndex+1], posArray[centralAtomIndex+2],
@@ -704,7 +704,7 @@ if( !(ii % 2 ) )fprintf( log, "]\n", posArray[ii] );
    char text[1024];
    if( errors ){
 
-#ifdef WIN32
+#ifdef _MSC_VER
       (void) sprintf_s( text, 1024, "Shake errors=%d tol=%.3e mxDff=%.3e atoms[%d %d]", errors, tolerance, maxDiff, maxDiffCentralIndex, maxDiffPeripheralIndex );
 #else
       (void) sprintf( text, "Shake errors=%d tol=%.3e mxDff=%.3e atoms[%d %d]", errors, tolerance, maxDiff, maxDiffCentralIndex, maxDiffPeripheralIndex );
@@ -713,7 +713,7 @@ if( !(ii % 2 ) )fprintf( log, "]\n", posArray[ii] );
 
       if( errors >= maxErrorToPrint ){
 
-#ifdef WIN32
+#ifdef _MSC_VER
          (void) sprintf_s( text, 1024, " only printing first %d errors", maxErrorToPrint );
 #else
          (void) sprintf( text, " only printing first %d errors", maxErrorToPrint );
@@ -725,7 +725,7 @@ if( !(ii % 2 ) )fprintf( log, "]\n", posArray[ii] );
 
    } else {
 
-#ifdef WIN32
+#ifdef _MSC_VER
       (void) sprintf_s( text, 1024, "Shake no errors: tol=%.3e mxDff=%.3e", tolerance, maxDiff );
 #else
       (void) sprintf( text, "Shake no errors: tol=%.3e mxDff=%.3e", tolerance, maxDiff );
@@ -764,7 +764,7 @@ std::string BrookShakeAlgorithm::getContentsString( int level ) const {
    std::stringstream message;
    std::string tab   = "   ";
 
-#ifdef WIN32
+#ifdef _MSC_VER
 #define LOCAL_SPRINTF(a,b,c) sprintf_s( (a), MAX_LINE_CHARS, (b), (c) );   
 #else
 #define LOCAL_SPRINTF(a,b,c) sprintf( (a), (b), (c) );   
@@ -807,7 +807,7 @@ std::string BrookShakeAlgorithm::getContentsString( int level ) const {
       char buffer[1024];
       const ShakeCluster& cluster        = iter->second;
 
-#ifdef WIN32
+#ifdef _MSC_VER
       sprintf_s( buffer, 1024, "%5d %6d [%6d %6d %6d] d=%.3f m[%12.5f %12.5f]", index++, cluster._centralID,
                  cluster._peripheralID[0], cluster._peripheralID[1], cluster._peripheralID[2], 
                  cluster._distance, cluster._centralInvMass, cluster._peripheralInvMass );

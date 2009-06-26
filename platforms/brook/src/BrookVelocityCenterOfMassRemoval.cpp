@@ -24,12 +24,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include <sstream>
 #include "BrookVelocityCenterOfMassRemoval.h"
 #include "BrookPlatform.h"
 #include "openmm/OpenMMException.h"
 #include "BrookStreamImpl.h"
 #include "kernels/kcom.h"
+
+#include <sstream>
 
 using namespace OpenMM;
 using namespace std;
@@ -397,7 +398,7 @@ std::string BrookVelocityCenterOfMassRemoval::getContentsString( int level ) con
    std::stringstream message;
    std::string tab   = "   ";
 
-#ifdef WIN32
+#ifdef _MSC_VER
 #define LOCAL_SPRINTF(a,b,c) sprintf_s( (a), MAX_LINE_CHARS, (b), (c) );   
 #else
 #define LOCAL_SPRINTF(a,b,c) sprintf( (a), (b), (c) );   

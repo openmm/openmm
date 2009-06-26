@@ -24,7 +24,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include <sstream>
 #include "BrookLangevinDynamics.h"
 #include "BrookPlatform.h"
 #include "openmm/OpenMMException.h"
@@ -32,6 +31,8 @@
 #include "kernels/kshakeh.h"
 #include "kernels/kupdatesd.h"
 #include "kernels/kcommon.h"
+
+#include <sstream>
 
 // use random number generator
 
@@ -996,7 +997,7 @@ std::string BrookLangevinDynamics::getContentsString( int level ) const {
    std::stringstream message;
    std::string tab   = "   ";
 
-#ifdef WIN32
+#ifdef _MSC_VER
 #define LOCAL_SPRINTF(a,b,c) sprintf_s( (a), MAX_LINE_CHARS, (b), (c) );   
 #else
 #define LOCAL_SPRINTF(a,b,c) sprintf( (a), (b), (c) );   

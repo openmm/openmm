@@ -246,7 +246,7 @@ std::string BrookBondParameters::_getLine( const std::string& tab,
 
    std::stringstream message;
    memset( line, ' ', MAX_LINE_CHARS );  
-#ifdef WIN32
+#ifdef _MSC_VER
    (void) sprintf_s( line, MAX_LINE_CHARS, "%s %-40s %s", tab.c_str(), description.c_str(), value.c_str() );
 #else
    (void) sprintf( line, "%s %-40s %s", tab.c_str(), description.c_str(), value.c_str() );
@@ -282,7 +282,7 @@ std::string BrookBondParameters::getContentsString( int level ) const {
    std::stringstream message;
    std::string tab   = "   ";
 
-#ifdef WIN32
+#ifdef _MSC_VER
 #define LOCAL_SPRINTF(a,b,c) sprintf_s( (a), MAX_LINE_CHARS, (b), (c) );   
 #define LOCAL_2_SPRINTF(a,b,c,d) sprintf_s( (a), MAX_LINE_CHARS, (b), (c), (d) );   
 #else
@@ -309,7 +309,7 @@ std::string BrookBondParameters::getContentsString( int level ) const {
       char buffer[1024];
       (void) LOCAL_SPRINTF( description, "%6d [", ii );
 
-#ifdef WIN32
+#ifdef _MSC_VER
 
       // particle indices
 

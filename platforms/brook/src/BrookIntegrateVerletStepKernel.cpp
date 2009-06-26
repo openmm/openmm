@@ -202,5 +202,5 @@ void BrookIntegrateVerletStepKernel::execute( OpenMMContextImpl& context, const 
 
    _brookVerletDynamics->update( *(_openMMBrookInterface.getParticlePositions()), *(_openMMBrookInterface.getParticleVelocities()),
                                  *(_openMMBrookInterface.getParticleForces()), *_brookShakeAlgorithm );
-   _openMMBrookInterface.setTime(_openMMBrookInterface.getTime(stepSize));
+   _openMMBrookInterface.setTime(_openMMBrookInterface.getTime());
 }

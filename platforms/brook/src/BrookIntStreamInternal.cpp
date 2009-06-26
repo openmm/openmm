@@ -309,7 +309,7 @@ const std::string BrookIntStreamInternal::getContentsString( int level ) const {
    std::stringstream message;
    std::string tab   = "   ";
 
-#ifdef WIN32
+#ifdef _MSC_VER
 #define LOCAL_SPRINTF(a,b,c) sprintf_s( (a), MAX_LINE_CHARS, (b), (c) );   
 #else
 #define LOCAL_SPRINTF(a,b,c) sprintf( (a), (b), (c) );   

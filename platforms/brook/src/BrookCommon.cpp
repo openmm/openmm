@@ -24,15 +24,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include <math.h>
-#include <stdlib.h>
-
-#include <sstream>
 
 #include "BrookCommon.h"
 #include "BrookPlatform.h"
 #include "BrookStreamFactory.h"
 #include "openmm/OpenMMException.h"
+
+#include <cmath>
+#include <sstream>
 
 using namespace OpenMM;
 using namespace std;
@@ -391,7 +390,7 @@ std::string BrookCommon::_getLine( const std::string& tab, const std::string& de
 
    std::stringstream message;
    memset( line, ' ', MAX_LINE_CHARS ); 
-#ifdef WIN32
+#ifdef _MSC_VER
    (void) sprintf_s( line, MAX_LINE_CHARS, "%s %-40s %s", tab.c_str(), description.c_str(), value.c_str() );
 #else
    (void) sprintf( line, "%s %-40s %s", tab.c_str(), description.c_str(), value.c_str() );

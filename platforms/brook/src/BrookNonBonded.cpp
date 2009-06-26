@@ -24,13 +24,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include <sstream>
 #include "BrookNonBonded.h"
 #include "BrookPlatform.h"
 #include "BrookStreamFactory.h"
 #include "openmm/OpenMMException.h"
 //#include "kernels/invmap.h"
 #include "kernels/kforce.h"
+
+#include <sstream>
 
 using namespace OpenMM;
 using namespace std;
@@ -1181,7 +1182,7 @@ std::string BrookNonBonded::getContentsString( int level ) const {
    std::stringstream message;
    std::string tab   = "   ";
 
-#ifdef WIN32
+#ifdef _MSC_VER
 #define LOCAL_SPRINTF(a,b,c) sprintf_s( (a), MAX_LINE_CHARS, (b), (c) );   
 #else
 #define LOCAL_SPRINTF(a,b,c) sprintf( (a), (b), (c) );   

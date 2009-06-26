@@ -25,8 +25,6 @@
  * -------------------------------------------------------------------------- */
 
 
-#include <math.h>
-#include <sstream>
 #include "BrookBonded.h"
 #include "BrookPlatform.h"
 #include "BrookStreamFactory.h"
@@ -34,6 +32,9 @@
 #include "kernels/kinvmap_gather.h"
 #include "kernels/invmap.h"
 #include "kernels/kforce.h"
+
+#include <cmath>
+#include <sstream>
 
 using namespace OpenMM;
 using namespace std;
@@ -1471,7 +1472,7 @@ std::string BrookBonded::getContentsString( int level ) const {
    std::stringstream message;
    std::string tab   = "   ";
 
-#ifdef WIN32
+#ifdef _MSC_VER
 #define LOCAL_SPRINTF(a,b,c) sprintf_s( (a), MAX_LINE_CHARS, (b), (c) );   
 #define LOCAL_2_SPRINTF(a,b,c,d) sprintf_s( (a), MAX_LINE_CHARS, (b), (c), (d) );   
 #else

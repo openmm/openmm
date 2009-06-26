@@ -25,8 +25,8 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/OpenMMException.h"
-#include <sstream>
 #include "BrookCalcPeriodicTorsionForceKernel.h"
+#include <sstream>
 
 using namespace OpenMM;
 using namespace std;

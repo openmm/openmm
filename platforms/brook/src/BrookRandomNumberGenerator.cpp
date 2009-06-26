@@ -24,11 +24,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include <sstream>
 #include "BrookRandomNumberGenerator.h"
 #include "../../reference/src/SimTKUtilities/SimTKOpenMMUtilities.h"
 #include "openmm/OpenMMException.h"
 #include "kernels/kupdatesd.h"
+
+#include <sstream>
 
 using namespace OpenMM;
 using namespace std;
@@ -1064,7 +1065,7 @@ std::string BrookRandomNumberGenerator::getContentsString( int level ) const {
    std::stringstream message;
    std::string tab   = "   ";
 
-#ifdef WIN32
+#ifdef _MSC_VER
 #define LOCAL_SPRINTF(a,b,c) sprintf_s( (a), MAX_LINE_CHARS, (b), (c) );   
 #else
 #define LOCAL_SPRINTF(a,b,c) sprintf( (a), (b), (c) );   
@@ -1159,7 +1160,7 @@ std::string BrookRandomNumberGenerator::getStatisticsString( void ) const {
    std::stringstream message;
    std::string tab   = "   ";
 
-#ifdef WIN32
+#ifdef _MSC_VER
 #define LOCAL_SPRINTF(a,b,c) sprintf_s( (a), MAX_LINE_CHARS, (b), (c) );   
 #else
 #define LOCAL_SPRINTF(a,b,c) sprintf( (a), (b), (c) );   

@@ -24,11 +24,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include <sstream>
 #include "openmm/OpenMMException.h"
 #include "BrookStreamInternal.h"
 
-#ifdef _WIN32
+#include <sstream>
+
+#ifdef _MSC_VER
 
 #include <float.h>
 #define isnan _isnan
@@ -275,7 +276,7 @@ std::string BrookStreamInternal::_getLine( const std::string& tab,
 
    std::stringstream message;
    memset( line, ' ', MAX_LINE_CHARS );  
-#ifdef WIN32
+#ifdef _MSC_VER
    (void) sprintf_s( line, MAX_LINE_CHARS, "%s %-40s %s", tab.c_str(), description.c_str(), value.c_str() );
 #else
    (void) sprintf( line, "%s %-40s %s", tab.c_str(), description.c_str(), value.c_str() );
@@ -343,7 +344,7 @@ const std::string BrookStreamInternal::getContentsString( int level ) const {
    std::stringstream message;
    std::string tab   = "   ";
 
-#ifdef WIN32
+#ifdef _MSC_VER
 #define LOCAL_SPRINTF(a,b,c) sprintf_s( (a), MAX_LINE_CHARS, (b), (c) );   
 #else
 #define LOCAL_SPRINTF(a,b,c) sprintf( (a), (b), (c) );   
@@ -421,7 +422,7 @@ std::string BrookStreamInternal::printStatistics( std::string tag, std::vector<s
       header.push_back( "Count" );
    }
 
-#ifdef WIN32
+#ifdef _MSC_VER
 #define LOCAL_SPRINTF(a,b,c) sprintf_s( (a), MAX_LINE_CHARS, (b), (c) );   
 #else
 #define LOCAL_SPRINTF(a,b,c) sprintf( (a), (b), (c) );   
@@ -476,7 +477,7 @@ int BrookStreamInternal::printStreamsToFile( std::string fileName, std::vector<B
 // ---------------------------------------------------------------------------------------
 
    FILE* filePtr;
-#ifdef WIN32
+#ifdef _MSC_VER
    fopen_s( &filePtr, fileName.c_str(), "w" );
 #else
    filePtr = fopen( fileName.c_str(), "w" );
@@ -605,7 +606,7 @@ int BrookStreamInternal::loadStreamGivenFileName( std::string& fileName ){
    /* open file, read header */
 
    FILE* filePtr;
-#ifdef WIN32
+#ifdef _MSC_VER
    fopen_s( &filePtr, fileName.c_str(), "rb" );
 #else
    filePtr = fopen( fileName.c_str(), "rb" );

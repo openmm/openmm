@@ -24,12 +24,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include <sstream>
 #include "openmm/OpenMMException.h"
 #include "BrookStreamFactory.h"
 #include "BrookStreamImpl.h"
 #include "openmm/internal/OpenMMContextImpl.h"
 #include "OpenMMBrookInterface.h"
+
+#include <sstream>
 
 using namespace OpenMM;
 
