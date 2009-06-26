@@ -728,7 +728,7 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
     // Compute the constraint coupling matrix
 
     vector<vector<int> > atomAngles(gpu->natoms);
-    for (int i = 0; i < (int)gpu->sim.bond_angles; i++)
+    for (int i = 0; i < gpu->sim.bond_angles; i++)
         atomAngles[(*gpu->psBondAngleID1)[i].y].push_back(i);
     vector<vector<pair<int, double> > > matrix(numCCMA);
     if (numCCMA > 0) {
@@ -902,7 +902,7 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
         (*psCcmaReducedMass)[i] = 0.5f/(invMass1[c]+invMass2[c]);
         for (unsigned int j = 0; j < matrix[index].size(); j++) {
             (*psConstraintMatrixColumn)[i+j*numCCMA] = matrix[index][j].first;
-            (*psConstraintMatrixValue)[i+j*numCCMA] = (float)matrix[index][j].second;
+            (*psConstraintMatrixValue)[i+j*numCCMA] = matrix[index][j].second;
         }
         (*psConstraintMatrixColumn)[i+matrix[index].size()*numCCMA] = numCCMA;
     }
@@ -1010,6 +1010,10 @@ int gpuAllocateInitialBuffers(gpuContext gpu)
     gpu->sim.pCosSinSum                 = gpu->psEwaldCosSinSum->_pDevStream[0];
     gpu->psObcData                      = new CUDAStream<float2>(gpu->sim.paddedNumberOfAtoms, 1, "ObcData");
     gpu->sim.pObcData                   = gpu->psObcData->_pDevStream[0];
+    gpu->psStepSize                     = new CUDAStream<float2>(1, 1, "StepSize");
+    gpu->sim.pStepSize                  = gpu->psStepSize->_pDevStream[0];
+    (*gpu->psStepSize)[0] = make_float2(0.0f, 0.0f);
+    gpu->psStepSize->Upload();
     gpu->pAtomSymbol                    = new unsigned char[gpu->natoms];
     gpu->psAtomIndex                    = new CUDAStream<int>(gpu->sim.paddedNumberOfAtoms, 1, "AtomIndex");
     gpu->sim.pAtomIndex                 = gpu->psAtomIndex->_pDevStream[0];
@@ -1359,9 +1363,13 @@ void gpuSetIntegrationParameters(gpuContext gpu, float tau, float deltaT, float 
 }
 
 extern "C"
-void gpuSetVerletIntegrationParameters(gpuContext gpu, float deltaT) {
+void gpuSetVerletIntegrationParameters(gpuContext gpu, float deltaT, float errorTol) {
     gpu->sim.deltaT                 = deltaT;
     gpu->sim.oneOverDeltaT          = 1.0f/deltaT;
+    gpu->sim.errorTol               = errorTol;
+    gpu->psStepSize->Download();
+    (*gpu->psStepSize)[0].y = deltaT;
+    gpu->psStepSize->Upload();
 }
 
 extern "C"

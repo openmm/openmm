@@ -40,15 +40,15 @@ namespace OpenMM {
 
 /**
  * This is an error contolled, variable time step Integrator that simulates a System using the
- * velocity Verlet algorithm.  It compares the result of the Verlet integrator to that of an
+ * leap-frog Verlet algorithm.  It compares the result of the Verlet integrator to that of an
  * explicit Euler integrator, takes the difference between the two as a measure of the integration
  * error in each time step, and continuously adjusts the step size to keep the error below a
- * specified tolerance.  This allows it to take larger steps on average than a fixed step size
- * integrator, while still maintaining comparable accuracy and stability.
+ * specified tolerance.  This both improves the stability of the integrator and allows it to take
+ * larger steps on average, while still maintaining comparable accuracy to a fixed step size integrator.
  *
  * It is best not to think of the error tolerance as having any absolute meaning.  It is just an
  * adjustable parameter that affects the step size and integration accuracy.  You
- * should try different values to find the largest onethat produces a trajectory sufficiently
+ * should try different values to find the largest one that produces a trajectory sufficiently
  * accurate for your purposes.  0.001 is often a good starting point.
  *
  * Unlike a fixed step size Verlet integrator, variable step size Verlet is not symplectic.  This

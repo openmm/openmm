@@ -268,6 +268,8 @@ struct cudaGmxSimulation {
     unsigned int*   pWorkUnit;                      // Pointer to work units
     unsigned int*   pInteractingWorkUnit;           // Pointer to work units that have interactions
     unsigned int*   pInteractionFlag;               // Flags for which work units have interactions
+    float2*         pStepSize;                      // The size of the previous and current time steps
+    float           errorTol;                       // Error tolerance for selecting the step size
     size_t*         pInteractionCount;              // A count of the number of work units which have interactions
     unsigned int    nonbond_workBlock;              // Number of work units running simultaneously per block in CDLJ and Born Force Part 1
     unsigned int    bornForce2_workBlock;           // Number of work units running second half of Born Forces calculation

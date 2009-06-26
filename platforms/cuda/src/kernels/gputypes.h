@@ -119,6 +119,7 @@ struct _gpuContext {
     CUDAStream<unsigned int>* psInteractingWorkUnit;
     CUDAStream<unsigned int>* psInteractionFlag;
     CUDAStream<size_t>* psInteractionCount;
+    CUDAStream<float2>* psStepSize;         // The size of the previous and current time steps
     CUDAStream<float4>* psRandom4;          // Pointer to sets of 4 random numbers for MD integration
     CUDAStream<float2>* psRandom2;          // Pointer to sets of 2 random numbers for MD integration
     CUDAStream<uint4>* psRandomSeed;        // Pointer to each random seed
@@ -211,7 +212,7 @@ extern "C"
 void gpuSetIntegrationParameters(gpuContext gpu, float tau, float deltaT, float temperature);
 
 extern "C"
-void gpuSetVerletIntegrationParameters(gpuContext gpu, float deltaT);
+void gpuSetVerletIntegrationParameters(gpuContext gpu, float deltaT, float errorTol);
 
 extern "C"
 void gpuSetBrownianIntegrationParameters(gpuContext gpu, float tau, float deltaT, float temperature);

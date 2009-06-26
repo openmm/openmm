@@ -472,7 +472,7 @@ private:
     RealOpenMM* constraintDistances;
     int** constraintIndices;
     int numConstraints;
-    double prevStepSize, prevErrorTol;
+    double prevErrorTol;
 };
 
 /**

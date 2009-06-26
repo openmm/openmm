@@ -50,6 +50,7 @@ extern void kLangevinUpdatePart1(gpuContext gpu);
 extern void kLangevinUpdatePart2(gpuContext gpu);
 extern void kVerletUpdatePart1(gpuContext gpu);
 extern void kVerletUpdatePart2(gpuContext gpu);
+extern void kSelectVerletStepSize(gpuContext gpu);
 extern void kBrownianUpdatePart1(gpuContext gpu);
 extern void kBrownianUpdatePart2(gpuContext gpu);
 

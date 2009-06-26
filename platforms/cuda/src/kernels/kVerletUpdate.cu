@@ -30,7 +30,6 @@
 #include <cstdlib>
 #include <string>
 #include <iostream>
-//#include <fstream>
 using namespace std;
 
 #include "gputypes.h"
@@ -89,4 +88,48 @@ void kVerletUpdatePart2(gpuContext gpu)
         LAUNCHERROR("kVerletUpdatePart2");
     }
 }
+
+__global__ void kSelectVerletStepSize_kernel()
+{
+    // Calculate the error.
+
+    extern __shared__ float error[];
+    error[threadIdx.x] = 0.0f;
+    unsigned int pos = threadIdx.x;
+    while (pos < cSim.atoms)
+    {
+        float4 force  = cSim.pForce4[pos];
+        float invMass = cSim.pVelm4[pos].w;
+        error[threadIdx.x] += (force.x*force.x + force.y*force.y + force.z*force.z)*invMass;
+        pos += blockDim.x * gridDim.x;
+    }
+
+    // Sum the errors from all threads.
+
+    for (int offset = 1; offset < cSim.atoms; offset *= 2)
+    {
+        if (threadIdx.x+offset < cSim.atoms && threadIdx.x%(2*offset) == 0)
+            error[threadIdx.x] += error[threadIdx.x+offset];
+        __syncthreads();
+    }
+    if (threadIdx.x == 0)
+    {
+        float totalError = sqrt(error[0]/(cSim.atoms*3));
+        float newStepSize = sqrt(cSim.errorTol/totalError);
+        float oldStepSize = cSim.pStepSize[0].y;
+        if (oldStepSize > 0.0f)
+            newStepSize = min(newStepSize, oldStepSize*2.0f); // For safety, limit how quickly dt can increase.
+        if (newStepSize > oldStepSize && newStepSize < 1.2f*oldStepSize)
+            newStepSize = oldStepSize; // Keeping dt constant between steps improves the behavior of the integrator.
+        cSim.pStepSize[0].y = newStepSize;
+    }
+}
+
+void kSelectVerletStepSize(gpuContext gpu)
+{
+//    printf("kSelectVerletStepSize\n");
+    kSelectVerletStepSize_kernel<<<1, gpu->sim.update_threads_per_block, sizeof(float)*gpu->sim.update_threads_per_block>>>();
+    LAUNCHERROR("kSelectVerletStepSize");
+}
+
 

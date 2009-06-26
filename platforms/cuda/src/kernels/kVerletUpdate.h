@@ -36,6 +36,15 @@ __global__ void kVerletUpdatePart1CM_kernel()
 __global__ void kVerletUpdatePart1_kernel()
 #endif
 {
+    // Load the step size to take.
+    __shared__ float dtPos;
+    __shared__ float dtVel;
+    if (threadIdx.x == 0)
+    {
+        float2 stepSize = cSim.pStepSize[0];
+        dtPos = stepSize.y;
+        dtVel = 0.5f*(stepSize.x+stepSize.y);
+    }
     unsigned int pos    = threadIdx.x + blockIdx.x * blockDim.x;
 #ifdef REMOVE_CM
     extern __shared__ float3 sCM[];
@@ -72,13 +81,15 @@ __global__ void kVerletUpdatePart1_kernel()
         offset *= 2;
         __syncthreads();
     }
+#else
+    __syncthreads();
 #endif
     while (pos < cSim.atoms)
     {
         float4 apos             = cSim.pPosq[pos];
         float4 velocity         = cSim.pVelm4[pos];
         float4 force            = cSim.pForce4[pos];
-        float dtOverMass        = cSim.deltaT*velocity.w;
+        float dtOverMass        = dtVel*velocity.w;
 
         cSim.pOldPosq[pos]      = apos;
         velocity.x             += dtOverMass*force.x;
@@ -90,9 +101,9 @@ __global__ void kVerletUpdatePart1_kernel()
         velocity.z             -= sCM[0].z;
 #endif
 
-        apos.x                  = velocity.x*cSim.deltaT;
-        apos.y                  = velocity.y*cSim.deltaT;
-        apos.z                  = velocity.z*cSim.deltaT;
+        apos.x                  = velocity.x*dtPos;
+        apos.y                  = velocity.y*dtPos;
+        apos.z                  = velocity.z*dtPos;
 
         cSim.pPosqP[pos]        = apos;
         cSim.pVelm4[pos]        = velocity;
@@ -106,7 +117,17 @@ __global__ void kVerletUpdatePart2CM_kernel()
 __global__ void kVerletUpdatePart2_kernel()
 #endif
 {
-    unsigned int pos            = threadIdx.x + blockIdx.x * blockDim.x;
+    // Load the step size to take.
+    unsigned int pos = threadIdx.x + blockIdx.x * blockDim.x;
+    __shared__ float oneOverDeltaT;
+    if (threadIdx.x == 0)
+    {
+        float dt = cSim.pStepSize[0].y;
+        oneOverDeltaT = 1.0f/dt;
+        if (pos == 0)
+            cSim.pStepSize[0].x = dt;
+    }
+    __syncthreads();
 #ifdef REMOVE_CM
     extern __shared__ float3 sCM[];
     float3 CM                   = {0.0f, 0.0f, 0.0f};
@@ -118,9 +139,9 @@ __global__ void kVerletUpdatePart2_kernel()
         float4 apos             = cSim.pPosq[pos];
         float4 xPrime           = cSim.pPosqP[pos];
 
-        velocity.x              = cSim.oneOverDeltaT*(xPrime.x);
-        velocity.y              = cSim.oneOverDeltaT*(xPrime.y);
-        velocity.z              = cSim.oneOverDeltaT*(xPrime.z);
+        velocity.x              = oneOverDeltaT*(xPrime.x);
+        velocity.y              = oneOverDeltaT*(xPrime.y);
+        velocity.z              = oneOverDeltaT*(xPrime.z);
 
         xPrime.x               += apos.x;
         xPrime.y               += apos.y;

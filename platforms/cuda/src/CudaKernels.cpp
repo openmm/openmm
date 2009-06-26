@@ -41,9 +41,9 @@ using namespace std;
 
 static void calcForces(OpenMMContextImpl& context, CudaPlatform::PlatformData& data) {
     _gpuContext* gpu = data.gpu;
-    if (data.nonbondedMethod != NO_CUTOFF && data.stepCount%100 == 0)
+    if (data.nonbondedMethod != NO_CUTOFF && data.computeForceCount%100 == 0)
         gpuReorderAtoms(gpu);
-    data.stepCount++;
+    data.computeForceCount++;
     kClearForces(gpu);
     if (gpu->bIncludeGBSA) {
         gpu->bRecalculateBornRadii = true;
@@ -443,22 +443,20 @@ void CudaIntegrateVerletStepKernel::execute(OpenMMContextImpl& context, const Ve
     if (stepSize != prevStepSize) {
         // Initialize the GPU parameters.
         
-        gpuSetVerletIntegrationParameters(gpu, (float) stepSize);
+        gpuSetVerletIntegrationParameters(gpu, (float) stepSize, 0.0f);
         gpuSetConstants(gpu);
-        kGenerateRandoms(gpu);
         prevStepSize = stepSize;
     }
     kVerletUpdatePart1(gpu);
     kApplyFirstShake(gpu);
     kApplyFirstSettle(gpu);
     kApplyFirstCCMA(gpu);
-    if (data.removeCM) {
-        int step = (int) (context.getTime()/stepSize);
-        if (step%data.cmMotionFrequency == 0)
+    if (data.removeCM)
+        if (data.stepCount%data.cmMotionFrequency == 0)
             gpu->bCalculateCM = true;
-    }
     kVerletUpdatePart2(gpu);
     data.time += stepSize;
+    data.stepCount++;
 }
 
 CudaIntegrateLangevinStepKernel::~CudaIntegrateLangevinStepKernel() {
@@ -492,16 +490,15 @@ void CudaIntegrateLangevinStepKernel::execute(OpenMMContextImpl& context, const 
     kApplyFirstShake(gpu);
     kApplyFirstSettle(gpu);
     kApplyFirstCCMA(gpu);
-    if (data.removeCM) {
-        int step = (int) (context.getTime()/stepSize);
-        if (step%data.cmMotionFrequency == 0)
+    if (data.removeCM)
+        if (data.stepCount%data.cmMotionFrequency == 0)
             gpu->bCalculateCM = true;
-    }
     kLangevinUpdatePart2(gpu);
     kApplySecondShake(gpu);
     kApplySecondSettle(gpu);
     kApplySecondCCMA(gpu);
     data.time += stepSize;
+    data.stepCount++;
 }
 
 CudaIntegrateBrownianStepKernel::~CudaIntegrateBrownianStepKernel() {
@@ -535,13 +532,44 @@ void CudaIntegrateBrownianStepKernel::execute(OpenMMContextImpl& context, const 
     kApplyFirstShake(gpu);
     kApplyFirstSettle(gpu);
     kApplyFirstCCMA(gpu);
-    if (data.removeCM) {
-        int step = (int) (context.getTime()/stepSize);
-        if (step%data.cmMotionFrequency == 0)
+    if (data.removeCM)
+        if (data.stepCount%data.cmMotionFrequency == 0)
             gpu->bCalculateCM = true;
-    }
     kBrownianUpdatePart2(gpu);
     data.time += stepSize;
+    data.stepCount++;
+}
+
+CudaIntegrateVariableVerletStepKernel::~CudaIntegrateVariableVerletStepKernel() {
+}
+
+void CudaIntegrateVariableVerletStepKernel::initialize(const System& system, const VariableVerletIntegrator& integrator) {
+    initializeIntegration(system, data, integrator);
+    prevErrorTol = -1.0;
+}
+
+void CudaIntegrateVariableVerletStepKernel::execute(OpenMMContextImpl& context, const VariableVerletIntegrator& integrator) {
+    _gpuContext* gpu = data.gpu;
+    double errorTol = integrator.getErrorTolerance();
+    if (errorTol != prevErrorTol) {
+        // Initialize the GPU parameters.
+
+        gpuSetVerletIntegrationParameters(gpu, 0.0f, (float) errorTol);
+        gpuSetConstants(gpu);
+        prevErrorTol = errorTol;
+    }
+    kSelectVerletStepSize(gpu);
+    kVerletUpdatePart1(gpu);
+    kApplyFirstShake(gpu);
+    kApplyFirstSettle(gpu);
+    kApplyFirstCCMA(gpu);
+    if (data.removeCM)
+        if (data.stepCount%data.cmMotionFrequency == 0)
+            gpu->bCalculateCM = true;
+    kVerletUpdatePart2(gpu);
+    gpu->psStepSize->Download();
+    data.time += (*gpu->psStepSize)[0].y;
+    data.stepCount++;
 }
 
 CudaApplyAndersenThermostatKernel::~CudaApplyAndersenThermostatKernel() {

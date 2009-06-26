@@ -374,6 +374,33 @@ private:
 };
 
 /**
+ * This kernel is invoked by VariableVerletIntegrator to take one time step.
+ */
+class CudaIntegrateVariableVerletStepKernel : public IntegrateVariableVerletStepKernel {
+public:
+    CudaIntegrateVariableVerletStepKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data) : IntegrateVariableVerletStepKernel(name, platform), data(data) {
+    }
+    ~CudaIntegrateVariableVerletStepKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param integrator the VerletIntegrator this kernel will be used for
+     */
+    void initialize(const System& system, const VariableVerletIntegrator& integrator);
+    /**
+     * Execute the kernel.
+     *
+     * @param context    the context in which to execute this kernel
+     * @param integrator the VerletIntegrator this kernel is being used for
+     */
+    void execute(OpenMMContextImpl& context, const VariableVerletIntegrator& integrator);
+private:
+    CudaPlatform::PlatformData& data;
+    double prevErrorTol;
+};
+
+/**
  * This kernel is invoked by AndersenThermostat at the start of each time step to adjust the particle velocities.
  */
 class CudaApplyAndersenThermostatKernel : public ApplyAndersenThermostatKernel {
