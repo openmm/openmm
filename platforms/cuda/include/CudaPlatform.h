@@ -61,7 +61,7 @@ private:
 class CudaPlatform::PlatformData {
 public:
     PlatformData(_gpuContext* gpu) : gpu(gpu), removeCM(false), nonbondedMethod(0), hasBonds(false), hasAngles(false),
-            hasPeriodicTorsions(false), hasRB(false), hasNonbonded(false), primaryKernel(NULL), stepCount(0), time(0.0) {
+            hasPeriodicTorsions(false), hasRB(false), hasNonbonded(false), primaryKernel(NULL), stepCount(0), computeForceCount(0), time(0.0) {
     }
     _gpuContext* gpu;
     KernelImpl* primaryKernel;
@@ -69,7 +69,7 @@ public:
     bool hasBonds, hasAngles, hasPeriodicTorsions, hasRB, hasNonbonded;
     int nonbondedMethod;
     int cmMotionFrequency;
-    int stepCount;
+    int stepCount, computeForceCount;
     double time;
 };
 
