@@ -183,7 +183,7 @@ SUBROUTINE myInitializeOpenMM(ommHandle, platformName)
     type(OpenMM_Vec3Array)      initialPosInNm
     type(OpenMM_NonbondedForce) nonbond
     type(OpenMM_GBSAOBCForce)   gbsa
-    integer n
+    integer*4 n, ix
 
     type(OpenMM_String) dir
 
@@ -218,7 +218,7 @@ SUBROUTINE myInitializeOpenMM(ommHandle, platformName)
     do n=1,NumAtoms
         call OpenMM_System_addParticle(system, atoms(n)%mass)
     
-        call OpenMM_NonbondedForce_addParticle(nonbond,                 &
+        ix = OpenMM_NonbondedForce_addParticle(nonbond,                 &
                 atoms(n)%charge,                                        &
                 atoms(n)%vdwRadiusInAng  * OpenMM_NmPerAngstrom         &
                                          * OpenMM_SigmaPerVdwRadius,    &

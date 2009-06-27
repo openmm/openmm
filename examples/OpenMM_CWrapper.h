@@ -167,10 +167,25 @@ extern const char* OpenMM_Platform_getDefaultPluginsDirectory();
 
 /* OpenMM::System */
 extern OpenMM_System* OpenMM_System_create();
-extern void OpenMM_System_destroy (OpenMM_System*);
-extern void OpenMM_System_addForce(OpenMM_System*, OpenMM_Force*);
-extern void OpenMM_System_addParticle(OpenMM_System*, double mass);
+extern void           OpenMM_System_destroy (OpenMM_System*);
 
+extern int    OpenMM_System_addParticle(OpenMM_System*, double mass);
+extern void   OpenMM_System_setParticleMass(OpenMM_System*, int ix, double mass);
+extern double OpenMM_System_getParticleMass(const OpenMM_System*, int ix);
+
+extern int  OpenMM_System_addConstraint(OpenMM_System*, int p1, int p2, double distance);
+extern void OpenMM_System_setConstraintParameters(OpenMM_System*, int ix, 
+                                                  int p1, int p2, double distance);
+extern void OpenMM_System_getConstraintParameters(const OpenMM_System*, int ix, 
+                                                  int* p1, int* p2, double* distance);
+
+extern int                 OpenMM_System_addForce(OpenMM_System*, OpenMM_Force*);
+extern OpenMM_Force*       OpenMM_System_updForce(OpenMM_System*, int ix);
+extern const OpenMM_Force* OpenMM_System_getForce(const OpenMM_System*, int ix);
+
+extern int OpenMM_System_getNumParticles(const OpenMM_System*);
+extern int OpenMM_System_getNumConstraints(const OpenMM_System*);
+extern int OpenMM_System_getNumForces(const OpenMM_System*);
 
 /* OpenMM::NonbondedForce */
 extern OpenMM_NonbondedForce* OpenMM_NonbondedForce_create();

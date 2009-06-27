@@ -269,7 +269,7 @@ myInitializeOpenMM( int                 numWatersAlongEdge,
     std::vector<Vec3>                   initialPosInNm;
     std::vector< std::pair<int,int> >   bondPairs;
     
-    // Add water molecules one at a time in the 10x10x10 cubic lattice
+    // Add water molecules one at a time in the NxNxN cubic lattice
     for (int latticeX = 0; latticeX < numWatersAlongEdge; ++latticeX)
     for (int latticeY = 0; latticeY < numWatersAlongEdge; ++latticeY)
     for (int latticeZ = 0; latticeZ < numWatersAlongEdge; ++latticeZ)

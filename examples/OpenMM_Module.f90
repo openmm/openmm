@@ -25,7 +25,7 @@
 ! pointers to deal with these objects; they get created by the API
 ! for you and you just pass them back to the API when you want to
 ! do something with them.
-module OpenMM_Types
+MODULE OpenMM_Types
     implicit none
 
     ! The System, Integrator, and Context must persist between calls.
@@ -732,4 +732,4 @@ module OpenMM
         end
 
     end interface
-end module OpenMM
+END MODULE OpenMM

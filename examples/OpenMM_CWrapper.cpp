@@ -62,25 +62,35 @@ OpenMM_Vec3Array* OpenMM_Vec3Array_create(int n)
 {   return (OpenMM_Vec3Array*)new std::vector<Vec3>(n); }
 void openmm_vec3array_create_(OpenMM_Vec3Array*& a, const int& n)
 {   a = OpenMM_Vec3Array_create(n); }
+void OPENMM_VEC3ARRAY_CREATE(OpenMM_Vec3Array*& a, const int& n)
+{   a = OpenMM_Vec3Array_create(n); }
 
 int OpenMM_Vec3Array_size(const OpenMM_Vec3Array* a) 
 {   return (int)((const std::vector<Vec3>*)a)->size(); }
 int openmm_vec3array_size_(const OpenMM_Vec3Array*& a)
+{   return OpenMM_Vec3Array_size(a); }
+int OPENMM_VEC3ARRAY_SIZE(const OpenMM_Vec3Array*& a)
 {   return OpenMM_Vec3Array_size(a); }
 
 void OpenMM_Vec3Array_resize(OpenMM_Vec3Array* a, int n) 
 {   ((std::vector<Vec3>*)a)->resize(n); }
 void openmm_vec3array_resize_(OpenMM_Vec3Array* const& a, const int& n)
 {   OpenMM_Vec3Array_resize(a, n); }
+void OPENMM_VEC3ARRAY_RESIZE(OpenMM_Vec3Array* const& a, const int& n)
+{   OpenMM_Vec3Array_resize(a, n); }
 
 void OpenMM_Vec3Array_destroy(OpenMM_Vec3Array* doomed) 
 {   delete ((std::vector<Vec3>*)doomed); }
 void openmm_vec3array_destroy_(OpenMM_Vec3Array*& doomed)
 {   OpenMM_Vec3Array_destroy(doomed); doomed = 0; }
+void OPENMM_VEC3ARRAY_DESTROY(OpenMM_Vec3Array*& doomed)
+{   OpenMM_Vec3Array_destroy(doomed); doomed = 0; }
 
 void OpenMM_Vec3Array_append(OpenMM_Vec3Array* a, const OpenMM_Vec3 v) 
 {   ((std::vector<Vec3>*)a)->push_back(*(const Vec3*)v); }
 void openmm_vec3array_append_(OpenMM_Vec3Array* const& a, const OpenMM_Vec3 v)
+{   OpenMM_Vec3Array_append(a, v); }
+void OPENMM_VEC3ARRAY_APPEND(OpenMM_Vec3Array* const& a, const OpenMM_Vec3 v)
 {   OpenMM_Vec3Array_append(a, v); }
 
 // Get a single Vec3 element from the array. Index is 0-relative in C, 1-relative in Fortran.
@@ -88,6 +98,8 @@ void OpenMM_Vec3Array_get(const OpenMM_Vec3Array* a, int i0, OpenMM_Vec3 ov3) {
     fromVec3((*(const std::vector<Vec3>*)a)[i0], ov3);
 }
 void openmm_vec3array_get_(const OpenMM_Vec3Array* const& a, const int& i1, OpenMM_Vec3 ov3)
+{   OpenMM_Vec3Array_get(a, i1-1, ov3); }
+void OPENMM_VEC3ARRAY_GET(const OpenMM_Vec3Array* const& a, const int& i1, OpenMM_Vec3 ov3)
 {   OpenMM_Vec3Array_get(a, i1-1, ov3); }
 
 // Get a single Vec3 element from the array and scale it. Index is 0-relative in C, 
@@ -97,11 +109,15 @@ void OpenMM_Vec3Array_getScaled(const OpenMM_Vec3Array* a, int i0, double s, Ope
 }
 void openmm_vec3array_getscaled_(const OpenMM_Vec3Array* const& a, const int& i1, const double& s, OpenMM_Vec3 ov3)
 {   OpenMM_Vec3Array_getScaled(a, i1-1, s, ov3); }
+void OPENMM_VEC3ARRAY_GETSCALED(const OpenMM_Vec3Array* const& a, const int& i1, const double& s, OpenMM_Vec3 ov3)
+{   OpenMM_Vec3Array_getScaled(a, i1-1, s, ov3); }
 
 // Set a single Vec3 element in the array. Index is 0-relative in C, 1-relative in Fortran.
 void OpenMM_Vec3Array_set(OpenMM_Vec3Array* a, int i0, const OpenMM_Vec3 v3)
 {   (*(std::vector<Vec3>*)a)[i0] = toVec3(v3); }
 void openmm_vec3array_set_(OpenMM_Vec3Array* const& a, const int& i1, const OpenMM_Vec3 v3)
+{   OpenMM_Vec3Array_set(a, i1-1, v3); }
+void OPENMM_VEC3ARRAY_SET(OpenMM_Vec3Array* const& a, const int& i1, const OpenMM_Vec3 v3)
 {   OpenMM_Vec3Array_set(a, i1-1, v3); }
 
 // Set a single Vec3 element in the array to a scaling of the input vector. 
@@ -110,12 +126,15 @@ void OpenMM_Vec3Array_setScaled(OpenMM_Vec3Array* a, int i0, const OpenMM_Vec3 v
 {   (*(std::vector<Vec3>*)a)[i0] = scaleToVec3(v3, s); }
 void openmm_vec3array_setscaled_(OpenMM_Vec3Array* const& a, const int& i1, const OpenMM_Vec3 v3, const double& s)
 {   OpenMM_Vec3Array_setScaled(a, i1-1, v3, s); }
+void OPENMM_VEC3ARRAY_SETSCALED(OpenMM_Vec3Array* const& a, const int& i1, const OpenMM_Vec3 v3, const double& s)
+{   OpenMM_Vec3Array_setScaled(a, i1-1, v3, s); }
 
 void OpenMM_Vec3_scale(const double in[3], double s, double out[3])
 {   out[0]=s*in[0]; out[1]=s*in[1]; out[2]=s*in[2]; }
 void openmm_vec3_scale_(const double in[3], const double& s, double out[3])
 {   out[0]=s*in[0]; out[1]=s*in[1]; out[2]=s*in[2]; }
-
+void OPENMM_VEC3_SCALE(const double in[3], const double& s, double out[3])
+{   out[0]=s*in[0]; out[1]=s*in[1]; out[2]=s*in[2]; }
 
 
     ///////////////////////////////////////
@@ -188,6 +207,7 @@ void OPENMM_BONDARRAY_SET(OpenMM_BondArray* const& a, const int& i1, int const& 
 // This is an interface to std::string primarily for Fortran. You
 // can use null-terminated char arrays directly in C.
 
+// create
 OpenMM_String* OpenMM_String_create(const char* nullTerminatedInitVal) {
     OpenMM_String* os = (OpenMM_String*)new std::string(nullTerminatedInitVal);
     return os;
@@ -200,20 +220,28 @@ void openmm_string_create_(OpenMM_String*& os, const char* init, int len) {
         std::strncpy(&(*s)[0], init, len);
     }
 }
-void OpenMM_String_destroy(OpenMM_String* os) {
-    delete ((std::string*)os);
-}
+void OPENMM_STRING_CREATE(OpenMM_String*& os, const char* init, int len)
+{   openmm_string_create_(os,init,len); }
+
+// destroy
+void OpenMM_String_destroy(OpenMM_String* os) 
+{   delete ((std::string*)os); }
 void openmm_string_destroy_(OpenMM_String*& os) {OpenMM_String_destroy(os);}
-const char* OpenMM_String_getAsC(const OpenMM_String* os) {
-    return ((const std::string*)os)->c_str();
-}
-int OpenMM_String_length(const OpenMM_String* os) {
-    return (int)((const std::string*)os)->size();
-}
-int openmm_string_length_(const OpenMM_String* const& os) {
-    return OpenMM_String_length(os);
-}
-// Copy out as a null-terminated C string.
+void OPENMM_STRING_DESTROY(OpenMM_String*& os) {OpenMM_String_destroy(os);}
+
+// C only : getAsC
+const char* OpenMM_String_getAsC(const OpenMM_String* os) 
+{   return ((const std::string*)os)->c_str(); }
+
+// length
+int OpenMM_String_length(const OpenMM_String* os) 
+{   return (int)((const std::string*)os)->size(); }
+int openmm_string_length_(const OpenMM_String* const& os) 
+{   return OpenMM_String_length(os); }
+int OPENMM_STRING_LENGTH(const OpenMM_String* const& os) 
+{   return OpenMM_String_length(os); }
+
+// get C: Copy out as a null-terminated C string.
 void OpenMM_String_get(const OpenMM_String* os, char* buf, int buflen) {
     if (buflen <= 0) return;
     const std::string& s = *(const std::string*)os;
@@ -223,7 +251,7 @@ void OpenMM_String_get(const OpenMM_String* os, char* buf, int buflen) {
     const int nullpos = std::min(minlen, buflen-1);
     buf[nullpos] = '\0';
 }
-// Copy out as a blank-padded Fortran string.
+// get Fortran: Copy out as a blank-padded Fortran string.
 void openmm_string_get_(const OpenMM_String* const& os, char* buf, int buflen) {
     if (buflen <= 0) return;
     const std::string& s = *(const std::string*)os;
@@ -233,8 +261,10 @@ void openmm_string_get_(const OpenMM_String* const& os, char* buf, int buflen) {
     for (int i=minlen; i < buflen; ++i)
         buf[i] = ' ';
 }
+void OPENMM_STRING_GET(const OpenMM_String* const& os, char* buf, int buflen) 
+{   openmm_string_get_(os,buf,buflen); }
 
-// Set string from a null-terminated C string, stripping trailing blanks.
+// set C: Set string from a null-terminated C string, stripping trailing blanks.
 void OpenMM_String_set(OpenMM_String* os, const char* in) {
     std::string& s = *(std::string*)os;
     int len = std::strlen(in);
@@ -243,7 +273,7 @@ void OpenMM_String_set(OpenMM_String* os, const char* in) {
         --len;
     s.erase(len);
 }
-// Set string from a fix-sized Fortran character array, 
+// set Fotran: Set string from a fix-sized Fortran character array, 
 // stripping trailing blanks.
 void openmm_string_set_(OpenMM_String*& os, const char* in, int len) {
     std::string& s = *(std::string*)os;
@@ -252,7 +282,8 @@ void openmm_string_set_(OpenMM_String*& os, const char* in, int len) {
         --len;
     s.erase(len);
 }
-
+void OPENMM_STRING_SET(OpenMM_String*& os, const char* in, int len) 
+{   openmm_string_set_(os,in,len); }
 
     //////////////////////
     // OpenMM::Platform //
@@ -269,43 +300,129 @@ const char* OpenMM_Platform_getDefaultPluginsDirectory() {
 
 void openmm_platform_loadpluginsfromdirectory_(const OpenMM_String* const& dir)
 {    OpenMM_Platform_loadPluginsFromDirectory(OpenMM_String_getAsC(dir)); }
+void OPENMM_PLATFORM_LOADPLUGINSFROMDIRECTORY(const OpenMM_String* const& dir)
+{    OpenMM_Platform_loadPluginsFromDirectory(OpenMM_String_getAsC(dir)); }
 
 void openmm_platform_getdefaultpluginsdirectory_(OpenMM_String* const& dir)
 {    OpenMM_String_set(dir, OpenMM_Platform_getDefaultPluginsDirectory()); }
-
+void OPENMM_PLATFORM_GETDEFAULTPLUGINSDIRECTORY(OpenMM_String* const& dir)
+{    OpenMM_String_set(dir, OpenMM_Platform_getDefaultPluginsDirectory()); }
 
     ////////////////////
     // OpenMM::System //
     ////////////////////
-OpenMM_System* 
-OpenMM_System_create() {
-    return (OpenMM_System*)new System();
-}
+
+// create
+OpenMM_System* OpenMM_System_create() 
+{   return (OpenMM_System*)new System(); }
 void openmm_system_create_(OpenMM_System*& sys) {sys=OpenMM_System_create();}
+void OPENMM_SYSTEM_CREATE(OpenMM_System*& sys) {sys=OpenMM_System_create();}
 
-void OpenMM_System_destroy(OpenMM_System* doomed) {
-    delete (System*)doomed;
-}
+// destroy
+void OpenMM_System_destroy(OpenMM_System* doomed) 
+{   delete (System*)doomed; }
 void openmm_system_destroy_(OpenMM_System*& doomed) 
-{OpenMM_System_destroy(doomed); doomed=0;}
+{   OpenMM_System_destroy(doomed); doomed=0; }
+void OPENMM_SYSTEM_DESTROY(OpenMM_System*& doomed) 
+{   OpenMM_System_destroy(doomed); doomed=0; }
 
-void OpenMM_System_addForce(OpenMM_System* sys, OpenMM_Force* frc) {
-    ((System*)sys)->addForce((NonbondedForce*)frc);
-}
-void openmm_system_addforce_(OpenMM_System*& sys, OpenMM_Force*& frc) 
-{OpenMM_System_addForce(sys,frc);}
+// addParticle
+int OpenMM_System_addParticle(OpenMM_System* sys, double mass) 
+{   return ((System*)sys)->addParticle(mass); }
+int openmm_system_addparticle_(OpenMM_System* const& sys, double const& mass) 
+{   return OpenMM_System_addParticle(sys,mass); }
+int OPENMM_SYSTEM_ADDPARTICLE(OpenMM_System* const& sys, double const& mass) 
+{   return OpenMM_System_addParticle(sys,mass); }
 
-void OpenMM_System_addParticle(OpenMM_System* sys, double mass) {
-    ((System*)sys)->addParticle(mass);
-}
-void openmm_system_addparticle_(OpenMM_System*& sys, const double& mass) 
-{OpenMM_System_addParticle(sys,mass);}
+// setParticleMass
+void OpenMM_System_setParticleMass(OpenMM_System* sys, int ix, double mass) 
+{   ((System*)sys)->setParticleMass(ix,mass); }
+void openmm_system_setparticlemass_(OpenMM_System* const& sys, int const& ix, double const& mass) 
+{   OpenMM_System_setParticleMass(sys,ix,mass); }
+void OPENMM_SYSTEM_SETPARTICLEMASS(OpenMM_System* const& sys, int const& ix, double const& mass) 
+{   OpenMM_System_setParticleMass(sys,ix,mass); }
 
-int OpenMM_System_getNumParticles(const OpenMM_System* sys) {
-    return ((const System*)sys)->getNumParticles();
-}
-int openmm_system_getnumparticles_(const OpenMM_System*& sys)
-{return OpenMM_System_getNumParticles(sys);}
+// getParticleMass
+double OpenMM_System_getParticleMass(const OpenMM_System* sys, int ix) 
+{   return ((const System*)sys)->getParticleMass(ix); }
+double openmm_system_getparticlemass_(const OpenMM_System* const& sys, int const& ix) 
+{   return OpenMM_System_getParticleMass(sys,ix); }
+double OPENMM_SYSTEM_GETPARTICLEMASS(const OpenMM_System* const& sys, int const& ix) 
+{   return OpenMM_System_getParticleMass(sys,ix); }
+
+// addConstraint
+int OpenMM_System_addConstraint(OpenMM_System* sys, int p1, int p2, double distance) 
+{   return ((System*)sys)->addConstraint(p1,p2,distance); }
+int openmm_system_addconstraint_(OpenMM_System* const& sys, int const& p1, int const& p2, double const& distance) 
+{   return OpenMM_System_addConstraint(sys,p1,p2,distance); }
+int OPENMM_SYSTEM_ADDCONSTRAINT(OpenMM_System* const& sys, int const& p1, int const& p2, double const& distance) 
+{   return OpenMM_System_addConstraint(sys,p1,p2,distance); }
+
+// setConstraintParameters
+void OpenMM_System_setConstraintParameters(OpenMM_System* sys, int ix, int p1, int p2, double distance) 
+{   ((System*)sys)->setConstraintParameters(ix,p1,p2,distance); }
+void openmm_system_setConstraintParameters_(OpenMM_System* const& sys, int const& ix, int const& p1, int const& p2, double const& distance) 
+{   OpenMM_System_setConstraintParameters(sys,ix,p1,p2,distance); }
+void OPENMM_SYSTEM_SETCONSTRAINTPARAMETERS(OpenMM_System* const& sys, int const& ix, int const& p1, int const& p2, double const& distance) 
+{   OpenMM_System_setConstraintParameters(sys,ix,p1,p2,distance); }
+
+// getConstraintParameters
+void OpenMM_System_getConstraintParameters(const OpenMM_System* sys, int ix, int* p1, int* p2, double* distance) 
+{   ((const System*)sys)->getConstraintParameters(ix,*p1,*p2,*distance); }
+void openmm_system_getConstraintParameters_(const OpenMM_System* const& sys, int const& ix, int& p1, int& p2, double& distance) 
+{   OpenMM_System_getConstraintParameters(sys,ix,&p1,&p2,&distance); }
+void OPENMM_SYSTEM_GETCONSTRAINTPARAMETERS(const OpenMM_System* const& sys, int const& ix, int& p1, int& p2, double& distance) 
+{   OpenMM_System_getConstraintParameters(sys,ix,&p1,&p2,&distance); }
+
+// addForce
+// TODO: PREVIEW RELEASE 3 doesn't return a value
+//int OpenMM_System_addForce(OpenMM_System* sys, OpenMM_Force* frc) 
+//{   return ((System*)sys)->addForce((NonbondedForce*)frc); }
+int OpenMM_System_addForce(OpenMM_System* sys, OpenMM_Force* frc) 
+{   ((System*)sys)->addForce((NonbondedForce*)frc); return -1; }
+int openmm_system_addforce_(OpenMM_System* const& sys, OpenMM_Force*& frc) 
+{   return OpenMM_System_addForce(sys,frc); }
+int OPENMM_SYSTEM_ADDFORCE(OpenMM_System* const& sys, OpenMM_Force*& frc) 
+{   return OpenMM_System_addForce(sys,frc); }
+
+// getForce, updForce
+OpenMM_Force* OpenMM_System_updForce(OpenMM_System* sys, int ix)
+{   return (OpenMM_Force*)&((System*)sys)->getForce(ix); }
+void openmm_system_updforce_(OpenMM_System* const& sys, int const& ix, OpenMM_Force*& frc)
+{   frc = OpenMM_System_updForce(sys, ix); }
+void OPENMM_SYSTEM_UPDFORCE(OpenMM_System* sys, int ix, OpenMM_Force*& frc)
+{   frc = OpenMM_System_updForce(sys, ix); }
+
+const OpenMM_Force* OpenMM_System_getForce(const OpenMM_System* sys, int ix)
+{   return (const OpenMM_Force*)&((const System*)sys)->getForce(ix); }
+void openmm_system_getforce_(const OpenMM_System* const& sys, int const& ix, const OpenMM_Force*& frc)
+{   frc = OpenMM_System_getForce(sys, ix); }
+void OPENMM_SYSTEM_GETFORCE(const OpenMM_System* const& sys, int const& ix, const OpenMM_Force*& frc)
+{   frc = OpenMM_System_getForce(sys, ix); }
+
+// getNumParticles
+int OpenMM_System_getNumParticles(const OpenMM_System* sys) 
+{   return ((const System*)sys)->getNumParticles(); }
+int openmm_system_getnumparticles_(const OpenMM_System* const& sys)
+{   return OpenMM_System_getNumParticles(sys); }
+int OPENMM_SYSTEM_GETNUMPARTICLES(const OpenMM_System* const& sys)
+{   return OpenMM_System_getNumParticles(sys); }
+
+// getNumConstraints
+int OpenMM_System_getNumConstraints(const OpenMM_System* sys) 
+{   return ((const System*)sys)->getNumConstraints(); }
+int openmm_system_getnumconstraints_(const OpenMM_System* const& sys)
+{   return OpenMM_System_getNumConstraints(sys); }
+int OPENMM_SYSTEM_GETNUMCONSTRAINTS(const OpenMM_System* const& sys)
+{   return OpenMM_System_getNumConstraints(sys); }
+
+// getNumForces
+int OpenMM_System_getNumForces(const OpenMM_System* sys) 
+{   return ((const System*)sys)->getNumForces(); }
+int openmm_system_getnumforces_(const OpenMM_System* const& sys)
+{   return OpenMM_System_getNumForces(sys); }
+int OPENMM_SYSTEM_GETNUMFORCES(const OpenMM_System* const& sys)
+{   return OpenMM_System_getNumForces(sys); }
 
     ////////////////////////////
     // OpenMM::NonbondedForce //
@@ -496,15 +613,22 @@ OpenMM_GBSAOBCForce* OpenMM_GBSAOBCForce_create()
 {   return (OpenMM_GBSAOBCForce*)new GBSAOBCForce(); }
 void openmm_gbsaobcforce_create_(OpenMM_GBSAOBCForce*& frc)
 {   frc = OpenMM_GBSAOBCForce_create(); }
+void OPENMM_GBSAOBCFORCE_CREATE(OpenMM_GBSAOBCForce*& frc)
+{   frc = OpenMM_GBSAOBCForce_create(); }
 
 // destroy
 void OpenMM_GBSAOBCForce_destroy(OpenMM_GBSAOBCForce* doomed) 
 {   delete (GBSAOBCForce*)doomed; }
 void openmm_gbsaobcforce_destroy_(OpenMM_GBSAOBCForce*& doomed) 
 {   OpenMM_GBSAOBCForce_destroy(doomed); doomed = 0; }
+void OPENMM_GBSAOBCFORCE_DESTROY(OpenMM_GBSAOBCForce*& doomed) 
+{   OpenMM_GBSAOBCForce_destroy(doomed); doomed = 0; }
 
 // Fortran only: recast GBSAOBCForce as a Force.
 void openmm_gbsaobcforce_asforce_(OpenMM_GBSAOBCForce* const& gbsa,
+							      OpenMM_Force*&              force)
+{   force = (OpenMM_Force*)gbsa; }
+void OPENMM_GBSAOBCFORCE_ASFORCE(OpenMM_GBSAOBCForce* const& gbsa,
 							      OpenMM_Force*&              force)
 {   force = (OpenMM_Force*)gbsa; }
 
@@ -513,11 +637,15 @@ void OpenMM_GBSAOBCForce_setSolventDielectric(OpenMM_GBSAOBCForce* gbsa, double 
 {   ((GBSAOBCForce*)gbsa)->setSolventDielectric(d); }
 void openmm_gbsaobcforce_setsolventdielectric_(OpenMM_GBSAOBCForce*& gbsa, const double& d)
 {   OpenMM_GBSAOBCForce_setSolventDielectric(gbsa,d); }
+void OPENMM_GBSAOBCFORCE_SETSOLVENTDIELECTRIC(OpenMM_GBSAOBCForce*& gbsa, const double& d)
+{   OpenMM_GBSAOBCForce_setSolventDielectric(gbsa,d); }
 
 // setSoluteDielectric
 void OpenMM_GBSAOBCForce_setSoluteDielectric(OpenMM_GBSAOBCForce* gbsa, double d) 
 {   ((GBSAOBCForce*)gbsa)->setSoluteDielectric(d); }
 void openmm_gbsaobcforce_setsolutedielectric_(OpenMM_GBSAOBCForce*& gbsa, const double& d)
+{   OpenMM_GBSAOBCForce_setSoluteDielectric(gbsa,d); }
+void OPENMM_GBSAOBCFORCE_SETSOLUTEDIELECTRIC(OpenMM_GBSAOBCForce*& gbsa, const double& d)
 {   OpenMM_GBSAOBCForce_setSoluteDielectric(gbsa,d); }
 
 // addParticle
@@ -527,7 +655,9 @@ void OpenMM_GBSAOBCForce_addParticle(OpenMM_GBSAOBCForce* gbsa,
 void openmm_gbsaobcforce_addparticle_(OpenMM_GBSAOBCForce*& gbsa, 
                                       const double& charge, const double& radiusInNm, const double& scalingFactor)
 {   OpenMM_GBSAOBCForce_addParticle(gbsa,charge, radiusInNm, scalingFactor); }
-
+void OPENMM_GBSAOBCFORCE_ADDPARTICLE(OpenMM_GBSAOBCForce*& gbsa, 
+                                     const double& charge, const double& radiusInNm, const double& scalingFactor)
+{   OpenMM_GBSAOBCForce_addParticle(gbsa,charge, radiusInNm, scalingFactor); }
 
     ///////////////////////////////
     // OpenMM::HarmonicBondForce //
@@ -701,10 +831,14 @@ void OpenMM_Integrator_step(OpenMM_Integrator* integ, int numSteps)
 {    ((Integrator*)integ)->step(numSteps); }
 void openmm_integrator_step_(OpenMM_Integrator* const& integ, int& numSteps) 
 {    OpenMM_Integrator_step(integ, numSteps); }
+void OPENMM_INTEGRATOR_STEP(OpenMM_Integrator* const& integ, int& numSteps) 
+{    OpenMM_Integrator_step(integ, numSteps); }
 
 void OpenMM_Integrator_destroy(OpenMM_Integrator* doomed) 
 {   delete ((Integrator*)doomed); }
 void openmm_integrator_destroy_(OpenMM_Integrator*& doomed)
+{   OpenMM_Integrator_destroy(doomed); doomed = 0; }
+void OPENMM_INTEGRATOR_DESTROY(OpenMM_Integrator*& doomed)
 {   OpenMM_Integrator_destroy(doomed); doomed = 0; }
 
     // OpenMM::VerletIntegrator
@@ -712,36 +846,51 @@ OpenMM_VerletIntegrator* OpenMM_VerletIntegrator_create(double stepSzInPs)
 {   return (OpenMM_VerletIntegrator*)new VerletIntegrator(stepSzInPs); }
 void openmm_verletintegrator_create_(OpenMM_VerletIntegrator*& verlet, double& stepSzInPs)
 {   verlet = OpenMM_VerletIntegrator_create(stepSzInPs); }
+void OPENMM_VERLETINTEGRATOR_CREATE(OpenMM_VerletIntegrator*& verlet, double& stepSzInPs)
+{   verlet = OpenMM_VerletIntegrator_create(stepSzInPs); }
 
 void OpenMM_VerletIntegrator_destroy(OpenMM_VerletIntegrator* doomed) 
 {   delete (VerletIntegrator*)doomed; }
 void openmm_verletintegrator_destroy_(OpenMM_VerletIntegrator*& doomed)
+{   OpenMM_VerletIntegrator_destroy(doomed); doomed = 0; }
+void OPENMM_VERLETINTEGRATOR_DESTROY(OpenMM_VerletIntegrator*& doomed)
 {   OpenMM_VerletIntegrator_destroy(doomed); doomed = 0; }
 
 // Fortran only: recast VerletIntegrator as an Integrator.
 void openmm_verletintegrator_asintegrator_(OpenMM_VerletIntegrator* const& verlet,
 										   OpenMM_Integrator*&             integ)
 {   integ = (OpenMM_Integrator*)verlet; }
+void OPENMM_VERLETINTEGRATOR_ASINTEGRATOR(OpenMM_VerletIntegrator* const& verlet,
+										  OpenMM_Integrator*&             integ)
+{   integ = (OpenMM_Integrator*)verlet; }
 
 void OpenMM_VerletIntegrator_step(OpenMM_VerletIntegrator* verlet, int numSteps) 
 {   ((VerletIntegrator*)verlet)->step(numSteps); }
 void openmm_verletintegrator_step_(OpenMM_VerletIntegrator* const& verlet, int& numSteps)
 {   OpenMM_VerletIntegrator_step(verlet, numSteps); }
-
+void OPENMM_VERLETINTEGRATOR_STEP(OpenMM_VerletIntegrator* const& verlet, int& numSteps)
+{   OpenMM_VerletIntegrator_step(verlet, numSteps); }
 
     // OpenMM::LangevinIntegrator
 OpenMM_LangevinIntegrator* OpenMM_LangevinIntegrator_create(double temperature, double frictionInPerPs, double stepSzInPs) 
 {   return (OpenMM_LangevinIntegrator*)new LangevinIntegrator(temperature, frictionInPerPs, stepSzInPs); }
 void openmm_langevinintegrator_create_(OpenMM_LangevinIntegrator*& langevin, double& temperature, double& frictionInPerPs, double& stepSzInPs)
 {   langevin = OpenMM_LangevinIntegrator_create(temperature, frictionInPerPs, stepSzInPs); }
+void OPENMM_LANGEVININTEGRATOR_CREATE(OpenMM_LangevinIntegrator*& langevin, double& temperature, double& frictionInPerPs, double& stepSzInPs)
+{   langevin = OpenMM_LangevinIntegrator_create(temperature, frictionInPerPs, stepSzInPs); }
 
 void OpenMM_LangevinIntegrator_destroy(OpenMM_LangevinIntegrator* doomed) 
 {   delete (LangevinIntegrator*)doomed; }
 void openmm_langevinintegrator_destroy_(OpenMM_LangevinIntegrator*& doomed)
 {   OpenMM_LangevinIntegrator_destroy(doomed); doomed = 0; }
+void OPENMM_LANGEVININTEGRATOR_DESTROY(OpenMM_LangevinIntegrator*& doomed)
+{   OpenMM_LangevinIntegrator_destroy(doomed); doomed = 0; }
 
 // Fortran only: recast LangevinIntegrator as an Integrator.
 void openmm_langevinintegrator_asintegrator_(OpenMM_LangevinIntegrator* const& langevin,
+										     OpenMM_Integrator*&               integ)
+{   integ = (OpenMM_Integrator*)langevin; }
+void OPENMM_LANGEVININTEGRATOR_ASINTEGRATOR(OpenMM_LangevinIntegrator* const& langevin,
 										     OpenMM_Integrator*&               integ)
 {   integ = (OpenMM_Integrator*)langevin; }
 
@@ -749,50 +898,61 @@ void OpenMM_LangevinIntegrator_step(OpenMM_LangevinIntegrator* langevin, int num
 {   ((LangevinIntegrator*)langevin)->step(numSteps); }
 void openmm_langevinintegrator_step_(OpenMM_LangevinIntegrator* const& langevin, int& numSteps)
 {   OpenMM_LangevinIntegrator_step(langevin, numSteps); }
+void OPENMM_LANGEVININTEGRATOR_STEP(OpenMM_LangevinIntegrator* const& langevin, int& numSteps)
+{   OpenMM_LangevinIntegrator_step(langevin, numSteps); }
 
     /////////////////////
     // OpenMM::Context //
     /////////////////////
-OpenMM_Context* OpenMM_Context_create(OpenMM_System* sys, OpenMM_Integrator* integ) {
-    return (OpenMM_Context*)new OpenMM::OpenMMContext(*(System*)sys, *(Integrator*)integ);
-}
+
+// create
+OpenMM_Context* OpenMM_Context_create(OpenMM_System* sys, OpenMM_Integrator* integ) 
+{   return (OpenMM_Context*)new OpenMM::OpenMMContext(*(System*)sys, *(Integrator*)integ); }
 void openmm_context_create_(OpenMM_Context*& context, OpenMM_System*& sys, OpenMM_Integrator*& integ)
 {   context = OpenMM_Context_create(sys, integ); }
+void OPENMM_CONTEXT_CREATE(OpenMM_Context*& context, OpenMM_System*& sys, OpenMM_Integrator*& integ)
+{   context = OpenMM_Context_create(sys, integ); }
 
-void OpenMM_Context_destroy(OpenMM_Context* doomed) {
-    delete (OpenMMContext*)doomed;
-}
+// destroy
+void OpenMM_Context_destroy(OpenMM_Context* doomed) 
+{   delete (OpenMMContext*)doomed; }
 void openmm_context_destroy_(OpenMM_Context*& doomed) 
 {    OpenMM_Context_destroy(doomed); }
+void OPENMM_CONTEXT_DESTROY(OpenMM_Context*& doomed) 
+{    OpenMM_Context_destroy(doomed); }
 
-void OpenMM_Context_setPositions(OpenMM_Context* context, const OpenMM_Vec3Array* positions) {
-    ((OpenMMContext*)context)->setPositions(*(const std::vector<Vec3>*)positions);
-}
-void openmm_context_setpositions_(OpenMM_Context*& context, const OpenMM_Vec3Array* const& positions)
+// setPositions
+void OpenMM_Context_setPositions(OpenMM_Context* context, const OpenMM_Vec3Array* positions) 
+{   ((OpenMMContext*)context)->setPositions(*(const std::vector<Vec3>*)positions); }
+void openmm_context_setpositions_(OpenMM_Context* const& context, const OpenMM_Vec3Array* const& positions)
+{    OpenMM_Context_setPositions(context, positions); }
+void OPENMM_CONTEXT_SETPOSITIONS(OpenMM_Context* const& context, const OpenMM_Vec3Array* const& positions)
 {    OpenMM_Context_setPositions(context, positions); }
 
-void OpenMM_Context_setVelocities(OpenMM_Context* context, const OpenMM_Vec3Array* velocities) {
-    ((OpenMMContext*)context)->setVelocities(*(const std::vector<Vec3>*)velocities);
-}
-void openmm_context_setvelocities_(OpenMM_Context*& context, const OpenMM_Vec3Array* const& velocities)
+void OpenMM_Context_setVelocities(OpenMM_Context* context, const OpenMM_Vec3Array* velocities) 
+{   ((OpenMMContext*)context)->setVelocities(*(const std::vector<Vec3>*)velocities); }
+void openmm_context_setvelocities_(OpenMM_Context* const& context, const OpenMM_Vec3Array* const& velocities)
+{    OpenMM_Context_setVelocities(context, velocities); }
+void OPENMM_CONTEXT_SETVELOCITIES(OpenMM_Context* const& context, const OpenMM_Vec3Array* const& velocities)
 {    OpenMM_Context_setVelocities(context, velocities); }
 
 // Note that a Context creates the OpenMM::State object, but you have to destroy
 // it using OpenMM_State_destroy.
-OpenMM_State* OpenMM_Context_createState(const OpenMM_Context* context, int types) {
-    return (OpenMM_State*)new State(((OpenMMContext*)context)->getState(types));
-}
+OpenMM_State* OpenMM_Context_createState(const OpenMM_Context* context, int types) 
+{   return (OpenMM_State*)new State(((OpenMMContext*)context)->getState(types)); }
 void openmm_context_createstate_(const OpenMM_Context* const& context, const int& types, OpenMM_State*& state)
 {   state=OpenMM_Context_createState(context, types); }
+void OPENMM_CONTEXT_CREATESTATE(const OpenMM_Context* const& context, const int& types, OpenMM_State*& state)
+{   state=OpenMM_Context_createState(context, types); }
 
-// Return a reference to a static null terminated C string containing the
+// getPlatformName C: Return a reference to a static null terminated C string containing the
 // Platform name.
 const char* OpenMM_Context_getPlatformName(const OpenMM_Context* context) {
     static std::string platform;
     platform = ((const OpenMMContext*)context)->getPlatform().getName();
     return platform.c_str();
 }
-// Return a blank-padded Fortran string containing the Platform name. There
+// getPlatformName Fortran: Return a blank-padded Fortran string containing the Platform name. There
 // is no terminating null.
 void openmm_context_getplatformname_(const OpenMM_Context* const& context, char* buf, int len) {
     const std::string name = ((const OpenMMContext*)context)->getPlatform().getName();
@@ -800,44 +960,68 @@ void openmm_context_getplatformname_(const OpenMM_Context* const& context, char*
     for (int i=0; i<minLen; ++i) buf[i] = name[i];
     for (int i=minLen; i<len; ++i) buf[i] = ' ';
 }
+void OPENMM_CONTEXT_GETPLATFORMNAME(const OpenMM_Context* const& context, char* buf, int len)
+{    openmm_context_getplatformname_(context,buf,len); }
 
     ///////////////////
     // OpenMM::State //
     ///////////////////
+
+// States are created by Context, see above.
+
+// destroy
 void OpenMM_State_destroy(OpenMM_State* doomed) 
 {   delete (State*)doomed; }
 void openmm_state_destroy_(OpenMM_State*& doomed)
 {   OpenMM_State_destroy(doomed); doomed=0; }
+void OPENMM_STATE_DESTROY(OpenMM_State*& doomed)
+{   OpenMM_State_destroy(doomed); doomed=0; }
 
+// getTime
 double OpenMM_State_getTime(const OpenMM_State* state) 
 {   return ((const State*)state)->getTime(); }
 double openmm_state_gettime_(const OpenMM_State* const& state)
 {   return OpenMM_State_getTime(state); }
+double OPENMM_STATE_GETTIME(const OpenMM_State* const& state)
+{   return OpenMM_State_getTime(state); }
 
+// getPotentialEnergy
 double OpenMM_State_getPotentialEnergy(const OpenMM_State* state) 
 {   return ((const State*)state)->getPotentialEnergy(); }
 double openmm_state_getpotentialenergy_(const OpenMM_State* const& state)
 {   return OpenMM_State_getPotentialEnergy(state); }
+double OPENMM_STATE_GETPOTENTIALENERGY(const OpenMM_State* const& state)
+{   return OpenMM_State_getPotentialEnergy(state); }
 
+// getKineticEnergy
 double OpenMM_State_getKineticEnergy(const OpenMM_State* state) 
 {   return ((const State*)state)->getKineticEnergy(); }
 double openmm_state_getkineticenergy_(const OpenMM_State* const& state)
 {   return OpenMM_State_getKineticEnergy(state); }
+double OPENMM_STATE_GETKINETICENERGY(const OpenMM_State* const& state)
+{   return OpenMM_State_getKineticEnergy(state); }
 
+// getPositions
 const OpenMM_Vec3Array* OpenMM_State_getPositions(const OpenMM_State* state) 
 {   return (const OpenMM_Vec3Array*)&((const State*)state)->getPositions(); }
 void openmm_state_getpositions_(const OpenMM_State* const& state, const OpenMM_Vec3Array*& positions)
 {   positions = OpenMM_State_getPositions(state); }
+void OPENMM_STATE_GETPOSITIONS(const OpenMM_State* const& state, const OpenMM_Vec3Array*& positions)
+{   positions = OpenMM_State_getPositions(state); }
 
+// getVelocities
 const OpenMM_Vec3Array*  OpenMM_State_getVelocities(const OpenMM_State* state) 
 {   return (const OpenMM_Vec3Array*)&((const State*)state)->getVelocities(); }
 void openmm_state_getvelocities_(const OpenMM_State* const& state, const OpenMM_Vec3Array*& velocities)
 {   velocities = OpenMM_State_getVelocities(state); }
-
+void OPENMM_STATE_GETVELOCITIES(const OpenMM_State* const& state, const OpenMM_Vec3Array*& velocities)
+{   velocities = OpenMM_State_getVelocities(state); }
 
     ///////////////////////////
     // OpenMM_RuntimeObjects //
     ///////////////////////////
+
+// create
 OpenMM_RuntimeObjects* OpenMM_RuntimeObjects_create() {
     OpenMM_RuntimeObjects* ommrt = new OpenMM_RuntimeObjects();
     ommrt->system     = 0;
@@ -847,46 +1031,75 @@ OpenMM_RuntimeObjects* OpenMM_RuntimeObjects_create() {
 }
 void openmm_runtimeobjects_create_(OpenMM_RuntimeObjects*& ommrt) 
 {   ommrt = OpenMM_RuntimeObjects_create(); }
+void OPENMM_RUNTIMEOBJECTS_CREATE(OpenMM_RuntimeObjects*& ommrt) 
+{   ommrt = OpenMM_RuntimeObjects_create(); }
 
+// destroy
+void OpenMM_RuntimeObjects_destroy(OpenMM_RuntimeObjects* ommrt)
+{    OpenMM_RuntimeObjects_clear(ommrt); delete ommrt; }
+void openmm_runtimeobjects_destroy_(OpenMM_RuntimeObjects*& ommrt)
+{    OpenMM_RuntimeObjects_destroy(ommrt); ommrt = 0; }
+void OPENMM_RUNTIMEOBJECTS_DESTROY(OpenMM_RuntimeObjects*& ommrt)
+{    OpenMM_RuntimeObjects_destroy(ommrt); ommrt = 0; }
+
+// clear
 void OpenMM_RuntimeObjects_clear(OpenMM_RuntimeObjects* ommrt) {
     if (!ommrt) return;
     OpenMM_Context_destroy(ommrt->context);       ommrt->context    = 0;
     OpenMM_Integrator_destroy(ommrt->integrator); ommrt->integrator = 0;
     OpenMM_System_destroy(ommrt->system);         ommrt->system     = 0;
 }
-void openmm_runtimeobjects_clear_(OpenMM_RuntimeObjects*& ommrt)
+void openmm_runtimeobjects_clear_(OpenMM_RuntimeObjects* const& ommrt)
+{   OpenMM_RuntimeObjects_clear(ommrt); }
+void OPENMM_RUNTIMEOBJECTS_CLEAR(OpenMM_RuntimeObjects* const& ommrt)
 {   OpenMM_RuntimeObjects_clear(ommrt); }
 
-void OpenMM_RuntimeObjects_destroy(OpenMM_RuntimeObjects* ommrt)
-{    OpenMM_RuntimeObjects_clear(ommrt); delete ommrt; }
-void openmm_runtimeobjects_destroy_(OpenMM_RuntimeObjects*& ommrt)
-{    OpenMM_RuntimeObjects_destroy(ommrt); ommrt = 0; }
 
+// setSystem
 void OpenMM_RuntimeObjects_setSystem(OpenMM_RuntimeObjects* ommrt, OpenMM_System* sys)
 {    OpenMM_System_destroy(ommrt->system); ommrt->system = sys; }
-void openmm_runtimeobjects_setsystem_(OpenMM_RuntimeObjects*& ommrt, OpenMM_System*& sys)
+void openmm_runtimeobjects_setsystem_(OpenMM_RuntimeObjects* const& ommrt, OpenMM_System* const& sys)
 {    OpenMM_RuntimeObjects_setSystem(ommrt, sys); }
+void OPENMM_RUNTIMEOBJECTS_SETSYSTEM(OpenMM_RuntimeObjects* const& ommrt, OpenMM_System* const& sys)
+{    OpenMM_RuntimeObjects_setSystem(ommrt, sys); }
+
+// getSystem
 OpenMM_System* OpenMM_RuntimeObjects_getSystem(OpenMM_RuntimeObjects* ommrt)
 {    return ommrt->system; }
-void openmm_runtimeobjects_getsystem_(OpenMM_RuntimeObjects*& ommrt, OpenMM_System*& sys)
+void openmm_runtimeobjects_getsystem_(OpenMM_RuntimeObjects* const& ommrt, OpenMM_System*& sys)
+{    sys = OpenMM_RuntimeObjects_getSystem(ommrt); }
+void OPENMM_RUNTIMEOBJECTS_GETSYSTEM(OpenMM_RuntimeObjects* const& ommrt, OpenMM_System*& sys)
 {    sys = OpenMM_RuntimeObjects_getSystem(ommrt); }
 
+// setIntegrator
 void OpenMM_RuntimeObjects_setIntegrator(OpenMM_RuntimeObjects* ommrt, OpenMM_Integrator* integ)
 {    OpenMM_Integrator_destroy(ommrt->integrator); ommrt->integrator = integ; }
-void openmm_runtimeobjects_setintegrator_(OpenMM_RuntimeObjects*& ommrt, OpenMM_Integrator*& integ)
+void openmm_runtimeobjects_setintegrator_(OpenMM_RuntimeObjects* const& ommrt, OpenMM_Integrator* const& integ)
 {    OpenMM_RuntimeObjects_setIntegrator(ommrt, integ); }
+void OPENMM_RUNTIMEOBJECTS_SETINTEGRATOR(OpenMM_RuntimeObjects* const& ommrt, OpenMM_Integrator* const& integ)
+{    OpenMM_RuntimeObjects_setIntegrator(ommrt, integ); }
+
+// getIntegrator
 OpenMM_Integrator* OpenMM_RuntimeObjects_getIntegrator(OpenMM_RuntimeObjects* ommrt)
 {    return ommrt->integrator; }
-void openmm_runtimeobjects_getintegrator_(OpenMM_RuntimeObjects*& ommrt, OpenMM_Integrator*& integ)
+void openmm_runtimeobjects_getintegrator_(OpenMM_RuntimeObjects* const& ommrt, OpenMM_Integrator*& integ)
+{    integ = OpenMM_RuntimeObjects_getIntegrator(ommrt); }
+void OPENMM_RUNTIMEOBJECTS_GETINTEGRATOR(OpenMM_RuntimeObjects* const& ommrt, OpenMM_Integrator*& integ)
 {    integ = OpenMM_RuntimeObjects_getIntegrator(ommrt); }
 
 void OpenMM_RuntimeObjects_setContext(OpenMM_RuntimeObjects* ommrt, OpenMM_Context* context)
 {    OpenMM_Context_destroy(ommrt->context); ommrt->context = context; }
-void openmm_runtimeobjects_setcontext_(OpenMM_RuntimeObjects*& ommrt, OpenMM_Context*& context)
+void openmm_runtimeobjects_setcontext_(OpenMM_RuntimeObjects* const& ommrt, OpenMM_Context*& context)
 {    OpenMM_RuntimeObjects_setContext(ommrt, context); }
+void OPENMM_RUNTIMEOBJECTS_SETCONTEXT(OpenMM_RuntimeObjects* const& ommrt, OpenMM_Context*& context)
+{    OpenMM_RuntimeObjects_setContext(ommrt, context); }
+
+// getContext
 OpenMM_Context* OpenMM_RuntimeObjects_getContext(OpenMM_RuntimeObjects* ommrt)
 {    return ommrt->context; }
-void openmm_runtimeobjects_getcontext_(OpenMM_RuntimeObjects*& ommrt, OpenMM_Context*& context)
+void openmm_runtimeobjects_getcontext_(OpenMM_RuntimeObjects* const& ommrt, OpenMM_Context*& context)
+{    context = OpenMM_RuntimeObjects_getContext(ommrt); }
+void OPENMM_RUNTIMEOBJECTS_GETCONTEXT(OpenMM_RuntimeObjects* const& ommrt, OpenMM_Context*& context)
 {    context = OpenMM_RuntimeObjects_getContext(ommrt); }
 
 } // extern "C"

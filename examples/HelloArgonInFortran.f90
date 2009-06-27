@@ -21,7 +21,7 @@ PROGRAM HelloArgon
     type(OpenMM_State)            state
     type(OpenMM_String)           dirName
     real*8                        timeInPs
-    integer                       a, frameNum
+    integer*4                     a, ix, frameNum
     character*10                  platformName
 
     ! Load any shared libraries containing GPU implementations.
@@ -46,7 +46,7 @@ PROGRAM HelloArgon
         call OpenMM_System_addParticle(system, 39.95d0) !mass of Ar, grams/mole
 
         ! charge, L-J sigma (nm), well depth (kJ) (vdWRad(Ar)=.188 nm)
-        call OpenMM_NonbondedForce_addParticle(nonbond, 0d0, 0.3350d0, 0.996d0)
+        ix = OpenMM_NonbondedForce_addParticle(nonbond, 0d0, 0.3350d0, 0.996d0)
     end do
 
     ! Create particular integrator, and recast to generic one.
