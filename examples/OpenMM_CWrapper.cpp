@@ -649,15 +649,15 @@ void OPENMM_GBSAOBCFORCE_SETSOLUTEDIELECTRIC(OpenMM_GBSAOBCForce*& gbsa, const d
 {   OpenMM_GBSAOBCForce_setSoluteDielectric(gbsa,d); }
 
 // addParticle
-void OpenMM_GBSAOBCForce_addParticle(OpenMM_GBSAOBCForce* gbsa, 
+int OpenMM_GBSAOBCForce_addParticle(OpenMM_GBSAOBCForce* gbsa, 
                                      double charge, double radiusInNm, double scalingFactor)
-{   ((GBSAOBCForce*)gbsa)->addParticle(charge, radiusInNm, scalingFactor); }
-void openmm_gbsaobcforce_addparticle_(OpenMM_GBSAOBCForce*& gbsa, 
+{   return ((GBSAOBCForce*)gbsa)->addParticle(charge, radiusInNm, scalingFactor); }
+int openmm_gbsaobcforce_addparticle_(OpenMM_GBSAOBCForce*& gbsa, 
                                       const double& charge, const double& radiusInNm, const double& scalingFactor)
-{   OpenMM_GBSAOBCForce_addParticle(gbsa,charge, radiusInNm, scalingFactor); }
-void OPENMM_GBSAOBCFORCE_ADDPARTICLE(OpenMM_GBSAOBCForce*& gbsa, 
+{   return OpenMM_GBSAOBCForce_addParticle(gbsa,charge, radiusInNm, scalingFactor); }
+int OPENMM_GBSAOBCFORCE_ADDPARTICLE(OpenMM_GBSAOBCForce*& gbsa, 
                                      const double& charge, const double& radiusInNm, const double& scalingFactor)
-{   OpenMM_GBSAOBCForce_addParticle(gbsa,charge, radiusInNm, scalingFactor); }
+{   return OpenMM_GBSAOBCForce_addParticle(gbsa,charge, radiusInNm, scalingFactor); }
 
     ///////////////////////////////
     // OpenMM::HarmonicBondForce //
@@ -827,6 +827,12 @@ void OPENMM_PERIODICTORSIONFORCE_GETTORSIONPARAMETERS(const OpenMM_PeriodicTorsi
     ////////////////////////
     // OpenMM::Integrator //
     ////////////////////////
+
+// This is the generic Integrator class so there is no "create" method. Instead,
+// you always create an object of a concrete class like VerletIntegrator and
+// then cast it to the generic Integrator.
+
+// step
 void OpenMM_Integrator_step(OpenMM_Integrator* integ, int numSteps) 
 {    ((Integrator*)integ)->step(numSteps); }
 void openmm_integrator_step_(OpenMM_Integrator* const& integ, int& numSteps) 
@@ -834,6 +840,7 @@ void openmm_integrator_step_(OpenMM_Integrator* const& integ, int& numSteps)
 void OPENMM_INTEGRATOR_STEP(OpenMM_Integrator* const& integ, int& numSteps) 
 {    OpenMM_Integrator_step(integ, numSteps); }
 
+// destroy
 void OpenMM_Integrator_destroy(OpenMM_Integrator* doomed) 
 {   delete ((Integrator*)doomed); }
 void openmm_integrator_destroy_(OpenMM_Integrator*& doomed)
@@ -842,6 +849,8 @@ void OPENMM_INTEGRATOR_DESTROY(OpenMM_Integrator*& doomed)
 {   OpenMM_Integrator_destroy(doomed); doomed = 0; }
 
     // OpenMM::VerletIntegrator
+
+// create
 OpenMM_VerletIntegrator* OpenMM_VerletIntegrator_create(double stepSzInPs) 
 {   return (OpenMM_VerletIntegrator*)new VerletIntegrator(stepSzInPs); }
 void openmm_verletintegrator_create_(OpenMM_VerletIntegrator*& verlet, double& stepSzInPs)
@@ -849,6 +858,7 @@ void openmm_verletintegrator_create_(OpenMM_VerletIntegrator*& verlet, double& s
 void OPENMM_VERLETINTEGRATOR_CREATE(OpenMM_VerletIntegrator*& verlet, double& stepSzInPs)
 {   verlet = OpenMM_VerletIntegrator_create(stepSzInPs); }
 
+// destroy
 void OpenMM_VerletIntegrator_destroy(OpenMM_VerletIntegrator* doomed) 
 {   delete (VerletIntegrator*)doomed; }
 void openmm_verletintegrator_destroy_(OpenMM_VerletIntegrator*& doomed)
@@ -864,6 +874,7 @@ void OPENMM_VERLETINTEGRATOR_ASINTEGRATOR(OpenMM_VerletIntegrator* const& verlet
 										  OpenMM_Integrator*&             integ)
 {   integ = (OpenMM_Integrator*)verlet; }
 
+// step
 void OpenMM_VerletIntegrator_step(OpenMM_VerletIntegrator* verlet, int numSteps) 
 {   ((VerletIntegrator*)verlet)->step(numSteps); }
 void openmm_verletintegrator_step_(OpenMM_VerletIntegrator* const& verlet, int& numSteps)
@@ -872,6 +883,8 @@ void OPENMM_VERLETINTEGRATOR_STEP(OpenMM_VerletIntegrator* const& verlet, int& n
 {   OpenMM_VerletIntegrator_step(verlet, numSteps); }
 
     // OpenMM::LangevinIntegrator
+
+// create
 OpenMM_LangevinIntegrator* OpenMM_LangevinIntegrator_create(double temperature, double frictionInPerPs, double stepSzInPs) 
 {   return (OpenMM_LangevinIntegrator*)new LangevinIntegrator(temperature, frictionInPerPs, stepSzInPs); }
 void openmm_langevinintegrator_create_(OpenMM_LangevinIntegrator*& langevin, double& temperature, double& frictionInPerPs, double& stepSzInPs)
@@ -879,6 +892,7 @@ void openmm_langevinintegrator_create_(OpenMM_LangevinIntegrator*& langevin, dou
 void OPENMM_LANGEVININTEGRATOR_CREATE(OpenMM_LangevinIntegrator*& langevin, double& temperature, double& frictionInPerPs, double& stepSzInPs)
 {   langevin = OpenMM_LangevinIntegrator_create(temperature, frictionInPerPs, stepSzInPs); }
 
+// destroy
 void OpenMM_LangevinIntegrator_destroy(OpenMM_LangevinIntegrator* doomed) 
 {   delete (LangevinIntegrator*)doomed; }
 void openmm_langevinintegrator_destroy_(OpenMM_LangevinIntegrator*& doomed)
@@ -886,7 +900,7 @@ void openmm_langevinintegrator_destroy_(OpenMM_LangevinIntegrator*& doomed)
 void OPENMM_LANGEVININTEGRATOR_DESTROY(OpenMM_LangevinIntegrator*& doomed)
 {   OpenMM_LangevinIntegrator_destroy(doomed); doomed = 0; }
 
-// Fortran only: recast LangevinIntegrator as an Integrator.
+// asIntegrator Fortran only: recast LangevinIntegrator as an Integrator.
 void openmm_langevinintegrator_asintegrator_(OpenMM_LangevinIntegrator* const& langevin,
 										     OpenMM_Integrator*&               integ)
 {   integ = (OpenMM_Integrator*)langevin; }
@@ -894,6 +908,7 @@ void OPENMM_LANGEVININTEGRATOR_ASINTEGRATOR(OpenMM_LangevinIntegrator* const& la
 										     OpenMM_Integrator*&               integ)
 {   integ = (OpenMM_Integrator*)langevin; }
 
+// step
 void OpenMM_LangevinIntegrator_step(OpenMM_LangevinIntegrator* langevin, int numSteps) 
 {   ((LangevinIntegrator*)langevin)->step(numSteps); }
 void openmm_langevinintegrator_step_(OpenMM_LangevinIntegrator* const& langevin, int& numSteps)
@@ -929,6 +944,7 @@ void openmm_context_setpositions_(OpenMM_Context* const& context, const OpenMM_V
 void OPENMM_CONTEXT_SETPOSITIONS(OpenMM_Context* const& context, const OpenMM_Vec3Array* const& positions)
 {    OpenMM_Context_setPositions(context, positions); }
 
+// setVelocities
 void OpenMM_Context_setVelocities(OpenMM_Context* context, const OpenMM_Vec3Array* velocities) 
 {   ((OpenMMContext*)context)->setVelocities(*(const std::vector<Vec3>*)velocities); }
 void openmm_context_setvelocities_(OpenMM_Context* const& context, const OpenMM_Vec3Array* const& velocities)
@@ -936,6 +952,7 @@ void openmm_context_setvelocities_(OpenMM_Context* const& context, const OpenMM_
 void OPENMM_CONTEXT_SETVELOCITIES(OpenMM_Context* const& context, const OpenMM_Vec3Array* const& velocities)
 {    OpenMM_Context_setVelocities(context, velocities); }
 
+// createState
 // Note that a Context creates the OpenMM::State object, but you have to destroy
 // it using OpenMM_State_destroy.
 OpenMM_State* OpenMM_Context_createState(const OpenMM_Context* context, int types) 
@@ -962,6 +979,7 @@ void openmm_context_getplatformname_(const OpenMM_Context* const& context, char*
 }
 void OPENMM_CONTEXT_GETPLATFORMNAME(const OpenMM_Context* const& context, char* buf, int len)
 {    openmm_context_getplatformname_(context,buf,len); }
+
 
     ///////////////////
     // OpenMM::State //
@@ -1017,6 +1035,8 @@ void openmm_state_getvelocities_(const OpenMM_State* const& state, const OpenMM_
 void OPENMM_STATE_GETVELOCITIES(const OpenMM_State* const& state, const OpenMM_Vec3Array*& velocities)
 {   velocities = OpenMM_State_getVelocities(state); }
 
+
+
     ///////////////////////////
     // OpenMM_RuntimeObjects //
     ///////////////////////////
@@ -1034,14 +1054,6 @@ void openmm_runtimeobjects_create_(OpenMM_RuntimeObjects*& ommrt)
 void OPENMM_RUNTIMEOBJECTS_CREATE(OpenMM_RuntimeObjects*& ommrt) 
 {   ommrt = OpenMM_RuntimeObjects_create(); }
 
-// destroy
-void OpenMM_RuntimeObjects_destroy(OpenMM_RuntimeObjects* ommrt)
-{    OpenMM_RuntimeObjects_clear(ommrt); delete ommrt; }
-void openmm_runtimeobjects_destroy_(OpenMM_RuntimeObjects*& ommrt)
-{    OpenMM_RuntimeObjects_destroy(ommrt); ommrt = 0; }
-void OPENMM_RUNTIMEOBJECTS_DESTROY(OpenMM_RuntimeObjects*& ommrt)
-{    OpenMM_RuntimeObjects_destroy(ommrt); ommrt = 0; }
-
 // clear
 void OpenMM_RuntimeObjects_clear(OpenMM_RuntimeObjects* ommrt) {
     if (!ommrt) return;
@@ -1054,6 +1066,13 @@ void openmm_runtimeobjects_clear_(OpenMM_RuntimeObjects* const& ommrt)
 void OPENMM_RUNTIMEOBJECTS_CLEAR(OpenMM_RuntimeObjects* const& ommrt)
 {   OpenMM_RuntimeObjects_clear(ommrt); }
 
+// destroy
+void OpenMM_RuntimeObjects_destroy(OpenMM_RuntimeObjects* ommrt)
+{    OpenMM_RuntimeObjects_clear(ommrt); delete ommrt; }
+void openmm_runtimeobjects_destroy_(OpenMM_RuntimeObjects*& ommrt)
+{    OpenMM_RuntimeObjects_destroy(ommrt); ommrt = 0; }
+void OPENMM_RUNTIMEOBJECTS_DESTROY(OpenMM_RuntimeObjects*& ommrt)
+{    OpenMM_RuntimeObjects_destroy(ommrt); ommrt = 0; }
 
 // setSystem
 void OpenMM_RuntimeObjects_setSystem(OpenMM_RuntimeObjects* ommrt, OpenMM_System* sys)

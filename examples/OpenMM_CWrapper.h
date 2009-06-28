@@ -229,7 +229,7 @@ extern OpenMM_GBSAOBCForce* OpenMM_GBSAOBCForce_create();
 extern void OpenMM_GBSAOBCForce_destroy             (OpenMM_GBSAOBCForce*);
 extern void OpenMM_GBSAOBCForce_setSolventDielectric(OpenMM_GBSAOBCForce*, double);
 extern void OpenMM_GBSAOBCForce_setSoluteDielectric (OpenMM_GBSAOBCForce*, double);
-extern void OpenMM_GBSAOBCForce_addParticle(OpenMM_GBSAOBCForce*,
+extern int  OpenMM_GBSAOBCForce_addParticle(OpenMM_GBSAOBCForce*,
                                             double charge,
                                             double radiusInNm,
                                             double scalingFactor);

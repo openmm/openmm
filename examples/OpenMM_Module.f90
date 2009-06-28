@@ -24,67 +24,79 @@
 ! data structures here. You never have to do anything with those 
 ! pointers to deal with these objects; they get created by the API
 ! for you and you just pass them back to the API when you want to
-! do something with them.
+! do something with them. We use integer*8 to hold the pointers
+! since that is big enough to work on any machine; we don't 
+! necessarily use the whole thing. If you are working in Fortran 77
+! (which doesn't have "type" declarations) you can simply use
+! an integer*8 instead; you won't get the type checking provided
+! here but it will still work.
+!
+! We are also making the assumption here that a C "int" is seen from
+! Fortran as an integer*4 (32 bit integer) and that a C double is
+! a real*8 (64 bit real). That is correct for all the systems we've
+! tried; if it isn't on yours you'll need to make some changes.
 MODULE OpenMM_Types
     implicit none
 
     ! The System, Integrator, and Context must persist between calls.
     ! They can be conveniently grouped in a RuntimeObjects structure.
     type OpenMM_System
-        character, pointer :: handle => NULL()
+        integer*8 :: handle = 0
     end type
     ! This is the generic Integrator type; it represents one of 
     ! the concrete integrators like Verlet or Langevin.
     type OpenMM_Integrator
-        character, pointer :: handle => NULL()
+        integer*8 :: handle = 0
     end type
+    ! A Context connects a System and an Integrator and manages
+    ! the run-time State.
     type OpenMM_Context
-        character, pointer :: handle => NULL()
+        integer*8 :: handle = 0
     end type
 
     ! This data structure can be used to hold the set of OpenMM objects
     ! that must persist from call to call while running a simulation.
     ! It contains an OpenMM_System, _Integrator, and _Context.
     type OpenMM_RuntimeObjects
-        character, pointer :: handle => NULL()
+        integer*8 :: handle = 0
     end type
 
     type OpenMM_State
-        character, pointer :: handle => NULL()
+        integer*8 :: handle = 0
     end type
     type OpenMM_Vec3Array
-        character, pointer :: handle => NULL()
+        integer*8 :: handle = 0
     end type
     type OpenMM_BondArray
-        character, pointer :: handle => NULL()
+        integer*8 :: handle = 0
     end type
     type OpenMM_String
-        character, pointer :: handle => NULL()
+        integer*8 :: handle = 0
     end type
     ! This is the generic Force type.
     type OpenMM_Force
-        character, pointer :: handle => NULL()
+        integer*8 :: handle = 0
     end type
     type OpenMM_NonbondedForce
-        character, pointer :: handle => NULL()
+        integer*8 :: handle = 0
     end type
     type OpenMM_GBSAOBCForce
-        character, pointer :: handle => NULL()
+        integer*8 :: handle = 0
     end type
     type OpenMM_HarmonicBondForce
-        character, pointer :: handle => NULL()
+        integer*8 :: handle = 0
     end type
     type OpenMM_HarmonicAngleForce
-        character, pointer :: handle => NULL()
+        integer*8 :: handle = 0
     end type
     type OpenMM_PeriodicTorsionForce
-        character, pointer :: handle => NULL()
+        integer*8 :: handle = 0
     end type
     type OpenMM_VerletIntegrator
-        character, pointer :: handle => NULL()
+        integer*8 :: handle = 0
     end type
     type OpenMM_LangevinIntegrator
-        character, pointer :: handle => NULL()
+        integer*8 :: handle = 0
     end type
 
     ! OpenMM::State enumerations
@@ -105,16 +117,16 @@ MODULE OpenMM_Types
     real*8 OpenMM_NmPerAngstrom, OpenMM_AngstromsPerNm, OpenMM_PsPerFs, OpenMM_FsPerPs
     real*8 OpenMM_KJPerKcal, OpenMM_KcalPerKJ, OpenMM_RadiansPerDegree, OpenMM_DegreesPerRadian
     real*8 OpenMM_SigmaPerVdwRadius
-    parameter(OpenMM_NmPerAngstrom=0.1, OpenMM_AngstromsPerNm=10.0)
-    parameter(OpenMM_PsPerFs=0.001, OpenMM_FsPerPs=1000.0)
-    parameter(OpenMM_KJPerKcal=4.184, OpenMM_KcalPerKJ=1.0/4.184)
-    parameter(OpenMM_RadiansPerDegree=3.1415926535897932385/180.0)
-    parameter(OpenMM_DegreesPerRadian=180.0/3.1415926535897932385)
-    parameter(OpenMM_SigmaPerVdwRadius=1.78179743628068)
+    parameter(OpenMM_NmPerAngstrom=0.1d0, OpenMM_AngstromsPerNm=10d0)
+    parameter(OpenMM_PsPerFs=0.001d0, OpenMM_FsPerPs=1000d0)
+    parameter(OpenMM_KJPerKcal=4.184d0, OpenMM_KcalPerKJ=1d0/4.184d0)
+    parameter(OpenMM_RadiansPerDegree=3.1415926535897932385d0/180d0)
+    parameter(OpenMM_DegreesPerRadian=180d0/3.1415926535897932385d0)
+    parameter(OpenMM_SigmaPerVdwRadius=1.78179743628068d0)
 
-end module OpenMM_Types
+END MODULE OpenMM_Types
 
-module OpenMM
+MODULE OpenMM
     use OpenMM_Types; implicit none
     interface
         ! -------------------------
@@ -132,8 +144,8 @@ module OpenMM
         end
         function OpenMM_Vec3Array_size(array)
             use OpenMM_Types; implicit none
-            integer*4 OpenMM_Vec3Array_size
             type (OpenMM_Vec3Array) array
+            integer*4 OpenMM_Vec3Array_size
         end
         subroutine OpenMM_Vec3Array_resize(array, n)
             use OpenMM_Types; implicit none
@@ -217,14 +229,12 @@ module OpenMM
         subroutine OpenMM_BondArray_get(array, i, p1, p2)
             use OpenMM_Types; implicit none
             type (OpenMM_BondArray) array
-            integer*4 i
-            integer*4 p1, p2
+            integer*4 i, p1, p2
         end
         subroutine OpenMM_BondArray_set(array, i, p1, p2)
             use OpenMM_Types; implicit none
             type (OpenMM_BondArray) array
-            integer*4 i
-            integer*4 p1, p2
+            integer*4 i, p1, p2
         end
 
         ! -------------------------
@@ -244,8 +254,8 @@ module OpenMM
         end
         function OpenMM_String_length(string)
             use OpenMM_Types; implicit none
-            integer*4 OpenMM_String_length
             type (OpenMM_String) string
+            integer*4 OpenMM_String_length
         end
         subroutine OpenMM_String_get(string, fstring)
             use OpenMM_Types; implicit none
@@ -282,17 +292,88 @@ module OpenMM
             use OpenMM_Types; implicit none
             type (OpenMM_System) system
         end
-        subroutine OpenMM_System_addForce(system, force)
+
+        ! Returns the particle index in case you want it.
+        function OpenMM_System_addParticle(system, mass)
+            use OpenMM_Types; implicit none
+            type (OpenMM_System) system
+            real*8    mass
+            integer*4 OpenMM_System_addParticle
+        end
+        subroutine OpenMM_System_setParticleMass(system, ix, mass)
+            use OpenMM_Types; implicit none
+            type (OpenMM_System) system
+            integer*4 ix ! particle index
+            real*8    mass
+        end        
+        function OpenMM_System_getParticleMass(system, ix)
+            use OpenMM_Types; implicit none
+            type (OpenMM_System) system
+            integer*4 ix ! particle index
+            real*8    OpenMM_System_getParticleMass
+        end        
+        
+        ! Returns the constraint index in case you want it.
+        function OpenMM_System_addConstraint(system, p1, p2, distance)
+            use OpenMM_Types; implicit none
+            type (OpenMM_System) system
+            integer*4 p1, p2
+            real*8    distance
+            integer*4 OpenMM_System_addConstraint
+        end
+        subroutine OpenMM_System_setConstraintParameters(system, ix, p1, p2, distance)
+            use OpenMM_Types; implicit none
+            type (OpenMM_System) system
+            integer*4 ix, p1, p2
+            real*8    distance
+        end
+        subroutine OpenMM_System_getConstraintParameters(system, ix, p1, p2, distance)
+            use OpenMM_Types; implicit none
+            type (OpenMM_System) system
+            integer*4 ix, p1, p2
+            real*8    distance
+        end
+                                
+        ! Returns the force index in case you want it.
+        function OpenMM_System_addForce(system, force)
             use OpenMM_Types; implicit none
             type (OpenMM_System) system
             type (OpenMM_Force) force
+            integer*4 OpenMM_System_addForce
         end
-        subroutine OpenMM_System_addParticle(system, mass)
+        
+        ! Fortran doesn't distinguish between writable and const objects but
+        ! we'll support both the "get" and "update" calls so it is clear what
+        ! is intended.
+        subroutine OpenMM_System_updForce(system, ix, force)
             use OpenMM_Types; implicit none
             type (OpenMM_System) system
-            real*8 mass
+            integer*4 ix ! force index
+            type (OpenMM_Force) force
         end
-  
+        subroutine OpenMM_System_getForce(system, ix, force)
+            use OpenMM_Types; implicit none
+            type (OpenMM_System) system
+            integer*4 ix ! force index
+            type (OpenMM_Force) force
+        end
+                        
+        function OpenMM_System_getNumParticles(system)
+            use OpenMM_Types; implicit none
+            type (OpenMM_System) system
+            integer*4 OpenMM_System_getNumParticles
+        end
+        function OpenMM_System_getNumConstraints(system)
+            use OpenMM_Types; implicit none
+            type (OpenMM_System) system
+            integer*4 OpenMM_System_getNumConstraints
+        end
+        function OpenMM_System_getNumForces(system)
+            use OpenMM_Types; implicit none
+            type (OpenMM_System) system
+            integer*4 OpenMM_System_getNumForces
+        end
+                  
         ! -------------------------
         ! OpenMM::NonbondedForce
         ! -------------------------
@@ -304,11 +385,18 @@ module OpenMM
             use OpenMM_Types; implicit none
             type (OpenMM_NonbondedForce) nonbond
         end
+        
+        ! This takes a NonbondedForce handle and recasts it to a generic
+        ! Force handle. This is only a type change; the returned Force
+        ! handle refers to the same NonbondedForce object as the input.
+        ! You can accomplish the same thing with Fortran 95's "transfer"
+        ! intrinsic function.
         subroutine OpenMM_NonbondedForce_asForce(nonbond, force)
             use OpenMM_Types; implicit none
             type (OpenMM_NonbondedForce) nonbond
             type (OpenMM_Force)          force
         end
+        
         subroutine OpenMM_NonbondedForce_setNonbondedMethod(nonbond, method)
             use OpenMM_Types; implicit none
             type (OpenMM_NonbondedForce) nonbond
@@ -339,12 +427,13 @@ module OpenMM
             type (OpenMM_NonbondedForce) nonbond
             real*8 a(3), b(3), c(3)
         end
+        ! Returns the assigned particle index.
         function OpenMM_NonbondedForce_addParticle &
                             (nonbond, charge, sigmaInNm, vdwEnergyInKJ)
             use OpenMM_Types; implicit none
             type (OpenMM_NonbondedForce) nonbond
-            integer*4 OpenMM_NonbondedForce_addParticle
             real*8 charge, sigmaInNm, vdwEnergyInKJ
+            integer*4 OpenMM_NonbondedForce_addParticle
         end
         subroutine OpenMM_NonbondedForce_setParticleParameters &
                             (nonbond, ix, charge, sigmaInNm, vdwEnergyInKJ)
@@ -370,13 +459,14 @@ module OpenMM
             type (OpenMM_NonbondedForce) nonbond
             integer*4 OpenMM_NonbondedForce_getNumExceptions
         end
+        ! Returns the assigned exception index.
         function OpenMM_NonbondedForce_addException &
                             (nonbond, p1, p2, chargeProd, sigmaInNm, vdwEnergyInKJ)
             use OpenMM_Types; implicit none
             type (OpenMM_NonbondedForce) nonbond
-            integer*4 OpenMM_NonbondedForce_addException
             integer*4 p1, p2
             real*8 chargeProd, sigmaInNm, vdwEnergyInKJ
+            integer*4 OpenMM_NonbondedForce_addException
         end
         subroutine OpenMM_NonbondedForce_setExceptionParameters &
                             (nonbond, ix, p1, p2, chargeProd, sigmaInNm, vdwEnergyInKJ)
@@ -411,11 +501,18 @@ module OpenMM
             use OpenMM_Types; implicit none
             type (OpenMM_GBSAOBCForce) gbsa
         end
+        
+        ! This takes a GBSAOBCForce handle and recasts it to a generic
+        ! Force handle. This is only a type change; the returned Force
+        ! handle refers to the same GBSAOBCForce object as the input.
+        ! You can accomplish the same thing with Fortran 95's "transfer"
+        ! intrinsic function.
         subroutine OpenMM_GBSAOBCForce_asForce(gbsa, force)
             use OpenMM_Types; implicit none
             type (OpenMM_GBSAOBCForce) gbsa
             type (OpenMM_Force)        force
         end
+        
         subroutine OpenMM_GBSAOBCForce_setSolventDielectric(gbsa, d)
             use OpenMM_Types; implicit none
             type (OpenMM_GBSAOBCForce) gbsa
@@ -426,11 +523,13 @@ module OpenMM
             type (OpenMM_GBSAOBCForce) gbsa
             real*8 d
         end
-        subroutine OpenMM_GBSAOBCForce_addParticle &
+        ! Returns the assigned particle index in case you want it.
+        function OpenMM_GBSAOBCForce_addParticle &
                             (gbsa, charge, radiusInNm, scalingFactor)
             use OpenMM_Types; implicit none
             type (OpenMM_GBSAOBCForce) gbsa
-            real*8 charge, radiusInNm, scalingFactor
+            real*8    charge, radiusInNm, scalingFactor
+            integer*4 OpenMM_GBSAOBCForce_addParticle
         end
 
         ! -------------------------
@@ -444,22 +543,30 @@ module OpenMM
             use OpenMM_Types; implicit none
             type (OpenMM_HarmonicBondForce) hbf
         end
+        
+        ! This takes a HarmonicBondForce handle and recasts it to a generic
+        ! Force handle. This is only a type change; the returned Force
+        ! handle refers to the same HarmonicBondForce object as the input.
+        ! You can accomplish the same thing with Fortran 95's "transfer"
+        ! intrinsic function.
         subroutine OpenMM_HarmonicBondForce_asForce(hbf, force)
             use OpenMM_Types; implicit none
             type (OpenMM_HarmonicBondForce) hbf
             type (OpenMM_Force)             force
         end
+        
         function OpenMM_HarmonicBondForce_getNumBonds(hbf)
             use OpenMM_Types; implicit none
             type (OpenMM_HarmonicBondForce) hbf
             integer*4 OpenMM_HarmonicBondForce_getNumBonds
         end
+        ! Returns bond index in case you want it.
         function OpenMM_HarmonicBondForce_addBond(hbf, p1, p2, length, k)
             use OpenMM_Types; implicit none
             type (OpenMM_HarmonicBondForce) hbf
-            integer*4 OpenMM_HarmonicBondForce_addBond
             integer*4 p1, p2
-            real*8 length,k
+            real*8    length, k
+            integer*4 OpenMM_HarmonicBondForce_addBond
         end
         subroutine OpenMM_HarmonicBondForce_setBondParameters(hbf, ix, p1, p2, length, k)
             use OpenMM_Types; implicit none
@@ -485,16 +592,24 @@ module OpenMM
             use OpenMM_Types; implicit none
             type (OpenMM_HarmonicAngleForce) hbf
         end
+        
+        ! This takes a HarmonicAngleForce handle and recasts it to a generic
+        ! Force handle. This is only a type change; the returned Force
+        ! handle refers to the same HarmonicAngleForce object as the input.
+        ! You can accomplish the same thing with Fortran 95's "transfer"
+        ! intrinsic function.
         subroutine OpenMM_HarmonicAngleForce_asForce(hbf, force)
             use OpenMM_Types; implicit none
             type (OpenMM_HarmonicAngleForce) hbf
             type (OpenMM_Force)             force
         end
+        
         function OpenMM_HarmonicAngleForce_getNumAngles(hbf)
             use OpenMM_Types; implicit none
             type (OpenMM_HarmonicAngleForce) hbf
             integer*4 OpenMM_HarmonicAngleForce_getNumAngles
         end
+        ! Returns angle index in case you want it.
         function OpenMM_HarmonicAngleForce_addAngle(hbf, p1, p2, p3, angle, k)
             use OpenMM_Types; implicit none
             type (OpenMM_HarmonicAngleForce) hbf
@@ -528,16 +643,24 @@ module OpenMM
             use OpenMM_Types; implicit none
             type (OpenMM_PeriodicTorsionForce) hbf
         end
+        
+        ! This takes a PeriodicTorsionForce handle and recasts it to a generic
+        ! Force handle. This is only a type change; the returned Force
+        ! handle refers to the same PeriodicTorsionForce object as the input.
+        ! You can accomplish the same thing with Fortran 95's "transfer"
+        ! intrinsic function.
         subroutine OpenMM_PeriodicTorsionForce_asForce(hbf, force)
             use OpenMM_Types; implicit none
             type (OpenMM_PeriodicTorsionForce) hbf
             type (OpenMM_Force)                force
         end
+        
         function OpenMM_PeriodicTorsionForce_getNumTorsions(hbf)
             use OpenMM_Types; implicit none
             type (OpenMM_PeriodicTorsionForce) hbf
             integer*4 OpenMM_PeriodicTorsionForce_getNumTorsions
         end
+        ! Returns torsion index in case you want it.
         function OpenMM_PeriodicTorsionForce_addTorsion &
                 (hbf, p1, p2, p3, p4, periodicity, phase, k)
             use OpenMM_Types; implicit none
@@ -586,11 +709,18 @@ module OpenMM
             use OpenMM_Types; implicit none
             type (OpenMM_VerletIntegrator) verlet
         end
+        
+        ! This takes a VerletIntegrator handle and recasts it to a generic
+        ! Integrator handle. This is only a type change; the returned Integrator
+        ! handle refers to the same VerletIntegrator object as the input.
+        ! You can accomplish the same thing with Fortran 95's "transfer"
+        ! intrinsic function.
         subroutine OpenMM_VerletIntegrator_asIntegrator(verlet, integ)
             use OpenMM_Types; implicit none
             type (OpenMM_VerletIntegrator) verlet
             type (OpenMM_Integrator)       integ
         end
+        
         subroutine OpenMM_VerletIntegrator_step(verlet, numSteps)
             use OpenMM_Types; implicit none
             type (OpenMM_VerletIntegrator) verlet
@@ -610,11 +740,18 @@ module OpenMM
             use OpenMM_Types; implicit none
             type (OpenMM_LangevinIntegrator) langevin
         end
+        
+        ! This takes a LangevinIntegrator handle and recasts it to a generic
+        ! Integrator handle. This is only a type change; the returned Integrator
+        ! handle refers to the same LangevinIntegrator object as the input.
+        ! You can accomplish the same thing with Fortran 95's "transfer"
+        ! intrinsic function.
         subroutine OpenMM_LangevinIntegrator_asIntegrator(langevin, integ)
             use OpenMM_Types; implicit none
             type (OpenMM_LangevinIntegrator) langevin
             type (OpenMM_Integrator)         integ
         end
+        
         subroutine OpenMM_LangevinIntegrator_step(langevin, numSteps)
             use OpenMM_Types; implicit none
             type (OpenMM_LangevinIntegrator) langevin
@@ -688,6 +825,10 @@ module OpenMM
             type (OpenMM_State) state
             type (OpenMM_Vec3Array) velocities
         end
+        
+        ! -------------------------
+        ! OpenMM::RuntimeObjects
+        ! -------------------------
         subroutine OpenMM_RuntimeObjects_create(omm)
             use OpenMM_Types; implicit none
             type (OpenMM_RuntimeObjects) omm
