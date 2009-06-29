@@ -89,7 +89,9 @@ FOREACH(EX_ROOT ${C_EXAMPLES})
     IF (BUILD_TESTING_STATIC)
         # Link with static library
         SET(EX_STATIC ${EX_ROOT}Static)
-        ADD_EXECUTABLE(${EX_STATIC} ${EX_ROOT}.c)
+		# We need at least one .cpp here to get CMake to include
+		# C++ libraries on the static link line.
+        ADD_EXECUTABLE(${EX_STATIC} ${EX_ROOT}.c Empty.cpp)
         SET_TARGET_PROPERTIES(${EX_STATIC}
 		PROPERTIES
 		COMPILE_FLAGS "-DOPENMM_USE_STATIC_LIBRARIES"
