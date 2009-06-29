@@ -1,0 +1,85 @@
+# ----------------------------------------------------------------------
+# Makefile for OpenMM Preview Release 3 workshop "hello world" examples.
+# June 24, 2009.
+# See https://simtk.org/home/openmm.
+# ----------------------------------------------------------------------
+# This assumes you have gcc compilers for whatever language you are
+# using: cl for C++ and C, ifort for Fortran 95.
+# 
+# Note: the C Wrappers and Fortran Module are just prototypes. They are
+# incomplete but have enough functionality to get through these examples.
+# We would like more complete and better-thought-out interfaces; if you
+# have code or ideas please post to the OpenMM forum at the above URL
+# (select "Advanced/Public Forums").
+#
+# This has had only minimal testing, although it has been known to
+# work. It is likely to work fine for C and C++. For Fortran, you
+# may need to add some of the C/C++ libraries: 
+#    -lc -lm -lstdc++ (or -lstdc++.6) -lgcc -lgcc_s
+# but this wasn't required for these examples on Centos 5.2 using
+# gcc 4.1.2.
+
+# Check whether this is the right capitalization for your install directory.
+OpenMM_INSTALL_DIR="C:/Program Files/OpenMM"
+CC = cl
+FC = ifort
+CFLAGS = /MD /EHsc
+FFLAGS = /MD
+
+# Extra libraries required when ifort links with a C++ module.
+# If this doesn't work, look in /usr/lib to
+# see what versions of libstdc++.so you have and try different
+# versions.
+FCPPLIBS = 
+
+LIB_DIR=$(OpenMM_INSTALL_DIR)/lib
+INCLUDE_DIR=$(OpenMM_INSTALL_DIR)/include
+LIBS= OpenMM.lib
+
+ALL_CPP_EXAMPLES = HelloArgon HelloSodiumChloride HelloEthane HelloWaterBox
+ALL_C_EXAMPLES   = HelloArgonInC HelloSodiumChlorideInC
+ALL_F95_EXAMPLES = HelloArgonInFortran HelloSodiumChlorideInFortran
+
+ALL_PROGS = $(ALL_CPP_EXAMPLES) $(ALL_C_EXAMPLES) $(ALL_F95_EXAMPLES)
+
+default: HelloArgon
+
+all : cpp cc fortran
+
+cpp c++: $(ALL_CPP_EXAMPLES)
+
+cc: $(ALL_C_EXAMPLES)
+
+fortran: $(ALL_F95_EXAMPLES)
+
+
+
+# Treat all .cpp source files the same way (except the one that 
+# implements the C Wrappers).
+HelloArgon HelloSodiumChloride HelloEthane HelloWaterBox: 
+	$(CC) $(CFLAGS) -I$(INCLUDE_DIR) $*.cpp /link /libpath:$(LIB_DIR) $(LIBS) /out:$*.exe
+
+HelloArgonInC: HelloArgonInC.c OpenMM_CWrapper.obj
+	$(CC) $(CFLAGS) -I. $*.c OpenMM_CWrapper.obj /link /libpath:$(LIB_DIR) $(LIBS) /out:$*.exe
+
+HelloSodiumChlorideInC: HelloSodiumChlorideInC.c OpenMM_CWrapper.obj
+	$(CC) $(CFLAGS) -I. $*.c OpenMM_CWrapper.obj /link /libpath:$(LIB_DIR) $(LIBS) /out:$*.exe
+
+HelloArgonInFortran: HelloArgonInFortran.f90 openmm.mod OpenMM_CWrapper.obj
+	$(FC) $(FFLAGS) $*.f90 OpenMM_CWrapper.obj /link /libpath:$(LIB_DIR) $(LIBS) /out:$*.exe
+
+HelloSodiumChlorideInFortran: HelloSodiumChlorideInFortran.f90 openmm.mod OpenMM_CWrapper.obj
+	$(FC) $(FFLAGS) $*.f90 OpenMM_CWrapper.obj /link /libpath:$(LIB_DIR) $(LIBS) /out:$*.exe
+
+
+# Build C Wrappers (Fortran depends on this too)
+OpenMM_CWrapper.obj: OpenMM_CWrapper.cpp
+	$(CC) $(CFLAGS) -c -I. -I$(INCLUDE_DIR) OpenMM_CWrapper.cpp
+
+# Build Fortran 95 Module file
+openmm.mod: OpenMM_Module.f90
+	$(FC) -c $(FFLAGS) OpenMM_Module.f90
+
+clean : 
+	del *.mod *.obj *.exe *.pdb *.exe.manifest
+
