@@ -202,8 +202,8 @@ SUBROUTINE myInitializeOpenMM(ommHandle, platformName)
     
     ! Convert specific force types to generic OpenMM_Force so that we can
     ! add them to the OpenMM_System.
-    ix = OpenMM_System_addForce(system, transfer(nonbond, OpenMM_Force(null())))
-    ix = OpenMM_System_addForce(system, transfer(gbsa,    OpenMM_Force(null())))
+    ix = OpenMM_System_addForce(system, transfer(nonbond, OpenMM_Force()))
+    ix = OpenMM_System_addForce(system, transfer(gbsa,    OpenMM_Force()))
 
     ! Specify dielectrics for GBSA implicit solvation.
     call OpenMM_GBSAOBCForce_setSolventDielectric(gbsa, SolventDielectric)
@@ -246,7 +246,7 @@ SUBROUTINE myInitializeOpenMM(ommHandle, platformName)
 
     ! Convert LangevinIntegrator to generic Integrator type for this call.
     call OpenMM_Context_create(context, system,                         &
-                               transfer(langevin, OpenMM_Integrator(null())))
+                               transfer(langevin, OpenMM_Integrator()))
     call OpenMM_Context_setPositions(context, initialPosInNm)
 
     ! Get the platform name to return.
@@ -257,7 +257,7 @@ SUBROUTINE myInitializeOpenMM(ommHandle, platformName)
     call OpenMM_RuntimeObjects_create(omm)
     call OpenMM_RuntimeObjects_setSystem(omm, system)
     call OpenMM_RuntimeObjects_setIntegrator(omm, &
-                               transfer(langevin, OpenMM_Integrator(null())))
+                               transfer(langevin, OpenMM_Integrator()))
     call OpenMM_RuntimeObjects_setContext(omm, context)
     ommHandle = transfer(omm, ommHandle)
 END SUBROUTINE
