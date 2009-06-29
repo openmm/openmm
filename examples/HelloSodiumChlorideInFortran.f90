@@ -216,7 +216,7 @@ SUBROUTINE myInitializeOpenMM(ommHandle, platformName)
     !  (4) Collect default positions for initializing the simulation later.
     call OpenMM_Vec3Array_create(initialPosInNm, NumAtoms)
     do n=1,NumAtoms
-        call OpenMM_System_addParticle(system, atoms(n)%mass)
+        ix = OpenMM_System_addParticle(system, atoms(n)%mass)
     
         ix = OpenMM_NonbondedForce_addParticle(nonbond,                 &
                 atoms(n)%charge,                                        &
