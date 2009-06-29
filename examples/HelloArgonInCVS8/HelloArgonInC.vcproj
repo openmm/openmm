@@ -61,7 +61,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="OpenMM_d.lib"
+				AdditionalDependencies="OpenMM_CWrapper_d.lib OpenMM_d.lib"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="&quot;$(ProgramFiles)\OpenMM\lib&quot;"
 				GenerateDebugInformation="true"
@@ -137,7 +137,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="OpenMM.lib"
+				AdditionalDependencies="OpenMM_CWrapper.lib OpenMM.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;$(ProgramFiles)\OpenMM\lib&quot;"
 				GenerateDebugInformation="true"
@@ -182,10 +182,6 @@
 			>
 			<File
 				RelativePath="..\HelloArgonInC.c"
-				>
-			</File>
-			<File
-				RelativePath="..\OpenMM_CWrapper.cpp"
 				>
 			</File>
 		</Filter>
