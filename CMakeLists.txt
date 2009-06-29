@@ -17,6 +17,12 @@
 # On Linux it appears that cmake 2.4 does not work with Cuda cmake rules
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
+if(COMMAND cmake_policy)
+		cmake_policy(SET CMP0003 NEW)
+		cmake_policy(SET CMP0005 NEW)
+		cmake_policy(SET CMP0011 NEW)
+endif(COMMAND cmake_policy)
+
 # Don't create a new project name if this is part of a mega-build from the
 # parent directory
 IF( NOT PROJECT_NAME )
@@ -273,77 +279,6 @@ INSTALL_FILES(/include/openmm          FILES ${TOP_HEADERS})
 INSTALL_FILES(/include/openmm/internal FILES ${INTERNAL_HEADERS})
 
 
-IF(HELL_IS_FROZEN_OVER)
-# Set the build flags to link statically to the microsoft runtime library, unless
-# the user tells us otherwise, via the variable "USE_MSVC_RUNTIME_DLL"
-# It is a sore defect of cmake that makes these gymnastics necessary
-IF(CMAKE_GENERATOR MATCHES "Visual Studio")
-
-    IF (CMAKE_BUILD_TYPE MATCHES Debug)
-       # STRING_APPEND( CMAKE_EXE_LINKER_FLAGS_DEBUG      "/NODEFAULTLIB:\"LIBCMT.lib\"")
-       # STRING_APPEND( CMAKE_EXE_LINKER_FLAGS_DEBUG      "/NODEFAULTLIB:\"LIBCMT.lib\"")
-       SET(CMAKE_EXE_LINKER_FLAGS /NODEFAULTLIB:LIBCMT)
-    ENDIF(CMAKE_BUILD_TYPE MATCHES Debug)
-
-    # First notice whether the user wants static or dll linkage to runtime library
-    
-    SET(USE_MSVC_RUNTIME_DLL 0 CACHE BOOL "Link to DLL version of microsoft runtime library")
-    
-    IF (USE_MSVC_RUNTIME_DLL)
-    
-        # The same replacement strings will be used to replace "/MD" with "/MT", and "/MDd" with "/MTd"
-        
-        SET(RT_FLAG_WE_WANT "/MD")
-        SET(RT_FLAG_WE_HATE "/MT")
-        IF (CMAKE_BUILD_TYPE MATCHES Debug)
-           SET(RT_FLAG_WE_WANT "/MDd")
-           SET(RT_FLAG_WE_HATE "/MTd")
-        ENDIF(CMAKE_BUILD_TYPE MATCHES Debug)
- 
-    ELSE (USE_MSVC_RUNTIME_DLL)
-    
-        SET(RT_FLAG_WE_WANT "/MT")
-        SET(RT_FLAG_WE_HATE "/MD")
-        IF (CMAKE_BUILD_TYPE MATCHES Debug)
-           SET(RT_FLAG_WE_WANT "/MTd")
-           SET(RT_FLAG_WE_HATE "/MDd")
-        ENDIF(CMAKE_BUILD_TYPE MATCHES Debug)
-        
-    ENDIF(USE_MSVC_RUNTIME_DLL)
-    
-    # Next, set the compiler flags using the "FORCE" option, which seems to be required for setting these
-    
-    # C flags
-    
-    STRING(REPLACE ${RT_FLAG_WE_HATE} ${RT_FLAG_WE_WANT} CMAKE_C_FLAGS_RELEASE ${CMAKE_C_FLAGS_RELEASE})
-    SET(CMAKE_C_FLAGS_RELEASE ${CMAKE_C_FLAGS_RELEASE} CACHE STRING "" FORCE)
-        
-    STRING(REPLACE ${RT_FLAG_WE_HATE} ${RT_FLAG_WE_WANT} CMAKE_C_FLAGS_DEBUG ${CMAKE_C_FLAGS_DEBUG})
-    SET(CMAKE_C_FLAGS_DEBUG ${CMAKE_C_FLAGS_DEBUG} CACHE STRING "" FORCE)
-    
-    STRING(REPLACE ${RT_FLAG_WE_HATE} ${RT_FLAG_WE_WANT} CMAKE_C_FLAGS_RELWITHDEBINFO ${CMAKE_C_FLAGS_RELWITHDEBINFO})
-    SET(CMAKE_C_FLAGS_RELWITHDEBINFO ${CMAKE_C_FLAGS_RELWITHDEBINFO} CACHE STRING "" FORCE)
-    
-    STRING(REPLACE ${RT_FLAG_WE_HATE} ${RT_FLAG_WE_WANT} CMAKE_C_FLAGS_MINSIZEREL ${CMAKE_C_FLAGS_MINSIZEREL})
-    SET(CMAKE_C_FLAGS_MINSIZEREL ${CMAKE_C_FLAGS_MINSIZEREL} CACHE STRING "" FORCE)
-    
-    # C++ flags
-    
-    STRING(REPLACE ${RT_FLAG_WE_HATE} ${RT_FLAG_WE_WANT} CMAKE_CXX_FLAGS_RELEASE ${CMAKE_CXX_FLAGS_RELEASE})
-    SET(CMAKE_CXX_FLAGS_RELEASE ${CMAKE_CXX_FLAGS_RELEASE} CACHE STRING "" FORCE)
-        
-    STRING(REPLACE ${RT_FLAG_WE_HATE} ${RT_FLAG_WE_WANT} CMAKE_CXX_FLAGS_DEBUG ${CMAKE_CXX_FLAGS_DEBUG})
-    SET(CMAKE_CXX_FLAGS_DEBUG ${CMAKE_CXX_FLAGS_DEBUG} CACHE STRING "" FORCE)
-    
-    STRING(REPLACE ${RT_FLAG_WE_HATE} ${RT_FLAG_WE_WANT} CMAKE_CXX_FLAGS_RELWITHDEBINFO ${CMAKE_CXX_FLAGS_RELWITHDEBINFO})
-    SET(CMAKE_CXX_FLAGS_RELWITHDEBINFO ${CMAKE_CXX_FLAGS_RELWITHDEBINFO} CACHE STRING "" FORCE)
-    
-    STRING(REPLACE ${RT_FLAG_WE_HATE} ${RT_FLAG_WE_WANT} CMAKE_CXX_FLAGS_MINSIZEREL ${CMAKE_CXX_FLAGS_MINSIZEREL})
-    SET(CMAKE_CXX_FLAGS_MINSIZEREL ${CMAKE_CXX_FLAGS_MINSIZEREL} CACHE STRING "" FORCE)
-    
-ENDIF(CMAKE_GENERATOR MATCHES "Visual Studio")
-
-ENDIF(HELL_IS_FROZEN_OVER)
 #
 # Allow automated build and dashboard.
 #

@@ -132,9 +132,13 @@ public:
      * Add a Force to the System.  The Force should have been created on the heap with the
      * "new" operator.  The System takes over ownership of it, and deletes the Force when the
      * System itself is deleted.
+     *
+     * @param force   a pointer to the Force object to be added
+     * @return        the index within the System of the Force that was added
      */
-    void addForce(Force* force) {
+    int addForce(Force* force) {
         forces.push_back(force);
+        return forces.size()-1;
     }
     /**
      * Get the number of Force objects that have been added to the System.
@@ -143,7 +147,7 @@ public:
         return forces.size();
     }
     /**
-     * Get a reference to one of the Forces in this System.
+     * Get a const reference to one of the Forces in this System.
      * 
      * @param index  the index of the Force to get
      */
@@ -151,7 +155,7 @@ public:
         return *forces[index];
     }
     /**
-     * Get a reference to one of the Forces in this System.
+     * Get a writable reference to one of the Forces in this System.
      *
      * @param index  the index of the Force to get
      */
