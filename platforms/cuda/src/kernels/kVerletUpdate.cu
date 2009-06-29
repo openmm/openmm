@@ -108,7 +108,7 @@ __global__ void kSelectVerletStepSize_kernel()
 
     for (int offset = 1; offset < cSim.atoms; offset *= 2)
     {
-        if (threadIdx.x+offset < cSim.atoms && threadIdx.x%(2*offset) == 0)
+        if (threadIdx.x+offset < cSim.atoms && (threadIdx.x&(2*offset-1)) == 0)
             error[threadIdx.x] += error[threadIdx.x+offset];
         __syncthreads();
     }
@@ -119,7 +119,7 @@ __global__ void kSelectVerletStepSize_kernel()
         float oldStepSize = cSim.pStepSize[0].y;
         if (oldStepSize > 0.0f)
             newStepSize = min(newStepSize, oldStepSize*2.0f); // For safety, limit how quickly dt can increase.
-        if (newStepSize > oldStepSize && newStepSize < 1.2f*oldStepSize)
+        if (newStepSize > oldStepSize && newStepSize < 1.1f*oldStepSize)
             newStepSize = oldStepSize; // Keeping dt constant between steps improves the behavior of the integrator.
         cSim.pStepSize[0].y = newStepSize;
     }
