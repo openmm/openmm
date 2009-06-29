@@ -35,7 +35,7 @@ PROGRAM HelloArgon
     ! to recast the specific NonbondedForce to a general Force.)
     call OpenMM_System_create(system)
     call OpenMM_NonbondedForce_create(nonbond)
-    call OpenMM_System_addForce(system, transfer(nonbond, OpenMM_Force(null())))
+    ix = OpenMM_System_addForce(system, transfer(nonbond, OpenMM_Force(null())))
 
     ! Create three atoms.
     call OpenMM_Vec3Array_create(initPosInNm, 3)
@@ -43,7 +43,7 @@ PROGRAM HelloArgon
         ! Space the atoms out evenly by atom index.
         call OpenMM_Vec3Array_set(initPosInNm, a, (/ 0.5d0*(a-1), 0d0, 0d0 /))
 
-        call OpenMM_System_addParticle(system, 39.95d0) !mass of Ar, grams/mole
+        ix = OpenMM_System_addParticle(system, 39.95d0) !mass of Ar, grams/mole
 
         ! charge, L-J sigma (nm), well depth (kJ) (vdWRad(Ar)=.188 nm)
         ix = OpenMM_NonbondedForce_addParticle(nonbond, 0d0, 0.3350d0, 0.996d0)

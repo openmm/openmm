@@ -1106,6 +1106,7 @@ void openmm_runtimeobjects_getintegrator_(OpenMM_RuntimeObjects* const& ommrt, O
 void OPENMM_RUNTIMEOBJECTS_GETINTEGRATOR(OpenMM_RuntimeObjects* const& ommrt, OpenMM_Integrator*& integ)
 {    integ = OpenMM_RuntimeObjects_getIntegrator(ommrt); }
 
+// setContext
 void OpenMM_RuntimeObjects_setContext(OpenMM_RuntimeObjects* ommrt, OpenMM_Context* context)
 {    OpenMM_Context_destroy(ommrt->context); ommrt->context = context; }
 void openmm_runtimeobjects_setcontext_(OpenMM_RuntimeObjects* const& ommrt, OpenMM_Context*& context)

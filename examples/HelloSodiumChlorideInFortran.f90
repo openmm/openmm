@@ -202,8 +202,8 @@ SUBROUTINE myInitializeOpenMM(ommHandle, platformName)
     
     ! Convert specific force types to generic OpenMM_Force so that we can
     ! add them to the OpenMM_System.
-    call OpenMM_System_addForce(system, transfer(nonbond, OpenMM_Force(null())))
-    call OpenMM_System_addForce(system, transfer(gbsa,    OpenMM_Force(null())))
+    ix = OpenMM_System_addForce(system, transfer(nonbond, OpenMM_Force(null())))
+    ix = OpenMM_System_addForce(system, transfer(gbsa,    OpenMM_Force(null())))
 
     ! Specify dielectrics for GBSA implicit solvation.
     call OpenMM_GBSAOBCForce_setSolventDielectric(gbsa, SolventDielectric)
@@ -224,7 +224,7 @@ SUBROUTINE myInitializeOpenMM(ommHandle, platformName)
                                          * OpenMM_SigmaPerVdwRadius,    &
                 atoms(n)%vdwEnergyInKcal * OpenMM_KJPerKcal)
     
-        call OpenMM_GBSAOBCForce_addParticle(gbsa,                      &
+        ix = OpenMM_GBSAOBCForce_addParticle(gbsa,                      &
                 atoms(n)%charge,                                        &
                 atoms(n)%gbsaRadiusInAng * OpenMM_NmPerAngstrom,        &
                 atoms(n)%gbsaScaleFactor)
