@@ -36,6 +36,8 @@
 // make sure that erf() and erfc() are defined.
 #include "MSVC_erfc.h"
 
+using std::vector;
+
 /**---------------------------------------------------------------------------------------
 
    ReferenceLJCoulombIxn constructor
@@ -279,9 +281,9 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
 // setup K-vectors
 
   #define EIR(x, y, z) eir[(x)*numberOfAtoms*3+(y)*3+z]
-  d_complex* eir = new d_complex[kmax*numberOfAtoms*3];
-  d_complex* tab_xy = new d_complex[numberOfAtoms];
-  d_complex* tab_qxyz = new d_complex[numberOfAtoms];
+  vector<d_complex> eir(kmax*numberOfAtoms*3);
+  vector<d_complex> tab_xy(numberOfAtoms);
+  vector<d_complex> tab_qxyz(numberOfAtoms);
 
   if (kmax < 1) {
       std::stringstream message;
@@ -389,7 +391,7 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
 
        // allocate and initialize exclusion array
 
-       int* exclusionIndices = new int[numberOfAtoms];
+       vector<int> exclusionIndices(numberOfAtoms);
        for( int ii = 0; ii < numberOfAtoms; ii++ ){
           exclusionIndices[ii] = -1;
        }
@@ -427,11 +429,6 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
              }
           }
        }
-
-       delete[] exclusionIndices;
-       delete[] eir;
-       delete[] tab_xy;
-       delete[] tab_qxyz;
 
 // ***********************************************************************
 

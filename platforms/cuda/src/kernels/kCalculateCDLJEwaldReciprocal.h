@@ -32,76 +32,56 @@
 
 __global__ void kCalculateCDLJEwaldReciprocalForces_kernel()
 {
-    float eps0             = 5.72765E-4;
-
-    int numRx              = 20+1;
-    int numRy              = 20+1;
-    int numRz              = 20+1;
-
-    int lowry, lowrz;
-
-    float kx, ky, kz, k2, ek;
-    float Qi, Qj, SinI, SinJ, CosI, CosJ;
-
-    float V = cSim.cellVolume;
-
-    float4 apos1, apos2 ; // i nteracting atoms
-    float4 af; // atomic force
+    const float eps0 = 1.0f/(4.0f*3.1415926535f*cSim.epsfac);
 
     unsigned int atomID1    = threadIdx.x + blockIdx.x * blockDim.x;
 
     while (atomID1 < cSim.atoms)
     {
-        apos1             = cSim.pPosq[atomID1];
-        af                = cSim.pForce4[atomID1];
-
-        unsigned int atomID2    = 0;
+        float4 apos1 = cSim.pPosq[atomID1];
+        float4 af    = cSim.pForce4[atomID1];
+        unsigned int atomID2 = 0;
         while (atomID2 < cSim.atoms)
         {
-                apos2             = cSim.pPosq[atomID2];
+            float4 apos2 = cSim.pPosq[atomID2];
+            float scale = 2.0f*apos1.w*apos2.w/(cSim.cellVolume*eps0);
 
-                lowry = 0;
-                lowrz = 1;
+            int lowry = 0;
+            int lowrz = 1;
 
-                for(int rx = 0; rx < numRx; rx++) {
+            for(int rx = 0; rx < cSim.kmax; rx++)
+            {
+                float kx = rx*cSim.recipBoxSizeX;
+                for(int ry = lowry; ry < cSim.kmax; ry++)
+                {
+                    float ky = ry*cSim.recipBoxSizeY;
+                    for (int rz = lowrz; rz < cSim.kmax; rz++)
+                    {
+                        float kz = rz*cSim.recipBoxSizeZ;
+                        float k2 = kx*kx + ky*ky + kz*kz;
+                        float ek = exp(k2*cSim.factorEwald);
 
-                  kx = rx * cSim.recipBoxSizeX;
+                        float arg1 = kx*apos1.x + ky*apos1.y + kz*apos1.z;
+                        float arg2 = kx*apos2.x + ky*apos2.y + kz*apos2.z;
+                        float sinI = sin(arg1);
+                        float sinJ = sin(arg2);
+                        float cosI = cos(arg1);
+                        float cosJ = cos(arg2);
 
-                  for(int ry = lowry; ry < numRy; ry++) {
+                        float f = scale * ek * (-sinI*cosJ + cosI*sinJ) / k2;
+                        af.x -= kx*f;
+                        af.y -= ky*f;
+                        af.z -= kz*f;
 
-                    ky = ry * cSim.recipBoxSizeY;
-
-                    for (int rz = lowrz; rz < numRz; rz++) {
-
-                      kz = rz * cSim.recipBoxSizeZ;
-
-                      k2 = kx * kx + ky * ky + kz * kz;
-                      ek = exp (  k2 * cSim.factorEwald);
-
-                      Qi = apos1.w ;
-                      Qj = apos2.w ;
-
-                      SinI = sin ( kx * apos1.x + ky * apos1.y + kz * apos1.z );
-                      SinJ = sin ( kx * apos2.x + ky * apos2.y + kz * apos2.z );
-                      CosI = cos ( kx * apos1.x + ky * apos1.y + kz * apos1.z );
-                      CosJ = cos ( kx * apos2.x + ky * apos2.y + kz * apos2.z );
-
-                      af.x -= (2.0 / (V * eps0 ))  * Qi * ( kx/k2) * ek * ( - SinI * Qj * CosJ + CosI * Qj * SinJ);
-                      af.y -= (2.0 / (V * eps0 ))  * Qi * ( ky/k2) * ek * ( - SinI * Qj * CosJ + CosI * Qj * SinJ);
-                      af.z -= (2.0 / (V * eps0 ))  * Qi * ( kz/k2) * ek * ( - SinI * Qj * CosJ + CosI * Qj * SinJ);
-
-                      lowrz = 1 - numRz;
+                        lowrz = 1 - cSim.kmax;
                     }
-
-                    lowry = 1 - numRy;
-                  }
+                    lowry = 1 - cSim.kmax;
                 }
-
-                atomID2++;
+            }
+            atomID2++;
        }
-   
-       cSim.pForce4[atomID1]               = af;
-       atomID1                            += blockDim.x * gridDim.x;
+       cSim.pForce4[atomID1] = af;
+       atomID1 += blockDim.x * gridDim.x;
 
     }
 }

@@ -155,7 +155,7 @@ __global__ void kLangevinUpdatePart2_kernel()
         CM.x                   += mass * velocity.x;
         CM.y                   += mass * velocity.y;
         CM.z                   += mass * velocity.z;
-#endif;
+#endif
 
         Xmh.x                   = vVector.x * cSim.TauDOverEMMinusOne +
                                   sqrtInvMass * random4b.x;
