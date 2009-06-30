@@ -432,7 +432,7 @@ void gpuSetEwaldParameters(gpuContext gpu)//, float alphaEwald, int kmax )
     gpu->sim.alphaEwald         = alpha;
     gpu->sim.factorEwald        = -1 / (4*alpha*alpha);
     gpu->sim.kmax               = 20+1;
-    gpu->psEwaldEikr            = new CUDAStream<float2>(gpu->sim.paddedNumberOfAtoms*gpu->sim.kmax, 1, "EwaldEikr");
+    gpu->psEwaldEikr            = new CUDAStream<float2>(gpu->sim.atoms*gpu->sim.kmax, 1, "EwaldEikr");
     gpu->sim.pEwaldEikr         = gpu->psEwaldEikr->_pDevStream[0];
     gpu->psEwaldCosSinSum       = new CUDAStream<float2>((gpu->sim.kmax*2-1) * (gpu->sim.kmax*2-1) * (gpu->sim.kmax*2-1), 1, "EwaldCosSinSum");
     gpu->sim.pEwaldCosSinSum    = gpu->psEwaldCosSinSum->_pDevStream[0];

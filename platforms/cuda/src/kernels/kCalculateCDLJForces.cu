@@ -198,18 +198,21 @@ void kCalculateCDLJForces(gpuContext gpu)
             kFindInteractionsWithinBlocksEwaldDirect_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                     sizeof(unsigned int)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
             if (gpu->bOutputBufferPerWarp)
-            {
-// Vanilla (N2) Ewald
                 kCalculateCDLJEwaldDirectByWarpForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                         (sizeof(Atom)+sizeof(float3))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
+            else
+                kCalculateCDLJEwaldDirectForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                        (sizeof(Atom)+sizeof(float3))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
+            LAUNCHERROR("kCalculateCDLJEwaldDirectForces");
+            if (false)
+            {
+                // O(N2) Ewald summation
                 kCalculateCDLJEwaldReciprocalForces_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
                 LAUNCHERROR("kCalculateCDLJEwaldReciprocalForces");
             }
             else
             {
-                kCalculateCDLJEwaldDirectForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                        (sizeof(Atom)+sizeof(float3))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
-                LAUNCHERROR("kCalculateCDLJEwaldDirectForces");
+                // O(N3/2) Ewald summation
                 kCalculateEwaldFastEikr_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
                 LAUNCHERROR("kCalculateEwaldFastEikr");
                 kCalculateEwaldFastCosSinSums_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
