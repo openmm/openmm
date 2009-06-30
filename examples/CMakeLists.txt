@@ -79,7 +79,9 @@ ENDFOREACH(EX_ROOT ${CPP_EXAMPLES})
 FOREACH(EX_ROOT ${C_EXAMPLES})
     IF (BUILD_TESTING_SHARED)
         # Link with shared library
-        ADD_EXECUTABLE(${EX_ROOT} ${EX_ROOT}.c)
+		# We need at least one .cpp here to get CMake to include
+		# C++ libraries on the link line.
+        ADD_EXECUTABLE(${EX_ROOT} ${EX_ROOT}.c Empty.cpp)
         SET_TARGET_PROPERTIES(${EX_ROOT}
 		PROPERTIES
 	      PROJECT_LABEL "Example C - ${EX_ROOT}")
