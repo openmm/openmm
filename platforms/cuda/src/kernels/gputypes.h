@@ -87,7 +87,6 @@ struct _gpuContext {
     CUDAStream<float4>* psvVector4;
     CUDAStream<float2>* psSigEps2; 
     CUDAStream<float2>* psEwaldEikr; 
-    CUDAStream<float2>* psEwaldStructureFactor; 
     CUDAStream<float2>* psEwaldCosSinSum; 
     CUDAStream<float2>* psObcData; 
     CUDAStream<float>* psObcChain;

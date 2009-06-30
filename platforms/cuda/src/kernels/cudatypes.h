@@ -300,7 +300,7 @@ struct cudaGmxSimulation {
     float           cellVolume;                     // Ewald parameter alpha (a.k.a. kappa)
     float           alphaEwald;                     // Ewald parameter alpha (a.k.a. kappa)
     float           factorEwald;                    // - 1 ( 4 * alphaEwald * alphaEwald)
-    float           kmax;                           // Maximum number of reciprocal vectors
+    int             kmax;                           // Maximum number of reciprocal vectors
     float           reactionFieldK;                 // Constant for reaction field correction
     float           probeRadius;                    // SASA probe radius
     float           surfaceAreaFactor;              // ACE approximation surface area factor
@@ -337,9 +337,8 @@ struct cudaGmxSimulation {
     float           collisionProbability;           // Collision probability for Andersen thermostat
     float2*         pObcData;                       // Pointer to fixed Born data
     float2*         pAttr;                          // Pointer to additional atom attributes (sig, eps)
-    float2*         pEikr;                          // Pointer to exponents of reciprocal vectors and atom coordinates (ewald)
-    float2*         pStructureFactor;               // Pointer to the structure factors (ewald)
-    float2*         pCosSinSum;                     // Pointer to the cos/sin sums (ewald)
+    float2*         pEwaldEikr;                     // Pointer to exponents of reciprocal vectors and atom coordinates (ewald)
+    float2*         pEwaldCosSinSum;                // Pointer to the cos/sin sums (ewald)
     unsigned int    bonds;                          // Number of bonds
     int4*           pBondID;                        // Bond atom and output buffer IDs
     float2*         pBondParameter;                 // Bond parameters

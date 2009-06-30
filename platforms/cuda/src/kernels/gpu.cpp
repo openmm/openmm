@@ -429,18 +429,13 @@ void gpuSetEwaldParameters(gpuContext gpu)//, float alphaEwald, int kmax )
 
     // hard coded alphaEwald and kmax, no interface yet
     float alpha            = 3.123413f;
-    float PI               = 3.14159265358979323846f;
-    float TWO_PI           = 2.0f * PI;
-
-    gpu->sim.recipBoxSizeX = TWO_PI / gpu->sim.periodicBoxSizeX ;
-    gpu->sim.recipBoxSizeY = TWO_PI / gpu->sim.periodicBoxSizeY ;
-    gpu->sim.recipBoxSizeZ = TWO_PI / gpu->sim.periodicBoxSizeZ ;
-
-    gpu->sim.cellVolume        = gpu->sim.periodicBoxSizeX * gpu->sim.periodicBoxSizeY * gpu->sim.periodicBoxSizeZ;
-
-    gpu->sim.alphaEwald        = alpha;
-    gpu->sim.factorEwald       = -1 / (4*alpha*alpha);
-    gpu->sim.kmax              = 20+1;
+    gpu->sim.alphaEwald         = alpha;
+    gpu->sim.factorEwald        = -1 / (4*alpha*alpha);
+    gpu->sim.kmax               = 20+1;
+    gpu->psEwaldEikr            = new CUDAStream<float2>(gpu->sim.paddedNumberOfAtoms*gpu->sim.kmax, 1, "EwaldEikr");
+    gpu->sim.pEwaldEikr         = gpu->psEwaldEikr->_pDevStream[0];
+    gpu->psEwaldCosSinSum       = new CUDAStream<float2>((gpu->sim.kmax*2-1) * (gpu->sim.kmax*2-1) * (gpu->sim.kmax*2-1), 1, "EwaldCosSinSum");
+    gpu->sim.pEwaldCosSinSum    = gpu->psEwaldCosSinSum->_pDevStream[0];
 }
 
 extern "C"
@@ -449,6 +444,10 @@ void gpuSetPeriodicBoxSize(gpuContext gpu, float xsize, float ysize, float zsize
     gpu->sim.periodicBoxSizeX = xsize;
     gpu->sim.periodicBoxSizeY = ysize;
     gpu->sim.periodicBoxSizeZ = zsize;
+    gpu->sim.recipBoxSizeX = 2.0f*PI/gpu->sim.periodicBoxSizeX;
+    gpu->sim.recipBoxSizeY = 2.0f*PI/gpu->sim.periodicBoxSizeY;
+    gpu->sim.recipBoxSizeZ = 2.0f*PI/gpu->sim.periodicBoxSizeZ;
+    gpu->sim.cellVolume = gpu->sim.periodicBoxSizeX*gpu->sim.periodicBoxSizeY*gpu->sim.periodicBoxSizeZ;
 }
 
 extern "C"
@@ -1002,12 +1001,6 @@ int gpuAllocateInitialBuffers(gpuContext gpu)
     gpu->sim.pObcChain                  = gpu->psObcChain->_pDevStream[0];
     gpu->psSigEps2                      = new CUDAStream<float2>(gpu->sim.paddedNumberOfAtoms, 1, "SigEps2");
     gpu->sim.pAttr                      = gpu->psSigEps2->_pDevStream[0];
-    gpu->psEwaldEikr                    = new CUDAStream<float2>(gpu->sim.paddedNumberOfAtoms, 1, "EwaldEikr");
-    gpu->sim.pEikr                      = gpu->psEwaldEikr->_pDevStream[0];
-    gpu->psEwaldStructureFactor         = new CUDAStream<float2>(gpu->sim.paddedNumberOfAtoms, 1, "EwaldStructureFactor");
-    gpu->sim.pStructureFactor           = gpu->psEwaldStructureFactor->_pDevStream[0];
-    gpu->psEwaldCosSinSum               = new CUDAStream<float2>(gpu->sim.paddedNumberOfAtoms, 1, "EwaldCosSinSum");
-    gpu->sim.pCosSinSum                 = gpu->psEwaldCosSinSum->_pDevStream[0];
     gpu->psObcData                      = new CUDAStream<float2>(gpu->sim.paddedNumberOfAtoms, 1, "ObcData");
     gpu->sim.pObcData                   = gpu->psObcData->_pDevStream[0];
     gpu->psStepSize                     = new CUDAStream<float2>(1, 1, "StepSize");
@@ -1281,6 +1274,8 @@ void* gpuInit(int numAtoms)
     gpu->psRbDihedralParameter2     = NULL;
     gpu->psLJ14ID                   = NULL;
     gpu->psLJ14Parameter            = NULL;
+    gpu->psEwaldEikr                = NULL;
+    gpu->psEwaldCosSinSum           = NULL;
     gpu->psShakeID                  = NULL;
     gpu->psShakeParameter           = NULL;
     gpu->psSettleID                 = NULL;
@@ -1408,11 +1403,13 @@ void gpuShutDown(gpuContext gpu)
     delete gpu->psForce4;
     delete gpu->psxVector4;
     delete gpu->psvVector4;
-    delete gpu->psSigEps2; 
-    delete gpu->psEwaldEikr;
-    delete gpu->psEwaldStructureFactor;
-    delete gpu->psEwaldCosSinSum;
-    delete gpu->psObcData; 
+    delete gpu->psSigEps2;
+    if (gpu->psEwaldEikr != NULL)
+    {
+        delete gpu->psEwaldEikr;
+        delete gpu->psEwaldCosSinSum;
+    }
+    delete gpu->psObcData;
     delete gpu->psObcChain;
     delete gpu->psBornForce;
     delete gpu->psBornRadii;
