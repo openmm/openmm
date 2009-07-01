@@ -67,13 +67,13 @@ public:
     /**
      * Get the default temperature of the heat bath (in Kelvin).
      */
-    double getDefaultTemperature() {
+    double getDefaultTemperature() const {
         return defaultTemp;
     }
     /**
      * Get the default collision frequency (in 1/ps).
      */
-    double getDefaultCollisionFrequency() {
+    double getDefaultCollisionFrequency() const {
         return defaultFreq;
     }
     /**
