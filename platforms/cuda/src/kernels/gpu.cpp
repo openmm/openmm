@@ -432,8 +432,6 @@ void gpuSetEwaldParameters(gpuContext gpu)//, float alphaEwald, int kmax )
     gpu->sim.alphaEwald         = alpha;
     gpu->sim.factorEwald        = -1 / (4*alpha*alpha);
     gpu->sim.kmax               = 20+1;
-    gpu->psEwaldEikr            = new CUDAStream<float2>(gpu->sim.atoms*gpu->sim.kmax*3, 1, "EwaldEikr");
-    gpu->sim.pEwaldEikr         = gpu->psEwaldEikr->_pDevStream[0];
     gpu->psEwaldCosSinSum       = new CUDAStream<float2>((gpu->sim.kmax*2-1) * (gpu->sim.kmax*2-1) * (gpu->sim.kmax*2-1), 1, "EwaldCosSinSum");
     gpu->sim.pEwaldCosSinSum    = gpu->psEwaldCosSinSum->_pDevStream[0];
 }
@@ -1274,7 +1272,6 @@ void* gpuInit(int numAtoms)
     gpu->psRbDihedralParameter2     = NULL;
     gpu->psLJ14ID                   = NULL;
     gpu->psLJ14Parameter            = NULL;
-    gpu->psEwaldEikr                = NULL;
     gpu->psEwaldCosSinSum           = NULL;
     gpu->psShakeID                  = NULL;
     gpu->psShakeParameter           = NULL;
@@ -1404,11 +1401,8 @@ void gpuShutDown(gpuContext gpu)
     delete gpu->psxVector4;
     delete gpu->psvVector4;
     delete gpu->psSigEps2;
-    if (gpu->psEwaldEikr != NULL)
-    {
-        delete gpu->psEwaldEikr;
+    if (gpu->psEwaldCosSinSum != NULL)
         delete gpu->psEwaldCosSinSum;
-    }
     delete gpu->psObcData;
     delete gpu->psObcChain;
     delete gpu->psBornForce;

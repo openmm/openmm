@@ -24,6 +24,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
+/**
+ * This file contains the kernel for evaluating nonbonded forces using the
+ * Ewald summation method (Reciprocal space summation).
+ */
+
 /* Define multiply operations for floats */
 
 __device__ float2 MultofFloat2(float2 a, float2 b)
@@ -42,50 +47,9 @@ __device__ float2 ConjMultofFloat2(float2 a, float2 b)
     return c;
 }
 
-#define EIR(x, y, z) cSim.pEwaldEikr[(x)+(y)*cSim.kmax+(z)*cSim.kmax*3]
-
-__global__ void kCalculateEwaldFastEikr_kernel()
-{
-
-    int kmax = cSim.kmax;
-    float4 apos;
-
-    unsigned int atom    = threadIdx.x + blockIdx.x * blockDim.x;
-
-    while (atom < cSim.atoms)
-    {
-
-          apos                         = cSim.pPosq[atom];
-
-//generic form of the array
-// pEikr[ atomID*kmax*3 + k*3 + m]
-
-
-// k = 0, explicitly
-        for(unsigned int m = 0; (m < 3); m++) {
-            EIR(atom, 0, m).x = 1;
-            EIR(atom, 0, m).y = 0;
-        }
-// k = 1, explicitly
-          EIR(atom, 1, 0).x = cos(apos.x*cSim.recipBoxSizeX);
-          EIR(atom, 1, 0).y = sin(apos.x*cSim.recipBoxSizeX);
-
-          EIR(atom, 1, 1).x = cos(apos.y*cSim.recipBoxSizeY);
-          EIR(atom, 1, 1).y = sin(apos.y*cSim.recipBoxSizeY);
-
-          EIR(atom, 1, 2).x = cos(apos.z*cSim.recipBoxSizeZ);
-          EIR(atom, 1, 2).y = sin(apos.z*cSim.recipBoxSizeZ);
-
-// k > 1, by recursion
-        for(unsigned int k=2; (k<kmax); k++) {
-          for(unsigned int m=0; (m<3); m++) {
-            EIR(atom, k, m) = MultofFloat2(EIR(atom, k-1, m), EIR(atom, 1, m));
-          }
-        }
-
-        atom                            += blockDim.x * gridDim.x;
-    }
-}
+/**
+ * Precompute the cosine and sine sums which appear in each force term.
+ */
 
 __global__ void kCalculateEwaldFastCosSinSums_kernel()
 {
@@ -94,26 +58,41 @@ __global__ void kCalculateEwaldFastCosSinSums_kernel()
     unsigned int index = threadIdx.x + blockIdx.x * blockDim.x;
     while (index < totalK)
     {
+        // Find the wave vector (kx, ky, kz) this index corresponds to.
+
         int rx = index/(ksize*ksize);
         int remainder = index - rx*ksize*ksize;
         int ry = remainder/ksize;
         int rz = remainder - ry*ksize - cSim.kmax + 1;
         ry += -cSim.kmax + 1;
+        float kx = rx*cSim.recipBoxSizeX;
+        float ky = ry*cSim.recipBoxSizeY;
+        float kz = rz*cSim.recipBoxSizeZ;
+
+        // Compute the sum for this wave vector.
+
         float2 sum = make_float2(0.0f, 0.0f);
         for (int atom = 0; atom < cSim.atoms; atom++)
         {
-            float2 tab_xy = (ry >= 0 ? MultofFloat2(EIR(atom, rx, 0), EIR(atom, ry, 1)) :
-                                       ConjMultofFloat2(EIR(atom, rx, 0), EIR(atom, -ry, 1)));
-            float charge = cSim.pPosq[atom].w;
-            float2 structureFactor = (rz >= 0 ? MultofFloat2(tab_xy, EIR(atom, rz, 2)) :
-                                                ConjMultofFloat2(tab_xy, EIR(atom, -rz, 2)));
-            sum.x += charge*structureFactor.x;
-            sum.y += charge*structureFactor.y;
+            float4 apos = cSim.pPosq[atom];
+            float phase = apos.x*kx;
+            float2 structureFactor = make_float2(cos(phase), sin(phase));
+            phase = apos.y*ky;
+            structureFactor = MultofFloat2(structureFactor, make_float2(cos(phase), sin(phase)));
+            phase = apos.z*kz;
+            structureFactor = MultofFloat2(structureFactor, make_float2(cos(phase), sin(phase)));
+            sum.x += apos.w*structureFactor.x;
+            sum.y += apos.w*structureFactor.y;
         }
         cSim.pEwaldCosSinSum[index] = sum;
         index += blockDim.x * gridDim.x;
     }
 }
+
+/**
+ * Compute the reciprocal space part of the Ewald force, using the precomputed sums from the
+ * previous routine.
+ */
 
 __global__ void kCalculateEwaldFastForces_kernel()
 {
@@ -122,8 +101,6 @@ __global__ void kCalculateEwaldFastForces_kernel()
     const float epsilon =  1.0;
     float recipCoeff = cSim.epsfac*(4*PI/cSim.cellVolume/epsilon);
 
-    int lowry = 0;
-    int lowrz = 1;
     const int numRx = cSim.kmax;
     const int numRy = cSim.kmax;
     const int numRz = cSim.kmax;
@@ -133,22 +110,32 @@ __global__ void kCalculateEwaldFastForces_kernel()
     while (atom < cSim.atoms)
     {
         float4 force = cSim.pForce4[atom];
-        float charge = cSim.pPosq[atom].w;
+        float4 apos = cSim.pPosq[atom];
+
+        // Loop over all wave vectors.
+
+        int lowry = 0;
+        int lowrz = 1;
         for (int rx = 0; rx < numRx; rx++) {
             float kx = rx * cSim.recipBoxSizeX;
             for (int ry = lowry; ry < numRy; ry++) {
                 float ky = ry * cSim.recipBoxSizeY;
-                float2 tab_xy = (ry >= 0 ? MultofFloat2(EIR(atom, rx, 0), EIR(atom, ry, 1)) :
-                                           ConjMultofFloat2(EIR(atom, rx, 0), EIR(atom, -ry, 1)));
+                float phase = apos.x*kx;
+                float2 tab_xy = make_float2(cos(phase), sin(phase));
+                phase = apos.y*ky;
+                tab_xy = MultofFloat2(tab_xy, make_float2(cos(phase), sin(phase)));
                 for (int rz = lowrz; rz < numRz; rz++) {
                     float kz = rz * cSim.recipBoxSizeZ;
+
+                    // Compute the force contribution of this wave vector.
+
                     int index = rx*(numRy*2-1)*(numRz*2-1) + (ry+numRy-1)*(numRz*2-1) + (rz+numRz-1);
                     float k2 = kx*kx + ky*ky + kz*kz;
                     float ak = exp(k2*cSim.factorEwald) / k2;
-                    float2 structureFactor = (rz >= 0 ? MultofFloat2(tab_xy, EIR(atom, rz, 2)) :
-                                                        ConjMultofFloat2(tab_xy, EIR(atom, -rz, 2)));
+                    phase = apos.z*kz;
+                    float2 structureFactor = MultofFloat2(tab_xy, make_float2(cos(phase), sin(phase)));
                     float2 cosSinSum = cSim.pEwaldCosSinSum[index];
-                    float dEdR = ak * charge * (cosSinSum.x*structureFactor.y - cosSinSum.y*structureFactor.x);
+                    float dEdR = ak * apos.w * (cosSinSum.x*structureFactor.y - cosSinSum.y*structureFactor.x);
                     force.x += 2 * recipCoeff * dEdR * kx;
                     force.y += 2 * recipCoeff * dEdR * ky;
                     force.z += 2 * recipCoeff * dEdR * kz;
@@ -157,6 +144,9 @@ __global__ void kCalculateEwaldFastForces_kernel()
                 lowry = 1 - numRy;
             }
         }
+
+        // Record the force on the atom.
+
         cSim.pForce4[atom] = force;
         atom += blockDim.x * gridDim.x;
     }

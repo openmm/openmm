@@ -209,13 +209,11 @@ void kCalculateCDLJForces(gpuContext gpu)
                 // O(N2) Ewald summation
                 kCalculateCDLJEwaldReciprocalForces_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
                 LAUNCHERROR("kCalculateCDLJEwaldReciprocalForces");
-            }
+        }
             else
             {
-                // O(N3/2) Ewald summation
-                kCalculateEwaldFastEikr_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
-                LAUNCHERROR("kCalculateEwaldFastEikr");
-                kCalculateEwaldFastCosSinSums_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
+                // Fast Ewald summation
+                kCalculateEwaldFastCosSinSums_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block>>>();
                 LAUNCHERROR("kCalculateEwaldFastCosSinSums");
                 kCalculateEwaldFastForces_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
                 LAUNCHERROR("kCalculateEwaldFastForces");

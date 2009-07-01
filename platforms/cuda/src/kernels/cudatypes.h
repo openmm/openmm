@@ -337,7 +337,6 @@ struct cudaGmxSimulation {
     float           collisionProbability;           // Collision probability for Andersen thermostat
     float2*         pObcData;                       // Pointer to fixed Born data
     float2*         pAttr;                          // Pointer to additional atom attributes (sig, eps)
-    float2*         pEwaldEikr;                     // Pointer to exponents of reciprocal vectors and atom coordinates (ewald)
     float2*         pEwaldCosSinSum;                // Pointer to the cos/sin sums (ewald)
     unsigned int    bonds;                          // Number of bonds
     int4*           pBondID;                        // Bond atom and output buffer IDs
