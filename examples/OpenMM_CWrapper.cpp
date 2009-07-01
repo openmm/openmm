@@ -679,6 +679,14 @@ void openmm_harmonicbondforce_destroy_(OpenMM_HarmonicBondForce*& doomed)
 void OPENMM_HARMONICBONDFORCE_DESTROY(OpenMM_HarmonicBondForce*& doomed) 
 {   OpenMM_HarmonicBondForce_destroy(doomed); doomed = 0;}
 
+// Fortran only: recast HarmonicBondForce as a Force.
+void openmm_harmonicbondforce_asforce_(OpenMM_HarmonicBondForce* const& hbf,
+							           OpenMM_Force*&                   force)
+{   force = (OpenMM_Force*)hbf; }
+void OPENMM_HARMONICBONDFORCE_ASFORCE(OpenMM_HarmonicBondForce* const& hbf,
+							          OpenMM_Force*&                   force)
+{   force = (OpenMM_Force*)hbf; }
+
 // getNumBonds
 int OpenMM_HarmonicBondForce_getNumBonds(const OpenMM_HarmonicBondForce* hbf)
 {   return ((const HarmonicBondForce*)hbf)->getNumBonds(); }
@@ -733,6 +741,14 @@ void openmm_harmonicangleforce_destroy_(OpenMM_HarmonicAngleForce*& doomed)
 {   OpenMM_HarmonicAngleForce_destroy(doomed); doomed = 0;}
 void OPENMM_HARMONICANGLEFORCE_DESTROY(OpenMM_HarmonicAngleForce*& doomed) 
 {   OpenMM_HarmonicAngleForce_destroy(doomed); doomed = 0;}
+
+// Fortran only: recast HarmonicAngleForce as a Force.
+void openmm_harmonicangleforce_asforce_(OpenMM_HarmonicAngleForce* const& haf,
+							            OpenMM_Force*&                   force)
+{   force = (OpenMM_Force*)haf; }
+void OPENMM_HARMONICANGLEFORCE_ASFORCE(OpenMM_HarmonicAngleForce* const& haf,
+							           OpenMM_Force*&                   force)
+{   force = (OpenMM_Force*)haf; }
 
 // getNumAngles
 int OpenMM_HarmonicAngleForce_getNumAngles(const OpenMM_HarmonicAngleForce* haf)
@@ -790,38 +806,112 @@ void openmm_periodictorsionforce_destroy_(OpenMM_PeriodicTorsionForce*& doomed)
 void OPENMM_PERIODICTORSIONFORCE_DESTROY(OpenMM_PeriodicTorsionForce*& doomed) 
 {   OpenMM_PeriodicTorsionForce_destroy(doomed); doomed = 0;}
 
+// Fortran only: recast PeriodicTorsionForce as a Force.
+void openmm_periodictorsionforce_asforce_(OpenMM_PeriodicTorsionForce* const& ptf,
+							              OpenMM_Force*&                      force)
+{   force = (OpenMM_Force*)ptf; }
+void OPENMM_PERIODICTORSIONFORCE_ASFORCE(OpenMM_PeriodicTorsionForce* const& ptf,
+							             OpenMM_Force*&                      force)
+{   force = (OpenMM_Force*)ptf; }
+
 // getNumTorsions
-int OpenMM_PeriodicTorsionForce_getNumTorsions(const OpenMM_PeriodicTorsionForce* haf)
-{   return ((const PeriodicTorsionForce*)haf)->getNumTorsions(); }
-int openmm_periodictorsionforce_getnumangles_(const OpenMM_PeriodicTorsionForce* const& haf)
-{   return OpenMM_PeriodicTorsionForce_getNumTorsions(haf); }
-int OPENMM_PERIODICTORSIONFORCE_GETNUMANGLES(const OpenMM_PeriodicTorsionForce* const& haf)
-{   return OpenMM_PeriodicTorsionForce_getNumTorsions(haf); }
+int OpenMM_PeriodicTorsionForce_getNumTorsions(const OpenMM_PeriodicTorsionForce* ptf)
+{   return ((const PeriodicTorsionForce*)ptf)->getNumTorsions(); }
+int openmm_periodictorsionforce_getnumangles_(const OpenMM_PeriodicTorsionForce* const& ptf)
+{   return OpenMM_PeriodicTorsionForce_getNumTorsions(ptf); }
+int OPENMM_PERIODICTORSIONFORCE_GETNUMANGLES(const OpenMM_PeriodicTorsionForce* const& ptf)
+{   return OpenMM_PeriodicTorsionForce_getNumTorsions(ptf); }
 
 // addTorsion
-int OpenMM_PeriodicTorsionForce_addTorsion(OpenMM_PeriodicTorsionForce* haf, int p1, int p2, int p3, int p4, int periodicity, double phase, double k)
-{   return ((PeriodicTorsionForce*)haf)->addTorsion(p1,p2,p3,p4,periodicity,phase,k); }
-int openmm_periodictorsionforce_addtorsion_(OpenMM_PeriodicTorsionForce* const& haf, int const& p1, int const& p2, int const& p3, int const& p4, int const& periodicity, double const& phase, double const& k)
-{   return OpenMM_PeriodicTorsionForce_addTorsion(haf,p1,p2,p3,p4,periodicity,phase,k); }
-int OPENMM_PERIODICTORSIONFORCE_ADDTORSION(OpenMM_PeriodicTorsionForce* const& haf, int const& p1, int const& p2, int const& p3, int const& p4, int const& periodicity, double const& phase, double const& k)
-{   return OpenMM_PeriodicTorsionForce_addTorsion(haf,p1,p2,p3,p4,periodicity,phase,k); }
+int OpenMM_PeriodicTorsionForce_addTorsion(OpenMM_PeriodicTorsionForce* ptf, int p1, int p2, int p3, int p4, int periodicity, double phase, double k)
+{   return ((PeriodicTorsionForce*)ptf)->addTorsion(p1,p2,p3,p4,periodicity,phase,k); }
+int openmm_periodictorsionforce_addtorsion_(OpenMM_PeriodicTorsionForce* const& ptf, int const& p1, int const& p2, int const& p3, int const& p4, int const& periodicity, double const& phase, double const& k)
+{   return OpenMM_PeriodicTorsionForce_addTorsion(ptf,p1,p2,p3,p4,periodicity,phase,k); }
+int OPENMM_PERIODICTORSIONFORCE_ADDTORSION(OpenMM_PeriodicTorsionForce* const& ptf, int const& p1, int const& p2, int const& p3, int const& p4, int const& periodicity, double const& phase, double const& k)
+{   return OpenMM_PeriodicTorsionForce_addTorsion(ptf,p1,p2,p3,p4,periodicity,phase,k); }
 
 // setTorsionParameters
-void OpenMM_PeriodicTorsionForce_setTorsionParameters(OpenMM_PeriodicTorsionForce* haf, int ix, int p1, int p2, int p3, int p4, int periodicity, double phase, double k)
-{   ((PeriodicTorsionForce*)haf)->setTorsionParameters(ix,p1,p2,p3,p4,periodicity,phase,k); }
-void openmm_periodictorsionforce_settorsionparameters_(OpenMM_PeriodicTorsionForce* const& haf, int const& ix, int const& p1, int const& p2, int const& p3, int const& p4, int const& periodicity, double const& phase, double const& k)
-{   OpenMM_PeriodicTorsionForce_setTorsionParameters(haf,ix,p1,p2,p3,p4,periodicity,phase,k); }
-void OPENMM_PERIODICTORSIONFORCE_SETTORSIONPARAMETERS(OpenMM_PeriodicTorsionForce* const& haf, int const& ix, int const& p1, int const& p2, int const& p3, int const& p4, int const& periodicity, double const& phase, double const& k)
-{   OpenMM_PeriodicTorsionForce_setTorsionParameters(haf,ix,p1,p2,p3,p4,periodicity,phase,k); }
+void OpenMM_PeriodicTorsionForce_setTorsionParameters(OpenMM_PeriodicTorsionForce* ptf, int ix, int p1, int p2, int p3, int p4, int periodicity, double phase, double k)
+{   ((PeriodicTorsionForce*)ptf)->setTorsionParameters(ix,p1,p2,p3,p4,periodicity,phase,k); }
+void openmm_periodictorsionforce_settorsionparameters_(OpenMM_PeriodicTorsionForce* const& ptf, int const& ix, int const& p1, int const& p2, int const& p3, int const& p4, int const& periodicity, double const& phase, double const& k)
+{   OpenMM_PeriodicTorsionForce_setTorsionParameters(ptf,ix,p1,p2,p3,p4,periodicity,phase,k); }
+void OPENMM_PERIODICTORSIONFORCE_SETTORSIONPARAMETERS(OpenMM_PeriodicTorsionForce* const& ptf, int const& ix, int const& p1, int const& p2, int const& p3, int const& p4, int const& periodicity, double const& phase, double const& k)
+{   OpenMM_PeriodicTorsionForce_setTorsionParameters(ptf,ix,p1,p2,p3,p4,periodicity,phase,k); }
 
 // getTorsionParameters
-void OpenMM_PeriodicTorsionForce_getTorsionParameters(const OpenMM_PeriodicTorsionForce* haf, int ix, 
+void OpenMM_PeriodicTorsionForce_getTorsionParameters(const OpenMM_PeriodicTorsionForce* ptf, int ix, 
                                                 int* p1, int* p2, int* p3, int* p4, int* periodicity, double* phase, double* k)
-{   ((const PeriodicTorsionForce*)haf)->getTorsionParameters(ix,*p1,*p2,*p3,*p4,*periodicity,*phase,*k); }
-void openmm_periodictorsionforce_gettorsionparameters_(const OpenMM_PeriodicTorsionForce* const& haf, int const& ix, int& p1, int& p2, int& p3, int& p4, int& periodicity, double& phase, double& k)
-{   OpenMM_PeriodicTorsionForce_getTorsionParameters(haf,ix,&p1,&p2,&p3,&p4,&periodicity,&phase,&k); }
-void OPENMM_PERIODICTORSIONFORCE_GETTORSIONPARAMETERS(const OpenMM_PeriodicTorsionForce* const& haf, int const& ix, int& p1, int& p2, int& p3, int& p4, int& periodicity, double& phase, double& k)
-{   OpenMM_PeriodicTorsionForce_getTorsionParameters(haf,ix,&p1,&p2,&p3,&p4,&periodicity,&phase,&k); }
+{   ((const PeriodicTorsionForce*)ptf)->getTorsionParameters(ix,*p1,*p2,*p3,*p4,*periodicity,*phase,*k); }
+void openmm_periodictorsionforce_gettorsionparameters_(const OpenMM_PeriodicTorsionForce* const& ptf, int const& ix, int& p1, int& p2, int& p3, int& p4, int& periodicity, double& phase, double& k)
+{   OpenMM_PeriodicTorsionForce_getTorsionParameters(ptf,ix,&p1,&p2,&p3,&p4,&periodicity,&phase,&k); }
+void OPENMM_PERIODICTORSIONFORCE_GETTORSIONPARAMETERS(const OpenMM_PeriodicTorsionForce* const& ptf, int const& ix, int& p1, int& p2, int& p3, int& p4, int& periodicity, double& phase, double& k)
+{   OpenMM_PeriodicTorsionForce_getTorsionParameters(ptf,ix,&p1,&p2,&p3,&p4,&periodicity,&phase,&k); }
+
+    ////////////////////////////////
+    // OpenMM::AndersenThermostat //
+    ////////////////////////////////
+
+// create
+OpenMM_AndersenThermostat* OpenMM_AndersenThermostat_create(double temp, double collisionFreqInPerPs)
+{   return (OpenMM_AndersenThermostat*)new AndersenThermostat(temp, collisionFreqInPerPs); }
+void openmm_andersenthermostat_create_(OpenMM_AndersenThermostat*& frc, double const& temp, double const& freq)
+{   frc = OpenMM_AndersenThermostat_create(temp, freq);}
+void OPENMM_ANDERSENTHERMOSTAT_CREATE(OpenMM_AndersenThermostat*& frc, double const& temp, double const& freq)
+{   frc = OpenMM_AndersenThermostat_create(temp, freq);}
+
+
+// destroy
+void OpenMM_AndersenThermostat_destroy(OpenMM_AndersenThermostat* doomed)
+{   delete (AndersenThermostat*)doomed; }
+void openmm_andersenthermostat_destroy_(OpenMM_AndersenThermostat*& doomed) 
+{   OpenMM_AndersenThermostat_destroy(doomed); doomed = 0;}
+void OPENMM_ANDERSENTHERMOSTAT_DESTROY(OpenMM_AndersenThermostat*& doomed) 
+{   OpenMM_AndersenThermostat_destroy(doomed); doomed = 0;}
+
+
+// Fortran only: recast AndersenThermostat as a Force.
+void openmm_andersenthermostat_asforce_(OpenMM_AndersenThermostat* const& at,
+							            OpenMM_Force*&                    force)
+{   force = (OpenMM_Force*)at; }
+void OPENMM_ANDERSENTHERMOSTAT_ASFORCE(OpenMM_AndersenThermostat* const& at,
+							           OpenMM_Force*&                    force)
+{   force = (OpenMM_Force*)at; }
+
+// For compatibility with preview release 3 where getDefaultTemperature() and
+// getDefaultCollisionFrequency() were accidentally declared nonconst, we're 
+// using const_cast<> here; that will be unnecessary (but harmless) later.
+
+// getDefaultTemperature
+double OpenMM_AndersenThermostat_getDefaultTemperature(const OpenMM_AndersenThermostat* at)
+{   return const_cast<AndersenThermostat*>((const AndersenThermostat*)at)->getDefaultTemperature(); }
+double openmm_andersenthermostat_getdefaulttemperature_(const OpenMM_AndersenThermostat* const& at)
+{   return OpenMM_AndersenThermostat_getDefaultTemperature(at); }
+double OPENMM_ANDERSENTHERMOSTAT_GETDEFAULTTEMPERATURE(const OpenMM_AndersenThermostat* const& at)
+{   return OpenMM_AndersenThermostat_getDefaultTemperature(at); }
+
+// getDefaultCollisionFrequency
+double OpenMM_AndersenThermostat_getDefaultCollisionFrequency(const OpenMM_AndersenThermostat* at)
+{   return const_cast<AndersenThermostat*>((const AndersenThermostat*)at)->getDefaultCollisionFrequency(); }
+double openmm_andersenthermostat_getdefaultcollisionfrequency_(const OpenMM_AndersenThermostat* const& at)
+{   return OpenMM_AndersenThermostat_getDefaultCollisionFrequency(at); }
+double OPENMM_ANDERSENTHERMOSTAT_GETDEFAULTCOLLISIONFREQUENCY(const OpenMM_AndersenThermostat* const& at)
+{   return OpenMM_AndersenThermostat_getDefaultCollisionFrequency(at); }
+
+// getRandomNumberSeed
+int OpenMM_AndersenThermostat_getRandomNumberSeed(const OpenMM_AndersenThermostat* at)
+{   return ((const AndersenThermostat*)at)->getRandomNumberSeed(); }
+int openmm_andersenthermostat_getrandomnumberseed_(const OpenMM_AndersenThermostat* const& at)
+{   return OpenMM_AndersenThermostat_getRandomNumberSeed(at); }
+int OPENMM_ANDERSENTHERMOSTAT_GETRANDOMNUMBERSEED(const OpenMM_AndersenThermostat* const& at)
+{   return OpenMM_AndersenThermostat_getRandomNumberSeed(at); }
+
+// setRandomNumberSeed
+void OpenMM_AndersenThermostat_setRandomNumberSeed(OpenMM_AndersenThermostat* at, int seed)
+{   ((AndersenThermostat*)at)->setRandomNumberSeed(seed); }
+void openmm_andersenthermostat_setrandomnumberseed_(OpenMM_AndersenThermostat* const& at, int const& seed)
+{   OpenMM_AndersenThermostat_setRandomNumberSeed(at, seed); }
+void OPENMM_ANDERSENTHERMOSTAT_SETRANDOMNUMBERSEED(OpenMM_AndersenThermostat* const& at, int const& seed)
+{   OpenMM_AndersenThermostat_setRandomNumberSeed(at, seed); }
 
 
     ////////////////////////

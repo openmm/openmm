@@ -67,6 +67,7 @@ typedef struct OpenMM_GBSAOBCForce_s            OpenMM_GBSAOBCForce;
 typedef struct OpenMM_HarmonicBondForce_s       OpenMM_HarmonicBondForce;
 typedef struct OpenMM_HarmonicAngleForce_s      OpenMM_HarmonicAngleForce;
 typedef struct OpenMM_PeriodicTorsionForce_s    OpenMM_PeriodicTorsionForce;
+typedef struct OpenMM_AndersenThermostat_s      OpenMM_AndersenThermostat;
 
 typedef enum {
     OpenMM_NonbondedForce_NoCutoff            = 0,
@@ -260,6 +261,15 @@ extern void OpenMM_PeriodicTorsionForce_getTorsionParameters(const OpenMM_Period
                                                            int* periodicity, double* phase, double* k);
 extern void OpenMM_PeriodicTorsionForce_setTorsionParameters(OpenMM_PeriodicTorsionForce*, int ix, int p1, int p2, int p3, int p4,
                                                            int periodicity, double phase, double k);
+
+/* OpenMM::AndersenThermostat */
+extern OpenMM_AndersenThermostat* OpenMM_AndersenThermostat_create(double temp, double collisionFreqInPerPs);
+extern void   OpenMM_AndersenThermostat_destroy(OpenMM_AndersenThermostat*);
+extern double OpenMM_AndersenThermostat_getDefaultTemperature(const OpenMM_AndersenThermostat*);
+extern double OpenMM_AndersenThermostat_getDefaultCollisionFrequency(const OpenMM_AndersenThermostat*);
+extern int    OpenMM_AndersenThermostat_getRandomNumberSeed(const OpenMM_AndersenThermostat*);
+extern void   OpenMM_AndersenThermostat_setRandomNumberSeed(OpenMM_AndersenThermostat*, int seed);
+
 
 /* OpenMM::Integrator */
 extern void OpenMM_Integrator_step(OpenMM_Integrator*, int numSteps);

@@ -92,6 +92,9 @@ MODULE OpenMM_Types
     type OpenMM_PeriodicTorsionForce
         integer*8 :: handle = 0
     end type
+    type OpenMM_AndersenThermostat
+        integer*8 :: handle = 0
+    end type
     type OpenMM_VerletIntegrator
         integer*8 :: handle = 0
     end type
@@ -683,7 +686,53 @@ MODULE OpenMM
             integer*4 ix, p1, p2, p3, p4, periodicity
             real*8 phase,k
         end
-
+        
+        
+        ! --------------------------
+        ! OpenMM::AndersenThermostat
+        ! --------------------------
+        subroutine OpenMM_AndersenThermostat_create(at, temp, freqInPerPs)
+            use OpenMM_Types; implicit none
+            type (OpenMM_AndersenThermostat) at
+            real*8 temp, freqInPerPs
+        end
+        subroutine OpenMM_AndersenThermostat_destroy(at)
+            use OpenMM_Types; implicit none
+            type (OpenMM_AndersenThermostat) at
+        end
+        
+        ! This takes an AndersenThermostat handle and recasts it to a generic
+        ! Force handle. This is only a type change; the returned Force
+        ! handle refers to the same AndersenThermostat object as the input.
+        ! You can accomplish the same thing with Fortran 95's "transfer"
+        ! intrinsic function.
+        subroutine OpenMM_AndersenThermostat_asForce(at, force)
+            use OpenMM_Types; implicit none
+            type (OpenMM_AndersenThermostat) at
+            type (OpenMM_Force)              force
+        end
+        
+        function OpenMM_AndersenThermostat_getDefaultTemperature(at)
+            use OpenMM_Types; implicit none
+            type (OpenMM_AndersenThermostat) at
+            real*8 OpenMM_AndersenThermostat_getDefaultTemperature
+        end
+        function OpenMM_AndersenThermostat_getDefaultCollisionFrequency(at)
+            use OpenMM_Types; implicit none
+            type (OpenMM_AndersenThermostat) at
+            real*8 OpenMM_AndersenThermostat_getDefaultCollisionFrequency
+        end
+        function OpenMM_AndersenThermostat_getRandomNumberSeed(at)
+            use OpenMM_Types; implicit none
+            type (OpenMM_AndersenThermostat) at
+            integer*4 OpenMM_AndersenThermostat_getRandomNumberSeed
+        end
+        subroutine OpenMM_AndersenThermostat_setRandomNumberSeed(at, seed)
+            use OpenMM_Types; implicit none
+            type (OpenMM_AndersenThermostat) at
+            integer*4 seed
+        end
+        
         ! -------------------------
         ! OpenMM::Integrator
         ! -------------------------
