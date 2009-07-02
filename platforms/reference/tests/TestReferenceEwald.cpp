@@ -62,6 +62,7 @@ void testEwald() {
     const double cutoff = 2.0;
     nonbonded->setCutoffDistance(cutoff);
     nonbonded->setPeriodicBoxVectors(Vec3(6, 0, 0), Vec3(0, 6, 0), Vec3(0, 0, 6));
+    nonbonded->setEwaldErrorTolerance(TOL);
     system.addForce(nonbonded);
     OpenMMContext context(system, integrator, platform);
     vector<Vec3> positions(2);
@@ -73,8 +74,8 @@ void testEwald() {
     cout << "force 0: " << forces[0] << endl;
     cout << "force 1: " << forces[1] << endl;
     cout << "PotentialEnergy: " << state.getPotentialEnergy() << endl;
-    ASSERT_EQUAL_VEC(Vec3(-123.711, 64.1877, -302.716), forces[0], TOL);
-    ASSERT_EQUAL_VEC(Vec3(123.711, -64.1877, 302.716), forces[1], TOL);
+    ASSERT_EQUAL_VEC(Vec3(-123.711, 64.1877, -302.716), forces[0], 10*TOL);
+    ASSERT_EQUAL_VEC(Vec3(123.711, -64.1877, 302.716), forces[1], 10*TOL);
 //    const double eps = 78.3;
 //    const double krf = (1.0/(cutoff*cutoff*cutoff))*(eps-1.0)/(2.0*eps+1.0);
 //    const double crf = (1.0/cutoff)*(3.0*eps)/(2.0*eps+1.0);

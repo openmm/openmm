@@ -44,7 +44,7 @@ using std::vector;
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceLJCoulombIxn::ReferenceLJCoulombIxn( ) : cutoff(false), periodic(false) {
+ReferenceLJCoulombIxn::ReferenceLJCoulombIxn( ) : cutoff(false), periodic(false), ewald(false) {
 
    // ---------------------------------------------------------------------------------------
 
@@ -119,6 +119,25 @@ ReferenceLJCoulombIxn::~ReferenceLJCoulombIxn( ){
 
   }
 
+  /**---------------------------------------------------------------------------------------
+
+     Set the force to use Ewald summation.
+
+     @param alpha  the Ewald separation parameter
+     @param kmaxx  the largest wave vector in the x direction
+     @param kmaxy  the largest wave vector in the y direction
+     @param kmaxz  the largest wave vector in the z direction
+
+     --------------------------------------------------------------------------------------- */
+
+  void ReferenceLJCoulombIxn::setUseEwald(RealOpenMM alpha, int kmaxx, int kmaxy, int kmaxz) {
+      alphaEwald = alpha;
+      numRx = kmaxx;
+      numRy = kmaxy;
+      numRz = kmaxz;
+      ewald = true;
+  }
+
 /**---------------------------------------------------------------------------------------
 
    Calculate parameters for LJ Coulomb ixn
@@ -171,44 +190,6 @@ int ReferenceLJCoulombIxn::getDerivedParameters( RealOpenMM c6, RealOpenMM c12, 
    return ReferenceForce::DefaultReturn;
 }
 
-  /**---------------------------------------------------------------------------------------
-
-     Set the reciprocal space vectors to use with Ewald
-
-// Currently a dumb routine, vectors are set in calculateEwaldIxn
-
-     @return ReferenceForce::DefaultReturn
-
-     --------------------------------------------------------------------------------------- */
-
- int ReferenceLJCoulombIxn::setRecipVectors() {
-    
-    return ReferenceForce::DefaultReturn;
-  }
-
-  /**---------------------------------------------------------------------------------------
-
-     Calculate the Ewald parameter based on the cutoff and the desired tolerance using
-
-     erfc( alpha*cutoff )/cutoff < tolerance
-
-     @return ReferenceForce::DefaultReturn
-
-     --------------------------------------------------------------------------------------- */
-
-/* int ReferenceLJCoulombIxn::setAlphaEwald(RealOpenMM cutoff, RealOpenMM tolerance,
-                                          RealOpenMM alphaEwald) {
- 
-    alphaEwald = 1.0f;
-
-    while ( erfc(alphaEwald*cutoff)  >=  tolerance*cutoff) {
-      alphaEwald= 1.2 * alphaEwald;
-    }
-
-    return ReferenceForce::DefaultReturn;
-  }
-*/
-
 /**---------------------------------------------------------------------------------------
 
    Calculate Ewald ixn
@@ -232,20 +213,13 @@ int ReferenceLJCoulombIxn::getDerivedParameters( RealOpenMM c6, RealOpenMM c12, 
 int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** atomCoordinates,
                                              RealOpenMM** atomParameters, int** exclusions,
                                              RealOpenMM* fixedParameters, RealOpenMM** forces,
-                                             RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const {
+                                             RealOpenMM* energyByAtom, RealOpenMM* totalEnergy) const {
 
     #include "../SimTKUtilities/RealTypeSimTk.h"
     typedef std::complex<RealOpenMM> d_complex;
 
-// Number of R-vectors (real space vectors)
-// to be calculated automatically eventually from alphaEwald and desired precision
-
-    int numRx = 20+1;
-    int numRy = 20+1;
-    int numRz = 20+1;
     int kmax = std::max(numRx, std::max(numRy,numRz));
 
-    static const RealOpenMM alphaEwald       =  (RealOpenMM) 3.123413;
     RealOpenMM  factorEwald = -1 / (4*alphaEwald*alphaEwald);
 
 
@@ -466,6 +440,8 @@ int ReferenceLJCoulombIxn::calculatePairIxn( int numberOfAtoms, RealOpenMM** ato
                                              RealOpenMM* fixedParameters, RealOpenMM** forces,
                                              RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const {
 
+    if (ewald)
+        return calculateEwaldIxn(numberOfAtoms, atomCoordinates, atomParameters, exclusions, fixedParameters, forces, energyByAtom, totalEnergy);
    if (cutoff) {
        for (int i = 0; i < (int) neighborList->size(); i++) {
            OpenMM::AtomPair pair = (*neighborList)[i];

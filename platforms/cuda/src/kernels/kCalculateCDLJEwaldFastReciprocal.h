@@ -53,18 +53,20 @@ __device__ float2 ConjMultofFloat2(float2 a, float2 b)
 
 __global__ void kCalculateEwaldFastCosSinSums_kernel()
 {
-    const unsigned int ksize = 2*cSim.kmax-1;
-    const unsigned int totalK = ksize*ksize*ksize;
+    const unsigned int ksizex = 2*cSim.kmaxX-1;
+    const unsigned int ksizey = 2*cSim.kmaxY-1;
+    const unsigned int ksizez = 2*cSim.kmaxZ-1;
+    const unsigned int totalK = ksizex*ksizey*ksizez;
     unsigned int index = threadIdx.x + blockIdx.x * blockDim.x;
     while (index < totalK)
     {
         // Find the wave vector (kx, ky, kz) this index corresponds to.
 
-        int rx = index/(ksize*ksize);
-        int remainder = index - rx*ksize*ksize;
-        int ry = remainder/ksize;
-        int rz = remainder - ry*ksize - cSim.kmax + 1;
-        ry += -cSim.kmax + 1;
+        int rx = index/(ksizey*ksizez);
+        int remainder = index - rx*ksizey*ksizez;
+        int ry = remainder/ksizez;
+        int rz = remainder - ry*ksizez - cSim.kmaxZ + 1;
+        ry += -cSim.kmaxY + 1;
         float kx = rx*cSim.recipBoxSizeX;
         float ky = ry*cSim.recipBoxSizeY;
         float kz = rz*cSim.recipBoxSizeZ;
@@ -101,10 +103,6 @@ __global__ void kCalculateEwaldFastForces_kernel()
     const float epsilon =  1.0;
     float recipCoeff = cSim.epsfac*(4*PI/cSim.cellVolume/epsilon);
 
-    const int numRx = cSim.kmax;
-    const int numRy = cSim.kmax;
-    const int numRz = cSim.kmax;
-
     unsigned int atom = threadIdx.x + blockIdx.x * blockDim.x;
 
     while (atom < cSim.atoms)
@@ -116,20 +114,20 @@ __global__ void kCalculateEwaldFastForces_kernel()
 
         int lowry = 0;
         int lowrz = 1;
-        for (int rx = 0; rx < numRx; rx++) {
+        for (int rx = 0; rx < cSim.kmaxX; rx++) {
             float kx = rx * cSim.recipBoxSizeX;
-            for (int ry = lowry; ry < numRy; ry++) {
+            for (int ry = lowry; ry < cSim.kmaxY; ry++) {
                 float ky = ry * cSim.recipBoxSizeY;
                 float phase = apos.x*kx;
                 float2 tab_xy = make_float2(cos(phase), sin(phase));
                 phase = apos.y*ky;
                 tab_xy = MultofFloat2(tab_xy, make_float2(cos(phase), sin(phase)));
-                for (int rz = lowrz; rz < numRz; rz++) {
+                for (int rz = lowrz; rz < cSim.kmaxZ; rz++) {
                     float kz = rz * cSim.recipBoxSizeZ;
 
                     // Compute the force contribution of this wave vector.
 
-                    int index = rx*(numRy*2-1)*(numRz*2-1) + (ry+numRy-1)*(numRz*2-1) + (rz+numRz-1);
+                    int index = rx*(cSim.kmaxY*2-1)*(cSim.kmaxZ*2-1) + (ry+cSim.kmaxY-1)*(cSim.kmaxZ*2-1) + (rz+cSim.kmaxZ-1);
                     float k2 = kx*kx + ky*ky + kz*kz;
                     float ak = exp(k2*cSim.factorEwald) / k2;
                     phase = apos.z*kz;
@@ -139,9 +137,9 @@ __global__ void kCalculateEwaldFastForces_kernel()
                     force.x += 2 * recipCoeff * dEdR * kx;
                     force.y += 2 * recipCoeff * dEdR * ky;
                     force.z += 2 * recipCoeff * dEdR * kz;
-                    lowrz = 1 - numRz;
+                    lowrz = 1 - cSim.kmaxZ;
                 }
-                lowry = 1 - numRy;
+                lowry = 1 - cSim.kmaxY;
             }
         }
 

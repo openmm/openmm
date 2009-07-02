@@ -392,7 +392,17 @@ void ReferenceCalcNonbondedForceKernel::initialize(const System& system, const N
         neighborList = NULL;
     else
         neighborList = new NeighborList();
-        
+    if (nonbondedMethod == Ewald) {
+        RealOpenMM ewaldErrorTol = (RealOpenMM) force.getEwaldErrorTolerance();
+        ewaldAlpha = (RealOpenMM) (std::sqrt(-std::log(ewaldErrorTol))/nonbondedCutoff);
+        RealOpenMM mx = periodicBoxSize[0]/nonbondedCutoff;
+        RealOpenMM my = periodicBoxSize[1]/nonbondedCutoff;
+        RealOpenMM mz = periodicBoxSize[2]/nonbondedCutoff;
+        RealOpenMM pi = (RealOpenMM) 3.1415926535897932385;
+        kmax[0] = std::ceil(-(mx/pi)*std::log(ewaldErrorTol));
+        kmax[1] = std::ceil(-(my/pi)*std::log(ewaldErrorTol));
+        kmax[2] = std::ceil(-(mz/pi)*std::log(ewaldErrorTol));
+    }
 }
 
 void ReferenceCalcNonbondedForceKernel::executeForces(OpenMMContextImpl& context) {
@@ -407,13 +417,9 @@ void ReferenceCalcNonbondedForceKernel::executeForces(OpenMMContextImpl& context
     }
     if (periodic||ewald)
         clj.setPeriodic(periodicBoxSize);
-    if (ewald) {
-        clj.setRecipVectors();
-        clj.calculateEwaldIxn(numParticles, posData, particleParamArray, exclusionArray, 0, forceData, 0, 0);
-    }
-    else {
-        clj.calculatePairIxn(numParticles, posData, particleParamArray, exclusionArray, 0, forceData, 0, 0);
-    }
+    if (ewald)
+        clj.setUseEwald(ewaldAlpha, kmax[0], kmax[1], kmax[2]);
+    clj.calculatePairIxn(numParticles, posData, particleParamArray, exclusionArray, 0, forceData, 0, 0);
     ReferenceBondForce refBondForce;
     ReferenceLJCoulomb14 nonbonded14;
     if (nonbondedMethod != NoCutoff)
@@ -434,13 +440,9 @@ double ReferenceCalcNonbondedForceKernel::executeEnergy(OpenMMContextImpl& conte
     }
     if (periodic || ewald)
         clj.setPeriodic(periodicBoxSize);
-    if (ewald) {
-        clj.setRecipVectors();
-        clj.calculateEwaldIxn(numParticles, posData, particleParamArray, exclusionArray, 0, forceData, 0, &energy);
-    }
-    else {
-        clj.calculatePairIxn(numParticles, posData, particleParamArray, exclusionArray, 0, forceData, 0, &energy);
-    }
+    if (ewald)
+        clj.setUseEwald(ewaldAlpha, kmax[0], kmax[1], kmax[2]);
+    clj.calculatePairIxn(numParticles, posData, particleParamArray, exclusionArray, 0, forceData, 0, &energy);
     ReferenceBondForce refBondForce;
     ReferenceLJCoulomb14 nonbonded14;
     if (nonbondedMethod != NoCutoff)

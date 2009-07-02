@@ -304,9 +304,17 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
             Vec3 boxVectors[3];
             force.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
             gpuSetPeriodicBoxSize(gpu, (float)boxVectors[0][0], (float)boxVectors[1][1], (float)boxVectors[2][2]);
-            gpuSetEwaldParameters(gpu);//, (float)alphaEwald, (int)kmax);
+            double ewaldErrorTol = force.getEwaldErrorTolerance();
+            double alpha = (1.0/force.getCutoffDistance())*std::sqrt(-std::log(ewaldErrorTol));
+            double mx = boxVectors[0][0]/force.getCutoffDistance();
+            double my = boxVectors[1][1]/force.getCutoffDistance();
+            double mz = boxVectors[2][2]/force.getCutoffDistance();
+            double pi = 3.1415926535897932385;
+            int kmaxx = std::ceil(-(mx/pi)*std::log(ewaldErrorTol));;
+            int kmaxy = std::ceil(-(my/pi)*std::log(ewaldErrorTol));;
+            int kmaxz = std::ceil(-(mz/pi)*std::log(ewaldErrorTol));;
+            gpuSetEwaldParameters(gpu, alpha, kmaxx, kmaxy, kmaxz);
             method = EWALD;
-
         }
         data.nonbondedMethod = method;
         gpuSetCoulombParameters(gpu, 138.935485f, particle, c6, c12, q, symbol, exclusionList, method);

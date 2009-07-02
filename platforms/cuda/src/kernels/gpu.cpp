@@ -424,15 +424,14 @@ void gpuSetNonbondedCutoff(gpuContext gpu, float cutoffDistance, float solventDi
 }
 
 extern "C"
-void gpuSetEwaldParameters(gpuContext gpu)//, float alphaEwald, int kmax )
+void gpuSetEwaldParameters(gpuContext gpu, float alpha, int kmaxx, int kmaxy, int kmaxz)
 {
-
-    // hard coded alphaEwald and kmax, no interface yet
-    float alpha            = 3.123413f;
     gpu->sim.alphaEwald         = alpha;
     gpu->sim.factorEwald        = -1 / (4*alpha*alpha);
-    gpu->sim.kmax               = 20+1;
-    gpu->psEwaldCosSinSum       = new CUDAStream<float2>((gpu->sim.kmax*2-1) * (gpu->sim.kmax*2-1) * (gpu->sim.kmax*2-1), 1, "EwaldCosSinSum");
+    gpu->sim.kmaxX              = kmaxx;
+    gpu->sim.kmaxY              = kmaxy;
+    gpu->sim.kmaxZ              = kmaxz;
+    gpu->psEwaldCosSinSum       = new CUDAStream<float2>((gpu->sim.kmaxX*2-1) * (gpu->sim.kmaxY*2-1) * (gpu->sim.kmaxZ*2-1), 1, "EwaldCosSinSum");
     gpu->sim.pEwaldCosSinSum    = gpu->psEwaldCosSinSum->_pDevStream[0];
 }
 

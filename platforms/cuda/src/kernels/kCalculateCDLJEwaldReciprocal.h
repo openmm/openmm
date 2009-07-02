@@ -49,13 +49,13 @@ __global__ void kCalculateCDLJEwaldReciprocalForces_kernel()
             int lowry = 0;
             int lowrz = 1;
 
-            for(int rx = 0; rx < cSim.kmax; rx++)
+            for(int rx = 0; rx < cSim.kmaxX; rx++)
             {
                 float kx = rx*cSim.recipBoxSizeX;
-                for(int ry = lowry; ry < cSim.kmax; ry++)
+                for(int ry = lowry; ry < cSim.kmaxY; ry++)
                 {
                     float ky = ry*cSim.recipBoxSizeY;
-                    for (int rz = lowrz; rz < cSim.kmax; rz++)
+                    for (int rz = lowrz; rz < cSim.kmaxZ; rz++)
                     {
                         float kz = rz*cSim.recipBoxSizeZ;
                         float k2 = kx*kx + ky*ky + kz*kz;
@@ -73,9 +73,9 @@ __global__ void kCalculateCDLJEwaldReciprocalForces_kernel()
                         af.y -= ky*f;
                         af.z -= kz*f;
 
-                        lowrz = 1 - cSim.kmax;
+                        lowrz = 1 - cSim.kmaxZ;
                     }
-                    lowry = 1 - cSim.kmax;
+                    lowry = 1 - cSim.kmaxY;
                 }
             }
             atomID2++;

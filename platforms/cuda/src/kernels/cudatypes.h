@@ -300,7 +300,9 @@ struct cudaGmxSimulation {
     float           cellVolume;                     // Ewald parameter alpha (a.k.a. kappa)
     float           alphaEwald;                     // Ewald parameter alpha (a.k.a. kappa)
     float           factorEwald;                    // - 1 ( 4 * alphaEwald * alphaEwald)
-    int             kmax;                           // Maximum number of reciprocal vectors
+    int             kmaxX;                          // Maximum number of reciprocal vectors in the X direction
+    int             kmaxY;                          // Maximum number of reciprocal vectors in the Y direction
+    int             kmaxZ;                          // Maximum number of reciprocal vectors in the Z direction
     float           reactionFieldK;                 // Constant for reaction field correction
     float           probeRadius;                    // SASA probe radius
     float           surfaceAreaFactor;              // ACE approximation surface area factor

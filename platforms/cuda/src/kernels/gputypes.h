@@ -176,7 +176,7 @@ extern "C"
 void gpuSetNonbondedCutoff(gpuContext gpu, float cutoffDistance, float solventDielectric);
 
 extern "C"
-void gpuSetEwaldParameters(gpuContext gpu);//, float alphaEwald, int kmax);
+void gpuSetEwaldParameters(gpuContext gpu, float alpha, int kmaxx, int kmaxy, int kmaxz);
 
 extern "C"
 void gpuSetPeriodicBoxSize(gpuContext gpu, float xsize, float ysize, float zsize);

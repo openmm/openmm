@@ -36,10 +36,13 @@ class ReferenceLJCoulombIxn : public ReferencePairIxn {
        
       bool cutoff;
       bool periodic;
+      bool ewald;
       const OpenMM::NeighborList* neighborList;
       RealOpenMM periodicBoxSize[3];
       RealOpenMM cutoffDistance;
       RealOpenMM krf, crf;
+      RealOpenMM alphaEwald;
+      int numRx, numRy, numRz;
 
       // parameter indices
 
@@ -116,15 +119,16 @@ class ReferenceLJCoulombIxn : public ReferencePairIxn {
       
       /**---------------------------------------------------------------------------------------
       
-         Set the reciprocal vectors to use with Ewald
+         Set the force to use Ewald summation.
       
-         @param
-      
-         @return ReferenceForce::DefaultReturn
+         @param alpha  the Ewald separation parameter
+         @param kmaxx  the largest wave vector in the x direction
+         @param kmaxy  the largest wave vector in the y direction
+         @param kmaxz  the largest wave vector in the z direction
       
          --------------------------------------------------------------------------------------- */
       
-      int setRecipVectors();      
+      void setUseEwald(RealOpenMM alpha, int kmaxx, int kmaxy, int kmaxz);
 
 
       /**---------------------------------------------------------------------------------------
@@ -172,7 +176,8 @@ class ReferenceLJCoulombIxn : public ReferencePairIxn {
                             RealOpenMM** atomParameters, int** exclusions,
                             RealOpenMM* fixedParameters, RealOpenMM** forces,
                             RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const;
-       
+
+private:
       /**---------------------------------------------------------------------------------------
       
          Calculate Ewald ixn
@@ -188,7 +193,7 @@ class ReferenceLJCoulombIxn : public ReferencePairIxn {
          @param forces           force array (forces added)
          @param energyByAtom     atom energy
          @param totalEnergy      total energy
-      
+
          @return ReferenceForce::DefaultReturn
             
          --------------------------------------------------------------------------------------- */

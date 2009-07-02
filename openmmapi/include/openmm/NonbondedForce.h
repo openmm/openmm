@@ -119,14 +119,28 @@ public:
     void setNonbondedMethod(NonbondedMethod method);
     /**
      * Get the cutoff distance (in nm) being used for nonbonded interactions.  If the NonbondedMethod in use
-     * does not use cutoffs, this value will have no effect.
+     * is NoCutoff, this value will have no effect.
      */
     double getCutoffDistance() const;
     /**
      * Set the cutoff distance (in nm) being used for nonbonded interactions.  If the NonbondedMethod in use
-     * does not use cutoffs, this value will have no effect.
+     * is NoCutoff, this value will have no effect.
      */
     void setCutoffDistance(double distance);
+    /**
+     * Get the error tolerance for Ewald summation.  This corresponds to the fractional error in the forces
+     * which is acceptable.  This value is used to select the reciprocal space cutoff and separation
+     * parameter so that the average error level will be less than the tolerance.  There is not a
+     * rigorous guarantee that all forces on all atoms will be less than the tolerance, however.
+     */
+    double getEwaldErrorTolerance() const;
+    /**
+     * Get the error tolerance for Ewald summation.  This corresponds to the fractional error in the forces
+     * which is acceptable.  This value is used to select the reciprocal space cutoff and separation
+     * parameter so that the average error level will be less than the tolerance.  There is not a
+     * rigorous guarantee that all forces on all atoms will be less than the tolerance, however.
+     */
+    void setEwaldErrorTolerance(double tol);
     /**
      * Get the vectors which define the axes of the periodic box (measured in nm).  If the NonbondedMethod
      * in use does not use periodic boundary conditions, these values will have no effect.
@@ -242,7 +256,7 @@ private:
     class ParticleInfo;
     class ExceptionInfo;
     NonbondedMethod nonbondedMethod;
-    double cutoffDistance;
+    double cutoffDistance, ewaldErrorTol;
     Vec3 periodicBoxVectors[3];
     void addExclusionsToSet(const std::vector<std::set<int> >& bonded12, std::set<int>& exclusions, int baseParticle, int fromParticle, int currentLevel) const;
 

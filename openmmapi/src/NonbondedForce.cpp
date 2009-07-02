@@ -41,7 +41,7 @@ using std::pair;
 using std::set;
 using std::vector;
 
-NonbondedForce::NonbondedForce() : nonbondedMethod(NoCutoff), cutoffDistance(1.0) {
+NonbondedForce::NonbondedForce() : nonbondedMethod(NoCutoff), cutoffDistance(1.0), ewaldErrorTol(1e-4) {
     periodicBoxVectors[0] = Vec3(2, 0, 0);
     periodicBoxVectors[1] = Vec3(0, 2, 0);
     periodicBoxVectors[2] = Vec3(0, 0, 2);
@@ -61,6 +61,15 @@ double NonbondedForce::getCutoffDistance() const {
 
 void NonbondedForce::setCutoffDistance(double distance) {
     cutoffDistance = distance;
+}
+
+double NonbondedForce::getEwaldErrorTolerance() const {
+    return ewaldErrorTol;
+}
+
+void NonbondedForce::setEwaldErrorTolerance(double tol)
+{
+    ewaldErrorTol = tol;
 }
 
 void NonbondedForce::getPeriodicBoxVectors(Vec3& a, Vec3& b, Vec3& c) const {
