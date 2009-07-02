@@ -402,6 +402,12 @@ void ReferenceCalcNonbondedForceKernel::initialize(const System& system, const N
         kmax[0] = std::ceil(-(mx/pi)*std::log(ewaldErrorTol));
         kmax[1] = std::ceil(-(my/pi)*std::log(ewaldErrorTol));
         kmax[2] = std::ceil(-(mz/pi)*std::log(ewaldErrorTol));
+        if (kmax[0]%2 == 0)
+            kmax[0]++;
+        if (kmax[1]%2 == 0)
+            kmax[1]++;
+        if (kmax[2]%2 == 0)
+            kmax[2]++;
     }
 }
 
