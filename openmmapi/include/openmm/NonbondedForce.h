@@ -91,7 +91,12 @@ public:
          * Periodic boundary conditions are used, and Ewald summation is used to compute the interaction of each particle
          * with all periodic copies of every other particle.
          */
-        Ewald = 3
+        Ewald = 3,
+        /**
+         * Periodic boundary conditions are used, and Particle-Mesh Ewald (PME) summation is used to compute the interaction of each particle
+         * with all periodic copies of every other particle.
+         */
+        PME = 4
     };
     /**
      * Create a NonbondedForce.

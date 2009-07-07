@@ -37,6 +37,7 @@ class ReferenceLJCoulombIxn : public ReferencePairIxn {
       bool cutoff;
       bool periodic;
       bool ewald;
+      bool pme;
       const OpenMM::NeighborList* neighborList;
       RealOpenMM periodicBoxSize[3];
       RealOpenMM cutoffDistance;
@@ -116,7 +117,7 @@ class ReferenceLJCoulombIxn : public ReferencePairIxn {
          --------------------------------------------------------------------------------------- */
       
       int setPeriodic( RealOpenMM* boxSize );      
-      
+       
       /**---------------------------------------------------------------------------------------
       
          Set the force to use Ewald summation.
@@ -129,6 +130,17 @@ class ReferenceLJCoulombIxn : public ReferencePairIxn {
          --------------------------------------------------------------------------------------- */
       
       void setUseEwald(RealOpenMM alpha, int kmaxx, int kmaxy, int kmaxz);
+
+     
+      /**---------------------------------------------------------------------------------------
+      
+         Set the force to use Particle-Mesh Ewald (PME) summation.
+      
+         @param alpha  the Ewald separation parameter
+      
+         --------------------------------------------------------------------------------------- */
+      
+      void setUsePME(RealOpenMM alpha);
 
 
       /**---------------------------------------------------------------------------------------
@@ -199,6 +211,31 @@ private:
          --------------------------------------------------------------------------------------- */
           
       int calculateEwaldIxn( int numberOfAtoms, RealOpenMM** atomCoordinates,
+                            RealOpenMM** atomParameters, int** exclusions,
+                            RealOpenMM* fixedParameters, RealOpenMM** forces,
+                            RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const;
+      
+      /**---------------------------------------------------------------------------------------
+      
+         Calculate PME ixn
+      
+         @param numberOfAtoms    number of atoms
+         @param atomCoordinates  atom coordinates
+         @param atomParameters   atom parameters (charges, c6, c12, ...)     atomParameters[atomIndex][paramterIndex]
+         @param exclusions       atom exclusion indices                      exclusions[atomIndex][atomToExcludeIndex]
+                                 exclusions[atomIndex][0] = number of exclusions
+                                 exclusions[atomIndex][1-no.] = atom indices of atoms to excluded from
+                                 interacting w/ atom atomIndex
+         @param fixedParameters  non atom parameters (not currently used)
+         @param forces           force array (forces added)
+         @param energyByAtom     atom energy
+         @param totalEnergy      total energy
+
+         @return ReferenceForce::DefaultReturn
+            
+         --------------------------------------------------------------------------------------- */
+          
+      int calculatePMEIxn( int numberOfAtoms, RealOpenMM** atomCoordinates,
                             RealOpenMM** atomParameters, int** exclusions,
                             RealOpenMM* fixedParameters, RealOpenMM** forces,
                             RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const;

@@ -76,85 +76,88 @@ void testEwald() {
     cout << "PotentialEnergy: " << state.getPotentialEnergy() << endl;
     ASSERT_EQUAL_VEC(Vec3(-123.711, 64.1877, -302.716), forces[0], 10*TOL);
     ASSERT_EQUAL_VEC(Vec3(123.711, -64.1877, 302.716), forces[1], 10*TOL);
-//    const double eps = 78.3;
-//    const double krf = (1.0/(cutoff*cutoff*cutoff))*(eps-1.0)/(2.0*eps+1.0);
-//    const double crf = (1.0/cutoff)*(3.0*eps)/(2.0*eps+1.0);
-//    const double force = 138.935485*(1.0)*(1.0-2.0*krf*1.0);
-//    ASSERT_EQUAL_VEC(Vec3(force, 0, 0), forces[0], TOL);
-//    ASSERT_EQUAL_VEC(Vec3(-force, 0, 0), forces[1], TOL);
-//    ASSERT_EQUAL_VEC(Vec3(0, 0, 0), forces[2], TOL);
-//    ASSERT_EQUAL_TOL(2*138.935485*(1.0)*(1.0+krf*1.0-crf), state.getPotentialEnergy(), TOL);
 }
 
-/*
-void testEwald4() {
+void testPME() {
     ReferencePlatform platform;
-    System system(4, 0);
+    System system;
+    for (int i = 0 ; i < 42 ; i++)
+    {
+       system.addParticle(1.0);
+    }
     VerletIntegrator integrator(0.01);
-    NonbondedForce* nonbonded = new NonbondedForce(4, 0);
-    nonbonded->setParticleParameters(0, 1.0, 1, 0);
-    nonbonded->setParticleParameters(1, 1.0, 1, 0);
-    nonbonded->setParticleParameters(2, -1.0, 1, 0);
-    nonbonded->setParticleParameters(3, -1.0, 1, 0);
-    nonbonded->setNonbondedMethod(NonbondedForce::Ewald);
-    const double cutoff = 2.0;
+    NonbondedForce* nonbonded = new NonbondedForce();
+    for (int i = 0 ; i < 14 ; i++)
+    {
+      nonbonded->addParticle(-0.82, 1, 0);
+      nonbonded->addParticle(0.41, 1, 0);
+      nonbonded->addParticle(0.41, 1, 0);
+    }
+    nonbonded->setNonbondedMethod(NonbondedForce::PME);
+    const double cutoff = 0.8;
     nonbonded->setCutoffDistance(cutoff);
-    nonbonded->setPeriodicBoxVectors(Vec3(6, 0, 0), Vec3(0, 6, 0), Vec3(0, 0, 6));
+    nonbonded->setPeriodicBoxVectors(Vec3(1.86206, 0, 0), Vec3(0, 1.86206, 0), Vec3(0, 0, 1.86206));
+    nonbonded->setEwaldErrorTolerance(TOL);
     system.addForce(nonbonded);
     OpenMMContext context(system, integrator, platform);
-    vector<Vec3> positions(4);
-    positions[0] = Vec3(3.048000,2.764000,3.156000);
-    positions[1] = Vec3(3.348000,2.764000,3.156000);
-    positions[2] = Vec3(2.809000,2.888000,2.571000);
-    positions[3] = Vec3(2.509000,2.888000,2.571000);
+    vector<Vec3> positions(42);
+positions[0] = Vec3( 0.23,0.628,0.113);
+positions[1] = Vec3(0.137,0.626, 0.15);
+positions[2] = Vec3(0.231,0.589,0.021);
+positions[3] = Vec3(-0.307,-0.351,0.703);
+positions[4] = Vec3(-0.364,-0.367,0.784);
+positions[5] = Vec3(-0.366,-0.341,0.623);
+positions[6] = Vec3(-0.569,-0.634,-0.439);
+positions[7] = Vec3(-0.532,-0.707,-0.497);
+positions[8] = Vec3(-0.517,-0.629,-0.354);
+positions[9] = Vec3(-0.871, 0.41,-0.62);
+positions[10] = Vec3(-0.948,0.444,-0.566);
+positions[11] = Vec3(-0.905,0.359,-0.699);
+positions[12] = Vec3(0.249,-0.077,-0.621);
+positions[13] = Vec3(0.306,-0.142,-0.571);
+positions[14] = Vec3(0.233,-0.11,-0.714);
+positions[15] = Vec3(0.561,0.222,-0.715);
+positions[16] = Vec3(0.599,0.138,-0.678);
+positions[17] = Vec3(0.473,0.241,-0.671);
+positions[18] = Vec3(-0.515,-0.803,-0.628);
+positions[19] = Vec3(-0.491,-0.866,-0.702);
+positions[20] = Vec3(-0.605,-0.763,-0.646);
+positions[21] = Vec3(-0.021,0.175,-0.899);
+positions[22] = Vec3(0.018, 0.09,-0.935);
+positions[23] = Vec3(-0.119,0.177,-0.918);
+positions[24] = Vec3(-0.422,0.856,-0.464);
+positions[25] = Vec3(-0.479,0.908,-0.527);
+positions[26] = Vec3(-0.326,0.868,-0.488);
+positions[27] = Vec3(-0.369,-0.095,-0.903);
+positions[28] = Vec3(-0.336,-0.031,-0.972);
+positions[29] = Vec3(-0.303,-0.101,-0.828);
+positions[30] = Vec3(0.594,0.745,0.652);
+positions[31] = Vec3(0.644, 0.83,0.633);
+positions[32] = Vec3(0.506,0.747,0.604);
+positions[33] = Vec3(-0.157,-0.375,-0.758);
+positions[34] = Vec3(-0.25, -0.4,-0.785);
+positions[35] = Vec3(-0.131,-0.425,-0.676);
+positions[36] = Vec3(0.618,-0.295,-0.578);
+positions[37] = Vec3(0.613,-0.213,-0.521);
+positions[38] = Vec3(0.707,-0.298,-0.623);
+positions[39] = Vec3(0.039,-0.785,  0.3);
+positions[40] = Vec3(0.138,-0.796,0.291);
+positions[41] = Vec3(-0.001,-0.871,0.332);
     context.setPositions(positions);
     State state = context.getState(State::Forces | State::Energy);
     const vector<Vec3>& forces = state.getForces();
-//    cout << "force 0: " << forces[0] << endl;
-//    cout << "force 1: " << forces[1] << endl;
-    cout << "energyPoten: " << state.getPotentialEnergy() << endl;
- //   const double eps = 78.3;
- //   const double krf = (1.0/(cutoff*cutoff*cutoff))*(eps-1.0)/(2.0*eps+1.0);
- //   const double crf = (1.0/cutoff)*(3.0*eps)/(2.0*eps+1.0);
-//    const double force = 138.935485*(1.0)*(1.0-2.0*krf*1.0);
-//    ASSERT_EQUAL_VEC(Vec3(force, 0, 0), forces[0], TOL);
-//    ASSERT_EQUAL_VEC(Vec3(-force, 0, 0), forces[1], TOL);
-//    ASSERT_EQUAL_VEC(Vec3(0, 0, 0), forces[2], TOL);
-//    ASSERT_EQUAL_TOL(2*138.935485*(1.0)*(1.0+krf*1.0-crf), state.getPotentialEnergy(), TOL);
+   // for (int i = 0 ; i < 42 ; i++)
+   //   cout << "f [" << i << " : ]" << forces[i] << endl;
+   // cout << "PotentialEnergy: " << state.getPotentialEnergy() << endl;
+//    ASSERT_EQUAL_VEC(Vec3(-123.711, 64.1877, -302.716), forces[0], 10*TOL);
+//    ASSERT_EQUAL_VEC(Vec3(123.711, -64.1877, 302.716), forces[1], 10*TOL);
 }
-*/
 
-/*
-void testPeriodic() {
-    ReferencePlatform platform;
-    System system(2, 0);
-    VerletIntegrator integrator(0.01);
-    NonbondedForce* nonbonded = new NonbondedForce(2, 0);
-    nonbonded->setParticleParameters(0, 1.0, 1, 0);
-    nonbonded->setParticleParameters(1, -1.0, 1, 0);
-    nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodci);
-    const double cutoff = 1.0;
-    nonbonded->setCutoffDistance(cutoff);
-    nonbonded->setPeriodicBoxVectors(Vec3(6, 0, 0), Vec3(0, 6, 0), Vec3(0, 0, 6));
-    system.addForce(nonbonded);
-    OpenMMContext context(system, integrator, platform);
-    vector<Vec3> positions(2);
-    positions[0] = Vec3(3.044293,2.765923,3.146914);
-    positions[1] = Vec3(2.812707,2.886077,2.580086);
-    context.setPositions(positions);
-    State state = context.getState(State::Forces | State::Energy);
-    const vector<Vec3>& forces = state.getForces();
-    cout << "force 0: " << forces[0] << endl;
-    cout << "force 1: " << forces[1] << endl;
-    cout << "energyPoten: " << state.getPotentialEnergy() << endl;
-}
-*/
 
 int main() {
     try {
-//        testPeriodic();
         testEwald();
-//        testEwald4();
+        testPME();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

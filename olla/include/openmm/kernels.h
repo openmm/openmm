@@ -246,7 +246,8 @@ public:
         NoCutoff = 0,
         CutoffNonPeriodic = 1,
         CutoffPeriodic = 2,
-        Ewald = 3
+        Ewald = 3,
+        PME = 4
     };
     static std::string Name() {
         return "CalcNonbondedForce";

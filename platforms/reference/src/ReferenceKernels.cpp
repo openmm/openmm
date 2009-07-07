@@ -392,7 +392,7 @@ void ReferenceCalcNonbondedForceKernel::initialize(const System& system, const N
         neighborList = NULL;
     else
         neighborList = new NeighborList();
-    if (nonbondedMethod == Ewald) {
+    if (nonbondedMethod == Ewald || nonbondedMethod == PME) {
         RealOpenMM ewaldErrorTol = (RealOpenMM) force.getEwaldErrorTolerance();
         ewaldAlpha = (RealOpenMM) (std::sqrt(-std::log(ewaldErrorTol))/nonbondedCutoff);
         RealOpenMM mx = periodicBoxSize[0]/nonbondedCutoff;
@@ -417,14 +417,17 @@ void ReferenceCalcNonbondedForceKernel::executeForces(OpenMMContextImpl& context
     ReferenceLJCoulombIxn clj;
     bool periodic = (nonbondedMethod == CutoffPeriodic);
     bool ewald  = (nonbondedMethod == Ewald);
+    bool pme  = (nonbondedMethod == PME);
     if (nonbondedMethod != NoCutoff) {
-        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, (periodic || ewald) ? periodicBoxSize : NULL, nonbondedCutoff, 0.0);
+        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, (periodic || ewald || pme) ? periodicBoxSize : NULL, nonbondedCutoff, 0.0);
         clj.setUseCutoff(nonbondedCutoff, *neighborList, 78.3f);
     }
-    if (periodic||ewald)
+    if (periodic||ewald||pme)
         clj.setPeriodic(periodicBoxSize);
     if (ewald)
         clj.setUseEwald(ewaldAlpha, kmax[0], kmax[1], kmax[2]);
+    if (pme)
+        clj.setUsePME(ewaldAlpha);
     clj.calculatePairIxn(numParticles, posData, particleParamArray, exclusionArray, 0, forceData, 0, 0);
     ReferenceBondForce refBondForce;
     ReferenceLJCoulomb14 nonbonded14;
@@ -440,14 +443,17 @@ double ReferenceCalcNonbondedForceKernel::executeEnergy(OpenMMContextImpl& conte
     ReferenceLJCoulombIxn clj;
     bool periodic = (nonbondedMethod == CutoffPeriodic);
     bool ewald  = (nonbondedMethod == Ewald);
+    bool pme  = (nonbondedMethod == PME);
     if (nonbondedMethod != NoCutoff) {
-        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, (periodic || ewald) ? periodicBoxSize : NULL, nonbondedCutoff, 0.0);
+        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, (periodic || ewald || pme) ? periodicBoxSize : NULL, nonbondedCutoff, 0.0);
         clj.setUseCutoff(nonbondedCutoff, *neighborList, 78.3f);
     }
-    if (periodic || ewald)
+    if (periodic || ewald || pme)
         clj.setPeriodic(periodicBoxSize);
     if (ewald)
         clj.setUseEwald(ewaldAlpha, kmax[0], kmax[1], kmax[2]);
+    if (pme)
+        clj.setUsePME(ewaldAlpha);
     clj.calculatePairIxn(numParticles, posData, particleParamArray, exclusionArray, 0, forceData, 0, &energy);
     ReferenceBondForce refBondForce;
     ReferenceLJCoulomb14 nonbonded14;
