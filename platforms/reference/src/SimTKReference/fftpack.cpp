@@ -1,21 +1,46 @@
-/* 
+/*
+ * This file contains a Fortran to C translation of the 1D transformations
+ * based on the original FFTPACK, written by paul n swarztrauber
+ * at the national center for atmospheric research and available
+ * at www.netlib.org. FFTPACK is in the public domain.
  *
- * 1D transformations based on F77 to C translation of FFTPACK.
- * FFTPACK was originally written by paul n swarztrauber
- * at the national center for atmospheric research
- * 
- * FFTPACK is in the public domain.
- * 
  * Higher-dimension transforms copyright Erik Lindahl, 2008-2009.
  * Just as FFTPACK, this file may be redistributed freely, and can be
  * considered to be in the public domain.
  *
  * Any errors in this (threadsafe, but not threaded) C version
- * are due to the f2c translator, or hacks by Erik Lindahl...
+ * are due to the f2c translator, or hacks by Erik Lindahl.
  *
  * Erik Lindahl, lindahl@cbr.su.se
  * Center for Biomembrane Research
  * Stockholm University, Sweden
+ *
+ * Copyright (c) 2009, Erik Lindahl
+ * All rights reserved.
+ * Contact: lindahl@cbr.su.se Stockholm University, Sweden.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * Redistributions of source code must retain the above copyright notice, this
+ * list of conditions and the following disclaimer. Redistributions in binary
+ * form must reproduce the above copyright notice, this list of conditions and
+ * the following disclaimer in the documentation and/or other materials provided
+ * with the distribution.
+ * Neither the name of the author/university nor the names of its contributors may
+ * be used to endorse or promote products derived from this software without
+ * specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA,
+ * OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  */
 
 #include <math.h>
@@ -28,9 +53,9 @@
 #include "fftpack.h"
 
 
-/** Contents of the FFTPACK fft datatype. 
+/** Contents of the FFTPACK fft datatype.
  *
- *  FFTPACK only does 1d transforms, so we use a pointers to another fft for 
+ *  FFTPACK only does 1d transforms, so we use a pointers to another fft for
  *  the transform in the next dimension.
  * Thus, a 3d-structure contains a pointer to a 2d one, which in turns contains
  * a pointer to a 1d. The 1d structure has next==NULL.
@@ -51,9 +76,9 @@ struct fftpack
 
 
 
-static void 
-fftpack_passf2(int         ido, 
-               int         l1, 
+static void
+fftpack_passf2(int         ido,
+               int         l1,
                RealOpenMM     cc[],
                RealOpenMM     ch[],
                RealOpenMM     wa1[],
@@ -61,10 +86,10 @@ fftpack_passf2(int         ido,
 {
     int i, k, ah, ac;
     RealOpenMM ti2, tr2;
-    
+
     if (ido <= 2)
     {
-        for (k=0; k<l1; k++) 
+        for (k=0; k<l1; k++)
         {
             ah = k*ido;
             ac = 2*k*ido;
@@ -73,12 +98,12 @@ fftpack_passf2(int         ido,
             ch[ah+1]            = cc[ac+1] + cc[ac + ido + 1];
             ch[ah + ido*l1 + 1] = cc[ac+1] - cc[ac + ido + 1];
         }
-    } 
+    }
     else
     {
-        for (k=0; k<l1; k++) 
+        for (k=0; k<l1; k++)
         {
-            for (i=0; i<ido-1; i+=2) 
+            for (i=0; i<ido-1; i+=2)
             {
                 ah              = i + k*ido;
                 ac              = i + 2*k*ido;
@@ -91,39 +116,39 @@ fftpack_passf2(int         ido,
             }
         }
     }
-} 
+}
 
 
 
-static void 
+static void
 fftpack_passf3(int         ido,
-               int         l1, 
+               int         l1,
                RealOpenMM     cc[],
                RealOpenMM     ch[],
-               RealOpenMM     wa1[], 
+               RealOpenMM     wa1[],
                RealOpenMM     wa2[],
                int         isign)
 {
     const RealOpenMM taur = -0.5;
     const RealOpenMM taui = 0.866025403784439;
-    
+
     int i, k, ac, ah;
     RealOpenMM ci2, ci3, di2, di3, cr2, cr3, dr2, dr3, ti2, tr2;
-    
-    if (ido == 2) 
+
+    if (ido == 2)
     {
-        for (k=1; k<=l1; k++) 
+        for (k=1; k<=l1; k++)
         {
             ac = (3*k - 2)*ido;
             tr2 = cc[ac] + cc[ac + ido];
             cr2 = cc[ac - ido] + taur*tr2;
             ah = (k - 1)*ido;
             ch[ah] = cc[ac - ido] + tr2;
-            
+
             ti2 = cc[ac + 1] + cc[ac + ido + 1];
             ci2 = cc[ac - ido + 1] + taur*ti2;
             ch[ah + 1] = cc[ac - ido + 1] + ti2;
-            
+
             cr3 = isign*taui*(cc[ac] - cc[ac + ido]);
             ci3 = isign*taui*(cc[ac + 1] - cc[ac + ido + 1]);
             ch[ah + l1*ido] = cr2 - ci3;
@@ -131,10 +156,10 @@ fftpack_passf3(int         ido,
             ch[ah + l1*ido + 1] = ci2 + cr3;
             ch[ah + 2*l1*ido + 1] = ci2 - cr3;
         }
-    } 
+    }
     else
     {
-        for (k=1; k<=l1; k++) 
+        for (k=1; k<=l1; k++)
         {
             for (i=0; i<ido-1; i+=2)
             {
@@ -159,23 +184,23 @@ fftpack_passf3(int         ido,
             }
         }
     }
-} 
+}
 
 
-static void 
-fftpack_passf4(int          ido, 
+static void
+fftpack_passf4(int          ido,
                int          l1,
-               RealOpenMM      cc[], 
+               RealOpenMM      cc[],
                RealOpenMM      ch[],
                RealOpenMM      wa1[],
-               RealOpenMM      wa2[], 
+               RealOpenMM      wa2[],
                RealOpenMM      wa3[],
                int          isign)
 {
     int i, k, ac, ah;
     RealOpenMM ci2, ci3, ci4, cr2, cr3, cr4, ti1, ti2, ti3, ti4, tr1, tr2, tr3, tr4;
-    
-    if (ido == 2) 
+
+    if (ido == 2)
     {
         for (k=0; k<l1; k++)
         {
@@ -198,7 +223,7 @@ fftpack_passf4(int          ido,
             ch[ah + l1*ido + 1] = ti1 + isign*ti4;
             ch[ah + 3*l1*ido + 1] = ti1 - isign*ti4;
         }
-    } 
+    }
     else
     {
         for (k=0; k<l1; k++)
@@ -232,17 +257,17 @@ fftpack_passf4(int          ido,
             }
         }
     }
-} 
+}
 
 
-static void 
+static void
 fftpack_passf5(int          ido,
-               int          l1, 
+               int          l1,
                RealOpenMM      cc[],
                RealOpenMM      ch[],
-               RealOpenMM      wa1[], 
+               RealOpenMM      wa1[],
                RealOpenMM      wa2[],
-               RealOpenMM      wa3[], 
+               RealOpenMM      wa3[],
                RealOpenMM      wa4[],
                int          isign)
 {
@@ -250,14 +275,14 @@ fftpack_passf5(int          ido,
     const RealOpenMM ti11 = 0.951056516295154;
     const RealOpenMM tr12 = -0.809016994374947;
     const RealOpenMM ti12 = 0.587785252292473;
-    
+
     int i, k, ac, ah;
     RealOpenMM ci2, ci3, ci4, ci5, di3, di4, di5, di2, cr2, cr3, cr5, cr4, ti2, ti3,
         ti4, ti5, dr3, dr4, dr5, dr2, tr2, tr3, tr4, tr5;
-    
-    if (ido == 2) 
+
+    if (ido == 2)
     {
-        for (k = 1; k <= l1; ++k) 
+        for (k = 1; k <= l1; ++k)
         {
             ac = (5*k - 4)*ido + 1;
             ti5 = cc[ac] - cc[ac + 3*ido];
@@ -288,12 +313,12 @@ fftpack_passf5(int          ido,
             ch[ah + 3*l1*ido + 1] = ci3 - cr4;
             ch[ah + 4*l1*ido + 1] = ci2 - cr5;
         }
-    } 
+    }
     else
     {
-        for (k=1; k<=l1; k++) 
+        for (k=1; k<=l1; k++)
         {
-            for (i=0; i<ido-1; i+=2) 
+            for (i=0; i<ido-1; i+=2)
             {
                 ac = i + 1 + (k*5 - 4)*ido;
                 ti5 = cc[ac] - cc[ac + 3*ido];
@@ -334,13 +359,13 @@ fftpack_passf5(int          ido,
             }
         }
     }
-} 
+}
 
 
-static void 
-fftpack_passf(int *        nac, 
+static void
+fftpack_passf(int *        nac,
               int          ido,
-              int          ip, 
+              int          ip,
               int          l1,
               int          idl1,
               RealOpenMM      cc[],
@@ -350,19 +375,19 @@ fftpack_passf(int *        nac,
 {
     int idij, idlj, idot, ipph, i, j, k, l, jc, lc, ik, nt, idj, idl, inc,idp;
     RealOpenMM wai, war;
-    
+
     idot = ido / 2;
     nt = ip*idl1;
     ipph = (ip + 1) / 2;
     idp = ip*ido;
-    if (ido >= l1) 
+    if (ido >= l1)
     {
         for (j=1; j<ipph; j++)
         {
             jc = ip - j;
-            for (k=0; k<l1; k++) 
+            for (k=0; k<l1; k++)
             {
-                for (i=0; i<ido; i++) 
+                for (i=0; i<ido; i++)
                 {
                     ch[i + (k + j*l1)*ido]  = cc[i + (j + k*ip)*ido] + cc[i + (jc + k*ip)*ido];
                     ch[i + (k + jc*l1)*ido] = cc[i + (j + k*ip)*ido] - cc[i + (jc + k*ip)*ido];
@@ -372,15 +397,15 @@ fftpack_passf(int *        nac,
         for (k=0; k<l1; k++)
             for (i=0; i<ido; i++)
                 ch[i + k*ido] = cc[i + k*ip*ido];
-    } 
+    }
     else
     {
-        for (j=1; j<ipph; j++) 
+        for (j=1; j<ipph; j++)
         {
             jc = ip - j;
-            for (i=0; i<ido; i++) 
+            for (i=0; i<ido; i++)
             {
-                for (k=0; k<l1; k++) 
+                for (k=0; k<l1; k++)
                 {
                     ch[i + (k + j*l1)*ido] =  cc[i + (j + k*ip)*ido] + cc[i + (jc + k*ip)*ido];
                     ch[i + (k + jc*l1)*ido] = cc[i + (j + k*ip)*ido] - cc[i + (jc + k*ip)*ido];
@@ -391,10 +416,10 @@ fftpack_passf(int *        nac,
             for (k=0; k<l1; k++)
                 ch[i + k*ido] = cc[i + k*ip*ido];
     }
-    
+
     idl = 2 - ido;
     inc = 0;
-    for (l=1; l<ipph; l++) 
+    for (l=1; l<ipph; l++)
     {
         lc = ip - l;
         idl += ido;
@@ -422,10 +447,10 @@ fftpack_passf(int *        nac,
     for (j=1; j<ipph; j++)
         for (ik=0; ik<idl1; ik++)
             ch[ik] += ch[ik + j*idl1];
-    for (j=1; j<ipph; j++) 
+    for (j=1; j<ipph; j++)
     {
         jc = ip - j;
-        for (ik=1; ik<idl1; ik+=2) 
+        for (ik=1; ik<idl1; ik+=2)
         {
             ch[ik - 1 + j*idl1] = cc[ik - 1 + j*idl1] - cc[ik + jc*idl1];
             ch[ik - 1 + jc*idl1] = cc[ik - 1 + j*idl1] + cc[ik + jc*idl1];
@@ -434,7 +459,7 @@ fftpack_passf(int *        nac,
         }
     }
     *nac = 1;
-    if (ido == 2) 
+    if (ido == 2)
         return;
     *nac = 0;
     for (ik=0; ik<idl1; ik++)
@@ -443,19 +468,19 @@ fftpack_passf(int *        nac,
     }
     for (j=1; j<ip; j++)
     {
-        for (k=0; k<l1; k++) 
+        for (k=0; k<l1; k++)
         {
             cc[(k + j*l1)*ido + 0] = ch[(k + j*l1)*ido + 0];
             cc[(k + j*l1)*ido + 1] = ch[(k + j*l1)*ido + 1];
         }
     }
-    if (idot <= l1) 
+    if (idot <= l1)
     {
         idij = 0;
         for (j=1; j<ip; j++)
         {
             idij += 2;
-            for (i=3; i<ido; i+=2) 
+            for (i=3; i<ido; i+=2)
             {
                 idij += 2;
                 for (k=0; k<l1; k++)
@@ -473,10 +498,10 @@ fftpack_passf(int *        nac,
     else
     {
         idj = 2 - ido;
-        for (j=1; j<ip; j++) 
+        for (j=1; j<ip; j++)
         {
             idj += ido;
-            for (k = 0; k < l1; k++) 
+            for (k = 0; k < l1; k++)
             {
                 idij = idj;
                 for (i=3; i<ido; i+=2)
@@ -492,13 +517,13 @@ fftpack_passf(int *        nac,
             }
         }
     }
-} 
+}
 
 
 
 
 
-static void 
+static void
 fftpack_cfftf1(int          n,
                RealOpenMM      c[],
                RealOpenMM      ch[],
@@ -514,25 +539,25 @@ fftpack_cfftf1(int          n,
     na = 0;
     l1 = 1;
     iw = 0;
-    
-    for (k1=2; k1<=nf+1; k1++) 
+
+    for (k1=2; k1<=nf+1; k1++)
     {
         ip = ifac[k1];
         l2 = ip*l1;
         ido = n / l2;
         idot = ido + ido;
         idl1 = idot*l1;
-        if (na) 
+        if (na)
         {
             cinput = ch;
             coutput = c;
         }
-        else 
+        else
         {
             cinput = c;
             coutput = ch;
         }
-        switch (ip) 
+        switch (ip)
         {
             case 4:
                 ix2 = iw + idot;
@@ -563,16 +588,16 @@ fftpack_cfftf1(int          n,
         l1 = l2;
         iw += (ip - 1)*idot;
     }
-    if (na == 0) 
+    if (na == 0)
         return;
-    for (i=0; i<2*n; i++) 
+    for (i=0; i<2*n; i++)
         c[i] = ch[i];
 }
 
 
 
 
-static void 
+static void
 fftpack_factorize(int    n,
                   int    ifac[15])
 {
@@ -585,7 +610,7 @@ startloop:
     else
         ntry+= 2;
     j++;
-    do 
+    do
     {
         nq = nl / ntry;
         nr = nl - ntry*nq;
@@ -593,16 +618,16 @@ startloop:
         nf++;
         ifac[nf + 1] = ntry;
         nl = nq;
-        if (ntry == 2 && nf != 1) 
+        if (ntry == 2 && nf != 1)
         {
-            for (i=2; i<=nf; i++) 
+            for (i=2; i<=nf; i++)
             {
                 ib = nf - i + 2;
                 ifac[ib + 1] = ifac[ib];
             }
             ifac[2] = 2;
         }
-    } 
+    }
     while (nl != 1);
     ifac[0] = n;
     ifac[1] = nf;
@@ -610,8 +635,8 @@ startloop:
 
 
 static void
-fftpack_cffti1(int          n, 
-               RealOpenMM      wa[], 
+fftpack_cffti1(int          n,
+               RealOpenMM      wa[],
                int          ifac[15])
 {
     const RealOpenMM twopi = 6.28318530717959;
@@ -626,7 +651,7 @@ fftpack_cffti1(int          n,
     argh = twopi/(RealOpenMM)n;
     i = 1;
     l1 = 1;
-    for (k1=1; k1<=nf; k1++) 
+    for (k1=1; k1<=nf; k1++)
     {
         ip = ifac[k1+1];
         ld = 0;
@@ -642,7 +667,7 @@ fftpack_cffti1(int          n,
             ld += l1;
             fi = 0;
             argld = ld*argh;
-            for (ii=4; ii<=idot; ii+=2) 
+            for (ii=4; ii<=idot; ii+=2)
             {
                 i+= 2;
                 fi+= 1;
@@ -650,7 +675,7 @@ fftpack_cffti1(int          n,
                 wa[i-1] = cos(arg);
                 wa[i] = sin(arg);
             }
-            if (ip > 5) 
+            if (ip > 5)
             {
                 wa[i1-1] = wa[i-1];
                 wa[i1] = wa[i];
@@ -658,7 +683,7 @@ fftpack_cffti1(int          n,
         }
         l1 = l2;
     }
-} 
+}
 
 
 
@@ -684,7 +709,7 @@ fftpack_transpose_2d(t_complex *          in_data,
         }
         return 0;
     }
-	
+
     if(in_data == out_data)
 	{
 		src = (t_complex *)malloc(sizeof(t_complex)*nx*ny);
@@ -694,7 +719,7 @@ fftpack_transpose_2d(t_complex *          in_data,
 	{
 		src = in_data;
 	}
-	
+
 	for(i=0;i<nx;i++)
 	{
 		for(j=0;j<ny;j++)
@@ -703,7 +728,7 @@ fftpack_transpose_2d(t_complex *          in_data,
 			out_data[j*nx+i].im = src[i*ny+j].im;
 		}
 	}
-	
+
 	if(src != in_data)
 	{
 		free(src);
@@ -723,9 +748,9 @@ fftpack_transpose_2d_nelem(t_complex *          in_data,
 	t_complex *   src;
 	int           ncopy;
 	int           i,j;
-	
+
 	ncopy = nelem*sizeof(t_complex);
-	
+
     if(nx<2 || ny<2)
     {
         if(in_data != out_data)
@@ -734,7 +759,7 @@ fftpack_transpose_2d_nelem(t_complex *          in_data,
         }
         return 0;
     }
-	
+
     if(in_data == out_data)
 	{
 		src = (t_complex *)malloc(nx*ny*ncopy);
@@ -744,7 +769,7 @@ fftpack_transpose_2d_nelem(t_complex *          in_data,
 	{
 		src = in_data;
 	}
-	
+
 	for(i=0;i<nx;i++)
 	{
 		for(j=0;j<ny;j++)
@@ -752,7 +777,7 @@ fftpack_transpose_2d_nelem(t_complex *          in_data,
 			memcpy(out_data + (j*nx+i)*nelem , src + (i*ny+j)*nelem , ncopy);
 		}
 	}
-	
+
 	if(src != in_data)
 	{
 		free(src);
@@ -770,24 +795,24 @@ fftpack_init_1d(fftpack_t *        pfft,
                 int                nx)
 {
     fftpack_t    fft;
-    
+
     if(pfft==NULL)
     {
         fprintf(stderr,"Fatal error - Invalid FFT opaque type pointer.");
         return EINVAL;
     }
     *pfft = NULL;
-    
+
     if( (fft = (struct fftpack *)malloc(sizeof(struct fftpack))) == NULL)
     {
         return ENOMEM;
-    }    
-        
+    }
+
     fft->next = NULL;
     fft->n    = nx;
-    
+
     /* Need 4*n storage for 1D complex FFT */
-    if( (fft->work = (RealOpenMM *)malloc(sizeof(RealOpenMM)*(4*nx))) == NULL) 
+    if( (fft->work = (RealOpenMM *)malloc(sizeof(RealOpenMM)*(4*nx))) == NULL)
     {
         free(fft);
         return ENOMEM;
@@ -795,7 +820,7 @@ fftpack_init_1d(fftpack_t *        pfft,
 
     if(fft->n>1)
         fftpack_cffti1(nx,fft->work,fft->ifac);
-    
+
     *pfft = fft;
     return 0;
 };
@@ -810,7 +835,7 @@ fftpack_init_2d(fftpack_t *        pfft,
 {
     fftpack_t     fft;
     int           rc;
-    
+
     if(pfft==NULL)
     {
         fprintf(stderr,"Fatal error - Invalid FFT opaque type pointer.");
@@ -822,15 +847,15 @@ fftpack_init_2d(fftpack_t *        pfft,
     if( (rc = fftpack_init_1d(&fft,nx)) != 0)
     {
         return rc;
-    }    
-    
+    }
+
     /* Create Y transform as a link from X */
     if( (rc=fftpack_init_1d(&(fft->next),ny)) != 0)
     {
         free(fft);
         return rc;
     }
-    
+
     *pfft = fft;
     return 0;
 };
@@ -845,7 +870,7 @@ fftpack_init_3d(fftpack_t *        pfft,
 {
     fftpack_t     fft;
     int           rc;
-    
+
     if(pfft==NULL)
     {
         fprintf(stderr,"Fatal error - Invalid FFT opaque type pointer.");
@@ -858,34 +883,34 @@ fftpack_init_3d(fftpack_t *        pfft,
     if( (fft = (struct fftpack *)malloc(sizeof(struct fftpack))) == NULL)
     {
         return ENOMEM;
-    }    
+    }
 
     fft->n    = nx;
-    
+
     /* Need 4*nx storage for 1D complex FFT.
      */
-    if( (fft->work = (RealOpenMM *)malloc(sizeof(RealOpenMM)*(4*nx))) == NULL) 
+    if( (fft->work = (RealOpenMM *)malloc(sizeof(RealOpenMM)*(4*nx))) == NULL)
     {
         free(fft);
         return ENOMEM;
     }
-    
+
     fftpack_cffti1(nx,fft->work,fft->ifac);
-    
+
     /* Create 2D Y/Z transforms as a link from X */
     if( (rc=fftpack_init_2d(&(fft->next),ny,nz)) != 0)
     {
         free(fft);
         return rc;
     }
-    
+
     *pfft = fft;
 
 	return 0;
 };
 
 
-int 
+int
 fftpack_exec_1d          (fftpack_t                  fft,
                           enum fftpack_direction     dir,
                           t_complex *                in_data,
@@ -900,11 +925,11 @@ fftpack_exec_1d          (fftpack_t                  fft,
     if(n==1)
     {
         p1 = (RealOpenMM *)in_data;
-        p2 = (RealOpenMM *)out_data;        
+        p2 = (RealOpenMM *)out_data;
         p2[0] = p1[0];
         p2[1] = p1[1];
     }
-    
+
     /* FFTPACK only does in-place transforms, so emulate out-of-place
      * by copying data to the output array first.
      */
@@ -912,31 +937,31 @@ fftpack_exec_1d          (fftpack_t                  fft,
     {
         p1 = (RealOpenMM *)in_data;
         p2 = (RealOpenMM *)out_data;
-        
+
         /* n complex = 2*n RealOpenMM elements */
         for(i=0;i<2*n;i++)
         {
             p2[i] = p1[i];
         }
     }
-  
+
     /* Elements 0   .. 2*n-1 in work are used for ffac values,
      * Elements 2*n .. 4*n-1 are internal FFTPACK work space.
      */
-    
-    if(dir == FFTPACK_FORWARD) 
+
+    if(dir == FFTPACK_FORWARD)
     {
         fftpack_cfftf1(n,(RealOpenMM *)out_data,fft->work+2*n,fft->work,fft->ifac, -1);
     }
     else if(dir == FFTPACK_BACKWARD)
     {
-        fftpack_cfftf1(n,(RealOpenMM *)out_data,fft->work+2*n,fft->work,fft->ifac, 1); 
+        fftpack_cfftf1(n,(RealOpenMM *)out_data,fft->work+2*n,fft->work,fft->ifac, 1);
     }
     else
     {
         fprintf(stderr,"FFT plan mismatch - bad plan or direction.");
         return EINVAL;
-    }    
+    }
 
     return 0;
 }
@@ -945,7 +970,7 @@ fftpack_exec_1d          (fftpack_t                  fft,
 
 
 
-int 
+int
 fftpack_exec_2d          (fftpack_t                  fft,
                           enum fftpack_direction     dir,
                           t_complex *                in_data,
@@ -953,10 +978,10 @@ fftpack_exec_2d          (fftpack_t                  fft,
 {
     int                i,nx,ny;
     t_complex *    data;
-    
+
     nx = fft->n;
     ny = fft->next->n;
-    
+
     /* FFTPACK only does in-place transforms, so emulate out-of-place
      * by copying data to the output array first.
      * For 2D there is likely enough data to benefit from memcpy().
@@ -974,19 +999,19 @@ fftpack_exec_2d          (fftpack_t                  fft,
     {
         fftpack_exec_1d(fft->next,dir,data+i*ny,data+i*ny);
     }
-    
+
     /* Transpose in-place to get data in place for x transform now */
     fftpack_transpose_2d(data,data,nx,ny);
-    
+
     /* x transforms */
     for(i=0;i<ny;i++)
     {
         fftpack_exec_1d(fft,dir,data+i*nx,data+i*nx);
     }
-    
+
     /* Transpose in-place to get data back in original order */
     fftpack_transpose_2d(data,data,ny,nx);
-    
+
     return 0;
 }
 
@@ -994,7 +1019,7 @@ fftpack_exec_2d          (fftpack_t                  fft,
 
 
 
-int 
+int
 fftpack_exec_3d     (fftpack_t                  fft,
                      enum fftpack_direction     dir,
                      t_complex *                in_data,
@@ -1015,7 +1040,7 @@ fftpack_exec_3d     (fftpack_t                  fft,
     {
         memcpy(out_data,in_data,sizeof(t_complex)*nx*ny*nz);
     }
-    
+
     /* Much easier to do pointer arithmetic when base has the correct type */
     data = (t_complex *)out_data;
 
@@ -1040,7 +1065,7 @@ fftpack_exec_3d     (fftpack_t                  fft,
     {
         fftpack_transpose_2d(data+i*ny*nz,data+i*ny*nz,nz,ny);
     }
-    
+
     /* Transpose entire x & y slices to go from
      * (nx,ny,nz) to (ny,nx,nz).
      */
@@ -1050,7 +1075,7 @@ fftpack_exec_3d     (fftpack_t                  fft,
         fprintf(stderr,"Fatal error - cannot transpose X & Y/Z in fftpack_exec_3d().");
         return rc;
     }
-    
+
     /* Then go from (ny,nx,nz) to (ny,nz,nx) */
     for(i=0;i<ny;i++)
     {
@@ -1062,14 +1087,14 @@ fftpack_exec_3d     (fftpack_t                  fft,
     {
         fftpack_exec_1d(fft,dir,data+i*nx,data+i*nx);
     }
-    
+
     /* Transpose back from (ny,nz,nx) to (ny,nx,nz) */
     for(i=0;i<ny;i++)
     {
         fftpack_transpose_2d(data+i*nz*nx,data+i*nz*nx,nz,nx);
     }
-    
-    /* Transpose from (ny,nx,nz) to (nx,ny,nz). 
+
+    /* Transpose from (ny,nx,nz) to (nx,ny,nz).
      */
     rc = fftpack_transpose_2d_nelem(data,data,ny,nx,nz);
     if( rc != 0)
@@ -1077,7 +1102,7 @@ fftpack_exec_3d     (fftpack_t                  fft,
         fprintf(stderr,"Fatal error - cannot transpose Y/Z & X in fftpack_exec_3d().");
         return rc;
     }
-    
+
     return 0;
 }
 
@@ -1086,7 +1111,7 @@ fftpack_exec_3d     (fftpack_t                  fft,
 void
 fftpack_destroy(fftpack_t      fft)
 {
-    if(fft != NULL) 
+    if(fft != NULL)
     {
         free(fft->work);
         if(fft->next != NULL)
