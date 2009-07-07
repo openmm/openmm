@@ -1,45 +1,18 @@
 /*
- * This file contains a Fortran to C translation of the 1D transformations
- * based on the original FFTPACK, written by paul n swarztrauber
- * at the national center for atmospheric research and available
- * at www.netlib.org. FFTPACK is in the public domain.
- *
- * Higher-dimension transforms copyright Erik Lindahl, 2008-2009.
- * Just as FFTPACK, this file may be redistributed freely, and can be
- * considered to be in the public domain.
- *
- * Any errors in this (threadsafe, but not threaded) C version
- * are due to the f2c translator, or hacks by Erik Lindahl.
- *
- * Copyright (c) 2009, Erik Lindahl
- * All rights reserved.
- * Contact: lindahl@cbr.su.se
- * Center for Biomembrane Research
- * Stockholm University, Sweden
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *
- * Redistributions of source code must retain the above copyright notice, this
- * list of conditions and the following disclaimer. Redistributions in binary
- * form must reproduce the above copyright notice, this list of conditions and
- * the following disclaimer in the documentation and/or other materials provided
- * with the distribution.
- * Neither the name of the author/university nor the names of its contributors may
- * be used to endorse or promote products derived from this software without
- * specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
- * IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
- * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA,
- * OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
- */
+* This file contains a Fortran to C translation of the 1D transformations
+* based on the original FFTPACK, written by paul n swarztrauber
+* at the national center for atmospheric research and available
+* at www.netlib.org. FFTPACK is in the public domain.
+*
+* Higher-dimension transforms written by Erik Lindahl, 2008-2009.
+* Just as FFTPACK, this file may be redistributed freely, and can be
+* considered to be in the public domain. 
+*
+* Any errors in this (threadsafe, but not threaded) C version
+* are probably due to the f2c translator, or hacks by Erik Lindahl,
+* rather than FFTPACK. If you find a bug, it would be great if you could
+* drop a line to lindahl@cbr.su.se and let me know about it!
+*/
 
 #include <math.h>
 #include <stdlib.h>
