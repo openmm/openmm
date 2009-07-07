@@ -33,12 +33,18 @@
 #include "openmm/OpenMMException.h"
 #include "openmm/NonbondedForce.h"
 #include "openmm/internal/NonbondedForceImpl.h"
+#include "openmm/NonBondedForce.h"
 #include <cmath>
+#include <map>
+#include <sstream>
 #include <utility>
 
 using namespace OpenMM;
+using std::map;
 using std::pair;
 using std::set;
+using std::string;
+using std::stringstream;
 using std::vector;
 
 NonbondedForce::NonbondedForce() : nonbondedMethod(NoCutoff), cutoffDistance(1.0), ewaldErrorTol(1e-4) {
@@ -107,9 +113,30 @@ void NonbondedForce::setParticleParameters(int index, double charge, double sigm
     particles[index].epsilon = epsilon;
 }
 
-int NonbondedForce::addException(int particle1, int particle2, double chargeProd, double sigma, double epsilon) {
-    exceptions.push_back(ExceptionInfo(particle1, particle2, chargeProd, sigma, epsilon));
-    return exceptions.size()-1;
+int NonbondedForce::addException(int particle1, int particle2, double chargeProd, double sigma, double epsilon, bool replace) {
+    map<pair<int, int>, int>::iterator iter = exceptionMap.find(pair<int, int>(particle1, particle2));
+    int newIndex;
+    if (iter == exceptionMap.end())
+        iter = exceptionMap.find(pair<int, int>(particle2, particle1));
+    if (iter != exceptionMap.end()) {
+        if (!replace) {
+            stringstream msg;
+            msg << "NonbondedForce: There is already an exception for particles ";
+            msg << particle1;
+            msg << " and ";
+            msg << particle2;
+            throw OpenMMException(msg.str());
+        }
+        exceptions[iter->second] = ExceptionInfo(particle1, particle2, chargeProd, sigma, epsilon);
+        newIndex = iter->second;
+        exceptionMap.erase(iter->first);
+    }
+    else {
+        exceptions.push_back(ExceptionInfo(particle1, particle2, chargeProd, sigma, epsilon));
+        newIndex = exceptions.size()-1;
+    }
+    exceptionMap[pair<int, int>(particle1, particle2)] = newIndex;
+    return newIndex;
 }
 void NonbondedForce::getExceptionParameters(int index, int& particle1, int& particle2, double& chargeProd, double& sigma, double& epsilon) const {
     particle1 = exceptions[index].particle1;

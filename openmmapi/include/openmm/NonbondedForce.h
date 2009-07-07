@@ -36,6 +36,7 @@
 #include "Vec3.h"
 #include <map>
 #include <set>
+#include <utility>
 #include <vector>
 #include "internal/windowsExport.h"
 
@@ -215,9 +216,11 @@ public:
      * @param chargeProd the scaled product of the atomic charges (i.e. the strength of the Coulomb interaction), measured in units of the proton charge squared
      * @param sigma      the sigma parameter of the Lennard-Jones potential (corresponding to the van der Waals radius of the particle), measured in nm
      * @param epsilon    the epsilon parameter of the Lennard-Jones potential (corresponding to the well depth of the van der Waals interaction), measured in kJ/mol
+     * @param replace    determines the behavior if there is already an exception for the same two particles.  If true, the existing one is replaced.  If false,
+     *                   an exception is thrown.
      * @return the index of the exception that was added
      */
-    int addException(int particle1, int particle2, double chargeProd, double sigma, double epsilon);
+    int addException(int particle1, int particle2, double chargeProd, double sigma, double epsilon, bool replace = false);
     /**
      * Get the force field parameters for an interaction that should be calculated differently from others.
      * 
@@ -275,6 +278,7 @@ private:
 #endif
     std::vector<ParticleInfo> particles;
     std::vector<ExceptionInfo> exceptions;
+    std::map<std::pair<int, int>, int> exceptionMap;
 #if defined(_MSC_VER)
 #pragma warning(pop)
 #endif
