@@ -11,13 +11,11 @@
  * Any errors in this (threadsafe, but not threaded) C version
  * are due to the f2c translator, or hacks by Erik Lindahl.
  *
- * Erik Lindahl, lindahl@cbr.su.se
- * Center for Biomembrane Research
- * Stockholm University, Sweden
- *
  * Copyright (c) 2009, Erik Lindahl
  * All rights reserved.
- * Contact: lindahl@cbr.su.se Stockholm University, Sweden.
+ * Contact: lindahl@cbr.su.se
+ * Center for Biomembrane Research
+ * Stockholm University, Sweden.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
