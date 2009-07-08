@@ -35,7 +35,7 @@ PROGRAM HelloArgon
     ! to recast the specific NonbondedForce to a general Force.)
     call OpenMM_System_create(system)
     call OpenMM_NonbondedForce_create(nonbond)
-    ix = OpenMM_System_addForce(system, transfer(nonbond, OpenMM_Force()))
+    ix = OpenMM_System_addForce(system, transfer(nonbond, OpenMM_Force(0)))
 
     ! Create three atoms.
     call OpenMM_Vec3Array_create(initPosInNm, 3)
@@ -54,7 +54,7 @@ PROGRAM HelloArgon
 
     ! Let OpenMM Context choose best platform.
     call OpenMM_Context_create(context, system, &
-              transfer(verlet, OpenMM_Integrator()))
+              transfer(verlet, OpenMM_Integrator(0)))
     call OpenMM_Context_getPlatformName(context, platformName)
     print "('REMARK  Using OpenMM platform ', A)", platformName
 
