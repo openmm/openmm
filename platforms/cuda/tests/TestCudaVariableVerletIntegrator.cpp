@@ -136,6 +136,14 @@ void testConstraints() {
             ASSERT_EQUAL_TOL(initialEnergy, energy, 0.1);
         integrator.step(1);
     }
+    double finalTime = context.getState(State::Positions).getTime();
+    ASSERT(finalTime > 0.1);
+
+    // Now try the stepTo() method.
+
+    finalTime += 0.5;
+    integrator.stepTo(finalTime);
+    ASSERT_EQUAL(finalTime, context.getState(State::Positions).getTime());
 }
 
 void testConstrainedClusters() {
@@ -198,6 +206,7 @@ void testConstrainedClusters() {
             ASSERT_EQUAL_TOL(initialEnergy, energy, 0.05);
         integrator.step(1);
     }
+    ASSERT(context.getState(State::Positions).getTime() > 0.1);
 }
 
 int main() {

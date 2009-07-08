@@ -33,6 +33,7 @@
 #include "openmm/OpenMMContext.h"
 #include "openmm/internal/OpenMMContextImpl.h"
 #include "openmm/kernels.h"
+#include <limits>
 #include <string>
 
 using namespace OpenMM;
@@ -59,7 +60,14 @@ void VariableVerletIntegrator::step(int steps) {
     for (int i = 0; i < steps; ++i) {
         context->updateContextState();
         context->calcForces();
-        dynamic_cast<IntegrateVariableVerletStepKernel&>(kernel.getImpl()).execute(*context, *this);
+        dynamic_cast<IntegrateVariableVerletStepKernel&>(kernel.getImpl()).execute(*context, *this, std::numeric_limits<double>::infinity());
     }
 }
 
+void VariableVerletIntegrator::stepTo(double time) {
+    while (time > context->getTime()) {
+        context->updateContextState();
+        context->calcForces();
+        dynamic_cast<IntegrateVariableVerletStepKernel&>(kernel.getImpl()).execute(*context, *this, time);
+    }
+}

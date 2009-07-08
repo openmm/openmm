@@ -71,6 +71,6 @@ KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name, const Pla
     if (name == CalcKineticEnergyKernel::Name())
         return new ReferenceCalcKineticEnergyKernel(name, platform);
     if (name == RemoveCMMotionKernel::Name())
-        return new ReferenceRemoveCMMotionKernel(name, platform);
+        return new ReferenceRemoveCMMotionKernel(name, platform, data);
     throw OpenMMException( (std::string("Tried to create kernel with illegal kernel name '") + name + "'").c_str() );
 }

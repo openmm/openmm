@@ -56,14 +56,14 @@ public:
     }
     /**
      * Get the size of each time step, in picoseconds.  If this integrator uses variable time steps,
-     * this is the initial step size that will be attempted for the next step.
+     * the size of the most recent step is returned.
      */
     double getStepSize() const {
         return stepSize;
     }
     /**
      * Set the size of each time step, in picoseconds.  If this integrator uses variable time steps,
-     * this is the initial step size that will be attempted for the next step.
+     * the effect of calling this method is undefined, and it may simply be ignored.
      */
     void setStepSize(double size) {
         stepSize = size;

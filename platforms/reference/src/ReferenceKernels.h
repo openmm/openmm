@@ -463,8 +463,9 @@ public:
      *
      * @param context    the context in which to execute this kernel
      * @param integrator the VerletIntegrator this kernel is being used for
+     * @param maxTime    the maximum time beyond which the simulation should not be advanced
      */
-    void execute(OpenMMContextImpl& context, const VariableVerletIntegrator& integrator);
+    void execute(OpenMMContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime);
 private:
     ReferencePlatform::PlatformData& data;
     ReferenceVariableVerletDynamics* dynamics;
@@ -530,7 +531,7 @@ private:
  */
 class ReferenceRemoveCMMotionKernel : public RemoveCMMotionKernel {
 public:
-    ReferenceRemoveCMMotionKernel(std::string name, const Platform& platform) : RemoveCMMotionKernel(name, platform) {
+    ReferenceRemoveCMMotionKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) : RemoveCMMotionKernel(name, platform), data(data) {
     }
     /**
      * Initialize the kernel, setting up the particle masses.
@@ -546,6 +547,7 @@ public:
      */
     void execute(OpenMMContextImpl& context);
 private:
+    ReferencePlatform::PlatformData& data;
     std::vector<double> masses;
     int frequency;
 };

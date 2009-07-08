@@ -655,6 +655,7 @@ void ReferenceIntegrateVerletStepKernel::execute(OpenMMContextImpl& context, con
     }
     dynamics->update(context.getSystem().getNumParticles(), posData, velData, forceData, masses);
     data.time += stepSize;
+    data.stepCount++;
 }
 
 ReferenceIntegrateLangevinStepKernel::~ReferenceIntegrateLangevinStepKernel() {
@@ -719,6 +720,7 @@ void ReferenceIntegrateLangevinStepKernel::execute(OpenMMContextImpl& context, c
     }
     dynamics->update(context.getSystem().getNumParticles(), posData, velData, forceData, masses);
     data.time += stepSize;
+    data.stepCount++;
 }
 
 ReferenceIntegrateBrownianStepKernel::~ReferenceIntegrateBrownianStepKernel() {
@@ -782,6 +784,7 @@ void ReferenceIntegrateBrownianStepKernel::execute(OpenMMContextImpl& context, c
     }
     dynamics->update(context.getSystem().getNumParticles(), posData, velData, forceData, masses);
     data.time += stepSize;
+    data.stepCount++;
 }
 
 ReferenceIntegrateVariableVerletStepKernel::~ReferenceIntegrateVariableVerletStepKernel() {
@@ -815,7 +818,7 @@ void ReferenceIntegrateVariableVerletStepKernel::initialize(const System& system
     }
 }
 
-void ReferenceIntegrateVariableVerletStepKernel::execute(OpenMMContextImpl& context, const VariableVerletIntegrator& integrator) {
+void ReferenceIntegrateVariableVerletStepKernel::execute(OpenMMContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime) {
     double errorTol = integrator.getErrorTolerance();
     RealOpenMM** posData = ((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData();
     RealOpenMM** velData = ((ReferenceFloatStreamImpl&) context.getVelocities().getImpl()).getData();
@@ -834,8 +837,12 @@ void ReferenceIntegrateVariableVerletStepKernel::execute(OpenMMContextImpl& cont
         dynamics->setReferenceConstraintAlgorithm(constraints);
         prevErrorTol = errorTol;
     }
-    dynamics->update(context.getSystem().getNumParticles(), posData, velData, forceData, masses);
+    RealOpenMM maxStepSize = (RealOpenMM) (maxTime-data.time);
+    dynamics->update(context.getSystem().getNumParticles(), posData, velData, forceData, masses, maxStepSize);
     data.time += dynamics->getDeltaT();
+    if (dynamics->getDeltaT() == maxStepSize)
+        data.time = maxTime; // Avoid round-off error
+    data.stepCount++;
 }
 
 ReferenceApplyAndersenThermostatKernel::~ReferenceApplyAndersenThermostatKernel() {
@@ -888,8 +895,7 @@ void ReferenceRemoveCMMotionKernel::initialize(const System& system, const CMMot
 }
 
 void ReferenceRemoveCMMotionKernel::execute(OpenMMContextImpl& context) {
-    int step = (int)std::floor(context.getTime()/context.getIntegrator().getStepSize());
-    if (step%frequency != 0)
+    if (data.stepCount%frequency != 0)
         return;
     RealOpenMM** velData = ((ReferenceFloatStreamImpl&) context.getVelocities().getImpl()).getData();
     

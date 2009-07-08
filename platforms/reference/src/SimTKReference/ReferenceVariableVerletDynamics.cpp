@@ -131,6 +131,7 @@ int ReferenceVariableVerletDynamics::printParameters( std::stringstream& message
    @param velocities          velocities
    @param forces              forces
    @param masses              atom masses
+   @param maxStepSize         maximum time step
 
    @return ReferenceDynamics::DefaultReturn
 
@@ -138,7 +139,7 @@ int ReferenceVariableVerletDynamics::printParameters( std::stringstream& message
 
 int ReferenceVariableVerletDynamics::update( int numberOfAtoms, RealOpenMM** atomCoordinates,
                                           RealOpenMM** velocities,
-                                          RealOpenMM** forces, RealOpenMM* masses ){
+                                          RealOpenMM** forces, RealOpenMM* masses, RealOpenMM maxStepSize ){
 
     // ---------------------------------------------------------------------------------------
 
@@ -195,6 +196,8 @@ int ReferenceVariableVerletDynamics::update( int numberOfAtoms, RealOpenMM** ato
         newStepSize = std::min(newStepSize, getDeltaT()*2.0f); // For safety, limit how quickly dt can increase.
     if (newStepSize > getDeltaT() && newStepSize < 1.2f*getDeltaT())
         newStepSize = getDeltaT(); // Keeping dt constant between steps improves the behavior of the integrator.
+    if (newStepSize > maxStepSize)
+        newStepSize = maxStepSize;
     RealOpenMM vstep = 0.5f*(newStepSize+getDeltaT()); // The time interval by which to advance the velocities
     setDeltaT(newStepSize);
     for (int i = 0; i < numberOfAtoms; ++i) {

@@ -441,8 +441,9 @@ public:
      *
      * @param context    the context in which to execute this kernel
      * @param integrator the VerletIntegrator this kernel is being used for
+     * @param maxTime    the maximum time beyond which the simulation should not be advanced
      */
-    virtual void execute(OpenMMContextImpl& context, const VariableVerletIntegrator& integrator) = 0;
+    virtual void execute(OpenMMContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime) = 0;
 };
 
 /**

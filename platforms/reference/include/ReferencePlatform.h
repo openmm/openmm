@@ -62,8 +62,9 @@ private:
 
 class ReferencePlatform::PlatformData {
 public:
-    PlatformData() : time(0.0) {
+    PlatformData() : time(0.0), stepCount(0) {
     }
+    int stepCount;
     double time;
 };
 } // namespace OpenMM

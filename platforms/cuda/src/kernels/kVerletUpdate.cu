@@ -89,7 +89,7 @@ void kVerletUpdatePart2(gpuContext gpu)
     }
 }
 
-__global__ void kSelectVerletStepSize_kernel()
+__global__ void kSelectVerletStepSize_kernel(float maxStepSize)
 {
     // Calculate the error.
 
@@ -121,14 +121,16 @@ __global__ void kSelectVerletStepSize_kernel()
             newStepSize = min(newStepSize, oldStepSize*2.0f); // For safety, limit how quickly dt can increase.
         if (newStepSize > oldStepSize && newStepSize < 1.1f*oldStepSize)
             newStepSize = oldStepSize; // Keeping dt constant between steps improves the behavior of the integrator.
+        if (newStepSize > maxStepSize)
+            newStepSize = maxStepSize;
         cSim.pStepSize[0].y = newStepSize;
     }
 }
 
-void kSelectVerletStepSize(gpuContext gpu)
+void kSelectVerletStepSize(gpuContext gpu, float maxTimeStep)
 {
 //    printf("kSelectVerletStepSize\n");
-    kSelectVerletStepSize_kernel<<<1, gpu->sim.update_threads_per_block, sizeof(float)*gpu->sim.update_threads_per_block>>>();
+    kSelectVerletStepSize_kernel<<<1, gpu->sim.update_threads_per_block, sizeof(float)*gpu->sim.update_threads_per_block>>>(maxTimeStep);
     LAUNCHERROR("kSelectVerletStepSize");
 }
 

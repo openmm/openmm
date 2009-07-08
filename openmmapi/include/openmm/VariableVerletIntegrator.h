@@ -78,12 +78,21 @@ public:
     void setErrorTolerance(double tol) {
         errorTol = tol;
     }
-   /**
+    /**
      * Advance a simulation through time by taking a series of time steps.
      *
      * @param steps   the number of time steps to take
      */
     void step(int steps);
+    /**
+     * Advance a simulation through time by taking a series of steps until a specified time is
+     * reached.  When this method returns, the simulation time will exactly equal the time which
+     * was specified.  If you call this method and specify a time that is earlier than the
+     * current time, it will return without doing anything.
+     *
+     * @param time   the time to which the simulation should be advanced
+     */
+    void stepTo(double time);
 protected:
     /**
      * This will be called by the OpenMMContext when it is created.  It informs the Integrator

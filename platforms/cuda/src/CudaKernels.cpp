@@ -562,7 +562,7 @@ void CudaIntegrateVariableVerletStepKernel::initialize(const System& system, con
     prevErrorTol = -1.0;
 }
 
-void CudaIntegrateVariableVerletStepKernel::execute(OpenMMContextImpl& context, const VariableVerletIntegrator& integrator) {
+void CudaIntegrateVariableVerletStepKernel::execute(OpenMMContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime) {
     _gpuContext* gpu = data.gpu;
     double errorTol = integrator.getErrorTolerance();
     if (errorTol != prevErrorTol) {
@@ -572,7 +572,8 @@ void CudaIntegrateVariableVerletStepKernel::execute(OpenMMContextImpl& context, 
         gpuSetConstants(gpu);
         prevErrorTol = errorTol;
     }
-    kSelectVerletStepSize(gpu);
+    float maxStepSize = maxTime-data.time;
+    kSelectVerletStepSize(gpu, maxStepSize);
     kVerletUpdatePart1(gpu);
     kApplyFirstShake(gpu);
     kApplyFirstSettle(gpu);
@@ -583,6 +584,8 @@ void CudaIntegrateVariableVerletStepKernel::execute(OpenMMContextImpl& context, 
     kVerletUpdatePart2(gpu);
     gpu->psStepSize->Download();
     data.time += (*gpu->psStepSize)[0].y;
+    if ((*gpu->psStepSize)[0].y == maxStepSize)
+        data.time = maxTime; // Avoid round-off error
     data.stepCount++;
 }
 
