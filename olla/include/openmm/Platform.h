@@ -120,7 +120,7 @@ public:
      * @return true if this Platform provides implementations of all the kernels in the list,
      * false if there are any which it does not support
      */
-    bool supportsKernels(std::vector<std::string> kernelNames) const ;
+    bool supportsKernels(const std::vector<std::string>& kernelNames) const ;
     /**
      * Create a Kernel object.  If you call this method multiple times for different contexts with the same name,
      * the returned Kernels are independent and do not interact with each other.  This means
@@ -167,7 +167,7 @@ public:
      * @return the fastest registered Platform which supports all of the requested kernels.  If no
      * Platform exists which supports all of them, this will throw an exception.
      */
-    static Platform& findPlatform(std::vector<std::string> kernelNames);
+    static Platform& findPlatform(const std::vector<std::string>& kernelNames);
     /**
      * Load a dynamic library (DLL) which contains an OpenMM plugin.  Typically, each Platform
      * is distributed as a separate dynamic library.  This method can then be called at runtime
@@ -198,7 +198,7 @@ public:
      *
      * @return the path to the default plugin directory
      */
-    static std::string getDefaultPluginsDirectory();
+    static const std::string& getDefaultPluginsDirectory();
 private:
 
 // Retarded visual studio compiler complains about being unable to 

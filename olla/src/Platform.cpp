@@ -88,7 +88,7 @@ void Platform::registerStreamFactory(string name, StreamFactory* factory) {
     streamFactories[name] = factory;
 }
 
-bool Platform::supportsKernels(vector<string> kernelNames) const {
+bool Platform::supportsKernels(const vector<string>& kernelNames) const {
     for (int i = 0; i < (int) kernelNames.size(); ++i)
         if (kernelFactories.find(kernelNames[i]) == kernelFactories.end())
             return false;
@@ -124,7 +124,7 @@ Platform& Platform::getPlatform(int index) {
     return *getPlatforms()[index];
 }
 
-Platform& Platform::findPlatform(vector<string> kernelNames) {
+Platform& Platform::findPlatform(const vector<string>& kernelNames) {
     Platform* best = 0;
     vector<Platform*>& platforms = getPlatforms();
     double speed = 0.0;
@@ -197,7 +197,7 @@ vector<string> Platform::loadPluginsFromDirectory(string directory) {
     return loadedLibraries;
 }
 
-string Platform::getDefaultPluginsDirectory() {
+const string& Platform::getDefaultPluginsDirectory() {
     char* dir = getenv("OPENMM_PLUGIN_DIR");
 #ifdef _MSC_VER
     if (dir != NULL)
@@ -207,8 +207,10 @@ string Platform::getDefaultPluginsDirectory() {
         return "C:\\\\Program Files\\OpenMM\\lib\\plugins";
     return string(dir)+"\\OpenMM\\lib\\plugins";
 #else
+    static string directory;
     if (dir == NULL)
-        return "/usr/local/openmm/lib/plugins";
-    return string(dir);
+        directory = "/usr/local/openmm/lib/plugins";
+    directory = string(dir);
+    return directory;
 #endif
 }
