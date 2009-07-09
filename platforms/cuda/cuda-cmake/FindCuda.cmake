@@ -424,6 +424,7 @@ MACRO(CUDA_add_custom_commands cuda_target)
       ARGS ${source_file} 
            ${CUDA_NVCC_FLAGS}
            ${nvcc_flags}
+			  ${CUDA_NVCC_BUILD_FLAGS}
            -DNVCC
            --keep
            -cuda -o ${generated_file} 
