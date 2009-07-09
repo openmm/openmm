@@ -33,7 +33,6 @@
 #include "openmm/OpenMMException.h"
 #include "openmm/NonbondedForce.h"
 #include "openmm/internal/NonbondedForceImpl.h"
-#include "openmm/NonBondedForce.h"
 #include <cmath>
 #include <map>
 #include <sstream>
