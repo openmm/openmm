@@ -202,15 +202,18 @@ const string& Platform::getDefaultPluginsDirectory() {
     static string directory;
 #ifdef _MSC_VER
     if (dir != NULL)
-        return directory = dir;
-    dir = getenv("PROGRAMFILES");
-    if (dir == NULL)
-        return directory = "C:\\\\Program Files\\OpenMM\\lib\\plugins";
-    return directory = (string(dir)+"\\OpenMM\\lib\\plugins");
+        directory = string(dir);
+    else {
+        dir = getenv("PROGRAMFILES");
+        if (dir == NULL)
+            directory = "C:\\\\Program Files\\OpenMM\\lib\\plugins";
+        else
+            directory = string(dir)+"\\OpenMM\\lib\\plugins";
+    }
 #else
     if (dir == NULL)
-        directory = "/usr/local/openmm/lib/plugins";
+        dir = "/usr/local/openmm/lib/plugins";
     directory = string(dir);
-    return directory;
 #endif
+    return directory;
 }
