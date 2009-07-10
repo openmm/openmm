@@ -32,6 +32,8 @@
 #include "ReferenceLJCoulombIxn.h"
 #include "ReferenceForce.h"
 
+#include "pme.h"
+
 // In case we're using some primitive version of Visual Studio this will
 // make sure that erf() and erfc() are defined.
 #include "MSVC_erfc.h"
@@ -452,8 +454,7 @@ int ReferenceLJCoulombIxn::calculatePMEIxn( int numberOfAtoms, RealOpenMM** atom
                                              RealOpenMM* fixedParameters, RealOpenMM** forces,
                                              RealOpenMM* energyByAtom, RealOpenMM* totalEnergy) const {
 
-    #include "../SimTKUtilities/RealTypeSimTk.h"
-    #include "pme.h"
+
 
     RealOpenMM SQRT_PI = sqrt(PI);
     static const RealOpenMM one         =  1.0;

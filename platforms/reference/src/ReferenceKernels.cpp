@@ -399,9 +399,9 @@ void ReferenceCalcNonbondedForceKernel::initialize(const System& system, const N
         RealOpenMM my = periodicBoxSize[1]/nonbondedCutoff;
         RealOpenMM mz = periodicBoxSize[2]/nonbondedCutoff;
         RealOpenMM pi = (RealOpenMM) 3.1415926535897932385;
-        kmax[0] = std::ceil(-(mx/pi)*std::log(ewaldErrorTol));
-        kmax[1] = std::ceil(-(my/pi)*std::log(ewaldErrorTol));
-        kmax[2] = std::ceil(-(mz/pi)*std::log(ewaldErrorTol));
+        kmax[0] = (int)std::ceil(-(mx/pi)*std::log(ewaldErrorTol));
+        kmax[1] = (int)std::ceil(-(my/pi)*std::log(ewaldErrorTol));
+        kmax[2] = (int)std::ceil(-(mz/pi)*std::log(ewaldErrorTol));
         if (kmax[0]%2 == 0)
             kmax[0]++;
         if (kmax[1]%2 == 0)
