@@ -80,11 +80,11 @@ void Platform::contextCreated(OpenMMContextImpl& context) const {
 void Platform::contextDestroyed(OpenMMContextImpl& context) const {
 }
 
-void Platform::registerKernelFactory(string name, KernelFactory* factory) {
+void Platform::registerKernelFactory(const string& name, KernelFactory* factory) {
     kernelFactories[name] = factory;
 }
 
-void Platform::registerStreamFactory(string name, StreamFactory* factory) {
+void Platform::registerStreamFactory(const string& name, StreamFactory* factory) {
     streamFactories[name] = factory;
 }
 
@@ -95,13 +95,13 @@ bool Platform::supportsKernels(const vector<string>& kernelNames) const {
     return true;
 }
 
-Kernel Platform::createKernel(string name, OpenMMContextImpl& context) const {
+Kernel Platform::createKernel(const string& name, OpenMMContextImpl& context) const {
     if (kernelFactories.find(name) == kernelFactories.end())
         throw OpenMMException("Called createKernel() on a Platform which does not support the requested kernel");
     return Kernel(kernelFactories.find(name)->second->createKernelImpl(name, *this, context));
 }
 
-Stream Platform::createStream(string name, int size, Stream::DataType type, OpenMMContextImpl& context) const {
+Stream Platform::createStream(const string& name, int size, Stream::DataType type, OpenMMContextImpl& context) const {
     if (streamFactories.find(name) == streamFactories.end())
         return Stream(getDefaultStreamFactory().createStreamImpl(name, size, type, *this, context));
     return Stream(streamFactories.find(name)->second->createStreamImpl(name, size, type, *this, context));
@@ -139,7 +139,7 @@ Platform& Platform::findPlatform(const vector<string>& kernelNames) {
     return *best;
 }
 
-void Platform::loadPluginLibrary(string file) {
+void Platform::loadPluginLibrary(const string& file) {
 #ifdef WIN32
     // Tell Windows not to bother the user with ugly error boxes.
     const UINT oldErrorMode = SetErrorMode(SEM_FAILCRITICALERRORS);
@@ -157,7 +157,7 @@ void Platform::loadPluginLibrary(string file) {
 #endif
 }
 
-vector<string> Platform::loadPluginsFromDirectory(string directory) {
+vector<string> Platform::loadPluginsFromDirectory(const string& directory) {
     vector<string> files;
     char dirSeparator;
 #ifdef WIN32

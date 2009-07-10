@@ -67,7 +67,7 @@ public:
     /**
      * Get the name of this platform.  This should be a unique identifier which can be used to recognized it.
      */
-    virtual std::string getName() const = 0;
+    virtual const std::string& getName() const = 0;
     /**
      * Get an estimate of how fast this Platform class is.  This need not be precise.  It only is expected to
      * return an order or magnitude estimate of the relative performance of different Platform classes.  An
@@ -103,7 +103,7 @@ public:
      * @param name     the kernel name for which the factory should be used
      * @param factory  the factory to use for creating Kernels with the specified name
      */
-    void registerKernelFactory(std::string name, KernelFactory* factory);
+    void registerKernelFactory(const std::string& name, KernelFactory* factory);
     /**
      * Register a StreamFactory which should be used to create Streams with a particular name.
      * The Platform takes over ownership of the factory, and will delete it when the Platform itself
@@ -112,7 +112,7 @@ public:
      * @param name     the stream name for which the factory should be used
      * @param factory  the factory to use for creating Streams with the specified name
      */
-    void registerStreamFactory(std::string name, StreamFactory* factory);
+    void registerStreamFactory(const std::string& name, StreamFactory* factory);
     /**
      * Determine whether this Platforms provides implementations of a set of kernels.
      * 
@@ -133,7 +133,7 @@ public:
      * @param context the context for which to create a Kernel
      * @return a newly created Kernel object
      */
-    Kernel createKernel(std::string name, OpenMMContextImpl& context) const;
+    Kernel createKernel(const std::string& name, OpenMMContextImpl& context) const;
     /**
      * Create a Stream object.  If you call this method multiple times for different contexts with the same name,
      * the returned Streams are independent and do not interact with each other.  This means
@@ -147,7 +147,7 @@ public:
      * @param context the context for which to create a Stream
      * @return a newly created Stream object
      */
-    Stream createStream(std::string name, int size, Stream::DataType type, OpenMMContextImpl& context) const;
+    Stream createStream(const std::string& name, int size, Stream::DataType type, OpenMMContextImpl& context) const;
     /**
      * Register a new Platform.
      */
@@ -180,7 +180,7 @@ public:
      *               system's rules for loading libraries.  Typically it may be either an absolute path
      *               or relative to a set of standard locations.
      */
-    static void loadPluginLibrary(std::string file);
+    static void loadPluginLibrary(const std::string& file);
     /**
      * Load multiple dynamic libraries (DLLs) which contain OpenMM plugins from a single directory.
      * This method loops over every file contained in the specified directory and calls loadPluginLibrary()
@@ -190,7 +190,7 @@ public:
      * @param directory    the path to the directory containing libraries to load
      * @return the names of all files which were successfully loaded as libraries
      */
-    static std::vector<std::string> loadPluginsFromDirectory(std::string directory);
+    static std::vector<std::string> loadPluginsFromDirectory(const std::string& directory);
     /**
      * Get the default directory from which to load plugins.  If the environment variable
      * OPENMM_PLUGIN_DIR is set, this returns its value.  Otherwise, it returns a platform

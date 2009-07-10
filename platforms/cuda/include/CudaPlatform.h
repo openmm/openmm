@@ -44,8 +44,9 @@ class OPENMM_EXPORT CudaPlatform : public Platform {
 public:
     class PlatformData;
     CudaPlatform();
-    std::string getName() const {
-        return "Cuda";
+    const std::string& getName() const {
+        static const std::string name = "Cuda";
+        return name;
     }
     double getSpeed() const {
         return 100;

@@ -46,8 +46,9 @@ class OPENMM_EXPORT ReferencePlatform : public Platform {
 public:
     class PlatformData;
     ReferencePlatform();
-    std::string getName() const {
-        return "Reference";
+    const std::string& getName() const {
+        static const std::string name = "Reference";
+        return name;
     }
     double getSpeed() const {
         return 1;

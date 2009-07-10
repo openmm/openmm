@@ -364,8 +364,9 @@ void BrookPlatform::_setBrookRuntime( const std::string& runtime ){
  * @return "Brook"
  */
     
-std::string BrookPlatform::getName() const {
-  return "Brook";
+const std::string& BrookPlatform::getName() const {
+  static const std::string name = "Brook";
+  return name;
 }   
 
 /** 

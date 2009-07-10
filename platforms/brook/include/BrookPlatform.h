@@ -190,7 +190,7 @@ class OPENMM_EXPORT BrookPlatform : public Platform {
        * @return "Brook"
        */
       
-      std::string getName() const;
+      const std::string& getName() const;
 
       /** 
        * Return platform speed
