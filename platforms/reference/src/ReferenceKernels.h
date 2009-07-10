@@ -43,6 +43,7 @@ class ReferenceAndersenThermostat;
 class ReferenceBrownianDynamics;
 class ReferenceStochasticDynamics;
 class ReferenceConstraintAlgorithm;
+class ReferenceVariableStochasticDynamics;
 class ReferenceVariableVerletDynamics;
 class ReferenceVerletDynamics;
 
@@ -440,6 +441,41 @@ private:
     int** constraintIndices;
     int numConstraints;
     double prevTemp, prevFriction, prevStepSize;
+};
+
+/**
+ * This kernel is invoked by VariableLangevinIntegrator to take one time step.
+ */
+class ReferenceIntegrateVariableLangevinStepKernel : public IntegrateVariableLangevinStepKernel {
+public:
+    ReferenceIntegrateVariableLangevinStepKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) : IntegrateVariableLangevinStepKernel(name, platform),
+        data(data), dynamics(0), constraints(0), masses(0), constraintDistances(0), constraintIndices(0) {
+    }
+    ~ReferenceIntegrateVariableLangevinStepKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param integrator the LangevinIntegrator this kernel will be used for
+     */
+    void initialize(const System& system, const VariableLangevinIntegrator& integrator);
+    /**
+     * Execute the kernel.
+     *
+     * @param context    the context in which to execute this kernel
+     * @param integrator the LangevinIntegrator this kernel is being used for
+     * @param maxTime    the maximum time beyond which the simulation should not be advanced
+     */
+    void execute(OpenMMContextImpl& context, const VariableLangevinIntegrator& integrator, double maxTime);
+private:
+    ReferencePlatform::PlatformData& data;
+    ReferenceVariableStochasticDynamics* dynamics;
+    ReferenceConstraintAlgorithm* constraints;
+    RealOpenMM* masses;
+    RealOpenMM* constraintDistances;
+    int** constraintIndices;
+    int numConstraints;
+    double prevTemp, prevFriction, prevErrorTol;
 };
 
 /**

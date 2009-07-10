@@ -33,18 +33,19 @@
 #include "ReferenceFloatStreamImpl.h"
 #include "gbsa/CpuObc.h"
 #include "gbsa/CpuGBVI.h"
-#include "SimTKReference/ReferenceVariableVerletDynamics.h"
 #include "SimTKReference/ReferenceAndersenThermostat.h"
 #include "SimTKReference/ReferenceAngleBondIxn.h"
 #include "SimTKReference/ReferenceBondForce.h"
 #include "SimTKReference/ReferenceBrownianDynamics.h"
+#include "SimTKReference/ReferenceCCMAAlgorithm.h"
 #include "SimTKReference/ReferenceHarmonicBondIxn.h"
 #include "SimTKReference/ReferenceLJCoulomb14.h"
 #include "SimTKReference/ReferenceLJCoulombIxn.h"
 #include "SimTKReference/ReferenceProperDihedralBond.h"
 #include "SimTKReference/ReferenceRbDihedralBond.h"
 #include "SimTKReference/ReferenceStochasticDynamics.h"
-#include "SimTKReference/ReferenceCCMAAlgorithm.h"
+#include "SimTKReference/ReferenceVariableStochasticDynamics.h"
+#include "SimTKReference/ReferenceVariableVerletDynamics.h"
 #include "SimTKReference/ReferenceVerletDynamics.h"
 #include "openmm/CMMotionRemover.h"
 #include "openmm/System.h"
@@ -784,6 +785,70 @@ void ReferenceIntegrateBrownianStepKernel::execute(OpenMMContextImpl& context, c
     }
     dynamics->update(context.getSystem().getNumParticles(), posData, velData, forceData, masses);
     data.time += stepSize;
+    data.stepCount++;
+}
+
+ReferenceIntegrateVariableLangevinStepKernel::~ReferenceIntegrateVariableLangevinStepKernel() {
+    if (dynamics)
+        delete dynamics;
+    if (constraints)
+        delete constraints;
+    if (masses)
+        delete[] masses;
+    if (constraintIndices)
+        disposeIntArray(constraintIndices, numConstraints);
+    if (constraintDistances)
+        delete[] constraintDistances;
+}
+
+void ReferenceIntegrateVariableLangevinStepKernel::initialize(const System& system, const VariableLangevinIntegrator& integrator) {
+    int numParticles = system.getNumParticles();
+    masses = new RealOpenMM[numParticles];
+    for (int i = 0; i < numParticles; ++i)
+        masses[i] = static_cast<RealOpenMM>(system.getParticleMass(i));
+    numConstraints = system.getNumConstraints();
+    constraintIndices = allocateIntArray(numConstraints, 2);
+    constraintDistances = new RealOpenMM[numConstraints];
+    for (int i = 0; i < numConstraints; ++i) {
+        int particle1, particle2;
+        double distance;
+        system.getConstraintParameters(i, particle1, particle2, distance);
+        constraintIndices[i][0] = particle1;
+        constraintIndices[i][1] = particle2;
+        constraintDistances[i] = static_cast<RealOpenMM>(distance);
+    }
+    SimTKOpenMMUtilities::setRandomNumberSeed((unsigned int) integrator.getRandomNumberSeed());
+}
+
+void ReferenceIntegrateVariableLangevinStepKernel::execute(OpenMMContextImpl& context, const VariableLangevinIntegrator& integrator, double maxTime) {
+    double temperature = integrator.getTemperature();
+    double friction = integrator.getFriction();
+    double errorTol = integrator.getErrorTolerance();
+    RealOpenMM** posData = ((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData();
+    RealOpenMM** velData = ((ReferenceFloatStreamImpl&) context.getVelocities().getImpl()).getData();
+    RealOpenMM** forceData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getForces().getImpl()).getData()); // Reference code needs to be made const correct
+    if (dynamics == 0 || temperature != prevTemp || friction != prevFriction || errorTol != prevErrorTol) {
+        // Recreate the computation objects with the new parameters.
+
+        if (dynamics) {
+            delete dynamics;
+            delete constraints;
+        }
+        RealOpenMM tau = static_cast<RealOpenMM>( friction == 0.0 ? 0.0 : 1.0/friction );
+        dynamics = new ReferenceVariableStochasticDynamics(context.getSystem().getNumParticles(), (RealOpenMM) tau, (RealOpenMM) temperature, (RealOpenMM) errorTol);
+        vector<ReferenceCCMAAlgorithm::AngleInfo> angles;
+        findAnglesForCCMA(context.getSystem(), angles);
+        constraints = new ReferenceCCMAAlgorithm(context.getSystem().getNumParticles(), numConstraints, constraintIndices, constraintDistances, masses, angles, (RealOpenMM)integrator.getConstraintTolerance());
+        dynamics->setReferenceConstraintAlgorithm(constraints);
+        prevTemp = temperature;
+        prevFriction = friction;
+        prevErrorTol = errorTol;
+    }
+    RealOpenMM maxStepSize = (RealOpenMM) (maxTime-data.time);
+    dynamics->update(context.getSystem().getNumParticles(), posData, velData, forceData, masses, maxStepSize);
+    data.time += dynamics->getDeltaT();
+    if (dynamics->getDeltaT() == maxStepSize)
+        data.time = maxTime; // Avoid round-off error
     data.stepCount++;
 }
 

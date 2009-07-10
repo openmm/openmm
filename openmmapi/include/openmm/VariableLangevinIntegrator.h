@@ -1,5 +1,5 @@
-#ifndef OPENMM_VARIABLEVERLETINTEGRATOR_H_
-#define OPENMM_VARIABLEVERLETINTEGRATOR_H_
+#ifndef OPENMM_VARIABLELANGEVININTEGRATOR_H_
+#define OPENMM_VARIABLELANGEVININTEGRATOR_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -39,8 +39,8 @@
 namespace OpenMM {
 
 /**
- * This is an error contolled, variable time step Integrator that simulates a System using the
- * leap-frog Verlet algorithm.  It compares the result of the Verlet integrator to that of an
+ * This is an error contolled, variable time step Integrator that simulates a System using Langevin
+ * dynamics.  It compares the result of the Langevin integrator to that of an
  * explicit Euler integrator, takes the difference between the two as a measure of the integration
  * error in each time step, and continuously adjusts the step size to keep the error below a
  * specified tolerance.  This both improves the stability of the integrator and allows it to take
@@ -50,22 +50,44 @@ namespace OpenMM {
  * adjustable parameter that affects the step size and integration accuracy.  You
  * should try different values to find the largest one that produces a trajectory sufficiently
  * accurate for your purposes.  0.001 is often a good starting point.
- *
- * Unlike a fixed step size Verlet integrator, variable step size Verlet is not symplectic.  This
- * means that at a given accuracy level, energy is not as precisely conserved over long time periods.
- * This makes it most appropriate for constant temperate simulations.  In constant energy simulations
- * where precise energy conservation over long time periods is important, a fixed step size Verlet
- * integrator may be more appropriate.
  */
 
-class OPENMM_EXPORT VariableVerletIntegrator : public Integrator {
+class OPENMM_EXPORT VariableLangevinIntegrator : public Integrator {
 public:
     /**
-     * Create a VariableVerletIntegrator.
+     * Create a VariableLangevinIntegrator.
      *
-     * @param errorTol    the error tolerance
+     * @param temperature    the temperature of the heat bath (in Kelvin)
+     * @param frictionCoeff  the friction coefficient which couples the system to the heat bath (in inverse picoseconds)
+     * @param errorTol       the error tolerance
      */
-    VariableVerletIntegrator(double errorTol);
+    VariableLangevinIntegrator(double temperature, double frictionCoeff, double errorTol);
+    /**
+     * Get the temperature of the heat bath (in Kelvin).
+     */
+    double getTemperature() const {
+        return temperature;
+    }
+    /**
+     * Set the temperature of the heat bath (in Kelvin).
+     */
+    void setTemperature(double temp) {
+        temperature = temp;
+    }
+    /**
+     * Get the friction coefficient which determines how strongly the system is coupled to
+     * the heat bath (in inverse ps).
+     */
+    double getFriction() const {
+        return friction;
+    }
+    /**
+     * Set the friction coefficient which determines how strongly the system is coupled to
+     * the heat bath (in inverse ps).
+     */
+    void setFriction(double coeff) {
+        friction = coeff;
+    }
     /**
      * Get the error tolerance.
      */
@@ -77,6 +99,23 @@ public:
      */
     void setErrorTolerance(double tol) {
         errorTol = tol;
+    }
+    /**
+     * Get the random number seed.  See setRandomNumberSeed() for details.
+     */
+    int getRandomNumberSeed() const {
+        return randomNumberSeed;
+    }
+    /**
+     * Set the random number seed.  The precise meaning of this parameter is undefined, and is left up
+     * to each Platform to interpret in an appropriate way.  It is guaranteed that if two simulations
+     * are run with different random number seeds, the sequence of random forces will be different.  On
+     * the other hand, no guarantees are made about the behavior of simulations that use the same seed.
+     * In particular, Platforms are permitted to use non-deterministic algorithms which produce different
+     * results on successive runs, even if those runs were initialized identically.
+     */
+    void setRandomNumberSeed(int seed) {
+        randomNumberSeed = seed;
     }
     /**
      * Advance a simulation through time by taking a series of time steps.
@@ -105,11 +144,12 @@ protected:
      */
     std::vector<std::string> getKernelNames();
 private:
-    double errorTol;
+    double temperature, friction, errorTol;
+    int randomNumberSeed;
     OpenMMContextImpl* context;
     Kernel kernel;
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_VARIABLEVERLETINTEGRATOR_H_*/
+#endif /*OPENMM_VARIABLELANGEVININTEGRATOR_H_*/

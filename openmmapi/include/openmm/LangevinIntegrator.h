@@ -66,14 +66,14 @@ public:
     }
     /**
      * Get the friction coefficient which determines how strongly the system is coupled to
-     * the heat bath.
+     * the heat bath (in inverse ps).
      */
     double getFriction() const {
         return friction;
     }
     /**
      * Set the friction coefficient which determines how strongly the system is coupled to
-     * the heat bath.
+     * the heat bath (in inverse ps).
      */
     void setFriction(double coeff) {
         friction = coeff;

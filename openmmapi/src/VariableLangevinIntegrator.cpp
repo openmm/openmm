@@ -1,6 +1,3 @@
-#ifndef OPENMM_H_
-#define OPENMM_H_
-
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -9,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,28 +29,49 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/AndersenThermostat.h"
-#include "openmm/BrownianIntegrator.h"
-#include "openmm/CMMotionRemover.h"
-#include "openmm/Force.h"
-#include "openmm/GBSAOBCForce.h"
-#include "openmm/GBVIForce.h"
-#include "openmm/HarmonicAngleForce.h"
-#include "openmm/HarmonicBondForce.h"
-#include "openmm/Integrator.h"
-#include "openmm/LangevinIntegrator.h"
-#include "openmm/NonbondedForce.h"
-#include "openmm/OpenMMContext.h"
-#include "openmm/OpenMMException.h"
-#include "openmm/PeriodicTorsionForce.h"
-#include "openmm/RBTorsionForce.h"
-#include "openmm/State.h"
-#include "openmm/System.h"
-#include "openmm/Units.h"
 #include "openmm/VariableLangevinIntegrator.h"
-#include "openmm/VariableVerletIntegrator.h"
-#include "openmm/Vec3.h"
-#include "openmm/VerletIntegrator.h"
-#include "openmm/Platform.h"
+#include "openmm/OpenMMContext.h"
+#include "openmm/internal/OpenMMContextImpl.h"
+#include "openmm/kernels.h"
+#include <limits>
+#include <string>
 
-#endif /*OPENMM_H_*/
+using namespace OpenMM;
+using std::string;
+using std::vector;
+
+VariableLangevinIntegrator::VariableLangevinIntegrator(double temperature, double frictionCoeff, double errorTol) {
+    setTemperature(temperature);
+    setFriction(frictionCoeff);
+    setErrorTolerance(errorTol);
+    setConstraintTolerance(1e-4);
+    setRandomNumberSeed((int) time(NULL));
+}
+
+void VariableLangevinIntegrator::initialize(OpenMMContextImpl& contextRef) {
+    context = &contextRef;
+    kernel = context->getPlatform().createKernel(IntegrateVariableLangevinStepKernel::Name(), contextRef);
+    dynamic_cast<IntegrateVariableLangevinStepKernel&>(kernel.getImpl()).initialize(contextRef.getSystem(), *this);
+}
+
+vector<string> VariableLangevinIntegrator::getKernelNames() {
+    std::vector<std::string> names;
+    names.push_back(IntegrateVariableLangevinStepKernel::Name());
+    return names;
+}
+
+void VariableLangevinIntegrator::step(int steps) {
+    for (int i = 0; i < steps; ++i) {
+        context->updateContextState();
+        context->calcForces();
+        dynamic_cast<IntegrateVariableLangevinStepKernel&>(kernel.getImpl()).execute(*context, *this, std::numeric_limits<double>::infinity());
+    }
+}
+
+void VariableLangevinIntegrator::stepTo(double time) {
+    while (time > context->getTime()) {
+        context->updateContextState();
+        context->calcForces();
+        dynamic_cast<IntegrateVariableLangevinStepKernel&>(kernel.getImpl()).execute(*context, *this, time);
+    }
+}

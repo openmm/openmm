@@ -32,7 +32,6 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/VariableVerletIntegrator.h"
 #include "openmm/AndersenThermostat.h"
 #include "openmm/BrownianIntegrator.h"
 #include "openmm/CMMotionRemover.h"
@@ -47,6 +46,8 @@
 #include "openmm/NonbondedForce.h"
 #include "openmm/Stream.h"
 #include "openmm/System.h"
+#include "openmm/VariableLangevinIntegrator.h"
+#include "openmm/VariableVerletIntegrator.h"
 #include "openmm/VerletIntegrator.h"
 #include <set>
 #include <string>
@@ -417,6 +418,33 @@ public:
      * @param integrator the BrownianIntegrator this kernel is being used for
      */
     virtual void execute(OpenMMContextImpl& context, const BrownianIntegrator& integrator) = 0;
+};
+
+/**
+ * This kernel is invoked by VariableLangevinIntegrator to take one time step.
+ */
+class IntegrateVariableLangevinStepKernel : public KernelImpl {
+public:
+    static std::string Name() {
+        return "IntegrateVariableLangevinStep";
+    }
+    IntegrateVariableLangevinStepKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param integrator the VariableLangevinIntegrator this kernel will be used for
+     */
+    virtual void initialize(const System& system, const VariableLangevinIntegrator& integrator) = 0;
+    /**
+     * Execute the kernel.
+     *
+     * @param context    the context in which to execute this kernel
+     * @param integrator the LangevinIntegrator this kernel is being used for
+     * @param maxTime    the maximum time beyond which the simulation should not be advanced
+     */
+    virtual void execute(OpenMMContextImpl& context, const VariableLangevinIntegrator& integrator, double maxTime) = 0;
 };
 
 /**
