@@ -108,11 +108,11 @@ void OpenMMContext::setVelocities(const vector<Vec3>& velocities) {
     impl->getVelocities().loadFromArray(&velocities[0]);
 }
 
-double OpenMMContext::getParameter(string name) {
+double OpenMMContext::getParameter(const string& name) {
     return impl->getParameter(name);
 }
 
-void OpenMMContext::setParameter(string name, double value) {
+void OpenMMContext::setParameter(const string& name, double value) {
     impl->setParameter(name, value);
 }
 

@@ -134,14 +134,14 @@ public:
      * 
      * @param name the name of the parameter to get
      */
-    double getParameter(std::string name);
+    double getParameter(const std::string& name);
     /**
      * Set the value of an adjustable parameter defined by a Force object in the System.
      * 
      * @param name  the name of the parameter to set
      * @param value the value of the parameter
      */
-    void setParameter(std::string name, double value);
+    void setParameter(const std::string& name, double value);
     /**
      * When an OpenMMContext is created, it may cache information about the System being simulated
      * and the Force objects contained in it.  This means that, if the System or Forces are then
