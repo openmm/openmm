@@ -199,15 +199,15 @@ vector<string> Platform::loadPluginsFromDirectory(string directory) {
 
 const string& Platform::getDefaultPluginsDirectory() {
     char* dir = getenv("OPENMM_PLUGIN_DIR");
+    static string directory;
 #ifdef _MSC_VER
     if (dir != NULL)
-        return string(dir);
+        return directory = dir;
     dir = getenv("PROGRAMFILES");
     if (dir == NULL)
-        return "C:\\\\Program Files\\OpenMM\\lib\\plugins";
-    return string(dir)+"\\OpenMM\\lib\\plugins";
+        return directory = "C:\\\\Program Files\\OpenMM\\lib\\plugins";
+    return directory = (string(dir)+"\\OpenMM\\lib\\plugins");
 #else
-    static string directory;
     if (dir == NULL)
         directory = "/usr/local/openmm/lib/plugins";
     directory = string(dir);

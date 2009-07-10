@@ -310,16 +310,16 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
             double my = boxVectors[1][1]/force.getCutoffDistance();
             double mz = boxVectors[2][2]/force.getCutoffDistance();
             double pi = 3.1415926535897932385;
-            int kmaxx = std::ceil(-(mx/pi)*std::log(ewaldErrorTol));
-            int kmaxy = std::ceil(-(my/pi)*std::log(ewaldErrorTol));
-            int kmaxz = std::ceil(-(mz/pi)*std::log(ewaldErrorTol));
+            int kmaxx = (int)std::ceil(-(mx/pi)*std::log(ewaldErrorTol));
+            int kmaxy = (int)std::ceil(-(my/pi)*std::log(ewaldErrorTol));
+            int kmaxz = (int)std::ceil(-(mz/pi)*std::log(ewaldErrorTol));
             if (kmaxx%2 == 0)
                 kmaxx++;
             if (kmaxy%2 == 0)
                 kmaxy++;
             if (kmaxz%2 == 0)
                 kmaxz++;
-            gpuSetEwaldParameters(gpu, alpha, kmaxx, kmaxy, kmaxz);
+            gpuSetEwaldParameters(gpu, (float)alpha, kmaxx, kmaxy, kmaxz);
             method = EWALD;
         }
         data.nonbondedMethod = method;
@@ -572,7 +572,7 @@ void CudaIntegrateVariableVerletStepKernel::execute(OpenMMContextImpl& context, 
         gpuSetConstants(gpu);
         prevErrorTol = errorTol;
     }
-    float maxStepSize = maxTime-data.time;
+    float maxStepSize = (float)(maxTime-data.time);
     kSelectVerletStepSize(gpu, maxStepSize);
     kVerletUpdatePart1(gpu);
     kApplyFirstShake(gpu);
