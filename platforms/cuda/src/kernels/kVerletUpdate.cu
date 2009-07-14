@@ -103,12 +103,13 @@ __global__ void kSelectVerletStepSize_kernel(float maxStepSize)
         error[threadIdx.x] += (force.x*force.x + force.y*force.y + force.z*force.z)*invMass;
         pos += blockDim.x * gridDim.x;
     }
+    __syncthreads();
 
     // Sum the errors from all threads.
 
-    for (int offset = 1; offset < cSim.atoms; offset *= 2)
+    for (int offset = 1; offset < blockDim.x; offset *= 2)
     {
-        if (threadIdx.x+offset < cSim.atoms && (threadIdx.x&(2*offset-1)) == 0)
+        if (threadIdx.x+offset < blockDim.x && (threadIdx.x&(2*offset-1)) == 0)
             error[threadIdx.x] += error[threadIdx.x+offset];
         __syncthreads();
     }
