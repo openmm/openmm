@@ -967,20 +967,22 @@ void ReferenceRemoveCMMotionKernel::execute(OpenMMContextImpl& context) {
     // Calculate the center of mass momentum.
     
     RealOpenMM momentum[] = {0.0, 0.0, 0.0};
+    RealOpenMM mass = 0.0;
     for (size_t i = 0; i < masses.size(); ++i) {
         momentum[0] += static_cast<RealOpenMM>( masses[i]*velData[i][0] );
         momentum[1] += static_cast<RealOpenMM>( masses[i]*velData[i][1] );
         momentum[2] += static_cast<RealOpenMM>( masses[i]*velData[i][2] );
+        mass += masses[i];
     }
     
     // Adjust the particle velocities.
     
-    momentum[0] /= static_cast<RealOpenMM>( masses.size() );
-    momentum[1] /= static_cast<RealOpenMM>( masses.size() );
-    momentum[2] /= static_cast<RealOpenMM>( masses.size() );
+    momentum[0] /= mass;
+    momentum[1] /= mass;
+    momentum[2] /= mass;
     for (size_t i = 0; i < masses.size(); ++i) {
-        velData[i][0] -= static_cast<RealOpenMM>( momentum[0]/masses[i] );
-        velData[i][1] -= static_cast<RealOpenMM>( momentum[1]/masses[i] );
-        velData[i][2] -= static_cast<RealOpenMM>( momentum[2]/masses[i] );
+        velData[i][0] -= momentum[0];
+        velData[i][1] -= momentum[1];
+        velData[i][2] -= momentum[2];
     }
 }

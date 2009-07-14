@@ -1351,6 +1351,9 @@ void gpuSetIntegrationParameters(gpuContext gpu, float tau, float deltaT, float 
     gpu->sim.X                      = gpu->sim.tau * sqrt(gpu->sim.kT * gpu->sim.C);
     gpu->sim.Yv                     = sqrt(gpu->sim.kT * gpu->sim.B / gpu->sim.C);
     gpu->sim.Yx                     = gpu->sim.tau * sqrt(gpu->sim.kT * gpu->sim.B / (1.0f - gpu->sim.EM));
+    gpu->psStepSize->Download();
+    (*gpu->psStepSize)[0].y = deltaT;
+    gpu->psStepSize->Upload();
 }
 
 extern "C"
@@ -1372,13 +1375,16 @@ void gpuSetBrownianIntegrationParameters(gpuContext gpu, float tau, float deltaT
     gpu->sim.T                      = temperature;
     gpu->sim.kT                     = BOLTZ * gpu->sim.T;
     gpu->sim.Yv = gpu->sim.Yx       = sqrt(2.0f*gpu->sim.kT*deltaT*tau);
+    gpu->psStepSize->Download();
+    (*gpu->psStepSize)[0].y = deltaT;
+    gpu->psStepSize->Upload();
 }
 
 extern "C"
-void gpuSetAndersenThermostatParameters(gpuContext gpu, float temperature, float collisionProbability) {
+void gpuSetAndersenThermostatParameters(gpuContext gpu, float temperature, float collisionFrequency) {
     gpu->sim.T                      = temperature;
     gpu->sim.kT                     = BOLTZ * gpu->sim.T;
-    gpu->sim.collisionProbability   = collisionProbability;
+    gpu->sim.collisionFrequency     = collisionFrequency;
     gpu->sim.Yv = gpu->sim.Yx       = 1.0f;
     gpu->sim.V = gpu->sim.X         = 1.0f;
 }

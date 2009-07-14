@@ -216,7 +216,7 @@ extern "C"
 void gpuSetBrownianIntegrationParameters(gpuContext gpu, float tau, float deltaT, float temperature);
 
 extern "C"
-void gpuSetAndersenThermostatParameters(gpuContext gpu, float temperature, float collisionProbability);
+void gpuSetAndersenThermostatParameters(gpuContext gpu, float temperature, float collisionFrequency);
 
 extern "C"
 void gpuShutDown(gpuContext gpu);

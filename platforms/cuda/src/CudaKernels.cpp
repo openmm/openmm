@@ -607,7 +607,7 @@ void CudaApplyAndersenThermostatKernel::execute(OpenMMContextImpl& context) {
     if (temperature != prevTemp || frequency != prevFrequency || stepSize != prevStepSize) {
         // Initialize the GPU parameters.
         
-        gpuSetAndersenThermostatParameters(gpu, (float) temperature, (float) (frequency*stepSize));
+        gpuSetAndersenThermostatParameters(gpu, (float) temperature, frequency);
         gpuSetConstants(gpu);
         kGenerateRandoms(gpu);
         prevTemp = temperature;

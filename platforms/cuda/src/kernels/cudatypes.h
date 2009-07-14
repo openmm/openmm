@@ -336,7 +336,7 @@ struct cudaGmxSimulation {
     float           fix1;                           // Molecular dynamics fix1 constant
     float           oneOverFix1;                    // Molecular dynamics reciprocal of fix1 constant
     float           DOverTauC;                      // Molecular dynamics DOverTauC constant
-    float           collisionProbability;           // Collision probability for Andersen thermostat
+    float           collisionFrequency;             // Collision frequency for Andersen thermostat
     float2*         pObcData;                       // Pointer to fixed Born data
     float2*         pAttr;                          // Pointer to additional atom attributes (sig, eps)
     float2*         pEwaldCosSinSum;                // Pointer to the cos/sin sums (ewald)

@@ -61,7 +61,7 @@
       void ReferenceAndersenThermostat::applyThermostat( int numberOfAtoms, RealOpenMM** atomVelocities, RealOpenMM* atomMasses,
               RealOpenMM temperature, RealOpenMM collisionFrequency, RealOpenMM stepSize ) const {
           
-          const RealOpenMM collisionProbability = collisionFrequency*stepSize;
+          const RealOpenMM collisionProbability = 1.0f - EXP(-collisionFrequency*stepSize);
           for (int i = 0; i < numberOfAtoms; ++i) {
               if (SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber() < collisionProbability) {
                   
