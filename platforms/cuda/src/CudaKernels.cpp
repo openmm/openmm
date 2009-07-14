@@ -290,7 +290,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
         }
         CudaNonbondedMethod method = NO_CUTOFF;
         if (force.getNonbondedMethod() != NonbondedForce::NoCutoff) {
-            gpuSetNonbondedCutoff(gpu, (float)force.getCutoffDistance(), 78.3f);
+            gpuSetNonbondedCutoff(gpu, (float)force.getCutoffDistance(), force.getReactionFieldDielectric());
             method = CUTOFF;
         }
         if (force.getNonbondedMethod() == NonbondedForce::CutoffPeriodic) {

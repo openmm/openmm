@@ -410,6 +410,7 @@ void ReferenceCalcNonbondedForceKernel::initialize(const System& system, const N
         if (kmax[2]%2 == 0)
             kmax[2]++;
     }
+    rfDielectric = force.getReactionFieldDielectric();
 }
 
 void ReferenceCalcNonbondedForceKernel::executeForces(OpenMMContextImpl& context) {
@@ -421,7 +422,7 @@ void ReferenceCalcNonbondedForceKernel::executeForces(OpenMMContextImpl& context
     bool pme  = (nonbondedMethod == PME);
     if (nonbondedMethod != NoCutoff) {
         computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, (periodic || ewald || pme) ? periodicBoxSize : NULL, nonbondedCutoff, 0.0);
-        clj.setUseCutoff(nonbondedCutoff, *neighborList, 78.3f);
+        clj.setUseCutoff(nonbondedCutoff, *neighborList, rfDielectric);
     }
     if (periodic||ewald||pme)
         clj.setPeriodic(periodicBoxSize);
@@ -433,7 +434,7 @@ void ReferenceCalcNonbondedForceKernel::executeForces(OpenMMContextImpl& context
     ReferenceBondForce refBondForce;
     ReferenceLJCoulomb14 nonbonded14;
     if (nonbondedMethod != NoCutoff)
-        nonbonded14.setUseCutoff(nonbondedCutoff, 78.3f);
+        nonbonded14.setUseCutoff(nonbondedCutoff, rfDielectric);
     refBondForce.calculateForce(num14, bonded14IndexArray, posData, bonded14ParamArray, forceData, 0, 0, 0, nonbonded14);
 }
 
@@ -447,7 +448,7 @@ double ReferenceCalcNonbondedForceKernel::executeEnergy(OpenMMContextImpl& conte
     bool pme  = (nonbondedMethod == PME);
     if (nonbondedMethod != NoCutoff) {
         computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, (periodic || ewald || pme) ? periodicBoxSize : NULL, nonbondedCutoff, 0.0);
-        clj.setUseCutoff(nonbondedCutoff, *neighborList, 78.3f);
+        clj.setUseCutoff(nonbondedCutoff, *neighborList, rfDielectric);
     }
     if (periodic || ewald || pme)
         clj.setPeriodic(periodicBoxSize);
@@ -459,7 +460,7 @@ double ReferenceCalcNonbondedForceKernel::executeEnergy(OpenMMContextImpl& conte
     ReferenceBondForce refBondForce;
     ReferenceLJCoulomb14 nonbonded14;
     if (nonbondedMethod != NoCutoff)
-        nonbonded14.setUseCutoff(nonbondedCutoff, 78.3f);
+        nonbonded14.setUseCutoff(nonbondedCutoff, rfDielectric);
     RealOpenMM* energyArray = new RealOpenMM[num14];
     for (int i = 0; i < num14; ++i)
         energyArray[i] = 0;

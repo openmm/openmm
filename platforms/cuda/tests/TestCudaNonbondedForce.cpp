@@ -203,6 +203,8 @@ void testCutoff() {
     forceField->setNonbondedMethod(NonbondedForce::CutoffNonPeriodic);
     const double cutoff = 2.9;
     forceField->setCutoffDistance(cutoff);
+    const double eps = 50.0;
+    forceField->setReactionFieldDielectric(eps);
     system.addForce(forceField);
     OpenMMContext context(system, integrator, platform);
     vector<Vec3> positions(3);
@@ -212,7 +214,6 @@ void testCutoff() {
     context.setPositions(positions);
     State state = context.getState(State::Forces | State::Energy);
     const vector<Vec3>& forces = state.getForces();
-    const double eps = 78.3;
     const double krf = (1.0/(cutoff*cutoff*cutoff))*(eps-1.0)/(2.0*eps+1.0);
     const double crf = (1.0/cutoff)*(3.0*eps)/(2.0*eps+1.0);
     const double force1 = 138.935485*(1.0)*(0.25-2.0*krf*2.0);
@@ -237,6 +238,8 @@ void testCutoff14() {
     }
     const double cutoff = 3.5;
     nonbonded->setCutoffDistance(cutoff);
+    const double eps = 30.0;
+    nonbonded->setReactionFieldDielectric(eps);
     vector<pair<int, int> > bonds;
     bonds.push_back(pair<int, int>(0, 1));
     bonds.push_back(pair<int, int>(1, 2));
@@ -303,7 +306,6 @@ void testCutoff14() {
         context.setPositions(positions);
         state = context.getState(State::Forces | State::Energy);
         const vector<Vec3>& forces2 = state.getForces();
-        const double eps = 78.3;
         const double krf = (1.0/(cutoff*cutoff*cutoff))*(eps-1.0)/(2.0*eps+1.0);
         const double crf = (1.0/cutoff)*(3.0*eps)/(2.0*eps+1.0);
         force = 138.935485*q*q*(1.0/(r*r)-2.0*krf*r);

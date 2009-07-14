@@ -134,6 +134,14 @@ public:
      */
     void setCutoffDistance(double distance);
     /**
+     * Get the dielectric constant to use for the solvent in the reaction field approximation.
+     */
+    double getReactionFieldDielectric() const;
+    /**
+     * Set the dielectric constant to use for the solvent in the reaction field approximation.
+     */
+    void setReactionFieldDielectric(double dielectric);
+    /**
      * Get the error tolerance for Ewald summation.  This corresponds to the fractional error in the forces
      * which is acceptable.  This value is used to select the reciprocal space cutoff and separation
      * parameter so that the average error level will be less than the tolerance.  There is not a
@@ -264,7 +272,7 @@ private:
     class ParticleInfo;
     class ExceptionInfo;
     NonbondedMethod nonbondedMethod;
-    double cutoffDistance, ewaldErrorTol;
+    double cutoffDistance, rfDielectric, ewaldErrorTol;
     Vec3 periodicBoxVectors[3];
     void addExclusionsToSet(const std::vector<std::set<int> >& bonded12, std::set<int>& exclusions, int baseParticle, int fromParticle, int currentLevel) const;
 

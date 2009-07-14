@@ -46,7 +46,7 @@ using std::string;
 using std::stringstream;
 using std::vector;
 
-NonbondedForce::NonbondedForce() : nonbondedMethod(NoCutoff), cutoffDistance(1.0), ewaldErrorTol(1e-4) {
+NonbondedForce::NonbondedForce() : nonbondedMethod(NoCutoff), cutoffDistance(1.0), rfDielectric(78.3), ewaldErrorTol(1e-4) {
     periodicBoxVectors[0] = Vec3(2, 0, 0);
     periodicBoxVectors[1] = Vec3(0, 2, 0);
     periodicBoxVectors[2] = Vec3(0, 0, 2);
@@ -66,6 +66,14 @@ double NonbondedForce::getCutoffDistance() const {
 
 void NonbondedForce::setCutoffDistance(double distance) {
     cutoffDistance = distance;
+}
+
+double NonbondedForce::getReactionFieldDielectric() const {
+    return rfDielectric;
+}
+
+void NonbondedForce::setReactionFieldDielectric(double dielectric) {
+    rfDielectric = dielectric;
 }
 
 double NonbondedForce::getEwaldErrorTolerance() const {
