@@ -29,7 +29,7 @@
 #include "../../../tests/AssertionUtilities.h"
 #include "BrookPlatform.h"
 #include "ReferencePlatform.h"
-#include "openmm/OpenMMContext.h"
+#include "openmm/Context.h"
 #include "openmm/HarmonicBondForce.h"
 #include "openmm/NonBondedForce.h"
 #include "openmm/CMMotionRemover.h"
@@ -43,7 +43,7 @@ using namespace std;
 
 const double TOL = 1e-5;
 
-static OpenMMContext* testLangevinSingleBondSetup( int brookContext, LangevinIntegrator** outIntegrator, FILE* log ){
+static Context* testLangevinSingleBondSetup( int brookContext, LangevinIntegrator** outIntegrator, FILE* log ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -83,7 +83,7 @@ static OpenMMContext* testLangevinSingleBondSetup( int brookContext, LangevinInt
    forceField->addBond(0, 1, 1.5, 1);
    system->addForce(forceField);
 
-   OpenMMContext* context         = new OpenMMContext( *system, *integrator, *platform );
+   Context* context         = new Context( *system, *integrator, *platform );
 
    vector<Vec3> positions(2);
    positions[0] = Vec3(-1, 0, 0);
@@ -109,7 +109,7 @@ void testLangevinSingleBond( FILE* log ){
    }   
 
    LangevinIntegrator* langevinIntegrator;
-   OpenMMContext* context = testLangevinSingleBondSetup( 1, &langevinIntegrator, log ); 
+   Context* context = testLangevinSingleBondSetup( 1, &langevinIntegrator, log ); 
 
    // This is simply a damped harmonic oscillator, so compare it to the analytical solution.
    
@@ -218,7 +218,7 @@ void testLangevinTemperature( FILE* log ){
    CMMotionRemover* remover = new CMMotionRemover( 10 );
    system.addForce(remover);
 
-   OpenMMContext context(system, integrator, platform);
+   Context context(system, integrator, platform);
    vector<Vec3> positions(numberOfParticles);
    for (int i = 0; i < numberOfParticles; ++i){
        positions[i] = Vec3((i%2 == 0 ? 2 : -2), (i%4 < 2 ? 2 : -2), (i < 4 ? 2 : -2));
@@ -319,7 +319,7 @@ void testLangevinConstraints( FILE* log ){
    CMMotionRemover* remover = new CMMotionRemover();
    system.addForce(remover);
 
-   OpenMMContext context(system, integrator, platform);
+   Context context(system, integrator, platform);
    vector<Vec3> positions(numParticles);
    vector<Vec3> velocities(numParticles);
    init_gen_rand(0);

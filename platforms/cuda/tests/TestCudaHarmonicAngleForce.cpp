@@ -34,7 +34,7 @@
  */
 
 #include "../../../tests/AssertionUtilities.h"
-#include "openmm/OpenMMContext.h"
+#include "openmm/Context.h"
 #include "CudaPlatform.h"
 #include "openmm/HarmonicAngleForce.h"
 #include "openmm/System.h"
@@ -60,7 +60,7 @@ void testAngles() {
     forceField->addAngle(0, 1, 2, PI_M/3, 1.1);
     forceField->addAngle(1, 2, 3, PI_M/2, 1.2);
     system.addForce(forceField);
-    OpenMMContext context(system, integrator, platform);
+    Context context(system, integrator, platform);
     vector<Vec3> positions(4);
     positions[0] = Vec3(0, 1, 0);
     positions[1] = Vec3(0, 0, 0);

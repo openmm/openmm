@@ -46,7 +46,7 @@ namespace OpenMM {
 class GBVIForceImpl : public ForceImpl {
 public:
     GBVIForceImpl(GBVIForce& owner);
-    void initialize(OpenMMContextImpl& context);
+    void initialize(ContextImpl& context);
     GBVIForce& getOwner() {
         return owner;
     }
@@ -56,11 +56,11 @@ public:
     void findScaledRadii( int numberOfParticles, const std::vector<std::vector<int> >& bondIndices,
                           const std::vector<double> & bondLengths, std::vector<double> & scaledRadii) const;
 
-    void updateContextState(OpenMMContextImpl& context) {
+    void updateContextState(ContextImpl& context) {
         // This force field doesn't update the state directly.
     }
-    void calcForces(OpenMMContextImpl& context, Stream& forces);
-    double calcEnergy(OpenMMContextImpl& context);
+    void calcForces(ContextImpl& context, Stream& forces);
+    double calcEnergy(ContextImpl& context);
     std::map<std::string, double> getDefaultParameters() {
         return std::map<std::string, double>(); // This force field doesn't define any parameters.
     }

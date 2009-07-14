@@ -30,8 +30,8 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/LangevinIntegrator.h"
-#include "openmm/OpenMMContext.h"
-#include "openmm/internal/OpenMMContextImpl.h"
+#include "openmm/Context.h"
+#include "openmm/internal/ContextImpl.h"
 #include "openmm/kernels.h"
 #include <ctime>
 #include <string>
@@ -48,7 +48,7 @@ LangevinIntegrator::LangevinIntegrator(double temperature, double frictionCoeff,
     setRandomNumberSeed((int) time(NULL));
 }
 
-void LangevinIntegrator::initialize(OpenMMContextImpl& contextRef) {
+void LangevinIntegrator::initialize(ContextImpl& contextRef) {
     context = &contextRef;
     kernel = context->getPlatform().createKernel(IntegrateLangevinStepKernel::Name(), contextRef);
     dynamic_cast<IntegrateLangevinStepKernel&>(kernel.getImpl()).initialize(contextRef.getSystem(), *this);

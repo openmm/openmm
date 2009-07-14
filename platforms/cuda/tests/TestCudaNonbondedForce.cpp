@@ -34,7 +34,7 @@
  */
 
 #include "../../../tests/AssertionUtilities.h"
-#include "openmm/OpenMMContext.h"
+#include "openmm/Context.h"
 #include "CudaPlatform.h"
 #include "ReferencePlatform.h"
 #include "openmm/HarmonicBondForce.h"
@@ -42,7 +42,7 @@
 #include "openmm/System.h"
 #include "openmm/LangevinIntegrator.h"
 #include "openmm/VerletIntegrator.h"
-#include "openmm/internal/OpenMMContextImpl.h"
+#include "openmm/internal/ContextImpl.h"
 #include "kernels/gputypes.h"
 #include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
 #include "../src/sfmt/SFMT.h"
@@ -64,7 +64,7 @@ void testCoulomb() {
     forceField->addParticle(0.5, 1, 0);
     forceField->addParticle(-1.5, 1, 0);
     system.addForce(forceField);
-    OpenMMContext context(system, integrator, platform);
+    Context context(system, integrator, platform);
     vector<Vec3> positions(2);
     positions[0] = Vec3(0, 0, 0);
     positions[1] = Vec3(2, 0, 0);
@@ -87,7 +87,7 @@ void testLJ() {
     forceField->addParticle(0, 1.2, 1);
     forceField->addParticle(0, 1.4, 2);
     system.addForce(forceField);
-    OpenMMContext context(system, integrator, platform);
+    Context context(system, integrator, platform);
     vector<Vec3> positions(2);
     positions[0] = Vec3(0, 0, 0);
     positions[1] = Vec3(2, 0, 0);
@@ -143,7 +143,7 @@ void testExclusionsAnd14() {
         nonbonded->setExceptionParameters(first14, 0, 3, 0, 1.5, i == 3 ? 0.5 : 0.0);
         nonbonded->setExceptionParameters(second14, 1, 4, 0, 1.5, 0.0);
         positions[i] = Vec3(r, 0, 0);
-        OpenMMContext context(system, integrator, platform);
+        Context context(system, integrator, platform);
         context.setPositions(positions);
         State state = context.getState(State::Forces | State::Energy);
         const vector<Vec3>& forces = state.getForces();
@@ -169,7 +169,7 @@ void testExclusionsAnd14() {
         nonbonded->setParticleParameters(i, 2, 1.5, 0);
         nonbonded->setExceptionParameters(first14, 0, 3, i == 3 ? 4/1.2 : 0, 1.5, 0);
         nonbonded->setExceptionParameters(second14, 1, 4, 0, 1.5, 0);
-        OpenMMContext context2(system, integrator, platform);
+        Context context2(system, integrator, platform);
         context2.setPositions(positions);
         state = context2.getState(State::Forces | State::Energy);
         const vector<Vec3>& forces2 = state.getForces();
@@ -206,7 +206,7 @@ void testCutoff() {
     const double eps = 50.0;
     forceField->setReactionFieldDielectric(eps);
     system.addForce(forceField);
-    OpenMMContext context(system, integrator, platform);
+    Context context(system, integrator, platform);
     vector<Vec3> positions(3);
     positions[0] = Vec3(0, 0, 0);
     positions[1] = Vec3(0, 2, 0);
@@ -257,7 +257,7 @@ void testCutoff14() {
             second14 = i;
     }
     system.addForce(nonbonded);
-    OpenMMContext context(system, integrator, platform);
+    Context context(system, integrator, platform);
     vector<Vec3> positions(5);
     positions[0] = Vec3(0, 0, 0);
     positions[1] = Vec3(1, 0, 0);
@@ -341,7 +341,7 @@ void testPeriodic() {
     nonbonded->setCutoffDistance(cutoff);
     nonbonded->setPeriodicBoxVectors(Vec3(4, 0, 0), Vec3(0, 4, 0), Vec3(0, 0, 4));
     system.addForce(nonbonded);
-    OpenMMContext context(system, integrator, platform);
+    Context context(system, integrator, platform);
     vector<Vec3> positions(3);
     positions[0] = Vec3(0, 0, 0);
     positions[1] = Vec3(2, 0, 0);
@@ -374,7 +374,7 @@ void testEwald() {
     nonbonded->setEwaldErrorTolerance(TOL);
     nonbonded->setPeriodicBoxVectors(Vec3(6, 0, 0), Vec3(0, 6, 0), Vec3(0, 0, 6));
     system.addForce(nonbonded);
-    OpenMMContext context(system, integrator, platform);
+    Context context(system, integrator, platform);
     vector<Vec3> positions(2);
     positions[0] = Vec3(3.048000,2.764000,3.156000);
     positions[1] = Vec3(2.809000,2.888000,2.571000);
@@ -428,8 +428,8 @@ void testLargeSystem() {
     nonbonded->setCutoffDistance(cutoff);
     system.addForce(nonbonded);
     system.addForce(bonds);
-    OpenMMContext cudaContext(system, integrator, cuda);
-    OpenMMContext referenceContext(system, integrator, reference);
+    Context cudaContext(system, integrator, cuda);
+    Context referenceContext(system, integrator, reference);
     cudaContext.setPositions(positions);
     cudaContext.setVelocities(velocities);
     referenceContext.setPositions(positions);
@@ -484,10 +484,10 @@ void testBlockInteractions(bool periodic) {
     nonbonded->setCutoffDistance(cutoff);
     nonbonded->setPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
     system.addForce(nonbonded);
-    OpenMMContext context(system, integrator, cuda);
+    Context context(system, integrator, cuda);
     context.setPositions(positions);
     State state = context.getState(State::Positions | State::Velocities | State::Forces);
-    OpenMMContextImpl* contextImpl = *reinterpret_cast<OpenMMContextImpl**>(&context);
+    ContextImpl* contextImpl = *reinterpret_cast<ContextImpl**>(&context);
     CudaPlatform::PlatformData& data = *static_cast<CudaPlatform::PlatformData*>(contextImpl->getPlatformData());
     
     // Verify that the bounds of each block were calculated correctly.

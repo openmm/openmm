@@ -30,7 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/internal/AndersenThermostatImpl.h"
-#include "openmm/internal/OpenMMContextImpl.h"
+#include "openmm/internal/ContextImpl.h"
 #include "openmm/Integrator.h"
 #include "openmm/System.h"
 #include "openmm/kernels.h"
@@ -42,12 +42,12 @@ using std::vector;
 AndersenThermostatImpl::AndersenThermostatImpl(AndersenThermostat& owner) : owner(owner) {
 }
 
-void AndersenThermostatImpl::initialize(OpenMMContextImpl& context) {
+void AndersenThermostatImpl::initialize(ContextImpl& context) {
     kernel = context.getPlatform().createKernel(ApplyAndersenThermostatKernel::Name(), context);
     dynamic_cast<ApplyAndersenThermostatKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
 
-void AndersenThermostatImpl::updateContextState(OpenMMContextImpl& context) {
+void AndersenThermostatImpl::updateContextState(ContextImpl& context) {
     dynamic_cast<ApplyAndersenThermostatKernel&>(kernel.getImpl()).execute(context);
 }
 

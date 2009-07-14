@@ -48,7 +48,7 @@ class ForceImpl;
  * <li>Add a contribution to the force on each particle</li>
  * <li>Add a contribution to the potential energy of the System</li>
  * <li>Modify the positions and velocities of particles at the start of each time step</li>
- * <li>Define parameters which are stored in the OpenMMContext and can be modified by the user</li>
+ * <li>Define parameters which are stored in the Context and can be modified by the user</li>
  * <li>Change the values of parameters defined by other Force objects at the start of each time step</li>
  * </ul>
  */
@@ -59,11 +59,11 @@ public:
     virtual ~Force() {
     }
 protected:
-    friend class OpenMMContextImpl;
+    friend class ContextImpl;
     /**
-     * When an OpenMMContext is created, it invokes this method on each Force in the System.
+     * When a Context is created, it invokes this method on each Force in the System.
      * It should create a new ForceImpl object which can be used by the context for calculating forces.
-     * The ForceImpl will be deleted automatically when the OpenMMContext is deleted.
+     * The ForceImpl will be deleted automatically when the Context is deleted.
      */
     virtual ForceImpl* createImpl() = 0;
     

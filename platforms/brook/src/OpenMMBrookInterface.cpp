@@ -26,7 +26,7 @@
 
 #include "openmm/LangevinIntegrator.h"
 #include "ReferencePlatform.h"
-#include "openmm/internal/OpenMMContextImpl.h"
+#include "openmm/internal/ContextImpl.h"
 #include "openmm/OpenMMException.h"
 
 #include "BrookStreamImpl.h"
@@ -514,7 +514,7 @@ BrookGbsa& OpenMMBrookInterface::getBrookGbsa( void ){
  *
  */
 
-void OpenMMBrookInterface::zeroForces( OpenMMContextImpl& context ){
+void OpenMMBrookInterface::zeroForces( ContextImpl& context ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -537,7 +537,7 @@ void OpenMMBrookInterface::zeroForces( OpenMMContextImpl& context ){
  *
  */
 
-void OpenMMBrookInterface::computeForces( OpenMMContextImpl& context ){
+void OpenMMBrookInterface::computeForces( ContextImpl& context ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -640,7 +640,7 @@ void OpenMMBrookInterface::computeForces( OpenMMContextImpl& context ){
  *
  */
 
-void OpenMMBrookInterface::printForcesToFile( OpenMMContextImpl& context ){
+void OpenMMBrookInterface::printForcesToFile( ContextImpl& context ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -755,7 +755,7 @@ void OpenMMBrookInterface::printForcesToFile( OpenMMContextImpl& context ){
  *
  */
 
-double OpenMMBrookInterface::computeEnergy( OpenMMContextImpl& context, System& system ){
+double OpenMMBrookInterface::computeEnergy( ContextImpl& context, System& system ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -768,7 +768,7 @@ double OpenMMBrookInterface::computeEnergy( OpenMMContextImpl& context, System& 
     
    LangevinIntegrator integrator(0.0, 1.0, 0.0);
    ReferencePlatform platform;
-   OpenMMContext refContext( system, integrator, platform );
+   Context refContext( system, integrator, platform );
 
    const Stream& positions = context.getPositions();
    double* posData         = new double[positions.getSize()*3];

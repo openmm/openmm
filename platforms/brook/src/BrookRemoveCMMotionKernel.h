@@ -112,11 +112,11 @@ class BrookRemoveCMMotionKernel : public RemoveCMMotionKernel {
       /** 
        * Execute the kernel.
        * 
-       * @param context  OpenMMContextImpl reference
+       * @param context  ContextImpl reference
        *
        */
 
-      void execute( OpenMMContextImpl& context );
+      void execute( ContextImpl& context );
 
    private:
 

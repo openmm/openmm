@@ -30,7 +30,7 @@
 
 #include "../../../tests/AssertionUtilities.h"
 #include "BrookPlatform.h"
-#include "openmm/OpenMMContext.h"
+#include "openmm/Context.h"
 #include "openmm/PeriodicTorsionForce.h"
 #include "openmm/System.h"
 #include "openmm/LangevinIntegrator.h"
@@ -78,7 +78,7 @@ void testBrookPeriodicTorsions( FILE* log ){
    forceField->addTorsion(0, 1, 2, 3, 2, PI_M/3, 1.1);
    system.addForce(forceField);
 
-   OpenMMContext context(system, integrator, platform);
+   Context context(system, integrator, platform);
    vector<Vec3> positions(numberOfParticles);
 
    positions[0] = Vec3(0, 1, 0);

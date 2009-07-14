@@ -34,7 +34,7 @@
  */
 
 #include "../../../tests/AssertionUtilities.h"
-#include "openmm/OpenMMContext.h"
+#include "openmm/Context.h"
 #include "ReferencePlatform.h"
 #include "openmm/NonbondedForce.h"
 #include "openmm/System.h"
@@ -59,7 +59,7 @@ void testCoulomb() {
     forceField->addParticle(0.5, 1, 0);
     forceField->addParticle(-1.5, 1, 0);
     system.addForce(forceField);
-    OpenMMContext context(system, integrator, platform);
+    Context context(system, integrator, platform);
     vector<Vec3> positions(2);
     positions[0] = Vec3(0, 0, 0);
     positions[1] = Vec3(2, 0, 0);
@@ -82,7 +82,7 @@ void testLJ() {
     forceField->addParticle(0, 1.2, 1);
     forceField->addParticle(0, 1.4, 2);
     system.addForce(forceField);
-    OpenMMContext context(system, integrator, platform);
+    Context context(system, integrator, platform);
     vector<Vec3> positions(2);
     positions[0] = Vec3(0, 0, 0);
     positions[1] = Vec3(2, 0, 0);
@@ -123,7 +123,7 @@ void testExclusionsAnd14() {
             second14 = i;
     }
     system.addForce(nonbonded);
-    OpenMMContext context(system, integrator, platform);
+    Context context(system, integrator, platform);
     for (int i = 1; i < 5; ++i) {
  
         // Test LJ forces
@@ -202,7 +202,7 @@ void testCutoff() {
     const double eps = 50.0;
     forceField->setReactionFieldDielectric(eps);
     system.addForce(forceField);
-    OpenMMContext context(system, integrator, platform);
+    Context context(system, integrator, platform);
     vector<Vec3> positions(3);
     positions[0] = Vec3(0, 0, 0);
     positions[1] = Vec3(0, 2, 0);
@@ -253,7 +253,7 @@ void testCutoff14() {
             second14 = i;
     }
     system.addForce(nonbonded);
-    OpenMMContext context(system, integrator, platform);
+    Context context(system, integrator, platform);
     vector<Vec3> positions(5);
     positions[0] = Vec3(0, 0, 0);
     positions[1] = Vec3(1, 0, 0);
@@ -337,7 +337,7 @@ void testPeriodic() {
     nonbonded->setCutoffDistance(cutoff);
     nonbonded->setPeriodicBoxVectors(Vec3(4, 0, 0), Vec3(0, 4, 0), Vec3(0, 0, 4));
     system.addForce(nonbonded);
-    OpenMMContext context(system, integrator, platform);
+    Context context(system, integrator, platform);
     vector<Vec3> positions(3);
     positions[0] = Vec3(0, 0, 0);
     positions[1] = Vec3(2, 0, 0);

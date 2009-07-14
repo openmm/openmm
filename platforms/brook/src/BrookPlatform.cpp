@@ -27,7 +27,7 @@
 #include "BrookPlatform.h"
 #include "BrookKernelFactory.h"
 #include "OpenMMBrookInterface.h"
-#include "openmm/internal/OpenMMContextImpl.h"
+#include "openmm/internal/ContextImpl.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/kernels.h"
 #include "../../reference/src/SimTKUtilities/SimTKOpenMMRealType.h"
@@ -526,11 +526,11 @@ int BrookPlatform::setLog( FILE* log ){
 
 /** 
  *
- * This is called whenever a new OpenMMContext is created.  It gives the Platform a chance to initialize
+ * This is called whenever a new Context is created.  It gives the Platform a chance to initialize
  * the context and store platform-specific data in it.
  *
  */
-void BrookPlatform::contextCreated( OpenMMContextImpl& context ) const {
+void BrookPlatform::contextCreated( ContextImpl& context ) const {
 
 // ---------------------------------------------------------------------------------------
 
@@ -547,12 +547,12 @@ void BrookPlatform::contextCreated( OpenMMContextImpl& context ) const {
 
 /** 
  *
- * This is called whenever an OpenMMContext is deleted.  It gives the Platform a chance to clean up
+ * This is called whenever a Context is deleted.  It gives the Platform a chance to clean up
  * any platform-specific data that was stored in it.
  *
  */
 
-void BrookPlatform::contextDestroyed( OpenMMContextImpl& context ) const {
+void BrookPlatform::contextDestroyed( ContextImpl& context ) const {
 
 // ---------------------------------------------------------------------------------------
 

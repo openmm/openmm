@@ -34,7 +34,7 @@
  */
 
 #include "../../../tests/AssertionUtilities.h"
-#include "openmm/OpenMMContext.h"
+#include "openmm/Context.h"
 #include "ReferencePlatform.h"
 #include "openmm/NonbondedForce.h"
 #include "openmm/System.h"
@@ -64,7 +64,7 @@ void testEwald() {
     nonbonded->setPeriodicBoxVectors(Vec3(6, 0, 0), Vec3(0, 6, 0), Vec3(0, 0, 6));
     nonbonded->setEwaldErrorTolerance(TOL);
     system.addForce(nonbonded);
-    OpenMMContext context(system, integrator, platform);
+    Context context(system, integrator, platform);
     vector<Vec3> positions(2);
     positions[0] = Vec3(3.048000,2.764000,3.156000);
     positions[1] = Vec3(2.809000,2.888000,2.571000);
@@ -99,7 +99,7 @@ void testPME() {
     nonbonded->setPeriodicBoxVectors(Vec3(1.86206, 0, 0), Vec3(0, 1.86206, 0), Vec3(0, 0, 1.86206));
     nonbonded->setEwaldErrorTolerance(TOL);
     system.addForce(nonbonded);
-    OpenMMContext context(system, integrator, platform);
+    Context context(system, integrator, platform);
     vector<Vec3> positions(42);
 positions[0] = Vec3( 0.23,0.628,0.113);
 positions[1] = Vec3(0.137,0.626, 0.15);

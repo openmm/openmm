@@ -1,5 +1,5 @@
-#ifndef OPENMM_OPENMMCONTEXT_H_
-#define OPENMM_OPENMMCONTEXT_H_
+#ifndef OPENMM_CONTEXT_H_
+#define OPENMM_CONTEXT_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -41,12 +41,12 @@
 
 namespace OpenMM {
 
-class OpenMMContextImpl;
+class ContextImpl;
 class Vec3;
 class Platform;
 
 /**
- * An OpenMMContext stores the complete state of a simulation.  More specifically, it includes:
+ * A Context stores the complete state of a simulation.  More specifically, it includes:
  * 
  * <ul>
  * <li>The current time</li>
@@ -61,25 +61,25 @@ class Platform;
  * particle and the current energy of the System.
  */
 
-class OPENMM_EXPORT OpenMMContext {
+class OPENMM_EXPORT Context {
 public:
     /**
-     * Construct a new OpenMMContext in which to run a simulation.
+     * Construct a new Context in which to run a simulation.
      * 
      * @param system      the System which will be simulated
      * @param integrator  the Integrator which will be used to simulate the System
      */
-    OpenMMContext(System& system, Integrator& integrator);
+    Context(System& system, Integrator& integrator);
     /**
-     * Construct a new OpenMMContext in which to run a simulation, explicitly specifying what Platform should be used
+     * Construct a new Context in which to run a simulation, explicitly specifying what Platform should be used
      * to perform calculations.
      * 
      * @param system      the System which will be simulated
      * @param integrator  the Integrator which will be used to simulate the System
      * @param platform    the Platform to use for calculations
      */
-    OpenMMContext(System& system, Integrator& integrator, Platform& platform);
-    ~OpenMMContext();
+    Context(System& system, Integrator& integrator, Platform& platform);
+    ~Context();
     /**
      * Get System being simulated in this context.
      */
@@ -143,19 +143,19 @@ public:
      */
     void setParameter(const std::string& name, double value);
     /**
-     * When an OpenMMContext is created, it may cache information about the System being simulated
+     * When a Context is created, it may cache information about the System being simulated
      * and the Force objects contained in it.  This means that, if the System or Forces are then
-     * modified, the OpenMMContext might not see all of the changes.  Call reinitialize() to force
-     * the OpenMMContext to rebuild its internal representation of the System and pick up any changes
+     * modified, the Context might not see all of the changes.  Call reinitialize() to force
+     * the Context to rebuild its internal representation of the System and pick up any changes
      * that have been made.
      * 
      * This is an expensive operation, so you should try to avoid calling it too frequently.
      */
     void reinitialize();
 private:
-    OpenMMContextImpl* impl;
+    ContextImpl* impl;
 };
 
 } // namespace OpenMM
 
-#endif /*OPENMM_OPENMMCONTEXT_H_*/
+#endif /*OPENMM_CONTEXT_H_*/

@@ -45,15 +45,15 @@ namespace OpenMM {
 class CMMotionRemoverImpl : public ForceImpl {
 public:
     CMMotionRemoverImpl(CMMotionRemover& owner);
-    void initialize(OpenMMContextImpl& context);
+    void initialize(ContextImpl& context);
     CMMotionRemover& getOwner() {
         return owner;
     }
-    void updateContextState(OpenMMContextImpl& context);
-    void calcForces(OpenMMContextImpl& context, Stream& forces) {
+    void updateContextState(ContextImpl& context);
+    void calcForces(ContextImpl& context, Stream& forces) {
         // This force doesn't apply forces to particles.
     }
-    double calcEnergy(OpenMMContextImpl& context) {
+    double calcEnergy(ContextImpl& context) {
         return 0.0; // This force doesn't contribute to the potential energy.
     }
     std::map<std::string, double> getDefaultParameters() {

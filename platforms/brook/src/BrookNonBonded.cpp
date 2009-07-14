@@ -1279,7 +1279,7 @@ std::string BrookNonBonded::getContentsString( int level ) const {
 /** 
  * Compute forces
  * 
- * @param context OpenMMContextImpl context
+ * @param context ContextImpl context
  *
  */
 

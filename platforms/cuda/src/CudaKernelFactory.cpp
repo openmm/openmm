@@ -26,12 +26,12 @@
 
 #include "CudaKernelFactory.h"
 #include "CudaKernels.h"
-#include "openmm/internal/OpenMMContextImpl.h"
+#include "openmm/internal/ContextImpl.h"
 #include "openmm/OpenMMException.h"
 
 using namespace OpenMM;
 
-KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform& platform, OpenMMContextImpl& context) const {
+KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const {
     CudaPlatform::PlatformData& data = *static_cast<CudaPlatform::PlatformData*>(context.getPlatformData());
     if (name == InitializeForcesKernel::Name())
         return new CudaInitializeForcesKernel(name, platform);

@@ -72,11 +72,11 @@ class BrookCalcKineticEnergyKernel : public CalcKineticEnergyKernel {
       /** 
        * Execute the kernel.
        * 
-       * @param context OpenMMContextImpl reference
+       * @param context ContextImpl reference
        *
        */
 
-      double execute( OpenMMContextImpl& context );
+      double execute( ContextImpl& context );
 
    private:
 

@@ -37,7 +37,7 @@ namespace OpenMM {
 
 class OPENMM_EXPORT CudaStreamFactory : public StreamFactory {
 public:
-    StreamImpl* createStreamImpl(std::string name, int size, Stream::DataType type, const Platform& platform, OpenMMContextImpl& context) const;
+    StreamImpl* createStreamImpl(std::string name, int size, Stream::DataType type, const Platform& platform, ContextImpl& context) const;
 };
 
 } // namespace OpenMM

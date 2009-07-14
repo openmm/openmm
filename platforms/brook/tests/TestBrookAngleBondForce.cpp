@@ -28,7 +28,7 @@
 
 #include "../../../tests/AssertionUtilities.h"
 #include "BrookPlatform.h"
-#include "openmm/OpenMMContext.h"
+#include "openmm/Context.h"
 #include "openmm/HarmonicAngleForce.h"
 #include "openmm/System.h"
 #include "openmm/LangevinIntegrator.h"
@@ -72,7 +72,7 @@ fprintf( stderr, "%s xxxx\n", methodName.c_str() ); fflush( stderr );
    forceField->addAngle(1, 2, 3, PI_M/2, 1.2);
    system.addForce(forceField);
 
-   OpenMMContext context(system, integrator, platform);
+   Context context(system, integrator, platform);
    vector<Vec3> positions(numberOfParticles);
 
    positions[0] = Vec3(0, 1, 0);

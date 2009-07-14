@@ -39,15 +39,15 @@
 
 namespace OpenMM {
 
-class OpenMMContext;
-class OpenMMContextImpl;
+class Context;
+class ContextImpl;
 
 /**
  * An Integrator defines a method for simulating a System by integrating the equations of motion.
  * This is an abstract class.  Subclasses define particular integration methods.
  * 
- * Each Integrator object is bound to a particular OpenMMContext which it integrates.  This connection
- * is specified by passing the Integrator as an argument to the constructor of the OpenMMContext.
+ * Each Integrator object is bound to a particular Context which it integrates.  This connection
+ * is specified by passing the Integrator as an argument to the constructor of the Context.
  */
 
 class OPENMM_EXPORT Integrator {
@@ -87,13 +87,13 @@ public:
      */
     virtual void step(int steps) = 0;
 protected:
-    friend class OpenMMContextImpl;
+    friend class ContextImpl;
     /**
-     * This will be called by the OpenMMContext when it is created.  It informs the Integrator
+     * This will be called by the Context when it is created.  It informs the Integrator
      * of what context it will be integrating, and gives it a chance to do any necessary initialization.
-     * It will also get called again if the application calls reinitialize() on the OpenMMContext.
+     * It will also get called again if the application calls reinitialize() on the Context.
      */
-    virtual void initialize(OpenMMContextImpl& context) = 0;
+    virtual void initialize(ContextImpl& context) = 0;
     /**
      * Get the names of all Kernels used by this Integrator.
      */

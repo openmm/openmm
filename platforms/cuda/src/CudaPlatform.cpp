@@ -28,7 +28,7 @@
 #include "CudaKernelFactory.h"
 #include "CudaKernels.h"
 #include "openmm/PluginInitializer.h"
-#include "openmm/internal/OpenMMContextImpl.h"
+#include "openmm/internal/ContextImpl.h"
 #include "kernels/gputypes.h"
 #include "openmm/System.h"
 
@@ -66,13 +66,13 @@ const StreamFactory& CudaPlatform::getDefaultStreamFactory() const {
     return defaultStreamFactory;
 }
 
-void CudaPlatform::contextCreated(OpenMMContextImpl& context) const {
+void CudaPlatform::contextCreated(ContextImpl& context) const {
     int numParticles = context.getSystem().getNumParticles();
     _gpuContext* gpu = (_gpuContext*) gpuInit(numParticles);
     context.setPlatformData(new PlatformData(gpu));
 }
 
-void CudaPlatform::contextDestroyed(OpenMMContextImpl& context) const {
+void CudaPlatform::contextDestroyed(ContextImpl& context) const {
     PlatformData* data = reinterpret_cast<PlatformData*>(context.getPlatformData());
     gpuShutDown(data->gpu);
     delete data;

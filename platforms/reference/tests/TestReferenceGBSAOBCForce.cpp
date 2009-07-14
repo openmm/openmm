@@ -34,7 +34,7 @@
  */
 
 #include "../../../tests/AssertionUtilities.h"
-#include "openmm/OpenMMContext.h"
+#include "openmm/Context.h"
 #include "ReferencePlatform.h"
 #include "openmm/GBSAOBCForce.h"
 #include "openmm/System.h"
@@ -58,7 +58,7 @@ void testSingleParticle() {
     GBSAOBCForce* forceField = new GBSAOBCForce();
     forceField->addParticle(0.5, 0.15, 1);
     system.addForce(forceField);
-    OpenMMContext context(system, integrator, platform);
+    Context context(system, integrator, platform);
     vector<Vec3> positions(1);
     positions[0] = Vec3(0, 0, 0);
     context.setPositions(positions);
@@ -96,7 +96,7 @@ void testCutoffAndPeriodic() {
     // Calculate the forces for both cutoff and periodic with two different atom positions.
 
     nonbonded->setNonbondedMethod(NonbondedForce::CutoffNonPeriodic);
-    OpenMMContext context(system, integrator, platform);
+    Context context(system, integrator, platform);
     context.setPositions(positions);
     State state1 = context.getState(State::Forces);
     nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
@@ -134,7 +134,7 @@ void testForce() {
         forceField->addParticle(i%2 == 0 ? -1 : 1, 0.15, 1);
     }
     system.addForce(forceField);
-    OpenMMContext context(system, integrator, platform);
+    Context context(system, integrator, platform);
     
     // Set random positions for all the particles.
     

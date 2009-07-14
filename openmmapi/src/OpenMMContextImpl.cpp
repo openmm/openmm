@@ -35,7 +35,7 @@
 #include "openmm/System.h"
 #include "openmm/kernels.h"
 #include "openmm/internal/ForceImpl.h"
-#include "openmm/internal/OpenMMContextImpl.h"
+#include "openmm/internal/ContextImpl.h"
 #include <map>
 #include <vector>
 
@@ -44,7 +44,7 @@ using std::map;
 using std::vector;
 using std::string;
 
-OpenMMContextImpl::OpenMMContextImpl(OpenMMContext& owner, System& system, Integrator& integrator, Platform* platform) :
+ContextImpl::ContextImpl(Context& owner, System& system, Integrator& integrator, Platform* platform) :
 				owner(owner), system(system), 
 				integrator(integrator), platform(platform), 
 				platformData(NULL)
@@ -65,7 +65,7 @@ OpenMMContextImpl::OpenMMContextImpl(OpenMMContext& owner, System& system, Integ
     if (platform == 0)
         this->platform = platform = &Platform::findPlatform(kernelNames);
     else if (!platform->supportsKernels(kernelNames))
-        throw OpenMMException("Specified a Platform for an OpenMMContext which does not support all required kernels");
+        throw OpenMMException("Specified a Platform for a Context which does not support all required kernels");
     platform->contextCreated(*this);
     initializeForcesKernel = platform->createKernel(InitializeForcesKernel::Name(), *this);
     dynamic_cast<InitializeForcesKernel&>(initializeForcesKernel.getImpl()).initialize(system);
@@ -83,58 +83,58 @@ OpenMMContextImpl::OpenMMContextImpl(OpenMMContext& owner, System& system, Integ
     velocities.fillWithValue(&zero);
 }
 
-OpenMMContextImpl::~OpenMMContextImpl() {
+ContextImpl::~ContextImpl() {
     for (int i = 0; i < (int) forceImpls.size(); ++i)
         delete forceImpls[i];
     platform->contextDestroyed(*this);
 }
 
-double OpenMMContextImpl::getTime() const {
+double ContextImpl::getTime() const {
     return dynamic_cast<const UpdateTimeKernel&>(updateTimeKernel.getImpl()).getTime(*this);
 }
 
-void OpenMMContextImpl::setTime(double t) {
+void ContextImpl::setTime(double t) {
     dynamic_cast<UpdateTimeKernel&>(updateTimeKernel.getImpl()).setTime(*this, t);
 }
 
-double OpenMMContextImpl::getParameter(std::string name) {
+double ContextImpl::getParameter(std::string name) {
     if (parameters.find(name) == parameters.end())
         throw OpenMMException("Called getParameter() with invalid parameter name");
     return parameters[name];
 }
 
-void OpenMMContextImpl::setParameter(std::string name, double value) {
+void ContextImpl::setParameter(std::string name, double value) {
     if (parameters.find(name) == parameters.end())
         throw OpenMMException("Called setParameter() with invalid parameter name");
     parameters[name] = value;
 }
 
-void OpenMMContextImpl::calcForces() {
+void ContextImpl::calcForces() {
     dynamic_cast<InitializeForcesKernel&>(initializeForcesKernel.getImpl()).execute(*this);
     for (int i = 0; i < (int) forceImpls.size(); ++i)
         forceImpls[i]->calcForces(*this, forces);
 }
 
-double OpenMMContextImpl::calcKineticEnergy() {
+double ContextImpl::calcKineticEnergy() {
     return dynamic_cast<CalcKineticEnergyKernel&>(kineticEnergyKernel.getImpl()).execute(*this);
 }
 
-double OpenMMContextImpl::calcPotentialEnergy() {
+double ContextImpl::calcPotentialEnergy() {
     double energy = 0.0;
     for (int i = 0; i < (int) forceImpls.size(); ++i)
         energy += forceImpls[i]->calcEnergy(*this);
     return energy;
 }
 
-void OpenMMContextImpl::updateContextState() {
+void ContextImpl::updateContextState() {
     for (int i = 0; i < (int) forceImpls.size(); ++i)
         forceImpls[i]->updateContextState(*this);
 }
 
-void* OpenMMContextImpl::getPlatformData() {
+void* ContextImpl::getPlatformData() {
     return platformData;
 }
 
-void OpenMMContextImpl::setPlatformData(void* data) {
+void ContextImpl::setPlatformData(void* data) {
     platformData = data;
 }

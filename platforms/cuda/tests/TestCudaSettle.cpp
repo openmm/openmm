@@ -35,7 +35,7 @@
  */
 
 #include "../../../tests/AssertionUtilities.h"
-#include "openmm/OpenMMContext.h"
+#include "openmm/Context.h"
 #include "CudaPlatform.h"
 #include "openmm/NonbondedForce.h"
 #include "openmm/System.h"
@@ -69,7 +69,7 @@ void testConstraints() {
         system.addConstraint(i*3+1, i*3+2, 0.163);
     }
     system.addForce(forceField);
-    OpenMMContext context(system, integrator, platform);
+    Context context(system, integrator, platform);
     vector<Vec3> positions(numParticles);
     vector<Vec3> velocities(numParticles);
     init_gen_rand(0);

@@ -77,12 +77,12 @@ class BrookIntegrateLangevinStepKernel : public IntegrateLangevinStepKernel {
       /** 
        * Execute kernel
        * 
-       * @param context            OpenMMContextImpl reference
+       * @param context            ContextImpl reference
        * @param integrator         LangevinIntegrator reference
        *
        */
 
-      void execute( OpenMMContextImpl& context, const LangevinIntegrator& integrator );
+      void execute( ContextImpl& context, const LangevinIntegrator& integrator );
 
       /** 
        * Set log file reference

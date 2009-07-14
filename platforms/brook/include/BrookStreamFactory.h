@@ -77,7 +77,7 @@ class OPENMM_EXPORT BrookStreamFactory : public StreamFactory {
        * @return StreamImpl
        */
       
-      StreamImpl* createStreamImpl( std::string name, int size, Stream::DataType type, const Platform& platform, OpenMMContextImpl& context ) const;
+      StreamImpl* createStreamImpl( std::string name, int size, Stream::DataType type, const Platform& platform, ContextImpl& context ) const;
 
       /** 
        * Create StreamImpl

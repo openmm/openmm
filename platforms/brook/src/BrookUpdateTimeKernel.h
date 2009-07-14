@@ -57,7 +57,7 @@ class BrookUpdateTimeKernel : public UpdateTimeKernel {
        * @param context    the context in which to execute this kernel
        */
 
-      double getTime(const OpenMMContextImpl& context) const;
+      double getTime(const ContextImpl& context) const;
 
       /**
        * Set the current time (in picoseconds).
@@ -66,7 +66,7 @@ class BrookUpdateTimeKernel : public UpdateTimeKernel {
        * @param time       the time
        */
 
-      void setTime(OpenMMContextImpl& context, double time);
+      void setTime(ContextImpl& context, double time);
 
 
       /**

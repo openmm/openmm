@@ -29,7 +29,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/internal/OpenMMContextImpl.h"
+#include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/HarmonicAngleForceImpl.h"
 #include "openmm/kernels.h"
 
@@ -44,16 +44,16 @@ HarmonicAngleForceImpl::HarmonicAngleForceImpl(HarmonicAngleForce& owner) : owne
 HarmonicAngleForceImpl::~HarmonicAngleForceImpl() {
 }
 
-void HarmonicAngleForceImpl::initialize(OpenMMContextImpl& context) {
+void HarmonicAngleForceImpl::initialize(ContextImpl& context) {
     kernel = context.getPlatform().createKernel(CalcHarmonicAngleForceKernel::Name(), context);
     dynamic_cast<CalcHarmonicAngleForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
 
-void HarmonicAngleForceImpl::calcForces(OpenMMContextImpl& context, Stream& forces) {
+void HarmonicAngleForceImpl::calcForces(ContextImpl& context, Stream& forces) {
     dynamic_cast<CalcHarmonicAngleForceKernel&>(kernel.getImpl()).executeForces(context);
 }
 
-double HarmonicAngleForceImpl::calcEnergy(OpenMMContextImpl& context) {
+double HarmonicAngleForceImpl::calcEnergy(ContextImpl& context) {
     return dynamic_cast<CalcHarmonicAngleForceKernel&>(kernel.getImpl()).executeEnergy(context);
 }
 

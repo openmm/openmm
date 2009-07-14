@@ -34,7 +34,7 @@
  */
 
 #include "../../../tests/AssertionUtilities.h"
-#include "openmm/OpenMMContext.h"
+#include "openmm/Context.h"
 #include "CudaPlatform.h"
 #include "ReferencePlatform.h"
 #include "openmm/GBSAOBCForce.h"
@@ -62,7 +62,7 @@ void testSingleParticle() {
     nonbonded->addParticle(0.5, 1, 0);
     system.addForce(gbsa);
     system.addForce(nonbonded);
-    OpenMMContext context(system, integrator, platform);
+    Context context(system, integrator, platform);
     vector<Vec3> positions(1);
     positions[0] = Vec3(0, 0, 0);
     context.setPositions(positions);
@@ -100,7 +100,7 @@ void testCutoffAndPeriodic() {
     // Calculate the forces for both cutoff and periodic with two different atom positions.
 
     nonbonded->setNonbondedMethod(NonbondedForce::CutoffNonPeriodic);
-    OpenMMContext context(system, integrator, cuda);
+    Context context(system, integrator, cuda);
     context.setPositions(positions);
     State state1 = context.getState(State::Forces);
     nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
@@ -149,8 +149,8 @@ void testForce(int numParticles, NonbondedForce::NonbondedMethod method) {
     }
     system.addForce(gbsa);
     system.addForce(nonbonded);
-    OpenMMContext context(system, integrator, cuda);
-    OpenMMContext refContext(system, integrator, reference);
+    Context context(system, integrator, cuda);
+    Context refContext(system, integrator, reference);
     
     // Set random (but uniformly distributed) positions for all the particles.
     

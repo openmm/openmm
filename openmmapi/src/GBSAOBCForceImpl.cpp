@@ -31,7 +31,7 @@
 
 #include "openmm/OpenMMException.h"
 #include "openmm/internal/GBSAOBCForceImpl.h"
-#include "openmm/internal/OpenMMContextImpl.h"
+#include "openmm/internal/ContextImpl.h"
 #include "openmm/kernels.h"
 #include <vector>
 
@@ -41,18 +41,18 @@ using std::vector;
 GBSAOBCForceImpl::GBSAOBCForceImpl(GBSAOBCForce& owner) : owner(owner) {
 }
 
-void GBSAOBCForceImpl::initialize(OpenMMContextImpl& context) {
+void GBSAOBCForceImpl::initialize(ContextImpl& context) {
     kernel = context.getPlatform().createKernel(CalcGBSAOBCForceKernel::Name(), context);
     if (owner.getNumParticles() != context.getSystem().getNumParticles())
         throw OpenMMException("GBSAOBCForce must have exactly as many particles as the System it belongs to.");
     dynamic_cast<CalcGBSAOBCForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
 
-void GBSAOBCForceImpl::calcForces(OpenMMContextImpl& context, Stream& forces) {
+void GBSAOBCForceImpl::calcForces(ContextImpl& context, Stream& forces) {
     dynamic_cast<CalcGBSAOBCForceKernel&>(kernel.getImpl()).executeForces(context);
 }
 
-double GBSAOBCForceImpl::calcEnergy(OpenMMContextImpl& context) {
+double GBSAOBCForceImpl::calcEnergy(ContextImpl& context) {
     return dynamic_cast<CalcGBSAOBCForceKernel&>(kernel.getImpl()).executeEnergy(context);
 }
 

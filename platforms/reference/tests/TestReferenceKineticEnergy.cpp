@@ -34,7 +34,7 @@
  */
 
 #include "../../../tests/AssertionUtilities.h"
-#include "openmm/OpenMMContext.h"
+#include "openmm/Context.h"
 #include "ReferencePlatform.h"
 #include "openmm/System.h"
 #include "openmm/VerletIntegrator.h"
@@ -52,7 +52,7 @@ void testCalcKE() {
     for (int i = 0; i < 4; ++i)
         system.addParticle(i+1);
     VerletIntegrator integrator(0.01);
-    OpenMMContext context(system, integrator, platform);
+    Context context(system, integrator, platform);
     vector<Vec3> velocities(4);
     velocities[0] = Vec3(1, 0, 0);
     velocities[1] = Vec3(0, 1, 0);

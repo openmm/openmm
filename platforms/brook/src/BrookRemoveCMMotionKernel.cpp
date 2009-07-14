@@ -24,7 +24,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/internal/OpenMMContextImpl.h"
+#include "openmm/internal/ContextImpl.h"
 #include "openmm/System.h"
 #include "BrookRemoveCMMotionKernel.h"
 #include "BrookStreamInternal.h"
@@ -156,11 +156,11 @@ int BrookRemoveCMMotionKernel::getFrequency( void ) const {
 /** 
  * Execute kernel
  * 
- * @param context    OpenMMContextImpl reference
+ * @param context    ContextImpl reference
  *
  */
 
-void BrookRemoveCMMotionKernel::execute( OpenMMContextImpl& context ){
+void BrookRemoveCMMotionKernel::execute( ContextImpl& context ){
 
 // ---------------------------------------------------------------------------------------
 

@@ -178,7 +178,7 @@ struct MyOpenMMData {
     MyOpenMMData() : system(0), context(0), integrator(0) {}
     ~MyOpenMMData() {delete system; delete context; delete integrator;}
     OpenMM::System*         system;
-    OpenMM::OpenMMContext*  context;
+    OpenMM::Context*  context;
     OpenMM::Integrator*     integrator;
 };
 
@@ -262,7 +262,7 @@ myInitializeOpenMM( const MyAtomInfo    atoms[],
     // have been set here.
     omm->integrator = new OpenMM::LangevinIntegrator(temperature, frictionInPs, 
                                                      stepSizeInFs * OpenMM::PsPerFs);
-    omm->context    = new OpenMM::OpenMMContext(*omm->system, *omm->integrator);
+    omm->context    = new OpenMM::Context(*omm->system, *omm->integrator);
     omm->context->setPositions(initialPosInNm);
 
     platformName = omm->context->getPlatform().getName();

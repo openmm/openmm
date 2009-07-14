@@ -29,7 +29,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/internal/OpenMMContextImpl.h"
+#include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/RBTorsionForceImpl.h"
 #include "openmm/kernels.h"
 
@@ -44,16 +44,16 @@ RBTorsionForceImpl::RBTorsionForceImpl(RBTorsionForce& owner) : owner(owner) {
 RBTorsionForceImpl::~RBTorsionForceImpl() {
 }
 
-void RBTorsionForceImpl::initialize(OpenMMContextImpl& context) {
+void RBTorsionForceImpl::initialize(ContextImpl& context) {
     kernel = context.getPlatform().createKernel(CalcRBTorsionForceKernel::Name(), context);
     dynamic_cast<CalcRBTorsionForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
 
-void RBTorsionForceImpl::calcForces(OpenMMContextImpl& context, Stream& forces) {
+void RBTorsionForceImpl::calcForces(ContextImpl& context, Stream& forces) {
     dynamic_cast<CalcRBTorsionForceKernel&>(kernel.getImpl()).executeForces(context);
 }
 
-double RBTorsionForceImpl::calcEnergy(OpenMMContextImpl& context) {
+double RBTorsionForceImpl::calcEnergy(ContextImpl& context) {
     return dynamic_cast<CalcRBTorsionForceKernel&>(kernel.getImpl()).executeEnergy(context);
 }
 

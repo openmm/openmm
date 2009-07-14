@@ -34,7 +34,7 @@
  */
 
 #include "../../../tests/AssertionUtilities.h"
-#include "openmm/OpenMMContext.h"
+#include "openmm/Context.h"
 #include "CudaPlatform.h"
 #include "openmm/HarmonicBondForce.h"
 #include "openmm/NonbondedForce.h"
@@ -59,7 +59,7 @@ void testSingleBond() {
     HarmonicBondForce* forceField = new HarmonicBondForce();
     forceField->addBond(0, 1, 1.5, 1);
     system.addForce(forceField);
-    OpenMMContext context(system, integrator, platform);
+    Context context(system, integrator, platform);
     vector<Vec3> positions(2);
     positions[0] = Vec3(-1, 0, 0);
     positions[1] = Vec3(1, 0, 0);
@@ -104,7 +104,7 @@ void testConstraints() {
     system.addConstraint(4, 5, 1.0);
     system.addConstraint(6, 7, 1.0);
     system.addForce(forceField);
-    OpenMMContext context(system, integrator, platform);
+    Context context(system, integrator, platform);
     vector<Vec3> positions(numParticles);
     vector<Vec3> velocities(numParticles);
     init_gen_rand(0);
@@ -161,7 +161,7 @@ void testConstrainedClusters() {
     system.addConstraint(3, 4, sqrt(2.0));
     system.addConstraint(5, 6, sqrt(2.0));
     system.addForce(forceField);
-    OpenMMContext context(system, integrator, platform);
+    Context context(system, integrator, platform);
     vector<Vec3> positions(numParticles);
     positions[0] = Vec3(0, 0, 0);
     positions[1] = Vec3(1, 0, 0);

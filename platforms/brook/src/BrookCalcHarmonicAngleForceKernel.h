@@ -72,7 +72,7 @@ class BrookCalcHarmonicAngleForceKernel : public CalcHarmonicAngleForceKernel {
        *
        */
 
-      void executeForces( OpenMMContextImpl& context );
+      void executeForces( ContextImpl& context );
   
       /**
        * Execute the kernel to calculate the energy.
@@ -83,7 +83,7 @@ class BrookCalcHarmonicAngleForceKernel : public CalcHarmonicAngleForceKernel {
        *
        */
 
-      double executeEnergy( OpenMMContextImpl& context );
+      double executeEnergy( ContextImpl& context );
 
       /** 
        * Set log file reference

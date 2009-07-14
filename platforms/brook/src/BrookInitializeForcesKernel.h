@@ -57,7 +57,7 @@ class BrookInitializeForcesKernel : public InitializeForcesKernel {
        * @param context    the context in which to execute this kernel
        */
 
-      void execute( OpenMMContextImpl& context );
+      void execute( ContextImpl& context );
   
       /** 
        * Set log file reference

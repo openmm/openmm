@@ -35,7 +35,7 @@
 
 #include "../../../tests/AssertionUtilities.h"
 #include "openmm/AndersenThermostat.h"
-#include "openmm/OpenMMContext.h"
+#include "openmm/Context.h"
 #include "ReferencePlatform.h"
 #include "openmm/NonbondedForce.h"
 #include "openmm/System.h"
@@ -63,7 +63,7 @@ void testTemperature() {
     system.addForce(forceField);
     AndersenThermostat* thermstat = new AndersenThermostat(temp, collisionFreq);
     system.addForce(thermstat);
-    OpenMMContext context(system, integrator, platform);
+    Context context(system, integrator, platform);
     vector<Vec3> positions(numParticles);
     for (int i = 0; i < numParticles; ++i)
         positions[i] = Vec3((i%2 == 0 ? 2 : -2), (i%4 < 2 ? 2 : -2), (i < 4 ? 2 : -2));
@@ -111,7 +111,7 @@ void testRandomSeed() {
     // Try twice with the same random seed.
 
     thermostat->setRandomNumberSeed(5);
-    OpenMMContext context(system, integrator, platform);
+    Context context(system, integrator, platform);
     context.setPositions(positions);
     context.setVelocities(velocities);
     integrator.step(10);

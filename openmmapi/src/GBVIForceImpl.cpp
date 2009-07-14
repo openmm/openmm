@@ -30,7 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/internal/GBVIForceImpl.h"
-#include "openmm/internal/OpenMMContextImpl.h"
+#include "openmm/internal/ContextImpl.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/kernels.h"
 #include <vector>
@@ -43,7 +43,7 @@ using std::vector;
 GBVIForceImpl::GBVIForceImpl(GBVIForce& owner) : owner(owner) {
 }
 
-void GBVIForceImpl::initialize(OpenMMContextImpl& context) {
+void GBVIForceImpl::initialize(ContextImpl& context) {
     kernel = context.getPlatform().createKernel(CalcGBVIForceKernel::Name(), context);
     if (owner.getNumParticles() != context.getSystem().getNumParticles())
         throw OpenMMException("GBVIForce must have exactly as many particles as the System it belongs to.");
@@ -188,11 +188,11 @@ void GBVIForceImpl::findScaledRadii( int numberOfParticles, const std::vector<st
 
 }
 
-void GBVIForceImpl::calcForces(OpenMMContextImpl& context, Stream& forces) {
+void GBVIForceImpl::calcForces(ContextImpl& context, Stream& forces) {
     dynamic_cast<CalcGBVIForceKernel&>(kernel.getImpl()).executeForces(context);
 }
 
-double GBVIForceImpl::calcEnergy(OpenMMContextImpl& context) {
+double GBVIForceImpl::calcEnergy(ContextImpl& context) {
     return dynamic_cast<CalcGBVIForceKernel&>(kernel.getImpl()).executeEnergy(context);
 }
 

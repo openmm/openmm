@@ -35,7 +35,7 @@
 
 #include "../../../tests/AssertionUtilities.h"
 #include "CudaPlatform.h"
-#include "openmm/OpenMMContext.h"
+#include "openmm/Context.h"
 #include "openmm/Stream.h"
 #include "openmm/VerletIntegrator.h"
 #include <iostream>
@@ -53,8 +53,8 @@ void testStream(Stream::DataType type, T scale) {
     for (int i = 0; i < size; i++)
         system.addParticle(1.0);
     VerletIntegrator integrator(0.01);
-    OpenMMContext context(system, integrator, platform);
-    OpenMMContextImpl* impl = *reinterpret_cast<OpenMMContextImpl**>(&context);
+    Context context(system, integrator, platform);
+    ContextImpl* impl = *reinterpret_cast<ContextImpl**>(&context);
     Stream stream = platform.createStream("", size, type, *impl);
     const int length = size*WIDTH;
     T array[size*WIDTH+1];

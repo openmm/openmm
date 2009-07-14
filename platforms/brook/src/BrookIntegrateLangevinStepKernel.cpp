@@ -219,12 +219,12 @@ void BrookIntegrateLangevinStepKernel::initialize( const System& system, const L
 /** 
  * Execute kernel
  * 
- * @param context            OpenMMContextImpl reference
+ * @param context            ContextImpl reference
  * @param integrator         LangevinIntegrator reference
  *
  */
 
-void BrookIntegrateLangevinStepKernel::execute( OpenMMContextImpl& context, const LangevinIntegrator& integrator ){
+void BrookIntegrateLangevinStepKernel::execute( ContextImpl& context, const LangevinIntegrator& integrator ){
 
 // ---------------------------------------------------------------------------------------
 

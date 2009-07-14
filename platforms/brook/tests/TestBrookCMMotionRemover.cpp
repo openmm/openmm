@@ -28,7 +28,7 @@
 
 #include "../../../tests/AssertionUtilities.h"
 #include "BrookPlatform.h"
-#include "openmm/OpenMMContext.h"
+#include "openmm/Context.h"
 #include "openmm/HarmonicBondForce.h"
 #include "openmm/NonbondedForce.h"
 #include "openmm/System.h"
@@ -88,7 +88,7 @@ void testMotionRemoval( FILE* log ) {
 
    CMMotionRemover* remover = new CMMotionRemover( 1 );
    system.addForce(remover);
-   OpenMMContext context(system, integrator, platform);
+   Context context(system, integrator, platform);
    vector<Vec3> positions(numberOfParticles);
    vector<Vec3> velocities(numberOfParticles);
    init_gen_rand(0);

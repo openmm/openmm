@@ -76,12 +76,12 @@ class BrookIntegrateVerletStepKernel : public IntegrateVerletStepKernel {
       /** 
        * Execute kernel
        * 
-       * @param context            OpenMMContextImpl reference
+       * @param context            ContextImpl reference
        * @param integrator         VerletIntegrator reference
        *
        */
 
-      void execute( OpenMMContextImpl& context, const VerletIntegrator& integrator );
+      void execute( ContextImpl& context, const VerletIntegrator& integrator );
 
       /** 
        * Set log file reference

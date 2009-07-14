@@ -38,11 +38,11 @@
 #include "BrookCalcKineticEnergyKernel.h"
 #include "BrookCalcGBSAOBCForceKernel.h"
 #include "BrookRemoveCMMotionKernel.h"
-#include "openmm/internal/OpenMMContextImpl.h"
+#include "openmm/internal/ContextImpl.h"
 
 using namespace OpenMM;
 
-KernelImpl* BrookKernelFactory::createKernelImpl( std::string name, const Platform& platform, OpenMMContextImpl& context ) const {
+KernelImpl* BrookKernelFactory::createKernelImpl( std::string name, const Platform& platform, ContextImpl& context ) const {
 
 // ---------------------------------------------------------------------------------------
 

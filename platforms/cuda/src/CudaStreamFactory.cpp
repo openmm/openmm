@@ -28,12 +28,12 @@
 #include "CudaStreamFactory.h"
 #include "CudaStreamImpl.h"
 #include "openmm/OpenMMException.h"
-#include "openmm/internal/OpenMMContextImpl.h"
+#include "openmm/internal/ContextImpl.h"
 #include "kernels/gputypes.h"
 
 using namespace OpenMM;
 
-StreamImpl* CudaStreamFactory::createStreamImpl(std::string name, int size, Stream::DataType type, const Platform& platform, OpenMMContextImpl& context) const {
+StreamImpl* CudaStreamFactory::createStreamImpl(std::string name, int size, Stream::DataType type, const Platform& platform, ContextImpl& context) const {
     CudaPlatform::PlatformData& data = *static_cast<CudaPlatform::PlatformData*>(context.getPlatformData());
     if (name == "particlePositions") {
         float padding[] = {100000.0f, 100000.0f, 100000.0f, 0.2f};

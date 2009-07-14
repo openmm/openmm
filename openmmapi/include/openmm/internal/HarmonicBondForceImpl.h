@@ -49,15 +49,15 @@ class HarmonicBondForceImpl : public ForceImpl {
 public:
     HarmonicBondForceImpl(HarmonicBondForce& owner);
     ~HarmonicBondForceImpl();
-    void initialize(OpenMMContextImpl& context);
+    void initialize(ContextImpl& context);
     HarmonicBondForce& getOwner() {
         return owner;
     }
-    void updateContextState(OpenMMContextImpl& context) {
+    void updateContextState(ContextImpl& context) {
         // This force field doesn't update the state directly.
     }
-    void calcForces(OpenMMContextImpl& context, Stream& forces);
-    double calcEnergy(OpenMMContextImpl& context);
+    void calcForces(ContextImpl& context, Stream& forces);
+    double calcEnergy(ContextImpl& context);
     std::map<std::string, double> getDefaultParameters() {
         return std::map<std::string, double>(); // This force field doesn't define any parameters.
     }

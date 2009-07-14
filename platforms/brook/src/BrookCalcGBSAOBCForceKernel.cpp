@@ -172,11 +172,11 @@ void BrookCalcGBSAOBCForceKernel::initialize( const System& system, const GBSAOB
 /** 
  * Compute forces given particle coordinates
  * 
- * @param context OpenMMContextImpl context
+ * @param context ContextImpl context
  *
  */
 
-void BrookCalcGBSAOBCForceKernel::executeForces( OpenMMContextImpl& context ){
+void BrookCalcGBSAOBCForceKernel::executeForces( ContextImpl& context ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -193,13 +193,13 @@ void BrookCalcGBSAOBCForceKernel::executeForces( OpenMMContextImpl& context ){
 /**
  * Execute the kernel to calculate the OBC energy
  * 
- * @param context OpenMMContextImpl context
+ * @param context ContextImpl context
  *
  * @return energy
  *
  */
 
-double BrookCalcGBSAOBCForceKernel::executeEnergy( OpenMMContextImpl& context ){
+double BrookCalcGBSAOBCForceKernel::executeEnergy( ContextImpl& context ){
 
 // ---------------------------------------------------------------------------------------
 

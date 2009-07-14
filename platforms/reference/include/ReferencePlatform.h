@@ -55,8 +55,8 @@ public:
     }
     bool supportsDoublePrecision() const;
     const StreamFactory& getDefaultStreamFactory() const;
-    void contextCreated(OpenMMContextImpl& context) const;
-    void contextDestroyed(OpenMMContextImpl& context) const;
+    void contextCreated(ContextImpl& context) const;
+    void contextDestroyed(ContextImpl& context) const;
 private:
     ReferenceStreamFactory defaultStreamFactory;
 };

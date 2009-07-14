@@ -58,7 +58,7 @@ public:
      * 
      * @param context    the context in which to execute this kernel
      */
-    void execute(OpenMMContextImpl& context);
+    void execute(ContextImpl& context);
 };
 
 /**
@@ -79,13 +79,13 @@ public:
      *
      * @param context    the context in which to execute this kernel
      */
-    double getTime(const OpenMMContextImpl& context) const;
+    double getTime(const ContextImpl& context) const;
     /**
      * Set the current time (in picoseconds).
      *
      * @param context    the context in which to execute this kernel
      */
-    void setTime(OpenMMContextImpl& context, double time);
+    void setTime(ContextImpl& context, double time);
 private:
     CudaPlatform::PlatformData& data;
 };
@@ -110,14 +110,14 @@ public:
      * 
      * @param context    the context in which to execute this kernel
      */
-    void executeForces(OpenMMContextImpl& context);
+    void executeForces(ContextImpl& context);
     /**
      * Execute the kernel to calculate the energy.
      * 
      * @param context    the context in which to execute this kernel
      * @return the potential energy due to the HarmonicBondForce
      */
-    double executeEnergy(OpenMMContextImpl& context);
+    double executeEnergy(ContextImpl& context);
 private:
     int numBonds;
     CudaPlatform::PlatformData& data;
@@ -144,14 +144,14 @@ public:
      * 
      * @param context    the context in which to execute this kernel
      */
-    void executeForces(OpenMMContextImpl& context);
+    void executeForces(ContextImpl& context);
     /**
      * Execute the kernel to calculate the energy.
      * 
      * @param context    the context in which to execute this kernel
      * @return the potential energy due to the HarmonicAngleForce
      */
-    double executeEnergy(OpenMMContextImpl& context);
+    double executeEnergy(ContextImpl& context);
 private:
     int numAngles;
     CudaPlatform::PlatformData& data;
@@ -178,14 +178,14 @@ public:
      * 
      * @param context    the context in which to execute this kernel
      */
-    void executeForces(OpenMMContextImpl& context);
+    void executeForces(ContextImpl& context);
     /**
      * Execute the kernel to calculate the energy.
      * 
      * @param context    the context in which to execute this kernel
      * @return the potential energy due to the PeriodicTorsionForce
      */
-    double executeEnergy(OpenMMContextImpl& context);
+    double executeEnergy(ContextImpl& context);
 private:
     int numTorsions;
     CudaPlatform::PlatformData& data;
@@ -212,14 +212,14 @@ public:
      * 
      * @param context    the context in which to execute this kernel
      */
-    void executeForces(OpenMMContextImpl& context);
+    void executeForces(ContextImpl& context);
     /**
      * Execute the kernel to calculate the energy.
      * 
      * @param context    the context in which to execute this kernel
      * @return the potential energy due to the RBTorsionForce
      */
-    double executeEnergy(OpenMMContextImpl& context);
+    double executeEnergy(ContextImpl& context);
 private:
     int numTorsions;
     CudaPlatform::PlatformData& data;
@@ -246,14 +246,14 @@ public:
      * 
      * @param context    the context in which to execute this kernel
      */
-    void executeForces(OpenMMContextImpl& context);
+    void executeForces(ContextImpl& context);
     /**
      * Execute the kernel to calculate the energy.
      * 
      * @param context    the context in which to execute this kernel
      * @return the potential energy due to the NonbondedForce
      */
-    double executeEnergy(OpenMMContextImpl& context);
+    double executeEnergy(ContextImpl& context);
 private:
     CudaPlatform::PlatformData& data;
     int numParticles, num14;
@@ -280,14 +280,14 @@ public:
      * 
      * @param context    the context in which to execute this kernel
      */
-    void executeForces(OpenMMContextImpl& context);
+    void executeForces(ContextImpl& context);
     /**
      * Execute the kernel to calculate the energy.
      * 
      * @param context    the context in which to execute this kernel
      * @return the potential energy due to the GBSAOBCForce
      */
-    double executeEnergy(OpenMMContextImpl& context);
+    double executeEnergy(ContextImpl& context);
 private:
     CudaPlatform::PlatformData& data;
 };
@@ -313,7 +313,7 @@ public:
      * @param context    the context in which to execute this kernel
      * @param integrator the VerletIntegrator this kernel is being used for
      */
-    void execute(OpenMMContextImpl& context, const VerletIntegrator& integrator);
+    void execute(ContextImpl& context, const VerletIntegrator& integrator);
 private:
     CudaPlatform::PlatformData& data;
     double prevStepSize;
@@ -340,7 +340,7 @@ public:
      * @param context    the context in which to execute this kernel
      * @param integrator the LangevinIntegrator this kernel is being used for
      */
-    void execute(OpenMMContextImpl& context, const LangevinIntegrator& integrator);
+    void execute(ContextImpl& context, const LangevinIntegrator& integrator);
 private:
     CudaPlatform::PlatformData& data;
     double prevTemp, prevFriction, prevStepSize;
@@ -367,7 +367,7 @@ public:
      * @param context    the context in which to execute this kernel
      * @param integrator the BrownianIntegrator this kernel is being used for
      */
-    void execute(OpenMMContextImpl& context, const BrownianIntegrator& integrator);
+    void execute(ContextImpl& context, const BrownianIntegrator& integrator);
 private:
     CudaPlatform::PlatformData& data;
     double prevTemp, prevFriction, prevStepSize;
@@ -395,7 +395,7 @@ public:
      * @param integrator the VerletIntegrator this kernel is being used for
      * @param maxTime    the maximum time beyond which the simulation should not be advanced
      */
-    void execute(OpenMMContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime);
+    void execute(ContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime);
 private:
     CudaPlatform::PlatformData& data;
     double prevErrorTol;
@@ -421,7 +421,7 @@ public:
      * 
      * @param context    the context in which to execute this kernel
      */
-    void execute(OpenMMContextImpl& context);
+    void execute(ContextImpl& context);
 private:
     CudaPlatform::PlatformData& data;
     double prevTemp, prevFrequency, prevStepSize;
@@ -445,7 +445,7 @@ public:
      * 
      * @param context    the context in which to execute this kernel
      */
-    double execute(OpenMMContextImpl& context);
+    double execute(ContextImpl& context);
 private:
     std::vector<double> masses;
 };
@@ -469,7 +469,7 @@ public:
      * 
      * @param context    the context in which to execute this kernel
      */
-    void execute(OpenMMContextImpl& context);
+    void execute(ContextImpl& context);
 private:
     CudaPlatform::PlatformData& data;
 };

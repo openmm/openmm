@@ -29,51 +29,51 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/OpenMMContext.h"
-#include "openmm/internal/OpenMMContextImpl.h"
+#include "openmm/Context.h"
+#include "openmm/internal/ContextImpl.h"
 #include "openmm/OpenMMException.h"
 
 using namespace OpenMM;
 using namespace std;
 
-OpenMMContext::OpenMMContext(System& system, Integrator& integrator) {
-    impl = new OpenMMContextImpl(*this, system, integrator, 0);
+Context::Context(System& system, Integrator& integrator) {
+    impl = new ContextImpl(*this, system, integrator, 0);
 }
 
-OpenMMContext::OpenMMContext(System& system, Integrator& integrator, Platform& platform) {
-    impl = new OpenMMContextImpl(*this, system, integrator, &platform);
+Context::Context(System& system, Integrator& integrator, Platform& platform) {
+    impl = new ContextImpl(*this, system, integrator, &platform);
 }
 
-OpenMMContext::~OpenMMContext() {
+Context::~Context() {
 	delete impl;
 }
 
-const System& OpenMMContext::getSystem() const {
+const System& Context::getSystem() const {
     return impl->getSystem();
 
 }
 
-System& OpenMMContext::getSystem() {
+System& Context::getSystem() {
     return impl->getSystem();
 }
 
-const Integrator& OpenMMContext::getIntegrator() const {
+const Integrator& Context::getIntegrator() const {
     return impl->getIntegrator();
 }
 
-Integrator& OpenMMContext::getIntegrator() {
+Integrator& Context::getIntegrator() {
     return impl->getIntegrator();
 }
 
-const Platform& OpenMMContext::getPlatform() const {
+const Platform& Context::getPlatform() const {
     return impl->getPlatform();
 }
 
-Platform& OpenMMContext::getPlatform() {
+Platform& Context::getPlatform() {
     return impl->getPlatform();
 }
 
-State OpenMMContext::getState(int types) const {
+State Context::getState(int types) const {
     State state(impl->getTime(), impl->getSystem().getNumParticles(), State::DataType(types));
     if (types&State::Energy)
         state.setEnergy(impl->calcKineticEnergy(), impl->calcPotentialEnergy());
@@ -92,34 +92,34 @@ State OpenMMContext::getState(int types) const {
     return state;
 }
 
-void OpenMMContext::setTime(double time) {
+void Context::setTime(double time) {
     impl->setTime(time);
 }
 
-void OpenMMContext::setPositions(const vector<Vec3>& positions) {
+void Context::setPositions(const vector<Vec3>& positions) {
     if ((int) positions.size() != impl->getSystem().getNumParticles())
-        throw OpenMMException("Called setPositions() on an OpenMMContext with the wrong number of positions");
+        throw OpenMMException("Called setPositions() on a Context with the wrong number of positions");
     impl->getPositions().loadFromArray(&positions[0]);
 }
 
-void OpenMMContext::setVelocities(const vector<Vec3>& velocities) {
+void Context::setVelocities(const vector<Vec3>& velocities) {
     if ((int) velocities.size() != impl->getSystem().getNumParticles())
-        throw OpenMMException("Called setVelocities() on an OpenMMContext with the wrong number of velocities");
+        throw OpenMMException("Called setVelocities() on a Context with the wrong number of velocities");
     impl->getVelocities().loadFromArray(&velocities[0]);
 }
 
-double OpenMMContext::getParameter(const string& name) {
+double Context::getParameter(const string& name) {
     return impl->getParameter(name);
 }
 
-void OpenMMContext::setParameter(const string& name, double value) {
+void Context::setParameter(const string& name, double value) {
     impl->setParameter(name, value);
 }
 
-void OpenMMContext::reinitialize() {
+void Context::reinitialize() {
     System& system = impl->getSystem();
     Integrator& integrator = impl->getIntegrator();
     Platform& platform = impl->getPlatform();
     delete impl;
-    impl = new OpenMMContextImpl(*this, system, integrator, &platform);
+    impl = new ContextImpl(*this, system, integrator, &platform);
 }

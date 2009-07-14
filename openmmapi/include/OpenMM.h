@@ -43,7 +43,7 @@
 #include "openmm/Integrator.h"
 #include "openmm/LangevinIntegrator.h"
 #include "openmm/NonbondedForce.h"
-#include "openmm/OpenMMContext.h"
+#include "openmm/Context.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/PeriodicTorsionForce.h"
 #include "openmm/RBTorsionForce.h"

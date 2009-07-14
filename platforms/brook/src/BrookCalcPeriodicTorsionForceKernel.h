@@ -72,7 +72,7 @@ class BrookCalcPeriodicTorsionForceKernel : public CalcPeriodicTorsionForceKerne
        *
        */
 
-      void executeForces( OpenMMContextImpl& context );
+      void executeForces( ContextImpl& context );
   
       /**
        * Execute the kernel to calculate the energy.
@@ -83,7 +83,7 @@ class BrookCalcPeriodicTorsionForceKernel : public CalcPeriodicTorsionForceKerne
        *
        */
 
-      double executeEnergy( OpenMMContextImpl& context );
+      double executeEnergy( ContextImpl& context );
 
       /** 
        * Set log file reference

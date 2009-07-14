@@ -30,7 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/OpenMMException.h"
-#include "openmm/internal/OpenMMContextImpl.h"
+#include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
 #include "openmm/kernels.h"
 #include <sstream>
@@ -47,7 +47,7 @@ NonbondedForceImpl::NonbondedForceImpl(NonbondedForce& owner) : owner(owner) {
 NonbondedForceImpl::~NonbondedForceImpl() {
 }
 
-void NonbondedForceImpl::initialize(OpenMMContextImpl& context) {
+void NonbondedForceImpl::initialize(ContextImpl& context) {
     kernel = context.getPlatform().createKernel(CalcNonbondedForceKernel::Name(), context);
 
     // Check for errors in the specification of exceptions.
@@ -86,11 +86,11 @@ void NonbondedForceImpl::initialize(OpenMMContextImpl& context) {
     dynamic_cast<CalcNonbondedForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
 
-void NonbondedForceImpl::calcForces(OpenMMContextImpl& context, Stream& forces) {
+void NonbondedForceImpl::calcForces(ContextImpl& context, Stream& forces) {
     dynamic_cast<CalcNonbondedForceKernel&>(kernel.getImpl()).executeForces(context);
 }
 
-double NonbondedForceImpl::calcEnergy(OpenMMContextImpl& context) {
+double NonbondedForceImpl::calcEnergy(ContextImpl& context) {
     return dynamic_cast<CalcNonbondedForceKernel&>(kernel.getImpl()).executeEnergy(context);
 }
 

@@ -29,7 +29,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/internal/OpenMMContextImpl.h"
+#include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/HarmonicBondForceImpl.h"
 #include "openmm/kernels.h"
 
@@ -44,16 +44,16 @@ HarmonicBondForceImpl::HarmonicBondForceImpl(HarmonicBondForce& owner) : owner(o
 HarmonicBondForceImpl::~HarmonicBondForceImpl() {
 }
 
-void HarmonicBondForceImpl::initialize(OpenMMContextImpl& context) {
+void HarmonicBondForceImpl::initialize(ContextImpl& context) {
     kernel = context.getPlatform().createKernel(CalcHarmonicBondForceKernel::Name(), context);
     dynamic_cast<CalcHarmonicBondForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
 
-void HarmonicBondForceImpl::calcForces(OpenMMContextImpl& context, Stream& forces) {
+void HarmonicBondForceImpl::calcForces(ContextImpl& context, Stream& forces) {
     dynamic_cast<CalcHarmonicBondForceKernel&>(kernel.getImpl()).executeForces(context);
 }
 
-double HarmonicBondForceImpl::calcEnergy(OpenMMContextImpl& context) {
+double HarmonicBondForceImpl::calcEnergy(ContextImpl& context) {
     return dynamic_cast<CalcHarmonicBondForceKernel&>(kernel.getImpl()).executeEnergy(context);
 }
 

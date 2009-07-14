@@ -103,11 +103,11 @@ public:
     void step(int steps);
 protected:
     /**
-     * This will be called by the OpenMMContext when it is created.  It informs the Integrator
+     * This will be called by the Context when it is created.  It informs the Integrator
      * of what context it will be integrating, and gives it a chance to do any necessary initialization.
-     * It will also get called again if the application calls reinitialize() on the OpenMMContext.
+     * It will also get called again if the application calls reinitialize() on the Context.
      */
-    void initialize(OpenMMContextImpl& context);
+    void initialize(ContextImpl& context);
     /**
      * Get the names of all Kernels used by this Integrator.
      */
@@ -115,7 +115,7 @@ protected:
 private:
     double temperature, friction;
     int randomNumberSeed;
-    OpenMMContextImpl* context;
+    ContextImpl* context;
     Kernel kernel;
 };
 

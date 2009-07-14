@@ -30,8 +30,8 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/VariableVerletIntegrator.h"
-#include "openmm/OpenMMContext.h"
-#include "openmm/internal/OpenMMContextImpl.h"
+#include "openmm/Context.h"
+#include "openmm/internal/ContextImpl.h"
 #include "openmm/kernels.h"
 #include <limits>
 #include <string>
@@ -44,7 +44,7 @@ VariableVerletIntegrator::VariableVerletIntegrator(double errorTol) : errorTol(e
     setConstraintTolerance(1e-4);
 }
 
-void VariableVerletIntegrator::initialize(OpenMMContextImpl& contextRef) {
+void VariableVerletIntegrator::initialize(ContextImpl& contextRef) {
     context = &contextRef;
     kernel = context->getPlatform().createKernel(IntegrateVariableVerletStepKernel::Name(), contextRef);
     dynamic_cast<IntegrateVariableVerletStepKernel&>(kernel.getImpl()).initialize(contextRef.getSystem(), *this);

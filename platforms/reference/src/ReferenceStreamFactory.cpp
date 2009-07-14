@@ -36,7 +36,7 @@
 
 using namespace OpenMM;
 
-StreamImpl* ReferenceStreamFactory::createStreamImpl(std::string name, int size, Stream::DataType type, const Platform& platform, OpenMMContextImpl& context) const {
+StreamImpl* ReferenceStreamFactory::createStreamImpl(std::string name, int size, Stream::DataType type, const Platform& platform, ContextImpl& context) const {
     switch (type) {
     case Stream::Float:
     case Stream::Float2:

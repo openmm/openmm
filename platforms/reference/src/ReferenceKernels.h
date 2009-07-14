@@ -67,7 +67,7 @@ public:
      * 
      * @param context    the context in which to execute this kernel
      */
-    void execute(OpenMMContextImpl& context);
+    void execute(ContextImpl& context);
 };
 
 /**
@@ -88,13 +88,13 @@ public:
      *
      * @param context    the context in which to execute this kernel
      */
-    double getTime(const OpenMMContextImpl& context) const;
+    double getTime(const ContextImpl& context) const;
     /**
      * Set the current time (in picoseconds).
      *
      * @param context    the context in which to execute this kernel
      */
-    void setTime(OpenMMContextImpl& context, double time);
+    void setTime(ContextImpl& context, double time);
 private:
     ReferencePlatform::PlatformData& data;
 };
@@ -119,14 +119,14 @@ public:
      * 
      * @param context    the context in which to execute this kernel
      */
-    void executeForces(OpenMMContextImpl& context);
+    void executeForces(ContextImpl& context);
     /**
      * Execute the kernel to calculate the energy.
      * 
      * @param context    the context in which to execute this kernel
      * @return the potential energy due to the HarmonicBondForce
      */
-    double executeEnergy(OpenMMContextImpl& context);
+    double executeEnergy(ContextImpl& context);
 private:
     int numBonds;
     int **bondIndexArray;
@@ -153,14 +153,14 @@ public:
      * 
      * @param context    the context in which to execute this kernel
      */
-    void executeForces(OpenMMContextImpl& context);
+    void executeForces(ContextImpl& context);
     /**
      * Execute the kernel to calculate the energy.
      * 
      * @param context    the context in which to execute this kernel
      * @return the potential energy due to the HarmonicAngleForce
      */
-    double executeEnergy(OpenMMContextImpl& context);
+    double executeEnergy(ContextImpl& context);
 private:
     int numAngles;
     int **angleIndexArray;
@@ -187,14 +187,14 @@ public:
      * 
      * @param context    the context in which to execute this kernel
      */
-    void executeForces(OpenMMContextImpl& context);
+    void executeForces(ContextImpl& context);
     /**
      * Execute the kernel to calculate the energy.
      * 
      * @param context    the context in which to execute this kernel
      * @return the potential energy due to the PeriodicTorsionForce
      */
-    double executeEnergy(OpenMMContextImpl& context);
+    double executeEnergy(ContextImpl& context);
 private:
     int numTorsions;
     int **torsionIndexArray;
@@ -221,14 +221,14 @@ public:
      * 
      * @param context    the context in which to execute this kernel
      */
-    void executeForces(OpenMMContextImpl& context);
+    void executeForces(ContextImpl& context);
     /**
      * Execute the kernel to calculate the energy.
      * 
      * @param context    the context in which to execute this kernel
      * @return the potential energy due to the RBTorsionForce
      */
-    double executeEnergy(OpenMMContextImpl& context);
+    double executeEnergy(ContextImpl& context);
 private:
     int numTorsions;
     int **torsionIndexArray;
@@ -255,14 +255,14 @@ public:
      * 
      * @param context    the context in which to execute this kernel
      */
-    void executeForces(OpenMMContextImpl& context);
+    void executeForces(ContextImpl& context);
     /**
      * Execute the kernel to calculate the energy.
      * 
      * @param context    the context in which to execute this kernel
      * @return the potential energy due to the NonbondedForce
      */
-    double executeEnergy(OpenMMContextImpl& context);
+    double executeEnergy(ContextImpl& context);
 private:
     int numParticles, num14;
     int **exclusionArray, **bonded14IndexArray;
@@ -294,14 +294,14 @@ public:
      * 
      * @param context    the context in which to execute this kernel
      */
-    void executeForces(OpenMMContextImpl& context);
+    void executeForces(ContextImpl& context);
     /**
      * Execute the kernel to calculate the energy.
      * 
      * @param context    the context in which to execute this kernel
      * @return the potential energy due to the GBSAOBCForce
      */
-    double executeEnergy(OpenMMContextImpl& context);
+    double executeEnergy(ContextImpl& context);
 private:
     CpuObc* obc;
     std::vector<RealOpenMM> charges;
@@ -328,14 +328,14 @@ public:
      * 
      * @param context    the context in which to execute this kernel
      */
-    void executeForces(OpenMMContextImpl& context);
+    void executeForces(ContextImpl& context);
     /**
      * Execute the kernel to calculate the energy.
      * 
      * @param context    the context in which to execute this kernel
      * @return the potential energy due to the GBVIForce
      */
-    double executeEnergy(OpenMMContextImpl& context);
+    double executeEnergy(ContextImpl& context);
 private:
     CpuGBVI * gbvi;
     std::vector<RealOpenMM> charges;
@@ -363,7 +363,7 @@ public:
      * @param context    the context in which to execute this kernel
      * @param integrator the VerletIntegrator this kernel is being used for
      */
-    void execute(OpenMMContextImpl& context, const VerletIntegrator& integrator);
+    void execute(ContextImpl& context, const VerletIntegrator& integrator);
 private:
     ReferencePlatform::PlatformData& data;
     ReferenceVerletDynamics* dynamics;
@@ -397,7 +397,7 @@ public:
      * @param context    the context in which to execute this kernel
      * @param integrator the LangevinIntegrator this kernel is being used for
      */
-    void execute(OpenMMContextImpl& context, const LangevinIntegrator& integrator);
+    void execute(ContextImpl& context, const LangevinIntegrator& integrator);
 private:
     ReferencePlatform::PlatformData& data;
     ReferenceStochasticDynamics* dynamics;
@@ -431,7 +431,7 @@ public:
      * @param context    the context in which to execute this kernel
      * @param integrator the BrownianIntegrator this kernel is being used for
      */
-    void execute(OpenMMContextImpl& context, const BrownianIntegrator& integrator);
+    void execute(ContextImpl& context, const BrownianIntegrator& integrator);
 private:
     ReferencePlatform::PlatformData& data;
     ReferenceBrownianDynamics* dynamics;
@@ -466,7 +466,7 @@ public:
      * @param integrator the LangevinIntegrator this kernel is being used for
      * @param maxTime    the maximum time beyond which the simulation should not be advanced
      */
-    void execute(OpenMMContextImpl& context, const VariableLangevinIntegrator& integrator, double maxTime);
+    void execute(ContextImpl& context, const VariableLangevinIntegrator& integrator, double maxTime);
 private:
     ReferencePlatform::PlatformData& data;
     ReferenceVariableStochasticDynamics* dynamics;
@@ -501,7 +501,7 @@ public:
      * @param integrator the VerletIntegrator this kernel is being used for
      * @param maxTime    the maximum time beyond which the simulation should not be advanced
      */
-    void execute(OpenMMContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime);
+    void execute(ContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime);
 private:
     ReferencePlatform::PlatformData& data;
     ReferenceVariableVerletDynamics* dynamics;
@@ -533,7 +533,7 @@ public:
      * 
      * @param context    the context in which to execute this kernel
      */
-    void execute(OpenMMContextImpl& context);
+    void execute(ContextImpl& context);
 private:
     ReferenceAndersenThermostat* thermostat;
     RealOpenMM* masses;
@@ -557,7 +557,7 @@ public:
      * 
      * @param context    the context in which to execute this kernel
      */
-    double execute(OpenMMContextImpl& context);
+    double execute(ContextImpl& context);
 private:
     std::vector<double> masses;
 };
@@ -581,7 +581,7 @@ public:
      * 
      * @param context    the context in which to execute this kernel
      */
-    void execute(OpenMMContextImpl& context);
+    void execute(ContextImpl& context);
 private:
     ReferencePlatform::PlatformData& data;
     std::vector<double> masses;

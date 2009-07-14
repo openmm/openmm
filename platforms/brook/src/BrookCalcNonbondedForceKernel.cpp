@@ -272,11 +272,11 @@ void BrookCalcNonbondedForceKernel::initialize14Interactions( const System& syst
 /** 
  * Execute the kernel to calculate the nonbonded forces
  * 
- * @param context OpenMMContextImpl context
+ * @param context ContextImpl context
  *
  */
 
-void BrookCalcNonbondedForceKernel::executeForces( OpenMMContextImpl& context ){
+void BrookCalcNonbondedForceKernel::executeForces( ContextImpl& context ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -294,14 +294,14 @@ void BrookCalcNonbondedForceKernel::executeForces( OpenMMContextImpl& context ){
 /**
  * Execute the kernel to calculate the energy.
  * 
- * @param context OpenMMContextImpl context
+ * @param context ContextImpl context
  *
  * @return  potential energy due to the NonbondedForce
  * Currently always return 0.0 since energies not calculated on gpu
  *
  */
 
-double BrookCalcNonbondedForceKernel::executeEnergy( OpenMMContextImpl& context ){
+double BrookCalcNonbondedForceKernel::executeEnergy( ContextImpl& context ){
 
 // ---------------------------------------------------------------------------------------
 

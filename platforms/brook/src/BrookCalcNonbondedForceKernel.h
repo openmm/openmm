@@ -79,7 +79,7 @@ class BrookCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
        * @param context    the context in which to execute this kernel
        */
 
-      void executeForces( OpenMMContextImpl& context );
+      void executeForces( ContextImpl& context );
   
       /**
        * Execute the kernel to calculate the energy.
@@ -100,7 +100,7 @@ class BrookCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
        * @return the potential energy due to the NonbondedForce
        */
   
-      double executeEnergy( OpenMMContextImpl& context );
+      double executeEnergy( ContextImpl& context );
 
       /** 
        * Set log file reference

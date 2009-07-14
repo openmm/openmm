@@ -1,5 +1,5 @@
-#ifndef OPENMM_OPENMMCONTEXTIMPL_H_
-#define OPENMM_OPENMMCONTEXTIMPL_H_
+#ifndef OPENMM_CONTEXTIMPL_H_
+#define OPENMM_CONTEXTIMPL_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -42,24 +42,24 @@ namespace OpenMM {
 
 class ForceImpl;
 class Integrator;
-class OpenMMContext;
+class Context;
 class System;
 
 /**
- * This is the internal implementation of an OpenMMContext.
+ * This is the internal implementation of a Context.
  */
 
-class OPENMM_EXPORT OpenMMContextImpl {
+class OPENMM_EXPORT ContextImpl {
 public:
     /**
-     * Create an OpenMMContextImpl for an OpenMMContext;
+     * Create an ContextImpl for a Context;
      */
-    OpenMMContextImpl(OpenMMContext& owner, System& system, Integrator& integrator, Platform* platform);
-    ~OpenMMContextImpl();
+    ContextImpl(Context& owner, System& system, Integrator& integrator, Platform* platform);
+    ~ContextImpl();
     /**
-     * Get the OpenMMContext for which this is the implementation.
+     * Get the Context for which this is the implementation.
      */
-    OpenMMContext& getOwner() {
+    Context& getOwner() {
         return owner;
     }
     /**
@@ -149,8 +149,8 @@ public:
      */
     void setPlatformData(void* data);
 private:
-    friend class OpenMMContext;
-    OpenMMContext& owner;
+    friend class Context;
+    Context& owner;
     System& system;
     Integrator& integrator;
     std::vector<ForceImpl*> forceImpls;
@@ -163,4 +163,4 @@ private:
 
 } // namespace OpenMM
 
-#endif /*OPENMM_OPENMMCONTEXTIMPL_H_*/
+#endif /*OPENMM_CONTEXTIMPL_H_*/

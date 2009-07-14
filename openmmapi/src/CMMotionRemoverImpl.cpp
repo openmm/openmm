@@ -30,7 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/internal/CMMotionRemoverImpl.h"
-#include "openmm/internal/OpenMMContextImpl.h"
+#include "openmm/internal/ContextImpl.h"
 #include "openmm/Integrator.h"
 #include "openmm/System.h"
 #include "openmm/kernels.h"
@@ -42,13 +42,13 @@ using std::vector;
 CMMotionRemoverImpl::CMMotionRemoverImpl(CMMotionRemover& owner) : owner(owner) {
 }
 
-void CMMotionRemoverImpl::initialize(OpenMMContextImpl& context) {
+void CMMotionRemoverImpl::initialize(ContextImpl& context) {
     kernel = context.getPlatform().createKernel(RemoveCMMotionKernel::Name(), context);
     const System& system = context.getSystem();
     dynamic_cast<RemoveCMMotionKernel&>(kernel.getImpl()).initialize(system, owner);
 }
 
-void CMMotionRemoverImpl::updateContextState(OpenMMContextImpl& context) {
+void CMMotionRemoverImpl::updateContextState(ContextImpl& context) {
     dynamic_cast<RemoveCMMotionKernel&>(kernel.getImpl()).execute(context);
 }
 

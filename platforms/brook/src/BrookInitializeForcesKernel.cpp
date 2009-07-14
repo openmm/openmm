@@ -128,11 +128,11 @@ void BrookInitializeForcesKernel::initialize( const System& system ){
 /** 
  * Zero forces
  * 
- * @param context OpenMMContextImpl context
+ * @param context ContextImpl context
  *
  */
 
-void BrookInitializeForcesKernel::execute( OpenMMContextImpl& context ){
+void BrookInitializeForcesKernel::execute( ContextImpl& context ){
 
 // ---------------------------------------------------------------------------------------
 

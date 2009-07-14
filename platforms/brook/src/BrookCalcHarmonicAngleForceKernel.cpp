@@ -171,11 +171,11 @@ void BrookCalcHarmonicAngleForceKernel::initialize( const System& system, const 
 /** 
  * Compute forces given particle coordinates
  * 
- * @param context OpenMMContextImpl context
+ * @param context ContextImpl context
  *
  */
 
-void BrookCalcHarmonicAngleForceKernel::executeForces( OpenMMContextImpl& context ){
+void BrookCalcHarmonicAngleForceKernel::executeForces( ContextImpl& context ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -195,13 +195,13 @@ void BrookCalcHarmonicAngleForceKernel::executeForces( OpenMMContextImpl& contex
 /**
  * Execute the kernel to calculate the energy
  * 
- * @param context OpenMMContextImpl context
+ * @param context ContextImpl context
  *
  * @return  potential energy
  *
  */
 
-double BrookCalcHarmonicAngleForceKernel::executeEnergy( OpenMMContextImpl& context ){
+double BrookCalcHarmonicAngleForceKernel::executeEnergy( ContextImpl& context ){
 
 // ---------------------------------------------------------------------------------------
 

@@ -117,13 +117,13 @@ _brookVelocityCenterOfMassRemoval->setup( masses, getPlatform() );
 /** 
  * Calculate kinetic energy
  * 
- * @param context OpenMMContextImpl reference
+ * @param context ContextImpl reference
  *
  * @return kinetic energy of the system
  *
  */
 
-double BrookCalcKineticEnergyKernel::execute( OpenMMContextImpl& context ){
+double BrookCalcKineticEnergyKernel::execute( ContextImpl& context ){
 
 // ---------------------------------------------------------------------------------------
 

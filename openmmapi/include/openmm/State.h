@@ -41,7 +41,7 @@ namespace OpenMM {
 
 /**
  * A State object records a snapshot of the current state of a simulation at a point in time.
- * You create it by calling getState() on an OpenMMContext.
+ * You create it by calling getState() on a Context.
  * 
  * When a State is created, you specify what information should be stored in it.  This saves
  * time and memory by only copying in the information that you actually want.  This is especially
@@ -86,7 +86,7 @@ public:
      */
     const std::map<std::string, double>& getParameters() const;
 private:
-    friend class OpenMMContext;
+    friend class Context;
     State(double time, int numParticles, DataType types);
 
 // Retarded visual studio compiler complains about being unable to 

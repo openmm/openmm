@@ -49,7 +49,7 @@ void simulateArgon()
     OpenMM::VerletIntegrator integrator(0.004); // step size in ps
 
     // Let OpenMM Context choose best platform.
-    OpenMM::OpenMMContext context(system, integrator);
+    OpenMM::Context context(system, integrator);
     printf( "REMARK  Using OpenMM platform %s\n", 
         context.getPlatform().getName().c_str() );
 

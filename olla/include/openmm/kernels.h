@@ -76,7 +76,7 @@ public:
      * 
      * @param context    the context in which to execute this kernel
      */
-    virtual void execute(OpenMMContextImpl& context) = 0;
+    virtual void execute(ContextImpl& context) = 0;
 };
 
 /**
@@ -100,14 +100,14 @@ public:
      *
      * @param context    the context in which to execute this kernel
      */
-    virtual double getTime(const OpenMMContextImpl& context) const = 0;
+    virtual double getTime(const ContextImpl& context) const = 0;
     /**
      * Set the current time (in picoseconds).
      *
      * @param context    the context in which to execute this kernel
      * @param time       the time
      */
-    virtual void setTime(OpenMMContextImpl& context, double time) = 0;
+    virtual void setTime(ContextImpl& context, double time) = 0;
 };
 
 /**
@@ -132,14 +132,14 @@ public:
      * 
      * @param context    the context in which to execute this kernel
      */
-    virtual void executeForces(OpenMMContextImpl& context) = 0;
+    virtual void executeForces(ContextImpl& context) = 0;
     /**
      * Execute the kernel to calculate the energy.
      * 
      * @param context    the context in which to execute this kernel
      * @return the potential energy due to the HarmonicBondForce
      */
-    virtual double executeEnergy(OpenMMContextImpl& context) = 0;
+    virtual double executeEnergy(ContextImpl& context) = 0;
 };
 
 /**
@@ -164,14 +164,14 @@ public:
      * 
      * @param context    the context in which to execute this kernel
      */
-    virtual void executeForces(OpenMMContextImpl& context) = 0;
+    virtual void executeForces(ContextImpl& context) = 0;
     /**
      * Execute the kernel to calculate the energy.
      * 
      * @param context    the context in which to execute this kernel
      * @return the potential energy due to the HarmonicAngleForce
      */
-    virtual double executeEnergy(OpenMMContextImpl& context) = 0;
+    virtual double executeEnergy(ContextImpl& context) = 0;
 };
 
 /**
@@ -196,14 +196,14 @@ public:
      * 
      * @param context    the context in which to execute this kernel
      */
-    virtual void executeForces(OpenMMContextImpl& context) = 0;
+    virtual void executeForces(ContextImpl& context) = 0;
     /**
      * Execute the kernel to calculate the energy.
      * 
      * @param context    the context in which to execute this kernel
      * @return the potential energy due to the PeriodicTorsionForce
      */
-    virtual double executeEnergy(OpenMMContextImpl& context) = 0;
+    virtual double executeEnergy(ContextImpl& context) = 0;
 };
 
 /**
@@ -228,14 +228,14 @@ public:
      * 
      * @param context    the context in which to execute this kernel
      */
-    virtual void executeForces(OpenMMContextImpl& context) = 0;
+    virtual void executeForces(ContextImpl& context) = 0;
     /**
      * Execute the kernel to calculate the energy.
      * 
      * @param context    the context in which to execute this kernel
      * @return the potential energy due to the RBTorsionForce
      */
-    virtual double executeEnergy(OpenMMContextImpl& context) = 0;
+    virtual double executeEnergy(ContextImpl& context) = 0;
 };
 
 /**
@@ -267,14 +267,14 @@ public:
      * 
      * @param context    the context in which to execute this kernel
      */
-    virtual void executeForces(OpenMMContextImpl& context) = 0;
+    virtual void executeForces(ContextImpl& context) = 0;
     /**
      * Execute the kernel to calculate the energy.
      * 
      * @param context    the context in which to execute this kernel
      * @return the potential energy due to the NonbondedForce
      */
-    virtual double executeEnergy(OpenMMContextImpl& context) = 0;
+    virtual double executeEnergy(ContextImpl& context) = 0;
 };
 
 /**
@@ -299,14 +299,14 @@ public:
      * 
      * @param context    the context in which to execute this kernel
      */
-    virtual void executeForces(OpenMMContextImpl& context) = 0;
+    virtual void executeForces(ContextImpl& context) = 0;
     /**
      * Execute the kernel to calculate the energy.
      * 
      * @param context    the context in which to execute this kernel
      * @return the potential energy due to the GBSAOBCForce
      */
-    virtual double executeEnergy(OpenMMContextImpl& context) = 0;
+    virtual double executeEnergy(ContextImpl& context) = 0;
 };
 
 /**
@@ -332,14 +332,14 @@ public:
      * 
      * @param context    the context in which to execute this kernel
      */
-    virtual void executeForces(OpenMMContextImpl& context) = 0;
+    virtual void executeForces(ContextImpl& context) = 0;
     /**
      * Execute the kernel to calculate the energy.
      * 
      * @param context    the context in which to execute this kernel
      * @return the potential energy due to the GBVIForce
      */
-    virtual double executeEnergy(OpenMMContextImpl& context) = 0;
+    virtual double executeEnergy(ContextImpl& context) = 0;
 };
 
 /**
@@ -365,7 +365,7 @@ public:
      * @param context    the context in which to execute this kernel
      * @param integrator the VerletIntegrator this kernel is being used for
      */
-    virtual void execute(OpenMMContextImpl& context, const VerletIntegrator& integrator) = 0;
+    virtual void execute(ContextImpl& context, const VerletIntegrator& integrator) = 0;
 };
 
 /**
@@ -391,7 +391,7 @@ public:
      * @param context    the context in which to execute this kernel
      * @param integrator the LangevinIntegrator this kernel is being used for
      */
-    virtual void execute(OpenMMContextImpl& context, const LangevinIntegrator& integrator) = 0;
+    virtual void execute(ContextImpl& context, const LangevinIntegrator& integrator) = 0;
 };
 
 /**
@@ -417,7 +417,7 @@ public:
      * @param context    the context in which to execute this kernel
      * @param integrator the BrownianIntegrator this kernel is being used for
      */
-    virtual void execute(OpenMMContextImpl& context, const BrownianIntegrator& integrator) = 0;
+    virtual void execute(ContextImpl& context, const BrownianIntegrator& integrator) = 0;
 };
 
 /**
@@ -444,7 +444,7 @@ public:
      * @param integrator the LangevinIntegrator this kernel is being used for
      * @param maxTime    the maximum time beyond which the simulation should not be advanced
      */
-    virtual void execute(OpenMMContextImpl& context, const VariableLangevinIntegrator& integrator, double maxTime) = 0;
+    virtual void execute(ContextImpl& context, const VariableLangevinIntegrator& integrator, double maxTime) = 0;
 };
 
 /**
@@ -471,7 +471,7 @@ public:
      * @param integrator the VerletIntegrator this kernel is being used for
      * @param maxTime    the maximum time beyond which the simulation should not be advanced
      */
-    virtual void execute(OpenMMContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime) = 0;
+    virtual void execute(ContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime) = 0;
 };
 
 /**
@@ -496,7 +496,7 @@ public:
      * 
      * @param context    the context in which to execute this kernel
      */
-    virtual void execute(OpenMMContextImpl& context) = 0;
+    virtual void execute(ContextImpl& context) = 0;
 };
 
 /**
@@ -520,7 +520,7 @@ public:
      * 
      * @param context    the context in which to execute this kernel
      */
-    virtual double execute(OpenMMContextImpl& context) = 0;
+    virtual double execute(ContextImpl& context) = 0;
 };
 
 /**
@@ -545,7 +545,7 @@ public:
      * 
      * @param context    the context in which to execute this kernel
      */
-    virtual void execute(OpenMMContextImpl& context) = 0;
+    virtual void execute(ContextImpl& context) = 0;
 };
 
 } // namespace OpenMM

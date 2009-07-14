@@ -53,7 +53,7 @@ public:
      * @param type the data type of each element in the stream
      * @param context the context the kernel will belong to
      */
-    virtual StreamImpl* createStreamImpl(std::string name, int size, Stream::DataType type, const Platform& platform, OpenMMContextImpl& context) const = 0;
+    virtual StreamImpl* createStreamImpl(std::string name, int size, Stream::DataType type, const Platform& platform, ContextImpl& context) const = 0;
     virtual ~StreamFactory() {
     }
 };

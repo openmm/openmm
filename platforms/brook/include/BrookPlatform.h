@@ -278,17 +278,17 @@ class OPENMM_EXPORT BrookPlatform : public Platform {
       FILE* getLog( void ) const;
       
       /** 
-       * This is called whenever a new OpenMMContext is created.  It gives the Platform a chance to initialize
+       * This is called whenever a new Context is created.  It gives the Platform a chance to initialize
        * the context and store platform-specific data in it.
        */
-      void contextCreated( OpenMMContextImpl& context ) const;
+      void contextCreated( ContextImpl& context ) const;
 
       /** 
-       * This is called whenever an OpenMMContext is deleted.  It gives the Platform a chance to clean up
+       * This is called whenever a Context is deleted.  It gives the Platform a chance to clean up
        * any platform-specific data that was stored in it.
        */
 
-      void contextDestroyed( OpenMMContextImpl& context ) const;
+      void contextDestroyed( ContextImpl& context ) const;
 
       /** 
        * Get minSuggestedThreads

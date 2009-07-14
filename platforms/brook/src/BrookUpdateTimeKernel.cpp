@@ -125,7 +125,7 @@ void BrookUpdateTimeKernel::initialize( const System& system ){
 * @param context    the context in which to execute this kernel
 */
 
-double BrookUpdateTimeKernel::getTime(const OpenMMContextImpl& context) const {
+double BrookUpdateTimeKernel::getTime(const ContextImpl& context) const {
     return _openMMBrookInterface.getTime();
 }
 
@@ -136,6 +136,6 @@ double BrookUpdateTimeKernel::getTime(const OpenMMContextImpl& context) const {
 * @param time       the time
 */
 
-void BrookUpdateTimeKernel::setTime(OpenMMContextImpl& context, double time) {
+void BrookUpdateTimeKernel::setTime(ContextImpl& context, double time) {
     _openMMBrookInterface.setTime(time);
 }

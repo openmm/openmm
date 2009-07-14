@@ -34,7 +34,7 @@
 #include "BrookNonBonded.h"
 #include "BrookGbsa.h"
 #include "openmm/NonbondedForce.h"
-#include "openmm/OpenMMContext.h"
+#include "openmm/Context.h"
 #include "openmm/System.h"
 
 namespace OpenMM {
@@ -55,11 +55,11 @@ class OpenMMBrookInterface {
        * 
        * @param numberOfParticles  number of particles
        *
-       * @return  OpenMMContext
+       * @return  Context
        *
        */
       
-      OpenMMContext* getReferenceOpenMMContext( int numberOfParticles );
+      Context* getReferenceContext( int numberOfParticles );
       
       /** 
        * Set log file reference
@@ -153,32 +153,32 @@ class OpenMMBrookInterface {
       /** 
        * Zero forces
        *
-       * @param context OpenMMContextImpl context 
+       * @param context ContextImpl context 
        *
        */
       
-      void zeroForces( OpenMMContextImpl& context );
+      void zeroForces( ContextImpl& context );
       
       /** 
        * Compute forces
        *
-       * @param context OpenMMContextImpl context 
+       * @param context ContextImpl context 
        *
        */
       
-      void computeForces( OpenMMContextImpl& context );
+      void computeForces( ContextImpl& context );
       
       /** 
        * Compute energy
        *
-       * @param context OpenMMContextImpl context 
+       * @param context ContextImpl context 
        * @param system  system reference
        *
        * @return potential energy
        *
        */
       
-      double computeEnergy( OpenMMContextImpl& context, System& system );
+      double computeEnergy( ContextImpl& context, System& system );
       
       /** 
        * Set trigger Force Kernel
@@ -401,7 +401,7 @@ class OpenMMBrookInterface {
        *
        */
       
-      void printForcesToFile( OpenMMContextImpl& context );
+      void printForcesToFile( ContextImpl& context );
       
    private:
    

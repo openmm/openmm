@@ -31,7 +31,7 @@
 #include "../../../tests/AssertionUtilities.h"
 #include "BrookPlatform.h"
 #include "ReferencePlatform.h"
-#include "openmm/OpenMMContext.h"
+#include "openmm/Context.h"
 #include "openmm/RBTorsionForce.h"
 #include "openmm/System.h"
 #include "openmm/LangevinIntegrator.h"
@@ -75,7 +75,7 @@ void testBrookRBTorsions( FILE* log ){
    forceField->addTorsion(0, 1, 2, 3, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6);
    system.addForce(forceField);
 
-   OpenMMContext context(system, integrator, platform);
+   Context context(system, integrator, platform);
    vector<Vec3> positions(numberOfParticles);
 
    positions[0] = Vec3(0, 1, 0);

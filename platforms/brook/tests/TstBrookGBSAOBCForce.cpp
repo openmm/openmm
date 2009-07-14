@@ -35,7 +35,7 @@
 #include "../../../tests/AssertionUtilities.h"
 #include "BrookPlatform.h"
 #include "ReferencePlatform.h"
-#include "openmm/OpenMMContext.h"
+#include "openmm/Context.h"
 #include "openmm/GBSAOBCForce.h"
 #include "openmm/System.h"
 #include "openmm/LangevinIntegrator.h"
@@ -134,7 +134,7 @@ int tokenizeString( char* lineBuffer, StringVector& tokenArray, const std::strin
    return (int) tokenArray.size();
 }
 
-static OpenMMContext* testObcForceSetup( int numParticles, int brookContext, FILE* log ){
+static Context* testObcForceSetup( int numParticles, int brookContext, FILE* log ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -161,7 +161,7 @@ static OpenMMContext* testObcForceSetup( int numParticles, int brookContext, FIL
        //forceField->setParticleParameters(i, i%2 == 0 ? -1 : 1, 1.5, 1);
    }
    system->addForce(forceField);
-   OpenMMContext* context = new OpenMMContext( *system, *integrator, *platform );
+   Context* context = new Context( *system, *integrator, *platform );
    
    // Set random positions for all the atoms.
    
@@ -224,7 +224,7 @@ static char* localStrsep( char** lineBuffer, const char* delimiter ){
    }
 }
 
-static OpenMMContext* testObcForceFileSetup( std::string fileName, int brookContext, int* numParticles, FILE* log ){
+static Context* testObcForceFileSetup( std::string fileName, int brookContext, int* numParticles, FILE* log ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -320,7 +320,7 @@ static OpenMMContext* testObcForceFileSetup( std::string fileName, int brookCont
       (void) fflush( log );
    }
    system->addForce(forceField);
-   OpenMMContext* context = new OpenMMContext( *system, *integrator, *platform );
+   Context* context = new Context( *system, *integrator, *platform );
 
    // Set positions for all the atoms.
    
@@ -345,13 +345,13 @@ void testObcForce( FILE* log, char* testInputFileName ){
    PrintOn = log ? PrintOn : 0;
    log     = PrintOn ? log : NULL;
 
-   //OpenMMContext* context      = testObcForceSetup( numParticles, 0, log );
-   //OpenMMContext* brookContext = testObcForceSetup( numParticles, 1, log );
+   //Context* context      = testObcForceSetup( numParticles, 0, log );
+   //Context* brookContext = testObcForceSetup( numParticles, 1, log );
    
-   OpenMMContext* context      = testObcForceFileSetup( std::string( testInputFileName ), 0, &numParticles, log );
-   //OpenMMContext* context      = NULL;
-   OpenMMContext* brookContext = testObcForceFileSetup( std::string( testInputFileName ), 1, &numParticles, log );
-   //OpenMMContext* brookContext = NULL;
+   Context* context      = testObcForceFileSetup( std::string( testInputFileName ), 0, &numParticles, log );
+   //Context* context      = NULL;
+   Context* brookContext = testObcForceFileSetup( std::string( testInputFileName ), 1, &numParticles, log );
+   //Context* brookContext = NULL;
    
    vector<Vec3> forces;
    if( context ){
@@ -436,7 +436,7 @@ void testObcSingleParticle( FILE* log ){
    GBSAOBCForce* forceField = new GBSAOBCForce();
    forceField->addParticle(0.5, 0.15, 1);
    system.addForce(forceField);
-   OpenMMContext context(system, integrator, platform);
+   Context context(system, integrator, platform);
    vector<Vec3> positions(1);
    positions[0] = Vec3(0, 0, 0);
    context.setPositions(positions);
@@ -475,7 +475,7 @@ void testObcEConsistentForce( FILE* log ){
        forceField->addParticle(i%2 == 0 ? -1 : 1, 0.15, 1);
    }
    system.addForce(forceField);
-   OpenMMContext context(system, integrator, platform);
+   Context context(system, integrator, platform);
    
    // Set random positions for all the atoms.
    

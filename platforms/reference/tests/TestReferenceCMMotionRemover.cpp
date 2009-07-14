@@ -35,7 +35,7 @@
 
 #include "../../../tests/AssertionUtilities.h"
 #include "openmm/CMMotionRemover.h"
-#include "openmm/OpenMMContext.h"
+#include "openmm/Context.h"
 #include "ReferencePlatform.h"
 #include "openmm/HarmonicBondForce.h"
 #include "openmm/NonbondedForce.h"
@@ -77,7 +77,7 @@ void testMotionRemoval() {
     system.addForce(nonbonded);
     CMMotionRemover* remover = new CMMotionRemover();
     system.addForce(remover);
-    OpenMMContext context(system, integrator, platform);
+    Context context(system, integrator, platform);
     vector<Vec3> positions(numParticles);
     vector<Vec3> velocities(numParticles);
     init_gen_rand(0);

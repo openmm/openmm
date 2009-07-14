@@ -72,7 +72,7 @@ class BrookCalcGBSAOBCForceKernel : public CalcGBSAOBCForceKernel {
        *
        */
 
-      void executeForces( OpenMMContextImpl& context );
+      void executeForces( ContextImpl& context );
   
       /**
        * Execute the kernel to calculate the energy.
@@ -84,7 +84,7 @@ class BrookCalcGBSAOBCForceKernel : public CalcGBSAOBCForceKernel {
        *
        */
 
-      double executeEnergy( OpenMMContextImpl& context );
+      double executeEnergy( ContextImpl& context );
 
       /** 
        * Set log file reference

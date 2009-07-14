@@ -175,12 +175,12 @@ void BrookIntegrateVerletStepKernel::initialize(  const System& system, const Ve
 /** 
  * Execute kernel
  * 
- * @param context            OpenMMContextImpl reference
+ * @param context            ContextImpl reference
  * @param integrator         VerletIntegrator reference
  *
  */
 
-void BrookIntegrateVerletStepKernel::execute( OpenMMContextImpl& context, const VerletIntegrator& integrator ){
+void BrookIntegrateVerletStepKernel::execute( ContextImpl& context, const VerletIntegrator& integrator ){
 
 // ---------------------------------------------------------------------------------------
 

@@ -1012,7 +1012,7 @@ void OPENMM_LANGEVININTEGRATOR_STEP(OpenMM_LangevinIntegrator* const& langevin, 
 
 // create
 OpenMM_Context* OpenMM_Context_create(OpenMM_System* sys, OpenMM_Integrator* integ) 
-{   return (OpenMM_Context*)new OpenMM::OpenMMContext(*(System*)sys, *(Integrator*)integ); }
+{   return (OpenMM_Context*)new OpenMM::Context(*(System*)sys, *(Integrator*)integ); }
 void openmm_context_create_(OpenMM_Context*& context, OpenMM_System*& sys, OpenMM_Integrator*& integ)
 {   context = OpenMM_Context_create(sys, integ); }
 void OPENMM_CONTEXT_CREATE(OpenMM_Context*& context, OpenMM_System*& sys, OpenMM_Integrator*& integ)
@@ -1020,7 +1020,7 @@ void OPENMM_CONTEXT_CREATE(OpenMM_Context*& context, OpenMM_System*& sys, OpenMM
 
 // destroy
 void OpenMM_Context_destroy(OpenMM_Context* doomed) 
-{   delete (OpenMMContext*)doomed; }
+{   delete (Context*)doomed; }
 void openmm_context_destroy_(OpenMM_Context*& doomed) 
 {    OpenMM_Context_destroy(doomed); }
 void OPENMM_CONTEXT_DESTROY(OpenMM_Context*& doomed) 
@@ -1028,7 +1028,7 @@ void OPENMM_CONTEXT_DESTROY(OpenMM_Context*& doomed)
 
 // setPositions
 void OpenMM_Context_setPositions(OpenMM_Context* context, const OpenMM_Vec3Array* positions) 
-{   ((OpenMMContext*)context)->setPositions(*(const std::vector<Vec3>*)positions); }
+{   ((Context*)context)->setPositions(*(const std::vector<Vec3>*)positions); }
 void openmm_context_setpositions_(OpenMM_Context* const& context, const OpenMM_Vec3Array* const& positions)
 {    OpenMM_Context_setPositions(context, positions); }
 void OPENMM_CONTEXT_SETPOSITIONS(OpenMM_Context* const& context, const OpenMM_Vec3Array* const& positions)
@@ -1036,7 +1036,7 @@ void OPENMM_CONTEXT_SETPOSITIONS(OpenMM_Context* const& context, const OpenMM_Ve
 
 // setVelocities
 void OpenMM_Context_setVelocities(OpenMM_Context* context, const OpenMM_Vec3Array* velocities) 
-{   ((OpenMMContext*)context)->setVelocities(*(const std::vector<Vec3>*)velocities); }
+{   ((Context*)context)->setVelocities(*(const std::vector<Vec3>*)velocities); }
 void openmm_context_setvelocities_(OpenMM_Context* const& context, const OpenMM_Vec3Array* const& velocities)
 {    OpenMM_Context_setVelocities(context, velocities); }
 void OPENMM_CONTEXT_SETVELOCITIES(OpenMM_Context* const& context, const OpenMM_Vec3Array* const& velocities)
@@ -1046,7 +1046,7 @@ void OPENMM_CONTEXT_SETVELOCITIES(OpenMM_Context* const& context, const OpenMM_V
 // Note that a Context creates the OpenMM::State object, but you have to destroy
 // it using OpenMM_State_destroy.
 OpenMM_State* OpenMM_Context_createState(const OpenMM_Context* context, int types) 
-{   return (OpenMM_State*)new State(((OpenMMContext*)context)->getState(types)); }
+{   return (OpenMM_State*)new State(((Context*)context)->getState(types)); }
 void openmm_context_createstate_(const OpenMM_Context* const& context, const int& types, OpenMM_State*& state)
 {   state=OpenMM_Context_createState(context, types); }
 void OPENMM_CONTEXT_CREATESTATE(const OpenMM_Context* const& context, const int& types, OpenMM_State*& state)
@@ -1056,13 +1056,13 @@ void OPENMM_CONTEXT_CREATESTATE(const OpenMM_Context* const& context, const int&
 // Platform name.
 const char* OpenMM_Context_getPlatformName(const OpenMM_Context* context) {
     static std::string platform;
-    platform = ((const OpenMMContext*)context)->getPlatform().getName();
+    platform = ((const Context*)context)->getPlatform().getName();
     return platform.c_str();
 }
 // getPlatformName Fortran: Return a blank-padded Fortran string containing the Platform name. There
 // is no terminating null.
 void openmm_context_getplatformname_(const OpenMM_Context* const& context, char* buf, int len) {
-    const std::string name = ((const OpenMMContext*)context)->getPlatform().getName();
+    const std::string name = ((const Context*)context)->getPlatform().getName();
     const int minLen = std::min((int)name.size(), len);
     for (int i=0; i<minLen; ++i) buf[i] = name[i];
     for (int i=minLen; i<len; ++i) buf[i] = ' ';

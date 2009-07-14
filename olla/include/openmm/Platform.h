@@ -41,7 +41,7 @@ namespace OpenMM {
 
 class Kernel;
 class KernelFactory;
-class OpenMMContextImpl;
+class ContextImpl;
 class StreamFactory;
 
 /**
@@ -86,15 +86,15 @@ public:
      */
     virtual const StreamFactory& getDefaultStreamFactory() const = 0;
     /**
-     * This is called whenever a new OpenMMContext is created.  It gives the Platform a chance to initialize
+     * This is called whenever a new Context is created.  It gives the Platform a chance to initialize
      * the context and store platform-specific data in it.
      */
-    virtual void contextCreated(OpenMMContextImpl& context) const;
+    virtual void contextCreated(ContextImpl& context) const;
     /**
-     * This is called whenever an OpenMMContext is deleted.  It gives the Platform a chance to clean up
+     * This is called whenever a Context is deleted.  It gives the Platform a chance to clean up
      * any platform-specific data that was stored in it.
      */
-    virtual void contextDestroyed(OpenMMContextImpl& context) const;
+    virtual void contextDestroyed(ContextImpl& context) const;
     /**
      * Register a KernelFactory which should be used to create Kernels with a particular name.
      * The Platform takes over ownership of the factory, and will delete it when the Platform itself
@@ -133,7 +133,7 @@ public:
      * @param context the context for which to create a Kernel
      * @return a newly created Kernel object
      */
-    Kernel createKernel(const std::string& name, OpenMMContextImpl& context) const;
+    Kernel createKernel(const std::string& name, ContextImpl& context) const;
     /**
      * Create a Stream object.  If you call this method multiple times for different contexts with the same name,
      * the returned Streams are independent and do not interact with each other.  This means
@@ -147,7 +147,7 @@ public:
      * @param context the context for which to create a Stream
      * @return a newly created Stream object
      */
-    Stream createStream(const std::string& name, int size, Stream::DataType type, OpenMMContextImpl& context) const;
+    Stream createStream(const std::string& name, int size, Stream::DataType type, ContextImpl& context) const;
     /**
      * Register a new Platform.
      */

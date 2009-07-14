@@ -29,7 +29,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/internal/OpenMMContextImpl.h"
+#include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/PeriodicTorsionForceImpl.h"
 #include "openmm/kernels.h"
 
@@ -44,16 +44,16 @@ PeriodicTorsionForceImpl::PeriodicTorsionForceImpl(PeriodicTorsionForce& owner) 
 PeriodicTorsionForceImpl::~PeriodicTorsionForceImpl() {
 }
 
-void PeriodicTorsionForceImpl::initialize(OpenMMContextImpl& context) {
+void PeriodicTorsionForceImpl::initialize(ContextImpl& context) {
     kernel = context.getPlatform().createKernel(CalcPeriodicTorsionForceKernel::Name(), context);
     dynamic_cast<CalcPeriodicTorsionForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
 
-void PeriodicTorsionForceImpl::calcForces(OpenMMContextImpl& context, Stream& forces) {
+void PeriodicTorsionForceImpl::calcForces(ContextImpl& context, Stream& forces) {
     dynamic_cast<CalcPeriodicTorsionForceKernel&>(kernel.getImpl()).executeForces(context);
 }
 
-double PeriodicTorsionForceImpl::calcEnergy(OpenMMContextImpl& context) {
+double PeriodicTorsionForceImpl::calcEnergy(ContextImpl& context) {
     return dynamic_cast<CalcPeriodicTorsionForceKernel&>(kernel.getImpl()).executeEnergy(context);
 }
 

@@ -44,7 +44,7 @@ class BrookKernelFactory : public KernelFactory {
 
    public:
 
-      KernelImpl* createKernelImpl( std::string name, const Platform& platform, OpenMMContextImpl& context ) const;
+      KernelImpl* createKernelImpl( std::string name, const Platform& platform, ContextImpl& context ) const;
 };
 
 } // namespace OpenMM

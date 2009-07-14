@@ -34,7 +34,7 @@
  */
 
 #include "../../../tests/AssertionUtilities.h"
-#include "openmm/OpenMMContext.h"
+#include "openmm/Context.h"
 #include "ReferencePlatform.h"
 #include "openmm/PeriodicTorsionForce.h"
 #include "openmm/System.h"
@@ -59,7 +59,7 @@ void testPeriodicTorsions() {
     PeriodicTorsionForce* forceField = new PeriodicTorsionForce();
     forceField->addTorsion(0, 1, 2, 3, 2, PI_M/3, 1.1);
     system.addForce(forceField);
-    OpenMMContext context(system, integrator, platform);
+    Context context(system, integrator, platform);
     vector<Vec3> positions(4);
     positions[0] = Vec3(0, 1, 0);
     positions[1] = Vec3(0, 0, 0);

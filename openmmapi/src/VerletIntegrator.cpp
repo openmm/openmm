@@ -30,8 +30,8 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/VerletIntegrator.h"
-#include "openmm/OpenMMContext.h"
-#include "openmm/internal/OpenMMContextImpl.h"
+#include "openmm/Context.h"
+#include "openmm/internal/ContextImpl.h"
 #include "openmm/kernels.h"
 #include <string>
 
@@ -44,7 +44,7 @@ VerletIntegrator::VerletIntegrator(double stepSize) {
     setConstraintTolerance(1e-4);
 }
 
-void VerletIntegrator::initialize(OpenMMContextImpl& contextRef) {
+void VerletIntegrator::initialize(ContextImpl& contextRef) {
     context = &contextRef;
     kernel = context->getPlatform().createKernel(IntegrateVerletStepKernel::Name(), contextRef);
     dynamic_cast<IntegrateVerletStepKernel&>(kernel.getImpl()).initialize(contextRef.getSystem(), *this);

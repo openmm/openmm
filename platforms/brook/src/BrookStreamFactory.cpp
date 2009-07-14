@@ -27,7 +27,7 @@
 #include "openmm/OpenMMException.h"
 #include "BrookStreamFactory.h"
 #include "BrookStreamImpl.h"
-#include "openmm/internal/OpenMMContextImpl.h"
+#include "openmm/internal/ContextImpl.h"
 #include "OpenMMBrookInterface.h"
 
 #include <sstream>
@@ -279,7 +279,7 @@ int BrookStreamFactory::setDefaultDangleValue( double defaultDangleValue ){
  */
 
 StreamImpl* BrookStreamFactory::createStreamImpl( std::string name, int size, Stream::DataType type,
-                                                  const Platform& platform, OpenMMContextImpl& context ) const {
+                                                  const Platform& platform, ContextImpl& context ) const {
 
 // ---------------------------------------------------------------------------------------
 

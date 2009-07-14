@@ -225,7 +225,7 @@ struct MyOpenMMData {
     ~MyOpenMMData() {delete context; delete integrator; delete system;}
     OpenMM::System*         system;
     OpenMM::Integrator*     integrator;
-    OpenMM::OpenMMContext*  context;
+    OpenMM::Context*  context;
 };
 
 
@@ -345,7 +345,7 @@ myInitializeOpenMM( const MyAtomInfo    atoms[],
     // best available Platform. Initialize the configuration from the default
     // positions we collected above. Initial velocities will be zero.
     omm->integrator = new OpenMM::VerletIntegrator(StepSizeInFs * OpenMM::PsPerFs);
-    omm->context    = new OpenMM::OpenMMContext(*omm->system, *omm->integrator);
+    omm->context    = new OpenMM::Context(*omm->system, *omm->integrator);
     omm->context->setPositions(initialPosInNm);
 
     platformName = omm->context->getPlatform().getName();

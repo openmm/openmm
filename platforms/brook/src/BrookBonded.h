@@ -31,7 +31,7 @@
 
 #include "BrookStreamImpl.h"
 #include "BrookCommon.h"
-#include "openmm/OpenMMContext.h"
+#include "openmm/Context.h"
 #include "BrookBondParameters.h"
 
 namespace OpenMM {

@@ -34,7 +34,7 @@
  */
 
 #include "../../../tests/AssertionUtilities.h"
-#include "openmm/OpenMMContext.h"
+#include "openmm/Context.h"
 #include "CudaPlatform.h"
 #include "openmm/HarmonicBondForce.h"
 #include "openmm/NonbondedForce.h"
@@ -59,7 +59,7 @@ void testSingleBond() {
     HarmonicBondForce* forceField = new HarmonicBondForce();
     forceField->addBond(0, 1, 1.5, 1);
     system.addForce(forceField);
-    OpenMMContext context(system, integrator, platform);
+    Context context(system, integrator, platform);
     vector<Vec3> positions(2);
     positions[0] = Vec3(-1, 0, 0);
     positions[1] = Vec3(1, 0, 0);
@@ -106,7 +106,7 @@ void testTemperature() {
         forceField->addParticle((i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
     }
     system.addForce(forceField);
-    OpenMMContext context(system, integrator, platform);
+    Context context(system, integrator, platform);
     vector<Vec3> positions(numParticles);
     for (int i = 0; i < numParticles; ++i)
         positions[i] = Vec3((i%2 == 0 ? 2 : -2), (i%4 < 2 ? 2 : -2), (i < 4 ? 2 : -2));
@@ -148,7 +148,7 @@ void testConstraints() {
     system.addConstraint(4, 5, 1.0);
     system.addConstraint(6, 7, 1.0);
     system.addForce(forceField);
-    OpenMMContext context(system, integrator, platform);
+    Context context(system, integrator, platform);
     vector<Vec3> positions(numParticles);
     vector<Vec3> velocities(numParticles);
     init_gen_rand(0);
@@ -199,7 +199,7 @@ void testRandomSeed() {
     // Try twice with the same random seed.
 
     integrator.setRandomNumberSeed(5);
-    OpenMMContext context(system, integrator, platform);
+    Context context(system, integrator, platform);
     context.setPositions(positions);
     context.setVelocities(velocities);
     integrator.step(10);

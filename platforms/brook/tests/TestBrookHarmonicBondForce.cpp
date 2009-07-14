@@ -26,7 +26,7 @@
 
 #include "../../../tests/AssertionUtilities.h"
 #include "BrookPlatform.h"
-#include "openmm/OpenMMContext.h"
+#include "openmm/Context.h"
 #include "openmm/HarmonicBondForce.h"
 #include "openmm/System.h"
 #include "openmm/LangevinIntegrator.h"
@@ -69,7 +69,7 @@ void testBrookBonds( FILE* log ){
    forceField->addBond(1, 2, 1.2, 0.7);
    system.addForce(forceField);
 
-   OpenMMContext context(system, integrator, platform);
+   Context context(system, integrator, platform);
    vector<Vec3> positions(3);
 
    positions[0] = Vec3(0, 2, 0); 

@@ -31,12 +31,12 @@
 
 #include "ReferenceKernelFactory.h"
 #include "ReferenceKernels.h"
-#include "openmm/internal/OpenMMContextImpl.h"
+#include "openmm/internal/ContextImpl.h"
 #include "openmm/OpenMMException.h"
 
 using namespace OpenMM;
 
-KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name, const Platform& platform, OpenMMContextImpl& context) const {
+KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const {
     ReferencePlatform::PlatformData& data = *static_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
     if (name == InitializeForcesKernel::Name())
         return new ReferenceInitializeForcesKernel(name, platform);

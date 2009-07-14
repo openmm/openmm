@@ -34,7 +34,7 @@
  */
 
 #include "../../../tests/AssertionUtilities.h"
-#include "openmm/OpenMMContext.h"
+#include "openmm/Context.h"
 #include "CudaPlatform.h"
 #include "openmm/HarmonicBondForce.h"
 #include "openmm/System.h"
@@ -59,7 +59,7 @@ void testBonds() {
     forceField->addBond(0, 1, 1.5, 0.8);
     forceField->addBond(1, 2, 1.2, 0.7);
     system.addForce(forceField);
-    OpenMMContext context(system, integrator, platform);
+    Context context(system, integrator, platform);
     vector<Vec3> positions(3);
     positions[0] = Vec3(0, 2, 0);
     positions[1] = Vec3(0, 0, 0);

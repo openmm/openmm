@@ -32,7 +32,7 @@
 
 #include "../../../tests/AssertionUtilities.h"
 #include "BrookPlatform.h"
-#include "openmm/OpenMMContext.h"
+#include "openmm/Context.h"
 #include "openmm/NonbondedForce.h"
 #include "openmm/HarmonicBondForce.h"
 #include "openmm/System.h"
@@ -78,7 +78,7 @@ void testBrookCoulomb( FILE* log ){
    //(void) fprintf( log, "%s: Calling context\n",  methodName.c_str() );
    //(void) fflush( log );
 
-   OpenMMContext context(system, integrator, platform);
+   Context context(system, integrator, platform);
    vector<Vec3> positions(numberOfParticles);
 
    positions[0] = Vec3(0, 0, 0);
@@ -148,7 +148,7 @@ void testBrookLJ( FILE* log ){
    //(void) fprintf( log, "%s: Calling context\n",  methodName.c_str() );
    //(void) fflush( log );
 
-   OpenMMContext context(system, integrator, platform);
+   Context context(system, integrator, platform);
    vector<Vec3> positions(numberOfParticles);
 
    positions[0] = Vec3(0, 0, 0);
@@ -233,7 +233,7 @@ void testBrookExclusionsAnd14( FILE* log ){
    //(void) fprintf( log, "%s: Calling context\n",  methodName.c_str() );
    //(void) fflush( log );
 
-   OpenMMContext context(system, integrator, platform);
+   Context context(system, integrator, platform);
    vector<Vec3> positions(numberOfParticles);
 
    const double r = 1.0;

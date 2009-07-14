@@ -34,7 +34,7 @@
  */
 
 #include "../../../tests/AssertionUtilities.h"
-#include "openmm/OpenMMContext.h"
+#include "openmm/Context.h"
 #include "CudaPlatform.h"
 #include "openmm/RBTorsionForce.h"
 #include "openmm/System.h"
@@ -59,7 +59,7 @@ void testRBTorsions() {
     RBTorsionForce* forceField = new RBTorsionForce();
     forceField->addTorsion(0, 1, 2, 3, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6);
     system.addForce(forceField);
-    OpenMMContext context(system, integrator, platform);
+    Context context(system, integrator, platform);
     vector<Vec3> positions(4);
     positions[0] = Vec3(0, 1, 0);
     positions[1] = Vec3(0, 0, 0);

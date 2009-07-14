@@ -30,8 +30,8 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/BrownianIntegrator.h"
-#include "openmm/OpenMMContext.h"
-#include "openmm/internal/OpenMMContextImpl.h"
+#include "openmm/Context.h"
+#include "openmm/internal/ContextImpl.h"
 #include "openmm/kernels.h"
 #include <ctime>
 #include <string>
@@ -48,7 +48,7 @@ BrownianIntegrator::BrownianIntegrator(double temperature, double frictionCoeff,
     setRandomNumberSeed((int) time(NULL));
 }
 
-void BrownianIntegrator::initialize(OpenMMContextImpl& contextRef) {
+void BrownianIntegrator::initialize(ContextImpl& contextRef) {
     context = &contextRef;
     kernel = context->getPlatform().createKernel(IntegrateBrownianStepKernel::Name(), contextRef);
     dynamic_cast<IntegrateBrownianStepKernel&>(kernel.getImpl()).initialize(contextRef.getSystem(), *this);

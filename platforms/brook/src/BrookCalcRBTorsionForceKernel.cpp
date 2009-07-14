@@ -177,11 +177,11 @@ void BrookCalcRBTorsionForceKernel::initialize( const System& system, const RBTo
 /** 
  * Compute forces given particle coordinates
  * 
- * @param context OpenMMContextImpl context
+ * @param context ContextImpl context
  *
  */
 
-void BrookCalcRBTorsionForceKernel::executeForces( OpenMMContextImpl& context ){
+void BrookCalcRBTorsionForceKernel::executeForces( ContextImpl& context ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -201,13 +201,13 @@ void BrookCalcRBTorsionForceKernel::executeForces( OpenMMContextImpl& context ){
 /**
  * Execute the kernel to calculate the energy
  * 
- * @param context OpenMMContextImpl context
+ * @param context ContextImpl context
  *
  * @return  potential energy
  *
  */
 
-double BrookCalcRBTorsionForceKernel::executeEnergy( OpenMMContextImpl& context ){
+double BrookCalcRBTorsionForceKernel::executeEnergy( ContextImpl& context ){
 
 // ---------------------------------------------------------------------------------------
 

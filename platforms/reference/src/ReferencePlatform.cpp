@@ -32,7 +32,7 @@
 #include "ReferencePlatform.h"
 #include "ReferenceKernelFactory.h"
 #include "ReferenceKernels.h"
-#include "openmm/internal/OpenMMContextImpl.h"
+#include "openmm/internal/ContextImpl.h"
 #include "SimTKUtilities/SimTKOpenMMRealType.h"
 
 using namespace OpenMM;
@@ -66,11 +66,11 @@ const StreamFactory& ReferencePlatform::getDefaultStreamFactory() const {
     return defaultStreamFactory;
 }
 
-void ReferencePlatform::contextCreated(OpenMMContextImpl& context) const {
+void ReferencePlatform::contextCreated(ContextImpl& context) const {
     context.setPlatformData(new PlatformData());
 }
 
-void ReferencePlatform::contextDestroyed(OpenMMContextImpl& context) const {
+void ReferencePlatform::contextDestroyed(ContextImpl& context) const {
     PlatformData* data = reinterpret_cast<PlatformData*>(context.getPlatformData());
     delete data;
 }

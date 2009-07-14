@@ -27,9 +27,9 @@
 #include "CudaKernels.h"
 #include "CudaStreamImpl.h"
 #include "openmm/LangevinIntegrator.h"
-#include "openmm/OpenMMContext.h"
+#include "openmm/Context.h"
 #include "ReferencePlatform.h"
-#include "openmm/internal/OpenMMContextImpl.h"
+#include "openmm/internal/ContextImpl.h"
 #include "kernels/gputypes.h"
 #include "kernels/cudaKernels.h"
 #include <cmath>
@@ -39,7 +39,7 @@ extern "C" int gpuSetConstants( gpuContext gpu );
 using namespace OpenMM;
 using namespace std;
 
-static void calcForces(OpenMMContextImpl& context, CudaPlatform::PlatformData& data) {
+static void calcForces(ContextImpl& context, CudaPlatform::PlatformData& data) {
     _gpuContext* gpu = data.gpu;
     if (data.nonbondedMethod != NO_CUTOFF && data.computeForceCount%100 == 0)
         gpuReorderAtoms(gpu);
@@ -63,13 +63,13 @@ static void calcForces(OpenMMContextImpl& context, CudaPlatform::PlatformData& d
         kReduceForces(gpu);
 }
 
-static double calcEnergy(OpenMMContextImpl& context, System& system) {
+static double calcEnergy(ContextImpl& context, System& system) {
     // We don't currently have GPU kernels to calculate energy, so instead we have the reference
     // platform do it.  This is VERY slow.
 
     LangevinIntegrator integrator(0.0, 1.0, 0.0);
     ReferencePlatform platform;
-    OpenMMContext refContext(system, integrator, platform);
+    Context refContext(system, integrator, platform);
     const Stream& positions = context.getPositions();
     double* posData = new double[positions.getSize()*3];
     positions.saveToArray(posData);
@@ -84,17 +84,17 @@ static double calcEnergy(OpenMMContextImpl& context, System& system) {
 void CudaInitializeForcesKernel::initialize(const System& system) {
 }
 
-void CudaInitializeForcesKernel::execute(OpenMMContextImpl& context) {
+void CudaInitializeForcesKernel::execute(ContextImpl& context) {
 }
 
 void CudaUpdateTimeKernel::initialize(const System& system) {
 }
 
-double CudaUpdateTimeKernel::getTime(const OpenMMContextImpl& context) const {
+double CudaUpdateTimeKernel::getTime(const ContextImpl& context) const {
     return data.time;
 }
 
-void CudaUpdateTimeKernel::setTime(OpenMMContextImpl& context, double time) {
+void CudaUpdateTimeKernel::setTime(ContextImpl& context, double time) {
     data.time = time;
 }
 
@@ -119,12 +119,12 @@ void CudaCalcHarmonicBondForceKernel::initialize(const System& system, const Har
     gpuSetBondParameters(data.gpu, particle1, particle2, length, k);
 }
 
-void CudaCalcHarmonicBondForceKernel::executeForces(OpenMMContextImpl& context) {
+void CudaCalcHarmonicBondForceKernel::executeForces(ContextImpl& context) {
     if (data.primaryKernel == this)
         calcForces(context, data);
 }
 
-double CudaCalcHarmonicBondForceKernel::executeEnergy(OpenMMContextImpl& context) {
+double CudaCalcHarmonicBondForceKernel::executeEnergy(ContextImpl& context) {
     if (data.primaryKernel == this)
         return calcEnergy(context, system);
     return 0.0;
@@ -153,12 +153,12 @@ void CudaCalcHarmonicAngleForceKernel::initialize(const System& system, const Ha
     gpuSetBondAngleParameters(data.gpu, particle1, particle2, particle3, angle, k);
 }
 
-void CudaCalcHarmonicAngleForceKernel::executeForces(OpenMMContextImpl& context) {
+void CudaCalcHarmonicAngleForceKernel::executeForces(ContextImpl& context) {
     if (data.primaryKernel == this)
         calcForces(context, data);
 }
 
-double CudaCalcHarmonicAngleForceKernel::executeEnergy(OpenMMContextImpl& context) {
+double CudaCalcHarmonicAngleForceKernel::executeEnergy(ContextImpl& context) {
     if (data.primaryKernel == this)
         return calcEnergy(context, system);
     return 0.0;
@@ -189,12 +189,12 @@ void CudaCalcPeriodicTorsionForceKernel::initialize(const System& system, const 
     gpuSetDihedralParameters(data.gpu, particle1, particle2, particle3, particle4, k, phase, periodicity);
 }
 
-void CudaCalcPeriodicTorsionForceKernel::executeForces(OpenMMContextImpl& context) {
+void CudaCalcPeriodicTorsionForceKernel::executeForces(ContextImpl& context) {
     if (data.primaryKernel == this)
         calcForces(context, data);
 }
 
-double CudaCalcPeriodicTorsionForceKernel::executeEnergy(OpenMMContextImpl& context) {
+double CudaCalcPeriodicTorsionForceKernel::executeEnergy(ContextImpl& context) {
     if (data.primaryKernel == this)
         return calcEnergy(context, system);
     return 0.0;
@@ -231,12 +231,12 @@ void CudaCalcRBTorsionForceKernel::initialize(const System& system, const RBTors
     gpuSetRbDihedralParameters(data.gpu, particle1, particle2, particle3, particle4, c0, c1, c2, c3, c4, c5);
 }
 
-void CudaCalcRBTorsionForceKernel::executeForces(OpenMMContextImpl& context) {
+void CudaCalcRBTorsionForceKernel::executeForces(ContextImpl& context) {
     if (data.primaryKernel == this)
         calcForces(context, data);
 }
 
-double CudaCalcRBTorsionForceKernel::executeEnergy(OpenMMContextImpl& context) {
+double CudaCalcRBTorsionForceKernel::executeEnergy(ContextImpl& context) {
     if (data.primaryKernel == this)
         return calcEnergy(context, system);
     return 0.0;
@@ -347,12 +347,12 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
     }
 }
 
-void CudaCalcNonbondedForceKernel::executeForces(OpenMMContextImpl& context) {
+void CudaCalcNonbondedForceKernel::executeForces(ContextImpl& context) {
     if (data.primaryKernel == this)
         calcForces(context, data);
 }
 
-double CudaCalcNonbondedForceKernel::executeEnergy(OpenMMContextImpl& context) {
+double CudaCalcNonbondedForceKernel::executeEnergy(ContextImpl& context) {
     if (data.primaryKernel == this)
         return calcEnergy(context, system);
     return 0.0;
@@ -378,7 +378,7 @@ void CudaCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOBCF
     gpuSetObcParameters(gpu, (float) force.getSoluteDielectric(), (float) force.getSolventDielectric(), radius, scale, charge);
 }
 
-void CudaCalcGBSAOBCForceKernel::executeForces(OpenMMContextImpl& context) {
+void CudaCalcGBSAOBCForceKernel::executeForces(ContextImpl& context) {
 }
 
 static void initializeIntegration(const System& system, CudaPlatform::PlatformData& data, const Integrator& integrator) {
@@ -439,7 +439,7 @@ static void initializeIntegration(const System& system, CudaPlatform::PlatformDa
     cudaThreadSynchronize();
 }
 
-double CudaCalcGBSAOBCForceKernel::executeEnergy(OpenMMContextImpl& context) {
+double CudaCalcGBSAOBCForceKernel::executeEnergy(ContextImpl& context) {
 	return 0.0;
 }
 
@@ -451,7 +451,7 @@ void CudaIntegrateVerletStepKernel::initialize(const System& system, const Verle
     prevStepSize = -1.0;
 }
 
-void CudaIntegrateVerletStepKernel::execute(OpenMMContextImpl& context, const VerletIntegrator& integrator) {
+void CudaIntegrateVerletStepKernel::execute(ContextImpl& context, const VerletIntegrator& integrator) {
     _gpuContext* gpu = data.gpu;
     double stepSize = integrator.getStepSize();
     if (stepSize != prevStepSize) {
@@ -484,7 +484,7 @@ void CudaIntegrateLangevinStepKernel::initialize(const System& system, const Lan
     prevStepSize = -1.0;
 }
 
-void CudaIntegrateLangevinStepKernel::execute(OpenMMContextImpl& context, const LangevinIntegrator& integrator) {
+void CudaIntegrateLangevinStepKernel::execute(ContextImpl& context, const LangevinIntegrator& integrator) {
     _gpuContext* gpu = data.gpu;
     double temperature = integrator.getTemperature();
     double friction = integrator.getFriction();
@@ -526,7 +526,7 @@ void CudaIntegrateBrownianStepKernel::initialize(const System& system, const Bro
     prevStepSize = -1.0;
 }
 
-void CudaIntegrateBrownianStepKernel::execute(OpenMMContextImpl& context, const BrownianIntegrator& integrator) {
+void CudaIntegrateBrownianStepKernel::execute(ContextImpl& context, const BrownianIntegrator& integrator) {
     _gpuContext* gpu = data.gpu;
     double temperature = integrator.getTemperature();
     double friction = integrator.getFriction();
@@ -562,7 +562,7 @@ void CudaIntegrateVariableVerletStepKernel::initialize(const System& system, con
     prevErrorTol = -1.0;
 }
 
-void CudaIntegrateVariableVerletStepKernel::execute(OpenMMContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime) {
+void CudaIntegrateVariableVerletStepKernel::execute(ContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime) {
     _gpuContext* gpu = data.gpu;
     double errorTol = integrator.getErrorTolerance();
     if (errorTol != prevErrorTol) {
@@ -599,7 +599,7 @@ void CudaApplyAndersenThermostatKernel::initialize(const System& system, const A
     prevStepSize = -1.0;
 }
 
-void CudaApplyAndersenThermostatKernel::execute(OpenMMContextImpl& context) {
+void CudaApplyAndersenThermostatKernel::execute(ContextImpl& context) {
     _gpuContext* gpu = data.gpu;
     double temperature = context.getParameter(AndersenThermostat::Temperature());
     double frequency = context.getParameter(AndersenThermostat::CollisionFrequency());
@@ -624,7 +624,7 @@ void CudaCalcKineticEnergyKernel::initialize(const System& system) {
         masses[i] = system.getParticleMass(i);
 }
 
-double CudaCalcKineticEnergyKernel::execute(OpenMMContextImpl& context) {
+double CudaCalcKineticEnergyKernel::execute(ContextImpl& context) {
     // We don't currently have a GPU kernel to do this, so we retrieve the velocities and calculate the energy
     // on the CPU.
     
@@ -643,5 +643,5 @@ void CudaRemoveCMMotionKernel::initialize(const System& system, const CMMotionRe
     data.cmMotionFrequency = force.getFrequency();
 }
 
-void CudaRemoveCMMotionKernel::execute(OpenMMContextImpl& context) {
+void CudaRemoveCMMotionKernel::execute(ContextImpl& context) {
 }

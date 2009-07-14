@@ -34,7 +34,7 @@
  */
 
 #include "../../../tests/AssertionUtilities.h"
-#include "openmm/OpenMMContext.h"
+#include "openmm/Context.h"
 #include "ReferencePlatform.h"
 #include "openmm/HarmonicBondForce.h"
 #include "openmm/GBVIForce.h"
@@ -66,7 +66,7 @@ void testSingleParticle() {
     forceField->addParticle(charge, radius, gamma);
     system.addForce(forceField);
 
-    OpenMMContext context(system, integrator, platform);
+    Context context(system, integrator, platform);
     vector<Vec3> positions(1);
     positions[0] = Vec3(0, 0, 0);
     context.setPositions(positions);
@@ -111,7 +111,7 @@ void testCutoffAndPeriodic() {
     // Calculate the forces for both cutoff and periodic with two different atom positions.
 
     nonbonded->setNonbondedMethod(NonbondedForce::CutoffNonPeriodic);
-    OpenMMContext context(system, integrator, platform);
+    Context context(system, integrator, platform);
     context.setPositions(positions);
     State state1 = context.getState(State::Forces);
     nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
@@ -204,7 +204,7 @@ void testEnergyEthane() {
        system.addForce(forceField);
     }
 
-    OpenMMContext context(system, integrator, platform);
+    Context context(system, integrator, platform);
     
 /*    
     0.5480    1.7661    0.0000 H   0  0  0  0  0  0           0  0  0
@@ -314,7 +314,7 @@ void testEnergyTwoParticle() {
        system.addForce(forceField);
     }
 
-    OpenMMContext context(system, integrator, platform);
+    Context context(system, integrator, platform);
     
     vector<Vec3> positions(numParticles);
     positions[0] = Vec3(         0.0000,    0.0000,    0.0000);
