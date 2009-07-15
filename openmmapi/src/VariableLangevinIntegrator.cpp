@@ -35,6 +35,7 @@
 #include "openmm/kernels.h"
 #include <limits>
 #include <string>
+#include <ctime>
 
 using namespace OpenMM;
 using std::string;
