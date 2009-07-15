@@ -410,7 +410,7 @@ void ReferenceCalcNonbondedForceKernel::initialize(const System& system, const N
         if (kmax[2]%2 == 0)
             kmax[2]++;
     }
-    rfDielectric = force.getReactionFieldDielectric();
+    rfDielectric = (RealOpenMM)force.getReactionFieldDielectric();
 }
 
 void ReferenceCalcNonbondedForceKernel::executeForces(ContextImpl& context) {
@@ -973,7 +973,7 @@ void ReferenceRemoveCMMotionKernel::execute(ContextImpl& context) {
         momentum[0] += static_cast<RealOpenMM>( masses[i]*velData[i][0] );
         momentum[1] += static_cast<RealOpenMM>( masses[i]*velData[i][1] );
         momentum[2] += static_cast<RealOpenMM>( masses[i]*velData[i][2] );
-        mass += masses[i];
+        mass += static_cast<RealOpenMM>( masses[i] );
     }
     
     // Adjust the particle velocities.
