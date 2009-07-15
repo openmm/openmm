@@ -83,6 +83,14 @@ namespace OpenMM {
      * The number of degrees in a radian.
      */
     static const double DegreesPerRadian = 180.0/3.1415926535897932385;
+    /**
+     * L-J sigma per unit van der Waals radius: 2/(2^1/6).
+     */
+    static const double SigmaPerVdwRadius = 1.7817974362806786095;
+    /**
+     * van der Waals radius per unit L-J sigma: (2^1/6)/2.
+     */
+    static const double VdwRadiusPerSigma = .56123102415468649070;
 
 } // namespace OpenMM
 

@@ -176,13 +176,6 @@ int main() {
 #include "OpenMM.h"
 using OpenMM::Vec3; // so we can just say "Vec3" below
 
-// Add definition missing from the current version of OpenMM.
-namespace OpenMM {
-// This conversion factor takes you from a van der Waals radius (defined as 1/2 
-// the minimum energy separation) to the related Lennard Jones "sigma" parameter
-// (defined as the zero crossing separation). The value is 2*pow(2, -1/6).
-static const double SigmaPerVdwRadius = 1.78179743628068;
-}
 
 // This is our opaque "handle" class containing all the OpenMM objects that
 // must persist from call to call during a simulation. The main program gets 

@@ -126,7 +126,7 @@ static const double OpenMM_DegreesPerRadian = 180.0/3.1415926535897932385;
  * "sigma" parameter (defined as the zero crossing separation). The value
  * is 2*pow(2, -1/6).
  */
-static const double OpenMM_SigmaPerVdwRadius = 1.78179743628068;
+static const double OpenMM_SigmaPerVdwRadius = 1.7817974362806786095;
 
 
 #if defined(__cplusplus)
