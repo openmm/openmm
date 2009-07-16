@@ -378,7 +378,7 @@ int ReferenceVariableStochasticDynamics::updatePart1( int numberOfAtoms, RealOpe
 
            RealOpenMM vPrime   = oldVelocities[ii][jj]*fixedParameters[EM_V] +
                                  inverseMasses[ii]*forces[ii][jj]*tau*(one - fixedParameters[EM_V]) +
-                                 vVector[ii][jj] - fixedParameters[EM_V]*Vmh;
+                                 vVector[ii][jj] - fixedParameters[EM]*Vmh;
 
            xPrime[ii][jj]      = atomCoordinates[ii][jj] + vPrime*fix1;
       }
