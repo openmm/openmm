@@ -210,7 +210,7 @@ class OPENMM_EXPORT BrookPlatform : public Platform {
 #define bool bool
 	  bool supportsDoublePrecision( void ) const;
 
-      /** 
+      /**
        * Return default Brook stream factory
        *
        * @return Brook stream factory

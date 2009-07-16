@@ -58,6 +58,7 @@ struct _gpuContext {
     //Cache this here so that it doesn't
     //have to be repeatedly passed around
     int natoms;
+    int device;
     gpuAtomType* gpAtomTable;
     int gAtomTypes;
     cudaGmxSimulation sim;
@@ -204,7 +205,7 @@ extern "C"
 void gpuInitializeRandoms(gpuContext gpu);
 
 extern "C"
-void* gpuInit(int numAtoms);
+void* gpuInit(int numAtoms, unsigned int device);
 
 extern "C"
 void gpuSetIntegrationParameters(gpuContext gpu, float tau, float deltaT, float temperature);

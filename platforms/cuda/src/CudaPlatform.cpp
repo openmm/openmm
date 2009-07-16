@@ -30,9 +30,14 @@
 #include "openmm/PluginInitializer.h"
 #include "openmm/internal/ContextImpl.h"
 #include "kernels/gputypes.h"
+#include "openmm/Context.h"
 #include "openmm/System.h"
+#include <sstream>
 
 using namespace OpenMM;
+using std::map;
+using std::string;
+using std::stringstream;
 
 extern "C" void initOpenMMPlugin() {
     if (gpuIsAvailable())
@@ -56,10 +61,24 @@ CudaPlatform::CudaPlatform() {
     registerKernelFactory(ApplyAndersenThermostatKernel::Name(), factory);
     registerKernelFactory(CalcKineticEnergyKernel::Name(), factory);
     registerKernelFactory(RemoveCMMotionKernel::Name(), factory);
+    platformProperties.push_back(CudaDevice());
+    setPropertyDefaultValue(CudaDevice(), "0");
 }
 
 bool CudaPlatform::supportsDoublePrecision() const {
     return false;
+}
+
+const string& CudaPlatform::getPropertyValue(const Context& context, const string& property) const {
+    const ContextImpl& impl = getContextImpl(context);
+    const PlatformData* data = reinterpret_cast<const PlatformData*>(impl.getPlatformData());
+    map<string, string>::const_iterator value = data->propertyValues.find(property);
+    if (value != data->propertyValues.end())
+        return value->second;
+    return Platform::getPropertyValue(context, property);
+}
+
+void CudaPlatform::setPropertyValue(Context& context, const string& property, const string& value) const {
 }
 
 const StreamFactory& CudaPlatform::getDefaultStreamFactory() const {
@@ -67,8 +86,12 @@ const StreamFactory& CudaPlatform::getDefaultStreamFactory() const {
 }
 
 void CudaPlatform::contextCreated(ContextImpl& context) const {
+    unsigned int device = 0;
+    const string& devicePropValue = getPropertyDefaultValue(CudaDevice());
+    if (devicePropValue.length() > 0)
+        stringstream(devicePropValue) >> device;
     int numParticles = context.getSystem().getNumParticles();
-    _gpuContext* gpu = (_gpuContext*) gpuInit(numParticles);
+    _gpuContext* gpu = (_gpuContext*) gpuInit(numParticles, device);
     context.setPlatformData(new PlatformData(gpu));
 }
 
@@ -76,4 +99,11 @@ void CudaPlatform::contextDestroyed(ContextImpl& context) const {
     PlatformData* data = reinterpret_cast<PlatformData*>(context.getPlatformData());
     gpuShutDown(data->gpu);
     delete data;
+}
+
+CudaPlatform::PlatformData::PlatformData(_gpuContext* gpu) : gpu(gpu), removeCM(false), nonbondedMethod(0), hasBonds(false), hasAngles(false),
+        hasPeriodicTorsions(false), hasRB(false), hasNonbonded(false), primaryKernel(NULL), stepCount(0), computeForceCount(0), time(0.0) {
+    stringstream device;
+    device << gpu->device;
+    propertyValues[CudaPlatform::CudaDevice()] = device.str();
 }

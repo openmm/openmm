@@ -135,6 +135,10 @@ void* ContextImpl::getPlatformData() {
     return platformData;
 }
 
+const void* ContextImpl::getPlatformData() const {
+    return platformData;
+}
+
 void ContextImpl::setPlatformData(void* data) {
     platformData = data;
 }

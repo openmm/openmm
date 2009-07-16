@@ -30,6 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/Platform.h"
+#include "openmm/Context.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/Kernel.h"
 #include "openmm/Stream.h"
@@ -72,6 +73,29 @@ Platform::~Platform() {
         delete *iter;
     for (set<StreamFactory*>::const_iterator iter = uniqueStreamFactories.begin(); iter != uniqueStreamFactories.end(); ++iter)
         delete *iter;
+}
+
+const vector<string>& Platform::getPropertyNames() {
+    return platformProperties;
+}
+
+const string& Platform::getPropertyValue(const Context& context, const string& property) const {
+    throw OpenMMException("getPropertyValue: Illegal property name");
+}
+
+void Platform::setPropertyValue(Context& context, const string& property, const string& value) const {
+    throw OpenMMException("setPropertyValue: Illegal property name");
+}
+
+const string& Platform::getPropertyDefaultValue(const string& property) const {
+    map<string, string>::const_iterator value = defaultProperties.find(property);
+    if (value == defaultProperties.end())
+        throw OpenMMException("getPropertyDefaultValue: Illegal property name");
+    return value->second;
+}
+
+void Platform::setPropertyDefaultValue(const string& property, const string& value) {
+    defaultProperties[property] = value;
 }
 
 void Platform::contextCreated(ContextImpl& context) const {
@@ -217,3 +241,12 @@ const string& Platform::getDefaultPluginsDirectory() {
 #endif
     return directory;
 }
+
+ContextImpl& Platform::getContextImpl(Context& context) const {
+    return *context.impl;
+}
+
+const ContextImpl& Platform::getContextImpl(const Context& context) const {
+    return *context.impl;
+}
+

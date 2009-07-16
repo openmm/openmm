@@ -454,7 +454,7 @@ bool BrookPlatform::supportsDoublePrecision( void ) const {
     return (sizeof(RealOpenMM) >= sizeof(double));
 }
 
-/** 
+/**
  * Return Stream factory
  *
  */

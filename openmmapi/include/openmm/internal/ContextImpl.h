@@ -145,6 +145,10 @@ public:
      */
     void* getPlatformData();
     /**
+     * Get the platform-specific data stored in this context.
+     */
+    const void* getPlatformData() const;
+    /**
      * Set the platform-specific data stored in this context.
      */
     void setPlatformData(void* data);

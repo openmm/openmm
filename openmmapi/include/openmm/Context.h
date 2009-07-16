@@ -153,6 +153,7 @@ public:
      */
     void reinitialize();
 private:
+    friend class Platform;
     ContextImpl* impl;
 };
 

@@ -1116,7 +1116,7 @@ bool gpuIsAvailable()
 }
 
 extern "C"
-void* gpuInit(int numAtoms)
+void* gpuInit(int numAtoms, unsigned int device)
 {
     gpuContext gpu = new _gpuContext;
     int LRFSize = 0;
@@ -1124,30 +1124,10 @@ void* gpuInit(int numAtoms)
     int SMMajor = 0;
     int SMMinor = 0;
 
-    // Get adapter
-    unsigned int device = 0;
-    char * pAdapter;
-    pAdapter = getenv ("NV_FAH_DEVICE");
-    if (pAdapter != NULL)
-    {
-        sscanf(pAdapter, "%d", &device);
-    }
-//    cudaError_t status = cudaSetDevice(device);
-//    RTERROR(status, "Error setting CUDA device")
-
-    // Determine which core to run on
-#if 0
-    SYSTEM_INFO info;
-    GetSystemInfo(&info);
-    unsigned int cores = info.dwNumberOfProcessors;
-    if (cores > 1)
-    {
-        HANDLE hproc = GetCurrentProcess();
-        unsigned int core = (cores - 1) - (device % (cores - 1)); 
-        unsigned int mask = 1 << core;
-        SetProcessAffinityMask(hproc, mask);
-    }
-#endif
+    // Select which device to use
+    cudaSetDevice(device); // Ignore errors
+    cudaError_t status = cudaGetDevice(&gpu->device);
+    RTERROR(status, "Error getting CUDA device")
 
     // Determine kernel call configuration
     cudaDeviceProp deviceProp;

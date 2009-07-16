@@ -34,14 +34,16 @@
 
 #include "Stream.h"
 #include <map>
+#include <string>
 #include <vector>
 #include "openmm/internal/windowsExport.h"
 
 namespace OpenMM {
 
+class Context;
+class ContextImpl;
 class Kernel;
 class KernelFactory;
-class ContextImpl;
 class StreamFactory;
 
 /**
@@ -80,6 +82,42 @@ public:
      * is permitted to implement double precision streams internally as single precision.
      */
     virtual bool supportsDoublePrecision() const = 0;
+    /**
+     * Get the names of all Platform-specific properties this Platform supports.
+     */
+    const std::vector<std::string>& getPropertyNames();
+    /**
+     * Get the value of a Platform-specific property for a Context.
+     *
+     * @param context     the Context for which to get the property
+     * @param property    the name of the property to get
+     * @return the value of the property
+     */
+    virtual const std::string& getPropertyValue(const Context& context, const std::string& property) const;
+    /**
+     * Set the value of a Platform-specific property for a Context.
+     *
+     * @param context     the Context for which to set the property
+     * @param property    the name of the property to set
+     * @param value       the value to set for the property
+     */
+    virtual void setPropertyValue(Context& context, const std::string& property, const std::string& value) const;
+    /**
+     * Get the default value of a Platform-specific property.  This is the value that will be used for
+     * newly created Contexts.
+     *
+     * @param property    the name of the property to get
+     * @return the default value of the property
+     */
+    const std::string& getPropertyDefaultValue(const std::string& property) const;
+    /**
+     * Set the default value of a Platform-specific property.  This is the value that will be used for
+     * newly created Contexts.
+     *
+     * @param property    the name of the property to set
+     * @param value       the value to set for the property
+     */
+    void setPropertyDefaultValue(const std::string& property, const std::string& value);
     /**
      * Get the default StreamFactory for this Platform.  It will be used to create Streams whenever a
      * different StreamFactory has not been registered for the requested stream name.
@@ -199,6 +237,16 @@ public:
      * @return the path to the default plugin directory
      */
     static const std::string& getDefaultPluginsDirectory();
+protected:
+    /**
+     * Get the ContextImpl for a Context.
+     */
+    ContextImpl& getContextImpl(Context& context) const;
+    /**
+     * Get the ContextImpl for a Context.
+     */
+    const ContextImpl& getContextImpl(const Context& context) const;
+    std::vector<std::string> platformProperties;
 private:
 
 // Retarded visual studio compiler complains about being unable to 
@@ -211,6 +259,7 @@ private:
 
     std::map<std::string, KernelFactory*> kernelFactories;
     std::map<std::string, StreamFactory*> streamFactories;
+    std::map<std::string, std::string> defaultProperties;
     static std::vector<Platform*>& getPlatforms();
 
 #if defined(_MSC_VER)

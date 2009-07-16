@@ -52,18 +52,25 @@ public:
         return 100;
     }
     bool supportsDoublePrecision() const;
+    const std::string& getPropertyValue(const Context& context, const std::string& property) const;
+    void setPropertyValue(Context& context, const std::string& property, const std::string& value) const;
     const StreamFactory& getDefaultStreamFactory() const;
     void contextCreated(ContextImpl& context) const;
     void contextDestroyed(ContextImpl& context) const;
+    /**
+     * This is the name of the parameter for selecting which CUDA device to use.
+     */
+    static const std::string& CudaDevice() {
+        static const std::string key = "CudaDevice";
+        return key;
+    }
 private:
     CudaStreamFactory defaultStreamFactory;
 };
 
 class CudaPlatform::PlatformData {
 public:
-    PlatformData(_gpuContext* gpu) : gpu(gpu), removeCM(false), nonbondedMethod(0), hasBonds(false), hasAngles(false),
-            hasPeriodicTorsions(false), hasRB(false), hasNonbonded(false), primaryKernel(NULL), stepCount(0), computeForceCount(0), time(0.0) {
-    }
+    PlatformData(_gpuContext* gpu);
     _gpuContext* gpu;
     KernelImpl* primaryKernel;
     bool removeCM;
@@ -72,6 +79,7 @@ public:
     int cmMotionFrequency;
     int stepCount, computeForceCount;
     double time;
+    std::map<std::string, std::string> propertyValues;
 };
 
 } // namespace OpenMM
