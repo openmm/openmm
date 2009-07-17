@@ -493,7 +493,7 @@ void CudaIntegrateLangevinStepKernel::execute(ContextImpl& context, const Langev
         // Initialize the GPU parameters.
         
         double tau = (friction == 0.0 ? 0.0 : 1.0/friction);
-        gpuSetIntegrationParameters(gpu, (float) tau, (float) stepSize, (float) temperature);
+        gpuSetLangevinIntegrationParameters(gpu, (float) tau, (float) stepSize, (float) temperature, 0.0f);
         gpuSetConstants(gpu);
         kGenerateRandoms(gpu);
         prevTemp = temperature;
@@ -582,6 +582,53 @@ void CudaIntegrateVariableVerletStepKernel::execute(ContextImpl& context, const 
         if (data.stepCount%data.cmMotionFrequency == 0)
             gpu->bCalculateCM = true;
     kVerletUpdatePart2(gpu);
+    gpu->psStepSize->Download();
+    data.time += (*gpu->psStepSize)[0].y;
+    if ((*gpu->psStepSize)[0].y == maxStepSize)
+        data.time = maxTime; // Avoid round-off error
+    data.stepCount++;
+}
+
+CudaIntegrateVariableLangevinStepKernel::~CudaIntegrateVariableLangevinStepKernel() {
+}
+
+void CudaIntegrateVariableLangevinStepKernel::initialize(const System& system, const VariableLangevinIntegrator& integrator) {
+    initializeIntegration(system, data, integrator);
+    _gpuContext* gpu = data.gpu;
+    gpu->seed = (unsigned long) integrator.getRandomNumberSeed();
+    gpuInitializeRandoms(gpu);
+    prevErrorTol = -1.0;
+}
+
+void CudaIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, const VariableLangevinIntegrator& integrator, double maxTime) {
+    _gpuContext* gpu = data.gpu;
+    double temperature = integrator.getTemperature();
+    double friction = integrator.getFriction();
+    double errorTol = integrator.getErrorTolerance();
+    if (temperature != prevTemp || friction != prevFriction || errorTol != prevErrorTol) {
+        // Initialize the GPU parameters.
+
+        double tau = (friction == 0.0 ? 0.0 : 1.0/friction);
+        gpuSetLangevinIntegrationParameters(gpu, (float) tau, 0.0f, (float) temperature, errorTol);
+        gpuSetConstants(gpu);
+        kGenerateRandoms(gpu);
+        prevTemp = temperature;
+        prevFriction = friction;
+        prevErrorTol = errorTol;
+    }
+    float maxStepSize = (float)(maxTime-data.time);
+    kSelectLangevinStepSize(gpu, maxStepSize);
+    kLangevinUpdatePart1(gpu);
+    kApplyFirstShake(gpu);
+    kApplyFirstSettle(gpu);
+    kApplyFirstCCMA(gpu);
+    if (data.removeCM)
+        if (data.stepCount%data.cmMotionFrequency == 0)
+            gpu->bCalculateCM = true;
+    kLangevinUpdatePart2(gpu);
+    kApplySecondShake(gpu);
+    kApplySecondSettle(gpu);
+    kApplySecondCCMA(gpu);
     gpu->psStepSize->Download();
     data.time += (*gpu->psStepSize)[0].y;
     if ((*gpu->psStepSize)[0].y == maxStepSize)

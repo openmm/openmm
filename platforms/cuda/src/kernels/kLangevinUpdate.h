@@ -37,6 +37,10 @@ __global__ void kLangevinUpdatePart1CM_kernel()
 __global__ void kLangevinUpdatePart1_kernel()
 #endif
 {
+    __shared__ float params[MaxParams];
+    if (threadIdx.x < MaxParams)
+        params[threadIdx.x] = cSim.pLangevinParameters[threadIdx.x];
+    __syncthreads();
     unsigned int pos    = threadIdx.x + blockIdx.x * blockDim.x;
     unsigned int rpos   = cSim.pRandomPosition[blockIdx.x];
 #ifdef REMOVE_CM
@@ -87,36 +91,36 @@ __global__ void kLangevinUpdatePart1_kernel()
 
         float3 Vmh;
         float sqrtInvMass       = sqrt(velocity.w);
-        Vmh.x                   = xVector.x * cSim.DOverTauC + sqrtInvMass * random4a.x;
-        Vmh.y                   = xVector.y * cSim.DOverTauC + sqrtInvMass * random4a.y;
-        Vmh.z                   = xVector.z * cSim.DOverTauC + sqrtInvMass * random4a.z;
+        Vmh.x                   = xVector.x * params[DOverTauC] + sqrtInvMass * params[Yv] * random4a.x;
+        Vmh.y                   = xVector.y * params[DOverTauC] + sqrtInvMass * params[Yv] * random4a.y;
+        Vmh.z                   = xVector.z * params[DOverTauC] + sqrtInvMass * params[Yv] * random4a.z;
         float4 vVector;
-        vVector.x               = sqrtInvMass * random4a.w;
-        vVector.y               = sqrtInvMass * random2a.x;
-        vVector.z               = sqrtInvMass * random2a.y;
+        vVector.x               = sqrtInvMass * params[V] * random4a.w;
+        vVector.y               = sqrtInvMass * params[V] * random2a.x;
+        vVector.z               = sqrtInvMass * params[V] * random2a.y;
         vVector.w               = 0.0f;
         cSim.pvVector4[pos]     = vVector;
-        velocity.x              = velocity.x * cSim.EM +
-                                  velocity.w * force.x * cSim.TauOneMinusEM +
+        velocity.x              = velocity.x * params[EM_V] +
+                                  velocity.w * force.x * params[TauOneMinusEM_V] +
                                   vVector.x -
-                                  cSim.EM * Vmh.x;
-        velocity.y              = velocity.y * cSim.EM +
-                                  velocity.w * force.y * cSim.TauOneMinusEM +
+                                  params[EM] * Vmh.x;
+        velocity.y              = velocity.y * params[EM_V] +
+                                  velocity.w * force.y * params[TauOneMinusEM_V] +
                                   vVector.y -
-                                  cSim.EM * Vmh.y;
-        velocity.z              = velocity.z * cSim.EM +
-                                  velocity.w * force.z * cSim.TauOneMinusEM +
+                                  params[EM] * Vmh.y;
+        velocity.z              = velocity.z * params[EM_V] +
+                                  velocity.w * force.z * params[TauOneMinusEM_V] +
                                   vVector.z -
-                                  cSim.EM * Vmh.z;
+                                  params[EM] * Vmh.z;
 #ifdef REMOVE_CM
         velocity.x             -= sCM[0].x;
         velocity.y             -= sCM[0].y;
         velocity.z             -= sCM[0].z;
 #endif
         cSim.pOldPosq[pos]      = apos;
-        apos.x                  = velocity.x * cSim.fix1;
-        apos.y                  = velocity.y * cSim.fix1;
-        apos.z                  = velocity.z * cSim.fix1;
+        apos.x                  = velocity.x * params[Fix1];
+        apos.y                  = velocity.y * params[Fix1];
+        apos.z                  = velocity.z * params[Fix1];
         cSim.pPosqP[pos]        = apos;
         cSim.pVelm4[pos]        = velocity;
         pos                    += blockDim.x * gridDim.x;
@@ -129,6 +133,10 @@ __global__ void kLangevinUpdatePart2CM_kernel()
 __global__ void kLangevinUpdatePart2_kernel()
 #endif
 {
+    __shared__ float params[MaxParams];
+    if (threadIdx.x < MaxParams)
+        params[threadIdx.x] = cSim.pLangevinParameters[threadIdx.x];
+    __syncthreads();
     unsigned int pos            = threadIdx.x + blockIdx.x * blockDim.x;
     unsigned int rpos           = cSim.pRandomPosition[blockIdx.x];
 #ifdef REMOVE_CM
@@ -147,9 +155,9 @@ __global__ void kLangevinUpdatePart2_kernel()
         float2 random2b         = cSim.pRandom2b[rpos + pos];
         float3 Xmh;
         float sqrtInvMass       = sqrt(velocity.w);
-        velocity.x              = xPrime.x * cSim.oneOverFix1;
-        velocity.y              = xPrime.y * cSim.oneOverFix1;
-        velocity.z              = xPrime.z * cSim.oneOverFix1;
+        velocity.x              = xPrime.x * params[OneOverFix1];
+        velocity.y              = xPrime.y * params[OneOverFix1];
+        velocity.z              = xPrime.z * params[OneOverFix1];
 #ifdef REMOVE_CM
         float mass              = 1.0f / velocity.w;
         CM.x                   += mass * velocity.x;
@@ -157,15 +165,15 @@ __global__ void kLangevinUpdatePart2_kernel()
         CM.z                   += mass * velocity.z;
 #endif
 
-        Xmh.x                   = vVector.x * cSim.TauDOverEMMinusOne +
-                                  sqrtInvMass * random4b.x;
-        Xmh.y                   = vVector.y * cSim.TauDOverEMMinusOne +
-                                  sqrtInvMass * random4b.y;
-        Xmh.z                   = vVector.z * cSim.TauDOverEMMinusOne +
-                                  sqrtInvMass * random4b.z;
-        xVector.x               = sqrtInvMass * random4b.w;
-        xVector.y               = sqrtInvMass * random2b.x;
-        xVector.z               = sqrtInvMass * random2b.y;
+        Xmh.x                   = vVector.x * params[TauDOverEMMinusOne] +
+                                  sqrtInvMass * params[Yx] * random4b.x;
+        Xmh.y                   = vVector.y * params[TauDOverEMMinusOne] +
+                                  sqrtInvMass * params[Yx] * random4b.y;
+        Xmh.z                   = vVector.z * params[TauDOverEMMinusOne] +
+                                  sqrtInvMass * params[Yx] * random4b.z;
+        xVector.x               = sqrtInvMass * params[X] * random4b.w;
+        xVector.y               = sqrtInvMass * params[X] * random2b.x;
+        xVector.z               = sqrtInvMass * params[X] * random2b.y;
         xPrime.x               += xVector.x - Xmh.x;
         xPrime.y               += xVector.y - Xmh.y;
         xPrime.z               += xVector.z - Xmh.z;

@@ -362,6 +362,8 @@ int ReferenceVariableStochasticDynamics::updatePart1( int numberOfAtoms, RealOpe
    const RealOpenMM*  fixedParameters = getFixedParameters();
    RealOpenMM   tau                   = getTau();
    RealOpenMM   fix1                  = tau*(fixedParameters[EPH] - fixedParameters[EMH]);
+   if (fix1 == zero)
+       fix1 = getDeltaT();
 
    for( int ii = 0; ii < numberOfAtoms; ii++ ){
 
@@ -412,6 +414,7 @@ int ReferenceVariableStochasticDynamics::updatePart2( int numberOfAtoms, RealOpe
 
    static const char* methodName  = "\nReferenceVariableStochasticDynamics::updatePart2";
 
+   static const RealOpenMM zero   =  0.0;
    static const RealOpenMM one    =  1.0;
    static int debug               = 0;
 
@@ -422,6 +425,8 @@ int ReferenceVariableStochasticDynamics::updatePart2( int numberOfAtoms, RealOpe
    const RealOpenMM*  fixedParameters = getFixedParameters();
    RealOpenMM   tau                   = getTau();
    RealOpenMM   fix1                  = tau*(fixedParameters[EPH] - fixedParameters[EMH]);
+   if (fix1 == zero)
+       fix1 = getDeltaT();
                 fix1                  = one/fix1;
 
    for( int ii = 0; ii < numberOfAtoms; ii++ ){

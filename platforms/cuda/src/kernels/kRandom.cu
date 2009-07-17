@@ -144,27 +144,15 @@ __global__ void kGenerateRandoms_kernel()
         }
         
         // Output final randoms
-        float c1, c2;
-        if (pos < cSim.totalRandoms)
-        {
-            c1                  = cSim.Yv;
-            c2                  = cSim.V;
-        }
-        else
-        {
-            c1                  = cSim.Yx;
-            c2                  = cSim.X;
-        }
-        random4.x               = c1 * sRand[threadIdx.x].x;
-        random4.y               = c1 * sRand[threadIdx.x].y;
-        random4.z               = c1 * sRand[threadIdx.x].z;
-        random4.w               = c2 * sRand[threadIdx.x + blockDim.x].x;
+        random4.x               = sRand[threadIdx.x].x;
+        random4.y               = sRand[threadIdx.x].y;
+        random4.z               = sRand[threadIdx.x].z;
+        random4.w               = sRand[threadIdx.x + blockDim.x].x;
         cSim.pRandom4a[pos]     = random4;
-        random2.x               = c2 * sRand[threadIdx.x + blockDim.x].y;
-        random2.y               = c2 * sRand[threadIdx.x + blockDim.x].z;
+        random2.x               = sRand[threadIdx.x + blockDim.x].y;
+        random2.y               = sRand[threadIdx.x + blockDim.x].z;
         cSim.pRandom2a[pos]     = random2;
         
-   
         pos += increment;
     }
     

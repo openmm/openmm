@@ -402,6 +402,34 @@ private:
 };
 
 /**
+ * This kernel is invoked by VariableLangevinIntegrator to take one time step.
+ */
+class CudaIntegrateVariableLangevinStepKernel : public IntegrateVariableLangevinStepKernel {
+public:
+    CudaIntegrateVariableLangevinStepKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data) : IntegrateVariableLangevinStepKernel(name, platform), data(data) {
+    }
+    ~CudaIntegrateVariableLangevinStepKernel();
+    /**
+     * Initialize the kernel, setting up the particle masses.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param integrator the VariableLangevinIntegrator this kernel will be used for
+     */
+    void initialize(const System& system, const VariableLangevinIntegrator& integrator);
+    /**
+     * Execute the kernel.
+     *
+     * @param context    the context in which to execute this kernel
+     * @param integrator the VariableLangevinIntegrator this kernel is being used for
+     * @param maxTime    the maximum time beyond which the simulation should not be advanced
+     */
+    void execute(ContextImpl& context, const VariableLangevinIntegrator& integrator, double maxTime);
+private:
+    CudaPlatform::PlatformData& data;
+    double prevTemp, prevFriction, prevErrorTol;
+};
+
+/**
  * This kernel is invoked by AndersenThermostat at the start of each time step to adjust the particle velocities.
  */
 class CudaApplyAndersenThermostatKernel : public ApplyAndersenThermostatKernel {

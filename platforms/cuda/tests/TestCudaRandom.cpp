@@ -49,10 +49,6 @@ static const float BOLTZ                    =    (RGAS / KILO);            // (k
 
 void testGaussian() {
     _gpuContext* gpu = (_gpuContext*) gpuInit(5000, 0);
-    gpu->sim.Yv = 1.0;
-    gpu->sim.Yx = 1.0;
-    gpu->sim.V = 1.0;
-    gpu->sim.X = 1.0;
     gpuSetConstants(gpu);
     kGenerateRandoms(gpu);
     const int numValues = 4*gpu->psRandom4->_length;

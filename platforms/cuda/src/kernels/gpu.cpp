@@ -1004,6 +1004,8 @@ int gpuAllocateInitialBuffers(gpuContext gpu)
     gpu->sim.pStepSize                  = gpu->psStepSize->_pDevStream[0];
     (*gpu->psStepSize)[0] = make_float2(0.0f, 0.0f);
     gpu->psStepSize->Upload();
+    gpu->psLangevinParameters           = new CUDAStream<float>(11, 1, "LangevinParameters");
+    gpu->sim.pLangevinParameters        = gpu->psLangevinParameters->_pDevStream[0];
     gpu->pAtomSymbol                    = new unsigned char[gpu->natoms];
     gpu->psAtomIndex                    = new CUDAStream<int>(gpu->sim.paddedNumberOfAtoms, 1, "AtomIndex");
     gpu->sim.pAtomIndex                 = gpu->psAtomIndex->_pDevStream[0];
@@ -1196,8 +1198,8 @@ void* gpuInit(int numAtoms, unsigned int device)
     gpu->sim.update_threads_per_block               = (gpu->natoms + gpu->sim.blocks - 1) / gpu->sim.blocks;
     if (gpu->sim.update_threads_per_block > gpu->sim.max_update_threads_per_block)
         gpu->sim.update_threads_per_block = gpu->sim.max_update_threads_per_block;
-    if (gpu->sim.update_threads_per_block < 1)
-            gpu->sim.update_threads_per_block = 1;
+    if (gpu->sim.update_threads_per_block < gpu->psLangevinParameters->_length)
+            gpu->sim.update_threads_per_block = gpu->psLangevinParameters->_length;
     gpu->sim.bf_reduce_threads_per_block = gpu->sim.update_threads_per_block;
     gpu->sim.bsf_reduce_threads_per_block = (gpu->sim.stride4 + gpu->natoms + gpu->sim.blocks - 1) / gpu->sim.blocks;
     gpu->sim.bsf_reduce_threads_per_block = ((gpu->sim.bsf_reduce_threads_per_block + (GRID - 1)) / GRID) * GRID;
@@ -1220,7 +1222,7 @@ void* gpuInit(int numAtoms, unsigned int device)
     gpu->sim.alphaOBC               = alphaOBC;
     gpu->sim.betaOBC                = betaOBC;
     gpu->sim.gammaOBC               = gammaOBC;
-    gpuSetIntegrationParameters(gpu, 1.0f, 2.0e-3f, 300.0f);
+    gpuSetLangevinIntegrationParameters(gpu, 1.0f, 2.0e-3f, 300.0f, 0.0f);
     gpu->sim.maxShakeIterations     = 15;
     gpu->sim.shakeTolerance         = 1.0e-04f * 2.0f;
     gpu->sim.InvMassJ               = 9.920635e-001f;
@@ -1288,28 +1290,30 @@ void* gpuInit(int numAtoms, unsigned int device)
 }
 
 extern "C"
-void gpuSetIntegrationParameters(gpuContext gpu, float tau, float deltaT, float temperature) {
+void gpuSetLangevinIntegrationParameters(gpuContext gpu, float tau, float deltaT, float temperature, float errorTol) {
     gpu->sim.deltaT                 = deltaT;
     gpu->sim.oneOverDeltaT          = 1.0f/deltaT;
+    gpu->sim.errorTol               = errorTol;
     gpu->sim.tau                    = tau;
-    gpu->sim.GDT                    = gpu->sim.deltaT / gpu->sim.tau;
-    gpu->sim.EPH                    = exp(0.5f * gpu->sim.GDT);
-    gpu->sim.EMH                    = exp(-0.5f * gpu->sim.GDT);
-    gpu->sim.EP                     = exp(gpu->sim.GDT);
-    gpu->sim.EM                     = exp(-gpu->sim.GDT);
-    gpu->sim.OneMinusEM             = 1.0f - gpu->sim.EM;
-    gpu->sim.TauOneMinusEM          = gpu->sim.tau * gpu->sim.OneMinusEM;
-    if (gpu->sim.GDT >= 0.1f)
+    gpu->sim.T                      = temperature;
+    gpu->sim.kT                     = BOLTZ * gpu->sim.T;
+    float GDT                       = gpu->sim.deltaT / gpu->sim.tau;
+    float EPH                       = exp(0.5f * GDT);
+    float EMH                       = exp(-0.5f * GDT);
+    float EP                        = exp(GDT);
+    float EM                        = exp(-GDT);
+    float B, C, D;
+    if (GDT >= 0.1f)
     {
-        float term1                 = gpu->sim.EPH - 1.0f;
+        float term1 = EPH - 1.0f;
         term1                      *= term1;
-        gpu->sim.B                  = gpu->sim.GDT * (gpu->sim.EP - 1.0f) - 4.0f * term1;
-        gpu->sim.C                  = gpu->sim.GDT - 3.0f + 4.0f * gpu->sim.EMH - gpu->sim.EM;
-        gpu->sim.D                  = 2.0f - gpu->sim.EPH - gpu->sim.EMH;
+        B                           = GDT * (EP - 1.0f) - 4.0f * term1;
+        C                           = GDT - 3.0f + 4.0f * EMH - EM;
+        D                           = 2.0f - EPH - EMH;
     }
     else
     {
-        float term1                 = 0.5f * gpu->sim.GDT;
+        float term1                 = 0.5f * GDT;
         float term2                 = term1 * term1;
         float term4                 = term2 * term2;
 
@@ -1321,20 +1325,33 @@ void gpuSetIntegrationParameters(gpuContext gpu, float tau, float deltaT, float 
         float o31_1260              = 31.0f / 1260.0f;
         float o_360                 = 1.0f / 360.0f;
 
-        gpu->sim.B                  = term4 * (third + term1 * (third + term1 * (o17_90 + term1 * o7_9)));
-        gpu->sim.C                  = term2 * term1 * (2.0f * third + term1 * (-0.5f + term1 * (o7_30 + term1 * (-o1_12 + term1 * o31_1260))));
-        gpu->sim.D                  = term2 * (-1.0f + term2 * (-o1_12 - term2 * o_360));   
+        B                           = term4 * (third + term1 * (third + term1 * (o17_90 + term1 * o7_9)));
+        C                           = term2 * term1 * (2.0f * third + term1 * (-0.5f + term1 * (o7_30 + term1 * (-o1_12 + term1 * o31_1260))));
+        D                           = term2 * (-1.0f + term2 * (-o1_12 - term2 * o_360));
     }
-    gpu->sim.TauDOverEMMinusOne     = gpu->sim.tau * gpu->sim.D / (gpu->sim.EM - 1.0f);
-    gpu->sim.DOverTauC              = gpu->sim.D / (gpu->sim.tau * gpu->sim.C);
-    gpu->sim.fix1                   = gpu->sim.tau * (gpu->sim.EPH - gpu->sim.EMH);
-    gpu->sim.oneOverFix1            = 1.0f / (gpu->sim.tau * (gpu->sim.EPH - gpu->sim.EMH));
-    gpu->sim.T                      = temperature;
-    gpu->sim.kT                     = BOLTZ * gpu->sim.T;
-    gpu->sim.V                      = sqrt(gpu->sim.kT * (1.0f - gpu->sim.EM));
-    gpu->sim.X                      = gpu->sim.tau * sqrt(gpu->sim.kT * gpu->sim.C);
-    gpu->sim.Yv                     = sqrt(gpu->sim.kT * gpu->sim.B / gpu->sim.C);
-    gpu->sim.Yx                     = gpu->sim.tau * sqrt(gpu->sim.kT * gpu->sim.B / (1.0f - gpu->sim.EM));
+    float DOverTauC                 = D / (gpu->sim.tau * C);
+    float TauOneMinusEM             = gpu->sim.tau * (1.0f-EM);
+    float TauDOverEMMinusOne        = gpu->sim.tau * D / (EM - 1.0f);
+    float fix1                      = gpu->sim.tau * (EPH - EMH);
+    if (fix1 == 0.0f)
+        fix1 = deltaT;
+    float oneOverFix1               = 1.0f / fix1;
+    float V                         = sqrt(gpu->sim.kT * (1.0f - EM));
+    float X                         = gpu->sim.tau * sqrt(gpu->sim.kT * C);
+    float Yv                        = sqrt(gpu->sim.kT * B / C);
+    float Yx                        = gpu->sim.tau * sqrt(gpu->sim.kT * B / (1.0f - EM));
+    (*gpu->psLangevinParameters)[0] = EM;
+    (*gpu->psLangevinParameters)[1] = EM;
+    (*gpu->psLangevinParameters)[2] = DOverTauC;
+    (*gpu->psLangevinParameters)[3] = TauOneMinusEM;
+    (*gpu->psLangevinParameters)[4] = TauDOverEMMinusOne;
+    (*gpu->psLangevinParameters)[5] = V;
+    (*gpu->psLangevinParameters)[6] = X;
+    (*gpu->psLangevinParameters)[7] = Yv;
+    (*gpu->psLangevinParameters)[8] = Yx;
+    (*gpu->psLangevinParameters)[9] = fix1;
+    (*gpu->psLangevinParameters)[10] = oneOverFix1;
+    gpu->psLangevinParameters->Upload();
     gpu->psStepSize->Download();
     (*gpu->psStepSize)[0].y = deltaT;
     gpu->psStepSize->Upload();
@@ -1355,10 +1372,10 @@ void gpuSetBrownianIntegrationParameters(gpuContext gpu, float tau, float deltaT
     gpu->sim.deltaT                 = deltaT;
     gpu->sim.oneOverDeltaT          = 1.0f/deltaT;
     gpu->sim.tau                    = tau;
-    gpu->sim.GDT                    = gpu->sim.deltaT * gpu->sim.tau;
+    gpu->sim.tauDeltaT              = gpu->sim.deltaT * gpu->sim.tau;
     gpu->sim.T                      = temperature;
     gpu->sim.kT                     = BOLTZ * gpu->sim.T;
-    gpu->sim.Yv = gpu->sim.Yx       = sqrt(2.0f*gpu->sim.kT*deltaT*tau);
+    gpu->sim.noiseAmplitude         = sqrt(2.0f*gpu->sim.kT*deltaT*tau);
     gpu->psStepSize->Download();
     (*gpu->psStepSize)[0].y = deltaT;
     gpu->psStepSize->Upload();
@@ -1369,8 +1386,6 @@ void gpuSetAndersenThermostatParameters(gpuContext gpu, float temperature, float
     gpu->sim.T                      = temperature;
     gpu->sim.kT                     = BOLTZ * gpu->sim.T;
     gpu->sim.collisionFrequency     = collisionFrequency;
-    gpu->sim.Yv = gpu->sim.Yx       = 1.0f;
-    gpu->sim.V = gpu->sim.X         = 1.0f;
 }
 
 extern "C"
@@ -1421,6 +1436,8 @@ void gpuShutDown(gpuContext gpu)
     delete gpu->psInteractingWorkUnit;
     delete gpu->psInteractionFlag;
     delete gpu->psInteractionCount;
+    delete gpu->psStepSize;
+    delete gpu->psLangevinParameters;
     delete gpu->psRandom4;
     delete gpu->psRandom2;
     delete gpu->psRandomPosition;    

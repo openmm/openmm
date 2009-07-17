@@ -269,6 +269,7 @@ struct cudaGmxSimulation {
     unsigned int*   pInteractingWorkUnit;           // Pointer to work units that have interactions
     unsigned int*   pInteractionFlag;               // Flags for which work units have interactions
     float2*         pStepSize;                      // The size of the previous and current time steps
+    float*          pLangevinParameters;            // Parameters used for Langevin integration
     float           errorTol;                       // Error tolerance for selecting the step size
     size_t*         pInteractionCount;              // A count of the number of work units which have interactions
     unsigned int    nonbond_workBlock;              // Number of work units running simultaneously per block in CDLJ and Born Force Part 1
@@ -315,27 +316,11 @@ struct cudaGmxSimulation {
     float           gammaOBC;                       // OBC gamma factor
     float           deltaT;                         // Molecular dynamics deltaT constant
     float           oneOverDeltaT;                  // 1/deltaT
-    float           B;                              // Molecular dynamics B constant
-    float           C;                              // Molecular dynamics C constant
-    float           D;                              // Molecular dynamics D constant
-    float           EPH;                            // Molecular dynamics EPH constant
-    float           EMH;                            // Molecular dynamics EMH constant
-    float           EM;                             // Molecular dynamics EM constant
-    float           EP;                             // Molecular dynamics EP constant
-    float           GDT;                            // Molecular dynamics GDT constant
-    float           OneMinusEM;                     // Molecular dynamics OneMinusEM constant
-    float           TauOneMinusEM;                  // Molecular dynamics TauOneMinusEM constant
-    float           TauDOverEMMinusOne;             // Molecular dynamics TauDOverEMMinusOne constant
-    float           T;                              // Molecular dynamics T constant
+    float           T;                              // Temperature
     float           kT;                             // Boltzmann's constant times T
-    float           V;                              // Molecular dynamics V constant
-    float           X;                              // Molecular dynamics X constant
-    float           Yv;                             // Molecular dynamics Yv constant
-    float           Yx;                             // Molecular dynamics Yx constant
-    float           tau;                            // Molecular dynamics tau constant
-    float           fix1;                           // Molecular dynamics fix1 constant
-    float           oneOverFix1;                    // Molecular dynamics reciprocal of fix1 constant
-    float           DOverTauC;                      // Molecular dynamics DOverTauC constant
+    float           noiseAmplitude;                 // The magnitude of the noise for Brownian dynamics
+    float           tau;                            // Inverse friction for Langevin or Brownian dynamics
+    float           tauDeltaT;                      // tau*deltaT
     float           collisionFrequency;             // Collision frequency for Andersen thermostat
     float2*         pObcData;                       // Pointer to fixed Born data
     float2*         pAttr;                          // Pointer to additional atom attributes (sig, eps)
