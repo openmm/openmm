@@ -31,8 +31,7 @@
 #include "../SimTKUtilities/SimTKOpenMMUtilities.h"
 #include "ReferenceLJCoulombIxn.h"
 #include "ReferenceForce.h"
-
-#include "pme.h"
+#include "PME.h"
 
 // In case we're using some primitive version of Visual Studio this will
 // make sure that erf() and erfc() are defined.
@@ -85,13 +84,13 @@ ReferenceLJCoulombIxn::~ReferenceLJCoulombIxn( ){
      --------------------------------------------------------------------------------------- */
 
   int ReferenceLJCoulombIxn::setUseCutoff( RealOpenMM distance, const OpenMM::NeighborList& neighbors, RealOpenMM solventDielectric ) {
-    
+
     cutoff = true;
     cutoffDistance = distance;
     neighborList = &neighbors;
     krf = pow(cutoffDistance, -3.0f)*(solventDielectric-1.0f)/(2.0f*solventDielectric+1.0f);
     crf = (1.0f/cutoffDistance)*(3.0f*solventDielectric)/(2.0f*solventDielectric+1.0f);
-            
+
     return ReferenceForce::DefaultReturn;
   }
 
@@ -193,9 +192,9 @@ int ReferenceLJCoulombIxn::getDerivedParameters( RealOpenMM c6, RealOpenMM c12, 
       parameters[SigIndex] = half;
 
    } else {
- 
+
       parameters[EpsIndex]    = c6*SQRT( one/c12 );
-   
+
       parameters[SigIndex]    = POW( (c12/c6), oneSixth );
       parameters[SigIndex]   *= half;
    }
@@ -222,9 +221,9 @@ int ReferenceLJCoulombIxn::getDerivedParameters( RealOpenMM c6, RealOpenMM c12, 
    @param totalEnergy      total energy
 
    @return ReferenceForce::DefaultReturn
-      
+
    --------------------------------------------------------------------------------------- */
- 
+
 int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** atomCoordinates,
                                              RealOpenMM** atomParameters, int** exclusions,
                                              RealOpenMM* fixedParameters, RealOpenMM** forces,
@@ -233,40 +232,80 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
     #include "../SimTKUtilities/RealTypeSimTk.h"
     typedef std::complex<RealOpenMM> d_complex;
 
-    int kmax = std::max(numRx, std::max(numRy,numRz));
-
-    RealOpenMM  factorEwald = -1 / (4*alphaEwald*alphaEwald);
-
-    RealOpenMM SQRT_PI = sqrt(PI);
-    RealOpenMM TWO_PI = 2.0 * PI;
     static const RealOpenMM epsilon     =  1.0;
     static const RealOpenMM one         =  1.0;
+    static const RealOpenMM six         =  6.0;
+    static const RealOpenMM twelve      = 12.0;
 
-    RealOpenMM recipCoeff = (RealOpenMM)(4*PI/(periodicBoxSize[0] * periodicBoxSize[1] * periodicBoxSize[2]) /epsilon);
+    int kmax                            = std::max(numRx, std::max(numRy,numRz));
+    RealOpenMM  factorEwald             = -1 / (4*alphaEwald*alphaEwald);
+    RealOpenMM SQRT_PI                  = sqrt(PI);
+    RealOpenMM TWO_PI                   = 2.0 * PI;
+    RealOpenMM recipCoeff               = (RealOpenMM)(4*PI/(periodicBoxSize[0] * periodicBoxSize[1] * periodicBoxSize[2]) /epsilon);
 
-    RealOpenMM selfEwaldEnergy = 0.0;
-    RealOpenMM realSpaceEwaldEnergy = 0.0;
-    RealOpenMM recipEnergy = 0.0;
+    RealOpenMM selfEwaldEnergy          = 0.0;
+    RealOpenMM realSpaceEwaldEnergy     = 0.0;
+    RealOpenMM recipEnergy              = 0.0;
+    RealOpenMM vdwEnergy                = 0.0;
 
 // **************************************************************************************
 // SELF ENERGY
 // **************************************************************************************
 
     for( int atomID = 0; atomID < numberOfAtoms; atomID++ ){
-        selfEwaldEnergy = selfEwaldEnergy + atomParameters[atomID][QIndex]*atomParameters[atomID][QIndex];
+        selfEwaldEnergy = atomParameters[atomID][QIndex]*atomParameters[atomID][QIndex] * alphaEwald/SQRT_PI;
+
+        if( totalEnergy )
+              *totalEnergy -= selfEwaldEnergy;
+
+        if( energyByAtom ){
+           energyByAtom[atomID] -= selfEwaldEnergy;
+        }
     }
-       selfEwaldEnergy = selfEwaldEnergy * alphaEwald/SQRT_PI ;
 
 // **************************************************************************************
 // RECIPROCAL SPACE EWALD ENERGY AND FORCES
 // **************************************************************************************
 
-// setup reciprocal box
+    // PME
+
+  if (pme) {
+	pme_t          pmedata; /* abstract handle for PME data */
+	int            ngrid[3];
+	RealOpenMM virial[3][3];
+
+	/* PME grid dimensions.
+	 * We typically want to set this as the spacing rather than absolute dimensions, but
+	 * to be able to reproduce results from other programs (e.g. Gromacs) we need to be
+	 * able to set exact grid dimenisions occasionally.
+	 */
+	ngrid[0] = 16;
+	ngrid[1] = 16;
+	ngrid[2] = 16;
+
+	pme_init(&pmedata,alphaEwald,numberOfAtoms,ngrid,4,1);
+
+	pme_exec(pmedata,atomCoordinates,forces,atomParameters,periodicBoxSize,&recipEnergy,virial);
+
+	if( totalEnergy )
+       *totalEnergy += recipEnergy;
+
+    if( energyByAtom )
+        for(int n = 0; n < numberOfAtoms; n++)
+            energyByAtom[n] += recipEnergy;
+
+  }
+
+    // Ewald method
+
+  else if (ewald) {
+
+    // setup reciprocal box
 
            RealOpenMM recipBoxSize[3] = { TWO_PI / periodicBoxSize[0], TWO_PI / periodicBoxSize[1], TWO_PI / periodicBoxSize[2]};
 
 
-// setup K-vectors
+    // setup K-vectors
 
   #define EIR(x, y, z) eir[(x)*numberOfAtoms*3+(y)*3+z]
   vector<d_complex> eir(kmax*numberOfAtoms*3);
@@ -292,7 +331,8 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
         EIR(j, i, m) = EIR(j-1, i, m) * EIR(1, i, m);
   }
 
-// calculate reciprocal space energy and forces
+    // calculate reciprocal space energy and forces
+
 
     int lowry = 0;
     int lowrz = 1;
@@ -335,12 +375,9 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
             ss += tab_qxyz[n].imag();
           }
 
-
           RealOpenMM kz = rz * recipBoxSize[2];
           RealOpenMM k2 = kx * kx + ky * ky + kz * kz;
           RealOpenMM ak = exp(k2*factorEwald) / k2;
-
-          recipEnergy += ak * ( cs * cs + ss * ss);
 
           for(int n = 0; n < numberOfAtoms; n++) {
             RealOpenMM force = ak * (cs * tab_qxyz[n].imag() - ss * tab_qxyz[n].real());
@@ -348,217 +385,81 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
             forces[n][1] += 2 * recipCoeff * force * ky ;
             forces[n][2] += 2 * recipCoeff * force * kz ;
           }
+
+          recipEnergy = recipCoeff * ak * ( cs * cs + ss * ss);
+
+          if( totalEnergy )
+             *totalEnergy += recipEnergy;
+
+          if( energyByAtom )
+             for(int n = 0; n < numberOfAtoms; n++)
+               energyByAtom[n] += recipEnergy;
+
           lowrz = 1 - numRz;
         }
         lowry = 1 - numRy;
       }
     }
+  }
 
-  recipEnergy *= recipCoeff;
-
-
+  else {
+      std::stringstream message;
+      message << " Wrong method for Ewald summation, Aborting" << std::endl;
+      SimTKOpenMMLog::printError( message );
+  }
 
 // **************************************************************************************
 // SHORT-RANGE ENERGY AND FORCES
 // **************************************************************************************
 
+    for (int i = 0; i < (int) neighborList->size(); i++) {
+       OpenMM::AtomPair pair = (*neighborList)[i];
+       int ii = pair.first;
+       int jj = pair.second;
+
        RealOpenMM deltaR[2][ReferenceForce::LastDeltaRIndex];
-
-       for( int atomID1 = 0; atomID1 < numberOfAtoms; atomID1++ ){
-        for( int atomID2 = atomID1 + 1; atomID2 < numberOfAtoms; atomID2++ ){
-
-          ReferenceForce::getDeltaRPeriodic( atomCoordinates[atomID2], atomCoordinates[atomID1], periodicBoxSize, deltaR[0] );  
-          RealOpenMM r         = deltaR[0][ReferenceForce::RIndex];
-          RealOpenMM r2        = deltaR[0][ReferenceForce::R2Index];
-          RealOpenMM inverseR  = one/(deltaR[0][ReferenceForce::RIndex]);
-
-          realSpaceEwaldEnergy = 
-              (RealOpenMM)(realSpaceEwaldEnergy + atomParameters[atomID1][QIndex]*atomParameters[atomID2][QIndex]*inverseR*erfc(alphaEwald*r)); 
-        }
-       }
-
-       // allocate and initialize exclusion array
-
-       vector<int> exclusionIndices(numberOfAtoms);
-       for( int ii = 0; ii < numberOfAtoms; ii++ ){
-          exclusionIndices[ii] = -1;
-       }
-
-       for( int ii = 0; ii < numberOfAtoms; ii++ ){
-
-          // set exclusions
-
-          for( int jj = 1; jj <= exclusions[ii][0]; jj++ ){
-             exclusionIndices[exclusions[ii][jj]] = ii;
-          }
-
-          // loop over atom pairs
-
-          for( int jj = ii+1; jj < numberOfAtoms; jj++ ){
-
-             if( exclusionIndices[jj] != ii ){
-
-       ReferenceForce::getDeltaRPeriodic( atomCoordinates[jj], atomCoordinates[ii], periodicBoxSize, deltaR[0] );  
+       ReferenceForce::getDeltaRPeriodic( atomCoordinates[jj], atomCoordinates[ii], periodicBoxSize, deltaR[0] );
        RealOpenMM r         = deltaR[0][ReferenceForce::RIndex];
        RealOpenMM r2        = deltaR[0][ReferenceForce::R2Index];
        RealOpenMM inverseR  = one/(deltaR[0][ReferenceForce::RIndex]);
        RealOpenMM alphaR    = alphaEwald * r;
- 
-       realSpaceEwaldEnergy = 
-           (RealOpenMM)(realSpaceEwaldEnergy + atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*inverseR*erfc(alphaR)); 
-       RealOpenMM dEdR = atomParameters[ii][QIndex] * atomParameters[jj][QIndex] * inverseR * inverseR * inverseR;
-       dEdR = (RealOpenMM)(dEdR * (erfc(alphaR) + 2 * alphaR * exp ( - alphaR * alphaR) / SQRT_PI ));
- 
-                for( int kk = 0; kk < 3; kk++ ){
-                   RealOpenMM force  = dEdR*deltaR[0][kk];
-                   forces[ii][kk]   += force;
-                   forces[jj][kk]   -= force;
-                } 
-             }
-          }
+
+
+       RealOpenMM dEdR      = atomParameters[ii][QIndex] * atomParameters[jj][QIndex] * inverseR * inverseR * inverseR;
+                  dEdR      = (RealOpenMM)(dEdR * (erfc(alphaR) + 2 * alphaR * exp ( - alphaR * alphaR) / SQRT_PI ));
+
+       RealOpenMM sig       = atomParameters[ii][SigIndex] +  atomParameters[jj][SigIndex];
+       RealOpenMM sig2      = inverseR*sig;
+                  sig2     *= sig2;
+       RealOpenMM sig6      = sig2*sig2*sig2;
+       RealOpenMM eps       = atomParameters[ii][EpsIndex]*atomParameters[jj][EpsIndex];
+
+                  dEdR     += eps*( twelve*sig6 - six )*sig6;
+
+       // accumulate forces
+
+       for( int kk = 0; kk < 3; kk++ ){
+          RealOpenMM force  = dEdR*deltaR[0][kk];
+          forces[ii][kk]   += force;
+          forces[jj][kk]   -= force;
        }
 
-// ***********************************************************************
+       // accumulate energies
 
-        if( totalEnergy ) {
-              *totalEnergy += recipEnergy + realSpaceEwaldEnergy - selfEwaldEnergy;
+       realSpaceEwaldEnergy = atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*inverseR*erfc(alphaR);
+       vdwEnergy = eps*(sig6-one)*sig6;
+
+        if( totalEnergy )
+              *totalEnergy += realSpaceEwaldEnergy + vdwEnergy;
+
+        if( energyByAtom ){
+           energyByAtom[ii] += realSpaceEwaldEnergy + vdwEnergy;
+           energyByAtom[jj] += realSpaceEwaldEnergy + vdwEnergy;
         }
 
-
-   return ReferenceForce::DefaultReturn;
-}
-
-
-/**---------------------------------------------------------------------------------------
-
-   Calculate PME ixn
-
-   @param numberOfAtoms    number of atoms
-   @param atomCoordinates  atom coordinates
-   @param atomParameters   atom parameters                             atomParameters[atomIndex][paramterIndex]
-   @param exclusions       atom exclusion indices                      exclusions[atomIndex][atomToExcludeIndex]
-                           exclusions[atomIndex][0] = number of exclusions
-                           exclusions[atomIndex][1-no.] = atom indices of atoms to excluded from
-                           interacting w/ atom atomIndex
-   @param fixedParameters  non atom parameters (not currently used)
-   @param forces           force array (forces added)
-   @param energyByAtom     atom energy
-   @param totalEnergy      total energy
-
-   @return ReferenceForce::DefaultReturn
-      
-   --------------------------------------------------------------------------------------- */
- 
-int ReferenceLJCoulombIxn::calculatePMEIxn( int numberOfAtoms, RealOpenMM** atomCoordinates,
-                                             RealOpenMM** atomParameters, int** exclusions,
-                                             RealOpenMM* fixedParameters, RealOpenMM** forces,
-                                             RealOpenMM* energyByAtom, RealOpenMM* totalEnergy) const {
-
-
-
-    RealOpenMM SQRT_PI = sqrt(PI);
-    static const RealOpenMM one         =  1.0;
-
-    RealOpenMM selfEwaldEnergy = 0.0;
-    RealOpenMM realSpaceEwaldEnergy = 0.0;
-    RealOpenMM recipEnergy = 0.0;
-
-
-// **************************************************************************************
-// SELF ENERGY
-// **************************************************************************************
-
-    for( int atomID = 0; atomID < numberOfAtoms; atomID++ ){
-        selfEwaldEnergy = selfEwaldEnergy + atomParameters[atomID][QIndex]*atomParameters[atomID][QIndex];
     }
-       selfEwaldEnergy = selfEwaldEnergy * alphaEwald/SQRT_PI ;
-
-// **************************************************************************************
-// RECIPROCAL SPACE EWALD ENERGY AND FORCES
-// **************************************************************************************
-
-	pme_t          pmedata; /* abstract handle for PME data */
-	int            ngrid[3];
-	RealOpenMM virial[3][3];
-	
-	/* PME grid dimensions.
-	 * We typically want to set this as the spacing rather than absolute dimensions, but
-	 * to be able to reproduce results from other programs (e.g. Gromacs) we need to be
-	 * able to set exact grid dimenisions occasionally.
-	 */
-	ngrid[0] = 16;
-	ngrid[1] = 16;
-	ngrid[2] = 16;
-	
-	pme_init(&pmedata,alphaEwald,numberOfAtoms,ngrid,4,1);
-	
-	pme_exec(pmedata,atomCoordinates,forces,atomParameters,periodicBoxSize,&recipEnergy,virial);
-	
-// **************************************************************************************
-// SHORT-RANGE ENERGY AND FORCES
-// **************************************************************************************
-
-       RealOpenMM deltaR[2][ReferenceForce::LastDeltaRIndex];
-
-       for( int atomID1 = 0; atomID1 < numberOfAtoms; atomID1++ ){
-        for( int atomID2 = atomID1 + 1; atomID2 < numberOfAtoms; atomID2++ ){
-
-          ReferenceForce::getDeltaRPeriodic( atomCoordinates[atomID2], atomCoordinates[atomID1], periodicBoxSize, deltaR[0] );  
-          RealOpenMM r         = deltaR[0][ReferenceForce::RIndex];
-          RealOpenMM r2        = deltaR[0][ReferenceForce::R2Index];
-          RealOpenMM inverseR  = one/(deltaR[0][ReferenceForce::RIndex]);
-
-          realSpaceEwaldEnergy = 
-              (RealOpenMM)(realSpaceEwaldEnergy + atomParameters[atomID1][QIndex]*atomParameters[atomID2][QIndex]*inverseR*erfc(alphaEwald*r)); 
-        }
-       }
-
-       // allocate and initialize exclusion array
-
-       vector<int> exclusionIndices(numberOfAtoms);
-       for( int ii = 0; ii < numberOfAtoms; ii++ ){
-          exclusionIndices[ii] = -1;
-       }
-
-       for( int ii = 0; ii < numberOfAtoms; ii++ ){
-
-          // set exclusions
-
-          for( int jj = 1; jj <= exclusions[ii][0]; jj++ ){
-             exclusionIndices[exclusions[ii][jj]] = ii;
-          }
-
-          // loop over atom pairs
-
-          for( int jj = ii+1; jj < numberOfAtoms; jj++ ){
-
-             if( exclusionIndices[jj] != ii ){
-
-       ReferenceForce::getDeltaRPeriodic( atomCoordinates[jj], atomCoordinates[ii], periodicBoxSize, deltaR[0] );  
-       RealOpenMM r         = deltaR[0][ReferenceForce::RIndex];
-       RealOpenMM r2        = deltaR[0][ReferenceForce::R2Index];
-       RealOpenMM inverseR  = one/(deltaR[0][ReferenceForce::RIndex]);
-       RealOpenMM alphaR    = alphaEwald * r;
- 
-       realSpaceEwaldEnergy = 
-           (RealOpenMM)(realSpaceEwaldEnergy + atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*inverseR*erfc(alphaR)); 
-       RealOpenMM dEdR = atomParameters[ii][QIndex] * atomParameters[jj][QIndex] * inverseR * inverseR * inverseR;
-       dEdR = (RealOpenMM)(dEdR * (erfc(alphaR) + 2 * alphaR * exp ( - alphaR * alphaR) / SQRT_PI ));
- 
-                for( int kk = 0; kk < 3; kk++ ){
-                   RealOpenMM force  = dEdR*deltaR[0][kk];
-                   forces[ii][kk]   += force;
-                   forces[jj][kk]   -= force;
-                } 
-             }
-          }
-       }
 
 // ***********************************************************************
-
-        if( totalEnergy ) {
-              *totalEnergy += recipEnergy + realSpaceEwaldEnergy - selfEwaldEnergy;
-        }
 
 
    return ReferenceForce::DefaultReturn;
@@ -582,18 +483,16 @@ int ReferenceLJCoulombIxn::calculatePMEIxn( int numberOfAtoms, RealOpenMM** atom
    @param totalEnergy      total energy
 
    @return ReferenceForce::DefaultReturn
-      
+
    --------------------------------------------------------------------------------------- */
-    
+
 int ReferenceLJCoulombIxn::calculatePairIxn( int numberOfAtoms, RealOpenMM** atomCoordinates,
                                              RealOpenMM** atomParameters, int** exclusions,
                                              RealOpenMM* fixedParameters, RealOpenMM** forces,
                                              RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const {
 
-   if (ewald)
+   if (ewald || pme)
         return calculateEwaldIxn(numberOfAtoms, atomCoordinates, atomParameters, exclusions, fixedParameters, forces, energyByAtom, totalEnergy);
-   if (pme)
-        return calculatePMEIxn(numberOfAtoms, atomCoordinates, atomParameters, exclusions, fixedParameters, forces, energyByAtom, totalEnergy);
    if (cutoff) {
        for (int i = 0; i < (int) neighborList->size(); i++) {
            OpenMM::AtomPair pair = (*neighborList)[i];
@@ -681,9 +580,9 @@ int ReferenceLJCoulombIxn::calculateOneIxn( int ii, int jj, RealOpenMM** atomCoo
     // get deltaR, R2, and R between 2 atoms
 
     if (periodic)
-        ReferenceForce::getDeltaRPeriodic( atomCoordinates[jj], atomCoordinates[ii], periodicBoxSize, deltaR[0] );  
+        ReferenceForce::getDeltaRPeriodic( atomCoordinates[jj], atomCoordinates[ii], periodicBoxSize, deltaR[0] );
     else
-        ReferenceForce::getDeltaR( atomCoordinates[jj], atomCoordinates[ii], deltaR[0] );  
+        ReferenceForce::getDeltaR( atomCoordinates[jj], atomCoordinates[ii], deltaR[0] );
 
     RealOpenMM r2        = deltaR[0][ReferenceForce::R2Index];
     RealOpenMM inverseR  = one/(deltaR[0][ReferenceForce::RIndex]);
@@ -699,7 +598,7 @@ int ReferenceLJCoulombIxn::calculateOneIxn( int ii, int jj, RealOpenMM** atomCoo
                else
                    dEdR += atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*inverseR;
                dEdR     *= inverseR*inverseR;
-               
+
     // accumulate forces
 
     for( int kk = 0; kk < 3; kk++ ){
@@ -726,7 +625,7 @@ int ReferenceLJCoulombIxn::calculateOneIxn( int ii, int jj, RealOpenMM** atomCoo
         }
     }
 
-    // debug 
+    // debug
 
     if( debug == ii ){
        static bool printHeader = false;
@@ -734,11 +633,11 @@ int ReferenceLJCoulombIxn::calculateOneIxn( int ii, int jj, RealOpenMM** atomCoo
        message << methodName;
        message << std::endl;
        int pairArray[2] = { ii, jj };
-       if( !printHeader  ){  
+       if( !printHeader  ){
           printHeader = true;
           message << std::endl;
           message << methodName.c_str() << " a0 k [c q p s] r1 r2  angle dt rp p[] dot cosine angle dEdR*r F[]" << std::endl;
-       }   
+       }
 
        message << std::endl;
        for( int kk = 0; kk < 2; kk++ ){
