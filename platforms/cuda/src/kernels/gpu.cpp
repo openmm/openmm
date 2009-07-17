@@ -1125,8 +1125,12 @@ void* gpuInit(int numAtoms, unsigned int device)
     int SMMinor = 0;
 
     // Select which device to use
-    cudaSetDevice(device); // Ignore errors
-    cudaError_t status = cudaGetDevice(&gpu->device);
+    int currentDevice;
+    cudaError_t status = cudaGetDevice(&currentDevice);
+    RTERROR(status, "Error getting CUDA device")
+    if (device != currentDevice)
+        cudaSetDevice(device); // Ignore errors
+    status = cudaGetDevice(&gpu->device);
     RTERROR(status, "Error getting CUDA device")
 
     // Determine kernel call configuration
