@@ -22,7 +22,7 @@
 # Check whether this is the right capitalization for your install directory.
 OpenMM_INSTALL_DIR=/usr/local/openmm
 CFLAGS = -g 
-FFLAGS = -g
+FFLAGS = -g -ffree-line-length-none
 
 # Extra libraries required when gfortran links with a C++ module.
 # If this doesn't work, look in /usr/lib to
