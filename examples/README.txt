@@ -27,11 +27,11 @@ workshop on June 24, 2009 at Stanford.
 
 
 In addition to the example programs here, there are also two sets 
-of prototype wrappers to enable C and Fortran 95 to call the 
+of wrappers to enable C and Fortran 95 to call the 
 OpenMM API. However, even if your calling code is in C or Fortran, 
 please consider instead writing your OpenMM-calling routines in 
 C++, using 'extern "C"' so that your main program can call them. 
-If that isn't feasible for you, try out our prototype wrappers 
+If that isn't feasible for you, try out our wrappers 
 and let us know what troubles or better ideas you have. (Post to 
 the OpenMM Forum at the above URL.)
 
@@ -47,10 +47,9 @@ NMake program to build the examples using Microsoft's "cl" compiler
 for C++ and C, and Intel's "ifort" Fortran compiler.
 
 There is a subdirectory here providing Visual Studio "solutions"
-for building HelloArgon in C++ or C. You will have to make your
-own for the other examples or just substitute a different source
-file for HelloArgon.cpp. We do not currently have a Visual Studio
-project for building the Fortran examples.
+for building HelloArgon in C++, C, and Fortran. You will have to 
+make your own for the other examples or just substitute a different 
+source file for HelloArgon.cpp.
 
 HelloArgon (C++, C, Fortran 95)
 -------------------------------
@@ -89,11 +88,11 @@ C Wrapper
 ---------
 
 This consists of two files:
-    OpenMM_CWrapper.h
-    OpenMM_CWrapper.cpp
+    OpenMMCWrapper.h
+    OpenMMCWrapper.cpp
 
 Your C code (and the C examples above) include the header file
-and link with OpenMM_CWrapper.o along with the OpenMM library.
+and link with OpenMMCWrapper.o along with the OpenMM library.
 Consult the code or the example programs to figure out how
 to use the wrappers; they are for the most part a very 
 straightforward rehashing of the well-documented OpenMM C++
@@ -102,17 +101,16 @@ API.
 Fortran Wrapper
 ---------------
 
-The file that defines the OpenMM module is:
-     OpenMM_Module.f90
+The files that define the OpenMM Fortran bindings are:
+     OpenMMFortranModule.f90
+     OpenMMFortranWrapper.cpp
 
-This consists of a Fortran '95 Module "OpenMM" so that your
+This consists of a Fortran 95 Module "OpenMM" so that your
 Fortran program units have "use OpenMM" statements. You will
 need access to the OpenMM*.mod files generated for the modules,
-and you must also link with the OpenMM_CWrapper.o as described
-above for C. That's because the C Wrapper also provides bindings
-that treat arguments in a manner appropriate to Fortran, and 
-the Fortran Module describes those rather than attempting to
-match the C or C++ signatures.
+and you must also link with the OpenMMCWrapper.o as described
+above for C, PLUS the OpenMMFortranWrapper.o. That's because 
+the Fortran Wrapper makes use of the C Wrapper.
 
 
 

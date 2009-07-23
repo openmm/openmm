@@ -13,8 +13,8 @@
 ! continue to work with Amber-style units like Angstroms, kCals, and van der
 ! Waals radii while correctly communicating with OpenMM in nm, kJ, and sigma.
 !
-! This example is written entirely in Fortran 95, using a Fortran interface 
-! module which is NOT official parts of the OpenMM distribution.
+! This example is written entirely in Fortran 95, using the OpenMM Fortran 
+! interface module.
 ! ------------------------------------------------------------------------------
 
 !-------------------------------------------------------------------------------
@@ -158,9 +158,7 @@ END SUBROUTINE
 ! (3) Create an Integrator and a Context associating the Integrator with
 !     the System.
 ! (4) Select the OpenMM platform to be used.
-! (5) Allocate a RuntimeObjects container to hang on to the System, 
-!     Integrator, and Context.
-! (6) Return an opaque handle to the RuntimeObjects and the name of the 
+! (5) Return an opaque handle to the Context object and the name of the 
 !     Platform in use.
 !
 ! Note that this routine must understand the calling MD code's molecule and
@@ -171,23 +169,21 @@ SUBROUTINE myInitializeOpenMM(ommHandle, platformName)
     integer*8,    intent(out) :: ommHandle
     character*10, intent(out) :: platformName
 
-    ! This is the actual type of the opaque handle.
-    type (OpenMM_RuntimeObjects) omm
-    ! These are the objects we'll create here and store in the
-    ! RuntimeObjects container for later access.
+    ! These are the objects we'll create here thare are stored in the
+    ! Context for later access. Don't forget to delete them at the end.
     type (OpenMM_System)             system
     type (OpenMM_LangevinIntegrator) langevin
     type (OpenMM_Context)            context
 
     ! These are temporary OpenMM objects used and discarded here.
-    type (OpenMM_StringArray)    pluginList
-    type (OpenMM_Vec3Array)      initialPosInNm
-    type (OpenMM_NonbondedForce) nonbond
-    type (OpenMM_GBSAOBCForce)   gbsa
-    type (OpenMM_Platform)       platform
-    character*100                dirName
-    integer*4                    n, ix
-    real*8                       posInNm(3)
+    type (OpenMM_StringArray)        pluginList
+    type (OpenMM_Vec3Array)          initialPosInNm
+    type (OpenMM_NonbondedForce)     nonbond
+    type (OpenMM_GBSAOBCForce)       gbsa
+    type (OpenMM_Platform)           platform
+    character*100                    dirName
+    integer*4                        n, ix
+    real*8                           posInNm(3)
 
     ! Get the name of the default plugins directory, 
     ! and then load all the plugins found there.
@@ -254,14 +250,10 @@ SUBROUTINE myInitializeOpenMM(ommHandle, platformName)
     call OpenMM_Context_getPlatform(context, platform)
     call OpenMM_Platform_getName(platform, platformName)
     
-    ! Put the System, Integrator, and Context in the RuntimeObjects
-    ! container and return an opaque reference to the container.
-    call OpenMM_RuntimeObjects_create(omm)
-    call OpenMM_RuntimeObjects_setSystem(omm, system)
-    call OpenMM_RuntimeObjects_setIntegrator(omm, &
-                               transfer(langevin, OpenMM_Integrator(0)))
-    call OpenMM_RuntimeObjects_setContext(omm, context)
-    ommHandle = transfer(omm, ommHandle)
+    ! References to the System and Integrator are in the Context, so
+    ! we can extract them later for stepping and cleanup. Return an opaque 
+    ! reference to the Context for use by the main program.
+    ommHandle = transfer(context, ommHandle)
 END SUBROUTINE
 
 
@@ -278,11 +270,9 @@ SUBROUTINE myGetOpenMMState(ommHandle, timeInPs, energyInKcal)
     integer                 infoMask, n
     real*8                  posInNm(3)
 
-    type (OpenMM_RuntimeObjects)  omm
     type (OpenMM_Context)         context
 
-    omm = transfer(ommHandle, omm)
-    call OpenMM_RuntimeObjects_getContext(omm, context)
+    context = transfer(ommHandle, context)
     
     infoMask = OpenMM_State_Positions
     if (WantEnergy) then
@@ -325,10 +315,11 @@ SUBROUTINE myStepWithOpenMM(ommHandle, numSteps)
     integer*8, intent(in) :: ommHandle
     integer,   intent(in) :: numSteps
 
-    type (OpenMM_RuntimeObjects) omm
-    type (OpenMM_Integrator)     integrator
-    omm = transfer(ommHandle, omm)
-    call OpenMM_RuntimeObjects_getIntegrator(omm, integrator)
+    type (OpenMM_Context)    context
+    type (OpenMM_Integrator) integrator
+    
+    context = transfer(ommHandle, context)
+    call OpenMM_Context_getIntegrator(context, integrator)
     
     call OpenMM_Integrator_step(integrator, numSteps)
 END SUBROUTINE
@@ -339,10 +330,17 @@ END SUBROUTINE
 !-------------------------------------------------------------------------------
 SUBROUTINE myTerminateOpenMM(ommHandle)
     use OpenMM; implicit none
-    integer*8, intent(in) :: ommHandle
+    integer*8, intent(inout) :: ommHandle
 
-    type (OpenMM_RuntimeObjects) omm
-    omm = transfer(ommHandle, omm)
-
-    call OpenMM_RuntimeObjects_destroy(omm)
+    type (OpenMM_Context)    context
+    type (OpenMM_Integrator) integrator
+    type (OpenMM_System)     system
+    
+    context = transfer(ommHandle, context)
+    call OpenMM_Context_getIntegrator(context, integrator)
+    call OpenMM_Context_getSystem(context, system)
+    
+    call OpenMM_Context_destroy(context)
+    call OpenMM_Integrator_destroy(integrator)
+    call OpenMM_System_destroy(system)
 END SUBROUTINE

@@ -46,16 +46,6 @@ typedef struct OpenMM_BondArray_struct OpenMM_BondArray;
 typedef struct OpenMM_ParameterArray_struct OpenMM_ParameterArray;
 typedef struct {double x, y, z;} OpenMM_Vec3;
 
-/* This struct collects all the runtime object pointers together to 
- * facilitate use of an opaque handle in high-level C or Fortran code 
- * that doesn't have (or want) access to OpenMM declarations. This
- * does not have an equivalent in the OpenMM C++ API. */
-typedef struct OpenMM_RuntimeObjects_s {
-    OpenMM_System*      system;
-    OpenMM_Integrator*  integrator;
-    OpenMM_Context*     context;
-} OpenMM_RuntimeObjects;
-
 typedef enum {OpenMM_False = 0, OpenMM_True = 1} OpenMM_Boolean;
 
 #if defined(__cplusplus)

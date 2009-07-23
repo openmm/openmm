@@ -13,8 +13,7 @@
  * continue to work with Amber-style units like Angstroms, kCals, and van der
  * Waals radii while correctly communicating with OpenMM in nm, kJ, and sigma.
  *
- * This example is written entirely in ANSI C, using a set of wrappers which
- * are NOT an official part of OpenMM.
+ * This example is written entirely in ANSI C, using the OpenMM C bindings.
  * -------------------------------------------------------------------------- */
 
 

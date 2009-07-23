@@ -7,9 +7,7 @@
 using namespace OpenMM;
 using namespace std;
 
-#if defined(__cplusplus)
 extern "C" {
-#endif
 
 /* OpenMM_Vec3 */
 void openmm_vec3_scale_(const OpenMM_Vec3& vec, double const& scale, OpenMM_Vec3& result) {
@@ -66,6 +64,14 @@ void OPENMM_VEC3ARRAY_GET(const OpenMM_Vec3Array* const& array, const int& index
 }
 
 /* OpenMM_StringArray */
+void copyAndPadString(char* dest, const char* source, int length) {
+    bool reachedEnd = false;
+    for (int i = 0; i < length; i++) {
+        if (source[i] == 0)
+            reachedEnd = true;
+        dest[i] = (reachedEnd ? ' ' : source[i]);
+    }
+}
 void openmm_stringarray_create_(OpenMM_StringArray*& result, const int& size) {
     result = OpenMM_StringArray_create(size);
 }
@@ -106,11 +112,11 @@ void OPENMM_STRINGARRAY_SET(OpenMM_StringArray* const& array, const int& index, 
 }
 void openmm_stringarray_get_(const OpenMM_StringArray* const& array, const int& index, char* result, int length) {
     const char* str = OpenMM_StringArray_get(array, index-1);
-    strncpy(result, str, length);
+    copyAndPadString(result, str, length);
 }
 void OPENMM_STRINGARRAY_GET(const OpenMM_StringArray* const& array, const int& index, char* result, int length) {
     const char* str = OpenMM_StringArray_get(array, index-1);
-    strncpy(result, str, length);
+    copyAndPadString(result, str, length);
 }
 
 /* OpenMM_BondArray */
@@ -308,13 +314,11 @@ void OPENMM_OPENMMEXCEPTION_DESTROY(OpenMM_OpenMMException*& destroy) {
 }
 void openmm_openmmexception_what_(const OpenMM_OpenMMException*& target, char* result, int result_length) {
     const char* result_chars = OpenMM_OpenMMException_what(target);
-    strncpy(result, result_chars, result_length);
- 
+    copyAndPadString(result, result_chars, result_length);
 };
 void OPENMM_OPENMMEXCEPTION_WHAT(const OpenMM_OpenMMException*& target, char* result, int result_length) {
     const char* result_chars = OpenMM_OpenMMException_what(target);
-    strncpy(result, result_chars, result_length);
- 
+    copyAndPadString(result, result_chars, result_length);
 };
 
 
@@ -995,23 +999,19 @@ void OPENMM_ANDERSENTHERMOSTAT_DESTROY(OpenMM_AndersenThermostat*& destroy) {
 }
 void openmm_andersenthermostat_temperature_(char* result, int result_length) {
     const char* result_chars = OpenMM_AndersenThermostat_Temperature();
-    strncpy(result, result_chars, result_length);
- 
+    copyAndPadString(result, result_chars, result_length);
 };
 void OPENMM_ANDERSENTHERMOSTAT_TEMPERATURE(char* result, int result_length) {
     const char* result_chars = OpenMM_AndersenThermostat_Temperature();
-    strncpy(result, result_chars, result_length);
- 
+    copyAndPadString(result, result_chars, result_length);
 };
 void openmm_andersenthermostat_collisionfrequency_(char* result, int result_length) {
     const char* result_chars = OpenMM_AndersenThermostat_CollisionFrequency();
-    strncpy(result, result_chars, result_length);
- 
+    copyAndPadString(result, result_chars, result_length);
 };
 void OPENMM_ANDERSENTHERMOSTAT_COLLISIONFREQUENCY(char* result, int result_length) {
     const char* result_chars = OpenMM_AndersenThermostat_CollisionFrequency();
-    strncpy(result, result_chars, result_length);
- 
+    copyAndPadString(result, result_chars, result_length);
 };
 double openmm_andersenthermostat_getdefaulttemperature_(const OpenMM_AndersenThermostat*& target) {
     return OpenMM_AndersenThermostat_getDefaultTemperature(target);
@@ -1050,13 +1050,11 @@ void OPENMM_PLATFORM_DESTROY(OpenMM_Platform*& destroy) {
 }
 void openmm_platform_getname_(const OpenMM_Platform*& target, char* result, int result_length) {
     const char* result_chars = OpenMM_Platform_getName(target);
-    strncpy(result, result_chars, result_length);
- 
+    copyAndPadString(result, result_chars, result_length);
 };
 void OPENMM_PLATFORM_GETNAME(const OpenMM_Platform*& target, char* result, int result_length) {
     const char* result_chars = OpenMM_Platform_getName(target);
-    strncpy(result, result_chars, result_length);
- 
+    copyAndPadString(result, result_chars, result_length);
 };
 double openmm_platform_getspeed_(const OpenMM_Platform*& target) {
     return OpenMM_Platform_getSpeed(target);
@@ -1078,13 +1076,11 @@ void OPENMM_PLATFORM_GETPROPERTYNAMES(OpenMM_Platform*& target, const OpenMM_Str
 };
 void openmm_platform_getpropertyvalue_(const OpenMM_Platform*& target, const OpenMM_Context*& context, const char* property, char* result, int property_length, int result_length) {
     const char* result_chars = OpenMM_Platform_getPropertyValue(target, context, string(property, property_length).c_str());
-    strncpy(result, result_chars, result_length);
- 
+    copyAndPadString(result, result_chars, result_length);
 };
 void OPENMM_PLATFORM_GETPROPERTYVALUE(const OpenMM_Platform*& target, const OpenMM_Context*& context, const char* property, char* result, int property_length, int result_length) {
     const char* result_chars = OpenMM_Platform_getPropertyValue(target, context, string(property, property_length).c_str());
-    strncpy(result, result_chars, result_length);
- 
+    copyAndPadString(result, result_chars, result_length);
 };
 void openmm_platform_setpropertyvalue_(const OpenMM_Platform*& target, OpenMM_Context*& context, const char* property, const char* value, int property_length, int value_length) {
     OpenMM_Platform_setPropertyValue(target, context, string(property, property_length).c_str(), string(value, value_length).c_str());
@@ -1094,13 +1090,11 @@ void OPENMM_PLATFORM_SETPROPERTYVALUE(const OpenMM_Platform*& target, OpenMM_Con
 };
 void openmm_platform_getpropertydefaultvalue_(const OpenMM_Platform*& target, const char* property, char* result, int property_length, int result_length) {
     const char* result_chars = OpenMM_Platform_getPropertyDefaultValue(target, string(property, property_length).c_str());
-    strncpy(result, result_chars, result_length);
- 
+    copyAndPadString(result, result_chars, result_length);
 };
 void OPENMM_PLATFORM_GETPROPERTYDEFAULTVALUE(const OpenMM_Platform*& target, const char* property, char* result, int property_length, int result_length) {
     const char* result_chars = OpenMM_Platform_getPropertyDefaultValue(target, string(property, property_length).c_str());
-    strncpy(result, result_chars, result_length);
- 
+    copyAndPadString(result, result_chars, result_length);
 };
 void openmm_platform_setpropertydefaultvalue_(OpenMM_Platform*& target, const char* property, const char* value, int property_length, int value_length) {
     OpenMM_Platform_setPropertyDefaultValue(target, string(property, property_length).c_str(), string(value, value_length).c_str());
@@ -1158,13 +1152,11 @@ void OPENMM_PLATFORM_LOADPLUGINLIBRARY(const char* file, int file_length) {
 };
 void openmm_platform_getdefaultpluginsdirectory_(char* result, int result_length) {
     const char* result_chars = OpenMM_Platform_getDefaultPluginsDirectory();
-    strncpy(result, result_chars, result_length);
- 
+    copyAndPadString(result, result_chars, result_length);
 };
 void OPENMM_PLATFORM_GETDEFAULTPLUGINSDIRECTORY(char* result, int result_length) {
     const char* result_chars = OpenMM_Platform_getDefaultPluginsDirectory();
-    strncpy(result, result_chars, result_length);
- 
+    copyAndPadString(result, result_chars, result_length);
 };
 
 
@@ -1386,6 +1378,4 @@ void OPENMM_SYSTEM_GETFORCE(OpenMM_System*& target, int const& index, OpenMM_For
 };
 
 
-#if defined(__cplusplus)
 }
-#endif

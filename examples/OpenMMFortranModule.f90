@@ -24,13 +24,6 @@ MODULE OpenMM_Types
     parameter(OpenMM_SigmaPerVdwRadius=1.7817974362806785)
     parameter(OpenMM_VdwRadiusPerSigma=0.5612310241546865)
     parameter(OpenMM_DegreesPerRadian=57.29577951308232)
-    
-    ! This data structure can be used to hold the set of OpenMM objects
-    ! that must persist from call to call while running a simulation.
-    ! It contains an OpenMM_System, _Integrator, and _Context.
-    type OpenMM_RuntimeObjects
-        integer*8 :: handle = 0
-    end type
 
     ! Type Declarations
  
@@ -1366,52 +1359,6 @@ MODULE OpenMM
             type (OpenMM_System) target
             integer*4 index
             type (OpenMM_Force) result
-        end
-        
-        ! -------------------------
-        ! OpenMM::RuntimeObjects
-        ! -------------------------
-        subroutine OpenMM_RuntimeObjects_create(omm)
-            use OpenMM_Types; implicit none
-            type (OpenMM_RuntimeObjects) omm
-        end
-        subroutine OpenMM_RuntimeObjects_clear(omm)
-            use OpenMM_Types; implicit none
-            type (OpenMM_RuntimeObjects) omm
-        end
-        subroutine OpenMM_RuntimeObjects_destroy(omm)
-            use OpenMM_Types; implicit none
-            type (OpenMM_RuntimeObjects) omm
-        end
-        subroutine OpenMM_RuntimeObjects_setSystem(omm,sys)
-            use OpenMM_Types; implicit none
-            type (OpenMM_RuntimeObjects) omm
-            type (OpenMM_System) sys
-        end
-        subroutine OpenMM_RuntimeObjects_setIntegrator(omm,integ)
-            use OpenMM_Types; implicit none
-            type (OpenMM_RuntimeObjects) omm
-            type (OpenMM_Integrator) integ
-        end
-        subroutine OpenMM_RuntimeObjects_setContext(omm,context)
-            use OpenMM_Types; implicit none
-            type (OpenMM_RuntimeObjects) omm
-            type (OpenMM_Context) context
-        end
-        subroutine OpenMM_RuntimeObjects_getSystem(omm,sys)
-            use OpenMM_Types; implicit none
-            type (OpenMM_RuntimeObjects) omm
-            type (OpenMM_System) sys
-        end
-        subroutine OpenMM_RuntimeObjects_getIntegrator(omm,integ)
-            use OpenMM_Types; implicit none
-            type (OpenMM_RuntimeObjects) omm
-            type (OpenMM_Integrator) integ
-        end
-        subroutine OpenMM_RuntimeObjects_getContext(omm,context)
-            use OpenMM_Types; implicit none
-            type (OpenMM_RuntimeObjects) omm
-            type (OpenMM_Context) context
         end
     end interface
 END MODULE OpenMM
