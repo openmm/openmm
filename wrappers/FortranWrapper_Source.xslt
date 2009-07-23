@@ -100,7 +100,7 @@ void OPENMM_VEC3ARRAY_GET(const OpenMM_Vec3Array* const&amp; array, const int&am
 }
 
 /* OpenMM_StringArray */
-void copyAndPadString(char* dest, const char* source, int length) {
+static void copyAndPadString(char* dest, const char* source, int length) {
     bool reachedEnd = false;
     for (int i = 0; i &lt; length; i++) {
         if (source[i] == 0)
