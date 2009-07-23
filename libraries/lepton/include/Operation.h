@@ -41,14 +41,45 @@
 
 namespace Lepton {
 
+/**
+ * An Operation represents a single step in the evaluation of an expression, such as a function,
+ * an operator, or a constant value.  Each Operation takes some number of values as arguments
+ * and produces a single value.
+ *
+ * This is an abstract class with subclasses for specific operations.
+ */
+
 class LEPTON_EXPORT Operation {
 public:
+    /**
+     * This enumeration lists all Operation subclasses.  This is provided so that switch statements
+     * can be used when processing or analyzing parsed expressions.
+     */
     enum Id {CONSTANT, VARIABLE, CUSTOM, ADD, SUBTRACT, MULTIPLY, DIVIDE, POWER, NEGATE, SQRT, EXP, LOG,
-             SIN, COS, SEC, CSC, TAN, COT, ASIN, ACOS, ATAN};
+             SIN, COS, SEC, CSC, TAN, COT, ASIN, ACOS, ATAN, SQUARE, CUBE, RECIPROCAL};
+    /**
+     * Get the name of this Operation.
+     */
     virtual std::string getName() const = 0;
+    /**
+     * Get this Operation's ID.
+     */
     virtual Id getId() const = 0;
+    /**
+     * Get the number of arguments this operation expects.
+     */
     virtual int getNumArguments() const = 0;
+    /**
+     * Create a clone of this Operation.
+     */
     virtual Operation* clone() const = 0;
+    /**
+     * Perform the computation represented by this operation.
+     *
+     * @param args        the array of arguments
+     * @param variables   a map containing the values of all variables
+     * @return the result of performing the computation.
+     */
     virtual double evaluate(double* args, const std::map<std::string, double>& variables) const = 0;
     class Constant;
     class Variable;
@@ -71,6 +102,9 @@ public:
     class Asin;
     class Acos;
     class Atan;
+    class Square;
+    class Cube;
+    class Reciprocal;
 };
 
 class Operation::Constant : public Operation {
@@ -92,6 +126,9 @@ public:
         return new Constant(value);
     }
     double evaluate(double* args, const std::map<std::string, double>& variables) const {
+        return value;
+    }
+    double getValue() const {
         return value;
     }
 private:
@@ -523,6 +560,69 @@ public:
     }
     double evaluate(double* args, const std::map<std::string, double>& variables) const {
         return std::atan(args[0]);
+    }
+};
+
+class Operation::Square : public Operation {
+public:
+    Square() {
+    }
+    std::string getName() const {
+        return "square";
+    }
+    Id getId() const {
+        return SQUARE;
+    }
+    int getNumArguments() const {
+        return 1;
+    }
+    Operation* clone() const {
+        return new Square();
+    }
+    double evaluate(double* args, const std::map<std::string, double>& variables) const {
+        return args[0]*args[0];
+    }
+};
+
+class Operation::Cube : public Operation {
+public:
+    Cube() {
+    }
+    std::string getName() const {
+        return "cube";
+    }
+    Id getId() const {
+        return CUBE;
+    }
+    int getNumArguments() const {
+        return 1;
+    }
+    Operation* clone() const {
+        return new Cube();
+    }
+    double evaluate(double* args, const std::map<std::string, double>& variables) const {
+        return args[0]*args[0]*args[0];
+    }
+};
+
+class Operation::Reciprocal : public Operation {
+public:
+    Reciprocal() {
+    }
+    std::string getName() const {
+        return "recip";
+    }
+    Id getId() const {
+        return RECIPROCAL;
+    }
+    int getNumArguments() const {
+        return 1;
+    }
+    Operation* clone() const {
+        return new Reciprocal();
+    }
+    double evaluate(double* args, const std::map<std::string, double>& variables) const {
+        return 1.0/args[0];
     }
 };
 

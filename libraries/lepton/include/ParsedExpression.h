@@ -39,14 +39,51 @@
 
 namespace Lepton {
 
+/**
+ * This class represents the result of parsing an expression.  It provides methods for working with the
+ * expression in various ways, such as evaluating it, getting the tree representation of the expresson, etc.
+ */
+
 class LEPTON_EXPORT ParsedExpression {
 public:
+    /**
+     * Create a ParsedExpression.  Normally you will not call this directly.  Instead, use the Parser class
+     * to parse expression.
+     */
     ParsedExpression(ExpressionTreeNode rootNode);
+    /**
+     * Get the root node of the expression's abstract syntax tree.
+     */
     const ExpressionTreeNode& getRootNode() const;
+    /**
+     * Evaluate the expression.  If the expression involves any variables, this method will throw an exception.
+     */
     double evaluate() const;
+    /**
+     * Evaluate the expression.
+     *
+     * @param variables    a map specifying the values of all variables that appear in the expression.  If any
+     *                     variable appears in the expression but is not included in this map, an exception
+     *                     will be thrown.
+     */
     double evaluate(const std::map<std::string, double>& variables) const;
+    /**
+     * Create a new ParsedExpression which produces the same result as this one, but is faster to evaluate.
+     */
+    ParsedExpression optimize() const;
+    /**
+     * Create a new ParsedExpression which produces the same result as this one, but is faster to evaluate.
+     *
+     * @param variables    a map specifying values for a subset of variables that appear in the expression.
+     *                     All occurrences of these variables in the expression are replaced with the values
+     *                     specified.
+     */
+    ParsedExpression optimize(const std::map<std::string, double>& variables) const;
 private:
-    double evaluate(const ExpressionTreeNode& node, const std::map<std::string, double>& variables) const;
+    static double evaluate(const ExpressionTreeNode& node, const std::map<std::string, double>& variables);
+    static ExpressionTreeNode preevaluateVariables(const ExpressionTreeNode& node, const std::map<std::string, double>& variables);
+    static ExpressionTreeNode precalculateConstantSubexpressions(const ExpressionTreeNode& node);
+    static ExpressionTreeNode substituteSimplerExpression(const ExpressionTreeNode& node);
     ExpressionTreeNode rootNode;
 };
 

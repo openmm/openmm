@@ -40,17 +40,58 @@ namespace Lepton {
 
 class Operation;
 
+/**
+ * This class represents a node in the abstract syntax tree representation of an expression.
+ * Each node is defined by an Operation and a set of children.  When the expression is
+ * evaluated, each child is first evaluated in order, then the resulting values are passed
+ * as the arguments to the Operation's evaluate() method.
+ */
+
 class LEPTON_EXPORT ExpressionTreeNode {
 public:
+    /**
+     * Create a new ExpressionTreeNode.
+     *
+     * @param operation    the operation for this node.  The ExpressionTreeNode takes over ownership
+     *                     of this object, and deletes it when the node is itself deleted.
+     * @param children     the children of this node
+     */
     ExpressionTreeNode(Operation* operation, const std::vector<ExpressionTreeNode>& children);
+    /**
+     * Create a new ExpressionTreeNode with two children.
+     *
+     * @param operation    the operation for this node.  The ExpressionTreeNode takes over ownership
+     *                     of this object, and deletes it when the node is itself deleted.
+     * @param child1       the first child of this node
+     * @param child2       the second child of this node
+     */
     ExpressionTreeNode(Operation* operation, const ExpressionTreeNode& child1, const ExpressionTreeNode& child2);
+    /**
+     * Create a new ExpressionTreeNode with one child.
+     *
+     * @param operation    the operation for this node.  The ExpressionTreeNode takes over ownership
+     *                     of this object, and deletes it when the node is itself deleted.
+     * @param child        the child of this node
+     */
     ExpressionTreeNode(Operation* operation, const ExpressionTreeNode& child);
+    /**
+     * Create a new ExpressionTreeNode with no children.
+     *
+     * @param operation    the operation for this node.  The ExpressionTreeNode takes over ownership
+     *                     of this object, and deletes it when the node is itself deleted.
+     */
     ExpressionTreeNode(Operation* operation);
     ExpressionTreeNode(const ExpressionTreeNode& node);
     ExpressionTreeNode();
     ~ExpressionTreeNode();
     ExpressionTreeNode& operator=(const ExpressionTreeNode& node);
+    /**
+     * Get the Operation performed by this node.
+     */
     const Operation& getOperation() const;
+    /**
+     * Get this node's child nodes.
+     */
     const std::vector<ExpressionTreeNode>& getChildren() const;
 private:
     Operation* operation;
