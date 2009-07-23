@@ -79,13 +79,26 @@ public:
      *                     specified.
      */
     ParsedExpression optimize(const std::map<std::string, double>& variables) const;
+    /**
+     * Create a new ParsedExpression which is the analytic derivative of this expression with respect to a
+     * particular variable.
+     *
+     * @param variable     the variable with respect to which the derivate should be taken
+     */
+    ParsedExpression differentiate(const std::string& variable) const;
 private:
     static double evaluate(const ExpressionTreeNode& node, const std::map<std::string, double>& variables);
     static ExpressionTreeNode preevaluateVariables(const ExpressionTreeNode& node, const std::map<std::string, double>& variables);
     static ExpressionTreeNode precalculateConstantSubexpressions(const ExpressionTreeNode& node);
     static ExpressionTreeNode substituteSimplerExpression(const ExpressionTreeNode& node);
+    static ExpressionTreeNode differentiate(const ExpressionTreeNode& node, const std::string& variable);
+    static double getConstantValue(const ExpressionTreeNode& node);
     ExpressionTreeNode rootNode;
 };
+
+std::ostream& operator<<(std::ostream& out, const ExpressionTreeNode& node);
+
+std::ostream& operator<<(std::ostream& out, const ParsedExpression& exp);
 
 } // namespace Lepton
 

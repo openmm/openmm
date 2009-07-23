@@ -41,6 +41,8 @@
 
 namespace Lepton {
 
+class ExpressionTreeNode;
+
 /**
  * An Operation represents a single step in the evaluation of an expression, such as a function,
  * an operator, or a constant value.  Each Operation takes some number of values as arguments
@@ -56,7 +58,7 @@ public:
      * can be used when processing or analyzing parsed expressions.
      */
     enum Id {CONSTANT, VARIABLE, CUSTOM, ADD, SUBTRACT, MULTIPLY, DIVIDE, POWER, NEGATE, SQRT, EXP, LOG,
-             SIN, COS, SEC, CSC, TAN, COT, ASIN, ACOS, ATAN, SQUARE, CUBE, RECIPROCAL};
+             SIN, COS, SEC, CSC, TAN, COT, ASIN, ACOS, ATAN, SQUARE, CUBE, RECIPROCAL, INCREMENT, DECREMENT};
     /**
      * Get the name of this Operation.
      */
@@ -81,6 +83,14 @@ public:
      * @return the result of performing the computation.
      */
     virtual double evaluate(double* args, const std::map<std::string, double>& variables) const = 0;
+    /**
+     * Return an ExpressionTreeNode which represents the analytic derivative of this Operation with respect to a variable.
+     *
+     * @param children     the child nodes
+     * @param childDerivs  the derivatives of the child nodes with respect to the variable
+     * @param variable     the variable with respect to which the derivate should be taken
+     */
+    virtual ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const = 0;
     class Constant;
     class Variable;
     class Custom;
@@ -105,6 +115,8 @@ public:
     class Square;
     class Cube;
     class Reciprocal;
+    class Increment;
+    class Decrement;
 };
 
 class Operation::Constant : public Operation {
@@ -128,6 +140,7 @@ public:
     double evaluate(double* args, const std::map<std::string, double>& variables) const {
         return value;
     }
+    ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
     double getValue() const {
         return value;
     }
@@ -157,6 +170,7 @@ public:
             throw std::exception();
         return iter->second;
     }
+    ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 private:
     std::string name;
 };
@@ -180,6 +194,7 @@ public:
     double evaluate(double* args, const std::map<std::string, double>& variables) const {
         return 0.0;
     }
+    ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 private:
     std::string name;
     int arguments;
@@ -204,6 +219,7 @@ public:
     double evaluate(double* args, const std::map<std::string, double>& variables) const {
         return args[0]+args[1];
     }
+    ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 
 class Operation::Subtract : public Operation {
@@ -225,6 +241,7 @@ public:
     double evaluate(double* args, const std::map<std::string, double>& variables) const {
         return args[0]-args[1];
     }
+    ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 
 class Operation::Multiply : public Operation {
@@ -246,6 +263,7 @@ public:
     double evaluate(double* args, const std::map<std::string, double>& variables) const {
         return args[0]*args[1];
     }
+    ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 
 class Operation::Divide : public Operation {
@@ -267,6 +285,7 @@ public:
     double evaluate(double* args, const std::map<std::string, double>& variables) const {
         return args[0]/args[1];
     }
+    ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 
 class Operation::Power : public Operation {
@@ -288,6 +307,7 @@ public:
     double evaluate(double* args, const std::map<std::string, double>& variables) const {
         return std::pow(args[0], args[1]);
     }
+    ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 
 class Operation::Negate : public Operation {
@@ -309,6 +329,7 @@ public:
     double evaluate(double* args, const std::map<std::string, double>& variables) const {
         return -args[0];
     }
+    ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 
 class Operation::Sqrt : public Operation {
@@ -330,6 +351,7 @@ public:
     double evaluate(double* args, const std::map<std::string, double>& variables) const {
         return std::sqrt(args[0]);
     }
+    ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 
 class Operation::Exp : public Operation {
@@ -351,6 +373,7 @@ public:
     double evaluate(double* args, const std::map<std::string, double>& variables) const {
         return std::exp(args[0]);
     }
+    ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 
 class Operation::Log : public Operation {
@@ -372,6 +395,7 @@ public:
     double evaluate(double* args, const std::map<std::string, double>& variables) const {
         return std::log(args[0]);
     }
+    ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 
 class Operation::Sin : public Operation {
@@ -393,6 +417,7 @@ public:
     double evaluate(double* args, const std::map<std::string, double>& variables) const {
         return std::sin(args[0]);
     }
+    ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 
 class Operation::Cos : public Operation {
@@ -414,6 +439,7 @@ public:
     double evaluate(double* args, const std::map<std::string, double>& variables) const {
         return std::cos(args[0]);
     }
+    ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 
 class Operation::Sec : public Operation {
@@ -435,6 +461,7 @@ public:
     double evaluate(double* args, const std::map<std::string, double>& variables) const {
         return 1.0/std::cos(args[0]);
     }
+    ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 
 class Operation::Csc : public Operation {
@@ -456,6 +483,7 @@ public:
     double evaluate(double* args, const std::map<std::string, double>& variables) const {
         return 1.0/std::sin(args[0]);
     }
+    ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 
 class Operation::Tan : public Operation {
@@ -477,6 +505,7 @@ public:
     double evaluate(double* args, const std::map<std::string, double>& variables) const {
         return std::tan(args[0]);
     }
+    ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 
 class Operation::Cot : public Operation {
@@ -498,6 +527,7 @@ public:
     double evaluate(double* args, const std::map<std::string, double>& variables) const {
         return 1.0/std::tan(args[0]);
     }
+    ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 
 class Operation::Asin : public Operation {
@@ -519,6 +549,7 @@ public:
     double evaluate(double* args, const std::map<std::string, double>& variables) const {
         return std::asin(args[0]);
     }
+    ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 
 class Operation::Acos : public Operation {
@@ -540,6 +571,7 @@ public:
     double evaluate(double* args, const std::map<std::string, double>& variables) const {
         return std::acos(args[0]);
     }
+    ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 
 class Operation::Atan : public Operation {
@@ -561,6 +593,7 @@ public:
     double evaluate(double* args, const std::map<std::string, double>& variables) const {
         return std::atan(args[0]);
     }
+    ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 
 class Operation::Square : public Operation {
@@ -582,6 +615,7 @@ public:
     double evaluate(double* args, const std::map<std::string, double>& variables) const {
         return args[0]*args[0];
     }
+    ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 
 class Operation::Cube : public Operation {
@@ -603,6 +637,7 @@ public:
     double evaluate(double* args, const std::map<std::string, double>& variables) const {
         return args[0]*args[0]*args[0];
     }
+    ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 
 class Operation::Reciprocal : public Operation {
@@ -624,6 +659,51 @@ public:
     double evaluate(double* args, const std::map<std::string, double>& variables) const {
         return 1.0/args[0];
     }
+    ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
+};
+
+class Operation::Increment : public Operation {
+public:
+    Increment() {
+    }
+    std::string getName() const {
+        return "increment";
+    }
+    Id getId() const {
+        return INCREMENT;
+    }
+    int getNumArguments() const {
+        return 1;
+    }
+    Operation* clone() const {
+        return new Increment();
+    }
+    double evaluate(double* args, const std::map<std::string, double>& variables) const {
+        return args[0]+1.0;
+    }
+    ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
+};
+
+class Operation::Decrement : public Operation {
+public:
+    Decrement() {
+    }
+    std::string getName() const {
+        return "decrement";
+    }
+    Id getId() const {
+        return DECREMENT;
+    }
+    int getNumArguments() const {
+        return 1;
+    }
+    Operation* clone() const {
+        return new Decrement();
+    }
+    double evaluate(double* args, const std::map<std::string, double>& variables) const {
+        return args[0]-1.0;
+    }
+    ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 
 } // namespace Lepton

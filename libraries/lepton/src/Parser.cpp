@@ -239,6 +239,8 @@ Operation* Parser::getFunctionOperation(const std::string& name, int arguments) 
         opMap["square"] = Operation::SQUARE;
         opMap["cube"] = Operation::CUBE;
         opMap["recip"] = Operation::RECIPROCAL;
+        opMap["increment"] = Operation::INCREMENT;
+        opMap["decrement"] = Operation::DECREMENT;
     }
     string trimmed = name.substr(0, name.size()-1);
     map<string, Operation::Id>::const_iterator iter = opMap.find(trimmed);
@@ -275,6 +277,10 @@ Operation* Parser::getFunctionOperation(const std::string& name, int arguments) 
             return new Operation::Cube();
         case Operation::RECIPROCAL:
             return new Operation::Reciprocal();
+        case Operation::INCREMENT:
+            return new Operation::Increment();
+        case Operation::DECREMENT:
+            return new Operation::Decrement();
         default:
             throw Exception("Parse error: unknown function");
     }
