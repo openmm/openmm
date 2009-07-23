@@ -180,19 +180,20 @@ SUBROUTINE myInitializeOpenMM(ommHandle, platformName)
     type (OpenMM_Context)            context
 
     ! These are temporary OpenMM objects used and discarded here.
-    type(OpenMM_Vec3Array)      initialPosInNm
-    type(OpenMM_NonbondedForce) nonbond
-    type(OpenMM_GBSAOBCForce)   gbsa
-    integer*4 n, ix
+    type (OpenMM_StringArray)    pluginList
+    type (OpenMM_Vec3Array)      initialPosInNm
+    type (OpenMM_NonbondedForce) nonbond
+    type (OpenMM_GBSAOBCForce)   gbsa
+    type (OpenMM_Platform)       platform
+    character*100                dirName
+    integer*4                    n, ix
+    real*8                       posInNm(3)
 
-    type(OpenMM_String) dir
-
-    ! Create a string, get the name of the default plugins directory, 
+    ! Get the name of the default plugins directory, 
     ! and then load all the plugins found there.
-    call OpenMM_String_create(dir, '')
-    call OpenMM_Platform_getDefaultPluginsDirectory(dir)
-    call OpenMM_Platform_loadPluginsFromDirectory(dir)
-    call OpenMM_String_destroy(dir)
+    call OpenMM_Platform_getDefaultPluginsDirectory(dirName)
+    call OpenMM_Platform_loadPluginsFromDirectory(dirName, pluginList)
+    call OpenMM_StringArray_destroy(pluginList)    
     
     ! Create a System and Force objects for it. The System will take
     ! over ownership of the Forces; don't destroy them yourself.
@@ -230,9 +231,9 @@ SUBROUTINE myInitializeOpenMM(ommHandle, platformName)
                 atoms(n)%gbsaScaleFactor)
     
         ! Sets initPos(n) = atoms(n)%initPos * nm/Angstrom.
-        call OpenMM_Vec3Array_setScaled(initialPosInNm, n,              &
-                                        atoms(n)%initPosInAng,          &
-                                        OpenMM_NmPerAngstrom)
+        call OpenMM_Vec3_scale(atoms(n)%initPosInAng,                   &
+                               OpenMM_NmPerAngstrom, posInNm)
+        call OpenMM_Vec3Array_set(initialPosInNm, n, posInNm)
     end do
     
     ! Choose an Integrator for advancing time, and a Context connecting the
@@ -250,7 +251,8 @@ SUBROUTINE myInitializeOpenMM(ommHandle, platformName)
     call OpenMM_Context_setPositions(context, initialPosInNm)
 
     ! Get the platform name to return.
-    call OpenMM_Context_getPlatformName(context, platformName)
+    call OpenMM_Context_getPlatform(context, platform)
+    call OpenMM_Platform_getName(platform, platformName)
     
     ! Put the System, Integrator, and Context in the RuntimeObjects
     ! container and return an opaque reference to the container.
@@ -274,6 +276,7 @@ SUBROUTINE myGetOpenMMState(ommHandle, timeInPs, energyInKcal)
     type (OpenMM_State)     state
     type (OpenMM_Vec3Array) posArrayInNm
     integer                 infoMask, n
+    real*8                  posInNm(3)
 
     type (OpenMM_RuntimeObjects)  omm
     type (OpenMM_Context)         context
@@ -289,7 +292,7 @@ SUBROUTINE myGetOpenMMState(ommHandle, timeInPs, energyInKcal)
     ! Forces are also available (and cheap).
     
     ! Don't forget to destroy this State when you're done with it.
-    call OpenMM_Context_createState(context, infoMask, state) 
+    call OpenMM_Context_getState(context, infoMask, state) 
     timeInPs = OpenMM_State_getTime(state) ! OpenMM time is in ps already.
     
     ! Positions are maintained as a Vec3Array inside the State. This will give
@@ -297,8 +300,9 @@ SUBROUTINE myGetOpenMMState(ommHandle, timeInPs, energyInKcal)
     call OpenMM_State_getPositions(state, posArrayInNm)
     do n = 1, NumAtoms
         ! Sets atoms(n)%pos = posArray(n) * Angstroms/nm.
-        call OpenMM_Vec3Array_getScaled(posArrayInNm, n, OpenMM_AngstromsPerNm, &
-                                        atoms(n)%posInAng)
+        call OpenMM_Vec3Array_get(posArrayInNm, n, posInNm)
+        call OpenMM_Vec3_scale(posInNm, OpenMM_AngstromsPerNm, &
+                               atoms(n)%posInAng)
     end do
     
     energyInKcal = 0

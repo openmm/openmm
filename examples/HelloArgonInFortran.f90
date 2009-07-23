@@ -16,19 +16,20 @@ PROGRAM HelloArgon
     type(OpenMM_System)           system
     type(OpenMM_VerletIntegrator) verlet
     type(OpenMM_Context)          context
+    type(OpenMM_Platform)         platform
     type(OpenMM_NonbondedForce)   nonbond 
     type(OpenMM_Vec3Array)        initPosInNm
     type(OpenMM_State)            state
-    type(OpenMM_String)           dirName
+    type(OpenMM_StringArray)      pluginList
     real*8                        timeInPs
     integer*4                     a, ix, frameNum
     character*10                  platformName
+    character*100                 dirName
 
     ! Load any shared libraries containing GPU implementations.
-    call OpenMM_String_create(dirName,'')
-    call OpenMM_Platform_getDefaultPluginsDirectory(dirName)
-    call OpenMM_Platform_loadPluginsFromDirectory(dirName)
-    call OpenMM_String_destroy(dirName)
+    call OpenMM_Platform_getDefaultPluginsDirectory(dirName)    
+    call OpenMM_Platform_loadPluginsFromDirectory(dirName, pluginList)
+    call OpenMM_StringArray_destroy(pluginList)    
 
     ! Create a system with nonbonded forces. System takes ownership
     ! of Force; don't destroy it yourself. (We're using transfer here
@@ -36,13 +37,13 @@ PROGRAM HelloArgon
     call OpenMM_System_create(system)
     call OpenMM_NonbondedForce_create(nonbond)
     ix = OpenMM_System_addForce(system, transfer(nonbond, OpenMM_Force(0)))
-
+    
     ! Create three atoms.
     call OpenMM_Vec3Array_create(initPosInNm, 3)
     do a=1,3
         ! Space the atoms out evenly by atom index.
         call OpenMM_Vec3Array_set(initPosInNm, a, (/ 0.5d0*(a-1), 0d0, 0d0 /))
-
+        
         ix = OpenMM_System_addParticle(system, 39.95d0) !mass of Ar, grams/mole
 
         ! charge, L-J sigma (nm), well depth (kJ) (vdWRad(Ar)=.188 nm)
@@ -55,7 +56,8 @@ PROGRAM HelloArgon
     ! Let OpenMM Context choose best platform.
     call OpenMM_Context_create(context, system, &
               transfer(verlet, OpenMM_Integrator(0)))
-    call OpenMM_Context_getPlatformName(context, platformName)
+    call OpenMM_Context_getPlatform(context, platform)
+    call OpenMM_Platform_getName(platform, platformName)
     print "('REMARK  Using OpenMM platform ', A)", platformName
 
     ! Set starting positions of the atoms. Leave time and velocity zero.
@@ -65,7 +67,7 @@ PROGRAM HelloArgon
     frameNum = 1
     do
         ! Output current state information.
-        call OpenMM_Context_createState(context, OpenMM_State_Positions, state)
+        call OpenMM_Context_getState(context, OpenMM_State_Positions, state)
         timeInPs = OpenMM_State_getTime(state)
         call writePdbFrame(frameNum, state) !output coordinates
         call OpenMM_State_destroy(state)
@@ -93,16 +95,17 @@ SUBROUTINE writePDBFrame(frameNum, state)
     integer            frameNum
     type(OpenMM_State) state
 
-    type(OpenMM_Vec3Array) posInNm
-    real*8                 posInAng(3)
+    type(OpenMM_Vec3Array) allPosInNm
+    real*8                 posInNm(3), posInAng(3)
     integer                n
-
+    
     ! Reference atomic positions in the OpenMM State.
-    call OpenMM_State_getPositions(state, posInNm)
+    call OpenMM_State_getPositions(state, allPosInNm)
 
     print "('MODEL',5X,I0)", frameNum   ! start of frame
-    do n = 1,OpenMM_Vec3Array_size(posInNm)
-        call OpenMM_Vec3Array_getScaled(posInNm, n, 10d0, posInAng)
+    do n = 1,OpenMM_Vec3Array_getSize(allPosInNm)
+        call OpenMM_Vec3Array_get(allPosInNm, n, posInNm)
+        call OpenMM_Vec3_scale(posInNm, 10d0, posInAng)
         print "('ATOM  ', I5, '  AR   AR     1    ', 3F8.3, '  1.00  0.00')",    &
             n, posInAng
     end do

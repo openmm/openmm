@@ -59,26 +59,30 @@ fortran: $(ALL_F95_EXAMPLES)
 HelloArgon HelloSodiumChloride HelloEthane HelloWaterBox: 
 	$(CC) $(CFLAGS) -I$(INCLUDE_DIR) $*.cpp /link /libpath:$(LIB_DIR) $(LIBS) /out:$*.exe
 
-HelloArgonInC: HelloArgonInC.c OpenMM_CWrapper.obj
-	$(CC) $(CFLAGS) -I. $*.c OpenMM_CWrapper.obj /link /libpath:$(LIB_DIR) $(LIBS) /out:$*.exe
+HelloArgonInC: HelloArgonInC.c OpenMMCWrapper.obj
+	$(CC) $(CFLAGS) -I. $*.c OpenMMCWrapper.obj /link /libpath:$(LIB_DIR) $(LIBS) /out:$*.exe
 
-HelloSodiumChlorideInC: HelloSodiumChlorideInC.c OpenMM_CWrapper.obj
-	$(CC) $(CFLAGS) -I. $*.c OpenMM_CWrapper.obj /link /libpath:$(LIB_DIR) $(LIBS) /out:$*.exe
+HelloSodiumChlorideInC: HelloSodiumChlorideInC.c OpenMMCWrapper.obj
+	$(CC) $(CFLAGS) -I. $*.c OpenMMCWrapper.obj /link /libpath:$(LIB_DIR) $(LIBS) /out:$*.exe
 
-HelloArgonInFortran: HelloArgonInFortran.f90 openmm.mod OpenMM_CWrapper.obj
-	$(FC) $(FFLAGS) $*.f90 OpenMM_CWrapper.obj /link /libpath:$(LIB_DIR) $(LIBS) /out:$*.exe
+HelloArgonInFortran: HelloArgonInFortran.f90 openmm.mod OpenMMFortranWrapper.obj OpenMMCWrapper.obj
+	$(FC) $(FFLAGS) $*.f90 OpenMMFortranWrapper.obj OpenMMCWrapper.obj /link /libpath:$(LIB_DIR) $(LIBS) /out:$*.exe
 
-HelloSodiumChlorideInFortran: HelloSodiumChlorideInFortran.f90 openmm.mod OpenMM_CWrapper.obj
-	$(FC) $(FFLAGS) $*.f90 OpenMM_CWrapper.obj /link /libpath:$(LIB_DIR) $(LIBS) /out:$*.exe
+HelloSodiumChlorideInFortran: HelloSodiumChlorideInFortran.f90 openmm.mod OpenMMFortranWrapper.obj OpenMMCWrapper.obj
+	$(FC) $(FFLAGS) $*.f90 OpenMMFortranWrapper.obj OpenMMCWrapper.obj /link /libpath:$(LIB_DIR) $(LIBS) /out:$*.exe
 
 
 # Build C Wrappers (Fortran depends on this too)
-OpenMM_CWrapper.obj: OpenMM_CWrapper.cpp
-	$(CC) $(CFLAGS) -c -I. -I$(INCLUDE_DIR) OpenMM_CWrapper.cpp
+OpenMMCWrapper.obj: OpenMMCWrapper.cpp
+	$(CC) $(CFLAGS) -c -I. -I$(INCLUDE_DIR) OpenMMCWrapper.cpp
+	
+# Build Fortran Wrappers
+OpenMMFortranWrapper.obj: OpenMMFortranWrapper.cpp
+	$(CC) $(CFLAGS) -c -I. -I$(INCLUDE_DIR) OpenMMFortranWrapper.cpp
 
 # Build Fortran 95 Module file
-openmm.mod: OpenMM_Module.f90
-	$(FC) -c $(FFLAGS) OpenMM_Module.f90
+openmm.mod: OpenMMFortranModule.f90
+	$(FC) -c $(FFLAGS) OpenMMFortranModule.f90
 
 clean : 
 	del *.mod *.obj *.exe *.pdb *.exe.manifest

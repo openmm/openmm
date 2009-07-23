@@ -11,7 +11,7 @@
  * other visualization tool to produce an animation of the resulting trajectory.
  * -------------------------------------------------------------------------- */
 
-#include "OpenMM_CWrapper.h"
+#include "OpenMMCWrapper.h"
 #include <stdio.h>
 
 /* Forward declaration of routine for printing one frame of the
@@ -23,6 +23,7 @@ void simulateArgon()
     OpenMM_System*         system;
     OpenMM_Integrator*     integrator;
     OpenMM_Context*        context;
+    OpenMM_Platform*       platform;
     OpenMM_NonbondedForce* nonbond; 
     OpenMM_Vec3Array*      initPosInNm;
     int                    a, frameNum;
@@ -41,7 +42,7 @@ void simulateArgon()
     initPosInNm = OpenMM_Vec3Array_create(3);
     for (a = 0; a < 3; ++a) 
     {
-        const double posNm[3] = {0.5*a, 0, 0};     /*location, nm*/
+        const OpenMM_Vec3 posNm = {0.5*a, 0, 0};     /*location, nm*/
         OpenMM_Vec3Array_set(initPosInNm, a, posNm);
 
         OpenMM_System_addParticle(system, 39.95); /*mass of Ar, grams/mole*/
@@ -55,8 +56,9 @@ void simulateArgon()
 
     /* Let OpenMM Context choose best platform. */
     context = OpenMM_Context_create(system, integrator);
+    platform = OpenMM_Context_getPlatform(context);
     printf( "REMARK  Using OpenMM platform %s\n", 
-        OpenMM_Context_getPlatformName(context));
+        OpenMM_Platform_getName(platform));
 
     /* Set starting positions of the atoms. Leave time and velocity zero. */
     OpenMM_Context_setPositions(context, initPosInNm);
@@ -64,7 +66,7 @@ void simulateArgon()
     /* Simulate. */
    for (frameNum=1; ;++frameNum) {
         /* Output current state information. */
-        OpenMM_State* state    = OpenMM_Context_createState(context, OpenMM_State_Positions);
+        OpenMM_State* state    = OpenMM_Context_getState(context, OpenMM_State_Positions);
         const double  timeInPs = OpenMM_State_getTime(state);
         writePdbFrame(frameNum, state); /*output coordinates*/
         OpenMM_State_destroy(state);
@@ -99,14 +101,14 @@ void writePdbFrame(int frameNum, const OpenMM_State* state)
 
     /* Use PDB MODEL cards to number trajectory frames. */
     printf("MODEL     %d\n", frameNum);  /*start of frame*/
-    for (a = 0; a < OpenMM_Vec3Array_size(posInNm); ++a)
+    for (a = 0; a < OpenMM_Vec3Array_getSize(posInNm); ++a)
     {
-        double posInAng[3];
+        OpenMM_Vec3 posInAng;
         /* "10" here converts nanometers to Angstroms */
-        OpenMM_Vec3Array_getScaled(posInNm, a, 10., posInAng);
+        posInAng = OpenMM_Vec3_scale(*OpenMM_Vec3Array_get(posInNm, a), 10.);
         printf("ATOM  %5d  AR   AR     1    ", a+1); /*atom number*/
         printf("%8.3f%8.3f%8.3f  1.00  0.00\n",      /*coordinates*/
-            posInAng[0], posInAng[1], posInAng[2]);
+            posInAng.x, posInAng.y, posInAng.z);
     }
     printf("ENDMDL\n"); /*end of frame*/
 }

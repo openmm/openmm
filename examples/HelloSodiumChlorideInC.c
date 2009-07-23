@@ -158,7 +158,7 @@ int main() {
  * can use the implementation from the C++ version of this example if you 
  * want. However, the methods are reimplemented in C below in case you prefer.
  */
-#include "OpenMM_CWrapper.h"
+#include "OpenMMCWrapper.h"
 
 
 struct MyOpenMMData_s {
@@ -200,6 +200,7 @@ myInitializeOpenMM( const MyAtomInfo    atoms[],
     OpenMM_Vec3Array*       initialPosInNm;
     OpenMM_NonbondedForce*  nonbond;
     OpenMM_GBSAOBCForce*    gbsa;
+    OpenMM_Platform*        platform;
     int n;
 
     /* Load all available OpenMM plugins from their default location. */
@@ -227,7 +228,7 @@ myInitializeOpenMM( const MyAtomInfo    atoms[],
     initialPosInNm = OpenMM_Vec3Array_create(0);
     for (n=0; *atoms[n].pdb; ++n) {
         const MyAtomInfo* atom = &atoms[n];
-        double posInNm[3];
+        OpenMM_Vec3 posInNm;
 
         OpenMM_System_addParticle(omm->system, atom->mass);
 
@@ -243,7 +244,7 @@ myInitializeOpenMM( const MyAtomInfo    atoms[],
                                 atom->gbsaScaleFactor);
 
         /* Convert the initial position to nm and append to the array. */
-        OpenMM_Vec3_scale(atom->initPosInAng, OpenMM_NmPerAngstrom, posInNm);
+        posInNm = OpenMM_Vec3_scale(*(const OpenMM_Vec3*)atom->initPosInAng, OpenMM_NmPerAngstrom);
         OpenMM_Vec3Array_append(initialPosInNm, posInNm);
     }
 
@@ -258,7 +259,8 @@ myInitializeOpenMM( const MyAtomInfo    atoms[],
     omm->context    = OpenMM_Context_create(omm->system, omm->integrator);
     OpenMM_Context_setPositions(omm->context, initialPosInNm);
 
-    *platformName = OpenMM_Context_getPlatformName(omm->context);
+    platform = OpenMM_Context_getPlatform(omm->context);
+    *platformName = OpenMM_Platform_getName(platform);
     return omm;
 }
 
@@ -286,7 +288,7 @@ myGetOpenMMState(MyOpenMMData* omm, int wantEnergy,
     /* Forces are also available (and cheap). */
 
     /* State object is created here and must be explicitly destroyed below. */
-    state = OpenMM_Context_createState(omm->context, infoMask);
+    state = OpenMM_Context_getState(omm->context, infoMask);
     *timeInPs = OpenMM_State_getTime(state); /* OpenMM time is in ps already. */
 
     /* Positions are maintained as a Vec3Array inside the State. This will give
@@ -294,8 +296,9 @@ myGetOpenMMState(MyOpenMMData* omm, int wantEnergy,
     posArrayInNm = OpenMM_State_getPositions(state);
     for (n=0; *atoms[n].pdb; ++n)
         /* Sets atoms[n].pos = posArray[n] * Angstroms/nm. */
-        OpenMM_Vec3Array_getScaled(posArrayInNm, n, OpenMM_AngstromsPerNm, 
-                                   atoms[n].posInAng);
+        *(OpenMM_Vec3*)atoms[n].posInAng = 
+            OpenMM_Vec3_scale(*OpenMM_Vec3Array_get(posArrayInNm, n),
+                              OpenMM_AngstromsPerNm); 
 
     /* If energy has been requested, obtain it and convert from kJ to kcal. */
     *energyInKcal = 0;
