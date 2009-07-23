@@ -291,6 +291,11 @@ int CpuObc::computeBornRadii( RealOpenMM** atomCoordinates, RealOpenMM* bornRadi
  
                RealOpenMM ratio    = LN( (u_ij/l_ij) );
                RealOpenMM term     = l_ij - u_ij + fourth*r*(u_ij2 - l_ij2)  + ( half*rInverse*ratio) + (fourth*scaledRadiusJ*scaledRadiusJ*rInverse)*(l_ij2 - u_ij2);
+
+               // this case (atom i completely inside atom j) is not considered in the original paper
+               // Jay Ponder and the authors of Tinker recognized this and
+               // worked out the details
+
                if( offsetRadiusI < (scaledRadiusJ - r) ){
                   term += two*( radiusIInverse - l_ij);
                }

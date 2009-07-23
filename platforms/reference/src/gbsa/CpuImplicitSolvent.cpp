@@ -814,6 +814,20 @@ int CpuImplicitSolvent::computeAceNonPolarForce( const ImplicitSolventParameters
 
    // 1 + 1 + pow + 3 + 1 + 2 FLOP
 
+   // the original ACE equation is based on Eq.2 of
+
+   // M. Schaefer, C. Bartels and M. Karplus, "Solution Conformations
+   // and Thermodynamics of Structured Peptides: Molecular Dynamics
+   // Simulation with an Implicit Solvation Model", J. Mol. Biol.,
+   // 284, 835-848 (1998)  (ACE Method)
+
+   // The original equation includes the factor (atomicRadii[atomI]/bornRadii[atomI]) to the first power,
+   // whereas here the ratio is raised to the sixth power: (atomicRadii[atomI]/bornRadii[atomI])**6
+
+   // This modification was made by Jay Ponder who observed it gave better correlations w/
+   // observed values. He did not think it was important enough to write up, so there is
+   // no paper to cite.
+
    for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
       if( bornRadii[atomI] > 0.0 ){
          RealOpenMM r            = atomicRadii[atomI] + probeRadius;
