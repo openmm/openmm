@@ -51,30 +51,35 @@ all : $(ALL_PROGS)
 .cpp : 
 	g++ $(CFLAGS) -I$(INCLUDE_DIR) $< -L$(LIB_DIR) $(LIBS) -o $*
 
-HelloArgonInC: HelloArgonInC.c OpenMM_CWrapper.o
-	g++ $(CFLAGS) -I$(WRAPPER_DIR) HelloArgonInC.c OpenMM_CWrapper.o \
+HelloArgonInC: HelloArgonInC.c OpenMMCWrapper.o
+	g++ $(CFLAGS) -I$(WRAPPER_DIR) HelloArgonInC.c OpenMMCWrapper.o \
         -L$(LIB_DIR) $(LIBS) -o HelloArgonInC
 
-HelloSodiumChlorideInC: HelloSodiumChlorideInC.c OpenMM_CWrapper.o
-	g++ $(CFLAGS) -I$(WRAPPER_DIR) HelloSodiumChlorideInC.c OpenMM_CWrapper.o \
+HelloSodiumChlorideInC: HelloSodiumChlorideInC.c OpenMMCWrapper.o
+	g++ $(CFLAGS) -I$(WRAPPER_DIR) HelloSodiumChlorideInC.c OpenMMCWrapper.o \
         -L$(LIB_DIR) $(LIBS) -o HelloSodiumChlorideInC
 
-HelloArgonInFortran: HelloArgonInFortran.f90 openmm.mod OpenMM_CWrapper.o
-	gfortran $(FFLAGS) HelloArgonInFortran.f90 OpenMM_CWrapper.o \
+HelloArgonInFortran: HelloArgonInFortran.f90 openmm.mod OpenMMFortranWrapper.o OpenMMCWrapper.o
+	gfortran $(FFLAGS) HelloArgonInFortran.f90 OpenMMFortranWrapper.o OpenMMCWrapper.o \
 	    -L$(LIB_DIR) $(LIBS) $(FCPPLIBS) -o HelloArgonInFortran
 
-HelloSodiumChlorideInFortran: HelloSodiumChlorideInFortran.f90 openmm.mod OpenMM_CWrapper.o
-	gfortran $(FFLAGS) HelloSodiumChlorideInFortran.f90 OpenMM_CWrapper.o \
+HelloSodiumChlorideInFortran: HelloSodiumChlorideInFortran.f90 openmm.mod OpenMMFortranWrapper.o OpenMMCWrapper.o
+	gfortran $(FFLAGS) HelloSodiumChlorideInFortran.f90 OpenMMFortranWrapper.o OpenMMCWrapper.o \
 	    -L$(LIB_DIR) $(LIBS) $(FCPPLIBS) -o HelloSodiumChlorideInFortran
 
 # Build C Wrappers (Fortran depends on this too)
-OpenMM_CWrapper.o: 
+OpenMMCWrapper.o: 
 	g++ -c $(CFLAGS) -I$(WRAPPER_DIR) -I$(INCLUDE_DIR) \
-         $(WRAPPER_DIR)/OpenMM_CWrapper.cpp -o OpenMM_CWrapper.o
+         $(WRAPPER_DIR)/OpenMMCWrapper.cpp -o OpenMMCWrapper.o
+
+# Build Fortran Wrappers
+OpenMMFortranWrapper.o: 
+	g++ -c $(CFLAGS) -I$(WRAPPER_DIR) -I$(INCLUDE_DIR) \
+         $(WRAPPER_DIR)/OpenMMFortranWrapper.cpp -o OpenMMFortranWrapper.o
 
 # Build Fortran 95 Module file
 openmm.mod:
-	gfortran -c $(FFLAGS) $(WRAPPER_DIR)/OpenMM_Module.f90
+	gfortran -c $(FFLAGS) $(WRAPPER_DIR)/OpenMMFortranModule.f90
 
 clean : 
 	rm $(ALL_PROGS) *.o *.mod *.obj *.exe
