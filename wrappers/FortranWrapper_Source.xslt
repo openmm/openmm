@@ -43,9 +43,7 @@
 using namespace OpenMM;
 using namespace std;
 
-#if defined(__cplusplus)
 extern "C" {
-#endif
 
 /* OpenMM_Vec3 */
 void openmm_vec3_scale_(const OpenMM_Vec3&amp; vec, double const&amp; scale, OpenMM_Vec3&amp; result) {
@@ -56,10 +54,10 @@ void OPENMM_VEC3_SCALE(const OpenMM_Vec3&amp; vec, double const&amp; scale, Open
 }
 
 /* OpenMM_Vec3Array */
-void openmm_vec3array_create_(const int&amp; size, OpenMM_Vec3Array*&amp; result) {
+void openmm_vec3array_create_(OpenMM_Vec3Array*&amp; result, const int&amp; size) {
     result = OpenMM_Vec3Array_create(size);
 }
-void OPENMM_VEC3ARRAY_CREATE(const int&amp; size, OpenMM_Vec3Array*&amp; result) {
+void OPENMM_VEC3ARRAY_CREATE(OpenMM_Vec3Array*&amp; result, const int&amp; size) {
     result = OpenMM_Vec3Array_create(size);
 }
 void openmm_vec3array_destroy_(OpenMM_Vec3Array*&amp; array) {
@@ -94,18 +92,26 @@ void openmm_vec3array_set_(OpenMM_Vec3Array* const&amp; array, const int&amp; in
 void OPENMM_VEC3ARRAY_SET(OpenMM_Vec3Array* const&amp; array, const int&amp; index, const OpenMM_Vec3&amp; vec) {
     OpenMM_Vec3Array_set(array, index-1, vec);
 }
-void openmm_vec3array_get_(const OpenMM_Vec3Array* const&amp; array, const int&amp; index, const OpenMM_Vec3*&amp; result) {
-    result = OpenMM_Vec3Array_get(array, index-1);
+void openmm_vec3array_get_(const OpenMM_Vec3Array* const&amp; array, const int&amp; index, OpenMM_Vec3&amp; result) {
+    result = *OpenMM_Vec3Array_get(array, index-1);
 }
-void OPENMM_VEC3ARRAY_GET(const OpenMM_Vec3Array* const&amp; array, const int&amp; index, const OpenMM_Vec3*&amp; result) {
-    result = OpenMM_Vec3Array_get(array, index-1);
+void OPENMM_VEC3ARRAY_GET(const OpenMM_Vec3Array* const&amp; array, const int&amp; index, OpenMM_Vec3&amp; result) {
+    result = *OpenMM_Vec3Array_get(array, index-1);
 }
 
 /* OpenMM_StringArray */
-void openmm_stringarray_create_(const int&amp; size, OpenMM_StringArray*&amp; result) {
+void copyAndPadString(char* dest, const char* source, int length) {
+    bool reachedEnd = false;
+    for (int i = 0; i &lt; length; i++) {
+        if (source[i] == 0)
+            reachedEnd = true;
+        dest[i] = (reachedEnd ? ' ' : source[i]);
+    }
+}
+void openmm_stringarray_create_(OpenMM_StringArray*&amp; result, const int&amp; size) {
     result = OpenMM_StringArray_create(size);
 }
-void OPENMM_STRINGARRAY_CREATE(const int&amp; size, OpenMM_StringArray*&amp; result) {
+void OPENMM_STRINGARRAY_CREATE(OpenMM_StringArray*&amp; result, const int&amp; size) {
     result = OpenMM_StringArray_create(size);
 }
 void openmm_stringarray_destroy_(OpenMM_StringArray*&amp; array) {
@@ -142,18 +148,18 @@ void OPENMM_STRINGARRAY_SET(OpenMM_StringArray* const&amp; array, const int&amp;
 }
 void openmm_stringarray_get_(const OpenMM_StringArray* const&amp; array, const int&amp; index, char* result, int length) {
     const char* str = OpenMM_StringArray_get(array, index-1);
-    strncpy(result, str, length);
+    copyAndPadString(result, str, length);
 }
 void OPENMM_STRINGARRAY_GET(const OpenMM_StringArray* const&amp; array, const int&amp; index, char* result, int length) {
     const char* str = OpenMM_StringArray_get(array, index-1);
-    strncpy(result, str, length);
+    copyAndPadString(result, str, length);
 }
 
 /* OpenMM_BondArray */
-void openmm_bondarray_create_(const int&amp; size, OpenMM_BondArray*&amp; result) {
+void openmm_bondarray_create_(OpenMM_BondArray*&amp; result, const int&amp; size) {
     result = OpenMM_BondArray_create(size);
 }
-void OPENMM_BONDARRAY_CREATE(const int&amp; size, OpenMM_BondArray*&amp; result) {
+void OPENMM_BONDARRAY_CREATE(OpenMM_BondArray*&amp; result, const int&amp; size) {
     result = OpenMM_BondArray_create(size);
 }
 void openmm_bondarray_destroy_(OpenMM_BondArray*&amp; array) {
@@ -229,9 +235,7 @@ void OPENMM_PLATFORM_LOADPLUGINSFROMDIRECTORY(const char* directory, OpenMM_Stri
   <xsl:call-template name="class"/>
  </xsl:for-each>
 
-#if defined(__cplusplus)
 }
-#endif
 </xsl:template>
 
 <!-- Print out information for a class -->
@@ -298,6 +302,15 @@ void OPENMM_PLATFORM_LOADPLUGINSFROMDIRECTORY(const char* directory, OpenMM_Stri
   <xsl:for-each select="Argument">
    <xsl:value-of select="', '"/>
    <xsl:call-template name="wrap_type"><xsl:with-param name="type_id" select="@type"/></xsl:call-template>
+   <xsl:variable name="is_handle">
+    <xsl:call-template name="is_handle_type">
+     <xsl:with-param name="type_id" select="@type"/>
+    </xsl:call-template>
+   </xsl:variable>
+   <xsl:if test="string-length($is_handle)>0">&amp;</xsl:if>
+   <xsl:variable name="type_id" select="@type"/>
+   <xsl:variable name="type_node" select="/GCC_XML/*[@id=$type_id]"/>
+   <xsl:if test="not(local-name($type_node)='ReferenceType' or local-name($type_node)='PointerType')"> const&amp;</xsl:if>
    <xsl:value-of select="concat(' ', @name)"/>
   </xsl:for-each>
   <!-- If any argument is a string, include a length argument -->
@@ -359,6 +372,12 @@ void OPENMM_PLATFORM_LOADPLUGINSFROMDIRECTORY(const char* directory, OpenMM_Stri
  <xsl:for-each select="Argument">
   <xsl:if test="position() > 1 or not($method/@static='1')">, </xsl:if>
   <xsl:call-template name="wrap_type"><xsl:with-param name="type_id" select="@type"/></xsl:call-template>
+  <xsl:variable name="is_handle">
+   <xsl:call-template name="is_handle_type">
+    <xsl:with-param name="type_id" select="@type"/>
+   </xsl:call-template>
+  </xsl:variable>
+  <xsl:if test="string-length($is_handle)>0">&amp;</xsl:if>
   <xsl:variable name="type_id" select="@type"/>
   <xsl:variable name="type_node" select="/GCC_XML/*[@id=$type_id]"/>
   <xsl:if test="not(local-name($type_node)='ReferenceType' or local-name($type_node)='PointerType')"> const&amp;</xsl:if>
@@ -372,9 +391,10 @@ void OPENMM_PLATFORM_LOADPLUGINSFROMDIRECTORY(const char* directory, OpenMM_Stri
    </xsl:when>
    <xsl:otherwise>
     <xsl:call-template name="wrap_type"><xsl:with-param name="type_id" select="@returns"/></xsl:call-template>
+    <xsl:value-of select="'&amp;'"/>
    </xsl:otherwise>
   </xsl:choose>
-  <xsl:value-of select="'&amp; result'"/>
+  <xsl:value-of select="' result'"/>
  </xsl:if>
  <!-- If any argument is a string, include a length argument -->
  <xsl:for-each select="Argument">
@@ -419,8 +439,7 @@ void OPENMM_PLATFORM_LOADPLUGINSFROMDIRECTORY(const char* directory, OpenMM_Stri
  </xsl:for-each>
  <xsl:value-of select="');'"/>
  <xsl:if test="$has_return_arg and (@returns=$const_ref_string_type_id or @returns=$ptr_const_char_type_id)">
-    strncpy(result, result_chars, result_length);
- </xsl:if>
+    copyAndPadString(result, result_chars, result_length);</xsl:if>
 };
 </xsl:template>
 
@@ -473,6 +492,31 @@ void OPENMM_PLATFORM_LOADPLUGINSFROMDIRECTORY(const char* directory, OpenMM_Stri
   <xsl:otherwise>
    <xsl:value-of select="$node/@name"/>
   </xsl:otherwise>
+ </xsl:choose>
+</xsl:template>
+
+<!-- Determine whether a type is one of the special handle types -->
+<xsl:template name="is_handle_type">
+ <xsl:param name="type_id"/>
+ <xsl:variable name="node" select="/GCC_XML/*[@id=$type_id]"/>
+ <xsl:choose>
+  <xsl:when test="$type_id=$vec3_type_id"></xsl:when>
+  <xsl:when test="$type_id=$vector_string_type_id">1</xsl:when>
+  <xsl:when test="$type_id=$vector_vec3_type_id">1</xsl:when>
+  <xsl:when test="$type_id=$vector_bond_type_id">1</xsl:when>
+  <xsl:when test="$type_id=$map_parameter_type_id">1</xsl:when>
+  <xsl:when test="$type_id=$vector_string_type_id">1</xsl:when>
+  <xsl:when test="local-name($node)='Class' and $node/@context=$openmm_namespace_id">1</xsl:when>
+  <xsl:when test="local-name($node)='ReferenceType' or local-name($node)='PointerType'">
+   <xsl:call-template name="is_handle_type">
+    <xsl:with-param name="type_id" select="$node/@type"/>
+   </xsl:call-template>
+  </xsl:when>
+  <xsl:when test="local-name($node)='CvQualifiedType'">
+   <xsl:call-template name="is_handle_type">
+    <xsl:with-param name="type_id" select="$node/@type"/>
+   </xsl:call-template>
+  </xsl:when>
  </xsl:choose>
 </xsl:template>
 

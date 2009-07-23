@@ -88,12 +88,12 @@ MODULE OpenMM
         subroutine OpenMM_Vec3_scale(vec, scale, result)
             use OpenMM_Types; implicit none
             real*8 vec(3)
-            real scale
+            real*8 scale
             real*8 result(3)
         end
 
         ! OpenMM_Vec3Array
-        subroutine OpenMM_Vec3Array_create(size, result)
+        subroutine OpenMM_Vec3Array_create(result, size)
             use OpenMM_Types; implicit none
             integer*4 size
             type (OpenMM_Vec3Array) result
@@ -131,7 +131,7 @@ MODULE OpenMM
         end
 
         ! OpenMM_StringArray
-        subroutine OpenMM_StringArray_create(size, result)
+        subroutine OpenMM_StringArray_create(result, size)
             use OpenMM_Types; implicit none
             integer*4 size
             type (OpenMM_StringArray) result
@@ -169,7 +169,7 @@ MODULE OpenMM
         end
 
         ! OpenMM_BondArray
-        subroutine OpenMM_BondArray_create(size, result)
+        subroutine OpenMM_BondArray_create(result, size)
             use OpenMM_Types; implicit none
             integer*4 size
             type (OpenMM_BondArray) result
@@ -268,7 +268,7 @@ END MODULE OpenMM
 <xsl:template name="enumeration">
  <xsl:param name="class_name"/>
   <xsl:for-each select="EnumValue">
-    real*8 OpenMM_<xsl:value-of select="concat($class_name, '_', @name)"/>
+    integer*4 OpenMM_<xsl:value-of select="concat($class_name, '_', @name)"/>
  </xsl:for-each>
   <xsl:for-each select="EnumValue">
     parameter(OpenMM_<xsl:value-of select="concat($class_name, '_', @name, '=', @init, ')')"/>
