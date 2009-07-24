@@ -19,7 +19,7 @@
 <!-- Do not generate the following functions -->
 <xsl:variable name="skip_methods" select="('OpenMM_Context_getState', 'OpenMM_Platform_loadPluginsFromDirectory')"/>
 <!-- Suppress any function which references any of the following classes -->
-<xsl:variable name="hide_classes" select="('Kernel', 'Stream', 'KernelImpl', 'StreamImpl', 'KernelFactory', 'StreamFactory')"/>
+<xsl:variable name="hide_classes" select="('Kernel', 'Stream', 'KernelImpl', 'StreamImpl', 'KernelFactory', 'StreamFactory', 'ContextImpl')"/>
 
 <!-- Main loop over all classes in the OpenMM namespace -->
 <xsl:template match="/GCC_XML">

@@ -26,7 +26,7 @@
 <!-- Do not generate functions for the following classes -->
 <xsl:variable name="skip_classes" select="('Vec3', 'Kernel', 'Stream', 'KernelImpl', 'StreamImpl', 'KernelFactory', 'StreamFactory')"/>
 <!-- Suppress any function which references any of the following classes -->
-<xsl:variable name="hide_classes" select="('Kernel', 'Stream', 'KernelImpl', 'StreamImpl', 'KernelFactory', 'StreamFactory')"/>
+<xsl:variable name="hide_classes" select="('Kernel', 'Stream', 'KernelImpl', 'StreamImpl', 'KernelFactory', 'StreamFactory', 'ContextImpl')"/>
 
 <!-- Main loop over all classes in the OpenMM namespace -->
 <xsl:template match="/GCC_XML">
