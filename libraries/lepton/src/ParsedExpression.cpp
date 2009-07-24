@@ -30,6 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "ParsedExpression.h"
+#include "ExpressionProgram.h"
 #include "Operation.h"
 #include <limits>
 #include <vector>
@@ -37,7 +38,7 @@
 using namespace Lepton;
 using namespace std;
 
-ParsedExpression::ParsedExpression(ExpressionTreeNode rootNode) : rootNode(rootNode) {
+ParsedExpression::ParsedExpression(const ExpressionTreeNode& rootNode) : rootNode(rootNode) {
 }
 
 const ExpressionTreeNode& ParsedExpression::getRootNode() const {
@@ -105,6 +106,7 @@ ExpressionTreeNode ParsedExpression::substituteSimplerExpression(const Expressio
         children[i] = substituteSimplerExpression(node.getChildren()[i]);
     switch (node.getOperation().getId()) {
         case Operation::ADD:
+        {
             double first = getConstantValue(children[0]);
             double second = getConstantValue(children[1]);
             if (first == 0.0)
@@ -116,19 +118,23 @@ ExpressionTreeNode ParsedExpression::substituteSimplerExpression(const Expressio
             if (second == 1.0)
                 return ExpressionTreeNode(new Operation::Increment(), children[0]);
             break;
+        }
         case Operation::SUBTRACT:
-            first = getConstantValue(children[0]);
+        {
+            double first = getConstantValue(children[0]);
             if (first == 0.0)
                 return ExpressionTreeNode(new Operation::Negate(), children[1]);
-            second = getConstantValue(children[1]);
+            double second = getConstantValue(children[1]);
             if (second == 0.0)
                 return children[0];
             if (second == 1.0)
                 return ExpressionTreeNode(new Operation::Decrement(), children[0]);
             break;
+        }
         case Operation::MULTIPLY:
-            first = getConstantValue(children[0]);
-            second = getConstantValue(children[1]);
+        {
+            double first = getConstantValue(children[0]);
+            double second = getConstantValue(children[1]);
             if (first == 0.0 || second == 0.0)
                 return ExpressionTreeNode(new Operation::Constant(0.0));
             if (first == 1.0)
@@ -136,7 +142,9 @@ ExpressionTreeNode ParsedExpression::substituteSimplerExpression(const Expressio
             if (second == 1.0)
                 return children[0];
             break;
+        }
         case Operation::DIVIDE:
+        {
             double numerator = getConstantValue(children[0]);
             if (numerator = 0.0)
                 return ExpressionTreeNode(new Operation::Constant(0.0));
@@ -146,7 +154,9 @@ ExpressionTreeNode ParsedExpression::substituteSimplerExpression(const Expressio
             if (denominator == 1.0)
                 return children[0];
             break;
+        }
         case Operation::POWER:
+        {
             double base = getConstantValue(children[0]);
             if (base == 0.0)
                 return ExpressionTreeNode(new Operation::Constant(0.0));
@@ -164,6 +174,7 @@ ExpressionTreeNode ParsedExpression::substituteSimplerExpression(const Expressio
             if (exponent == 0.5)
                 return ExpressionTreeNode(new Operation::Sqrt(), children[0]);
             break;
+        }
     }
     return ExpressionTreeNode(node.getOperation().clone(), children);
 }
@@ -183,6 +194,10 @@ double ParsedExpression::getConstantValue(const ExpressionTreeNode& node) {
     if (node.getOperation().getId() == Operation::CONSTANT)
         return dynamic_cast<const Operation::Constant&>(node.getOperation()).getValue();
     return numeric_limits<double>::quiet_NaN();
+}
+
+ExpressionProgram ParsedExpression::createProgram() const {
+    return ExpressionProgram(*this);
 }
 
 ostream& Lepton::operator<<(ostream& out, const ExpressionTreeNode& node) {

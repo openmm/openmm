@@ -1,5 +1,5 @@
-#ifndef LEPTON_PARSED_EXPRESSION_H_
-#define LEPTON_PARSED_EXPRESSION_H_
+#ifndef LEPTON_EXPRESSION_PROGRAM_H_
+#define LEPTON_EXPRESSION_PROGRAM_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   Lepton                                   *
@@ -36,27 +36,39 @@
 #include "windowsIncludes.h"
 #include <map>
 #include <string>
+#include <vector>
 
 namespace Lepton {
 
-class ExpressionProgram;
-
 /**
- * This class represents the result of parsing an expression.  It provides methods for working with the
- * expression in various ways, such as evaluating it, getting the tree representation of the expresson, etc.
+ * An ExpressionProgram is a linear sequence of Operations for evaluating an expression.  The evaluation
+ * is done with a stack.  The arguments to each Operation are first taken off the stack in order, then it is
+ * evaluated and the result is pushed back onto the stack.  At the end, the stack contains a single value,
+ * which is the value of the expression.
+ *
+ * An ExpressionProgram is created by calling createProgram() on a ParsedExpression.  It can generally be evaluated
+ * more quickly than the ParsedExpression itself, so when you need to evaluate an expression many times, it is
+ * most efficient to create an ExpressionProgram from it.
  */
 
-class LEPTON_EXPORT ParsedExpression {
+class LEPTON_EXPORT ExpressionProgram {
 public:
+    ExpressionProgram(const ExpressionProgram& program);
+    ~ExpressionProgram();
+    ExpressionProgram& operator=(const ExpressionProgram& program);
     /**
-     * Create a ParsedExpression.  Normally you will not call this directly.  Instead, use the Parser class
-     * to parse expression.
+     * Get the number of Operations that make up this program.
      */
-    ParsedExpression(const ExpressionTreeNode& rootNode);
+    int getNumOperations() const;
     /**
-     * Get the root node of the expression's abstract syntax tree.
+     * Get an Operation in this program.
      */
-    const ExpressionTreeNode& getRootNode() const;
+    const Operation& getOperation(int index) const;
+    /**
+     * Get the size of the stack needed to execute this program.  This is the largest number of elements present
+     * on the stack at any point during evaluation.
+     */
+    int getStackSize() const;
     /**
      * Evaluate the expression.  If the expression involves any variables, this method will throw an exception.
      */
@@ -69,43 +81,14 @@ public:
      *                     will be thrown.
      */
     double evaluate(const std::map<std::string, double>& variables) const;
-    /**
-     * Create a new ParsedExpression which produces the same result as this one, but is faster to evaluate.
-     */
-    ParsedExpression optimize() const;
-    /**
-     * Create a new ParsedExpression which produces the same result as this one, but is faster to evaluate.
-     *
-     * @param variables    a map specifying values for a subset of variables that appear in the expression.
-     *                     All occurrences of these variables in the expression are replaced with the values
-     *                     specified.
-     */
-    ParsedExpression optimize(const std::map<std::string, double>& variables) const;
-    /**
-     * Create a new ParsedExpression which is the analytic derivative of this expression with respect to a
-     * particular variable.
-     *
-     * @param variable     the variable with respect to which the derivate should be taken
-     */
-    ParsedExpression differentiate(const std::string& variable) const;
-    /**
-     * Create an ExpressionProgram that represents the same calculation as this expression.
-     */
-    ExpressionProgram createProgram() const;
 private:
-    static double evaluate(const ExpressionTreeNode& node, const std::map<std::string, double>& variables);
-    static ExpressionTreeNode preevaluateVariables(const ExpressionTreeNode& node, const std::map<std::string, double>& variables);
-    static ExpressionTreeNode precalculateConstantSubexpressions(const ExpressionTreeNode& node);
-    static ExpressionTreeNode substituteSimplerExpression(const ExpressionTreeNode& node);
-    static ExpressionTreeNode differentiate(const ExpressionTreeNode& node, const std::string& variable);
-    static double getConstantValue(const ExpressionTreeNode& node);
-    ExpressionTreeNode rootNode;
+    friend class ParsedExpression;
+    ExpressionProgram(const ParsedExpression& expression);
+    void buildProgram(const ExpressionTreeNode& node);
+    std::vector<Operation*> operations;
+    int maxArgs, stackSize;
 };
-
-std::ostream& operator<<(std::ostream& out, const ExpressionTreeNode& node);
-
-std::ostream& operator<<(std::ostream& out, const ParsedExpression& exp);
 
 } // namespace Lepton
 
-#endif /*LEPTON_PARSED_EXPRESSION_H_*/
+#endif /*LEPTON_EXPRESSION_PROGRAM_H_*/
