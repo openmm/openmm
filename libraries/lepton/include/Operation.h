@@ -33,6 +33,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "windowsIncludes.h"
+#include "CustomFunction.h"
 #include <cmath>
 #include <map>
 #include <string>
@@ -53,6 +54,8 @@ class ExpressionTreeNode;
 
 class LEPTON_EXPORT Operation {
 public:
+    virtual ~Operation() {
+    }
     /**
      * This enumeration lists all Operation subclasses.  This is provided so that switch statements
      * can be used when processing or analyzing parsed expressions.
@@ -177,7 +180,13 @@ private:
 
 class Operation::Custom : public Operation {
 public:
-    Custom(const std::string& name, int arguments) : name(name), arguments(arguments) {
+    Custom(const std::string& name, CustomFunction* function) : name(name), function(function), isDerivative(false), derivOrder(function->getNumArguments(), 0) {
+    }
+    Custom(const Custom& base, int derivIndex) : name(base.name), function(base.function->clone()), isDerivative(true), derivOrder(base.derivOrder) {
+        derivOrder[derivIndex]++;
+    }
+    ~Custom() {
+        delete function;
     }
     std::string getName() const {
         return name;
@@ -186,18 +195,25 @@ public:
         return CUSTOM;
     }
     int getNumArguments() const {
-        return arguments;
+        return function->getNumArguments();
     }
     Operation* clone() const {
-        return new Custom(name, arguments);
+        Custom* clone = new Custom(name, function->clone());
+        clone->isDerivative = isDerivative;
+        clone->derivOrder = derivOrder;
+        return clone;
     }
     double evaluate(double* args, const std::map<std::string, double>& variables) const {
-        return 0.0;
+        if (isDerivative)
+            return function->evaluateDerivative(args, &derivOrder[0]);
+        return function->evaluate(args);
     }
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 private:
     std::string name;
-    int arguments;
+    CustomFunction* function;
+    bool isDerivative;
+    std::vector<int> derivOrder;
 };
 
 class Operation::Add : public Operation {

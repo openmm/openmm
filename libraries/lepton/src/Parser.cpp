@@ -30,6 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "Parser.h"
+#include "CustomFunction.h"
 #include "Exception.h"
 #include "ExpressionTreeNode.h"
 #include "Operation.h"
@@ -130,16 +131,20 @@ vector<ParseToken> Parser::tokenize(string expression) {
     return tokens;
 }
 
-ParsedExpression Parser::parse(string expression) {
+ParsedExpression Parser::parse(const string& expression) {
+    return parse(expression, map<string, CustomFunction*>());
+}
+
+ParsedExpression Parser::parse(const string& expression, const map<string, CustomFunction*>& customFunctions) {
     vector<ParseToken> tokens = tokenize(expression);
     int pos = 0;
-    ExpressionTreeNode result = parsePrecedence(tokens, pos, 0);
+    ExpressionTreeNode result = parsePrecedence(tokens, pos, customFunctions, 0);
     if (pos != tokens.size())
         throw Exception("Parse error: unexpected text at end of expression");
     return ParsedExpression(result);
 }
 
-ExpressionTreeNode Parser::parsePrecedence(const vector<ParseToken>& tokens, int& pos, int precedence) {
+ExpressionTreeNode Parser::parsePrecedence(const vector<ParseToken>& tokens, int& pos, const map<string, CustomFunction*>& customFunctions, int precedence) {
     if (pos == tokens.size())
         throw Exception("Parse error: unexpected end of expression");
 
@@ -160,7 +165,7 @@ ExpressionTreeNode Parser::parsePrecedence(const vector<ParseToken>& tokens, int
     }
     else if (token.getType() == ParseToken::LeftParen) {
         pos++;
-        result = parsePrecedence(tokens, pos, 0);
+        result = parsePrecedence(tokens, pos, customFunctions, 0);
         if (pos == tokens.size() || tokens[pos].getType() != ParseToken::RightParen)
         throw Exception("Parse error: unbalanced parentheses");
         pos++;
@@ -170,7 +175,7 @@ ExpressionTreeNode Parser::parsePrecedence(const vector<ParseToken>& tokens, int
         vector<ExpressionTreeNode> args;
         bool moreArgs;
         do {
-            args.push_back(parsePrecedence(tokens, pos, 0));
+            args.push_back(parsePrecedence(tokens, pos, customFunctions, 0));
             moreArgs = (pos < tokens.size() && tokens[pos].getType() == ParseToken::Comma);
             if (moreArgs)
                 pos++;
@@ -178,11 +183,11 @@ ExpressionTreeNode Parser::parsePrecedence(const vector<ParseToken>& tokens, int
         if (pos == tokens.size() || tokens[pos].getType() != ParseToken::RightParen)
         throw Exception("Parse error: unbalanced parentheses");
         pos++;
-        result = ExpressionTreeNode(getFunctionOperation(token.getText(), args.size()), args);
+        result = ExpressionTreeNode(getFunctionOperation(token.getText(), customFunctions), args);
     }
     else if (token.getType() == ParseToken::Operator && token.getText() == "-") {
         pos++;
-        ExpressionTreeNode toNegate = parsePrecedence(tokens, pos, 2);
+        ExpressionTreeNode toNegate = parsePrecedence(tokens, pos, customFunctions, 2);
         result = ExpressionTreeNode(new Operation::Negate(), toNegate);
     }
     else
@@ -197,7 +202,7 @@ ExpressionTreeNode Parser::parsePrecedence(const vector<ParseToken>& tokens, int
         if (opPrecedence < precedence)
             return result;
         pos++;
-        ExpressionTreeNode arg = parsePrecedence(tokens, pos, LeftAssociative[op] ? opPrecedence+1 : opPrecedence);
+        ExpressionTreeNode arg = parsePrecedence(tokens, pos, customFunctions, LeftAssociative[op] ? opPrecedence+1 : opPrecedence);
         result = ExpressionTreeNode(getOperatorOperation(token.getText()), result, arg);
     }
     return result;
@@ -220,7 +225,7 @@ Operation* Parser::getOperatorOperation(const std::string& name) {
     }
 }
 
-Operation* Parser::getFunctionOperation(const std::string& name, int arguments) {
+Operation* Parser::getFunctionOperation(const std::string& name, const map<string, CustomFunction*>& customFunctions) {
 
     static map<string, Operation::Id> opMap;
     if (opMap.size() == 0) {
@@ -243,9 +248,18 @@ Operation* Parser::getFunctionOperation(const std::string& name, int arguments) 
         opMap["decrement"] = Operation::DECREMENT;
     }
     string trimmed = name.substr(0, name.size()-1);
+
+    // First check custom functions.
+
+    map<string, CustomFunction*>::const_iterator custom = customFunctions.find(trimmed);
+    if (custom != customFunctions.end())
+        return new Operation::Custom(trimmed, custom->second->clone());
+
+    // Now try standard functions.
+
     map<string, Operation::Id>::const_iterator iter = opMap.find(trimmed);
     if (iter == opMap.end())
-        return new Operation::Custom(trimmed, arguments);
+        throw Exception("Parse error: unknown function");
     switch (iter->second) {
         case Operation::SQRT:
             return new Operation::Sqrt();

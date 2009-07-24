@@ -1,5 +1,5 @@
-#ifndef LEPTON_PARSER_H_
-#define LEPTON_PARSER_H_
+#ifndef LEPTON_CUSTOM_FUNCTION_H_
+#define LEPTON_CUSTOM_FUNCTION_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   Lepton                                   *
@@ -33,43 +33,45 @@
  * -------------------------------------------------------------------------- */
 
 #include "windowsIncludes.h"
-#include <map>
-#include <string>
-#include <vector>
 
 namespace Lepton {
 
-class CustomFunction;
-class ExpressionTreeNode;
-class Operation;
-class ParsedExpression;
-class ParseToken;
-
 /**
- * This class provides the main interface for parsing expressions.
+ * This class is the interface for defining your own function that may be included in expressions.
+ * To use it, create a concrete subclass that implements all of the virtual methods for each new function
+ * you want to define.  Then when you call Parser::parse() to parse an expression, pass a map of
+ * function names to CustomFunction objects.
  */
 
-class LEPTON_EXPORT Parser {
+class LEPTON_EXPORT CustomFunction {
 public:
+    virtual ~CustomFunction() {
+    }
     /**
-     * Parse a mathematical expression and return a representation of it as an abstract syntax tree.
+     * Get the number of arguments this function exprects.
      */
-    static ParsedExpression parse(const std::string& expression);
+    virtual int getNumArguments() const = 0;
     /**
-     * Parse a mathematical expression and return a representation of it as an abstract syntax tree.
+     * Evaluate the function.
      *
-     * @param customFunctions   a map specifying user defined functions that may appear in the expression.
-     *                          The key are function names, and the values are corresponding CustomFunction objects.
+     * @param arguments    the array of argument values
      */
-    static ParsedExpression parse(const std::string& expression, const std::map<std::string, CustomFunction*>& customFunctions);
-private:
-    static std::vector<ParseToken> tokenize(std::string expression);
-    static ParseToken getNextToken(std::string expression, int start);
-    static ExpressionTreeNode parsePrecedence(const std::vector<ParseToken>& tokens, int& pos, const std::map<std::string, CustomFunction*>& customFunctions, int precedence);
-    static Operation* getOperatorOperation(const std::string& name);
-    static Operation* getFunctionOperation(const std::string& name, const std::map<std::string, CustomFunction*>& customFunctions);
+    virtual double evaluate(const double* arguments) const = 0;
+    /**
+     * Evaluate a derivative of the function.
+     *
+     * @param arguments    the array of argument values
+     * @param derivOrder   an array specifying the number of times the function has been differentiated
+     *                     with respect to each of its arguments.  For example, the array {0, 2} indicates
+     *                     a second derivative with respect to the second argument.
+     */
+    virtual double evaluateDerivative(const double* arguments, const int* derivOrder) const = 0;
+    /**
+     * Create a new duplicate of this object on the heap using the "new" operator.
+     */
+    virtual CustomFunction* clone() const = 0;
 };
 
 } // namespace Lepton
 
-#endif /*LEPTON_PARSER_H_*/
+#endif /*LEPTON_CUSTOM_FUNCTION_H_*/
