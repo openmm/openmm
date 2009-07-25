@@ -72,7 +72,9 @@ ReferenceFloatStreamImpl::ReferenceFloatStreamImpl(std::string name, int size, S
 }
 
 ReferenceFloatStreamImpl::~ReferenceFloatStreamImpl() {
-    delete [] data;
+    for (int i = 0; i < getSize(); i++)
+        delete[] data[i];
+    delete[] data;
 }
 
 void ReferenceFloatStreamImpl::loadFromArray(const void* array) {
