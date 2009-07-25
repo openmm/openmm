@@ -1430,6 +1430,7 @@ void gpuShutDown(gpuContext gpu)
     delete gpu->psShakeParameter;
     delete gpu->psSettleID;
     delete gpu->psSettleParameter;
+    delete gpu->psNonShakeID;
     delete gpu->psExclusion;
     delete gpu->psExclusionIndex;
     delete gpu->psWorkUnit;
