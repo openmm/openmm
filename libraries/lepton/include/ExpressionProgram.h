@@ -40,6 +40,8 @@
 
 namespace Lepton {
 
+class ParsedExpression;
+
 /**
  * An ExpressionProgram is a linear sequence of Operations for evaluating an expression.  The evaluation
  * is done with a stack.  The arguments to each Operation are first taken off the stack in order, then it is
