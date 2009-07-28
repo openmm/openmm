@@ -1118,7 +1118,7 @@ bool gpuIsAvailable()
 }
 
 extern "C"
-void* gpuInit(int numAtoms, unsigned int device)
+void* gpuInit(int numAtoms, unsigned int device, bool useBlockingSync)
 {
     gpuContext gpu = new _gpuContext;
     int LRFSize = 0;
@@ -1134,6 +1134,9 @@ void* gpuInit(int numAtoms, unsigned int device)
         cudaSetDevice(device); // Ignore errors
     status = cudaGetDevice(&gpu->device);
     RTERROR(status, "Error getting CUDA device")
+    status = cudaSetDeviceFlags(useBlockingSync ? cudaDeviceBlockingSync : cudaDeviceScheduleAuto);
+    RTERROR(status, "Error setting device flags")
+    gpu->useBlockingSync = useBlockingSync;
 
     // Determine kernel call configuration
     cudaDeviceProp deviceProp;

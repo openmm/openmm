@@ -63,7 +63,9 @@ CudaPlatform::CudaPlatform() {
     registerKernelFactory(CalcKineticEnergyKernel::Name(), factory);
     registerKernelFactory(RemoveCMMotionKernel::Name(), factory);
     platformProperties.push_back(CudaDevice());
+    platformProperties.push_back(CudaUseBlockingSync());
     setPropertyDefaultValue(CudaDevice(), "0");
+    setPropertyDefaultValue(CudaUseBlockingSync(), "false");
 }
 
 bool CudaPlatform::supportsDoublePrecision() const {
@@ -92,7 +94,7 @@ void CudaPlatform::contextCreated(ContextImpl& context) const {
     if (devicePropValue.length() > 0)
         stringstream(devicePropValue) >> device;
     int numParticles = context.getSystem().getNumParticles();
-    _gpuContext* gpu = (_gpuContext*) gpuInit(numParticles, device);
+    _gpuContext* gpu = (_gpuContext*) gpuInit(numParticles, device, getPropertyDefaultValue(CudaUseBlockingSync()) == "true");
     context.setPlatformData(new PlatformData(gpu));
 }
 
@@ -107,4 +109,5 @@ CudaPlatform::PlatformData::PlatformData(_gpuContext* gpu) : gpu(gpu), removeCM(
     stringstream device;
     device << gpu->device;
     propertyValues[CudaPlatform::CudaDevice()] = device.str();
+    propertyValues[CudaPlatform::CudaUseBlockingSync()] = (gpu->useBlockingSync ? "true" : "false");
 }

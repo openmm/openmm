@@ -59,6 +59,7 @@ struct _gpuContext {
     //have to be repeatedly passed around
     int natoms;
     int device;
+    bool useBlockingSync;
     gpuAtomType* gpAtomTable;
     int gAtomTypes;
     cudaGmxSimulation sim;
@@ -206,7 +207,7 @@ extern "C"
 void gpuInitializeRandoms(gpuContext gpu);
 
 extern "C"
-void* gpuInit(int numAtoms, unsigned int device);
+void* gpuInit(int numAtoms, unsigned int device = 0, bool useBlockingSync = false);
 
 extern "C"
 void gpuSetLangevinIntegrationParameters(gpuContext gpu, float tau, float deltaT, float temperature, float errorTol);

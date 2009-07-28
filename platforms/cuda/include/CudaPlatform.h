@@ -64,6 +64,13 @@ public:
         static const std::string key = "CudaDevice";
         return key;
     }
+    /**
+     * This is the name of the parameter for selecting whether CUDA should sync or spin loop while waiting for results.
+     */
+    static const std::string& CudaUseBlockingSync() {
+        static const std::string key = "CudaUseBlockingSync";
+        return key;
+    }
 private:
     CudaStreamFactory defaultStreamFactory;
 };
