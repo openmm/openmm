@@ -1,3 +1,6 @@
+#ifndef LEPTON_H_
+#define LEPTON_H_
+
 /* -------------------------------------------------------------------------- *
  *                                   Lepton                                   *
  * -------------------------------------------------------------------------- *
@@ -29,59 +32,11 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include "lepton/CustomFunction.h"
+#include "lepton/ExpressionProgram.h"
 #include "lepton/ExpressionTreeNode.h"
-#include "lepton/Exception.h"
 #include "lepton/Operation.h"
+#include "lepton/ParsedExpression.h"
+#include "lepton/Parser.h"
 
-using namespace Lepton;
-using namespace std;
-
-ExpressionTreeNode::ExpressionTreeNode(Operation* operation, const vector<ExpressionTreeNode>& children) : operation(operation), children(children) {
-    if (operation->getNumArguments() != children.size())
-        throw Exception("Parse error: wrong number of arguments to function");
-}
-
-ExpressionTreeNode::ExpressionTreeNode(Operation* operation, const ExpressionTreeNode& child1, const ExpressionTreeNode& child2) : operation(operation) {
-    children.push_back(child1);
-    children.push_back(child2);
-    if (operation->getNumArguments() != children.size())
-        throw Exception("Parse error: wrong number of arguments to function");
-}
-
-ExpressionTreeNode::ExpressionTreeNode(Operation* operation, const ExpressionTreeNode& child) : operation(operation) {
-    children.push_back(child);
-    if (operation->getNumArguments() != children.size())
-        throw Exception("Parse error: wrong number of arguments to function");
-}
-
-ExpressionTreeNode::ExpressionTreeNode(Operation* operation) : operation(operation) {
-    if (operation->getNumArguments() != children.size())
-        throw Exception("Parse error: wrong number of arguments to function");
-}
-
-ExpressionTreeNode::ExpressionTreeNode(const ExpressionTreeNode& node) : operation(&node.getOperation() == NULL ? NULL : node.getOperation().clone()), children(node.getChildren()) {
-}
-
-ExpressionTreeNode::ExpressionTreeNode() : operation(NULL) {
-}
-
-ExpressionTreeNode::~ExpressionTreeNode() {
-    if (operation != NULL)
-        delete operation;
-}
-
-ExpressionTreeNode& ExpressionTreeNode::operator=(const ExpressionTreeNode& node) {
-    if (operation != NULL)
-        delete operation;
-    operation = node.getOperation().clone();
-    children = node.getChildren();
-    return *this;
-}
-
-const Operation& ExpressionTreeNode::getOperation() const {
-    return *operation;
-}
-
-const vector<ExpressionTreeNode>& ExpressionTreeNode::getChildren() const {
-    return children;
-}
+#endif /*LEPTON_H_*/

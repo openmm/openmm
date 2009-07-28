@@ -29,9 +29,9 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "ParsedExpression.h"
-#include "ExpressionProgram.h"
-#include "Operation.h"
+#include "lepton/ParsedExpression.h"
+#include "lepton/ExpressionProgram.h"
+#include "lepton/Operation.h"
 #include <limits>
 #include <vector>
 

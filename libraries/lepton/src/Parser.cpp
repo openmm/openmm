@@ -29,12 +29,12 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "Parser.h"
-#include "CustomFunction.h"
-#include "Exception.h"
-#include "ExpressionTreeNode.h"
-#include "Operation.h"
-#include "ParsedExpression.h"
+#include "lepton/Parser.h"
+#include "lepton/CustomFunction.h"
+#include "lepton/Exception.h"
+#include "lepton/ExpressionTreeNode.h"
+#include "lepton/Operation.h"
+#include "lepton/ParsedExpression.h"
 #include <iostream>
 
 using namespace Lepton;
