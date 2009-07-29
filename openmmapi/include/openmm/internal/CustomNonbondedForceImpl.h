@@ -1,3 +1,6 @@
+#ifndef OPENMM_CUSTOMNONBONDEDFORCEIMPL_H_
+#define OPENMM_CUSTOMNONBONDEDFORCEIMPL_H_
+
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -6,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -29,49 +32,40 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "ReferencePlatform.h"
-#include "ReferenceKernelFactory.h"
-#include "ReferenceKernels.h"
-#include "openmm/internal/ContextImpl.h"
-#include "SimTKUtilities/SimTKOpenMMRealType.h"
+#include "ForceImpl.h"
+#include "openmm/CustomNonbondedForce.h"
+#include "openmm/Kernel.h"
+#include <utility>
+#include <string>
 
-using namespace OpenMM;
+namespace OpenMM {
 
-ReferencePlatform::ReferencePlatform() {
-    ReferenceKernelFactory* factory = new ReferenceKernelFactory();
-    registerKernelFactory(InitializeForcesKernel::Name(), factory);
-    registerKernelFactory(UpdateTimeKernel::Name(), factory);
-    registerKernelFactory(CalcHarmonicBondForceKernel::Name(), factory);
-    registerKernelFactory(CalcHarmonicAngleForceKernel::Name(), factory);
-    registerKernelFactory(CalcPeriodicTorsionForceKernel::Name(), factory);
-    registerKernelFactory(CalcRBTorsionForceKernel::Name(), factory);
-    registerKernelFactory(CalcNonbondedForceKernel::Name(), factory);
-    registerKernelFactory(CalcCustomNonbondedForceKernel::Name(), factory);
-    registerKernelFactory(CalcGBSAOBCForceKernel::Name(), factory);
-    registerKernelFactory(CalcGBVIForceKernel::Name(), factory);
-    registerKernelFactory(IntegrateVerletStepKernel::Name(), factory);
-    registerKernelFactory(IntegrateLangevinStepKernel::Name(), factory);
-    registerKernelFactory(IntegrateBrownianStepKernel::Name(), factory);
-    registerKernelFactory(IntegrateVariableLangevinStepKernel::Name(), factory);
-    registerKernelFactory(IntegrateVariableVerletStepKernel::Name(), factory);
-    registerKernelFactory(ApplyAndersenThermostatKernel::Name(), factory);
-    registerKernelFactory(CalcKineticEnergyKernel::Name(), factory);
-    registerKernelFactory(RemoveCMMotionKernel::Name(), factory);
-}
+/**
+ * This is the internal implementation of CustomNonbondedForce.
+ */
 
-bool ReferencePlatform::supportsDoublePrecision() const {
-    return (sizeof(RealOpenMM) >= sizeof(double));
-}
+class CustomNonbondedForceImpl : public ForceImpl {
+public:
+    CustomNonbondedForceImpl(CustomNonbondedForce& owner);
+    ~CustomNonbondedForceImpl();
+    void initialize(ContextImpl& context);
+    CustomNonbondedForce& getOwner() {
+        return owner;
+    }
+    void updateContextState(ContextImpl& context) {
+        // This force field doesn't update the state directly.
+    }
+    void calcForces(ContextImpl& context, Stream& forces);
+    double calcEnergy(ContextImpl& context);
+    std::map<std::string, double> getDefaultParameters() {
+        return std::map<std::string, double>(); // This force field doesn't define any parameters.
+    }
+    std::vector<std::string> getKernelNames();
+private:
+    CustomNonbondedForce& owner;
+    Kernel kernel;
+};
 
-const StreamFactory& ReferencePlatform::getDefaultStreamFactory() const {
-    return defaultStreamFactory;
-}
+} // namespace OpenMM
 
-void ReferencePlatform::contextCreated(ContextImpl& context) const {
-    context.setPlatformData(new PlatformData());
-}
-
-void ReferencePlatform::contextDestroyed(ContextImpl& context) const {
-    PlatformData* data = reinterpret_cast<PlatformData*>(context.getPlatformData());
-    delete data;
-}
+#endif /*OPENMM_CUSTOMNONBONDEDFORCEIMPL_H_*/

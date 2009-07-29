@@ -55,6 +55,7 @@ class ParsedExpression;
 
 class LEPTON_EXPORT ExpressionProgram {
 public:
+    ExpressionProgram();
     ExpressionProgram(const ExpressionProgram& program);
     ~ExpressionProgram();
     ExpressionProgram& operator=(const ExpressionProgram& program);

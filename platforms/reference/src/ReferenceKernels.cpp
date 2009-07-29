@@ -38,6 +38,7 @@
 #include "SimTKReference/ReferenceBondForce.h"
 #include "SimTKReference/ReferenceBrownianDynamics.h"
 #include "SimTKReference/ReferenceCCMAAlgorithm.h"
+#include "SimTKReference/ReferenceCustomNonbondedIxn.h"
 #include "SimTKReference/ReferenceHarmonicBondIxn.h"
 #include "SimTKReference/ReferenceLJCoulomb14.h"
 #include "SimTKReference/ReferenceLJCoulombIxn.h"
@@ -52,6 +53,8 @@
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/Integrator.h"
 #include "SimTKUtilities/SimTKOpenMMUtilities.h"
+#include "lepton/Parser.h"
+#include "lepton/ParsedExpression.h"
 #include <cmath>
 #include <limits>
 
@@ -467,6 +470,115 @@ double ReferenceCalcNonbondedForceKernel::executeEnergy(ContextImpl& context) {
     refBondForce.calculateForce(num14, bonded14IndexArray, posData, bonded14ParamArray, forceData, energyArray, 0, &energy, nonbonded14);
     disposeRealArray(forceData, numParticles);
     delete[] energyArray;
+    return energy;
+}
+
+ReferenceCalcCustomNonbondedForceKernel::~ReferenceCalcCustomNonbondedForceKernel() {
+    disposeRealArray(particleParamArray, numParticles);
+    disposeIntArray(exclusionArray, numParticles);
+    disposeIntArray(bonded14IndexArray, num14);
+    disposeRealArray(bonded14ParamArray, num14);
+    if (neighborList != NULL)
+        delete neighborList;
+}
+
+void ReferenceCalcCustomNonbondedForceKernel::initialize(const System& system, const CustomNonbondedForce& force) {
+
+    // Identify which exceptions are 1-4 interactions.
+
+    numParticles = force.getNumParticles();
+    exclusions.resize(numParticles);
+    vector<int> nb14s;
+    vector<double> parameters;
+    for (int i = 0; i < force.getNumExceptions(); i++) {
+        int particle1, particle2;
+        force.getExceptionParameters(i, particle1, particle2, parameters);
+        exclusions[particle1].insert(particle2);
+        exclusions[particle2].insert(particle1);
+        if (parameters.size() > 0)
+            nb14s.push_back(i);
+    }
+
+    // Build the arrays.
+
+    num14 = nb14s.size();
+    int numParameters = force.getNumParameters();
+    bonded14IndexArray = allocateIntArray(num14, 2);
+    bonded14ParamArray = allocateRealArray(num14, numParameters);
+    particleParamArray = allocateRealArray(numParticles, numParameters);
+    for (int i = 0; i < numParticles; ++i) {
+        force.getParticleParameters(i, parameters);
+        for (int j = 0; j < numParameters; j++)
+            particleParamArray[i][j] = static_cast<RealOpenMM>(parameters[j]);
+    }
+    this->exclusions = exclusions;
+    exclusionArray = new int*[numParticles];
+    for (int i = 0; i < numParticles; ++i) {
+        exclusionArray[i] = new int[exclusions[i].size()+1];
+        exclusionArray[i][0] = exclusions[i].size();
+        int index = 0;
+        for (set<int>::const_iterator iter = exclusions[i].begin(); iter != exclusions[i].end(); ++iter)
+            exclusionArray[i][++index] = *iter;
+    }
+    for (int i = 0; i < num14; ++i) {
+        int particle1, particle2;
+        force.getExceptionParameters(nb14s[i], particle1, particle2, parameters);
+        bonded14IndexArray[i][0] = particle1;
+        bonded14IndexArray[i][1] = particle2;
+        for (int j = 0; j < numParameters; j++)
+            bonded14ParamArray[i][j] = static_cast<RealOpenMM>(parameters[j]);
+    }
+    nonbondedMethod = CalcCustomNonbondedForceKernel::NonbondedMethod(force.getNonbondedMethod());
+    nonbondedCutoff = (RealOpenMM) force.getCutoffDistance();
+    Vec3 boxVectors[3];
+    force.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+    periodicBoxSize[0] = (RealOpenMM) boxVectors[0][0];
+    periodicBoxSize[1] = (RealOpenMM) boxVectors[1][1];
+    periodicBoxSize[2] = (RealOpenMM) boxVectors[2][2];
+    if (nonbondedMethod == NoCutoff)
+        neighborList = NULL;
+    else
+        neighborList = new NeighborList();
+
+    // Parse the various expressions used to calculate the force.
+
+    Lepton::ParsedExpression expression = Lepton::Parser::parse(force.getEnergyFunction()).optimize();
+    energyExpression = expression.createProgram();
+    forceExpression = expression.differentiate("r").optimize().createProgram();
+    for (int i = 0; i < numParameters; i++)
+        combiningRules.push_back(Lepton::Parser::parse(force.getParameterCombiningRule(i)).optimize().createProgram());
+}
+
+void ReferenceCalcCustomNonbondedForceKernel::executeForces(ContextImpl& context) {
+    RealOpenMM** posData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData()); // Reference code needs to be made const correct
+    RealOpenMM** forceData = ((ReferenceFloatStreamImpl&) context.getForces().getImpl()).getData();
+    ReferenceCustomNonbondedIxn ixn(energyExpression, forceExpression, combiningRules);
+    bool periodic = (nonbondedMethod == CutoffPeriodic);
+    if (nonbondedMethod != NoCutoff) {
+        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, periodic ? periodicBoxSize : NULL, nonbondedCutoff, 0.0);
+        ixn.setUseCutoff(nonbondedCutoff, *neighborList);
+    }
+    if (periodic)
+        ixn.setPeriodic(periodicBoxSize);
+    ixn.calculatePairIxn(numParticles, posData, particleParamArray, exclusionArray, 0, forceData, 0, 0);
+    ixn.calculateExceptionIxn(num14, bonded14IndexArray, posData, bonded14ParamArray, forceData, 0, 0);
+}
+
+double ReferenceCalcCustomNonbondedForceKernel::executeEnergy(ContextImpl& context) {
+    RealOpenMM** posData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData()); // Reference code needs to be made const correct
+    RealOpenMM** forceData = allocateRealArray(numParticles, 3);
+    RealOpenMM energy = 0;
+    ReferenceCustomNonbondedIxn ixn(energyExpression, forceExpression, combiningRules);
+    bool periodic = (nonbondedMethod == CutoffPeriodic);
+    if (nonbondedMethod != NoCutoff) {
+        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, periodic ? periodicBoxSize : NULL, nonbondedCutoff, 0.0);
+        ixn.setUseCutoff(nonbondedCutoff, *neighborList);
+    }
+    if (periodic)
+        ixn.setPeriodic(periodicBoxSize);
+    ixn.calculatePairIxn(numParticles, posData, particleParamArray, exclusionArray, 0, forceData, 0, &energy);
+    ixn.calculateExceptionIxn(num14, bonded14IndexArray, posData, bonded14ParamArray, forceData, 0, &energy);
+    disposeRealArray(forceData, numParticles);
     return energy;
 }
 

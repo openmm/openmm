@@ -34,6 +34,7 @@
 
 #include "windowsIncludes.h"
 #include "CustomFunction.h"
+#include "Exception.h"
 #include <cmath>
 #include <map>
 #include <string>
@@ -170,7 +171,7 @@ public:
     double evaluate(double* args, const std::map<std::string, double>& variables) const {
         std::map<std::string, double>::const_iterator iter = variables.find(name);
         if (iter == variables.end())
-            throw std::exception();
+            throw Exception("No value specified for variable "+name);
         return iter->second;
     }
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;

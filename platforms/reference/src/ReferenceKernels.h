@@ -36,6 +36,7 @@
 #include "openmm/kernels.h"
 #include "SimTKUtilities/SimTKOpenMMRealType.h"
 #include "SimTKReference/ReferenceNeighborList.h"
+#include "lepton/ExpressionProgram.h"
 
 class CpuObc;
 class CpuGBVI;
@@ -270,6 +271,46 @@ private:
     RealOpenMM nonbondedCutoff, periodicBoxSize[3], rfDielectric, ewaldAlpha;
     int kmax[3];
     std::vector<std::set<int> > exclusions;
+    NonbondedMethod nonbondedMethod;
+    NeighborList* neighborList;
+};
+
+/**
+ * This kernel is invoked by CustomNonbondedForce to calculate the forces acting on the system.
+ */
+class ReferenceCalcCustomNonbondedForceKernel : public CalcCustomNonbondedForceKernel {
+public:
+    ReferenceCalcCustomNonbondedForceKernel(std::string name, const Platform& platform) : CalcCustomNonbondedForceKernel(name, platform) {
+    }
+    ~ReferenceCalcCustomNonbondedForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomNonbondedForce this kernel will be used for
+     */
+    void initialize(const System& system, const CustomNonbondedForce& force);
+    /**
+     * Execute the kernel to calculate the forces.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void executeForces(ContextImpl& context);
+    /**
+     * Execute the kernel to calculate the energy.
+     *
+     * @param context    the context in which to execute this kernel
+     * @return the potential energy due to the CustomNonbondedForce
+     */
+    double executeEnergy(ContextImpl& context);
+private:
+    int numParticles, num14;
+    int **exclusionArray, **bonded14IndexArray;
+    RealOpenMM **particleParamArray, **bonded14ParamArray;
+    RealOpenMM nonbondedCutoff, periodicBoxSize[3];
+    std::vector<std::set<int> > exclusions;
+    Lepton::ExpressionProgram energyExpression, forceExpression;
+    std::vector<Lepton::ExpressionProgram> combiningRules;
     NonbondedMethod nonbondedMethod;
     NeighborList* neighborList;
 };

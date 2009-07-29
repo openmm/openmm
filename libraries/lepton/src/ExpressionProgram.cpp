@@ -36,6 +36,9 @@
 using namespace Lepton;
 using namespace std;
 
+ExpressionProgram::ExpressionProgram() : maxArgs(0), stackSize(0) {
+}
+
 ExpressionProgram::ExpressionProgram(const ParsedExpression& expression) : maxArgs(0), stackSize(0) {
     buildProgram(expression.getRootNode());
     int currentStackSize = 0;

@@ -35,6 +35,7 @@
 #include "openmm/AndersenThermostat.h"
 #include "openmm/BrownianIntegrator.h"
 #include "openmm/CMMotionRemover.h"
+#include "openmm/CustomNonbondedForce.h"
 #include "openmm/GBSAOBCForce.h"
 #include "openmm/GBVIForce.h"
 #include "openmm/HarmonicAngleForce.h"
@@ -273,6 +274,43 @@ public:
      * 
      * @param context    the context in which to execute this kernel
      * @return the potential energy due to the NonbondedForce
+     */
+    virtual double executeEnergy(ContextImpl& context) = 0;
+};
+
+/**
+ * This kernel is invoked by CustomNonbondedForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CalcCustomNonbondedForceKernel : public KernelImpl {
+public:
+    enum NonbondedMethod {
+        NoCutoff = 0,
+        CutoffNonPeriodic = 1,
+        CutoffPeriodic = 2
+    };
+    static std::string Name() {
+        return "CalcCustomNonbondedForce";
+    }
+    CalcCustomNonbondedForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomNonbondedForce this kernel will be used for
+     */
+    virtual void initialize(const System& system, const CustomNonbondedForce& force) = 0;
+    /**
+     * Execute the kernel to calculate the forces.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    virtual void executeForces(ContextImpl& context) = 0;
+    /**
+     * Execute the kernel to calculate the energy.
+     *
+     * @param context    the context in which to execute this kernel
+     * @return the potential energy due to the CustomNonbondedForce
      */
     virtual double executeEnergy(ContextImpl& context) = 0;
 };

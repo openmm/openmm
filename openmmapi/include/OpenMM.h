@@ -35,6 +35,7 @@
 #include "openmm/AndersenThermostat.h"
 #include "openmm/BrownianIntegrator.h"
 #include "openmm/CMMotionRemover.h"
+#include "openmm/CustomNonbondedForce.h"
 #include "openmm/Force.h"
 #include "openmm/GBSAOBCForce.h"
 #include "openmm/GBVIForce.h"
