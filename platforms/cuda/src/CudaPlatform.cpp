@@ -65,7 +65,7 @@ CudaPlatform::CudaPlatform() {
     platformProperties.push_back(CudaDevice());
     platformProperties.push_back(CudaUseBlockingSync());
     setPropertyDefaultValue(CudaDevice(), "0");
-    setPropertyDefaultValue(CudaUseBlockingSync(), "false");
+    setPropertyDefaultValue(CudaUseBlockingSync(), "true");
 }
 
 bool CudaPlatform::supportsDoublePrecision() const {
