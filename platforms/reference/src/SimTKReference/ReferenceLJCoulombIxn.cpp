@@ -237,7 +237,7 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
     static const RealOpenMM six         =  6.0;
     static const RealOpenMM twelve      = 12.0;
 
-    int kmax                            = std::max(numRx, std::max(numRy,numRz));
+    int kmax                            = (ewald ? std::max(numRx, std::max(numRy,numRz)) : 0);
     RealOpenMM  factorEwald             = -1 / (4*alphaEwald*alphaEwald);
     RealOpenMM SQRT_PI                  = sqrt(PI);
     RealOpenMM TWO_PI                   = 2.0 * PI;
