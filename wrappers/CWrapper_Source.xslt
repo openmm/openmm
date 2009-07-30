@@ -7,6 +7,7 @@
 <xsl:variable name="openmm_namespace_id" select="/GCC_XML/Namespace[@name='OpenMM']/@id"/>
 <xsl:variable name="void_type_id" select="/GCC_XML/FundamentalType[@name='void']/@id"/>
 <xsl:variable name="bool_type_id" select="/GCC_XML/FundamentalType[@name='bool']/@id"/>
+<xsl:variable name="double_type_id" select="/GCC_XML/FundamentalType[@name='double']/@id"/>
 <xsl:variable name="string_type_id" select="/GCC_XML/*[@name='string' and @context=$std_namespace_id]/@id"/>
 <xsl:variable name="const_string_type_id" select="/GCC_XML/CvQualifiedType[@type=$string_type_id]/@id"/>
 <xsl:variable name="const_ref_string_type_id" select="/GCC_XML/ReferenceType[@type=$const_string_type_id]/@id"/>
@@ -15,6 +16,7 @@
 <xsl:variable name="vector_vec3_type_id" select="/GCC_XML/Class[starts-with(@name, 'vector&lt;OpenMM::Vec3')]/@id"/>
 <xsl:variable name="vector_bond_type_id" select="/GCC_XML/Class[starts-with(@name, 'vector&lt;std::pair&lt;int, int')]/@id"/>
 <xsl:variable name="map_parameter_type_id" select="/GCC_XML/Class[starts-with(@name, 'map&lt;std::basic_string')]/@id"/>
+<xsl:variable name="vector_double_type_id" select="/GCC_XML/Class[starts-with(@name, 'vector&lt;double')]/@id"/>
 <xsl:variable name="newline">
 <xsl:text>
 </xsl:text>
@@ -130,6 +132,10 @@ double OpenMM_ParameterArray_get(const OpenMM_ParameterArray* array, const char*
         throw OpenMMException("OpenMM_ParameterArray_get: No such parameter");
     return iter->second;
 }
+<xsl:call-template name="primitive_array">
+ <xsl:with-param name="element_type" select="'double'"/>
+ <xsl:with-param name="name" select="'OpenMM_DoubleArray'"/>
+</xsl:call-template>
 
 /* These methods need to be handled specially, since their C++ APIs cannot be directly translated to C.
    Unlike the C++ versions, the return value is allocated on the heap, and you must delete it yourself. */
@@ -150,6 +156,34 @@ OpenMM_StringArray* OpenMM_Platform_loadPluginsFromDirectory(const char* directo
 #if defined(__cplusplus)
 }
 #endif
+</xsl:template>
+
+<!-- Print out the definitions for a (Primitive)Array type -->
+<xsl:template name="primitive_array">
+ <xsl:param name="element_type"/>
+ <xsl:param name="name"/>
+/* <xsl:value-of select="$name"/> */
+<xsl:value-of select="$name"/>* <xsl:value-of select="$name"/>_create(int size) {
+    return reinterpret_cast&lt;<xsl:value-of select="$name"/>*&gt;(new vector&lt;<xsl:value-of select="$element_type"/>&gt;(size));
+}
+void <xsl:value-of select="$name"/>_destroy(<xsl:value-of select="$name"/>* array) {
+    delete reinterpret_cast&lt;vector&lt;<xsl:value-of select="$element_type"/>&gt;*&gt;(array);
+}
+int <xsl:value-of select="$name"/>_getSize(const <xsl:value-of select="$name"/>* array) {
+    return reinterpret_cast&lt;const vector&lt;<xsl:value-of select="$element_type"/>&gt;*&gt;(array)->size();
+}
+void <xsl:value-of select="$name"/>_resize(<xsl:value-of select="$name"/>* array, int size) {
+    reinterpret_cast&lt;vector&lt;<xsl:value-of select="$element_type"/>&gt;*&gt;(array)->resize(size);
+}
+void <xsl:value-of select="$name"/>_append(<xsl:value-of select="$name"/>* array, <xsl:value-of select="$element_type"/> value) {
+    reinterpret_cast&lt;vector&lt;<xsl:value-of select="$element_type"/>&gt;*&gt;(array)->push_back(value);
+}
+void <xsl:value-of select="$name"/>_set(<xsl:value-of select="$name"/>* array, int index, <xsl:value-of select="$element_type"/> value) {
+    (*reinterpret_cast&lt;vector&lt;<xsl:value-of select="$element_type"/>&gt;*&gt;(array))[index] = value;
+}
+double <xsl:value-of select="$name"/>_get(const <xsl:value-of select="$name"/>* array, int index) {
+    return (*reinterpret_cast&lt;const vector&lt;<xsl:value-of select="$element_type"/>&gt;*&gt;(array))[index];
+}
 </xsl:template>
 
 <!-- Print out information for a class -->
@@ -298,6 +332,9 @@ OpenMM_<xsl:value-of select="concat(@name, '* OpenMM_', @name, '_create', $suffi
   <xsl:when test="$type_id=$map_parameter_type_id">
    <xsl:value-of select="'OpenMM_ParameterArray'"/>
   </xsl:when>
+  <xsl:when test="$type_id=$vector_double_type_id">
+   <xsl:value-of select="'OpenMM_DoubleArray'"/>
+  </xsl:when>
   <xsl:when test="local-name($node)='ReferenceType' or local-name($node)='PointerType'">
    <xsl:call-template name="wrap_type">
     <xsl:with-param name="type_id" select="$node/@type"/>
@@ -341,6 +378,9 @@ OpenMM_<xsl:value-of select="concat(@name, '* OpenMM_', @name, '_create', $suffi
   </xsl:when>
   <xsl:when test="$type_id=$map_parameter_type_id">
    <xsl:value-of select="'map&lt;string, double&gt;'"/>
+  </xsl:when>
+  <xsl:when test="$type_id=$vector_double_type_id">
+   <xsl:value-of select="'vector&lt;double&gt;'"/>
   </xsl:when>
   <xsl:when test="local-name($node)='ReferenceType' or local-name($node)='PointerType'">
    <xsl:call-template name="unwrap_type">

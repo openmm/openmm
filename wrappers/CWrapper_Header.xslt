@@ -6,6 +6,7 @@
 <xsl:variable name="std_namespace_id" select="/GCC_XML/Namespace[@name='std']/@id"/>
 <xsl:variable name="openmm_namespace_id" select="/GCC_XML/Namespace[@name='OpenMM']/@id"/>
 <xsl:variable name="bool_type_id" select="/GCC_XML/FundamentalType[@name='bool']/@id"/>
+<xsl:variable name="double_type_id" select="/GCC_XML/FundamentalType[@name='double']/@id"/>
 <xsl:variable name="string_type_id" select="/GCC_XML/*[@name='string' and @context=$std_namespace_id]/@id"/>
 <xsl:variable name="const_string_type_id" select="/GCC_XML/CvQualifiedType[@type=$string_type_id]/@id"/>
 <xsl:variable name="const_ref_string_type_id" select="/GCC_XML/ReferenceType[@type=$const_string_type_id]/@id"/>
@@ -13,6 +14,7 @@
 <xsl:variable name="vector_vec3_type_id" select="/GCC_XML/Class[starts-with(@name, 'vector&lt;OpenMM::Vec3')]/@id"/>
 <xsl:variable name="vector_bond_type_id" select="/GCC_XML/Class[starts-with(@name, 'vector&lt;std::pair&lt;int, int')]/@id"/>
 <xsl:variable name="map_parameter_type_id" select="/GCC_XML/Class[starts-with(@name, 'map&lt;std::basic_string')]/@id"/>
+<xsl:variable name="vector_double_type_id" select="/GCC_XML/Class[starts-with(@name, 'vector&lt;double')]/@id"/>
 
 <!-- Do not generate functions for the following classes -->
 <xsl:variable name="skip_classes" select="('Vec3', 'Kernel', 'Stream', 'KernelImpl', 'StreamImpl', 'KernelFactory', 'StreamFactory')"/>
@@ -39,6 +41,7 @@ typedef struct OpenMM_Vec3Array_struct OpenMM_Vec3Array;
 typedef struct OpenMM_StringArray_struct OpenMM_StringArray;
 typedef struct OpenMM_BondArray_struct OpenMM_BondArray;
 typedef struct OpenMM_ParameterArray_struct OpenMM_ParameterArray;
+typedef struct OpenMM_DoubleArray_struct OpenMM_DoubleArray;
 typedef struct {double x, y, z;} OpenMM_Vec3;
 
 typedef enum {OpenMM_False = 0, OpenMM_True = 1} OpenMM_Boolean;
@@ -80,6 +83,10 @@ extern void OpenMM_BondArray_get(const OpenMM_BondArray* array, int index, int* 
 /* OpenMM_ParameterArray */
 extern int OpenMM_ParameterArray_getSize(const OpenMM_ParameterArray* array);
 extern double OpenMM_ParameterArray_get(const OpenMM_ParameterArray* array, const char* name);
+<xsl:call-template name="primitive_array">
+ <xsl:with-param name="element_type" select="'double'"/>
+ <xsl:with-param name="name" select="'OpenMM_DoubleArray'"/>
+</xsl:call-template>
 
 /* These methods need to be handled specially, since their C++ APIs cannot be directly translated to C.
    Unlike the C++ versions, the return value is allocated on the heap, and you must delete it yourself. */
@@ -96,6 +103,20 @@ extern OpenMM_StringArray* OpenMM_Platform_loadPluginsFromDirectory(const char* 
 #endif
 
 #endif /*OPENMM_CWRAPPER_H_*/
+</xsl:template>
+
+<!-- Print out the declarations for a (Primitive)Array type -->
+<xsl:template name="primitive_array">
+ <xsl:param name="element_type"/>
+ <xsl:param name="name"/>
+/* <xsl:value-of select="$name"/> */
+extern <xsl:value-of select="$name"/>* <xsl:value-of select="$name"/>_create(int size);
+extern void <xsl:value-of select="$name"/>_destroy(<xsl:value-of select="$name"/>* array);
+extern int <xsl:value-of select="$name"/>_getSize(const <xsl:value-of select="$name"/>* array);
+extern void <xsl:value-of select="$name"/>_resize(<xsl:value-of select="$name"/>* array, int size);
+extern void <xsl:value-of select="$name"/>_append(<xsl:value-of select="$name"/>* array, <xsl:value-of select="$element_type"/> value);
+extern void <xsl:value-of select="$name"/>_set(<xsl:value-of select="$name"/>* array, int index, <xsl:value-of select="$element_type"/> value);
+extern <xsl:value-of select="concat($element_type, ' ', $name)"/>_get(const <xsl:value-of select="$name"/>* array, int index);
 </xsl:template>
 
 <!-- Print out information for a class -->
@@ -205,6 +226,9 @@ extern <xsl:call-template name="wrap_type"><xsl:with-param name="type_id" select
   </xsl:when>
   <xsl:when test="$type_id=$map_parameter_type_id">
    <xsl:value-of select="'OpenMM_ParameterArray'"/>
+  </xsl:when>
+  <xsl:when test="$type_id=$vector_double_type_id">
+   <xsl:value-of select="'OpenMM_DoubleArray'"/>
   </xsl:when>
   <xsl:when test="local-name($node)='ReferenceType' or local-name($node)='PointerType'">
    <xsl:call-template name="wrap_type">

@@ -20,6 +20,7 @@
 <xsl:variable name="vector_vec3_type_id" select="/GCC_XML/Class[starts-with(@name, 'vector&lt;OpenMM::Vec3')]/@id"/>
 <xsl:variable name="vector_bond_type_id" select="/GCC_XML/Class[starts-with(@name, 'vector&lt;std::pair&lt;int, int')]/@id"/>
 <xsl:variable name="map_parameter_type_id" select="/GCC_XML/Class[starts-with(@name, 'map&lt;std::basic_string')]/@id"/>
+<xsl:variable name="vector_double_type_id" select="/GCC_XML/Class[starts-with(@name, 'vector&lt;double')]/@id"/>
 <xsl:variable name="newline">
 <xsl:text>
 </xsl:text>
@@ -214,6 +215,10 @@ double openmm_parameterarray_get_(const OpenMM_ParameterArray* const&amp; array,
 double OPENMM_PARAMETERARRAY_GET(const OpenMM_ParameterArray* const&amp; array, const char* name, int length) {
     return OpenMM_ParameterArray_get(array, string(name, length).c_str());
 }
+<xsl:call-template name="primitive_array">
+ <xsl:with-param name="element_type" select="'double'"/>
+ <xsl:with-param name="name" select="'OpenMM_DoubleArray'"/>
+</xsl:call-template>
 
 /* These methods need to be handled specially, since their C++ APIs cannot be directly translated to C.
    Unlike the C++ versions, the return value is allocated on the heap, and you must delete it yourself. */
@@ -235,6 +240,59 @@ void OPENMM_PLATFORM_LOADPLUGINSFROMDIRECTORY(const char* directory, OpenMM_Stri
   <xsl:call-template name="class"/>
  </xsl:for-each>
 
+}
+</xsl:template>
+
+<!-- Print out the definitions for a (Primitive)Array type -->
+<xsl:template name="primitive_array">
+ <xsl:param name="element_type"/>
+ <xsl:param name="name"/>
+ <xsl:variable name="name_lower" select="lower-case($name)"/>
+ <xsl:variable name="name_upper" select="upper-case($name)"/>
+/* <xsl:value-of select="$name"/> */
+void <xsl:value-of select="$name_lower"/>_create_(<xsl:value-of select="$name"/>*&amp; result, const int&amp; size) {
+    result = <xsl:value-of select="$name"/>_create(size);
+}
+void <xsl:value-of select="$name_upper"/>_CREATE(<xsl:value-of select="$name"/>*&amp; result, const int&amp; size) {
+    result = <xsl:value-of select="$name"/>_create(size);
+}
+void <xsl:value-of select="$name_lower"/>_destroy_(<xsl:value-of select="$name"/>*&amp; array) {
+    <xsl:value-of select="$name"/>_destroy(array);
+    array = 0;
+}
+void <xsl:value-of select="$name_upper"/>_DESTROY(<xsl:value-of select="$name"/>*&amp; array) {
+    <xsl:value-of select="$name"/>_destroy(array);
+    array = 0;
+}
+int <xsl:value-of select="$name_lower"/>_getsize_(const <xsl:value-of select="$name"/>* const&amp; array) {
+    return <xsl:value-of select="$name"/>_getSize(array);
+}
+int <xsl:value-of select="$name_upper"/>_GETSIZE(const <xsl:value-of select="$name"/>* const&amp; array) {
+    return <xsl:value-of select="$name"/>_getSize(array);
+}
+void <xsl:value-of select="$name_lower"/>_resize_(<xsl:value-of select="$name"/>* const&amp; array, const int&amp; size) {
+    <xsl:value-of select="$name"/>_resize(array, size);
+}
+void <xsl:value-of select="$name_upper"/>_RESIZE(<xsl:value-of select="$name"/>* const&amp; array, const int&amp; size) {
+    <xsl:value-of select="$name"/>_resize(array, size);
+}
+void <xsl:value-of select="$name_lower"/>_append_(<xsl:value-of select="$name"/>* const&amp; array, <xsl:value-of select="$element_type"/> value) {
+    <xsl:value-of select="$name"/>_append(array, value);
+}
+void <xsl:value-of select="$name_upper"/>_APPEND(<xsl:value-of select="$name"/>* const&amp; array, <xsl:value-of select="$element_type"/> value) {
+    <xsl:value-of select="$name"/>_append(array, value);
+}
+void <xsl:value-of select="$name_lower"/>_set_(<xsl:value-of select="$name"/>* const&amp; array, const int&amp; index, <xsl:value-of select="$element_type"/> value) {
+    <xsl:value-of select="$name"/>_set(array, index-1, value);
+}
+void <xsl:value-of select="$name_upper"/>_SET(<xsl:value-of select="$name"/>* const&amp; array, const int&amp; index, <xsl:value-of select="$element_type"/> value) {
+    <xsl:value-of select="$name"/>_set(array, index-1, value);
+}
+void <xsl:value-of select="$name_lower"/>_get_(const <xsl:value-of select="$name"/>* const&amp; array, const int&amp; index, <xsl:value-of select="$element_type"/> value&amp; result) {
+    result = <xsl:value-of select="$name"/>_get(array, index-1);
+}
+void <xsl:value-of select="$name_upper"/>_GET(const <xsl:value-of select="$name"/>* const&amp; array, const int&amp; index, <xsl:value-of select="$element_type"/> value&amp; result) {
+    result = <xsl:value-of select="$name"/>_get(array, index-1);
 }
 </xsl:template>
 
@@ -469,6 +527,9 @@ void OPENMM_PLATFORM_LOADPLUGINSFROMDIRECTORY(const char* directory, OpenMM_Stri
   <xsl:when test="$type_id=$map_parameter_type_id">
    <xsl:value-of select="'OpenMM_ParameterArray'"/>
   </xsl:when>
+  <xsl:when test="$type_id=$vector_double_type_id">
+   <xsl:value-of select="'OpenMM_DoubleArray'"/>
+  </xsl:when>
   <xsl:when test="local-name($node)='ReferenceType' or local-name($node)='PointerType'">
    <xsl:call-template name="wrap_type">
     <xsl:with-param name="type_id" select="$node/@type"/>
@@ -505,6 +566,7 @@ void OPENMM_PLATFORM_LOADPLUGINSFROMDIRECTORY(const char* directory, OpenMM_Stri
   <xsl:when test="$type_id=$vector_vec3_type_id">1</xsl:when>
   <xsl:when test="$type_id=$vector_bond_type_id">1</xsl:when>
   <xsl:when test="$type_id=$map_parameter_type_id">1</xsl:when>
+  <xsl:when test="$type_id=$vector_double_type_id">1</xsl:when>
   <xsl:when test="$type_id=$vector_string_type_id">1</xsl:when>
   <xsl:when test="local-name($node)='Class' and $node/@context=$openmm_namespace_id">1</xsl:when>
   <xsl:when test="local-name($node)='ReferenceType' or local-name($node)='PointerType'">

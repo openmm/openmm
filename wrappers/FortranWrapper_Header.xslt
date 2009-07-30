@@ -18,6 +18,7 @@
 <xsl:variable name="vector_vec3_type_id" select="/GCC_XML/Class[starts-with(@name, 'vector&lt;OpenMM::Vec3')]/@id"/>
 <xsl:variable name="vector_bond_type_id" select="/GCC_XML/Class[starts-with(@name, 'vector&lt;std::pair&lt;int, int')]/@id"/>
 <xsl:variable name="map_parameter_type_id" select="/GCC_XML/Class[starts-with(@name, 'map&lt;std::basic_string')]/@id"/>
+<xsl:variable name="vector_double_type_id" select="/GCC_XML/Class[starts-with(@name, 'vector&lt;double')]/@id"/>
 <xsl:variable name="newline">
 <xsl:text>
 </xsl:text>
@@ -60,6 +61,10 @@ MODULE OpenMM_Types
     end type
 
     type OpenMM_ParameterArray
+        integer*8 :: handle = 0
+    end type
+
+    type OpenMM_DoubleArray
         integer*8 :: handle = 0
     end type
 
@@ -221,6 +226,10 @@ MODULE OpenMM
             character(*) name
             character(*) result
         end
+<xsl:call-template name="primitive_array">
+ <xsl:with-param name="element_type" select="'real*8'"/>
+ <xsl:with-param name="name" select="'OpenMM_DoubleArray'"/>
+</xsl:call-template>
 
  <!-- Class members -->
  <xsl:for-each select="Class[@context=$openmm_namespace_id and empty(index-of($skip_classes, @name))]">
@@ -228,6 +237,49 @@ MODULE OpenMM
  </xsl:for-each>
     end interface
 END MODULE OpenMM
+</xsl:template>
+
+<!-- Print out the declarations for a (Primitive)Array type -->
+<xsl:template name="primitive_array">
+ <xsl:param name="element_type"/>
+ <xsl:param name="name"/>
+        ! <xsl:value-of select="$name"/>
+        subroutine <xsl:value-of select="$name"/>_create(result, size)
+            use OpenMM_Types; implicit none
+            integer*4 size
+            type (<xsl:value-of select="$name"/>) result
+        end
+        subroutine <xsl:value-of select="$name"/>_destroy(destroy)
+            use OpenMM_Types; implicit none
+            type (<xsl:value-of select="$name"/>) destroy
+        end
+        function <xsl:value-of select="$name"/>_getSize(target)
+            use OpenMM_Types; implicit none
+            type (<xsl:value-of select="$name"/>) target
+            integer*4 <xsl:value-of select="$name"/>_getSize
+        end
+        subroutine <xsl:value-of select="$name"/>_resize(target, size)
+            use OpenMM_Types; implicit none
+            type (<xsl:value-of select="$name"/>) target
+            integer*4 size
+        end
+        subroutine <xsl:value-of select="$name"/>_append(target, value
+            use OpenMM_Types; implicit none
+            type (<xsl:value-of select="$name"/>) target
+            <xsl:value-of select="$element_type"/> value
+        end
+        subroutine <xsl:value-of select="$name"/>_set(target, index, value)
+            use OpenMM_Types; implicit none
+            type (<xsl:value-of select="$name"/>) target
+            integer*4 index
+            <xsl:value-of select="$element_type"/> value
+        end
+        subroutine <xsl:value-of select="$name"/>_get(target, index, result)
+            use OpenMM_Types; implicit none
+            type (<xsl:value-of select="$name"/>) target
+            integer*4 index
+            <xsl:value-of select="$element_type"/> result
+        end
 </xsl:template>
 
 <!-- Print out information for a class -->
@@ -400,6 +452,9 @@ END MODULE OpenMM
   </xsl:when>
   <xsl:when test="$type_id=$map_parameter_type_id">
    <xsl:value-of select="concat('type (OpenMM_ParameterArray) ', $value)"/>
+  </xsl:when>
+  <xsl:when test="$type_id=$vector_double_type_id">
+   <xsl:value-of select="concat('type (OpenMM_DoubleArray) ', $value)"/>
   </xsl:when>
   <xsl:when test="local-name($node)='ReferenceType' or local-name($node)='PointerType'">
    <xsl:call-template name="declare_argument">
