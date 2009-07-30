@@ -77,9 +77,11 @@ void testParameters() {
     system.addParticle(1.0);
     system.addParticle(1.0);
     VerletIntegrator integrator(0.01);
-    CustomNonbondedForce* forceField = new CustomNonbondedForce("param0*(r*param1)^3");
-    forceField->addParameter("particle1*particle2");
-    forceField->addParameter("particle1+particle2");
+    CustomNonbondedForce* forceField = new CustomNonbondedForce("scale*a*(r*b)^3");
+    forceField->addParameter("a", "a1*a2");
+    forceField->addParameter("b", "c+b1+b2");
+    forceField->addGlobalParameter("scale");
+    forceField->addGlobalParameter("c");
     vector<double> params(2);
     params[0] = 1.5;
     params[1] = 2.0;
@@ -93,20 +95,30 @@ void testParameters() {
     positions[0] = Vec3(0, 0, 0);
     positions[1] = Vec3(2, 0, 0);
     context.setPositions(positions);
+    context.setParameter("scale", 1.0);
+    context.setParameter("c", 0.0);
     State state = context.getState(State::Forces | State::Energy);
-    const vector<Vec3>& forces = state.getForces();
+    vector<Vec3> forces = state.getForces();
     double force = -3.0*3*5.0*(10*10);
     ASSERT_EQUAL_VEC(Vec3(-force, 0, 0), forces[0], TOL);
     ASSERT_EQUAL_VEC(Vec3(force, 0, 0), forces[1], TOL);
     ASSERT_EQUAL_TOL(3.0*(10*10*10), state.getPotentialEnergy(), TOL);
+    context.setParameter("scale", 1.5);
+    context.setParameter("c", 1.0);
+    state = context.getState(State::Forces | State::Energy);
+    forces = state.getForces();
+    force = -1.5*3.0*3*6.0*(12*12);
+    ASSERT_EQUAL_VEC(Vec3(-force, 0, 0), forces[0], TOL);
+    ASSERT_EQUAL_VEC(Vec3(force, 0, 0), forces[1], TOL);
+    ASSERT_EQUAL_TOL(1.5*3.0*(12*12*12), state.getPotentialEnergy(), TOL);
 }
 
 void testExceptions() {
     ReferencePlatform platform;
     System system;
     VerletIntegrator integrator(0.01);
-    CustomNonbondedForce* nonbonded = new CustomNonbondedForce("param0*r");
-    nonbonded->addParameter("particle1+particle2");
+    CustomNonbondedForce* nonbonded = new CustomNonbondedForce("a*r");
+    nonbonded->addParameter("a", "a1+a2");
     vector<double> params(1);
     vector<Vec3> positions(4);
     for (int i = 0; i < 4; i++) {

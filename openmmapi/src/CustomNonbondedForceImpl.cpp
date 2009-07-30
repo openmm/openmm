@@ -36,9 +36,11 @@
 #include <sstream>
 
 using namespace OpenMM;
+using std::map;
 using std::pair;
 using std::vector;
 using std::set;
+using std::string;
 using std::stringstream;
 
 CustomNonbondedForceImpl::CustomNonbondedForceImpl(CustomNonbondedForce& owner) : owner(owner) {
@@ -110,9 +112,15 @@ double CustomNonbondedForceImpl::calcEnergy(ContextImpl& context) {
     return dynamic_cast<CalcCustomNonbondedForceKernel&>(kernel.getImpl()).executeEnergy(context);
 }
 
-std::vector<std::string> CustomNonbondedForceImpl::getKernelNames() {
-    std::vector<std::string> names;
+vector<string> CustomNonbondedForceImpl::getKernelNames() {
+    vector<string> names;
     names.push_back(CalcCustomNonbondedForceKernel::Name());
     return names;
 }
 
+map<string, double> CustomNonbondedForceImpl::getDefaultParameters() {
+    map<string, double> parameters;
+    for (int i = 0; i < owner.getNumGlobalParameters(); i++)
+        parameters[owner.getGlobalParameterName(i)] = 0.0;
+    return parameters;
+}

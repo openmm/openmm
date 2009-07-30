@@ -89,7 +89,13 @@ public:
      * Get the number of per-particle parameters that the interaction depends on.
      */
     int getNumParameters() const {
-        return combiningRules.size();
+        return parameters.size();
+    }
+    /**
+     * Get the number of global parameters that the interaction depends on.
+     */
+    int getNumGlobalParameters() const {
+        return globalParameters.size();
     }
     /**
      * Get the algebraic expression that gives the interaction energy between two particles
@@ -144,10 +150,25 @@ public:
     /**
      * Add a new per-particle parmeter that the interaction may depend on.
      *
+     * @param name             the name of the parameter
      * @param combiningRule    an algebraic expression giving the combining rule for this parameter
      * @return the index of the parameter that was added
      */
-    int addParameter(const std::string& combiningRule);
+    int addParameter(const std::string& name, const std::string& combiningRule);
+    /**
+     * Get the name of a per-particle parameter.
+     *
+     * @param index     the index of the parameter for which to get the name
+     * @return the parameter name
+     */
+    const std::string& getParameterName(int index) const;
+    /**
+     * Set the name of a per-particle parameter.
+     *
+     * @param index          the index of the parameter for which to set the name
+     * @param name           the name of the parameter
+     */
+    void setParameterName(int index, const std::string& name);
     /**
      * Get the combining rule for a per-particle parameter.
      *
@@ -162,6 +183,27 @@ public:
      * @param combiningRule  an algebraic expression giving the combining rule for the parameter
      */
     void setParameterCombiningRule(int index, const std::string& combiningRule);
+    /**
+     * Add a new global parmeter that the interaction may depend on.
+     *
+     * @param name             the name of the parameter
+     * @return the index of the parameter that was added
+     */
+    int addGlobalParameter(const std::string& name);
+    /**
+     * Get the name of a global parameter.
+     *
+     * @param index     the index of the parameter for which to get the name
+     * @return the parameter name
+     */
+    const std::string& getGlobalParameterName(int index) const;
+    /**
+     * Set the name of a global parameter.
+     *
+     * @param index          the index of the parameter for which to set the name
+     * @param name           the name of the parameter
+     */
+    void setGlobalParameterName(int index, const std::string& name);
     /**
      * Add the nonbonded force parameters for a particle.  This should be called once for each particle
      * in the System.  When it is called for the i'th time, it specifies the parameters for the i'th particle.
@@ -220,12 +262,14 @@ protected:
     ForceImpl* createImpl();
 private:
     class ParticleInfo;
+    class ParameterInfo;
     class ExceptionInfo;
     NonbondedMethod nonbondedMethod;
     double cutoffDistance;
     Vec3 periodicBoxVectors[3];
     std::string energyExpression;
-    std::vector<std::string> combiningRules;
+    std::vector<ParameterInfo> parameters;
+    std::vector<std::string> globalParameters;
     std::vector<ParticleInfo> particles;
     std::vector<ExceptionInfo> exceptions;
     std::map<std::pair<int, int>, int> exceptionMap;
@@ -237,6 +281,15 @@ public:
     ParticleInfo() {
     }
     ParticleInfo(const std::vector<double>& parameters) : parameters(parameters) {
+    }
+};
+
+class CustomNonbondedForce::ParameterInfo {
+public:
+    std::string name, combiningRule;
+    ParameterInfo() {
+    }
+    ParameterInfo(const std::string& name, const std::string& combiningRule) : name(name), combiningRule(combiningRule) {
     }
 };
 

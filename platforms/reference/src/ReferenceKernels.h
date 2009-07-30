@@ -310,6 +310,7 @@ private:
     RealOpenMM nonbondedCutoff, periodicBoxSize[3];
     std::vector<std::set<int> > exclusions;
     Lepton::ExpressionProgram energyExpression, forceExpression;
+    std::vector<std::string> parameterNames, globalParameterNames;
     std::vector<Lepton::ExpressionProgram> combiningRules;
     NonbondedMethod nonbondedMethod;
     NeighborList* neighborList;

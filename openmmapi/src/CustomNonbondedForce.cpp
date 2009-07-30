@@ -94,17 +94,38 @@ void CustomNonbondedForce::setPeriodicBoxVectors(Vec3 a, Vec3 b, Vec3 c) {
     periodicBoxVectors[2] = c;
 }
 
-int CustomNonbondedForce::addParameter(const string& combiningRule) {
-    combiningRules.push_back(combiningRule);
-    return combiningRules.size()-1;
+int CustomNonbondedForce::addParameter(const string& name, const string& combiningRule) {
+    parameters.push_back(ParameterInfo(name, combiningRule));
+    return parameters.size()-1;
+}
+
+const string& CustomNonbondedForce::getParameterName(int index) const {
+    return parameters[index].name;
+}
+
+void CustomNonbondedForce::setParameterName(int index, const string& name) {
+    parameters[index].name = name;
 }
 
 const string& CustomNonbondedForce::getParameterCombiningRule(int index) const {
-    return combiningRules[index];
+    return parameters[index].combiningRule;
 }
 
 void CustomNonbondedForce::setParameterCombiningRule(int index, const string& combiningRule) {
-    combiningRules[index] = combiningRule;
+    parameters[index].combiningRule = combiningRule;
+}
+
+int CustomNonbondedForce::addGlobalParameter(const string& name) {
+    globalParameters.push_back(name);
+    return globalParameters.size()-1;
+}
+
+const string& CustomNonbondedForce::getGlobalParameterName(int index) const {
+    return globalParameters[index];
+}
+
+void CustomNonbondedForce::setGlobalParameterName(int index, const string& name) {
+    globalParameters[index] = name;
 }
 
 int CustomNonbondedForce::addParticle(const vector<double>& parameters) {

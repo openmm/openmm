@@ -33,7 +33,7 @@
 
 // ---------------------------------------------------------------------------------------
 
-class ReferenceCustomNonbondedIxn : public ReferencePairIxn {
+class ReferenceCustomNonbondedIxn {
 
    private:
 
@@ -46,6 +46,7 @@ class ReferenceCustomNonbondedIxn : public ReferencePairIxn {
       Lepton::ExpressionProgram forceExpression;
       std::vector<Lepton::ExpressionProgram> combiningRules;
       std::vector<std::string> paramNames;
+      std::vector<std::string> particleParamNames;
 
       /**---------------------------------------------------------------------------------------
 
@@ -75,7 +76,7 @@ class ReferenceCustomNonbondedIxn : public ReferencePairIxn {
          --------------------------------------------------------------------------------------- */
 
        ReferenceCustomNonbondedIxn(const Lepton::ExpressionProgram& energyExpression, const Lepton::ExpressionProgram& forceExpression,
-                                   const std::vector<Lepton::ExpressionProgram>& combiningRules);
+                                   const std::vector<std::string>& parameterNames, const std::vector<Lepton::ExpressionProgram>& combiningRules);
 
       /**---------------------------------------------------------------------------------------
 
@@ -124,6 +125,7 @@ class ReferenceCustomNonbondedIxn : public ReferencePairIxn {
                                  exclusions[atomIndex][1-no.] = atom indices of atoms to excluded from
                                  interacting w/ atom atomIndex
          @param fixedParameters  non atom parameters (not currently used)
+         @param globalParameters the values of global parameters
          @param forces           force array (forces added)
          @param energyByAtom     atom energy
          @param totalEnergy      total energy
@@ -134,8 +136,8 @@ class ReferenceCustomNonbondedIxn : public ReferencePairIxn {
 
       int calculatePairIxn( int numberOfAtoms, RealOpenMM** atomCoordinates,
                             RealOpenMM** atomParameters, int** exclusions,
-                            RealOpenMM* fixedParameters, RealOpenMM** forces,
-                            RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const;
+                            RealOpenMM* fixedParameters, std::map<std::string, double> globalParameters,
+                            RealOpenMM** forces, RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const;
 
       /**---------------------------------------------------------------------------------------
 
@@ -146,6 +148,7 @@ class ReferenceCustomNonbondedIxn : public ReferencePairIxn {
          @param atomCoordinates      atom coordinates: atomCoordinates[atomIndex][3]
          @param parameters           parameters: parameters[excptionIndex][*]; contents of array
                                      depend on ixn
+         @param globalParameters     the values of global parameters
          @param forces               force array (forces added to current values): forces[atomIndex][3]
          @param energyByAtom         atom energy
          @param totalEnergy          total energy
@@ -153,8 +156,8 @@ class ReferenceCustomNonbondedIxn : public ReferencePairIxn {
          --------------------------------------------------------------------------------------- */
 
       void calculateExceptionIxn( int numberOfExceptions, int** atomIndices, RealOpenMM** atomCoordinates,
-                                    RealOpenMM** parameters, RealOpenMM** forces,
-                                    RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const;
+                                    RealOpenMM** parameters, std::map<std::string, double> globalParameters,
+                                    RealOpenMM** forces, RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const;
 
 // ---------------------------------------------------------------------------------------
 

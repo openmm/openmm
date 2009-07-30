@@ -545,14 +545,18 @@ void ReferenceCalcCustomNonbondedForceKernel::initialize(const System& system, c
     Lepton::ParsedExpression expression = Lepton::Parser::parse(force.getEnergyFunction()).optimize();
     energyExpression = expression.createProgram();
     forceExpression = expression.differentiate("r").optimize().createProgram();
-    for (int i = 0; i < numParameters; i++)
+    for (int i = 0; i < numParameters; i++) {
+        parameterNames.push_back(force.getParameterName(i));
         combiningRules.push_back(Lepton::Parser::parse(force.getParameterCombiningRule(i)).optimize().createProgram());
+    }
+    for (int i = 0; i < force.getNumGlobalParameters(); i++)
+        globalParameterNames.push_back(force.getGlobalParameterName(i));
 }
 
 void ReferenceCalcCustomNonbondedForceKernel::executeForces(ContextImpl& context) {
     RealOpenMM** posData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData()); // Reference code needs to be made const correct
     RealOpenMM** forceData = ((ReferenceFloatStreamImpl&) context.getForces().getImpl()).getData();
-    ReferenceCustomNonbondedIxn ixn(energyExpression, forceExpression, combiningRules);
+    ReferenceCustomNonbondedIxn ixn(energyExpression, forceExpression, parameterNames, combiningRules);
     bool periodic = (nonbondedMethod == CutoffPeriodic);
     if (nonbondedMethod != NoCutoff) {
         computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, periodic ? periodicBoxSize : NULL, nonbondedCutoff, 0.0);
@@ -560,15 +564,18 @@ void ReferenceCalcCustomNonbondedForceKernel::executeForces(ContextImpl& context
     }
     if (periodic)
         ixn.setPeriodic(periodicBoxSize);
-    ixn.calculatePairIxn(numParticles, posData, particleParamArray, exclusionArray, 0, forceData, 0, 0);
-    ixn.calculateExceptionIxn(num14, bonded14IndexArray, posData, bonded14ParamArray, forceData, 0, 0);
+    map<string, double> globalParameters;
+    for (int i = 0; i < globalParameterNames.size(); i++)
+        globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
+    ixn.calculatePairIxn(numParticles, posData, particleParamArray, exclusionArray, 0, globalParameters, forceData, 0, 0);
+    ixn.calculateExceptionIxn(num14, bonded14IndexArray, posData, bonded14ParamArray, globalParameters, forceData, 0, 0);
 }
 
 double ReferenceCalcCustomNonbondedForceKernel::executeEnergy(ContextImpl& context) {
     RealOpenMM** posData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData()); // Reference code needs to be made const correct
     RealOpenMM** forceData = allocateRealArray(numParticles, 3);
     RealOpenMM energy = 0;
-    ReferenceCustomNonbondedIxn ixn(energyExpression, forceExpression, combiningRules);
+    ReferenceCustomNonbondedIxn ixn(energyExpression, forceExpression, parameterNames, combiningRules);
     bool periodic = (nonbondedMethod == CutoffPeriodic);
     if (nonbondedMethod != NoCutoff) {
         computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, periodic ? periodicBoxSize : NULL, nonbondedCutoff, 0.0);
@@ -576,8 +583,11 @@ double ReferenceCalcCustomNonbondedForceKernel::executeEnergy(ContextImpl& conte
     }
     if (periodic)
         ixn.setPeriodic(periodicBoxSize);
-    ixn.calculatePairIxn(numParticles, posData, particleParamArray, exclusionArray, 0, forceData, 0, &energy);
-    ixn.calculateExceptionIxn(num14, bonded14IndexArray, posData, bonded14ParamArray, forceData, 0, &energy);
+    map<string, double> globalParameters;
+    for (int i = 0; i < globalParameterNames.size(); i++)
+        globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
+    ixn.calculatePairIxn(numParticles, posData, particleParamArray, exclusionArray, 0, globalParameters, forceData, 0, &energy);
+    ixn.calculateExceptionIxn(num14, bonded14IndexArray, posData, bonded14ParamArray, globalParameters, forceData, 0, &energy);
     disposeRealArray(forceData, numParticles);
     return energy;
 }

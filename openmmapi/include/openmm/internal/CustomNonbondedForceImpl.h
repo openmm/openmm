@@ -36,6 +36,7 @@
 #include "openmm/CustomNonbondedForce.h"
 #include "openmm/Kernel.h"
 #include <utility>
+#include <map>
 #include <string>
 
 namespace OpenMM {
@@ -57,9 +58,7 @@ public:
     }
     void calcForces(ContextImpl& context, Stream& forces);
     double calcEnergy(ContextImpl& context);
-    std::map<std::string, double> getDefaultParameters() {
-        return std::map<std::string, double>(); // This force field doesn't define any parameters.
-    }
+    std::map<std::string, double> getDefaultParameters();
     std::vector<std::string> getKernelNames();
 private:
     CustomNonbondedForce& owner;
