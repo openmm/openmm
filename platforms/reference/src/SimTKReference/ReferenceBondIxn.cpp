@@ -152,6 +152,35 @@ RealOpenMM ReferenceBondIxn::getNormedDotProduct( RealOpenMM* vector1, RealOpenM
 
    // ---------------------------------------------------------------------------------------
 
+// for angles near pi, double is required due to the 'steepness' of acos()
+// in this regime.
+  
+#define USE_DOUBLE_FOR_NORMED_DOT_PRODUCT
+
+#if defined USE_DOUBLE_FOR_NORMED_DOT_PRODUCT
+   double v1D[3];
+   double v2D[3];
+   v1D[0]                = static_cast<double>( vector1[0] );
+   v1D[1]                = static_cast<double>( vector1[1] );
+   v1D[2]                = static_cast<double>( vector1[2] );
+
+   v2D[0]                = static_cast<double>( vector2[0] );
+   v2D[1]                = static_cast<double>( vector2[1] );
+   v2D[2]                = static_cast<double>( vector2[2] );
+   double dotProductD    = DOT3( v1D, v2D );
+   if( dotProductD != 0.0 ){
+      if( hasREntry ){
+         dotProductD    /= ( static_cast<double>(vector1[ReferenceForce::RIndex])*static_cast<double>(vector2[ReferenceForce::RIndex]) );
+      } else {
+         double norm1    = DOT3( v1D, v1D );
+         double norm2    = DOT3( v2D, v2D);
+         dotProductD    /= sqrt( norm1*norm2 );
+      }
+   }
+   RealOpenMM dotProduct = static_cast<RealOpenMM>(dotProductD);
+
+#else      
+
    RealOpenMM dotProduct = DOT3( vector1, vector2 );
    if( dotProduct != zero ){
       if( hasREntry ){
@@ -162,6 +191,9 @@ RealOpenMM ReferenceBondIxn::getNormedDotProduct( RealOpenMM* vector1, RealOpenM
          dotProduct       /= SQRT( norm1*norm2 );
       }
    }
+
+#endif
+#undef USE_DOUBLE_FOR_NORMED_DOT_PRODUCT
       
    // clamp dot product to [-1,1]
 
