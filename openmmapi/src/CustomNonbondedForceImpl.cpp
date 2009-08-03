@@ -121,6 +121,6 @@ vector<string> CustomNonbondedForceImpl::getKernelNames() {
 map<string, double> CustomNonbondedForceImpl::getDefaultParameters() {
     map<string, double> parameters;
     for (int i = 0; i < owner.getNumGlobalParameters(); i++)
-        parameters[owner.getGlobalParameterName(i)] = 0.0;
+        parameters[owner.getGlobalParameterName(i)] = owner.getGlobalParameterDefaultValue(i);
     return parameters;
 }

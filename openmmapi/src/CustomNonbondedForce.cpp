@@ -115,17 +115,25 @@ void CustomNonbondedForce::setParameterCombiningRule(int index, const string& co
     parameters[index].combiningRule = combiningRule;
 }
 
-int CustomNonbondedForce::addGlobalParameter(const string& name) {
-    globalParameters.push_back(name);
+int CustomNonbondedForce::addGlobalParameter(const string& name, double defaultValue) {
+    globalParameters.push_back(GlobalParameterInfo(name, defaultValue));
     return globalParameters.size()-1;
 }
 
 const string& CustomNonbondedForce::getGlobalParameterName(int index) const {
-    return globalParameters[index];
+    return globalParameters[index].name;
 }
 
 void CustomNonbondedForce::setGlobalParameterName(int index, const string& name) {
-    globalParameters[index] = name;
+    globalParameters[index].name = name;
+}
+
+double CustomNonbondedForce::getGlobalParameterDefaultValue(int index) const {
+    return globalParameters[index].defaultValue;
+}
+
+void CustomNonbondedForce::setGlobalParameterDefaultValue(int index, double defaultValue) {
+    globalParameters[index].defaultValue = defaultValue;
 }
 
 int CustomNonbondedForce::addParticle(const vector<double>& parameters) {

@@ -80,8 +80,8 @@ void testParameters() {
     CustomNonbondedForce* forceField = new CustomNonbondedForce("scale*a*(r*b)^3");
     forceField->addParameter("a", "a1*a2");
     forceField->addParameter("b", "c+b1+b2");
-    forceField->addGlobalParameter("scale");
-    forceField->addGlobalParameter("c");
+    forceField->addGlobalParameter("scale", 3.0);
+    forceField->addGlobalParameter("c", -1.0);
     vector<double> params(2);
     params[0] = 1.5;
     params[1] = 2.0;

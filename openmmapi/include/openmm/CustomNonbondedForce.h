@@ -187,9 +187,10 @@ public:
      * Add a new global parmeter that the interaction may depend on.
      *
      * @param name             the name of the parameter
+     * @param defaultValue     the default value of the parameter
      * @return the index of the parameter that was added
      */
-    int addGlobalParameter(const std::string& name);
+    int addGlobalParameter(const std::string& name, double defaultValue);
     /**
      * Get the name of a global parameter.
      *
@@ -204,6 +205,20 @@ public:
      * @param name           the name of the parameter
      */
     void setGlobalParameterName(int index, const std::string& name);
+    /**
+     * Get the default value of a global parameter.
+     *
+     * @param index     the index of the parameter for which to get the default value
+     * @return the parameter default value
+     */
+    double getGlobalParameterDefaultValue(int index) const;
+    /**
+     * Set the default value of a global parameter.
+     *
+     * @param index          the index of the parameter for which to set the default value
+     * @param name           the default value of the parameter
+     */
+    void setGlobalParameterDefaultValue(int index, double defaultValue);
     /**
      * Add the nonbonded force parameters for a particle.  This should be called once for each particle
      * in the System.  When it is called for the i'th time, it specifies the parameters for the i'th particle.
@@ -263,13 +278,14 @@ protected:
 private:
     class ParticleInfo;
     class ParameterInfo;
+    class GlobalParameterInfo;
     class ExceptionInfo;
     NonbondedMethod nonbondedMethod;
     double cutoffDistance;
     Vec3 periodicBoxVectors[3];
     std::string energyExpression;
     std::vector<ParameterInfo> parameters;
-    std::vector<std::string> globalParameters;
+    std::vector<GlobalParameterInfo> globalParameters;
     std::vector<ParticleInfo> particles;
     std::vector<ExceptionInfo> exceptions;
     std::map<std::pair<int, int>, int> exceptionMap;
@@ -290,6 +306,16 @@ public:
     ParameterInfo() {
     }
     ParameterInfo(const std::string& name, const std::string& combiningRule) : name(name), combiningRule(combiningRule) {
+    }
+};
+
+class CustomNonbondedForce::GlobalParameterInfo {
+public:
+    std::string name;
+    double defaultValue;
+    GlobalParameterInfo() {
+    }
+    GlobalParameterInfo(const std::string& name, double defaultValue) : name(name), defaultValue(defaultValue) {
     }
 };
 

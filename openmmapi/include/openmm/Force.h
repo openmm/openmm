@@ -55,7 +55,7 @@ class ForceImpl;
 
 class OPENMM_EXPORT Force {
 public:
-	Force() {}
+    Force() {}
     virtual ~Force() {
     }
 protected:
@@ -68,8 +68,8 @@ protected:
     virtual ForceImpl* createImpl() = 0;
     
 private:
-	Force& operator=(const Force& rhs);
-	Force(const Force& rhs);
+    Force& operator=(const Force& rhs);
+    Force(const Force& rhs);
 };
 
 } // namespace OpenMM
