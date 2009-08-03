@@ -113,7 +113,7 @@ ParseToken Parser::getNextToken(string expression, int start) {
         c = expression[pos];
         if (c == '(')
             return ParseToken(expression.substr(start, pos-start+1), ParseToken::Function);
-        if (Operators.find(c) != string::npos || c == ',' || c == ')')
+        if (Operators.find(c) != string::npos || c == ',' || c == ')' || c == ' ')
             return ParseToken(expression.substr(start, pos-start), ParseToken::Variable);
     }
     return ParseToken(expression.substr(start, string::npos), ParseToken::Variable);
