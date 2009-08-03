@@ -566,8 +566,8 @@ int CpuGBVI::computeBornForces( const RealOpenMM* bornRadii, RealOpenMM** atomCo
 
    const unsigned int arraySzInBytes    = sizeof( RealOpenMM )*numberOfAtoms;
 
-   RealOpenMM** forces  = (RealOpenMM**) malloc( sizeof( RealOpenMM* )*numberOfAtoms );
-   RealOpenMM*  block   = (RealOpenMM*)  malloc( sizeof( RealOpenMM )*numberOfAtoms*3 );
+   RealOpenMM** forces  = new RealOpenMM*[numberOfAtoms];
+   RealOpenMM*  block   = new RealOpenMM[numberOfAtoms*3];
 	memset( block, 0, sizeof( RealOpenMM )*numberOfAtoms*3 );
 	RealOpenMM* blockPtr = block;
    for( int ii = 0; ii < numberOfAtoms; ii++ ){
@@ -782,6 +782,9 @@ if( 0 ){
       inputForces[atomI][1] = conversion*forces[atomI][1];
       inputForces[atomI][2] = conversion*forces[atomI][2];
    }
+
+   delete[] forces;
+   delete[] block;
 
    return SimTKOpenMMCommon::DefaultReturn;
 

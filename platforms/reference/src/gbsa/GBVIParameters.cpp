@@ -148,7 +148,7 @@ GBVIParameters::~GBVIParameters( ){
    if( _ownScaledRadii ){
       delete[] _scaledRadii;
    }
-   delete _gammaParameters;
+   delete[] _gammaParameters;
 /*
    if( getFreeArrays() ){
 
