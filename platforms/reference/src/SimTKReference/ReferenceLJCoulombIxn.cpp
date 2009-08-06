@@ -294,6 +294,7 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
         for(int n = 0; n < numberOfAtoms; n++)
             energyByAtom[n] += recipEnergy;
 
+        pme_destroy(pmedata);
   }
 
     // Ewald method
