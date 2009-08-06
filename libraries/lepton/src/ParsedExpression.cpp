@@ -162,7 +162,7 @@ ExpressionTreeNode ParsedExpression::substituteSimplerExpression(const Expressio
         case Operation::DIVIDE:
         {
             double numerator = getConstantValue(children[0]);
-            if (numerator = 0.0) // 0 divided by something
+            if (numerator == 0.0) // 0 divided by something
                 return ExpressionTreeNode(new Operation::Constant(0.0));
             if (numerator == 1.0) // 1 divided by something
                 return ExpressionTreeNode(new Operation::Reciprocal(), children[1]);
@@ -188,6 +188,8 @@ ExpressionTreeNode ParsedExpression::substituteSimplerExpression(const Expressio
             if (base == 1.0) // 1 to any power is 1
                 return ExpressionTreeNode(new Operation::Constant(1.0));
             double exponent = getConstantValue(children[1]);
+            if (exponent == 0.0) // x^0 = 1
+                return ExpressionTreeNode(new Operation::Constant(1.0));
             if (exponent == 1.0) // x^1 = x
                 return children[0];
             if (exponent == -1.0) // x^-1 = recip(x)
