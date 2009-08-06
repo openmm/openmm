@@ -88,6 +88,9 @@ struct _gpuContext {
     CUDAStream<float4>* psxVector4;
     CUDAStream<float4>* psvVector4;
     CUDAStream<float2>* psSigEps2; 
+    CUDAStream<float4>* psCustomParams;     // Atom parameters for custom nonbonded force
+    CUDAStream<int4>* psCustomExceptionID;  // Atom indices for custom nonbonded exceptions
+    CUDAStream<float4>* psCustomExceptionParams; // Parameters for custom nonbonded exceptions
     CUDAStream<float2>* psEwaldCosSinSum;
     CUDAStream<float2>* psObcData; 
     CUDAStream<float>* psObcChain;
@@ -177,6 +180,12 @@ void gpuSetCoulombParameters(gpuContext gpu, float epsfac, const std::vector<int
 
 extern "C"
 void gpuSetNonbondedCutoff(gpuContext gpu, float cutoffDistance, float solventDielectric);
+
+extern "C"
+void gpuSetCustomNonbondedParameters(gpuContext gpu, const std::vector<std::vector<double> >& parameters, const std::vector<std::vector<int> >& exclusions,
+            const std::vector<int>& exceptionAtom1, const std::vector<int>& exceptionAtom2, const std::vector<std::vector<double> >& exceptionParams,
+            CudaNonbondedMethod method, float cutoffDistance, const std::string& energyExp, const std::vector<std::string>& combiningRules,
+            const std::vector<std::string>& paramNames);
 
 extern "C"
 void gpuSetEwaldParameters(gpuContext gpu, float alpha, int kmaxx, int kmaxy, int kmaxz);

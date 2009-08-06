@@ -53,6 +53,7 @@ CudaPlatform::CudaPlatform() {
     registerKernelFactory(CalcPeriodicTorsionForceKernel::Name(), factory);
     registerKernelFactory(CalcRBTorsionForceKernel::Name(), factory);
     registerKernelFactory(CalcNonbondedForceKernel::Name(), factory);
+    registerKernelFactory(CalcCustomNonbondedForceKernel::Name(), factory);
     registerKernelFactory(CalcGBSAOBCForceKernel::Name(), factory);
     registerKernelFactory(IntegrateVerletStepKernel::Name(), factory);
     registerKernelFactory(IntegrateLangevinStepKernel::Name(), factory);
@@ -104,8 +105,8 @@ void CudaPlatform::contextDestroyed(ContextImpl& context) const {
     delete data;
 }
 
-CudaPlatform::PlatformData::PlatformData(_gpuContext* gpu) : gpu(gpu), removeCM(false), nonbondedMethod(0), hasBonds(false), hasAngles(false),
-        hasPeriodicTorsions(false), hasRB(false), hasNonbonded(false), primaryKernel(NULL), stepCount(0), computeForceCount(0), time(0.0) {
+CudaPlatform::PlatformData::PlatformData(_gpuContext* gpu) : gpu(gpu), removeCM(false), nonbondedMethod(0), customNonbondedMethod(0), hasBonds(false), hasAngles(false),
+        hasPeriodicTorsions(false), hasRB(false), hasNonbonded(false), hasCustomNonbonded(false), primaryKernel(NULL), stepCount(0), computeForceCount(0), time(0.0) {
     stringstream device;
     device << gpu->device;
     propertyValues[CudaPlatform::CudaDevice()] = device.str();

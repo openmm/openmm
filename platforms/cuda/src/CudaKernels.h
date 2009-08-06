@@ -256,7 +256,41 @@ public:
     double executeEnergy(ContextImpl& context);
 private:
     CudaPlatform::PlatformData& data;
-    int numParticles, num14;
+    int numParticles;
+    System& system;
+};
+
+/**
+ * This kernel is invoked by CustomNonbondedForce to calculate the forces acting on the system.
+ */
+class CudaCalcCustomNonbondedForceKernel : public CalcCustomNonbondedForceKernel {
+public:
+    CudaCalcCustomNonbondedForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data, System& system) : CalcCustomNonbondedForceKernel(name, platform), data(data), system(system) {
+    }
+    ~CudaCalcCustomNonbondedForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomNonbondedForce this kernel will be used for
+     */
+    void initialize(const System& system, const CustomNonbondedForce& force);
+    /**
+     * Execute the kernel to calculate the forces.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void executeForces(ContextImpl& context);
+    /**
+     * Execute the kernel to calculate the energy.
+     *
+     * @param context    the context in which to execute this kernel
+     * @return the potential energy due to the CustomNonbondedForce
+     */
+    double executeEnergy(ContextImpl& context);
+private:
+    CudaPlatform::PlatformData& data;
+    int numParticles;
     System& system;
 };
 

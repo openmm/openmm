@@ -231,13 +231,25 @@ static const int G8X_RANDOM_THREADS_PER_BLOCK           = 256;
 static const int GT2XX_RANDOM_THREADS_PER_BLOCK         = 384;
 static const int G8X_NONBOND_WORKUNITS_PER_SM           = 220;
 static const int GT2XX_NONBOND_WORKUNITS_PER_SM         = 256;
-
+static const unsigned int MAX_STACK_SIZE = 8;
 enum CudaNonbondedMethod
 {
     NO_CUTOFF,
     CUTOFF,
     PERIODIC,
     EWALD
+};
+
+enum ExpressionOp {
+    CONSTANT = 0, VARIABLE0, VARIABLE1, VARIABLE2, VARIABLE3, VARIABLE4, VARIABLE5, VARIABLE6, VARIABLE7, VARIABLE8, CUSTOM, ADD, SUBTRACT, MULTIPLY, DIVIDE,
+        POWER, NEGATE, SQRT, EXP, LOG, SIN, COS, SEC, CSC, TAN, COT, ASIN, ACOS, ATAN, SQUARE, CUBE, RECIPROCAL, INCREMENT, DECREMENT
+};
+
+template<int SIZE>
+struct Expression {
+    int op[SIZE];
+    float arg[SIZE];
+    int length, stackSize;
 };
 
 struct cudaGmxSimulation {
@@ -291,7 +303,9 @@ struct cudaGmxSimulation {
     float           bigFloat;                       // Floating point value used as a flag for Shaken atoms 
     float           epsfac;                         // Epsilon factor for CDLJ calculations
     CudaNonbondedMethod nonbondedMethod;            // How to handle nonbonded interactions
-    float           nonbondedCutoffSqr;             // Cutoff distance for CDLJ calculations
+    CudaNonbondedMethod customNonbondedMethod;      // How to handle custom nonbonded interactions
+    float           nonbondedCutoff;                // Cutoff distance for nonbonded interactions
+    float           nonbondedCutoffSqr;             // Square of the cutoff distance for nonbonded interactions
     float           periodicBoxSizeX;               // The X dimension of the periodic box
     float           periodicBoxSizeY;               // The Y dimension of the periodic box
     float           periodicBoxSizeZ;               // The Z dimension of the periodic box
@@ -324,6 +338,10 @@ struct cudaGmxSimulation {
     float           collisionFrequency;             // Collision frequency for Andersen thermostat
     float2*         pObcData;                       // Pointer to fixed Born data
     float2*         pAttr;                          // Pointer to additional atom attributes (sig, eps)
+    float4*         pCustomParams;                  // Pointer to atom parameters for custom nonbonded force
+    int4*           pCustomExceptionID;             // Atom indices for custom nonbonded exceptions
+    float4*         pCustomExceptionParams;         // Parameters for custom nonbonded exceptions
+    unsigned int    customExceptions;               // Number of custom nonbonded exceptions
     float2*         pEwaldCosSinSum;                // Pointer to the cos/sin sums (ewald)
     unsigned int    bonds;                          // Number of bonds
     int4*           pBondID;                        // Bond atom and output buffer IDs

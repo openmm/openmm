@@ -304,9 +304,9 @@ public:
      */
     double executeEnergy(ContextImpl& context);
 private:
-    int numParticles, num14;
-    int **exclusionArray, **bonded14IndexArray;
-    RealOpenMM **particleParamArray, **bonded14ParamArray;
+    int numParticles, numExceptions;
+    int **exclusionArray, **exceptionIndexArray;
+    RealOpenMM **particleParamArray, **exceptionParamArray;
     RealOpenMM nonbondedCutoff, periodicBoxSize[3];
     std::vector<std::set<int> > exclusions;
     Lepton::ExpressionProgram energyExpression, forceExpression;

@@ -51,16 +51,12 @@ static void calcForces(ContextImpl& context, CudaPlatform::PlatformData& data) {
         kReduceObcGbsaBornForces(gpu);
         kCalculateObcGbsaForces2(gpu);
     }
-    else if (data.hasNonbonded) {
+    else if (data.hasNonbonded)
         kCalculateCDLJForces(gpu);
-    }
+    if (data.hasCustomNonbonded)
+        kCalculateCustomNonbondedForces(gpu, data.hasNonbonded);
     kCalculateLocalForces(gpu);
-/*
-    if (gpu->bIncludeGBSA)
-        kReduceBornSumAndForces(gpu);
-    else
-*/
-        kReduceForces(gpu);
+    kReduceForces(gpu);
 }
 
 static double calcEnergy(ContextImpl& context, System& system) {
@@ -255,16 +251,15 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
     // Identify which exceptions are 1-4 interactions.
 
     vector<pair<int, int> > exclusions;
-    vector<int> nb14s;
+    vector<int> exceptions;
     for (int i = 0; i < force.getNumExceptions(); i++) {
         int particle1, particle2;
         double chargeProd, sigma, epsilon;
         force.getExceptionParameters(i, particle1, particle2, chargeProd, sigma, epsilon);
         exclusions.push_back(pair<int, int>(particle1, particle2));
         if (chargeProd != 0.0 || epsilon != 0.0)
-            nb14s.push_back(i);
+            exceptions.push_back(i);
     }
-    num14 = nb14s.size();
 
     // Initialize nonbonded interactions.
     
@@ -329,15 +324,16 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
     // Initialize 1-4 nonbonded interactions.
     
     {
-        vector<int> particle1(num14);
-        vector<int> particle2(num14);
-        vector<float> c6(num14);
-        vector<float> c12(num14);
-        vector<float> q1(num14);
-        vector<float> q2(num14);
-        for (int i = 0; i < num14; i++) {
+        int numExceptions = exceptions.size();
+        vector<int> particle1(numExceptions);
+        vector<int> particle2(numExceptions);
+        vector<float> c6(numExceptions);
+        vector<float> c12(numExceptions);
+        vector<float> q1(numExceptions);
+        vector<float> q2(numExceptions);
+        for (int i = 0; i < numExceptions; i++) {
             double charge, sig, eps;
-            force.getExceptionParameters(nb14s[i], particle1[i], particle2[i], charge, sig, eps);
+            force.getExceptionParameters(exceptions[i], particle1[i], particle2[i], charge, sig, eps);
             c6[i] = (float) (4*eps*pow(sig, 6.0));
             c12[i] = (float) (4*eps*pow(sig, 12.0));
             q1[i] = (float) charge;
@@ -353,6 +349,88 @@ void CudaCalcNonbondedForceKernel::executeForces(ContextImpl& context) {
 }
 
 double CudaCalcNonbondedForceKernel::executeEnergy(ContextImpl& context) {
+    if (data.primaryKernel == this)
+        return calcEnergy(context, system);
+    return 0.0;
+}
+
+CudaCalcCustomNonbondedForceKernel::~CudaCalcCustomNonbondedForceKernel() {
+}
+
+void CudaCalcCustomNonbondedForceKernel::initialize(const System& system, const CustomNonbondedForce& force) {
+    if (data.primaryKernel == NULL)
+        data.primaryKernel = this;
+    data.hasCustomNonbonded = true;
+    numParticles = force.getNumParticles();
+    _gpuContext* gpu = data.gpu;
+
+    // Identify which exceptions are actual interactions.
+
+    vector<pair<int, int> > exclusions;
+    vector<int> exceptions;
+    {
+        vector<double> parameters;
+        for (int i = 0; i < force.getNumExceptions(); i++) {
+            int particle1, particle2;
+            force.getExceptionParameters(i, particle1, particle2, parameters);
+            exclusions.push_back(pair<int, int>(particle1, particle2));
+            if (parameters.size() > 0)
+                exceptions.push_back(i);
+        }
+    }
+
+    // Initialize nonbonded interactions.
+
+    vector<int> particle(numParticles);
+    vector<vector<double> > parameters(numParticles);
+    vector<vector<int> > exclusionList(numParticles);
+    for (int i = 0; i < numParticles; i++) {
+        force.getParticleParameters(i, parameters[i]);
+        particle[i] = i;
+        exclusionList[i].push_back(i);
+    }
+    for (int i = 0; i < (int)exclusions.size(); i++) {
+        exclusionList[exclusions[i].first].push_back(exclusions[i].second);
+        exclusionList[exclusions[i].second].push_back(exclusions[i].first);
+    }
+    CudaNonbondedMethod method = NO_CUTOFF;
+    if (force.getNonbondedMethod() != CustomNonbondedForce::NoCutoff)
+        method = CUTOFF;
+    if (force.getNonbondedMethod() == CustomNonbondedForce::CutoffPeriodic) {
+        Vec3 boxVectors[3];
+        force.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+        gpuSetPeriodicBoxSize(gpu, (float)boxVectors[0][0], (float)boxVectors[1][1], (float)boxVectors[2][2]);
+        method = PERIODIC;
+    }
+    data.customNonbondedMethod = method;
+
+    // Initialize exceptions.
+
+    int numExceptions = exceptions.size();
+    vector<int> exceptionParticle1(numExceptions);
+    vector<int> exceptionParticle2(numExceptions);
+    vector<vector<double> > exceptionParams(numExceptions);
+    for (int i = 0; i < numExceptions; i++)
+        force.getExceptionParameters(exceptions[i], exceptionParticle1[i], exceptionParticle2[i], exceptionParams[i]);
+
+    // Record information for the expressions.
+
+    vector<string> paramNames;
+    vector<string> combiningRules;
+    for (int i = 0; i < force.getNumParameters(); i++) {
+        paramNames.push_back(force.getParameterName(i));
+        combiningRules.push_back(force.getParameterCombiningRule(i));
+    }
+    gpuSetCustomNonbondedParameters(gpu, parameters, exclusionList, exceptionParticle1, exceptionParticle2, exceptionParams, method,
+            (float)force.getCutoffDistance(), force.getEnergyFunction(), combiningRules, paramNames);
+}
+
+void CudaCalcCustomNonbondedForceKernel::executeForces(ContextImpl& context) {
+    if (data.primaryKernel == this)
+        calcForces(context, data);
+}
+
+double CudaCalcCustomNonbondedForceKernel::executeEnergy(ContextImpl& context) {
     if (data.primaryKernel == this)
         return calcEnergy(context, system);
     return 0.0;

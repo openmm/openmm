@@ -49,8 +49,10 @@ using namespace std;
 #include "hilbert.h"
 #include "openmm/OpenMMException.h"
 #include "quern.h"
+#include "Lepton.h"
 
 using OpenMM::OpenMMException;
+using Lepton::Operation;
 
 struct ShakeCluster {
     int centralID;
@@ -129,6 +131,116 @@ static const float RGAS                     =    BOLTZMANN * AVOGADRO;     // (J
 static const float BOLTZ                    =    (RGAS / KILO);            // (kJ/(mol K)) 
 
 #define DUMP_PARAMETERS 0
+
+template <int SIZE>
+static Expression<SIZE> createExpression(const string& expression, const Lepton::ExpressionProgram& program, const vector<string>& variables) {
+    Expression<SIZE> exp;
+    if (program.getNumOperations() > SIZE)
+        throw OpenMMException("Expression contains too many operations: "+expression);
+    exp.length = program.getNumOperations();
+    exp.stackSize = program.getStackSize();
+    for (int i = 0; i < program.getNumOperations(); i++) {
+        const Operation& op = program.getOperation(i);
+        switch (op.getId()) {
+            case Operation::CONSTANT:
+                exp.op[i] = CONSTANT;
+                exp.arg[i] = op.evaluate(NULL, map<string, double>());
+                break;
+            case Operation::VARIABLE:
+                if (variables.size() > 0 && op.getName() == variables[0])
+                    exp.op[i] = VARIABLE0;
+                else if (variables.size() > 1 && op.getName() == variables[1])
+                    exp.op[i] = VARIABLE1;
+                else if (variables.size() > 2 && op.getName() == variables[2])
+                    exp.op[i] = VARIABLE2;
+                else if (variables.size() > 3 && op.getName() == variables[3])
+                    exp.op[i] = VARIABLE3;
+                else if (variables.size() > 4 && op.getName() == variables[4])
+                    exp.op[i] = VARIABLE4;
+                else if (variables.size() > 5 && op.getName() == variables[5])
+                    exp.op[i] = VARIABLE5;
+                else if (variables.size() > 6 && op.getName() == variables[6])
+                    exp.op[i] = VARIABLE6;
+                else if (variables.size() > 7 && op.getName() == variables[7])
+                    exp.op[i] = VARIABLE7;
+                else if (variables.size() > 8 && op.getName() == variables[8])
+                    exp.op[i] = VARIABLE8;
+                else
+                    throw OpenMMException("Unknown variable '"+op.getName()+"' in expression: "+expression);
+                break;
+            case Operation::ADD:
+                exp.op[i] = ADD;
+                break;
+            case Operation::SUBTRACT:
+                exp.op[i] = SUBTRACT;
+                break;
+            case Operation::MULTIPLY:
+                exp.op[i] = MULTIPLY;
+                break;
+            case Operation::DIVIDE:
+                exp.op[i] = DIVIDE;
+                break;
+            case Operation::POWER:
+                exp.op[i] = POWER;
+                break;
+            case Operation::NEGATE:
+                exp.op[i] = NEGATE;
+                break;
+            case Operation::SQRT:
+                exp.op[i] = SQRT;
+                break;
+            case Operation::EXP:
+                exp.op[i] = EXP;
+                break;
+            case Operation::LOG:
+                exp.op[i] = LOG;
+                break;
+            case Operation::SIN:
+                exp.op[i] = SIN;
+                break;
+            case Operation::COS:
+                exp.op[i] = COS;
+                break;
+            case Operation::SEC:
+                exp.op[i] = SEC;
+                break;
+            case Operation::CSC:
+                exp.op[i] = CSC;
+                break;
+            case Operation::TAN:
+                exp.op[i] = TAN;
+                break;
+            case Operation::COT:
+                exp.op[i] = COT;
+                break;
+            case Operation::ASIN:
+                exp.op[i] = ASIN;
+                break;
+            case Operation::ACOS:
+                exp.op[i] = ACOS;
+                break;
+            case Operation::ATAN:
+                exp.op[i] = ATAN;
+                break;
+            case Operation::SQUARE:
+                exp.op[i] = SQUARE;
+                break;
+            case Operation::CUBE:
+                exp.op[i] = CUBE;
+                break;
+            case Operation::RECIPROCAL:
+                exp.op[i] = RECIPROCAL;
+                break;
+            case Operation::INCREMENT:
+                exp.op[i] = INCREMENT;
+                break;
+            case Operation::DECREMENT:
+                exp.op[i] = DECREMENT;
+                break;
+        }
+    }
+    return exp;
+}
 
 extern "C"
 void gpuSetBondParameters(gpuContext gpu, const vector<int>& atom1, const vector<int>& atom2, const vector<float>& length, const vector<float>& k)
@@ -376,15 +488,34 @@ void gpuSetLJ14Parameters(gpuContext gpu, float epsfac, float fudge, const vecto
     psLJ14Parameter->Upload();
 }
 
+static void setExclusions(gpuContext gpu, const vector<vector<int> >& exclusions) {
+    if (gpu->exclusions.size() > 0) {
+        bool ok = (exclusions.size() == gpu->exclusions.size());
+        for (int i = 0; i < exclusions.size() && ok; i++) {
+            if (exclusions[i].size() != gpu->exclusions[i].size())
+                ok = false;
+            else {
+                for (int j = 0; j < exclusions[i].size(); j++)
+                    if (find(gpu->exclusions[i].begin(), gpu->exclusions[i].end(), exclusions[i][j]) == gpu->exclusions[i].end())
+                        ok = false;
+            }
+        }
+        if (!ok)
+            throw OpenMMException("All nonbonded forces must have identical sets of exceptions");
+    }
+    gpu->exclusions = exclusions;
+}
+
 extern "C"
 void gpuSetCoulombParameters(gpuContext gpu, float epsfac, const vector<int>& atom, const vector<float>& c6, const vector<float>& c12, const vector<float>& q,
         const vector<char>& symbol, const vector<vector<int> >& exclusions, CudaNonbondedMethod method)
 {
-    unsigned int coulombs = atom.size();
+    unsigned int coulombs = c6.size();
     gpu->sim.epsfac = epsfac;
     gpu->sim.nonbondedMethod = method;
-    gpu->exclusions = exclusions;
-
+    if (coulombs > 0)
+        setExclusions(gpu, exclusions);
+    
     for (unsigned int i = 0; i < coulombs; i++)
     {
             float p0 = q[i];
@@ -419,8 +550,82 @@ void gpuSetCoulombParameters(gpuContext gpu, float epsfac, const vector<int>& at
 extern "C"
 void gpuSetNonbondedCutoff(gpuContext gpu, float cutoffDistance, float solventDielectric)
 {
+    if (gpu->sim.nonbondedCutoff != 0.0f && gpu->sim.nonbondedCutoff != cutoffDistance)
+        throw OpenMMException("All nonbonded forces must use the same cutoff");
+    gpu->sim.nonbondedCutoff = cutoffDistance;
     gpu->sim.nonbondedCutoffSqr = cutoffDistance*cutoffDistance;
     gpu->sim.reactionFieldK = pow(cutoffDistance, -3.0f)*(solventDielectric-1.0f)/(2.0f*solventDielectric+1.0f);
+}
+
+extern "C"
+void gpuSetCustomNonbondedParameters(gpuContext gpu, const vector<vector<double> >& parameters, const vector<vector<int> >& exclusions,
+            const vector<int>& exceptionAtom1, const vector<int>& exceptionAtom2, const vector<vector<double> >& exceptionParams,
+            CudaNonbondedMethod method, float cutoffDistance, const string& energyExp, const vector<string>& combiningRules, const vector<string>& paramNames)
+{
+    if (gpu->sim.nonbondedCutoff != 0.0f && gpu->sim.nonbondedCutoff != cutoffDistance)
+        throw OpenMMException("All nonbonded forces must use the same cutoff");
+    if (paramNames.size() > 4)
+        throw OpenMMException("CudaPlatform only supports four per-atom parameters for custom nonbonded forces");
+    gpu->sim.nonbondedCutoff = cutoffDistance;
+    gpu->sim.nonbondedCutoffSqr = cutoffDistance*cutoffDistance;
+    gpu->sim.customNonbondedMethod = method;
+    gpu->sim.customExceptions = exceptionAtom1.size();
+    setExclusions(gpu, exclusions);
+    gpu->psCustomParams = new CUDAStream<float4>(gpu->sim.paddedNumberOfAtoms, 1, "CustomParams");
+    gpu->sim.pCustomParams = gpu->psCustomParams->_pDevData;
+    gpu->psCustomExceptionID = new CUDAStream<int4>(gpu->sim.customExceptions, 1, "CustomExceptionId");
+    gpu->sim.pCustomExceptionID = gpu->psCustomExceptionID->_pDevData;
+    gpu->psCustomExceptionParams = new CUDAStream<float4>(gpu->sim.customExceptions, 1, "CustomExceptionParams");
+    gpu->sim.pCustomExceptionParams = gpu->psCustomExceptionParams->_pDevData;
+    for (int i = 0; i < parameters.size(); i++) {
+        if (parameters[i].size() > 0)
+            (*gpu->psCustomParams)[i].x = parameters[i][0];
+        if (parameters[i].size() > 1)
+            (*gpu->psCustomParams)[i].y = parameters[i][1];
+        if (parameters[i].size() > 2)
+            (*gpu->psCustomParams)[i].z = parameters[i][2];
+        if (parameters[i].size() > 3)
+            (*gpu->psCustomParams)[i].w = parameters[i][3];
+    }
+    for (int i = 0; i < exceptionAtom1.size(); i++) {
+        (*gpu->psCustomExceptionID)[i].x = exceptionAtom1[i];
+        (*gpu->psCustomExceptionID)[i].y = exceptionAtom2[i];
+        (*gpu->psCustomExceptionID)[i].z = gpu->pOutputBufferCounter[exceptionAtom1[i]]++;
+        (*gpu->psCustomExceptionID)[i].w = gpu->pOutputBufferCounter[exceptionAtom2[i]]++;
+        if (exceptionParams[i].size() > 0)
+            (*gpu->psCustomExceptionParams)[i].x = exceptionParams[i][0];
+        if (exceptionParams[i].size() > 1)
+            (*gpu->psCustomExceptionParams)[i].y = exceptionParams[i][1];
+        if (exceptionParams[i].size() > 2)
+            (*gpu->psCustomExceptionParams)[i].z = exceptionParams[i][2];
+        if (exceptionParams[i].size() > 3)
+            (*gpu->psCustomExceptionParams)[i].w = exceptionParams[i][3];
+    }
+    gpu->psCustomParams->Upload();
+    gpu->psCustomExceptionID->Upload();
+    gpu->psCustomExceptionParams->Upload();
+
+    // Create the Expressions.
+
+    vector<string> variables;
+    variables.push_back("r");
+    for (int i = 0; i < paramNames.size(); i++)
+        variables.push_back(paramNames[i]);
+    SetCustomNonbondedEnergyExpression(createExpression<128>(energyExp, Lepton::Parser::parse(energyExp).optimize().createProgram(), variables));
+    SetCustomNonbondedForceExpression(createExpression<128>(energyExp, Lepton::Parser::parse(energyExp).differentiate("r").optimize().createProgram(), variables));
+    Expression<64> paramExpressions[4];
+    vector<string> combiningRuleParams;
+    combiningRuleParams.push_back("");
+    for (int j = 1; j < 3; j++) {
+        for (int i = 0; i < paramNames.size(); i++) {
+            stringstream name;
+            name << paramNames[i] << j;
+            combiningRuleParams.push_back(name.str());
+        }
+    }
+    for (int i = 0; i < paramNames.size(); i++)
+        paramExpressions[i] = createExpression<64>(combiningRules[i], Lepton::Parser::parse(combiningRules[i]).optimize().createProgram(), combiningRuleParams);
+    SetCustomNonbondedCombiningRules(paramExpressions);
 }
 
 extern "C"
@@ -1216,6 +1421,7 @@ void* gpuInit(int numAtoms, unsigned int device, bool useBlockingSync)
     gpu->sim.surfaceAreaFactor      = surfaceAreaFactor;
     gpu->sim.electricConstant       = electricConstant;
     gpu->sim.nonbondedMethod        = NO_CUTOFF;
+    gpu->sim.nonbondedCutoff        = 0.0f;
     gpu->sim.nonbondedCutoffSqr     = 0.0f;
 
     gpu->sim.bigFloat               = 99999999.0f;
@@ -1408,6 +1614,11 @@ void gpuShutDown(gpuContext gpu)
     delete gpu->psxVector4;
     delete gpu->psvVector4;
     delete gpu->psSigEps2;
+    if (gpu->psCustomParams != NULL) {
+        delete gpu->psCustomParams;
+        delete gpu->psCustomExceptionID;
+        delete gpu->psCustomExceptionParams;
+    }
     if (gpu->psEwaldCosSinSum != NULL)
         delete gpu->psEwaldCosSinSum;
     delete gpu->psObcData;
@@ -1761,6 +1972,7 @@ int gpuSetConstants(gpuContext gpu)
 {
     SetCalculateCDLJForcesSim(gpu);
     SetCalculateCDLJObcGbsaForces1Sim(gpu);
+    SetCalculateCustomNonbondedForcesSim(gpu);
     SetCalculateLocalForcesSim(gpu);
     SetCalculateObcGbsaBornSumSim(gpu);
     SetCalculateObcGbsaForces2Sim(gpu);

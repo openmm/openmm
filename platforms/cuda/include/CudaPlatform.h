@@ -81,8 +81,8 @@ public:
     _gpuContext* gpu;
     KernelImpl* primaryKernel;
     bool removeCM;
-    bool hasBonds, hasAngles, hasPeriodicTorsions, hasRB, hasNonbonded;
-    int nonbondedMethod;
+    bool hasBonds, hasAngles, hasPeriodicTorsions, hasRB, hasNonbonded, hasCustomNonbonded;
+    int nonbondedMethod, customNonbondedMethod;
     int cmMotionFrequency;
     int stepCount, computeForceCount;
     double time;
