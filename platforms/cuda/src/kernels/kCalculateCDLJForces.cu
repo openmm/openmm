@@ -124,19 +124,23 @@ void GetCalculateCDLJForcesSim(gpuContext gpu)
 
 __global__ extern void kCalculateCDLJCutoffForces_12_kernel();
 
-void kCalculateCDLJForces(gpuContext gpu)
+double kCalculateCDLJForces(gpuContext gpu)
 {
 //    printf("kCalculateCDLJCutoffForces\n");
+    unsigned int N = gpu->sim.nonbond_blocks * gpu->sim.nonbond_threads_per_block;
+    float *energies_dev;
+    cudaMalloc((void**) &energies_dev, sizeof(float) * N);
+
     CUDPPResult result;
     switch (gpu->sim.nonbondedMethod)
     {
         case NO_CUTOFF:
             if (gpu->bOutputBufferPerWarp)
                 kCalculateCDLJN2ByWarpForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                        sizeof(Atom)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pWorkUnit);
+                        sizeof(Atom)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pWorkUnit, energies_dev);
             else
                 kCalculateCDLJN2Forces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                        sizeof(Atom)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pWorkUnit);
+                        sizeof(Atom)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pWorkUnit, energies_dev);
             LAUNCHERROR("kCalculateCDLJN2Forces");
             break;
         case CUTOFF:
@@ -155,10 +159,10 @@ void kCalculateCDLJForces(gpuContext gpu)
                     sizeof(unsigned int)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
             if (gpu->bOutputBufferPerWarp)
                 kCalculateCDLJCutoffByWarpForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                        (sizeof(Atom)+sizeof(float3))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
+                        (sizeof(Atom)+sizeof(float3))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, energies_dev);
             else
                 kCalculateCDLJCutoffForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                        (sizeof(Atom)+sizeof(float3))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
+                        (sizeof(Atom)+sizeof(float3))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, energies_dev);
             LAUNCHERROR("kCalculateCDLJCutoffForces");
             break;
         case PERIODIC:
@@ -177,10 +181,10 @@ void kCalculateCDLJForces(gpuContext gpu)
                     sizeof(unsigned int)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
             if (gpu->bOutputBufferPerWarp)
                 kCalculateCDLJPeriodicByWarpForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                        (sizeof(Atom)+sizeof(float3))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
+                        (sizeof(Atom)+sizeof(float3))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, energies_dev);
             else
                 kCalculateCDLJPeriodicForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                        (sizeof(Atom)+sizeof(float3))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
+                        (sizeof(Atom)+sizeof(float3))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, energies_dev);
             LAUNCHERROR("kCalculateCDLJPeriodicForces");
             break;
         case EWALD:
@@ -199,17 +203,17 @@ void kCalculateCDLJForces(gpuContext gpu)
                     sizeof(unsigned int)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
             if (gpu->bOutputBufferPerWarp)
                 kCalculateCDLJEwaldDirectByWarpForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                        (sizeof(Atom)+sizeof(float3))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
+                        (sizeof(Atom)+sizeof(float3))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, energies_dev);
             else
                 kCalculateCDLJEwaldDirectForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                        (sizeof(Atom)+sizeof(float3))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
+                        (sizeof(Atom)+sizeof(float3))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, energies_dev);
             LAUNCHERROR("kCalculateCDLJEwaldDirectForces");
             if (false)
             {
                 // O(N2) Ewald summation
                 kCalculateCDLJEwaldReciprocalForces_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
                 LAUNCHERROR("kCalculateCDLJEwaldReciprocalForces");
-        }
+            }
             else
             {
                 // Fast Ewald summation
@@ -220,4 +224,19 @@ void kCalculateCDLJForces(gpuContext gpu)
             }
 
     }
+
+    double sum = 0.0f;
+    if (gpu->bReduceEnergies)
+    {
+        float *energies = (float*) malloc(sizeof(float) * N);
+        memset(energies, 0, sizeof(float) * N);
+        cudaMemcpy(energies, energies_dev, sizeof(float) * N, cudaMemcpyDeviceToHost);
+        for (int i = 0; i < N; i++) sum += energies[i];
+/*        printf("\n");
+        for (int i = 0; i < N; i++) printf("\t%f", energies[i]);
+        printf("\n");
+*/
+    }
+    cudaFree(energies_dev);
+    return sum;
 }

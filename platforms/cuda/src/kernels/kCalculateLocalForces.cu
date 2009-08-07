@@ -63,6 +63,13 @@ static __constant__ cudaGmxSimulation cSim;
    dEdR                 = param.y * deltaIdeal; \
 }
 
+#define GETENERGYGIVENANGLECOSINE(cosine, param, dEdR) \
+{ \
+   float angle          = acos(cosine); \
+   float deltaIdeal     = angle - (param.x * (3.14159265f / 180.0f)); \
+   dEdR                 = param.y * deltaIdeal * deltaIdeal; \
+}
+
 #define GETANGLEBETWEENTWOVECTORS(v1, v2, angle) \
 { \
     float dp; \
@@ -109,10 +116,13 @@ void GetCalculateLocalForcesSim(gpuContext gpu)
 }
     
 
-__global__ void kCalculateLocalForces_kernel()
+__global__ void kCalculateLocalForces_kernel(float * gpu_energies)
 {
     unsigned int pos = blockIdx.x * blockDim.x + threadIdx.x;
+    unsigned int energyIndex = pos;
     Vectors* A = &sV[threadIdx.x];
+
+    float energy = 0.0f;
 
     while (pos < cSim.bond_offset)
     {
@@ -128,6 +138,7 @@ __global__ void kCalculateLocalForces_kernel()
             float r2            = dx * dx + dy * dy + dz * dz;
             float r             = sqrt(r2);
             float deltaIdeal    = r - bond.x;
+/* E */     energy             += bond.y * deltaIdeal * deltaIdeal / 2.0;
             float dEdR          = bond.y * deltaIdeal;
             dEdR                = (r > 0.0f) ? (dEdR / r) : 0.0f;
 //            printf("D: %11.4f %11.4f %11.4f %11.4f %11.4f %11.4f\n", dx, dy, dz, r, deltaIdeal, dEdR);
@@ -149,7 +160,7 @@ __global__ void kCalculateLocalForces_kernel()
         }
         pos += blockDim.x * gridDim.x;
     }
-  
+
     while (pos < cSim.bond_angle_offset)
     {
         unsigned int pos1   = pos - cSim.bond_offset;
@@ -174,6 +185,11 @@ __global__ void kCalculateLocalForces_kernel()
             float r23               = DOT3(A->v1, A->v1); // dx2 * dx2 + dy2 * dy2 + dz2 * dz2;
             float dot               = DOT3(A->v0, A->v1); // dx1 * dx2 + dy1 * dy2 + dz1 * dz2;
             float cosine            = dot / sqrt(r21 * r23);
+
+            float angle_energy;
+/* E */     GETENERGYGIVENANGLECOSINE(cosine, bond_angle, angle_energy);
+            energy                 += angle_energy / 2.0;
+
             float dEdR;
             GETPREFACTORSGIVENANGLECOSINE(cosine, bond_angle, dEdR);
             //printf("%11.4f %11.4f\n", cosine, dEdR);
@@ -211,7 +227,7 @@ __global__ void kCalculateLocalForces_kernel()
         }
         pos += blockDim.x * gridDim.x;
     }
-            
+
     while (pos < cSim.dihedral_offset)
     {
         unsigned int pos1 = pos - cSim.bond_angle_offset;
@@ -236,6 +252,19 @@ __global__ void kCalculateLocalForces_kernel()
             GETDIHEDRALANGLEBETWEENTHREEVECTORS(A->v0, A->v1, A->v2, A->v0, cp0, cp1, dihedralAngle);
             float4 dihedral         = cSim.pDihedralParameter[pos1];
             float deltaAngle        = dihedral.z * dihedralAngle - (dihedral.y * 3.14159265f / 180.0f);
+
+	    // ATTENTION: This section leads to a divergent deltaAngle values wrt
+	    // forces and energies. We separate the case dihedral.z = n = 0, which
+	    // is treated by the calculation of energies via a harmonic potential
+/* E */     if (dihedral.z) energy += dihedral.x * (1.0f + cos(deltaAngle));
+/* E */     else
+	    {
+		float deltaAngle    = dihedralAngle - dihedral.y;
+		if (deltaAngle < -M_PI) deltaAngle += 2.0 * M_PI;
+		else if (deltaAngle > M_PI) deltaAngle -= 2.0 * M_PI;
+                energy             += dihedral.x * deltaAngle * deltaAngle;
+	    }
+
             float sinDeltaAngle     = sin(deltaAngle);
             float dEdAngle          = -dihedral.x * dihedral.z * sinDeltaAngle;
             float normCross1        = DOT3(cp0, cp0);
@@ -293,10 +322,11 @@ __global__ void kCalculateLocalForces_kernel()
             force.z                            += -internalF3.z - s.z;
             cSim.pForce4[offset]                = force;
             //printf("%4d - 2: %9.4f %9.4f %9.4f\n", pos1, cSim.pForce[offset], cSim.pForce[offset + cSim.stride], cSim.pForce[offset + cSim.stride2]);
-        }        
+        }
         pos += blockDim.x * gridDim.x;
     }
 
+    // Ryckaert Bellemans dihedrals
     while (pos < cSim.rb_dihedral_offset)
     {
         unsigned int pos1 = pos - cSim.dihedral_offset;
@@ -336,17 +366,25 @@ __global__ void kCalculateLocalForces_kernel()
             float2 dihedral2        = cSim.pRbDihedralParameter2[pos1];
             float cosFactor         = cosPhi;
             float dEdAngle          = -dihedral1.y;
+
+/* E */     float rb_energy         = dihedral1.x;
+            rb_energy              += dihedral1.y * cosFactor;
         //    printf("%4d - 1: %9.4f %9.4f\n", pos1, dEdAngle, 1.0f);
             dEdAngle               -= 2.0f * dihedral1.z * cosFactor;
        //     printf("%4d - 2: %9.4f %9.4f\n", pos1, dEdAngle, cosFactor);
             cosFactor              *= cosPhi;
             dEdAngle               -= 3.0f * dihedral1.w * cosFactor;
-     //       printf("%4d - 3: %9.4f %9.4f\n", pos1, dEdAngle, cosFactor);
+            rb_energy              += dihedral1.z * cosFactor;
+    //       printf("%4d - 3: %9.4f %9.4f\n", pos1, dEdAngle, cosFactor);
             cosFactor              *= cosPhi;
             dEdAngle               -= 4.0f * dihedral2.x * cosFactor;
-   //         printf("%4d - 4: %9.4f %9.4f\n", pos1, dEdAngle, cosFactor);
+            rb_energy              += dihedral1.w * cosFactor;
+  //         printf("%4d - 4: %9.4f %9.4f\n", pos1, dEdAngle, cosFactor);
             cosFactor              *= cosPhi;
             dEdAngle               -= 5.0f * dihedral2.y * cosFactor;
+            rb_energy              += dihedral2.x * cosFactor;
+            rb_energy              += dihedral2.y * cosFactor * cosPhi;
+/* E */     energy                 += rb_energy;
  //           printf("%4d - 5: %9.4f %9.4f\n", pos1, dEdAngle, cosFactor);
             dEdAngle               *= sin(dihedralAngle);
 //            printf("%4d - f: %9.4f\n", pos1, dEdAngle);
@@ -430,6 +468,10 @@ __global__ void kCalculateLocalForces_kernel()
                 sig2                   *= sig2;
                 float sig6              = sig2 * sig2 * sig2;
                 float dEdR              = LJ14.x * (12.0f * sig6 - 6.0f) * sig6;
+                /* E */
+                energy                  = LJ14.x * (sig6 - 1.0f) * sig6;
+                energy                 += LJ14.z * inverseR;
+
                 dEdR                   += LJ14.z * inverseR;
                 dEdR                   *= inverseR * inverseR;
                 unsigned int offsetA    = atom.x + atom.z * cSim.stride;
@@ -453,6 +495,7 @@ __global__ void kCalculateLocalForces_kernel()
     }
     else if (cSim.nonbondedMethod == CUTOFF)
     {
+        float LJ14_energy;
         while (pos < cSim.LJ14_offset)
         {
             unsigned int pos1       = pos - cSim.rb_dihedral_offset;
@@ -471,13 +514,21 @@ __global__ void kCalculateLocalForces_kernel()
                 float sig2              = inverseR * LJ14.y;
                 sig2                   *= sig2;
                 float sig6              = sig2 * sig2 * sig2;
-                float dEdR              = LJ14.x * (12.0f * sig6 - 6.0f) * sig6;
+                float dEdR              = LJ14.x * (12.0f * sig6 - 6.0f) * sig6;                
+                /* E */
+                LJ14_energy             = LJ14.x * (sig6 - 1.0f) * sig6;
+                LJ14_energy            += LJ14.z * (inverseR + cSim.reactionFieldK * r2 - cSim.reactionFieldC);
                 dEdR                   += LJ14.z * (inverseR - 2.0f * cSim.reactionFieldK * r2);
                 dEdR                   *= inverseR * inverseR;
                 if (r2 > cSim.nonbondedCutoffSqr)
-                {
+                {                   
                     dEdR = 0.0f;
+                    /* E */
+                    LJ14_energy = 0.0f;
                 }
+                /* E */
+                energy                 += LJ14_energy;
+ 
                 unsigned int offsetA    = atom.x + atom.z * cSim.stride;
                 unsigned int offsetB    = atom.y + atom.w * cSim.stride;
                 float4 forceA           = cSim.pForce4[offsetA];
@@ -499,6 +550,7 @@ __global__ void kCalculateLocalForces_kernel()
     }
     else if (cSim.nonbondedMethod == PERIODIC)
     {
+        float LJ14_energy;
         while (pos < cSim.LJ14_offset)
         {
             unsigned int pos1       = pos - cSim.rb_dihedral_offset;
@@ -521,12 +573,21 @@ __global__ void kCalculateLocalForces_kernel()
                 sig2                   *= sig2;
                 float sig6              = sig2 * sig2 * sig2;
                 float dEdR              = LJ14.x * (12.0f * sig6 - 6.0f) * sig6;
+                /* E */
+                LJ14_energy             = LJ14.x * (sig6 - 1.0f) * sig6;
+                LJ14_energy            += LJ14.z * (inverseR + cSim.reactionFieldK * r2 - cSim.reactionFieldC);
+
                 dEdR                   += LJ14.z * (inverseR - 2.0f * cSim.reactionFieldK * r2);
                 dEdR                   *= inverseR * inverseR;
                 if (r2 > cSim.nonbondedCutoffSqr)
                 {
                     dEdR = 0.0f;
+                    /* E */
+                    LJ14_energy = 0.0f;
                 }
+                /* E */
+                energy                 += LJ14_energy;
+
                 unsigned int offsetA    = atom.x + atom.z * cSim.stride;
                 unsigned int offsetB    = atom.y + atom.w * cSim.stride;
                 float4 forceA           = cSim.pForce4[offsetA];
@@ -546,13 +607,30 @@ __global__ void kCalculateLocalForces_kernel()
             pos                    += blockDim.x * gridDim.x;
         }
     }
-
+    gpu_energies[energyIndex] = energy;
 }
 
-void kCalculateLocalForces(gpuContext gpu)
+
+double kCalculateLocalForces(gpuContext gpu)
 {
   //  printf("kCalculateLocalForces\n");
-    kCalculateLocalForces_kernel<<<gpu->sim.blocks, gpu->sim.localForces_threads_per_block, gpu->sim.localForces_threads_per_block * sizeof(Vectors)>>>();
+    unsigned int N = gpu->sim.blocks * gpu->sim.localForces_threads_per_block;
+    float *energies_dev;
+    cudaMalloc((void**) &energies_dev, sizeof(float) * N);
+
+    kCalculateLocalForces_kernel<<<gpu->sim.blocks, gpu->sim.localForces_threads_per_block, gpu->sim.localForces_threads_per_block * sizeof(Vectors)>>>(energies_dev);
     LAUNCHERROR("kCalculateLocalForces");
+
+    double sum = 0.0f;
+    if (gpu->bReduceEnergies)
+    {
+        // sum = kReduceLocalEnergies(gpu, energies_dev);
+        float *energies = (float*) malloc(sizeof(float) * N);
+        memset(energies, 0, sizeof(float) * N);
+        cudaMemcpy(energies, energies_dev, sizeof(float) * N, cudaMemcpyDeviceToHost);
+        for (int i = 0; i < N; i++) sum += energies[i];
+    }
+    cudaFree(energies_dev);
+    return sum;
 }
 

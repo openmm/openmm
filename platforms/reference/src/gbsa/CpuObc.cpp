@@ -416,7 +416,7 @@ int CpuObc::computeBornEnergyForces( RealOpenMM* bornRadii, RealOpenMM** atomCoo
    if( includeAceApproximation() ){
       computeAceNonPolarForce( obcParameters, bornRadii, &obcEnergy, bornForces );
    }
-
+ 
    // ---------------------------------------------------------------------------------------
 
    // first main loop

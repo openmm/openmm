@@ -30,7 +30,7 @@
  * different versions of the kernels.
  */
 
-__global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int* workUnit)
+__global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int* workUnit, float * gpu_energies)
 {
     extern __shared__ Atom sA[];
     unsigned int totalWarps = cSim.nonbond_blocks*cSim.nonbond_threads_per_block/GRID;
@@ -38,6 +38,9 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int*
     unsigned int numWorkUnits = cSim.pInteractionCount[0];
     unsigned int pos = warp*numWorkUnits/totalWarps;
     unsigned int end = (warp+1)*numWorkUnits/totalWarps;
+    unsigned int energyIndex = blockIdx.x * blockDim.x + threadIdx.x;
+    float CDLJObcGbsa_energy;
+    float energy = 0.0f;
 #ifdef USE_CUTOFF
     float* tempBuffer = (float*) &sA[cSim.nonbond_threads_per_block];
 #endif
@@ -98,10 +101,17 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int*
                     float sig6              = sig2 * sig2 * sig2;
                     float eps               = a.y * psA[j].eps;
                     float dEdR              = eps * (12.0f * sig6 - 6.0f) * sig6;
+                    /* E */ 
+		    CDLJObcGbsa_energy      = eps * (sig6 - 1.0f) * sig6;
 #ifdef USE_CUTOFF
                     dEdR                   += apos.w * psA[j].q * (invR - 2.0f * cSim.reactionFieldK * r2);
+                    /* E */
+                    CDLJObcGbsa_energy     += apos.w * psA[j].q * (invR + cSim.reactionFieldK * r2 - cSim.reactionFieldC);
 #else
-                    dEdR                   += apos.w * psA[j].q * invR;
+                    float factorX           = apos.w * psA[j].q * invR;
+                    dEdR                   += factorX;
+                    /* E */
+                    CDLJObcGbsa_energy     += factorX;
 #endif
                     dEdR                   *= invR * invR;
 
@@ -115,13 +125,21 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int*
                     float dGpol_dalpha2_ij  = -0.5f * Gpol * expTerm * (1.0f + D_ij);
                     af.w                   += dGpol_dalpha2_ij * psA[j].br;
                     dEdR                   += Gpol * (1.0f - 0.25f * expTerm);
+		    /* E */
+		    CDLJObcGbsa_energy     += (q2 * psA[j].q) / denominator;
 #ifdef USE_CUTOFF
                     if (r2 > cSim.nonbondedCutoffSqr)
                     {
                         dEdR = 0.0f;
-                    }
+ 			/* E */
+			CDLJObcGbsa_energy  = 0.0f;
+                   }
 #endif
-
+		    /* E */
+                    if (i < cSim.atoms)
+                    {
+                        energy             += CDLJObcGbsa_energy / 2.0f;
+                    }
                     // Add Forces
                     dx                     *= dEdR;
                     dy                     *= dEdR;
@@ -156,15 +174,24 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int*
                     float sig6              = sig2 * sig2 * sig2;
                     float eps               = a.y * psA[j].eps;
                     float dEdR              = eps * (12.0f * sig6 - 6.0f) * sig6;
+                    /* E */ 
+		    CDLJObcGbsa_energy      = eps * (sig6 - 1.0f) * sig6;
 #ifdef USE_CUTOFF
                     dEdR                   += apos.w * psA[j].q * (invR - 2.0f * cSim.reactionFieldK * r2);
+                    /* E */
+                    CDLJObcGbsa_energy     += apos.w * psA[j].q * (invR + cSim.reactionFieldK * r2 - cSim.reactionFieldC);
 #else
-                    dEdR                   += apos.w * psA[j].q * invR;
+                    float factorX           = apos.w * psA[j].q * invR;
+                    dEdR                   += factorX;
+                    /* E */
+                    CDLJObcGbsa_energy     += factorX;
 #endif
                     dEdR                   *= invR * invR;
                     if (!(excl & 0x1))
                     {
                         dEdR = 0.0f;
+			/* E */
+		        CDLJObcGbsa_energy  = 0.0f;
                     }
 
                     // ObcGbsaForce1 part
@@ -177,18 +204,28 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int*
                     float dGpol_dalpha2_ij  = -0.5f * Gpol * expTerm * (1.0f + D_ij);
                     af.w                   += dGpol_dalpha2_ij * psA[j].br;
                     dEdR                   += Gpol * (1.0f - 0.25f * expTerm);
+                    /* E */
+		    CDLJObcGbsa_energy     += (q2 * psA[j].q) / denominator;
 #if defined USE_PERIODIC
                     if (i >= cSim.atoms || x+j >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)
                     {
                         dEdR = 0.0f;
+			/* E */
+		        CDLJObcGbsa_energy = 0.0f;
                     }
 #elif defined USE_CUTOFF
                     if (r2 > cSim.nonbondedCutoffSqr)
                     {
                         dEdR = 0.0f;
+			/* E */
+		        CDLJObcGbsa_energy = 0.0f;
                     }
 #endif
-
+		    /* E */
+                    if (i < cSim.atoms)
+                    {
+                        energy         += CDLJObcGbsa_energy / 2.0f;
+                    }
                     // Add Forces
                     dx                     *= dEdR;
                     dy                     *= dEdR;
@@ -271,10 +308,17 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int*
                         float sig6              = sig2 * sig2 * sig2;
                         float eps               = a.y * psA[tj].eps;
                         float dEdR              = eps * (12.0f * sig6 - 6.0f) * sig6;
+                        /* E */ 
+                        CDLJObcGbsa_energy      = eps * (sig6 - 1.0f) * sig6;
 #ifdef USE_CUTOFF
                         dEdR                   += apos.w * psA[tj].q * (invR - 2.0f * cSim.reactionFieldK * r2);
+                        /* E */
+                        CDLJObcGbsa_energy     += apos.w * psA[tj].q * (invR + cSim.reactionFieldK * r2 - cSim.reactionFieldC);
 #else
-                        dEdR                   += apos.w * psA[tj].q * invR;
+                        float factorX           = apos.w * psA[tj].q * invR;
+                        dEdR                   += factorX;
+                        /* E */
+                        CDLJObcGbsa_energy     += factorX;
 #endif
                         dEdR                   *= invR * invR;
 
@@ -289,13 +333,21 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int*
                         af.w                   += dGpol_dalpha2_ij * psA[tj].br;
                         psA[tj].fb             += dGpol_dalpha2_ij * br;
                         dEdR                   += Gpol * (1.0f - 0.25f * expTerm);
+                        /* E */
+                        CDLJObcGbsa_energy     += (q2 * psA[tj].q) / denominator;
 #ifdef USE_CUTOFF
                         if (r2 > cSim.nonbondedCutoffSqr)
                         {
                             dEdR = 0.0f;
+			    /* E */
+       			    CDLJObcGbsa_energy = 0.0f;
                         }
 #endif
-
+			/* E */
+                        if (i < cSim.atoms)
+                        {
+                            energy         += CDLJObcGbsa_energy;
+                        }
                         // Add forces
                         dx                     *= dEdR;
                         dy                     *= dEdR;
@@ -336,10 +388,17 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int*
                             float sig6              = sig2 * sig2 * sig2;
                             float eps               = a.y * psA[j].eps;
                             float dEdR              = eps * (12.0f * sig6 - 6.0f) * sig6;
+                            /* E */ 
+                            CDLJObcGbsa_energy      = eps * (sig6 - 1.0f) * sig6;
 #ifdef USE_CUTOFF
                             dEdR                   += apos.w * psA[j].q * (invR - 2.0f * cSim.reactionFieldK * r2);
+                            /* E */
+                            CDLJObcGbsa_energy     += apos.w * psA[j].q * (invR + cSim.reactionFieldK * r2 - cSim.reactionFieldC);
 #else
-                            dEdR                   += apos.w * psA[j].q * invR;
+                            float factorX           = apos.w * psA[j].q * invR;
+                            dEdR                   += factorX;
+                            /* E */
+                            CDLJObcGbsa_energy     += factorX;
 #endif
                             dEdR                   *= invR * invR;
 
@@ -353,6 +412,8 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int*
                             float dGpol_dalpha2_ij  = -0.5f * Gpol * expTerm * (1.0f + D_ij);
                             af.w                   += dGpol_dalpha2_ij * psA[j].br;
                             dEdR                   += Gpol * (1.0f - 0.25f * expTerm);
+                            /* E */
+                            CDLJObcGbsa_energy     += (q2 * psA[j].q) / denominator;
 
                             // Sum the Born forces.
 
@@ -371,9 +432,15 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int*
                             if (r2 > cSim.nonbondedCutoffSqr)
                             {
                                 dEdR = 0.0f;
+				/* E */
+				CDLJObcGbsa_energy  = 0.0f;
                             }
 #endif
-
+			    /* E */
+                            if (i < cSim.atoms)
+                            {
+            			energy         += CDLJObcGbsa_energy;
+                            }
                             // Add forces
                             dx                     *= dEdR;
                             dy                     *= dEdR;
@@ -446,15 +513,24 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int*
                     float sig6              = sig2 * sig2 * sig2;
                     float eps               = a.y * psA[tj].eps;
                     float dEdR              = eps * (12.0f * sig6 - 6.0f) * sig6;
+                    /* E */ 
+		    CDLJObcGbsa_energy      = eps * (sig6 - 1.0f) * sig6;
 #ifdef USE_CUTOFF
                     dEdR                   += apos.w * psA[tj].q * (invR - 2.0f * cSim.reactionFieldK * r2);
+                    /* E */
+                    CDLJObcGbsa_energy     += apos.w * psA[tj].q * (invR + cSim.reactionFieldK * r2 - cSim.reactionFieldC);
 #else
-                    dEdR                   += apos.w * psA[tj].q * invR;
+                    float factorX           = apos.w * psA[tj].q * invR;
+                    dEdR                   += factorX;
+                    /* E */
+                    CDLJObcGbsa_energy     += factorX;
 #endif
                     dEdR                   *= invR * invR;
                     if (!(excl & 0x1))
                     {
                         dEdR = 0.0f;
+			/* E */
+			CDLJObcGbsa_energy = 0.0f;
                     }
 
                     // ObcGbsaForce1 part
@@ -468,18 +544,28 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int*
                     af.w                   += dGpol_dalpha2_ij * psA[tj].br;
                     psA[tj].fb             += dGpol_dalpha2_ij * br;
                     dEdR                   += Gpol * (1.0f - 0.25f * expTerm);
+		    /* E */
+		    CDLJObcGbsa_energy     += (q2 * psA[tj].q) / denominator;
 #if defined USE_PERIODIC
                     if (i >= cSim.atoms || y+tj >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)
                     {
                         dEdR = 0.0f;
+			/* E */
+			CDLJObcGbsa_energy = 0.0f;
                     }
 #elif defined USE_CUTOFF
                     if (r2 > cSim.nonbondedCutoffSqr)
                     {
                         dEdR = 0.0f;
+			/* E */
+			CDLJObcGbsa_energy = 0.0f;
                     }
 #endif
-
+		    /* E */
+                    if (i < cSim.atoms)
+                    {
+                        energy             += CDLJObcGbsa_energy;
+                    }
                     // Add forces
                     dx                     *= dEdR;
                     dy                     *= dEdR;
@@ -529,4 +615,5 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int*
         }
         pos++;
     }
+    gpu_energies[energyIndex] = energy;
 }

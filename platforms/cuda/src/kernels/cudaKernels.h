@@ -33,12 +33,12 @@ extern void kReduceObcGbsaBornSum(gpuContext gpu);
 extern void kGenerateRandoms(gpuContext gpu);
 
 // Main loop
-extern void kCalculateCDLJObcGbsaForces1(gpuContext gpu);
-extern void kCalculateCDLJForces(gpuContext gpu);
+extern double kCalculateCDLJObcGbsaForces1(gpuContext gpu);
+extern double kCalculateCDLJForces(gpuContext gpu);
 extern void kCalculateCustomNonbondedForces(gpuContext gpu, bool neighborListValid);
-extern void kReduceObcGbsaBornForces(gpuContext gpu);
+extern double kReduceObcGbsaBornForces(gpuContext gpu);
 extern void kCalculateObcGbsaForces2(gpuContext gpu);
-extern void kCalculateLocalForces(gpuContext gpu);
+extern double kCalculateLocalForces(gpuContext gpu);
 extern void kCalculateAndersenThermostat(gpuContext gpu);
 extern void kReduceBornSumAndForces(gpuContext gpu);
 extern void kApplyFirstShake(gpuContext gpu);
@@ -58,6 +58,8 @@ extern void kBrownianUpdatePart2(gpuContext gpu);
 
 // Extras
 extern void kReduceForces(gpuContext gpu);
+extern void kReduceLocalEnergies(gpuContext gpu, float * gpu_energies);
+extern double kReduceNonbondEnergies(gpuContext gpu, float * gpu_energies);
 extern void kClearBornForces(gpuContext gpu);
 
 // Initializers

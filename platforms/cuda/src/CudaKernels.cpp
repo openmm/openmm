@@ -41,6 +41,7 @@ using namespace std;
 
 static void calcForces(ContextImpl& context, CudaPlatform::PlatformData& data) {
     _gpuContext* gpu = data.gpu;
+    gpu->bReduceEnergies = false;
     if (data.nonbondedMethod != NO_CUTOFF && data.computeForceCount%100 == 0)
         gpuReorderAtoms(gpu);
     data.computeForceCount++;
@@ -59,22 +60,67 @@ static void calcForces(ContextImpl& context, CudaPlatform::PlatformData& data) {
     kReduceForces(gpu);
 }
 
-static double calcEnergy(ContextImpl& context, System& system) {
-    // We don't currently have GPU kernels to calculate energy, so instead we have the reference
-    // platform do it.  This is VERY slow.
+//static double calcEnergy(ContextImpl& context, System& system) {
+static double calcEnergy(ContextImpl& context, CudaPlatform::PlatformData& data, System& system) {
 
-    LangevinIntegrator integrator(0.0, 1.0, 0.0);
-    ReferencePlatform platform;
-    Context refContext(system, integrator, platform);
-    const Stream& positions = context.getPositions();
-    double* posData = new double[positions.getSize()*3];
-    positions.saveToArray(posData);
-    vector<Vec3> pos(positions.getSize());
-    for (int i = 0; i < (int)pos.size(); i++)
-        pos[i] = Vec3(posData[3*i], posData[3*i+1], posData[3*i+2]);
-    delete[] posData;
-    refContext.setPositions(pos);
-    return refContext.getState(State::Energy).getPotentialEnergy();
+    // New section 2009-09-03: calculate energies and forces, then return reduced energies
+
+    _gpuContext* gpu = data.gpu;
+    
+    if (gpu->sim.nonbondedMethod == EWALD)
+    {
+        // We don't currently have GPU kernels to calculate energy, so instead we have the reference
+        // platform do it.  This is VERY slow.
+
+        LangevinIntegrator integrator(0.0, 1.0, 0.0);
+        ReferencePlatform platform;
+        Context refContext(system, integrator, platform);
+        const Stream& positions = context.getPositions();
+        double* posData = new double[positions.getSize()*3];
+        positions.saveToArray(posData);
+        vector<Vec3> pos(positions.getSize());
+        for (int i = 0; i < (int)pos.size(); i++)
+            pos[i] = Vec3(posData[3*i], posData[3*i+1], posData[3*i+2]);
+        delete[] posData;
+        refContext.setPositions(pos);
+ //       printf("Total CPU energies: %f\n", refContext.getState(State::Energy).getPotentialEnergy());
+        return refContext.getState(State::Energy).getPotentialEnergy();
+    }
+    else
+    {
+        double totalEnergy = 0.0f;
+        double energy;
+        gpu->bReduceEnergies = true;
+        if (data.nonbondedMethod != NO_CUTOFF && data.stepCount%100 == 0)
+            gpuReorderAtoms(gpu);
+        data.stepCount++;
+        kClearForces(gpu);
+        if (gpu->bIncludeGBSA) {
+            gpu->bRecalculateBornRadii = true;
+            energy = kCalculateCDLJObcGbsaForces1(gpu);
+    //        printf("Calculated CDLJObcGbsa energy: %f\n", energy);
+            totalEnergy += energy;
+            energy = kReduceObcGbsaBornForces(gpu);
+    //        printf("Calculated reduced GbsaBorn surface area energy: %f\n", energy);
+            totalEnergy += energy;
+            kCalculateObcGbsaForces2(gpu);
+        }
+        else if (data.hasNonbonded) {
+            energy = kCalculateCDLJForces(gpu);
+    //        printf("Calculated CDLJ energy: %f\n", energy);
+            totalEnergy += energy;
+        }
+        energy = kCalculateLocalForces(gpu);
+    //    printf("Calculated local interactions energy: %f\n", energy);
+        totalEnergy += energy;
+        if (gpu->bIncludeGBSA)
+            kReduceBornSumAndForces(gpu);
+        else
+            kReduceForces(gpu);
+ //       printf("Total GPU energies: %f\n", totalEnergy);
+        return totalEnergy;
+    }
+    return 0.0f;
 }
 
 void CudaInitializeForcesKernel::initialize(const System& system) {
@@ -122,7 +168,7 @@ void CudaCalcHarmonicBondForceKernel::executeForces(ContextImpl& context) {
 
 double CudaCalcHarmonicBondForceKernel::executeEnergy(ContextImpl& context) {
     if (data.primaryKernel == this)
-        return calcEnergy(context, system);
+        return calcEnergy(context, data, system);
     return 0.0;
 }
 
@@ -156,7 +202,7 @@ void CudaCalcHarmonicAngleForceKernel::executeForces(ContextImpl& context) {
 
 double CudaCalcHarmonicAngleForceKernel::executeEnergy(ContextImpl& context) {
     if (data.primaryKernel == this)
-        return calcEnergy(context, system);
+        return calcEnergy(context, data, system);
     return 0.0;
 }
 
@@ -192,7 +238,7 @@ void CudaCalcPeriodicTorsionForceKernel::executeForces(ContextImpl& context) {
 
 double CudaCalcPeriodicTorsionForceKernel::executeEnergy(ContextImpl& context) {
     if (data.primaryKernel == this)
-        return calcEnergy(context, system);
+        return calcEnergy(context, data, system);
     return 0.0;
 }
 
@@ -234,7 +280,7 @@ void CudaCalcRBTorsionForceKernel::executeForces(ContextImpl& context) {
 
 double CudaCalcRBTorsionForceKernel::executeEnergy(ContextImpl& context) {
     if (data.primaryKernel == this)
-        return calcEnergy(context, system);
+        return calcEnergy(context, data, system);
     return 0.0;
 }
 
@@ -350,7 +396,7 @@ void CudaCalcNonbondedForceKernel::executeForces(ContextImpl& context) {
 
 double CudaCalcNonbondedForceKernel::executeEnergy(ContextImpl& context) {
     if (data.primaryKernel == this)
-        return calcEnergy(context, system);
+        return calcEnergy(context, data, system);
     return 0.0;
 }
 
@@ -432,7 +478,7 @@ void CudaCalcCustomNonbondedForceKernel::executeForces(ContextImpl& context) {
 
 double CudaCalcCustomNonbondedForceKernel::executeEnergy(ContextImpl& context) {
     if (data.primaryKernel == this)
-        return calcEnergy(context, system);
+        return calcEnergy(context, data, system);
     return 0.0;
 }
 

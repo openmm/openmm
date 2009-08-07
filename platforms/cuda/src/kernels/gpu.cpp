@@ -555,6 +555,7 @@ void gpuSetNonbondedCutoff(gpuContext gpu, float cutoffDistance, float solventDi
     gpu->sim.nonbondedCutoff = cutoffDistance;
     gpu->sim.nonbondedCutoffSqr = cutoffDistance*cutoffDistance;
     gpu->sim.reactionFieldK = pow(cutoffDistance, -3.0f)*(solventDielectric-1.0f)/(2.0f*solventDielectric+1.0f);
+    gpu->sim.reactionFieldC = (1.0f / cutoffDistance)*(3.0f*solventDielectric)/(2.0f*solventDielectric+1.0f);
 }
 
 extern "C"
@@ -1440,6 +1441,7 @@ void* gpuInit(int numAtoms, unsigned int device, bool useBlockingSync)
     gpu->bRemoveCM                  = false;
     gpu->bRecalculateBornRadii      = true;
     gpu->bIncludeGBSA               = false;
+    gpu->bReduceEnergies            = true;
     gpuInitializeRandoms(gpu);
 
     // To be determined later
