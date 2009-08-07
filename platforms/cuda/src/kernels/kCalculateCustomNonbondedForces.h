@@ -60,7 +60,7 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
         Atom* psA = &sA[tbx];
         unsigned int i      = x + tgx;
         apos                = cSim.pPosq[i];
-        float4 params       = make_float4(0,0,0,0);
+        float4 params       = cSim.pCustomParams[i];
         af.x                = 0.0f;
         af.y                = 0.0f;
         af.z                = 0.0f;
@@ -71,71 +71,62 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
             sA[threadIdx.x].y   = apos.y;
             sA[threadIdx.x].z   = apos.z;
             sA[threadIdx.x].params = params;
-            if (!bExclusionFlag)
+            unsigned int xi   = x>>GRIDBITS;
+            unsigned int cell = xi+xi*cSim.paddedNumberOfAtoms/GRID-xi*(xi+1)/2;
+            unsigned int excl = cSim.pExclusion[cSim.pExclusionIndex[cell]+tgx];
+            for (unsigned int j = 0; j < GRID; j++)
             {
-                for (unsigned int j = 0; j < GRID; j++)
+                // Apply the combining rules to the parameters.
+
+                float4 combinedParams = make_float4(0, 0, 0, 0);
+                for (int k = 0; k < cSim.customParameters; k++)
                 {
-                    float4 combinedParams;
-                    float dx        = psA[j].x - apos.x;
-                    float dy        = psA[j].y - apos.y;
-                    float dz        = psA[j].z - apos.z;
-#ifdef USE_PERIODIC
-                    dx -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                    dy -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                    dz -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
-#endif
-                    float r         = sqrt(dx*dx + dy*dy + dz*dz);
-                    float invR      = 1.0f/r;
-                    float dEdR      = -kEvaluateExpression_kernel(&forceExp, &stack[MAX_STACK_SIZE*threadIdx.x], r, combinedParams, combinedParams)*invR;
-#ifdef USE_CUTOFF
-                    if (r > cSim.nonbondedCutoff)
+                    float value = kEvaluateExpression_kernel(&combiningRules[k], &stack[MAX_STACK_SIZE*threadIdx.x], 0.0f, params, psA[j].params);
+                    switch (k)
                     {
-                        dEdR = 0.0f;
+                        case 0:
+                            combinedParams.x = value;
+                            break;
+                        case 1:
+                            combinedParams.y = value;
+                            break;
+                        case 2:
+                            combinedParams.z = value;
+                            break;
+                        case 3:
+                            combinedParams.w = value;
+                            break;
                     }
-#endif
-                    dx             *= dEdR;
-                    dy             *= dEdR;
-                    dz             *= dEdR;
-                    af.x           -= dx;
-                    af.y           -= dy;
-                    af.z           -= dz;
                 }
-            }
-            else  // bExclusion
-            {
-                unsigned int xi   = x>>GRIDBITS;
-                unsigned int cell          = xi+xi*cSim.paddedNumberOfAtoms/GRID-xi*(xi+1)/2;
-                unsigned int excl = cSim.pExclusion[cSim.pExclusionIndex[cell]+tgx];
-                for (unsigned int j = 0; j < GRID; j++)
-                {
-                    float4 combinedParams;
-                    float dx        = psA[j].x - apos.x;
-                    float dy        = psA[j].y - apos.y;
-                    float dz        = psA[j].z - apos.z;
+
+                // Compute the force.
+
+                float dx        = psA[j].x - apos.x;
+                float dy        = psA[j].y - apos.y;
+                float dz        = psA[j].z - apos.z;
 #ifdef USE_PERIODIC
-                    dx -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                    dy -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                    dz -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                dx -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                dy -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                dz -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
-                    float r         = sqrt(dx*dx + dy*dy + dz*dz);
-                    float invR      = 1.0f/r;
-                    float dEdR      = -kEvaluateExpression_kernel(&forceExp, &stack[MAX_STACK_SIZE*threadIdx.x], r, combinedParams, combinedParams)*invR;
+                float r         = sqrt(dx*dx + dy*dy + dz*dz);
+                float invR      = 1.0f/r;
+                float dEdR      = -kEvaluateExpression_kernel(&forceExp, &stack[MAX_STACK_SIZE*threadIdx.x], r, combinedParams, combinedParams)*invR;
 #ifdef USE_CUTOFF
-                    if (!(excl & 0x1) || r > cSim.nonbondedCutoff)
+                if (!(excl & 0x1) || r > cSim.nonbondedCutoff)
 #else
-                    if (!(excl & 0x1))
+                if (!(excl & 0x1))
 #endif
-                    {
-                        dEdR = 0.0f;
-                    }
-                    dx             *= dEdR;
-                    dy             *= dEdR;
-                    dz             *= dEdR;
-                    af.x           -= dx;
-                    af.y           -= dy;
-                    af.z           -= dz;
-                    excl          >>= 1;
+                {
+                    dEdR = 0.0f;
                 }
+                dx             *= dEdR;
+                dy             *= dEdR;
+                dz             *= dEdR;
+                af.x           -= dx;
+                af.y           -= dy;
+                af.z           -= dz;
+                excl          >>= 1;
             }
 
             // Write results
@@ -166,7 +157,7 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
                 sA[threadIdx.x].x       = temp.x;
                 sA[threadIdx.x].y       = temp.y;
                 sA[threadIdx.x].z       = temp.z;
-                sA[threadIdx.x].params  = make_float4(0,0,0,0);;
+                sA[threadIdx.x].params  = cSim.pCustomParams[j];
             }
             sA[threadIdx.x].fx      = 0.0f;
             sA[threadIdx.x].fy      = 0.0f;
@@ -186,7 +177,31 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
 
                     for (unsigned int j = 0; j < GRID; j++)
                     {
-                        float4 combinedParams;
+                        // Apply the combining rules to the parameters.
+
+                        float4 combinedParams = make_float4(0, 0, 0, 0);
+                        for (int k = 0; k < cSim.customParameters; k++)
+                        {
+                            float value = kEvaluateExpression_kernel(&combiningRules[0], &stack[MAX_STACK_SIZE*threadIdx.x], 0.0f, params, psA[tj].params);
+                            switch (k)
+                            {
+                                case 0:
+                                    combinedParams.x = value;
+                                    break;
+                                case 1:
+                                    combinedParams.y = value;
+                                    break;
+                                case 2:
+                                    combinedParams.z = value;
+                                    break;
+                                case 3:
+                                    combinedParams.w = value;
+                                    break;
+                            }
+                        }
+
+                        // Compute the force.
+
                         float dx        = psA[tj].x - apos.x;
                         float dy        = psA[tj].y - apos.y;
                         float dz        = psA[tj].z - apos.z;
@@ -225,7 +240,31 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
                     {
                         if ((flags&(1<<j)) != 0)
                         {
-                            float4 combinedParams;
+                            // Apply the combining rules to the parameters.
+
+                            float4 combinedParams = make_float4(0, 0, 0, 0);
+                            for (int k = 0; k < cSim.customParameters; k++)
+                            {
+                                float value = kEvaluateExpression_kernel(&combiningRules[0], &stack[MAX_STACK_SIZE*threadIdx.x], 0.0f, params, psA[j].params);
+                                switch (k)
+                                {
+                                    case 0:
+                                        combinedParams.x = value;
+                                        break;
+                                    case 1:
+                                        combinedParams.y = value;
+                                        break;
+                                    case 2:
+                                        combinedParams.z = value;
+                                        break;
+                                    case 3:
+                                        combinedParams.w = value;
+                                        break;
+                                }
+                            }
+
+                            // Compute the force.
+
                             float dx        = psA[j].x - apos.x;
                             float dy        = psA[j].y - apos.y;
                             float dz        = psA[j].z - apos.z;
@@ -300,7 +339,31 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
                 excl              = (excl >> tgx) | (excl << (GRID - tgx));
                 for (unsigned int j = 0; j < GRID; j++)
                 {
-                    float4 combinedParams;
+                    // Apply the combining rules to the parameters.
+
+                    float4 combinedParams = make_float4(0, 0, 0, 0);
+                    for (int k = 0; k < cSim.customParameters; k++)
+                    {
+                        float value = kEvaluateExpression_kernel(&combiningRules[0], &stack[MAX_STACK_SIZE*threadIdx.x], 0.0f, params, psA[tj].params);
+                        switch (k)
+                        {
+                            case 0:
+                                combinedParams.x = value;
+                                break;
+                            case 1:
+                                combinedParams.y = value;
+                                break;
+                            case 2:
+                                combinedParams.z = value;
+                                break;
+                            case 3:
+                                combinedParams.w = value;
+                                break;
+                        }
+                    }
+
+                    // Compute the force.
+
                     float dx        = psA[tj].x - apos.x;
                     float dy        = psA[tj].y - apos.y;
                     float dz        = psA[tj].z - apos.z;

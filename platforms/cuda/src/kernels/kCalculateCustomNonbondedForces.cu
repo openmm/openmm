@@ -106,27 +106,27 @@ __device__ float kEvaluateExpression_kernel(Expression<SIZE>* expression, float*
             case VARIABLE1:
                 stack[++stackPointer] = vars1.x;
                 break;
-//            case VARIABLE2:
-//                stack[++stackPointer] = vars1.y;
-//                break;
-//            case VARIABLE3:
-//                stack[++stackPointer] = vars1.z;
-//                break;
-//            case VARIABLE4:
-//                stack[++stackPointer] = vars1.w;
-//                break;
+            case VARIABLE2:
+                stack[++stackPointer] = vars1.y;
+                break;
+            case VARIABLE3:
+                stack[++stackPointer] = vars1.z;
+                break;
+            case VARIABLE4:
+                stack[++stackPointer] = vars1.w;
+                break;
             case VARIABLE5:
                 stack[++stackPointer] = vars2.x;
                 break;
-//            case VARIABLE6:
-//                stack[++stackPointer] = vars2.y;
-//                break;
-//            case VARIABLE7:
-//                stack[++stackPointer] = vars2.z;
-//                break;
-//            case VARIABLE8:
-//                stack[++stackPointer] = vars2.w;
-//                break;
+            case VARIABLE6:
+                stack[++stackPointer] = vars2.y;
+                break;
+            case VARIABLE7:
+                stack[++stackPointer] = vars2.z;
+                break;
+            case VARIABLE8:
+                stack[++stackPointer] = vars2.w;
+                break;
             case ADD:
             {
                 float temp = stack[stackPointer];

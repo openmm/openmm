@@ -571,6 +571,7 @@ void gpuSetCustomNonbondedParameters(gpuContext gpu, const vector<vector<double>
     gpu->sim.nonbondedCutoffSqr = cutoffDistance*cutoffDistance;
     gpu->sim.customNonbondedMethod = method;
     gpu->sim.customExceptions = exceptionAtom1.size();
+    gpu->sim.customParameters = paramNames.size();
     setExclusions(gpu, exclusions);
     gpu->psCustomParams = new CUDAStream<float4>(gpu->sim.paddedNumberOfAtoms, 1, "CustomParams");
     gpu->sim.pCustomParams = gpu->psCustomParams->_pDevData;
@@ -623,6 +624,8 @@ void gpuSetCustomNonbondedParameters(gpuContext gpu, const vector<vector<double>
             name << paramNames[i] << j;
             combiningRuleParams.push_back(name.str());
         }
+        for (int i = paramNames.size(); i < 4; i++)
+            combiningRuleParams.push_back("");
     }
     for (int i = 0; i < paramNames.size(); i++)
         paramExpressions[i] = createExpression<64>(combiningRules[i], Lepton::Parser::parse(combiningRules[i]).optimize().createProgram(), combiningRuleParams);

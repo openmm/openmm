@@ -344,6 +344,7 @@ struct cudaGmxSimulation {
     int4*           pCustomExceptionID;             // Atom indices for custom nonbonded exceptions
     float4*         pCustomExceptionParams;         // Parameters for custom nonbonded exceptions
     unsigned int    customExceptions;               // Number of custom nonbonded exceptions
+    unsigned int    customParameters;               // Number of parameters for custom nonbonded interactions
     float2*         pEwaldCosSinSum;                // Pointer to the cos/sin sums (ewald)
     unsigned int    bonds;                          // Number of bonds
     int4*           pBondID;                        // Bond atom and output buffer IDs
