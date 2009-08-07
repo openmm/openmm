@@ -1466,6 +1466,9 @@ void* gpuInit(int numAtoms, unsigned int device, bool useBlockingSync)
     gpu->psRbDihedralParameter2     = NULL;
     gpu->psLJ14ID                   = NULL;
     gpu->psLJ14Parameter            = NULL;
+    gpu->psCustomParams             = NULL;
+    gpu->psCustomExceptionID        = NULL;
+    gpu->psCustomExceptionParams    = NULL;
     gpu->psEwaldCosSinSum           = NULL;
     gpu->psShakeID                  = NULL;
     gpu->psShakeParameter           = NULL;
