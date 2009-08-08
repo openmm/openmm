@@ -104,13 +104,9 @@ extern __global__ void kFindBlocksWithInteractionsPeriodic_kernel();
 extern __global__ void kFindInteractionsWithinBlocksCutoff_kernel(unsigned int*);
 extern __global__ void kFindInteractionsWithinBlocksPeriodic_kernel(unsigned int*);
 
-double kCalculateCDLJObcGbsaForces1(gpuContext gpu)
+void kCalculateCDLJObcGbsaForces1(gpuContext gpu)
 {
 //    printf("kCalculateCDLJObcGbsaForces1\n");
-
-    unsigned int N = gpu->sim.nonbond_blocks * gpu->sim.nonbond_threads_per_block;
-    float *energies_dev;
-    cudaMalloc((void**) &energies_dev, sizeof(float) * N);
 
     // check if Born radii need to be calculated
 
@@ -126,10 +122,10 @@ double kCalculateCDLJObcGbsaForces1(gpuContext gpu)
             }
             if (gpu->bOutputBufferPerWarp)
                 kCalculateCDLJObcGbsaN2ByWarpForces1_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                        sizeof(Atom)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pWorkUnit, energies_dev);
+                        sizeof(Atom)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pWorkUnit);
             else
                 kCalculateCDLJObcGbsaN2Forces1_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                        sizeof(Atom)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pWorkUnit, energies_dev);
+                        sizeof(Atom)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pWorkUnit);
             LAUNCHERROR("kCalculateCDLJObcGbsaN2Forces1");
             break;
         case CUTOFF:
@@ -153,10 +149,10 @@ double kCalculateCDLJObcGbsaForces1(gpuContext gpu)
             }
             if (gpu->bOutputBufferPerWarp)
                 kCalculateCDLJObcGbsaCutoffByWarpForces1_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                        (sizeof(Atom)+sizeof(float))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, energies_dev);
+                        (sizeof(Atom)+sizeof(float))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
             else
                 kCalculateCDLJObcGbsaCutoffForces1_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                        (sizeof(Atom)+sizeof(float))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, energies_dev);
+                        (sizeof(Atom)+sizeof(float))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
             LAUNCHERROR("kCalculateCDLJObcGbsaCutoffForces1");
             break;
         case PERIODIC:
@@ -180,24 +176,11 @@ double kCalculateCDLJObcGbsaForces1(gpuContext gpu)
             }
             if (gpu->bOutputBufferPerWarp)
                 kCalculateCDLJObcGbsaPeriodicByWarpForces1_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                        (sizeof(Atom)+sizeof(float))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, energies_dev);
+                        (sizeof(Atom)+sizeof(float))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
             else
                 kCalculateCDLJObcGbsaPeriodicForces1_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                        (sizeof(Atom)+sizeof(float))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit, energies_dev);
+                        (sizeof(Atom)+sizeof(float))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
             LAUNCHERROR("kCalculateCDLJObcGbsaPeriodicForces1");
             break;
     }
-    
-   double sum = 0.0f;
-   if (gpu->bReduceEnergies)
-    {
-        float *energies = (float*) malloc(sizeof(float) * N);
-//        double sum = kReduceNonbondEnergies(gpu, energies_dev);
-//        printf("GPU____Sum: %f\n", sum);
-        cudaMemcpy(energies, energies_dev, sizeof(float) * N, cudaMemcpyDeviceToHost);
-        for (int i = 0; i < N; i++) sum += energies[i];
-//        printf("ControlSum: %f\n", sum);
-    }
-    cudaFree(energies_dev);
-    return sum;
 }

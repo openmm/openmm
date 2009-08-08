@@ -87,6 +87,23 @@ void kClearBornForces(gpuContext gpu)
     LAUNCHERROR("kClearBornForces");
 }
 
+__global__ void kClearEnergy_kernel()
+{
+    unsigned int pos = blockIdx.x * blockDim.x + threadIdx.x;
+    while (pos < cSim.energyOutputBuffers)
+    {
+        ((float*)cSim.pEnergy)[pos] = 0.0f;
+        pos += gridDim.x * blockDim.x;
+    }
+}
+
+void kClearEnergy(gpuContext gpu)
+{
+  //  printf("kClearEnergy\n");
+    kClearEnergy_kernel<<<gpu->sim.blocks, 384>>>();
+    LAUNCHERROR("kClearEnergy");
+}
+
 __global__ void kReduceBornSumAndForces_kernel()
 {
     unsigned int pos = (blockIdx.x * blockDim.x + threadIdx.x);
@@ -188,20 +205,6 @@ void kReduceBornSumAndForces(gpuContext gpu)
     //printf("kReduceBornSumAndForces\n");
     kReduceBornSumAndForces_kernel<<<gpu->sim.blocks, gpu->sim.bsf_reduce_threads_per_block>>>();
     LAUNCHERROR("kReduceBornSumAndForces");
-    
-#if 0
-    //gpuDumpObcLoop1( gpu );
-	 /*
-    gpu->psForce4->Download();
-    for (int i = 0; i < gpu->natoms; i++)
-    {
-        printf("%4d: %12.6f %12.6f %12.6f\n", i, 
-            gpu->psForce4->_pSysStream[0][i].x,
-            gpu->psForce4->_pSysStream[0][i].y,
-            gpu->psForce4->_pSysStream[0][i].z
-        );
-    } */
-#endif
 }
 
 __global__ void kReduceForces_kernel()
@@ -254,56 +257,19 @@ void kReduceForces(gpuContext gpu)
     LAUNCHERROR("kReduceForces");
 }
 
-__global__ void kReduceEnergies_kernel(float * gpu_energies)
+double kReduceEnergy(gpuContext gpu)
 {
-// GPU energy reduction algorithm goes here
-//    unsigned int pos = (blockIdx.x * blockDim.x + threadIdx.x);
-
-}
-
-double kReduceLocalEnergies(gpuContext gpu, float * gpu_energies)
-{
-//    printf("kReduceLocalEnergies\n");
-    unsigned int N = gpu->sim.blocks * gpu->sim.localForces_threads_per_block;
-    float *energies = (float*) malloc(sizeof(float) * N);
-    //kReduceEnergies_kernel<<<gpu->sim.blocks, gpu->sim.localForces_threads_per_block>>>(gpu_energies);
-    LAUNCHERROR("kReduceLocalEnergies");
-    cudaMemcpy(energies, gpu_energies, sizeof(float) * N, cudaMemcpyDeviceToHost);
+//    printf("kReduceEnergy\n");
+    gpu->psEnergy->Download();
     double sum = 0.0f;
-    for (int i = 0; i < N; i++) sum += energies[i];
+    for (int i = 0; i < gpu->sim.energyOutputBuffers; i++)
+        sum += (*gpu->psEnergy)[i];
     return sum;
 }
 
-double kReduceNonbondEnergies(gpuContext gpu, float * gpu_energies)
-{
-//    printf("kReduceNonbondEnergies\n");
-    unsigned int N = gpu->sim.nonbond_blocks * gpu->sim.nonbond_threads_per_block;
-    float *energies = (float*) malloc(sizeof(float) * N);
-    //kReduceEnergies_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block>>>(gpu_energies);
-    LAUNCHERROR("kReduceNonbondEnergies");
-    cudaMemcpy(energies, gpu_energies, sizeof(float) * N, cudaMemcpyDeviceToHost);
-    double sum = 0.0f;
-    for (int i = 0; i < N; i++) sum += energies[i];
-    return sum;
-}
-
-double kReduceObcGbsaBornEnergies(gpuContext gpu, float * gpu_energies)
-{
-//    printf("kReduceObcGbsaBornEnergies\n");
-    unsigned int N = gpu->sim.blocks * gpu->sim.bf_reduce_threads_per_block;
-    float *energies = (float*) malloc(sizeof(float) * N);
-    //kReduceEnergies_kernel<<<gpu->sim.blocks, gpu->sim.bf_reduce_threads_per_block>>>(gpu_energies);
-    LAUNCHERROR("kReduceObcGbsaBornEnergies");
-    cudaMemcpy(energies, gpu_energies, sizeof(float) * N, cudaMemcpyDeviceToHost);
-    double sum = 0.0f;
-    for (int i = 0; i < N; i++) sum += energies[i];
-    return sum;
-}
-
-__global__ void kReduceObcGbsaBornForces_kernel(float * gpu_energies)
+__global__ void kReduceObcGbsaBornForces_kernel()
 {
     unsigned int pos = (blockIdx.x * blockDim.x + threadIdx.x);
-    unsigned int energyIndex = pos;
     float energy = 0.0f;
     while (pos < cSim.atoms)
     {
@@ -357,29 +323,14 @@ __global__ void kReduceObcGbsaBornForces_kernel(float * gpu_energies)
     }
     /* E */
     // correct for surface area factor of -6
-    gpu_energies[energyIndex] = energy / -6.0f;
+    cSim.pEnergy[blockIdx.x * blockDim.x + threadIdx.x] += energy / -6.0f;
 }
 
-double kReduceObcGbsaBornForces(gpuContext gpu)
+void kReduceObcGbsaBornForces(gpuContext gpu)
 {
-    unsigned int N = gpu->sim.blocks * gpu->sim.bf_reduce_threads_per_block;
-    float *energies_dev;
-    cudaMalloc((void**) &energies_dev, sizeof(float) * N);
-
     //printf("kReduceObcGbsaBornForces\n");
-    kReduceObcGbsaBornForces_kernel<<<gpu->sim.blocks, gpu->sim.bf_reduce_threads_per_block>>>(energies_dev);
+    kReduceObcGbsaBornForces_kernel<<<gpu->sim.blocks, gpu->sim.bf_reduce_threads_per_block>>>();
     LAUNCHERROR("kReduceObcGbsaBornForces");
-
-    float sum = 0.0f;
-    if (gpu->bReduceEnergies)
-    {
-        // double sum = kReduceObcGbsaBornEnergies(gpu, energies_dev);
-        float *energies = (float*) malloc(sizeof(float) * N);
-        cudaMemcpy(energies, energies_dev, sizeof(float) * N, cudaMemcpyDeviceToHost);
-        for (int i = 0; i < N; i++) sum += energies[i];
-    }
-    cudaFree(energies_dev);   
-    return sum;
 }
 
 

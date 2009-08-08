@@ -106,7 +106,6 @@ struct Molecule {
 };
 
 static const float dielectricOffset         =    0.009f;
-static const float PI                       =    3.1415926535f;
 static const float probeRadius              =    0.14f;
 static const float forceConversionFactor    =    0.4184f;
 
@@ -1444,12 +1443,12 @@ void* gpuInit(int numAtoms, unsigned int device, bool useBlockingSync)
     gpu->bRemoveCM                  = false;
     gpu->bRecalculateBornRadii      = true;
     gpu->bIncludeGBSA               = false;
-    gpu->bReduceEnergies            = true;
     gpuInitializeRandoms(gpu);
 
     // To be determined later
     gpu->psLJ14ID                   = NULL;
     gpu->psForce4                   = NULL;
+    gpu->psEnergy                   = NULL;
     gpu->sim.pForce4                = NULL;
     gpu->sim.pForce4a               = NULL;
     gpu->sim.pForce4b               = NULL;
@@ -1619,6 +1618,7 @@ void gpuShutDown(gpuContext gpu)
     delete gpu->psOldPosq4;
     delete gpu->psVelm4;
     delete gpu->psForce4;
+    delete gpu->psEnergy;
     delete gpu->psxVector4;
     delete gpu->psvVector4;
     delete gpu->psSigEps2;
@@ -1713,12 +1713,15 @@ int gpuBuildOutputBuffers(gpuContext gpu)
         }
     }    
     gpu->sim.outputBuffers      = outputBuffers;
+    gpu->sim.energyOutputBuffers = max(gpu->sim.nonbond_threads_per_block, gpu->sim.localForces_threads_per_block)*gpu->sim.blocks;
     gpu->psForce4               = new CUDAStream<float4>(gpu->sim.paddedNumberOfAtoms, outputBuffers, "Force");
+    gpu->psEnergy               = new CUDAStream<float>(gpu->sim.energyOutputBuffers, 1, "Energy");
     gpu->psBornForce            = new CUDAStream<float>(gpu->sim.paddedNumberOfAtoms, gpu->sim.nonbondOutputBuffers, "BornForce");
     gpu->psBornSum              = new CUDAStream<float>(gpu->sim.paddedNumberOfAtoms, gpu->sim.nonbondOutputBuffers, "BornSum");
     gpu->sim.pForce4            = gpu->psForce4->_pDevStream[0];
     gpu->sim.pForce4a           = gpu->sim.pForce4;
     gpu->sim.pForce4b           = gpu->sim.pForce4 + 1 * gpu->sim.nonbondOutputBuffers * gpu->sim.stride;
+    gpu->sim.pEnergy            = gpu->psEnergy->_pDevStream[0];
     gpu->sim.pBornForce         = gpu->psBornForce->_pDevStream[0];
     gpu->sim.pBornSum           = gpu->psBornSum->_pDevStream[0];
 

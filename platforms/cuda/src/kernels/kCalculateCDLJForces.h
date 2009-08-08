@@ -30,7 +30,7 @@
  * different versions of the kernels.
  */
 
-__global__ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUnit, float * gpu_energies)
+__global__ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUnit)
 {
     extern __shared__ Atom sA[];
     unsigned int totalWarps = cSim.nonbond_blocks*cSim.nonbond_threads_per_block/GRID;
@@ -38,7 +38,6 @@ __global__ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUni
     unsigned int numWorkUnits = cSim.pInteractionCount[0];
     unsigned int pos = warp*numWorkUnits/totalWarps;
     unsigned int end = (warp+1)*numWorkUnits/totalWarps;
-    unsigned int energyIndex = blockIdx.x * blockDim.x + threadIdx.x;
     float CDLJ_energy;
     float energy = 0.0f;
 #ifdef USE_CUTOFF
@@ -46,8 +45,7 @@ __global__ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUni
 #endif
 
 #ifdef USE_EWALD
-    float PI           = 3.14159265358979323846f;
-    float SQRT_PI      = sqrt(PI);
+    const float SQRT_PI = sqrt(PI);
 #endif
 
     unsigned int lasty = 0xFFFFFFFF;
@@ -140,7 +138,7 @@ __global__ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUni
                     }
 #endif
 		    /* E */
-		    energy         += CDLJ_energy / 2.0;
+		    energy         += 0.5f*CDLJ_energy;
                     dx             *= dEdR;
                     dy             *= dEdR;
                     dz             *= dEdR;
@@ -214,7 +212,7 @@ __global__ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUni
 		        CDLJ_energy  = 0.0f;
                     }
 		    /* E */
-                    energy         += CDLJ_energy / 2.0;
+                    energy         += 0.5f*CDLJ_energy;
                     dx             *= dEdR;
                     dy             *= dEdR;
                     dz             *= dEdR;
@@ -541,5 +539,5 @@ __global__ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUni
 
         pos++;
     }
-    gpu_energies[energyIndex] = energy;
+    cSim.pEnergy[blockIdx.x*blockDim.x+threadIdx.x] += energy;
 }

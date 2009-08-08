@@ -257,7 +257,6 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
 
         if( totalEnergy )
               *totalEnergy -= selfEwaldEnergy;
-//       printf("- selfEwaldEnergy: %f aEwald %f p1 %f\n", -selfEwaldEnergy, alphaEwald, atomParameters[atomID][QIndex]);
 
         if( energyByAtom ){
            energyByAtom[atomID] -= selfEwaldEnergy;
@@ -267,7 +266,6 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
 // **************************************************************************************
 // RECIPROCAL SPACE EWALD ENERGY AND FORCES
 // **************************************************************************************
-    RealOpenMM tempStore = *totalEnergy;
     // PME
     
   if (pme) {
@@ -410,8 +408,6 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
       SimTKOpenMMLog::printError( message );
   }
 
-//       printf("recipEnergy: %f\n", *totalEnergy - tempStore);
-
 // **************************************************************************************
 // SHORT-RANGE ENERGY AND FORCES
 // **************************************************************************************
@@ -451,13 +447,11 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
        // accumulate energies
 
        realSpaceEwaldEnergy = atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*inverseR*erfc(alphaR);
-//       printf("realSpaceEwald: %f p1 %f p2 %f invR %f erfc(aR) %f aR %f\n", realSpaceEwaldEnergy, atomParameters[ii][QIndex], atomParameters[jj][QIndex], inverseR, erfc(alphaR), alphaR);
        vdwEnergy = eps*(sig6-one)*sig6;
 
         if( totalEnergy )
               *totalEnergy += realSpaceEwaldEnergy + vdwEnergy;
       
-
         if( energyByAtom ){
            energyByAtom[ii] += realSpaceEwaldEnergy + vdwEnergy;
            energyByAtom[jj] += realSpaceEwaldEnergy + vdwEnergy;

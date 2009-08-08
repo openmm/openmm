@@ -41,7 +41,6 @@ using namespace std;
 
 static void calcForces(ContextImpl& context, CudaPlatform::PlatformData& data) {
     _gpuContext* gpu = data.gpu;
-    gpu->bReduceEnergies = false;
     if (data.nonbondedMethod != NO_CUTOFF && data.computeForceCount%100 == 0)
         gpuReorderAtoms(gpu);
     data.computeForceCount++;
@@ -88,37 +87,23 @@ static double calcEnergy(ContextImpl& context, CudaPlatform::PlatformData& data,
     }
     else
     {
-        double totalEnergy = 0.0f;
-        double energy;
-        gpu->bReduceEnergies = true;
         if (data.nonbondedMethod != NO_CUTOFF && data.stepCount%100 == 0)
             gpuReorderAtoms(gpu);
         data.stepCount++;
-        kClearForces(gpu);
+        kClearEnergy(gpu);
         if (gpu->bIncludeGBSA) {
             gpu->bRecalculateBornRadii = true;
-            energy = kCalculateCDLJObcGbsaForces1(gpu);
-    //        printf("Calculated CDLJObcGbsa energy: %f\n", energy);
-            totalEnergy += energy;
-            energy = kReduceObcGbsaBornForces(gpu);
-    //        printf("Calculated reduced GbsaBorn surface area energy: %f\n", energy);
-            totalEnergy += energy;
+            kCalculateCDLJObcGbsaForces1(gpu);
+            kReduceObcGbsaBornForces(gpu);
             kCalculateObcGbsaForces2(gpu);
         }
         else if (data.hasNonbonded) {
-            energy = kCalculateCDLJForces(gpu);
-    //        printf("Calculated CDLJ energy: %f\n", energy);
-            totalEnergy += energy;
+            kCalculateCDLJForces(gpu);
         }
-        energy = kCalculateLocalForces(gpu);
-    //    printf("Calculated local interactions energy: %f\n", energy);
-        totalEnergy += energy;
+        kCalculateLocalForces(gpu);
         if (gpu->bIncludeGBSA)
             kReduceBornSumAndForces(gpu);
-        else
-            kReduceForces(gpu);
- //       printf("Total GPU energies: %f\n", totalEnergy);
-        return totalEnergy;
+        return kReduceEnergy(gpu);
     }
     return 0.0f;
 }

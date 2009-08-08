@@ -179,7 +179,8 @@ void testForce(int numParticles, NonbondedForce::NonbondedMethod method) {
     }
     norm = std::sqrt(norm);
     diff = std::sqrt(diff);
-    ASSERT_EQUAL_TOL(0.0, diff, 0.001*norm); 
+    ASSERT_EQUAL_TOL(0.0, diff, 0.001*norm);
+    ASSERT_EQUAL_TOL(state.getPotentialEnergy(), refState.getPotentialEnergy(), 1e-3);
 
     // Take a small step in the direction of the energy gradient.  (This doesn't work with cutoffs, since the energy
     // changes discontinuously at the cutoff distance.)

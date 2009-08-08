@@ -232,6 +232,9 @@ static const int GT2XX_RANDOM_THREADS_PER_BLOCK         = 384;
 static const int G8X_NONBOND_WORKUNITS_PER_SM           = 220;
 static const int GT2XX_NONBOND_WORKUNITS_PER_SM         = 256;
 static const unsigned int MAX_STACK_SIZE = 8;
+
+static const float PI = 3.14159265358979323846f;
+
 enum CudaNonbondedMethod
 {
     NO_CUTOFF,
@@ -297,9 +300,10 @@ struct cudaGmxSimulation {
     unsigned int    stride2;                        // Atomic attributes stride x 2
     unsigned int    stride3;                        // Atomic attributes stride x 3
     unsigned int    stride4;                        // Atomic attributes stride x 4
-    unsigned int	nonbondOutputBuffers;           // Nonbond output buffers per nonbond call
+    unsigned int    nonbondOutputBuffers;           // Nonbond output buffers per nonbond call
     unsigned int    totalNonbondOutputBuffers;      // Total nonbond output buffers
     unsigned int    outputBuffers;                  // Number of output buffers
+    unsigned int    energyOutputBuffers;            // Number of energy output buffers
     float           bigFloat;                       // Floating point value used as a flag for Shaken atoms 
     float           epsfac;                         // Epsilon factor for CDLJ calculations
     CudaNonbondedMethod nonbondedMethod;            // How to handle nonbonded interactions
@@ -414,10 +418,10 @@ struct cudaGmxSimulation {
     float4*         pForce4;                        // Pointer to all force4 data
     float4*         pForce4a;                       // Pointer to first set of force4 data
     float4*         pForce4b;                       // Pointer to second set of force4 data
-    float4*         pOutForce4;                     // Pointer to output float4 force
+    float*          pEnergy;                        // Pointer to energy output buffer
     float*          pBornForce;                     // Pointer to Born force data
-    float*			pBornSum;                       // Pointer to Born Radii calculation output buffers
-    float*			pBornRadii;				        // Pointer to Born Radii
+    float*	    pBornSum;                       // Pointer to Born Radii calculation output buffers
+    float*	    pBornRadii;                     // Pointer to Born Radii
     float*          pObcChain;                      // Pointer to OBC chain data
     float4*         pLinearMomentum;                // Pointer to linear momentum
     

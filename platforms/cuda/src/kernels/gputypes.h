@@ -77,7 +77,6 @@ struct _gpuContext {
     bool bRecalculateBornRadii;
     bool bOutputBufferPerWarp;
     bool bIncludeGBSA;
-    bool bReduceEnergies;
     unsigned long seed;
     SM_VERSION sm_version;
     CUDPPHandle cudpp;
@@ -86,6 +85,7 @@ struct _gpuContext {
     CUDAStream<float4>* psOldPosq4;
     CUDAStream<float4>* psVelm4;
     CUDAStream<float4>* psForce4;
+    CUDAStream<float>*  psEnergy;           // Energy output buffer
     CUDAStream<float4>* psxVector4;
     CUDAStream<float4>* psvVector4;
     CUDAStream<float2>* psSigEps2; 

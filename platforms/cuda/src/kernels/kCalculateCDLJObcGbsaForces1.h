@@ -30,7 +30,7 @@
  * different versions of the kernels.
  */
 
-__global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int* workUnit, float * gpu_energies)
+__global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int* workUnit)
 {
     extern __shared__ Atom sA[];
     unsigned int totalWarps = cSim.nonbond_blocks*cSim.nonbond_threads_per_block/GRID;
@@ -38,7 +38,6 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int*
     unsigned int numWorkUnits = cSim.pInteractionCount[0];
     unsigned int pos = warp*numWorkUnits/totalWarps;
     unsigned int end = (warp+1)*numWorkUnits/totalWarps;
-    unsigned int energyIndex = blockIdx.x * blockDim.x + threadIdx.x;
     float CDLJObcGbsa_energy;
     float energy = 0.0f;
 #ifdef USE_CUTOFF
@@ -138,7 +137,7 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int*
 		    /* E */
                     if (i < cSim.atoms)
                     {
-                        energy             += CDLJObcGbsa_energy / 2.0f;
+                        energy             += 0.5f*CDLJObcGbsa_energy;
                     }
                     // Add Forces
                     dx                     *= dEdR;
@@ -224,7 +223,7 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int*
 		    /* E */
                     if (i < cSim.atoms)
                     {
-                        energy         += CDLJObcGbsa_energy / 2.0f;
+                        energy         += 0.5f*CDLJObcGbsa_energy;
                     }
                     // Add Forces
                     dx                     *= dEdR;
@@ -615,5 +614,5 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int*
         }
         pos++;
     }
-    gpu_energies[energyIndex] = energy;
+    cSim.pEnergy[blockIdx.x*blockDim.x+threadIdx.x] += energy;
 }
