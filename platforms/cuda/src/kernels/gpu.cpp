@@ -1839,6 +1839,8 @@ int gpuBuildThreadBlockWorkList(gpuContext gpu)
     gpu->sim.bf2WorkUnitsPerBlockRemainder  = cells - gpu->sim.bornForce2_blocks * gpu->sim.bf2WorkUnitsPerBlock;
     gpu->sim.interaction_threads_per_block = 64;
     gpu->sim.interaction_blocks = (gpu->sim.workUnits + gpu->sim.interaction_threads_per_block - 1) / gpu->sim.interaction_threads_per_block;
+    if (gpu->sim.interaction_blocks > 8*gpu->sim.blocks)
+        gpu->sim.interaction_blocks = 8*gpu->sim.blocks;
 
     // Decrease thread count for extra small molecules to spread computation
     // across entire chip

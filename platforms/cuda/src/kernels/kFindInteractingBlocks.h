@@ -79,7 +79,7 @@ __global__ void METHOD_NAME(kFindBlockBounds, _kernel)()
 __global__ void METHOD_NAME(kFindBlocksWithInteractions, _kernel)()
 {
     unsigned int pos = blockIdx.x * blockDim.x + threadIdx.x;
-    if (pos < cSim.workUnits)
+    while (pos < cSim.workUnits)
     {
         // Extract cell coordinates from appropriate work unit
 
@@ -105,6 +105,7 @@ __global__ void METHOD_NAME(kFindBlocksWithInteractions, _kernel)()
         dy = max(0.0f, abs(dy)-boxSizea.y-boxSizeb.y);
         dz = max(0.0f, abs(dz)-boxSizea.z-boxSizeb.z);
         cSim.pInteractionFlag[pos] = (dx*dx+dy*dy+dz*dz > cSim.nonbondedCutoffSqr ? 0 : 1);
+        pos += gridDim.x*blockDim.x;
     }
 }
 
