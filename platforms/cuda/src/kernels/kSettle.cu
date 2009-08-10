@@ -62,6 +62,8 @@ __global__ void kApplyFirstSettle_kernel()
     unsigned int pos = threadIdx.x + blockIdx.x * blockDim.x;
     while (pos < cSim.settleConstraints)
     {
+        // Load data.
+
         int4 atomID         = cSim.pSettleID[pos];
         float2 params       = cSim.pSettleParameter[pos];
         float4 apos0        = cSim.pOldPosq[atomID.x];
@@ -74,6 +76,20 @@ __global__ void kApplyFirstSettle_kernel()
         float m1            = 1.0/cSim.pVelm4[atomID.y].w;
         float m2            = 1.0/cSim.pVelm4[atomID.z].w;
 
+        // Subtract the average old atom position to improve numerical precision.
+
+        float3 center = make_float3((apos0.x+apos1.x+apos2.x)/3.0f, (apos0.y+apos1.y+apos2.y)/3.0f, (apos0.z+apos1.z+apos2.z)/3.0f);
+        apos0.x -= center.x;
+        apos0.y -= center.y;
+        apos0.z -= center.z;
+        apos1.x -= center.x;
+        apos1.y -= center.y;
+        apos1.z -= center.z;
+        apos2.x -= center.x;
+        apos2.y -= center.y;
+        apos2.z -= center.z;
+
+        // Apply the SETTLE algorithm.
 
         float xb0 = apos1.x-apos0.x;
         float yb0 = apos1.y-apos0.y;
