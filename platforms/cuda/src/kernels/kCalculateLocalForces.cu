@@ -468,7 +468,7 @@ __global__ void kCalculateLocalForces_kernel()
                 float sig6              = sig2 * sig2 * sig2;
                 float dEdR              = LJ14.x * (12.0f * sig6 - 6.0f) * sig6;
                 /* E */
-                energy                  = LJ14.x * (sig6 - 1.0f) * sig6;
+                energy                 += LJ14.x * (sig6 - 1.0f) * sig6;
                 energy                 += LJ14.z * inverseR;
 
                 dEdR                   += LJ14.z * inverseR;
