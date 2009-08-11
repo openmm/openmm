@@ -205,7 +205,7 @@ void testPeriodic() {
 int main() {
     try {
         testSimpleExpression();
-//        testParameters();
+        testParameters();
 //        testExceptions();
         testCutoff();
         testPeriodic();

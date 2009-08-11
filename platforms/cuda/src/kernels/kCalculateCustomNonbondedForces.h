@@ -39,6 +39,7 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
     unsigned int numWorkUnits = cSim.pInteractionCount[0];
     unsigned int pos = warp*numWorkUnits/totalWarps;
     unsigned int end = (warp+1)*numWorkUnits/totalWarps;
+    float totalEnergy = 0.0f;
 #ifdef USE_CUTOFF
     float3* tempBuffer = (float3*) &sA[cSim.nonbond_threads_per_block];
 #endif
@@ -112,6 +113,7 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
                 float r         = sqrt(dx*dx + dy*dy + dz*dz);
                 float invR      = 1.0f/r;
                 float dEdR      = -kEvaluateExpression_kernel(&forceExp, &stack[MAX_STACK_SIZE*threadIdx.x], r, combinedParams, combinedParams)*invR;
+                float energy    = kEvaluateExpression_kernel(&energyExp, &stack[MAX_STACK_SIZE*threadIdx.x], r, combinedParams, combinedParams);
 #ifdef USE_CUTOFF
                 if (!(excl & 0x1) || r > cSim.nonbondedCutoff)
 #else
@@ -119,7 +121,9 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
 #endif
                 {
                     dEdR = 0.0f;
+                    energy = 0.0f;
                 }
+                totalEnergy    += 0.5f*energy;
                 dx             *= dEdR;
                 dy             *= dEdR;
                 dz             *= dEdR;
@@ -213,12 +217,15 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
                         float r         = sqrt(dx*dx + dy*dy + dz*dz);
                         float invR      = 1.0f/r;
                         float dEdR      = -kEvaluateExpression_kernel(&forceExp, &stack[MAX_STACK_SIZE*threadIdx.x], r, combinedParams, combinedParams)*invR;
+                        float energy    = kEvaluateExpression_kernel(&energyExp, &stack[MAX_STACK_SIZE*threadIdx.x], r, combinedParams, combinedParams);
 #ifdef USE_CUTOFF
                         if (r > cSim.nonbondedCutoff)
                         {
                             dEdR = 0.0f;
+                            energy = 0.0f;
                         }
 #endif
+                        totalEnergy    += energy;
                         dx             *= dEdR;
                         dy             *= dEdR;
                         dz             *= dEdR;
@@ -276,12 +283,15 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
                             float r         = sqrt(dx*dx + dy*dy + dz*dz);
                             float invR      = 1.0f/r;
                             float dEdR      = -kEvaluateExpression_kernel(&forceExp, &stack[MAX_STACK_SIZE*threadIdx.x], r, combinedParams, combinedParams)*invR;
+                            float energy    = kEvaluateExpression_kernel(&energyExp, &stack[MAX_STACK_SIZE*threadIdx.x], r, combinedParams, combinedParams);
 #ifdef USE_CUTOFF
                             if (r > cSim.nonbondedCutoff)
                             {
                                 dEdR = 0.0f;
+                                energy = 0.0f;
                             }
 #endif
+                            totalEnergy    += energy;
                             dx             *= dEdR;
                             dy             *= dEdR;
                             dz             *= dEdR;
@@ -375,6 +385,7 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
                     float r         = sqrt(dx*dx + dy*dy + dz*dz);
                     float invR      = 1.0f/r;
                     float dEdR      = -kEvaluateExpression_kernel(&forceExp, &stack[MAX_STACK_SIZE*threadIdx.x], r, combinedParams, combinedParams)*invR;
+                    float energy    = kEvaluateExpression_kernel(&energyExp, &stack[MAX_STACK_SIZE*threadIdx.x], r, combinedParams, combinedParams);
 #ifdef USE_CUTOFF
                     if (!(excl & 0x1) || r > cSim.nonbondedCutoff)
 #else
@@ -382,7 +393,9 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
 #endif
                     {
                         dEdR = 0.0f;
+                        energy = 0.0f;
                     }
+                    totalEnergy    += energy;
                     dx             *= dEdR;
                     dy             *= dEdR;
                     dz             *= dEdR;
@@ -430,4 +443,5 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
 
         pos++;
     }
+    cSim.pEnergy[blockIdx.x*blockDim.x+threadIdx.x] += totalEnergy;
 }

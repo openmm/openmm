@@ -132,7 +132,7 @@ static const float BOLTZ                    =    (RGAS / KILO);            // (k
 #define DUMP_PARAMETERS 0
 
 template <int SIZE>
-static Expression<SIZE> createExpression(const string& expression, const Lepton::ExpressionProgram& program, const vector<string>& variables) {
+static Expression<SIZE> createExpression(const string& expression, const Lepton::ExpressionProgram& program, const vector<string>& variables, const vector<string>& globalParamNames) {
     Expression<SIZE> exp;
     if (program.getNumOperations() > SIZE)
         throw OpenMMException("Expression contains too many operations: "+expression);
@@ -164,8 +164,14 @@ static Expression<SIZE> createExpression(const string& expression, const Lepton:
                     exp.op[i] = VARIABLE7;
                 else if (variables.size() > 8 && op.getName() == variables[8])
                     exp.op[i] = VARIABLE8;
-                else
-                    throw OpenMMException("Unknown variable '"+op.getName()+"' in expression: "+expression);
+                else {
+                    int j;
+                    for (j = 0; j < globalParamNames.size() && op.getName() != globalParamNames[j]; j++);
+                    if (j == globalParamNames.size())
+                        throw OpenMMException("Unknown variable '"+op.getName()+"' in expression: "+expression);
+                    exp.op[i] = GLOBAL;
+                    exp.arg[i] = j;
+                }
                 break;
             case Operation::ADD:
                 exp.op[i] = ADD;
@@ -560,12 +566,15 @@ void gpuSetNonbondedCutoff(gpuContext gpu, float cutoffDistance, float solventDi
 extern "C"
 void gpuSetCustomNonbondedParameters(gpuContext gpu, const vector<vector<double> >& parameters, const vector<vector<int> >& exclusions,
             const vector<int>& exceptionAtom1, const vector<int>& exceptionAtom2, const vector<vector<double> >& exceptionParams,
-            CudaNonbondedMethod method, float cutoffDistance, const string& energyExp, const vector<string>& combiningRules, const vector<string>& paramNames)
+            CudaNonbondedMethod method, float cutoffDistance, const string& energyExp, const vector<string>& combiningRules,
+            const vector<string>& paramNames, const vector<string>& globalParamNames)
 {
     if (gpu->sim.nonbondedCutoff != 0.0f && gpu->sim.nonbondedCutoff != cutoffDistance)
         throw OpenMMException("All nonbonded forces must use the same cutoff");
     if (paramNames.size() > 4)
         throw OpenMMException("CudaPlatform only supports four per-atom parameters for custom nonbonded forces");
+    if (globalParamNames.size() > 8)
+        throw OpenMMException("CudaPlatform only supports eight global parameters for custom nonbonded forces");
     gpu->sim.nonbondedCutoff = cutoffDistance;
     gpu->sim.nonbondedCutoffSqr = cutoffDistance*cutoffDistance;
     gpu->sim.customNonbondedMethod = method;
@@ -612,8 +621,8 @@ void gpuSetCustomNonbondedParameters(gpuContext gpu, const vector<vector<double>
     variables.push_back("r");
     for (int i = 0; i < paramNames.size(); i++)
         variables.push_back(paramNames[i]);
-    SetCustomNonbondedEnergyExpression(createExpression<128>(energyExp, Lepton::Parser::parse(energyExp).optimize().createProgram(), variables));
-    SetCustomNonbondedForceExpression(createExpression<128>(energyExp, Lepton::Parser::parse(energyExp).differentiate("r").optimize().createProgram(), variables));
+    SetCustomNonbondedEnergyExpression(createExpression<128>(energyExp, Lepton::Parser::parse(energyExp).optimize().createProgram(), variables, globalParamNames));
+    SetCustomNonbondedForceExpression(createExpression<128>(energyExp, Lepton::Parser::parse(energyExp).differentiate("r").optimize().createProgram(), variables, globalParamNames));
     Expression<64> paramExpressions[4];
     vector<string> combiningRuleParams;
     combiningRuleParams.push_back("");
@@ -627,7 +636,7 @@ void gpuSetCustomNonbondedParameters(gpuContext gpu, const vector<vector<double>
             combiningRuleParams.push_back("");
     }
     for (int i = 0; i < paramNames.size(); i++)
-        paramExpressions[i] = createExpression<64>(combiningRules[i], Lepton::Parser::parse(combiningRules[i]).optimize().createProgram(), combiningRuleParams);
+        paramExpressions[i] = createExpression<64>(combiningRules[i], Lepton::Parser::parse(combiningRules[i]).optimize().createProgram(), combiningRuleParams, globalParamNames);
     SetCustomNonbondedCombiningRules(paramExpressions);
 }
 

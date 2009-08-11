@@ -289,8 +289,11 @@ public:
      */
     double executeEnergy(ContextImpl& context);
 private:
+    void updateGlobalParams(ContextImpl& context);
     CudaPlatform::PlatformData& data;
     int numParticles;
+    std::vector<std::string> globalParamNames;
+    std::vector<float> globalParamValues;
     System& system;
 };
 

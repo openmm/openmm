@@ -82,7 +82,6 @@ static double calcEnergy(ContextImpl& context, CudaPlatform::PlatformData& data,
             pos[i] = Vec3(posData[3*i], posData[3*i+1], posData[3*i+2]);
         delete[] posData;
         refContext.setPositions(pos);
- //       printf("Total CPU energies: %f\n", refContext.getState(State::Energy).getPotentialEnergy());
         return refContext.getState(State::Energy).getPotentialEnergy();
     }
     else
@@ -97,9 +96,10 @@ static double calcEnergy(ContextImpl& context, CudaPlatform::PlatformData& data,
             kReduceObcGbsaBornForces(gpu);
             kCalculateObcGbsaForces2(gpu);
         }
-        else if (data.hasNonbonded) {
+        else if (data.hasNonbonded)
             kCalculateCDLJForces(gpu);
-        }
+        if (data.hasCustomNonbonded)
+            kCalculateCustomNonbondedForces(gpu, data.hasNonbonded);
         kCalculateLocalForces(gpu);
         if (gpu->bIncludeGBSA)
             kReduceBornSumAndForces(gpu);
@@ -389,8 +389,7 @@ CudaCalcCustomNonbondedForceKernel::~CudaCalcCustomNonbondedForceKernel() {
 }
 
 void CudaCalcCustomNonbondedForceKernel::initialize(const System& system, const CustomNonbondedForce& force) {
-    if (data.primaryKernel == NULL)
-        data.primaryKernel = this;
+    data.primaryKernel = this; // This must always be the primary kernel so it can update the global parameters
     data.hasCustomNonbonded = true;
     numParticles = force.getNumParticles();
     _gpuContext* gpu = data.gpu;
@@ -452,19 +451,43 @@ void CudaCalcCustomNonbondedForceKernel::initialize(const System& system, const 
         paramNames.push_back(force.getParameterName(i));
         combiningRules.push_back(force.getParameterCombiningRule(i));
     }
+    globalParamNames.resize(force.getNumGlobalParameters());
+    globalParamValues.resize(force.getNumGlobalParameters());
+    for (int i = 0; i < force.getNumGlobalParameters(); i++) {
+        globalParamNames[i] = force.getGlobalParameterName(i);
+        globalParamValues[i] = force.getGlobalParameterDefaultValue(i);
+    }
     gpuSetCustomNonbondedParameters(gpu, parameters, exclusionList, exceptionParticle1, exceptionParticle2, exceptionParams, method,
-            (float)force.getCutoffDistance(), force.getEnergyFunction(), combiningRules, paramNames);
+            (float)force.getCutoffDistance(), force.getEnergyFunction(), combiningRules, paramNames, globalParamNames);
+    if (globalParamValues.size() > 0)
+        SetCustomNonbondedGlobalParams(globalParamValues);
 }
 
 void CudaCalcCustomNonbondedForceKernel::executeForces(ContextImpl& context) {
-    if (data.primaryKernel == this)
+    if (data.primaryKernel == this) {
+        updateGlobalParams(context);
         calcForces(context, data);
+    }
 }
 
 double CudaCalcCustomNonbondedForceKernel::executeEnergy(ContextImpl& context) {
-    if (data.primaryKernel == this)
+    if (data.primaryKernel == this) {
+        updateGlobalParams(context);
         return calcEnergy(context, data, system);
+    }
     return 0.0;
+}
+
+void CudaCalcCustomNonbondedForceKernel::updateGlobalParams(ContextImpl& context) {
+    bool changed = false;
+    for (int i = 0; i < globalParamNames.size(); i++) {
+        float value = (float) context.getParameter(globalParamNames[i]);
+        if (value != globalParamValues[i])
+            changed = true;
+        globalParamValues[i] = value;
+    }
+    if (changed)
+        SetCustomNonbondedGlobalParams(globalParamValues);
 }
 
 CudaCalcGBSAOBCForceKernel::~CudaCalcGBSAOBCForceKernel() {

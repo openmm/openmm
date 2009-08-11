@@ -53,6 +53,7 @@ static __constant__ cudaGmxSimulation cSim;
 static __constant__ Expression<128> forceExp;
 static __constant__ Expression<128> energyExp;
 static __constant__ Expression<64> combiningRules[4];
+static __constant__ float globalParams[8];
 
 void SetCalculateCustomNonbondedForcesSim(gpuContext gpu)
 {
@@ -87,6 +88,13 @@ void SetCustomNonbondedCombiningRules(const Expression<64>* expressions)
     cudaError_t status;
     status = cudaMemcpyToSymbol(combiningRules, expressions, sizeof(combiningRules));
     RTERROR(status, "SetCustomNonbondedCombiningRules: cudaMemcpyToSymbol failed");
+}
+
+void SetCustomNonbondedGlobalParams(const vector<float>& paramValues)
+{
+    cudaError_t status;
+    status = cudaMemcpyToSymbol(globalParams, &paramValues[0], sizeof(globalParams));
+    RTERROR(status, "SetCustomNonbondedGlobalParams: cudaMemcpyToSymbol failed");
 }
 
 template<int SIZE>
@@ -126,6 +134,9 @@ __device__ float kEvaluateExpression_kernel(Expression<SIZE>* expression, float*
                 break;
             case VARIABLE8:
                 stack[++stackPointer] = vars2.w;
+                break;
+            case GLOBAL:
+                stack[++stackPointer] = globalParams[(int) expression->arg[i]];
                 break;
             case ADD:
             {

@@ -186,7 +186,7 @@ extern "C"
 void gpuSetCustomNonbondedParameters(gpuContext gpu, const std::vector<std::vector<double> >& parameters, const std::vector<std::vector<int> >& exclusions,
             const std::vector<int>& exceptionAtom1, const std::vector<int>& exceptionAtom2, const std::vector<std::vector<double> >& exceptionParams,
             CudaNonbondedMethod method, float cutoffDistance, const std::string& energyExp, const std::vector<std::string>& combiningRules,
-            const std::vector<std::string>& paramNames);
+            const std::vector<std::string>& paramNames, const std::vector<std::string>& globalParamNames);
 
 extern "C"
 void gpuSetEwaldParameters(gpuContext gpu, float alpha, int kmaxx, int kmaxy, int kmaxz);
