@@ -85,7 +85,7 @@ public:
     int nonbondedMethod, customNonbondedMethod;
     int cmMotionFrequency;
     int stepCount, computeForceCount;
-    double time;
+    double time, ewaldSelfEnergy;
     std::map<std::string, std::string> propertyValues;
 };
 

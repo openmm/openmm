@@ -59,53 +59,26 @@ static void calcForces(ContextImpl& context, CudaPlatform::PlatformData& data) {
     kReduceForces(gpu);
 }
 
-//static double calcEnergy(ContextImpl& context, System& system) {
 static double calcEnergy(ContextImpl& context, CudaPlatform::PlatformData& data, System& system) {
-
-    // New section 2009-09-03: calculate energies and forces, then return reduced energies
-
     _gpuContext* gpu = data.gpu;
-    
-    if (gpu->sim.nonbondedMethod == EWALD)
-    {
-        // We don't currently have GPU kernels to calculate energy, so instead we have the reference
-        // platform do it.  This is VERY slow.
-
-        LangevinIntegrator integrator(0.0, 1.0, 0.0);
-        ReferencePlatform platform;
-        Context refContext(system, integrator, platform);
-        const Stream& positions = context.getPositions();
-        double* posData = new double[positions.getSize()*3];
-        positions.saveToArray(posData);
-        vector<Vec3> pos(positions.getSize());
-        for (int i = 0; i < (int)pos.size(); i++)
-            pos[i] = Vec3(posData[3*i], posData[3*i+1], posData[3*i+2]);
-        delete[] posData;
-        refContext.setPositions(pos);
-        return refContext.getState(State::Energy).getPotentialEnergy();
+    if (data.nonbondedMethod != NO_CUTOFF && data.stepCount%100 == 0)
+        gpuReorderAtoms(gpu);
+    data.stepCount++;
+    kClearEnergy(gpu);
+    if (gpu->bIncludeGBSA) {
+        gpu->bRecalculateBornRadii = true;
+        kCalculateCDLJObcGbsaForces1(gpu);
+        kReduceObcGbsaBornForces(gpu);
+        kCalculateObcGbsaForces2(gpu);
     }
-    else
-    {
-        if (data.nonbondedMethod != NO_CUTOFF && data.stepCount%100 == 0)
-            gpuReorderAtoms(gpu);
-        data.stepCount++;
-        kClearEnergy(gpu);
-        if (gpu->bIncludeGBSA) {
-            gpu->bRecalculateBornRadii = true;
-            kCalculateCDLJObcGbsaForces1(gpu);
-            kReduceObcGbsaBornForces(gpu);
-            kCalculateObcGbsaForces2(gpu);
-        }
-        else if (data.hasNonbonded)
-            kCalculateCDLJForces(gpu);
-        if (data.hasCustomNonbonded)
-            kCalculateCustomNonbondedForces(gpu, data.hasNonbonded);
-        kCalculateLocalForces(gpu);
-        if (gpu->bIncludeGBSA)
-            kReduceBornSumAndForces(gpu);
-        return kReduceEnergy(gpu);
-    }
-    return 0.0f;
+    else if (data.hasNonbonded)
+        kCalculateCDLJForces(gpu);
+    if (data.hasCustomNonbonded)
+        kCalculateCustomNonbondedForces(gpu, data.hasNonbonded);
+    kCalculateLocalForces(gpu);
+    if (gpu->bIncludeGBSA)
+        kReduceBornSumAndForces(gpu);
+    return kReduceEnergy(gpu)+data.ewaldSelfEnergy;
 }
 
 void CudaInitializeForcesKernel::initialize(const System& system) {
@@ -325,7 +298,6 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
             gpuSetPeriodicBoxSize(gpu, (float)boxVectors[0][0], (float)boxVectors[1][1], (float)boxVectors[2][2]);
             method = PERIODIC;
         }
-
         if (force.getNonbondedMethod() == NonbondedForce::Ewald) {
             Vec3 boxVectors[3];
             force.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
@@ -350,6 +322,14 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
         }
         data.nonbondedMethod = method;
         gpuSetCoulombParameters(gpu, 138.935485f, particle, c6, c12, q, symbol, exclusionList, method);
+
+        // Compute the Ewald self energy.
+
+        data.ewaldSelfEnergy = 0.0;
+        double selfEnergyScale = gpu->sim.epsfac*gpu->sim.alphaEwald/std::sqrt(PI);
+        if (force.getNonbondedMethod() == NonbondedForce::Ewald)
+            for (int i = 0; i < numParticles; i++)
+                data.ewaldSelfEnergy -= selfEnergyScale*q[i]*q[i];
     }
 
     // Initialize 1-4 nonbonded interactions.

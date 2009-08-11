@@ -384,7 +384,7 @@ void testEwald() {
 
     ASSERT_EQUAL_VEC(Vec3(-123.711,  64.1877, -302.716), forces[0], 10*TOL);
     ASSERT_EQUAL_VEC(Vec3( 123.711, -64.1877,  302.716), forces[1], 10*TOL);
-//    ASSERT_EQUAL_TOL(-217.276, state.getPotentialEnergy(), 10*TOL);
+    ASSERT_EQUAL_TOL(-217.276, state.getPotentialEnergy(), 0.01/*10*TOL*/);
 }
 
 

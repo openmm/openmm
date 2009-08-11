@@ -117,7 +117,7 @@ __global__ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUni
                     float alphaR    = cSim.alphaEwald * r;
                     dEdR           += apos.w * psA[j].q * invR * (erfc(alphaR) + 2.0f * alphaR * exp ( - alphaR * alphaR) / SQRT_PI );
 		    /* E */
-		    CDLJ_energy    += apos.w * psA[j].q * invR * (erfc(alphaR) + 2.0f * alphaR * exp ( - alphaR * alphaR) / SQRT_PI );
+                    CDLJ_energy    += apos.w * psA[j].q * invR * erfc(alphaR);
     #else
                     dEdR           += apos.w * psA[j].q * (invR - 2.0f * cSim.reactionFieldK * r2);
 		    /* E */
@@ -178,19 +178,8 @@ __global__ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUni
                     float alphaR    = cSim.alphaEwald * r;
                     dEdR           += apos.w * psA[j].q * invR * (erfc(alphaR) + 2.0f * alphaR * exp ( - alphaR * alphaR) / SQRT_PI );
 		    /* E */
-		    //CDLJ_energy    += apos.w * psA[j].q * invR * (erfc(alphaR) + 2.0f * alphaR * exp ( - alphaR * alphaR) / SQRT_PI );
-                    // direct space sum
-                    // CDLJ_energy      += 0.5f * apos.w * psA[j].q * erfc(alphaR) * invR;
-                    // reciprocal space sum
-                    CDLJ_energy     = 0.5f * apos.w * psA[j].q / PI;
-                    CDLJ_energy    *= exp ( - alphaR * alphaR) / SQRT_PI;
-                    // self Ewald Energy
-                    // factor 2 necessary here, because energy is divided by 2 below
-//                    CDLJ_energy     += -cSim.epsfac * (psA[i].q * psA[i].q) * cSim.alphaEwald / SQRT_PI;
-
-                    //    if (r != 0) energy = cSim.alphaEwald;
-                   // if (r != 0) energy = apos.w;
-   #else
+		    CDLJ_energy    += apos.w * psA[j].q * invR * erfc(alphaR);
+    #else
                     dEdR           += apos.w * psA[j].q * (invR - 2.0f * cSim.reactionFieldK * r2);
                     /* E */
 		    CDLJ_energy    += apos.w * psA[j].q * (invR + cSim.reactionFieldK * r2 - cSim.reactionFieldC);
@@ -299,7 +288,7 @@ __global__ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUni
                         float alphaR    = cSim.alphaEwald * r;
                         dEdR           += apos.w * psA[tj].q * invR * (erfc(alphaR) + 2.0f * alphaR * exp ( - alphaR * alphaR) / SQRT_PI );
                         /* E */
-                        CDLJ_energy    += apos.w * psA[tj].q * invR * (erfc(alphaR) + 2.0f * alphaR * exp ( - alphaR * alphaR) / SQRT_PI );
+                        CDLJ_energy    += apos.w * psA[tj].q * invR * erfc(alphaR);
     #else
                         dEdR           += apos.w * psA[tj].q * (invR - 2.0f * cSim.reactionFieldK * r2);
 			/* E */
@@ -365,7 +354,7 @@ __global__ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUni
                             float r         = sqrt(r2);
                             float alphaR    = cSim.alphaEwald * r;
                             dEdR           += apos.w * psA[j].q * invR * (erfc(alphaR) + 2.0f * alphaR * exp ( - alphaR * alphaR) / SQRT_PI );
-                            CDLJ_energy    += apos.w * psA[j].q * invR * (erfc(alphaR) + 2.0f * alphaR * exp ( - alphaR * alphaR) / SQRT_PI );
+                            CDLJ_energy    += apos.w * psA[j].q * invR * erfc(alphaR);
     #else
                             dEdR           += apos.w * psA[j].q * (invR - 2.0f * cSim.reactionFieldK * r2);
                             /* E */
@@ -468,7 +457,7 @@ __global__ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUni
                     float alphaR    = cSim.alphaEwald * r;
                     dEdR           += apos.w * psA[tj].q * invR * (erfc(alphaR) + 2.0f * alphaR * exp ( - alphaR * alphaR) / SQRT_PI );
                     /* E */
-                    CDLJ_energy    += apos.w * psA[tj].q * invR * (erfc(alphaR) + 2.0f * alphaR * exp ( - alphaR * alphaR) / SQRT_PI );
+                    CDLJ_energy    += apos.w * psA[tj].q * invR * erfc(alphaR);
     #else
                     dEdR           += apos.w * psA[tj].q * (invR - 2.0f * cSim.reactionFieldK * r2);
                     /* E */

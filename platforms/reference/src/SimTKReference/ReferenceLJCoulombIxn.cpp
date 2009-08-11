@@ -267,7 +267,7 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
 // RECIPROCAL SPACE EWALD ENERGY AND FORCES
 // **************************************************************************************
     // PME
-    
+
   if (pme) {
 	pme_t          pmedata; /* abstract handle for PME data */
 	int            ngrid[3];
@@ -451,7 +451,7 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
 
         if( totalEnergy )
               *totalEnergy += realSpaceEwaldEnergy + vdwEnergy;
-      
+
         if( energyByAtom ){
            energyByAtom[ii] += realSpaceEwaldEnergy + vdwEnergy;
            energyByAtom[jj] += realSpaceEwaldEnergy + vdwEnergy;

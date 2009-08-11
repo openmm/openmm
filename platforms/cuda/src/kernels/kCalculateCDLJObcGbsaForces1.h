@@ -44,6 +44,10 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int*
     float* tempBuffer = (float*) &sA[cSim.nonbond_threads_per_block];
 #endif
 
+#ifdef USE_EWALD
+    const float SQRT_PI = sqrt(PI);
+#endif
+
     unsigned int lasty = -0xFFFFFFFF;
     while (pos < end)
     {
@@ -103,9 +107,17 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int*
                     /* E */ 
 		    CDLJObcGbsa_energy      = eps * (sig6 - 1.0f) * sig6;
 #ifdef USE_CUTOFF
+    #ifdef USE_EWALD
+                    float r                 = sqrt(r2);
+                    float alphaR            = cSim.alphaEwald * r;
+                    dEdR                   += apos.w * psA[j].q * invR * (erfc(alphaR) + 2.0f * alphaR * exp ( - alphaR * alphaR) / SQRT_PI );
+		    /* E */
+                    CDLJObcGbsa_energy     += apos.w * psA[j].q * invR * erfc(alphaR);
+    #else
                     dEdR                   += apos.w * psA[j].q * (invR - 2.0f * cSim.reactionFieldK * r2);
                     /* E */
                     CDLJObcGbsa_energy     += apos.w * psA[j].q * (invR + cSim.reactionFieldK * r2 - cSim.reactionFieldC);
+    #endif
 #else
                     float factorX           = apos.w * psA[j].q * invR;
                     dEdR                   += factorX;
@@ -176,9 +188,17 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int*
                     /* E */ 
 		    CDLJObcGbsa_energy      = eps * (sig6 - 1.0f) * sig6;
 #ifdef USE_CUTOFF
+    #ifdef USE_EWALD
+                    float r                 = sqrt(r2);
+                    float alphaR            = cSim.alphaEwald * r;
+                    dEdR                   += apos.w * psA[j].q * invR * (erfc(alphaR) + 2.0f * alphaR * exp ( - alphaR * alphaR) / SQRT_PI );
+		    /* E */
+                    CDLJObcGbsa_energy     += apos.w * psA[j].q * invR * erfc(alphaR);
+    #else
                     dEdR                   += apos.w * psA[j].q * (invR - 2.0f * cSim.reactionFieldK * r2);
                     /* E */
                     CDLJObcGbsa_energy     += apos.w * psA[j].q * (invR + cSim.reactionFieldK * r2 - cSim.reactionFieldC);
+    #endif
 #else
                     float factorX           = apos.w * psA[j].q * invR;
                     dEdR                   += factorX;
@@ -310,9 +330,17 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int*
                         /* E */ 
                         CDLJObcGbsa_energy      = eps * (sig6 - 1.0f) * sig6;
 #ifdef USE_CUTOFF
+    #ifdef USE_EWALD
+                        float r                 = sqrt(r2);
+                        float alphaR            = cSim.alphaEwald * r;
+                        dEdR                   += apos.w * psA[tj].q * invR * (erfc(alphaR) + 2.0f * alphaR * exp ( - alphaR * alphaR) / SQRT_PI );
+                        /* E */
+                        CDLJObcGbsa_energy     += apos.w * psA[tj].q * invR * erfc(alphaR);
+    #else
                         dEdR                   += apos.w * psA[tj].q * (invR - 2.0f * cSim.reactionFieldK * r2);
                         /* E */
                         CDLJObcGbsa_energy     += apos.w * psA[tj].q * (invR + cSim.reactionFieldK * r2 - cSim.reactionFieldC);
+    #endif
 #else
                         float factorX           = apos.w * psA[tj].q * invR;
                         dEdR                   += factorX;
@@ -390,9 +418,16 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int*
                             /* E */ 
                             CDLJObcGbsa_energy      = eps * (sig6 - 1.0f) * sig6;
 #ifdef USE_CUTOFF
+    #ifdef USE_EWALD
+                            float r                 = sqrt(r2);
+                            float alphaR            = cSim.alphaEwald * r;
+                            dEdR                   += apos.w * psA[j].q * invR * (erfc(alphaR) + 2.0f * alphaR * exp ( - alphaR * alphaR) / SQRT_PI );
+                            CDLJObcGbsa_energy     += apos.w * psA[j].q * invR * erfc(alphaR);
+    #else
                             dEdR                   += apos.w * psA[j].q * (invR - 2.0f * cSim.reactionFieldK * r2);
                             /* E */
                             CDLJObcGbsa_energy     += apos.w * psA[j].q * (invR + cSim.reactionFieldK * r2 - cSim.reactionFieldC);
+    #endif
 #else
                             float factorX           = apos.w * psA[j].q * invR;
                             dEdR                   += factorX;
@@ -515,9 +550,17 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int*
                     /* E */ 
 		    CDLJObcGbsa_energy      = eps * (sig6 - 1.0f) * sig6;
 #ifdef USE_CUTOFF
+    #ifdef USE_EWALD
+                    float r                 = sqrt(r2);
+                    float alphaR            = cSim.alphaEwald * r;
+                    dEdR                   += apos.w * psA[tj].q * invR * (erfc(alphaR) + 2.0f * alphaR * exp ( - alphaR * alphaR) / SQRT_PI );
+                    /* E */
+                    CDLJObcGbsa_energy     += apos.w * psA[tj].q * invR * erfc(alphaR);
+    #else
                     dEdR                   += apos.w * psA[tj].q * (invR - 2.0f * cSim.reactionFieldK * r2);
                     /* E */
                     CDLJObcGbsa_energy     += apos.w * psA[tj].q * (invR + cSim.reactionFieldK * r2 - cSim.reactionFieldC);
+    #endif
 #else
                     float factorX           = apos.w * psA[tj].q * invR;
                     dEdR                   += factorX;

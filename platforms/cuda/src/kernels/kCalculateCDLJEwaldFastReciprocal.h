@@ -53,11 +53,16 @@ __device__ float2 ConjMultofFloat2(float2 a, float2 b)
 
 __global__ void kCalculateEwaldFastCosSinSums_kernel()
 {
+    const float epsilon =  1.0;
+    const float recipCoeff = cSim.epsfac*(4*PI/cSim.cellVolume/epsilon);
     const unsigned int ksizex = 2*cSim.kmaxX-1;
     const unsigned int ksizey = 2*cSim.kmaxY-1;
     const unsigned int ksizez = 2*cSim.kmaxZ-1;
     const unsigned int totalK = ksizex*ksizey*ksizez;
     unsigned int index = threadIdx.x + blockIdx.x * blockDim.x;
+    float energy = 0.0f;
+    while (index < (cSim.kmaxY-1)*ksizez+cSim.kmaxZ)
+        index += blockDim.x * gridDim.x;
     while (index < totalK)
     {
         // Find the wave vector (kx, ky, kz) this index corresponds to.
@@ -87,8 +92,15 @@ __global__ void kCalculateEwaldFastCosSinSums_kernel()
             sum.y += apos.w*structureFactor.y;
         }
         cSim.pEwaldCosSinSum[index] = sum;
+
+        // Compute the contribution to the energy.
+
+        float k2 = kx*kx + ky*ky + kz*kz;
+        float ak = exp(k2*cSim.factorEwald) / k2;
+        energy += recipCoeff*ak*(sum.x*sum.x + sum.y*sum.y);
         index += blockDim.x * gridDim.x;
     }
+    cSim.pEnergy[blockIdx.x*blockDim.x+threadIdx.x] += energy;
 }
 
 /**
@@ -98,8 +110,6 @@ __global__ void kCalculateEwaldFastCosSinSums_kernel()
 
 __global__ void kCalculateEwaldFastForces_kernel()
 {
-
-    float PI = 3.14159265358979323846f;
     const float epsilon =  1.0;
     float recipCoeff = cSim.epsfac*(4*PI/cSim.cellVolume/epsilon);
 
