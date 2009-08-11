@@ -132,12 +132,15 @@ static const float BOLTZ                    =    (RGAS / KILO);            // (k
 #define DUMP_PARAMETERS 0
 
 template <int SIZE>
-static Expression<SIZE> createExpression(const string& expression, const Lepton::ExpressionProgram& program, const vector<string>& variables, const vector<string>& globalParamNames) {
+static Expression<SIZE> createExpression(const string& expression, const Lepton::ExpressionProgram& program, const vector<string>& variables,
+        const vector<string>& globalParamNames, unsigned int& maxStackSize) {
     Expression<SIZE> exp;
     if (program.getNumOperations() > SIZE)
         throw OpenMMException("Expression contains too many operations: "+expression);
     exp.length = program.getNumOperations();
     exp.stackSize = program.getStackSize();
+    if (exp.stackSize > maxStackSize)
+        maxStackSize = exp.stackSize;
     for (int i = 0; i < program.getNumOperations(); i++) {
         const Operation& op = program.getOperation(i);
         switch (op.getId()) {
@@ -580,6 +583,11 @@ void gpuSetCustomNonbondedParameters(gpuContext gpu, const vector<vector<double>
     gpu->sim.customNonbondedMethod = method;
     gpu->sim.customExceptions = exceptionAtom1.size();
     gpu->sim.customParameters = paramNames.size();
+    gpu->sim.custom_exception_threads_per_block = (gpu->sim.customExceptions+gpu->sim.blocks-1)/gpu->sim.blocks;
+    if (gpu->sim.custom_exception_threads_per_block < 1)
+        gpu->sim.custom_exception_threads_per_block = 1;
+    if (gpu->sim.custom_exception_threads_per_block > gpu->sim.max_localForces_threads_per_block)
+        gpu->sim.custom_exception_threads_per_block = gpu->sim.max_localForces_threads_per_block;
     setExclusions(gpu, exclusions);
     gpu->psCustomParams = new CUDAStream<float4>(gpu->sim.paddedNumberOfAtoms, 1, "CustomParams");
     gpu->sim.pCustomParams = gpu->psCustomParams->_pDevData;
@@ -621,8 +629,9 @@ void gpuSetCustomNonbondedParameters(gpuContext gpu, const vector<vector<double>
     variables.push_back("r");
     for (int i = 0; i < paramNames.size(); i++)
         variables.push_back(paramNames[i]);
-    SetCustomNonbondedEnergyExpression(createExpression<128>(energyExp, Lepton::Parser::parse(energyExp).optimize().createProgram(), variables, globalParamNames));
-    SetCustomNonbondedForceExpression(createExpression<128>(energyExp, Lepton::Parser::parse(energyExp).differentiate("r").optimize().createProgram(), variables, globalParamNames));
+    gpu->sim.customExpressionStackSize = 0;
+    SetCustomNonbondedEnergyExpression(createExpression<128>(energyExp, Lepton::Parser::parse(energyExp).optimize().createProgram(), variables, globalParamNames, gpu->sim.customExpressionStackSize));
+    SetCustomNonbondedForceExpression(createExpression<128>(energyExp, Lepton::Parser::parse(energyExp).differentiate("r").optimize().createProgram(), variables, globalParamNames, gpu->sim.customExpressionStackSize));
     Expression<64> paramExpressions[4];
     vector<string> combiningRuleParams;
     combiningRuleParams.push_back("");
@@ -636,7 +645,7 @@ void gpuSetCustomNonbondedParameters(gpuContext gpu, const vector<vector<double>
             combiningRuleParams.push_back("");
     }
     for (int i = 0; i < paramNames.size(); i++)
-        paramExpressions[i] = createExpression<64>(combiningRules[i], Lepton::Parser::parse(combiningRules[i]).optimize().createProgram(), combiningRuleParams, globalParamNames);
+        paramExpressions[i] = createExpression<64>(combiningRules[i], Lepton::Parser::parse(combiningRules[i]).optimize().createProgram(), combiningRuleParams, globalParamNames, gpu->sim.customExpressionStackSize);
     SetCustomNonbondedCombiningRules(paramExpressions);
 }
 

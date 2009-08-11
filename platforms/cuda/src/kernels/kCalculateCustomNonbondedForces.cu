@@ -277,16 +277,24 @@ void kCalculateCustomNonbondedForces(gpuContext gpu, bool neighborListValid)
 {
 //    printf("kCalculateCustomNonbondedCutoffForces\n");
     CUDPPResult result;
+    int sharedPerThread = sizeof(Atom)+gpu->sim.customExpressionStackSize*sizeof(float);
+    if (gpu->sim.customNonbondedMethod != NO_CUTOFF)
+        sharedPerThread += sizeof(float3);
+    int threads = gpu->sim.nonbond_threads_per_block;
+    int maxThreads = 16380/sharedPerThread;
+    if (threads > maxThreads)
+        threads = (maxThreads/32)*32;
     switch (gpu->sim.customNonbondedMethod)
     {
         case NO_CUTOFF:
             if (gpu->bOutputBufferPerWarp)
-                kCalculateCustomNonbondedN2ByWarpForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                        (sizeof(Atom)+MAX_STACK_SIZE*sizeof(float))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pWorkUnit);
+                kCalculateCustomNonbondedN2ByWarpForces_kernel<<<gpu->sim.nonbond_blocks, threads, sharedPerThread*threads>>>(gpu->sim.pWorkUnit);
             else
-                kCalculateCustomNonbondedN2Forces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                        (sizeof(Atom)+MAX_STACK_SIZE*sizeof(float))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pWorkUnit);
+                kCalculateCustomNonbondedN2Forces_kernel<<<gpu->sim.nonbond_blocks, threads, sharedPerThread*threads>>>(gpu->sim.pWorkUnit);
             LAUNCHERROR("kCalculateCustomNonbondedN2Forces");
+            kCalculateCustomNonbondedN2Exceptions_kernel<<<gpu->sim.blocks, gpu->sim.custom_exception_threads_per_block,
+                    gpu->sim.customExpressionStackSize*sizeof(float)*gpu->sim.custom_exception_threads_per_block>>>();
+            LAUNCHERROR("kCalculateCustomNonbondedN2Exceptions");
             break;
         case CUTOFF:
             if (!neighborListValid)
@@ -306,12 +314,13 @@ void kCalculateCustomNonbondedForces(gpuContext gpu, bool neighborListValid)
                         sizeof(unsigned int)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
             }
             if (gpu->bOutputBufferPerWarp)
-                kCalculateCustomNonbondedCutoffByWarpForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                        (sizeof(Atom)+MAX_STACK_SIZE*sizeof(float)+sizeof(float3))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
+                kCalculateCustomNonbondedCutoffByWarpForces_kernel<<<gpu->sim.nonbond_blocks, threads, sharedPerThread*threads>>>(gpu->sim.pInteractingWorkUnit);
             else
-                kCalculateCustomNonbondedCutoffForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                        (sizeof(Atom)+MAX_STACK_SIZE*sizeof(float)+sizeof(float3))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
+                kCalculateCustomNonbondedCutoffForces_kernel<<<gpu->sim.nonbond_blocks, threads, sharedPerThread*threads>>>(gpu->sim.pInteractingWorkUnit);
             LAUNCHERROR("kCalculateCustomNonbondedCutoffForces");
+            kCalculateCustomNonbondedCutoffExceptions_kernel<<<gpu->sim.blocks, gpu->sim.custom_exception_threads_per_block,
+                    gpu->sim.customExpressionStackSize*sizeof(float)*gpu->sim.custom_exception_threads_per_block>>>();
+            LAUNCHERROR("kCalculateCustomNonbondedCutoffExceptions");
             break;
         case PERIODIC:
             if (!neighborListValid)
@@ -331,12 +340,13 @@ void kCalculateCustomNonbondedForces(gpuContext gpu, bool neighborListValid)
                         sizeof(unsigned int)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
             }
             if (gpu->bOutputBufferPerWarp)
-                kCalculateCustomNonbondedPeriodicByWarpForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                        (sizeof(Atom)+MAX_STACK_SIZE*sizeof(float)+sizeof(float3))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
+                kCalculateCustomNonbondedPeriodicByWarpForces_kernel<<<gpu->sim.nonbond_blocks, threads, sharedPerThread*threads>>>(gpu->sim.pInteractingWorkUnit);
             else
-                kCalculateCustomNonbondedPeriodicForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                        (sizeof(Atom)+MAX_STACK_SIZE*sizeof(float)+sizeof(float3))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
+                kCalculateCustomNonbondedPeriodicForces_kernel<<<gpu->sim.nonbond_blocks, threads, sharedPerThread*threads>>>(gpu->sim.pInteractingWorkUnit);
             LAUNCHERROR("kCalculateCustomNonbondedPeriodicForces");
+            kCalculateCustomNonbondedPeriodicExceptions_kernel<<<gpu->sim.blocks, gpu->sim.custom_exception_threads_per_block,
+                    gpu->sim.customExpressionStackSize*sizeof(float)*gpu->sim.custom_exception_threads_per_block>>>();
+            LAUNCHERROR("kCalculateCustomNonbondedPeriodicExceptions");
             break;
     }
 }

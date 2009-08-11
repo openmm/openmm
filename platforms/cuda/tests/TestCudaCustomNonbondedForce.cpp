@@ -206,7 +206,7 @@ int main() {
     try {
         testSimpleExpression();
         testParameters();
-//        testExceptions();
+        testExceptions();
         testCutoff();
         testPeriodic();
     }

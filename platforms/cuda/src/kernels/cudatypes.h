@@ -279,6 +279,8 @@ struct cudaGmxSimulation {
     unsigned int    localForces_threads_per_block;  // Threads per block in local forces kernel calls
     unsigned int    random_threads_per_block;       // Threads per block in RNG kernel calls
     unsigned int    interaction_threads_per_block;  // Threads per block when identifying interacting tiles
+    unsigned int    custom_exception_threads_per_block; // Threads per block in custom nonbonded exception kernel calls
+    unsigned int    customExpressionStackSize;      // Stack size for evaluating custom nonbonded forces
     unsigned int    workUnits;                      // Number of work units
     unsigned int*   pWorkUnit;                      // Pointer to work units
     unsigned int*   pInteractingWorkUnit;           // Pointer to work units that have interactions
