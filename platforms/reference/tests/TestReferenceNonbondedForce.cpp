@@ -355,6 +355,34 @@ void testPeriodic() {
     ASSERT_EQUAL_TOL(2*138.935485*(1.0)*(1.0+krf*1.0-crf), state.getPotentialEnergy(), TOL);
 }
 
+void testEwald() {
+    ReferencePlatform platform;
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    VerletIntegrator integrator(0.01);
+    NonbondedForce* nonbonded = new NonbondedForce();
+    nonbonded->addParticle(1.0, 1, 0); 
+    nonbonded->addParticle(-1.0, 1, 0); 
+    nonbonded->setNonbondedMethod(NonbondedForce::Ewald);
+    const double cutoff = 2.0;
+    nonbonded->setCutoffDistance(cutoff);
+    nonbonded->setEwaldErrorTolerance(TOL);
+    nonbonded->setPeriodicBoxVectors(Vec3(6, 0, 0), Vec3(0, 6, 0), Vec3(0, 0, 6));
+    system.addForce(nonbonded);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(2);
+    positions[0] = Vec3(3.048000,2.764000,3.156000);
+    positions[1] = Vec3(2.809000,2.888000,2.571000);
+    context.setPositions(positions);
+    State state = context.getState(State::Forces | State::Energy);
+    const vector<Vec3>& forces = state.getForces();
+
+    ASSERT_EQUAL_VEC(Vec3(-123.711,  64.1877, -302.716), forces[0], 10*TOL);
+    ASSERT_EQUAL_VEC(Vec3( 123.711, -64.1877,  302.716), forces[1], 10*TOL);
+    ASSERT_EQUAL_TOL(-217.276, state.getPotentialEnergy(), 0.01/*10*TOL*/);
+}
+
 int main() {
     try {
         testCoulomb();
@@ -363,6 +391,7 @@ int main() {
         testCutoff();
         testCutoff14();
         testPeriodic();
+        testEwald();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;
