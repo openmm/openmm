@@ -186,7 +186,7 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
                         float4 combinedParams = make_float4(0, 0, 0, 0);
                         for (int k = 0; k < cSim.customParameters; k++)
                         {
-                            float value = kEvaluateExpression_kernel(&combiningRules[0], &stack[cSim.customExpressionStackSize*threadIdx.x], 0.0f, params, psA[tj].params);
+                            float value = kEvaluateExpression_kernel(&combiningRules[k], &stack[cSim.customExpressionStackSize*threadIdx.x], 0.0f, params, psA[tj].params);
                             switch (k)
                             {
                                 case 0:
@@ -252,7 +252,7 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
                             float4 combinedParams = make_float4(0, 0, 0, 0);
                             for (int k = 0; k < cSim.customParameters; k++)
                             {
-                                float value = kEvaluateExpression_kernel(&combiningRules[0], &stack[cSim.customExpressionStackSize*threadIdx.x], 0.0f, params, psA[j].params);
+                                float value = kEvaluateExpression_kernel(&combiningRules[k], &stack[cSim.customExpressionStackSize*threadIdx.x], 0.0f, params, psA[j].params);
                                 switch (k)
                                 {
                                     case 0:
@@ -354,7 +354,7 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
                     float4 combinedParams = make_float4(0, 0, 0, 0);
                     for (int k = 0; k < cSim.customParameters; k++)
                     {
-                        float value = kEvaluateExpression_kernel(&combiningRules[0], &stack[cSim.customExpressionStackSize*threadIdx.x], 0.0f, params, psA[tj].params);
+                        float value = kEvaluateExpression_kernel(&combiningRules[k], &stack[cSim.customExpressionStackSize*threadIdx.x], 0.0f, params, psA[tj].params);
                         switch (k)
                         {
                             case 0:
