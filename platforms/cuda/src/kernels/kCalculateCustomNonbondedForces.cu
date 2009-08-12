@@ -105,132 +105,276 @@ __device__ float kEvaluateExpression_kernel(Expression<SIZE>* expression, float*
     int stackPointer = -1;
     for (int i = 0; i < expression->length; i++)
     {
-        switch (expression->op[i])
-        {
-            case CONSTANT:
-                STACK(++stackPointer) = expression->arg[i];
-                break;
-            case VARIABLE0:
-                STACK(++stackPointer) = var0;
-                break;
-            case VARIABLE1:
-                STACK(++stackPointer) = vars1.x;
-                break;
-            case VARIABLE2:
-                STACK(++stackPointer) = vars1.y;
-                break;
-            case VARIABLE3:
-                STACK(++stackPointer) = vars1.z;
-                break;
-            case VARIABLE4:
-                STACK(++stackPointer) = vars1.w;
-                break;
-            case VARIABLE5:
-                STACK(++stackPointer) = vars2.x;
-                break;
-            case VARIABLE6:
-                STACK(++stackPointer) = vars2.y;
-                break;
-            case VARIABLE7:
-                STACK(++stackPointer) = vars2.z;
-                break;
-            case VARIABLE8:
-                STACK(++stackPointer) = vars2.w;
-                break;
-            case GLOBAL:
-                STACK(++stackPointer) = globalParams[(int) expression->arg[i]];
-                break;
-            case ADD:
-            {
-                float temp = STACK(stackPointer);
-                STACK(--stackPointer) += temp;
-                break;
+        int op = expression->op[i];
+        if (op < SQRT) {
+            if (op < VARIABLE8) {
+                if (op < VARIABLE4) {
+                    if (op == CONSTANT) {
+                        STACK(++stackPointer) = expression->arg[i];
+                    }
+                    else if (op == VARIABLE0) {
+                        STACK(++stackPointer) = var0;
+                    }
+                    else if (op == VARIABLE1) {
+                        STACK(++stackPointer) = vars1.x;
+                    }
+                    else if (op == VARIABLE2) {
+                        STACK(++stackPointer) = vars1.y;
+                    }
+                    else if (op == VARIABLE3) {
+                        STACK(++stackPointer) = vars1.z;
+                    }
+                }
+                else {
+                    if (op == VARIABLE4) {
+                        STACK(++stackPointer) = vars1.w;
+                    }
+                    else if (op == VARIABLE5) {
+                        STACK(++stackPointer) = vars2.x;
+                    }
+                    else if (op == VARIABLE6) {
+                        STACK(++stackPointer) = vars2.y;
+                    }
+                    else if (op == VARIABLE7) {
+                        STACK(++stackPointer) = vars2.z;
+                    }
+                }
             }
-            case SUBTRACT:
-            {
-                float temp = STACK(stackPointer);
-                STACK(stackPointer) = temp-STACK(--stackPointer);
-                break;
+            else {
+                if (op < MULTIPLY) {
+                    if (op == VARIABLE8) {
+                        STACK(++stackPointer) = vars2.w;
+                    }
+                    else if (op == GLOBAL) {
+                        STACK(++stackPointer) = globalParams[(int) expression->arg[i]];
+                    }
+                    else if (op == ADD) {
+                        float temp = STACK(stackPointer);
+                        STACK(--stackPointer) += temp;
+                    }
+                    else if (op == SUBTRACT) {
+                        float temp = STACK(stackPointer);
+                        STACK(stackPointer) = temp-STACK(--stackPointer);
+                    }
+                }
+                else {
+                    if (op == MULTIPLY) {
+                        float temp = STACK(stackPointer);
+                        STACK(--stackPointer) *= temp;
+                    }
+                    else if (op == DIVIDE) {
+                        float temp = STACK(stackPointer);
+                        STACK(stackPointer) = temp/STACK(--stackPointer);
+                    }
+                    else if (op == POWER) {
+                        float temp = STACK(stackPointer);
+                        STACK(stackPointer) = pow(temp, STACK(--stackPointer));
+                    }
+                    else if (op == NEGATE) {
+                        STACK(stackPointer) *= -1.0f;
+                    }
+                }
             }
-            case MULTIPLY:
-            {
-                float temp = STACK(stackPointer);
-                STACK(--stackPointer) *= temp;
-                break;
-            }
-            case DIVIDE:
-            {
-                float temp = STACK(stackPointer);
-                STACK(stackPointer) = temp/STACK(--stackPointer);
-                break;
-            }
-            case POWER:
-            {
-                float temp = STACK(stackPointer);
-                STACK(stackPointer) = pow(temp, STACK(--stackPointer));
-                break;
-            }
-            case NEGATE:
-                STACK(stackPointer) *= -1.0f;
-                break;
-            case SQRT:
-                STACK(stackPointer) = sqrt(STACK(stackPointer));
-                break;
-            case EXP:
-                STACK(stackPointer) = exp(STACK(stackPointer));
-                break;
-            case LOG:
-                STACK(stackPointer) = log(STACK(stackPointer));
-                break;
-            case SIN:
-                STACK(stackPointer) = sin(STACK(stackPointer));
-                break;
-            case COS:
-                STACK(stackPointer) = cos(STACK(stackPointer));
-                break;
-            case SEC:
-                STACK(stackPointer) = 1.0f/cos(STACK(stackPointer));
-                break;
-            case CSC:
-                STACK(stackPointer) = 1.0f/sin(STACK(stackPointer));
-                break;
-            case TAN:
-                STACK(stackPointer) = tan(STACK(stackPointer));
-                break;
-            case COT:
-                STACK(stackPointer) = 1.0f/tan(STACK(stackPointer));
-                break;
-            case ASIN:
-                STACK(stackPointer) = asin(STACK(stackPointer));
-                break;
-            case ACOS:
-                STACK(stackPointer) = acos(STACK(stackPointer));
-                break;
-            case ATAN:
-                STACK(stackPointer) = atan(STACK(stackPointer));
-                break;
-            case SQUARE:
-            {
-                float temp = STACK(stackPointer);
-                STACK(stackPointer) *= temp;
-                break;
-            }
-            case CUBE:
-            {
-                float temp = STACK(stackPointer);
-                STACK(stackPointer) *= temp*temp;
-                break;
-            }
-            case RECIPROCAL:
-                STACK(stackPointer) = 1.0f/STACK(stackPointer);
-                break;
-            case INCREMENT:
-                STACK(stackPointer) += 1.0f;
-                break;
-            case DECREMENT:
-                STACK(stackPointer) -= 1.0f;
-                break;
         }
+        else {
+            if (op < ASIN) {
+                if (op < SEC) {
+                    if (op == SQRT) {
+                        STACK(stackPointer) = sqrt(STACK(stackPointer));
+                    }
+                    else if (op == EXP) {
+                        STACK(stackPointer) = exp(STACK(stackPointer));
+                    }
+                    else if (op == LOG) {
+                        STACK(stackPointer) = log(STACK(stackPointer));
+                    }
+                    else if (op == SIN) {
+                        STACK(stackPointer) = sin(STACK(stackPointer));
+                    }
+                    else if (op == COS) {
+                        STACK(stackPointer) = cos(STACK(stackPointer));
+                    }
+                }
+                else {
+                    if (op == SEC) {
+                        STACK(stackPointer) = 1.0f/cos(STACK(stackPointer));
+                    }
+                    else if (op == CSC) {
+                        STACK(stackPointer) = 1.0f/sin(STACK(stackPointer));
+                    }
+                    else if (op == TAN) {
+                        STACK(stackPointer) = tan(STACK(stackPointer));
+                    }
+                    else if (op == COT) {
+                        STACK(stackPointer) = 1.0f/tan(STACK(stackPointer));
+                    }
+                }
+            }
+            else {
+                if (op < RECIPROCAL) {
+                    if (op == ASIN) {
+                        STACK(stackPointer) = asin(STACK(stackPointer));
+                    }
+                    else if (op == ACOS) {
+                        STACK(stackPointer) = acos(STACK(stackPointer));
+                    }
+                    else if (op == ATAN) {
+                        STACK(stackPointer) = atan(STACK(stackPointer));
+                    }
+                    else if (op == SQUARE) {
+                        float temp = STACK(stackPointer);
+                        STACK(stackPointer) *= temp;
+                    }
+                    else if (op == CUBE) {
+                        float temp = STACK(stackPointer);
+                        STACK(stackPointer) *= temp*temp;
+                    }
+                }
+                else {
+                    if (op == RECIPROCAL) {
+                        STACK(stackPointer) = 1.0f/STACK(stackPointer);
+                    }
+                    else if (op == ADD_CONSTANT) {
+                        STACK(stackPointer) += expression->arg[i];
+                    }
+                    else if (op == MULTIPLY_CONSTANT) {
+                        STACK(stackPointer) *= expression->arg[i];
+                    }
+                    else if (op == POWER_CONSTANT) {
+                        STACK(stackPointer) = pow(STACK(stackPointer), expression->arg[i]);
+                    }
+                }
+            }
+        }
+//        switch (expression->op[i])
+//        {
+//            case CONSTANT:
+//                STACK(++stackPointer) = expression->arg[i];
+//                break;
+//            case VARIABLE0:
+//                STACK(++stackPointer) = var0;
+//                break;
+//            case VARIABLE1:
+//                STACK(++stackPointer) = vars1.x;
+//                break;
+//            case VARIABLE2:
+//                STACK(++stackPointer) = vars1.y;
+//                break;
+//            case VARIABLE3:
+//                STACK(++stackPointer) = vars1.z;
+//                break;
+//            case VARIABLE4:
+//                STACK(++stackPointer) = vars1.w;
+//                break;
+//            case VARIABLE5:
+//                STACK(++stackPointer) = vars2.x;
+//                break;
+//            case VARIABLE6:
+//                STACK(++stackPointer) = vars2.y;
+//                break;
+//            case VARIABLE7:
+//                STACK(++stackPointer) = vars2.z;
+//                break;
+//            case VARIABLE8:
+//                STACK(++stackPointer) = vars2.w;
+//                break;
+//            case GLOBAL:
+//                STACK(++stackPointer) = globalParams[(int) expression->arg[i]];
+//                break;
+//            case ADD:
+//            {
+//                float temp = STACK(stackPointer);
+//                STACK(--stackPointer) += temp;
+//                break;
+//            }
+//            case SUBTRACT:
+//            {
+//                float temp = STACK(stackPointer);
+//                STACK(stackPointer) = temp-STACK(--stackPointer);
+//                break;
+//            }
+//            case MULTIPLY:
+//            {
+//                float temp = STACK(stackPointer);
+//                STACK(--stackPointer) *= temp;
+//                break;
+//            }
+//            case DIVIDE:
+//            {
+//                float temp = STACK(stackPointer);
+//                STACK(stackPointer) = temp/STACK(--stackPointer);
+//                break;
+//            }
+//            case POWER:
+//            {
+//                float temp = STACK(stackPointer);
+//                STACK(stackPointer) = pow(temp, STACK(--stackPointer));
+//                break;
+//            }
+//            case NEGATE:
+//                STACK(stackPointer) *= -1.0f;
+//                break;
+//            case SQRT:
+//                STACK(stackPointer) = sqrt(STACK(stackPointer));
+//                break;
+//            case EXP:
+//                STACK(stackPointer) = exp(STACK(stackPointer));
+//                break;
+//            case LOG:
+//                STACK(stackPointer) = log(STACK(stackPointer));
+//                break;
+//            case SIN:
+//                STACK(stackPointer) = sin(STACK(stackPointer));
+//                break;
+//            case COS:
+//                STACK(stackPointer) = cos(STACK(stackPointer));
+//                break;
+//            case SEC:
+//                STACK(stackPointer) = 1.0f/cos(STACK(stackPointer));
+//                break;
+//            case CSC:
+//                STACK(stackPointer) = 1.0f/sin(STACK(stackPointer));
+//                break;
+//            case TAN:
+//                STACK(stackPointer) = tan(STACK(stackPointer));
+//                break;
+//            case COT:
+//                STACK(stackPointer) = 1.0f/tan(STACK(stackPointer));
+//                break;
+//            case ASIN:
+//                STACK(stackPointer) = asin(STACK(stackPointer));
+//                break;
+//            case ACOS:
+//                STACK(stackPointer) = acos(STACK(stackPointer));
+//                break;
+//            case ATAN:
+//                STACK(stackPointer) = atan(STACK(stackPointer));
+//                break;
+//            case SQUARE:
+//            {
+//                float temp = STACK(stackPointer);
+//                STACK(stackPointer) *= temp;
+//                break;
+//            }
+//            case CUBE:
+//            {
+//                float temp = STACK(stackPointer);
+//                STACK(stackPointer) *= temp*temp;
+//                break;
+//            }
+//            case RECIPROCAL:
+//                STACK(stackPointer) = 1.0f/STACK(stackPointer);
+//                break;
+//            case ADD_CONSTANT:
+//                STACK(stackPointer) += expression->arg[i];
+//                break;
+//            case MULTIPLY_CONSTANT:
+//                STACK(stackPointer) *= expression->arg[i];
+//                break;
+//            case POWER_CONSTANT:
+//                STACK(stackPointer) = pow(STACK(stackPointer), expression->arg[i]);
+//                break;
+//        }
     }
     return STACK(stackPointer);
 }

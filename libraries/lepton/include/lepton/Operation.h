@@ -62,7 +62,7 @@ public:
      * can be used when processing or analyzing parsed expressions.
      */
     enum Id {CONSTANT, VARIABLE, CUSTOM, ADD, SUBTRACT, MULTIPLY, DIVIDE, POWER, NEGATE, SQRT, EXP, LOG,
-             SIN, COS, SEC, CSC, TAN, COT, ASIN, ACOS, ATAN, SQUARE, CUBE, RECIPROCAL, INCREMENT, DECREMENT};
+             SIN, COS, SEC, CSC, TAN, COT, ASIN, ACOS, ATAN, SQUARE, CUBE, RECIPROCAL, ADD_CONSTANT, MULTIPLY_CONSTANT, POWER_CONSTANT};
     /**
      * Get the name of this Operation.
      */
@@ -119,8 +119,9 @@ public:
     class Square;
     class Cube;
     class Reciprocal;
-    class Increment;
-    class Decrement;
+    class AddConstant;
+    class MultiplyConstant;
+    class PowerConstant;
 };
 
 class Operation::Constant : public Operation {
@@ -679,48 +680,91 @@ public:
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 
-class Operation::Increment : public Operation {
+class Operation::AddConstant : public Operation {
 public:
-    Increment() {
+    AddConstant(double value) : value(value) {
     }
     std::string getName() const {
-        return "increment";
+        std::stringstream name;
+        name << value << "+";
+        return name.str();
     }
     Id getId() const {
-        return INCREMENT;
+        return ADD_CONSTANT;
     }
     int getNumArguments() const {
         return 1;
     }
     Operation* clone() const {
-        return new Increment();
+        return new AddConstant(value);
     }
     double evaluate(double* args, const std::map<std::string, double>& variables) const {
-        return args[0]+1.0;
+        return args[0]+value;
     }
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
+    double getValue() const {
+        return value;
+    }
+private:
+    double value;
 };
 
-class Operation::Decrement : public Operation {
+class Operation::MultiplyConstant : public Operation {
 public:
-    Decrement() {
+    MultiplyConstant(double value) : value(value) {
     }
     std::string getName() const {
-        return "decrement";
+        std::stringstream name;
+        name << value << "*";
+        return name.str();
     }
     Id getId() const {
-        return DECREMENT;
+        return MULTIPLY_CONSTANT;
     }
     int getNumArguments() const {
         return 1;
     }
     Operation* clone() const {
-        return new Decrement();
+        return new MultiplyConstant(value);
     }
     double evaluate(double* args, const std::map<std::string, double>& variables) const {
-        return args[0]-1.0;
+        return args[0]*value;
     }
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
+    double getValue() const {
+        return value;
+    }
+private:
+    double value;
+};
+
+class Operation::PowerConstant : public Operation {
+public:
+    PowerConstant(double value) : value(value) {
+    }
+    std::string getName() const {
+        std::stringstream name;
+        name << "^" << value;
+        return name.str();
+    }
+    Id getId() const {
+        return POWER_CONSTANT;
+    }
+    int getNumArguments() const {
+        return 1;
+    }
+    Operation* clone() const {
+        return new PowerConstant(value);
+    }
+    double evaluate(double* args, const std::map<std::string, double>& variables) const {
+        return std::pow(args[0], value);
+    }
+    ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
+    double getValue() const {
+        return value;
+    }
+private:
+    double value;
 };
 
 } // namespace Lepton

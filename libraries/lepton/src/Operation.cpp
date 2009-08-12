@@ -86,7 +86,7 @@ ExpressionTreeNode Operation::Power::differentiate(const std::vector<ExpressionT
                                                  ExpressionTreeNode(new Operation::Multiply(),
                                                                     children[1],
                                                                     ExpressionTreeNode(new Operation::Power(),
-                                                                                       children[0], ExpressionTreeNode(new Operation::Decrement(), children[1]))),
+                                                                                       children[0], ExpressionTreeNode(new Operation::AddConstant(-1.0), children[1]))),
                                                  childDerivs[0]),
                               ExpressionTreeNode(new Operation::Multiply(),
                                                  ExpressionTreeNode(new Operation::Multiply(),
@@ -101,8 +101,7 @@ ExpressionTreeNode Operation::Negate::differentiate(const std::vector<Expression
 
 ExpressionTreeNode Operation::Sqrt::differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const {
     return ExpressionTreeNode(new Operation::Multiply(),
-                              ExpressionTreeNode(new Operation::Multiply(),
-                                                 ExpressionTreeNode(new Operation::Constant(0.5)),
+                              ExpressionTreeNode(new Operation::MultiplyConstant(0.5),
                                                  ExpressionTreeNode(new Operation::Reciprocal(),
                                                                     ExpressionTreeNode(new Operation::Sqrt(), children[0]))),
                               childDerivs[0]);
@@ -189,23 +188,21 @@ ExpressionTreeNode Operation::Acos::differentiate(const std::vector<ExpressionTr
 ExpressionTreeNode Operation::Atan::differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const {
     return ExpressionTreeNode(new Operation::Multiply(),
                               ExpressionTreeNode(new Operation::Reciprocal(),
-                                                 ExpressionTreeNode(new Operation::Increment(),
+                                                 ExpressionTreeNode(new Operation::AddConstant(1.0),
                                                                     ExpressionTreeNode(new Operation::Square(), children[0]))),
                               childDerivs[0]);
 }
 
 ExpressionTreeNode Operation::Square::differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const {
     return ExpressionTreeNode(new Operation::Multiply(),
-                              ExpressionTreeNode(new Operation::Multiply(),
-                                                 ExpressionTreeNode(new Operation::Constant(2.0)),
+                              ExpressionTreeNode(new Operation::MultiplyConstant(2.0),
                                                  children[0]),
                               childDerivs[0]);
 }
 
 ExpressionTreeNode Operation::Cube::differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const {
     return ExpressionTreeNode(new Operation::Multiply(),
-                              ExpressionTreeNode(new Operation::Multiply(),
-                                                 ExpressionTreeNode(new Operation::Constant(3.0)),
+                              ExpressionTreeNode(new Operation::MultiplyConstant(3.0),
                                                  ExpressionTreeNode(new Operation::Square(), children[0])),
                               childDerivs[0]);
 }
@@ -218,10 +215,19 @@ ExpressionTreeNode Operation::Reciprocal::differentiate(const std::vector<Expres
                               childDerivs[0]);
 }
 
-ExpressionTreeNode Operation::Increment::differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const {
+ExpressionTreeNode Operation::AddConstant::differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const {
     return childDerivs[0];
 }
 
-ExpressionTreeNode Operation::Decrement::differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const {
-    return childDerivs[0];
+ExpressionTreeNode Operation::MultiplyConstant::differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const {
+    return ExpressionTreeNode(new Operation::MultiplyConstant(value),
+                              childDerivs[0]);
+}
+
+ExpressionTreeNode Operation::PowerConstant::differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const {
+    return ExpressionTreeNode(ExpressionTreeNode(new Operation::Multiply(),
+                                                 ExpressionTreeNode(new Operation::MultiplyConstant(value),
+                                                                    ExpressionTreeNode(new Operation::PowerConstant(value-1),
+                                                                                       children[0])),
+                                                 childDerivs[0]));
 }

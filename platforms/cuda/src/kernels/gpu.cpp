@@ -146,7 +146,7 @@ static Expression<SIZE> createExpression(const string& expression, const Lepton:
         switch (op.getId()) {
             case Operation::CONSTANT:
                 exp.op[i] = CONSTANT;
-                exp.arg[i] = op.evaluate(NULL, map<string, double>());
+                exp.arg[i] = dynamic_cast<const Operation::Constant*>(&op)->getValue();
                 break;
             case Operation::VARIABLE:
                 if (variables.size() > 0 && op.getName() == variables[0])
@@ -239,11 +239,17 @@ static Expression<SIZE> createExpression(const string& expression, const Lepton:
             case Operation::RECIPROCAL:
                 exp.op[i] = RECIPROCAL;
                 break;
-            case Operation::INCREMENT:
-                exp.op[i] = INCREMENT;
+            case Operation::ADD_CONSTANT:
+                exp.op[i] = ADD_CONSTANT;
+                exp.arg[i] = dynamic_cast<const Operation::AddConstant*>(&op)->getValue();
                 break;
-            case Operation::DECREMENT:
-                exp.op[i] = DECREMENT;
+            case Operation::MULTIPLY_CONSTANT:
+                exp.op[i] = MULTIPLY_CONSTANT;
+                exp.arg[i] = dynamic_cast<const Operation::MultiplyConstant*>(&op)->getValue();
+                break;
+            case Operation::POWER_CONSTANT:
+                exp.op[i] = POWER_CONSTANT;
+                exp.arg[i] = dynamic_cast<const Operation::PowerConstant*>(&op)->getValue();
                 break;
         }
     }
