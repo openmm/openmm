@@ -82,7 +82,7 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
                 float4 combinedParams = make_float4(0, 0, 0, 0);
                 for (int k = 0; k < cSim.customParameters; k++)
                 {
-                    float value = kEvaluateExpression_kernel(&combiningRules[k], &stack[cSim.customExpressionStackSize*threadIdx.x], 0.0f, params, psA[j].params);
+                    float value = kEvaluateExpression_kernel(&combiningRules[k], stack, 0.0f, params, psA[j].params);
                     switch (k)
                     {
                         case 0:
@@ -112,8 +112,8 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
 #endif
                 float r         = sqrt(dx*dx + dy*dy + dz*dz);
                 float invR      = 1.0f/r;
-                float dEdR      = -kEvaluateExpression_kernel(&forceExp, &stack[cSim.customExpressionStackSize*threadIdx.x], r, combinedParams, combinedParams)*invR;
-                float energy    = kEvaluateExpression_kernel(&energyExp, &stack[cSim.customExpressionStackSize*threadIdx.x], r, combinedParams, combinedParams);
+                float dEdR      = -kEvaluateExpression_kernel(&forceExp, stack, r, combinedParams, combinedParams)*invR;
+                float energy    = kEvaluateExpression_kernel(&energyExp, stack, r, combinedParams, combinedParams);
 #ifdef USE_CUTOFF
                 if (!(excl & 0x1) || r > cSim.nonbondedCutoff)
 #else
@@ -186,7 +186,7 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
                         float4 combinedParams = make_float4(0, 0, 0, 0);
                         for (int k = 0; k < cSim.customParameters; k++)
                         {
-                            float value = kEvaluateExpression_kernel(&combiningRules[k], &stack[cSim.customExpressionStackSize*threadIdx.x], 0.0f, params, psA[tj].params);
+                            float value = kEvaluateExpression_kernel(&combiningRules[k], stack, 0.0f, params, psA[tj].params);
                             switch (k)
                             {
                                 case 0:
@@ -216,8 +216,8 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
 #endif
                         float r         = sqrt(dx*dx + dy*dy + dz*dz);
                         float invR      = 1.0f/r;
-                        float dEdR      = -kEvaluateExpression_kernel(&forceExp, &stack[cSim.customExpressionStackSize*threadIdx.x], r, combinedParams, combinedParams)*invR;
-                        float energy    = kEvaluateExpression_kernel(&energyExp, &stack[cSim.customExpressionStackSize*threadIdx.x], r, combinedParams, combinedParams);
+                        float dEdR      = -kEvaluateExpression_kernel(&forceExp, stack, r, combinedParams, combinedParams)*invR;
+                        float energy    = kEvaluateExpression_kernel(&energyExp, stack, r, combinedParams, combinedParams);
 #ifdef USE_CUTOFF
                         if (r > cSim.nonbondedCutoff)
                         {
@@ -252,7 +252,7 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
                             float4 combinedParams = make_float4(0, 0, 0, 0);
                             for (int k = 0; k < cSim.customParameters; k++)
                             {
-                                float value = kEvaluateExpression_kernel(&combiningRules[k], &stack[cSim.customExpressionStackSize*threadIdx.x], 0.0f, params, psA[j].params);
+                                float value = kEvaluateExpression_kernel(&combiningRules[k], stack, 0.0f, params, psA[j].params);
                                 switch (k)
                                 {
                                     case 0:
@@ -282,8 +282,8 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
 #endif
                             float r         = sqrt(dx*dx + dy*dy + dz*dz);
                             float invR      = 1.0f/r;
-                            float dEdR      = -kEvaluateExpression_kernel(&forceExp, &stack[cSim.customExpressionStackSize*threadIdx.x], r, combinedParams, combinedParams)*invR;
-                            float energy    = kEvaluateExpression_kernel(&energyExp, &stack[cSim.customExpressionStackSize*threadIdx.x], r, combinedParams, combinedParams);
+                            float dEdR      = -kEvaluateExpression_kernel(&forceExp, stack, r, combinedParams, combinedParams)*invR;
+                            float energy    = kEvaluateExpression_kernel(&energyExp, stack, r, combinedParams, combinedParams);
 #ifdef USE_CUTOFF
                             if (r > cSim.nonbondedCutoff)
                             {
@@ -354,7 +354,7 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
                     float4 combinedParams = make_float4(0, 0, 0, 0);
                     for (int k = 0; k < cSim.customParameters; k++)
                     {
-                        float value = kEvaluateExpression_kernel(&combiningRules[k], &stack[cSim.customExpressionStackSize*threadIdx.x], 0.0f, params, psA[tj].params);
+                        float value = kEvaluateExpression_kernel(&combiningRules[k], stack, 0.0f, params, psA[tj].params);
                         switch (k)
                         {
                             case 0:
@@ -384,8 +384,8 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
 #endif
                     float r         = sqrt(dx*dx + dy*dy + dz*dz);
                     float invR      = 1.0f/r;
-                    float dEdR      = -kEvaluateExpression_kernel(&forceExp, &stack[cSim.customExpressionStackSize*threadIdx.x], r, combinedParams, combinedParams)*invR;
-                    float energy    = kEvaluateExpression_kernel(&energyExp, &stack[cSim.customExpressionStackSize*threadIdx.x], r, combinedParams, combinedParams);
+                    float dEdR      = -kEvaluateExpression_kernel(&forceExp, stack, r, combinedParams, combinedParams)*invR;
+                    float energy    = kEvaluateExpression_kernel(&energyExp, stack, r, combinedParams, combinedParams);
 #ifdef USE_CUTOFF
                     if (!(excl & 0x1) || r > cSim.nonbondedCutoff)
 #else
@@ -469,8 +469,8 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Exceptions_kernel)()
 #endif
         float r         = sqrt(dx*dx + dy*dy + dz*dz);
         float invR      = 1.0f/r;
-        float dEdR      = -kEvaluateExpression_kernel(&forceExp, &stack[cSim.customExpressionStackSize*threadIdx.x], r, params, params)*invR;
-        float energy    = kEvaluateExpression_kernel(&energyExp, &stack[cSim.customExpressionStackSize*threadIdx.x], r, params, params);
+        float dEdR      = -kEvaluateExpression_kernel(&forceExp, stack, r, params, params)*invR;
+        float energy    = kEvaluateExpression_kernel(&energyExp, stack, r, params, params);
 #ifdef USE_CUTOFF
         if (r > cSim.nonbondedCutoff)
         {

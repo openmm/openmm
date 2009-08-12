@@ -97,6 +97,8 @@ void SetCustomNonbondedGlobalParams(const vector<float>& paramValues)
     RTERROR(status, "SetCustomNonbondedGlobalParams: cudaMemcpyToSymbol failed");
 }
 
+#define STACK(y) stack[(y)*blockDim.x+threadIdx.x]
+
 template<int SIZE>
 __device__ float kEvaluateExpression_kernel(Expression<SIZE>* expression, float* stack, float var0, float4 vars1, float4 vars2)
 {
@@ -106,131 +108,131 @@ __device__ float kEvaluateExpression_kernel(Expression<SIZE>* expression, float*
         switch (expression->op[i])
         {
             case CONSTANT:
-                stack[++stackPointer] = expression->arg[i];
+                STACK(++stackPointer) = expression->arg[i];
                 break;
             case VARIABLE0:
-                stack[++stackPointer] = var0;
+                STACK(++stackPointer) = var0;
                 break;
             case VARIABLE1:
-                stack[++stackPointer] = vars1.x;
+                STACK(++stackPointer) = vars1.x;
                 break;
             case VARIABLE2:
-                stack[++stackPointer] = vars1.y;
+                STACK(++stackPointer) = vars1.y;
                 break;
             case VARIABLE3:
-                stack[++stackPointer] = vars1.z;
+                STACK(++stackPointer) = vars1.z;
                 break;
             case VARIABLE4:
-                stack[++stackPointer] = vars1.w;
+                STACK(++stackPointer) = vars1.w;
                 break;
             case VARIABLE5:
-                stack[++stackPointer] = vars2.x;
+                STACK(++stackPointer) = vars2.x;
                 break;
             case VARIABLE6:
-                stack[++stackPointer] = vars2.y;
+                STACK(++stackPointer) = vars2.y;
                 break;
             case VARIABLE7:
-                stack[++stackPointer] = vars2.z;
+                STACK(++stackPointer) = vars2.z;
                 break;
             case VARIABLE8:
-                stack[++stackPointer] = vars2.w;
+                STACK(++stackPointer) = vars2.w;
                 break;
             case GLOBAL:
-                stack[++stackPointer] = globalParams[(int) expression->arg[i]];
+                STACK(++stackPointer) = globalParams[(int) expression->arg[i]];
                 break;
             case ADD:
             {
-                float temp = stack[stackPointer];
-                stack[stackPointer] = temp+stack[--stackPointer];
+                float temp = STACK(stackPointer);
+                STACK(--stackPointer) += temp;
                 break;
             }
             case SUBTRACT:
             {
-                float temp = stack[stackPointer];
-                stack[stackPointer] = temp-stack[--stackPointer];
+                float temp = STACK(stackPointer);
+                STACK(stackPointer) = temp-STACK(--stackPointer);
                 break;
             }
             case MULTIPLY:
             {
-                float temp = stack[stackPointer];
-                stack[stackPointer] = temp*stack[--stackPointer];
+                float temp = STACK(stackPointer);
+                STACK(--stackPointer) *= temp;
                 break;
             }
             case DIVIDE:
             {
-                float temp = stack[stackPointer];
-                stack[stackPointer] = temp/stack[--stackPointer];
+                float temp = STACK(stackPointer);
+                STACK(stackPointer) = temp/STACK(--stackPointer);
                 break;
             }
             case POWER:
             {
-                float temp = stack[stackPointer];
-                stack[stackPointer] = pow(temp, stack[--stackPointer]);
+                float temp = STACK(stackPointer);
+                STACK(stackPointer) = pow(temp, STACK(--stackPointer));
                 break;
             }
             case NEGATE:
-                stack[stackPointer] = -stack[stackPointer];
+                STACK(stackPointer) *= -1.0f;
                 break;
             case SQRT:
-                stack[stackPointer] = sqrt(stack[stackPointer]);
+                STACK(stackPointer) = sqrt(STACK(stackPointer));
                 break;
             case EXP:
-                stack[stackPointer] = exp(stack[stackPointer]);
+                STACK(stackPointer) = exp(STACK(stackPointer));
                 break;
             case LOG:
-                stack[stackPointer] = log(stack[stackPointer]);
+                STACK(stackPointer) = log(STACK(stackPointer));
                 break;
             case SIN:
-                stack[stackPointer] = sin(stack[stackPointer]);
+                STACK(stackPointer) = sin(STACK(stackPointer));
                 break;
             case COS:
-                stack[stackPointer] = cos(stack[stackPointer]);
+                STACK(stackPointer) = cos(STACK(stackPointer));
                 break;
             case SEC:
-                stack[stackPointer] = 1.0f/cos(stack[stackPointer]);
+                STACK(stackPointer) = 1.0f/cos(STACK(stackPointer));
                 break;
             case CSC:
-                stack[stackPointer] = 1.0f/sin(stack[stackPointer]);
+                STACK(stackPointer) = 1.0f/sin(STACK(stackPointer));
                 break;
             case TAN:
-                stack[stackPointer] = tan(stack[stackPointer]);
+                STACK(stackPointer) = tan(STACK(stackPointer));
                 break;
             case COT:
-                stack[stackPointer] = 1.0f/tan(stack[stackPointer]);
+                STACK(stackPointer) = 1.0f/tan(STACK(stackPointer));
                 break;
             case ASIN:
-                stack[stackPointer] = asin(stack[stackPointer]);
+                STACK(stackPointer) = asin(STACK(stackPointer));
                 break;
             case ACOS:
-                stack[stackPointer] = acos(stack[stackPointer]);
+                STACK(stackPointer) = acos(STACK(stackPointer));
                 break;
             case ATAN:
-                stack[stackPointer] = atan(stack[stackPointer]);
+                STACK(stackPointer) = atan(STACK(stackPointer));
                 break;
             case SQUARE:
             {
-                float temp = stack[stackPointer];
-                stack[stackPointer] = temp*temp;
+                float temp = STACK(stackPointer);
+                STACK(stackPointer) *= temp;
                 break;
             }
             case CUBE:
             {
-                float temp = stack[stackPointer];
-                stack[stackPointer] = temp*temp*temp;
+                float temp = STACK(stackPointer);
+                STACK(stackPointer) *= temp*temp;
                 break;
             }
             case RECIPROCAL:
-                stack[stackPointer] = 1.0f/stack[stackPointer];
+                STACK(stackPointer) = 1.0f/STACK(stackPointer);
                 break;
             case INCREMENT:
-                stack[stackPointer] = stack[stackPointer]+1.0f;
+                STACK(stackPointer) += 1.0f;
                 break;
             case DECREMENT:
-                stack[stackPointer] = stack[stackPointer]-1.0f;
+                STACK(stackPointer) -= 1.0f;
                 break;
         }
     }
-    return stack[stackPointer];
+    return STACK(stackPointer);
 }
 
 // Include versions of the kernels for N^2 calculations.
