@@ -459,6 +459,43 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
 
     }
 
+    // Now subtract off the exclusions, since they were implicitly included in the reciprocal space sum.
+
+    for (int i = 0; i < numberOfAtoms; i++)
+        for (int j = 1; j <= exclusions[i][0]; j++)
+            if (exclusions[i][j] > i) {
+               int ii = i;
+               int jj = exclusions[i][j];
+
+               RealOpenMM deltaR[2][ReferenceForce::LastDeltaRIndex];
+               ReferenceForce::getDeltaRPeriodic( atomCoordinates[jj], atomCoordinates[ii], periodicBoxSize, deltaR[0] );
+               RealOpenMM r         = deltaR[0][ReferenceForce::RIndex];
+               RealOpenMM inverseR  = one/(deltaR[0][ReferenceForce::RIndex]);
+               RealOpenMM alphaR    = alphaEwald * r;
+               RealOpenMM dEdR      = atomParameters[ii][QIndex] * atomParameters[jj][QIndex] * inverseR * inverseR * inverseR;
+                          dEdR      = (RealOpenMM)(dEdR * (erf(alphaR) - 2 * alphaR * exp ( - alphaR * alphaR) / SQRT_PI ));
+
+               // accumulate forces
+
+               for( int kk = 0; kk < 3; kk++ ){
+                  RealOpenMM force  = dEdR*deltaR[0][kk];
+                  forces[ii][kk]   -= force;
+                  forces[jj][kk]   += force;
+               }
+
+               // accumulate energies
+
+               realSpaceEwaldEnergy = atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*inverseR*erf(alphaR);
+
+                if( totalEnergy )
+                      *totalEnergy -= realSpaceEwaldEnergy;
+
+                if( energyByAtom ){
+                   energyByAtom[ii] -= realSpaceEwaldEnergy;
+                   energyByAtom[jj] -= realSpaceEwaldEnergy;
+                }
+            }
+
 // ***********************************************************************
 
 

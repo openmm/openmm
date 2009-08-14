@@ -446,7 +446,7 @@ __global__ void kCalculateLocalForces_kernel()
         pos += blockDim.x * gridDim.x;
     }   
 
-    if (cSim.nonbondedMethod == NO_CUTOFF)
+    if (cSim.nonbondedMethod == NO_CUTOFF || cSim.nonbondedMethod == EWALD)
     {
         while (pos < cSim.LJ14_offset)
         {

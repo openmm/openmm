@@ -436,7 +436,7 @@ void ReferenceCalcNonbondedForceKernel::executeForces(ContextImpl& context) {
     clj.calculatePairIxn(numParticles, posData, particleParamArray, exclusionArray, 0, forceData, 0, 0);
     ReferenceBondForce refBondForce;
     ReferenceLJCoulomb14 nonbonded14;
-    if (nonbondedMethod != NoCutoff)
+    if (nonbondedMethod == CutoffNonPeriodic || nonbondedMethod == CutoffPeriodic)
         nonbonded14.setUseCutoff(nonbondedCutoff, rfDielectric);
     refBondForce.calculateForce(num14, bonded14IndexArray, posData, bonded14ParamArray, forceData, 0, 0, 0, nonbonded14);
 }
@@ -462,7 +462,7 @@ double ReferenceCalcNonbondedForceKernel::executeEnergy(ContextImpl& context) {
     clj.calculatePairIxn(numParticles, posData, particleParamArray, exclusionArray, 0, forceData, 0, &energy);
     ReferenceBondForce refBondForce;
     ReferenceLJCoulomb14 nonbonded14;
-    if (nonbondedMethod != NoCutoff)
+    if (nonbondedMethod == CutoffNonPeriodic || nonbondedMethod == CutoffPeriodic)
         nonbonded14.setUseCutoff(nonbondedCutoff, rfDielectric);
     RealOpenMM* energyArray = new RealOpenMM[num14];
     for (int i = 0; i < num14; ++i)
