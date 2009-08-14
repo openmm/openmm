@@ -76,9 +76,9 @@ __global__ void kApplyFirstSettle_kernel()
         float m1            = 1.0/cSim.pVelm4[atomID.y].w;
         float m2            = 1.0/cSim.pVelm4[atomID.z].w;
 
-        // Subtract the average old atom position to improve numerical precision.
+        // Translate the molecule to the origin to improve numerical precision.
 
-        float3 center = make_float3((apos0.x+apos1.x+apos2.x)/3.0f, (apos0.y+apos1.y+apos2.y)/3.0f, (apos0.z+apos1.z+apos2.z)/3.0f);
+        float3 center = make_float3(apos0.x, apos0.y, apos0.z);
         apos0.x -= center.x;
         apos0.y -= center.y;
         apos0.z -= center.z;
@@ -97,8 +97,6 @@ __global__ void kApplyFirstSettle_kernel()
         float xc0 = apos2.x-apos0.x;
         float yc0 = apos2.y-apos0.y;
         float zc0 = apos2.z-apos0.z;
-        float dist1 = sqrt(xb0*xb0 + yb0*yb0 + zb0*zb0);
-        float dist2 = sqrt(xc0*xc0 + yc0*yc0 + zc0*zc0);
 
         float totalMass = m0+m1+m2;
         float xcom = ((apos0.x+xp0.x)*m0 + (apos1.x+xp1.x)*m1 + (apos2.x+xp2.x)*m2) / totalMass;
@@ -142,8 +140,6 @@ __global__ void kApplyFirstSettle_kernel()
         float yb0d = trns12*xb0 + trns22*yb0 + trns32*zb0;
         float xc0d = trns11*xc0 + trns21*yc0 + trns31*zc0;
         float yc0d = trns12*xc0 + trns22*yc0 + trns32*zc0;
-//        float xa1d = trns11*xa1 + trns21*ya1 + trns31*za1;
-//        float ya1d = trns12*xa1 + trns22*ya1 + trns32*za1;
         float za1d = trns13*xa1 + trns23*ya1 + trns33*za1;
         float  xb1d = trns11*xb1 + trns21*yb1 + trns31*zb1;
         float  yb1d = trns12*xb1 + trns22*yb1 + trns32*zb1;
@@ -259,8 +255,6 @@ __global__ void kApplySecondSettle_kernel()
         float xc0 = apos2.x-apos0.x;
         float yc0 = apos2.y-apos0.y;
         float zc0 = apos2.z-apos0.z;
-        float dist1 = sqrt(xb0*xb0 + yb0*yb0 + zb0*zb0);
-        float dist2 = sqrt(xc0*xc0 + yc0*yc0 + zc0*zc0);
 
         float totalMass = m0+m1+m2;
         float xcom = ((apos0.x+xp0.x)*m0 + (apos1.x+xp1.x)*m1 + (apos2.x+xp2.x)*m2) / totalMass;
@@ -304,8 +298,6 @@ __global__ void kApplySecondSettle_kernel()
         float yb0d = trns12*xb0 + trns22*yb0 + trns32*zb0;
         float xc0d = trns11*xc0 + trns21*yc0 + trns31*zc0;
         float yc0d = trns12*xc0 + trns22*yc0 + trns32*zc0;
-//        float xa1d = trns11*xa1 + trns21*ya1 + trns31*za1;
-//        float ya1d = trns12*xa1 + trns22*ya1 + trns32*za1;
         float za1d = trns13*xa1 + trns23*ya1 + trns33*za1;
         float  xb1d = trns11*xb1 + trns21*yb1 + trns31*zb1;
         float  yb1d = trns12*xb1 + trns22*yb1 + trns32*zb1;
