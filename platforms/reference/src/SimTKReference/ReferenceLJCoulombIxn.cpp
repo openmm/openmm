@@ -433,8 +433,7 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
                   sig2     *= sig2;
        RealOpenMM sig6      = sig2*sig2*sig2;
        RealOpenMM eps       = atomParameters[ii][EpsIndex]*atomParameters[jj][EpsIndex];
-
-                  dEdR     += eps*( twelve*sig6 - six )*sig6;
+                  dEdR     += eps*( twelve*sig6 - six )*sig6*inverseR*inverseR;
 
        // accumulate forces
 
