@@ -79,7 +79,7 @@ void testLargeSystem() {
 //    cout << "force 0: " << forces[0] << endl;
 //    cout << "force 1: " << forces[1] << endl;
     cout << "PotentialEnergy: " << state.getPotentialEnergy() << endl;
-    ASSERT_EQUAL_TOL(-430355, state.getPotentialEnergy(), 100*TOL);
+    ASSERT_EQUAL_TOL(-430355.0, state.getPotentialEnergy(), 100*TOL);
 //    ASSERT_EQUAL_VEC(Vec3(-123.711, 64.1877, -302.716), forces[0], 10*TOL);
 //    ASSERT_EQUAL_VEC(Vec3(123.711, -64.1877, 302.716), forces[1], 10*TOL);
 }
