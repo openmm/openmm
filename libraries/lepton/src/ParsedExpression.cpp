@@ -54,8 +54,9 @@ double ParsedExpression::evaluate(const std::map<std::string, double>& variables
 }
 
 double ParsedExpression::evaluate(const ExpressionTreeNode& node, const map<string, double>& variables) {
-    vector<double> args(node.getChildren().size());
-    for (int i = 0; i < args.size(); i++)
+    int numArgs = node.getChildren().size();
+    vector<double> args(max(numArgs, 1));
+    for (int i = 0; i < numArgs; i++)
         args[i] = evaluate(node.getChildren()[i], variables);
     return node.getOperation().evaluate(&args[0], variables);
 }
@@ -84,19 +85,19 @@ ExpressionTreeNode ParsedExpression::preevaluateVariables(const ExpressionTreeNo
         return ExpressionTreeNode(new Operation::Constant(iter->second));
     }
     vector<ExpressionTreeNode> children(node.getChildren().size());
-    for (int i = 0; i < children.size(); i++)
+    for (int i = 0; i < (int) children.size(); i++)
         children[i] = preevaluateVariables(node.getChildren()[i], variables);
     return ExpressionTreeNode(node.getOperation().clone(), children);
 }
 
 ExpressionTreeNode ParsedExpression::precalculateConstantSubexpressions(const ExpressionTreeNode& node) {
     vector<ExpressionTreeNode> children(node.getChildren().size());
-    for (int i = 0; i < children.size(); i++)
+    for (int i = 0; i < (int) children.size(); i++)
         children[i] = precalculateConstantSubexpressions(node.getChildren()[i]);
     ExpressionTreeNode result = ExpressionTreeNode(node.getOperation().clone(), children);
     if (node.getOperation().getId() == Operation::VARIABLE)
         return result;
-    for (int i = 0; i < children.size(); i++)
+    for (int i = 0; i < (int) children.size(); i++)
         if (children[i].getOperation().getId() != Operation::CONSTANT)
             return result;
     return ExpressionTreeNode(new Operation::Constant(evaluate(result, map<string, double>())));
@@ -104,7 +105,7 @@ ExpressionTreeNode ParsedExpression::precalculateConstantSubexpressions(const Ex
 
 ExpressionTreeNode ParsedExpression::substituteSimplerExpression(const ExpressionTreeNode& node) {
     vector<ExpressionTreeNode> children(node.getChildren().size());
-    for (int i = 0; i < children.size(); i++)
+    for (int i = 0; i < (int) children.size(); i++)
         children[i] = substituteSimplerExpression(node.getChildren()[i]);
     switch (node.getOperation().getId()) {
         case Operation::ADD:
@@ -212,7 +213,7 @@ ParsedExpression ParsedExpression::differentiate(const std::string& variable) co
 
 ExpressionTreeNode ParsedExpression::differentiate(const ExpressionTreeNode& node, const std::string& variable) {
     vector<ExpressionTreeNode> childDerivs(node.getChildren().size());
-    for (int i = 0; i < childDerivs.size(); i++)
+    for (int i = 0; i < (int) childDerivs.size(); i++)
         childDerivs[i] = differentiate(node.getChildren()[i], variable);
     return node.getOperation().differentiate(node.getChildren(),childDerivs, variable);
 }
@@ -231,7 +232,7 @@ ostream& Lepton::operator<<(ostream& out, const ExpressionTreeNode& node) {
     out << node.getOperation().getName();
     if (node.getChildren().size() > 0) {
         out << "(";
-        for (int i = 0; i < node.getChildren().size(); i++) {
+        for (int i = 0; i < (int) node.getChildren().size(); i++) {
             if (i > 0)
                 out << ", ";
             out << node.getChildren()[i];

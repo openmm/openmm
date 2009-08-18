@@ -76,7 +76,7 @@ ParseToken Parser::getNextToken(string expression, int start) {
     if (c == ' ') {
         // White space
 
-        for (int pos = start+1; pos < expression.size(); pos++) {
+        for (int pos = start+1; pos < (int) expression.size(); pos++) {
             if (expression[pos] != ' ')
                 return ParseToken(expression.substr(start, pos-start), ParseToken::Whitespace);
         }
@@ -88,7 +88,7 @@ ParseToken Parser::getNextToken(string expression, int start) {
         bool foundDecimal = (c == '.');
         bool foundExp = false;
         int pos;
-        for (pos = start+1; pos < expression.size(); pos++) {
+        for (pos = start+1; pos < (int) expression.size(); pos++) {
             c = expression[pos];
             if (Digits.find(c) != string::npos)
                 continue;
@@ -98,7 +98,7 @@ ParseToken Parser::getNextToken(string expression, int start) {
             }
             if ((c == 'e' || c == 'E') && !foundExp) {
                 foundExp = true;
-                if (pos < expression.size()-1 && expression[pos+1] == '-')
+                if (pos < (int) expression.size()-1 && expression[pos+1] == '-')
                     pos++;
                 continue;
             }
@@ -109,7 +109,7 @@ ParseToken Parser::getNextToken(string expression, int start) {
 
     // A variable, function, or left parenthesis
 
-    for (int pos = start; pos < expression.size(); pos++) {
+    for (int pos = start; pos < (int) expression.size(); pos++) {
         c = expression[pos];
         if (c == '(')
             return ParseToken(expression.substr(start, pos-start+1), ParseToken::Function);
@@ -122,7 +122,7 @@ ParseToken Parser::getNextToken(string expression, int start) {
 vector<ParseToken> Parser::tokenize(string expression) {
     vector<ParseToken> tokens;
     int pos = 0;
-    while (pos < expression.size()) {
+    while (pos < (int) expression.size()) {
         ParseToken token = getNextToken(expression, pos);
         if (token.getType() != ParseToken::Whitespace)
             tokens.push_back(token);
@@ -176,7 +176,7 @@ ExpressionTreeNode Parser::parsePrecedence(const vector<ParseToken>& tokens, int
         bool moreArgs;
         do {
             args.push_back(parsePrecedence(tokens, pos, customFunctions, 0));
-            moreArgs = (pos < tokens.size() && tokens[pos].getType() == ParseToken::Comma);
+            moreArgs = (pos < (int) tokens.size() && tokens[pos].getType() == ParseToken::Comma);
             if (moreArgs)
                 pos++;
         } while (moreArgs);
@@ -195,7 +195,7 @@ ExpressionTreeNode Parser::parsePrecedence(const vector<ParseToken>& tokens, int
 
     // Now deal with the next binary operator.
 
-    while (pos < tokens.size() && tokens[pos].getType() == ParseToken::Operator) {
+    while (pos < (int) tokens.size() && tokens[pos].getType() == ParseToken::Operator) {
         token = tokens[pos];
         int op = Operators.find(token.getText());
         int opPrecedence = Precedence[op];

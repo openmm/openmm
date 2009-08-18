@@ -170,7 +170,6 @@ int main() {
 // Suppress irrelevant warnings from Microsoft's compiler.
 #ifdef _MSC_VER
     #pragma warning(disable:4996)   // sprintf is unsafe 
-    #pragma warning(disable:4251)   // no dll interface for some classes
 #endif
 
 #include "OpenMM.h"

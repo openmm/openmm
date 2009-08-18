@@ -248,24 +248,10 @@ protected:
     const ContextImpl& getContextImpl(const Context& context) const;
     std::vector<std::string> platformProperties;
 private:
-
-// Retarded visual studio compiler complains about being unable to 
-// export private stl class members.
-// This stanza explains that it should temporarily shut up.
-#if defined(_MSC_VER)
-#pragma warning(push)
-#pragma warning(disable:4251)
-#endif
-
     std::map<std::string, KernelFactory*> kernelFactories;
     std::map<std::string, StreamFactory*> streamFactories;
     std::map<std::string, std::string> defaultProperties;
     static std::vector<Platform*>& getPlatforms();
-
-#if defined(_MSC_VER)
-#pragma warning(pop)
-#endif
-
 };
 
 } // namespace OpenMM

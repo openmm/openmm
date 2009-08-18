@@ -42,7 +42,7 @@ ExpressionProgram::ExpressionProgram() : maxArgs(0), stackSize(0) {
 ExpressionProgram::ExpressionProgram(const ParsedExpression& expression) : maxArgs(0), stackSize(0) {
     buildProgram(expression.getRootNode());
     int currentStackSize = 0;
-    for (int i = 0; i < operations.size(); i++) {
+    for (int i = 0; i < (int) operations.size(); i++) {
         int args = operations[i]->getNumArguments();
         if (args > maxArgs)
             maxArgs = args;
@@ -53,7 +53,7 @@ ExpressionProgram::ExpressionProgram(const ParsedExpression& expression) : maxAr
 }
 
 ExpressionProgram::~ExpressionProgram() {
-    for (int i = 0; i < operations.size(); i++)
+    for (int i = 0; i < (int) operations.size(); i++)
         delete operations[i];
 }
 
@@ -65,7 +65,7 @@ ExpressionProgram& ExpressionProgram::operator=(const ExpressionProgram& program
     maxArgs = program.maxArgs;
     stackSize = program.stackSize;
     operations.resize(program.operations.size());
-    for (int i = 0; i < operations.size(); i++)
+    for (int i = 0; i < (int) operations.size(); i++)
         operations[i] = program.operations[i]->clone();
     return *this;
 }
@@ -93,10 +93,10 @@ double ExpressionProgram::evaluate() const {
 }
 
 double ExpressionProgram::evaluate(const std::map<std::string, double>& variables) const {
-    vector<double> args(maxArgs);
+    vector<double> args(max(maxArgs, 1));
     vector<double> stack(stackSize);
     int stackPointer = 0;
-    for (int i = 0; i < operations.size(); i++) {
+    for (int i = 0; i < (int) operations.size(); i++) {
         int numArgs = operations[i]->getNumArguments();
         for (int j = 0; j < numArgs; j++)
             args[j] = stack[--stackPointer];

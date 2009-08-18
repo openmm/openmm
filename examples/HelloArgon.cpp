@@ -11,11 +11,6 @@
 // other visualization tool to produce an animation of the resulting trajectory.
 // -----------------------------------------------------------------------------
 
-// Suppress irrelevant warning from Microsoft's compiler.
-#ifdef _MSC_VER
-    #pragma warning(disable:4251)   // no dll interface for some classes
-#endif
-
 #include "OpenMM.h"
 #include <cstdio>
 

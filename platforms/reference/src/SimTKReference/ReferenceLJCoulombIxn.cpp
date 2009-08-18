@@ -445,7 +445,7 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
 
        // accumulate energies
 
-       realSpaceEwaldEnergy = atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*inverseR*erfc(alphaR);
+       realSpaceEwaldEnergy = (RealOpenMM) (atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*inverseR*erfc(alphaR));
        vdwEnergy = eps*(sig6-one)*sig6;
 
         if( totalEnergy )
@@ -484,7 +484,7 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
 
                // accumulate energies
 
-               realSpaceEwaldEnergy = atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*inverseR*erf(alphaR);
+               realSpaceEwaldEnergy = (RealOpenMM) (atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*inverseR*erf(alphaR));
 
                 if( totalEnergy )
                       *totalEnergy -= realSpaceEwaldEnergy;

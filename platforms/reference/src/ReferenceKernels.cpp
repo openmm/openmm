@@ -565,7 +565,7 @@ void ReferenceCalcCustomNonbondedForceKernel::executeForces(ContextImpl& context
     if (periodic)
         ixn.setPeriodic(periodicBoxSize);
     map<string, double> globalParameters;
-    for (int i = 0; i < globalParameterNames.size(); i++)
+    for (int i = 0; i < (int) globalParameterNames.size(); i++)
         globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
     ixn.calculatePairIxn(numParticles, posData, particleParamArray, exclusionArray, 0, globalParameters, forceData, 0, 0);
     ixn.calculateExceptionIxn(numExceptions, exceptionIndexArray, posData, exceptionParamArray, globalParameters, forceData, 0, 0);
@@ -584,7 +584,7 @@ double ReferenceCalcCustomNonbondedForceKernel::executeEnergy(ContextImpl& conte
     if (periodic)
         ixn.setPeriodic(periodicBoxSize);
     map<string, double> globalParameters;
-    for (int i = 0; i < globalParameterNames.size(); i++)
+    for (int i = 0; i < (int) globalParameterNames.size(); i++)
         globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
     ixn.calculatePairIxn(numParticles, posData, particleParamArray, exclusionArray, 0, globalParameters, forceData, 0, &energy);
     ixn.calculateExceptionIxn(numExceptions, exceptionIndexArray, posData, exceptionParamArray, globalParameters, forceData, 0, &energy);
