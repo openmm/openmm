@@ -288,10 +288,10 @@ void <xsl:value-of select="$name_lower"/>_set_(<xsl:value-of select="$name"/>* c
 void <xsl:value-of select="$name_upper"/>_SET(<xsl:value-of select="$name"/>* const&amp; array, const int&amp; index, <xsl:value-of select="$element_type"/> value) {
     <xsl:value-of select="$name"/>_set(array, index-1, value);
 }
-void <xsl:value-of select="$name_lower"/>_get_(const <xsl:value-of select="$name"/>* const&amp; array, const int&amp; index, <xsl:value-of select="$element_type"/> value&amp; result) {
+void <xsl:value-of select="$name_lower"/>_get_(const <xsl:value-of select="$name"/>* const&amp; array, const int&amp; index, <xsl:value-of select="$element_type"/>&amp; result) {
     result = <xsl:value-of select="$name"/>_get(array, index-1);
 }
-void <xsl:value-of select="$name_upper"/>_GET(const <xsl:value-of select="$name"/>* const&amp; array, const int&amp; index, <xsl:value-of select="$element_type"/> value&amp; result) {
+void <xsl:value-of select="$name_upper"/>_GET(const <xsl:value-of select="$name"/>* const&amp; array, const int&amp; index, <xsl:value-of select="$element_type"/>&amp; result) {
     result = <xsl:value-of select="$name"/>_get(array, index-1);
 }
 </xsl:template>
