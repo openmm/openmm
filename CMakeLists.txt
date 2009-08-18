@@ -242,7 +242,7 @@ ENDFOREACH(subdir)
 # If API wrappers are being generated, and add them to the build.
 SET(OPENMM_BUILD_API_WRAPPERS OFF CACHE BOOL "Build wrappers for C and Fortran")
 IF(OPENMM_BUILD_API_WRAPPERS)
-    SET(SOURCE_FILES         ${SOURCE_FILES}         wrappers/OpenMMCWrapper.cpp wrappersOpenMMFortranWrapper.cpp/)
+    SET(SOURCE_FILES         ${SOURCE_FILES}         wrappers/OpenMMCWrapper.cpp wrappers/OpenMMFortranWrapper.cpp)
 ENDIF(OPENMM_BUILD_API_WRAPPERS)
 
 INCLUDE_DIRECTORIES(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/src)
