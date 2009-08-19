@@ -5,7 +5,7 @@ FOREACH(subdir ${API_INCLUDE_DIRS})
     SET(GCCXML_ARGS ${GCCXML_ARGS} -I${subdir})
 ENDFOREACH(subdir)
 
-SET(GCCXML_PATH "/usr/local/bin/gccxml" CACHE PATH "Path to the gccxml executable")
+SET(GCCXML_PATH "/usr/local/bin/gccxml" CACHE FILEPATH "Path to the gccxml executable")
 
 ADD_CUSTOM_COMMAND(OUTPUT OpenMMApi.xml COMMAND ${GCCXML_PATH} ${GCCXML_ARGS} ${CMAKE_SOURCE_DIR}/openmmapi/include/OpenMM.h -fxml=OpenMMApi.xml)
 ADD_CUSTOM_COMMAND(OUTPUT OpenMMCWrapper.h COMMAND ${JAVA_RUNTIME} -jar ${CMAKE_SOURCE_DIR}/wrappers/saxonb9-1-0-7j/saxon9.jar -t -s:OpenMMApi.xml

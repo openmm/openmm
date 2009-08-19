@@ -109,7 +109,9 @@ SET(OPENMM_AUTHORS "Peter.Eastman")
 # Cygwin, and your "about" string will say "unknown" rather than
 # providing the SVN version of the source.
 
-FIND_PROGRAM (SVNVERSION_EXE svnversion.exe)
+FIND_PROGRAM (SVNVERSION_EXE svnversion.exe
+    PATHS "C:/cygwin/bin"
+)
 IF (SVNVERSION_EXE)
     EXEC_PROGRAM (${SVNVERSION_EXE}
                   ARGS  \"${CMAKE_CURRENT_SOURCE_DIR}\"
