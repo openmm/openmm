@@ -243,9 +243,10 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
     RealOpenMM TWO_PI                   = 2.0 * PI;
     RealOpenMM recipCoeff               = (RealOpenMM)(4*PI/(periodicBoxSize[0] * periodicBoxSize[1] * periodicBoxSize[2]) /epsilon);
 
-    RealOpenMM selfEwaldEnergy          = 0.0;
+    RealOpenMM totalSelfEwaldEnergy     = 0.0;
     RealOpenMM realSpaceEwaldEnergy     = 0.0;
     RealOpenMM recipEnergy              = 0.0;
+    RealOpenMM totalRecipEnergy         = 0.0;
     RealOpenMM vdwEnergy                = 0.0;
 
 // **************************************************************************************
@@ -253,14 +254,16 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
 // **************************************************************************************
 
     for( int atomID = 0; atomID < numberOfAtoms; atomID++ ){
-        selfEwaldEnergy = atomParameters[atomID][QIndex]*atomParameters[atomID][QIndex] * alphaEwald/SQRT_PI;
-
-        if( totalEnergy )
-              *totalEnergy -= selfEwaldEnergy;
+        RealOpenMM selfEwaldEnergy       = atomParameters[atomID][QIndex]*atomParameters[atomID][QIndex] * alphaEwald/SQRT_PI;
+        totalSelfEwaldEnergy            -= selfEwaldEnergy;
 
         if( energyByAtom ){
-           energyByAtom[atomID] -= selfEwaldEnergy;
+           energyByAtom[atomID]         -= selfEwaldEnergy;
         }
+    }
+
+    if( totalEnergy ){
+        *totalEnergy += totalSelfEwaldEnergy;
     }
 
 // **************************************************************************************
@@ -333,7 +336,6 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
 
     // calculate reciprocal space energy and forces
 
-
     int lowry = 0;
     int lowrz = 1;
 
@@ -386,7 +388,8 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
             forces[n][2] += 2 * recipCoeff * force * kz ;
           }
 
-          recipEnergy = recipCoeff * ak * ( cs * cs + ss * ss);
+          recipEnergy       = recipCoeff * ak * ( cs * cs + ss * ss);
+          totalRecipEnergy += recipEnergy;
 
           if( totalEnergy )
              *totalEnergy += recipEnergy;
@@ -408,9 +411,13 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
       SimTKOpenMMLog::printError( message );
   }
 
+
 // **************************************************************************************
 // SHORT-RANGE ENERGY AND FORCES
 // **************************************************************************************
+
+    RealOpenMM totalVdwEnergy            = 0.0f;
+    RealOpenMM totalRealSpaceEwaldEnergy = 0.0f;
 
     for (int i = 0; i < (int) neighborList->size(); i++) {
        OpenMM::AtomPair pair = (*neighborList)[i];
@@ -445,11 +452,11 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
 
        // accumulate energies
 
-       realSpaceEwaldEnergy = (RealOpenMM) (atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*inverseR*erfc(alphaR));
-       vdwEnergy = eps*(sig6-one)*sig6;
+       realSpaceEwaldEnergy        = (RealOpenMM) (atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*inverseR*erfc(alphaR));
+       vdwEnergy                   = eps*(sig6-one)*sig6;
 
-        if( totalEnergy )
-              *totalEnergy += realSpaceEwaldEnergy + vdwEnergy;
+       totalVdwEnergy             += vdwEnergy;
+       totalRealSpaceEwaldEnergy  += realSpaceEwaldEnergy;
 
         if( energyByAtom ){
            energyByAtom[ii] += realSpaceEwaldEnergy + vdwEnergy;
@@ -458,8 +465,12 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
 
     }
 
+    if( totalEnergy )
+        *totalEnergy += totalRealSpaceEwaldEnergy + totalVdwEnergy;
+
     // Now subtract off the exclusions, since they were implicitly included in the reciprocal space sum.
 
+    RealOpenMM totalExclusionEnergy = 0.0f;
     for (int i = 0; i < numberOfAtoms; i++)
         for (int j = 1; j <= exclusions[i][0]; j++)
             if (exclusions[i][j] > i) {
@@ -486,17 +497,17 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
 
                realSpaceEwaldEnergy = (RealOpenMM) (atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*inverseR*erf(alphaR));
 
-                if( totalEnergy )
-                      *totalEnergy -= realSpaceEwaldEnergy;
-
-                if( energyByAtom ){
+               totalExclusionEnergy += realSpaceEwaldEnergy;
+               if( energyByAtom ){
                    energyByAtom[ii] -= realSpaceEwaldEnergy;
                    energyByAtom[jj] -= realSpaceEwaldEnergy;
-                }
+               }
             }
 
-// ***********************************************************************
+    if( totalEnergy )
+        *totalEnergy -= totalExclusionEnergy;
 
+// ***********************************************************************
 
    return ReferenceForce::DefaultReturn;
 }
