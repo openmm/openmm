@@ -47,11 +47,11 @@ all : $(ALL_PROGS)
 	g++ $(CFLAGS) -I$(INCLUDE_DIR) $< -L$(LIB_DIR) $(LIBS) -o $*
 
 HelloArgonInC: HelloArgonInC.c 
-	g++ $(CFLAGS) HelloArgonInC.c \
+	g++ $(CFLAGS) -I$(INCLUDE_DIR) HelloArgonInC.c \
         -L$(LIB_DIR) $(LIBS) -o HelloArgonInC
 
 HelloSodiumChlorideInC: HelloSodiumChlorideInC.c 
-	g++ $(CFLAGS) HelloSodiumChlorideInC.c \
+	g++ $(CFLAGS) -I$(INCLUDE_DIR) HelloSodiumChlorideInC.c \
         -L$(LIB_DIR) $(LIBS) -o HelloSodiumChlorideInC
 
 HelloArgonInFortran: HelloArgonInFortran.f90 openmm.mod 
