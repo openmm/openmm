@@ -197,14 +197,16 @@ myInitializeOpenMM( const MyAtomInfo    atoms[],
     MyOpenMMData* omm = (MyOpenMMData*)malloc(sizeof(struct MyOpenMMData_s));
     /* These are temporary OpenMM objects used and discarded here. */
     OpenMM_Vec3Array*       initialPosInNm;
+    OpenMM_StringArray*     pluginList;
     OpenMM_NonbondedForce*  nonbond;
     OpenMM_GBSAOBCForce*    gbsa;
     OpenMM_Platform*        platform;
     int n;
 
     /* Load all available OpenMM plugins from their default location. */
-    OpenMM_Platform_loadPluginsFromDirectory
+    pluginList = OpenMM_Platform_loadPluginsFromDirectory
        (OpenMM_Platform_getDefaultPluginsDirectory());
+    OpenMM_StringArray_destroy(pluginList);
 
     /* Create a System and Force objects within the System. Retain a reference
      * to each force object so we can fill in the forces. Note: the OpenMM

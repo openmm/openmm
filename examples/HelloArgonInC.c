@@ -26,11 +26,13 @@ void simulateArgon()
     OpenMM_Platform*       platform;
     OpenMM_NonbondedForce* nonbond; 
     OpenMM_Vec3Array*      initPosInNm;
+    OpenMM_StringArray*    pluginList;
     int                    a, frameNum;
 
     /* Load any shared libraries containing GPU implementations. */
-    OpenMM_Platform_loadPluginsFromDirectory(
+    pluginList = OpenMM_Platform_loadPluginsFromDirectory(
         OpenMM_Platform_getDefaultPluginsDirectory());
+    OpenMM_StringArray_destroy(pluginList);
 
     /* Create a system with nonbonded forces. System takes ownership
        of Force; don't destroy it yourself. */
