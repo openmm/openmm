@@ -53,8 +53,6 @@ ENDIF(${CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT})
 
 INCLUDE(Dart)
 
-SUBDIRS (tests examples)
-
 # The source is organized into subdirectories, but we handle them all from
 # this CMakeLists file rather than letting CMake visit them as SUBDIRS.
 SET(OPENMM_SOURCE_SUBDIRS . openmmapi olla libraries/jama libraries/quern libraries/lepton platforms/reference)
@@ -318,3 +316,5 @@ ENDIF (EXECUTABLE_OUTPUT_PATH)
 
 INCLUDE(ApiDoxygen.cmake)
 
+ADD_SUBDIRECTORY(tests)
+ADD_SUBDIRECTORY(examples)
