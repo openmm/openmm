@@ -103,6 +103,7 @@ struct Molecule {
     vector<int> periodicTorsions;
     vector<int> rbTorsions;
     vector<int> constraints;
+    vector<int> lj14s;
 };
 
 static const float dielectricOffset         =    0.009f;
@@ -2072,7 +2073,7 @@ static void findMoleculeGroups(gpuContext gpu)
         constraints.push_back(Constraint(atom1, atom2, distance2));
     }
 
-    // First make a list of every other atom to which each atom is connect by a bond or constraint.
+    // First make a list of every other atom to which each atom is connect by a bond, constraint, or exclusion.
 
     int numAtoms = gpu->natoms;
     vector<vector<int> > atomBonds(numAtoms);
@@ -2090,6 +2091,9 @@ static void findMoleculeGroups(gpuContext gpu)
         atomBonds[atom1].push_back(atom2);
         atomBonds[atom2].push_back(atom1);
     }
+    for (int i = 0; i < (int)gpu->exclusions.size(); i++)
+        for (int j = 0; j < (int)gpu->exclusions[i].size(); j++)
+            atomBonds[i].push_back(gpu->exclusions[i][j]);
 
     // Now tag atoms by which molecule they belong to.
 
@@ -2131,6 +2135,11 @@ static void findMoleculeGroups(gpuContext gpu)
     {
         molecules[atomMolecule[constraints[i].atom1]].constraints.push_back(i);
     }
+    for (int i = 0; i < (int)gpu->sim.LJ14s; i++)
+    {
+        int atom1 = (*gpu->psLJ14ID)[i].x;
+        molecules[atomMolecule[atom1]].lj14s.push_back(i);
+    }
 
     // Sort them into groups of identical molecules.
 
@@ -2149,7 +2158,8 @@ static void findMoleculeGroups(gpuContext gpu)
             bool identical = true;
             if (mol.atoms.size() != mol2.atoms.size() || mol.bonds.size() != mol2.bonds.size()
                     || mol.angles.size() != mol2.angles.size() || mol.periodicTorsions.size() != mol2.periodicTorsions.size()
-                    || mol.rbTorsions.size() != mol2.rbTorsions.size() || mol.constraints.size() != mol2.constraints.size())
+                    || mol.rbTorsions.size() != mol2.rbTorsions.size() || mol.constraints.size() != mol2.constraints.size()
+                    || mol.lj14s.size() != mol2.lj14s.size())
                 identical = false;
             int atomOffset = mol2.atoms[0]-mol.atoms[0];
             float4* posq = gpu->psPosq4->_pSysData;
@@ -2205,6 +2215,13 @@ static void findMoleculeGroups(gpuContext gpu)
                 if (constraints[mol.constraints[i]].atom1 != constraints[mol2.constraints[i]].atom1-atomOffset ||
                         constraints[mol.constraints[i]].atom2 != constraints[mol2.constraints[i]].atom2-atomOffset ||
                         constraints[mol.constraints[i]].distance2 != constraints[mol2.constraints[i]].distance2)
+                    identical = false;
+            int4* lj14ID = gpu->psLJ14ID->_pSysData;
+            float4* lj14Param = gpu->psLJ14Parameter->_pSysData;
+            for (int i = 0; i < (int)mol.lj14s.size() && identical; i++)
+                if (lj14ID[mol.lj14s[i]].x != lj14ID[mol2.lj14s[i]].x-atomOffset || lj14ID[mol.lj14s[i]].y != lj14ID[mol2.lj14s[i]].y-atomOffset ||
+                        lj14Param[mol.lj14s[i]].x != lj14Param[mol2.lj14s[i]].x || lj14Param[mol.lj14s[i]].y != lj14Param[mol2.lj14s[i]].y ||
+                        lj14Param[mol.lj14s[i]].z != lj14Param[mol2.lj14s[i]].z)
                     identical = false;
             if (identical)
             {

@@ -392,7 +392,7 @@ void testLargeSystem() {
     const int numMolecules = 600;
     const int numParticles = numMolecules*2;
     const double cutoff = 2.0;
-    const double boxSize = 10.0;
+    const double boxSize = 20.0;
     const double tol = 1e-3;
     CudaPlatform cuda;
     ReferencePlatform reference;
@@ -407,11 +407,11 @@ void testLargeSystem() {
     init_gen_rand(0);
     for (int i = 0; i < numMolecules; i++) {
         if (i < numMolecules/2) {
-            nonbonded->addParticle(1.0, 0.2, 0.1);
+            nonbonded->addParticle(-1.0, 0.2, 0.1);
             nonbonded->addParticle(1.0, 0.1, 0.1);
         }
         else {
-            nonbonded->addParticle(1.0, 0.2, 0.2);
+            nonbonded->addParticle(-1.0, 0.2, 0.2);
             nonbonded->addParticle(1.0, 0.1, 0.2);
         }
         positions[2*i] = Vec3(boxSize*genrand_real2(), boxSize*genrand_real2(), boxSize*genrand_real2());
@@ -419,6 +419,7 @@ void testLargeSystem() {
         velocities[2*i] = Vec3(genrand_real2(), genrand_real2(), genrand_real2());
         velocities[2*i+1] = Vec3(genrand_real2(), genrand_real2(), genrand_real2());
         bonds->addBond(2*i, 2*i+1, 1.0, 0.1);
+        nonbonded->addException(2*i, 2*i+1, 0.0, 0.15, 0.0);
     }
 
     // Try with cutoffs but not periodic boundary conditions, and make sure the Cuda and Reference
@@ -434,13 +435,14 @@ void testLargeSystem() {
     cudaContext.setVelocities(velocities);
     referenceContext.setPositions(positions);
     referenceContext.setVelocities(velocities);
-    State cudaState = cudaContext.getState(State::Positions | State::Velocities | State::Forces);
-    State referenceState = referenceContext.getState(State::Positions | State::Velocities | State::Forces);
+    State cudaState = cudaContext.getState(State::Positions | State::Velocities | State::Forces | State::Energy);
+    State referenceState = referenceContext.getState(State::Positions | State::Velocities | State::Forces | State::Energy);
     for (int i = 0; i < numParticles; i++) {
         ASSERT_EQUAL_VEC(cudaState.getPositions()[i], referenceState.getPositions()[i], tol);
         ASSERT_EQUAL_VEC(cudaState.getVelocities()[i], referenceState.getVelocities()[i], tol);
         ASSERT_EQUAL_VEC(cudaState.getForces()[i], referenceState.getForces()[i], tol);
     }
+    ASSERT_EQUAL_TOL(cudaState.getPotentialEnergy(), referenceState.getPotentialEnergy(), tol);
 
     // Now do the same thing with periodic boundary conditions.
 
@@ -452,8 +454,8 @@ void testLargeSystem() {
     cudaContext.setVelocities(velocities);
     referenceContext.setPositions(positions);
     referenceContext.setVelocities(velocities);
-    cudaState = cudaContext.getState(State::Positions | State::Velocities | State::Forces);
-    referenceState = referenceContext.getState(State::Positions | State::Velocities | State::Forces);
+    cudaState = cudaContext.getState(State::Positions | State::Velocities | State::Forces | State::Energy);
+    referenceState = referenceContext.getState(State::Positions | State::Velocities | State::Forces | State::Energy);
     for (int i = 0; i < numParticles; i++) {
         ASSERT_EQUAL_TOL(fmod(cudaState.getPositions()[i][0]-referenceState.getPositions()[i][0], boxSize), 0, tol);
         ASSERT_EQUAL_TOL(fmod(cudaState.getPositions()[i][1]-referenceState.getPositions()[i][1], boxSize), 0, tol);
@@ -461,6 +463,7 @@ void testLargeSystem() {
         ASSERT_EQUAL_VEC(cudaState.getVelocities()[i], referenceState.getVelocities()[i], tol);
         ASSERT_EQUAL_VEC(cudaState.getForces()[i], referenceState.getForces()[i], tol);
     }
+    ASSERT_EQUAL_TOL(cudaState.getPotentialEnergy(), referenceState.getPotentialEnergy(), tol);
 }
 
 void testBlockInteractions(bool periodic) {
