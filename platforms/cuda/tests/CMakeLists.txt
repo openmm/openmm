@@ -33,8 +33,8 @@ ENDFOREACH(TEST_PROG ${TEST_PROGS})
 
 ADD_EXECUTABLE(TestCudaUsingParameterFile TstCudaUsingParameterFile.cpp)
 TARGET_LINK_LIBRARIES(TestCudaUsingParameterFile ${SHARED_TARGET})
-ADD_TEST(TestCudaUsingParameterFile "${EXECUTABLE_OUTPUT_PATH}/TestCudaUsingParameterFile" "${CMAKE_CURRENT_SOURCE_DIR}/lambdaSdObcParameters.txt")
-ADD_TEST(TestCudaUsingParameterFile "${EXECUTABLE_OUTPUT_PATH}/TestCudaUsingParameterFile" "${CMAKE_CURRENT_SOURCE_DIR}/bptiMdRfNoPbcParameters.txt")
+ADD_TEST(TestCudaUsingParameterFile "${EXECUTABLE_OUTPUT_PATH}/TestCudaUsingParameterFile" "-parameterFileName" "${CMAKE_CURRENT_SOURCE_DIR}/lambdaSdObcParameters.txt")
+ADD_TEST(TestCudaUsingParameterFile "${EXECUTABLE_OUTPUT_PATH}/TestCudaUsingParameterFile" "-parameterFileName" "${CMAKE_CURRENT_SOURCE_DIR}/bptiMdRfNoPbcParameters.txt")
 
 SET(TEST_ROOT TestCudaUsingParameterFile)
 SET(TEST_PROG TstCudaUsingParameterFile.cpp)
