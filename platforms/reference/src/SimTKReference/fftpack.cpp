@@ -100,8 +100,8 @@ fftpack_passf3(int         ido,
                RealOpenMM     wa2[],
                int         isign)
 {
-    const RealOpenMM taur = -0.5;
-    const RealOpenMM taui = 0.866025403784439;
+    const RealOpenMM taur = (RealOpenMM)-0.5;
+    const RealOpenMM taui = (RealOpenMM)0.866025403784439;
 
     int i, k, ac, ah;
     RealOpenMM ci2, ci3, di2, di3, cr2, cr3, dr2, dr3, ti2, tr2;
@@ -242,10 +242,10 @@ fftpack_passf5(int          ido,
                RealOpenMM      wa4[],
                int          isign)
 {
-    const RealOpenMM tr11 = 0.309016994374947;
-    const RealOpenMM ti11 = 0.951056516295154;
-    const RealOpenMM tr12 = -0.809016994374947;
-    const RealOpenMM ti12 = 0.587785252292473;
+    const RealOpenMM tr11 = (RealOpenMM)0.309016994374947;
+    const RealOpenMM ti11 = (RealOpenMM)0.951056516295154;
+    const RealOpenMM tr12 = (RealOpenMM)-0.809016994374947;
+    const RealOpenMM ti12 = (RealOpenMM)0.587785252292473;
 
     int i, k, ac, ah;
     RealOpenMM ci2, ci3, ci4, ci5, di3, di4, di5, di2, cr2, cr3, cr5, cr4, ti2, ti3,
@@ -610,7 +610,7 @@ fftpack_cffti1(int          n,
                RealOpenMM      wa[],
                int          ifac[15])
 {
-    const RealOpenMM twopi = 6.28318530717959;
+    const RealOpenMM twopi = (RealOpenMM)6.28318530717959;
     RealOpenMM arg, argh, argld, fi;
     int idot, i, j;
     int i1, k1, l1, l2;
