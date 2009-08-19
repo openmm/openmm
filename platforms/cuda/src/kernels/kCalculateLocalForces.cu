@@ -38,6 +38,8 @@ using namespace std;
 extern __shared__ Vectors sV[];
 static __constant__ cudaGmxSimulation cSim;
 
+/* Cuda compiler on Windows does not recognized "static const float" values */
+#define LOCAL_HACK_PI 3.1415926535897932384626433832795
 
 #define DOT3(v1, v2) (v1.x * v2.x + v1.y * v2.y + v1.z * v2.z)
 
@@ -59,14 +61,14 @@ static __constant__ cudaGmxSimulation cSim;
 #define GETPREFACTORSGIVENANGLECOSINE(cosine, param, dEdR) \
 { \
    float angle          = acos(cosine); \
-   float deltaIdeal     = angle - (param.x * (PI / 180.0f)); \
+   float deltaIdeal     = angle - (param.x * (LOCAL_HACK_PI / 180.0f)); \
    dEdR                 = param.y * deltaIdeal; \
 }
 
 #define GETENERGYGIVENANGLECOSINE(cosine, param, dEdR) \
 { \
    float angle          = acos(cosine); \
-   float deltaIdeal     = angle - (param.x * (PI / 180.0f)); \
+   float deltaIdeal     = angle - (param.x * (LOCAL_HACK_PI / 180.0f)); \
    dEdR                 = param.y * deltaIdeal * deltaIdeal; \
 }
 
@@ -250,7 +252,7 @@ __global__ void kCalculateLocalForces_kernel()
             float dihedralAngle;
             GETDIHEDRALANGLEBETWEENTHREEVECTORS(A->v0, A->v1, A->v2, A->v0, cp0, cp1, dihedralAngle);
             float4 dihedral         = cSim.pDihedralParameter[pos1];
-            float deltaAngle        = dihedral.z * dihedralAngle - (dihedral.y * PI / 180.0f);
+            float deltaAngle        = dihedral.z * dihedralAngle - (dihedral.y * LOCAL_HACK_PI / 180.0f);
 
 	    // ATTENTION: This section leads to a divergent deltaAngle values wrt
 	    // forces and energies. We separate the case dihedral.z = n = 0, which
@@ -259,8 +261,8 @@ __global__ void kCalculateLocalForces_kernel()
 /* E */     else
 	    {
 		float deltaAngle    = dihedralAngle - dihedral.y;
-		if (deltaAngle < -PI) deltaAngle += 2.0f * PI;
-		else if (deltaAngle > PI) deltaAngle -= 2.0f * PI;
+		if (deltaAngle < -LOCAL_HACK_PI) deltaAngle += 2.0f * LOCAL_HACK_PI;
+		else if (deltaAngle > LOCAL_HACK_PI) deltaAngle -= 2.0f * LOCAL_HACK_PI;
                 energy             += dihedral.x * deltaAngle * deltaAngle;
 	    }
 
@@ -353,11 +355,11 @@ __global__ void kCalculateLocalForces_kernel()
             GETDIHEDRALANGLECOSINEBETWEENTHREEVECTORS(A->v0, A->v1, A->v2, A->v0, cp0, cp1, dihedralAngle, cosPhi);
             if (dihedralAngle < 0.0f )
             {
-                dihedralAngle += PI;
+                dihedralAngle += LOCAL_HACK_PI;
             }
             else
             {
-                dihedralAngle -= PI;
+                dihedralAngle -= LOCAL_HACK_PI;
             }
             cosPhi                  = -cosPhi;
          //   printf("%4d: %9.4f %9.4f\n", pos1, dihedralAngle, cosPhi);

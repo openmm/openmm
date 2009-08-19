@@ -29,6 +29,9 @@
  * Ewald summation method (Reciprocal space summation).
  */
 
+/* Cuda compiler on Windows does not recognized "static const float" values */
+#define LOCAL_HACK_PI 3.1415926535897932384626433832795
+
 /* Define multiply operations for floats */
 
 __device__ float2 MultofFloat2(float2 a, float2 b)
@@ -54,7 +57,7 @@ __device__ float2 ConjMultofFloat2(float2 a, float2 b)
 __global__ void kCalculateEwaldFastCosSinSums_kernel()
 {
     const float epsilon =  1.0;
-    const float recipCoeff = cSim.epsfac*(4*PI/cSim.cellVolume/epsilon);
+    const float recipCoeff = cSim.epsfac*(4*LOCAL_HACK_PI/cSim.cellVolume/epsilon);
     const unsigned int ksizex = 2*cSim.kmaxX-1;
     const unsigned int ksizey = 2*cSim.kmaxY-1;
     const unsigned int ksizez = 2*cSim.kmaxZ-1;
@@ -111,7 +114,7 @@ __global__ void kCalculateEwaldFastCosSinSums_kernel()
 __global__ void kCalculateEwaldFastForces_kernel()
 {
     const float epsilon =  1.0;
-    float recipCoeff = cSim.epsfac*(4*PI/cSim.cellVolume/epsilon);
+    float recipCoeff = cSim.epsfac*(4*LOCAL_HACK_PI/cSim.cellVolume/epsilon);
 
     unsigned int atom = threadIdx.x + blockIdx.x * blockDim.x;
 

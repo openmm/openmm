@@ -30,6 +30,9 @@
  * different versions of the kernels.
  */
 
+/* Cuda compiler on Windows does not recognized "static const float" values */
+#define LOCAL_HACK_PI 3.1415926535897932384626433832795
+
 __global__ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUnit)
 {
     extern __shared__ Atom sA[];
@@ -45,7 +48,7 @@ __global__ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUni
 #endif
 
 #ifdef USE_EWALD
-    const float SQRT_PI = sqrt(PI);
+    const float SQRT_PI = sqrt(LOCAL_HACK_PI);
 #endif
 
     unsigned int lasty = 0xFFFFFFFF;
