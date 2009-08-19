@@ -109,6 +109,12 @@ static void copyAndPadString(char* dest, const char* source, int length) {
         dest[i] = (reachedEnd ? ' ' : source[i]);
     }
 }
+/* copy blank-trimmed Fortran string into an std::string */
+static string makeString(const char* fsrc, int length) {
+    while (length &amp;&amp; fsrc[length-1]==' ')
+        --length;
+    return string(fsrc, length);
+}
 OPENMM_EXPORT void openmm_stringarray_create_(OpenMM_StringArray*&amp; result, const int&amp; size) {
     result = OpenMM_StringArray_create(size);
 }
@@ -136,16 +142,16 @@ OPENMM_EXPORT void OPENMM_STRINGARRAY_RESIZE(OpenMM_StringArray* const&amp; arra
     OpenMM_StringArray_resize(array, size);
 }
 OPENMM_EXPORT void openmm_stringarray_append_(OpenMM_StringArray* const&amp; array, const char* str, int length) {
-    OpenMM_StringArray_append(array, string(str, length).c_str());
+    OpenMM_StringArray_append(array, makeString(str, length).c_str());
 }
 OPENMM_EXPORT void OPENMM_STRINGARRAY_APPEND(OpenMM_StringArray* const&amp; array, const char* str, int length) {
-    OpenMM_StringArray_append(array, string(str, length).c_str());
+    OpenMM_StringArray_append(array, makeString(str, length).c_str());
 }
 OPENMM_EXPORT void openmm_stringarray_set_(OpenMM_StringArray* const&amp; array, const int&amp; index, const char* str, int length) {
-    OpenMM_StringArray_set(array, index-1, string(str, length).c_str());
-}
+  OpenMM_StringArray_set(array, index-1, makeString(str, length).c_str());
+  }
 OPENMM_EXPORT void OPENMM_STRINGARRAY_SET(OpenMM_StringArray* const&amp; array, const int&amp; index, const char* str, int length) {
-    OpenMM_StringArray_set(array, index-1, string(str, length).c_str());
+  OpenMM_StringArray_set(array, index-1, makeString(str, length).c_str());
 }
 OPENMM_EXPORT void openmm_stringarray_get_(const OpenMM_StringArray* const&amp; array, const int&amp; index, char* result, int length) {
     const char* str = OpenMM_StringArray_get(array, index-1);
@@ -210,10 +216,10 @@ OPENMM_EXPORT int OPENMM_PARAMETERARRAY_GETSIZE(const OpenMM_ParameterArray* con
     return OpenMM_ParameterArray_getSize(array);
 }
 OPENMM_EXPORT double openmm_parameterarray_get_(const OpenMM_ParameterArray* const&amp; array, const char* name, int length) {
-    return OpenMM_ParameterArray_get(array, string(name, length).c_str());
+    return OpenMM_ParameterArray_get(array, makeString(name, length).c_str());
 }
 OPENMM_EXPORT double OPENMM_PARAMETERARRAY_GET(const OpenMM_ParameterArray* const&amp; array, const char* name, int length) {
-    return OpenMM_ParameterArray_get(array, string(name, length).c_str());
+    return OpenMM_ParameterArray_get(array, makeString(name, length).c_str());
 }
 <xsl:call-template name="primitive_array">
  <xsl:with-param name="element_type" select="'double'"/>
@@ -229,10 +235,10 @@ OPENMM_EXPORT void OPENMM_CONTEXT_GETSTATE(const OpenMM_Context*&amp; target, in
     result = OpenMM_Context_getState(target, types);
 };
 OPENMM_EXPORT void openmm_platform_loadpluginsfromdirectory_(const char* directory, OpenMM_StringArray*&amp; result, int length) {
-    result = OpenMM_Platform_loadPluginsFromDirectory(string(directory, length).c_str());
+    result = OpenMM_Platform_loadPluginsFromDirectory(makeString(directory, length).c_str());
 };
 OPENMM_EXPORT void OPENMM_PLATFORM_LOADPLUGINSFROMDIRECTORY(const char* directory, OpenMM_StringArray*&amp; result, int length) {
-    result = OpenMM_Platform_loadPluginsFromDirectory(string(directory, length).c_str());
+    result = OpenMM_Platform_loadPluginsFromDirectory(makeString(directory, length).c_str());
 };
 
  <!-- Class members -->
@@ -384,7 +390,7 @@ OPENMM_EXPORT <xsl:value-of select="concat('void ', $function_name, '(OpenMM_', 
    <xsl:if test="position() > 1">, </xsl:if>
    <xsl:choose>
     <xsl:when test="@type=$const_ref_string_type_id">
-     <xsl:value-of select="concat('string(', @name, ', ', @name, '_length).c_str()')"/>
+     <xsl:value-of select="concat('makeString(', @name, ', ', @name, '_length).c_str()')"/>
     </xsl:when>
     <xsl:otherwise>
      <xsl:value-of select="@name"/>
@@ -484,7 +490,7 @@ OPENMM_EXPORT <xsl:if test="$has_return">
    <xsl:variable name="type_node" select="/GCC_XML/*[@id=$type_id]"/>
    <xsl:choose>
    <xsl:when test="@type=$const_ref_string_type_id or @type=$ptr_const_char_type_id">
-    <xsl:value-of select="concat('string(', @name, ', ', @name, '_length).c_str()')"/>
+    <xsl:value-of select="concat('makeString(', @name, ', ', @name, '_length).c_str()')"/>
    </xsl:when>
    <xsl:when test="local-name($type_node)='Enumeration'">
     <xsl:variable name="enum_class" select="/GCC_XML/*[@id=$type_node/@context]"/>
