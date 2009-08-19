@@ -44,6 +44,22 @@
 using namespace OpenMM;
 using namespace std;
 
+/* Utilities for dealing with Fortran's blank-padded strings. */
+static void copyAndPadString(char* dest, const char* source, int length) {
+    bool reachedEnd = false;
+    for (int i = 0; i &lt; length; i++) {
+        if (source[i] == 0)
+            reachedEnd = true;
+        dest[i] = (reachedEnd ? ' ' : source[i]);
+    }
+}
+
+static string makeString(const char* fsrc, int length) {
+    while (length &amp;&amp; fsrc[length-1]==' ')
+        --length;
+    return string(fsrc, length);
+}
+
 extern "C" {
 
 /* OpenMM_Vec3 */
@@ -101,20 +117,6 @@ OPENMM_EXPORT void OPENMM_VEC3ARRAY_GET(const OpenMM_Vec3Array* const&amp; array
 }
 
 /* OpenMM_StringArray */
-static void copyAndPadString(char* dest, const char* source, int length) {
-    bool reachedEnd = false;
-    for (int i = 0; i &lt; length; i++) {
-        if (source[i] == 0)
-            reachedEnd = true;
-        dest[i] = (reachedEnd ? ' ' : source[i]);
-    }
-}
-/* copy blank-trimmed Fortran string into an std::string */
-static string makeString(const char* fsrc, int length) {
-    while (length &amp;&amp; fsrc[length-1]==' ')
-        --length;
-    return string(fsrc, length);
-}
 OPENMM_EXPORT void openmm_stringarray_create_(OpenMM_StringArray*&amp; result, const int&amp; size) {
     result = OpenMM_StringArray_create(size);
 }
