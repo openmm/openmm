@@ -61,7 +61,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="OpenMMCWrapper_d.lib OpenMM_d.lib"
+				AdditionalDependencies="OpenMM_d.lib"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="&quot;$(ProgramFiles)\OpenMM\lib&quot;"
 				GenerateDebugInformation="true"
@@ -137,7 +137,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="OpenMMCWrapper.lib OpenMM.lib"
+				AdditionalDependencies="OpenMM.lib"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="&quot;$(ProgramFiles)\OpenMM\lib&quot;"
 				GenerateDebugInformation="true"
