@@ -1,16 +1,14 @@
 # ----------------------------------------------------------------------
-# Makefile for OpenMM Preview Release 3 workshop "hello world" examples.
-# June 24, 2009.
+# Makefile for OpenMM Preview Release 4 workshop "hello world" examples.
+# August 18, 2009
 # See https://simtk.org/home/openmm.
 # ----------------------------------------------------------------------
 # This assumes you have gcc compilers for whatever language you are
 # using: g++ for C++ and C, gfortran for Fortran 95.
 # 
-# Note: the C Wrappers and Fortran Module are just prototypes. They are
-# incomplete but have enough functionality to get through these examples.
-# We would like more complete and better-thought-out interfaces; if you
-# have code or ideas please post to the OpenMM forum at the above URL
-# (select "Advanced/Public Forums").
+# For the C and Fortran examples, we're depending on your version of
+# OpenMM to have been built with the automatically-generated API
+# wrappers.
 #
 # This has had only minimal testing, although it has been known to
 # work. It is likely to work fine for C and C++. For Fortran, you
@@ -32,8 +30,6 @@ FCPPLIBS = -lstdc++
 
 LIB_DIR=$(OpenMM_INSTALL_DIR)/lib
 INCLUDE_DIR=$(OpenMM_INSTALL_DIR)/include
-# assume local directory for C and Fortran wrappers
-WRAPPER_DIR=.
 LIBS= -lOpenMM
 
 ALL_CPP_EXAMPLES = HelloArgon HelloSodiumChloride HelloEthane HelloWaterBox
@@ -46,40 +42,30 @@ default: HelloArgon
 
 all : $(ALL_PROGS)
 
-# Treat all .cpp source files the same way (except the one that 
-# implements the C Wrappers).
+# Treat all .cpp source files the same way.
 .cpp : 
 	g++ $(CFLAGS) -I$(INCLUDE_DIR) $< -L$(LIB_DIR) $(LIBS) -o $*
 
-HelloArgonInC: HelloArgonInC.c OpenMMCWrapper.o
-	g++ $(CFLAGS) -I$(WRAPPER_DIR) HelloArgonInC.c OpenMMCWrapper.o \
+HelloArgonInC: HelloArgonInC.c 
+	g++ $(CFLAGS) HelloArgonInC.c \
         -L$(LIB_DIR) $(LIBS) -o HelloArgonInC
 
-HelloSodiumChlorideInC: HelloSodiumChlorideInC.c OpenMMCWrapper.o
-	g++ $(CFLAGS) -I$(WRAPPER_DIR) HelloSodiumChlorideInC.c OpenMMCWrapper.o \
+HelloSodiumChlorideInC: HelloSodiumChlorideInC.c 
+	g++ $(CFLAGS) HelloSodiumChlorideInC.c \
         -L$(LIB_DIR) $(LIBS) -o HelloSodiumChlorideInC
 
-HelloArgonInFortran: HelloArgonInFortran.f90 openmm.mod OpenMMFortranWrapper.o OpenMMCWrapper.o
-	gfortran $(FFLAGS) HelloArgonInFortran.f90 OpenMMFortranWrapper.o OpenMMCWrapper.o \
+HelloArgonInFortran: HelloArgonInFortran.f90 openmm.mod 
+	gfortran $(FFLAGS) HelloArgonInFortran.f90 \
 	    -L$(LIB_DIR) $(LIBS) $(FCPPLIBS) -o HelloArgonInFortran
 
-HelloSodiumChlorideInFortran: HelloSodiumChlorideInFortran.f90 openmm.mod OpenMMFortranWrapper.o OpenMMCWrapper.o
-	gfortran $(FFLAGS) HelloSodiumChlorideInFortran.f90 OpenMMFortranWrapper.o OpenMMCWrapper.o \
+HelloSodiumChlorideInFortran: HelloSodiumChlorideInFortran.f90 openmm.mod 
+	gfortran $(FFLAGS) HelloSodiumChlorideInFortran.f90 \
 	    -L$(LIB_DIR) $(LIBS) $(FCPPLIBS) -o HelloSodiumChlorideInFortran
 
-# Build C Wrappers (Fortran depends on this too)
-OpenMMCWrapper.o: 
-	g++ -c $(CFLAGS) -I$(WRAPPER_DIR) -I$(INCLUDE_DIR) \
-         $(WRAPPER_DIR)/OpenMMCWrapper.cpp -o OpenMMCWrapper.o
-
-# Build Fortran Wrappers
-OpenMMFortranWrapper.o: 
-	g++ -c $(CFLAGS) -I$(WRAPPER_DIR) -I$(INCLUDE_DIR) \
-         $(WRAPPER_DIR)/OpenMMFortranWrapper.cpp -o OpenMMFortranWrapper.o
 
 # Build Fortran 95 Module file
 openmm.mod:
-	gfortran -c $(FFLAGS) $(WRAPPER_DIR)/OpenMMFortranModule.f90
+	gfortran -c $(FFLAGS) $(INCLUDE_DIR)/OpenMMFortranModule.f90
 
 clean : 
 	rm $(ALL_PROGS) *.o *.mod *.obj *.exe

@@ -28,6 +28,10 @@
 #ifndef OPENMM_CWRAPPER_H_
 #define OPENMM_CWRAPPER_H_
 
+#ifndef OPENMM_EXPORT
+#define OPENMM_EXPORT
+#endif
+
 /* Global Constants */
  <xsl:for-each select="Variable[@context=$openmm_namespace_id]">
 static <xsl:call-template name="wrap_type"><xsl:with-param name="type_id" select="@type"/></xsl:call-template><xsl:value-of select="concat(' OpenMM_', @name, ' = ', number(@init), ';')"/>
@@ -51,38 +55,38 @@ extern "C" {
 #endif
 
 /* OpenMM_Vec3 */
-extern OpenMM_Vec3 OpenMM_Vec3_scale(const OpenMM_Vec3 vec, double scale);
+extern OPENMM_EXPORT OpenMM_Vec3 OpenMM_Vec3_scale(const OpenMM_Vec3 vec, double scale);
 
 /* OpenMM_Vec3Array */
-extern OpenMM_Vec3Array* OpenMM_Vec3Array_create(int size);
-extern void OpenMM_Vec3Array_destroy(OpenMM_Vec3Array* array);
-extern int OpenMM_Vec3Array_getSize(const OpenMM_Vec3Array* array);
-extern void OpenMM_Vec3Array_resize(OpenMM_Vec3Array* array, int size);
-extern void OpenMM_Vec3Array_append(OpenMM_Vec3Array* array, const OpenMM_Vec3 vec);
-extern void OpenMM_Vec3Array_set(OpenMM_Vec3Array* array, int index, const OpenMM_Vec3 vec);
-extern const OpenMM_Vec3* OpenMM_Vec3Array_get(const OpenMM_Vec3Array* array, int index);
+extern OPENMM_EXPORT OpenMM_Vec3Array* OpenMM_Vec3Array_create(int size);
+extern OPENMM_EXPORT void OpenMM_Vec3Array_destroy(OpenMM_Vec3Array* array);
+extern OPENMM_EXPORT int OpenMM_Vec3Array_getSize(const OpenMM_Vec3Array* array);
+extern OPENMM_EXPORT void OpenMM_Vec3Array_resize(OpenMM_Vec3Array* array, int size);
+extern OPENMM_EXPORT void OpenMM_Vec3Array_append(OpenMM_Vec3Array* array, const OpenMM_Vec3 vec);
+extern OPENMM_EXPORT void OpenMM_Vec3Array_set(OpenMM_Vec3Array* array, int index, const OpenMM_Vec3 vec);
+extern OPENMM_EXPORT const OpenMM_Vec3* OpenMM_Vec3Array_get(const OpenMM_Vec3Array* array, int index);
 
 /* OpenMM_StringArray */
-extern OpenMM_StringArray* OpenMM_StringArray_create(int size);
-extern void OpenMM_StringArray_destroy(OpenMM_StringArray* array);
-extern int OpenMM_StringArray_getSize(const OpenMM_StringArray* array);
-extern void OpenMM_StringArray_resize(OpenMM_StringArray* array, int size);
-extern void OpenMM_StringArray_append(OpenMM_StringArray* array, const char* string);
-extern void OpenMM_StringArray_set(OpenMM_StringArray* array, int index, const char* string);
-extern const char* OpenMM_StringArray_get(const OpenMM_StringArray* array, int index);
+extern OPENMM_EXPORT OpenMM_StringArray* OpenMM_StringArray_create(int size);
+extern OPENMM_EXPORT void OpenMM_StringArray_destroy(OpenMM_StringArray* array);
+extern OPENMM_EXPORT int OpenMM_StringArray_getSize(const OpenMM_StringArray* array);
+extern OPENMM_EXPORT void OpenMM_StringArray_resize(OpenMM_StringArray* array, int size);
+extern OPENMM_EXPORT void OpenMM_StringArray_append(OpenMM_StringArray* array, const char* string);
+extern OPENMM_EXPORT void OpenMM_StringArray_set(OpenMM_StringArray* array, int index, const char* string);
+extern OPENMM_EXPORT const char* OpenMM_StringArray_get(const OpenMM_StringArray* array, int index);
 
 /* OpenMM_BondArray */
-extern OpenMM_BondArray* OpenMM_BondArray_create(int size);
-extern void OpenMM_BondArray_destroy(OpenMM_BondArray* array);
-extern int OpenMM_BondArray_getSize(const OpenMM_BondArray* array);
-extern void OpenMM_BondArray_resize(OpenMM_BondArray* array, int size);
-extern void OpenMM_BondArray_append(OpenMM_BondArray* array, int particle1, int particle2);
-extern void OpenMM_BondArray_set(OpenMM_BondArray* array, int index, int particle1, int particle2);
-extern void OpenMM_BondArray_get(const OpenMM_BondArray* array, int index, int* particle1, int* particle2);
+extern OPENMM_EXPORT OpenMM_BondArray* OpenMM_BondArray_create(int size);
+extern OPENMM_EXPORT void OpenMM_BondArray_destroy(OpenMM_BondArray* array);
+extern OPENMM_EXPORT int OpenMM_BondArray_getSize(const OpenMM_BondArray* array);
+extern OPENMM_EXPORT void OpenMM_BondArray_resize(OpenMM_BondArray* array, int size);
+extern OPENMM_EXPORT void OpenMM_BondArray_append(OpenMM_BondArray* array, int particle1, int particle2);
+extern OPENMM_EXPORT void OpenMM_BondArray_set(OpenMM_BondArray* array, int index, int particle1, int particle2);
+extern OPENMM_EXPORT void OpenMM_BondArray_get(const OpenMM_BondArray* array, int index, int* particle1, int* particle2);
 
 /* OpenMM_ParameterArray */
-extern int OpenMM_ParameterArray_getSize(const OpenMM_ParameterArray* array);
-extern double OpenMM_ParameterArray_get(const OpenMM_ParameterArray* array, const char* name);
+extern OPENMM_EXPORT int OpenMM_ParameterArray_getSize(const OpenMM_ParameterArray* array);
+extern OPENMM_EXPORT double OpenMM_ParameterArray_get(const OpenMM_ParameterArray* array, const char* name);
 <xsl:call-template name="primitive_array">
  <xsl:with-param name="element_type" select="'double'"/>
  <xsl:with-param name="name" select="'OpenMM_DoubleArray'"/>
@@ -90,8 +94,8 @@ extern double OpenMM_ParameterArray_get(const OpenMM_ParameterArray* array, cons
 
 /* These methods need to be handled specially, since their C++ APIs cannot be directly translated to C.
    Unlike the C++ versions, the return value is allocated on the heap, and you must delete it yourself. */
-extern OpenMM_State* OpenMM_Context_getState(const OpenMM_Context* target, int types);
-extern OpenMM_StringArray* OpenMM_Platform_loadPluginsFromDirectory(const char* directory);
+extern OPENMM_EXPORT OpenMM_State* OpenMM_Context_getState(const OpenMM_Context* target, int types);
+extern OPENMM_EXPORT OpenMM_StringArray* OpenMM_Platform_loadPluginsFromDirectory(const char* directory);
 
  <!-- Class members -->
  <xsl:for-each select="Class[@context=$openmm_namespace_id and empty(index-of($skip_classes, @name))]">
@@ -110,13 +114,13 @@ extern OpenMM_StringArray* OpenMM_Platform_loadPluginsFromDirectory(const char* 
  <xsl:param name="element_type"/>
  <xsl:param name="name"/>
 /* <xsl:value-of select="$name"/> */
-extern <xsl:value-of select="$name"/>* <xsl:value-of select="$name"/>_create(int size);
-extern void <xsl:value-of select="$name"/>_destroy(<xsl:value-of select="$name"/>* array);
-extern int <xsl:value-of select="$name"/>_getSize(const <xsl:value-of select="$name"/>* array);
-extern void <xsl:value-of select="$name"/>_resize(<xsl:value-of select="$name"/>* array, int size);
-extern void <xsl:value-of select="$name"/>_append(<xsl:value-of select="$name"/>* array, <xsl:value-of select="$element_type"/> value);
-extern void <xsl:value-of select="$name"/>_set(<xsl:value-of select="$name"/>* array, int index, <xsl:value-of select="$element_type"/> value);
-extern <xsl:value-of select="concat($element_type, ' ', $name)"/>_get(const <xsl:value-of select="$name"/>* array, int index);
+extern OPENMM_EXPORT <xsl:value-of select="$name"/>* <xsl:value-of select="$name"/>_create(int size);
+extern OPENMM_EXPORT void <xsl:value-of select="$name"/>_destroy(<xsl:value-of select="$name"/>* array);
+extern OPENMM_EXPORT int <xsl:value-of select="$name"/>_getSize(const <xsl:value-of select="$name"/>* array);
+extern OPENMM_EXPORT void <xsl:value-of select="$name"/>_resize(<xsl:value-of select="$name"/>* array, int size);
+extern OPENMM_EXPORT void <xsl:value-of select="$name"/>_append(<xsl:value-of select="$name"/>* array, <xsl:value-of select="$element_type"/> value);
+extern OPENMM_EXPORT void <xsl:value-of select="$name"/>_set(<xsl:value-of select="$name"/>* array, int index, <xsl:value-of select="$element_type"/> value);
+extern OPENMM_EXPORT <xsl:value-of select="concat($element_type, ' ', $name)"/>_get(const <xsl:value-of select="$name"/>* array, int index);
 </xsl:template>
 
 <!-- Print out information for a class -->
@@ -140,7 +144,7 @@ extern <xsl:value-of select="concat($element_type, ' ', $name)"/>_get(const <xsl
    </xsl:call-template>
   </xsl:for-each>
  </xsl:if>
-extern void OpenMM_<xsl:value-of select="concat(@name, '_destroy(OpenMM_', @name, '* target);')"/>
+extern OPENMM_EXPORT void OpenMM_<xsl:value-of select="concat(@name, '_destroy(OpenMM_', @name, '* target);')"/>
  <!-- Methods -->
  <xsl:variable name="methods" select="/GCC_XML/Method[@context=$class_id and @access='public']"/>
  <xsl:for-each select="$methods">
@@ -173,7 +177,7 @@ typedef enum {
 <!-- Print out the declaration for a constructor -->
 <xsl:template name="constructor">
  <xsl:param name="suffix"/>
-extern OpenMM_<xsl:value-of select="concat(@name, '* OpenMM_', @name, '_create', $suffix, '(')"/>
+extern OPENMM_EXPORT OpenMM_<xsl:value-of select="concat(@name, '* OpenMM_', @name, '_create', $suffix, '(')"/>
   <xsl:for-each select="Argument">
    <xsl:if test="position() > 1">, </xsl:if>
    <xsl:call-template name="wrap_type"><xsl:with-param name="type_id" select="@type"/></xsl:call-template>
@@ -185,7 +189,7 @@ extern OpenMM_<xsl:value-of select="concat(@name, '* OpenMM_', @name, '_create',
 <!-- Print out the declaration for a method -->
 <xsl:template name="method">
  <xsl:param name="class_name"/>
-extern <xsl:call-template name="wrap_type"><xsl:with-param name="type_id" select="@returns"/></xsl:call-template><xsl:value-of select="concat(' OpenMM_', $class_name, '_', @name, '(')"/>
+extern OPENMM_EXPORT <xsl:call-template name="wrap_type"><xsl:with-param name="type_id" select="@returns"/></xsl:call-template><xsl:value-of select="concat(' OpenMM_', $class_name, '_', @name, '(')"/>
  <xsl:if test="not(@static='1')">
   <xsl:if test="@const='1'">
    <xsl:value-of select="'const '"/>

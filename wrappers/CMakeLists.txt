@@ -19,7 +19,5 @@ ADD_CUSTOM_COMMAND(OUTPUT OpenMMFortranWrapper.cpp COMMAND ${JAVA_RUNTIME} -jar 
 
 ADD_CUSTOM_TARGET(ApiWrappers DEPENDS OpenMMCWrapper.h OpenMMCWrapper.cpp OpenMMFortranModule.f90 OpenMMFortranWrapper.cpp)
 
-ADD_DEPENDENCIES(${SHARED_TARGET} ApiWrappers)
-ADD_DEPENDENCIES(${STATIC_TARGET} ApiWrappers)
 
 INSTALL_FILES(/include FILES OpenMMCWrapper.h OpenMMFortranModule.f90)

@@ -36,8 +36,8 @@
 
 <!-- Main loop over all classes in the OpenMM namespace -->
 <xsl:template match="/GCC_XML">
-#include "OpenMMCWrapper.h"
 #include "OpenMM.h"
+#include "OpenMMCWrapper.h"
 #include &lt;cstring&gt;
 #include &lt;vector&gt;
 
@@ -47,56 +47,56 @@ using namespace std;
 extern "C" {
 
 /* OpenMM_Vec3 */
-void openmm_vec3_scale_(const OpenMM_Vec3&amp; vec, double const&amp; scale, OpenMM_Vec3&amp; result) {
+OPENMM_EXPORT void openmm_vec3_scale_(const OpenMM_Vec3&amp; vec, double const&amp; scale, OpenMM_Vec3&amp; result) {
     result = OpenMM_Vec3_scale(vec, scale);
 }
-void OPENMM_VEC3_SCALE(const OpenMM_Vec3&amp; vec, double const&amp; scale, OpenMM_Vec3&amp; result) {
+OPENMM_EXPORT void OPENMM_VEC3_SCALE(const OpenMM_Vec3&amp; vec, double const&amp; scale, OpenMM_Vec3&amp; result) {
     result = OpenMM_Vec3_scale(vec, scale);
 }
 
 /* OpenMM_Vec3Array */
-void openmm_vec3array_create_(OpenMM_Vec3Array*&amp; result, const int&amp; size) {
+OPENMM_EXPORT void openmm_vec3array_create_(OpenMM_Vec3Array*&amp; result, const int&amp; size) {
     result = OpenMM_Vec3Array_create(size);
 }
-void OPENMM_VEC3ARRAY_CREATE(OpenMM_Vec3Array*&amp; result, const int&amp; size) {
+OPENMM_EXPORT void OPENMM_VEC3ARRAY_CREATE(OpenMM_Vec3Array*&amp; result, const int&amp; size) {
     result = OpenMM_Vec3Array_create(size);
 }
-void openmm_vec3array_destroy_(OpenMM_Vec3Array*&amp; array) {
+OPENMM_EXPORT void openmm_vec3array_destroy_(OpenMM_Vec3Array*&amp; array) {
     OpenMM_Vec3Array_destroy(array);
     array = 0;
 }
-void OPENMM_VEC3ARRAY_DESTROY(OpenMM_Vec3Array*&amp; array) {
+OPENMM_EXPORT void OPENMM_VEC3ARRAY_DESTROY(OpenMM_Vec3Array*&amp; array) {
     OpenMM_Vec3Array_destroy(array);
     array = 0;
 }
-int openmm_vec3array_getsize_(const OpenMM_Vec3Array* const&amp; array) {
+OPENMM_EXPORT int openmm_vec3array_getsize_(const OpenMM_Vec3Array* const&amp; array) {
     return OpenMM_Vec3Array_getSize(array);
 }
-int OPENMM_VEC3ARRAY_GETSIZE(const OpenMM_Vec3Array* const&amp; array) {
+OPENMM_EXPORT int OPENMM_VEC3ARRAY_GETSIZE(const OpenMM_Vec3Array* const&amp; array) {
     return OpenMM_Vec3Array_getSize(array);
 }
-void openmm_vec3array_resize_(OpenMM_Vec3Array* const&amp; array, const int&amp; size) {
+OPENMM_EXPORT void openmm_vec3array_resize_(OpenMM_Vec3Array* const&amp; array, const int&amp; size) {
     OpenMM_Vec3Array_resize(array, size);
 }
-void OPENMM_VEC3ARRAY_RESIZE(OpenMM_Vec3Array* const&amp; array, const int&amp; size) {
+OPENMM_EXPORT void OPENMM_VEC3ARRAY_RESIZE(OpenMM_Vec3Array* const&amp; array, const int&amp; size) {
     OpenMM_Vec3Array_resize(array, size);
 }
-void openmm_vec3array_append_(OpenMM_Vec3Array* const&amp; array, const OpenMM_Vec3&amp; vec) {
+OPENMM_EXPORT void openmm_vec3array_append_(OpenMM_Vec3Array* const&amp; array, const OpenMM_Vec3&amp; vec) {
     OpenMM_Vec3Array_append(array, vec);
 }
-void OPENMM_VEC3ARRAY_APPEND(OpenMM_Vec3Array* const&amp; array, const OpenMM_Vec3&amp; vec) {
+OPENMM_EXPORT void OPENMM_VEC3ARRAY_APPEND(OpenMM_Vec3Array* const&amp; array, const OpenMM_Vec3&amp; vec) {
     OpenMM_Vec3Array_append(array, vec);
 }
-void openmm_vec3array_set_(OpenMM_Vec3Array* const&amp; array, const int&amp; index, const OpenMM_Vec3&amp; vec) {
+OPENMM_EXPORT void openmm_vec3array_set_(OpenMM_Vec3Array* const&amp; array, const int&amp; index, const OpenMM_Vec3&amp; vec) {
     OpenMM_Vec3Array_set(array, index-1, vec);
 }
-void OPENMM_VEC3ARRAY_SET(OpenMM_Vec3Array* const&amp; array, const int&amp; index, const OpenMM_Vec3&amp; vec) {
+OPENMM_EXPORT void OPENMM_VEC3ARRAY_SET(OpenMM_Vec3Array* const&amp; array, const int&amp; index, const OpenMM_Vec3&amp; vec) {
     OpenMM_Vec3Array_set(array, index-1, vec);
 }
-void openmm_vec3array_get_(const OpenMM_Vec3Array* const&amp; array, const int&amp; index, OpenMM_Vec3&amp; result) {
+OPENMM_EXPORT void openmm_vec3array_get_(const OpenMM_Vec3Array* const&amp; array, const int&amp; index, OpenMM_Vec3&amp; result) {
     result = *OpenMM_Vec3Array_get(array, index-1);
 }
-void OPENMM_VEC3ARRAY_GET(const OpenMM_Vec3Array* const&amp; array, const int&amp; index, OpenMM_Vec3&amp; result) {
+OPENMM_EXPORT void OPENMM_VEC3ARRAY_GET(const OpenMM_Vec3Array* const&amp; array, const int&amp; index, OpenMM_Vec3&amp; result) {
     result = *OpenMM_Vec3Array_get(array, index-1);
 }
 
@@ -109,110 +109,110 @@ static void copyAndPadString(char* dest, const char* source, int length) {
         dest[i] = (reachedEnd ? ' ' : source[i]);
     }
 }
-void openmm_stringarray_create_(OpenMM_StringArray*&amp; result, const int&amp; size) {
+OPENMM_EXPORT void openmm_stringarray_create_(OpenMM_StringArray*&amp; result, const int&amp; size) {
     result = OpenMM_StringArray_create(size);
 }
-void OPENMM_STRINGARRAY_CREATE(OpenMM_StringArray*&amp; result, const int&amp; size) {
+OPENMM_EXPORT void OPENMM_STRINGARRAY_CREATE(OpenMM_StringArray*&amp; result, const int&amp; size) {
     result = OpenMM_StringArray_create(size);
 }
-void openmm_stringarray_destroy_(OpenMM_StringArray*&amp; array) {
+OPENMM_EXPORT void openmm_stringarray_destroy_(OpenMM_StringArray*&amp; array) {
     OpenMM_StringArray_destroy(array);
     array = 0;
 }
-void OPENMM_STRINGARRAY_DESTROY(OpenMM_StringArray*&amp; array) {
+OPENMM_EXPORT void OPENMM_STRINGARRAY_DESTROY(OpenMM_StringArray*&amp; array) {
     OpenMM_StringArray_destroy(array);
     array = 0;
 }
-int openmm_stringarray_getsize_(const OpenMM_StringArray* const&amp; array) {
+OPENMM_EXPORT int openmm_stringarray_getsize_(const OpenMM_StringArray* const&amp; array) {
     return OpenMM_StringArray_getSize(array);
 }
-int OPENMM_STRINGARRAY_GETSIZE(const OpenMM_StringArray* const&amp; array) {
+OPENMM_EXPORT int OPENMM_STRINGARRAY_GETSIZE(const OpenMM_StringArray* const&amp; array) {
     return OpenMM_StringArray_getSize(array);
 }
-void openmm_stringarray_resize_(OpenMM_StringArray* const&amp; array, const int&amp; size) {
+OPENMM_EXPORT void openmm_stringarray_resize_(OpenMM_StringArray* const&amp; array, const int&amp; size) {
     OpenMM_StringArray_resize(array, size);
 }
-void OPENMM_STRINGARRAY_RESIZE(OpenMM_StringArray* const&amp; array, const int&amp; size) {
+OPENMM_EXPORT void OPENMM_STRINGARRAY_RESIZE(OpenMM_StringArray* const&amp; array, const int&amp; size) {
     OpenMM_StringArray_resize(array, size);
 }
-void openmm_stringarray_append_(OpenMM_StringArray* const&amp; array, const char* str, int length) {
+OPENMM_EXPORT void openmm_stringarray_append_(OpenMM_StringArray* const&amp; array, const char* str, int length) {
     OpenMM_StringArray_append(array, string(str, length).c_str());
 }
-void OPENMM_STRINGARRAY_APPEND(OpenMM_StringArray* const&amp; array, const char* str, int length) {
+OPENMM_EXPORT void OPENMM_STRINGARRAY_APPEND(OpenMM_StringArray* const&amp; array, const char* str, int length) {
     OpenMM_StringArray_append(array, string(str, length).c_str());
 }
-void openmm_stringarray_set_(OpenMM_StringArray* const&amp; array, const int&amp; index, const char* str, int length) {
+OPENMM_EXPORT void openmm_stringarray_set_(OpenMM_StringArray* const&amp; array, const int&amp; index, const char* str, int length) {
     OpenMM_StringArray_set(array, index-1, string(str, length).c_str());
 }
-void OPENMM_STRINGARRAY_SET(OpenMM_StringArray* const&amp; array, const int&amp; index, const char* str, int length) {
+OPENMM_EXPORT void OPENMM_STRINGARRAY_SET(OpenMM_StringArray* const&amp; array, const int&amp; index, const char* str, int length) {
     OpenMM_StringArray_set(array, index-1, string(str, length).c_str());
 }
-void openmm_stringarray_get_(const OpenMM_StringArray* const&amp; array, const int&amp; index, char* result, int length) {
+OPENMM_EXPORT void openmm_stringarray_get_(const OpenMM_StringArray* const&amp; array, const int&amp; index, char* result, int length) {
     const char* str = OpenMM_StringArray_get(array, index-1);
     copyAndPadString(result, str, length);
 }
-void OPENMM_STRINGARRAY_GET(const OpenMM_StringArray* const&amp; array, const int&amp; index, char* result, int length) {
+OPENMM_EXPORT void OPENMM_STRINGARRAY_GET(const OpenMM_StringArray* const&amp; array, const int&amp; index, char* result, int length) {
     const char* str = OpenMM_StringArray_get(array, index-1);
     copyAndPadString(result, str, length);
 }
 
 /* OpenMM_BondArray */
-void openmm_bondarray_create_(OpenMM_BondArray*&amp; result, const int&amp; size) {
+OPENMM_EXPORT void openmm_bondarray_create_(OpenMM_BondArray*&amp; result, const int&amp; size) {
     result = OpenMM_BondArray_create(size);
 }
-void OPENMM_BONDARRAY_CREATE(OpenMM_BondArray*&amp; result, const int&amp; size) {
+OPENMM_EXPORT void OPENMM_BONDARRAY_CREATE(OpenMM_BondArray*&amp; result, const int&amp; size) {
     result = OpenMM_BondArray_create(size);
 }
-void openmm_bondarray_destroy_(OpenMM_BondArray*&amp; array) {
+OPENMM_EXPORT void openmm_bondarray_destroy_(OpenMM_BondArray*&amp; array) {
     OpenMM_BondArray_destroy(array);
     array = 0;
 }
-void OPENMM_BONDARRAY_DESTROY(OpenMM_BondArray*&amp; array) {
+OPENMM_EXPORT void OPENMM_BONDARRAY_DESTROY(OpenMM_BondArray*&amp; array) {
     OpenMM_BondArray_destroy(array);
     array = 0;
 }
-int openmm_bondarray_getsize_(const OpenMM_BondArray* const&amp; array) {
+OPENMM_EXPORT int openmm_bondarray_getsize_(const OpenMM_BondArray* const&amp; array) {
     return OpenMM_BondArray_getSize(array);
 }
-int OPENMM_BONDARRAY_GETSIZE(const OpenMM_BondArray* const&amp; array) {
+OPENMM_EXPORT int OPENMM_BONDARRAY_GETSIZE(const OpenMM_BondArray* const&amp; array) {
     return OpenMM_BondArray_getSize(array);
 }
-void openmm_bondarray_resize_(OpenMM_BondArray* const&amp; array, const int&amp; size) {
+OPENMM_EXPORT void openmm_bondarray_resize_(OpenMM_BondArray* const&amp; array, const int&amp; size) {
     OpenMM_BondArray_resize(array, size);
 }
-void OPENMM_BONDARRAY_RESIZE(OpenMM_BondArray* const&amp; array, const int&amp; size) {
+OPENMM_EXPORT void OPENMM_BONDARRAY_RESIZE(OpenMM_BondArray* const&amp; array, const int&amp; size) {
     OpenMM_BondArray_resize(array, size);
 }
-void openmm_bondarray_append_(OpenMM_BondArray* const&amp; array, const int&amp; particle1, const int&amp; particle2) {
+OPENMM_EXPORT void openmm_bondarray_append_(OpenMM_BondArray* const&amp; array, const int&amp; particle1, const int&amp; particle2) {
     OpenMM_BondArray_append(array, particle1, particle2);
 }
-void OPENMM_BONDARRAY_APPEND(OpenMM_BondArray* const&amp; array, const int&amp; particle1, const int&amp; particle2) {
+OPENMM_EXPORT void OPENMM_BONDARRAY_APPEND(OpenMM_BondArray* const&amp; array, const int&amp; particle1, const int&amp; particle2) {
     OpenMM_BondArray_append(array, particle1, particle2);
 }
-void openmm_bondarray_set_(OpenMM_BondArray* const&amp; array, const int&amp; index, const int&amp; particle1, const int&amp; particle2) {
+OPENMM_EXPORT void openmm_bondarray_set_(OpenMM_BondArray* const&amp; array, const int&amp; index, const int&amp; particle1, const int&amp; particle2) {
     OpenMM_BondArray_set(array, index-1, particle1, particle2);
 }
-void OPENMM_BONDARRAY_SET(OpenMM_BondArray* const&amp; array, const int&amp; index, const int&amp; particle1, const int&amp; particle2) {
+OPENMM_EXPORT void OPENMM_BONDARRAY_SET(OpenMM_BondArray* const&amp; array, const int&amp; index, const int&amp; particle1, const int&amp; particle2) {
     OpenMM_BondArray_set(array, index-1, particle1, particle2);
 }
-void openmm_bondarray_get_(const OpenMM_BondArray* const&amp; array, const int&amp; index, int* particle1, int* particle2) {
+OPENMM_EXPORT void openmm_bondarray_get_(const OpenMM_BondArray* const&amp; array, const int&amp; index, int* particle1, int* particle2) {
     OpenMM_BondArray_get(array, index-1, particle1, particle2);
 }
-void OPENMM_BONDARRAY_GET(const OpenMM_BondArray* const&amp; array, const int&amp; index, int* particle1, int* particle2) {
+OPENMM_EXPORT void OPENMM_BONDARRAY_GET(const OpenMM_BondArray* const&amp; array, const int&amp; index, int* particle1, int* particle2) {
     OpenMM_BondArray_get(array, index-1, particle1, particle2);
 }
 
 /* OpenMM_ParameterArray */
-int openmm_parameterarray_getsize_(const OpenMM_ParameterArray* const&amp; array) {
+OPENMM_EXPORT int openmm_parameterarray_getsize_(const OpenMM_ParameterArray* const&amp; array) {
     return OpenMM_ParameterArray_getSize(array);
 }
-int OPENMM_PARAMETERARRAY_GETSIZE(const OpenMM_ParameterArray* const&amp; array) {
+OPENMM_EXPORT int OPENMM_PARAMETERARRAY_GETSIZE(const OpenMM_ParameterArray* const&amp; array) {
     return OpenMM_ParameterArray_getSize(array);
 }
-double openmm_parameterarray_get_(const OpenMM_ParameterArray* const&amp; array, const char* name, int length) {
+OPENMM_EXPORT double openmm_parameterarray_get_(const OpenMM_ParameterArray* const&amp; array, const char* name, int length) {
     return OpenMM_ParameterArray_get(array, string(name, length).c_str());
 }
-double OPENMM_PARAMETERARRAY_GET(const OpenMM_ParameterArray* const&amp; array, const char* name, int length) {
+OPENMM_EXPORT double OPENMM_PARAMETERARRAY_GET(const OpenMM_ParameterArray* const&amp; array, const char* name, int length) {
     return OpenMM_ParameterArray_get(array, string(name, length).c_str());
 }
 <xsl:call-template name="primitive_array">
@@ -222,16 +222,16 @@ double OPENMM_PARAMETERARRAY_GET(const OpenMM_ParameterArray* const&amp; array, 
 
 /* These methods need to be handled specially, since their C++ APIs cannot be directly translated to C.
    Unlike the C++ versions, the return value is allocated on the heap, and you must delete it yourself. */
-void openmm_context_getstate_(const OpenMM_Context*&amp; target, int const&amp; types, OpenMM_State*&amp; result) {
+OPENMM_EXPORT void openmm_context_getstate_(const OpenMM_Context*&amp; target, int const&amp; types, OpenMM_State*&amp; result) {
     result = OpenMM_Context_getState(target, types);
 };
-void OPENMM_CONTEXT_GETSTATE(const OpenMM_Context*&amp; target, int const&amp; types, OpenMM_State*&amp; result) {
+OPENMM_EXPORT void OPENMM_CONTEXT_GETSTATE(const OpenMM_Context*&amp; target, int const&amp; types, OpenMM_State*&amp; result) {
     result = OpenMM_Context_getState(target, types);
 };
-void openmm_platform_loadpluginsfromdirectory_(const char* directory, OpenMM_StringArray*&amp; result, int length) {
+OPENMM_EXPORT void openmm_platform_loadpluginsfromdirectory_(const char* directory, OpenMM_StringArray*&amp; result, int length) {
     result = OpenMM_Platform_loadPluginsFromDirectory(string(directory, length).c_str());
 };
-void OPENMM_PLATFORM_LOADPLUGINSFROMDIRECTORY(const char* directory, OpenMM_StringArray*&amp; result, int length) {
+OPENMM_EXPORT void OPENMM_PLATFORM_LOADPLUGINSFROMDIRECTORY(const char* directory, OpenMM_StringArray*&amp; result, int length) {
     result = OpenMM_Platform_loadPluginsFromDirectory(string(directory, length).c_str());
 };
 
@@ -250,48 +250,48 @@ void OPENMM_PLATFORM_LOADPLUGINSFROMDIRECTORY(const char* directory, OpenMM_Stri
  <xsl:variable name="name_lower" select="lower-case($name)"/>
  <xsl:variable name="name_upper" select="upper-case($name)"/>
 /* <xsl:value-of select="$name"/> */
-void <xsl:value-of select="$name_lower"/>_create_(<xsl:value-of select="$name"/>*&amp; result, const int&amp; size) {
+OPENMM_EXPORT void <xsl:value-of select="$name_lower"/>_create_(<xsl:value-of select="$name"/>*&amp; result, const int&amp; size) {
     result = <xsl:value-of select="$name"/>_create(size);
 }
-void <xsl:value-of select="$name_upper"/>_CREATE(<xsl:value-of select="$name"/>*&amp; result, const int&amp; size) {
+OPENMM_EXPORT void <xsl:value-of select="$name_upper"/>_CREATE(<xsl:value-of select="$name"/>*&amp; result, const int&amp; size) {
     result = <xsl:value-of select="$name"/>_create(size);
 }
-void <xsl:value-of select="$name_lower"/>_destroy_(<xsl:value-of select="$name"/>*&amp; array) {
+OPENMM_EXPORT void <xsl:value-of select="$name_lower"/>_destroy_(<xsl:value-of select="$name"/>*&amp; array) {
     <xsl:value-of select="$name"/>_destroy(array);
     array = 0;
 }
-void <xsl:value-of select="$name_upper"/>_DESTROY(<xsl:value-of select="$name"/>*&amp; array) {
+OPENMM_EXPORT void <xsl:value-of select="$name_upper"/>_DESTROY(<xsl:value-of select="$name"/>*&amp; array) {
     <xsl:value-of select="$name"/>_destroy(array);
     array = 0;
 }
-int <xsl:value-of select="$name_lower"/>_getsize_(const <xsl:value-of select="$name"/>* const&amp; array) {
+OPENMM_EXPORT int <xsl:value-of select="$name_lower"/>_getsize_(const <xsl:value-of select="$name"/>* const&amp; array) {
     return <xsl:value-of select="$name"/>_getSize(array);
 }
-int <xsl:value-of select="$name_upper"/>_GETSIZE(const <xsl:value-of select="$name"/>* const&amp; array) {
+OPENMM_EXPORT int <xsl:value-of select="$name_upper"/>_GETSIZE(const <xsl:value-of select="$name"/>* const&amp; array) {
     return <xsl:value-of select="$name"/>_getSize(array);
 }
-void <xsl:value-of select="$name_lower"/>_resize_(<xsl:value-of select="$name"/>* const&amp; array, const int&amp; size) {
+OPENMM_EXPORT void <xsl:value-of select="$name_lower"/>_resize_(<xsl:value-of select="$name"/>* const&amp; array, const int&amp; size) {
     <xsl:value-of select="$name"/>_resize(array, size);
 }
-void <xsl:value-of select="$name_upper"/>_RESIZE(<xsl:value-of select="$name"/>* const&amp; array, const int&amp; size) {
+OPENMM_EXPORT void <xsl:value-of select="$name_upper"/>_RESIZE(<xsl:value-of select="$name"/>* const&amp; array, const int&amp; size) {
     <xsl:value-of select="$name"/>_resize(array, size);
 }
-void <xsl:value-of select="$name_lower"/>_append_(<xsl:value-of select="$name"/>* const&amp; array, <xsl:value-of select="$element_type"/> value) {
+OPENMM_EXPORT void <xsl:value-of select="$name_lower"/>_append_(<xsl:value-of select="$name"/>* const&amp; array, <xsl:value-of select="$element_type"/> value) {
     <xsl:value-of select="$name"/>_append(array, value);
 }
-void <xsl:value-of select="$name_upper"/>_APPEND(<xsl:value-of select="$name"/>* const&amp; array, <xsl:value-of select="$element_type"/> value) {
+OPENMM_EXPORT void <xsl:value-of select="$name_upper"/>_APPEND(<xsl:value-of select="$name"/>* const&amp; array, <xsl:value-of select="$element_type"/> value) {
     <xsl:value-of select="$name"/>_append(array, value);
 }
-void <xsl:value-of select="$name_lower"/>_set_(<xsl:value-of select="$name"/>* const&amp; array, const int&amp; index, <xsl:value-of select="$element_type"/> value) {
+OPENMM_EXPORT void <xsl:value-of select="$name_lower"/>_set_(<xsl:value-of select="$name"/>* const&amp; array, const int&amp; index, <xsl:value-of select="$element_type"/> value) {
     <xsl:value-of select="$name"/>_set(array, index-1, value);
 }
-void <xsl:value-of select="$name_upper"/>_SET(<xsl:value-of select="$name"/>* const&amp; array, const int&amp; index, <xsl:value-of select="$element_type"/> value) {
+OPENMM_EXPORT void <xsl:value-of select="$name_upper"/>_SET(<xsl:value-of select="$name"/>* const&amp; array, const int&amp; index, <xsl:value-of select="$element_type"/> value) {
     <xsl:value-of select="$name"/>_set(array, index-1, value);
 }
-void <xsl:value-of select="$name_lower"/>_get_(const <xsl:value-of select="$name"/>* const&amp; array, const int&amp; index, <xsl:value-of select="$element_type"/>&amp; result) {
+OPENMM_EXPORT void <xsl:value-of select="$name_lower"/>_get_(const <xsl:value-of select="$name"/>* const&amp; array, const int&amp; index, <xsl:value-of select="$element_type"/>&amp; result) {
     result = <xsl:value-of select="$name"/>_get(array, index-1);
 }
-void <xsl:value-of select="$name_upper"/>_GET(const <xsl:value-of select="$name"/>* const&amp; array, const int&amp; index, <xsl:value-of select="$element_type"/>&amp; result) {
+OPENMM_EXPORT void <xsl:value-of select="$name_upper"/>_GET(const <xsl:value-of select="$name"/>* const&amp; array, const int&amp; index, <xsl:value-of select="$element_type"/>&amp; result) {
     result = <xsl:value-of select="$name"/>_get(array, index-1);
 }
 </xsl:template>
@@ -355,7 +355,7 @@ void <xsl:value-of select="$name_upper"/>_GET(const <xsl:value-of select="$name"
 <xsl:template name="constructor">
  <xsl:param name="function_name"/>
  <xsl:param name="suffix"/>
- <xsl:value-of select="concat('void ', $function_name, '(OpenMM_', @name, '*&amp; result')"/>
+OPENMM_EXPORT <xsl:value-of select="concat('void ', $function_name, '(OpenMM_', @name, '*&amp; result')"/>
   <!-- Generate the list of arguments -->
   <xsl:for-each select="Argument">
    <xsl:value-of select="', '"/>
@@ -398,7 +398,7 @@ void <xsl:value-of select="$name_upper"/>_GET(const <xsl:value-of select="$name"
 <!-- Print out the definition of a destructor -->
 <xsl:template name="destructor">
  <xsl:param name="function_name"/>
- <xsl:value-of select="concat('void ', $function_name, '(OpenMM_', @name, '*&amp; destroy) {')"/>
+OPENMM_EXPORT <xsl:value-of select="concat('void ', $function_name, '(OpenMM_', @name, '*&amp; destroy) {')"/>
     OpenMM_<xsl:value-of select="concat(@name, '_destroy(destroy);')"/>
     destroy = 0;
 }
@@ -412,7 +412,7 @@ void <xsl:value-of select="$name_upper"/>_GET(const <xsl:value-of select="$name"
  <!-- First the method signature -->
  <xsl:variable name="has_return" select="@returns=$int_type_id or @returns=$double_type_id"/>
  <xsl:variable name="has_return_arg" select="not($has_return or @returns=$void_type_id)"/>
- <xsl:if test="$has_return">
+OPENMM_EXPORT <xsl:if test="$has_return">
   <xsl:call-template name="wrap_type"><xsl:with-param name="type_id" select="@returns"/></xsl:call-template>
  </xsl:if>
  <xsl:if test="not($has_return)">

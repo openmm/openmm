@@ -32,100 +32,98 @@
 
 <!-- Main loop over all classes in the OpenMM namespace -->
 <xsl:template match="/GCC_XML">
-#include "OpenMMCWrapper.h"
 #include "OpenMM.h"
+#include "OpenMMCWrapper.h"
 #include &lt;cstring&gt;
 #include &lt;vector&gt;
 
 using namespace OpenMM;
 using namespace std;
 
-#if defined(__cplusplus)
 extern "C" {
-#endif
 
 /* OpenMM_Vec3 */
-OpenMM_Vec3 OpenMM_Vec3_scale(const OpenMM_Vec3 vec, double scale) {
+OPENMM_EXPORT OpenMM_Vec3 OpenMM_Vec3_scale(const OpenMM_Vec3 vec, double scale) {
     OpenMM_Vec3 result = {vec.x*scale, vec.y*scale, vec.z*scale};
     return result;
 }
 
 /* OpenMM_Vec3Array */
-OpenMM_Vec3Array* OpenMM_Vec3Array_create(int size) {
+OPENMM_EXPORT OpenMM_Vec3Array* OpenMM_Vec3Array_create(int size) {
     return reinterpret_cast&lt;OpenMM_Vec3Array*&gt;(new vector&lt;Vec3&gt;(size));
 }
-void OpenMM_Vec3Array_destroy(OpenMM_Vec3Array* array) {
+OPENMM_EXPORT void OpenMM_Vec3Array_destroy(OpenMM_Vec3Array* array) {
     delete reinterpret_cast&lt;vector&lt;Vec3&gt;*&gt;(array);
 }
-int OpenMM_Vec3Array_getSize(const OpenMM_Vec3Array* array) {
+OPENMM_EXPORT int OpenMM_Vec3Array_getSize(const OpenMM_Vec3Array* array) {
     return reinterpret_cast&lt;const vector&lt;Vec3&gt;*&gt;(array)->size();
 }
-void OpenMM_Vec3Array_resize(OpenMM_Vec3Array* array, int size) {
+OPENMM_EXPORT void OpenMM_Vec3Array_resize(OpenMM_Vec3Array* array, int size) {
     reinterpret_cast&lt;vector&lt;Vec3&gt;*&gt;(array)->resize(size);
 }
-void OpenMM_Vec3Array_append(OpenMM_Vec3Array* array, const OpenMM_Vec3 vec) {
+OPENMM_EXPORT void OpenMM_Vec3Array_append(OpenMM_Vec3Array* array, const OpenMM_Vec3 vec) {
     reinterpret_cast&lt;vector&lt;Vec3&gt;*&gt;(array)->push_back(Vec3(vec.x, vec.y, vec.z));
 }
-void OpenMM_Vec3Array_set(OpenMM_Vec3Array* array, int index, const OpenMM_Vec3 vec) {
+OPENMM_EXPORT void OpenMM_Vec3Array_set(OpenMM_Vec3Array* array, int index, const OpenMM_Vec3 vec) {
     (*reinterpret_cast&lt;vector&lt;Vec3&gt;*&gt;(array))[index] = Vec3(vec.x, vec.y, vec.z);
 }
-const OpenMM_Vec3* OpenMM_Vec3Array_get(const OpenMM_Vec3Array* array, int index) {
+OPENMM_EXPORT const OpenMM_Vec3* OpenMM_Vec3Array_get(const OpenMM_Vec3Array* array, int index) {
     return reinterpret_cast&lt;const OpenMM_Vec3*&gt;((&amp;(*reinterpret_cast&lt;const vector&lt;Vec3&gt;*&gt;(array))[index]));
 }
 
 /* OpenMM_StringArray */
-OpenMM_StringArray* OpenMM_StringArray_create(int size) {
+OPENMM_EXPORT OpenMM_StringArray* OpenMM_StringArray_create(int size) {
     return reinterpret_cast&lt;OpenMM_StringArray*&gt;(new vector&lt;string&gt;(size));
 }
-void OpenMM_StringArray_destroy(OpenMM_StringArray* array) {
+OPENMM_EXPORT void OpenMM_StringArray_destroy(OpenMM_StringArray* array) {
     delete reinterpret_cast&lt;vector&lt;string&gt;*&gt;(array);
 }
-int OpenMM_StringArray_getSize(const OpenMM_StringArray* array) {
+OPENMM_EXPORT int OpenMM_StringArray_getSize(const OpenMM_StringArray* array) {
     return reinterpret_cast&lt;const vector&lt;string&gt;*&gt;(array)->size();
 }
-void OpenMM_StringArray_resize(OpenMM_StringArray* array, int size) {
+OPENMM_EXPORT void OpenMM_StringArray_resize(OpenMM_StringArray* array, int size) {
     reinterpret_cast&lt;vector&lt;string&gt;*&gt;(array)->resize(size);
 }
-void OpenMM_StringArray_append(OpenMM_StringArray* array, const char* str) {
+OPENMM_EXPORT void OpenMM_StringArray_append(OpenMM_StringArray* array, const char* str) {
     reinterpret_cast&lt;vector&lt;string&gt;*&gt;(array)->push_back(string(str));
 }
-void OpenMM_StringArray_set(OpenMM_StringArray* array, int index, const char* str) {
+OPENMM_EXPORT void OpenMM_StringArray_set(OpenMM_StringArray* array, int index, const char* str) {
     (*reinterpret_cast&lt;vector&lt;string&gt;*&gt;(array))[index] = string(str);
 }
-const char* OpenMM_StringArray_get(const OpenMM_StringArray* array, int index) {
+OPENMM_EXPORT const char* OpenMM_StringArray_get(const OpenMM_StringArray* array, int index) {
     return (*reinterpret_cast&lt;const vector&lt;string&gt;*&gt;(array))[index].c_str();
 }
 
 /* OpenMM_BondArray */
-OpenMM_BondArray* OpenMM_BondArray_create(int size) {
+OPENMM_EXPORT OpenMM_BondArray* OpenMM_BondArray_create(int size) {
     return reinterpret_cast&lt;OpenMM_BondArray*&gt;(new vector&lt;pair&lt;int, int&gt; &gt;(size));
 }
-void OpenMM_BondArray_destroy(OpenMM_BondArray* array) {
+OPENMM_EXPORT void OpenMM_BondArray_destroy(OpenMM_BondArray* array) {
     delete reinterpret_cast&lt;vector&lt;pair&lt;int, int&gt; &gt;*&gt;(array);
 }
-int OpenMM_BondArray_getSize(const OpenMM_BondArray* array) {
+OPENMM_EXPORT int OpenMM_BondArray_getSize(const OpenMM_BondArray* array) {
     return reinterpret_cast&lt;const vector&lt;pair&lt;int, int&gt; &gt;*&gt;(array)->size();
 }
-void OpenMM_BondArray_resize(OpenMM_BondArray* array, int size) {
+OPENMM_EXPORT void OpenMM_BondArray_resize(OpenMM_BondArray* array, int size) {
     reinterpret_cast&lt;vector&lt;pair&lt;int, int&gt; &gt;*&gt;(array)->resize(size);
 }
-void OpenMM_BondArray_append(OpenMM_BondArray* array, int particle1, int particle2) {
+OPENMM_EXPORT void OpenMM_BondArray_append(OpenMM_BondArray* array, int particle1, int particle2) {
     reinterpret_cast&lt;vector&lt;pair&lt;int, int&gt; &gt;*&gt;(array)->push_back(pair&lt;int, int&gt;(particle1, particle2));
 }
-void OpenMM_BondArray_set(OpenMM_BondArray* array, int index, int particle1, int particle2) {
+OPENMM_EXPORT void OpenMM_BondArray_set(OpenMM_BondArray* array, int index, int particle1, int particle2) {
     (*reinterpret_cast&lt;vector&lt;pair&lt;int, int&gt; &gt;*&gt;(array))[index] = pair&lt;int, int&gt;(particle1, particle2);
 }
-void OpenMM_BondArray_get(const OpenMM_BondArray* array, int index, int* particle1, int* particle2) {
+OPENMM_EXPORT void OpenMM_BondArray_get(const OpenMM_BondArray* array, int index, int* particle1, int* particle2) {
     pair&lt;int, int&gt; particles = (*reinterpret_cast&lt;const vector&lt;pair&lt;int, int&gt; &gt;*&gt;(array))[index];
     *particle1 = particles.first;
     *particle2 = particles.second;
 }
 
 /* OpenMM_ParameterArray */
-int OpenMM_ParameterArray_getSize(const OpenMM_ParameterArray* array) {
+OPENMM_EXPORT int OpenMM_ParameterArray_getSize(const OpenMM_ParameterArray* array) {
     return reinterpret_cast&lt;const map&lt;string, double&gt;*&gt;(array)->size();
 }
-double OpenMM_ParameterArray_get(const OpenMM_ParameterArray* array, const char* name) {
+OPENMM_EXPORT double OpenMM_ParameterArray_get(const OpenMM_ParameterArray* array, const char* name) {
     const map&lt;string, double&gt;* params = reinterpret_cast&lt;const map&lt;string, double&gt;*&gt;(array);
     const map&lt;string, double&gt;::const_iterator iter = params->find(string(name));
     if (iter == params->end())
@@ -139,11 +137,11 @@ double OpenMM_ParameterArray_get(const OpenMM_ParameterArray* array, const char*
 
 /* These methods need to be handled specially, since their C++ APIs cannot be directly translated to C.
    Unlike the C++ versions, the return value is allocated on the heap, and you must delete it yourself. */
-OpenMM_State* OpenMM_Context_getState(const OpenMM_Context* target, int types) {
+OPENMM_EXPORT OpenMM_State* OpenMM_Context_getState(const OpenMM_Context* target, int types) {
     State result = reinterpret_cast&lt;const Context*&gt;(target)->getState(types);
     return reinterpret_cast&lt;OpenMM_State*&gt;(new State(result));
 };
-OpenMM_StringArray* OpenMM_Platform_loadPluginsFromDirectory(const char* directory) {
+OPENMM_EXPORT OpenMM_StringArray* OpenMM_Platform_loadPluginsFromDirectory(const char* directory) {
     vector&lt;string&gt; result = Platform::loadPluginsFromDirectory(string(directory));
     return reinterpret_cast&lt;OpenMM_StringArray*&gt;(new vector&lt;string&gt;(result));
 };
@@ -153,9 +151,7 @@ OpenMM_StringArray* OpenMM_Platform_loadPluginsFromDirectory(const char* directo
   <xsl:call-template name="class"/>
  </xsl:for-each>
  
-#if defined(__cplusplus)
 }
-#endif
 </xsl:template>
 
 <!-- Print out the definitions for a (Primitive)Array type -->
@@ -163,25 +159,25 @@ OpenMM_StringArray* OpenMM_Platform_loadPluginsFromDirectory(const char* directo
  <xsl:param name="element_type"/>
  <xsl:param name="name"/>
 /* <xsl:value-of select="$name"/> */
-<xsl:value-of select="$name"/>* <xsl:value-of select="$name"/>_create(int size) {
+OPENMM_EXPORT <xsl:value-of select="$name"/>* <xsl:value-of select="$name"/>_create(int size) {
     return reinterpret_cast&lt;<xsl:value-of select="$name"/>*&gt;(new vector&lt;<xsl:value-of select="$element_type"/>&gt;(size));
 }
-void <xsl:value-of select="$name"/>_destroy(<xsl:value-of select="$name"/>* array) {
+OPENMM_EXPORT void <xsl:value-of select="$name"/>_destroy(<xsl:value-of select="$name"/>* array) {
     delete reinterpret_cast&lt;vector&lt;<xsl:value-of select="$element_type"/>&gt;*&gt;(array);
 }
-int <xsl:value-of select="$name"/>_getSize(const <xsl:value-of select="$name"/>* array) {
+OPENMM_EXPORT int <xsl:value-of select="$name"/>_getSize(const <xsl:value-of select="$name"/>* array) {
     return reinterpret_cast&lt;const vector&lt;<xsl:value-of select="$element_type"/>&gt;*&gt;(array)->size();
 }
-void <xsl:value-of select="$name"/>_resize(<xsl:value-of select="$name"/>* array, int size) {
+OPENMM_EXPORT void <xsl:value-of select="$name"/>_resize(<xsl:value-of select="$name"/>* array, int size) {
     reinterpret_cast&lt;vector&lt;<xsl:value-of select="$element_type"/>&gt;*&gt;(array)->resize(size);
 }
-void <xsl:value-of select="$name"/>_append(<xsl:value-of select="$name"/>* array, <xsl:value-of select="$element_type"/> value) {
+OPENMM_EXPORT void <xsl:value-of select="$name"/>_append(<xsl:value-of select="$name"/>* array, <xsl:value-of select="$element_type"/> value) {
     reinterpret_cast&lt;vector&lt;<xsl:value-of select="$element_type"/>&gt;*&gt;(array)->push_back(value);
 }
-void <xsl:value-of select="$name"/>_set(<xsl:value-of select="$name"/>* array, int index, <xsl:value-of select="$element_type"/> value) {
+OPENMM_EXPORT void <xsl:value-of select="$name"/>_set(<xsl:value-of select="$name"/>* array, int index, <xsl:value-of select="$element_type"/> value) {
     (*reinterpret_cast&lt;vector&lt;<xsl:value-of select="$element_type"/>&gt;*&gt;(array))[index] = value;
 }
-double <xsl:value-of select="$name"/>_get(const <xsl:value-of select="$name"/>* array, int index) {
+OPENMM_EXPORT double <xsl:value-of select="$name"/>_get(const <xsl:value-of select="$name"/>* array, int index) {
     return (*reinterpret_cast&lt;const vector&lt;<xsl:value-of select="$element_type"/>&gt;*&gt;(array))[index];
 }
 </xsl:template>
@@ -201,7 +197,7 @@ double <xsl:value-of select="$name"/>_get(const <xsl:value-of select="$name"/>* 
    </xsl:call-template>
   </xsl:for-each>
  </xsl:if>
-void OpenMM_<xsl:value-of select="concat(@name, '_destroy(OpenMM_', @name, '* target) {')"/>
+OPENMM_EXPORT void OpenMM_<xsl:value-of select="concat(@name, '_destroy(OpenMM_', @name, '* target) {')"/>
     delete reinterpret_cast&lt;<xsl:value-of select="@name"/>*&gt;(target);
 }
  <!-- Methods -->
@@ -226,7 +222,7 @@ void OpenMM_<xsl:value-of select="concat(@name, '_destroy(OpenMM_', @name, '* ta
 <!-- Print out the definition of a constructor -->
 <xsl:template name="constructor">
  <xsl:param name="suffix"/>
-OpenMM_<xsl:value-of select="concat(@name, '* OpenMM_', @name, '_create', $suffix, '(')"/>
+OPENMM_EXPORT OpenMM_<xsl:value-of select="concat(@name, '* OpenMM_', @name, '_create', $suffix, '(')"/>
   <xsl:for-each select="Argument">
    <xsl:if test="position() > 1">, </xsl:if>
    <xsl:call-template name="wrap_type"><xsl:with-param name="type_id" select="@type"/></xsl:call-template>
@@ -251,7 +247,7 @@ OpenMM_<xsl:value-of select="concat(@name, '* OpenMM_', @name, '_create', $suffi
  <xsl:param name="class_id"/>
  <!-- First the method signature -->
  <xsl:value-of select="$newline"/>
- <xsl:call-template name="wrap_type"><xsl:with-param name="type_id" select="@returns"/></xsl:call-template><xsl:value-of select="concat(' OpenMM_', $class_name, '_', @name, '(')"/>
+OPENMM_EXPORT <xsl:call-template name="wrap_type"><xsl:with-param name="type_id" select="@returns"/></xsl:call-template><xsl:value-of select="concat(' OpenMM_', $class_name, '_', @name, '(')"/>
  <xsl:if test="not(@static='1')">
   <xsl:if test="@const='1'">
    <xsl:value-of select="'const '"/>
