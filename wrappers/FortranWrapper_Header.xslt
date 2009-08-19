@@ -263,7 +263,7 @@ END MODULE OpenMM
             type (<xsl:value-of select="$name"/>) target
             integer*4 size
         end
-        subroutine <xsl:value-of select="$name"/>_append(target, value
+        subroutine <xsl:value-of select="$name"/>_append(target, value)
             use OpenMM_Types; implicit none
             type (<xsl:value-of select="$name"/>) target
             <xsl:value-of select="$element_type"/> value
