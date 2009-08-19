@@ -169,7 +169,7 @@ struct MyOpenMMData {
     MyOpenMMData() : system(0), context(0), integrator(0) {}
     ~MyOpenMMData() {delete system; delete context; delete integrator;}
     OpenMM::System*         system;
-    OpenMM::Context*  context;
+    OpenMM::Context*        context;
     OpenMM::Integrator*     integrator;
 };
 
