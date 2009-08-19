@@ -1,6 +1,6 @@
 ----------------------------------------------------------------
-OpenMM(tm) Example programs and prototype C and Fortran wrappers
-for OpenMM Preview Release 3, June, 2009.
+OpenMM(tm) Example programs for OpenMM Preview Release 4, 
+August, 2009.
 
 See https://simtk.org/home/openmm.
 For help go to the Advanced/Public Forums tab and post to the
@@ -21,19 +21,17 @@ V. S. Pande. “Accelerating Molecular Dynamic Simulation on
 Graphics Processing Units.” J. Comp. Chem., (2009), 30(6):864-872.
 
 These simple "hello world" examples were developed by
-Christopher Bruns and Michael Sherman for the OpenMM
-workshop on June 24, 2009 at Stanford.
+Christopher Bruns and Michael Sherman.
 ----------------------------------------------------------------
 
 
-In addition to the example programs here, there are also two sets 
-of wrappers to enable C and Fortran 95 to call the 
-OpenMM API. However, even if your calling code is in C or Fortran, 
+OpenMM's native API is in C++, however it also comes with
+automatically-generated C and Fortran 95 bindings for that API.
+However, even if your calling code is in C or Fortran, 
 please consider instead writing your OpenMM-calling routines in 
 C++, using 'extern "C"' so that your main program can call them. 
-If that isn't feasible for you, try out our wrappers 
-and let us know what troubles or better ideas you have. (Post to 
-the OpenMM Forum at the above URL.)
+If that isn't feasible for you, you can use the C or Fortran 95
+bindings.
 
 Building the examples
 ---------------------
@@ -49,7 +47,7 @@ for C++ and C, and Intel's "ifort" Fortran compiler.
 There is a subdirectory here providing Visual Studio "solutions"
 for building HelloArgon in C++, C, and Fortran. You will have to 
 make your own for the other examples or just substitute a different 
-source file for HelloArgon.cpp.
+source file for HelloArgon.
 
 HelloArgon (C++, C, Fortran 95)
 -------------------------------
@@ -87,12 +85,17 @@ It is organized like the previous two.
 C Wrapper
 ---------
 
-This consists of two files:
+The folling header file is available in the OpenMM/include
+directory (where you installed OpenMM):
     OpenMMCWrapper.h
-    OpenMMCWrapper.cpp
+
+The C functions it declares are built in to the main OpenMM
+library that you link with. If you are building your own
+OpenMM, be sure to enable the OPENMM_BUILD_API_WRAPPERS
+CMake option.
 
 Your C code (and the C examples above) include the header file
-and link with OpenMMCWrapper.o along with the OpenMM library.
+and link with the OpenMM library.
 Consult the code or the example programs to figure out how
 to use the wrappers; they are for the most part a very 
 straightforward rehashing of the well-documented OpenMM C++
@@ -101,16 +104,18 @@ API.
 Fortran Wrapper
 ---------------
 
-The files that define the OpenMM Fortran bindings are:
+The file that defines the OpenMM Fortran bindings is in the
+OpenMM/include directory (where you installed OpenMM):
      OpenMMFortranModule.f90
-     OpenMMFortranWrapper.cpp
 
-This consists of a Fortran 95 Module "OpenMM" so that your
-Fortran program units have "use OpenMM" statements. You will
-need access to the OpenMM*.mod files generated for the modules,
-and you must also link with the OpenMMCWrapper.o as described
-above for C, PLUS the OpenMMFortranWrapper.o. That's because 
-the Fortran Wrapper makes use of the C Wrapper.
+You have to compile this .f90 file yourself so that you
+get appropriate OpenMM*.mod module files. This allows your
+Fortran program units to have "use OpenMM" statements. 
+
+The functions described there are built in to the main OpenMM
+library that you link with. If you are building your own
+OpenMM, be sure to enable the OPENMM_BUILD_API_WRAPPERS
+CMake option.
 
 
 
