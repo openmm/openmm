@@ -90,7 +90,11 @@ ELSE (APPLE)
     IF (WIN32)
         LINK_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/cudpp/win)
         INSTALL_FILES(/lib FILES ${CMAKE_CURRENT_SOURCE_DIR}/cudpp/win/cudpp32.dll)
+    ELSEIF (CMAKE_SIZEOF_VOID_P MATCHES "8")
+        # Linux 64 bit
+        LINK_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/cudpp/linux64)
     ELSE (WIN32)
+        # Linux 64 bit
         LINK_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/cudpp/linux)
     ENDIF (WIN32)
 ENDIF(APPLE)
