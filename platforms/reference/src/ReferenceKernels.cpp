@@ -53,6 +53,7 @@
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/Integrator.h"
 #include "SimTKUtilities/SimTKOpenMMUtilities.h"
+#include "lepton/CustomFunction.h"
 #include "lepton/Parser.h"
 #include "lepton/ParsedExpression.h"
 #include <cmath>
@@ -473,6 +474,65 @@ double ReferenceCalcNonbondedForceKernel::executeEnergy(ContextImpl& context) {
     return energy;
 }
 
+class ReferenceCalcCustomNonbondedForceKernel::TabulatedFunction : public Lepton::CustomFunction {
+public:
+    TabulatedFunction(double min, double max, const vector<double>& values, bool interpolating) :
+            min(min), max(max), values(values), interpolating(interpolating) {
+    }
+    int getNumArguments() const {
+        return 1;
+    }
+    /**
+     * Given the function argument, find the local spline coefficients.
+     */
+    void findCoefficients(double& x, double* coeff) const {
+        int length = values.size();
+        double spacing = (max-min)/(length-1);
+        int index = std::floor((x-min)/spacing);
+        double points[4];
+        points[0] = (index == 0 ? 2*values[0]-values[1] : values[index-1]);
+        points[1] = values[index];
+        points[2] = (index > length-2 ? values[length-1] : values[index+1]);
+        points[3] = (index > length-3 ? 2*values[length-1]-values[length-2] : values[index+2]);
+        if (interpolating) {
+            coeff[0] = points[1];
+            coeff[1] = 0.5*(-points[0]+points[2]);
+            coeff[2] = 0.5*(2.0*points[0]-5.0*points[1]+4.0*points[2]-points[3]);
+            coeff[3] = 0.5*(-points[0]+3.0*points[1]-3.0*points[2]+points[3]);
+        }
+        else {
+            coeff[0] = (points[0]+4.0*points[1]+points[2])/6.0;
+            coeff[1] = (-3.0*points[0]+3.0*points[2])/6.0;
+            coeff[2] = (3.0*points[0]-6.0*points[1]+3.0*points[2])/6.0;
+            coeff[3] = (-points[0]+3.0*points[1]-3.0*points[2]+points[3])/6.0;
+        }
+        x = (x-min)/spacing-index;
+    }
+    double evaluate(const double* arguments) const {
+        double x = arguments[0];
+        if (x < min || x > max)
+            return 0.0;
+        double coeff[4];
+        findCoefficients(x, coeff);
+        return coeff[0]+x*(coeff[1]+x*(coeff[2]+x*coeff[3]));
+    }
+    double evaluateDerivative(const double* arguments, const int* derivOrder) const {
+        double x = arguments[0];
+        if (x < min || x > max)
+            return 0.0;
+        double coeff[4];
+        findCoefficients(x, coeff);
+        double scale = (values.size()-1)/(max-min);
+        return scale*(coeff[1]+x*(2.0*coeff[2]+x*3.0*coeff[3]));
+    }
+    CustomFunction* clone() const {
+        return new TabulatedFunction(min, max, values, interpolating);
+    }
+    double min, max;
+    vector<double> values;
+    bool interpolating;
+};
+
 ReferenceCalcCustomNonbondedForceKernel::~ReferenceCalcCustomNonbondedForceKernel() {
     disposeRealArray(particleParamArray, numParticles);
     disposeIntArray(exclusionArray, numParticles);
@@ -540,17 +600,34 @@ void ReferenceCalcCustomNonbondedForceKernel::initialize(const System& system, c
     else
         neighborList = new NeighborList();
 
+    // Create custom functions for the tabulated functions.
+
+    map<string, Lepton::CustomFunction*> functions;
+    for (int i = 0; i < force.getNumFunctions(); i++) {
+        string name;
+        vector<double> values;
+        double min, max;
+        bool interpolating;
+        force.getFunctionParameters(i, name, values, min, max, interpolating);
+        functions[name] = new TabulatedFunction(min, max, values, interpolating);
+    }
+
     // Parse the various expressions used to calculate the force.
 
-    Lepton::ParsedExpression expression = Lepton::Parser::parse(force.getEnergyFunction()).optimize();
+    Lepton::ParsedExpression expression = Lepton::Parser::parse(force.getEnergyFunction(), functions).optimize();
     energyExpression = expression.createProgram();
     forceExpression = expression.differentiate("r").optimize().createProgram();
     for (int i = 0; i < numParameters; i++) {
         parameterNames.push_back(force.getParameterName(i));
-        combiningRules.push_back(Lepton::Parser::parse(force.getParameterCombiningRule(i)).optimize().createProgram());
+        combiningRules.push_back(Lepton::Parser::parse(force.getParameterCombiningRule(i), functions).optimize().createProgram());
     }
     for (int i = 0; i < force.getNumGlobalParameters(); i++)
         globalParameterNames.push_back(force.getGlobalParameterName(i));
+
+    // Delete the custom functions.
+
+    for (map<string, Lepton::CustomFunction*>::iterator iter = functions.begin(); iter != functions.end(); iter++)
+        delete iter->second;
 }
 
 void ReferenceCalcCustomNonbondedForceKernel::executeForces(ContextImpl& context) {

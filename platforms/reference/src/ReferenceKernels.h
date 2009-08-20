@@ -314,6 +314,7 @@ private:
     std::vector<Lepton::ExpressionProgram> combiningRules;
     NonbondedMethod nonbondedMethod;
     NeighborList* neighborList;
+    class TabulatedFunction;
 };
 
 /**

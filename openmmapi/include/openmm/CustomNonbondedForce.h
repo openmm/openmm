@@ -98,6 +98,12 @@ public:
         return globalParameters.size();
     }
     /**
+     * Get the number of tabulated functions that have been defined.
+     */
+    int getNumFunctions() const {
+        return functions.size();
+    }
+    /**
      * Get the algebraic expression that gives the interaction energy between two particles
      */
     const std::string& getEnergyFunction() const;
@@ -273,6 +279,45 @@ public:
      *                   will cause the interaction to be completely omitted from force and energy calculations.
      */
     void setExceptionParameters(int index, int particle1, int particle2, const std::vector<double>& parameters);
+    /**
+     * Add a tabulated function that may appear in algebraic expressions.
+     *
+     * @param name           the name of the function as it appears in expressions
+     * @param values         the tabulated values of the function f(x) at uniformly spaced values of x between min and max.
+     *                       The function is assumed to be zero for x &lt; min or x &gt; max.
+     * @param min            the value of the independent variable corresponding to the first element of values
+     * @param max            the value of the independent variable corresponding to the last element of values
+     * @param interpolating  if true, an interpolating (Catmull-Rom) spline will be used to represent the function.
+     *                       If false, an approximating spline (B-spline) will be used.
+     * @return the index of the function that was added
+     */
+    int addFunction(const std::string& name, const std::vector<double>& values, double min, double max, bool interpolating);
+    /**
+     * Get the parameters for a tabulated function that may appear in algebraic expressions.
+     *
+     * @param index          the index of the function for which to get parameters
+     * @param name           the name of the function as it appears in expressions
+     * @param values         the tabulated values of the function f(x) at uniformly spaced values of x between min and max.
+     *                       The function is assumed to be zero for x &lt; min or x &gt; max.
+     * @param min            the value of the independent variable corresponding to the first element of values
+     * @param max            the value of the independent variable corresponding to the last element of values
+     * @param interpolating  if true, an interpolating (Catmull-Rom) spline will be used to represent the function.
+     *                       If false, an approximating spline (B-spline) will be used.
+     */
+    void getFunctionParameters(int index, std::string& name, std::vector<double>& values, double& min, double& max, bool& interpolating) const;
+    /**
+     * Set the parameters for a tabulated function that may appear in algebraic expressions.
+     *
+     * @param index          the index of the function for which to set parameters
+     * @param name           the name of the function as it appears in expressions
+     * @param values         the tabulated values of the function f(x) at uniformly spaced values of x between min and max.
+     *                       The function is assumed to be zero for x &lt; min or x &gt; max.
+     * @param min            the value of the independent variable corresponding to the first element of values
+     * @param max            the value of the independent variable corresponding to the last element of values
+     * @param interpolating  if true, an interpolating (Catmull-Rom) spline will be used to represent the function.
+     *                       If false, an approximating spline (B-spline) will be used.
+     */
+    void setFunctionParameters(int index, const std::string& name, const std::vector<double>& values, double min, double max, bool interpolating);
 protected:
     ForceImpl* createImpl();
 private:
@@ -280,6 +325,7 @@ private:
     class ParameterInfo;
     class GlobalParameterInfo;
     class ExceptionInfo;
+    class FunctionInfo;
     NonbondedMethod nonbondedMethod;
     double cutoffDistance;
     Vec3 periodicBoxVectors[3];
@@ -288,6 +334,7 @@ private:
     std::vector<GlobalParameterInfo> globalParameters;
     std::vector<ParticleInfo> particles;
     std::vector<ExceptionInfo> exceptions;
+    std::vector<FunctionInfo> functions;
     std::map<std::pair<int, int>, int> exceptionMap;
 };
 
@@ -328,6 +375,19 @@ public:
     }
     ExceptionInfo(int particle1, int particle2, const std::vector<double>& parameters) :
         particle1(particle1), particle2(particle2), parameters(parameters) {
+    }
+};
+
+class CustomNonbondedForce::FunctionInfo {
+public:
+    std::string name;
+    std::vector<double> values;
+    double min, max;
+    bool interpolating;
+    FunctionInfo() {
+    }
+    FunctionInfo(const std::string& name, const std::vector<double>& values, double min, double max, bool interpolating) :
+        name(name), values(values), min(min), max(max), interpolating(interpolating) {
     }
 };
 
