@@ -32,7 +32,6 @@
  * 
  */
 
-#include <vector>
 
 #include "../../../tests/AssertionUtilities.h"
 #include "CudaPlatform.h"
@@ -60,6 +59,10 @@
 #include "openmm/VariableVerletIntegrator.h"
 #include "openmm/BrownianIntegrator.h"
 #include "../src/sfmt/SFMT.h"
+
+#include <ctime>
+#include <vector>
+#include <cfloat>
 
 // force enums
 
@@ -2262,7 +2265,7 @@ static int checkEnergyForceConsistent( Context& context, double delta, double to
    double step = delta/forceNorm;
    std::vector<Vec3> perturbedPositions; 
    perturbedPositions.resize( forces.size() );
-   for( int ii = 0; ii < forces.size(); ii++ ){
+   for( unsigned int ii = 0; ii < forces.size(); ii++ ){
       perturbedPositions[ii] = Vec3( coordinates[ii][0] - step*forces[ii][0], coordinates[ii][1] - step*forces[ii][1], coordinates[ii][2] - step*forces[ii][2] ); 
    }
 
@@ -2339,7 +2342,8 @@ Integrator* _getIntegrator( std::string& integratorName, double timeStep,
         integrator                                = new LangevinIntegrator( temperature, friction, timeStep );
         LangevinIntegrator* langevinIntegrator    = dynamic_cast<LangevinIntegrator*>(integrator);
         if( randomNumberSeed <= 0 ){
-           langevinIntegrator->setRandomNumberSeed(time(NULL));
+           time_t zero = time(NULL);
+           langevinIntegrator->setRandomNumberSeed(static_cast<int>(zero));
         } else { 
            langevinIntegrator->setRandomNumberSeed( randomNumberSeed );
         }
@@ -2347,7 +2351,8 @@ Integrator* _getIntegrator( std::string& integratorName, double timeStep,
         integrator                                        = new VariableLangevinIntegrator( temperature, friction, errorTolerance );
         VariableLangevinIntegrator* langevinIntegrator    = dynamic_cast<VariableLangevinIntegrator*>(integrator);
         if( randomNumberSeed <= 0 ){
-           langevinIntegrator->setRandomNumberSeed(time(NULL));
+           time_t zero = time(NULL);
+           langevinIntegrator->setRandomNumberSeed(static_cast<int>(zero));
         } else { 
            langevinIntegrator->setRandomNumberSeed( randomNumberSeed );
         }
@@ -3500,18 +3505,18 @@ void testEnergyForcesConsistent( std::string parameterFileName, int forceFlag, d
 #endif
 
    if( log ){
-      (void) fprintf( log, "%s Testing reference platform\n", methodName.c_str() );
-      (void) fflush( log );
-   }   
-
-   checkEnergyForceConsistent( *referenceOpenMMContext, delta, tolerance, log );
-
-   if( log ){
       (void) fprintf( log, "%s Testing cuda platform\n", methodName.c_str() );
       (void) fflush( log );
    }   
 
    checkEnergyForceConsistent( *cudaOpenMMContext, delta, tolerance, log );
+
+   if( log ){
+      (void) fprintf( log, "%s Testing reference platform\n", methodName.c_str() );
+      (void) fflush( log );
+   }   
+
+   checkEnergyForceConsistent( *referenceOpenMMContext, delta, tolerance, log );
 }
 
 void testEnergyConservation( std::string parameterFileName, int forceFlag, int totalSimulationSteps, FILE* inputLog ){
