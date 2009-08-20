@@ -325,17 +325,18 @@ if( logFile && atomI == 0 ){
       obcChain[atomI]       = offsetRadiusI*( alphaObc - two*betaObc*sum + three*gammaObc*sum2 );
       obcChain[atomI]       = (one - tanhSum*tanhSum)*obcChain[atomI]/radiusI;
 
-/* if( logFile && atomI >= 0 ){
+/*
+if( logFile ){
    (void) fprintf( logFile, "\nRRQ %d sum %12.6e tanhS %12.6e radI %.5f %.5f born %18.10e obc %12.6e",
                    atomI, sum, tanhSum, radiusI, offsetRadiusI, bornRadii[atomI], obcChain[atomI] );
-} */
+}
+*/
 
    }
 /*
-   if( logFile ){
+if( logFile ){
       (void) fclose( logFile );
-   }
-	*/
+} */
 
    return SimTKOpenMMCommon::DefaultReturn;
 
@@ -390,6 +391,22 @@ int CpuObc::computeBornEnergyForces( RealOpenMM* bornRadii, RealOpenMM** atomCoo
    const RealOpenMM dielectricOffset    = obcParameters->getDielectricOffset();
 
    // ---------------------------------------------------------------------------------------
+
+#if 0
+{
+   RealOpenMM* atomicRadii               = obcParameters->getAtomicRadii();
+   const RealOpenMM* scaledRadiusFactor  = obcParameters->getScaledRadiusFactors();
+   RealOpenMM* obcChain                  = getObcChain();
+   FILE* logFile = fopen( "bornParameters", "w" );
+   (void) fprintf( logFile, "%5d dielOff=%.4e rad::hct::q::bR::Chain::coords\n", numberOfAtoms, dielectricOffset );
+   for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
+      (void) fprintf( logFile, "%5d %10.5f %10.5f %10.5f %14.7e %14.7e %14.7e %14.7e %14.7e\n", atomI,
+                      atomicRadii[atomI], scaledRadiusFactor[atomI], partialCharges[atomI], bornRadii[atomI], obcChain[atomI],
+                      atomCoordinates[atomI][0], atomCoordinates[atomI][1], atomCoordinates[atomI][2] );
+   }
+   (void) fclose( logFile );
+}
+#endif
 
    // set energy/forces to zero
 
