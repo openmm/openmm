@@ -40,7 +40,7 @@
 //#define FREE_ENERGY_BRANCH
 
 #ifdef FREE_ENERGY_BRANCH
-#include "openmm/OpenMMContext.h"
+#include "openmm/Context.h"
 #else
 #include "openmm/Context.h"
 #endif
@@ -488,11 +488,7 @@ static int findStatsForDouble( const std::vector<double>& array, std::vector<dou
 
    --------------------------------------------------------------------------------------- */
 
-#ifdef FREE_ENERGY_BRANCH
-static int checkConstraints( const OpenMMContext& context, const System& system, double tolerance, FILE* log ) {
-#else
 static int checkConstraints( const Context& context, const System& system, double tolerance, FILE* log ) {
-#endif
     
 	 int violations                    = 0;
 	 State state                       = context.getState(State::Positions);
@@ -537,11 +533,7 @@ static int checkConstraints( const Context& context, const System& system, doubl
 
       --------------------------------------------------------------------------------------- */
 
-#ifdef FREE_ENERGY_BRANCH
-static int sumForces( const OpenMMContext& context, const System& system, double forceSum[3], int step, FILE* log ){  
-#else
 static int sumForces( const Context& context, const System& system, double forceSum[3], int step, FILE* log ){  
-#endif
 
 // ---------------------------------------------------------------------------------------
       
@@ -593,11 +585,7 @@ static int sumForces( const Context& context, const System& system, double force
 
    --------------------------------------------------------------------------------------- */
 
-#ifdef FREE_ENERGY_BRANCH
-static int checkKineticEnergy( const OpenMMContext& context, const System& system, double temperature, int step, FILE* log ){  
-#else
 static int checkKineticEnergy( const Context& context, const System& system, double temperature, int step, FILE* log ){  
-#endif
 
    // ---------------------------------------------------------------------------------------
 
@@ -2218,11 +2206,7 @@ Integrator* readParameterFile( const std::string& inputParameterFile, int forceF
  *
  */
 
-#ifdef FREE_ENERGY_BRANCH
-static int checkEnergyForceConsistent( OpenMMContext& context, double delta, double tolerance, FILE* log ) {
-#else
 static int checkEnergyForceConsistent( Context& context, double delta, double tolerance, FILE* log ) {
-#endif
     
 // ---------------------------------------------------------------------------------------
 
@@ -2551,11 +2535,7 @@ static int _printIntegratorInfo( Integrator* integrator, FILE* log ){
 
    --------------------------------------------------------------------------------------- */
 
-#ifdef FREE_ENERGY_BRANCH
-static int _synchContexts( const OpenMMContext& context1, OpenMMContext& context2 ){
-#else
 static int _synchContexts( const Context& context1, Context& context2 ){
-#endif
 
    // ---------------------------------------------------------------------------------------
 
@@ -2712,11 +2692,7 @@ static int _getStatistics( const std::vector<double> & array,  std::vector<doubl
  *
    --------------------------------------------------------------------------------------- */
 
-#ifdef FREE_ENERGY_BRANCH
-static int checkEnergyConservation( OpenMMContext& context, int totalSimulationSteps, FILE* log ) {
-#else
 static int checkEnergyConservation( Context& context, int totalSimulationSteps, FILE* log ) {
-#endif
     
 // ---------------------------------------------------------------------------------------
 
@@ -2779,11 +2755,7 @@ static int checkEnergyConservation( Context& context, int totalSimulationSteps, 
    if( log ){
       _printIntegratorInfo( integrator, log );
    }
-#ifdef FREE_ENERGY_BRANCH
-   OpenMMContext* equilibrationContext = _getContext( &system, &context, integrator, "CudaPlatform", "EquilibrationContext", log );
-#else
    Context*       equilibrationContext = _getContext( &system, &context, integrator, "CudaPlatform", "EquilibrationContext", log );
-#endif
 
    // equilibration loop
 
@@ -2869,11 +2841,7 @@ static int checkEnergyConservation( Context& context, int totalSimulationSteps, 
       _printIntegratorInfo( simulationIntegrator, log );
    }
 
-#ifdef FREE_ENERGY_BRANCH
-   OpenMMContext* simulationContext = _getContext( &system, equilibrationContext, simulationIntegrator, "CudaPlatform", "SimulationContext", log );
-#else
    Context*       simulationContext = _getContext( &system, equilibrationContext, simulationIntegrator, "CudaPlatform", "SimulationContext", log );
-#endif
 
    // create/initialize arrays used to track energies
 
@@ -3065,13 +3033,8 @@ static int checkEnergyConservation( Context& context, int totalSimulationSteps, 
 
    --------------------------------------------------------------------------------------- */
 
-#ifdef FREE_ENERGY_BRANCH
-OpenMMContext* testSetup( std::string parameterFileName, int forceFlag, Platform& platform, std::vector<Vec3>& forces,
-                          double* kineticEnergy, double* potentialEnergy, FILE* log ){
-#else
 Context* testSetup( std::string parameterFileName, int forceFlag, Platform& platform, std::vector<Vec3>& forces,
                     double* kineticEnergy, double* potentialEnergy, FILE* log ){
-#endif
 
 // ---------------------------------------------------------------------------------------
 
@@ -3092,13 +3055,8 @@ Context* testSetup( std::string parameterFileName, int forceFlag, Platform& plat
       readParameterFile( parameterFileName, forceFlag, *system, coordinates, velocities,
                          forces, kineticEnergy, potentialEnergy, log );
 
-#ifdef FREE_ENERGY_BRANCH
-   OpenMMContext* context;
-   context = new OpenMMContext( *system, *integrator, platform);
-#else
    Context* context;
    context = new Context( *system, *integrator, platform);
-#endif
 
    context->setPositions( coordinates );
    context->setVelocities( velocities );
@@ -3120,7 +3078,7 @@ Context* testSetup( std::string parameterFileName, int forceFlag, Platform& plat
 
 int compareForces( const std::vector<Vec3>& forceArray1, const std::string& f1Name, std::vector<double>& forceArray1Sum, std::vector<double>& forceArray1Stats,
                    const std::vector<Vec3>& forceArray2, const std::string& f2Name, std::vector<double>& forceArray2Sum, std::vector<double>& forceArray2Stats,
-                   double* maxDelta, double* maxRelativeDelta, double forceTolerance, FILE* inputLog ){
+                   double* maxDelta, double* maxRelativeDelta, double* maxDot, double forceTolerance, FILE* inputLog ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -3143,6 +3101,7 @@ int compareForces( const std::vector<Vec3>& forceArray1, const std::string& f1Na
 
    *maxDelta                           = -1.0e+30;
    *maxRelativeDelta                   = -1.0e+30;
+   *maxDot                             = -1.0e+30;
 
    std::vector<double> forceArray1Norms;
    std::vector<double> forceArray2Norms;
@@ -3171,21 +3130,35 @@ int compareForces( const std::vector<Vec3>& forceArray1, const std::string& f1Na
       forceArray2Sum[2]     += f2[2];
 
       double delta           = std::sqrt( (f1[0]-f2[0])*(f1[0]-f2[0]) + (f1[1]-f2[1])*(f1[1]-f2[1]) + (f1[2]-f2[2])*(f1[2]-f2[2]) );
+      double dotProduct      = f1[0]*f2[0] + f1[1]*f2[1] + f1[2]*f2[2];
+             dotProduct     /= (normF1*normF2);
+             dotProduct      = 1.0 - dotProduct;
+
       double relativeDelta   = (delta*2.0)/(normF1+normF2);
 
-      if( 0 && log && delta > forceTolerance ){
-         (void) fprintf( log, "%5d delta=%13.6e relativeDelta=%13.6e  %s %13.6e [%14.7e %14.7e %14.7e]  %s %13.6e [%14.7e %14.7e %14.7e]\n", 
-                         ii, delta, relativeDelta, f1Name.c_str(), normF1, f1[0], f1[1], f1[2],  f2Name.c_str(), normF2, f2[0], f2[1], f2[2] );
-         (void) fflush( log );
+      int print              = 0;
+      if( delta > forceTolerance ){
+         print++;
       }
-      if( log && *maxRelativeDelta < relativeDelta ){
-         (void) fprintf( log, "%5d delta=%13.6e relativeDelta=%13.6e  %s %13.6e [%14.7e %14.7e %14.7e]  %s %13.6e [%14.7e %14.7e %14.7e]\n", 
-                         ii, delta, relativeDelta, f1Name.c_str(), normF1, f1[0], f1[1], f1[2], f2Name.c_str(), normF2, f2[0], f2[1], f2[2] );
-         (void) fflush( log );
+
+      if( *maxRelativeDelta < relativeDelta ){
+         print++;
          *maxRelativeDelta = relativeDelta;   
       }
+
+      if( *maxDot < dotProduct ){
+         *maxDot = dotProduct;   
+         if( dotProduct > 1.0e-06 )print++;
+      }
+
       if( *maxDelta < delta ){
          *maxDelta = delta;
+      }
+
+      if( print && log ){
+         (void) fprintf( log, "%5d delta=%14.7e relDelta=%14.7e dot=%14.7e  %s %14.7e [%14.7e %14.7e %14.7e]  %s %14.7e [%14.7e %14.7e %14.7e]\n", 
+                         ii, delta, relativeDelta, dotProduct, f1Name.c_str(), normF1, f1[0], f1[1], f1[2],  f2Name.c_str(), normF2, f2[0], f2[1], f2[2] );
+         (void) fflush( log );
       }
    }
 
@@ -3232,20 +3205,13 @@ void testReferenceCudaForces( std::string parameterFileName, int forceFlag, FILE
    std::vector<Vec3> parameterForces;
    std::vector<Vec3> parameterForces2;
 
-#ifdef FREE_ENERGY_BRANCH
-   OpenMMContext* referenceOpenMMContext = testSetup( parameterFileName, forceFlag, referencePlatform, 
+   Context* referenceContext       = testSetup( parameterFileName, forceFlag, referencePlatform, 
                                                       parameterForces, &parameterKineticEnergy, &parameterPotentialEnergy, log );
-   OpenMMContext* cudaOpenMMContext      = testSetup( parameterFileName, forceFlag,  cudaPlatform,
-                                                      parameterForces2, &parameterKineticEnergy, &parameterPotentialEnergy, NULL );
-#else
-   Context* referenceOpenMMContext       = testSetup( parameterFileName, forceFlag, referencePlatform, 
-                                                      parameterForces, &parameterKineticEnergy, &parameterPotentialEnergy, log );
-   Context* cudaOpenMMContext            = testSetup( parameterFileName, forceFlag,  cudaPlatform,
+   Context* cudaContext            = testSetup( parameterFileName, forceFlag,  cudaPlatform,
                                                       parameterForces2, &parameterKineticEnergy, &parameterPotentialEnergy, log );
-#endif
 
-   Integrator& referenceIntegrator       = referenceOpenMMContext->getIntegrator();
-   Integrator& cudaIntegrator            = cudaOpenMMContext->getIntegrator();
+   Integrator& referenceIntegrator       = referenceContext->getIntegrator();
+   Integrator& cudaIntegrator            = cudaContext->getIntegrator();
 
    // Run several steps and see if relative force difference is within tolerance
    
@@ -3255,8 +3221,8 @@ void testReferenceCudaForces( std::string parameterFileName, int forceFlag, FILE
 
       int types                                       = State::Positions | State::Velocities | State::Forces | State::Energy;
 
-      State cudaState                                 =      cudaOpenMMContext->getState( types );
-      State referenceState                            = referenceOpenMMContext->getState( types );
+      State cudaState                                 =      cudaContext->getState( types );
+      State referenceState                            = referenceContext->getState( types );
 
       std::vector<Vec3> referenceCoordinates          = referenceState.getPositions();
       std::vector<Vec3> referenceVelocities           = referenceState.getVelocities();
@@ -3366,8 +3332,10 @@ void testReferenceCudaForces( std::string parameterFileName, int forceFlag, FILE
 
       double maxDeltaRefCud                          = -1.0e+30;
       double maxRelativeDeltaRefCud                  = -1.0e+30;
+      double maxDotRefCud                            = -1.0e+30;
       double maxDeltaPrmCud                          = -1.0e+30;
       double maxRelativeDeltaPrmCud                  = -1.0e+30;
+      double maxDotPrmCud                            = -1.0e+30;
 
       std::vector<double> forceArray1Sum;
       std::vector<double> forceArray2Sum;
@@ -3380,7 +3348,7 @@ void testReferenceCudaForces( std::string parameterFileName, int forceFlag, FILE
 
       compareForces( referenceForces, "fRef", forceArray1Sum, referenceForceStats,
                      cudaForces,      "fCud", forceArray2Sum, cudaForceStats, 
-                     &maxDeltaRefCud, &maxRelativeDeltaRefCud, forceTolerance, log );
+                     &maxDeltaRefCud, &maxRelativeDeltaRefCud, &maxDotRefCud, forceTolerance, log );
       
       (void) fflush( log );
 
@@ -3390,11 +3358,11 @@ void testReferenceCudaForces( std::string parameterFileName, int forceFlag, FILE
 
          compareForces( parameterForces, "fPrm", forceArray3Sum, paramForceStats,
                         cudaForces,      "fCud", forceArray2Sum, cudaForceStats1,
-                        &maxDeltaPrmCud, &maxRelativeDeltaPrmCud, forceTolerance, log );
+                        &maxDeltaPrmCud, &maxRelativeDeltaPrmCud, &maxDotPrmCud, forceTolerance, log );
       }
 
       if( log ){
-         (void) fprintf( log, "Step=%d max delta=%14.7e maxRelativeDelta=%14.7e\n", step, maxDeltaRefCud, maxRelativeDeltaRefCud);
+         (void) fprintf( log, "Step=%d max delta=%14.7e maxRelDelta=%14.7e maxDot=%14.7e\n", step, maxDeltaRefCud, maxRelativeDeltaRefCud, maxDotRefCud);
          (void) fprintf( log, "Reference force sum [%14.7e %14.7e %14.7e]\n", forceArray1Sum[0], forceArray1Sum[1], forceArray1Sum[2] );
          (void) fprintf( log, "Cuda      force sum [%14.7e %14.7e %14.7e]\n", forceArray2Sum[0], forceArray2Sum[1], forceArray2Sum[2] );
          if( compareParameterForces ){
@@ -3446,7 +3414,7 @@ void testReferenceCudaForces( std::string parameterFileName, int forceFlag, FILE
 */
       if( steps ){
          cudaIntegrator.step( steps );
-         _synchContexts( *cudaOpenMMContext, *referenceOpenMMContext );
+         _synchContexts( *cudaContext, *referenceContext );
       }
 
    }
@@ -3492,31 +3460,24 @@ void testEnergyForcesConsistent( std::string parameterFileName, int forceFlag, d
    std::vector<Vec3> parameterForces;
    std::vector<Vec3> parameterForces2;
 
-#ifdef FREE_ENERGY_BRANCH
-   OpenMMContext* referenceOpenMMContext = testSetup( parameterFileName, forceFlag, referencePlatform, 
+   Context* referenceContext       = testSetup( parameterFileName, forceFlag, referencePlatform, 
                                                       parameterForces, &parameterKineticEnergy, &parameterPotentialEnergy, log );
-   OpenMMContext* cudaOpenMMContext      = testSetup( parameterFileName, forceFlag,  cudaPlatform,
+   Context* cudaContext            = testSetup( parameterFileName, forceFlag,  cudaPlatform,
                                                       parameterForces2, &parameterKineticEnergy, &parameterPotentialEnergy, NULL );
-#else
-   Context* referenceOpenMMContext       = testSetup( parameterFileName, forceFlag, referencePlatform, 
-                                                      parameterForces, &parameterKineticEnergy, &parameterPotentialEnergy, log );
-   Context* cudaOpenMMContext            = testSetup( parameterFileName, forceFlag,  cudaPlatform,
-                                                      parameterForces2, &parameterKineticEnergy, &parameterPotentialEnergy, NULL );
-#endif
 
    if( log ){
       (void) fprintf( log, "%s Testing cuda platform\n", methodName.c_str() );
       (void) fflush( log );
    }   
 
-   checkEnergyForceConsistent( *cudaOpenMMContext, delta, tolerance, log );
+   checkEnergyForceConsistent( *cudaContext, delta, tolerance, log );
 
    if( log ){
       (void) fprintf( log, "%s Testing reference platform\n", methodName.c_str() );
       (void) fflush( log );
    }   
 
-   checkEnergyForceConsistent( *referenceOpenMMContext, delta, tolerance, log );
+   checkEnergyForceConsistent( *referenceContext, delta, tolerance, log );
 }
 
 void testEnergyConservation( std::string parameterFileName, int forceFlag, int totalSimulationSteps, FILE* inputLog ){
@@ -3547,20 +3508,15 @@ void testEnergyConservation( std::string parameterFileName, int forceFlag, int t
    std::vector<Vec3> parameterForces;
    std::vector<Vec3> parameterForces2;
 
-#ifdef FREE_ENERGY_BRANCH
-   OpenMMContext* cudaOpenMMContext      = testSetup( parameterFileName, forceFlag,  cudaPlatform,
-                                                      parameterForces2, &parameterKineticEnergy, &parameterPotentialEnergy, log );
-#else
-   Context* cudaOpenMMContext            = testSetup( parameterFileName, forceFlag,  cudaPlatform,
-                                                      parameterForces2, &parameterKineticEnergy, &parameterPotentialEnergy, log );
-#endif
+   Context* cudaContext            = testSetup( parameterFileName, forceFlag,  cudaPlatform,
+                                                parameterForces2, &parameterKineticEnergy, &parameterPotentialEnergy, log );
 
    if( log ){
       (void) fprintf( log, "%s Testing cuda platform\n", methodName.c_str() );
       (void) fflush( log );
    }   
 
-   checkEnergyConservation( *cudaOpenMMContext, totalSimulationSteps, log );
+   checkEnergyConservation( *cudaContext, totalSimulationSteps, log );
 }
 
 /**---------------------------------------------------------------------------------------
