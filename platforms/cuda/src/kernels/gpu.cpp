@@ -133,7 +133,7 @@ static const float BOLTZ                    =    (RGAS / KILO);            // (k
 #define DUMP_PARAMETERS 0
 
 template <int SIZE>
-static Expression<SIZE> createExpression(const string& expression, const Lepton::ExpressionProgram& program, const vector<string>& variables,
+static Expression<SIZE> createExpression(gpuContext gpu, const string& expression, const Lepton::ExpressionProgram& program, const vector<string>& variables,
         const vector<string>& globalParamNames, unsigned int& maxStackSize) {
     Expression<SIZE> exp;
     if (program.getNumOperations() > SIZE)
@@ -176,6 +176,14 @@ static Expression<SIZE> createExpression(const string& expression, const Lepton:
                     exp.op[i] = GLOBAL;
                     exp.arg[i] = j;
                 }
+                break;
+            case Operation::CUSTOM:
+                exp.op[i] = dynamic_cast<const Operation::Custom*>(&op)->getDerivOrder()[0] == 0 ? CUSTOM : CUSTOM_DERIV;
+                for (int j = 0; j < MAX_TABULATED_FUNCTIONS; j++)
+                    if (op.getName() == gpu->tabulatedFunctions[j].name) {
+                        exp.arg[i] = j;
+                        break;
+                    }
                 break;
             case Operation::ADD:
                 exp.op[i] = ADD;
@@ -574,6 +582,52 @@ void gpuSetNonbondedCutoff(gpuContext gpu, float cutoffDistance, float solventDi
 }
 
 extern "C"
+void gpuSetTabulatedFunction(gpuContext gpu, int index, const string& name, const vector<double>& values, double min, double max, bool interpolating)
+{
+    if (index < 0 || index >= MAX_TABULATED_FUNCTIONS) {
+        stringstream str;
+        str << "Only " << MAX_TABULATED_FUNCTIONS << " tabulated functions are supported";
+        throw OpenMMException(str.str());
+    }
+    if (gpu->tabulatedFunctions[index].coefficients != NULL)
+        delete gpu->tabulatedFunctions[index].coefficients;
+    CUDAStream<float4>* coeff = new CUDAStream<float4>((int) values.size()-1, 1, "TabulatedFunction");
+    gpu->tabulatedFunctions[index].coefficients = coeff;
+    gpu->sim.pTabulatedFunctionCoefficients[index] = coeff->_pDevData;
+    gpu->tabulatedFunctions[index].name = name;
+    gpu->tabulatedFunctions[index].min = min;
+    gpu->tabulatedFunctions[index].max = max;
+
+    // First create a padded set of function values.
+
+    vector<double> padded(values.size()+2);
+    padded[0] = 2*values[0]-values[1];
+    for (int i = 0; i < (int) values.size(); i++)
+        padded[i+1] = values[i];
+    padded[padded.size()-1] = 2*values[values.size()-1]-values[values.size()-2];
+
+    // Now compute the spline coefficients.
+
+    for (int i = 0; i < (int) values.size()-1; i++) {
+        float4 c;
+        if (interpolating) {
+            c.x = padded[i+1];
+            c.y = 0.5*(-padded[i]+padded[i+2]);
+            c.z = 0.5*(2.0*padded[i]-5.0*padded[i+1]+4.0*padded[i+2]-padded[i+3]);
+            c.w = 0.5*(-padded[i]+3.0*padded[i+1]-3.0*padded[i+2]+padded[i+3]);
+        }
+        else {
+            c.x = (padded[i]+4.0*padded[i+1]+padded[i+2])/6.0;
+            c.y = (-3.0*padded[i]+3.0*padded[i+2])/6.0;
+            c.z = (3.0*padded[i]-6.0*padded[i+1]+3.0*padded[i+2])/6.0;
+            c.w = (-padded[i]+3.0*padded[i+1]-3.0*padded[i+2]+padded[i+3])/6.0;
+        }
+        (*coeff)[i] = c;
+    }
+    coeff->Upload();
+}
+
+extern "C"
 void gpuSetCustomNonbondedParameters(gpuContext gpu, const vector<vector<double> >& parameters, const vector<vector<int> >& exclusions,
             const vector<int>& exceptionAtom1, const vector<int>& exceptionAtom2, const vector<vector<double> >& exceptionParams,
             CudaNonbondedMethod method, float cutoffDistance, const string& energyExp, const vector<string>& combiningRules,
@@ -630,6 +684,39 @@ void gpuSetCustomNonbondedParameters(gpuContext gpu, const vector<vector<double>
     gpu->psCustomExceptionID->Upload();
     gpu->psCustomExceptionParams->Upload();
 
+    // This class serves as a placeholder for custom functions in expressions.
+
+    class FunctionPlaceholder : public Lepton::CustomFunction {
+    public:
+        int getNumArguments() const {
+            return 1;
+        }
+        double evaluate(const double* arguments) const {
+            return 0.0;
+        }
+        double evaluateDerivative(const double* arguments, const int* derivOrder) const {
+            return 0.0;
+        }
+        CustomFunction* clone() const {
+            return new FunctionPlaceholder();
+        }
+    };
+
+    // Record the tabulated functions, which were previously set with calls to gpuSetTabulatedFunction().
+
+    FunctionPlaceholder* fp = new FunctionPlaceholder();
+    map<string, Lepton::CustomFunction*> functions;
+    gpu->psTabulatedFunctionParams = new CUDAStream<float4>(MAX_TABULATED_FUNCTIONS, 1, "TabulatedFunctionRange");
+    gpu->sim.pTabulatedFunctionParams = gpu->psTabulatedFunctionParams->_pDevData;
+    for (int i = 0; i < MAX_TABULATED_FUNCTIONS; i++) {
+        gpuTabulatedFunction& func = gpu->tabulatedFunctions[i];
+        if (func.coefficients != NULL) {
+            (*gpu->psTabulatedFunctionParams)[i] = make_float4(func.min, func.max, func.coefficients->_length/(func.max-func.min), 0.0f);
+            functions[func.name] = fp;
+        }
+    }
+    gpu->psTabulatedFunctionParams->Upload();
+
     // Create the Expressions.
 
     vector<string> variables;
@@ -637,8 +724,8 @@ void gpuSetCustomNonbondedParameters(gpuContext gpu, const vector<vector<double>
     for (int i = 0; i < paramNames.size(); i++)
         variables.push_back(paramNames[i]);
     gpu->sim.customExpressionStackSize = 0;
-    SetCustomNonbondedEnergyExpression(createExpression<128>(energyExp, Lepton::Parser::parse(energyExp).optimize().createProgram(), variables, globalParamNames, gpu->sim.customExpressionStackSize));
-    SetCustomNonbondedForceExpression(createExpression<128>(energyExp, Lepton::Parser::parse(energyExp).differentiate("r").optimize().createProgram(), variables, globalParamNames, gpu->sim.customExpressionStackSize));
+    SetCustomNonbondedEnergyExpression(createExpression<128>(gpu, energyExp, Lepton::Parser::parse(energyExp, functions).optimize().createProgram(), variables, globalParamNames, gpu->sim.customExpressionStackSize));
+    SetCustomNonbondedForceExpression(createExpression<128>(gpu, energyExp, Lepton::Parser::parse(energyExp, functions).differentiate("r").optimize().createProgram(), variables, globalParamNames, gpu->sim.customExpressionStackSize));
     Expression<64> paramExpressions[4];
     vector<string> combiningRuleParams;
     combiningRuleParams.push_back("");
@@ -652,8 +739,9 @@ void gpuSetCustomNonbondedParameters(gpuContext gpu, const vector<vector<double>
             combiningRuleParams.push_back("");
     }
     for (int i = 0; i < paramNames.size(); i++)
-        paramExpressions[i] = createExpression<64>(combiningRules[i], Lepton::Parser::parse(combiningRules[i]).optimize().createProgram(), combiningRuleParams, globalParamNames, gpu->sim.customExpressionStackSize);
+        paramExpressions[i] = createExpression<64>(gpu, combiningRules[i], Lepton::Parser::parse(combiningRules[i], functions).optimize().createProgram(), combiningRuleParams, globalParamNames, gpu->sim.customExpressionStackSize);
     SetCustomNonbondedCombiningRules(paramExpressions);
+    delete fp;
 }
 
 extern "C"
@@ -1522,6 +1610,9 @@ void* gpuInit(int numAtoms, unsigned int device, bool useBlockingSync)
     gpu->psCcmaReducedMass          = NULL;
     gpu->psConstraintMatrixColumn   = NULL;
     gpu->psConstraintMatrixValue    = NULL;
+    gpu->psTabulatedFunctionParams  = NULL;
+    for (int i = 0; i < MAX_TABULATED_FUNCTIONS; i++)
+        gpu->tabulatedFunctions[i].coefficients = NULL;
 
     // Initialize output buffer before reading parameters
     gpu->pOutputBufferCounter       = new unsigned int[gpu->sim.paddedNumberOfAtoms];
@@ -1705,6 +1796,10 @@ void gpuShutDown(gpuContext gpu)
     delete gpu->psCcmaReducedMass;
     delete gpu->psConstraintMatrixColumn;
     delete gpu->psConstraintMatrixValue;
+    delete gpu->psTabulatedFunctionParams;
+    for (int i = 0; i < MAX_TABULATED_FUNCTIONS; i++)
+        if (gpu->tabulatedFunctions[i].coefficients != NULL)
+            delete gpu->tabulatedFunctions[i].coefficients;
     if (gpu->cudpp != 0)
         cudppDestroyPlan(gpu->cudpp);
 

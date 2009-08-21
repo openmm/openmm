@@ -42,6 +42,12 @@ struct gpuMoleculeGroup {
     std::vector<int> instances;
 };
 
+struct gpuTabulatedFunction {
+    std::string name;
+    double min, max;
+    CUDAStream<float4>* coefficients;
+};
+
 enum SM_VERSION
 {
     SM_10,
@@ -67,6 +73,7 @@ struct _gpuContext {
     std::vector<std::vector<int> > exclusions;
     unsigned char* pAtomSymbol;
     std::vector<gpuMoleculeGroup> moleculeGroups;
+    gpuTabulatedFunction tabulatedFunctions[MAX_TABULATED_FUNCTIONS];
     float iterations;
     float epsfac;
     float solventDielectric;
@@ -92,6 +99,7 @@ struct _gpuContext {
     CUDAStream<float4>* psCustomParams;     // Atom parameters for custom nonbonded force
     CUDAStream<int4>* psCustomExceptionID;  // Atom indices for custom nonbonded exceptions
     CUDAStream<float4>* psCustomExceptionParams; // Parameters for custom nonbonded exceptions
+    CUDAStream<float4>* psTabulatedFunctionParams; // The min, max, and spacing for each tabulated function
     CUDAStream<float2>* psEwaldCosSinSum;
     CUDAStream<float2>* psObcData; 
     CUDAStream<float>* psObcChain;
@@ -181,6 +189,9 @@ void gpuSetCoulombParameters(gpuContext gpu, float epsfac, const std::vector<int
 
 extern "C"
 void gpuSetNonbondedCutoff(gpuContext gpu, float cutoffDistance, float solventDielectric);
+
+extern "C"
+void gpuSetTabulatedFunction(gpuContext gpu, int index, const std::string& name, const std::vector<double>& values, double min, double max, bool interpolating);
 
 extern "C"
 void gpuSetCustomNonbondedParameters(gpuContext gpu, const std::vector<std::vector<double> >& parameters, const std::vector<std::vector<int> >& exclusions,

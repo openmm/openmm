@@ -487,8 +487,8 @@ public:
      */
     void findCoefficients(double& x, double* coeff) const {
         int length = values.size();
-        double spacing = (max-min)/(length-1);
-        int index = std::floor((x-min)/spacing);
+        double scale = (length-1)/(max-min);
+        int index = std::floor((x-min)*scale);
         double points[4];
         points[0] = (index == 0 ? 2*values[0]-values[1] : values[index-1]);
         points[1] = values[index];
@@ -506,7 +506,7 @@ public:
             coeff[2] = (3.0*points[0]-6.0*points[1]+3.0*points[2])/6.0;
             coeff[3] = (-points[0]+3.0*points[1]-3.0*points[2]+points[3])/6.0;
         }
-        x = (x-min)/spacing-index;
+        x = (x-min)*scale-index;
     }
     double evaluate(const double* arguments) const {
         double x = arguments[0];
@@ -523,7 +523,7 @@ public:
         double coeff[4];
         findCoefficients(x, coeff);
         double scale = (values.size()-1)/(max-min);
-        return scale*(coeff[1]+x*(2.0*coeff[2]+x*3.0*coeff[3]));
+        return scale*(coeff[1]+x*(2.0*coeff[2]+x*3.0*coeff[3])); // We assume a first derivative, because that's the only order ever used by CustomNonbondedForce.
     }
     CustomFunction* clone() const {
         return new TabulatedFunction(min, max, values, interpolating);

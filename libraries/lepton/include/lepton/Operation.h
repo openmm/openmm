@@ -211,6 +211,9 @@ public:
         return function->evaluate(args);
     }
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
+    const std::vector<int>& getDerivOrder() const {
+        return derivOrder;
+    }
 private:
     std::string name;
     CustomFunction* function;

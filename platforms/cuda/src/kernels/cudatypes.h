@@ -232,6 +232,7 @@ static const int GT2XX_RANDOM_THREADS_PER_BLOCK         = 384;
 static const int G8X_NONBOND_WORKUNITS_PER_SM           = 220;
 static const int GT2XX_NONBOND_WORKUNITS_PER_SM         = 256;
 static const unsigned int MAX_STACK_SIZE = 8;
+static const unsigned int MAX_TABULATED_FUNCTIONS = 8;
 
 static const float PI = 3.14159265358979323846f;
 
@@ -244,7 +245,7 @@ enum CudaNonbondedMethod
 };
 
 enum ExpressionOp {
-    CONSTANT = 0, VARIABLE0, VARIABLE1, VARIABLE2, VARIABLE3, VARIABLE4, VARIABLE5, VARIABLE6, VARIABLE7, VARIABLE8, GLOBAL, CUSTOM, ADD, SUBTRACT, MULTIPLY, DIVIDE,
+    CONSTANT = 0, VARIABLE0, VARIABLE1, VARIABLE2, VARIABLE3, VARIABLE4, VARIABLE5, VARIABLE6, VARIABLE7, VARIABLE8, GLOBAL, CUSTOM, CUSTOM_DERIV, ADD, SUBTRACT, MULTIPLY, DIVIDE,
         POWER, NEGATE, SQRT, EXP, LOG, SIN, COS, SEC, CSC, TAN, COT, ASIN, ACOS, ATAN, SQUARE, CUBE, RECIPROCAL, ADD_CONSTANT, MULTIPLY_CONSTANT, POWER_CONSTANT
 };
 
@@ -350,6 +351,8 @@ struct cudaGmxSimulation {
     float4*         pCustomExceptionParams;         // Parameters for custom nonbonded exceptions
     unsigned int    customExceptions;               // Number of custom nonbonded exceptions
     unsigned int    customParameters;               // Number of parameters for custom nonbonded interactions
+    float4*         pTabulatedFunctionCoefficients[MAX_TABULATED_FUNCTIONS]; // The spline coefficients for each tabulated function
+    float4*         pTabulatedFunctionParams;       // The min, max, and spacing for each tabulated function
     float2*         pEwaldCosSinSum;                // Pointer to the cos/sin sums (ewald)
     unsigned int    bonds;                          // Number of bonds
     int4*           pBondID;                        // Bond atom and output buffer IDs

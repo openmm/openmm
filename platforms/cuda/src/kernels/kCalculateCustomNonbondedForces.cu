@@ -148,6 +148,23 @@ __device__ float kEvaluateExpression_kernel(Expression<SIZE>* expression, float*
                     else if (op == GLOBAL) {
                         STACK(++stackPointer) = globalParams[(int) expression->arg[i]];
                     }
+                    else if (op == CUSTOM || op == CUSTOM_DERIV) {
+                        int function = (int) expression->arg[i];
+                        float x = STACK(stackPointer);
+                        float4 params = cSim.pTabulatedFunctionParams[function];
+                        if (x < params.x || x > params.y)
+                            STACK(stackPointer) = 0.0f;
+                        else
+                        {
+                            int index = floor((x-params.x)*params.z);
+                            float4 coeff = cSim.pTabulatedFunctionCoefficients[function][index];
+                            x = (x-params.x)*params.z-index;
+                            if (op == CUSTOM)
+                                STACK(stackPointer) = coeff.x+x*(coeff.y+x*(coeff.z+x*coeff.w));
+                            else
+                                STACK(stackPointer) = (coeff.y+x*(2.0f*coeff.z+x*3.0f*coeff.w))*params.z;
+                        }
+                    }
                     else if (op == ADD) {
                         float temp = STACK(stackPointer);
                         STACK(--stackPointer) += temp;

@@ -423,6 +423,17 @@ void CudaCalcCustomNonbondedForceKernel::initialize(const System& system, const 
     for (int i = 0; i < numExceptions; i++)
         force.getExceptionParameters(exceptions[i], exceptionParticle1[i], exceptionParticle2[i], exceptionParams[i]);
 
+    // Record the tabulated functions.
+
+    for (int i = 0; i < force.getNumFunctions(); i++) {
+        string name;
+        vector<double> values;
+        double min, max;
+        bool interpolating;
+        force.getFunctionParameters(i, name, values, min, max, interpolating);
+        gpuSetTabulatedFunction(gpu, i, name, values, min, max, interpolating);
+    }
+
     // Record information for the expressions.
 
     vector<string> paramNames;
