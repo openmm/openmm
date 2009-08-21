@@ -43,7 +43,47 @@
 namespace OpenMM {
 
 /**
- * This class is still under development.
+ * This class implements nonbonded interactions between particles.  Unlike NonbondedForce, the functional form
+ * of the interaction is completely customizable, and may involve arbitrary algebraic expressions and tabulated
+ * functions.  It may depend on the distance between particles, as well as on arbitrary global and
+ * per-particle parameters.  It also optionally supports periodic boundary conditions and cutoffs for long range interactions.
+ *
+ * To use this class, create a CustomNonbondedForce object, passing an algebraic expression to the constructor
+ * that defines the interaction energy between each pair of particles.  The expression may depend on r, the distance
+ * between the particles, as well as on any parameters you choose.  Then call addParameter() to define per-particle
+ * parameters, and addGlobalParameter() to define global parameters.  When defining a per-particle parameter, you
+ * specify an arbitrary algebraic expression which serves as the combining rule for calculating the parameter value
+ * based on the values for the two particles involved.  The values of global parameters may be modified during a
+ * simulation by calling Context::setParameter().
+ * 
+ * Next, call addParticle() once for each particle in the System to set the values of its per-particle parameters.
+ * The number of particles for which you set parameters must be exactly equal to the number of particles in the
+ * System, or else an exception will be thrown when you try to create a Context.  After a particle has been added,
+ * you can modify its parameters by calling setParticleParameters().
+ *
+ * CustomNonbondedForce also lets you specify "exceptions", particular pairs of particles whose interactions should be
+ * computed based on different parameters than those defined for the individual particles.  This can be used to
+ * completely exclude certain interactions from the force calculation, or to alter how they interact with each other.
+ *
+ * As an example, the following code creates a CustomNonbondedForce that implements a 12-6 Lennard-Jones potential:
+ *
+ * <tt>CustomNonbondedForce* force = new CustomNonbondedForce("4*epsilon*((sigma/r)^12-(sigma/r)^6)");</tt>
+ *
+ * This force depends on two parameters: sigma and epsilon.  The following code defines these parameters, and
+ * specifies combining rules for them which correspond to the standard Lorentz-Bertelot combining rules:
+ *
+ * <tt><pre>
+ * force->addParameter("sigma", "0.5*(sigma1*sigma2)");
+ * force->addParameter("epsilon", "sqrt(epsilon1*epsilon2)");
+ * </pre></tt>
+ *
+ * Expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
+ * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan.  All trigonometric functions are defined
+ * in radians, and log is the natural logarithm.
+ *
+ * In addition, you can call addFunction() to define a new function based on tabulated values.  You specify a vector of
+ * values, and an interpolating or approximating spline is created from them.  That function can then appear in expressions
+ * that define energy or combining rules.
  */
 
 class OPENMM_EXPORT CustomNonbondedForce : public Force {
@@ -70,7 +110,8 @@ public:
     /**
      * Create a CustomNonbondedForce.
      *
-     * @param energy    an algebraic expression giving the interaction energy between two particles
+     * @param energy    an algebraic expression giving the interaction energy between two particles as a function
+     *                  of r, the distance between them
      */
     CustomNonbondedForce(const std::string& energy);
     /**
@@ -108,7 +149,7 @@ public:
      */
     const std::string& getEnergyFunction() const;
     /**
-     * SDet the algebraic expression that gives the interaction energy between two particles
+     * Set the algebraic expression that gives the interaction energy between two particles
      */
     void setEnergyFunction(const std::string& energy);
     /**
