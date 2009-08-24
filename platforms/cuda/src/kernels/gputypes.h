@@ -74,6 +74,7 @@ struct _gpuContext {
     unsigned char* pAtomSymbol;
     std::vector<gpuMoleculeGroup> moleculeGroups;
     gpuTabulatedFunction tabulatedFunctions[MAX_TABULATED_FUNCTIONS];
+    std::vector<int3> posCellOffsets;
     float iterations;
     float epsfac;
     float solventDielectric;

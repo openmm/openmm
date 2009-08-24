@@ -150,12 +150,10 @@ void CudaStreamImpl<T>::loadFromArray(const void* array) {
         for (int j = 0; j < rowOffset; ++j)
             data[i*rowOffset+j] = paddingValues[j];
     stream->Upload();
-
-    // VisualStudio compiler did not like stream == gpu->psPosq4
-    //if( gpu && stream == gpu->psPosq4 ){
-
-    if( gpu && getName() == "particlePositions" ){
+    if (gpu && getName() == "particlePositions") {
         gpu->bRecalculateBornRadii = true;
+        for (int i = 0; i < gpu->posCellOffsets.size(); i++)
+            gpu->posCellOffsets[i] = make_int3(0, 0, 0);
     }
 }
 
@@ -175,6 +173,14 @@ void CudaStreamImpl<T>::saveToArray(void* array) {
         for (int i = 0; i < getSize(); ++i)
             for (int j = 0; j < width; ++j)
                 arrayData[order[i]*width+j] = data[i*rowOffset+j];
+        if (gpu && getName() == "particlePositions") {
+            for (int i = 0; i < getSize(); i++) {
+                int3 offset = gpu->posCellOffsets[i];
+                arrayData[order[i]*width] -= offset.x*gpu->sim.periodicBoxSizeX;
+                arrayData[order[i]*width+1] -= offset.y*gpu->sim.periodicBoxSizeY;
+                arrayData[order[i]*width+2] -= offset.z*gpu->sim.periodicBoxSizeZ;
+            }
+        }
     }
     else {
         int* arrayData = (int*) array;
@@ -209,6 +215,11 @@ void CudaStreamImpl<T>::fillWithValue(void* value) {
         for (int j = 0; j < rowOffset; ++j)
             data[i*rowOffset+j] = paddingValues[j];
     stream->Upload();
+    if (gpu && getName() == "particlePositions") {
+        gpu->bRecalculateBornRadii = true;
+        for (int i = 0; i < gpu->posCellOffsets.size(); i++)
+            gpu->posCellOffsets[i] = make_int3(0, 0, 0);
+    }
 }
 
 template <class T>

@@ -1333,6 +1333,7 @@ int gpuAllocateInitialBuffers(gpuContext gpu)
     for (int i = 0; i < (int) gpu->sim.paddedNumberOfAtoms; i++)
         (*gpu->psAtomIndex)[i] = i;
     gpu->psAtomIndex->Upload();
+    gpu->posCellOffsets.resize(gpu->natoms, make_int3(0, 0, 0));
     // Determine randoms
     gpu->seed                           = 1;
     gpu->sim.randomFrames               = 20;
@@ -2385,6 +2386,7 @@ void gpuReorderAtoms(gpuContext gpu)
     vector<int> originalIndex(numAtoms);
     vector<float4> newPosq(numAtoms);
     vector<float4> newVelm(numAtoms);
+    vector<int3> newCellOffsets(numAtoms);
     for (int group = 0; group < (int)gpu->moleculeGroups.size(); group++)
     {
         // Find the center of each molecule.
@@ -2415,9 +2417,12 @@ void gpuReorderAtoms(gpuContext gpu)
 
             for (int i = 0; i < numMolecules; i++)
             {
-                float dx = floor(molPos[i].x/gpu->sim.periodicBoxSizeX)*gpu->sim.periodicBoxSizeX;
-                float dy = floor(molPos[i].y/gpu->sim.periodicBoxSizeY)*gpu->sim.periodicBoxSizeY;
-                float dz = floor(molPos[i].z/gpu->sim.periodicBoxSizeZ)*gpu->sim.periodicBoxSizeZ;
+                int xcell = (int) floor(molPos[i].x/gpu->sim.periodicBoxSizeX);
+                int ycell = (int) floor(molPos[i].y/gpu->sim.periodicBoxSizeY);
+                int zcell = (int) floor(molPos[i].z/gpu->sim.periodicBoxSizeZ);
+                float dx = xcell*gpu->sim.periodicBoxSizeX;
+                float dy = ycell*gpu->sim.periodicBoxSizeY;
+                float dz = zcell*gpu->sim.periodicBoxSizeZ;
                 if (dx != 0.0f || dy != 0.0f || dz != 0.0f)
                 {
                     molPos[i].x -= dx;
@@ -2429,6 +2434,9 @@ void gpuReorderAtoms(gpuContext gpu)
                         posq[atom].x -= dx;
                         posq[atom].y -= dy;
                         posq[atom].z -= dz;
+                        gpu->posCellOffsets[atom].x -= xcell;
+                        gpu->posCellOffsets[atom].y -= ycell;
+                        gpu->posCellOffsets[atom].z -= zcell;
                     }
                 }
             }
@@ -2482,19 +2490,20 @@ void gpuReorderAtoms(gpuContext gpu)
                 originalIndex[newIndex] = (*gpu->psAtomIndex)[oldIndex];
                 newPosq[newIndex] = posq[oldIndex];
                 newVelm[newIndex] = velm[oldIndex];
+                newCellOffsets[newIndex] = gpu->posCellOffsets[oldIndex];
             }
         }
     }
 
     // Update the streams.
 
-    for (int i = 0; i < numAtoms; i++)
+    for (int i = 0; i < numAtoms; i++) {
         posq[i] = newPosq[i];
-    gpu->psPosq4->Upload();
-    for (int i = 0; i < numAtoms; i++)
         velm[i] = newVelm[i];
-    gpu->psVelm4->Upload();
-    for (int i = 0; i < numAtoms; i++)
         (*gpu->psAtomIndex)[i] = originalIndex[i];
+        gpu->posCellOffsets[i] = newCellOffsets[i];
+    }
+    gpu->psPosq4->Upload();
+    gpu->psVelm4->Upload();
     gpu->psAtomIndex->Upload();
 }
