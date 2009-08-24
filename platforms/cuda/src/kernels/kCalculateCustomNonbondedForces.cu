@@ -90,10 +90,10 @@ void SetCustomNonbondedCombiningRules(const Expression<64>* expressions)
     RTERROR(status, "SetCustomNonbondedCombiningRules: cudaMemcpyToSymbol failed");
 }
 
-void SetCustomNonbondedGlobalParams(const vector<float>& paramValues)
+void SetCustomNonbondedGlobalParams(float* paramValues)
 {
     cudaError_t status;
-    status = cudaMemcpyToSymbol(globalParams, &paramValues[0], sizeof(globalParams));
+    status = cudaMemcpyToSymbol(globalParams, paramValues, sizeof(globalParams));
     RTERROR(status, "SetCustomNonbondedGlobalParams: cudaMemcpyToSymbol failed");
 }
 

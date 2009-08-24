@@ -451,7 +451,7 @@ void CudaCalcCustomNonbondedForceKernel::initialize(const System& system, const 
     gpuSetCustomNonbondedParameters(gpu, parameters, exclusionList, exceptionParticle1, exceptionParticle2, exceptionParams, method,
             (float)force.getCutoffDistance(), force.getEnergyFunction(), combiningRules, paramNames, globalParamNames);
     if (globalParamValues.size() > 0)
-        SetCustomNonbondedGlobalParams(globalParamValues);
+        SetCustomNonbondedGlobalParams(&globalParamValues[0]);
 }
 
 void CudaCalcCustomNonbondedForceKernel::executeForces(ContextImpl& context) {
@@ -478,7 +478,7 @@ void CudaCalcCustomNonbondedForceKernel::updateGlobalParams(ContextImpl& context
         globalParamValues[i] = value;
     }
     if (changed)
-        SetCustomNonbondedGlobalParams(globalParamValues);
+        SetCustomNonbondedGlobalParams(&globalParamValues[0]);
 }
 
 CudaCalcGBSAOBCForceKernel::~CudaCalcGBSAOBCForceKernel() {
