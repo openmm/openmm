@@ -63,6 +63,9 @@
 #include <ctime>
 #include <vector>
 #include <cfloat>
+#include <cstring>
+#include <cstdlib>
+#include <typeinfo>
 
 // force enums
 
