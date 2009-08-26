@@ -184,8 +184,10 @@ __global__ void moveValidElementsScattered(const T* dgData,T* dgCompact,const un
 }
 
 void planCompaction(compactionPlan& d,bool stageOutput) {
+    int device;
+    cudaGetDevice(&device);
     cudaDeviceProp deviceProp;
-    cudaGetDeviceProperties(&deviceProp, 0);
+    cudaGetDeviceProperties(&deviceProp, device);
     d.nThreadBlocks = 16*deviceProp.multiProcessorCount;
     cudaMalloc((void**)&(d.dgBlockCounts), d.nThreadBlocks*sizeof(unsigned int));
     d.stageOutput = stageOutput;
