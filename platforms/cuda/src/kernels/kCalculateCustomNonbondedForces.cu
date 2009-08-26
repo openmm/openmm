@@ -439,7 +439,6 @@ __global__ void kFindInteractionsWithinBlocksPeriodic_kernel(unsigned int* workU
 void kCalculateCustomNonbondedForces(gpuContext gpu, bool neighborListValid)
 {
 //    printf("kCalculateCustomNonbondedCutoffForces\n");
-    CUDPPResult result;
     int sharedPerThread = sizeof(Atom)+gpu->sim.customExpressionStackSize*sizeof(float);
     if (gpu->sim.customNonbondedMethod != NO_CUTOFF)
         sharedPerThread += sizeof(float3);
@@ -466,13 +465,7 @@ void kCalculateCustomNonbondedForces(gpuContext gpu, bool neighborListValid)
                 LAUNCHERROR("kFindBlockBoundsCutoff");
                 kFindBlocksWithInteractionsCutoff_kernel<<<gpu->sim.interaction_blocks, gpu->sim.interaction_threads_per_block>>>();
                 LAUNCHERROR("kFindBlocksWithInteractionsCutoff");
-                result = cudppCompact(gpu->cudpp, gpu->sim.pInteractingWorkUnit, gpu->sim.pInteractionCount,
-                        gpu->sim.pWorkUnit, gpu->sim.pInteractionFlag, gpu->sim.workUnits);
-                if (result != CUDPP_SUCCESS)
-                {
-                    printf("Error in cudppCompact: %d\n", result);
-                    exit(-1);
-                }
+                compactStream(gpu->compactPlan, gpu->sim.pInteractingWorkUnit, gpu->sim.pWorkUnit, gpu->sim.pInteractionFlag, gpu->sim.workUnits, gpu->sim.pInteractionCount);
                 kFindInteractionsWithinBlocksCutoff_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                         sizeof(unsigned int)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
             }
@@ -492,13 +485,7 @@ void kCalculateCustomNonbondedForces(gpuContext gpu, bool neighborListValid)
                 LAUNCHERROR("kFindBlockBoundsPeriodic");
                 kFindBlocksWithInteractionsPeriodic_kernel<<<gpu->sim.interaction_blocks, gpu->sim.interaction_threads_per_block>>>();
                 LAUNCHERROR("kFindBlocksWithInteractionsPeriodic");
-                result = cudppCompact(gpu->cudpp, gpu->sim.pInteractingWorkUnit, gpu->sim.pInteractionCount,
-                        gpu->sim.pWorkUnit, gpu->sim.pInteractionFlag, gpu->sim.workUnits);
-                if (result != CUDPP_SUCCESS)
-                {
-                    printf("Error in cudppCompact: %d\n", result);
-                    exit(-1);
-                }
+                compactStream(gpu->compactPlan, gpu->sim.pInteractingWorkUnit, gpu->sim.pWorkUnit, gpu->sim.pInteractionFlag, gpu->sim.workUnits, gpu->sim.pInteractionCount);
                 kFindInteractionsWithinBlocksPeriodic_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                         sizeof(unsigned int)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
             }

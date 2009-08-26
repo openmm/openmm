@@ -28,7 +28,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "cudatypes.h"
-#include "cudpp.h"
+#include "cudaCompact.h"
 #include <vector>
 
 struct gpuAtomType {
@@ -87,7 +87,7 @@ struct _gpuContext {
     bool bIncludeGBSA;
     unsigned long seed;
     SM_VERSION sm_version;
-    CUDPPHandle cudpp;
+    compactionPlan compactPlan;
     CUDAStream<float4>* psPosq4;
     CUDAStream<float4>* psPosqP4;
     CUDAStream<float4>* psOldPosq4;

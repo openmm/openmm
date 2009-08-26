@@ -1801,8 +1801,8 @@ void gpuShutDown(gpuContext gpu)
     for (int i = 0; i < MAX_TABULATED_FUNCTIONS; i++)
         if (gpu->tabulatedFunctions[i].coefficients != NULL)
             delete gpu->tabulatedFunctions[i].coefficients;
-    if (gpu->cudpp != 0)
-        cudppDestroyPlan(gpu->cudpp);
+    if (gpu->compactPlan.valid)
+        destroyCompactionPlan(gpu->compactPlan);
 
     // Wrap up
     delete gpu;
@@ -1930,18 +1930,8 @@ int gpuBuildThreadBlockWorkList(gpuContext gpu)
     gpu->sim.bornForce2_workBlock   = gpu->sim.bornForce2_threads_per_block / GRID;
     gpu->sim.workUnits = cells;
 
-    // Initialize the CUDPP workspace.
-    gpu->cudpp = 0;
-    CUDPPConfiguration config;
-    config.datatype = CUDPP_UINT;
-    config.algorithm = CUDPP_COMPACT;
-    config.options = CUDPP_OPTION_FORWARD;
-    CUDPPResult result = cudppPlan(&gpu->cudpp, config, cells, 1, 0);
-    if (CUDPP_SUCCESS != result)
-    {
-        printf("Error initializing CUDPP: %d\n", result);
-        exit(-1);
-    }
+    // Initialize the plan for doing stream compaction.
+    planCompaction(gpu->compactPlan);
 
     // Increase block count if necessary for extra large molecules that would
     // otherwise overflow the SM workunit buffers
