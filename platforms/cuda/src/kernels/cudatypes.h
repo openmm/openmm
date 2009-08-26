@@ -232,7 +232,7 @@ static const int GT2XX_RANDOM_THREADS_PER_BLOCK         = 384;
 static const int G8X_NONBOND_WORKUNITS_PER_SM           = 220;
 static const int GT2XX_NONBOND_WORKUNITS_PER_SM         = 256;
 static const unsigned int MAX_STACK_SIZE = 8;
-static const unsigned int MAX_TABULATED_FUNCTIONS = 8;
+static const unsigned int MAX_TABULATED_FUNCTIONS = 4;
 
 static const float PI = 3.14159265358979323846f;
 

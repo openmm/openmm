@@ -55,6 +55,11 @@ static __constant__ Expression<128> energyExp;
 static __constant__ Expression<64> combiningRules[4];
 static __constant__ float globalParams[8];
 
+texture<float4, 1, cudaReadModeElementType> texRef0;
+texture<float4, 1, cudaReadModeElementType> texRef1;
+texture<float4, 1, cudaReadModeElementType> texRef2;
+texture<float4, 1, cudaReadModeElementType> texRef3;
+
 void SetCalculateCustomNonbondedForcesSim(gpuContext gpu)
 {
     cudaError_t status;
@@ -157,7 +162,15 @@ __device__ float kEvaluateExpression_kernel(Expression<SIZE>* expression, float*
                         else
                         {
                             int index = floor((x-params.x)*params.z);
-                            float4 coeff = cSim.pTabulatedFunctionCoefficients[function][index];
+                            float4 coeff;
+                            if (function == 0)
+                                coeff = tex1Dfetch(texRef0, index);
+                            else if (function == 1)
+                                coeff = tex1Dfetch(texRef1, index);
+                            else if (function == 2)
+                                coeff = tex1Dfetch(texRef2, index);
+                            else
+                                coeff = tex1Dfetch(texRef3, index);
                             x = (x-params.x)*params.z-index;
                             if (op == CUSTOM)
                                 STACK(stackPointer) = coeff.x+x*(coeff.y+x*(coeff.z+x*coeff.w));
@@ -263,135 +276,6 @@ __device__ float kEvaluateExpression_kernel(Expression<SIZE>* expression, float*
                 }
             }
         }
-//        switch (expression->op[i])
-//        {
-//            case CONSTANT:
-//                STACK(++stackPointer) = expression->arg[i];
-//                break;
-//            case VARIABLE0:
-//                STACK(++stackPointer) = var0;
-//                break;
-//            case VARIABLE1:
-//                STACK(++stackPointer) = vars1.x;
-//                break;
-//            case VARIABLE2:
-//                STACK(++stackPointer) = vars1.y;
-//                break;
-//            case VARIABLE3:
-//                STACK(++stackPointer) = vars1.z;
-//                break;
-//            case VARIABLE4:
-//                STACK(++stackPointer) = vars1.w;
-//                break;
-//            case VARIABLE5:
-//                STACK(++stackPointer) = vars2.x;
-//                break;
-//            case VARIABLE6:
-//                STACK(++stackPointer) = vars2.y;
-//                break;
-//            case VARIABLE7:
-//                STACK(++stackPointer) = vars2.z;
-//                break;
-//            case VARIABLE8:
-//                STACK(++stackPointer) = vars2.w;
-//                break;
-//            case GLOBAL:
-//                STACK(++stackPointer) = globalParams[(int) expression->arg[i]];
-//                break;
-//            case ADD:
-//            {
-//                float temp = STACK(stackPointer);
-//                STACK(--stackPointer) += temp;
-//                break;
-//            }
-//            case SUBTRACT:
-//            {
-//                float temp = STACK(stackPointer);
-//                STACK(stackPointer) = temp-STACK(--stackPointer);
-//                break;
-//            }
-//            case MULTIPLY:
-//            {
-//                float temp = STACK(stackPointer);
-//                STACK(--stackPointer) *= temp;
-//                break;
-//            }
-//            case DIVIDE:
-//            {
-//                float temp = STACK(stackPointer);
-//                STACK(stackPointer) = temp/STACK(--stackPointer);
-//                break;
-//            }
-//            case POWER:
-//            {
-//                float temp = STACK(stackPointer);
-//                STACK(stackPointer) = pow(temp, STACK(--stackPointer));
-//                break;
-//            }
-//            case NEGATE:
-//                STACK(stackPointer) *= -1.0f;
-//                break;
-//            case SQRT:
-//                STACK(stackPointer) = sqrt(STACK(stackPointer));
-//                break;
-//            case EXP:
-//                STACK(stackPointer) = exp(STACK(stackPointer));
-//                break;
-//            case LOG:
-//                STACK(stackPointer) = log(STACK(stackPointer));
-//                break;
-//            case SIN:
-//                STACK(stackPointer) = sin(STACK(stackPointer));
-//                break;
-//            case COS:
-//                STACK(stackPointer) = cos(STACK(stackPointer));
-//                break;
-//            case SEC:
-//                STACK(stackPointer) = 1.0f/cos(STACK(stackPointer));
-//                break;
-//            case CSC:
-//                STACK(stackPointer) = 1.0f/sin(STACK(stackPointer));
-//                break;
-//            case TAN:
-//                STACK(stackPointer) = tan(STACK(stackPointer));
-//                break;
-//            case COT:
-//                STACK(stackPointer) = 1.0f/tan(STACK(stackPointer));
-//                break;
-//            case ASIN:
-//                STACK(stackPointer) = asin(STACK(stackPointer));
-//                break;
-//            case ACOS:
-//                STACK(stackPointer) = acos(STACK(stackPointer));
-//                break;
-//            case ATAN:
-//                STACK(stackPointer) = atan(STACK(stackPointer));
-//                break;
-//            case SQUARE:
-//            {
-//                float temp = STACK(stackPointer);
-//                STACK(stackPointer) *= temp;
-//                break;
-//            }
-//            case CUBE:
-//            {
-//                float temp = STACK(stackPointer);
-//                STACK(stackPointer) *= temp*temp;
-//                break;
-//            }
-//            case RECIPROCAL:
-//                STACK(stackPointer) = 1.0f/STACK(stackPointer);
-//                break;
-//            case ADD_CONSTANT:
-//                STACK(stackPointer) += expression->arg[i];
-//                break;
-//            case MULTIPLY_CONSTANT:
-//                STACK(stackPointer) *= expression->arg[i];
-//                break;
-//            case POWER_CONSTANT:
-//                STACK(stackPointer) = pow(STACK(stackPointer), expression->arg[i]);
-//                break;
-//        }
     }
     return STACK(stackPointer);
 }
@@ -439,6 +323,19 @@ __global__ void kFindInteractionsWithinBlocksPeriodic_kernel(unsigned int* workU
 void kCalculateCustomNonbondedForces(gpuContext gpu, bool neighborListValid)
 {
 //    printf("kCalculateCustomNonbondedCutoffForces\n");
+    if (gpu->tabulatedFunctionsChanged)
+    {
+        cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<float4>();
+        if (gpu->tabulatedFunctions[0].coefficients != NULL)
+            cudaBindTexture(NULL, &texRef0, gpu->tabulatedFunctions[0].coefficients->_pDevData, &channelDesc, gpu->tabulatedFunctions[0].coefficients->_length*sizeof(float4));
+        if (gpu->tabulatedFunctions[1].coefficients != NULL)
+            cudaBindTexture(NULL, &texRef1, gpu->tabulatedFunctions[1].coefficients->_pDevData, &channelDesc, gpu->tabulatedFunctions[1].coefficients->_length*sizeof(float4));
+        if (gpu->tabulatedFunctions[2].coefficients != NULL)
+            cudaBindTexture(NULL, &texRef2, gpu->tabulatedFunctions[2].coefficients->_pDevData, &channelDesc, gpu->tabulatedFunctions[2].coefficients->_length*sizeof(float4));
+        if (gpu->tabulatedFunctions[3].coefficients != NULL)
+            cudaBindTexture(NULL, &texRef3, gpu->tabulatedFunctions[3].coefficients->_pDevData, &channelDesc, gpu->tabulatedFunctions[3].coefficients->_length*sizeof(float4));
+        gpu->tabulatedFunctionsChanged = false;
+    }
     int sharedPerThread = sizeof(Atom)+gpu->sim.customExpressionStackSize*sizeof(float);
     if (gpu->sim.customNonbondedMethod != NO_CUTOFF)
         sharedPerThread += sizeof(float3);

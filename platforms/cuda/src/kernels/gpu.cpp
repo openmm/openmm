@@ -597,6 +597,7 @@ void gpuSetTabulatedFunction(gpuContext gpu, int index, const string& name, cons
     gpu->tabulatedFunctions[index].name = name;
     gpu->tabulatedFunctions[index].min = min;
     gpu->tabulatedFunctions[index].max = max;
+    gpu->tabulatedFunctionsChanged = true;
 
     // First create a padded set of function values.
 

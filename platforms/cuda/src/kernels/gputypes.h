@@ -43,6 +43,8 @@ struct gpuMoleculeGroup {
 };
 
 struct gpuTabulatedFunction {
+    gpuTabulatedFunction() : coefficients(NULL) {
+    }
     std::string name;
     double min, max;
     CUDAStream<float4>* coefficients;
@@ -75,7 +77,7 @@ struct _gpuContext {
     std::vector<gpuMoleculeGroup> moleculeGroups;
     gpuTabulatedFunction tabulatedFunctions[MAX_TABULATED_FUNCTIONS];
     std::vector<int3> posCellOffsets;
-    float iterations;
+    int iterations;
     float epsfac;
     float solventDielectric;
     float soluteDielectric;
@@ -85,6 +87,7 @@ struct _gpuContext {
     bool bRecalculateBornRadii;
     bool bOutputBufferPerWarp;
     bool bIncludeGBSA;
+    bool tabulatedFunctionsChanged;
     unsigned long seed;
     SM_VERSION sm_version;
     compactionPlan compactPlan;
