@@ -77,6 +77,8 @@ extern void SetCalculateObcGbsaForces2Sim(gpuContext gpu);
 extern void GetCalculateObcGbsaForces2Sim(gpuContext gpu);
 extern void SetCalculateAndersenThermostatSim(gpuContext gpu);
 extern void GetCalculateAndersenThermostatSim(gpuContext gpu);
+extern void SetCalculatePMESim(gpuContext gpu);
+extern void GetCalculatePMESim(gpuContext gpu);
 extern void SetForcesSim(gpuContext gpu);
 extern void GetForcesSim(gpuContext gpu);
 extern void SetShakeHSim(gpuContext gpu);

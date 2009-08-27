@@ -298,7 +298,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
             gpuSetPeriodicBoxSize(gpu, (float)boxVectors[0][0], (float)boxVectors[1][1], (float)boxVectors[2][2]);
             method = PERIODIC;
         }
-        if (force.getNonbondedMethod() == NonbondedForce::Ewald) {
+        if (force.getNonbondedMethod() == NonbondedForce::Ewald || force.getNonbondedMethod() == NonbondedForce::PME) {
             Vec3 boxVectors[3];
             force.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
             gpuSetPeriodicBoxSize(gpu, (float)boxVectors[0][0], (float)boxVectors[1][1], (float)boxVectors[2][2]);
@@ -308,17 +308,23 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
             double my = boxVectors[1][1]/force.getCutoffDistance();
             double mz = boxVectors[2][2]/force.getCutoffDistance();
             double pi = 3.1415926535897932385;
-            int kmaxx = (int)std::ceil(-(mx/pi)*std::log(ewaldErrorTol));
-            int kmaxy = (int)std::ceil(-(my/pi)*std::log(ewaldErrorTol));
-            int kmaxz = (int)std::ceil(-(mz/pi)*std::log(ewaldErrorTol));
-            if (kmaxx%2 == 0)
-                kmaxx++;
-            if (kmaxy%2 == 0)
-                kmaxy++;
-            if (kmaxz%2 == 0)
-                kmaxz++;
-            gpuSetEwaldParameters(gpu, (float)alpha, kmaxx, kmaxy, kmaxz);
-            method = EWALD;
+            if (force.getNonbondedMethod() == NonbondedForce::Ewald) {
+                int kmaxx = (int)std::ceil(-(mx/pi)*std::log(ewaldErrorTol));
+                int kmaxy = (int)std::ceil(-(my/pi)*std::log(ewaldErrorTol));
+                int kmaxz = (int)std::ceil(-(mz/pi)*std::log(ewaldErrorTol));
+                if (kmaxx%2 == 0)
+                    kmaxx++;
+                if (kmaxy%2 == 0)
+                    kmaxy++;
+                if (kmaxz%2 == 0)
+                    kmaxz++;
+                gpuSetEwaldParameters(gpu, (float) alpha, kmaxx, kmaxy, kmaxz);
+                method = EWALD;
+            }
+            else {
+                gpuSetPMEParameters(gpu, (float) alpha);
+                method = PARTICLE_MESH_EWALD;
+            }
         }
         data.nonbondedMethod = method;
         gpuSetCoulombParameters(gpu, 138.935485f, particle, c6, c12, q, symbol, exclusionList, method);

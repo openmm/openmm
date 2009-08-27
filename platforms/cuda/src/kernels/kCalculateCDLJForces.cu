@@ -120,6 +120,7 @@ void GetCalculateCDLJForcesSim(gpuContext gpu)
 // Reciprocal Space Ewald summation is in a separate kernel
 #include "kCalculateCDLJEwaldFastReciprocal.h"
 
+void kCalculatePME(gpuContext gpu);
 
 void kCalculateCDLJForces(gpuContext gpu)
 {
@@ -187,5 +188,22 @@ void kCalculateCDLJForces(gpuContext gpu)
             LAUNCHERROR("kCalculateEwaldFastCosSinSums");
             kCalculateEwaldFastForces_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
             LAUNCHERROR("kCalculateEwaldFastForces");
+            break;
+        case PARTICLE_MESH_EWALD:
+            kFindBlockBoundsEwaldDirect_kernel<<<(gpu->psGridBoundingBox->_length+63)/64, 64>>>();
+            LAUNCHERROR("kFindBlockBoundsEwaldDirect");
+            kFindBlocksWithInteractionsEwaldDirect_kernel<<<gpu->sim.interaction_blocks, gpu->sim.interaction_threads_per_block>>>();
+            LAUNCHERROR("kFindBlocksWithInteractionsEwaldDirect");
+            compactStream(gpu->compactPlan, gpu->sim.pInteractingWorkUnit, gpu->sim.pWorkUnit, gpu->sim.pInteractionFlag, gpu->sim.workUnits, gpu->sim.pInteractionCount);
+            kFindInteractionsWithinBlocksEwaldDirect_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                    sizeof(unsigned int)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
+            if (gpu->bOutputBufferPerWarp)
+                kCalculateCDLJEwaldDirectByWarpForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                        (sizeof(Atom)+sizeof(float3))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
+            else
+                kCalculateCDLJEwaldDirectForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                        (sizeof(Atom)+sizeof(float3))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
+            LAUNCHERROR("kCalculateCDLJEwaldDirectForces");
+            kCalculatePME(gpu);
     }
 }

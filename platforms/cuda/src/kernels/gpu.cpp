@@ -758,6 +758,31 @@ void gpuSetEwaldParameters(gpuContext gpu, float alpha, int kmaxx, int kmaxy, in
 }
 
 extern "C"
+void gpuSetPMEParameters(gpuContext gpu, float alpha)
+{
+    gpu->sim.alphaEwald         = alpha;
+    int3 gridSize = make_int3(16, 16, 16);
+    gpu->sim.pmeGridSize = gridSize;
+    cufftPlan3d(&gpu->fftplan, gridSize.x, gridSize.y, gridSize.z, CUFFT_C2C);
+    gpu->psPmeGrid = new CUDAStream<cufftComplex>(gridSize.x*gridSize.y*gridSize.z, 1, "PmeGrid");
+    gpu->sim.pPmeGrid = gpu->psPmeGrid->_pDevData;
+    gpu->psPmeBsplineModuli[0] = new CUDAStream<float>(gridSize.x, 1, "PmeBsplineModuli0");
+    gpu->sim.pPmeBsplineModuli[0] = gpu->psPmeBsplineModuli[0]->_pDevData;
+    gpu->psPmeBsplineModuli[1] = new CUDAStream<float>(gridSize.y, 1, "PmeBsplineModuli1");
+    gpu->sim.pPmeBsplineModuli[1] = gpu->psPmeBsplineModuli[1]->_pDevData;
+    gpu->psPmeBsplineModuli[2] = new CUDAStream<float>(gridSize.z, 1, "PmeBsplineModuli2");
+    gpu->sim.pPmeBsplineModuli[2] = gpu->psPmeBsplineModuli[2]->_pDevData;
+    gpu->psPmeBsplineTheta = new CUDAStream<float4>(PME_ORDER*gpu->natoms, 1, "PmeBsplineTheta");
+    gpu->sim.pPmeBsplineTheta = gpu->psPmeBsplineTheta->_pDevData;
+    gpu->psPmeBsplineDtheta = new CUDAStream<float4>(PME_ORDER*gpu->natoms, 1, "PmeBsplineDtheta");
+    gpu->sim.pPmeBsplineDtheta = gpu->psPmeBsplineDtheta->_pDevData;
+    gpu->psPmeParticleIndex = new CUDAStream<int4>(gpu->natoms, 1, "PmeParticleIndex");
+    gpu->sim.pPmeParticleIndex = gpu->psPmeParticleIndex->_pDevData;
+    gpu->psPmeParticleFraction = new CUDAStream<float4>(gpu->natoms, 1, "PmeParticleFraction");
+    gpu->sim.pPmeParticleFraction = gpu->psPmeParticleFraction->_pDevData;
+}
+
+extern "C"
 void gpuSetPeriodicBoxSize(gpuContext gpu, float xsize, float ysize, float zsize)
 {
     gpu->sim.periodicBoxSizeX = xsize;
@@ -1589,6 +1614,14 @@ void* gpuInit(int numAtoms, unsigned int device, bool useBlockingSync)
     gpu->psCustomExceptionID        = NULL;
     gpu->psCustomExceptionParams    = NULL;
     gpu->psEwaldCosSinSum           = NULL;
+    gpu->psPmeGrid                  = NULL;
+    gpu->psPmeBsplineModuli[0]      = NULL;
+    gpu->psPmeBsplineModuli[1]      = NULL;
+    gpu->psPmeBsplineModuli[2]      = NULL;
+    gpu->psPmeBsplineTheta          = NULL;
+    gpu->psPmeBsplineDtheta         = NULL;
+    gpu->psPmeParticleIndex         = NULL;
+    gpu->psPmeParticleFraction      = NULL;
     gpu->psShakeID                  = NULL;
     gpu->psShakeParameter           = NULL;
     gpu->psSettleID                 = NULL;
@@ -1747,6 +1780,17 @@ void gpuShutDown(gpuContext gpu)
     }
     if (gpu->psEwaldCosSinSum != NULL)
         delete gpu->psEwaldCosSinSum;
+    if (gpu->psPmeGrid != NULL) {
+        delete gpu->psPmeGrid;
+        delete gpu->psPmeBsplineModuli[0];
+        delete gpu->psPmeBsplineModuli[1];
+        delete gpu->psPmeBsplineModuli[2];
+        delete gpu->psPmeBsplineTheta;
+        delete gpu->psPmeBsplineDtheta;
+        delete gpu->psPmeParticleIndex;
+        delete gpu->psPmeParticleFraction;
+        cufftDestroy(gpu->fftplan);
+    }
     delete gpu->psObcData;
     delete gpu->psObcChain;
     delete gpu->psBornForce;
@@ -2102,6 +2146,7 @@ int gpuSetConstants(gpuContext gpu)
     SetCalculateObcGbsaBornSumSim(gpu);
     SetCalculateObcGbsaForces2Sim(gpu);
     SetCalculateAndersenThermostatSim(gpu);
+    SetCalculatePMESim(gpu);
     SetForcesSim(gpu);
     SetShakeHSim(gpu);
     SetLangevinUpdateSim(gpu);

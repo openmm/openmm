@@ -91,6 +91,7 @@ struct _gpuContext {
     unsigned long seed;
     SM_VERSION sm_version;
     compactionPlan compactPlan;
+    cufftHandle fftplan;
     CUDAStream<float4>* psPosq4;
     CUDAStream<float4>* psPosqP4;
     CUDAStream<float4>* psOldPosq4;
@@ -105,6 +106,12 @@ struct _gpuContext {
     CUDAStream<float4>* psCustomExceptionParams; // Parameters for custom nonbonded exceptions
     CUDAStream<float4>* psTabulatedFunctionParams; // The min, max, and spacing for each tabulated function
     CUDAStream<float2>* psEwaldCosSinSum;
+    CUDAStream<cufftComplex>* psPmeGrid;    // Grid points for particle mesh Ewald
+    CUDAStream<float>* psPmeBsplineModuli[3];
+    CUDAStream<float4>* psPmeBsplineTheta;
+    CUDAStream<float4>* psPmeBsplineDtheta;
+    CUDAStream<int4>* psPmeParticleIndex; // The grid indices for each atom
+    CUDAStream<float4>* psPmeParticleFraction; // Fractional offset in the grid for each atom in all three dimensions.
     CUDAStream<float2>* psObcData; 
     CUDAStream<float>* psObcChain;
     CUDAStream<float>* psBornForce;
@@ -205,6 +212,9 @@ void gpuSetCustomNonbondedParameters(gpuContext gpu, const std::vector<std::vect
 
 extern "C"
 void gpuSetEwaldParameters(gpuContext gpu, float alpha, int kmaxx, int kmaxy, int kmaxz);
+
+extern "C"
+void gpuSetPMEParameters(gpuContext gpu, float alpha);
 
 extern "C"
 void gpuSetPeriodicBoxSize(gpuContext gpu, float xsize, float ysize, float zsize);

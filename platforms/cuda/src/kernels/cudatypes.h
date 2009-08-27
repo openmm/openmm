@@ -35,6 +35,7 @@
 #include <string>
 #include <cuda.h>
 #include <cuda_runtime_api.h>
+#include <cufft.h>
 #include <builtin_types.h>
 #include <vector_functions.h>
 
@@ -236,12 +237,15 @@ static const unsigned int MAX_TABULATED_FUNCTIONS = 4;
 
 static const float PI = 3.14159265358979323846f;
 
+static const int PME_ORDER = 4;
+
 enum CudaNonbondedMethod
 {
     NO_CUTOFF,
     CUTOFF,
     PERIODIC,
-    EWALD
+    EWALD,
+    PARTICLE_MESH_EWALD
 };
 
 enum ExpressionOp {
@@ -354,6 +358,13 @@ struct cudaGmxSimulation {
     float4*         pTabulatedFunctionCoefficients[MAX_TABULATED_FUNCTIONS]; // The spline coefficients for each tabulated function
     float4*         pTabulatedFunctionParams;       // The min, max, and spacing for each tabulated function
     float2*         pEwaldCosSinSum;                // Pointer to the cos/sin sums (ewald)
+    int3            pmeGridSize;                    // The dimensions of the grid for particle mesh Ewald
+    cufftComplex*   pPmeGrid;                       // Grid points for particle mesh Ewald
+    float*          pPmeBsplineModuli[3];
+    float4*         pPmeBsplineTheta;
+    float4*         pPmeBsplineDtheta;
+    int4*           pPmeParticleIndex;              // The grid indices for each atom
+    float4*         pPmeParticleFraction;           // Fractional offset in the grid for each atom in all three dimensions.
     unsigned int    bonds;                          // Number of bonds
     int4*           pBondID;                        // Bond atom and output buffer IDs
     float2*         pBondParameter;                 // Bond parameters
