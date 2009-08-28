@@ -196,7 +196,7 @@ __global__ void kUpdateBsplines_kernel()
 __global__ void kGridSpreadCharge_kernel()
 {
     extern __shared__ float4 atomPos[];
-    int4* atomGridIndex = (int4*) &atomPos[cSim.atoms];
+    int4* atomGridIndex = (int4*) &atomPos[blockDim.x];
     const unsigned int totalWarps = cSim.nonbond_blocks*cSim.nonbond_threads_per_block/GRID;
     const unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
     const int3 groupDim = make_int3(4, 4, 2);
@@ -257,7 +257,8 @@ __global__ void kGridSpreadCharge_kernel()
             }
         }
         unsigned int gridIndex = gridPoint.x*cSim.pmeGridSize.y*cSim.pmeGridSize.z+gridPoint.y*cSim.pmeGridSize.z+gridPoint.z;
-        cSim.pPmeGrid[gridIndex] = make_cuComplex(gridIndex < cSim.pmeGridSize.x*cSim.pmeGridSize.y*cSim.pmeGridSize.z ? result*sqrt(cSim.epsfac) : 0.0f, 0.0f);
+        if (gridIndex < cSim.pmeGridSize.x*cSim.pmeGridSize.y*cSim.pmeGridSize.z)
+            cSim.pPmeGrid[gridIndex] = make_cuComplex(result*sqrt(cSim.epsfac), 0.0f);
         group++;
     }
 }
@@ -292,7 +293,46 @@ __global__ void kReciprocalConvolution_kernel()
         cSim.pPmeGrid[index] = make_cuComplex(grid.x*eterm, grid.y*eterm);
         energy += eterm*(grid.x*grid.x + grid.y*grid.y);
     }
-    cSim.pEnergy[blockIdx.x*blockDim.x+threadIdx.x] += energy;
+    cSim.pEnergy[blockIdx.x*blockDim.x+threadIdx.x] += 0.5f*energy;
+}
+
+__global__ void kGridInterpolateForce_kernel()
+{
+    for (int atom = blockIdx.x*blockDim.x+threadIdx.x; atom < cSim.atoms; atom += blockDim.x*gridDim.x)
+    {
+        float3 force = make_float3(0.0f, 0.0f, 0.0f);
+        float4 posq = cSim.pPosq[atom];
+        int4 gridIndex = cSim.pPmeParticleIndex[atom];
+        for (int ix = 0; ix < PME_ORDER; ix++)
+        {
+            int xindex = (gridIndex.x + ix) % cSim.pmeGridSize.x;
+            float tx = cSim.pPmeBsplineTheta[atom*PME_ORDER+ix].x;
+            float dtx = cSim.pPmeBsplineDtheta[atom*PME_ORDER+ix].x;
+            for (int iy = 0; iy < PME_ORDER; iy++)
+            {
+                int yindex = (gridIndex.y + iy) % cSim.pmeGridSize.y;
+                float ty = cSim.pPmeBsplineTheta[atom*PME_ORDER+iy].y;
+                float dty = cSim.pPmeBsplineDtheta[atom*PME_ORDER+iy].y;
+                for (int iz = 0; iz < PME_ORDER; iz++)
+                {
+                    int zindex               = (gridIndex.z + iz) % cSim.pmeGridSize.z;
+                    float tz = cSim.pPmeBsplineTheta[atom*PME_ORDER+iz].z;
+                    float dtz = cSim.pPmeBsplineDtheta[atom*PME_ORDER+iz].z;
+                    int index                = xindex*cSim.pmeGridSize.y*cSim.pmeGridSize.z + yindex*cSim.pmeGridSize.z + zindex;
+                    float gridvalue            = cSim.pPmeGrid[index].x;
+                    force.x                  += dtx*ty*tz*gridvalue;
+                    force.y                  += tx*dty*tz*gridvalue;
+                    force.z                  += tx*ty*dtz*gridvalue;
+                }
+            }
+        }
+        float4 totalForce = cSim.pForce4[atom];
+        float q = posq.w*sqrt(cSim.epsfac);
+        totalForce.x -= q*force.x*cSim.pmeGridSize.x/cSim.periodicBoxSizeX;
+        totalForce.y -= q*force.y*cSim.pmeGridSize.y/cSim.periodicBoxSizeY;
+        totalForce.z -= q*force.z*cSim.pmeGridSize.z/cSim.periodicBoxSizeZ;
+        cSim.pForce4[atom] = totalForce;
+    }
 }
 
 void kCalculatePME(gpuContext gpu)
@@ -303,8 +343,11 @@ void kCalculatePME(gpuContext gpu)
     kUpdateBsplines_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block, 2*gpu->sim.update_threads_per_block*PME_ORDER*sizeof(float4)>>>();
     LAUNCHERROR("kUpdateBsplines");
     kGridSpreadCharge_kernel<<<gpu->sim.blocks, 64, 64*(sizeof(float4)+sizeof(int4))>>>();
-    LAUNCHERROR("kUpdateBsplines");
+    LAUNCHERROR("kGridSpreadChargeß");
     cufftExecC2C(gpu->fftplan, gpu->psPmeGrid->_pDevData, gpu->psPmeGrid->_pDevData, CUFFT_FORWARD);
     kReciprocalConvolution_kernel<<<gpu->sim.blocks, gpu->sim.nonbond_threads_per_block>>>();
-    LAUNCHERROR("kUpdateGridIndexAndFraction");
+    LAUNCHERROR("kReciprocalConvolution");
+    cufftExecC2C(gpu->fftplan, gpu->psPmeGrid->_pDevData, gpu->psPmeGrid->_pDevData, CUFFT_INVERSE);
+    kGridInterpolateForce_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
+    LAUNCHERROR("kGridInterpolateForce");
 }

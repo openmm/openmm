@@ -332,10 +332,11 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
         // Compute the Ewald self energy.
 
         data.ewaldSelfEnergy = 0.0;
-        double selfEnergyScale = gpu->sim.epsfac*gpu->sim.alphaEwald/std::sqrt(PI);
-        if (force.getNonbondedMethod() == NonbondedForce::Ewald)
-            for (int i = 0; i < numParticles; i++)
-                data.ewaldSelfEnergy -= selfEnergyScale*q[i]*q[i];
+        if (force.getNonbondedMethod() == NonbondedForce::Ewald || force.getNonbondedMethod() == NonbondedForce::PME) {
+            double selfEnergyScale = gpu->sim.epsfac*gpu->sim.alphaEwald/std::sqrt(PI);
+                for (int i = 0; i < numParticles; i++)
+                    data.ewaldSelfEnergy -= selfEnergyScale*q[i]*q[i];
+        }
     }
 
     // Initialize 1-4 nonbonded interactions.
