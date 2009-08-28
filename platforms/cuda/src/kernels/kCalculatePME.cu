@@ -262,6 +262,39 @@ __global__ void kGridSpreadCharge_kernel()
     }
 }
 
+__global__ void kReciprocalConvolution_kernel()
+{
+    const unsigned int gridSize = cSim.pmeGridSize.x*cSim.pmeGridSize.y*cSim.pmeGridSize.z;
+    float expFactor = PI*PI/(cSim.alphaEwald*cSim.alphaEwald);
+    float scaleFactor = 1.0/(PI*cSim.periodicBoxSizeX*cSim.periodicBoxSizeY*cSim.periodicBoxSizeZ);
+    float energy = 0.0f;
+    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < gridSize; index += blockDim.x*gridDim.x)
+    {
+        int kx = index/(cSim.pmeGridSize.y*cSim.pmeGridSize.z);
+        int remainder = index-kx*cSim.pmeGridSize.y*cSim.pmeGridSize.z;
+        int ky = remainder/cSim.pmeGridSize.z;
+        int kz = remainder-ky*cSim.pmeGridSize.z;
+        if (kx == 0 && ky == 0 && kz == 0)
+            continue;
+        int mx = (kx < (cSim.pmeGridSize.x+1)/2) ? kx : (kx-cSim.pmeGridSize.x);
+        int my = (ky < (cSim.pmeGridSize.y+1)/2) ? ky : (ky-cSim.pmeGridSize.y);
+        int mz = (kz < (cSim.pmeGridSize.z+1)/2) ? kz : (kz-cSim.pmeGridSize.z);
+        float mhx = mx/cSim.periodicBoxSizeX;
+        float mhy = my/cSim.periodicBoxSizeY;
+        float mhz = mz/cSim.periodicBoxSizeZ;
+        float bx = cSim.pPmeBsplineModuli[0][kx];
+        float by = cSim.pPmeBsplineModuli[1][ky];
+        float bz = cSim.pPmeBsplineModuli[2][kz];
+        cuComplex grid = cSim.pPmeGrid[index];
+        float m2 = mhx*mhx+mhy*mhy+mhz*mhz;
+        float denom = m2*bx*by*bz;
+        float eterm = scaleFactor*exp(-expFactor*m2)/denom;
+        cSim.pPmeGrid[index] = make_cuComplex(grid.x*eterm, grid.y*eterm);
+        energy += eterm*(grid.x*grid.x + grid.y*grid.y);
+    }
+    cSim.pEnergy[blockIdx.x*blockDim.x+threadIdx.x] += energy;
+}
+
 void kCalculatePME(gpuContext gpu)
 {
 //    printf("kCalculatePME\n");
@@ -272,4 +305,6 @@ void kCalculatePME(gpuContext gpu)
     kGridSpreadCharge_kernel<<<gpu->sim.blocks, 64, 64*(sizeof(float4)+sizeof(int4))>>>();
     LAUNCHERROR("kUpdateBsplines");
     cufftExecC2C(gpu->fftplan, gpu->psPmeGrid->_pDevData, gpu->psPmeGrid->_pDevData, CUFFT_FORWARD);
+    kReciprocalConvolution_kernel<<<gpu->sim.blocks, gpu->sim.nonbond_threads_per_block>>>();
+    LAUNCHERROR("kUpdateGridIndexAndFraction");
 }

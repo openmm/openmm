@@ -780,6 +780,64 @@ void gpuSetPMEParameters(gpuContext gpu, float alpha)
     gpu->sim.pPmeParticleIndex = gpu->psPmeParticleIndex->_pDevData;
     gpu->psPmeParticleFraction = new CUDAStream<float4>(gpu->natoms, 1, "PmeParticleFraction");
     gpu->sim.pPmeParticleFraction = gpu->psPmeParticleFraction->_pDevData;
+
+    // Initialize the b-spline moduli.
+
+    int maxSize = max(max(gridSize.x, gridSize.y), gridSize.z);
+    vector<double> data(PME_ORDER);
+    vector<double> ddata(PME_ORDER);
+    vector<double> bsplines_data(maxSize);
+    data[PME_ORDER-1] = 0.0;
+    data[1] = 0.0;
+    data[0] = 1.0;
+    for (int i = 3; i < PME_ORDER; i++)
+    {
+        double div = 1.0/(i-1.0);
+        data[i-1] = 0.0;
+        for (int j = 1; j < (i-1); j++)
+            data[i-j-1] = div*(j*data[i-j-2]+(i-j)*data[i-j-1]);
+        data[0] = div*data[0];
+    }
+
+    // Differentiate.
+
+    ddata[0] = -data[0];
+    for (int i = 1; i < PME_ORDER; i++)
+        ddata[i] = data[i-1]-data[i];
+    double div = 1.0/(PME_ORDER-1);
+    data[PME_ORDER-1] = 0.0;
+    for (int i = 1; i < (PME_ORDER-1); i++)
+        data[PME_ORDER-i-1] = div*(i*data[PME_ORDER-i-2]+(PME_ORDER-i)*data[PME_ORDER-i-1]);
+    data[0] = div*data[0];
+    for (int i = 0; i < maxSize; i++)
+        bsplines_data[i] = 0.0;
+    for (int i = 1; i <= PME_ORDER; i++)
+        bsplines_data[i] = data[i-1];
+
+    // Evaluate the actual bspline moduli for X/Y/Z.
+
+    for(int dim = 0; dim < 3; dim++)
+    {
+        int ndata = (dim == 0 ? gridSize.x : dim == 1 ? gridSize.y : gridSize.z);
+        for (int i = 0; i < ndata; i++)
+        {
+            double sc = 0.0;
+            double ss = 0.0;
+            for (int j = 0; j < ndata; j++)
+            {
+                double arg = (2.0*M_PI*i*j)/ndata;
+                sc += bsplines_data[j]*cos(arg);
+                ss += bsplines_data[j]*sin(arg);
+            }
+            (*gpu->psPmeBsplineModuli[dim])[i] = sc*sc+ss*ss;
+        }
+        for (int i = 0; i < ndata; i++)
+        {
+            if ((*gpu->psPmeBsplineModuli[dim])[i] < 1.0e-7)
+                (*gpu->psPmeBsplineModuli[dim])[i] = ((*gpu->psPmeBsplineModuli[dim])[i-1]+(*gpu->psPmeBsplineModuli[dim])[i+1])*0.5;
+        }
+        gpu->psPmeBsplineModuli[dim]->Upload();
+    }
 }
 
 extern "C"
