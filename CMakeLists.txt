@@ -18,9 +18,15 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
 if(COMMAND cmake_policy)
-		cmake_policy(SET CMP0003 NEW)
-		cmake_policy(SET CMP0005 NEW)
-		cmake_policy(SET CMP0011 NEW)
+    if(POLICY CMP0003)
+        cmake_policy(SET CMP0003 NEW) 
+    endif(POLICY CMP0003)
+    if(POLICY CMP0005) 
+        cmake_policy(SET CMP0005 NEW) 
+    endif(POLICY CMP0005)
+    if(POLICY CMP0011) 
+        cmake_policy(SET CMP0011 NEW) 
+    endif(POLICY CMP0011)
 endif(COMMAND cmake_policy)
 
 # Don't create a new project name if this is part of a mega-build from the
