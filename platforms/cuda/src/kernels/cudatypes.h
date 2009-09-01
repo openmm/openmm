@@ -359,12 +359,14 @@ struct cudaGmxSimulation {
     float4*         pTabulatedFunctionParams;       // The min, max, and spacing for each tabulated function
     float2*         pEwaldCosSinSum;                // Pointer to the cos/sin sums (ewald)
     int3            pmeGridSize;                    // The dimensions of the grid for particle mesh Ewald
+    int3            pmeGroupSize;                   // The dimensions of the groups used in charge spreading for PME
     cufftComplex*   pPmeGrid;                       // Grid points for particle mesh Ewald
     float*          pPmeBsplineModuli[3];
     float4*         pPmeBsplineTheta;
     float4*         pPmeBsplineDtheta;
     int4*           pPmeParticleIndex;              // The grid indices for each atom
     float4*         pPmeParticleFraction;           // Fractional offset in the grid for each atom in all three dimensions.
+    int*            pPmeInteractionFlags;           // Flags for which groups of grid points interact with which atoms
     unsigned int    bonds;                          // Number of bonds
     int4*           pBondID;                        // Bond atom and output buffer IDs
     float2*         pBondParameter;                 // Bond parameters

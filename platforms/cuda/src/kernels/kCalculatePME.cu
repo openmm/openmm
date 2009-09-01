@@ -94,9 +94,6 @@ __global__ void kUpdateGridIndexAndFraction_kernel()
     for (int i = tid; i < cSim.atoms; i += tnb)
     {
         float4 ftmp = cSim.pPosq[i];
-
-        __syncthreads();
-
         float3 t = make_float3((ftmp.x/cSim.periodicBoxSizeX+1.0f)*cSim.pmeGridSize.x,
                                (ftmp.y/cSim.periodicBoxSizeY+1.0f)*cSim.pmeGridSize.y,
                                (ftmp.z/cSim.periodicBoxSizeZ+1.0f)*cSim.pmeGridSize.z);
@@ -104,17 +101,53 @@ __global__ void kUpdateGridIndexAndFraction_kernel()
         ftmp.x = modff(t.x, &tix.x);
         ftmp.y = modff(t.y, &tix.y);
         ftmp.z = modff(t.z, &tix.z);
-
         cSim.pPmeParticleFraction[i] = ftmp;
-
-        /* avoid costly % operations if possible that is if dc_ngrid.* is pow. of 2 */
         int4 itmp = make_int4(fast_mod(__float2int_rd(tix.x), cSim.pmeGridSize.x),
                               fast_mod(__float2int_rd(tix.y), cSim.pmeGridSize.y),
                               fast_mod(__float2int_rd(tix.z), cSim.pmeGridSize.z), 0);
-
         cSim.pPmeParticleIndex[i] = itmp;
+    }
 
-        __syncthreads();
+    // Compute flags for which atoms affect which groups of grid points.
+
+    const int3 numGroups = make_int3((cSim.pmeGridSize.x+cSim.pmeGroupSize.x-1)/cSim.pmeGroupSize.x, (cSim.pmeGridSize.y+cSim.pmeGroupSize.y-1)/cSim.pmeGroupSize.y, (cSim.pmeGridSize.z+cSim.pmeGroupSize.z-1)/cSim.pmeGroupSize.z);
+    const unsigned int totalGroups = numGroups.x*numGroups.y*numGroups.z;
+    const float3 gridScale = make_float3(cSim.pmeGridSize.x/cSim.periodicBoxSizeX, cSim.pmeGridSize.y/cSim.periodicBoxSizeY, cSim.pmeGridSize.z/cSim.periodicBoxSizeZ);
+    for (int group = tid; group < totalGroups; group += tnb)
+    {
+        int3 gridBase;
+        gridBase.x = group/(numGroups.y*numGroups.z);
+        int remainder = group-gridBase.x*numGroups.y*numGroups.z;
+        gridBase.y = remainder/numGroups.z;
+        gridBase.z = remainder-gridBase.y*numGroups.z;
+        gridBase.x *= cSim.pmeGroupSize.x;
+        gridBase.y *= cSim.pmeGroupSize.y;
+        gridBase.z *= cSim.pmeGroupSize.z;
+        unsigned int flags = 0;
+        unsigned int baseIndex = group*(cSim.paddedNumberOfAtoms/32);
+        for (int atomBlock = 0; atomBlock < cSim.paddedNumberOfAtoms>>GRIDBITS; atomBlock++)
+        {
+            // Decide if this block actually needs to be processed.
+
+            int flagIndex = atomBlock%32;
+            if (flagIndex == 0)
+                flags = 0;
+            float4 boxSize = cSim.pGridBoundingBox[atomBlock];
+            float4 center = cSim.pGridCenter[atomBlock];
+            int maxx = (int) ceil((center.x+boxSize.x)*gridScale.x)+cSim.pmeGroupSize.x+PME_ORDER;
+            int maxy = (int) ceil((center.y+boxSize.y)*gridScale.y)+cSim.pmeGroupSize.y+PME_ORDER;
+            int maxz = (int) ceil((center.z+boxSize.z)*gridScale.z)+cSim.pmeGroupSize.z+PME_ORDER;
+            int minx = (int) floor((center.x-boxSize.x)*gridScale.x);
+            int miny = (int) floor((center.y-boxSize.y)*gridScale.y);
+            int minz = (int) floor((center.z-boxSize.z)*gridScale.z);
+            int x = minx+(gridBase.x-minx)%cSim.pmeGridSize.x;
+            int y = miny+(gridBase.y-miny)%cSim.pmeGridSize.y;
+            int z = minz+(gridBase.z-minz)%cSim.pmeGridSize.z;
+            if (maxx < x || maxy < y || maxz < z)
+                flags += 1<<flagIndex;
+            if (flagIndex == 31 || atomBlock == cSim.paddedNumberOfAtoms>>GRIDBITS)
+                cSim.pPmeInteractionFlags[baseIndex+atomBlock/32] = flags;
+        }
     }
 }
 
@@ -139,8 +172,6 @@ __global__ void kUpdateBsplines_kernel()
         }
 
         float4 dr = cSim.pPmeParticleFraction[i];
-
-        __syncthreads();
 
         data[PME_ORDER - 1] = make_float4(0.0f);
         data[1]            = dr;
@@ -178,14 +209,11 @@ __global__ void kUpdateBsplines_kernel()
         }
         data[0] = div_o * (-dr + 1.0f) * data[0];
 
-        __syncthreads();
-
         for (int j = 0; j < PME_ORDER; j++)
         {
             cSim.pPmeBsplineTheta[i + j*cSim.atoms] =  data[j];
             cSim.pPmeBsplineDtheta[i + j*cSim.atoms] = ddata[j];
         }
-        __syncthreads();
     }
 }
 
@@ -193,11 +221,9 @@ __global__ void kGridSpreadCharge_kernel()
 {
     extern __shared__ float atomCharge[];
     int4* atomGridIndex = (int4*) &atomCharge[blockDim.x];
-    float4* bsplineTheta = (float4*) &atomGridIndex[blockDim.x];
     const unsigned int totalWarps = gridDim.x*blockDim.x/GRID;
     const unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
-    const int3 groupDim = make_int3(4, 4, 2);
-    const int3 numGroups = make_int3((cSim.pmeGridSize.x+groupDim.x-1)/groupDim.x, (cSim.pmeGridSize.y+groupDim.y-1)/groupDim.y, (cSim.pmeGridSize.z+groupDim.z-1)/groupDim.z);
+    const int3 numGroups = make_int3((cSim.pmeGridSize.x+cSim.pmeGroupSize.x-1)/cSim.pmeGroupSize.x, (cSim.pmeGridSize.y+cSim.pmeGroupSize.y-1)/cSim.pmeGroupSize.y, (cSim.pmeGridSize.z+cSim.pmeGroupSize.z-1)/cSim.pmeGroupSize.z);
     const unsigned int totalGroups = numGroups.x*numGroups.y*numGroups.z;
     unsigned int group = warp*totalGroups/totalWarps;
     const unsigned int end = (warp+1)*totalGroups/totalWarps;
@@ -205,7 +231,7 @@ __global__ void kGridSpreadCharge_kernel()
 
     while (group < end)
     {
-        // Process a group of grid points of size groupDim.  First figure out the base index for the group,
+        // Process a group of grid points of size cSim.pmeGroupSize.  First figure out the base index for the group,
         // and the index of the specific point this thread will handle.
 
         int3 gridBase;
@@ -213,14 +239,14 @@ __global__ void kGridSpreadCharge_kernel()
         int remainder = group-gridBase.x*numGroups.y*numGroups.z;
         gridBase.y = remainder/numGroups.z;
         gridBase.z = remainder-gridBase.y*numGroups.z;
-        gridBase.x *= groupDim.x;
-        gridBase.y *= groupDim.y;
-        gridBase.z *= groupDim.z;
+        gridBase.x *= cSim.pmeGroupSize.x;
+        gridBase.y *= cSim.pmeGroupSize.y;
+        gridBase.z *= cSim.pmeGroupSize.z;
         int3 gridPoint;
-        gridPoint.x = index/(groupDim.y*groupDim.z);
-        remainder = index-gridPoint.x*groupDim.y*groupDim.z;
-        gridPoint.y = remainder/groupDim.z;
-        gridPoint.z = remainder-gridPoint.y*groupDim.z;
+        gridPoint.x = index/(cSim.pmeGroupSize.y*cSim.pmeGroupSize.z);
+        remainder = index-gridPoint.x*cSim.pmeGroupSize.y*cSim.pmeGroupSize.z;
+        gridPoint.y = remainder/cSim.pmeGroupSize.z;
+        gridPoint.z = remainder-gridPoint.y*cSim.pmeGroupSize.z;
         gridPoint.x += gridBase.x;
         gridPoint.y += gridBase.y;
         gridPoint.z += gridBase.z;
@@ -228,17 +254,22 @@ __global__ void kGridSpreadCharge_kernel()
         // Loop over blocks of atoms.
 
         float result = 0.0f;
+        int flags = 0;
+        unsigned int baseIndex = group*(cSim.paddedNumberOfAtoms/32);
         for (int atomBlock = 0; atomBlock < cSim.paddedNumberOfAtoms>>GRIDBITS; atomBlock++)
         {
+            // Decide if this block actually needs to be processed.
+
+            int flagIndex = atomBlock%32;
+            if (flagIndex == 0)
+                flags = cSim.pPmeInteractionFlags[baseIndex+atomBlock/32];
+            if ((flags & (1<<flagIndex)) != 0)
+                continue;
             int atomIndex = (atomBlock<<GRIDBITS)+index;
             if (atomIndex < cSim.atoms)
             {
                 atomCharge[threadIdx.x] = cSim.pPosq[atomIndex].w;
                 atomGridIndex[threadIdx.x] = cSim.pPmeParticleIndex[atomIndex];
-//                bsplineTheta[threadIdx.x] = cSim.pPmeBsplineTheta[atomIndex];
-//                bsplineTheta[threadIdx.x+blockDim.x] = cSim.pPmeBsplineTheta[atomIndex+cSim.atoms];
-//                bsplineTheta[threadIdx.x+2*blockDim.x] = cSim.pPmeBsplineTheta[atomIndex+2*cSim.atoms];
-//                bsplineTheta[threadIdx.x+3*blockDim.x] = cSim.pPmeBsplineTheta[atomIndex+3*cSim.atoms];
             }
             int maxAtoms = min(GRID, cSim.atoms-(atomBlock<<GRIDBITS));
             for (int i = 0; i < maxAtoms; i++)
@@ -248,14 +279,10 @@ __global__ void kGridSpreadCharge_kernel()
                 int ix = gridPoint.x-atomGridIndex[localIndex].x;
                 int iy = gridPoint.y-atomGridIndex[localIndex].y;
                 int iz = gridPoint.z-atomGridIndex[localIndex].z;
-                if (ix < 0)
-                    ix += cSim.pmeGridSize.x;
-                if (iy < 0)
-                    iy += cSim.pmeGridSize.y;
-                if (iz < 0)
-                    iz += cSim.pmeGridSize.z;
+                ix += (ix < 0 ? cSim.pmeGridSize.x : 0);
+                iy += (iy < 0 ? cSim.pmeGridSize.y : 0);
+                iz += (iz < 0 ? cSim.pmeGridSize.z : 0);
                 if (ix < PME_ORDER && iy < PME_ORDER && iz < PME_ORDER)
-//                    result += atomCharge[threadIdx.x-index+i]*bsplineTheta[localIndex+ix*blockDim.x].x*bsplineTheta[localIndex+iy*blockDim.x].y*bsplineTheta[localIndex+iz*blockDim.x].z;
                     result += atomCharge[threadIdx.x-index+i]*cSim.pPmeBsplineTheta[atomIndex+ix*cSim.atoms].x*cSim.pPmeBsplineTheta[atomIndex+iy*cSim.atoms].y*cSim.pPmeBsplineTheta[atomIndex+iz*cSim.atoms].z;
             }
         }
@@ -346,7 +373,7 @@ void kCalculatePME(gpuContext gpu)
     unsigned int threads = 16380/(2*PME_ORDER*sizeof(float4));
     kUpdateBsplines_kernel<<<gpu->sim.blocks, threads, 2*threads*PME_ORDER*sizeof(float4)>>>();
     LAUNCHERROR("kUpdateBsplines");
-    kGridSpreadCharge_kernel<<<gpu->sim.blocks, 64, 64*(sizeof(float)+sizeof(int4)+4*sizeof(float4))>>>();
+    kGridSpreadCharge_kernel<<<gpu->sim.blocks, 64, 64*(sizeof(float)+sizeof(int4))>>>();
     LAUNCHERROR("kGridSpreadCharge");
     cufftExecC2C(gpu->fftplan, gpu->psPmeGrid->_pDevData, gpu->psPmeGrid->_pDevData, CUFFT_FORWARD);
     kReciprocalConvolution_kernel<<<gpu->sim.blocks, gpu->sim.nonbond_threads_per_block>>>();

@@ -761,8 +761,12 @@ extern "C"
 void gpuSetPMEParameters(gpuContext gpu, float alpha)
 {
     gpu->sim.alphaEwald         = alpha;
-    int3 gridSize = make_int3(16, 16, 16);
+    int3 gridSize = make_int3(32, 32, 32);
     gpu->sim.pmeGridSize = gridSize;
+    int3 groupSize = make_int3(2, 4, 4);
+    gpu->sim.pmeGroupSize = groupSize;
+    const int3 numGroups = make_int3((gridSize.x+groupSize.x-1)/groupSize.x, (gridSize.y+groupSize.y-1)/groupSize.y, (gridSize.z+groupSize.z-1)/groupSize.z);
+    const unsigned int totalGroups = numGroups.x*numGroups.y*numGroups.z;
     cufftPlan3d(&gpu->fftplan, gridSize.x, gridSize.y, gridSize.z, CUFFT_C2C);
     gpu->psPmeGrid = new CUDAStream<cufftComplex>(gridSize.x*gridSize.y*gridSize.z, 1, "PmeGrid");
     gpu->sim.pPmeGrid = gpu->psPmeGrid->_pDevData;
@@ -780,6 +784,8 @@ void gpuSetPMEParameters(gpuContext gpu, float alpha)
     gpu->sim.pPmeParticleIndex = gpu->psPmeParticleIndex->_pDevData;
     gpu->psPmeParticleFraction = new CUDAStream<float4>(gpu->natoms, 1, "PmeParticleFraction");
     gpu->sim.pPmeParticleFraction = gpu->psPmeParticleFraction->_pDevData;
+    gpu->psPmeInteractionFlags = new CUDAStream<int>(totalGroups*(gpu->sim.paddedNumberOfAtoms/32), 1, "PmeInteractionFlags");
+    gpu->sim.pPmeInteractionFlags = gpu->psPmeInteractionFlags->_pDevData;
 
     // Initialize the b-spline moduli.
 

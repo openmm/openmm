@@ -110,8 +110,9 @@ struct _gpuContext {
     CUDAStream<float>* psPmeBsplineModuli[3];
     CUDAStream<float4>* psPmeBsplineTheta;
     CUDAStream<float4>* psPmeBsplineDtheta;
-    CUDAStream<int4>* psPmeParticleIndex; // The grid indices for each atom
+    CUDAStream<int4>* psPmeParticleIndex;      // The grid indices for each atom
     CUDAStream<float4>* psPmeParticleFraction; // Fractional offset in the grid for each atom in all three dimensions.
+    CUDAStream<int>* psPmeInteractionFlags;     // Flags for which groups of grid points interact with which atoms
     CUDAStream<float2>* psObcData; 
     CUDAStream<float>* psObcChain;
     CUDAStream<float>* psBornForce;
