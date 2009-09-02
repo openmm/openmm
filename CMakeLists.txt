@@ -21,22 +21,18 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 # might actually make cmake LESS brittle?
 # (Probably the same genius who came up the endif(allthesamecrap) syntax)
 # Older cmake versions do not have cmake_policy command
+# Cmake 2.4.5, the default cmake on red hat linux, has the
+# cmake_policy command, but it does not work
+# "if(POLICY ..." does not work with cmake 2.4.[56] on red hat
+# (cmake 2.4.7 is OK)
 if(COMMAND cmake_policy)
-    # Cmake 2.4.5, the default cmake on red hat linux, has the
-    # cmake_policy command, but it does not work
-    if(${CMAKE_MAJOR_VERSION} EQUAL 2 AND ${CMAKE_MINOR_VERSION} EQUAL 4})
-       # do nothing
-    else(${CMAKE_MAJOR_VERSION} EQUAL 2 AND ${CMAKE_MINOR_VERSION} EQUAL 4})
-        if(POLICY CMP0003)
-            cmake_policy(SET CMP0003 NEW) 
-        endif(POLICY CMP0003)
-        if(POLICY CMP0005) 
-            cmake_policy(SET CMP0005 NEW) 
-        endif(POLICY CMP0005)
-        if(POLICY CMP0011) 
-            cmake_policy(SET CMP0011 NEW) 
-        endif(POLICY CMP0011)
-    endif(${CMAKE_MAJOR_VERSION} EQUAL 2 AND ${CMAKE_MINOR_VERSION} EQUAL 4})
+    if(CMAKE_MAJOR_VERSION GREATER 2 OR CMAKE_MINOR_VERSION GREATER 5)
+        cmake_policy(SET CMP0003 NEW) 
+        cmake_policy(SET CMP0005 NEW) 
+    endif(CMAKE_MAJOR_VERSION GREATER 2 OR CMAKE_MINOR_VERSION GREATER 5)
+    if(CMAKE_MAJOR_VERSION GREATER 2 OR CMAKE_MINOR_VERSION GREATER 6 OR CMAKE_PATCH_VERSION GREATER 2)
+        cmake_policy(SET CMP0011 NEW) 
+    endif(CMAKE_MAJOR_VERSION GREATER 2 OR CMAKE_MINOR_VERSION GREATER 6 OR CMAKE_PATCH_VERSION GREATER 2)
 endif(COMMAND cmake_policy)
 
 # Don't create a new project name if this is part of a mega-build from the
