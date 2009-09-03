@@ -786,6 +786,10 @@ void gpuSetPMEParameters(gpuContext gpu, float alpha)
     gpu->sim.pPmeParticleFraction = gpu->psPmeParticleFraction->_pDevData;
     gpu->psPmeInteractionFlags = new CUDAStream<int>(totalGroups*(gpu->sim.paddedNumberOfAtoms/32), 1, "PmeInteractionFlags");
     gpu->sim.pPmeInteractionFlags = gpu->psPmeInteractionFlags->_pDevData;
+    gpu->psPmeAtomRange = new CUDAStream<int>(gridSize.x*gridSize.y*gridSize.z+1, 1, "PmeAtomRange");
+    gpu->sim.pPmeAtomRange = gpu->psPmeAtomRange->_pDevData;
+    gpu->psPmeAtomGridIndex = new CUDAStream<float2>(gpu->natoms, 1, "PmeAtomGridIndex");
+    gpu->sim.pPmeAtomGridIndex = gpu->psPmeAtomGridIndex->_pDevData;
 
     // Initialize the b-spline moduli.
 
@@ -1686,6 +1690,8 @@ void* gpuInit(int numAtoms, unsigned int device, bool useBlockingSync)
     gpu->psPmeBsplineDtheta         = NULL;
     gpu->psPmeParticleIndex         = NULL;
     gpu->psPmeParticleFraction      = NULL;
+    gpu->psPmeAtomRange             = NULL;
+    gpu->psPmeAtomGridIndex         = NULL;
     gpu->psShakeID                  = NULL;
     gpu->psShakeParameter           = NULL;
     gpu->psSettleID                 = NULL;
@@ -1853,6 +1859,8 @@ void gpuShutDown(gpuContext gpu)
         delete gpu->psPmeBsplineDtheta;
         delete gpu->psPmeParticleIndex;
         delete gpu->psPmeParticleFraction;
+        delete gpu->psPmeAtomRange;
+        delete gpu->psPmeAtomGridIndex;
         cufftDestroy(gpu->fftplan);
     }
     delete gpu->psObcData;

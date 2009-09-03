@@ -367,6 +367,8 @@ struct cudaGmxSimulation {
     int4*           pPmeParticleIndex;              // The grid indices for each atom
     float4*         pPmeParticleFraction;           // Fractional offset in the grid for each atom in all three dimensions.
     int*            pPmeInteractionFlags;           // Flags for which groups of grid points interact with which atoms
+    int*            pPmeAtomRange;                  // The range of sorted atoms at each grid point
+    float2*         pPmeAtomGridIndex;              // The grid point each atom is at
     unsigned int    bonds;                          // Number of bonds
     int4*           pBondID;                        // Bond atom and output buffer IDs
     float2*         pBondParameter;                 // Bond parameters

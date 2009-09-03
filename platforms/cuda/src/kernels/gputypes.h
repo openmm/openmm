@@ -112,8 +112,10 @@ struct _gpuContext {
     CUDAStream<float4>* psPmeBsplineDtheta;
     CUDAStream<int4>* psPmeParticleIndex;      // The grid indices for each atom
     CUDAStream<float4>* psPmeParticleFraction; // Fractional offset in the grid for each atom in all three dimensions.
-    CUDAStream<int>* psPmeInteractionFlags;     // Flags for which groups of grid points interact with which atoms
-    CUDAStream<float2>* psObcData; 
+    CUDAStream<int>* psPmeInteractionFlags;    // Flags for which groups of grid points interact with which atoms
+    CUDAStream<int>* psPmeAtomRange;           // The range of sorted atoms at each grid point
+    CUDAStream<float2>* psPmeAtomGridIndex;    // The grid point each atom is at
+    CUDAStream<float2>* psObcData;
     CUDAStream<float>* psObcChain;
     CUDAStream<float>* psBornForce;
     CUDAStream<float>* psBornRadii;
