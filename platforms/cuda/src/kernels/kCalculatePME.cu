@@ -32,6 +32,9 @@ using namespace std;
 
 static __constant__ cudaGmxSimulation cSim;
 
+/* Cuda compiler on Windows does not recognized "static const float" values */
+#define LOCAL_HACK_PI 3.1415926535897932384626433832795
+
 void SetCalculatePMESim(gpuContext gpu)
 {
     cudaError_t status;
@@ -372,8 +375,8 @@ __global__ void kGridSpreadCharge_kernel()
 __global__ void kReciprocalConvolution_kernel()
 {
     const unsigned int gridSize = cSim.pmeGridSize.x*cSim.pmeGridSize.y*cSim.pmeGridSize.z;
-    float expFactor = PI*PI/(cSim.alphaEwald*cSim.alphaEwald);
-    float scaleFactor = 1.0/(PI*cSim.periodicBoxSizeX*cSim.periodicBoxSizeY*cSim.periodicBoxSizeZ);
+    float expFactor = LOCAL_HACK_PI*LOCAL_HACK_PI/(cSim.alphaEwald*cSim.alphaEwald);
+    float scaleFactor = 1.0/(LOCAL_HACK_PI*cSim.periodicBoxSizeX*cSim.periodicBoxSizeY*cSim.periodicBoxSizeZ);
     float energy = 0.0f;
     for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < gridSize; index += blockDim.x*gridDim.x)
     {

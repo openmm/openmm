@@ -38,6 +38,8 @@
 #include <set>
 #include <algorithm>
 #ifdef WIN32
+  #define _USE_MATH_DEFINES /* M_PI */
+  #include <math.h>
   #include <windows.h>
 #else
   #include <stdint.h>
