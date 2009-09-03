@@ -102,19 +102,17 @@ void GetCalculateCDLJForcesSim(gpuContext gpu)
 #define METHOD_NAME(a, b) a##PeriodicByWarp##b
 #include "kCalculateCDLJForces.h"
 
-// Include version of the kernel with Ewald method
+// Include versions of the kernels for Ewald
 
-// Real Space Ewald summation utilizes almost the same kernel as Periodic
 #undef METHOD_NAME
 #undef USE_OUTPUT_BUFFER_PER_WARP
 #define USE_PERIODIC
 #define USE_EWALD
-#define METHOD_NAME(a, b) a##EwaldDirect##b
+#define METHOD_NAME(a, b) a##Ewald##b
 #include "kCalculateCDLJForces.h"
-#include "kFindInteractingBlocks.h"
 #define USE_OUTPUT_BUFFER_PER_WARP
 #undef METHOD_NAME
-#define METHOD_NAME(a, b) a##EwaldDirectByWarp##b
+#define METHOD_NAME(a, b) a##EwaldByWarp##b
 #include "kCalculateCDLJForces.h"
 
 // Reciprocal Space Ewald summation is in a separate kernel
@@ -169,20 +167,21 @@ void kCalculateCDLJForces(gpuContext gpu)
             LAUNCHERROR("kCalculateCDLJPeriodicForces");
             break;
         case EWALD:
-            kFindBlockBoundsEwaldDirect_kernel<<<(gpu->psGridBoundingBox->_length+63)/64, 64>>>();
-            LAUNCHERROR("kFindBlockBoundsEwaldDirect");
-            kFindBlocksWithInteractionsEwaldDirect_kernel<<<gpu->sim.interaction_blocks, gpu->sim.interaction_threads_per_block>>>();
-            LAUNCHERROR("kFindBlocksWithInteractionsEwaldDirect");
+            kFindBlockBoundsPeriodic_kernel<<<(gpu->psGridBoundingBox->_length+63)/64, 64>>>();
+            LAUNCHERROR("kFindBlockBoundsPeriodic");
+            kFindBlocksWithInteractionsPeriodic_kernel<<<gpu->sim.interaction_blocks, gpu->sim.interaction_threads_per_block>>>();
+            LAUNCHERROR("kFindBlocksWithInteractionsPeriodic");
             compactStream(gpu->compactPlan, gpu->sim.pInteractingWorkUnit, gpu->sim.pWorkUnit, gpu->sim.pInteractionFlag, gpu->sim.workUnits, gpu->sim.pInteractionCount);
-            kFindInteractionsWithinBlocksEwaldDirect_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+            kFindInteractionsWithinBlocksPeriodic_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                     sizeof(unsigned int)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
+            LAUNCHERROR("kFindInteractionsWithinBlocksPeriodic");
             if (gpu->bOutputBufferPerWarp)
-                kCalculateCDLJEwaldDirectByWarpForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                kCalculateCDLJEwaldByWarpForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                         (sizeof(Atom)+sizeof(float3))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
             else
-                kCalculateCDLJEwaldDirectForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                kCalculateCDLJEwaldForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                         (sizeof(Atom)+sizeof(float3))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
-            LAUNCHERROR("kCalculateCDLJEwaldDirectForces");
+            LAUNCHERROR("kCalculateCDLJEwaldForces");
             // Ewald summation
             kCalculateEwaldFastCosSinSums_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block>>>();
             LAUNCHERROR("kCalculateEwaldFastCosSinSums");
@@ -190,20 +189,21 @@ void kCalculateCDLJForces(gpuContext gpu)
             LAUNCHERROR("kCalculateEwaldFastForces");
             break;
         case PARTICLE_MESH_EWALD:
-            kFindBlockBoundsEwaldDirect_kernel<<<(gpu->psGridBoundingBox->_length+63)/64, 64>>>();
-            LAUNCHERROR("kFindBlockBoundsEwaldDirect");
-            kFindBlocksWithInteractionsEwaldDirect_kernel<<<gpu->sim.interaction_blocks, gpu->sim.interaction_threads_per_block>>>();
-            LAUNCHERROR("kFindBlocksWithInteractionsEwaldDirect");
+            kFindBlockBoundsPeriodic_kernel<<<(gpu->psGridBoundingBox->_length+63)/64, 64>>>();
+            LAUNCHERROR("kFindBlockBoundsPeriodic");
+            kFindBlocksWithInteractionsPeriodic_kernel<<<gpu->sim.interaction_blocks, gpu->sim.interaction_threads_per_block>>>();
+            LAUNCHERROR("kFindBlocksWithInteractionsPeriodic");
             compactStream(gpu->compactPlan, gpu->sim.pInteractingWorkUnit, gpu->sim.pWorkUnit, gpu->sim.pInteractionFlag, gpu->sim.workUnits, gpu->sim.pInteractionCount);
-            kFindInteractionsWithinBlocksEwaldDirect_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+            kFindInteractionsWithinBlocksPeriodic_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                     sizeof(unsigned int)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
+            LAUNCHERROR("kFindInteractionsWithinBlocksPeriodic");
             if (gpu->bOutputBufferPerWarp)
-                kCalculateCDLJEwaldDirectByWarpForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                kCalculateCDLJEwaldByWarpForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                         (sizeof(Atom)+sizeof(float3))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
             else
-                kCalculateCDLJEwaldDirectForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                kCalculateCDLJEwaldForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                         (sizeof(Atom)+sizeof(float3))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
-            LAUNCHERROR("kCalculateCDLJEwaldDirectForces");
+            LAUNCHERROR("kCalculateCDLJEwaldForces");
             kCalculatePME(gpu);
     }
 }
