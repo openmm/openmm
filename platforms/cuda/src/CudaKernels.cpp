@@ -308,10 +308,10 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
             double my = boxVectors[1][1]/force.getCutoffDistance();
             double mz = boxVectors[2][2]/force.getCutoffDistance();
             double pi = 3.1415926535897932385;
+            int kmaxx = (int)std::ceil(-(mx/pi)*std::log(ewaldErrorTol));
+            int kmaxy = (int)std::ceil(-(my/pi)*std::log(ewaldErrorTol));
+            int kmaxz = (int)std::ceil(-(mz/pi)*std::log(ewaldErrorTol));
             if (force.getNonbondedMethod() == NonbondedForce::Ewald) {
-                int kmaxx = (int)std::ceil(-(mx/pi)*std::log(ewaldErrorTol));
-                int kmaxy = (int)std::ceil(-(my/pi)*std::log(ewaldErrorTol));
-                int kmaxz = (int)std::ceil(-(mz/pi)*std::log(ewaldErrorTol));
                 if (kmaxx%2 == 0)
                     kmaxx++;
                 if (kmaxy%2 == 0)
@@ -322,7 +322,13 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                 method = EWALD;
             }
             else {
-                gpuSetPMEParameters(gpu, (float) alpha);
+                int gridSizeX = kmaxx*3;
+                int gridSizeY = kmaxy*3;
+                int gridSizeZ = kmaxz*3;
+                gridSizeX = ((gridSizeX+3)/4)*4;
+                gridSizeY = ((gridSizeY+3)/4)*4;
+                gridSizeZ = ((gridSizeZ+3)/4)*4;
+                gpuSetPMEParameters(gpu, (float) alpha, gridSizeX, gridSizeY, gridSizeZ);
                 method = PARTICLE_MESH_EWALD;
             }
         }

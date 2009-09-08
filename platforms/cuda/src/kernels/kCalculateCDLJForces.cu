@@ -67,6 +67,17 @@ void GetCalculateCDLJForcesSim(gpuContext gpu)
     RTERROR(status, "cudaMemcpyFromSymbol: SetSim copy from cSim failed");
 }
 
+texture<float, 1, cudaReadModeElementType> tabulatedErfcRef;
+
+__device__ float fastErfc(float r)
+{
+    float normalized = cSim.tabulatedErfcScale*r;
+    int index = (int) normalized;
+    float fract2 = normalized-index;
+    float fract1 = 1.0f-fract2;
+    return fract1*tex1Dfetch(tabulatedErfcRef, index) + fract2*tex1Dfetch(tabulatedErfcRef, index+1);
+}
+
 // Include versions of the kernels for N^2 calculations.
 
 #define METHOD_NAME(a, b) a##N2##b
@@ -167,27 +178,6 @@ void kCalculateCDLJForces(gpuContext gpu)
             LAUNCHERROR("kCalculateCDLJPeriodicForces");
             break;
         case EWALD:
-            kFindBlockBoundsPeriodic_kernel<<<(gpu->psGridBoundingBox->_length+63)/64, 64>>>();
-            LAUNCHERROR("kFindBlockBoundsPeriodic");
-            kFindBlocksWithInteractionsPeriodic_kernel<<<gpu->sim.interaction_blocks, gpu->sim.interaction_threads_per_block>>>();
-            LAUNCHERROR("kFindBlocksWithInteractionsPeriodic");
-            compactStream(gpu->compactPlan, gpu->sim.pInteractingWorkUnit, gpu->sim.pWorkUnit, gpu->sim.pInteractionFlag, gpu->sim.workUnits, gpu->sim.pInteractionCount);
-            kFindInteractionsWithinBlocksPeriodic_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                    sizeof(unsigned int)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
-            LAUNCHERROR("kFindInteractionsWithinBlocksPeriodic");
-            if (gpu->bOutputBufferPerWarp)
-                kCalculateCDLJEwaldByWarpForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                        (sizeof(Atom)+sizeof(float3))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
-            else
-                kCalculateCDLJEwaldForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                        (sizeof(Atom)+sizeof(float3))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
-            LAUNCHERROR("kCalculateCDLJEwaldForces");
-            // Ewald summation
-            kCalculateEwaldFastCosSinSums_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block>>>();
-            LAUNCHERROR("kCalculateEwaldFastCosSinSums");
-            kCalculateEwaldFastForces_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
-            LAUNCHERROR("kCalculateEwaldFastForces");
-            break;
         case PARTICLE_MESH_EWALD:
             kFindBlockBoundsPeriodic_kernel<<<(gpu->psGridBoundingBox->_length+63)/64, 64>>>();
             LAUNCHERROR("kFindBlockBoundsPeriodic");
@@ -197,6 +187,8 @@ void kCalculateCDLJForces(gpuContext gpu)
             kFindInteractionsWithinBlocksPeriodic_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                     sizeof(unsigned int)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
             LAUNCHERROR("kFindInteractionsWithinBlocksPeriodic");
+            cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<float>();
+            cudaBindTexture(NULL, &tabulatedErfcRef, gpu->psTabulatedErfc->_pDevData, &channelDesc, gpu->psTabulatedErfc->_length*sizeof(float));
             if (gpu->bOutputBufferPerWarp)
                 kCalculateCDLJEwaldByWarpForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                         (sizeof(Atom)+sizeof(float3))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
@@ -204,6 +196,14 @@ void kCalculateCDLJForces(gpuContext gpu)
                 kCalculateCDLJEwaldForces_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                         (sizeof(Atom)+sizeof(float3))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
             LAUNCHERROR("kCalculateCDLJEwaldForces");
-            kCalculatePME(gpu);
+            if (gpu->sim.nonbondedMethod == EWALD)
+            {
+                kCalculateEwaldFastCosSinSums_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block>>>();
+                LAUNCHERROR("kCalculateEwaldFastCosSinSums");
+                kCalculateEwaldFastForces_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
+                LAUNCHERROR("kCalculateEwaldFastForces");
+            }
+            else
+                kCalculatePME(gpu);
     }
 }

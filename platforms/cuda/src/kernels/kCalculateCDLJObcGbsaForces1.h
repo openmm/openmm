@@ -113,7 +113,7 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int*
     #ifdef USE_EWALD
                     float r                 = sqrt(r2);
                     float alphaR            = cSim.alphaEwald * r;
-                    float erfcAlphaR        = erfc(alphaR);
+                    float erfcAlphaR        = fastErfc(alphaR);
                     dEdR                   += apos.w * psA[j].q * invR * (erfcAlphaR + alphaR * exp ( - alphaR * alphaR) * TWO_OVER_SQRT_PI);
 		    /* E */
                     CDLJObcGbsa_energy     += apos.w * psA[j].q * invR * erfcAlphaR;
@@ -195,7 +195,7 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int*
     #ifdef USE_EWALD
                     float r                 = sqrt(r2);
                     float alphaR            = cSim.alphaEwald * r;
-                    float erfcAlphaR        = erfc(alphaR);
+                    float erfcAlphaR        = fastErfc(alphaR);
                     dEdR                   += apos.w * psA[j].q * invR * (erfcAlphaR + alphaR * exp ( - alphaR * alphaR) * TWO_OVER_SQRT_PI);
 		    /* E */
                     CDLJObcGbsa_energy     += apos.w * psA[j].q * invR * erfcAlphaR;
@@ -350,7 +350,7 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int*
     #ifdef USE_EWALD
                         float r                 = sqrt(r2);
                         float alphaR            = cSim.alphaEwald * r;
-                        float erfcAlphaR        = erfc(alphaR);
+                        float erfcAlphaR        = fastErfc(alphaR);
                         dEdR                   += apos.w * psA[tj].q * invR * (erfcAlphaR + alphaR * exp ( - alphaR * alphaR) * TWO_OVER_SQRT_PI);
                         /* E */
                         CDLJObcGbsa_energy     += apos.w * psA[tj].q * invR * erfcAlphaR;
@@ -439,7 +439,7 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int*
     #ifdef USE_EWALD
                             float r                 = sqrt(r2);
                             float alphaR            = cSim.alphaEwald * r;
-                            float erfcAlphaR        = erfc(alphaR);
+                            float erfcAlphaR        = fastErfc(alphaR);
                             dEdR                   += apos.w * psA[j].q * invR * (erfcAlphaR + alphaR * exp ( - alphaR * alphaR) * TWO_OVER_SQRT_PI);
                             CDLJObcGbsa_energy     += apos.w * psA[j].q * invR * erfcAlphaR;
     #else
@@ -572,7 +572,7 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int*
     #ifdef USE_EWALD
                     float r                 = sqrt(r2);
                     float alphaR            = cSim.alphaEwald * r;
-                    float erfcAlphaR        = erfc(alphaR);
+                    float erfcAlphaR        = fastErfc(alphaR);
                     dEdR                   += apos.w * psA[tj].q * invR * (erfcAlphaR + alphaR * exp ( - alphaR * alphaR) * TWO_OVER_SQRT_PI);
                     /* E */
                     CDLJObcGbsa_energy     += apos.w * psA[tj].q * invR * erfcAlphaR;

@@ -747,6 +747,18 @@ void gpuSetCustomNonbondedParameters(gpuContext gpu, const vector<vector<double>
     delete fp;
 }
 
+static void tabulateErfc(gpuContext gpu)
+{
+    int tableSize = 2048;
+    gpu->sim.tabulatedErfcSize = tableSize;
+    gpu->sim.tabulatedErfcScale = tableSize/(gpu->sim.alphaEwald*gpu->sim.nonbondedCutoff);
+    gpu->psTabulatedErfc = new CUDAStream<float>(tableSize, 1, "TabulatedErfc");
+    gpu->sim.pTabulatedErfc = gpu->psTabulatedErfc->_pDevData;
+    for (int i = 0; i < tableSize; ++i)
+        (*gpu->psTabulatedErfc)[i] = erfc(i*(gpu->sim.alphaEwald*gpu->sim.nonbondedCutoff)/tableSize);
+    gpu->psTabulatedErfc->Upload();
+}
+
 extern "C"
 void gpuSetEwaldParameters(gpuContext gpu, float alpha, int kmaxx, int kmaxy, int kmaxz)
 {
@@ -757,13 +769,14 @@ void gpuSetEwaldParameters(gpuContext gpu, float alpha, int kmaxx, int kmaxy, in
     gpu->sim.kmaxZ              = kmaxz;
     gpu->psEwaldCosSinSum       = new CUDAStream<float2>((gpu->sim.kmaxX*2-1) * (gpu->sim.kmaxY*2-1) * (gpu->sim.kmaxZ*2-1), 1, "EwaldCosSinSum");
     gpu->sim.pEwaldCosSinSum    = gpu->psEwaldCosSinSum->_pDevStream[0];
+    tabulateErfc(gpu);
 }
 
 extern "C"
-void gpuSetPMEParameters(gpuContext gpu, float alpha)
+void gpuSetPMEParameters(gpuContext gpu, float alpha, int gridSizeX, int gridSizeY, int gridSizeZ)
 {
     gpu->sim.alphaEwald         = alpha;
-    int3 gridSize = make_int3(32, 32, 32);
+    int3 gridSize = make_int3(gridSizeX, gridSizeY, gridSizeZ);
     gpu->sim.pmeGridSize = gridSize;
     int3 groupSize = make_int3(2, 4, 4);
     gpu->sim.pmeGroupSize = groupSize;
@@ -786,12 +799,11 @@ void gpuSetPMEParameters(gpuContext gpu, float alpha)
     gpu->sim.pPmeParticleIndex = gpu->psPmeParticleIndex->_pDevData;
     gpu->psPmeParticleFraction = new CUDAStream<float4>(gpu->natoms, 1, "PmeParticleFraction");
     gpu->sim.pPmeParticleFraction = gpu->psPmeParticleFraction->_pDevData;
-    gpu->psPmeInteractionFlags = new CUDAStream<int>(totalGroups*(gpu->sim.paddedNumberOfAtoms/32), 1, "PmeInteractionFlags");
-    gpu->sim.pPmeInteractionFlags = gpu->psPmeInteractionFlags->_pDevData;
     gpu->psPmeAtomRange = new CUDAStream<int>(gridSize.x*gridSize.y*gridSize.z+1, 1, "PmeAtomRange");
     gpu->sim.pPmeAtomRange = gpu->psPmeAtomRange->_pDevData;
     gpu->psPmeAtomGridIndex = new CUDAStream<float2>(gpu->natoms, 1, "PmeAtomGridIndex");
     gpu->sim.pPmeAtomGridIndex = gpu->psPmeAtomGridIndex->_pDevData;
+    tabulateErfc(gpu);
 
     // Initialize the b-spline moduli.
 
@@ -1684,6 +1696,7 @@ void* gpuInit(int numAtoms, unsigned int device, bool useBlockingSync)
     gpu->psCustomExceptionID        = NULL;
     gpu->psCustomExceptionParams    = NULL;
     gpu->psEwaldCosSinSum           = NULL;
+    gpu->psTabulatedErfc            = NULL;
     gpu->psPmeGrid                  = NULL;
     gpu->psPmeBsplineModuli[0]      = NULL;
     gpu->psPmeBsplineModuli[1]      = NULL;
@@ -1863,6 +1876,7 @@ void gpuShutDown(gpuContext gpu)
         delete gpu->psPmeParticleFraction;
         delete gpu->psPmeAtomRange;
         delete gpu->psPmeAtomGridIndex;
+        delete gpu->psTabulatedErfc;
         cufftDestroy(gpu->fftplan);
     }
     delete gpu->psObcData;
