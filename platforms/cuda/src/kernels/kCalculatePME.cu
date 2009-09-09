@@ -167,7 +167,7 @@ __global__ void kUpdateBsplines_kernel()
             ddata[j] = make_float4(0.0f);
         }
 
-        float4 posq = cSim.pPosq[tid];
+        float4 posq = cSim.pPosq[i];
         float3 t = make_float3((posq.x/cSim.periodicBoxSizeX+1.0f)*cSim.pmeGridSize.x,
                                (posq.y/cSim.periodicBoxSizeY+1.0f)*cSim.pmeGridSize.y,
                                (posq.z/cSim.periodicBoxSizeZ+1.0f)*cSim.pmeGridSize.z);
