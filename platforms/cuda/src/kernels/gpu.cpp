@@ -1566,7 +1566,7 @@ void* gpuInit(int numAtoms, unsigned int device, bool useBlockingSync)
 
     // Determine kernel call configuration
     cudaDeviceProp deviceProp;
-    cudaGetDeviceProperties(&deviceProp, 0);
+    cudaGetDeviceProperties(&deviceProp, currentDevice);
 
     // Determine SM version
     if (deviceProp.major == 1)
