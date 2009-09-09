@@ -99,20 +99,14 @@ __global__ void kUpdateGridIndexAndFraction_kernel()
 
     for (int i = tid; i < cSim.atoms; i += tnb)
     {
-        float4 ftmp = cSim.pPosq[i];
-        float3 t = make_float3((ftmp.x/cSim.periodicBoxSizeX+1.0f)*cSim.pmeGridSize.x,
-                               (ftmp.y/cSim.periodicBoxSizeY+1.0f)*cSim.pmeGridSize.y,
-                               (ftmp.z/cSim.periodicBoxSizeZ+1.0f)*cSim.pmeGridSize.z);
-        float3 tix;
-        ftmp.x = modff(t.x, &tix.x);
-        ftmp.y = modff(t.y, &tix.y);
-        ftmp.z = modff(t.z, &tix.z);
-        cSim.pPmeParticleFraction[i] = ftmp;
-        int4 itmp = make_int4(fast_mod(__float2int_rd(tix.x), cSim.pmeGridSize.x),
-                              fast_mod(__float2int_rd(tix.y), cSim.pmeGridSize.y),
-                              fast_mod(__float2int_rd(tix.z), cSim.pmeGridSize.z), 0);
-        cSim.pPmeParticleIndex[i] = itmp;
-        cSim.pPmeAtomGridIndex[i] = make_float2(i, itmp.x*cSim.pmeGridSize.y*cSim.pmeGridSize.z+itmp.y*cSim.pmeGridSize.z+itmp.z);
+        float4 posq = cSim.pPosq[i];
+        float3 t = make_float3((posq.x/cSim.periodicBoxSizeX+1.0f)*cSim.pmeGridSize.x,
+                               (posq.y/cSim.periodicBoxSizeY+1.0f)*cSim.pmeGridSize.y,
+                               (posq.z/cSim.periodicBoxSizeZ+1.0f)*cSim.pmeGridSize.z);
+        int3 gridIndex = make_int3(((int) t.x) % cSim.pmeGridSize.x,
+                              ((int) t.y) % cSim.pmeGridSize.y,
+                              ((int) t.z) % cSim.pmeGridSize.z);
+        cSim.pPmeAtomGridIndex[i] = make_float2(i, gridIndex.x*cSim.pmeGridSize.y*cSim.pmeGridSize.z+gridIndex.y*cSim.pmeGridSize.z+gridIndex.z);
     }
 }
 
@@ -173,7 +167,11 @@ __global__ void kUpdateBsplines_kernel()
             ddata[j] = make_float4(0.0f);
         }
 
-        float4 dr = cSim.pPmeParticleFraction[i];
+        float4 posq = cSim.pPosq[tid];
+        float3 t = make_float3((posq.x/cSim.periodicBoxSizeX+1.0f)*cSim.pmeGridSize.x,
+                               (posq.y/cSim.periodicBoxSizeY+1.0f)*cSim.pmeGridSize.y,
+                               (posq.z/cSim.periodicBoxSizeZ+1.0f)*cSim.pmeGridSize.z);
+        float4 dr = make_float4(t.x-(int) t.x, t.y-(int) t.y, t.z-(int) t.z, 0.0f);
 
         data[PME_ORDER - 1] = make_float4(0.0f);
         data[1]            = dr;
@@ -295,7 +293,12 @@ __global__ void kGridInterpolateForce_kernel()
     {
         float3 force = make_float3(0.0f, 0.0f, 0.0f);
         float4 posq = cSim.pPosq[atom];
-        int4 gridIndex = cSim.pPmeParticleIndex[atom];
+        float3 t = make_float3((posq.x/cSim.periodicBoxSizeX+1.0f)*cSim.pmeGridSize.x,
+                               (posq.y/cSim.periodicBoxSizeY+1.0f)*cSim.pmeGridSize.y,
+                               (posq.z/cSim.periodicBoxSizeZ+1.0f)*cSim.pmeGridSize.z);
+        int3 gridIndex = make_int3(((int) t.x) % cSim.pmeGridSize.x,
+                              ((int) t.y) % cSim.pmeGridSize.y,
+                              ((int) t.z) % cSim.pmeGridSize.z);
         for (int ix = 0; ix < PME_ORDER; ix++)
         {
             int xindex = (gridIndex.x + ix) % cSim.pmeGridSize.x;
@@ -312,10 +315,10 @@ __global__ void kGridInterpolateForce_kernel()
                     float tz = cSim.pPmeBsplineTheta[atom+iz*cSim.atoms].z;
                     float dtz = cSim.pPmeBsplineDtheta[atom+iz*cSim.atoms].z;
                     int index                = xindex*cSim.pmeGridSize.y*cSim.pmeGridSize.z + yindex*cSim.pmeGridSize.z + zindex;
-                    float gridvalue            = cSim.pPmeGrid[index].x;
-                    force.x                  += dtx*ty*tz*gridvalue;
-                    force.y                  += tx*dty*tz*gridvalue;
-                    force.z                  += tx*ty*dtz*gridvalue;
+                    float gridvalue          = cSim.pPmeGrid[index].x;
+                    force.x                 += dtx*ty*tz*gridvalue;
+                    force.y                 += tx*dty*tz*gridvalue;
+                    force.z                 += tx*ty*dtz*gridvalue;
                 }
             }
         }
@@ -347,6 +350,6 @@ void kCalculatePME(gpuContext gpu)
     kReciprocalConvolution_kernel<<<gpu->sim.blocks, gpu->sim.nonbond_threads_per_block>>>();
     LAUNCHERROR("kReciprocalConvolution");
     cufftExecC2C(gpu->fftplan, gpu->psPmeGrid->_pDevData, gpu->psPmeGrid->_pDevData, CUFFT_INVERSE);
-    kGridInterpolateForce_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
+    kGridInterpolateForce_kernel<<<2*gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
     LAUNCHERROR("kGridInterpolateForce");
 }

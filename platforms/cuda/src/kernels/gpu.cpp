@@ -795,10 +795,6 @@ void gpuSetPMEParameters(gpuContext gpu, float alpha, int gridSizeX, int gridSiz
     gpu->sim.pPmeBsplineTheta = gpu->psPmeBsplineTheta->_pDevData;
     gpu->psPmeBsplineDtheta = new CUDAStream<float4>(PME_ORDER*gpu->natoms, 1, "PmeBsplineDtheta");
     gpu->sim.pPmeBsplineDtheta = gpu->psPmeBsplineDtheta->_pDevData;
-    gpu->psPmeParticleIndex = new CUDAStream<int4>(gpu->natoms, 1, "PmeParticleIndex");
-    gpu->sim.pPmeParticleIndex = gpu->psPmeParticleIndex->_pDevData;
-    gpu->psPmeParticleFraction = new CUDAStream<float4>(gpu->natoms, 1, "PmeParticleFraction");
-    gpu->sim.pPmeParticleFraction = gpu->psPmeParticleFraction->_pDevData;
     gpu->psPmeAtomRange = new CUDAStream<int>(gridSize.x*gridSize.y*gridSize.z+1, 1, "PmeAtomRange");
     gpu->sim.pPmeAtomRange = gpu->psPmeAtomRange->_pDevData;
     gpu->psPmeAtomGridIndex = new CUDAStream<float2>(gpu->natoms, 1, "PmeAtomGridIndex");
@@ -1703,8 +1699,6 @@ void* gpuInit(int numAtoms, unsigned int device, bool useBlockingSync)
     gpu->psPmeBsplineModuli[2]      = NULL;
     gpu->psPmeBsplineTheta          = NULL;
     gpu->psPmeBsplineDtheta         = NULL;
-    gpu->psPmeParticleIndex         = NULL;
-    gpu->psPmeParticleFraction      = NULL;
     gpu->psPmeAtomRange             = NULL;
     gpu->psPmeAtomGridIndex         = NULL;
     gpu->psShakeID                  = NULL;
@@ -1872,8 +1866,6 @@ void gpuShutDown(gpuContext gpu)
         delete gpu->psPmeBsplineModuli[2];
         delete gpu->psPmeBsplineTheta;
         delete gpu->psPmeBsplineDtheta;
-        delete gpu->psPmeParticleIndex;
-        delete gpu->psPmeParticleFraction;
         delete gpu->psPmeAtomRange;
         delete gpu->psPmeAtomGridIndex;
         delete gpu->psTabulatedErfc;
