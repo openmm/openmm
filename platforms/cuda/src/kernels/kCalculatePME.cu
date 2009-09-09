@@ -119,7 +119,7 @@ __global__ void kFindAtomRangeForGrid_kernel()
     int thread = blockIdx.x*blockDim.x+threadIdx.x;
     int start = (cSim.atoms*thread)/(blockDim.x*gridDim.x);
     int end = (cSim.atoms*(thread+1))/(blockDim.x*gridDim.x);
-    int last = (thread == 0 ? -1 : cSim.pPmeAtomGridIndex[start-1].y);
+    int last = (start == 0 ? -1 : cSim.pPmeAtomGridIndex[start-1].y);
     for (int i = start; i < end; ++i)
     {
         float2 atomData = cSim.pPmeAtomGridIndex[i];
