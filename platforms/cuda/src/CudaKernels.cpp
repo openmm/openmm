@@ -322,12 +322,9 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                 method = EWALD;
             }
             else {
-                int gridSizeX = kmaxx*3;
-                int gridSizeY = kmaxy*3;
-                int gridSizeZ = kmaxz*3;
-                gridSizeX = ((gridSizeX+3)/4)*4;
-                gridSizeY = ((gridSizeY+3)/4)*4;
-                gridSizeZ = ((gridSizeZ+3)/4)*4;
+                int gridSizeX = -0.5*kmaxx*std::log(ewaldErrorTol);
+                int gridSizeY = -0.5*kmaxy*std::log(ewaldErrorTol);
+                int gridSizeZ = -0.5*kmaxz*std::log(ewaldErrorTol);
                 gpuSetPMEParameters(gpu, (float) alpha, gridSizeX, gridSizeY, gridSizeZ);
                 method = PARTICLE_MESH_EWALD;
             }

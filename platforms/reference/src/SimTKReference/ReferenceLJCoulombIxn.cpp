@@ -144,11 +144,15 @@ ReferenceLJCoulombIxn::~ReferenceLJCoulombIxn( ){
      Set the force to use Particle-Mesh Ewald (PME) summation.
 
      @param alpha  the Ewald separation parameter
+     @param gridSize the dimensions of the mesh
 
      --------------------------------------------------------------------------------------- */
 
-  void ReferenceLJCoulombIxn::setUsePME(RealOpenMM alpha) {
+  void ReferenceLJCoulombIxn::setUsePME(RealOpenMM alpha, int meshSize[3]) {
       alphaEwald = alpha;
+      meshDim[0] = meshSize[0];
+      meshDim[1] = meshSize[1];
+      meshDim[2] = meshSize[2];
       pme = true;
   }
 
@@ -273,19 +277,9 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
 
   if (pme) {
 	pme_t          pmedata; /* abstract handle for PME data */
-	int            ngrid[3];
 	RealOpenMM virial[3][3];
 
-	/* PME grid dimensions.
-	 * We typically want to set this as the spacing rather than absolute dimensions, but
-	 * to be able to reproduce results from other programs (e.g. Gromacs) we need to be
-	 * able to set exact grid dimenisions occasionally.
-	 */
-	ngrid[0] = 16;
-	ngrid[1] = 16;
-	ngrid[2] = 16;
-
-	pme_init(&pmedata,alphaEwald,numberOfAtoms,ngrid,4,1);
+	pme_init(&pmedata,alphaEwald,numberOfAtoms,meshDim,4,1);
 
 	pme_exec(pmedata,atomCoordinates,forces,atomParameters,periodicBoxSize,&recipEnergy,virial);
 

@@ -269,7 +269,7 @@ private:
     int **exclusionArray, **bonded14IndexArray;
     RealOpenMM **particleParamArray, **bonded14ParamArray;
     RealOpenMM nonbondedCutoff, periodicBoxSize[3], rfDielectric, ewaldAlpha;
-    int kmax[3];
+    int kmax[3], gridSize[3];
     std::vector<std::set<int> > exclusions;
     NonbondedMethod nonbondedMethod;
     NeighborList* neighborList;

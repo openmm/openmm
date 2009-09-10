@@ -407,12 +407,19 @@ void ReferenceCalcNonbondedForceKernel::initialize(const System& system, const N
         kmax[0] = (int)std::ceil(-(mx/pi)*std::log(ewaldErrorTol));
         kmax[1] = (int)std::ceil(-(my/pi)*std::log(ewaldErrorTol));
         kmax[2] = (int)std::ceil(-(mz/pi)*std::log(ewaldErrorTol));
-        if (kmax[0]%2 == 0)
-            kmax[0]++;
-        if (kmax[1]%2 == 0)
-            kmax[1]++;
-        if (kmax[2]%2 == 0)
-            kmax[2]++;
+        if (nonbondedMethod == Ewald) {
+            if (kmax[0]%2 == 0)
+                kmax[0]++;
+            if (kmax[1]%2 == 0)
+                kmax[1]++;
+            if (kmax[2]%2 == 0)
+                kmax[2]++;
+        }
+        else {
+            gridSize[0] = -0.5*kmax[0]*std::log(ewaldErrorTol);
+            gridSize[1] = -0.5*kmax[1]*std::log(ewaldErrorTol);
+            gridSize[2] = -0.5*kmax[2]*std::log(ewaldErrorTol);
+        }
     }
     rfDielectric = (RealOpenMM)force.getReactionFieldDielectric();
 }
@@ -433,7 +440,7 @@ void ReferenceCalcNonbondedForceKernel::executeForces(ContextImpl& context) {
     if (ewald)
         clj.setUseEwald(ewaldAlpha, kmax[0], kmax[1], kmax[2]);
     if (pme)
-        clj.setUsePME(ewaldAlpha);
+        clj.setUsePME(ewaldAlpha, gridSize);
     clj.calculatePairIxn(numParticles, posData, particleParamArray, exclusionArray, 0, forceData, 0, 0);
     ReferenceBondForce refBondForce;
     ReferenceLJCoulomb14 nonbonded14;
@@ -459,7 +466,7 @@ double ReferenceCalcNonbondedForceKernel::executeEnergy(ContextImpl& context) {
     if (ewald)
         clj.setUseEwald(ewaldAlpha, kmax[0], kmax[1], kmax[2]);
     if (pme)
-        clj.setUsePME(ewaldAlpha);
+        clj.setUsePME(ewaldAlpha, gridSize);
     clj.calculatePairIxn(numParticles, posData, particleParamArray, exclusionArray, 0, forceData, 0, &energy);
     ReferenceBondForce refBondForce;
     ReferenceLJCoulomb14 nonbonded14;

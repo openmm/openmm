@@ -627,7 +627,7 @@ int
 pme_init(pme_t *       ppme,
 		 RealOpenMM        ewaldcoeff,
 		 int           natoms,
-		 int           ngrid[3],
+		 const int           ngrid[3],
 		 int           pme_order,
          RealOpenMM        epsilon_r)
 {

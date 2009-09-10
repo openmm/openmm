@@ -44,6 +44,7 @@ class ReferenceLJCoulombIxn : public ReferencePairIxn {
       RealOpenMM krf, crf;
       RealOpenMM alphaEwald;
       int numRx, numRy, numRz;
+      int meshDim[3];
 
       // parameter indices
 
@@ -136,11 +137,12 @@ class ReferenceLJCoulombIxn : public ReferencePairIxn {
       
          Set the force to use Particle-Mesh Ewald (PME) summation.
       
-         @param alpha  the Ewald separation parameter
+         @param alpha    the Ewald separation parameter
+         @param gridSize the dimensions of the mesh
       
          --------------------------------------------------------------------------------------- */
       
-      void setUsePME(RealOpenMM alpha);
+      void setUsePME(RealOpenMM alpha, int meshSize[3]);
 
 
       /**---------------------------------------------------------------------------------------
