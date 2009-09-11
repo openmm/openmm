@@ -168,8 +168,6 @@ static Expression<SIZE> createExpression(gpuContext gpu, const string& expressio
                     exp.op[i] = VARIABLE6;
                 else if (variables.size() > 7 && op.getName() == variables[7])
                     exp.op[i] = VARIABLE7;
-                else if (variables.size() > 8 && op.getName() == variables[8])
-                    exp.op[i] = VARIABLE8;
                 else {
                     int j;
                     for (j = 0; j < globalParamNames.size() && op.getName() != globalParamNames[j]; j++);
@@ -731,7 +729,6 @@ void gpuSetCustomNonbondedParameters(gpuContext gpu, const vector<vector<double>
     SetCustomNonbondedForceExpression(createExpression<128>(gpu, energyExp, Lepton::Parser::parse(energyExp, functions).differentiate("r").optimize().createProgram(), variables, globalParamNames, gpu->sim.customExpressionStackSize));
     Expression<64> paramExpressions[4];
     vector<string> combiningRuleParams;
-    combiningRuleParams.push_back("");
     for (int j = 1; j < 3; j++) {
         for (int i = 0; i < paramNames.size(); i++) {
             stringstream name;

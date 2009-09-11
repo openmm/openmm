@@ -34,6 +34,7 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
 {
     extern __shared__ float stack[];
     Atom* sA = (Atom*) &stack[cSim.customExpressionStackSize*blockDim.x];
+    float* variables = (float*) &sA[blockDim.x];
     unsigned int totalWarps = cSim.nonbond_blocks*cSim.nonbond_threads_per_block/GRID;
     unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
     unsigned int numWorkUnits = cSim.pInteractionCount[0];
@@ -79,26 +80,38 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
             {
                 // Apply the combining rules to the parameters.
 
-                float4 combinedParams = make_float4(0, 0, 0, 0);
+                float combinedParams[4];
+                VARIABLE(0) = params.x;
+                VARIABLE(1) = params.y;
+                VARIABLE(2) = params.z;
+                VARIABLE(3) = params.w;
                 for (int k = 0; k < cSim.customParameters; k++)
                 {
-                    float value = kEvaluateExpression_kernel(&combiningRules[k], stack, 0.0f, params, psA[j].params);
+                    VARIABLE(4) = psA[j].params.x;
+                    VARIABLE(5) = psA[j].params.y;
+                    VARIABLE(6) = psA[j].params.z;
+                    VARIABLE(7) = psA[j].params.w;
+                    float value = kEvaluateExpression_kernel(&combiningRules[k], stack, variables);
                     switch (k)
                     {
                         case 0:
-                            combinedParams.x = value;
+                            combinedParams[0] = value;
                             break;
                         case 1:
-                            combinedParams.y = value;
+                            combinedParams[1] = value;
                             break;
                         case 2:
-                            combinedParams.z = value;
+                            combinedParams[2] = value;
                             break;
                         case 3:
-                            combinedParams.w = value;
+                            combinedParams[3] = value;
                             break;
                     }
                 }
+                VARIABLE(1) = combinedParams[0];
+                VARIABLE(2) = combinedParams[1];
+                VARIABLE(3) = combinedParams[2];
+                VARIABLE(4) = combinedParams[3];
 
                 // Compute the force.
 
@@ -112,8 +125,9 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
 #endif
                 float r         = sqrt(dx*dx + dy*dy + dz*dz);
                 float invR      = 1.0f/r;
-                float dEdR      = -kEvaluateExpression_kernel(&forceExp, stack, r, combinedParams, combinedParams)*invR;
-                float energy    = kEvaluateExpression_kernel(&energyExp, stack, r, combinedParams, combinedParams);
+                VARIABLE(0)     = r;
+                float dEdR      = -kEvaluateExpression_kernel(&forceExp, stack, variables)*invR;
+                float energy    = kEvaluateExpression_kernel(&energyExp, stack, variables);
 #ifdef USE_CUTOFF
                 if (!(excl & 0x1) || r > cSim.nonbondedCutoff)
 #else
@@ -183,26 +197,38 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
                     {
                         // Apply the combining rules to the parameters.
 
-                        float4 combinedParams = make_float4(0, 0, 0, 0);
+                        float combinedParams[4];
+                        VARIABLE(0) = params.x;
+                        VARIABLE(1) = params.y;
+                        VARIABLE(2) = params.z;
+                        VARIABLE(3) = params.w;
                         for (int k = 0; k < cSim.customParameters; k++)
                         {
-                            float value = kEvaluateExpression_kernel(&combiningRules[k], stack, 0.0f, params, psA[tj].params);
+                            VARIABLE(4) = psA[j].params.x;
+                            VARIABLE(5) = psA[j].params.y;
+                            VARIABLE(6) = psA[j].params.z;
+                            VARIABLE(7) = psA[j].params.w;
+                            float value = kEvaluateExpression_kernel(&combiningRules[k], stack, variables);
                             switch (k)
                             {
                                 case 0:
-                                    combinedParams.x = value;
+                                    combinedParams[0] = value;
                                     break;
                                 case 1:
-                                    combinedParams.y = value;
+                                    combinedParams[1] = value;
                                     break;
                                 case 2:
-                                    combinedParams.z = value;
+                                    combinedParams[2] = value;
                                     break;
                                 case 3:
-                                    combinedParams.w = value;
+                                    combinedParams[3] = value;
                                     break;
                             }
                         }
+                        VARIABLE(1) = combinedParams[0];
+                        VARIABLE(2) = combinedParams[1];
+                        VARIABLE(3) = combinedParams[2];
+                        VARIABLE(4) = combinedParams[3];
 
                         // Compute the force.
 
@@ -216,8 +242,9 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
 #endif
                         float r         = sqrt(dx*dx + dy*dy + dz*dz);
                         float invR      = 1.0f/r;
-                        float dEdR      = -kEvaluateExpression_kernel(&forceExp, stack, r, combinedParams, combinedParams)*invR;
-                        float energy    = kEvaluateExpression_kernel(&energyExp, stack, r, combinedParams, combinedParams);
+                        VARIABLE(0)     = r;
+                        float dEdR      = -kEvaluateExpression_kernel(&forceExp, stack, variables)*invR;
+                        float energy    = kEvaluateExpression_kernel(&energyExp, stack, variables);
 #ifdef USE_CUTOFF
                         if (r > cSim.nonbondedCutoff)
                         {
@@ -249,26 +276,38 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
                         {
                             // Apply the combining rules to the parameters.
 
-                            float4 combinedParams = make_float4(0, 0, 0, 0);
+                            float combinedParams[4];
+                            VARIABLE(0) = params.x;
+                            VARIABLE(1) = params.y;
+                            VARIABLE(2) = params.z;
+                            VARIABLE(3) = params.w;
                             for (int k = 0; k < cSim.customParameters; k++)
                             {
-                                float value = kEvaluateExpression_kernel(&combiningRules[k], stack, 0.0f, params, psA[j].params);
+                                VARIABLE(4) = psA[j].params.x;
+                                VARIABLE(5) = psA[j].params.y;
+                                VARIABLE(6) = psA[j].params.z;
+                                VARIABLE(7) = psA[j].params.w;
+                                float value = kEvaluateExpression_kernel(&combiningRules[k], stack, variables);
                                 switch (k)
                                 {
                                     case 0:
-                                        combinedParams.x = value;
+                                        combinedParams[0] = value;
                                         break;
                                     case 1:
-                                        combinedParams.y = value;
+                                        combinedParams[1] = value;
                                         break;
                                     case 2:
-                                        combinedParams.z = value;
+                                        combinedParams[2] = value;
                                         break;
                                     case 3:
-                                        combinedParams.w = value;
+                                        combinedParams[3] = value;
                                         break;
                                 }
                             }
+                            VARIABLE(1) = combinedParams[0];
+                            VARIABLE(2) = combinedParams[1];
+                            VARIABLE(3) = combinedParams[2];
+                            VARIABLE(4) = combinedParams[3];
 
                             // Compute the force.
 
@@ -282,8 +321,9 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
 #endif
                             float r         = sqrt(dx*dx + dy*dy + dz*dz);
                             float invR      = 1.0f/r;
-                            float dEdR      = -kEvaluateExpression_kernel(&forceExp, stack, r, combinedParams, combinedParams)*invR;
-                            float energy    = kEvaluateExpression_kernel(&energyExp, stack, r, combinedParams, combinedParams);
+                            VARIABLE(0)     = r;
+                            float dEdR      = -kEvaluateExpression_kernel(&forceExp, stack, variables)*invR;
+                            float energy    = kEvaluateExpression_kernel(&energyExp, stack, variables);
 #ifdef USE_CUTOFF
                             if (r > cSim.nonbondedCutoff)
                             {
@@ -351,26 +391,38 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
                 {
                     // Apply the combining rules to the parameters.
 
-                    float4 combinedParams = make_float4(0, 0, 0, 0);
+                    float combinedParams[4];
+                    VARIABLE(0) = params.x;
+                    VARIABLE(1) = params.y;
+                    VARIABLE(2) = params.z;
+                    VARIABLE(3) = params.w;
                     for (int k = 0; k < cSim.customParameters; k++)
                     {
-                        float value = kEvaluateExpression_kernel(&combiningRules[k], stack, 0.0f, params, psA[tj].params);
+                        VARIABLE(4) = psA[j].params.x;
+                        VARIABLE(5) = psA[j].params.y;
+                        VARIABLE(6) = psA[j].params.z;
+                        VARIABLE(7) = psA[j].params.w;
+                        float value = kEvaluateExpression_kernel(&combiningRules[k], stack, variables);
                         switch (k)
                         {
                             case 0:
-                                combinedParams.x = value;
+                                combinedParams[0] = value;
                                 break;
                             case 1:
-                                combinedParams.y = value;
+                                combinedParams[1] = value;
                                 break;
                             case 2:
-                                combinedParams.z = value;
+                                combinedParams[2] = value;
                                 break;
                             case 3:
-                                combinedParams.w = value;
+                                combinedParams[3] = value;
                                 break;
                         }
                     }
+                    VARIABLE(1) = combinedParams[0];
+                    VARIABLE(2) = combinedParams[1];
+                    VARIABLE(3) = combinedParams[2];
+                    VARIABLE(4) = combinedParams[3];
 
                     // Compute the force.
 
@@ -384,8 +436,9 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
 #endif
                     float r         = sqrt(dx*dx + dy*dy + dz*dz);
                     float invR      = 1.0f/r;
-                    float dEdR      = -kEvaluateExpression_kernel(&forceExp, stack, r, combinedParams, combinedParams)*invR;
-                    float energy    = kEvaluateExpression_kernel(&energyExp, stack, r, combinedParams, combinedParams);
+                    VARIABLE(0)     = r;
+                    float dEdR      = -kEvaluateExpression_kernel(&forceExp, stack, variables)*invR;
+                    float energy    = kEvaluateExpression_kernel(&energyExp, stack, variables);
 #ifdef USE_CUTOFF
                     if (!(excl & 0x1) || r > cSim.nonbondedCutoff)
 #else
@@ -450,6 +503,7 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
 __global__ void METHOD_NAME(kCalculateCustomNonbonded, Exceptions_kernel)()
 {
     extern __shared__ float stack[];
+    float* variables = (float*) &stack[cSim.customExpressionStackSize*blockDim.x];
     unsigned int pos = blockIdx.x * blockDim.x + threadIdx.x;
     float totalEnergy = 0.0f;
 
@@ -469,8 +523,13 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Exceptions_kernel)()
 #endif
         float r         = sqrt(dx*dx + dy*dy + dz*dz);
         float invR      = 1.0f/r;
-        float dEdR      = -kEvaluateExpression_kernel(&forceExp, stack, r, params, params)*invR;
-        float energy    = kEvaluateExpression_kernel(&energyExp, stack, r, params, params);
+        VARIABLE(0)     = r;
+        VARIABLE(1)     = params.x;
+        VARIABLE(2)     = params.y;
+        VARIABLE(3)     = params.z;
+        VARIABLE(4)     = params.w;
+        float dEdR      = -kEvaluateExpression_kernel(&forceExp, stack, variables)*invR;
+        float energy    = kEvaluateExpression_kernel(&energyExp, stack, variables);
 #ifdef USE_CUTOFF
         if (r > cSim.nonbondedCutoff)
         {

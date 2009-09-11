@@ -103,176 +103,139 @@ void SetCustomNonbondedGlobalParams(float* paramValues)
 }
 
 #define STACK(y) stack[(y)*blockDim.x+threadIdx.x]
+#define VARIABLE(y) variables[(y)*blockDim.x+threadIdx.x]
 
 template<int SIZE>
-__device__ float kEvaluateExpression_kernel(Expression<SIZE>* expression, float* stack, float var0, float4 vars1, float4 vars2)
+__device__ float kEvaluateExpression_kernel(Expression<SIZE>* expression, float* stack, float* variables)
 {
     int stackPointer = -1;
     for (int i = 0; i < expression->length; i++)
     {
         int op = expression->op[i];
-        if (op < SQRT) {
-            if (op < VARIABLE8) {
-                if (op < VARIABLE4) {
-                    if (op == CONSTANT) {
-                        STACK(++stackPointer) = expression->arg[i];
-                    }
-                    else if (op == VARIABLE0) {
-                        STACK(++stackPointer) = var0;
-                    }
-                    else if (op == VARIABLE1) {
-                        STACK(++stackPointer) = vars1.x;
-                    }
-                    else if (op == VARIABLE2) {
-                        STACK(++stackPointer) = vars1.y;
-                    }
-                    else if (op == VARIABLE3) {
-                        STACK(++stackPointer) = vars1.z;
-                    }
+        if (op < MULTIPLY) {
+            STACK(++stackPointer) = VARIABLE(op-VARIABLE0);
+        }
+        else if (op < NEGATE) {
+            if (op < MULTIPLY_CONSTANT) {
+                if (op == MULTIPLY) {
+                    float temp = STACK(stackPointer);
+                    STACK(--stackPointer) *= temp;
                 }
-                else {
-                    if (op == VARIABLE4) {
-                        STACK(++stackPointer) = vars1.w;
-                    }
-                    else if (op == VARIABLE5) {
-                        STACK(++stackPointer) = vars2.x;
-                    }
-                    else if (op == VARIABLE6) {
-                        STACK(++stackPointer) = vars2.y;
-                    }
-                    else if (op == VARIABLE7) {
-                        STACK(++stackPointer) = vars2.z;
-                    }
+                else if (op == DIVIDE) {
+                    float temp = STACK(stackPointer);
+                    STACK(stackPointer) = temp/STACK(--stackPointer);
+                }
+                else if (op == ADD) {
+                    float temp = STACK(stackPointer);
+                    STACK(--stackPointer) += temp;
+                }
+                else if (op == SUBTRACT) {
+                    float temp = STACK(stackPointer);
+                    STACK(stackPointer) = temp-STACK(--stackPointer);
+                }
+                else if (op == POWER) {
+                    float temp = STACK(stackPointer);
+                    STACK(stackPointer) = pow(temp, STACK(--stackPointer));
+                }
+            }
+            else if (op < GLOBAL) {
+                if (op == MULTIPLY_CONSTANT) {
+                    STACK(stackPointer) *= expression->arg[i];
+                }
+                else if (op == POWER_CONSTANT) {
+                    STACK(stackPointer) = pow(STACK(stackPointer), expression->arg[i]);
+                }
+                else if (op == ADD_CONSTANT) {
+                    STACK(stackPointer) += expression->arg[i];
                 }
             }
             else {
-                if (op < MULTIPLY) {
-                    if (op == VARIABLE8) {
-                        STACK(++stackPointer) = vars2.w;
-                    }
-                    else if (op == GLOBAL) {
-                        STACK(++stackPointer) = globalParams[(int) expression->arg[i]];
-                    }
-                    else if (op == CUSTOM || op == CUSTOM_DERIV) {
-                        int function = (int) expression->arg[i];
-                        float x = STACK(stackPointer);
-                        float4 params = cSim.pTabulatedFunctionParams[function];
-                        if (x < params.x || x > params.y)
-                            STACK(stackPointer) = 0.0f;
-                        else
-                        {
-                            int index = floor((x-params.x)*params.z);
-                            float4 coeff;
-                            if (function == 0)
-                                coeff = tex1Dfetch(texRef0, index);
-                            else if (function == 1)
-                                coeff = tex1Dfetch(texRef1, index);
-                            else if (function == 2)
-                                coeff = tex1Dfetch(texRef2, index);
-                            else
-                                coeff = tex1Dfetch(texRef3, index);
-                            x = (x-params.x)*params.z-index;
-                            if (op == CUSTOM)
-                                STACK(stackPointer) = coeff.x+x*(coeff.y+x*(coeff.z+x*coeff.w));
-                            else
-                                STACK(stackPointer) = (coeff.y+x*(2.0f*coeff.z+x*3.0f*coeff.w))*params.z;
-                        }
-                    }
-                    else if (op == ADD) {
-                        float temp = STACK(stackPointer);
-                        STACK(--stackPointer) += temp;
-                    }
-                    else if (op == SUBTRACT) {
-                        float temp = STACK(stackPointer);
-                        STACK(stackPointer) = temp-STACK(--stackPointer);
-                    }
+                if (op == GLOBAL) {
+                    STACK(++stackPointer) = globalParams[(int) expression->arg[i]];
                 }
-                else {
-                    if (op == MULTIPLY) {
-                        float temp = STACK(stackPointer);
-                        STACK(--stackPointer) *= temp;
-                    }
-                    else if (op == DIVIDE) {
-                        float temp = STACK(stackPointer);
-                        STACK(stackPointer) = temp/STACK(--stackPointer);
-                    }
-                    else if (op == POWER) {
-                        float temp = STACK(stackPointer);
-                        STACK(stackPointer) = pow(temp, STACK(--stackPointer));
-                    }
-                    else if (op == NEGATE) {
-                        STACK(stackPointer) *= -1.0f;
+                else if (op == CONSTANT) {
+                    STACK(++stackPointer) = expression->arg[i];
+                }
+                else if (op == CUSTOM || op == CUSTOM_DERIV) {
+                    int function = (int) expression->arg[i];
+                    float x = STACK(stackPointer);
+                    float4 params = cSim.pTabulatedFunctionParams[function];
+                    if (x < params.x || x > params.y)
+                        STACK(stackPointer) = 0.0f;
+                    else
+                    {
+                        int index = floor((x-params.x)*params.z);
+                        float4 coeff;
+                        if (function == 0)
+                            coeff = tex1Dfetch(texRef0, index);
+                        else if (function == 1)
+                            coeff = tex1Dfetch(texRef1, index);
+                        else if (function == 2)
+                            coeff = tex1Dfetch(texRef2, index);
+                        else
+                            coeff = tex1Dfetch(texRef3, index);
+                        x = (x-params.x)*params.z-index;
+                        if (op == CUSTOM)
+                            STACK(stackPointer) = coeff.x+x*(coeff.y+x*(coeff.z+x*coeff.w));
+                        else
+                            STACK(stackPointer) = (coeff.y+x*(2.0f*coeff.z+x*3.0f*coeff.w))*params.z;
                     }
                 }
             }
         }
         else {
-            if (op < ASIN) {
-                if (op < SEC) {
-                    if (op == SQRT) {
-                        STACK(stackPointer) = sqrt(STACK(stackPointer));
-                    }
-                    else if (op == EXP) {
-                        STACK(stackPointer) = exp(STACK(stackPointer));
-                    }
-                    else if (op == LOG) {
-                        STACK(stackPointer) = log(STACK(stackPointer));
-                    }
-                    else if (op == SIN) {
-                        STACK(stackPointer) = sin(STACK(stackPointer));
-                    }
-                    else if (op == COS) {
-                        STACK(stackPointer) = cos(STACK(stackPointer));
-                    }
+            if (op < SIN) {
+                if (op == NEGATE) {
+                    STACK(stackPointer) *= -1.0f;
                 }
-                else {
-                    if (op == SEC) {
-                        STACK(stackPointer) = 1.0f/cos(STACK(stackPointer));
-                    }
-                    else if (op == CSC) {
-                        STACK(stackPointer) = 1.0f/sin(STACK(stackPointer));
-                    }
-                    else if (op == TAN) {
-                        STACK(stackPointer) = tan(STACK(stackPointer));
-                    }
-                    else if (op == COT) {
-                        STACK(stackPointer) = 1.0f/tan(STACK(stackPointer));
-                    }
+                else if (op == RECIPROCAL) {
+                    STACK(stackPointer) = 1.0f/STACK(stackPointer);
+                }
+                else if (op == SQRT) {
+                    STACK(stackPointer) = sqrt(STACK(stackPointer));
+                }
+                else if (op == EXP) {
+                    STACK(stackPointer) = exp(STACK(stackPointer));
+                }
+                else if (op == LOG) {
+                    STACK(stackPointer) = log(STACK(stackPointer));
+                }
+                else if (op == SQUARE) {
+                    float temp = STACK(stackPointer);
+                    STACK(stackPointer) *= temp;
+                }
+                else if (op == CUBE) {
+                    float temp = STACK(stackPointer);
+                    STACK(stackPointer) *= temp*temp;
                 }
             }
             else {
-                if (op < RECIPROCAL) {
-                    if (op == ASIN) {
-                        STACK(stackPointer) = asin(STACK(stackPointer));
-                    }
-                    else if (op == ACOS) {
-                        STACK(stackPointer) = acos(STACK(stackPointer));
-                    }
-                    else if (op == ATAN) {
-                        STACK(stackPointer) = atan(STACK(stackPointer));
-                    }
-                    else if (op == SQUARE) {
-                        float temp = STACK(stackPointer);
-                        STACK(stackPointer) *= temp;
-                    }
-                    else if (op == CUBE) {
-                        float temp = STACK(stackPointer);
-                        STACK(stackPointer) *= temp*temp;
-                    }
+                if (op == SIN) {
+                    STACK(stackPointer) = sin(STACK(stackPointer));
                 }
-                else {
-                    if (op == RECIPROCAL) {
-                        STACK(stackPointer) = 1.0f/STACK(stackPointer);
-                    }
-                    else if (op == ADD_CONSTANT) {
-                        STACK(stackPointer) += expression->arg[i];
-                    }
-                    else if (op == MULTIPLY_CONSTANT) {
-                        STACK(stackPointer) *= expression->arg[i];
-                    }
-                    else if (op == POWER_CONSTANT) {
-                        STACK(stackPointer) = pow(STACK(stackPointer), expression->arg[i]);
-                    }
+                else if (op == COS) {
+                    STACK(stackPointer) = cos(STACK(stackPointer));
+                }
+                else if (op == SEC) {
+                    STACK(stackPointer) = 1.0f/cos(STACK(stackPointer));
+                }
+                else if (op == CSC) {
+                    STACK(stackPointer) = 1.0f/sin(STACK(stackPointer));
+                }
+                else if (op == TAN) {
+                    STACK(stackPointer) = tan(STACK(stackPointer));
+                }
+                else if (op == COT) {
+                    STACK(stackPointer) = 1.0f/tan(STACK(stackPointer));
+                }
+                else if (op == ASIN) {
+                    STACK(stackPointer) = asin(STACK(stackPointer));
+                }
+                else if (op == ACOS) {
+                    STACK(stackPointer) = acos(STACK(stackPointer));
+                }
+                else if (op == ATAN) {
+                    STACK(stackPointer) = atan(STACK(stackPointer));
                 }
             }
         }
@@ -336,7 +299,7 @@ void kCalculateCustomNonbondedForces(gpuContext gpu, bool neighborListValid)
             cudaBindTexture(NULL, &texRef3, gpu->tabulatedFunctions[3].coefficients->_pDevData, &channelDesc, gpu->tabulatedFunctions[3].coefficients->_length*sizeof(float4));
         gpu->tabulatedFunctionsChanged = false;
     }
-    int sharedPerThread = sizeof(Atom)+gpu->sim.customExpressionStackSize*sizeof(float);
+    int sharedPerThread = sizeof(Atom)+gpu->sim.customExpressionStackSize*sizeof(float)+8*sizeof(float);
     if (gpu->sim.customNonbondedMethod != NO_CUTOFF)
         sharedPerThread += sizeof(float3);
     int threads = gpu->sim.nonbond_threads_per_block;
@@ -392,7 +355,7 @@ void kCalculateCustomNonbondedForces(gpuContext gpu, bool neighborListValid)
                 kCalculateCustomNonbondedPeriodicForces_kernel<<<gpu->sim.nonbond_blocks, threads, sharedPerThread*threads>>>(gpu->sim.pInteractingWorkUnit);
             LAUNCHERROR("kCalculateCustomNonbondedPeriodicForces");
             kCalculateCustomNonbondedPeriodicExceptions_kernel<<<gpu->sim.blocks, gpu->sim.custom_exception_threads_per_block,
-                    gpu->sim.customExpressionStackSize*sizeof(float)*gpu->sim.custom_exception_threads_per_block>>>();
+                    (gpu->sim.customExpressionStackSize+8)*sizeof(float)*gpu->sim.custom_exception_threads_per_block>>>();
             LAUNCHERROR("kCalculateCustomNonbondedPeriodicExceptions");
             break;
     }
