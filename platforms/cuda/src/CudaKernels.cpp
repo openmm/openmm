@@ -287,21 +287,18 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
             exclusionList[exclusions[i].first].push_back(exclusions[i].second);
             exclusionList[exclusions[i].second].push_back(exclusions[i].first);
         }
+        Vec3 boxVectors[3];
+        force.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+        gpuSetPeriodicBoxSize(gpu, (float)boxVectors[0][0], (float)boxVectors[1][1], (float)boxVectors[2][2]);
         CudaNonbondedMethod method = NO_CUTOFF;
         if (force.getNonbondedMethod() != NonbondedForce::NoCutoff) {
             gpuSetNonbondedCutoff(gpu, (float)force.getCutoffDistance(), force.getReactionFieldDielectric());
             method = CUTOFF;
         }
         if (force.getNonbondedMethod() == NonbondedForce::CutoffPeriodic) {
-            Vec3 boxVectors[3];
-            force.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
-            gpuSetPeriodicBoxSize(gpu, (float)boxVectors[0][0], (float)boxVectors[1][1], (float)boxVectors[2][2]);
             method = PERIODIC;
         }
         if (force.getNonbondedMethod() == NonbondedForce::Ewald || force.getNonbondedMethod() == NonbondedForce::PME) {
-            Vec3 boxVectors[3];
-            force.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
-            gpuSetPeriodicBoxSize(gpu, (float)boxVectors[0][0], (float)boxVectors[1][1], (float)boxVectors[2][2]);
             double ewaldErrorTol = force.getEwaldErrorTolerance();
             double alpha = (1.0/force.getCutoffDistance())*std::sqrt(-std::log(ewaldErrorTol));
             double mx = boxVectors[0][0]/force.getCutoffDistance();
