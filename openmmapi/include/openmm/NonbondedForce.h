@@ -33,7 +33,6 @@
  * -------------------------------------------------------------------------- */
 
 #include "Force.h"
-#include "Vec3.h"
 #include <map>
 #include <set>
 #include <utility>
@@ -156,30 +155,6 @@ public:
      */
     void setEwaldErrorTolerance(double tol);
     /**
-     * Get the vectors which define the axes of the periodic box (measured in nm).  If the NonbondedMethod
-     * in use does not use periodic boundary conditions, these values will have no effect.
-     *
-     * Currently, only rectangular boxes are supported.  This means that a, b, and c must be aligned with the
-     * x, y, and z axes respectively.  Future releases may support arbitrary triclinic boxes.
-     *
-     * @param a      on exit, this contains the vector defining the first edge of the periodic box
-     * @param b      on exit, this contains the vector defining the second edge of the periodic box
-     * @param c      on exit, this contains the vector defining the third edge of the periodic box
-     */
-    void getPeriodicBoxVectors(Vec3& a, Vec3& b, Vec3& c) const;
-    /**
-     * Set the vectors which define the axes of the periodic box (measured in nm).  If the NonbondedMethod
-     * in use does not use periodic boundary conditions, these values will have no effect.
-     *
-     * Currently, only rectangular boxes are supported.  This means that a, b, and c must be aligned with the
-     * x, y, and z axes respectively.  Future releases may support arbitrary triclinic boxes.
-     *
-     * @param a      the vector defining the first edge of the periodic box
-     * @param b      the vector defining the second edge of the periodic box
-     * @param c      the vector defining the third edge of the periodic box
-     */
-    void setPeriodicBoxVectors(Vec3 a, Vec3 b, Vec3 c);
-    /**
      * Add the nonbonded force parameters for a particle.  This should be called once for each particle
      * in the System.  When it is called for the i'th time, it specifies the parameters for the i'th particle.
      * For calculating the Lennard-Jones interaction between two particles, the arithmetic mean of the sigmas
@@ -273,24 +248,10 @@ private:
     class ExceptionInfo;
     NonbondedMethod nonbondedMethod;
     double cutoffDistance, rfDielectric, ewaldErrorTol;
-    Vec3 periodicBoxVectors[3];
     void addExclusionsToSet(const std::vector<std::set<int> >& bonded12, std::set<int>& exclusions, int baseParticle, int fromParticle, int currentLevel) const;
-
-
-// Retarded visual studio compiler complains about being unable to 
-// export private stl class members.
-// This stanza explains that it should temporarily shut up.
-#if defined(_MSC_VER)
-#pragma warning(push)
-#pragma warning(disable:4251)
-#endif
     std::vector<ParticleInfo> particles;
     std::vector<ExceptionInfo> exceptions;
     std::map<std::pair<int, int>, int> exceptionMap;
-#if defined(_MSC_VER)
-#pragma warning(pop)
-#endif
-
 };
 
 class NonbondedForce::ParticleInfo {

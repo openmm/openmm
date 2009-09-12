@@ -46,13 +46,29 @@ namespace OpenMM {
  * be exactly equal to the number of particles in the System, or else an exception will be thrown when you
  * try to create a Context.  After a particle has been added, you can modify its force field parameters
  * by calling setParticleParameters().
- * <p>
- * If the System also contains a NonbondedForce, this force will use the cutoffs
- * and periodic boundary conditions specified in it.
  */
 
 class OPENMM_EXPORT GBSAOBCForce : public Force {
 public:
+    /**
+     * This is an enumeration of the different methods that may be used for handling long range nonbonded forces.
+     */
+    enum NonbondedMethod {
+        /**
+         * No cutoff is applied to nonbonded interactions.  The full set of N^2 interactions is computed exactly.
+         * This necessarily means that periodic boundary conditions cannot be used.  This is the default.
+         */
+        NoCutoff = 0,
+        /**
+         * Interactions beyond the cutoff distance are ignored.
+         */
+        CutoffNonPeriodic = 1,
+        /**
+         * Periodic boundary conditions are used, so that each particle interacts only with the nearest periodic copy of
+         * each other particle.  Interactions beyond the cutoff distance are ignored.
+         */
+        CutoffPeriodic = 2,
+    };
     /*
      * Create a GBSAOBCForce.
      */
@@ -115,26 +131,31 @@ public:
     void setSoluteDielectric(double dielectric) {
         soluteDielectric = dielectric;
     }
+    /**
+     * Get the method used for handling long range nonbonded interactions.
+     */
+    NonbondedMethod getNonbondedMethod() const;
+    /**
+     * Set the method used for handling long range nonbonded interactions.
+     */
+    void setNonbondedMethod(NonbondedMethod method);
+    /**
+     * Get the cutoff distance (in nm) being used for nonbonded interactions.  If the NonbondedMethod in use
+     * is NoCutoff, this value will have no effect.
+     */
+    double getCutoffDistance() const;
+    /**
+     * Set the cutoff distance (in nm) being used for nonbonded interactions.  If the NonbondedMethod in use
+     * is NoCutoff, this value will have no effect.
+     */
+    void setCutoffDistance(double distance);
 protected:
     ForceImpl* createImpl();
 private:
     class ParticleInfo;
-    double solventDielectric, soluteDielectric;
-
-// Retarded visual studio compiler complains about being unable to 
-// export private stl class members.
-// This stanza explains that it should temporarily shut up.
-#if defined(_MSC_VER)
-#pragma warning(push)
-#pragma warning(disable:4251)
-#endif
-
+    NonbondedMethod nonbondedMethod;
+    double cutoffDistance, solventDielectric, soluteDielectric;
     std::vector<ParticleInfo> particles;
-
-#if defined(_MSC_VER)
-#pragma warning(pop)
-#endif
-
 };
 
 class GBSAOBCForce::ParticleInfo {

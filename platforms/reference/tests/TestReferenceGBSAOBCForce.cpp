@@ -86,7 +86,8 @@ void testCutoffAndPeriodic() {
     const double cutoffDistance = 3.0;
     const double boxSize = 10.0;
     nonbonded->setCutoffDistance(cutoffDistance);
-    nonbonded->setPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    gbsa->setCutoffDistance(cutoffDistance);
+    system.setPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
     system.addForce(gbsa);
     system.addForce(nonbonded);
     vector<Vec3> positions(2);
@@ -96,19 +97,23 @@ void testCutoffAndPeriodic() {
     // Calculate the forces for both cutoff and periodic with two different atom positions.
 
     nonbonded->setNonbondedMethod(NonbondedForce::CutoffNonPeriodic);
+    gbsa->setNonbondedMethod(GBSAOBCForce::CutoffNonPeriodic);
     Context context(system, integrator, platform);
     context.setPositions(positions);
     State state1 = context.getState(State::Forces);
     nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    gbsa->setNonbondedMethod(GBSAOBCForce::CutoffPeriodic);
     context.reinitialize();
     context.setPositions(positions);
     State state2 = context.getState(State::Forces);
     positions[1][0]+= boxSize;
     nonbonded->setNonbondedMethod(NonbondedForce::CutoffNonPeriodic);
+    gbsa->setNonbondedMethod(GBSAOBCForce::CutoffNonPeriodic);
     context.reinitialize();
     context.setPositions(positions);
     State state3 = context.getState(State::Forces);
     nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    gbsa->setNonbondedMethod(GBSAOBCForce::CutoffPeriodic);
     context.reinitialize();
     context.setPositions(positions);
     State state4 = context.getState(State::Forces);

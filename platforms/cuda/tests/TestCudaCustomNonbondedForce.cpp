@@ -186,7 +186,7 @@ void testPeriodic() {
     forceField->addParticle(vector<double>());
     forceField->setNonbondedMethod(CustomNonbondedForce::CutoffPeriodic);
     forceField->setCutoffDistance(2.0);
-    forceField->setPeriodicBoxVectors(Vec3(4, 0, 0), Vec3(0, 4, 0), Vec3(0, 0, 4));
+    system.setPeriodicBoxVectors(Vec3(4, 0, 0), Vec3(0, 4, 0), Vec3(0, 0, 4));
     system.addForce(forceField);
     Context context(system, integrator, platform);
     vector<Vec3> positions(3);
@@ -251,4 +251,3 @@ int main() {
     cout << "Done" << endl;
     return 0;
 }
-

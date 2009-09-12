@@ -171,30 +171,6 @@ public:
      */
     void setCutoffDistance(double distance);
     /**
-     * Get the vectors which define the axes of the periodic box (measured in nm).  If the NonbondedMethod
-     * in use does not use periodic boundary conditions, these values will have no effect.
-     *
-     * Currently, only rectangular boxes are supported.  This means that a, b, and c must be aligned with the
-     * x, y, and z axes respectively.  Future releases may support arbitrary triclinic boxes.
-     *
-     * @param a      on exit, this contains the vector defining the first edge of the periodic box
-     * @param b      on exit, this contains the vector defining the second edge of the periodic box
-     * @param c      on exit, this contains the vector defining the third edge of the periodic box
-     */
-    void getPeriodicBoxVectors(Vec3& a, Vec3& b, Vec3& c) const;
-    /**
-     * Set the vectors which define the axes of the periodic box (measured in nm).  If the NonbondedMethod
-     * in use does not use periodic boundary conditions, these values will have no effect.
-     *
-     * Currently, only rectangular boxes are supported.  This means that a, b, and c must be aligned with the
-     * x, y, and z axes respectively.  Future releases may support arbitrary triclinic boxes.
-     *
-     * @param a      the vector defining the first edge of the periodic box
-     * @param b      the vector defining the second edge of the periodic box
-     * @param c      the vector defining the third edge of the periodic box
-     */
-    void setPeriodicBoxVectors(Vec3 a, Vec3 b, Vec3 c);
-    /**
      * Add a new per-particle parmeter that the interaction may depend on.
      *
      * @param name             the name of the parameter
@@ -369,7 +345,6 @@ private:
     class FunctionInfo;
     NonbondedMethod nonbondedMethod;
     double cutoffDistance;
-    Vec3 periodicBoxVectors[3];
     std::string energyExpression;
     std::vector<ParameterInfo> parameters;
     std::vector<GlobalParameterInfo> globalParameters;

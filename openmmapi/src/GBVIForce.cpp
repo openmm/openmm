@@ -36,7 +36,7 @@
 
 using namespace OpenMM;
 
-GBVIForce::GBVIForce() : solventDielectric(78.3), soluteDielectric(1.0) {
+GBVIForce::GBVIForce() : nonbondedMethod(NoCutoff), cutoffDistance(1.0), solventDielectric(78.3), soluteDielectric(1.0) {
 }
 
 int GBVIForce::addParticle(double charge, double radius, double gamma) {
@@ -54,6 +54,22 @@ void GBVIForce::setParticleParameters(int index, double charge, double radius, d
     particles[index].charge = charge;
     particles[index].radius = radius;
     particles[index].gamma  = gamma;
+}
+
+GBVIForce::NonbondedMethod GBVIForce::getNonbondedMethod() const {
+    return nonbondedMethod;
+}
+
+void GBVIForce::setNonbondedMethod(NonbondedMethod method) {
+    nonbondedMethod = method;
+}
+
+double GBVIForce::getCutoffDistance() const {
+    return cutoffDistance;
+}
+
+void GBVIForce::setCutoffDistance(double distance) {
+    cutoffDistance = distance;
 }
 
 ForceImpl* GBVIForce::createImpl() {

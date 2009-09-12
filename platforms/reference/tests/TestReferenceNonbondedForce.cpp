@@ -335,7 +335,7 @@ void testPeriodic() {
     nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
     const double cutoff = 2.0;
     nonbonded->setCutoffDistance(cutoff);
-    nonbonded->setPeriodicBoxVectors(Vec3(4, 0, 0), Vec3(0, 4, 0), Vec3(0, 0, 4));
+    system.setPeriodicBoxVectors(Vec3(4, 0, 0), Vec3(0, 4, 0), Vec3(0, 0, 4));
     system.addForce(nonbonded);
     Context context(system, integrator, platform);
     vector<Vec3> positions(3);
@@ -368,7 +368,7 @@ void testEwald() {
     const double cutoff = 2.0;
     nonbonded->setCutoffDistance(cutoff);
     nonbonded->setEwaldErrorTolerance(TOL);
-    nonbonded->setPeriodicBoxVectors(Vec3(6, 0, 0), Vec3(0, 6, 0), Vec3(0, 0, 6));
+    system.setPeriodicBoxVectors(Vec3(6, 0, 0), Vec3(0, 6, 0), Vec3(0, 0, 6));
     system.addForce(nonbonded);
     Context context(system, integrator, platform);
     vector<Vec3> positions(2);

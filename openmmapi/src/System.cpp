@@ -30,11 +30,15 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/Force.h"
+#include "openmm/OpenMMException.h"
 #include "openmm/System.h"
 
 using namespace OpenMM;
 
 System::System() {
+    periodicBoxVectors[0] = Vec3(2, 0, 0);
+    periodicBoxVectors[1] = Vec3(0, 2, 0);
+    periodicBoxVectors[2] = Vec3(0, 0, 2);
 }
 
 System::~System() {
@@ -57,4 +61,22 @@ void System::setConstraintParameters(int index, int particle1, int particle2, do
     constraints[index].particle1 = particle1;
     constraints[index].particle2 = particle2;
     constraints[index].distance = distance;
+}
+
+void System::getPeriodicBoxVectors(Vec3& a, Vec3& b, Vec3& c) const {
+    a = periodicBoxVectors[0];
+    b = periodicBoxVectors[1];
+    c = periodicBoxVectors[2];
+}
+
+void System::setPeriodicBoxVectors(Vec3 a, Vec3 b, Vec3 c) {
+    if (a[1] != 0.0 || a[2] != 0.0)
+        throw OpenMMException("First periodic box vector must be parallel to x.");
+    if (b[0] != 0.0 || b[2] != 0.0)
+        throw OpenMMException("Second periodic box vector must be parallel to y.");
+    if (c[0] != 0.0 || c[1] != 0.0)
+        throw OpenMMException("Third periodic box vector must be parallel to z.");
+    periodicBoxVectors[0] = a;
+    periodicBoxVectors[1] = b;
+    periodicBoxVectors[2] = c;
 }

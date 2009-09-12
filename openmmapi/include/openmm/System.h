@@ -32,6 +32,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include "Vec3.h"
 #include <vector>
 #include "internal/windowsExport.h"
 
@@ -41,12 +42,13 @@ class OPENMM_EXPORT Force;
 
 /**
  * This class represents a molecular system.  The definition of a System involves
- * three elements:
+ * four elements:
  * 
  * <ol>
  * <li>The set of particles in the system</li>
  * <li>The forces acting on them</li>
  * <li>Pairs of particles whose separation should be constrained to a fixed value</li>
+ * <li>For periodic systems, the dimensions of the periodic box</li>
  * </ol>
  * 
  * The particles and constraints are defined directly by the System object, while
@@ -162,25 +164,36 @@ public:
     Force& getForce(int index) {
         return *forces[index];
     }
+    /**
+     * Get the vectors which define the axes of the periodic box (measured in nm).  These will affect
+     * any Force added to the System that uses periodic boundary conditions.
+     *
+     * Currently, only rectangular boxes are supported.  This means that a, b, and c must be aligned with the
+     * x, y, and z axes respectively.  Future releases may support arbitrary triclinic boxes.
+     *
+     * @param a      on exit, this contains the vector defining the first edge of the periodic box
+     * @param b      on exit, this contains the vector defining the second edge of the periodic box
+     * @param c      on exit, this contains the vector defining the third edge of the periodic box
+     */
+    void getPeriodicBoxVectors(Vec3& a, Vec3& b, Vec3& c) const;
+    /**
+     * Set the vectors which define the axes of the periodic box (measured in nm).  These will affect
+     * any Force added to the System that uses periodic boundary conditions.
+     *
+     * Currently, only rectangular boxes are supported.  This means that a, b, and c must be aligned with the
+     * x, y, and z axes respectively.  Future releases may support arbitrary triclinic boxes.
+     *
+     * @param a      the vector defining the first edge of the periodic box
+     * @param b      the vector defining the second edge of the periodic box
+     * @param c      the vector defining the third edge of the periodic box
+     */
+    void setPeriodicBoxVectors(Vec3 a, Vec3 b, Vec3 c);
 private:
     class ConstraintInfo;
-
-// Retarded visual studio compiler complains about being unable to 
-// export private stl class members.
-// This stanza explains that it should temporarily shut up.
-#if defined(_MSC_VER)
-#pragma warning(push)
-#pragma warning(disable:4251)
-#endif
-
+    Vec3 periodicBoxVectors[3];
     std::vector<double> masses;
     std::vector<ConstraintInfo> constraints;
     std::vector<Force*> forces;
-
-#if defined(_MSC_VER)
-#pragma warning(pop)
-#endif
-
 };
 
 class System::ConstraintInfo {

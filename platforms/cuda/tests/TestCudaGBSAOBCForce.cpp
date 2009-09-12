@@ -90,7 +90,8 @@ void testCutoffAndPeriodic() {
     const double cutoffDistance = 3.0;
     const double boxSize = 10.0;
     nonbonded->setCutoffDistance(cutoffDistance);
-    nonbonded->setPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    gbsa->setCutoffDistance(cutoffDistance);
+    system.setPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
     system.addForce(gbsa);
     system.addForce(nonbonded);
     vector<Vec3> positions(2);
@@ -100,19 +101,23 @@ void testCutoffAndPeriodic() {
     // Calculate the forces for both cutoff and periodic with two different atom positions.
 
     nonbonded->setNonbondedMethod(NonbondedForce::CutoffNonPeriodic);
+    gbsa->setNonbondedMethod(GBSAOBCForce::CutoffNonPeriodic);
     Context context(system, integrator, cuda);
     context.setPositions(positions);
     State state1 = context.getState(State::Forces);
     nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    gbsa->setNonbondedMethod(GBSAOBCForce::CutoffPeriodic);
     context.reinitialize();
     context.setPositions(positions);
     State state2 = context.getState(State::Forces);
     positions[1][0]+= boxSize;
     nonbonded->setNonbondedMethod(NonbondedForce::CutoffNonPeriodic);
+    gbsa->setNonbondedMethod(GBSAOBCForce::CutoffNonPeriodic);
     context.reinitialize();
     context.setPositions(positions);
     State state3 = context.getState(State::Forces);
     nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    gbsa->setNonbondedMethod(GBSAOBCForce::CutoffPeriodic);
     context.reinitialize();
     context.setPositions(positions);
     State state4 = context.getState(State::Forces);
@@ -127,7 +132,7 @@ void testCutoffAndPeriodic() {
     ASSERT_EQUAL_VEC(state3.getForces()[1], Vec3(0, 0, 0), 0.01);
 }
 
-void testForce(int numParticles, NonbondedForce::NonbondedMethod method) {
+void testForce(int numParticles, NonbondedForce::NonbondedMethod method, GBSAOBCForce::NonbondedMethod method2) {
     CudaPlatform cuda;
     ReferencePlatform reference;
     System system;
@@ -141,11 +146,13 @@ void testForce(int numParticles, NonbondedForce::NonbondedMethod method) {
         nonbonded->addParticle(charge, 1, 0);
     }
     nonbonded->setNonbondedMethod(method);
+    gbsa->setNonbondedMethod(method2);
     nonbonded->setCutoffDistance(3.0);
+    gbsa->setCutoffDistance(3.0);
     int grid = (int) floor(0.5+pow(numParticles, 1.0/3.0));
     if (method == NonbondedForce::CutoffPeriodic) {
         double boxSize = (grid+1)*1.1;
-        nonbonded->setPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+        system.setPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
     }
     system.addForce(gbsa);
     system.addForce(nonbonded);
@@ -208,9 +215,9 @@ int main() {
         testSingleParticle();
         testCutoffAndPeriodic();
         for (int i = 5; i < 11; i++) {
-            testForce(i*i*i, NonbondedForce::NoCutoff);
-            testForce(i*i*i, NonbondedForce::CutoffNonPeriodic);
-            testForce(i*i*i, NonbondedForce::CutoffPeriodic);
+            testForce(i*i*i, NonbondedForce::NoCutoff, GBSAOBCForce::NoCutoff);
+            testForce(i*i*i, NonbondedForce::CutoffNonPeriodic, GBSAOBCForce::CutoffNonPeriodic);
+            testForce(i*i*i, NonbondedForce::CutoffPeriodic, GBSAOBCForce::CutoffPeriodic);
         }
     }
     catch(const exception& e) {

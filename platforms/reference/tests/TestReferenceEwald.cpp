@@ -67,7 +67,7 @@ void testLargeSystem() {
     nonbonded->setNonbondedMethod(NonbondedForce::PME);
     const double cutoff = 1.0;
     nonbonded->setCutoffDistance(cutoff);
-    nonbonded->setPeriodicBoxVectors(Vec3(2.82, 0, 0), Vec3(0, 2.82, 0), Vec3(0, 0, 2.82));
+    system.setPeriodicBoxVectors(Vec3(2.82, 0, 0), Vec3(0, 2.82, 0), Vec3(0, 0, 2.82));
     nonbonded->setEwaldErrorTolerance(TOL);
     system.addForce(nonbonded);
     Context context(system, integrator, platform);
@@ -99,7 +99,7 @@ void testEwald() {
     nonbonded->setNonbondedMethod(NonbondedForce::Ewald);
     const double cutoff = 2.0;
     nonbonded->setCutoffDistance(cutoff);
-    nonbonded->setPeriodicBoxVectors(Vec3(6, 0, 0), Vec3(0, 6, 0), Vec3(0, 0, 6));
+    system.setPeriodicBoxVectors(Vec3(6, 0, 0), Vec3(0, 6, 0), Vec3(0, 0, 6));
     nonbonded->setEwaldErrorTolerance(TOL);
     system.addForce(nonbonded);
     Context context(system, integrator, platform);
@@ -134,7 +134,7 @@ void testPME() {
     nonbonded->setNonbondedMethod(NonbondedForce::PME);
     const double cutoff = 0.8;
     nonbonded->setCutoffDistance(cutoff);
-    nonbonded->setPeriodicBoxVectors(Vec3(1.86206, 0, 0), Vec3(0, 1.86206, 0), Vec3(0, 0, 1.86206));
+    system.setPeriodicBoxVectors(Vec3(1.86206, 0, 0), Vec3(0, 1.86206, 0), Vec3(0, 0, 1.86206));
     nonbonded->setEwaldErrorTolerance(TOL);
     system.addForce(nonbonded);
     Context context(system, integrator, platform);

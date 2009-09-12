@@ -1529,7 +1529,7 @@ if( log ){
                   boxIndex++;
                }
             }
-            nonbondedForce->setPeriodicBoxVectors( box[0], box[1], box[2] );
+            system.setPeriodicBoxVectors( box[0], box[1], box[2] );
 
          } else if( field.compare( "NonbondedForceMethod" ) == 0 ){
             std::string nonbondedForceMethod = tokens[1];
@@ -1569,7 +1569,7 @@ if( log ){
 
       (void) fprintf( log, "CutoffDistance %14.7e\n", nonbondedForce->getCutoffDistance() );
       Vec3 a, b, c;
-      nonbondedForce->getPeriodicBoxVectors( a, b, c);
+      system.getPeriodicBoxVectors( a, b, c);
       (void) fprintf( log, "Box [%14.7f %14.7f %14.7f]\n    [%14.7f %14.7f %14.7f]\n    [%14.7f %14.7f %14.7f]\n",
                       a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2] );
   

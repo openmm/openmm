@@ -36,7 +36,7 @@
 
 using namespace OpenMM;
 
-GBSAOBCForce::GBSAOBCForce() : solventDielectric(78.3), soluteDielectric(1.0) {
+GBSAOBCForce::GBSAOBCForce() : nonbondedMethod(NoCutoff), cutoffDistance(1.0), solventDielectric(78.3), soluteDielectric(1.0) {
 }
 
 int GBSAOBCForce::addParticle(double charge, double radius, double scalingFactor) {
@@ -54,6 +54,22 @@ void GBSAOBCForce::setParticleParameters(int index, double charge, double radius
     particles[index].charge = charge;
     particles[index].radius = radius;
     particles[index].scalingFactor = scalingFactor;
+}
+
+GBSAOBCForce::NonbondedMethod GBSAOBCForce::getNonbondedMethod() const {
+    return nonbondedMethod;
+}
+
+void GBSAOBCForce::setNonbondedMethod(NonbondedMethod method) {
+    nonbondedMethod = method;
+}
+
+double GBSAOBCForce::getCutoffDistance() const {
+    return cutoffDistance;
+}
+
+void GBSAOBCForce::setCutoffDistance(double distance) {
+    cutoffDistance = distance;
 }
 
 ForceImpl* GBSAOBCForce::createImpl() {
