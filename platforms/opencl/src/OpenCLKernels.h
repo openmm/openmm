@@ -33,55 +33,57 @@
 
 namespace OpenMM {
 
-///**
-// * This kernel is invoked at the start of each force evaluation to clear the forces.
-// */
-//class OpenCLInitializeForcesKernel : public InitializeForcesKernel {
-//public:
-//    OpenCLInitializeForcesKernel(std::string name, const Platform& platform) : InitializeForcesKernel(name, platform) {
-//    }
-//    /**
-//     * Initialize the kernel.
-//     *
-//     * @param system     the System this kernel will be applied to
-//     */
-//    void initialize(const System& system);
-//    /**
-//     * Execute the kernel.
-//     *
-//     * @param context    the context in which to execute this kernel
-//     */
-//    void execute(ContextImpl& context);
-//};
-//
-///**
-// * This kernel is invoked to get or set the current time.
-// */
-//class OpenCLUpdateTimeKernel : public UpdateTimeKernel {
-//public:
-//    OpenCLUpdateTimeKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data) : UpdateTimeKernel(name, platform), data(data) {
-//    }
-//    /**
-//     * Initialize the kernel.
-//     *
-//     * @param system     the System this kernel will be applied to
-//     */
-//    void initialize(const System& system);
-//    /**
-//     * Get the current time (in picoseconds).
-//     *
-//     * @param context    the context in which to execute this kernel
-//     */
-//    double getTime(const ContextImpl& context) const;
-//    /**
-//     * Set the current time (in picoseconds).
-//     *
-//     * @param context    the context in which to execute this kernel
-//     */
-//    void setTime(ContextImpl& context, double time);
-//private:
-//    OpenCLPlatform::PlatformData& data;
-//};
+/**
+ * This kernel is invoked at the start of each force evaluation to clear the forces.
+ */
+class OpenCLInitializeForcesKernel : public InitializeForcesKernel {
+public:
+    OpenCLInitializeForcesKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data) : InitializeForcesKernel(name, platform), data(data) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     */
+    void initialize(const System& system);
+    /**
+     * Execute the kernel.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void execute(ContextImpl& context);
+private:
+   OpenCLPlatform::PlatformData& data;
+};
+
+/**
+ * This kernel is invoked to get or set the current time.
+ */
+class OpenCLUpdateTimeKernel : public UpdateTimeKernel {
+public:
+    OpenCLUpdateTimeKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data) : UpdateTimeKernel(name, platform), data(data) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     */
+    void initialize(const System& system);
+    /**
+     * Get the current time (in picoseconds).
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    double getTime(const ContextImpl& context) const;
+    /**
+     * Set the current time (in picoseconds).
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void setTime(ContextImpl& context, double time);
+private:
+    OpenCLPlatform::PlatformData& data;
+};
 //
 ///**
 // * This kernel is invoked by HarmonicBondForce to calculate the forces acting on the system and the energy of the system.
@@ -321,34 +323,34 @@ namespace OpenMM {
 //private:
 //    OpenCLPlatform::PlatformData& data;
 //};
-//
-///**
-// * This kernel is invoked by VerletIntegrator to take one time step.
-// */
-//class OpenCLIntegrateVerletStepKernel : public IntegrateVerletStepKernel {
-//public:
-//    OpenCLIntegrateVerletStepKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data) : IntegrateVerletStepKernel(name, platform), data(data) {
-//    }
-//    ~OpenCLIntegrateVerletStepKernel();
-//    /**
-//     * Initialize the kernel.
-//     *
-//     * @param system     the System this kernel will be applied to
-//     * @param integrator the VerletIntegrator this kernel will be used for
-//     */
-//    void initialize(const System& system, const VerletIntegrator& integrator);
-//    /**
-//     * Execute the kernel.
-//     *
-//     * @param context    the context in which to execute this kernel
-//     * @param integrator the VerletIntegrator this kernel is being used for
-//     */
-//    void execute(ContextImpl& context, const VerletIntegrator& integrator);
-//private:
-//    OpenCLPlatform::PlatformData& data;
-//    double prevStepSize;
-//};
-//
+
+/**
+ * This kernel is invoked by VerletIntegrator to take one time step.
+ */
+class OpenCLIntegrateVerletStepKernel : public IntegrateVerletStepKernel {
+public:
+    OpenCLIntegrateVerletStepKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data) : IntegrateVerletStepKernel(name, platform), data(data) {
+    }
+    ~OpenCLIntegrateVerletStepKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param integrator the VerletIntegrator this kernel will be used for
+     */
+    void initialize(const System& system, const VerletIntegrator& integrator);
+    /**
+     * Execute the kernel.
+     *
+     * @param context    the context in which to execute this kernel
+     * @param integrator the VerletIntegrator this kernel is being used for
+     */
+    void execute(ContextImpl& context, const VerletIntegrator& integrator);
+private:
+    OpenCLPlatform::PlatformData& data;
+    double prevStepSize;
+};
+
 ///**
 // * This kernel is invoked by LangevinIntegrator to take one time step.
 // */
@@ -484,30 +486,30 @@ namespace OpenMM {
 //    OpenCLPlatform::PlatformData& data;
 //    double prevTemp, prevFrequency, prevStepSize;
 //};
-//
-///**
-// * This kernel is invoked to calculate the kinetic energy of the system.
-// */
-//class OpenCLCalcKineticEnergyKernel : public CalcKineticEnergyKernel {
-//public:
-//    OpenCLCalcKineticEnergyKernel(std::string name, const Platform& platform) : CalcKineticEnergyKernel(name, platform) {
-//    }
-//    /**
-//     * Initialize the kernel.
-//     *
-//     * @param system     the System this kernel will be applied to
-//     */
-//    void initialize(const System& system);
-//    /**
-//     * Execute the kernel.
-//     *
-//     * @param context    the context in which to execute this kernel
-//     */
-//    double execute(ContextImpl& context);
-//private:
-//    std::vector<double> masses;
-//};
-//
+
+/**
+ * This kernel is invoked to calculate the kinetic energy of the system.
+ */
+class OpenCLCalcKineticEnergyKernel : public CalcKineticEnergyKernel {
+public:
+    OpenCLCalcKineticEnergyKernel(std::string name, const Platform& platform) : CalcKineticEnergyKernel(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     */
+    void initialize(const System& system);
+    /**
+     * Execute the kernel.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    double execute(ContextImpl& context);
+private:
+    std::vector<double> masses;
+};
+
 ///**
 // * This kernel is invoked to remove center of mass motion from the system.
 // */

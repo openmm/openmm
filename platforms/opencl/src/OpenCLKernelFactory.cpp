@@ -33,10 +33,10 @@ using namespace OpenMM;
 
 KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const {
     OpenCLPlatform::PlatformData& data = *static_cast<OpenCLPlatform::PlatformData*>(context.getPlatformData());
-//    if (name == InitializeForcesKernel::Name())
-//        return new OpenCLInitializeForcesKernel(name, platform);
-//    if (name == UpdateTimeKernel::Name())
-//        return new OpenCLUpdateTimeKernel(name, platform, data);
+    if (name == InitializeForcesKernel::Name())
+        return new OpenCLInitializeForcesKernel(name, platform, data);
+    if (name == UpdateTimeKernel::Name())
+        return new OpenCLUpdateTimeKernel(name, platform, data);
 //    if (name == CalcHarmonicBondForceKernel::Name())
 //        return new OpenCLCalcHarmonicBondForceKernel(name, platform, data, context.getSystem());
 //    if (name == CalcHarmonicAngleForceKernel::Name())
@@ -51,8 +51,8 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
 //        return new OpenCLCalcCustomNonbondedForceKernel(name, platform, data, context.getSystem());
 //    if (name == CalcGBSAOBCForceKernel::Name())
 //        return new OpenCLCalcGBSAOBCForceKernel(name, platform, data);
-//    if (name == IntegrateVerletStepKernel::Name())
-//        return new OpenCLIntegrateVerletStepKernel(name, platform, data);
+    if (name == IntegrateVerletStepKernel::Name())
+        return new OpenCLIntegrateVerletStepKernel(name, platform, data);
 //    if (name == IntegrateLangevinStepKernel::Name())
 //        return new OpenCLIntegrateLangevinStepKernel(name, platform, data);
 //    if (name == IntegrateBrownianStepKernel::Name())
@@ -63,8 +63,8 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
 //        return new OpenCLIntegrateVariableLangevinStepKernel(name, platform, data);
 //    if (name == ApplyAndersenThermostatKernel::Name())
 //        return new OpenCLApplyAndersenThermostatKernel(name, platform, data);
-//    if (name == CalcKineticEnergyKernel::Name())
-//        return new OpenCLCalcKineticEnergyKernel(name, platform);
+    if (name == CalcKineticEnergyKernel::Name())
+        return new OpenCLCalcKineticEnergyKernel(name, platform);
 //    if (name == RemoveCMMotionKernel::Name())
 //        return new OpenCLRemoveCMMotionKernel(name, platform, data);
     throw OpenMMException((std::string("Tried to create kernel with illegal kernel name '")+name+"'").c_str());

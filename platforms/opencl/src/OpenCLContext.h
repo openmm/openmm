@@ -41,19 +41,21 @@ class OpenCLArray;
 
 class OpenCLContext {
 public:
+    static const int ThreadBlockSize = 64;
+    static const int TileSize = 32;
     OpenCLContext(int numParticles, int platformIndex, int deviceIndex);
     ~OpenCLContext();
     /**
      * Get the cl::Context associated with this object.
      */
     cl::Context& getContext() {
-        return *context;
+        return context;
     }
     /**
      * Get the cl::CommandQueue associated with this object.
      */
     cl::CommandQueue& getQueue() {
-        return *queue;
+        return queue;
     }
     /**
      * Get the array which contains the position and charge of each atom.
@@ -74,17 +76,50 @@ public:
         return *force;
     }
     /**
+     * Get the array which contains the buffers in which forces are computed.
+     */
+    OpenCLArray<cl_float4>& getForceBuffers() {
+        return *forceBuffers;
+    }
+    /**
      * Get the array which contains the index of each atom.
      */
     OpenCLArray<cl_int>& getAtomIndex() {
         return *atomIndex;
     }
+    /**
+     * Load OpenCL source code from a file in the kernels directory.
+     */
+    std::string loadSourceFromFile(const std::string& filename) const;
+    /**
+     * Create an OpenCL Program from source code.
+     */
+    cl::Program createProgram(const std::string source);
+    /**
+     * Set all elements of an array to 0.
+     */
+    void clearBuffer(OpenCLArray<float>& array);
+    /**
+     * Set all elements of an array to 0.
+     */
+    void clearBuffer(OpenCLArray<cl_float4>& array);
+    int numAtoms;
+    int paddedNumAtoms;
+    int numAtomBlocks;
+    int numTiles;
+    int numThreadBlocks;
+    int numForceBuffers;
+    bool forceBufferPerWarp;
 private:
-    cl::Context* context;
-    cl::CommandQueue* queue;
+    cl::Context context;
+    cl::Device device;
+    cl::CommandQueue queue;
+    cl::Program utilities;
+    cl::Kernel clearBufferKernel;
     OpenCLArray<cl_float4>* posq;
     OpenCLArray<cl_float4>* velm;
     OpenCLArray<cl_float4>* force;
+    OpenCLArray<cl_float4>* forceBuffers;
     OpenCLArray<cl_int>* atomIndex;
 };
 

@@ -51,17 +51,43 @@ public:
      *                          the OpenCL Buffer
      */
     OpenCLArray(OpenCLContext& context, int size, const std::string& name, bool createHostBuffer = false) :
-            context(context), size(size), name(name), local(createHostBuffer ? size : 0) {
+            context(context), size(size), name(name), local(createHostBuffer ? size : 0), ownsBuffer(true) {
         buffer = new cl::Buffer(context.getContext(), CL_MEM_READ_WRITE, size*sizeof(T));
     }
+    /**
+     * Create an OpenCLArray object the uses a preexisting Buffer.
+     *
+     * @param context           the context for which to create the array
+     * @param buffer            the OpenCL Buffer this object encapsulates
+     * @param size              the number of elements in the array
+     * @param name              the name of the array
+     * @param createHostBuffer  specifies whether to create a buffer in host memory for copying data to and from
+     *                          the OpenCL Buffer
+     */
+    OpenCLArray(OpenCLContext& context, cl::Buffer* buffer, int size, const std::string& name, bool createHostBuffer = false) :
+            context(context), buffer(buffer), size(size), name(name), local(createHostBuffer ? size : 0), ownsBuffer(false) {
+    }
     ~OpenCLArray() {
-        delete buffer;
+        if (ownsBuffer)
+            delete buffer;
     }
     const T& operator[](int index) const {
         return local[index];
     }
     T& operator[](int index) {
         return local[index];
+    }
+    /**
+     * Get the size of the array.
+     */
+    int getSize() {
+        return size;
+    }
+    /**
+     * Get the OpenCL Buffer object.
+     */
+    cl::Buffer& getDeviceBuffer() {
+        return *buffer;
     }
     /**
      * Get a pointer to the host buffer.
@@ -114,6 +140,7 @@ private:
     cl::Buffer* buffer;
     std::vector<T> local;
     int size;
+    bool ownsBuffer;
     std::string name;
 };
 

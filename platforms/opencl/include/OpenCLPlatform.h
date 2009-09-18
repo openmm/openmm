@@ -49,7 +49,7 @@ public:
         return name;
     }
     double getSpeed() const {
-        return 100;
+        return 0; // TODO Increase this.  Currently set to 0 so it will never be selected automatically.
     }
     bool supportsDoublePrecision() const;
     const std::string& getPropertyValue(const Context& context, const std::string& property) const;

@@ -82,4 +82,8 @@ ENDFOREACH(subdir)
 
 INCLUDE_DIRECTORIES(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
+# Install kernel files that will be loaded at runtime.
+FILE(GLOB OPENCL_KERNELS   ${CMAKE_CURRENT_SOURCE_DIR}/src/kernels/*.cl src/kernels/*.h)
+INSTALL_FILES(/lib/plugins/opencl FILES ${OPENCL_KERNELS})
+
 SUBDIRS (sharedTarget)

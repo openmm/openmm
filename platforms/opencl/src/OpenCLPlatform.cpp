@@ -45,8 +45,8 @@ extern "C" void initOpenMMPlugin() {
 
 OpenCLPlatform::OpenCLPlatform() {
     OpenCLKernelFactory* factory = new OpenCLKernelFactory();
-//    registerKernelFactory(InitializeForcesKernel::Name(), factory);
-//    registerKernelFactory(UpdateTimeKernel::Name(), factory);
+    registerKernelFactory(InitializeForcesKernel::Name(), factory);
+    registerKernelFactory(UpdateTimeKernel::Name(), factory);
 //    registerKernelFactory(CalcHarmonicBondForceKernel::Name(), factory);
 //    registerKernelFactory(CalcHarmonicAngleForceKernel::Name(), factory);
 //    registerKernelFactory(CalcPeriodicTorsionForceKernel::Name(), factory);
@@ -54,13 +54,13 @@ OpenCLPlatform::OpenCLPlatform() {
 //    registerKernelFactory(CalcNonbondedForceKernel::Name(), factory);
 //    registerKernelFactory(CalcCustomNonbondedForceKernel::Name(), factory);
 //    registerKernelFactory(CalcGBSAOBCForceKernel::Name(), factory);
-//    registerKernelFactory(IntegrateVerletStepKernel::Name(), factory);
+    registerKernelFactory(IntegrateVerletStepKernel::Name(), factory);
 //    registerKernelFactory(IntegrateLangevinStepKernel::Name(), factory);
 //    registerKernelFactory(IntegrateBrownianStepKernel::Name(), factory);
 //    registerKernelFactory(IntegrateVariableVerletStepKernel::Name(), factory);
 //    registerKernelFactory(IntegrateVariableLangevinStepKernel::Name(), factory);
 //    registerKernelFactory(ApplyAndersenThermostatKernel::Name(), factory);
-//    registerKernelFactory(CalcKineticEnergyKernel::Name(), factory);
+    registerKernelFactory(CalcKineticEnergyKernel::Name(), factory);
 //    registerKernelFactory(RemoveCMMotionKernel::Name(), factory);
     platformProperties.push_back(OpenCLPlatformIndex());
     platformProperties.push_back(OpenCLDeviceIndex());
