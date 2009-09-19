@@ -45,7 +45,7 @@ extern "C" void initOpenMMPlugin() {
 
 OpenCLPlatform::OpenCLPlatform() {
     OpenCLKernelFactory* factory = new OpenCLKernelFactory();
-    registerKernelFactory(InitializeForcesKernel::Name(), factory);
+    registerKernelFactory(CalcForcesAndEnergyKernel::Name(), factory);
     registerKernelFactory(UpdateTimeKernel::Name(), factory);
 //    registerKernelFactory(CalcHarmonicBondForceKernel::Name(), factory);
 //    registerKernelFactory(CalcHarmonicAngleForceKernel::Name(), factory);

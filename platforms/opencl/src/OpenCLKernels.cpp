@@ -34,11 +34,21 @@
 using namespace OpenMM;
 using namespace std;
 
-void OpenCLInitializeForcesKernel::initialize(const System& system) {
+void OpenCLCalcForcesAndEnergyKernel::initialize(const System& system) {
 }
 
-void OpenCLInitializeForcesKernel::execute(ContextImpl& context) {
+void OpenCLCalcForcesAndEnergyKernel::beginForceComputation(ContextImpl& context) {
     data.context->clearBuffer(data.context->getForceBuffers());
+}
+
+void OpenCLCalcForcesAndEnergyKernel::finishForceComputation(ContextImpl& context) {
+}
+
+void OpenCLCalcForcesAndEnergyKernel::beginEnergyComputation(ContextImpl& context) {
+}
+
+double OpenCLCalcForcesAndEnergyKernel::finishEnergyComputation(ContextImpl& context) {
+    return 0.0;
 }
 
 void OpenCLUpdateTimeKernel::initialize(const System& system) {

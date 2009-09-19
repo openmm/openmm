@@ -47,7 +47,7 @@ using namespace std;
 
 BrookInitializeForcesKernel::BrookInitializeForcesKernel( std::string name, const Platform& platform,
                                                           OpenMMBrookInterface& openMMBrookInterface, System& system ) :
-                     InitializeForcesKernel( name, platform ), _openMMBrookInterface( openMMBrookInterface ), _system( system ){
+                     CalcForcesAndEnergyKernel( name, platform ), _openMMBrookInterface( openMMBrookInterface ), _system( system ){
 
 // ---------------------------------------------------------------------------------------
 

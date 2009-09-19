@@ -35,7 +35,7 @@ namespace OpenMM {
 /**
  * This kernel initializes the forces
  */
-class BrookInitializeForcesKernel : public InitializeForcesKernel {
+class BrookInitializeForcesKernel : public CalcForcesAndEnergyKernel {
 
    public:
   

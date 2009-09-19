@@ -126,12 +126,22 @@ static void findAnglesForCCMA(const System& system, vector<ReferenceCCMAAlgorith
     }
 }
 
-void ReferenceInitializeForcesKernel::initialize(const System& system) {
+void ReferenceCalcForcesAndEnergyKernel::initialize(const System& system) {
 }
 
-void ReferenceInitializeForcesKernel::execute(ContextImpl& context) {
+void ReferenceCalcForcesAndEnergyKernel::beginForceComputation(ContextImpl& context) {
     double zero[] = {0.0, 0.0, 0.0};
     context.getForces().fillWithValue(zero);
+}
+
+void ReferenceCalcForcesAndEnergyKernel::finishForceComputation(ContextImpl& context) {
+}
+
+void ReferenceCalcForcesAndEnergyKernel::beginEnergyComputation(ContextImpl& context) {
+}
+
+double ReferenceCalcForcesAndEnergyKernel::finishEnergyComputation(ContextImpl& context) {
+    return 0.0;
 }
 
 void ReferenceUpdateTimeKernel::initialize(const System& system) {

@@ -33,8 +33,6 @@
 struct _gpuContext;
 
 namespace OpenMM {
-    
-class KernelImpl;
 
 /**
  * This Platform subclass uses CUDA implementations of the OpenMM kernels to run on NVidia GPUs.
@@ -79,7 +77,6 @@ class CudaPlatform::PlatformData {
 public:
     PlatformData(_gpuContext* gpu);
     _gpuContext* gpu;
-    KernelImpl* primaryKernel;
     bool removeCM;
     bool hasBonds, hasAngles, hasPeriodicTorsions, hasRB, hasNonbonded, hasCustomNonbonded;
     int nonbondedMethod, customNonbondedMethod;

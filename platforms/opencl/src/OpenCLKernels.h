@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -34,11 +34,13 @@
 namespace OpenMM {
 
 /**
- * This kernel is invoked at the start of each force evaluation to clear the forces.
+ * This kernel is invoked at the beginning and end of force and energy computations.  It gives the
+ * Platform a chance to clear buffers and do other initialization at the beginning, and to do any
+ * necessary work at the end to determine the final results.
  */
-class OpenCLInitializeForcesKernel : public InitializeForcesKernel {
+class OpenCLCalcForcesAndEnergyKernel : public CalcForcesAndEnergyKernel {
 public:
-    OpenCLInitializeForcesKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data) : InitializeForcesKernel(name, platform), data(data) {
+    OpenCLCalcForcesAndEnergyKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data) : CalcForcesAndEnergyKernel(name, platform), data(data) {
     }
     /**
      * Initialize the kernel.
@@ -47,11 +49,36 @@ public:
      */
     void initialize(const System& system);
     /**
-     * Execute the kernel.
+     * This is called at the beginning of each force computation, before calcForces() has been called on
+     * any ForceImpl.
      *
      * @param context    the context in which to execute this kernel
      */
-    void execute(ContextImpl& context);
+    void beginForceComputation(ContextImpl& context);
+    /**
+     * This is called at the end of each force computation, after calcForces() has been called on
+     * every ForceImpl.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void finishForceComputation(ContextImpl& context);
+    /**
+     * This is called at the beginning of each energy computation, before calcEnergy() has been called on
+     * any ForceImpl.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void beginEnergyComputation(ContextImpl& context);
+    /**
+     * This is called at the end of each energy computation, after calcEnergy() has been called on
+     * every ForceImpl.
+     *
+     * @param context    the context in which to execute this kernel
+     * @return the potential energy of the system.  This value is added to all values returned by ForceImpls'
+     * calcEnergy() methods.  That is, each force kernel may <i>either</i> return its contribution to the
+     * energy directly, <i>or</i> add it to an internal buffer so that it will be included here.
+     */
+    double finishEnergyComputation(ContextImpl& context);
 private:
    OpenCLPlatform::PlatformData& data;
 };

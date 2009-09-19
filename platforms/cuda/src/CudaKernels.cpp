@@ -28,7 +28,6 @@
 #include "CudaStreamImpl.h"
 #include "openmm/LangevinIntegrator.h"
 #include "openmm/Context.h"
-#include "ReferencePlatform.h"
 #include "openmm/internal/ContextImpl.h"
 #include "kernels/gputypes.h"
 #include "kernels/cudaKernels.h"
@@ -39,12 +38,19 @@ extern "C" int gpuSetConstants( gpuContext gpu );
 using namespace OpenMM;
 using namespace std;
 
-static void calcForces(ContextImpl& context, CudaPlatform::PlatformData& data) {
+void CudaCalcForcesAndEnergyKernel::initialize(const System& system) {
+}
+
+void CudaCalcForcesAndEnergyKernel::beginForceComputation(ContextImpl& context) {
     _gpuContext* gpu = data.gpu;
     if (data.nonbondedMethod != NO_CUTOFF && data.computeForceCount%100 == 0)
         gpuReorderAtoms(gpu);
     data.computeForceCount++;
     kClearForces(gpu);
+}
+
+void CudaCalcForcesAndEnergyKernel::finishForceComputation(ContextImpl& context) {
+    _gpuContext* gpu = data.gpu;
     if (gpu->bIncludeGBSA) {
         gpu->bRecalculateBornRadii = true;
         kCalculateCDLJObcGbsaForces1(gpu);
@@ -59,12 +65,16 @@ static void calcForces(ContextImpl& context, CudaPlatform::PlatformData& data) {
     kReduceForces(gpu);
 }
 
-static double calcEnergy(ContextImpl& context, CudaPlatform::PlatformData& data, System& system) {
+void CudaCalcForcesAndEnergyKernel::beginEnergyComputation(ContextImpl& context) {
     _gpuContext* gpu = data.gpu;
     if (data.nonbondedMethod != NO_CUTOFF && data.stepCount%100 == 0)
         gpuReorderAtoms(gpu);
     data.stepCount++;
     kClearEnergy(gpu);
+}
+
+double CudaCalcForcesAndEnergyKernel::finishEnergyComputation(ContextImpl& context) {
+    _gpuContext* gpu = data.gpu;
     if (gpu->bIncludeGBSA) {
         gpu->bRecalculateBornRadii = true;
         kCalculateCDLJObcGbsaForces1(gpu);
@@ -79,12 +89,6 @@ static double calcEnergy(ContextImpl& context, CudaPlatform::PlatformData& data,
     if (gpu->bIncludeGBSA)
         kReduceBornSumAndForces(gpu);
     return kReduceEnergy(gpu)+data.ewaldSelfEnergy;
-}
-
-void CudaInitializeForcesKernel::initialize(const System& system) {
-}
-
-void CudaInitializeForcesKernel::execute(ContextImpl& context) {
 }
 
 void CudaUpdateTimeKernel::initialize(const System& system) {
@@ -102,8 +106,6 @@ CudaCalcHarmonicBondForceKernel::~CudaCalcHarmonicBondForceKernel() {
 }
 
 void CudaCalcHarmonicBondForceKernel::initialize(const System& system, const HarmonicBondForce& force) {
-    if (data.primaryKernel == NULL)
-        data.primaryKernel = this;
     data.hasBonds = true;
     numBonds = force.getNumBonds();
     vector<int> particle1(numBonds);
@@ -120,13 +122,9 @@ void CudaCalcHarmonicBondForceKernel::initialize(const System& system, const Har
 }
 
 void CudaCalcHarmonicBondForceKernel::executeForces(ContextImpl& context) {
-    if (data.primaryKernel == this)
-        calcForces(context, data);
 }
 
 double CudaCalcHarmonicBondForceKernel::executeEnergy(ContextImpl& context) {
-    if (data.primaryKernel == this)
-        return calcEnergy(context, data, system);
     return 0.0;
 }
 
@@ -134,8 +132,6 @@ CudaCalcHarmonicAngleForceKernel::~CudaCalcHarmonicAngleForceKernel() {
 }
 
 void CudaCalcHarmonicAngleForceKernel::initialize(const System& system, const HarmonicAngleForce& force) {
-    if (data.primaryKernel == NULL)
-        data.primaryKernel = this;
     data.hasAngles = true;
     numAngles = force.getNumAngles();
     const float RadiansToDegrees = (float) (180.0/3.14159265);
@@ -154,13 +150,9 @@ void CudaCalcHarmonicAngleForceKernel::initialize(const System& system, const Ha
 }
 
 void CudaCalcHarmonicAngleForceKernel::executeForces(ContextImpl& context) {
-    if (data.primaryKernel == this)
-        calcForces(context, data);
 }
 
 double CudaCalcHarmonicAngleForceKernel::executeEnergy(ContextImpl& context) {
-    if (data.primaryKernel == this)
-        return calcEnergy(context, data, system);
     return 0.0;
 }
 
@@ -168,8 +160,6 @@ CudaCalcPeriodicTorsionForceKernel::~CudaCalcPeriodicTorsionForceKernel() {
 }
 
 void CudaCalcPeriodicTorsionForceKernel::initialize(const System& system, const PeriodicTorsionForce& force) {
-    if (data.primaryKernel == NULL)
-        data.primaryKernel = this;
     data.hasPeriodicTorsions = true;
     numTorsions = force.getNumTorsions();
     const float RadiansToDegrees = (float)(180.0/3.14159265);
@@ -190,13 +180,9 @@ void CudaCalcPeriodicTorsionForceKernel::initialize(const System& system, const 
 }
 
 void CudaCalcPeriodicTorsionForceKernel::executeForces(ContextImpl& context) {
-    if (data.primaryKernel == this)
-        calcForces(context, data);
 }
 
 double CudaCalcPeriodicTorsionForceKernel::executeEnergy(ContextImpl& context) {
-    if (data.primaryKernel == this)
-        return calcEnergy(context, data, system);
     return 0.0;
 }
 
@@ -204,8 +190,6 @@ CudaCalcRBTorsionForceKernel::~CudaCalcRBTorsionForceKernel() {
 }
 
 void CudaCalcRBTorsionForceKernel::initialize(const System& system, const RBTorsionForce& force) {
-    if (data.primaryKernel == NULL)
-        data.primaryKernel = this;
     data.hasRB = true;
     numTorsions = force.getNumTorsions();
     vector<int> particle1(numTorsions);
@@ -232,13 +216,9 @@ void CudaCalcRBTorsionForceKernel::initialize(const System& system, const RBTors
 }
 
 void CudaCalcRBTorsionForceKernel::executeForces(ContextImpl& context) {
-    if (data.primaryKernel == this)
-        calcForces(context, data);
 }
 
 double CudaCalcRBTorsionForceKernel::executeEnergy(ContextImpl& context) {
-    if (data.primaryKernel == this)
-        return calcEnergy(context, data, system);
     return 0.0;
 }
 
@@ -246,8 +226,6 @@ CudaCalcNonbondedForceKernel::~CudaCalcNonbondedForceKernel() {
 }
 
 void CudaCalcNonbondedForceKernel::initialize(const System& system, const NonbondedForce& force) {
-    if (data.primaryKernel == NULL)
-        data.primaryKernel = this;
     data.hasNonbonded = true;
     numParticles = force.getNumParticles();
     _gpuContext* gpu = data.gpu;
@@ -362,13 +340,9 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
 }
 
 void CudaCalcNonbondedForceKernel::executeForces(ContextImpl& context) {
-    if (data.primaryKernel == this)
-        calcForces(context, data);
 }
 
 double CudaCalcNonbondedForceKernel::executeEnergy(ContextImpl& context) {
-    if (data.primaryKernel == this)
-        return calcEnergy(context, data, system);
     return 0.0;
 }
 
@@ -376,7 +350,6 @@ CudaCalcCustomNonbondedForceKernel::~CudaCalcCustomNonbondedForceKernel() {
 }
 
 void CudaCalcCustomNonbondedForceKernel::initialize(const System& system, const CustomNonbondedForce& force) {
-    data.primaryKernel = this; // This must always be the primary kernel so it can update the global parameters
     data.hasCustomNonbonded = true;
     numParticles = force.getNumParticles();
     _gpuContext* gpu = data.gpu;
@@ -462,17 +435,11 @@ void CudaCalcCustomNonbondedForceKernel::initialize(const System& system, const 
 }
 
 void CudaCalcCustomNonbondedForceKernel::executeForces(ContextImpl& context) {
-    if (data.primaryKernel == this) {
-        updateGlobalParams(context);
-        calcForces(context, data);
-    }
+    updateGlobalParams(context);
 }
 
 double CudaCalcCustomNonbondedForceKernel::executeEnergy(ContextImpl& context) {
-    if (data.primaryKernel == this) {
-        updateGlobalParams(context);
-        return calcEnergy(context, data, system);
-    }
+    updateGlobalParams(context);
     return 0.0;
 }
 

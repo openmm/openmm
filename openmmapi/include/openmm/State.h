@@ -88,15 +88,6 @@ public:
 private:
     friend class Context;
     State(double time, int numParticles, DataType types);
-
-// Retarded visual studio compiler complains about being unable to 
-// export private stl class members.
-// This stanza explains that it should temporarily shut up.
-#if defined(_MSC_VER)
-#pragma warning(push)
-#pragma warning(disable:4251)
-#endif
-
     std::vector<Vec3>& updPositions();
     std::vector<Vec3>& updVelocities();
     std::vector<Vec3>& updForces();
@@ -108,11 +99,6 @@ private:
     std::vector<Vec3> velocities;
     std::vector<Vec3> forces;
     std::map<std::string, double> parameters;
-
-#if defined(_MSC_VER)
-#pragma warning(pop)
-#endif
-    
 };
 
 } // namespace OpenMM

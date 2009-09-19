@@ -33,8 +33,8 @@ using namespace OpenMM;
 
 KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const {
     OpenCLPlatform::PlatformData& data = *static_cast<OpenCLPlatform::PlatformData*>(context.getPlatformData());
-    if (name == InitializeForcesKernel::Name())
-        return new OpenCLInitializeForcesKernel(name, platform, data);
+    if (name == CalcForcesAndEnergyKernel::Name())
+        return new OpenCLCalcForcesAndEnergyKernel(name, platform, data);
     if (name == UpdateTimeKernel::Name())
         return new OpenCLUpdateTimeKernel(name, platform, data);
 //    if (name == CalcHarmonicBondForceKernel::Name())

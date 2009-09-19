@@ -51,7 +51,7 @@ ContextImpl::ContextImpl(Context& owner, System& system, Integrator& integrator,
 {
     vector<string> kernelNames;
     kernelNames.push_back(CalcKineticEnergyKernel::Name());
-    kernelNames.push_back(InitializeForcesKernel::Name());
+    kernelNames.push_back(CalcForcesAndEnergyKernel::Name());
     kernelNames.push_back(UpdateTimeKernel::Name());
     for (int i = 0; i < system.getNumForces(); ++i) {
         forceImpls.push_back(system.getForce(i).createImpl());
@@ -67,8 +67,8 @@ ContextImpl::ContextImpl(Context& owner, System& system, Integrator& integrator,
     else if (!platform->supportsKernels(kernelNames))
         throw OpenMMException("Specified a Platform for a Context which does not support all required kernels");
     platform->contextCreated(*this);
-    initializeForcesKernel = platform->createKernel(InitializeForcesKernel::Name(), *this);
-    dynamic_cast<InitializeForcesKernel&>(initializeForcesKernel.getImpl()).initialize(system);
+    initializeForcesKernel = platform->createKernel(CalcForcesAndEnergyKernel::Name(), *this);
+    dynamic_cast<CalcForcesAndEnergyKernel&>(initializeForcesKernel.getImpl()).initialize(system);
     kineticEnergyKernel = platform->createKernel(CalcKineticEnergyKernel::Name(), *this);
     dynamic_cast<CalcKineticEnergyKernel&>(kineticEnergyKernel.getImpl()).initialize(system);
     updateTimeKernel = platform->createKernel(UpdateTimeKernel::Name(), *this);
@@ -110,9 +110,11 @@ void ContextImpl::setParameter(std::string name, double value) {
 }
 
 void ContextImpl::calcForces() {
-    dynamic_cast<InitializeForcesKernel&>(initializeForcesKernel.getImpl()).execute(*this);
+    CalcForcesAndEnergyKernel& kernel = dynamic_cast<CalcForcesAndEnergyKernel&>(initializeForcesKernel.getImpl());
+    kernel.beginForceComputation(*this);
     for (int i = 0; i < (int) forceImpls.size(); ++i)
         forceImpls[i]->calcForces(*this, forces);
+    kernel.finishForceComputation(*this);
 }
 
 double ContextImpl::calcKineticEnergy() {
@@ -120,9 +122,12 @@ double ContextImpl::calcKineticEnergy() {
 }
 
 double ContextImpl::calcPotentialEnergy() {
+    CalcForcesAndEnergyKernel& kernel = dynamic_cast<CalcForcesAndEnergyKernel&>(initializeForcesKernel.getImpl());
+    kernel.beginEnergyComputation(*this);
     double energy = 0.0;
     for (int i = 0; i < (int) forceImpls.size(); ++i)
         energy += forceImpls[i]->calcEnergy(*this);
+    energy += kernel.finishEnergyComputation(*this);
     return energy;
 }
 

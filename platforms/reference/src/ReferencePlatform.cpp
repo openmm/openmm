@@ -39,7 +39,7 @@ using namespace OpenMM;
 
 ReferencePlatform::ReferencePlatform() {
     ReferenceKernelFactory* factory = new ReferenceKernelFactory();
-    registerKernelFactory(InitializeForcesKernel::Name(), factory);
+    registerKernelFactory(CalcForcesAndEnergyKernel::Name(), factory);
     registerKernelFactory(UpdateTimeKernel::Name(), factory);
     registerKernelFactory(CalcHarmonicBondForceKernel::Name(), factory);
     registerKernelFactory(CalcHarmonicAngleForceKernel::Name(), factory);

@@ -279,7 +279,7 @@ void BrookPlatform::_initializeKernelFactory( void ){
 
    BrookKernelFactory* factory = new BrookKernelFactory();
 
-   registerKernelFactory( InitializeForcesKernel::Name(),         factory );
+   registerKernelFactory( CalcForcesAndEnergyKernel::Name(),         factory );
    registerKernelFactory( CalcHarmonicBondForceKernel::Name(),    factory );
    registerKernelFactory( CalcHarmonicAngleForceKernel::Name(),   factory );
    registerKernelFactory( CalcPeriodicTorsionForceKernel::Name(), factory );

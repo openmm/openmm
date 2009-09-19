@@ -54,7 +54,7 @@ KernelImpl* BrookKernelFactory::createKernelImpl( std::string name, const Platfo
 
    // initialize forces
 
-	if( name == InitializeForcesKernel::Name() ){
+	if( name == CalcForcesAndEnergyKernel::Name() ){
 
       return new BrookInitializeForcesKernel( name, platform, openMMBrookInterface, context.getSystem() );
 
