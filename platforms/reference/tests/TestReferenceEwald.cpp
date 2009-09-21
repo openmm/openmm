@@ -84,8 +84,21 @@ void testEwaldExact() {
     State state = context.getState(State::Forces | State::Energy);
     const vector<Vec3>& forces = state.getForces();
 
-//  Compare against Gromacs result for now
-    ASSERT_EQUAL_TOL(-430494.0, state.getPotentialEnergy(), 10*TOL);
+//   The potential energy of an ion in a crystal is 
+//   E = - (M*e/ 4*pi*epsilon0*a0),
+//   where 
+//   M			:	Madelung constant (dimensionless, for FCC cells such as NaCl it is 1.7476)
+//   e			:	1.6022 × 10−19 C
+//   4*pi*epsilon0	: 	1.112 × 10−10 C²/(J m)
+//   a0			:	0.282 x 10-9 m (perfect cell)
+//   Therefore
+    double exactEnergy = -8.9290; // eV
+    exactEnergy        = -4.4645; // eV per 1 ion
+    exactEnergy        = -7.15292069e-19; // J per ion
+    exactEnergy        = -430.820; // kJ/mol per ion
+    ASSERT_EQUAL_TOL(exactEnergy * numParticles , state.getPotentialEnergy(), 100*TOL);
+//  Gromacs result
+//    ASSERT_EQUAL_TOL(-430494.0, state.getPotentialEnergy(), 10*TOL);
 
 }
 
