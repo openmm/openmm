@@ -46,7 +46,7 @@ extern "C" void initOpenMMPlugin() {
 OpenCLPlatform::OpenCLPlatform() {
     OpenCLKernelFactory* factory = new OpenCLKernelFactory();
     registerKernelFactory(CalcForcesAndEnergyKernel::Name(), factory);
-    registerKernelFactory(UpdateTimeKernel::Name(), factory);
+    registerKernelFactory(UpdateStateDataKernel::Name(), factory);
 //    registerKernelFactory(CalcHarmonicBondForceKernel::Name(), factory);
 //    registerKernelFactory(CalcHarmonicAngleForceKernel::Name(), factory);
 //    registerKernelFactory(CalcPeriodicTorsionForceKernel::Name(), factory);
@@ -82,10 +82,6 @@ const string& OpenCLPlatform::getPropertyValue(const Context& context, const str
 }
 
 void OpenCLPlatform::setPropertyValue(Context& context, const string& property, const string& value) const {
-}
-
-const StreamFactory& OpenCLPlatform::getDefaultStreamFactory() const {
-    return defaultStreamFactory;
 }
 
 void OpenCLPlatform::contextCreated(ContextImpl& context) const {

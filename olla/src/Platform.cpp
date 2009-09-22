@@ -33,9 +33,7 @@
 #include "openmm/Context.h"
 #include "openmm/OpenMMException.h"
 #include "openmm/Kernel.h"
-#include "openmm/Stream.h"
 #include "openmm/KernelFactory.h"
-#include "openmm/StreamFactory.h"
 #ifdef WIN32
 #include <windows.h>
 #include <sstream>
@@ -64,14 +62,9 @@ static int platformInitializer = registerPlatforms();
 
 Platform::~Platform() {
     set<KernelFactory*> uniqueKernelFactories;
-    set<StreamFactory*> uniqueStreamFactories;
     for (map<string, KernelFactory*>::const_iterator iter = kernelFactories.begin(); iter != kernelFactories.end(); ++iter)
         uniqueKernelFactories.insert(iter->second);
-    for (map<string, StreamFactory*>::const_iterator iter = streamFactories.begin(); iter != streamFactories.end(); ++iter)
-        uniqueStreamFactories.insert(iter->second);
     for (set<KernelFactory*>::const_iterator iter = uniqueKernelFactories.begin(); iter != uniqueKernelFactories.end(); ++iter)
-        delete *iter;
-    for (set<StreamFactory*>::const_iterator iter = uniqueStreamFactories.begin(); iter != uniqueStreamFactories.end(); ++iter)
         delete *iter;
 }
 
@@ -108,10 +101,6 @@ void Platform::registerKernelFactory(const string& name, KernelFactory* factory)
     kernelFactories[name] = factory;
 }
 
-void Platform::registerStreamFactory(const string& name, StreamFactory* factory) {
-    streamFactories[name] = factory;
-}
-
 bool Platform::supportsKernels(const vector<string>& kernelNames) const {
     for (int i = 0; i < (int) kernelNames.size(); ++i)
         if (kernelFactories.find(kernelNames[i]) == kernelFactories.end())
@@ -123,12 +112,6 @@ Kernel Platform::createKernel(const string& name, ContextImpl& context) const {
     if (kernelFactories.find(name) == kernelFactories.end())
         throw OpenMMException("Called createKernel() on a Platform which does not support the requested kernel");
     return Kernel(kernelFactories.find(name)->second->createKernelImpl(name, *this, context));
-}
-
-Stream Platform::createStream(const string& name, int size, Stream::DataType type, ContextImpl& context) const {
-    if (streamFactories.find(name) == streamFactories.end())
-        return Stream(getDefaultStreamFactory().createStreamImpl(name, size, type, *this, context));
-    return Stream(streamFactories.find(name)->second->createStreamImpl(name, size, type, *this, context));
 }
 
 vector<Platform*>& Platform::getPlatforms() {

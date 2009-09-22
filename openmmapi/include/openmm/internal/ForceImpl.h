@@ -40,7 +40,6 @@ namespace OpenMM {
 
 class Force;
 class ContextImpl;
-class Stream;
 
 /**
  * A ForceImpl provides the internal implementation of a Force.  When a Context is
@@ -82,7 +81,7 @@ public:
      * @param context     the context in which the system is being simulated
      * @param forces      new forces should be added to the value already stored in this
      */
-    virtual void calcForces(ContextImpl& context, Stream& forces) = 0;
+    virtual void calcForces(ContextImpl& context) = 0;
     /**
      * Calculate this ForceImpl's contribution to the potential energy of the system.
      * 

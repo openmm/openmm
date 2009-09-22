@@ -30,7 +30,6 @@
  * -------------------------------------------------------------------------- */
 
 #include "ReferenceKernels.h"
-#include "ReferenceFloatStreamImpl.h"
 #include "gbsa/CpuObc.h"
 #include "gbsa/CpuGBVI.h"
 #include "SimTKReference/ReferenceAndersenThermostat.h"
@@ -112,6 +111,21 @@ static void disposeRealArray(RealOpenMM** array, int size) {
     }
 }
 
+static RealOpenMM** extractPositions(ContextImpl& context) {
+    ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
+    return (RealOpenMM**) data->positions;
+}
+
+static RealOpenMM** extractVelocities(ContextImpl& context) {
+    ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
+    return (RealOpenMM**) data->velocities;
+}
+
+static RealOpenMM** extractForces(ContextImpl& context) {
+    ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
+    return (RealOpenMM**) data->forces;
+}
+
 static void findAnglesForCCMA(const System& system, vector<ReferenceCCMAAlgorithm::AngleInfo>& angles) {
     for (int i = 0; i < system.getNumForces(); i++) {
         const HarmonicAngleForce* force = dynamic_cast<const HarmonicAngleForce*>(&system.getForce(i));
@@ -130,8 +144,13 @@ void ReferenceCalcForcesAndEnergyKernel::initialize(const System& system) {
 }
 
 void ReferenceCalcForcesAndEnergyKernel::beginForceComputation(ContextImpl& context) {
-    double zero[] = {0.0, 0.0, 0.0};
-    context.getForces().fillWithValue(zero);
+    int numParticles = context.getSystem().getNumParticles();
+    RealOpenMM** forceData = extractForces(context);
+    for (int i = 0; i < numParticles; ++i) {
+        forceData[i][0] = (RealOpenMM) 0.0;
+        forceData[i][1] = (RealOpenMM) 0.0;
+        forceData[i][2] = (RealOpenMM) 0.0;
+    }
 }
 
 void ReferenceCalcForcesAndEnergyKernel::finishForceComputation(ContextImpl& context) {
@@ -144,15 +163,59 @@ double ReferenceCalcForcesAndEnergyKernel::finishEnergyComputation(ContextImpl& 
     return 0.0;
 }
 
-void ReferenceUpdateTimeKernel::initialize(const System& system) {
+void ReferenceUpdateStateDataKernel::initialize(const System& system) {
 }
 
-double ReferenceUpdateTimeKernel::getTime(const ContextImpl& context) const {
+double ReferenceUpdateStateDataKernel::getTime(const ContextImpl& context) const {
     return data.time;
 }
 
-void ReferenceUpdateTimeKernel::setTime(ContextImpl& context, double time) {
+void ReferenceUpdateStateDataKernel::setTime(ContextImpl& context, double time) {
     data.time = time;
+}
+
+void ReferenceUpdateStateDataKernel::getPositions(ContextImpl& context, std::vector<Vec3>& positions) {
+    int numParticles = context.getSystem().getNumParticles();
+    RealOpenMM** posData = extractPositions(context);
+    positions.resize(numParticles);
+    for (int i = 0; i < numParticles; ++i)
+        positions[i] = Vec3(posData[i][0], posData[i][1], posData[i][2]);
+}
+
+void ReferenceUpdateStateDataKernel::setPositions(ContextImpl& context, const std::vector<Vec3>& positions) {
+    int numParticles = context.getSystem().getNumParticles();
+    RealOpenMM** posData = extractPositions(context);
+    for (int i = 0; i < numParticles; ++i) {
+        posData[i][0] = positions[i][0];
+        posData[i][1] = positions[i][1];
+        posData[i][2] = positions[i][2];
+    }
+}
+
+void ReferenceUpdateStateDataKernel::getVelocities(ContextImpl& context, std::vector<Vec3>& velocities) {
+    int numParticles = context.getSystem().getNumParticles();
+    RealOpenMM** velData = extractVelocities(context);
+    velocities.resize(numParticles);
+    for (int i = 0; i < numParticles; ++i)
+        velocities[i] = Vec3(velData[i][0], velData[i][1], velData[i][2]);
+}
+
+void ReferenceUpdateStateDataKernel::setVelocities(ContextImpl& context, const std::vector<Vec3>& velocities) {
+    int numParticles = context.getSystem().getNumParticles();
+    RealOpenMM** velData = extractVelocities(context);
+    for (int i = 0; i < numParticles; ++i) {
+        velData[i][0] = velocities[i][0];
+        velData[i][1] = velocities[i][1];
+        velData[i][2] = velocities[i][2];
+    }
+}
+
+void ReferenceUpdateStateDataKernel::getForces(ContextImpl& context, std::vector<Vec3>& forces) {
+    int numParticles = context.getSystem().getNumParticles();
+    RealOpenMM** forceData = extractForces(context);
+    forces.resize(numParticles);
+    for (int i = 0; i < numParticles; ++i)
+        forces[i] = Vec3(forceData[i][0], forceData[i][1], forceData[i][2]);
 }
 
 ReferenceCalcHarmonicBondForceKernel::~ReferenceCalcHarmonicBondForceKernel() {
@@ -176,15 +239,15 @@ void ReferenceCalcHarmonicBondForceKernel::initialize(const System& system, cons
 }
 
 void ReferenceCalcHarmonicBondForceKernel::executeForces(ContextImpl& context) {
-    RealOpenMM** posData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData()); // Reference code needs to be made const correct
-    RealOpenMM** forceData = ((ReferenceFloatStreamImpl&) context.getForces().getImpl()).getData();
+    RealOpenMM** posData = extractPositions(context);
+    RealOpenMM** forceData = extractForces(context);
     ReferenceBondForce refBondForce;
     ReferenceHarmonicBondIxn harmonicBond;
     refBondForce.calculateForce(numBonds, bondIndexArray, posData, bondParamArray, forceData, 0, 0, 0, harmonicBond);
 }
 
 double ReferenceCalcHarmonicBondForceKernel::executeEnergy(ContextImpl& context) {
-    RealOpenMM** posData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData()); // Reference code needs to be made const correct
+    RealOpenMM** posData = extractPositions(context);
     RealOpenMM** forceData = allocateRealArray(context.getSystem().getNumParticles(), 3);
     RealOpenMM* energyArray = new RealOpenMM[numBonds];
     RealOpenMM energy = 0;
@@ -220,15 +283,15 @@ void ReferenceCalcHarmonicAngleForceKernel::initialize(const System& system, con
 }
 
 void ReferenceCalcHarmonicAngleForceKernel::executeForces(ContextImpl& context) {
-    RealOpenMM** posData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData()); // Reference code needs to be made const correct
-    RealOpenMM** forceData = ((ReferenceFloatStreamImpl&) context.getForces().getImpl()).getData();
+    RealOpenMM** posData = extractPositions(context);
+    RealOpenMM** forceData = extractForces(context);
     ReferenceBondForce refBondForce;
     ReferenceAngleBondIxn angleBond;
     refBondForce.calculateForce(numAngles, angleIndexArray, posData, angleParamArray, forceData, 0, 0, 0, angleBond);
 }
 
 double ReferenceCalcHarmonicAngleForceKernel::executeEnergy(ContextImpl& context) {
-    RealOpenMM** posData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData()); // Reference code needs to be made const correct
+    RealOpenMM** posData = extractPositions(context);
     RealOpenMM** forceData = allocateRealArray(context.getSystem().getNumParticles(), 3);
     RealOpenMM* energyArray = new RealOpenMM[numAngles];
     RealOpenMM energy = 0;
@@ -266,15 +329,15 @@ void ReferenceCalcPeriodicTorsionForceKernel::initialize(const System& system, c
 }
 
 void ReferenceCalcPeriodicTorsionForceKernel::executeForces(ContextImpl& context) {
-    RealOpenMM** posData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData()); // Reference code needs to be made const correct
-    RealOpenMM** forceData = ((ReferenceFloatStreamImpl&) context.getForces().getImpl()).getData();
+    RealOpenMM** posData = extractPositions(context);
+    RealOpenMM** forceData = extractForces(context);
     ReferenceBondForce refBondForce;
     ReferenceProperDihedralBond periodicTorsionBond;
     refBondForce.calculateForce(numTorsions, torsionIndexArray, posData, torsionParamArray, forceData, 0, 0, 0, periodicTorsionBond);
 }
 
 double ReferenceCalcPeriodicTorsionForceKernel::executeEnergy(ContextImpl& context) {
-    RealOpenMM** posData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData()); // Reference code needs to be made const correct
+    RealOpenMM** posData = extractPositions(context);
     RealOpenMM** forceData = allocateRealArray(context.getSystem().getNumParticles(), 3);
     RealOpenMM* energyArray = new RealOpenMM[numTorsions];
     RealOpenMM energy = 0;
@@ -315,15 +378,15 @@ void ReferenceCalcRBTorsionForceKernel::initialize(const System& system, const R
 }
 
 void ReferenceCalcRBTorsionForceKernel::executeForces(ContextImpl& context) {
-    RealOpenMM** posData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData()); // Reference code needs to be made const correct
-    RealOpenMM** forceData = ((ReferenceFloatStreamImpl&) context.getForces().getImpl()).getData();
+    RealOpenMM** posData = extractPositions(context);
+    RealOpenMM** forceData = extractForces(context);
     ReferenceBondForce refBondForce;
     ReferenceRbDihedralBond rbTorsionBond;
     refBondForce.calculateForce(numTorsions, torsionIndexArray, posData, torsionParamArray, forceData, 0, 0, 0, rbTorsionBond);
 }
 
 double ReferenceCalcRBTorsionForceKernel::executeEnergy(ContextImpl& context) {
-    RealOpenMM** posData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData()); // Reference code needs to be made const correct
+    RealOpenMM** posData = extractPositions(context);
     RealOpenMM** forceData = allocateRealArray(context.getSystem().getNumParticles(), 3);
     RealOpenMM* energyArray = new RealOpenMM[numTorsions];
     RealOpenMM energy = 0;
@@ -435,8 +498,8 @@ void ReferenceCalcNonbondedForceKernel::initialize(const System& system, const N
 }
 
 void ReferenceCalcNonbondedForceKernel::executeForces(ContextImpl& context) {
-    RealOpenMM** posData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData()); // Reference code needs to be made const correct
-    RealOpenMM** forceData = ((ReferenceFloatStreamImpl&) context.getForces().getImpl()).getData();
+    RealOpenMM** posData = extractPositions(context);
+    RealOpenMM** forceData = extractForces(context);
     ReferenceLJCoulombIxn clj;
     bool periodic = (nonbondedMethod == CutoffPeriodic);
     bool ewald  = (nonbondedMethod == Ewald);
@@ -460,7 +523,7 @@ void ReferenceCalcNonbondedForceKernel::executeForces(ContextImpl& context) {
 }
 
 double ReferenceCalcNonbondedForceKernel::executeEnergy(ContextImpl& context) {
-    RealOpenMM** posData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData()); // Reference code needs to be made const correct
+    RealOpenMM** posData = extractPositions(context);
     RealOpenMM** forceData = allocateRealArray(numParticles, 3);
     RealOpenMM energy = 0;
     ReferenceLJCoulombIxn clj;
@@ -648,8 +711,8 @@ void ReferenceCalcCustomNonbondedForceKernel::initialize(const System& system, c
 }
 
 void ReferenceCalcCustomNonbondedForceKernel::executeForces(ContextImpl& context) {
-    RealOpenMM** posData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData()); // Reference code needs to be made const correct
-    RealOpenMM** forceData = ((ReferenceFloatStreamImpl&) context.getForces().getImpl()).getData();
+    RealOpenMM** posData = extractPositions(context);
+    RealOpenMM** forceData = extractForces(context);
     ReferenceCustomNonbondedIxn ixn(energyExpression, forceExpression, parameterNames, combiningRules);
     bool periodic = (nonbondedMethod == CutoffPeriodic);
     if (nonbondedMethod != NoCutoff) {
@@ -666,7 +729,7 @@ void ReferenceCalcCustomNonbondedForceKernel::executeForces(ContextImpl& context
 }
 
 double ReferenceCalcCustomNonbondedForceKernel::executeEnergy(ContextImpl& context) {
-    RealOpenMM** posData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData()); // Reference code needs to be made const correct
+    RealOpenMM** posData = extractPositions(context);
     RealOpenMM** forceData = allocateRealArray(numParticles, 3);
     RealOpenMM energy = 0;
     ReferenceCustomNonbondedIxn ixn(energyExpression, forceExpression, parameterNames, combiningRules);
@@ -726,13 +789,13 @@ void ReferenceCalcGBSAOBCForceKernel::initialize(const System& system, const GBS
 }
 
 void ReferenceCalcGBSAOBCForceKernel::executeForces(ContextImpl& context) {
-    RealOpenMM** posData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData()); // Reference code needs to be made const correct
-    RealOpenMM** forceData = ((ReferenceFloatStreamImpl&) context.getForces().getImpl()).getData();
+    RealOpenMM** posData = extractPositions(context);
+    RealOpenMM** forceData = extractForces(context);
     obc->computeImplicitSolventForces(posData, &charges[0], forceData, 1);
 }
 
 double ReferenceCalcGBSAOBCForceKernel::executeEnergy(ContextImpl& context) {
-    RealOpenMM** posData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData()); // Reference code needs to be made const correct
+    RealOpenMM** posData = extractPositions(context);
     RealOpenMM** forceData = allocateRealArray(context.getSystem().getNumParticles(), 3);
     obc->computeImplicitSolventForces(posData, &charges[0], forceData, 1);
     disposeRealArray(forceData, context.getSystem().getNumParticles());
@@ -781,8 +844,8 @@ void ReferenceCalcGBVIForceKernel::initialize(const System& system, const GBVIFo
 
 void ReferenceCalcGBVIForceKernel::executeForces(ContextImpl& context) {
 
-    RealOpenMM** posData   = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData()); // Reference code needs to be made const correct
-    RealOpenMM** forceData = ((ReferenceFloatStreamImpl&) context.getForces().getImpl()).getData();
+    RealOpenMM** posData = extractPositions(context);
+    RealOpenMM** forceData = extractForces(context);
     RealOpenMM* bornRadii  = new RealOpenMM[context.getSystem().getNumParticles()];
     gbvi->computeBornRadii(posData, bornRadii, NULL ); 
     gbvi->computeBornForces(bornRadii, posData, &charges[0], forceData);
@@ -790,7 +853,7 @@ void ReferenceCalcGBVIForceKernel::executeForces(ContextImpl& context) {
 }
 
 double ReferenceCalcGBVIForceKernel::executeEnergy(ContextImpl& context) {
-    RealOpenMM** posData  = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData()); // Reference code needs to be made const correct
+    RealOpenMM** posData = extractPositions(context);
     RealOpenMM* bornRadii = new RealOpenMM[context.getSystem().getNumParticles()];
     gbvi->computeBornRadii(posData, bornRadii, NULL ); 
     RealOpenMM energy     = gbvi->computeBornEnergy(bornRadii ,posData, &charges[0]);
@@ -831,9 +894,9 @@ void ReferenceIntegrateVerletStepKernel::initialize(const System& system, const 
 
 void ReferenceIntegrateVerletStepKernel::execute(ContextImpl& context, const VerletIntegrator& integrator) {
     double stepSize = integrator.getStepSize();
-    RealOpenMM** posData = ((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData();
-    RealOpenMM** velData = ((ReferenceFloatStreamImpl&) context.getVelocities().getImpl()).getData();
-    RealOpenMM** forceData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getForces().getImpl()).getData()); // Reference code needs to be made const correct
+    RealOpenMM** posData = extractPositions(context);
+    RealOpenMM** velData = extractVelocities(context);
+    RealOpenMM** forceData = extractForces(context);
     if (dynamics == 0 || stepSize != prevStepSize) {
         // Recreate the computation objects with the new parameters.
         
@@ -889,9 +952,9 @@ void ReferenceIntegrateLangevinStepKernel::execute(ContextImpl& context, const L
     double temperature = integrator.getTemperature();
     double friction = integrator.getFriction();
     double stepSize = integrator.getStepSize();
-    RealOpenMM** posData = ((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData();
-    RealOpenMM** velData = ((ReferenceFloatStreamImpl&) context.getVelocities().getImpl()).getData();
-    RealOpenMM** forceData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getForces().getImpl()).getData()); // Reference code needs to be made const correct
+    RealOpenMM** posData = extractPositions(context);
+    RealOpenMM** velData = extractVelocities(context);
+    RealOpenMM** forceData = extractForces(context);
     if (dynamics == 0 || temperature != prevTemp || friction != prevFriction || stepSize != prevStepSize) {
         // Recreate the computation objects with the new parameters.
         
@@ -954,9 +1017,9 @@ void ReferenceIntegrateBrownianStepKernel::execute(ContextImpl& context, const B
     double temperature = integrator.getTemperature();
     double friction = integrator.getFriction();
     double stepSize = integrator.getStepSize();
-    RealOpenMM** posData = ((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData();
-    RealOpenMM** velData = ((ReferenceFloatStreamImpl&) context.getVelocities().getImpl()).getData();
-    RealOpenMM** forceData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getForces().getImpl()).getData()); // Reference code needs to be made const correct
+    RealOpenMM** posData = extractPositions(context);
+    RealOpenMM** velData = extractVelocities(context);
+    RealOpenMM** forceData = extractForces(context);
     if (dynamics == 0 || temperature != prevTemp || friction != prevFriction || stepSize != prevStepSize) {
         // Recreate the computation objects with the new parameters.
         
@@ -1018,9 +1081,9 @@ void ReferenceIntegrateVariableLangevinStepKernel::execute(ContextImpl& context,
     double temperature = integrator.getTemperature();
     double friction = integrator.getFriction();
     double errorTol = integrator.getErrorTolerance();
-    RealOpenMM** posData = ((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData();
-    RealOpenMM** velData = ((ReferenceFloatStreamImpl&) context.getVelocities().getImpl()).getData();
-    RealOpenMM** forceData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getForces().getImpl()).getData()); // Reference code needs to be made const correct
+    RealOpenMM** posData = extractPositions(context);
+    RealOpenMM** velData = extractVelocities(context);
+    RealOpenMM** forceData = extractForces(context);
     if (dynamics == 0 || temperature != prevTemp || friction != prevFriction || errorTol != prevErrorTol) {
         // Recreate the computation objects with the new parameters.
 
@@ -1079,9 +1142,9 @@ void ReferenceIntegrateVariableVerletStepKernel::initialize(const System& system
 
 void ReferenceIntegrateVariableVerletStepKernel::execute(ContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime) {
     double errorTol = integrator.getErrorTolerance();
-    RealOpenMM** posData = ((ReferenceFloatStreamImpl&) context.getPositions().getImpl()).getData();
-    RealOpenMM** velData = ((ReferenceFloatStreamImpl&) context.getVelocities().getImpl()).getData();
-    RealOpenMM** forceData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getForces().getImpl()).getData()); // Reference code needs to be made const correct
+    RealOpenMM** posData = extractPositions(context);
+    RealOpenMM** velData = extractVelocities(context);
+    RealOpenMM** forceData = extractForces(context);
     if (dynamics == 0 || errorTol != prevErrorTol) {
         // Recreate the computation objects with the new parameters.
 
@@ -1121,9 +1184,9 @@ void ReferenceApplyAndersenThermostatKernel::initialize(const System& system, co
 }
 
 void ReferenceApplyAndersenThermostatKernel::execute(ContextImpl& context) {
-    RealOpenMM** velData = ((ReferenceFloatStreamImpl&) context.getVelocities().getImpl()).getData();
+    RealOpenMM** velData = extractVelocities(context);
     thermostat->applyThermostat(
-			context.getVelocities().getSize(), 
+			context.getSystem().getNumParticles(),
 			velData, 
 			masses, 
 			static_cast<RealOpenMM>(context.getParameter(AndersenThermostat::Temperature())), 
@@ -1139,7 +1202,7 @@ void ReferenceCalcKineticEnergyKernel::initialize(const System& system) {
 }
 
 double ReferenceCalcKineticEnergyKernel::execute(ContextImpl& context) {
-    RealOpenMM** velData = const_cast<RealOpenMM**>(((ReferenceFloatStreamImpl&) context.getVelocities().getImpl()).getData()); // Reference code needs to be made const correct
+    RealOpenMM** velData = extractVelocities(context);
     double energy = 0.0;
     for (size_t i = 0; i < masses.size(); ++i)
         energy += masses[i]*(velData[i][0]*velData[i][0]+velData[i][1]*velData[i][1]+velData[i][2]*velData[i][2]);
@@ -1156,7 +1219,7 @@ void ReferenceRemoveCMMotionKernel::initialize(const System& system, const CMMot
 void ReferenceRemoveCMMotionKernel::execute(ContextImpl& context) {
     if (data.stepCount%frequency != 0)
         return;
-    RealOpenMM** velData = ((ReferenceFloatStreamImpl&) context.getVelocities().getImpl()).getData();
+    RealOpenMM** velData = extractVelocities(context);
     
     // Calculate the center of mass momentum.
     

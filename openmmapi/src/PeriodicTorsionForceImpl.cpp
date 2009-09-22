@@ -49,7 +49,7 @@ void PeriodicTorsionForceImpl::initialize(ContextImpl& context) {
     dynamic_cast<CalcPeriodicTorsionForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
 
-void PeriodicTorsionForceImpl::calcForces(ContextImpl& context, Stream& forces) {
+void PeriodicTorsionForceImpl::calcForces(ContextImpl& context) {
     dynamic_cast<CalcPeriodicTorsionForceKernel&>(kernel.getImpl()).executeForces(context);
 }
 

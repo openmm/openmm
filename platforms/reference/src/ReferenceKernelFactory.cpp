@@ -40,8 +40,8 @@ KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name, const Pla
     ReferencePlatform::PlatformData& data = *static_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
     if (name == CalcForcesAndEnergyKernel::Name())
         return new ReferenceCalcForcesAndEnergyKernel(name, platform);
-    if (name == UpdateTimeKernel::Name())
-        return new ReferenceUpdateTimeKernel(name, platform, data);
+    if (name == UpdateStateDataKernel::Name())
+        return new ReferenceUpdateStateDataKernel(name, platform, data);
     if (name == CalcNonbondedForceKernel::Name())
         return new ReferenceCalcNonbondedForceKernel(name, platform);
     if (name == CalcCustomNonbondedForceKernel::Name())

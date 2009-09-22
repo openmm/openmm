@@ -38,8 +38,8 @@
 namespace OpenMM {
 
 /**
- * A Kernel encapsulates a particular implementation of a calculation that can be performed on Streams.
- * Kernel objects are created by Platforms:
+ * A Kernel encapsulates a particular implementation of a calculation that can be performed on the data
+ * in a Context.  Kernel objects are created by Platforms:
  * 
  * <pre>
  * Kernel kernel = platform.createKernel(kernelName);

@@ -32,7 +32,6 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "Stream.h"
 #include <map>
 #include <string>
 #include <vector>
@@ -44,12 +43,11 @@ class Context;
 class ContextImpl;
 class Kernel;
 class KernelFactory;
-class StreamFactory;
 
 /**
- * A Platform defines an implementation of all the kernels and streams needed to perform some calculation.
- * More precisely, a Platform object acts as a registry for a set of KernelFactory and StreamFactory
- * objects which together implement the kernels and streams.  The Platform class, in turn, provides a
+ * A Platform defines an implementation of all the kernels needed to perform some calculation.
+ * More precisely, a Platform object acts as a registry for a set of KernelFactory
+ * objects which together implement the kernels.  The Platform class, in turn, provides a
  * static registry of all available Platform objects.
  * 
  * To get a Platform object, call
@@ -60,7 +58,7 @@ class StreamFactory;
  * 
  * passing in the names of all kernels that will be required for the calculation you plan to perform.  It
  * will return the fastest available Platform which provides implementations of all the specified kernels.
- * You can then call createKernel() and createStream() to construct particular kernels and streams as needed.
+ * You can then call createKernel() to construct particular kernels as needed.
  */
 
 class OPENMM_EXPORT Platform {
@@ -79,7 +77,7 @@ public:
     virtual double getSpeed() const = 0;
     /**
      * Get whether this Platform supports double precision arithmetic.  If this returns false, the platform
-     * is permitted to implement double precision streams internally as single precision.
+     * is permitted to represent double precision values internally as single precision.
      */
     virtual bool supportsDoublePrecision() const = 0;
     /**
@@ -119,11 +117,6 @@ public:
      */
     void setPropertyDefaultValue(const std::string& property, const std::string& value);
     /**
-     * Get the default StreamFactory for this Platform.  It will be used to create Streams whenever a
-     * different StreamFactory has not been registered for the requested stream name.
-     */
-    virtual const StreamFactory& getDefaultStreamFactory() const = 0;
-    /**
      * This is called whenever a new Context is created.  It gives the Platform a chance to initialize
      * the context and store platform-specific data in it.
      */
@@ -142,15 +135,6 @@ public:
      * @param factory  the factory to use for creating Kernels with the specified name
      */
     void registerKernelFactory(const std::string& name, KernelFactory* factory);
-    /**
-     * Register a StreamFactory which should be used to create Streams with a particular name.
-     * The Platform takes over ownership of the factory, and will delete it when the Platform itself
-     * is deleted.
-     * 
-     * @param name     the stream name for which the factory should be used
-     * @param factory  the factory to use for creating Streams with the specified name
-     */
-    void registerStreamFactory(const std::string& name, StreamFactory* factory);
     /**
      * Determine whether this Platforms provides implementations of a set of kernels.
      * 
@@ -172,20 +156,6 @@ public:
      * @return a newly created Kernel object
      */
     Kernel createKernel(const std::string& name, ContextImpl& context) const;
-    /**
-     * Create a Stream object.  If you call this method multiple times for different contexts with the same name,
-     * the returned Streams are independent and do not interact with each other.  This means
-     * that it is possible to have multiple simulations in progress at one time without them
-     * interfering.
-     * 
-     * If a StreamFactory has been registered for the specified name, it will be used to create
-     * the Stream.  Otherwise, the default StreamFactory will be used.
-     * 
-     * @param name the name of the Stream to get
-     * @param context the context for which to create a Stream
-     * @return a newly created Stream object
-     */
-    Stream createStream(const std::string& name, int size, Stream::DataType type, ContextImpl& context) const;
     /**
      * Register a new Platform.
      */
@@ -249,7 +219,6 @@ protected:
     std::vector<std::string> platformProperties;
 private:
     std::map<std::string, KernelFactory*> kernelFactories;
-    std::map<std::string, StreamFactory*> streamFactories;
     std::map<std::string, std::string> defaultProperties;
     static std::vector<Platform*>& getPlatforms();
 };

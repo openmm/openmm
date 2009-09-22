@@ -79,16 +79,16 @@ State Context::getState(int types) const {
         state.setEnergy(impl->calcKineticEnergy(), impl->calcPotentialEnergy());
     if (types&State::Forces) {
         impl->calcForces();
-        impl->getForces().saveToArray(&state.updForces()[0]);
+        impl->getForces(state.updForces());
     }
     if (types&State::Parameters) {
         for (map<string, double>::const_iterator iter = impl->parameters.begin(); iter != impl->parameters.end(); iter++)
             state.updParameters()[iter->first] = iter->second;
     }
     if (types&State::Positions)
-        impl->getPositions().saveToArray(&state.updPositions()[0]);
+        impl->getPositions(state.updPositions());
     if (types&State::Velocities)
-        impl->getVelocities().saveToArray(&state.updVelocities()[0]);
+        impl->getVelocities(state.updVelocities());
     return state;
 }
 
@@ -99,13 +99,13 @@ void Context::setTime(double time) {
 void Context::setPositions(const vector<Vec3>& positions) {
     if ((int) positions.size() != impl->getSystem().getNumParticles())
         throw OpenMMException("Called setPositions() on a Context with the wrong number of positions");
-    impl->getPositions().loadFromArray(&positions[0]);
+    impl->setPositions(positions);
 }
 
 void Context::setVelocities(const vector<Vec3>& velocities) {
     if ((int) velocities.size() != impl->getSystem().getNumParticles())
         throw OpenMMException("Called setVelocities() on a Context with the wrong number of velocities");
-    impl->getVelocities().loadFromArray(&velocities[0]);
+    impl->setVelocities(velocities);
 }
 
 double Context::getParameter(const string& name) {

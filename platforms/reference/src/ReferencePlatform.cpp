@@ -40,7 +40,7 @@ using namespace OpenMM;
 ReferencePlatform::ReferencePlatform() {
     ReferenceKernelFactory* factory = new ReferenceKernelFactory();
     registerKernelFactory(CalcForcesAndEnergyKernel::Name(), factory);
-    registerKernelFactory(UpdateTimeKernel::Name(), factory);
+    registerKernelFactory(UpdateStateDataKernel::Name(), factory);
     registerKernelFactory(CalcHarmonicBondForceKernel::Name(), factory);
     registerKernelFactory(CalcHarmonicAngleForceKernel::Name(), factory);
     registerKernelFactory(CalcPeriodicTorsionForceKernel::Name(), factory);
@@ -63,15 +63,39 @@ bool ReferencePlatform::supportsDoublePrecision() const {
     return (sizeof(RealOpenMM) >= sizeof(double));
 }
 
-const StreamFactory& ReferencePlatform::getDefaultStreamFactory() const {
-    return defaultStreamFactory;
-}
-
 void ReferencePlatform::contextCreated(ContextImpl& context) const {
-    context.setPlatformData(new PlatformData());
+    context.setPlatformData(new PlatformData(context.getSystem().getNumParticles()));
 }
 
 void ReferencePlatform::contextDestroyed(ContextImpl& context) const {
     PlatformData* data = reinterpret_cast<PlatformData*>(context.getPlatformData());
     delete data;
+}
+
+ReferencePlatform::PlatformData::PlatformData(int numParticles) : time(0.0), stepCount(0), numParticles(numParticles) {
+    RealOpenMM** positions = new RealOpenMM*[numParticles];
+    RealOpenMM** velocities = new RealOpenMM*[numParticles];
+    RealOpenMM** forces = new RealOpenMM*[numParticles];
+    for (int i = 0; i < numParticles; ++i) {
+        positions[i] = new RealOpenMM[3];
+        velocities[i] = new RealOpenMM[3];
+        forces[i] = new RealOpenMM[3];
+    }
+    this->positions = positions;
+    this->velocities = velocities;
+    this->forces = forces;
+}
+
+ReferencePlatform::PlatformData::~PlatformData() {
+    RealOpenMM** positions = (RealOpenMM**) this->positions;
+    RealOpenMM** velocities = (RealOpenMM**) this->velocities;
+    RealOpenMM** forces = (RealOpenMM**) this->forces;
+    for (int i = 0; i < numParticles; ++i) {
+        delete[] positions[i];
+        delete[] velocities[i];
+        delete[] forces[i];
+    }
+    delete[] positions;
+    delete[] velocities;
+    delete[] forces;
 }

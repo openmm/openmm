@@ -42,7 +42,7 @@ using namespace std;
  */
 
 BrookUpdateTimeKernel::BrookUpdateTimeKernel( std::string name, const Platform& platform, OpenMMBrookInterface& openMMBrookInterface ) :
-                     UpdateTimeKernel( name, platform ), _openMMBrookInterface(openMMBrookInterface){
+                     UpdateStateDataKernel( name, platform ), _openMMBrookInterface(openMMBrookInterface){
 
 // ---------------------------------------------------------------------------------------
 

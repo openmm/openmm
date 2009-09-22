@@ -49,7 +49,7 @@ void HarmonicAngleForceImpl::initialize(ContextImpl& context) {
     dynamic_cast<CalcHarmonicAngleForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
 
-void HarmonicAngleForceImpl::calcForces(ContextImpl& context, Stream& forces) {
+void HarmonicAngleForceImpl::calcForces(ContextImpl& context) {
     dynamic_cast<CalcHarmonicAngleForceKernel&>(kernel.getImpl()).executeForces(context);
 }
 

@@ -188,7 +188,7 @@ void GBVIForceImpl::findScaledRadii( int numberOfParticles, const std::vector<st
 
 }
 
-void GBVIForceImpl::calcForces(ContextImpl& context, Stream& forces) {
+void GBVIForceImpl::calcForces(ContextImpl& context) {
     dynamic_cast<CalcGBVIForceKernel&>(kernel.getImpl()).executeForces(context);
 }
 

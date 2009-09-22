@@ -288,7 +288,7 @@ void BrookPlatform::_initializeKernelFactory( void ){
    registerKernelFactory( CalcGBSAOBCForceKernel::Name(),         factory );
    registerKernelFactory( IntegrateVerletStepKernel::Name(),      factory );
    registerKernelFactory( IntegrateLangevinStepKernel::Name(),    factory );
-   registerKernelFactory( UpdateTimeKernel::Name(),               factory );
+   registerKernelFactory( UpdateStateDataKernel::Name(),               factory );
    // registerKernelFactory( IntegrateBrownianStepKernel::Name(),    factory );
    //registerKernelFactory( ApplyAndersenThermostatKernel::Name(),  factory );
    registerKernelFactory( CalcKineticEnergyKernel::Name(),        factory );

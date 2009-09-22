@@ -45,14 +45,11 @@ using std::vector;
 using std::string;
 
 ContextImpl::ContextImpl(Context& owner, System& system, Integrator& integrator, Platform* platform) :
-				owner(owner), system(system), 
-				integrator(integrator), platform(platform), 
-				platformData(NULL)
-{
+         owner(owner), system(system), integrator(integrator), platform(platform), platformData(NULL) {
     vector<string> kernelNames;
     kernelNames.push_back(CalcKineticEnergyKernel::Name());
     kernelNames.push_back(CalcForcesAndEnergyKernel::Name());
-    kernelNames.push_back(UpdateTimeKernel::Name());
+    kernelNames.push_back(UpdateStateDataKernel::Name());
     for (int i = 0; i < system.getNumForces(); ++i) {
         forceImpls.push_back(system.getForce(i).createImpl());
         map<string, double> forceParameters = forceImpls[forceImpls.size()-1]->getDefaultParameters();
@@ -71,16 +68,12 @@ ContextImpl::ContextImpl(Context& owner, System& system, Integrator& integrator,
     dynamic_cast<CalcForcesAndEnergyKernel&>(initializeForcesKernel.getImpl()).initialize(system);
     kineticEnergyKernel = platform->createKernel(CalcKineticEnergyKernel::Name(), *this);
     dynamic_cast<CalcKineticEnergyKernel&>(kineticEnergyKernel.getImpl()).initialize(system);
-    updateTimeKernel = platform->createKernel(UpdateTimeKernel::Name(), *this);
-    dynamic_cast<UpdateTimeKernel&>(updateTimeKernel.getImpl()).initialize(system);
+    updateStateDataKernel = platform->createKernel(UpdateStateDataKernel::Name(), *this);
+    dynamic_cast<UpdateStateDataKernel&>(updateStateDataKernel.getImpl()).initialize(system);
     for (size_t i = 0; i < forceImpls.size(); ++i)
         forceImpls[i]->initialize(*this);
     integrator.initialize(*this);
-    positions = platform->createStream("particlePositions", system.getNumParticles(), Stream::Double3, *this);
-    velocities = platform->createStream("particleVelocities", system.getNumParticles(), Stream::Double3, *this);
-    forces = platform->createStream("particleForces", system.getNumParticles(), Stream::Double3, *this);
-    double zero[] = {0.0, 0.0, 0.0};
-    velocities.fillWithValue(&zero);
+    dynamic_cast<UpdateStateDataKernel&>(updateStateDataKernel.getImpl()).setVelocities(*this, vector<Vec3>(system.getNumParticles()));
 }
 
 ContextImpl::~ContextImpl() {
@@ -90,11 +83,31 @@ ContextImpl::~ContextImpl() {
 }
 
 double ContextImpl::getTime() const {
-    return dynamic_cast<const UpdateTimeKernel&>(updateTimeKernel.getImpl()).getTime(*this);
+    return dynamic_cast<const UpdateStateDataKernel&>(updateStateDataKernel.getImpl()).getTime(*this);
 }
 
 void ContextImpl::setTime(double t) {
-    dynamic_cast<UpdateTimeKernel&>(updateTimeKernel.getImpl()).setTime(*this, t);
+    dynamic_cast<UpdateStateDataKernel&>(updateStateDataKernel.getImpl()).setTime(*this, t);
+}
+
+void ContextImpl::getPositions(std::vector<Vec3>& positions) {
+    dynamic_cast<UpdateStateDataKernel&>(updateStateDataKernel.getImpl()).getPositions(*this, positions);
+}
+
+void ContextImpl::setPositions(const std::vector<Vec3>& positions) {
+    dynamic_cast<UpdateStateDataKernel&>(updateStateDataKernel.getImpl()).setPositions(*this, positions);
+}
+
+void ContextImpl::getVelocities(std::vector<Vec3>& velocities) {
+    dynamic_cast<UpdateStateDataKernel&>(updateStateDataKernel.getImpl()).getVelocities(*this, velocities);
+}
+
+void ContextImpl::setVelocities(const std::vector<Vec3>& velocities) {
+    dynamic_cast<UpdateStateDataKernel&>(updateStateDataKernel.getImpl()).setVelocities(*this, velocities);
+}
+
+void ContextImpl::getForces(std::vector<Vec3>& forces) {
+    dynamic_cast<UpdateStateDataKernel&>(updateStateDataKernel.getImpl()).getForces(*this, forces);
 }
 
 double ContextImpl::getParameter(std::string name) {
@@ -113,7 +126,7 @@ void ContextImpl::calcForces() {
     CalcForcesAndEnergyKernel& kernel = dynamic_cast<CalcForcesAndEnergyKernel&>(initializeForcesKernel.getImpl());
     kernel.beginForceComputation(*this);
     for (int i = 0; i < (int) forceImpls.size(); ++i)
-        forceImpls[i]->calcForces(*this, forces);
+        forceImpls[i]->calcForces(*this);
     kernel.finishForceComputation(*this);
 }
 

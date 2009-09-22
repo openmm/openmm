@@ -84,11 +84,12 @@ private:
 };
 
 /**
- * This kernel is invoked to get or set the current time.
+ * This kernel provides methods for setting and retrieving various state data: time, positions,
+ * velocities, and forces.
  */
-class OpenCLUpdateTimeKernel : public UpdateTimeKernel {
+class OpenCLUpdateStateDataKernel : public UpdateStateDataKernel {
 public:
-    OpenCLUpdateTimeKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data) : UpdateTimeKernel(name, platform), data(data) {
+    OpenCLUpdateStateDataKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data) : UpdateStateDataKernel(name, platform), data(data) {
     }
     /**
      * Initialize the kernel.
@@ -108,6 +109,36 @@ public:
      * @param context    the context in which to execute this kernel
      */
     void setTime(ContextImpl& context, double time);
+    /**
+     * Get the positions of all particles.
+     *
+     * @param positions  on exit, this contains the particle positions
+     */
+    void getPositions(ContextImpl& context, std::vector<Vec3>& positions);
+    /**
+     * Set the positions of all particles.
+     *
+     * @param positions  a vector containg the particle positions
+     */
+    void setPositions(ContextImpl& context, const std::vector<Vec3>& positions);
+    /**
+     * Get the velocities of all particles.
+     *
+     * @param velocities  on exit, this contains the particle velocities
+     */
+    void getVelocities(ContextImpl& context, std::vector<Vec3>& velocities);
+    /**
+     * Set the velocities of all particles.
+     *
+     * @param velocities  a vector containg the particle velocities
+     */
+    void setVelocities(ContextImpl& context, const std::vector<Vec3>& velocities);
+    /**
+     * Get the current forces on all particles.
+     *
+     * @param forces  on exit, this contains the forces
+     */
+    void getForces(ContextImpl& context, std::vector<Vec3>& forces);
 private:
     OpenCLPlatform::PlatformData& data;
 };
@@ -519,7 +550,7 @@ private:
  */
 class OpenCLCalcKineticEnergyKernel : public CalcKineticEnergyKernel {
 public:
-    OpenCLCalcKineticEnergyKernel(std::string name, const Platform& platform) : CalcKineticEnergyKernel(name, platform) {
+    OpenCLCalcKineticEnergyKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data) : CalcKineticEnergyKernel(name, platform), data(data) {
     }
     /**
      * Initialize the kernel.
@@ -534,6 +565,7 @@ public:
      */
     double execute(ContextImpl& context);
 private:
+    OpenCLPlatform::PlatformData& data;
     std::vector<double> masses;
 };
 

@@ -35,8 +35,8 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
     OpenCLPlatform::PlatformData& data = *static_cast<OpenCLPlatform::PlatformData*>(context.getPlatformData());
     if (name == CalcForcesAndEnergyKernel::Name())
         return new OpenCLCalcForcesAndEnergyKernel(name, platform, data);
-    if (name == UpdateTimeKernel::Name())
-        return new OpenCLUpdateTimeKernel(name, platform, data);
+    if (name == UpdateStateDataKernel::Name())
+        return new OpenCLUpdateStateDataKernel(name, platform, data);
 //    if (name == CalcHarmonicBondForceKernel::Name())
 //        return new OpenCLCalcHarmonicBondForceKernel(name, platform, data, context.getSystem());
 //    if (name == CalcHarmonicAngleForceKernel::Name())
@@ -64,7 +64,7 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
 //    if (name == ApplyAndersenThermostatKernel::Name())
 //        return new OpenCLApplyAndersenThermostatKernel(name, platform, data);
     if (name == CalcKineticEnergyKernel::Name())
-        return new OpenCLCalcKineticEnergyKernel(name, platform);
+        return new OpenCLCalcKineticEnergyKernel(name, platform, data);
 //    if (name == RemoveCMMotionKernel::Name())
 //        return new OpenCLRemoveCMMotionKernel(name, platform, data);
     throw OpenMMException((std::string("Tried to create kernel with illegal kernel name '")+name+"'").c_str());

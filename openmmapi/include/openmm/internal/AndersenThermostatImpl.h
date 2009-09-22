@@ -51,7 +51,7 @@ public:
         return owner;
     }
     void updateContextState(ContextImpl& context);
-    void calcForces(ContextImpl& context, Stream& forces) {
+    void calcForces(ContextImpl& context) {
         // This force doesn't apply forces to particles.
     }
     double calcEnergy(ContextImpl& context) {

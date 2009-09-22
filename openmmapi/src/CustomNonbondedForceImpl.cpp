@@ -104,7 +104,7 @@ void CustomNonbondedForceImpl::initialize(ContextImpl& context) {
     dynamic_cast<CalcCustomNonbondedForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
 
-void CustomNonbondedForceImpl::calcForces(ContextImpl& context, Stream& forces) {
+void CustomNonbondedForceImpl::calcForces(ContextImpl& context) {
     dynamic_cast<CalcCustomNonbondedForceKernel&>(kernel.getImpl()).executeForces(context);
 }
 

@@ -33,7 +33,6 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/Platform.h"
-#include "ReferenceStreamFactory.h"
 #include "openmm/internal/windowsExport.h"
 
 namespace OpenMM {
@@ -54,19 +53,19 @@ public:
         return 1;
     }
     bool supportsDoublePrecision() const;
-    const StreamFactory& getDefaultStreamFactory() const;
     void contextCreated(ContextImpl& context) const;
     void contextDestroyed(ContextImpl& context) const;
-private:
-    ReferenceStreamFactory defaultStreamFactory;
 };
 
 class ReferencePlatform::PlatformData {
 public:
-    PlatformData() : time(0.0), stepCount(0) {
-    }
-    int stepCount;
+    PlatformData(int numParticles);
+    ~PlatformData();
+    int numParticles, stepCount;
     double time;
+    void* positions;
+    void* velocities;
+    void* forces;
 };
 } // namespace OpenMM
 

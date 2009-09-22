@@ -28,7 +28,6 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/Platform.h"
-#include "OpenCLStreamFactory.h"
 
 struct _gpuContext;
 
@@ -54,7 +53,6 @@ public:
     bool supportsDoublePrecision() const;
     const std::string& getPropertyValue(const Context& context, const std::string& property) const;
     void setPropertyValue(Context& context, const std::string& property, const std::string& value) const;
-    const StreamFactory& getDefaultStreamFactory() const;
     void contextCreated(ContextImpl& context) const;
     void contextDestroyed(ContextImpl& context) const;
     /**
@@ -71,8 +69,6 @@ public:
         static const std::string key = "OpenCLDeviceIndex";
         return key;
     }
-private:
-    OpenCLStreamFactory defaultStreamFactory;
 };
 
 class OpenCLPlatform::PlatformData {

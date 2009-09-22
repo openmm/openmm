@@ -25,7 +25,6 @@
  * -------------------------------------------------------------------------- */
 
 #include "CudaKernels.h"
-#include "CudaStreamImpl.h"
 #include "openmm/LangevinIntegrator.h"
 #include "openmm/Context.h"
 #include "openmm/internal/ContextImpl.h"
@@ -91,15 +90,82 @@ double CudaCalcForcesAndEnergyKernel::finishEnergyComputation(ContextImpl& conte
     return kReduceEnergy(gpu)+data.ewaldSelfEnergy;
 }
 
-void CudaUpdateTimeKernel::initialize(const System& system) {
+void CudaUpdateStateDataKernel::initialize(const System& system) {
 }
 
-double CudaUpdateTimeKernel::getTime(const ContextImpl& context) const {
+double CudaUpdateStateDataKernel::getTime(const ContextImpl& context) const {
     return data.time;
 }
 
-void CudaUpdateTimeKernel::setTime(ContextImpl& context, double time) {
+void CudaUpdateStateDataKernel::setTime(ContextImpl& context, double time) {
     data.time = time;
+}
+
+void CudaUpdateStateDataKernel::getPositions(ContextImpl& context, std::vector<Vec3>& positions) {
+    _gpuContext* gpu = data.gpu;
+    gpu->psPosq4->Download();
+    int* order = gpu->psAtomIndex->_pSysData;
+    int numParticles = context.getSystem().getNumParticles();
+    positions.resize(numParticles);
+    for (int i = 0; i < numParticles; ++i) {
+        float4 pos = (*gpu->psPosq4)[i];
+        int3 offset = gpu->posCellOffsets[i];
+        positions[order[i]] = Vec3(pos.x-offset.x*gpu->sim.periodicBoxSizeX, pos.y-offset.y*gpu->sim.periodicBoxSizeY, pos.z-offset.z*gpu->sim.periodicBoxSizeZ);
+    }
+}
+
+void CudaUpdateStateDataKernel::setPositions(ContextImpl& context, const std::vector<Vec3>& positions) {
+    _gpuContext* gpu = data.gpu;
+    int* order = gpu->psAtomIndex->_pSysData;
+    int numParticles = context.getSystem().getNumParticles();
+    for (int i = 0; i < numParticles; ++i) {
+        float4& pos = (*gpu->psPosq4)[i];
+        const Vec3& p = positions[order[i]];
+        pos.x = p[0];
+        pos.y = p[1];
+        pos.z = p[2];
+    }
+    gpu->psPosq4->Upload();
+    for (int i = 0; i < gpu->posCellOffsets.size(); i++)
+        gpu->posCellOffsets[i] = make_int3(0, 0, 0);
+}
+
+void CudaUpdateStateDataKernel::getVelocities(ContextImpl& context, std::vector<Vec3>& velocities) {
+    _gpuContext* gpu = data.gpu;
+    gpu->psVelm4->Download();
+    int* order = gpu->psAtomIndex->_pSysData;
+    int numParticles = context.getSystem().getNumParticles();
+    velocities.resize(numParticles);
+    for (int i = 0; i < numParticles; ++i) {
+        float4 vel = (*gpu->psVelm4)[i];
+        velocities[order[i]] = Vec3(vel.x, vel.y, vel.z);
+    }
+}
+
+void CudaUpdateStateDataKernel::setVelocities(ContextImpl& context, const std::vector<Vec3>& velocities) {
+    _gpuContext* gpu = data.gpu;
+    int* order = gpu->psAtomIndex->_pSysData;
+    int numParticles = context.getSystem().getNumParticles();
+    for (int i = 0; i < numParticles; ++i) {
+        float4& vel = (*gpu->psVelm4)[i];
+        const Vec3& v = velocities[order[i]];
+        vel.x = v[0];
+        vel.y = v[1];
+        vel.z = v[2];
+    }
+    gpu->psVelm4->Upload();
+}
+
+void CudaUpdateStateDataKernel::getForces(ContextImpl& context, std::vector<Vec3>& forces) {
+    _gpuContext* gpu = data.gpu;
+    int* order = gpu->psAtomIndex->_pSysData;
+    gpu->psForce4->Download();
+    int numParticles = context.getSystem().getNumParticles();
+    forces.resize(numParticles);
+    for (int i = 0; i < numParticles; ++i) {
+        float4 force = (*gpu->psForce4)[i];
+        forces[order[i]] = Vec3(force.x, force.y, force.z);
+    }
 }
 
 CudaCalcHarmonicBondForceKernel::~CudaCalcHarmonicBondForceKernel() {
@@ -772,13 +838,13 @@ double CudaCalcKineticEnergyKernel::execute(ContextImpl& context) {
     // We don't currently have a GPU kernel to do this, so we retrieve the velocities and calculate the energy
     // on the CPU.
     
-    const Stream& velocities = context.getVelocities();
-    double* v = new double[velocities.getSize()*3];
-    velocities.saveToArray(v);
+    _gpuContext* gpu = data.gpu;
+    gpu->psVelm4->Download();
     double energy = 0.0;
-    for (size_t i = 0; i < masses.size(); ++i)
-        energy += masses[i]*(v[i*3]*v[i*3]+v[i*3+1]*v[i*3+1]+v[i*3+2]*v[i*3+2]);
-    delete v;
+    for (int i = 0; i < (int) masses.size(); ++i) {
+        float4 v = (*gpu->psVelm4)[i];
+        energy += masses[i]*(v.x*v.x+v.y*v.y+v.z*v.z);
+    }
     return 0.5*energy;
 }
 

@@ -56,7 +56,7 @@ public:
     void updateContextState(ContextImpl& context) {
         // This force field doesn't update the state directly.
     }
-    void calcForces(ContextImpl& context, Stream& forces);
+    void calcForces(ContextImpl& context);
     double calcEnergy(ContextImpl& context);
     std::map<std::string, double> getDefaultParameters() {
         return std::map<std::string, double>(); // This force field doesn't define any parameters.

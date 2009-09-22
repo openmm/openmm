@@ -35,7 +35,7 @@ namespace OpenMM {
 /**
  * This kernel initializes the forces
  */
-class BrookUpdateTimeKernel : public UpdateTimeKernel {
+class BrookUpdateTimeKernel : public UpdateStateDataKernel {
 
    public:
 

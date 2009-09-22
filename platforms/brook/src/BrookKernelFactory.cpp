@@ -60,7 +60,7 @@ KernelImpl* BrookKernelFactory::createKernelImpl( std::string name, const Platfo
 
    // update time
 
-	} else if( name == UpdateTimeKernel::Name() ){
+	} else if( name == UpdateStateDataKernel::Name() ){
 
       return new BrookUpdateTimeKernel( name, platform, openMMBrookInterface );
 

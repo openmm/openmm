@@ -45,7 +45,6 @@
 #include "openmm/PeriodicTorsionForce.h"
 #include "openmm/RBTorsionForce.h"
 #include "openmm/NonbondedForce.h"
-#include "openmm/Stream.h"
 #include "openmm/System.h"
 #include "openmm/VariableLangevinIntegrator.h"
 #include "openmm/VariableVerletIntegrator.h"
@@ -108,14 +107,15 @@ public:
 };
 
 /**
- * This kernel is invoked to get or set the current time.
+ * This kernel provides methods for setting and retrieving various state data: time, positions,
+ * velocities, and forces.
  */
-class UpdateTimeKernel : public KernelImpl {
+class UpdateStateDataKernel : public KernelImpl {
 public:
     static std::string Name() {
         return "UpdateTime";
     }
-    UpdateTimeKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    UpdateStateDataKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
     /**
      * Initialize the kernel.
@@ -136,6 +136,36 @@ public:
      * @param time       the time
      */
     virtual void setTime(ContextImpl& context, double time) = 0;
+    /**
+     * Get the positions of all particles.
+     *
+     * @param positions  on exit, this contains the particle positions
+     */
+    virtual void getPositions(ContextImpl& context, std::vector<Vec3>& positions) = 0;
+    /**
+     * Set the positions of all particles.
+     *
+     * @param positions  a vector containg the particle positions
+     */
+    virtual void setPositions(ContextImpl& context, const std::vector<Vec3>& positions) = 0;
+    /**
+     * Get the velocities of all particles.
+     *
+     * @param velocities  on exit, this contains the particle velocities
+     */
+    virtual void getVelocities(ContextImpl& context, std::vector<Vec3>& velocities) = 0;
+    /**
+     * Set the velocities of all particles.
+     *
+     * @param velocities  a vector containg the particle velocities
+     */
+    virtual void setVelocities(ContextImpl& context, const std::vector<Vec3>& velocities) = 0;
+    /**
+     * Get the current forces on all particles.
+     *
+     * @param forces  on exit, this contains the forces
+     */
+    virtual void getForces(ContextImpl& context, std::vector<Vec3>& forces) = 0;
 };
 
 /**

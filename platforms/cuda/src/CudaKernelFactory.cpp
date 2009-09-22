@@ -35,8 +35,8 @@ KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform
     CudaPlatform::PlatformData& data = *static_cast<CudaPlatform::PlatformData*>(context.getPlatformData());
     if (name == CalcForcesAndEnergyKernel::Name())
         return new CudaCalcForcesAndEnergyKernel(name, platform, data);
-    if (name == UpdateTimeKernel::Name())
-        return new CudaUpdateTimeKernel(name, platform, data);
+    if (name == UpdateStateDataKernel::Name())
+        return new CudaUpdateStateDataKernel(name, platform, data);
     if (name == CalcHarmonicBondForceKernel::Name())
         return new CudaCalcHarmonicBondForceKernel(name, platform, data, context.getSystem());
     if (name == CalcHarmonicAngleForceKernel::Name())
@@ -64,7 +64,7 @@ KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform
     if (name == ApplyAndersenThermostatKernel::Name())
         return new CudaApplyAndersenThermostatKernel(name, platform, data);
     if (name == CalcKineticEnergyKernel::Name())
-        return new CudaCalcKineticEnergyKernel(name, platform);
+        return new CudaCalcKineticEnergyKernel(name, platform, data);
     if (name == RemoveCMMotionKernel::Name())
         return new CudaRemoveCMMotionKernel(name, platform, data);
     throw OpenMMException((std::string("Tried to create kernel with illegal kernel name '")+name+"'").c_str());

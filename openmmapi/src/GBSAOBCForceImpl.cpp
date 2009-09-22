@@ -48,7 +48,7 @@ void GBSAOBCForceImpl::initialize(ContextImpl& context) {
     dynamic_cast<CalcGBSAOBCForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
 
-void GBSAOBCForceImpl::calcForces(ContextImpl& context, Stream& forces) {
+void GBSAOBCForceImpl::calcForces(ContextImpl& context) {
     dynamic_cast<CalcGBSAOBCForceKernel&>(kernel.getImpl()).executeForces(context);
 }
 

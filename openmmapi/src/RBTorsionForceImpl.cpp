@@ -49,7 +49,7 @@ void RBTorsionForceImpl::initialize(ContextImpl& context) {
     dynamic_cast<CalcRBTorsionForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
 
-void RBTorsionForceImpl::calcForces(ContextImpl& context, Stream& forces) {
+void RBTorsionForceImpl::calcForces(ContextImpl& context) {
     dynamic_cast<CalcRBTorsionForceKernel&>(kernel.getImpl()).executeForces(context);
 }
 

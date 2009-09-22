@@ -49,7 +49,7 @@ void HarmonicBondForceImpl::initialize(ContextImpl& context) {
     dynamic_cast<CalcHarmonicBondForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
 
-void HarmonicBondForceImpl::calcForces(ContextImpl& context, Stream& forces) {
+void HarmonicBondForceImpl::calcForces(ContextImpl& context) {
     dynamic_cast<CalcHarmonicBondForceKernel&>(kernel.getImpl()).executeForces(context);
 }
 

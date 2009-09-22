@@ -24,8 +24,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
+#include "OpenCLArray.h"
 #include "OpenCLKernels.h"
-#include "OpenCLStreamImpl.h"
+#include "OpenCLContext.h"
 #include "openmm/LangevinIntegrator.h"
 #include "openmm/Context.h"
 #include "openmm/internal/ContextImpl.h"
@@ -51,15 +52,83 @@ double OpenCLCalcForcesAndEnergyKernel::finishEnergyComputation(ContextImpl& con
     return 0.0;
 }
 
-void OpenCLUpdateTimeKernel::initialize(const System& system) {
+void OpenCLUpdateStateDataKernel::initialize(const System& system) {
 }
 
-double OpenCLUpdateTimeKernel::getTime(const ContextImpl& context) const {
+double OpenCLUpdateStateDataKernel::getTime(const ContextImpl& context) const {
     return data.time;
 }
 
-void OpenCLUpdateTimeKernel::setTime(ContextImpl& context, double time) {
+void OpenCLUpdateStateDataKernel::setTime(ContextImpl& context, double time) {
     data.time = time;
+}
+
+void OpenCLUpdateStateDataKernel::getPositions(ContextImpl& context, std::vector<Vec3>& positions) {
+    OpenCLArray<cl_float4>& posq = data.context->getPosq();
+    posq.download();
+    OpenCLArray<cl_int>& order = data.context->getAtomIndex();
+    int numParticles = context.getSystem().getNumParticles();
+    positions.resize(numParticles);
+    for (int i = 0; i < numParticles; ++i) {
+        cl_float4 pos = posq[i];
+//        int3 offset = gpu->posCellOffsets[i];
+//        positions[order[i]] = Vec3(pos.x-offset.x*gpu->sim.periodicBoxSizeX, pos.y-offset.y*gpu->sim.periodicBoxSizeY, pos.z-offset.z*gpu->sim.periodicBoxSizeZ);
+        positions[order[i]] = Vec3(pos.f32[0], pos.f32[1], pos.f32[2]);
+    }
+}
+
+void OpenCLUpdateStateDataKernel::setPositions(ContextImpl& context, const std::vector<Vec3>& positions) {
+    OpenCLArray<cl_float4>& posq = data.context->getPosq();
+    OpenCLArray<cl_int>& order = data.context->getAtomIndex();
+    int numParticles = context.getSystem().getNumParticles();
+    for (int i = 0; i < numParticles; ++i) {
+        cl_float4& pos = posq[i];
+        const Vec3& p = positions[order[i]];
+        pos.f32[0] = p[0];
+        pos.f32[1] = p[1];
+        pos.f32[2] = p[2];
+    }
+    posq.upload();
+//    for (int i = 0; i < gpu->posCellOffsets.size(); i++)
+//        gpu->posCellOffsets[i] = make_int3(0, 0, 0);
+}
+
+void OpenCLUpdateStateDataKernel::getVelocities(ContextImpl& context, std::vector<Vec3>& velocities) {
+    OpenCLArray<cl_float4>& velm = data.context->getVelm();
+    velm.download();
+    OpenCLArray<cl_int>& order = data.context->getAtomIndex();
+    int numParticles = context.getSystem().getNumParticles();
+    velocities.resize(numParticles);
+    for (int i = 0; i < numParticles; ++i) {
+        cl_float4 vel = velm[i];
+        velocities[order[i]] = Vec3(vel.f32[0], vel.f32[1], vel.f32[2]);
+    }
+}
+
+void OpenCLUpdateStateDataKernel::setVelocities(ContextImpl& context, const std::vector<Vec3>& velocities) {
+    OpenCLArray<cl_float4>& velm = data.context->getVelm();
+    OpenCLArray<cl_int>& order = data.context->getAtomIndex();
+    int numParticles = context.getSystem().getNumParticles();
+    for (int i = 0; i < numParticles; ++i) {
+        cl_float4& vel = velm[i];
+        const Vec3& p = velocities[order[i]];
+        vel.f32[0] = p[0];
+        vel.f32[1] = p[1];
+        vel.f32[2] = p[2];
+    }
+    velm.upload();
+}
+
+void OpenCLUpdateStateDataKernel::getForces(ContextImpl& context, std::vector<Vec3>& forces) {
+    OpenCLArray<cl_float4>& force = data.context->getForce();
+    force.download();
+    OpenCLArray<cl_int>& order = data.context->getAtomIndex();
+    int numParticles = context.getSystem().getNumParticles();
+    forces.resize(numParticles);
+    for (int i = 0; i < numParticles; ++i) {
+        cl_float4 f = force[i];
+        forces[order[i]] = Vec3(f.f32[0], f.f32[1], f.f32[2]);
+    }
 }
 
 //OpenCLCalcHarmonicBondForceKernel::~OpenCLCalcHarmonicBondForceKernel() {
@@ -783,13 +852,12 @@ double OpenCLCalcKineticEnergyKernel::execute(ContextImpl& context) {
     // We don't currently have a GPU kernel to do this, so we retrieve the velocities and calculate the energy
     // on the CPU.
 
-    const Stream& velocities = context.getVelocities();
-    double* v = new double[velocities.getSize()*3];
-    velocities.saveToArray(v);
+    OpenCLArray<cl_float4>& velm = data.context->getVelm();
     double energy = 0.0;
-    for (size_t i = 0; i < masses.size(); ++i)
-        energy += masses[i]*(v[i*3]*v[i*3]+v[i*3+1]*v[i*3+1]+v[i*3+2]*v[i*3+2]);
-    delete v;
+    for (size_t i = 0; i < masses.size(); ++i) {
+        cl_float4 v = velm[i];
+        energy += masses[i]*(v.f32[0]*v.f32[0]+v.f32[1]*v.f32[1]+v.f32[2]*v.f32[2]);
+    }
     return 0.5*energy;
 }
 //

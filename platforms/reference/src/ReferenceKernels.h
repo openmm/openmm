@@ -99,11 +99,12 @@ public:
 };
 
 /**
- * This kernel is invoked to get or set the current time.
+ * This kernel provides methods for setting and retrieving various state data: time, positions,
+ * velocities, and forces.
  */
-class ReferenceUpdateTimeKernel : public UpdateTimeKernel {
+class ReferenceUpdateStateDataKernel : public UpdateStateDataKernel {
 public:
-    ReferenceUpdateTimeKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) : UpdateTimeKernel(name, platform), data(data) {
+    ReferenceUpdateStateDataKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) : UpdateStateDataKernel(name, platform), data(data) {
     }
     /**
      * Initialize the kernel.
@@ -123,6 +124,36 @@ public:
      * @param context    the context in which to execute this kernel
      */
     void setTime(ContextImpl& context, double time);
+    /**
+     * Get the positions of all particles.
+     *
+     * @param positions  on exit, this contains the particle positions
+     */
+    void getPositions(ContextImpl& context, std::vector<Vec3>& positions);
+    /**
+     * Set the positions of all particles.
+     *
+     * @param positions  a vector containg the particle positions
+     */
+    void setPositions(ContextImpl& context, const std::vector<Vec3>& positions);
+    /**
+     * Get the velocities of all particles.
+     *
+     * @param velocities  on exit, this contains the particle velocities
+     */
+    void getVelocities(ContextImpl& context, std::vector<Vec3>& velocities);
+    /**
+     * Set the velocities of all particles.
+     *
+     * @param velocities  a vector containg the particle velocities
+     */
+    void setVelocities(ContextImpl& context, const std::vector<Vec3>& velocities);
+    /**
+     * Get the current forces on all particles.
+     *
+     * @param forces  on exit, this contains the forces
+     */
+    void getForces(ContextImpl& context, std::vector<Vec3>& forces);
 private:
     ReferencePlatform::PlatformData& data;
 };

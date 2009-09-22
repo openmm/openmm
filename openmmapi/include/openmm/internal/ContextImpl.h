@@ -34,7 +34,7 @@
 
 #include "openmm/Kernel.h"
 #include "openmm/Platform.h"
-#include "openmm/Stream.h"
+#include "openmm/Vec3.h"
 #include <map>
 #include <vector>
 
@@ -81,25 +81,6 @@ public:
         return *platform;
     }
     /**
-     * Get the Stream containing the current position of each particle.
-     */
-    Stream& getPositions() {
-        return positions;
-    }
-    /**
-     * Get the Stream containing the current velocity of each particle.
-     */
-    Stream& getVelocities() {
-        return velocities;
-    }
-    /**
-     * Get the Stream containing the force on each particle that was calculated by
-     * the most recent call to calcForces().
-     */
-    Stream& getForces() {
-        return forces;
-    }
-    /**
      * Get the current time (in picoseconds).
      */
     double getTime() const;
@@ -107,6 +88,36 @@ public:
      * Set the current time (in picoseconds).
      */
     void setTime(double t);
+    /**
+     * Get the positions of all particles.
+     *
+     * @param positions  on exit, this contains the particle positions
+     */
+    void getPositions(std::vector<Vec3>& positions);
+    /**
+     * Set the positions of all particles.
+     *
+     * @param positions  a vector containg the particle positions
+     */
+    void setPositions(const std::vector<Vec3>& positions);
+    /**
+     * Get the velocities of all particles.
+     *
+     * @param velocities  on exit, this contains the particle velocities
+     */
+    void getVelocities(std::vector<Vec3>& velocities);
+    /**
+     * Set the velocities of all particles.
+     *
+     * @param velocities  a vector containg the particle velocities
+     */
+    void setVelocities(const std::vector<Vec3>& velocities);
+    /**
+     * Get the current forces on all particles.
+     *
+     * @param forces  on exit, this contains the forces
+     */
+    void getForces(std::vector<Vec3>& forces);
     /**
      * Get the value of an adjustable parameter.  If there is no parameter with the specified name, this
      * throws an exception.
@@ -160,8 +171,7 @@ private:
     std::vector<ForceImpl*> forceImpls;
     std::map<std::string, double> parameters;
     Platform* platform;
-    Stream positions, velocities, forces;
-    Kernel initializeForcesKernel, kineticEnergyKernel, updateTimeKernel;
+    Kernel initializeForcesKernel, kineticEnergyKernel, updateStateDataKernel;
     void* platformData;
 };
 

@@ -47,7 +47,7 @@ extern "C" void initOpenMMPlugin() {
 CudaPlatform::CudaPlatform() {
     CudaKernelFactory* factory = new CudaKernelFactory();
     registerKernelFactory(CalcForcesAndEnergyKernel::Name(), factory);
-    registerKernelFactory(UpdateTimeKernel::Name(), factory);
+    registerKernelFactory(UpdateStateDataKernel::Name(), factory);
     registerKernelFactory(CalcHarmonicBondForceKernel::Name(), factory);
     registerKernelFactory(CalcHarmonicAngleForceKernel::Name(), factory);
     registerKernelFactory(CalcPeriodicTorsionForceKernel::Name(), factory);
@@ -83,10 +83,6 @@ const string& CudaPlatform::getPropertyValue(const Context& context, const strin
 }
 
 void CudaPlatform::setPropertyValue(Context& context, const string& property, const string& value) const {
-}
-
-const StreamFactory& CudaPlatform::getDefaultStreamFactory() const {
-    return defaultStreamFactory;
 }
 
 void CudaPlatform::contextCreated(ContextImpl& context) const {
