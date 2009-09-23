@@ -51,10 +51,10 @@ OpenCLContext::OpenCLContext(int numParticles, int platformIndex, int deviceInde
         forceBufferPerWarp = false;
         numForceBuffers = numAtomBlocks;
     }
-    posq = new OpenCLArray<cl_float4>(*this, paddedNumAtoms, "posq", true);
-    velm = new OpenCLArray<cl_float4>(*this, paddedNumAtoms, "velm", true);
-    forceBuffers = new OpenCLArray<cl_float4>(*this, paddedNumAtoms*numForceBuffers, "forceBuffers", false);
-    force = new OpenCLArray<cl_float4>(*this, &forceBuffers->getDeviceBuffer(), paddedNumAtoms, "force", true);
+    posq = new OpenCLArray<mm_float4>(*this, paddedNumAtoms, "posq", true);
+    velm = new OpenCLArray<mm_float4>(*this, paddedNumAtoms, "velm", true);
+    forceBuffers = new OpenCLArray<mm_float4>(*this, paddedNumAtoms*numForceBuffers, "forceBuffers", false);
+    force = new OpenCLArray<mm_float4>(*this, &forceBuffers->getDeviceBuffer(), paddedNumAtoms, "force", true);
     atomIndex = new OpenCLArray<cl_int>(*this, paddedNumAtoms, "atomIndex", true);
     for (int i = 0; i < paddedNumAtoms; ++i)
         atomIndex->set(i, i);
@@ -105,7 +105,7 @@ void OpenCLContext::clearBuffer(OpenCLArray<float>& array) {
     queue.enqueueNDRangeKernel(clearBufferKernel, cl::NullRange, cl::NDRange(numThreadBlocks*ThreadBlockSize), cl::NDRange(ThreadBlockSize));
 }
 
-void OpenCLContext::clearBuffer(OpenCLArray<cl_float4>& array) {
+void OpenCLContext::clearBuffer(OpenCLArray<mm_float4>& array) {
     clearBufferKernel.setArg<cl::Buffer>(0, array.getDeviceBuffer());
     clearBufferKernel.setArg<cl_int>(1, array.getSize()*4);
     queue.enqueueNDRangeKernel(clearBufferKernel, cl::NullRange, cl::NDRange(numThreadBlocks*ThreadBlockSize), cl::NDRange(ThreadBlockSize));

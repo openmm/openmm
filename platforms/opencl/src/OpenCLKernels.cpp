@@ -64,29 +64,29 @@ void OpenCLUpdateStateDataKernel::setTime(ContextImpl& context, double time) {
 }
 
 void OpenCLUpdateStateDataKernel::getPositions(ContextImpl& context, std::vector<Vec3>& positions) {
-    OpenCLArray<cl_float4>& posq = data.context->getPosq();
+    OpenCLArray<mm_float4>& posq = data.context->getPosq();
     posq.download();
     OpenCLArray<cl_int>& order = data.context->getAtomIndex();
     int numParticles = context.getSystem().getNumParticles();
     positions.resize(numParticles);
     for (int i = 0; i < numParticles; ++i) {
-        cl_float4 pos = posq[i];
+        mm_float4 pos = posq[i];
 //        int3 offset = gpu->posCellOffsets[i];
 //        positions[order[i]] = Vec3(pos.x-offset.x*gpu->sim.periodicBoxSizeX, pos.y-offset.y*gpu->sim.periodicBoxSizeY, pos.z-offset.z*gpu->sim.periodicBoxSizeZ);
-        positions[order[i]] = Vec3(pos.f32[0], pos.f32[1], pos.f32[2]);
+        positions[order[i]] = Vec3(pos.x, pos.y, pos.z);
     }
 }
 
 void OpenCLUpdateStateDataKernel::setPositions(ContextImpl& context, const std::vector<Vec3>& positions) {
-    OpenCLArray<cl_float4>& posq = data.context->getPosq();
+    OpenCLArray<mm_float4>& posq = data.context->getPosq();
     OpenCLArray<cl_int>& order = data.context->getAtomIndex();
     int numParticles = context.getSystem().getNumParticles();
     for (int i = 0; i < numParticles; ++i) {
-        cl_float4& pos = posq[i];
+        mm_float4& pos = posq[i];
         const Vec3& p = positions[order[i]];
-        pos.f32[0] = p[0];
-        pos.f32[1] = p[1];
-        pos.f32[2] = p[2];
+        pos.x = p[0];
+        pos.y = p[1];
+        pos.z = p[2];
     }
     posq.upload();
 //    for (int i = 0; i < gpu->posCellOffsets.size(); i++)
@@ -94,40 +94,40 @@ void OpenCLUpdateStateDataKernel::setPositions(ContextImpl& context, const std::
 }
 
 void OpenCLUpdateStateDataKernel::getVelocities(ContextImpl& context, std::vector<Vec3>& velocities) {
-    OpenCLArray<cl_float4>& velm = data.context->getVelm();
+    OpenCLArray<mm_float4>& velm = data.context->getVelm();
     velm.download();
     OpenCLArray<cl_int>& order = data.context->getAtomIndex();
     int numParticles = context.getSystem().getNumParticles();
     velocities.resize(numParticles);
     for (int i = 0; i < numParticles; ++i) {
-        cl_float4 vel = velm[i];
-        velocities[order[i]] = Vec3(vel.f32[0], vel.f32[1], vel.f32[2]);
+        mm_float4 vel = velm[i];
+        velocities[order[i]] = Vec3(vel.x, vel.y, vel.z);
     }
 }
 
 void OpenCLUpdateStateDataKernel::setVelocities(ContextImpl& context, const std::vector<Vec3>& velocities) {
-    OpenCLArray<cl_float4>& velm = data.context->getVelm();
+    OpenCLArray<mm_float4>& velm = data.context->getVelm();
     OpenCLArray<cl_int>& order = data.context->getAtomIndex();
     int numParticles = context.getSystem().getNumParticles();
     for (int i = 0; i < numParticles; ++i) {
-        cl_float4& vel = velm[i];
+        mm_float4& vel = velm[i];
         const Vec3& p = velocities[order[i]];
-        vel.f32[0] = p[0];
-        vel.f32[1] = p[1];
-        vel.f32[2] = p[2];
+        vel.x = p[0];
+        vel.y = p[1];
+        vel.z = p[2];
     }
     velm.upload();
 }
 
 void OpenCLUpdateStateDataKernel::getForces(ContextImpl& context, std::vector<Vec3>& forces) {
-    OpenCLArray<cl_float4>& force = data.context->getForce();
+    OpenCLArray<mm_float4>& force = data.context->getForce();
     force.download();
     OpenCLArray<cl_int>& order = data.context->getAtomIndex();
     int numParticles = context.getSystem().getNumParticles();
     forces.resize(numParticles);
     for (int i = 0; i < numParticles; ++i) {
-        cl_float4 f = force[i];
-        forces[order[i]] = Vec3(f.f32[0], f.f32[1], f.f32[2]);
+        mm_float4 f = force[i];
+        forces[order[i]] = Vec3(f.x, f.y, f.z);
     }
 }
 
@@ -852,11 +852,11 @@ double OpenCLCalcKineticEnergyKernel::execute(ContextImpl& context) {
     // We don't currently have a GPU kernel to do this, so we retrieve the velocities and calculate the energy
     // on the CPU.
 
-    OpenCLArray<cl_float4>& velm = data.context->getVelm();
+    OpenCLArray<mm_float4>& velm = data.context->getVelm();
     double energy = 0.0;
     for (size_t i = 0; i < masses.size(); ++i) {
-        cl_float4 v = velm[i];
-        energy += masses[i]*(v.f32[0]*v.f32[0]+v.f32[1]*v.f32[1]+v.f32[2]*v.f32[2]);
+        mm_float4 v = velm[i];
+        energy += masses[i]*(v.x*v.x+v.y*v.y+v.z*v.z);
     }
     return 0.5*energy;
 }

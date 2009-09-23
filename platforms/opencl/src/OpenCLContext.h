@@ -28,12 +28,22 @@
  * -------------------------------------------------------------------------- */
 
 #define __CL_ENABLE_EXCEPTIONS
-#include <CL/cl.hpp>
+#include <cl.hpp>
 
 namespace OpenMM {
 
 template <class T>
 class OpenCLArray;
+
+/**
+ * We can't use cl_float4, since different OpenCL implementations currently define it in
+ * incompatible ways.  Hopefully that will be fixed in the future.  In the mean time, we
+ * define our own type to represent float4 on the host.
+ */
+
+typedef struct {
+    cl_float x, y, z, w;
+} mm_float4;
 
 /**
  * This class contains the information associated with a Context by the OpenCL Platform.
@@ -60,25 +70,25 @@ public:
     /**
      * Get the array which contains the position and charge of each atom.
      */
-    OpenCLArray<cl_float4>& getPosq() {
+    OpenCLArray<mm_float4>& getPosq() {
         return *posq;
     }
     /**
      * Get the array which contains the velocity and massof each atom.
      */
-    OpenCLArray<cl_float4>& getVelm() {
+    OpenCLArray<mm_float4>& getVelm() {
         return *velm;
     }
     /**
      * Get the array which contains the force on each atom.
      */
-    OpenCLArray<cl_float4>& getForce() {
+    OpenCLArray<mm_float4>& getForce() {
         return *force;
     }
     /**
      * Get the array which contains the buffers in which forces are computed.
      */
-    OpenCLArray<cl_float4>& getForceBuffers() {
+    OpenCLArray<mm_float4>& getForceBuffers() {
         return *forceBuffers;
     }
     /**
@@ -102,7 +112,7 @@ public:
     /**
      * Set all elements of an array to 0.
      */
-    void clearBuffer(OpenCLArray<cl_float4>& array);
+    void clearBuffer(OpenCLArray<mm_float4>& array);
     int numAtoms;
     int paddedNumAtoms;
     int numAtomBlocks;
@@ -116,10 +126,10 @@ private:
     cl::CommandQueue queue;
     cl::Program utilities;
     cl::Kernel clearBufferKernel;
-    OpenCLArray<cl_float4>* posq;
-    OpenCLArray<cl_float4>* velm;
-    OpenCLArray<cl_float4>* force;
-    OpenCLArray<cl_float4>* forceBuffers;
+    OpenCLArray<mm_float4>* posq;
+    OpenCLArray<mm_float4>* velm;
+    OpenCLArray<mm_float4>* force;
+    OpenCLArray<mm_float4>* forceBuffers;
     OpenCLArray<cl_int>* atomIndex;
 };
 
