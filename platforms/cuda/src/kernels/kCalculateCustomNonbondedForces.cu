@@ -133,7 +133,7 @@ __device__ float kEvaluateExpression_kernel(Expression<SIZE>* expression, float*
                     float temp = STACK(stackPointer);
                     STACK(stackPointer) = temp-STACK(--stackPointer);
                 }
-                else if (op == POWER) {
+                else /*if (op == POWER)*/ {
                     float temp = STACK(stackPointer);
                     STACK(stackPointer) = pow(temp, STACK(--stackPointer));
                 }
@@ -145,7 +145,7 @@ __device__ float kEvaluateExpression_kernel(Expression<SIZE>* expression, float*
                 else if (op == POWER_CONSTANT) {
                     STACK(stackPointer) = pow(STACK(stackPointer), expression->arg[i]);
                 }
-                else if (op == ADD_CONSTANT) {
+                else /*if (op == ADD_CONSTANT)*/ {
                     STACK(stackPointer) += expression->arg[i];
                 }
             }
@@ -156,7 +156,7 @@ __device__ float kEvaluateExpression_kernel(Expression<SIZE>* expression, float*
                 else if (op == CONSTANT) {
                     STACK(++stackPointer) = expression->arg[i];
                 }
-                else if (op == CUSTOM || op == CUSTOM_DERIV) {
+                else /*if (op == CUSTOM || op == CUSTOM_DERIV)*/ {
                     int function = (int) expression->arg[i];
                     float x = STACK(stackPointer);
                     float4 params = cSim.pTabulatedFunctionParams[function];
@@ -204,7 +204,7 @@ __device__ float kEvaluateExpression_kernel(Expression<SIZE>* expression, float*
                     float temp = STACK(stackPointer);
                     STACK(stackPointer) *= temp;
                 }
-                else if (op == CUBE) {
+                else /*if (op == CUBE)*/ {
                     float temp = STACK(stackPointer);
                     STACK(stackPointer) *= temp*temp;
                 }
@@ -234,7 +234,7 @@ __device__ float kEvaluateExpression_kernel(Expression<SIZE>* expression, float*
                 else if (op == ACOS) {
                     STACK(stackPointer) = acos(STACK(stackPointer));
                 }
-                else if (op == ATAN) {
+                else /*if (op == ATAN)*/ {
                     STACK(stackPointer) = atan(STACK(stackPointer));
                 }
             }
