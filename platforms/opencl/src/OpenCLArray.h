@@ -84,6 +84,12 @@ public:
         return size;
     }
     /**
+     * Get the name of the array.
+     */
+    const std::string& getName() {
+        return name;
+    }
+    /**
      * Get the OpenCL Buffer object.
      */
     cl::Buffer& getDeviceBuffer() {
@@ -111,13 +117,13 @@ public:
      * Copy the values in a vector to the Buffer.
      */
     void upload(std::vector<T>& data) {
-        context.getQueue().enqueueWriteBuffer(*buffer, true, 0, size*sizeof(T), &data[0]);
+        context.getQueue().enqueueWriteBuffer(*buffer, CL_TRUE, 0, size*sizeof(T), &data[0]);
     }
     /**
      * Copy the values in the Buffer to a vector.
      */
     void download(std::vector<T>& data) const {
-        context.getQueue().enqueueReadBuffer(*buffer, true, 0, size*sizeof(T), &data[0]);
+        context.getQueue().enqueueReadBuffer(*buffer, CL_TRUE, 0, size*sizeof(T), &data[0]);
     }
     /**
      * Copy the values in the host buffer to the OpenCL Buffer.

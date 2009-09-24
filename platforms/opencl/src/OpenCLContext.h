@@ -34,16 +34,27 @@ namespace OpenMM {
 
 template <class T>
 class OpenCLArray;
+class OpenCLForceInfo;
+class System;
 
 /**
- * We can't use cl_float4, since different OpenCL implementations currently define it in
- * incompatible ways.  Hopefully that will be fixed in the future.  In the mean time, we
- * define our own type to represent float4 on the host.
+ * We can't use predefined vector types like cl_float4, since different OpenCL implementations currently define
+ * them in incompatible ways.  Hopefully that will be fixed in the future.  In the mean time, we define our own
+ * types to represent them on the host.
  */
 
 typedef struct {
+    cl_float x, y;
+} mm_float2;
+typedef struct {
     cl_float x, y, z, w;
 } mm_float4;
+typedef struct {
+    cl_int x, y;
+} mm_int2;
+typedef struct {
+    cl_int x, y, z, w;
+} mm_int4;
 
 /**
  * This class contains the information associated with a Context by the OpenCL Platform.
@@ -55,6 +66,15 @@ public:
     static const int TileSize = 32;
     OpenCLContext(int numParticles, int platformIndex, int deviceIndex);
     ~OpenCLContext();
+    /**
+     * This is called to initialize internal data structures after all Forces in the system
+     * have been initialized.
+     */
+    void initialize(const System& system);
+    /**
+     * Add an OpenCLForce to this context.
+     */
+    void addForce(OpenCLForceInfo* force);
     /**
      * Get the cl::Context associated with this object.
      */
@@ -92,6 +112,12 @@ public:
         return *forceBuffers;
     }
     /**
+     * Get the array which contains the buffer in which energy is computed.
+     */
+    OpenCLArray<cl_float>& getEnergyBuffer() {
+        return *energyBuffer;
+    }
+    /**
      * Get the array which contains the index of each atom.
      */
     OpenCLArray<cl_int>& getAtomIndex() {
@@ -106,6 +132,13 @@ public:
      */
     cl::Program createProgram(const std::string source);
     /**
+     * Execute a kernel.
+     *
+     * @param kernel    the kernel to execute
+     * @param workUnits the maximum number of work units that should be used
+     */
+    void executeKernel(cl::Kernel& kernel, int workUnits);
+    /**
      * Set all elements of an array to 0.
      */
     void clearBuffer(OpenCLArray<float>& array);
@@ -113,23 +146,70 @@ public:
      * Set all elements of an array to 0.
      */
     void clearBuffer(OpenCLArray<mm_float4>& array);
+    /**
+     * Given a collection of buffers packed into an array, sum them and store
+     * the sum in the first buffer.
+     *
+     * @param array       the array containing the buffers to reduce
+     * @param numBuffers  the number of buffers packed into the array
+     */
+    void reduceBuffer(OpenCLArray<mm_float4>& array, int numBuffers);
+    /**
+     * Get the number of atoms.
+     */
+    int getNumAtoms() const {
+        return numAtoms;
+    }
+    /**
+     * Get the number of atoms, rounded up to a multiple of TileSize.  This is the actual size of
+     * most arrays with one element per atom.
+     */
+    int getPaddedNumAtoms() const {
+        return paddedNumAtoms;
+    }
+    /**
+     * Get the number of blocks of TileSize atoms.
+     */
+    int getNumAtomBlocks() const {
+        return numAtomBlocks;
+    }
+    /**
+     * Get the standard number of thread blocks to use when executing kernels.
+     */
+    int getNumThreadBlocks() const {
+        return numThreadBlocks;
+    }
+    /**
+     * Get the total number of tiles used for nonbonded computation.
+     */
+    int getNumTiles() const {
+        return numTiles;
+    }
+    /**
+     * Get the number of force buffers.
+     */
+    int getNumForceBuffers() const {
+        return numForceBuffers;
+    }
+private:
     int numAtoms;
     int paddedNumAtoms;
     int numAtomBlocks;
     int numTiles;
     int numThreadBlocks;
     int numForceBuffers;
-    bool forceBufferPerWarp;
-private:
     cl::Context context;
     cl::Device device;
     cl::CommandQueue queue;
     cl::Program utilities;
     cl::Kernel clearBufferKernel;
+    cl::Kernel reduceFloat4Kernel;
+    std::vector<OpenCLForceInfo*> forces;
     OpenCLArray<mm_float4>* posq;
     OpenCLArray<mm_float4>* velm;
     OpenCLArray<mm_float4>* force;
     OpenCLArray<mm_float4>* forceBuffers;
+    OpenCLArray<cl_float>* energyBuffer;
     OpenCLArray<cl_int>* atomIndex;
 };
 

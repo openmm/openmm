@@ -47,7 +47,7 @@ OpenCLPlatform::OpenCLPlatform() {
     OpenCLKernelFactory* factory = new OpenCLKernelFactory();
     registerKernelFactory(CalcForcesAndEnergyKernel::Name(), factory);
     registerKernelFactory(UpdateStateDataKernel::Name(), factory);
-//    registerKernelFactory(CalcHarmonicBondForceKernel::Name(), factory);
+    registerKernelFactory(CalcHarmonicBondForceKernel::Name(), factory);
 //    registerKernelFactory(CalcHarmonicAngleForceKernel::Name(), factory);
 //    registerKernelFactory(CalcPeriodicTorsionForceKernel::Name(), factory);
 //    registerKernelFactory(CalcRBTorsionForceKernel::Name(), factory);

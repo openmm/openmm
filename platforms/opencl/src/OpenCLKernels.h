@@ -28,6 +28,8 @@
  * -------------------------------------------------------------------------- */
 
 #include "OpenCLPlatform.h"
+#include "OpenCLArray.h"
+#include "OpenCLContext.h"
 #include "openmm/kernels.h"
 #include "openmm/System.h"
 
@@ -142,41 +144,45 @@ public:
 private:
     OpenCLPlatform::PlatformData& data;
 };
-//
-///**
-// * This kernel is invoked by HarmonicBondForce to calculate the forces acting on the system and the energy of the system.
-// */
-//class OpenCLCalcHarmonicBondForceKernel : public CalcHarmonicBondForceKernel {
-//public:
-//    OpenCLCalcHarmonicBondForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, System& system) : CalcHarmonicBondForceKernel(name, platform), data(data), system(system) {
-//    }
-//    ~OpenCLCalcHarmonicBondForceKernel();
-//    /**
-//     * Initialize the kernel.
-//     *
-//     * @param system     the System this kernel will be applied to
-//     * @param force      the HarmonicBondForce this kernel will be used for
-//     */
-//    void initialize(const System& system, const HarmonicBondForce& force);
-//    /**
-//     * Execute the kernel to calculate the forces.
-//     *
-//     * @param context    the context in which to execute this kernel
-//     */
-//    void executeForces(ContextImpl& context);
-//    /**
-//     * Execute the kernel to calculate the energy.
-//     *
-//     * @param context    the context in which to execute this kernel
-//     * @return the potential energy due to the HarmonicBondForce
-//     */
-//    double executeEnergy(ContextImpl& context);
-//private:
-//    int numBonds;
-//    OpenCLPlatform::PlatformData& data;
-//    System& system;
-//};
-//
+
+/**
+ * This kernel is invoked by HarmonicBondForce to calculate the forces acting on the system and the energy of the system.
+ */
+class OpenCLCalcHarmonicBondForceKernel : public CalcHarmonicBondForceKernel {
+public:
+    OpenCLCalcHarmonicBondForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, System& system) :
+        CalcHarmonicBondForceKernel(name, platform), data(data), system(system), params(NULL), indices(NULL) {
+    }
+    ~OpenCLCalcHarmonicBondForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the HarmonicBondForce this kernel will be used for
+     */
+    void initialize(const System& system, const HarmonicBondForce& force);
+    /**
+     * Execute the kernel to calculate the forces.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void executeForces(ContextImpl& context);
+    /**
+     * Execute the kernel to calculate the energy.
+     *
+     * @param context    the context in which to execute this kernel
+     * @return the potential energy due to the HarmonicBondForce
+     */
+    double executeEnergy(ContextImpl& context);
+private:
+    int numBonds;
+    OpenCLPlatform::PlatformData& data;
+    System& system;
+    OpenCLArray<mm_float2>* params;
+    OpenCLArray<mm_int4>* indices;
+    cl::Kernel kernel;
+};
+
 ///**
 // * This kernel is invoked by HarmonicAngleForce to calculate the forces acting on the system and the energy of the system.
 // */

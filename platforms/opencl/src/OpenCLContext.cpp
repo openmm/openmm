@@ -26,16 +26,19 @@
 
 #include "OpenCLContext.h"
 #include "OpenCLArray.h"
+#include "OpenCLForceInfo.h"
 #include "openmm/Platform.h"
+#include "openmm/System.h"
 #include <fstream>
 #include <iostream>
+#include <sstream>
 
 using namespace OpenMM;
 using namespace std;
 
 OpenCLContext::OpenCLContext(int numParticles, int platformIndex, int deviceIndex) {
     // TODO Select the platform and device correctly
-    context = cl::Context(CL_DEVICE_TYPE_CPU);
+    context = cl::Context(CL_DEVICE_TYPE_GPU);
     device = context.getInfo<CL_CONTEXT_DEVICES>()[0];
     queue = cl::CommandQueue(context, device);
     numAtoms = numParticles;
@@ -43,34 +46,53 @@ OpenCLContext::OpenCLContext(int numParticles, int platformIndex, int deviceInde
     numAtomBlocks = (paddedNumAtoms+(TileSize-1))/TileSize;
     numTiles = numAtomBlocks*(numAtomBlocks+1)/2;
     numThreadBlocks = 8*device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>();
-    forceBufferPerWarp = true;
-    numForceBuffers = numThreadBlocks*ThreadBlockSize/TileSize;
-    if (numForceBuffers >= numAtomBlocks) {
-        // For small systems, it is more efficient to have one force buffer per block of 32 atoms instead of one per warp.
-
-        forceBufferPerWarp = false;
-        numForceBuffers = numAtomBlocks;
-    }
-    posq = new OpenCLArray<mm_float4>(*this, paddedNumAtoms, "posq", true);
-    velm = new OpenCLArray<mm_float4>(*this, paddedNumAtoms, "velm", true);
-    forceBuffers = new OpenCLArray<mm_float4>(*this, paddedNumAtoms*numForceBuffers, "forceBuffers", false);
-    force = new OpenCLArray<mm_float4>(*this, &forceBuffers->getDeviceBuffer(), paddedNumAtoms, "force", true);
-    atomIndex = new OpenCLArray<cl_int>(*this, paddedNumAtoms, "atomIndex", true);
-    for (int i = 0; i < paddedNumAtoms; ++i)
-        atomIndex->set(i, i);
-    atomIndex->upload();
 
     // Create utility kernels that are used in multiple places.
 
     utilities = createProgram(loadSourceFromFile("utilities.cl"));
     clearBufferKernel = cl::Kernel(utilities, "clearBuffer");
+    reduceFloat4Kernel = cl::Kernel(utilities, "reduceFloat4Buffer");
 }
 
 OpenCLContext::~OpenCLContext() {
+    for (int i = 0; i < (int) forces.size(); i++)
+        delete forces[i];
     delete posq;
     delete velm;
     delete force;
+    delete forceBuffers;
+    delete energyBuffer;
     delete atomIndex;
+}
+
+void OpenCLContext::initialize(const System& system) {
+//    forceBufferPerWarp = true;
+//    numForceBuffers = numThreadBlocks*ThreadBlockSize/TileSize;
+//    if (numForceBuffers >= numAtomBlocks) {
+//        // For small systems, it is more efficient to have one force buffer per block of 32 atoms instead of one per warp.
+//
+//        forceBufferPerWarp = false;
+//        numForceBuffers = numAtomBlocks;
+//    }
+    posq = new OpenCLArray<mm_float4>(*this, paddedNumAtoms, "posq", true);
+    velm = new OpenCLArray<mm_float4>(*this, paddedNumAtoms, "velm", true);
+    for (int i = 0; i < numAtoms; i++)
+        (*velm)[i].w = system.getParticleMass(i);
+    velm->upload();
+    numForceBuffers = 1;
+    for (int i = 0; i < (int) forces.size(); i++)
+        numForceBuffers = std::max(numForceBuffers, forces[i]->getRequiredForceBuffers());
+    forceBuffers = new OpenCLArray<mm_float4>(*this, paddedNumAtoms*numForceBuffers, "forceBuffers", false);
+    force = new OpenCLArray<mm_float4>(*this, &forceBuffers->getDeviceBuffer(), paddedNumAtoms, "force", true);
+    energyBuffer = new OpenCLArray<cl_float>(*this, numThreadBlocks*ThreadBlockSize, "energyBuffer", true);
+    atomIndex = new OpenCLArray<cl_int>(*this, paddedNumAtoms, "atomIndex", true);
+    for (int i = 0; i < paddedNumAtoms; ++i)
+        (*atomIndex)[i] = i;
+    atomIndex->upload();
+}
+
+void OpenCLContext::addForce(OpenCLForceInfo* force) {
+    forces.push_back(force);
 }
 
 string OpenCLContext::loadSourceFromFile(const string& filename) const {
@@ -99,14 +121,35 @@ cl::Program OpenCLContext::createProgram(const std::string source) {
     return program;
 }
 
+void OpenCLContext::executeKernel(cl::Kernel& kernel, int workUnits) {
+    int size = std::min((workUnits+ThreadBlockSize-1)/ThreadBlockSize, numThreadBlocks)*ThreadBlockSize;
+    try {
+        queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(size), cl::NDRange(ThreadBlockSize));
+    }
+    catch (cl::Error err) {
+        stringstream str;
+        str<<"Error invoking kernel ";
+        str<<kernel.getInfo<CL_KERNEL_FUNCTION_NAME>()<<": "<<err.what()<<" ("<<err.err()<<")";
+        throw OpenMMException(str.str());
+    }
+}
+
 void OpenCLContext::clearBuffer(OpenCLArray<float>& array) {
     clearBufferKernel.setArg<cl::Buffer>(0, array.getDeviceBuffer());
     clearBufferKernel.setArg<cl_int>(1, array.getSize());
-    queue.enqueueNDRangeKernel(clearBufferKernel, cl::NullRange, cl::NDRange(numThreadBlocks*ThreadBlockSize), cl::NDRange(ThreadBlockSize));
+    executeKernel(clearBufferKernel, array.getSize());
 }
 
 void OpenCLContext::clearBuffer(OpenCLArray<mm_float4>& array) {
     clearBufferKernel.setArg<cl::Buffer>(0, array.getDeviceBuffer());
     clearBufferKernel.setArg<cl_int>(1, array.getSize()*4);
-    queue.enqueueNDRangeKernel(clearBufferKernel, cl::NullRange, cl::NDRange(numThreadBlocks*ThreadBlockSize), cl::NDRange(ThreadBlockSize));
+    executeKernel(clearBufferKernel, array.getSize()*4);
+}
+
+void OpenCLContext::reduceBuffer(OpenCLArray<mm_float4>& array, int numBuffers) {
+    int bufferSize = array.getSize()/numBuffers;
+    reduceFloat4Kernel.setArg<cl::Buffer>(0, array.getDeviceBuffer());
+    reduceFloat4Kernel.setArg<cl_int>(1, bufferSize);
+    reduceFloat4Kernel.setArg<cl_int>(2, numBuffers);
+    executeKernel(reduceFloat4Kernel, bufferSize);
 }

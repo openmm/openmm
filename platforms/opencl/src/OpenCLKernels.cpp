@@ -24,9 +24,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "OpenCLArray.h"
 #include "OpenCLKernels.h"
-#include "OpenCLContext.h"
+#include "OpenCLForceInfo.h"
 #include "openmm/LangevinIntegrator.h"
 #include "openmm/Context.h"
 #include "openmm/internal/ContextImpl.h"
@@ -43,13 +42,20 @@ void OpenCLCalcForcesAndEnergyKernel::beginForceComputation(ContextImpl& context
 }
 
 void OpenCLCalcForcesAndEnergyKernel::finishForceComputation(ContextImpl& context) {
+    data.context->reduceBuffer(data.context->getForceBuffers(), data.context->getNumForceBuffers());
 }
 
 void OpenCLCalcForcesAndEnergyKernel::beginEnergyComputation(ContextImpl& context) {
+    data.context->clearBuffer(data.context->getEnergyBuffer());
 }
 
 double OpenCLCalcForcesAndEnergyKernel::finishEnergyComputation(ContextImpl& context) {
-    return 0.0;
+    OpenCLArray<cl_float>& energy = data.context->getEnergyBuffer();
+    energy.download();
+    double sum = 0.0f;
+    for (int i = 0; i < energy.getSize(); i++)
+        sum += energy[i];
+    return sum;
 }
 
 void OpenCLUpdateStateDataKernel::initialize(const System& system) {
@@ -131,37 +137,80 @@ void OpenCLUpdateStateDataKernel::getForces(ContextImpl& context, std::vector<Ve
     }
 }
 
-//OpenCLCalcHarmonicBondForceKernel::~OpenCLCalcHarmonicBondForceKernel() {
-//}
-//
-//void OpenCLCalcHarmonicBondForceKernel::initialize(const System& system, const HarmonicBondForce& force) {
-//    if (data.primaryKernel == NULL)
-//        data.primaryKernel = this;
-//    data.hasBonds = true;
-//    numBonds = force.getNumBonds();
-//    vector<int> particle1(numBonds);
-//    vector<int> particle2(numBonds);
-//    vector<float> length(numBonds);
-//    vector<float> k(numBonds);
-//    for (int i = 0; i < numBonds; i++) {
-//        double lengthValue, kValue;
-//        force.getBondParameters(i, particle1[i], particle2[i], lengthValue, kValue);
-//        length[i] = (float) lengthValue;
-//        k[i] = (float) kValue;
-//    }
-//    gpuSetBondParameters(data.gpu, particle1, particle2, length, k);
-//}
-//
-//void OpenCLCalcHarmonicBondForceKernel::executeForces(ContextImpl& context) {
-//    if (data.primaryKernel == this)
-//        calcForces(context, data);
-//}
-//
-//double OpenCLCalcHarmonicBondForceKernel::executeEnergy(ContextImpl& context) {
-//    if (data.primaryKernel == this)
-//        return calcEnergy(context, data, system);
-//    return 0.0;
-//}
+OpenCLCalcHarmonicBondForceKernel::~OpenCLCalcHarmonicBondForceKernel() {
+    if (params != NULL)
+        delete params;
+    if (indices != NULL)
+        delete indices;
+}
+
+class OpenCLBondForceInfo : public OpenCLForceInfo {
+public:
+    OpenCLBondForceInfo(int requiredBuffers, const HarmonicBondForce& force) : OpenCLForceInfo(requiredBuffers, false, 0.0), force(force) {
+    }
+    int getNumParticleGroups() {
+        return force.getNumBonds();
+    }
+    void getParticlesInGroup(int index, std::vector<int>& particles) {
+        int particle1, particle2;
+        double length, k;
+        force.getBondParameters(index, particle1, particle2, length, k);
+        particles.resize(2);
+        particles[0] = particle1;
+        particles[1] = particle2;
+    }
+    bool areGroupsIdentical(int group1, int group2) {
+        int particle1, particle2;
+        double length1, length2, k1, k2;
+        force.getBondParameters(group1, particle1, particle2, length1, k1);
+        force.getBondParameters(group2, particle1, particle2, length2, k2);
+        return (length1 == length2 && k1 == k2);
+    }
+private:
+    const HarmonicBondForce& force;
+};
+
+void OpenCLCalcHarmonicBondForceKernel::initialize(const System& system, const HarmonicBondForce& force) {
+    numBonds = force.getNumBonds();
+    params = new OpenCLArray<mm_float2>(*data.context, numBonds, "BondParams");
+    indices = new OpenCLArray<mm_int4>(*data.context, numBonds, "BondIndices");
+    vector<int> forceBufferCounter(system.getNumParticles(), 0);
+    vector<mm_float2> paramVector(numBonds);
+    vector<mm_int4> indicesVector(numBonds);
+    for (int i = 0; i < numBonds; i++) {
+        int particle1, particle2;
+        double length, k;
+        force.getBondParameters(i, particle1, particle2, length, k);
+        paramVector[i] = (mm_float2) {length, k};
+        indicesVector[i] = (mm_int4) {particle1, particle2, forceBufferCounter[particle1]++, forceBufferCounter[particle2]++};
+
+    }
+    params->upload(paramVector);
+    indices->upload(indicesVector);
+    int maxBuffers = 1;
+    for (int i = 0; i < forceBufferCounter.size(); i++) {
+        maxBuffers = max(maxBuffers, forceBufferCounter[i]);
+    }
+    data.context->addForce(new OpenCLBondForceInfo(maxBuffers, force));
+    cl::Program program = data.context->createProgram(data.context->loadSourceFromFile("harmonicBondForce.cl"));
+    kernel = cl::Kernel(program, "calcHarmonicBondForce");
+}
+
+void OpenCLCalcHarmonicBondForceKernel::executeForces(ContextImpl& context) {
+    kernel.setArg<cl_int>(0, data.context->getPaddedNumAtoms());
+    kernel.setArg<cl_int>(1, numBonds);
+    kernel.setArg<cl::Buffer>(2, data.context->getForceBuffers().getDeviceBuffer());
+    kernel.setArg<cl::Buffer>(3, data.context->getEnergyBuffer().getDeviceBuffer());
+    kernel.setArg<cl::Buffer>(4, data.context->getPosq().getDeviceBuffer());
+    kernel.setArg<cl::Buffer>(5, params->getDeviceBuffer());
+    kernel.setArg<cl::Buffer>(6, indices->getDeviceBuffer());
+    data.context->executeKernel(kernel, numBonds);
+}
+
+double OpenCLCalcHarmonicBondForceKernel::executeEnergy(ContextImpl& context) {
+    executeForces(context);
+    return 0.0;
+}
 //
 //OpenCLCalcHarmonicAngleForceKernel::~OpenCLCalcHarmonicAngleForceKernel() {
 //}
@@ -625,6 +674,7 @@ OpenCLIntegrateVerletStepKernel::~OpenCLIntegrateVerletStepKernel() {
 
 void OpenCLIntegrateVerletStepKernel::initialize(const System& system, const VerletIntegrator& integrator) {
 //    initializeIntegration(system, data, integrator);
+    data.context->initialize(system);
     prevStepSize = -1.0;
 }
 
