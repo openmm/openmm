@@ -56,13 +56,6 @@ public:
     void contextCreated(ContextImpl& context) const;
     void contextDestroyed(ContextImpl& context) const;
     /**
-     * This is the name of the parameter for selecting which OpenCL platform to use.
-     */
-    static const std::string& OpenCLPlatformIndex() {
-        static const std::string key = "OpenCLPlatformIndex";
-        return key;
-    }
-    /**
      * This is the name of the parameter for selecting which OpenCL device to use.
      */
     static const std::string& OpenCLDeviceIndex() {
@@ -73,7 +66,7 @@ public:
 
 class OpenCLPlatform::PlatformData {
 public:
-    PlatformData(int numParticles, int platformIndex, int deviceIndex);
+    PlatformData(int numParticles, int deviceIndex);
     OpenCLContext* context;
     bool removeCM;
     int cmMotionFrequency;

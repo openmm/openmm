@@ -62,10 +62,8 @@ OpenCLPlatform::OpenCLPlatform() {
 //    registerKernelFactory(ApplyAndersenThermostatKernel::Name(), factory);
     registerKernelFactory(CalcKineticEnergyKernel::Name(), factory);
 //    registerKernelFactory(RemoveCMMotionKernel::Name(), factory);
-    platformProperties.push_back(OpenCLPlatformIndex());
     platformProperties.push_back(OpenCLDeviceIndex());
-    setPropertyDefaultValue(OpenCLPlatformIndex(), "0");
-    setPropertyDefaultValue(OpenCLDeviceIndex(), "0");
+    setPropertyDefaultValue(OpenCLDeviceIndex(), "");
 }
 
 bool OpenCLPlatform::supportsDoublePrecision() const {
@@ -85,16 +83,12 @@ void OpenCLPlatform::setPropertyValue(Context& context, const string& property, 
 }
 
 void OpenCLPlatform::contextCreated(ContextImpl& context) const {
-    unsigned int platformIndex = 0;
-    const string& platformPropValue = getPropertyDefaultValue(OpenCLPlatformIndex());
-    if (platformPropValue.length() > 0)
-        stringstream(platformPropValue) >> platformIndex;
-    unsigned int deviceIndex = 0;
+    unsigned int deviceIndex = -1;
     const string& devicePropValue = getPropertyDefaultValue(OpenCLDeviceIndex());
     if (devicePropValue.length() > 0)
         stringstream(devicePropValue) >> deviceIndex;
     int numParticles = context.getSystem().getNumParticles();
-    context.setPlatformData(new PlatformData(numParticles, platformIndex, deviceIndex));
+    context.setPlatformData(new PlatformData(numParticles, deviceIndex));
 }
 
 void OpenCLPlatform::contextDestroyed(ContextImpl& context) const {
@@ -103,12 +97,9 @@ void OpenCLPlatform::contextDestroyed(ContextImpl& context) const {
     delete data;
 }
 
-OpenCLPlatform::PlatformData::PlatformData(int numParticles, int platformIndex, int deviceIndex) : removeCM(false), stepCount(0), computeForceCount(0), time(0.0)  {
-    context = new OpenCLContext(numParticles, platformIndex, deviceIndex);
-    stringstream platform;
-//    device << gpu->platform;
+OpenCLPlatform::PlatformData::PlatformData(int numParticles, int deviceIndex) : removeCM(false), stepCount(0), computeForceCount(0), time(0.0)  {
+    context = new OpenCLContext(numParticles, deviceIndex);
     stringstream device;
 //    device << gpu->device;
-    propertyValues[OpenCLPlatform::OpenCLPlatformIndex()] = platform.str();
     propertyValues[OpenCLPlatform::OpenCLDeviceIndex()] = device.str();
 }

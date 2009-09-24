@@ -64,7 +64,7 @@ class OpenCLContext {
 public:
     static const int ThreadBlockSize = 64;
     static const int TileSize = 32;
-    OpenCLContext(int numParticles, int platformIndex, int deviceIndex);
+    OpenCLContext(int numParticles, int deviceIndex);
     ~OpenCLContext();
     /**
      * This is called to initialize internal data structures after all Forces in the system

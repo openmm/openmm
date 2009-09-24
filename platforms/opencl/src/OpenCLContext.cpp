@@ -36,16 +36,32 @@
 using namespace OpenMM;
 using namespace std;
 
-OpenCLContext::OpenCLContext(int numParticles, int platformIndex, int deviceIndex) {
-    // TODO Select the platform and device correctly
-    context = cl::Context(CL_DEVICE_TYPE_GPU);
-    device = context.getInfo<CL_CONTEXT_DEVICES>()[0];
+OpenCLContext::OpenCLContext(int numParticles, int deviceIndex) {
+    context = cl::Context(CL_DEVICE_TYPE_ALL);
+    vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
+    const int minThreadBlockSize = 32;
+    if (deviceIndex < 0 || deviceIndex >= devices.size()) {
+        // Try to figure out which device is the fastest.
+
+        int bestSpeed = 0;
+        for (int i = 0; i < devices.size(); i++) {
+            int maxSize = devices[i].getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>()[0];
+            int speed = devices[i].getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>()*devices[i].getInfo<CL_DEVICE_MAX_CLOCK_FREQUENCY>();
+            if (maxSize >= minThreadBlockSize && speed > bestSpeed)
+                deviceIndex = i;
+        }
+    }
+    if (deviceIndex == -1)
+        throw OpenMMException("No compatible OpenCL device is available");
+    device = devices[deviceIndex];
+    if (device.getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>()[0] < minThreadBlockSize)
+        throw OpenMMException("The specified OpenCL device is not compatible with OpenMM");
     queue = cl::CommandQueue(context, device);
     numAtoms = numParticles;
     paddedNumAtoms = TileSize*((numParticles+TileSize-1)/TileSize);
     numAtomBlocks = (paddedNumAtoms+(TileSize-1))/TileSize;
     numTiles = numAtomBlocks*(numAtomBlocks+1)/2;
-    numThreadBlocks = 8*device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>();
+    numThreadBlocks = device.getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>()[0]/ThreadBlockSize;
 
     // Create utility kernels that are used in multiple places.
 
