@@ -35,6 +35,7 @@ namespace OpenMM {
 template <class T>
 class OpenCLArray;
 class OpenCLForceInfo;
+class OpenCLIntegrationUtilities;
 class System;
 
 /**
@@ -100,7 +101,7 @@ public:
         return *posq;
     }
     /**
-     * Get the array which contains the velocity and massof each atom.
+     * Get the array which contains the velocity and inverse mass of each atom.
      */
     OpenCLArray<mm_float4>& getVelm() {
         return *velm;
@@ -161,6 +162,30 @@ public:
      */
     void reduceBuffer(OpenCLArray<mm_float4>& array, int numBuffers);
     /**
+     * Get the current simulation time.
+     */
+    double getTime() {
+        return time;
+    }
+    /**
+     * Set the current simulation time.
+     */
+    void setTime(double t) {
+        time = t;
+    }
+    /**
+     * Get the number of integration steps that have been taken.
+     */
+    int getStepCount() {
+        return stepCount;
+    }
+    /**
+     * Set the number of integration steps that have been taken.
+     */
+    void setStepCount(int steps) {
+        stepCount = steps;;
+    }
+    /**
      * Get the number of atoms.
      */
     int getNumAtoms() const {
@@ -197,7 +222,15 @@ public:
     int getNumForceBuffers() const {
         return numForceBuffers;
     }
+    /**
+     * Get the OpenCLIntegrationUtilities for this context.
+     */
+    OpenCLIntegrationUtilities& getIntegrationUtilties() {
+        return *integration;
+    }
 private:
+    double time;
+    int stepCount;
     int numAtoms;
     int paddedNumAtoms;
     int numAtomBlocks;
@@ -217,6 +250,7 @@ private:
     OpenCLArray<mm_float4>* forceBuffers;
     OpenCLArray<cl_float>* energyBuffer;
     OpenCLArray<cl_int>* atomIndex;
+    OpenCLIntegrationUtilities* integration;
 };
 
 } // namespace OpenMM

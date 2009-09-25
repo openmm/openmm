@@ -29,6 +29,7 @@
 #include "openmm/LangevinIntegrator.h"
 #include "openmm/Context.h"
 #include "openmm/internal/ContextImpl.h"
+#include "OpenCLIntegrationUtilities.h"
 #include <cmath>
 
 using namespace OpenMM;
@@ -38,19 +39,19 @@ void OpenCLCalcForcesAndEnergyKernel::initialize(const System& system) {
 }
 
 void OpenCLCalcForcesAndEnergyKernel::beginForceComputation(ContextImpl& context) {
-    data.context->clearBuffer(data.context->getForceBuffers());
+    cl.clearBuffer(cl.getForceBuffers());
 }
 
 void OpenCLCalcForcesAndEnergyKernel::finishForceComputation(ContextImpl& context) {
-    data.context->reduceBuffer(data.context->getForceBuffers(), data.context->getNumForceBuffers());
+    cl.reduceBuffer(cl.getForceBuffers(), cl.getNumForceBuffers());
 }
 
 void OpenCLCalcForcesAndEnergyKernel::beginEnergyComputation(ContextImpl& context) {
-    data.context->clearBuffer(data.context->getEnergyBuffer());
+    cl.clearBuffer(cl.getEnergyBuffer());
 }
 
 double OpenCLCalcForcesAndEnergyKernel::finishEnergyComputation(ContextImpl& context) {
-    OpenCLArray<cl_float>& energy = data.context->getEnergyBuffer();
+    OpenCLArray<cl_float>& energy = cl.getEnergyBuffer();
     energy.download();
     double sum = 0.0f;
     for (int i = 0; i < energy.getSize(); i++)
@@ -62,17 +63,17 @@ void OpenCLUpdateStateDataKernel::initialize(const System& system) {
 }
 
 double OpenCLUpdateStateDataKernel::getTime(const ContextImpl& context) const {
-    return data.time;
+    return cl.getTime();
 }
 
 void OpenCLUpdateStateDataKernel::setTime(ContextImpl& context, double time) {
-    data.time = time;
+    cl.setTime(time);
 }
 
 void OpenCLUpdateStateDataKernel::getPositions(ContextImpl& context, std::vector<Vec3>& positions) {
-    OpenCLArray<mm_float4>& posq = data.context->getPosq();
+    OpenCLArray<mm_float4>& posq = cl.getPosq();
     posq.download();
-    OpenCLArray<cl_int>& order = data.context->getAtomIndex();
+    OpenCLArray<cl_int>& order = cl.getAtomIndex();
     int numParticles = context.getSystem().getNumParticles();
     positions.resize(numParticles);
     for (int i = 0; i < numParticles; ++i) {
@@ -84,8 +85,8 @@ void OpenCLUpdateStateDataKernel::getPositions(ContextImpl& context, std::vector
 }
 
 void OpenCLUpdateStateDataKernel::setPositions(ContextImpl& context, const std::vector<Vec3>& positions) {
-    OpenCLArray<mm_float4>& posq = data.context->getPosq();
-    OpenCLArray<cl_int>& order = data.context->getAtomIndex();
+    OpenCLArray<mm_float4>& posq = cl.getPosq();
+    OpenCLArray<cl_int>& order = cl.getAtomIndex();
     int numParticles = context.getSystem().getNumParticles();
     for (int i = 0; i < numParticles; ++i) {
         mm_float4& pos = posq[i];
@@ -100,9 +101,9 @@ void OpenCLUpdateStateDataKernel::setPositions(ContextImpl& context, const std::
 }
 
 void OpenCLUpdateStateDataKernel::getVelocities(ContextImpl& context, std::vector<Vec3>& velocities) {
-    OpenCLArray<mm_float4>& velm = data.context->getVelm();
+    OpenCLArray<mm_float4>& velm = cl.getVelm();
     velm.download();
-    OpenCLArray<cl_int>& order = data.context->getAtomIndex();
+    OpenCLArray<cl_int>& order = cl.getAtomIndex();
     int numParticles = context.getSystem().getNumParticles();
     velocities.resize(numParticles);
     for (int i = 0; i < numParticles; ++i) {
@@ -112,8 +113,8 @@ void OpenCLUpdateStateDataKernel::getVelocities(ContextImpl& context, std::vecto
 }
 
 void OpenCLUpdateStateDataKernel::setVelocities(ContextImpl& context, const std::vector<Vec3>& velocities) {
-    OpenCLArray<mm_float4>& velm = data.context->getVelm();
-    OpenCLArray<cl_int>& order = data.context->getAtomIndex();
+    OpenCLArray<mm_float4>& velm = cl.getVelm();
+    OpenCLArray<cl_int>& order = cl.getAtomIndex();
     int numParticles = context.getSystem().getNumParticles();
     for (int i = 0; i < numParticles; ++i) {
         mm_float4& vel = velm[i];
@@ -126,9 +127,9 @@ void OpenCLUpdateStateDataKernel::setVelocities(ContextImpl& context, const std:
 }
 
 void OpenCLUpdateStateDataKernel::getForces(ContextImpl& context, std::vector<Vec3>& forces) {
-    OpenCLArray<mm_float4>& force = data.context->getForce();
+    OpenCLArray<mm_float4>& force = cl.getForce();
     force.download();
-    OpenCLArray<cl_int>& order = data.context->getAtomIndex();
+    OpenCLArray<cl_int>& order = cl.getAtomIndex();
     int numParticles = context.getSystem().getNumParticles();
     forces.resize(numParticles);
     for (int i = 0; i < numParticles; ++i) {
@@ -172,8 +173,8 @@ OpenCLCalcHarmonicBondForceKernel::~OpenCLCalcHarmonicBondForceKernel() {
 
 void OpenCLCalcHarmonicBondForceKernel::initialize(const System& system, const HarmonicBondForce& force) {
     numBonds = force.getNumBonds();
-    params = new OpenCLArray<mm_float2>(*data.context, numBonds, "bondParams");
-    indices = new OpenCLArray<mm_int4>(*data.context, numBonds, "bondIndices");
+    params = new OpenCLArray<mm_float2>(cl, numBonds, "bondParams");
+    indices = new OpenCLArray<mm_int4>(cl, numBonds, "bondIndices");
     vector<int> forceBufferCounter(system.getNumParticles(), 0);
     vector<mm_float2> paramVector(numBonds);
     vector<mm_int4> indicesVector(numBonds);
@@ -191,20 +192,20 @@ void OpenCLCalcHarmonicBondForceKernel::initialize(const System& system, const H
     for (int i = 0; i < forceBufferCounter.size(); i++) {
         maxBuffers = max(maxBuffers, forceBufferCounter[i]);
     }
-    data.context->addForce(new OpenCLBondForceInfo(maxBuffers, force));
-    cl::Program program = data.context->createProgram(data.context->loadSourceFromFile("harmonicBondForce.cl"));
+    cl.addForce(new OpenCLBondForceInfo(maxBuffers, force));
+    cl::Program program = cl.createProgram(cl.loadSourceFromFile("harmonicBondForce.cl"));
     kernel = cl::Kernel(program, "calcHarmonicBondForce");
 }
 
 void OpenCLCalcHarmonicBondForceKernel::executeForces(ContextImpl& context) {
-    kernel.setArg<cl_int>(0, data.context->getPaddedNumAtoms());
+    kernel.setArg<cl_int>(0, cl.getPaddedNumAtoms());
     kernel.setArg<cl_int>(1, numBonds);
-    kernel.setArg<cl::Buffer>(2, data.context->getForceBuffers().getDeviceBuffer());
-    kernel.setArg<cl::Buffer>(3, data.context->getEnergyBuffer().getDeviceBuffer());
-    kernel.setArg<cl::Buffer>(4, data.context->getPosq().getDeviceBuffer());
+    kernel.setArg<cl::Buffer>(2, cl.getForceBuffers().getDeviceBuffer());
+    kernel.setArg<cl::Buffer>(3, cl.getEnergyBuffer().getDeviceBuffer());
+    kernel.setArg<cl::Buffer>(4, cl.getPosq().getDeviceBuffer());
     kernel.setArg<cl::Buffer>(5, params->getDeviceBuffer());
     kernel.setArg<cl::Buffer>(6, indices->getDeviceBuffer());
-    data.context->executeKernel(kernel, numBonds);
+    cl.executeKernel(kernel, numBonds);
 }
 
 double OpenCLCalcHarmonicBondForceKernel::executeEnergy(ContextImpl& context) {
@@ -248,8 +249,8 @@ OpenCLCalcHarmonicAngleForceKernel::~OpenCLCalcHarmonicAngleForceKernel() {
 
 void OpenCLCalcHarmonicAngleForceKernel::initialize(const System& system, const HarmonicAngleForce& force) {
     numAngles = force.getNumAngles();
-    params = new OpenCLArray<mm_float2>(*data.context, numAngles, "angleParams");
-    indices = new OpenCLArray<mm_int8>(*data.context, numAngles, "angleIndices");
+    params = new OpenCLArray<mm_float2>(cl, numAngles, "angleParams");
+    indices = new OpenCLArray<mm_int8>(cl, numAngles, "angleIndices");
     vector<int> forceBufferCounter(system.getNumParticles(), 0);
     vector<mm_float2> paramVector(numAngles);
     vector<mm_int8> indicesVector(numAngles);
@@ -268,20 +269,20 @@ void OpenCLCalcHarmonicAngleForceKernel::initialize(const System& system, const 
     for (int i = 0; i < forceBufferCounter.size(); i++) {
         maxBuffers = max(maxBuffers, forceBufferCounter[i]);
     }
-    data.context->addForce(new OpenCLAngleForceInfo(maxBuffers, force));
-    cl::Program program = data.context->createProgram(data.context->loadSourceFromFile("harmonicAngleForce.cl"));
+    cl.addForce(new OpenCLAngleForceInfo(maxBuffers, force));
+    cl::Program program = cl.createProgram(cl.loadSourceFromFile("harmonicAngleForce.cl"));
     kernel = cl::Kernel(program, "calcHarmonicAngleForce");
 }
 
 void OpenCLCalcHarmonicAngleForceKernel::executeForces(ContextImpl& context) {
-    kernel.setArg<cl_int>(0, data.context->getPaddedNumAtoms());
+    kernel.setArg<cl_int>(0, cl.getPaddedNumAtoms());
     kernel.setArg<cl_int>(1, numAngles);
-    kernel.setArg<cl::Buffer>(2, data.context->getForceBuffers().getDeviceBuffer());
-    kernel.setArg<cl::Buffer>(3, data.context->getEnergyBuffer().getDeviceBuffer());
-    kernel.setArg<cl::Buffer>(4, data.context->getPosq().getDeviceBuffer());
+    kernel.setArg<cl::Buffer>(2, cl.getForceBuffers().getDeviceBuffer());
+    kernel.setArg<cl::Buffer>(3, cl.getEnergyBuffer().getDeviceBuffer());
+    kernel.setArg<cl::Buffer>(4, cl.getPosq().getDeviceBuffer());
     kernel.setArg<cl::Buffer>(5, params->getDeviceBuffer());
     kernel.setArg<cl::Buffer>(6, indices->getDeviceBuffer());
-    data.context->executeKernel(kernel, numAngles);
+    cl.executeKernel(kernel, numAngles);
 }
 
 double OpenCLCalcHarmonicAngleForceKernel::executeEnergy(ContextImpl& context) {
@@ -326,8 +327,8 @@ OpenCLCalcPeriodicTorsionForceKernel::~OpenCLCalcPeriodicTorsionForceKernel() {
 
 void OpenCLCalcPeriodicTorsionForceKernel::initialize(const System& system, const PeriodicTorsionForce& force) {
     numTorsions = force.getNumTorsions();
-    params = new OpenCLArray<mm_float4>(*data.context, numTorsions, "periodicTorsionParams");
-    indices = new OpenCLArray<mm_int8>(*data.context, numTorsions, "periodicTorsionIndices");
+    params = new OpenCLArray<mm_float4>(cl, numTorsions, "periodicTorsionParams");
+    indices = new OpenCLArray<mm_int8>(cl, numTorsions, "periodicTorsionIndices");
     vector<int> forceBufferCounter(system.getNumParticles(), 0);
     vector<mm_float4> paramVector(numTorsions);
     vector<mm_int8> indicesVector(numTorsions);
@@ -346,20 +347,20 @@ void OpenCLCalcPeriodicTorsionForceKernel::initialize(const System& system, cons
     for (int i = 0; i < forceBufferCounter.size(); i++) {
         maxBuffers = max(maxBuffers, forceBufferCounter[i]);
     }
-    data.context->addForce(new OpenCLPeriodicTorsionForceInfo(maxBuffers, force));
-    cl::Program program = data.context->createProgram(data.context->loadSourceFromFile("periodicTorsionForce.cl"));
+    cl.addForce(new OpenCLPeriodicTorsionForceInfo(maxBuffers, force));
+    cl::Program program = cl.createProgram(cl.loadSourceFromFile("periodicTorsionForce.cl"));
     kernel = cl::Kernel(program, "calcPeriodicTorsionForce");
 }
 
 void OpenCLCalcPeriodicTorsionForceKernel::executeForces(ContextImpl& context) {
-    kernel.setArg<cl_int>(0, data.context->getPaddedNumAtoms());
+    kernel.setArg<cl_int>(0, cl.getPaddedNumAtoms());
     kernel.setArg<cl_int>(1, numTorsions);
-    kernel.setArg<cl::Buffer>(2, data.context->getForceBuffers().getDeviceBuffer());
-    kernel.setArg<cl::Buffer>(3, data.context->getEnergyBuffer().getDeviceBuffer());
-    kernel.setArg<cl::Buffer>(4, data.context->getPosq().getDeviceBuffer());
+    kernel.setArg<cl::Buffer>(2, cl.getForceBuffers().getDeviceBuffer());
+    kernel.setArg<cl::Buffer>(3, cl.getEnergyBuffer().getDeviceBuffer());
+    kernel.setArg<cl::Buffer>(4, cl.getPosq().getDeviceBuffer());
     kernel.setArg<cl::Buffer>(5, params->getDeviceBuffer());
     kernel.setArg<cl::Buffer>(6, indices->getDeviceBuffer());
-    data.context->executeKernel(kernel, numTorsions);
+    cl.executeKernel(kernel, numTorsions);
 }
 
 double OpenCLCalcPeriodicTorsionForceKernel::executeEnergy(ContextImpl& context) {
@@ -404,8 +405,8 @@ OpenCLCalcRBTorsionForceKernel::~OpenCLCalcRBTorsionForceKernel() {
 
 void OpenCLCalcRBTorsionForceKernel::initialize(const System& system, const RBTorsionForce& force) {
     numTorsions = force.getNumTorsions();
-    params = new OpenCLArray<mm_float8>(*data.context, numTorsions, "rbTorsionParams");
-    indices = new OpenCLArray<mm_int8>(*data.context, numTorsions, "rbTorsionIndices");
+    params = new OpenCLArray<mm_float8>(cl, numTorsions, "rbTorsionParams");
+    indices = new OpenCLArray<mm_int8>(cl, numTorsions, "rbTorsionIndices");
     vector<int> forceBufferCounter(system.getNumParticles(), 0);
     vector<mm_float8> paramVector(numTorsions);
     vector<mm_int8> indicesVector(numTorsions);
@@ -424,20 +425,20 @@ void OpenCLCalcRBTorsionForceKernel::initialize(const System& system, const RBTo
     for (int i = 0; i < forceBufferCounter.size(); i++) {
         maxBuffers = max(maxBuffers, forceBufferCounter[i]);
     }
-    data.context->addForce(new OpenCLRBTorsionForceInfo(maxBuffers, force));
-    cl::Program program = data.context->createProgram(data.context->loadSourceFromFile("rbTorsionForce.cl"));
+    cl.addForce(new OpenCLRBTorsionForceInfo(maxBuffers, force));
+    cl::Program program = cl.createProgram(cl.loadSourceFromFile("rbTorsionForce.cl"));
     kernel = cl::Kernel(program, "calcRBTorsionForce");
 }
 
 void OpenCLCalcRBTorsionForceKernel::executeForces(ContextImpl& context) {
-    kernel.setArg<cl_int>(0, data.context->getPaddedNumAtoms());
+    kernel.setArg<cl_int>(0, cl.getPaddedNumAtoms());
     kernel.setArg<cl_int>(1, numTorsions);
-    kernel.setArg<cl::Buffer>(2, data.context->getForceBuffers().getDeviceBuffer());
-    kernel.setArg<cl::Buffer>(3, data.context->getEnergyBuffer().getDeviceBuffer());
-    kernel.setArg<cl::Buffer>(4, data.context->getPosq().getDeviceBuffer());
+    kernel.setArg<cl::Buffer>(2, cl.getForceBuffers().getDeviceBuffer());
+    kernel.setArg<cl::Buffer>(3, cl.getEnergyBuffer().getDeviceBuffer());
+    kernel.setArg<cl::Buffer>(4, cl.getPosq().getDeviceBuffer());
     kernel.setArg<cl::Buffer>(5, params->getDeviceBuffer());
     kernel.setArg<cl::Buffer>(6, indices->getDeviceBuffer());
-    data.context->executeKernel(kernel, numTorsions);
+    cl.executeKernel(kernel, numTorsions);
 }
 
 double OpenCLCalcRBTorsionForceKernel::executeEnergy(ContextImpl& context) {
@@ -794,31 +795,45 @@ OpenCLIntegrateVerletStepKernel::~OpenCLIntegrateVerletStepKernel() {
 }
 
 void OpenCLIntegrateVerletStepKernel::initialize(const System& system, const VerletIntegrator& integrator) {
-//    initializeIntegration(system, data, integrator);
-    data.context->initialize(system);
-    prevStepSize = -1.0;
+    cl.initialize(system);
+    cl::Program program = cl.createProgram(cl.loadSourceFromFile("verlet.cl"));
+    kernel1 = cl::Kernel(program, "integrateVerletPart1");
+    kernel2 = cl::Kernel(program, "integrateVerletPart2");
 }
 
 void OpenCLIntegrateVerletStepKernel::execute(ContextImpl& context, const VerletIntegrator& integrator) {
-//    _gpuContext* gpu = data.gpu;
-//    double stepSize = integrator.getStepSize();
-//    if (stepSize != prevStepSize) {
-//        // Initialize the GPU parameters.
-//
-//        gpuSetVerletIntegrationParameters(gpu, (float) stepSize, 0.0f);
-//        gpuSetConstants(gpu);
-//        prevStepSize = stepSize;
-//    }
-//    kVerletUpdatePart1(gpu);
-//    kApplyFirstShake(gpu);
-//    kApplyFirstSettle(gpu);
-//    kApplyFirstCCMA(gpu);
-//    if (data.removeCM)
-//        if (data.stepCount%data.cmMotionFrequency == 0)
-//            gpu->bCalculateCM = true;
-//    kVerletUpdatePart2(gpu);
-//    data.time += stepSize;
-//    data.stepCount++;
+    OpenCLIntegrationUtilities& integration = cl.getIntegrationUtilties();
+    int numAtoms = cl.getNumAtoms();
+    double dt = integrator.getStepSize();
+
+    // Call the first integration kernel.
+
+    kernel1.setArg<cl_int>(0, numAtoms);
+    kernel1.setArg<cl_float>(1, dt);
+    kernel1.setArg<cl::Buffer>(2, cl.getPosq().getDeviceBuffer());
+    kernel1.setArg<cl::Buffer>(3, cl.getVelm().getDeviceBuffer());
+    kernel1.setArg<cl::Buffer>(4, cl.getForce().getDeviceBuffer());
+    kernel1.setArg<cl::Buffer>(5, integration.getPosDelta().getDeviceBuffer());
+    kernel1.setArg<cl::Buffer>(6, integration.getOldPos().getDeviceBuffer());
+    cl.executeKernel(kernel1, numAtoms);
+
+    // Apply constraints.
+
+    integration.applyConstraints(integrator.getConstraintTolerance(), integration.getOldPos(), integration.getPosDelta(), integration.getPosDelta());
+
+    // Call the second integration kernel.
+
+    kernel2.setArg<cl_int>(0, numAtoms);
+    kernel2.setArg<cl_float>(1, dt);
+    kernel2.setArg<cl::Buffer>(2, cl.getPosq().getDeviceBuffer());
+    kernel2.setArg<cl::Buffer>(3, cl.getVelm().getDeviceBuffer());
+    kernel2.setArg<cl::Buffer>(4, integration.getPosDelta().getDeviceBuffer());
+    cl.executeKernel(kernel2, numAtoms);
+
+    // Update the time and step count.
+
+    cl.setTime(cl.getTime()+dt);
+    cl.setStepCount(cl.getStepCount()+1);
 }
 
 //OpenCLIntegrateLangevinStepKernel::~OpenCLIntegrateLangevinStepKernel() {
@@ -1023,7 +1038,7 @@ double OpenCLCalcKineticEnergyKernel::execute(ContextImpl& context) {
     // We don't currently have a GPU kernel to do this, so we retrieve the velocities and calculate the energy
     // on the CPU.
 
-    OpenCLArray<mm_float4>& velm = data.context->getVelm();
+    OpenCLArray<mm_float4>& velm = cl.getVelm();
     double energy = 0.0;
     for (size_t i = 0; i < masses.size(); ++i) {
         mm_float4 v = velm[i];

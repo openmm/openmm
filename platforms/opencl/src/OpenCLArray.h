@@ -29,6 +29,8 @@
 
 #include "OpenCLContext.h"
 #include "openmm/OpenMMException.h"
+#include <iostream>
+#include <sstream>
 #include <vector>
 
 namespace OpenMM {
@@ -117,13 +119,27 @@ public:
      * Copy the values in a vector to the Buffer.
      */
     void upload(std::vector<T>& data) {
-        context.getQueue().enqueueWriteBuffer(*buffer, CL_TRUE, 0, size*sizeof(T), &data[0]);
+        try {
+            context.getQueue().enqueueWriteBuffer(*buffer, CL_TRUE, 0, size*sizeof(T), &data[0]);
+        }
+        catch (cl::Error err) {
+            std::stringstream str;
+            str<<"Error uploading array "<<name<<": "<<err.what()<<" ("<<err.err()<<")";
+            throw OpenMMException(str.str());
+        }
     }
     /**
      * Copy the values in the Buffer to a vector.
      */
     void download(std::vector<T>& data) const {
-        context.getQueue().enqueueReadBuffer(*buffer, CL_TRUE, 0, size*sizeof(T), &data[0]);
+        try {
+            context.getQueue().enqueueReadBuffer(*buffer, CL_TRUE, 0, size*sizeof(T), &data[0]);
+        }
+        catch (cl::Error err) {
+            std::stringstream str;
+            str<<"Error downloading array "<<name<<": "<<err.what()<<" ("<<err.err()<<")";
+            throw OpenMMException(str.str());
+        }
     }
     /**
      * Copy the values in the host buffer to the OpenCL Buffer.

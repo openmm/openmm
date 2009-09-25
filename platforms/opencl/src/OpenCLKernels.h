@@ -42,7 +42,7 @@ namespace OpenMM {
  */
 class OpenCLCalcForcesAndEnergyKernel : public CalcForcesAndEnergyKernel {
 public:
-    OpenCLCalcForcesAndEnergyKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data) : CalcForcesAndEnergyKernel(name, platform), data(data) {
+    OpenCLCalcForcesAndEnergyKernel(std::string name, const Platform& platform, OpenCLContext& cl) : CalcForcesAndEnergyKernel(name, platform), cl(cl) {
     }
     /**
      * Initialize the kernel.
@@ -82,7 +82,7 @@ public:
      */
     double finishEnergyComputation(ContextImpl& context);
 private:
-   OpenCLPlatform::PlatformData& data;
+   OpenCLContext& cl;
 };
 
 /**
@@ -91,7 +91,7 @@ private:
  */
 class OpenCLUpdateStateDataKernel : public UpdateStateDataKernel {
 public:
-    OpenCLUpdateStateDataKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data) : UpdateStateDataKernel(name, platform), data(data) {
+    OpenCLUpdateStateDataKernel(std::string name, const Platform& platform, OpenCLContext& cl) : UpdateStateDataKernel(name, platform), cl(cl) {
     }
     /**
      * Initialize the kernel.
@@ -142,7 +142,7 @@ public:
      */
     void getForces(ContextImpl& context, std::vector<Vec3>& forces);
 private:
-    OpenCLPlatform::PlatformData& data;
+    OpenCLContext& cl;
 };
 
 /**
@@ -150,8 +150,8 @@ private:
  */
 class OpenCLCalcHarmonicBondForceKernel : public CalcHarmonicBondForceKernel {
 public:
-    OpenCLCalcHarmonicBondForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, System& system) :
-        CalcHarmonicBondForceKernel(name, platform), data(data), system(system), params(NULL), indices(NULL) {
+    OpenCLCalcHarmonicBondForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) :
+        CalcHarmonicBondForceKernel(name, platform), cl(cl), system(system), params(NULL), indices(NULL) {
     }
     ~OpenCLCalcHarmonicBondForceKernel();
     /**
@@ -176,7 +176,7 @@ public:
     double executeEnergy(ContextImpl& context);
 private:
     int numBonds;
-    OpenCLPlatform::PlatformData& data;
+    OpenCLContext& cl;
     System& system;
     OpenCLArray<mm_float2>* params;
     OpenCLArray<mm_int4>* indices;
@@ -188,7 +188,7 @@ private:
  */
 class OpenCLCalcHarmonicAngleForceKernel : public CalcHarmonicAngleForceKernel {
 public:
-    OpenCLCalcHarmonicAngleForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, System& system) : CalcHarmonicAngleForceKernel(name, platform), data(data), system(system) {
+    OpenCLCalcHarmonicAngleForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcHarmonicAngleForceKernel(name, platform), cl(cl), system(system) {
     }
     ~OpenCLCalcHarmonicAngleForceKernel();
     /**
@@ -213,7 +213,7 @@ public:
     double executeEnergy(ContextImpl& context);
 private:
     int numAngles;
-    OpenCLPlatform::PlatformData& data;
+    OpenCLContext& cl;
     System& system;
     OpenCLArray<mm_float2>* params;
     OpenCLArray<mm_int8>* indices;
@@ -225,7 +225,7 @@ private:
  */
 class OpenCLCalcPeriodicTorsionForceKernel : public CalcPeriodicTorsionForceKernel {
 public:
-    OpenCLCalcPeriodicTorsionForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, System& system) : CalcPeriodicTorsionForceKernel(name, platform), data(data), system(system) {
+    OpenCLCalcPeriodicTorsionForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcPeriodicTorsionForceKernel(name, platform), cl(cl), system(system) {
     }
     ~OpenCLCalcPeriodicTorsionForceKernel();
     /**
@@ -250,7 +250,7 @@ public:
     double executeEnergy(ContextImpl& context);
 private:
     int numTorsions;
-    OpenCLPlatform::PlatformData& data;
+    OpenCLContext& cl;
     System& system;
     OpenCLArray<mm_float4>* params;
     OpenCLArray<mm_int8>* indices;
@@ -262,7 +262,7 @@ private:
  */
 class OpenCLCalcRBTorsionForceKernel : public CalcRBTorsionForceKernel {
 public:
-    OpenCLCalcRBTorsionForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, System& system) : CalcRBTorsionForceKernel(name, platform), data(data), system(system) {
+    OpenCLCalcRBTorsionForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcRBTorsionForceKernel(name, platform), cl(cl), system(system) {
     }
     ~OpenCLCalcRBTorsionForceKernel();
     /**
@@ -287,7 +287,7 @@ public:
     double executeEnergy(ContextImpl& context);
 private:
     int numTorsions;
-    OpenCLPlatform::PlatformData& data;
+    OpenCLContext& cl;
     System& system;
     OpenCLArray<mm_float8>* params;
     OpenCLArray<mm_int8>* indices;
@@ -299,7 +299,7 @@ private:
 // */
 //class OpenCLCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
 //public:
-//    OpenCLCalcNonbondedForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, System& system) : CalcNonbondedForceKernel(name, platform), data(data), system(system) {
+//    OpenCLCalcNonbondedForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcNonbondedForceKernel(name, platform), cl(cl), system(system) {
 //    }
 //    ~OpenCLCalcNonbondedForceKernel();
 //    /**
@@ -323,7 +323,7 @@ private:
 //     */
 //    double executeEnergy(ContextImpl& context);
 //private:
-//    OpenCLPlatform::PlatformData& data;
+//    OpenCLContext& cl;
 //    int numParticles;
 //    System& system;
 //};
@@ -333,7 +333,7 @@ private:
 // */
 //class OpenCLCalcCustomNonbondedForceKernel : public CalcCustomNonbondedForceKernel {
 //public:
-//    OpenCLCalcCustomNonbondedForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, System& system) : CalcCustomNonbondedForceKernel(name, platform), data(data), system(system) {
+//    OpenCLCalcCustomNonbondedForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcCustomNonbondedForceKernel(name, platform), cl(cl), system(system) {
 //    }
 //    ~OpenCLCalcCustomNonbondedForceKernel();
 //    /**
@@ -358,7 +358,7 @@ private:
 //    double executeEnergy(ContextImpl& context);
 //private:
 //    void updateGlobalParams(ContextImpl& context);
-//    OpenCLPlatform::PlatformData& data;
+//    OpenCLContext& cl;
 //    int numParticles;
 //    std::vector<std::string> globalParamNames;
 //    std::vector<float> globalParamValues;
@@ -370,7 +370,7 @@ private:
 // */
 //class OpenCLCalcGBSAOBCForceKernel : public CalcGBSAOBCForceKernel {
 //public:
-//    OpenCLCalcGBSAOBCForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data) : CalcGBSAOBCForceKernel(name, platform), data(data) {
+//    OpenCLCalcGBSAOBCForceKernel(std::string name, const Platform& platform, OpenCLContext& cl) : CalcGBSAOBCForceKernel(name, platform), cl(cl) {
 //    }
 //    ~OpenCLCalcGBSAOBCForceKernel();
 //    /**
@@ -394,7 +394,7 @@ private:
 //     */
 //    double executeEnergy(ContextImpl& context);
 //private:
-//    OpenCLPlatform::PlatformData& data;
+//    OpenCLContext& cl;
 //};
 
 /**
@@ -402,7 +402,7 @@ private:
  */
 class OpenCLIntegrateVerletStepKernel : public IntegrateVerletStepKernel {
 public:
-    OpenCLIntegrateVerletStepKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data) : IntegrateVerletStepKernel(name, platform), data(data) {
+    OpenCLIntegrateVerletStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateVerletStepKernel(name, platform), cl(cl) {
     }
     ~OpenCLIntegrateVerletStepKernel();
     /**
@@ -420,8 +420,9 @@ public:
      */
     void execute(ContextImpl& context, const VerletIntegrator& integrator);
 private:
-    OpenCLPlatform::PlatformData& data;
-    double prevStepSize;
+    OpenCLContext& cl;
+    cl::Kernel kernel1;
+    cl::Kernel kernel2;
 };
 
 ///**
@@ -429,7 +430,7 @@ private:
 // */
 //class OpenCLIntegrateLangevinStepKernel : public IntegrateLangevinStepKernel {
 //public:
-//    OpenCLIntegrateLangevinStepKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data) : IntegrateLangevinStepKernel(name, platform), data(data) {
+//    OpenCLIntegrateLangevinStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateLangevinStepKernel(name, platform), cl(cl) {
 //    }
 //    ~OpenCLIntegrateLangevinStepKernel();
 //    /**
@@ -447,7 +448,7 @@ private:
 //     */
 //    void execute(ContextImpl& context, const LangevinIntegrator& integrator);
 //private:
-//    OpenCLPlatform::PlatformData& data;
+//    OpenCLContext& cl;
 //    double prevTemp, prevFriction, prevStepSize;
 //};
 //
@@ -456,7 +457,7 @@ private:
 // */
 //class OpenCLIntegrateBrownianStepKernel : public IntegrateBrownianStepKernel {
 //public:
-//    OpenCLIntegrateBrownianStepKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data) : IntegrateBrownianStepKernel(name, platform), data(data) {
+//    OpenCLIntegrateBrownianStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateBrownianStepKernel(name, platform), cl(cl) {
 //    }
 //    ~OpenCLIntegrateBrownianStepKernel();
 //    /**
@@ -474,7 +475,7 @@ private:
 //     */
 //    void execute(ContextImpl& context, const BrownianIntegrator& integrator);
 //private:
-//    OpenCLPlatform::PlatformData& data;
+//    OpenCLContext& cl;
 //    double prevTemp, prevFriction, prevStepSize;
 //};
 //
@@ -483,7 +484,7 @@ private:
 // */
 //class OpenCLIntegrateVariableVerletStepKernel : public IntegrateVariableVerletStepKernel {
 //public:
-//    OpenCLIntegrateVariableVerletStepKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data) : IntegrateVariableVerletStepKernel(name, platform), data(data) {
+//    OpenCLIntegrateVariableVerletStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateVariableVerletStepKernel(name, platform), cl(cl) {
 //    }
 //    ~OpenCLIntegrateVariableVerletStepKernel();
 //    /**
@@ -502,7 +503,7 @@ private:
 //     */
 //    void execute(ContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime);
 //private:
-//    OpenCLPlatform::PlatformData& data;
+//    OpenCLContext& cl;
 //    double prevErrorTol;
 //};
 //
@@ -511,7 +512,7 @@ private:
 // */
 //class OpenCLIntegrateVariableLangevinStepKernel : public IntegrateVariableLangevinStepKernel {
 //public:
-//    OpenCLIntegrateVariableLangevinStepKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data) : IntegrateVariableLangevinStepKernel(name, platform), data(data) {
+//    OpenCLIntegrateVariableLangevinStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateVariableLangevinStepKernel(name, platform), cl(cl) {
 //    }
 //    ~OpenCLIntegrateVariableLangevinStepKernel();
 //    /**
@@ -530,7 +531,7 @@ private:
 //     */
 //    void execute(ContextImpl& context, const VariableLangevinIntegrator& integrator, double maxTime);
 //private:
-//    OpenCLPlatform::PlatformData& data;
+//    OpenCLContext& cl;
 //    double prevTemp, prevFriction, prevErrorTol;
 //};
 //
@@ -539,7 +540,7 @@ private:
 // */
 //class OpenCLApplyAndersenThermostatKernel : public ApplyAndersenThermostatKernel {
 //public:
-//    OpenCLApplyAndersenThermostatKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data) : ApplyAndersenThermostatKernel(name, platform), data(data) {
+//    OpenCLApplyAndersenThermostatKernel(std::string name, const Platform& platform, OpenCLContext& cl) : ApplyAndersenThermostatKernel(name, platform), cl(cl) {
 //    }
 //    ~OpenCLApplyAndersenThermostatKernel();
 //    /**
@@ -556,7 +557,7 @@ private:
 //     */
 //    void execute(ContextImpl& context);
 //private:
-//    OpenCLPlatform::PlatformData& data;
+//    OpenCLContext& cl;
 //    double prevTemp, prevFrequency, prevStepSize;
 //};
 
@@ -565,7 +566,7 @@ private:
  */
 class OpenCLCalcKineticEnergyKernel : public CalcKineticEnergyKernel {
 public:
-    OpenCLCalcKineticEnergyKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data) : CalcKineticEnergyKernel(name, platform), data(data) {
+    OpenCLCalcKineticEnergyKernel(std::string name, const Platform& platform, OpenCLContext& cl) : CalcKineticEnergyKernel(name, platform), cl(cl) {
     }
     /**
      * Initialize the kernel.
@@ -580,7 +581,7 @@ public:
      */
     double execute(ContextImpl& context);
 private:
-    OpenCLPlatform::PlatformData& data;
+    OpenCLContext& cl;
     std::vector<double> masses;
 };
 
@@ -589,7 +590,7 @@ private:
 // */
 //class OpenCLRemoveCMMotionKernel : public RemoveCMMotionKernel {
 //public:
-//    OpenCLRemoveCMMotionKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data) : RemoveCMMotionKernel(name, platform), data(data) {
+//    OpenCLRemoveCMMotionKernel(std::string name, const Platform& platform, OpenCLContext& cl) : RemoveCMMotionKernel(name, platform), cl(cl) {
 //    }
 //    /**
 //     * Initialize the kernel, setting up the particle masses.
@@ -605,7 +606,7 @@ private:
 //     */
 //    void execute(ContextImpl& context);
 //private:
-//    OpenCLPlatform::PlatformData& data;
+//    OpenCLContext& cl;
 //};
 
 } // namespace OpenMM

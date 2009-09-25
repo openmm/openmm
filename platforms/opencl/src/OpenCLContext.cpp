@@ -27,6 +27,7 @@
 #include "OpenCLContext.h"
 #include "OpenCLArray.h"
 #include "OpenCLForceInfo.h"
+#include "OpenCLIntegrationUtilities.h"
 #include "openmm/Platform.h"
 #include "openmm/System.h"
 #include <fstream>
@@ -36,7 +37,7 @@
 using namespace OpenMM;
 using namespace std;
 
-OpenCLContext::OpenCLContext(int numParticles, int deviceIndex) {
+OpenCLContext::OpenCLContext(int numParticles, int deviceIndex) : time(0.0), stepCount(0) {
     context = cl::Context(CL_DEVICE_TYPE_ALL);
     vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
     const int minThreadBlockSize = 32;
@@ -79,6 +80,7 @@ OpenCLContext::~OpenCLContext() {
     delete forceBuffers;
     delete energyBuffer;
     delete atomIndex;
+    delete integration;
 }
 
 void OpenCLContext::initialize(const System& system) {
@@ -93,7 +95,7 @@ void OpenCLContext::initialize(const System& system) {
     posq = new OpenCLArray<mm_float4>(*this, paddedNumAtoms, "posq", true);
     velm = new OpenCLArray<mm_float4>(*this, paddedNumAtoms, "velm", true);
     for (int i = 0; i < numAtoms; i++)
-        (*velm)[i].w = system.getParticleMass(i);
+        (*velm)[i].w = (float) (1.0/system.getParticleMass(i));
     velm->upload();
     numForceBuffers = 1;
     for (int i = 0; i < (int) forces.size(); i++)
@@ -105,6 +107,7 @@ void OpenCLContext::initialize(const System& system) {
     for (int i = 0; i < paddedNumAtoms; ++i)
         (*atomIndex)[i] = i;
     atomIndex->upload();
+    integration = new OpenCLIntegrationUtilities(*this, system);
 }
 
 void OpenCLContext::addForce(OpenCLForceInfo* force) {
@@ -144,8 +147,7 @@ void OpenCLContext::executeKernel(cl::Kernel& kernel, int workUnits) {
     }
     catch (cl::Error err) {
         stringstream str;
-        str<<"Error invoking kernel ";
-        str<<kernel.getInfo<CL_KERNEL_FUNCTION_NAME>()<<": "<<err.what()<<" ("<<err.err()<<")";
+        str<<"Error invoking kernel "<<kernel.getInfo<CL_KERNEL_FUNCTION_NAME>()<<": "<<err.what()<<" ("<<err.err()<<")";
         throw OpenMMException(str.str());
     }
 }
