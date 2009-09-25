@@ -10,20 +10,20 @@ __kernel void calcHarmonicAngleForce(int numAtoms, int numAngles, __global float
 
         int8 atoms = indices[index];
         float2 angleParams = params[index];
-        float4 a1 = posq[atoms.x];
-        float4 a2 = posq[atoms.y];
-        float4 a3 = posq[atoms.z];
+        float4 a1 = posq[atoms.s0];
+        float4 a2 = posq[atoms.s1];
+        float4 a3 = posq[atoms.s2];
 
         // Compute the force.
 
         float4 v0 = a2-a1;
         float4 v1 = a2-a3;
         float4 cp = cross(v0, v1);
-        float rp = dot(cp.xyz, cp.xyz);
+        float rp = cp.x*cp.x + cp.y*cp.y + cp.z*cp.z;
         rp = max(sqrt(rp), 1.0e-06f);
-        float r21 = dot(v0.xyz, v0.xyz);
-        float r23 = dot(v1.xyz, v1.xyz);
-        float dot = dot(v0.xyz, v1.xyz);
+        float r21 = v0.x*v0.x + v0.y*v0.y + v0.z*v0.z;
+        float r23 = v1.x*v1.x + v1.y*v1.y + v1.z*v1.z;
+        float dot = v0.x*v1.x + v0.y*v1.y + v0.z*v1.z;
         float cosine = dot/sqrt(r21*r23);
         float deltaIdeal = acos(cosine)-angleParams.x;
         energy += 0.5f*angleParams.y*deltaIdeal*deltaIdeal;

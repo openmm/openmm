@@ -10,10 +10,10 @@ __kernel void calcPeriodicTorsionForce(int numAtoms, int numTorsions, __global f
 
         int8 atoms = indices[index];
         float4 torsionParams = params[index];
-        float4 a1 = posq[atoms.x];
-        float4 a2 = posq[atoms.y];
-        float4 a3 = posq[atoms.z];
-        float4 a4 = posq[atoms.w];
+        float4 a1 = posq[atoms.s0];
+        float4 a2 = posq[atoms.s1];
+        float4 a3 = posq[atoms.s2];
+        float4 a4 = posq[atoms.s3];
 
         // Compute the force.
 
