@@ -1,15 +1,16 @@
 /**
- * Evaluate the forces due to periodic torsions.
+ * Evaluate the forces due to Ryckaert-Bellemans torsions.
  */
 
-__kernel void calcPeriodicTorsionForce(int numAtoms, int numTorsions, __global float4* forceBuffers, __global float* energyBuffer, __global float4* posq, __global float4* params, __global int8* indices) {
+__kernel void calcRBTorsionForce(int numAtoms, int numTorsions, __global float4* forceBuffers, __global float* energyBuffer, __global float4* posq, __global float8* params, __global int8* indices) {
     int index = get_global_id(0);
     float energy = 0.0f;
+    const float PI = 3.14159265358979323846f;
     while (index < numTorsions) {
         // Look up the data for this torsion.
 
         int8 atoms = indices[index];
-        float4 torsionParams = params[index];
+        float8 torsionParams = params[index];
         float4 a1 = posq[atoms.s0];
         float4 a2 = posq[atoms.s1];
         float4 a3 = posq[atoms.s2];
@@ -26,10 +27,28 @@ __kernel void calcPeriodicTorsionForce(int numAtoms, int numTorsions, __global f
         cosangle = clamp(cosangle, -1.0f, 1.0f);
         float dihedralAngle = acos(cosangle);
         dihedralAngle = (dot(v0, cp1) >= 0 ? dihedralAngle : -dihedralAngle);
-        float deltaAngle = torsionParams.z*dihedralAngle-torsionParams.y;
-        energy += torsionParams.x*(1.0f+cos(deltaAngle));
-        float sinDeltaAngle = sin(deltaAngle);
-        float dEdAngle = -torsionParams.x*torsionParams.z*sinDeltaAngle;
+        if (dihedralAngle < 0.0f)
+            dihedralAngle += PI;
+        else
+            dihedralAngle -= PI;
+        cosangle = -cosangle;
+        float cosFactor = cosangle;
+        float dEdAngle = -torsionParams.s1;
+        float rbEnergy = torsionParams.s0;
+        rbEnergy += torsionParams.s1*cosFactor;
+        dEdAngle -= 2.0f*torsionParams.s2*cosFactor;
+        cosFactor *= cosangle;
+        dEdAngle -= 3.0f*torsionParams.s3*cosFactor;
+        rbEnergy += torsionParams.s2*cosFactor;
+        cosFactor *= cosangle;
+        dEdAngle -= 4.0f*torsionParams.s4*cosFactor;
+        rbEnergy += torsionParams.s3*cosFactor;
+        cosFactor *= cosangle;
+        dEdAngle -= 5.0f*torsionParams.s5*cosFactor;
+        rbEnergy += torsionParams.s4*cosFactor;
+        rbEnergy += torsionParams.s5*cosFactor*cosangle;
+        energy += rbEnergy;
+        dEdAngle *= sin(dihedralAngle);
         float normCross1 = dot(cp0, cp0);
         float normBC = sqrt(dot(v1, v1));
         float normCross2 = dot(cp1, cp1);

@@ -367,48 +367,84 @@ double OpenCLCalcPeriodicTorsionForceKernel::executeEnergy(ContextImpl& context)
     return 0.0;
 }
 
-//OpenCLCalcRBTorsionForceKernel::~OpenCLCalcRBTorsionForceKernel() {
-//}
-//
-//void OpenCLCalcRBTorsionForceKernel::initialize(const System& system, const RBTorsionForce& force) {
-//    if (data.primaryKernel == NULL)
-//        data.primaryKernel = this;
-//    data.hasRB = true;
-//    numTorsions = force.getNumTorsions();
-//    vector<int> particle1(numTorsions);
-//    vector<int> particle2(numTorsions);
-//    vector<int> particle3(numTorsions);
-//    vector<int> particle4(numTorsions);
-//    vector<float> c0(numTorsions);
-//    vector<float> c1(numTorsions);
-//    vector<float> c2(numTorsions);
-//    vector<float> c3(numTorsions);
-//    vector<float> c4(numTorsions);
-//    vector<float> c5(numTorsions);
-//    for (int i = 0; i < numTorsions; i++) {
-//        double c[6];
-//        force.getTorsionParameters(i, particle1[i], particle2[i], particle3[i], particle4[i], c[0], c[1], c[2], c[3], c[4], c[5]);
-//        c0[i] = (float) c[0];
-//        c1[i] = (float) c[1];
-//        c2[i] = (float) c[2];
-//        c3[i] = (float) c[3];
-//        c4[i] = (float) c[4];
-//        c5[i] = (float) c[5];
-//    }
-//    gpuSetRbDihedralParameters(data.gpu, particle1, particle2, particle3, particle4, c0, c1, c2, c3, c4, c5);
-//}
-//
-//void OpenCLCalcRBTorsionForceKernel::executeForces(ContextImpl& context) {
-//    if (data.primaryKernel == this)
-//        calcForces(context, data);
-//}
-//
-//double OpenCLCalcRBTorsionForceKernel::executeEnergy(ContextImpl& context) {
-//    if (data.primaryKernel == this)
-//        return calcEnergy(context, data, system);
-//    return 0.0;
-//}
-//
+class OpenCLRBTorsionForceInfo : public OpenCLForceInfo {
+public:
+    OpenCLRBTorsionForceInfo(int requiredBuffers, const RBTorsionForce& force) : OpenCLForceInfo(requiredBuffers, false, 0.0), force(force) {
+    }
+    int getNumParticleGroups() {
+        return force.getNumTorsions();
+    }
+    void getParticlesInGroup(int index, std::vector<int>& particles) {
+        int particle1, particle2, particle3, particle4;
+        double c0, c1, c2, c3, c4, c5;
+        force.getTorsionParameters(index, particle1, particle2, particle3, particle4, c0, c1, c2, c3, c4, c5);
+        particles.resize(4);
+        particles[0] = particle1;
+        particles[1] = particle2;
+        particles[2] = particle3;
+        particles[3] = particle4;
+    }
+    bool areGroupsIdentical(int group1, int group2) {
+        int particle1, particle2, particle3, particle4;
+        double c0a, c0b, c1a, c1b, c2a, c2b, c3a, c3b, c4a, c4b, c5a, c5b;
+        force.getTorsionParameters(group1, particle1, particle2, particle3, particle4, c0a, c1a, c2a, c3a, c4a, c5a);
+        force.getTorsionParameters(group1, particle1, particle2, particle3, particle4, c0b, c1b, c2b, c3b, c4b, c5b);
+        return (c0a == c0b && c1a == c1b && c2a == c2b && c3a == c3b && c4a == c4b && c5a == c5b);
+    }
+private:
+    const RBTorsionForce& force;
+};
+
+OpenCLCalcRBTorsionForceKernel::~OpenCLCalcRBTorsionForceKernel() {
+    if (params != NULL)
+        delete params;
+    if (indices != NULL)
+        delete indices;
+}
+
+void OpenCLCalcRBTorsionForceKernel::initialize(const System& system, const RBTorsionForce& force) {
+    numTorsions = force.getNumTorsions();
+    params = new OpenCLArray<mm_float8>(*data.context, numTorsions, "rbTorsionParams");
+    indices = new OpenCLArray<mm_int8>(*data.context, numTorsions, "rbTorsionIndices");
+    vector<int> forceBufferCounter(system.getNumParticles(), 0);
+    vector<mm_float8> paramVector(numTorsions);
+    vector<mm_int8> indicesVector(numTorsions);
+    for (int i = 0; i < numTorsions; i++) {
+        int particle1, particle2, particle3, particle4;
+        double c0, c1, c2, c3, c4, c5;
+        force.getTorsionParameters(i, particle1, particle2, particle3, particle4, c0, c1, c2, c3, c4, c5);
+        paramVector[i] = (mm_float8) {c0, c1, c2, c3, c4, c5};
+        indicesVector[i] = (mm_int8) {particle1, particle2, particle3, particle4,
+                forceBufferCounter[particle1]++, forceBufferCounter[particle2]++, forceBufferCounter[particle3]++, forceBufferCounter[particle4]++};
+
+    }
+    params->upload(paramVector);
+    indices->upload(indicesVector);
+    int maxBuffers = 1;
+    for (int i = 0; i < forceBufferCounter.size(); i++) {
+        maxBuffers = max(maxBuffers, forceBufferCounter[i]);
+    }
+    data.context->addForce(new OpenCLRBTorsionForceInfo(maxBuffers, force));
+    cl::Program program = data.context->createProgram(data.context->loadSourceFromFile("rbTorsionForce.cl"));
+    kernel = cl::Kernel(program, "calcRBTorsionForce");
+}
+
+void OpenCLCalcRBTorsionForceKernel::executeForces(ContextImpl& context) {
+    kernel.setArg<cl_int>(0, data.context->getPaddedNumAtoms());
+    kernel.setArg<cl_int>(1, numTorsions);
+    kernel.setArg<cl::Buffer>(2, data.context->getForceBuffers().getDeviceBuffer());
+    kernel.setArg<cl::Buffer>(3, data.context->getEnergyBuffer().getDeviceBuffer());
+    kernel.setArg<cl::Buffer>(4, data.context->getPosq().getDeviceBuffer());
+    kernel.setArg<cl::Buffer>(5, params->getDeviceBuffer());
+    kernel.setArg<cl::Buffer>(6, indices->getDeviceBuffer());
+    data.context->executeKernel(kernel, numTorsions);
+}
+
+double OpenCLCalcRBTorsionForceKernel::executeEnergy(ContextImpl& context) {
+    executeForces(context);
+    return 0.0;
+}
+
 //OpenCLCalcNonbondedForceKernel::~OpenCLCalcNonbondedForceKernel() {
 //}
 //

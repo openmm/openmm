@@ -257,40 +257,43 @@ private:
     cl::Kernel kernel;
 };
 
-///**
-// * This kernel is invoked by RBTorsionForce to calculate the forces acting on the system and the energy of the system.
-// */
-//class OpenCLCalcRBTorsionForceKernel : public CalcRBTorsionForceKernel {
-//public:
-//    OpenCLCalcRBTorsionForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, System& system) : CalcRBTorsionForceKernel(name, platform), data(data), system(system) {
-//    }
-//    ~OpenCLCalcRBTorsionForceKernel();
-//    /**
-//     * Initialize the kernel.
-//     *
-//     * @param system     the System this kernel will be applied to
-//     * @param force      the RBTorsionForce this kernel will be used for
-//     */
-//    void initialize(const System& system, const RBTorsionForce& force);
-//    /**
-//     * Execute the kernel to calculate the forces.
-//     *
-//     * @param context    the context in which to execute this kernel
-//     */
-//    void executeForces(ContextImpl& context);
-//    /**
-//     * Execute the kernel to calculate the energy.
-//     *
-//     * @param context    the context in which to execute this kernel
-//     * @return the potential energy due to the RBTorsionForce
-//     */
-//    double executeEnergy(ContextImpl& context);
-//private:
-//    int numTorsions;
-//    OpenCLPlatform::PlatformData& data;
-//    System& system;
-//};
-//
+/**
+ * This kernel is invoked by RBTorsionForce to calculate the forces acting on the system and the energy of the system.
+ */
+class OpenCLCalcRBTorsionForceKernel : public CalcRBTorsionForceKernel {
+public:
+    OpenCLCalcRBTorsionForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, System& system) : CalcRBTorsionForceKernel(name, platform), data(data), system(system) {
+    }
+    ~OpenCLCalcRBTorsionForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the RBTorsionForce this kernel will be used for
+     */
+    void initialize(const System& system, const RBTorsionForce& force);
+    /**
+     * Execute the kernel to calculate the forces.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void executeForces(ContextImpl& context);
+    /**
+     * Execute the kernel to calculate the energy.
+     *
+     * @param context    the context in which to execute this kernel
+     * @return the potential energy due to the RBTorsionForce
+     */
+    double executeEnergy(ContextImpl& context);
+private:
+    int numTorsions;
+    OpenCLPlatform::PlatformData& data;
+    System& system;
+    OpenCLArray<mm_float8>* params;
+    OpenCLArray<mm_int8>* indices;
+    cl::Kernel kernel;
+};
+
 ///**
 // * This kernel is invoked by NonbondedForce to calculate the forces acting on the system.
 // */

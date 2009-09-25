@@ -50,6 +50,9 @@ typedef struct {
     cl_float x, y, z, w;
 } mm_float4;
 typedef struct {
+    cl_float s0, s1, s2, s3, s4, s5, s6, s7;
+} mm_float8;
+typedef struct {
     cl_int x, y;
 } mm_int2;
 typedef struct {
