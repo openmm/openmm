@@ -55,6 +55,9 @@ typedef struct {
 typedef struct {
     cl_int x, y, z, w;
 } mm_int4;
+typedef struct {
+    cl_int s0, s1, s2, s3, s4, s5, s6, s7;
+} mm_int8;
 
 /**
  * This class contains the information associated with a Context by the OpenCL Platform.

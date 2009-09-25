@@ -6,15 +6,23 @@ __kernel void calcHarmonicBondForce(int numAtoms, int numBonds, __global float4*
     int index = get_global_id(0);
     float energy = 0.0f;
     while (index < numBonds) {
+        // Look up the data for this bonds.
+
         int4 atoms = indices[index];
         float4 delta = posq[atoms.y]-posq[atoms.x];
         float2 bondParams = params[index];
-        float r = sqrt(delta.x*delta.x + delta.y*delta.y + delta.z*delta.z);
+
+        // Compute the force.
+
+        float r = sqrt(dot(delta.xyz, delta.xyz));
         float deltaIdeal = r-bondParams.x;
         energy += 0.5f * bondParams.y*deltaIdeal*deltaIdeal;
         float dEdR = bondParams.y * deltaIdeal;
         dEdR = (r > 0.0f) ? (dEdR / r) : 0.0f;
         delta.xyz *= dEdR;
+
+        // Record the force on each of the two atoms.
+
         unsigned int offsetA = atoms.x+atoms.z*numAtoms;
         unsigned int offsetB = atoms.y+atoms.w*numAtoms;
         float4 forceA = forceBuffers[offsetA];

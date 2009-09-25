@@ -183,74 +183,80 @@ private:
     cl::Kernel kernel;
 };
 
-///**
-// * This kernel is invoked by HarmonicAngleForce to calculate the forces acting on the system and the energy of the system.
-// */
-//class OpenCLCalcHarmonicAngleForceKernel : public CalcHarmonicAngleForceKernel {
-//public:
-//    OpenCLCalcHarmonicAngleForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, System& system) : CalcHarmonicAngleForceKernel(name, platform), data(data), system(system) {
-//    }
-//    ~OpenCLCalcHarmonicAngleForceKernel();
-//    /**
-//     * Initialize the kernel.
-//     *
-//     * @param system     the System this kernel will be applied to
-//     * @param force      the HarmonicAngleForce this kernel will be used for
-//     */
-//    void initialize(const System& system, const HarmonicAngleForce& force);
-//    /**
-//     * Execute the kernel to calculate the forces.
-//     *
-//     * @param context    the context in which to execute this kernel
-//     */
-//    void executeForces(ContextImpl& context);
-//    /**
-//     * Execute the kernel to calculate the energy.
-//     *
-//     * @param context    the context in which to execute this kernel
-//     * @return the potential energy due to the HarmonicAngleForce
-//     */
-//    double executeEnergy(ContextImpl& context);
-//private:
-//    int numAngles;
-//    OpenCLPlatform::PlatformData& data;
-//    System& system;
-//};
-//
-///**
-// * This kernel is invoked by PeriodicTorsionForce to calculate the forces acting on the system and the energy of the system.
-// */
-//class OpenCLCalcPeriodicTorsionForceKernel : public CalcPeriodicTorsionForceKernel {
-//public:
-//    OpenCLCalcPeriodicTorsionForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, System& system) : CalcPeriodicTorsionForceKernel(name, platform), data(data), system(system) {
-//    }
-//    ~OpenCLCalcPeriodicTorsionForceKernel();
-//    /**
-//     * Initialize the kernel.
-//     *
-//     * @param system     the System this kernel will be applied to
-//     * @param force      the PeriodicTorsionForce this kernel will be used for
-//     */
-//    void initialize(const System& system, const PeriodicTorsionForce& force);
-//    /**
-//     * Execute the kernel to calculate the forces.
-//     *
-//     * @param context    the context in which to execute this kernel
-//     */
-//    void executeForces(ContextImpl& context);
-//    /**
-//     * Execute the kernel to calculate the energy.
-//     *
-//     * @param context    the context in which to execute this kernel
-//     * @return the potential energy due to the PeriodicTorsionForce
-//     */
-//    double executeEnergy(ContextImpl& context);
-//private:
-//    int numTorsions;
-//    OpenCLPlatform::PlatformData& data;
-//    System& system;
-//};
-//
+/**
+ * This kernel is invoked by HarmonicAngleForce to calculate the forces acting on the system and the energy of the system.
+ */
+class OpenCLCalcHarmonicAngleForceKernel : public CalcHarmonicAngleForceKernel {
+public:
+    OpenCLCalcHarmonicAngleForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, System& system) : CalcHarmonicAngleForceKernel(name, platform), data(data), system(system) {
+    }
+    ~OpenCLCalcHarmonicAngleForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the HarmonicAngleForce this kernel will be used for
+     */
+    void initialize(const System& system, const HarmonicAngleForce& force);
+    /**
+     * Execute the kernel to calculate the forces.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void executeForces(ContextImpl& context);
+    /**
+     * Execute the kernel to calculate the energy.
+     *
+     * @param context    the context in which to execute this kernel
+     * @return the potential energy due to the HarmonicAngleForce
+     */
+    double executeEnergy(ContextImpl& context);
+private:
+    int numAngles;
+    OpenCLPlatform::PlatformData& data;
+    System& system;
+    OpenCLArray<mm_float2>* params;
+    OpenCLArray<mm_int8>* indices;
+    cl::Kernel kernel;
+};
+
+/**
+ * This kernel is invoked by PeriodicTorsionForce to calculate the forces acting on the system and the energy of the system.
+ */
+class OpenCLCalcPeriodicTorsionForceKernel : public CalcPeriodicTorsionForceKernel {
+public:
+    OpenCLCalcPeriodicTorsionForceKernel(std::string name, const Platform& platform, OpenCLPlatform::PlatformData& data, System& system) : CalcPeriodicTorsionForceKernel(name, platform), data(data), system(system) {
+    }
+    ~OpenCLCalcPeriodicTorsionForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the PeriodicTorsionForce this kernel will be used for
+     */
+    void initialize(const System& system, const PeriodicTorsionForce& force);
+    /**
+     * Execute the kernel to calculate the forces.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void executeForces(ContextImpl& context);
+    /**
+     * Execute the kernel to calculate the energy.
+     *
+     * @param context    the context in which to execute this kernel
+     * @return the potential energy due to the PeriodicTorsionForce
+     */
+    double executeEnergy(ContextImpl& context);
+private:
+    int numTorsions;
+    OpenCLPlatform::PlatformData& data;
+    System& system;
+    OpenCLArray<mm_float4>* params;
+    OpenCLArray<mm_int8>* indices;
+    cl::Kernel kernel;
+};
+
 ///**
 // * This kernel is invoked by RBTorsionForce to calculate the forces acting on the system and the energy of the system.
 // */

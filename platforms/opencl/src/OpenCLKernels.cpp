@@ -137,13 +137,6 @@ void OpenCLUpdateStateDataKernel::getForces(ContextImpl& context, std::vector<Ve
     }
 }
 
-OpenCLCalcHarmonicBondForceKernel::~OpenCLCalcHarmonicBondForceKernel() {
-    if (params != NULL)
-        delete params;
-    if (indices != NULL)
-        delete indices;
-}
-
 class OpenCLBondForceInfo : public OpenCLForceInfo {
 public:
     OpenCLBondForceInfo(int requiredBuffers, const HarmonicBondForce& force) : OpenCLForceInfo(requiredBuffers, false, 0.0), force(force) {
@@ -170,10 +163,17 @@ private:
     const HarmonicBondForce& force;
 };
 
+OpenCLCalcHarmonicBondForceKernel::~OpenCLCalcHarmonicBondForceKernel() {
+    if (params != NULL)
+        delete params;
+    if (indices != NULL)
+        delete indices;
+}
+
 void OpenCLCalcHarmonicBondForceKernel::initialize(const System& system, const HarmonicBondForce& force) {
     numBonds = force.getNumBonds();
-    params = new OpenCLArray<mm_float2>(*data.context, numBonds, "BondParams");
-    indices = new OpenCLArray<mm_int4>(*data.context, numBonds, "BondIndices");
+    params = new OpenCLArray<mm_float2>(*data.context, numBonds, "bondParams");
+    indices = new OpenCLArray<mm_int4>(*data.context, numBonds, "bondIndices");
     vector<int> forceBufferCounter(system.getNumParticles(), 0);
     vector<mm_float2> paramVector(numBonds);
     vector<mm_int4> indicesVector(numBonds);
@@ -211,77 +211,162 @@ double OpenCLCalcHarmonicBondForceKernel::executeEnergy(ContextImpl& context) {
     executeForces(context);
     return 0.0;
 }
-//
-//OpenCLCalcHarmonicAngleForceKernel::~OpenCLCalcHarmonicAngleForceKernel() {
-//}
-//
-//void OpenCLCalcHarmonicAngleForceKernel::initialize(const System& system, const HarmonicAngleForce& force) {
-//    if (data.primaryKernel == NULL)
-//        data.primaryKernel = this;
-//    data.hasAngles = true;
-//    numAngles = force.getNumAngles();
-//    const float RadiansToDegrees = (float) (180.0/3.14159265);
-//    vector<int> particle1(numAngles);
-//    vector<int> particle2(numAngles);
-//    vector<int> particle3(numAngles);
-//    vector<float> angle(numAngles);
-//    vector<float> k(numAngles);
-//    for (int i = 0; i < numAngles; i++) {
-//        double angleValue, kValue;
-//        force.getAngleParameters(i, particle1[i], particle2[i], particle3[i], angleValue, kValue);
-//        angle[i] = (float) (angleValue*RadiansToDegrees);
-//        k[i] = (float) kValue;
-//    }
-//    gpuSetBondAngleParameters(data.gpu, particle1, particle2, particle3, angle, k);
-//}
-//
-//void OpenCLCalcHarmonicAngleForceKernel::executeForces(ContextImpl& context) {
-//    if (data.primaryKernel == this)
-//        calcForces(context, data);
-//}
-//
-//double OpenCLCalcHarmonicAngleForceKernel::executeEnergy(ContextImpl& context) {
-//    if (data.primaryKernel == this)
-//        return calcEnergy(context, data, system);
-//    return 0.0;
-//}
-//
-//OpenCLCalcPeriodicTorsionForceKernel::~OpenCLCalcPeriodicTorsionForceKernel() {
-//}
-//
-//void OpenCLCalcPeriodicTorsionForceKernel::initialize(const System& system, const PeriodicTorsionForce& force) {
-//    if (data.primaryKernel == NULL)
-//        data.primaryKernel = this;
-//    data.hasPeriodicTorsions = true;
-//    numTorsions = force.getNumTorsions();
-//    const float RadiansToDegrees = (float)(180.0/3.14159265);
-//    vector<int> particle1(numTorsions);
-//    vector<int> particle2(numTorsions);
-//    vector<int> particle3(numTorsions);
-//    vector<int> particle4(numTorsions);
-//    vector<float> k(numTorsions);
-//    vector<float> phase(numTorsions);
-//    vector<int> periodicity(numTorsions);
-//    for (int i = 0; i < numTorsions; i++) {
-//        double kValue, phaseValue;
-//        force.getTorsionParameters(i, particle1[i], particle2[i], particle3[i], particle4[i], periodicity[i], phaseValue, kValue);
-//        k[i] = (float) kValue;
-//        phase[i] = (float) (phaseValue*RadiansToDegrees);
-//    }
-//    gpuSetDihedralParameters(data.gpu, particle1, particle2, particle3, particle4, k, phase, periodicity);
-//}
-//
-//void OpenCLCalcPeriodicTorsionForceKernel::executeForces(ContextImpl& context) {
-//    if (data.primaryKernel == this)
-//        calcForces(context, data);
-//}
-//
-//double OpenCLCalcPeriodicTorsionForceKernel::executeEnergy(ContextImpl& context) {
-//    if (data.primaryKernel == this)
-//        return calcEnergy(context, data, system);
-//    return 0.0;
-//}
-//
+
+class OpenCLAngleForceInfo : public OpenCLForceInfo {
+public:
+    OpenCLAngleForceInfo(int requiredBuffers, const HarmonicAngleForce& force) : OpenCLForceInfo(requiredBuffers, false, 0.0), force(force) {
+    }
+    int getNumParticleGroups() {
+        return force.getNumAngles();
+    }
+    void getParticlesInGroup(int index, std::vector<int>& particles) {
+        int particle1, particle2, particle3;
+        double angle, k;
+        force.getAngleParameters(index, particle1, particle2, particle3, angle, k);
+        particles.resize(3);
+        particles[0] = particle1;
+        particles[1] = particle2;
+        particles[2] = particle3;
+    }
+    bool areGroupsIdentical(int group1, int group2) {
+        int particle1, particle2, particle3;
+        double angle1, angle2, k1, k2;
+        force.getAngleParameters(group1, particle1, particle2, particle3, angle1, k1);
+        force.getAngleParameters(group2, particle1, particle2, particle3, angle2, k2);
+        return (angle1 == angle2 && k1 == k2);
+    }
+private:
+    const HarmonicAngleForce& force;
+};
+
+OpenCLCalcHarmonicAngleForceKernel::~OpenCLCalcHarmonicAngleForceKernel() {
+    if (params != NULL)
+        delete params;
+    if (indices != NULL)
+        delete indices;
+}
+
+void OpenCLCalcHarmonicAngleForceKernel::initialize(const System& system, const HarmonicAngleForce& force) {
+    numAngles = force.getNumAngles();
+    params = new OpenCLArray<mm_float2>(*data.context, numAngles, "angleParams");
+    indices = new OpenCLArray<mm_int8>(*data.context, numAngles, "angleIndices");
+    vector<int> forceBufferCounter(system.getNumParticles(), 0);
+    vector<mm_float2> paramVector(numAngles);
+    vector<mm_int8> indicesVector(numAngles);
+    for (int i = 0; i < numAngles; i++) {
+        int particle1, particle2, particle3;
+        double angle, k;
+        force.getAngleParameters(i, particle1, particle2, particle3, angle, k);
+        paramVector[i] = (mm_float2) {angle, k};
+        indicesVector[i] = (mm_int8) {particle1, particle2, particle3,
+                forceBufferCounter[particle1]++, forceBufferCounter[particle2]++, forceBufferCounter[particle3]++, 0, 0};
+
+    }
+    params->upload(paramVector);
+    indices->upload(indicesVector);
+    int maxBuffers = 1;
+    for (int i = 0; i < forceBufferCounter.size(); i++) {
+        maxBuffers = max(maxBuffers, forceBufferCounter[i]);
+    }
+    data.context->addForce(new OpenCLAngleForceInfo(maxBuffers, force));
+    cl::Program program = data.context->createProgram(data.context->loadSourceFromFile("harmonicAngleForce.cl"));
+    kernel = cl::Kernel(program, "calcHarmonicAngleForce");
+}
+
+void OpenCLCalcHarmonicAngleForceKernel::executeForces(ContextImpl& context) {
+    kernel.setArg<cl_int>(0, data.context->getPaddedNumAtoms());
+    kernel.setArg<cl_int>(1, numAngles);
+    kernel.setArg<cl::Buffer>(2, data.context->getForceBuffers().getDeviceBuffer());
+    kernel.setArg<cl::Buffer>(3, data.context->getEnergyBuffer().getDeviceBuffer());
+    kernel.setArg<cl::Buffer>(4, data.context->getPosq().getDeviceBuffer());
+    kernel.setArg<cl::Buffer>(5, params->getDeviceBuffer());
+    kernel.setArg<cl::Buffer>(6, indices->getDeviceBuffer());
+    data.context->executeKernel(kernel, numAngles);
+}
+
+double OpenCLCalcHarmonicAngleForceKernel::executeEnergy(ContextImpl& context) {
+    executeForces(context);
+    return 0.0;
+}
+
+class OpenCLPeriodicTorsionForceInfo : public OpenCLForceInfo {
+public:
+    OpenCLPeriodicTorsionForceInfo(int requiredBuffers, const PeriodicTorsionForce& force) : OpenCLForceInfo(requiredBuffers, false, 0.0), force(force) {
+    }
+    int getNumParticleGroups() {
+        return force.getNumTorsions();
+    }
+    void getParticlesInGroup(int index, std::vector<int>& particles) {
+        int particle1, particle2, particle3, particle4, periodicity;
+        double phase, k;
+        force.getTorsionParameters(index, particle1, particle2, particle3, particle4, periodicity, phase, k);
+        particles.resize(4);
+        particles[0] = particle1;
+        particles[1] = particle2;
+        particles[2] = particle3;
+        particles[3] = particle4;
+    }
+    bool areGroupsIdentical(int group1, int group2) {
+        int particle1, particle2, particle3, particle4, periodicity1, periodicity2;
+        double phase1, phase2, k1, k2;
+        force.getTorsionParameters(group1, particle1, particle2, particle3, particle4, periodicity1, phase1, k1);
+        force.getTorsionParameters(group1, particle1, particle2, particle3, particle4, periodicity2, phase2, k2);
+        return (periodicity1 == periodicity2 && phase1 == phase2 && k1 == k2);
+    }
+private:
+    const PeriodicTorsionForce& force;
+};
+
+OpenCLCalcPeriodicTorsionForceKernel::~OpenCLCalcPeriodicTorsionForceKernel() {
+    if (params != NULL)
+        delete params;
+    if (indices != NULL)
+        delete indices;
+}
+
+void OpenCLCalcPeriodicTorsionForceKernel::initialize(const System& system, const PeriodicTorsionForce& force) {
+    numTorsions = force.getNumTorsions();
+    params = new OpenCLArray<mm_float4>(*data.context, numTorsions, "periodicTorsionParams");
+    indices = new OpenCLArray<mm_int8>(*data.context, numTorsions, "periodicTorsionIndices");
+    vector<int> forceBufferCounter(system.getNumParticles(), 0);
+    vector<mm_float4> paramVector(numTorsions);
+    vector<mm_int8> indicesVector(numTorsions);
+    for (int i = 0; i < numTorsions; i++) {
+        int particle1, particle2, particle3, particle4, periodicity;
+        double phase, k;
+        force.getTorsionParameters(i, particle1, particle2, particle3, particle4, periodicity, phase, k);
+        paramVector[i] = (mm_float4) {k, phase, (float) periodicity};
+        indicesVector[i] = (mm_int8) {particle1, particle2, particle3, particle4,
+                forceBufferCounter[particle1]++, forceBufferCounter[particle2]++, forceBufferCounter[particle3]++, forceBufferCounter[particle4]++};
+
+    }
+    params->upload(paramVector);
+    indices->upload(indicesVector);
+    int maxBuffers = 1;
+    for (int i = 0; i < forceBufferCounter.size(); i++) {
+        maxBuffers = max(maxBuffers, forceBufferCounter[i]);
+    }
+    data.context->addForce(new OpenCLPeriodicTorsionForceInfo(maxBuffers, force));
+    cl::Program program = data.context->createProgram(data.context->loadSourceFromFile("periodicTorsionForce.cl"));
+    kernel = cl::Kernel(program, "calcPeriodicTorsionForce");
+}
+
+void OpenCLCalcPeriodicTorsionForceKernel::executeForces(ContextImpl& context) {
+    kernel.setArg<cl_int>(0, data.context->getPaddedNumAtoms());
+    kernel.setArg<cl_int>(1, numTorsions);
+    kernel.setArg<cl::Buffer>(2, data.context->getForceBuffers().getDeviceBuffer());
+    kernel.setArg<cl::Buffer>(3, data.context->getEnergyBuffer().getDeviceBuffer());
+    kernel.setArg<cl::Buffer>(4, data.context->getPosq().getDeviceBuffer());
+    kernel.setArg<cl::Buffer>(5, params->getDeviceBuffer());
+    kernel.setArg<cl::Buffer>(6, indices->getDeviceBuffer());
+    data.context->executeKernel(kernel, numTorsions);
+}
+
+double OpenCLCalcPeriodicTorsionForceKernel::executeEnergy(ContextImpl& context) {
+    executeForces(context);
+    return 0.0;
+}
+
 //OpenCLCalcRBTorsionForceKernel::~OpenCLCalcRBTorsionForceKernel() {
 //}
 //
