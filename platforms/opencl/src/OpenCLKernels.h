@@ -421,37 +421,41 @@ public:
     void execute(ContextImpl& context, const VerletIntegrator& integrator);
 private:
     OpenCLContext& cl;
-    cl::Kernel kernel1;
-    cl::Kernel kernel2;
+    cl::Kernel kernel1, kernel2;
 };
 
-///**
-// * This kernel is invoked by LangevinIntegrator to take one time step.
-// */
-//class OpenCLIntegrateLangevinStepKernel : public IntegrateLangevinStepKernel {
-//public:
-//    OpenCLIntegrateLangevinStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateLangevinStepKernel(name, platform), cl(cl) {
-//    }
-//    ~OpenCLIntegrateLangevinStepKernel();
-//    /**
-//     * Initialize the kernel, setting up the particle masses.
-//     *
-//     * @param system     the System this kernel will be applied to
-//     * @param integrator the LangevinIntegrator this kernel will be used for
-//     */
-//    void initialize(const System& system, const LangevinIntegrator& integrator);
-//    /**
-//     * Execute the kernel.
-//     *
-//     * @param context    the context in which to execute this kernel
-//     * @param integrator the LangevinIntegrator this kernel is being used for
-//     */
-//    void execute(ContextImpl& context, const LangevinIntegrator& integrator);
-//private:
-//    OpenCLContext& cl;
-//    double prevTemp, prevFriction, prevStepSize;
-//};
-//
+/**
+ * This kernel is invoked by LangevinIntegrator to take one time step.
+ */
+class OpenCLIntegrateLangevinStepKernel : public IntegrateLangevinStepKernel {
+public:
+    OpenCLIntegrateLangevinStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateLangevinStepKernel(name, platform), cl(cl),
+            params(NULL), xVector(NULL), vVector(NULL) {
+    }
+    ~OpenCLIntegrateLangevinStepKernel();
+    /**
+     * Initialize the kernel, setting up the particle masses.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param integrator the LangevinIntegrator this kernel will be used for
+     */
+    void initialize(const System& system, const LangevinIntegrator& integrator);
+    /**
+     * Execute the kernel.
+     *
+     * @param context    the context in which to execute this kernel
+     * @param integrator the LangevinIntegrator this kernel is being used for
+     */
+    void execute(ContextImpl& context, const LangevinIntegrator& integrator);
+private:
+    OpenCLContext& cl;
+    double prevTemp, prevFriction, prevStepSize;
+    OpenCLArray<cl_float>* params;
+    OpenCLArray<mm_float4>* xVector;
+    OpenCLArray<mm_float4>* vVector;
+    cl::Kernel kernel1, kernel2, kernel3;
+};
+
 ///**
 // * This kernel is invoked by BrownianIntegrator to take one time step.
 // */

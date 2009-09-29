@@ -35,6 +35,12 @@
 using namespace OpenMM;
 using namespace std;
 
+static const double KILO = 1e3;                      // Thousand
+static const double BOLTZMANN = 1.380658e-23;            // (J/K)
+static const double AVOGADRO = 6.0221367e23;            // ()
+static const double RGAS = BOLTZMANN*AVOGADRO;     // (J/(mol K))
+static const double BOLTZ = (RGAS/KILO);            // (kJ/(mol K))
+
 void OpenCLCalcForcesAndEnergyKernel::initialize(const System& system) {
 }
 
@@ -836,47 +842,149 @@ void OpenCLIntegrateVerletStepKernel::execute(ContextImpl& context, const Verlet
     cl.setStepCount(cl.getStepCount()+1);
 }
 
-//OpenCLIntegrateLangevinStepKernel::~OpenCLIntegrateLangevinStepKernel() {
-//}
-//
-//void OpenCLIntegrateLangevinStepKernel::initialize(const System& system, const LangevinIntegrator& integrator) {
-//    initializeIntegration(system, data, integrator);
-//    _gpuContext* gpu = data.gpu;
-//    gpu->seed = (unsigned long) integrator.getRandomNumberSeed();
-//    gpuInitializeRandoms(gpu);
-//    prevStepSize = -1.0;
-//}
-//
-//void OpenCLIntegrateLangevinStepKernel::execute(ContextImpl& context, const LangevinIntegrator& integrator) {
-//    _gpuContext* gpu = data.gpu;
-//    double temperature = integrator.getTemperature();
-//    double friction = integrator.getFriction();
-//    double stepSize = integrator.getStepSize();
-//    if (temperature != prevTemp || friction != prevFriction || stepSize != prevStepSize) {
-//        // Initialize the GPU parameters.
-//
-//        double tau = (friction == 0.0 ? 0.0 : 1.0/friction);
-//        gpuSetLangevinIntegrationParameters(gpu, (float) tau, (float) stepSize, (float) temperature, 0.0f);
-//        gpuSetConstants(gpu);
-//        kGenerateRandoms(gpu);
-//        prevTemp = temperature;
-//        prevFriction = friction;
-//        prevStepSize = stepSize;
-//    }
-//    kLangevinUpdatePart1(gpu);
-//    kApplyFirstShake(gpu);
-//    kApplyFirstSettle(gpu);
-//    kApplyFirstCCMA(gpu);
-//    if (data.removeCM)
-//        if (data.stepCount%data.cmMotionFrequency == 0)
-//            gpu->bCalculateCM = true;
-//    kLangevinUpdatePart2(gpu);
-//    kApplySecondShake(gpu);
-//    kApplySecondSettle(gpu);
-//    kApplySecondCCMA(gpu);
-//    data.time += stepSize;
-//    data.stepCount++;
-//}
+OpenCLIntegrateLangevinStepKernel::~OpenCLIntegrateLangevinStepKernel() {
+    if (params != NULL)
+        delete params;
+    if (xVector != NULL)
+        delete xVector;
+    if (vVector != NULL)
+        delete vVector;
+}
+
+void OpenCLIntegrateLangevinStepKernel::initialize(const System& system, const LangevinIntegrator& integrator) {
+    cl.initialize(system);
+    cl.getIntegrationUtilties().initRandomNumberGenerator(integrator.getRandomNumberSeed());
+    cl::Program program = cl.createProgram(cl.loadSourceFromFile("langevin.cl"));
+    kernel1 = cl::Kernel(program, "integrateLangevinPart1");
+    kernel2 = cl::Kernel(program, "integrateLangevinPart2");
+    kernel3 = cl::Kernel(program, "integrateLangevinPart3");
+    params = new OpenCLArray<cl_float>(cl, 11, "langevinParams");
+    xVector = new OpenCLArray<mm_float4>(cl, cl.getPaddedNumAtoms(), "xVector");
+    vVector = new OpenCLArray<mm_float4>(cl, cl.getPaddedNumAtoms(), "vVector");
+    vector<mm_float4> initialXVector(xVector->getSize(), (mm_float4) {0.0f, 0.0f, 0.0f, 0.0f});
+    xVector->upload(initialXVector);
+    prevStepSize = -1.0;
+}
+
+void OpenCLIntegrateLangevinStepKernel::execute(ContextImpl& context, const LangevinIntegrator& integrator) {
+    OpenCLIntegrationUtilities& integration = cl.getIntegrationUtilties();
+    int numAtoms = cl.getNumAtoms();
+    double temperature = integrator.getTemperature();
+    double friction = integrator.getFriction();
+    double stepSize = integrator.getStepSize();
+    if (temperature != prevTemp || friction != prevFriction || stepSize != prevStepSize) {
+        // Calculate the integration parameters.
+
+        double tau = (friction == 0.0 ? 0.0 : 1.0/friction);
+        double kT = BOLTZ*temperature;
+        double GDT = stepSize/tau;
+        double EPH = exp(0.5*GDT);
+        double EMH = exp(-0.5*GDT);
+        double EP = exp(GDT);
+        double EM = exp(-GDT);
+        double B, C, D;
+        if (GDT >= 0.1)
+        {
+            double term1 = EPH - 1.0;
+            term1 *= term1;
+            B = GDT*(EP - 1.0) - 4.0*term1;
+            C = GDT - 3.0 + 4.0*EMH - EM;
+            D = 2.0 - EPH - EMH;
+        }
+        else
+        {
+            double term1 = 0.5*GDT;
+            double term2 = term1*term1;
+            double term4 = term2*term2;
+
+            double third = 1.0/3.0;
+            double o7_9 = 7.0/9.0;
+            double o1_12 = 1.0/12.0;
+            double o17_90 = 17.0/90.0;
+            double o7_30 = 7.0/30.0;
+            double o31_1260 = 31.0/1260.0;
+            double o_360 = 1.0/360.0;
+            B = term4*(third + term1*(third + term1*(o17_90 + term1*o7_9)));
+            C = term2*term1*(2.0*third + term1*(-0.5 + term1*(o7_30 + term1*(-o1_12 + term1*o31_1260))));
+            D = term2*(-1.0 + term2*(-o1_12 - term2*o_360));
+        }
+        double DOverTauC = D/(tau*C);
+        double TauOneMinusEM = tau*(1.0-EM);
+        double TauDOverEMMinusOne = tau*D/(EM - 1.0);
+        double fix1 = tau*(EPH - EMH);
+        if (fix1 == 0.0)
+            fix1 = stepSize;
+        double oneOverFix1 = 1.0/fix1;
+        double V = sqrt(kT*(1.0 - EM));
+        double X = tau*sqrt(kT*C);
+        double Yv = sqrt(kT*B/C);
+        double Yx = tau*sqrt(kT*B/(1.0 - EM));
+        vector<cl_float> p(params->getSize());
+        p[0] = EM;
+        p[1] = EM;
+        p[2] = DOverTauC;
+        p[3] = TauOneMinusEM;
+        p[4] = TauDOverEMMinusOne;
+        p[5] = V;
+        p[6] = X;
+        p[7] = Yv;
+        p[8] = Yx;
+        p[9] = fix1;
+        p[10] = oneOverFix1;
+        params->upload(p);
+        prevTemp = temperature;
+        prevFriction = friction;
+        prevStepSize = stepSize;
+    }
+
+    // Call the first integration kernel.
+
+    kernel1.setArg<cl_int>(0, numAtoms);
+    kernel1.setArg<cl::Buffer>(1, cl.getPosq().getDeviceBuffer());
+    kernel1.setArg<cl::Buffer>(2, cl.getVelm().getDeviceBuffer());
+    kernel1.setArg<cl::Buffer>(3, cl.getForce().getDeviceBuffer());
+    kernel1.setArg<cl::Buffer>(4, integration.getPosDelta().getDeviceBuffer());
+    kernel1.setArg<cl::Buffer>(5, params->getDeviceBuffer());
+    kernel1.setArg(6, params->getSize()*sizeof(cl_float), NULL);
+    kernel1.setArg<cl::Buffer>(7, xVector->getDeviceBuffer());
+    kernel1.setArg<cl::Buffer>(8, vVector->getDeviceBuffer());
+    kernel1.setArg<cl::Buffer>(9,integration.getRandom().getDeviceBuffer());
+    kernel1.setArg<cl_uint>(10, integration.prepareRandomNumbers(2*numAtoms));
+    cl.executeKernel(kernel1, numAtoms);
+
+    // Apply constraints.
+
+    integration.applyConstraints(integrator.getConstraintTolerance(), integration.getOldPos(), integration.getPosDelta(), integration.getPosDelta());
+
+    // Call the second integration kernel.
+
+    kernel2.setArg<cl_int>(0, numAtoms);
+    kernel2.setArg<cl::Buffer>(1, cl.getVelm().getDeviceBuffer());
+    kernel2.setArg<cl::Buffer>(2, integration.getPosDelta().getDeviceBuffer());
+    kernel2.setArg<cl::Buffer>(3, params->getDeviceBuffer());
+    kernel2.setArg(4, params->getSize()*sizeof(cl_float), NULL);
+    kernel2.setArg<cl::Buffer>(5, xVector->getDeviceBuffer());
+    kernel2.setArg<cl::Buffer>(6, vVector->getDeviceBuffer());
+    kernel2.setArg<cl::Buffer>(7,integration.getRandom().getDeviceBuffer());
+    kernel2.setArg<cl_uint>(8, integration.prepareRandomNumbers(2*numAtoms));
+    cl.executeKernel(kernel2, numAtoms);
+
+    // Reapply constraints.
+
+    integration.applyConstraints(integrator.getConstraintTolerance(), integration.getOldPos(), integration.getPosDelta(), cl.getPosq());
+
+    // Call the third integration kernel.
+
+    kernel3.setArg<cl_int>(0, numAtoms);
+    kernel3.setArg<cl::Buffer>(1, cl.getPosq().getDeviceBuffer());
+    kernel3.setArg<cl::Buffer>(2, integration.getPosDelta().getDeviceBuffer());
+    cl.executeKernel(kernel3, numAtoms);
+
+    // Update the time and step count.
+
+    cl.setTime(cl.getTime()+stepSize);
+    cl.setStepCount(cl.getStepCount()+1);
+}
 //
 //OpenCLIntegrateBrownianStepKernel::~OpenCLIntegrateBrownianStepKernel() {
 //}
@@ -1039,6 +1147,7 @@ double OpenCLCalcKineticEnergyKernel::execute(ContextImpl& context) {
     // on the CPU.
 
     OpenCLArray<mm_float4>& velm = cl.getVelm();
+    velm.download();
     double energy = 0.0;
     for (size_t i = 0; i < masses.size(); ++i) {
         mm_float4 v = velm[i];

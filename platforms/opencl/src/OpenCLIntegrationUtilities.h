@@ -34,7 +34,7 @@ namespace OpenMM {
 
 /**
  * This class implements features that are used by many different integrators, including
- * common workspace arrays and enforcing constraints.
+ * common workspace arrays, random number generation, and enforcing constraints.
  */
 
 class OpenCLIntegrationUtilities {
@@ -54,6 +54,12 @@ public:
         return *oldPos;
     }
     /**
+     * Get the array which contains random values.
+     */
+    OpenCLArray<mm_float4>& getRandom() {
+        return *random;
+    }
+    /**
      * Apply constraints to the atom positions.
      *
      * @param tol             the constraint tolerance
@@ -62,16 +68,32 @@ public:
      * @param newDeltas       the array to store constrained deltas into
      */
     void applyConstraints(double tol, OpenCLArray<mm_float4>& oldPositions, OpenCLArray<mm_float4>& positionDeltas, OpenCLArray<mm_float4>& newDeltas);
+    /**
+     * Initialize the random number generator.
+     */
+    void initRandomNumberGenerator(unsigned int randomNumberSeed);
+    /**
+     * Ensure that sufficient random numbers are available in the array, and generate new ones if not.
+     *
+     * @param numValues     the number of random float4's that will be required
+     * @return the index in the array at which to start reading
+     */
+    int prepareRandomNumbers(int numValues);
 private:
     OpenCLContext& context;
-//    cl::Kernel clearBufferKernel;
+    cl::Kernel settleKernel;
     cl::Kernel shakeKernel;
+    cl::Kernel randomKernel;
     OpenCLArray<mm_float4>* posDelta;
     OpenCLArray<mm_float4>* oldPos;
     OpenCLArray<mm_int4>* settleAtoms;
     OpenCLArray<mm_float2>* settleParams;
     OpenCLArray<mm_int4>* shakeAtoms;
     OpenCLArray<mm_float4>* shakeParams;
+    OpenCLArray<mm_float4>* random;
+    OpenCLArray<mm_int4>* randomSeed;
+    int randomPos;
+    int lastSeed;
     struct ShakeCluster;
 };
 
