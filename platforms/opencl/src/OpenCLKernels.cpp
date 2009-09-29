@@ -949,7 +949,7 @@ void OpenCLIntegrateLangevinStepKernel::execute(ContextImpl& context, const Lang
     kernel1.setArg<cl::Buffer>(7, xVector->getDeviceBuffer());
     kernel1.setArg<cl::Buffer>(8, vVector->getDeviceBuffer());
     kernel1.setArg<cl::Buffer>(9,integration.getRandom().getDeviceBuffer());
-    kernel1.setArg<cl_uint>(10, integration.prepareRandomNumbers(2*numAtoms));
+    kernel1.setArg<cl_uint>(10, integration.prepareRandomNumbers(2*cl.getPaddedNumAtoms()));
     cl.executeKernel(kernel1, numAtoms);
 
     // Apply constraints.
@@ -966,7 +966,7 @@ void OpenCLIntegrateLangevinStepKernel::execute(ContextImpl& context, const Lang
     kernel2.setArg<cl::Buffer>(5, xVector->getDeviceBuffer());
     kernel2.setArg<cl::Buffer>(6, vVector->getDeviceBuffer());
     kernel2.setArg<cl::Buffer>(7,integration.getRandom().getDeviceBuffer());
-    kernel2.setArg<cl_uint>(8, integration.prepareRandomNumbers(2*numAtoms));
+    kernel2.setArg<cl_uint>(8, integration.prepareRandomNumbers(2*cl.getPaddedNumAtoms()));
     cl.executeKernel(kernel2, numAtoms);
 
     // Reapply constraints.

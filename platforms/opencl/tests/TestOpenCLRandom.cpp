@@ -37,7 +37,7 @@
 #include "../src/OpenCLArray.h"
 #include "../src/OpenCLContext.h"
 #include "../src/OpenCLIntegrationUtilities.h"
-#include "OpenMM/System.h"
+#include "openmm/System.h"
 #include <iostream>
 
 using namespace OpenMM;
