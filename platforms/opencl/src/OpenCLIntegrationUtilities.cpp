@@ -67,12 +67,11 @@ struct OpenCLIntegrationUtilities::ShakeCluster {
 };
 
 OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, const System& system) : context(context),
-        oldPos(NULL), posDelta(NULL), settleAtoms(NULL), settleParams(NULL), shakeAtoms(NULL), shakeParams(NULL),
+        posDelta(NULL), settleAtoms(NULL), settleParams(NULL), shakeAtoms(NULL), shakeParams(NULL),
         random(NULL), randomSeed(NULL), randomPos(NULL) {
     // Create workspace arrays.
 
     posDelta = new OpenCLArray<mm_float4>(context, context.getPaddedNumAtoms(), "posDelta");
-    oldPos = new OpenCLArray<mm_float4>(context, context.getPaddedNumAtoms(), "oldPos");
 
     // Create kernels for enforcing constraints.
 
@@ -249,8 +248,6 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
 OpenCLIntegrationUtilities::~OpenCLIntegrationUtilities() {
     if (posDelta != NULL)
         delete posDelta;
-    if (oldPos != NULL)
-        delete oldPos;
     if (settleAtoms != NULL)
         delete settleAtoms;
     if (settleParams != NULL)
@@ -265,13 +262,13 @@ OpenCLIntegrationUtilities::~OpenCLIntegrationUtilities() {
         delete randomSeed;
 }
 
-void OpenCLIntegrationUtilities::applyConstraints(double tol, OpenCLArray<mm_float4>& oldPositions, OpenCLArray<mm_float4>& positionDeltas, OpenCLArray<mm_float4>& newDeltas) {
+void OpenCLIntegrationUtilities::applyConstraints(double tol) {
     if (settleAtoms != NULL) {
         settleKernel.setArg<cl_int>(0, settleAtoms->getSize());
         settleKernel.setArg<cl_float>(1, tol);
-        settleKernel.setArg<cl::Buffer>(2, oldPositions.getDeviceBuffer());
-        settleKernel.setArg<cl::Buffer>(3, positionDeltas.getDeviceBuffer());
-        settleKernel.setArg<cl::Buffer>(4, newDeltas.getDeviceBuffer());
+        settleKernel.setArg<cl::Buffer>(2, context.getPosq().getDeviceBuffer());
+        settleKernel.setArg<cl::Buffer>(3, posDelta->getDeviceBuffer());
+        settleKernel.setArg<cl::Buffer>(4, posDelta->getDeviceBuffer());
         settleKernel.setArg<cl::Buffer>(5, context.getVelm().getDeviceBuffer());
         settleKernel.setArg<cl::Buffer>(6, settleAtoms->getDeviceBuffer());
         settleKernel.setArg<cl::Buffer>(7, settleParams->getDeviceBuffer());
@@ -280,9 +277,9 @@ void OpenCLIntegrationUtilities::applyConstraints(double tol, OpenCLArray<mm_flo
     if (shakeAtoms != NULL) {
         shakeKernel.setArg<cl_int>(0, shakeAtoms->getSize());
         shakeKernel.setArg<cl_float>(1, tol);
-        shakeKernel.setArg<cl::Buffer>(2, oldPositions.getDeviceBuffer());
-        shakeKernel.setArg<cl::Buffer>(3, positionDeltas.getDeviceBuffer());
-        shakeKernel.setArg<cl::Buffer>(4, newDeltas.getDeviceBuffer());
+        shakeKernel.setArg<cl::Buffer>(2, context.getPosq().getDeviceBuffer());
+        shakeKernel.setArg<cl::Buffer>(3, posDelta->getDeviceBuffer());
+        shakeKernel.setArg<cl::Buffer>(4, posDelta->getDeviceBuffer());
         shakeKernel.setArg<cl::Buffer>(5, shakeAtoms->getDeviceBuffer());
         shakeKernel.setArg<cl::Buffer>(6, shakeParams->getDeviceBuffer());
         context.executeKernel(shakeKernel, shakeAtoms->getSize());
@@ -299,7 +296,7 @@ void OpenCLIntegrationUtilities::initRandomNumberGenerator(unsigned int randomNu
     // Create the random number arrays.
 
     lastSeed = randomNumberSeed;
-    random = new OpenCLArray<mm_float4>(context, 32*context.getNumAtoms(), "random");
+    random = new OpenCLArray<mm_float4>(context, 32*context.getPaddedNumAtoms(), "random");
     randomSeed = new OpenCLArray<mm_int4>(context, context.getNumThreadBlocks()*OpenCLContext::ThreadBlockSize, "randomSeed");
     randomPos = random->getSize();
 
@@ -328,7 +325,5 @@ int OpenCLIntegrationUtilities::prepareRandomNumbers(int numValues) {
     randomKernel.setArg<cl::Buffer>(2, randomSeed->getDeviceBuffer());
     context.executeKernel(randomKernel, random->getSize());
     randomPos = numValues;
-    vector<mm_float4> r(random->getSize());
-    random->download(r);
     return 0;
 }

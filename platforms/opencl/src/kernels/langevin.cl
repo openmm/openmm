@@ -4,9 +4,9 @@ enum {EM, EM_V, DOverTauC, TauOneMinusEM_V, TauDOverEMMinusOne, V, X, Yv, Yx, Fi
  * Perform the first step of Langevin integration.
  */
 
-__kernel void integrateLangevinPart1(int numAtoms, __global float4* posq, __global float4* velm, __global float4* force,
-        __global float4* posDelta, __global float* paramBuffer, __local float* params, __global float4* xVector,
-        __global float4* vVector, __global float4* random, unsigned int randomIndex) {
+__kernel void integrateLangevinPart1(int numAtoms, __global float4* velm, __global float4* force, __global float4* posDelta,
+        __global float* paramBuffer, __local float* params, __global float4* xVector, __global float4* vVector,
+        __global float4* random, unsigned int randomIndex) {
 
     // Load the parameters into local memory for faster access.
 
@@ -47,7 +47,7 @@ __kernel void integrateLangevinPart2(int numAtoms, __global float4* velm, __glob
     while (index < numAtoms) {
         float4 delta = posDelta[index];
         float4 velocity = velm[index];
-        float sqrtInvMass = 0.0f;//sqrt(velocity.w);
+        float sqrtInvMass = sqrt(velocity.w);
         velocity.xyz = delta.xyz*params[OneOverFix1];
         float4 xmh = (float4) (vVector[index].xyz*params[TauDOverEMMinusOne] + sqrtInvMass*params[Yx]*random[randomIndex].xyz, 0.0f);
         randomIndex += get_global_size(0);

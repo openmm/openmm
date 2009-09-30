@@ -2,12 +2,11 @@
  * Perform the first step of verlet integration.
  */
 
-__kernel void integrateVerletPart1(int numAtoms, float dt, __global float4* posq, __global float4* velm, __global float4* force, __global float4* posDelta, __global float4* oldPos) {
+__kernel void integrateVerletPart1(int numAtoms, float dt, __global float4* posq, __global float4* velm, __global float4* force, __global float4* posDelta) {
     int index = get_global_id(0);
     while (index < numAtoms) {
         float4 pos = posq[index];
         float4 velocity = velm[index];
-        oldPos[index] = pos;
         velocity.xyz += force[index].xyz*dt*velocity.w;
         pos.xyz = velocity.xyz*dt;
         posDelta[index] = pos;

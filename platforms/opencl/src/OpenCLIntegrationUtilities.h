@@ -48,12 +48,6 @@ public:
         return *posDelta;
     }
     /**
-     * Get the array which contains positions from before the current time step.
-     */
-    OpenCLArray<mm_float4>& getOldPos() {
-        return *oldPos;
-    }
-    /**
      * Get the array which contains random values.
      */
     OpenCLArray<mm_float4>& getRandom() {
@@ -63,11 +57,8 @@ public:
      * Apply constraints to the atom positions.
      *
      * @param tol             the constraint tolerance
-     * @param oldPositions    the atom positions from before the current time step
-     * @param positionDeltas  the offsets being added to atom positions
-     * @param newDeltas       the array to store constrained deltas into
      */
-    void applyConstraints(double tol, OpenCLArray<mm_float4>& oldPositions, OpenCLArray<mm_float4>& positionDeltas, OpenCLArray<mm_float4>& newDeltas);
+    void applyConstraints(double tol);
     /**
      * Initialize the random number generator.
      */
@@ -85,7 +76,6 @@ private:
     cl::Kernel shakeKernel;
     cl::Kernel randomKernel;
     OpenCLArray<mm_float4>* posDelta;
-    OpenCLArray<mm_float4>* oldPos;
     OpenCLArray<mm_int4>* settleAtoms;
     OpenCLArray<mm_float2>* settleParams;
     OpenCLArray<mm_int4>* shakeAtoms;

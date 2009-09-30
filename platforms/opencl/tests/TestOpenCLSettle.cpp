@@ -39,7 +39,7 @@
 #include "OpenCLPlatform.h"
 #include "openmm/NonbondedForce.h"
 #include "openmm/System.h"
-#include "openmm/VerletIntegrator.h"
+#include "openmm/LangevinIntegrator.h"
 #include "../src/sfmt/SFMT.h"
 #include <iostream>
 #include <vector>
@@ -54,7 +54,7 @@ void testConstraints() {
     const double temp = 100.0;
     OpenCLPlatform platform;
     System system;
-    VerletIntegrator integrator(0.001);
+    LangevinIntegrator integrator(temp, 2.0, 0.001);
     integrator.setConstraintTolerance(1e-5);
     NonbondedForce* forceField = new NonbondedForce();
     for (int i = 0; i < numMolecules; ++i) {
