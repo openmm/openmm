@@ -36,6 +36,7 @@ template <class T>
 class OpenCLArray;
 class OpenCLForceInfo;
 class OpenCLIntegrationUtilities;
+class OpenCLNonbondedUtilities;
 class System;
 
 /**
@@ -211,12 +212,6 @@ public:
         return numThreadBlocks;
     }
     /**
-     * Get the total number of tiles used for nonbonded computation.
-     */
-    int getNumTiles() const {
-        return numTiles;
-    }
-    /**
      * Get the number of force buffers.
      */
     int getNumForceBuffers() const {
@@ -228,13 +223,18 @@ public:
     OpenCLIntegrationUtilities& getIntegrationUtilties() {
         return *integration;
     }
+    /**
+     * Get the OpenCLNonbondedUtilities for this context.
+     */
+    OpenCLNonbondedUtilities& getNonbondedUtilties() {
+        return *nonbonded;
+    }
 private:
     double time;
     int stepCount;
     int numAtoms;
     int paddedNumAtoms;
     int numAtomBlocks;
-    int numTiles;
     int numThreadBlocks;
     int numForceBuffers;
     cl::Context context;
@@ -251,6 +251,7 @@ private:
     OpenCLArray<cl_float>* energyBuffer;
     OpenCLArray<cl_int>* atomIndex;
     OpenCLIntegrationUtilities* integration;
+    OpenCLNonbondedUtilities* nonbonded;
 };
 
 } // namespace OpenMM

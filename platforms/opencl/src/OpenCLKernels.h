@@ -294,40 +294,40 @@ private:
     cl::Kernel kernel;
 };
 
-///**
-// * This kernel is invoked by NonbondedForce to calculate the forces acting on the system.
-// */
-//class OpenCLCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
-//public:
-//    OpenCLCalcNonbondedForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcNonbondedForceKernel(name, platform), cl(cl), system(system) {
-//    }
-//    ~OpenCLCalcNonbondedForceKernel();
-//    /**
-//     * Initialize the kernel.
-//     *
-//     * @param system     the System this kernel will be applied to
-//     * @param force      the NonbondedForce this kernel will be used for
-//     */
-//    void initialize(const System& system, const NonbondedForce& force);
-//    /**
-//     * Execute the kernel to calculate the forces.
-//     *
-//     * @param context    the context in which to execute this kernel
-//     */
-//    void executeForces(ContextImpl& context);
-//    /**
-//     * Execute the kernel to calculate the energy.
-//     *
-//     * @param context    the context in which to execute this kernel
-//     * @return the potential energy due to the NonbondedForce
-//     */
-//    double executeEnergy(ContextImpl& context);
-//private:
-//    OpenCLContext& cl;
-//    int numParticles;
-//    System& system;
-//};
-//
+/**
+ * This kernel is invoked by NonbondedForce to calculate the forces acting on the system.
+ */
+class OpenCLCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
+public:
+    OpenCLCalcNonbondedForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcNonbondedForceKernel(name, platform), cl(cl) {
+    }
+    ~OpenCLCalcNonbondedForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the NonbondedForce this kernel will be used for
+     */
+    void initialize(const System& system, const NonbondedForce& force);
+    /**
+     * Execute the kernel to calculate the forces.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void executeForces(ContextImpl& context);
+    /**
+     * Execute the kernel to calculate the energy.
+     *
+     * @param context    the context in which to execute this kernel
+     * @return the potential energy due to the NonbondedForce
+     */
+    double executeEnergy(ContextImpl& context);
+private:
+    OpenCLContext& cl;
+    OpenCLArray<mm_float2>* sigmaEpsilon;
+    double ewaldSelfEnergy;
+};
+
 ///**
 // * This kernel is invoked by CustomNonbondedForce to calculate the forces acting on the system.
 // */

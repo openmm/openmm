@@ -28,6 +28,7 @@
 #include "OpenCLArray.h"
 #include "OpenCLForceInfo.h"
 #include "OpenCLIntegrationUtilities.h"
+#include "OpenCLNonbondedUtilities.h"
 #include "openmm/Platform.h"
 #include "openmm/System.h"
 #include <fstream>
@@ -61,8 +62,10 @@ OpenCLContext::OpenCLContext(int numParticles, int deviceIndex) : time(0.0), ste
     numAtoms = numParticles;
     paddedNumAtoms = TileSize*((numParticles+TileSize-1)/TileSize);
     numAtomBlocks = (paddedNumAtoms+(TileSize-1))/TileSize;
-    numTiles = numAtomBlocks*(numAtomBlocks+1)/2;
     numThreadBlocks = device.getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>()[0]/ThreadBlockSize;
+    nonbonded = new OpenCLNonbondedUtilities(*this);
+    posq = new OpenCLArray<mm_float4>(*this, paddedNumAtoms, "posq", true);
+    velm = new OpenCLArray<mm_float4>(*this, paddedNumAtoms, "velm", true);
 
     // Create utility kernels that are used in multiple places.
 
@@ -74,26 +77,25 @@ OpenCLContext::OpenCLContext(int numParticles, int deviceIndex) : time(0.0), ste
 OpenCLContext::~OpenCLContext() {
     for (int i = 0; i < (int) forces.size(); i++)
         delete forces[i];
-    delete posq;
-    delete velm;
-    delete force;
-    delete forceBuffers;
-    delete energyBuffer;
-    delete atomIndex;
-    delete integration;
+    if (posq != NULL)
+        delete posq;
+    if (velm != NULL)
+        delete velm;
+    if (force != NULL)
+        delete force;
+    if (forceBuffers != NULL)
+        delete forceBuffers;
+    if (energyBuffer != NULL)
+        delete energyBuffer;
+    if (atomIndex != NULL)
+        delete atomIndex;
+    if (integration != NULL)
+        delete integration;
+    if (nonbonded != NULL)
+        delete nonbonded;
 }
 
 void OpenCLContext::initialize(const System& system) {
-//    forceBufferPerWarp = true;
-//    numForceBuffers = numThreadBlocks*ThreadBlockSize/TileSize;
-//    if (numForceBuffers >= numAtomBlocks) {
-//        // For small systems, it is more efficient to have one force buffer per block of 32 atoms instead of one per warp.
-//
-//        forceBufferPerWarp = false;
-//        numForceBuffers = numAtomBlocks;
-//    }
-    posq = new OpenCLArray<mm_float4>(*this, paddedNumAtoms, "posq", true);
-    velm = new OpenCLArray<mm_float4>(*this, paddedNumAtoms, "velm", true);
     for (int i = 0; i < numAtoms; i++)
         (*velm)[i].w = (float) (1.0/system.getParticleMass(i));
     velm->upload();
@@ -108,6 +110,7 @@ void OpenCLContext::initialize(const System& system) {
         (*atomIndex)[i] = i;
     atomIndex->upload();
     integration = new OpenCLIntegrationUtilities(*this, system);
+    nonbonded->initialize(system);
 }
 
 void OpenCLContext::addForce(OpenCLForceInfo* force) {

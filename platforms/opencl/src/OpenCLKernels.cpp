@@ -30,6 +30,7 @@
 #include "openmm/Context.h"
 #include "openmm/internal/ContextImpl.h"
 #include "OpenCLIntegrationUtilities.h"
+#include "OpenCLNonbondedUtilities.h"
 #include <cmath>
 
 using namespace OpenMM;
@@ -46,10 +47,12 @@ void OpenCLCalcForcesAndEnergyKernel::initialize(const System& system) {
 
 void OpenCLCalcForcesAndEnergyKernel::beginForceComputation(ContextImpl& context) {
     cl.clearBuffer(cl.getForceBuffers());
+    cl.getNonbondedUtilties().prepareInteractions();
 }
 
 void OpenCLCalcForcesAndEnergyKernel::finishForceComputation(ContextImpl& context) {
     cl.reduceBuffer(cl.getForceBuffers(), cl.getNumForceBuffers());
+    cl.getNonbondedUtilties().prepareInteractions();
 }
 
 void OpenCLCalcForcesAndEnergyKernel::beginEnergyComputation(ContextImpl& context) {
@@ -452,150 +455,127 @@ double OpenCLCalcRBTorsionForceKernel::executeEnergy(ContextImpl& context) {
     return 0.0;
 }
 
-//OpenCLCalcNonbondedForceKernel::~OpenCLCalcNonbondedForceKernel() {
-//}
-//
-//void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const NonbondedForce& force) {
-//    if (data.primaryKernel == NULL)
-//        data.primaryKernel = this;
-//    data.hasNonbonded = true;
-//    numParticles = force.getNumParticles();
-//    _gpuContext* gpu = data.gpu;
-//
-//    // Identify which exceptions are 1-4 interactions.
-//
-//    vector<pair<int, int> > exclusions;
-//    vector<int> exceptions;
-//    for (int i = 0; i < force.getNumExceptions(); i++) {
-//        int particle1, particle2;
-//        double chargeProd, sigma, epsilon;
-//        force.getExceptionParameters(i, particle1, particle2, chargeProd, sigma, epsilon);
-//        exclusions.push_back(pair<int, int>(particle1, particle2));
-//        if (chargeProd != 0.0 || epsilon != 0.0)
-//            exceptions.push_back(i);
+OpenCLCalcNonbondedForceKernel::~OpenCLCalcNonbondedForceKernel() {
+    if (sigmaEpsilon != NULL)
+        delete sigmaEpsilon;
+}
+
+void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const NonbondedForce& force) {
+
+    // Identify which exceptions are 1-4 interactions.
+
+    vector<pair<int, int> > exclusions;
+    vector<int> exceptions;
+    for (int i = 0; i < force.getNumExceptions(); i++) {
+        int particle1, particle2;
+        double chargeProd, sigma, epsilon;
+        force.getExceptionParameters(i, particle1, particle2, chargeProd, sigma, epsilon);
+        exclusions.push_back(pair<int, int>(particle1, particle2));
+        if (chargeProd != 0.0 || epsilon != 0.0)
+            exceptions.push_back(i);
+    }
+
+    // Initialize nonbonded interactions.
+
+    int numParticles = force.getNumParticles();
+    sigmaEpsilon = new OpenCLArray<mm_float2>(cl, numParticles, "sigmaEpsilon");
+    OpenCLArray<mm_float4>& posq = cl.getPosq();
+    vector<mm_float2> sigmaEpsilonVector(numParticles);
+    vector<vector<int> > exclusionList(numParticles);
+    for (int i = 0; i < numParticles; i++) {
+        double charge, sigma, epsilon;
+        force.getParticleParameters(i, charge, sigma, epsilon);
+        posq[i].w = (float) charge;
+        sigmaEpsilonVector[i] = (mm_float2) {(float) (0.5*sigma), (float) (2.0*sqrt(epsilon))};
+        exclusionList[i].push_back(i);
+    }
+    for (int i = 0; i < (int) exclusions.size(); i++) {
+        exclusionList[exclusions[i].first].push_back(exclusions[i].second);
+        exclusionList[exclusions[i].second].push_back(exclusions[i].first);
+    }
+    posq.upload();
+    sigmaEpsilon->upload(sigmaEpsilonVector);
+    bool useCutoff = (force.getNonbondedMethod() != NonbondedForce::NoCutoff);
+    bool usePeriodic = (force.getNonbondedMethod() != NonbondedForce::NoCutoff && force.getNonbondedMethod() != NonbondedForce::CutoffNonPeriodic);
+//    if (force.getNonbondedMethod() != NonbondedForce::NoCutoff) {
+//        method = CUTOFF;
 //    }
-//
-//    // Initialize nonbonded interactions.
-//
-//    {
-//        vector<int> particle(numParticles);
-//        vector<float> c6(numParticles);
-//        vector<float> c12(numParticles);
-//        vector<float> q(numParticles);
-//        vector<char> symbol;
-//        vector<vector<int> > exclusionList(numParticles);
-//        for (int i = 0; i < numParticles; i++) {
-//            double charge, radius, depth;
-//            force.getParticleParameters(i, charge, radius, depth);
-//            particle[i] = i;
-//            q[i] = (float) charge;
-//            c6[i] = (float) (4*depth*pow(radius, 6.0));
-//            c12[i] = (float) (4*depth*pow(radius, 12.0));
-//            exclusionList[i].push_back(i);
+//    if (force.getNonbondedMethod() == NonbondedForce::CutoffPeriodic) {
+//        method = PERIODIC;
+//    }
+//    if (force.getNonbondedMethod() == NonbondedForce::Ewald || force.getNonbondedMethod() == NonbondedForce::PME) {
+//        double ewaldErrorTol = force.getEwaldErrorTolerance();
+//        double alpha = (1.0/force.getCutoffDistance())*std::sqrt(-std::log(ewaldErrorTol));
+//        double mx = boxVectors[0][0]/force.getCutoffDistance();
+//        double my = boxVectors[1][1]/force.getCutoffDistance();
+//        double mz = boxVectors[2][2]/force.getCutoffDistance();
+//        double pi = 3.1415926535897932385;
+//        int kmaxx = (int)std::ceil(-(mx/pi)*std::log(ewaldErrorTol));
+//        int kmaxy = (int)std::ceil(-(my/pi)*std::log(ewaldErrorTol));
+//        int kmaxz = (int)std::ceil(-(mz/pi)*std::log(ewaldErrorTol));
+//        if (force.getNonbondedMethod() == NonbondedForce::Ewald) {
+//            if (kmaxx%2 == 0)
+//                kmaxx++;
+//            if (kmaxy%2 == 0)
+//                kmaxy++;
+//            if (kmaxz%2 == 0)
+//                kmaxz++;
+//            gpuSetEwaldParameters(gpu, (float) alpha, kmaxx, kmaxy, kmaxz);
+//            method = EWALD;
 //        }
-//        for (int i = 0; i < (int)exclusions.size(); i++) {
-//            exclusionList[exclusions[i].first].push_back(exclusions[i].second);
-//            exclusionList[exclusions[i].second].push_back(exclusions[i].first);
-//        }
-//        Vec3 boxVectors[3];
-//        system.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
-//        gpuSetPeriodicBoxSize(gpu, (float)boxVectors[0][0], (float)boxVectors[1][1], (float)boxVectors[2][2]);
-//        OpenCLNonbondedMethod method = NO_CUTOFF;
-//        if (force.getNonbondedMethod() != NonbondedForce::NoCutoff) {
-//            gpuSetNonbondedCutoff(gpu, (float)force.getCutoffDistance(), force.getReactionFieldDielectric());
-//            method = CUTOFF;
-//        }
-//        if (force.getNonbondedMethod() == NonbondedForce::CutoffPeriodic) {
-//            method = PERIODIC;
-//        }
-//        if (force.getNonbondedMethod() == NonbondedForce::Ewald || force.getNonbondedMethod() == NonbondedForce::PME) {
-//            double ewaldErrorTol = force.getEwaldErrorTolerance();
-//            double alpha = (1.0/force.getCutoffDistance())*std::sqrt(-std::log(ewaldErrorTol));
-//            double mx = boxVectors[0][0]/force.getCutoffDistance();
-//            double my = boxVectors[1][1]/force.getCutoffDistance();
-//            double mz = boxVectors[2][2]/force.getCutoffDistance();
-//            double pi = 3.1415926535897932385;
-//            int kmaxx = (int)std::ceil(-(mx/pi)*std::log(ewaldErrorTol));
-//            int kmaxy = (int)std::ceil(-(my/pi)*std::log(ewaldErrorTol));
-//            int kmaxz = (int)std::ceil(-(mz/pi)*std::log(ewaldErrorTol));
-//            if (force.getNonbondedMethod() == NonbondedForce::Ewald) {
-//                if (kmaxx%2 == 0)
-//                    kmaxx++;
-//                if (kmaxy%2 == 0)
-//                    kmaxy++;
-//                if (kmaxz%2 == 0)
-//                    kmaxz++;
-//                gpuSetEwaldParameters(gpu, (float) alpha, kmaxx, kmaxy, kmaxz);
-//                method = EWALD;
-//            }
-//            else {
-//                int gridSizeX = -0.5*kmaxx*std::log(ewaldErrorTol);
-//                int gridSizeY = -0.5*kmaxy*std::log(ewaldErrorTol);
-//                int gridSizeZ = -0.5*kmaxz*std::log(ewaldErrorTol);
-////                printf("%d %d\n", gridSizeX, (int) (kmaxx*std::sqrt(-std::log(ewaldErrorTol))));
-////                gridSizeX = 0.02*mx*std::pow(-std::log(1.5*ewaldErrorTol), 3);
-////                gridSizeY = 0.02*my*std::pow(-std::log(1.5*ewaldErrorTol), 3);
-////                gridSizeZ = 0.02*mz*std::pow(-std::log(1.5*ewaldErrorTol), 3);
-////                double scale = 0.698*std::pow(ewaldErrorTol, -0.312);
-////                double scale = 0.713*std::pow(ewaldErrorTol, -0.261);
-////                printf("%f\n", scale);
-//                gridSizeX = mx*NonbondedForce::PMEscale;
-//                gridSizeY = my*NonbondedForce::PMEscale;
-//                gridSizeZ = mz*NonbondedForce::PMEscale;
-////                printf("%d %d %d\n", gridSizeX, gridSizeY, gridSizeZ);
-////                gridSizeX = mx*scale;
-////                gridSizeY = my*scale;
-////                gridSizeZ = mz*scale;
-//                gpuSetPMEParameters(gpu, (float) alpha, gridSizeX, gridSizeY, gridSizeZ);
-//                method = PARTICLE_MESH_EWALD;
-//            }
-//        }
-//        data.nonbondedMethod = method;
-//        gpuSetCoulombParameters(gpu, 138.935485f, particle, c6, c12, q, symbol, exclusionList, method);
-//
-//        // Compute the Ewald self energy.
-//
-//        data.ewaldSelfEnergy = 0.0;
-//        if (force.getNonbondedMethod() == NonbondedForce::Ewald || force.getNonbondedMethod() == NonbondedForce::PME) {
-//            double selfEnergyScale = gpu->sim.epsfac*gpu->sim.alphaEwald/std::sqrt(PI);
-//                for (int i = 0; i < numParticles; i++)
-//                    data.ewaldSelfEnergy -= selfEnergyScale*q[i]*q[i];
+//        else {
+//            int gridSizeX = -0.5*kmaxx*std::log(ewaldErrorTol);
+//            int gridSizeY = -0.5*kmaxy*std::log(ewaldErrorTol);
+//            int gridSizeZ = -0.5*kmaxz*std::log(ewaldErrorTol);
+//            gpuSetPMEParameters(gpu, (float) alpha, gridSizeX, gridSizeY, gridSizeZ);
+//            method = PARTICLE_MESH_EWALD;
 //        }
 //    }
-//
-//    // Initialize 1-4 nonbonded interactions.
-//
-//    {
-//        int numExceptions = exceptions.size();
-//        vector<int> particle1(numExceptions);
-//        vector<int> particle2(numExceptions);
-//        vector<float> c6(numExceptions);
-//        vector<float> c12(numExceptions);
-//        vector<float> q1(numExceptions);
-//        vector<float> q2(numExceptions);
-//        for (int i = 0; i < numExceptions; i++) {
-//            double charge, sig, eps;
-//            force.getExceptionParameters(exceptions[i], particle1[i], particle2[i], charge, sig, eps);
-//            c6[i] = (float) (4*eps*pow(sig, 6.0));
-//            c12[i] = (float) (4*eps*pow(sig, 12.0));
-//            q1[i] = (float) charge;
-//            q2[i] = 1.0f;
-//        }
+//    data.nonbondedMethod = method;
+//    gpuSetCoulombParameters(gpu, 138.935485f, particle, c6, c12, q, symbol, exclusionList, method);
+    cl.getNonbondedUtilties().addInteraction(useCutoff, usePeriodic, force.getCutoffDistance(), exclusionList);
+    cl.getNonbondedUtilties().addParameter("sigmaEpsilon", "float2", 8, sigmaEpsilon->getDeviceBuffer());
+
+    // Compute the Ewald self energy.
+
+    ewaldSelfEnergy = 0.0;
+    if (force.getNonbondedMethod() == NonbondedForce::Ewald || force.getNonbondedMethod() == NonbondedForce::PME) {
+//        double selfEnergyScale = gpu->sim.epsfac*gpu->sim.alphaEwald/std::sqrt(PI);
+//            for (int i = 0; i < numParticles; i++)
+//                ewaldSelfEnergy -= selfEnergyScale*q[i]*q[i];
+    }
+
+    // Initialize 1-4 nonbonded interactions.
+
+    {
+        int numExceptions = exceptions.size();
+        vector<int> particle1(numExceptions);
+        vector<int> particle2(numExceptions);
+        vector<float> c6(numExceptions);
+        vector<float> c12(numExceptions);
+        vector<float> q1(numExceptions);
+        vector<float> q2(numExceptions);
+        for (int i = 0; i < numExceptions; i++) {
+            double charge, sig, eps;
+            force.getExceptionParameters(exceptions[i], particle1[i], particle2[i], charge, sig, eps);
+            c6[i] = (float) (4*eps*pow(sig, 6.0));
+            c12[i] = (float) (4*eps*pow(sig, 12.0));
+            q1[i] = (float) charge;
+            q2[i] = 1.0f;
+        }
 //        gpuSetLJ14Parameters(gpu, 138.935485f, 1.0f, particle1, particle2, c6, c12, q1, q2);
-//    }
-//}
-//
-//void OpenCLCalcNonbondedForceKernel::executeForces(ContextImpl& context) {
-//    if (data.primaryKernel == this)
-//        calcForces(context, data);
-//}
-//
-//double OpenCLCalcNonbondedForceKernel::executeEnergy(ContextImpl& context) {
-//    if (data.primaryKernel == this)
-//        return calcEnergy(context, data, system);
-//    return 0.0;
-//}
-//
+    }
+}
+
+void OpenCLCalcNonbondedForceKernel::executeForces(ContextImpl& context) {
+    cl.getNonbondedUtilties().computeInteractions();
+}
+
+double OpenCLCalcNonbondedForceKernel::executeEnergy(ContextImpl& context) {
+    executeForces(context);
+    return ewaldSelfEnergy;
+}
+
 //OpenCLCalcCustomNonbondedForceKernel::~OpenCLCalcCustomNonbondedForceKernel() {
 //}
 //
