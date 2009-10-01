@@ -39,7 +39,6 @@ __kernel void computeNonbonded(int numTiles, int paddedNumAtoms, float cutoffSqu
 
             local_posq[get_local_id(0)] = apos;
             local_sigmaEpsilon[get_local_id(0)] = a;
-            barrier(CLK_LOCAL_MEM_FENCE);
             apos.w *= EpsilonFactor;
             unsigned int xi = x/TileSize;
             unsigned int tile = xi+xi*paddedNumAtoms/TileSize-xi*(xi+1)/2;
@@ -107,7 +106,6 @@ __kernel void computeNonbonded(int numTiles, int paddedNumAtoms, float cutoffSqu
                 local_sigmaEpsilon[get_local_id(0)] = sigmaEpsilon[j];
             }
             local_force[get_local_id(0)] = 0.0f;
-            barrier(CLK_LOCAL_MEM_FENCE);
             apos.w *= EpsilonFactor;
 #ifdef USE_CUTOFF
             unsigned int flags = cSim.pInteractionFlag[pos];
@@ -159,19 +157,14 @@ __kernel void computeNonbonded(int numTiles, int paddedNumAtoms, float cutoffSqu
 
                             if (tgx % 2 == 0)
                                 tempBuffer[get_local_id(0)].xyz += tempBuffer[get_local_id(0)+1].xyz;
-                            barrier(CLK_LOCAL_MEM_FENCE);
                             if (tgx % 4 == 0)
                                 tempBuffer[get_local_id(0)].xyz += tempBuffer[get_local_id(0)+2].xyz;
-                            barrier(CLK_LOCAL_MEM_FENCE);
                             if (tgx % 8 == 0)
                                 tempBuffer[get_local_id(0)].xyz += tempBuffer[get_local_id(0)+4].xyz;
-                            barrier(CLK_LOCAL_MEM_FENCE);
                             if (tgx % 16 == 0)
                                 tempBuffer[get_local_id(0)].xyz += tempBuffer[get_local_id(0)+8].xyz;
-                            barrier(CLK_LOCAL_MEM_FENCE);
                             if (tgx == 0)
                                 local_force[tbx+j].xyz += tempBuffer[get_local_id(0)].xyz + tempBuffer[get_local_id(0)+16].xyz;
-                            barrier(CLK_LOCAL_MEM_FENCE);
                         }
                     }
                 }
@@ -222,7 +215,6 @@ __kernel void computeNonbonded(int numTiles, int paddedNumAtoms, float cutoffSqu
                     delta.xyz *= dEdR;
                     af.xyz -= delta.xyz;
                     local_force[tbx+tj].xyz += delta.xyz;
-                    barrier(CLK_LOCAL_MEM_FENCE);
                     excl >>= 1;
                     tj = (tj + 1) & (TileSize - 1);
                 }

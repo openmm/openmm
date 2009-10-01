@@ -57,6 +57,7 @@ void OpenCLCalcForcesAndEnergyKernel::finishForceComputation(ContextImpl& contex
 
 void OpenCLCalcForcesAndEnergyKernel::beginEnergyComputation(ContextImpl& context) {
     cl.clearBuffer(cl.getEnergyBuffer());
+    cl.getNonbondedUtilties().prepareInteractions();
 }
 
 double OpenCLCalcForcesAndEnergyKernel::finishEnergyComputation(ContextImpl& context) {
@@ -149,7 +150,7 @@ void OpenCLUpdateStateDataKernel::getForces(ContextImpl& context, std::vector<Ve
 
 class OpenCLBondForceInfo : public OpenCLForceInfo {
 public:
-    OpenCLBondForceInfo(int requiredBuffers, const HarmonicBondForce& force) : OpenCLForceInfo(requiredBuffers, false, 0.0), force(force) {
+    OpenCLBondForceInfo(int requiredBuffers, const HarmonicBondForce& force) : OpenCLForceInfo(requiredBuffers), force(force) {
     }
     int getNumParticleGroups() {
         return force.getNumBonds();
@@ -198,9 +199,8 @@ void OpenCLCalcHarmonicBondForceKernel::initialize(const System& system, const H
     params->upload(paramVector);
     indices->upload(indicesVector);
     int maxBuffers = 1;
-    for (int i = 0; i < forceBufferCounter.size(); i++) {
+    for (int i = 0; i < forceBufferCounter.size(); i++)
         maxBuffers = max(maxBuffers, forceBufferCounter[i]);
-    }
     cl.addForce(new OpenCLBondForceInfo(maxBuffers, force));
     cl::Program program = cl.createProgram(cl.loadSourceFromFile("harmonicBondForce.cl"));
     kernel = cl::Kernel(program, "calcHarmonicBondForce");
@@ -224,7 +224,7 @@ double OpenCLCalcHarmonicBondForceKernel::executeEnergy(ContextImpl& context) {
 
 class OpenCLAngleForceInfo : public OpenCLForceInfo {
 public:
-    OpenCLAngleForceInfo(int requiredBuffers, const HarmonicAngleForce& force) : OpenCLForceInfo(requiredBuffers, false, 0.0), force(force) {
+    OpenCLAngleForceInfo(int requiredBuffers, const HarmonicAngleForce& force) : OpenCLForceInfo(requiredBuffers), force(force) {
     }
     int getNumParticleGroups() {
         return force.getNumAngles();
@@ -275,9 +275,8 @@ void OpenCLCalcHarmonicAngleForceKernel::initialize(const System& system, const 
     params->upload(paramVector);
     indices->upload(indicesVector);
     int maxBuffers = 1;
-    for (int i = 0; i < forceBufferCounter.size(); i++) {
+    for (int i = 0; i < forceBufferCounter.size(); i++)
         maxBuffers = max(maxBuffers, forceBufferCounter[i]);
-    }
     cl.addForce(new OpenCLAngleForceInfo(maxBuffers, force));
     cl::Program program = cl.createProgram(cl.loadSourceFromFile("harmonicAngleForce.cl"));
     kernel = cl::Kernel(program, "calcHarmonicAngleForce");
@@ -301,7 +300,7 @@ double OpenCLCalcHarmonicAngleForceKernel::executeEnergy(ContextImpl& context) {
 
 class OpenCLPeriodicTorsionForceInfo : public OpenCLForceInfo {
 public:
-    OpenCLPeriodicTorsionForceInfo(int requiredBuffers, const PeriodicTorsionForce& force) : OpenCLForceInfo(requiredBuffers, false, 0.0), force(force) {
+    OpenCLPeriodicTorsionForceInfo(int requiredBuffers, const PeriodicTorsionForce& force) : OpenCLForceInfo(requiredBuffers), force(force) {
     }
     int getNumParticleGroups() {
         return force.getNumTorsions();
@@ -353,9 +352,8 @@ void OpenCLCalcPeriodicTorsionForceKernel::initialize(const System& system, cons
     params->upload(paramVector);
     indices->upload(indicesVector);
     int maxBuffers = 1;
-    for (int i = 0; i < forceBufferCounter.size(); i++) {
+    for (int i = 0; i < forceBufferCounter.size(); i++)
         maxBuffers = max(maxBuffers, forceBufferCounter[i]);
-    }
     cl.addForce(new OpenCLPeriodicTorsionForceInfo(maxBuffers, force));
     cl::Program program = cl.createProgram(cl.loadSourceFromFile("periodicTorsionForce.cl"));
     kernel = cl::Kernel(program, "calcPeriodicTorsionForce");
@@ -379,7 +377,7 @@ double OpenCLCalcPeriodicTorsionForceKernel::executeEnergy(ContextImpl& context)
 
 class OpenCLRBTorsionForceInfo : public OpenCLForceInfo {
 public:
-    OpenCLRBTorsionForceInfo(int requiredBuffers, const RBTorsionForce& force) : OpenCLForceInfo(requiredBuffers, false, 0.0), force(force) {
+    OpenCLRBTorsionForceInfo(int requiredBuffers, const RBTorsionForce& force) : OpenCLForceInfo(requiredBuffers), force(force) {
     }
     int getNumParticleGroups() {
         return force.getNumTorsions();
@@ -431,9 +429,8 @@ void OpenCLCalcRBTorsionForceKernel::initialize(const System& system, const RBTo
     params->upload(paramVector);
     indices->upload(indicesVector);
     int maxBuffers = 1;
-    for (int i = 0; i < forceBufferCounter.size(); i++) {
+    for (int i = 0; i < forceBufferCounter.size(); i++)
         maxBuffers = max(maxBuffers, forceBufferCounter[i]);
-    }
     cl.addForce(new OpenCLRBTorsionForceInfo(maxBuffers, force));
     cl::Program program = cl.createProgram(cl.loadSourceFromFile("rbTorsionForce.cl"));
     kernel = cl::Kernel(program, "calcRBTorsionForce");
@@ -455,9 +452,45 @@ double OpenCLCalcRBTorsionForceKernel::executeEnergy(ContextImpl& context) {
     return 0.0;
 }
 
+class OpenCLNonbondedForceInfo : public OpenCLForceInfo {
+public:
+    OpenCLNonbondedForceInfo(int requiredBuffers, const NonbondedForce& force) : OpenCLForceInfo(requiredBuffers), force(force) {
+    }
+    bool areParticlesIdentical(int particle1, int particle2) {
+        double charge1, charge2, sigma1, sigma2, epsilon1, epsilon2;
+        force.getParticleParameters(particle1, charge1, sigma1, epsilon1);
+        force.getParticleParameters(particle2, charge2, sigma2, epsilon2);
+        return (charge1 == charge2 && sigma1 == sigma2 && epsilon1 == epsilon2);
+    }
+    int getNumParticleGroups() {
+        return force.getNumExceptions();
+    }
+    void getParticlesInGroup(int index, std::vector<int>& particles) {
+        int particle1, particle2;
+        double chargeProd, sigma, epsilon;
+        force.getExceptionParameters(index, particle1, particle2, chargeProd, sigma, epsilon);
+        particles.resize(2);
+        particles[0] = particle1;
+        particles[1] = particle2;
+    }
+    bool areGroupsIdentical(int group1, int group2) {
+        int particle1, particle2;
+        double chargeProd1, chargeProd2, sigma1, sigma2, epsilon1, epsilon2;
+        force.getExceptionParameters(group1, particle1, particle2, chargeProd1, sigma1, epsilon1);
+        force.getExceptionParameters(group2, particle1, particle2, chargeProd2, sigma2, epsilon2);
+        return (chargeProd1 == chargeProd2 && sigma1 == sigma2 && epsilon1 == epsilon2);
+    }
+private:
+    const NonbondedForce& force;
+};
+
 OpenCLCalcNonbondedForceKernel::~OpenCLCalcNonbondedForceKernel() {
     if (sigmaEpsilon != NULL)
         delete sigmaEpsilon;
+    if (exceptionParams != NULL)
+        delete exceptionParams;
+    if (exceptionIndices != NULL)
+        delete exceptionIndices;
 }
 
 void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const NonbondedForce& force) {
@@ -535,6 +568,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
 //    gpuSetCoulombParameters(gpu, 138.935485f, particle, c6, c12, q, symbol, exclusionList, method);
     cl.getNonbondedUtilties().addInteraction(useCutoff, usePeriodic, force.getCutoffDistance(), exclusionList);
     cl.getNonbondedUtilties().addParameter("sigmaEpsilon", "float2", 8, sigmaEpsilon->getDeviceBuffer());
+    cutoffSquared = force.getCutoffDistance()*force.getCutoffDistance();
 
     // Compute the Ewald self energy.
 
@@ -545,30 +579,48 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
 //                ewaldSelfEnergy -= selfEnergyScale*q[i]*q[i];
     }
 
-    // Initialize 1-4 nonbonded interactions.
+    // Initialize the exceptions.
 
-    {
-        int numExceptions = exceptions.size();
-        vector<int> particle1(numExceptions);
-        vector<int> particle2(numExceptions);
-        vector<float> c6(numExceptions);
-        vector<float> c12(numExceptions);
-        vector<float> q1(numExceptions);
-        vector<float> q2(numExceptions);
+    int numExceptions = exceptions.size();
+    int maxBuffers = 1;
+    if (numExceptions > 0) {
+        exceptionParams = new OpenCLArray<mm_float4>(cl, numExceptions, "exceptionParams");
+        exceptionIndices = new OpenCLArray<mm_int4>(cl, numExceptions, "exceptionIndices");
+        vector<mm_float4> exceptionParamsVector(numExceptions);
+        vector<mm_int4> exceptionIndicesVector(numExceptions);
+        vector<int> forceBufferCounter(system.getNumParticles(), 0);
         for (int i = 0; i < numExceptions; i++) {
-            double charge, sig, eps;
-            force.getExceptionParameters(exceptions[i], particle1[i], particle2[i], charge, sig, eps);
-            c6[i] = (float) (4*eps*pow(sig, 6.0));
-            c12[i] = (float) (4*eps*pow(sig, 12.0));
-            q1[i] = (float) charge;
-            q2[i] = 1.0f;
+            int particle1, particle2;
+            double chargeProd, sigma, epsilon;
+            force.getExceptionParameters(exceptions[i], particle1, particle2, chargeProd, sigma, epsilon);
+            exceptionParamsVector[i] = (mm_float4) {(float) (138.935485*chargeProd), (float) sigma, (float) (4.0*epsilon), 0.0f};
+            exceptionIndicesVector[i] = (mm_int4) {particle1, particle2, forceBufferCounter[particle1]++, forceBufferCounter[particle2]++};
         }
-//        gpuSetLJ14Parameters(gpu, 138.935485f, 1.0f, particle1, particle2, c6, c12, q1, q2);
+        exceptionParams->upload(exceptionParamsVector);
+        exceptionIndices->upload(exceptionIndicesVector);
+        for (int i = 0; i < forceBufferCounter.size(); i++)
+            maxBuffers = max(maxBuffers, forceBufferCounter[i]);
     }
+    cl.addForce(new OpenCLNonbondedForceInfo(maxBuffers, force));
+    cl::Program program = cl.createProgram(cl.loadSourceFromFile("nonbondedExceptions.cl"));
+    exceptionsKernel = cl::Kernel(program, "computeNonbondedExceptions");
 }
 
 void OpenCLCalcNonbondedForceKernel::executeForces(ContextImpl& context) {
     cl.getNonbondedUtilties().computeInteractions();
+    if (exceptionIndices != NULL) {
+        int numExceptions = exceptionIndices->getSize();
+        exceptionsKernel.setArg<cl_int>(0, cl.getPaddedNumAtoms());
+        exceptionsKernel.setArg<cl_int>(1, numExceptions);
+        exceptionsKernel.setArg<cl_float>(2, cutoffSquared);
+        exceptionsKernel.setArg<mm_float4>(3, cl.getNonbondedUtilties().getPeriodicBoxSize());
+        exceptionsKernel.setArg<cl::Buffer>(4, cl.getForceBuffers().getDeviceBuffer());
+        exceptionsKernel.setArg<cl::Buffer>(5, cl.getEnergyBuffer().getDeviceBuffer());
+        exceptionsKernel.setArg<cl::Buffer>(6, cl.getPosq().getDeviceBuffer());
+        exceptionsKernel.setArg<cl::Buffer>(7, exceptionParams->getDeviceBuffer());
+        exceptionsKernel.setArg<cl::Buffer>(8, exceptionIndices->getDeviceBuffer());
+        cl.executeKernel(exceptionsKernel, numExceptions);
+    }
 }
 
 double OpenCLCalcNonbondedForceKernel::executeEnergy(ContextImpl& context) {

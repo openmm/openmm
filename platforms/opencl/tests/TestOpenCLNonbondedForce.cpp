@@ -604,7 +604,7 @@ int main() {
     try {
         testCoulomb();
         testLJ();
-//        testExclusionsAnd14();
+        testExclusionsAnd14();
 //        testCutoff();
 //        testCutoff14();
 //        testPeriodic();

@@ -54,7 +54,14 @@ public:
      */
     OpenCLArray(OpenCLContext& context, int size, const std::string& name, bool createHostBuffer = false) :
             context(context), size(size), name(name), local(createHostBuffer ? size : 0), ownsBuffer(true) {
-        buffer = new cl::Buffer(context.getContext(), CL_MEM_READ_WRITE, size*sizeof(T));
+        try {
+            buffer = new cl::Buffer(context.getContext(), CL_MEM_READ_WRITE, size*sizeof(T));
+        }
+        catch (cl::Error err) {
+            std::stringstream str;
+            str<<"Error creating array "<<name<<": "<<err.what()<<" ("<<err.err()<<")";
+            throw OpenMMException(str.str());
+        }
     }
     /**
      * Create an OpenCLArray object the uses a preexisting Buffer.

@@ -29,7 +29,7 @@
 using namespace OpenMM;
 using namespace std;
 
-bool OpenCLForceInfo::areParticlesIdentical() {
+bool OpenCLForceInfo::areParticlesIdentical(int particle1, int particle2) {
     return true;
 }
 

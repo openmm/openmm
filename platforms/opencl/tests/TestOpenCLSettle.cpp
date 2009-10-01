@@ -68,7 +68,7 @@ void testConstraints() {
         system.addConstraint(i*3, i*3+2, 0.1);
         system.addConstraint(i*3+1, i*3+2, 0.163);
     }
-//    system.addForce(forceField);
+    system.addForce(forceField);
     Context context(system, integrator, platform);
     vector<Vec3> positions(numParticles);
     vector<Vec3> velocities(numParticles);

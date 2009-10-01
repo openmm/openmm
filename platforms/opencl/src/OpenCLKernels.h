@@ -299,7 +299,8 @@ private:
  */
 class OpenCLCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
 public:
-    OpenCLCalcNonbondedForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcNonbondedForceKernel(name, platform), cl(cl) {
+    OpenCLCalcNonbondedForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcNonbondedForceKernel(name, platform), cl(cl),
+            exceptionParams(NULL), exceptionIndices(NULL) {
     }
     ~OpenCLCalcNonbondedForceKernel();
     /**
@@ -325,7 +326,10 @@ public:
 private:
     OpenCLContext& cl;
     OpenCLArray<mm_float2>* sigmaEpsilon;
-    double ewaldSelfEnergy;
+    OpenCLArray<mm_float4>* exceptionParams;
+    OpenCLArray<mm_int4>* exceptionIndices;
+    cl::Kernel exceptionsKernel;
+    double cutoffSquared, ewaldSelfEnergy;
 };
 
 ///**

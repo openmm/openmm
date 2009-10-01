@@ -38,8 +38,7 @@ namespace OpenMM {
 
 class OpenCLForceInfo {
 public:
-    OpenCLForceInfo(int requiredForceBuffers, bool usesNeighborList, double cutoffDistance) :
-        requiredForceBuffers(requiredForceBuffers), usesNeighborList(usesNeighborList), cutoffDistance(cutoffDistance) {
+    OpenCLForceInfo(int requiredForceBuffers) : requiredForceBuffers(requiredForceBuffers) {
     }
     /**
      * Get the number of force buffers this force requires.
@@ -48,22 +47,9 @@ public:
         return requiredForceBuffers;
     }
     /**
-     * Get whether or not this force makes use of the neighbor list.
-     */
-    bool getUsesNeighborList() {
-        return usesNeighborList;
-    }
-    /**
-     * Get the cutoff distance used by this force.  If usesNeighborList() returns false,
-     * the return value from this method is ignored.
-     */
-    double getCutoffDistance() {
-        return cutoffDistance;
-    }
-    /**
      * Get whether or not two particles have identical force field parameters.
      */
-    virtual bool areParticlesIdentical();
+    virtual bool areParticlesIdentical(int particle1, int particle2);
     /**
      * Get the number of particle groups defined by this force.
      */
@@ -78,8 +64,6 @@ public:
     virtual bool areGroupsIdentical(int group1, int group2);
 private:
     int requiredForceBuffers;
-    bool usesNeighborList;
-    double cutoffDistance;
 };
 
 } // namespace OpenMM

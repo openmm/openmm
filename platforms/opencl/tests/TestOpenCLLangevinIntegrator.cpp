@@ -105,7 +105,7 @@ void testTemperature() {
         system.addParticle(2.0);
         forceField->addParticle((i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
     }
-//    system.addForce(forceField);
+    system.addForce(forceField);
     Context context(system, integrator, platform);
     vector<Vec3> positions(numParticles);
     for (int i = 0; i < numParticles; ++i)
@@ -188,7 +188,7 @@ void testRandomSeed() {
         system.addParticle(2.0);
         forceField->addParticle((i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
     }
-//    system.addForce(forceField);
+    system.addForce(forceField);
     vector<Vec3> positions(numParticles);
     vector<Vec3> velocities(numParticles);
     for (int i = 0; i < numParticles; ++i) {
