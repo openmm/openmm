@@ -91,19 +91,21 @@ void testEwaldExact() {
 //   e			:	1.6022 × 10−19 C
 //   4*pi*epsilon0	: 	1.112 × 10−10 C²/(J m)
 //   a0			:	0.282 x 10-9 m (perfect cell)
-//   Therefore
-    double exactEnergy = -14.3061e-19; // J (per ion pair)
-    exactEnergy        = -7.1531e-19; // J per ion
-    exactEnergy        = -430.820; // kJ/mol per ion
-    ASSERT_EQUAL_TOL(exactEnergy * numParticles , state.getPotentialEnergy(), 100*TOL);
-//  Gromacs result
-//    ASSERT_EQUAL_TOL(-430494.0, state.getPotentialEnergy(), 10*TOL);
+// 
+//   E is then the energy per pair of ions, so for our case
+//   E has to be divided by 2 (per ion), multiplied by N(avogadro), multiplied by number of particles, and divided by 1000 for kJ
+   	double exactEnergy        = - (1.7476 * 1.6022e-19 * 1.6022e-19  * 6.02214e+23 * numParticles) / (1.112e-10 * 0.282e-9 * 2 * 1000);
+    ASSERT_EQUAL_TOL(exactEnergy, state.getPotentialEnergy(), 100*TOL);
+//    cout << "exactEnergy: " << exactEnergy << endl;
+//    cout << "PotentialEnergy: " << state.getPotentialEnergy() << endl;
 
 }
 
 void testEwaldPME() {
 
-//      Use amorphoush NaCl system
+    double tol = 1e-5;
+
+//      Use amorphous NaCl system
 
     ReferencePlatform platform;
     const int numParticles = 216;
@@ -132,13 +134,17 @@ void testEwaldPME() {
     State state1 = context.getState(State::Forces | State::Energy);
     const vector<Vec3>& forces1 = state1.getForces();
 
-//   (1)   CHECK EXACT VALUE OF EWALD ENERGY
+//    for (int i = 0 ; i < numParticles ; i++)
+ //     cout << "f [" << i << " : ]" << forces1[i] << endl;
+//   (1)   CHECK EXACT VALUE OF EWALD ENERGY (Against Gromacs output)
 
-    ASSERT_EQUAL_TOL(-26651.9, state1.getPotentialEnergy(), TOL);
+    tol = 1e-5;
+    ASSERT_EQUAL_TOL(-36687.5, state1.getPotentialEnergy(), tol);
 
 //   (2)   CHECK WHETHER THE EWALD FORCES ARE THE SAME AS THE GROMACS OUTPUT
-// Even at tolerance 0.1 the test doesn't pass
-//    #include "nacl_amorph_GromacsForcesEwald.dat"
+  
+    tol = 1e-3;
+    #include "nacl_amorph_GromacsForcesEwald.dat"
 
 //   (3)   CHECK SELF-CONSISTENCY
 
@@ -163,22 +169,28 @@ void testEwaldPME() {
     
     // See whether the potential energy changed by the expected amount.
     
+    tol = 1e-4;
     State state2 = context.getState(State::Energy);
-    ASSERT_EQUAL_TOL(norm, (state2.getPotentialEnergy()-state1.getPotentialEnergy())/delta, 0.01)
+    ASSERT_EQUAL_TOL(norm, (state2.getPotentialEnergy()-state1.getPotentialEnergy())/delta, tol)
 
-//   (4)   CHECK EXACT VALUE OF PME ENERGY
+//   (4)   CHECK EXACT VALUE OF PME ENERGY 
 
     nonbonded->setNonbondedMethod(NonbondedForce::PME);
     context.reinitialize();
     #include "nacl_amorph.dat"
     context.setPositions(positions);
     State state3 = context.getState(State::Forces | State::Energy);
-    ASSERT_EQUAL_TOL(-26651.9, state3.getPotentialEnergy(), 10*TOL);
+    tol = 1e-5;
+//  Gromacs PME energy for the same mesh
+    ASSERT_EQUAL_TOL(-36688.3, state3.getPotentialEnergy(), tol);
+//  Gromacs Ewald energy
+    tol = 1e-4;
+    ASSERT_EQUAL_TOL(-36687.5, state3.getPotentialEnergy(), tol);
 
 //   (5) CHECK WHETHER PME FORCES ARE THE SAME AS THE GROMACS OUTPUT
 
-// Even at tolerance 0.1 the test doesn't pass
-//    #include "nacl_amorph_GromacsForcesEwald.dat"
+    tol = 1e-3;
+    #include "nacl_amorph_GromacsForcesEwald.dat"
 
 //   (6) CHECK PME FOR SELF-CONSISTENCY
 
@@ -201,7 +213,8 @@ void testEwaldPME() {
     // See whether the potential energy changed by the expected amount.
     
     State state4 = context.getState(State::Energy);
-    ASSERT_EQUAL_TOL(norm, (state4.getPotentialEnergy()-state3.getPotentialEnergy())/delta, 0.01)
+    tol = 1e-4;
+    ASSERT_EQUAL_TOL(norm, (state4.getPotentialEnergy()-state3.getPotentialEnergy())/delta, tol)
 
 }
 
