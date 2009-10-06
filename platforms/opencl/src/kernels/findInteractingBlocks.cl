@@ -118,6 +118,7 @@ __kernel void findInteractionsWithinBlocks(float cutoffSquared, float4 periodicB
 
             // Sum the flags.
 
+#ifdef WARPS_ARE_ATOMIC
             if (index % 2 == 0)
                 flags[thread] += flags[thread+1];
             if (index % 4 == 0)
@@ -126,6 +127,21 @@ __kernel void findInteractionsWithinBlocks(float cutoffSquared, float4 periodicB
                 flags[thread] += flags[thread+4];
             if (index % 16 == 0)
                 flags[thread] += flags[thread+8];
+#else
+            barrier(CLK_LOCAL_MEM_FENCE);
+            if (index % 2 == 0)
+                flags[thread] += flags[thread+1];
+            barrier(CLK_LOCAL_MEM_FENCE);
+            if (index % 4 == 0)
+                flags[thread] += flags[thread+2];
+            barrier(CLK_LOCAL_MEM_FENCE);
+            if (index % 8 == 0)
+                flags[thread] += flags[thread+4];
+            barrier(CLK_LOCAL_MEM_FENCE);
+            if (index % 16 == 0)
+                flags[thread] += flags[thread+8];
+            barrier(CLK_LOCAL_MEM_FENCE);
+#endif
             if (index == 0)
             {
                 unsigned int allFlags = flags[thread] + flags[thread+16];

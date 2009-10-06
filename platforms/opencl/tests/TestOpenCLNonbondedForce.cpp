@@ -525,7 +525,6 @@ void testBlockInteractions(bool periodic) {
     const unsigned int atoms = clcontext.getPaddedNumAtoms();
     const unsigned int grid = OpenCLContext::TileSize;
     const unsigned int dim = clcontext.getNumAtomBlocks();
-    printf("%d of %d\n", numWithInteractions, hasInteractions.size());
     for (int i = 0; i < numWithInteractions; i++) {
         unsigned int tile = interactingTiles[i];
         unsigned int x = (tile >> 17);
@@ -615,12 +614,12 @@ int main() {
         testCoulomb();
         testLJ();
         testExclusionsAnd14();
-//        testCutoff();
-//        testCutoff14();
-//        testPeriodic();
-//        testLargeSystem();
+        testCutoff();
+        testCutoff14();
+        testPeriodic();
+        testLargeSystem();
         testBlockInteractions(false);
-//        testBlockInteractions(true);
+        testBlockInteractions(true);
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

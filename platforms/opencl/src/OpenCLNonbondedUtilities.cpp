@@ -68,7 +68,7 @@ OpenCLNonbondedUtilities::~OpenCLNonbondedUtilities() {
         delete compact;
 }
 
-void OpenCLNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic, double cutoffDistance, const std::vector<std::vector<int> >& exclusionList) {
+void OpenCLNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic, double cutoffDistance, const vector<vector<int> >& exclusionList, const map<string, string>& defines) {
     if (cutoff != -1.0) {
         if (usesCutoff != useCutoff)
             throw OpenMMException("All Forces must agree on whether to use a cutoff");
@@ -86,12 +86,18 @@ void OpenCLNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic
         }
         if (!sameExclusions)
             throw OpenMMException("All Forces must have identical exceptions");
+        for (map<string, string>::const_iterator iter = defines.begin(); iter != defines.end(); ++iter) {
+            map<string, string>::const_iterator existing = defines.find(iter->first);
+            if (existing != defines.end() && existing->second != iter->second)
+                throw OpenMMException("Two Forces define different values for "+iter->first);
+        }
     }
     else {
         useCutoff = usesCutoff;
         usePeriodic = usesPeriodic;
         cutoff = cutoffDistance;
         atomExclusions = exclusionList;
+        kernelDefines.insert(defines.begin(), defines.end());
     }
 }
 
@@ -116,9 +122,13 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
 
     // Create kernels.
 
-    map<string, string> defines;
+    map<string, string> defines = kernelDefines;
     if (forceBufferPerAtomBlock)
-        defines["USE_OUTPUT_BUFFER_PER_BLOCK"] = "true";
+        defines["USE_OUTPUT_BUFFER_PER_BLOCK"] = "1";
+    if (useCutoff)
+        defines["USE_CUTOFF"] = "1";
+    if (usePeriodic)
+        defines["USE_PERIODIC"] = "1";
     cl::Program forceProgram = context.createProgram(context.loadSourceFromFile("nonbonded.cl"), defines);
     forceKernel = cl::Kernel(forceProgram, "computeNonbonded");
     cl::Program interactingBlocksProgram = context.createProgram(context.loadSourceFromFile("findInteractingBlocks.cl"), defines);
@@ -264,19 +274,25 @@ void OpenCLNonbondedUtilities::computeInteractions() {
     hasComputedInteractions = true;
     forceKernel.setArg<cl_int>(0, tiles->getSize());
     forceKernel.setArg<cl_int>(1, context.getPaddedNumAtoms());
-    forceKernel.setArg<cl_float>(2, cutoff*cutoff);
-    forceKernel.setArg<mm_float4>(3, periodicBoxSize);
-    forceKernel.setArg<cl::Buffer>(4, context.getForceBuffers().getDeviceBuffer());
-    forceKernel.setArg<cl::Buffer>(5, context.getEnergyBuffer().getDeviceBuffer());
-    forceKernel.setArg<cl::Buffer>(6, context.getPosq().getDeviceBuffer());
-    forceKernel.setArg<cl::Buffer>(7, tiles->getDeviceBuffer());
-    forceKernel.setArg<cl::Buffer>(8, exclusions->getDeviceBuffer());
-    forceKernel.setArg<cl::Buffer>(9, exclusionIndex->getDeviceBuffer());
-    forceKernel.setArg(10, OpenCLContext::ThreadBlockSize*sizeof(cl_float4), NULL);
-    forceKernel.setArg(11, OpenCLContext::ThreadBlockSize*sizeof(cl_float4), NULL);
+    forceKernel.setArg<cl::Buffer>(2, context.getForceBuffers().getDeviceBuffer());
+    forceKernel.setArg<cl::Buffer>(3, context.getEnergyBuffer().getDeviceBuffer());
+    forceKernel.setArg<cl::Buffer>(4, context.getPosq().getDeviceBuffer());
+    forceKernel.setArg<cl::Buffer>(5, tiles->getDeviceBuffer());
+    forceKernel.setArg<cl::Buffer>(6, exclusions->getDeviceBuffer());
+    forceKernel.setArg<cl::Buffer>(7, exclusionIndex->getDeviceBuffer());
+    forceKernel.setArg(8, OpenCLContext::ThreadBlockSize*sizeof(cl_float4), NULL);
+    forceKernel.setArg(9, OpenCLContext::ThreadBlockSize*sizeof(cl_float4), NULL);
+    int paramBase = 10;
+    if (useCutoff) {
+        paramBase = 14;
+        forceKernel.setArg<cl_float>(10, cutoff*cutoff);
+        forceKernel.setArg<mm_float4>(11, periodicBoxSize);
+        forceKernel.setArg<cl::Buffer>(12, interactionFlags->getDeviceBuffer());
+        forceKernel.setArg(13, OpenCLContext::ThreadBlockSize*sizeof(cl_float4), NULL);
+    }
     for (int i = 0; i < (int) parameters.size(); i++) {
-        forceKernel.setArg<cl::Buffer>(i*2+12, *parameters[i].buffer);
-        forceKernel.setArg(i*2+13, OpenCLContext::ThreadBlockSize*parameters[i].size, NULL);
+        forceKernel.setArg<cl::Buffer>(i*2+paramBase, *parameters[i].buffer);
+        forceKernel.setArg(i*2+paramBase+1, OpenCLContext::ThreadBlockSize*parameters[i].size, NULL);
     }
     context.executeKernel(forceKernel, tiles->getSize()*OpenCLContext::TileSize);
 }

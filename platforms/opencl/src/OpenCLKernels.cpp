@@ -530,6 +530,16 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     sigmaEpsilon->upload(sigmaEpsilonVector);
     bool useCutoff = (force.getNonbondedMethod() != NonbondedForce::NoCutoff);
     bool usePeriodic = (force.getNonbondedMethod() != NonbondedForce::NoCutoff && force.getNonbondedMethod() != NonbondedForce::CutoffNonPeriodic);
+    map<string, string> defines;
+    if (useCutoff) {
+        double reactionFieldK = pow(force.getCutoffDistance(), -3.0)*(force.getReactionFieldDielectric()-1.0)/(2.0*force.getReactionFieldDielectric()+1.0);
+        double reactionFieldC = (1.0 / force.getCutoffDistance())*(3.0*force.getReactionFieldDielectric())/(2.0*force.getReactionFieldDielectric()+1.0);
+        char k[50], c[50];
+        sprintf(k, "%.8ef", reactionFieldK);
+        sprintf(c, "%.8ef", reactionFieldC);
+        defines["REACTION_FIELD_K"] = string(k);
+        defines["REACTION_FIELD_C"] = string(c);
+    }
 //    if (force.getNonbondedMethod() != NonbondedForce::NoCutoff) {
 //        method = CUTOFF;
 //    }
@@ -566,7 +576,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
 //    }
 //    data.nonbondedMethod = method;
 //    gpuSetCoulombParameters(gpu, 138.935485f, particle, c6, c12, q, symbol, exclusionList, method);
-    cl.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, force.getCutoffDistance(), exclusionList);
+    cl.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, force.getCutoffDistance(), exclusionList, defines);
     cl.getNonbondedUtilities().addParameter("sigmaEpsilon", "float2", 8, sigmaEpsilon->getDeviceBuffer());
     cutoffSquared = force.getCutoffDistance()*force.getCutoffDistance();
 
@@ -602,7 +612,12 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
             maxBuffers = max(maxBuffers, forceBufferCounter[i]);
     }
     cl.addForce(new OpenCLNonbondedForceInfo(maxBuffers, force));
-    cl::Program program = cl.createProgram(cl.loadSourceFromFile("nonbondedExceptions.cl"));
+    if (useCutoff) {
+        defines["USE_CUTOFF"] = "1";
+    }
+    if (usePeriodic)
+        defines["USE_PERIODIC"] = "1";
+    cl::Program program = cl.createProgram(cl.loadSourceFromFile("nonbondedExceptions.cl"), defines);
     exceptionsKernel = cl::Kernel(program, "computeNonbondedExceptions");
 }
 

@@ -5,18 +5,18 @@ const float EpsilonFactor = 138.935485f;
  * Compute nonbonded interactions.
  */
 
-__kernel void computeNonbonded(int numTiles, int paddedNumAtoms, float cutoffSquared, float4 periodicBoxSize,
+__kernel void computeNonbonded(int numTiles, int paddedNumAtoms,
         __global float4* forceBuffers, __global float* energyBuffer, __global float4* posq, __global unsigned int* tiles,
         __global unsigned int* exclusions,  __global unsigned int* exclusionIndices, __local float4* local_posq, __local float4* local_force,
+#ifdef USE_CUTOFF
+        float cutoffSquared, float4 periodicBoxSize, __global unsigned int* interactionFlags, __local float4* tempBuffer,
+#endif
         __global float2* sigmaEpsilon, __local float2* local_sigmaEpsilon) {
     unsigned int totalWarps = get_global_size(0)/TileSize;
     unsigned int warp = get_global_id(0)/TileSize;
     unsigned int pos = warp*numTiles/totalWarps;
     unsigned int end = (warp+1)*numTiles/totalWarps;
     float energy = 0.0f;
-#ifdef USE_CUTOFF
-    float3* tempBuffer = (float3*) &sA[cSim.nonbond_threads_per_block];
-#endif
     unsigned int lasty = 0xFFFFFFFF;
 
     while (pos < end) {
@@ -61,8 +61,8 @@ __kernel void computeNonbonded(int numTiles, int paddedNumAtoms, float cutoffSqu
                 float dEdR = eps * (12.0f * sig6 - 6.0f) * sig6;
                 float tempEnergy = eps * (sig6 - 1.0f) * sig6;
 #ifdef USE_CUTOFF
-                dEdR += apos.w * local_posq[tbx+j].w * (invR - 2.0f * cSim.reactionFieldK * r2);
-                tempEnergy += apos.w * local_posq[tbx+j].w * (invR + cSim.reactionFieldK * r2 - cSim.reactionFieldC);
+                dEdR += apos.w * local_posq[tbx+j].w * (invR - 2.0f * REACTION_FIELD_K * r2);
+                tempEnergy += apos.w * local_posq[tbx+j].w * (invR + REACTION_FIELD_K * r2 - REACTION_FIELD_C);
 #else
                 dEdR += apos.w * local_posq[tbx+j].w * invR;
                 tempEnergy += apos.w * local_posq[tbx+j].w * invR;
@@ -108,7 +108,7 @@ __kernel void computeNonbonded(int numTiles, int paddedNumAtoms, float cutoffSqu
             local_force[get_local_id(0)] = 0.0f;
             apos.w *= EpsilonFactor;
 #ifdef USE_CUTOFF
-            unsigned int flags = cSim.pInteractionFlag[pos];
+            unsigned int flags = interactionFlags[pos];
             if (!hasExclusions && flags != 0xFFFFFFFF) {
                 if (flags == 0) {
                     // No interactions in this tile.
@@ -131,12 +131,12 @@ __kernel void computeNonbonded(int numTiles, int paddedNumAtoms, float cutoffSqu
                             float sig2 = invR * sig;
                             sig2 *= sig2;
                             float sig6 = sig2 * sig2 * sig2;
-                            float eps = a.y * local_sigmaEpsilon[tbx+j].Y;
+                            float eps = a.y * local_sigmaEpsilon[tbx+j].y;
                             float dEdR = eps * (12.0f * sig6 - 6.0f) * sig6;
 			    float tempEnergy = eps * (sig6 - 1.0f) * sig6;
 #ifdef USE_CUTOFF
-                            dEdR += apos.w * local_posq[tbx+j].w * (invR - 2.0f * cSim.reactionFieldK * r2);
-                            tempEnergy += apos.w * local_posq[tbx+j].w * (invR + cSim.reactionFieldK * r2 - cSim.reactionFieldC);
+                            dEdR += apos.w * local_posq[tbx+j].w * (invR - 2.0f * REACTION_FIELD_K * r2);
+                            tempEnergy += apos.w * local_posq[tbx+j].w * (invR + REACTION_FIELD_K * r2 - REACTION_FIELD_C);
 #else
                             dEdR += apos.w * local_posq[tbx+j].w * invR;
                             tempEnergy += apos.w * local_posq[tbx+j].w * invR;
@@ -188,19 +188,19 @@ __kernel void computeNonbonded(int numTiles, int paddedNumAtoms, float cutoffSqu
 #endif
                     float r2 = delta.x * delta.x + delta.y * delta.y + delta.z * delta.z;
                     float invR = 1.0f / sqrt(r2);
-                    float sig = a.x + local_sigmaEpsilon[tbx+j].x;
+                    float sig = a.x + local_sigmaEpsilon[tbx+tj].x;
                     float sig2 = invR * sig;
                     sig2 *= sig2;
                     float sig6 = sig2 * sig2 * sig2;
-                    float eps = a.y * local_sigmaEpsilon[tbx+j].y;
+                    float eps = a.y * local_sigmaEpsilon[tbx+tj].y;
                     float dEdR = eps * (12.0f * sig6 - 6.0f) * sig6;
 		    float tempEnergy = eps * (sig6 - 1.0f) * sig6;
 #ifdef USE_CUTOFF
-                    dEdR += apos.w * local_posq[tbx+j].w * (invR - 2.0f * cSim.reactionFieldK * r2);
-		    tempEnergy += apos.w * local_posq[tbx+j].w * (invR + cSim.reactionFieldK * r2 - cSim.reactionFieldC);
+                    dEdR += apos.w * local_posq[tbx+tj].w * (invR - 2.0f * REACTION_FIELD_K * r2);
+		    tempEnergy += apos.w * local_posq[tbx+tj].w * (invR + REACTION_FIELD_K * r2 - REACTION_FIELD_C);
 #else
-                    dEdR += apos.w * local_posq[tbx+j].w * invR;
-                    tempEnergy += apos.w * local_posq[tbx+j].w * invR;
+                    dEdR += apos.w * local_posq[tbx+tj].w * invR;
+                    tempEnergy += apos.w * local_posq[tbx+tj].w * invR;
 #endif
                     dEdR *= invR * invR;
 #ifdef USE_CUTOFF

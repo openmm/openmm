@@ -28,8 +28,8 @@ __kernel void computeNonbondedExceptions(int numAtoms, int numExceptions, float 
         float dEdR = exceptionParams.z*(12.0f*sig6-6.0f)*sig6;
         float tempEnergy = exceptionParams.z*(sig6-1.0f)*sig6;
 #ifdef USE_CUTOFF
-        dEdR += exceptionParams.x*(invR-2.0f*cSim.reactionFieldK*r2);
-        tempEnergy += exceptionParams.x*(invR+cSim.reactionFieldK*r2-cSim.reactionFieldC);
+        dEdR += exceptionParams.x*(invR-2.0f*REACTION_FIELD_K*r2);
+        tempEnergy += exceptionParams.x*(invR+REACTION_FIELD_K*r2-REACTION_FIELD_C);
 #else
         dEdR += exceptionParams.x*invR;
         tempEnergy += exceptionParams.x*invR;
