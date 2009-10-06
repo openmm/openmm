@@ -1740,49 +1740,49 @@ void gpuSetLangevinIntegrationParameters(gpuContext gpu, float tau, float deltaT
     gpu->sim.tau                    = tau;
     gpu->sim.T                      = temperature;
     gpu->sim.kT                     = BOLTZ * gpu->sim.T;
-    float GDT                       = gpu->sim.deltaT / gpu->sim.tau;
-    float EPH                       = exp(0.5f * GDT);
-    float EMH                       = exp(-0.5f * GDT);
-    float EP                        = exp(GDT);
-    float EM                        = exp(-GDT);
-    float B, C, D;
-    if (GDT >= 0.1f)
+    double GDT                       = gpu->sim.deltaT / gpu->sim.tau;
+    double EPH                       = exp(0.5 * GDT);
+    double EMH                       = exp(-0.5 * GDT);
+    double EP                        = exp(GDT);
+    double EM                        = exp(-GDT);
+    double B, C, D;
+    if (GDT >= 0.1)
     {
-        float term1 = EPH - 1.0f;
+        double term1 = EPH - 1.0;
         term1                      *= term1;
-        B                           = GDT * (EP - 1.0f) - 4.0f * term1;
-        C                           = GDT - 3.0f + 4.0f * EMH - EM;
-        D                           = 2.0f - EPH - EMH;
+        B                           = GDT * (EP - 1.0) - 4.0 * term1;
+        C                           = GDT - 3.0 + 4.0 * EMH - EM;
+        D                           = 2.0 - EPH - EMH;
     }
     else
     {
-        float term1                 = 0.5f * GDT;
-        float term2                 = term1 * term1;
-        float term4                 = term2 * term2;
+        double term1                 = 0.5 * GDT;
+        double term2                 = term1 * term1;
+        double term4                 = term2 * term2;
 
-        float third                 = 1.0f / 3.0f;
-        float o7_9                  = 7.0f / 9.0f;
-        float o1_12                 = 1.0f / 12.0f;
-        float o17_90                = 17.0f / 90.0f;
-        float o7_30                 = 7.0f / 30.0f;
-        float o31_1260              = 31.0f / 1260.0f;
-        float o_360                 = 1.0f / 360.0f;
+        double third                 = 1.0 / 3.0;
+        double o7_9                  = 7.0 / 9.0;
+        double o1_12                 = 1.0 / 12.0;
+        double o17_90                = 17.0 / 90.0;
+        double o7_30                 = 7.0 / 30.0;
+        double o31_1260              = 31.0 / 1260.0;
+        double o_360                 = 1.0 / 360.0;
 
         B                           = term4 * (third + term1 * (third + term1 * (o17_90 + term1 * o7_9)));
-        C                           = term2 * term1 * (2.0f * third + term1 * (-0.5f + term1 * (o7_30 + term1 * (-o1_12 + term1 * o31_1260))));
-        D                           = term2 * (-1.0f + term2 * (-o1_12 - term2 * o_360));
+        C                           = term2 * term1 * (2.0 * third + term1 * (-0.5 + term1 * (o7_30 + term1 * (-o1_12 + term1 * o31_1260))));
+        D                           = term2 * (-1.0 + term2 * (-o1_12 - term2 * o_360));
     }
-    float DOverTauC                 = D / (gpu->sim.tau * C);
-    float TauOneMinusEM             = gpu->sim.tau * (1.0f-EM);
-    float TauDOverEMMinusOne        = gpu->sim.tau * D / (EM - 1.0f);
-    float fix1                      = gpu->sim.tau * (EPH - EMH);
-    if (fix1 == 0.0f)
+    double DOverTauC                 = D / (gpu->sim.tau * C);
+    double TauOneMinusEM             = gpu->sim.tau * (1.0-EM);
+    double TauDOverEMMinusOne        = gpu->sim.tau * D / (EM - 1.0);
+    double fix1                      = gpu->sim.tau * (EPH - EMH);
+    if (fix1 == 0.0)
         fix1 = deltaT;
-    float oneOverFix1               = 1.0f / fix1;
-    float V                         = sqrt(gpu->sim.kT * (1.0f - EM));
-    float X                         = gpu->sim.tau * sqrt(gpu->sim.kT * C);
-    float Yv                        = sqrt(gpu->sim.kT * B / C);
-    float Yx                        = gpu->sim.tau * sqrt(gpu->sim.kT * B / (1.0f - EM));
+    double oneOverFix1               = 1.0 / fix1;
+    double V                         = sqrt(gpu->sim.kT * (1.0 - EM));
+    double X                         = gpu->sim.tau * sqrt(gpu->sim.kT * C);
+    double Yv                        = sqrt(gpu->sim.kT * B / C);
+    double Yx                        = gpu->sim.tau * sqrt(gpu->sim.kT * B / (1.0 - EM));
     (*gpu->psLangevinParameters)[0] = EM;
     (*gpu->psLangevinParameters)[1] = EM;
     (*gpu->psLangevinParameters)[2] = DOverTauC;
@@ -2192,7 +2192,6 @@ void gpuBuildExclusionList(gpuContext gpu)
         for (int atom2 = 0; atom2 < (int)atoms; ++atom2)
         {
             int y = atom2/grid;
-            int index = x*atoms+y*grid+offset1;
             int offset2 = atom2-y*grid;
             if (x >= y)
             {

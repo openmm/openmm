@@ -72,9 +72,9 @@ __global__ void kApplyFirstSettle_kernel()
         float4 xp1          = cSim.pPosqP[atomID.y];
         float4 apos2        = cSim.pOldPosq[atomID.z];
         float4 xp2          = cSim.pPosqP[atomID.z];
-        float m0            = 1.0/cSim.pVelm4[atomID.x].w;
-        float m1            = 1.0/cSim.pVelm4[atomID.y].w;
-        float m2            = 1.0/cSim.pVelm4[atomID.z].w;
+        float m0            = 1.0f/cSim.pVelm4[atomID.x].w;
+        float m1            = 1.0f/cSim.pVelm4[atomID.y].w;
+        float m2            = 1.0f/cSim.pVelm4[atomID.z].w;
 
         // Translate the molecule to the origin to improve numerical precision.
 
@@ -150,23 +150,23 @@ __global__ void kApplyFirstSettle_kernel()
 
         //                                        --- Step2  A2' ---
 
-        float rc = 0.5*params.y;
+        float rc = 0.5f*params.y;
         float rb = sqrt(params.x*params.x-rc*rc);
         float ra = rb*(m1+m2)/totalMass;
         rb -= ra;
         float sinphi = za1d / ra;
-        float cosphi = sqrt(1.0 - sinphi*sinphi);
+        float cosphi = sqrt(1.0f - sinphi*sinphi);
         float sinpsi = ( zb1d - zc1d ) / (2*rc*cosphi);
-        float cospsi = sqrt(1.0 - sinpsi*sinpsi);
+        float cospsi = sqrt(1.0f - sinpsi*sinpsi);
 
         float ya2d =   ra * cosphi;
         float xb2d = - rc * cospsi;
         float yb2d = - rb * cosphi - rc *sinpsi * sinphi;
         float yc2d = - rb * cosphi + rc *sinpsi * sinphi;
         float xb2d2 = xb2d * xb2d;
-        float hh2 = 4.0 * xb2d2 + (yb2d-yc2d) * (yb2d-yc2d) + (zb1d-zc1d) * (zb1d-zc1d);
-        float deltx = 2.0 * xb2d + sqrt ( 4.0 * xb2d2 - hh2 + params.y*params.y );
-        xb2d -= deltx * 0.5;
+        float hh2 = 4.0f * xb2d2 + (yb2d-yc2d) * (yb2d-yc2d) + (zb1d-zc1d) * (zb1d-zc1d);
+        float deltx = 2.0f * xb2d + sqrt ( 4.0f * xb2d2 - hh2 + params.y*params.y );
+        xb2d -= deltx * 0.5f;
 
         //                                        --- Step3  al,be,ga ---
 
@@ -179,7 +179,7 @@ __global__ void kApplyFirstSettle_kernel()
 
         //                                        --- Step4  A3' ---
 
-        float costhe = sqrt (1.0 - sinthe * sinthe );
+        float costhe = sqrt (1.0f - sinthe * sinthe );
         float xa3d = - ya2d * sinthe;
         float ya3d =   ya2d * costhe;
         float za3d = za1d;
@@ -244,9 +244,9 @@ __global__ void kApplySecondSettle_kernel()
         float4 xp1          = cSim.pPosq[atomID.y];
         float4 apos2        = cSim.pOldPosq[atomID.z];
         float4 xp2          = cSim.pPosq[atomID.z];
-        float m0            = 1.0/cSim.pVelm4[atomID.x].w;
-        float m1            = 1.0/cSim.pVelm4[atomID.y].w;
-        float m2            = 1.0/cSim.pVelm4[atomID.z].w;
+        float m0            = 1.0f/cSim.pVelm4[atomID.x].w;
+        float m1            = 1.0f/cSim.pVelm4[atomID.y].w;
+        float m2            = 1.0f/cSim.pVelm4[atomID.z].w;
 
 
         float xb0 = apos1.x-apos0.x;
@@ -308,23 +308,23 @@ __global__ void kApplySecondSettle_kernel()
 
         //                                        --- Step2  A2' ---
 
-        float rc = 0.5*params.y;
+        float rc = 0.5f*params.y;
         float rb = sqrt(params.x*params.x-rc*rc);
         float ra = rb*(m1+m2)/totalMass;
         rb -= ra;
         float sinphi = za1d / ra;
-        float cosphi = sqrt(1.0 - sinphi*sinphi);
+        float cosphi = sqrt(1.0f - sinphi*sinphi);
         float sinpsi = ( zb1d - zc1d ) / (2*rc*cosphi);
-        float cospsi = sqrt(1.0 - sinpsi*sinpsi);
+        float cospsi = sqrt(1.0f - sinpsi*sinpsi);
 
         float ya2d =   ra * cosphi;
         float xb2d = - rc * cospsi;
         float yb2d = - rb * cosphi - rc *sinpsi * sinphi;
         float yc2d = - rb * cosphi + rc *sinpsi * sinphi;
         float xb2d2 = xb2d * xb2d;
-        float hh2 = 4.0 * xb2d2 + (yb2d-yc2d) * (yb2d-yc2d) + (zb1d-zc1d) * (zb1d-zc1d);
-        float deltx = 2.0 * xb2d + sqrt ( 4.0 * xb2d2 - hh2 + params.y*params.y );
-        xb2d -= deltx * 0.5;
+        float hh2 = 4.0f * xb2d2 + (yb2d-yc2d) * (yb2d-yc2d) + (zb1d-zc1d) * (zb1d-zc1d);
+        float deltx = 2.0f * xb2d + sqrt ( 4.0f * xb2d2 - hh2 + params.y*params.y );
+        xb2d -= deltx * 0.5f;
 
         //                                        --- Step3  al,be,ga ---
 
@@ -337,7 +337,7 @@ __global__ void kApplySecondSettle_kernel()
 
         //                                        --- Step4  A3' ---
 
-        float costhe = sqrt (1.0 - sinthe * sinthe );
+        float costhe = sqrt (1.0f - sinthe * sinthe );
         float xa3d = - ya2d * sinthe;
         float ya3d =   ya2d * costhe;
         float za3d = za1d;
