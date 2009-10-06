@@ -39,36 +39,44 @@ using namespace OpenMM;
 using namespace std;
 
 OpenCLContext::OpenCLContext(int numParticles, int deviceIndex) : time(0.0), stepCount(0) {
-    context = cl::Context(CL_DEVICE_TYPE_ALL);
-    vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
-    const int minThreadBlockSize = 32;
-    if (deviceIndex < 0 || deviceIndex >= devices.size()) {
-        // Try to figure out which device is the fastest.
+    try {
+        context = cl::Context(CL_DEVICE_TYPE_ALL);
+        vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
+        const int minThreadBlockSize = 32;
+        if (deviceIndex < 0 || deviceIndex >= devices.size()) {
+            // Try to figure out which device is the fastest.
 
-        int bestSpeed = 0;
-        for (int i = 0; i < devices.size(); i++) {
-            int maxSize = devices[i].getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>()[0];
-            int speed = devices[i].getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>()*devices[i].getInfo<CL_DEVICE_MAX_CLOCK_FREQUENCY>();
-            if (maxSize >= minThreadBlockSize && speed > bestSpeed)
-                deviceIndex = i;
+            int bestSpeed = 0;
+            for (int i = 0; i < devices.size(); i++) {
+                int maxSize = devices[i].getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>()[0];
+                int speed = devices[i].getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>()*devices[i].getInfo<CL_DEVICE_MAX_CLOCK_FREQUENCY>();
+                if (maxSize >= minThreadBlockSize && speed > bestSpeed)
+                    deviceIndex = i;
+            }
         }
+        if (deviceIndex == -1)
+            throw OpenMMException("No compatible OpenCL device is available");
+        device = devices[deviceIndex];
+        if (device.getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>()[0] < minThreadBlockSize)
+            throw OpenMMException("The specified OpenCL device is not compatible with OpenMM");
+        compilationOptions = "-cl-fast-relaxed-math";
+        string vendor = device.getInfo<CL_DEVICE_VENDOR>();
+        if (vendor.size() >= 6 && vendor.substr(0, 6) == "NVIDIA")
+            compilationOptions += " -DWARPS_ARE_ATOMIC";
+        queue = cl::CommandQueue(context, device);
+        numAtoms = numParticles;
+        paddedNumAtoms = TileSize*((numParticles+TileSize-1)/TileSize);
+        numAtomBlocks = (paddedNumAtoms+(TileSize-1))/TileSize;
+        numThreadBlocks = device.getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>()[0]/ThreadBlockSize;
+        nonbonded = new OpenCLNonbondedUtilities(*this);
+        posq = new OpenCLArray<mm_float4>(*this, paddedNumAtoms, "posq", true);
+        velm = new OpenCLArray<mm_float4>(*this, paddedNumAtoms, "velm", true);
     }
-    if (deviceIndex == -1)
-        throw OpenMMException("No compatible OpenCL device is available");
-    device = devices[deviceIndex];
-    if (device.getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>()[0] < minThreadBlockSize)
-        throw OpenMMException("The specified OpenCL device is not compatible with OpenMM");
-    compilationOptions = "-cl-fast-relaxed-math";
-    if (device.getInfo<CL_DEVICE_VENDOR>() == "NVIDIA")
-        compilationOptions += " -DWARPS_ARE_ATOMIC";
-    queue = cl::CommandQueue(context, device);
-    numAtoms = numParticles;
-    paddedNumAtoms = TileSize*((numParticles+TileSize-1)/TileSize);
-    numAtomBlocks = (paddedNumAtoms+(TileSize-1))/TileSize;
-    numThreadBlocks = device.getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>()[0]/ThreadBlockSize;
-    nonbonded = new OpenCLNonbondedUtilities(*this);
-    posq = new OpenCLArray<mm_float4>(*this, paddedNumAtoms, "posq", true);
-    velm = new OpenCLArray<mm_float4>(*this, paddedNumAtoms, "velm", true);
+    catch (cl::Error err) {
+        std::stringstream str;
+        str<<"Error initializing context: "<<err.what()<<" ("<<err.err()<<")";
+        throw OpenMMException(str.str());
+    }
 
     // Create utility kernels that are used in multiple places.
 
