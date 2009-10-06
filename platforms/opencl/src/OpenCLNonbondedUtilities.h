@@ -34,6 +34,8 @@
 
 namespace OpenMM {
 
+class OpenCLCompact;
+
 /**
  * This class implements features that are used by several different force.  It provides
  * a generic interface for calculating nonbonded interactions.
@@ -86,17 +88,62 @@ public:
      * prepareInteractions().  Additional calls return immediately without doing anything.
      */
     void computeInteractions();
+    /**
+     * Get the array containing the center of each atom block.
+     */
+    OpenCLArray<mm_float4>& getBlockCenters() {
+        return *blockCenter;
+    }
+    /**
+     * Get the array containing the dimensions of each atom block.
+     */
+    OpenCLArray<mm_float4>& getBlockBoundingBoxes() {
+        return *blockBoundingBox;
+    }
+    /**
+     * Get the array containing the full set of tiles.
+     */
+    OpenCLArray<cl_uint>& getTiles() {
+        return *tiles;
+    }
+    /**
+     * Get the array whose first element contains the number of tiles with interactions.
+     */
+    OpenCLArray<cl_uint>& getInteractionCount() {
+        return *interactionCount;
+    }
+    /**
+     * Get the array containing tiles with interactions.
+     */
+    OpenCLArray<cl_uint>& getInteractingTiles() {
+        return *interactingTiles;
+    }
+    /**
+     * Get the array containing flags for tiles with interactions.
+     */
+    OpenCLArray<cl_uint>& getInteractionFlags() {
+        return *interactionFlags;
+    }
 private:
     class ParameterInfo;
     OpenCLContext& context;
     cl::Kernel forceKernel;
+    cl::Kernel findBlockBoundsKernel;
+    cl::Kernel findInteractingBlocksKernel;
+    cl::Kernel findInteractionsWithinBlocksKernel;
     OpenCLArray<cl_uint>* tiles;
     OpenCLArray<cl_uint>* exclusionIndex;
     OpenCLArray<cl_uint>* exclusions;
+    OpenCLArray<cl_uint>* interactingTiles;
+    OpenCLArray<cl_uint>* interactionFlags;
+    OpenCLArray<cl_uint>* interactionCount;
+    OpenCLArray<mm_float4>* blockCenter;
+    OpenCLArray<mm_float4>* blockBoundingBox;
     std::vector<std::vector<int> > atomExclusions;
     std::vector<ParameterInfo> parameters;
+    OpenCLCompact* compact;
     double cutoff;
-    bool useCutoff, usePeriodic, hasComputedInteractions;
+    bool useCutoff, usePeriodic, forceBufferPerAtomBlock, hasComputedInteractions;
     int numForceBuffers;
     mm_float4 periodicBoxSize;
 };

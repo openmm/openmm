@@ -26,13 +26,25 @@
 
 #include "OpenCLNonbondedUtilities.h"
 #include "OpenCLArray.h"
+#include "OpenCLCompact.h"
 #include <map>
 
 using namespace OpenMM;
 using namespace std;
 
 OpenCLNonbondedUtilities::OpenCLNonbondedUtilities(OpenCLContext& context) : context(context), cutoff(-1.0), useCutoff(false),
-        numForceBuffers(0), tiles(NULL), exclusionIndex(NULL), exclusions(NULL) {
+        numForceBuffers(0), tiles(NULL), exclusionIndex(NULL), exclusions(NULL), interactingTiles(NULL), interactionFlags(NULL),
+        interactionCount(NULL), blockCenter(NULL), blockBoundingBox(NULL), compact(NULL) {
+    // Decide how many force buffers to use.
+
+    forceBufferPerAtomBlock = false;
+    numForceBuffers = context.getNumThreadBlocks()*OpenCLContext::ThreadBlockSize/OpenCLContext::TileSize;
+    if (numForceBuffers >= context.getNumAtomBlocks()) {
+        // For small systems, it is more efficient to have one force buffer per block of 32 atoms instead of one per warp.
+
+        forceBufferPerAtomBlock = true;
+        numForceBuffers = context.getNumAtomBlocks();
+    }
 }
 
 OpenCLNonbondedUtilities::~OpenCLNonbondedUtilities() {
@@ -42,6 +54,18 @@ OpenCLNonbondedUtilities::~OpenCLNonbondedUtilities() {
         delete exclusionIndex;
     if (exclusions != NULL)
         delete exclusions;
+    if (interactingTiles != NULL)
+        delete interactingTiles;
+    if (interactionFlags != NULL)
+        delete interactionFlags;
+    if (interactionCount != NULL)
+        delete interactionCount;
+    if (blockCenter != NULL)
+        delete blockCenter;
+    if (blockBoundingBox != NULL)
+        delete blockBoundingBox;
+    if (compact != NULL)
+        delete compact;
 }
 
 void OpenCLNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic, double cutoffDistance, const std::vector<std::vector<int> >& exclusionList) {
@@ -90,21 +114,17 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
         for (unsigned int x = y; x < numAtomBlocks; x++)
             tileVec[count++] = (x << 17) | (y << 2);
 
-    // Decide how many force buffers to use.
-
-    bool forceBufferPerAtomBlock = false;
-    numForceBuffers = context.getNumThreadBlocks()*OpenCLContext::ThreadBlockSize/OpenCLContext::TileSize;
-    if (numForceBuffers >= numAtomBlocks) {
-        // For small systems, it is more efficient to have one force buffer per block of 32 atoms instead of one per warp.
-
-        forceBufferPerAtomBlock = true;
-        numForceBuffers = numAtomBlocks;
-    }
-
     // Create kernels.
 
-    cl::Program forceProgram = context.createProgram(context.loadSourceFromFile("nonbonded.cl"));
+    map<string, string> defines;
+    if (forceBufferPerAtomBlock)
+        defines["USE_OUTPUT_BUFFER_PER_BLOCK"] = "true";
+    cl::Program forceProgram = context.createProgram(context.loadSourceFromFile("nonbonded.cl"), defines);
     forceKernel = cl::Kernel(forceProgram, "computeNonbonded");
+    cl::Program interactingBlocksProgram = context.createProgram(context.loadSourceFromFile("findInteractingBlocks.cl"), defines);
+    findBlockBoundsKernel = cl::Kernel(interactingBlocksProgram, "findBlockBounds");
+    findInteractingBlocksKernel = cl::Kernel(interactingBlocksProgram, "findBlocksWithInteractions");
+    findInteractionsWithinBlocksKernel = cl::Kernel(interactingBlocksProgram, "findInteractionsWithinBlocks");
 
     // Mark which tiles have exclusions.
 
@@ -182,16 +202,60 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
     tiles->upload(tileVec);
     exclusions->upload(exclusionVec);
     exclusionIndex->upload(exclusionIndexVec);
+
+    // Record the periodic box size.
+
     Vec3 boxVectors[3];
     system.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
     periodicBoxSize = (mm_float4) {(float) boxVectors[0][0], (float) boxVectors[1][1], (float) boxVectors[2][2], 0.0f};
+
+    // Create data structures for the neighbor list.
+
+    if (useCutoff) {
+        interactingTiles = new OpenCLArray<cl_uint>(context, numTiles, "interactingTiles");
+        interactionFlags = new OpenCLArray<cl_uint>(context, numTiles, "interactionFlags");
+        interactionCount = new OpenCLArray<cl_uint>(context, 1, "interactionCount");
+        blockCenter = new OpenCLArray<mm_float4>(context, numAtomBlocks, "blockCenter");
+        blockBoundingBox = new OpenCLArray<mm_float4>(context, numAtomBlocks, "blockBoundingBox");
+        compact = new OpenCLCompact(context);
+    }
 }
 
 void OpenCLNonbondedUtilities::prepareInteractions() {
     hasComputedInteractions = false;
     if (!useCutoff)
         return;
-    // TODO compute the neighbor list
+
+    // Compute the neighbor list.
+
+    findBlockBoundsKernel.setArg<cl_int>(0, context.getNumAtoms());
+    findBlockBoundsKernel.setArg<mm_float4>(1, periodicBoxSize);
+    findBlockBoundsKernel.setArg<cl::Buffer>(2, context.getPosq().getDeviceBuffer());
+    findBlockBoundsKernel.setArg<cl::Buffer>(3, blockCenter->getDeviceBuffer());
+    findBlockBoundsKernel.setArg<cl::Buffer>(4, blockBoundingBox->getDeviceBuffer());
+    context.executeKernel(findBlockBoundsKernel, context.getNumAtoms());
+
+    findInteractingBlocksKernel.setArg<cl_int>(0, tiles->getSize());
+    findInteractingBlocksKernel.setArg<cl_float>(1, cutoff*cutoff);
+    findInteractingBlocksKernel.setArg<mm_float4>(2, periodicBoxSize);
+    findInteractingBlocksKernel.setArg<cl::Buffer>(3, tiles->getDeviceBuffer());
+    findInteractingBlocksKernel.setArg<cl::Buffer>(4, blockCenter->getDeviceBuffer());
+    findInteractingBlocksKernel.setArg<cl::Buffer>(5, blockBoundingBox->getDeviceBuffer());
+    findInteractingBlocksKernel.setArg<cl::Buffer>(6, interactionFlags->getDeviceBuffer());
+    context.executeKernel(findInteractingBlocksKernel, context.getNumAtoms());
+
+    compact->compactStream(*interactingTiles, *tiles, *interactionFlags, *interactionCount);
+
+    findInteractionsWithinBlocksKernel.setArg<cl_float>(0, cutoff*cutoff);
+    findInteractionsWithinBlocksKernel.setArg<mm_float4>(1, periodicBoxSize);
+    findInteractionsWithinBlocksKernel.setArg<cl::Buffer>(2, context.getPosq().getDeviceBuffer());
+    findInteractionsWithinBlocksKernel.setArg<cl::Buffer>(3, tiles->getDeviceBuffer());
+    findInteractionsWithinBlocksKernel.setArg<cl::Buffer>(4, blockCenter->getDeviceBuffer());
+    findInteractionsWithinBlocksKernel.setArg<cl::Buffer>(5, blockBoundingBox->getDeviceBuffer());
+    findInteractionsWithinBlocksKernel.setArg<cl::Buffer>(6, interactionFlags->getDeviceBuffer());
+    findInteractionsWithinBlocksKernel.setArg<cl::Buffer>(7, interactionCount->getDeviceBuffer());
+    findInteractionsWithinBlocksKernel.setArg(8, OpenCLContext::ThreadBlockSize*sizeof(cl_uint), NULL);
+    context.executeKernel(findInteractionsWithinBlocksKernel, context.getNumAtoms());
 }
 
 void OpenCLNonbondedUtilities::computeInteractions() {

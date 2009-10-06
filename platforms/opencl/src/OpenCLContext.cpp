@@ -58,6 +58,9 @@ OpenCLContext::OpenCLContext(int numParticles, int deviceIndex) : time(0.0), ste
     device = devices[deviceIndex];
     if (device.getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>()[0] < minThreadBlockSize)
         throw OpenMMException("The specified OpenCL device is not compatible with OpenMM");
+    compilationOptions = "-cl-fast-relaxed-math";
+    if (device.getInfo<CL_DEVICE_VENDOR>() == "NVIDIA")
+        compilationOptions += " -DWARPS_ARE_ATOMIC";
     queue = cl::CommandQueue(context, device);
     numAtoms = numParticles;
     paddedNumAtoms = TileSize*((numParticles+TileSize-1)/TileSize);
@@ -132,21 +135,30 @@ string OpenCLContext::loadSourceFromFile(const string& filename) const {
     return kernel;
 }
 
-cl::Program OpenCLContext::createProgram(const std::string source) {
+cl::Program OpenCLContext::createProgram(const string source) {
+    return createProgram(source, map<string, string>());
+}
+
+cl::Program OpenCLContext::createProgram(const string source, const map<string, string>& defines) {
     cl::Program::Sources sources(1, make_pair(source.c_str(), source.size()));
     cl::Program program(context, sources);
+    string options = compilationOptions;
+    for (map<string, string>::const_iterator iter = defines.begin(); iter != defines.end(); ++iter)
+        options += " -D"+iter->first+"="+iter->second;
     try {
-        program.build(vector<cl::Device>(1, device));
+        program.build(vector<cl::Device>(1, device), options.c_str());
     } catch (cl::Error err) {
         throw OpenMMException("Error compiling kernel: "+program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device));
     }
     return program;
 }
 
-void OpenCLContext::executeKernel(cl::Kernel& kernel, int workUnits) {
-    int size = std::min((workUnits+ThreadBlockSize-1)/ThreadBlockSize, numThreadBlocks)*ThreadBlockSize;
+void OpenCLContext::executeKernel(cl::Kernel& kernel, int workUnits, int workUnitSize) {
+    if (workUnitSize == -1)
+        workUnitSize = ThreadBlockSize;
+    int size = std::min((workUnits+workUnitSize-1)/workUnitSize, numThreadBlocks)*workUnitSize;
     try {
-        queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(size), cl::NDRange(ThreadBlockSize));
+        queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(size), cl::NDRange(workUnitSize));
     }
     catch (cl::Error err) {
         stringstream str;

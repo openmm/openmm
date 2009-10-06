@@ -139,6 +139,8 @@ public:
      * Copy the values in the Buffer to a vector.
      */
     void download(std::vector<T>& data) const {
+        if (data.size() != size)
+            data.resize(size);
         try {
             context.getQueue().enqueueReadBuffer(*buffer, CL_TRUE, 0, size*sizeof(T), &data[0]);
         }

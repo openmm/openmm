@@ -28,6 +28,8 @@
  * -------------------------------------------------------------------------- */
 
 #define __CL_ENABLE_EXCEPTIONS
+#include <map>
+#include <string>
 #include <cl.hpp>
 
 namespace OpenMM {
@@ -140,12 +142,19 @@ public:
      */
     cl::Program createProgram(const std::string source);
     /**
+     * Create an OpenCL Program from source code.
+     *
+     * @param defines    a set of preprocessor definitions (name, value) to define when compiling the program
+     */
+    cl::Program createProgram(const std::string source, const std::map<std::string, std::string>& defines);
+    /**
      * Execute a kernel.
      *
-     * @param kernel    the kernel to execute
-     * @param workUnits the maximum number of work units that should be used
+     * @param kernel       the kernel to execute
+     * @param workUnits    the maximum number of work units that should be used
+     * @param workUnitSize the size of each work unit to use
      */
-    void executeKernel(cl::Kernel& kernel, int workUnits);
+    void executeKernel(cl::Kernel& kernel, int workUnits, int workUnitSize = -1);
     /**
      * Set all elements of an array to 0.
      */
@@ -226,7 +235,7 @@ public:
     /**
      * Get the OpenCLNonbondedUtilities for this context.
      */
-    OpenCLNonbondedUtilities& getNonbondedUtilties() {
+    OpenCLNonbondedUtilities& getNonbondedUtilities() {
         return *nonbonded;
     }
 private:
@@ -237,6 +246,7 @@ private:
     int numAtomBlocks;
     int numThreadBlocks;
     int numForceBuffers;
+    std::string compilationOptions;
     cl::Context context;
     cl::Device device;
     cl::CommandQueue queue;

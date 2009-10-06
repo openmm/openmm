@@ -47,17 +47,17 @@ void OpenCLCalcForcesAndEnergyKernel::initialize(const System& system) {
 
 void OpenCLCalcForcesAndEnergyKernel::beginForceComputation(ContextImpl& context) {
     cl.clearBuffer(cl.getForceBuffers());
-    cl.getNonbondedUtilties().prepareInteractions();
+    cl.getNonbondedUtilities().prepareInteractions();
 }
 
 void OpenCLCalcForcesAndEnergyKernel::finishForceComputation(ContextImpl& context) {
     cl.reduceBuffer(cl.getForceBuffers(), cl.getNumForceBuffers());
-    cl.getNonbondedUtilties().prepareInteractions();
+    cl.getNonbondedUtilities().prepareInteractions();
 }
 
 void OpenCLCalcForcesAndEnergyKernel::beginEnergyComputation(ContextImpl& context) {
     cl.clearBuffer(cl.getEnergyBuffer());
-    cl.getNonbondedUtilties().prepareInteractions();
+    cl.getNonbondedUtilities().prepareInteractions();
 }
 
 double OpenCLCalcForcesAndEnergyKernel::finishEnergyComputation(ContextImpl& context) {
@@ -566,8 +566,8 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
 //    }
 //    data.nonbondedMethod = method;
 //    gpuSetCoulombParameters(gpu, 138.935485f, particle, c6, c12, q, symbol, exclusionList, method);
-    cl.getNonbondedUtilties().addInteraction(useCutoff, usePeriodic, force.getCutoffDistance(), exclusionList);
-    cl.getNonbondedUtilties().addParameter("sigmaEpsilon", "float2", 8, sigmaEpsilon->getDeviceBuffer());
+    cl.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, force.getCutoffDistance(), exclusionList);
+    cl.getNonbondedUtilities().addParameter("sigmaEpsilon", "float2", 8, sigmaEpsilon->getDeviceBuffer());
     cutoffSquared = force.getCutoffDistance()*force.getCutoffDistance();
 
     // Compute the Ewald self energy.
@@ -582,7 +582,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     // Initialize the exceptions.
 
     int numExceptions = exceptions.size();
-    int maxBuffers = 1;
+    int maxBuffers = cl.getNonbondedUtilities().getNumForceBuffers();
     if (numExceptions > 0) {
         exceptionParams = new OpenCLArray<mm_float4>(cl, numExceptions, "exceptionParams");
         exceptionIndices = new OpenCLArray<mm_int4>(cl, numExceptions, "exceptionIndices");
@@ -607,13 +607,13 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
 }
 
 void OpenCLCalcNonbondedForceKernel::executeForces(ContextImpl& context) {
-    cl.getNonbondedUtilties().computeInteractions();
+    cl.getNonbondedUtilities().computeInteractions();
     if (exceptionIndices != NULL) {
         int numExceptions = exceptionIndices->getSize();
         exceptionsKernel.setArg<cl_int>(0, cl.getPaddedNumAtoms());
         exceptionsKernel.setArg<cl_int>(1, numExceptions);
         exceptionsKernel.setArg<cl_float>(2, cutoffSquared);
-        exceptionsKernel.setArg<mm_float4>(3, cl.getNonbondedUtilties().getPeriodicBoxSize());
+        exceptionsKernel.setArg<mm_float4>(3, cl.getNonbondedUtilities().getPeriodicBoxSize());
         exceptionsKernel.setArg<cl::Buffer>(4, cl.getForceBuffers().getDeviceBuffer());
         exceptionsKernel.setArg<cl::Buffer>(5, cl.getEnergyBuffer().getDeviceBuffer());
         exceptionsKernel.setArg<cl::Buffer>(6, cl.getPosq().getDeviceBuffer());

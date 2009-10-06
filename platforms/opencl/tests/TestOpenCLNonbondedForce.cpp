@@ -43,7 +43,8 @@
 #include "openmm/LangevinIntegrator.h"
 #include "openmm/VerletIntegrator.h"
 #include "openmm/internal/ContextImpl.h"
-//#include "kernels/gputypes.h"
+#include "OpenCLArray.h"
+#include "OpenCLNonbondedUtilities.h"
 #include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
 #include "../src/sfmt/SFMT.h"
 #include <iostream>
@@ -438,167 +439,176 @@ void testLargeSystem() {
     ASSERT_EQUAL_TOL(clState.getPotentialEnergy(), referenceState.getPotentialEnergy(), tol);
 }
 
-//void testBlockInteractions(bool periodic) {
-//    const int blockSize = 32;
-//    const int numBlocks = 100;
-//    const int numParticles = blockSize*numBlocks;
-//    const double cutoff = 1.0;
-//    const double boxSize = (periodic ? 5.1 : 1.1);
-//    OpenCLPlatform cl;
-//    System system;
-//    VerletIntegrator integrator(0.01);
-//    NonbondedForce* nonbonded = new NonbondedForce();
-//    vector<Vec3> positions(numParticles);
-//    init_gen_rand(0);
-//    for (int i = 0; i < numParticles; i++) {
-//        system.addParticle(1.0);
-//        nonbonded->addParticle(1.0, 0.2, 0.2);
-//        positions[i] = Vec3(boxSize*(3*genrand_real2()-1), boxSize*(3*genrand_real2()-1), boxSize*(3*genrand_real2()-1));
-//    }
-//    nonbonded->setNonbondedMethod(periodic ? NonbondedForce::CutoffPeriodic : NonbondedForce::CutoffNonPeriodic);
-//    nonbonded->setCutoffDistance(cutoff);
-//    system.setPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
-//    system.addForce(nonbonded);
-//    Context context(system, integrator, cl);
-//    context.setPositions(positions);
-//    State state = context.getState(State::Positions | State::Velocities | State::Forces);
-//    ContextImpl* contextImpl = *reinterpret_cast<ContextImpl**>(&context);
-//    OpenCLPlatform::PlatformData& data = *static_cast<OpenCLPlatform::PlatformData*>(contextImpl->getPlatformData());
-//
-//    // Verify that the bounds of each block were calculated correctly.
-//
-//    data.gpu->psPosq4->Download();
-//    data.gpu->psGridBoundingBox->Download();
-//    data.gpu->psGridCenter->Download();
-//    for (int i = 0; i < numBlocks; i++) {
-//        float4 gridSize = (*data.gpu->psGridBoundingBox)[i];
-//        float4 center = (*data.gpu->psGridCenter)[i];
-//        if (periodic) {
-//            ASSERT(gridSize.x < 0.5*boxSize);
-//            ASSERT(gridSize.y < 0.5*boxSize);
-//            ASSERT(gridSize.z < 0.5*boxSize);
-//        }
-//        float minx = 0.0, maxx = 0.0, miny = 0.0, maxy = 0.0, minz = 0.0, maxz = 0.0, radius = 0.0;
-//        for (int j = 0; j < blockSize; j++) {
-//            float4 pos = (*data.gpu->psPosq4)[i*blockSize+j];
-//            float dx = pos.x-center.x;
-//            float dy = pos.y-center.y;
-//            float dz = pos.z-center.z;
-//            if (periodic) {
-//                dx -= (float)(floor(0.5+dx/boxSize)*boxSize);
-//                dy -= (float)(floor(0.5+dy/boxSize)*boxSize);
-//                dz -= (float)(floor(0.5+dz/boxSize)*boxSize);
-//            }
-//            ASSERT(abs(dx) < gridSize.x+TOL);
-//            ASSERT(abs(dy) < gridSize.y+TOL);
-//            ASSERT(abs(dz) < gridSize.z+TOL);
-//            minx = min(minx, dx);
-//            maxx = max(maxx, dx);
-//            miny = min(miny, dy);
-//            maxy = max(maxy, dy);
-//            minz = min(minz, dz);
-//            maxz = max(maxz, dz);
-//        }
-//        ASSERT_EQUAL_TOL(-minx, gridSize.x, TOL);
-//        ASSERT_EQUAL_TOL(maxx, gridSize.x, TOL);
-//        ASSERT_EQUAL_TOL(-miny, gridSize.y, TOL);
-//        ASSERT_EQUAL_TOL(maxy, gridSize.y, TOL);
-//        ASSERT_EQUAL_TOL(-minz, gridSize.z, TOL);
-//        ASSERT_EQUAL_TOL(maxz, gridSize.z, TOL);
-//    }
-//
-//    // Verify that interactions were identified correctly.
-//
-//    data.gpu->psInteractionCount->Download();
-//    int numWithInteractions = (*data.gpu->psInteractionCount)[0];
-//    vector<bool> hasInteractions(data.gpu->sim.workUnits, false);
-//    data.gpu->psInteractingWorkUnit->Download();
-//    data.gpu->psInteractionFlag->Download();
-//    const unsigned int atoms = data.gpu->sim.paddedNumberOfAtoms;
-//    const unsigned int grid = data.gpu->grid;
-//    const unsigned int dim = (atoms+(grid-1))/grid;
-//    for (int i = 0; i < numWithInteractions; i++) {
-//        unsigned int workUnit = (*data.gpu->psInteractingWorkUnit)[i];
-//        unsigned int x = (workUnit >> 17);
-//        unsigned int y = ((workUnit >> 2) & 0x7fff);
-//        int tile = (x > y ? x+y*dim-y*(y+1)/2 : y+x*dim-x*(x+1)/2);
-//        hasInteractions[tile] = true;
-//
-//        // Make sure this tile really should have been flagged based on bounding volumes.
-//
-//        float4 gridSize1 = (*data.gpu->psGridBoundingBox)[x];
-//        float4 gridSize2 = (*data.gpu->psGridBoundingBox)[y];
-//        float4 center1 = (*data.gpu->psGridCenter)[x];
-//        float4 center2 = (*data.gpu->psGridCenter)[y];
-//        float dx = center1.x-center2.x;
-//        float dy = center1.y-center2.y;
-//        float dz = center1.z-center2.z;
-//        if (periodic) {
-//            dx -= (float)(floor(0.5+dx/boxSize)*boxSize);
-//            dy -= (float)(floor(0.5+dy/boxSize)*boxSize);
-//            dz -= (float)(floor(0.5+dz/boxSize)*boxSize);
-//        }
-//        dx = max(0.0f, abs(dx)-gridSize1.x-gridSize2.x);
-//        dy = max(0.0f, abs(dy)-gridSize1.y-gridSize2.y);
-//        dz = max(0.0f, abs(dz)-gridSize1.z-gridSize2.z);
-//        ASSERT(sqrt(dx*dx+dy*dy+dz*dz) < cutoff+TOL);
-//
-//        // Check the interaction flags.
-//
-//        unsigned int flags = (*data.gpu->psInteractionFlag)[i];
-//        for (int atom2 = 0; atom2 < 32; atom2++) {
-//            if ((flags & 1) == 0) {
-//                float4 pos2 = (*data.gpu->psPosq4)[y*blockSize+atom2];
-//                for (int atom1 = 0; atom1 < blockSize; ++atom1) {
-//                    float4 pos1 = (*data.gpu->psPosq4)[x*blockSize+atom1];
-//                    float dx = pos2.x-pos1.x;
-//                    float dy = pos2.y-pos1.y;
-//                    float dz = pos2.z-pos1.z;
-//                    if (periodic) {
-//                        dx -= (float)(floor(0.5+dx/boxSize)*boxSize);
-//                        dy -= (float)(floor(0.5+dy/boxSize)*boxSize);
-//                        dz -= (float)(floor(0.5+dz/boxSize)*boxSize);
-//                    }
-//                    if (dx*dx+dy*dy+dz*dz < cutoff*cutoff) {
-//                        dx = pos2.x-center1.x;
-//                        dy = pos2.y-center1.y;
-//                        dz = pos2.z-center1.z;
-//                        dx = max(0.0f, abs(dx)-gridSize1.x);
-//                        dy = max(0.0f, abs(dy)-gridSize1.y);
-//                        dz = max(0.0f, abs(dz)-gridSize1.z);
-//                    }
-//                    ASSERT(dx*dx+dy*dy+dz*dz > cutoff*cutoff);
-//                }
-//            }
-//            flags >>= 1;
-//        }
-//    }
-//
-//    // Check the tiles that did not have interactions to make sure all atoms are beyond the cutoff.
-//
-//    data.gpu->psWorkUnit->Download();
-//    for (int i = 0; i < (int)hasInteractions.size(); i++)
-//        if (!hasInteractions[i]) {
-//            unsigned int workUnit = (*data.gpu->psWorkUnit)[i];
-//            unsigned int x = (workUnit >> 17);
-//            unsigned int y = ((workUnit >> 2) & 0x7fff);
-//            for (int atom1 = 0; atom1 < blockSize; ++atom1) {
-//                float4 pos1 = (*data.gpu->psPosq4)[x*blockSize+atom1];
-//                for (int atom2 = 0; atom2 < blockSize; ++atom2) {
-//                    float4 pos2 = (*data.gpu->psPosq4)[y*blockSize+atom2];
-//                    float dx = pos1.x-pos2.x;
-//                    float dy = pos1.y-pos2.y;
-//                    float dz = pos1.z-pos2.z;
-//                    if (periodic) {
-//                        dx -= (float)(floor(0.5+dx/boxSize)*boxSize);
-//                        dy -= (float)(floor(0.5+dy/boxSize)*boxSize);
-//                        dz -= (float)(floor(0.5+dz/boxSize)*boxSize);
-//                    }
-//                    ASSERT(dx*dx+dy*dy+dz*dz > cutoff*cutoff);
-//                }
-//            }
-//        }
-//}
+void testBlockInteractions(bool periodic) {
+    const int blockSize = 32;
+    const int numBlocks = 100;
+    const int numParticles = blockSize*numBlocks;
+    const double cutoff = 1.0;
+    const double boxSize = (periodic ? 5.1 : 1.1);
+    OpenCLPlatform cl;
+    System system;
+    VerletIntegrator integrator(0.01);
+    NonbondedForce* nonbonded = new NonbondedForce();
+    vector<Vec3> positions(numParticles);
+    init_gen_rand(0);
+    for (int i = 0; i < numParticles; i++) {
+        system.addParticle(1.0);
+        nonbonded->addParticle(1.0, 0.2, 0.2);
+        positions[i] = Vec3(boxSize*(3*genrand_real2()-1), boxSize*(3*genrand_real2()-1), boxSize*(3*genrand_real2()-1));
+    }
+    nonbonded->setNonbondedMethod(periodic ? NonbondedForce::CutoffPeriodic : NonbondedForce::CutoffNonPeriodic);
+    nonbonded->setCutoffDistance(cutoff);
+    system.setPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    system.addForce(nonbonded);
+    Context context(system, integrator, cl);
+    context.setPositions(positions);
+    State state = context.getState(State::Positions | State::Velocities | State::Forces);
+    ContextImpl* contextImpl = *reinterpret_cast<ContextImpl**>(&context);
+    OpenCLPlatform::PlatformData& data = *static_cast<OpenCLPlatform::PlatformData*>(contextImpl->getPlatformData());
+    OpenCLContext& clcontext = *data.context;
+
+    // Verify that the bounds of each block were calculated correctly.
+
+    clcontext.getPosq().download();
+    vector<mm_float4> blockCenters(numBlocks);
+    vector<mm_float4> blockBoundingBoxes(numBlocks);
+    OpenCLNonbondedUtilities& nb = clcontext.getNonbondedUtilities();
+    nb.getBlockCenters().download(blockCenters);
+    nb.getBlockBoundingBoxes().download(blockBoundingBoxes);
+    for (int i = 0; i < numBlocks; i++) {
+        mm_float4 gridSize = blockBoundingBoxes[i];
+        mm_float4 center = blockCenters[i];
+        if (periodic) {
+            ASSERT(gridSize.x < 0.5*boxSize);
+            ASSERT(gridSize.y < 0.5*boxSize);
+            ASSERT(gridSize.z < 0.5*boxSize);
+        }
+        float minx = 0.0, maxx = 0.0, miny = 0.0, maxy = 0.0, minz = 0.0, maxz = 0.0, radius = 0.0;
+        for (int j = 0; j < blockSize; j++) {
+            mm_float4 pos = clcontext.getPosq()[i*blockSize+j];
+            float dx = pos.x-center.x;
+            float dy = pos.y-center.y;
+            float dz = pos.z-center.z;
+            if (periodic) {
+                dx -= (float)(floor(0.5+dx/boxSize)*boxSize);
+                dy -= (float)(floor(0.5+dy/boxSize)*boxSize);
+                dz -= (float)(floor(0.5+dz/boxSize)*boxSize);
+            }
+            ASSERT(abs(dx) < gridSize.x+TOL);
+            ASSERT(abs(dy) < gridSize.y+TOL);
+            ASSERT(abs(dz) < gridSize.z+TOL);
+            minx = min(minx, dx);
+            maxx = max(maxx, dx);
+            miny = min(miny, dy);
+            maxy = max(maxy, dy);
+            minz = min(minz, dz);
+            maxz = max(maxz, dz);
+        }
+        ASSERT_EQUAL_TOL(-minx, gridSize.x, TOL);
+        ASSERT_EQUAL_TOL(maxx, gridSize.x, TOL);
+        ASSERT_EQUAL_TOL(-miny, gridSize.y, TOL);
+        ASSERT_EQUAL_TOL(maxy, gridSize.y, TOL);
+        ASSERT_EQUAL_TOL(-minz, gridSize.z, TOL);
+        ASSERT_EQUAL_TOL(maxz, gridSize.z, TOL);
+    }
+
+    // Verify that interactions were identified correctly.
+
+    vector<cl_uint> interactionCount;
+    vector<cl_uint> interactingTiles;
+    vector<cl_uint> interactionFlags;
+    nb.getInteractionCount().download(interactionCount);
+    int numWithInteractions = interactionCount[0];
+    vector<bool> hasInteractions(nb.getTiles().getSize(), false);
+    nb.getInteractingTiles().download(interactingTiles);
+    nb.getInteractionFlags().download(interactionFlags);
+    const unsigned int atoms = clcontext.getPaddedNumAtoms();
+    const unsigned int grid = OpenCLContext::TileSize;
+    const unsigned int dim = clcontext.getNumAtomBlocks();
+    printf("%d of %d\n", numWithInteractions, hasInteractions.size());
+    for (int i = 0; i < numWithInteractions; i++) {
+        unsigned int tile = interactingTiles[i];
+        unsigned int x = (tile >> 17);
+        unsigned int y = ((tile >> 2) & 0x7fff);
+        int index = (x > y ? x+y*dim-y*(y+1)/2 : y+x*dim-x*(x+1)/2);
+        hasInteractions[index] = true;
+
+        // Make sure this tile really should have been flagged based on bounding volumes.
+
+        mm_float4 gridSize1 = blockBoundingBoxes[x];
+        mm_float4 gridSize2 = blockBoundingBoxes[y];
+        mm_float4 center1 = blockCenters[x];
+        mm_float4 center2 = blockCenters[y];
+        float dx = center1.x-center2.x;
+        float dy = center1.y-center2.y;
+        float dz = center1.z-center2.z;
+        if (periodic) {
+            dx -= (float)(floor(0.5+dx/boxSize)*boxSize);
+            dy -= (float)(floor(0.5+dy/boxSize)*boxSize);
+            dz -= (float)(floor(0.5+dz/boxSize)*boxSize);
+        }
+        dx = max(0.0f, abs(dx)-gridSize1.x-gridSize2.x);
+        dy = max(0.0f, abs(dy)-gridSize1.y-gridSize2.y);
+        dz = max(0.0f, abs(dz)-gridSize1.z-gridSize2.z);
+        ASSERT(sqrt(dx*dx+dy*dy+dz*dz) < cutoff+TOL);
+
+        // Check the interaction flags.
+
+        unsigned int flags = interactionFlags[i];
+        for (int atom2 = 0; atom2 < 32; atom2++) {
+            if ((flags & 1) == 0) {
+                mm_float4 pos2 = clcontext.getPosq()[y*blockSize+atom2];
+                for (int atom1 = 0; atom1 < blockSize; ++atom1) {
+                    mm_float4 pos1 = clcontext.getPosq()[x*blockSize+atom1];
+                    float dx = pos2.x-pos1.x;
+                    float dy = pos2.y-pos1.y;
+                    float dz = pos2.z-pos1.z;
+                    if (periodic) {
+                        dx -= (float)(floor(0.5+dx/boxSize)*boxSize);
+                        dy -= (float)(floor(0.5+dy/boxSize)*boxSize);
+                        dz -= (float)(floor(0.5+dz/boxSize)*boxSize);
+                    }
+                    if (dx*dx+dy*dy+dz*dz < cutoff*cutoff) {
+                        dx = pos2.x-center1.x;
+                        dy = pos2.y-center1.y;
+                        dz = pos2.z-center1.z;
+                        dx = max(0.0f, abs(dx)-gridSize1.x);
+                        dy = max(0.0f, abs(dy)-gridSize1.y);
+                        dz = max(0.0f, abs(dz)-gridSize1.z);
+                    }
+                    ASSERT(dx*dx+dy*dy+dz*dz > cutoff*cutoff);
+                }
+            }
+            flags >>= 1;
+        }
+    }
+
+    // Check the tiles that did not have interactions to make sure all atoms are beyond the cutoff.
+
+    vector<cl_uint> tiles;
+    nb.getTiles().download(tiles);
+    for (int i = 0; i < (int) hasInteractions.size(); i++) 
+        if (!hasInteractions[i]) {
+            unsigned int tile = tiles[i];
+            unsigned int x = (tile >> 17);
+            unsigned int y = ((tile >> 2) & 0x7fff);
+            for (int atom1 = 0; atom1 < blockSize; ++atom1) {
+                mm_float4 pos1 = clcontext.getPosq()[x*blockSize+atom1];
+                for (int atom2 = 0; atom2 < blockSize; ++atom2) {
+                    mm_float4 pos2 = clcontext.getPosq()[y*blockSize+atom2];
+                    float dx = pos1.x-pos2.x;
+                    float dy = pos1.y-pos2.y;
+                    float dz = pos1.z-pos2.z;
+                    if (periodic) {
+                        dx -= (float)(floor(0.5+dx/boxSize)*boxSize);
+                        dy -= (float)(floor(0.5+dy/boxSize)*boxSize);
+                        dz -= (float)(floor(0.5+dz/boxSize)*boxSize);
+                    }
+                    ASSERT(dx*dx+dy*dy+dz*dz > cutoff*cutoff);
+                }
+            }
+        }
+}
 
 int main() {
     try {
@@ -609,7 +619,7 @@ int main() {
 //        testCutoff14();
 //        testPeriodic();
 //        testLargeSystem();
-//        testBlockInteractions(false);
+        testBlockInteractions(false);
 //        testBlockInteractions(true);
     }
     catch(const exception& e) {

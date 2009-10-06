@@ -84,15 +84,15 @@ __kernel void computeNonbonded(int numTiles, int paddedNumAtoms, float cutoffSqu
 
             // Write results
             float4 of;
-#ifdef USE_OUTPUT_BUFFER_PER_WARP
-            unsigned int offset = x + tgx + warp*paddedNumAtoms;
-            of = forceBuffers[offset];
-            of.xyz += af.xyz;
-            forceBuffers[offset] = of;
-#else
+#ifdef USE_OUTPUT_BUFFER_PER_BLOCK
             of.xyz = af.xyz;
             of.w = 0.0f;
             unsigned int offset = x + tgx + (x/TileSize) * paddedNumAtoms;
+            forceBuffers[offset] = of;
+#else
+            unsigned int offset = x + tgx + warp*paddedNumAtoms;
+            of = forceBuffers[offset];
+            of.xyz += af.xyz;
             forceBuffers[offset] = of;
 #endif
         }
@@ -169,14 +169,14 @@ __kernel void computeNonbonded(int numTiles, int paddedNumAtoms, float cutoffSqu
                     }
                 }
             }
-            else  // bExclusion
+            else
 #endif
             {
                 // Read fixed atom data into registers and GRF
                 unsigned int xi = x/TileSize;
                 unsigned int yi = y/TileSize;
                 unsigned int tile = xi+yi*paddedNumAtoms/TileSize-yi*(yi+1)/2;
-                unsigned int excl = exclusions[exclusionIndices[tile]+tgx];
+                unsigned int excl = (hasExclusions ? exclusions[exclusionIndices[tile]+tgx] : 0xFFFFFFFF);
                 excl = (excl >> tgx) | (excl << (TileSize - tgx));
                 for (unsigned int j = 0; j < TileSize; j++) {
                     bool isExcluded = !(excl & 0x1);
@@ -222,22 +222,22 @@ __kernel void computeNonbonded(int numTiles, int paddedNumAtoms, float cutoffSqu
 
             // Write results
             float4 of;
-#ifdef USE_OUTPUT_BUFFER_PER_WARP
-            unsigned int offset = x + tgx + warp*paddedNumAtoms;
-            of = forceBuffers[offset];
-            of.xyz += af.xyz;
-            forceBuffers[offset] = of;
-            offset = y + tgx + warp*paddedNumAtoms;
-            of = forceBuffers[offset];
-            of.xyz += local_foce[get_local_id(0)].xyz;
-            forceBuffers[offset] = of;
-#else
+#ifdef USE_OUTPUT_BUFFER_PER_BLOCK
             of.xyz = af.xyz;
             of.w = 0.0f;
             unsigned int offset = x + tgx + (y/TileSize) * paddedNumAtoms;
             forceBuffers[offset] = of;
             of = local_force[get_local_id(0)];
             offset = y + tgx + (x/TileSize) * paddedNumAtoms;
+            forceBuffers[offset] = of;
+#else
+            unsigned int offset = x + tgx + warp*paddedNumAtoms;
+            of = forceBuffers[offset];
+            of.xyz += af.xyz;
+            forceBuffers[offset] = of;
+            offset = y + tgx + warp*paddedNumAtoms;
+            of = forceBuffers[offset];
+            of.xyz += local_force[get_local_id(0)].xyz;
             forceBuffers[offset] = of;
 #endif
             lasty = y;
