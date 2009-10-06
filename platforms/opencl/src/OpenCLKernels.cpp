@@ -576,7 +576,8 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
 //    }
 //    data.nonbondedMethod = method;
 //    gpuSetCoulombParameters(gpu, 138.935485f, particle, c6, c12, q, symbol, exclusionList, method);
-    cl.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, force.getCutoffDistance(), exclusionList, defines);
+    string source = cl.loadSourceFromFile("coulombLennardJones.cl", defines);
+    cl.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, force.getCutoffDistance(), exclusionList, source);
     cl.getNonbondedUtilities().addParameter("sigmaEpsilon", "float2", 8, sigmaEpsilon->getDeviceBuffer());
     cutoffSquared = force.getCutoffDistance()*force.getCutoffDistance();
 

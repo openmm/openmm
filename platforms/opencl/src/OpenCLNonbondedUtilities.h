@@ -52,9 +52,9 @@ public:
      * @param usesPeriodic   specifies whether periodic boundary conditions should be applied to this interaction
      * @param cutoffDistance the cutoff distance for this interaction (ignored if usesCutoff is false)
      * @param exclusionList  for each atom, specifies the list of other atoms whose interactions should be excluded
-     * @param defines        preprocessor macros to define when compiling the kernel
+     * @param kernel         the code to evaluate the interaction
      */
-    void addInteraction(bool usesCutoff, bool usesPeriodic, double cutoffDistance, const std::vector<std::vector<int> >& exclusionList, const std::map<std::string, std::string>& defines);
+    void addInteraction(bool usesCutoff, bool usesPeriodic, double cutoffDistance, const std::vector<std::vector<int> >& exclusionList, const std::string& kernel);
     /**
      * Add a per-atom parameter that interactions may depend on.
      *
@@ -143,6 +143,7 @@ private:
     std::vector<std::vector<int> > atomExclusions;
     std::vector<ParameterInfo> parameters;
     OpenCLCompact* compact;
+    std::string kernelSource;
     std::map<std::string, std::string> kernelDefines;
     double cutoff;
     bool useCutoff, usePeriodic, forceBufferPerAtomBlock, hasComputedInteractions;

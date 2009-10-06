@@ -68,7 +68,7 @@ OpenCLNonbondedUtilities::~OpenCLNonbondedUtilities() {
         delete compact;
 }
 
-void OpenCLNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic, double cutoffDistance, const vector<vector<int> >& exclusionList, const map<string, string>& defines) {
+void OpenCLNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic, double cutoffDistance, const vector<vector<int> >& exclusionList, const string& kernel) {
     if (cutoff != -1.0) {
         if (usesCutoff != useCutoff)
             throw OpenMMException("All Forces must agree on whether to use a cutoff");
@@ -86,18 +86,13 @@ void OpenCLNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic
         }
         if (!sameExclusions)
             throw OpenMMException("All Forces must have identical exceptions");
-        for (map<string, string>::const_iterator iter = defines.begin(); iter != defines.end(); ++iter) {
-            map<string, string>::const_iterator existing = defines.find(iter->first);
-            if (existing != defines.end() && existing->second != iter->second)
-                throw OpenMMException("Two Forces define different values for "+iter->first);
-        }
     }
     else {
         useCutoff = usesCutoff;
         usePeriodic = usesPeriodic;
         cutoff = cutoffDistance;
         atomExclusions = exclusionList;
-        kernelDefines.insert(defines.begin(), defines.end());
+        kernelSource += kernel+"\n";
     }
 }
 
@@ -122,14 +117,58 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
 
     // Create kernels.
 
-    map<string, string> defines = kernelDefines;
+    map<string, string> replacements;
+    replacements["COMPUTE_INTERACTION"] = kernelSource;
+    stringstream args;
+    for (int i = 0; i < parameters.size(); i++) {
+        args << ", __global ";
+        args << parameters[i].type;
+        args << "* global_";
+        args << parameters[i].name;
+        args << ", __local ";
+        args << parameters[i].type;
+        args << "* local_";
+        args << parameters[i].name;
+    }
+    replacements["PARAMETER_ARGUMENTS"] = args.str();
+    stringstream load1;
+    for (int i = 0; i < parameters.size(); i++) {
+        load1 << parameters[i].type;
+        load1 << " ";
+        load1 << parameters[i].name;
+        load1 << "1 = global_";
+        load1 << parameters[i].name;
+        load1 << "[i];";
+    }
+    replacements["LOAD_ATOM1_PARAMETERS"] = load1.str();
+    stringstream load2j;
+    for (int i = 0; i < parameters.size(); i++) {
+        load2j << parameters[i].type;
+        load2j << " ";
+        load2j << parameters[i].name;
+        load2j << "2 = local_";
+        load2j << parameters[i].name;
+        load2j << "[tbx+j];";
+    }
+    replacements["LOAD_ATOM2_PARAMETERS_J"] = load2j.str();
+    stringstream load2tj;
+    for (int i = 0; i < parameters.size(); i++) {
+        load2tj << parameters[i].type;
+        load2tj << " ";
+        load2tj << parameters[i].name;
+        load2tj << "2 = local_";
+        load2tj << parameters[i].name;
+        load2tj << "[tbx+tj];";
+    }
+    replacements["LOAD_ATOM2_PARAMETERS_TJ"] = load2tj.str();
+    map<string, string> defines;
     if (forceBufferPerAtomBlock)
         defines["USE_OUTPUT_BUFFER_PER_BLOCK"] = "1";
     if (useCutoff)
         defines["USE_CUTOFF"] = "1";
     if (usePeriodic)
         defines["USE_PERIODIC"] = "1";
-    cl::Program forceProgram = context.createProgram(context.loadSourceFromFile("nonbonded.cl"), defines);
+    cl::Program forceProgram = context.createProgram(context.loadSourceFromFile("nonbonded.cl", replacements), defines);
     forceKernel = cl::Kernel(forceProgram, "computeNonbonded");
     cl::Program interactingBlocksProgram = context.createProgram(context.loadSourceFromFile("findInteractingBlocks.cl"), defines);
     findBlockBoundsKernel = cl::Kernel(interactingBlocksProgram, "findBlockBounds");

@@ -121,6 +121,10 @@ void OpenCLContext::addForce(OpenCLForceInfo* force) {
 }
 
 string OpenCLContext::loadSourceFromFile(const string& filename) const {
+    return loadSourceFromFile(filename, map<string, string>());
+}
+
+string OpenCLContext::loadSourceFromFile(const string& filename, const std::map<std::string, std::string>& replacements) const {
     ifstream file((Platform::getDefaultPluginsDirectory()+"/opencl/"+filename).c_str());
     if (!file.is_open())
         throw OpenMMException("Unable to load kernel: "+filename);
@@ -132,6 +136,14 @@ string OpenCLContext::loadSourceFromFile(const string& filename) const {
         kernel += '\n';
     }
     file.close();
+    for (map<string, string>::const_iterator iter = replacements.begin(); iter != replacements.end(); iter++) {
+        int index = -1;
+        do {
+            index = kernel.find(iter->first);
+            if (index != kernel.npos)
+                kernel.replace(index, iter->first.size(), iter->second);
+        } while (index != kernel.npos);
+    }
     return kernel;
 }
 

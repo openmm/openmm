@@ -138,6 +138,13 @@ public:
      */
     std::string loadSourceFromFile(const std::string& filename) const;
     /**
+     * Load OpenCL source code from a file in the kernels directory.
+     *
+     * @param filename     the file to load
+     * @param replacements a set of strings that should be replaced with new strings wherever they appear in the
+     */
+    std::string loadSourceFromFile(const std::string& filename, const std::map<std::string, std::string>& replacements) const;
+    /**
      * Create an OpenCL Program from source code.
      */
     cl::Program createProgram(const std::string source);
