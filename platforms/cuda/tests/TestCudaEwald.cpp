@@ -57,10 +57,10 @@ void testEwaldPME() {
 
 //      Use amorphous NaCl system for the tests
 
-    const int numParticles = 216;
-    const double cutoff = 0.8;
-    const double boxSize = 1.86206;
-    const double tol = 0.001;
+    const int numParticles 	= 894;
+    const double cutoff 	= 1.2;
+    const double boxSize 	= 3.00646;
+    double tol 				= 1e-5;
 
     CudaPlatform cuda;
     ReferencePlatform reference;
@@ -93,10 +93,12 @@ void testEwaldPME() {
     referenceContext.setPositions(positions);
     State cudaState = cudaContext.getState(State::Forces | State::Energy);
     State referenceState = referenceContext.getState(State::Forces | State::Energy);
+    tol = 1e-2;
     for (int i = 0; i < numParticles; i++) {
-        ASSERT_EQUAL_VEC(cudaState.getForces()[i], referenceState.getForces()[i], tol);
+        ASSERT_EQUAL_VEC(referenceState.getForces()[i], cudaState.getForces()[i], tol);
     }
-    ASSERT_EQUAL_TOL(cudaState.getPotentialEnergy(), referenceState.getPotentialEnergy(), tol);
+    tol = 1e-5;
+    ASSERT_EQUAL_TOL(referenceState.getPotentialEnergy(), cudaState.getPotentialEnergy(), tol);
 
 //    (2) Check whether Ewald method in Cuda is self-consistent
 
@@ -117,6 +119,7 @@ void testEwaldPME() {
     Context cudaContext2(system, integrator, cuda);
     cudaContext2.setPositions(positions);
     
+    tol = 1e-4;
     State cudaState2 = cudaContext2.getState(State::Energy);
     ASSERT_EQUAL_TOL(norm, (cudaState2.getPotentialEnergy()-cudaState.getPotentialEnergy())/delta, tol)
 
@@ -129,10 +132,12 @@ void testEwaldPME() {
     referenceContext.setPositions(positions);
     cudaState = cudaContext.getState(State::Forces | State::Energy);
     referenceState = referenceContext.getState(State::Forces | State::Energy);
+    tol = 1e-2;
     for (int i = 0; i < numParticles; i++) {
-        ASSERT_EQUAL_VEC(cudaState.getForces()[i], referenceState.getForces()[i], tol);
+        ASSERT_EQUAL_VEC(referenceState.getForces()[i], cudaState.getForces()[i], tol);
     }
-    ASSERT_EQUAL_TOL(cudaState.getPotentialEnergy(), referenceState.getPotentialEnergy(), tol);
+    tol = 1e-5;
+    ASSERT_EQUAL_TOL(referenceState.getPotentialEnergy(), cudaState.getPotentialEnergy(), tol);
 
 //    (4) Check whether PME method in Cuda is self-consistent
 
@@ -152,6 +157,7 @@ void testEwaldPME() {
     Context cudaContext3(system, integrator, cuda);
     cudaContext3.setPositions(positions);
      
+    tol = 1e-4;
     State cudaState3 = cudaContext3.getState(State::Energy);
     ASSERT_EQUAL_TOL(norm, (cudaState3.getPotentialEnergy()-cudaState.getPotentialEnergy())/delta, tol)
 

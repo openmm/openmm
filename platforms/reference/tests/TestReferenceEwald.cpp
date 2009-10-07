@@ -96,19 +96,20 @@ void testEwaldExact() {
 //   E has to be divided by 2 (per ion), multiplied by N(avogadro), multiplied by number of particles, and divided by 1000 for kJ
    	double exactEnergy        = - (1.7476 * 1.6022e-19 * 1.6022e-19  * 6.02214e+23 * numParticles) / (1.112e-10 * 0.282e-9 * 2 * 1000);
     ASSERT_EQUAL_TOL(exactEnergy, state.getPotentialEnergy(), 100*TOL);
-//    cout << "exactEnergy: " << exactEnergy << endl;
-//    cout << "PotentialEnergy: " << state.getPotentialEnergy() << endl;
 
 }
 
 void testEwaldPME() {
 
     double tol = 1e-5;
+    const double boxSize = 3.00646;
+    const double cutoff = 1.2;
+    const int numParticles = 894;
 
 //      Use amorphous NaCl system
+//      The particles are simple charges, no VdW interactions
 
     ReferencePlatform platform;
-    const int numParticles = 216;
     System system;
     for (int i = 0; i < numParticles/2; i++)
         system.addParticle(22.99);
@@ -121,9 +122,8 @@ void testEwaldPME() {
     for (int i = 0; i < numParticles/2; i++)
         nonbonded->addParticle(-1.0, 1.0,0.0);
     nonbonded->setNonbondedMethod(NonbondedForce::Ewald);
-    const double cutoff = 0.8;
     nonbonded->setCutoffDistance(cutoff);
-    system.setPeriodicBoxVectors(Vec3(1.86206, 0, 0), Vec3(0, 1.86206, 0), Vec3(0, 0, 1.86206));
+    system.setPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
     nonbonded->setEwaldErrorTolerance(TOL);
     system.addForce(nonbonded);
     Context context(system, integrator, platform);
@@ -134,21 +134,19 @@ void testEwaldPME() {
     State state1 = context.getState(State::Forces | State::Energy);
     const vector<Vec3>& forces1 = state1.getForces();
 
-//    for (int i = 0 ; i < numParticles ; i++)
- //     cout << "f [" << i << " : ]" << forces1[i] << endl;
 //   (1)   CHECK EXACT VALUE OF EWALD ENERGY (Against Gromacs output)
 
     tol = 1e-5;
-    ASSERT_EQUAL_TOL(-36687.5, state1.getPotentialEnergy(), tol);
+    ASSERT_EQUAL_TOL(-3.82047e+05, state1.getPotentialEnergy(), tol);
 
 //   (2)   CHECK WHETHER THE EWALD FORCES ARE THE SAME AS THE GROMACS OUTPUT
   
-    tol = 1e-3;
+    tol = 1e-1;
     #include "nacl_amorph_GromacsForcesEwald.dat"
 
 //   (3)   CHECK SELF-CONSISTENCY
 
-// Take a small step in the direction of the energy gradient.
+    // Take a small step in the direction of the energy gradient.
 
     double norm = 0.0;
     for (int i = 0; i < numParticles; ++i) {
@@ -169,7 +167,7 @@ void testEwaldPME() {
     
     // See whether the potential energy changed by the expected amount.
     
-    tol = 1e-4;
+    tol = 1e-2;
     State state2 = context.getState(State::Energy);
     ASSERT_EQUAL_TOL(norm, (state2.getPotentialEnergy()-state1.getPotentialEnergy())/delta, tol)
 
@@ -180,21 +178,23 @@ void testEwaldPME() {
     #include "nacl_amorph.dat"
     context.setPositions(positions);
     State state3 = context.getState(State::Forces | State::Energy);
-    tol = 1e-5;
+
 //  Gromacs PME energy for the same mesh
-    ASSERT_EQUAL_TOL(-36688.3, state3.getPotentialEnergy(), tol);
+    tol = 1e-5;
+    ASSERT_EQUAL_TOL(-3.82047e+05, state3.getPotentialEnergy(), tol);
+
 //  Gromacs Ewald energy
-    tol = 1e-4;
-    ASSERT_EQUAL_TOL(-36687.5, state3.getPotentialEnergy(), tol);
+    tol = 1e-5;
+    ASSERT_EQUAL_TOL(-3.82047e+05, state3.getPotentialEnergy(), tol);
 
 //   (5) CHECK WHETHER PME FORCES ARE THE SAME AS THE GROMACS OUTPUT
 
-    tol = 1e-3;
-    #include "nacl_amorph_GromacsForcesEwald.dat"
+    tol = 1e-1;
+    #include "nacl_amorph_GromacsForcesPME.dat"
 
 //   (6) CHECK PME FOR SELF-CONSISTENCY
 
-// Take a small step in the direction of the energy gradient.
+    // Take a small step in the direction of the energy gradient.
     
     norm = 0.0;
     for (int i = 0; i < numParticles; ++i) {
@@ -213,7 +213,7 @@ void testEwaldPME() {
     // See whether the potential energy changed by the expected amount.
     
     State state4 = context.getState(State::Energy);
-    tol = 1e-4;
+    tol = 1e-2;
     ASSERT_EQUAL_TOL(norm, (state4.getPotentialEnergy()-state3.getPotentialEnergy())/delta, tol)
 
 }
@@ -248,8 +248,9 @@ void testEwald2Ions() {
 void testWaterSystem() {
     ReferencePlatform platform;
     System system;
-    static int numParticles;
-    numParticles = 648;
+    static int numParticles = 648;
+    const double boxSize = 1.86206;
+
     for (int i = 0 ; i < numParticles ; i++)
     {
        system.addParticle(1.0);
@@ -265,7 +266,7 @@ void testWaterSystem() {
     nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
     const double cutoff = 0.8;
     nonbonded->setCutoffDistance(cutoff);
-    system.setPeriodicBoxVectors(Vec3(1.86206, 0, 0), Vec3(0, 1.86206, 0), Vec3(0, 0, 1.86206));
+    system.setPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
     nonbonded->setEwaldErrorTolerance(TOL);
     system.addForce(nonbonded);
     Context context(system, integrator, platform);
@@ -274,9 +275,6 @@ void testWaterSystem() {
     context.setPositions(positions);
     State state1 = context.getState(State::Forces | State::Energy);
     const vector<Vec3>& forces = state1.getForces();
-   // for (int i = 0 ; i < 42 ; i++)
-   //   cout << "f [" << i << " : ]" << forces[i] << endl;
-   // cout << "PotentialEnergy: " << state1.getPotentialEnergy() << endl;
 
 // Take a small step in the direction of the energy gradient.
     
