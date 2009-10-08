@@ -1,11 +1,11 @@
-const int BlockSize = 32;
+const int TileSize = 32;
 
 /**
  * Find a bounding box for the atoms in each block.
  */
 __kernel void findBlockBounds(int numAtoms, float4 periodicBoxSize, __global float4* posq, __global float4* blockCenter, __global float4* blockBoundingBox) {
     int index = get_global_id(0);
-    int base = index*BlockSize;
+    int base = index*TileSize;
     while (base < numAtoms) {
         float4 pos = posq[base];
 #ifdef USE_PERIODIC
@@ -16,7 +16,7 @@ __kernel void findBlockBounds(int numAtoms, float4 periodicBoxSize, __global flo
 #endif
         float4 minPos = pos;
         float4 maxPos = pos;
-        int last = min(base+BlockSize, numAtoms);
+        int last = min(base+TileSize, numAtoms);
         for (int i = base+1; i < last; i++) {
             pos = posq[i];
 #ifdef USE_PERIODIC
@@ -30,7 +30,7 @@ __kernel void findBlockBounds(int numAtoms, float4 periodicBoxSize, __global flo
         blockBoundingBox[index] = 0.5f*(maxPos-minPos);
         blockCenter[index] = 0.5f*(maxPos+minPos);
         index += get_global_size(0);
-        base = index*BlockSize;
+        base = index*TileSize;
     }
 }
 
@@ -72,37 +72,34 @@ __kernel void findBlocksWithInteractions(int numTiles, float cutoffSquared, floa
  */
 __kernel void findInteractionsWithinBlocks(float cutoffSquared, float4 periodicBoxSize, __global float4* posq, __global unsigned int* tiles, __global float4* blockCenter,
             __global float4* blockBoundingBox, __global unsigned int* interactionFlags, __global unsigned int* interactionCount, __local unsigned int* flags) {
-    unsigned int totalWarps = get_global_size(0)/BlockSize;
-    unsigned int warp = get_global_id(0)/BlockSize;
+    unsigned int totalWarps = get_global_size(0)/TileSize;
+    unsigned int warp = get_global_id(0)/TileSize;
     unsigned int numTiles = interactionCount[0];
     unsigned int pos = warp*numTiles/totalWarps;
     unsigned int end = (warp+1)*numTiles/totalWarps;
-    unsigned int index = get_local_id(0) & (BlockSize - 1);
+    unsigned int index = get_local_id(0) & (TileSize - 1);
 
     unsigned int lasty = 0xFFFFFFFF;
     float4 apos;
-    while (pos < end)
-    {
-        // Extract cell coordinates from appropriate work unit
+    while (pos < end) {
+        // Extract the coordinates of this tile
         unsigned int x = tiles[pos];
         unsigned int y = ((x >> 2) & 0x7fff);
-        bool bExclusionFlag = (x & 0x1);
+        bool hasExclusions = (x & 0x1);
         x = (x >> 17);
-        if (x == y || bExclusionFlag)
-        {
-            // Assume this block will be dense.
+        if (x == y || hasExclusions) {
+            // Assume this tile will be dense.
 
             if (index == 0)
                 interactionFlags[pos] = 0xFFFFFFFF;
         }
-        else
-        {
+        else {
             // Load the bounding box for x and the atom positions for y.
 
             float4 center = blockCenter[x];
             float4 boxSize = blockBoundingBox[x];
             if (y != lasty)
-                apos = posq[(y*BlockSize)+index];
+                apos = posq[y*TileSize+index];
 
             // Find the distance of the atom from the bounding box.
 
@@ -142,8 +139,7 @@ __kernel void findInteractionsWithinBlocks(float cutoffSquared, float4 periodicB
                 flags[thread] += flags[thread+8];
             barrier(CLK_LOCAL_MEM_FENCE);
 #endif
-            if (index == 0)
-            {
+            if (index == 0) {
                 unsigned int allFlags = flags[thread] + flags[thread+16];
 
                 // Count how many flags are set, and based on that decide whether to compute all interactions

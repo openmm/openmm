@@ -298,7 +298,7 @@ void OpenCLNonbondedUtilities::prepareInteractions() {
     findInteractionsWithinBlocksKernel.setArg<cl_float>(0, cutoff*cutoff);
     findInteractionsWithinBlocksKernel.setArg<mm_float4>(1, periodicBoxSize);
     findInteractionsWithinBlocksKernel.setArg<cl::Buffer>(2, context.getPosq().getDeviceBuffer());
-    findInteractionsWithinBlocksKernel.setArg<cl::Buffer>(3, tiles->getDeviceBuffer());
+    findInteractionsWithinBlocksKernel.setArg<cl::Buffer>(3, interactingTiles->getDeviceBuffer());
     findInteractionsWithinBlocksKernel.setArg<cl::Buffer>(4, blockCenter->getDeviceBuffer());
     findInteractionsWithinBlocksKernel.setArg<cl::Buffer>(5, blockBoundingBox->getDeviceBuffer());
     findInteractionsWithinBlocksKernel.setArg<cl::Buffer>(6, interactionFlags->getDeviceBuffer());
@@ -311,23 +311,27 @@ void OpenCLNonbondedUtilities::computeInteractions() {
     if (hasComputedInteractions)
         return;
     hasComputedInteractions = true;
-    forceKernel.setArg<cl_int>(0, tiles->getSize());
-    forceKernel.setArg<cl_int>(1, context.getPaddedNumAtoms());
-    forceKernel.setArg<cl::Buffer>(2, context.getForceBuffers().getDeviceBuffer());
-    forceKernel.setArg<cl::Buffer>(3, context.getEnergyBuffer().getDeviceBuffer());
-    forceKernel.setArg<cl::Buffer>(4, context.getPosq().getDeviceBuffer());
-    forceKernel.setArg<cl::Buffer>(5, tiles->getDeviceBuffer());
-    forceKernel.setArg<cl::Buffer>(6, exclusions->getDeviceBuffer());
-    forceKernel.setArg<cl::Buffer>(7, exclusionIndex->getDeviceBuffer());
-    forceKernel.setArg(8, OpenCLContext::ThreadBlockSize*sizeof(cl_float4), NULL);
-    forceKernel.setArg(9, OpenCLContext::ThreadBlockSize*sizeof(cl_float4), NULL);
+    forceKernel.setArg<cl_int>(0, context.getPaddedNumAtoms());
+    forceKernel.setArg<cl::Buffer>(1, context.getForceBuffers().getDeviceBuffer());
+    forceKernel.setArg<cl::Buffer>(2, context.getEnergyBuffer().getDeviceBuffer());
+    forceKernel.setArg<cl::Buffer>(3, context.getPosq().getDeviceBuffer());
+    forceKernel.setArg<cl::Buffer>(4, exclusions->getDeviceBuffer());
+    forceKernel.setArg<cl::Buffer>(5, exclusionIndex->getDeviceBuffer());
+    forceKernel.setArg(6, OpenCLContext::ThreadBlockSize*sizeof(cl_float4), NULL);
+    forceKernel.setArg(7, OpenCLContext::ThreadBlockSize*sizeof(cl_float4), NULL);
     int paramBase = 10;
     if (useCutoff) {
         paramBase = 14;
-        forceKernel.setArg<cl_float>(10, cutoff*cutoff);
-        forceKernel.setArg<mm_float4>(11, periodicBoxSize);
-        forceKernel.setArg<cl::Buffer>(12, interactionFlags->getDeviceBuffer());
+        forceKernel.setArg<cl::Buffer>(8, interactingTiles->getDeviceBuffer());
+        forceKernel.setArg<cl_float>(9, cutoff*cutoff);
+        forceKernel.setArg<mm_float4>(10, periodicBoxSize);
+        forceKernel.setArg<cl::Buffer>(11, interactionFlags->getDeviceBuffer());
+        forceKernel.setArg<cl::Buffer>(12, interactionCount->getDeviceBuffer());
         forceKernel.setArg(13, OpenCLContext::ThreadBlockSize*sizeof(cl_float4), NULL);
+    }
+    else {
+        forceKernel.setArg<cl::Buffer>(8, tiles->getDeviceBuffer());
+        forceKernel.setArg<cl_uint>(9, tiles->getSize());
     }
     for (int i = 0; i < (int) parameters.size(); i++) {
         forceKernel.setArg<cl::Buffer>(i*2+paramBase, *parameters[i].buffer);

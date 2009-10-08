@@ -75,6 +75,24 @@ public:
         return numForceBuffers;
     }
     /**
+     * Get whether a cutoff is being used.
+     */
+    bool getUseCutoff() {
+        return useCutoff;
+    }
+    /**
+     * Get whether periodic boundary conditions are being used.
+     */
+    bool getUsePeriodic() {
+        return usePeriodic;
+    }
+    /**
+     * Get the cutoff distance.
+     */
+    double getCutoffDistance() {
+        return cutoff;
+    }
+    /**
      * Get the periodic box size.
      */
     mm_float4 getPeriodicBoxSize() {

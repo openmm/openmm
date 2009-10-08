@@ -46,6 +46,9 @@ void OpenCLCalcForcesAndEnergyKernel::initialize(const System& system) {
 }
 
 void OpenCLCalcForcesAndEnergyKernel::beginForceComputation(ContextImpl& context) {
+    if (cl.getNonbondedUtilities().getUseCutoff() && cl.getComputeForceCount()%100 == 0)
+        cl.reorderAtoms();
+    cl.setComputeForceCount(cl.getComputeForceCount()+1);
     cl.clearBuffer(cl.getForceBuffers());
     cl.getNonbondedUtilities().prepareInteractions();
 }
@@ -56,6 +59,9 @@ void OpenCLCalcForcesAndEnergyKernel::finishForceComputation(ContextImpl& contex
 }
 
 void OpenCLCalcForcesAndEnergyKernel::beginEnergyComputation(ContextImpl& context) {
+    if (cl.getNonbondedUtilities().getUseCutoff() && cl.getComputeForceCount()%100 == 0)
+        cl.reorderAtoms();
+    cl.setComputeForceCount(cl.getComputeForceCount()+1);
     cl.clearBuffer(cl.getEnergyBuffer());
     cl.getNonbondedUtilities().prepareInteractions();
 }
@@ -86,11 +92,11 @@ void OpenCLUpdateStateDataKernel::getPositions(ContextImpl& context, std::vector
     OpenCLArray<cl_int>& order = cl.getAtomIndex();
     int numParticles = context.getSystem().getNumParticles();
     positions.resize(numParticles);
+    mm_float4 periodicBoxSize = cl.getNonbondedUtilities().getPeriodicBoxSize();
     for (int i = 0; i < numParticles; ++i) {
         mm_float4 pos = posq[i];
-//        int3 offset = gpu->posCellOffsets[i];
-//        positions[order[i]] = Vec3(pos.x-offset.x*gpu->sim.periodicBoxSizeX, pos.y-offset.y*gpu->sim.periodicBoxSizeY, pos.z-offset.z*gpu->sim.periodicBoxSizeZ);
-        positions[order[i]] = Vec3(pos.x, pos.y, pos.z);
+        mm_int4 offset = cl.getPosCellOffsets()[i];
+        positions[order[i]] = Vec3(pos.x-offset.x*periodicBoxSize.x, pos.y-offset.y*periodicBoxSize.y, pos.z-offset.z*periodicBoxSize.z);
     }
 }
 
@@ -106,8 +112,8 @@ void OpenCLUpdateStateDataKernel::setPositions(ContextImpl& context, const std::
         pos.z = p[2];
     }
     posq.upload();
-//    for (int i = 0; i < gpu->posCellOffsets.size(); i++)
-//        gpu->posCellOffsets[i] = make_int3(0, 0, 0);
+    for (int i = 0; i < cl.getPosCellOffsets().size(); i++)
+        cl.getPosCellOffsets()[i] = (mm_int4) {0, 0, 0, 0};
 }
 
 void OpenCLUpdateStateDataKernel::getVelocities(ContextImpl& context, std::vector<Vec3>& velocities) {

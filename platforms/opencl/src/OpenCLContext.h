@@ -134,6 +134,12 @@ public:
         return *atomIndex;
     }
     /**
+     * Get the number of cells by which the positions are offset.
+     */
+    std::vector<mm_int4>& getPosCellOffsets() {
+        return posCellOffsets;
+    }
+    /**
      * Load OpenCL source code from a file in the kernels directory.
      */
     std::string loadSourceFromFile(const std::string& filename) const;
@@ -200,7 +206,19 @@ public:
      * Set the number of integration steps that have been taken.
      */
     void setStepCount(int steps) {
-        stepCount = steps;;
+        stepCount = steps;
+    }
+    /**
+     * Get the number of times forces or energy has been computed.
+     */
+    int getComputeForceCount() {
+        return computeForceCount;
+    }
+    /**
+     * Set the number of times forces or energy has been computed.
+     */
+    void setComputeForceCount(int count) {
+        computeForceCount = count;
     }
     /**
      * Get the number of atoms.
@@ -245,9 +263,19 @@ public:
     OpenCLNonbondedUtilities& getNonbondedUtilities() {
         return *nonbonded;
     }
+    /**
+     * Reorder the internal arrays of atoms to try to keep spatially contiguous atoms close
+     * together in the arrays.
+     */
+    void reorderAtoms();
 private:
+    struct Molecule;
+    struct MoleculeGroup;
+    void findMoleculeGroups(const System& system);
+    static void tagAtomsInMolecule(int atom, int molecule, std::vector<int>& atomMolecule, std::vector<std::vector<int> >& atomBonds);
     double time;
     int stepCount;
+    int computeForceCount;
     int numAtoms;
     int paddedNumAtoms;
     int numAtomBlocks;
@@ -261,6 +289,8 @@ private:
     cl::Kernel clearBufferKernel;
     cl::Kernel reduceFloat4Kernel;
     std::vector<OpenCLForceInfo*> forces;
+    std::vector<MoleculeGroup> moleculeGroups;
+    std::vector<mm_int4> posCellOffsets;
     OpenCLArray<mm_float4>* posq;
     OpenCLArray<mm_float4>* velm;
     OpenCLArray<mm_float4>* force;
@@ -269,6 +299,11 @@ private:
     OpenCLArray<cl_int>* atomIndex;
     OpenCLIntegrationUtilities* integration;
     OpenCLNonbondedUtilities* nonbonded;
+};
+
+struct OpenCLContext::MoleculeGroup {
+    std::vector<int> atoms;
+    std::vector<int> instances;
 };
 
 } // namespace OpenMM

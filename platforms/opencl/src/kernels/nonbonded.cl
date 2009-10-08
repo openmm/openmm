@@ -4,13 +4,17 @@ const unsigned int TileSize = 32;
  * Compute nonbonded interactions.
  */
 
-__kernel void computeNonbonded(int numTiles, int paddedNumAtoms,
-        __global float4* forceBuffers, __global float* energyBuffer, __global float4* posq, __global unsigned int* tiles,
-        __global unsigned int* exclusions,  __global unsigned int* exclusionIndices, __local float4* local_posq, __local float4* local_force
+__kernel void computeNonbonded(int paddedNumAtoms, __global float4* forceBuffers, __global float* energyBuffer, __global float4* posq,
+        __global unsigned int* exclusions,  __global unsigned int* exclusionIndices, __local float4* local_posq, __local float4* local_force, __global unsigned int* tiles,
 #ifdef USE_CUTOFF
-        , float cutoffSquared, float4 periodicBoxSize, __global unsigned int* interactionFlags, __local float4* tempBuffer
+        float cutoffSquared, float4 periodicBoxSize, __global unsigned int* interactionFlags, __global unsigned int* interactionCount, __local float4* tempBuffer
+#else
+        unsigned int numTiles
 #endif
         PARAMETER_ARGUMENTS) {
+#ifdef USE_CUTOFF
+    unsigned int numTiles = interactionCount[0];
+#endif
     unsigned int totalWarps = get_global_size(0)/TileSize;
     unsigned int warp = get_global_id(0)/TileSize;
     unsigned int pos = warp*numTiles/totalWarps;
