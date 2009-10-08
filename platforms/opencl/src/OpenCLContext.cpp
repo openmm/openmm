@@ -32,6 +32,7 @@
 #include "hilbert.h"
 #include "openmm/Platform.h"
 #include "openmm/System.h"
+#include <algorithm>
 #include <cmath>
 #include <fstream>
 #include <iostream>
