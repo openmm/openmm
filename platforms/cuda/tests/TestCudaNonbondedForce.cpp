@@ -559,14 +559,6 @@ void testBlockInteractions(bool periodic) {
                         dy -= (float)(floor(0.5+dy/boxSize)*boxSize);
                         dz -= (float)(floor(0.5+dz/boxSize)*boxSize);
                     }
-                    if (dx*dx+dy*dy+dz*dz < cutoff*cutoff) {
-                        dx = pos2.x-center1.x;
-                        dy = pos2.y-center1.y;
-                        dz = pos2.z-center1.z;
-                        dx = max(0.0f, abs(dx)-gridSize1.x);
-                        dy = max(0.0f, abs(dy)-gridSize1.y);
-                        dz = max(0.0f, abs(dz)-gridSize1.z);
-                    }
                     ASSERT(dx*dx+dy*dy+dz*dz > cutoff*cutoff);
                 }
             }

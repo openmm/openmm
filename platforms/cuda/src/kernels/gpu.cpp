@@ -2473,7 +2473,7 @@ void gpuReorderAtoms(gpuContext gpu)
     float minx = posq[0].x, maxx = posq[0].x;
     float miny = posq[0].y, maxy = posq[0].y;
     float minz = posq[0].z, maxz = posq[0].z;
-    if (gpu->sim.nonbondedMethod == PERIODIC)
+    if (gpu->sim.nonbondedMethod == PERIODIC || gpu->sim.nonbondedMethod == EWALD || gpu->sim.nonbondedMethod == PARTICLE_MESH_EWALD)
     {
         minx = miny = minz = 0.0;
         maxx = gpu->sim.periodicBoxSizeX;
@@ -2523,7 +2523,7 @@ void gpuReorderAtoms(gpuContext gpu)
             molPos[i].y /= atoms.size();
             molPos[i].z /= atoms.size();
         }
-        if (gpu->sim.nonbondedMethod == PERIODIC)
+        if (gpu->sim.nonbondedMethod == PERIODIC || gpu->sim.nonbondedMethod == EWALD || gpu->sim.nonbondedMethod == PARTICLE_MESH_EWALD)
         {
             // Move each molecule position into the same box.
 
