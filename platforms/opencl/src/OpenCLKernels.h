@@ -368,38 +368,46 @@ private:
 //    std::vector<float> globalParamValues;
 //    System& system;
 //};
-//
-///**
-// * This kernel is invoked by GBSAOBCForce to calculate the forces acting on the system.
-// */
-//class OpenCLCalcGBSAOBCForceKernel : public CalcGBSAOBCForceKernel {
-//public:
-//    OpenCLCalcGBSAOBCForceKernel(std::string name, const Platform& platform, OpenCLContext& cl) : CalcGBSAOBCForceKernel(name, platform), cl(cl) {
-//    }
-//    ~OpenCLCalcGBSAOBCForceKernel();
-//    /**
-//     * Initialize the kernel.
-//     *
-//     * @param system     the System this kernel will be applied to
-//     * @param force      the GBSAOBCForce this kernel will be used for
-//     */
-//    void initialize(const System& system, const GBSAOBCForce& force);
-//    /**
-//     * Execute the kernel to calculate the forces.
-//     *
-//     * @param context    the context in which to execute this kernel
-//     */
-//    void executeForces(ContextImpl& context);
-//    /**
-//     * Execute the kernel to calculate the energy.
-//     *
-//     * @param context    the context in which to execute this kernel
-//     * @return the potential energy due to the GBSAOBCForce
-//     */
-//    double executeEnergy(ContextImpl& context);
-//private:
-//    OpenCLContext& cl;
-//};
+
+/**
+ * This kernel is invoked by GBSAOBCForce to calculate the forces acting on the system.
+ */
+class OpenCLCalcGBSAOBCForceKernel : public CalcGBSAOBCForceKernel {
+public:
+    OpenCLCalcGBSAOBCForceKernel(std::string name, const Platform& platform, OpenCLContext& cl) : CalcGBSAOBCForceKernel(name, platform), cl(cl), bornSum(NULL) {
+    }
+    ~OpenCLCalcGBSAOBCForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the GBSAOBCForce this kernel will be used for
+     */
+    void initialize(const System& system, const GBSAOBCForce& force);
+    /**
+     * Execute the kernel to calculate the forces.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void executeForces(ContextImpl& context);
+    /**
+     * Execute the kernel to calculate the energy.
+     *
+     * @param context    the context in which to execute this kernel
+     * @return the potential energy due to the GBSAOBCForce
+     */
+    double executeEnergy(ContextImpl& context);
+private:
+    double prefactor;
+    OpenCLContext& cl;
+    OpenCLArray<mm_float2>* params;
+    OpenCLArray<cl_float>* bornSum;
+    OpenCLArray<cl_float>* bornRadii;
+    OpenCLArray<cl_float>* bornForce;
+    OpenCLArray<cl_float>* obcChain;
+    cl::Kernel computeBornSumKernel;
+    cl::Kernel reduceBornSumKernel;
+};
 
 /**
  * This kernel is invoked by VerletIntegrator to take one time step.

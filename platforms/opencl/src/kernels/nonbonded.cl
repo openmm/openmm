@@ -39,12 +39,16 @@ __kernel void computeNonbonded(int paddedNumAtoms, __global float4* forceBuffers
             // This tile is on the diagonal.
 
             local_posq[get_local_id(0)] = posq1;
-            local_sigmaEpsilon[get_local_id(0)] = sigmaEpsilon1;
+            LOAD_LOCAL_PARAMETERS_FROM_1
             unsigned int xi = x/TileSize;
             unsigned int tile = xi+xi*paddedNumAtoms/TileSize-xi*(xi+1)/2;
+#ifdef USE_EXCLUSIONS
             unsigned int excl = exclusions[exclusionIndices[tile]+tgx];
+#endif
             for (unsigned int j = 0; j < TileSize; j++) {
+#ifdef USE_EXCLUSIONS
                 bool isExcluded = !(excl & 0x1);
+#endif
                 float4 delta = (float4) (local_posq[tbx+j].xyz - posq1.xyz, 0.0f);
 #ifdef USE_PERIODIC
                 delta.x -= floor(delta.x/periodicBoxSize.x+0.5f)*periodicBoxSize.x;
@@ -59,33 +63,35 @@ __kernel void computeNonbonded(int paddedNumAtoms, __global float4* forceBuffers
                 float dEdR = 0.0f;
                 float tempEnergy = 0.0f;
                 COMPUTE_INTERACTION
-#ifdef USE_CUTOFF
+#if defined USE_CUTOFF || defined USE_EXCLUSIONS
+    #if defined USE_CUTOFF && defined USE_EXCLUSIONS
+                excl >>= 1;
                 if (isExcluded || r2 > cutoffSquared) {
-#else
+    #elif defined USE_CUTOFF
+                if (r2 > cutoffSquared) {
+    #elif defined USE_EXCLUSIONS
+                excl >>= 1;
                 if (isExcluded) {
-#endif
+    #endif
                     dEdR = 0.0f;
                     tempEnergy  = 0.0f;
                 }
+#endif
                 energy += 0.5f*tempEnergy;
                 delta.xyz *= dEdR;
                 force.xyz -= delta.xyz;
-                excl >>= 1;
             }
 
             // Write results
             float4 of;
 #ifdef USE_OUTPUT_BUFFER_PER_BLOCK
-            of.xyz = force.xyz;
-            of.w = 0.0f;
             unsigned int offset = x + tgx + (x/TileSize)*paddedNumAtoms;
-            forceBuffers[offset] = of;
 #else
             unsigned int offset = x + tgx + warp*paddedNumAtoms;
+#endif
             of = forceBuffers[offset];
             of.xyz += force.xyz;
             forceBuffers[offset] = of;
-#endif
         }
         else {
             // This is an off-diagonal tile.
@@ -93,7 +99,7 @@ __kernel void computeNonbonded(int paddedNumAtoms, __global float4* forceBuffers
             if (lasty != y) {
                 unsigned int j = y + tgx;
                 local_posq[get_local_id(0)] = posq[j];
-                local_sigmaEpsilon[get_local_id(0)] = global_sigmaEpsilon[j];
+                LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
             }
             local_force[get_local_id(0)] = 0.0f;
 #ifdef USE_CUTOFF
@@ -157,10 +163,14 @@ __kernel void computeNonbonded(int paddedNumAtoms, __global float4* forceBuffers
                 unsigned int xi = x/TileSize;
                 unsigned int yi = y/TileSize;
                 unsigned int tile = xi+yi*paddedNumAtoms/TileSize-yi*(yi+1)/2;
+#ifdef USE_EXCLUSIONS
                 unsigned int excl = (hasExclusions ? exclusions[exclusionIndices[tile]+tgx] : 0xFFFFFFFF);
                 excl = (excl >> tgx) | (excl << (TileSize - tgx));
+#endif
                 for (unsigned int j = 0; j < TileSize; j++) {
+#ifdef USE_EXCLUSIONS
                     bool isExcluded = !(excl & 0x1);
+#endif
                     float4 delta = (float4) (local_posq[tbx+tj].xyz - posq1.xyz, 0.0f);
 #ifdef USE_PERIODIC
                     delta.x -= floor(delta.x/periodicBoxSize.x+0.5f)*periodicBoxSize.x;
@@ -175,19 +185,24 @@ __kernel void computeNonbonded(int paddedNumAtoms, __global float4* forceBuffers
                     float dEdR = 0.0f;
                     float tempEnergy = 0.0f;
                     COMPUTE_INTERACTION
-#ifdef USE_CUTOFF
+#if defined USE_CUTOFF || defined USE_EXCLUSIONS
+    #if defined USE_CUTOFF && defined USE_EXCLUSIONS
+                    excl >>= 1;
                     if (isExcluded || r2 > cutoffSquared) {
-#else
+    #elif defined USE_CUTOFF
+                    if (r2 > cutoffSquared) {
+    #elif defined USE_EXCLUSIONS
+                    excl >>= 1;
                     if (isExcluded) {
-#endif
+    #endif
                         dEdR = 0.0f;
 			tempEnergy  = 0.0f;
                     }
+#endif
 		    energy += tempEnergy;
                     delta.xyz *= dEdR;
                     force.xyz -= delta.xyz;
                     local_force[tbx+tj].xyz += delta.xyz;
-                    excl >>= 1;
                     tj = (tj + 1) & (TileSize - 1);
                 }
             }
@@ -195,23 +210,18 @@ __kernel void computeNonbonded(int paddedNumAtoms, __global float4* forceBuffers
             // Write results
             float4 of;
 #ifdef USE_OUTPUT_BUFFER_PER_BLOCK
-            of.xyz = force.xyz;
-            of.w = 0.0f;
-            unsigned int offset = x + tgx + (y/TileSize)*paddedNumAtoms;
-            forceBuffers[offset] = of;
-            of = local_force[get_local_id(0)];
-            offset = y + tgx + (x/TileSize)*paddedNumAtoms;
-            forceBuffers[offset] = of;
+            unsigned int offset1 = x + tgx + (y/TileSize)*paddedNumAtoms;
+            unsigned int offset2 = y + tgx + (x/TileSize)*paddedNumAtoms;
 #else
-            unsigned int offset = x + tgx + warp*paddedNumAtoms;
-            of = forceBuffers[offset];
-            of.xyz += force.xyz;
-            forceBuffers[offset] = of;
-            offset = y + tgx + warp*paddedNumAtoms;
-            of = forceBuffers[offset];
-            of.xyz += local_force[get_local_id(0)].xyz;
-            forceBuffers[offset] = of;
+            unsigned int offset1 = x + tgx + warp*paddedNumAtoms;
+            unsigned int offset2 = y + tgx + warp*paddedNumAtoms;
 #endif
+            of = forceBuffers[offset1];
+            of.xyz += force.xyz;
+            forceBuffers[offset1] = of;
+            of = forceBuffers[offset2];
+            of.xyz += local_force[get_local_id(0)].xyz;
+            forceBuffers[offset2] = of;
             lasty = y;
         }
         pos++;

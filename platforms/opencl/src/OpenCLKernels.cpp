@@ -54,6 +54,7 @@ void OpenCLCalcForcesAndEnergyKernel::beginForceComputation(ContextImpl& context
 }
 
 void OpenCLCalcForcesAndEnergyKernel::finishForceComputation(ContextImpl& context) {
+    cl.getNonbondedUtilities().computeInteractions();
     cl.reduceBuffer(cl.getForceBuffers(), cl.getNumForceBuffers());
     cl.getNonbondedUtilities().prepareInteractions();
 }
@@ -67,6 +68,7 @@ void OpenCLCalcForcesAndEnergyKernel::beginEnergyComputation(ContextImpl& contex
 }
 
 double OpenCLCalcForcesAndEnergyKernel::finishEnergyComputation(ContextImpl& context) {
+    cl.getNonbondedUtilities().computeInteractions();
     OpenCLArray<cl_float>& energy = cl.getEnergyBuffer();
     energy.download();
     double sum = 0.0f;
@@ -584,7 +586,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
 //    gpuSetCoulombParameters(gpu, 138.935485f, particle, c6, c12, q, symbol, exclusionList, method);
     string source = cl.loadSourceFromFile("coulombLennardJones.cl", defines);
     cl.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, force.getCutoffDistance(), exclusionList, source);
-    cl.getNonbondedUtilities().addParameter("sigmaEpsilon", "float2", 8, sigmaEpsilon->getDeviceBuffer());
+    cl.getNonbondedUtilities().addParameter(OpenCLNonbondedUtilities::ParameterInfo("sigmaEpsilon", "float2", 8, sigmaEpsilon->getDeviceBuffer()));
     cutoffSquared = force.getCutoffDistance()*force.getCutoffDistance();
 
     // Compute the Ewald self energy.
@@ -629,7 +631,6 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
 }
 
 void OpenCLCalcNonbondedForceKernel::executeForces(ContextImpl& context) {
-    cl.getNonbondedUtilities().computeInteractions();
     if (exceptionIndices != NULL) {
         int numExceptions = exceptionIndices->getSize();
         exceptionsKernel.setArg<cl_int>(0, cl.getPaddedNumAtoms());
@@ -766,90 +767,104 @@ double OpenCLCalcNonbondedForceKernel::executeEnergy(ContextImpl& context) {
 //        SetCustomNonbondedGlobalParams(&globalParamValues[0]);
 //}
 //
-//OpenCLCalcGBSAOBCForceKernel::~OpenCLCalcGBSAOBCForceKernel() {
-//}
-//
-//void OpenCLCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOBCForce& force) {
-//
-//    int numParticles = system.getNumParticles();
-//    _gpuContext* gpu = data.gpu;
-//    vector<float> radius(numParticles);
-//    vector<float> scale(numParticles);
-//    vector<float> charge(numParticles);
-//    for (int i = 0; i < numParticles; i++) {
-//        double particleCharge, particleRadius, scalingFactor;
-//        force.getParticleParameters(i, particleCharge, particleRadius, scalingFactor);
-//        radius[i] = (float) particleRadius;
-//        scale[i] = (float) scalingFactor;
-//        charge[i] = (float) particleCharge;
-//    }
-//    gpuSetObcParameters(gpu, (float) force.getSoluteDielectric(), (float) force.getSolventDielectric(), radius, scale, charge);
-//}
-//
-//void OpenCLCalcGBSAOBCForceKernel::executeForces(ContextImpl& context) {
-//}
-//
-//static void initializeIntegration(const System& system, OpenCLPlatform::PlatformData& data, const Integrator& integrator) {
-//
-//    // Initialize any terms that haven't already been handled by a Force.
-//
-//    _gpuContext* gpu = data.gpu;
-//    if (!data.hasBonds)
-//        gpuSetBondParameters(gpu, vector<int>(), vector<int>(), vector<float>(), vector<float>());
-//    if (!data.hasAngles)
-//        gpuSetBondAngleParameters(gpu, vector<int>(), vector<int>(), vector<int>(), vector<float>(), vector<float>());
-//    if (!data.hasPeriodicTorsions)
-//        gpuSetDihedralParameters(gpu, vector<int>(), vector<int>(), vector<int>(), vector<int>(), vector<float>(), vector<float>(), vector<int>());
-//    if (!data.hasRB)
-//        gpuSetRbDihedralParameters(gpu, vector<int>(), vector<int>(), vector<int>(), vector<int>(), vector<float>(), vector<float>(),
-//                vector<float>(), vector<float>(), vector<float>(), vector<float>());
-//    if (!data.hasNonbonded) {
-//        gpuSetCoulombParameters(gpu, 138.935485f, vector<int>(), vector<float>(), vector<float>(), vector<float>(), vector<char>(), vector<vector<int> >(), NO_CUTOFF);
-//        gpuSetLJ14Parameters(gpu, 138.935485f, 1.0f, vector<int>(), vector<int>(), vector<float>(), vector<float>(), vector<float>(), vector<float>());
-//    }
-//
-//    // Set masses.
-//
-//    int numParticles = system.getNumParticles();
-//    vector<float> mass(numParticles);
-//    for (int i = 0; i < numParticles; i++)
-//        mass[i] = (float) system.getParticleMass(i);
-//    gpuSetMass(gpu, mass);
-//
-//    // Set constraints.
-//
-//    int numConstraints = system.getNumConstraints();
-//    vector<int> particle1(numConstraints);
-//    vector<int> particle2(numConstraints);
-//    vector<float> distance(numConstraints);
-//    vector<float> invMass1(numConstraints);
-//    vector<float> invMass2(numConstraints);
-//    for (int i = 0; i < numConstraints; i++) {
-//        int particle1Index, particle2Index;
-//        double constraintDistance;
-//        system.getConstraintParameters(i, particle1Index, particle2Index, constraintDistance);
-//        particle1[i] = particle1Index;
-//        particle2[i] = particle2Index;
-//        distance[i] = (float) constraintDistance;
-//        invMass1[i] = 1.0f/mass[particle1Index];
-//        invMass2[i] = 1.0f/mass[particle2Index];
-//    }
-//    gpuSetConstraintParameters(gpu, particle1, particle2, distance, invMass1, invMass2, (float)integrator.getConstraintTolerance());
-//
-//    // Finish initialization.
-//
-//    gpuBuildThreadBlockWorkList(gpu);
-//    gpuBuildExclusionList(gpu);
-//    gpuBuildOutputBuffers(gpu);
-//    gpuSetConstants(gpu);
-//    kClearBornForces(gpu);
-//    kClearForces(gpu);
-//    cudaThreadSynchronize();
-//}
-//
-//double OpenCLCalcGBSAOBCForceKernel::executeEnergy(ContextImpl& context) {
-//	return 0.0;
-//}
+OpenCLCalcGBSAOBCForceKernel::~OpenCLCalcGBSAOBCForceKernel() {
+    if (params != NULL)
+        delete params;
+    if (bornSum != NULL)
+        delete bornSum;
+    if (bornRadii != NULL)
+        delete bornRadii;
+    if (bornForce != NULL)
+        delete bornForce;
+    if (obcChain != NULL)
+        delete obcChain;
+}
+
+void OpenCLCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOBCForce& force) {
+
+    params = new OpenCLArray<mm_float2>(cl, cl.getPaddedNumAtoms(), "gbsaObcParams");
+    bornRadii = new OpenCLArray<cl_float>(cl, cl.getPaddedNumAtoms(), "bornRadii");
+    bornForce = new OpenCLArray<cl_float>(cl, cl.getPaddedNumAtoms(), "bornForce");
+    obcChain = new OpenCLArray<cl_float>(cl, cl.getPaddedNumAtoms(), "obcChain");
+    OpenCLArray<mm_float4>& posq = cl.getPosq();
+    int numParticles = force.getNumParticles();
+    vector<mm_float2> paramsVector(numParticles);
+    const double dielectricOffset = 0.009;
+    for (int i = 0; i < numParticles; i++) {
+        double charge, radius, scalingFactor;
+        force.getParticleParameters(i, charge, radius, scalingFactor);
+        radius -= dielectricOffset;
+        paramsVector[i] = (mm_float2) {(float) radius, (float) (scalingFactor*radius)};
+        posq[i].w = (float) charge;
+    }
+    posq.upload();
+    params->upload(paramsVector);
+    prefactor = 2.0*-166.02691*0.4184*((1.0/force.getSoluteDielectric())-(1.0/force.getSolventDielectric()));
+}
+
+void OpenCLCalcGBSAOBCForceKernel::executeForces(ContextImpl& context) {
+    OpenCLNonbondedUtilities& nb = cl.getNonbondedUtilities();
+    if (bornSum == NULL) {
+        // These objects cannot be created in initialize(), because the OpenCLNonbondedUtilities has not been initialized yet then.
+        
+        bornSum = new OpenCLArray<cl_float>(cl, cl.getPaddedNumAtoms()*cl.getNumForceBuffers(), "bornSum");
+        map<string, string> defines;
+        if (nb.getForceBufferPerAtomBlock())
+            defines["USE_OUTPUT_BUFFER_PER_BLOCK"] = "1";
+        if (nb.getUseCutoff())
+            defines["USE_CUTOFF"] = "1";
+        if (nb.getUsePeriodic())
+            defines["USE_PERIODIC"] = "1";
+        cl::Program program = cl.createProgram(cl.loadSourceFromFile("gbsaObc.cl"), defines);
+        computeBornSumKernel = cl::Kernel(program, "computeBornSum");
+        reduceBornSumKernel = cl::Kernel(program, "reduceBornSum");
+    }
+    cl.clearBuffer(*bornSum);
+    cl.clearBuffer(*bornForce);
+
+    // Compute the Born sum.
+
+    computeBornSumKernel.setArg<cl_int>(0, cl.getNumAtoms());
+    computeBornSumKernel.setArg<cl_int>(1, cl.getPaddedNumAtoms());
+    computeBornSumKernel.setArg<cl::Buffer>(2, bornSum->getDeviceBuffer());
+    computeBornSumKernel.setArg(3, OpenCLContext::ThreadBlockSize*sizeof(cl_float), NULL);
+    computeBornSumKernel.setArg<cl::Buffer>(4, cl.getPosq().getDeviceBuffer());
+    computeBornSumKernel.setArg(5, OpenCLContext::ThreadBlockSize*sizeof(cl_float4), NULL);
+    computeBornSumKernel.setArg<cl::Buffer>(6, params->getDeviceBuffer());
+    computeBornSumKernel.setArg(7, OpenCLContext::ThreadBlockSize*sizeof(cl_float2), NULL);
+    if (nb.getUseCutoff()) {
+        computeBornSumKernel.setArg<cl::Buffer>(8, nb.getInteractingTiles().getDeviceBuffer());
+        computeBornSumKernel.setArg<cl_float>(9, nb.getCutoffDistance()*nb.getCutoffDistance());
+        computeBornSumKernel.setArg<mm_float4>(10, nb.getPeriodicBoxSize());
+        computeBornSumKernel.setArg<cl::Buffer>(11, nb.getInteractionFlags().getDeviceBuffer());
+        computeBornSumKernel.setArg<cl::Buffer>(12, nb.getInteractionCount().getDeviceBuffer());
+        computeBornSumKernel.setArg(13, OpenCLContext::ThreadBlockSize*sizeof(cl_float), NULL);
+    }
+    else {
+        computeBornSumKernel.setArg<cl::Buffer>(8, nb.getTiles().getDeviceBuffer());
+        computeBornSumKernel.setArg<cl_uint>(9, nb.getTiles().getSize());
+    }
+    cl.executeKernel(computeBornSumKernel, nb.getTiles().getSize()*OpenCLContext::TileSize);
+
+    // Reduce the Born sum.
+
+    reduceBornSumKernel.setArg<cl_int>(0, cl.getNumAtoms());
+    reduceBornSumKernel.setArg<cl_int>(1, cl.getPaddedNumAtoms());
+    reduceBornSumKernel.setArg<cl_int>(2, cl.getNumForceBuffers());
+    reduceBornSumKernel.setArg<cl_float>(3, 1.0f);
+    reduceBornSumKernel.setArg<cl_float>(4, 0.8f);
+    reduceBornSumKernel.setArg<cl_float>(5, 4.85f);
+    reduceBornSumKernel.setArg<cl::Buffer>(6, bornSum->getDeviceBuffer());
+    reduceBornSumKernel.setArg<cl::Buffer>(7, params->getDeviceBuffer());
+    reduceBornSumKernel.setArg<cl::Buffer>(8, bornRadii->getDeviceBuffer());
+    reduceBornSumKernel.setArg<cl::Buffer>(9, obcChain->getDeviceBuffer());
+    cl.executeKernel(reduceBornSumKernel, cl.getPaddedNumAtoms());
+}
+
+double OpenCLCalcGBSAOBCForceKernel::executeEnergy(ContextImpl& context) {
+    executeForces(context);
+    return 0.0;
+}
 
 OpenCLIntegrateVerletStepKernel::~OpenCLIntegrateVerletStepKernel() {
 }

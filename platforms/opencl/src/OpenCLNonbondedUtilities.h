@@ -37,16 +37,37 @@ namespace OpenMM {
 class OpenCLCompact;
 
 /**
- * This class implements features that are used by several different force.  It provides
- * a generic interface for calculating nonbonded interactions.
+ * This class provides a generic interface for calculating nonbonded interactions.  It does this in two
+ * ways.  First, it can be used to create and invoke Kernels that evaluate nonbonded interactions.  Clients
+ * only need to provide the code for evaluating a single interaction and the list of parameters it depends on.
+ * A complete kernel is then synthesized using an appropriate algorithm to evaluate all interactions on all
+ * atoms.
+ *
+ * Second, this class itself creates and invokes a single "default" interaction kernel, allowing several
+ * different forces to be evaluated at once for greater efficiency.  Call addInteraction() and addParameter()
+ * to add interactions to this default kernel.
+ *
+ * During each force or energy evaluation, the following sequence of steps takes place:
+ *
+ * 1. Data structures (e.g. neighbor lists) are calculated to allow nonbonded interactions to be evaluated
+ * quickly.
+ *
+ * 2. calcForces() or calcEnergy() is called on each ForceImpl in the System.
+ *
+ * 3. Finally, the default interaction kernel is invoked to calculate all interactions that were added
+ * to it.
+ *
+ * This sequence means that the default interaction kernel may depend on quantities that were calculated
+ * by ForceImpls during calcForces() or calcEnergy().
  */
 
 class OpenCLNonbondedUtilities {
 public:
+    class ParameterInfo;
     OpenCLNonbondedUtilities(OpenCLContext& context);
     ~OpenCLNonbondedUtilities();
     /**
-     * Add a nonbonded interaction.
+     * Add a nonbonded interaction to be evaluated by the default interaction kernel.
      *
      * @param usesCutoff     specifies whether a cutoff should be applied to this interaction
      * @param usesPeriodic   specifies whether periodic boundary conditions should be applied to this interaction
@@ -56,14 +77,9 @@ public:
      */
     void addInteraction(bool usesCutoff, bool usesPeriodic, double cutoffDistance, const std::vector<std::vector<int> >& exclusionList, const std::string& kernel);
     /**
-     * Add a per-atom parameter that interactions may depend on.
-     *
-     * @param name      the name of the parameter
-     * @param type      the data type of the parameter
-     * @param size      the size of the parameter in bytes
-     * @param buffer    the buffer containing the parameter values
+     * Add a per-atom parameter that the default interaction kernel may depend on.
      */
-    void addParameter(const std::string& name, const std::string& type, int size, cl::Buffer& buffer);
+    void addParameter(const ParameterInfo& parameter);
     /**
      * Initialize this object in preparation for a simulation.
      */
@@ -85,6 +101,12 @@ public:
      */
     bool getUsePeriodic() {
         return usePeriodic;
+    }
+    /**
+     * Get whether there is one force buffer per atom block.
+     */
+    bool getForceBufferPerAtomBlock() {
+        return forceBufferPerAtomBlock;
     }
     /**
      * Get the cutoff distance.
@@ -143,8 +165,24 @@ public:
     OpenCLArray<cl_uint>& getInteractionFlags() {
         return *interactionFlags;
     }
+    /**
+     * Create a Kernel for evaluating a nonbonded interaction.  Cutoffs and periodic boundary conditions
+     * are assumed to be the same as those for the default interaction Kernel, since this kernel will use
+     * the same neighbor list.
+     * 
+     * @param source        the source code for evaluating the force and energy
+     * @param params        the per-atom parameters this kernel may depend on
+     * @param useExclusions specifies whether exclusions are applied to this interaction
+     */
+    cl::Kernel createInteractionKernel(const std::string& source, const std::vector<ParameterInfo> params, bool useExclusions) const;
+    /**
+     * Invoke a Kernel that was created by createInteractionKernel.
+     *
+     * @param kernel     the Kernel to invoke
+     * @param params     the per-atom parameters to pass to the Kernel
+     */
+    void invokeInteractionKernel(cl::Kernel kernel, const std::vector<ParameterInfo>& params);
 private:
-    class ParameterInfo;
     OpenCLContext& context;
     cl::Kernel forceKernel;
     cl::Kernel findBlockBoundsKernel;
@@ -164,16 +202,41 @@ private:
     std::string kernelSource;
     std::map<std::string, std::string> kernelDefines;
     double cutoff;
-    bool useCutoff, usePeriodic, forceBufferPerAtomBlock, hasComputedInteractions;
+    bool useCutoff, usePeriodic, forceBufferPerAtomBlock;
     int numForceBuffers;
     mm_float4 periodicBoxSize;
 };
 
+/**
+ * This class stores information about a per-atom parameter that may be used in a nonbonded kernel.
+ */
+
 class OpenCLNonbondedUtilities::ParameterInfo {
 public:
+    /**
+     * Create a ParameterInfo object.
+     *
+     * @param name      the name of the parameter
+     * @param type      the data type of the parameter
+     * @param size      the size of the parameter in bytes
+     * @param buffer    the buffer containing the parameter values
+     */
     ParameterInfo(const std::string& name, const std::string& type, int size, cl::Buffer& buffer) :
             name(name), type(type), size(size), buffer(&buffer) {
     }
+    const std::string& getName() const {
+        return name;
+    }
+    const std::string& getType() const {
+        return type;
+    }
+    int getSize() const {
+        return size;
+    }
+    cl::Buffer& getBuffer() const {
+        return *buffer;
+    }
+private:
     std::string name;
     std::string type;
     int size;
