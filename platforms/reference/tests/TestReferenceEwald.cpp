@@ -95,6 +95,8 @@ void testEwaldExact() {
 //   E is then the energy per pair of ions, so for our case
 //   E has to be divided by 2 (per ion), multiplied by N(avogadro), multiplied by number of particles, and divided by 1000 for kJ
    	double exactEnergy        = - (1.7476 * 1.6022e-19 * 1.6022e-19  * 6.02214e+23 * numParticles) / (1.112e-10 * 0.282e-9 * 2 * 1000);
+    //cout << "exact\t\t: " << exactEnergy << endl;
+    //cout << "calc\t\t: " << state.getPotentialEnergy() << endl;
     ASSERT_EQUAL_TOL(exactEnergy, state.getPotentialEnergy(), 100*TOL);
 
 }
@@ -140,9 +142,10 @@ void testEwaldPME() {
     ASSERT_EQUAL_TOL(-3.82047e+05, state1.getPotentialEnergy(), tol);
 
 //   (2)   CHECK WHETHER THE EWALD FORCES ARE THE SAME AS THE GROMACS OUTPUT
+//         these are forces for alpha: 2.82756, kmax(x/y/z) = 11
   
-    tol = 1e-1;
-    #include "nacl_amorph_GromacsForcesEwald.dat"
+    tol = 1e-2;
+//    #include "nacl_amorph_GromacsForcesEwald.dat"
 
 //   (3)   CHECK SELF-CONSISTENCY
 
@@ -183,14 +186,10 @@ void testEwaldPME() {
     tol = 1e-5;
     ASSERT_EQUAL_TOL(-3.82047e+05, state3.getPotentialEnergy(), tol);
 
-//  Gromacs Ewald energy
-    tol = 1e-5;
-    ASSERT_EQUAL_TOL(-3.82047e+05, state3.getPotentialEnergy(), tol);
-
-//   (5) CHECK WHETHER PME FORCES ARE THE SAME AS THE GROMACS OUTPUT
+//   (5) CHECK WHETHER PME FORCES ARE THE SAME AS THE GROMACS OUTPUT USING EWALD
 
     tol = 1e-1;
-    #include "nacl_amorph_GromacsForcesPME.dat"
+//    #include "nacl_amorph_GromacsForcesEwald.dat"
 
 //   (6) CHECK PME FOR SELF-CONSISTENCY
 
