@@ -374,7 +374,7 @@ private:
  */
 class OpenCLCalcGBSAOBCForceKernel : public CalcGBSAOBCForceKernel {
 public:
-    OpenCLCalcGBSAOBCForceKernel(std::string name, const Platform& platform, OpenCLContext& cl) : CalcGBSAOBCForceKernel(name, platform), cl(cl), bornSum(NULL) {
+    OpenCLCalcGBSAOBCForceKernel(std::string name, const Platform& platform, OpenCLContext& cl) : CalcGBSAOBCForceKernel(name, platform), cl(cl), hasCreatedKernels(false) {
     }
     ~OpenCLCalcGBSAOBCForceKernel();
     /**
@@ -399,6 +399,7 @@ public:
     double executeEnergy(ContextImpl& context);
 private:
     double prefactor;
+    bool hasCreatedKernels;
     OpenCLContext& cl;
     OpenCLArray<mm_float2>* params;
     OpenCLArray<cl_float>* bornSum;
@@ -407,6 +408,8 @@ private:
     OpenCLArray<cl_float>* obcChain;
     cl::Kernel computeBornSumKernel;
     cl::Kernel reduceBornSumKernel;
+    cl::Kernel force1Kernel;
+    cl::Kernel reduceBornForceKernel;
 };
 
 /**

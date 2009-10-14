@@ -38,7 +38,7 @@ class OpenCLCompact;
 
 /**
  * This class provides a generic interface for calculating nonbonded interactions.  It does this in two
- * ways.  First, it can be used to create and invoke Kernels that evaluate nonbonded interactions.  Clients
+ * ways.  First, it can be used to create Kernels that evaluate nonbonded interactions.  Clients
  * only need to provide the code for evaluating a single interaction and the list of parameters it depends on.
  * A complete kernel is then synthesized using an appropriate algorithm to evaluate all interactions on all
  * atoms.
@@ -71,11 +71,12 @@ public:
      *
      * @param usesCutoff     specifies whether a cutoff should be applied to this interaction
      * @param usesPeriodic   specifies whether periodic boundary conditions should be applied to this interaction
+     * @param usesExclusions specifies whether this interaction uses exclusions.  If this is true, it must have identical exclusions to every other interaction.
      * @param cutoffDistance the cutoff distance for this interaction (ignored if usesCutoff is false)
      * @param exclusionList  for each atom, specifies the list of other atoms whose interactions should be excluded
      * @param kernel         the code to evaluate the interaction
      */
-    void addInteraction(bool usesCutoff, bool usesPeriodic, double cutoffDistance, const std::vector<std::vector<int> >& exclusionList, const std::string& kernel);
+    void addInteraction(bool usesCutoff, bool usesPeriodic, bool usesExclusions, double cutoffDistance, const std::vector<std::vector<int> >& exclusionList, const std::string& kernel);
     /**
      * Add a per-atom parameter that the default interaction kernel may depend on.
      */
@@ -175,13 +176,6 @@ public:
      * @param useExclusions specifies whether exclusions are applied to this interaction
      */
     cl::Kernel createInteractionKernel(const std::string& source, const std::vector<ParameterInfo> params, bool useExclusions) const;
-    /**
-     * Invoke a Kernel that was created by createInteractionKernel.
-     *
-     * @param kernel     the Kernel to invoke
-     * @param params     the per-atom parameters to pass to the Kernel
-     */
-    void invokeInteractionKernel(cl::Kernel kernel, const std::vector<ParameterInfo>& params);
 private:
     OpenCLContext& context;
     cl::Kernel forceKernel;

@@ -4,7 +4,7 @@ const unsigned int TileSize = 32;
  * Compute nonbonded interactions.
  */
 
-__kernel void computeNonbonded(int paddedNumAtoms, __global float4* forceBuffers, __global float* energyBuffer, __global float4* posq,
+__kernel void computeNonbonded(int numAtoms, int paddedNumAtoms, __global float4* forceBuffers, __global float* energyBuffer, __global float4* posq,
         __global unsigned int* exclusions,  __global unsigned int* exclusionIndices, __local float4* local_posq, __local float4* local_force, __global unsigned int* tiles,
 #ifdef USE_CUTOFF
         float cutoffSquared, float4 periodicBoxSize, __global unsigned int* interactionFlags, __global unsigned int* interactionCount, __local float4* tempBuffer
@@ -31,9 +31,9 @@ __kernel void computeNonbonded(int paddedNumAtoms, __global float4* forceBuffers
         unsigned int tgx = get_local_id(0) & (TileSize-1);
         unsigned int tbx = get_local_id(0) - tgx;
         unsigned int tj = tgx;
-        unsigned int i = x + tgx;
+        unsigned int atom1 = x + tgx;
         float4 force = 0.0f;
-        float4 posq1 = posq[i];
+        float4 posq1 = posq[atom1];
         LOAD_ATOM1_PARAMETERS
         if (x == y) {
             // This tile is on the diagonal.
@@ -58,40 +58,26 @@ __kernel void computeNonbonded(int paddedNumAtoms, __global float4* forceBuffers
                 float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
                 float r = sqrt(r2);
                 float invR = 1.0f / r;
-                float4 posq2 = local_posq[tbx+j];
-                LOAD_ATOM2_PARAMETERS_J
+                int atom2 = tbx+j;
+                float4 posq2 = local_posq[atom2];
+                LOAD_ATOM2_PARAMETERS
+                atom2 = y+j;
                 float dEdR = 0.0f;
                 float tempEnergy = 0.0f;
                 COMPUTE_INTERACTION
-#if defined USE_CUTOFF || defined USE_EXCLUSIONS
-    #if defined USE_CUTOFF && defined USE_EXCLUSIONS
-                excl >>= 1;
-                if (isExcluded || r2 > cutoffSquared) {
-    #elif defined USE_CUTOFF
-                if (r2 > cutoffSquared) {
-    #elif defined USE_EXCLUSIONS
-                excl >>= 1;
-                if (isExcluded) {
-    #endif
-                    dEdR = 0.0f;
-                    tempEnergy  = 0.0f;
-                }
-#endif
                 energy += 0.5f*tempEnergy;
                 delta.xyz *= dEdR;
                 force.xyz -= delta.xyz;
+                excl >>= 1;
             }
 
             // Write results
-            float4 of;
 #ifdef USE_OUTPUT_BUFFER_PER_BLOCK
             unsigned int offset = x + tgx + (x/TileSize)*paddedNumAtoms;
 #else
             unsigned int offset = x + tgx + warp*paddedNumAtoms;
 #endif
-            of = forceBuffers[offset];
-            of.xyz += force.xyz;
-            forceBuffers[offset] = of;
+            forceBuffers[offset].xyz += force.xyz;
         }
         else {
             // This is an off-diagonal tile.
@@ -123,23 +109,19 @@ __kernel void computeNonbonded(int paddedNumAtoms, __global float4* forceBuffers
                             float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
                             float r = sqrt(r2);
                             float invR = 1.0f / r;
-                            float4 posq2 = local_posq[tbx+j];
-                            LOAD_ATOM2_PARAMETERS_J
+                            int atom2 = tbx+j;
+                            float4 posq2 = local_posq[atom2];
+                            LOAD_ATOM2_PARAMETERS
+                            atom2 = y+j;
                             float dEdR = 0.0f;
                             float tempEnergy = 0.0f;
                             COMPUTE_INTERACTION
-#ifdef USE_CUTOFF
-                            if (r2 > cutoffSquared) {
-                                dEdR = 0.0f;
-				tempEnergy = 0.0f;
-                            }
-#endif
 			    energy += tempEnergy;
                             delta.xyz *= dEdR;
                             force.xyz -= delta.xyz;
                             tempBuffer[get_local_id(0)] = delta;
 
-                            // Sum the forces on atom j.
+                            // Sum the forces on atom2.
 
                             if (tgx % 2 == 0)
                                 tempBuffer[get_local_id(0)].xyz += tempBuffer[get_local_id(0)+1].xyz;
@@ -180,35 +162,23 @@ __kernel void computeNonbonded(int paddedNumAtoms, __global float4* forceBuffers
                     float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
                     float r = sqrt(r2);
                     float invR = 1.0f / r;
-                    float4 posq2 = local_posq[tbx+tj];
-                    LOAD_ATOM2_PARAMETERS_TJ
+                    int atom2 = tbx+tj;
+                    float4 posq2 = local_posq[atom2];
+                    LOAD_ATOM2_PARAMETERS
+                    atom2 = y+tj;
                     float dEdR = 0.0f;
                     float tempEnergy = 0.0f;
                     COMPUTE_INTERACTION
-#if defined USE_CUTOFF || defined USE_EXCLUSIONS
-    #if defined USE_CUTOFF && defined USE_EXCLUSIONS
-                    excl >>= 1;
-                    if (isExcluded || r2 > cutoffSquared) {
-    #elif defined USE_CUTOFF
-                    if (r2 > cutoffSquared) {
-    #elif defined USE_EXCLUSIONS
-                    excl >>= 1;
-                    if (isExcluded) {
-    #endif
-                        dEdR = 0.0f;
-			tempEnergy  = 0.0f;
-                    }
-#endif
 		    energy += tempEnergy;
                     delta.xyz *= dEdR;
                     force.xyz -= delta.xyz;
                     local_force[tbx+tj].xyz += delta.xyz;
+                    excl >>= 1;
                     tj = (tj + 1) & (TileSize - 1);
                 }
             }
 
             // Write results
-            float4 of;
 #ifdef USE_OUTPUT_BUFFER_PER_BLOCK
             unsigned int offset1 = x + tgx + (y/TileSize)*paddedNumAtoms;
             unsigned int offset2 = y + tgx + (x/TileSize)*paddedNumAtoms;
@@ -216,12 +186,8 @@ __kernel void computeNonbonded(int paddedNumAtoms, __global float4* forceBuffers
             unsigned int offset1 = x + tgx + warp*paddedNumAtoms;
             unsigned int offset2 = y + tgx + warp*paddedNumAtoms;
 #endif
-            of = forceBuffers[offset1];
-            of.xyz += force.xyz;
-            forceBuffers[offset1] = of;
-            of = forceBuffers[offset2];
-            of.xyz += local_force[get_local_id(0)].xyz;
-            forceBuffers[offset2] = of;
+            forceBuffers[offset1].xyz += force.xyz;
+            forceBuffers[offset2].xyz += local_force[get_local_id(0)].xyz;
             lasty = y;
         }
         pos++;

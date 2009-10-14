@@ -1,4 +1,8 @@
-{
+#ifdef USE_CUTOFF
+if (!isExcluded && r2 < cutoffSquared) {
+#else
+if (!isExcluded) {
+#endif
     float sig = sigmaEpsilon1.x + sigmaEpsilon2.x;
     float sig2 = invR*sig;
     sig2 *= sig2;

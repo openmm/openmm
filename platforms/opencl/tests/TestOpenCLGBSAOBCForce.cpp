@@ -72,7 +72,7 @@ void testSingleParticle() {
     double bornEnergy = (-0.5*0.5/(8*PI_M*eps0))*(1.0/gbsa->getSoluteDielectric()-1.0/gbsa->getSolventDielectric())/bornRadius;
     double extendedRadius = bornRadius+0.14; // probe radius
     double nonpolarEnergy = CAL2JOULE*PI_M*0.0216*(10*extendedRadius)*(10*extendedRadius)*std::pow(0.15/bornRadius, 6.0); // Where did this formula come from?  Just copied it from CpuImplicitSolvent.cpp
-//    ASSERT_EQUAL_TOL((bornEnergy+nonpolarEnergy), state.getPotentialEnergy(), 0.01);
+    ASSERT_EQUAL_TOL((bornEnergy+nonpolarEnergy), state.getPotentialEnergy(), 0.01);
 }
 
 void testCutoffAndPeriodic() {
@@ -214,11 +214,11 @@ int main() {
     try {
         testSingleParticle();
         testCutoffAndPeriodic();
-//        for (int i = 5; i < 11; i++) {
-//            testForce(i*i*i, NonbondedForce::NoCutoff, GBSAOBCForce::NoCutoff);
-//            testForce(i*i*i, NonbondedForce::CutoffNonPeriodic, GBSAOBCForce::CutoffNonPeriodic);
-//            testForce(i*i*i, NonbondedForce::CutoffPeriodic, GBSAOBCForce::CutoffPeriodic);
-//        }
+        for (int i = 5; i < 11; i++) {
+            testForce(i*i*i, NonbondedForce::NoCutoff, GBSAOBCForce::NoCutoff);
+            testForce(i*i*i, NonbondedForce::CutoffNonPeriodic, GBSAOBCForce::CutoffNonPeriodic);
+            testForce(i*i*i, NonbondedForce::CutoffPeriodic, GBSAOBCForce::CutoffPeriodic);
+        }
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;
