@@ -109,6 +109,7 @@ __kernel void computeBornSum(int numAtoms, int paddedNumAtoms, __global float* g
                             delta.z -= floor(delta.z/periodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
                             float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
+                            tempBuffer[get_local_id(0)] = 0.0f;
 #ifdef USE_CUTOFF
                             if (atom1 < numAtoms && y+j < numAtoms && r2 < cutoffSquared) {
 #else
@@ -118,7 +119,7 @@ __kernel void computeBornSum(int numAtoms, int paddedNumAtoms, __global float* g
                                 float invR = 1.0f/r;
                                 float2 params2 = local_params[tbx+j];
                                 float rScaledRadiusJ = r+params2.y;
-                                if ((j != tgx) && (params1.x < rScaledRadiusJ)) {
+                                if (params1.x < rScaledRadiusJ) {
                                     float l_ij = 1.0f/max(params1.x, fabs(r-params2.y));
                                     float u_ij = 1.0f/rScaledRadiusJ;
                                     float l_ij2 = l_ij*l_ij;
@@ -130,7 +131,7 @@ __kernel void computeBornSum(int numAtoms, int paddedNumAtoms, __global float* g
                                         bornSum += 2.0f*(1.0f/params1.x-l_ij);
                                 }
                                 float rScaledRadiusI = r+params1.y;
-                                if ((j != tgx) && (params2.x < rScaledRadiusJ)) {
+                                if (params2.x < rScaledRadiusJ) {
                                     float l_ij = 1.0f/max(params2.x, fabs(r-params1.y));
                                     float u_ij = 1.0f/rScaledRadiusJ;
                                     float l_ij2 = l_ij*l_ij;
@@ -185,7 +186,7 @@ __kernel void computeBornSum(int numAtoms, int paddedNumAtoms, __global float* g
                         float invR = 1.0f/r;
                         float2 params2 = local_params[tbx+tj];
                         float rScaledRadiusJ = r+params2.y;
-                        if ((tj != tgx) && (params1.x < rScaledRadiusJ)) {
+                        if (params1.x < rScaledRadiusJ) {
                             float l_ij = 1.0f/max(params1.x, fabs(r-params2.y));
                             float u_ij = 1.0f/rScaledRadiusJ;
                             float l_ij2 = l_ij*l_ij;
@@ -197,7 +198,7 @@ __kernel void computeBornSum(int numAtoms, int paddedNumAtoms, __global float* g
                                 bornSum += 2.0f*(1.0f/params1.x-l_ij);
                         }
                         float rScaledRadiusI = r+params1.y;
-                        if ((tj != tgx) && (params2.x < rScaledRadiusJ)) {
+                        if (params2.x < rScaledRadiusJ) {
                             float l_ij = 1.0f/max(params2.x, fabs(r-params1.y));
                             float u_ij = 1.0f/rScaledRadiusJ;
                             float l_ij2 = l_ij*l_ij;
@@ -207,7 +208,7 @@ __kernel void computeBornSum(int numAtoms, int paddedNumAtoms, __global float* g
                                              (0.25f*params1.y*params1.y*invR)*(l_ij2-u_ij2);
                             if (params2.x < params1.x-r)
                                 term += 2.0f*(1.0f/params2.x-l_ij);
-                            local_bornSum[tbx+tj] = term;
+                            local_bornSum[tbx+tj] += term;
                         }
                     }
                     tj = (tj + 1) & (TileSize - 1);
@@ -245,7 +246,6 @@ __kernel void reduceBornSum(int numAtoms, int bufferSize, int numBuffers, float 
         float sum = bornSum[index];
         for (int i = index+bufferSize; i < totalSize; i += bufferSize)
             sum += bornSum[i];
-        bornSum[index] = sum;
 
         // Now calculate Born radius and OBC term.
 
@@ -254,10 +254,10 @@ __kernel void reduceBornSum(int numAtoms, int bufferSize, int numBuffers, float 
         float sum2 = sum*sum;
         float sum3 = sum*sum2;
         float tanhSum = tanh(alpha*sum - beta*sum2 + gamma*sum3);
-        float nonOffsetRadii = offsetRadius + dielectricOffset;
-        float radius = 1.0f/(1.0f/offsetRadius - tanhSum/nonOffsetRadii);
+        float nonOffsetRadius = offsetRadius + dielectricOffset;
+        float radius = 1.0f/(1.0f/offsetRadius - tanhSum/nonOffsetRadius);
         float chain = offsetRadius*(alpha - 2.0f*beta*sum + 3.0f*gamma*sum2);
-        chain = (1.0f-tanhSum*tanhSum)*chain / nonOffsetRadii;
+        chain = (1.0f-tanhSum*tanhSum)*chain / nonOffsetRadius;
         bornRadii[index] = radius;
         obcChain[index] = chain;
         index += get_global_size(0);
@@ -347,7 +347,7 @@ __kernel void computeGBSAForce1(int numAtoms, int paddedNumAtoms, float prefacto
             unsigned int offset = x + tgx + warp*paddedNumAtoms;
 #endif
             forceBuffers[offset].xyz += force.xyz;
-            global_bornForce[offset] = force.w;
+            global_bornForce[offset] += force.w;
         }
         else {
             // This is an off-diagonal tile.
@@ -401,7 +401,7 @@ __kernel void computeGBSAForce1(int numAtoms, int paddedNumAtoms, float prefacto
 			    energy += tempEnergy;
                             delta.xyz *= dEdR;
                             force.xyz -= delta.xyz;
-                            tempBuffer[get_local_id(0)] = (float4) (delta.xyz, dGpol_dalpha2_ij*bornRadius2);
+                            tempBuffer[get_local_id(0)] = (float4) (delta.xyz, dGpol_dalpha2_ij*bornRadius1);
 
                             // Sum the forces on atom j.
 
@@ -459,7 +459,7 @@ __kernel void computeGBSAForce1(int numAtoms, int paddedNumAtoms, float prefacto
                         energy += tempEnergy;
                         delta.xyz *= dEdR;
                         force.xyz -= delta.xyz;
-                        local_force[tbx+tj].xyz += delta.xyz;
+                        local_force[tbx+tj] += (float4) (delta.xyz, dGpol_dalpha2_ij*bornRadius1);
                     }
                     tj = (tj + 1) & (TileSize - 1);
                 }
@@ -475,8 +475,8 @@ __kernel void computeGBSAForce1(int numAtoms, int paddedNumAtoms, float prefacto
 #endif
             forceBuffers[offset1].xyz += force.xyz;
             forceBuffers[offset2].xyz += local_force[get_local_id(0)].xyz;
-            global_bornForce[offset1] = force.w;
-            global_bornForce[offset2] = local_force[get_local_id(0)].w;
+            global_bornForce[offset1] += force.w;
+            global_bornForce[offset2] += local_force[get_local_id(0)].w;
             lasty = y;
         }
         pos++;

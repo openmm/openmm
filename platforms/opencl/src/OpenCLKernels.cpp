@@ -767,6 +767,21 @@ double OpenCLCalcNonbondedForceKernel::executeEnergy(ContextImpl& context) {
 //        SetCustomNonbondedGlobalParams(&globalParamValues[0]);
 //}
 //
+
+class OpenCLGBSAOBCForceInfo : public OpenCLForceInfo {
+public:
+    OpenCLGBSAOBCForceInfo(int requiredBuffers, const GBSAOBCForce& force) : OpenCLForceInfo(requiredBuffers), force(force) {
+    }
+    bool areParticlesIdentical(int particle1, int particle2) {
+        double charge1, charge2, radius1, radius2, scale1, scale2;
+        force.getParticleParameters(particle1, charge1, radius1, scale1);
+        force.getParticleParameters(particle2, charge2, radius2, scale2);
+        return (charge1 == charge2 && radius1 == radius2 && scale1 == scale2);
+    }
+private:
+    const GBSAOBCForce& force;
+};
+
 OpenCLCalcGBSAOBCForceKernel::~OpenCLCalcGBSAOBCForceKernel() {
     if (params != NULL)
         delete params;
@@ -807,6 +822,7 @@ void OpenCLCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOB
     nb.addInteraction(useCutoff, usePeriodic, false, force.getCutoffDistance(), vector<vector<int> >(), source);
     nb.addParameter(OpenCLNonbondedUtilities::ParameterInfo("obcParams", "float2", sizeof(cl_float2), params->getDeviceBuffer()));;
     nb.addParameter(OpenCLNonbondedUtilities::ParameterInfo("bornForce", "float", sizeof(cl_float), bornForce->getDeviceBuffer()));;
+    cl.addForce(new OpenCLGBSAOBCForceInfo(nb.getNumForceBuffers(), force));
 }
 
 void OpenCLCalcGBSAOBCForceKernel::executeForces(ContextImpl& context) {

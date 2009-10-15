@@ -282,7 +282,7 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int*
             of.z                       += af.z;
             of.w                       += af.w;
             cSim.pForce4a[offset]       = of;
-            cSim.pBornForce[offset]     = af.w;
+            cSim.pBornForce[offset]     = of.w;
 #else
             unsigned int offset         = x + tgx + (x >> GRIDBITS) * cSim.stride;
             cSim.pForce4a[offset]       = af;
