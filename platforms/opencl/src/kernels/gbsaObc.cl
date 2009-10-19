@@ -7,10 +7,10 @@ const float surfaceAreaFactor = -6.0f*3.14159265358979323846f*0.0216f*1000.0f*0.
  * Compute the Born sum.
  */
 
-__kernel void computeBornSum(int numAtoms, int paddedNumAtoms, __global float* global_bornSum, __local float* local_bornSum, __global float4* posq,
+__kernel void computeBornSum(__global float* global_bornSum, __local float* local_bornSum, __global float4* posq,
         __local float4* local_posq, __global float2* global_params, __local float2* local_params, __global unsigned int* tiles,
 #ifdef USE_CUTOFF
-        float cutoffSquared, float4 periodicBoxSize, __global unsigned int* interactionFlags, __global unsigned int* interactionCount, __local float* tempBuffer) {
+        __global unsigned int* interactionFlags, __global unsigned int* interactionCount, __local float* tempBuffer) {
 #else
         unsigned int numTiles) {
 #endif
@@ -42,19 +42,19 @@ __kernel void computeBornSum(int numAtoms, int paddedNumAtoms, __global float* g
             local_posq[get_local_id(0)] = posq1;
             local_params[get_local_id(0)] = params1;
             unsigned int xi = x/TileSize;
-            unsigned int tile = xi+xi*paddedNumAtoms/TileSize-xi*(xi+1)/2;
+            unsigned int tile = xi+xi*PADDED_NUM_ATOMS/TileSize-xi*(xi+1)/2;
             for (unsigned int j = 0; j < TileSize; j++) {
                 float4 delta = (float4) (local_posq[tbx+j].xyz - posq1.xyz, 0.0f);
 #ifdef USE_PERIODIC
-                delta.x -= floor(delta.x/periodicBoxSize.x+0.5f)*periodicBoxSize.x;
-                delta.y -= floor(delta.y/periodicBoxSize.y+0.5f)*periodicBoxSize.y;
-                delta.z -= floor(delta.z/periodicBoxSize.z+0.5f)*periodicBoxSize.z;
+                delta.x -= floor(delta.x/PERIODIC_BOX_SIZE_X+0.5f)*PERIODIC_BOX_SIZE_X;
+                delta.y -= floor(delta.y/PERIODIC_BOX_SIZE_Y+0.5f)*PERIODIC_BOX_SIZE_Y;
+                delta.z -= floor(delta.z/PERIODIC_BOX_SIZE_Z+0.5f)*PERIODIC_BOX_SIZE_Z;
 #endif
                 float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
 #ifdef USE_CUTOFF
-                if (atom1 < numAtoms && y+j < numAtoms && r2 < cutoffSquared) {
+                if (atom1 < NUM_ATOMS && y+j < NUM_ATOMS && r2 < CUTOFF_SQUARED) {
 #else
-                if (atom1 < numAtoms && y+j < numAtoms) {
+                if (atom1 < NUM_ATOMS && y+j < NUM_ATOMS) {
 #endif
                     float r = sqrt(r2);
                     float invR = 1.0f/r;
@@ -76,9 +76,9 @@ __kernel void computeBornSum(int numAtoms, int paddedNumAtoms, __global float* g
 
             // Write results
 #ifdef USE_OUTPUT_BUFFER_PER_BLOCK
-            unsigned int offset = x + tgx + (x/TileSize)*paddedNumAtoms;
+            unsigned int offset = x + tgx + (x/TileSize)*PADDED_NUM_ATOMS;
 #else
-            unsigned int offset = x + tgx + warp*paddedNumAtoms;
+            unsigned int offset = x + tgx + warp*PADDED_NUM_ATOMS;
 #endif
             global_bornSum[offset] += bornSum;
         }
@@ -104,16 +104,16 @@ __kernel void computeBornSum(int numAtoms, int paddedNumAtoms, __global float* g
                         if ((flags&(1<<j)) != 0) {
                             float4 delta = (float4) (local_posq[tbx+j].xyz - posq1.xyz, 0.0f);
 #ifdef USE_PERIODIC
-                            delta.x -= floor(delta.x/periodicBoxSize.x+0.5f)*periodicBoxSize.x;
-                            delta.y -= floor(delta.y/periodicBoxSize.y+0.5f)*periodicBoxSize.y;
-                            delta.z -= floor(delta.z/periodicBoxSize.z+0.5f)*periodicBoxSize.z;
+                            delta.x -= floor(delta.x/PERIODIC_BOX_SIZE_X+0.5f)*PERIODIC_BOX_SIZE_X;
+                            delta.y -= floor(delta.y/PERIODIC_BOX_SIZE_Y+0.5f)*PERIODIC_BOX_SIZE_Y;
+                            delta.z -= floor(delta.z/PERIODIC_BOX_SIZE_Z+0.5f)*PERIODIC_BOX_SIZE_Z;
 #endif
                             float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
                             tempBuffer[get_local_id(0)] = 0.0f;
 #ifdef USE_CUTOFF
-                            if (atom1 < numAtoms && y+j < numAtoms && r2 < cutoffSquared) {
+                            if (atom1 < NUM_ATOMS && y+j < NUM_ATOMS && r2 < CUTOFF_SQUARED) {
 #else
-                            if (atom1 < numAtoms && y+j < numAtoms) {
+                            if (atom1 < NUM_ATOMS && y+j < NUM_ATOMS) {
 #endif
                                 float r = sqrt(r2);
                                 float invR = 1.0f/r;
@@ -168,19 +168,19 @@ __kernel void computeBornSum(int numAtoms, int paddedNumAtoms, __global float* g
 
                 unsigned int xi = x/TileSize;
                 unsigned int yi = y/TileSize;
-                unsigned int tile = xi+yi*paddedNumAtoms/TileSize-yi*(yi+1)/2;
+                unsigned int tile = xi+yi*PADDED_NUM_ATOMS/TileSize-yi*(yi+1)/2;
                 for (unsigned int j = 0; j < TileSize; j++) {
                     float4 delta = (float4) (local_posq[tbx+tj].xyz - posq1.xyz, 0.0f);
 #ifdef USE_PERIODIC
-                    delta.x -= floor(delta.x/periodicBoxSize.x+0.5f)*periodicBoxSize.x;
-                    delta.y -= floor(delta.y/periodicBoxSize.y+0.5f)*periodicBoxSize.y;
-                    delta.z -= floor(delta.z/periodicBoxSize.z+0.5f)*periodicBoxSize.z;
+                    delta.x -= floor(delta.x/PERIODIC_BOX_SIZE_X+0.5f)*PERIODIC_BOX_SIZE_X;
+                    delta.y -= floor(delta.y/PERIODIC_BOX_SIZE_Y+0.5f)*PERIODIC_BOX_SIZE_Y;
+                    delta.z -= floor(delta.z/PERIODIC_BOX_SIZE_Z+0.5f)*PERIODIC_BOX_SIZE_Z;
 #endif
                     float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
 #ifdef USE_CUTOFF
-                    if (atom1 < numAtoms && y+tj < numAtoms && r2 < cutoffSquared) {
+                    if (atom1 < NUM_ATOMS && y+tj < NUM_ATOMS && r2 < CUTOFF_SQUARED) {
 #else
-                    if (atom1 < numAtoms && y+tj < numAtoms) {
+                    if (atom1 < NUM_ATOMS && y+tj < NUM_ATOMS) {
 #endif
                         float r = sqrt(r2);
                         float invR = 1.0f/r;
@@ -218,11 +218,11 @@ __kernel void computeBornSum(int numAtoms, int paddedNumAtoms, __global float* g
             // Write results
             float4 of;
 #ifdef USE_OUTPUT_BUFFER_PER_BLOCK
-            unsigned int offset1 = x + tgx + (y/TileSize)*paddedNumAtoms;
-            unsigned int offset2 = y + tgx + (x/TileSize)*paddedNumAtoms;
+            unsigned int offset1 = x + tgx + (y/TileSize)*PADDED_NUM_ATOMS;
+            unsigned int offset2 = y + tgx + (x/TileSize)*PADDED_NUM_ATOMS;
 #else
-            unsigned int offset1 = x + tgx + warp*paddedNumAtoms;
-            unsigned int offset2 = y + tgx + warp*paddedNumAtoms;
+            unsigned int offset1 = x + tgx + warp*PADDED_NUM_ATOMS;
+            unsigned int offset2 = y + tgx + warp*PADDED_NUM_ATOMS;
 #endif
             global_bornSum[offset1] += bornSum;
             global_bornSum[offset2] += local_bornSum[get_local_id(0)];
@@ -236,10 +236,10 @@ __kernel void computeBornSum(int numAtoms, int paddedNumAtoms, __global float* g
  * Reduce the Born sums to compute the Born radii.
  */
 
-__kernel void reduceBornSum(int numAtoms, int bufferSize, int numBuffers, float alpha, float beta, float gamma,
+__kernel void reduceBornSum(int bufferSize, int numBuffers, float alpha, float beta, float gamma,
             __global float* bornSum, __global float2* params, __global float* bornRadii, __global float* obcChain) {
     unsigned int index = get_global_id(0);
-    while (index < numAtoms) {
+    while (index < NUM_ATOMS) {
         // Get summed Born data
 
         int totalSize = bufferSize*numBuffers;
@@ -268,11 +268,11 @@ __kernel void reduceBornSum(int numAtoms, int bufferSize, int numBuffers, float 
  * First part of computing the GBSA interaction.
  */
 
-__kernel void computeGBSAForce1(int numAtoms, int paddedNumAtoms, float prefactor, __global float4* forceBuffers, __global float* energyBuffer,
+__kernel void computeGBSAForce1(__global float4* forceBuffers, __global float* energyBuffer,
         __global float4* posq, __local float4* local_posq, __local float4* local_force, __global float* global_bornRadii, __local float* local_bornRadii,
         __global float* global_bornForce, __local float* local_bornForce, __global unsigned int* tiles,
 #ifdef USE_CUTOFF
-        float cutoffSquared, float4 periodicBoxSize, __global unsigned int* interactionFlags, __global unsigned int* interactionCount, __local float4* tempBuffer) {
+        __global unsigned int* interactionFlags, __global unsigned int* interactionCount, __local float4* tempBuffer) {
 #else
         unsigned int numTiles) {
 #endif
@@ -304,14 +304,14 @@ __kernel void computeGBSAForce1(int numAtoms, int paddedNumAtoms, float prefacto
             local_posq[get_local_id(0)] = posq1;
             local_bornRadii[get_local_id(0)] = bornRadius1;
             unsigned int xi = x/TileSize;
-            unsigned int tile = xi+xi*paddedNumAtoms/TileSize-xi*(xi+1)/2;
+            unsigned int tile = xi+xi*PADDED_NUM_ATOMS/TileSize-xi*(xi+1)/2;
             for (unsigned int j = 0; j < TileSize; j++) {
-                if (atom1 < numAtoms && y+j < numAtoms) {
+                if (atom1 < NUM_ATOMS && y+j < NUM_ATOMS) {
                     float4 delta = (float4) (local_posq[tbx+j].xyz - posq1.xyz, 0.0f);
 #ifdef USE_PERIODIC
-                    delta.x -= floor(delta.x/periodicBoxSize.x+0.5f)*periodicBoxSize.x;
-                    delta.y -= floor(delta.y/periodicBoxSize.y+0.5f)*periodicBoxSize.y;
-                    delta.z -= floor(delta.z/periodicBoxSize.z+0.5f)*periodicBoxSize.z;
+                    delta.x -= floor(delta.x/PERIODIC_BOX_SIZE_X+0.5f)*PERIODIC_BOX_SIZE_X;
+                    delta.y -= floor(delta.y/PERIODIC_BOX_SIZE_Y+0.5f)*PERIODIC_BOX_SIZE_Y;
+                    delta.z -= floor(delta.z/PERIODIC_BOX_SIZE_Z+0.5f)*PERIODIC_BOX_SIZE_Z;
 #endif
                     float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
                     float r = sqrt(r2);
@@ -323,13 +323,13 @@ __kernel void computeGBSAForce1(int numAtoms, int paddedNumAtoms, float prefacto
                     float expTerm = exp(-D_ij);
                     float denominator2 = r2 + alpha2_ij*expTerm;
                     float denominator = sqrt(denominator2);
-                    float tempEnergy = (prefactor*posq1.w*posq2.w)/denominator;
+                    float tempEnergy = (PREFACTOR*posq1.w*posq2.w)/denominator;
                     float Gpol = tempEnergy/denominator2;
                     float dGpol_dalpha2_ij = -0.5f*Gpol*expTerm*(1.0f+D_ij);
                     force.w += dGpol_dalpha2_ij*bornRadius2;
                     float dEdR = Gpol*(1.0f - 0.25f*expTerm);
 #ifdef USE_CUTOFF
-                    if (r2 > cutoffSquared) {
+                    if (r2 > CUTOFF_SQUARED) {
                         dEdR = 0.0f;
                         tempEnergy  = 0.0f;
                     }
@@ -342,9 +342,9 @@ __kernel void computeGBSAForce1(int numAtoms, int paddedNumAtoms, float prefacto
 
             // Write results
 #ifdef USE_OUTPUT_BUFFER_PER_BLOCK
-            unsigned int offset = x + tgx + (x/TileSize)*paddedNumAtoms;
+            unsigned int offset = x + tgx + (x/TileSize)*PADDED_NUM_ATOMS;
 #else
-            unsigned int offset = x + tgx + warp*paddedNumAtoms;
+            unsigned int offset = x + tgx + warp*PADDED_NUM_ATOMS;
 #endif
             forceBuffers[offset].xyz += force.xyz;
             global_bornForce[offset] += force.w;
@@ -371,9 +371,9 @@ __kernel void computeGBSAForce1(int numAtoms, int paddedNumAtoms, float prefacto
                         if ((flags&(1<<j)) != 0) {
                             float4 delta = (float4) (local_posq[tbx+j].xyz - posq1.xyz, 0.0f);
 #ifdef USE_PERIODIC
-                            delta.x -= floor(delta.x/periodicBoxSize.x+0.5f)*periodicBoxSize.x;
-                            delta.y -= floor(delta.y/periodicBoxSize.y+0.5f)*periodicBoxSize.y;
-                            delta.z -= floor(delta.z/periodicBoxSize.z+0.5f)*periodicBoxSize.z;
+                            delta.x -= floor(delta.x/PERIODIC_BOX_SIZE_X+0.5f)*PERIODIC_BOX_SIZE_X;
+                            delta.y -= floor(delta.y/PERIODIC_BOX_SIZE_Y+0.5f)*PERIODIC_BOX_SIZE_Y;
+                            delta.z -= floor(delta.z/PERIODIC_BOX_SIZE_Z+0.5f)*PERIODIC_BOX_SIZE_Z;
 #endif
                             float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
                             float r = sqrt(r2);
@@ -385,15 +385,15 @@ __kernel void computeGBSAForce1(int numAtoms, int paddedNumAtoms, float prefacto
                             float expTerm = exp(-D_ij);
                             float denominator2 = r2 + alpha2_ij*expTerm;
                             float denominator = sqrt(denominator2);
-                            float tempEnergy = (prefactor*posq1.w*posq2.w)/denominator;
+                            float tempEnergy = (PREFACTOR*posq1.w*posq2.w)/denominator;
                             float Gpol = tempEnergy/denominator2;
                             float dGpol_dalpha2_ij = -0.5f*Gpol*expTerm*(1.0f+D_ij);
                             force.w += dGpol_dalpha2_ij*bornRadius2;
                             float dEdR = Gpol*(1.0f - 0.25f*expTerm);
 #ifdef USE_CUTOFF
-                            if (atom1 >= numAtoms || y+j >= numAtoms || r2 > cutoffSquared) {
+                            if (atom1 >= NUM_ATOMS || y+j >= NUM_ATOMS || r2 > CUTOFF_SQUARED) {
 #else
-                            if (atom1 >= numAtoms || y+j >= numAtoms) {
+                            if (atom1 >= NUM_ATOMS || y+j >= NUM_ATOMS) {
 #endif
                                 dEdR = 0.0f;
 				tempEnergy = 0.0f;
@@ -426,14 +426,14 @@ __kernel void computeGBSAForce1(int numAtoms, int paddedNumAtoms, float prefacto
 
                 unsigned int xi = x/TileSize;
                 unsigned int yi = y/TileSize;
-                unsigned int tile = xi+yi*paddedNumAtoms/TileSize-yi*(yi+1)/2;
+                unsigned int tile = xi+yi*PADDED_NUM_ATOMS/TileSize-yi*(yi+1)/2;
                 for (unsigned int j = 0; j < TileSize; j++) {
-                    if (atom1 < numAtoms && y+tj < numAtoms) {
+                    if (atom1 < NUM_ATOMS && y+tj < NUM_ATOMS) {
                         float4 delta = (float4) (local_posq[tbx+tj].xyz - posq1.xyz, 0.0f);
 #ifdef USE_PERIODIC
-                        delta.x -= floor(delta.x/periodicBoxSize.x+0.5f)*periodicBoxSize.x;
-                        delta.y -= floor(delta.y/periodicBoxSize.y+0.5f)*periodicBoxSize.y;
-                        delta.z -= floor(delta.z/periodicBoxSize.z+0.5f)*periodicBoxSize.z;
+                        delta.x -= floor(delta.x/PERIODIC_BOX_SIZE_X+0.5f)*PERIODIC_BOX_SIZE_X;
+                        delta.y -= floor(delta.y/PERIODIC_BOX_SIZE_Y+0.5f)*PERIODIC_BOX_SIZE_Y;
+                        delta.z -= floor(delta.z/PERIODIC_BOX_SIZE_Z+0.5f)*PERIODIC_BOX_SIZE_Z;
 #endif
                         float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
                         float r = sqrt(r2);
@@ -445,13 +445,13 @@ __kernel void computeGBSAForce1(int numAtoms, int paddedNumAtoms, float prefacto
                         float expTerm = exp(-D_ij);
                         float denominator2 = r2 + alpha2_ij*expTerm;
                         float denominator = sqrt(denominator2);
-                        float tempEnergy = (prefactor*posq1.w*posq2.w)/denominator;
+                        float tempEnergy = (PREFACTOR*posq1.w*posq2.w)/denominator;
                         float Gpol = tempEnergy/denominator2;
                         float dGpol_dalpha2_ij = -0.5f*Gpol*expTerm*(1.0f+D_ij);
                         force.w += dGpol_dalpha2_ij*bornRadius2;
                         float dEdR = Gpol*(1.0f - 0.25f*expTerm);
 #ifdef USE_CUTOFF
-                        if (r2 > cutoffSquared) {
+                        if (r2 > CUTOFF_SQUARED) {
                             dEdR = 0.0f;
                             tempEnergy  = 0.0f;
                         }
@@ -467,11 +467,11 @@ __kernel void computeGBSAForce1(int numAtoms, int paddedNumAtoms, float prefacto
 
             // Write results
 #ifdef USE_OUTPUT_BUFFER_PER_BLOCK
-            unsigned int offset1 = x + tgx + (y/TileSize)*paddedNumAtoms;
-            unsigned int offset2 = y + tgx + (x/TileSize)*paddedNumAtoms;
+            unsigned int offset1 = x + tgx + (y/TileSize)*PADDED_NUM_ATOMS;
+            unsigned int offset2 = y + tgx + (x/TileSize)*PADDED_NUM_ATOMS;
 #else
-            unsigned int offset1 = x + tgx + warp*paddedNumAtoms;
-            unsigned int offset2 = y + tgx + warp*paddedNumAtoms;
+            unsigned int offset1 = x + tgx + warp*PADDED_NUM_ATOMS;
+            unsigned int offset2 = y + tgx + warp*PADDED_NUM_ATOMS;
 #endif
             forceBuffers[offset1].xyz += force.xyz;
             forceBuffers[offset2].xyz += local_force[get_local_id(0)].xyz;
@@ -488,11 +488,11 @@ __kernel void computeGBSAForce1(int numAtoms, int paddedNumAtoms, float prefacto
  * Reduce the Born force.
  */
 
-__kernel void reduceBornForce(int numAtoms, int bufferSize, int numBuffers, __global float* bornForce, __global float* energyBuffer,
+__kernel void reduceBornForce(int bufferSize, int numBuffers, __global float* bornForce, __global float* energyBuffer,
             __global float2* params, __global float* bornRadii, __global float* obcChain) {
     float energy = 0.0f;
     unsigned int index = get_global_id(0);
-    while (index < numAtoms) {
+    while (index < NUM_ATOMS) {
         // Sum the Born force
 
         int totalSize = bufferSize*numBuffers;

@@ -542,11 +542,13 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     if (useCutoff) {
         double reactionFieldK = pow(force.getCutoffDistance(), -3.0)*(force.getReactionFieldDielectric()-1.0)/(2.0*force.getReactionFieldDielectric()+1.0);
         double reactionFieldC = (1.0 / force.getCutoffDistance())*(3.0*force.getReactionFieldDielectric())/(2.0*force.getReactionFieldDielectric()+1.0);
-        char k[50], c[50];
-        sprintf(k, "%.8ef", reactionFieldK);
-        sprintf(c, "%.8ef", reactionFieldC);
-        defines["REACTION_FIELD_K"] = string(k);
-        defines["REACTION_FIELD_C"] = string(c);
+        stringstream k, c;
+        k.precision(8);
+        c.precision(8);
+        k << scientific << reactionFieldK << "f";
+        c << scientific << reactionFieldC << "f";
+        defines["REACTION_FIELD_K"] = k.str();
+        defines["REACTION_FIELD_C"] = c.str();
     }
 //    if (force.getNonbondedMethod() != NonbondedForce::NoCutoff) {
 //        method = CUTOFF;
@@ -838,73 +840,83 @@ void OpenCLCalcGBSAOBCForceKernel::executeForces(ContextImpl& context) {
             defines["USE_CUTOFF"] = "1";
         if (nb.getUsePeriodic())
             defines["USE_PERIODIC"] = "1";
+        stringstream xsize, ysize, zsize, cutoffSquared, prefac;
+        xsize.precision(8);
+        ysize.precision(8);
+        zsize.precision(8);
+        cutoffSquared.precision(8);
+        prefac.precision(8);
+        xsize << scientific << nb.getPeriodicBoxSize().x << "f";
+        ysize << scientific << nb.getPeriodicBoxSize().y << "f";
+        zsize << scientific << nb.getPeriodicBoxSize().z << "f";
+        cutoffSquared << scientific << (nb.getCutoffDistance()*nb.getCutoffDistance()) << "f";
+        prefac << scientific << prefactor << "f";
+        defines["PERIODIC_BOX_SIZE_X"] = xsize.str();
+        defines["PERIODIC_BOX_SIZE_Y"] = ysize.str();
+        defines["PERIODIC_BOX_SIZE_Z"] = zsize.str();
+        defines["CUTOFF_SQUARED"] = cutoffSquared.str();
+        defines["PREFACTOR"] = prefac.str();
+        stringstream natom, padded;
+        natom << cl.getNumAtoms();
+        padded << cl.getPaddedNumAtoms();
+        defines["NUM_ATOMS"] = natom.str();
+        defines["PADDED_NUM_ATOMS"] = padded.str();
         cl::Program program = cl.createProgram(cl.loadSourceFromFile("gbsaObc.cl"), defines);
         computeBornSumKernel = cl::Kernel(program, "computeBornSum");
-        computeBornSumKernel.setArg<cl_int>(0, cl.getNumAtoms());
-        computeBornSumKernel.setArg<cl_int>(1, cl.getPaddedNumAtoms());
-        computeBornSumKernel.setArg<cl::Buffer>(2, bornSum->getDeviceBuffer());
-        computeBornSumKernel.setArg(3, OpenCLContext::ThreadBlockSize*sizeof(cl_float), NULL);
-        computeBornSumKernel.setArg<cl::Buffer>(4, cl.getPosq().getDeviceBuffer());
-        computeBornSumKernel.setArg(5, OpenCLContext::ThreadBlockSize*sizeof(cl_float4), NULL);
-        computeBornSumKernel.setArg<cl::Buffer>(6, params->getDeviceBuffer());
-        computeBornSumKernel.setArg(7, OpenCLContext::ThreadBlockSize*sizeof(cl_float2), NULL);
+        computeBornSumKernel.setArg<cl::Buffer>(0, bornSum->getDeviceBuffer());
+        computeBornSumKernel.setArg(1, OpenCLContext::ThreadBlockSize*sizeof(cl_float), NULL);
+        computeBornSumKernel.setArg<cl::Buffer>(2, cl.getPosq().getDeviceBuffer());
+        computeBornSumKernel.setArg(3, OpenCLContext::ThreadBlockSize*sizeof(cl_float4), NULL);
+        computeBornSumKernel.setArg<cl::Buffer>(4, params->getDeviceBuffer());
+        computeBornSumKernel.setArg(5, OpenCLContext::ThreadBlockSize*sizeof(cl_float2), NULL);
         if (nb.getUseCutoff()) {
-            computeBornSumKernel.setArg<cl::Buffer>(8, nb.getInteractingTiles().getDeviceBuffer());
-            computeBornSumKernel.setArg<cl_float>(9, nb.getCutoffDistance()*nb.getCutoffDistance());
-            computeBornSumKernel.setArg<mm_float4>(10, nb.getPeriodicBoxSize());
-            computeBornSumKernel.setArg<cl::Buffer>(11, nb.getInteractionFlags().getDeviceBuffer());
-            computeBornSumKernel.setArg<cl::Buffer>(12, nb.getInteractionCount().getDeviceBuffer());
-            computeBornSumKernel.setArg(13, OpenCLContext::ThreadBlockSize*sizeof(cl_float), NULL);
+            computeBornSumKernel.setArg<cl::Buffer>(6, nb.getInteractingTiles().getDeviceBuffer());
+            computeBornSumKernel.setArg<cl::Buffer>(7, nb.getInteractionFlags().getDeviceBuffer());
+            computeBornSumKernel.setArg<cl::Buffer>(8, nb.getInteractionCount().getDeviceBuffer());
+            computeBornSumKernel.setArg(9, OpenCLContext::ThreadBlockSize*sizeof(cl_float), NULL);
         }
         else {
-            computeBornSumKernel.setArg<cl::Buffer>(8, nb.getTiles().getDeviceBuffer());
-            computeBornSumKernel.setArg<cl_uint>(9, nb.getTiles().getSize());
+            computeBornSumKernel.setArg<cl::Buffer>(6, nb.getTiles().getDeviceBuffer());
+            computeBornSumKernel.setArg<cl_uint>(7, nb.getTiles().getSize());
         }
         reduceBornSumKernel = cl::Kernel(program, "reduceBornSum");
-        reduceBornSumKernel.setArg<cl_int>(0, cl.getNumAtoms());
-        reduceBornSumKernel.setArg<cl_int>(1, cl.getPaddedNumAtoms());
-        reduceBornSumKernel.setArg<cl_int>(2, cl.getNumForceBuffers());
-        reduceBornSumKernel.setArg<cl_float>(3, 1.0f);
-        reduceBornSumKernel.setArg<cl_float>(4, 0.8f);
-        reduceBornSumKernel.setArg<cl_float>(5, 4.85f);
-        reduceBornSumKernel.setArg<cl::Buffer>(6, bornSum->getDeviceBuffer());
-        reduceBornSumKernel.setArg<cl::Buffer>(7, params->getDeviceBuffer());
-        reduceBornSumKernel.setArg<cl::Buffer>(8, bornRadii->getDeviceBuffer());
-        reduceBornSumKernel.setArg<cl::Buffer>(9, obcChain->getDeviceBuffer());
+        reduceBornSumKernel.setArg<cl_int>(0, cl.getPaddedNumAtoms());
+        reduceBornSumKernel.setArg<cl_int>(1, cl.getNumForceBuffers());
+        reduceBornSumKernel.setArg<cl_float>(2, 1.0f);
+        reduceBornSumKernel.setArg<cl_float>(3, 0.8f);
+        reduceBornSumKernel.setArg<cl_float>(4, 4.85f);
+        reduceBornSumKernel.setArg<cl::Buffer>(5, bornSum->getDeviceBuffer());
+        reduceBornSumKernel.setArg<cl::Buffer>(6, params->getDeviceBuffer());
+        reduceBornSumKernel.setArg<cl::Buffer>(7, bornRadii->getDeviceBuffer());
+        reduceBornSumKernel.setArg<cl::Buffer>(8, obcChain->getDeviceBuffer());
         force1Kernel = cl::Kernel(program, "computeGBSAForce1");
-        force1Kernel.setArg<cl_int>(0, cl.getNumAtoms());
-        force1Kernel.setArg<cl_int>(1, cl.getPaddedNumAtoms());
-        force1Kernel.setArg<cl_float>(2, prefactor);
-        force1Kernel.setArg<cl::Buffer>(3, cl.getForceBuffers().getDeviceBuffer());
-        force1Kernel.setArg<cl::Buffer>(4, cl.getEnergyBuffer().getDeviceBuffer());
-        force1Kernel.setArg<cl::Buffer>(5, cl.getPosq().getDeviceBuffer());
-        force1Kernel.setArg(6, OpenCLContext::ThreadBlockSize*sizeof(cl_float4), NULL);
-        force1Kernel.setArg(7, OpenCLContext::ThreadBlockSize*sizeof(cl_float4), NULL);
-        force1Kernel.setArg<cl::Buffer>(8, bornRadii->getDeviceBuffer());
-        force1Kernel.setArg(9, OpenCLContext::ThreadBlockSize*sizeof(cl_float), NULL);
-        force1Kernel.setArg<cl::Buffer>(10, bornForce->getDeviceBuffer());
-        force1Kernel.setArg(11, OpenCLContext::ThreadBlockSize*sizeof(cl_float), NULL);
+        force1Kernel.setArg<cl::Buffer>(0, cl.getForceBuffers().getDeviceBuffer());
+        force1Kernel.setArg<cl::Buffer>(1, cl.getEnergyBuffer().getDeviceBuffer());
+        force1Kernel.setArg<cl::Buffer>(2, cl.getPosq().getDeviceBuffer());
+        force1Kernel.setArg(3, OpenCLContext::ThreadBlockSize*sizeof(cl_float4), NULL);
+        force1Kernel.setArg(4, OpenCLContext::ThreadBlockSize*sizeof(cl_float4), NULL);
+        force1Kernel.setArg<cl::Buffer>(5, bornRadii->getDeviceBuffer());
+        force1Kernel.setArg(6, OpenCLContext::ThreadBlockSize*sizeof(cl_float), NULL);
+        force1Kernel.setArg<cl::Buffer>(7, bornForce->getDeviceBuffer());
+        force1Kernel.setArg(8, OpenCLContext::ThreadBlockSize*sizeof(cl_float), NULL);
         if (nb.getUseCutoff()) {
-            force1Kernel.setArg<cl::Buffer>(12, nb.getInteractingTiles().getDeviceBuffer());
-            force1Kernel.setArg<cl_float>(13, nb.getCutoffDistance()*nb.getCutoffDistance());
-            force1Kernel.setArg<mm_float4>(14, nb.getPeriodicBoxSize());
-            force1Kernel.setArg<cl::Buffer>(15, nb.getInteractionFlags().getDeviceBuffer());
-            force1Kernel.setArg<cl::Buffer>(16, nb.getInteractionCount().getDeviceBuffer());
-            force1Kernel.setArg(17, OpenCLContext::ThreadBlockSize*sizeof(mm_float4), NULL);
+            force1Kernel.setArg<cl::Buffer>(9, nb.getInteractingTiles().getDeviceBuffer());
+            force1Kernel.setArg<cl::Buffer>(10, nb.getInteractionFlags().getDeviceBuffer());
+            force1Kernel.setArg<cl::Buffer>(11, nb.getInteractionCount().getDeviceBuffer());
+            force1Kernel.setArg(12, OpenCLContext::ThreadBlockSize*sizeof(mm_float4), NULL);
         }
         else {
-            force1Kernel.setArg<cl::Buffer>(12, nb.getTiles().getDeviceBuffer());
-            force1Kernel.setArg<cl_uint>(13, nb.getTiles().getSize());
+            force1Kernel.setArg<cl::Buffer>(9, nb.getTiles().getDeviceBuffer());
+            force1Kernel.setArg<cl_uint>(10, nb.getTiles().getSize());
         }
         reduceBornForceKernel = cl::Kernel(program, "reduceBornForce");
-        reduceBornForceKernel.setArg<cl_int>(0, cl.getNumAtoms());
-        reduceBornForceKernel.setArg<cl_int>(1, cl.getPaddedNumAtoms());
-        reduceBornForceKernel.setArg<cl_int>(2, cl.getNumForceBuffers());
-        reduceBornForceKernel.setArg<cl::Buffer>(3, bornForce->getDeviceBuffer());
-        reduceBornForceKernel.setArg<cl::Buffer>(4, cl.getEnergyBuffer().getDeviceBuffer());
-        reduceBornForceKernel.setArg<cl::Buffer>(5, params->getDeviceBuffer());
-        reduceBornForceKernel.setArg<cl::Buffer>(6, bornRadii->getDeviceBuffer());
-        reduceBornForceKernel.setArg<cl::Buffer>(7, obcChain->getDeviceBuffer());
+        reduceBornForceKernel.setArg<cl_int>(0, cl.getPaddedNumAtoms());
+        reduceBornForceKernel.setArg<cl_int>(1, cl.getNumForceBuffers());
+        reduceBornForceKernel.setArg<cl::Buffer>(2, bornForce->getDeviceBuffer());
+        reduceBornForceKernel.setArg<cl::Buffer>(3, cl.getEnergyBuffer().getDeviceBuffer());
+        reduceBornForceKernel.setArg<cl::Buffer>(4, params->getDeviceBuffer());
+        reduceBornForceKernel.setArg<cl::Buffer>(5, bornRadii->getDeviceBuffer());
+        reduceBornForceKernel.setArg<cl::Buffer>(6, obcChain->getDeviceBuffer());
     }
     cl.clearBuffer(*bornSum);
     cl.clearBuffer(*bornForce);

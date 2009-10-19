@@ -4,10 +4,10 @@ const unsigned int TileSize = 32;
  * Compute nonbonded interactions.
  */
 
-__kernel void computeNonbonded(int numAtoms, int paddedNumAtoms, __global float4* forceBuffers, __global float* energyBuffer, __global float4* posq,
+__kernel void computeNonbonded(__global float4* forceBuffers, __global float* energyBuffer, __global float4* posq,
         __global unsigned int* exclusions,  __global unsigned int* exclusionIndices, __local float4* local_posq, __local float4* local_force, __global unsigned int* tiles,
 #ifdef USE_CUTOFF
-        float cutoffSquared, float4 periodicBoxSize, __global unsigned int* interactionFlags, __global unsigned int* interactionCount, __local float4* tempBuffer
+        __global unsigned int* interactionFlags, __global unsigned int* interactionCount, __local float4* tempBuffer
 #else
         unsigned int numTiles
 #endif
@@ -41,7 +41,7 @@ __kernel void computeNonbonded(int numAtoms, int paddedNumAtoms, __global float4
             local_posq[get_local_id(0)] = posq1;
             LOAD_LOCAL_PARAMETERS_FROM_1
             unsigned int xi = x/TileSize;
-            unsigned int tile = xi+xi*paddedNumAtoms/TileSize-xi*(xi+1)/2;
+            unsigned int tile = xi+xi*PADDED_NUM_ATOMS/TileSize-xi*(xi+1)/2;
 #ifdef USE_EXCLUSIONS
             unsigned int excl = exclusions[exclusionIndices[tile]+tgx];
 #endif
@@ -51,13 +51,13 @@ __kernel void computeNonbonded(int numAtoms, int paddedNumAtoms, __global float4
 #endif
                 float4 delta = (float4) (local_posq[tbx+j].xyz - posq1.xyz, 0.0f);
 #ifdef USE_PERIODIC
-                delta.x -= floor(delta.x/periodicBoxSize.x+0.5f)*periodicBoxSize.x;
-                delta.y -= floor(delta.y/periodicBoxSize.y+0.5f)*periodicBoxSize.y;
-                delta.z -= floor(delta.z/periodicBoxSize.z+0.5f)*periodicBoxSize.z;
+                delta.x -= floor(delta.x/PERIODIC_BOX_SIZE_X+0.5f)*PERIODIC_BOX_SIZE_X;
+                delta.y -= floor(delta.y/PERIODIC_BOX_SIZE_Y+0.5f)*PERIODIC_BOX_SIZE_Y;
+                delta.z -= floor(delta.z/PERIODIC_BOX_SIZE_Z+0.5f)*PERIODIC_BOX_SIZE_Z;
 #endif
                 float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
                 float r = sqrt(r2);
-                float invR = 1.0f / r;
+                float invR = 1.0f/r;
                 int atom2 = tbx+j;
                 float4 posq2 = local_posq[atom2];
                 LOAD_ATOM2_PARAMETERS
@@ -73,9 +73,9 @@ __kernel void computeNonbonded(int numAtoms, int paddedNumAtoms, __global float4
 
             // Write results
 #ifdef USE_OUTPUT_BUFFER_PER_BLOCK
-            unsigned int offset = x + tgx + (x/TileSize)*paddedNumAtoms;
+            unsigned int offset = x + tgx + (x/TileSize)*PADDED_NUM_ATOMS;
 #else
-            unsigned int offset = x + tgx + warp*paddedNumAtoms;
+            unsigned int offset = x + tgx + warp*PADDED_NUM_ATOMS;
 #endif
             forceBuffers[offset].xyz += force.xyz;
         }
@@ -102,13 +102,13 @@ __kernel void computeNonbonded(int numAtoms, int paddedNumAtoms, __global float4
                             bool isExcluded = false;
                             float4 delta = (float4) (local_posq[tbx+j].xyz - posq1.xyz, 0.0f);
 #ifdef USE_PERIODIC
-                            delta.x -= floor(delta.x/periodicBoxSize.x+0.5f)*periodicBoxSize.x;
-                            delta.y -= floor(delta.y/periodicBoxSize.y+0.5f)*periodicBoxSize.y;
-                            delta.z -= floor(delta.z/periodicBoxSize.z+0.5f)*periodicBoxSize.z;
+                            delta.x -= floor(delta.x/PERIODIC_BOX_SIZE_X+0.5f)*PERIODIC_BOX_SIZE_X;
+                            delta.y -= floor(delta.y/PERIODIC_BOX_SIZE_Y+0.5f)*PERIODIC_BOX_SIZE_Y;
+                            delta.z -= floor(delta.z/PERIODIC_BOX_SIZE_Z+0.5f)*PERIODIC_BOX_SIZE_Z;
 #endif
                             float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
                             float r = sqrt(r2);
-                            float invR = 1.0f / r;
+                            float invR = 1.0f/r;
                             int atom2 = tbx+j;
                             float4 posq2 = local_posq[atom2];
                             LOAD_ATOM2_PARAMETERS
@@ -144,7 +144,7 @@ __kernel void computeNonbonded(int numAtoms, int paddedNumAtoms, __global float4
 
                 unsigned int xi = x/TileSize;
                 unsigned int yi = y/TileSize;
-                unsigned int tile = xi+yi*paddedNumAtoms/TileSize-yi*(yi+1)/2;
+                unsigned int tile = xi+yi*PADDED_NUM_ATOMS/TileSize-yi*(yi+1)/2;
 #ifdef USE_EXCLUSIONS
                 unsigned int excl = (hasExclusions ? exclusions[exclusionIndices[tile]+tgx] : 0xFFFFFFFF);
                 excl = (excl >> tgx) | (excl << (TileSize - tgx));
@@ -155,13 +155,13 @@ __kernel void computeNonbonded(int numAtoms, int paddedNumAtoms, __global float4
 #endif
                     float4 delta = (float4) (local_posq[tbx+tj].xyz - posq1.xyz, 0.0f);
 #ifdef USE_PERIODIC
-                    delta.x -= floor(delta.x/periodicBoxSize.x+0.5f)*periodicBoxSize.x;
-                    delta.y -= floor(delta.y/periodicBoxSize.y+0.5f)*periodicBoxSize.y;
-                    delta.z -= floor(delta.z/periodicBoxSize.z+0.5f)*periodicBoxSize.z;
+                    delta.x -= floor(delta.x/PERIODIC_BOX_SIZE_X+0.5f)*PERIODIC_BOX_SIZE_X;
+                    delta.y -= floor(delta.y/PERIODIC_BOX_SIZE_Y+0.5f)*PERIODIC_BOX_SIZE_Y;
+                    delta.z -= floor(delta.z/PERIODIC_BOX_SIZE_Z+0.5f)*PERIODIC_BOX_SIZE_Z;
 #endif
                     float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
                     float r = sqrt(r2);
-                    float invR = 1.0f / r;
+                    float invR = 1.0f/r;
                     int atom2 = tbx+tj;
                     float4 posq2 = local_posq[atom2];
                     LOAD_ATOM2_PARAMETERS
@@ -180,11 +180,11 @@ __kernel void computeNonbonded(int numAtoms, int paddedNumAtoms, __global float4
 
             // Write results
 #ifdef USE_OUTPUT_BUFFER_PER_BLOCK
-            unsigned int offset1 = x + tgx + (y/TileSize)*paddedNumAtoms;
-            unsigned int offset2 = y + tgx + (x/TileSize)*paddedNumAtoms;
+            unsigned int offset1 = x + tgx + (y/TileSize)*PADDED_NUM_ATOMS;
+            unsigned int offset2 = y + tgx + (x/TileSize)*PADDED_NUM_ATOMS;
 #else
-            unsigned int offset1 = x + tgx + warp*paddedNumAtoms;
-            unsigned int offset2 = y + tgx + warp*paddedNumAtoms;
+            unsigned int offset1 = x + tgx + warp*PADDED_NUM_ATOMS;
+            unsigned int offset2 = y + tgx + warp*PADDED_NUM_ATOMS;
 #endif
             forceBuffers[offset1].xyz += force.xyz;
             forceBuffers[offset2].xyz += local_force[get_local_id(0)].xyz;

@@ -327,33 +327,47 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
         defines["USE_PERIODIC"] = "1";
     if (useExclusions)
         defines["USE_EXCLUSIONS"] = "1";
+    stringstream xsize, ysize, zsize, cutoffSquared;
+    xsize.precision(8);
+    ysize.precision(8);
+    zsize.precision(8);
+    cutoffSquared.precision(8);
+    xsize << scientific << periodicBoxSize.x << "f";
+    ysize << scientific << periodicBoxSize.y << "f";
+    zsize << scientific << periodicBoxSize.z << "f";
+    cutoffSquared << scientific << (cutoff*cutoff) << "f";
+    defines["PERIODIC_BOX_SIZE_X"] = xsize.str();
+    defines["PERIODIC_BOX_SIZE_Y"] = ysize.str();
+    defines["PERIODIC_BOX_SIZE_Z"] = zsize.str();
+    defines["CUTOFF_SQUARED"] = cutoffSquared.str();
+    stringstream natom, padded;
+    natom << context.getNumAtoms();
+    padded << context.getPaddedNumAtoms();
+    defines["NUM_ATOMS"] = natom.str();
+    defines["PADDED_NUM_ATOMS"] = padded.str();
     cl::Program program = context.createProgram(context.loadSourceFromFile("nonbonded.cl", replacements), defines);
     cl::Kernel kernel(program, "computeNonbonded");
 
     // Set arguments to the Kernel.
 
-    kernel.setArg<cl_int>(0, context.getNumAtoms());
-    kernel.setArg<cl_int>(1, context.getPaddedNumAtoms());
-    kernel.setArg<cl::Buffer>(2, context.getForceBuffers().getDeviceBuffer());
-    kernel.setArg<cl::Buffer>(3, context.getEnergyBuffer().getDeviceBuffer());
-    kernel.setArg<cl::Buffer>(4, context.getPosq().getDeviceBuffer());
-    kernel.setArg<cl::Buffer>(5, exclusions->getDeviceBuffer());
-    kernel.setArg<cl::Buffer>(6, exclusionIndex->getDeviceBuffer());
-    kernel.setArg(7, OpenCLContext::ThreadBlockSize*sizeof(cl_float4), NULL);
-    kernel.setArg(8, OpenCLContext::ThreadBlockSize*sizeof(cl_float4), NULL);
-    int paramBase = 11;
+    kernel.setArg<cl::Buffer>(0, context.getForceBuffers().getDeviceBuffer());
+    kernel.setArg<cl::Buffer>(1, context.getEnergyBuffer().getDeviceBuffer());
+    kernel.setArg<cl::Buffer>(2, context.getPosq().getDeviceBuffer());
+    kernel.setArg<cl::Buffer>(3, exclusions->getDeviceBuffer());
+    kernel.setArg<cl::Buffer>(4, exclusionIndex->getDeviceBuffer());
+    kernel.setArg(5, OpenCLContext::ThreadBlockSize*sizeof(cl_float4), NULL);
+    kernel.setArg(6, OpenCLContext::ThreadBlockSize*sizeof(cl_float4), NULL);
+    int paramBase = 9;
     if (useCutoff) {
-        paramBase = 15;
-        kernel.setArg<cl::Buffer>(9, interactingTiles->getDeviceBuffer());
-        kernel.setArg<cl_float>(10, cutoff*cutoff);
-        kernel.setArg<mm_float4>(11, periodicBoxSize);
-        kernel.setArg<cl::Buffer>(12, interactionFlags->getDeviceBuffer());
-        kernel.setArg<cl::Buffer>(13, interactionCount->getDeviceBuffer());
-        kernel.setArg(14, OpenCLContext::ThreadBlockSize*sizeof(cl_float4), NULL);
+        paramBase = 11;
+        kernel.setArg<cl::Buffer>(7, interactingTiles->getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(8, interactionFlags->getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(9, interactionCount->getDeviceBuffer());
+        kernel.setArg(10, OpenCLContext::ThreadBlockSize*sizeof(cl_float4), NULL);
     }
     else {
-        kernel.setArg<cl::Buffer>(9, tiles->getDeviceBuffer());
-        kernel.setArg<cl_uint>(10, tiles->getSize());
+        kernel.setArg<cl::Buffer>(7, tiles->getDeviceBuffer());
+        kernel.setArg<cl_uint>(8, tiles->getSize());
     }
     for (int i = 0; i < (int) params.size(); i++) {
         kernel.setArg<cl::Buffer>(i*2+paramBase, params[i].getBuffer());

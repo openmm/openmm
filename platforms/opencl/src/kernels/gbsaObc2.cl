@@ -1,7 +1,7 @@
 #ifdef USE_CUTOFF
-if (atom1 < numAtoms && atom2 < numAtoms && atom1 != atom2 && r2 < cutoffSquared) {
+if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS && atom1 != atom2 && r2 < CUTOFF_SQUARED) {
 #else
-if (atom1 < numAtoms && atom2 < numAtoms && atom1 != atom2) {
+if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS && atom1 != atom2) {
 #endif
     float invRSquared = 1.0f/r2;
     float rScaledRadiusJ = r+obcParams2.y;
