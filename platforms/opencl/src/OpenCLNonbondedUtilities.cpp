@@ -262,7 +262,8 @@ void OpenCLNonbondedUtilities::prepareInteractions() {
 }
 
 void OpenCLNonbondedUtilities::computeInteractions() {
-    context.executeKernel(forceKernel, tiles->getSize()*OpenCLContext::TileSize);
+    if (tiles != NULL)
+        context.executeKernel(forceKernel, tiles->getSize()*OpenCLContext::TileSize);
 }
 
 cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& source, const vector<ParameterInfo> params, bool useExclusions) const {
