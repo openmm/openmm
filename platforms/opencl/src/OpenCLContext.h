@@ -252,6 +252,12 @@ public:
         return numForceBuffers;
     }
     /**
+     * Get the SIMD width of the device being used.
+     */
+    int getSIMDWidth() const {
+        return simdWidth;
+    }
+    /**
      * Get the OpenCLIntegrationUtilities for this context.
      */
     OpenCLIntegrationUtilities& getIntegrationUtilties() {
@@ -281,6 +287,7 @@ private:
     int numAtomBlocks;
     int numThreadBlocks;
     int numForceBuffers;
+    int simdWidth;
     std::string compilationOptions;
     cl::Context context;
     cl::Device device;

@@ -4,10 +4,10 @@ const unsigned int TileSize = 32;
  * Compute nonbonded interactions.
  */
 
-__kernel void computeNonbonded(__global float4* forceBuffers, __global float* energyBuffer, __global float4* posq,
-        __global unsigned int* exclusions,  __global unsigned int* exclusionIndices, __local float4* local_posq, __local float4* local_force, __global unsigned int* tiles,
+__kernel void computeNonbonded(__global float4* forceBuffers, __global float* energyBuffer, __global float4* posq, __global unsigned int* exclusions,
+        __global unsigned int* exclusionIndices, __local float4* local_posq, __local float4* local_force, __local float4* tempBuffer, __global unsigned int* tiles,
 #ifdef USE_CUTOFF
-        __global unsigned int* interactionFlags, __global unsigned int* interactionCount, __local float4* tempBuffer
+        __global unsigned int* interactionFlags, __global unsigned int* interactionCount
 #else
         unsigned int numTiles
 #endif
@@ -30,7 +30,6 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
         x = (x>>17)*TileSize;
         unsigned int tgx = get_local_id(0) & (TileSize-1);
         unsigned int tbx = get_local_id(0) - tgx;
-        unsigned int tj = tgx;
         unsigned int atom1 = x + tgx;
         float4 force = 0.0f;
         float4 posq1 = posq[atom1];
@@ -49,7 +48,9 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
 #ifdef USE_EXCLUSIONS
                 bool isExcluded = !(excl & 0x1);
 #endif
-                float4 delta = (float4) (local_posq[tbx+j].xyz - posq1.xyz, 0.0f);
+                int atom2 = tbx+j;
+                float4 posq2 = local_posq[atom2];
+                float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
 #ifdef USE_PERIODIC
                 delta.x -= floor(delta.x/PERIODIC_BOX_SIZE_X+0.5f)*PERIODIC_BOX_SIZE_X;
                 delta.y -= floor(delta.y/PERIODIC_BOX_SIZE_Y+0.5f)*PERIODIC_BOX_SIZE_Y;
@@ -58,8 +59,6 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
                 float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
                 float r = sqrt(r2);
                 float invR = 1.0f/r;
-                int atom2 = tbx+j;
-                float4 posq2 = local_posq[atom2];
                 LOAD_ATOM2_PARAMETERS
                 atom2 = y+j;
                 float dEdR = 0.0f;
@@ -100,7 +99,9 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
                     for (unsigned int j = 0; j < TileSize; j++) {
                         if ((flags&(1<<j)) != 0) {
                             bool isExcluded = false;
-                            float4 delta = (float4) (local_posq[tbx+j].xyz - posq1.xyz, 0.0f);
+                            int atom2 = tbx+j;
+                            float4 posq2 = local_posq[atom2];
+                            float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
 #ifdef USE_PERIODIC
                             delta.x -= floor(delta.x/PERIODIC_BOX_SIZE_X+0.5f)*PERIODIC_BOX_SIZE_X;
                             delta.y -= floor(delta.y/PERIODIC_BOX_SIZE_Y+0.5f)*PERIODIC_BOX_SIZE_Y;
@@ -109,8 +110,6 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
                             float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
                             float r = sqrt(r2);
                             float invR = 1.0f/r;
-                            int atom2 = tbx+j;
-                            float4 posq2 = local_posq[atom2];
                             LOAD_ATOM2_PARAMETERS
                             atom2 = y+j;
                             float dEdR = 0.0f;
@@ -149,11 +148,14 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
                 unsigned int excl = (hasExclusions ? exclusions[exclusionIndices[tile]+tgx] : 0xFFFFFFFF);
                 excl = (excl >> tgx) | (excl << (TileSize - tgx));
 #endif
+                unsigned int tj = tgx;
                 for (unsigned int j = 0; j < TileSize; j++) {
 #ifdef USE_EXCLUSIONS
                     bool isExcluded = !(excl & 0x1);
 #endif
-                    float4 delta = (float4) (local_posq[tbx+tj].xyz - posq1.xyz, 0.0f);
+                    int atom2 = tbx+tj;
+                    float4 posq2 = local_posq[atom2];
+                    float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
 #ifdef USE_PERIODIC
                     delta.x -= floor(delta.x/PERIODIC_BOX_SIZE_X+0.5f)*PERIODIC_BOX_SIZE_X;
                     delta.y -= floor(delta.y/PERIODIC_BOX_SIZE_Y+0.5f)*PERIODIC_BOX_SIZE_Y;
@@ -162,8 +164,6 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
                     float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
                     float r = sqrt(r2);
                     float invR = 1.0f/r;
-                    int atom2 = tbx+tj;
-                    float4 posq2 = local_posq[atom2];
                     LOAD_ATOM2_PARAMETERS
                     atom2 = y+tj;
                     float dEdR = 0.0f;

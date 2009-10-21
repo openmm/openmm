@@ -64,8 +64,12 @@ OpenCLContext::OpenCLContext(int numParticles, int deviceIndex) : time(0.0), ste
             throw OpenMMException("The specified OpenCL device is not compatible with OpenMM");
         compilationOptions = "-cl-fast-relaxed-math";
         string vendor = device.getInfo<CL_DEVICE_VENDOR>();
-        if (vendor.size() >= 6 && vendor.substr(0, 6) == "NVIDIA")
+        if (vendor.size() >= 6 && vendor.substr(0, 6) == "NVIDIA") {
             compilationOptions += " -DWARPS_ARE_ATOMIC";
+            simdWidth = 32;
+        }
+        else
+            simdWidth = 1;
         queue = cl::CommandQueue(context, device);
         numAtoms = numParticles;
         paddedNumAtoms = TileSize*((numParticles+TileSize-1)/TileSize);

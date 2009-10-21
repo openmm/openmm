@@ -346,7 +346,8 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
     padded << context.getPaddedNumAtoms();
     defines["NUM_ATOMS"] = natom.str();
     defines["PADDED_NUM_ATOMS"] = padded.str();
-    cl::Program program = context.createProgram(context.loadSourceFromFile("nonbonded.cl", replacements), defines);
+    string filename = (context.getSIMDWidth() == 32 ? "nonbonded_nvidia.cl" : "nonbonded_default.cl");
+    cl::Program program = context.createProgram(context.loadSourceFromFile(filename, replacements), defines);
     cl::Kernel kernel(program, "computeNonbonded");
 
     // Set arguments to the Kernel.
@@ -358,17 +359,17 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
     kernel.setArg<cl::Buffer>(4, exclusionIndex->getDeviceBuffer());
     kernel.setArg(5, OpenCLContext::ThreadBlockSize*sizeof(cl_float4), NULL);
     kernel.setArg(6, OpenCLContext::ThreadBlockSize*sizeof(cl_float4), NULL);
-    int paramBase = 9;
+    kernel.setArg(7, OpenCLContext::ThreadBlockSize*sizeof(cl_float4), NULL);
+    int paramBase = 10;
     if (useCutoff) {
         paramBase = 11;
-        kernel.setArg<cl::Buffer>(7, interactingTiles->getDeviceBuffer());
-        kernel.setArg<cl::Buffer>(8, interactionFlags->getDeviceBuffer());
-        kernel.setArg<cl::Buffer>(9, interactionCount->getDeviceBuffer());
-        kernel.setArg(10, OpenCLContext::ThreadBlockSize*sizeof(cl_float4), NULL);
+        kernel.setArg<cl::Buffer>(8, interactingTiles->getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(9, interactionFlags->getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(10, interactionCount->getDeviceBuffer());
     }
     else {
-        kernel.setArg<cl::Buffer>(7, tiles->getDeviceBuffer());
-        kernel.setArg<cl_uint>(8, tiles->getSize());
+        kernel.setArg<cl::Buffer>(8, tiles->getDeviceBuffer());
+        kernel.setArg<cl_uint>(9, tiles->getSize());
     }
     for (int i = 0; i < (int) params.size(); i++) {
         kernel.setArg<cl::Buffer>(i*2+paramBase, params[i].getBuffer());
