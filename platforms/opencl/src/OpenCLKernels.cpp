@@ -56,7 +56,6 @@ void OpenCLCalcForcesAndEnergyKernel::beginForceComputation(ContextImpl& context
 void OpenCLCalcForcesAndEnergyKernel::finishForceComputation(ContextImpl& context) {
     cl.getNonbondedUtilities().computeInteractions();
     cl.reduceBuffer(cl.getForceBuffers(), cl.getNumForceBuffers());
-    cl.getNonbondedUtilities().prepareInteractions();
 }
 
 void OpenCLCalcForcesAndEnergyKernel::beginEnergyComputation(ContextImpl& context) {
