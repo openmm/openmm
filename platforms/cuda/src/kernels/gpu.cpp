@@ -1865,9 +1865,10 @@ void gpuShutDown(gpuContext gpu)
         delete gpu->psPmeBsplineDtheta;
         delete gpu->psPmeAtomRange;
         delete gpu->psPmeAtomGridIndex;
-        delete gpu->psTabulatedErfc;
         cufftDestroy(gpu->fftplan);
     }
+    if (gpu->psTabulatedErfc != NULL)
+        delete gpu->psTabulatedErfc;
     delete gpu->psObcData;
     delete gpu->psObcChain;
     delete gpu->psBornForce;
