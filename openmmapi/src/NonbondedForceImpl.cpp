@@ -33,13 +33,11 @@
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
 #include "openmm/kernels.h"
+#include <cmath>
 #include <sstream>
 
 using namespace OpenMM;
-using std::pair;
-using std::vector;
-using std::set;
-using std::stringstream;
+using namespace std;
 
 NonbondedForceImpl::NonbondedForceImpl(NonbondedForce& owner) : owner(owner) {
 }
@@ -98,4 +96,60 @@ std::vector<std::string> NonbondedForceImpl::getKernelNames() {
     std::vector<std::string> names;
     names.push_back(CalcNonbondedForceKernel::Name());
     return names;
+}
+
+class NonbondedForceImpl::ErrorFunction {
+public:
+    virtual double getValue(int arg) const = 0;
+};
+
+class NonbondedForceImpl::EwaldErrorFunction : public ErrorFunction {
+public:
+    EwaldErrorFunction(double width, double alpha, double target) : width(width), alpha(alpha), target(target) {
+    }
+    double getValue(int arg) const {
+        double temp = arg*M_PI/(width*alpha);
+        return target-0.05*sqrt(width*alpha)*arg*exp(-temp*temp);
+    }
+private:
+    double width, alpha, target;
+};
+
+void NonbondedForceImpl::calcEwaldParameters(const System& system, const NonbondedForce& force, double& alpha, int& kmaxx, int& kmaxy, int& kmaxz) {
+    Vec3 boxVectors[3];
+    system.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+    double tol = force.getEwaldErrorTolerance();
+    alpha = (1.0/force.getCutoffDistance())*std::sqrt(-log(0.5*tol));
+    kmaxx = findZero(EwaldErrorFunction(boxVectors[0][0], alpha, tol), 10);
+    kmaxy = findZero(EwaldErrorFunction(boxVectors[1][1], alpha, tol), 10);
+    kmaxz = findZero(EwaldErrorFunction(boxVectors[2][2], alpha, tol), 10);
+    if (kmaxx%2 == 0)
+        kmaxx++;
+    if (kmaxy%2 == 0)
+        kmaxy++;
+    if (kmaxz%2 == 0)
+        kmaxz++;
+}
+
+void NonbondedForceImpl::calcPMEParameters(const System& system, const NonbondedForce& force, double& alpha, int& xsize, int& ysize, int& zsize) {
+    Vec3 boxVectors[3];
+    system.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+    double tol = force.getEwaldErrorTolerance();
+    alpha = (1.0/force.getCutoffDistance())*std::sqrt(-log(2.0*tol));
+    xsize = (int) ceil(alpha*boxVectors[0][0]/pow(0.5*tol, 0.2));
+    ysize = (int) ceil(alpha*boxVectors[1][1]/pow(0.5*tol, 0.2));
+    zsize = (int) ceil(alpha*boxVectors[2][2]/pow(0.5*tol, 0.2));
+}
+
+double NonbondedForceImpl::findZero(const NonbondedForceImpl::ErrorFunction& f, int initialGuess) {
+    int arg = initialGuess;
+    double value = f.getValue(arg);
+    if (value > 0.0) {
+        while (value > 0.0 && arg > 0)
+            value = f.getValue(--arg);
+        return arg+1;
+    }
+    while (value < 0.0)
+        value = f.getValue(++arg);
+    return arg;
 }

@@ -41,6 +41,8 @@
 
 namespace OpenMM {
 
+class System;
+
 /**
  * This is the internal implementation of NonbondedForce.
  */
@@ -62,7 +64,20 @@ public:
         return std::map<std::string, double>(); // This force field doesn't define any parameters.
     }
     std::vector<std::string> getKernelNames();
+    /**
+     * This is a utility routine that calculates the values to use for alpha and kmax when using
+     * Ewald summation.
+     */
+    static void calcEwaldParameters(const System& system, const NonbondedForce& force, double& alpha, int& kmaxx, int& kmaxy, int& kmaxz);
+    /**
+     * This is a utility routine that calculates the values to use for alpha and grid size when using
+     * Particle Mesh Ewald.
+     */
+    static void calcPMEParameters(const System& system, const NonbondedForce& force, double& alpha, int& xsize, int& ysize, int& zsize);
 private:
+    class ErrorFunction;
+    class EwaldErrorFunction;
+    static double findZero(const ErrorFunction& f, int initialGuess);
     NonbondedForce& owner;
     Kernel kernel;
 };

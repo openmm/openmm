@@ -28,6 +28,7 @@
 #include "openmm/LangevinIntegrator.h"
 #include "openmm/Context.h"
 #include "openmm/internal/ContextImpl.h"
+#include "openmm/internal/NonbondedForceImpl.h"
 #include "kernels/gputypes.h"
 #include "kernels/cudaKernels.h"
 #include <cmath>
@@ -343,29 +344,17 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
             method = PERIODIC;
         }
         if (force.getNonbondedMethod() == NonbondedForce::Ewald || force.getNonbondedMethod() == NonbondedForce::PME) {
-            double ewaldErrorTol = force.getEwaldErrorTolerance();
-            double alpha = (1.0/force.getCutoffDistance())*std::sqrt(-std::log(ewaldErrorTol));
-            double mx = boxVectors[0][0]/force.getCutoffDistance();
-            double my = boxVectors[1][1]/force.getCutoffDistance();
-            double mz = boxVectors[2][2]/force.getCutoffDistance();
-            double pi = 3.1415926535897932385;
-            int kmaxx = (int)std::ceil(-(mx/pi)*std::log(ewaldErrorTol));
-            int kmaxy = (int)std::ceil(-(my/pi)*std::log(ewaldErrorTol));
-            int kmaxz = (int)std::ceil(-(mz/pi)*std::log(ewaldErrorTol));
             if (force.getNonbondedMethod() == NonbondedForce::Ewald) {
-                if (kmaxx%2 == 0)
-                    kmaxx++;
-                if (kmaxy%2 == 0)
-                    kmaxy++;
-                if (kmaxz%2 == 0)
-                    kmaxz++;
+                double alpha;
+                int kmaxx, kmaxy, kmaxz;
+                NonbondedForceImpl::calcEwaldParameters(system, force, alpha, kmaxx, kmaxy, kmaxz);
                 gpuSetEwaldParameters(gpu, (float) alpha, kmaxx, kmaxy, kmaxz);
                 method = EWALD;
             }
             else {
-                int gridSizeX = -0.5*kmaxx*std::log(ewaldErrorTol);
-                int gridSizeY = -0.5*kmaxy*std::log(ewaldErrorTol);
-                int gridSizeZ = -0.5*kmaxz*std::log(ewaldErrorTol);
+                double alpha;
+                int gridSizeX, gridSizeY, gridSizeZ;
+                NonbondedForceImpl::calcPMEParameters(system, force, alpha, gridSizeX, gridSizeY, gridSizeZ);
                 gpuSetPMEParameters(gpu, (float) alpha, gridSizeX, gridSizeY, gridSizeZ);
                 method = PARTICLE_MESH_EWALD;
             }

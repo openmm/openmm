@@ -50,6 +50,7 @@
 #include "openmm/CMMotionRemover.h"
 #include "openmm/System.h"
 #include "openmm/internal/ContextImpl.h"
+#include "openmm/internal/NonbondedForceImpl.h"
 #include "openmm/Integrator.h"
 #include "SimTKUtilities/SimTKOpenMMUtilities.h"
 #include "lepton/CustomFunction.h"
@@ -470,29 +471,15 @@ void ReferenceCalcNonbondedForceKernel::initialize(const System& system, const N
         neighborList = NULL;
     else
         neighborList = new NeighborList();
-    if (nonbondedMethod == Ewald || nonbondedMethod == PME) {
-        RealOpenMM ewaldErrorTol = (RealOpenMM) force.getEwaldErrorTolerance();
-        ewaldAlpha = (RealOpenMM) (std::sqrt(-std::log(ewaldErrorTol))/nonbondedCutoff);
-        RealOpenMM mx = periodicBoxSize[0]/nonbondedCutoff;
-        RealOpenMM my = periodicBoxSize[1]/nonbondedCutoff;
-        RealOpenMM mz = periodicBoxSize[2]/nonbondedCutoff;
-        RealOpenMM pi = (RealOpenMM) 3.1415926535897932385;
-        kmax[0] = (int)std::ceil(-(mx/pi)*std::log(ewaldErrorTol));
-        kmax[1] = (int)std::ceil(-(my/pi)*std::log(ewaldErrorTol));
-        kmax[2] = (int)std::ceil(-(mz/pi)*std::log(ewaldErrorTol));
-        if (nonbondedMethod == Ewald) {
-            if (kmax[0]%2 == 0)
-                kmax[0]++;
-            if (kmax[1]%2 == 0)
-                kmax[1]++;
-            if (kmax[2]%2 == 0)
-                kmax[2]++;
-        }
-        else {
-            gridSize[0] = -0.5*kmax[0]*std::log(ewaldErrorTol);
-            gridSize[1] = -0.5*kmax[1]*std::log(ewaldErrorTol);
-            gridSize[2] = -0.5*kmax[2]*std::log(ewaldErrorTol);
-        }
+    if (nonbondedMethod == Ewald) {
+        double alpha;
+        NonbondedForceImpl::calcEwaldParameters(system, force, alpha, kmax[0], kmax[1], kmax[2]);
+        ewaldAlpha = alpha;
+    }
+    else if (nonbondedMethod == PME) {
+        double alpha;
+        NonbondedForceImpl::calcPMEParameters(system, force, alpha, gridSize[0], gridSize[1], gridSize[2]);
+        ewaldAlpha = alpha;
     }
     rfDielectric = (RealOpenMM)force.getReactionFieldDielectric();
 }

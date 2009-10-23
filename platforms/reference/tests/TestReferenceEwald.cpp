@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -40,6 +40,7 @@
 #include "openmm/System.h"
 #include "openmm/VerletIntegrator.h"
 #include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
+#include "../src/sfmt/SFMT.h"
 #include "openmm/HarmonicBondForce.h"
 #include <iostream>
 #include <vector>
@@ -138,7 +139,7 @@ void testEwaldPME() {
 
 //   (1)   CHECK EXACT VALUE OF EWALD ENERGY (Against Gromacs output)
 
-    tol = 1e-5;
+    tol = 1e-4;
     ASSERT_EQUAL_TOL(-3.82047e+05, state1.getPotentialEnergy(), tol);
 
 //   (2)   CHECK WHETHER THE EWALD FORCES ARE THE SAME AS THE GROMACS OUTPUT
@@ -303,13 +304,64 @@ void testWaterSystem() {
 
 }
 
+void testErrorTolerance(NonbondedForce::NonbondedMethod method) {
+    // Create a cloud of random point charges.
+
+    const int numParticles = 51;
+    const double boxWidth = 5.0;
+    System system;
+    system.setPeriodicBoxVectors(Vec3(boxWidth, 0, 0), Vec3(0, boxWidth, 0), Vec3(0, 0, boxWidth));
+    NonbondedForce* force = new NonbondedForce();
+    system.addForce(force);
+    vector<Vec3> positions(numParticles);
+    init_gen_rand(0);
+    for (int i = 0; i < numParticles; i++) {
+        system.addParticle(1.0);
+        force->addParticle(-1.0+i*2.0/(numParticles-1), 1.0, 0.0);
+        positions[i] = Vec3(boxWidth*genrand_real2(), boxWidth*genrand_real2(), boxWidth*genrand_real2());
+    }
+    force->setNonbondedMethod(method);
+    ReferencePlatform platform;
+    VerletIntegrator integrator(0.01);
+
+    // For various values of the cutoff and error tolerance, see if the actual error is reasonable.
+
+    for (double cutoff = 1.0; cutoff < boxWidth/2; cutoff += 0.2) {
+        force->setCutoffDistance(cutoff);
+        vector<Vec3> refForces;
+        double norm = 0.0;
+        for (double tol = 5e-5; tol < 1e-3; tol *= 2.0) {
+            force->setEwaldErrorTolerance(tol);
+            Context context(system, integrator, platform);
+            context.setPositions(positions);
+            State state = context.getState(State::Forces);
+            if (refForces.size() == 0) {
+                refForces = state.getForces();
+                for (int i = 0; i < numParticles; i++)
+                    norm += refForces[i].dot(refForces[i]);
+                norm = sqrt(norm);
+            }
+            else {
+                double diff = 0.0;
+                for (int i = 0; i < numParticles; i++) {
+                    Vec3 delta = refForces[i]-state.getForces()[i];
+                    diff += delta.dot(delta);
+                }
+                diff = sqrt(diff)/norm;
+                ASSERT(diff < 5*tol);
+            }
+        }
+    }
+}
 
 int main() {
     try {
-     testEwaldExact();           
+     testEwaldExact();
      testEwaldPME();
 //     testEwald2Ions();
 //     testWaterSystem();
+     testErrorTolerance(NonbondedForce::Ewald);
+     testErrorTolerance(NonbondedForce::PME);
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;
