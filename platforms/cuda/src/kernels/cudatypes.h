@@ -237,7 +237,7 @@ static const unsigned int MAX_TABULATED_FUNCTIONS = 4;
 
 static const float PI = 3.14159265358979323846f;
 
-static const int PME_ORDER = 4;
+static const int PME_ORDER = 5;
 
 enum CudaNonbondedMethod
 {
