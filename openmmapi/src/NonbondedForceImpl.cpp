@@ -119,7 +119,7 @@ void NonbondedForceImpl::calcEwaldParameters(const System& system, const Nonbond
     Vec3 boxVectors[3];
     system.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
     double tol = force.getEwaldErrorTolerance();
-    alpha = (1.0/force.getCutoffDistance())*std::sqrt(-log(0.5*tol));
+    alpha = (1.0/force.getCutoffDistance())*std::sqrt(-log(2.0*tol));
     kmaxx = findZero(EwaldErrorFunction(boxVectors[0][0], alpha, tol), 10);
     kmaxy = findZero(EwaldErrorFunction(boxVectors[1][1], alpha, tol), 10);
     kmaxz = findZero(EwaldErrorFunction(boxVectors[2][2], alpha, tol), 10);

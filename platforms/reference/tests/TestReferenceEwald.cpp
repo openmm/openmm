@@ -48,8 +48,8 @@
 using namespace OpenMM;
 using namespace std;
 
-const double TOL = 1e-5;
-
+const double EWALD_TOL = 1e-5;
+const double PME_TOL = 5e-5;
 
 void testEwaldExact() {
 
@@ -75,7 +75,7 @@ void testEwaldExact() {
     nonbonded->setNonbondedMethod(NonbondedForce::Ewald);
     nonbonded->setCutoffDistance(cutoff);
     system.setPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
-    nonbonded->setEwaldErrorTolerance(TOL);
+    nonbonded->setEwaldErrorTolerance(EWALD_TOL);
     system.addForce(nonbonded);
     Context context(system, integrator, platform);
     vector<Vec3> positions(numParticles);
@@ -98,7 +98,7 @@ void testEwaldExact() {
    	double exactEnergy        = - (1.7476 * 1.6022e-19 * 1.6022e-19  * 6.02214e+23 * numParticles) / (1.112e-10 * 0.282e-9 * 2 * 1000);
     //cout << "exact\t\t: " << exactEnergy << endl;
     //cout << "calc\t\t: " << state.getPotentialEnergy() << endl;
-    ASSERT_EQUAL_TOL(exactEnergy, state.getPotentialEnergy(), 100*TOL);
+    ASSERT_EQUAL_TOL(exactEnergy, state.getPotentialEnergy(), 100*EWALD_TOL);
 
 }
 
@@ -127,7 +127,7 @@ void testEwaldPME() {
     nonbonded->setNonbondedMethod(NonbondedForce::Ewald);
     nonbonded->setCutoffDistance(cutoff);
     system.setPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
-    nonbonded->setEwaldErrorTolerance(TOL);
+    nonbonded->setEwaldErrorTolerance(EWALD_TOL);
     system.addForce(nonbonded);
     Context context(system, integrator, platform);
     vector<Vec3> positions(numParticles);
@@ -160,7 +160,7 @@ void testEwaldPME() {
 
 
     norm = std::sqrt(norm);
-    const double delta = 1e-3;
+    const double delta = 1e-2;
     double step = delta/norm;
     for (int i = 0; i < numParticles; ++i) {
         Vec3 p = positions[i];
@@ -171,13 +171,13 @@ void testEwaldPME() {
     
     // See whether the potential energy changed by the expected amount.
     
-    tol = 1e-2;
     State state2 = context.getState(State::Energy);
-    ASSERT_EQUAL_TOL(norm, (state2.getPotentialEnergy()-state1.getPotentialEnergy())/delta, tol)
+    ASSERT_EQUAL_TOL(norm, (state2.getPotentialEnergy()-state1.getPotentialEnergy())/delta, fabs(EWALD_TOL*state2.getPotentialEnergy()/(state2.getPotentialEnergy()-state1.getPotentialEnergy())))
 
 //   (4)   CHECK EXACT VALUE OF PME ENERGY 
 
     nonbonded->setNonbondedMethod(NonbondedForce::PME);
+    nonbonded->setEwaldErrorTolerance(PME_TOL);
     context.reinitialize();
     #include "nacl_amorph.dat"
     context.setPositions(positions);
@@ -213,9 +213,7 @@ void testEwaldPME() {
     // See whether the potential energy changed by the expected amount.
     
     State state4 = context.getState(State::Energy);
-    tol = 1e-2;
-    ASSERT_EQUAL_TOL(norm, (state4.getPotentialEnergy()-state3.getPotentialEnergy())/delta, tol)
-
+    ASSERT_EQUAL_TOL(norm, (state4.getPotentialEnergy()-state3.getPotentialEnergy())/delta, fabs(PME_TOL*state4.getPotentialEnergy()/(state4.getPotentialEnergy()-state3.getPotentialEnergy())))
 }
 
 void testEwald2Ions() {
@@ -231,7 +229,7 @@ void testEwald2Ions() {
     const double cutoff = 2.0;
     nonbonded->setCutoffDistance(cutoff);
     system.setPeriodicBoxVectors(Vec3(6, 0, 0), Vec3(0, 6, 0), Vec3(0, 0, 6));
-    nonbonded->setEwaldErrorTolerance(TOL);
+    nonbonded->setEwaldErrorTolerance(EWALD_TOL);
     system.addForce(nonbonded);
     Context context(system, integrator, platform);
     vector<Vec3> positions(2);
@@ -240,9 +238,9 @@ void testEwald2Ions() {
     context.setPositions(positions);
     State state = context.getState(State::Forces | State::Energy);
     const vector<Vec3>& forces = state.getForces();
-    ASSERT_EQUAL_VEC(Vec3(-123.711, 64.1877, -302.716), forces[0], 10*TOL);
-    ASSERT_EQUAL_VEC(Vec3(123.711, -64.1877, 302.716), forces[1], 10*TOL);
-    ASSERT_EQUAL_TOL(-217.276, state.getPotentialEnergy(), 10*TOL);
+    ASSERT_EQUAL_VEC(Vec3(-123.711, 64.1877, -302.716), forces[0], 10*EWALD_TOL);
+    ASSERT_EQUAL_VEC(Vec3(123.711, -64.1877, 302.716), forces[1], 10*EWALD_TOL);
+    ASSERT_EQUAL_TOL(-217.276, state.getPotentialEnergy(), 10*EWALD_TOL);
 }
 
 void testWaterSystem() {
@@ -267,7 +265,7 @@ void testWaterSystem() {
     const double cutoff = 0.8;
     nonbonded->setCutoffDistance(cutoff);
     system.setPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
-    nonbonded->setEwaldErrorTolerance(TOL);
+    nonbonded->setEwaldErrorTolerance(EWALD_TOL);
     system.addForce(nonbonded);
     Context context(system, integrator, platform);
     vector<Vec3> positions(numParticles);
