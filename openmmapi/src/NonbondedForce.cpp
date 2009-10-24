@@ -46,7 +46,7 @@ using std::string;
 using std::stringstream;
 using std::vector;
 
-NonbondedForce::NonbondedForce() : nonbondedMethod(NoCutoff), cutoffDistance(1.0), rfDielectric(78.3), ewaldErrorTol(1e-4) {
+NonbondedForce::NonbondedForce() : nonbondedMethod(NoCutoff), cutoffDistance(1.0), rfDielectric(78.3), ewaldErrorTol(5e-4) {
 }
 
 NonbondedForce::NonbondedMethod NonbondedForce::getNonbondedMethod() const {
