@@ -328,7 +328,10 @@ private:
     OpenCLArray<mm_float2>* sigmaEpsilon;
     OpenCLArray<mm_float4>* exceptionParams;
     OpenCLArray<mm_int4>* exceptionIndices;
+    OpenCLArray<mm_float2>* cosSinSums;
     cl::Kernel exceptionsKernel;
+    cl::Kernel ewaldSumsKernel;
+    cl::Kernel ewaldForcesKernel;
     double cutoffSquared, ewaldSelfEnergy;
 };
 

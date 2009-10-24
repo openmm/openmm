@@ -29,6 +29,7 @@
 #include "openmm/LangevinIntegrator.h"
 #include "openmm/Context.h"
 #include "openmm/internal/ContextImpl.h"
+#include "openmm/internal/NonbondedForceImpl.h"
 #include "OpenCLIntegrationUtilities.h"
 #include "OpenCLNonbondedUtilities.h"
 #include <cmath>
@@ -41,6 +42,19 @@ static const double BOLTZMANN = 1.380658e-23;            // (J/K)
 static const double AVOGADRO = 6.0221367e23;            // ()
 static const double RGAS = BOLTZMANN*AVOGADRO;     // (J/(mol K))
 static const double BOLTZ = (RGAS/KILO);            // (kJ/(mol K))
+
+static string doubleToString(double value) {
+    stringstream s;
+    s.precision(8);
+    s << scientific << value << "f";
+    return s.str();
+}
+
+static string intToString(int value) {
+    stringstream s;
+    s << value;
+    return s.str();
+}
 
 void OpenCLCalcForcesAndEnergyKernel::initialize(const System& system) {
 }
@@ -522,12 +536,14 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     OpenCLArray<mm_float4>& posq = cl.getPosq();
     vector<mm_float2> sigmaEpsilonVector(numParticles);
     vector<vector<int> > exclusionList(numParticles);
+    double sumSquaredCharges = 0.0;
     for (int i = 0; i < numParticles; i++) {
         double charge, sigma, epsilon;
         force.getParticleParameters(i, charge, sigma, epsilon);
         posq[i].w = (float) charge;
         sigmaEpsilonVector[i] = (mm_float2) {(float) (0.5*sigma), (float) (2.0*sqrt(epsilon))};
         exclusionList[i].push_back(i);
+        sumSquaredCharges += charge*charge;
     }
     for (int i = 0; i < (int) exclusions.size(); i++) {
         exclusionList[exclusions[i].first].push_back(exclusions[i].second);
@@ -537,67 +553,55 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     sigmaEpsilon->upload(sigmaEpsilonVector);
     bool useCutoff = (force.getNonbondedMethod() != NonbondedForce::NoCutoff);
     bool usePeriodic = (force.getNonbondedMethod() != NonbondedForce::NoCutoff && force.getNonbondedMethod() != NonbondedForce::CutoffNonPeriodic);
+    Vec3 boxVectors[3];
+    system.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
     map<string, string> defines;
     if (useCutoff) {
+        // Compute the reaction field constants.
+
         double reactionFieldK = pow(force.getCutoffDistance(), -3.0)*(force.getReactionFieldDielectric()-1.0)/(2.0*force.getReactionFieldDielectric()+1.0);
         double reactionFieldC = (1.0 / force.getCutoffDistance())*(3.0*force.getReactionFieldDielectric())/(2.0*force.getReactionFieldDielectric()+1.0);
-        stringstream k, c;
-        k.precision(8);
-        c.precision(8);
-        k << scientific << reactionFieldK << "f";
-        c << scientific << reactionFieldC << "f";
-        defines["REACTION_FIELD_K"] = k.str();
-        defines["REACTION_FIELD_C"] = c.str();
+        defines["REACTION_FIELD_K"] = doubleToString(reactionFieldK);
+        defines["REACTION_FIELD_C"] = doubleToString(reactionFieldC);
     }
-//    if (force.getNonbondedMethod() != NonbondedForce::NoCutoff) {
-//        method = CUTOFF;
-//    }
-//    if (force.getNonbondedMethod() == NonbondedForce::CutoffPeriodic) {
-//        method = PERIODIC;
-//    }
-//    if (force.getNonbondedMethod() == NonbondedForce::Ewald || force.getNonbondedMethod() == NonbondedForce::PME) {
-//        double ewaldErrorTol = force.getEwaldErrorTolerance();
-//        double alpha = (1.0/force.getCutoffDistance())*std::sqrt(-std::log(ewaldErrorTol));
-//        double mx = boxVectors[0][0]/force.getCutoffDistance();
-//        double my = boxVectors[1][1]/force.getCutoffDistance();
-//        double mz = boxVectors[2][2]/force.getCutoffDistance();
-//        double pi = 3.1415926535897932385;
-//        int kmaxx = (int)std::ceil(-(mx/pi)*std::log(ewaldErrorTol));
-//        int kmaxy = (int)std::ceil(-(my/pi)*std::log(ewaldErrorTol));
-//        int kmaxz = (int)std::ceil(-(mz/pi)*std::log(ewaldErrorTol));
-//        if (force.getNonbondedMethod() == NonbondedForce::Ewald) {
-//            if (kmaxx%2 == 0)
-//                kmaxx++;
-//            if (kmaxy%2 == 0)
-//                kmaxy++;
-//            if (kmaxz%2 == 0)
-//                kmaxz++;
-//            gpuSetEwaldParameters(gpu, (float) alpha, kmaxx, kmaxy, kmaxz);
-//            method = EWALD;
-//        }
-//        else {
-//            int gridSizeX = -0.5*kmaxx*std::log(ewaldErrorTol);
-//            int gridSizeY = -0.5*kmaxy*std::log(ewaldErrorTol);
-//            int gridSizeZ = -0.5*kmaxz*std::log(ewaldErrorTol);
-//            gpuSetPMEParameters(gpu, (float) alpha, gridSizeX, gridSizeY, gridSizeZ);
-//            method = PARTICLE_MESH_EWALD;
-//        }
-//    }
-//    data.nonbondedMethod = method;
-//    gpuSetCoulombParameters(gpu, 138.935485f, particle, c6, c12, q, symbol, exclusionList, method);
+    if (force.getNonbondedMethod() == NonbondedForce::Ewald) {
+        // Compute the Ewald parameters.
+
+        double alpha;
+        int kmaxx, kmaxy, kmaxz;
+        NonbondedForceImpl::calcEwaldParameters(system, force, alpha, kmaxx, kmaxy, kmaxz);
+        defines["EWALD_ALPHA"] = doubleToString(alpha);
+        defines["TWO_OVER_SQRT_PI"] = doubleToString(2.0/sqrt(M_PI));
+        defines["USE_EWALD"] = "1";
+        double selfEnergyScale = 138.935485*alpha/std::sqrt(M_PI);
+        ewaldSelfEnergy = - 138.935485*alpha*sumSquaredCharges/std::sqrt(M_PI);
+
+        // Create the reciprocal space kernels.
+
+        map<string, string> replacements;
+        replacements["NUM_ATOMS"] = intToString(numParticles);
+        replacements["KMAX_X"] = intToString(kmaxx);
+        replacements["KMAX_Y"] = intToString(kmaxy);
+        replacements["KMAX_Z"] = intToString(kmaxz);
+        replacements["RECIPROCAL_BOX_SIZE_X"] = doubleToString(2.0*M_PI/boxVectors[0][0]);
+        replacements["RECIPROCAL_BOX_SIZE_Y"] = doubleToString(2.0*M_PI/boxVectors[1][1]);
+        replacements["RECIPROCAL_BOX_SIZE_Z"] = doubleToString(2.0*M_PI/boxVectors[2][2]);
+        replacements["RECIPROCAL_COEFFICIENT"] = doubleToString(138.935485*4*M_PI/(boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2]));
+        replacements["EXP_COEFFICIENT"] = doubleToString(-1.0/(4.0*alpha*alpha));
+        cl::Program program = cl.createProgram(cl.loadSourceFromFile("ewald.cl"), replacements);
+        ewaldSumsKernel = cl::Kernel(program, "calculateEwaldCosSinSums");
+        ewaldForcesKernel = cl::Kernel(program, "calculateEwaldForces");
+        cosSinSums = new OpenCLArray<mm_float2>(cl, (2*kmaxx-1)*(2*kmaxy-1)*(2*kmaxz-1), "cosSinSums");
+    }
+    else
+        ewaldSelfEnergy = 0.0;
+
+    // Add the interaction to the default nonbonded kernel.
+    
     string source = cl.loadSourceFromFile("coulombLennardJones.cl", defines);
     cl.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, source);
     cl.getNonbondedUtilities().addParameter(OpenCLNonbondedUtilities::ParameterInfo("sigmaEpsilon", "float2", sizeof(cl_float2), sigmaEpsilon->getDeviceBuffer()));
     cutoffSquared = force.getCutoffDistance()*force.getCutoffDistance();
-
-    // Compute the Ewald self energy.
-
-    ewaldSelfEnergy = 0.0;
-    if (force.getNonbondedMethod() == NonbondedForce::Ewald || force.getNonbondedMethod() == NonbondedForce::PME) {
-//        double selfEnergyScale = gpu->sim.epsfac*gpu->sim.alphaEwald/std::sqrt(PI);
-//            for (int i = 0; i < numParticles; i++)
-//                ewaldSelfEnergy -= selfEnergyScale*q[i]*q[i];
-    }
 
     // Initialize the exceptions.
 
@@ -644,6 +648,16 @@ void OpenCLCalcNonbondedForceKernel::executeForces(ContextImpl& context) {
         exceptionsKernel.setArg<cl::Buffer>(7, exceptionParams->getDeviceBuffer());
         exceptionsKernel.setArg<cl::Buffer>(8, exceptionIndices->getDeviceBuffer());
         cl.executeKernel(exceptionsKernel, numExceptions);
+    }
+    if (cosSinSums != NULL) {
+        ewaldSumsKernel.setArg<cl::Buffer>(0, cl.getEnergyBuffer().getDeviceBuffer());
+        ewaldSumsKernel.setArg<cl::Buffer>(1, cl.getPosq().getDeviceBuffer());
+        ewaldSumsKernel.setArg<cl::Buffer>(2, cosSinSums->getDeviceBuffer());
+        cl.executeKernel(ewaldSumsKernel, cosSinSums->getSize());
+        ewaldForcesKernel.setArg<cl::Buffer>(0, cl.getForceBuffers().getDeviceBuffer());
+        ewaldForcesKernel.setArg<cl::Buffer>(1, cl.getPosq().getDeviceBuffer());
+        ewaldForcesKernel.setArg<cl::Buffer>(2, cosSinSums->getDeviceBuffer());
+        cl.executeKernel(ewaldForcesKernel, cl.getNumAtoms());
     }
 }
 
