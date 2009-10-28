@@ -119,14 +119,14 @@ void testTemperature() {
     // Now run it for a while and see if the temperature is correct.
     
     double ke = 0.0;
-    for (int i = 0; i < 1000; ++i) {
+    for (int i = 0; i < 10000; ++i) {
         State state = context.getState(State::Energy);
         ke += state.getKineticEnergy();
         integrator.step(1);
     }
-    ke /= 1000;
+    ke /= 10000;
     double expected = 0.5*numParticles*3*BOLTZ*temp;
-    ASSERT_EQUAL_TOL(expected, ke, 3/std::sqrt(1000.0));
+    ASSERT_EQUAL_TOL(expected, ke, 6/std::sqrt(10000.0));
 }
 
 void testConstraints() {
