@@ -77,7 +77,7 @@ public:
 private:
     class ErrorFunction;
     class EwaldErrorFunction;
-    static double findZero(const ErrorFunction& f, int initialGuess);
+    static int findZero(const ErrorFunction& f, int initialGuess);
     NonbondedForce& owner;
     Kernel kernel;
 };

@@ -35,7 +35,7 @@
 
 // In case we're using some primitive version of Visual Studio this will
 // make sure that erf() and erfc() are defined.
-#include "MSVC_erfc.h"
+#include "openmm/internal/MSVC_erfc.h"
 
 using std::vector;
 

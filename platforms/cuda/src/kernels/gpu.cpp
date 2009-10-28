@@ -53,6 +53,10 @@ using namespace std;
 #include "quern.h"
 #include "Lepton.h"
 
+// In case we're using some primitive version of Visual Studio this will
+// make sure that erf() and erfc() are defined.
+#include "openmm/internal/MSVC_erfc.h"
+
 using OpenMM::OpenMMException;
 using Lepton::Operation;
 
@@ -657,17 +661,17 @@ void gpuSetCustomNonbondedParameters(gpuContext gpu, const vector<vector<double>
     gpu->sim.pCustomExceptionID = gpu->psCustomExceptionID->_pDevData;
     gpu->psCustomExceptionParams = new CUDAStream<float4>(gpu->sim.customExceptions, 1, "CustomExceptionParams");
     gpu->sim.pCustomExceptionParams = gpu->psCustomExceptionParams->_pDevData;
-    for (int i = 0; i < parameters.size(); i++) {
+    for (int i = 0; i < (int) parameters.size(); i++) {
         if (parameters[i].size() > 0)
-            (*gpu->psCustomParams)[i].x = parameters[i][0];
+            (*gpu->psCustomParams)[i].x = (float) parameters[i][0];
         if (parameters[i].size() > 1)
-            (*gpu->psCustomParams)[i].y = parameters[i][1];
+            (*gpu->psCustomParams)[i].y = (float) parameters[i][1];
         if (parameters[i].size() > 2)
-            (*gpu->psCustomParams)[i].z = parameters[i][2];
+            (*gpu->psCustomParams)[i].z = (float) parameters[i][2];
         if (parameters[i].size() > 3)
-            (*gpu->psCustomParams)[i].w = parameters[i][3];
+            (*gpu->psCustomParams)[i].w = (float) parameters[i][3];
     }
-    for (int i = 0; i < exceptionAtom1.size(); i++) {
+    for (int i = 0; i < (int) exceptionAtom1.size(); i++) {
         (*gpu->psCustomExceptionID)[i].x = exceptionAtom1[i];
         (*gpu->psCustomExceptionID)[i].y = exceptionAtom2[i];
         (*gpu->psCustomExceptionID)[i].z = gpu->pOutputBufferCounter[exceptionAtom1[i]]++;
@@ -1783,17 +1787,17 @@ void gpuSetLangevinIntegrationParameters(gpuContext gpu, float tau, float deltaT
     double X                         = gpu->sim.tau * sqrt(gpu->sim.kT * C);
     double Yv                        = sqrt(gpu->sim.kT * B / C);
     double Yx                        = gpu->sim.tau * sqrt(gpu->sim.kT * B / (1.0 - EM));
-    (*gpu->psLangevinParameters)[0] = EM;
-    (*gpu->psLangevinParameters)[1] = EM;
-    (*gpu->psLangevinParameters)[2] = DOverTauC;
-    (*gpu->psLangevinParameters)[3] = TauOneMinusEM;
-    (*gpu->psLangevinParameters)[4] = TauDOverEMMinusOne;
-    (*gpu->psLangevinParameters)[5] = V;
-    (*gpu->psLangevinParameters)[6] = X;
-    (*gpu->psLangevinParameters)[7] = Yv;
-    (*gpu->psLangevinParameters)[8] = Yx;
-    (*gpu->psLangevinParameters)[9] = fix1;
-    (*gpu->psLangevinParameters)[10] = oneOverFix1;
+    (*gpu->psLangevinParameters)[0] = (float) EM;
+    (*gpu->psLangevinParameters)[1] = (float) EM;
+    (*gpu->psLangevinParameters)[2] = (float) DOverTauC;
+    (*gpu->psLangevinParameters)[3] = (float) TauOneMinusEM;
+    (*gpu->psLangevinParameters)[4] = (float) TauDOverEMMinusOne;
+    (*gpu->psLangevinParameters)[5] = (float) V;
+    (*gpu->psLangevinParameters)[6] = (float) X;
+    (*gpu->psLangevinParameters)[7] = (float) Yv;
+    (*gpu->psLangevinParameters)[8] = (float) Yx;
+    (*gpu->psLangevinParameters)[9] = (float) fix1;
+    (*gpu->psLangevinParameters)[10] = (float) oneOverFix1;
     gpu->psLangevinParameters->Upload();
     gpu->psStepSize->Download();
     (*gpu->psStepSize)[0].y = deltaT;

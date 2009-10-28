@@ -145,7 +145,7 @@ void NonbondedForceImpl::calcPMEParameters(const System& system, const Nonbonded
     zsize = (int) ceil(alpha*boxVectors[2][2]/pow(0.5*tol, 0.2));
 }
 
-double NonbondedForceImpl::findZero(const NonbondedForceImpl::ErrorFunction& f, int initialGuess) {
+int NonbondedForceImpl::findZero(const NonbondedForceImpl::ErrorFunction& f, int initialGuess) {
     int arg = initialGuess;
     double value = f.getValue(arg);
     if (value > 0.0) {
