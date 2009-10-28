@@ -1,4 +1,4 @@
-const unsigned int TileSize = 32;
+#define TILE_SIZE 32
 
 /**
  * Compute nonbonded interactions.
@@ -15,8 +15,8 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
 #ifdef USE_CUTOFF
     unsigned int numTiles = interactionCount[0];
 #endif
-    unsigned int totalWarps = get_global_size(0)/TileSize;
-    unsigned int warp = get_global_id(0)/TileSize;
+    unsigned int totalWarps = get_global_size(0)/TILE_SIZE;
+    unsigned int warp = get_global_id(0)/TILE_SIZE;
     unsigned int pos = warp*numTiles/totalWarps;
     unsigned int end = (warp+1)*numTiles/totalWarps;
     float energy = 0.0f;
@@ -25,10 +25,10 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
     while (pos < end) {
         // Extract the coordinates of this tile
         unsigned int x = tiles[pos];
-        unsigned int y = ((x >> 2) & 0x7fff)*TileSize;
+        unsigned int y = ((x >> 2) & 0x7fff)*TILE_SIZE;
         bool hasExclusions = (x & 0x1);
-        x = (x>>17)*TileSize;
-        unsigned int tgx = get_local_id(0) & (TileSize-1);
+        x = (x>>17)*TILE_SIZE;
+        unsigned int tgx = get_local_id(0) & (TILE_SIZE-1);
         unsigned int tbx = get_local_id(0) - tgx;
         unsigned int atom1 = x + tgx;
         float4 force = 0.0f;
@@ -39,12 +39,12 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
 
             local_posq[get_local_id(0)] = posq1;
             LOAD_LOCAL_PARAMETERS_FROM_1
-            unsigned int xi = x/TileSize;
-            unsigned int tile = xi+xi*PADDED_NUM_ATOMS/TileSize-xi*(xi+1)/2;
+            unsigned int xi = x/TILE_SIZE;
+            unsigned int tile = xi+xi*PADDED_NUM_ATOMS/TILE_SIZE-xi*(xi+1)/2;
 #ifdef USE_EXCLUSIONS
             unsigned int excl = exclusions[exclusionIndices[tile]+tgx];
 #endif
-            for (unsigned int j = 0; j < TileSize; j++) {
+            for (unsigned int j = 0; j < TILE_SIZE; j++) {
 #ifdef USE_EXCLUSIONS
                 bool isExcluded = !(excl & 0x1);
 #endif
@@ -72,7 +72,7 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
 
             // Write results
 #ifdef USE_OUTPUT_BUFFER_PER_BLOCK
-            unsigned int offset = x + tgx + (x/TileSize)*PADDED_NUM_ATOMS;
+            unsigned int offset = x + tgx + (x/TILE_SIZE)*PADDED_NUM_ATOMS;
 #else
             unsigned int offset = x + tgx + warp*PADDED_NUM_ATOMS;
 #endif
@@ -96,7 +96,7 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
                 else {
                     // Compute only a subset of the interactions in this tile.
 
-                    for (unsigned int j = 0; j < TileSize; j++) {
+                    for (unsigned int j = 0; j < TILE_SIZE; j++) {
                         if ((flags&(1<<j)) != 0) {
                             bool isExcluded = false;
                             int atom2 = tbx+j;
@@ -141,15 +141,15 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
             {
                 // Compute the full set of interactions in this tile.
 
-                unsigned int xi = x/TileSize;
-                unsigned int yi = y/TileSize;
-                unsigned int tile = xi+yi*PADDED_NUM_ATOMS/TileSize-yi*(yi+1)/2;
+                unsigned int xi = x/TILE_SIZE;
+                unsigned int yi = y/TILE_SIZE;
+                unsigned int tile = xi+yi*PADDED_NUM_ATOMS/TILE_SIZE-yi*(yi+1)/2;
 #ifdef USE_EXCLUSIONS
                 unsigned int excl = (hasExclusions ? exclusions[exclusionIndices[tile]+tgx] : 0xFFFFFFFF);
-                excl = (excl >> tgx) | (excl << (TileSize - tgx));
+                excl = (excl >> tgx) | (excl << (TILE_SIZE - tgx));
 #endif
                 unsigned int tj = tgx;
-                for (unsigned int j = 0; j < TileSize; j++) {
+                for (unsigned int j = 0; j < TILE_SIZE; j++) {
 #ifdef USE_EXCLUSIONS
                     bool isExcluded = !(excl & 0x1);
 #endif
@@ -174,14 +174,14 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
                     force.xyz -= delta.xyz;
                     local_force[tbx+tj].xyz += delta.xyz;
                     excl >>= 1;
-                    tj = (tj + 1) & (TileSize - 1);
+                    tj = (tj + 1) & (TILE_SIZE - 1);
                 }
             }
 
             // Write results
 #ifdef USE_OUTPUT_BUFFER_PER_BLOCK
-            unsigned int offset1 = x + tgx + (y/TileSize)*PADDED_NUM_ATOMS;
-            unsigned int offset2 = y + tgx + (x/TileSize)*PADDED_NUM_ATOMS;
+            unsigned int offset1 = x + tgx + (y/TILE_SIZE)*PADDED_NUM_ATOMS;
+            unsigned int offset2 = y + tgx + (x/TILE_SIZE)*PADDED_NUM_ATOMS;
 #else
             unsigned int offset1 = x + tgx + warp*PADDED_NUM_ATOMS;
             unsigned int offset2 = y + tgx + warp*PADDED_NUM_ATOMS;

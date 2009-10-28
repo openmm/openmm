@@ -300,7 +300,7 @@ private:
 class OpenCLCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
 public:
     OpenCLCalcNonbondedForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcNonbondedForceKernel(name, platform), cl(cl),
-            exceptionParams(NULL), exceptionIndices(NULL) {
+            sigmaEpsilon(NULL), exceptionParams(NULL), exceptionIndices(NULL), cosSinSums(NULL) {
     }
     ~OpenCLCalcNonbondedForceKernel();
     /**

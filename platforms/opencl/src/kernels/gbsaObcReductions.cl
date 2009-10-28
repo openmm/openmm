@@ -1,0 +1,67 @@
+const float dielectricOffset = 0.009f;
+const float probeRadius = 0.14f;
+const float surfaceAreaFactor = -6.0f*3.14159265358979323846f*0.0216f*1000.0f*0.4184f;
+
+/**
+ * Reduce the Born sums to compute the Born radii.
+ */
+
+__kernel void reduceBornSum(int bufferSize, int numBuffers, float alpha, float beta, float gamma,
+            __global float* bornSum, __global float2* params, __global float* bornRadii, __global float* obcChain) {
+    unsigned int index = get_global_id(0);
+    while (index < NUM_ATOMS) {
+        // Get summed Born data
+
+        int totalSize = bufferSize*numBuffers;
+        float sum = bornSum[index];
+        for (int i = index+bufferSize; i < totalSize; i += bufferSize)
+            sum += bornSum[i];
+
+        // Now calculate Born radius and OBC term.
+
+        float offsetRadius = params[index].x;
+        sum *= 0.5f*offsetRadius;
+        float sum2 = sum*sum;
+        float sum3 = sum*sum2;
+        float tanhSum = tanh(alpha*sum - beta*sum2 + gamma*sum3);
+        float nonOffsetRadius = offsetRadius + dielectricOffset;
+        float radius = 1.0f/(1.0f/offsetRadius - tanhSum/nonOffsetRadius);
+        float chain = offsetRadius*(alpha - 2.0f*beta*sum + 3.0f*gamma*sum2);
+        chain = (1.0f-tanhSum*tanhSum)*chain / nonOffsetRadius;
+        bornRadii[index] = radius;
+        obcChain[index] = chain;
+        index += get_global_size(0);
+    }
+}
+
+/**
+ * Reduce the Born force.
+ */
+
+__kernel void reduceBornForce(int bufferSize, int numBuffers, __global float* bornForce, __global float* energyBuffer,
+            __global float2* params, __global float* bornRadii, __global float* obcChain) {
+    float energy = 0.0f;
+    unsigned int index = get_global_id(0);
+    while (index < NUM_ATOMS) {
+        // Sum the Born force
+
+        int totalSize = bufferSize*numBuffers;
+        float force = bornForce[index];
+        for (int i = index+bufferSize; i < totalSize; i += bufferSize)
+            force += bornForce[i];
+
+        // Now calculate the actual force
+
+        float offsetRadius = params[index].x;
+        float bornRadius = bornRadii[index];
+        float r = offsetRadius+dielectricOffset+probeRadius;
+        float ratio6 = pow((offsetRadius+dielectricOffset)/bornRadius, 6.0f);
+        float saTerm = surfaceAreaFactor*r*r*ratio6;
+        force += saTerm/bornRadius;
+        energy += saTerm;
+        force *= bornRadius*bornRadius*obcChain[index];
+        bornForce[index] = force;
+        index += get_global_size(0);
+    }
+    energyBuffer[get_global_id(0)] += energy/-6.0f;
+}

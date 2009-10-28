@@ -107,6 +107,14 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
     if (cutoff == -1.0)
         return; // There are no nonbonded interactions in the System.
     
+    if (atomExclusions.size() == 0) {
+        // No exclusions were specifically requested, so just mark every atom as not interacting with itself.
+        
+        atomExclusions.resize(context.getNumAtoms());
+        for (int i = 0; i < atomExclusions.size(); i++)
+            atomExclusions[i].push_back(i);
+    }
+
     // Create the list of tiles.
 
     int numAtomBlocks = context.getNumAtomBlocks();

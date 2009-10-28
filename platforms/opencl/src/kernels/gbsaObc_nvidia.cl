@@ -1,24 +1,21 @@
-const unsigned int TileSize = 32;
-const float dielectricOffset = 0.009f;
-const float probeRadius = 0.14f;
-const float surfaceAreaFactor = -6.0f*3.14159265358979323846f*0.0216f*1000.0f*0.4184f;
+#define TILE_SIZE 32
 
 /**
  * Compute the Born sum.
  */
 
 __kernel void computeBornSum(__global float* global_bornSum, __local float* local_bornSum, __global float4* posq,
-        __local float4* local_posq, __global float2* global_params, __local float2* local_params, __global unsigned int* tiles,
+        __local float4* local_posq, __global float2* global_params, __local float2* local_params, __local float* tempBuffer, __global unsigned int* tiles,
 #ifdef USE_CUTOFF
-        __global unsigned int* interactionFlags, __global unsigned int* interactionCount, __local float* tempBuffer) {
+        __global unsigned int* interactionFlags, __global unsigned int* interactionCount) {
 #else
         unsigned int numTiles) {
 #endif
 #ifdef USE_CUTOFF
     unsigned int numTiles = interactionCount[0];
 #endif
-    unsigned int totalWarps = get_global_size(0)/TileSize;
-    unsigned int warp = get_global_id(0)/TileSize;
+    unsigned int totalWarps = get_global_size(0)/TILE_SIZE;
+    unsigned int warp = get_global_id(0)/TILE_SIZE;
     unsigned int pos = warp*numTiles/totalWarps;
     unsigned int end = (warp+1)*numTiles/totalWarps;
     float energy = 0.0f;
@@ -27,11 +24,10 @@ __kernel void computeBornSum(__global float* global_bornSum, __local float* loca
     while (pos < end) {
         // Extract the coordinates of this tile
         unsigned int x = tiles[pos];
-        unsigned int y = ((x >> 2) & 0x7fff)*TileSize;
-        x = (x>>17)*TileSize;
-        unsigned int tgx = get_local_id(0) & (TileSize-1);
+        unsigned int y = ((x >> 2) & 0x7fff)*TILE_SIZE;
+        x = (x>>17)*TILE_SIZE;
+        unsigned int tgx = get_local_id(0) & (TILE_SIZE-1);
         unsigned int tbx = get_local_id(0) - tgx;
-        unsigned int tj = tgx;
         unsigned int atom1 = x + tgx;
         float bornSum = 0.0f;
         float4 posq1 = posq[atom1];
@@ -41,9 +37,9 @@ __kernel void computeBornSum(__global float* global_bornSum, __local float* loca
 
             local_posq[get_local_id(0)] = posq1;
             local_params[get_local_id(0)] = params1;
-            unsigned int xi = x/TileSize;
-            unsigned int tile = xi+xi*PADDED_NUM_ATOMS/TileSize-xi*(xi+1)/2;
-            for (unsigned int j = 0; j < TileSize; j++) {
+            unsigned int xi = x/TILE_SIZE;
+            unsigned int tile = xi+xi*PADDED_NUM_ATOMS/TILE_SIZE-xi*(xi+1)/2;
+            for (unsigned int j = 0; j < TILE_SIZE; j++) {
                 float4 delta = (float4) (local_posq[tbx+j].xyz - posq1.xyz, 0.0f);
 #ifdef USE_PERIODIC
                 delta.x -= floor(delta.x/PERIODIC_BOX_SIZE_X+0.5f)*PERIODIC_BOX_SIZE_X;
@@ -76,7 +72,7 @@ __kernel void computeBornSum(__global float* global_bornSum, __local float* loca
 
             // Write results
 #ifdef USE_OUTPUT_BUFFER_PER_BLOCK
-            unsigned int offset = x + tgx + (x/TileSize)*PADDED_NUM_ATOMS;
+            unsigned int offset = x + tgx + (x/TILE_SIZE)*PADDED_NUM_ATOMS;
 #else
             unsigned int offset = x + tgx + warp*PADDED_NUM_ATOMS;
 #endif
@@ -100,7 +96,7 @@ __kernel void computeBornSum(__global float* global_bornSum, __local float* loca
                 else {
                     // Compute only a subset of the interactions in this tile.
 
-                    for (unsigned int j = 0; j < TileSize; j++) {
+                    for (unsigned int j = 0; j < TILE_SIZE; j++) {
                         if ((flags&(1<<j)) != 0) {
                             float4 delta = (float4) (local_posq[tbx+j].xyz - posq1.xyz, 0.0f);
 #ifdef USE_PERIODIC
@@ -166,10 +162,11 @@ __kernel void computeBornSum(__global float* global_bornSum, __local float* loca
             {
                 // Compute the full set of interactions in this tile.
 
-                unsigned int xi = x/TileSize;
-                unsigned int yi = y/TileSize;
-                unsigned int tile = xi+yi*PADDED_NUM_ATOMS/TileSize-yi*(yi+1)/2;
-                for (unsigned int j = 0; j < TileSize; j++) {
+                unsigned int xi = x/TILE_SIZE;
+                unsigned int yi = y/TILE_SIZE;
+                unsigned int tile = xi+yi*PADDED_NUM_ATOMS/TILE_SIZE-yi*(yi+1)/2;
+                unsigned int tj = tgx;
+                for (unsigned int j = 0; j < TILE_SIZE; j++) {
                     float4 delta = (float4) (local_posq[tbx+tj].xyz - posq1.xyz, 0.0f);
 #ifdef USE_PERIODIC
                     delta.x -= floor(delta.x/PERIODIC_BOX_SIZE_X+0.5f)*PERIODIC_BOX_SIZE_X;
@@ -211,15 +208,15 @@ __kernel void computeBornSum(__global float* global_bornSum, __local float* loca
                             local_bornSum[tbx+tj] += term;
                         }
                     }
-                    tj = (tj + 1) & (TileSize - 1);
+                    tj = (tj + 1) & (TILE_SIZE - 1);
                 }
             }
 
             // Write results
             float4 of;
 #ifdef USE_OUTPUT_BUFFER_PER_BLOCK
-            unsigned int offset1 = x + tgx + (y/TileSize)*PADDED_NUM_ATOMS;
-            unsigned int offset2 = y + tgx + (x/TileSize)*PADDED_NUM_ATOMS;
+            unsigned int offset1 = x + tgx + (y/TILE_SIZE)*PADDED_NUM_ATOMS;
+            unsigned int offset2 = y + tgx + (x/TILE_SIZE)*PADDED_NUM_ATOMS;
 #else
             unsigned int offset1 = x + tgx + warp*PADDED_NUM_ATOMS;
             unsigned int offset2 = y + tgx + warp*PADDED_NUM_ATOMS;
@@ -233,54 +230,22 @@ __kernel void computeBornSum(__global float* global_bornSum, __local float* loca
 }
 
 /**
- * Reduce the Born sums to compute the Born radii.
- */
-
-__kernel void reduceBornSum(int bufferSize, int numBuffers, float alpha, float beta, float gamma,
-            __global float* bornSum, __global float2* params, __global float* bornRadii, __global float* obcChain) {
-    unsigned int index = get_global_id(0);
-    while (index < NUM_ATOMS) {
-        // Get summed Born data
-
-        int totalSize = bufferSize*numBuffers;
-        float sum = bornSum[index];
-        for (int i = index+bufferSize; i < totalSize; i += bufferSize)
-            sum += bornSum[i];
-
-        // Now calculate Born radius and OBC term.
-
-        float offsetRadius = params[index].x;
-        sum *= 0.5f*offsetRadius;
-        float sum2 = sum*sum;
-        float sum3 = sum*sum2;
-        float tanhSum = tanh(alpha*sum - beta*sum2 + gamma*sum3);
-        float nonOffsetRadius = offsetRadius + dielectricOffset;
-        float radius = 1.0f/(1.0f/offsetRadius - tanhSum/nonOffsetRadius);
-        float chain = offsetRadius*(alpha - 2.0f*beta*sum + 3.0f*gamma*sum2);
-        chain = (1.0f-tanhSum*tanhSum)*chain / nonOffsetRadius;
-        bornRadii[index] = radius;
-        obcChain[index] = chain;
-        index += get_global_size(0);
-    }
-}
-
-/**
  * First part of computing the GBSA interaction.
  */
 
 __kernel void computeGBSAForce1(__global float4* forceBuffers, __global float* energyBuffer,
         __global float4* posq, __local float4* local_posq, __local float4* local_force, __global float* global_bornRadii, __local float* local_bornRadii,
-        __global float* global_bornForce, __local float* local_bornForce, __global unsigned int* tiles,
+        __global float* global_bornForce, __local float* local_bornForce, __local float4* tempBuffer, __global unsigned int* tiles,
 #ifdef USE_CUTOFF
-        __global unsigned int* interactionFlags, __global unsigned int* interactionCount, __local float4* tempBuffer) {
+        __global unsigned int* interactionFlags, __global unsigned int* interactionCount) {
 #else
         unsigned int numTiles) {
 #endif
 #ifdef USE_CUTOFF
     unsigned int numTiles = interactionCount[0];
 #endif
-    unsigned int totalWarps = get_global_size(0)/TileSize;
-    unsigned int warp = get_global_id(0)/TileSize;
+    unsigned int totalWarps = get_global_size(0)/TILE_SIZE;
+    unsigned int warp = get_global_id(0)/TILE_SIZE;
     unsigned int pos = warp*numTiles/totalWarps;
     unsigned int end = (warp+1)*numTiles/totalWarps;
     float energy = 0.0f;
@@ -289,11 +254,10 @@ __kernel void computeGBSAForce1(__global float4* forceBuffers, __global float* e
     while (pos < end) {
         // Extract the coordinates of this tile
         unsigned int x = tiles[pos];
-        unsigned int y = ((x >> 2) & 0x7fff)*TileSize;
-        x = (x>>17)*TileSize;
-        unsigned int tgx = get_local_id(0) & (TileSize-1);
+        unsigned int y = ((x >> 2) & 0x7fff)*TILE_SIZE;
+        x = (x>>17)*TILE_SIZE;
+        unsigned int tgx = get_local_id(0) & (TILE_SIZE-1);
         unsigned int tbx = get_local_id(0) - tgx;
-        unsigned int tj = tgx;
         unsigned int atom1 = x + tgx;
         float4 force = 0.0f;
         float4 posq1 = posq[atom1];
@@ -303,11 +267,12 @@ __kernel void computeGBSAForce1(__global float4* forceBuffers, __global float* e
 
             local_posq[get_local_id(0)] = posq1;
             local_bornRadii[get_local_id(0)] = bornRadius1;
-            unsigned int xi = x/TileSize;
-            unsigned int tile = xi+xi*PADDED_NUM_ATOMS/TileSize-xi*(xi+1)/2;
-            for (unsigned int j = 0; j < TileSize; j++) {
+            unsigned int xi = x/TILE_SIZE;
+            unsigned int tile = xi+xi*PADDED_NUM_ATOMS/TILE_SIZE-xi*(xi+1)/2;
+            for (unsigned int j = 0; j < TILE_SIZE; j++) {
                 if (atom1 < NUM_ATOMS && y+j < NUM_ATOMS) {
-                    float4 delta = (float4) (local_posq[tbx+j].xyz - posq1.xyz, 0.0f);
+                    float4 posq2 = local_posq[tbx+j];
+                    float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
 #ifdef USE_PERIODIC
                     delta.x -= floor(delta.x/PERIODIC_BOX_SIZE_X+0.5f)*PERIODIC_BOX_SIZE_X;
                     delta.y -= floor(delta.y/PERIODIC_BOX_SIZE_Y+0.5f)*PERIODIC_BOX_SIZE_Y;
@@ -316,7 +281,6 @@ __kernel void computeGBSAForce1(__global float4* forceBuffers, __global float* e
                     float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
                     float r = sqrt(r2);
                     float invR = 1.0f/r;
-                    float4 posq2 = local_posq[tbx+j];
                     float bornRadius2 = local_bornRadii[tbx+j];
                     float alpha2_ij = bornRadius1*bornRadius2;
                     float D_ij = r2/(4.0f*alpha2_ij);
@@ -342,7 +306,7 @@ __kernel void computeGBSAForce1(__global float4* forceBuffers, __global float* e
 
             // Write results
 #ifdef USE_OUTPUT_BUFFER_PER_BLOCK
-            unsigned int offset = x + tgx + (x/TileSize)*PADDED_NUM_ATOMS;
+            unsigned int offset = x + tgx + (x/TILE_SIZE)*PADDED_NUM_ATOMS;
 #else
             unsigned int offset = x + tgx + warp*PADDED_NUM_ATOMS;
 #endif
@@ -367,9 +331,10 @@ __kernel void computeGBSAForce1(__global float4* forceBuffers, __global float* e
                 else {
                     // Compute only a subset of the interactions in this tile.
 
-                    for (unsigned int j = 0; j < TileSize; j++) {
+                    for (unsigned int j = 0; j < TILE_SIZE; j++) {
                         if ((flags&(1<<j)) != 0) {
-                            float4 delta = (float4) (local_posq[tbx+j].xyz - posq1.xyz, 0.0f);
+                            float4 posq2 = local_posq[tbx+j];
+                            float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
 #ifdef USE_PERIODIC
                             delta.x -= floor(delta.x/PERIODIC_BOX_SIZE_X+0.5f)*PERIODIC_BOX_SIZE_X;
                             delta.y -= floor(delta.y/PERIODIC_BOX_SIZE_Y+0.5f)*PERIODIC_BOX_SIZE_Y;
@@ -377,8 +342,7 @@ __kernel void computeGBSAForce1(__global float4* forceBuffers, __global float* e
 #endif
                             float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
                             float r = sqrt(r2);
-                            float invR = 1.0f / r;
-                            float4 posq2 = local_posq[tbx+j];
+                            float invR = 1.0f/r;
                             float bornRadius2 = local_bornRadii[tbx+j];
                             float alpha2_ij = bornRadius1*bornRadius2;
                             float D_ij = r2/(4.0f*alpha2_ij);
@@ -424,12 +388,14 @@ __kernel void computeGBSAForce1(__global float4* forceBuffers, __global float* e
             {
                 // Compute the full set of interactions in this tile.
 
-                unsigned int xi = x/TileSize;
-                unsigned int yi = y/TileSize;
-                unsigned int tile = xi+yi*PADDED_NUM_ATOMS/TileSize-yi*(yi+1)/2;
-                for (unsigned int j = 0; j < TileSize; j++) {
+                unsigned int xi = x/TILE_SIZE;
+                unsigned int yi = y/TILE_SIZE;
+                unsigned int tile = xi+yi*PADDED_NUM_ATOMS/TILE_SIZE-yi*(yi+1)/2;
+                unsigned int tj = tgx;
+                for (unsigned int j = 0; j < TILE_SIZE; j++) {
                     if (atom1 < NUM_ATOMS && y+tj < NUM_ATOMS) {
-                        float4 delta = (float4) (local_posq[tbx+tj].xyz - posq1.xyz, 0.0f);
+                        float4 posq2 = local_posq[tbx+tj];
+                        float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
 #ifdef USE_PERIODIC
                         delta.x -= floor(delta.x/PERIODIC_BOX_SIZE_X+0.5f)*PERIODIC_BOX_SIZE_X;
                         delta.y -= floor(delta.y/PERIODIC_BOX_SIZE_Y+0.5f)*PERIODIC_BOX_SIZE_Y;
@@ -437,8 +403,7 @@ __kernel void computeGBSAForce1(__global float4* forceBuffers, __global float* e
 #endif
                         float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
                         float r = sqrt(r2);
-                        float invR = 1.0f / r;
-                        float4 posq2 = local_posq[tbx+tj];
+                        float invR = 1.0f/r;
                         float bornRadius2 = local_bornRadii[tbx+tj];
                         float alpha2_ij = bornRadius1*bornRadius2;
                         float D_ij = r2/(4.0f*alpha2_ij);
@@ -461,14 +426,14 @@ __kernel void computeGBSAForce1(__global float4* forceBuffers, __global float* e
                         force.xyz -= delta.xyz;
                         local_force[tbx+tj] += (float4) (delta.xyz, dGpol_dalpha2_ij*bornRadius1);
                     }
-                    tj = (tj + 1) & (TileSize - 1);
+                    tj = (tj + 1) & (TILE_SIZE - 1);
                 }
             }
 
             // Write results
 #ifdef USE_OUTPUT_BUFFER_PER_BLOCK
-            unsigned int offset1 = x + tgx + (y/TileSize)*PADDED_NUM_ATOMS;
-            unsigned int offset2 = y + tgx + (x/TileSize)*PADDED_NUM_ATOMS;
+            unsigned int offset1 = x + tgx + (y/TILE_SIZE)*PADDED_NUM_ATOMS;
+            unsigned int offset2 = y + tgx + (x/TILE_SIZE)*PADDED_NUM_ATOMS;
 #else
             unsigned int offset1 = x + tgx + warp*PADDED_NUM_ATOMS;
             unsigned int offset2 = y + tgx + warp*PADDED_NUM_ATOMS;
@@ -482,36 +447,4 @@ __kernel void computeGBSAForce1(__global float4* forceBuffers, __global float* e
         pos++;
     }
     energyBuffer[get_global_id(0)] += energy;
-}
-
-/**
- * Reduce the Born force.
- */
-
-__kernel void reduceBornForce(int bufferSize, int numBuffers, __global float* bornForce, __global float* energyBuffer,
-            __global float2* params, __global float* bornRadii, __global float* obcChain) {
-    float energy = 0.0f;
-    unsigned int index = get_global_id(0);
-    while (index < NUM_ATOMS) {
-        // Sum the Born force
-
-        int totalSize = bufferSize*numBuffers;
-        float force = bornForce[index];
-        for (int i = index+bufferSize; i < totalSize; i += bufferSize)
-            force += bornForce[i];
-
-        // Now calculate the actual force
-
-        float offsetRadius = params[index].x;
-        float bornRadius = bornRadii[index];
-        float r = offsetRadius+dielectricOffset+probeRadius;
-        float ratio6 = pow((offsetRadius+dielectricOffset)/bornRadius, 6.0f);
-        float saTerm = surfaceAreaFactor*r*r*ratio6;
-        force += saTerm/bornRadius;
-        energy += saTerm;
-        force *= bornRadius*bornRadius*obcChain[index];
-        bornForce[index] = force;
-        index += get_global_size(0);
-    }
-    energyBuffer[get_global_id(0)] += energy/-6.0f;
 }
