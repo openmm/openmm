@@ -712,7 +712,7 @@ void gpuSetCustomNonbondedParameters(gpuContext gpu, const vector<vector<double>
     for (int i = 0; i < MAX_TABULATED_FUNCTIONS; i++) {
         gpuTabulatedFunction& func = gpu->tabulatedFunctions[i];
         if (func.coefficients != NULL) {
-            (*gpu->psTabulatedFunctionParams)[i] = make_float4(func.min, func.max, func.coefficients->_length/(func.max-func.min), 0.0f);
+            (*gpu->psTabulatedFunctionParams)[i] = make_float4((float) func.min, (float) func.max, (float) (func.coefficients->_length/(func.max-func.min)), 0.0f);
             functions[func.name] = fp;
         }
     }
@@ -722,7 +722,7 @@ void gpuSetCustomNonbondedParameters(gpuContext gpu, const vector<vector<double>
 
     vector<string> variables;
     variables.push_back("r");
-    for (int i = 0; i < paramNames.size(); i++)
+    for (int i = 0; i < (int) paramNames.size(); i++)
         variables.push_back(paramNames[i]);
     gpu->sim.customExpressionStackSize = 0;
     SetCustomNonbondedEnergyExpression(createExpression<128>(gpu, energyExp, Lepton::Parser::parse(energyExp, functions).optimize().createProgram(), variables, globalParamNames, gpu->sim.customExpressionStackSize));
@@ -730,7 +730,7 @@ void gpuSetCustomNonbondedParameters(gpuContext gpu, const vector<vector<double>
     Expression<64> paramExpressions[4];
     vector<string> combiningRuleParams;
     for (int j = 1; j < 3; j++) {
-        for (int i = 0; i < paramNames.size(); i++) {
+        for (int i = 0; i < (int) paramNames.size(); i++) {
             stringstream name;
             name << paramNames[i] << j;
             combiningRuleParams.push_back(name.str());
@@ -738,7 +738,7 @@ void gpuSetCustomNonbondedParameters(gpuContext gpu, const vector<vector<double>
         for (int i = paramNames.size(); i < 4; i++)
             combiningRuleParams.push_back("");
     }
-    for (int i = 0; i < paramNames.size(); i++)
+    for (int i = 0; i < (int) paramNames.size(); i++)
         paramExpressions[i] = createExpression<64>(gpu, combiningRules[i], Lepton::Parser::parse(combiningRules[i], functions).optimize().createProgram(), combiningRuleParams, globalParamNames, gpu->sim.customExpressionStackSize);
     SetCustomNonbondedCombiningRules(paramExpressions);
     delete fp;
@@ -846,12 +846,12 @@ void gpuSetPMEParameters(gpuContext gpu, float alpha, int gridSizeX, int gridSiz
                 sc += bsplines_data[j]*cos(arg);
                 ss += bsplines_data[j]*sin(arg);
             }
-            (*gpu->psPmeBsplineModuli[dim])[i] = sc*sc+ss*ss;
+            (*gpu->psPmeBsplineModuli[dim])[i] = (float) (sc*sc+ss*ss);
         }
         for (int i = 0; i < ndata; i++)
         {
             if ((*gpu->psPmeBsplineModuli[dim])[i] < 1.0e-7)
-                (*gpu->psPmeBsplineModuli[dim])[i] = ((*gpu->psPmeBsplineModuli[dim])[i-1]+(*gpu->psPmeBsplineModuli[dim])[i+1])*0.5;
+                (*gpu->psPmeBsplineModuli[dim])[i] = ((*gpu->psPmeBsplineModuli[dim])[i-1]+(*gpu->psPmeBsplineModuli[dim])[i+1])*0.5f;
         }
         gpu->psPmeBsplineModuli[dim]->Upload();
     }
@@ -1146,7 +1146,7 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
     // Compute the constraint coupling matrix
 
     vector<vector<int> > atomAngles(gpu->natoms);
-    for (int i = 0; i < gpu->sim.bond_angles; i++)
+    for (int i = 0; i < (int) gpu->sim.bond_angles; i++)
         atomAngles[(*gpu->psBondAngleID1)[i].y].push_back(i);
     vector<vector<pair<int, double> > > matrix(numCCMA);
     if (numCCMA > 0) {
@@ -1320,7 +1320,7 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
         (*psCcmaReducedMass)[i] = 0.5f/(invMass1[c]+invMass2[c]);
         for (unsigned int j = 0; j < matrix[index].size(); j++) {
             (*psConstraintMatrixColumn)[i+j*numCCMA] = matrix[index][j].first;
-            (*psConstraintMatrixValue)[i+j*numCCMA] = matrix[index][j].second;
+            (*psConstraintMatrixValue)[i+j*numCCMA] = (float) matrix[index][j].second;
         }
         (*psConstraintMatrixColumn)[i+matrix[index].size()*numCCMA] = numCCMA;
     }

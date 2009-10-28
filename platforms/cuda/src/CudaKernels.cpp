@@ -481,7 +481,7 @@ void CudaCalcCustomNonbondedForceKernel::initialize(const System& system, const 
     globalParamValues.resize(force.getNumGlobalParameters());
     for (int i = 0; i < force.getNumGlobalParameters(); i++) {
         globalParamNames[i] = force.getGlobalParameterName(i);
-        globalParamValues[i] = force.getGlobalParameterDefaultValue(i);
+        globalParamValues[i] = (float) force.getGlobalParameterDefaultValue(i);
     }
     gpuSetCustomNonbondedParameters(gpu, parameters, exclusionList, exceptionParticle1, exceptionParticle2, exceptionParams, method,
             (float)force.getCutoffDistance(), force.getEnergyFunction(), combiningRules, paramNames, globalParamNames);
@@ -500,7 +500,7 @@ double CudaCalcCustomNonbondedForceKernel::executeEnergy(ContextImpl& context) {
 
 void CudaCalcCustomNonbondedForceKernel::updateGlobalParams(ContextImpl& context) {
     bool changed = false;
-    for (int i = 0; i < globalParamNames.size(); i++) {
+    for (int i = 0; i < (int) globalParamNames.size(); i++) {
         float value = (float) context.getParameter(globalParamNames[i]);
         if (value != globalParamValues[i])
             changed = true;
@@ -761,7 +761,7 @@ void CudaIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, cons
         // Initialize the GPU parameters.
 
         double tau = (friction == 0.0 ? 0.0 : 1.0/friction);
-        gpuSetLangevinIntegrationParameters(gpu, (float) tau, 0.0f, (float) temperature, errorTol);
+        gpuSetLangevinIntegrationParameters(gpu, (float) tau, 0.0f, (float) temperature, (float) errorTol);
         gpuSetConstants(gpu);
         kGenerateRandoms(gpu);
         prevTemp = temperature;
@@ -806,7 +806,7 @@ void CudaApplyAndersenThermostatKernel::execute(ContextImpl& context) {
     if (temperature != prevTemp || frequency != prevFrequency || stepSize != prevStepSize) {
         // Initialize the GPU parameters.
         
-        gpuSetAndersenThermostatParameters(gpu, (float) temperature, frequency);
+        gpuSetAndersenThermostatParameters(gpu, (float) temperature, (float) frequency);
         gpuSetConstants(gpu);
         kGenerateRandoms(gpu);
         prevTemp = temperature;
