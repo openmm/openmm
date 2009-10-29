@@ -47,7 +47,7 @@ class System;
  * This is the internal implementation of NonbondedForce.
  */
 
-class NonbondedForceImpl : public ForceImpl {
+class OPENMM_EXPORT NonbondedForceImpl : public ForceImpl {
 public:
     NonbondedForceImpl(NonbondedForce& owner);
     ~NonbondedForceImpl();
