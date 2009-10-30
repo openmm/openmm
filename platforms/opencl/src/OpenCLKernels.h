@@ -335,42 +335,47 @@ private:
     double cutoffSquared, ewaldSelfEnergy;
 };
 
-///**
-// * This kernel is invoked by CustomNonbondedForce to calculate the forces acting on the system.
-// */
-//class OpenCLCalcCustomNonbondedForceKernel : public CalcCustomNonbondedForceKernel {
-//public:
-//    OpenCLCalcCustomNonbondedForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcCustomNonbondedForceKernel(name, platform), cl(cl), system(system) {
-//    }
-//    ~OpenCLCalcCustomNonbondedForceKernel();
-//    /**
-//     * Initialize the kernel.
-//     *
-//     * @param system     the System this kernel will be applied to
-//     * @param force      the CustomNonbondedForce this kernel will be used for
-//     */
-//    void initialize(const System& system, const CustomNonbondedForce& force);
-//    /**
-//     * Execute the kernel to calculate the forces.
-//     *
-//     * @param context    the context in which to execute this kernel
-//     */
-//    void executeForces(ContextImpl& context);
-//    /**
-//     * Execute the kernel to calculate the energy.
-//     *
-//     * @param context    the context in which to execute this kernel
-//     * @return the potential energy due to the CustomNonbondedForce
-//     */
-//    double executeEnergy(ContextImpl& context);
-//private:
-//    void updateGlobalParams(ContextImpl& context);
-//    OpenCLContext& cl;
-//    int numParticles;
-//    std::vector<std::string> globalParamNames;
-//    std::vector<float> globalParamValues;
-//    System& system;
-//};
+/**
+ * This kernel is invoked by CustomNonbondedForce to calculate the forces acting on the system.
+ */
+class OpenCLCalcCustomNonbondedForceKernel : public CalcCustomNonbondedForceKernel {
+public:
+    OpenCLCalcCustomNonbondedForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcCustomNonbondedForceKernel(name, platform),
+            hasCreatedKernels(false), cl(cl), params(NULL), globals(NULL), exceptionParams(NULL), exceptionIndices(NULL), system(system) {
+    }
+    ~OpenCLCalcCustomNonbondedForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomNonbondedForce this kernel will be used for
+     */
+    void initialize(const System& system, const CustomNonbondedForce& force);
+    /**
+     * Execute the kernel to calculate the forces.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void executeForces(ContextImpl& context);
+    /**
+     * Execute the kernel to calculate the energy.
+     *
+     * @param context    the context in which to execute this kernel
+     * @return the potential energy due to the CustomNonbondedForce
+     */
+    double executeEnergy(ContextImpl& context);
+private:
+    bool hasCreatedKernels;
+    OpenCLContext& cl;
+    OpenCLArray<mm_float4>* params;
+    OpenCLArray<cl_float>* globals;
+    OpenCLArray<mm_float4>* exceptionParams;
+    OpenCLArray<mm_int4>* exceptionIndices;
+    cl::Kernel exceptionsKernel;
+    std::vector<std::string> globalParamNames;
+    std::vector<cl_float> globalParamValues;
+    System& system;
+};
 
 /**
  * This kernel is invoked by GBSAOBCForce to calculate the forces acting on the system.

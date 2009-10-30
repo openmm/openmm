@@ -52,7 +52,7 @@ OpenCLPlatform::OpenCLPlatform() {
     registerKernelFactory(CalcPeriodicTorsionForceKernel::Name(), factory);
     registerKernelFactory(CalcRBTorsionForceKernel::Name(), factory);
     registerKernelFactory(CalcNonbondedForceKernel::Name(), factory);
-//    registerKernelFactory(CalcCustomNonbondedForceKernel::Name(), factory);
+    registerKernelFactory(CalcCustomNonbondedForceKernel::Name(), factory);
     registerKernelFactory(CalcGBSAOBCForceKernel::Name(), factory);
     registerKernelFactory(IntegrateVerletStepKernel::Name(), factory);
     registerKernelFactory(IntegrateLangevinStepKernel::Name(), factory);

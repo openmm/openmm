@@ -30,8 +30,11 @@
 #include "openmm/Context.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
+#include "OpenCLExpressionUtilities.h"
 #include "OpenCLIntegrationUtilities.h"
 #include "OpenCLNonbondedUtilities.h"
+#include "lepton/Parser.h"
+#include "lepton/ParsedExpression.h"
 #include <cmath>
 
 using namespace OpenMM;
@@ -666,122 +669,254 @@ double OpenCLCalcNonbondedForceKernel::executeEnergy(ContextImpl& context) {
     return ewaldSelfEnergy;
 }
 
-//OpenCLCalcCustomNonbondedForceKernel::~OpenCLCalcCustomNonbondedForceKernel() {
-//}
-//
-//void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, const CustomNonbondedForce& force) {
-//    data.primaryKernel = this; // This must always be the primary kernel so it can update the global parameters
-//    data.hasCustomNonbonded = true;
-//    numParticles = force.getNumParticles();
-//    _gpuContext* gpu = data.gpu;
-//
-//    // Identify which exceptions are actual interactions.
-//
-//    vector<pair<int, int> > exclusions;
-//    vector<int> exceptions;
-//    {
-//        vector<double> parameters;
-//        for (int i = 0; i < force.getNumExceptions(); i++) {
-//            int particle1, particle2;
-//            force.getExceptionParameters(i, particle1, particle2, parameters);
-//            exclusions.push_back(pair<int, int>(particle1, particle2));
-//            if (parameters.size() > 0)
-//                exceptions.push_back(i);
-//        }
-//    }
-//
-//    // Initialize nonbonded interactions.
-//
-//    vector<int> particle(numParticles);
-//    vector<vector<double> > parameters(numParticles);
-//    vector<vector<int> > exclusionList(numParticles);
-//    for (int i = 0; i < numParticles; i++) {
-//        force.getParticleParameters(i, parameters[i]);
-//        particle[i] = i;
-//        exclusionList[i].push_back(i);
-//    }
-//    for (int i = 0; i < (int)exclusions.size(); i++) {
-//        exclusionList[exclusions[i].first].push_back(exclusions[i].second);
-//        exclusionList[exclusions[i].second].push_back(exclusions[i].first);
-//    }
-//    Vec3 boxVectors[3];
-//    system.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
-//    gpuSetPeriodicBoxSize(gpu, (float)boxVectors[0][0], (float)boxVectors[1][1], (float)boxVectors[2][2]);
-//    OpenCLNonbondedMethod method = NO_CUTOFF;
-//    if (force.getNonbondedMethod() != CustomNonbondedForce::NoCutoff)
-//        method = CUTOFF;
-//    if (force.getNonbondedMethod() == CustomNonbondedForce::CutoffPeriodic) {
-//        method = PERIODIC;
-//    }
-//    data.customNonbondedMethod = method;
-//
-//    // Initialize exceptions.
-//
-//    int numExceptions = exceptions.size();
-//    vector<int> exceptionParticle1(numExceptions);
-//    vector<int> exceptionParticle2(numExceptions);
-//    vector<vector<double> > exceptionParams(numExceptions);
-//    for (int i = 0; i < numExceptions; i++)
-//        force.getExceptionParameters(exceptions[i], exceptionParticle1[i], exceptionParticle2[i], exceptionParams[i]);
-//
-//    // Record the tabulated functions.
-//
-//    for (int i = 0; i < force.getNumFunctions(); i++) {
-//        string name;
-//        vector<double> values;
-//        double min, max;
-//        bool interpolating;
-//        force.getFunctionParameters(i, name, values, min, max, interpolating);
+class OpenCLCustomNonbondedForceInfo : public OpenCLForceInfo {
+public:
+    OpenCLCustomNonbondedForceInfo(int requiredBuffers, const CustomNonbondedForce& force) : OpenCLForceInfo(requiredBuffers), force(force) {
+    }
+    bool areParticlesIdentical(int particle1, int particle2) {
+        vector<double> params1;
+        vector<double> params2;
+        force.getParticleParameters(particle1, params1);
+        force.getParticleParameters(particle2, params2);
+        for (int i = 0; i < params1.size(); i++)
+            if (params1[i] != params2[i])
+                return false;
+        return true;
+    }
+    int getNumParticleGroups() {
+        return force.getNumExceptions();
+    }
+    void getParticlesInGroup(int index, std::vector<int>& particles) {
+        int particle1, particle2;
+        vector<double> params;
+        force.getExceptionParameters(index, particle1, particle2, params);
+        particles.resize(2);
+        particles[0] = particle1;
+        particles[1] = particle2;
+    }
+    bool areGroupsIdentical(int group1, int group2) {
+        int particle1, particle2;
+        vector<double> params1;
+        vector<double> params2;
+        force.getExceptionParameters(group1, particle1, particle2, params1);
+        force.getExceptionParameters(group2, particle1, particle2, params2);
+        for (int i = 0; i < params1.size(); i++)
+            if (params1[i] != params2[i])
+                return false;
+        return true;
+    }
+private:
+    const CustomNonbondedForce& force;
+};
+
+OpenCLCalcCustomNonbondedForceKernel::~OpenCLCalcCustomNonbondedForceKernel() {
+    if (params != NULL)
+        delete params;
+    if (globals != NULL)
+        delete globals;
+    if (exceptionParams != NULL)
+        delete exceptionParams;
+    if (exceptionIndices != NULL)
+        delete exceptionIndices;
+}
+
+void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, const CustomNonbondedForce& force) {
+    if (force.getNumParameters() > 4)
+        throw OpenMMException("OpenCLPlatform only supports four per-atom parameters for custom nonbonded forces");
+    int forceIndex;
+    for (forceIndex = 0; forceIndex < system.getNumForces() && &system.getForce(forceIndex) != &force; ++forceIndex)
+        ;
+    string prefix = "custom"+intToString(forceIndex)+"_";
+
+    // Identify which exceptions are actual interactions.
+
+    vector<pair<int, int> > exclusions;
+    vector<int> exceptions;
+    {
+        vector<double> parameters;
+        for (int i = 0; i < force.getNumExceptions(); i++) {
+            int particle1, particle2;
+            force.getExceptionParameters(i, particle1, particle2, parameters);
+            exclusions.push_back(pair<int, int>(particle1, particle2));
+            if (parameters.size() > 0)
+                exceptions.push_back(i);
+        }
+    }
+
+    // Record parameters and exclusions.
+
+    int numParticles = force.getNumParticles();
+    params = new OpenCLArray<mm_float4>(cl, numParticles, "customNonbondedParameters");
+    if (force.getNumGlobalParameters() > 0)
+        globals = new OpenCLArray<cl_float>(cl, force.getNumGlobalParameters(), "customNonbondedGlobals", false, CL_MEM_READ_ONLY);
+    vector<mm_float4> paramVec(numParticles);
+    vector<vector<int> > exclusionList(numParticles);
+    for (int i = 0; i < numParticles; i++) {
+        vector<double> parameters;
+        force.getParticleParameters(i, parameters);
+        if (parameters.size() > 0)
+            paramVec[i].x = (cl_float) parameters[0];
+        if (parameters.size() > 1)
+            paramVec[i].y = (cl_float) parameters[1];
+        if (parameters.size() > 2)
+            paramVec[i].z = (cl_float) parameters[2];
+        if (parameters.size() > 3)
+            paramVec[i].w = (cl_float) parameters[3];
+        exclusionList[i].push_back(i);
+    }
+    for (int i = 0; i < (int)exclusions.size(); i++) {
+        exclusionList[exclusions[i].first].push_back(exclusions[i].second);
+        exclusionList[exclusions[i].second].push_back(exclusions[i].first);
+    }
+    params->upload(paramVec);
+
+    // Record the tabulated functions.
+
+    for (int i = 0; i < force.getNumFunctions(); i++) {
+        string name;
+        vector<double> values;
+        double min, max;
+        bool interpolating;
+        force.getFunctionParameters(i, name, values, min, max, interpolating);
 //        gpuSetTabulatedFunction(gpu, i, name, values, min, max, interpolating);
-//    }
-//
-//    // Record information for the expressions.
-//
-//    vector<string> paramNames;
-//    vector<string> combiningRules;
-//    for (int i = 0; i < force.getNumParameters(); i++) {
-//        paramNames.push_back(force.getParameterName(i));
-//        combiningRules.push_back(force.getParameterCombiningRule(i));
-//    }
-//    globalParamNames.resize(force.getNumGlobalParameters());
-//    globalParamValues.resize(force.getNumGlobalParameters());
-//    for (int i = 0; i < force.getNumGlobalParameters(); i++) {
-//        globalParamNames[i] = force.getGlobalParameterName(i);
-//        globalParamValues[i] = force.getGlobalParameterDefaultValue(i);
-//    }
-//    gpuSetCustomNonbondedParameters(gpu, parameters, exclusionList, exceptionParticle1, exceptionParticle2, exceptionParams, method,
-//            (float)force.getCutoffDistance(), force.getEnergyFunction(), combiningRules, paramNames, globalParamNames);
-//    if (globalParamValues.size() > 0)
-//        SetCustomNonbondedGlobalParams(&globalParamValues[0]);
-//}
-//
-//void OpenCLCalcCustomNonbondedForceKernel::executeForces(ContextImpl& context) {
-//    if (data.primaryKernel == this) {
-//        updateGlobalParams(context);
-//        calcForces(context, data);
-//    }
-//}
-//
-//double OpenCLCalcCustomNonbondedForceKernel::executeEnergy(ContextImpl& context) {
-//    if (data.primaryKernel == this) {
-//        updateGlobalParams(context);
-//        return calcEnergy(context, data, system);
-//    }
-//    return 0.0;
-//}
-//
-//void OpenCLCalcCustomNonbondedForceKernel::updateGlobalParams(ContextImpl& context) {
-//    bool changed = false;
-//    for (int i = 0; i < globalParamNames.size(); i++) {
-//        float value = (float) context.getParameter(globalParamNames[i]);
-//        if (value != globalParamValues[i])
-//            changed = true;
-//        globalParamValues[i] = value;
-//    }
-//    if (changed)
-//        SetCustomNonbondedGlobalParams(&globalParamValues[0]);
-//}
-//
+    }
+
+    // Record information for the expressions.
+
+    vector<string> paramNames;
+    vector<string> combiningRules;
+    for (int i = 0; i < force.getNumParameters(); i++) {
+        paramNames.push_back(force.getParameterName(i));
+        combiningRules.push_back(force.getParameterCombiningRule(i));
+    }
+    globalParamNames.resize(force.getNumGlobalParameters());
+    globalParamValues.resize(force.getNumGlobalParameters());
+    for (int i = 0; i < force.getNumGlobalParameters(); i++) {
+        globalParamNames[i] = force.getGlobalParameterName(i);
+        globalParamValues[i] = (cl_float) force.getGlobalParameterDefaultValue(i);
+    }
+    if (globals != NULL)
+        globals->upload(globalParamValues);
+    bool useCutoff = (force.getNonbondedMethod() != CustomNonbondedForce::NoCutoff);
+    bool usePeriodic = (force.getNonbondedMethod() != CustomNonbondedForce::NoCutoff && force.getNonbondedMethod() != CustomNonbondedForce::CutoffNonPeriodic);
+    Lepton::ParsedExpression energyExpression = Lepton::Parser::parse(force.getEnergyFunction()).optimize();
+    Lepton::ParsedExpression forceExpression = energyExpression.differentiate("r").optimize();
+
+    // Create the kernels.
+
+    map<string, string> paramVariables;
+    map<string, string> forceVariables;
+    map<string, string> exceptionVariables;
+    forceVariables["r"] = "r";
+    exceptionVariables["r"] = "r";
+    string suffixes[] = {".x", ".y", ".z", ".w"};
+    for (int i = 0; i < force.getNumParameters(); i++) {
+        const string& name = force.getParameterName(i);
+        paramVariables[name+"1"] = prefix+"params1"+suffixes[i];
+        paramVariables[name+"2"] = prefix+"params2"+suffixes[i];
+        forceVariables[name] = prefix+name;
+        exceptionVariables[name] = "exceptionParams"+suffixes[i];
+    }
+    for (int i = 0; i < force.getNumGlobalParameters(); i++) {
+        const string& name = force.getGlobalParameterName(i);
+        string value = "globals["+intToString(i)+"]";
+        paramVariables[name] = prefix+value;
+        forceVariables[name] = prefix+value;
+        exceptionVariables[name] = value;
+    }
+    stringstream compute;
+    for (int i = 0; i < force.getNumParameters(); i++) {
+        Lepton::ParsedExpression expression = Lepton::Parser::parse(force.getParameterCombiningRule(i)).optimize();
+        compute << "float " << prefix << force.getParameterName(i) << " = " << OpenCLExpressionUtilities::createExpression(expression, paramVariables) << ";\n";
+    }
+    compute << "tempEnergy += " << OpenCLExpressionUtilities::createExpression(energyExpression, forceVariables) << ";\n";
+    compute << "tempForce -= " << OpenCLExpressionUtilities::createExpression(forceExpression, forceVariables) << ";\n";
+    map<string, string> replacements;
+    replacements["COMPUTE_FORCE"] = compute.str();
+    string source = cl.loadSourceFromFile("customNonbonded.cl", replacements);
+    cl.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, source);
+    cl.getNonbondedUtilities().addParameter(OpenCLNonbondedUtilities::ParameterInfo(prefix+"params", "float4", sizeof(cl_float4), params->getDeviceBuffer()));
+    if (globals != NULL) {
+        globals->upload(globalParamValues);
+        cl.getNonbondedUtilities().addArgument(OpenCLNonbondedUtilities::ParameterInfo(prefix+"globals", "float", sizeof(cl_float), globals->getDeviceBuffer()));
+    }
+    stringstream computeExceptions;
+    computeExceptions << "energy += " << OpenCLExpressionUtilities::createExpression(energyExpression, exceptionVariables) << ";\n";
+    computeExceptions << "dEdR = " << OpenCLExpressionUtilities::createExpression(forceExpression, exceptionVariables) << ";\n";
+    replacements["COMPUTE_FORCE"] = computeExceptions.str();
+    map<string, string> defines;
+    if (globals != NULL)
+        defines["HAS_GLOBALS"] = "1";
+    cl::Program program = cl.createProgram(cl.loadSourceFromFile("customNonbondedExceptions.cl", replacements), defines);
+    exceptionsKernel = cl::Kernel(program, "computeCustomNonbondedExceptions");
+
+    // Initialize exception parameters.
+
+    int numExceptions = exceptions.size();
+    int maxBuffers = cl.getNonbondedUtilities().getNumForceBuffers();
+    if (numExceptions > 0) {
+        exceptionParams = new OpenCLArray<mm_float4>(cl, numExceptions, "customExceptionParams");
+        exceptionIndices = new OpenCLArray<mm_int4>(cl, numExceptions, "customExceptionIndices");
+        vector<mm_float4> exceptionParamsVector(numExceptions);
+        vector<mm_int4> exceptionIndicesVector(numExceptions);
+        vector<int> forceBufferCounter(system.getNumParticles(), 0);
+        for (int i = 0; i < numExceptions; i++) {
+            int particle1, particle2;
+            vector<double> parameters;
+            force.getExceptionParameters(exceptions[i], particle1, particle2, parameters);
+            if (parameters.size() > 0)
+                exceptionParamsVector[i].x = (cl_float) parameters[0];
+            if (parameters.size() > 1)
+                exceptionParamsVector[i].y = (cl_float) parameters[1];
+            if (parameters.size() > 2)
+                exceptionParamsVector[i].z = (cl_float) parameters[2];
+            if (parameters.size() > 3)
+                exceptionParamsVector[i].w = (cl_float) parameters[3];
+            exceptionIndicesVector[i] = (mm_int4) {particle1, particle2, forceBufferCounter[particle1]++, forceBufferCounter[particle2]++};
+        }
+        exceptionParams->upload(exceptionParamsVector);
+        exceptionIndices->upload(exceptionIndicesVector);
+        for (int i = 0; i < forceBufferCounter.size(); i++)
+            maxBuffers = max(maxBuffers, forceBufferCounter[i]);
+    }
+    cl.addForce(new OpenCLCustomNonbondedForceInfo(maxBuffers, force));
+}
+
+void OpenCLCalcCustomNonbondedForceKernel::executeForces(ContextImpl& context) {
+    if (exceptionParams != NULL) {
+        if (!hasCreatedKernels) {
+            hasCreatedKernels = true;
+            exceptionsKernel.setArg<cl_int>(0, cl.getPaddedNumAtoms());
+            exceptionsKernel.setArg<cl_int>(1, exceptionParams->getSize());
+            exceptionsKernel.setArg<cl_float>(2, cl.getNonbondedUtilities().getCutoffDistance()*cl.getNonbondedUtilities().getCutoffDistance());
+            exceptionsKernel.setArg<mm_float4>(3, cl.getNonbondedUtilities().getPeriodicBoxSize());
+            exceptionsKernel.setArg<cl::Buffer>(4, cl.getForceBuffers().getDeviceBuffer());
+            exceptionsKernel.setArg<cl::Buffer>(5, cl.getEnergyBuffer().getDeviceBuffer());
+            exceptionsKernel.setArg<cl::Buffer>(6, cl.getPosq().getDeviceBuffer());
+            exceptionsKernel.setArg<cl::Buffer>(7, exceptionParams->getDeviceBuffer());
+            exceptionsKernel.setArg<cl::Buffer>(8, exceptionIndices->getDeviceBuffer());
+            if (globals != NULL)
+                exceptionsKernel.setArg<cl::Buffer>(9, globals->getDeviceBuffer());
+        }
+        cl.executeKernel(exceptionsKernel, exceptionIndices->getSize());
+    }
+    if (globals == NULL)
+        return;
+    bool changed = false;
+    for (int i = 0; i < globalParamNames.size(); i++) {
+        cl_float value = (cl_float) context.getParameter(globalParamNames[i]);
+        if (value != globalParamValues[i])
+            changed = true;
+        globalParamValues[i] = value;
+    }
+    if (changed)
+        globals->upload(globalParamValues);
+}
+
+double OpenCLCalcCustomNonbondedForceKernel::executeEnergy(ContextImpl& context) {
+    executeForces(context);
+    return 0.0;
+}
 
 class OpenCLGBSAOBCForceInfo : public OpenCLForceInfo {
 public:

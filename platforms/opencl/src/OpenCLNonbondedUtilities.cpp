@@ -103,6 +103,10 @@ void OpenCLNonbondedUtilities::addParameter(const ParameterInfo& parameter) {
     parameters.push_back(parameter);
 }
 
+void OpenCLNonbondedUtilities::addArgument(const ParameterInfo& parameter) {
+    arguments.push_back(parameter);
+}
+
 void OpenCLNonbondedUtilities::initialize(const System& system) {
     if (cutoff == -1.0)
         return; // There are no nonbonded interactions in the System.
@@ -222,7 +226,7 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
 
     // Create kernels.
 
-    forceKernel = createInteractionKernel(kernelSource, parameters, true);
+    forceKernel = createInteractionKernel(kernelSource, parameters, arguments, true);
     if (useCutoff) {
         map<string, string> defines;
         if (forceBufferPerAtomBlock)
@@ -274,7 +278,7 @@ void OpenCLNonbondedUtilities::computeInteractions() {
         context.executeKernel(forceKernel, tiles->getSize()*OpenCLContext::TileSize);
 }
 
-cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& source, const vector<ParameterInfo> params, bool useExclusions) const {
+cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& source, const vector<ParameterInfo>& params, const vector<ParameterInfo>& arguments, bool useExclusions) const {
     map<string, string> replacements;
     replacements["COMPUTE_INTERACTION"] = source;
     stringstream args;
@@ -287,6 +291,15 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
         args << params[i].getType();
         args << "* local_";
         args << params[i].getName();
+    }
+    for (int i = 0; i < arguments.size(); i++) {
+        if ((arguments[i].getBuffer().getInfo<CL_MEM_FLAGS>() & CL_MEM_READ_ONLY) == 0)
+            args << ", __global ";
+        else
+            args << ", __constant ";
+        args << arguments[i].getType();
+        args << "* ";
+        args << arguments[i].getName();
     }
     replacements["PARAMETER_ARGUMENTS"] = args.str();
     stringstream loadLocal1;
@@ -382,6 +395,10 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
     for (int i = 0; i < (int) params.size(); i++) {
         kernel.setArg<cl::Buffer>(i*2+paramBase, params[i].getBuffer());
         kernel.setArg(i*2+paramBase+1, OpenCLContext::ThreadBlockSize*params[i].getSize(), NULL);
+    }
+    paramBase += 2*params.size();
+    for (int i = 0; i < (int) arguments.size(); i++) {
+        kernel.setArg<cl::Buffer>(i+paramBase, arguments[i].getBuffer());
     }
     return kernel;
 }

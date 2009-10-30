@@ -82,6 +82,10 @@ public:
      */
     void addParameter(const ParameterInfo& parameter);
     /**
+     * Add an array (other than a per-atom parameter) that should be passed as an argument to the default interaction kernel.
+     */
+    void addArgument(const ParameterInfo& parameter);
+    /**
      * Initialize this object in preparation for a simulation.
      */
     void initialize(const System& system);
@@ -173,9 +177,10 @@ public:
      * 
      * @param source        the source code for evaluating the force and energy
      * @param params        the per-atom parameters this kernel may depend on
+     * @param arguments     arrays (other than per-atom parameters) that should be passed as arguments to the kernel
      * @param useExclusions specifies whether exclusions are applied to this interaction
      */
-    cl::Kernel createInteractionKernel(const std::string& source, const std::vector<ParameterInfo> params, bool useExclusions) const;
+    cl::Kernel createInteractionKernel(const std::string& source, const std::vector<ParameterInfo>& params, const std::vector<ParameterInfo>& arguments, bool useExclusions) const;
 private:
     OpenCLContext& context;
     cl::Kernel forceKernel;
@@ -192,6 +197,7 @@ private:
     OpenCLArray<mm_float4>* blockBoundingBox;
     std::vector<std::vector<int> > atomExclusions;
     std::vector<ParameterInfo> parameters;
+    std::vector<ParameterInfo> arguments;
     OpenCLCompact* compact;
     std::string kernelSource;
     std::map<std::string, std::string> kernelDefines;

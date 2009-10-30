@@ -51,11 +51,12 @@ public:
      * @param name              the name of the array
      * @param createHostBuffer  specifies whether to create a buffer in host memory for copying data to and from
      *                          the OpenCL Buffer
+     * @param flags             the set of flags to specify when creating the OpenCL Buffer
      */
-    OpenCLArray(OpenCLContext& context, int size, const std::string& name, bool createHostBuffer = false) :
+    OpenCLArray(OpenCLContext& context, int size, const std::string& name, bool createHostBuffer = false, cl_int flags = CL_MEM_READ_WRITE) :
             context(context), size(size), name(name), local(createHostBuffer ? size : 0), ownsBuffer(true) {
         try {
-            buffer = new cl::Buffer(context.getContext(), CL_MEM_READ_WRITE, size*sizeof(T));
+            buffer = new cl::Buffer(context.getContext(), flags, size*sizeof(T));
         }
         catch (cl::Error err) {
             std::stringstream str;
