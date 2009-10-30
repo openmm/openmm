@@ -102,9 +102,9 @@ private:
     ExpressionTreeNode rootNode;
 };
 
-std::ostream& operator<<(std::ostream& out, const ExpressionTreeNode& node);
+LEPTON_EXPORT std::ostream& operator<<(std::ostream& out, const ExpressionTreeNode& node);
 
-std::ostream& operator<<(std::ostream& out, const ParsedExpression& exp);
+LEPTON_EXPORT std::ostream& operator<<(std::ostream& out, const ParsedExpression& exp);
 
 } // namespace Lepton
 
