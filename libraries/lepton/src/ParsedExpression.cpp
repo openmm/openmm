@@ -203,6 +203,11 @@ ExpressionTreeNode ParsedExpression::substituteSimplerExpression(const Expressio
                 return ExpressionTreeNode(new Operation::MultiplyConstant(-dynamic_cast<const Operation::MultiplyConstant*>(&children[0].getOperation())->getValue()), children[0].getChildren()[0]);
             break;
         }
+        case Operation::MULTIPLY_CONSTANT:
+        {
+            if (children[0].getOperation().getId() == Operation::MULTIPLY_CONSTANT) // Combine two multiplies into a single one
+                return ExpressionTreeNode(new Operation::MultiplyConstant(dynamic_cast<const Operation::MultiplyConstant*>(&node.getOperation())->getValue()*dynamic_cast<const Operation::MultiplyConstant*>(&children[0].getOperation())->getValue()), children[0].getChildren()[0]);
+        }
     }
     return ExpressionTreeNode(node.getOperation().clone(), children);
 }
