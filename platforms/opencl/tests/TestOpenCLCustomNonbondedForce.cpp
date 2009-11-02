@@ -241,8 +241,8 @@ int main() {
         testExceptions();
         testCutoff();
         testPeriodic();
-//        testTabulatedFunction(true);
-//        testTabulatedFunction(false);
+        testTabulatedFunction(true);
+        testTabulatedFunction(false);
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

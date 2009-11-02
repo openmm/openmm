@@ -33,6 +33,7 @@
 #include "OpenCLExpressionUtilities.h"
 #include "OpenCLIntegrationUtilities.h"
 #include "OpenCLNonbondedUtilities.h"
+#include "lepton/CustomFunction.h"
 #include "lepton/Parser.h"
 #include "lepton/ParsedExpression.h"
 #include <cmath>
@@ -231,13 +232,16 @@ void OpenCLCalcHarmonicBondForceKernel::initialize(const System& system, const H
 }
 
 void OpenCLCalcHarmonicBondForceKernel::executeForces(ContextImpl& context) {
-    kernel.setArg<cl_int>(0, cl.getPaddedNumAtoms());
-    kernel.setArg<cl_int>(1, numBonds);
-    kernel.setArg<cl::Buffer>(2, cl.getForceBuffers().getDeviceBuffer());
-    kernel.setArg<cl::Buffer>(3, cl.getEnergyBuffer().getDeviceBuffer());
-    kernel.setArg<cl::Buffer>(4, cl.getPosq().getDeviceBuffer());
-    kernel.setArg<cl::Buffer>(5, params->getDeviceBuffer());
-    kernel.setArg<cl::Buffer>(6, indices->getDeviceBuffer());
+    if (!hasInitializedKernel) {
+        hasInitializedKernel = true;
+        kernel.setArg<cl_int>(0, cl.getPaddedNumAtoms());
+        kernel.setArg<cl_int>(1, numBonds);
+        kernel.setArg<cl::Buffer>(2, cl.getForceBuffers().getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(3, cl.getEnergyBuffer().getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(4, cl.getPosq().getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(5, params->getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(6, indices->getDeviceBuffer());
+    }
     cl.executeKernel(kernel, numBonds);
 }
 
@@ -307,13 +311,16 @@ void OpenCLCalcHarmonicAngleForceKernel::initialize(const System& system, const 
 }
 
 void OpenCLCalcHarmonicAngleForceKernel::executeForces(ContextImpl& context) {
-    kernel.setArg<cl_int>(0, cl.getPaddedNumAtoms());
-    kernel.setArg<cl_int>(1, numAngles);
-    kernel.setArg<cl::Buffer>(2, cl.getForceBuffers().getDeviceBuffer());
-    kernel.setArg<cl::Buffer>(3, cl.getEnergyBuffer().getDeviceBuffer());
-    kernel.setArg<cl::Buffer>(4, cl.getPosq().getDeviceBuffer());
-    kernel.setArg<cl::Buffer>(5, params->getDeviceBuffer());
-    kernel.setArg<cl::Buffer>(6, indices->getDeviceBuffer());
+    if (!hasInitializedKernel) {
+        hasInitializedKernel = true;
+        kernel.setArg<cl_int>(0, cl.getPaddedNumAtoms());
+        kernel.setArg<cl_int>(1, numAngles);
+        kernel.setArg<cl::Buffer>(2, cl.getForceBuffers().getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(3, cl.getEnergyBuffer().getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(4, cl.getPosq().getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(5, params->getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(6, indices->getDeviceBuffer());
+    }
     cl.executeKernel(kernel, numAngles);
 }
 
@@ -384,13 +391,16 @@ void OpenCLCalcPeriodicTorsionForceKernel::initialize(const System& system, cons
 }
 
 void OpenCLCalcPeriodicTorsionForceKernel::executeForces(ContextImpl& context) {
-    kernel.setArg<cl_int>(0, cl.getPaddedNumAtoms());
-    kernel.setArg<cl_int>(1, numTorsions);
-    kernel.setArg<cl::Buffer>(2, cl.getForceBuffers().getDeviceBuffer());
-    kernel.setArg<cl::Buffer>(3, cl.getEnergyBuffer().getDeviceBuffer());
-    kernel.setArg<cl::Buffer>(4, cl.getPosq().getDeviceBuffer());
-    kernel.setArg<cl::Buffer>(5, params->getDeviceBuffer());
-    kernel.setArg<cl::Buffer>(6, indices->getDeviceBuffer());
+    if (!hasInitializedKernel) {
+        hasInitializedKernel = true;
+        kernel.setArg<cl_int>(0, cl.getPaddedNumAtoms());
+        kernel.setArg<cl_int>(1, numTorsions);
+        kernel.setArg<cl::Buffer>(2, cl.getForceBuffers().getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(3, cl.getEnergyBuffer().getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(4, cl.getPosq().getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(5, params->getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(6, indices->getDeviceBuffer());
+    }
     cl.executeKernel(kernel, numTorsions);
 }
 
@@ -461,13 +471,16 @@ void OpenCLCalcRBTorsionForceKernel::initialize(const System& system, const RBTo
 }
 
 void OpenCLCalcRBTorsionForceKernel::executeForces(ContextImpl& context) {
-    kernel.setArg<cl_int>(0, cl.getPaddedNumAtoms());
-    kernel.setArg<cl_int>(1, numTorsions);
-    kernel.setArg<cl::Buffer>(2, cl.getForceBuffers().getDeviceBuffer());
-    kernel.setArg<cl::Buffer>(3, cl.getEnergyBuffer().getDeviceBuffer());
-    kernel.setArg<cl::Buffer>(4, cl.getPosq().getDeviceBuffer());
-    kernel.setArg<cl::Buffer>(5, params->getDeviceBuffer());
-    kernel.setArg<cl::Buffer>(6, indices->getDeviceBuffer());
+    if (!hasInitializedKernel) {
+        hasInitializedKernel = true;
+        kernel.setArg<cl_int>(0, cl.getPaddedNumAtoms());
+        kernel.setArg<cl_int>(1, numTorsions);
+        kernel.setArg<cl::Buffer>(2, cl.getForceBuffers().getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(3, cl.getEnergyBuffer().getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(4, cl.getPosq().getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(5, params->getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(6, indices->getDeviceBuffer());
+    }
     cl.executeKernel(kernel, numTorsions);
 }
 
@@ -639,27 +652,33 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
 }
 
 void OpenCLCalcNonbondedForceKernel::executeForces(ContextImpl& context) {
-    if (exceptionIndices != NULL) {
-        int numExceptions = exceptionIndices->getSize();
-        exceptionsKernel.setArg<cl_int>(0, cl.getPaddedNumAtoms());
-        exceptionsKernel.setArg<cl_int>(1, numExceptions);
-        exceptionsKernel.setArg<cl_float>(2, cutoffSquared);
-        exceptionsKernel.setArg<mm_float4>(3, cl.getNonbondedUtilities().getPeriodicBoxSize());
-        exceptionsKernel.setArg<cl::Buffer>(4, cl.getForceBuffers().getDeviceBuffer());
-        exceptionsKernel.setArg<cl::Buffer>(5, cl.getEnergyBuffer().getDeviceBuffer());
-        exceptionsKernel.setArg<cl::Buffer>(6, cl.getPosq().getDeviceBuffer());
-        exceptionsKernel.setArg<cl::Buffer>(7, exceptionParams->getDeviceBuffer());
-        exceptionsKernel.setArg<cl::Buffer>(8, exceptionIndices->getDeviceBuffer());
-        cl.executeKernel(exceptionsKernel, numExceptions);
+    if (!hasInitializedKernel) {
+        hasInitializedKernel = true;
+        if (exceptionIndices != NULL) {
+            int numExceptions = exceptionIndices->getSize();
+            exceptionsKernel.setArg<cl_int>(0, cl.getPaddedNumAtoms());
+            exceptionsKernel.setArg<cl_int>(1, numExceptions);
+            exceptionsKernel.setArg<cl_float>(2, cutoffSquared);
+            exceptionsKernel.setArg<mm_float4>(3, cl.getNonbondedUtilities().getPeriodicBoxSize());
+            exceptionsKernel.setArg<cl::Buffer>(4, cl.getForceBuffers().getDeviceBuffer());
+            exceptionsKernel.setArg<cl::Buffer>(5, cl.getEnergyBuffer().getDeviceBuffer());
+            exceptionsKernel.setArg<cl::Buffer>(6, cl.getPosq().getDeviceBuffer());
+            exceptionsKernel.setArg<cl::Buffer>(7, exceptionParams->getDeviceBuffer());
+            exceptionsKernel.setArg<cl::Buffer>(8, exceptionIndices->getDeviceBuffer());
+        }
+        if (cosSinSums != NULL) {
+            ewaldSumsKernel.setArg<cl::Buffer>(0, cl.getEnergyBuffer().getDeviceBuffer());
+            ewaldSumsKernel.setArg<cl::Buffer>(1, cl.getPosq().getDeviceBuffer());
+            ewaldSumsKernel.setArg<cl::Buffer>(2, cosSinSums->getDeviceBuffer());
+            ewaldForcesKernel.setArg<cl::Buffer>(0, cl.getForceBuffers().getDeviceBuffer());
+            ewaldForcesKernel.setArg<cl::Buffer>(1, cl.getPosq().getDeviceBuffer());
+            ewaldForcesKernel.setArg<cl::Buffer>(2, cosSinSums->getDeviceBuffer());
+        }
     }
+    if (exceptionIndices != NULL)
+        cl.executeKernel(exceptionsKernel, exceptionIndices->getSize());
     if (cosSinSums != NULL) {
-        ewaldSumsKernel.setArg<cl::Buffer>(0, cl.getEnergyBuffer().getDeviceBuffer());
-        ewaldSumsKernel.setArg<cl::Buffer>(1, cl.getPosq().getDeviceBuffer());
-        ewaldSumsKernel.setArg<cl::Buffer>(2, cosSinSums->getDeviceBuffer());
         cl.executeKernel(ewaldSumsKernel, cosSinSums->getSize());
-        ewaldForcesKernel.setArg<cl::Buffer>(0, cl.getForceBuffers().getDeviceBuffer());
-        ewaldForcesKernel.setArg<cl::Buffer>(1, cl.getPosq().getDeviceBuffer());
-        ewaldForcesKernel.setArg<cl::Buffer>(2, cosSinSums->getDeviceBuffer());
         cl.executeKernel(ewaldForcesKernel, cl.getNumAtoms());
     }
 }
@@ -718,6 +737,10 @@ OpenCLCalcCustomNonbondedForceKernel::~OpenCLCalcCustomNonbondedForceKernel() {
         delete exceptionParams;
     if (exceptionIndices != NULL)
         delete exceptionIndices;
+    if (tabulatedFunctionParams != NULL)
+        delete tabulatedFunctionParams;
+    for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
+        delete tabulatedFunctions[i];
 }
 
 void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, const CustomNonbondedForce& force) {
@@ -746,9 +769,12 @@ void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, cons
     // Record parameters and exclusions.
 
     int numParticles = force.getNumParticles();
+    string extraArguments;
     params = new OpenCLArray<mm_float4>(cl, numParticles, "customNonbondedParameters");
-    if (force.getNumGlobalParameters() > 0)
+    if (force.getNumGlobalParameters() > 0) {
         globals = new OpenCLArray<cl_float>(cl, force.getNumGlobalParameters(), "customNonbondedGlobals", false, CL_MEM_READ_ONLY);
+        extraArguments += ", __constant float* globals";
+    }
     vector<mm_float4> paramVec(numParticles);
     vector<vector<int> > exclusionList(numParticles);
     for (int i = 0; i < numParticles; i++) {
@@ -764,21 +790,80 @@ void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, cons
             paramVec[i].w = (cl_float) parameters[3];
         exclusionList[i].push_back(i);
     }
-    for (int i = 0; i < (int)exclusions.size(); i++) {
+    for (int i = 0; i < (int) exclusions.size(); i++) {
         exclusionList[exclusions[i].first].push_back(exclusions[i].second);
         exclusionList[exclusions[i].second].push_back(exclusions[i].first);
     }
     params->upload(paramVec);
 
+    // This class serves as a placeholder for custom functions in expressions.
+
+    class FunctionPlaceholder : public Lepton::CustomFunction {
+    public:
+        int getNumArguments() const {
+            return 1;
+        }
+        double evaluate(const double* arguments) const {
+            return 0.0;
+        }
+        double evaluateDerivative(const double* arguments, const int* derivOrder) const {
+            return 0.0;
+        }
+        CustomFunction* clone() const {
+            return new FunctionPlaceholder();
+        }
+    };
+
     // Record the tabulated functions.
 
+    FunctionPlaceholder* fp = new FunctionPlaceholder();
+    map<string, Lepton::CustomFunction*> functions;
+    vector<pair<string, string> > functionDefinitions;
+    vector<mm_float4> tabulatedFunctionParamsVec(force.getNumFunctions());
     for (int i = 0; i < force.getNumFunctions(); i++) {
         string name;
         vector<double> values;
         double min, max;
         bool interpolating;
         force.getFunctionParameters(i, name, values, min, max, interpolating);
-//        gpuSetTabulatedFunction(gpu, i, name, values, min, max, interpolating);
+        string arrayName = prefix+"table"+intToString(i);
+        functionDefinitions.push_back(make_pair(name, arrayName));
+        functions[name] = fp;
+        tabulatedFunctionParamsVec[i] = (mm_float4) {(float) min, (float) max, (float) ((values.size()-1)/(max-min)), 0.0f};
+
+        // First create a padded set of function values.
+
+        vector<double> padded(values.size()+2);
+        padded[0] = 2*values[0]-values[1];
+        for (int i = 0; i < (int) values.size(); i++)
+            padded[i+1] = values[i];
+        padded[padded.size()-1] = 2*values[values.size()-1]-values[values.size()-2];
+
+        // Now compute the spline coefficients.
+
+        vector<mm_float4> f(values.size()-1);
+        for (int i = 0; i < (int) values.size()-1; i++) {
+            if (interpolating)
+                f[i] = (mm_float4) {(cl_float) padded[i+1],
+                                       (cl_float) (0.5*(-padded[i]+padded[i+2])),
+                                       (cl_float) (0.5*(2.0*padded[i]-5.0*padded[i+1]+4.0*padded[i+2]-padded[i+3])),
+                                       (cl_float) (0.5*(-padded[i]+3.0*padded[i+1]-3.0*padded[i+2]+padded[i+3]))};
+            else
+                f[i] = (mm_float4) {(cl_float) ((padded[i]+4.0*padded[i+1]+padded[i+2])/6.0),
+                                       (cl_float) ((-3.0*padded[i]+3.0*padded[i+2])/6.0),
+                                       (cl_float) ((3.0*padded[i]-6.0*padded[i+1]+3.0*padded[i+2])/6.0),
+                                       (cl_float) ((-padded[i]+3.0*padded[i+1]-3.0*padded[i+2]+padded[i+3])/6.0)};
+        }
+        tabulatedFunctions.push_back(new OpenCLArray<mm_float4>(cl, values.size()-1, "TabulatedFunction"));
+        tabulatedFunctions[tabulatedFunctions.size()-1]->upload(f);
+        cl.getNonbondedUtilities().addArgument(OpenCLNonbondedUtilities::ParameterInfo(arrayName, "float4", sizeof(cl_float4), tabulatedFunctions[tabulatedFunctions.size()-1]->getDeviceBuffer()));
+        extraArguments += ", __constant float4* "+arrayName;
+    }
+    if (force.getNumFunctions() > 0) {
+        tabulatedFunctionParams = new OpenCLArray<mm_float4>(cl, tabulatedFunctionParamsVec.size(), "tabulatedFunctionParameters", false, CL_MEM_READ_ONLY);
+        tabulatedFunctionParams->upload(tabulatedFunctionParamsVec);
+        cl.getNonbondedUtilities().addArgument(OpenCLNonbondedUtilities::ParameterInfo(prefix+"functionParams", "float4", sizeof(cl_float4), tabulatedFunctionParams->getDeviceBuffer()));
+        extraArguments += ", __constant float4* "+prefix+"functionParams";
     }
 
     // Record information for the expressions.
@@ -799,8 +884,11 @@ void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, cons
         globals->upload(globalParamValues);
     bool useCutoff = (force.getNonbondedMethod() != CustomNonbondedForce::NoCutoff);
     bool usePeriodic = (force.getNonbondedMethod() != CustomNonbondedForce::NoCutoff && force.getNonbondedMethod() != CustomNonbondedForce::CutoffNonPeriodic);
-    Lepton::ParsedExpression energyExpression = Lepton::Parser::parse(force.getEnergyFunction()).optimize();
+    Lepton::ParsedExpression energyExpression = Lepton::Parser::parse(force.getEnergyFunction(), functions).optimize();
     Lepton::ParsedExpression forceExpression = energyExpression.differentiate("r").optimize();
+    map<string, Lepton::ParsedExpression> forceExpressions;
+    forceExpressions["tempEnergy += "] = energyExpression;
+    forceExpressions["tempForce -= "] = forceExpression;
 
     // Create the kernels.
 
@@ -824,13 +912,13 @@ void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, cons
         forceVariables[name] = prefix+value;
         exceptionVariables[name] = value;
     }
-    stringstream compute;
+    map<string, Lepton::ParsedExpression> paramExpressions;
     for (int i = 0; i < force.getNumParameters(); i++) {
-        Lepton::ParsedExpression expression = Lepton::Parser::parse(force.getParameterCombiningRule(i)).optimize();
-        compute << "float " << prefix << force.getParameterName(i) << " = " << OpenCLExpressionUtilities::createExpression(expression, paramVariables) << ";\n";
+        paramExpressions["float "+prefix+force.getParameterName(i)+" = " ] = Lepton::Parser::parse(force.getParameterCombiningRule(i)).optimize();
     }
-    compute << "tempEnergy += " << OpenCLExpressionUtilities::createExpression(energyExpression, forceVariables) << ";\n";
-    compute << "tempForce -= " << OpenCLExpressionUtilities::createExpression(forceExpression, forceVariables) << ";\n";
+    stringstream compute;
+    compute << OpenCLExpressionUtilities::createExpressions(paramExpressions, paramVariables, functionDefinitions, prefix+"param_temp", prefix+"functionParams");
+    compute << OpenCLExpressionUtilities::createExpressions(forceExpressions, forceVariables, functionDefinitions, prefix+"force_temp", prefix+"functionParams");
     map<string, string> replacements;
     replacements["COMPUTE_FORCE"] = compute.str();
     string source = cl.loadSourceFromFile("customNonbonded.cl", replacements);
@@ -840,13 +928,20 @@ void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, cons
         globals->upload(globalParamValues);
         cl.getNonbondedUtilities().addArgument(OpenCLNonbondedUtilities::ParameterInfo(prefix+"globals", "float", sizeof(cl_float), globals->getDeviceBuffer()));
     }
+    map<string, Lepton::ParsedExpression> exceptionExpressions;
     stringstream computeExceptions;
-    computeExceptions << "energy += " << OpenCLExpressionUtilities::createExpression(energyExpression, exceptionVariables) << ";\n";
-    computeExceptions << "dEdR = " << OpenCLExpressionUtilities::createExpression(forceExpression, exceptionVariables) << ";\n";
+    exceptionExpressions["energy += "] = energyExpression;
+    exceptionExpressions["dEdR = "] = forceExpression;
+    computeExceptions << OpenCLExpressionUtilities::createExpressions(exceptionExpressions, exceptionVariables, functionDefinitions, "temp", prefix+"functionParams");
     replacements["COMPUTE_FORCE"] = computeExceptions.str();
+    replacements["EXTRA_ARGUMENTS"] = extraArguments;
     map<string, string> defines;
-    if (globals != NULL)
-        defines["HAS_GLOBALS"] = "1";
+    defines["CUTOFF_SQUARED"] = doubleToString(force.getCutoffDistance()*force.getCutoffDistance());
+    Vec3 boxVectors[3];
+    system.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+    defines["PERIODIC_BOX_SIZE_X"] = doubleToString(boxVectors[0][0]);
+    defines["PERIODIC_BOX_SIZE_Y"] = doubleToString(boxVectors[1][1]);
+    defines["PERIODIC_BOX_SIZE_Z"] = doubleToString(boxVectors[2][2]);
     cl::Program program = cl.createProgram(cl.loadSourceFromFile("customNonbondedExceptions.cl", replacements), defines);
     exceptionsKernel = cl::Kernel(program, "computeCustomNonbondedExceptions");
 
@@ -880,23 +975,22 @@ void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, cons
             maxBuffers = max(maxBuffers, forceBufferCounter[i]);
     }
     cl.addForce(new OpenCLCustomNonbondedForceInfo(maxBuffers, force));
+    delete fp;
 }
 
 void OpenCLCalcCustomNonbondedForceKernel::executeForces(ContextImpl& context) {
     if (exceptionParams != NULL) {
-        if (!hasCreatedKernels) {
-            hasCreatedKernels = true;
+        if (!hasInitializedKernel) {
+            hasInitializedKernel = true;
             exceptionsKernel.setArg<cl_int>(0, cl.getPaddedNumAtoms());
             exceptionsKernel.setArg<cl_int>(1, exceptionParams->getSize());
-            exceptionsKernel.setArg<cl_float>(2, cl.getNonbondedUtilities().getCutoffDistance()*cl.getNonbondedUtilities().getCutoffDistance());
-            exceptionsKernel.setArg<mm_float4>(3, cl.getNonbondedUtilities().getPeriodicBoxSize());
-            exceptionsKernel.setArg<cl::Buffer>(4, cl.getForceBuffers().getDeviceBuffer());
-            exceptionsKernel.setArg<cl::Buffer>(5, cl.getEnergyBuffer().getDeviceBuffer());
-            exceptionsKernel.setArg<cl::Buffer>(6, cl.getPosq().getDeviceBuffer());
-            exceptionsKernel.setArg<cl::Buffer>(7, exceptionParams->getDeviceBuffer());
-            exceptionsKernel.setArg<cl::Buffer>(8, exceptionIndices->getDeviceBuffer());
+            exceptionsKernel.setArg<cl::Buffer>(2, cl.getForceBuffers().getDeviceBuffer());
+            exceptionsKernel.setArg<cl::Buffer>(3, cl.getEnergyBuffer().getDeviceBuffer());
+            exceptionsKernel.setArg<cl::Buffer>(4, cl.getPosq().getDeviceBuffer());
+            exceptionsKernel.setArg<cl::Buffer>(5, exceptionParams->getDeviceBuffer());
+            exceptionsKernel.setArg<cl::Buffer>(6, exceptionIndices->getDeviceBuffer());
             if (globals != NULL)
-                exceptionsKernel.setArg<cl::Buffer>(9, globals->getDeviceBuffer());
+                exceptionsKernel.setArg<cl::Buffer>(7, globals->getDeviceBuffer());
         }
         cl.executeKernel(exceptionsKernel, exceptionIndices->getSize());
     }

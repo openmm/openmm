@@ -30,7 +30,9 @@
 #include "lepton/ExpressionTreeNode.h"
 #include "lepton/ParsedExpression.h"
 #include <map>
+#include <sstream>
 #include <string>
+#include <utility>
 
 namespace OpenMM {
 
@@ -41,9 +43,13 @@ namespace OpenMM {
 
 class OpenCLExpressionUtilities {
 public:
-    static std::string createExpression(const Lepton::ParsedExpression& expression, const std::map<std::string, std::string>& variables);
+    static std::string createExpressions(const std::map<std::string, Lepton::ParsedExpression>& expressions, const std::map<std::string, std::string>& variables,
+            const std::vector<std::pair<std::string, std::string> >& functions, const std::string& prefix, const std::string& functionParams);
 private:
-    static std::string processExpression(const Lepton::ExpressionTreeNode& node, const std::map<std::string, std::string>& variables);
+    static void processExpression(std::stringstream& out, const Lepton::ExpressionTreeNode& node,
+            std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& temps, const std::map<std::string, std::string>& variables,
+            const std::vector<std::pair<std::string, std::string> >& functions, const std::string& prefix, const std::string& functionParams);
+    static std::string getTempName(const Lepton::ExpressionTreeNode& node, const std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& temps);
 };
 
 } // namespace OpenMM

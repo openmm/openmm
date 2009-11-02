@@ -27,7 +27,6 @@
 #include "OpenCLExpressionUtilities.h"
 #include "openmm/OpenMMException.h"
 #include "lepton/Operation.h"
-#include <sstream>
 
 using namespace OpenMM;
 using namespace Lepton;
@@ -46,69 +45,152 @@ static string intToString(int value) {
     return s.str();
 }
 
-string OpenCLExpressionUtilities::createExpression(const ParsedExpression& expression, const map<string, string>& variables) {
-    return processExpression(expression.getRootNode(), variables);
+string OpenCLExpressionUtilities::createExpressions(const map<string, ParsedExpression>& expressions, const map<string, string>& variables,
+        const vector<pair<string, string> >& functions, const string& prefix, const string& functionParams) {
+    stringstream out;
+    vector<pair<ExpressionTreeNode, string> > temps;
+    for (map<string, ParsedExpression>::const_iterator iter = expressions.begin(); iter != expressions.end(); ++iter) {
+        processExpression(out, iter->second.getRootNode(), temps, variables, functions, prefix, functionParams);
+        out << iter->first << getTempName(iter->second.getRootNode(), temps) << ";\n";
+    }
+    return out.str();
 }
 
-string OpenCLExpressionUtilities::processExpression(const ExpressionTreeNode& node, const map<string, string>& variables) {
+void OpenCLExpressionUtilities::processExpression(stringstream& out, const ExpressionTreeNode& node, vector<pair<ExpressionTreeNode, string> >& temps,
+        const map<string, string>& variables, const vector<pair<string, string> >& functions, const string& prefix, const string& functionParams) {
+    for (int i = 0; i < (int) temps.size(); i++)
+        if (temps[i].first == node)
+            return;
+    for (int i = 0; i < (int) node.getChildren().size(); i++)
+        processExpression(out, node.getChildren()[i], temps, variables, functions, prefix, functionParams);
+    string name = prefix+intToString(temps.size());
+    
+    out << "float " << name << " = ";
     switch (node.getOperation().getId()) {
         case Operation::CONSTANT:
-            return doubleToString(dynamic_cast<const Operation::Constant*>(&node.getOperation())->getValue());
+            out << doubleToString(dynamic_cast<const Operation::Constant*>(&node.getOperation())->getValue());
+            break;
         case Operation::VARIABLE:
         {
             map<string, string>::const_iterator iter = variables.find(node.getOperation().getName());
             if (iter == variables.end())
                 throw OpenMMException("Unknown variable in expression: "+node.getOperation().getName());
-            return iter->second;
+            out << iter->second;
+            break;
+        }
+        case Operation::CUSTOM:
+        {
+            int i;
+            for (i = 0; i < (int) functions.size() && functions[i].first != node.getOperation().getName(); i++)
+                ;
+            if (i == functions.size())
+                throw OpenMMException("Unknown function in expression: "+node.getOperation().getName());
+            out << "0.0f;\n";
+            out << "{\n";
+            out << "float4 params = " << functionParams << "[" << i << "];\n";
+            out << "float x = " << getTempName(node.getChildren()[0], temps) << ";\n";
+            out << "if (x >= params.x && x <= params.y) {\n";
+            out << "int index = (int) (floor((x-params.x)*params.z));\n";
+            out << "float4 coeff = " << functions[i].second << "[index];\n";
+            out << "x = (x-params.x)*params.z-index;\n";
+            if (dynamic_cast<const Operation::Custom*>(&node.getOperation())->getDerivOrder()[0] == 0)
+                out << name << " = coeff.x+x*(coeff.y+x*(coeff.z+x*coeff.w));\n";
+            else
+                out << name << " = (coeff.y+x*(2.0f*coeff.z+x*3.0f*coeff.w))*params.z;\n";
+            out << "}\n";
+            out << "}";
+            break;
         }
         case Operation::ADD:
-             return "("+processExpression(node.getChildren()[0], variables)+")+("+processExpression(node.getChildren()[1], variables)+")";
+            out << getTempName(node.getChildren()[0], temps) << "+" << getTempName(node.getChildren()[1], temps);
+            break;
         case Operation::SUBTRACT:
-            return "("+processExpression(node.getChildren()[0], variables)+")-("+processExpression(node.getChildren()[1], variables)+")";
+            out << getTempName(node.getChildren()[0], temps) << "-" << getTempName(node.getChildren()[1], temps);
+            break;
         case Operation::MULTIPLY:
-            return "("+processExpression(node.getChildren()[0], variables)+")*("+processExpression(node.getChildren()[1], variables)+")";
+            out << getTempName(node.getChildren()[0], temps) << "*" << getTempName(node.getChildren()[1], temps);
+            break;
         case Operation::DIVIDE:
-            return "("+processExpression(node.getChildren()[0], variables)+")/("+processExpression(node.getChildren()[1], variables)+")";
+            out << getTempName(node.getChildren()[0], temps) << "/" << getTempName(node.getChildren()[1], temps);
+            break;
         case Operation::POWER:
-            return "pow(("+processExpression(node.getChildren()[0], variables)+"), ("+processExpression(node.getChildren()[1], variables)+"))";
+            out << "pow(" << getTempName(node.getChildren()[0], temps) << ", " << getTempName(node.getChildren()[1], temps) << ")";
+            break;
         case Operation::NEGATE:
-            return "-("+processExpression(node.getChildren()[0], variables)+")";
+            out << "-" << getTempName(node.getChildren()[0], temps);
+            break;
         case Operation::SQRT:
-            return "sqrt("+processExpression(node.getChildren()[0], variables)+")";
+            out << "sqrt(" << getTempName(node.getChildren()[0], temps) << ")";
+            break;
         case Operation::EXP:
-            return "exp("+processExpression(node.getChildren()[0], variables)+")";
+            out << "exp(" << getTempName(node.getChildren()[0], temps) << ")";
+            break;
         case Operation::LOG:
-            return "log("+processExpression(node.getChildren()[0], variables)+")";
+            out << "log(" << getTempName(node.getChildren()[0], temps) << ")";
+            break;
         case Operation::SIN:
-            return "sin("+processExpression(node.getChildren()[0], variables)+")";
+            out << "sin(" << getTempName(node.getChildren()[0], temps) << ")";
+            break;
         case Operation::COS:
-            return "cos("+processExpression(node.getChildren()[0], variables)+")";
+            out << "cos(" << getTempName(node.getChildren()[0], temps) << ")";
+            break;
         case Operation::SEC:
-            return "1.0f/cos("+processExpression(node.getChildren()[0], variables)+")";
+            out << "1.0f/cos(" << getTempName(node.getChildren()[0], temps) << ")";
+            break;
         case Operation::CSC:
-            return "1.0f/sin("+processExpression(node.getChildren()[0], variables)+")";
+            out << "1.0f/sin(" << getTempName(node.getChildren()[0], temps) << ")";
+            break;
         case Operation::TAN:
-            return "tan("+processExpression(node.getChildren()[0], variables)+")";
+            out << "tan(" << getTempName(node.getChildren()[0], temps) << ")";
+            break;
         case Operation::COT:
-            return "1.0f/tan("+processExpression(node.getChildren()[0], variables)+")";
+            out << "1.0f/tan(" << getTempName(node.getChildren()[0], temps) << ")";
+            break;
         case Operation::ASIN:
-            return "asin("+processExpression(node.getChildren()[0], variables)+")";
+            out << "asin(" << getTempName(node.getChildren()[0], temps) << ")";
+            break;
         case Operation::ACOS:
-            return "acos("+processExpression(node.getChildren()[0], variables)+")";
+            out << "acos(" << getTempName(node.getChildren()[0], temps) << ")";
+            break;
         case Operation::ATAN:
-            return "atan("+processExpression(node.getChildren()[0], variables)+")";
+            out << "atan(" << getTempName(node.getChildren()[0], temps) << ")";
+            break;
         case Operation::SQUARE:
-            return "pow(("+processExpression(node.getChildren()[0], variables)+"), 2.0f)";
+        {
+            string arg = getTempName(node.getChildren()[0], temps);
+            out << arg << "*" << arg;
+            break;
+        }
         case Operation::CUBE:
-            return "pow(("+processExpression(node.getChildren()[0], variables)+"), 3.0f)";
+        {
+            string arg = getTempName(node.getChildren()[0], temps);
+            out << arg << "*" << arg << "*" << arg;
+            break;
+        }
         case Operation::RECIPROCAL:
-            return "1.0f/("+processExpression(node.getChildren()[0], variables)+")";
+            out << "1.0f/" << getTempName(node.getChildren()[0], temps);
+            break;
         case Operation::ADD_CONSTANT:
-            return doubleToString(dynamic_cast<const Operation::AddConstant*>(&node.getOperation())->getValue())+"+("+processExpression(node.getChildren()[0], variables)+")";
+            out << doubleToString(dynamic_cast<const Operation::AddConstant*>(&node.getOperation())->getValue()) << "+" << getTempName(node.getChildren()[0], temps);
+            break;
         case Operation::MULTIPLY_CONSTANT:
-            return doubleToString(dynamic_cast<const Operation::MultiplyConstant*>(&node.getOperation())->getValue())+"*("+processExpression(node.getChildren()[0], variables)+")";
+            out << doubleToString(dynamic_cast<const Operation::MultiplyConstant*>(&node.getOperation())->getValue()) << "*" << getTempName(node.getChildren()[0], temps);
+            break;
         case Operation::POWER_CONSTANT:
-            return "pow(("+processExpression(node.getChildren()[0], variables)+"), "+doubleToString(dynamic_cast<const Operation::PowerConstant*>(&node.getOperation())->getValue())+")";
+            out << "pow(" << getTempName(node.getChildren()[0], temps) << ", " << doubleToString(dynamic_cast<const Operation::PowerConstant*>(&node.getOperation())->getValue()) << ")";
+            break;
+        default:
+            throw OpenMMException("Internal error: Unknown operation in user-defined expression: "+node.getOperation().getName());
     }
-    throw OpenMMException("Internal error: Unknown operation in user-defined expression: "+node.getOperation().getName());
+    out << ";\n";
+    temps.push_back(make_pair(node, name));
+}
+
+string OpenCLExpressionUtilities::getTempName(const ExpressionTreeNode& node, const vector<pair<ExpressionTreeNode, string> >& temps) {
+    for (int i = 0; i < (int) temps.size(); i++)
+        if (temps[i].first == node)
+            return temps[i].second;
+    stringstream out;
+    out << "Internal error: No temporary variable for expression node: " << node;
+    throw OpenMMException(out.str());
 }

@@ -95,6 +95,12 @@ public:
      * @param variable     the variable with respect to which the derivate should be taken
      */
     virtual ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const = 0;
+    virtual bool operator!=(const Operation& op) const {
+        return op.getId() != getId();
+    }
+    virtual bool operator==(const Operation& op) const {
+        return !(*this != op);
+    }
     class Constant;
     class Variable;
     class Custom;
@@ -149,6 +155,10 @@ public:
     double getValue() const {
         return value;
     }
+    bool operator!=(const Operation& op) const {
+        const Constant* o = dynamic_cast<const Constant*>(&op);
+        return (o == NULL || o->value != value);
+    }
 private:
     double value;
 };
@@ -176,6 +186,10 @@ public:
         return iter->second;
     }
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
+    bool operator!=(const Operation& op) const {
+        const Variable* o = dynamic_cast<const Variable*>(&op);
+        return (o == NULL || o->name != name);
+    }
 private:
     std::string name;
 };
@@ -213,6 +227,10 @@ public:
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
     const std::vector<int>& getDerivOrder() const {
         return derivOrder;
+    }
+    bool operator!=(const Operation& op) const {
+        const Custom* o = dynamic_cast<const Custom*>(&op);
+        return (o == NULL || o->name != name || o->isDerivative != isDerivative || o->derivOrder != derivOrder);
     }
 private:
     std::string name;
@@ -708,6 +726,10 @@ public:
     double getValue() const {
         return value;
     }
+    bool operator!=(const Operation& op) const {
+        const AddConstant* o = dynamic_cast<const AddConstant*>(&op);
+        return (o == NULL || o->value != value);
+    }
 private:
     double value;
 };
@@ -737,6 +759,10 @@ public:
     double getValue() const {
         return value;
     }
+    bool operator!=(const Operation& op) const {
+        const MultiplyConstant* o = dynamic_cast<const MultiplyConstant*>(&op);
+        return (o == NULL || o->value != value);
+    }
 private:
     double value;
 };
@@ -765,6 +791,10 @@ public:
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
     double getValue() const {
         return value;
+    }
+    bool operator!=(const Operation& op) const {
+        const PowerConstant* o = dynamic_cast<const PowerConstant*>(&op);
+        return (o == NULL || o->value != value);
     }
 private:
     double value;

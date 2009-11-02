@@ -49,6 +49,11 @@ class ExpressionProgram;
 class LEPTON_EXPORT ParsedExpression {
 public:
     /**
+     * Create an uninitialized ParsedExpression.  This exists so that ParsedExpressions can be put in STL containers.
+     * Doing anything with it will produce an exception.
+     */
+    ParsedExpression();
+    /**
      * Create a ParsedExpression.  Normally you will not call this directly.  Instead, use the Parser class
      * to parse expression.
      */

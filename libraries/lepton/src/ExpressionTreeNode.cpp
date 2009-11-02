@@ -70,6 +70,19 @@ ExpressionTreeNode::~ExpressionTreeNode() {
         delete operation;
 }
 
+bool ExpressionTreeNode::operator!=(const ExpressionTreeNode& node) const {
+    if (node.getOperation() != getOperation())
+        return true;
+    for (int i = 0; i < (int) getChildren().size(); i++)
+        if (getChildren()[i] != node.getChildren()[i])
+            return true;
+    return false;
+}
+
+bool ExpressionTreeNode::operator==(const ExpressionTreeNode& node) const {
+    return !(*this != node);
+}
+
 ExpressionTreeNode& ExpressionTreeNode::operator=(const ExpressionTreeNode& node) {
     if (operation != NULL)
         delete operation;

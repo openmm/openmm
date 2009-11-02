@@ -2,13 +2,9 @@
  * Compute custom nonbonded exceptions.
  */
 
-__kernel void computeCustomNonbondedExceptions(int numAtoms, int numExceptions, float cutoffSquared, float4 periodicBoxSize, __global float4* forceBuffers, __global float* energyBuffer,
+__kernel void computeCustomNonbondedExceptions(int numAtoms, int numExceptions, __global float4* forceBuffers, __global float* energyBuffer,
         __global float4* posq, __global float4* params, __global int4* indices
-#ifdef HAS_GLOBALS
-        , __constant float* globals) {
-#else
-        ) {
-#endif
+        EXTRA_ARGUMENTS) {
     int index = get_global_id(0);
     float energy = 0.0f;
     while (index < numExceptions) {
@@ -18,15 +14,15 @@ __kernel void computeCustomNonbondedExceptions(int numAtoms, int numExceptions, 
         float4 exceptionParams = params[index];
         float4 delta = posq[atoms.y]-posq[atoms.x];
 #ifdef USE_PERIODIC
-        delta.x -= floor(delta.x/periodicBoxSize.x+0.5f)*periodicBoxSize.x;
-        delta.y -= floor(delta.y/periodicBoxSize.y+0.5f)*periodicBoxSize.y;
-        delta.z -= floor(delta.z/periodicBoxSize.z+0.5f)*periodicBoxSize.z;
+        delta.x -= floor(delta.x/PERIODIC_BOX_SIZE_X+0.5f)*PERIODIC_BOX_SIZE_X;
+        delta.y -= floor(delta.y/PERIODIC_BOX_SIZE_Y+0.5f)*PERIODIC_BOX_SIZE_Y;
+        delta.z -= floor(delta.z/PERIODIC_BOX_SIZE_Z+0.5f)*PERIODIC_BOX_SIZE_Z;
 #endif
         // Compute the force.
 
         float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
 #ifdef USE_CUTOFF
-        if (r2 > cutoffSquared) {
+        if (r2 > CUTOFF_SQUARED) {
 #else
         {
 #endif

@@ -150,8 +150,8 @@ private:
  */
 class OpenCLCalcHarmonicBondForceKernel : public CalcHarmonicBondForceKernel {
 public:
-    OpenCLCalcHarmonicBondForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) :
-        CalcHarmonicBondForceKernel(name, platform), cl(cl), system(system), params(NULL), indices(NULL) {
+    OpenCLCalcHarmonicBondForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcHarmonicBondForceKernel(name, platform),
+            hasInitializedKernel(false), cl(cl), system(system), params(NULL), indices(NULL) {
     }
     ~OpenCLCalcHarmonicBondForceKernel();
     /**
@@ -176,6 +176,7 @@ public:
     double executeEnergy(ContextImpl& context);
 private:
     int numBonds;
+    bool hasInitializedKernel;
     OpenCLContext& cl;
     System& system;
     OpenCLArray<mm_float2>* params;
@@ -188,7 +189,8 @@ private:
  */
 class OpenCLCalcHarmonicAngleForceKernel : public CalcHarmonicAngleForceKernel {
 public:
-    OpenCLCalcHarmonicAngleForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcHarmonicAngleForceKernel(name, platform), cl(cl), system(system) {
+    OpenCLCalcHarmonicAngleForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcHarmonicAngleForceKernel(name, platform),
+            hasInitializedKernel(false), cl(cl), system(system) {
     }
     ~OpenCLCalcHarmonicAngleForceKernel();
     /**
@@ -213,6 +215,7 @@ public:
     double executeEnergy(ContextImpl& context);
 private:
     int numAngles;
+    bool hasInitializedKernel;
     OpenCLContext& cl;
     System& system;
     OpenCLArray<mm_float2>* params;
@@ -225,7 +228,8 @@ private:
  */
 class OpenCLCalcPeriodicTorsionForceKernel : public CalcPeriodicTorsionForceKernel {
 public:
-    OpenCLCalcPeriodicTorsionForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcPeriodicTorsionForceKernel(name, platform), cl(cl), system(system) {
+    OpenCLCalcPeriodicTorsionForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcPeriodicTorsionForceKernel(name, platform),
+            hasInitializedKernel(false), cl(cl), system(system) {
     }
     ~OpenCLCalcPeriodicTorsionForceKernel();
     /**
@@ -250,6 +254,7 @@ public:
     double executeEnergy(ContextImpl& context);
 private:
     int numTorsions;
+    bool hasInitializedKernel;
     OpenCLContext& cl;
     System& system;
     OpenCLArray<mm_float4>* params;
@@ -262,7 +267,8 @@ private:
  */
 class OpenCLCalcRBTorsionForceKernel : public CalcRBTorsionForceKernel {
 public:
-    OpenCLCalcRBTorsionForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcRBTorsionForceKernel(name, platform), cl(cl), system(system) {
+    OpenCLCalcRBTorsionForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcRBTorsionForceKernel(name, platform),
+            hasInitializedKernel(false), cl(cl), system(system) {
     }
     ~OpenCLCalcRBTorsionForceKernel();
     /**
@@ -287,6 +293,7 @@ public:
     double executeEnergy(ContextImpl& context);
 private:
     int numTorsions;
+    bool hasInitializedKernel;
     OpenCLContext& cl;
     System& system;
     OpenCLArray<mm_float8>* params;
@@ -299,8 +306,8 @@ private:
  */
 class OpenCLCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
 public:
-    OpenCLCalcNonbondedForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcNonbondedForceKernel(name, platform), cl(cl),
-            sigmaEpsilon(NULL), exceptionParams(NULL), exceptionIndices(NULL), cosSinSums(NULL) {
+    OpenCLCalcNonbondedForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcNonbondedForceKernel(name, platform),
+            hasInitializedKernel(false), cl(cl), sigmaEpsilon(NULL), exceptionParams(NULL), exceptionIndices(NULL), cosSinSums(NULL) {
     }
     ~OpenCLCalcNonbondedForceKernel();
     /**
@@ -325,6 +332,7 @@ public:
     double executeEnergy(ContextImpl& context);
 private:
     OpenCLContext& cl;
+    bool hasInitializedKernel;
     OpenCLArray<mm_float2>* sigmaEpsilon;
     OpenCLArray<mm_float4>* exceptionParams;
     OpenCLArray<mm_int4>* exceptionIndices;
@@ -341,7 +349,7 @@ private:
 class OpenCLCalcCustomNonbondedForceKernel : public CalcCustomNonbondedForceKernel {
 public:
     OpenCLCalcCustomNonbondedForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcCustomNonbondedForceKernel(name, platform),
-            hasCreatedKernels(false), cl(cl), params(NULL), globals(NULL), exceptionParams(NULL), exceptionIndices(NULL), system(system) {
+            hasInitializedKernel(false), cl(cl), params(NULL), globals(NULL), exceptionParams(NULL), exceptionIndices(NULL), tabulatedFunctionParams(NULL), system(system) {
     }
     ~OpenCLCalcCustomNonbondedForceKernel();
     /**
@@ -365,15 +373,17 @@ public:
      */
     double executeEnergy(ContextImpl& context);
 private:
-    bool hasCreatedKernels;
+    bool hasInitializedKernel;
     OpenCLContext& cl;
     OpenCLArray<mm_float4>* params;
     OpenCLArray<cl_float>* globals;
     OpenCLArray<mm_float4>* exceptionParams;
     OpenCLArray<mm_int4>* exceptionIndices;
+    OpenCLArray<mm_float4>* tabulatedFunctionParams;
     cl::Kernel exceptionsKernel;
     std::vector<std::string> globalParamNames;
     std::vector<cl_float> globalParamValues;
+    std::vector<OpenCLArray<mm_float4>*> tabulatedFunctions;
     System& system;
 };
 

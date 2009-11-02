@@ -38,10 +38,15 @@
 using namespace Lepton;
 using namespace std;
 
+ParsedExpression::ParsedExpression() : rootNode(ExpressionTreeNode()) {
+}
+
 ParsedExpression::ParsedExpression(const ExpressionTreeNode& rootNode) : rootNode(rootNode) {
 }
 
 const ExpressionTreeNode& ParsedExpression::getRootNode() const {
+    if (&rootNode.getOperation() == NULL)
+        throw Exception("Illegal call to an initialized ParsedExpression");
     return rootNode;
 }
 
