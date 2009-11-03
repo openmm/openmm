@@ -176,6 +176,20 @@ struct Atom {
     float bornRadiusScaleFactor;
 };
 
+__global__ void kClearGBVISoftcoreBornSum_kernel()
+{
+    unsigned int pos = blockIdx.x * blockDim.x + threadIdx.x;
+    while (pos < cSim.stride * cSim.nonbondOutputBuffers)
+    {   
+        ((float*)cSim.pBornSum)[pos] = 0.0f;
+        pos += gridDim.x * blockDim.x;
+    }   
+}
+
+void kClearGBVISoftcoreBornSum(gpuContext gpu) {
+    kClearGBVISoftcoreBornSum_kernel<<<gpu->sim.blocks, 384>>>();
+}
+
 // Include versions of the kernels for N^2 calculations.
 
 #define METHOD_NAME(a, b) a##N2##b
@@ -384,7 +398,7 @@ void kReduceGBVIBornForcesQuinticScaling(gpuContext gpu)
 void kCalculateGBVISoftcoreBornSum(gpuContext gpu)
 {
     //printf("kCalculateGBVIBornSum\n");
-    kClearGBVIBornSum( gpu );
+    kClearGBVISoftcoreBornSum( gpu );
     LAUNCHERROR("kClearGBVIBornSum from kCalculateGBVISoftcoreBornSum");
 
     size_t numWithInteractions;

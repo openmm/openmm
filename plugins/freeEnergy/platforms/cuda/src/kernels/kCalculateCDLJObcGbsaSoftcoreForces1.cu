@@ -24,9 +24,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "gputypes.h"
-#include "cudatypes.h"
-#include "cudaKernels.h"
+#include "kernels/gputypes.h"
+#include "kernels/cudatypes.h"
+#include "kernels/cudaKernels.h"
 #include "GpuFreeEnergyCudaKernels.h"
 
 #include <stdio.h>

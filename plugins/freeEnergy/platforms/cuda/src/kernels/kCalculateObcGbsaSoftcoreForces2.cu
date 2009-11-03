@@ -34,7 +34,6 @@
 using namespace std;
 
 #include "gputypes.h"
-#include "cudaKernels.h"
 
 struct Atom {
     float x;

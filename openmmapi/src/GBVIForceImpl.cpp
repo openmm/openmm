@@ -133,6 +133,7 @@ int GBVIForceImpl::getBondsFromForces(ContextImpl& context) {
         }
     }   
 
+    return 0;
 }
 
 #define GBVIDebug 0

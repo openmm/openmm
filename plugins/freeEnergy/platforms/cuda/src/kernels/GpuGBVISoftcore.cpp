@@ -24,8 +24,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-using namespace std;
-
 #include "GpuGBVISoftcore.h"
 #include "GpuFreeEnergyCudaKernels.h"
 
@@ -33,8 +31,8 @@ using namespace std;
 
 GpuGBVISoftcore::GpuGBVISoftcore( ){
     _bornRadiiScalingMethod   = 0;
-    _quinticLowerLimitFactor  = 0.8;
-    _quinticUpperLimit        = 0.008;
+    _quinticLowerLimitFactor  = 0.8f;
+    _quinticUpperLimit        = 0.008f;
     _psSwitchDerivative       = NULL;
 }
 

@@ -28,7 +28,7 @@
 
 #include "gputypes.h"
 #include "cudatypes.h"
-#include "cudaKernels.h"
+//#include "cudaKernels.h"
 #include "openmm/OpenMMException.h"
 
 // info related to nonbonded softcore

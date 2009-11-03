@@ -3936,7 +3936,7 @@ Context* _getContext( System* system, Context* inputContext, Integrator* inputIn
        if( log ){
           (void) fprintf( log, "OpenMM Platform: %s\n", context->getPlatform().getName().c_str() ); (void) fflush( log );
           const vector<string>& properties = gpuPlatform.getPropertyNames();
-          for (int i = 0; i < properties.size(); i++) {
+          for (unsigned int i = 0; i < properties.size(); i++) {
               fprintf( log, "%s: %s\n", properties[i].c_str(), gpuPlatform.getPropertyValue(*context, properties[i]).c_str());
           }    
        }    
@@ -4040,7 +4040,7 @@ static int getForceStrings( System& system, StringVector& forceStringArray, FILE
 
     // print active forces and relevant parameters
 
-    for( unsigned int ii = 0; ii < system.getNumForces(); ii++ ) {
+    for( int ii = 0; ii < system.getNumForces(); ii++ ) {
 
         int hit                 = 0;
         Force& force            = system.getForce(ii);
@@ -5989,62 +5989,69 @@ int main( int numberOfArguments, char* argv[] ){
    initializeForceMap( forceMap, 0 );
    int logFileNameIndex                     = -1;
    int summaryFileNameIndex                 = -1;
-   int forceEnum;
 
    // parse arguments
 
+#ifdef _MSC_VER
+#define STRCASECMP(X,Y)  stricmp(X,Y)
+#define STRNCASECMP(X,Y,Z)  strnicmp(X,Y,Z)
+#else
+#define STRCASECMP(X,Y)  strcasecmp(X,Y)
+#define STRNCASECMP(X,Y,Z)  strncasecmp(X,Y,Z)
+#endif
+
    for( int ii = 1; ii < numberOfArguments; ii++ ){
       int addToMap = 0;
-      if( strcasecmp( argv[ii], "-parameterFileName" ) == 0 ){
+      if( STRCASECMP( argv[ii], "-parameterFileName" ) == 0 ){
          parameterFileName          = argv[ii+1];
          ii++;
-      } else if( strcasecmp( argv[ii], "-logFileName" ) == 0 ){
+      } else if( STRCASECMP( argv[ii], "-logFileName" ) == 0 ){
          logFileNameIndex           = ii + 1;
          ii++;
-      } else if( strcasecmp( argv[ii], "-summaryFileName" ) == 0 ){ 
+      } else if( STRCASECMP( argv[ii], "-summaryFileName" ) == 0 ){ 
          summaryFileNameIndex       = ii + 1; 
          ii++;
-      } else if( strcasecmp( argv[ii], "-checkForces" ) == 0 ){
+      } else if( STRCASECMP( argv[ii], "-checkForces" ) == 0 ){
          checkForces                = atoi( argv[ii+1] );
          ii++;
-      } else if( strcasecmp( argv[ii], "-checkInputForces" ) == 0 ){
+      } else if( STRCASECMP( argv[ii], "-checkInputForces" ) == 0 ){
          checkInputForces           = atoi( argv[ii+1] );
          ii++;
-      } else if( strcasecmp( argv[ii], "-checkEnergyForceConsistent" ) == 0 ){
+      } else if( STRCASECMP( argv[ii], "-checkEnergyForceConsistent" ) == 0 ){
          checkEnergyForceConsistent = atoi( argv[ii+1] );
          ii++;
-      } else if( strcasecmp( argv[ii], "-checkEnergyConservation" ) == 0 ){
+      } else if( STRCASECMP( argv[ii], "-checkEnergyConservation" ) == 0 ){
          checkEnergyConservation = atoi( argv[ii+1] );;
          ii++;
-      } else if( strcasecmp( argv[ii], "-energyForceDelta" )     == 0    ||
-                 strcasecmp( argv[ii], "-energyForceTolerance" ) == 0    ||
-                 strcasecmp( argv[ii], "-cudaDeviceId" )         == 0    ||
-                 strcasecmp( argv[ii], "-platform" )             == 0    ||
-                 strcasecmp( argv[ii], "-applyAssertion" )       == 0 ){
+      } else if( STRCASECMP( argv[ii], "-energyForceDelta" )     == 0    ||
+                 STRCASECMP( argv[ii], "-energyForceTolerance" ) == 0    ||
+                 STRCASECMP( argv[ii], "-cudaDeviceId" )         == 0    ||
+                 STRCASECMP( argv[ii], "-platform" )             == 0    ||
+                 STRCASECMP( argv[ii], "-applyAssertion" )       == 0 ){
          addToMap                   = ii;
          ii++;
 
-      } else if( strcasecmp( argv[ii], "-allForces" ) == 0 ){
+      } else if( STRCASECMP( argv[ii], "-allForces" ) == 0 ){
          int flag = atoi( argv[ii+1] );
          ii++;
          initializeForceMap( forceMap, flag );
-      } else if( strcasecmp( argv[ii], "-log" ) == 0 ){
+      } else if( STRCASECMP( argv[ii], "-log" ) == 0 ){
          if( atoi( argv[ii+1] ) != 0 ){
             log = stderr;
          } else {
             log = NULL;
          }
          ii++;
-      } else if( strcasecmp( argv[ii], "-help" ) == 0 ){
+      } else if( STRCASECMP( argv[ii], "-help" ) == 0 ){
          printUsage( defaultParameterFileName );
 
       } else if( getForceOffset( ii, numberOfArguments, argv, forceMap ) ){
          ii++;
-      } else if( strncasecmp( argv[ii], "-equilibration", 14  ) == 0 ||
-                 strncasecmp( argv[ii], "-simulation",    11  ) == 0 ||
-                 strncasecmp( argv[ii], "-runId",          6  ) == 0 ||
-                 strncasecmp( argv[ii], "-nonbonded",     10  ) == 0 ||
-                 strncasecmp( argv[ii], "-readContext",   12  ) == 0 ){
+      } else if( STRNCASECMP( argv[ii], "-equilibration", 14  ) == 0 ||
+                 STRNCASECMP( argv[ii], "-simulation",    11  ) == 0 ||
+                 STRNCASECMP( argv[ii], "-runId",          6  ) == 0 ||
+                 STRNCASECMP( argv[ii], "-nonbonded",     10  ) == 0 ||
+                 STRNCASECMP( argv[ii], "-readContext",   12  ) == 0 ){
          addToMap = ii;
          ii++;
       } else {

@@ -43,7 +43,7 @@ GpuLJ14Softcore::~GpuLJ14Softcore( ){
 
 int GpuLJ14Softcore::flipStrides( gpuContext gpu ){
     int flip = gpu->sim.outputBuffers - 1;
-    for (int ii = 0; ii < psLJ14SoftcoreID->_stride; ii++)
+    for (unsigned int ii = 0; ii < psLJ14SoftcoreID->_stride; ii++)
     {
         (*psLJ14SoftcoreID)[ii].z = flip - (*psLJ14SoftcoreID)[ii].z;
         (*psLJ14SoftcoreID)[ii].w = flip - (*psLJ14SoftcoreID)[ii].w;

@@ -25,7 +25,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "gputypes.h"
-#include "cudaKernels.h"
+#include "kernels/cudaKernels.h"
 #include "GpuObcGbsaSoftcore.h"
 
 #include <cuda.h>

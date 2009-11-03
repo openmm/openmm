@@ -149,6 +149,8 @@ int GBVISoftcoreForceImpl::getBondsFromForces(ContextImpl& context) {
         }
     }
 
+    return 0;
+
 }
 
 #define GBVIDebug 0
