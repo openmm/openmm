@@ -55,11 +55,13 @@
 #include "../src/sfmt/SFMT.h"
 
 // free-energy plugin includes
-
+//#define	INCLUDE_FREE_ENERGY_PLUGIN
+#ifdef INCLUDE_FREE_ENERGY_PLUGIN
 #include "OpenMMFreeEnergy.h"
 #include "openmm/freeEnergyKernels.h"
 #include "ReferenceFreeEnergyKernelFactory.h"
 #include "CudaFreeEnergyKernelFactory.h"
+#endif
 
 #include <ctime>
 #include <vector>
@@ -1812,6 +1814,7 @@ static int readNonbondedExceptions( FILE* filePtr, int includeNonbondedException
 
    --------------------------------------------------------------------------------------- */
 
+#ifdef INCLUDE_FREE_ENERGY_PLUGIN
 static int readNonbondedSoftcoreExceptions( FILE* filePtr, int includeNonbondedSoftcoreExceptions,
                                             const StringVector& tokens, NonbondedSoftcoreForce& nonbondedForce,
                                             int* lineCount, FILE* log ){
@@ -1879,6 +1882,7 @@ static int readNonbondedSoftcoreExceptions( FILE* filePtr, int includeNonbondedS
 
    return nonbondedForce.getNumExceptions();
 }
+#endif
 
 /**---------------------------------------------------------------------------------------
 
@@ -1948,6 +1952,7 @@ static int setNonbondedForceMethod( NonbondedForce* nonbondedForce, std::string 
 
    --------------------------------------------------------------------------------------- */
 
+#ifdef INCLUDE_FREE_ENERGY_PLUGIN
 static int setNonbondedSoftcoreForceMethod( NonbondedSoftcoreForce* nonbondedSoftcoreForce, std::string nonbondedSoftcoreForceMethod, FILE* log ){
 
 // ---------------------------------------------------------------------------------------
@@ -1991,6 +1996,7 @@ static int setNonbondedSoftcoreForceMethod( NonbondedSoftcoreForce* nonbondedSof
    return method;
 
 }
+#endif
 
 /**---------------------------------------------------------------------------------------
 
@@ -2195,6 +2201,7 @@ static int readNonbondedForce( FILE* filePtr, MapStringInt& forceMap, const Stri
 
    --------------------------------------------------------------------------------------- */
 
+#ifdef INCLUDE_FREE_ENERGY_PLUGIN
 static int readNonbondedSoftcoreForce( FILE* filePtr, MapStringInt& forceMap, const StringVector& tokens,
                                        System& system, int* lineCount, MapStringString& inputArgumentMap, FILE* log ){
 
@@ -2374,6 +2381,7 @@ static int readNonbondedSoftcoreForce( FILE* filePtr, MapStringInt& forceMap, co
 
    return nonbondedSoftcore->getNumParticles();
 }
+#endif
 
 /**---------------------------------------------------------------------------------------
 
@@ -2506,6 +2514,7 @@ static int readGBSAOBCForce( FILE* filePtr, MapStringInt& forceMap, const String
 
    --------------------------------------------------------------------------------------- */
 
+#ifdef INCLUDE_FREE_ENERGY_PLUGIN
 static int readGBSAOBCSoftcoreForce( FILE* filePtr, MapStringInt& forceMap, const StringVector& tokens, System& system, int* lineCount, FILE* log ){
 
 // ---------------------------------------------------------------------------------------
@@ -2605,6 +2614,7 @@ static int readGBSAOBCSoftcoreForce( FILE* filePtr, MapStringInt& forceMap, cons
 
    return gbsaObcSoftcoreForce->getNumParticles();
 }
+#endif
 
 /**---------------------------------------------------------------------------------------
 
@@ -2917,6 +2927,7 @@ static int readGBVIForce( FILE* filePtr, MapStringInt& forceMap, const StringVec
 
    --------------------------------------------------------------------------------------- */
 
+#ifdef INCLUDE_FREE_ENERGY_PLUGIN
 static int readGBVISoftcoreForce( FILE* filePtr, MapStringInt& forceMap, const StringVector& tokens, System& system, int* lineCount, FILE* log ){
 
 // ---------------------------------------------------------------------------------------
@@ -3079,6 +3090,7 @@ static int readGBVISoftcoreForce( FILE* filePtr, MapStringInt& forceMap, const S
 
    return gbviForce->getNumParticles();
 }
+#endif
 
 /**---------------------------------------------------------------------------------------
 
@@ -3485,16 +3497,22 @@ Integrator* readParameterFile( const std::string& inputParameterFile, MapStringI
             readRBTorsionForce( filePtr, forceMap, tokens, system, &lineCount, log );
          } else if( field.compare( "NonbondedForce" ) == 0 ){
             readNonbondedForce( filePtr, forceMap, tokens, system, &lineCount, inputArgumentMap, log );
+#ifdef INCLUDE_FREE_ENERGY_PLUGIN
          } else if( field.compare( "NonbondedSoftcoreForce" ) == 0 ){
             readNonbondedSoftcoreForce( filePtr, forceMap, tokens, system, &lineCount, inputArgumentMap, log );
+#endif
          } else if( field.compare( "GBSAOBCForce" ) == 0 ){
             readGBSAOBCForce( filePtr, forceMap, tokens, system, &lineCount, log );
+#ifdef INCLUDE_FREE_ENERGY_PLUGIN
          } else if( field.compare( "GBSAOBCSoftcoreForce" ) == 0 ){
             readGBSAOBCSoftcoreForce( filePtr, forceMap, tokens, system, &lineCount, log );
+#endif
          } else if( field.compare( "GBVIForce" ) == 0 ){
             readGBVIForce( filePtr, forceMap, tokens, system, &lineCount, log );
+#ifdef INCLUDE_FREE_ENERGY_PLUGIN
          } else if( field.compare( "GBVISoftcoreForce" ) == 0 ){
             readGBVISoftcoreForce( filePtr, forceMap, tokens, system, &lineCount, log );
+#endif
          } else if( field.compare( "Constraints" ) == 0 ){
             readConstraints( filePtr, tokens, system, &lineCount, log );
          } else if( field.compare( "Integrator" ) == 0 ){
@@ -3812,11 +3830,13 @@ static void registerFreeEnergyMethodsReferencePlatform( ReferencePlatform& refer
 
    // ---------------------------------------------------------------------------------------
 
+#ifdef INCLUDE_FREE_ENERGY_PLUGIN
    ReferenceFreeEnergyKernelFactory* factory  = new ReferenceFreeEnergyKernelFactory();
 
    referencePlatform.registerKernelFactory(CalcNonbondedSoftcoreForceKernel::Name(), factory);
    referencePlatform.registerKernelFactory(CalcGBVISoftcoreForceKernel::Name(), factory);
    referencePlatform.registerKernelFactory(CalcGBSAOBCSoftcoreForceKernel::Name(), factory);
+#endif
 
 }
 
@@ -3836,11 +3856,13 @@ static void registerFreeEnergyMethodsCudaPlatform( CudaPlatform& cudaPlatform ){
 
    // ---------------------------------------------------------------------------------------
 
+#ifdef INCLUDE_FREE_ENERGY_PLUGIN
    CudaFreeEnergyKernelFactory* factory  = new CudaFreeEnergyKernelFactory();
 
    cudaPlatform.registerKernelFactory(CalcNonbondedSoftcoreForceKernel::Name(), factory);
    cudaPlatform.registerKernelFactory(CalcGBVISoftcoreForceKernel::Name(), factory);
    cudaPlatform.registerKernelFactory(CalcGBSAOBCSoftcoreForceKernel::Name(), factory);
+#endif
 
 }
 
@@ -4118,6 +4140,7 @@ static int getForceStrings( System& system, StringVector& forceStringArray, FILE
 
         // nonbonded softcore
     
+#ifdef INCLUDE_FREE_ENERGY_PLUGIN
         if( !hit ){
             try {
                NonbondedSoftcoreForce& nbForce = dynamic_cast<NonbondedSoftcoreForce&>(force);
@@ -4161,6 +4184,7 @@ static int getForceStrings( System& system, StringVector& forceStringArray, FILE
             } catch( std::bad_cast ){
             }
         } 
+#endif
 
         // GBSA OBC
     
@@ -4175,6 +4199,7 @@ static int getForceStrings( System& system, StringVector& forceStringArray, FILE
     
         // GBSA OBC softcore
     
+#ifdef INCLUDE_FREE_ENERGY_PLUGIN
         if( !hit ){
             try {
                GBSAOBCSoftcoreForce& obcForce = dynamic_cast<GBSAOBCSoftcoreForce&>(force);
@@ -4183,6 +4208,7 @@ static int getForceStrings( System& system, StringVector& forceStringArray, FILE
             } catch( std::bad_cast ){
             }
         }
+#endif
     
         // GBVI
     
@@ -4197,6 +4223,7 @@ static int getForceStrings( System& system, StringVector& forceStringArray, FILE
     
         // GBVI softcore
     
+#ifdef INCLUDE_FREE_ENERGY_PLUGIN
         if( !hit ){
             try {
                GBVISoftcoreForce& gbviForce = dynamic_cast<GBVISoftcoreForce&>(force);
@@ -4205,6 +4232,7 @@ static int getForceStrings( System& system, StringVector& forceStringArray, FILE
             } catch( std::bad_cast ){
             }
         }
+#endif
     
         // COM
 
@@ -5737,7 +5765,6 @@ void testEnergyForcesConsistent( std::string parameterFileName, MapStringInt& fo
          (void) fflush( log );
       }   
 
-      CudaFreeEnergyKernelFactory* factory  = new CudaFreeEnergyKernelFactory();
       registerFreeEnergyMethodsCudaPlatform( cudaPlatform );
 
       Context* cudaContext                  = testSetup( parameterFileName, forceMap,  cudaPlatform,
