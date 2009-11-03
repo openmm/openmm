@@ -177,8 +177,34 @@ void OpenCLExpressionUtilities::processExpression(stringstream& out, const Expre
             out << doubleToString(dynamic_cast<const Operation::MultiplyConstant*>(&node.getOperation())->getValue()) << "*" << getTempName(node.getChildren()[0], temps);
             break;
         case Operation::POWER_CONSTANT:
-            out << "pow(" << getTempName(node.getChildren()[0], temps) << ", " << doubleToString(dynamic_cast<const Operation::PowerConstant*>(&node.getOperation())->getValue()) << ")";
+        {
+            double exponent = dynamic_cast<const Operation::PowerConstant*>(&node.getOperation())->getValue();
+            if (exponent == 0.0)
+                out << "1.0f";
+            else if (exponent == (int) exponent) {
+                out << "0.0f;\n";
+                out << "{\n";
+                out << "float multiplier = " << (exponent < 0.0 ? "1.0f/" : "") << getTempName(node.getChildren()[0], temps) << ";\n";
+                int exp = (int) fabs(exponent);
+                bool hasAssigned = false;
+                while (exp != 0) {
+                    if (exp%2 == 1) {
+                        if (!hasAssigned)
+                            out << name << " = multiplier;\n";
+                        else
+                            out << name << " *= multiplier;\n";
+                        hasAssigned = true;
+                    }
+                    exp >>= 1;
+                    if (exp != 0)
+                        out << "multiplier *= multiplier;\n";
+                }
+                out << "}";
+            }
+            else
+                out << "pow(" << getTempName(node.getChildren()[0], temps) << ", " << doubleToString(exponent) << ")";
             break;
+        }
         default:
             throw OpenMMException("Internal error: Unknown operation in user-defined expression: "+node.getOperation().getName());
     }

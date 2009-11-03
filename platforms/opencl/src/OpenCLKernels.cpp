@@ -553,6 +553,8 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     vector<mm_float2> sigmaEpsilonVector(numParticles);
     vector<vector<int> > exclusionList(numParticles);
     double sumSquaredCharges = 0.0;
+    bool hasCoulomb = false;
+    bool hasLJ = false;
     for (int i = 0; i < numParticles; i++) {
         double charge, sigma, epsilon;
         force.getParticleParameters(i, charge, sigma, epsilon);
@@ -560,6 +562,10 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         sigmaEpsilonVector[i] = (mm_float2) {(float) (0.5*sigma), (float) (2.0*sqrt(epsilon))};
         exclusionList[i].push_back(i);
         sumSquaredCharges += charge*charge;
+        if (charge != 0.0)
+            hasCoulomb = true;
+        if (epsilon != 0.0)
+            hasLJ = true;
     }
     for (int i = 0; i < (int) exclusions.size(); i++) {
         exclusionList[exclusions[i].first].push_back(exclusions[i].second);
@@ -572,6 +578,8 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     Vec3 boxVectors[3];
     system.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
     map<string, string> defines;
+    defines["HAS_COULOMB"] = (hasCoulomb ? "1" : "0");
+    defines["HAS_LENNARD_JONES"] = (hasLJ ? "1" : "0");
     if (useCutoff) {
         // Compute the reaction field constants.
 
