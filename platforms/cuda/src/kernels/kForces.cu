@@ -43,14 +43,14 @@ void SetForcesSim(gpuContext gpu)
 {
     cudaError_t status;
     status = cudaMemcpyToSymbol(cSim, &gpu->sim, sizeof(cudaGmxSimulation));     
-    RTERROR(status, "cudaMemcpyToSymbol: SetSim copy to cSim failed");
+    RTERROR(status, "cudaMemcpyToSymbol: SetForcesSim copy to cSim failed");
 }
 
 void GetForcesSim(gpuContext gpu)
 {
     cudaError_t status;
     status = cudaMemcpyFromSymbol(&gpu->sim, cSim, sizeof(cudaGmxSimulation));     
-    RTERROR(status, "cudaMemcpyFromSymbol: SetSim copy from cSim failed");
+    RTERROR(status, "cudaMemcpyFromSymbol: GetForcesSim copy from cSim failed");
 }
 
 __global__ void kClearForces_kernel()
@@ -243,7 +243,7 @@ __global__ void kReduceForces_kernel()
         {
             totalForce += *pFt;
         }
-        
+
         pFt = (float*)cSim.pForce4 + pos;
         *pFt = totalForce;
         pos += gridDim.x * blockDim.x;
@@ -259,11 +259,13 @@ void kReduceForces(gpuContext gpu)
 
 double kReduceEnergy(gpuContext gpu)
 {
-//    printf("kReduceEnergy\n");
+    //printf("kReduceEnergy\n");
     gpu->psEnergy->Download();
-    double sum = 0.0f;
-    for (int i = 0; i < gpu->sim.energyOutputBuffers; i++)
+    double sum = 0.0;
+    for (int i = 0; i < gpu->sim.energyOutputBuffers; i++){
         sum += (*gpu->psEnergy)[i];
+    }
+
     return sum;
 }
 
@@ -308,29 +310,87 @@ __global__ void kReduceObcGbsaBornForces_kernel()
         }
         float r            = (obcData.x + cSim.dielectricOffset + cSim.probeRadius);
         float ratio6       = pow((obcData.x + cSim.dielectricOffset) / bornRadius, 6.0f);
-        //float saTerm       = cSim.surfaceAreaFactor * r * r * ratio6;
         float saTerm       = cSim.surfaceAreaFactor * r * r * ratio6;
-        totalForce        += saTerm / bornRadius; // 1.102 == Temp mysterious fudge factor, FIX FIX FIX
 
-        /* E */
-        energy += saTerm;
+        totalForce        += saTerm / bornRadius;
+        totalForce        *= bornRadius * bornRadius * obcChain;
 
-        totalForce *= bornRadius * bornRadius * obcChain;
+        energy            += saTerm;
+
+        pFt                = cSim.pBornForce + pos;
+        *pFt               = totalForce;
+
+        pos               += gridDim.x * blockDim.x;
+    }
+
+    // correct for surface area factor of -6
+    cSim.pEnergy[blockIdx.x * blockDim.x + threadIdx.x] += energy / -6.0f;
+}
+
+__global__ void kReduceGBVIBornForces_kernel()
+{
+    unsigned int pos = (blockIdx.x * blockDim.x + threadIdx.x);
+    float energy = 0.0f;
+    while (pos < cSim.atoms)
+    {
+        float bornRadius  = cSim.pBornRadii[pos];
+        float4 gbviData   = cSim.pGBVIData[pos];
+        float totalForce  = 0.0f;
+        float* pFt        = cSim.pBornForce + pos;
+
+        int i = cSim.nonbondOutputBuffers;
+        while (i >= 4)
+        {
+            float f1    = *pFt;
+            pFt        += cSim.stride;
+            float f2    = *pFt;
+            pFt        += cSim.stride;
+            float f3    = *pFt;
+            pFt        += cSim.stride;
+            float f4    = *pFt;
+            pFt        += cSim.stride;
+            totalForce += f1 + f2 + f3 + f4;
+            i -= 4;
+        }
+        if (i >= 2)
+        {
+            float f1    = *pFt;
+            pFt        += cSim.stride;
+            float f2    = *pFt;
+            pFt        += cSim.stride;
+            totalForce += f1 + f2;
+            i -= 2;
+        }
+        if (i > 0)
+        {
+            totalForce += *pFt;
+        }
+
+        float ratio         = (gbviData.x/bornRadius);
+        float ratio3        = ratio*ratio*ratio;
+        energy             -= gbviData.z*ratio3;
+        totalForce         += (3.0f*gbviData.z*ratio3)/bornRadius; // 'cavity' term
+        float br2           = bornRadius*bornRadius;
+        totalForce         *= (1.0f/3.0f)*br2*br2;
 
         pFt = cSim.pBornForce + pos;
         *pFt = totalForce;
         pos += gridDim.x * blockDim.x;
     }
-    /* E */
-    // correct for surface area factor of -6
-    cSim.pEnergy[blockIdx.x * blockDim.x + threadIdx.x] += energy / -6.0f;
+    cSim.pEnergy[blockIdx.x * blockDim.x + threadIdx.x] += energy;
 }
 
 void kReduceObcGbsaBornForces(gpuContext gpu)
 {
     //printf("kReduceObcGbsaBornForces\n");
-    kReduceObcGbsaBornForces_kernel<<<gpu->sim.blocks, gpu->sim.bf_reduce_threads_per_block>>>();
-    LAUNCHERROR("kReduceObcGbsaBornForces");
+    if( gpu->bIncludeGBSA ){
+       kReduceObcGbsaBornForces_kernel<<<gpu->sim.blocks, gpu->sim.bf_reduce_threads_per_block>>>();
+       LAUNCHERROR("kReduceObcGbsaBornForces");
+    } else if( gpu->bIncludeGBVI ){
+       kReduceGBVIBornForces_kernel<<<gpu->sim.blocks, gpu->sim.bf_reduce_threads_per_block>>>();
+       LAUNCHERROR("kReduceGBVIBornForces");
+    }   
+
 }
 
 

@@ -36,6 +36,7 @@
 #include <vector>
 #include <cmath>
 #include <cstdio>
+#include <sstream>
 
 using namespace OpenMM;
 using std::vector;
@@ -47,42 +48,51 @@ void GBVIForceImpl::initialize(ContextImpl& context) {
     kernel = context.getPlatform().createKernel(CalcGBVIForceKernel::Name(), context);
     if (owner.getNumParticles() != context.getSystem().getNumParticles())
         throw OpenMMException("GBVIForce must have exactly as many particles as the System it belongs to.");
-
-    // load 1-2 atom pairs along w/ bond distance using HarmonicBondForce & constraints
     
     System& system            = context.getSystem();
     int     numberOfParticles = owner.getNumParticles();
+    int numberOfBonds         = owner.getNumBonds();
 
-    vector<vector<int> > bondIndices;
-    vector<double> bondLengths;
+    // load 1-2 atom pairs along w/ bond distance using HarmonicBondForce & constraints
+    // numberOfBonds < 1, indicating they were not set by the user
 
-    for (int i = 0; i < system.getNumForces(); i++) {
-        if (dynamic_cast<HarmonicBondForce*>(&system.getForce(i)) != NULL) {
-            const HarmonicBondForce& force = dynamic_cast<const HarmonicBondForce&>(system.getForce(i));
-            bondIndices.resize(force.getNumBonds());
-            for (int j = 0; j < force.getNumBonds(); ++j) {
-                int particle1, particle2;
-                double length, k;
-                force.getBondParameters(j, particle1, particle2, length, k); 
-                bondIndices[j].push_back(particle1);
-                bondIndices[j].push_back(particle2);
-                bondLengths.push_back(length);
-            }
-            break;
-        }
-    }   
+    if( numberOfBonds < 1 ){
+        (void) fprintf( stderr, "Warning: no covalent bonds set for GB/VI force!\n" ); 
+//        getBondsFromForces( context );
+//        numberOfBonds = owner.getNumBonds();
+    }
 
-    // Also treat constrained distances as bonds.
+    std::vector< std::vector<int> > bondIndices;
+    bondIndices.resize( numberOfBonds );
 
-    int numBonds = bondIndices.size();
-    bondIndices.resize(numBonds+system.getNumConstraints());
-    for (int j = 0; j < system.getNumConstraints(); j++) {
+    std::vector<double> bondLengths;
+    bondLengths.resize( numberOfBonds );
+
+    for (int i = 0; i < numberOfBonds; i++) {
         int particle1, particle2;
-        double distance;
-        system.getConstraintParameters(j, particle1, particle2, distance);
-        bondIndices[j+numBonds].push_back(particle1);
-        bondIndices[j+numBonds].push_back(particle2);
-        bondLengths.push_back(distance);
+        double bondLength;
+        owner.getBondParameters(i, particle1, particle2, bondLength);
+        if (particle1 < 0 || particle1 >= owner.getNumParticles()) {
+            std::stringstream msg;
+            msg << "GBVISoftcoreForce: Illegal particle index: ";
+            msg << particle1;
+            throw OpenMMException(msg.str());
+        }
+        if (particle2 < 0 || particle2 >= owner.getNumParticles()) {
+            std::stringstream msg;
+            msg << "GBVISoftcoreForce: Illegal particle index: ";
+            msg << particle2;
+            throw OpenMMException(msg.str());
+        }
+        if (bondLength < 0 ) { 
+            std::stringstream msg;
+            msg << "GBVISoftcoreForce: negative bondlength: ";
+            msg << bondLength;
+            throw OpenMMException(msg.str());
+        }
+        bondIndices[i].push_back( particle1 );  
+        bondIndices[i].push_back( particle2 );
+        bondLengths[i] = bondLength;
     }   
 
     vector<double> scaledRadii;
@@ -92,7 +102,40 @@ void GBVIForceImpl::initialize(ContextImpl& context) {
     dynamic_cast<CalcGBVIForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner, scaledRadii);
 }
 
-#define GBVIDebug 1
+int GBVIForceImpl::getBondsFromForces(ContextImpl& context) {
+
+    // load 1-2 atom pairs along w/ bond distance using HarmonicBondForce & constraints
+    
+    System& system            = context.getSystem();
+    for (int i = 0; i < system.getNumForces(); i++) {
+        if (dynamic_cast<HarmonicBondForce*>(&system.getForce(i)) != NULL) {
+            const HarmonicBondForce& force = dynamic_cast<const HarmonicBondForce&>(system.getForce(i));
+            for (int j = 0; j < force.getNumBonds(); ++j) {
+                int particle1, particle2;
+                double length, k;
+                force.getBondParameters(j, particle1, particle2, length, k); 
+                owner.addBond( particle1, particle2, length );
+            }
+            break;
+        }
+    }   
+
+    // Also treat constrained distances as bonds if mass of one particle is < (2 + epsilon) (~2=deuterium) 
+
+    for (int j = 0; j < system.getNumConstraints(); j++) {
+        int particle1, particle2;
+        double distance;
+        system.getConstraintParameters(j, particle1, particle2, distance);
+        double mass1 = system.getParticleMass( particle1 );
+        double mass2 = system.getParticleMass( particle2 );
+        if( mass1 < 2.1 || mass2 < 2.1 ){
+            owner.addBond( particle1, particle2, distance );
+        }
+    }   
+
+}
+
+#define GBVIDebug 0
 
 void GBVIForceImpl::findScaledRadii( int numberOfParticles, const std::vector<std::vector<int> >& bondIndices,
                                      const std::vector<double> & bondLengths, std::vector<double> & scaledRadii) const {

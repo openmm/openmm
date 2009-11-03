@@ -55,6 +55,7 @@ void SetCalculateCDLJObcGbsaForces1Sim(gpuContext gpu)
     cudaError_t status;
     status = cudaMemcpyToSymbol(cSim, &gpu->sim, sizeof(cudaGmxSimulation));     
     RTERROR(status, "cudaMemcpyToSymbol: SetSim copy to cSim failed");
+
 }
 
 void GetCalculateCDLJObcGbsaForces1Sim(gpuContext gpu)
@@ -142,15 +143,22 @@ void kCalculateCDLJObcGbsaForces1(gpuContext gpu)
         case NO_CUTOFF:
             if (gpu->bRecalculateBornRadii)
             {
-                kCalculateObcGbsaBornSum(gpu);
-                kReduceObcGbsaBornSum(gpu);
+                if( gpu->bIncludeGBVI ){
+                   kCalculateGBVIBornSum(gpu);
+                   kReduceGBVIBornSum(gpu);
+                } else {
+                   kCalculateObcGbsaBornSum(gpu);
+                   kReduceObcGbsaBornSum(gpu);
+                }
+
             }
             if (gpu->bOutputBufferPerWarp)
-                kCalculateCDLJObcGbsaN2ByWarpForces1_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                        sizeof(Atom)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pWorkUnit);
-            else
-                kCalculateCDLJObcGbsaN2Forces1_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
-                        sizeof(Atom)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pWorkUnit);
+                   kCalculateCDLJObcGbsaN2ByWarpForces1_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                           sizeof(Atom)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pWorkUnit);
+               else
+                   kCalculateCDLJObcGbsaN2Forces1_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                           sizeof(Atom)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pWorkUnit);
+   
             LAUNCHERROR("kCalculateCDLJObcGbsaN2Forces1");
             break;
         case CUTOFF:

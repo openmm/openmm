@@ -56,6 +56,9 @@ public:
     void findScaledRadii( int numberOfParticles, const std::vector<std::vector<int> >& bondIndices,
                           const std::vector<double> & bondLengths, std::vector<double> & scaledRadii) const;
 
+    // if bond info not set, then use bond forces/constraints
+    int getBondsFromForces(ContextImpl& context);
+
     void updateContextState(ContextImpl& context) {
         // This force field doesn't update the state directly.
     }

@@ -33,6 +33,7 @@
 #include "openmm/OpenMMException.h"
 #include "openmm/GBVIForce.h"
 #include "openmm/internal/GBVIForceImpl.h"
+#include <sstream>
 
 using namespace OpenMM;
 
@@ -70,6 +71,27 @@ double GBVIForce::getCutoffDistance() const {
 
 void GBVIForce::setCutoffDistance(double distance) {
     cutoffDistance = distance;
+}
+
+int GBVIForce::addBond(int particle1, int particle2, double bondLength) {
+    bonds.push_back(BondInfo(particle1, particle2, bondLength));
+    return bonds.size()-1;
+}
+
+void GBVIForce::setBondParameters( int index, int particle1, int particle2, double bondLength) {
+    bonds[index].particle1  = particle1;
+    bonds[index].particle2  = particle2;
+    bonds[index].bondLength = bondLength;
+}
+
+int GBVIForce::getNumBonds( void ) const {
+   return (int) bonds.size();
+}
+
+void GBVIForce::getBondParameters(int index, int& bondIndex1, int& bondIndex2, double& bondLength) const {
+    bondIndex1 = bonds[index].particle1;
+    bondIndex2 = bonds[index].particle2;
+    bondLength = bonds[index].bondLength;
 }
 
 ForceImpl* GBVIForce::createImpl() {

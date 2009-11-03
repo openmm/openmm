@@ -30,16 +30,22 @@
 extern void kClearForces(gpuContext gpu);
 extern void kClearEnergy(gpuContext gpu);
 extern void kClearBornForces(gpuContext gpu);
+extern void kClearObcGbsaBornSum(gpuContext gpu);
 extern void kCalculateObcGbsaBornSum(gpuContext gpu);
 extern void kReduceObcGbsaBornSum(gpuContext gpu);
+extern void kCalculateGBVIBornSum(gpuContext gpu);
+extern void kReduceGBVIBornSum(gpuContext gpu);
+extern void kClearGBVIBornSum( gpuContext gpu );
 extern void kGenerateRandoms(gpuContext gpu);
 
 // Main loop
 extern void kCalculateCDLJObcGbsaForces1(gpuContext gpu);
+extern void kCalculateCDLJGBVIForces1(gpuContext gpu);
 extern void kCalculateCDLJForces(gpuContext gpu);
 extern void kCalculateCustomNonbondedForces(gpuContext gpu, bool neighborListValid);
 extern void kReduceObcGbsaBornForces(gpuContext gpu);
 extern void kCalculateObcGbsaForces2(gpuContext gpu);
+extern void kCalculateGBVIForces2(gpuContext gpu);
 extern void kCalculateLocalForces(gpuContext gpu);
 extern void kCalculateAndersenThermostat(gpuContext gpu);
 extern void kReduceBornSumAndForces(gpuContext gpu);
@@ -73,8 +79,12 @@ extern void SetCalculateLocalForcesSim(gpuContext gpu);
 extern void GetCalculateLocalForcesSim(gpuContext gpu);
 extern void SetCalculateObcGbsaBornSumSim(gpuContext gpu);
 extern void GetCalculateObcGbsaBornSumSim(gpuContext gpu);
+extern void SetCalculateGBVIBornSumSim(gpuContext gpu);
+extern void GetCalculateGBVIBornSumSim(gpuContext gpu);
 extern void SetCalculateObcGbsaForces2Sim(gpuContext gpu);
 extern void GetCalculateObcGbsaForces2Sim(gpuContext gpu);
+extern void SetCalculateGBVIForces2Sim(gpuContext gpu);
+extern void GetCalculateGBVIForces2Sim(gpuContext gpu);
 extern void SetCalculateAndersenThermostatSim(gpuContext gpu);
 extern void GetCalculateAndersenThermostatSim(gpuContext gpu);
 extern void SetCalculatePMESim(gpuContext gpu);

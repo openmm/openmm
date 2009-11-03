@@ -524,7 +524,8 @@ void gpuSetLJ14Parameters(gpuContext gpu, float epsfac, float fudge, const vecto
     psLJ14Parameter->Upload();
 }
 
-static void setExclusions(gpuContext gpu, const vector<vector<int> >& exclusions) {
+extern "C"
+void setExclusions(gpuContext gpu, const vector<vector<int> >& exclusions) {
     if (gpu->exclusions.size() > 0) {
         bool ok = (exclusions.size() == gpu->exclusions.size());
         for (int i = 0; i < exclusions.size() && ok; i++) {
@@ -569,7 +570,8 @@ void gpuSetCoulombParameters(gpuContext gpu, float epsfac, const vector<int>& at
     }
 
     // Dummy out extra atom data
-    for (unsigned int i = coulombs; i < gpu->sim.paddedNumberOfAtoms; i++)
+
+    for (unsigned int i = gpu->natoms; i < gpu->sim.paddedNumberOfAtoms; i++)
     {
         (*gpu->psPosq4)[i].x       = 100000.0f + i * 10.0f;
         (*gpu->psPosq4)[i].y       = 100000.0f + i * 10.0f;
@@ -578,7 +580,6 @@ void gpuSetCoulombParameters(gpuContext gpu, float epsfac, const vector<int>& at
         (*gpu->psSigEps2)[i].x     = 0.0f;
         (*gpu->psSigEps2)[i].y     = 0.0f;
     }
-
     gpu->psPosq4->Upload();
     gpu->psSigEps2->Upload();
 }
@@ -914,6 +915,53 @@ void gpuSetObcParameters(gpuContext gpu, float innerDielectric, float solventDie
     gpu->psObcData->Upload();
     gpu->psPosq4->Upload();
     gpu->sim.preFactor = 2.0f*electricConstant*((1.0f/innerDielectric)-(1.0f/solventDielectric))*gpu->sim.forceConversionFactor;
+}
+
+extern "C"
+void gpuSetGBVIParameters(gpuContext gpu, float innerDielectric, float solventDielectric, const vector<int>& atom, const vector<float>& radius, 
+                          const vector<float>& gamma, const vector<float>& scaledRadii )
+{
+    unsigned int atoms = atom.size();
+    gpu->bIncludeGBVI  = true;
+    double tau         = ((1.0f/innerDielectric)-(1.0f/solventDielectric)); 
+    for (unsigned int i = 0; i < atoms; i++)
+    {
+            (*gpu->psGBVIData)[i].x = radius[i];
+            (*gpu->psGBVIData)[i].y = scaledRadii[i];
+            (*gpu->psGBVIData)[i].z = tau*gamma[i];
+            (*gpu->psGBVIData)[i].w = 1.0f;
+
+(*gpu->psObcData)[i].x  = radius[i];
+(*gpu->psObcData)[i].y  = 0.9f*radius[i];
+
+#undef DUMP_PARAMETERS
+#define DUMP_PARAMETERS 0
+#if (DUMP_PARAMETERS == 1)
+        (void) fprintf( stderr,"GBVI param: %5u R=%14.7e scaledR=%14.7e gamma*tau=%14.7e bornRadiusScaleFactor=%14.7e\n",
+                        i, (*gpu->psGBVIData)[i].x, (*gpu->psGBVIData)[i].y,
+                        (*gpu->psGBVIData)[i].z, (*gpu->psGBVIData)[i].w ); 
+#endif
+    }
+//(void) fprintf( stderr, "gpuSetGBVIParameters: setting Obc parameters!!!! should be removed.\n" );
+    // Dummy out extra atom data
+    for (unsigned int i = atoms; i < gpu->sim.paddedNumberOfAtoms; i++)
+    {
+        (*gpu->psBornRadii)[i]      = 0.2f;
+        (*gpu->psGBVIData)[i].x     = 0.01f;
+        (*gpu->psGBVIData)[i].y     = 0.01f;
+        (*gpu->psGBVIData)[i].z     = 0.01f;
+        (*gpu->psGBVIData)[i].w     = 1.00f;
+    }
+
+    gpu->psBornRadii->Upload();
+    gpu->psGBVIData->Upload();
+gpu->psObcData->Upload();
+    gpu->sim.preFactor = 2.0f*electricConstant*((1.0f/innerDielectric)-(1.0f/solventDielectric))*gpu->sim.forceConversionFactor;
+
+#if (DUMP_PARAMETERS == 1)
+(void) fprintf( stderr, "gpuSetGBVIParameters: preFactor=%14.6e elecCnstnt=%.4f frcCnvrsnFctr=%.4f tau=%.4f.\n",
+                gpu->sim.preFactor, 2.0f*electricConstant, gpu->sim.forceConversionFactor, ((1.0f/innerDielectric)-(1.0f/solventDielectric)) );
+#endif
 }
 
 static void markShakeClusterInvalid(ShakeCluster& cluster, map<int, ShakeCluster>& allClusters, vector<bool>& invalidForShake)
@@ -1435,6 +1483,8 @@ int gpuAllocateInitialBuffers(gpuContext gpu)
     gpu->sim.pAttr                      = gpu->psSigEps2->_pDevStream[0];
     gpu->psObcData                      = new CUDAStream<float2>(gpu->sim.paddedNumberOfAtoms, 1, "ObcData");
     gpu->sim.pObcData                   = gpu->psObcData->_pDevStream[0];
+    gpu->psGBVIData                     = new CUDAStream<float4>(gpu->sim.paddedNumberOfAtoms, 1, "GBVIData");
+    gpu->sim.pGBVIData                  = gpu->psGBVIData->_pDevStream[0];
     gpu->psStepSize                     = new CUDAStream<float2>(1, 1, "StepSize");
     gpu->sim.pStepSize                  = gpu->psStepSize->_pDevStream[0];
     (*gpu->psStepSize)[0] = make_float2(0.0f, 0.0f);
@@ -1671,6 +1721,7 @@ void* gpuInit(int numAtoms, unsigned int device, bool useBlockingSync)
     gpu->bRemoveCM                  = false;
     gpu->bRecalculateBornRadii      = true;
     gpu->bIncludeGBSA               = false;
+    gpu->bIncludeGBVI               = false;
     gpuInitializeRandoms(gpu);
 
     // To be determined later
@@ -1883,6 +1934,7 @@ void gpuShutDown(gpuContext gpu)
     if (gpu->psTabulatedErfc != NULL)
         delete gpu->psTabulatedErfc;
     delete gpu->psObcData;
+    delete gpu->psGBVIData;
     delete gpu->psObcChain;
     delete gpu->psBornForce;
     delete gpu->psBornRadii;
@@ -1957,9 +2009,9 @@ int gpuBuildOutputBuffers(gpuContext gpu)
         gpu->bOutputBufferPerWarp           = false;
         gpu->sim.nonbondOutputBuffers       = gpu->sim.paddedNumberOfAtoms / GRID;
     }
-    gpu->sim.totalNonbondOutputBuffers  = (gpu->bIncludeGBSA ? 2 * gpu->sim.nonbondOutputBuffers : gpu->sim.nonbondOutputBuffers);
+    gpu->sim.totalNonbondOutputBuffers  = ( (gpu->bIncludeGBSA || gpu->bIncludeGBVI) ? 2 * gpu->sim.nonbondOutputBuffers : gpu->sim.nonbondOutputBuffers);
+//gpu->sim.totalNonbondOutputBuffers  = 2*gpu->sim.nonbondOutputBuffers;
     gpu->sim.outputBuffers              = gpu->sim.totalNonbondOutputBuffers;
-
 
     unsigned int outputBuffers = gpu->sim.totalNonbondOutputBuffers;
     for (unsigned int i = 0; i < gpu->sim.paddedNumberOfAtoms; i++)
@@ -2234,7 +2286,9 @@ int gpuSetConstants(gpuContext gpu)
     SetCalculateCustomNonbondedForcesSim(gpu);
     SetCalculateLocalForcesSim(gpu);
     SetCalculateObcGbsaBornSumSim(gpu);
+    SetCalculateGBVIBornSumSim(gpu);
     SetCalculateObcGbsaForces2Sim(gpu);
+    SetCalculateGBVIForces2Sim(gpu);
     SetCalculateAndersenThermostatSim(gpu);
     SetCalculatePMESim(gpu);
     SetForcesSim(gpu);

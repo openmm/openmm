@@ -109,7 +109,7 @@ int ReferenceRbDihedralBond::calculateBondIxn( int* atomIndices,
 
    // debug flag
 
-   static const int debug              = 0;
+   static int debug                    = 0;
 
    static const int LastAtomIndex      = 4;
 
@@ -244,9 +244,12 @@ int ReferenceRbDihedralBond::calculateBondIxn( int* atomIndices,
       }
       message << std::endl;
 
-      message << " k="     << parameters[0];
-      message << " a="     << parameters[1];
-      message << " m="     << parameters[2];
+      message << std::endl << numberOfParameters << " Parameters: [";
+      for( int ii = 0; ii < numberOfParameters; ii++ ){
+         message << parameters[ii] << " ";
+      }
+      message << " ]" << std::endl;
+
       message << " ang="   << dihederalAngle;
       message << " dotD="  << cosPhi;
       message << " sign="  << signOfAngle;

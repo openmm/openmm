@@ -155,7 +155,7 @@ RealOpenMM ReferenceBondIxn::getNormedDotProduct( RealOpenMM* vector1, RealOpenM
 // for angles near pi, double is required due to the 'steepness' of acos()
 // in this regime.
   
-#define USE_DOUBLE_FOR_NORMED_DOT_PRODUCT
+//#define USE_DOUBLE_FOR_NORMED_DOT_PRODUCT
 
 #if defined USE_DOUBLE_FOR_NORMED_DOT_PRODUCT
    double v1D[3];

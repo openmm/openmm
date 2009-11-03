@@ -27,7 +27,8 @@
 
 // ---------------------------------------------------------------------------------------
 
-#include "UtilitiesSimTk.h"
+//#include "SimTKOpenMMUtilities.h"
+#include "SimTKOpenMMUtilities.h"
 
 /**---------------------------------------------------------------------------------------
 
@@ -116,11 +117,11 @@ TwoDimArraySimTk<T>::TwoDimArraySimTk( int rowSize, int columnSize ){
    _columnSize        = columnSize;
 
 #ifdef useXMalloc 
-   _2Darray           = (T**) UtilitiesSimTk::Xmalloc( "TwoDimArraySimTk", __FILE__, __LINE__, rowSize*sizeof( T* ) );
-   _2DMemoryBlock     = (T*)  UtilitiesSimTk::Xmalloc( "block",   __FILE__, __LINE__, columnSize*rowSize*sizeof( T ) );
+   _2Darray           = (T**) SimTKOpenMMUtilities::Xmalloc( "TwoDimArraySimTk", __FILE__, __LINE__, rowSize*sizeof( T* ) );
+   _2DMemoryBlock     = (T*)  SimTKOpenMMUtilities::Xmalloc( "block",   __FILE__, __LINE__, columnSize*rowSize*sizeof( T ) );
 #else
-   _2Darray           = (T**) UtilitiesSimTk::Xmalloc( "TwoDimArraySimTk", __FILE__, __LINE__, rowSize*sizeof( T* ) );
-   _2DMemoryBlock     = (T*)  UtilitiesSimTk::Xmalloc( "block",   __FILE__, __LINE__, columnSize*rowSize*sizeof( T ) );
+   _2Darray           = (T**) SimTKOpenMMUtilities::Xmalloc( "TwoDimArraySimTk", __FILE__, __LINE__, rowSize*sizeof( T* ) );
+   _2DMemoryBlock     = (T*)  SimTKOpenMMUtilities::Xmalloc( "block",   __FILE__, __LINE__, columnSize*rowSize*sizeof( T ) );
 #endif
 
    T* blockPtr        = _2DMemoryBlock;
@@ -157,10 +158,10 @@ template <typename T> TwoDimArraySimTk<T>::~TwoDimArraySimTk( ){
    // ---------------------------------------------------------------------------------------
 
    if( _2DMemoryBlock ){
-      UtilitiesSimTk::Xfree(  "2DMemoryBlock", __FILE__, __LINE__, _2DMemoryBlock );
+      SimTKOpenMMUtilities::Xfree(  "2DMemoryBlock", __FILE__, __LINE__, _2DMemoryBlock );
    }
    if( _2Darray ){
-      UtilitiesSimTk::Xfree( "2Darray", __FILE__, __LINE__, _2Darray );
+      SimTKOpenMMUtilities::Xfree( "2Darray", __FILE__, __LINE__, _2Darray );
    }
       
 }

@@ -62,7 +62,6 @@ enum SM_VERSION
  * to gromacs functions*/
 struct _gpuContext {
     
-    
     //Cache this here so that it doesn't
     //have to be repeatedly passed around
     int natoms;
@@ -87,6 +86,7 @@ struct _gpuContext {
     bool bRecalculateBornRadii;
     bool bOutputBufferPerWarp;
     bool bIncludeGBSA;
+    bool bIncludeGBVI;
     bool tabulatedFunctionsChanged;
     unsigned long seed;
     SM_VERSION sm_version;
@@ -114,6 +114,7 @@ struct _gpuContext {
     CUDAStream<int>* psPmeAtomRange;           // The range of sorted atoms at each grid point
     CUDAStream<float2>* psPmeAtomGridIndex;    // The grid point each atom is at
     CUDAStream<float2>* psObcData;
+    CUDAStream<float4>* psGBVIData;
     CUDAStream<float>* psObcChain;
     CUDAStream<float>* psBornForce;
     CUDAStream<float>* psBornRadii;
@@ -223,6 +224,10 @@ void gpuSetPeriodicBoxSize(gpuContext gpu, float xsize, float ysize, float zsize
 extern "C"
 void gpuSetObcParameters(gpuContext gpu, float innerDielectric, float solventDielectric, const std::vector<float>& radius, const std::vector<float>& scale, const std::vector<float>& charge);
 
+extern "C" 
+void gpuSetGBVIParameters(gpuContext gpu, float innerDielectric, float solventDielectric, const std::vector<int>& atom, const std::vector<float>& radius,
+                          const std::vector<float>& gammas, const std::vector<float>& scaledRadii);
+
 extern "C"
 void gpuSetConstraintParameters(gpuContext gpu, const std::vector<int>& atom1, const std::vector<int>& atom2, const std::vector<float>& distance,
         const std::vector<float>& invMass1, const std::vector<float>& invMass2, float constraintTolerance);
@@ -274,5 +279,8 @@ int gpuSetConstants(gpuContext gpu);
 
 extern "C"
 void gpuReorderAtoms(gpuContext gpu);
+
+extern "C"
+void setExclusions(gpuContext gpu, const std::vector<std::vector<int> >& exclusions);
 
 #endif //__GPUTYPES_H__

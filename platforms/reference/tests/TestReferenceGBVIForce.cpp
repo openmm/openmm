@@ -368,7 +368,7 @@ int main() {
         testEnergy1();
 */
 //        testSingleParticle();
-        testEnergyTwoParticle();
+//        testEnergyTwoParticle();
         testEnergyEthane();
     }
     catch(const exception& e) {

@@ -163,14 +163,14 @@ int CpuGBVI::computeBornRadii( RealOpenMM** atomCoordinates, RealOpenMM* bornRad
 
    // ---------------------------------------------------------------------------------------
 
-   GBVIParameters* gbviParameters        = getGBVIParameters();
-   int numberOfAtoms                     = gbviParameters->getNumberOfAtoms();
-   RealOpenMM* atomicRadii               = gbviParameters->getAtomicRadii();
-   const RealOpenMM* scaledRadii         = gbviParameters->getScaledRadii();
+   GBVIParameters* gbviParameters                   = getGBVIParameters();
+   int numberOfAtoms                                = gbviParameters->getNumberOfAtoms();
+   RealOpenMM* atomicRadii                          = gbviParameters->getAtomicRadii();
+   const RealOpenMM* scaledRadii                    = gbviParameters->getScaledRadii();
 
    // ---------------------------------------------------------------------------------------
 
-#if GBVIDebug
+#if( GBVIDebug == 1 )
    FILE* logFile                         = stderr;
    (void) fprintf( logFile, "\n%s\n", methodName );
 #endif
@@ -201,18 +201,24 @@ int CpuGBVI::computeBornRadii( RealOpenMM** atomCoordinates, RealOpenMM* bornRad
 
             sum  += CpuGBVI::getVolume( r, radiusI, scaledRadii[atomJ] );
 
-#if GBVIDebug
-            (void) fprintf( logFile, "%d r=%.5f add for atom J=%d scR=%.4e %.6e sum=%14.6e\n",
-                            atomI, r, atomJ, scaledRadii[atomJ], getVolume( r, radiusI, scaledRadii[atomJ] ), sum );
+#if( GBVIDebug == 1 )
+if( atomI == 1568 || atomJ == 1568 ){
+            (void) fprintf( logFile, "%d addJ=%d scR=%14.6e %14.6e sum=%14.6e rI=%14.6e r=%14.6e S-R=%14.6e\n",
+                            atomI, atomJ, scaledRadii[atomJ], getVolume( r, radiusI, scaledRadii[atomJ] ), sum,
+                            radiusI, r, (scaledRadii[atomJ]-radiusI) );
+}
 #endif
          }
       }
 
+#if( GBVIDebug == 1 )
+      (void) fprintf( logFile, "%d Born radius sum=%14.6e %14.6e %14.6e ", atomI, sum, POW( radiusI, minusThree ), (POW( radiusI, minusThree ) - sum) );
+#endif
       sum              = POW( radiusI, minusThree ) - sum;
       bornRadii[atomI] = POW( sum, minusOneThird );
 
-#if GBVIDebug
-      (void) fprintf( logFile, "%d Born radius %14.6e\n", atomI, bornRadii[atomI] );
+#if( GBVIDebug == 1 )
+      (void) fprintf( logFile, "br=%14.6e\n", atomI, bornRadii[atomI] );
 #endif
 
    }
@@ -442,7 +448,7 @@ RealOpenMM CpuGBVI::computeBornEnergy( const RealOpenMM* bornRadii, RealOpenMM**
       bornRadii   = getBornRadii();
    }
 
-#if GBVIDebug
+#if( GBVIDebug == 1 )
    FILE* logFile                        = stderr;
    (void) fprintf( logFile, "\n%s\n", methodName );
    (void) fflush( logFile );
@@ -451,22 +457,24 @@ RealOpenMM CpuGBVI::computeBornEnergy( const RealOpenMM* bornRadii, RealOpenMM**
    // ---------------------------------------------------------------------------------------
 
    // Eq.2 of Labute paper [JCC 29 p. 1693-1698 2008]
+   // to minimze roundoff error sum cavityEnergy separately since in general much
+   // smaller than other contributions
 
    RealOpenMM energy                 = zero;
+   RealOpenMM cavityEnergy           = zero;
 
    for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
  
-      RealOpenMM partialChargeI   = preFactor*partialCharges[atomI];
-      RealOpenMM partialChargeI2  = two*partialChargeI;
+      RealOpenMM partialChargeI   = partialCharges[atomI];
 
       // self-energy term
 
-      energy                      += partialChargeI*partialCharges[atomI]/bornRadii[atomI];
+      RealOpenMM  atomIEnergy     = half*partialChargeI/bornRadii[atomI];
 
       // cavity term
 
-      RealOpenMM ratio             = (atomicRadii[atomI]/bornRadii[atomI]);
-      energy                      -= gammaParameters[atomI]*ratio*ratio*ratio;
+      RealOpenMM ratio            = (atomicRadii[atomI]/bornRadii[atomI]);
+      cavityEnergy               += gammaParameters[atomI]*ratio*ratio*ratio;
 
 /*
 RealOpenMM e1 = partialChargeI*partialCharges[atomI]/bornRadii[atomI];
@@ -485,15 +493,19 @@ RealOpenMM e2 = gammaParameters[atomI]*ratio*ratio*ratio;
 
          RealOpenMM r2                 = deltaR[ReferenceForce::R2Index];
          RealOpenMM t                  = fourth*r2/(bornRadii[atomI]*bornRadii[atomJ]);         
-         energy                       += partialChargeI2*partialCharges[atomJ]*Sgb( t )/deltaR[ReferenceForce::RIndex];
+         atomIEnergy                  += partialCharges[atomJ]*Sgb( t )/deltaR[ReferenceForce::RIndex];
 /*
 RealOpenMM e3 = -partialChargeI2*partialCharges[atomJ]*Sgb( t )/deltaR[ReferenceForce::RIndex];
 (void) fprintf( stderr, "E %d %d e3=%.4e r2=%4e t=%.3e sgb=%.4e e=%.5e\n", atomI, atomJ, e3, r2, t, Sgb( t ), energy );
 */
       }
-   }
 
-#if GBVIDebug
+      energy += two*partialChargeI*atomIEnergy;
+   }
+   energy *= CAL_TO_JOULE*preFactor;
+   energy -= cavityEnergy;
+
+#if( GBVIDebug == 1 )
    (void) fprintf( logFile, "ElectricConstant=%.4e Tau=%.4e e=%.5e eOut=%.5e\n", preFactor, gbviParameters->getTau(), energy, gbviParameters->getTau()*energy );
    for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
       (void) fprintf( logFile, "bR %d bR=%16.8e\n", atomI, bornRadii[atomI] );
@@ -501,10 +513,14 @@ RealOpenMM e3 = -partialChargeI2*partialCharges[atomJ]*Sgb( t )/deltaR[Reference
    (void) fflush( logFile );
 #endif
 
-   RealOpenMM conversion = (RealOpenMM)(CAL_TO_JOULE*gbviParameters->getTau());  
+   RealOpenMM conversion = (RealOpenMM)(gbviParameters->getTau());  
    return (conversion*energy);
  
 }
+
+#undef GBVIDebug
+
+#define GBVIDebug 0
 
 /**---------------------------------------------------------------------------------------
 
@@ -539,7 +555,7 @@ int CpuGBVI::computeBornForces( const RealOpenMM* bornRadii, RealOpenMM** atomCo
 
    // ---------------------------------------------------------------------------------------
 
-#if GBVIDebug
+#if( GBVIDebug == 1 )
    FILE* logFile                        = stderr;
    (void) fprintf( logFile, "\n%s\n", methodName );
    (void) fflush( logFile );
@@ -584,11 +600,6 @@ int CpuGBVI::computeBornForces( const RealOpenMM* bornRadii, RealOpenMM** atomCo
 
    for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
  
-      // partial of cavity term wrt Born radius
-
-      RealOpenMM          ratio = (atomicRadii[atomI]/bornRadii[atomI]);
-      bornForces[atomI]        += (three*gammaParameters[atomI]*ratio*ratio*ratio)/bornRadii[atomI]; 
-
       // partial of polar term wrt Born radius
       // and (dGpol/dr)(dr/dx)
 
@@ -641,16 +652,50 @@ int CpuGBVI::computeBornForces( const RealOpenMM* bornRadii, RealOpenMM** atomCo
 
          // 3 FLOP
 
+#if 0
+if( atomI == 0 ){
+   (void) fprintf( logFile, "bFCalc: %6d %6d %14.6e %14.6e   %14.6e %14.6e\n", atomI, atomJ, dGpol_dalpha2_ij, bornRadii[atomJ], bornForces[atomI], bornRadii[atomI] );
+}
+#endif
          bornForces[atomI] += dGpol_dalpha2_ij*bornRadii[atomJ];
 
       }
    }
 
-#if GBVIDebug
+#if( GBVIDebug == 1 )
+{
+   double stupidFactor                   = three/CAL_TO_JOULE;
+   RealOpenMM conversion                 = (RealOpenMM)(CAL_TO_JOULE*gbviParameters->getTau());  
+   int maxPrint                          = 10;
+   const RealOpenMM* scaledRadii         = gbviParameters->getScaledRadii();
+
+   (void) fprintf( logFile, "Conversion=%14.6e %14.6e*%14.6e (tau)\n", conversion, CAL_TO_JOULE, gbviParameters->getTau() );
    for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
-       (void) fprintf( logFile, "F1 %d bF=%14.6e [%14.6e %14.6e %14.6e]\n", atomI, bornForces[atomI], forces[atomI][0], forces[atomI][1],  forces[atomI][2] );
+      RealOpenMM R        = atomicRadii[atomI];
+
+      // partial of cavity term wrt Born radius
+     
+      RealOpenMM  ratio   = (atomicRadii[atomI]/bornRadii[atomI]);
+      bornForces[atomI]  += (stupidFactor*gammaParameters[atomI]*ratio*ratio*ratio)/bornRadii[atomI]; 
+
+      RealOpenMM b2       = bornRadii[atomI]*bornRadii[atomI];
+      double xx           = bornForces[atomI]*oneThird*b2*b2;
+
+      // xx*conversion should agree w/ values pulled out of kReduceGBVIBornForces_kernel in kForces.cu
+
+      (void) fprintf( logFile, "F1 %6d r/sclR[%14.6e %14.6e] bR=%14.6e bF=%14.6e %14.6e f[%14.6e %14.6e %14.6e](cnvrtd)"
+                               " x[%14.6e %14.6e %14.6e]\n",
+                      atomI, atomicRadii[atomI], scaledRadii[atomI], bornRadii[atomI], bornForces[atomI], xx*conversion,
+//                      forces[atomI][0], forces[atomI][1], forces[atomI][2],
+                      conversion*forces[atomI][0], conversion*forces[atomI][1],  conversion*forces[atomI][2],
+                      atomCoordinates[atomI][0], atomCoordinates[atomI][1], atomCoordinates[atomI][2] );
+      if( atomI == maxPrint ){
+         atomI = numberOfAtoms - maxPrint;
+         if( atomI < maxPrint )atomI = maxPrint;
+      }
    }
    (void) fflush( logFile );
+}
 #endif
 
    // ---------------------------------------------------------------------------------------
@@ -660,10 +705,27 @@ int CpuGBVI::computeBornForces( const RealOpenMM* bornRadii, RealOpenMM** atomCo
    // dGpol/dBornRadius) = bornForces[]
    // dBornRadius/dr     = (1/3)*(bR**4)*(dV/dr)
 
+#if 0
+   (void) fprintf( logFile, "Clearing forces before loop2 periodic=%d cutoff=%d cutoffR=%14.7e\n",
+                   _gbviParameters->getPeriodic(), _gbviParameters->getUseCutoff(),  _gbviParameters->getCutoffDistance() );
+   for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
+      forces[atomI][0]  = zero;
+      forces[atomI][1]  = zero;
+      forces[atomI][2]  = zero;
+   } 
+   (void) fflush( logFile );
+#endif
+
    const RealOpenMM* scaledRadii         = gbviParameters->getScaledRadii();
+   double stupidFactor                   = three/CAL_TO_JOULE;
    for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
  
       RealOpenMM R        = atomicRadii[atomI];
+
+      // partial of cavity term wrt Born radius
+     
+      RealOpenMM  ratio   = (atomicRadii[atomI]/bornRadii[atomI]);
+      bornForces[atomI]  += (stupidFactor*gammaParameters[atomI]*ratio*ratio*ratio)/bornRadii[atomI]; 
 
       RealOpenMM b2       = bornRadii[atomI]*bornRadii[atomI];
       bornForces[atomI]  *= oneThird*b2*b2;
@@ -698,22 +760,18 @@ int CpuGBVI::computeBornForces( const RealOpenMM* bornRadii, RealOpenMM** atomCo
 
             // find dRb/dr, where Rb is the Born radius
 
+            de = CpuGBVI::dL_dr( r, r+S, S ) + CpuGBVI::dL_dx( r, r+S, S );   
             if( FABS( diff ) < r ){
-               de = CpuGBVI::dL_dr( r, r+S, S ) + CpuGBVI::dL_dx( r, r+S, S );   
                if( R > (r - S) ){
-//(void) fprintf( stderr, "F2 %d %d block 0\n", atomI, atomJ );
                   de -= CpuGBVI::dL_dr( r, R, S );  
                } else {
-//(void) fprintf( stderr, "F2 %d %d block 1\n", atomI, atomJ );
                   de -= ( CpuGBVI::dL_dr( r, (r-S), S ) + CpuGBVI::dL_dx( r, (r-S), S ) );
                }
             } else if( r < (S - R) ){
-//(void) fprintf( stderr, "F3 %d %d block 2\n", atomI, atomJ );
-               de =   CpuGBVI::dL_dr( r, r+S, S ) + CpuGBVI::dL_dx( r, r+S, S ) -
-                    ( CpuGBVI::dL_dr( r, r-S, S ) + CpuGBVI::dL_dx( r, r-S, S ) );   
+               de -= ( CpuGBVI::dL_dr( r, r-S, S ) + CpuGBVI::dL_dx( r, r-S, S ) );   
             }
 
-if( 0 ){
+#if 0
    RealOpenMM delta = (RealOpenMM) 1.0e-02;
    (void) fprintf( stderr, "\n" );
    for( int kk = 0; kk < 5; kk++ ){
@@ -733,12 +791,10 @@ if( 0 ){
       (void) fprintf( stderr, "df %d %d [%14.6e %14.6e] V[%14.6e %14.6e] %.2e\n", atomI, atomJ, ded, df, V2, V1, deltaD );
       deltaD *= 0.1;
    }
-}
+#endif
 
 
-
-
-            // de = (dG/dRb)(dRb/dr)
+             // de = (dG/dRb)(dRb/dr)
 
             de                      *= bornForces[atomI]/r;
 
@@ -759,7 +815,7 @@ if( 0 ){
 
    }
 
-#if GBVIDebug
+#if( GBVIDebug == 1 )
    (void) fprintf( logFile, "Atom      BornRadii      BornForce                                         Forces\n" );
    double forceSum[3] = { 0.0, 0.0, 0.0 };
    for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
@@ -772,16 +828,32 @@ if( 0 ){
    (void) fflush( logFile );
 #endif
 
-#undef GBVIDebug
-
    // convert from cal to Joule & apply prefactor tau = (1/diel_solute - 1/diel_solvent)
 
    RealOpenMM conversion = (RealOpenMM)(CAL_TO_JOULE*gbviParameters->getTau());  
    for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
-      inputForces[atomI][0] = conversion*forces[atomI][0];
-      inputForces[atomI][1] = conversion*forces[atomI][1];
-      inputForces[atomI][2] = conversion*forces[atomI][2];
+      inputForces[atomI][0] += conversion*forces[atomI][0];
+      inputForces[atomI][1] += conversion*forces[atomI][1];
+      inputForces[atomI][2] += conversion*forces[atomI][2];
    }
+
+#if( GBVIDebug == 1 )
+{
+   (void) fprintf( logFile, "\nPost conversion\n" );
+   (void) fprintf( logFile, "Atom      BornRadii      BornForce                                         Forces\n" );
+   int maxPrint = 10;
+   for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
+      (void) fprintf( logFile, "%4d %14.6e %14.6e [%14.6e %14.6e %14.6e]\n", atomI, bornRadii[atomI], conversion*bornForces[atomI],
+                      inputForces[atomI][0], inputForces[atomI][1], inputForces[atomI][2] );
+      if( atomI == maxPrint ){
+         atomI = numberOfAtoms - maxPrint;
+         if( atomI < maxPrint )atomI = numberOfAtoms;
+      }
+   }
+   (void) fflush( logFile );
+}
+#endif
+#undef GBVIDebug
 
    delete[] forces;
    delete[] block;

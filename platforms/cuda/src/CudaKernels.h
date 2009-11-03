@@ -390,6 +390,39 @@ private:
 };
 
 /**
+ * This kernel is invoked by GBVIForce to calculate the forces acting on the system.
+ */
+class CudaCalcGBVIForceKernel : public CalcGBVIForceKernel {
+public:
+    CudaCalcGBVIForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data) : CalcGBVIForceKernel(name, platform), data(data) {
+    }
+    ~CudaCalcGBVIForceKernel();
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system      the System this kernel will be applied to
+     * @param force       the GBVIForce this kernel will be used for
+     * @param scaledRadii the scaled radii (Eq. 5 of Labute paper)
+     */
+    void initialize(const System& system, const GBVIForce& force, const std::vector<double> & scaledRadii);
+    /**
+     * Execute the kernel to calculate the forces.
+     * 
+     * @param context    the context in which to execute this kernel
+     */
+    void executeForces(ContextImpl& context);
+    /**
+     * Execute the kernel to calculate the energy.
+     * 
+     * @param context    the context in which to execute this kernel
+     * @return the potential energy due to the GBVIForce
+     */
+    double executeEnergy(ContextImpl& context);
+private:
+    CudaPlatform::PlatformData& data;
+};
+
+/**
  * This kernel is invoked by VerletIntegrator to take one time step.
  */
 class CudaIntegrateVerletStepKernel : public IntegrateVerletStepKernel {

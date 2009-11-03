@@ -50,7 +50,7 @@ namespace OpenMM {
 
 class OPENMM_EXPORT GBVIForce : public Force {
 public:
-    /**
+    /** 
      * This is an enumeration of the different methods that may be used for handling long range nonbonded forces.
      */
     enum NonbondedMethod {
@@ -68,7 +68,7 @@ public:
          * each other particle.  Interactions beyond the cutoff distance are ignored.
          */
         CutoffPeriodic = 2,
-    };
+    };  
     /*
      * Create a GBVIForce.
      */
@@ -108,6 +108,41 @@ public:
      */
     void setParticleParameters(int index, double charge, double radius, double gamma);
     /**
+     * Add a bond 
+     *
+     * @param particle1 the index of the first particle 
+     * @param particle2 the index of the second particle
+     * @param distance  the distance between the two particles, measured in nm
+     * @return the index of the bond that was added
+     */
+    int addBond(int particle1, int particle2, double distance);
+
+    /** 
+     * Get the parameters defining a bond
+     * 
+     * @param index     the index of the bond for which to get parameters
+     * @param particle1 the index of the first particle involved in the bond
+     * @param particle2 the index of the second particle involved in the bond
+     * @param distance  the distance between the two particles, measured in nm
+     */
+    void getBondParameters(int index, int& particle1, int& particle2, double& distance) const;
+    /**
+     * Set 1-2 bonds
+     * 
+     * @param index          index of the bond for which to set parameters
+     * @param particle1      index of first atom in bond
+     * @param particle2      index of second atom in bond
+     * @param bondLength     bond length
+     */
+    void setBondParameters( int index, int particle1, int particle2, double bondLength);
+    /** 
+     * Get number of bonds
+     * 
+     * @return number of bonds
+     */
+    int getNumBonds( void ) const;
+
+    /**
      * Get the dielectric constant for the solvent.
      */
     double getSolventDielectric() const {
@@ -131,20 +166,20 @@ public:
     void setSoluteDielectric(double dielectric) {
         soluteDielectric = dielectric;
     }
-    /**
+    /** 
      * Get the method used for handling long range nonbonded interactions.
      */
     NonbondedMethod getNonbondedMethod() const;
-    /**
+    /** 
      * Set the method used for handling long range nonbonded interactions.
      */
     void setNonbondedMethod(NonbondedMethod method);
-    /**
+    /** 
      * Get the cutoff distance (in nm) being used for nonbonded interactions.  If the NonbondedMethod in use
      * is NoCutoff, this value will have no effect.
      */
     double getCutoffDistance() const;
-    /**
+    /** 
      * Set the cutoff distance (in nm) being used for nonbonded interactions.  If the NonbondedMethod in use
      * is NoCutoff, this value will have no effect.
      */
@@ -155,7 +190,23 @@ private:
     class ParticleInfo;
     NonbondedMethod nonbondedMethod;
     double cutoffDistance, solventDielectric, soluteDielectric;
+    class BondInfo;
+
+// Retarded visual studio compiler complains about being unable to 
+// export private stl class members.
+// This stanza explains that it should temporarily shut up.
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable:4251)
+#endif
+
     std::vector<ParticleInfo> particles;
+    std::vector<BondInfo> bonds;
+
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
+
 };
 
 class GBVIForce::ParticleInfo {
@@ -166,6 +217,20 @@ public:
     }
     ParticleInfo(double charge, double radius, double gamma) :
         charge(charge), radius(radius), gamma(gamma) {
+    }
+};
+
+class GBVIForce::BondInfo {
+public:
+    int particle1, particle2;
+    double bondLength;
+    BondInfo() {
+        bondLength     = 0.0;
+        particle1      = -1;
+        particle2      = -1;
+    }
+    BondInfo(int atomIndex1, int atomIndex2, double bondLength) :
+             particle1(atomIndex1), particle2(atomIndex2), bondLength(bondLength) {
     }
 };
 

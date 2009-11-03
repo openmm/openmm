@@ -378,7 +378,7 @@ public:
 class CalcGBSAOBCForceKernel : public KernelImpl {
 public:
     static std::string Name() {
-        return "CalcGBSAOBCForces";
+        return "CalcGBSAOBCForce";
     }
     CalcGBSAOBCForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }
@@ -410,7 +410,7 @@ public:
 class CalcGBVIForceKernel : public KernelImpl {
 public:
     static std::string Name() {
-        return "CalcGBVIForces";
+        return "CalcGBVIForce";
     }
     CalcGBVIForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
     }

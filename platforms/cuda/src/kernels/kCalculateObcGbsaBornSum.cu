@@ -45,7 +45,6 @@ struct Atom {
     float r;
     float sr;
     float sum;
-    float junk;
 };
 
 static __constant__ cudaGmxSimulation cSim;
@@ -150,14 +149,21 @@ void kReduceObcGbsaBornSum(gpuContext gpu)
     LAUNCHERROR("kReduceObcGbsaBornSum");
 }
 
+void kClearObcGbsaBornSum(gpuContext gpu)
+{
+  //  printf("kClearObcGbsaBornSum\n");
+    kClearObcGbsaBornSum_kernel<<<gpu->sim.blocks, 384>>>();
+}
+
 void kCalculateObcGbsaBornSum(gpuContext gpu)
 {
   //  printf("kCalculateObcgbsaBornSum\n");
-    kClearObcGbsaBornSum_kernel<<<gpu->sim.blocks, 384>>>();
+    kClearObcGbsaBornSum(gpu);
     LAUNCHERROR("kClearBornSum");
     switch (gpu->sim.nonbondedMethod)
     {
         case NO_CUTOFF:
+
             if (gpu->bOutputBufferPerWarp)
                 kCalculateObcGbsaN2ByWarpBornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                         sizeof(Atom)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pWorkUnit);

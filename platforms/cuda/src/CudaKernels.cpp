@@ -51,11 +51,16 @@ void CudaCalcForcesAndEnergyKernel::beginForceComputation(ContextImpl& context) 
 
 void CudaCalcForcesAndEnergyKernel::finishForceComputation(ContextImpl& context) {
     _gpuContext* gpu = data.gpu;
-    if (gpu->bIncludeGBSA) {
+
+    if (gpu->bIncludeGBSA || gpu->bIncludeGBVI) {
         gpu->bRecalculateBornRadii = true;
         kCalculateCDLJObcGbsaForces1(gpu);
         kReduceObcGbsaBornForces(gpu);
-        kCalculateObcGbsaForces2(gpu);
+        if (gpu->bIncludeGBSA ) { 
+           kCalculateObcGbsaForces2(gpu);
+        } else {
+           kCalculateGBVIForces2(gpu);
+        }
     }
     else if (data.hasNonbonded)
         kCalculateCDLJForces(gpu);
@@ -75,19 +80,21 @@ void CudaCalcForcesAndEnergyKernel::beginEnergyComputation(ContextImpl& context)
 
 double CudaCalcForcesAndEnergyKernel::finishEnergyComputation(ContextImpl& context) {
     _gpuContext* gpu = data.gpu;
-    if (gpu->bIncludeGBSA) {
+    if (gpu->bIncludeGBSA || gpu->bIncludeGBVI) {
         gpu->bRecalculateBornRadii = true;
         kCalculateCDLJObcGbsaForces1(gpu);
         kReduceObcGbsaBornForces(gpu);
-        kCalculateObcGbsaForces2(gpu);
+        if (gpu->bIncludeGBSA ) {
+           kCalculateObcGbsaForces2(gpu);
+        } else {
+           kCalculateGBVIForces2(gpu);
+        }
     }
     else if (data.hasNonbonded)
         kCalculateCDLJForces(gpu);
     if (data.hasCustomNonbonded)
         kCalculateCustomNonbondedForces(gpu, data.hasNonbonded);
     kCalculateLocalForces(gpu);
-    if (gpu->bIncludeGBSA)
-        kReduceBornSumAndForces(gpu);
     return kReduceEnergy(gpu)+data.ewaldSelfEnergy;
 }
 
@@ -533,6 +540,38 @@ void CudaCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOBCF
 void CudaCalcGBSAOBCForceKernel::executeForces(ContextImpl& context) {
 }
 
+CudaCalcGBVIForceKernel::~CudaCalcGBVIForceKernel() {
+}
+
+void CudaCalcGBVIForceKernel::initialize(const System& system, const GBVIForce& force, const std::vector<double> & inputScaledRadii) {
+
+    int numParticles = system.getNumParticles();
+    _gpuContext* gpu = data.gpu;
+
+    vector<int> particle(numParticles);
+    vector<float> radius(numParticles);
+    vector<float> scaledRadii(numParticles);
+    vector<float> gammas(numParticles);
+
+    for (int i = 0; i < numParticles; i++) {
+        double charge, particleRadius, gamma, bornRadiusScaleFactor;
+        force.getParticleParameters(i, charge, particleRadius, gamma );
+        particle[i]                  = i;
+        radius[i]                    = (float) particleRadius;
+        gammas[i]                    = (float) gamma;
+        scaledRadii[i]               = (float) inputScaledRadii[i];
+    }
+    gpuSetGBVIParameters(gpu, (float) force.getSoluteDielectric(), (float) force.getSolventDielectric(), particle,
+                         radius, gammas, scaledRadii );
+}
+
+void CudaCalcGBVIForceKernel::executeForces(ContextImpl& context) {
+}
+
+double CudaCalcGBVIForceKernel::executeEnergy(ContextImpl& context) {
+    return 0.0;
+}
+
 static void initializeIntegration(const System& system, CudaPlatform::PlatformData& data, const Integrator& integrator) {
 
     // Initialize any terms that haven't already been handled by a Force.
@@ -643,7 +682,6 @@ void CudaIntegrateLangevinStepKernel::execute(ContextImpl& context, const Langev
     double stepSize = integrator.getStepSize();
     if (temperature != prevTemp || friction != prevFriction || stepSize != prevStepSize) {
         // Initialize the GPU parameters.
-        
         double tau = (friction == 0.0 ? 0.0 : 1.0/friction);
         gpuSetLangevinIntegrationParameters(gpu, (float) tau, (float) stepSize, (float) temperature, 0.0f);
         gpuSetConstants(gpu);
