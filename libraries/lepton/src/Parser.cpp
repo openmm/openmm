@@ -241,6 +241,9 @@ Operation* Parser::getFunctionOperation(const std::string& name, const map<strin
         opMap["asin"] = Operation::ASIN;
         opMap["acos"] = Operation::ACOS;
         opMap["atan"] = Operation::ATAN;
+        opMap["sinh"] = Operation::SINH;
+        opMap["cosh"] = Operation::COSH;
+        opMap["tanh"] = Operation::TANH;
         opMap["square"] = Operation::SQUARE;
         opMap["cube"] = Operation::CUBE;
         opMap["recip"] = Operation::RECIPROCAL;
@@ -283,6 +286,12 @@ Operation* Parser::getFunctionOperation(const std::string& name, const map<strin
             return new Operation::Acos();
         case Operation::ATAN:
             return new Operation::Atan();
+        case Operation::SINH:
+            return new Operation::Sinh();
+        case Operation::COSH:
+            return new Operation::Cosh();
+        case Operation::TANH:
+            return new Operation::Tanh();
         case Operation::SQUARE:
             return new Operation::Square();
         case Operation::CUBE:

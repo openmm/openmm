@@ -158,10 +158,10 @@ void testCustomFunction(const string& expression, const string& equivalent) {
     verifySameValue(deriv1, deriv2, 2.0, -3.0);
     ParsedExpression deriv3 = deriv1.differentiate("y");
     ParsedExpression deriv4 = deriv2.differentiate("y");
-    verifySameValue(deriv1, deriv2, 1.0, 2.0);
-    verifySameValue(deriv1, deriv2, 2.0, 3.0);
-    verifySameValue(deriv1, deriv2, -2.0, 3.0);
-    verifySameValue(deriv1, deriv2, 2.0, -3.0);
+    verifySameValue(deriv3, deriv4, 1.0, 2.0);
+    verifySameValue(deriv3, deriv4, 2.0, 3.0);
+    verifySameValue(deriv3, deriv4, -2.0, 3.0);
+    verifySameValue(deriv3, deriv4, 2.0, -3.0);
     delete functions["custom"];
 }
 
@@ -204,14 +204,14 @@ int main() {
         verifyDerivative("asin(x)", "1/sqrt(1-x^2)");
         verifyDerivative("acos(x)", "-1/sqrt(1-x^2)");
         verifyDerivative("atan(x)", "1/(1+x^2)");
+        verifyDerivative("sinh(x)", "cosh(x)");
+        verifyDerivative("cosh(x)", "sinh(x)");
+        verifyDerivative("tanh(x)", "1/(cosh(x)^2)");
         verifyDerivative("recip(x)", "-1/x^2");
         verifyDerivative("square(x)", "2*x");
         verifyDerivative("cube(x)", "3*x^2");
         testCustomFunction("custom(x, y)/2", "x*y");
         testCustomFunction("custom(x^2, 1)+custom(2, y-1)", "2*x^2+4*(y-1)");
-        map<string, double> variables;
-        variables["x"] = 2.0;
-        variables["y"] = 10.0;
         cout << Parser::parse("2*3*x").optimize() << endl;
         cout << Parser::parse("1/(1+x)").optimize() << endl;
         cout << Parser::parse("x^(1/2)").optimize() << endl;

@@ -193,6 +193,29 @@ ExpressionTreeNode Operation::Atan::differentiate(const std::vector<ExpressionTr
                               childDerivs[0]);
 }
 
+ExpressionTreeNode Operation::Sinh::differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const {
+    return ExpressionTreeNode(new Operation::Multiply(),
+                              ExpressionTreeNode(new Operation::Cosh(),
+                                                 children[0]),
+                              childDerivs[0]);
+}
+
+ExpressionTreeNode Operation::Cosh::differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const {
+    return ExpressionTreeNode(new Operation::Multiply(),
+                              ExpressionTreeNode(new Operation::Sinh(),
+                                                 children[0]),
+                              childDerivs[0]);
+}
+
+ExpressionTreeNode Operation::Tanh::differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const {
+    return ExpressionTreeNode(new Operation::Multiply(),
+                              ExpressionTreeNode(new Operation::Subtract(),
+                                                 ExpressionTreeNode(new Operation::Constant(1.0)),
+                                                 ExpressionTreeNode(new Operation::Square(),
+                                                                    ExpressionTreeNode(new Operation::Tanh(), children[0]))),
+                              childDerivs[0]);
+}
+
 ExpressionTreeNode Operation::Square::differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const {
     return ExpressionTreeNode(new Operation::Multiply(),
                               ExpressionTreeNode(new Operation::MultiplyConstant(2.0),

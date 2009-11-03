@@ -155,6 +155,15 @@ void OpenCLExpressionUtilities::processExpression(stringstream& out, const Expre
         case Operation::ATAN:
             out << "atan(" << getTempName(node.getChildren()[0], temps) << ")";
             break;
+        case Operation::SINH:
+            out << "sinh(" << getTempName(node.getChildren()[0], temps) << ")";
+            break;
+        case Operation::COSH:
+            out << "cosh(" << getTempName(node.getChildren()[0], temps) << ")";
+            break;
+        case Operation::TANH:
+            out << "tanh(" << getTempName(node.getChildren()[0], temps) << ")";
+            break;
         case Operation::SQUARE:
         {
             string arg = getTempName(node.getChildren()[0], temps);

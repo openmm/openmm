@@ -234,8 +234,17 @@ __device__ float kEvaluateExpression_kernel(Expression<SIZE>* expression, float*
                 else if (op == ACOS) {
                     STACK(stackPointer) = acos(STACK(stackPointer));
                 }
-                else /*if (op == ATAN)*/ {
+                else if (op == ATAN) {
                     STACK(stackPointer) = atan(STACK(stackPointer));
+                }
+                else if (op == SINH) {
+                    STACK(stackPointer) = sinh(STACK(stackPointer));
+                }
+                else if (op == COSH) {
+                    STACK(stackPointer) = cosh(STACK(stackPointer));
+                }
+                else /*if (op == TANH)*/ {
+                    STACK(stackPointer) = tanh(STACK(stackPointer));
                 }
             }
         }

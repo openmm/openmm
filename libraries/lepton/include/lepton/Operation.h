@@ -62,7 +62,7 @@ public:
      * can be used when processing or analyzing parsed expressions.
      */
     enum Id {CONSTANT, VARIABLE, CUSTOM, ADD, SUBTRACT, MULTIPLY, DIVIDE, POWER, NEGATE, SQRT, EXP, LOG,
-             SIN, COS, SEC, CSC, TAN, COT, ASIN, ACOS, ATAN, SQUARE, CUBE, RECIPROCAL, ADD_CONSTANT, MULTIPLY_CONSTANT, POWER_CONSTANT};
+             SIN, COS, SEC, CSC, TAN, COT, ASIN, ACOS, ATAN, SINH, COSH, TANH, SQUARE, CUBE, RECIPROCAL, ADD_CONSTANT, MULTIPLY_CONSTANT, POWER_CONSTANT};
     /**
      * Get the name of this Operation.
      */
@@ -122,6 +122,9 @@ public:
     class Asin;
     class Acos;
     class Atan;
+    class Sinh;
+    class Cosh;
+    class Tanh;
     class Square;
     class Cube;
     class Reciprocal;
@@ -631,6 +634,72 @@ public:
     }
     double evaluate(double* args, const std::map<std::string, double>& variables) const {
         return std::atan(args[0]);
+    }
+    ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
+};
+
+class Operation::Sinh : public Operation {
+public:
+    Sinh() {
+    }
+    std::string getName() const {
+        return "sinh";
+    }
+    Id getId() const {
+        return SINH;
+    }
+    int getNumArguments() const {
+        return 1;
+    }
+    Operation* clone() const {
+        return new Sinh();
+    }
+    double evaluate(double* args, const std::map<std::string, double>& variables) const {
+        return std::sinh(args[0]);
+    }
+    ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
+};
+
+class Operation::Cosh : public Operation {
+public:
+    Cosh() {
+    }
+    std::string getName() const {
+        return "cosh";
+    }
+    Id getId() const {
+        return COSH;
+    }
+    int getNumArguments() const {
+        return 1;
+    }
+    Operation* clone() const {
+        return new Cosh();
+    }
+    double evaluate(double* args, const std::map<std::string, double>& variables) const {
+        return std::cosh(args[0]);
+    }
+    ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
+};
+
+class Operation::Tanh : public Operation {
+public:
+    Tanh() {
+    }
+    std::string getName() const {
+        return "tanh";
+    }
+    Id getId() const {
+        return TANH;
+    }
+    int getNumArguments() const {
+        return 1;
+    }
+    Operation* clone() const {
+        return new Tanh();
+    }
+    double evaluate(double* args, const std::map<std::string, double>& variables) const {
+        return std::tanh(args[0]);
     }
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };

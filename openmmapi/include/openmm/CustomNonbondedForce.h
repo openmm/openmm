@@ -78,8 +78,8 @@ namespace OpenMM {
  * </pre></tt>
  *
  * Expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
- * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan.  All trigonometric functions are defined
- * in radians, and log is the natural logarithm.
+ * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, sinh, cosh, tanh.  All trigonometric functions
+ * are defined in radians, and log is the natural logarithm.
  *
  * In addition, you can call addFunction() to define a new function based on tabulated values.  You specify a vector of
  * values, and an interpolating or approximating spline is created from them.  That function can then appear in expressions

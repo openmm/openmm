@@ -243,6 +243,15 @@ static Expression<SIZE> createExpression(gpuContext gpu, const string& expressio
             case Operation::ATAN:
                 exp.op[i] = ATAN;
                 break;
+            case Operation::SINH:
+                exp.op[i] = SINH;
+                break;
+            case Operation::COSH:
+                exp.op[i] = COSH;
+                break;
+            case Operation::TANH:
+                exp.op[i] = TANH;
+                break;
             case Operation::SQUARE:
                 exp.op[i] = SQUARE;
                 break;
