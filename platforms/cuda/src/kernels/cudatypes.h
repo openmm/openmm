@@ -349,6 +349,7 @@ struct cudaGmxSimulation {
     float           tauDeltaT;                      // tau*deltaT
     float           collisionFrequency;             // Collision frequency for Andersen thermostat
     float2*         pObcData;                       // Pointer to fixed Born data
+    float4*         pGBVIData;                      // Pointer to fixed Born data for GB/VI algorithm
     float2*         pAttr;                          // Pointer to additional atom attributes (sig, eps)
     float4*         pCustomParams;                  // Pointer to atom parameters for custom nonbonded force
     int4*           pCustomExceptionID;             // Atom indices for custom nonbonded exceptions
