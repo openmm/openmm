@@ -26,15 +26,9 @@ class ExampleFunction : public CustomFunction {
                 return 2.0*arguments[1];
             else if (derivOrder[1] == 1)
                 return 2.0;
-            else
-                return 0.0;
         }
-        if (derivOrder[1] == 1) {
-            if (derivOrder[0] == 0)
-                return 2.0*arguments[0];
-            else
-                return 0.0;
-        }
+        if (derivOrder[1] == 1 && derivOrder[0] == 0)
+            return 2.0*arguments[0];
         return 0.0;
     }
     CustomFunction* clone() const {
@@ -143,7 +137,8 @@ void verifyDerivative(const string& expression, const string& expectedDeriv) {
 
 void testCustomFunction(const string& expression, const string& equivalent) {
     map<string, CustomFunction*> functions;
-    functions["custom"] = new ExampleFunction();
+    ExampleFunction exp;
+    functions["custom"] = &exp;
     ParsedExpression exp1 = Parser::parse(expression, functions);
     ParsedExpression exp2 = Parser::parse(equivalent);
     verifySameValue(exp1, exp2, 1.0, 2.0);
@@ -162,7 +157,6 @@ void testCustomFunction(const string& expression, const string& equivalent) {
     verifySameValue(deriv3, deriv4, 2.0, 3.0);
     verifySameValue(deriv3, deriv4, -2.0, 3.0);
     verifySameValue(deriv3, deriv4, 2.0, -3.0);
-    delete functions["custom"];
 }
 
 int main() {
