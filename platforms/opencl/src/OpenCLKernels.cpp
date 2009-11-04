@@ -624,7 +624,8 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     
     string source = cl.loadSourceFromFile("coulombLennardJones.cl", defines);
     cl.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, source);
-    cl.getNonbondedUtilities().addParameter(OpenCLNonbondedUtilities::ParameterInfo("sigmaEpsilon", "float2", sizeof(cl_float2), sigmaEpsilon->getDeviceBuffer()));
+    if (hasLJ)
+        cl.getNonbondedUtilities().addParameter(OpenCLNonbondedUtilities::ParameterInfo("sigmaEpsilon", "float2", sizeof(cl_float2), sigmaEpsilon->getDeviceBuffer()));
     cutoffSquared = force.getCutoffDistance()*force.getCutoffDistance();
 
     // Initialize the exceptions.
