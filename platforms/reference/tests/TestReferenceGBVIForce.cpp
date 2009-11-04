@@ -53,6 +53,7 @@ using namespace std;
 const double TOL = 1e-5;
 
 void testSingleParticle() {
+    const int log          = 0;
     ReferencePlatform platform;
     System system;
     system.addParticle(2.0);
@@ -60,9 +61,9 @@ void testSingleParticle() {
 
     GBVIForce* forceField = new GBVIForce();
 
-    double charge         = 0.0;
-    double radius         = 0.15;
-    double gamma          = 1.0;
+    double charge         = -1.0;
+    double radius         =  0.15;
+    double gamma          =  1.0;
     forceField->addParticle(charge, radius, gamma);
     system.addForce(forceField);
 
@@ -77,76 +78,29 @@ void testSingleParticle() {
     double tau            = (1.0/forceField->getSoluteDielectric()-1.0/forceField->getSolventDielectric());
 
     double bornEnergy     = (-charge*charge/(8*PI_M*eps0))*tau/bornRadius;
-    double nonpolarEnergy = -CAL2JOULE*gamma*tau*std::pow( radius/bornRadius, 3.0);
+    double nonpolarEnergy = -gamma*tau*std::pow( radius/bornRadius, 3.0);
 
     double expectedE      = (bornEnergy+nonpolarEnergy); 
     double obtainedE      = state.getPotentialEnergy(); 
-    double diff           = fabs( obtainedE - expectedE );
-    (void) fprintf( stderr, "testSingleParticle expected=%14.6e obtained=%14.6e diff=%14.6e breakdown:[%14.6e %14.6e]\n",
-                    expectedE, obtainedE, diff, bornEnergy, nonpolarEnergy );
+    double diff           = fabs( (obtainedE - expectedE)/expectedE );
+    if( log ){
+        (void) fprintf( stderr, "testSingleParticle expected=%14.6e obtained=%14.6e diff=%14.6e breakdown:[%14.6e %14.6e]\n",
+                        expectedE, obtainedE, diff, bornEnergy, nonpolarEnergy );
+    }
+
     ASSERT_EQUAL_TOL((bornEnergy+nonpolarEnergy), state.getPotentialEnergy(), 0.01);
 }
-
-/*
-void testCutoffAndPeriodic() {
-    ReferencePlatform platform;
-    System system(2, 0);
-    LangevinIntegrator integrator(0, 0.1, 0.01);
-    GBSAOBCForce* gbsa = new GBSAOBCForce(2);
-    NonbondedForce* nonbonded = new NonbondedForce(2, 0);
-    gbsa->setParticleParameters(0, -1, 0.15, 1);
-    nonbonded->setParticleParameters(0, -1, 1, 0);
-    gbsa->setParticleParameters(1, 1, 0.15, 1);
-    nonbonded->setParticleParameters(1, 1, 1, 0);
-    const double cutoffDistance = 3.0;
-    const double boxSize = 10.0;
-    nonbonded->setCutoffDistance(cutoffDistance);
-    system.setPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
-    system.addForce(gbsa);
-    system.addForce(nonbonded);
-    vector<Vec3> positions(2);
-    positions[0] = Vec3(0, 0, 0);
-    positions[1] = Vec3(2, 0, 0);
-
-    // Calculate the forces for both cutoff and periodic with two different atom positions.
-
-    nonbonded->setNonbondedMethod(NonbondedForce::CutoffNonPeriodic);
-    Context context(system, integrator, platform);
-    context.setPositions(positions);
-    State state1 = context.getState(State::Forces);
-    nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
-    context.reinitialize();
-    context.setPositions(positions);
-    State state2 = context.getState(State::Forces);
-    positions[1][0]+= boxSize;
-    nonbonded->setNonbondedMethod(NonbondedForce::CutoffNonPeriodic);
-    context.reinitialize();
-    context.setPositions(positions);
-    State state3 = context.getState(State::Forces);
-    nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
-    context.reinitialize();
-    context.setPositions(positions);
-    State state4 = context.getState(State::Forces);
-
-    // All forces should be identical, exception state3 which should be zero.
-
-    ASSERT_EQUAL_VEC(state1.getForces()[0], state2.getForces()[0], 0.01);
-    ASSERT_EQUAL_VEC(state1.getForces()[1], state2.getForces()[1], 0.01);
-    ASSERT_EQUAL_VEC(state1.getForces()[0], state4.getForces()[0], 0.01);
-    ASSERT_EQUAL_VEC(state1.getForces()[1], state4.getForces()[1], 0.01);
-    ASSERT_EQUAL_VEC(state3.getForces()[0], Vec3(0, 0, 0), 0.01);
-    ASSERT_EQUAL_VEC(state3.getForces()[1], Vec3(0, 0, 0), 0.01);
-}
-*/
 
 void testEnergyEthane() {
 
     ReferencePlatform platform;
     const int numParticles = 8;
+    const int log          = 0;
     System system;
     LangevinIntegrator integrator(0, 0.1, 0.01);
 
-    //void HarmonicBondForce::getBondParameters(int index, int& particle1, int& particle2, double& length, double& k)
+    // harmonic bond
+
     double C_HBondDistance   = 0.1097;
     double C_CBondDistance   = 0.1504;
     HarmonicBondForce* bonds = new HarmonicBondForce();
@@ -179,44 +133,64 @@ void testEnergyEthane() {
        H_gamma  =  0.1237;
     }
 
-    int VI = 1;
-    if( VI ){
+    NonbondedForce* nonbonded = new NonbondedForce();
+    nonbonded->setNonbondedMethod(NonbondedForce::NoCutoff);
+
+    if( log ){
        (void) fprintf( stderr, "Applying GB/VI\n" );
-       GBVIForce* forceField = new GBVIForce();
-       for( int i = 0; i < numParticles; i++ ){
-          system.addParticle(1.0);
-          forceField->addParticle( H_charge, H_radius, H_gamma);
-       }
-       forceField->setParticleParameters(1, C_charge, C_radius, C_gamma);
-       forceField->setParticleParameters(4, C_charge, C_radius, C_gamma);
-       system.addForce(forceField);
-    } else {
-       (void) fprintf( stderr, "Applying GBSA OBC\n" );
-       GBSAOBCForce* forceField = new GBSAOBCForce();
-       double H_scale           =  0.85;
-       double C_scale           =  0.72;
-       for( int i = 0; i < numParticles; i++ ){
-          system.addParticle(1.0);
-          forceField->addParticle(H_charge, H_radius, H_scale );
-       }
-       forceField->setParticleParameters(1, C_charge, C_radius, C_scale);
-       forceField->setParticleParameters(4, C_charge, C_radius, C_scale);
-       system.addForce(forceField);
     }
+    GBVIForce* forceField = new GBVIForce();
+    for( int i = 0; i < numParticles; i++ ){
+       system.addParticle(1.0);
+       forceField->addParticle( H_charge, H_radius, H_gamma);
+       nonbonded->addParticle(  H_charge, H_radius, 0.0);
+    }
+ 
+    forceField->setParticleParameters( 1, C_charge, C_radius, C_gamma);
+    forceField->setParticleParameters( 4, C_charge, C_radius, C_gamma);
+ 
+    nonbonded->setParticleParameters(  1, C_charge, C_radius, 0.0);
+    nonbonded->setParticleParameters(  4, C_charge, C_radius, 0.0);
+ 
+    forceField->addBond( 0, 1, C_HBondDistance );
+    forceField->addBond( 2, 1, C_HBondDistance );
+    forceField->addBond( 3, 1, C_HBondDistance );
+    forceField->addBond( 1, 4, C_CBondDistance );
+    forceField->addBond( 5, 4, C_HBondDistance );
+    forceField->addBond( 6, 4, C_HBondDistance );
+    forceField->addBond( 7, 4, C_HBondDistance );
+    
+    std::vector<pair<int, int> > bondExceptions;
+    std::vector<double> bondDistances;
+    
+    bondExceptions.push_back(pair<int, int>(0, 1)); 
+    bondDistances.push_back( C_HBondDistance );
+    
+    bondExceptions.push_back(pair<int, int>(2, 1)); 
+    bondDistances.push_back( C_HBondDistance );
+    
+    bondExceptions.push_back(pair<int, int>(3, 1)); 
+    bondDistances.push_back( C_HBondDistance );
+    
+    bondExceptions.push_back(pair<int, int>(1, 4)); 
+    bondDistances.push_back( C_CBondDistance );
+    
+    bondExceptions.push_back(pair<int, int>(5, 4)); 
+    bondDistances.push_back( C_HBondDistance );
+    
+    bondExceptions.push_back(pair<int, int>(6, 4)); 
+    bondDistances.push_back( C_HBondDistance );
+ 
+    bondExceptions.push_back(pair<int, int>(7, 4));
+    bondDistances.push_back( C_HBondDistance );
+ 
+    nonbonded->createExceptionsFromBonds(bondExceptions, 0.0, 0.0);
+ 
+    system.addForce(forceField);
+    system.addForce(nonbonded);
 
     Context context(system, integrator, platform);
     
-/*    
-    0.5480    1.7661    0.0000 H   0  0  0  0  0  0           0  0  0
-    0.7286    0.8978    0.6468 C   0  0  0  0  0  0           0  0  0
-    0.4974    0.0000    0.0588 H   0  0  0  0  0  0           0  0  0
-    0.0000    0.9459    1.4666 H   0  0  0  0  0  0           0  0  0
-    2.1421    0.8746    1.1615 C   0  0  0  0  0  0           0  0  0
-    2.3239    0.0050    1.8065 H   0  0  0  0  0  0           0  0  0
-    2.8705    0.8295    0.3416 H   0  0  0  0  0  0           0  0  0
-    2.3722    1.7711    1.7518 H   0  0  0  0  0  0           0  0  0
-*/
-
     vector<Vec3> positions(numParticles);
     positions[0] = Vec3(0.5480,    1.7661,    0.0000);
     positions[1] = Vec3(0.7286,    0.8978,    0.6468);
@@ -229,7 +203,9 @@ void testEnergyEthane() {
     context.setPositions(positions);
 
     State state = context.getState(State::Forces | State::Energy);
-    (void) fprintf( stderr, "Energy %.4e\n", state.getPotentialEnergy() );
+    if( log ){
+        (void) fprintf( stderr, "Energy %.4e\n", state.getPotentialEnergy() );
+    }
     
     // Take a small step in the direction of the energy gradient.
     
@@ -237,14 +213,18 @@ void testEnergyEthane() {
     double forceSum[3] = { 0.0, 0.0, 0.0 };
     for (int i = 0; i < numParticles; ++i) {
         Vec3 f  = state.getForces()[i];
-        (void) fprintf( stderr, "F %d [%14.6e %14.6e %14.6e]\n", i, f[0], f[1], f[2] );
-        norm   += f[0]*f[0] + f[1]*f[1] + f[2]*f[2];
+        if( log ){
+            (void) fprintf( stderr, "F %d [%14.6e %14.6e %14.6e]\n", i, f[0], f[1], f[2] );
+        }
+        norm        += f[0]*f[0] + f[1]*f[1] + f[2]*f[2];
         forceSum[0] += f[0];
         forceSum[1] += f[1];
         forceSum[2] += f[2];
     }
     norm               = std::sqrt(norm);
-    (void) fprintf( stderr, "Fsum [%14.6e %14.6e %14.6e] norm=%14.6e\n", forceSum[0], forceSum[1], forceSum[2], norm );
+    if( log ){
+        (void) fprintf( stderr, "Fsum [%14.6e %14.6e %14.6e] norm=%14.6e\n", forceSum[0], forceSum[1], forceSum[2], norm );
+    }
 
     const double delta = 1e-4;
     double step = delta/norm;
@@ -257,101 +237,11 @@ void testEnergyEthane() {
     
     State state2 = context.getState(State::Energy);
 
-    (void) fprintf( stderr, "Energies %.8e %.8e\n", state.getPotentialEnergy(), state2.getPotentialEnergy() );
-
-    // See whether the potential energy changed by the expected amount.
-    
-    ASSERT_EQUAL_TOL(norm, (state2.getPotentialEnergy()-state.getPotentialEnergy())/delta, 0.01)
-}
-
-void testEnergyTwoParticle() {
-
-    ReferencePlatform platform;
-    const int numParticles = 2;
-    System system;
-    system.addParticle(1.0);
-    system.addParticle(1.0);
-    LangevinIntegrator integrator(0, 0.1, 0.01);
-
-    //void HarmonicBondForce::getBondParameters(int index, int& particle1, int& particle2, double& length, double& k)
-    double C_HBondDistance   = 3.0;
-    HarmonicBondForce* bonds = new HarmonicBondForce();
-    bonds->addBond(0, 1, C_HBondDistance, 0.0);
-    system.addForce(bonds);
-
-    double C_radius, C_gamma, C_charge, H_radius, H_gamma, H_charge;
-/*
-    H_charge    = -1.0;
-    C_charge    =  1.0;
-
-    H_gamma     =  1.0;
-    C_gamma     =  1.0;
-
-    H_radius    =  1.0;
-    C_radius    =  1.0;
-*/ 
-    H_charge    = -0.5;
-    C_charge    =  0.5;
-
-    H_gamma     =  0.5;
-    C_gamma     =  0.5;
-
-    H_radius    =  1.5;
-    C_radius    =  1.5;
- 
-    int VI = 1;
-    if( VI ){
-       (void) fprintf( stderr, "Applying GB/VI\n" );
-       GBVIForce* forceField = new GBVIForce();
-       forceField->addParticle(H_charge, H_radius, H_gamma);
-       forceField->addParticle(C_charge, C_radius, C_gamma);
-       system.addForce(forceField);
-    } else {
-       (void) fprintf( stderr, "Applying GBSA OBC\n" );
-       GBSAOBCForce* forceField = new GBSAOBCForce();
-       forceField->addParticle(H_charge, H_radius, 1.0);
-       forceField->addParticle(C_charge, C_radius, 1.0);
-       system.addForce(forceField);
+    if( log ){
+        double deltaE = fabs( state.getPotentialEnergy() - state2.getPotentialEnergy() )/delta;
+        double diff   = (deltaE - norm)/norm;
+        (void) fprintf( stderr, "Energies %.8e %.8e deltaE=%14.7e %14.7e diff=%14.7e\n", state.getPotentialEnergy(), state2.getPotentialEnergy(), deltaE, norm, diff );
     }
-
-    Context context(system, integrator, platform);
-    
-    vector<Vec3> positions(numParticles);
-    positions[0] = Vec3(         0.0000,    0.0000,    0.0000);
-    positions[1] = Vec3(C_HBondDistance,    0.0000,    0.0000);
-    context.setPositions(positions);
-
-    State state = context.getState(State::Forces | State::Energy);
-    
-    // Take a small step in the direction of the energy gradient.
-    
-    double norm        = 0.0;
-    double forceSum[3] = { 0.0, 0.0, 0.0 };
-    for (int i = 0; i < numParticles; ++i) {
-        Vec3 f  = state.getForces()[i];
-        (void) fprintf( stderr, "F %d [%14.6e %14.6e %14.6e]\n", i, f[0], f[1], f[2] );
-        norm   += f[0]*f[0] + f[1]*f[1] + f[2]*f[2];
-        forceSum[0] += f[0];
-        forceSum[1] += f[1];
-        forceSum[2] += f[2];
-    }
-    norm               = std::sqrt(norm);
-    (void) fprintf( stderr, "Fsum [%14.6e %14.6e %14.6e] norm=%14.6e\n", forceSum[0], forceSum[1], forceSum[2], norm );
-
-    const double delta = 1e-4;
-    double step = delta/norm;
-    for (int i = 0; i < numParticles; ++i) {
-        Vec3 p = positions[i];
-        Vec3 f = state.getForces()[i];
-        positions[i] = Vec3(p[0]-f[0]*step, p[1]-f[1]*step, p[2]-f[2]*step);
-    }
-    context.setPositions(positions);
-    
-    State state2 = context.getState(State::Energy);
-
-    double diff = fabs( norm - (state2.getPotentialEnergy()-state.getPotentialEnergy())/delta );
-    (void) fprintf( stderr, "Energies %14.6e %14.6e diff=%14.6e [%14.6e %14.6e]\n",
-                    state.getPotentialEnergy(), state2.getPotentialEnergy(), diff, norm, (state2.getPotentialEnergy()-state.getPotentialEnergy())/delta );
 
     // See whether the potential energy changed by the expected amount.
     
@@ -360,15 +250,7 @@ void testEnergyTwoParticle() {
 
 int main() {
     try {
-/*
         testSingleParticle();
-        testCutoffAndPeriodic();
-        testForce();
-        testEnergyEthane();
-        testEnergy1();
-*/
-//        testSingleParticle();
-//        testEnergyTwoParticle();
         testEnergyEthane();
     }
     catch(const exception& e) {
