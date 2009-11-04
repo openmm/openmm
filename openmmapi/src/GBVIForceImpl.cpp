@@ -56,7 +56,7 @@ void GBVIForceImpl::initialize(ContextImpl& context) {
     // load 1-2 atom pairs along w/ bond distance using HarmonicBondForce & constraints
     // numberOfBonds < 1, indicating they were not set by the user
 
-    if( numberOfBonds < 1 ){
+    if( numberOfBonds < 1 && numberOfParticles > 1 ){
         (void) fprintf( stderr, "Warning: no covalent bonds set for GB/VI force!\n" ); 
 //        getBondsFromForces( context );
 //        numberOfBonds = owner.getNumBonds();
@@ -163,7 +163,7 @@ void GBVIForceImpl::findScaledRadii( int numberOfParticles, const std::vector<st
      
         owner.getParticleParameters(j, charge, radiusJ, gamma); 
 
-        if(  bonded12[j].size() == 0 ){
+        if(  bonded12[j].size() == 0 && numberOfParticles > 1 ){
             (void) fprintf( stderr, "Warning GBVIForceImpl::findScaledRadii atom %d has no covalent bonds; using atomic radius=%.3f.\n", j, radiusJ );
             scaledRadiusJ = radiusJ;
 //             errors++;
