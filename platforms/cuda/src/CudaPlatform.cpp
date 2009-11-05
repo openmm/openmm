@@ -55,6 +55,7 @@ CudaPlatform::CudaPlatform() {
     registerKernelFactory(CalcNonbondedForceKernel::Name(), factory);
     registerKernelFactory(CalcCustomNonbondedForceKernel::Name(), factory);
     registerKernelFactory(CalcGBSAOBCForceKernel::Name(), factory);
+    registerKernelFactory(CudaCalcGBVIForceKernel::Name(), factory);
     registerKernelFactory(IntegrateVerletStepKernel::Name(), factory);
     registerKernelFactory(IntegrateLangevinStepKernel::Name(), factory);
     registerKernelFactory(IntegrateBrownianStepKernel::Name(), factory);
