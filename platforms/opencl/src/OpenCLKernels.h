@@ -435,7 +435,7 @@ private:
  */
 class OpenCLIntegrateVerletStepKernel : public IntegrateVerletStepKernel {
 public:
-    OpenCLIntegrateVerletStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateVerletStepKernel(name, platform), cl(cl) {
+    OpenCLIntegrateVerletStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateVerletStepKernel(name, platform), cl(cl), hasInitializedKernels(false) {
     }
     ~OpenCLIntegrateVerletStepKernel();
     /**
@@ -454,6 +454,7 @@ public:
     void execute(ContextImpl& context, const VerletIntegrator& integrator);
 private:
     OpenCLContext& cl;
+    bool hasInitializedKernels;
     cl::Kernel kernel1, kernel2;
 };
 
@@ -463,7 +464,7 @@ private:
 class OpenCLIntegrateLangevinStepKernel : public IntegrateLangevinStepKernel {
 public:
     OpenCLIntegrateLangevinStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateLangevinStepKernel(name, platform), cl(cl),
-            params(NULL), xVector(NULL), vVector(NULL) {
+            params(NULL), xVector(NULL), vVector(NULL), hasInitializedKernels(false) {
     }
     ~OpenCLIntegrateLangevinStepKernel();
     /**
@@ -483,6 +484,7 @@ public:
 private:
     OpenCLContext& cl;
     double prevTemp, prevFriction, prevStepSize;
+    bool hasInitializedKernels;
     OpenCLArray<cl_float>* params;
     OpenCLArray<mm_float4>* xVector;
     OpenCLArray<mm_float4>* vVector;
@@ -622,29 +624,33 @@ private:
     std::vector<double> masses;
 };
 
-///**
-// * This kernel is invoked to remove center of mass motion from the system.
-// */
-//class OpenCLRemoveCMMotionKernel : public RemoveCMMotionKernel {
-//public:
-//    OpenCLRemoveCMMotionKernel(std::string name, const Platform& platform, OpenCLContext& cl) : RemoveCMMotionKernel(name, platform), cl(cl) {
-//    }
-//    /**
-//     * Initialize the kernel, setting up the particle masses.
-//     *
-//     * @param system     the System this kernel will be applied to
-//     * @param force      the CMMotionRemover this kernel will be used for
-//     */
-//    void initialize(const System& system, const CMMotionRemover& force);
-//    /**
-//     * Execute the kernel.
-//     *
-//     * @param context    the context in which to execute this kernel
-//     */
-//    void execute(ContextImpl& context);
-//private:
-//    OpenCLContext& cl;
-//};
+/**
+ * This kernel is invoked to remove center of mass motion from the system.
+ */
+class OpenCLRemoveCMMotionKernel : public RemoveCMMotionKernel {
+public:
+    OpenCLRemoveCMMotionKernel(std::string name, const Platform& platform, OpenCLContext& cl) : RemoveCMMotionKernel(name, platform), cl(cl), cmMomentum(NULL) {
+    }
+    ~OpenCLRemoveCMMotionKernel();
+    /**
+     * Initialize the kernel, setting up the particle masses.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CMMotionRemover this kernel will be used for
+     */
+    void initialize(const System& system, const CMMotionRemover& force);
+    /**
+     * Execute the kernel.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void execute(ContextImpl& context);
+private:
+    OpenCLContext& cl;
+    int frequency;
+    OpenCLArray<mm_float4>* cmMomentum;
+    cl::Kernel kernel1, kernel2;
+};
 
 } // namespace OpenMM
 
