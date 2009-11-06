@@ -92,6 +92,12 @@ public:
         return context;
     }
     /**
+     * Get the cl::Device associated with this object.
+     */
+    cl::Device& getDevice() {
+        return device;
+    }
+    /**
      * Get the cl::CommandQueue associated with this object.
      */
     cl::CommandQueue& getQueue() {
@@ -165,9 +171,9 @@ public:
      *
      * @param kernel       the kernel to execute
      * @param workUnits    the maximum number of work units that should be used
-     * @param workUnitSize the size of each work unit to use
+     * @param blockSize    the size of each thread block to use
      */
-    void executeKernel(cl::Kernel& kernel, int workUnits, int workUnitSize = -1);
+    void executeKernel(cl::Kernel& kernel, int workUnits, int blockSize = -1);
     /**
      * Set all elements of an array to 0.
      */

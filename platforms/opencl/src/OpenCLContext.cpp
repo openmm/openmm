@@ -60,7 +60,7 @@ OpenCLContext::OpenCLContext(int numParticles, int deviceIndex) : time(0.0), ste
         if (deviceIndex == -1)
             throw OpenMMException("No compatible OpenCL device is available");
         device = devices[deviceIndex];
-        if (device.getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>()[0] < minThreadBlockSize)
+        if (device.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>() < minThreadBlockSize)
             throw OpenMMException("The specified OpenCL device is not compatible with OpenMM");
         compilationOptions = "-cl-fast-relaxed-math";
         string vendor = device.getInfo<CL_DEVICE_VENDOR>();
@@ -182,12 +182,12 @@ cl::Program OpenCLContext::createProgram(const string source, const map<string, 
     return program;
 }
 
-void OpenCLContext::executeKernel(cl::Kernel& kernel, int workUnits, int workUnitSize) {
-    if (workUnitSize == -1)
-        workUnitSize = ThreadBlockSize;
-    int size = std::min((workUnits+workUnitSize-1)/workUnitSize, numThreadBlocks)*workUnitSize;
+void OpenCLContext::executeKernel(cl::Kernel& kernel, int workUnits, int blockSize) {
+    if (blockSize == -1)
+        blockSize = ThreadBlockSize;
+    int size = std::min((workUnits+blockSize-1)/blockSize, numThreadBlocks)*blockSize;
     try {
-        queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(size), cl::NDRange(workUnitSize));
+        queue.enqueueNDRangeKernel(kernel, cl::NullRange, cl::NDRange(size), cl::NDRange(blockSize));
     }
     catch (cl::Error err) {
         stringstream str;

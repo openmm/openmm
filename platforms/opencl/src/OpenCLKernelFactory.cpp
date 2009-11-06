@@ -58,10 +58,10 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
         return new OpenCLIntegrateLangevinStepKernel(name, platform, cl);
 //    if (name == IntegrateBrownianStepKernel::Name())
 //        return new OpenCLIntegrateBrownianStepKernel(name, platform, cl);
-//    if (name == IntegrateVariableVerletStepKernel::Name())
-//        return new OpenCLIntegrateVariableVerletStepKernel(name, platform, cl);
-//    if (name == IntegrateVariableLangevinStepKernel::Name())
-//        return new OpenCLIntegrateVariableLangevinStepKernel(name, platform, cl);
+    if (name == IntegrateVariableVerletStepKernel::Name())
+        return new OpenCLIntegrateVariableVerletStepKernel(name, platform, cl);
+    if (name == IntegrateVariableLangevinStepKernel::Name())
+        return new OpenCLIntegrateVariableLangevinStepKernel(name, platform, cl);
 //    if (name == ApplyAndersenThermostatKernel::Name())
 //        return new OpenCLApplyAndersenThermostatKernel(name, platform, cl);
     if (name == CalcKineticEnergyKernel::Name())

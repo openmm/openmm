@@ -435,7 +435,8 @@ private:
  */
 class OpenCLIntegrateVerletStepKernel : public IntegrateVerletStepKernel {
 public:
-    OpenCLIntegrateVerletStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateVerletStepKernel(name, platform), cl(cl), hasInitializedKernels(false) {
+    OpenCLIntegrateVerletStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateVerletStepKernel(name, platform), cl(cl),
+            hasInitializedKernels(false), stepSize(NULL) {
     }
     ~OpenCLIntegrateVerletStepKernel();
     /**
@@ -454,7 +455,9 @@ public:
     void execute(ContextImpl& context, const VerletIntegrator& integrator);
 private:
     OpenCLContext& cl;
+    double prevStepSize;
     bool hasInitializedKernels;
+    OpenCLArray<mm_float2>* stepSize;
     cl::Kernel kernel1, kernel2;
 };
 
@@ -464,7 +467,7 @@ private:
 class OpenCLIntegrateLangevinStepKernel : public IntegrateLangevinStepKernel {
 public:
     OpenCLIntegrateLangevinStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateLangevinStepKernel(name, platform), cl(cl),
-            params(NULL), xVector(NULL), vVector(NULL), hasInitializedKernels(false) {
+            hasInitializedKernels(false), params(NULL), xVector(NULL), vVector(NULL) {
     }
     ~OpenCLIntegrateLangevinStepKernel();
     /**
@@ -517,62 +520,74 @@ private:
 //    OpenCLContext& cl;
 //    double prevTemp, prevFriction, prevStepSize;
 //};
-//
-///**
-// * This kernel is invoked by VariableVerletIntegrator to take one time step.
-// */
-//class OpenCLIntegrateVariableVerletStepKernel : public IntegrateVariableVerletStepKernel {
-//public:
-//    OpenCLIntegrateVariableVerletStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateVariableVerletStepKernel(name, platform), cl(cl) {
-//    }
-//    ~OpenCLIntegrateVariableVerletStepKernel();
-//    /**
-//     * Initialize the kernel.
-//     *
-//     * @param system     the System this kernel will be applied to
-//     * @param integrator the VerletIntegrator this kernel will be used for
-//     */
-//    void initialize(const System& system, const VariableVerletIntegrator& integrator);
-//    /**
-//     * Execute the kernel.
-//     *
-//     * @param context    the context in which to execute this kernel
-//     * @param integrator the VerletIntegrator this kernel is being used for
-//     * @param maxTime    the maximum time beyond which the simulation should not be advanced
-//     */
-//    void execute(ContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime);
-//private:
-//    OpenCLContext& cl;
-//    double prevErrorTol;
-//};
-//
-///**
-// * This kernel is invoked by VariableLangevinIntegrator to take one time step.
-// */
-//class OpenCLIntegrateVariableLangevinStepKernel : public IntegrateVariableLangevinStepKernel {
-//public:
-//    OpenCLIntegrateVariableLangevinStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateVariableLangevinStepKernel(name, platform), cl(cl) {
-//    }
-//    ~OpenCLIntegrateVariableLangevinStepKernel();
-//    /**
-//     * Initialize the kernel, setting up the particle masses.
-//     *
-//     * @param system     the System this kernel will be applied to
-//     * @param integrator the VariableLangevinIntegrator this kernel will be used for
-//     */
-//    void initialize(const System& system, const VariableLangevinIntegrator& integrator);
-//    /**
-//     * Execute the kernel.
-//     *
-//     * @param context    the context in which to execute this kernel
-//     * @param integrator the VariableLangevinIntegrator this kernel is being used for
-//     * @param maxTime    the maximum time beyond which the simulation should not be advanced
-//     */
-//    void execute(ContextImpl& context, const VariableLangevinIntegrator& integrator, double maxTime);
-//private:
-//    OpenCLContext& cl;
-//    double prevTemp, prevFriction, prevErrorTol;
-//};
+
+/**
+ * This kernel is invoked by VariableVerletIntegrator to take one time step.
+ */
+class OpenCLIntegrateVariableVerletStepKernel : public IntegrateVariableVerletStepKernel {
+public:
+    OpenCLIntegrateVariableVerletStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateVariableVerletStepKernel(name, platform), cl(cl),
+            hasInitializedKernels(false), stepSize(NULL) {
+    }
+    ~OpenCLIntegrateVariableVerletStepKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param integrator the VerletIntegrator this kernel will be used for
+     */
+    void initialize(const System& system, const VariableVerletIntegrator& integrator);
+    /**
+     * Execute the kernel.
+     *
+     * @param context    the context in which to execute this kernel
+     * @param integrator the VerletIntegrator this kernel is being used for
+     * @param maxTime    the maximum time beyond which the simulation should not be advanced
+     */
+    void execute(ContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime);
+private:
+    OpenCLContext& cl;
+    bool hasInitializedKernels;
+    int blockSize;
+    OpenCLArray<mm_float2>* stepSize;
+    cl::Kernel kernel1, kernel2, selectSizeKernel;
+};
+
+/**
+ * This kernel is invoked by VariableLangevinIntegrator to take one time step.
+ */
+class OpenCLIntegrateVariableLangevinStepKernel : public IntegrateVariableLangevinStepKernel {
+public:
+    OpenCLIntegrateVariableLangevinStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateVariableLangevinStepKernel(name, platform), cl(cl),
+            hasInitializedKernels(false), stepSize(NULL) {
+    }
+    ~OpenCLIntegrateVariableLangevinStepKernel();
+    /**
+     * Initialize the kernel, setting up the particle masses.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param integrator the VariableLangevinIntegrator this kernel will be used for
+     */
+    void initialize(const System& system, const VariableLangevinIntegrator& integrator);
+    /**
+     * Execute the kernel.
+     *
+     * @param context    the context in which to execute this kernel
+     * @param integrator the VariableLangevinIntegrator this kernel is being used for
+     * @param maxTime    the maximum time beyond which the simulation should not be advanced
+     */
+    void execute(ContextImpl& context, const VariableLangevinIntegrator& integrator, double maxTime);
+private:
+    OpenCLContext& cl;
+    bool hasInitializedKernels;
+    int blockSize;
+    OpenCLArray<cl_float>* params;
+    OpenCLArray<mm_float4>* xVector;
+    OpenCLArray<mm_float4>* vVector;
+    OpenCLArray<mm_float2>* stepSize;
+    cl::Kernel kernel1, kernel2, kernel3, selectSizeKernel;
+    double prevTemp, prevFriction, prevErrorTol;
+};
 //
 ///**
 // * This kernel is invoked by AndersenThermostat at the start of each time step to adjust the particle velocities.

@@ -75,3 +75,96 @@ __kernel void integrateLangevinPart3(int numAtoms, __global float4* posq, __glob
         index += get_global_size(0);
     }
 }
+
+/**
+ * Select the step size to use for the next step.
+ */
+
+__kernel void selectLangevinStepSize(int numAtoms, float maxStepSize, float errorTol, float tau, float kT, __global float2* dt,
+        __global float4* velm, __global float4* force, __global float* paramBuffer, __local float* params, __local float* error) {
+    // Calculate the error.
+
+    float err = 0.0f;
+    unsigned int index = get_local_id(0);
+    while (index < numAtoms) {
+        float4 force = force[index];
+        float invMass = velm[index].w;
+        err += (force.x*force.x + force.y*force.y + force.z*force.z)*invMass;
+        index += get_global_size(0);
+    }
+    error[get_local_id(0)] = err;
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    // Sum the errors from all threads.
+
+    for (int offset = 1; offset < get_local_size(0); offset *= 2) {
+        if (get_local_id(0)+offset < get_local_size(0) && (get_local_id(0)&(2*offset-1)) == 0)
+            error[get_local_id(0)] += error[get_local_id(0)+offset];
+        barrier(CLK_LOCAL_MEM_FENCE);
+    }
+    if (get_global_id(0) == 0) {
+        // Select the new step size.
+
+        float totalError = sqrt(error[0]/(numAtoms*3));
+        float newStepSize = sqrt(errorTol/totalError);
+        float oldStepSize = dt[0].y;
+        if (oldStepSize > 0.0f)
+            newStepSize = min(newStepSize, oldStepSize*2.0f); // For safety, limit how quickly dt can increase.
+        if (newStepSize > oldStepSize && newStepSize < 1.1f*oldStepSize)
+            newStepSize = oldStepSize; // Keeping dt constant between steps improves the behavior of the integrator.
+        if (newStepSize > maxStepSize)
+            newStepSize = maxStepSize;
+        dt[0].y = newStepSize;
+
+        // Recalculate the integration parameters.
+
+        float gdt                  = newStepSize/tau;
+        float eph                  = exp(0.5f*gdt);
+        float emh                  = exp(-0.5f*gdt);
+        float ep                   = exp(gdt);
+        float em                   = exp(-gdt);
+        float em_v                 = exp(-0.5f*(oldStepSize+newStepSize)/tau);
+        float b, c, d;
+        if (gdt >= 0.1f) {
+            float term1 = eph-1.0f;
+            term1                 *= term1;
+            b                      = gdt*(ep-1.0f) - 4.0f*term1;
+            c                      = gdt - 3.0f + 4.0f*emh - em;
+            d                      = 2.0f - eph - emh;
+        }
+        else {
+            float term1            = 0.5f*gdt;
+            float term2            = term1*term1;
+            float term4            = term2*term2;
+
+            float third            = 1.0f/3.0f;
+            float o7_9             = 7.0f/9.0f;
+            float o1_12            = 1.0f/12.0f;
+            float o17_90           = 17.0f/90.0f;
+            float o7_30            = 7.0f/30.0f;
+            float o31_1260         = 31.0f/1260.0f;
+            float o_360            = 1.0f/360.0f;
+
+            b                      = term4*(third + term1*(third + term1*(o17_90 + term1*o7_9)));
+            c                      = term2*term1*(2.0f*third + term1*(-0.5f + term1*(o7_30 + term1*(-o1_12 + term1*o31_1260))));
+            d                      = term2*(-1.0f + term2*(-o1_12 - term2*o_360));
+        }
+        float fix1                 = tau*(eph - emh);
+        if (fix1 == 0.0f)
+            fix1 = newStepSize;
+        params[EM]                 = em;
+        params[EM_V]               = em_v;
+        params[DOverTauC]          = d/(tau*c);
+        params[TauOneMinusEM_V]    = tau*(1.0f-em_v);
+        params[TauDOverEMMinusOne] = tau*d/(em - 1.0f);
+        params[Fix1]               = fix1;
+        params[OneOverFix1]        = 1.0f/fix1;
+        params[V]                  = sqrt(kT*(1.0f - em));
+        params[X]                  = tau*sqrt(kT*c);
+        params[Yv]                 = sqrt(kT*b/c);
+        params[Yx]                 = tau*sqrt(kT*b/(1.0f - em));
+    }
+    barrier(CLK_LOCAL_MEM_FENCE);
+    if (get_local_id(0) < MaxParams)
+        paramBuffer[get_local_id(0)] = params[get_local_id(0)];
+}
