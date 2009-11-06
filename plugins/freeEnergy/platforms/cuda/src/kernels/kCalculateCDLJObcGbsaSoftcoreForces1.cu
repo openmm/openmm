@@ -60,7 +60,7 @@ void SetCalculateCDLJObcGbsaSoftcoreGpu1Sim( gpuContext gpu )
 {
     cudaError_t status;
 
-    (void) fprintf( stderr, "SetCalculateCDLJObcGbsaSoftcoreGpu1Sim gpu=%p cSim=%p sizeof=%u\n", gpu, &gpu->sim, sizeof(cudaGmxSimulation) ); fflush( stderr );
+    //(void) fprintf( stderr, "SetCalculateCDLJObcGbsaSoftcoreGpu1Sim gpu=%p cSim=%p sizeof=%u\n", gpu, &gpu->sim, sizeof(cudaGmxSimulation) ); fflush( stderr );
     status = cudaMemcpyToSymbol(cSim, &gpu->sim, sizeof(cudaGmxSimulation));     
     RTERROR(status, "cudaMemcpyToSymbol: SetCalculateCDLJObcGbsaSoftcoreGpu1Sim copy to cSim failed");
 
@@ -69,7 +69,7 @@ void SetCalculateCDLJObcGbsaSoftcoreGpu1Sim( gpuContext gpu )
 void SetCalculateCDLJObcGbsaSoftcoreSupplementary1Sim( float* gpuParticleSoftCoreLJLambda)
 {
     cudaError_t status;
-    (void) fprintf( stderr, "SetCalculateCDLJObcGbsaSoftcoreSupplementary1Sim\n" );
+    //(void) fprintf( stderr, "SetCalculateCDLJObcGbsaSoftcoreSupplementary1Sim\n" );
 
     struct cudaFreeEnergySimulation feSim;
     feSim.pParticleSoftCoreLJLambda = gpuParticleSoftCoreLJLambda;

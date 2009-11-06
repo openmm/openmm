@@ -35,7 +35,6 @@
 
 #include "../../../tests/AssertionUtilities.h"
 #include "openmm/Context.h"
-#include "CudaPlatform.h"
 #include "ReferencePlatform.h"
 #include "openmm/GBVISoftcoreForce.h"
 #include "openmm/GBSAOBCForce.h"
@@ -48,7 +47,6 @@
 #include "OpenMMFreeEnergy.h"
 #include "openmm/freeEnergyKernels.h"
 #include "ReferenceFreeEnergyKernelFactory.h"
-#include "CudaFreeEnergyKernelFactory.h"
 
 #include <iostream>
 #include <vector>
@@ -87,7 +85,7 @@ int compareForcesOfTwoStates( int numParticles, State& state1, State& state2, do
 
 void testSingleParticle() {
 
-#if 1
+#if 0
     CudaPlatform platform;
     CudaFreeEnergyKernelFactory* factory  = new CudaFreeEnergyKernelFactory();
     platform.registerKernelFactory(CalcNonbondedSoftcoreForceKernel::Name(), factory);
@@ -148,7 +146,7 @@ void testEnergyEthaneSwitchingFunction( int useSwitchingFunction ) {
 
     std::string methodName = "testEnergyEthaneSwitchingFunction";
 
-#if 1
+#if 0
     CudaPlatform platform;
     CudaFreeEnergyKernelFactory* factory  = new CudaFreeEnergyKernelFactory();
     platform.registerKernelFactory(CalcNonbondedSoftcoreForceKernel::Name(), factory);

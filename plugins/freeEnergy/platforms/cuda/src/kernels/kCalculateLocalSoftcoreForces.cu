@@ -101,7 +101,7 @@ static __constant__ cudaFreeEnergySimulationNonbonded14 feSim;
 extern "C"
 void SetCalculateLocalSoftcoreGpuSim(gpuContext gpu)
 {
-    (void) fprintf( stderr, "SetCalculateLocalSoftcoreForcesSim called\n" );
+    //(void) fprintf( stderr, "SetCalculateLocalSoftcoreForcesSim called\n" );
     cudaError_t status;
     status = cudaMemcpyToSymbol(cSim, &gpu->sim, sizeof(cudaGmxSimulation));     
     RTERROR(status, "cudaMemcpyToSymbol: SetCalculateLocalSoftcoreForcesSim copy to cSim failed");
@@ -112,7 +112,7 @@ static void SetCalculateLocalSoftcoreSim( GpuLJ14Softcore* gpuLJ14Softcore)
 {
     cudaError_t status;
 
-    (void) fprintf( stderr, "SetCalculateLocalSoftcoreSim called\n" );
+    //(void) fprintf( stderr, "SetCalculateLocalSoftcoreSim called\n" );
     status = cudaMemcpyToSymbol(feSim, &gpuLJ14Softcore->feSim, sizeof(cudaFreeEnergySimulationNonbonded14));     
     RTERROR(status, "cudaMemcpyToSymbol: SetCalculateLocalSoftcoreSim copy to cSim failed");
 }

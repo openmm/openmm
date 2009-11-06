@@ -47,7 +47,7 @@ void SetCalculateGBVISoftcoreBornSumGpuSim(gpuContext gpu)
     cudaError_t status;
     status = cudaMemcpyToSymbol(cSim, &gpu->sim, sizeof(cudaGmxSimulation));     
     RTERROR(status, "cudaMemcpyToSymbol: SetCalculateGBVISoftcoreBornSumGpuSim copy to cSim failed");
-    (void) fprintf( stderr, "SetCalculateGBVISoftcoreBornSumGpuSim\n" );
+    //(void) fprintf( stderr, "SetCalculateGBVISoftcoreBornSumGpuSim\n" );
 }
 
 void GetCalculateGBVISoftcoreBornSumSim(gpuContext gpu)
@@ -66,8 +66,8 @@ void SetCalculateGBVISoftcoreSupplementarySim( GpuGBVISoftcore* gpuGBVISoftcore 
     status                           = cudaMemcpyToSymbol(gbviSimDev, &gbviSim, sizeof(cudaFreeEnergySimulationGBVI));
     RTERROR(status, "cudaMemcpyToSymbol: SetCalculateGBVISoftcoreSupplementarySim");
 
-    (void) fprintf( stderr, "SetCalculateGBVISoftcoreSupplementarySim %14.6e %14.6e swDerv=%p\n",
-                    gbviSim.quinticLowerLimitFactor, gbviSim.quinticUpperLimit, gbviSim.pSwitchDerivative );
+    //(void) fprintf( stderr, "SetCalculateGBVISoftcoreSupplementarySim %14.6e %14.6e swDerv=%p\n",
+    //                gbviSim.quinticLowerLimitFactor, gbviSim.quinticUpperLimit, gbviSim.pSwitchDerivative );
 }
 
 // create, initialize and enter BornRadiusScaleFactors values (used to scale contribution of atoms to Born sum of other atoms)
@@ -123,7 +123,7 @@ GpuGBVISoftcore* gpuSetGBVISoftcoreParameters(gpuContext gpu, float innerDielect
     }
 
 #undef DUMP_PARAMETERS
-#define DUMP_PARAMETERS 1
+#define DUMP_PARAMETERS 0
 #if (DUMP_PARAMETERS == 1)
     (void) fprintf( stderr,"GBVI softcore param %u %u sclMeth=%d LwFct=%8.3f UpLmt=[%12.5e (nm) %12.5e]\nR scaledR gamma*tau= bornRadiusScaleFactor \n",
                     bornRadiusScaleFactors.size(), gpu->sim.paddedNumberOfAtoms,

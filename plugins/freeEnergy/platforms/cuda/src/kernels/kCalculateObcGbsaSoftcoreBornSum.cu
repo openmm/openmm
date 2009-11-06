@@ -65,7 +65,7 @@ void SetCalculateObcGbsaSoftcoreNonPolarScalingFactorsSim( float* nonPolarScalin
     status                          = cudaMemcpyToSymbol(gbsaSimDev, &gbsaSim, sizeof(cudaFreeEnergySimulationObcGbsaSoftcore));
     RTERROR(status, "cudaMemcpyToSymbol: SetCalculateObcGbsaSoftcoreNonPolarScalingFactorsSim");
 
-    (void) fprintf( stderr, "In SetCalculateObcGbsaSoftcoreNonPolarScalingFactorsSim\n" );
+    //(void) fprintf( stderr, "In SetCalculateObcGbsaSoftcoreNonPolarScalingFactorsSim\n" );
 }
 
 void GetCalculateObcGbsaSoftcoreBornSumSim(gpuContext gpu)

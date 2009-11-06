@@ -76,7 +76,7 @@ void GBVISoftcoreForceImpl::initialize(ContextImpl& context) {
 
     std::vector<double> bondLengths;
     bondLengths.resize( numberOfBonds );
-double maxBond = -1.0;
+//double maxBond = -1.0;
     for (int i = 0; i < numberOfBonds; i++) {
         int particle1, particle2;
         double bondLength;
@@ -93,7 +93,7 @@ double maxBond = -1.0;
             msg << particle2;
             throw OpenMMException(msg.str());
         }
-if( maxBond < bondLength ) maxBond = bondLength;
+//if( maxBond < bondLength ) maxBond = bondLength;
         if (bondLength < 0.0 ) {
             std::stringstream msg;
             msg << "GBVISoftcoreForce: negative bondlength: ";
@@ -105,7 +105,7 @@ if( maxBond < bondLength ) maxBond = bondLength;
         bondLengths[i] = bondLength;
     }
 
-fprintf( stderr, "%s MaxBond=%14.6e\n", methodName.c_str(), maxBond );
+//fprintf( stderr, "%s MaxBond=%14.6e\n", methodName.c_str(), maxBond );
 
     vector<double> scaledRadii;
     scaledRadii.resize(numberOfParticles);

@@ -47,7 +47,7 @@ void SetCalculateCDLJSoftcoreGpuSim( gpuContext gpu )
     status = cudaMemcpyToSymbol(cSim, &gpu->sim, sizeof(cudaGmxSimulation));
     RTERROR(status, "cudaMemcpyToSymbol: SetSim copy to cSim failed");
 
-    (void) fprintf( stderr, "SetCalculateCDLJSoftcoreGpuSim gpu=%p cSim=%p sizeof=%u\n", gpu, &gpu->sim, sizeof(cudaGmxSimulation) ); fflush( stderr );
+    //(void) fprintf( stderr, "SetCalculateCDLJSoftcoreGpuSim gpu=%p cSim=%p sizeof=%u\n", gpu, &gpu->sim, sizeof(cudaGmxSimulation) ); fflush( stderr );
 }
 
 void SetCalculateCDLJSoftcoreSupplementarySim( float* gpuParticleSoftCoreLJLambda)
@@ -57,7 +57,7 @@ void SetCalculateCDLJSoftcoreSupplementarySim( float* gpuParticleSoftCoreLJLambd
     status = cudaMemcpyToSymbol(feSimDev, &feSim, sizeof(cudaFreeEnergySimulationNonBonded));
     RTERROR(status, "cudaMemcpyToSymbol: SetCalculateCDLJSoftcoreSupplementarySim");
 
-    (void) fprintf( stderr, "SetCalculateCDLJSoftcoreSupplementarySim\n" );
+    //(void) fprintf( stderr, "SetCalculateCDLJSoftcoreSupplementarySim\n" );
 }
 
 void GetCalculateCDLJSoftcoreForcesSim(float* gpuParticleSoftCoreLJLambda)
@@ -126,7 +126,7 @@ GpuNonbondedSoftcore* gpuSetNonbondedSoftcoreParameters(gpuContext gpu, float ep
     }
 
 #undef DUMP_PARAMETERS
-#define DUMP_PARAMETERS 1
+#define DUMP_PARAMETERS 0
 #if (DUMP_PARAMETERS == 1)
     (void) fprintf( stderr,"gpuSetNonbondedSoftcoreParameters: %5u epsfac=%14.7e method=%d\n", numberOfParticles, gpu->sim.paddedNumberOfAtoms, epsfac, method );
     int maxPrint = 31;
