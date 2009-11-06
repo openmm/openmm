@@ -3,14 +3,9 @@
  */
 
 __kernel void integrateVerletPart1(int numAtoms, __global float2* dt, __global float4* posq, __global float4* velm, __global float4* force, __global float4* posDelta) {
-    __local float dtPos;
-    __local float dtVel;
-    if (get_local_id(0) == 0) {
-        float2 stepSize = dt[0];
-        dtPos = stepSize.y;
-        dtVel = 0.5f*(stepSize.x+stepSize.y);
-    }
-    barrier(CLK_LOCAL_MEM_FENCE);
+    float2 stepSize = dt[0];
+    float dtPos = stepSize.y;
+    float dtVel = 0.5f*(stepSize.x+stepSize.y);
     int index = get_global_id(0);
     while (index < numAtoms) {
         float4 pos = posq[index];
