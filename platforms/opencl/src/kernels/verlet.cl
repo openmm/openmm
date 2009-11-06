@@ -28,13 +28,10 @@ __kernel void integrateVerletPart1(int numAtoms, __global float2* dt, __global f
  */
 
 __kernel void integrateVerletPart2(int numAtoms, __global float2* dt, __global float4* posq, __global float4* velm, __global float4* posDelta) {
-    __local float oneOverDt;
-    if (get_local_id(0) == 0) {
-        float2 stepSize = dt[0];
-        oneOverDt = 1.0f/stepSize.y;
-        if (get_global_id(0) == 0)
-            dt[0].x = stepSize.y;
-    }
+    float2 stepSize = dt[0];
+    float oneOverDt = 1.0f/stepSize.y;
+    if (get_global_id(0) == 0)
+        dt[0].x = stepSize.y;
     barrier(CLK_LOCAL_MEM_FENCE);
     int index = get_global_id(0);
     while (index < numAtoms) {
@@ -59,9 +56,9 @@ __kernel void selectVerletStepSize(int numAtoms, float maxStepSize, float errorT
     float err = 0.0f;
     unsigned int index = get_local_id(0);
     while (index < numAtoms) {
-        float4 force = force[index];
+        float4 f = force[index];
         float invMass = velm[index].w;
-        err += (force.x*force.x + force.y*force.y + force.z*force.z)*invMass;
+        err += (f.x*f.x + f.y*f.y + f.z*f.z)*invMass;
         index += get_global_size(0);
     }
     error[get_local_id(0)] = err;

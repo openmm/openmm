@@ -87,9 +87,9 @@ __kernel void selectLangevinStepSize(int numAtoms, float maxStepSize, float erro
     float err = 0.0f;
     unsigned int index = get_local_id(0);
     while (index < numAtoms) {
-        float4 force = force[index];
+        float4 f = force[index];
         float invMass = velm[index].w;
-        err += (force.x*force.x + force.y*force.y + force.z*force.z)*invMass;
+        err += (f.x*f.x + f.y*f.y + f.z*f.z)*invMass;
         index += get_global_size(0);
     }
     error[get_local_id(0)] = err;
