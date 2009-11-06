@@ -56,10 +56,10 @@ OpenCLPlatform::OpenCLPlatform() {
     registerKernelFactory(CalcGBSAOBCForceKernel::Name(), factory);
     registerKernelFactory(IntegrateVerletStepKernel::Name(), factory);
     registerKernelFactory(IntegrateLangevinStepKernel::Name(), factory);
-//    registerKernelFactory(IntegrateBrownianStepKernel::Name(), factory);
+    registerKernelFactory(IntegrateBrownianStepKernel::Name(), factory);
     registerKernelFactory(IntegrateVariableVerletStepKernel::Name(), factory);
     registerKernelFactory(IntegrateVariableLangevinStepKernel::Name(), factory);
-//    registerKernelFactory(ApplyAndersenThermostatKernel::Name(), factory);
+    registerKernelFactory(ApplyAndersenThermostatKernel::Name(), factory);
     registerKernelFactory(CalcKineticEnergyKernel::Name(), factory);
     registerKernelFactory(RemoveCMMotionKernel::Name(), factory);
     platformProperties.push_back(OpenCLDeviceIndex());

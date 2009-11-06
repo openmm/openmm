@@ -54,6 +54,12 @@ public:
         return *random;
     }
     /**
+     * Get the array which contains the current step size.
+     */
+    OpenCLArray<mm_float2>& getStepSize() {
+        return *stepSize;
+    }
+    /**
      * Apply constraints to the atom positions.
      *
      * @param tol             the constraint tolerance
@@ -82,6 +88,7 @@ private:
     OpenCLArray<mm_float4>* shakeParams;
     OpenCLArray<mm_float4>* random;
     OpenCLArray<mm_int4>* randomSeed;
+    OpenCLArray<mm_float2>* stepSize;
     int randomPos;
     int lastSeed;
     struct ShakeCluster;

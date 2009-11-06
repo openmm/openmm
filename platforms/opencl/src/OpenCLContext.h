@@ -266,7 +266,7 @@ public:
     /**
      * Get the OpenCLIntegrationUtilities for this context.
      */
-    OpenCLIntegrationUtilities& getIntegrationUtilties() {
+    OpenCLIntegrationUtilities& getIntegrationUtilities() {
         return *integration;
     }
     /**

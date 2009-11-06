@@ -436,7 +436,7 @@ private:
 class OpenCLIntegrateVerletStepKernel : public IntegrateVerletStepKernel {
 public:
     OpenCLIntegrateVerletStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateVerletStepKernel(name, platform), cl(cl),
-            hasInitializedKernels(false), stepSize(NULL) {
+            hasInitializedKernels(false) {
     }
     ~OpenCLIntegrateVerletStepKernel();
     /**
@@ -457,7 +457,6 @@ private:
     OpenCLContext& cl;
     double prevStepSize;
     bool hasInitializedKernels;
-    OpenCLArray<mm_float2>* stepSize;
     cl::Kernel kernel1, kernel2;
 };
 
@@ -494,32 +493,34 @@ private:
     cl::Kernel kernel1, kernel2, kernel3;
 };
 
-///**
-// * This kernel is invoked by BrownianIntegrator to take one time step.
-// */
-//class OpenCLIntegrateBrownianStepKernel : public IntegrateBrownianStepKernel {
-//public:
-//    OpenCLIntegrateBrownianStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateBrownianStepKernel(name, platform), cl(cl) {
-//    }
-//    ~OpenCLIntegrateBrownianStepKernel();
-//    /**
-//     * Initialize the kernel.
-//     *
-//     * @param system     the System this kernel will be applied to
-//     * @param integrator the BrownianIntegrator this kernel will be used for
-//     */
-//    void initialize(const System& system, const BrownianIntegrator& integrator);
-//    /**
-//     * Execute the kernel.
-//     *
-//     * @param context    the context in which to execute this kernel
-//     * @param integrator the BrownianIntegrator this kernel is being used for
-//     */
-//    void execute(ContextImpl& context, const BrownianIntegrator& integrator);
-//private:
-//    OpenCLContext& cl;
-//    double prevTemp, prevFriction, prevStepSize;
-//};
+/**
+ * This kernel is invoked by BrownianIntegrator to take one time step.
+ */
+class OpenCLIntegrateBrownianStepKernel : public IntegrateBrownianStepKernel {
+public:
+    OpenCLIntegrateBrownianStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateBrownianStepKernel(name, platform), cl(cl) {
+    }
+    ~OpenCLIntegrateBrownianStepKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param integrator the BrownianIntegrator this kernel will be used for
+     */
+    void initialize(const System& system, const BrownianIntegrator& integrator);
+    /**
+     * Execute the kernel.
+     *
+     * @param context    the context in which to execute this kernel
+     * @param integrator the BrownianIntegrator this kernel is being used for
+     */
+    void execute(ContextImpl& context, const BrownianIntegrator& integrator);
+private:
+    OpenCLContext& cl;
+    double prevTemp, prevFriction, prevStepSize;
+    bool hasInitializedKernels;
+    cl::Kernel kernel1, kernel2;
+};
 
 /**
  * This kernel is invoked by VariableVerletIntegrator to take one time step.
@@ -527,7 +528,7 @@ private:
 class OpenCLIntegrateVariableVerletStepKernel : public IntegrateVariableVerletStepKernel {
 public:
     OpenCLIntegrateVariableVerletStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateVariableVerletStepKernel(name, platform), cl(cl),
-            hasInitializedKernels(false), stepSize(NULL) {
+            hasInitializedKernels(false) {
     }
     ~OpenCLIntegrateVariableVerletStepKernel();
     /**
@@ -549,7 +550,6 @@ private:
     OpenCLContext& cl;
     bool hasInitializedKernels;
     int blockSize;
-    OpenCLArray<mm_float2>* stepSize;
     cl::Kernel kernel1, kernel2, selectSizeKernel;
 };
 
@@ -559,7 +559,7 @@ private:
 class OpenCLIntegrateVariableLangevinStepKernel : public IntegrateVariableLangevinStepKernel {
 public:
     OpenCLIntegrateVariableLangevinStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateVariableLangevinStepKernel(name, platform), cl(cl),
-            hasInitializedKernels(false), stepSize(NULL) {
+            hasInitializedKernels(false) {
     }
     ~OpenCLIntegrateVariableLangevinStepKernel();
     /**
@@ -584,36 +584,39 @@ private:
     OpenCLArray<cl_float>* params;
     OpenCLArray<mm_float4>* xVector;
     OpenCLArray<mm_float4>* vVector;
-    OpenCLArray<mm_float2>* stepSize;
     cl::Kernel kernel1, kernel2, kernel3, selectSizeKernel;
     double prevTemp, prevFriction, prevErrorTol;
 };
-//
-///**
-// * This kernel is invoked by AndersenThermostat at the start of each time step to adjust the particle velocities.
-// */
-//class OpenCLApplyAndersenThermostatKernel : public ApplyAndersenThermostatKernel {
-//public:
-//    OpenCLApplyAndersenThermostatKernel(std::string name, const Platform& platform, OpenCLContext& cl) : ApplyAndersenThermostatKernel(name, platform), cl(cl) {
-//    }
-//    ~OpenCLApplyAndersenThermostatKernel();
-//    /**
-//     * Initialize the kernel.
-//     *
-//     * @param system     the System this kernel will be applied to
-//     * @param thermostat the AndersenThermostat this kernel will be used for
-//     */
-//    void initialize(const System& system, const AndersenThermostat& thermostat);
-//    /**
-//     * Execute the kernel.
-//     *
-//     * @param context    the context in which to execute this kernel
-//     */
-//    void execute(ContextImpl& context);
-//private:
-//    OpenCLContext& cl;
-//    double prevTemp, prevFrequency, prevStepSize;
-//};
+
+/**
+ * This kernel is invoked by AndersenThermostat at the start of each time step to adjust the particle velocities.
+ */
+class OpenCLApplyAndersenThermostatKernel : public ApplyAndersenThermostatKernel {
+public:
+    OpenCLApplyAndersenThermostatKernel(std::string name, const Platform& platform, OpenCLContext& cl) : ApplyAndersenThermostatKernel(name, platform), cl(cl),
+            hasInitializedKernels(false) {
+    }
+    ~OpenCLApplyAndersenThermostatKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param thermostat the AndersenThermostat this kernel will be used for
+     */
+    void initialize(const System& system, const AndersenThermostat& thermostat);
+    /**
+     * Execute the kernel.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void execute(ContextImpl& context);
+private:
+    OpenCLContext& cl;
+    bool hasInitializedKernels;
+    int randomSeed;
+    cl::Kernel kernel;
+    double prevTemp, prevFriction, prevStepSize;
+};
 
 /**
  * This kernel is invoked to calculate the kinetic energy of the system.

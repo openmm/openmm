@@ -4,7 +4,7 @@ enum {EM, EM_V, DOverTauC, TauOneMinusEM_V, TauDOverEMMinusOne, V, X, Yv, Yx, Fi
  * Perform the first step of Langevin integration.
  */
 
-__kernel void integrateLangevinPart1(int numAtoms, __global float4* velm, __global float4* force, __global float4* posDelta,
+__kernel void integrateLangevinPart1(__global float4* velm, __global float4* force, __global float4* posDelta,
         __global float* paramBuffer, __local float* params, __global float4* xVector, __global float4* vVector,
         __global float4* random, unsigned int randomIndex) {
 
@@ -15,12 +15,11 @@ __kernel void integrateLangevinPart1(int numAtoms, __global float4* velm, __glob
         params[index] = paramBuffer[index];
     barrier(CLK_LOCAL_MEM_FENCE);
     randomIndex += index;
-    while (index < numAtoms) {
+    while (index < NUM_ATOMS) {
         float4 velocity = velm[index];
         float sqrtInvMass = sqrt(velocity.w);
         float4 vmh = (float4) (xVector[index].xyz*params[DOverTauC] + sqrtInvMass*params[Yv]*random[randomIndex].xyz, 0.0f);
-        randomIndex += get_global_size(0);
-        float4 vVec = (float4) (sqrtInvMass*params[V]*random[randomIndex].xyz, 0.0f);
+        float4 vVec = (float4) (sqrtInvMass*params[V]*random[randomIndex+PADDED_NUM_ATOMS].xyz, 0.0f);
         randomIndex += get_global_size(0);
         vVector[index] = vVec;
         velocity.xyz = velocity.xyz*params[EM_V] + velocity.w*force[index].xyz*params[TauOneMinusEM_V] + vVec.xyz - params[EM]*vmh.xyz;
@@ -34,7 +33,7 @@ __kernel void integrateLangevinPart1(int numAtoms, __global float4* velm, __glob
  * Perform the second step of Langevin integration.
  */
 
-__kernel void integrateLangevinPart2(int numAtoms, __global float4* velm, __global float4* posDelta, __global float* paramBuffer,
+__kernel void integrateLangevinPart2(__global float4* velm, __global float4* posDelta, __global float* paramBuffer,
         __local float* params, __global float4* xVector, __global float4* vVector, __global float4* random, unsigned int randomIndex) {
 
     // Load the parameters into local memory for faster access.
@@ -44,14 +43,13 @@ __kernel void integrateLangevinPart2(int numAtoms, __global float4* velm, __glob
         params[index] = paramBuffer[index];
     barrier(CLK_LOCAL_MEM_FENCE);
     randomIndex += index;
-    while (index < numAtoms) {
+    while (index < NUM_ATOMS) {
         float4 delta = posDelta[index];
         float4 velocity = velm[index];
         float sqrtInvMass = sqrt(velocity.w);
         velocity.xyz = delta.xyz*params[OneOverFix1];
         float4 xmh = (float4) (vVector[index].xyz*params[TauDOverEMMinusOne] + sqrtInvMass*params[Yx]*random[randomIndex].xyz, 0.0f);
-        randomIndex += get_global_size(0);
-        float4 xVec = (float4) (sqrtInvMass*params[X]*random[randomIndex].xyz, 0.0f);
+        float4 xVec = (float4) (sqrtInvMass*params[X]*random[randomIndex+PADDED_NUM_ATOMS].xyz, 0.0f);
         randomIndex += get_global_size(0);
         delta.xyz += xVec.xyz - xmh.xyz;
         posDelta[index] = delta;
@@ -65,9 +63,9 @@ __kernel void integrateLangevinPart2(int numAtoms, __global float4* velm, __glob
  * Perform the third step of Langevin integration.
  */
 
-__kernel void integrateLangevinPart3(int numAtoms, __global float4* posq, __global float4* posDelta) {
+__kernel void integrateLangevinPart3(__global float4* posq, __global float4* posDelta) {
     int index = get_global_id(0);
-    while (index < numAtoms) {
+    while (index < NUM_ATOMS) {
         float4 pos = posq[index];
         float4 delta = posDelta[index];
         pos.xyz += delta.xyz;
@@ -80,13 +78,13 @@ __kernel void integrateLangevinPart3(int numAtoms, __global float4* posq, __glob
  * Select the step size to use for the next step.
  */
 
-__kernel void selectLangevinStepSize(int numAtoms, float maxStepSize, float errorTol, float tau, float kT, __global float2* dt,
+__kernel void selectLangevinStepSize(float maxStepSize, float errorTol, float tau, float kT, __global float2* dt,
         __global float4* velm, __global float4* force, __global float* paramBuffer, __local float* params, __local float* error) {
     // Calculate the error.
 
     float err = 0.0f;
     unsigned int index = get_local_id(0);
-    while (index < numAtoms) {
+    while (index < NUM_ATOMS) {
         float4 f = force[index];
         float invMass = velm[index].w;
         err += (f.x*f.x + f.y*f.y + f.z*f.z)*invMass;
@@ -105,7 +103,7 @@ __kernel void selectLangevinStepSize(int numAtoms, float maxStepSize, float erro
     if (get_global_id(0) == 0) {
         // Select the new step size.
 
-        float totalError = sqrt(error[0]/(numAtoms*3));
+        float totalError = sqrt(error[0]/(NUM_ATOMS*3));
         float newStepSize = sqrt(errorTol/totalError);
         float oldStepSize = dt[0].y;
         if (oldStepSize > 0.0f)

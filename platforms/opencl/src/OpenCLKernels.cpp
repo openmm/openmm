@@ -1171,8 +1171,6 @@ double OpenCLCalcGBSAOBCForceKernel::executeEnergy(ContextImpl& context) {
 }
 
 OpenCLIntegrateVerletStepKernel::~OpenCLIntegrateVerletStepKernel() {
-    if (stepSize != NULL)
-        delete stepSize;
 }
 
 void OpenCLIntegrateVerletStepKernel::initialize(const System& system, const VerletIntegrator& integrator) {
@@ -1180,24 +1178,23 @@ void OpenCLIntegrateVerletStepKernel::initialize(const System& system, const Ver
     cl::Program program = cl.createProgram(cl.loadSourceFromFile("verlet.cl"));
     kernel1 = cl::Kernel(program, "integrateVerletPart1");
     kernel2 = cl::Kernel(program, "integrateVerletPart2");
-    stepSize = new OpenCLArray<mm_float2>(cl, 1, "stepSize");
     prevStepSize = -1.0;
 }
 
 void OpenCLIntegrateVerletStepKernel::execute(ContextImpl& context, const VerletIntegrator& integrator) {
-    OpenCLIntegrationUtilities& integration = cl.getIntegrationUtilties();
+    OpenCLIntegrationUtilities& integration = cl.getIntegrationUtilities();
     int numAtoms = cl.getNumAtoms();
     double dt = integrator.getStepSize();
     if (!hasInitializedKernels) {
         hasInitializedKernels = true;
         kernel1.setArg<cl_int>(0, numAtoms);
-        kernel1.setArg<cl::Buffer>(1, stepSize->getDeviceBuffer());
+        kernel1.setArg<cl::Buffer>(1, cl.getIntegrationUtilities().getStepSize().getDeviceBuffer());
         kernel1.setArg<cl::Buffer>(2, cl.getPosq().getDeviceBuffer());
         kernel1.setArg<cl::Buffer>(3, cl.getVelm().getDeviceBuffer());
         kernel1.setArg<cl::Buffer>(4, cl.getForce().getDeviceBuffer());
         kernel1.setArg<cl::Buffer>(5, integration.getPosDelta().getDeviceBuffer());
         kernel2.setArg<cl_int>(0, numAtoms);
-        kernel2.setArg<cl::Buffer>(1, stepSize->getDeviceBuffer());
+        kernel2.setArg<cl::Buffer>(1, cl.getIntegrationUtilities().getStepSize().getDeviceBuffer());
         kernel2.setArg<cl::Buffer>(2, cl.getPosq().getDeviceBuffer());
         kernel2.setArg<cl::Buffer>(3, cl.getVelm().getDeviceBuffer());
         kernel2.setArg<cl::Buffer>(4, integration.getPosDelta().getDeviceBuffer());
@@ -1205,7 +1202,7 @@ void OpenCLIntegrateVerletStepKernel::execute(ContextImpl& context, const Verlet
     if (dt != prevStepSize) {
         vector<mm_float2> stepSizeVec(1);
         stepSizeVec[0] = (mm_float2) {dt, dt};
-        stepSize->upload(stepSizeVec);
+        cl.getIntegrationUtilities().getStepSize().upload(stepSizeVec);
         prevStepSize = dt;
     }
 
@@ -1238,8 +1235,11 @@ OpenCLIntegrateLangevinStepKernel::~OpenCLIntegrateLangevinStepKernel() {
 
 void OpenCLIntegrateLangevinStepKernel::initialize(const System& system, const LangevinIntegrator& integrator) {
     cl.initialize(system);
-    cl.getIntegrationUtilties().initRandomNumberGenerator(integrator.getRandomNumberSeed());
-    cl::Program program = cl.createProgram(cl.loadSourceFromFile("langevin.cl"));
+    cl.getIntegrationUtilities().initRandomNumberGenerator(integrator.getRandomNumberSeed());
+    map<string, string> defines;
+    defines["NUM_ATOMS"] = intToString(cl.getNumAtoms());
+    defines["PADDED_NUM_ATOMS"] = intToString(cl.getPaddedNumAtoms());
+    cl::Program program = cl.createProgram(cl.loadSourceFromFile("langevin.cl"), defines);
     kernel1 = cl::Kernel(program, "integrateLangevinPart1");
     kernel2 = cl::Kernel(program, "integrateLangevinPart2");
     kernel3 = cl::Kernel(program, "integrateLangevinPart3");
@@ -1252,32 +1252,28 @@ void OpenCLIntegrateLangevinStepKernel::initialize(const System& system, const L
 }
 
 void OpenCLIntegrateLangevinStepKernel::execute(ContextImpl& context, const LangevinIntegrator& integrator) {
-    OpenCLIntegrationUtilities& integration = cl.getIntegrationUtilties();
+    OpenCLIntegrationUtilities& integration = cl.getIntegrationUtilities();
     int numAtoms = cl.getNumAtoms();
     if (!hasInitializedKernels) {
         hasInitializedKernels = true;
-        kernel1.setArg<cl_int>(0, numAtoms);
-        kernel1.setArg<cl::Buffer>(1, cl.getVelm().getDeviceBuffer());
-        kernel1.setArg<cl::Buffer>(2, cl.getForce().getDeviceBuffer());
-        kernel1.setArg<cl::Buffer>(3, integration.getPosDelta().getDeviceBuffer());
-        kernel1.setArg<cl::Buffer>(4, params->getDeviceBuffer());
-        kernel1.setArg(5, params->getSize()*sizeof(cl_float), NULL);
-        kernel1.setArg<cl::Buffer>(6, xVector->getDeviceBuffer());
-        kernel1.setArg<cl::Buffer>(7, vVector->getDeviceBuffer());
-        kernel1.setArg<cl::Buffer>(8,integration.getRandom().getDeviceBuffer());
-        kernel2.setArg<cl_int>(0, numAtoms);
-        kernel2.setArg<cl::Buffer>(1, cl.getVelm().getDeviceBuffer());
-        kernel2.setArg<cl::Buffer>(2, integration.getPosDelta().getDeviceBuffer());
-        kernel2.setArg<cl::Buffer>(3, params->getDeviceBuffer());
-        kernel2.setArg(4, params->getSize()*sizeof(cl_float), NULL);
-        kernel2.setArg<cl::Buffer>(5, xVector->getDeviceBuffer());
-        kernel2.setArg<cl::Buffer>(6, vVector->getDeviceBuffer());
-        kernel2.setArg<cl::Buffer>(7,integration.getRandom().getDeviceBuffer());
-        kernel3.setArg<cl_int>(0, numAtoms);
-        kernel3.setArg<cl::Buffer>(1, cl.getPosq().getDeviceBuffer());
-        kernel3.setArg<cl::Buffer>(2, integration.getPosDelta().getDeviceBuffer());
+        kernel1.setArg<cl::Buffer>(0, cl.getVelm().getDeviceBuffer());
+        kernel1.setArg<cl::Buffer>(1, cl.getForce().getDeviceBuffer());
+        kernel1.setArg<cl::Buffer>(2, integration.getPosDelta().getDeviceBuffer());
+        kernel1.setArg<cl::Buffer>(3, params->getDeviceBuffer());
+        kernel1.setArg(4, params->getSize()*sizeof(cl_float), NULL);
+        kernel1.setArg<cl::Buffer>(5, xVector->getDeviceBuffer());
+        kernel1.setArg<cl::Buffer>(6, vVector->getDeviceBuffer());
+        kernel1.setArg<cl::Buffer>(7,integration.getRandom().getDeviceBuffer());
+        kernel2.setArg<cl::Buffer>(0, cl.getVelm().getDeviceBuffer());
+        kernel2.setArg<cl::Buffer>(1, integration.getPosDelta().getDeviceBuffer());
+        kernel2.setArg<cl::Buffer>(2, params->getDeviceBuffer());
+        kernel2.setArg(3, params->getSize()*sizeof(cl_float), NULL);
+        kernel2.setArg<cl::Buffer>(4, xVector->getDeviceBuffer());
+        kernel2.setArg<cl::Buffer>(5, vVector->getDeviceBuffer());
+        kernel2.setArg<cl::Buffer>(6,integration.getRandom().getDeviceBuffer());
+        kernel3.setArg<cl::Buffer>(0, cl.getPosq().getDeviceBuffer());
+        kernel3.setArg<cl::Buffer>(1, integration.getPosDelta().getDeviceBuffer());
     }
-    int numThreads = cl.getNumThreadBlocks()*cl.ThreadBlockSize;
     double temperature = integrator.getTemperature();
     double friction = integrator.getFriction();
     double stepSize = integrator.getStepSize();
@@ -1346,7 +1342,7 @@ void OpenCLIntegrateLangevinStepKernel::execute(ContextImpl& context, const Lang
 
     // Call the first integration kernel.
 
-    kernel1.setArg<cl_uint>(9, integration.prepareRandomNumbers(2*numThreads));
+    kernel1.setArg<cl_uint>(8, integration.prepareRandomNumbers(2*cl.getPaddedNumAtoms()));
     cl.executeKernel(kernel1, numAtoms);
 
     // Apply constraints.
@@ -1355,7 +1351,7 @@ void OpenCLIntegrateLangevinStepKernel::execute(ContextImpl& context, const Lang
 
     // Call the second integration kernel.
 
-    kernel2.setArg<cl_uint>(8, integration.prepareRandomNumbers(2*numThreads));
+    kernel2.setArg<cl_uint>(7, integration.prepareRandomNumbers(2*cl.getPaddedNumAtoms()));
     cl.executeKernel(kernel2, numAtoms);
 
     // Reapply constraints.
@@ -1371,50 +1367,66 @@ void OpenCLIntegrateLangevinStepKernel::execute(ContextImpl& context, const Lang
     cl.setTime(cl.getTime()+stepSize);
     cl.setStepCount(cl.getStepCount()+1);
 }
-//
-//OpenCLIntegrateBrownianStepKernel::~OpenCLIntegrateBrownianStepKernel() {
-//}
-//
-//void OpenCLIntegrateBrownianStepKernel::initialize(const System& system, const BrownianIntegrator& integrator) {
-//    initializeIntegration(system, data, integrator);
-//    _gpuContext* gpu = data.gpu;
-//    gpu->seed = (unsigned long) integrator.getRandomNumberSeed();
-//    gpuInitializeRandoms(gpu);
-//    prevStepSize = -1.0;
-//}
-//
-//void OpenCLIntegrateBrownianStepKernel::execute(ContextImpl& context, const BrownianIntegrator& integrator) {
-//    _gpuContext* gpu = data.gpu;
-//    double temperature = integrator.getTemperature();
-//    double friction = integrator.getFriction();
-//    double stepSize = integrator.getStepSize();
-//    if (temperature != prevTemp || friction != prevFriction || stepSize != prevStepSize) {
-//        // Initialize the GPU parameters.
-//
-//        double tau = (friction == 0.0 ? 0.0 : 1.0/friction);
-//        gpuSetBrownianIntegrationParameters(gpu, (float) tau, (float) stepSize, (float) temperature);
-//        gpuSetConstants(gpu);
-//        kGenerateRandoms(gpu);
-//        prevTemp = temperature;
-//        prevFriction = friction;
-//        prevStepSize = stepSize;
-//    }
-//    kBrownianUpdatePart1(gpu);
-//    kApplyFirstShake(gpu);
-//    kApplyFirstSettle(gpu);
-//    kApplyFirstCCMA(gpu);
-//    if (data.removeCM)
-//        if (data.stepCount%data.cmMotionFrequency == 0)
-//            gpu->bCalculateCM = true;
-//    kBrownianUpdatePart2(gpu);
-//    data.time += stepSize;
-//    data.stepCount++;
-//}
-//
+
+OpenCLIntegrateBrownianStepKernel::~OpenCLIntegrateBrownianStepKernel() {
+}
+
+void OpenCLIntegrateBrownianStepKernel::initialize(const System& system, const BrownianIntegrator& integrator) {
+    cl.initialize(system);
+    cl.getIntegrationUtilities().initRandomNumberGenerator(integrator.getRandomNumberSeed());
+    map<string, string> defines;
+    defines["NUM_ATOMS"] = intToString(cl.getNumAtoms());
+    cl::Program program = cl.createProgram(cl.loadSourceFromFile("brownian.cl"), defines);
+    kernel1 = cl::Kernel(program, "integrateBrownianPart1");
+    kernel2 = cl::Kernel(program, "integrateBrownianPart2");
+    prevStepSize = -1.0;
+}
+
+void OpenCLIntegrateBrownianStepKernel::execute(ContextImpl& context, const BrownianIntegrator& integrator) {
+    OpenCLIntegrationUtilities& integration = cl.getIntegrationUtilities();
+    int numAtoms = cl.getNumAtoms();
+    if (!hasInitializedKernels) {
+        hasInitializedKernels = true;
+        kernel1.setArg<cl::Buffer>(2, cl.getForce().getDeviceBuffer());
+        kernel1.setArg<cl::Buffer>(3, integration.getPosDelta().getDeviceBuffer());
+        kernel1.setArg<cl::Buffer>(4,integration.getRandom().getDeviceBuffer());
+        kernel2.setArg<cl::Buffer>(1, cl.getPosq().getDeviceBuffer());
+        kernel2.setArg<cl::Buffer>(2, cl.getVelm().getDeviceBuffer());
+        kernel2.setArg<cl::Buffer>(3, integration.getPosDelta().getDeviceBuffer());
+    }
+    double temperature = integrator.getTemperature();
+    double friction = integrator.getFriction();
+    double stepSize = integrator.getStepSize();
+    if (temperature != prevTemp || friction != prevFriction || stepSize != prevStepSize) {
+        double tau = (friction == 0.0 ? 0.0 : 1.0/friction);
+        kernel1.setArg<cl_float>(0, (cl_float) (tau*stepSize));
+        kernel1.setArg<cl_float>(1, (cl_float) (sqrt(2.0f*BOLTZ*temperature*stepSize*tau)));
+        kernel2.setArg<cl_float>(0, (cl_float) (1.0/stepSize));
+        prevTemp = temperature;
+        prevFriction = friction;
+        prevStepSize = stepSize;
+    }
+
+    // Call the first integration kernel.
+
+    kernel1.setArg<cl_uint>(5, integration.prepareRandomNumbers(cl.getPaddedNumAtoms()));
+    cl.executeKernel(kernel1, numAtoms);
+
+    // Apply constraints.
+
+    integration.applyConstraints(integrator.getConstraintTolerance());
+
+    // Call the second integration kernel.
+
+    cl.executeKernel(kernel2, numAtoms);
+
+    // Update the time and step count.
+
+    cl.setTime(cl.getTime()+stepSize);
+    cl.setStepCount(cl.getStepCount()+1);
+}
 
 OpenCLIntegrateVariableVerletStepKernel::~OpenCLIntegrateVariableVerletStepKernel() {
-    if (stepSize != NULL)
-        delete stepSize;
 }
 
 void OpenCLIntegrateVariableVerletStepKernel::initialize(const System& system, const VariableVerletIntegrator& integrator) {
@@ -1423,30 +1435,27 @@ void OpenCLIntegrateVariableVerletStepKernel::initialize(const System& system, c
     kernel1 = cl::Kernel(program, "integrateVerletPart1");
     kernel2 = cl::Kernel(program, "integrateVerletPart2");
     selectSizeKernel = cl::Kernel(program, "selectVerletStepSize");
-    stepSize = new OpenCLArray<mm_float2>(cl, 1, "stepSize", true);
-    stepSize->set(0, (mm_float2) {0.0f, 0.0f});
-    stepSize->upload();
     blockSize = std::min(std::min(256, system.getNumParticles()), (int) cl.getDevice().getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>());
 }
 
 void OpenCLIntegrateVariableVerletStepKernel::execute(ContextImpl& context, const VariableVerletIntegrator& integrator, double maxTime) {
-    OpenCLIntegrationUtilities& integration = cl.getIntegrationUtilties();
+    OpenCLIntegrationUtilities& integration = cl.getIntegrationUtilities();
     int numAtoms = cl.getNumAtoms();
     if (!hasInitializedKernels) {
         hasInitializedKernels = true;
         kernel1.setArg<cl_int>(0, numAtoms);
-        kernel1.setArg<cl::Buffer>(1, stepSize->getDeviceBuffer());
+        kernel1.setArg<cl::Buffer>(1, cl.getIntegrationUtilities().getStepSize().getDeviceBuffer());
         kernel1.setArg<cl::Buffer>(2, cl.getPosq().getDeviceBuffer());
         kernel1.setArg<cl::Buffer>(3, cl.getVelm().getDeviceBuffer());
         kernel1.setArg<cl::Buffer>(4, cl.getForce().getDeviceBuffer());
         kernel1.setArg<cl::Buffer>(5, integration.getPosDelta().getDeviceBuffer());
         kernel2.setArg<cl_int>(0, numAtoms);
-        kernel2.setArg<cl::Buffer>(1, stepSize->getDeviceBuffer());
+        kernel2.setArg<cl::Buffer>(1, cl.getIntegrationUtilities().getStepSize().getDeviceBuffer());
         kernel2.setArg<cl::Buffer>(2, cl.getPosq().getDeviceBuffer());
         kernel2.setArg<cl::Buffer>(3, cl.getVelm().getDeviceBuffer());
         kernel2.setArg<cl::Buffer>(4, integration.getPosDelta().getDeviceBuffer());
         selectSizeKernel.setArg<cl_int>(0, numAtoms);
-        selectSizeKernel.setArg<cl::Buffer>(3, stepSize->getDeviceBuffer());
+        selectSizeKernel.setArg<cl::Buffer>(3, cl.getIntegrationUtilities().getStepSize().getDeviceBuffer());
         selectSizeKernel.setArg<cl::Buffer>(4, cl.getVelm().getDeviceBuffer());
         selectSizeKernel.setArg<cl::Buffer>(5, cl.getForce().getDeviceBuffer());
         selectSizeKernel.setArg(6, blockSize*sizeof(cl_float), NULL);
@@ -1473,8 +1482,8 @@ void OpenCLIntegrateVariableVerletStepKernel::execute(ContextImpl& context, cons
 
     // Update the time and step count.
 
-    stepSize->download();
-    double dt = stepSize->get(0).y;
+    cl.getIntegrationUtilities().getStepSize().download();
+    double dt = cl.getIntegrationUtilities().getStepSize()[0].y;
     double time = cl.getTime()+dt;
     if (dt == maxStepSize)
         time = maxTime; // Avoid round-off error
@@ -1489,14 +1498,15 @@ OpenCLIntegrateVariableLangevinStepKernel::~OpenCLIntegrateVariableLangevinStepK
         delete xVector;
     if (vVector != NULL)
         delete vVector;
-    if (stepSize != NULL)
-        delete stepSize;
 }
 
 void OpenCLIntegrateVariableLangevinStepKernel::initialize(const System& system, const VariableLangevinIntegrator& integrator) {
     cl.initialize(system);
-    cl.getIntegrationUtilties().initRandomNumberGenerator(integrator.getRandomNumberSeed());
-    cl::Program program = cl.createProgram(cl.loadSourceFromFile("langevin.cl"));
+    cl.getIntegrationUtilities().initRandomNumberGenerator(integrator.getRandomNumberSeed());
+    map<string, string> defines;
+    defines["NUM_ATOMS"] = intToString(cl.getNumAtoms());
+    defines["PADDED_NUM_ATOMS"] = intToString(cl.getPaddedNumAtoms());
+    cl::Program program = cl.createProgram(cl.loadSourceFromFile("langevin.cl"), defines);
     kernel1 = cl::Kernel(program, "integrateLangevinPart1");
     kernel2 = cl::Kernel(program, "integrateLangevinPart2");
     kernel3 = cl::Kernel(program, "integrateLangevinPart3");
@@ -1506,61 +1516,53 @@ void OpenCLIntegrateVariableLangevinStepKernel::initialize(const System& system,
     vVector = new OpenCLArray<mm_float4>(cl, cl.getPaddedNumAtoms(), "vVector");
     vector<mm_float4> initialXVector(xVector->getSize(), (mm_float4) {0.0f, 0.0f, 0.0f, 0.0f});
     xVector->upload(initialXVector);
-    stepSize = new OpenCLArray<mm_float2>(cl, 1, "stepSize", true);
-    stepSize->set(0, (mm_float2) {0.0f, 0.0f});
-    stepSize->upload();
     blockSize = std::min(256, system.getNumParticles());
     blockSize = std::max(blockSize, params->getSize());
     blockSize = std::min(blockSize, (int) cl.getDevice().getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>());
 }
 
 void OpenCLIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, const VariableLangevinIntegrator& integrator, double maxTime) {
-    OpenCLIntegrationUtilities& integration = cl.getIntegrationUtilties();
+    OpenCLIntegrationUtilities& integration = cl.getIntegrationUtilities();
     int numAtoms = cl.getNumAtoms();
     if (!hasInitializedKernels) {
         hasInitializedKernels = true;
-        kernel1.setArg<cl_int>(0, numAtoms);
-        kernel1.setArg<cl::Buffer>(1, cl.getVelm().getDeviceBuffer());
-        kernel1.setArg<cl::Buffer>(2, cl.getForce().getDeviceBuffer());
-        kernel1.setArg<cl::Buffer>(3, integration.getPosDelta().getDeviceBuffer());
-        kernel1.setArg<cl::Buffer>(4, params->getDeviceBuffer());
-        kernel1.setArg(5, params->getSize()*sizeof(cl_float), NULL);
-        kernel1.setArg<cl::Buffer>(6, xVector->getDeviceBuffer());
-        kernel1.setArg<cl::Buffer>(7, vVector->getDeviceBuffer());
-        kernel1.setArg<cl::Buffer>(8,integration.getRandom().getDeviceBuffer());
-        kernel2.setArg<cl_int>(0, numAtoms);
-        kernel2.setArg<cl::Buffer>(1, cl.getVelm().getDeviceBuffer());
-        kernel2.setArg<cl::Buffer>(2, integration.getPosDelta().getDeviceBuffer());
-        kernel2.setArg<cl::Buffer>(3, params->getDeviceBuffer());
-        kernel2.setArg(4, params->getSize()*sizeof(cl_float), NULL);
-        kernel2.setArg<cl::Buffer>(5, xVector->getDeviceBuffer());
-        kernel2.setArg<cl::Buffer>(6, vVector->getDeviceBuffer());
-        kernel2.setArg<cl::Buffer>(7,integration.getRandom().getDeviceBuffer());
-        kernel3.setArg<cl_int>(0, numAtoms);
-        kernel3.setArg<cl::Buffer>(1, cl.getPosq().getDeviceBuffer());
-        kernel3.setArg<cl::Buffer>(2, integration.getPosDelta().getDeviceBuffer());
-        selectSizeKernel.setArg<cl_int>(0, numAtoms);
-        selectSizeKernel.setArg<cl::Buffer>(5, stepSize->getDeviceBuffer());
-        selectSizeKernel.setArg<cl::Buffer>(6, cl.getVelm().getDeviceBuffer());
-        selectSizeKernel.setArg<cl::Buffer>(7, cl.getForce().getDeviceBuffer());
-        selectSizeKernel.setArg<cl::Buffer>(8, params->getDeviceBuffer());
-        selectSizeKernel.setArg(9, params->getSize()*sizeof(cl_float), NULL);
-        selectSizeKernel.setArg(10, blockSize*sizeof(cl_float), NULL);
+        kernel1.setArg<cl::Buffer>(0, cl.getVelm().getDeviceBuffer());
+        kernel1.setArg<cl::Buffer>(1, cl.getForce().getDeviceBuffer());
+        kernel1.setArg<cl::Buffer>(2, integration.getPosDelta().getDeviceBuffer());
+        kernel1.setArg<cl::Buffer>(3, params->getDeviceBuffer());
+        kernel1.setArg(4, params->getSize()*sizeof(cl_float), NULL);
+        kernel1.setArg<cl::Buffer>(5, xVector->getDeviceBuffer());
+        kernel1.setArg<cl::Buffer>(6, vVector->getDeviceBuffer());
+        kernel1.setArg<cl::Buffer>(7,integration.getRandom().getDeviceBuffer());
+        kernel2.setArg<cl::Buffer>(0, cl.getVelm().getDeviceBuffer());
+        kernel2.setArg<cl::Buffer>(1, integration.getPosDelta().getDeviceBuffer());
+        kernel2.setArg<cl::Buffer>(2, params->getDeviceBuffer());
+        kernel2.setArg(3, params->getSize()*sizeof(cl_float), NULL);
+        kernel2.setArg<cl::Buffer>(4, xVector->getDeviceBuffer());
+        kernel2.setArg<cl::Buffer>(5, vVector->getDeviceBuffer());
+        kernel2.setArg<cl::Buffer>(6,integration.getRandom().getDeviceBuffer());
+        kernel3.setArg<cl::Buffer>(0, cl.getPosq().getDeviceBuffer());
+        kernel3.setArg<cl::Buffer>(1, integration.getPosDelta().getDeviceBuffer());
+        selectSizeKernel.setArg<cl::Buffer>(4, cl.getIntegrationUtilities().getStepSize().getDeviceBuffer());
+        selectSizeKernel.setArg<cl::Buffer>(5, cl.getVelm().getDeviceBuffer());
+        selectSizeKernel.setArg<cl::Buffer>(6, cl.getForce().getDeviceBuffer());
+        selectSizeKernel.setArg<cl::Buffer>(7, params->getDeviceBuffer());
+        selectSizeKernel.setArg(8, params->getSize()*sizeof(cl_float), NULL);
+        selectSizeKernel.setArg(9, blockSize*sizeof(cl_float), NULL);
     }
 
     // Select the step size to use.
 
     float maxStepSize = (float)(maxTime-cl.getTime());
-    selectSizeKernel.setArg<cl_float>(1, maxStepSize);
-    selectSizeKernel.setArg<cl_float>(2, (cl_float) integrator.getErrorTolerance());
-    selectSizeKernel.setArg<cl_float>(3, (cl_float) (integrator.getFriction() == 0.0 ? 0.0 : 1.0/integrator.getFriction()));
-    selectSizeKernel.setArg<cl_float>(4, (cl_float) (BOLTZ*integrator.getTemperature()));
+    selectSizeKernel.setArg<cl_float>(0, maxStepSize);
+    selectSizeKernel.setArg<cl_float>(1, (cl_float) integrator.getErrorTolerance());
+    selectSizeKernel.setArg<cl_float>(2, (cl_float) (integrator.getFriction() == 0.0 ? 0.0 : 1.0/integrator.getFriction()));
+    selectSizeKernel.setArg<cl_float>(3, (cl_float) (BOLTZ*integrator.getTemperature()));
     cl.executeKernel(selectSizeKernel, blockSize, blockSize);
 
     // Call the first integration kernel.
 
-    int numThreads = cl.getNumThreadBlocks()*cl.ThreadBlockSize;
-    kernel1.setArg<cl_uint>(9, integration.prepareRandomNumbers(2*numThreads));
+    kernel1.setArg<cl_uint>(8, integration.prepareRandomNumbers(2*cl.getPaddedNumAtoms()));
     cl.executeKernel(kernel1, numAtoms);
 
     // Apply constraints.
@@ -1569,7 +1571,7 @@ void OpenCLIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, co
 
     // Call the second integration kernel.
 
-    kernel2.setArg<cl_uint>(8, integration.prepareRandomNumbers(2*numThreads));
+    kernel2.setArg<cl_uint>(7, integration.prepareRandomNumbers(2*cl.getPaddedNumAtoms()));
     cl.executeKernel(kernel2, numAtoms);
 
     // Reapply constraints.
@@ -1582,8 +1584,8 @@ void OpenCLIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, co
 
     // Update the time and step count.
 
-    stepSize->download();
-    double dt = stepSize->get(0).y;
+    cl.getIntegrationUtilities().getStepSize().download();
+    double dt = cl.getIntegrationUtilities().getStepSize()[0].y;
     double time = cl.getTime()+dt;
     if (dt == maxStepSize)
         time = maxTime; // Avoid round-off error
@@ -1591,34 +1593,32 @@ void OpenCLIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, co
     cl.setStepCount(cl.getStepCount()+1);
 }
 
-//OpenCLApplyAndersenThermostatKernel::~OpenCLApplyAndersenThermostatKernel() {
-//}
-//
-//void OpenCLApplyAndersenThermostatKernel::initialize(const System& system, const AndersenThermostat& thermostat) {
-//    _gpuContext* gpu = data.gpu;
-//    gpu->seed = (unsigned long) thermostat.getRandomNumberSeed();
-//    gpuInitializeRandoms(gpu);
-//    prevStepSize = -1.0;
-//}
-//
-//void OpenCLApplyAndersenThermostatKernel::execute(ContextImpl& context) {
-//    _gpuContext* gpu = data.gpu;
-//    double temperature = context.getParameter(AndersenThermostat::Temperature());
-//    double frequency = context.getParameter(AndersenThermostat::CollisionFrequency());
-//    double stepSize = context.getIntegrator().getStepSize();
-//    if (temperature != prevTemp || frequency != prevFrequency || stepSize != prevStepSize) {
-//        // Initialize the GPU parameters.
-//
-//        gpuSetAndersenThermostatParameters(gpu, (float) temperature, frequency);
-//        gpuSetConstants(gpu);
-//        kGenerateRandoms(gpu);
-//        prevTemp = temperature;
-//        prevFrequency = frequency;
-//        prevStepSize = stepSize;
-//    }
-//    kCalculateAndersenThermostat(gpu);
-//}
-//
+OpenCLApplyAndersenThermostatKernel::~OpenCLApplyAndersenThermostatKernel() {
+}
+
+void OpenCLApplyAndersenThermostatKernel::initialize(const System& system, const AndersenThermostat& thermostat) {
+    randomSeed = thermostat.getRandomNumberSeed();
+    map<string, string> defines;
+    defines["NUM_ATOMS"] = intToString(cl.getNumAtoms());
+    defines["PADDED_NUM_ATOMS"] = intToString(cl.getPaddedNumAtoms());
+    cl::Program program = cl.createProgram(cl.loadSourceFromFile("andersenThermostat.cl"), defines);
+    kernel = cl::Kernel(program, "applyAndersenThermostat");
+}
+
+void OpenCLApplyAndersenThermostatKernel::execute(ContextImpl& context) {
+    if (!hasInitializedKernels) {
+        hasInitializedKernels = true;
+        cl.getIntegrationUtilities().initRandomNumberGenerator(randomSeed);
+        kernel.setArg<cl::Buffer>(2, cl.getVelm().getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(3, cl.getIntegrationUtilities().getStepSize().getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(4, cl.getIntegrationUtilities().getRandom().getDeviceBuffer());
+    }
+    kernel.setArg<cl_float>(0, (cl_float) context.getParameter(AndersenThermostat::CollisionFrequency()));
+    kernel.setArg<cl_float>(1, (cl_float) (BOLTZ*context.getParameter(AndersenThermostat::Temperature())));
+    kernel.setArg<cl_uint>(5, cl.getIntegrationUtilities().prepareRandomNumbers(cl.getPaddedNumAtoms()));
+    cl.executeKernel(kernel, cl.getNumAtoms());
+}
+
 void OpenCLCalcKineticEnergyKernel::initialize(const System& system) {
     int numParticles = system.getNumParticles();
     masses.resize(numParticles);

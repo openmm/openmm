@@ -50,9 +50,9 @@ void testGaussian() {
         system.addParticle(1.0);
     OpenCLContext context(numAtoms, -1);
     context.initialize(system);
-    context.getIntegrationUtilties().initRandomNumberGenerator(0);
-    OpenCLArray<mm_float4>& random = context.getIntegrationUtilties().getRandom();
-    context.getIntegrationUtilties().prepareRandomNumbers(random.getSize());
+    context.getIntegrationUtilities().initRandomNumberGenerator(0);
+    OpenCLArray<mm_float4>& random = context.getIntegrationUtilities().getRandom();
+    context.getIntegrationUtilities().prepareRandomNumbers(random.getSize());
     const int numValues = random.getSize()*4;
     vector<mm_float4> values(numValues);
     random.download(values);

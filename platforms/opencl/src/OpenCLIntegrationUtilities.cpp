@@ -68,10 +68,13 @@ struct OpenCLIntegrationUtilities::ShakeCluster {
 
 OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, const System& system) : context(context),
         posDelta(NULL), settleAtoms(NULL), settleParams(NULL), shakeAtoms(NULL), shakeParams(NULL),
-        random(NULL), randomSeed(NULL), randomPos(NULL) {
+        random(NULL), randomSeed(NULL), randomPos(NULL), stepSize(NULL) {
     // Create workspace arrays.
 
     posDelta = new OpenCLArray<mm_float4>(context, context.getPaddedNumAtoms(), "posDelta");
+    stepSize = new OpenCLArray<mm_float2>(context, 1, "stepSize", true);
+    stepSize->set(0, (mm_float2) {0.0f, 0.0f});
+    stepSize->upload();
 
     // Create kernels for enforcing constraints.
 
@@ -260,6 +263,8 @@ OpenCLIntegrationUtilities::~OpenCLIntegrationUtilities() {
         delete random;
     if (randomSeed != NULL)
         delete randomSeed;
+    if (stepSize != NULL)
+        delete stepSize;
 }
 
 void OpenCLIntegrationUtilities::applyConstraints(double tol) {
