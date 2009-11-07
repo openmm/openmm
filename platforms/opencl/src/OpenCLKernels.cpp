@@ -1140,7 +1140,7 @@ void OpenCLCalcGBSAOBCForceKernel::executeForces(ContextImpl& context) {
         program = cl.createProgram(cl.loadSourceFromFile("gbsaObcReductions.cl"), defines);
         reduceBornSumKernel = cl::Kernel(program, "reduceBornSum");
         reduceBornSumKernel.setArg<cl_int>(0, cl.getPaddedNumAtoms());
-        reduceBornSumKernel.setArg<cl_int>(1, cl.getNumForceBuffers());
+        reduceBornSumKernel.setArg<cl_int>(1, nb.getNumForceBuffers());
         reduceBornSumKernel.setArg<cl_float>(2, 1.0f);
         reduceBornSumKernel.setArg<cl_float>(3, 0.8f);
         reduceBornSumKernel.setArg<cl_float>(4, 4.85f);
@@ -1150,7 +1150,7 @@ void OpenCLCalcGBSAOBCForceKernel::executeForces(ContextImpl& context) {
         reduceBornSumKernel.setArg<cl::Buffer>(8, obcChain->getDeviceBuffer());
         reduceBornForceKernel = cl::Kernel(program, "reduceBornForce");
         reduceBornForceKernel.setArg<cl_int>(0, cl.getPaddedNumAtoms());
-        reduceBornForceKernel.setArg<cl_int>(1, cl.getNumForceBuffers());
+        reduceBornForceKernel.setArg<cl_int>(1, nb.getNumForceBuffers());
         reduceBornForceKernel.setArg<cl::Buffer>(2, bornForce->getDeviceBuffer());
         reduceBornForceKernel.setArg<cl::Buffer>(3, cl.getEnergyBuffer().getDeviceBuffer());
         reduceBornForceKernel.setArg<cl::Buffer>(4, params->getDeviceBuffer());

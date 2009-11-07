@@ -93,13 +93,12 @@ void OpenCLPlatform::contextCreated(ContextImpl& context) const {
 
 void OpenCLPlatform::contextDestroyed(ContextImpl& context) const {
     PlatformData* data = reinterpret_cast<PlatformData*>(context.getPlatformData());
-//    gpuShutDown(data->gpu);
     delete data;
 }
 
 OpenCLPlatform::PlatformData::PlatformData(int numParticles, int deviceIndex) : removeCM(false), stepCount(0), computeForceCount(0), time(0.0)  {
     context = new OpenCLContext(numParticles, deviceIndex);
     stringstream device;
-//    device << gpu->device;
+    device << context->getDeviceIndex();
     propertyValues[OpenCLPlatform::OpenCLDeviceIndex()] = device.str();
 }

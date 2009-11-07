@@ -98,6 +98,12 @@ public:
         return device;
     }
     /**
+     * Get the index of the cl::Device associated with this object.
+     */
+    int getDeviceIndex() {
+        return deviceIndex;
+    }
+    /**
      * Get the cl::CommandQueue associated with this object.
      */
     cl::CommandQueue& getQueue() {
@@ -286,6 +292,7 @@ private:
     void findMoleculeGroups(const System& system);
     static void tagAtomsInMolecule(int atom, int molecule, std::vector<int>& atomMolecule, std::vector<std::vector<int> >& atomBonds);
     double time;
+    int deviceIndex;
     int stepCount;
     int computeForceCount;
     int numAtoms;

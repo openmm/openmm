@@ -60,6 +60,7 @@ OpenCLContext::OpenCLContext(int numParticles, int deviceIndex) : time(0.0), ste
         if (deviceIndex == -1)
             throw OpenMMException("No compatible OpenCL device is available");
         device = devices[deviceIndex];
+        this->deviceIndex = deviceIndex;
         if (device.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>() < minThreadBlockSize)
             throw OpenMMException("The specified OpenCL device is not compatible with OpenMM");
         compilationOptions = "-cl-fast-relaxed-math";
