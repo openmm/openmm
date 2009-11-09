@@ -61,7 +61,7 @@ const std::string GBSA_OBC_SOFTCORE_FORCE         = "ObcSoftcore";
 const std::string GBVI_FORCE                      = "GBVI";
 const std::string GBVI_SOFTCORE_FORCE             = "GBVISoftcore";
 
-static void getForceMap(const System& system, MapStringInt& forceMap) { 
+static void getForceMap(const System& system, MapStringInt& forceMap, FILE* log) { 
 
     // check forces and relevant parameters
 
@@ -69,6 +69,7 @@ static void getForceMap(const System& system, MapStringInt& forceMap) {
 
         int hit                 = 0;
         const Force& force      = system.getForce(i);
+         std::string forceName  = "NA";
 
         // bond
 
@@ -77,6 +78,7 @@ static void getForceMap(const System& system, MapStringInt& forceMap) {
             try {
                const HarmonicBondForce& harmonicBondForce = dynamic_cast<const HarmonicBondForce&>(force);
                forceMap[HARMONIC_BOND_FORCE]              = 1;
+               forceName                                  = HARMONIC_BOND_FORCE;
                hit++;
             } catch( std::bad_cast ){
             }
@@ -89,6 +91,7 @@ static void getForceMap(const System& system, MapStringInt& forceMap) {
             try {
                const HarmonicAngleForce& harmonicAngleForce = dynamic_cast<const HarmonicAngleForce&>(force);
                forceMap[HARMONIC_ANGLE_FORCE]               = 1;
+               forceName                                    = HARMONIC_ANGLE_FORCE;
                hit++;
             } catch( std::bad_cast ){
             }
@@ -101,6 +104,7 @@ static void getForceMap(const System& system, MapStringInt& forceMap) {
             try {
                const PeriodicTorsionForce & periodicTorsionForce = dynamic_cast<const PeriodicTorsionForce&>(force);
                forceMap[PERIODIC_TORSION_FORCE]                  = 1;
+               forceName                                         = PERIODIC_TORSION_FORCE;
                hit++;
             } catch( std::bad_cast ){
             }
@@ -112,6 +116,7 @@ static void getForceMap(const System& system, MapStringInt& forceMap) {
             try {
                const RBTorsionForce& rBTorsionForce = dynamic_cast<const RBTorsionForce&>(force);
                forceMap[RB_TORSION_FORCE]           = 1;
+               forceName                            = RB_TORSION_FORCE;
                hit++;
             } catch( std::bad_cast ){
             }
@@ -123,6 +128,7 @@ static void getForceMap(const System& system, MapStringInt& forceMap) {
             try {
                const NonbondedForce& nbForce = dynamic_cast<const NonbondedForce&>(force);
                forceMap[NB_FORCE]            = 1;
+               forceName                     = NB_FORCE;
             } catch( std::bad_cast ){
             }
         }
@@ -133,6 +139,7 @@ static void getForceMap(const System& system, MapStringInt& forceMap) {
             try {
                const NonbondedSoftcoreForce& nbForce = dynamic_cast<const NonbondedSoftcoreForce&>(force);
                forceMap[NB_SOFTCORE_FORCE]           = 1;
+               forceName                             = NB_SOFTCORE_FORCE;
             } catch( std::bad_cast ){
             }
         }
@@ -143,6 +150,7 @@ static void getForceMap(const System& system, MapStringInt& forceMap) {
             try {
                const GBSAOBCForce& obcForce       = dynamic_cast<const GBSAOBCForce&>(force);
                forceMap[GBSA_OBC_FORCE]           = 1;
+               forceName                          = GBSA_OBC_FORCE;
                hit++;
             } catch( std::bad_cast ){
             }
@@ -154,6 +162,7 @@ static void getForceMap(const System& system, MapStringInt& forceMap) {
             try {
                const GBSAOBCSoftcoreForce& obcForce = dynamic_cast<const GBSAOBCSoftcoreForce&>(force);
                forceMap[GBSA_OBC_SOFTCORE_FORCE]    = 1;
+               forceName                            = GBSA_OBC_SOFTCORE_FORCE;
                hit++;
             } catch( std::bad_cast ){
             }
@@ -164,7 +173,8 @@ static void getForceMap(const System& system, MapStringInt& forceMap) {
         if( !hit ){
             try {
                const GBVIForce& obcForce  = dynamic_cast<const GBVIForce&>(force);
-               forceMap[GBVI_FORCE] = 1;
+               forceMap[GBVI_FORCE]       = 1;
+               forceName                  = GBVI_FORCE;
                hit++;
             } catch( std::bad_cast ){
             }
@@ -176,9 +186,14 @@ static void getForceMap(const System& system, MapStringInt& forceMap) {
             try {
                const GBVISoftcoreForce& gbviForce = dynamic_cast<const GBVISoftcoreForce&>(force);
                forceMap[GBVI_SOFTCORE_FORCE]      = 1;
+               forceName                          = GBVI_SOFTCORE_FORCE;
                hit++;
             } catch( std::bad_cast ){
             }
+        }
+
+        if( log ){
+            (void) fprintf( stderr, "Map: Force %d %s\n", i, forceName.c_str() );
         }
      }
 }
@@ -208,7 +223,7 @@ void CudaFreeEnergyCalcNonbondedSoftcoreForceKernel::initialize(const System& sy
     // check forces and relevant parameters
 
     MapStringInt forceMap;
-    getForceMap( system, forceMap);
+    getForceMap( system, forceMap, log);
 
     int softcore        = 0;
     if( forceMap.find( GBSA_OBC_FORCE ) != forceMap.end() ){
@@ -470,12 +485,15 @@ void CudaFreeEnergyCalcGBSAOBCSoftcoreForceKernel::initialize(const System& syst
     _gpuContext* gpu = data.gpu;
 
     MapStringInt forceMap;
-    getForceMap( system, forceMap);
+    getForceMap( system, forceMap, log);
 
     // check that nonbonded (non-softcore is not active)
 
     if( forceMap.find( NB_FORCE ) != forceMap.end() ){ 
         throw OpenMMException( "Mixing NonbondedForce and GBSAOBCSoftoreForce not allowed -- use NonbondedSoftcoreForce " );
+    }
+    if( forceMap.find( NB_SOFTCORE_FORCE ) == forceMap.end() ){ 
+        throw OpenMMException( "NonbondedSoftcore force must be included w/ GBSAOBCSoftcore force." );
     }
 
     int numParticles = system.getNumParticles();
@@ -495,6 +513,7 @@ void CudaFreeEnergyCalcGBSAOBCSoftcoreForceKernel::initialize(const System& syst
     }
     gpuObcGbsaSoftcore = gpuSetObcSoftcoreParameters(gpu, static_cast<float>( force.getSoluteDielectric()),
                                                      static_cast<float>( force.getSolventDielectric()),
+                                                     static_cast<float>( force.getNonPolarPrefactor()),
                                                      radius, scale, charge, nonPolarScalingFactors  );
 }
 
@@ -585,7 +604,7 @@ void CudaFreeEnergyCalcGBVISoftcoreForceKernel::initialize(const System& system,
     // check forces and relevant parameters
 
     MapStringInt forceMap;
-    getForceMap( system, forceMap);
+    getForceMap( system, forceMap, log);
 
     // check that nonbonded (non-softcore is not active)
 

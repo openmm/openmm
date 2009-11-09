@@ -176,9 +176,11 @@ void kReduceObcGbsaBornSum(gpuContext gpu)
  */
 
 extern "C"
-void gpuSetObcSoftcoreParameters(gpuContext gpu, float innerDielectric, float solventDielectric, const std::vector<float>& radius, const std::vector<float>& scale,
+void gpuSetObcSoftcoreParameters(gpuContext gpu, float innerDielectric, float solventDielectric, float nonPolarPrefactor,
+                                 const std::vector<float>& radius, const std::vector<float>& scale,
                                  const std::vector<float>& charge, const std::vector<float>& nonPolarScalingFactors)
 {
+
 // ---------------------------------------------------------------------------------------
 
    static const float dielectricOffset    =    0.009f;
@@ -187,7 +189,6 @@ void gpuSetObcSoftcoreParameters(gpuContext gpu, float innerDielectric, float so
 
 // ---------------------------------------------------------------------------------------
 
-
     unsigned int atoms                     = radius.size();
 
     // initialize parameters
@@ -195,6 +196,7 @@ void gpuSetObcSoftcoreParameters(gpuContext gpu, float innerDielectric, float so
 //    gpu->bIncludeGBSA = true;
     GpuObcGbsaSoftcore* gpuObcGbsaSoftcore = new GpuObcGbsaSoftcore();
     gpuObcGbsaSoftcore->initializeNonPolarScalingFactors( gpu->sim.paddedNumberOfAtoms );
+    gpu->sim.surfaceAreaFactor             =  -6.0f*PI*4.0f*nonPolarPrefactor*1000.0f*0.4184f;
     for (unsigned int i = 0; i < atoms; i++)
     {
             (*gpu->psObcData)[i].x = radius[i] - dielectricOffset;
@@ -205,12 +207,13 @@ void gpuSetObcSoftcoreParameters(gpuContext gpu, float innerDielectric, float so
     }
 
     // diagnostics
-
+#define DUMP_PARAMETERS 0
 #if (DUMP_PARAMETERS == 1)
     (void) fprintf( stderr, "%s %u %u\n", methodName.c_str(), gpu->natoms, gpu->sim.paddedNumberOfAtoms );
     for (unsigned int i = 0; i < atoms; i++)
     {
        (void) fprintf( stderr, "%6u %13.6e %13.6e %8.3f %8.3f\n", i,  (*gpu->psObcData)[i].x, (*gpu->psObcData)[i].y, (*gpu->psPosq4)[i].w , nonPolarScalingFactors[i] );
+    }
 #endif
 
     // dummy out extra atom data

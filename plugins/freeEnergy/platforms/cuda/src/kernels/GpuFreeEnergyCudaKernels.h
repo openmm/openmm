@@ -127,7 +127,8 @@ extern void kReduceGBVIBornForcesQuinticScaling( gpuContext gpu );
  */
 
 extern "C" 
-GpuObcGbsaSoftcore* gpuSetObcSoftcoreParameters(gpuContext gpu, float innerDielectric, float solventDielectric, const std::vector<float>& radius, const std::vector<float>& scale,
+GpuObcGbsaSoftcore* gpuSetObcSoftcoreParameters(gpuContext gpu, float innerDielectric, float solventDielectric, float nonPolarPrefactor,
+                                                const std::vector<float>& radius, const std::vector<float>& scale,
                                                 const std::vector<float>& charge, const std::vector<float>& nonPolarScalingFactors);
 
 // delete supplemtentary objects, ...

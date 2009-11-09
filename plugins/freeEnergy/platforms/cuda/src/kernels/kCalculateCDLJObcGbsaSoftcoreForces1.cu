@@ -121,6 +121,7 @@ __device__ float fastErfc(float r)
 #define METHOD_NAME(a, b) a##N2ByWarp##b
 #include "kCalculateCDLJObcGbsaSoftcoreForces1.h"
 #undef USE_SOFTCORE_LJ
+#undef USE_OUTPUT_BUFFER_PER_WARP
 
 // Include versions of the kernel with cutoffs.
 
@@ -196,7 +197,7 @@ void kCalculateCDLJObcGbsaSoftcoreForces1(gpuContext gpu )
                    kCalculateCDLJObcGbsaSoftcoreN2Forces1_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                            sizeof(Atom)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pWorkUnit);
    
-            LAUNCHERROR("kCalculateCDLJObcGbsaN2Forces1");
+            LAUNCHERROR("kCalculateCDLJObcGbsaSoftcoreForces1");
             break;
 #if 0
         case CUTOFF:

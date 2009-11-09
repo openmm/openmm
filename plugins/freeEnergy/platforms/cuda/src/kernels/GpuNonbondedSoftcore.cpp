@@ -71,7 +71,24 @@ int GpuNonbondedSoftcore::setParticleSoftCoreLJLambda( unsigned int particleInde
 // upload SoftCoreLJLambda array
 
 int GpuNonbondedSoftcore::upload( gpuContext gpu ){
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName    = "GpuNonbondedSoftcore::upload";
+
+// ---------------------------------------------------------------------------------------
+
     _psSoftcoreLJLambda->Upload();
+
+#define DUMP_PARAMETERS 0
+#if (DUMP_PARAMETERS == 1)
+    (void) fprintf( stderr, "%s %u %u\n", methodName.c_str(), gpu->natoms, gpu->sim.paddedNumberOfAtoms );
+    for (unsigned int ii = 0; ii < gpu->natoms; ii++)
+    {   
+       (void) fprintf( stderr, "%6u %13.6e\n", ii,  (*_psSoftcoreLJLambda)[ii] );
+    }
+#endif
+
     SetCalculateCDLJSoftcoreSupplementarySim( getGpuParticleSoftCoreLJLambda() );
     SetCalculateCDLJObcGbsaSoftcoreSupplementary1Sim( getGpuParticleSoftCoreLJLambda() );
     return 0;
