@@ -29,24 +29,37 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include "ReferenceFreeEnergyPlatform.h"
+#include "openmm/freeEnergyKernels.h"
 #include "ReferenceFreeEnergyKernelFactory.h"
-#include "ReferenceFreeEnergyKernels.h"
-#include "openmm/internal/ContextImpl.h"
-#include "openmm/OpenMMException.h"
+
+// using PluginInitializer.h and initOpenMMPlugin() does not seem to work
+//#include "openmm/PluginInitializer.h"
+
+#if defined(OPENMM_BUILDING_SHARED_LIBRARY)
+    #if defined(WIN32)
+      #include <windows.h>
+        extern "C" void initOpenMMReferenceFreeEnergyPlugin();
+        BOOL WINAPI DllMain(HANDLE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved) {
+            if (ul_reason_for_call == DLL_PROCESS_ATTACH)
+                initOpenMMReferenceFreeEnergyPlugin();
+            return TRUE;
+        }
+    #else
+        extern "C" void __attribute__((constructor)) initOpenMMReferenceFreeEnergyPlugin();
+    #endif
+#endif
 
 using namespace OpenMM;
 
-KernelImpl* ReferenceFreeEnergyKernelFactory::createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const {
-    ReferencePlatform::PlatformData& data = *static_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
+extern "C" void initOpenMMReferenceFreeEnergyPlugin() {
+    Platform::registerPlatform( new ReferenceFreeEnergyPlatform() );
+}
 
-    if (name == CalcNonbondedSoftcoreForceKernel::Name())
-        return new ReferenceFreeEnergyCalcNonbondedSoftcoreForceKernel(name, platform);
+ReferenceFreeEnergyPlatform::ReferenceFreeEnergyPlatform( void ){
 
-    if (name == CalcGBSAOBCSoftcoreForceKernel::Name())
-        return new ReferenceFreeEnergyCalcGBSAOBCSoftcoreForceKernel(name, platform);
-
-    if (name == CalcGBVISoftcoreForceKernel::Name())
-        return new ReferenceFreeEnergyCalcGBVISoftcoreForceKernel(name, platform);
-
-    throw OpenMMException( (std::string("Tried to create kernel with illegal kernel name '") + name + "'").c_str() );
+    ReferenceFreeEnergyKernelFactory* factory  = new ReferenceFreeEnergyKernelFactory();
+    registerKernelFactory(CalcNonbondedSoftcoreForceKernel::Name(), factory);
+    registerKernelFactory(CalcGBSAOBCSoftcoreForceKernel::Name(), factory);
+    registerKernelFactory(CalcGBVISoftcoreForceKernel::Name(), factory);
 }

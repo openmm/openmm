@@ -1,3 +1,6 @@
+#ifndef OPENMM_CUDA_FREE_ENERGY_PLATFORM_H_
+#define OPENMM_CUDA_FREE_ENERGY_PLATFORM_H_
+
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -24,26 +27,68 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "CudaFreeEnergyKernelFactory.h"
-#include "CudaFreeEnergyKernels.h"
-#include "openmm/freeEnergyKernels.h"
-#include "openmm/internal/ContextImpl.h"
-#include "openmm/OpenMMException.h"
+#include "CudaPlatform.h"
 
-using namespace OpenMM;
+struct _gpuContext;
 
-KernelImpl* CudaFreeEnergyKernelFactory::createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const {
+namespace OpenMM {
 
-    CudaPlatform::PlatformData& data = *static_cast<CudaPlatform::PlatformData*>(context.getPlatformData());
+/**
+ * This Platform subclass uses CUDA implementations of the OpenMM kernels to run on NVidia GPUs.
+ */
 
-    if (name == CalcNonbondedSoftcoreForceKernel::Name())
-        return new CudaFreeEnergyCalcNonbondedSoftcoreForceKernel(name, platform, data, context.getSystem());
+class OPENMM_EXPORT CudaFreeEnergyPlatform : public CudaPlatform {
+public:
 
-    if (name == CalcGBSAOBCSoftcoreForceKernel::Name())
-        return new CudaFreeEnergyCalcGBSAOBCSoftcoreForceKernel(name, platform, data);
+    //class PlatformData;
 
-    if (name == CalcGBVISoftcoreForceKernel::Name())
-        return new CudaFreeEnergyCalcGBVISoftcoreForceKernel(name, platform, data);
+    CudaFreeEnergyPlatform();
+    const std::string& getName() const {
+        static const std::string name = "CudaFreeEnergy";
+        return name;
+    }
 
-    throw OpenMMException( (std::string("Tried to create kernel with illegal kernel name '") + name + "'").c_str() );
-}
+#if 0
+    double getSpeed() const {
+        return 100;
+    }
+    bool supportsDoublePrecision() const;
+    const std::string& getPropertyValue(const Context& context, const std::string& property) const;
+    void setPropertyValue(Context& context, const std::string& property, const std::string& value) const;
+    void contextCreated(ContextImpl& context) const;
+    void contextDestroyed(ContextImpl& context) const;
+    /**
+     * This is the name of the parameter for selecting which CUDA device to use.
+     */
+    static const std::string& CudaDevice() {
+        static const std::string key = "CudaDevice";
+        return key;
+    }
+    /**
+     * This is the name of the parameter for selecting whether CUDA should sync or spin loop while waiting for results.
+     */
+    static const std::string& CudaUseBlockingSync() {
+        static const std::string key = "CudaUseBlockingSync";
+        return key;
+    }
+#endif
+};
+
+#if 0
+class CudaPlatform::PlatformData {
+public:
+    PlatformData(_gpuContext* gpu);
+    _gpuContext* gpu;
+    bool removeCM;
+    bool hasBonds, hasAngles, hasPeriodicTorsions, hasRB, hasNonbonded, hasCustomNonbonded;
+    int nonbondedMethod, customNonbondedMethod;
+    int cmMotionFrequency;
+    int stepCount, computeForceCount;
+    double time, ewaldSelfEnergy;
+    std::map<std::string, std::string> propertyValues;
+};
+#endif
+
+} // namespace OpenMM
+
+#endif /*OPENMM_CUDA_FREE_ENERGY_PLATFORM_H_*/

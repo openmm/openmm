@@ -24,26 +24,41 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
+#include "CudaFreeEnergyPlatform.h"
 #include "CudaFreeEnergyKernelFactory.h"
-#include "CudaFreeEnergyKernels.h"
 #include "openmm/freeEnergyKernels.h"
-#include "openmm/internal/ContextImpl.h"
-#include "openmm/OpenMMException.h"
+#include "kernels/gputypes.h"
 
 using namespace OpenMM;
 
-KernelImpl* CudaFreeEnergyKernelFactory::createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const {
+#if defined(OPENMM_BUILDING_SHARED_LIBRARY)
+    #if defined(WIN32)
+      #include <windows.h>
+        extern "C" void initOpenMMCudaFreeEnergyPlugin();
+        BOOL WINAPI DllMain(HANDLE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved) {
+            if (ul_reason_for_call == DLL_PROCESS_ATTACH)
+                initOpenMMCudaFreeEnergyPlugin();
+            return TRUE;
+        }
+    #else
+        extern "C" void __attribute__((constructor)) initOpenMMCudaFreeEnergyPlugin();
+    #endif
+#endif
 
-    CudaPlatform::PlatformData& data = *static_cast<CudaPlatform::PlatformData*>(context.getPlatformData());
+using namespace OpenMM;
 
-    if (name == CalcNonbondedSoftcoreForceKernel::Name())
-        return new CudaFreeEnergyCalcNonbondedSoftcoreForceKernel(name, platform, data, context.getSystem());
+extern "C" void initOpenMMCudaFreeEnergyPlugin() {
 
-    if (name == CalcGBSAOBCSoftcoreForceKernel::Name())
-        return new CudaFreeEnergyCalcGBSAOBCSoftcoreForceKernel(name, platform, data);
-
-    if (name == CalcGBVISoftcoreForceKernel::Name())
-        return new CudaFreeEnergyCalcGBVISoftcoreForceKernel(name, platform, data);
-
-    throw OpenMMException( (std::string("Tried to create kernel with illegal kernel name '") + name + "'").c_str() );
+//(void) fprintf( stderr, "initOpenMMCudaFreeEnergyPlugin called\n");
+    if ( gpuIsAvailable() ){
+        Platform::registerPlatform(new CudaFreeEnergyPlatform());
+    }   
 }
+
+CudaFreeEnergyPlatform::CudaFreeEnergyPlatform( void ){
+    CudaFreeEnergyKernelFactory* factory = new CudaFreeEnergyKernelFactory();
+    registerKernelFactory(CalcNonbondedSoftcoreForceKernel::Name(), factory);
+    registerKernelFactory(CalcGBSAOBCSoftcoreForceKernel::Name(), factory);
+    registerKernelFactory(CalcGBVISoftcoreForceKernel::Name(), factory);
+}
+

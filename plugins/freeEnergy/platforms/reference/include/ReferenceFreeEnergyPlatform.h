@@ -1,3 +1,6 @@
+#ifndef OPENMM_REFERENCE_FREE_ENERGY_PLATFORM_H_
+#define OPENMM_REFERENCE_FREE_ENERGY_PLATFORM_H_
+
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -29,24 +32,44 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "ReferenceFreeEnergyKernelFactory.h"
-#include "ReferenceFreeEnergyKernels.h"
-#include "openmm/internal/ContextImpl.h"
-#include "openmm/OpenMMException.h"
+#include "ReferencePlatform.h"
 
-using namespace OpenMM;
+namespace OpenMM {
 
-KernelImpl* ReferenceFreeEnergyKernelFactory::createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const {
-    ReferencePlatform::PlatformData& data = *static_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
+/**
+ * This Platform subclass uses the reference implementations of all the OpenMM kernels.
+ */
 
-    if (name == CalcNonbondedSoftcoreForceKernel::Name())
-        return new ReferenceFreeEnergyCalcNonbondedSoftcoreForceKernel(name, platform);
+class OPENMM_EXPORT  ReferenceFreeEnergyPlatform : public ReferencePlatform {
+public:
+//    class PlatformData;
+    ReferenceFreeEnergyPlatform();
+    const std::string& getName() const {
+        static const std::string name = "ReferenceFreeEnergyPlatform";
+        return name;
+    }
+#if 0
+    double getSpeed() const {
+        return 1;
+    }
+    bool supportsDoublePrecision() const;
+    void contextCreated(ContextImpl& context) const;
+    void contextDestroyed(ContextImpl& context) const;
+#endif
+};
 
-    if (name == CalcGBSAOBCSoftcoreForceKernel::Name())
-        return new ReferenceFreeEnergyCalcGBSAOBCSoftcoreForceKernel(name, platform);
+#if 0
+class ReferencePlatform::PlatformData {
+public:
+    PlatformData(int numParticles);
+    ~PlatformData();
+    int numParticles, stepCount;
+    double time;
+    void* positions;
+    void* velocities;
+    void* forces;
+};
+#endif
+} // namespace OpenMM
 
-    if (name == CalcGBVISoftcoreForceKernel::Name())
-        return new ReferenceFreeEnergyCalcGBVISoftcoreForceKernel(name, platform);
-
-    throw OpenMMException( (std::string("Tried to create kernel with illegal kernel name '") + name + "'").c_str() );
-}
+#endif /*OPENMM_REFERENCE_FREE_ENERGY_PLATFORM_H_*/

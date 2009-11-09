@@ -193,7 +193,7 @@ static void getForceMap(const System& system, MapStringInt& forceMap, FILE* log)
         }
 
         if( log ){
-            (void) fprintf( stderr, "Map: Force %d %s\n", i, forceName.c_str() );
+            (void) fprintf( log, "Map: Force %d %s\n", i, forceName.c_str() );
         }
      }
 }
