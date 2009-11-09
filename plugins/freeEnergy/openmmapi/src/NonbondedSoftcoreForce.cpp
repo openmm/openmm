@@ -46,7 +46,7 @@ using std::string;
 using std::stringstream;
 using std::vector;
 
-NonbondedSoftcoreForce::NonbondedSoftcoreForce() : nonbondedMethod(NoCutoff), cutoffDistance(1.0),  rfDielectric(78.3), ewaldErrorTol(1e-4), softCoreLJLambda(1.0) {
+NonbondedSoftcoreForce::NonbondedSoftcoreForce() : nonbondedMethod(NoCutoff), cutoffDistance(1.0),  rfDielectric(78.3), ewaldErrorTol(1e-4) {
 }
 
 NonbondedSoftcoreForce::NonbondedSoftcoreMethod NonbondedSoftcoreForce::getNonbondedMethod() const {
@@ -63,14 +63,6 @@ double NonbondedSoftcoreForce::getCutoffDistance() const {
 
 void NonbondedSoftcoreForce::setCutoffDistance(double distance) {
     cutoffDistance = distance;
-}
-
-double NonbondedSoftcoreForce::getSoftCoreLJLambda( void ) const {
-    return softCoreLJLambda;
-}
-
-void NonbondedSoftcoreForce::setSoftCoreLJLambda(double lambda) {
-    softCoreLJLambda = lambda;
 }
 
 double NonbondedSoftcoreForce::getReactionFieldDielectric( void ) const {

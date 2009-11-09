@@ -48,16 +48,19 @@ using namespace OpenMM;
 
 extern "C" void initOpenMMCudaFreeEnergyPlugin() {
 
+//(void) fprintf( stderr, "initOpenMMCudaFreeEnergyPlugin called ");
     if ( gpuIsAvailable() ){
         CudaPlatform* cudaPlatform            = new CudaPlatform();
         CudaFreeEnergyKernelFactory* factory  = new CudaFreeEnergyKernelFactory();
     
+//(void) fprintf( stderr, "gpu is available platform=%p", cudaPlatform);
         cudaPlatform->registerKernelFactory(CalcNonbondedSoftcoreForceKernel::Name(), factory);
         cudaPlatform->registerKernelFactory(CalcGBSAOBCSoftcoreForceKernel::Name(), factory);
         cudaPlatform->registerKernelFactory(CalcGBVISoftcoreForceKernel::Name(), factory);
     
         Platform::registerPlatform(cudaPlatform);
     }
+//(void) fprintf( stderr, "\n");
 }
 
 KernelImpl* CudaFreeEnergyKernelFactory::createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const {

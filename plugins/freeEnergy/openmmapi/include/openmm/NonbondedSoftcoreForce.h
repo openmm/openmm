@@ -133,15 +133,6 @@ public:
      */
     void setCutoffDistance(double distance);
     /**
-     * Get the soft-core LJ lambda (in nm) being used for nonbonded interactions.
-     * is NoCutoff, this value will have no effect.
-     */
-    double getSoftCoreLJLambda(void) const;
-    /**
-     * Set the soft core LJ lambda (in nm) being used for nonbonded interactions.
-     */
-    void setSoftCoreLJLambda(double lambda);
-    /**
      * Get the error tolerance for Ewald summation.  This corresponds to the fractional error in the forces
      * which is acceptable.  This value is used to select the reciprocal space cutoff and separation
      * parameter so that the average error level will be less than the tolerance.  There is not a
@@ -283,7 +274,7 @@ private:
     class ParticleInfo;
     class ExceptionInfo;
     NonbondedSoftcoreMethod nonbondedMethod;
-    double cutoffDistance, rfDielectric,  ewaldErrorTol, softCoreLJLambda;
+    double cutoffDistance, rfDielectric,  ewaldErrorTol;
     void addExclusionsToSet(const std::vector<std::set<int> >& bonded12, std::set<int>& exclusions, int baseParticle, int fromParticle, int currentLevel) const;
 
 // Retarded visual studio compiler complains about being unable to 

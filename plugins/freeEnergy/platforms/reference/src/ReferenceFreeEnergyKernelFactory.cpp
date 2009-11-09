@@ -54,9 +54,9 @@
 using namespace OpenMM;
 
 extern "C" void initOpenMMReferenceFreeEnergyPlugin() {
-
     ReferencePlatform* referencePlatform       = new ReferencePlatform();
 
+//(void) fprintf( stderr, "In initOpenMMReferenceFreeEnergyPlugin platform=%p\n", referencePlatform );
     ReferenceFreeEnergyKernelFactory* factory  = new ReferenceFreeEnergyKernelFactory();
     referencePlatform->registerKernelFactory(CalcNonbondedSoftcoreForceKernel::Name(), factory);
     referencePlatform->registerKernelFactory(CalcGBSAOBCSoftcoreForceKernel::Name(), factory);

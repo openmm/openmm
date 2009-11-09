@@ -951,6 +951,7 @@ int ReferenceFreeEnergyLJCoulombSoftcoreIxn::calculateOneSoftCoreLJIxn( RealOpen
 
     static const RealOpenMM zero        =  0.0;
     static const RealOpenMM one         =  1.0;
+    static const RealOpenMM four        =  4.0;
     static const RealOpenMM six         =  6.0;
     static const RealOpenMM twelve      = 12.0;
     static const RealOpenMM alphaLJ     = 0.5;
@@ -964,7 +965,7 @@ calculateOneLJIxn( one/r, sig, eps, &dEdROrig, &E_Orig );
 
     // soft-core LJ energy = lambda*4*eps*[ 1/{alphaLJ*(1-lambda) + (r/sig)**6}**2 - 1/{alphaLJ*(1-lambda) + (r/sig)**6} ]
 
-    eps                                *= lambda;
+    eps                                *= POW( lambda, four );
 
     RealOpenMM sig2                     = r/sig;
                sig2                    *= sig2;
