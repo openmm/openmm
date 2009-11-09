@@ -10,10 +10,10 @@ __kernel void integrateLangevinPart1(__global float4* velm, __global float4* for
 
     // Load the parameters into local memory for faster access.
 
-    int index = get_global_id(0);
-    if (index < MaxParams)
-        params[index] = paramBuffer[index];
+    if (get_local_id(0) < MaxParams)
+        params[get_local_id(0)] = paramBuffer[get_local_id(0)];
     barrier(CLK_LOCAL_MEM_FENCE);
+    int index = get_global_id(0);
     randomIndex += index;
     while (index < NUM_ATOMS) {
         float4 velocity = velm[index];
@@ -38,10 +38,10 @@ __kernel void integrateLangevinPart2(__global float4* velm, __global float4* pos
 
     // Load the parameters into local memory for faster access.
 
-    int index = get_global_id(0);
-    if (index < MaxParams)
-        params[index] = paramBuffer[index];
+    if (get_local_id(0) < MaxParams)
+        params[get_local_id(0)] = paramBuffer[get_local_id(0)];
     barrier(CLK_LOCAL_MEM_FENCE);
+    int index = get_global_id(0);
     randomIndex += index;
     while (index < NUM_ATOMS) {
         float4 delta = posDelta[index];

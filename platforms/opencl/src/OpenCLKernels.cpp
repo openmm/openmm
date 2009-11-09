@@ -217,9 +217,8 @@ void OpenCLCalcHarmonicBondForceKernel::initialize(const System& system, const H
         int particle1, particle2;
         double length, k;
         force.getBondParameters(i, particle1, particle2, length, k);
-        paramVector[i] = (mm_float2) {length, k};
+        paramVector[i] = (mm_float2) {(cl_float) length, (cl_float) k};
         indicesVector[i] = (mm_int4) {particle1, particle2, forceBufferCounter[particle1]++, forceBufferCounter[particle2]++};
-
     }
     params->upload(paramVector);
     indices->upload(indicesVector);
@@ -295,7 +294,7 @@ void OpenCLCalcHarmonicAngleForceKernel::initialize(const System& system, const 
         int particle1, particle2, particle3;
         double angle, k;
         force.getAngleParameters(i, particle1, particle2, particle3, angle, k);
-        paramVector[i] = (mm_float2) {angle, k};
+        paramVector[i] = (mm_float2) {(cl_float) angle, (cl_float) k};
         indicesVector[i] = (mm_int8) {particle1, particle2, particle3,
                 forceBufferCounter[particle1]++, forceBufferCounter[particle2]++, forceBufferCounter[particle3]++, 0, 0};
 
@@ -375,7 +374,7 @@ void OpenCLCalcPeriodicTorsionForceKernel::initialize(const System& system, cons
         int particle1, particle2, particle3, particle4, periodicity;
         double phase, k;
         force.getTorsionParameters(i, particle1, particle2, particle3, particle4, periodicity, phase, k);
-        paramVector[i] = (mm_float4) {k, phase, (float) periodicity};
+        paramVector[i] = (mm_float4) {(cl_float) k, (cl_float) phase, (cl_float) periodicity, 0.0f};
         indicesVector[i] = (mm_int8) {particle1, particle2, particle3, particle4,
                 forceBufferCounter[particle1]++, forceBufferCounter[particle2]++, forceBufferCounter[particle3]++, forceBufferCounter[particle4]++};
 
@@ -455,7 +454,7 @@ void OpenCLCalcRBTorsionForceKernel::initialize(const System& system, const RBTo
         int particle1, particle2, particle3, particle4;
         double c0, c1, c2, c3, c4, c5;
         force.getTorsionParameters(i, particle1, particle2, particle3, particle4, c0, c1, c2, c3, c4, c5);
-        paramVector[i] = (mm_float8) {c0, c1, c2, c3, c4, c5};
+        paramVector[i] = (mm_float8) {(cl_float) c0, (cl_float) c1, (cl_float) c2, (cl_float) c3, (cl_float) c4, (cl_float) c5, 0.0f, 0.0f};
         indicesVector[i] = (mm_int8) {particle1, particle2, particle3, particle4,
                 forceBufferCounter[particle1]++, forceBufferCounter[particle2]++, forceBufferCounter[particle3]++, forceBufferCounter[particle4]++};
 
