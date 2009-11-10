@@ -7,7 +7,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -35,9 +35,11 @@
  */
 
 #include "../../../tests/AssertionUtilities.h"
+#include "../src/sfmt/SFMT.h"
 #include "openmm/Context.h"
 #include "CudaPlatform.h"
 #include "openmm/CustomNonbondedForce.h"
+#include "openmm/NonbondedForce.h"
 #include "openmm/System.h"
 #include "openmm/VerletIntegrator.h"
 #include <iostream>
@@ -234,6 +236,82 @@ void testTabulatedFunction(bool interpolating) {
     }
 }
 
+void testCoulombLennardJones() {
+    const int numMolecules = 300;
+    const int numParticles = numMolecules*2;
+    const double boxSize = 20.0;
+    CudaPlatform platform;
+
+    // Create two systems: one with a NonbondedForce, and one using a CustomNonbondedForce to implement the same interaction.
+
+    System standardSystem;
+    System customSystem;
+    for (int i = 0; i < numParticles; i++) {
+        standardSystem.addParticle(1.0);
+        customSystem.addParticle(1.0);
+    }
+    NonbondedForce* standardNonbonded = new NonbondedForce();
+    CustomNonbondedForce* customNonbonded = new CustomNonbondedForce("4*eps*((sigma/r)^12-(sigma/r)^6) + 138.935485*q/r");
+    customNonbonded->addParameter("q", "q1*q2");
+    customNonbonded->addParameter("sigma", "0.5*(sigma1+sigma2)");
+    customNonbonded->addParameter("eps", "sqrt(eps1*eps2)");
+    vector<Vec3> positions(numParticles);
+    vector<Vec3> velocities(numParticles);
+    init_gen_rand(0);
+    vector<double> params(3);
+    for (int i = 0; i < numMolecules; i++) {
+        if (i < numMolecules/2) {
+            standardNonbonded->addParticle(1.0, 0.2, 0.1);
+            params[0] = 1.0;
+            params[1] = 0.2;
+            params[2] = 0.1;
+            customNonbonded->addParticle(params);
+            standardNonbonded->addParticle(1.0, 0.1, 0.1);
+            params[1] = 0.1;
+            customNonbonded->addParticle(params);
+        }
+        else {
+            standardNonbonded->addParticle(1.0, 0.2, 0.2);
+            params[0] = 1.0;
+            params[1] = 0.2;
+            params[2] = 0.2;
+            customNonbonded->addParticle(params);
+            standardNonbonded->addParticle(1.0, 0.1, 0.2);
+            params[1] = 0.1;
+            customNonbonded->addParticle(params);
+        }
+        positions[2*i] = Vec3(boxSize*genrand_real2(), boxSize*genrand_real2(), boxSize*genrand_real2());
+        positions[2*i+1] = Vec3(positions[2*i][0]+1.0, positions[2*i][1], positions[2*i][2]);
+        velocities[2*i] = Vec3(genrand_real2(), genrand_real2(), genrand_real2());
+        velocities[2*i+1] = Vec3(genrand_real2(), genrand_real2(), genrand_real2());
+        standardNonbonded->addException(2*i, 2*i+1, 0.0, 1.0, 0.0);
+        customNonbonded->addException(2*i, 2*i+1, vector<double>());
+    }
+    standardNonbonded->setNonbondedMethod(NonbondedForce::NoCutoff);
+    customNonbonded->setNonbondedMethod(CustomNonbondedForce::NoCutoff);
+    standardSystem.addForce(standardNonbonded);
+    customSystem.addForce(customNonbonded);
+    VerletIntegrator integrator1(0.01);
+    VerletIntegrator integrator2(0.01);
+    Context context1(standardSystem, integrator1, platform);
+//    Context context2(customSystem, integrator2, platform);
+    context1.setPositions(positions);
+//    context2.setPositions(positions);
+    context1.setVelocities(velocities);
+//    context2.setVelocities(velocities);
+    State state1 = context1.getState(State::Forces | State::Energy);
+//    State state2 = context2.getState(State::Forces | State::Energy);
+    for (int i = 0; i < numParticles; i++)
+        std::cout << i<<": "<<state1.getForces()[i]<< std::endl;
+//    for (int i = 0; i < numParticles; i++)
+//        std::cout << i<<": "<<state1.getForces()[i]<<" "<<state2.getForces()[i]<< std::endl;
+//    std::cout <<state1.getPotentialEnergy()<<" "<<state2.getPotentialEnergy() << std::endl;
+//    ASSERT_EQUAL_TOL(state1.getPotentialEnergy(), state2.getPotentialEnergy(), 1e-4);
+//    for (int i = 0; i < numParticles; i++) {
+//        ASSERT_EQUAL_VEC(state1.getForces()[i], state2.getForces()[i], 1e-4);
+//    }
+}
+
 int main() {
     try {
         testSimpleExpression();
@@ -243,6 +321,7 @@ int main() {
         testPeriodic();
         testTabulatedFunction(true);
         testTabulatedFunction(false);
+//        testCoulombLennardJones();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

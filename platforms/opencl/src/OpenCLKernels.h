@@ -185,6 +185,48 @@ private:
 };
 
 /**
+ * This kernel is invoked by CustomBondForce to calculate the forces acting on the system and the energy of the system.
+ */
+class OpenCLCalcCustomBondForceKernel : public CalcCustomBondForceKernel {
+public:
+    OpenCLCalcCustomBondForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcCustomBondForceKernel(name, platform),
+            hasInitializedKernel(false), cl(cl), system(system), params(NULL), indices(NULL), globals(NULL) {
+    }
+    ~OpenCLCalcCustomBondForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomBondForce this kernel will be used for
+     */
+    void initialize(const System& system, const CustomBondForce& force);
+    /**
+     * Execute the kernel to calculate the forces.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void executeForces(ContextImpl& context);
+    /**
+     * Execute the kernel to calculate the energy.
+     *
+     * @param context    the context in which to execute this kernel
+     * @return the potential energy due to the CustomBondForce
+     */
+    double executeEnergy(ContextImpl& context);
+private:
+    int numBonds;
+    bool hasInitializedKernel;
+    OpenCLContext& cl;
+    System& system;
+    OpenCLArray<mm_float4>* params;
+    OpenCLArray<mm_int4>* indices;
+    OpenCLArray<cl_float>* globals;
+    std::vector<std::string> globalParamNames;
+    std::vector<cl_float> globalParamValues;
+    cl::Kernel kernel;
+};
+
+/**
  * This kernel is invoked by HarmonicAngleForce to calculate the forces acting on the system and the energy of the system.
  */
 class OpenCLCalcHarmonicAngleForceKernel : public CalcHarmonicAngleForceKernel {

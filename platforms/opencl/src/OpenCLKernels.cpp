@@ -249,6 +249,154 @@ double OpenCLCalcHarmonicBondForceKernel::executeEnergy(ContextImpl& context) {
     return 0.0;
 }
 
+class OpenCLCustomBondForceInfo : public OpenCLForceInfo {
+public:
+    OpenCLCustomBondForceInfo(int requiredBuffers, const CustomBondForce& force) : OpenCLForceInfo(requiredBuffers), force(force) {
+    }
+    int getNumParticleGroups() {
+        return force.getNumBonds();
+    }
+    void getParticlesInGroup(int index, std::vector<int>& particles) {
+        int particle1, particle2;
+        vector<double> parameters;
+        force.getBondParameters(index, particle1, particle2, parameters);
+        particles.resize(2);
+        particles[0] = particle1;
+        particles[1] = particle2;
+    }
+    bool areGroupsIdentical(int group1, int group2) {
+        int particle1, particle2;
+        vector<double> parameters1, parameters2;
+        force.getBondParameters(group1, particle1, particle2, parameters1);
+        force.getBondParameters(group2, particle1, particle2, parameters2);
+        for (int i = 0; i < (int) parameters1.size(); i++)
+            if (parameters1[i] != parameters2[i])
+                return false;
+        return true;
+    }
+private:
+    const CustomBondForce& force;
+};
+
+OpenCLCalcCustomBondForceKernel::~OpenCLCalcCustomBondForceKernel() {
+    if (params != NULL)
+        delete params;
+    if (indices != NULL)
+        delete indices;
+    if (globals != NULL)
+        delete globals;
+}
+
+void OpenCLCalcCustomBondForceKernel::initialize(const System& system, const CustomBondForce& force) {
+    if (force.getNumPerBondParameters() > 4)
+        throw OpenMMException("OpenCLPlatform only supports four per-bond parameters for custom bonded forces");
+    numBonds = force.getNumBonds();
+    params = new OpenCLArray<mm_float4>(cl, numBonds, "customBondParams");
+    indices = new OpenCLArray<mm_int4>(cl, numBonds, "customBondIndices");
+    string extraArguments;
+    if (force.getNumGlobalParameters() > 0) {
+        globals = new OpenCLArray<cl_float>(cl, force.getNumGlobalParameters(), "customBondGlobals", false, CL_MEM_READ_ONLY);
+        extraArguments += ", __constant float* globals";
+    }
+    vector<int> forceBufferCounter(system.getNumParticles(), 0);
+    vector<mm_float4> paramVector(numBonds);
+    vector<mm_int4> indicesVector(numBonds);
+    for (int i = 0; i < numBonds; i++) {
+        int particle1, particle2;
+        vector<double> parameters;
+        force.getBondParameters(i, particle1, particle2, parameters);
+        if (parameters.size() > 0)
+            paramVector[i].x = (cl_float) parameters[0];
+        if (parameters.size() > 1)
+            paramVector[i].y = (cl_float) parameters[1];
+        if (parameters.size() > 2)
+            paramVector[i].z = (cl_float) parameters[2];
+        if (parameters.size() > 3)
+            paramVector[i].w = (cl_float) parameters[3];
+        indicesVector[i] = (mm_int4) {particle1, particle2, forceBufferCounter[particle1]++, forceBufferCounter[particle2]++};
+    }
+    params->upload(paramVector);
+    indices->upload(indicesVector);
+    int maxBuffers = 1;
+    for (int i = 0; i < forceBufferCounter.size(); i++)
+        maxBuffers = max(maxBuffers, forceBufferCounter[i]);
+    cl.addForce(new OpenCLCustomBondForceInfo(maxBuffers, force));
+
+    // Record information for the expressions.
+
+    vector<string> paramNames;
+    for (int i = 0; i < force.getNumPerBondParameters(); i++)
+        paramNames.push_back(force.getPerBondParameterName(i));
+    globalParamNames.resize(force.getNumGlobalParameters());
+    globalParamValues.resize(force.getNumGlobalParameters());
+    for (int i = 0; i < force.getNumGlobalParameters(); i++) {
+        globalParamNames[i] = force.getGlobalParameterName(i);
+        globalParamValues[i] = (cl_float) force.getGlobalParameterDefaultValue(i);
+    }
+    if (globals != NULL)
+        globals->upload(globalParamValues);
+    Lepton::ParsedExpression energyExpression = Lepton::Parser::parse(force.getEnergyFunction()).optimize();
+    Lepton::ParsedExpression forceExpression = energyExpression.differentiate("r").optimize();
+    map<string, Lepton::ParsedExpression> expressions;
+    expressions["energy += "] = energyExpression;
+    expressions["float dEdR = "] = forceExpression;
+
+    // Create the kernels.
+
+    map<string, string> variables;
+    variables["r"] = "r";
+    string suffixes[] = {".x", ".y", ".z", ".w"};
+    for (int i = 0; i < force.getNumPerBondParameters(); i++) {
+        const string& name = force.getPerBondParameterName(i);
+        variables[name] = "exceptionParams"+suffixes[i];
+    }
+    for (int i = 0; i < force.getNumGlobalParameters(); i++) {
+        const string& name = force.getGlobalParameterName(i);
+        string value = "globals["+intToString(i)+"]";
+        variables[name] = value;
+    }
+    map<string, string> replacements;
+    stringstream compute;
+    vector<pair<string, string> > functions;
+    compute << OpenCLExpressionUtilities::createExpressions(expressions, variables, functions, "temp", "");
+    replacements["COMPUTE_FORCE"] = compute.str();
+    replacements["EXTRA_ARGUMENTS"] = extraArguments;
+    cl::Program program = cl.createProgram(cl.loadSourceFromFile("customBondForce.cl", replacements));
+    kernel = cl::Kernel(program, "computeCustomBondForces");
+}
+
+void OpenCLCalcCustomBondForceKernel::executeForces(ContextImpl& context) {
+    if (globals != NULL) {
+        bool changed = false;
+        for (int i = 0; i < globalParamNames.size(); i++) {
+            cl_float value = (cl_float) context.getParameter(globalParamNames[i]);
+            if (value != globalParamValues[i])
+                changed = true;
+            globalParamValues[i] = value;
+        }
+        if (changed)
+            globals->upload(globalParamValues);
+    }
+    if (!hasInitializedKernel) {
+        hasInitializedKernel = true;
+        kernel.setArg<cl_int>(0, cl.getPaddedNumAtoms());
+        kernel.setArg<cl_int>(1, numBonds);
+        kernel.setArg<cl::Buffer>(2, cl.getForceBuffers().getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(3, cl.getEnergyBuffer().getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(4, cl.getPosq().getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(5, params->getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(6, indices->getDeviceBuffer());
+        if (globals != NULL)
+            kernel.setArg<cl::Buffer>(7, globals->getDeviceBuffer());
+    }
+    cl.executeKernel(kernel, numBonds);
+}
+
+double OpenCLCalcCustomBondForceKernel::executeEnergy(ContextImpl& context) {
+    executeForces(context);
+    return 0.0;
+}
+
 class OpenCLAngleForceInfo : public OpenCLForceInfo {
 public:
     OpenCLAngleForceInfo(int requiredBuffers, const HarmonicAngleForce& force) : OpenCLForceInfo(requiredBuffers), force(force) {
@@ -987,6 +1135,17 @@ void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, cons
 }
 
 void OpenCLCalcCustomNonbondedForceKernel::executeForces(ContextImpl& context) {
+    if (globals != NULL) {
+        bool changed = false;
+        for (int i = 0; i < globalParamNames.size(); i++) {
+            cl_float value = (cl_float) context.getParameter(globalParamNames[i]);
+            if (value != globalParamValues[i])
+                changed = true;
+            globalParamValues[i] = value;
+        }
+        if (changed)
+            globals->upload(globalParamValues);
+    }
     if (exceptionParams != NULL) {
         if (!hasInitializedKernel) {
             hasInitializedKernel = true;
@@ -1002,17 +1161,6 @@ void OpenCLCalcCustomNonbondedForceKernel::executeForces(ContextImpl& context) {
         }
         cl.executeKernel(exceptionsKernel, exceptionIndices->getSize());
     }
-    if (globals == NULL)
-        return;
-    bool changed = false;
-    for (int i = 0; i < globalParamNames.size(); i++) {
-        cl_float value = (cl_float) context.getParameter(globalParamNames[i]);
-        if (value != globalParamValues[i])
-            changed = true;
-        globalParamValues[i] = value;
-    }
-    if (changed)
-        globals->upload(globalParamValues);
 }
 
 double OpenCLCalcCustomNonbondedForceKernel::executeEnergy(ContextImpl& context) {

@@ -30,12 +30,12 @@
  * -------------------------------------------------------------------------- */
 
 /**
- * This tests the reference implementation of CustomBondForce.
+ * This tests the OpenCL implementation of CustomBondForce.
  */
 
 #include "../../../tests/AssertionUtilities.h"
 #include "openmm/Context.h"
-#include "ReferencePlatform.h"
+#include "OpenCLPlatform.h"
 #include "openmm/CustomBondForce.h"
 #include "openmm/System.h"
 #include "openmm/VerletIntegrator.h"
@@ -49,7 +49,7 @@ using namespace std;
 const double TOL = 1e-5;
 
 void testBonds() {
-    ReferencePlatform platform;
+    OpenCLPlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -92,4 +92,5 @@ int main() {
     cout << "Done" << endl;
     return 0;
 }
+
 
