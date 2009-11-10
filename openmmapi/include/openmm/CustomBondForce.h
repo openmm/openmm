@@ -1,0 +1,234 @@
+#ifndef OPENMM_CUSTOMBONDEDFORCE_H_
+#define OPENMM_CUSTOMBONDEDFORCE_H_
+
+/* -------------------------------------------------------------------------- *
+ *                                   OpenMM                                   *
+ * -------------------------------------------------------------------------- *
+ * This is part of the OpenMM molecular simulation toolkit originating from   *
+ * Simbios, the NIH National Center for Physics-Based Simulation of           *
+ * Biological Structures at Stanford, funded under the NIH Roadmap for        *
+ * Medical Research, grant U54 GM072970. See https://simtk.org.               *
+ *                                                                            *
+ * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
+ * Authors: Peter Eastman                                                     *
+ * Contributors:                                                              *
+ *                                                                            *
+ * Permission is hereby granted, free of charge, to any person obtaining a    *
+ * copy of this software and associated documentation files (the "Software"), *
+ * to deal in the Software without restriction, including without limitation  *
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,   *
+ * and/or sell copies of the Software, and to permit persons to whom the      *
+ * Software is furnished to do so, subject to the following conditions:       *
+ *                                                                            *
+ * The above copyright notice and this permission notice shall be included in *
+ * all copies or substantial portions of the Software.                        *
+ *                                                                            *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR *
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,   *
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL    *
+ * THE AUTHORS, CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,    *
+ * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR      *
+ * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE  *
+ * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
+ * -------------------------------------------------------------------------- */
+
+#include "Force.h"
+#include "Vec3.h"
+#include <vector>
+#include "internal/windowsExport.h"
+
+namespace OpenMM {
+
+/**
+ * This class implements bonded interactions between pairs of particles.  Unlike HarmonicBondForce, the functional form
+ * of the interaction is completely customizable, and may involve arbitrary algebraic expressions.
+ * It may depend on the distance between particles, as well as on arbitrary global and
+ * per-bond parameters.
+ *
+ * To use this class, create a CustomBondForce object, passing an algebraic expression to the constructor
+ * that defines the interaction energy between each pair of bonded particles.  The expression may depend on r, the distance
+ * between the particles, as well as on any parameters you choose.  Then call addPerBondParameter() to define per-bond
+ * parameters, and addGlobalParameter() to define global parameters.  The values of per-bond parameters are specified as
+ * part of the system definition, while values of global parameters may be modified during a simulation by calling Context::setParameter().
+ * Finally, call addBond() once for each bond.  After a bond has been added, you can modify its parameters by calling setBondParameters().
+ *
+ * As an example, the following code creates a CustomBondForce that implements a harmonic potential:
+ *
+ * <tt>CustomBondForce* force = new CustomBondForce("0.5*k*(r-r0)^2");</tt>
+ *
+ * This force depends on two parameters: the spring constant k and equilibrium distance r0.  The following code defines these parameters:
+ *
+ * <tt><pre>
+ * force->addPerBondParameter("k");
+ * force->addPerBondParameter("r0");
+ * </pre></tt>
+ *
+ * Expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
+ * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, sinh, cosh, tanh.  All trigonometric functions
+ * are defined in radians, and log is the natural logarithm.
+ */
+
+class OPENMM_EXPORT CustomBondForce : public Force {
+public:
+    /**
+     * Create a CustomBondForce.
+     *
+     * @param energy    an algebraic expression giving the interaction energy between two bonded particles as a function
+     *                  of r, the distance between them
+     */
+    CustomBondForce(const std::string& energy);
+    /**
+     * Get the number of bonds for which force field parameters have been defined.
+     */
+    int getNumBonds() const {
+        return bonds.size();
+    }
+    /**
+     * Get the number of per-bond parameters that the interaction depends on.
+     */
+    int getNumPerBondParameters() const {
+        return parameters.size();
+    }
+    /**
+     * Get the number of global parameters that the interaction depends on.
+     */
+    int getNumGlobalParameters() const {
+        return globalParameters.size();
+    }
+    /**
+     * Get the algebraic expression that gives the interaction energy for each bond
+     */
+    const std::string& getEnergyFunction() const;
+    /**
+     * Set the algebraic expression that gives the interaction energy for each bond
+     */
+    void setEnergyFunction(const std::string& energy);
+    /**
+     * Add a new per-bond parmeter that the interaction may depend on.
+     *
+     * @param name             the name of the parameter
+     * @return the index of the parameter that was added
+     */
+    int addPerBondParameter(const std::string& name);
+    /**
+     * Get the name of a per-bond parameter.
+     *
+     * @param index     the index of the parameter for which to get the name
+     * @return the parameter name
+     */
+    const std::string& getPerBondParameterName(int index) const;
+    /**
+     * Set the name of a per-bond parameter.
+     *
+     * @param index          the index of the parameter for which to set the name
+     * @param name           the name of the parameter
+     */
+    void setPerBondParameterName(int index, const std::string& name);
+    /**
+     * Add a new global parmeter that the interaction may depend on.
+     *
+     * @param name             the name of the parameter
+     * @param defaultValue     the default value of the parameter
+     * @return the index of the parameter that was added
+     */
+    int addGlobalParameter(const std::string& name, double defaultValue);
+    /**
+     * Get the name of a global parameter.
+     *
+     * @param index     the index of the parameter for which to get the name
+     * @return the parameter name
+     */
+    const std::string& getGlobalParameterName(int index) const;
+    /**
+     * Set the name of a global parameter.
+     *
+     * @param index          the index of the parameter for which to set the name
+     * @param name           the name of the parameter
+     */
+    void setGlobalParameterName(int index, const std::string& name);
+    /**
+     * Get the default value of a global parameter.
+     *
+     * @param index     the index of the parameter for which to get the default value
+     * @return the parameter default value
+     */
+    double getGlobalParameterDefaultValue(int index) const;
+    /**
+     * Set the default value of a global parameter.
+     *
+     * @param index          the index of the parameter for which to set the default value
+     * @param name           the default value of the parameter
+     */
+    void setGlobalParameterDefaultValue(int index, double defaultValue);
+    /**
+     * Add a bond term to the force field.
+     *
+     * @param particle1     the index of the first particle connected by the bond
+     * @param particle2     the index of the second particle connected by the bond
+     * @param parameters    the list of parameters for the new bond
+     * @return the index of the bond that was added
+     */
+    int addBond(int particle1, int particle2, const std::vector<double>& parameters);
+    /**
+     * Get the force field parameters for a bond term.
+     *
+     * @param index         the index of the bond for which to get parameters
+     * @param particle1     the index of the first particle connected by the bond
+     * @param particle2     the index of the second particle connected by the bond
+     * @param parameters    the list of parameters for the bond
+     */
+    void getBondParameters(int index, int& particle1, int& particle2, std::vector<double>& parameters) const;
+    /**
+     * Set the force field parameters for a bond term.
+     *
+     * @param index         the index of the bond for which to set parameters
+     * @param particle1     the index of the first particle connected by the bond
+     * @param particle2     the index of the second particle connected by the bond
+     * @param parameters    the list of parameters for the bond
+     */
+    void setBondParameters(int index, int particle1, int particle2, const std::vector<double>& parameters);
+protected:
+    ForceImpl* createImpl();
+private:
+    class BondInfo;
+    class BondParameterInfo;
+    class GlobalParameterInfo;
+    std::string energyExpression;
+    std::vector<BondParameterInfo> parameters;
+    std::vector<GlobalParameterInfo> globalParameters;
+    std::vector<BondInfo> bonds;
+};
+
+class CustomBondForce::BondInfo {
+public:
+    int particle1, particle2;
+    std::vector<double> parameters;
+    BondInfo() : particle1(-1), particle2(-1) {
+    }
+    BondInfo(int particle1, int particle2, const std::vector<double>& parameters) :
+            particle1(particle1), particle2(particle2), parameters(parameters) {
+    }
+};
+
+class CustomBondForce::BondParameterInfo {
+public:
+    std::string name;
+    BondParameterInfo() {
+    }
+    BondParameterInfo(const std::string& name) : name(name) {
+    }
+};
+
+class CustomBondForce::GlobalParameterInfo {
+public:
+    std::string name;
+    double defaultValue;
+    GlobalParameterInfo() {
+    }
+    GlobalParameterInfo(const std::string& name, double defaultValue) : name(name), defaultValue(defaultValue) {
+    }
+};
+
+} // namespace OpenMM
+
+#endif /*OPENMM_CUSTOMBONDEDFORCE_H_*/

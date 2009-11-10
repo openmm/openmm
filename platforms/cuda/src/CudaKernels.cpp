@@ -682,6 +682,7 @@ void CudaIntegrateLangevinStepKernel::execute(ContextImpl& context, const Langev
     double stepSize = integrator.getStepSize();
     if (temperature != prevTemp || friction != prevFriction || stepSize != prevStepSize) {
         // Initialize the GPU parameters.
+        
         double tau = (friction == 0.0 ? 0.0 : 1.0/friction);
         gpuSetLangevinIntegrationParameters(gpu, (float) tau, (float) stepSize, (float) temperature, 0.0f);
         gpuSetConstants(gpu);

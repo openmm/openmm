@@ -37,6 +37,7 @@
 #include "SimTKReference/ReferenceBondForce.h"
 #include "SimTKReference/ReferenceBrownianDynamics.h"
 #include "SimTKReference/ReferenceCCMAAlgorithm.h"
+#include "SimTKReference/ReferenceCustomBondIxn.h"
 #include "SimTKReference/ReferenceCustomNonbondedIxn.h"
 #include "SimTKReference/ReferenceHarmonicBondIxn.h"
 #include "SimTKReference/ReferenceLJCoulomb14.h"
@@ -254,6 +255,69 @@ double ReferenceCalcHarmonicBondForceKernel::executeEnergy(ContextImpl& context)
     RealOpenMM energy = 0;
     ReferenceBondForce refBondForce;
     ReferenceHarmonicBondIxn harmonicBond;
+    for (int i = 0; i < numBonds; ++i)
+        energyArray[i] = 0;
+    refBondForce.calculateForce(numBonds, bondIndexArray, posData, bondParamArray, forceData, energyArray, 0, &energy, harmonicBond);
+    disposeRealArray(forceData, context.getSystem().getNumParticles());
+    delete[] energyArray;
+    return energy;
+}
+
+ReferenceCalcCustomBondForceKernel::~ReferenceCalcCustomBondForceKernel() {
+    disposeIntArray(bondIndexArray, numBonds);
+    disposeRealArray(bondParamArray, numBonds);
+}
+
+void ReferenceCalcCustomBondForceKernel::initialize(const System& system, const CustomBondForce& force) {
+    numBonds = force.getNumBonds();
+    int numParameters = force.getNumPerBondParameters();
+
+    // Build the arrays.
+
+    bondIndexArray = allocateIntArray(numBonds, numParameters);
+    bondParamArray = allocateRealArray(numBonds, numParameters);
+    vector<double> params;
+    for (int i = 0; i < force.getNumBonds(); ++i) {
+        int particle1, particle2;
+        force.getBondParameters(i, particle1, particle2, params);
+        bondIndexArray[i][0] = particle1;
+        bondIndexArray[i][1] = particle2;
+        for (int j = 0; j < numParameters; j++)
+            bondParamArray[i][j] = (RealOpenMM) params[j];
+    }
+
+    // Parse the expression used to calculate the force.
+
+    Lepton::ParsedExpression expression = Lepton::Parser::parse(force.getEnergyFunction()).optimize();
+    energyExpression = expression.createProgram();
+    forceExpression = expression.differentiate("r").optimize().createProgram();
+    for (int i = 0; i < numParameters; i++)
+        parameterNames.push_back(force.getPerBondParameterName(i));
+    for (int i = 0; i < force.getNumGlobalParameters(); i++)
+        globalParameterNames.push_back(force.getGlobalParameterName(i));
+}
+
+void ReferenceCalcCustomBondForceKernel::executeForces(ContextImpl& context) {
+    RealOpenMM** posData = extractPositions(context);
+    RealOpenMM** forceData = extractForces(context);
+    map<string, double> globalParameters;
+    for (int i = 0; i < (int) globalParameterNames.size(); i++)
+        globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
+    ReferenceBondForce refBondForce;
+    ReferenceCustomBondIxn harmonicBond(energyExpression, forceExpression, parameterNames, globalParameters);
+    refBondForce.calculateForce(numBonds, bondIndexArray, posData, bondParamArray, forceData, 0, 0, 0, harmonicBond);
+}
+
+double ReferenceCalcCustomBondForceKernel::executeEnergy(ContextImpl& context) {
+    RealOpenMM** posData = extractPositions(context);
+    RealOpenMM** forceData = allocateRealArray(context.getSystem().getNumParticles(), 3);
+    RealOpenMM* energyArray = new RealOpenMM[numBonds];
+    RealOpenMM energy = 0;
+    map<string, double> globalParameters;
+    for (int i = 0; i < (int) globalParameterNames.size(); i++)
+        globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
+    ReferenceBondForce refBondForce;
+    ReferenceCustomBondIxn harmonicBond(energyExpression, forceExpression, parameterNames, globalParameters);
     for (int i = 0; i < numBonds; ++i)
         energyArray[i] = 0;
     refBondForce.calculateForce(numBonds, bondIndexArray, posData, bondParamArray, forceData, energyArray, 0, &energy, harmonicBond);

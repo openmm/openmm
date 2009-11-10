@@ -193,6 +193,42 @@ private:
 };
 
 /**
+ * This kernel is invoked by CustomBondForce to calculate the forces acting on the system and the energy of the system.
+ */
+class ReferenceCalcCustomBondForceKernel : public CalcCustomBondForceKernel {
+public:
+    ReferenceCalcCustomBondForceKernel(std::string name, const Platform& platform) : CalcCustomBondForceKernel(name, platform) {
+    }
+    ~ReferenceCalcCustomBondForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomBondForce this kernel will be used for
+     */
+    void initialize(const System& system, const CustomBondForce& force);
+    /**
+     * Execute the kernel to calculate the forces.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void executeForces(ContextImpl& context);
+    /**
+     * Execute the kernel to calculate the energy.
+     *
+     * @param context    the context in which to execute this kernel
+     * @return the potential energy due to the CustomBondForce
+     */
+    double executeEnergy(ContextImpl& context);
+private:
+    int numBonds;
+    int **bondIndexArray;
+    RealOpenMM **bondParamArray;
+    Lepton::ExpressionProgram energyExpression, forceExpression;
+    std::vector<std::string> parameterNames, globalParameterNames;
+};
+
+/**
  * This kernel is invoked by HarmonicAngleForce to calculate the forces acting on the system and the energy of the system.
  */
 class ReferenceCalcHarmonicAngleForceKernel : public CalcHarmonicAngleForceKernel {
