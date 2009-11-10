@@ -151,6 +151,7 @@ void SetCalculateObcGbsaSoftcoreForces2Sim( gpuContext gpu );
 
 // kernel calls to device
 
+extern void kReduceObcGbsaSoftcoreBornForces( gpuContext gpu );
 extern void kCalculateObcGbsaSoftcoreBornSum( gpuContext gpu );
 
 // this method is not needed; the OpenMM version can be used

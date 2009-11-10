@@ -75,6 +75,74 @@ void GetCalculateObcGbsaSoftcoreBornSumSim(gpuContext gpu)
     RTERROR(status, "GetCalculateObcGbsaSoftcoreBornSumSim: cudaMemcpyFromSymbol: SetSim copy from cSim failed");
 }
 
+__global__ void kReduceObcGbsaSoftcoreBornForces_kernel()
+{
+    unsigned int pos = (blockIdx.x * blockDim.x + threadIdx.x);
+    float energy = 0.0f;
+    while (pos < cSim.atoms)
+    {
+        float bornRadius         = cSim.pBornRadii[pos];
+        float obcChain           = cSim.pObcChain[pos];
+        float2 obcData           = cSim.pObcData[pos];
+        float  nonPolarScaleData = gbsaSimDev.pNonPolarScalingFactors[pos];
+        float totalForce = 0.0f;
+        float* pFt = cSim.pBornForce + pos;
+
+        int i = cSim.nonbondOutputBuffers;
+        while (i >= 4)
+        {
+            float f1    = *pFt;
+            pFt        += cSim.stride;
+            float f2    = *pFt;
+            pFt        += cSim.stride;
+            float f3    = *pFt;
+            pFt        += cSim.stride;
+            float f4    = *pFt;
+            pFt        += cSim.stride;
+            totalForce += f1 + f2 + f3 + f4;
+            i -= 4;
+        }
+        if (i >= 2)
+        {
+            float f1    = *pFt;
+            pFt        += cSim.stride;
+            float f2    = *pFt;
+            pFt        += cSim.stride;
+            totalForce += f1 + f2;
+            i -= 2;
+        }
+        if (i > 0)
+        {
+            totalForce += *pFt;
+        }
+        float r            = (obcData.x + cSim.dielectricOffset + cSim.probeRadius);
+        float ratio6       = pow((obcData.x + cSim.dielectricOffset) / bornRadius, 6.0f);
+        float saTerm       = nonPolarScaleData*cSim.surfaceAreaFactor * r * r * ratio6;
+        totalForce        += saTerm / bornRadius; // 1.102 == Temp mysterious fudge factor, FIX FIX FIX
+
+        /* E */
+        energy += saTerm;
+
+        totalForce *= bornRadius * bornRadius * obcChain;
+
+        pFt = cSim.pBornForce + pos;
+        *pFt = totalForce;
+        pos += gridDim.x * blockDim.x;
+    }
+    /* E */
+    // correct for surface area factor of -6
+    cSim.pEnergy[blockIdx.x * blockDim.x + threadIdx.x] += energy / -6.0f;
+}
+
+
+void kReduceObcGbsaSoftcoreBornForces(gpuContext gpu)
+{
+
+    kReduceObcGbsaSoftcoreBornForces_kernel<<<gpu->sim.blocks, gpu->sim.bf_reduce_threads_per_block>>>();
+    LAUNCHERROR("kReduceObcGbsaBornForces");
+}
+
+
 // Include versions of the kernels for N^2 calculations.
 
 #define METHOD_NAME(a, b) a##N2##b

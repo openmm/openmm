@@ -562,9 +562,7 @@ void CudaFreeEnergyCalcGBSAOBCSoftcoreForceKernel::executeForces(ContextImpl& co
 
     // compute Born forces
 
-    gpu->bIncludeGBSA = true;
-    kReduceObcGbsaBornForces(gpu);
-    gpu->bIncludeGBSA = false;
+    kReduceObcGbsaSoftcoreBornForces(gpu);
 
     if( debug && log ){
         (void) fprintf( stderr, "\n%s calling kCalculateObcGbsaForces2\n", methodName.c_str() );
