@@ -2010,7 +2010,6 @@ int gpuBuildOutputBuffers(gpuContext gpu)
         gpu->sim.nonbondOutputBuffers       = gpu->sim.paddedNumberOfAtoms / GRID;
     }
     gpu->sim.totalNonbondOutputBuffers  = ( (gpu->bIncludeGBSA || gpu->bIncludeGBVI) ? 2 * gpu->sim.nonbondOutputBuffers : gpu->sim.nonbondOutputBuffers);
-//gpu->sim.totalNonbondOutputBuffers  = 2*gpu->sim.nonbondOutputBuffers;
     gpu->sim.outputBuffers              = gpu->sim.totalNonbondOutputBuffers;
 
     unsigned int outputBuffers = gpu->sim.totalNonbondOutputBuffers;
