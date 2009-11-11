@@ -395,3 +395,85 @@ fprintf( stderr, "kCalculateCDLJSoftcoreForces: bOutputBufferPerWarp=%u blks=%u 
 #endif
     }
 }
+
+void kPrintForces(gpuContext gpu, std::string idString, int call )
+{
+ //   printf("kReduceForces\n");
+#define GBVI_DEBUG 4
+#if ( GBVI_DEBUG == 4 )
+
+                gpu->psBornRadii->Download();
+                gpu->psObcData->Download();
+                gpu->psObcChain->Download();
+                gpu->psBornForce->Download();
+                gpu->psForce4->Download();
+                gpu->psPosq4->Download();
+                int maxPrint = 0; 
+int   nanHit       = 0;
+int   targetIndex  = 852;
+float maxForce     = 3.0e+04;
+float maxPosition  = 2.0e+02;
+                for( int ii = 0; ii < gpu->natoms; ii++ ){
+
+int   hit  = 0;
+float dist = sqrtf( gpu->psPosq4->_pSysStream[0][ii].x*gpu->psPosq4->_pSysStream[0][ii].x + 
+                    gpu->psPosq4->_pSysStream[0][ii].y*gpu->psPosq4->_pSysStream[0][ii].y +
+                    gpu->psPosq4->_pSysStream[0][ii].z*gpu->psPosq4->_pSysStream[0][ii].z );
+
+if( fabs( gpu->psForce4->_pSysStream[0][ii].x ) > maxForce ||
+    fabs( gpu->psForce4->_pSysStream[0][ii].y ) > maxForce ||
+    fabs( gpu->psForce4->_pSysStream[0][ii].z ) > maxForce ||
+//    gpu->psBornRadii->_pSysStream[0][ii] <= 0.0            ||
+    dist > maxPosition                                     ||
+    isnan( gpu->psForce4->_pSysStream[0][ii].x )           ||
+    isnan( gpu->psForce4->_pSysStream[0][ii].y )           ||
+    isnan( gpu->psForce4->_pSysStream[0][ii].z )  ){  
+   hit = 1;
+} else {
+   hit = 0;
+}
+if( ii == targetIndex || ii == (targetIndex+1) || ii == (targetIndex+2) )hit = 1;
+if( isnan( gpu->psBornForce->_pSysStream[0][ii] ) ||
+    isnan( gpu->psBornRadii->_pSysStream[0][ii] ) ||
+    isnan( gpu->psObcChain->_pSysStream[0][ii]  ) ||
+    isnan( gpu->psForce4->_pSysStream[0][ii].x  )  ||
+    isnan( gpu->psForce4->_pSysStream[0][ii].y  )  ||
+    isnan( gpu->psForce4->_pSysStream[0][ii].z  )  ){  
+   hit    = 1;
+   nanHit = 1;
+}
+
+                //if( hit || ii < maxPrint || ii >= (gpu->natoms - maxPrint) )
+                if( hit ){
+                    static int firstHit = 1;
+                    if( firstHit ){
+                       firstHit = 0;
+                       (void) fprintf( stderr, "\nkPrintForces: %d [r, scl q] b[r/c/f] f[] x[] Born radii/force (%p %p)\n", call,
+                                       gpu->psBornForce, gpu->psBornForce->_pDevStream[0] );
+                    }
+                    (void) fprintf( stderr, "%6d [%8.3f %8.3f %8.3f] b[%13.6e %13.6e %13.6e] f[%13.6e %13.6e %13.6e] x[%13.6e %13.6e %13.6e] %10.3e %s %s %d\n",
+                                    ii, 
+                                    (gpu->psObcData->_pSysStream[0][ii].x + 0.009f),
+                                    (gpu->psObcData->_pSysStream[0][ii].y/gpu->psObcData->_pSysStream[0][ii].x),
+                                    gpu->psPosq4->_pSysStream[0][ii].w,
+                                    gpu->psBornRadii->_pSysStream[0][ii],
+                                    gpu->psObcChain->_pSysStream[0][ii],
+                                    gpu->psBornForce->_pSysStream[0][ii],
+
+                                    gpu->psForce4->_pSysStream[0][ii].x,
+                                    gpu->psForce4->_pSysStream[0][ii].y,
+                                    gpu->psForce4->_pSysStream[0][ii].z,
+
+                                    gpu->psPosq4->_pSysStream[0][ii].x,
+                                    gpu->psPosq4->_pSysStream[0][ii].y,
+                                    gpu->psPosq4->_pSysStream[0][ii].z, dist,
+
+                                    (hit ? "XXXXXXX" : "" ), idString.c_str(), call );
+                }
+                }
+                (void) fflush( stderr );
+//                if( nanHit )exit(0);
+#endif
+
+}
+

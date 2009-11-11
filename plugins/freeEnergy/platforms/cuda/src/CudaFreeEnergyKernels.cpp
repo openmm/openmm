@@ -386,6 +386,8 @@ void CudaFreeEnergyCalcNonbondedSoftcoreForceKernel::executeForces(ContextImpl& 
 // ---------------------------------------------------------------------------------------
 
     _gpuContext* gpu = data.gpu;
+//    static int call  = 0;
+//    call++;
 
     // write array, ... address's to board
 
@@ -398,7 +400,6 @@ void CudaFreeEnergyCalcNonbondedSoftcoreForceKernel::executeForces(ContextImpl& 
         }
         SetCalculateLocalSoftcoreGpuSim( gpu );
         SetCalculateCDLJSoftcoreGpuSim( gpu );
-// (void) fprintf( log, "Calling SetCalculateLocalSoftcoreGpuSim\n" ); fflush( stderr );
 
         // flip strides (unsure if this is needed)
 
@@ -413,20 +414,20 @@ void CudaFreeEnergyCalcNonbondedSoftcoreForceKernel::executeForces(ContextImpl& 
             }
         }
 #endif
+
     }
  
     // calculate nonbonded ixns here, only if implicit solvent is inactive
 
     if ( !getIncludeGBSA() && !getIncludeGBVI() ) {
-//kClearForces(gpu);
         kCalculateCDLJSoftcoreForces(gpu);
     }
   
     // local LJ-14 forces
 
     kCalculateLocalSoftcoreForces(gpu);
+//kPrintForces(gpu, "Post kCalculateLocalSoftcoreForces", call );
 //kReduceForces(gpu);
-//exit(0);
 }
 
 double CudaFreeEnergyCalcNonbondedSoftcoreForceKernel::executeEnergy(ContextImpl& context) {
@@ -527,6 +528,7 @@ void CudaFreeEnergyCalcGBSAOBCSoftcoreForceKernel::executeForces(ContextImpl& co
 
     _gpuContext* gpu = data.gpu;
     int debug        = 1;
+    static int call  = 0;
 
     // send address's of arrays, ... to device on first call
     // required since force/energy buffers not set when CudaFreeEnergyCalcGBSAOBCSoftcoreForceKernel::initialize() was called
@@ -535,8 +537,6 @@ void CudaFreeEnergyCalcGBSAOBCSoftcoreForceKernel::executeForces(ContextImpl& co
        setSim++;
        SetCalculateObcGbsaSoftcoreBornSumSim( gpu );
        SetCalculateCDLJObcGbsaSoftcoreGpu1Sim( gpu );
-
-       //SetCalculateObcGbsaForces2Sim( gpu );
        SetCalculateObcGbsaSoftcoreForces2Sim( gpu );
     }
 
@@ -546,8 +546,11 @@ void CudaFreeEnergyCalcGBSAOBCSoftcoreForceKernel::executeForces(ContextImpl& co
     // calculate Born radii and first loop of Obc forces
 
     if( debug && log ){
-        (void) fprintf( stderr, "\n%s: calling kCalculateCDLJObcGbsaSoftcoreForces1\n", methodName.c_str() );
-        (void) fflush( stderr );
+        call++;
+        if( log ){
+            (void) fprintf( log, "\n%s: calling kCalculateCDLJObcGbsaSoftcoreForces1\n", methodName.c_str() );
+            (void) fflush( log );
+        }
     }
 
     kClearBornForces(gpu);
@@ -555,9 +558,10 @@ void CudaFreeEnergyCalcGBSAOBCSoftcoreForceKernel::executeForces(ContextImpl& co
     kReduceObcGbsaBornSum(gpu);
     kCalculateCDLJObcGbsaSoftcoreForces1(gpu);
 
+//kPrintForces(gpu, "Post kCalculateCDLJObcGbsaSoftcoreForces1", call );
     if( debug && log ){
-        (void) fprintf( stderr, "\n%s: calling kReduceObcGbsaBornForces\n", methodName.c_str()  );
-        (void) fflush( stderr );
+        (void) fprintf( log, "\n%s: calling kReduceObcGbsaBornForces\n", methodName.c_str()  );
+        (void) fflush( log );
     }
 
     // compute Born forces
@@ -565,13 +569,12 @@ void CudaFreeEnergyCalcGBSAOBCSoftcoreForceKernel::executeForces(ContextImpl& co
     kReduceObcGbsaSoftcoreBornForces(gpu);
 
     if( debug && log ){
-        (void) fprintf( stderr, "\n%s calling kCalculateObcGbsaForces2\n", methodName.c_str() );
-        (void) fflush( stderr );
+        (void) fprintf( log, "\n%s calling kCalculateObcGbsaForces2\n", methodName.c_str() );
+        (void) fflush( log );
     }
 
     // second loop of Obc GBSA forces
 
-    //kCalculateObcGbsaForces2(gpu);
     kCalculateObcGbsaSoftcoreForces2(gpu);
 }
 
@@ -668,6 +671,7 @@ void CudaFreeEnergyCalcGBVISoftcoreForceKernel::executeForces(ContextImpl& conte
 
     _gpuContext* gpu = data.gpu;
     int debug        = 1;
+    static int call  = 0;
 
     // send address's of arrays, ... to device on first call
     // required since force/energy buffers not set when CudaFreeEnergyCalcGBVISoftcoreForceKernel::initialize() was called
@@ -676,36 +680,40 @@ void CudaFreeEnergyCalcGBVISoftcoreForceKernel::executeForces(ContextImpl& conte
        setSim++;
        SetCalculateGBVISoftcoreBornSumGpuSim( gpu );
        SetCalculateCDLJObcGbsaSoftcoreGpu1Sim( gpu );
-       SetCalculateGBVIForces2Sim( gpu );
+       SetCalculateGBVISoftcoreForces2Sim( gpu );
     }
 
-    // required!!
+    // required?
+
     gpu->bRecalculateBornRadii = true; // fixed
 
-//kClearForces(gpu);
     // calculate Born radii and first loop of GB/VI forces
 
     if( debug && log ){
-        (void) fprintf( stderr, "\n%s: calling kCalculateCDLJObcGbsaSoftcoreForces1 & %s\n", methodName.c_str(),
-                        getQuinticScaling() ? "kReduceGBVIBornSumQuinticScaling" : "kReduceGBVIBornSum" );
-        (void) fflush( stderr );
+        call++;
+        if( log ){
+            (void) fprintf( log, "\n%s: calling kCalculateCDLJObcGbsaSoftcoreForces1 & %s\n", methodName.c_str(),
+                            getQuinticScaling() ? "kReduceGBVIBornSumQuinticScaling" : "kReduceGBVIBornSum" );
+            (void) fflush( log );
+        }
     }
 
     kClearBornForces(gpu);
     kCalculateGBVISoftcoreBornSum(gpu);
 
     if( getQuinticScaling() ){
-//(void) fprintf( stderr, "\n%s: calling kReduceGBVIBornSumQuinticScaling\n", methodName.c_str() ); fflush( stderr );
         kReduceGBVIBornSumQuinticScaling(gpu, gpuGBVISoftcore );
     } else {
         kReduceGBVIBornSum(gpu);
     }
     kCalculateCDLJObcGbsaSoftcoreForces1(gpu);
 
+//kPrintForces(gpu, "Post kCalculateCDLJObcGbsaSoftcoreForces1", call );
+
     if( debug && log ){
-        (void) fprintf( stderr, "\n%s: calling %s\n", methodName.c_str(),
+        (void) fprintf( log, "\n%s: calling %s\n", methodName.c_str(),
                         getQuinticScaling() ? "kReduceGBVIBornForcesQuinticScaling" : "kReduceObcGbsaBornForces" );
-        (void) fflush( stderr );
+        (void) fflush( log );
     }
 
     // compute Born forces
@@ -719,14 +727,13 @@ void CudaFreeEnergyCalcGBVISoftcoreForceKernel::executeForces(ContextImpl& conte
     }
 
     if( debug && log ){
-        (void) fprintf( stderr, "\n%s: calling kCalculateGBVIForces2\n", methodName.c_str() );
-        (void) fflush( stderr );
+        (void) fprintf( log, "\n%s: calling kCalculateGBVIForces2\n", methodName.c_str() );
+        (void) fflush( log );
     }
 
     // second loop of GB/VI forces
 
-    kCalculateGBVIForces2(gpu);
-//kReduceForces(gpu);
+    kCalculateGBVISoftcoreForces2(gpu);
 }
 
 double CudaFreeEnergyCalcGBVISoftcoreForceKernel::executeEnergy(ContextImpl& context) {

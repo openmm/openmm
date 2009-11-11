@@ -103,11 +103,18 @@ void SetCalculateGBVISoftcoreBornSumGpuSim( gpuContext gpu);
 extern "C"
 void SetCalculateGBVISoftcoreSupplementarySim( GpuGBVISoftcore* gpuGBVISoftcore );
 
+extern "C"
+void SetCalculateGBVISoftcoreForces2Sim(gpuContext gpu);
+
+extern "C"
+void GetCalculateGBVISoftcoreForces2Sim(gpuContext gpu);
+
 // kernel calls to device
 
 extern void kReduceGBVIBornSumQuinticScaling( gpuContext gpu, GpuGBVISoftcore* gpuGBVISoftcore );
 extern void kCalculateGBVISoftcoreBornSum( gpuContext gpu );
 extern void kReduceGBVIBornForcesQuinticScaling( gpuContext gpu );
+extern void kCalculateGBVISoftcoreForces2( gpuContext gpu );
 
 // Obc softcore
 
@@ -156,6 +163,7 @@ extern void kCalculateObcGbsaSoftcoreBornSum( gpuContext gpu );
 
 // this method is not needed; the OpenMM version can be used
 extern void kCalculateObcGbsaSoftcoreForces2( gpuContext gpu );
+extern void kPrintForces( gpuContext gpu, std::string idString, int call );
 
 
 // shared

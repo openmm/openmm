@@ -10,36 +10,42 @@
  * Authors: Scott Le Grand, Peter Eastman                                     *
  * Contributors:                                                              *
  *                                                                            *
- * This program is free software: you can redistribute it and/or modify       *
- * it under the terms of the GNU Lesser General Public License as published   *
- * by the Free Software Foundation, either version 3 of the License, or       *
- * (at your option) any later version.                                        *
+ * Permission is hereby granted, free of charge, to any person obtaining a    *
+ * copy of this software and associated documentation files (the "Software"), *
+ * to deal in the Software without restriction, including without limitation  *
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,   *
+ * and/or sell copies of the Software, and to permit persons to whom the      *
+ * Software is furnished to do so, subject to the following conditions:       *
  *                                                                            *
- * This program is distributed in the hope that it will be useful,            *
- * but WITHOUT ANY WARRANTY; without even the implied warranty of             *
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the              *
- * GNU Lesser General Public License for more details.                        *
+ * The above copyright notice and this permission notice shall be included in *
+ * all copies or substantial portions of the Software.                        *
  *                                                                            *
- * You should have received a copy of the GNU Lesser General Public License   *
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR *
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,   *
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL    *
+ * THE AUTHORS, CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,    *
+ * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR      *
+ * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE  *
+ * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
+
+#include "kCalculateGBVIAux.h"
 
 /**
  * This file contains the kernel for evalauating the second stage of GBSA.  It is included
- * several times in kCalculateObcGbsaSoftcoreForces2.cu with different #defines to generate
+ * several times in kCalculateGBVIForces2.cu with different #defines to generate
  * different versions of the kernels.
  */
 
-__global__ void METHOD_NAME(kCalculateObcGbsaSoftcore, Forces2_kernel)(unsigned int* workUnit)
+__global__ void METHOD_NAME(kCalculateGBVISoftcore, Forces2_kernel)(unsigned int* workUnit, unsigned int numWorkUnits)
 {
     extern __shared__ Atom sA[];
-    unsigned int totalWarps = cSim.bornForce2_blocks*cSim.bornForce2_threads_per_block/GRID;
-    unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
-    unsigned int numWorkUnits = cSim.pInteractionCount[0];
-    unsigned int pos = warp*numWorkUnits/totalWarps;
-    unsigned int end = (warp+1)*numWorkUnits/totalWarps;
+    unsigned int totalWarps  = cSim.bornForce2_blocks*cSim.bornForce2_threads_per_block/GRID;
+    unsigned int warp        = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
+    unsigned int pos         = warp*numWorkUnits/totalWarps;
+    unsigned int end         = (warp+1)*numWorkUnits/totalWarps;
 #ifdef USE_CUTOFF
-    float3* tempBuffer = (float3*) &sA[cSim.bornForce2_threads_per_block];
+    float3* tempBuffer       = (float3*) &sA[cSim.bornForce2_threads_per_block];
 #endif
 
     unsigned int lasty = -0xFFFFFFFF;
@@ -53,7 +59,7 @@ __global__ void METHOD_NAME(kCalculateObcGbsaSoftcore, Forces2_kernel)(unsigned 
         unsigned int tgx                = threadIdx.x & (GRID - 1);
         unsigned int i                  = x + tgx;
         float4 apos                     = cSim.pPosq[i];
-        float2 a                        = cSim.pObcData[i];
+        float4 ar                       = cSim.pGBVIData[i];
         float fb                        = cSim.pBornForce[i];
         unsigned int tbx                = threadIdx.x - tgx;
         unsigned int tj                 = tgx;
@@ -69,8 +75,8 @@ __global__ void METHOD_NAME(kCalculateObcGbsaSoftcore, Forces2_kernel)(unsigned 
             sA[threadIdx.x].x           = apos.x;
             sA[threadIdx.x].y           = apos.y;
             sA[threadIdx.x].z           = apos.z;
-            sA[threadIdx.x].r           = a.x;
-            sA[threadIdx.x].sr          = a.y;
+            sA[threadIdx.x].r           = ar.x;
+            sA[threadIdx.x].sr          = ar.y;
             sA[threadIdx.x].fb          = fb;
 
             for (unsigned int j = (tgx+1)&(GRID-1); j != tgx; j = (j+1)&(GRID-1))
@@ -86,37 +92,21 @@ __global__ void METHOD_NAME(kCalculateObcGbsaSoftcore, Forces2_kernel)(unsigned 
                 float r2                = dx * dx + dy * dy + dz * dz;
                 float r                 = sqrt(r2);
 
-
                 // Atom I Born forces and sum
-                float rScaledRadiusJ    = r + psA[j].sr;
-
-                float l_ij          = 1.0f / max(a.x, fabs(r - psA[j].sr));
-                float u_ij          = 1.0f / rScaledRadiusJ;
-                float rInverse      = 1.0f / r;
-                float l_ij2         = l_ij * l_ij;
-                float u_ij2         = u_ij * u_ij;
-                float r2Inverse     = rInverse * rInverse;
-                float t1            = log (u_ij / l_ij);
-                float t2            = (l_ij2 - u_ij2);
-                float t3            = t2 * rInverse;
-                t1                 *= rInverse;
-
-                // Born Forces term
-                float term          =  0.125f *
-                                      (1.000f + psA[j].sr * psA[j].sr * r2Inverse) * t3 +
-                                       0.250f * t1 * r2Inverse;
-                float dE            = fb * term;
-
+                float dE                = getGBVI_dE2( r, ar.x, psA[j].sr, fb );
+               
 #if defined USE_PERIODIC
-                if (a.x >= rScaledRadiusJ || i >= cSim.atoms || x+j >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)
-#elif defined USE_CUTOFF
-                if (a.x >= rScaledRadiusJ || r2 > cSim.nonbondedCutoffSqr)
-#else
-                if (a.x >= rScaledRadiusJ)
-#endif
+                if (i >= cSim.atoms || x+j >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)
                 {
                     dE              = 0.0f;
                 }
+#endif
+#if defined USE_CUTOFF
+                if (r2 > cSim.nonbondedCutoffSqr)
+                {
+                    dE              = 0.0f;
+                }
+#endif
                 float d             = dx * dE;
                 af.x               -= d;
                 psA[j].fx          += d;
@@ -132,15 +122,20 @@ __global__ void METHOD_NAME(kCalculateObcGbsaSoftcore, Forces2_kernel)(unsigned 
             float4 of;
 #ifdef USE_OUTPUT_BUFFER_PER_WARP
             unsigned int offset         = x + tgx + warp*cSim.stride;
+            of                          = cSim.pForce4[offset];
+            of.x                       += af.x + sA[threadIdx.x].fx;
+            of.y                       += af.y + sA[threadIdx.x].fy;
+            of.z                       += af.z + sA[threadIdx.x].fz;
+            cSim.pForce4[offset]        = of;
 #else
             unsigned int offset         = x + tgx + (x >> GRIDBITS) * cSim.stride;
-#endif
             of                          = cSim.pForce4[offset];
             of.x                       += af.x + sA[threadIdx.x].fx;
             of.y                       += af.y + sA[threadIdx.x].fy;
             of.z                       += af.z + sA[threadIdx.x].fz;
             of.w                        = 0.0f;
-            cSim.pForce4[offset]       = of;
+            cSim.pForce4[offset]        = of;
+#endif
         }
         else
         {
@@ -149,15 +144,15 @@ __global__ void METHOD_NAME(kCalculateObcGbsaSoftcore, Forces2_kernel)(unsigned 
             {
                 unsigned int j              = y + tgx;
                 float4 temp                 = cSim.pPosq[j];
-                float2 temp1                = cSim.pObcData[j];
-                sA[threadIdx.x].fb          = cSim.pBornForce[j];
+                float4 temp1                = cSim.pGBVIData[j];
+                float fb                    = cSim.pBornForce[j];
+                sA[threadIdx.x].fb          = fb;
                 sA[threadIdx.x].x           = temp.x;
                 sA[threadIdx.x].y           = temp.y;
                 sA[threadIdx.x].z           = temp.z;
                 sA[threadIdx.x].r           = temp1.x;
                 sA[threadIdx.x].sr          = temp1.y;
             }
-            float sr2                   = a.y * a.y;
 #ifdef USE_CUTOFF
             unsigned int flags = cSim.pInteractionFlag[pos];
             if (flags == 0)
@@ -182,44 +177,20 @@ __global__ void METHOD_NAME(kCalculateObcGbsaSoftcore, Forces2_kernel)(unsigned 
                     float r2                = dx * dx + dy * dy + dz * dz;
                     float r                 = sqrt(r2);
 
-                    // Interleaved Atom I and J Born Forces and sum components
-                    float r2Inverse         = 1.0f / r2;
-                    float rScaledRadiusJ    = r + psA[tj].sr;
-                    float rScaledRadiusI    = r + a.y;
-                    float rInverse          = 1.0f / r;
-                    float l_ijJ             = 1.0f / max(a.x, fabs(r - psA[tj].sr));
-                    float l_ijI             = 1.0f / max(psA[tj].r, fabs(r - a.y));
-                    float u_ijJ             = 1.0f / rScaledRadiusJ;
-                    float u_ijI             = 1.0f / rScaledRadiusI;
-                    float l_ij2J            = l_ijJ * l_ijJ;
-                    float l_ij2I            = l_ijI * l_ijI;
-                    float u_ij2J            = u_ijJ * u_ijJ;
-                    float u_ij2I            = u_ijI * u_ijI;
-                    float t1J               = log (u_ijJ / l_ijJ);
-                    float t1I               = log (u_ijI / l_ijI);
-                    float t2J               = (l_ij2J - u_ij2J);
-                    float t2I               = (l_ij2I - u_ij2I);
-                    float t3J               = t2J * rInverse;
-                    float t3I               = t2I * rInverse;
-                    t1J                    *= rInverse;
-                    t1I                    *= rInverse;
-
-                    // Born Forces term
-                    float term              =  0.125f *
-                                              (1.000f + psA[tj].sr * psA[tj].sr * r2Inverse) * t3J +
-                                               0.250f * t1J * r2Inverse;
-                    float dE                = fb * term;
+                    float dE                = getGBVI_dE2( r, ar.x, psA[tj].sr, fb );
 
 #if defined USE_PERIODIC
-                    if (a.x >= rScaledRadiusJ || i >= cSim.atoms || y+tj >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)
-#elif defined USE_CUTOFF
-                    if (a.x >= rScaledRadiusJ || r2 > cSim.nonbondedCutoffSqr)
-#else
-                    if (a.x >= rScaledRadiusJ)
-#endif
+                    if (i >= cSim.atoms || y+tj >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)
                     {
                         dE                  = 0.0f;
                     }
+#endif
+#if defined USE_CUTOFF
+                    if (r2 > cSim.nonbondedCutoffSqr)
+                    {
+                        dE                  = 0.0f;
+                    }
+#endif
 
                     float d                 = dx * dE;
                     af.x                   -= d;
@@ -232,22 +203,20 @@ __global__ void METHOD_NAME(kCalculateObcGbsaSoftcore, Forces2_kernel)(unsigned 
                     psA[tj].fz             += d;
 
                     // Atom J Born sum term
-                    term                    =  0.125f *
-                                              (1.000f + sr2 * r2Inverse) * t3I +
-                                               0.250f * t1I * r2Inverse;
-                    dE                      = psA[tj].fb * term;
+                    dE                      = getGBVI_dE2( r, psA[tj].r, ar.y, psA[tj].fb );
 
-                    float rj = psA[tj].r;
 #ifdef USE_PERIODIC
-                    if (rj >= rScaledRadiusI || i >= cSim.atoms || y+tj >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)
-#elif defined USE_CUTOFF
-                    if (rj >= rScaledRadiusI || r2 > cSim.nonbondedCutoffSqr)
-#else
-                    if (rj >= rScaledRadiusI)
-#endif
+                    if (i >= cSim.atoms || y+tj >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)
                     {
                         dE                  = 0.0f;
                     }
+#endif
+#if defined USE_CUTOFF
+                    if (r2 > cSim.nonbondedCutoffSqr)
+                    {
+                        dE                  = 0.0f;
+                    }
+#endif
                     dx                     *= dE;
                     dy                     *= dE;
                     dz                     *= dE;
@@ -272,52 +241,29 @@ __global__ void METHOD_NAME(kCalculateObcGbsaSoftcore, Forces2_kernel)(unsigned 
                         float dx                = psA[j].x - apos.x;
                         float dy                = psA[j].y - apos.y;
                         float dz                = psA[j].z - apos.z;
-    #ifdef USE_PERIODIC
+#ifdef USE_PERIODIC
                         dx -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
                         dy -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
                         dz -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
-    #endif
+#endif
                         float r2                = dx * dx + dy * dy + dz * dz;
                         float r                 = sqrt(r2);
 
                         // Interleaved Atom I and J Born Forces and sum components
-                        float r2Inverse         = 1.0f / r2;
-                        float rScaledRadiusJ    = r + psA[j].sr;
-                        float rScaledRadiusI    = r + a.y;
-                        float rInverse          = 1.0f / r;
-                        float l_ijJ             = 1.0f / max(a.x, fabs(r - psA[j].sr));
-                        float l_ijI             = 1.0f / max(psA[j].r, fabs(r - a.y));
-                        float u_ijJ             = 1.0f / rScaledRadiusJ;
-                        float u_ijI             = 1.0f / rScaledRadiusI;
-                        float l_ij2J            = l_ijJ * l_ijJ;
-                        float l_ij2I            = l_ijI * l_ijI;
-                        float u_ij2J            = u_ijJ * u_ijJ;
-                        float u_ij2I            = u_ijI * u_ijI;
-                        float t1J               = log (u_ijJ / l_ijJ);
-                        float t1I               = log (u_ijI / l_ijI);
-                        float t2J               = (l_ij2J - u_ij2J);
-                        float t2I               = (l_ij2I - u_ij2I);
-                        float t3J               = t2J * rInverse;
-                        float t3I               = t2I * rInverse;
-                        t1J                    *= rInverse;
-                        t1I                    *= rInverse;
+                        float dE                = getGBVI_dE2( r, ar.x, psA[j].sr, fb );
 
-                        // Born Forces term
-                        float term              =  0.125f *
-                                                  (1.000f + psA[j].sr * psA[j].sr * r2Inverse) * t3J +
-                                                   0.250f * t1J * r2Inverse;
-                        float dE                = fb * term;
-
-    #if defined USE_PERIODIC
-                        if (a.x >= rScaledRadiusJ || i >= cSim.atoms || y+j >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)
-    #elif defined USE_CUTOFF
-                        if (a.x >= rScaledRadiusJ || r2 > cSim.nonbondedCutoffSqr)
-    #else
-                        if (a.x >= rScaledRadiusJ)
-    #endif
+#if defined USE_PERIODIC
+                        if (i >= cSim.atoms || y+j >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)
                         {
                             dE                  = 0.0f;
                         }
+#endif
+#if defined USE_CUTOFF
+                        if (r2 > cSim.nonbondedCutoffSqr)
+                        {
+                            dE                  = 0.0f;
+                        }
+#endif
 
                         float d                 = dx * dE;
                         af.x                   -= d;
@@ -330,22 +276,20 @@ __global__ void METHOD_NAME(kCalculateObcGbsaSoftcore, Forces2_kernel)(unsigned 
                         tempBuffer[threadIdx.x].z = d;
 
                         // Atom J Born sum term
-                        term                    =  0.125f *
-                                                  (1.000f + sr2 * r2Inverse) * t3I +
-                                                   0.250f * t1I * r2Inverse;
-                        dE                      = psA[j].fb * term;
+                        dE                      = getGBVI_dE2( r, psA[j].r, ar.y, psA[j].fb );
 
-                        float rj = psA[j].r;
-    #ifdef USE_PERIODIC
-                        if (rj >= rScaledRadiusI || i >= cSim.atoms || y+j >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)
-    #elif defined USE_CUTOFF
-                        if (rj >= rScaledRadiusI || r2 > cSim.nonbondedCutoffSqr)
-    #else
-                        if (rj >= rScaledRadiusI)
-    #endif
+#ifdef USE_PERIODIC
+                        if (i >= cSim.atoms || y+j >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)
                         {
                             dE                  = 0.0f;
                         }
+#endif
+#if defined USE_CUTOFF
+                        if (r2 > cSim.nonbondedCutoffSqr)
+                        {
+                            dE                  = 0.0f;
+                        }
+#endif
                         dx                     *= dE;
                         dy                     *= dE;
                         dz                     *= dE;
@@ -397,25 +341,33 @@ __global__ void METHOD_NAME(kCalculateObcGbsaSoftcore, Forces2_kernel)(unsigned 
             float4 of;
 #ifdef USE_OUTPUT_BUFFER_PER_WARP
             unsigned int offset         = x + tgx + warp*cSim.stride;
-#else
-            unsigned int offset         = x + tgx + (y >> GRIDBITS) * cSim.stride;
-#endif
             of                          = cSim.pForce4[offset];
             of.x                       += af.x;
             of.y                       += af.y;
             of.z                       += af.z;
             cSim.pForce4[offset]        = of;
-
-#ifdef USE_OUTPUT_BUFFER_PER_WARP
             offset                      = y + tgx + warp*cSim.stride;
-#else
-            offset                      = y + tgx + (x >> GRIDBITS) * cSim.stride;
-#endif
             of                          = cSim.pForce4[offset];
             of.x                       += sA[threadIdx.x].fx;
             of.y                       += sA[threadIdx.x].fy;
             of.z                       += sA[threadIdx.x].fz;
             cSim.pForce4[offset]        = of;
+#else
+            unsigned int offset         = x + tgx + (y >> GRIDBITS) * cSim.stride;
+            of                          = cSim.pForce4[offset];
+            of.x                       += af.x;
+            of.y                       += af.y;
+            of.z                       += af.z;
+            of.w                        = 0.0f;
+            cSim.pForce4[offset]        = of;
+
+            offset                      = y + tgx + (x >> GRIDBITS) * cSim.stride;
+            of                          = cSim.pForce4[offset];
+            of.x                       += sA[threadIdx.x].fx;
+            of.y                       += sA[threadIdx.x].fy;
+            of.z                       += sA[threadIdx.x].fz;
+            cSim.pForce4[offset]        = of;
+#endif
         }
         lasty = y;
         pos++;
