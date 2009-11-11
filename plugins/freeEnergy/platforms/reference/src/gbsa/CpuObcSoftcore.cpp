@@ -707,7 +707,7 @@ int CpuObcSoftcore::computeBornEnergyForces( RealOpenMM* bornRadii, RealOpenMM**
    }
    setEnergy( obcEnergy*conversion );
 
-#if 1
+#if 0
 {
    RealOpenMM* atomicRadii               = obcSoftcoreParameters->getAtomicRadii();
    const RealOpenMM* scaledRadiusFactor  = obcSoftcoreParameters->getScaledRadiusFactors();
