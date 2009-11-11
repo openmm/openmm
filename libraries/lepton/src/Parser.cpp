@@ -63,7 +63,20 @@ private:
     Type type;
 };
 
-ParseToken Parser::getNextToken(string expression, int start) {
+string Parser::trim(const string& expression) {
+    // Remove leading and trailing spaces.
+    
+    int start, end;
+    for (start = 0; start < (int) expression.size() && expression[start] == ' '; start++)
+        ;
+    for (end = expression.size()-1; end > start && expression[end] == ' '; end--)
+        ;
+    if (start == end && expression[end] == ' ')
+        return "";
+    return expression.substr(start, end-start+1);
+}
+
+ParseToken Parser::getNextToken(const string& expression, int start) {
     char c = expression[start];
     if (c == '(')
         return ParseToken("(", ParseToken::LeftParen);
@@ -119,7 +132,7 @@ ParseToken Parser::getNextToken(string expression, int start) {
     return ParseToken(expression.substr(start, string::npos), ParseToken::Variable);
 }
 
-vector<ParseToken> Parser::tokenize(string expression) {
+vector<ParseToken> Parser::tokenize(const string& expression) {
     vector<ParseToken> tokens;
     int pos = 0;
     while (pos < (int) expression.size()) {
@@ -136,15 +149,49 @@ ParsedExpression Parser::parse(const string& expression) {
 }
 
 ParsedExpression Parser::parse(const string& expression, const map<string, CustomFunction*>& customFunctions) {
-    vector<ParseToken> tokens = tokenize(expression);
+    // First split the expression into subexpressions.
+
+    string primaryExpression = expression;
+    vector<string> subexpressions;
+    while (true) {
+        string::size_type pos = primaryExpression.find_last_of(';');
+        if (pos == string::npos)
+            break;
+        string sub = trim(primaryExpression.substr(pos+1));
+        if (sub.size() > 0)
+            subexpressions.push_back(sub);
+        primaryExpression = primaryExpression.substr(0, pos);
+    }
+
+    // Parse the subexpressions.
+
+    map<string, ExpressionTreeNode> subexpDefs;
+    for (int i = 0; i < (int) subexpressions.size(); i++) {
+        string::size_type equalsPos = subexpressions[i].find('=');
+        if (equalsPos == string::npos)
+            throw Exception("Parse error: subexpression does not specify a name");
+        string name = trim(subexpressions[i].substr(0, equalsPos));
+        if (name.size() == 0)
+            throw Exception("Parse error: subexpression does not specify a name");
+        vector<ParseToken> tokens = tokenize(subexpressions[i].substr(equalsPos+1));
+        int pos = 0;
+        subexpDefs[name] = parsePrecedence(tokens, pos, customFunctions, subexpDefs, 0);
+        if (pos != tokens.size())
+            throw Exception("Parse error: unexpected text at end of subexpression");
+    }
+
+    // Now parse the primary expression.
+
+    vector<ParseToken> tokens = tokenize(primaryExpression);
     int pos = 0;
-    ExpressionTreeNode result = parsePrecedence(tokens, pos, customFunctions, 0);
+    ExpressionTreeNode result = parsePrecedence(tokens, pos, customFunctions, subexpDefs, 0);
     if (pos != tokens.size())
         throw Exception("Parse error: unexpected text at end of expression");
     return ParsedExpression(result);
 }
 
-ExpressionTreeNode Parser::parsePrecedence(const vector<ParseToken>& tokens, int& pos, const map<string, CustomFunction*>& customFunctions, int precedence) {
+ExpressionTreeNode Parser::parsePrecedence(const vector<ParseToken>& tokens, int& pos, const map<string, CustomFunction*>& customFunctions,
+            const map<string, ExpressionTreeNode>& subexpressionDefs, int precedence) {
     if (pos == tokens.size())
         throw Exception("Parse error: unexpected end of expression");
 
@@ -159,13 +206,18 @@ ExpressionTreeNode Parser::parsePrecedence(const vector<ParseToken>& tokens, int
         pos++;
     }
     else if (token.getType() == ParseToken::Variable) {
-        Operation* op = new Operation::Variable(token.getText());
-        result = ExpressionTreeNode(op);
+        map<string, ExpressionTreeNode>::const_iterator subexp = subexpressionDefs.find(token.getText());
+        if (subexp == subexpressionDefs.end()) {
+            Operation* op = new Operation::Variable(token.getText());
+            result = ExpressionTreeNode(op);
+        }
+        else
+            result = subexp->second;
         pos++;
     }
     else if (token.getType() == ParseToken::LeftParen) {
         pos++;
-        result = parsePrecedence(tokens, pos, customFunctions, 0);
+        result = parsePrecedence(tokens, pos, customFunctions, subexpressionDefs, 0);
         if (pos == tokens.size() || tokens[pos].getType() != ParseToken::RightParen)
         throw Exception("Parse error: unbalanced parentheses");
         pos++;
@@ -175,7 +227,7 @@ ExpressionTreeNode Parser::parsePrecedence(const vector<ParseToken>& tokens, int
         vector<ExpressionTreeNode> args;
         bool moreArgs;
         do {
-            args.push_back(parsePrecedence(tokens, pos, customFunctions, 0));
+            args.push_back(parsePrecedence(tokens, pos, customFunctions, subexpressionDefs, 0));
             moreArgs = (pos < (int) tokens.size() && tokens[pos].getType() == ParseToken::Comma);
             if (moreArgs)
                 pos++;
@@ -187,7 +239,7 @@ ExpressionTreeNode Parser::parsePrecedence(const vector<ParseToken>& tokens, int
     }
     else if (token.getType() == ParseToken::Operator && token.getText() == "-") {
         pos++;
-        ExpressionTreeNode toNegate = parsePrecedence(tokens, pos, customFunctions, 2);
+        ExpressionTreeNode toNegate = parsePrecedence(tokens, pos, customFunctions, subexpressionDefs, 2);
         result = ExpressionTreeNode(new Operation::Negate(), toNegate);
     }
     else
@@ -202,7 +254,7 @@ ExpressionTreeNode Parser::parsePrecedence(const vector<ParseToken>& tokens, int
         if (opPrecedence < precedence)
             return result;
         pos++;
-        ExpressionTreeNode arg = parsePrecedence(tokens, pos, customFunctions, LeftAssociative[op] ? opPrecedence+1 : opPrecedence);
+        ExpressionTreeNode arg = parsePrecedence(tokens, pos, customFunctions, subexpressionDefs, LeftAssociative[op] ? opPrecedence+1 : opPrecedence);
         result = ExpressionTreeNode(getOperatorOperation(token.getText()), result, arg);
     }
     return result;

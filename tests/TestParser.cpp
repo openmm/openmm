@@ -178,6 +178,8 @@ int main() {
         verifyEvaluation("2*(3*x)", 4.0, 4.0, 24.0);
         verifyEvaluation("2*x/3", 1.0, 4.0, 2.0/3.0);
         verifyEvaluation("x*2/3", 1.0, 4.0, 2.0/3.0);
+        verifyEvaluation("x*w; w = 5", 3.0, 1.0, 15.0);
+        verifyEvaluation("a+b^2;a=x-b;b=3*y", 2.0, 3.0, 74.0);
         verifyInvalidExpression("1..2");
         verifyInvalidExpression("1*(2+3");
         verifyInvalidExpression("5++4");

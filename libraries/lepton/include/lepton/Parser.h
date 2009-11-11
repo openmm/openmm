@@ -63,9 +63,11 @@ public:
      */
     static ParsedExpression parse(const std::string& expression, const std::map<std::string, CustomFunction*>& customFunctions);
 private:
-    static std::vector<ParseToken> tokenize(std::string expression);
-    static ParseToken getNextToken(std::string expression, int start);
-    static ExpressionTreeNode parsePrecedence(const std::vector<ParseToken>& tokens, int& pos, const std::map<std::string, CustomFunction*>& customFunctions, int precedence);
+    static std::string trim(const std::string& expression);
+    static std::vector<ParseToken> tokenize(const std::string& expression);
+    static ParseToken getNextToken(const std::string& expression, int start);
+    static ExpressionTreeNode parsePrecedence(const std::vector<ParseToken>& tokens, int& pos, const std::map<std::string, CustomFunction*>& customFunctions,
+            const std::map<std::string, ExpressionTreeNode>& subexpressionDefs, int precedence);
     static Operation* getOperatorOperation(const std::string& name);
     static Operation* getFunctionOperation(const std::string& name, const std::map<std::string, CustomFunction*>& customFunctions);
 };
