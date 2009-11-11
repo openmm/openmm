@@ -30,12 +30,12 @@
  * -------------------------------------------------------------------------- */
 
 /**
- * This tests the reference implementation of CustomExternalForce.
+ * This tests the OpenCL implementation of CustomExternalForce.
  */
 
 #include "../../../tests/AssertionUtilities.h"
 #include "openmm/Context.h"
-#include "ReferencePlatform.h"
+#include "OpenCLPlatform.h"
 #include "openmm/CustomExternalForce.h"
 #include "openmm/System.h"
 #include "openmm/VerletIntegrator.h"
@@ -49,7 +49,7 @@ using namespace std;
 const double TOL = 1e-5;
 
 void testForce() {
-    ReferencePlatform platform;
+    OpenCLPlatform platform;
     System system;
     system.addParticle(1.0);
     system.addParticle(1.0);
@@ -92,5 +92,6 @@ int main() {
     cout << "Done" << endl;
     return 0;
 }
+
 
 

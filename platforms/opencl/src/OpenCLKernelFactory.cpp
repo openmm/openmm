@@ -54,6 +54,8 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
         return new OpenCLCalcCustomNonbondedForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcGBSAOBCForceKernel::Name())
         return new OpenCLCalcGBSAOBCForceKernel(name, platform, cl);
+    if (name == CalcCustomExternalForceKernel::Name())
+        return new OpenCLCalcCustomExternalForceKernel(name, platform, cl, context.getSystem());
     if (name == IntegrateVerletStepKernel::Name())
         return new OpenCLIntegrateVerletStepKernel(name, platform, cl);
     if (name == IntegrateLangevinStepKernel::Name())

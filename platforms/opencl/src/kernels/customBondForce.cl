@@ -5,13 +5,12 @@
 __kernel void computeCustomBondForces(int numAtoms, int numBonds, __global float4* forceBuffers, __global float* energyBuffer,
         __global float4* posq, __global float4* params, __global int4* indices
         EXTRA_ARGUMENTS) {
-    int index = get_global_id(0);
     float energy = 0.0f;
-    while (index < numBonds) {
-        // Look up the data for this exception.
+    for (int index = get_global_id(0); index < numBonds; index += get_global_size(0)) {
+        // Look up the data for this bond.
 
         int4 atoms = indices[index];
-        float4 exceptionParams = params[index];
+        float4 bondParams = params[index];
         float4 delta = posq[atoms.y]-posq[atoms.x];
 
         // Compute the force.
@@ -30,7 +29,6 @@ __kernel void computeCustomBondForces(int numAtoms, int numBonds, __global float
         forceB.xyz += delta.xyz;
         forceBuffers[offsetA] = forceA;
         forceBuffers[offsetB] = forceB;
-        index += get_global_size(0);
     }
     energyBuffer[get_global_id(0)] += energy;
 }

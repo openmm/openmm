@@ -348,7 +348,7 @@ void OpenCLCalcCustomBondForceKernel::initialize(const System& system, const Cus
     string suffixes[] = {".x", ".y", ".z", ".w"};
     for (int i = 0; i < force.getNumPerBondParameters(); i++) {
         const string& name = force.getPerBondParameterName(i);
-        variables[name] = "exceptionParams"+suffixes[i];
+        variables[name] = "bondParams"+suffixes[i];
     }
     for (int i = 0; i < force.getNumGlobalParameters(); i++) {
         const string& name = force.getGlobalParameterName(i);
@@ -1313,6 +1313,155 @@ void OpenCLCalcGBSAOBCForceKernel::executeForces(ContextImpl& context) {
 }
 
 double OpenCLCalcGBSAOBCForceKernel::executeEnergy(ContextImpl& context) {
+    executeForces(context);
+    return 0.0;
+}
+class OpenCLCustomExternalForceInfo : public OpenCLForceInfo {
+public:
+    OpenCLCustomExternalForceInfo(const CustomExternalForce& force, int numParticles) : OpenCLForceInfo(1), force(force), indices(numParticles, -1) {
+        vector<double> params;
+        for (int i = 0; i < force.getNumParticles(); i++) {
+            int particle;
+            force.getParticleParameters(i, particle, params);
+            indices[particle] = i;
+        }
+    }
+    bool areParticlesIdentical(int particle1, int particle2) {
+        particle1 = indices[particle1];
+        particle2 = indices[particle2];
+        if (particle1 == -1 && particle2 == -1)
+            return true;
+        if (particle1 == -1 || particle2 == -1)
+            return false;
+        int temp;
+        vector<double> params1;
+        vector<double> params2;
+        force.getParticleParameters(particle1, temp, params1);
+        force.getParticleParameters(particle2, temp, params2);
+        for (int i = 0; i < params1.size(); i++)
+            if (params1[i] != params2[i])
+                return false;
+        return true;
+    }
+private:
+    const CustomExternalForce& force;
+    vector<int> indices;
+};
+
+OpenCLCalcCustomExternalForceKernel::~OpenCLCalcCustomExternalForceKernel() {
+    if (params != NULL)
+        delete params;
+    if (indices != NULL)
+        delete indices;
+    if (globals != NULL)
+        delete globals;
+}
+
+void OpenCLCalcCustomExternalForceKernel::initialize(const System& system, const CustomExternalForce& force) {
+    if (force.getNumPerParticleParameters() > 4)
+        throw OpenMMException("OpenCLPlatform only supports four per-particle parameters for custom external forces");
+    numParticles = force.getNumParticles();
+    params = new OpenCLArray<mm_float4>(cl, numParticles, "customExternalParams");
+    indices = new OpenCLArray<cl_int>(cl, numParticles, "customExternalIndices");
+    string extraArguments;
+    if (force.getNumGlobalParameters() > 0) {
+        globals = new OpenCLArray<cl_float>(cl, force.getNumGlobalParameters(), "customExternalGlobals", false, CL_MEM_READ_ONLY);
+        extraArguments += ", __constant float* globals";
+    }
+    vector<mm_float4> paramVector(numParticles);
+    vector<cl_int> indicesVector(numParticles);
+    for (int i = 0; i < numParticles; i++) {
+        vector<double> parameters;
+        force.getParticleParameters(i, indicesVector[i], parameters);
+        if (parameters.size() > 0)
+            paramVector[i].x = (cl_float) parameters[0];
+        if (parameters.size() > 1)
+            paramVector[i].y = (cl_float) parameters[1];
+        if (parameters.size() > 2)
+            paramVector[i].z = (cl_float) parameters[2];
+        if (parameters.size() > 3)
+            paramVector[i].w = (cl_float) parameters[3];
+    }
+    params->upload(paramVector);
+    indices->upload(indicesVector);
+    cl.addForce(new OpenCLCustomExternalForceInfo(force, system.getNumParticles()));
+
+    // Record information for the expressions.
+
+    vector<string> paramNames;
+    for (int i = 0; i < force.getNumPerParticleParameters(); i++)
+        paramNames.push_back(force.getPerParticleParameterName(i));
+    globalParamNames.resize(force.getNumGlobalParameters());
+    globalParamValues.resize(force.getNumGlobalParameters());
+    for (int i = 0; i < force.getNumGlobalParameters(); i++) {
+        globalParamNames[i] = force.getGlobalParameterName(i);
+        globalParamValues[i] = (cl_float) force.getGlobalParameterDefaultValue(i);
+    }
+    if (globals != NULL)
+        globals->upload(globalParamValues);
+    Lepton::ParsedExpression energyExpression = Lepton::Parser::parse(force.getEnergyFunction()).optimize();
+    Lepton::ParsedExpression forceExpressionX = energyExpression.differentiate("x").optimize();
+    Lepton::ParsedExpression forceExpressionY = energyExpression.differentiate("y").optimize();
+    Lepton::ParsedExpression forceExpressionZ = energyExpression.differentiate("z").optimize();
+    map<string, Lepton::ParsedExpression> expressions;
+    expressions["energy += "] = energyExpression;
+    expressions["float dEdX = "] = forceExpressionX;
+    expressions["float dEdY = "] = forceExpressionY;
+    expressions["float dEdZ = "] = forceExpressionZ;
+
+    // Create the kernels.
+
+    map<string, string> variables;
+    variables["x"] = "pos.x";
+    variables["y"] = "pos.y";
+    variables["z"] = "pos.z";
+    string suffixes[] = {".x", ".y", ".z", ".w"};
+    for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
+        const string& name = force.getPerParticleParameterName(i);
+        variables[name] = "particleParams"+suffixes[i];
+    }
+    for (int i = 0; i < force.getNumGlobalParameters(); i++) {
+        const string& name = force.getGlobalParameterName(i);
+        string value = "globals["+intToString(i)+"]";
+        variables[name] = value;
+    }
+    map<string, string> replacements;
+    stringstream compute;
+    vector<pair<string, string> > functions;
+    compute << OpenCLExpressionUtilities::createExpressions(expressions, variables, functions, "temp", "");
+    replacements["COMPUTE_FORCE"] = compute.str();
+    replacements["EXTRA_ARGUMENTS"] = extraArguments;
+    cl::Program program = cl.createProgram(cl.loadSourceFromFile("customExternalForce.cl", replacements));
+    kernel = cl::Kernel(program, "computeCustomExternalForces");
+}
+
+void OpenCLCalcCustomExternalForceKernel::executeForces(ContextImpl& context) {
+    if (globals != NULL) {
+        bool changed = false;
+        for (int i = 0; i < globalParamNames.size(); i++) {
+            cl_float value = (cl_float) context.getParameter(globalParamNames[i]);
+            if (value != globalParamValues[i])
+                changed = true;
+            globalParamValues[i] = value;
+        }
+        if (changed)
+            globals->upload(globalParamValues);
+    }
+    if (!hasInitializedKernel) {
+        hasInitializedKernel = true;
+        kernel.setArg<cl_int>(0, numParticles);
+        kernel.setArg<cl::Buffer>(1, cl.getForceBuffers().getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(2, cl.getEnergyBuffer().getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(3, cl.getPosq().getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(4, params->getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(5, indices->getDeviceBuffer());
+        if (globals != NULL)
+            kernel.setArg<cl::Buffer>(6, globals->getDeviceBuffer());
+    }
+    cl.executeKernel(kernel, numParticles);
+}
+
+double OpenCLCalcCustomExternalForceKernel::executeEnergy(ContextImpl& context) {
     executeForces(context);
     return 0.0;
 }

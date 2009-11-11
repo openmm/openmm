@@ -473,6 +473,48 @@ private:
 };
 
 /**
+ * This kernel is invoked by CustomExternalForce to calculate the forces acting on the system and the energy of the system.
+ */
+class OpenCLCalcCustomExternalForceKernel : public CalcCustomExternalForceKernel {
+public:
+    OpenCLCalcCustomExternalForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcCustomExternalForceKernel(name, platform),
+            hasInitializedKernel(false), cl(cl), system(system), params(NULL), indices(NULL), globals(NULL) {
+    }
+    ~OpenCLCalcCustomExternalForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomExternalForce this kernel will be used for
+     */
+    void initialize(const System& system, const CustomExternalForce& force);
+    /**
+     * Execute the kernel to calculate the forces.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void executeForces(ContextImpl& context);
+    /**
+     * Execute the kernel to calculate the energy.
+     *
+     * @param context    the context in which to execute this kernel
+     * @return the potential energy due to the CustomExternalForce
+     */
+    double executeEnergy(ContextImpl& context);
+private:
+    int numParticles;
+    bool hasInitializedKernel;
+    OpenCLContext& cl;
+    System& system;
+    OpenCLArray<mm_float4>* params;
+    OpenCLArray<cl_int>* indices;
+    OpenCLArray<cl_float>* globals;
+    std::vector<std::string> globalParamNames;
+    std::vector<cl_float> globalParamValues;
+    cl::Kernel kernel;
+};
+
+/**
  * This kernel is invoked by VerletIntegrator to take one time step.
  */
 class OpenCLIntegrateVerletStepKernel : public IntegrateVerletStepKernel {
