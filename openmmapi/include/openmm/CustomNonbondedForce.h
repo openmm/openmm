@@ -171,7 +171,7 @@ public:
      */
     void setCutoffDistance(double distance);
     /**
-     * Add a new per-particle parmeter that the interaction may depend on.
+     * Add a new per-particle parameter that the interaction may depend on.
      *
      * @param name             the name of the parameter
      * @param combiningRule    an algebraic expression giving the combining rule for this parameter
@@ -207,7 +207,7 @@ public:
      */
     void setParameterCombiningRule(int index, const std::string& combiningRule);
     /**
-     * Add a new global parmeter that the interaction may depend on.
+     * Add a new global parameter that the interaction may depend on.
      *
      * @param name             the name of the parameter
      * @param defaultValue     the default value of the parameter

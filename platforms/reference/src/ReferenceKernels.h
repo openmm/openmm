@@ -479,6 +479,42 @@ private:
 };
 
 /**
+ * This kernel is invoked by CustomExternalForce to calculate the forces acting on the system and the energy of the system.
+ */
+class ReferenceCalcCustomExternalForceKernel : public CalcCustomExternalForceKernel {
+public:
+    ReferenceCalcCustomExternalForceKernel(std::string name, const Platform& platform) : CalcCustomExternalForceKernel(name, platform) {
+    }
+    ~ReferenceCalcCustomExternalForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomExternalForce this kernel will be used for
+     */
+    void initialize(const System& system, const CustomExternalForce& force);
+    /**
+     * Execute the kernel to calculate the forces.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void executeForces(ContextImpl& context);
+    /**
+     * Execute the kernel to calculate the energy.
+     *
+     * @param context    the context in which to execute this kernel
+     * @return the potential energy due to the CustomExternalForce
+     */
+    double executeEnergy(ContextImpl& context);
+private:
+    int numParticles;
+    std::vector<int> particles;
+    RealOpenMM **particleParamArray;
+    Lepton::ExpressionProgram energyExpression, forceExpressionX, forceExpressionY, forceExpressionZ;
+    std::vector<std::string> parameterNames, globalParameterNames;
+};
+
+/**
  * This kernel is invoked by VerletIntegrator to take one time step.
  */
 class ReferenceIntegrateVerletStepKernel : public IntegrateVerletStepKernel {

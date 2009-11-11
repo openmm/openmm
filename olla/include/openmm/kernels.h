@@ -36,6 +36,7 @@
 #include "openmm/BrownianIntegrator.h"
 #include "openmm/CMMotionRemover.h"
 #include "openmm/CustomBondForce.h"
+#include "openmm/CustomExternalForce.h"
 #include "openmm/CustomNonbondedForce.h"
 #include "openmm/GBSAOBCForce.h"
 #include "openmm/GBVIForce.h"
@@ -215,7 +216,7 @@ public:
      * Initialize the kernel.
      *
      * @param system     the System this kernel will be applied to
-     * @param force      the HarmonicBondForce this kernel will be used for
+     * @param force      the CustomBondForce this kernel will be used for
      */
     virtual void initialize(const System& system, const CustomBondForce& force) = 0;
     /**
@@ -228,7 +229,7 @@ public:
      * Execute the kernel to calculate the energy.
      *
      * @param context    the context in which to execute this kernel
-     * @return the potential energy due to the HarmonicBondForce
+     * @return the potential energy due to the CustomBondForce
      */
     virtual double executeEnergy(ContextImpl& context) = 0;
 };
@@ -466,6 +467,38 @@ public:
      * 
      * @param context    the context in which to execute this kernel
      * @return the potential energy due to the GBVIForce
+     */
+    virtual double executeEnergy(ContextImpl& context) = 0;
+};
+
+/**
+ * This kernel is invoked by CustomExternalForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CalcCustomExternalForceKernel : public KernelImpl {
+public:
+    static std::string Name() {
+        return "CalcCustomExternalForce";
+    }
+    CalcCustomExternalForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomExternalForce this kernel will be used for
+     */
+    virtual void initialize(const System& system, const CustomExternalForce& force) = 0;
+    /**
+     * Execute the kernel to calculate the forces.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    virtual void executeForces(ContextImpl& context) = 0;
+    /**
+     * Execute the kernel to calculate the energy.
+     *
+     * @param context    the context in which to execute this kernel
+     * @return the potential energy due to the CustomExternalForce
      */
     virtual double executeEnergy(ContextImpl& context) = 0;
 };

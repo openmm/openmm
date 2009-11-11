@@ -38,6 +38,7 @@
 #include "SimTKReference/ReferenceBrownianDynamics.h"
 #include "SimTKReference/ReferenceCCMAAlgorithm.h"
 #include "SimTKReference/ReferenceCustomBondIxn.h"
+#include "SimTKReference/ReferenceCustomExternalIxn.h"
 #include "SimTKReference/ReferenceCustomNonbondedIxn.h"
 #include "SimTKReference/ReferenceHarmonicBondIxn.h"
 #include "SimTKReference/ReferenceLJCoulomb14.h"
@@ -910,6 +911,63 @@ double ReferenceCalcGBVIForceKernel::executeEnergy(ContextImpl& context) {
     RealOpenMM energy     = gbvi->computeBornEnergy(bornRadii ,posData, &charges[0]);
     delete[] bornRadii;
     return static_cast<double>(energy);
+}
+
+ReferenceCalcCustomExternalForceKernel::~ReferenceCalcCustomExternalForceKernel() {
+    disposeRealArray(particleParamArray, numParticles);
+}
+
+void ReferenceCalcCustomExternalForceKernel::initialize(const System& system, const CustomExternalForce& force) {
+    numParticles = force.getNumParticles();
+    int numParameters = force.getNumPerParticleParameters();
+
+    // Build the arrays.
+
+    particles.resize(numParticles);
+    particleParamArray = allocateRealArray(numParticles, numParameters);
+    vector<double> params;
+    for (int i = 0; i < numParticles; ++i) {
+        force.getParticleParameters(i, particles[i], params);
+        for (int j = 0; j < numParameters; j++)
+            particleParamArray[i][j] = (RealOpenMM) params[j];
+    }
+
+    // Parse the expression used to calculate the force.
+
+    Lepton::ParsedExpression expression = Lepton::Parser::parse(force.getEnergyFunction()).optimize();
+    energyExpression = expression.createProgram();
+    forceExpressionX = expression.differentiate("x").optimize().createProgram();
+    forceExpressionY = expression.differentiate("y").optimize().createProgram();
+    forceExpressionZ = expression.differentiate("z").optimize().createProgram();
+    for (int i = 0; i < numParameters; i++)
+        parameterNames.push_back(force.getPerParticleParameterName(i));
+    for (int i = 0; i < force.getNumGlobalParameters(); i++)
+        globalParameterNames.push_back(force.getGlobalParameterName(i));
+}
+
+void ReferenceCalcCustomExternalForceKernel::executeForces(ContextImpl& context) {
+    RealOpenMM** posData = extractPositions(context);
+    RealOpenMM** forceData = extractForces(context);
+    map<string, double> globalParameters;
+    for (int i = 0; i < (int) globalParameterNames.size(); i++)
+        globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
+    ReferenceCustomExternalIxn force(energyExpression, forceExpressionX, forceExpressionY, forceExpressionZ, parameterNames, globalParameters);
+    for (int i = 0; i < numParticles; ++i)
+        force.calculateForce(particles[i], posData, particleParamArray[i], forceData, 0);
+}
+
+double ReferenceCalcCustomExternalForceKernel::executeEnergy(ContextImpl& context) {
+    RealOpenMM** posData = extractPositions(context);
+    RealOpenMM** forceData = allocateRealArray(context.getSystem().getNumParticles(), 3);
+    RealOpenMM energy = 0;
+    map<string, double> globalParameters;
+    for (int i = 0; i < (int) globalParameterNames.size(); i++)
+        globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
+    ReferenceCustomExternalIxn force(energyExpression, forceExpressionX, forceExpressionY, forceExpressionZ, parameterNames, globalParameters);
+    for (int i = 0; i < numParticles; ++i)
+        force.calculateForce(particles[i], posData, particleParamArray[i], forceData, &energy);
+    disposeRealArray(forceData, context.getSystem().getNumParticles());
+    return energy;
 }
 
 ReferenceIntegrateVerletStepKernel::~ReferenceIntegrateVerletStepKernel() {

@@ -1,5 +1,5 @@
-#ifndef OPENMM_CUSTOMBONDEDFORCE_H_
-#define OPENMM_CUSTOMBONDEDFORCE_H_
+#ifndef OPENMM_CUSTOMEXTERNALFORCE_H_
+#define OPENMM_CUSTOMEXTERNALFORCE_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -40,27 +40,30 @@
 namespace OpenMM {
 
 /**
- * This class implements bonded interactions between pairs of particles.  Unlike HarmonicBondForce, the functional form
- * of the interaction is completely customizable, and may involve arbitrary algebraic expressions.
- * It may depend on the distance between particles, as well as on arbitrary global and
- * per-bond parameters.
+ * This class implements an "external" force on particles.  The force may be applied to any subset of the particles
+ * in the System.  The force on each particle is specified by an arbitrary algebraic expression, which may depend
+ * on the current position of the particle as well as on arbitrary global and per-particle parameters.
  *
- * To use this class, create a CustomBondForce object, passing an algebraic expression to the constructor
- * that defines the interaction energy between each pair of bonded particles.  The expression may depend on r, the distance
- * between the particles, as well as on any parameters you choose.  Then call addPerBondParameter() to define per-bond
- * parameters, and addGlobalParameter() to define global parameters.  The values of per-bond parameters are specified as
+ * To use this class, create a CustomExternalForce object, passing an algebraic expression to the constructor
+ * that defines the potential energy of each affected particle.  The expression may depend on the particle's x, y, and
+ * z coordinates, as well as on any parameters you choose.  Then call addPerParticleParameter() to define per-particle
+ * parameters, and addGlobalParameter() to define global parameters.  The values of per-particle parameters are specified as
  * part of the system definition, while values of global parameters may be modified during a simulation by calling Context::setParameter().
- * Finally, call addBond() once for each bond.  After a bond has been added, you can modify its parameters by calling setBondParameters().
+ * Finally, call addParticle() once for each particle that should be affected by the force.  After a particle has been added,
+ * you can modify its parameters by calling setParticleParameters().
  *
- * As an example, the following code creates a CustomBondForce that implements a harmonic potential:
+ * As an example, the following code creates a CustomExternalForce that attracts each particle to a target position (x0, y0, z0)
+ * via a harmonic potential:
  *
- * <tt>CustomBondForce* force = new CustomBondForce("0.5*k*(r-r0)^2");</tt>
+ * <tt>CustomExternalForce* force = new CustomExternalForce("k*((x-x0)^2+(y-y0)^2+(z-z0)^2");</tt>
  *
- * This force depends on two parameters: the spring constant k and equilibrium distance r0.  The following code defines these parameters:
+ * This force depends on four parameters: the spring constant k and equilibrium coordinates x0, y0, and z0.  The following code defines these parameters:
  *
  * <tt><pre>
- * force->addPerBondParameter("k");
- * force->addPerBondParameter("r0");
+ * force->addGlobalParameter("k");
+ * force->addPerParticleParameter("x0");
+ * force->addPerParticleParameter("y0");
+ * force->addPerParticleParameter("z0");
  * </pre></tt>
  *
  * Expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
@@ -68,64 +71,64 @@ namespace OpenMM {
  * are defined in radians, and log is the natural logarithm.
  */
 
-class OPENMM_EXPORT CustomBondForce : public Force {
+class OPENMM_EXPORT CustomExternalForce : public Force {
 public:
     /**
-     * Create a CustomBondForce.
+     * Create a CustomExternalForce.
      *
-     * @param energy    an algebraic expression giving the interaction energy between two bonded particles as a function
-     *                  of r, the distance between them
+     * @param energy    an algebraic expression giving the potential energy of each particle as a function
+     *                  of its x, y, and z coordinates
      */
-    CustomBondForce(const std::string& energy);
+    CustomExternalForce(const std::string& energy);
     /**
-     * Get the number of bonds for which force field parameters have been defined.
+     * Get the number of particles for which force field parameters have been defined.
      */
-    int getNumBonds() const {
-        return bonds.size();
+    int getNumParticles() const {
+        return particles.size();
     }
     /**
-     * Get the number of per-bond parameters that the interaction depends on.
+     * Get the number of per-particle parameters that the force depends on
      */
-    int getNumPerBondParameters() const {
+    int getNumPerParticleParameters() const {
         return parameters.size();
     }
     /**
-     * Get the number of global parameters that the interaction depends on.
+     * Get the number of global parameters that the force depends on.
      */
     int getNumGlobalParameters() const {
         return globalParameters.size();
     }
     /**
-     * Get the algebraic expression that gives the interaction energy for each bond
+     * Get the algebraic expression that gives the potential energy of each particle
      */
     const std::string& getEnergyFunction() const;
     /**
-     * Set the algebraic expression that gives the interaction energy for each bond
+     * Set the algebraic expression that gives the potential energy of each particle
      */
     void setEnergyFunction(const std::string& energy);
     /**
-     * Add a new per-bond parameter that the interaction may depend on.
+     * Add a new per-particle parameter that the force may depend on.
      *
      * @param name             the name of the parameter
      * @return the index of the parameter that was added
      */
-    int addPerBondParameter(const std::string& name);
+    int addPerParticleParameter(const std::string& name);
     /**
-     * Get the name of a per-bond parameter.
+     * Get the name of a per-particle parameter.
      *
      * @param index     the index of the parameter for which to get the name
      * @return the parameter name
      */
-    const std::string& getPerBondParameterName(int index) const;
+    const std::string& getPerParticleParameterName(int index) const;
     /**
-     * Set the name of a per-bond parameter.
+     * Set the name of a per-particle parameter.
      *
      * @param index          the index of the parameter for which to set the name
      * @param name           the name of the parameter
      */
-    void setPerBondParameterName(int index, const std::string& name);
+    void setPerParticleParameterName(int index, const std::string& name);
     /**
-     * Add a new global parameter that the interaction may depend on.
+     * Add a new global parameter that the force may depend on.
      *
      * @param name             the name of the parameter
      * @param defaultValue     the default value of the parameter
@@ -161,65 +164,61 @@ public:
      */
     void setGlobalParameterDefaultValue(int index, double defaultValue);
     /**
-     * Add a bond term to the force field.
+     * Add a particle term to the force field.
      *
-     * @param particle1     the index of the first particle connected by the bond
-     * @param particle2     the index of the second particle connected by the bond
-     * @param parameters    the list of parameters for the new bond
-     * @return the index of the bond that was added
+     * @param particle     the index of the particle this term is applied to
+     * @param parameters   the list of parameters for the new force term
+     * @return the index of the particle term that was added
      */
-    int addBond(int particle1, int particle2, const std::vector<double>& parameters);
+    int addParticle(int particle, const std::vector<double>& parameters);
     /**
-     * Get the force field parameters for a bond term.
+     * Get the force field parameters for a force field term.
      *
-     * @param index         the index of the bond for which to get parameters
-     * @param particle1     the index of the first particle connected by the bond
-     * @param particle2     the index of the second particle connected by the bond
-     * @param parameters    the list of parameters for the bond
+     * @param index         the index of the particle term for which to get parameters
+     * @param particle      the index of the particle this term is applied to
+     * @param parameters    the list of parameters for the force field term
      */
-    void getBondParameters(int index, int& particle1, int& particle2, std::vector<double>& parameters) const;
+    void getParticleParameters(int index, int& particle, std::vector<double>& parameters) const;
     /**
-     * Set the force field parameters for a bond term.
+     * Set the force field parameters for a force field term.
      *
-     * @param index         the index of the bond for which to set parameters
-     * @param particle1     the index of the first particle connected by the bond
-     * @param particle2     the index of the second particle connected by the bond
-     * @param parameters    the list of parameters for the bond
+     * @param index         the index of the particle term for which to set parameters
+     * @param particle      the index of the particle this term is applied to
+     * @param parameters    the list of parameters for the force field term
      */
-    void setBondParameters(int index, int particle1, int particle2, const std::vector<double>& parameters);
+    void setParticleParameters(int index, int particle, const std::vector<double>& parameters);
 protected:
     ForceImpl* createImpl();
 private:
-    class BondInfo;
-    class BondParameterInfo;
+    class ParticleInfo;
+    class ParticleParameterInfo;
     class GlobalParameterInfo;
     std::string energyExpression;
-    std::vector<BondParameterInfo> parameters;
+    std::vector<ParticleParameterInfo> parameters;
     std::vector<GlobalParameterInfo> globalParameters;
-    std::vector<BondInfo> bonds;
+    std::vector<ParticleInfo> particles;
 };
 
-class CustomBondForce::BondInfo {
+class CustomExternalForce::ParticleInfo {
 public:
-    int particle1, particle2;
+    int particle;
     std::vector<double> parameters;
-    BondInfo() : particle1(-1), particle2(-1) {
+    ParticleInfo() : particle(-1) {
     }
-    BondInfo(int particle1, int particle2, const std::vector<double>& parameters) :
-            particle1(particle1), particle2(particle2), parameters(parameters) {
+    ParticleInfo(int particle, const std::vector<double>& parameters) : particle(particle), parameters(parameters) {
     }
 };
 
-class CustomBondForce::BondParameterInfo {
+class CustomExternalForce::ParticleParameterInfo {
 public:
     std::string name;
-    BondParameterInfo() {
+    ParticleParameterInfo() {
     }
-    BondParameterInfo(const std::string& name) : name(name) {
+    ParticleParameterInfo(const std::string& name) : name(name) {
     }
 };
 
-class CustomBondForce::GlobalParameterInfo {
+class CustomExternalForce::GlobalParameterInfo {
 public:
     std::string name;
     double defaultValue;
@@ -231,4 +230,4 @@ public:
 
 } // namespace OpenMM
 
-#endif /*OPENMM_CUSTOMBONDEDFORCE_H_*/
+#endif /*OPENMM_CUSTOMEXTERNALFORCE_H_*/
