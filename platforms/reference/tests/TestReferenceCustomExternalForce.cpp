@@ -74,6 +74,7 @@ void testForce() {
     positions[2] = Vec3(1, 0, 1);
     context.setPositions(positions);
     State state = context.getState(State::Forces | State::Energy);
+    const vector<Vec3>& forces = state.getForces();
     ASSERT_EQUAL_VEC(Vec3(0.5, 0.5*2.0*2.0*1.5, 0), forces[0], TOL);
     ASSERT_EQUAL_VEC(Vec3(0, 0, 0), forces[1], TOL);
     ASSERT_EQUAL_VEC(Vec3(0.5, -0.5*3.0*2.0*1.5, 0), forces[2], TOL);
