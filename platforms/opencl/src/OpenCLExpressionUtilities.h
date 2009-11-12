@@ -43,13 +43,25 @@ namespace OpenMM {
 
 class OpenCLExpressionUtilities {
 public:
+    /**
+     * Generate the source code for calculating a set of expressions.
+     *
+     * @param expressions    the expressions to generate code for (keys are the variables to store the output values in)
+     * @param variables      defines the source code to generate for each variable that may appear in the expressions
+     * @param functions      defines the variable name for each tabulated function that may appear in the expressions
+     * @param prefix         a prefix to put in front of temporary variables
+     * @param functionParams the variable name containing the parameters for each tabulated function
+     */
     static std::string createExpressions(const std::map<std::string, Lepton::ParsedExpression>& expressions, const std::map<std::string, std::string>& variables,
             const std::vector<std::pair<std::string, std::string> >& functions, const std::string& prefix, const std::string& functionParams);
 private:
     static void processExpression(std::stringstream& out, const Lepton::ExpressionTreeNode& node,
             std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& temps, const std::map<std::string, std::string>& variables,
-            const std::vector<std::pair<std::string, std::string> >& functions, const std::string& prefix, const std::string& functionParams);
+            const std::vector<std::pair<std::string, std::string> >& functions, const std::string& prefix, const std::string& functionParams,
+            const std::vector<Lepton::ParsedExpression>& allExpressions);
     static std::string getTempName(const Lepton::ExpressionTreeNode& node, const std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& temps);
+    static void findRelatedTabulatedFunctions(const Lepton::ExpressionTreeNode& node, const Lepton::ExpressionTreeNode& searchNode,
+            const Lepton::ExpressionTreeNode*& valueNode, const Lepton::ExpressionTreeNode*& derivNode);
 };
 
 } // namespace OpenMM
