@@ -455,6 +455,9 @@ private:
 class CudaIntegrateLangevinStepKernel : public IntegrateLangevinStepKernel {
 public:
     CudaIntegrateLangevinStepKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data) : IntegrateLangevinStepKernel(name, platform), data(data) {
+       prevTemp     = -1.0;
+       prevFriction = -1.0;
+       prevStepSize = -1.0;
     }
     ~CudaIntegrateLangevinStepKernel();
     /**
