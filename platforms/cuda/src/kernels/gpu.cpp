@@ -52,6 +52,8 @@ using namespace std;
 #include "openmm/OpenMMException.h"
 #include "quern.h"
 #include "Lepton.h"
+#include <stdint.h>
+#include "rng.h"
 
 // In case we're using some primitive version of Visual Studio this will
 // make sure that erf() and erfc() are defined.
@@ -1580,6 +1582,7 @@ void gpuInitializeRandoms(gpuContext gpu)
         (*gpu->psRandomPosition)[i] = 0;
     }
     int seed = gpu->seed | ((gpu->seed ^ 0xffffffff) << 16);
+#if 0
     srand(seed);
     for (int i = 0; i < (int) (gpu->sim.blocks * gpu->sim.random_threads_per_block); i++)
     {
@@ -1588,6 +1591,16 @@ void gpuInitializeRandoms(gpuContext gpu)
         (*gpu->psRandomSeed)[i].z = rand();
         (*gpu->psRandomSeed)[i].w = rand();
     }
+#else
+    RNG rng(seed);
+    for (int i = 0; i < (int) (gpu->sim.blocks * gpu->sim.random_threads_per_block); i++)
+    {
+        (*gpu->psRandomSeed)[i].x = rng.rand_int();
+        (*gpu->psRandomSeed)[i].y = rng.rand_int();
+        (*gpu->psRandomSeed)[i].z = rng.rand_int();
+        (*gpu->psRandomSeed)[i].w = rng.rand_int();
+    }
+#endif
     gpu->psRandomPosition->Upload();
     gpu->psRandomSeed->Upload();
     gpuSetConstants(gpu);
