@@ -185,6 +185,44 @@ private:
 };
 
 /**
+ * This kernel is invoked by CustomBondForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CudaCalcCustomBondForceKernel : public CalcCustomBondForceKernel {
+public:
+    CudaCalcCustomBondForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data, System& system) : CalcCustomBondForceKernel(name, platform),
+            data(data), system(system) {
+    }
+    ~CudaCalcCustomBondForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomBondForce this kernel will be used for
+     */
+    void initialize(const System& system, const CustomBondForce& force);
+    /**
+     * Execute the kernel to calculate the forces.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void executeForces(ContextImpl& context);
+    /**
+     * Execute the kernel to calculate the energy.
+     *
+     * @param context    the context in which to execute this kernel
+     * @return the potential energy due to the CustomBondForce
+     */
+    double executeEnergy(ContextImpl& context);
+private:
+    void updateGlobalParams(ContextImpl& context);
+    int numBonds;
+    CudaPlatform::PlatformData& data;
+    std::vector<std::string> globalParamNames;
+    std::vector<float> globalParamValues;
+    System& system;
+};
+
+/**
  * This kernel is invoked by HarmonicAngleForce to calculate the forces acting on the system and the energy of the system.
  */
 class CudaCalcHarmonicAngleForceKernel : public CalcHarmonicAngleForceKernel {
@@ -428,7 +466,6 @@ private:
 class CudaIntegrateVerletStepKernel : public IntegrateVerletStepKernel {
 public:
     CudaIntegrateVerletStepKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data) : IntegrateVerletStepKernel(name, platform), data(data) {
-       prevStepSize = -1.0;
     }
     ~CudaIntegrateVerletStepKernel();
     /**
@@ -456,9 +493,6 @@ private:
 class CudaIntegrateLangevinStepKernel : public IntegrateLangevinStepKernel {
 public:
     CudaIntegrateLangevinStepKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data) : IntegrateLangevinStepKernel(name, platform), data(data) {
-       prevTemp     = -1.0;
-       prevFriction = -1.0;
-       prevStepSize = -1.0;
     }
     ~CudaIntegrateLangevinStepKernel();
     /**
@@ -486,9 +520,6 @@ private:
 class CudaIntegrateBrownianStepKernel : public IntegrateBrownianStepKernel {
 public:
     CudaIntegrateBrownianStepKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data) : IntegrateBrownianStepKernel(name, platform), data(data) {
-       prevTemp     = -1.0;
-       prevFriction = -1.0;
-       prevStepSize = -1.0;
     }
     ~CudaIntegrateBrownianStepKernel();
     /**
@@ -516,7 +547,6 @@ private:
 class CudaIntegrateVariableVerletStepKernel : public IntegrateVariableVerletStepKernel {
 public:
     CudaIntegrateVariableVerletStepKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data) : IntegrateVariableVerletStepKernel(name, platform), data(data) {
-       prevErrorTol = -1.0;
     }
     ~CudaIntegrateVariableVerletStepKernel();
     /**
@@ -545,9 +575,6 @@ private:
 class CudaIntegrateVariableLangevinStepKernel : public IntegrateVariableLangevinStepKernel {
 public:
     CudaIntegrateVariableLangevinStepKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data) : IntegrateVariableLangevinStepKernel(name, platform), data(data) {
-       prevTemp     = -1.0;
-       prevFriction = -1.0;
-       prevErrorTol = -1.0;
     }
     ~CudaIntegrateVariableLangevinStepKernel();
     /**
@@ -576,9 +603,6 @@ private:
 class CudaApplyAndersenThermostatKernel : public ApplyAndersenThermostatKernel {
 public:
     CudaApplyAndersenThermostatKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data) : ApplyAndersenThermostatKernel(name, platform), data(data) {
-       prevTemp      = -1.0;
-       prevFrequency = -1.0;
-       prevStepSize  = -1.0;
     }
     ~CudaApplyAndersenThermostatKernel();
     /**

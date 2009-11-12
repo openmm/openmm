@@ -645,6 +645,53 @@ void gpuSetTabulatedFunction(gpuContext gpu, int index, const string& name, cons
 }
 
 extern "C"
+void gpuSetCustomBondParameters(gpuContext gpu, const vector<int>& bondAtom1, const vector<int>& bondAtom2, const vector<vector<double> >& bondParams,
+            const string& energyExp, const vector<string>& paramNames, const vector<string>& globalParamNames)
+{
+    if (paramNames.size() > 4)
+        throw OpenMMException("CudaPlatform only supports four per-bond parameters for custom bond forces");
+    if (globalParamNames.size() > 8)
+        throw OpenMMException("CudaPlatform only supports eight global parameters for custom bond forces");
+    if (gpu->psCustomBondID != NULL)
+        throw OpenMMException("CudaPlatform only supports a single CustomBondForce per System");
+    gpu->sim.customBonds = bondAtom1.size();
+    gpu->sim.customBondParameters = paramNames.size();
+    gpu->psCustomBondID = new CUDAStream<int4>(gpu->sim.customBonds, 1, "CustomBondId");
+    gpu->sim.pCustomBondID = gpu->psCustomBondID->_pDevData;
+    gpu->psCustomBondParams = new CUDAStream<float4>(gpu->sim.customBonds, 1, "CustomBondParams");
+    gpu->sim.pCustomBondParams = gpu->psCustomBondParams->_pDevData;
+    vector<int> forceBufferCounter(gpu->natoms, 0);
+    for (int i = 0; i < (int) bondAtom1.size(); i++) {
+        (*gpu->psCustomBondID)[i].x = bondAtom1[i];
+        (*gpu->psCustomBondID)[i].y = bondAtom2[i];
+        (*gpu->psCustomBondID)[i].z = forceBufferCounter[bondAtom1[i]]++;
+        (*gpu->psCustomBondID)[i].w = forceBufferCounter[bondAtom2[i]]++;
+        if (bondParams[i].size() > 0)
+            (*gpu->psCustomBondParams)[i].x = bondParams[i][0];
+        if (bondParams[i].size() > 1)
+            (*gpu->psCustomBondParams)[i].y = bondParams[i][1];
+        if (bondParams[i].size() > 2)
+            (*gpu->psCustomBondParams)[i].z = bondParams[i][2];
+        if (bondParams[i].size() > 3)
+            (*gpu->psCustomBondParams)[i].w = bondParams[i][3];
+    }
+    gpu->psCustomBondID->Upload();
+    gpu->psCustomBondParams->Upload();
+    for (int i = 0; i < (int) forceBufferCounter.size(); i++)
+        if (forceBufferCounter[i] > gpu->pOutputBufferCounter[i])
+            gpu->pOutputBufferCounter[i] = forceBufferCounter[i];
+
+    // Create the Expressions.
+
+    vector<string> variables;
+    variables.push_back("r");
+    for (int i = 0; i < (int) paramNames.size(); i++)
+        variables.push_back(paramNames[i]);
+    SetCustomBondEnergyExpression(createExpression<128>(gpu, energyExp, Lepton::Parser::parse(energyExp).optimize().createProgram(), variables, globalParamNames, gpu->sim.customExpressionStackSize));
+    SetCustomBondForceExpression(createExpression<128>(gpu, energyExp, Lepton::Parser::parse(energyExp).differentiate("r").optimize().createProgram(), variables, globalParamNames, gpu->sim.customExpressionStackSize));
+}
+
+extern "C"
 void gpuSetCustomNonbondedParameters(gpuContext gpu, const vector<vector<double> >& parameters, const vector<vector<int> >& exclusions,
             const vector<int>& exceptionAtom1, const vector<int>& exceptionAtom2, const vector<vector<double> >& exceptionParams,
             CudaNonbondedMethod method, float cutoffDistance, const string& energyExp, const vector<string>& combiningRules,
@@ -740,7 +787,6 @@ void gpuSetCustomNonbondedParameters(gpuContext gpu, const vector<vector<double>
     variables.push_back("r");
     for (int i = 0; i < (int) paramNames.size(); i++)
         variables.push_back(paramNames[i]);
-    gpu->sim.customExpressionStackSize = 0;
     SetCustomNonbondedEnergyExpression(createExpression<128>(gpu, energyExp, Lepton::Parser::parse(energyExp, functions).optimize().createProgram(), variables, globalParamNames, gpu->sim.customExpressionStackSize));
     SetCustomNonbondedForceExpression(createExpression<128>(gpu, energyExp, Lepton::Parser::parse(energyExp, functions).differentiate("r").optimize().createProgram(), variables, globalParamNames, gpu->sim.customExpressionStackSize));
     Expression<64> paramExpressions[4];
@@ -1765,6 +1811,8 @@ void* gpuInit(int numAtoms, unsigned int device, bool useBlockingSync)
     gpu->psCustomParams             = NULL;
     gpu->psCustomExceptionID        = NULL;
     gpu->psCustomExceptionParams    = NULL;
+    gpu->psCustomBondID             = NULL;
+    gpu->psCustomBondParams         = NULL;
     gpu->psEwaldCosSinSum           = NULL;
     gpu->psTabulatedErfc            = NULL;
     gpu->psPmeGrid                  = NULL;
@@ -1801,6 +1849,7 @@ void* gpuInit(int numAtoms, unsigned int device, bool useBlockingSync)
     gpu->psTabulatedFunctionParams  = NULL;
     for (int i = 0; i < MAX_TABULATED_FUNCTIONS; i++)
         gpu->tabulatedFunctions[i].coefficients = NULL;
+    gpu->sim.customExpressionStackSize = 0;
 
     // Initialize output buffer before reading parameters
     gpu->pOutputBufferCounter       = new unsigned int[gpu->sim.paddedNumberOfAtoms];
@@ -1931,6 +1980,10 @@ void gpuShutDown(gpuContext gpu)
         delete gpu->psCustomExceptionID;
         delete gpu->psCustomExceptionParams;
     }
+    if (gpu->psCustomBondParams != NULL) {
+        delete gpu->psCustomBondID;
+        delete gpu->psCustomBondParams;
+    }
     if (gpu->psEwaldCosSinSum != NULL)
         delete gpu->psEwaldCosSinSum;
     if (gpu->psPmeGrid != NULL) {
@@ -2052,7 +2105,7 @@ int gpuBuildOutputBuffers(gpuContext gpu)
     gpu->sim.dihedral_offset    = gpu->sim.bond_angle_offset     + gpu->psDihedralParameter->_stride;
     gpu->sim.rb_dihedral_offset = gpu->sim.dihedral_offset       + gpu->psRbDihedralParameter1->_stride;
     gpu->sim.LJ14_offset        = gpu->sim.rb_dihedral_offset    + gpu->psLJ14Parameter->_stride;
-    gpu->sim.localForces_threads_per_block  = (gpu->sim.LJ14_offset / gpu->sim.blocks + 15) & 0xfffffff0;
+    gpu->sim.localForces_threads_per_block  = (std::max(gpu->sim.LJ14_offset, gpu->sim.customBonds) / gpu->sim.blocks + 15) & 0xfffffff0;
     if (gpu->sim.localForces_threads_per_block > gpu->sim.max_localForces_threads_per_block)
         gpu->sim.localForces_threads_per_block = gpu->sim.max_localForces_threads_per_block;
     if (gpu->sim.localForces_threads_per_block < 1)
@@ -2296,6 +2349,7 @@ int gpuSetConstants(gpuContext gpu)
     SetCalculateCDLJForcesSim(gpu);
     SetCalculateCDLJObcGbsaForces1Sim(gpu);
     SetCalculateCustomNonbondedForcesSim(gpu);
+    SetCalculateCustomBondForcesSim(gpu);
     SetCalculateLocalForcesSim(gpu);
     SetCalculateObcGbsaBornSumSim(gpu);
     SetCalculateGBVIBornSumSim(gpu);

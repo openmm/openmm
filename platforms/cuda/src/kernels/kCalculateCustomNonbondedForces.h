@@ -85,12 +85,12 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
                 VARIABLE(1) = params.y;
                 VARIABLE(2) = params.z;
                 VARIABLE(3) = params.w;
+                VARIABLE(4) = psA[j].params.x;
+                VARIABLE(5) = psA[j].params.y;
+                VARIABLE(6) = psA[j].params.z;
+                VARIABLE(7) = psA[j].params.w;
                 for (int k = 0; k < cSim.customParameters; k++)
                 {
-                    VARIABLE(4) = psA[j].params.x;
-                    VARIABLE(5) = psA[j].params.y;
-                    VARIABLE(6) = psA[j].params.z;
-                    VARIABLE(7) = psA[j].params.w;
                     float value = kEvaluateExpression_kernel(&combiningRules[k], stack, variables);
                     switch (k)
                     {
@@ -202,12 +202,12 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
                         VARIABLE(1) = params.y;
                         VARIABLE(2) = params.z;
                         VARIABLE(3) = params.w;
+                        VARIABLE(4) = psA[tj].params.x;
+                        VARIABLE(5) = psA[tj].params.y;
+                        VARIABLE(6) = psA[tj].params.z;
+                        VARIABLE(7) = psA[tj].params.w;
                         for (int k = 0; k < cSim.customParameters; k++)
                         {
-                            VARIABLE(4) = psA[j].params.x;
-                            VARIABLE(5) = psA[j].params.y;
-                            VARIABLE(6) = psA[j].params.z;
-                            VARIABLE(7) = psA[j].params.w;
                             float value = kEvaluateExpression_kernel(&combiningRules[k], stack, variables);
                             switch (k)
                             {
@@ -281,12 +281,12 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
                             VARIABLE(1) = params.y;
                             VARIABLE(2) = params.z;
                             VARIABLE(3) = params.w;
+                            VARIABLE(4) = psA[j].params.x;
+                            VARIABLE(5) = psA[j].params.y;
+                            VARIABLE(6) = psA[j].params.z;
+                            VARIABLE(7) = psA[j].params.w;
                             for (int k = 0; k < cSim.customParameters; k++)
                             {
-                                VARIABLE(4) = psA[j].params.x;
-                                VARIABLE(5) = psA[j].params.y;
-                                VARIABLE(6) = psA[j].params.z;
-                                VARIABLE(7) = psA[j].params.w;
                                 float value = kEvaluateExpression_kernel(&combiningRules[k], stack, variables);
                                 switch (k)
                                 {
@@ -396,12 +396,12 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
                     VARIABLE(1) = params.y;
                     VARIABLE(2) = params.z;
                     VARIABLE(3) = params.w;
+                    VARIABLE(4) = psA[tj].params.x;
+                    VARIABLE(5) = psA[tj].params.y;
+                    VARIABLE(6) = psA[tj].params.z;
+                    VARIABLE(7) = psA[tj].params.w;
                     for (int k = 0; k < cSim.customParameters; k++)
                     {
-                        VARIABLE(4) = psA[j].params.x;
-                        VARIABLE(5) = psA[j].params.y;
-                        VARIABLE(6) = psA[j].params.z;
-                        VARIABLE(7) = psA[j].params.w;
                         float value = kEvaluateExpression_kernel(&combiningRules[k], stack, variables);
                         switch (k)
                         {

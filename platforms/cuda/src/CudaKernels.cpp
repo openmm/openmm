@@ -202,6 +202,53 @@ double CudaCalcHarmonicBondForceKernel::executeEnergy(ContextImpl& context) {
     return 0.0;
 }
 
+CudaCalcCustomBondForceKernel::~CudaCalcCustomBondForceKernel() {
+}
+
+void CudaCalcCustomBondForceKernel::initialize(const System& system, const CustomBondForce& force) {
+    numBonds = force.getNumBonds();
+    vector<int> particle1(numBonds);
+    vector<int> particle2(numBonds);
+    vector<vector<double> > params(numBonds);
+    for (int i = 0; i < numBonds; i++)
+        force.getBondParameters(i, particle1[i], particle2[i], params[i]);
+    vector<string> paramNames;
+    for (int i = 0; i < force.getNumPerBondParameters(); i++)
+        paramNames.push_back(force.getPerBondParameterName(i));
+    globalParamNames.resize(force.getNumGlobalParameters());
+    globalParamValues.resize(force.getNumGlobalParameters());
+    for (int i = 0; i < force.getNumGlobalParameters(); i++) {
+        globalParamNames[i] = force.getGlobalParameterName(i);
+        globalParamValues[i] = (float) force.getGlobalParameterDefaultValue(i);
+    }
+    gpuSetCustomBondParameters(data.gpu, particle1, particle2, params, force.getEnergyFunction(), paramNames, globalParamNames);
+    if (globalParamValues.size() > 0)
+        SetCustomBondGlobalParams(&globalParamValues[0]);
+}
+
+void CudaCalcCustomBondForceKernel::executeForces(ContextImpl& context) {
+    updateGlobalParams(context);
+    kCalculateCustomBondForces(data.gpu);
+}
+
+double CudaCalcCustomBondForceKernel::executeEnergy(ContextImpl& context) {
+    updateGlobalParams(context);
+    kCalculateCustomBondForces(data.gpu);
+    return 0.0;
+}
+
+void CudaCalcCustomBondForceKernel::updateGlobalParams(ContextImpl& context) {
+    bool changed = false;
+    for (int i = 0; i < (int) globalParamNames.size(); i++) {
+        float value = (float) context.getParameter(globalParamNames[i]);
+        if (value != globalParamValues[i])
+            changed = true;
+        globalParamValues[i] = value;
+    }
+    if (changed)
+        SetCustomBondGlobalParams(&globalParamValues[0]);
+}
+
 CudaCalcHarmonicAngleForceKernel::~CudaCalcHarmonicAngleForceKernel() {
 }
 
@@ -672,6 +719,8 @@ void CudaIntegrateLangevinStepKernel::initialize(const System& system, const Lan
     _gpuContext* gpu = data.gpu;
     gpu->seed = (unsigned long) integrator.getRandomNumberSeed();
     gpuInitializeRandoms(gpu);
+    prevTemp = -1.0;
+    prevFriction = -1.0;
     prevStepSize = -1.0;
 }
 
@@ -714,6 +763,8 @@ void CudaIntegrateBrownianStepKernel::initialize(const System& system, const Bro
     _gpuContext* gpu = data.gpu;
     gpu->seed = (unsigned long) integrator.getRandomNumberSeed();
     gpuInitializeRandoms(gpu);
+    prevTemp = -1.0;
+    prevFriction = -1.0;
     prevStepSize = -1.0;
 }
 
@@ -788,6 +839,8 @@ void CudaIntegrateVariableLangevinStepKernel::initialize(const System& system, c
     _gpuContext* gpu = data.gpu;
     gpu->seed = (unsigned long) integrator.getRandomNumberSeed();
     gpuInitializeRandoms(gpu);
+    prevTemp = -1.0;
+    prevFriction = -1.0;
     prevErrorTol = -1.0;
 }
 
@@ -834,6 +887,8 @@ void CudaApplyAndersenThermostatKernel::initialize(const System& system, const A
     _gpuContext* gpu = data.gpu;
     gpu->seed = (unsigned long) thermostat.getRandomNumberSeed();
     gpuInitializeRandoms(gpu);
+    prevTemp = -1.0;
+    prevFrequency = -1.0;
     prevStepSize = -1.0;
 }
 
