@@ -428,6 +428,7 @@ private:
 class CudaIntegrateVerletStepKernel : public IntegrateVerletStepKernel {
 public:
     CudaIntegrateVerletStepKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data) : IntegrateVerletStepKernel(name, platform), data(data) {
+       prevStepSize = -1.0;
     }
     ~CudaIntegrateVerletStepKernel();
     /**
@@ -485,6 +486,9 @@ private:
 class CudaIntegrateBrownianStepKernel : public IntegrateBrownianStepKernel {
 public:
     CudaIntegrateBrownianStepKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data) : IntegrateBrownianStepKernel(name, platform), data(data) {
+       prevTemp     = -1.0;
+       prevFriction = -1.0;
+       prevStepSize = -1.0;
     }
     ~CudaIntegrateBrownianStepKernel();
     /**
@@ -512,6 +516,7 @@ private:
 class CudaIntegrateVariableVerletStepKernel : public IntegrateVariableVerletStepKernel {
 public:
     CudaIntegrateVariableVerletStepKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data) : IntegrateVariableVerletStepKernel(name, platform), data(data) {
+       prevErrorTol = -1.0;
     }
     ~CudaIntegrateVariableVerletStepKernel();
     /**
@@ -540,6 +545,9 @@ private:
 class CudaIntegrateVariableLangevinStepKernel : public IntegrateVariableLangevinStepKernel {
 public:
     CudaIntegrateVariableLangevinStepKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data) : IntegrateVariableLangevinStepKernel(name, platform), data(data) {
+       prevTemp     = -1.0;
+       prevFriction = -1.0;
+       prevErrorTol = -1.0;
     }
     ~CudaIntegrateVariableLangevinStepKernel();
     /**
@@ -568,6 +576,9 @@ private:
 class CudaApplyAndersenThermostatKernel : public ApplyAndersenThermostatKernel {
 public:
     CudaApplyAndersenThermostatKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data) : ApplyAndersenThermostatKernel(name, platform), data(data) {
+       prevTemp      = -1.0;
+       prevFrequency = -1.0;
+       prevStepSize  = -1.0;
     }
     ~CudaApplyAndersenThermostatKernel();
     /**
