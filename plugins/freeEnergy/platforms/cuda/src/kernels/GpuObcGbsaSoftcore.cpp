@@ -40,7 +40,7 @@ GpuObcGbsaSoftcore::~GpuObcGbsaSoftcore( ){
 // initialize NonPolarScalingFactors array
 
 int GpuObcGbsaSoftcore::initializeNonPolarScalingFactors( unsigned int numberOfParticles ){
-    _psNonPolarScalingFactors = new CUDAStream<float>( numberOfParticles, 1, "ObcSoftcoreNonPolarScalingFactors");
+    _psNonPolarScalingFactors = new CUDAStream<float>( numberOfParticles, 1, "ObcSoftcoreNonPolarScaling");
     for( unsigned int ii = 0; ii < numberOfParticles; ii++ ){
         (*_psNonPolarScalingFactors)[ii] = 1.0f;
     }

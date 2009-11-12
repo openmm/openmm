@@ -244,9 +244,9 @@ void kReduceObcGbsaBornSum(gpuContext gpu)
  */
 
 extern "C"
-void gpuSetObcSoftcoreParameters(gpuContext gpu, float innerDielectric, float solventDielectric, float nonPolarPrefactor,
-                                 const std::vector<float>& radius, const std::vector<float>& scale,
-                                 const std::vector<float>& charge, const std::vector<float>& nonPolarScalingFactors)
+GpuObcGbsaSoftcore* gpuSetObcSoftcoreParameters(gpuContext gpu, float innerDielectric, float solventDielectric, float nonPolarPrefactor,
+                                                const std::vector<float>& radius, const std::vector<float>& scale,
+                                                const std::vector<float>& charge, const std::vector<float>& nonPolarScalingFactors)
 {
 
 // ---------------------------------------------------------------------------------------
@@ -264,6 +264,7 @@ void gpuSetObcSoftcoreParameters(gpuContext gpu, float innerDielectric, float so
 //    gpu->bIncludeGBSA = true;
     GpuObcGbsaSoftcore* gpuObcGbsaSoftcore = new GpuObcGbsaSoftcore();
     gpuObcGbsaSoftcore->initializeNonPolarScalingFactors( gpu->sim.paddedNumberOfAtoms );
+
     gpu->sim.surfaceAreaFactor             =  -6.0f*PI*4.0f*nonPolarPrefactor*1000.0f*0.4184f;
     for (unsigned int i = 0; i < atoms; i++)
     {
@@ -301,6 +302,8 @@ void gpuSetObcSoftcoreParameters(gpuContext gpu, float innerDielectric, float so
     gpu->psPosq4->Upload();
 
     gpu->sim.preFactor = 2.0f*electricConstant*((1.0f/innerDielectric)-(1.0f/solventDielectric))*gpu->sim.forceConversionFactor;
+
+    return gpuObcGbsaSoftcore;
 }
 
 void kCalculateObcGbsaSoftcoreBornSum(gpuContext gpu)

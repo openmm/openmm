@@ -527,6 +527,7 @@ void CudaFreeEnergyCalcGBSAOBCSoftcoreForceKernel::executeForces(ContextImpl& co
 // ---------------------------------------------------------------------------------------
 
     _gpuContext* gpu = data.gpu;
+
     int debug        = 1;
     static int call  = 0;
 
