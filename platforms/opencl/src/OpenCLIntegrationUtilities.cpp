@@ -305,12 +305,16 @@ void OpenCLIntegrationUtilities::initRandomNumberGenerator(unsigned int randomNu
     randomSeed = new OpenCLArray<mm_int4>(context, context.getNumThreadBlocks()*OpenCLContext::ThreadBlockSize, "randomSeed");
     randomPos = random->getSize();
 
-    // Initialize the random number seeds.
+    // Use a quick and dirty RNG to pick seeds for the real random number generator.
 
-    srand(randomNumberSeed);
     vector<mm_int4> seed(randomSeed->getSize());
-    for (int i = 0; i < randomSeed->getSize(); i++)
-        seed[i] = (mm_int4) {rand(), rand(), rand(), rand()};
+    unsigned int r = randomNumberSeed;
+    for (int i = 0; i < randomSeed->getSize(); i++) {
+        seed[i].x = r = (1664525*r + 1013904223) & 0xFFFFFFFF;
+        seed[i].y = r = (1664525*r + 1013904223) & 0xFFFFFFFF;
+        seed[i].z = r = (1664525*r + 1013904223) & 0xFFFFFFFF;
+        seed[i].w = r = (1664525*r + 1013904223) & 0xFFFFFFFF;
+    }
     randomSeed->upload(seed);
 
     // Create the kernel.
