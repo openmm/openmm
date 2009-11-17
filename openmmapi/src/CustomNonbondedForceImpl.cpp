@@ -52,14 +52,14 @@ CustomNonbondedForceImpl::~CustomNonbondedForceImpl() {
 void CustomNonbondedForceImpl::initialize(ContextImpl& context) {
     kernel = context.getPlatform().createKernel(CalcCustomNonbondedForceKernel::Name(), context);
 
-    // Check for errors in the specification of parameters and exceptions.
+    // Check for errors in the specification of parameters and exclusions.
 
     System& system = context.getSystem();
     if (owner.getNumParticles() != system.getNumParticles())
         throw OpenMMException("CustomNonbondedForce must have exactly as many particles as the System it belongs to.");
-    vector<set<int> > exceptions(owner.getNumParticles());
+    vector<set<int> > exclusions(owner.getNumParticles());
     vector<double> parameters;
-    int numParameters = owner.getNumParameters();
+    int numParameters = owner.getNumPerParticleParameters();
     for (int i = 0; i < owner.getNumParticles(); i++) {
         owner.getParticleParameters(i, parameters);
         if (parameters.size() != numParameters) {
@@ -69,37 +69,31 @@ void CustomNonbondedForceImpl::initialize(ContextImpl& context) {
             throw OpenMMException(msg.str());
         }
     }
-    for (int i = 0; i < owner.getNumExceptions(); i++) {
+    for (int i = 0; i < owner.getNumExclusions(); i++) {
         int particle1, particle2;
-        owner.getExceptionParameters(i, particle1, particle2, parameters);
+        owner.getExclusionParticles(i, particle1, particle2);
         if (particle1 < 0 || particle1 >= owner.getNumParticles()) {
             stringstream msg;
-            msg << "CustomNonbondedForce: Illegal particle index for an exception: ";
+            msg << "CustomNonbondedForce: Illegal particle index for an exclusion: ";
             msg << particle1;
             throw OpenMMException(msg.str());
         }
         if (particle2 < 0 || particle2 >= owner.getNumParticles()) {
             stringstream msg;
-            msg << "CustomNonbondedForce: Illegal particle index for an exception: ";
+            msg << "CustomNonbondedForce: Illegal particle index for an exclusion: ";
             msg << particle2;
             throw OpenMMException(msg.str());
         }
-        if (exceptions[particle1].count(particle2) > 0 || exceptions[particle2].count(particle1) > 0) {
+        if (exclusions[particle1].count(particle2) > 0 || exclusions[particle2].count(particle1) > 0) {
             stringstream msg;
-            msg << "CustomNonbondedForce: Multiple exceptions are specified for particles ";
+            msg << "CustomNonbondedForce: Multiple exclusions are specified for particles ";
             msg << particle1;
             msg << " and ";
             msg << particle2;
             throw OpenMMException(msg.str());
         }
-        if (parameters.size() != 0 && parameters.size() != numParameters) {
-            stringstream msg;
-            msg << "CustomNonbondedForce: Wrong number of parameters for exception ";
-            msg << i;
-            throw OpenMMException(msg.str());
-        }
-        exceptions[particle1].insert(particle2);
-        exceptions[particle2].insert(particle1);
+        exclusions[particle1].insert(particle2);
+        exclusions[particle2].insert(particle1);
     }
     dynamic_cast<CalcCustomNonbondedForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }

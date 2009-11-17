@@ -36,7 +36,7 @@
 __global__ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUnit)
 {
     extern __shared__ Atom sA[];
-    unsigned int totalWarps = cSim.nonbond_blocks*cSim.nonbond_threads_per_block/GRID;
+    unsigned int totalWarps = gridDim.x*blockDim.x/GRID;
     unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
     unsigned int numWorkUnits = cSim.pInteractionCount[0];
     unsigned int pos = warp*numWorkUnits/totalWarps;

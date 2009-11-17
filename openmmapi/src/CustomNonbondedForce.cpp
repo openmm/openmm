@@ -73,25 +73,17 @@ void CustomNonbondedForce::setCutoffDistance(double distance) {
     cutoffDistance = distance;
 }
 
-int CustomNonbondedForce::addParameter(const string& name, const string& combiningRule) {
-    parameters.push_back(ParameterInfo(name, combiningRule));
+int CustomNonbondedForce::addPerParticleParameter(const string& name) {
+    parameters.push_back(PerParticleParameterInfo(name));
     return parameters.size()-1;
 }
 
-const string& CustomNonbondedForce::getParameterName(int index) const {
+const string& CustomNonbondedForce::getPerParticleParameterName(int index) const {
     return parameters[index].name;
 }
 
-void CustomNonbondedForce::setParameterName(int index, const string& name) {
+void CustomNonbondedForce::setPerParticleParameterName(int index, const string& name) {
     parameters[index].name = name;
-}
-
-const string& CustomNonbondedForce::getParameterCombiningRule(int index) const {
-    return parameters[index].combiningRule;
-}
-
-void CustomNonbondedForce::setParameterCombiningRule(int index, const string& combiningRule) {
-    parameters[index].combiningRule = combiningRule;
 }
 
 int CustomNonbondedForce::addGlobalParameter(const string& name, double defaultValue) {
@@ -128,41 +120,18 @@ void CustomNonbondedForce::setParticleParameters(int index, const vector<double>
     particles[index].parameters = parameters;
 }
 
-int CustomNonbondedForce::addException(int particle1, int particle2, const vector<double>& parameters, bool replace) {
-    map<pair<int, int>, int>::iterator iter = exceptionMap.find(pair<int, int>(particle1, particle2));
-    int newIndex;
-    if (iter == exceptionMap.end())
-        iter = exceptionMap.find(pair<int, int>(particle2, particle1));
-    if (iter != exceptionMap.end()) {
-        if (!replace) {
-            stringstream msg;
-            msg << "CustomNonbondedForce: There is already an exception for particles ";
-            msg << particle1;
-            msg << " and ";
-            msg << particle2;
-            throw OpenMMException(msg.str());
-        }
-        exceptions[iter->second] = ExceptionInfo(particle1, particle2, parameters);
-        newIndex = iter->second;
-        exceptionMap.erase(iter->first);
-    }
-    else {
-        exceptions.push_back(ExceptionInfo(particle1, particle2, parameters));
-        newIndex = exceptions.size()-1;
-    }
-    exceptionMap[pair<int, int>(particle1, particle2)] = newIndex;
-    return newIndex;
+int CustomNonbondedForce::addExclusion(int particle1, int particle2) {
+    exclusions.push_back(ExclusionInfo(particle1, particle2));
+    return exclusions.size()-1;
 }
-void CustomNonbondedForce::getExceptionParameters(int index, int& particle1, int& particle2, vector<double>& parameters) const {
-    particle1 = exceptions[index].particle1;
-    particle2 = exceptions[index].particle2;
-    parameters = exceptions[index].parameters;
+void CustomNonbondedForce::getExclusionParticles(int index, int& particle1, int& particle2) const {
+    particle1 = exclusions[index].particle1;
+    particle2 = exclusions[index].particle2;
 }
 
-void CustomNonbondedForce::setExceptionParameters(int index, int particle1, int particle2, const vector<double>& parameters) {
-    exceptions[index].particle1 = particle1;
-    exceptions[index].particle2 = particle2;
-    exceptions[index].parameters = parameters;
+void CustomNonbondedForce::setExclusionParticles(int index, int particle1, int particle2) {
+    exclusions[index].particle1 = particle1;
+    exclusions[index].particle2 = particle2;
 }
 
 int CustomNonbondedForce::addFunction(const std::string& name, const std::vector<double>& values, double min, double max, bool interpolating) {

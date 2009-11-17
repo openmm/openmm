@@ -668,42 +668,33 @@ public:
 ReferenceCalcCustomNonbondedForceKernel::~ReferenceCalcCustomNonbondedForceKernel() {
     disposeRealArray(particleParamArray, numParticles);
     disposeIntArray(exclusionArray, numParticles);
-    disposeIntArray(exceptionIndexArray, numExceptions);
-    disposeRealArray(exceptionParamArray, numExceptions);
     if (neighborList != NULL)
         delete neighborList;
 }
 
 void ReferenceCalcCustomNonbondedForceKernel::initialize(const System& system, const CustomNonbondedForce& force) {
 
-    // Identify which exceptions are actual interactions.
+    // Record the exclusions.
 
     numParticles = force.getNumParticles();
     exclusions.resize(numParticles);
-    vector<int> exceptions;
-    vector<double> parameters;
-    for (int i = 0; i < force.getNumExceptions(); i++) {
+    for (int i = 0; i < force.getNumExclusions(); i++) {
         int particle1, particle2;
-        force.getExceptionParameters(i, particle1, particle2, parameters);
+        force.getExclusionParticles(i, particle1, particle2);
         exclusions[particle1].insert(particle2);
         exclusions[particle2].insert(particle1);
-        if (parameters.size() > 0)
-            exceptions.push_back(i);
     }
 
     // Build the arrays.
 
-    numExceptions = exceptions.size();
-    int numParameters = force.getNumParameters();
-    exceptionIndexArray = allocateIntArray(numExceptions, 2);
-    exceptionParamArray = allocateRealArray(numExceptions, numParameters);
+    int numParameters = force.getNumPerParticleParameters();
     particleParamArray = allocateRealArray(numParticles, numParameters);
     for (int i = 0; i < numParticles; ++i) {
+        vector<double> parameters;
         force.getParticleParameters(i, parameters);
         for (int j = 0; j < numParameters; j++)
             particleParamArray[i][j] = static_cast<RealOpenMM>(parameters[j]);
     }
-    this->exclusions = exclusions;
     exclusionArray = new int*[numParticles];
     for (int i = 0; i < numParticles; ++i) {
         exclusionArray[i] = new int[exclusions[i].size()+1];
@@ -711,14 +702,6 @@ void ReferenceCalcCustomNonbondedForceKernel::initialize(const System& system, c
         int index = 0;
         for (set<int>::const_iterator iter = exclusions[i].begin(); iter != exclusions[i].end(); ++iter)
             exclusionArray[i][++index] = *iter;
-    }
-    for (int i = 0; i < numExceptions; ++i) {
-        int particle1, particle2;
-        force.getExceptionParameters(exceptions[i], particle1, particle2, parameters);
-        exceptionIndexArray[i][0] = particle1;
-        exceptionIndexArray[i][1] = particle2;
-        for (int j = 0; j < numParameters; j++)
-            exceptionParamArray[i][j] = static_cast<RealOpenMM>(parameters[j]);
     }
     nonbondedMethod = CalcCustomNonbondedForceKernel::NonbondedMethod(force.getNonbondedMethod());
     nonbondedCutoff = (RealOpenMM) force.getCutoffDistance();
@@ -749,10 +732,8 @@ void ReferenceCalcCustomNonbondedForceKernel::initialize(const System& system, c
     Lepton::ParsedExpression expression = Lepton::Parser::parse(force.getEnergyFunction(), functions).optimize();
     energyExpression = expression.createProgram();
     forceExpression = expression.differentiate("r").optimize().createProgram();
-    for (int i = 0; i < numParameters; i++) {
-        parameterNames.push_back(force.getParameterName(i));
-        combiningRules.push_back(Lepton::Parser::parse(force.getParameterCombiningRule(i), functions).optimize().createProgram());
-    }
+    for (int i = 0; i < numParameters; i++)
+        parameterNames.push_back(force.getPerParticleParameterName(i));
     for (int i = 0; i < force.getNumGlobalParameters(); i++)
         globalParameterNames.push_back(force.getGlobalParameterName(i));
 
@@ -765,7 +746,7 @@ void ReferenceCalcCustomNonbondedForceKernel::initialize(const System& system, c
 void ReferenceCalcCustomNonbondedForceKernel::executeForces(ContextImpl& context) {
     RealOpenMM** posData = extractPositions(context);
     RealOpenMM** forceData = extractForces(context);
-    ReferenceCustomNonbondedIxn ixn(energyExpression, forceExpression, parameterNames, combiningRules);
+    ReferenceCustomNonbondedIxn ixn(energyExpression, forceExpression, parameterNames);
     bool periodic = (nonbondedMethod == CutoffPeriodic);
     if (nonbondedMethod != NoCutoff) {
         computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, periodic ? periodicBoxSize : NULL, nonbondedCutoff, 0.0);
@@ -777,14 +758,13 @@ void ReferenceCalcCustomNonbondedForceKernel::executeForces(ContextImpl& context
     for (int i = 0; i < (int) globalParameterNames.size(); i++)
         globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
     ixn.calculatePairIxn(numParticles, posData, particleParamArray, exclusionArray, 0, globalParameters, forceData, 0, 0);
-    ixn.calculateExceptionIxn(numExceptions, exceptionIndexArray, posData, exceptionParamArray, globalParameters, forceData, 0, 0);
 }
 
 double ReferenceCalcCustomNonbondedForceKernel::executeEnergy(ContextImpl& context) {
     RealOpenMM** posData = extractPositions(context);
     RealOpenMM** forceData = allocateRealArray(numParticles, 3);
     RealOpenMM energy = 0;
-    ReferenceCustomNonbondedIxn ixn(energyExpression, forceExpression, parameterNames, combiningRules);
+    ReferenceCustomNonbondedIxn ixn(energyExpression, forceExpression, parameterNames);
     bool periodic = (nonbondedMethod == CutoffPeriodic);
     if (nonbondedMethod != NoCutoff) {
         computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, periodic ? periodicBoxSize : NULL, nonbondedCutoff, 0.0);
@@ -796,7 +776,6 @@ double ReferenceCalcCustomNonbondedForceKernel::executeEnergy(ContextImpl& conte
     for (int i = 0; i < (int) globalParameterNames.size(); i++)
         globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
     ixn.calculatePairIxn(numParticles, posData, particleParamArray, exclusionArray, 0, globalParameters, forceData, 0, &energy);
-    ixn.calculateExceptionIxn(numExceptions, exceptionIndexArray, posData, exceptionParamArray, globalParameters, forceData, 0, &energy);
     disposeRealArray(forceData, numParticles);
     return energy;
 }

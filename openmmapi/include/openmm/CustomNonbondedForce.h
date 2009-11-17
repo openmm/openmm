@@ -50,40 +50,38 @@ namespace OpenMM {
  *
  * To use this class, create a CustomNonbondedForce object, passing an algebraic expression to the constructor
  * that defines the interaction energy between each pair of particles.  The expression may depend on r, the distance
- * between the particles, as well as on any parameters you choose.  Then call addParameter() to define per-particle
- * parameters, and addGlobalParameter() to define global parameters.  When defining a per-particle parameter, you
- * specify an arbitrary algebraic expression which serves as the combining rule for calculating the parameter value
- * based on the values for the two particles involved.  The values of global parameters may be modified during a
- * simulation by calling Context::setParameter().
+ * between the particles, as well as on any parameters you choose.  Then call addPerParticleParameter() to define per-particle
+ * parameters, and addGlobalParameter() to define global parameters.  The values of per-particle parameters are specified as
+ * part of the system definition, while values of global parameters may be modified during a simulation by calling Context::setParameter().
  * 
  * Next, call addParticle() once for each particle in the System to set the values of its per-particle parameters.
  * The number of particles for which you set parameters must be exactly equal to the number of particles in the
  * System, or else an exception will be thrown when you try to create a Context.  After a particle has been added,
  * you can modify its parameters by calling setParticleParameters().
  *
- * CustomNonbondedForce also lets you specify "exceptions", particular pairs of particles whose interactions should be
- * computed based on different parameters than those defined for the individual particles.  This can be used to
- * completely exclude certain interactions from the force calculation, or to alter how they interact with each other.
+ * CustomNonbondedForce also lets you specify "exclusions", particular pairs of particles whose interactions should be
+ * omitted from force and energy calculations.  This is most often used for particles that are bonded to each other.
  *
  * As an example, the following code creates a CustomNonbondedForce that implements a 12-6 Lennard-Jones potential:
  *
- * <tt>CustomNonbondedForce* force = new CustomNonbondedForce("4*epsilon*((sigma/r)^12-(sigma/r)^6)");</tt>
+ * <tt>CustomNonbondedForce* force = new CustomNonbondedForce("4*epsilon*((sigma/r)^12-(sigma/r)^6); sigma=0.5*(sigma1*sigma2); epsilon=sqrt(epsilon1*epsilon2)");</tt>
  *
  * This force depends on two parameters: sigma and epsilon.  The following code defines these parameters, and
  * specifies combining rules for them which correspond to the standard Lorentz-Bertelot combining rules:
  *
  * <tt><pre>
- * force->addParameter("sigma", "0.5*(sigma1*sigma2)");
- * force->addParameter("epsilon", "sqrt(epsilon1*epsilon2)");
+ * force->addPerParticleParameter("sigma");
+ * force->addPerParticleParameter("epsilon");
  * </pre></tt>
  *
  * Expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
  * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, sinh, cosh, tanh.  All trigonometric functions
- * are defined in radians, and log is the natural logarithm.
+ * are defined in radians, and log is the natural logarithm.  The names of per-particle parameters have the suffix "1" or "2"
+ * appended to them to indicate the values for the two interacting particles.  As seen in the above example, the expression may
+ * also involve intermediate quantities that are defined following the main expression, using ";" as a separator.
  *
  * In addition, you can call addFunction() to define a new function based on tabulated values.  You specify a vector of
- * values, and an interpolating or approximating spline is created from them.  That function can then appear in expressions
- * that define energy or combining rules.
+ * values, and an interpolating or approximating spline is created from them.  That function can then appear in the expression.
  */
 
 class OPENMM_EXPORT CustomNonbondedForce : public Force {
@@ -111,7 +109,7 @@ public:
      * Create a CustomNonbondedForce.
      *
      * @param energy    an algebraic expression giving the interaction energy between two particles as a function
-     *                  of r, the distance between them
+     *                  of r, the distance between them, as well as any global and per-particle parameters
      */
     CustomNonbondedForce(const std::string& energy);
     /**
@@ -121,15 +119,15 @@ public:
         return particles.size();
     }
     /**
-     * Get the number of special interactions that should be calculated differently from other interactions.
+     * Get the number of particle pairs whose interactions should be excluded.
      */
-    int getNumExceptions() const {
-        return exceptions.size();
+    int getNumExclusions() const {
+        return exclusions.size();
     }
     /**
      * Get the number of per-particle parameters that the interaction depends on.
      */
-    int getNumParameters() const {
+    int getNumPerParticleParameters() const {
         return parameters.size();
     }
     /**
@@ -173,39 +171,24 @@ public:
     /**
      * Add a new per-particle parameter that the interaction may depend on.
      *
-     * @param name             the name of the parameter
-     * @param combiningRule    an algebraic expression giving the combining rule for this parameter
+     * @param name     the name of the parameter
      * @return the index of the parameter that was added
      */
-    int addParameter(const std::string& name, const std::string& combiningRule);
+    int addPerParticleParameter(const std::string& name);
     /**
      * Get the name of a per-particle parameter.
      *
      * @param index     the index of the parameter for which to get the name
      * @return the parameter name
      */
-    const std::string& getParameterName(int index) const;
+    const std::string& getPerParticleParameterName(int index) const;
     /**
      * Set the name of a per-particle parameter.
      *
      * @param index          the index of the parameter for which to set the name
      * @param name           the name of the parameter
      */
-    void setParameterName(int index, const std::string& name);
-    /**
-     * Get the combining rule for a per-particle parameter.
-     *
-     * @param index     the index of the parameter for which to get the combining rule
-     * @return an algebraic expression giving the combining rule for the parameter
-     */
-    const std::string& getParameterCombiningRule(int index) const;
-    /**
-     * Set the combining rule for a per-particle parameter.
-     *
-     * @param index          the index of the parameter for which to set the combining rule
-     * @param combiningRule  an algebraic expression giving the combining rule for the parameter
-     */
-    void setParameterCombiningRule(int index, const std::string& combiningRule);
+    void setPerParticleParameterName(int index, const std::string& name);
     /**
      * Add a new global parameter that the interaction may depend on.
      *
@@ -265,39 +248,31 @@ public:
      */
     void setParticleParameters(int index, const std::vector<double>& parameters);
     /**
-     * Add an interaction to the list of exceptions that should be calculated differently from other interactions.
+     * Add a particle pair to the list of interactions that should be excluded.
      *
-     * @param particle1  the index of the first particle involved in the interaction
-     * @param particle2  the index of the second particle involved in the interaction
-     * @param parameters the list of parameters for the new interaction.  If this is an empty (zero length) vector, it
-     *                   will cause the interaction to be completely omitted from force and energy calculations.
-     * @param replace    determines the behavior if there is already an exception for the same two particles.  If true, the existing one is replaced.  If false,
-     *                   an exception is thrown.
-     * @return the index of the exception that was added
+     * @param particle1  the index of the first particle in the pair
+     * @param particle2  the index of the second particle in the pair
+     * @return the index of the exclusion that was added
      */
-    int addException(int particle1, int particle2, const std::vector<double>& parameters, bool replace = false);
+    int addExclusion(int particle1, int particle2);
     /**
-     * Get the force field parameters for an interaction that should be calculated differently from others.
+     * Get the particles in a pair whose interaction should be excluded.
      *
-     * @param index      the index of the interaction for which to get parameters
-     * @param particle1  the index of the first particle involved in the interaction
-     * @param particle2  the index of the second particle involved in the interaction
-     * @param parameters the list of parameters for the interaction.  If this is an empty (zero length) vector, it means
-     *                   the interaction will be completely omitted from force and energy calculations.
+     * @param index      the index of the exclusion for which to get particle indices
+     * @param particle1  the index of the first particle in the pair
+     * @param particle2  the index of the second particle in the pair
      */
-    void getExceptionParameters(int index, int& particle1, int& particle2, std::vector<double>& parameters) const;
+    void getExclusionParticles(int index, int& particle1, int& particle2) const;
     /**
-     * Set the force field parameters for an interaction that should be calculated differently from others.
+     * Set the particles in a pair whose interaction should be excluded.
      *
-     * @param index      the index of the interaction for which to get parameters
-     * @param particle1  the index of the first particle involved in the interaction
-     * @param particle2  the index of the second particle involved in the interaction
-     * @param parameters the list of parameters for the interaction.  If this is an empty (zero length) vector, it
-     *                   will cause the interaction to be completely omitted from force and energy calculations.
+     * @param index      the index of the exclusion for which to set particle indices
+     * @param particle1  the index of the first particle in the pair
+     * @param particle2  the index of the second particle in the pair
      */
-    void setExceptionParameters(int index, int particle1, int particle2, const std::vector<double>& parameters);
+    void setExclusionParticles(int index, int particle1, int particle2);
     /**
-     * Add a tabulated function that may appear in algebraic expressions.
+     * Add a tabulated function that may appear in the energy expression.
      *
      * @param name           the name of the function as it appears in expressions
      * @param values         the tabulated values of the function f(x) at uniformly spaced values of x between min and max.
@@ -310,7 +285,7 @@ public:
      */
     int addFunction(const std::string& name, const std::vector<double>& values, double min, double max, bool interpolating);
     /**
-     * Get the parameters for a tabulated function that may appear in algebraic expressions.
+     * Get the parameters for a tabulated function that may appear in the energy expression.
      *
      * @param index          the index of the function for which to get parameters
      * @param name           the name of the function as it appears in expressions
@@ -339,19 +314,19 @@ protected:
     ForceImpl* createImpl();
 private:
     class ParticleInfo;
-    class ParameterInfo;
+    class PerParticleParameterInfo;
     class GlobalParameterInfo;
-    class ExceptionInfo;
+    class ExclusionInfo;
     class FunctionInfo;
     NonbondedMethod nonbondedMethod;
     double cutoffDistance;
     std::string energyExpression;
-    std::vector<ParameterInfo> parameters;
+    std::vector<PerParticleParameterInfo> parameters;
     std::vector<GlobalParameterInfo> globalParameters;
     std::vector<ParticleInfo> particles;
-    std::vector<ExceptionInfo> exceptions;
+    std::vector<ExclusionInfo> exclusions;
     std::vector<FunctionInfo> functions;
-    std::map<std::pair<int, int>, int> exceptionMap;
+    std::map<std::pair<int, int>, int> exclusionMap;
 };
 
 class CustomNonbondedForce::ParticleInfo {
@@ -363,12 +338,12 @@ public:
     }
 };
 
-class CustomNonbondedForce::ParameterInfo {
+class CustomNonbondedForce::PerParticleParameterInfo {
 public:
-    std::string name, combiningRule;
-    ParameterInfo() {
+    std::string name;
+    PerParticleParameterInfo() {
     }
-    ParameterInfo(const std::string& name, const std::string& combiningRule) : name(name), combiningRule(combiningRule) {
+    PerParticleParameterInfo(const std::string& name) : name(name) {
     }
 };
 
@@ -382,15 +357,14 @@ public:
     }
 };
 
-class CustomNonbondedForce::ExceptionInfo {
+class CustomNonbondedForce::ExclusionInfo {
 public:
     int particle1, particle2;
-    std::vector<double> parameters;
-    ExceptionInfo() {
+    ExclusionInfo() {
         particle1 = particle2 = -1;
     }
-    ExceptionInfo(int particle1, int particle2, const std::vector<double>& parameters) :
-        particle1(particle1), particle2(particle2), parameters(parameters) {
+    ExclusionInfo(int particle1, int particle2) :
+        particle1(particle1), particle2(particle2) {
     }
 };
 

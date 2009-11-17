@@ -174,6 +174,8 @@ static Expression<SIZE> createExpression(gpuContext gpu, const string& expressio
                     exp.op[i] = VARIABLE6;
                 else if (variables.size() > 7 && op.getName() == variables[7])
                     exp.op[i] = VARIABLE7;
+                else if (variables.size() > 8 && op.getName() == variables[8])
+                    exp.op[i] = VARIABLE8;
                 else {
                     int j;
                     for (j = 0; j < globalParamNames.size() && op.getName() != globalParamNames[j]; j++);
@@ -693,8 +695,7 @@ void gpuSetCustomBondParameters(gpuContext gpu, const vector<int>& bondAtom1, co
 
 extern "C"
 void gpuSetCustomNonbondedParameters(gpuContext gpu, const vector<vector<double> >& parameters, const vector<vector<int> >& exclusions,
-            const vector<int>& exceptionAtom1, const vector<int>& exceptionAtom2, const vector<vector<double> >& exceptionParams,
-            CudaNonbondedMethod method, float cutoffDistance, const string& energyExp, const vector<string>& combiningRules,
+            CudaNonbondedMethod method, float cutoffDistance, const string& energyExp,
             const vector<string>& paramNames, const vector<string>& globalParamNames)
 {
     if (gpu->sim.nonbondedCutoff != 0.0f && gpu->sim.nonbondedCutoff != cutoffDistance)
@@ -706,20 +707,10 @@ void gpuSetCustomNonbondedParameters(gpuContext gpu, const vector<vector<double>
     gpu->sim.nonbondedCutoff = cutoffDistance;
     gpu->sim.nonbondedCutoffSqr = cutoffDistance*cutoffDistance;
     gpu->sim.customNonbondedMethod = method;
-    gpu->sim.customExceptions = exceptionAtom1.size();
     gpu->sim.customParameters = paramNames.size();
-    gpu->sim.custom_exception_threads_per_block = (gpu->sim.customExceptions+gpu->sim.blocks-1)/gpu->sim.blocks;
-    if (gpu->sim.custom_exception_threads_per_block < 1)
-        gpu->sim.custom_exception_threads_per_block = 1;
-    if (gpu->sim.custom_exception_threads_per_block > gpu->sim.max_localForces_threads_per_block)
-        gpu->sim.custom_exception_threads_per_block = gpu->sim.max_localForces_threads_per_block;
     setExclusions(gpu, exclusions);
     gpu->psCustomParams = new CUDAStream<float4>(gpu->sim.paddedNumberOfAtoms, 1, "CustomParams");
     gpu->sim.pCustomParams = gpu->psCustomParams->_pDevData;
-    gpu->psCustomExceptionID = new CUDAStream<int4>(gpu->sim.customExceptions, 1, "CustomExceptionId");
-    gpu->sim.pCustomExceptionID = gpu->psCustomExceptionID->_pDevData;
-    gpu->psCustomExceptionParams = new CUDAStream<float4>(gpu->sim.customExceptions, 1, "CustomExceptionParams");
-    gpu->sim.pCustomExceptionParams = gpu->psCustomExceptionParams->_pDevData;
     for (int i = 0; i < (int) parameters.size(); i++) {
         if (parameters[i].size() > 0)
             (*gpu->psCustomParams)[i].x = (float) parameters[i][0];
@@ -730,23 +721,7 @@ void gpuSetCustomNonbondedParameters(gpuContext gpu, const vector<vector<double>
         if (parameters[i].size() > 3)
             (*gpu->psCustomParams)[i].w = (float) parameters[i][3];
     }
-    for (int i = 0; i < (int) exceptionAtom1.size(); i++) {
-        (*gpu->psCustomExceptionID)[i].x = exceptionAtom1[i];
-        (*gpu->psCustomExceptionID)[i].y = exceptionAtom2[i];
-        (*gpu->psCustomExceptionID)[i].z = gpu->pOutputBufferCounter[exceptionAtom1[i]]++;
-        (*gpu->psCustomExceptionID)[i].w = gpu->pOutputBufferCounter[exceptionAtom2[i]]++;
-        if (exceptionParams[i].size() > 0)
-            (*gpu->psCustomExceptionParams)[i].x = exceptionParams[i][0];
-        if (exceptionParams[i].size() > 1)
-            (*gpu->psCustomExceptionParams)[i].y = exceptionParams[i][1];
-        if (exceptionParams[i].size() > 2)
-            (*gpu->psCustomExceptionParams)[i].z = exceptionParams[i][2];
-        if (exceptionParams[i].size() > 3)
-            (*gpu->psCustomExceptionParams)[i].w = exceptionParams[i][3];
-    }
     gpu->psCustomParams->Upload();
-    gpu->psCustomExceptionID->Upload();
-    gpu->psCustomExceptionParams->Upload();
 
     // This class serves as a placeholder for custom functions in expressions.
 
@@ -784,25 +759,18 @@ void gpuSetCustomNonbondedParameters(gpuContext gpu, const vector<vector<double>
     // Create the Expressions.
 
     vector<string> variables;
-    variables.push_back("r");
-    for (int i = 0; i < (int) paramNames.size(); i++)
-        variables.push_back(paramNames[i]);
-    SetCustomNonbondedEnergyExpression(createExpression<128>(gpu, energyExp, Lepton::Parser::parse(energyExp, functions).optimize().createProgram(), variables, globalParamNames, gpu->sim.customExpressionStackSize));
-    SetCustomNonbondedForceExpression(createExpression<128>(gpu, energyExp, Lepton::Parser::parse(energyExp, functions).differentiate("r").optimize().createProgram(), variables, globalParamNames, gpu->sim.customExpressionStackSize));
-    Expression<64> paramExpressions[4];
-    vector<string> combiningRuleParams;
     for (int j = 1; j < 3; j++) {
         for (int i = 0; i < (int) paramNames.size(); i++) {
             stringstream name;
             name << paramNames[i] << j;
-            combiningRuleParams.push_back(name.str());
+            variables.push_back(name.str());
         }
         for (int i = paramNames.size(); i < 4; i++)
-            combiningRuleParams.push_back("");
+            variables.push_back("");
     }
-    for (int i = 0; i < (int) paramNames.size(); i++)
-        paramExpressions[i] = createExpression<64>(gpu, combiningRules[i], Lepton::Parser::parse(combiningRules[i], functions).optimize().createProgram(), combiningRuleParams, globalParamNames, gpu->sim.customExpressionStackSize);
-    SetCustomNonbondedCombiningRules(paramExpressions);
+    variables.push_back("r");
+    SetCustomNonbondedEnergyExpression(createExpression<128>(gpu, energyExp, Lepton::Parser::parse(energyExp, functions).optimize().createProgram(), variables, globalParamNames, gpu->sim.customExpressionStackSize));
+    SetCustomNonbondedForceExpression(createExpression<128>(gpu, energyExp, Lepton::Parser::parse(energyExp, functions).differentiate("r").optimize().createProgram(), variables, globalParamNames, gpu->sim.customExpressionStackSize));
     delete fp;
 }
 
@@ -2336,7 +2304,7 @@ void gpuBuildExclusionList(gpuContext gpu)
             }
         }
     }
-    
+
     psExclusion->Upload();
     psExclusionIndex->Upload();
     gpu->psWorkUnit->Upload();

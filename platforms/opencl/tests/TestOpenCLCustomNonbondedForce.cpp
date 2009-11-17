@@ -79,9 +79,9 @@ void testParameters() {
     system.addParticle(1.0);
     system.addParticle(1.0);
     VerletIntegrator integrator(0.01);
-    CustomNonbondedForce* forceField = new CustomNonbondedForce("scale*a*(r*b)^3");
-    forceField->addParameter("a", "a1*a2");
-    forceField->addParameter("b", "c+b1+b2");
+    CustomNonbondedForce* forceField = new CustomNonbondedForce("scale*a*(r*b)^3; a=a1*a2; b=c+b1+b2");
+    forceField->addPerParticleParameter("a");
+    forceField->addPerParticleParameter("b");
     forceField->addGlobalParameter("scale", 3.0);
     forceField->addGlobalParameter("c", -1.0);
     vector<double> params(2);
@@ -115,12 +115,12 @@ void testParameters() {
     ASSERT_EQUAL_TOL(1.5*3.0*(12*12*12), state.getPotentialEnergy(), TOL);
 }
 
-void testExceptions() {
+void testExclusions() {
     OpenCLPlatform platform;
     System system;
     VerletIntegrator integrator(0.01);
-    CustomNonbondedForce* nonbonded = new CustomNonbondedForce("a*r");
-    nonbonded->addParameter("a", "a1+a2");
+    CustomNonbondedForce* nonbonded = new CustomNonbondedForce("a*r; a=a1+a2");
+    nonbonded->addPerParticleParameter("a");
     vector<double> params(1);
     vector<Vec3> positions(4);
     for (int i = 0; i < 4; i++) {
@@ -129,22 +129,21 @@ void testExceptions() {
         nonbonded->addParticle(params);
         positions[i] = Vec3(i, 0, 0);
     }
-    nonbonded->addException(0, 1, vector<double>());
-    nonbonded->addException(1, 2, vector<double>());
-    nonbonded->addException(2, 3, vector<double>());
-    params[0] = 0.5;
-    nonbonded->addException(0, 2, params);
-    nonbonded->addException(1, 3, params);
+    nonbonded->addExclusion(0, 1);
+    nonbonded->addExclusion(1, 2);
+    nonbonded->addExclusion(2, 3);
+    nonbonded->addExclusion(0, 2);
+    nonbonded->addExclusion(1, 3);
     system.addForce(nonbonded);
     Context context(system, integrator, platform);
     context.setPositions(positions);
     State state = context.getState(State::Forces | State::Energy);
     const vector<Vec3>& forces = state.getForces();
-    ASSERT_EQUAL_VEC(Vec3(0.5+1+4, 0, 0), forces[0], TOL);
-    ASSERT_EQUAL_VEC(Vec3(0.5, 0, 0), forces[1], TOL);
-    ASSERT_EQUAL_VEC(Vec3(-0.5, 0, 0), forces[2], TOL);
-    ASSERT_EQUAL_VEC(Vec3(-(0.5+1+4), 0, 0), forces[3], TOL);
-    ASSERT_EQUAL_TOL((1+4)*3+0.5*2+0.5*2, state.getPotentialEnergy(), TOL);
+    ASSERT_EQUAL_VEC(Vec3(1+4, 0, 0), forces[0], TOL);
+    ASSERT_EQUAL_VEC(Vec3(0, 0, 0), forces[1], TOL);
+    ASSERT_EQUAL_VEC(Vec3(0, 0, 0), forces[2], TOL);
+    ASSERT_EQUAL_VEC(Vec3(-(1+4), 0, 0), forces[3], TOL);
+    ASSERT_EQUAL_TOL((1+4)*3, state.getPotentialEnergy(), TOL);
 }
 
 void testCutoff() {
@@ -251,10 +250,10 @@ void testCoulombLennardJones() {
         customSystem.addParticle(1.0);
     }
     NonbondedForce* standardNonbonded = new NonbondedForce();
-    CustomNonbondedForce* customNonbonded = new CustomNonbondedForce("4*eps*((sigma/r)^12-(sigma/r)^6) + 138.935485*q/r");
-    customNonbonded->addParameter("q", "q1*q2");
-    customNonbonded->addParameter("sigma", "0.5*(sigma1+sigma2)");
-    customNonbonded->addParameter("eps", "sqrt(eps1*eps2)");
+    CustomNonbondedForce* customNonbonded = new CustomNonbondedForce("4*eps*((sigma/r)^12-(sigma/r)^6)+138.935485*q/r; q=q1*q2; sigma=0.5*(sigma1+sigma2); eps=sqrt(eps1*eps2)");
+    customNonbonded->addPerParticleParameter("q");
+    customNonbonded->addPerParticleParameter("sigma");
+    customNonbonded->addPerParticleParameter("eps");
     vector<Vec3> positions(numParticles);
     vector<Vec3> velocities(numParticles);
     init_gen_rand(0);
@@ -266,7 +265,8 @@ void testCoulombLennardJones() {
             params[1] = 0.2;
             params[2] = 0.1;
             customNonbonded->addParticle(params);
-            standardNonbonded->addParticle(1.0, 0.1, 0.1);
+            standardNonbonded->addParticle(-1.0, 0.1, 0.1);
+            params[0] = -1.0;
             params[1] = 0.1;
             customNonbonded->addParticle(params);
         }
@@ -276,7 +276,8 @@ void testCoulombLennardJones() {
             params[1] = 0.2;
             params[2] = 0.2;
             customNonbonded->addParticle(params);
-            standardNonbonded->addParticle(1.0, 0.1, 0.2);
+            standardNonbonded->addParticle(-1.0, 0.1, 0.2);
+            params[0] = -1.0;
             params[1] = 0.1;
             customNonbonded->addParticle(params);
         }
@@ -285,7 +286,7 @@ void testCoulombLennardJones() {
         velocities[2*i] = Vec3(genrand_real2(), genrand_real2(), genrand_real2());
         velocities[2*i+1] = Vec3(genrand_real2(), genrand_real2(), genrand_real2());
         standardNonbonded->addException(2*i, 2*i+1, 0.0, 1.0, 0.0);
-        customNonbonded->addException(2*i, 2*i+1, vector<double>());
+        customNonbonded->addExclusion(2*i, 2*i+1);
     }
     standardNonbonded->setNonbondedMethod(NonbondedForce::NoCutoff);
     customNonbonded->setNonbondedMethod(CustomNonbondedForce::NoCutoff);
@@ -311,7 +312,7 @@ int main() {
     try {
         testSimpleExpression();
         testParameters();
-        testExceptions();
+        testExclusions();
         testCutoff();
         testPeriodic();
         testTabulatedFunction(true);

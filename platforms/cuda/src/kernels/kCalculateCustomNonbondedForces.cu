@@ -52,7 +52,6 @@ struct Atom {
 static __constant__ cudaGmxSimulation cSim;
 static __constant__ Expression<128> forceExp;
 static __constant__ Expression<128> energyExp;
-static __constant__ Expression<64> combiningRules[4];
 
 #include "kEvaluateExpression.h"
 
@@ -82,13 +81,6 @@ void SetCustomNonbondedEnergyExpression(const Expression<128>& expression)
     cudaError_t status;
     status = cudaMemcpyToSymbol(energyExp, &expression, sizeof(energyExp));
     RTERROR(status, "SetCustomNonbondedEnergyExpression: cudaMemcpyToSymbol failed");
-}
-
-void SetCustomNonbondedCombiningRules(const Expression<64>* expressions)
-{
-    cudaError_t status;
-    status = cudaMemcpyToSymbol(combiningRules, expressions, sizeof(combiningRules));
-    RTERROR(status, "SetCustomNonbondedCombiningRules: cudaMemcpyToSymbol failed");
 }
 
 void SetCustomNonbondedGlobalParams(float* paramValues)
@@ -154,7 +146,7 @@ void kCalculateCustomNonbondedForces(gpuContext gpu, bool neighborListValid)
             cudaBindTexture(NULL, &texRef3, gpu->tabulatedFunctions[3].coefficients->_pDevData, &channelDesc, gpu->tabulatedFunctions[3].coefficients->_length*sizeof(float4));
         gpu->tabulatedFunctionsChanged = false;
     }
-    int sharedPerThread = sizeof(Atom)+gpu->sim.customExpressionStackSize*sizeof(float)+8*sizeof(float);
+    int sharedPerThread = sizeof(Atom)+gpu->sim.customExpressionStackSize*sizeof(float)+9*sizeof(float);
     if (gpu->sim.customNonbondedMethod != NO_CUTOFF)
         sharedPerThread += sizeof(float3);
     int threads = gpu->sim.nonbond_threads_per_block;
@@ -169,9 +161,6 @@ void kCalculateCustomNonbondedForces(gpuContext gpu, bool neighborListValid)
             else
                 kCalculateCustomNonbondedN2Forces_kernel<<<gpu->sim.nonbond_blocks, threads, sharedPerThread*threads>>>(gpu->sim.pWorkUnit);
             LAUNCHERROR("kCalculateCustomNonbondedN2Forces");
-            kCalculateCustomNonbondedN2Exceptions_kernel<<<gpu->sim.blocks, gpu->sim.custom_exception_threads_per_block,
-                    gpu->sim.customExpressionStackSize*sizeof(float)*gpu->sim.custom_exception_threads_per_block>>>();
-            LAUNCHERROR("kCalculateCustomNonbondedN2Exceptions");
             break;
         case CUTOFF:
             if (!neighborListValid)
@@ -189,9 +178,6 @@ void kCalculateCustomNonbondedForces(gpuContext gpu, bool neighborListValid)
             else
                 kCalculateCustomNonbondedCutoffForces_kernel<<<gpu->sim.nonbond_blocks, threads, sharedPerThread*threads>>>(gpu->sim.pInteractingWorkUnit);
             LAUNCHERROR("kCalculateCustomNonbondedCutoffForces");
-            kCalculateCustomNonbondedCutoffExceptions_kernel<<<gpu->sim.blocks, gpu->sim.custom_exception_threads_per_block,
-                    gpu->sim.customExpressionStackSize*sizeof(float)*gpu->sim.custom_exception_threads_per_block>>>();
-            LAUNCHERROR("kCalculateCustomNonbondedCutoffExceptions");
             break;
         case PERIODIC:
             if (!neighborListValid)
@@ -209,9 +195,6 @@ void kCalculateCustomNonbondedForces(gpuContext gpu, bool neighborListValid)
             else
                 kCalculateCustomNonbondedPeriodicForces_kernel<<<gpu->sim.nonbond_blocks, threads, sharedPerThread*threads>>>(gpu->sim.pInteractingWorkUnit);
             LAUNCHERROR("kCalculateCustomNonbondedPeriodicForces");
-            kCalculateCustomNonbondedPeriodicExceptions_kernel<<<gpu->sim.blocks, gpu->sim.custom_exception_threads_per_block,
-                    (gpu->sim.customExpressionStackSize+8)*sizeof(float)*gpu->sim.custom_exception_threads_per_block>>>();
-            LAUNCHERROR("kCalculateCustomNonbondedPeriodicExceptions");
             break;
     }
 }

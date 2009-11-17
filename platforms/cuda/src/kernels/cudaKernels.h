@@ -113,5 +113,4 @@ extern void SetCustomBondEnergyExpression(const Expression<128>& expression);
 extern void SetCustomBondGlobalParams(float* paramValues);
 extern void SetCustomNonbondedForceExpression(const Expression<128>& expression);
 extern void SetCustomNonbondedEnergyExpression(const Expression<128>& expression);
-extern void SetCustomNonbondedCombiningRules(const Expression<64>* expressions);
 extern void SetCustomNonbondedGlobalParams(float* paramValues);

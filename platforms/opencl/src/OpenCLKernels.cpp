@@ -859,25 +859,16 @@ public:
         return true;
     }
     int getNumParticleGroups() {
-        return force.getNumExceptions();
+        return force.getNumExclusions();
     }
     void getParticlesInGroup(int index, std::vector<int>& particles) {
         int particle1, particle2;
-        vector<double> params;
-        force.getExceptionParameters(index, particle1, particle2, params);
+        force.getExclusionParticles(index, particle1, particle2);
         particles.resize(2);
         particles[0] = particle1;
         particles[1] = particle2;
     }
     bool areGroupsIdentical(int group1, int group2) {
-        int particle1, particle2;
-        vector<double> params1;
-        vector<double> params2;
-        force.getExceptionParameters(group1, particle1, particle2, params1);
-        force.getExceptionParameters(group2, particle1, particle2, params2);
-        for (int i = 0; i < params1.size(); i++)
-            if (params1[i] != params2[i])
-                return false;
         return true;
     }
 private:
@@ -889,10 +880,6 @@ OpenCLCalcCustomNonbondedForceKernel::~OpenCLCalcCustomNonbondedForceKernel() {
         delete params;
     if (globals != NULL)
         delete globals;
-    if (exceptionParams != NULL)
-        delete exceptionParams;
-    if (exceptionIndices != NULL)
-        delete exceptionIndices;
     if (tabulatedFunctionParams != NULL)
         delete tabulatedFunctionParams;
     for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
@@ -900,27 +887,12 @@ OpenCLCalcCustomNonbondedForceKernel::~OpenCLCalcCustomNonbondedForceKernel() {
 }
 
 void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, const CustomNonbondedForce& force) {
-    if (force.getNumParameters() > 4)
+    if (force.getNumPerParticleParameters() > 4)
         throw OpenMMException("OpenCLPlatform only supports four per-atom parameters for custom nonbonded forces");
     int forceIndex;
     for (forceIndex = 0; forceIndex < system.getNumForces() && &system.getForce(forceIndex) != &force; ++forceIndex)
         ;
     string prefix = "custom"+intToString(forceIndex)+"_";
-
-    // Identify which exceptions are actual interactions.
-
-    vector<pair<int, int> > exclusions;
-    vector<int> exceptions;
-    {
-        vector<double> parameters;
-        for (int i = 0; i < force.getNumExceptions(); i++) {
-            int particle1, particle2;
-            force.getExceptionParameters(i, particle1, particle2, parameters);
-            exclusions.push_back(pair<int, int>(particle1, particle2));
-            if (parameters.size() > 0)
-                exceptions.push_back(i);
-        }
-    }
 
     // Record parameters and exclusions.
 
@@ -946,9 +918,11 @@ void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, cons
             paramVec[i].w = (cl_float) parameters[3];
         exclusionList[i].push_back(i);
     }
-    for (int i = 0; i < (int) exclusions.size(); i++) {
-        exclusionList[exclusions[i].first].push_back(exclusions[i].second);
-        exclusionList[exclusions[i].second].push_back(exclusions[i].first);
+    for (int i = 0; i < force.getNumExclusions(); i++) {
+        int particle1, particle2;
+        force.getExclusionParticles(i, particle1, particle2);
+        exclusionList[particle1].push_back(particle2);
+        exclusionList[particle2].push_back(particle1);
     }
     params->upload(paramVec);
 
@@ -1025,11 +999,8 @@ void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, cons
     // Record information for the expressions.
 
     vector<string> paramNames;
-    vector<string> combiningRules;
-    for (int i = 0; i < force.getNumParameters(); i++) {
-        paramNames.push_back(force.getParameterName(i));
-        combiningRules.push_back(force.getParameterCombiningRule(i));
-    }
+    for (int i = 0; i < force.getNumPerParticleParameters(); i++)
+        paramNames.push_back(force.getPerParticleParameterName(i));
     globalParamNames.resize(force.getNumGlobalParameters());
     globalParamValues.resize(force.getNumGlobalParameters());
     for (int i = 0; i < force.getNumGlobalParameters(); i++) {
@@ -1048,33 +1019,21 @@ void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, cons
 
     // Create the kernels.
 
-    map<string, string> paramVariables;
-    map<string, string> forceVariables;
-    map<string, string> exceptionVariables;
-    forceVariables["r"] = "r";
-    exceptionVariables["r"] = "r";
+    map<string, string> variables;
+    variables["r"] = "r";
     string suffixes[] = {".x", ".y", ".z", ".w"};
-    for (int i = 0; i < force.getNumParameters(); i++) {
-        const string& name = force.getParameterName(i);
-        paramVariables[name+"1"] = prefix+"params1"+suffixes[i];
-        paramVariables[name+"2"] = prefix+"params2"+suffixes[i];
-        forceVariables[name] = prefix+name;
-        exceptionVariables[name] = "exceptionParams"+suffixes[i];
+    for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
+        const string& name = force.getPerParticleParameterName(i);
+        variables[name+"1"] = prefix+"params1"+suffixes[i];
+        variables[name+"2"] = prefix+"params2"+suffixes[i];
     }
     for (int i = 0; i < force.getNumGlobalParameters(); i++) {
         const string& name = force.getGlobalParameterName(i);
         string value = "globals["+intToString(i)+"]";
-        paramVariables[name] = prefix+value;
-        forceVariables[name] = prefix+value;
-        exceptionVariables[name] = value;
-    }
-    map<string, Lepton::ParsedExpression> paramExpressions;
-    for (int i = 0; i < force.getNumParameters(); i++) {
-        paramExpressions["float "+prefix+force.getParameterName(i)+" = " ] = Lepton::Parser::parse(force.getParameterCombiningRule(i)).optimize();
+        variables[name] = prefix+value;
     }
     stringstream compute;
-    compute << OpenCLExpressionUtilities::createExpressions(paramExpressions, paramVariables, functionDefinitions, prefix+"param_temp", prefix+"functionParams");
-    compute << OpenCLExpressionUtilities::createExpressions(forceExpressions, forceVariables, functionDefinitions, prefix+"force_temp", prefix+"functionParams");
+    compute << OpenCLExpressionUtilities::createExpressions(forceExpressions, variables, functionDefinitions, prefix+"temp", prefix+"functionParams");
     map<string, string> replacements;
     replacements["COMPUTE_FORCE"] = compute.str();
     string source = cl.loadSourceFromFile("customNonbonded.cl", replacements);
@@ -1084,53 +1043,7 @@ void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, cons
         globals->upload(globalParamValues);
         cl.getNonbondedUtilities().addArgument(OpenCLNonbondedUtilities::ParameterInfo(prefix+"globals", "float", sizeof(cl_float), globals->getDeviceBuffer()));
     }
-    map<string, Lepton::ParsedExpression> exceptionExpressions;
-    stringstream computeExceptions;
-    exceptionExpressions["energy += "] = energyExpression;
-    exceptionExpressions["dEdR = "] = forceExpression;
-    computeExceptions << OpenCLExpressionUtilities::createExpressions(exceptionExpressions, exceptionVariables, functionDefinitions, "temp", prefix+"functionParams");
-    replacements["COMPUTE_FORCE"] = computeExceptions.str();
-    replacements["EXTRA_ARGUMENTS"] = extraArguments;
-    map<string, string> defines;
-    defines["CUTOFF_SQUARED"] = doubleToString(force.getCutoffDistance()*force.getCutoffDistance());
-    Vec3 boxVectors[3];
-    system.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
-    defines["PERIODIC_BOX_SIZE_X"] = doubleToString(boxVectors[0][0]);
-    defines["PERIODIC_BOX_SIZE_Y"] = doubleToString(boxVectors[1][1]);
-    defines["PERIODIC_BOX_SIZE_Z"] = doubleToString(boxVectors[2][2]);
-    cl::Program program = cl.createProgram(cl.loadSourceFromFile("customNonbondedExceptions.cl", replacements), defines);
-    exceptionsKernel = cl::Kernel(program, "computeCustomNonbondedExceptions");
-
-    // Initialize exception parameters.
-
-    int numExceptions = exceptions.size();
-    int maxBuffers = cl.getNonbondedUtilities().getNumForceBuffers();
-    if (numExceptions > 0) {
-        exceptionParams = new OpenCLArray<mm_float4>(cl, numExceptions, "customExceptionParams");
-        exceptionIndices = new OpenCLArray<mm_int4>(cl, numExceptions, "customExceptionIndices");
-        vector<mm_float4> exceptionParamsVector(numExceptions);
-        vector<mm_int4> exceptionIndicesVector(numExceptions);
-        vector<int> forceBufferCounter(system.getNumParticles(), 0);
-        for (int i = 0; i < numExceptions; i++) {
-            int particle1, particle2;
-            vector<double> parameters;
-            force.getExceptionParameters(exceptions[i], particle1, particle2, parameters);
-            if (parameters.size() > 0)
-                exceptionParamsVector[i].x = (cl_float) parameters[0];
-            if (parameters.size() > 1)
-                exceptionParamsVector[i].y = (cl_float) parameters[1];
-            if (parameters.size() > 2)
-                exceptionParamsVector[i].z = (cl_float) parameters[2];
-            if (parameters.size() > 3)
-                exceptionParamsVector[i].w = (cl_float) parameters[3];
-            exceptionIndicesVector[i] = (mm_int4) {particle1, particle2, forceBufferCounter[particle1]++, forceBufferCounter[particle2]++};
-        }
-        exceptionParams->upload(exceptionParamsVector);
-        exceptionIndices->upload(exceptionIndicesVector);
-        for (int i = 0; i < forceBufferCounter.size(); i++)
-            maxBuffers = max(maxBuffers, forceBufferCounter[i]);
-    }
-    cl.addForce(new OpenCLCustomNonbondedForceInfo(maxBuffers, force));
+    cl.addForce(new OpenCLCustomNonbondedForceInfo(cl.getNonbondedUtilities().getNumForceBuffers(), force));
     delete fp;
 }
 
@@ -1145,21 +1058,6 @@ void OpenCLCalcCustomNonbondedForceKernel::executeForces(ContextImpl& context) {
         }
         if (changed)
             globals->upload(globalParamValues);
-    }
-    if (exceptionParams != NULL) {
-        if (!hasInitializedKernel) {
-            hasInitializedKernel = true;
-            exceptionsKernel.setArg<cl_int>(0, cl.getPaddedNumAtoms());
-            exceptionsKernel.setArg<cl_int>(1, exceptionParams->getSize());
-            exceptionsKernel.setArg<cl::Buffer>(2, cl.getForceBuffers().getDeviceBuffer());
-            exceptionsKernel.setArg<cl::Buffer>(3, cl.getEnergyBuffer().getDeviceBuffer());
-            exceptionsKernel.setArg<cl::Buffer>(4, cl.getPosq().getDeviceBuffer());
-            exceptionsKernel.setArg<cl::Buffer>(5, exceptionParams->getDeviceBuffer());
-            exceptionsKernel.setArg<cl::Buffer>(6, exceptionIndices->getDeviceBuffer());
-            if (globals != NULL)
-                exceptionsKernel.setArg<cl::Buffer>(7, globals->getDeviceBuffer());
-        }
-        cl.executeKernel(exceptionsKernel, exceptionIndices->getSize());
     }
 }
 

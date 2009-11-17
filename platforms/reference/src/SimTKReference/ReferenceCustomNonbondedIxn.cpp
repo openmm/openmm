@@ -43,9 +43,8 @@ using std::vector;
    --------------------------------------------------------------------------------------- */
 
 ReferenceCustomNonbondedIxn::ReferenceCustomNonbondedIxn(const Lepton::ExpressionProgram& energyExpression,
-        const Lepton::ExpressionProgram& forceExpression, const vector<string>& parameterNames, const vector<Lepton::ExpressionProgram>& combiningRules) :
-            cutoff(false), periodic(false), energyExpression(energyExpression), forceExpression(forceExpression),
-            paramNames(parameterNames), combiningRules(combiningRules) {
+        const Lepton::ExpressionProgram& forceExpression, const vector<string>& parameterNames) :
+            cutoff(false), periodic(false), energyExpression(energyExpression), forceExpression(forceExpression), paramNames(parameterNames) {
 
    // ---------------------------------------------------------------------------------------
 
@@ -151,21 +150,15 @@ int ReferenceCustomNonbondedIxn::calculatePairIxn( int numberOfAtoms, RealOpenMM
                                              RealOpenMM* fixedParameters, map<string, double> globalParameters, RealOpenMM** forces,
                                              RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const {
 
-   map<string, double> variablesForParams = globalParameters;
-   map<string, double> variablesForForce = globalParameters;
+   map<string, double> variables = globalParameters;
    if (cutoff) {
        for (int i = 0; i < (int) neighborList->size(); i++) {
            OpenMM::AtomPair pair = (*neighborList)[i];
-
-           // Apply the combining rules to compute the force field parameters.
-
-           for (int j = 0; j < (int) combiningRules.size(); j++) {
-               variablesForParams[particleParamNames[j*2]] = atomParameters[pair.first][j];
-               variablesForParams[particleParamNames[j*2+1]] = atomParameters[pair.second][j];
+           for (int j = 0; j < (int) paramNames.size(); j++) {
+               variables[particleParamNames[j*2]] = atomParameters[pair.first][j];
+               variables[particleParamNames[j*2+1]] = atomParameters[pair.second][j];
            }
-           for (int j = 0; j < (int) combiningRules.size(); j++)
-               variablesForForce[paramNames[j]] = combiningRules[j].evaluate(variablesForParams);
-           calculateOneIxn(pair.first, pair.second, atomCoordinates, variablesForForce, forces, energyByAtom, totalEnergy);
+           calculateOneIxn(pair.first, pair.second, atomCoordinates, variables, forces, energyByAtom, totalEnergy);
        }
    }
    else {
@@ -189,16 +182,11 @@ int ReferenceCustomNonbondedIxn::calculatePairIxn( int numberOfAtoms, RealOpenMM
           for( int jj = ii+1; jj < numberOfAtoms; jj++ ){
 
              if( exclusionIndices[jj] != ii ){
-
-                 // Apply the combining rules to compute the force field parameters.
-
-                 for (int j = 0; j < (int) combiningRules.size(); j++) {
-                     variablesForParams[particleParamNames[j*2]] = atomParameters[ii][j];
-                     variablesForParams[particleParamNames[j*2+1]] = atomParameters[jj][j];
+                 for (int j = 0; j < (int) paramNames.size(); j++) {
+                     variables[particleParamNames[j*2]] = atomParameters[ii][j];
+                     variables[particleParamNames[j*2+1]] = atomParameters[jj][j];
                  }
-                 for (int j = 0; j < (int) combiningRules.size(); j++)
-                     variablesForForce[paramNames[j]] = combiningRules[j].evaluate(variablesForParams);
-                 calculateOneIxn(ii, jj, atomCoordinates, variablesForForce, forces, energyByAtom, totalEnergy);
+                 calculateOneIxn(ii, jj, atomCoordinates, variables, forces, energyByAtom, totalEnergy);
              }
           }
        }
@@ -207,32 +195,6 @@ int ReferenceCustomNonbondedIxn::calculatePairIxn( int numberOfAtoms, RealOpenMM
    }
 
    return ReferenceForce::DefaultReturn;
-}
-/**---------------------------------------------------------------------------------------
-
-   Calculate custom pair ixn for exceptions
-
-   @param numberOfExceptions   number of exceptions
-   @param atomIndices          indices of atoms participating in exception ixn: atomIndices[exceptionIndex][indices]
-   @param atomCoordinates      atom coordinates: atomCoordinates[atomIndex][3]
-   @param parameters           parameters: parameters[exceptionIndex][*]; contents of array
-                               depend on ixn
-   @param globalParameters     the values of global parameters
-   @param forces               force array (forces added to current values): forces[atomIndex][3]
-   @param totalEnergy          totalEnergy: sum over { energies[atomIndex] }
-
-   --------------------------------------------------------------------------------------- */
-
-void ReferenceCustomNonbondedIxn::calculateExceptionIxn( int numberOfExceptions, int** atomIndices, RealOpenMM** atomCoordinates,
-                            RealOpenMM** parameters, map<string, double> globalParameters, RealOpenMM** forces,
-                            RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const {
-
-    map<string, double> variables = globalParameters;
-    for (int i = 0; i < numberOfExceptions; i++) {
-        for (int j = 0; j < (int) combiningRules.size(); j++)
-            variables[paramNames[j]] = parameters[i][j];
-        calculateOneIxn(atomIndices[i][0], atomIndices[i][1], atomCoordinates, variables, forces, energyByAtom, totalEnergy);
-    }
 }
 
   /**---------------------------------------------------------------------------------------

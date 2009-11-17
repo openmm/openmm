@@ -463,21 +463,6 @@ void CudaCalcCustomNonbondedForceKernel::initialize(const System& system, const 
     numParticles = force.getNumParticles();
     _gpuContext* gpu = data.gpu;
 
-    // Identify which exceptions are actual interactions.
-
-    vector<pair<int, int> > exclusions;
-    vector<int> exceptions;
-    {
-        vector<double> parameters;
-        for (int i = 0; i < force.getNumExceptions(); i++) {
-            int particle1, particle2;
-            force.getExceptionParameters(i, particle1, particle2, parameters);
-            exclusions.push_back(pair<int, int>(particle1, particle2));
-            if (parameters.size() > 0)
-                exceptions.push_back(i);
-        }
-    }
-
     // Initialize nonbonded interactions.
 
     vector<int> particle(numParticles);
@@ -488,9 +473,11 @@ void CudaCalcCustomNonbondedForceKernel::initialize(const System& system, const 
         particle[i] = i;
         exclusionList[i].push_back(i);
     }
-    for (int i = 0; i < (int)exclusions.size(); i++) {
-        exclusionList[exclusions[i].first].push_back(exclusions[i].second);
-        exclusionList[exclusions[i].second].push_back(exclusions[i].first);
+    for (int i = 0; i < force.getNumExclusions(); i++) {
+        int particle1, particle2;
+        force.getExclusionParticles(i, particle1, particle2);
+        exclusionList[particle1].push_back(particle2);
+        exclusionList[particle2].push_back(particle1);
     }
     Vec3 boxVectors[3];
     system.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
@@ -502,15 +489,6 @@ void CudaCalcCustomNonbondedForceKernel::initialize(const System& system, const 
         method = PERIODIC;
     }
     data.customNonbondedMethod = method;
-
-    // Initialize exceptions.
-
-    int numExceptions = exceptions.size();
-    vector<int> exceptionParticle1(numExceptions);
-    vector<int> exceptionParticle2(numExceptions);
-    vector<vector<double> > exceptionParams(numExceptions);
-    for (int i = 0; i < numExceptions; i++)
-        force.getExceptionParameters(exceptions[i], exceptionParticle1[i], exceptionParticle2[i], exceptionParams[i]);
 
     // Record the tabulated functions.
 
@@ -526,19 +504,15 @@ void CudaCalcCustomNonbondedForceKernel::initialize(const System& system, const 
     // Record information for the expressions.
 
     vector<string> paramNames;
-    vector<string> combiningRules;
-    for (int i = 0; i < force.getNumParameters(); i++) {
-        paramNames.push_back(force.getParameterName(i));
-        combiningRules.push_back(force.getParameterCombiningRule(i));
-    }
+    for (int i = 0; i < force.getNumPerParticleParameters(); i++)
+        paramNames.push_back(force.getPerParticleParameterName(i));
     globalParamNames.resize(force.getNumGlobalParameters());
     globalParamValues.resize(force.getNumGlobalParameters());
     for (int i = 0; i < force.getNumGlobalParameters(); i++) {
         globalParamNames[i] = force.getGlobalParameterName(i);
         globalParamValues[i] = (float) force.getGlobalParameterDefaultValue(i);
     }
-    gpuSetCustomNonbondedParameters(gpu, parameters, exclusionList, exceptionParticle1, exceptionParticle2, exceptionParams, method,
-            (float)force.getCutoffDistance(), force.getEnergyFunction(), combiningRules, paramNames, globalParamNames);
+    gpuSetCustomNonbondedParameters(gpu, parameters, exclusionList, method, (float) force.getCutoffDistance(), force.getEnergyFunction(), paramNames, globalParamNames);
     if (globalParamValues.size() > 0)
         SetCustomNonbondedGlobalParams(&globalParamValues[0]);
 }

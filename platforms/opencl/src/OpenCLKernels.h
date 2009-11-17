@@ -391,7 +391,7 @@ private:
 class OpenCLCalcCustomNonbondedForceKernel : public CalcCustomNonbondedForceKernel {
 public:
     OpenCLCalcCustomNonbondedForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcCustomNonbondedForceKernel(name, platform),
-            hasInitializedKernel(false), cl(cl), params(NULL), globals(NULL), exceptionParams(NULL), exceptionIndices(NULL), tabulatedFunctionParams(NULL), system(system) {
+            hasInitializedKernel(false), cl(cl), params(NULL), globals(NULL), tabulatedFunctionParams(NULL), system(system) {
     }
     ~OpenCLCalcCustomNonbondedForceKernel();
     /**
@@ -419,10 +419,7 @@ private:
     OpenCLContext& cl;
     OpenCLArray<mm_float4>* params;
     OpenCLArray<cl_float>* globals;
-    OpenCLArray<mm_float4>* exceptionParams;
-    OpenCLArray<mm_int4>* exceptionIndices;
     OpenCLArray<mm_float4>* tabulatedFunctionParams;
-    cl::Kernel exceptionsKernel;
     std::vector<std::string> globalParamNames;
     std::vector<cl_float> globalParamValues;
     std::vector<OpenCLArray<mm_float4>*> tabulatedFunctions;

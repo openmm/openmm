@@ -398,14 +398,13 @@ public:
      */
     double executeEnergy(ContextImpl& context);
 private:
-    int numParticles, numExceptions;
-    int **exclusionArray, **exceptionIndexArray;
-    RealOpenMM **particleParamArray, **exceptionParamArray;
+    int numParticles;
+    int **exclusionArray;
+    RealOpenMM **particleParamArray;
     RealOpenMM nonbondedCutoff, periodicBoxSize[3];
     std::vector<std::set<int> > exclusions;
     Lepton::ExpressionProgram energyExpression, forceExpression;
     std::vector<std::string> parameterNames, globalParameterNames;
-    std::vector<Lepton::ExpressionProgram> combiningRules;
     NonbondedMethod nonbondedMethod;
     NeighborList* neighborList;
     class TabulatedFunction;

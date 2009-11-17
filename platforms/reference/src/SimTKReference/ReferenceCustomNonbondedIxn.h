@@ -44,7 +44,6 @@ class ReferenceCustomNonbondedIxn {
       RealOpenMM cutoffDistance;
       Lepton::ExpressionProgram energyExpression;
       Lepton::ExpressionProgram forceExpression;
-      std::vector<Lepton::ExpressionProgram> combiningRules;
       std::vector<std::string> paramNames;
       std::vector<std::string> particleParamNames;
 
@@ -76,7 +75,7 @@ class ReferenceCustomNonbondedIxn {
          --------------------------------------------------------------------------------------- */
 
        ReferenceCustomNonbondedIxn(const Lepton::ExpressionProgram& energyExpression, const Lepton::ExpressionProgram& forceExpression,
-                                   const std::vector<std::string>& parameterNames, const std::vector<Lepton::ExpressionProgram>& combiningRules);
+                                   const std::vector<std::string>& parameterNames);
 
       /**---------------------------------------------------------------------------------------
 
@@ -138,26 +137,6 @@ class ReferenceCustomNonbondedIxn {
                             RealOpenMM** atomParameters, int** exclusions,
                             RealOpenMM* fixedParameters, std::map<std::string, double> globalParameters,
                             RealOpenMM** forces, RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const;
-
-      /**---------------------------------------------------------------------------------------
-
-         Calculate custom pair ixn for exceptions
-
-         @param numberOfExceptions   number of exceptions
-         @param atomIndices          indices of atoms participating in exception ixn: atomIndices[exceptionIndex][indices]
-         @param atomCoordinates      atom coordinates: atomCoordinates[atomIndex][3]
-         @param parameters           parameters: parameters[excptionIndex][*]; contents of array
-                                     depend on ixn
-         @param globalParameters     the values of global parameters
-         @param forces               force array (forces added to current values): forces[atomIndex][3]
-         @param energyByAtom         atom energy
-         @param totalEnergy          total energy
-
-         --------------------------------------------------------------------------------------- */
-
-      void calculateExceptionIxn( int numberOfExceptions, int** atomIndices, RealOpenMM** atomCoordinates,
-                                    RealOpenMM** parameters, std::map<std::string, double> globalParameters,
-                                    RealOpenMM** forces, RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const;
 
 // ---------------------------------------------------------------------------------------
 
