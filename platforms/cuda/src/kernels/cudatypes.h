@@ -360,6 +360,10 @@ struct cudaGmxSimulation {
     float4*         pCustomBondParams;              // Parameters for custom bonds
     unsigned int    customBonds;                    // Number of custom bonds
     unsigned int    customBondParameters;           // Number of parameters for custom bonds
+    int*            pCustomExternalID;              // Atom indices for custom external force
+    float4*         pCustomExternalParams;          // Parameters for custom external force
+    unsigned int    customExternals;                // Number of particles for custom external force
+    unsigned int    customExternalParameters;       // Number of parameters for custom external force
     float4*         pTabulatedFunctionCoefficients[MAX_TABULATED_FUNCTIONS]; // The spline coefficients for each tabulated function
     float4*         pTabulatedFunctionParams;       // The min, max, and spacing for each tabulated function
     float2*         pEwaldCosSinSum;                // Pointer to the cos/sin sums (ewald)

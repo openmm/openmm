@@ -694,6 +694,50 @@ void gpuSetCustomBondParameters(gpuContext gpu, const vector<int>& bondAtom1, co
 }
 
 extern "C"
+void gpuSetCustomExternalParameters(gpuContext gpu, const vector<int>& atomIndex, const vector<vector<double> >& atomParams,
+            const string& energyExp, const vector<string>& paramNames, const vector<string>& globalParamNames)
+{
+    if (paramNames.size() > 4)
+        throw OpenMMException("CudaPlatform only supports four per-particle parameters for custom external forces");
+    if (globalParamNames.size() > 8)
+        throw OpenMMException("CudaPlatform only supports eight global parameters for custom external forces");
+    if (gpu->psCustomExternalID != NULL)
+        throw OpenMMException("CudaPlatform only supports a single CustomExternalForce per System");
+    gpu->sim.customExternals = atomIndex.size();
+    gpu->sim.customExternalParameters = paramNames.size();
+    gpu->psCustomExternalID = new CUDAStream<int>(gpu->sim.customExternals, 1, "CustomExternalId");
+    gpu->sim.pCustomExternalID = gpu->psCustomExternalID->_pDevData;
+    gpu->psCustomExternalParams = new CUDAStream<float4>(gpu->sim.customExternals, 1, "CustomExternalParams");
+    gpu->sim.pCustomExternalParams = gpu->psCustomExternalParams->_pDevData;
+    for (int i = 0; i < (int) atomIndex.size(); i++) {
+        (*gpu->psCustomExternalID)[i] = atomIndex[i];
+        if (atomParams[i].size() > 0)
+            (*gpu->psCustomExternalParams)[i].x = atomParams[i][0];
+        if (atomParams[i].size() > 1)
+            (*gpu->psCustomExternalParams)[i].y = atomParams[i][1];
+        if (atomParams[i].size() > 2)
+            (*gpu->psCustomExternalParams)[i].z = atomParams[i][2];
+        if (atomParams[i].size() > 3)
+            (*gpu->psCustomExternalParams)[i].w = atomParams[i][3];
+    }
+    gpu->psCustomExternalID->Upload();
+    gpu->psCustomExternalParams->Upload();
+
+    // Create the Expressions.
+
+    vector<string> variables;
+    variables.push_back("x");
+    variables.push_back("y");
+    variables.push_back("z");
+    for (int i = 0; i < (int) paramNames.size(); i++)
+        variables.push_back(paramNames[i]);
+    SetCustomExternalEnergyExpression(createExpression<128>(gpu, energyExp, Lepton::Parser::parse(energyExp).optimize().createProgram(), variables, globalParamNames, gpu->sim.customExpressionStackSize));
+    SetCustomExternalForceExpressions(createExpression<128>(gpu, energyExp, Lepton::Parser::parse(energyExp).differentiate("x").optimize().createProgram(), variables, globalParamNames, gpu->sim.customExpressionStackSize),
+                                  createExpression<128>(gpu, energyExp, Lepton::Parser::parse(energyExp).differentiate("y").optimize().createProgram(), variables, globalParamNames, gpu->sim.customExpressionStackSize),
+                                  createExpression<128>(gpu, energyExp, Lepton::Parser::parse(energyExp).differentiate("z").optimize().createProgram(), variables, globalParamNames, gpu->sim.customExpressionStackSize));
+}
+
+extern "C"
 void gpuSetCustomNonbondedParameters(gpuContext gpu, const vector<vector<double> >& parameters, const vector<vector<int> >& exclusions,
             CudaNonbondedMethod method, float cutoffDistance, const string& energyExp,
             const vector<string>& paramNames, const vector<string>& globalParamNames)
@@ -1781,6 +1825,8 @@ void* gpuInit(int numAtoms, unsigned int device, bool useBlockingSync)
     gpu->psCustomExceptionParams    = NULL;
     gpu->psCustomBondID             = NULL;
     gpu->psCustomBondParams         = NULL;
+    gpu->psCustomExternalID         = NULL;
+    gpu->psCustomExternalParams     = NULL;
     gpu->psEwaldCosSinSum           = NULL;
     gpu->psTabulatedErfc            = NULL;
     gpu->psPmeGrid                  = NULL;
@@ -1951,6 +1997,10 @@ void gpuShutDown(gpuContext gpu)
     if (gpu->psCustomBondParams != NULL) {
         delete gpu->psCustomBondID;
         delete gpu->psCustomBondParams;
+    }
+    if (gpu->psCustomExternalParams != NULL) {
+        delete gpu->psCustomExternalID;
+        delete gpu->psCustomExternalParams;
     }
     if (gpu->psEwaldCosSinSum != NULL)
         delete gpu->psEwaldCosSinSum;
@@ -2318,6 +2368,7 @@ int gpuSetConstants(gpuContext gpu)
     SetCalculateCDLJObcGbsaForces1Sim(gpu);
     SetCalculateCustomNonbondedForcesSim(gpu);
     SetCalculateCustomBondForcesSim(gpu);
+    SetCalculateCustomExternalForcesSim(gpu);
     SetCalculateLocalForcesSim(gpu);
     SetCalculateObcGbsaBornSumSim(gpu);
     SetCalculateGBVIBornSumSim(gpu);

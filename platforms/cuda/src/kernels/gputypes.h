@@ -106,6 +106,8 @@ struct _gpuContext {
     CUDAStream<float4>* psCustomExceptionParams; // Parameters for custom nonbonded exceptions
     CUDAStream<int4>* psCustomBondID;             // Atom indices for custom bonds
     CUDAStream<float4>* psCustomBondParams;       // Parameters for custom bonds
+    CUDAStream<int>* psCustomExternalID;          // Atom indices for custom external force
+    CUDAStream<float4>* psCustomExternalParams;   // Parameters for custom external force
     CUDAStream<float4>* psTabulatedFunctionParams; // The min, max, and spacing for each tabulated function
     CUDAStream<float2>* psEwaldCosSinSum;
     CUDAStream<float>* psTabulatedErfc;     // Tabulated values for erfc()
@@ -210,6 +212,10 @@ void gpuSetTabulatedFunction(gpuContext gpu, int index, const std::string& name,
 
 extern "C"
 void gpuSetCustomBondParameters(gpuContext gpu, const std::vector<int>& bondAtom1, const std::vector<int>& bondAtom2, const std::vector<std::vector<double> >& bondParams,
+            const std::string& energyExp, const std::vector<std::string>& paramNames, const std::vector<std::string>& globalParamNames);
+
+extern "C"
+void gpuSetCustomExternalParameters(gpuContext gpu, const std::vector<int>& atomIndex, const std::vector<std::vector<double> >& atomParams,
             const std::string& energyExp, const std::vector<std::string>& paramNames, const std::vector<std::string>& globalParamNames);
 
 extern "C"

@@ -593,6 +593,52 @@ double CudaCalcGBVIForceKernel::executeEnergy(ContextImpl& context) {
     return 0.0;
 }
 
+CudaCalcCustomExternalForceKernel::~CudaCalcCustomExternalForceKernel() {
+}
+
+void CudaCalcCustomExternalForceKernel::initialize(const System& system, const CustomExternalForce& force) {
+    numParticles = force.getNumParticles();
+    vector<int> particle(numParticles);
+    vector<vector<double> > params(numParticles);
+    for (int i = 0; i < numParticles; i++)
+        force.getParticleParameters(i, particle[i], params[i]);
+    vector<string> paramNames;
+    for (int i = 0; i < force.getNumPerParticleParameters(); i++)
+        paramNames.push_back(force.getPerParticleParameterName(i));
+    globalParamNames.resize(force.getNumGlobalParameters());
+    globalParamValues.resize(force.getNumGlobalParameters());
+    for (int i = 0; i < force.getNumGlobalParameters(); i++) {
+        globalParamNames[i] = force.getGlobalParameterName(i);
+        globalParamValues[i] = (float) force.getGlobalParameterDefaultValue(i);
+    }
+    gpuSetCustomExternalParameters(data.gpu, particle, params, force.getEnergyFunction(), paramNames, globalParamNames);
+    if (globalParamValues.size() > 0)
+        SetCustomExternalGlobalParams(&globalParamValues[0]);
+}
+
+void CudaCalcCustomExternalForceKernel::executeForces(ContextImpl& context) {
+    updateGlobalParams(context);
+    kCalculateCustomExternalForces(data.gpu);
+}
+
+double CudaCalcCustomExternalForceKernel::executeEnergy(ContextImpl& context) {
+    updateGlobalParams(context);
+    kCalculateCustomExternalForces(data.gpu);
+    return 0.0;
+}
+
+void CudaCalcCustomExternalForceKernel::updateGlobalParams(ContextImpl& context) {
+    bool changed = false;
+    for (int i = 0; i < (int) globalParamNames.size(); i++) {
+        float value = (float) context.getParameter(globalParamNames[i]);
+        if (value != globalParamValues[i])
+            changed = true;
+        globalParamValues[i] = value;
+    }
+    if (changed)
+        SetCustomExternalGlobalParams(&globalParamValues[0]);
+}
+
 static void initializeIntegration(const System& system, CudaPlatform::PlatformData& data, const Integrator& integrator) {
 
     // Initialize any terms that haven't already been handled by a Force.

@@ -461,6 +461,44 @@ private:
 };
 
 /**
+ * This kernel is invoked by CustomExternalForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CudaCalcCustomExternalForceKernel : public CalcCustomExternalForceKernel {
+public:
+    CudaCalcCustomExternalForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data, System& system) : CalcCustomExternalForceKernel(name, platform),
+            data(data), system(system) {
+    }
+    ~CudaCalcCustomExternalForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomExternalForce this kernel will be used for
+     */
+    void initialize(const System& system, const CustomExternalForce& force);
+    /**
+     * Execute the kernel to calculate the forces.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void executeForces(ContextImpl& context);
+    /**
+     * Execute the kernel to calculate the energy.
+     *
+     * @param context    the context in which to execute this kernel
+     * @return the potential energy due to the CustomExternalForce
+     */
+    double executeEnergy(ContextImpl& context);
+private:
+    void updateGlobalParams(ContextImpl& context);
+    int numParticles;
+    CudaPlatform::PlatformData& data;
+    std::vector<std::string> globalParamNames;
+    std::vector<float> globalParamValues;
+    System& system;
+};
+
+/**
  * This kernel is invoked by VerletIntegrator to take one time step.
  */
 class CudaIntegrateVerletStepKernel : public IntegrateVerletStepKernel {
