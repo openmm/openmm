@@ -45,7 +45,7 @@ public:
 //    class PlatformData;
     ReferenceFreeEnergyPlatform();
     const std::string& getName() const {
-        static const std::string name = "ReferenceFreeEnergyPlatform";
+        static const std::string name = "ReferenceFreeEnergy";
         return name;
     }
 #if 0

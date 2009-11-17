@@ -265,7 +265,7 @@ GpuObcGbsaSoftcore* gpuSetObcSoftcoreParameters(gpuContext gpu, float innerDiele
     GpuObcGbsaSoftcore* gpuObcGbsaSoftcore = new GpuObcGbsaSoftcore();
     gpuObcGbsaSoftcore->initializeNonPolarScalingFactors( gpu->sim.paddedNumberOfAtoms );
 
-    gpu->sim.surfaceAreaFactor             =  -6.0f*PI*4.0f*nonPolarPrefactor*1000.0f*0.4184f;
+    gpu->sim.surfaceAreaFactor             =  -6.0f*PI*4.0f*nonPolarPrefactor;
     for (unsigned int i = 0; i < atoms; i++)
     {
             (*gpu->psObcData)[i].x = radius[i] - dielectricOffset;

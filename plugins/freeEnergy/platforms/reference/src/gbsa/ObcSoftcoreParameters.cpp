@@ -118,7 +118,7 @@ ObcSoftcoreParameters::ObcSoftcoreParameters( int numberOfAtoms, ObcSoftcorePara
    _nonPolarScaleFactors         = NULL;
 
 
-   _nonPolarPreFactor            = 0.054;
+   _nonPolarPreFactor            = 2.25936;
 
    setObcTypeParameters( obcType );
 

@@ -36,7 +36,9 @@
 
 using namespace OpenMM;
 
-GBSAOBCSoftcoreForce::GBSAOBCSoftcoreForce() : solventDielectric(78.3), soluteDielectric(1.0), nonPolarPrefactor( 0.0054 ){
+// units of nonPolarPrefactor are now kJ/mol/nm^2
+
+GBSAOBCSoftcoreForce::GBSAOBCSoftcoreForce() : solventDielectric(78.3), soluteDielectric(1.0), nonPolarPrefactor( 2.25936 ){
 }
 
 int GBSAOBCSoftcoreForce::addParticle(double charge, double radius, double scalingFactor, double nonPolarScalingFactor) {

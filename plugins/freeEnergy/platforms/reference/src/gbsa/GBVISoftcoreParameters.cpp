@@ -38,8 +38,6 @@ extern "C" {
 }
 #endif
 
-const std::string GBVISoftcoreParameters::ParameterFileName = std::string( "params.agb" );
-
 /**---------------------------------------------------------------------------------------
 
    GBVISoftcoreParameters:

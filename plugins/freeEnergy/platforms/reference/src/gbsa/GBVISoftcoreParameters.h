@@ -34,8 +34,6 @@ class GBVISoftcoreParameters : public ImplicitSolventParameters {
 
    public:
 
-       static const std::string ParameterFileName;
-
     /** 
      * This is an enumeration of the different methods that may be used for scaling of the Born radii.
      */

@@ -512,10 +512,11 @@ void CudaFreeEnergyCalcGBSAOBCSoftcoreForceKernel::initialize(const System& syst
         charge[i]                 = static_cast<float>( particleCharge);
         nonPolarScalingFactors[i] = static_cast<float>( particleNonPolarScalingFactor);
     }
+
     gpuObcGbsaSoftcore = gpuSetObcSoftcoreParameters(gpu, static_cast<float>( force.getSoluteDielectric()),
                                                      static_cast<float>( force.getSolventDielectric()),
                                                      static_cast<float>( force.getNonPolarPrefactor()),
-                                                     radius, scale, charge, nonPolarScalingFactors  );
+                                                     radius, scale, charge, nonPolarScalingFactors );
 }
 
 void CudaFreeEnergyCalcGBSAOBCSoftcoreForceKernel::executeForces(ContextImpl& context) {

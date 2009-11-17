@@ -334,7 +334,13 @@ void ReferenceFreeEnergyCalcGBSAOBCSoftcoreForceKernel::initialize(const System&
 
     obcParameters->setSolventDielectric( static_cast<RealOpenMM>(force.getSolventDielectric()) );
     obcParameters->setSoluteDielectric(  static_cast<RealOpenMM>(force.getSoluteDielectric()) );
-    obcParameters->setNonPolarPrefactor( static_cast<RealOpenMM>(force.getNonPolarPrefactor()) );
+
+    // nonPolarPrefactor is in units of kJ/mol/nm^2 convert to kcal/mol/A^2 
+    // to be consistent w/ polar part of OBC calculation
+
+    RealOpenMM nonPolarPrefactor =  static_cast<RealOpenMM>(force.getNonPolarPrefactor());
+    nonPolarPrefactor           /= static_cast<RealOpenMM>(418.4);
+    obcParameters->setNonPolarPrefactor( nonPolarPrefactor );
 
     // If there is a NonbondedForce in this system, use it to initialize cutoffs and periodic boundary conditions.
 

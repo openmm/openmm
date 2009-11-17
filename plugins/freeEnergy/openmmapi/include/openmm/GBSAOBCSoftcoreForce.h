@@ -135,7 +135,7 @@ public:
         return nonPolarPrefactor;
     }
     /**
-     * Set the nonPolarPrefactor.
+     * Set the nonPolarPrefactor; units are kJ/mol/nm^2
      */
     void setNonPolarPrefactor(double inputNonPolarPrefactor) {
         nonPolarPrefactor = inputNonPolarPrefactor;
