@@ -158,58 +158,6 @@ ReferenceLJCoulombIxn::~ReferenceLJCoulombIxn( ){
 
 /**---------------------------------------------------------------------------------------
 
-   Calculate parameters for LJ Coulomb ixn
-
-   @param c6               c6
-   @param c12              c12
-   @param q1               q1 charge atom 1
-   @param epsfac           epsfacSqrt ????????????
-   @param parameters       output parameters:
-										parameter[SigIndex]  = 0.5*( (c12/c6)**1/6 ) (sigma/2)
-										parameter[EpsIndex]  = sqrt(c6*c6/c12)       (2*sqrt(epsilon))
-										parameter[QIndex]    = epsfactorSqrt*q1
-
-   @return ReferenceForce::DefaultReturn
-
-   --------------------------------------------------------------------------------------- */
-
-int ReferenceLJCoulombIxn::getDerivedParameters( RealOpenMM c6, RealOpenMM c12, RealOpenMM q1,
-                                                 RealOpenMM epsfacSqrt,
-                                                 RealOpenMM* parameters ) const {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceLJCoulombIxn::getDerivedParameters";
-
-   static const RealOpenMM zero          =  0.0;
-   static const RealOpenMM one           =  1.0;
-   static const RealOpenMM six           =  6.0;
-   static const RealOpenMM half          =  0.5;
-   static const RealOpenMM oneSixth      =  one/six;
-   static const RealOpenMM oneTweleth    =  half*oneSixth;
-
-   // ---------------------------------------------------------------------------------------
-
-   if( c12 <= 0.0 ){
-
-      parameters[EpsIndex] = zero;
-      parameters[SigIndex] = half;
-
-   } else {
-
-      parameters[EpsIndex]    = c6*SQRT( one/c12 );
-
-      parameters[SigIndex]    = POW( (c12/c6), oneSixth );
-      parameters[SigIndex]   *= half;
-   }
-
-   parameters[QIndex]   = epsfacSqrt*q1;
-
-   return ReferenceForce::DefaultReturn;
-}
-
-/**---------------------------------------------------------------------------------------
-
    Calculate Ewald ixn
 
    @param numberOfAtoms    number of atoms
@@ -245,7 +193,7 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
     RealOpenMM  factorEwald             = -1 / (4*alphaEwald*alphaEwald);
     RealOpenMM SQRT_PI                  = sqrt(PI);
     RealOpenMM TWO_PI                   = 2.0 * PI;
-    RealOpenMM recipCoeff               = (RealOpenMM)(4*PI/(periodicBoxSize[0] * periodicBoxSize[1] * periodicBoxSize[2]) /epsilon);
+    RealOpenMM recipCoeff               = (RealOpenMM)(ONE_4PI_EPS0*4*PI/(periodicBoxSize[0] * periodicBoxSize[1] * periodicBoxSize[2]) /epsilon);
 
     RealOpenMM totalSelfEwaldEnergy     = 0.0;
     RealOpenMM realSpaceEwaldEnergy     = 0.0;
@@ -258,7 +206,7 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
 // **************************************************************************************
 
     for( int atomID = 0; atomID < numberOfAtoms; atomID++ ){
-        RealOpenMM selfEwaldEnergy       = atomParameters[atomID][QIndex]*atomParameters[atomID][QIndex] * alphaEwald/SQRT_PI;
+        RealOpenMM selfEwaldEnergy       = ONE_4PI_EPS0*atomParameters[atomID][QIndex]*atomParameters[atomID][QIndex] * alphaEwald/SQRT_PI;
         totalSelfEwaldEnergy            -= selfEwaldEnergy;
 
         if( energyByAtom ){
@@ -421,12 +369,11 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
        RealOpenMM deltaR[2][ReferenceForce::LastDeltaRIndex];
        ReferenceForce::getDeltaRPeriodic( atomCoordinates[jj], atomCoordinates[ii], periodicBoxSize, deltaR[0] );
        RealOpenMM r         = deltaR[0][ReferenceForce::RIndex];
-       RealOpenMM r2        = deltaR[0][ReferenceForce::R2Index];
        RealOpenMM inverseR  = one/(deltaR[0][ReferenceForce::RIndex]);
        RealOpenMM alphaR    = alphaEwald * r;
 
 
-       RealOpenMM dEdR      = atomParameters[ii][QIndex] * atomParameters[jj][QIndex] * inverseR * inverseR * inverseR;
+       RealOpenMM dEdR      = ONE_4PI_EPS0 * atomParameters[ii][QIndex] * atomParameters[jj][QIndex] * inverseR * inverseR * inverseR;
                   dEdR      = (RealOpenMM)(dEdR * (erfc(alphaR) + 2 * alphaR * exp ( - alphaR * alphaR) / SQRT_PI ));
 
        RealOpenMM sig       = atomParameters[ii][SigIndex] +  atomParameters[jj][SigIndex];
@@ -446,7 +393,7 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
 
        // accumulate energies
 
-       realSpaceEwaldEnergy        = (RealOpenMM) (atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*inverseR*erfc(alphaR));
+       realSpaceEwaldEnergy        = (RealOpenMM) (ONE_4PI_EPS0*atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*inverseR*erfc(alphaR));
        vdwEnergy                   = eps*(sig6-one)*sig6;
 
        totalVdwEnergy             += vdwEnergy;
@@ -476,7 +423,7 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
                RealOpenMM r         = deltaR[0][ReferenceForce::RIndex];
                RealOpenMM inverseR  = one/(deltaR[0][ReferenceForce::RIndex]);
                RealOpenMM alphaR    = alphaEwald * r;
-               RealOpenMM dEdR      = atomParameters[ii][QIndex] * atomParameters[jj][QIndex] * inverseR * inverseR * inverseR;
+               RealOpenMM dEdR      = ONE_4PI_EPS0 * atomParameters[ii][QIndex] * atomParameters[jj][QIndex] * inverseR * inverseR * inverseR;
                           dEdR      = (RealOpenMM)(dEdR * (erf(alphaR) - 2 * alphaR * exp ( - alphaR * alphaR) / SQRT_PI ));
 
                // accumulate forces
@@ -489,7 +436,7 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
 
                // accumulate energies
 
-               realSpaceEwaldEnergy = (RealOpenMM) (atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*inverseR*erf(alphaR));
+               realSpaceEwaldEnergy = (RealOpenMM) (ONE_4PI_EPS0*atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*inverseR*erf(alphaR));
 
                totalExclusionEnergy += realSpaceEwaldEnergy;
                if( energyByAtom ){
@@ -635,9 +582,9 @@ int ReferenceLJCoulombIxn::calculateOneIxn( int ii, int jj, RealOpenMM** atomCoo
     RealOpenMM eps       = atomParameters[ii][EpsIndex]*atomParameters[jj][EpsIndex];
     RealOpenMM dEdR      = eps*( twelve*sig6 - six )*sig6;
                if (cutoff)
-                   dEdR += atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*(inverseR-2.0f*krf*r2);
+                   dEdR += ONE_4PI_EPS0*atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*(inverseR-2.0f*krf*r2);
                else
-                   dEdR += atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*inverseR;
+                   dEdR += ONE_4PI_EPS0*atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*inverseR;
                dEdR     *= inverseR*inverseR;
 
     // accumulate forces
@@ -654,9 +601,9 @@ int ReferenceLJCoulombIxn::calculateOneIxn( int ii, int jj, RealOpenMM** atomCoo
 
     if( totalEnergy || energyByAtom ) {
         if (cutoff)
-            energy = atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*(inverseR+krf*r2-crf);
+            energy = ONE_4PI_EPS0*atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*(inverseR+krf*r2-crf);
         else
-            energy = atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*inverseR;
+            energy = ONE_4PI_EPS0*atomParameters[ii][QIndex]*atomParameters[jj][QIndex]*inverseR;
         energy += eps*(sig6-one)*sig6;
         if( totalEnergy )
            *totalEnergy += energy;

@@ -143,28 +143,6 @@ class ReferenceLJCoulombIxn : public ReferencePairIxn {
          --------------------------------------------------------------------------------------- */
       
       void setUsePME(RealOpenMM alpha, int meshSize[3]);
-
-
-      /**---------------------------------------------------------------------------------------
-      
-         Calculate parameters for LJ 1-4 ixn
-      
-         @param c6               c6
-         @param c12              c12
-         @param q1               q1 charge atom
-         @param epsfacSqrt       epsfacSqrt (what is this?)
-         @param parameters       output parameters:
-                                    parameter[SigIndex]  = sqrt(c6*c6/c12)
-                                    parameter[EpsIndex]  = 0.5*( (c12/c6)**1/6 )
-                                    parameter[QIndex]    = epsfactorSqrt*q1
-      
-         @return ReferenceForce::DefaultReturn
-      
-         --------------------------------------------------------------------------------------- */
-      
-      int getDerivedParameters( RealOpenMM c6, RealOpenMM c12, RealOpenMM q1, 
-                                RealOpenMM epsfacSqrt,
-                                RealOpenMM* parameters ) const;
       
       /**---------------------------------------------------------------------------------------
       

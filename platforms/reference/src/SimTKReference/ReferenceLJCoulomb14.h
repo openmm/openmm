@@ -67,29 +67,7 @@ class ReferenceLJCoulomb14 : public ReferenceBondIxn {
          --------------------------------------------------------------------------------------- */
       
       int setUseCutoff( RealOpenMM distance, RealOpenMM solventDielectric );
-       
-      /**---------------------------------------------------------------------------------------
-      
-         Calculate parameters for LJ 1-4 ixn
-      
-         @param c6               c6
-         @param c12              c12
-         @param q1               q1 charge atom 1
-         @param q2               q2 charge atom 2
-         @param epsfac           epsfac ????????????
-         @param parameters       output parameters:
-                                    parameter[0]= c6*c6/c12
-                                    parameter[1]= (c12/c6)**1/6
-                                    parameter[2]= epsfactor*q1*q2
-      
-         @return ReferenceForce::DefaultReturn
-      
-         --------------------------------------------------------------------------------------- */
-      
-      int getDerivedParameters( RealOpenMM c6, RealOpenMM c12, RealOpenMM q1, 
-                                               RealOpenMM q2, RealOpenMM epsfac,
-                                               RealOpenMM* parameters ) const;
-      
+             
       /**---------------------------------------------------------------------------------------
       
          Calculate Ryckaert-Bellemans bond ixn

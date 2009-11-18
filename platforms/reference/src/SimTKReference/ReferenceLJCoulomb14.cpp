@@ -86,51 +86,6 @@ ReferenceLJCoulomb14::~ReferenceLJCoulomb14( ){
   
 /**---------------------------------------------------------------------------------------
 
-   Calculate parameters for LJ 1-4 ixn
-
-   @param c6               c6
-   @param c12              c12
-   @param q1               q1 charge atom 1
-   @param q2               q2 charge atom 2
-   @param epsfac           epsfac ????????????
-   @param parameters       output parameters:
-										parameter[0]= c6*c6/c12
-										parameter[1]= (c12/c6)**1/6
-										parameter[2]= epsfactor*q1*q2
-
-   @return ReferenceForce::DefaultReturn
-
-   --------------------------------------------------------------------------------------- */
-
-int ReferenceLJCoulomb14::getDerivedParameters( RealOpenMM c6, RealOpenMM c12, RealOpenMM q1,
-                                         RealOpenMM q2, RealOpenMM epsfac,
-                                         RealOpenMM* parameters ) const {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceLJCoulomb14::getDerivedParameters";
-
-   static const RealOpenMM zero       =  0.0;
-   static const RealOpenMM one        =  1.0;
-   static const RealOpenMM six        =  6.0;
-   static const RealOpenMM oneSixth   =  one/six;
-
-   // ---------------------------------------------------------------------------------------
-
-   if( c12 <= zero ){
-      parameters[0] = one;
-      parameters[1] = zero;
-   } else {
-      parameters[0] = (c6*c6)/c12;
-      parameters[1] = POW( (c12/c6), oneSixth );
-   }
-   parameters[2] = epsfac*q1*q2;
-
-   return ReferenceForce::DefaultReturn;
-}
-
-/**---------------------------------------------------------------------------------------
-
    Calculate LJ 1-4 ixn
 
    @param atomIndices      atom indices of 4 atoms in bond
@@ -202,9 +157,9 @@ int ReferenceLJCoulomb14::calculateBondIxn( int* atomIndices, RealOpenMM** atomC
 
    RealOpenMM dEdR      = parameters[1]*( twelve*sig6 - six )*sig6;
               if (cutoff)
-                  dEdR += parameters[2]*(inverseR-2.0f*krf*r2);
+                  dEdR += ONE_4PI_EPS0*parameters[2]*(inverseR-2.0f*krf*r2);
               else
-                  dEdR += parameters[2]*inverseR;
+                  dEdR += ONE_4PI_EPS0*parameters[2]*inverseR;
               dEdR     *= inverseR*inverseR;
 
    // accumulate forces
@@ -217,9 +172,9 @@ int ReferenceLJCoulomb14::calculateBondIxn( int* atomIndices, RealOpenMM** atomC
 
    RealOpenMM energy = parameters[1]*( sig6 - one )*sig6;
    if (cutoff)
-       energy += parameters[2]*(inverseR+krf*r2-crf);
+       energy += ONE_4PI_EPS0*parameters[2]*(inverseR+krf*r2-crf);
    else
-       energy += parameters[2]*inverseR;
+       energy += ONE_4PI_EPS0*parameters[2]*inverseR;
 
    // accumulate energies
 

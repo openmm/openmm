@@ -37,10 +37,6 @@
 #include "fftpack.h"
 
 
-//#define ONE_4PI_EPS0 (33.20636930*4.184) /* Units of kJ/mol and nm */
-// In OpenMM, atom charges are already scaled by sqrt(ONE_4PI_EPS0), so we don't need this
-#define ONE_4PI_EPS0 (1.0) /* Units of kJ/mol and nm */
-
 typedef int    ivec[3];
 
 

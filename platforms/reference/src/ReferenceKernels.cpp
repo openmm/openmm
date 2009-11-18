@@ -498,13 +498,12 @@ void ReferenceCalcNonbondedForceKernel::initialize(const System& system, const N
     bonded14IndexArray = allocateIntArray(num14, 2);
     bonded14ParamArray = allocateRealArray(num14, 3);
     particleParamArray = allocateRealArray(numParticles, 3);
-    RealOpenMM sqrtEps = static_cast<RealOpenMM>( std::sqrt(138.935485) );
     for (int i = 0; i < numParticles; ++i) {
         double charge, radius, depth;
         force.getParticleParameters(i, charge, radius, depth);
         particleParamArray[i][0] = static_cast<RealOpenMM>(0.5*radius);
         particleParamArray[i][1] = static_cast<RealOpenMM>(2.0*sqrt(depth));
-        particleParamArray[i][2] = static_cast<RealOpenMM>(charge*sqrtEps);
+        particleParamArray[i][2] = static_cast<RealOpenMM>(charge);
     }
     this->exclusions = exclusions;
     exclusionArray = new int*[numParticles];
@@ -523,7 +522,7 @@ void ReferenceCalcNonbondedForceKernel::initialize(const System& system, const N
         bonded14IndexArray[i][1] = particle2;
         bonded14ParamArray[i][0] = static_cast<RealOpenMM>(radius);
         bonded14ParamArray[i][1] = static_cast<RealOpenMM>(4.0*depth);
-        bonded14ParamArray[i][2] = static_cast<RealOpenMM>(charge*sqrtEps*sqrtEps);
+        bonded14ParamArray[i][2] = static_cast<RealOpenMM>(charge);
     }
     nonbondedMethod = CalcNonbondedForceKernel::NonbondedMethod(force.getNonbondedMethod());
     nonbondedCutoff = (RealOpenMM) force.getCutoffDistance();
