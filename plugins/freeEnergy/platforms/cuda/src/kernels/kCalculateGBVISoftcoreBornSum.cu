@@ -157,14 +157,6 @@ gpu->psObcData->Upload();
 
 }
 
-// delete gpuGBVISoftcore
-
-extern "C"
-void gpuDeleteGBVISoftcoreParameters( void* gpuGBVISoftcore)
-{
-   delete gpuGBVISoftcore;
-}
-
 struct Atom {
     float x;
     float y;
@@ -518,7 +510,7 @@ void kCalculateGBVISoftcoreBornSum(gpuContext gpu)
     kClearGBVISoftcoreBornSum( gpu );
     LAUNCHERROR("kClearGBVIBornSum from kCalculateGBVISoftcoreBornSum");
 
-    size_t numWithInteractions;
+    //size_t numWithInteractions;
     switch (gpu->sim.nonbondedMethod)
     {
         case NO_CUTOFF:

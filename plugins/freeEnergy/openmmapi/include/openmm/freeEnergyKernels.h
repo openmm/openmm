@@ -32,10 +32,13 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/GBSAOBCSoftcoreForce.h"
-#include "openmm/GBVISoftcoreForce.h"
+//#include "openmm/GBSAOBCSoftcoreForce.h"
+#include "GBSAOBCSoftcoreForce.h"
+//#include "openmm/GBVISoftcoreForce.h"
+#include "GBVISoftcoreForce.h"
 #include "openmm/NonbondedForce.h"
-#include "openmm/NonbondedSoftcoreForce.h"
+//#include "openmm/NonbondedSoftcoreForce.h"
+#include "NonbondedSoftcoreForce.h"
 #include "openmm/System.h"
 #include "openmm/KernelImpl.h"
 #include <set>

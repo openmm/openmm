@@ -95,7 +95,7 @@ static __constant__ cudaFreeEnergySimulationNonbonded14 feSim;
     angle = (dp >= 0) ? angle : -angle; \
 }
 
-void SetCalculateLocalSoftcoreGpuSim(gpuContext gpu)
+extern "C" void SetCalculateLocalSoftcoreGpuSim(gpuContext gpu)
 {
     cudaError_t status;
     status = cudaMemcpyToSymbol(cSim, &gpu->sim, sizeof(cudaGmxSimulation));     

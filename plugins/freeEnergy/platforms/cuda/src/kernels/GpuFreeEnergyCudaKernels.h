@@ -88,11 +88,6 @@ GpuGBVISoftcore* gpuSetGBVISoftcoreParameters(gpuContext gpu, float innerDielect
                                               const std::vector<float>& gamma, const std::vector<float>& scaledRadii,
                                               const std::vector<float>& bornRadiusScaleFactors, const std::vector<float>& quinticSplineParameters);
 
-// delete supplemtentary objects, ...
-
-extern "C"
-void gpuDeleteGBVISoftcoreParameters( void* gpuNonbondedSoftcore);
-
 // write address's to device
 
 extern "C"
