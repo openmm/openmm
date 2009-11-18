@@ -4,8 +4,12 @@
 
 #include "rng.h"
 #include <cmath>
-
 #include <iostream>
+
+inline ulong32 ULONG32(slong x) { return (ulong32(x)); }
+inline ulong32 ULONG32(ulong32 x) { return (ulong32(x)); }
+inline ulong32 ULONG32(double x) { return (ulong32(x)); }
+
 static const double PI   =  3.1415926535897932;
 
 //________________________________________________________________________

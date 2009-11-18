@@ -1,8 +1,8 @@
 // ORIGIN:
 // http://sites.google.com/site/jivsoft/Home/a-c---random-number-generator-class
 
-#ifndef RNG_H
-#define RNG_H
+#ifndef _RNG_OPENMM_H_
+#define _RNG_OPENMM_H_
 
 // __________________________________________________________________________
 // rng.h - a Random Number Generator Class
@@ -94,11 +94,6 @@ typedef int32_t sint;
 typedef uint32_t uint;
 typedef int32_t slong;
 typedef uint32_t ulong32;
-#ifndef _MSC_VER
-inline ulong32 ULONG32(slong x) { return (ulong32(x)); }
-inline ulong32 ULONG32(ulong32 x) { return (ulong32(x)); }
-inline ulong32 ULONG32(double x) { return (ulong32(x)); }
-#endif
 inline slong UL32toSL32(ulong32 x) { return (slong(x)); }
 
 class RNG
@@ -229,6 +224,5 @@ class RNG
 }; // class RNG
 
 #undef UINT32_MAX
-
 #endif // RNG_H
 
