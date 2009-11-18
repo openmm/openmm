@@ -39,7 +39,6 @@
 using namespace std;
 
 #include "gputypes.h"
-#include "cudaKernels.h"
 #include "GpuFreeEnergyCudaKernels.h"
 
 struct Atom {
