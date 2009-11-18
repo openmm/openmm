@@ -1863,7 +1863,8 @@ void* gpuInit(int numAtoms, unsigned int device, bool useBlockingSync)
     for (int i = 0; i < MAX_TABULATED_FUNCTIONS; i++)
         gpu->tabulatedFunctions[i].coefficients = NULL;
     gpu->sim.customExpressionStackSize = 0;
-
+    gpu->sim.customBonds = 0;
+    
     // Initialize output buffer before reading parameters
     gpu->pOutputBufferCounter       = new unsigned int[gpu->sim.paddedNumberOfAtoms];
     memset(gpu->pOutputBufferCounter, 0, gpu->sim.paddedNumberOfAtoms * sizeof(unsigned int));

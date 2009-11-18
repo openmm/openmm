@@ -83,10 +83,10 @@ void SetCustomNonbondedEnergyExpression(const Expression<128>& expression)
     RTERROR(status, "SetCustomNonbondedEnergyExpression: cudaMemcpyToSymbol failed");
 }
 
-void SetCustomNonbondedGlobalParams(float* paramValues)
+void SetCustomNonbondedGlobalParams(const vector<float>& paramValues)
 {
     cudaError_t status;
-    status = cudaMemcpyToSymbol(globalParams, paramValues, sizeof(globalParams));
+    status = cudaMemcpyToSymbol(globalParams, &paramValues[0], paramValues.size()*sizeof(float));
     RTERROR(status, "SetCustomNonbondedGlobalParams: cudaMemcpyToSymbol failed");
 }
 

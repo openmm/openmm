@@ -74,10 +74,10 @@ void SetCustomExternalEnergyExpression(const Expression<128>& expression)
     RTERROR(status, "SetCustomExternalEnergyExpression: cudaMemcpyToSymbol failed");
 }
 
-void SetCustomExternalGlobalParams(float* paramValues)
+void SetCustomExternalGlobalParams(const vector<float>& paramValues)
 {
     cudaError_t status;
-    status = cudaMemcpyToSymbol(globalParams, paramValues, sizeof(globalParams));
+    status = cudaMemcpyToSymbol(globalParams, &paramValues[0], paramValues.size()*sizeof(float));
     RTERROR(status, "SetCustomExternalGlobalParams: cudaMemcpyToSymbol failed");
 }
 

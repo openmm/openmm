@@ -223,7 +223,7 @@ void CudaCalcCustomBondForceKernel::initialize(const System& system, const Custo
     }
     gpuSetCustomBondParameters(data.gpu, particle1, particle2, params, force.getEnergyFunction(), paramNames, globalParamNames);
     if (globalParamValues.size() > 0)
-        SetCustomBondGlobalParams(&globalParamValues[0]);
+        SetCustomBondGlobalParams(globalParamValues);
 }
 
 void CudaCalcCustomBondForceKernel::executeForces(ContextImpl& context) {
@@ -246,7 +246,7 @@ void CudaCalcCustomBondForceKernel::updateGlobalParams(ContextImpl& context) {
         globalParamValues[i] = value;
     }
     if (changed)
-        SetCustomBondGlobalParams(&globalParamValues[0]);
+        SetCustomBondGlobalParams(globalParamValues);
 }
 
 CudaCalcHarmonicAngleForceKernel::~CudaCalcHarmonicAngleForceKernel() {
@@ -514,7 +514,7 @@ void CudaCalcCustomNonbondedForceKernel::initialize(const System& system, const 
     }
     gpuSetCustomNonbondedParameters(gpu, parameters, exclusionList, method, (float) force.getCutoffDistance(), force.getEnergyFunction(), paramNames, globalParamNames);
     if (globalParamValues.size() > 0)
-        SetCustomNonbondedGlobalParams(&globalParamValues[0]);
+        SetCustomNonbondedGlobalParams(globalParamValues);
 }
 
 void CudaCalcCustomNonbondedForceKernel::executeForces(ContextImpl& context) {
@@ -535,7 +535,7 @@ void CudaCalcCustomNonbondedForceKernel::updateGlobalParams(ContextImpl& context
         globalParamValues[i] = value;
     }
     if (changed)
-        SetCustomNonbondedGlobalParams(&globalParamValues[0]);
+        SetCustomNonbondedGlobalParams(globalParamValues);
 }
 
 CudaCalcGBSAOBCForceKernel::~CudaCalcGBSAOBCForceKernel() {
@@ -613,7 +613,7 @@ void CudaCalcCustomExternalForceKernel::initialize(const System& system, const C
     }
     gpuSetCustomExternalParameters(data.gpu, particle, params, force.getEnergyFunction(), paramNames, globalParamNames);
     if (globalParamValues.size() > 0)
-        SetCustomExternalGlobalParams(&globalParamValues[0]);
+        SetCustomExternalGlobalParams(globalParamValues);
 }
 
 void CudaCalcCustomExternalForceKernel::executeForces(ContextImpl& context) {
@@ -636,7 +636,7 @@ void CudaCalcCustomExternalForceKernel::updateGlobalParams(ContextImpl& context)
         globalParamValues[i] = value;
     }
     if (changed)
-        SetCustomExternalGlobalParams(&globalParamValues[0]);
+        SetCustomExternalGlobalParams(globalParamValues);
 }
 
 static void initializeIntegration(const System& system, CudaPlatform::PlatformData& data, const Integrator& integrator) {
