@@ -65,8 +65,10 @@
 #ifdef _MSC_VER
 #include "windowsStdInt.h"
 #else
-#include <cstdint>		// Use the C99 official header
-//#define UINT32_MAX  0xffffffff
+#include <stdint.h>		// Use the C99 official header
+#ifndef UINT32_MAX
+#define UINT32_MAX  0xffffffff
+#endif
 #endif
 
 #include <cstdlib>
