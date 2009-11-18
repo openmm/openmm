@@ -182,7 +182,7 @@ void testExclusions() {
     ASSERT_EQUAL_VEC(Vec3(0, 0, 0), forces[1], TOL);
     ASSERT_EQUAL_VEC(Vec3(0, 0, 0), forces[2], TOL);
     ASSERT_EQUAL_VEC(Vec3(-(1+4), 0, 0), forces[3], TOL);
-    ASSERT_EQUAL_TOL((1+4)*3, state.getPotentialEnergy(), TOL);
+    ASSERT_EQUAL_TOL((1+4)*3.0, state.getPotentialEnergy(), TOL);
 }
 
 void testCutoff() {
