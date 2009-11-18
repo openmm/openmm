@@ -179,7 +179,7 @@ void kCalculateGBVIBornSum(gpuContext gpu)
     //printf("kCalculateGBVIBornSum\n");
     kClearGBVIBornSum( gpu );
     LAUNCHERROR("kClearBornSum");
-    size_t numWithInteractions;
+    //size_t numWithInteractions;
     switch (gpu->sim.nonbondedMethod)
     {
         case NO_CUTOFF:
