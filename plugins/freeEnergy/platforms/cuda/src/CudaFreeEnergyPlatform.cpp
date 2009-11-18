@@ -27,7 +27,7 @@
 #include "CudaFreeEnergyPlatform.h"
 #include "CudaFreeEnergyKernelFactory.h"
 #include "openmm/freeEnergyKernels.h"
-#include "kernels/gputypes.h"
+#include "kernels/GpuFreeEnergyCudaKernels.h"
 
 using namespace OpenMM;
 
@@ -50,7 +50,7 @@ using namespace OpenMM;
 extern "C" void initOpenMMCudaFreeEnergyPlugin() {
 
 //(void) fprintf( stderr, "initOpenMMCudaFreeEnergyPlugin called\n");
-    if ( gpuIsAvailable() ){
+    if ( gpuIsAvailableSoftcore() ){
         Platform::registerPlatform(new CudaFreeEnergyPlatform());
     }   
 }

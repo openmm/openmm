@@ -120,7 +120,7 @@ GBVISoftcoreParameters* CpuGBVISoftcore::getGBVISoftcoreParameters( void ) const
 
    @param GBVISoftcoreParameters reference
 
-   @return SimTKOpenMMCommon::DefaultReturn;
+   @return 0;
 
    --------------------------------------------------------------------------------------- */
 
@@ -133,7 +133,7 @@ int CpuGBVISoftcore::setGBVISoftcoreParameters( GBVISoftcoreParameters* gbviPara
    // ---------------------------------------------------------------------------------------
 
    _gbviParameters = gbviParameters;
-   return SimTKOpenMMCommon::DefaultReturn;
+   return 0;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -219,7 +219,7 @@ int CpuGBVISoftcore::quinticSpline( RealOpenMM x, RealOpenMM rl, RealOpenMM ru,
    *outValue               = one + ratio3*(minusTen + fifteen*ratio + minusSix*ratio2);
    *outDerivative          = ratio2*(minusThirty + sixty*ratio + minusThirty*ratio2)/denominator;
 
-   return SimTKOpenMMCommon::DefaultReturn;
+   return 0;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -410,7 +410,7 @@ if( atomI == 0 || atomI == 1 ){
 
    }
 
-   return SimTKOpenMMCommon::DefaultReturn;
+   return 0;
 
 }
 
@@ -717,7 +717,7 @@ RealOpenMM e3 = -partialChargeI2*partialCharges[atomJ]*Sgb( t )/deltaR[Reference
    @param partialCharges      partial charges
    @param forces              forces
 
-   @return SimTKOpenMMCommon::DefaultReturn;
+   @return 0;
 
    --------------------------------------------------------------------------------------- */
 
@@ -1092,7 +1092,7 @@ if( atomI == 0 ){
    delete[] forces;
    delete[] block;
 
-   return SimTKOpenMMCommon::DefaultReturn;
+   return 0;
 
 }
 
@@ -1212,7 +1212,7 @@ int CpuGBVISoftcore::writeBornEnergyForces( RealOpenMM** atomCoordinates,
    (void) fclose( implicitSolventResultsFile );
 
 */
-   return SimTKOpenMMCommon::DefaultReturn;
+   return 0;
 
 }
 
@@ -1343,7 +1343,7 @@ int CpuGBVISoftcore::writeForceLoop( int numberOfAtoms, const IntVector& chunkSi
    @param partialCharges      partial charges
    @param forces              forces
 
-   @return SimTKOpenMMCommon::DefaultReturn;
+   @return 0;
 
    The array bornRadii is also updated and the obcEnergy
 
@@ -1356,7 +1356,7 @@ int CpuGBVISoftcore::computeBornEnergyForces( RealOpenMM* bornRadii, RealOpenMM*
 
    // static const char* methodName = "\nCpuGBVISoftcore::computeBornEnergyForcesPrint";
 
-   return SimTKOpenMMCommon::DefaultReturn;
+   return 0;
 
 }
 

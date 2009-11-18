@@ -29,7 +29,7 @@
 
 // ---------------------------------------------------------------------------------------
 
-class ReferenceBondIxn {
+class OPENMM_EXPORT ReferenceBondIxn {
 
    private:
 

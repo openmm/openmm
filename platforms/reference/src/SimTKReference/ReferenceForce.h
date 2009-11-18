@@ -25,9 +25,11 @@
 #ifndef __ReferenceForce_H__
 #define __ReferenceForce_H__
 
+#include "../../../../openmmapi/include/openmm/internal/windowsExport.h"
+
 // ---------------------------------------------------------------------------------------
 
-class ReferenceForce {
+class OPENMM_EXPORT  ReferenceForce {
 
    private:
        

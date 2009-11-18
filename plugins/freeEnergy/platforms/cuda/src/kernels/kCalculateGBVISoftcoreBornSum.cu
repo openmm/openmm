@@ -190,6 +190,123 @@ void kClearGBVISoftcoreBornSum(gpuContext gpu) {
     kClearGBVISoftcoreBornSum_kernel<<<gpu->sim.blocks, 384>>>();
 }
 
+__global__ void kReduceGBVISoftcoreBornForces_kernel()
+{
+    unsigned int pos = (blockIdx.x * blockDim.x + threadIdx.x);
+    float energy = 0.0f;
+    while (pos < cSim.atoms)
+    {
+        float bornRadius  = cSim.pBornRadii[pos];
+        float4 gbviData   = cSim.pGBVIData[pos];
+        float totalForce  = 0.0f;
+        float* pFt        = cSim.pBornForce + pos;
+
+        int i = cSim.nonbondOutputBuffers;
+        while (i >= 4)
+        {
+            float f1    = *pFt;
+            pFt        += cSim.stride;
+            float f2    = *pFt;
+            pFt        += cSim.stride;
+            float f3    = *pFt;
+            pFt        += cSim.stride;
+            float f4    = *pFt;
+            pFt        += cSim.stride;
+            totalForce += f1 + f2 + f3 + f4;
+            i -= 4;
+        }
+        if (i >= 2)
+        {
+            float f1    = *pFt;
+            pFt        += cSim.stride;
+            float f2    = *pFt;
+            pFt        += cSim.stride;
+            totalForce += f1 + f2;
+            i -= 2;
+        }
+        if (i > 0)
+        {
+            totalForce += *pFt;
+        }
+
+        float ratio         = (gbviData.x/bornRadius);
+        float ratio3        = ratio*ratio*ratio;
+        energy             -= gbviData.z*ratio3;
+        totalForce         += (3.0f*gbviData.z*ratio3)/bornRadius; // 'cavity' term
+        float br2           = bornRadius*bornRadius;
+        totalForce         *= (1.0f/3.0f)*br2*br2;
+
+        pFt = cSim.pBornForce + pos;
+        *pFt = totalForce;
+        pos += gridDim.x * blockDim.x;
+    }
+    cSim.pEnergy[blockIdx.x * blockDim.x + threadIdx.x] += energy;
+}
+
+void kReduceGBVISoftcoreBornForces(gpuContext gpu)
+{
+    kReduceGBVISoftcoreBornForces_kernel<<<gpu->sim.blocks, gpu->sim.bf_reduce_threads_per_block>>>();
+    LAUNCHERROR("kReduceGBVISoftcoreBornForces");
+
+}
+
+__global__ void kReduceGBVISoftcoreBornSum_kernel()
+{
+    unsigned int pos = (blockIdx.x * blockDim.x + threadIdx.x);
+    
+    while (pos < cSim.atoms)
+    {
+        float sum = 0.0f;
+        float* pSt = cSim.pBornSum + pos;
+        float4 atom = cSim.pGBVIData[pos];
+        
+        // Get summed Born data
+        for (int i = 0; i < cSim.nonbondOutputBuffers; i++)
+        {
+            sum += *pSt;
+       //     printf("%4d %4d A: %9.4f\n", pos, i, *pSt);
+            pSt += cSim.stride;
+        }
+        
+        // Now calculate Born radius
+
+        float Rinv           = 1.0f/atom.x;
+        sum                  = Rinv*Rinv*Rinv - sum; 
+        cSim.pBornRadii[pos] = pow( sum, (-1.0f/3.0f) ); 
+        pos += gridDim.x * blockDim.x;
+    }   
+}
+
+void kReduceGBVISoftcoreBornSum(gpuContext gpu)
+{
+    //printf("kReduceGBVISoftcoreBornSum\n");
+#define GBVISoftcore_DEBUG 0
+#if ( GBVISoftcore_DEBUG == 1 )
+               gpu->psGBVISoftcoreData->Download();
+               gpu->psBornSum->Download();
+               gpu->psPosq4->Download();
+                (void) fprintf( stderr, "\nkReduceGBVISoftcoreBornSum: Post BornSum %s Born radii & params\n", 
+                               (gpu->bIncludeGBVISoftcore ? "GBVI" : "Obc") );
+                for( int ii = 0; ii < gpu->natoms; ii++ ){
+                   (void) fprintf( stderr, "%d bSum=%14.6e param[%14.6e %14.6e %14.6e] x[%14.6f %14.6f %14.6f %14.6f]\n",
+                                   ii, 
+                                   gpu->psBornSum->_pSysStream[0][ii],
+                                   gpu->psGBVISoftcoreData->_pSysStream[0][ii].x,
+                                   gpu->psGBVISoftcoreData->_pSysStream[0][ii].y,
+                                   gpu->psGBVISoftcoreData->_pSysStream[0][ii].z,
+                                   gpu->psPosq4->_pSysStream[0][ii].x, gpu->psPosq4->_pSysStream[0][ii].y,
+                                   gpu->psPosq4->_pSysStream[0][ii].z, gpu->psPosq4->_pSysStream[0][ii].w
+                                 );  
+                }   
+#endif
+#undef GBVISoftcore_DEBUG
+
+
+    kReduceGBVISoftcoreBornSum_kernel<<<gpu->sim.blocks, 384>>>();
+    gpu->bRecalculateBornRadii = false;
+    LAUNCHERROR("kReduceGBVISoftcoreBornSum");
+}
+
 // Include versions of the kernels for N^2 calculations.
 
 #define METHOD_NAME(a, b) a##N2##b

@@ -42,13 +42,16 @@
 // setup methods called from CudaFreeEnergyKernels
 // nonbonded and 1-4 ixns
 
+extern "C"
+bool gpuIsAvailableSoftcore();
+
 extern "C" 
 GpuNonbondedSoftcore* gpuSetNonbondedSoftcoreParameters(gpuContext gpu, float epsfac, const std::vector<int>& atom, const std::vector<float>& c6,
                                                         const std::vector<float>& c12, const std::vector<float>& q,
                                                         const std::vector<float>& softcoreLJLambdaArray, const std::vector<char>& symbol,
                                                         const std::vector<std::vector<int> >& exclusions, CudaNonbondedMethod method);
 
-extern "C" 
+extern "C"
 GpuLJ14Softcore* gpuSetLJ14SoftcoreParameters(gpuContext gpu, float epsfac, float fudge, const std::vector<int>& atom1,
                                               const std::vector<int>& atom2, const std::vector<float>& c6, const std::vector<float>& c12,
                                               const std::vector<float>& q1, const std::vector<float>& q2, const std::vector<float>& softcoreLJLambdaArray);
@@ -75,8 +78,6 @@ extern "C"
 void kCalculateCDLJSoftcoreForces(gpuContext gpu );
 
 extern void kCalculateLocalSoftcoreForces( gpuContext gpu );
-
-
 
 // GB/VI softcore
 
@@ -115,6 +116,10 @@ extern void kReduceGBVIBornSumQuinticScaling( gpuContext gpu, GpuGBVISoftcore* g
 extern void kCalculateGBVISoftcoreBornSum( gpuContext gpu );
 extern void kReduceGBVIBornForcesQuinticScaling( gpuContext gpu );
 extern void kCalculateGBVISoftcoreForces2( gpuContext gpu );
+extern void kReduceGBVISoftcoreBornForces(gpuContext gpu);
+extern void kReduceGBVISoftcoreBornSum(gpuContext gpu);
+
+extern void kClearSoftcoreBornForces(gpuContext gpu);
 
 // Obc softcore
 
@@ -158,8 +163,11 @@ void SetCalculateObcGbsaSoftcoreForces2Sim( gpuContext gpu );
 
 // kernel calls to device
 
+extern void kClearObcGbsaSoftcoreBornSum( gpuContext gpu );
 extern void kReduceObcGbsaSoftcoreBornForces( gpuContext gpu );
 extern void kCalculateObcGbsaSoftcoreBornSum( gpuContext gpu );
+extern void kReduceObcGbsaSoftcoreBornSum( gpuContext gpu );
+
 
 // this method is not needed; the OpenMM version can be used
 extern void kCalculateObcGbsaSoftcoreForces2( gpuContext gpu );

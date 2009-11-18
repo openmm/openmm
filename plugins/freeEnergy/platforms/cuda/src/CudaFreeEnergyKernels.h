@@ -61,7 +61,7 @@ public:
         numParticles         = 0;
         bIncludeGBSA         = false;
         bIncludeGBVI         = false;
-        bIncludeSoftcore     = false;
+        includeSoftcore      = false;
     }
 
     ~CudaFreeEnergyCalcNonbondedSoftcoreForceKernel();
@@ -114,13 +114,13 @@ public:
      *
      * @return flag
      */
-    bool getIncludeSoftcore( void ) const;
+    int getIncludeSoftcore( void ) const;
     /**
      * Set flag signalling whether GB/VI force is included
      *
      * @param inputIncludeGBVI input flag value
      */
-    void setIncludeSoftcore( bool inputSoftcore);
+    void setIncludeSoftcore( int inputSoftcore);
     /**
      * Get number of exceptions
      *
@@ -147,7 +147,7 @@ private:
     GpuLJ14Softcore* gpuLJ14Softcore;
     bool bIncludeGBSA;
     bool bIncludeGBVI;
-    bool bIncludeSoftcore;
+    int includeSoftcore;
     int numExceptions;
     FILE* log;
     int setSim;

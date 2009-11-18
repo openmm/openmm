@@ -57,6 +57,7 @@ using namespace std;
 // In case we're using some primitive version of Visual Studio this will
 // make sure that erf() and erfc() are defined.
 #include "openmm/internal/MSVC_erfc.h"
+#include "openmm/internal/windowsExport.h"
 
 using OpenMM::OpenMMException;
 using Lepton::Operation;
@@ -527,8 +528,7 @@ void gpuSetLJ14Parameters(gpuContext gpu, float epsfac, float fudge, const vecto
     psLJ14Parameter->Upload();
 }
 
-extern "C"
-void setExclusions(gpuContext gpu, const vector<vector<int> >& exclusions) {
+extern "C" void setExclusions(gpuContext gpu, const vector<vector<int> >& exclusions) {
     if (gpu->exclusions.size() > 0) {
         bool ok = (exclusions.size() == gpu->exclusions.size());
         for (int i = 0; i < exclusions.size() && ok; i++) {

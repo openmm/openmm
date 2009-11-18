@@ -281,7 +281,7 @@ int ReferenceFreeEnergyLJCoulomb14Softcore::calculateBondIxn( int* atomIndices, 
          message << "]";
       }
 
-      SimTKOpenMMLog::printMessage( message );
+      //SimTKOpenMMLog::printMessage( message );
    }   
 
    return ReferenceForce::DefaultReturn;

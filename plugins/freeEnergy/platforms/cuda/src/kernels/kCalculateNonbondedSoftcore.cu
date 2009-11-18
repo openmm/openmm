@@ -26,6 +26,8 @@
 
 #include "GpuNonbondedSoftcore.h"
 #include "GpuFreeEnergyCudaKernels.h"
+#include "openmm/OpenMMException.h"
+#include <algorithm>
 
 // structure containing array of softcore lambdas
 
@@ -70,6 +72,24 @@ void GetCalculateCDLJSoftcoreForcesSim(float* gpuParticleSoftCoreLJLambda)
 // create, initialize and entrt SoftCoreLJLambda values
 // return handle to GpuNonbondedSoftcore object
 
+static void setSoftcoreExclusions(gpuContext gpu, const std::vector<std::vector<int> >& exclusions) {
+    if (gpu->exclusions.size() > 0) { 
+        bool ok = (exclusions.size() == gpu->exclusions.size());
+        for (unsigned int i = 0; i < exclusions.size() && ok; i++) {
+            if (exclusions[i].size() != gpu->exclusions[i].size())
+                ok = false;
+            else {
+                for (unsigned int j = 0; j < exclusions[i].size(); j++) 
+                    if (find(gpu->exclusions[i].begin(), gpu->exclusions[i].end(), exclusions[i][j]) == gpu->exclusions[i].end())
+                        ok = false;
+            }
+        }
+        if (!ok)
+            throw OpenMM::OpenMMException("All nonbonded forces must have identical sets of exceptions");
+    }    
+    gpu->exclusions = exclusions;
+}
+
 extern "C"
 GpuNonbondedSoftcore* gpuSetNonbondedSoftcoreParameters(gpuContext gpu, float epsfac, const std::vector<int>& atom, const std::vector<float>& c6,
                                                         const std::vector<float>& c12, const std::vector<float>& q,
@@ -80,7 +100,7 @@ GpuNonbondedSoftcore* gpuSetNonbondedSoftcoreParameters(gpuContext gpu, float ep
     gpu->sim.epsfac                    = epsfac;
     gpu->sim.nonbondedMethod           = method;
     if (numberOfParticles > 0)
-        setExclusions(gpu, exclusions);
+        setSoftcoreExclusions(gpu, exclusions);
     
     // create gpuNonbondedSoftcore
 
@@ -157,6 +177,14 @@ void gpuDeleteNonbondedSoftcoreParameters( void* gpuNonbondedSoftcore)
 {
     GpuNonbondedSoftcore* internalGNonbondedSoftcore = static_cast<GpuNonbondedSoftcore*>(gpuNonbondedSoftcore);
     delete internalGNonbondedSoftcore;
+}
+
+extern "C"
+bool gpuIsAvailableSoftcore()
+{
+    int deviceCount;
+    cudaGetDeviceCount(&deviceCount);
+    return (deviceCount > 0);
 }
 
 struct Atom {
@@ -399,7 +427,7 @@ fprintf( stderr, "kCalculateCDLJSoftcoreForces: bOutputBufferPerWarp=%u blks=%u 
 void kPrintForces(gpuContext gpu, std::string idString, int call )
 {
  //   printf("kReduceForces\n");
-#define GBVI_DEBUG 4
+#define GBVI_DEBUG 0
 #if ( GBVI_DEBUG == 4 )
 
                 gpu->psBornRadii->Download();

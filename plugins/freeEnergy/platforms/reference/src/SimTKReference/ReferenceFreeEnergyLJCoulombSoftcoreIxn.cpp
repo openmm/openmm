@@ -242,8 +242,8 @@ int ReferenceFreeEnergyLJCoulombSoftcoreIxn::calculateEwaldIxn( int numberOfAtom
                                                                  RealOpenMM** atomParameters, int** exclusions,
                                                                  RealOpenMM* fixedParameters, RealOpenMM** forces,
                                                                  RealOpenMM* energyByAtom, RealOpenMM* totalEnergy) const {
-
     #include "../SimTKUtilities/RealTypeSimTk.h"
+#if 0
     typedef std::complex<RealOpenMM> d_complex;
 
     static const RealOpenMM epsilon     =  1.0;
@@ -523,6 +523,7 @@ int ReferenceFreeEnergyLJCoulombSoftcoreIxn::calculateEwaldIxn( int numberOfAtom
 
    // ***********************************************************************
 
+#endif
    return ReferenceForce::DefaultReturn;
 }
 
@@ -552,7 +553,7 @@ int ReferenceFreeEnergyLJCoulombSoftcoreIxn::calculatePMEIxn( int numberOfAtoms,
                                                               RealOpenMM* energyByAtom, RealOpenMM* totalEnergy) const {
 
 
-
+#if 0
     RealOpenMM SQRT_PI = sqrt(PI);
     static const RealOpenMM one         =  1.0;
 
@@ -653,7 +654,7 @@ int ReferenceFreeEnergyLJCoulombSoftcoreIxn::calculatePMEIxn( int numberOfAtoms,
 
 // ***********************************************************************
 
-
+#endif
    return ReferenceForce::DefaultReturn;
 }
 
@@ -877,7 +878,7 @@ int ReferenceFreeEnergyLJCoulombSoftcoreIxn::calculateOneIxn( int ii, int jj, Re
           message << "]";
        }
 
-       SimTKOpenMMLog::printMessage( message );
+       //SimTKOpenMMLog::printMessage( message );
     }
     return ReferenceForce::DefaultReturn;
   }

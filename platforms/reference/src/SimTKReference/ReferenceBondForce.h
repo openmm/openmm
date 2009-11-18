@@ -30,7 +30,7 @@
 
 // ---------------------------------------------------------------------------------------
 
-class ReferenceBondForce : public ReferenceForce {
+class OPENMM_EXPORT ReferenceBondForce : public ReferenceForce {
 
    private:
 

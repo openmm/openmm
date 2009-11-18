@@ -75,6 +75,39 @@ void GetCalculateObcGbsaSoftcoreBornSumSim(gpuContext gpu)
     RTERROR(status, "GetCalculateObcGbsaSoftcoreBornSumSim: cudaMemcpyFromSymbol: SetSim copy from cSim failed");
 }
 
+__global__ void kClearObcGbsaSoftcoreBornSum_kernel()
+{
+    unsigned int pos = blockIdx.x * blockDim.x + threadIdx.x;
+    while (pos < cSim.stride * cSim.nonbondOutputBuffers)
+    {
+        ((float*)cSim.pBornSum)[pos] = 0.0f;
+        pos += gridDim.x * blockDim.x;
+    }
+}
+
+__global__ void kClearSoftcoreBornForces_kernel()
+{
+    unsigned int pos = blockIdx.x * blockDim.x + threadIdx.x;
+    while (pos < cSim.stride * cSim.nonbondOutputBuffers)
+    {   
+        ((float*)cSim.pBornForce)[pos] = 0.0f;
+        pos += gridDim.x * blockDim.x;
+    }   
+}
+
+void kClearSoftcoreBornForces(gpuContext gpu)
+{
+  //  printf("kClearBornForces\n");
+    kClearSoftcoreBornForces_kernel<<<gpu->sim.blocks, 384>>>();
+    LAUNCHERROR("kClearSoftcoreBornForces");
+}
+
+void kClearObcGbsaSoftcoreBornSum(gpuContext gpu)
+{
+  //  printf("kClearObcGbsaBornSum\n");
+    kClearObcGbsaSoftcoreBornSum_kernel<<<gpu->sim.blocks, 384>>>();
+}
+
 __global__ void kReduceObcGbsaSoftcoreBornForces_kernel()
 {
     unsigned int pos = (blockIdx.x * blockDim.x + threadIdx.x);
@@ -176,18 +209,7 @@ void kReduceObcGbsaSoftcoreBornForces(gpuContext gpu)
 #define METHOD_NAME(a, b) a##PeriodicByWarp##b
 #include "kCalculateObcGbsaSoftcoreBornSum.h"
 
-#if 0
-__global__ void kClearObcGbsaBornSum_kernel()
-{
-    unsigned int pos = blockIdx.x * blockDim.x + threadIdx.x;
-    while (pos < cSim.stride * cSim.nonbondOutputBuffers)
-    {
-        ((float*)cSim.pBornSum)[pos] = 0.0f;
-        pos += gridDim.x * blockDim.x;
-    }
-}
-
-__global__ void kReduceObcGbsaBornSum_kernel()
+__global__ void kReduceObcGbsaSoftcoreBornSum_kernel()
 {
     unsigned int pos = (blockIdx.x * blockDim.x + threadIdx.x);
     
@@ -221,14 +243,13 @@ __global__ void kReduceObcGbsaBornSum_kernel()
     }   
 }
 
-void kReduceObcGbsaBornSum(gpuContext gpu)
+void kReduceObcGbsaSoftcoreBornSum(gpuContext gpu)
 {
-//    printf("kReduceObcGbsaBornSum\n");
-    kReduceObcGbsaBornSum_kernel<<<gpu->sim.blocks, 384>>>();
+//    printf("kReduceObcGbsaSoftcoreBornSum\n");
+    kReduceObcGbsaSoftcoreBornSum_kernel<<<gpu->sim.blocks, 384>>>();
     gpu->bRecalculateBornRadii = false;
-    LAUNCHERROR("kReduceObcGbsaBornSum");
+    LAUNCHERROR("kReduceObcGbsaSoftcoreBornSum");
 }
-#endif
 
 /** 
  * Initialize parameters for Cuda Obc softcore
@@ -309,7 +330,7 @@ GpuObcGbsaSoftcore* gpuSetObcSoftcoreParameters(gpuContext gpu, float innerDiele
 void kCalculateObcGbsaSoftcoreBornSum(gpuContext gpu)
 {
   //  printf("kCalculateObcGbsaSoftcoreBornSum\n");
-    kClearObcGbsaBornSum( gpu );
+    kClearObcGbsaSoftcoreBornSum(gpu);
     LAUNCHERROR("kClearBornSum from kCalculateObcGbsaSoftcoreBornSum");
 
     switch (gpu->sim.nonbondedMethod)

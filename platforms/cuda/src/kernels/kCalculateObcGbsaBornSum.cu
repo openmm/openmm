@@ -149,7 +149,7 @@ void kReduceObcGbsaBornSum(gpuContext gpu)
     LAUNCHERROR("kReduceObcGbsaBornSum");
 }
 
-void kClearObcGbsaBornSum(gpuContext gpu)
+extern void kClearObcGbsaBornSum(gpuContext gpu)
 {
   //  printf("kClearObcGbsaBornSum\n");
     kClearObcGbsaBornSum_kernel<<<gpu->sim.blocks, 384>>>();

@@ -278,7 +278,6 @@ void CudaFreeEnergyCalcNonbondedSoftcoreForceKernel::initialize(const System& sy
         std::vector<float> softcoreLJLambdaArray(numParticles);
         std::vector<char> symbol;
         std::vector<std::vector<int> > exclusionList(numParticles);
-        float minSoftcoreLJLambda = 1.0e+20f;
         for (int i = 0; i < numParticles; i++) {
             double charge, radius, depth, softcoreLJLambda;
             force.getParticleParameters(i, charge, radius, depth, softcoreLJLambda);
@@ -287,9 +286,6 @@ void CudaFreeEnergyCalcNonbondedSoftcoreForceKernel::initialize(const System& sy
             c6[i]                    = static_cast<float>( (4*depth*pow(radius, 6.0)) );
             c12[i]                   = static_cast<float>( (4*depth*pow(radius, 12.0)) );
             softcoreLJLambdaArray[i] = static_cast<float>( softcoreLJLambda );
-            if( minSoftcoreLJLambda > softcoreLJLambda ){
-               minSoftcoreLJLambda = softcoreLJLambda;
-            }
             exclusionList[i].push_back(i);
         }
 
@@ -299,10 +295,11 @@ void CudaFreeEnergyCalcNonbondedSoftcoreForceKernel::initialize(const System& sy
         }
         Vec3 boxVectors[3];
         system.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
-        gpuSetPeriodicBoxSize(gpu, static_cast<float>(boxVectors[0][0] ), static_cast<float>(boxVectors[1][1] ), static_cast<float>(boxVectors[2][2] ));
+        //gpuSetPeriodicBoxSize(gpu, static_cast<float>(boxVectors[0][0] ), static_cast<float>(boxVectors[1][1] ), static_cast<float>(boxVectors[2][2] ));
         CudaNonbondedMethod method = NO_CUTOFF;
         if (force.getNonbondedMethod() != NonbondedSoftcoreForce::NoCutoff) {
-            gpuSetNonbondedCutoff(gpu, static_cast<float>(force.getCutoffDistance() ), force.getReactionFieldDielectric());
+            throw OpenMMException( "NonbondedSoftcoreForce currently only handles NoCutoff option." );
+            //gpuSetNonbondedCutoff(gpu, static_cast<float>(force.getCutoffDistance() ), force.getReactionFieldDielectric());
             method = CUTOFF;
         }
         if (force.getNonbondedMethod() == NonbondedSoftcoreForce::CutoffPeriodic) {
@@ -325,7 +322,7 @@ void CudaFreeEnergyCalcNonbondedSoftcoreForceKernel::initialize(const System& sy
                     kmaxy++;
                 if (kmaxz%2 == 0)
                     kmaxz++;
-                gpuSetEwaldParameters(gpu, static_cast<float>( alpha ), kmaxx, kmaxy, kmaxz);
+                //gpuSetEwaldParameters(gpu, static_cast<float>( alpha ), kmaxx, kmaxy, kmaxz);
                 method = EWALD;
             }
             else {
@@ -335,7 +332,7 @@ void CudaFreeEnergyCalcNonbondedSoftcoreForceKernel::initialize(const System& sy
                 gridSizeX = ((gridSizeX+3)/4)*4;
                 gridSizeY = ((gridSizeY+3)/4)*4;
                 gridSizeZ = ((gridSizeZ+3)/4)*4;
-                gpuSetPMEParameters(gpu, static_cast<float>( alpha ), gridSizeX, gridSizeY, gridSizeZ);
+                //gpuSetPMEParameters(gpu, static_cast<float>( alpha ), gridSizeX, gridSizeY, gridSizeZ);
                 method = PARTICLE_MESH_EWALD;
             }
         }
@@ -454,16 +451,16 @@ void CudaFreeEnergyCalcNonbondedSoftcoreForceKernel::setIncludeGBVI( bool inputI
     bIncludeGBVI = inputIncludeGBVI;
 }
 
-bool CudaFreeEnergyCalcNonbondedSoftcoreForceKernel::getIncludeSoftcore( void ) const {
-    return bIncludeSoftcore;
+int CudaFreeEnergyCalcNonbondedSoftcoreForceKernel::getIncludeSoftcore( void ) const {
+    return includeSoftcore;
 }
 
 int CudaFreeEnergyCalcNonbondedSoftcoreForceKernel::getNumExceptions( void ) const {
     return numExceptions;
 }
 
-void CudaFreeEnergyCalcNonbondedSoftcoreForceKernel::setIncludeSoftcore( bool inputIncludeSoftcore ){
-    bIncludeSoftcore = inputIncludeSoftcore;
+void CudaFreeEnergyCalcNonbondedSoftcoreForceKernel::setIncludeSoftcore( int inputIncludeSoftcore ){
+    includeSoftcore = inputIncludeSoftcore;
 }
 
 GpuLJ14Softcore* CudaFreeEnergyCalcNonbondedSoftcoreForceKernel::getGpuLJ14Softcore( void ) const {
@@ -558,9 +555,9 @@ void CudaFreeEnergyCalcGBSAOBCSoftcoreForceKernel::executeForces(ContextImpl& co
         }
     }
 
-    kClearBornForces(gpu);
+    kClearSoftcoreBornForces(gpu);
     kCalculateObcGbsaSoftcoreBornSum(gpu);
-    kReduceObcGbsaBornSum(gpu);
+    kReduceObcGbsaSoftcoreBornSum(gpu);
     kCalculateCDLJObcGbsaSoftcoreForces1(gpu);
 
 //kPrintForces(gpu, "Post kCalculateCDLJObcGbsaSoftcoreForces1", call );
@@ -703,13 +700,13 @@ void CudaFreeEnergyCalcGBVISoftcoreForceKernel::executeForces(ContextImpl& conte
         }
     }
 
-    kClearBornForces(gpu);
+    kClearSoftcoreBornForces(gpu);
     kCalculateGBVISoftcoreBornSum(gpu);
 
     if( getQuinticScaling() ){
         kReduceGBVIBornSumQuinticScaling(gpu, gpuGBVISoftcore );
     } else {
-        kReduceGBVIBornSum(gpu);
+        kReduceGBVISoftcoreBornSum(gpu);
     }
     kCalculateCDLJObcGbsaSoftcoreForces1(gpu);
 
@@ -727,7 +724,7 @@ void CudaFreeEnergyCalcGBVISoftcoreForceKernel::executeForces(ContextImpl& conte
         kReduceGBVIBornForcesQuinticScaling(gpu);
     } else {
         gpu->bIncludeGBVI = true;
-        kReduceObcGbsaBornForces(gpu);
+        kReduceObcGbsaSoftcoreBornForces(gpu);
         gpu->bIncludeGBVI = false;
     }
 

@@ -26,11 +26,12 @@
 #define __ImplicitSolventParameters_H__
 
 #include "../SimTKUtilities/SimTKOpenMMRealType.h"
+#include "../../../../openmmapi/include/openmm/internal/windowsExport.h"
 #include <string>
 
 // ---------------------------------------------------------------------------------------
 
-class ImplicitSolventParameters {
+class OPENMM_EXPORT ImplicitSolventParameters {
 
    protected:
 

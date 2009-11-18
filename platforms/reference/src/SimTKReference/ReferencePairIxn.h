@@ -25,11 +25,11 @@
 #ifndef __ReferencePairIxn_H__
 #define __ReferencePairIxn_H__
 
-// #include "ReferenceIxn.h"
+#include "../../../../openmmapi/include/openmm/internal/windowsExport.h"
 
 // ---------------------------------------------------------------------------------------
 
-class ReferencePairIxn {
+class OPENMM_EXPORT ReferencePairIxn {
 
    private:
 

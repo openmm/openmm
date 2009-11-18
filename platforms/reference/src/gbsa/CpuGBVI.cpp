@@ -501,7 +501,7 @@ RealOpenMM e3 = -partialChargeI2*partialCharges[atomJ]*Sgb( t )/deltaR[Reference
 
       energy += two*partialChargeI*atomIEnergy;
    }
-   energy *= CAL_TO_JOULE*preFactor;
+   energy *= 0.4184f*preFactor;
    energy -= cavityEnergy;
 
 #if( GBVIDebug == 1 )
@@ -717,7 +717,7 @@ if( atomI == 0 ){
 #endif
 
    const RealOpenMM* scaledRadii         = gbviParameters->getScaledRadii();
-   RealOpenMM stupidFactor               = three/CAL_TO_JOULE;
+   RealOpenMM stupidFactor               = three/0.4184f;
    for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
  
       RealOpenMM R        = atomicRadii[atomI];
@@ -830,7 +830,7 @@ if( atomI == 0 ){
 
    // convert from cal to Joule & apply prefactor tau = (1/diel_solute - 1/diel_solvent)
 
-   RealOpenMM conversion = (RealOpenMM)(CAL_TO_JOULE*gbviParameters->getTau());  
+   RealOpenMM conversion = (RealOpenMM)(0.4184f*gbviParameters->getTau());  
    for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
       inputForces[atomI][0] += conversion*forces[atomI][0];
       inputForces[atomI][1] += conversion*forces[atomI][1];

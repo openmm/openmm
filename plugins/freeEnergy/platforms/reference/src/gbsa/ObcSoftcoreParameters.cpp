@@ -219,7 +219,7 @@ int ObcSoftcoreParameters::setObcTypeParameters( ObcSoftcoreParameters::ObcType 
    }
    _obcType = obcType;
 
-   return SimTKOpenMMCommon::DefaultReturn;
+   return 0;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -410,7 +410,7 @@ int ObcSoftcoreParameters::setOwnScaleFactors( int ownScaledRadiusFactors ){
 
    _ownScaledRadiusFactors = ownScaledRadiusFactors;
 
-   return SimTKOpenMMCommon::DefaultReturn;
+   return 0;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -438,7 +438,7 @@ int ObcSoftcoreParameters::setScaledRadiusFactors( RealOpenMM* scaledRadiusFacto
 
    _scaledRadiusFactors = scaledRadiusFactors;
 
-   return SimTKOpenMMCommon::DefaultReturn;
+   return 0;
 
 }
 
@@ -470,7 +470,7 @@ int ObcSoftcoreParameters::setScaledRadiusFactors( float* scaledRadiusFactors ){
       _scaledRadiusFactors[ii] = (RealOpenMM) scaledRadiusFactors[ii];
    }
 
-   return SimTKOpenMMCommon::DefaultReturn;
+   return 0;
 
 }
 
@@ -503,7 +503,7 @@ int ObcSoftcoreParameters::setScaledRadiusFactors( const RealOpenMMVector& scale
       _scaledRadiusFactors[ii] = scaledRadiusFactors[ii];
    }
 
-   return SimTKOpenMMCommon::DefaultReturn;
+   return 0;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -659,7 +659,7 @@ int ObcSoftcoreParameters::isNotReady( void ) const {
 
    if( errors ){
       message << std::endl;
-      SimTKOpenMMLog::printMessage( message );
+      (void) fprintf( stderr, "%s", message.str().c_str() );
    }
 
    errors += isReady;
@@ -681,7 +681,7 @@ int ObcSoftcoreParameters::setUseCutoff( RealOpenMM distance ) {
 
     cutoff = true;
     cutoffDistance = distance;
-    return SimTKOpenMMCommon::DefaultReturn;
+    return 0;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -726,7 +726,7 @@ int ObcSoftcoreParameters::setPeriodic( RealOpenMM* boxSize ) {
     periodicBoxSize[0] = boxSize[0];
     periodicBoxSize[1] = boxSize[1];
     periodicBoxSize[2] = boxSize[2];
-    return SimTKOpenMMCommon::DefaultReturn;
+    return 0;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -796,7 +796,7 @@ int ObcSoftcoreParameters::setOwnNonPolarScaleFactors( int ownNonPolarScaleFacto
 
    _ownNonPolarScaleFactors = ownNonPolarScaleFactors;
 
-   return SimTKOpenMMCommon::DefaultReturn;
+   return 0;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -827,7 +827,7 @@ int ObcSoftcoreParameters::setNonPolarScaleFactors( const RealOpenMMVector& nonP
       _nonPolarScaleFactors[ii] = nonPolarScaleFactors[ii];
    }
 
-   return SimTKOpenMMCommon::DefaultReturn;
+   return 0;
 
 }
 
@@ -859,7 +859,7 @@ int ObcSoftcoreParameters::setNonPolarScaleFactors( float* nonPolarScaleFactors 
       _nonPolarScaleFactors[ii] = (RealOpenMM) nonPolarScaleFactors[ii];
    }
 
-   return SimTKOpenMMCommon::DefaultReturn;
+   return 0;
 
 }
 
@@ -884,6 +884,6 @@ int ObcSoftcoreParameters::setNonPolarPrefactor( RealOpenMM nonPolarPreFactor ){
    // ---------------------------------------------------------------------------------------
 
    _nonPolarPreFactor = nonPolarPreFactor;
-   return SimTKOpenMMCommon::DefaultReturn;
+   return 0;
 }
 

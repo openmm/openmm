@@ -24,12 +24,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#include "gputypes.h"
 #include "GpuLJ14Softcore.h"
-
 #include <cuda.h>
 
-extern __shared__ Vectors sV[];
 static __constant__ cudaGmxSimulation cSim;
 static __constant__ cudaFreeEnergySimulationNonbonded14 feSim;
 
@@ -98,21 +95,18 @@ static __constant__ cudaFreeEnergySimulationNonbonded14 feSim;
     angle = (dp >= 0) ? angle : -angle; \
 }
 
-extern "C"
 void SetCalculateLocalSoftcoreGpuSim(gpuContext gpu)
 {
-    //(void) fprintf( stderr, "SetCalculateLocalSoftcoreForcesSim called\n" );
     cudaError_t status;
     status = cudaMemcpyToSymbol(cSim, &gpu->sim, sizeof(cudaGmxSimulation));     
     RTERROR(status, "cudaMemcpyToSymbol: SetCalculateLocalSoftcoreForcesSim copy to cSim failed");
 
 }
 
-static void SetCalculateLocalSoftcoreSim( GpuLJ14Softcore* gpuLJ14Softcore)
+void SetCalculateLocalSoftcoreSim( GpuLJ14Softcore* gpuLJ14Softcore)
 {
     cudaError_t status;
 
-    //(void) fprintf( stderr, "SetCalculateLocalSoftcoreSim called\n" );
     status = cudaMemcpyToSymbol(feSim, &gpuLJ14Softcore->feSim, sizeof(cudaFreeEnergySimulationNonbonded14));     
     RTERROR(status, "cudaMemcpyToSymbol: SetCalculateLocalSoftcoreSim copy to cSim failed");
 }
@@ -121,7 +115,7 @@ void GetCalculateLocalSoftcoreForcesSim(gpuContext gpu)
 {
     cudaError_t status;
     status = cudaMemcpyFromSymbol(&gpu->sim, cSim, sizeof(cudaGmxSimulation));     
-    RTERROR(status, "cudaMemcpyFromSymbol: SetSim copy from cSim failed");
+    RTERROR(status, "cudaMemcpyFromSymbol: GetCalculateLocalSoftcoreForcesSim copy from cSim failed");
 }
     
 #define USE_SOFTCORE_LJ
@@ -129,7 +123,6 @@ void GetCalculateLocalSoftcoreForcesSim(gpuContext gpu)
 #include "kSoftcoreLJ.h"
 #endif
 
-//__global__ void METHOD_NAME(kCalculateLocalSoftcore, Forces_kernel)()
 __global__ void kCalculateLocalSoftcoreForces_kernel()
 {
     unsigned int pos = blockIdx.x * blockDim.x + threadIdx.x;

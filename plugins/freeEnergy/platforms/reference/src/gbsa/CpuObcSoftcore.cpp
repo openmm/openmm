@@ -25,7 +25,7 @@
 #include <string.h>
 #include <sstream>
 
-#include "../SimTKUtilities/SimTKOpenMMCommon.h"
+//#include "../SimTKUtilities/SimTKOpenMMCommon.h"
 #include "../SimTKUtilities/SimTKOpenMMLog.h"
 #include "../SimTKUtilities/SimTKOpenMMUtilities.h"
 #include "CpuObcSoftcore.h"
@@ -134,7 +134,7 @@ int CpuObcSoftcore::setObcSoftcoreParameters(  ObcSoftcoreParameters* obcSoftcor
    // ---------------------------------------------------------------------------------------
 
    _obcSoftcoreParameters = obcSoftcoreParameters;
-   return SimTKOpenMMCommon::DefaultReturn;
+   return 0;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -341,7 +341,7 @@ if( logFile ){
 }
 #endif
 
-   return SimTKOpenMMCommon::DefaultReturn;
+   return 0;
 
 }
 
@@ -355,7 +355,7 @@ if( logFile ){
    @param energy                    energy (output): value is incremented from input value 
    @param forces                    forces: values are incremented from input values
 
-   @return SimTKOpenMMCommon::DefaultReturn
+   @return 0
 
    --------------------------------------------------------------------------------------- */
 
@@ -406,7 +406,7 @@ int CpuObcSoftcore::computeAceNonPolarForce( const ObcSoftcoreParameters* obcSof
       }
    }
 
-   return SimTKOpenMMCommon::DefaultReturn; 
+   return 0;
 
 }
 
@@ -420,7 +420,7 @@ int CpuObcSoftcore::computeAceNonPolarForce( const ObcSoftcoreParameters* obcSof
    @param partialCharges      partial charges
    @param forces              forces
 
-   @return SimTKOpenMMCommon::DefaultReturn;
+   @return 0
 
    The array bornRadii is also updated and the obcEnergy
 
@@ -736,7 +736,7 @@ int CpuObcSoftcore::computeBornEnergyForces( RealOpenMM* bornRadii, RealOpenMM**
 	free( (char*) block );
 	free( (char*) forces );
 
-   return SimTKOpenMMCommon::DefaultReturn;
+   return 0;
 
 }
 
@@ -773,15 +773,15 @@ std::string CpuObcSoftcore::getStateString( const char* title ) const {
    @param forces              forces
    @param resultsFileName     output file name
 
-   @return SimTKOpenMMCommon::DefaultReturn unless
+   @return 0 unless
            file cannot be opened
-           in which case return SimTKOpenMMCommon::ErrorReturn
+           in which case return -1
 
    --------------------------------------------------------------------------------------- */
 
 int CpuObcSoftcore::writeBornEnergyForces( RealOpenMM** atomCoordinates,
-                                   const RealOpenMM* partialCharges, RealOpenMM** forces,
-                                   const std::string& resultsFileName ) const {
+                                           const RealOpenMM* partialCharges, RealOpenMM** forces,
+                                           const std::string& resultsFileName ) const {
 
    // ---------------------------------------------------------------------------------------
 
@@ -819,13 +819,15 @@ int CpuObcSoftcore::writeBornEnergyForces( RealOpenMM** atomCoordinates,
       std::stringstream message;
       message << methodName;
       message << " Opened file=<" << resultsFileName << ">.";
-      SimTKOpenMMLog::printMessage( message );
+      //SimTKOpenMMLog::printMessage( message );
+      (void) fprintf( stderr, "%s", message.str().c_str() );
    } else {
       std::stringstream message;
       message << methodName;
       message << "  could not open file=<" << resultsFileName << "> -- abort output.";
-      SimTKOpenMMLog::printMessage( message );
-      return SimTKOpenMMCommon::ErrorReturn;
+      //SimTKOpenMMLog::printMessage( message );
+      (void) fprintf( stderr, "%s", message.str().c_str() );
+      return -1;
    }
 
    // header
@@ -855,7 +857,7 @@ int CpuObcSoftcore::writeBornEnergyForces( RealOpenMM** atomCoordinates,
    }
    (void) fclose( implicitSolventResultsFile );
 
-   return SimTKOpenMMCommon::DefaultReturn;
+   return 0;
 
 }
 
@@ -868,9 +870,9 @@ int CpuObcSoftcore::writeBornEnergyForces( RealOpenMM** atomCoordinates,
    @param bornForce           Born force prefactor
    @param outputFileName      output file name
 
-   @return SimTKOpenMMCommon::DefaultReturn unless
+   @return 0 unless
            file cannot be opened
-           in which case return SimTKOpenMMCommon::ErrorReturn
+           in which case return -1
 
    --------------------------------------------------------------------------------------- */
 
@@ -923,9 +925,9 @@ int CpuObcSoftcore::writeForceLoop1( int numberOfAtoms, RealOpenMM** forces, con
    --------------------------------------------------------------------------------------- */
 
 int CpuObcSoftcore::writeForceLoop( int numberOfAtoms, const IntVector& chunkSizes,
-                            const RealOpenMMPtrPtrVector& realRealOpenMMVector, 
-                            const RealOpenMMPtrVector& realVector,
-                            const std::string& outputFileName ){
+                                    const RealOpenMMPtrPtrVector& realRealOpenMMVector, 
+                                    const RealOpenMMPtrVector& realVector,
+                                    const std::string& outputFileName ){
 
    // ---------------------------------------------------------------------------------------
 
@@ -1399,6 +1401,6 @@ if( logFile && atomI >= 0 ){
       (void) fclose( logFile );
    }
 
-   return SimTKOpenMMCommon::DefaultReturn;
+   return 0;
 
 }

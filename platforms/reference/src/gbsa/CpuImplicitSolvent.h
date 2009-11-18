@@ -29,7 +29,7 @@
 
 // ---------------------------------------------------------------------------------------
 
-class CpuImplicitSolvent {
+class OPENMM_EXPORT CpuImplicitSolvent {
 
    public:
 

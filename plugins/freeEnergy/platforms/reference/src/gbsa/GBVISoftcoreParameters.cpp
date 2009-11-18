@@ -200,7 +200,7 @@ int GBVISoftcoreParameters::setQuinticLowerLimitFactor( RealOpenMM quinticLowerL
    // ---------------------------------------------------------------------------------------
 
    _quinticLowerLimitFactor = quinticLowerLimitFactor;
-   return SimTKOpenMMCommon::DefaultReturn;
+   return 0;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -242,7 +242,7 @@ int GBVISoftcoreParameters::setQuinticUpperBornRadiusLimit( RealOpenMM quinticUp
 
    _quinticUpperBornRadiusLimit  = quinticUpperBornRadiusLimit;
    _quinticUpperSplineLimit      = POW( _quinticUpperBornRadiusLimit, static_cast<RealOpenMM>(-3.0) ); 
-   return SimTKOpenMMCommon::DefaultReturn;
+   return 0;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -374,7 +374,7 @@ int GBVISoftcoreParameters::setOwnScaledRadii( int ownScaledRadii ){
 
    _ownScaledRadii = ownScaledRadii;
 
-   return SimTKOpenMMCommon::DefaultReturn;
+   return 0;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -402,7 +402,7 @@ int GBVISoftcoreParameters::setScaledRadii( RealOpenMM* scaledRadii ){
 
    _scaledRadii = scaledRadii;
 
-   return SimTKOpenMMCommon::DefaultReturn;
+   return 0;
 
 }
 
@@ -434,7 +434,7 @@ int GBVISoftcoreParameters::setScaledRadii( float* scaledRadii ){
       _scaledRadii[ii] = (RealOpenMM) scaledRadii[ii];
    }
 
-   return SimTKOpenMMCommon::DefaultReturn;
+   return 0;
 
 }
 
@@ -467,7 +467,7 @@ int GBVISoftcoreParameters::setScaledRadii( const RealOpenMMVector& scaledRadii 
       _scaledRadii[ii] = scaledRadii[ii];
    }
 
-   return SimTKOpenMMCommon::DefaultReturn;
+   return 0;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -517,7 +517,7 @@ int GBVISoftcoreParameters::setOwnGammaParameters( int ownGammaParameters ){
 
    _ownGammaParameters = ownGammaParameters;
 
-   return SimTKOpenMMCommon::DefaultReturn;
+   return 0;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -545,7 +545,7 @@ int GBVISoftcoreParameters::setGammaParameters( RealOpenMM* gammas ){
 
    _gammaParameters = gammas;
 
-   return SimTKOpenMMCommon::DefaultReturn;
+   return 0;
 
 }
 
@@ -577,7 +577,7 @@ int GBVISoftcoreParameters::setGammaParameters( float* gammas ){
       _gammaParameters[ii] = (RealOpenMM) gammas[ii];
    }
 
-   return SimTKOpenMMCommon::DefaultReturn;
+   return 0;
 
 }
 
@@ -611,7 +611,7 @@ int GBVISoftcoreParameters::setGammaParameters( const RealOpenMMVector& gammas )
       _gammaParameters[ii] = gammas[ii];
    }
 
-   return SimTKOpenMMCommon::DefaultReturn;
+   return 0;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -661,7 +661,7 @@ int GBVISoftcoreParameters::setOwnBornRadiusScaleFactors( int ownBornRadiusScale
 
    _ownBornRadiusScaleFactors = ownBornRadiusScaleFactorsParameters;
 
-   return SimTKOpenMMCommon::DefaultReturn;
+   return 0;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -689,7 +689,7 @@ int GBVISoftcoreParameters::setBornRadiusScaleFactors( RealOpenMM* bornRadiusSca
 
    _bornRadiusScaleFactors = bornRadiusScaleFactors;
 
-   return SimTKOpenMMCommon::DefaultReturn;
+   return 0;
 
 }
 
@@ -721,7 +721,7 @@ int GBVISoftcoreParameters::setBornRadiusScaleFactors( float* bornRadiusScaleFac
       _bornRadiusScaleFactors[ii] = (RealOpenMM) bornRadiusScaleFactorss[ii];
    }
 
-   return SimTKOpenMMCommon::DefaultReturn;
+   return 0;
 
 }
 
@@ -755,7 +755,7 @@ int GBVISoftcoreParameters::setBornRadiusScaleFactors( const RealOpenMMVector& b
       _bornRadiusScaleFactors[ii] = bornRadiusScaleFactors[ii];
    }
 
-   return SimTKOpenMMCommon::DefaultReturn;
+   return 0;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -835,7 +835,7 @@ int GBVISoftcoreParameters::isNotReady( void ) const {
 
    if( errors ){
       message << std::endl;
-      SimTKOpenMMLog::printMessage( message );
+      (void) fprintf( stderr, "%s", message.str().c_str() );
    }
 
    errors += isReady;
@@ -857,7 +857,7 @@ int GBVISoftcoreParameters::setUseCutoff( RealOpenMM distance ) {
 
     cutoff = true;
     cutoffDistance = distance;
-    return SimTKOpenMMCommon::DefaultReturn;
+    return 0;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -902,7 +902,7 @@ int GBVISoftcoreParameters::setPeriodic( RealOpenMM* boxSize ) {
     periodicBoxSize[0] = boxSize[0];
     periodicBoxSize[1] = boxSize[1];
     periodicBoxSize[2] = boxSize[2];
-    return SimTKOpenMMCommon::DefaultReturn;
+    return 0;
 }
 
 /**---------------------------------------------------------------------------------------
