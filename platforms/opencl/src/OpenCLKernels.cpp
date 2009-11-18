@@ -288,10 +288,8 @@ OpenCLCalcCustomBondForceKernel::~OpenCLCalcCustomBondForceKernel() {
 }
 
 void OpenCLCalcCustomBondForceKernel::initialize(const System& system, const CustomBondForce& force) {
-    if (force.getNumPerBondParameters() > 4)
-        throw OpenMMException("OpenCLPlatform only supports four per-bond parameters for custom bonded forces");
     numBonds = force.getNumBonds();
-    params = new OpenCLArray<mm_float4>(cl, numBonds, "customBondParams");
+    params = new OpenCLParameterSet(cl, force.getNumPerBondParameters(), numBonds, "customBondParams");
     indices = new OpenCLArray<mm_int4>(cl, numBonds, "customBondIndices");
     string extraArguments;
     if (force.getNumGlobalParameters() > 0) {
@@ -299,23 +297,18 @@ void OpenCLCalcCustomBondForceKernel::initialize(const System& system, const Cus
         extraArguments += ", __constant float* globals";
     }
     vector<int> forceBufferCounter(system.getNumParticles(), 0);
-    vector<mm_float4> paramVector(numBonds);
+    vector<vector<cl_float> > paramVector(numBonds);
     vector<mm_int4> indicesVector(numBonds);
     for (int i = 0; i < numBonds; i++) {
         int particle1, particle2;
         vector<double> parameters;
         force.getBondParameters(i, particle1, particle2, parameters);
-        if (parameters.size() > 0)
-            paramVector[i].x = (cl_float) parameters[0];
-        if (parameters.size() > 1)
-            paramVector[i].y = (cl_float) parameters[1];
-        if (parameters.size() > 2)
-            paramVector[i].z = (cl_float) parameters[2];
-        if (parameters.size() > 3)
-            paramVector[i].w = (cl_float) parameters[3];
+        paramVector[i].resize(parameters.size());
+        for (int j = 0; j < parameters.size(); j++)
+            paramVector[i][j] = (cl_float) parameters[j];
         indicesVector[i] = (mm_int4) {particle1, particle2, forceBufferCounter[particle1]++, forceBufferCounter[particle2]++};
     }
-    params->upload(paramVector);
+    params->setParameterValues(paramVector);
     indices->upload(indicesVector);
     int maxBuffers = 1;
     for (int i = 0; i < forceBufferCounter.size(); i++)
@@ -345,20 +338,24 @@ void OpenCLCalcCustomBondForceKernel::initialize(const System& system, const Cus
 
     map<string, string> variables;
     variables["r"] = "r";
-    string suffixes[] = {".x", ".y", ".z", ".w"};
     for (int i = 0; i < force.getNumPerBondParameters(); i++) {
         const string& name = force.getPerBondParameterName(i);
-        variables[name] = "bondParams"+suffixes[i];
+        variables[name] = "bondParams"+params->getParameterSuffix(i);
     }
     for (int i = 0; i < force.getNumGlobalParameters(); i++) {
         const string& name = force.getGlobalParameterName(i);
         string value = "globals["+intToString(i)+"]";
         variables[name] = value;
     }
-    map<string, string> replacements;
     stringstream compute;
+    for (int i = 0; i < (int) params->getBuffers().size(); i++) {
+        const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
+        extraArguments += ", __global "+buffer.getType()+"* "+buffer.getName();
+        compute<<buffer.getType()<<" bondParams"<<(i+1)<<" = "<<buffer.getName()<<"[index];\n";
+    }
     vector<pair<string, string> > functions;
     compute << OpenCLExpressionUtilities::createExpressions(expressions, variables, functions, "temp", "");
+    map<string, string> replacements;
     replacements["COMPUTE_FORCE"] = compute.str();
     replacements["EXTRA_ARGUMENTS"] = extraArguments;
     cl::Program program = cl.createProgram(cl.loadSourceFromFile("customBondForce.cl", replacements));
@@ -384,10 +381,14 @@ void OpenCLCalcCustomBondForceKernel::executeForces(ContextImpl& context) {
         kernel.setArg<cl::Buffer>(2, cl.getForceBuffers().getDeviceBuffer());
         kernel.setArg<cl::Buffer>(3, cl.getEnergyBuffer().getDeviceBuffer());
         kernel.setArg<cl::Buffer>(4, cl.getPosq().getDeviceBuffer());
-        kernel.setArg<cl::Buffer>(5, params->getDeviceBuffer());
-        kernel.setArg<cl::Buffer>(6, indices->getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(5, indices->getDeviceBuffer());
+        int nextIndex = 6;
         if (globals != NULL)
-            kernel.setArg<cl::Buffer>(7, globals->getDeviceBuffer());
+            kernel.setArg<cl::Buffer>(nextIndex++, globals->getDeviceBuffer());
+        for (int i = 0; i < (int) params->getBuffers().size(); i++) {
+            const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
+            kernel.setArg<cl::Buffer>(nextIndex++, buffer.getBuffer());
+        }
     }
     cl.executeKernel(kernel, numBonds);
 }
@@ -887,8 +888,6 @@ OpenCLCalcCustomNonbondedForceKernel::~OpenCLCalcCustomNonbondedForceKernel() {
 }
 
 void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, const CustomNonbondedForce& force) {
-    if (force.getNumPerParticleParameters() > 4)
-        throw OpenMMException("OpenCLPlatform only supports four per-atom parameters for custom nonbonded forces");
     int forceIndex;
     for (forceIndex = 0; forceIndex < system.getNumForces() && &system.getForce(forceIndex) != &force; ++forceIndex)
         ;
@@ -898,24 +897,19 @@ void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, cons
 
     int numParticles = force.getNumParticles();
     string extraArguments;
-    params = new OpenCLArray<mm_float4>(cl, numParticles, "customNonbondedParameters");
+    params = new OpenCLParameterSet(cl, force.getNumPerParticleParameters(), numParticles, "customNonbondedParameters");
     if (force.getNumGlobalParameters() > 0) {
         globals = new OpenCLArray<cl_float>(cl, force.getNumGlobalParameters(), "customNonbondedGlobals", false, CL_MEM_READ_ONLY);
         extraArguments += ", __constant float* globals";
     }
-    vector<mm_float4> paramVec(numParticles);
+    vector<vector<cl_float> > paramVector(numParticles);
     vector<vector<int> > exclusionList(numParticles);
     for (int i = 0; i < numParticles; i++) {
         vector<double> parameters;
         force.getParticleParameters(i, parameters);
-        if (parameters.size() > 0)
-            paramVec[i].x = (cl_float) parameters[0];
-        if (parameters.size() > 1)
-            paramVec[i].y = (cl_float) parameters[1];
-        if (parameters.size() > 2)
-            paramVec[i].z = (cl_float) parameters[2];
-        if (parameters.size() > 3)
-            paramVec[i].w = (cl_float) parameters[3];
+        paramVector[i].resize(parameters.size());
+        for (int j = 0; j < parameters.size(); j++)
+            paramVector[i][j] = (cl_float) parameters[j];
         exclusionList[i].push_back(i);
     }
     for (int i = 0; i < force.getNumExclusions(); i++) {
@@ -924,7 +918,7 @@ void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, cons
         exclusionList[particle1].push_back(particle2);
         exclusionList[particle2].push_back(particle1);
     }
-    params->upload(paramVec);
+    params->setParameterValues(paramVector);
 
     // This class serves as a placeholder for custom functions in expressions.
 
@@ -1021,11 +1015,10 @@ void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, cons
 
     map<string, string> variables;
     variables["r"] = "r";
-    string suffixes[] = {".x", ".y", ".z", ".w"};
     for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
         const string& name = force.getPerParticleParameterName(i);
-        variables[name+"1"] = prefix+"params1"+suffixes[i];
-        variables[name+"2"] = prefix+"params2"+suffixes[i];
+        variables[name+"1"] = prefix+"params"+params->getParameterSuffix(i, "1");
+        variables[name+"2"] = prefix+"params"+params->getParameterSuffix(i, "2");
     }
     for (int i = 0; i < force.getNumGlobalParameters(); i++) {
         const string& name = force.getGlobalParameterName(i);
@@ -1038,7 +1031,10 @@ void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, cons
     replacements["COMPUTE_FORCE"] = compute.str();
     string source = cl.loadSourceFromFile("customNonbonded.cl", replacements);
     cl.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, source);
-    cl.getNonbondedUtilities().addParameter(OpenCLNonbondedUtilities::ParameterInfo(prefix+"params", "float4", sizeof(cl_float4), params->getDeviceBuffer()));
+    for (int i = 0; i < (int) params->getBuffers().size(); i++) {
+        const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
+        cl.getNonbondedUtilities().addParameter(OpenCLNonbondedUtilities::ParameterInfo(prefix+"params"+intToString(i+1), buffer.getType(), buffer.getSize(), buffer.getBuffer()));
+    }
     if (globals != NULL) {
         globals->upload(globalParamValues);
         cl.getNonbondedUtilities().addArgument(OpenCLNonbondedUtilities::ParameterInfo(prefix+"globals", "float", sizeof(cl_float), globals->getDeviceBuffer()));
@@ -1256,31 +1252,24 @@ OpenCLCalcCustomExternalForceKernel::~OpenCLCalcCustomExternalForceKernel() {
 }
 
 void OpenCLCalcCustomExternalForceKernel::initialize(const System& system, const CustomExternalForce& force) {
-    if (force.getNumPerParticleParameters() > 4)
-        throw OpenMMException("OpenCLPlatform only supports four per-particle parameters for custom external forces");
     numParticles = force.getNumParticles();
-    params = new OpenCLArray<mm_float4>(cl, numParticles, "customExternalParams");
+    params = new OpenCLParameterSet(cl, force.getNumPerParticleParameters(), numParticles, "customExternalParams");
     indices = new OpenCLArray<cl_int>(cl, numParticles, "customExternalIndices");
     string extraArguments;
     if (force.getNumGlobalParameters() > 0) {
         globals = new OpenCLArray<cl_float>(cl, force.getNumGlobalParameters(), "customExternalGlobals", false, CL_MEM_READ_ONLY);
         extraArguments += ", __constant float* globals";
     }
-    vector<mm_float4> paramVector(numParticles);
+    vector<vector<cl_float> > paramVector(numParticles);
     vector<cl_int> indicesVector(numParticles);
     for (int i = 0; i < numParticles; i++) {
         vector<double> parameters;
         force.getParticleParameters(i, indicesVector[i], parameters);
-        if (parameters.size() > 0)
-            paramVector[i].x = (cl_float) parameters[0];
-        if (parameters.size() > 1)
-            paramVector[i].y = (cl_float) parameters[1];
-        if (parameters.size() > 2)
-            paramVector[i].z = (cl_float) parameters[2];
-        if (parameters.size() > 3)
-            paramVector[i].w = (cl_float) parameters[3];
+        paramVector[i].resize(parameters.size());
+        for (int j = 0; j < parameters.size(); j++)
+            paramVector[i][j] = (cl_float) parameters[j];
     }
-    params->upload(paramVector);
+    params->setParameterValues(paramVector);
     indices->upload(indicesVector);
     cl.addForce(new OpenCLCustomExternalForceInfo(force, system.getNumParticles()));
 
@@ -1313,20 +1302,24 @@ void OpenCLCalcCustomExternalForceKernel::initialize(const System& system, const
     variables["x"] = "pos.x";
     variables["y"] = "pos.y";
     variables["z"] = "pos.z";
-    string suffixes[] = {".x", ".y", ".z", ".w"};
     for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
         const string& name = force.getPerParticleParameterName(i);
-        variables[name] = "particleParams"+suffixes[i];
+        variables[name] = "particleParams"+params->getParameterSuffix(i);
     }
     for (int i = 0; i < force.getNumGlobalParameters(); i++) {
         const string& name = force.getGlobalParameterName(i);
         string value = "globals["+intToString(i)+"]";
         variables[name] = value;
     }
-    map<string, string> replacements;
     stringstream compute;
+    for (int i = 0; i < (int) params->getBuffers().size(); i++) {
+        const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
+        extraArguments += ", __global "+buffer.getType()+"* "+buffer.getName();
+        compute<<buffer.getType()<<" particleParams"<<(i+1)<<" = "<<buffer.getName()<<"[index];\n";
+    }
     vector<pair<string, string> > functions;
     compute << OpenCLExpressionUtilities::createExpressions(expressions, variables, functions, "temp", "");
+    map<string, string> replacements;
     replacements["COMPUTE_FORCE"] = compute.str();
     replacements["EXTRA_ARGUMENTS"] = extraArguments;
     cl::Program program = cl.createProgram(cl.loadSourceFromFile("customExternalForce.cl", replacements));
@@ -1351,10 +1344,14 @@ void OpenCLCalcCustomExternalForceKernel::executeForces(ContextImpl& context) {
         kernel.setArg<cl::Buffer>(1, cl.getForceBuffers().getDeviceBuffer());
         kernel.setArg<cl::Buffer>(2, cl.getEnergyBuffer().getDeviceBuffer());
         kernel.setArg<cl::Buffer>(3, cl.getPosq().getDeviceBuffer());
-        kernel.setArg<cl::Buffer>(4, params->getDeviceBuffer());
-        kernel.setArg<cl::Buffer>(5, indices->getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(4, indices->getDeviceBuffer());
+        int nextIndex = 5;
         if (globals != NULL)
-            kernel.setArg<cl::Buffer>(6, globals->getDeviceBuffer());
+            kernel.setArg<cl::Buffer>(nextIndex++, globals->getDeviceBuffer());
+        for (int i = 0; i < (int) params->getBuffers().size(); i++) {
+            const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
+            kernel.setArg<cl::Buffer>(nextIndex++, buffer.getBuffer());
+        }
     }
     cl.executeKernel(kernel, numParticles);
 }

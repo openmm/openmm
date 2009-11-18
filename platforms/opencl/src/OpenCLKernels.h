@@ -30,6 +30,7 @@
 #include "OpenCLPlatform.h"
 #include "OpenCLArray.h"
 #include "OpenCLContext.h"
+#include "OpenCLParameterSet.h"
 #include "openmm/kernels.h"
 #include "openmm/System.h"
 
@@ -218,7 +219,7 @@ private:
     bool hasInitializedKernel;
     OpenCLContext& cl;
     System& system;
-    OpenCLArray<mm_float4>* params;
+    OpenCLParameterSet* params;
     OpenCLArray<mm_int4>* indices;
     OpenCLArray<cl_float>* globals;
     std::vector<std::string> globalParamNames;
@@ -417,7 +418,7 @@ public:
 private:
     bool hasInitializedKernel;
     OpenCLContext& cl;
-    OpenCLArray<mm_float4>* params;
+    OpenCLParameterSet* params;
     OpenCLArray<cl_float>* globals;
     OpenCLArray<mm_float4>* tabulatedFunctionParams;
     std::vector<std::string> globalParamNames;
@@ -503,7 +504,7 @@ private:
     bool hasInitializedKernel;
     OpenCLContext& cl;
     System& system;
-    OpenCLArray<mm_float4>* params;
+    OpenCLParameterSet* params;
     OpenCLArray<cl_int>* indices;
     OpenCLArray<cl_float>* globals;
     std::vector<std::string> globalParamNames;

@@ -81,9 +81,41 @@ void testForce() {
     ASSERT_EQUAL_TOL(0.5*(1.0 + 2.0*1.5*1.5 + 3.0*1.5*1.5), state.getPotentialEnergy(), TOL);
 }
 
+void testManyParameters() {
+    OpenCLPlatform platform;
+    System system;
+    system.addParticle(1.0);
+    VerletIntegrator integrator(0.01);
+    CustomExternalForce* forceField = new CustomExternalForce("xscale*(x-x0)^2+yscale*(y-y0)^2+zscale*(z-z0)^2");
+    forceField->addPerParticleParameter("x0");
+    forceField->addPerParticleParameter("y0");
+    forceField->addPerParticleParameter("z0");
+    forceField->addPerParticleParameter("xscale");
+    forceField->addPerParticleParameter("yscale");
+    forceField->addPerParticleParameter("zscale");
+    vector<double> parameters(6);
+    parameters[0] = 1.0;
+    parameters[1] = 2.0;
+    parameters[2] = 3.0;
+    parameters[3] = 0.1;
+    parameters[4] = 0.2;
+    parameters[5] = 0.3;
+    forceField->addParticle(0, parameters);
+    system.addForce(forceField);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(1);
+    positions[0] = Vec3(0, -1, 0);
+    context.setPositions(positions);
+    State state = context.getState(State::Forces | State::Energy);
+    const vector<Vec3>& forces = state.getForces();
+    ASSERT_EQUAL_VEC(Vec3(2*0.1*1.0, 2*0.2*3.0, 2*0.3*3.0), forces[0], TOL);
+    ASSERT_EQUAL_TOL(0.1*1*1 + 0.2*3*3 + 0.3*3*3, state.getPotentialEnergy(), TOL);
+}
+
 int main() {
     try {
         testForce();
+        testManyParameters();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

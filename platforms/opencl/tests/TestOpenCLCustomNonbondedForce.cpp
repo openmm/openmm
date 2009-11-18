@@ -115,6 +115,45 @@ void testParameters() {
     ASSERT_EQUAL_TOL(1.5*3.0*(12*12*12), state.getPotentialEnergy(), TOL);
 }
 
+void testManyParameters() {
+    OpenCLPlatform platform;
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    VerletIntegrator integrator(0.01);
+    CustomNonbondedForce* forceField = new CustomNonbondedForce("(a1*a2+b1*b2+c1*c2+d1*d2+e1*e2)*r");
+    forceField->addPerParticleParameter("a");
+    forceField->addPerParticleParameter("b");
+    forceField->addPerParticleParameter("c");
+    forceField->addPerParticleParameter("d");
+    forceField->addPerParticleParameter("e");
+    vector<double> params(5);
+    params[0] = 1.0;
+    params[1] = 2.0;
+    params[2] = 3.0;
+    params[3] = 4.0;
+    params[4] = 5.0;
+    forceField->addParticle(params);
+    params[0] = 1.1;
+    params[1] = 1.2;
+    params[2] = 1.3;
+    params[3] = 1.4;
+    params[4] = 1.5;
+    forceField->addParticle(params);
+    system.addForce(forceField);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(2);
+    positions[0] = Vec3(0, 0, 0);
+    positions[1] = Vec3(2, 0, 0);
+    context.setPositions(positions);
+    State state = context.getState(State::Forces | State::Energy);
+    vector<Vec3> forces = state.getForces();
+    double force = 1*1.1 + 2*1.2 + 3*1.3 + 4*1.4 + 5*1.5;
+    ASSERT_EQUAL_VEC(Vec3(force, 0, 0), forces[0], TOL);
+    ASSERT_EQUAL_VEC(Vec3(-force, 0, 0), forces[1], TOL);
+    ASSERT_EQUAL_TOL(2*force, state.getPotentialEnergy(), TOL);
+}
+
 void testExclusions() {
     OpenCLPlatform platform;
     System system;
@@ -312,6 +351,7 @@ int main() {
     try {
         testSimpleExpression();
         testParameters();
+        testManyParameters();
         testExclusions();
         testCutoff();
         testPeriodic();

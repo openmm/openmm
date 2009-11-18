@@ -81,9 +81,44 @@ void testBonds() {
     ASSERT_EQUAL_TOL(0.5*0.8*0.5*0.5 + 0.5*0.7*0.2*0.2, state.getPotentialEnergy(), TOL);
 }
 
+void testManyParameters() {
+    OpenCLPlatform platform;
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    VerletIntegrator integrator(0.01);
+    CustomBondForce* forceField = new CustomBondForce("(a+b+c+d+e+f+g+h+i)*r");
+    forceField->addPerBondParameter("a");
+    forceField->addPerBondParameter("b");
+    forceField->addPerBondParameter("c");
+    forceField->addPerBondParameter("d");
+    forceField->addPerBondParameter("e");
+    forceField->addPerBondParameter("f");
+    forceField->addPerBondParameter("g");
+    forceField->addPerBondParameter("h");
+    forceField->addPerBondParameter("i");
+    vector<double> parameters(forceField->getNumPerBondParameters());
+    for (int i = 0; i < parameters.size(); i++)
+        parameters[i] = i;
+    forceField->addBond(0, 1, parameters);
+    system.addForce(forceField);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(2);
+    positions[0] = Vec3(0, 0, 0);
+    positions[1] = Vec3(0, 2.5, 0);
+    context.setPositions(positions);
+    State state = context.getState(State::Forces | State::Energy);
+    const vector<Vec3>& forces = state.getForces();
+    double f = 1+2+3+4+5+6+7+8;
+    ASSERT_EQUAL_VEC(Vec3(0, f, 0), forces[0], TOL);
+    ASSERT_EQUAL_VEC(Vec3(0, -f, 0), forces[1], TOL);
+    ASSERT_EQUAL_TOL(f*2.5, state.getPotentialEnergy(), TOL);
+}
+
 int main() {
     try {
         testBonds();
+        testManyParameters();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;
