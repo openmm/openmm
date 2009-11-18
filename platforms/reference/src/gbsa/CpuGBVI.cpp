@@ -32,8 +32,6 @@
 #include "../SimTKReference/ReferenceForce.h"
 #include <math.h>
 
-static const double CAL_TO_JOULE = 0.4184;
-
 /**---------------------------------------------------------------------------------------
 
    CpuGBVI constructor
@@ -425,16 +423,17 @@ RealOpenMM CpuGBVI::computeBornEnergy( const RealOpenMM* bornRadii, RealOpenMM**
 
    // ---------------------------------------------------------------------------------------
 
-   static const char* methodName   = "CpuGBVI::computeBornEnergy";
+   static const char* methodName         = "CpuGBVI::computeBornEnergy";
 
-   static const RealOpenMM zero    = (RealOpenMM) 0.0;
-   static const RealOpenMM one     = (RealOpenMM) 1.0;
-   static const RealOpenMM two     = (RealOpenMM) 2.0;
-   static const RealOpenMM three   = (RealOpenMM) 3.0;
-   static const RealOpenMM four    = (RealOpenMM) 4.0;
-   static const RealOpenMM half    = (RealOpenMM) 0.5;
-   static const RealOpenMM fourth  = (RealOpenMM) 0.25;
-   static const RealOpenMM eighth  = (RealOpenMM) 0.125;
+   static const RealOpenMM zero          = (RealOpenMM) 0.0;
+   static const RealOpenMM one           = (RealOpenMM) 1.0;
+   static const RealOpenMM two           = (RealOpenMM) 2.0;
+   static const RealOpenMM three         = (RealOpenMM) 3.0;
+   static const RealOpenMM four          = (RealOpenMM) 4.0;
+   static const RealOpenMM half          = (RealOpenMM) 0.5;
+   static const RealOpenMM fourth        = (RealOpenMM) 0.25;
+   static const RealOpenMM eighth        = (RealOpenMM) 0.125;
+   static const RealOpenMM CAL_TO_JOULE  = 0.4184;
 
    // ---------------------------------------------------------------------------------------
 
@@ -552,6 +551,7 @@ int CpuGBVI::computeBornForces( const RealOpenMM* bornRadii, RealOpenMM** atomCo
    static const RealOpenMM oneThird     = (RealOpenMM) (1.0/3.0);
    static const RealOpenMM fourth       = (RealOpenMM) 0.25;
    static const RealOpenMM eighth       = (RealOpenMM) 0.125;
+   static const RealOpenMM CAL_TO_JOULE = 0.4184;
 
    // ---------------------------------------------------------------------------------------
 
@@ -717,7 +717,7 @@ if( atomI == 0 ){
 #endif
 
    const RealOpenMM* scaledRadii         = gbviParameters->getScaledRadii();
-   double stupidFactor                   = three/CAL_TO_JOULE;
+   RealOpenMM stupidFactor               = three/CAL_TO_JOULE;
    for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
  
       RealOpenMM R        = atomicRadii[atomI];
