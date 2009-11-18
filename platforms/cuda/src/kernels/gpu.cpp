@@ -52,7 +52,6 @@ using namespace std;
 #include "openmm/OpenMMException.h"
 #include "quern.h"
 #include "Lepton.h"
-#include <stdint.h>
 #include "rng.h"
 
 // In case we're using some primitive version of Visual Studio this will
@@ -2123,7 +2122,7 @@ int gpuBuildOutputBuffers(gpuContext gpu)
     gpu->sim.dihedral_offset    = gpu->sim.bond_angle_offset     + gpu->psDihedralParameter->_stride;
     gpu->sim.rb_dihedral_offset = gpu->sim.dihedral_offset       + gpu->psRbDihedralParameter1->_stride;
     gpu->sim.LJ14_offset        = gpu->sim.rb_dihedral_offset    + gpu->psLJ14Parameter->_stride;
-    gpu->sim.localForces_threads_per_block  = (std::max(gpu->sim.LJ14_offset, gpu->sim.customBonds) / gpu->sim.blocks + 15) & 0xfffffff0;
+    gpu->sim.localForces_threads_per_block  = (max(gpu->sim.LJ14_offset, gpu->sim.customBonds) / gpu->sim.blocks + 15) & 0xfffffff0;
     if (gpu->sim.localForces_threads_per_block > gpu->sim.max_localForces_threads_per_block)
         gpu->sim.localForces_threads_per_block = gpu->sim.max_localForces_threads_per_block;
     if (gpu->sim.localForces_threads_per_block < 1)

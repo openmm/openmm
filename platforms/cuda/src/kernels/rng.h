@@ -3,7 +3,6 @@
 
 #ifndef RNG_H
 #define RNG_H
-#define UINT32_MAX  0xffffffff
 
 // __________________________________________________________________________
 // rng.h - a Random Number Generator Class
@@ -62,7 +61,14 @@
 #ifndef __STDC_LIMIT_MACROS
 #define __STDC_LIMIT_MACROS
 #endif
-#include <stdint.h>
+
+#ifdef _MSC_VER
+#include "windowsStdInt.h"
+#else
+#include <cstdint>		// Use the C99 official header
+//#define UINT32_MAX  0xffffffff
+#endif
+
 #include <cstdlib>
 #include <ctime>
 #include <cmath>
@@ -86,9 +92,11 @@ typedef int32_t sint;
 typedef uint32_t uint;
 typedef int32_t slong;
 typedef uint32_t ulong32;
+#ifndef _MSC_VER
 inline ulong32 ULONG32(slong x) { return (ulong32(x)); }
 inline ulong32 ULONG32(ulong32 x) { return (ulong32(x)); }
 inline ulong32 ULONG32(double x) { return (ulong32(x)); }
+#endif
 inline slong UL32toSL32(ulong32 x) { return (slong(x)); }
 
 class RNG
