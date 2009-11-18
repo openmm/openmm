@@ -34,10 +34,13 @@
 #include "kernels/GpuLJ14Softcore.h" 
 
 #include <cmath>
+#include <map>
+#include <cstring>
+#include <cstdlib>
+#include <typeinfo>
 
 using namespace OpenMM;
 
-#include <map>
 typedef std::map< std::string, int > MapStringInt;
 typedef MapStringInt::iterator MapStringIntI;
 typedef MapStringInt::const_iterator MapStringIntCI;
