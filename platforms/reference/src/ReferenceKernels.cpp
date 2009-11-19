@@ -619,7 +619,7 @@ public:
     void findCoefficients(double& x, double* coeff) const {
         int length = values.size();
         double scale = (length-1)/(max-min);
-        int index = std::floor((x-min)*scale);
+        int index = (int) std::floor((x-min)*scale);
         double points[4];
         points[0] = (index == 0 ? 2*values[0]-values[1] : values[index-1]);
         points[1] = values[index];

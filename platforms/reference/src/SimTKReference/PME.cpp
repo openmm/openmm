@@ -242,7 +242,7 @@ pme_update_grid_index_and_fraction(pme_t    pme,
              *    (And, by adding 100.0 box lengths, we would lose a bit of numerical accuracy here!)
 			 */
 			t  = (atomCoordinates[i][d] / periodicBoxSize[d] + 1.0)*pme->ngrid[d];
-			ti = t;
+			ti = (int) t;
 
 			pme->particlefraction[i][d] = t - ti;
 			pme->particleindex[i][d]    = ti % pme->ngrid[d];
