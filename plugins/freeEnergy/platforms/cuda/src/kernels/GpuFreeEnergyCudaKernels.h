@@ -34,6 +34,7 @@
 #include "GpuObcGbsaSoftcore.h"
 #include "GpuGBVISoftcore.h"
 #include <vector>
+#include <cuda.h>
 
 // Function prototypes
 

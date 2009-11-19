@@ -398,8 +398,8 @@ void CudaFreeEnergyCalcNonbondedSoftcoreForceKernel::executeForces(ContextImpl& 
                             methodName.c_str(), getIncludeGBSA(), getIncludeGBVI(), getNumExceptions() );
             (void) fflush( log );
         }
-        SetCalculateLocalSoftcoreGpuSim( gpu );
         SetCalculateCDLJSoftcoreGpuSim( gpu );
+        SetCalculateLocalSoftcoreGpuSim( gpu );
 
         // flip strides (unsure if this is needed)
 
@@ -701,6 +701,7 @@ void CudaFreeEnergyCalcGBVISoftcoreForceKernel::executeForces(ContextImpl& conte
     }
 
     kClearSoftcoreBornForces(gpu);
+
     kCalculateGBVISoftcoreBornSum(gpu);
 
     if( getQuinticScaling() ){
@@ -708,9 +709,8 @@ void CudaFreeEnergyCalcGBVISoftcoreForceKernel::executeForces(ContextImpl& conte
     } else {
         kReduceGBVISoftcoreBornSum(gpu);
     }
-    kCalculateCDLJObcGbsaSoftcoreForces1(gpu);
 
-//kPrintForces(gpu, "Post kCalculateCDLJObcGbsaSoftcoreForces1", call );
+    kCalculateCDLJObcGbsaSoftcoreForces1(gpu);
 
     if( debug && log ){
         (void) fprintf( log, "\n%s: calling %s\n", methodName.c_str(),
@@ -724,7 +724,7 @@ void CudaFreeEnergyCalcGBVISoftcoreForceKernel::executeForces(ContextImpl& conte
         kReduceGBVIBornForcesQuinticScaling(gpu);
     } else {
         gpu->bIncludeGBVI = true;
-        kReduceObcGbsaSoftcoreBornForces(gpu);
+        kReduceGBVISoftcoreBornForces(gpu);
         gpu->bIncludeGBVI = false;
     }
 

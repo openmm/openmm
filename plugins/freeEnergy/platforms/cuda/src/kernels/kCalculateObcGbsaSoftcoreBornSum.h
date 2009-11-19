@@ -30,7 +30,7 @@
  * different versions of the kernels.
  */
 
-__global__ void METHOD_NAME(kCalculateObcGbsa, BornSum_kernel)(unsigned int* workUnit)
+__global__ void METHOD_NAME(kCalculateObcGbsaSoftcore, BornSum_kernel)(unsigned int* workUnit)
 {
     extern __shared__ Atom sA[];
     unsigned int totalWarps   = cSim.nonbond_blocks*cSim.nonbond_threads_per_block/GRID;

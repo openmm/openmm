@@ -187,6 +187,7 @@ void kReduceObcGbsaSoftcoreBornForces(gpuContext gpu)
 
 // Include versions of the kernels with cutoffs.
 
+#if 0
 #undef METHOD_NAME
 #undef USE_OUTPUT_BUFFER_PER_WARP
 #define USE_CUTOFF
@@ -208,6 +209,7 @@ void kReduceObcGbsaSoftcoreBornForces(gpuContext gpu)
 #undef METHOD_NAME
 #define METHOD_NAME(a, b) a##PeriodicByWarp##b
 #include "kCalculateObcGbsaSoftcoreBornSum.h"
+#endif
 
 __global__ void kReduceObcGbsaSoftcoreBornSum_kernel()
 {
@@ -345,12 +347,13 @@ fprintf( stderr, "kCalculateObcGbsaSoftcoreBornSum: bOutputBufferPerWarp=%u blks
 #undef GBSA
 
             if (gpu->bOutputBufferPerWarp)
-                kCalculateObcGbsaN2ByWarpBornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                kCalculateObcGbsaSoftcoreN2ByWarpBornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                         sizeof(Atom)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pWorkUnit);
             else
-                kCalculateObcGbsaN2BornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
+                kCalculateObcGbsaSoftcoreN2BornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                         sizeof(Atom)*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pWorkUnit);
             break;
+#if 0
         case CUTOFF:
             if (gpu->bOutputBufferPerWarp)
                 kCalculateObcGbsaCutoffByWarpBornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
@@ -367,6 +370,7 @@ fprintf( stderr, "kCalculateObcGbsaSoftcoreBornSum: bOutputBufferPerWarp=%u blks
                 kCalculateObcGbsaPeriodicBornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
                         (sizeof(Atom)+sizeof(float))*gpu->sim.nonbond_threads_per_block>>>(gpu->sim.pInteractingWorkUnit);
             break;
+#endif
     }
     LAUNCHERROR("kCalculateObcGbsaSoftcoreBornSum");
 }

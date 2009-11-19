@@ -31,6 +31,7 @@
 
 #include "GpuGBVISoftcore.h"
 #include "GpuFreeEnergyCudaKernels.h"
+#include <cuda.h>
 
 struct cudaFreeEnergySimulationGBVI {
     float quinticLowerLimitFactor;

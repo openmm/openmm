@@ -47,7 +47,7 @@ void SetCalculateCDLJSoftcoreGpuSim( gpuContext gpu )
 {
     cudaError_t status;
     status = cudaMemcpyToSymbol(cSim, &gpu->sim, sizeof(cudaGmxSimulation));
-    RTERROR(status, "cudaMemcpyToSymbol: SetSim copy to cSim failed");
+    RTERROR(status, "cudaMemcpyToSymbol: SetCalculateCDLJSoftcoreGpuSim copy to cSim failed");
 
     //(void) fprintf( stderr, "SetCalculateCDLJSoftcoreGpuSim gpu=%p cSim=%p sizeof=%u\n", gpu, &gpu->sim, sizeof(cudaGmxSimulation) ); fflush( stderr );
 }
