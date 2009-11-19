@@ -62,7 +62,8 @@ public:
      * can be used when processing or analyzing parsed expressions.
      */
     enum Id {CONSTANT, VARIABLE, CUSTOM, ADD, SUBTRACT, MULTIPLY, DIVIDE, POWER, NEGATE, SQRT, EXP, LOG,
-             SIN, COS, SEC, CSC, TAN, COT, ASIN, ACOS, ATAN, SINH, COSH, TANH, SQUARE, CUBE, RECIPROCAL, ADD_CONSTANT, MULTIPLY_CONSTANT, POWER_CONSTANT};
+             SIN, COS, SEC, CSC, TAN, COT, ASIN, ACOS, ATAN, SINH, COSH, TANH, STEP, SQUARE, CUBE, RECIPROCAL,
+             ADD_CONSTANT, MULTIPLY_CONSTANT, POWER_CONSTANT};
     /**
      * Get the name of this Operation.
      */
@@ -125,6 +126,7 @@ public:
     class Sinh;
     class Cosh;
     class Tanh;
+    class Step;
     class Square;
     class Cube;
     class Reciprocal;
@@ -700,6 +702,28 @@ public:
     }
     double evaluate(double* args, const std::map<std::string, double>& variables) const {
         return std::tanh(args[0]);
+    }
+    ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
+};
+
+class Operation::Step : public Operation {
+public:
+    Step() {
+    }
+    std::string getName() const {
+        return "step";
+    }
+    Id getId() const {
+        return STEP;
+    }
+    int getNumArguments() const {
+        return 1;
+    }
+    Operation* clone() const {
+        return new Step();
+    }
+    double evaluate(double* args, const std::map<std::string, double>& variables) const {
+        return (args[0] >= 0.0 ? 1.0 : 0.0);
     }
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };

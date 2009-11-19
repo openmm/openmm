@@ -296,6 +296,7 @@ Operation* Parser::getFunctionOperation(const std::string& name, const map<strin
         opMap["sinh"] = Operation::SINH;
         opMap["cosh"] = Operation::COSH;
         opMap["tanh"] = Operation::TANH;
+        opMap["step"] = Operation::STEP;
         opMap["square"] = Operation::SQUARE;
         opMap["cube"] = Operation::CUBE;
         opMap["recip"] = Operation::RECIPROCAL;
@@ -344,6 +345,8 @@ Operation* Parser::getFunctionOperation(const std::string& name, const map<strin
             return new Operation::Cosh();
         case Operation::TANH:
             return new Operation::Tanh();
+        case Operation::STEP:
+            return new Operation::Step();
         case Operation::SQUARE:
             return new Operation::Square();
         case Operation::CUBE:

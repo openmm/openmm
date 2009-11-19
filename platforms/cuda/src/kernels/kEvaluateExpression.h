@@ -137,9 +137,12 @@ __device__ float kEvaluateExpression_kernel(Expression<SIZE>* expression, float*
                     float temp = STACK(stackPointer);
                     STACK(stackPointer) *= temp;
                 }
-                else /*if (op == CUBE)*/ {
+                else if (op == CUBE) {
                     float temp = STACK(stackPointer);
                     STACK(stackPointer) *= temp*temp;
+                }
+                else /*if (op == STEP)*/ {
+                    STACK(stackPointer) = (STACK(stackPointer) >= 0.0f ? 1.0f : 0.0f);
                 }
             }
             else {

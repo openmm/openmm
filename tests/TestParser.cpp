@@ -203,6 +203,7 @@ int main() {
         verifyDerivative("sinh(x)", "cosh(x)");
         verifyDerivative("cosh(x)", "sinh(x)");
         verifyDerivative("tanh(x)", "1/(cosh(x)^2)");
+        verifyDerivative("step(x)*x+step(1-x)*2*x", "step(x)+step(1-x)*2");
         verifyDerivative("recip(x)", "-1/x^2");
         verifyDerivative("square(x)", "2*x");
         verifyDerivative("cube(x)", "3*x^2");
