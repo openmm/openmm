@@ -25,7 +25,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "GpuLJ14Softcore.h"
-#include <cuda.h>
+#include "GpuFreeEnergyCudaKernels.h"
 
 static __constant__ cudaGmxSimulation cSim;
 static __constant__ cudaFreeEnergySimulationNonbonded14 feSim;
@@ -95,11 +95,11 @@ static __constant__ cudaFreeEnergySimulationNonbonded14 feSim;
     angle = (dp >= 0) ? angle : -angle; \
 }
 
-extern "C" void SetCalculateLocalSoftcoreGpuSim(gpuContext gpu)
+void SetCalculateLocalSoftcoreGpuSim(gpuContext gpu)
 {
     cudaError_t status;
     status = cudaMemcpyToSymbol(cSim, &gpu->sim, sizeof(cudaGmxSimulation));     
-    RTERROR(status, "cudaMemcpyToSymbol: SetCalculateLocalSoftcoreForcesSim copy to cSim failed");
+    RTERROR(status, "cudaMemcpyToSymbol: SetCalculateLocalSoftcoreGpuSim copy to cSim failed");
 
 }
 
