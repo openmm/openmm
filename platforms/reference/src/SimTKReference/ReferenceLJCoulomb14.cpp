@@ -157,9 +157,9 @@ int ReferenceLJCoulomb14::calculateBondIxn( int* atomIndices, RealOpenMM** atomC
 
    RealOpenMM dEdR      = parameters[1]*( twelve*sig6 - six )*sig6;
               if (cutoff)
-                  dEdR += ONE_4PI_EPS0*parameters[2]*(inverseR-2.0f*krf*r2);
+                  dEdR += (RealOpenMM) (ONE_4PI_EPS0*parameters[2]*(inverseR-2.0f*krf*r2));
               else
-                  dEdR += ONE_4PI_EPS0*parameters[2]*inverseR;
+                  dEdR += (RealOpenMM) (ONE_4PI_EPS0*parameters[2]*inverseR);
               dEdR     *= inverseR*inverseR;
 
    // accumulate forces
@@ -172,9 +172,9 @@ int ReferenceLJCoulomb14::calculateBondIxn( int* atomIndices, RealOpenMM** atomC
 
    RealOpenMM energy = parameters[1]*( sig6 - one )*sig6;
    if (cutoff)
-       energy += ONE_4PI_EPS0*parameters[2]*(inverseR+krf*r2-crf);
+       energy += (RealOpenMM) (ONE_4PI_EPS0*parameters[2]*(inverseR+krf*r2-crf));
    else
-       energy += ONE_4PI_EPS0*parameters[2]*inverseR;
+       energy += (RealOpenMM) (ONE_4PI_EPS0*parameters[2]*inverseR);
 
    // accumulate energies
 

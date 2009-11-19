@@ -106,11 +106,11 @@ int ReferenceCustomExternalIxn::calculateForce( int atomIndex,
 
    // ---------------------------------------------------------------------------------------
 
-   forces[atomIndex][0] -= forceExpressionX.evaluate(variables);
-   forces[atomIndex][1] -= forceExpressionY.evaluate(variables);
-   forces[atomIndex][2] -= forceExpressionZ.evaluate(variables);
+   forces[atomIndex][0] -= (RealOpenMM) forceExpressionX.evaluate(variables);
+   forces[atomIndex][1] -= (RealOpenMM) forceExpressionY.evaluate(variables);
+   forces[atomIndex][2] -= (RealOpenMM) forceExpressionZ.evaluate(variables);
    if (energy != NULL)
-       *energy += energyExpression.evaluate(variables);
+       *energy += (RealOpenMM) energyExpression.evaluate(variables);
 
    return ReferenceForce::DefaultReturn;
 }

@@ -116,7 +116,7 @@ int ReferenceCustomBondIxn::calculateBondIxn( int* atomIndices,
    int atomBIndex = atomIndices[1];
    ReferenceForce::getDeltaR( atomCoordinates[atomAIndex], atomCoordinates[atomBIndex], deltaR );
    variables["r"]             = deltaR[ReferenceForce::RIndex];
-   RealOpenMM dEdR            = forceExpression.evaluate(variables);
+   RealOpenMM dEdR            = (RealOpenMM) forceExpression.evaluate(variables);
    dEdR                       = deltaR[ReferenceForce::RIndex] > zero ? (dEdR/deltaR[ReferenceForce::RIndex]) : zero;
 
    forces[atomAIndex][0]     += dEdR*deltaR[ReferenceForce::XIndex];
@@ -127,7 +127,7 @@ int ReferenceCustomBondIxn::calculateBondIxn( int* atomIndices,
    forces[atomBIndex][1]     -= dEdR*deltaR[ReferenceForce::YIndex];
    forces[atomBIndex][2]     -= dEdR*deltaR[ReferenceForce::ZIndex];
 
-   RealOpenMM energy          = energyExpression.evaluate(variables);
+   RealOpenMM energy          = (RealOpenMM) energyExpression.evaluate(variables);
    updateEnergy( energy, energiesByBond, twoI, atomIndices, energiesByAtom );
 
    return ReferenceForce::DefaultReturn;
