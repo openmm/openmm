@@ -75,10 +75,10 @@ namespace OpenMM {
  * </pre></tt>
  *
  * Expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
- * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, sinh, cosh, tanh.  All trigonometric functions
- * are defined in radians, and log is the natural logarithm.  The names of per-particle parameters have the suffix "1" or "2"
- * appended to them to indicate the values for the two interacting particles.  As seen in the above example, the expression may
- * also involve intermediate quantities that are defined following the main expression, using ";" as a separator.
+ * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, step.  All trigonometric functions
+ * are defined in radians, and log is the natural logarithm.  step(x) = 0 if x is less than 0, 1 otherwise.  The names of per-particle parameters
+ * have the suffix "1" or "2" appended to them to indicate the values for the two interacting particles.  As seen in the above example,
+ * the expression may also involve intermediate quantities that are defined following the main expression, using ";" as a separator.
  *
  * In addition, you can call addFunction() to define a new function based on tabulated values.  You specify a vector of
  * values, and an interpolating or approximating spline is created from them.  That function can then appear in the expression.
