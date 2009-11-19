@@ -235,7 +235,14 @@ ExpressionTreeNode Parser::parsePrecedence(const vector<ParseToken>& tokens, int
         if (pos == tokens.size() || tokens[pos].getType() != ParseToken::RightParen)
         throw Exception("Parse error: unbalanced parentheses");
         pos++;
-        result = ExpressionTreeNode(getFunctionOperation(token.getText(), customFunctions), args);
+        Operation* op = getFunctionOperation(token.getText(), customFunctions);
+        try {
+            result = ExpressionTreeNode(op, args);
+        }
+        catch (...) {
+            delete op;
+            throw;
+        }
     }
     else if (token.getType() == ParseToken::Operator && token.getText() == "-") {
         pos++;
@@ -249,13 +256,20 @@ ExpressionTreeNode Parser::parsePrecedence(const vector<ParseToken>& tokens, int
 
     while (pos < (int) tokens.size() && tokens[pos].getType() == ParseToken::Operator) {
         token = tokens[pos];
-        int op = Operators.find(token.getText());
-        int opPrecedence = Precedence[op];
+        int opIndex = Operators.find(token.getText());
+        int opPrecedence = Precedence[opIndex];
         if (opPrecedence < precedence)
             return result;
         pos++;
-        ExpressionTreeNode arg = parsePrecedence(tokens, pos, customFunctions, subexpressionDefs, LeftAssociative[op] ? opPrecedence+1 : opPrecedence);
-        result = ExpressionTreeNode(getOperatorOperation(token.getText()), result, arg);
+        ExpressionTreeNode arg = parsePrecedence(tokens, pos, customFunctions, subexpressionDefs, LeftAssociative[opIndex] ? opPrecedence+1 : opPrecedence);
+        Operation* op = getOperatorOperation(token.getText());
+        try {
+            result = ExpressionTreeNode(op, result, arg);
+        }
+        catch (...) {
+            delete op;
+            throw;
+        }
     }
     return result;
 }
