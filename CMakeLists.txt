@@ -17,6 +17,10 @@
 # On Linux it appears that cmake 2.4 does not work with Cuda cmake rules
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
+# We have custom cmake modules for FindOpenMM and running python tests
+SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake_modules")
+
+
 # Does someone at Kitware actually believe that this policy crap
 # might actually make cmake LESS brittle?
 # (Probably the same genius who came up the endif(allthesamecrap) syntax)
@@ -64,6 +68,7 @@ IF(${CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT})
 ENDIF(${CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT})
 
 INCLUDE(Dart)
+MARK_AS_ADVANCED(DART_ROOT)
 
 # The source is organized into subdirectories, but we handle them all from
 # this CMakeLists file rather than letting CMake visit them as SUBDIRS.
@@ -126,28 +131,23 @@ SET(OPENMM_AUTHORS "Peter.Eastman")
 # Cygwin, and your "about" string will say "unknown" rather than
 # providing the SVN version of the source.
 
-FIND_PROGRAM (SVNVERSION_EXE svnversion.exe
+FIND_PROGRAM (SVNVERSION_PROGRAM svnversion
     PATHS "C:/cygwin/bin"
 )
-IF (SVNVERSION_EXE)
-    EXEC_PROGRAM (${SVNVERSION_EXE}
-                  ARGS  \"${CMAKE_CURRENT_SOURCE_DIR}\"
-                  OUTPUT_VARIABLE OPENMM_SVN_REVISION )
-ELSE (SVNVERSION_EXE) 
-    FIND_PROGRAM (SVNVERSION svnversion) 
-    IF (SVNVERSION)
-        EXEC_PROGRAM (${SVNVERSION}
-                      ARGS "${CMAKE_CURRENT_SOURCE_DIR}"
-                      OUTPUT_VARIABLE OPENMM_SVN_REVISION)
-    ELSE (SVNVERSION)
-        MESSAGE (STATUS 
-          "Could not find 'svnversion' executable; 'about' will be wrong. (Cygwin provides one on Windows.)"
-        )
-        SET (OPENMM_SVN_REVISION unknown) 
-    ENDIF (SVNVERSION)
-ENDIF (SVNVERSION_EXE)
+IF (SVNVERSION_PROGRAM)
+    EXEC_PROGRAM (${SVNVERSION_PROGRAM}
+                  ARGS \"${CMAKE_CURRENT_SOURCE_DIR}\"
+                  OUTPUT_VARIABLE OPENMM_SVN_REVISION)
+ELSE (SVNVERSION_PROGRAM)
+    MESSAGE (STATUS 
+      "Could not find 'svnversion' executable; 'about' will be wrong. (Cygwin provides one on Windows.)"
+    )
+    SET (OPENMM_SVN_REVISION unknown) 
+ENDIF (SVNVERSION_PROGRAM)
+
 # Remove colon from build version, for easier placement in directory names
 STRING(REPLACE ":" "_" OPENMM_SVN_REVISION ${OPENMM_SVN_REVISION})
+SET(OPENMM_SVN_REVISION "${OPENMM_SVN_REVISION}" CACHE STRING "subversion repository revision of OpenMM" FORCE)
 
 ADD_DEFINITIONS(-DOPENMM_LIBRARY_NAME=${OPENMM_LIBRARY_NAME}
                 -DOPENMM_MAJOR_VERSION=${OPENMM_MAJOR_VERSION}
@@ -259,7 +259,18 @@ FOREACH(subdir ${OPENMM_SOURCE_SUBDIRS})
 ENDFOREACH(subdir)
 
 # If API wrappers are being generated, and add them to the build.
-SET(OPENMM_BUILD_API_WRAPPERS OFF CACHE BOOL "Build wrappers for C and Fortran")
+# Java and gccxml are required for API wrappers
+FIND_PACKAGE(Java)
+MARK_AS_ADVANCED(CLEAR JAVA_RUNTIME)
+FIND_PROGRAM(GCCXML_PATH gccxml PATH
+    /usr/local/bin
+    "C:/Program Files/gccxml 0.9/bin"
+)
+IF(GCCXML_PATH AND Java_FOUND)
+    SET(OPENMM_BUILD_API_WRAPPERS ON CACHE BOOL "Build wrappers for C and Fortran")
+ELSE(GCCXML_PATH AND Java_FOUND)
+    SET(OPENMM_BUILD_API_WRAPPERS OFF CACHE BOOL "Build wrappers for C and Fortran")
+ENDIF(GCCXML_PATH AND Java_FOUND)
 IF(OPENMM_BUILD_API_WRAPPERS)
     ADD_SUBDIRECTORY(wrappers)
     SET(SOURCE_FILES ${SOURCE_FILES} wrappers/OpenMMCWrapper.cpp  wrappers/OpenMMFortranWrapper.cpp)
@@ -290,17 +301,30 @@ ADD_SUBDIRECTORY(platforms/reference/tests)
 
 # Which hardware platforms to build
 
-SET(OPENMM_BUILD_CUDA_LIB OFF CACHE BOOL "Build OpenMMCuda library for Nvidia GPUs")
+FIND_PACKAGE(CUDA QUIET)
+IF(CUDA_FOUND)
+    SET(OPENMM_BUILD_CUDA_LIB ON CACHE BOOL "Build OpenMMCuda library for Nvidia GPUs")
+ELSE(CUDA_FOUND)
+    SET(OPENMM_BUILD_CUDA_LIB OFF CACHE BOOL "Build OpenMMCuda library for Nvidia GPUs")
+ENDIF(CUDA_FOUND)
 IF(OPENMM_BUILD_CUDA_LIB)
     ADD_SUBDIRECTORY(platforms/cuda)
 ENDIF(OPENMM_BUILD_CUDA_LIB)
+MARK_AS_ADVANCED(CUDA_VERBOSE_BUILD)
+MARK_AS_ADVANCED(CUDA_BUILD_CUBIN)
+MARK_AS_ADVANCED(CUDA_BUILD_EMULATION)
 
 SET(OPENMM_BUILD_BROOK_LIB OFF CACHE BOOL "Build OpenMMBrook library for ATI GPUs")
 IF(OPENMM_BUILD_BROOK_LIB)
     ADD_SUBDIRECTORY(platforms/brook)
 ENDIF(OPENMM_BUILD_BROOK_LIB)
 
-SET(OPENMM_BUILD_OPENCL_LIB OFF CACHE BOOL "Build OpenMMOpenCL library for Nvidia GPUs")
+FIND_PACKAGE(OPENCL QUIET)
+IF(OPENCL_FOUND)
+    SET(OPENMM_BUILD_OPENCL_LIB ON CACHE BOOL "Build OpenMMOpenCL library for Nvidia GPUs")
+ELSE(OPENCL_FOUND)
+    SET(OPENMM_BUILD_OPENCL_LIB OFF CACHE BOOL "Build OpenMMOpenCL library for Nvidia GPUs")
+ENDIF(OPENCL_FOUND)
 IF(OPENMM_BUILD_OPENCL_LIB)
     ADD_SUBDIRECTORY(platforms/opencl)
 ENDIF(OPENMM_BUILD_OPENCL_LIB)
@@ -328,7 +352,7 @@ INSTALL_FILES(/include/openmm/internal FILES ${INTERNAL_HEADERS})
 #
 # Allow automated build and dashboard.
 #
-INCLUDE (Dart)
+# INCLUDE (Dart)
 
 #IF (UNIX AND NOT CYGWIN AND NOT APPLE)
 #  IF (NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE MATCHES Debug)
