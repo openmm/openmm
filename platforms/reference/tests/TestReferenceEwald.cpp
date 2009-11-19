@@ -184,7 +184,7 @@ void testEwaldPME() {
     State state3 = context.getState(State::Forces | State::Energy);
 
 //  Gromacs PME energy for the same mesh
-    tol = 1e-5;
+    tol = 1e-4;
     ASSERT_EQUAL_TOL(-3.82047e+05, state3.getPotentialEnergy(), tol);
 
 //   (5) CHECK WHETHER PME FORCES ARE THE SAME AS THE GROMACS OUTPUT USING EWALD
