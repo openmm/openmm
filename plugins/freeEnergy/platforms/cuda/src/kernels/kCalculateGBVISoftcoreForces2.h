@@ -29,7 +29,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "kCalculateGBVIAux.h"
+#include "kCalculateGBVISoftcoreAux.h"
 
 /**
  * This file contains the kernel for evalauating the second stage of GBSA.  It is included
@@ -72,12 +72,13 @@ __global__ void METHOD_NAME(kCalculateGBVISoftcore, Forces2_kernel)(unsigned int
         {
             // Read fixed atom data into registers and GRF
 
-            sA[threadIdx.x].x           = apos.x;
-            sA[threadIdx.x].y           = apos.y;
-            sA[threadIdx.x].z           = apos.z;
-            sA[threadIdx.x].r           = ar.x;
-            sA[threadIdx.x].sr          = ar.y;
-            sA[threadIdx.x].fb          = fb;
+            sA[threadIdx.x].x                       = apos.x;
+            sA[threadIdx.x].y                       = apos.y;
+            sA[threadIdx.x].z                       = apos.z;
+            sA[threadIdx.x].r                       = ar.x;
+            sA[threadIdx.x].sr                      = ar.y;
+            sA[threadIdx.x].bornRadiusScaleFactor   = ar.w;
+            sA[threadIdx.x].fb                      = fb;
 
             for (unsigned int j = (tgx+1)&(GRID-1); j != tgx; j = (j+1)&(GRID-1))
             {
@@ -93,7 +94,7 @@ __global__ void METHOD_NAME(kCalculateGBVISoftcore, Forces2_kernel)(unsigned int
                 float r                 = sqrt(r2);
 
                 // Atom I Born forces and sum
-                float dE                = getGBVI_dE2( r, ar.x, psA[j].sr, fb );
+                float dE                = psA[j].bornRadiusScaleFactor*getGBVI_dE2( r, ar.x, psA[j].sr, fb );
                
 #if defined USE_PERIODIC
                 if (i >= cSim.atoms || x+j >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)
@@ -142,16 +143,17 @@ __global__ void METHOD_NAME(kCalculateGBVISoftcore, Forces2_kernel)(unsigned int
             // Read fixed atom data into registers and GRF
             if (lasty != y)
             {
-                unsigned int j              = y + tgx;
-                float4 temp                 = cSim.pPosq[j];
-                float4 temp1                = cSim.pGBVIData[j];
-                float fb                    = cSim.pBornForce[j];
-                sA[threadIdx.x].fb          = fb;
-                sA[threadIdx.x].x           = temp.x;
-                sA[threadIdx.x].y           = temp.y;
-                sA[threadIdx.x].z           = temp.z;
-                sA[threadIdx.x].r           = temp1.x;
-                sA[threadIdx.x].sr          = temp1.y;
+                unsigned int j                          = y + tgx;
+                float4 temp                             = cSim.pPosq[j];
+                float4 temp1                            = cSim.pGBVIData[j];
+                float fb                                = cSim.pBornForce[j];
+                sA[threadIdx.x].fb                      = fb;
+                sA[threadIdx.x].x                       = temp.x;
+                sA[threadIdx.x].y                       = temp.y;
+                sA[threadIdx.x].z                       = temp.z;
+                sA[threadIdx.x].r                       = temp1.x;
+                sA[threadIdx.x].sr                      = temp1.y;
+                sA[threadIdx.x].bornRadiusScaleFactor   = temp1.w;
             }
 #ifdef USE_CUTOFF
             unsigned int flags = cSim.pInteractionFlag[pos];
@@ -177,7 +179,7 @@ __global__ void METHOD_NAME(kCalculateGBVISoftcore, Forces2_kernel)(unsigned int
                     float r2                = dx * dx + dy * dy + dz * dz;
                     float r                 = sqrt(r2);
 
-                    float dE                = getGBVI_dE2( r, ar.x, psA[tj].sr, fb );
+                    float dE                = psA[tj].bornRadiusScaleFactor*getGBVI_dE2( r, ar.x, psA[tj].sr, fb );
 
 #if defined USE_PERIODIC
                     if (i >= cSim.atoms || y+tj >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)
@@ -203,7 +205,7 @@ __global__ void METHOD_NAME(kCalculateGBVISoftcore, Forces2_kernel)(unsigned int
                     psA[tj].fz             += d;
 
                     // Atom J Born sum term
-                    dE                      = getGBVI_dE2( r, psA[tj].r, ar.y, psA[tj].fb );
+                    dE                      = ar.w*getGBVI_dE2( r, psA[tj].r, ar.y, psA[tj].fb );
 
 #ifdef USE_PERIODIC
                     if (i >= cSim.atoms || y+tj >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)
@@ -250,7 +252,7 @@ __global__ void METHOD_NAME(kCalculateGBVISoftcore, Forces2_kernel)(unsigned int
                         float r                 = sqrt(r2);
 
                         // Interleaved Atom I and J Born Forces and sum components
-                        float dE                = getGBVI_dE2( r, ar.x, psA[j].sr, fb );
+                        float dE                = psA[j].bornRadiusScaleFactor*getGBVI_dE2( r, ar.x, psA[j].sr, fb );
 
 #if defined USE_PERIODIC
                         if (i >= cSim.atoms || y+j >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)
@@ -276,7 +278,7 @@ __global__ void METHOD_NAME(kCalculateGBVISoftcore, Forces2_kernel)(unsigned int
                         tempBuffer[threadIdx.x].z = d;
 
                         // Atom J Born sum term
-                        dE                      = getGBVI_dE2( r, psA[j].r, ar.y, psA[j].fb );
+                        dE                      = ar.w*getGBVI_dE2( r, psA[j].r, ar.y, psA[j].fb );
 
 #ifdef USE_PERIODIC
                         if (i >= cSim.atoms || y+j >= cSim.atoms || r2 > cSim.nonbondedCutoffSqr)

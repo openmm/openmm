@@ -29,8 +29,8 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#ifndef __GpuGBVIAUX_H__
-#define __GpuGBVIAUX_H__
+#ifndef __Gpu_GBVI_SOFTCORE_AUX_H__
+#define __Gpu_GBVI_SOFTCORE_AUX_H__
 
 /**
  * This file contains subroutines used in evaluating quantities associated w/ the GB/VI function
@@ -130,4 +130,4 @@ __device__ float getGBVIBornForce2( float bornRadius, float R, float bornForce, 
 
 }
 
-#endif // __GpuGBVIAUX_H__
+#endif // __Gpu_GBVI_SOFTCORE_AUX_H__

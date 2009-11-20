@@ -727,7 +727,7 @@ int CpuGBVISoftcore::computeBornForces( const RealOpenMM* bornRadii, RealOpenMM*
 
    // ---------------------------------------------------------------------------------------
 
-   static const char* methodName        = "CpuGBVISoftcore::computeBornEnergyForces";
+   static const char* methodName        = "CpuGBVISoftcore::computeBornForces";
 
    static const RealOpenMM zero         = (RealOpenMM) 0.0;
    static const RealOpenMM one          = (RealOpenMM) 1.0;
@@ -852,7 +852,7 @@ if( atomI == 0 ){
 {
    double stupidFactor                   = three/CAL_TO_JOULE;
    RealOpenMM conversion                 = (RealOpenMM)(CAL_TO_JOULE*gbviParameters->getTau());  
-   int maxPrint                          = 200000;
+   int maxPrint                          = 20;
    const RealOpenMM* scaledRadii         = gbviParameters->getScaledRadii();
    RealOpenMM* switchDeriviative         = getSwitchDeriviative();
 
@@ -866,9 +866,9 @@ if( atomI == 0 ){
       double xx           = switchDeriviative[atomI]*bF*oneThird*b2*b2;
 
       // xx*conversion should agree w/ values pulled out of kReduceGBVISoftcoreBornForces_kernel in kForces.cu
-      (void) fprintf( logFile, "F1 %6d r/sclR[%14.6e %14.6e] bR=%14.6e bF=%14.6e sw=%14.6e %14.6e f[%14.6e %14.6e %14.6e](cnvrtd)"
+      (void) fprintf( logFile, "F1 %6d r/sclR[%14.6e %14.6e] bR=%14.6e bF=%14.6e sw=%14.6e f[%14.6e %14.6e %14.6e](cnvrtd)"
                                " x[%14.6e %14.6e %14.6e]\n",
-                      atomI, atomicRadii[atomI], scaledRadii[atomI], bornRadii[atomI], bF, switchDeriviative[atomI], xx*conversion,
+                      atomI, atomicRadii[atomI], scaledRadii[atomI], bornRadii[atomI], xx*conversion, switchDeriviative[atomI],
                       conversion*forces[atomI][0], conversion*forces[atomI][1],  conversion*forces[atomI][2],
                       atomCoordinates[atomI][0], atomCoordinates[atomI][1], atomCoordinates[atomI][2] );
       if( atomI == maxPrint ){
@@ -877,6 +877,15 @@ if( atomI == 0 ){
       }
    }
    (void) fflush( logFile );
+   int clearForces = 0;
+   if( clearForces ){
+      (void) fprintf( logFile, "Forces cleared after loop 1\n" );
+      for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
+          forces[atomI][0] = 0.0f;
+          forces[atomI][1] = 0.0f;
+          forces[atomI][2] = 0.0f;
+      }
+   }
 }
 #endif
 
@@ -932,9 +941,10 @@ if( atomI == 0 ){
    (void) fflush( logFile );
 #endif
 
-   const RealOpenMM* scaledRadii         = gbviParameters->getScaledRadii();
-   RealOpenMM* switchDeriviative         = getSwitchDeriviative();
-   double stupidFactor                   = three/CAL_TO_JOULE;
+   const RealOpenMM* scaledRadii                    = gbviParameters->getScaledRadii();
+   RealOpenMM* switchDeriviative                    = getSwitchDeriviative();
+   double stupidFactor                              = three/CAL_TO_JOULE;
+   const RealOpenMM* bornRadiusScaleFactors         = gbviParameters->getBornRadiusScaleFactors();
    for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
  
       RealOpenMM R        = atomicRadii[atomI];
@@ -973,11 +983,9 @@ if( atomI == 0 ){
             RealOpenMM S                  = scaledRadii[atomJ];
             RealOpenMM diff               = (S - R);
 
-            RealOpenMM de                 = zero;
-
             // find dRb/dr, where Rb is the Born radius
 
-            de = CpuGBVISoftcore::dL_dr( r, r+S, S ) + CpuGBVISoftcore::dL_dx( r, r+S, S );   
+            RealOpenMM de = CpuGBVISoftcore::dL_dr( r, r+S, S ) + CpuGBVISoftcore::dL_dx( r, r+S, S );   
             if( FABS( diff ) < r ){
                if( R > (r - S) ){
                   de -= CpuGBVISoftcore::dL_dr( r, R, S );  
@@ -988,9 +996,8 @@ if( atomI == 0 ){
                de -= ( CpuGBVISoftcore::dL_dr( r, r-S, S ) + CpuGBVISoftcore::dL_dx( r, r-S, S ) );   
             }
 
+
 #if 0
-   RealOpenMM delta = (RealOpenMM) 1.0e-02;
-   (void) fprintf( stderr, "\n" );
    for( int kk = 0; kk < 5; kk++ ){
       RealOpenMM V1    = CpuGBVISoftcore::getVolume( r, R, S );
       RealOpenMM V2    = CpuGBVISoftcore::getVolume( r+delta, R, S );
@@ -1010,10 +1017,9 @@ if( atomI == 0 ){
    }
 #endif
 
-
              // de = (dG/dRb)(dRb/dr)
 
-            de                      *= bornForces[atomI]/r;
+            de                      *= bornRadiusScaleFactors[atomJ]*bornForces[atomI]/r;
 
             deltaX                  *= de;
             deltaY                  *= de;
@@ -1027,12 +1033,23 @@ if( atomI == 0 ){
             forces[atomJ][1]        -= deltaY;
             forces[atomJ][2]        -= deltaZ;
 
+#if 0
+   if( atomI == 2613 ){
+   (void) fprintf( stderr, "AtomJ %5d r=%14.7e de=%14.7e bfI=%14.7e finalDe=%14.7e [%14.7e %14.7e %14.7e]\n",
+                   atomJ, r, de, bornForces[atomI], (de*bornForces[atomI]/r), 
+                   forces[atomI][0], forces[atomI][1], forces[atomI][2]  );
+   } else if( atomJ == 2613 ){
+   (void) fprintf( stderr, "AtomI %5d r=%14.7e de=%14.7e bfI=%14.7e finalDe=%14.7e [%14.7e %14.7e %14.7e]\n",
+                   atomI, r, de, bornForces[atomI], (de*bornForces[atomI]/r), 
+                   forces[atomJ][0], forces[atomJ][1], forces[atomJ][2]  );
+   }
+#endif
          }
       }
 
    }
 
-#if( GBVISoftcoreDebug == 1 )
+#if( GBVISoftcoreDebug == 9 )
 {
    (void) fprintf( logFile, "\nPre conversion\n" );
    (void) fprintf( logFile, "Atom        ScaledRadii    BornRadii      BornForce      SwitchDrv                                         Forces\n" );
@@ -1065,10 +1082,13 @@ if( atomI == 0 ){
 {
    (void) fprintf( logFile, "\nPost conversion\n" );
    (void) fprintf( logFile, "Atom        BornRadii      BornForce      SwitchDrv                                         Forces\n" );
-   int maxPrint = 1000000;
+   int maxPrint = 20;
    for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
-      (void) fprintf( logFile, "%6d %14.6e %14.6e %14.6e [%14.6e %14.6e %14.6e] %s\n", atomI, bornRadii[atomI], conversion*bornForces[atomI],
-                      switchDeriviative[atomI], inputForces[atomI][0], inputForces[atomI][1], inputForces[atomI][2], (fabs( switchDeriviative[atomI] - 1.0 ) > 1.0e-05 ? "SWWWWW" : "") );
+      (void) fprintf( logFile, "%6d %14.6e %14.6e %14.6e 2[%14.6e %14.6e %14.6e] ttlF[%14.6e %14.6e %14.6e] %s\n",
+                      atomI, bornRadii[atomI], conversion*bornForces[atomI], switchDeriviative[atomI],
+                      conversion*forces[atomI][0], conversion*forces[atomI][1], conversion*forces[atomI][2], 
+                      inputForces[atomI][0], inputForces[atomI][1], inputForces[atomI][2], 
+                      (fabs( switchDeriviative[atomI] - 1.0 ) > 1.0e-05 ? "SWWWWW" : "") );
       if( atomI == maxPrint ){
          atomI = numberOfAtoms - maxPrint;
          if( atomI < maxPrint )atomI = numberOfAtoms;
@@ -1118,246 +1138,6 @@ std::string CpuGBVISoftcore::getStateString( const char* title ) const {
    message << CpuImplicitSolvent::getStateString( title );
 
    return message.str();
-}
-
-/**---------------------------------------------------------------------------------------
-
-   Write Born energy and forces (Simbios)
-
-   @param atomCoordinates     atomic coordinates
-   @param partialCharges      partial charges
-   @param forces              forces
-   @param resultsFileName     output file name
-
-   @return SimTKOpenMMCommon::DefaultReturn unless
-           file cannot be opened
-           in which case return SimTKOpenMMCommon::ErrorReturn
-
-   --------------------------------------------------------------------------------------- */
-
-int CpuGBVISoftcore::writeBornEnergyForces( RealOpenMM** atomCoordinates,
-                                   const RealOpenMM* partialCharges, RealOpenMM** forces,
-                                   const std::string& resultsFileName ) const {
-
-   // ---------------------------------------------------------------------------------------
-
-   static const char* methodName  = "\nCpuGBVISoftcore::writeBornEnergyForces";
-
-   // ---------------------------------------------------------------------------------------
-/*
-   ImplicitSolventParameters* implicitSolventParameters = getImplicitSolventParameters();
-   const GBVISoftcoreParameters* gbviParameters                   = static_cast<const GBVISoftcoreParameters*>(implicitSolventParameters);
-   
-
-   int numberOfAtoms                    = gbviParameters->getNumberOfAtoms();
-   const RealOpenMM* atomicRadii        = gbviParameters->getAtomicRadii();
-   const RealOpenMM* bornRadii          = getBornRadiiConst();
-   const RealOpenMM* scaledRadii        = gbviParameters->getScaledRadiusFactors();
-   const RealOpenMM* gbviChain           = getObcChainConst();
-   const RealOpenMM  energy             = getEnergy();
-
-   // ---------------------------------------------------------------------------------------
-
-   // open file -- return if unsuccessful
-
-   FILE* implicitSolventResultsFile = NULL;
-#ifdef WIN32
-   fopen_s( &implicitSolventResultsFile, resultsFileName.c_str(), "w" );
-#else
-   implicitSolventResultsFile = fopen( resultsFileName.c_str(), "w" );
-#endif
-
-   // diganostics
-
-   std::stringstream message;
-   message << methodName;
-   if( implicitSolventResultsFile != NULL ){
-      std::stringstream message;
-      message << methodName;
-      message << " Opened file=<" << resultsFileName << ">.";
-      SimTKOpenMMLog::printMessage( message );
-   } else {
-      std::stringstream message;
-      message << methodName;
-      message << "  could not open file=<" << resultsFileName << "> -- abort output.";
-      SimTKOpenMMLog::printMessage( message );
-      return SimTKOpenMMCommon::ErrorReturn;
-   }
-
-   // header
-
-   (void) fprintf( implicitSolventResultsFile, "# %d atoms E=%.7e   format: coords(3) bornRadii(input) q atomicRadii scaleFactors forces gbviChain\n",
-                   numberOfAtoms, energy );
-
-   RealOpenMM forceConversion  = (RealOpenMM) 1.0;
-   RealOpenMM lengthConversion = (RealOpenMM) 1.0;
-
-   // output
-
-   if( forces != NULL && atomCoordinates != NULL && partialCharges != NULL && atomicRadii != NULL ){
-      for( int ii = 0; ii < numberOfAtoms; ii++ ){
-            (void) fprintf( implicitSolventResultsFile, "%.7e %.7e %.7e %.7e %.5f %.5f %.5f %.7e %.7e %.7e %.7e\n",
-                            lengthConversion*atomCoordinates[ii][0],
-                            lengthConversion*atomCoordinates[ii][1], 
-                            lengthConversion*atomCoordinates[ii][2],
-                           (bornRadii != NULL ? lengthConversion*bornRadii[ii] : 0.0),
-                            partialCharges[ii], lengthConversion*atomicRadii[ii], scaledRadii[ii],
-                            forceConversion*forces[ii][0],
-                            forceConversion*forces[ii][1],
-                            forceConversion*forces[ii][2],
-                            forceConversion*gbviChain[ii]
-                          );
-      }
-   }
-   (void) fclose( implicitSolventResultsFile );
-
-*/
-   return 0;
-
-}
-
-/**---------------------------------------------------------------------------------------
-
-   Write  results from first loop
-
-   @param numberOfAtoms       number of atoms
-   @param forces              forces
-   @param bornForce           Born force prefactor
-   @param outputFileName      output file name
-
-   @return SimTKOpenMMCommon::DefaultReturn unless
-           file cannot be opened
-           in which case return SimTKOpenMMCommon::ErrorReturn
-
-   --------------------------------------------------------------------------------------- */
-
-int CpuGBVISoftcore::writeForceLoop1( int numberOfAtoms, RealOpenMM** forces, const RealOpenMM* bornForce,
-                             const std::string& outputFileName ){
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName  = "\nCpuGBVISoftcore::writeForceLoop1";
-
-   // ---------------------------------------------------------------------------------------
-
-   int chunkSize;
-   if( bornForce ){
-      chunkSize = 3;
-   } else {
-      chunkSize = 4;
-   }
-
-   StringVector lineVector;
-   std::stringstream header;
-   lineVector.push_back( "# bornF F" );
-   for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
-      std::stringstream line;
-      line << (atomI+1) << " ";
-      SimTKOpenMMUtilities::formatRealStringStream( line, forces[atomI], chunkSize );
-      if( bornForce ){
-         line << " " << bornForce[atomI];
-      }
-      lineVector.push_back( line.str() );
-   }
-   return SimTKOpenMMUtilities::writeFile( lineVector, outputFileName );
-
-}
-
-/**---------------------------------------------------------------------------------------
-
-   Write results
-
-   @param numberOfAtoms        number of atoms
-   @param chunkSizes           vector of chunk sizes for realRealOpenMMVector
-   @param realRealOpenMMVector vector of RealOpenMM**
-   @param realVector           vector of RealOpenMM*
-   @param outputFileName       output file name
-
-   @return SimTKOpenMMCommon::DefaultReturn unless
-           file cannot be opened
-           in which case return SimTKOpenMMCommon::ErrorReturn
-
-   --------------------------------------------------------------------------------------- */
-
-int CpuGBVISoftcore::writeForceLoop( int numberOfAtoms, const IntVector& chunkSizes,
-                            const RealOpenMMPtrPtrVector& realRealOpenMMVector, 
-                            const RealOpenMMPtrVector& realVector,
-                            const std::string& outputFileName ){
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName  = "\nCpuGBVISoftcore::writeForceLoop";
-
-   static const int maxChunks = 10;
-   int chunks[maxChunks];
-
-   // ---------------------------------------------------------------------------------------
-
-   for( int ii = 0; ii < (int) chunkSizes.size(); ii++ ){
-      chunks[ii] = chunkSizes[ii];
-   }
-   for( int ii = (int) chunkSizes.size(); ii < maxChunks; ii++ ){
-      chunks[ii] = 3;
-   }
-
-   StringVector lineVector;
-   std::stringstream header;
-   // lineVector.push_back( "# " );
-
-   for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
-
-      std::stringstream line;
-		char buffer[128];
-
-		(void) sprintf( buffer, "%4d ", atomI );
-		line << buffer;
-
-      int index = 0;
-      for( RealOpenMMPtrPtrVectorCI ii = realRealOpenMMVector.begin(); ii != realRealOpenMMVector.end(); ii++ ){
-         RealOpenMM** forces = *ii;
-			(void) sprintf( buffer, "%11.5f %11.5f %11.5f ", forces[atomI][0], forces[atomI][1], forces[atomI][2] );
-			line << buffer;
-//         SimTKOpenMMUtilities::formatRealStringStream( line, forces[atomI], chunks[index++] );
-//         line << " ";
-      }
-
-      for( RealOpenMMPtrVectorCI ii = realVector.begin(); ii != realVector.end(); ii++ ){
-         RealOpenMM* array = *ii;
-			(void) sprintf( buffer, "%11.5f ", array[atomI] );
-         line << buffer;
-      }
-
-      lineVector.push_back( line.str() );
-   }
-   return SimTKOpenMMUtilities::writeFile( lineVector, outputFileName );
-
-}
-
-/**---------------------------------------------------------------------------------------
-
-   Get Obc Born energy and forces -- used debugging
-
-   @param bornRadii           Born radii -- optional; if NULL, then GBVISoftcoreParameters 
-                              entry is used
-   @param atomCoordinates     atomic coordinates
-   @param partialCharges      partial charges
-   @param forces              forces
-
-   @return 0;
-
-   The array bornRadii is also updated and the obcEnergy
-
-   --------------------------------------------------------------------------------------- */
-
-int CpuGBVISoftcore::computeBornEnergyForces( RealOpenMM* bornRadii, RealOpenMM** atomCoordinates,
-                                      const RealOpenMM* partialCharges, RealOpenMM** forces ){
- 
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nCpuGBVISoftcore::computeBornEnergyForcesPrint";
-
-   return 0;
-
 }
 
 /**---------------------------------------------------------------------------------------

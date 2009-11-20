@@ -502,7 +502,35 @@ void kReduceGBVIBornForcesQuinticScaling(gpuContext gpu)
     //printf("kReduceObcGbsaBornForces\n");
     kReduceGBVIBornForcesQuinticScaling_kernel<<<gpu->sim.blocks, gpu->sim.bf_reduce_threads_per_block>>>();
     LAUNCHERROR("kReduceGBVIBornForcesQuinticScaling");
+}
 
+void kPrintGBVISoftcore(gpuContext gpu, GpuGBVISoftcore* gpuGBVISoftcore, std::string callId, int call)
+{
+    int maxPrint = 20;
+    (void) fprintf( stderr, "kPrintGBVgSoftcore %s %d\n", callId.c_str(), call );
+    gpu->psGBVIData->Download();
+    gpu->psBornRadii->Download();
+    gpu->psBornForce->Download();
+    gpu->psPosq4->Download();
+    CUDAStream<float>* switchDeriviative = gpuGBVISoftcore-> getSwitchDerivative( );
+    switchDeriviative->Download();
+
+    (void) fprintf( stderr, "BornSum Born radii & params\n" );
+    for( int ii = 0; ii < gpu->natoms; ii++ ){
+        (void) fprintf( stderr, "%6d prm[%14.6e %14.6e %14.6e] bR=%14.6e bF=%14.6e swDrv=%14.6e x[%14.6f %14.6f %14.6f %14.6f]\n",
+                        ii,
+                        gpu->psGBVIData->_pSysStream[0][ii].x,
+                        gpu->psGBVIData->_pSysStream[0][ii].y,
+                        gpu->psGBVIData->_pSysStream[0][ii].z,
+                        gpu->psBornRadii->_pSysStream[0][ii],
+                        gpu->psBornForce->_pSysStream[0][ii],
+                        switchDeriviative->_pSysStream[0][ii],
+                        gpu->psPosq4->_pSysStream[0][ii].x, gpu->psPosq4->_pSysStream[0][ii].y,
+                        gpu->psPosq4->_pSysStream[0][ii].z, gpu->psPosq4->_pSysStream[0][ii].w );
+        if( (ii == maxPrint) && ( ii < (gpu->natoms - maxPrint)) ){
+            ii = gpu->natoms - maxPrint;
+        }
+    }
 }
 
 void kCalculateGBVISoftcoreBornSum(gpuContext gpu)
@@ -515,39 +543,6 @@ void kCalculateGBVISoftcoreBornSum(gpuContext gpu)
     switch (gpu->sim.nonbondedMethod)
     {
         case NO_CUTOFF:
-
-#define GBVI 0
-#if GBVI == 1
-int maxPrint = 31;
-gpu->psWorkUnit->Download();
-fprintf( stderr, "kCalculateGBVISoftcoreBornSum: bOutputBufferPerWarp=%u blks=%u th/blk=%u wu=%u %u shrd=%u\n", gpu->bOutputBufferPerWarp,
-                 gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block, gpu->sim.workUnits, gpu->psWorkUnit->_pSysStream[0][0],
-        sizeof(Atom)*gpu->sim.nonbond_threads_per_block );
-
-               gpu->psGBVIData->Download();
-               gpu->psBornSum->Download();
-               gpu->psPosq4->Download();
-
-                (void) fprintf( stderr, "\nkCalculateGBVISoftcoreBornSum: pre BornSum %s Born radii & params\n",
-                               (gpu->bIncludeGBVI ? "GBVI" : "Obc") );
-                for( int ii = 0; ii < gpu->natoms; ii++ ){
-                   (void) fprintf( stderr, "%6d bSum=%14.6e param[%14.6e %14.6e %14.6e] x[%14.6f %14.6f %14.6f %14.6f]\n",
-                                   ii,
-                                   gpu->psBornSum->_pSysStream[0][ii],
-                                   gpu->psGBVIData->_pSysStream[0][ii].x,
-                                   gpu->psGBVIData->_pSysStream[0][ii].y,
-                                   gpu->psGBVIData->_pSysStream[0][ii].z,
-                                   gpu->psPosq4->_pSysStream[0][ii].x, gpu->psPosq4->_pSysStream[0][ii].y,
-                                   gpu->psPosq4->_pSysStream[0][ii].z, gpu->psPosq4->_pSysStream[0][ii].w
-                                 );
-                   if( (ii == maxPrint) && ( ii < (gpu->natoms - maxPrint)) ){
-                      ii = gpu->natoms - maxPrint;
-                   }
-                }
-
-#endif
-#undef GBVI
-
 
             if (gpu->bOutputBufferPerWarp){
                 kCalculateGBVISoftcoreN2ByWarpBornSum_kernel<<<gpu->sim.nonbond_blocks, gpu->sim.nonbond_threads_per_block,
@@ -576,5 +571,5 @@ fprintf( stderr, "kCalculateGBVISoftcoreBornSum: bOutputBufferPerWarp=%u blks=%u
             break;
 #endif
     }
-    LAUNCHERROR("kCalculateGBVIBornSum");
+    LAUNCHERROR("kCalculateGBVISoftcoreBornSum");
 }

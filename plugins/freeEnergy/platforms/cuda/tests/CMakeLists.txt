@@ -1,9 +1,7 @@
 #
 # Testing
 #
-
 ENABLE_TESTING()
-
 INCLUDE(${CMAKE_SOURCE_DIR}/platforms/cuda/cuda-cmake/FindCuda.cmake)
 INCLUDE_DIRECTORIES(${CUDA_INCLUDE})
 INCLUDE_DIRECTORIES(${OPENMM_DIR}/platforms/cuda/include)
@@ -48,9 +46,9 @@ ENDFOREACH(TEST_PROG ${TEST_PROGS})
 
 # TestCudaUsingParameterFile customized w/ command-line argument (input file name used in test) 
 
-#ADD_EXECUTABLE(TestCudaUsingParameterFile TstCudaUsingParameterFile.cpp)
-#TARGET_LINK_LIBRARIES(TestCudaUsingParameterFile ${SHARED_TARGET})
-#ADD_TEST(TestCudaUsingParameterFile "${EXECUTABLE_OUTPUT_PATH}/TestCudaUsingParameterFile" "-parameterFileName" "${CMAKE_CURRENT_SOURCE_DIR}/lambdaSdObcParameters.txt")
+ADD_EXECUTABLE(TestFreeEnergyCudaUsingParameterFile TstFreeEnergyCudaUsingParameterFile.cpp)
+TARGET_LINK_LIBRARIES(TestFreeEnergyCudaUsingParameterFile ${SHARED_TARGET} ${SHARED_OPENMM_TARGET} ${SHARED_CUDA_TARGET})
+ADD_TEST(TestCudaUsingParameterFile "${EXECUTABLE_OUTPUT_PATH}/TestCudaUsingParameterFile" "-parameterFileName" "${CMAKE_CURRENT_SOURCE_DIR}/lambdaSdObcParameters.txt")
 #ADD_TEST(TestCudaUsingParameterFile "${EXECUTABLE_OUTPUT_PATH}/TestCudaUsingParameterFile" "-parameterFileName" "${CMAKE_CURRENT_SOURCE_DIR}/bptiMdRfNoPbcParameters.txt")
 #
 #SET(TEST_ROOT TestCudaUsingParameterFile)

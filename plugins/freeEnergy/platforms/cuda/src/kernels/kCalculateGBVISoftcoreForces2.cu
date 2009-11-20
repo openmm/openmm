@@ -51,6 +51,7 @@ struct Atom {
     float fy;
     float fz;
     float fb;
+    float bornRadiusScaleFactor;
 };
 
 
@@ -61,6 +62,7 @@ void SetCalculateGBVISoftcoreForces2Sim(gpuContext gpu)
     cudaError_t status;
     status = cudaMemcpyToSymbol(cSim, &gpu->sim, sizeof(cudaGmxSimulation));     
     RTERROR(status, "cudaMemcpyToSymbol: SetSim copy to cSim failed");
+    //(void) fprintf( stderr, "SetCalculateGBVISoftcoreForces2Sim called.\n" );
 }
 
 void GetCalculateGBVISoftcoreForces2Sim(gpuContext gpu)

@@ -97,7 +97,7 @@ __global__ void kClearSoftcoreBornForces_kernel()
 
 void kClearSoftcoreBornForces(gpuContext gpu)
 {
-  //  printf("kClearBornForces\n");
+  //  printf("kClearSoftcoreBornForces\n");
     kClearSoftcoreBornForces_kernel<<<gpu->sim.blocks, 384>>>();
     LAUNCHERROR("kClearSoftcoreBornForces");
 }

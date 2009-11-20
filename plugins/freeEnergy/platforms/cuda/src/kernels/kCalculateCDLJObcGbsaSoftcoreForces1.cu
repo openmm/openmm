@@ -86,8 +86,8 @@ void GetCalculateCDLJObcGbsaSoftcoreForces1Sim( gpuContext gpu )
     RTERROR(status, "cudaMemcpyFromSymbol: SetSim copy from cSim failed");
 
 }
-texture<float, 1, cudaReadModeElementType> tabulatedErfcRef;
 
+#if 0
 __device__ float fastErfc(float r)
 {
     float normalized = cSim.tabulatedErfcScale*r;
@@ -96,6 +96,7 @@ __device__ float fastErfc(float r)
     float fract1 = 1.0f-fract2;
     return fract1*tex1Dfetch(tabulatedErfcRef, index) + fract2*tex1Dfetch(tabulatedErfcRef, index+1);
 }
+#endif
 
 // Include versions of the kernel for N^2 calculations.
 

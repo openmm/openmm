@@ -5054,12 +5054,15 @@ void testReferenceCudaForces( std::string parameterFileName, MapStringInt& force
 
    // Run several steps and see if relative force difference is within tolerance
    
+   int includeEnergy = 1;
    for( int step = 0; step < numberOfSteps; step++ ){
 
       // pull info out of contexts
 
       int types                                       = State::Positions | State::Velocities | State::Forces;
-      //int types                                       = State::Positions | State::Velocities | State::Forces | State::Energy;
+      if( includeEnergy ){
+         types                                       |= State::Energy;
+      }
 
       State cudaState                                 =      cudaContext->getState( types );
       State referenceState                            = referenceContext->getState( types );
@@ -5068,20 +5071,29 @@ void testReferenceCudaForces( std::string parameterFileName, MapStringInt& force
       std::vector<Vec3> referenceVelocities           = referenceState.getVelocities();
       std::vector<Vec3> referenceForces               = referenceState.getForces();
 
-//      double referenceKineticEnergy                   = referenceState.getKineticEnergy();
-//      double referencePotentialEnergy                 = referenceState.getPotentialEnergy();
-
-double referenceKineticEnergy                   = 0.0;
-double referencePotentialEnergy                 = 0.0;
+      double referenceKineticEnergy;
+      double referencePotentialEnergy;
+      if( includeEnergy ){
+         referenceKineticEnergy                       = referenceState.getKineticEnergy();
+         referencePotentialEnergy                     = referenceState.getPotentialEnergy();
+      } else {
+         referenceKineticEnergy                       = 0.0;
+         referencePotentialEnergy                     = 0.0;
+      }
 
       std::vector<Vec3> cudaCoordinates               = cudaState.getPositions();
       std::vector<Vec3> cudaVelocities                = cudaState.getVelocities();
       std::vector<Vec3> cudaForces                    = cudaState.getForces();
 
-//      double cudaKineticEnergy                        = cudaState.getKineticEnergy();
-//      double cudaPotentialEnergy                      = cudaState.getPotentialEnergy();
-double cudaKineticEnergy                        = 0.0;
-double cudaPotentialEnergy                      = 0.0;
+      double cudaKineticEnergy                        = cudaState.getKineticEnergy();
+      double cudaPotentialEnergy                      = cudaState.getPotentialEnergy();
+      if( includeEnergy ){
+         cudaKineticEnergy                            = cudaState.getKineticEnergy();
+         cudaPotentialEnergy                          = cudaState.getPotentialEnergy();
+      } else {
+         cudaKineticEnergy                            = 0.0;
+         cudaPotentialEnergy                          = 0.0;
+      }
 
       // diagnostics
 

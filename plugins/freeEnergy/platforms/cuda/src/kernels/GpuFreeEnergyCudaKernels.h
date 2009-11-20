@@ -114,6 +114,7 @@ extern void kReduceGBVIBornForcesQuinticScaling( gpuContext gpu );
 extern void kCalculateGBVISoftcoreForces2( gpuContext gpu );
 extern void kReduceGBVISoftcoreBornForces(gpuContext gpu);
 extern void kReduceGBVISoftcoreBornSum(gpuContext gpu);
+extern void kPrintGBVISoftcore(gpuContext gpu, GpuGBVISoftcore* gpuGBVISoftcore, std::string callId, int call);
 
 extern void kClearSoftcoreBornForces(gpuContext gpu);
 

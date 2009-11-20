@@ -427,7 +427,7 @@ fprintf( stderr, "kCalculateCDLJSoftcoreForces: bOutputBufferPerWarp=%u blks=%u 
 void kPrintForces(gpuContext gpu, std::string idString, int call )
 {
  //   printf("kReduceForces\n");
-#define GBVI_DEBUG 0
+#define GBVI_DEBUG 4
 #if ( GBVI_DEBUG == 4 )
 
                 gpu->psBornRadii->Download();
@@ -436,9 +436,9 @@ void kPrintForces(gpuContext gpu, std::string idString, int call )
                 gpu->psBornForce->Download();
                 gpu->psForce4->Download();
                 gpu->psPosq4->Download();
-                int maxPrint = 0; 
+                int maxPrint = 30; 
 int   nanHit       = 0;
-int   targetIndex  = 852;
+int   targetIndex  = -852;
 float maxForce     = 3.0e+04;
 float maxPosition  = 2.0e+02;
                 for( int ii = 0; ii < gpu->natoms; ii++ ){
@@ -471,8 +471,8 @@ if( isnan( gpu->psBornForce->_pSysStream[0][ii] ) ||
    nanHit = 1;
 }
 
-                //if( hit || ii < maxPrint || ii >= (gpu->natoms - maxPrint) )
-                if( hit ){
+                if( hit || ii < maxPrint || ii >= (gpu->natoms - maxPrint) ){
+                //if( hit ){
                     static int firstHit = 1;
                     if( firstHit ){
                        firstHit = 0;
