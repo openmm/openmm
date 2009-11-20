@@ -239,15 +239,20 @@ ExpressionProgram ParsedExpression::createProgram() const {
 }
 
 ostream& Lepton::operator<<(ostream& out, const ExpressionTreeNode& node) {
-    out << node.getOperation().getName();
-    if (node.getChildren().size() > 0) {
-        out << "(";
-        for (int i = 0; i < (int) node.getChildren().size(); i++) {
-            if (i > 0)
-                out << ", ";
-            out << node.getChildren()[i];
+    if (node.getOperation().isInfixOperator() && node.getChildren().size() == 2) {
+        out << "(" << node.getChildren()[0] << ")" << node.getOperation().getName() << "(" << node.getChildren()[1] << ")";
+    }
+    else {
+        out << node.getOperation().getName();
+        if (node.getChildren().size() > 0) {
+            out << "(";
+            for (int i = 0; i < (int) node.getChildren().size(); i++) {
+                if (i > 0)
+                    out << ", ";
+                out << node.getChildren()[i];
+            }
+            out << ")";
         }
-        out << ")";
     }
     return out;
 }

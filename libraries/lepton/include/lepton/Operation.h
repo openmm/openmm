@@ -96,6 +96,12 @@ public:
      * @param variable     the variable with respect to which the derivate should be taken
      */
     virtual ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const = 0;
+    /**
+     * Get whether this operation should be displayed with infix notation.
+     */
+    virtual bool isInfixOperator() const {
+        return false;
+    }
     virtual bool operator!=(const Operation& op) const {
         return op.getId() != getId();
     }
@@ -264,6 +270,9 @@ public:
         return args[0]+args[1];
     }
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
+    bool isInfixOperator() const {
+        return true;
+    }
 };
 
 class Operation::Subtract : public Operation {
@@ -286,6 +295,9 @@ public:
         return args[0]-args[1];
     }
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
+    bool isInfixOperator() const {
+        return true;
+    }
 };
 
 class Operation::Multiply : public Operation {
@@ -308,6 +320,9 @@ public:
         return args[0]*args[1];
     }
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
+    bool isInfixOperator() const {
+        return true;
+    }
 };
 
 class Operation::Divide : public Operation {
@@ -330,6 +345,9 @@ public:
         return args[0]/args[1];
     }
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
+    bool isInfixOperator() const {
+        return true;
+    }
 };
 
 class Operation::Power : public Operation {
@@ -352,6 +370,9 @@ public:
         return std::pow(args[0], args[1]);
     }
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
+    bool isInfixOperator() const {
+        return true;
+    }
 };
 
 class Operation::Negate : public Operation {
