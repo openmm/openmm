@@ -259,6 +259,9 @@ FOREACH(subdir ${OPENMM_SOURCE_SUBDIRS})
     INCLUDE_DIRECTORIES(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/${subdir}/include)
 ENDFOREACH(subdir)
 
+# Avoid dart server problem with cmake 2.4 --cmb
+set(cmv "${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}")
+
 # If API wrappers are being generated, and add them to the build.
 # Java and gccxml are required for API wrappers
 FIND_PACKAGE(Java)
@@ -274,8 +277,10 @@ ELSE(GCCXML_PATH AND JAVA_RUNTIME)
 ENDIF(GCCXML_PATH AND JAVA_RUNTIME)
 IF(OPENMM_BUILD_API_WRAPPERS)
     ADD_SUBDIRECTORY(wrappers)
-    SET(SOURCE_FILES ${SOURCE_FILES} wrappers/OpenMMCWrapper.cpp  wrappers/OpenMMFortranWrapper.cpp)
-    SET_SOURCE_FILES_PROPERTIES(wrappers/OpenMMCWrapper.cpp wrappers/OpenMMFortranWrapper.cpp PROPERTIES GENERATED TRUE)
+    IF(NOT cmv EQUAL "2.4")
+        SET(SOURCE_FILES ${SOURCE_FILES} wrappers/OpenMMCWrapper.cpp  wrappers/OpenMMFortranWrapper.cpp)
+        SET_SOURCE_FILES_PROPERTIES(wrappers/OpenMMCWrapper.cpp wrappers/OpenMMFortranWrapper.cpp PROPERTIES GENERATED TRUE)
+    ENDIF(NOT cmv EQUAL "2.4")
 ENDIF(OPENMM_BUILD_API_WRAPPERS)
 
 INCLUDE_DIRECTORIES(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -305,7 +310,9 @@ ADD_SUBDIRECTORY(platforms/reference/tests)
 
 # Which hardware platforms to build
 
-FIND_PACKAGE(CUDA QUIET)
+IF(NOT cmv EQUAL "2.4")
+    FIND_PACKAGE(CUDA QUIET)
+ENDIF(NOT cmv EQUAL "2.4")
 IF(CUDA_FOUND)
     SET(OPENMM_BUILD_CUDA_LIB ON CACHE BOOL "Build OpenMMCuda library for Nvidia GPUs")
 ELSE(CUDA_FOUND)
@@ -323,7 +330,9 @@ IF(OPENMM_BUILD_BROOK_LIB)
     ADD_SUBDIRECTORY(platforms/brook)
 ENDIF(OPENMM_BUILD_BROOK_LIB)
 
-FIND_PACKAGE(OpenCL QUIET)
+IF(NOT cmv EQUAL "2.4")
+    FIND_PACKAGE(OpenCL QUIET)
+ENDIF(NOT cmv EQUAL "2.4")
 IF(OPENCL_FOUND)
     SET(OPENMM_BUILD_OPENCL_LIB ON CACHE BOOL "Build OpenMMOpenCL library for Nvidia GPUs")
 ELSE(OPENCL_FOUND)
