@@ -17,6 +17,8 @@
 # On Linux it appears that cmake 2.4 does not work with Cuda cmake rules
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
+#SET(CMAKE_VERBOSE_MAKEFILE 1)
+
 # We have custom cmake modules for FindOpenMM and running python tests
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake_modules")
 
@@ -72,7 +74,7 @@ MARK_AS_ADVANCED(DART_ROOT)
 
 # The source is organized into subdirectories, but we handle them all from
 # this CMakeLists file rather than letting CMake visit them as SUBDIRS.
-SET(OPENMM_SOURCE_SUBDIRS . openmmapi olla libraries/jama libraries/quern libraries/lepton platforms/reference)
+SET(OPENMM_SOURCE_SUBDIRS . openmmapi olla libraries/jama libraries/quern libraries/lepton platforms/reference libraries/validate)
 
 # The build system will set ARCH64 for 64 bit builds, which require
 # use of the lib64/ library directories rather than lib/.
@@ -346,11 +348,11 @@ MARK_AS_ADVANCED(CLEAR OPENCL_LIBRARY)
 
 # FreeEnergy plugin
 
-SET(OPENMM_BUILD_FREE_ENERGY_PLUGIN ON CACHE BOOL "Build FreeEnergy plugin for Nvidia GPUs")
+SET(OPENMM_BUILD_FREE_ENERGY_PLUGIN OFF CACHE BOOL "Build FreeEnergy plugin")
 SET(OPENMM_BUILD_FREE_ENERGY_PATH)
 IF(OPENMM_BUILD_FREE_ENERGY_PLUGIN)
    SET(OPENMM_BUILD_FREE_ENERGY_PATH ${CMAKE_CURRENT_SOURCE_DIR}/plugins/freeEnergy)
-#MESSAGE("\nIn0 OpenMM: OPENMM_BUILD_FREE_ENERGY_PATH=" ${OPENMM_BUILD_FREE_ENERGY_PATH} )
+#  ADD_DEFINITIONS(-DINCLUDE_FREE_ENERGY_PLUGIN)
    ADD_SUBDIRECTORY(plugins/freeEnergy)
 ENDIF(OPENMM_BUILD_FREE_ENERGY_PLUGIN)
 
@@ -362,7 +364,6 @@ FILE(GLOB INTERNAL_HEADERS include/openmm/internal/*.h */include/openmm/internal
 INSTALL_FILES(/include                 FILES ${CORE_HEADERS})
 INSTALL_FILES(/include/openmm          FILES ${TOP_HEADERS})
 INSTALL_FILES(/include/openmm/internal FILES ${INTERNAL_HEADERS})
-
 
 #
 # Allow automated build and dashboard.
