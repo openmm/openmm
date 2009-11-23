@@ -32,7 +32,7 @@
 #include "../SimTKReference/ReferenceForce.h"
 #include <math.h>
 
-static const double CAL_TO_JOULE = 0.4184;
+static const RealOpenMM CAL_TO_JOULE = 0.4184f;
 
 /**---------------------------------------------------------------------------------------
 
@@ -943,7 +943,7 @@ if( atomI == 0 ){
 
    const RealOpenMM* scaledRadii                    = gbviParameters->getScaledRadii();
    RealOpenMM* switchDeriviative                    = getSwitchDeriviative();
-   double stupidFactor                              = three/CAL_TO_JOULE;
+   RealOpenMM stupidFactor                          = three/CAL_TO_JOULE;
    const RealOpenMM* bornRadiusScaleFactors         = gbviParameters->getBornRadiusScaleFactors();
    for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
  
