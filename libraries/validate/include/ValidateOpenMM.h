@@ -45,6 +45,7 @@
 #include <typeinfo>
 
 #ifdef _MSC_VER
+   #include <limits>
    #define isinf !_finite
    #define isnan _isnan
 #endif

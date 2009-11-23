@@ -77,6 +77,7 @@ ValidateOpenMM::ValidateOpenMM( void ) {
 ValidateOpenMM::~ValidateOpenMM() {
 }
 
+
 int ValidateOpenMM::isNan( double number ){
     return isinf( number ) || isnan( number ) ? 1 : 0;
 }
@@ -843,7 +844,7 @@ void ValidateOpenMM::copyConstraints( const System& systemToCopy, System* system
    
 // ---------------------------------------------------------------------------------------
 
-    for( unsigned int ii = 0; ii < systemToCopy.getNumConstraints(); ii++ ){
+    for( int ii = 0; ii < systemToCopy.getNumConstraints(); ii++ ){
         int particle1, particle2;
         double distance;
         systemToCopy.getConstraintParameters( ii, particle1, particle2, distance ); 

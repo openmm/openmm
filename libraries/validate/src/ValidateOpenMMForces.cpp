@@ -505,7 +505,7 @@ void ValidateOpenMMForces::compareOpenMMForces( Context& context, Platform& plat
  
     const System& system         = context.getSystem();
     std::vector<int> compareAllForces;
-    for( unsigned int ii = 0; ii < system.getNumForces(); ii++ ){
+    for( int ii = 0; ii < system.getNumForces(); ii++ ){
         std::vector<int> compareForces;
         std::string forceName  = getForceName( system.getForce( ii ) );
         if( isExcludedForce( forceName ) == 0 ){
@@ -772,7 +772,7 @@ std::string ValidateOpenMMForces::getSummary( std::vector<ForceValidationResult*
 #define LOCAL_SPRINTF12(a,b,c,d,e,f,g,h,i,j,k,l) sprintf( (a), (b), (c), (d), (e), (f), (g), (h), (i), (j), (k), (l) );   
 #endif
 
-    int maxMissesToPrint = getMaxErrorsToPrint();
+    unsigned int maxMissesToPrint = static_cast<unsigned int>(getMaxErrorsToPrint());
     std::stringstream summary;
     std::string tab      = "   ";
     int useForces        = 1;
@@ -829,8 +829,7 @@ std::string ValidateOpenMMForces::getSummary( std::vector<ForceValidationResult*
             std::vector<double> forceNorms2    = forceValidationResults[ii]->getForceNorms( 1 );
             for( unsigned int kk = 0; kk < inconsistentIndices.size() && kk < maxMissesToPrint; kk++ ){
                 int jj = inconsistentIndices[kk];
-                if( isinf( forceNorms1[jj] ) || isnan( forceNorms1[jj] ) ||
-                    isinf( forceNorms2[jj] ) || isnan( forceNorms2[jj] ) ){
+                if( isNan( forceNorms1[jj] ) || isNan( forceNorms2[jj] ) ){
                      (void) LOCAL_SPRINTF5( value, "         nan at index %6d  norms: [%12.5e  %12.5e]",  jj, forceNorms1[jj], forceNorms2[jj] );
                      summary << _getLine( tab, "Error", value );
                 } else {
