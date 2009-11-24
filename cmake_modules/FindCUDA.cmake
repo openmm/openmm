@@ -371,7 +371,7 @@ set(CUDA_GENERATED_OUTPUT_DIR "" CACHE PATH "Directory to put all the output fil
 option(CUDA_HOST_COMPILATION_CPP "Generated file extension" ON)
 
 # Extra user settable flags
-set(CUDA_NVCC_FLAGS "" CACHE STRING "Semi-colon delimit multiple arguments.")
+set(CUDA_NVCC_FLAGS "-maxrregcount=32;-use_fast_math;-O0;-arch=sm_11" CACHE STRING "Semi-colon delimit multiple arguments.")
 
 # Propagate the host flags to the host compiler via -Xcompiler
 option(CUDA_PROPAGATE_HOST_FLAGS "Propage C/CXX_FLAGS and friends to the host compiler via -Xcompile" ON)
