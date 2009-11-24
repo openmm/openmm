@@ -1109,7 +1109,7 @@ void OpenCLCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOB
     }
     posq.upload();
     params->upload(paramsVector);
-    prefactor = 2.0*-166.02691*0.4184*((1.0/force.getSoluteDielectric())-(1.0/force.getSolventDielectric()));
+    prefactor = -138.935485*((1.0/force.getSoluteDielectric())-(1.0/force.getSolventDielectric()));
     bool useCutoff = (force.getNonbondedMethod() != GBSAOBCForce::NoCutoff);
     bool usePeriodic = (force.getNonbondedMethod() != GBSAOBCForce::NoCutoff && force.getNonbondedMethod() != GBSAOBCForce::CutoffNonPeriodic);
     string source = cl.loadSourceFromFile("gbsaObc2.cl");

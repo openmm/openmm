@@ -39,6 +39,7 @@
 #include "SimTKReference/ReferenceCCMAAlgorithm.h"
 #include "SimTKReference/ReferenceCustomBondIxn.h"
 #include "SimTKReference/ReferenceCustomExternalIxn.h"
+#include "SimTKReference/ReferenceCustomGBIxn.h"
 #include "SimTKReference/ReferenceCustomNonbondedIxn.h"
 #include "SimTKReference/ReferenceHarmonicBondIxn.h"
 #include "SimTKReference/ReferenceLJCoulomb14.h"
@@ -889,6 +890,151 @@ double ReferenceCalcGBVIForceKernel::executeEnergy(ContextImpl& context) {
     RealOpenMM energy     = gbvi->computeBornEnergy(bornRadii ,posData, &charges[0]);
     delete[] bornRadii;
     return static_cast<double>(energy);
+}
+
+ReferenceCalcCustomGBForceKernel::~ReferenceCalcCustomGBForceKernel() {
+    disposeRealArray(particleParamArray, numParticles);
+    if (neighborList != NULL)
+        delete neighborList;
+}
+
+void ReferenceCalcCustomGBForceKernel::initialize(const System& system, const CustomGBForce& force) {
+
+    // Record the exclusions.
+
+    numParticles = force.getNumParticles();
+    exclusions.resize(numParticles);
+    for (int i = 0; i < force.getNumExclusions(); i++) {
+        int particle1, particle2;
+        force.getExclusionParticles(i, particle1, particle2);
+        exclusions[particle1].insert(particle2);
+        exclusions[particle2].insert(particle1);
+    }
+
+    // Build the arrays.
+
+    int numPerParticleParameters = force.getNumPerParticleParameters();
+    particleParamArray = allocateRealArray(numParticles, numPerParticleParameters);
+    for (int i = 0; i < numParticles; ++i) {
+        vector<double> parameters;
+        force.getParticleParameters(i, parameters);
+        for (int j = 0; j < numPerParticleParameters; j++)
+            particleParamArray[i][j] = static_cast<RealOpenMM>(parameters[j]);
+    }
+    for (int i = 0; i < numPerParticleParameters; i++)
+        particleParameterNames.push_back(force.getPerParticleParameterName(i));
+    for (int i = 0; i < force.getNumGlobalParameters(); i++)
+        globalParameterNames.push_back(force.getGlobalParameterName(i));
+    nonbondedMethod = CalcCustomGBForceKernel::NonbondedMethod(force.getNonbondedMethod());
+    nonbondedCutoff = (RealOpenMM) force.getCutoffDistance();
+    Vec3 boxVectors[3];
+    system.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+    periodicBoxSize[0] = (RealOpenMM) boxVectors[0][0];
+    periodicBoxSize[1] = (RealOpenMM) boxVectors[1][1];
+    periodicBoxSize[2] = (RealOpenMM) boxVectors[2][2];
+    if (nonbondedMethod == NoCutoff)
+        neighborList = NULL;
+    else
+        neighborList = new NeighborList();
+
+    // Create custom functions for the tabulated functions.
+
+    map<string, Lepton::CustomFunction*> functions;
+//    for (int i = 0; i < force.getNumFunctions(); i++) {
+//        string name;
+//        vector<double> values;
+//        double min, max;
+//        bool interpolating;
+//        force.getFunctionParameters(i, name, values, min, max, interpolating);
+//        functions[name] = new TabulatedFunction(min, max, values, interpolating);
+//    }
+
+    // Parse the expressions for computed values.
+
+    valueDerivExpressions.resize(force.getNumComputedValues());
+    for (int i = 0; i < force.getNumComputedValues(); i++) {
+        string name, expression;
+        CustomGBForce::ComputationType type;
+        force.getComputedValueParameters(i, name, expression, type);
+        Lepton::ParsedExpression ex = Lepton::Parser::parse(expression, functions).optimize();
+        valueExpressions.push_back(ex.createProgram());
+        valueTypes.push_back(type);
+        valueNames.push_back(name);
+        if (type != CustomGBForce::SingleParticle)
+            valueDerivExpressions[i].push_back(ex.differentiate("r").optimize().createProgram());
+        for (int j = 0; j < i; j++) {
+            if (type == CustomGBForce::SingleParticle)
+                valueDerivExpressions[i].push_back(ex.differentiate(valueNames[j]).optimize().createProgram());
+            else
+                valueDerivExpressions[i].push_back(ex.differentiate(valueNames[j]+"1").optimize().createProgram());
+        }
+    }
+
+    // Parse the various expressions used to calculate the force.
+
+    energyDerivExpressions.resize(force.getNumEnergyTerms());
+    for (int i = 0; i < force.getNumEnergyTerms(); i++) {
+        string expression;
+        CustomGBForce::ComputationType type;
+        force.getEnergyTermParameters(i, expression, type);
+        Lepton::ParsedExpression ex = Lepton::Parser::parse(expression, functions).optimize();
+        energyExpressions.push_back(ex.createProgram());
+        energyTypes.push_back(type);
+        if (type != CustomGBForce::SingleParticle)
+            energyDerivExpressions[i].push_back(ex.differentiate("r").optimize().createProgram());
+        for (int j = 0; j < force.getNumComputedValues(); j++) {
+            if (type == CustomGBForce::SingleParticle)
+                energyDerivExpressions[i].push_back(ex.differentiate(valueNames[j]).optimize().createProgram());
+            else {
+                energyDerivExpressions[i].push_back(ex.differentiate(valueNames[j]+"1").optimize().createProgram());
+                energyDerivExpressions[i].push_back(ex.differentiate(valueNames[j]+"2").optimize().createProgram());
+            }
+        }
+    }
+
+    // Delete the custom functions.
+
+    for (map<string, Lepton::CustomFunction*>::iterator iter = functions.begin(); iter != functions.end(); iter++)
+        delete iter->second;
+}
+
+void ReferenceCalcCustomGBForceKernel::executeForces(ContextImpl& context) {
+    RealOpenMM** posData = extractPositions(context);
+    RealOpenMM** forceData = extractForces(context);
+    ReferenceCustomGBIxn ixn(valueExpressions, valueDerivExpressions, valueNames, valueTypes, energyExpressions,
+        energyDerivExpressions, energyTypes, particleParameterNames);
+    bool periodic = (nonbondedMethod == CutoffPeriodic);
+    if (nonbondedMethod != NoCutoff) {
+        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, periodic ? periodicBoxSize : NULL, nonbondedCutoff, 0.0);
+        ixn.setUseCutoff(nonbondedCutoff, *neighborList);
+    }
+    if (periodic)
+        ixn.setPeriodic(periodicBoxSize);
+    map<string, double> globalParameters;
+    for (int i = 0; i < (int) globalParameterNames.size(); i++)
+        globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
+    ixn.calculateIxn(numParticles, posData, particleParamArray, exclusions, globalParameters, forceData, 0, 0);
+}
+
+double ReferenceCalcCustomGBForceKernel::executeEnergy(ContextImpl& context) {
+    RealOpenMM** posData = extractPositions(context);
+    RealOpenMM** forceData = allocateRealArray(numParticles, 3);
+    RealOpenMM energy = 0;
+    ReferenceCustomGBIxn ixn(valueExpressions, valueDerivExpressions, valueNames, valueTypes, energyExpressions,
+        energyDerivExpressions, energyTypes, particleParameterNames);
+    bool periodic = (nonbondedMethod == CutoffPeriodic);
+    if (nonbondedMethod != NoCutoff) {
+        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, periodic ? periodicBoxSize : NULL, nonbondedCutoff, 0.0);
+        ixn.setUseCutoff(nonbondedCutoff, *neighborList);
+    }
+    if (periodic)
+        ixn.setPeriodic(periodicBoxSize);
+    map<string, double> globalParameters;
+    for (int i = 0; i < (int) globalParameterNames.size(); i++)
+        globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
+    ixn.calculateIxn(numParticles, posData, particleParamArray, exclusions, globalParameters, forceData, 0, &energy);
+    disposeRealArray(forceData, numParticles);
+    return energy;
 }
 
 ReferenceCalcCustomExternalForceKernel::~ReferenceCalcCustomExternalForceKernel() {

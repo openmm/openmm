@@ -624,7 +624,7 @@ int CpuObc::computeBornEnergyForces( RealOpenMM* bornRadii, RealOpenMM** atomCoo
       RealOpenMM sum3            = bornSum*sum2;
       RealOpenMM tanhSum         = TANH( alphaObc*bornSum - betaObc*sum2 + gammaObc*sum3 );
       
-      bornRadiiTemp[atomI]       = one/( one/offsetRadiusI - tanhSum/radiusI ); 
+      bornRadiiTemp[atomI]       = one/( one/offsetRadiusI - tanhSum/radiusI );
  
       obcChainTemp[atomI]        = offsetRadiusI*( alphaObc - two*betaObc*bornSum + three*gammaObc*sum2 );
       obcChainTemp[atomI]        = (one - tanhSum*tanhSum)*obcChainTemp[atomI]/radiusI;

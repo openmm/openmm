@@ -147,7 +147,7 @@ ReferenceCustomNonbondedIxn::~ReferenceCustomNonbondedIxn( ){
 
 int ReferenceCustomNonbondedIxn::calculatePairIxn( int numberOfAtoms, RealOpenMM** atomCoordinates,
                                              RealOpenMM** atomParameters, int** exclusions,
-                                             RealOpenMM* fixedParameters, map<string, double> globalParameters, RealOpenMM** forces,
+                                             RealOpenMM* fixedParameters, const map<string, double>& globalParameters, RealOpenMM** forces,
                                              RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const {
 
    map<string, double> variables = globalParameters;

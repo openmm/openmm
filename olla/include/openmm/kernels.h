@@ -37,6 +37,7 @@
 #include "openmm/CMMotionRemover.h"
 #include "openmm/CustomBondForce.h"
 #include "openmm/CustomExternalForce.h"
+#include "openmm/CustomGBForce.h"
 #include "openmm/CustomNonbondedForce.h"
 #include "openmm/GBSAOBCForce.h"
 #include "openmm/GBVIForce.h"
@@ -467,6 +468,43 @@ public:
      * 
      * @param context    the context in which to execute this kernel
      * @return the potential energy due to the GBVIForce
+     */
+    virtual double executeEnergy(ContextImpl& context) = 0;
+};
+
+/**
+ * This kernel is invoked by CustomGBForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CalcCustomGBForceKernel : public KernelImpl {
+public:
+    enum NonbondedMethod {
+        NoCutoff = 0,
+        CutoffNonPeriodic = 1,
+        CutoffPeriodic = 2
+    };
+    static std::string Name() {
+        return "CalcCustomGBForce";
+    }
+    CalcCustomGBForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomGBForce this kernel will be used for
+     */
+    virtual void initialize(const System& system, const CustomGBForce& force) = 0;
+    /**
+     * Execute the kernel to calculate the forces.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    virtual void executeForces(ContextImpl& context) = 0;
+    /**
+     * Execute the kernel to calculate the energy.
+     *
+     * @param context    the context in which to execute this kernel
+     * @return the potential energy due to the CustomGBForce
      */
     virtual double executeEnergy(ContextImpl& context) = 0;
 };

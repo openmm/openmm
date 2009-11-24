@@ -62,6 +62,8 @@ KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name, const Pla
         return new ReferenceCalcGBSAOBCForceKernel(name, platform);
     if (name == CalcGBVIForceKernel::Name())
         return new ReferenceCalcGBVIForceKernel(name, platform);
+    if (name == CalcCustomGBForceKernel::Name())
+        return new ReferenceCalcCustomGBForceKernel(name, platform);
     if (name == CalcCustomExternalForceKernel::Name())
         return new ReferenceCalcCustomExternalForceKernel(name, platform);
     if (name == IntegrateVerletStepKernel::Name())

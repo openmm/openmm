@@ -1,5 +1,5 @@
-#ifndef OPENMM_CUSTOMNONBONDEDFORCE_H_
-#define OPENMM_CUSTOMNONBONDEDFORCE_H_
+#ifndef OPENMM_CUSTOMGBFORCE_H_
+#define OPENMM_CUSTOMGBFORCE_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -43,48 +43,9 @@
 namespace OpenMM {
 
 /**
- * This class implements nonbonded interactions between particles.  Unlike NonbondedForce, the functional form
- * of the interaction is completely customizable, and may involve arbitrary algebraic expressions and tabulated
- * functions.  It may depend on the distance between particles, as well as on arbitrary global and
- * per-particle parameters.  It also optionally supports periodic boundary conditions and cutoffs for long range interactions.
- *
- * To use this class, create a CustomNonbondedForce object, passing an algebraic expression to the constructor
- * that defines the interaction energy between each pair of particles.  The expression may depend on r, the distance
- * between the particles, as well as on any parameters you choose.  Then call addPerParticleParameter() to define per-particle
- * parameters, and addGlobalParameter() to define global parameters.  The values of per-particle parameters are specified as
- * part of the system definition, while values of global parameters may be modified during a simulation by calling Context::setParameter().
- * 
- * Next, call addParticle() once for each particle in the System to set the values of its per-particle parameters.
- * The number of particles for which you set parameters must be exactly equal to the number of particles in the
- * System, or else an exception will be thrown when you try to create a Context.  After a particle has been added,
- * you can modify its parameters by calling setParticleParameters().
- *
- * CustomNonbondedForce also lets you specify "exclusions", particular pairs of particles whose interactions should be
- * omitted from force and energy calculations.  This is most often used for particles that are bonded to each other.
- *
- * As an example, the following code creates a CustomNonbondedForce that implements a 12-6 Lennard-Jones potential:
- *
- * <tt>CustomNonbondedForce* force = new CustomNonbondedForce("4*epsilon*((sigma/r)^12-(sigma/r)^6); sigma=0.5*(sigma1*sigma2); epsilon=sqrt(epsilon1*epsilon2)");</tt>
- *
- * This force depends on two parameters: sigma and epsilon.  The following code defines these parameters, and
- * specifies combining rules for them which correspond to the standard Lorentz-Bertelot combining rules:
- *
- * <tt><pre>
- * force->addPerParticleParameter("sigma");
- * force->addPerParticleParameter("epsilon");
- * </pre></tt>
- *
- * Expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
- * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, step.  All trigonometric functions
- * are defined in radians, and log is the natural logarithm.  step(x) = 0 if x is less than 0, 1 otherwise.  The names of per-particle parameters
- * have the suffix "1" or "2" appended to them to indicate the values for the two interacting particles.  As seen in the above example,
- * the expression may also involve intermediate quantities that are defined following the main expression, using ";" as a separator.
- *
- * In addition, you can call addFunction() to define a new function based on tabulated values.  You specify a vector of
- * values, and an interpolating or approximating spline is created from them.  That function can then appear in the expression.
  */
 
-class OPENMM_EXPORT CustomNonbondedForce : public Force {
+class OPENMM_EXPORT CustomGBForce : public Force {
 public:
     /**
      * This is an enumeration of the different methods that may be used for handling long range nonbonded forces.
@@ -105,13 +66,15 @@ public:
          */
         CutoffPeriodic = 2,
     };
+    enum ComputationType {
+        SingleParticle = 0,
+        ParticlePair = 1,
+        ParticlePairNoExclusions = 2
+    };
     /**
-     * Create a CustomNonbondedForce.
-     *
-     * @param energy    an algebraic expression giving the interaction energy between two particles as a function
-     *                  of r, the distance between them, as well as any global and per-particle parameters
+     * Create a CustomGBForce.
      */
-    CustomNonbondedForce(const std::string& energy);
+    CustomGBForce();
     /**
      * Get the number of particles for which force field parameters have been defined.
      */
@@ -142,14 +105,12 @@ public:
     int getNumFunctions() const {
         return functions.size();
     }
-    /**
-     * Get the algebraic expression that gives the interaction energy between two particles
-     */
-    const std::string& getEnergyFunction() const;
-    /**
-     * Set the algebraic expression that gives the interaction energy between two particles
-     */
-    void setEnergyFunction(const std::string& energy);
+    int getNumComputedValues() const {
+        return computedValues.size();
+    }
+    int getNumEnergyTerms() const {
+        return energyTerms.size();
+    }
     /**
      * Get the method used for handling long range nonbonded interactions.
      */
@@ -247,6 +208,12 @@ public:
      * @param parameters  the list of parameters for the specified particle
      */
     void setParticleParameters(int index, const std::vector<double>& parameters);
+    int addComputedValue(const std::string& name, const std::string& expression, ComputationType type);
+    void getComputedValueParameters(int index, std::string& name, std::string& expression, ComputationType& type) const;
+    void setComputedValueParameters(int index, const std::string& name, const std::string& expression, ComputationType type);
+    int addEnergyTerm(const std::string& expression, ComputationType type);
+    void getEnergyTermParameters(int index, std::string& expression, ComputationType& type) const;
+    void setEnergyTermParameters(int index, const std::string& expression, ComputationType type);
     /**
      * Add a particle pair to the list of interactions that should be excluded.
      *
@@ -318,6 +285,7 @@ private:
     class GlobalParameterInfo;
     class ExclusionInfo;
     class FunctionInfo;
+    class ComputationInfo;
     NonbondedMethod nonbondedMethod;
     double cutoffDistance;
     std::string energyExpression;
@@ -326,9 +294,11 @@ private:
     std::vector<ParticleInfo> particles;
     std::vector<ExclusionInfo> exclusions;
     std::vector<FunctionInfo> functions;
+    std::vector<ComputationInfo> computedValues;
+    std::vector<ComputationInfo> energyTerms;
 };
 
-class CustomNonbondedForce::ParticleInfo {
+class CustomGBForce::ParticleInfo {
 public:
     std::vector<double> parameters;
     ParticleInfo() {
@@ -337,7 +307,7 @@ public:
     }
 };
 
-class CustomNonbondedForce::PerParticleParameterInfo {
+class CustomGBForce::PerParticleParameterInfo {
 public:
     std::string name;
     PerParticleParameterInfo() {
@@ -346,7 +316,7 @@ public:
     }
 };
 
-class CustomNonbondedForce::GlobalParameterInfo {
+class CustomGBForce::GlobalParameterInfo {
 public:
     std::string name;
     double defaultValue;
@@ -356,7 +326,7 @@ public:
     }
 };
 
-class CustomNonbondedForce::ExclusionInfo {
+class CustomGBForce::ExclusionInfo {
 public:
     int particle1, particle2;
     ExclusionInfo() {
@@ -367,7 +337,7 @@ public:
     }
 };
 
-class CustomNonbondedForce::FunctionInfo {
+class CustomGBForce::FunctionInfo {
 public:
     std::string name;
     std::vector<double> values;
@@ -380,6 +350,18 @@ public:
     }
 };
 
+class CustomGBForce::ComputationInfo {
+public:
+    std::string name;
+    std::string expression;
+    CustomGBForce::ComputationType type;
+    ComputationInfo() {
+    }
+    ComputationInfo(const std::string& name, const std::string& expression, CustomGBForce::ComputationType type) :
+        name(name), expression(expression), type(type) {
+    }
+};
+
 } // namespace OpenMM
 
-#endif /*OPENMM_CUSTOMNONBONDEDFORCE_H_*/
+#endif /*OPENMM_CUSTOMGBFORCE_H_*/

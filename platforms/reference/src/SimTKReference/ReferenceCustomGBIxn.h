@@ -22,18 +22,19 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __ReferenceCustomNonbondedxIxn_H__
-#define __ReferenceCustomNonbondedxIxn_H__
+#ifndef __ReferenceCustomGBIxn_H__
+#define __ReferenceCustomGBIxn_H__
 
-#include "ReferencePairIxn.h"
 #include "ReferenceNeighborList.h"
 #include "lepton/ExpressionProgram.h"
+#include "openmm/CustomGBForce.h"
 #include <map>
+#include <set>
 #include <vector>
 
 // ---------------------------------------------------------------------------------------
 
-class ReferenceCustomNonbondedIxn {
+class ReferenceCustomGBIxn {
 
    private:
 
@@ -42,10 +43,26 @@ class ReferenceCustomNonbondedIxn {
       const OpenMM::NeighborList* neighborList;
       RealOpenMM periodicBoxSize[3];
       RealOpenMM cutoffDistance;
-      Lepton::ExpressionProgram energyExpression;
-      Lepton::ExpressionProgram forceExpression;
+      std::vector<Lepton::ExpressionProgram> valueExpressions;
+      std::vector<std::vector<Lepton::ExpressionProgram> > valueDerivExpressions;
+      std::vector<std::string> valueNames;
+      std::vector<OpenMM::CustomGBForce::ComputationType> valueTypes;
+      std::vector<Lepton::ExpressionProgram> energyExpressions;
+      std::vector<std::vector<Lepton::ExpressionProgram> > energyDerivExpressions;
       std::vector<std::string> paramNames;
+      std::vector<OpenMM::CustomGBForce::ComputationType> energyTypes;
       std::vector<std::string> particleParamNames;
+      std::vector<std::string> particleValueNames;
+      struct ComputedValue {
+          RealOpenMM value;
+          RealOpenMM gradient[3];
+          ComputedValue() {
+              value = (RealOpenMM) 0;
+              gradient[0] = (RealOpenMM) 0;
+              gradient[1] = (RealOpenMM) 0;
+              gradient[2] = (RealOpenMM) 0;
+          }
+      };
 
       /**---------------------------------------------------------------------------------------
 
@@ -61,10 +78,32 @@ class ReferenceCustomNonbondedIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateOneIxn( int atom1, int atom2, RealOpenMM** atomCoordinates,
-                            std::map<std::string, double>& variables, RealOpenMM** forces,
-                            RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const;
+      void calculateSingleParticleValue(int index, int numAtoms, std::vector<std::vector<ComputedValue> >& values,
+                                        const std::map<std::string, double>& globalParameters, RealOpenMM** atomParameters) const;
 
+      void calculateParticlePairValue(int index, int numAtoms, RealOpenMM** atomCoordinates, RealOpenMM** atomParameters,
+                                      std::vector<std::vector<ComputedValue> >& values,
+                                      const std::map<std::string, double>& globalParameters,
+                                      const std::vector<std::set<int> >& exclusions, bool useExclusions) const;
+
+      void calculateOnePairValue(int index, int atom1, int atom2, RealOpenMM** atomCoordinates, RealOpenMM** atomParameters,
+                                 const std::map<std::string, double>& globalParameters,
+                                 std::vector<std::vector<ComputedValue> >& values) const;
+
+      void calculateSingleParticleEnergyTerm(int index, int numAtoms, const std::vector<std::vector<ComputedValue> >& values,
+                                        const std::map<std::string, double>& globalParameters, RealOpenMM** atomParameters,
+                                        RealOpenMM** forces, RealOpenMM* totalEnergy) const;
+
+      void calculateParticlePairEnergyTerm(int index, int numAtoms, RealOpenMM** atomCoordinates, RealOpenMM** atomParameters,
+                                      const std::vector<std::vector<ComputedValue> >& values,
+                                      const std::map<std::string, double>& globalParameters,
+                                      const std::vector<std::set<int> >& exclusions, bool useExclusions,
+                                      RealOpenMM** forces, RealOpenMM* totalEnergy) const;
+
+      void calculateOnePairEnergyTerm(int index, int atom1, int atom2, RealOpenMM** atomCoordinates, RealOpenMM** atomParameters,
+                                 const std::map<std::string, double>& globalParameters,
+                                 const std::vector<std::vector<ComputedValue> >& values,
+                                 RealOpenMM** forces, RealOpenMM* totalEnergy) const;
 
    public:
 
@@ -74,8 +113,14 @@ class ReferenceCustomNonbondedIxn {
 
          --------------------------------------------------------------------------------------- */
 
-       ReferenceCustomNonbondedIxn(const Lepton::ExpressionProgram& energyExpression, const Lepton::ExpressionProgram& forceExpression,
-                                   const std::vector<std::string>& parameterNames);
+       ReferenceCustomGBIxn(const std::vector<Lepton::ExpressionProgram>& valueExpressions,
+                            const std::vector<std::vector<Lepton::ExpressionProgram> >& valueDerivExpressions,
+                            const std::vector<std::string>& valueNames,
+                            const std::vector<OpenMM::CustomGBForce::ComputationType>& valueTypes,
+                            const std::vector<Lepton::ExpressionProgram>& energyExpressions,
+                            const std::vector<std::vector<Lepton::ExpressionProgram> > energyDerivExpressions,
+                            const std::vector<OpenMM::CustomGBForce::ComputationType>& energyTypes,
+                            const std::vector<std::string>& parameterNames);
 
       /**---------------------------------------------------------------------------------------
 
@@ -83,7 +128,7 @@ class ReferenceCustomNonbondedIxn {
 
          --------------------------------------------------------------------------------------- */
 
-       ~ReferenceCustomNonbondedIxn( );
+       ~ReferenceCustomGBIxn( );
 
       /**---------------------------------------------------------------------------------------
 
@@ -133,13 +178,12 @@ class ReferenceCustomNonbondedIxn {
 
          --------------------------------------------------------------------------------------- */
 
-      int calculatePairIxn( int numberOfAtoms, RealOpenMM** atomCoordinates,
-                            RealOpenMM** atomParameters, int** exclusions,
-                            RealOpenMM* fixedParameters, const std::map<std::string, double>& globalParameters,
-                            RealOpenMM** forces, RealOpenMM* energyByAtom, RealOpenMM* totalEnergy ) const;
+      int calculateIxn(int numberOfAtoms, RealOpenMM** atomCoordinates, RealOpenMM** atomParameters, const std::vector<std::set<int> >& exclusions,
+                       std::map<std::string, double>& globalParameters, RealOpenMM** forces,
+                       RealOpenMM* energyByAtom, RealOpenMM* totalEnergy) const;
 
 // ---------------------------------------------------------------------------------------
 
 };
 
-#endif // __ReferenceCustomNonbondedxIxn_H__
+#endif // __ReferenceCustomGBIxn_H__

@@ -478,6 +478,50 @@ private:
 };
 
 /**
+ * This kernel is invoked by CustomGBForce to calculate the forces acting on the system.
+ */
+class ReferenceCalcCustomGBForceKernel : public CalcCustomGBForceKernel {
+public:
+    ReferenceCalcCustomGBForceKernel(std::string name, const Platform& platform) : CalcCustomGBForceKernel(name, platform) {
+    }
+    ~ReferenceCalcCustomGBForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomGBForce this kernel will be used for
+     */
+    void initialize(const System& system, const CustomGBForce& force);
+    /**
+     * Execute the kernel to calculate the forces.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void executeForces(ContextImpl& context);
+    /**
+     * Execute the kernel to calculate the energy.
+     *
+     * @param context    the context in which to execute this kernel
+     * @return the potential energy due to the CustomGBForce
+     */
+    double executeEnergy(ContextImpl& context);
+private:
+    int numParticles;
+    RealOpenMM **particleParamArray;
+    RealOpenMM nonbondedCutoff, periodicBoxSize[3];
+    std::vector<std::set<int> > exclusions;
+    std::vector<std::string> particleParameterNames, globalParameterNames, valueNames;
+    std::vector<Lepton::ExpressionProgram> valueExpressions;
+    std::vector<std::vector<Lepton::ExpressionProgram> > valueDerivExpressions;
+    std::vector<OpenMM::CustomGBForce::ComputationType> valueTypes;
+    std::vector<Lepton::ExpressionProgram> energyExpressions;
+    std::vector<std::vector<Lepton::ExpressionProgram> > energyDerivExpressions;
+    std::vector<OpenMM::CustomGBForce::ComputationType> energyTypes;
+    NonbondedMethod nonbondedMethod;
+    NeighborList* neighborList;
+};
+
+/**
  * This kernel is invoked by CustomExternalForce to calculate the forces acting on the system and the energy of the system.
  */
 class ReferenceCalcCustomExternalForceKernel : public CalcCustomExternalForceKernel {
