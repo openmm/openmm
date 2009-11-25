@@ -607,9 +607,9 @@ double ReferenceCalcNonbondedForceKernel::executeEnergy(ContextImpl& context) {
     return energy;
 }
 
-class ReferenceCalcCustomNonbondedForceKernel::TabulatedFunction : public Lepton::CustomFunction {
+class ReferenceTabulatedFunction : public Lepton::CustomFunction {
 public:
-    TabulatedFunction(double min, double max, const vector<double>& values, bool interpolating) :
+    ReferenceTabulatedFunction(double min, double max, const vector<double>& values, bool interpolating) :
             min(min), max(max), values(values), interpolating(interpolating) {
     }
     int getNumArguments() const {
@@ -659,7 +659,7 @@ public:
         return scale*(coeff[1]+x*(2.0*coeff[2]+x*3.0*coeff[3])); // We assume a first derivative, because that's the only order ever used by CustomNonbondedForce.
     }
     CustomFunction* clone() const {
-        return new TabulatedFunction(min, max, values, interpolating);
+        return new ReferenceTabulatedFunction(min, max, values, interpolating);
     }
     double min, max;
     vector<double> values;
@@ -725,7 +725,7 @@ void ReferenceCalcCustomNonbondedForceKernel::initialize(const System& system, c
         double min, max;
         bool interpolating;
         force.getFunctionParameters(i, name, values, min, max, interpolating);
-        functions[name] = new TabulatedFunction(min, max, values, interpolating);
+        functions[name] = new ReferenceTabulatedFunction(min, max, values, interpolating);
     }
 
     // Parse the various expressions used to calculate the force.
@@ -953,14 +953,14 @@ void ReferenceCalcCustomGBForceKernel::initialize(const System& system, const Cu
     // Create custom functions for the tabulated functions.
 
     map<string, Lepton::CustomFunction*> functions;
-//    for (int i = 0; i < force.getNumFunctions(); i++) {
-//        string name;
-//        vector<double> values;
-//        double min, max;
-//        bool interpolating;
-//        force.getFunctionParameters(i, name, values, min, max, interpolating);
-//        functions[name] = new TabulatedFunction(min, max, values, interpolating);
-//    }
+    for (int i = 0; i < force.getNumFunctions(); i++) {
+        string name;
+        vector<double> values;
+        double min, max;
+        bool interpolating;
+        force.getFunctionParameters(i, name, values, min, max, interpolating);
+        functions[name] = new ReferenceTabulatedFunction(min, max, values, interpolating);
+    }
 
     // Parse the expressions for computed values.
 
@@ -978,7 +978,7 @@ void ReferenceCalcCustomGBForceKernel::initialize(const System& system, const Cu
             valueDerivExpressions.push_back(ex.differentiate("r").optimize().createProgram());
     }
 
-    // Parse the various expressions used to calculate the force.
+    // Parse the expressions for energy terms.
 
     energyDerivExpressions.resize(force.getNumEnergyTerms());
     for (int i = 0; i < force.getNumEnergyTerms(); i++) {

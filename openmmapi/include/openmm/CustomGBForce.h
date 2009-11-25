@@ -52,12 +52,12 @@ namespace OpenMM {
  * The computation consists of calculating some number of per-particle <i>computed values</i>, followed by one or more
  * <i>energy terms</i>.  A computed value is a scalar value that is computed for each particle in the system.  It may
  * depend on an arbitrary set of global and per-particle parameters, and well as on other computed values that have
- * been calculating before it.  Once all computed values have been calculated, the energy terms and their derivatives
+ * been calculated before it.  Once all computed values have been calculated, the energy terms and their derivatives
  * are evaluated to determine the system energy and particle forces.  The energy terms may depend on global parameters,
  * per-particle parameters, and per-particle computed values.
  *
  * When specifying a computed value or energy term, you provide an algebraic expression to evaluate and a <i>computation type</i>
- * describing how is the expression is to be evaluated.  There are two main types of computations:
+ * describing how the expression is to be evaluated.  There are two main types of computations:
  *
  * <ul>
  * <li><b>Single Particle</b>: The expression is evaluated once for each particle in the System.  In the case of a computed
@@ -68,14 +68,14 @@ namespace OpenMM {
  * value, the value for a particular particle is calculated by pairing it with every other particle in the system, evaluating
  * the expression for each pair, and summing them.  For an energy term, each particle pair makes an independent contribution to
  * the System energy.  (Note that energy terms are assumed to be symmetric with respect to the two interacting particles, and
- * therefore are evaluated only once per pair.  In contrast, computed values need not be symmetric and therefore are calculated
+ * therefore are evaluated only once per pair.  In contrast, expressions for computed values need not be symmetric and therefore are calculated
  * twice for each pair: once when calculating the value for the first particle, and again when calculating the value for the
  * second particle.)</li>
  * </ul>
  *
  * Be aware that, although this class is extremely general in the computations it can define, particular Platforms may only support
  * more restricted types of computations.  In particular, all currently existing Platforms require that the first computed value
- * <i>must</i> be a particle pair computation, and all computed values that follow it <i>must</i> be single particle computations.
+ * <i>must</i> be a particle pair computation, and all computed values after the first <i>must</i> be single particle computations.
  * This is sufficient for most Generalized Born models, but might not permit some other types of calculations to be implemented.
  *
  * This is a complicated class to use, and an example may help to clarify it.  The following code implements the OBC variant
@@ -107,7 +107,7 @@ namespace OpenMM {
  * (the dielectric constants for the solute and solvent).  It then defines a computed value "I" of type ParticlePair.  The
  * expression for evaluating it is a complicated function of the distance between each pair of particles (r), their atomic
  * radii (radius1 and radius2), and their scale factors (scale1 and scale2).  Very roughly speaking, it is a measure of the
- * overlap between each particle and other nearby particles.
+ * distance between each particle and other nearby particles.
  *
  * Next a computation is defined for the Born Radius (B).  It is computed independently for each particle, and is a function of
  * that particle's atomic radius and the intermediate value I defined above.
@@ -128,12 +128,13 @@ namespace OpenMM {
  *
  * Expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
  * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, step.  All trigonometric functions
- * are defined in radians, and log is the natural logarithm.  step(x) = 0 if x is less than 0, 1 otherwise.  The names of per-particle parameters
+ * are defined in radians, and log is the natural logarithm.  step(x) = 0 if x is less than 0, 1 otherwise.  In expressions for
+ * particle pair calculations, the names of per-particle parameters and computed values
  * have the suffix "1" or "2" appended to them to indicate the values for the two interacting particles.  As seen in the above example,
- * the expression may also involve intermediate quantities that are defined following the main expression, using ";" as a separator.
+ * an expression may also involve intermediate quantities that are defined following the main expression, using ";" as a separator.
  *
  * In addition, you can call addFunction() to define a new function based on tabulated values.  You specify a vector of
- * values, and an interpolating or approximating spline is created from them.  That function can then appear in the expression.
+ * values, and an interpolating or approximating spline is created from them.  That function can then appear in expressions.
  */
 
 class OPENMM_EXPORT CustomGBForce : public Force {

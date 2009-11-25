@@ -407,7 +407,6 @@ private:
     std::vector<std::string> parameterNames, globalParameterNames;
     NonbondedMethod nonbondedMethod;
     NeighborList* neighborList;
-    class TabulatedFunction;
 };
 
 /**

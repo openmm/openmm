@@ -139,11 +139,46 @@ void testOBC(GBSAOBCForce::NonbondedMethod obcMethod, CustomGBForce::NonbondedMe
     }
 }
 
+void testTabulatedFunction(bool interpolating) {
+    ReferencePlatform platform;
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    VerletIntegrator integrator(0.01);
+    CustomGBForce* force = new CustomGBForce();
+    force->addComputedValue("a", "0", CustomGBForce::ParticlePair);
+    force->addEnergyTerm("fn(r)+1", CustomGBForce::ParticlePair);
+    force->addParticle(vector<double>());
+    force->addParticle(vector<double>());
+    vector<double> table;
+    for (int i = 0; i < 21; i++)
+        table.push_back(std::sin(0.25*i));
+    force->addFunction("fn", table, 1.0, 6.0, interpolating);
+    system.addForce(force);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(2);
+    positions[0] = Vec3(0, 0, 0);
+    for (int i = 1; i < 30; i++) {
+        double x = (7.0/30.0)*i;
+        positions[1] = Vec3(x, 0, 0);
+        context.setPositions(positions);
+        State state = context.getState(State::Forces | State::Energy);
+        const vector<Vec3>& forces = state.getForces();
+        double force = (x < 1.0 || x > 6.0 ? 0.0 : -std::cos(x-1.0));
+        double energy = (x < 1.0 || x > 6.0 ? 0.0 : std::sin(x-1.0))+1.0;
+        ASSERT_EQUAL_VEC(Vec3(-force, 0, 0), forces[0], 0.1);
+        ASSERT_EQUAL_VEC(Vec3(force, 0, 0), forces[1], 0.1);
+        ASSERT_EQUAL_TOL(energy, state.getPotentialEnergy(), 0.02);
+    }
+}
+
 int main() {
     try {
         testOBC(GBSAOBCForce::NoCutoff, CustomGBForce::NoCutoff);
         testOBC(GBSAOBCForce::CutoffNonPeriodic, CustomGBForce::CutoffNonPeriodic);
         testOBC(GBSAOBCForce::CutoffPeriodic, CustomGBForce::CutoffPeriodic);
+        testTabulatedFunction(true);
+        testTabulatedFunction(false);
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;
