@@ -46,7 +46,7 @@ ForceValidationResult::ForceValidationResult( const Context& context1, const Con
 
     _potentialEnergies[0]                     = state1.getPotentialEnergy();
     _potentialEnergies[1]                     = state2.getPotentialEnergy();
-    if( ValidateOpenMM::isNan( _potentialEnergies[0] ) || ValidateOpenMM::isNan( _potentialEnergies[1] ) ){
+    if( ValidateOpenMM::isNanOrInfinity( _potentialEnergies[0] ) || ValidateOpenMM::isNanOrInfinity( _potentialEnergies[1] ) ){
        _nansDetected++;
     }
 
@@ -154,7 +154,7 @@ void ForceValidationResult::_calculateNormOfForceVector( int forceIndex ){
     for( unsigned int ii = 0; ii < _forces[forceIndex].size(); ii++ ){
         Vec3 f1 = _forces[forceIndex][ii];
         _norms[forceIndex].push_back( std::sqrt( (f1[0]*f1[0]) + (f1[1]*f1[1]) + (f1[2]*f1[2]) ) );
-        if( ValidateOpenMM::isNan( f1[0] ) || ValidateOpenMM::isNan( f1[1] ) || ValidateOpenMM::isNan( f1[2] ) ){
+        if( ValidateOpenMM::isNanOrInfinity( f1[0] ) || ValidateOpenMM::isNanOrInfinity( f1[1] ) || ValidateOpenMM::isNanOrInfinity( f1[2] ) ){
             _nansDetected++;
         }
     }
@@ -375,7 +375,7 @@ void ForceValidationResult::compareForces( double tolerance ){
 
     clearInconsistentForceIndexList( );
     for( unsigned int jj = 0; jj < forces1.size(); jj++ ){
-        if( ValidateOpenMM::isNan( forceNorms1[jj] ) ||  ValidateOpenMM::isNan( forceNorms2[jj] ) ){
+        if( ValidateOpenMM::isNanOrInfinity( forceNorms1[jj] ) ||  ValidateOpenMM::isNanOrInfinity( forceNorms2[jj] ) ){
             registerInconsistentForceIndex( jj );
         } else {
             double delta   = std::sqrt( (forces1[jj][0]-forces2[jj][0])*(forces1[jj][0]-forces2[jj][0]) +
@@ -405,7 +405,7 @@ void ForceValidationResult::compareForceNorms( double tolerance ){
 
     clearInconsistentForceIndexList( );
     for( unsigned int jj = 0; jj < forceNorms0.size(); jj++ ){
-        if( ValidateOpenMM::isNan( forceNorms0[jj] ) || ValidateOpenMM::isNan( forceNorms1[jj] ) ){
+        if( ValidateOpenMM::isNanOrInfinity( forceNorms0[jj] ) || ValidateOpenMM::isNanOrInfinity( forceNorms1[jj] ) ){
             registerInconsistentForceIndex( jj );
         } else {
             double sum  = 0.5*( fabs( forceNorms0[jj] ) + fabs( forceNorms1[jj] ) );
@@ -829,7 +829,7 @@ std::string ValidateOpenMMForces::getSummary( std::vector<ForceValidationResult*
             std::vector<double> forceNorms2    = forceValidationResults[ii]->getForceNorms( 1 );
             for( unsigned int kk = 0; kk < inconsistentIndices.size() && kk < maxMissesToPrint; kk++ ){
                 int jj = inconsistentIndices[kk];
-                if( isNan( forceNorms1[jj] ) || isNan( forceNorms2[jj] ) ){
+                if( isNanOrInfinity( forceNorms1[jj] ) || isNanOrInfinity( forceNorms2[jj] ) ){
                      (void) LOCAL_SPRINTF5( value, "         nan at index %6d  norms: [%12.5e  %12.5e]",  jj, forceNorms1[jj], forceNorms2[jj] );
                      summary << _getLine( tab, "Error", value );
                 } else {

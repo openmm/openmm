@@ -78,8 +78,8 @@ ValidateOpenMM::~ValidateOpenMM() {
 }
 
 
-int ValidateOpenMM::isNan( double number ){
-    return isinf( number ) || isnan( number ) ? 1 : 0;
+int ValidateOpenMM::isNanOrInfinity( double number ){
+    return (number != number || number == std::numeric_limits<double>::infinity() || number == -std::numeric_limits<double>::infinity()) ? 1 : 0;
 }
 
 FILE* ValidateOpenMM::getLog( void ) const {

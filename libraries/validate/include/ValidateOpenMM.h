@@ -44,11 +44,7 @@
 #include <sstream>
 #include <typeinfo>
 
-#ifdef _MSC_VER
-   #include <limits>
-   #define isinf !_finite
-   #define isnan _isnan
-#endif
+#include <limits>
 
 namespace OpenMM {
 
@@ -111,14 +107,14 @@ public:
     static const std::string CUSTOM_NONBONDED_FORCE;
 
     /**
-     * Return true if input number is nan
+     * Return true if input number is nan or infinity
      *
      * @param number   number to test
      *
-     * @return true if number is nan
+     * @return true if number is nan or infinity
      */
     
-    static int isNan( double number );
+    static int isNanOrInfinity( double number );
     
     /**
      * Get force name

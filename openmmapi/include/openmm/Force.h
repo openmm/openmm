@@ -66,10 +66,6 @@ protected:
      * The ForceImpl will be deleted automatically when the Context is deleted.
      */
     virtual ForceImpl* createImpl() = 0;
-    
-private:
-    Force& operator=(const Force& rhs);
-    Force(const Force& rhs);
 };
 
 } // namespace OpenMM
