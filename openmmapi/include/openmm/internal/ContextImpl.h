@@ -54,7 +54,7 @@ public:
     /**
      * Create an ContextImpl for a Context;
      */
-    ContextImpl(Context& owner, System& system, Integrator& integrator, Platform* platform);
+    ContextImpl(Context& owner, System& system, Integrator& integrator, Platform* platform, const std::map<std::string, std::string>& properties);
     ~ContextImpl();
     /**
      * Get the Context for which this is the implementation.

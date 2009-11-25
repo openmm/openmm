@@ -51,7 +51,7 @@ public:
     bool supportsDoublePrecision() const;
     const std::string& getPropertyValue(const Context& context, const std::string& property) const;
     void setPropertyValue(Context& context, const std::string& property, const std::string& value) const;
-    void contextCreated(ContextImpl& context) const;
+    void contextCreated(ContextImpl& context, const std::map<std::string, std::string>& properties) const;
     void contextDestroyed(ContextImpl& context) const;
     /**
      * This is the name of the parameter for selecting which CUDA device to use.

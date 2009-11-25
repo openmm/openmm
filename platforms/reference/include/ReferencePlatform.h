@@ -53,7 +53,7 @@ public:
         return 1;
     }
     bool supportsDoublePrecision() const;
-    void contextCreated(ContextImpl& context) const;
+    void contextCreated(ContextImpl& context, const std::map<std::string, std::string>& properties) const;
     void contextDestroyed(ContextImpl& context) const;
 };
 

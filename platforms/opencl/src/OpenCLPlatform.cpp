@@ -84,9 +84,10 @@ const string& OpenCLPlatform::getPropertyValue(const Context& context, const str
 void OpenCLPlatform::setPropertyValue(Context& context, const string& property, const string& value) const {
 }
 
-void OpenCLPlatform::contextCreated(ContextImpl& context) const {
+void OpenCLPlatform::contextCreated(ContextImpl& context, const map<string, string>& properties) const {
     unsigned int deviceIndex = -1;
-    const string& devicePropValue = getPropertyDefaultValue(OpenCLDeviceIndex());
+    const string& devicePropValue = (properties.find(OpenCLDeviceIndex()) == properties.end() ?
+            getPropertyDefaultValue(OpenCLDeviceIndex()) : properties.find(OpenCLDeviceIndex())->second);
     if (devicePropValue.length() > 0)
         stringstream(devicePropValue) >> deviceIndex;
     int numParticles = context.getSystem().getNumParticles();

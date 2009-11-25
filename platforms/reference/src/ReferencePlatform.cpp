@@ -36,6 +36,7 @@
 #include "SimTKUtilities/SimTKOpenMMRealType.h"
 
 using namespace OpenMM;
+using namespace std;
 
 ReferencePlatform::ReferencePlatform() {
     ReferenceKernelFactory* factory = new ReferenceKernelFactory();
@@ -66,7 +67,7 @@ bool ReferencePlatform::supportsDoublePrecision() const {
     return (sizeof(RealOpenMM) >= sizeof(double));
 }
 
-void ReferencePlatform::contextCreated(ContextImpl& context) const {
+void ReferencePlatform::contextCreated(ContextImpl& context, const map<string, string>& properties) const {
     context.setPlatformData(new PlatformData(context.getSystem().getNumParticles()));
 }
 

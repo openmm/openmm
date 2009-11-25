@@ -36,12 +36,16 @@
 using namespace OpenMM;
 using namespace std;
 
-Context::Context(System& system, Integrator& integrator) {
-    impl = new ContextImpl(*this, system, integrator, 0);
+Context::Context(System& system, Integrator& integrator) : properties(map<string, string>()) {
+    impl = new ContextImpl(*this, system, integrator, 0, properties);
 }
 
-Context::Context(System& system, Integrator& integrator, Platform& platform) {
-    impl = new ContextImpl(*this, system, integrator, &platform);
+Context::Context(System& system, Integrator& integrator, Platform& platform) : properties(map<string, string>()) {
+    impl = new ContextImpl(*this, system, integrator, &platform, properties);
+}
+
+Context::Context(System& system, Integrator& integrator, Platform& platform, const map<string, string>& properties) : properties(properties) {
+    impl = new ContextImpl(*this, system, integrator, &platform, properties);
 }
 
 Context::~Context() {
@@ -121,5 +125,5 @@ void Context::reinitialize() {
     Integrator& integrator = impl->getIntegrator();
     Platform& platform = impl->getPlatform();
     delete impl;
-    impl = new ContextImpl(*this, system, integrator, &platform);
+    impl = new ContextImpl(*this, system, integrator, &platform, properties);
 }

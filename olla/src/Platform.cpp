@@ -91,7 +91,7 @@ void Platform::setPropertyDefaultValue(const string& property, const string& val
     defaultProperties[property] = value;
 }
 
-void Platform::contextCreated(ContextImpl& context) const {
+void Platform::contextCreated(ContextImpl& context, const map<string, string>& properties) const {
 }
 
 void Platform::contextDestroyed(ContextImpl& context) const {
@@ -129,6 +129,13 @@ int Platform::getNumPlatforms() {
 
 Platform& Platform::getPlatform(int index) {
     return *getPlatforms()[index];
+}
+
+Platform& Platform::getPlatform(const string& name) {
+    for (int i = 0; i < getNumPlatforms(); i++)
+        if (getPlatform(i).getName() == name)
+            return getPlatform(i);
+    throw OpenMMException("There is no registered Platform called \""+name+"\"");
 }
 
 Platform& Platform::findPlatform(const vector<string>& kernelNames) {

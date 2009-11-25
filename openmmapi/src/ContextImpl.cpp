@@ -44,7 +44,7 @@ using std::map;
 using std::vector;
 using std::string;
 
-ContextImpl::ContextImpl(Context& owner, System& system, Integrator& integrator, Platform* platform) :
+ContextImpl::ContextImpl(Context& owner, System& system, Integrator& integrator, Platform* platform, const map<string, string>& properties) :
          owner(owner), system(system), integrator(integrator), platform(platform), platformData(NULL) {
     vector<string> kernelNames;
     kernelNames.push_back(CalcKineticEnergyKernel::Name());
@@ -63,7 +63,7 @@ ContextImpl::ContextImpl(Context& owner, System& system, Integrator& integrator,
         this->platform = platform = &Platform::findPlatform(kernelNames);
     else if (!platform->supportsKernels(kernelNames))
         throw OpenMMException("Specified a Platform for a Context which does not support all required kernels");
-    platform->contextCreated(*this);
+    platform->contextCreated(*this, properties);
     initializeForcesKernel = platform->createKernel(CalcForcesAndEnergyKernel::Name(), *this);
     dynamic_cast<CalcForcesAndEnergyKernel&>(initializeForcesKernel.getImpl()).initialize(system);
     kineticEnergyKernel = platform->createKernel(CalcKineticEnergyKernel::Name(), *this);

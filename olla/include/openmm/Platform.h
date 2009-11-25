@@ -119,8 +119,11 @@ public:
     /**
      * This is called whenever a new Context is created.  It gives the Platform a chance to initialize
      * the context and store platform-specific data in it.
+     *
+     * @param context    the newly created context
+     * @param properties a set of values for platform-specific properties.  Keys are the property names.
      */
-    virtual void contextCreated(ContextImpl& context) const;
+    virtual void contextCreated(ContextImpl& context, const std::map<std::string, std::string>& properties) const;
     /**
      * This is called whenever a Context is deleted.  It gives the Platform a chance to clean up
      * any platform-specific data that was stored in it.
@@ -168,6 +171,11 @@ public:
      * Get a registered Platform by index.
      */
     static Platform& getPlatform(int index);
+    /**
+     * Get the registered Platform with a particular name.  If no Platform with that name has been
+     * registered, this throws an exception.
+     */
+    static Platform& getPlatform(const std::string& name);
     /**
      * Find a Platform which can be used to perform a calculation.
      * 

@@ -35,6 +35,7 @@
 #include "Integrator.h"
 #include "State.h"
 #include "System.h"
+#include <map>
 #include <string>
 #include <vector>
 #include "internal/windowsExport.h"
@@ -79,6 +80,16 @@ public:
      * @param platform    the Platform to use for calculations
      */
     Context(System& system, Integrator& integrator, Platform& platform);
+    /**
+     * Construct a new Context in which to run a simulation, explicitly specifying what Platform should be used
+     * to perform calculations and the values of platform-specific properties.
+     *
+     * @param system      the System which will be simulated
+     * @param integrator  the Integrator which will be used to simulate the System
+     * @param platform    the Platform to use for calculations
+     * @param properties  a set of values for platform-specific properties.  Keys are the property names.
+     */
+    Context(System& system, Integrator& integrator, Platform& platform, const std::map<std::string, std::string>& properties);
     ~Context();
     /**
      * Get System being simulated in this context.
@@ -155,6 +166,7 @@ public:
 private:
     friend class Platform;
     ContextImpl* impl;
+    std::map<std::string, std::string> properties;
 };
 
 } // namespace OpenMM

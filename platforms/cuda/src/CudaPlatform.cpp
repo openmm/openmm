@@ -88,13 +88,16 @@ const string& CudaPlatform::getPropertyValue(const Context& context, const strin
 void CudaPlatform::setPropertyValue(Context& context, const string& property, const string& value) const {
 }
 
-void CudaPlatform::contextCreated(ContextImpl& context) const {
+void CudaPlatform::contextCreated(ContextImpl& context, const map<string, string>& properties) const {
     unsigned int device = 0;
-    const string& devicePropValue = getPropertyDefaultValue(CudaDevice());
+    const string& devicePropValue = (properties.find(CudaDevice()) == properties.end() ?
+            getPropertyDefaultValue(CudaDevice()) : properties.find(CudaDevice())->second);
     if (devicePropValue.length() > 0)
         stringstream(devicePropValue) >> device;
     int numParticles = context.getSystem().getNumParticles();
-    _gpuContext* gpu = (_gpuContext*) gpuInit(numParticles, device, getPropertyDefaultValue(CudaUseBlockingSync()) == "true");
+    const string& blockingSync = (properties.find(CudaUseBlockingSync()) == properties.end() ?
+            getPropertyDefaultValue(CudaUseBlockingSync()) : properties.find(CudaUseBlockingSync())->second);
+    _gpuContext* gpu = (_gpuContext*) gpuInit(numParticles, device, blockingSync == "true");
     context.setPlatformData(new PlatformData(gpu));
 }
 
