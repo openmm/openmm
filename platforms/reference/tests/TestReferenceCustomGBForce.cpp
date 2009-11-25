@@ -50,8 +50,8 @@ using namespace std;
 
 const double TOL = 1e-5;
 
-void testOBC() {
-    const int numMolecules = 100;
+void testOBC(GBSAOBCForce::NonbondedMethod obcMethod, CustomGBForce::NonbondedMethod customMethod) {
+    const int numMolecules = 70;
     const int numParticles = numMolecules*2;
     const double boxSize = 10.0;
     ReferencePlatform platform;
@@ -64,8 +64,12 @@ void testOBC() {
         standardSystem.addParticle(1.0);
         customSystem.addParticle(1.0);
     }
+    standardSystem.setPeriodicBoxVectors(Vec3(boxSize, 0.0, 0.0), Vec3(0.0, boxSize, 0.0), Vec3(0.0, 0.0, boxSize));
+    customSystem.setPeriodicBoxVectors(Vec3(boxSize, 0.0, 0.0), Vec3(0.0, boxSize, 0.0), Vec3(0.0, 0.0, boxSize));
     GBSAOBCForce* obc = new GBSAOBCForce();
     CustomGBForce* custom = new CustomGBForce();
+    obc->setCutoffDistance(2.0);
+    custom->setCutoffDistance(2.0);
     custom->addPerParticleParameter("q");
     custom->addPerParticleParameter("radius");
     custom->addPerParticleParameter("scale");
@@ -115,31 +119,31 @@ void testOBC() {
         velocities[2*i] = Vec3(genrand_real2(), genrand_real2(), genrand_real2());
         velocities[2*i+1] = Vec3(genrand_real2(), genrand_real2(), genrand_real2());
     }
-    obc->setNonbondedMethod(GBSAOBCForce::NoCutoff);
-    custom->setNonbondedMethod(CustomGBForce::NoCutoff);
+    obc->setNonbondedMethod(obcMethod);
+    custom->setNonbondedMethod(customMethod);
     standardSystem.addForce(obc);
     customSystem.addForce(custom);
     VerletIntegrator integrator1(0.01);
     VerletIntegrator integrator2(0.01);
     Context context1(standardSystem, integrator1, platform);
-    Context context2(customSystem, integrator2, platform);
     context1.setPositions(positions);
-    context2.setPositions(positions);
     context1.setVelocities(velocities);
-    context2.setVelocities(velocities);
     State state1 = context1.getState(State::Forces | State::Energy);
+    Context context2(customSystem, integrator2, platform);
+    context2.setPositions(positions);
+    context2.setVelocities(velocities);
     State state2 = context2.getState(State::Forces | State::Energy);
-    for (int i = 0; i < numParticles; i++)
-        std::cout << state1.getForces()[i]<< state2.getForces()[i]<< std::endl;
     ASSERT_EQUAL_TOL(state1.getPotentialEnergy(), state2.getPotentialEnergy(), 1e-4);
     for (int i = 0; i < numParticles; i++) {
-        ASSERT_EQUAL_VEC(state1.getForces()[i], state2.getForces()[i], 1e-3);
+        ASSERT_EQUAL_VEC(state1.getForces()[i], state2.getForces()[i], 1e-4);
     }
 }
 
 int main() {
     try {
-        testOBC();
+        testOBC(GBSAOBCForce::NoCutoff, CustomGBForce::NoCutoff);
+        testOBC(GBSAOBCForce::CutoffNonPeriodic, CustomGBForce::CutoffNonPeriodic);
+        testOBC(GBSAOBCForce::CutoffPeriodic, CustomGBForce::CutoffPeriodic);
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

@@ -512,7 +512,7 @@ private:
     std::vector<std::set<int> > exclusions;
     std::vector<std::string> particleParameterNames, globalParameterNames, valueNames;
     std::vector<Lepton::ExpressionProgram> valueExpressions;
-    std::vector<std::vector<Lepton::ExpressionProgram> > valueDerivExpressions;
+    std::vector<Lepton::ExpressionProgram> valueDerivExpressions;
     std::vector<OpenMM::CustomGBForce::ComputationType> valueTypes;
     std::vector<Lepton::ExpressionProgram> energyExpressions;
     std::vector<std::vector<Lepton::ExpressionProgram> > energyDerivExpressions;

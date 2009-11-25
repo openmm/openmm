@@ -44,7 +44,7 @@ class ReferenceCustomGBIxn {
       RealOpenMM periodicBoxSize[3];
       RealOpenMM cutoffDistance;
       std::vector<Lepton::ExpressionProgram> valueExpressions;
-      std::vector<std::vector<Lepton::ExpressionProgram> > valueDerivExpressions;
+      std::vector<Lepton::ExpressionProgram> valueDerivExpressions;
       std::vector<std::string> valueNames;
       std::vector<OpenMM::CustomGBForce::ComputationType> valueTypes;
       std::vector<Lepton::ExpressionProgram> energyExpressions;
@@ -53,57 +53,164 @@ class ReferenceCustomGBIxn {
       std::vector<OpenMM::CustomGBForce::ComputationType> energyTypes;
       std::vector<std::string> particleParamNames;
       std::vector<std::string> particleValueNames;
-      struct ComputedValue {
-          RealOpenMM value;
-          RealOpenMM gradient[3];
-          ComputedValue() {
-              value = (RealOpenMM) 0;
-              gradient[0] = (RealOpenMM) 0;
-              gradient[1] = (RealOpenMM) 0;
-              gradient[2] = (RealOpenMM) 0;
-          }
-      };
 
       /**---------------------------------------------------------------------------------------
 
-         Calculate custom pair ixn between two atoms
+         Calculate a computed value of type SingleParticle
 
-         @param atom1            the index of the first atom
-         @param atom2            the index of the second atom
-         @param atomCoordinates  atom coordinates
-         @param atomParameters   atomParameters[atomIndex][parameterIndex]
-         @param forces           force array (forces added)
-         @param energyByAtom     atom energy
-         @param totalEnergy      total energy
+         @param index            the index of the value to compute
+         @param numAtoms         number of atoms
+         @param values           the vector to store computed values into
+         @param globalParameters the values of global parameters
+         @param atomParameters   atomParameters[atomIndex][paramterIndex]
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateSingleParticleValue(int index, int numAtoms, std::vector<std::vector<ComputedValue> >& values,
+      void calculateSingleParticleValue(int index, int numAtoms, std::vector<std::vector<RealOpenMM> >& values,
                                         const std::map<std::string, double>& globalParameters, RealOpenMM** atomParameters) const;
 
+      /**---------------------------------------------------------------------------------------
+
+         Calculate a computed value that is based on particle pairs
+
+         @param index            the index of the value to compute
+         @param numAtoms         number of atoms
+         @param atomCoordinates  atom coordinates
+         @param atomParameters   atomParameters[atomIndex][paramterIndex]
+         @param values           the vector to store computed values into
+         @param globalParameters the values of global parameters
+         @param exclusions       exclusions[i] is the set of excluded indices for atom i
+         @param useExclusions    specifies whether to use exclusions
+
+         --------------------------------------------------------------------------------------- */
+
       void calculateParticlePairValue(int index, int numAtoms, RealOpenMM** atomCoordinates, RealOpenMM** atomParameters,
-                                      std::vector<std::vector<ComputedValue> >& values,
+                                      std::vector<std::vector<RealOpenMM> >& values,
                                       const std::map<std::string, double>& globalParameters,
                                       const std::vector<std::set<int> >& exclusions, bool useExclusions) const;
 
+      /**---------------------------------------------------------------------------------------
+
+         Evaluate a single atom pair as part of calculating a computed value
+
+         @param index            the index of the value to compute
+         @param atom1            the index of the first atom in the pair
+         @param atom2            the index of the second atom in the pair
+         @param atomCoordinates  atom coordinates
+         @param atomParameters   atomParameters[atomIndex][paramterIndex]
+         @param globalParameters the values of global parameters
+         @param values           the vector to store computed values into
+
+         --------------------------------------------------------------------------------------- */
+
       void calculateOnePairValue(int index, int atom1, int atom2, RealOpenMM** atomCoordinates, RealOpenMM** atomParameters,
                                  const std::map<std::string, double>& globalParameters,
-                                 std::vector<std::vector<ComputedValue> >& values) const;
+                                 std::vector<std::vector<RealOpenMM> >& values) const;
 
-      void calculateSingleParticleEnergyTerm(int index, int numAtoms, const std::vector<std::vector<ComputedValue> >& values,
+      /**---------------------------------------------------------------------------------------
+
+         Calculate an energy term of type SingleParticle
+
+         @param index            the index of the value to compute
+         @param numAtoms         number of atoms
+         @param values           the vector containing computed values
+         @param globalParameters the values of global parameters
+         @param atomParameters   atomParameters[atomIndex][paramterIndex]
+         @param totalEnergy      the energy contribution is added to this
+         @param dEdV             the derivative of energy with respect to computed values is stored in this
+
+         --------------------------------------------------------------------------------------- */
+
+      void calculateSingleParticleEnergyTerm(int index, int numAtoms, const std::vector<std::vector<RealOpenMM> >& values,
                                         const std::map<std::string, double>& globalParameters, RealOpenMM** atomParameters,
-                                        RealOpenMM** forces, RealOpenMM* totalEnergy) const;
+                                        RealOpenMM* totalEnergy, std::vector<std::vector<RealOpenMM> >& dEdV) const;
+
+      /**---------------------------------------------------------------------------------------
+
+         Calculate an energy term that is based on particle pairs
+
+         @param index            the index of the term to compute
+         @param numAtoms         number of atoms
+         @param atomCoordinates  atom coordinates
+         @param atomParameters   atomParameters[atomIndex][paramterIndex]
+         @param values           the vector containing computed values
+         @param globalParameters the values of global parameters
+         @param exclusions       exclusions[i] is the set of excluded indices for atom i
+         @param useExclusions    specifies whether to use exclusions
+         @param forces           forces on atoms are added to this
+         @param totalEnergy      the energy contribution is added to this
+         @param dEdV             the derivative of energy with respect to computed values is stored in this
+
+         --------------------------------------------------------------------------------------- */
 
       void calculateParticlePairEnergyTerm(int index, int numAtoms, RealOpenMM** atomCoordinates, RealOpenMM** atomParameters,
-                                      const std::vector<std::vector<ComputedValue> >& values,
+                                      const std::vector<std::vector<RealOpenMM> >& values,
                                       const std::map<std::string, double>& globalParameters,
                                       const std::vector<std::set<int> >& exclusions, bool useExclusions,
-                                      RealOpenMM** forces, RealOpenMM* totalEnergy) const;
+                                      RealOpenMM** forces, RealOpenMM* totalEnergy, std::vector<std::vector<RealOpenMM> >& dEdV) const;
+
+      /**---------------------------------------------------------------------------------------
+
+         Evaluate a single atom pair as part of calculating an energy term
+
+         @param index            the index of the term to compute
+         @param atom1            the index of the first atom in the pair
+         @param atom2            the index of the second atom in the pair
+         @param atomCoordinates  atom coordinates
+         @param atomParameters   atomParameters[atomIndex][paramterIndex]
+         @param globalParameters the values of global parameters
+         @param values           the vector containing computed values
+         @param forces           forces on atoms are added to this
+         @param totalEnergy      the energy contribution is added to this
+         @param dEdV             the derivative of energy with respect to computed values is stored in this
+
+         --------------------------------------------------------------------------------------- */
 
       void calculateOnePairEnergyTerm(int index, int atom1, int atom2, RealOpenMM** atomCoordinates, RealOpenMM** atomParameters,
                                  const std::map<std::string, double>& globalParameters,
-                                 const std::vector<std::vector<ComputedValue> >& values,
-                                 RealOpenMM** forces, RealOpenMM* totalEnergy) const;
+                                 const std::vector<std::vector<RealOpenMM> >& values,
+                                 RealOpenMM** forces, RealOpenMM* totalEnergy, std::vector<std::vector<RealOpenMM> >& dEdV) const;
+
+      /**---------------------------------------------------------------------------------------
+
+         Apply the chain rule to compute forces on atoms
+
+         @param numAtoms         number of atoms
+         @param atomCoordinates  atom coordinates
+         @param atomParameters   atomParameters[atomIndex][paramterIndex]
+         @param values           the vector containing computed values
+         @param globalParameters the values of global parameters
+         @param exclusions       exclusions[i] is the set of excluded indices for atom i
+         @param forces           forces on atoms are added to this
+         @param dEdV             the derivative of energy with respect to computed values is stored in this
+
+         --------------------------------------------------------------------------------------- */
+
+      void calculateChainRuleForces(int numAtoms, RealOpenMM** atomCoordinates, RealOpenMM** atomParameters,
+                                      const std::vector<std::vector<RealOpenMM> >& values,
+                                      const std::map<std::string, double>& globalParameters,
+                                      const std::vector<std::set<int> >& exclusions,
+                                      RealOpenMM** forces, std::vector<std::vector<RealOpenMM> >& dEdV) const;
+
+      /**---------------------------------------------------------------------------------------
+
+         Evaluate a single atom pair as part of applying the chain rule
+
+         @param atom1            the index of the first atom in the pair
+         @param atom2            the index of the second atom in the pair
+         @param atomCoordinates  atom coordinates
+         @param atomParameters   atomParameters[atomIndex][paramterIndex]
+         @param globalParameters the values of global parameters
+         @param values           the vector containing computed values
+         @param forces           forces on atoms are added to this
+         @param dEdV             the derivative of energy with respect to computed values is stored in this
+
+         --------------------------------------------------------------------------------------- */
+
+      void calculateOnePairChainRule(int atom1, int atom2, RealOpenMM** atomCoordinates, RealOpenMM** atomParameters,
+                                 const std::map<std::string, double>& globalParameters,
+                                 const std::vector<std::vector<RealOpenMM> >& values,
+                                 RealOpenMM** forces, std::vector<std::vector<RealOpenMM> >& dEdV) const;
 
    public:
 
@@ -114,7 +221,7 @@ class ReferenceCustomGBIxn {
          --------------------------------------------------------------------------------------- */
 
        ReferenceCustomGBIxn(const std::vector<Lepton::ExpressionProgram>& valueExpressions,
-                            const std::vector<std::vector<Lepton::ExpressionProgram> >& valueDerivExpressions,
+                            const std::vector<Lepton::ExpressionProgram>& valueDerivExpressions,
                             const std::vector<std::string>& valueNames,
                             const std::vector<OpenMM::CustomGBForce::ComputationType>& valueTypes,
                             const std::vector<Lepton::ExpressionProgram>& energyExpressions,
@@ -137,11 +244,9 @@ class ReferenceCustomGBIxn {
          @param distance            the cutoff distance
          @param neighbors           the neighbor list to use
 
-         @return ReferenceForce::DefaultReturn
-
          --------------------------------------------------------------------------------------- */
 
-      int setUseCutoff( RealOpenMM distance, const OpenMM::NeighborList& neighbors );
+      void setUseCutoff( RealOpenMM distance, const OpenMM::NeighborList& neighbors );
 
       /**---------------------------------------------------------------------------------------
 
@@ -151,36 +256,26 @@ class ReferenceCustomGBIxn {
 
          @param boxSize             the X, Y, and Z widths of the periodic box
 
-         @return ReferenceForce::DefaultReturn
-
          --------------------------------------------------------------------------------------- */
 
-      int setPeriodic( RealOpenMM* boxSize );
+      void setPeriodic( RealOpenMM* boxSize );
 
       /**---------------------------------------------------------------------------------------
 
-         Calculate custom pair ixn
+         Calculate custom GB ixn
 
          @param numberOfAtoms    number of atoms
          @param atomCoordinates  atom coordinates
-         @param atomParameters   atom parameters (charges, c6, c12, ...)     atomParameters[atomIndex][paramterIndex]
-         @param exclusions       atom exclusion indices                      exclusions[atomIndex][atomToExcludeIndex]
-                                 exclusions[atomIndex][0] = number of exclusions
-                                 exclusions[atomIndex][1-no.] = atom indices of atoms to excluded from
-                                 interacting w/ atom atomIndex
-         @param fixedParameters  non atom parameters (not currently used)
+         @param atomParameters   atomParameters[atomIndex][paramterIndex]
+         @param exclusions       exclusions[i] is the set of excluded indices for atom i
          @param globalParameters the values of global parameters
          @param forces           force array (forces added)
-         @param energyByAtom     atom energy
          @param totalEnergy      total energy
-
-         @return ReferenceForce::DefaultReturn
 
          --------------------------------------------------------------------------------------- */
 
-      int calculateIxn(int numberOfAtoms, RealOpenMM** atomCoordinates, RealOpenMM** atomParameters, const std::vector<std::set<int> >& exclusions,
-                       std::map<std::string, double>& globalParameters, RealOpenMM** forces,
-                       RealOpenMM* energyByAtom, RealOpenMM* totalEnergy) const;
+      void calculateIxn(int numberOfAtoms, RealOpenMM** atomCoordinates, RealOpenMM** atomParameters, const std::vector<std::set<int> >& exclusions,
+                       std::map<std::string, double>& globalParameters, RealOpenMM** forces, RealOpenMM* totalEnergy) const;
 
 // ---------------------------------------------------------------------------------------
 

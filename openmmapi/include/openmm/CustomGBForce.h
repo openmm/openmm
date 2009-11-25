@@ -43,6 +43,97 @@
 namespace OpenMM {
 
 /**
+ * This class implements complex, multiple stage nonbonded interactions between particles.  It is designed primarily
+ * for implementing Generalized Born implicit solvation models, although it is not strictly limited to that purpose.
+ * The interaction is specified as a series of computations, each defined by an arbitrary algebraic expression.
+ * It also allows tabulated functions to be defined and used with the computations.  It optionally supports periodic boundary
+ * conditions and cutoffs for long range interactions.
+ *
+ * The computation consists of calculating some number of per-particle <i>computed values</i>, followed by one or more
+ * <i>energy terms</i>.  A computed value is a scalar value that is computed for each particle in the system.  It may
+ * depend on an arbitrary set of global and per-particle parameters, and well as on other computed values that have
+ * been calculating before it.  Once all computed values have been calculated, the energy terms and their derivatives
+ * are evaluated to determine the system energy and particle forces.  The energy terms may depend on global parameters,
+ * per-particle parameters, and per-particle computed values.
+ *
+ * When specifying a computed value or energy term, you provide an algebraic expression to evaluate and a <i>computation type</i>
+ * describing how is the expression is to be evaluated.  There are two main types of computations:
+ *
+ * <ul>
+ * <li><b>Single Particle</b>: The expression is evaluated once for each particle in the System.  In the case of a computed
+ * value, this means the value for a particle depends only on other properties of that particle (its parameters and other
+ * computed values).  In the case of an energy term, it means each particle makes an independent contribution to the System
+ * energy.</li>
+ * <li><b>Particle Pairs</b>: The expression is evaluated for every pair of particles in the system.  In the case of a computed
+ * value, the value for a particular particle is calculated by pairing it with every other particle in the system, evaluating
+ * the expression for each pair, and summing them.  For an energy term, each particle pair makes an independent contribution to
+ * the System energy.  (Note that energy terms are assumed to be symmetric with respect to the two interacting particles, and
+ * therefore are evaluated only once per pair.  In contrast, computed values need not be symmetric and therefore are calculated
+ * twice for each pair: once when calculating the value for the first particle, and again when calculating the value for the
+ * second particle.)</li>
+ * </ul>
+ *
+ * Be aware that, although this class is extremely general in the computations it can define, particular Platforms may only support
+ * more restricted types of computations.  In particular, all currently existing Platforms require that the first computed value
+ * <i>must</i> be a particle pair computation, and all computed values that follow it <i>must</i> be single particle computations.
+ * This is sufficient for most Generalized Born models, but might not permit some other types of calculations to be implemented.
+ *
+ * This is a complicated class to use, and an example may help to clarify it.  The following code implements the OBC variant
+ * of the GB/SA solvation model, using the ACE approximation to estimate surface area:
+ *
+ * <tt><pre>
+ * CustomGBForce* custom = new CustomGBForce();
+ * custom->addPerParticleParameter("q");
+ * custom->addPerParticleParameter("radius");
+ * custom->addPerParticleParameter("scale");
+ * custom->addGlobalParameter("solventDielectric", obc->getSolventDielectric());
+ * custom->addGlobalParameter("soluteDielectric", obc->getSoluteDielectric());
+ * custom->addComputedValue("I", "step(r+sr2-or1)*0.5*(1/L-1/U+0.25*(r*(1/U^2-1/L^2))+0.5*log(L/U)/r+0.25*(sr2*sr2/r)*(1/L^2-1/U^2)+C);"
+ *                               "U=r+sr2;"
+ *                               "C=2*(1/or1-1/L)*step(sr2-r-or1);"
+ *                               "L=step(or1-D)*or1+step(D-or1)*D;"
+ *                               "D=step(r-sr2)*(r-sr2)+step(sr2-r)*(sr2-r);"
+ *                               "sr1 = scale1*or1; sr2 = scale2*or2;"
+ *                               "or1 = radius1-0.009; or2 = radius2-0.009", CustomGBForce::ParticlePair);
+ * custom->addComputedValue("B", "1/(1/or-tanh(1*psi-0.8*psi^2+4.85*psi^3)/radius);"
+ *                               "psi=I*or; or=radius-0.009", CustomGBForce::SingleParticle);
+ * custom->addEnergyTerm("28.3919551*(radius+0.14)^2*(radius/B)^6-0.5*138.935485*(1/soluteDielectric-1/solventDielectric)*q^2/B",
+ *                       CustomGBForce::SingleParticle);
+ * custom->addEnergyTerm("-138.935485*(1/soluteDielectric-1/solventDielectric)*q1*q2/f;"
+ *                       "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))", CustomGBForce::ParticlePair);
+ * </pre></tt>
+ *
+ * It begins by defining three per-particle parameters (charge, atomic radius, and scale factor) and two global parameters
+ * (the dielectric constants for the solute and solvent).  It then defines a computed value "I" of type ParticlePair.  The
+ * expression for evaluating it is a complicated function of the distance between each pair of particles (r), their atomic
+ * radii (radius1 and radius2), and their scale factors (scale1 and scale2).  Very roughly speaking, it is a measure of the
+ * overlap between each particle and other nearby particles.
+ *
+ * Next a computation is defined for the Born Radius (B).  It is computed independently for each particle, and is a function of
+ * that particle's atomic radius and the intermediate value I defined above.
+ *
+ * Finally, two energy terms are defined.  The first one is computed for each particle and represents the surface area term,
+ * as well as the self interaction part of the polarization energy.  The second term is calculated for each pair of particles,
+ * and represents the screening of electrostatic interactions by the solvent.
+ *
+ * After defining the force as shown above, you should then call addParticle() once for each particle in the System to set the
+ * values of its per-particle parameters (q, radius, and scale).  The number of particles for which you set parameters must be
+ * exactly equal to the number of particles in the System, or else an exception will be thrown when you try to create a Context.
+ * After a particle has been added, you can modify its parameters by calling setParticleParameters().
+ *
+ * CustomNonbondedForce also lets you specify "exclusions", particular pairs of particles whose interactions should be
+ * omitted from calculations.  This is most often used for particles that are bonded to each other.  Even if you specify exclusions,
+ * however, you can use the computation type ParticlePairNoExclusions to indicate that exclusions should not be applied to a
+ * particular piece of the computation.
+ *
+ * Expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
+ * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, step.  All trigonometric functions
+ * are defined in radians, and log is the natural logarithm.  step(x) = 0 if x is less than 0, 1 otherwise.  The names of per-particle parameters
+ * have the suffix "1" or "2" appended to them to indicate the values for the two interacting particles.  As seen in the above example,
+ * the expression may also involve intermediate quantities that are defined following the main expression, using ";" as a separator.
+ *
+ * In addition, you can call addFunction() to define a new function based on tabulated values.  You specify a vector of
+ * values, and an interpolating or approximating spline is created from them.  That function can then appear in the expression.
  */
 
 class OPENMM_EXPORT CustomGBForce : public Force {
@@ -66,9 +157,22 @@ public:
          */
         CutoffPeriodic = 2,
     };
+    /**
+     * This is an enumeration of the different ways in which a computed value or energy term can be calculated.
+     */
     enum ComputationType {
+        /**
+         * The value is computed independently for each particle, based only on the parameters and computed values for that particle.
+         */
         SingleParticle = 0,
+        /**
+         * The value is computed as a sum over all pairs of particles, except those which have been added as exclusions.
+         */
         ParticlePair = 1,
+        /**
+         * The value is computed as a sum over all pairs of particles.  Unlike ParticlePair, the list of exclusions is ignored
+         * and all pairs are included in the sum, even those marked as exclusions.
+         */
         ParticlePairNoExclusions = 2
     };
     /**
@@ -105,9 +209,15 @@ public:
     int getNumFunctions() const {
         return functions.size();
     }
+    /**
+     * Get the number of per-particle computed values the interaction depends on.
+     */
     int getNumComputedValues() const {
         return computedValues.size();
     }
+    /**
+     * Get the number of terms in the energy computation.
+     */
     int getNumEnergyTerms() const {
         return energyTerms.size();
     }
@@ -208,11 +318,108 @@ public:
      * @param parameters  the list of parameters for the specified particle
      */
     void setParticleParameters(int index, const std::vector<double>& parameters);
+    /**
+     * Add a computed value to calculate for each particle.
+     *
+     * @param name        the name of the value
+     * @param expression  an algebraic expression to evaluate when calculating the computed value.  If the
+     *                    ComputationType is SingleParticle, the expression is evaluated independently
+     *                    for each particle, and may depend on the per-particle parameters and previous
+     *                    computed values for that particle.  If the ComputationType is ParticlePair or
+     *                    ParticlePairNoExclusions, the expression is evaluated once for every other
+     *                    particle in the system and summed to get the final value.  In the latter case,
+     *                    the expression may depend on the distance r between the two particles, and on
+     *                    the per-particle parameters and previous computed values for each of them.
+     *                    Append "1" to a variable name to indicate the parameter for the particle whose
+     *                    value is being calculated, and "2" to indicate the particle it is interacting with.
+     * @param type        the method to use for computing this value
+     */
     int addComputedValue(const std::string& name, const std::string& expression, ComputationType type);
+    /**
+     * Get the properties of a computed value.
+     *
+     * @param index       the index of the computed value for which to get parameters
+     * @param name        the name of the value
+     * @param expression  an algebraic expression to evaluate when calculating the computed value.  If the
+     *                    ComputationType is SingleParticle, the expression is evaluated independently
+     *                    for each particle, and may depend on the per-particle parameters and previous
+     *                    computed values for that particle.  If the ComputationType is ParticlePair or
+     *                    ParticlePairNoExclusions, the expression is evaluated once for every other
+     *                    particle in the system and summed to get the final value.  In the latter case,
+     *                    the expression may depend on the distance r between the two particles, and on
+     *                    the per-particle parameters and previous computed values for each of them.
+     *                    Append "1" to a variable name to indicate the parameter for the particle whose
+     *                    value is being calculated, and "2" to indicate the particle it is interacting with.
+     * @param type        the method to use for computing this value
+     */
     void getComputedValueParameters(int index, std::string& name, std::string& expression, ComputationType& type) const;
+    /**
+     * Set the properties of a computed value.
+     *
+     * @param index       the index of the computed value for which to set parameters
+     * @param name        the name of the value
+     * @param expression  an algebraic expression to evaluate when calculating the computed value.  If the
+     *                    ComputationType is SingleParticle, the expression is evaluated independently
+     *                    for each particle, and may depend on the per-particle parameters and previous
+     *                    computed values for that particle.  If the ComputationType is ParticlePair or
+     *                    ParticlePairNoExclusions, the expression is evaluated once for every other
+     *                    particle in the system and summed to get the final value.  In the latter case,
+     *                    the expression may depend on the distance r between the two particles, and on
+     *                    the per-particle parameters and previous computed values for each of them.
+     *                    Append "1" to a variable name to indicate the parameter for the particle whose
+     *                    value is being calculated, and "2" to indicate the particle it is interacting with.
+     * @param type        the method to use for computing this value
+     */
     void setComputedValueParameters(int index, const std::string& name, const std::string& expression, ComputationType type);
+    /**
+     * Add a term to the energy computation.
+     *
+     * @param expression  an algebraic expression to evaluate when calculating the energy.  If the
+     *                    ComputationType is SingleParticle, the expression is evaluated once
+     *                    for each particle, and may depend on the per-particle parameters and
+     *                    computed values for that particle.  If the ComputationType is ParticlePair or
+     *                    ParticlePairNoExclusions, the expression is evaluated once for every pair of
+     *                    particles in the system.  In the latter case,
+     *                    the expression may depend on the distance r between the two particles, and on
+     *                    the per-particle parameters and computed values for each of them.
+     *                    Append "1" to a variable name to indicate the parameter for the first particle
+     *                    in the pair and "2" to indicate the second particle in the pair.
+     * @param type        the method to use for computing this value
+     */
     int addEnergyTerm(const std::string& expression, ComputationType type);
+    /**
+     * Get the properties of a term to the energy computation.
+     *
+     * @param index       the index of the term for which to get parameters
+     * @param expression  an algebraic expression to evaluate when calculating the energy.  If the
+     *                    ComputationType is SingleParticle, the expression is evaluated once
+     *                    for each particle, and may depend on the per-particle parameters and
+     *                    computed values for that particle.  If the ComputationType is ParticlePair or
+     *                    ParticlePairNoExclusions, the expression is evaluated once for every pair of
+     *                    particles in the system.  In the latter case,
+     *                    the expression may depend on the distance r between the two particles, and on
+     *                    the per-particle parameters and computed values for each of them.
+     *                    Append "1" to a variable name to indicate the parameter for the first particle
+     *                    in the pair and "2" to indicate the second particle in the pair.
+     * @param type        the method to use for computing this value
+     */
     void getEnergyTermParameters(int index, std::string& expression, ComputationType& type) const;
+    /**
+     * Set the properties of a term to the energy computation.
+     *
+     * @param index       the index of the term for which to set parameters
+     * @param expression  an algebraic expression to evaluate when calculating the energy.  If the
+     *                    ComputationType is SingleParticle, the expression is evaluated once
+     *                    for each particle, and may depend on the per-particle parameters and
+     *                    computed values for that particle.  If the ComputationType is ParticlePair or
+     *                    ParticlePairNoExclusions, the expression is evaluated once for every pair of
+     *                    particles in the system.  In the latter case,
+     *                    the expression may depend on the distance r between the two particles, and on
+     *                    the per-particle parameters and computed values for each of them.
+     *                    Append "1" to a variable name to indicate the parameter for the first particle
+     *                    in the pair and "2" to indicate the second particle in the pair.
+     * @param type        the method to use for computing this value
+     */
     void setEnergyTermParameters(int index, const std::string& expression, ComputationType type);
     /**
      * Add a particle pair to the list of interactions that should be excluded.

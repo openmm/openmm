@@ -55,6 +55,7 @@
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
 #include "openmm/Integrator.h"
+#include "openmm/OpenMMException.h"
 #include "SimTKUtilities/SimTKOpenMMUtilities.h"
 #include "lepton/CustomFunction.h"
 #include "lepton/Parser.h"
@@ -899,6 +900,18 @@ ReferenceCalcCustomGBForceKernel::~ReferenceCalcCustomGBForceKernel() {
 }
 
 void ReferenceCalcCustomGBForceKernel::initialize(const System& system, const CustomGBForce& force) {
+    if (force.getNumComputedValues() > 0) {
+        string name, expression;
+        CustomGBForce::ComputationType type;
+        force.getComputedValueParameters(0, name, expression, type);
+        if (type == CustomGBForce::SingleParticle)
+            throw OpenMMException("ReferencePlatform requires that the first computed value for a CustomGBForce be of type ParticlePair or ParticlePairNoExclusions.");
+        for (int i = 1; i < force.getNumComputedValues(); i++) {
+            force.getComputedValueParameters(i, name, expression, type);
+            if (type != CustomGBForce::SingleParticle)
+                throw OpenMMException("ReferencePlatform requires that a CustomGBForce only have one computed value of type ParticlePair or ParticlePairNoExclusions.");
+        }
+    }
 
     // Record the exclusions.
 
@@ -951,7 +964,6 @@ void ReferenceCalcCustomGBForceKernel::initialize(const System& system, const Cu
 
     // Parse the expressions for computed values.
 
-    valueDerivExpressions.resize(force.getNumComputedValues());
     for (int i = 0; i < force.getNumComputedValues(); i++) {
         string name, expression;
         CustomGBForce::ComputationType type;
@@ -960,14 +972,10 @@ void ReferenceCalcCustomGBForceKernel::initialize(const System& system, const Cu
         valueExpressions.push_back(ex.createProgram());
         valueTypes.push_back(type);
         valueNames.push_back(name);
-        if (type != CustomGBForce::SingleParticle)
-            valueDerivExpressions[i].push_back(ex.differentiate("r").optimize().createProgram());
-        for (int j = 0; j < i; j++) {
-            if (type == CustomGBForce::SingleParticle)
-                valueDerivExpressions[i].push_back(ex.differentiate(valueNames[j]).optimize().createProgram());
-            else
-                valueDerivExpressions[i].push_back(ex.differentiate(valueNames[j]+"1").optimize().createProgram());
-        }
+        if (type == CustomGBForce::SingleParticle)
+            valueDerivExpressions.push_back(ex.differentiate(valueNames[i-1]).optimize().createProgram());
+        else
+            valueDerivExpressions.push_back(ex.differentiate("r").optimize().createProgram());
     }
 
     // Parse the various expressions used to calculate the force.
@@ -1013,7 +1021,7 @@ void ReferenceCalcCustomGBForceKernel::executeForces(ContextImpl& context) {
     map<string, double> globalParameters;
     for (int i = 0; i < (int) globalParameterNames.size(); i++)
         globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
-    ixn.calculateIxn(numParticles, posData, particleParamArray, exclusions, globalParameters, forceData, 0, 0);
+    ixn.calculateIxn(numParticles, posData, particleParamArray, exclusions, globalParameters, forceData, 0);
 }
 
 double ReferenceCalcCustomGBForceKernel::executeEnergy(ContextImpl& context) {
@@ -1032,7 +1040,7 @@ double ReferenceCalcCustomGBForceKernel::executeEnergy(ContextImpl& context) {
     map<string, double> globalParameters;
     for (int i = 0; i < (int) globalParameterNames.size(); i++)
         globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
-    ixn.calculateIxn(numParticles, posData, particleParamArray, exclusions, globalParameters, forceData, 0, &energy);
+    ixn.calculateIxn(numParticles, posData, particleParamArray, exclusions, globalParameters, forceData, &energy);
     disposeRealArray(forceData, numParticles);
     return energy;
 }
