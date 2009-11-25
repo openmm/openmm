@@ -41,7 +41,7 @@ Main method (virtual) is update()
 
 --------------------------------------------------------------------------------------- */
 
-class ReferenceDynamics {
+class OPENMM_EXPORT ReferenceDynamics {
 
    public:
 

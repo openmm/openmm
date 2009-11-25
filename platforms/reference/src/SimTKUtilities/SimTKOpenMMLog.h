@@ -28,6 +28,7 @@
 #include <stdio.h>
 #include <sstream>
 #include "SimTKOpenMMCommon.h"
+#include "openmm/internal/windowsExport.h"
 
 /** ---------------------------------------------------------------------------------------
 
@@ -35,7 +36,7 @@
 
    --------------------------------------------------------------------------------------- */
 
-class SimTKOpenMMLog {
+class OPENMM_EXPORT SimTKOpenMMLog {
 
    public:
 

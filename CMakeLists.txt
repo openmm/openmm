@@ -268,6 +268,10 @@ set(cmv "${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}")
 # Java and gccxml are required for API wrappers
 FIND_PACKAGE(Java)
 MARK_AS_ADVANCED(CLEAR JAVA_RUNTIME)
+# One particular location to try first for nightly builds
+FIND_PROGRAM(GCCXML_PATH gccxml PATH
+    "C:/Program Files/gccxml_sherm/bin")
+# In case first attempt fails
 FIND_PROGRAM(GCCXML_PATH gccxml PATH
     /usr/local/bin
     "C:/Program Files/gccxml 0.9/bin"
@@ -355,6 +359,12 @@ IF(OPENMM_BUILD_FREE_ENERGY_PLUGIN)
 #  ADD_DEFINITIONS(-DINCLUDE_FREE_ENERGY_PLUGIN)
    ADD_SUBDIRECTORY(plugins/freeEnergy)
 ENDIF(OPENMM_BUILD_FREE_ENERGY_PLUGIN)
+
+# Normal mode langevin plugin
+set(OPENMM_BUILD_NML_PLUGIN ON CACHE BOOL "Build normal-mode langevin plugin")
+if(OPENMM_BUILD_NML_PLUGIN)
+    add_subdirectory(plugins/normalModeLangevin)
+endif(OPENMM_BUILD_NML_PLUGIN)
 
 INSTALL_TARGETS(/lib RUNTIME_DIRECTORY /lib ${SHARED_TARGET})
 INSTALL_TARGETS(/lib RUNTIME_DIRECTORY /lib ${STATIC_TARGET})

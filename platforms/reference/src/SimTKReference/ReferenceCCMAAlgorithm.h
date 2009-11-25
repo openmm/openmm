@@ -32,7 +32,7 @@
 
 // ---------------------------------------------------------------------------------------
 
-class ReferenceCCMAAlgorithm : public ReferenceConstraintAlgorithm {
+class OPENMM_EXPORT ReferenceCCMAAlgorithm : public ReferenceConstraintAlgorithm {
 
    protected:
 
