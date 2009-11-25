@@ -1,6 +1,7 @@
 #include "OpenMM.h"
 #include <vector>
 #include <string>
+#include <iostream>
 
 using namespace OpenMM;
 using namespace std;
@@ -11,11 +12,20 @@ void testLoadNMLPlugin()
     vector<string> kernelName;
     kernelName.push_back("IntegrateNMLStepKernel");
     // Was NormalModeLangevin plugin loaded?
-    const Platform& platform = Platform::findPlatform(kernelName); // throws if no platform with kernel
+    Platform& platform = Platform::findPlatform(kernelName); // throws if no platform with kernel
 }
 
 int main() 
 {
-    testLoadNMLPlugin();
-    return 0;
+    try 
+    {
+        testLoadNMLPlugin();
+        cout << "tests passed" << endl;
+        return 0;
+    } 
+    catch (...) 
+    {
+        cout << "FAILED" << endl;
+        return 1;
+    }
 }
