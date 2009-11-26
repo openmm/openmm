@@ -16,12 +16,12 @@ else(ENV_OPENCL_DIR)
 endif(ENV_OPENCL_DIR)
 
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(OPENCL DEFAULT_MSG OPENCL_LIBRARY OPENCL_INCLUDE_DIR)
+find_package_handle_standard_args(OpenCL DEFAULT_MSG OPENCL_LIBRARY OPENCL_INCLUDE_DIR)
 
-if(OPENCL_FOUND)
+if(OpenCL_FOUND)
   set(OPENCL_LIBRARIES ${OPENCL_LIBRARY})
-else(OPENCL_FOUND)
+else(OpenCL_FOUND)
   set(OPENCL_LIBRARIES)
-endif(OPENCL_FOUND)
+endif(OpenCL_FOUND)
 
 mark_as_advanced(OPENCL_INCLUDE_DIR OPENCL_LIBRARY)

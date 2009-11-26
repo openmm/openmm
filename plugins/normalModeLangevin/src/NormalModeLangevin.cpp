@@ -38,12 +38,18 @@ using namespace std;
 
 extern "C" void initOpenMMPlugin() {
     cout << "Initializing Normal Mode Langevin OpenMM plugin..." << endl;
-    for (int p = 0; p < Platform::getNumPlatforms(); ++p) {
-        Platform& platform = Platform::getPlatform(p);
-        if (platform.getName() == "CudaPlatform")
-            // We don't have a Cuda one yet, but we will soon
-            platform.registerKernelFactory("ReferenceNMLKernelFactory", new ReferenceNMLKernelFactory());
-        else
-            platform.registerKernelFactory("ReferenceNMLKernelFactory", new ReferenceNMLKernelFactory());
+    // for (int p = 0; p < Platform::getNumPlatforms(); ++p) {
+
+    // Only register cuda kernels if cuda platform is found
+    try {
+        Platform& platform = Platform::getPlatform("CudaPlatform");
+        // platform.registerKernelFactory("CudaNMLKernelFactory", new CudaNMLKernelFactory());
+    } catch (std::exception exc) { // non fatal
+    }
+
+    try {
+        Platform& platform = Platform::getPlatform("ReferencePlatform");
+        platform.registerKernelFactory("ReferenceNMLKernelFactory", new ReferenceNMLKernelFactory());
+    } catch (std::exception exc) { // non fatal
     }
 }
