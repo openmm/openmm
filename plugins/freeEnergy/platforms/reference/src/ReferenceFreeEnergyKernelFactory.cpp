@@ -36,6 +36,35 @@
 
 using namespace OpenMM;
 
+// using PluginInitializer.h and initOpenMMPlugin() does not seem to work
+//#include "openmm/PluginInitializer.h"
+
+#if defined(OPENMM_BUILDING_SHARED_LIBRARY)
+    #if defined(WIN32)
+      #include <windows.h>
+        extern "C" void initOpenMMReferenceFreeEnergyPlugin();
+        BOOL WINAPI DllMain(HANDLE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved) {
+            if (ul_reason_for_call == DLL_PROCESS_ATTACH)
+                initOpenMMReferenceFreeEnergyPlugin();
+            return TRUE;
+        }
+    #else
+        extern "C" void __attribute__((constructor)) initOpenMMReferenceFreeEnergyPlugin();
+    #endif
+#endif
+
+extern "C" void initOpenMMReferenceFreeEnergyPlugin() {
+    for( int ii = 0; ii < Platform::getNumPlatforms(); ii++ ){
+        Platform& platform = Platform::getPlatform(ii);
+        if( platform.getName().compare( "Reference" ) == 0 ){
+            ReferenceFreeEnergyKernelFactory* factory  = new ReferenceFreeEnergyKernelFactory();
+            platform.registerKernelFactory(CalcNonbondedSoftcoreForceKernel::Name(), factory);
+            platform.registerKernelFactory(CalcGBSAOBCSoftcoreForceKernel::Name(), factory);
+            platform.registerKernelFactory(CalcGBVISoftcoreForceKernel::Name(), factory);
+        }
+    }   
+}
+
 KernelImpl* ReferenceFreeEnergyKernelFactory::createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const {
     ReferencePlatform::PlatformData& data = *static_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
 
