@@ -367,8 +367,8 @@ void CudaFreeEnergyCalcNonbondedSoftcoreForceKernel::initialize(const System& sy
         for (int i = 0; i < numExceptions; i++) {
             double charge, sig, eps, softcoreLJLambda;
             force.getExceptionParameters(exceptions[i], particle1[i], particle2[i], charge, sig, eps, softcoreLJLambda);
-            c6[i]                    = static_cast<float>( (4*eps*pow(sig, 6.0)) );
-            c12[i]                   = static_cast<float>( (4*eps*pow(sig, 12.0)) );
+            c6[i]                    = static_cast<float>( (4.0f*eps*powf(sig, 6.0f)) );
+            c12[i]                   = static_cast<float>( (4.0f*eps*powf(sig, 12.0f)) );
             q1[i]                    = static_cast<float>( charge );
             q2[i]                    = 1.0f;
             softcoreLJLambdaArray[i] = static_cast<float>( softcoreLJLambda );

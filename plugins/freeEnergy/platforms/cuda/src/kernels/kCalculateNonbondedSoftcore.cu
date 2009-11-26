@@ -122,8 +122,8 @@ GpuNonbondedSoftcore* gpuSetNonbondedSoftcoreParameters(gpuContext gpu, float ep
             float p1 = 0.5f, p2 = 0.0f;               
             if ((c6[i] > 0.0f) && (c12[i] > 0.0f))
             {
-                p1 = 0.5f * pow(c12[i] / c6[i], 1.0f / 6.0f);
-                p2 = c6[i] * sqrt(1.0f / c12[i]);
+                p1 = 0.5f * powf(c12[i] / c6[i], 1.0f / 6.0f);
+                p2 = c6[i] * sqrtf(1.0f / c12[i]);
             }
             if (symbol.size() > 0)
                 gpu->pAtomSymbol[i] = symbol[i];

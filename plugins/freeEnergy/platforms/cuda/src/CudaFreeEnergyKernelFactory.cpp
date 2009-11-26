@@ -29,8 +29,41 @@
 #include "openmm/freeEnergyKernels.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/OpenMMException.h"
+#include "kernels/GpuFreeEnergyCudaKernels.h"
 
 using namespace OpenMM;
+
+#if defined(OPENMM_BUILDING_SHARED_LIBRARY)
+    #if defined(WIN32)
+      #include <windows.h>
+        extern "C" void initOpenMMCudaFreeEnergyPlugin();
+        BOOL WINAPI DllMain(HANDLE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved) {
+            if (ul_reason_for_call == DLL_PROCESS_ATTACH)
+                initOpenMMCudaFreeEnergyPlugin();
+            return TRUE;
+        }
+    #else
+        extern "C" void __attribute__((constructor)) initOpenMMCudaFreeEnergyPlugin();
+    #endif
+#endif
+
+using namespace OpenMM;
+
+extern "C" void initOpenMMCudaFreeEnergyPlugin() {
+
+    // (void) fprintf( stderr, "initOpenMMCudaFreeEnergyPlugin called\n");
+    if ( gpuIsAvailableSoftcore() ){
+        for( int ii = 0; ii < Platform::getNumPlatforms(); ii++ ){
+            Platform& platform = Platform::getPlatform(ii);
+            if( platform.getName().compare( "Cuda" ) == 0 ){
+                 CudaFreeEnergyKernelFactory* factory = new CudaFreeEnergyKernelFactory();
+                 platform.registerKernelFactory(CalcNonbondedSoftcoreForceKernel::Name(), factory);
+                 platform.registerKernelFactory(CalcGBSAOBCSoftcoreForceKernel::Name(), factory);
+                 platform.registerKernelFactory(CalcGBVISoftcoreForceKernel::Name(), factory);
+            }
+        }
+    }   
+}
 
 KernelImpl* CudaFreeEnergyKernelFactory::createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const {
 
