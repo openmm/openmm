@@ -241,7 +241,7 @@ Force* ValidateOpenMM::copyForce(const Force& force) const {
 
     try {
         const HarmonicBondForce& harmonicBondForce = dynamic_cast<const HarmonicBondForce&>(force);
-        return copyHarmonicBondForce( harmonicBondForce );
+        return new HarmonicBondForce( harmonicBondForce );
     } catch( std::bad_cast ){
     }
 
@@ -249,7 +249,7 @@ Force* ValidateOpenMM::copyForce(const Force& force) const {
 
     try {
         const HarmonicAngleForce& harmonicAngleForce = dynamic_cast<const HarmonicAngleForce&>(force);
-        return copyHarmonicAngleForce( harmonicAngleForce );
+        return new HarmonicAngleForce( harmonicAngleForce );
     } catch( std::bad_cast ){
     }
 
@@ -257,7 +257,7 @@ Force* ValidateOpenMM::copyForce(const Force& force) const {
 
     try {
         const PeriodicTorsionForce & periodicTorsionForce = dynamic_cast<const PeriodicTorsionForce&>(force);
-        return copyPeriodicTorsionForce( periodicTorsionForce );
+        return new PeriodicTorsionForce( periodicTorsionForce );
     } catch( std::bad_cast ){
     }
 
@@ -265,7 +265,7 @@ Force* ValidateOpenMM::copyForce(const Force& force) const {
 
     try {
         const RBTorsionForce& rBTorsionForce = dynamic_cast<const RBTorsionForce&>(force);
-        return copyRBTorsionForce( rBTorsionForce );
+        return new RBTorsionForce( rBTorsionForce );
     } catch( std::bad_cast ){
     }
 
@@ -273,7 +273,7 @@ Force* ValidateOpenMM::copyForce(const Force& force) const {
 
     try {
         const NonbondedForce& nbForce = dynamic_cast<const NonbondedForce&>(force);
-        return copyNonbondedForce( nbForce ); 
+        return new NonbondedForce( nbForce ); 
     } catch( std::bad_cast ){
     }
 
@@ -281,7 +281,7 @@ Force* ValidateOpenMM::copyForce(const Force& force) const {
 
     try {
         const GBSAOBCForce& obcForce       = dynamic_cast<const GBSAOBCForce&>(force);
-        return copyGBSAOBCForce( obcForce );
+        return new GBSAOBCForce( obcForce );
     } catch( std::bad_cast ){
     }
 
@@ -289,7 +289,7 @@ Force* ValidateOpenMM::copyForce(const Force& force) const {
 
     try {
         const GBVIForce& gbviForce  = dynamic_cast<const GBVIForce&>(force);
-        return copyGBVIForce( gbviForce );
+        return new GBVIForce( gbviForce );
     } catch( std::bad_cast ){
     }
 
@@ -300,7 +300,7 @@ Force* ValidateOpenMM::copyForce(const Force& force) const {
     // nonbonded softcore
     try {
          const NonbondedSoftcoreForce& nbForce = dynamic_cast<const NonbondedSoftcoreForce&>(force);
-         return copyNonbondedSoftcoreForce( nbForce );
+         return new NonbondedSoftcoreForce( nbForce );
     } catch( std::bad_cast ){
     }
 
@@ -308,7 +308,7 @@ Force* ValidateOpenMM::copyForce(const Force& force) const {
 
     try {
         const GBSAOBCSoftcoreForce& obcForce = dynamic_cast<const GBSAOBCSoftcoreForce&>(force);
-        return copyGBSAOBCSoftcoreForce( obcForce );
+        return new GBSAOBCSoftcoreForce( obcForce );
     } catch( std::bad_cast ){
     }
 
@@ -316,7 +316,7 @@ Force* ValidateOpenMM::copyForce(const Force& force) const {
 
     try {
         const GBVISoftcoreForce& gbviForce = dynamic_cast<const GBVISoftcoreForce&>(force);
-        return copyGBVISoftcoreForce( gbviForce );
+        return new GBVISoftcoreForce( gbviForce );
     } catch( std::bad_cast ){
     }
 #endif
@@ -325,7 +325,7 @@ Force* ValidateOpenMM::copyForce(const Force& force) const {
 
     try {
         const CMMotionRemover& cMMotionRemover  = dynamic_cast<const CMMotionRemover&>(force);
-        return NULL;
+        return new CMMotionRemover( cMMotionRemover );
     } catch( std::bad_cast ){
     }
 
@@ -333,7 +333,7 @@ Force* ValidateOpenMM::copyForce(const Force& force) const {
 
     try {
         const AndersenThermostat & andersenThermostat = dynamic_cast<const AndersenThermostat&>(force);
-        return NULL;
+        return new AndersenThermostat( andersenThermostat );
     } catch( std::bad_cast ){
     }
 
@@ -341,7 +341,7 @@ Force* ValidateOpenMM::copyForce(const Force& force) const {
 
     try {
         const CustomBondForce & customBondForce = dynamic_cast<const CustomBondForce&>(force);
-        return NULL;
+        return new CustomBondForce( customBondForce );
     } catch( std::bad_cast ){
     }
 
@@ -349,7 +349,7 @@ Force* ValidateOpenMM::copyForce(const Force& force) const {
 
     try {
         const CustomExternalForce& customExternalForce = dynamic_cast<const CustomExternalForce&>(force);
-        return NULL;
+        return new CustomExternalForce( customExternalForce );
     } catch( std::bad_cast ){
     }
 
@@ -357,7 +357,7 @@ Force* ValidateOpenMM::copyForce(const Force& force) const {
 
     try {
         const CustomNonbondedForce& customNonbondedForce = dynamic_cast<const CustomNonbondedForce&>(force);
-        return NULL;
+        return new CustomNonbondedForce( customNonbondedForce );
     } catch( std::bad_cast ){
     }
 
@@ -423,408 +423,6 @@ void ValidateOpenMM::synchContexts( const Context& context1, Context& context2 )
  
     return;
 }
-
-/**---------------------------------------------------------------------------------------
-
-   Copy harmonic bond force
-
-   @param forceToCopy          force to copy
-   @param log                  log file pointer -- may be NULL
-
-   @return copy of force
-
-   --------------------------------------------------------------------------------------- */
-
-Force* ValidateOpenMM::copyHarmonicBondForce( const HarmonicBondForce& forceToCopy, FILE* log ) const {
-
-// ---------------------------------------------------------------------------------------
-
-   //static const std::string methodName      = "copyHarmonicBondForce";
-   
-// ---------------------------------------------------------------------------------------
-
-    HarmonicBondForce* bondForce = new HarmonicBondForce();
-    for( int ii = 0; ii < forceToCopy.getNumBonds(); ii++ ){
-        int particle1, particle2;
-        double length, k;
-        forceToCopy.getBondParameters( ii, particle1, particle2, length, k ); 
-        bondForce->addBond( particle1, particle2, length, k );
-    }
-
-    return bondForce;
-}
-
-/**---------------------------------------------------------------------------------------
-
-   Copy harmonic angle
-
-   @param forceToCopy          force to copy
-   @param log                  log file pointer -- may be NULL
-
-   @return copy of force
-
-   --------------------------------------------------------------------------------------- */
-
-Force* ValidateOpenMM::copyHarmonicAngleForce( const HarmonicAngleForce& forceToCopy, FILE* log ) const {
-
-// ---------------------------------------------------------------------------------------
-
-   //static const std::string methodName      = "copyHarmonicAngleForce";
-   
-// ---------------------------------------------------------------------------------------
-
-    HarmonicAngleForce* bondForce = new HarmonicAngleForce();
-    for( int ii = 0; ii < forceToCopy.getNumAngles(); ii++ ){
-        int particle1, particle2, particle3;
-        double angle, k;
-        forceToCopy.getAngleParameters( ii, particle1, particle2, particle3, angle, k ); 
-        bondForce->addAngle( particle1, particle2, particle3, angle, k );
-    }
-
-    return bondForce;
-}
-
-/**---------------------------------------------------------------------------------------
-
-   Copy PeriodicTorsionForce  
-
-   @param forceToCopy          force to copy
-   @param log                  log file pointer -- may be NULL
-
-   @return copy of force
-
-   --------------------------------------------------------------------------------------- */
-
-Force* ValidateOpenMM::copyPeriodicTorsionForce( const PeriodicTorsionForce& forceToCopy, FILE* log ) const {
-
-// ---------------------------------------------------------------------------------------
-
-   // static const std::string methodName      = "copyPeriodicTorsionForce";
-   
-// ---------------------------------------------------------------------------------------
-
-    PeriodicTorsionForce* bondForce = new PeriodicTorsionForce();
-    for( int ii = 0; ii < forceToCopy.getNumTorsions(); ii++ ){
-        int particle1, particle2, particle3, particle4, periodicity;
-        double phase, k;
-        forceToCopy.getTorsionParameters( ii, particle1, particle2, particle3, particle4, periodicity, phase, k );
-        bondForce->addTorsion( particle1, particle2, particle3, particle4, periodicity, phase, k );
-    }
-
-    return bondForce;
-}
-
-/**---------------------------------------------------------------------------------------
-
-   Copy RBTorsionForce
-
-   @param forceToCopy          force to copy
-   @param log                  log file pointer -- may be NULL
-
-   @return copy of force
-
-   --------------------------------------------------------------------------------------- */
-
-Force* ValidateOpenMM::copyRBTorsionForce( const RBTorsionForce& forceToCopy, FILE* log ) const {
-
-// ---------------------------------------------------------------------------------------
-
-    // static const std::string methodName      = "copyRBTorsionForce";
-   
-// ---------------------------------------------------------------------------------------
-
-    RBTorsionForce* bondForce = new RBTorsionForce();
-    for( int ii = 0; ii < forceToCopy.getNumTorsions(); ii++ ){
-        int particle1, particle2, particle3, particle4;
-        double c0, c1, c2, c3, c4, c5;
-        forceToCopy.getTorsionParameters( ii, particle1, particle2, particle3, particle4, c0, c1, c2, c3, c4, c5 );
-        bondForce->addTorsion( particle1, particle2, particle3, particle4, c0, c1, c2, c3, c4, c5 );
-    }
-
-    return bondForce;
-}
-
-/**---------------------------------------------------------------------------------------
-
-   Copy NonbondedException force
-
-   @param forceToCopy          force to copy
-   @param nonbondedForce       force to copy execeptions to
-   @param log                  log file pointer -- may be NULL
-
-   --------------------------------------------------------------------------------------- */
-
-void ValidateOpenMM::copyNonbondedExceptions( const NonbondedForce& forceToCopy, NonbondedForce* nonbondedForce, FILE* log ) const {
-
-// ---------------------------------------------------------------------------------------
-
-    //static const std::string methodName      = "copyNonbondedExceptions";
-   
-// ---------------------------------------------------------------------------------------
-
-    for( int ii = 0; ii < forceToCopy.getNumExceptions(); ii++ ){
-        int particle1, particle2;
-        double chargeProd, sigma, epsilon;
-        forceToCopy.getExceptionParameters( ii, particle1, particle2, chargeProd, sigma, epsilon );
-        nonbondedForce->addException( particle1, particle2, chargeProd, sigma, epsilon );
-    }
-
-}
-
-/**---------------------------------------------------------------------------------------
-
-   Copy NonbondedSoftcoreExceptions force
-
-   @param forceToCopy          force to copy
-   @param nonbondedForce       force to copy execeptions to
-   @param log                  log file pointer -- may be NULL
-
-   --------------------------------------------------------------------------------------- */
-
-#ifdef INCLUDE_FREE_ENERGY_PLUGIN
-void ValidateOpenMM::copyNonbondedSoftcoreExceptions( const NonbondedSoftcoreForce& forceToCopy,
-                                                      NonbondedSoftcoreForce* nonbondedForce, FILE* log ) const {
-
-// ---------------------------------------------------------------------------------------
-
-    // static const std::string methodName      = "copyNonbondedSoftcoreExceptions";
-   
-// ---------------------------------------------------------------------------------------
-
-    for( int ii = 0; ii < forceToCopy.getNumExceptions(); ii++ ){
-         int particle1, particle2;
-         double chargeProd, sigma, epsilon, softcoreLJLambda;
-         forceToCopy.getExceptionParameters( ii, particle1, particle2, chargeProd, sigma, epsilon, softcoreLJLambda );
-         nonbondedForce->addException( particle1, particle2, chargeProd, sigma, epsilon, softcoreLJLambda );
-    }
-
-    return;
-}
-#endif
-
-/**---------------------------------------------------------------------------------------
-
-   Copy NonbondedForce
-
-   @param forceToCopy          force to copy
-   @param log                  log file pointer -- may be NULL
-
-   @return copy of force
-
-   --------------------------------------------------------------------------------------- */
-
-Force* ValidateOpenMM::copyNonbondedForce( const NonbondedForce& forceToCopy, FILE* log ) const {
-
-// ---------------------------------------------------------------------------------------
-
-    // static const std::string methodName      = "copyNonbondedForce";
-   
-// ---------------------------------------------------------------------------------------
-
-    NonbondedForce* nonbondedForce         = new NonbondedForce();
-
-    for( int ii = 0; ii < forceToCopy.getNumParticles(); ii++ ){
-        double charge, sigma, epsilon;
-        forceToCopy.getParticleParameters( ii, charge, sigma, epsilon );
-        nonbondedForce->addParticle( charge, sigma, epsilon );
-    }
-
-    nonbondedForce->setNonbondedMethod( forceToCopy.getNonbondedMethod() );
-    nonbondedForce->setCutoffDistance( forceToCopy.getCutoffDistance() );
-    nonbondedForce->setReactionFieldDielectric( forceToCopy.getReactionFieldDielectric() );
-    nonbondedForce->setEwaldErrorTolerance( forceToCopy.getEwaldErrorTolerance() );
-
-    copyNonbondedExceptions( forceToCopy, nonbondedForce, log );
-
-    return nonbondedForce;
-}
-
-/**---------------------------------------------------------------------------------------
-
-   Copy NonbondedSoftcoreForce
-
-   @param forceToCopy          force to copy
-   @param log                  log file pointer -- may be NULL
-
-   @return copy of force
-
-   --------------------------------------------------------------------------------------- */
-
-#ifdef INCLUDE_FREE_ENERGY_PLUGIN
-Force* ValidateOpenMM::copyNonbondedSoftcoreForce( const NonbondedSoftcoreForce& forceToCopy, FILE* log ) const {
-
-// ---------------------------------------------------------------------------------------
-
-    // static const std::string methodName      = "copyNonbondedSoftcoreForce";
-   
-// ---------------------------------------------------------------------------------------
-
-    NonbondedSoftcoreForce* nonbondedSoftcore  = new NonbondedSoftcoreForce();
-
-    for( int ii = 0; ii < forceToCopy.getNumParticles(); ii++ ){
-         double charge, sigma, epsilon, softcoreLJLambda;
-         forceToCopy.getParticleParameters( ii, charge, sigma, epsilon, softcoreLJLambda );
-         nonbondedSoftcore->addParticle( charge, sigma, epsilon, softcoreLJLambda );
-    }
-
-    nonbondedSoftcore->setNonbondedMethod( forceToCopy.getNonbondedMethod() );
-    nonbondedSoftcore->setCutoffDistance( forceToCopy.getCutoffDistance() );
-    nonbondedSoftcore->setReactionFieldDielectric( forceToCopy.getReactionFieldDielectric() );
-    nonbondedSoftcore->setEwaldErrorTolerance( forceToCopy.getEwaldErrorTolerance() );
-
-    copyNonbondedSoftcoreExceptions( forceToCopy, nonbondedSoftcore, log );
-
-    return nonbondedSoftcore;
-}
-#endif
-
-/**---------------------------------------------------------------------------------------
-
-   Copy GBSAOBCForce 
-
-   @param forceToCopy          force to copy
-   @param log                  log file pointer -- may be NULL
-
-   @return copy of force
-
-   --------------------------------------------------------------------------------------- */
-
-Force* ValidateOpenMM::copyGBSAOBCForce( const GBSAOBCForce& forceToCopy, FILE* log ) const {
-
-// ---------------------------------------------------------------------------------------
-
-    // static const std::string methodName      = "copyGBSAOBCForce";
-   
-// ---------------------------------------------------------------------------------------
-
-    GBSAOBCForce* gbsaObcForce = new GBSAOBCForce();
-    gbsaObcForce->setSoluteDielectric( forceToCopy.getSoluteDielectric() );
-    gbsaObcForce->setSolventDielectric( forceToCopy.getSolventDielectric() );
-
-    for( int ii = 0; ii < forceToCopy.getNumParticles(); ii++ ){
-         double charge, radius, scalingFactor;
-         forceToCopy.getParticleParameters( ii, charge, radius, scalingFactor );
-         gbsaObcForce->addParticle( charge, radius, scalingFactor );
-    }
-
-    return gbsaObcForce;
-}
-
-/**---------------------------------------------------------------------------------------
-
-   Copy GBSAOBCSoftcoreForce
-
-   @param forceToCopy          force to copy
-   @param log                  log file pointer -- may be NULL
-
-   @return copy of force
-
-   --------------------------------------------------------------------------------------- */
-
-#ifdef INCLUDE_FREE_ENERGY_PLUGIN
-Force* ValidateOpenMM::copyGBSAOBCSoftcoreForce( const GBSAOBCSoftcoreForce& forceToCopy, FILE* log ) const {
-
-// ---------------------------------------------------------------------------------------
-
-    // static const std::string methodName      = "copyGBSAOBCSoftcoreForce";
-   
-// ---------------------------------------------------------------------------------------
-
-    GBSAOBCSoftcoreForce* gbsaObcSoftcoreForce   = new GBSAOBCSoftcoreForce();
-
-    gbsaObcSoftcoreForce->setSoluteDielectric( forceToCopy.getSoluteDielectric() );
-    gbsaObcSoftcoreForce->setSolventDielectric( forceToCopy.getSolventDielectric() );
-
-    for( int ii = 0; ii < forceToCopy.getNumParticles(); ii++ ){
-        double charge, radius, scalingFactor, nonpolarScaleFactor;
-        forceToCopy.getParticleParameters( ii, charge, radius, scalingFactor, nonpolarScaleFactor );
-        gbsaObcSoftcoreForce->addParticle( charge, radius, scalingFactor, nonpolarScaleFactor );
-    }
-
-    return gbsaObcSoftcoreForce;
-}
-#endif
-
-/**---------------------------------------------------------------------------------------
-
-   Copy GBVIForce
-
-   @param forceToCopy          force to copy
-   @param log                  log file pointer -- may be NULL
-
-   @return copy of force
-
-   --------------------------------------------------------------------------------------- */
-
-Force* ValidateOpenMM::copyGBVIForce( const GBVIForce& forceToCopy, FILE* log ) const {
-
-// ---------------------------------------------------------------------------------------
-
-    // static const std::string methodName      = "copyGBVIForce";
-   
-// ---------------------------------------------------------------------------------------
-
-    GBVIForce* gbviForce          = new GBVIForce();
-    gbviForce->setSoluteDielectric( forceToCopy.getSoluteDielectric() );
-    gbviForce->setSolventDielectric( forceToCopy.getSolventDielectric() );
-
-    for( int ii = 0; ii < forceToCopy.getNumParticles(); ii++ ){
-        double charge, radius, gamma;
-        forceToCopy.getParticleParameters( ii, charge, radius, gamma );
-        gbviForce->addParticle( charge, radius, gamma );
-    }
-    for( int ii = 0; ii < forceToCopy.getNumBonds(); ii++ ){
-        int atomI, atomJ;
-        double bondLength;
-        forceToCopy.getBondParameters( ii, atomI, atomJ, bondLength );
-        gbviForce->addBond( atomI, atomJ, bondLength );
-    }
-
-    return gbviForce;
-}
-
-/**---------------------------------------------------------------------------------------
-
-   Copy GBVISoftcoreForce
-
-   @param forceToCopy          force to copy
-   @param log                  log file pointer -- may be NULL
-
-   @return copy of force
-
-   --------------------------------------------------------------------------------------- */
-
-#ifdef INCLUDE_FREE_ENERGY_PLUGIN
-Force* ValidateOpenMM::copyGBVISoftcoreForce( const GBVISoftcoreForce& forceToCopy, FILE* log ) const {
-
-// ---------------------------------------------------------------------------------------
-
-    // static const std::string methodName      = "copyGBVISoftcoreForce";
-   
-// ---------------------------------------------------------------------------------------
-
-    GBVISoftcoreForce* gbviForce          = new GBVISoftcoreForce();
-    gbviForce->setSoluteDielectric( forceToCopy.getSoluteDielectric() );
-    gbviForce->setSolventDielectric( forceToCopy.getSolventDielectric() );
-    gbviForce->setBornRadiusScalingMethod( forceToCopy.getBornRadiusScalingMethod() );
-    gbviForce->setQuinticLowerLimitFactor( forceToCopy.getQuinticLowerLimitFactor() );
-    gbviForce->setQuinticUpperBornRadiusLimit( forceToCopy.getQuinticUpperBornRadiusLimit() );
-
-    for( int ii = 0; ii < forceToCopy.getNumParticles(); ii++ ){
-        double charge, radius, gamma, bornRadiusScaleFactor;
-        forceToCopy.getParticleParameters( ii, charge, radius, gamma, bornRadiusScaleFactor );
-        gbviForce->addParticle( charge, radius, gamma, bornRadiusScaleFactor );
-    }
-    for( int ii = 0; ii < forceToCopy.getNumBonds(); ii++ ){
-         int atomI, atomJ;
-         double bondLength;
-         forceToCopy.getBondParameters( ii, atomI, atomJ, bondLength );
-         gbviForce->addBond( atomI, atomJ, bondLength );
-    }
-
-    return gbviForce;
-}
-#endif
 
 /**---------------------------------------------------------------------------------------
 

@@ -445,9 +445,6 @@ void ValidateOpenMMForces::_initialize( void ){
 
     _forcesToBeExcluded[CM_MOTION_REMOVER]        = 1;
     _forcesToBeExcluded[ANDERSEN_THERMOSTAT]      = 1;
-    _forcesToBeExcluded[CUSTOM_BOND_FORCE]        = 1;
-    _forcesToBeExcluded[CUSTOM_EXTERNAL_FORCE]    = 1;
-    _forcesToBeExcluded[CUSTOM_NONBONDED_FORCE]   = 1;
 }
 
 ValidateOpenMMForces::~ValidateOpenMMForces( ){
@@ -475,10 +472,12 @@ int ValidateOpenMMForces::compareWithReferencePlatform( Context& context, std::s
 
 // ---------------------------------------------------------------------------------------
 
-#ifdef INCLUDE_FREE_ENERGY_PLUGIN
-    ReferenceFreeEnergyPlatform referencePlatform;
-#else
     ReferencePlatform referencePlatform;
+#ifdef INCLUDE_FREE_ENERGY_PLUGIN
+    ReferenceFreeEnergyKernelFactory* factory  = new ReferenceFreeEnergyKernelFactory();
+    referencePlatform.registerKernelFactory(CalcNonbondedSoftcoreForceKernel::Name(), factory);
+    referencePlatform.registerKernelFactory(CalcGBSAOBCSoftcoreForceKernel::Name(), factory);
+    referencePlatform.registerKernelFactory(CalcGBVISoftcoreForceKernel::Name(), factory);
 #endif
 
     compareOpenMMForces( context, referencePlatform, _forceValidationResults );
