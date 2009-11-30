@@ -55,5 +55,9 @@ if(BUILD_TESTING)
     add_subdirectory(test)
 endif(BUILD_TESTING)
 
-install(TARGETS NormalModeLangevin RUNTIME DESTINATION lib/plugins)
-
+if(WIN32)
+    # install DLL but not LIB
+    install(TARGETS NormalModeLangevin RUNTIME DESTINATION lib/plugins)
+else(WIN32)
+    install(TARGETS NormalModeLangevin LIBRARY DESTINATION lib/plugins)
+endif(WIN32)
