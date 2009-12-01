@@ -49,7 +49,7 @@ set_target_properties(NormalModeLangevin PROPERTIES COMPILE_FLAGS "-DOPENMM_BUIL
 if(UNIX)
     set_target_properties(NormalModeLangevin PROPERTIES DEBUG_OUTPUT_NAME NormalModeLangevin_d)
 endif(UNIX)
-target_link_libraries( NormalModeLangevin OpenMM )
+target_link_libraries( NormalModeLangevin ${SHARED_TARGET} )
 
 if(BUILD_TESTING)
     add_subdirectory(test)
