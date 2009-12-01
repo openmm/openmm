@@ -42,13 +42,13 @@ extern "C" void registerKernelFactories() {
 
     // Only register cuda kernels if cuda platform is found
     try {
-        Platform& platform = Platform::getPlatform("CudaPlatform");
+        Platform& platform = Platform::getPlatformByName("CudaPlatform");
         // platform.registerKernelFactory("CudaNMLKernelFactory", new CudaNMLKernelFactory());
     } catch (std::exception exc) { // non fatal
     }
 
     try {
-        Platform& platform = Platform::getPlatform("ReferencePlatform");
+        Platform& platform = Platform::getPlatformByName("ReferencePlatform");
         platform.registerKernelFactory("ReferenceNMLKernelFactory", new ReferenceNMLKernelFactory());
     } catch (std::exception exc) { // non fatal
     }
