@@ -28,7 +28,6 @@
 #include "OpenCLPlatform.h"
 #include "OpenCLKernelFactory.h"
 #include "OpenCLKernels.h"
-#include "openmm/PluginInitializer.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/Context.h"
 #include "openmm/System.h"
@@ -39,7 +38,7 @@ using std::map;
 using std::string;
 using std::stringstream;
 
-extern "C" void initOpenMMPlugin() {
+extern "C" void registerPlatforms() {
     Platform::registerPlatform(new OpenCLPlatform());
 }
 

@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2009 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -33,27 +33,28 @@
  * -------------------------------------------------------------------------- */
 
 /**
- * This file should be included once in each dynamic library that contains an OpenMM
- * plugin.  The library should define a function with the signature
- *
- * extern "C" void initOpenMMPlugin();
- *
- * that registers any Platforms and KernelFactories it contains.  Including this file
- * will cause that function to be invoked when the library is loaded.
+ * This file contains declarations for initialization functions that may be defined
+ * by plugins, and that are invoked after the plugins have been loaded.  There are
+ * two such functions: one for registering new Platforms, and one for adding new
+ * KernelFactories to existing Platforms.  Each of these functions is optional; most
+ * plugins implement one or the other of them, but not both.
  */
 
-#if defined(OPENMM_BUILDING_SHARED_LIBRARY)
-    #if defined(WIN32)
-		#include <windows.h>
-        extern "C" void initOpenMMPlugin();
-        BOOL WINAPI DllMain(HANDLE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved) {
-            if (ul_reason_for_call == DLL_PROCESS_ATTACH)
-                initOpenMMPlugin();
-            return TRUE;
-        }
-    #else
-        extern "C" void __attribute__((constructor)) initOpenMMPlugin();
-    #endif
-#endif
+/**
+ * If a plugin defines a new Platform, it should define this function.  It will be
+ * invoked after the plugin is loaded, and should register the new Platform by
+ * calling Platform::registerPlatform().
+ */
+extern "C" void registerPlatforms();
+
+/**
+ * If a plugin defines a new KernelFactory for an existing Platform, it should define
+ * this function.  It will be invoked after the plugin is loaded, and should register
+ * the new factory by calling registerKernelFactory() on the appropriate Platform object.
+ * It is not invoked until after registerPlatforms() has been called on every plugin,
+ * thus avoiding initialization order problems when one plugin adds a KernelFactory
+ * to a Platform defined by another plugin.
+ */
+extern "C" void registerKernelFactories();
 
 #endif /*OPENMM_PLUGININITIALIZER_H_*/

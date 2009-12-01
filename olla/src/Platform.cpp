@@ -115,9 +115,56 @@ Kernel Platform::createKernel(const string& name, ContextImpl& context) const {
 }
 
 vector<Platform*>& Platform::getPlatforms() {
+    if (getPlugins().size() > 0) {
+        // Initialize plugins before returning the list of platforms.
+
+#ifdef WIN32
+        vector<HMODULE> plugins = getPlugins();
+        getPlugins().clear();
+        for (int i = 0; i < (int) plugins.size(); i++) {
+            void (*init)();
+            *(void **)(&init) = GetProcAddress(plugins[i], "registerPlatforms");
+            if (init != NULL)
+                (*init)();
+        }
+        for (int i = 0; i < (int) plugins.size(); i++) {
+            void (*init)();
+            *(void **)(&init) = GetProcAddress(plugins[i], "registerKernelFactories");
+            if (init != NULL)
+                (*init)();
+        }
+#else
+        vector<void*> plugins = getPlugins();
+        getPlugins().clear();
+        for (int i = 0; i < (int) plugins.size(); i++) {
+            void (*init)();
+            *(void **)(&init) = dlsym(plugins[i], "registerPlatforms");
+            if (init != NULL)
+                (*init)();
+        }
+        for (int i = 0; i < (int) plugins.size(); i++) {
+            void (*init)();
+            *(void **)(&init) = dlsym(plugins[i], "registerKernelFactories");
+            if (init != NULL)
+                (*init)();
+        }
+#endif
+    }
     static vector<Platform*> platforms;
     return platforms;
 }
+
+#ifdef WIN32
+vector<HMODULE>& Platform::getPlugins() {
+    static vector<HMODULE> plugins;
+    return plugins;
+}
+#else
+vector<void*>& Platform::getPlugins() {
+    static vector<void*> plugins;
+    return plugins;
+}
+#endif
 
 void Platform::registerPlatform(Platform* platform) {
     getPlatforms().push_back(platform);
@@ -159,16 +206,17 @@ void Platform::loadPluginLibrary(const string& file) {
     const UINT oldErrorMode = SetErrorMode(SEM_FAILCRITICALERRORS);
     HMODULE handle = LoadLibrary(file.c_str());
     SetErrorMode(oldErrorMode); // Restore previous error mode.
-	if (handle == NULL) {
-		string message;
-		stringstream(message) << "Error loading library " << file << ": " << GetLastError();
+    if (handle == NULL) {
+        string message;
+        stringstream(message) << "Error loading library " << file << ": " << GetLastError();
         throw OpenMMException(message);
-	}
+    }
 #else
     void *handle = dlopen(file.c_str(), RTLD_LAZY | RTLD_GLOBAL);
     if (handle == NULL)
         throw OpenMMException("Error loading library "+file+": "+dlerror());
 #endif
+    getPlugins().push_back(handle);
 }
 
 vector<string> Platform::loadPluginsFromDirectory(const string& directory) {

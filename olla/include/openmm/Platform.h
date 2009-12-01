@@ -229,6 +229,11 @@ private:
     std::map<std::string, KernelFactory*> kernelFactories;
     std::map<std::string, std::string> defaultProperties;
     static std::vector<Platform*>& getPlatforms();
+#ifdef WIN32
+    static std::vector<HMODULE>& getPlugins();
+#else
+    static std::vector<void*>& getPlugins();
+#endif
 };
 
 } // namespace OpenMM

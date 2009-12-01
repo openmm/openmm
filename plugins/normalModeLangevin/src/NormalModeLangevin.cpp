@@ -36,7 +36,7 @@
 using namespace OpenMM;
 using namespace std;
 
-extern "C" void initOpenMMPlugin() {
+extern "C" void registerKernelFactories() {
     cout << "Initializing Normal Mode Langevin OpenMM plugin..." << endl;
     // for (int p = 0; p < Platform::getNumPlatforms(); ++p) {
 

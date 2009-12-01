@@ -27,7 +27,6 @@
 #include "CudaPlatform.h"
 #include "CudaKernelFactory.h"
 #include "CudaKernels.h"
-#include "openmm/PluginInitializer.h"
 #include "openmm/internal/ContextImpl.h"
 #include "kernels/gputypes.h"
 #include "openmm/Context.h"
@@ -39,7 +38,7 @@ using std::map;
 using std::string;
 using std::stringstream;
 
-extern "C" void initOpenMMPlugin() {
+extern "C" void registerPlatforms() {
     if (gpuIsAvailable())
         Platform::registerPlatform(new CudaPlatform());
 }
