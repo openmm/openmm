@@ -33,6 +33,9 @@
 #include "openmm/internal/ContextImpl.h"
 #include "ReferenceNMLKernelFactory.h"
 #include "ReferenceIntegrateNMLStepKernel.h"
+#include <iostream>
+
+using namespace std;
 
 namespace OpenMM {
 

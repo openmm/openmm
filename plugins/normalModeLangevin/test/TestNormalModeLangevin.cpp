@@ -23,8 +23,9 @@ void testLoadNMLPlugin()
     cout << "Default plugins directory = " << pluginDir << endl;
     Platform::loadPluginsFromDirectory(pluginDir);
     vector<string> kernelName;
-    kernelName.push_back("IntegrateNMLStepKernel");
+    kernelName.push_back("IntegrateNMLStep");
     // Was NormalModeLangevin plugin loaded?
+    cout << "Searching for kernel IntegrateNMLStep = " << pluginDir << endl;
     Platform& platform = Platform::findPlatform(kernelName); // throws if no platform with kernel
 }
 
@@ -43,9 +44,10 @@ int main(int argc, const char* argv[])
         cout << "tests passed" << endl;
         return 0;
     } 
-    catch (...) 
+    catch (const std::exception& exc) 
     {
-        cout << "FAILED" << endl;
+        cout << "FAILED: " << exc.what() << endl;
         return 1;
     }
 }
+

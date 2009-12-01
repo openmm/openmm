@@ -36,20 +36,33 @@
 using namespace OpenMM;
 using namespace std;
 
+extern "C" void registerPlatforms() {
+    cout << "calling NML registerPlatforms()..." << endl;
+}
+
 extern "C" void registerKernelFactories() {
     cout << "Initializing Normal Mode Langevin OpenMM plugin..." << endl;
-    // for (int p = 0; p < Platform::getNumPlatforms(); ++p) {
+    for (int p = 0; p < Platform::getNumPlatforms(); ++p) {
+        cout << "Plugin number " << p << endl;
+        cout << "Platform " << p << " name = " << Platform::getPlatform(p).getName() << endl;
+    }
 
     // Only register cuda kernels if cuda platform is found
+    cout << "NML looking for Cuda plugin..." << endl;
     try {
-        Platform& platform = Platform::getPlatformByName("CudaPlatform");
+        Platform& platform = Platform::getPlatformByName("Cuda");
+        cout << "NML found Cuda platform..." << endl;
         // platform.registerKernelFactory("CudaNMLKernelFactory", new CudaNMLKernelFactory());
-    } catch (std::exception exc) { // non fatal
+    } catch (const std::exception& exc) { // non fatal
     }
 
+    cout << "NML looking for Reference plugin..." << endl;
     try {
-        Platform& platform = Platform::getPlatformByName("ReferencePlatform");
+        Platform& platform = Platform::getPlatformByName("Reference");
+        cout << "NML found Reference platform..." << endl;
         platform.registerKernelFactory("ReferenceNMLKernelFactory", new ReferenceNMLKernelFactory());
-    } catch (std::exception exc) { // non fatal
+    } catch (const std::exception& exc) { // non fatal
+        cout << "NML Reference platform not found. " << exc.what() << endl;
     }
 }
+
