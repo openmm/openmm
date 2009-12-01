@@ -1,5 +1,6 @@
 
-add_executable(TestNormalModeLangevinEXE TestNormalModeLangevin.cpp)
-target_link_libraries(TestNormalModeLangevinEXE ${SHARED_TARGET})
+add_executable(TestNormalModeLangevin TestNormalModeLangevin.cpp)
+target_link_libraries(TestNormalModeLangevin ${SHARED_TARGET})
 
-add_test(TestNormalModeLangevin TestNormalModeLangevinEXE)
+add_test(TestNormalModeLangevin "${EXECUTABLE_OUTPUT_PATH}/TestNormalModeLangevin")
+
