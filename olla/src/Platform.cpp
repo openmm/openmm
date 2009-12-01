@@ -178,7 +178,7 @@ Platform& Platform::getPlatform(int index) {
     return *getPlatforms()[index];
 }
 
-Platform& Platform::getPlatform(const string& name) {
+Platform& Platform::getPlatformByName(const string& name) {
     for (int i = 0; i < getNumPlatforms(); i++)
         if (getPlatform(i).getName() == name)
             return getPlatform(i);

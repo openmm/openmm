@@ -175,7 +175,7 @@ public:
      * Get the registered Platform with a particular name.  If no Platform with that name has been
      * registered, this throws an exception.
      */
-    static Platform& getPlatform(const std::string& name);
+    static Platform& getPlatformByName(const std::string& name);
     /**
      * Find a Platform which can be used to perform a calculation.
      * 
