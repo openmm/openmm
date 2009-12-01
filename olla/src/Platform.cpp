@@ -114,6 +114,18 @@ Kernel Platform::createKernel(const string& name, ContextImpl& context) const {
     return Kernel(kernelFactories.find(name)->second->createKernelImpl(name, *this, context));
 }
 
+#ifdef WIN32
+static vector<HMODULE>& getPlugins() {
+    static vector<HMODULE> plugins;
+    return plugins;
+}
+#else
+static vector<void*>& getPlugins() {
+    static vector<void*> plugins;
+    return plugins;
+}
+#endif
+
 vector<Platform*>& Platform::getPlatforms() {
     if (getPlugins().size() > 0) {
         // Initialize plugins before returning the list of platforms.
@@ -153,18 +165,6 @@ vector<Platform*>& Platform::getPlatforms() {
     static vector<Platform*> platforms;
     return platforms;
 }
-
-#ifdef WIN32
-vector<HMODULE>& Platform::getPlugins() {
-    static vector<HMODULE> plugins;
-    return plugins;
-}
-#else
-vector<void*>& Platform::getPlugins() {
-    static vector<void*> plugins;
-    return plugins;
-}
-#endif
 
 void Platform::registerPlatform(Platform* platform) {
     getPlatforms().push_back(platform);
