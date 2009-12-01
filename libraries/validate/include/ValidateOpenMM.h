@@ -10,7 +10,7 @@
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
  * Portions copyright (c) 2008 Stanford University and the Authors.           *
- * Authors: Peter Eastman                                                     *
+ * Authors: Mark Friedrichs                                                   *
  * Contributors:                                                              *
  *                                                                            *
  * This program is free software: you can redistribute it and/or modify       *
@@ -46,6 +46,8 @@
 #include <typeinfo>
 
 #include <limits>
+#include <stdlib.h>
+#include <string.h>
 
 namespace OpenMM {
 
