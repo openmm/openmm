@@ -688,13 +688,13 @@ void ValidateOpenMM::writeContext( FILE* filePtr, const Context& context ) const
     std::vector<Vec3> velocities = state.getVelocities();
     std::vector<Vec3> forces     = state.getForces();
 
-    (void) fprintf( filePtr, "Positions %u\n", positions.size() );
+    (void) fprintf( filePtr, "Positions %zu\n", positions.size() );
     writeVec3( filePtr, positions );
 
-    (void) fprintf( filePtr, "Velocities %u\n", velocities.size() );
+    (void) fprintf( filePtr, "Velocities %zu\n", velocities.size() );
     writeVec3( filePtr, velocities );
 
-    (void) fprintf( filePtr, "Forces %u\n", forces.size() );
+    (void) fprintf( filePtr, "Forces %zu\n", forces.size() );
     writeVec3( filePtr, forces );
 
     (void) fprintf( filePtr, "KineticEnergy %14.7e\n", state.getKineticEnergy() );
@@ -888,7 +888,9 @@ void ValidateOpenMM::writeIntegrator( FILE* filePtr, const Integrator& integrato
 }
 
 /**
- * Write parameter file
+ * Write parameter file: Custom forces not implemented
+ * Mesage is sent to stderr if a force is not recognized
+ *
  */
 
 void ValidateOpenMM::writeParameterFile( const Context& context, const std::string& parameterFileName ) const {
@@ -1045,8 +1047,10 @@ void ValidateOpenMM::writeParameterFile( const Context& context, const std::stri
         }
 
         if( !hit ){
-           (void) fprintf( stderr, "   %2d force not recognized.\n", i );
-           exit(-1);
+           char buffer[1024];
+           (void) sprintf( buffer, "   %2d force not recognized.\n", i );
+           (void) fprintf( stderr, "%s\n", buffer );
+//           throw OpenMMException( buffer );
         }
 
     }
