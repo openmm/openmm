@@ -113,55 +113,7 @@ Kernel Platform::createKernel(const string& name, ContextImpl& context) const {
         throw OpenMMException("Called createKernel() on a Platform which does not support the requested kernel");
     return Kernel(kernelFactories.find(name)->second->createKernelImpl(name, *this, context));
 }
-
-#ifdef WIN32
-static vector<HMODULE>& getPlugins() {
-    static vector<HMODULE> plugins;
-    return plugins;
-}
-#else
-static vector<void*>& getPlugins() {
-    static vector<void*> plugins;
-    return plugins;
-}
-#endif
-
 vector<Platform*>& Platform::getPlatforms() {
-    if (getPlugins().size() > 0) {
-        // Initialize plugins before returning the list of platforms.
-
-#ifdef WIN32
-        vector<HMODULE> plugins = getPlugins();
-        getPlugins().clear();
-        for (int i = 0; i < (int) plugins.size(); i++) {
-            void (*init)();
-            *(void **)(&init) = GetProcAddress(plugins[i], "registerPlatforms");
-            if (init != NULL)
-                (*init)();
-        }
-        for (int i = 0; i < (int) plugins.size(); i++) {
-            void (*init)();
-            *(void **)(&init) = GetProcAddress(plugins[i], "registerKernelFactories");
-            if (init != NULL)
-                (*init)();
-        }
-#else
-        vector<void*> plugins = getPlugins();
-        getPlugins().clear();
-        for (int i = 0; i < (int) plugins.size(); i++) {
-            void (*init)();
-            *(void **)(&init) = dlsym(plugins[i], "registerPlatforms");
-            if (init != NULL)
-                (*init)();
-        }
-        for (int i = 0; i < (int) plugins.size(); i++) {
-            void (*init)();
-            *(void **)(&init) = dlsym(plugins[i], "registerKernelFactories");
-            if (init != NULL)
-                (*init)();
-        }
-#endif
-    }
     static vector<Platform*> platforms;
     return platforms;
 }
@@ -200,8 +152,8 @@ Platform& Platform::findPlatform(const vector<string>& kernelNames) {
     return *best;
 }
 
-void Platform::loadPluginLibrary(const string& file) {
 #ifdef WIN32
+static HMODULE loadOneLibrary(const string& file) {
     // Tell Windows not to bother the user with ugly error boxes.
     const UINT oldErrorMode = SetErrorMode(SEM_FAILCRITICALERRORS);
     HMODULE handle = LoadLibrary(file.c_str());
@@ -211,12 +163,55 @@ void Platform::loadPluginLibrary(const string& file) {
         stringstream(message) << "Error loading library " << file << ": " << GetLastError();
         throw OpenMMException(message);
     }
+    return handle;
+}
+
+static void initializePlugins(vector<HMODULE>& plugins) {
+    for (int i = 0; i < (int) plugins.size(); i++) {
+        void (*init)();
+        *(void **)(&init) = GetProcAddress(plugins[i], "registerPlatforms");
+        if (init != NULL)
+            (*init)();
+    }
+    for (int i = 0; i < (int) plugins.size(); i++) {
+        void (*init)();
+        *(void **)(&init) = GetProcAddress(plugins[i], "registerKernelFactories");
+        if (init != NULL)
+            (*init)();
+    }
+}
 #else
+static void* loadOneLibrary(const string& file) {
     void *handle = dlopen(file.c_str(), RTLD_LAZY | RTLD_GLOBAL);
     if (handle == NULL)
         throw OpenMMException("Error loading library "+file+": "+dlerror());
+    return handle;
+}
+
+static void initializePlugins(vector<void*>& plugins) {
+    for (int i = 0; i < (int) plugins.size(); i++) {
+        void (*init)();
+        *(void **)(&init) = dlsym(plugins[i], "registerPlatforms");
+        if (init != NULL)
+            (*init)();
+    }
+    for (int i = 0; i < (int) plugins.size(); i++) {
+        void (*init)();
+        *(void **)(&init) = dlsym(plugins[i], "registerKernelFactories");
+        if (init != NULL)
+            (*init)();
+    }
+}
 #endif
-    getPlugins().push_back(handle);
+
+void Platform::loadPluginLibrary(const string& file) {
+#ifdef WIN32
+    vector<HMODULE> plugins;
+#else
+    vector<void*> plugins;
+#endif
+    plugins.push_back(loadOneLibrary(file));
+    initializePlugins(plugins);
 }
 
 vector<string> Platform::loadPluginsFromDirectory(const string& directory) {
@@ -234,6 +229,7 @@ vector<string> Platform::loadPluginsFromDirectory(const string& directory) {
         } while (FindNextFile(findHandle, &fileInfo));
         FindClose(findHandle);
     }
+    vector<HMODULE> plugins;
 #else
     dirSeparator = '/';
     DIR* dir;
@@ -246,16 +242,18 @@ vector<string> Platform::loadPluginsFromDirectory(const string& directory) {
         }
         closedir(dir);
     }
+    vector<void*> plugins;
 #endif
     vector<string> loadedLibraries;
     for (unsigned int i = 0; i < files.size(); ++i) {
         try {
-            Platform::loadPluginLibrary(directory+dirSeparator+files[i]);
+            plugins.push_back(loadOneLibrary(directory+dirSeparator+files[i]));
             loadedLibraries.push_back(files[i]);
         } catch (OpenMMException ex) {
             // Just ignore it.
         }
     }
+    initializePlugins(plugins);
     return loadedLibraries;
 }
 
