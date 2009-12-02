@@ -48,4 +48,3 @@ public:
 } // namespace OpenMM
 
 #endif /*OPENMM_REFERENCE_NMLKERNELFACTORY_H_*/
-

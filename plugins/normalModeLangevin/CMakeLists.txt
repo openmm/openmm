@@ -50,8 +50,34 @@ if(UNIX)
     set_target_properties(NormalModeLangevin PROPERTIES DEBUG_OUTPUT_NAME NormalModeLangevin_d)
 endif(UNIX)
 target_link_libraries( NormalModeLangevin ${SHARED_TARGET} )
+# Copy plugin to test_plugin_dir
+# TODO - move this up to top level CMakeLists.txt
+set(test_plugin_dir "${CMAKE_BINARY_DIR}/test_plugin_dir")
+file(MAKE_DIRECTORY "${test_plugin_dir}")
 
 if(BUILD_TESTING)
+    # On Windows we need to copy the correct Release/Debug plugin for testing
+    if(MSVC)
+        set(args -E copy $\(TargetPath\) \"${test_plugin_dir}\")
+        message(${args})
+        add_custom_command(TARGET NormalModeLangevin POST_BUILD
+            DEPENDS $(TargetPath)
+            COMMAND "${CMAKE_COMMAND}"
+            ARGS -E copy \"$\(TargetPath\)\" \"${test_plugin_dir}\"
+            COMMENT "Copying normal mode langevin plugin for testing (WIN32)")
+    else(MSVC)
+        get_target_property(old_loc NormalModeLangevin LOCATION)
+        get_filename_component(new_loc ${old_loc} NAME)
+        set(new_loc "${test_plugin_dir}/${new_loc}")
+        add_custom_command(
+            DEPENDS ${old_loc} NormalModeLangevin
+            OUTPUT ${new_loc}
+            COMMAND ${CMAKE_COMMAND} -E copy ${old_loc} ${new_loc})
+        add_custom_target(CopyTestNmlPlugin ALL
+            DEPENDS "${new_loc}"
+            COMMENT "Copying normal mode langevin plugin for testing")
+    endif(MSVC)
+
     add_subdirectory(test)
 endif(BUILD_TESTING)
 

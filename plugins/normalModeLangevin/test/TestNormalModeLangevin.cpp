@@ -22,10 +22,16 @@ void testLoadNMLPlugin()
     string pluginDir = Platform::getDefaultPluginsDirectory();
     cout << "Default plugins directory = " << pluginDir << endl;
     Platform::loadPluginsFromDirectory(pluginDir);
+
+    // Create a context, just to initialize all plugins
+    System system;
+    VerletIntegrator integrator(0.01);
+    Context context(system, integrator);
+
+    // Was NormalModeLangevin plugin loaded?
     vector<string> kernelName;
     kernelName.push_back("IntegrateNMLStep");
-    // Was NormalModeLangevin plugin loaded?
-    cout << "Searching for kernel IntegrateNMLStep = " << pluginDir << endl;
+    cout << "Searching for kernel IntegrateNMLStep" << endl;
     Platform& platform = Platform::findPlatform(kernelName); // throws if no platform with kernel
 }
 
@@ -33,9 +39,9 @@ int main(int argc, const char* argv[])
 {
     try 
     {
+        // Set OPENMM_PLUGIN_DIR from first command line argument
         if (argc > 1) {
             const char* plugin_dir = argv[1];
-            // 0 => don't set if variable exists
             mysetenv("OPENMM_PLUGIN_DIR", plugin_dir);
             cout << plugin_dir << endl;
             cout << getenv("OPENMM_PLUGIN_DIR") << endl;

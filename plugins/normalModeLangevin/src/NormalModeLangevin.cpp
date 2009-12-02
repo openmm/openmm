@@ -35,15 +35,14 @@
 
 using namespace OpenMM;
 using namespace std;
-
-extern "C" void registerPlatforms() {
+ 
+extern "C" void OPENMM_EXPORT registerPlatforms() {
     cout << "calling NML registerPlatforms()..." << endl;
 }
 
-extern "C" void registerKernelFactories() {
+extern "C" void OPENMM_EXPORT registerKernelFactories() {
     cout << "Initializing Normal Mode Langevin OpenMM plugin..." << endl;
     for (int p = 0; p < Platform::getNumPlatforms(); ++p) {
-        cout << "Plugin number " << p << endl;
         cout << "Platform " << p << " name = " << Platform::getPlatform(p).getName() << endl;
     }
 
@@ -54,13 +53,15 @@ extern "C" void registerKernelFactories() {
         cout << "NML found Cuda platform..." << endl;
         // platform.registerKernelFactory("CudaNMLKernelFactory", new CudaNMLKernelFactory());
     } catch (const std::exception& exc) { // non fatal
+        cout << "NML Cuda platform not found. " << exc.what() << endl;
     }
 
     cout << "NML looking for Reference plugin..." << endl;
     try {
         Platform& platform = Platform::getPlatformByName("Reference");
         cout << "NML found Reference platform..." << endl;
-        platform.registerKernelFactory("ReferenceNMLKernelFactory", new ReferenceNMLKernelFactory());
+        ReferenceNMLKernelFactory* factory = new ReferenceNMLKernelFactory();
+        platform.registerKernelFactory("IntegrateNMLStep", factory);
     } catch (const std::exception& exc) { // non fatal
         cout << "NML Reference platform not found. " << exc.what() << endl;
     }
