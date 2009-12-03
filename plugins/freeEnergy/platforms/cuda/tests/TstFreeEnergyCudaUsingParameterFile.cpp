@@ -3721,9 +3721,9 @@ Context* _getContext( System* system, Context* inputContext, Integrator* inputIn
     ReferencePlatform referencePlatform;
 
     if( platformName.compare( "ReferencePlatform" ) == 0 ){
-       context = new Context( *system, *inputIntegrator, Platform::getPlatform("Reference") );
+       context = new Context( *system, *inputIntegrator, Platform::getPlatformByName("Reference") );
     } else {
-       context                    = new Context( *system, *inputIntegrator, Platform::getPlatform("Cuda") );
+       context                    = new Context( *system, *inputIntegrator, Platform::getPlatformByName("Cuda") );
     }
     if( log ){
        (void) fprintf( log, "%s Using Platform: %s device=%s\n", idString.c_str(), context->getPlatform().getName().c_str(), deviceId.c_str() );
@@ -4967,8 +4967,8 @@ void testReferenceCudaForces( std::string parameterFileName, MapStringInt& force
       (void) fflush( log );
    }   
 
-   Platform& referencePlatform         =  Platform::getPlatform("Reference");
-   Platform& cudaPlatform              = Platform::getPlatform("Cuda");;
+   Platform& referencePlatform         =  Platform::getPlatformByName("Reference");
+   Platform& cudaPlatform              = Platform::getPlatformByName("Cuda");;
 
    double parameterKineticEnergy, parameterPotentialEnergy;
 
@@ -5566,7 +5566,7 @@ void testEnergyForcesConsistent( std::string parameterFileName, MapStringInt& fo
          (void) fflush( log );
       }   
 
-      Platform& cudaPlatform              = Platform::getPlatform( "Cuda");;
+      Platform& cudaPlatform              = Platform::getPlatformByName( "Cuda");;
 
       Context* cudaContext                = testSetup( parameterFileName, forceMap,  cudaPlatform,
                                                          parameterForces2, &parameterKineticEnergy, &parameterPotentialEnergy,
@@ -5576,7 +5576,7 @@ void testEnergyForcesConsistent( std::string parameterFileName, MapStringInt& fo
 
    } else {
 
-      Platform& referencePlatform         =  Platform::getPlatform( "Reference");
+      Platform& referencePlatform         =  Platform::getPlatformByName( "Reference");
 
       if( log ){
          (void) fprintf( log, "%s Testing reference platform\n", methodName.c_str() );
@@ -5614,7 +5614,7 @@ void testEnergyConservation( std::string parameterFileName, MapStringInt& forceM
       (void) fflush( log );
    }   
 
-   Platform& referencePlatform         =  Platform::getPlatform( "Reference");
+   Platform& referencePlatform         =  Platform::getPlatformByName( "Reference");
 
    double parameterKineticEnergy, parameterPotentialEnergy;
 
