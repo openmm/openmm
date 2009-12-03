@@ -33,24 +33,7 @@
 
 using namespace OpenMM;
 
-#if defined(OPENMM_BUILDING_SHARED_LIBRARY)
-    #if defined(WIN32)
-      #include <windows.h>
-        extern "C" void initOpenMMCudaFreeEnergyPlugin();
-        BOOL WINAPI DllMain(HANDLE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved) {
-            if (ul_reason_for_call == DLL_PROCESS_ATTACH)
-                initOpenMMCudaFreeEnergyPlugin();
-            return TRUE;
-        }
-    #else
-        extern "C" void __attribute__((constructor)) initOpenMMCudaFreeEnergyPlugin();
-    #endif
-#endif
-
-using namespace OpenMM;
-
-extern "C" void initOpenMMCudaFreeEnergyPlugin() {
-
+extern "C" void registerKernelFactories() {
     // (void) fprintf( stderr, "initOpenMMCudaFreeEnergyPlugin called\n");
     if ( gpuIsAvailableSoftcore() ){
         for( int ii = 0; ii < Platform::getNumPlatforms(); ii++ ){
