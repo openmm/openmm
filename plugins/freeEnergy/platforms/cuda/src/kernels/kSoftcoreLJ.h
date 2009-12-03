@@ -37,8 +37,7 @@ __device__ float getSoftCoreLJ( float r2, float sig, float  eps, float lambdaI, 
 
    float r                         = sqrt(r2);
    float lambda                    = lambdaI < lambdaJ ? lambdaI : lambdaJ;
-   float lambda2                   = lambda*lambda;
-   eps                            *= lambda2*lambda2;
+   eps                            *= lambda;
 
 
     // (r/sig)

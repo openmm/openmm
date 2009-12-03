@@ -3664,56 +3664,6 @@ static int _printIntegratorInfo( Integrator* integrator, FILE* log ){
 
 /**---------------------------------------------------------------------------------------
 
-   Register forces associated w/ Reference free energy platform
-
-   @param referencePlatform             reference platform
-
-   --------------------------------------------------------------------------------------- */
-
-static void registerFreeEnergyMethodsReferencePlatform( ReferencePlatform& referencePlatform ){
-
-   // ---------------------------------------------------------------------------------------
-
-   //static const char* methodName  = "registerFreeEnergyMethodsReferencePlatform: ";
-
-   // ---------------------------------------------------------------------------------------
-
-#ifdef INCLUDE_FREE_ENERGY_PLUGIN
-   ReferenceFreeEnergyKernelFactory* factory  = new ReferenceFreeEnergyKernelFactory();
-   referencePlatform.registerKernelFactory(CalcNonbondedSoftcoreForceKernel::Name(), factory);
-   referencePlatform.registerKernelFactory(CalcGBVISoftcoreForceKernel::Name(), factory);
-   referencePlatform.registerKernelFactory(CalcGBSAOBCSoftcoreForceKernel::Name(), factory);
-#endif
-
-}
-
-/**---------------------------------------------------------------------------------------
-
-   Register forces associated w/ Cuda free energy platform
-
-   @param cudaPlatform             cuda platform
-
-   --------------------------------------------------------------------------------------- */
-
-static void registerFreeEnergyMethodsCudaPlatform( CudaPlatform& cudaPlatform ){
-
-   // ---------------------------------------------------------------------------------------
-
-   //static const char* methodName  = "registerFreeEnergyMethodsCudaPlatform: ";
-
-   // ---------------------------------------------------------------------------------------
-
-#ifdef INCLUDE_FREE_ENERGY_PLUGIN
-   CudaFreeEnergyKernelFactory* factory  = new CudaFreeEnergyKernelFactory();
-   cudaPlatform.registerKernelFactory(CalcNonbondedSoftcoreForceKernel::Name(), factory);
-   cudaPlatform.registerKernelFactory(CalcGBVISoftcoreForceKernel::Name(), factory);
-   cudaPlatform.registerKernelFactory(CalcGBSAOBCSoftcoreForceKernel::Name(), factory);
-#endif
-
-}
-
-/**---------------------------------------------------------------------------------------
-
    Set the velocities/positions of context2 to those of context1
 
    @param context1                 context1 
@@ -3769,25 +3719,12 @@ Context* _getContext( System* system, Context* inputContext, Integrator* inputIn
 
     Context* context;
     ReferencePlatform referencePlatform;
-    registerFreeEnergyMethodsReferencePlatform( referencePlatform );
-
-    CudaPlatform gpuPlatform;
-    registerFreeEnergyMethodsCudaPlatform( gpuPlatform );
 
     if( platformName.compare( "ReferencePlatform" ) == 0 ){
-       context = new Context( *system, *inputIntegrator, referencePlatform );
+       context = new Context( *system, *inputIntegrator, Platform::getPlatform("Reference") );
     } else {
-       gpuPlatform.setPropertyDefaultValue( "CudaDevice", deviceId );
-       context = new Context( *system, *inputIntegrator, gpuPlatform );
-       if( log ){
-          (void) fprintf( log, "OpenMM Platform: %s\n", context->getPlatform().getName().c_str() ); (void) fflush( log );
-          const vector<string>& properties = gpuPlatform.getPropertyNames();
-          for (unsigned int i = 0; i < properties.size(); i++) {
-              fprintf( log, "%s: %s\n", properties[i].c_str(), gpuPlatform.getPropertyValue(*context, properties[i]).c_str());
-          }    
-       }    
+       context                    = new Context( *system, *inputIntegrator, Platform::getPlatform("Cuda") );
     }
-
     if( log ){
        (void) fprintf( log, "%s Using Platform: %s device=%s\n", idString.c_str(), context->getPlatform().getName().c_str(), deviceId.c_str() );
        (void) fflush( log );
@@ -5030,11 +4967,8 @@ void testReferenceCudaForces( std::string parameterFileName, MapStringInt& force
       (void) fflush( log );
    }   
 
-   ReferencePlatform referencePlatform;
-   registerFreeEnergyMethodsReferencePlatform( referencePlatform );
-
-   CudaPlatform cudaPlatform;
-   registerFreeEnergyMethodsCudaPlatform( cudaPlatform );
+   Platform& referencePlatform         =  Platform::getPlatform("Reference");
+   Platform& cudaPlatform              = Platform::getPlatform("Cuda");;
 
    double parameterKineticEnergy, parameterPotentialEnergy;
 
@@ -5627,16 +5561,14 @@ void testEnergyForcesConsistent( std::string parameterFileName, MapStringInt& fo
 
    if( platformInclude == 1 ){
 
-      CudaPlatform cudaPlatform;
-
       if( log ){
          (void) fprintf( log, "%s Testing cuda platform\n", methodName.c_str() );
          (void) fflush( log );
       }   
 
-      registerFreeEnergyMethodsCudaPlatform( cudaPlatform );
+      Platform& cudaPlatform              = Platform::getPlatform( "Cuda");;
 
-      Context* cudaContext                  = testSetup( parameterFileName, forceMap,  cudaPlatform,
+      Context* cudaContext                = testSetup( parameterFileName, forceMap,  cudaPlatform,
                                                          parameterForces2, &parameterKineticEnergy, &parameterPotentialEnergy,
                                                          supplementary, inputArgumentMap, log );
 
@@ -5644,8 +5576,7 @@ void testEnergyForcesConsistent( std::string parameterFileName, MapStringInt& fo
 
    } else {
 
-      ReferencePlatform referencePlatform;
-      registerFreeEnergyMethodsReferencePlatform( referencePlatform );
+      Platform& referencePlatform         =  Platform::getPlatform( "Reference");
 
       if( log ){
          (void) fprintf( log, "%s Testing reference platform\n", methodName.c_str() );
@@ -5683,9 +5614,7 @@ void testEnergyConservation( std::string parameterFileName, MapStringInt& forceM
       (void) fflush( log );
    }   
 
-   //CudaPlatform cudaPlatform;
-   ReferencePlatform referencePlatform;
-   registerFreeEnergyMethodsReferencePlatform( referencePlatform );
+   Platform& referencePlatform         =  Platform::getPlatform( "Reference");
 
    double parameterKineticEnergy, parameterPotentialEnergy;
 
@@ -5854,6 +5783,7 @@ int main( int numberOfArguments, char* argv[] ){
    }
 
    std::string parameterFileName            = defaultParameterFileName;
+   std::string pluginDirectoryName          = Platform::getDefaultPluginsDirectory();
    MapStringInt forceMap;
    initializeForceMap( forceMap, 0 );
    int logFileNameIndex                     = -1;
@@ -5970,6 +5900,7 @@ int main( int numberOfArguments, char* argv[] ){
          (void) fprintf( log, "no summary file\n" );
       }
 
+      (void) fprintf( log, "pluginDirectoryName         %s\n", pluginDirectoryName.c_str() );
       (void) fprintf( log, "checkEnergyForceConsistent  %d\n", checkEnergyForceConsistent );
       (void) fprintf( log, "checkEnergyConservation     %d\n", checkEnergyConservation );
       (void) fprintf( log, "checkInputForces            %d\n", checkInputForces );
@@ -5984,6 +5915,8 @@ int main( int numberOfArguments, char* argv[] ){
       }
       (void) fflush( log );
    }
+
+   Platform::loadPluginsFromDirectory(pluginDirectoryName);
 
    // check forces
 

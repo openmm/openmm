@@ -1,67 +1,18 @@
 #---------------------------------------------------
 # OpenMM FreeEnergy Plugin
 #
-# Creates OpenMM FreeEnergy plugin library, base name=OpenMM.
+# Creates OpenMM FreeEnergy plugin library, base name=OpenMMFreeEnergy.
 # Default libraries are shared & optimized. Variants
 # are created for static (_static) and debug (_d).
 #
 # Windows:
-#   OpenMM[_d].dll
-#   OpenMM[_d].lib
-#   OpenMM_static[_d].lib
+#   OpenMMFreeEnergy[_d].dll
+#   OpenMMFreeEnergy[_d].lib
+#   OpenMMFreeEnergy_static[_d].lib
 # Unix:
-#   libOpenMM[_d].so
-#   libOpenMM_static[_d].a
+#   libOpenMMFreeEnergy[_d].so
+#   libOpenMMFreeEnergy_static[_d].a
 #----------------------------------------------------
-
-# On Linux it appears that cmake 2.4 does not work with Cuda cmake rules
-#CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
-
-# Does someone at Kitware actually believe that this policy crap
-# might actually make cmake LESS brittle?
-# (Probably the same genius who came up the endif(allthesamecrap) syntax)
-# Older cmake versions do not have cmake_policy command
-# Cmake 2.4.5, the default cmake on red hat linux, has the
-# cmake_policy command, but it does not work
-# "if(POLICY ..." does not work with cmake 2.4.[56] on red hat
-# (cmake 2.4.7 is OK)
-#if(COMMAND cmake_policy)
-#    if(CMAKE_MAJOR_VERSION GREATER 2 OR CMAKE_MINOR_VERSION GREATER 5)
-#        cmake_policy(SET CMP0003 NEW) 
-#        cmake_policy(SET CMP0005 NEW) 
-#    endif(CMAKE_MAJOR_VERSION GREATER 2 OR CMAKE_MINOR_VERSION GREATER 5)
-#    if(CMAKE_MAJOR_VERSION GREATER 2 OR CMAKE_MINOR_VERSION GREATER 6 OR CMAKE_PATCH_VERSION GREATER 2)
-#        cmake_policy(SET CMP0011 NEW) 
-#    endif(CMAKE_MAJOR_VERSION GREATER 2 OR CMAKE_MINOR_VERSION GREATER 6 OR CMAKE_PATCH_VERSION GREATER 2)
-#endif(COMMAND cmake_policy)
-
-# Don't create a new project name if this is part of a mega-build from the
-# parent directory
-#IF( NOT PROJECT_NAME )
-#    PROJECT (OpenMM)
-#ENDIF( NOT PROJECT_NAME )
-
-# Where to install
-#IF(${CMAKE_C_COMPILER} MATCHES "gcc")
-#    IF(NOT OPENMM_INSTALL_PREFIX)
-#        SET(OPENMM_INSTALL_PREFIX "/usr/local/openmm" CACHE PATH "Where to install OpenMM")
-#    ENDIF(NOT OPENMM_INSTALL_PREFIX)
-#ELSE(${CMAKE_C_COMPILER} MATCHES "gcc")
-#    IF(NOT OPENMM_INSTALL_PREFIX)
-#        SET(OPENMM_INSTALL_PREFIX "$ENV{ProgramFiles}/OpenMM" CACHE PATH "Where to install OpenMM")
-#    ENDIF(NOT OPENMM_INSTALL_PREFIX)
-#ENDIF(${CMAKE_C_COMPILER} MATCHES "gcc")
-#MARK_AS_ADVANCED(OPENMM_INSTALL_PREFIX)
-
-# It seems that on linux and mac, everything is trying to be installed in /usr/local/openmm
-# But if every install target is prefixed with /openmm/, on Windows the install files
-# end up in C:/Program Files/OpenMM/openmm/ which is ugly.
-# Better to set CMAKE_INSTALL_PREFIX to /usr/local/openmm and leave /openmm/ off the 
-# install target names.  Plus, the user now has the opportunity to install into /usr/local/
-# if she so chooses.  --cmb
-#IF(${CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT})
-#  SET(CMAKE_INSTALL_PREFIX ${OPENMM_INSTALL_PREFIX} CACHE PATH "Where to install OpenMM" FORCE)
-#ENDIF(${CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT})
 
 #INCLUDE(Dart)
 
@@ -89,43 +40,6 @@ ENDIF(LOG)
 # this CMakeLists file rather than letting CMake visit them as SUBDIRS.
 SET(OPENMM_FREE_ENERGY_PLUGIN_SOURCE_SUBDIRS . openmmapi platforms/reference)
 
-# The build system will set ARCH64 for 64 bit builds, which require
-# use of the lib64/ library directories rather than lib/.
-#SET( ARCH64 OFF CACHE BOOL "ON for 64bit builds, OFF for 32bit builds")
-#MARK_AS_ADVANCED( ARCH64  )
-#IF (ARCH64)
-#    SET(LIB64 64)
-#ELSE (ARCH64)
-#    SET(LIB64) # nothing
-#ENDIF (ARCH64)
-
-#IF( CMAKE_SIZEOF_VOID_P EQUAL 8 )
-#  SET( LIB64 64 )
-#ELSE( CMAKE_SIZEOF_VOID_P EQUAL 8 )
-#  SET( LIB64  )
-#ENDIF( CMAKE_SIZEOF_VOID_P EQUAL 8 )
-
-# Build 32 bit binaries, since CUDA doesn't currently work with 64 bit
-#IF (APPLE)
-#   SET (CMAKE_CXX_FLAGS "-arch i386")
-#   SET (CMAKE_C_FLAGS "-arch i386")
-#ENDIF (APPLE)
-#
-#IF(UNIX AND NOT CMAKE_BUILD_TYPE)
-#    SET(CMAKE_BUILD_TYPE Debug CACHE STRING "Debug or Release build" FORCE)
-#ENDIF (UNIX AND NOT CMAKE_BUILD_TYPE)
-#
-#IF (NOT CMAKE_CXX_FLAGS_DEBUG)
-#    SET(CMAKE_CXX_FLAGS_DEBUG "-g" CACHE STRING "To use when CMAKE_BUILD_TYPE=Debug" FORCE)
-#ENDIF (NOT CMAKE_CXX_FLAGS_DEBUG)
-#
-#IF (NOT CMAKE_CXX_FLAGS_RELEASE)
-#    SET(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG" CACHE STRING 
-#          "To use when CMAKE_BUILD_TYPE=Release" FORCE)
-#ENDIF (NOT CMAKE_CXX_FLAGS_RELEASE)
-
-
-
 # Collect up information about the version of the OpenMM library we're building
 # and make it available to the code so it can be built into the binaries.
 
@@ -134,106 +48,19 @@ SET(OPENMM_FREE_ENERGY_MAJOR_VERSION 1)
 SET(OPENMM_FREE_ENERGY_MINOR_VERSION 0)
 SET(OPENMM_FREE_ENERGY_BUILD_VERSION 0)
 
-#SET(OPENMM_COPYRIGHT_YEARS "2009")
-
-# underbar separated list of dotted authors, no spaces or commas
-#SET(OPENMM_AUTHORS "Peter.Eastman")
-
-# Get the subversion revision number if we can
-# It's possible that WIN32 installs use svnversion through cygwin
-# so we'll try for both svnversion.exe and svnversion. Note that
-# this will result in warnings if all you have is Tortoise without
-# Cygwin, and your "about" string will say "unknown" rather than
-# providing the SVN version of the source.
-
-#FIND_PROGRAM (SVNVERSION_EXE svnversion.exe
-#    PATHS "C:/cygwin/bin"
-#)
-#IF (SVNVERSION_EXE)
-#    EXEC_PROGRAM (${SVNVERSION_EXE}
-#                  ARGS  \"${CMAKE_CURRENT_SOURCE_DIR}\"
-#                  OUTPUT_VARIABLE OPENMM_SVN_REVISION )
-#ELSE (SVNVERSION_EXE) 
-#    FIND_PROGRAM (SVNVERSION svnversion) 
-#    IF (SVNVERSION)
-#        EXEC_PROGRAM (${SVNVERSION}
-#                      ARGS "${CMAKE_CURRENT_SOURCE_DIR}"
-#                      OUTPUT_VARIABLE OPENMM_SVN_REVISION)
-#    ELSE (SVNVERSION)
-#        MESSAGE (STATUS 
-#          "Could not find 'svnversion' executable; 'about' will be wrong. (Cygwin provides one on Windows.)"
-#        )
-#        SET (OPENMM_SVN_REVISION unknown) 
-#    ENDIF (SVNVERSION)
-#ENDIF (SVNVERSION_EXE)
-# Remove colon from build version, for easier placement in directory names
-#STRING(REPLACE ":" "_" OPENMM_SVN_REVISION ${OPENMM_SVN_REVISION})
-
 ADD_DEFINITIONS(-DOPENMM_FREE_ENERGY_LIBRARY_NAME=${OPENMM_FREE_ENERGY_LIBRARY_NAME}
                 -DOPENMM_FREE_ENERGY_MAJOR_VERSION=${OPENMM_FREE_ENERGY_MAJOR_VERSION}
                 -DOPENMM_FREE_ENERGY_MINOR_VERSION=${OPENMM_FREE_ENERGY_MINOR_VERSION}
-                -DINCLUDE_FREE_ENERGY_PLUGIN
 		          -DOPENMM_FREE_ENERGY_BUILD_VERSION=${OPENMM_FREE_ENERGY_BUILD_VERSION})
-
-# CMake quotes automatically when building Visual Studio projects but we need
-# to add them ourselves for Linux or Cygwin. Two cases to avoid duplicate quotes
-# in Visual Studio which end up in the binary.
-#
-#IF (${CMAKE_GENERATOR} MATCHES "Visual Studio")
-#   SET(NEED_QUOTES FALSE)
-#ELSE (${CMAKE_GENERATOR} MATCHES "Visual Studio")
-#   SET(NEED_QUOTES TRUE)
-#ENDIF (${CMAKE_GENERATOR} MATCHES "Visual Studio")
-
-##TODO: doesn't work without quotes in nightly build
-#SET(NEED_QUOTES TRUE)
-
-#IF(NEED_QUOTES)
-#   ADD_DEFINITIONS(-DOPENMM_SVN_REVISION="${OPENMM_SVN_REVISION}"
-#                   -DOPENMM_COPYRIGHT_YEARS="${OPENMM_COPYRIGHT_YEARS}"
-#                   -DOPENMM_AUTHORS="${OPENMM_AUTHORS}")
-#ELSE(NEED_QUOTES)
-#   ADD_DEFINITIONS(-DOPENMM_SVN_REVISION=${OPENMM_SVN_REVISION}
-#                   -DOPENMM_COPYRIGHT_YEARS=${OPENMM_COPYRIGHT_YEARS}
-#                   -DOPENMM_AUTHORS=${OPENMM_AUTHORS})
-#ENDIF(NEED_QUOTES)
-
-# -DOPENMM_TYPE has to be defined in the target subdirectories.
-# -Dsimbody_EXPORTS defined automatically when Windows DLL build is being done.
-
-# Report the version number to the CMake UI
-SET(OPENMM_VERSION
-    "${OPENMM_MAJOR_VERSION}.${OPENMM_MINOR_VERSION}.${OPENMM_BUILD_VERSION}"
-     CACHE STRING "This is the version of OpenMM FreeEnergy which will be built." FORCE)
 
 SET(SHARED_FREE_ENERGY_TARGET ${OPENMM_FREE_ENERGY_LIBRARY_NAME})
 SET(STATIC_FREE_ENERGY_TARGET ${OPENMM_FREE_ENERGY_LIBRARY_NAME}_static)
-
-## If no one says otherwise, change the executable path to drop into the same binary 
-## location as the DLLs so that the test cases will use the just-build DLLs.
-#IF(NOT EXECUTABLE_OUTPUT_PATH)
-#  SET(EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR} 
-#      CACHE INTERNAL "Single output directory for building all executables.")
-#ENDIF(NOT EXECUTABLE_OUTPUT_PATH)
-#IF(NOT LIBRARY_OUTPUT_PATH)
-#  SET(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR} 
-#      CACHE INTERNAL "Single output directory for building all libraries.")
-#ENDIF(NOT LIBRARY_OUTPUT_PATH)
-#SET(${PROJECT_NAME}_EXECUTABLE_DIR ${EXECUTABLE_OUTPUT_PATH}/${CMAKE_CFG_INTDIR})
-#SET(${PROJECT_NAME}_LIBRARY_DIR    ${LIBRARY_OUTPUT_PATH}/${CMAKE_CFG_INTDIR})
-
-# Ensure that debug libraries have "_d" appended to their names.
-# CMake gets this right on Windows automatically with this definition.
-#IF (${CMAKE_GENERATOR} MATCHES "Visual Studio")
-#    SET(CMAKE_DEBUG_POSTFIX "_d" CACHE INTERNAL "" FORCE)
-#ENDIF (${CMAKE_GENERATOR} MATCHES "Visual Studio")
 
 # But on Unix or Cygwin we have to add the suffix manually
 IF (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
     SET(SHARED_FREE_ENERGY_TARGET ${SHARED_FREE_ENERGY_TARGET}_d)
     SET(STATIC_FREE_ENERGY_TARGET ${STATIC_FREE_ENERGY_TARGET}_d)
 ENDIF (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
-
 
 # These are all the places to search for header files which are
 # to be part of the API.

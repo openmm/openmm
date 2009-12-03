@@ -966,8 +966,7 @@ calculateOneLJIxn( one/r, sig, eps, &dEdROrig, &E_Orig );
 
     // soft-core LJ energy = lambda*4*eps*[ 1/{alphaLJ*(1-lambda) + (r/sig)**6}**2 - 1/{alphaLJ*(1-lambda) + (r/sig)**6} ]
 
-    eps                                *= POW( lambda, four );
-
+    eps                                *= lambda;
     RealOpenMM sig2                     = r/sig;
                sig2                    *= sig2;
     RealOpenMM sig6                     = sig2*sig2*sig2;
