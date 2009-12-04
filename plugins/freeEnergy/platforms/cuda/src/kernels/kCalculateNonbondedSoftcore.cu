@@ -34,7 +34,7 @@
 struct cudaFreeEnergySimulationNonBonded {
     float* pParticleSoftCoreLJLambda;
 };
-struct cudaFreeEnergySimulationNonBonded feSim;
+//struct cudaFreeEnergySimulationNonBonded feSim;
 
 // device handles
 
@@ -55,6 +55,8 @@ void SetCalculateCDLJSoftcoreGpuSim( gpuContext gpu )
 void SetCalculateCDLJSoftcoreSupplementarySim( float* gpuParticleSoftCoreLJLambda)
 {
     cudaError_t status;
+    struct cudaFreeEnergySimulationNonBonded feSim;
+
     feSim.pParticleSoftCoreLJLambda = gpuParticleSoftCoreLJLambda;
     status = cudaMemcpyToSymbol(feSimDev, &feSim, sizeof(cudaFreeEnergySimulationNonBonded));
     RTERROR(status, "cudaMemcpyToSymbol: SetCalculateCDLJSoftcoreSupplementarySim");

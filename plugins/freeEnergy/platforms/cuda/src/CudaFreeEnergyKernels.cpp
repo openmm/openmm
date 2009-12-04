@@ -386,8 +386,6 @@ void CudaFreeEnergyCalcNonbondedSoftcoreForceKernel::executeForces(ContextImpl& 
 // ---------------------------------------------------------------------------------------
 
     _gpuContext* gpu = data.gpu;
-    static int call  = 0;
-    call++;
 
     // write array, ... address's to board
 
@@ -532,7 +530,6 @@ void CudaFreeEnergyCalcGBSAOBCSoftcoreForceKernel::executeForces(ContextImpl& co
     _gpuContext* gpu = data.gpu;
 
     int debug        = 1;
-    static int call  = 0;
 
     // send address's of arrays, ... to device on first call
     // required since force/energy buffers not set when CudaFreeEnergyCalcGBSAOBCSoftcoreForceKernel::initialize() was called
@@ -550,7 +547,6 @@ void CudaFreeEnergyCalcGBSAOBCSoftcoreForceKernel::executeForces(ContextImpl& co
     // calculate Born radii and first loop of Obc forces
 
     if( debug && log ){
-        call++;
         if( log ){
             (void) fprintf( log, "\n%s: calling kCalculateCDLJObcGbsaSoftcoreForces1\n", methodName.c_str() );
             (void) fflush( log );
@@ -675,7 +671,6 @@ void CudaFreeEnergyCalcGBVISoftcoreForceKernel::executeForces(ContextImpl& conte
 
     _gpuContext* gpu = data.gpu;
     int debug        = 1;
-    static int call  = 0;
 
     // send address's of arrays, ... to device on first call
     // required since force/energy buffers not set when CudaFreeEnergyCalcGBVISoftcoreForceKernel::initialize() was called
@@ -691,7 +686,6 @@ void CudaFreeEnergyCalcGBVISoftcoreForceKernel::executeForces(ContextImpl& conte
     // calculate Born radii and first loop of GB/VI forces
 
     if( debug && log ){
-        call++;
         if( log ){
             (void) fprintf( log, "\n%s: calling kCalculateCDLJObcGbsaSoftcoreForces1 & %s\n", methodName.c_str(),
                             getQuinticScaling() ? "kReduceGBVIBornSumQuinticScaling" : "kReduceGBVIBornSum" );
