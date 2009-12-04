@@ -40,7 +40,7 @@ namespace OpenMM {
  * This KernelFactory creates all kernels for ReferencePlatform.
  */
 
-class ReferenceFreeEnergyKernelFactory : public KernelFactory {
+class OPENMM_EXPORT ReferenceFreeEnergyKernelFactory : public KernelFactory {
 public:
     KernelImpl* createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const;
 };
