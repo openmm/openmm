@@ -1229,17 +1229,16 @@ OpenCLCalcCustomGBForceKernel::~OpenCLCalcCustomGBForceKernel() {
 
 void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const CustomGBForce& force) {
     bool useExclusionsForValue = false;
-    string n2ValueExpression;
+    vector<string> computedValueNames(force.getNumComputedValues());
+    vector<string> computedValueExpressions(force.getNumComputedValues());
     if (force.getNumComputedValues() > 0) {
-        string name, expression;
         CustomGBForce::ComputationType type;
-        force.getComputedValueParameters(0, name, expression, type);
+        force.getComputedValueParameters(0, computedValueNames[0], computedValueExpressions[0], type);
         if (type == CustomGBForce::SingleParticle)
             throw OpenMMException("OpenCLPlatform requires that the first computed value for a CustomGBForce be of type ParticlePair or ParticlePairNoExclusions.");
         useExclusionsForValue = (type == CustomGBForce::ParticlePair);
-        n2ValueExpression = expression;
         for (int i = 1; i < force.getNumComputedValues(); i++) {
-            force.getComputedValueParameters(i, name, expression, type);
+            force.getComputedValueParameters(i, computedValueNames[i], computedValueExpressions[i], type);
             if (type != CustomGBForce::SingleParticle)
                 throw OpenMMException("OpenCLPlatform requires that a CustomGBForce only have one computed value of type ParticlePair or ParticlePairNoExclusions.");
         }
@@ -1324,33 +1323,33 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
 //
     // Create the kernels.
 
-    map<string, string> variables1;
-    map<string, string> variables2;
-    variables1["r"] = "r";
-    variables2["r"] = "r";
-    for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
-        const string& name = force.getPerParticleParameterName(i);
-        variables1[name+"1"] = prefix+"params"+params->getParameterSuffix(i, "1");
-        variables1[name+"2"] = prefix+"params"+params->getParameterSuffix(i, "2");
-        variables2[name+"2"] = prefix+"params"+params->getParameterSuffix(i, "1");
-        variables2[name+"1"] = prefix+"params"+params->getParameterSuffix(i, "2");
-    }
-    for (int i = 0; i < force.getNumGlobalParameters(); i++) {
-        const string& name = force.getGlobalParameterName(i);
-        string value = "globals["+intToString(i)+"]";
-        variables1[name] = prefix+value;
-        variables2[name] = prefix+value;
-    }
     {
         // Create the N2 value kernel.
 
+        map<string, string> variables1;
+        map<string, string> variables2;
+        variables1["r"] = "r";
+        variables2["r"] = "r";
+        for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
+            const string& name = force.getPerParticleParameterName(i);
+            variables1[name+"1"] = prefix+"params"+params->getParameterSuffix(i, "1");
+            variables1[name+"2"] = prefix+"params"+params->getParameterSuffix(i, "2");
+            variables2[name+"2"] = prefix+"params"+params->getParameterSuffix(i, "1");
+            variables2[name+"1"] = prefix+"params"+params->getParameterSuffix(i, "2");
+        }
+        for (int i = 0; i < force.getNumGlobalParameters(); i++) {
+            const string& name = force.getGlobalParameterName(i);
+            string value = "globals["+intToString(i)+"]";
+            variables1[name] = prefix+value;
+            variables2[name] = prefix+value;
+        }
         map<string, Lepton::ParsedExpression> n2ValueExpressions;
         stringstream n2ValueSource;
-        n2ValueExpressions["tempValue1 = "] = Lepton::Parser::parse(n2ValueExpression, functions).optimize();
-        n2ValueSource << OpenCLExpressionUtilities::createExpressions(n2ValueExpressions, variables1, functionDefinitions, prefix+"tempA", prefix+"functionParams");
+        n2ValueExpressions["tempValue1 = "] = Lepton::Parser::parse(computedValueExpressions[0], functions).optimize();
+        n2ValueSource << OpenCLExpressionUtilities::createExpressions(n2ValueExpressions, variables1, functionDefinitions, "tempA", prefix+"functionParams");
         n2ValueExpressions.clear();
-        n2ValueExpressions["tempValue2 = "] = Lepton::Parser::parse(n2ValueExpression, functions).optimize();
-        n2ValueSource << OpenCLExpressionUtilities::createExpressions(n2ValueExpressions, variables2, functionDefinitions, prefix+"tempB", prefix+"functionParams");
+        n2ValueExpressions["tempValue2 = "] = Lepton::Parser::parse(computedValueExpressions[0], functions).optimize();
+        n2ValueSource << OpenCLExpressionUtilities::createExpressions(n2ValueExpressions, variables2, functionDefinitions, "tempB", prefix+"functionParams");
         map<string, string> replacements;
         replacements["COMPUTE_VALUE"] = n2ValueSource.str();
         cl.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, ""); // **********
@@ -1390,7 +1389,6 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         defines["NUM_ATOMS"] = intToString(cl.getNumAtoms());
         defines["PADDED_NUM_ATOMS"] = intToString(cl.getPaddedNumAtoms());
         string filename = (cl.getSIMDWidth() == 32 ? "customGBValueN2_nvidia.cl" : "customGBValueN2_default.cl");
-//        printf("%s\n", cl.loadSourceFromFile(filename, replacements).c_str());
         cl::Program program = cl.createProgram(cl.loadSourceFromFile(filename, replacements), defines);
         pairValueKernel = cl::Kernel(program, "computeN2Value");
     }
@@ -1402,18 +1400,29 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
             extraArgs << ", __constant float* globals";
         for (int i = 0; i < (int) params->getBuffers().size(); i++) {
             const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
-            string paramName = prefix+"params"+intToString(i+1);
-            extraArgs << ", __global " << buffer.getType() << "* global_" << paramName;
+            string paramName = "params"+intToString(i+1);
+            extraArgs << ", __global " << buffer.getType() << "* " << paramName;
         }
         for (int i = 0; i < (int) computedValues->getBuffers().size(); i++) {
             const OpenCLNonbondedUtilities::ParameterInfo& buffer = computedValues->getBuffers()[i];
-            string valueName = prefix+"values"+intToString(i+1);
+            string valueName = "values"+intToString(i+1);
             extraArgs << ", __global " << buffer.getType() << "* global_" << valueName;
             reductionSource << buffer.getType() << " local_" << valueName << ";\n";
         }
         reductionSource << "local_values" << computedValues->getParameterSuffix(0) << " = sum;\n";
+        map<string, string> variables;
+        for (int i = 0; i < force.getNumPerParticleParameters(); i++)
+            variables[force.getPerParticleParameterName(i)] = "params"+params->getParameterSuffix(i, "[index]");
+        for (int i = 0; i < force.getNumGlobalParameters(); i++)
+            variables[force.getGlobalParameterName(i)] = "globals["+intToString(i)+"]";
+        for (int i = 1; i < force.getNumComputedValues(); i++) {
+            variables[computedValueNames[i-1]] = "local_values"+computedValues->getParameterSuffix(i-1);
+            map<string, Lepton::ParsedExpression> valueExpressions;
+            valueExpressions["local_values"+computedValues->getParameterSuffix(i)+" = "] = Lepton::Parser::parse(computedValueExpressions[i], functions).optimize();
+            reductionSource << OpenCLExpressionUtilities::createExpressions(valueExpressions, variables, functionDefinitions, "value"+intToString(i)+"_temp", "functionParams");
+        }
         for (int i = 0; i < (int) computedValues->getBuffers().size(); i++) {
-            string valueName = prefix+"values"+intToString(i+1);
+            string valueName = "values"+intToString(i+1);
             reductionSource << "global_" << valueName << "[index] = local_" << valueName << ";\n";
         }
         map<string, string> replacements;
@@ -1421,7 +1430,6 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         replacements["COMPUTE_VALUES"] = reductionSource.str();
         map<string, string> defines;
         defines["NUM_ATOMS"] = intToString(cl.getNumAtoms());
-//        printf("%s\n", cl.loadSourceFromFile("customGBValueReduction.cl", replacements).c_str());
         cl::Program program = cl.createProgram(cl.loadSourceFromFile("customGBValueReduction.cl", replacements), defines);
         reduceValueKernel = cl::Kernel(program, "reduceGBValue");
     }
@@ -1487,7 +1495,7 @@ void OpenCLCalcCustomGBForceKernel::executeForces(ContextImpl& context) {
 //    vector<vector<cl_float> > values;
 //    computedValues->getParameterValues(values);
 //    for (int i = 0; i < cl.getNumAtoms(); i++)
-//        printf("%d: %f\n", i, values[i][0]);
+//        printf("%d: %f\n", i, values[i][1]);
 }
 
 double OpenCLCalcCustomGBForceKernel::executeEnergy(ContextImpl& context) {
