@@ -70,21 +70,79 @@ OpenCLParameterSet::~OpenCLParameterSet() {
         delete &buffers[i].getBuffer();
 }
 
+void OpenCLParameterSet::getParameterValues(vector<vector<cl_float> >& values) const {
+    values.resize(numObjects);
+    for (int i = 0; i < numObjects; i++)
+        values[i].resize(numParameters);
+    try {
+        int base = 0;
+        for (int i = 0; i < (int) buffers.size(); i++) {
+            if (buffers[i].getType() == "float4") {
+                vector<mm_float4> data(numObjects);
+                context.getQueue().enqueueReadBuffer(buffers[i].getBuffer(), CL_TRUE, 0, numObjects*buffers[i].getSize(), &data[0]);
+                for (int j = 0; j < numObjects; j++) {
+                    values[j][base] = data[j].x;
+                    if (base+1 < numParameters)
+                        values[j][base+1] = data[j].y;
+                    if (base+2 < numParameters)
+                        values[j][base+2] = data[j].z;
+                    if (base+3 < numParameters)
+                        values[j][base+3] = data[j].w;
+                }
+                base += 4;
+            }
+            else if (buffers[i].getType() == "float2") {
+                vector<mm_float2> data(numObjects);
+                context.getQueue().enqueueReadBuffer(buffers[i].getBuffer(), CL_TRUE, 0, numObjects*buffers[i].getSize(), &data[0]);
+                for (int j = 0; j < numObjects; j++) {
+                    values[j][base] = data[j].x;
+                    if (base+1 < numParameters)
+                        values[j][base+1] = data[j].y;
+                }
+                base += 2;
+            }
+            else if (buffers[i].getType() == "float") {
+                vector<cl_float> data(numObjects);
+                context.getQueue().enqueueReadBuffer(buffers[i].getBuffer(), CL_TRUE, 0, numObjects*buffers[i].getSize(), &data[0]);
+                for (int j = 0; j < numObjects; j++)
+                    values[j][base] = data[j];
+            }
+            else
+                throw OpenMMException("Internal error: Unknown buffer type in OpenCLParameterSet");
+        }
+    }
+    catch (cl::Error err) {
+        stringstream str;
+        str<<"Error downloading parameter set "<<name<<": "<<err.what()<<" ("<<err.err()<<")";
+        throw OpenMMException(str.str());
+    }
+}
+
 void OpenCLParameterSet::setParameterValues(const vector<vector<cl_float> >& values) {
     try {
         int base = 0;
         for (int i = 0; i < (int) buffers.size(); i++) {
             if (buffers[i].getType() == "float4") {
                 vector<mm_float4> data(numObjects);
-                for (int j = 0; j < numObjects; j++)
-                    data[j] = (mm_float4) {values[j][base], values[j][base+1], values[j][base+2], values[j][base+3]};
+                for (int j = 0; j < numObjects; j++) {
+                    data[j].x = values[j][base];
+                    if (base+1 < numParameters)
+                        data[j].y = values[j][base+1];
+                    if (base+2 < numParameters)
+                        data[j].z = values[j][base+2];
+                    if (base+3 < numParameters)
+                        data[j].w = values[j][base+3];
+                }
                 context.getQueue().enqueueWriteBuffer(buffers[i].getBuffer(), CL_TRUE, 0, numObjects*buffers[i].getSize(), &data[0]);
                 base += 4;
             }
             else if (buffers[i].getType() == "float2") {
                 vector<mm_float2> data(numObjects);
-                for (int j = 0; j < numObjects; j++)
-                    data[j] = (mm_float2) {values[j][base], values[j][base+1]};
+                for (int j = 0; j < numObjects; j++) {
+                    data[j].x = values[j][base];
+                    if (base+1 < numParameters)
+                        data[j].y = values[j][base+1];
+                }
                 context.getQueue().enqueueWriteBuffer(buffers[i].getBuffer(), CL_TRUE, 0, numObjects*buffers[i].getSize(), &data[0]);
                 base += 2;
             }

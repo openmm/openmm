@@ -471,6 +471,50 @@ private:
 };
 
 /**
+ * This kernel is invoked by CustomGBForce to calculate the forces acting on the system.
+ */
+class OpenCLCalcCustomGBForceKernel : public CalcCustomGBForceKernel {
+public:
+    OpenCLCalcCustomGBForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcCustomGBForceKernel(name, platform),
+            hasInitializedKernels(false), cl(cl), params(NULL), globals(NULL), valueBuffers(NULL), tabulatedFunctionParams(NULL), system(system) {
+    }
+    ~OpenCLCalcCustomGBForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomGBForce this kernel will be used for
+     */
+    void initialize(const System& system, const CustomGBForce& force);
+    /**
+     * Execute the kernel to calculate the forces.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void executeForces(ContextImpl& context);
+    /**
+     * Execute the kernel to calculate the energy.
+     *
+     * @param context    the context in which to execute this kernel
+     * @return the potential energy due to the CustomGBForce
+     */
+    double executeEnergy(ContextImpl& context);
+private:
+    bool hasInitializedKernels;
+    OpenCLContext& cl;
+    OpenCLParameterSet* params;
+    OpenCLParameterSet* computedValues;
+    OpenCLArray<cl_float>* globals;
+    OpenCLArray<cl_float>* valueBuffers;
+    OpenCLArray<mm_float4>* tabulatedFunctionParams;
+    std::vector<std::string> globalParamNames;
+    std::vector<cl_float> globalParamValues;
+    std::vector<OpenCLArray<mm_float4>*> tabulatedFunctions;
+    System& system;
+    cl::Kernel pairValueKernel, reduceValueKernel, pairForceKernel, particleForceKernel;
+};
+
+/**
  * This kernel is invoked by CustomExternalForce to calculate the forces acting on the system and the energy of the system.
  */
 class OpenCLCalcCustomExternalForceKernel : public CalcCustomExternalForceKernel {

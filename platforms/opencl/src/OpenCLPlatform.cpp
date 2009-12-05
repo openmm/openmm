@@ -54,6 +54,7 @@ OpenCLPlatform::OpenCLPlatform() {
     registerKernelFactory(CalcNonbondedForceKernel::Name(), factory);
     registerKernelFactory(CalcCustomNonbondedForceKernel::Name(), factory);
     registerKernelFactory(CalcGBSAOBCForceKernel::Name(), factory);
+    registerKernelFactory(CalcCustomGBForceKernel::Name(), factory);
     registerKernelFactory(CalcCustomExternalForceKernel::Name(), factory);
     registerKernelFactory(IntegrateVerletStepKernel::Name(), factory);
     registerKernelFactory(IntegrateLangevinStepKernel::Name(), factory);

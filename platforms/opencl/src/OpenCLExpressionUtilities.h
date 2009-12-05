@@ -27,6 +27,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
+#include "OpenCLContext.h"
+#include "lepton/CustomFunction.h"
 #include "lepton/ExpressionTreeNode.h"
 #include "lepton/ParsedExpression.h"
 #include <map>
@@ -54,6 +56,15 @@ public:
      */
     static std::string createExpressions(const std::map<std::string, Lepton::ParsedExpression>& expressions, const std::map<std::string, std::string>& variables,
             const std::vector<std::pair<std::string, std::string> >& functions, const std::string& prefix, const std::string& functionParams);
+    /**
+     * Calculate the spline coefficients for a tabulated function that appears in expressions.
+     *
+     * @param values         the tabulated values of the function
+     * @param interpolating  true if an interpolating spline should be used, false if an approximating spline should be used
+     * @return the spline coefficients
+     */
+    static std::vector<mm_float4> computeFunctionCoefficients(const std::vector<double>& values, bool interpolating);
+    class FunctionPlaceholder;
 private:
     static void processExpression(std::stringstream& out, const Lepton::ExpressionTreeNode& node,
             std::vector<std::pair<Lepton::ExpressionTreeNode, std::string> >& temps, const std::map<std::string, std::string>& variables,
@@ -64,6 +75,26 @@ private:
             const Lepton::ExpressionTreeNode*& valueNode, const Lepton::ExpressionTreeNode*& derivNode);
     static void findRelatedPowers(const Lepton::ExpressionTreeNode& node, const Lepton::ExpressionTreeNode& searchNode,
             std::map<int, const Lepton::ExpressionTreeNode*>& powers);
+};
+
+/**
+ * This class serves as a placeholder for custom functions in expressions.
+ */
+
+class OpenCLExpressionUtilities::FunctionPlaceholder : public Lepton::CustomFunction {
+public:
+    int getNumArguments() const {
+        return 1;
+    }
+    double evaluate(const double* arguments) const {
+        return 0.0;
+    }
+    double evaluateDerivative(const double* arguments, const int* derivOrder) const {
+        return 0.0;
+    }
+    CustomFunction* clone() const {
+        return new FunctionPlaceholder();
+    }
 };
 
 } // namespace OpenMM

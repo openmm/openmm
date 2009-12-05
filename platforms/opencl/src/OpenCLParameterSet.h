@@ -65,6 +65,12 @@ public:
         return numObjects;
     }
     /**
+     * Get the values of all parameters.
+     *
+     * @param values on exit, values[i][j] contains the value of parameter j for object i
+     */
+    void getParameterValues(std::vector<std::vector<cl_float> >& values) const;
+    /**
      * Set the values of all parameters.
      *
      * @param values values[i][j] contains the value of parameter j for object i
