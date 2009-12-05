@@ -449,7 +449,7 @@ public:
         return "log";
     }
     Id getId() const {
-        return SQRT;
+        return LOG;
     }
     int getNumArguments() const {
         return 1;
@@ -471,7 +471,7 @@ public:
         return "sin";
     }
     Id getId() const {
-        return LOG;
+        return SIN;
     }
     int getNumArguments() const {
         return 1;
