@@ -2,7 +2,7 @@
  * Reduce a pairwise computed value, and compute per-particle values.
  */
 
-__kernel void reduceGBValue(int bufferSize, int numBuffers, __global float* valueBuffers
+__kernel void computePerParticleValues(int bufferSize, int numBuffers, __global float* valueBuffers
         PARAMETER_ARGUMENTS) {
     unsigned int index = get_global_id(0);
     while (index < NUM_ATOMS) {

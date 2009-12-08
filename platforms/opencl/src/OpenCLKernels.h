@@ -511,7 +511,7 @@ private:
     std::vector<cl_float> globalParamValues;
     std::vector<OpenCLArray<mm_float4>*> tabulatedFunctions;
     System& system;
-    cl::Kernel pairValueKernel, reduceValueKernel, pairForceKernel, particleForceKernel;
+    cl::Kernel pairValueKernel, perParticleValueKernel, pairEnergyKernel, perParticleEnergyKernel;
 };
 
 /**
