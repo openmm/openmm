@@ -63,6 +63,7 @@ __kernel void computeN2Energy(__global float4* forceBuffers, __global float* ene
                 float tempEnergy = 0.0f;
                 if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS && atom1 != atom2) {
                     COMPUTE_INTERACTION
+                    dEdR /= -r;
                 }
                 energy += 0.5f*tempEnergy;
                 delta.xyz *= dEdR;
@@ -74,11 +75,12 @@ __kernel void computeN2Energy(__global float4* forceBuffers, __global float* ene
 
             // Write results
 #ifdef USE_OUTPUT_BUFFER_PER_BLOCK
-            unsigned int offset = x + tgx + (x/TILE_SIZE)*PADDED_NUM_ATOMS;
+            unsigned int offset1 = x + tgx + (x/TILE_SIZE)*PADDED_NUM_ATOMS;
 #else
-            unsigned int offset = x + tgx + warp*PADDED_NUM_ATOMS;
+            unsigned int offset1 = x + tgx + warp*PADDED_NUM_ATOMS;
 #endif
-            forceBuffers[offset].xyz += force.xyz;
+            forceBuffers[offset1].xyz += force.xyz;
+            STORE_DERIVATIVES_1
         }
         else {
             // This is an off-diagonal tile.
@@ -91,52 +93,8 @@ __kernel void computeN2Energy(__global float4* forceBuffers, __global float* ene
             local_force[get_local_id(0)] = 0.0f;
 #ifdef USE_CUTOFF
             unsigned int flags = interactionFlags[pos];
-            if (!hasExclusions && flags != 0xFFFFFFFF) {
-                if (flags == 0) {
-                    // No interactions in this tile.
-                }
-                else {
-                    // Compute only a subset of the interactions in this tile.
-
-                    for (unsigned int j = 0; j < TILE_SIZE; j++) {
-                        if ((flags&(1<<j)) != 0) {
-                            bool isExcluded = false;
-                            int atom2 = tbx+j;
-                            float4 posq2 = local_posq[atom2];
-                            float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
-#ifdef USE_PERIODIC
-                            delta.x -= floor(delta.x/PERIODIC_BOX_SIZE_X+0.5f)*PERIODIC_BOX_SIZE_X;
-                            delta.y -= floor(delta.y/PERIODIC_BOX_SIZE_Y+0.5f)*PERIODIC_BOX_SIZE_Y;
-                            delta.z -= floor(delta.z/PERIODIC_BOX_SIZE_Z+0.5f)*PERIODIC_BOX_SIZE_Z;
-#endif
-                            float r = sqrt(delta.x*delta.x + delta.y*delta.y + delta.z*delta.z);
-                            LOAD_ATOM2_PARAMETERS
-                            atom2 = y+j;
-                            float dEdR = 0.0f;
-                            float tempEnergy = 0.0f;
-                            if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
-                                COMPUTE_INTERACTION
-                            }
-			    energy += tempEnergy;
-                            delta.xyz *= dEdR;
-                            force.xyz -= delta.xyz;
-                            tempBuffer[get_local_id(0)].xyz = delta.xyz;
-
-                            // Sum the forces on atom2.
-
-                            if (tgx % 2 == 0)
-                                tempBuffer[get_local_id(0)] += tempBuffer[get_local_id(0)+1];
-                            if (tgx % 4 == 0)
-                                tempBuffer[get_local_id(0)] += tempBuffer[get_local_id(0)+2];
-                            if (tgx % 8 == 0)
-                                tempBuffer[get_local_id(0)] += tempBuffer[get_local_id(0)+4];
-                            if (tgx % 16 == 0)
-                                tempBuffer[get_local_id(0)] += tempBuffer[get_local_id(0)+8];
-                            if (tgx == 0)
-                                local_force[tbx+j] += tempBuffer[get_local_id(0)] + tempBuffer[get_local_id(0)+16];
-                        }
-                    }
-                }
+            if (!hasExclusions && flags == 0) {
+                // No interactions in this tile.
             }
             else
 #endif
@@ -170,11 +128,14 @@ __kernel void computeN2Energy(__global float4* forceBuffers, __global float* ene
                     float tempEnergy = 0.0f;
                     if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
                         COMPUTE_INTERACTION
+                        dEdR /= -r;
+                        RECORD_DERIVATIVE_2
                     }
 		    energy += tempEnergy;
                     delta.xyz *= dEdR;
                     force.xyz -= delta.xyz;
-                    local_force[tbx+tj].xyz += delta.xyz;
+                    atom2 = tbx+tj;
+                    local_force[atom2].xyz += delta.xyz;
 #ifdef USE_EXCLUSIONS
                     excl >>= 1;
 #endif
@@ -192,6 +153,8 @@ __kernel void computeN2Energy(__global float4* forceBuffers, __global float* ene
 #endif
             forceBuffers[offset1].xyz += force.xyz;
             forceBuffers[offset2].xyz += local_force[get_local_id(0)].xyz;
+            STORE_DERIVATIVES_1
+            STORE_DERIVATIVES_2
             lasty = y;
         }
         pos++;

@@ -198,15 +198,17 @@ void OpenCLContext::executeKernel(cl::Kernel& kernel, int workUnits, int blockSi
 }
 
 void OpenCLContext::clearBuffer(OpenCLArray<float>& array) {
-    clearBufferKernel.setArg<cl::Buffer>(0, array.getDeviceBuffer());
-    clearBufferKernel.setArg<cl_int>(1, array.getSize());
-    executeKernel(clearBufferKernel, array.getSize());
+    clearBuffer(array.getDeviceBuffer(), array.getSize());
 }
 
 void OpenCLContext::clearBuffer(OpenCLArray<mm_float4>& array) {
-    clearBufferKernel.setArg<cl::Buffer>(0, array.getDeviceBuffer());
-    clearBufferKernel.setArg<cl_int>(1, array.getSize()*4);
-    executeKernel(clearBufferKernel, array.getSize()*4);
+    clearBuffer(array.getDeviceBuffer(), array.getSize()*4);
+}
+
+void OpenCLContext::clearBuffer(cl::Buffer& buffer, int size) {
+    clearBufferKernel.setArg<cl::Buffer>(0, buffer);
+    clearBufferKernel.setArg<cl_int>(1, size);
+    executeKernel(clearBufferKernel, size);
 }
 
 void OpenCLContext::reduceBuffer(OpenCLArray<mm_float4>& array, int numBuffers) {

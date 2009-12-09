@@ -1219,8 +1219,12 @@ OpenCLCalcCustomGBForceKernel::~OpenCLCalcCustomGBForceKernel() {
         delete params;
     if (computedValues != NULL)
         delete computedValues;
+    if (energyDerivs != NULL)
+        delete energyDerivs;
     if (globals != NULL)
         delete globals;
+    if (valueBuffers != NULL)
+        delete valueBuffers;
     if (tabulatedFunctionParams != NULL)
         delete tabulatedFunctionParams;
     for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
@@ -1303,7 +1307,7 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         tableArgs << ", __constant float4* " << prefix << "functionParams";
     }
 
-    // Record information for the expressions.
+    // Record the global parameters.
 
     vector<string> paramNames;
     for (int i = 0; i < force.getNumPerParticleParameters(); i++)
@@ -1316,16 +1320,39 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
     }
     if (globals != NULL)
         globals->upload(globalParamValues);
-    bool useCutoff = (force.getNonbondedMethod() != CustomGBForce::NoCutoff);
-    bool usePeriodic = (force.getNonbondedMethod() != CustomGBForce::NoCutoff && force.getNonbondedMethod() != CustomGBForce::CutoffNonPeriodic);
-//    Lepton::ParsedExpression energyExpression = Lepton::Parser::parse(force.getEnergyFunction(), functions).optimize();
-//    Lepton::ParsedExpression forceExpression = energyExpression.differentiate("r").optimize();
-//    map<string, Lepton::ParsedExpression> forceExpressions;
-//    forceExpressions["tempEnergy += "] = energyExpression;
-//    forceExpressions["tempForce -= "] = forceExpression;
-//
+
+    // Record derivatives of expressions needed for the chain rule terms.
+
+    vector<Lepton::ParsedExpression> valueDerivExpressions;
+    vector<vector<Lepton::ParsedExpression> > energyDerivExpressions;
+    for (int i = 0; i < force.getNumComputedValues(); i++) {
+        Lepton::ParsedExpression ex = Lepton::Parser::parse(computedValueExpressions[i], functions).optimize();
+        if (i == 0)
+            valueDerivExpressions.push_back(ex.differentiate("r").optimize());
+        else
+            valueDerivExpressions.push_back(ex.differentiate(computedValueNames[i-1]).optimize());
+    }
+    energyDerivExpressions.resize(force.getNumEnergyTerms());
+    for (int i = 0; i < force.getNumEnergyTerms(); i++) {
+        string expression;
+        CustomGBForce::ComputationType type;
+        force.getEnergyTermParameters(i, expression, type);
+        Lepton::ParsedExpression ex = Lepton::Parser::parse(expression, functions).optimize();
+        for (int j = 0; j < force.getNumComputedValues(); j++) {
+            if (type == CustomGBForce::SingleParticle)
+                energyDerivExpressions[i].push_back(ex.differentiate(computedValueNames[j]).optimize());
+            else {
+                energyDerivExpressions[i].push_back(ex.differentiate(computedValueNames[j]+"1").optimize());
+                energyDerivExpressions[i].push_back(ex.differentiate(computedValueNames[j]+"2").optimize());
+            }
+        }
+    }
+    energyDerivs = new OpenCLParameterSet(cl, force.getNumComputedValues(), cl.getPaddedNumAtoms()*cl.getNonbondedUtilities().getNumForceBuffers(), "customGBEnergyDerivatives");
+
     // Create the kernels.
 
+    bool useCutoff = (force.getNonbondedMethod() != CustomGBForce::NoCutoff);
+    bool usePeriodic = (force.getNonbondedMethod() != CustomGBForce::NoCutoff && force.getNonbondedMethod() != CustomGBForce::CutoffNonPeriodic);
     {
         // Create the N2 value kernel.
 
@@ -1453,7 +1480,7 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         for (int i = 0; i < force.getNumGlobalParameters(); i++)
             variables[force.getGlobalParameterName(i)] = "globals["+intToString(i)+"]";
         map<string, Lepton::ParsedExpression> n2EnergyExpressions;
-        stringstream n2ForceSource;
+        stringstream n2EnergySource;
         bool anyExclusions = false;
         for (int i = 0; i < force.getNumEnergyTerms(); i++) {
             string expression;
@@ -1462,15 +1489,22 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
             if (type == CustomGBForce::SingleParticle)
                 continue;
             bool exclude = (type == CustomGBForce::ParticlePair);
-            anyExclusions != exclude;
-            string excludePrefix = (exclude ? "if (!isExcluded) " :  "");
-            n2EnergyExpressions[excludePrefix+"tempEnergy += "] = Lepton::Parser::parse(expression, functions).optimize();
-            n2EnergyExpressions[excludePrefix+"dEdR += "] = Lepton::Parser::parse(expression, functions).differentiate("r").optimize();
-            n2ForceSource << OpenCLExpressionUtilities::createExpressions(n2EnergyExpressions, variables, functionDefinitions, "temp", prefix+"functionParams");
+            anyExclusions |= exclude;
+            n2EnergyExpressions["tempEnergy += "] = Lepton::Parser::parse(expression, functions).optimize();
+            n2EnergyExpressions["dEdR += "] = Lepton::Parser::parse(expression, functions).differentiate("r").optimize();
+            for (int j = 0; j < force.getNumComputedValues(); j++) {
+                n2EnergyExpressions["/*"+intToString(i+1)+"*/ deriv"+energyDerivs->getParameterSuffix(j, "_1")+" += "] = energyDerivExpressions[i][2*j];
+                n2EnergyExpressions["/*"+intToString(i+1)+"*/ deriv"+energyDerivs->getParameterSuffix(j, "_2")+" += "] = energyDerivExpressions[i][2*j+1];
+            }
+            if (exclude)
+                n2EnergySource << "if (!isExcluded) {\n";
+            n2EnergySource << OpenCLExpressionUtilities::createExpressions(n2EnergyExpressions, variables, functionDefinitions, "temp", prefix+"functionParams");
+            if (exclude)
+                n2EnergySource << "}\n";
         }
         map<string, string> replacements;
-        replacements["COMPUTE_INTERACTION"] = n2ForceSource.str();
-        stringstream extraArgs, loadLocal1, loadLocal2, load1, load2;
+        replacements["COMPUTE_INTERACTION"] = n2EnergySource.str();
+        stringstream extraArgs, loadLocal1, loadLocal2, load1, load2, recordDeriv, storeDerivs1, storeDerivs2;
         if (force.getNumGlobalParameters() > 0)
             extraArgs << ", __constant float* globals";
         for (int i = 0; i < (int) params->getBuffers().size(); i++) {
@@ -1491,11 +1525,25 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
             load1 << buffer.getType() << " " << valueName << "1 = global_" << valueName << "[atom1];\n";
             load2 << buffer.getType() << " " << valueName << "2 = local_" << valueName << "[atom2];\n";
         }
+        for (int i = 0; i < (int) energyDerivs->getBuffers().size(); i++) {
+            const OpenCLNonbondedUtilities::ParameterInfo& buffer = energyDerivs->getBuffers()[i];
+            string index = intToString(i+1);
+            extraArgs << ", __global " << buffer.getType() << "* derivBuffers" << index << ", __local " << buffer.getType() << "* local_deriv" << index;
+            loadLocal2 << "local_deriv" << index << "[get_local_id(0)] = 0.0f;\n";
+            load1 << buffer.getType() << " deriv" << index << "_1 = 0;\n";
+            load2 << buffer.getType() << " deriv" << index << "_2 = 0;\n";
+            recordDeriv << "local_deriv" << index << "[atom2] += deriv" << index << "_2;\n";
+            storeDerivs1 << "derivBuffers" << index << "[offset1] += deriv" << index << "_1;\n";
+            storeDerivs2 << "derivBuffers" << index << "[offset2] += local_deriv" << index << "[get_local_id(0)];\n";
+        }
         replacements["PARAMETER_ARGUMENTS"] = extraArgs.str()+tableArgs.str();
         replacements["LOAD_LOCAL_PARAMETERS_FROM_1"] = loadLocal1.str();
         replacements["LOAD_LOCAL_PARAMETERS_FROM_GLOBAL"] = loadLocal2.str();
         replacements["LOAD_ATOM1_PARAMETERS"] = load1.str();
         replacements["LOAD_ATOM2_PARAMETERS"] = load2.str();
+        replacements["RECORD_DERIVATIVE_2"] = recordDeriv.str();
+        replacements["STORE_DERIVATIVES_1"] = storeDerivs1.str();
+        replacements["STORE_DERIVATIVES_2"] = storeDerivs2.str();
         map<string, string> defines;
         if (cl.getNonbondedUtilities().getForceBufferPerAtomBlock())
             defines["USE_OUTPUT_BUFFER_PER_BLOCK"] = "1";
@@ -1520,7 +1568,8 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
     {
         // Create the kernel to reduce the derivatives and calculate per-particle energy terms.
 
-        stringstream source, extraArgs;
+        stringstream compute, extraArgs, reduce;
+        map<string, Lepton::ParsedExpression> energyExpressions;
         if (force.getNumGlobalParameters() > 0)
             extraArgs << ", __constant float* globals";
         for (int i = 0; i < (int) params->getBuffers().size(); i++) {
@@ -1533,6 +1582,13 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
             string valueName = "values"+intToString(i+1);
             extraArgs << ", __global " << buffer.getType() << "* " << valueName;
         }
+        for (int i = 0; i < (int) energyDerivs->getBuffers().size(); i++) {
+            const OpenCLNonbondedUtilities::ParameterInfo& buffer = energyDerivs->getBuffers()[i];
+            string index = intToString(i+1);
+            extraArgs << ", __global " << buffer.getType() << "* derivBuffers" << index;
+            reduce << "REDUCE_VALUE(derivBuffers" << index << ", " << buffer.getType() << ")\n";
+            compute << buffer.getType() << " deriv" << index << " = derivBuffers" << index << "[index];\n";
+        }
         map<string, string> variables;
         for (int i = 0; i < force.getNumPerParticleParameters(); i++)
             variables[force.getPerParticleParameterName(i)] = "params"+params->getParameterSuffix(i, "[index]");
@@ -1540,7 +1596,6 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
             variables[force.getGlobalParameterName(i)] = "globals["+intToString(i)+"]";
         for (int i = 0; i < force.getNumComputedValues(); i++)
             variables[computedValueNames[i]] = "values"+computedValues->getParameterSuffix(i, "[index]");
-        map<string, Lepton::ParsedExpression> energyExpressions;
         for (int i = 0; i < force.getNumEnergyTerms(); i++) {
             string expression;
             CustomGBForce::ComputationType type;
@@ -1548,15 +1603,18 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
             if (type != CustomGBForce::SingleParticle)
                 continue;
             energyExpressions["/*"+intToString(i+1)+"*/ energy += "] = Lepton::Parser::parse(expression, functions).optimize();
+            for (int j = 0; j < force.getNumComputedValues(); j++)
+                energyExpressions["/*"+intToString(i+1)+"*/ deriv"+energyDerivs->getParameterSuffix(j)+" += "] = energyDerivExpressions[i][j];
         }
-        source << OpenCLExpressionUtilities::createExpressions(energyExpressions, variables, functionDefinitions, "temp", prefix+"functionParams");
-//        for (int i = 0; i < (int) computedValues->getBuffers().size(); i++) {
-//            string valueName = "values"+intToString(i+1);
-//            source << "global_" << valueName << "[index] = local_" << valueName << ";\n";
-//        }
+        compute << OpenCLExpressionUtilities::createExpressions(energyExpressions, variables, functionDefinitions, "temp", prefix+"functionParams");
+        for (int i = 0; i < (int) energyDerivs->getBuffers().size(); i++) {
+            string index = intToString(i+1);
+            compute << "derivBuffers" << index << "[index] = deriv" << index << ";\n";
+        }
         map<string, string> replacements;
         replacements["PARAMETER_ARGUMENTS"] = extraArgs.str()+tableArgs.str();
-        replacements["COMPUTE_ENERGY"] = source.str();
+        replacements["REDUCE_DERIVATIVES"] = reduce.str();
+        replacements["COMPUTE_ENERGY"] = compute.str();
         map<string, string> defines;
         defines["NUM_ATOMS"] = intToString(cl.getNumAtoms());
         cl::Program program = cl.createProgram(cl.loadSourceFromFile("customGBEnergyPerParticle.cl", replacements), defines);
@@ -1644,6 +1702,11 @@ void OpenCLCalcCustomGBForceKernel::executeForces(ContextImpl& context) {
             pairEnergyKernel.setArg<cl::Buffer>(index++, buffer.getBuffer());
             pairEnergyKernel.setArg(index++, OpenCLContext::ThreadBlockSize*buffer.getSize(), NULL);
         }
+        for (int i = 0; i < (int) energyDerivs->getBuffers().size(); i++) {
+            const OpenCLNonbondedUtilities::ParameterInfo& buffer = energyDerivs->getBuffers()[i];
+            pairEnergyKernel.setArg<cl::Buffer>(index++, buffer.getBuffer());
+            pairEnergyKernel.setArg(index++, OpenCLContext::ThreadBlockSize*buffer.getSize(), NULL);
+        }
         if (tabulatedFunctionParams != NULL) {
             for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
                 pairEnergyKernel.setArg<cl::Buffer>(index++, tabulatedFunctions[i]->getDeviceBuffer());
@@ -1659,6 +1722,8 @@ void OpenCLCalcCustomGBForceKernel::executeForces(ContextImpl& context) {
             perParticleEnergyKernel.setArg<cl::Buffer>(index++, params->getBuffers()[i].getBuffer());
         for (int i = 0; i < (int) computedValues->getBuffers().size(); i++)
             perParticleEnergyKernel.setArg<cl::Buffer>(index++, computedValues->getBuffers()[i].getBuffer());
+        for (int i = 0; i < (int) energyDerivs->getBuffers().size(); i++)
+            perParticleEnergyKernel.setArg<cl::Buffer>(index++, energyDerivs->getBuffers()[i].getBuffer());
         if (tabulatedFunctionParams != NULL) {
             for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
                 perParticleEnergyKernel.setArg<cl::Buffer>(index++, tabulatedFunctions[i]->getDeviceBuffer());
@@ -1677,14 +1742,18 @@ void OpenCLCalcCustomGBForceKernel::executeForces(ContextImpl& context) {
             globals->upload(globalParamValues);
     }
     cl.clearBuffer(*valueBuffers);
+    for (int i = 0; i < (int) energyDerivs->getBuffers().size(); i++) {
+        const OpenCLNonbondedUtilities::ParameterInfo& buffer = energyDerivs->getBuffers()[i];
+        cl.clearBuffer(buffer.getBuffer(), buffer.getSize()*energyDerivs->getNumObjects()/sizeof(cl_float));
+    }
     cl.executeKernel(pairValueKernel, nb.getTiles().getSize()*OpenCLContext::TileSize);
     cl.executeKernel(perParticleValueKernel, cl.getPaddedNumAtoms());
     cl.executeKernel(pairEnergyKernel, nb.getTiles().getSize()*OpenCLContext::TileSize);
     cl.executeKernel(perParticleEnergyKernel, cl.getPaddedNumAtoms());
 //    vector<vector<cl_float> > values;
-//    computedValues->getParameterValues(values);
+//    energyDerivs->getParameterValues(values);
 //    for (int i = 0; i < cl.getNumAtoms(); i++)
-//        printf("%d: %f\n", i, values[i][1]);
+//        printf("%d: %f %f\n", i, values[i][0], values[i][1]);
 }
 
 double OpenCLCalcCustomGBForceKernel::executeEnergy(ContextImpl& context) {

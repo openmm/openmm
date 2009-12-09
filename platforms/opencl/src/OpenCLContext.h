@@ -189,6 +189,13 @@ public:
      */
     void clearBuffer(OpenCLArray<mm_float4>& array);
     /**
+     * Set all elements of an array to 0.
+     *
+     * @param buffer     the Buffer to clear
+     * @param size       the number of float elements in the buffer
+     */
+    void clearBuffer(cl::Buffer& buffer, int size);
+    /**
      * Given a collection of buffers packed into an array, sum them and store
      * the sum in the first buffer.
      *

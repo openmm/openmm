@@ -476,7 +476,8 @@ private:
 class OpenCLCalcCustomGBForceKernel : public CalcCustomGBForceKernel {
 public:
     OpenCLCalcCustomGBForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcCustomGBForceKernel(name, platform),
-            hasInitializedKernels(false), cl(cl), params(NULL), globals(NULL), valueBuffers(NULL), tabulatedFunctionParams(NULL), system(system) {
+            hasInitializedKernels(false), cl(cl), params(NULL), computedValues(NULL), energyDerivs(NULL), globals(NULL), valueBuffers(NULL),
+            tabulatedFunctionParams(NULL), system(system) {
     }
     ~OpenCLCalcCustomGBForceKernel();
     /**
@@ -504,6 +505,7 @@ private:
     OpenCLContext& cl;
     OpenCLParameterSet* params;
     OpenCLParameterSet* computedValues;
+    OpenCLParameterSet* energyDerivs;
     OpenCLArray<cl_float>* globals;
     OpenCLArray<cl_float>* valueBuffers;
     OpenCLArray<mm_float4>* tabulatedFunctionParams;
