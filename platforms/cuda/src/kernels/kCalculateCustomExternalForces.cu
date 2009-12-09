@@ -37,10 +37,10 @@ using namespace std;
 #include "cudatypes.h"
 
 static __constant__ cudaGmxSimulation cSim;
-static __constant__ Expression<128> forceExpX;
-static __constant__ Expression<128> forceExpY;
-static __constant__ Expression<128> forceExpZ;
-static __constant__ Expression<128> energyExp;
+static __constant__ Expression<256> forceExpX;
+static __constant__ Expression<256> forceExpY;
+static __constant__ Expression<256> forceExpZ;
+static __constant__ Expression<256> energyExp;
 
 #include "kEvaluateExpression.h"
 
@@ -58,7 +58,7 @@ void GetCalculateCustomExternalForcesSim(gpuContext gpu)
     RTERROR(status, "cudaMemcpyFromSymbol: SetSim copy from cSim failed");
 }
 
-void SetCustomExternalForceExpressions(const Expression<128>& expressionX, const Expression<128>& expressionY, const Expression<128>& expressionZ)
+void SetCustomExternalForceExpressions(const Expression<256>& expressionX, const Expression<256>& expressionY, const Expression<256>& expressionZ)
 {
     cudaError_t status;
     status = cudaMemcpyToSymbol(forceExpX, &expressionX, sizeof(forceExpX));
@@ -67,7 +67,7 @@ void SetCustomExternalForceExpressions(const Expression<128>& expressionX, const
     RTERROR(status, "SetCustomExternalForceExpression: cudaMemcpyToSymbol failed");
 }
 
-void SetCustomExternalEnergyExpression(const Expression<128>& expression)
+void SetCustomExternalEnergyExpression(const Expression<256>& expression)
 {
     cudaError_t status;
     status = cudaMemcpyToSymbol(energyExp, &expression, sizeof(energyExp));

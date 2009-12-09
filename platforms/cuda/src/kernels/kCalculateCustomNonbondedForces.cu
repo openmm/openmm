@@ -50,8 +50,8 @@ struct Atom {
 };
 
 static __constant__ cudaGmxSimulation cSim;
-static __constant__ Expression<128> forceExp;
-static __constant__ Expression<128> energyExp;
+static __constant__ Expression<256> forceExp;
+static __constant__ Expression<256> energyExp;
 
 #include "kEvaluateExpression.h"
 
@@ -69,14 +69,14 @@ void GetCalculateCustomNonbondedForcesSim(gpuContext gpu)
     RTERROR(status, "cudaMemcpyFromSymbol: SetSim copy from cSim failed");
 }
 
-void SetCustomNonbondedForceExpression(const Expression<128>& expression)
+void SetCustomNonbondedForceExpression(const Expression<256>& expression)
 {
     cudaError_t status;
     status = cudaMemcpyToSymbol(forceExp, &expression, sizeof(forceExp));
     RTERROR(status, "SetCustomNonbondedForceExpression: cudaMemcpyToSymbol failed");
 }
 
-void SetCustomNonbondedEnergyExpression(const Expression<128>& expression)
+void SetCustomNonbondedEnergyExpression(const Expression<256>& expression)
 {
     cudaError_t status;
     status = cudaMemcpyToSymbol(energyExp, &expression, sizeof(energyExp));

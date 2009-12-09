@@ -691,8 +691,8 @@ void gpuSetCustomBondParameters(gpuContext gpu, const vector<int>& bondAtom1, co
     variables.push_back("r");
     for (int i = 0; i < (int) paramNames.size(); i++)
         variables.push_back(paramNames[i]);
-    SetCustomBondEnergyExpression(createExpression<128>(gpu, energyExp, Lepton::Parser::parse(energyExp).optimize().createProgram(), variables, globalParamNames, gpu->sim.customExpressionStackSize));
-    SetCustomBondForceExpression(createExpression<128>(gpu, energyExp, Lepton::Parser::parse(energyExp).differentiate("r").optimize().createProgram(), variables, globalParamNames, gpu->sim.customExpressionStackSize));
+    SetCustomBondEnergyExpression(createExpression<256>(gpu, energyExp, Lepton::Parser::parse(energyExp).optimize().createProgram(), variables, globalParamNames, gpu->sim.customExpressionStackSize));
+    SetCustomBondForceExpression(createExpression<256>(gpu, energyExp, Lepton::Parser::parse(energyExp).differentiate("r").optimize().createProgram(), variables, globalParamNames, gpu->sim.customExpressionStackSize));
 }
 
 extern "C"
@@ -733,10 +733,10 @@ void gpuSetCustomExternalParameters(gpuContext gpu, const vector<int>& atomIndex
     variables.push_back("z");
     for (int i = 0; i < (int) paramNames.size(); i++)
         variables.push_back(paramNames[i]);
-    SetCustomExternalEnergyExpression(createExpression<128>(gpu, energyExp, Lepton::Parser::parse(energyExp).optimize().createProgram(), variables, globalParamNames, gpu->sim.customExpressionStackSize));
-    SetCustomExternalForceExpressions(createExpression<128>(gpu, energyExp, Lepton::Parser::parse(energyExp).differentiate("x").optimize().createProgram(), variables, globalParamNames, gpu->sim.customExpressionStackSize),
-                                  createExpression<128>(gpu, energyExp, Lepton::Parser::parse(energyExp).differentiate("y").optimize().createProgram(), variables, globalParamNames, gpu->sim.customExpressionStackSize),
-                                  createExpression<128>(gpu, energyExp, Lepton::Parser::parse(energyExp).differentiate("z").optimize().createProgram(), variables, globalParamNames, gpu->sim.customExpressionStackSize));
+    SetCustomExternalEnergyExpression(createExpression<256>(gpu, energyExp, Lepton::Parser::parse(energyExp).optimize().createProgram(), variables, globalParamNames, gpu->sim.customExpressionStackSize));
+    SetCustomExternalForceExpressions(createExpression<256>(gpu, energyExp, Lepton::Parser::parse(energyExp).differentiate("x").optimize().createProgram(), variables, globalParamNames, gpu->sim.customExpressionStackSize),
+                                  createExpression<256>(gpu, energyExp, Lepton::Parser::parse(energyExp).differentiate("y").optimize().createProgram(), variables, globalParamNames, gpu->sim.customExpressionStackSize),
+                                  createExpression<256>(gpu, energyExp, Lepton::Parser::parse(energyExp).differentiate("z").optimize().createProgram(), variables, globalParamNames, gpu->sim.customExpressionStackSize));
 }
 
 extern "C"
@@ -815,8 +815,8 @@ void gpuSetCustomNonbondedParameters(gpuContext gpu, const vector<vector<double>
             variables.push_back("");
     }
     variables.push_back("r");
-    SetCustomNonbondedEnergyExpression(createExpression<128>(gpu, energyExp, Lepton::Parser::parse(energyExp, functions).optimize().createProgram(), variables, globalParamNames, gpu->sim.customExpressionStackSize));
-    SetCustomNonbondedForceExpression(createExpression<128>(gpu, energyExp, Lepton::Parser::parse(energyExp, functions).differentiate("r").optimize().createProgram(), variables, globalParamNames, gpu->sim.customExpressionStackSize));
+    SetCustomNonbondedEnergyExpression(createExpression<256>(gpu, energyExp, Lepton::Parser::parse(energyExp, functions).optimize().createProgram(), variables, globalParamNames, gpu->sim.customExpressionStackSize));
+    SetCustomNonbondedForceExpression(createExpression<256>(gpu, energyExp, Lepton::Parser::parse(energyExp, functions).differentiate("r").optimize().createProgram(), variables, globalParamNames, gpu->sim.customExpressionStackSize));
     delete fp;
 }
 
@@ -1843,6 +1843,7 @@ void* gpuInit(int numAtoms, unsigned int device, bool useBlockingSync)
     gpu->psShakeParameter           = NULL;
     gpu->psSettleID                 = NULL;
     gpu->psSettleParameter          = NULL;
+    gpu->psNonShakeID               = NULL;
     gpu->psExclusion                = NULL;
     gpu->psExclusionIndex           = NULL;
     gpu->psWorkUnit                 = NULL;
@@ -2044,7 +2045,8 @@ void gpuShutDown(gpuContext gpu)
     delete gpu->psShakeParameter;
     delete gpu->psSettleID;
     delete gpu->psSettleParameter;
-    delete gpu->psNonShakeID;
+    if (gpu->psNonShakeID != NULL)
+        delete gpu->psNonShakeID;
     delete gpu->psExclusion;
     delete gpu->psExclusionIndex;
     delete gpu->psWorkUnit;

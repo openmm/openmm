@@ -37,8 +37,8 @@ using namespace std;
 #include "cudatypes.h"
 
 static __constant__ cudaGmxSimulation cSim;
-static __constant__ Expression<128> forceExp;
-static __constant__ Expression<128> energyExp;
+static __constant__ Expression<256> forceExp;
+static __constant__ Expression<256> energyExp;
 
 #include "kEvaluateExpression.h"
 
@@ -56,14 +56,14 @@ void GetCalculateCustomBondForcesSim(gpuContext gpu)
     RTERROR(status, "cudaMemcpyFromSymbol: SetSim copy from cSim failed");
 }
 
-void SetCustomBondForceExpression(const Expression<128>& expression)
+void SetCustomBondForceExpression(const Expression<256>& expression)
 {
     cudaError_t status;
     status = cudaMemcpyToSymbol(forceExp, &expression, sizeof(forceExp));
     RTERROR(status, "SetCustomBondForceExpression: cudaMemcpyToSymbol failed");
 }
 
-void SetCustomBondEnergyExpression(const Expression<128>& expression)
+void SetCustomBondEnergyExpression(const Expression<256>& expression)
 {
     cudaError_t status;
     status = cudaMemcpyToSymbol(energyExp, &expression, sizeof(energyExp));
