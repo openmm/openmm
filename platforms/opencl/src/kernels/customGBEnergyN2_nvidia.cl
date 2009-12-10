@@ -129,13 +129,13 @@ __kernel void computeN2Energy(__global float4* forceBuffers, __global float* ene
                     if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
                         COMPUTE_INTERACTION
                         dEdR /= -r;
-                        RECORD_DERIVATIVE_2
                     }
 		    energy += tempEnergy;
                     delta.xyz *= dEdR;
                     force.xyz -= delta.xyz;
                     atom2 = tbx+tj;
                     local_force[atom2].xyz += delta.xyz;
+                    RECORD_DERIVATIVE_2
 #ifdef USE_EXCLUSIONS
                     excl >>= 1;
 #endif
