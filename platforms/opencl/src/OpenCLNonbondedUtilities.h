@@ -171,6 +171,18 @@ public:
         return *interactionFlags;
     }
     /**
+     * Get the array containing exclusion flags.
+     */
+    OpenCLArray<cl_uint>& getExclusions() {
+        return *exclusions;
+    }
+    /**
+     * Get the array containing the index into the exclusion array for each tile.
+     */
+    OpenCLArray<cl_uint>& getExclusionIndices() {
+        return *exclusionIndex;
+    }
+    /**
      * Create a Kernel for evaluating a nonbonded interaction.  Cutoffs and periodic boundary conditions
      * are assumed to be the same as those for the default interaction Kernel, since this kernel will use
      * the same neighbor list.

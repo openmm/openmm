@@ -5,7 +5,8 @@
  */
 
 __kernel void computeN2Energy(__global float4* forceBuffers, __global float* energyBuffer, __local float4* local_force,
-	__global float4* posq, __local float4* local_posq, __local float4* tempBuffer, __global unsigned int* tiles,
+	__global float4* posq, __local float4* local_posq, __global unsigned int* exclusions, __global unsigned int* exclusionIndices,
+        __local float4* tempBuffer, __global unsigned int* tiles,
 #ifdef USE_CUTOFF
         __global unsigned int* interactionFlags, __global unsigned int* interactionCount
 #else
@@ -56,7 +57,11 @@ __kernel void computeN2Energy(__global float4* forceBuffers, __global float* ene
                 delta.y -= floor(delta.y/PERIODIC_BOX_SIZE_Y+0.5f)*PERIODIC_BOX_SIZE_Y;
                 delta.z -= floor(delta.z/PERIODIC_BOX_SIZE_Z+0.5f)*PERIODIC_BOX_SIZE_Z;
 #endif
-                float r = sqrt(delta.x*delta.x + delta.y*delta.y + delta.z*delta.z);
+                float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
+#ifdef USE_CUTOFF
+                if (r2 < CUTOFF_SQUARED) {
+#endif
+                float r = sqrt(r2);
                 LOAD_ATOM2_PARAMETERS
                 atom2 = y+j;
                 float dEdR = 0.0f;
@@ -68,6 +73,9 @@ __kernel void computeN2Energy(__global float4* forceBuffers, __global float* ene
                 energy += 0.5f*tempEnergy;
                 delta.xyz *= dEdR;
                 force.xyz -= delta.xyz;
+#ifdef USE_CUTOFF
+                }
+#endif
 #ifdef USE_EXCLUSIONS
                 excl >>= 1;
 #endif
@@ -121,7 +129,11 @@ __kernel void computeN2Energy(__global float4* forceBuffers, __global float* ene
                     delta.y -= floor(delta.y/PERIODIC_BOX_SIZE_Y+0.5f)*PERIODIC_BOX_SIZE_Y;
                     delta.z -= floor(delta.z/PERIODIC_BOX_SIZE_Z+0.5f)*PERIODIC_BOX_SIZE_Z;
 #endif
-                    float r = sqrt(delta.x*delta.x + delta.y*delta.y + delta.z*delta.z);
+                    float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
+#ifdef USE_CUTOFF
+                    if (r2 < CUTOFF_SQUARED) {
+#endif
+                    float r = sqrt(r2);
                     LOAD_ATOM2_PARAMETERS
                     atom2 = y+tj;
                     float dEdR = 0.0f;
@@ -136,6 +148,9 @@ __kernel void computeN2Energy(__global float4* forceBuffers, __global float* ene
                     atom2 = tbx+tj;
                     local_force[atom2].xyz += delta.xyz;
                     RECORD_DERIVATIVE_2
+#ifdef USE_CUTOFF
+                    }
+#endif
 #ifdef USE_EXCLUSIONS
                     excl >>= 1;
 #endif

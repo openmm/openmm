@@ -4,8 +4,9 @@
  * Compute a value based on pair interactions.
  */
 
-__kernel void computeN2Value(__global float4* posq, __local float4* local_posq, __global float* global_value,
-        __local float* local_value, __local float* tempBuffer, __global unsigned int* tiles,
+__kernel void computeN2Value(__global float4* posq, __local float4* local_posq, __global unsigned int* exclusions,
+        __global unsigned int* exclusionIndices, __global float* global_value, __local float* local_value,
+        __local float* tempBuffer, __global unsigned int* tiles,
 #ifdef USE_CUTOFF
         __global unsigned int* interactionFlags, __global unsigned int* interactionCount
 #else
@@ -57,6 +58,9 @@ __kernel void computeN2Value(__global float4* posq, __local float4* local_posq, 
                 delta.z -= floor(delta.z/PERIODIC_BOX_SIZE_Z+0.5f)*PERIODIC_BOX_SIZE_Z;
 #endif
                 float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
+#ifdef USE_CUTOFF
+                if (r2 < CUTOFF_SQUARED) {
+#endif
                 float r = sqrt(r2);
                 LOAD_ATOM2_PARAMETERS
                 atom2 = y+j;
@@ -70,6 +74,9 @@ __kernel void computeN2Value(__global float4* posq, __local float4* local_posq, 
                     COMPUTE_VALUE
                 }
                 value += tempValue1;
+#ifdef USE_CUTOFF
+                }
+#endif
 #ifdef USE_EXCLUSIONS
                 excl >>= 1;
 #endif
@@ -112,15 +119,17 @@ __kernel void computeN2Value(__global float4* posq, __local float4* local_posq, 
                             delta.z -= floor(delta.z/PERIODIC_BOX_SIZE_Z+0.5f)*PERIODIC_BOX_SIZE_Z;
 #endif
                             float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
-                            float r = sqrt(r2);
-                            LOAD_ATOM2_PARAMETERS
-                            atom2 = y+j;
                             float tempValue1 = 0.0f;
                             float tempValue2 = 0.0f;
-                            if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
-                                COMPUTE_VALUE
+                            if (r2 < CUTOFF_SQUARED) {
+                                float r = sqrt(r2);
+                                LOAD_ATOM2_PARAMETERS
+                                atom2 = y+j;
+                                if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS) {
+                                    COMPUTE_VALUE
+                                }
+                                value += tempValue1;
                             }
-                            value += tempValue1;
                             tempBuffer[get_local_id(0)] = tempValue2;
 
                             // Sum the forces on atom2.
@@ -165,6 +174,9 @@ __kernel void computeN2Value(__global float4* posq, __local float4* local_posq, 
                     delta.z -= floor(delta.z/PERIODIC_BOX_SIZE_Z+0.5f)*PERIODIC_BOX_SIZE_Z;
 #endif
                     float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
+#ifdef USE_CUTOFF
+                    if (r2 < CUTOFF_SQUARED) {
+#endif
                     float r = sqrt(r2);
                     LOAD_ATOM2_PARAMETERS
                     atom2 = y+tj;
@@ -179,6 +191,9 @@ __kernel void computeN2Value(__global float4* posq, __local float4* local_posq, 
                     }
                     value += tempValue1;
                     local_value[tbx+tj] += tempValue2;
+#ifdef USE_CUTOFF
+                    }
+#endif
 #ifdef USE_EXCLUSIONS
                     excl >>= 1;
 #endif
