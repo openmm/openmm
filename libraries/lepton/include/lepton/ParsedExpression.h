@@ -97,6 +97,14 @@ public:
      * Create an ExpressionProgram that represents the same calculation as this expression.
      */
     ExpressionProgram createProgram() const;
+    /**
+     * Create a new ParsedExpression which is identical to this one, except that the names of some
+     * variables have been changed.
+     *
+     * @param replacements    a map whose keys are the names of variables, and whose values are the
+     *                        new names to replace them with
+     */
+    ParsedExpression renameVariables(const std::map<std::string, std::string>& replacements) const;
 private:
     static double evaluate(const ExpressionTreeNode& node, const std::map<std::string, double>& variables);
     static ExpressionTreeNode preevaluateVariables(const ExpressionTreeNode& node, const std::map<std::string, double>& variables);
@@ -104,6 +112,7 @@ private:
     static ExpressionTreeNode substituteSimplerExpression(const ExpressionTreeNode& node);
     static ExpressionTreeNode differentiate(const ExpressionTreeNode& node, const std::string& variable);
     static double getConstantValue(const ExpressionTreeNode& node);
+    static ExpressionTreeNode renameNodeVariables(const ExpressionTreeNode& node, const std::map<std::string, std::string>& replacements);
     ExpressionTreeNode rootNode;
 };
 

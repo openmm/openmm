@@ -1356,30 +1356,27 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
     {
         // Create the N2 value kernel.
 
-        map<string, string> variables1;
-        map<string, string> variables2;
-        variables1["r"] = "r";
-        variables2["r"] = "r";
+        map<string, string> variables;
+        map<string, string> rename;
+        variables["r"] = "r";
         for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
             const string& name = force.getPerParticleParameterName(i);
-            variables1[name+"1"] = "params"+params->getParameterSuffix(i, "1");
-            variables1[name+"2"] = "params"+params->getParameterSuffix(i, "2");
-            variables2[name+"2"] = "params"+params->getParameterSuffix(i, "1");
-            variables2[name+"1"] = "params"+params->getParameterSuffix(i, "2");
+            variables[name+"1"] = "params"+params->getParameterSuffix(i, "1");
+            variables[name+"2"] = "params"+params->getParameterSuffix(i, "2");
+            rename[name+"1"] = name+"2";
+            rename[name+"2"] = name+"1";
         }
         for (int i = 0; i < force.getNumGlobalParameters(); i++) {
             const string& name = force.getGlobalParameterName(i);
             string value = "globals["+intToString(i)+"]";
-            variables1[name] = value;
-            variables2[name] = value;
+            variables[name] = value;
         }
         map<string, Lepton::ParsedExpression> n2ValueExpressions;
         stringstream n2ValueSource;
-        n2ValueExpressions["tempValue1 = "] = Lepton::Parser::parse(computedValueExpressions[0], functions).optimize();
-        n2ValueSource << OpenCLExpressionUtilities::createExpressions(n2ValueExpressions, variables1, functionDefinitions, "tempA", prefix+"functionParams");
-        n2ValueExpressions.clear();
-        n2ValueExpressions["tempValue2 = "] = Lepton::Parser::parse(computedValueExpressions[0], functions).optimize();
-        n2ValueSource << OpenCLExpressionUtilities::createExpressions(n2ValueExpressions, variables2, functionDefinitions, "tempB", prefix+"functionParams");
+        Lepton::ParsedExpression ex = Lepton::Parser::parse(computedValueExpressions[0], functions).optimize();
+        n2ValueExpressions["tempValue1 = "] = ex;
+        n2ValueExpressions["tempValue2 = "] = ex.renameVariables(rename);
+        n2ValueSource << OpenCLExpressionUtilities::createExpressions(n2ValueExpressions, variables, functionDefinitions, "temp", prefix+"functionParams");
         map<string, string> replacements;
         replacements["COMPUTE_VALUE"] = n2ValueSource.str();
         stringstream extraArgs, loadLocal1, loadLocal2, load1, load2;
@@ -1627,48 +1624,48 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
             string value = "globals["+intToString(i)+"]";
             globalVariables[name] = prefix+value;
         }
-        map<string, string> variables1 = globalVariables;
-        map<string, string> variables2 = globalVariables;
-        variables1["r"] = "r";
-        variables2["r"] = "r";
+        map<string, string> variables = globalVariables;
+        map<string, string> rename;
+        variables["r"] = "r";
         for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
             const string& name = force.getPerParticleParameterName(i);
-            variables1[name+"1"] = prefix+"params"+params->getParameterSuffix(i, "1");
-            variables1[name+"2"] = prefix+"params"+params->getParameterSuffix(i, "2");
-            variables2[name+"2"] = prefix+"params"+params->getParameterSuffix(i, "1");
-            variables2[name+"1"] = prefix+"params"+params->getParameterSuffix(i, "2");
+            variables[name+"1"] = prefix+"params"+params->getParameterSuffix(i, "1");
+            variables[name+"2"] = prefix+"params"+params->getParameterSuffix(i, "2");
+            rename[name+"1"] =  name+"2";
+            rename[name+"2"] =  name+"1";
         }
         map<string, Lepton::ParsedExpression> derivExpressions;
         stringstream chainSource;
         Lepton::ParsedExpression dVdR = Lepton::Parser::parse(computedValueExpressions[0], functions).differentiate("r").optimize();
         derivExpressions["float dVdR1 = "] = dVdR;
-        chainSource << OpenCLExpressionUtilities::createExpressions(derivExpressions, variables1, functionDefinitions, prefix+"tempA0_", prefix+"functionParams");
-        derivExpressions.clear();
-        derivExpressions["float dVdR2 = "] = dVdR;
-        chainSource << OpenCLExpressionUtilities::createExpressions(derivExpressions, variables2, functionDefinitions, prefix+"tempB0_", prefix+"functionParams");
+        derivExpressions["float dVdR2 = "] = dVdR.renameVariables(rename);
+        chainSource << OpenCLExpressionUtilities::createExpressions(derivExpressions, variables, functionDefinitions, prefix+"temp0_", prefix+"functionParams");
         chainSource << "tempForce -= dVdR1*" << prefix << "dEdV" << energyDerivs->getParameterSuffix(0, "1") << ";\n";
         chainSource << "tempForce -= dVdR2*" << prefix << "dEdV" << energyDerivs->getParameterSuffix(0, "2") << ";\n";
-        variables1 = globalVariables;
-        variables2 = globalVariables;
+        variables = globalVariables;
+        map<string, string> rename1;
+        map<string, string> rename2;
         for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
             const string& name = force.getPerParticleParameterName(i);
-            variables1[name] = prefix+"params"+params->getParameterSuffix(i, "1");
-            variables2[name] = prefix+"params"+params->getParameterSuffix(i, "2");
+            variables[name+"1"] = prefix+"params"+params->getParameterSuffix(i, "1");
+            variables[name+"2"] = prefix+"params"+params->getParameterSuffix(i, "2");
+            rename1[name] = name+"1";
+            rename2[name] = name+"2";
         }
         for (int i = 0; i < force.getNumComputedValues(); i++) {
             const string& name = computedValueNames[i];
-            variables1[name] = prefix+"values"+computedValues->getParameterSuffix(i, "1");
-            variables2[name] = prefix+"values"+computedValues->getParameterSuffix(i, "2");
+            variables[name+"1"] = prefix+"values"+computedValues->getParameterSuffix(i, "1");
+            variables[name+"2"] = prefix+"values"+computedValues->getParameterSuffix(i, "2");
+            rename1[name] = name+"1";
+            rename2[name] = name+"2";
             if (i == 0)
                 continue;
             Lepton::ParsedExpression dVdV = Lepton::Parser::parse(computedValueExpressions[1], functions).differentiate(computedValueNames[i-1]).optimize();
             string var = "dV"+intToString(i+1)+"dV"+intToString(i)+"_";
             derivExpressions.clear();
-            derivExpressions["float "+var+"1 = "] = dVdV;
-            chainSource << OpenCLExpressionUtilities::createExpressions(derivExpressions, variables1, functionDefinitions, prefix+"tempA"+intToString(i)+"_", prefix+"functionParams");
-            derivExpressions.clear();
-            derivExpressions["float "+var+"2 = "] = dVdV;
-            chainSource << OpenCLExpressionUtilities::createExpressions(derivExpressions, variables2, functionDefinitions, prefix+"tempB"+intToString(i)+"_", prefix+"functionParams");
+            derivExpressions["float "+var+"1 = "] = dVdV.renameVariables(rename1);
+            derivExpressions["float "+var+"2 = "] = dVdV.renameVariables(rename2);
+            chainSource << OpenCLExpressionUtilities::createExpressions(derivExpressions, variables, functionDefinitions, prefix+"temp"+intToString(i)+"_", prefix+"functionParams");
             chainSource << "dVdR1 *= "+var+"1;\n";
             chainSource << "dVdR2 *= "+var+"2;\n";
             chainSource << "tempForce -= dVdR1*" << prefix << "dEdV" << energyDerivs->getParameterSuffix(i, "1") << ";\n";

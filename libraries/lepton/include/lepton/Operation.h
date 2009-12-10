@@ -102,6 +102,13 @@ public:
     virtual bool isInfixOperator() const {
         return false;
     }
+    /**
+     * Get whether this is a symmetric binary operation, such that exchanging its arguments
+     * does not affect the result.
+     */
+    virtual bool isSymmetric() const {
+        return false;
+    }
     virtual bool operator!=(const Operation& op) const {
         return op.getId() != getId();
     }
@@ -273,6 +280,9 @@ public:
     bool isInfixOperator() const {
         return true;
     }
+    bool isSymmetric() const {
+        return true;
+    }
 };
 
 class Operation::Subtract : public Operation {
@@ -321,6 +331,9 @@ public:
     }
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
     bool isInfixOperator() const {
+        return true;
+    }
+    bool isSymmetric() const {
         return true;
     }
 };
@@ -909,6 +922,9 @@ public:
     bool operator!=(const Operation& op) const {
         const PowerConstant* o = dynamic_cast<const PowerConstant*>(&op);
         return (o == NULL || o->value != value);
+    }
+    bool isInfixOperator() const {
+        return true;
     }
 private:
     double value;

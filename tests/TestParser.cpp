@@ -85,6 +85,16 @@ void verifyEvaluation(const string& expression, double x, double y, double expec
     ExpressionProgram program = parsed.createProgram();
     value = program.evaluate(variables);
     ASSERT_EQUAL_TOL(expectedValue, value, 1e-10);
+
+    // Make sure that variable renaming works.
+
+    variables.clear();
+    variables["w"] = x;
+    variables["y"] = y;
+    map<string, string> replacements;
+    replacements["x"] = "w";
+    value = parsed.renameVariables(replacements).evaluate(variables);
+    ASSERT_EQUAL_TOL(expectedValue, value, 1e-10);
 }
 
 /**
@@ -184,6 +194,9 @@ int main() {
         verifyEvaluation("5*(-x)/(-y)", 1.0, 4.0, 1.25);
         verifyEvaluation("5*(-x)/(y)", 1.0, 4.0, -1.25);
         verifyEvaluation("5*(x)/(-y)", 1.0, 4.0, -1.25);
+        verifyEvaluation("x+(-y)", 1.0, 4.0, -3.0);
+        verifyEvaluation("(-x)+y", 1.0, 4.0, 3.0);
+        verifyEvaluation("x/(1/y)", 1.0, 4.0, 4.0);
         verifyEvaluation("x*w; w = 5", 3.0, 1.0, 15.0);
         verifyEvaluation("a+b^2;a=x-b;b=3*y", 2.0, 3.0, 74.0);
         verifyInvalidExpression("1..2");
