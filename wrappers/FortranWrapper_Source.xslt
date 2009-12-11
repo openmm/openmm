@@ -513,6 +513,11 @@ OPENMM_EXPORT <xsl:if test="$has_return">
     <xsl:variable name="enum_class" select="/GCC_XML/*[@id=$type_node/@context]"/>
     <xsl:value-of select="concat('(OpenMM_', $enum_class/@name, '_', $type_node/@name, ') ', @name)"/>
    </xsl:when>
+   <xsl:when test="local-name($type_node)='ReferenceType' and not(empty(/GCC_XML/Enumeration[@id=$type_node/@type]))">
+    <xsl:variable name="enum_node" select="/GCC_XML/Enumeration[@id=$type_node/@type]"/>
+    <xsl:variable name="enum_class" select="/GCC_XML/*[@id=$enum_node/@context]"/>
+    <xsl:value-of select="concat('(OpenMM_', $enum_class/@name, '_', $enum_node/@name, '*) ', @name)"/>
+   </xsl:when>
    <xsl:otherwise>
     <xsl:value-of select="@name"/>
    </xsl:otherwise>
@@ -634,7 +639,7 @@ OPENMM_EXPORT <xsl:if test="$has_return">
     <xsl:with-param name="type_id" select="$node/@type"/>
    </xsl:call-template>
   </xsl:when>
-  <xsl:when test="local-name($node)='Enumeration'">
+  <xsl:when test="local-name($node)='Enumeration' or (local-name($node)='ReferenceType' and not(empty(/GCC_XML/Enumeration[@id=$node/@type])))">
    <xsl:call-template name="hide_type">
     <xsl:with-param name="type_id" select="$node/@context"/>
    </xsl:call-template>
