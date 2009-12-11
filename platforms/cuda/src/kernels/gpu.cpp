@@ -122,14 +122,14 @@ static const float forceConversionFactor    =    0.4184f;
 //static const float surfaceAreaFactor        =   -6.0f * PI * 4.0f * 0.0049f * 1000.0f;
 static const float surfaceAreaFactor        = -6.0f*PI*0.0216f*1000.0f*0.4184f;
 //static const float surfaceAreaFactor        = -1.7035573959e+001;
-//static const float surfaceAreaFactor        = -166.02691f;
+//static const float surfaceAreaFactor        = -166.03185f;
 //static const float surfaceAreaFactor        = 1.0f;
 
 static const float alphaOBC                 =    1.0f;
 static const float betaOBC                  =    0.8f;
 static const float gammaOBC                 =    4.85f;
 static const float kcalMolTokJNM            =   -0.4184f;
-static const float electricConstant         = -166.02691f;
+static const float electricConstant         = -166.03185f;
 static const float defaultInnerDielectric   =    1.0f;
 static const float defaultSolventDielectric =   78.3f;
 static const float KILO                     =    1e3;                      // Thousand

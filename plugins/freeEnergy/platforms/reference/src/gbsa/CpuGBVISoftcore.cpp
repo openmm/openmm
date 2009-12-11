@@ -32,8 +32,6 @@
 #include "../SimTKReference/ReferenceForce.h"
 #include <math.h>
 
-static const RealOpenMM CAL_TO_JOULE = 0.4184f;
-
 /**---------------------------------------------------------------------------------------
 
    CpuGBVISoftcore constructor
@@ -688,7 +686,7 @@ RealOpenMM e3 = -partialChargeI2*partialCharges[atomJ]*Sgb( t )/deltaR[Reference
 
       energy += two*partialChargeI*atomIEnergy;
    }
-   energy *= CAL_TO_JOULE*preFactor;
+   energy *= preFactor;
    energy -= cavityEnergy;
 
 #if( GBVISoftcoreDebug == 1 )
@@ -850,13 +848,13 @@ if( atomI == 0 ){
 
 #if( GBVISoftcoreDebug == 1 )
 {
-   double stupidFactor                   = three/CAL_TO_JOULE;
-   RealOpenMM conversion                 = (RealOpenMM)(CAL_TO_JOULE*gbviParameters->getTau());  
+   double stupidFactor                   = three;
+   RealOpenMM conversion                 = (RealOpenMM)(gbviParameters->getTau());  
    int maxPrint                          = 20;
    const RealOpenMM* scaledRadii         = gbviParameters->getScaledRadii();
    RealOpenMM* switchDeriviative         = getSwitchDeriviative();
 
-   (void) fprintf( logFile, "F1: Conversion=%14.6e %14.6e*%14.6e (tau)\n", conversion, CAL_TO_JOULE, gbviParameters->getTau() );
+   (void) fprintf( logFile, "F1: Conversion=%14.6e %14.6e*%14.6e (tau)\n", conversion, 1, gbviParameters->getTau() );
    for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
       RealOpenMM R        = atomicRadii[atomI];
       RealOpenMM  ratio   = (atomicRadii[atomI]/bornRadii[atomI]);
@@ -891,13 +889,13 @@ if( atomI == 0 ){
 
 #if( GBVISoftcoreDebug == 2 )
 {
-   double stupidFactor                   = three/CAL_TO_JOULE;
-   RealOpenMM conversion                 = (RealOpenMM)(CAL_TO_JOULE*gbviParameters->getTau());  
+   double stupidFactor                   = three;
+   RealOpenMM conversion                 = (RealOpenMM)(gbviParameters->getTau());  
    int maxPrint                          = 1000000;
    const RealOpenMM* scaledRadii         = gbviParameters->getScaledRadii();
    RealOpenMM* switchDeriviative         = getSwitchDeriviative();
 
-   (void) fprintf( logFile, "F1: Conversion=%14.6e %14.6e*%14.6e (tau)\n", conversion, CAL_TO_JOULE, gbviParameters->getTau() );
+   (void) fprintf( logFile, "F1: Conversion=%14.6e %14.6e*%14.6e (tau)\n", conversion, 1, gbviParameters->getTau() );
    for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
       RealOpenMM R        = atomicRadii[atomI];
       RealOpenMM  ratio   = (atomicRadii[atomI]/bornRadii[atomI]);
@@ -943,7 +941,7 @@ if( atomI == 0 ){
 
    const RealOpenMM* scaledRadii                    = gbviParameters->getScaledRadii();
    RealOpenMM* switchDeriviative                    = getSwitchDeriviative();
-   RealOpenMM stupidFactor                          = three/CAL_TO_JOULE;
+   RealOpenMM stupidFactor                          = three;
    const RealOpenMM* bornRadiusScaleFactors         = gbviParameters->getBornRadiusScaleFactors();
    for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
  
@@ -1054,7 +1052,7 @@ if( atomI == 0 ){
    (void) fprintf( logFile, "\nPre conversion\n" );
    (void) fprintf( logFile, "Atom        ScaledRadii    BornRadii      BornForce      SwitchDrv                                         Forces\n" );
    double forceSum[3] = { 0.0, 0.0, 0.0 };
-   RealOpenMM conversion = (RealOpenMM)(CAL_TO_JOULE*gbviParameters->getTau());  
+   RealOpenMM conversion = (RealOpenMM)(gbviParameters->getTau());  
    const RealOpenMM* scaledRadii                    = gbviParameters->getScaledRadii();
    for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
       forceSum[0] += forces[atomI][0];
@@ -1071,7 +1069,7 @@ if( atomI == 0 ){
 
    // convert from cal to Joule & apply prefactor tau = (1/diel_solute - 1/diel_solvent)
 
-   RealOpenMM conversion = (RealOpenMM)(CAL_TO_JOULE*gbviParameters->getTau());  
+   RealOpenMM conversion = (RealOpenMM)(gbviParameters->getTau());  
    for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
       inputForces[atomI][0] += conversion*forces[atomI][0];
       inputForces[atomI][1] += conversion*forces[atomI][1];

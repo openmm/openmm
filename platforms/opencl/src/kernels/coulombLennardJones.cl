@@ -2,7 +2,7 @@
 if (r2 < CUTOFF_SQUARED) {
     bool needCorrection = isExcluded && atom1 != atom2 && atom1 < NUM_ATOMS && atom2 < NUM_ATOMS;
     if (!isExcluded || needCorrection) {
-        const float prefactor = 138.935485f*posq1.w*posq2.w*invR;
+        const float prefactor = 138.935456f*posq1.w*posq2.w*invR;
         float alphaR = EWALD_ALPHA*r;
         float erfcAlphaR = erfc(alphaR);
         float tempForce;
@@ -47,11 +47,11 @@ if (!isExcluded) {
   #endif
 #if HAS_COULOMB
   #ifdef USE_CUTOFF
-    const float prefactor = 138.935485f*posq1.w*posq2.w;
+    const float prefactor = 138.935456f*posq1.w*posq2.w;
     tempForce += prefactor*(invR - 2.0f*REACTION_FIELD_K*r2);
     tempEnergy += prefactor*(invR + REACTION_FIELD_K*r2 - REACTION_FIELD_C);
   #else
-    const float prefactor = 138.935485f*posq1.w*posq2.w*invR;
+    const float prefactor = 138.935456f*posq1.w*posq2.w*invR;
     tempForce += prefactor;
     tempEnergy += prefactor;
   #endif

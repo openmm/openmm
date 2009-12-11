@@ -31,6 +31,7 @@
 #include "openmm/internal/NonbondedForceImpl.h"
 #include "kernels/gputypes.h"
 #include "kernels/cudaKernels.h"
+#include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
 #include <cmath>
 
 extern "C" int gpuSetConstants( gpuContext gpu );
@@ -414,7 +415,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
             }
         }
         data.nonbondedMethod = method;
-        gpuSetCoulombParameters(gpu, 138.935485f, particle, c6, c12, q, symbol, exclusionList, method);
+        gpuSetCoulombParameters(gpu, (float) ONE_4PI_EPS0, particle, c6, c12, q, symbol, exclusionList, method);
 
         // Compute the Ewald self energy.
 
@@ -444,7 +445,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
             q1[i] = (float) charge;
             q2[i] = 1.0f;
         }
-        gpuSetLJ14Parameters(gpu, 138.935485f, 1.0f, particle1, particle2, c6, c12, q1, q2);
+        gpuSetLJ14Parameters(gpu, (float) ONE_4PI_EPS0, 1.0f, particle1, particle2, c6, c12, q1, q2);
     }
 }
 
@@ -654,8 +655,8 @@ static void initializeIntegration(const System& system, CudaPlatform::PlatformDa
         gpuSetRbDihedralParameters(gpu, vector<int>(), vector<int>(), vector<int>(), vector<int>(), vector<float>(), vector<float>(),
                 vector<float>(), vector<float>(), vector<float>(), vector<float>());
     if (!data.hasNonbonded) {
-        gpuSetCoulombParameters(gpu, 138.935485f, vector<int>(), vector<float>(), vector<float>(), vector<float>(), vector<char>(), vector<vector<int> >(), NO_CUTOFF);
-        gpuSetLJ14Parameters(gpu, 138.935485f, 1.0f, vector<int>(), vector<int>(), vector<float>(), vector<float>(), vector<float>(), vector<float>());
+        gpuSetCoulombParameters(gpu, (float) ONE_4PI_EPS0, vector<int>(), vector<float>(), vector<float>(), vector<float>(), vector<char>(), vector<vector<int> >(), NO_CUTOFF);
+        gpuSetLJ14Parameters(gpu, (float) ONE_4PI_EPS0, 1.0f, vector<int>(), vector<int>(), vector<float>(), vector<float>(), vector<float>(), vector<float>());
     }
     
     // Set masses.

@@ -289,7 +289,7 @@ void testCoulombLennardJones() {
         customSystem.addParticle(1.0);
     }
     NonbondedForce* standardNonbonded = new NonbondedForce();
-    CustomNonbondedForce* customNonbonded = new CustomNonbondedForce("4*eps*((sigma/r)^12-(sigma/r)^6)+138.935485*q/r; q=q1*q2; sigma=0.5*(sigma1+sigma2); eps=sqrt(eps1*eps2)");
+    CustomNonbondedForce* customNonbonded = new CustomNonbondedForce("4*eps*((sigma/r)^12-(sigma/r)^6)+138.935456*q/r; q=q1*q2; sigma=0.5*(sigma1+sigma2); eps=sqrt(eps1*eps2)");
     customNonbonded->addPerParticleParameter("q");
     customNonbonded->addPerParticleParameter("sigma");
     customNonbonded->addPerParticleParameter("eps");

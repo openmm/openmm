@@ -72,10 +72,10 @@ void testCoulomb() {
     context.setPositions(positions);
     State state = context.getState(State::Forces | State::Energy);
     const vector<Vec3>& forces = state.getForces();
-    double force = 138.935485*(-0.75)/4.0;
+    double force = ONE_4PI_EPS0*(-0.75)/4.0;
     ASSERT_EQUAL_VEC(Vec3(-force, 0, 0), forces[0], TOL);
     ASSERT_EQUAL_VEC(Vec3(force, 0, 0), forces[1], TOL);
-    ASSERT_EQUAL_TOL(138.935485*(-0.75)/2.0, state.getPotentialEnergy(), TOL);
+    ASSERT_EQUAL_TOL(ONE_4PI_EPS0*(-0.75)/2.0, state.getPotentialEnergy(), TOL);
 }
 
 void testLJ() {
@@ -174,8 +174,8 @@ void testExclusionsAnd14() {
         context2.setPositions(positions);
         state = context2.getState(State::Forces | State::Energy);
         const vector<Vec3>& forces2 = state.getForces();
-        force = 138.935485*4/(r*r);
-        energy = 138.935485*4/r;
+        force = ONE_4PI_EPS0*4/(r*r);
+        energy = ONE_4PI_EPS0*4/r;
         if (i == 3) {
             force /= 1.2;
             energy /= 1.2;
@@ -217,13 +217,13 @@ void testCutoff() {
     const vector<Vec3>& forces = state.getForces();
     const double krf = (1.0/(cutoff*cutoff*cutoff))*(eps-1.0)/(2.0*eps+1.0);
     const double crf = (1.0/cutoff)*(3.0*eps)/(2.0*eps+1.0);
-    const double force1 = 138.935485*(1.0)*(0.25-2.0*krf*2.0);
-    const double force2 = 138.935485*(1.0)*(1.0-2.0*krf*1.0);
+    const double force1 = ONE_4PI_EPS0*(1.0)*(0.25-2.0*krf*2.0);
+    const double force2 = ONE_4PI_EPS0*(1.0)*(1.0-2.0*krf*1.0);
     ASSERT_EQUAL_VEC(Vec3(0, -force1, 0), forces[0], TOL);
     ASSERT_EQUAL_VEC(Vec3(0, force1-force2, 0), forces[1], TOL);
     ASSERT_EQUAL_VEC(Vec3(0, force2, 0), forces[2], TOL);
-    const double energy1 = 138.935485*(1.0)*(0.5+krf*4.0-crf);
-    const double energy2 = 138.935485*(1.0)*(1.0+krf*1.0-crf);
+    const double energy1 = ONE_4PI_EPS0*(1.0)*(0.5+krf*4.0-crf);
+    const double energy2 = ONE_4PI_EPS0*(1.0)*(1.0+krf*1.0-crf);
     ASSERT_EQUAL_TOL(energy1+energy2, state.getPotentialEnergy(), TOL);
 }
 
@@ -309,8 +309,8 @@ void testCutoff14() {
         const vector<Vec3>& forces2 = state.getForces();
         const double krf = (1.0/(cutoff*cutoff*cutoff))*(eps-1.0)/(2.0*eps+1.0);
         const double crf = (1.0/cutoff)*(3.0*eps)/(2.0*eps+1.0);
-        force = 138.935485*q*q*(1.0/(r*r)-2.0*krf*r);
-        energy = 138.935485*q*q*(1.0/r+krf*r*r-crf);
+        force = ONE_4PI_EPS0*q*q*(1.0/(r*r)-2.0*krf*r);
+        energy = ONE_4PI_EPS0*q*q*(1.0/r+krf*r*r-crf);
         if (i == 3) {
             force /= 1.2;
             energy /= 1.2;
@@ -353,11 +353,11 @@ void testPeriodic() {
     const double eps = 78.3;
     const double krf = (1.0/(cutoff*cutoff*cutoff))*(eps-1.0)/(2.0*eps+1.0);
     const double crf = (1.0/cutoff)*(3.0*eps)/(2.0*eps+1.0);
-    const double force = 138.935485*(1.0)*(1.0-2.0*krf*1.0);
+    const double force = ONE_4PI_EPS0*(1.0)*(1.0-2.0*krf*1.0);
     ASSERT_EQUAL_VEC(Vec3(force, 0, 0), forces[0], TOL);
     ASSERT_EQUAL_VEC(Vec3(-force, 0, 0), forces[1], TOL);
     ASSERT_EQUAL_VEC(Vec3(0, 0, 0), forces[2], TOL);
-    ASSERT_EQUAL_TOL(2*138.935485*(1.0)*(1.0+krf*1.0-crf), state.getPotentialEnergy(), TOL);
+    ASSERT_EQUAL_TOL(2*ONE_4PI_EPS0*(1.0)*(1.0+krf*1.0-crf), state.getPotentialEnergy(), TOL);
 }
 
 

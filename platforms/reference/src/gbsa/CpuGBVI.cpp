@@ -433,7 +433,6 @@ RealOpenMM CpuGBVI::computeBornEnergy( const RealOpenMM* bornRadii, RealOpenMM**
    static const RealOpenMM half          = (RealOpenMM) 0.5;
    static const RealOpenMM fourth        = (RealOpenMM) 0.25;
    static const RealOpenMM eighth        = (RealOpenMM) 0.125;
-   static const RealOpenMM CAL_TO_JOULE  = (RealOpenMM) 0.4184;
 
    // ---------------------------------------------------------------------------------------
 
@@ -501,7 +500,7 @@ RealOpenMM e3 = -partialChargeI2*partialCharges[atomJ]*Sgb( t )/deltaR[Reference
 
       energy += two*partialChargeI*atomIEnergy;
    }
-   energy *= 0.4184f*preFactor;
+   energy *= preFactor;
    energy -= cavityEnergy;
 
 #if( GBVIDebug == 1 )
@@ -551,7 +550,6 @@ int CpuGBVI::computeBornForces( const RealOpenMM* bornRadii, RealOpenMM** atomCo
    static const RealOpenMM oneThird     = (RealOpenMM) (1.0/3.0);
    static const RealOpenMM fourth       = (RealOpenMM) 0.25;
    static const RealOpenMM eighth       = (RealOpenMM) 0.125;
-   static const RealOpenMM CAL_TO_JOULE = (RealOpenMM) 0.4184;
 
    // ---------------------------------------------------------------------------------------
 
@@ -664,12 +662,12 @@ if( atomI == 0 ){
 
 #if( GBVIDebug == 1 )
 {
-   double stupidFactor                   = three/CAL_TO_JOULE;
-   RealOpenMM conversion                 = (RealOpenMM)(CAL_TO_JOULE*gbviParameters->getTau());  
+   double stupidFactor                   = three;
+   RealOpenMM conversion                 = (RealOpenMM)(gbviParameters->getTau());  
    int maxPrint                          = 10;
    const RealOpenMM* scaledRadii         = gbviParameters->getScaledRadii();
 
-   (void) fprintf( logFile, "Conversion=%14.6e %14.6e*%14.6e (tau)\n", conversion, CAL_TO_JOULE, gbviParameters->getTau() );
+   (void) fprintf( logFile, "Conversion=%14.6e %14.6e*%14.6e (tau)\n", conversion, 1, gbviParameters->getTau() );
    for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
       RealOpenMM R        = atomicRadii[atomI];
 
@@ -717,7 +715,7 @@ if( atomI == 0 ){
 #endif
 
    const RealOpenMM* scaledRadii         = gbviParameters->getScaledRadii();
-   RealOpenMM stupidFactor               = three/0.4184f;
+   RealOpenMM stupidFactor               = three;
    for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
  
       RealOpenMM R        = atomicRadii[atomI];
@@ -830,7 +828,7 @@ if( atomI == 0 ){
 
    // convert from cal to Joule & apply prefactor tau = (1/diel_solute - 1/diel_solvent)
 
-   RealOpenMM conversion = (RealOpenMM)(0.4184f*gbviParameters->getTau());  
+   RealOpenMM conversion = (RealOpenMM)(gbviParameters->getTau());  
    for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
       inputForces[atomI][0] += conversion*forces[atomI][0];
       inputForces[atomI][1] += conversion*forces[atomI][1];

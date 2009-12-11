@@ -35,16 +35,11 @@
 #include "OpenCLNonbondedUtilities.h"
 #include "lepton/Parser.h"
 #include "lepton/ParsedExpression.h"
+#include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
 #include <cmath>
 
 using namespace OpenMM;
 using namespace std;
-
-static const double KILO = 1e3;                      // Thousand
-static const double BOLTZMANN = 1.380658e-23;            // (J/K)
-static const double AVOGADRO = 6.0221367e23;            // ()
-static const double RGAS = BOLTZMANN*AVOGADRO;     // (J/(mol K))
-static const double BOLTZ = (RGAS/KILO);            // (kJ/(mol K))
 
 static string doubleToString(double value) {
     stringstream s;
@@ -764,8 +759,8 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         defines["EWALD_ALPHA"] = doubleToString(alpha);
         defines["TWO_OVER_SQRT_PI"] = doubleToString(2.0/sqrt(M_PI));
         defines["USE_EWALD"] = "1";
-        double selfEnergyScale = 138.935485*alpha/std::sqrt(M_PI);
-        ewaldSelfEnergy = - 138.935485*alpha*sumSquaredCharges/std::sqrt(M_PI);
+        double selfEnergyScale = ONE_4PI_EPS0*alpha/std::sqrt(M_PI);
+        ewaldSelfEnergy = -ONE_4PI_EPS0*alpha*sumSquaredCharges/std::sqrt(M_PI);
 
         // Create the reciprocal space kernels.
 
@@ -777,7 +772,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         replacements["RECIPROCAL_BOX_SIZE_X"] = doubleToString(2.0*M_PI/boxVectors[0][0]);
         replacements["RECIPROCAL_BOX_SIZE_Y"] = doubleToString(2.0*M_PI/boxVectors[1][1]);
         replacements["RECIPROCAL_BOX_SIZE_Z"] = doubleToString(2.0*M_PI/boxVectors[2][2]);
-        replacements["RECIPROCAL_COEFFICIENT"] = doubleToString(138.935485*4*M_PI/(boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2]));
+        replacements["RECIPROCAL_COEFFICIENT"] = doubleToString(ONE_4PI_EPS0*4*M_PI/(boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2]));
         replacements["EXP_COEFFICIENT"] = doubleToString(-1.0/(4.0*alpha*alpha));
         cl::Program program = cl.createProgram(cl.loadSourceFromFile("ewald.cl"), replacements);
         ewaldSumsKernel = cl::Kernel(program, "calculateEwaldCosSinSums");
@@ -809,7 +804,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
             int particle1, particle2;
             double chargeProd, sigma, epsilon;
             force.getExceptionParameters(exceptions[i], particle1, particle2, chargeProd, sigma, epsilon);
-            exceptionParamsVector[i] = (mm_float4) {(float) (138.935485*chargeProd), (float) sigma, (float) (4.0*epsilon), 0.0f};
+            exceptionParamsVector[i] = (mm_float4) {(float) (ONE_4PI_EPS0*chargeProd), (float) sigma, (float) (4.0*epsilon), 0.0f};
             exceptionIndicesVector[i] = (mm_int4) {particle1, particle2, forceBufferCounter[particle1]++, forceBufferCounter[particle2]++};
         }
         exceptionParams->upload(exceptionParamsVector);
@@ -1081,7 +1076,7 @@ void OpenCLCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOB
     }
     posq.upload();
     params->upload(paramsVector);
-    prefactor = -138.935485*((1.0/force.getSoluteDielectric())-(1.0/force.getSolventDielectric()));
+    prefactor = -ONE_4PI_EPS0*((1.0/force.getSoluteDielectric())-(1.0/force.getSolventDielectric()));
     bool useCutoff = (force.getNonbondedMethod() != GBSAOBCForce::NoCutoff);
     bool usePeriodic = (force.getNonbondedMethod() != GBSAOBCForce::NoCutoff && force.getNonbondedMethod() != GBSAOBCForce::CutoffNonPeriodic);
     string source = cl.loadSourceFromFile("gbsaObc2.cl");

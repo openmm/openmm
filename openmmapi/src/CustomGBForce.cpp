@@ -117,7 +117,7 @@ int CustomGBForce::addComputedValue(const std::string& name, const std::string& 
     return computedValues.size()-1;
 }
 
-void CustomGBForce::getComputedValueParameters(int index, std::string& name, std::string& expression, ComputationType type) const {
+void CustomGBForce::getComputedValueParameters(int index, std::string& name, std::string& expression, ComputationType& type) const {
     name = computedValues[index].name;
     expression = computedValues[index].expression;
     type = computedValues[index].type;
@@ -134,7 +134,7 @@ int CustomGBForce::addEnergyTerm(const std::string& expression, ComputationType 
     return energyTerms.size()-1;
 }
 
-void CustomGBForce::getEnergyTermParameters(int index, std::string& expression, ComputationType type) const {
+void CustomGBForce::getEnergyTermParameters(int index, std::string& expression, ComputationType& type) const {
     expression = energyTerms[index].expression;
     type = energyTerms[index].type;
 }

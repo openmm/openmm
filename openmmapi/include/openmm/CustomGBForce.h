@@ -97,9 +97,9 @@ namespace OpenMM {
  *                               "or1 = radius1-0.009; or2 = radius2-0.009", CustomGBForce::ParticlePair);
  * custom->addComputedValue("B", "1/(1/or-tanh(1*psi-0.8*psi^2+4.85*psi^3)/radius);"
  *                               "psi=I*or; or=radius-0.009", CustomGBForce::SingleParticle);
- * custom->addEnergyTerm("28.3919551*(radius+0.14)^2*(radius/B)^6-0.5*138.935485*(1/soluteDielectric-1/solventDielectric)*q^2/B",
+ * custom->addEnergyTerm("28.3919551*(radius+0.14)^2*(radius/B)^6-0.5*138.935456*(1/soluteDielectric-1/solventDielectric)*q^2/B",
  *                       CustomGBForce::SingleParticle);
- * custom->addEnergyTerm("-138.935485*(1/soluteDielectric-1/solventDielectric)*q1*q2/f;"
+ * custom->addEnergyTerm("-138.935456*(1/soluteDielectric-1/solventDielectric)*q1*q2/f;"
  *                       "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))", CustomGBForce::ParticlePair);
  * </pre></tt>
  *
@@ -353,7 +353,7 @@ public:
      *                    value is being calculated, and "2" to indicate the particle it is interacting with.
      * @param type        the method to use for computing this value
      */
-    void getComputedValueParameters(int index, std::string& name, std::string& expression, ComputationType type) const;
+    void getComputedValueParameters(int index, std::string& name, std::string& expression, ComputationType& type) const;
     /**
      * Set the properties of a computed value.
      *
@@ -404,7 +404,7 @@ public:
      *                    in the pair and "2" to indicate the second particle in the pair.
      * @param type        the method to use for computing this value
      */
-    void getEnergyTermParameters(int index, std::string& expression, ComputationType type) const;
+    void getEnergyTermParameters(int index, std::string& expression, ComputationType& type) const;
     /**
      * Set the properties of a term to the energy computation.
      *

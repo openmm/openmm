@@ -637,12 +637,12 @@ void ImplicitSolventParameters::_initializeImplicitSolventConstants( void ){
    _solventDielectric       = (RealOpenMM)   78.3;
    _kcalA_To_kJNm           = (RealOpenMM)    0.4184;
    _probeRadius             = (RealOpenMM)    0.14;
-   _electricConstant        = (RealOpenMM) -166.02691;
+   _electricConstant        = (RealOpenMM) -0.5*ONE_4PI_EPS0;
 
    //_pi4Asolv                = (RealOpenMM) PI_M*4.0*0.0049*1000.0;
    //_pi4Asolv                = (RealOpenMM) PI_M*19.6;
    //_pi4Asolv                = (RealOpenMM) PI_M*4.0*0.0054;
-   _pi4Asolv                = (RealOpenMM) (PI_M*0.0216*1000.0);
+   _pi4Asolv                = (RealOpenMM) 28.3919551;
    //_pi4Asolv                = (RealOpenMM) -400.71504079;
    //_pi4Asolv                = (RealOpenMM) 0.0;
 

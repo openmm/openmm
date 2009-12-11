@@ -699,13 +699,12 @@ int CpuObcSoftcore::computeBornEnergyForces( RealOpenMM* bornRadii, RealOpenMM**
 
    // cal to Joule conversion
 
-   RealOpenMM conversion = (RealOpenMM)0.4184;  
    for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
-      inputForces[atomI][0] += conversion*forces[atomI][0];
-      inputForces[atomI][1] += conversion*forces[atomI][1];
-      inputForces[atomI][2] += conversion*forces[atomI][2];
+      inputForces[atomI][0] += forces[atomI][0];
+      inputForces[atomI][1] += forces[atomI][1];
+      inputForces[atomI][2] += forces[atomI][2];
    }
-   setEnergy( obcEnergy*conversion );
+   setEnergy( obcEnergy );
 
 #if 0
 {
@@ -1347,13 +1346,7 @@ if( logFile && atomI >= 0 ){
 
    }
 
-   RealOpenMM conversion = (RealOpenMM)0.4184;  
-   for( int atomI = 0; atomI < numberOfAtoms; atomI++ ){
-      forces[atomI][0] *= conversion;
-      forces[atomI][1] *= conversion;
-      forces[atomI][2] *= conversion;
-   }
-   setEnergy( obcEnergy*conversion );
+   setEnergy( obcEnergy );
 
    if( 1 ){
 
