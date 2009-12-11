@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2006 Stanford University and Simbios.
+/* Portions copyright (c) 2006-2009 Stanford University and Simbios.
  * Contributors: Pande Group
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -239,10 +239,15 @@ RealOpenMM ReferenceBondIxn::getAngleBetweenTwoVectors( RealOpenMM* vector1, Rea
    RealOpenMM dotProduct = getNormedDotProduct( vector1, vector2, hasREntry );
 
    RealOpenMM angle;
-   if( dotProduct >= one ){
-      angle = zero;
-   } else if( dotProduct <= -one ){
-      angle = PI_M;
+   if (dotProduct > (RealOpenMM) 0.99 || dotProduct < (RealOpenMM) -0.99) {
+       // We're close to the singularity in acos(), so take the cross product and use asin() instead.
+
+       RealOpenMM cross[3];
+       SimTKOpenMMUtilities::crossProductVector3(vector1, vector2, cross);
+       RealOpenMM scale = DOT3(vector1, vector1)*DOT3(vector2, vector2);
+       angle = ASIN(SQRT(DOT3(cross, cross)/scale));
+       if (dotProduct < zero)
+           angle = M_PI-angle;
    } else {
       angle = ACOS(dotProduct);
    }
