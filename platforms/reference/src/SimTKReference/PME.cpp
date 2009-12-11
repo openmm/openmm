@@ -512,7 +512,7 @@ pme_reciprocal_convolution(pme_t     pme,
     pme_virial[1][2] = pme_virial[2][1] = (RealOpenMM) (0.25*viryz);
 
     /* The factor 0.5 is nothing special, but it is better to have it here than inside the loop :-) */
-    *energy = 0.5*esum;
+    *energy = (RealOpenMM) (0.5*esum);
 }
 
 

@@ -25,10 +25,12 @@
 #ifndef __ReferenceConstraintAlgorithm_H__
 #define __ReferenceConstraintAlgorithm_H__
 
+#include "openmm/internal/windowsExport.h"
+
 /**
  * This abstract class defines the interface which constraint algorithms must implement.
  */
-class ReferenceConstraintAlgorithm {
+class OPENMM_EXPORT ReferenceConstraintAlgorithm {
 public:
 
     virtual ~ReferenceConstraintAlgorithm() {};

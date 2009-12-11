@@ -32,6 +32,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include "openmm/internal/windowsExport.h"
 #include <map>
 #include <string>
 #include <vector>
@@ -52,7 +53,7 @@ class ContextImpl;
  * ForceImpl subclass.
  */
 
-class ForceImpl {
+class OPENMM_EXPORT ForceImpl {
 public:
     virtual ~ForceImpl() {
     }

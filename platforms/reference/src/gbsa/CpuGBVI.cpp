@@ -433,7 +433,7 @@ RealOpenMM CpuGBVI::computeBornEnergy( const RealOpenMM* bornRadii, RealOpenMM**
    static const RealOpenMM half          = (RealOpenMM) 0.5;
    static const RealOpenMM fourth        = (RealOpenMM) 0.25;
    static const RealOpenMM eighth        = (RealOpenMM) 0.125;
-   static const RealOpenMM CAL_TO_JOULE  = 0.4184;
+   static const RealOpenMM CAL_TO_JOULE  = (RealOpenMM) 0.4184;
 
    // ---------------------------------------------------------------------------------------
 
@@ -551,7 +551,7 @@ int CpuGBVI::computeBornForces( const RealOpenMM* bornRadii, RealOpenMM** atomCo
    static const RealOpenMM oneThird     = (RealOpenMM) (1.0/3.0);
    static const RealOpenMM fourth       = (RealOpenMM) 0.25;
    static const RealOpenMM eighth       = (RealOpenMM) 0.125;
-   static const RealOpenMM CAL_TO_JOULE = 0.4184;
+   static const RealOpenMM CAL_TO_JOULE = (RealOpenMM) 0.4184;
 
    // ---------------------------------------------------------------------------------------
 

@@ -191,9 +191,9 @@ void ReferenceUpdateStateDataKernel::setPositions(ContextImpl& context, const st
     int numParticles = context.getSystem().getNumParticles();
     RealOpenMM** posData = extractPositions(context);
     for (int i = 0; i < numParticles; ++i) {
-        posData[i][0] = positions[i][0];
-        posData[i][1] = positions[i][1];
-        posData[i][2] = positions[i][2];
+        posData[i][0] = (RealOpenMM) positions[i][0];
+        posData[i][1] = (RealOpenMM) positions[i][1];
+        posData[i][2] = (RealOpenMM) positions[i][2];
     }
 }
 
@@ -209,9 +209,9 @@ void ReferenceUpdateStateDataKernel::setVelocities(ContextImpl& context, const s
     int numParticles = context.getSystem().getNumParticles();
     RealOpenMM** velData = extractVelocities(context);
     for (int i = 0; i < numParticles; ++i) {
-        velData[i][0] = velocities[i][0];
-        velData[i][1] = velocities[i][1];
-        velData[i][2] = velocities[i][2];
+        velData[i][0] = (RealOpenMM) velocities[i][0];
+        velData[i][1] = (RealOpenMM) velocities[i][1];
+        velData[i][2] = (RealOpenMM) velocities[i][2];
     }
 }
 
@@ -540,12 +540,12 @@ void ReferenceCalcNonbondedForceKernel::initialize(const System& system, const N
     if (nonbondedMethod == Ewald) {
         double alpha;
         NonbondedForceImpl::calcEwaldParameters(system, force, alpha, kmax[0], kmax[1], kmax[2]);
-        ewaldAlpha = alpha;
+        ewaldAlpha = (RealOpenMM) alpha;
     }
     else if (nonbondedMethod == PME) {
         double alpha;
         NonbondedForceImpl::calcPMEParameters(system, force, alpha, gridSize[0], gridSize[1], gridSize[2]);
-        ewaldAlpha = alpha;
+        ewaldAlpha = (RealOpenMM) alpha;
     }
     rfDielectric = (RealOpenMM)force.getReactionFieldDielectric();
 }

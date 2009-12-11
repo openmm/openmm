@@ -218,7 +218,7 @@ void ReferenceCustomGBIxn::calculateOnePairValue(int index, int atom1, int atom2
     if (cutoff && r >= cutoffDistance)
         return;
     map<string, double> variables = globalParameters;
-    for (int i = 0; i < paramNames.size(); i++) {
+    for (int i = 0; i < (int) paramNames.size(); i++) {
         variables[particleParamNames[i*2]] = atomParameters[atom1][i];
         variables[particleParamNames[i*2+1]] = atomParameters[atom2][i];
     }
@@ -289,7 +289,7 @@ void ReferenceCustomGBIxn::calculateOnePairEnergyTerm(int index, int atom1, int 
     // Record variables for evaluating expressions.
 
     map<string, double> variables = globalParameters;
-    for (int i = 0; i < paramNames.size(); i++) {
+    for (int i = 0; i < (int) paramNames.size(); i++) {
         variables[particleParamNames[i*2]] = atomParameters[atom1][i];
         variables[particleParamNames[i*2+1]] = atomParameters[atom2][i];
     }
@@ -361,7 +361,7 @@ void ReferenceCustomGBIxn::calculateOnePairChainRule(int atom1, int atom2, RealO
     // Record variables for evaluating expressions.
 
     map<string, double> variables = globalParameters;
-    for (int i = 0; i < paramNames.size(); i++) {
+    for (int i = 0; i < (int) paramNames.size(); i++) {
         variables[particleParamNames[i*2]] = atomParameters[atom1][i];
         variables[particleParamNames[i*2+1]] = atomParameters[atom2][i];
     }
@@ -379,7 +379,7 @@ void ReferenceCustomGBIxn::calculateOnePairChainRule(int atom1, int atom2, RealO
         forces[atom2][i] += f;
     }
     variables = globalParameters;
-    for (int i = 0; i < paramNames.size(); i++)
+    for (int i = 0; i < (int) paramNames.size(); i++)
         variables[paramNames[i]] = atomParameters[atom1][i];
     variables[valueNames[0]] = values[0][atom1];
     for (int i = 1; i < (int) valueNames.size(); i++) {

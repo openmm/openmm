@@ -42,7 +42,7 @@ namespace OpenMM {
  * KernelImpls as needed.
  */
 
-class KernelFactory {
+class OPENMM_EXPORT KernelFactory {
 public:
     /**
      * Create a KernelImpl.
