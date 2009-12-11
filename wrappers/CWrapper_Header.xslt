@@ -13,7 +13,8 @@
 <xsl:variable name="vector_string_type_id" select="/GCC_XML/Class[starts-with(@name, 'vector&lt;std::basic_string')]/@id"/>
 <xsl:variable name="vector_vec3_type_id" select="/GCC_XML/Class[starts-with(@name, 'vector&lt;OpenMM::Vec3')]/@id"/>
 <xsl:variable name="vector_bond_type_id" select="/GCC_XML/Class[starts-with(@name, 'vector&lt;std::pair&lt;int, int')]/@id"/>
-<xsl:variable name="map_parameter_type_id" select="/GCC_XML/Class[starts-with(@name, 'map&lt;std::basic_string')]/@id"/>
+<xsl:variable name="map_parameter_type_id" select="/GCC_XML/Class[starts-with(@name, 'map&lt;std::basic_string') and contains(@name, 'double')]/@id"/>
+<xsl:variable name="map_property_type_id" select="/GCC_XML/Class[starts-with(@name, 'map&lt;std::basic_string') and not(contains(@name, 'double'))]/@id"/>
 <xsl:variable name="vector_double_type_id" select="/GCC_XML/Class[starts-with(@name, 'vector&lt;double')]/@id"/>
 
 <!-- Do not generate functions for the following classes -->
@@ -45,6 +46,7 @@ typedef struct OpenMM_Vec3Array_struct OpenMM_Vec3Array;
 typedef struct OpenMM_StringArray_struct OpenMM_StringArray;
 typedef struct OpenMM_BondArray_struct OpenMM_BondArray;
 typedef struct OpenMM_ParameterArray_struct OpenMM_ParameterArray;
+typedef struct OpenMM_PropertyArray_struct OpenMM_PropertyArray;
 typedef struct OpenMM_DoubleArray_struct OpenMM_DoubleArray;
 typedef struct {double x, y, z;} OpenMM_Vec3;
 
@@ -87,6 +89,10 @@ extern OPENMM_EXPORT void OpenMM_BondArray_get(const OpenMM_BondArray* array, in
 /* OpenMM_ParameterArray */
 extern OPENMM_EXPORT int OpenMM_ParameterArray_getSize(const OpenMM_ParameterArray* array);
 extern OPENMM_EXPORT double OpenMM_ParameterArray_get(const OpenMM_ParameterArray* array, const char* name);
+
+/* OpenMM_PropertyArray */
+extern OPENMM_EXPORT int OpenMM_PropertyArray_getSize(const OpenMM_PropertyArray* array);
+extern OPENMM_EXPORT const char* OpenMM_PropertyArray_get(const OpenMM_PropertyArray* array, const char* name);
 <xsl:call-template name="primitive_array">
  <xsl:with-param name="element_type" select="'double'"/>
  <xsl:with-param name="name" select="'OpenMM_DoubleArray'"/>
@@ -230,6 +236,9 @@ extern OPENMM_EXPORT <xsl:call-template name="wrap_type"><xsl:with-param name="t
   </xsl:when>
   <xsl:when test="$type_id=$map_parameter_type_id">
    <xsl:value-of select="'OpenMM_ParameterArray'"/>
+  </xsl:when>
+  <xsl:when test="$type_id=$map_property_type_id">
+   <xsl:value-of select="'OpenMM_PropertyArray'"/>
   </xsl:when>
   <xsl:when test="$type_id=$vector_double_type_id">
    <xsl:value-of select="'OpenMM_DoubleArray'"/>

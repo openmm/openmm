@@ -353,7 +353,7 @@ public:
      *                    value is being calculated, and "2" to indicate the particle it is interacting with.
      * @param type        the method to use for computing this value
      */
-    void getComputedValueParameters(int index, std::string& name, std::string& expression, ComputationType& type) const;
+    void getComputedValueParameters(int index, std::string& name, std::string& expression, ComputationType type) const;
     /**
      * Set the properties of a computed value.
      *
@@ -404,7 +404,7 @@ public:
      *                    in the pair and "2" to indicate the second particle in the pair.
      * @param type        the method to use for computing this value
      */
-    void getEnergyTermParameters(int index, std::string& expression, ComputationType& type) const;
+    void getEnergyTermParameters(int index, std::string& expression, ComputationType type) const;
     /**
      * Set the properties of a term to the energy computation.
      *

@@ -17,7 +17,8 @@
 <xsl:variable name="vector_string_type_id" select="/GCC_XML/Class[starts-with(@name, 'vector&lt;std::basic_string')]/@id"/>
 <xsl:variable name="vector_vec3_type_id" select="/GCC_XML/Class[starts-with(@name, 'vector&lt;OpenMM::Vec3')]/@id"/>
 <xsl:variable name="vector_bond_type_id" select="/GCC_XML/Class[starts-with(@name, 'vector&lt;std::pair&lt;int, int')]/@id"/>
-<xsl:variable name="map_parameter_type_id" select="/GCC_XML/Class[starts-with(@name, 'map&lt;std::basic_string')]/@id"/>
+<xsl:variable name="map_parameter_type_id" select="/GCC_XML/Class[starts-with(@name, 'map&lt;std::basic_string') and contains(@name, 'double')]/@id"/>
+<xsl:variable name="map_property_type_id" select="/GCC_XML/Class[starts-with(@name, 'map&lt;std::basic_string') and not(contains(@name, 'double'))]/@id"/>
 <xsl:variable name="vector_double_type_id" select="/GCC_XML/Class[starts-with(@name, 'vector&lt;double')]/@id"/>
 <xsl:variable name="newline">
 <xsl:text>
@@ -61,6 +62,10 @@ MODULE OpenMM_Types
     end type
 
     type OpenMM_ParameterArray
+        integer*8 :: handle = 0
+    end type
+
+    type OpenMM_PropertyArray
         integer*8 :: handle = 0
     end type
 
@@ -223,6 +228,19 @@ MODULE OpenMM
         subroutine OpenMM_ParameterArray_get(target, name, result)
             use OpenMM_Types; implicit none
             type (OpenMM_ParameterArray) target
+            character(*) name
+            character(*) result
+        end
+
+        ! OpenMM_PropertyArray
+        function OpenMM_PropertyArray_getSize(target)
+            use OpenMM_Types; implicit none
+            type (OpenMM_ParameterArray) target
+            integer*4 OpenMM_PropertyArray_getSize
+        end
+        subroutine OpenMM_PropertyArray_get(target, name, result)
+            use OpenMM_Types; implicit none
+            type (OpenMM_PropertyArray) target
             character(*) name
             character(*) result
         end
@@ -452,6 +470,9 @@ END MODULE OpenMM
   </xsl:when>
   <xsl:when test="$type_id=$map_parameter_type_id">
    <xsl:value-of select="concat('type (OpenMM_ParameterArray) ', $value)"/>
+  </xsl:when>
+  <xsl:when test="$type_id=$map_property_type_id">
+   <xsl:value-of select="concat('type (OpenMM_PropertyArray) ', $value)"/>
   </xsl:when>
   <xsl:when test="$type_id=$vector_double_type_id">
    <xsl:value-of select="concat('type (OpenMM_DoubleArray) ', $value)"/>

@@ -19,7 +19,8 @@
 <xsl:variable name="vector_string_type_id" select="/GCC_XML/Class[starts-with(@name, 'vector&lt;std::basic_string')]/@id"/>
 <xsl:variable name="vector_vec3_type_id" select="/GCC_XML/Class[starts-with(@name, 'vector&lt;OpenMM::Vec3')]/@id"/>
 <xsl:variable name="vector_bond_type_id" select="/GCC_XML/Class[starts-with(@name, 'vector&lt;std::pair&lt;int, int')]/@id"/>
-<xsl:variable name="map_parameter_type_id" select="/GCC_XML/Class[starts-with(@name, 'map&lt;std::basic_string')]/@id"/>
+<xsl:variable name="map_parameter_type_id" select="/GCC_XML/Class[starts-with(@name, 'map&lt;std::basic_string') and contains(@name, 'double')]/@id"/>
+<xsl:variable name="map_property_type_id" select="/GCC_XML/Class[starts-with(@name, 'map&lt;std::basic_string') and not(contains(@name, 'double'))]/@id"/>
 <xsl:variable name="vector_double_type_id" select="/GCC_XML/Class[starts-with(@name, 'vector&lt;double')]/@id"/>
 <xsl:variable name="newline">
 <xsl:text>
@@ -222,6 +223,20 @@ OPENMM_EXPORT double openmm_parameterarray_get_(const OpenMM_ParameterArray* con
 }
 OPENMM_EXPORT double OPENMM_PARAMETERARRAY_GET(const OpenMM_ParameterArray* const&amp; array, const char* name, int length) {
     return OpenMM_ParameterArray_get(array, makeString(name, length).c_str());
+}
+
+/* OpenMM_PropertyArray */
+OPENMM_EXPORT int openmm_propertyarray_getsize_(const OpenMM_PropertyArray* const&amp; array) {
+    return OpenMM_PropertyArray_getSize(array);
+}
+OPENMM_EXPORT int OPENMM_PROPERTYARRAY_GETSIZE(const OpenMM_PropertyArray* const&amp; array) {
+    return OpenMM_PropertyArray_getSize(array);
+}
+OPENMM_EXPORT const char* openmm_propertyarray_get_(const OpenMM_PropertyArray* const&amp; array, const char* name, int length) {
+    return OpenMM_PropertyArray_get(array, makeString(name, length).c_str());
+}
+OPENMM_EXPORT const char* OPENMM_PROPERTYARRAY_GET(const OpenMM_PropertyArray* const&amp; array, const char* name, int length) {
+    return OpenMM_PropertyArray_get(array, makeString(name, length).c_str());
 }
 <xsl:call-template name="primitive_array">
  <xsl:with-param name="element_type" select="'double'"/>
@@ -535,6 +550,9 @@ OPENMM_EXPORT <xsl:if test="$has_return">
   <xsl:when test="$type_id=$map_parameter_type_id">
    <xsl:value-of select="'OpenMM_ParameterArray'"/>
   </xsl:when>
+  <xsl:when test="$type_id=$map_property_type_id">
+   <xsl:value-of select="'OpenMM_PropertyArray'"/>
+  </xsl:when>
   <xsl:when test="$type_id=$vector_double_type_id">
    <xsl:value-of select="'OpenMM_DoubleArray'"/>
   </xsl:when>
@@ -574,6 +592,7 @@ OPENMM_EXPORT <xsl:if test="$has_return">
   <xsl:when test="$type_id=$vector_vec3_type_id">1</xsl:when>
   <xsl:when test="$type_id=$vector_bond_type_id">1</xsl:when>
   <xsl:when test="$type_id=$map_parameter_type_id">1</xsl:when>
+  <xsl:when test="$type_id=$map_property_type_id">1</xsl:when>
   <xsl:when test="$type_id=$vector_double_type_id">1</xsl:when>
   <xsl:when test="$type_id=$vector_string_type_id">1</xsl:when>
   <xsl:when test="local-name($node)='Class' and $node/@context=$openmm_namespace_id">1</xsl:when>

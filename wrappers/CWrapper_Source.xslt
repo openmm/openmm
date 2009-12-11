@@ -15,7 +15,8 @@
 <xsl:variable name="vector_string_type_id" select="/GCC_XML/Class[starts-with(@name, 'vector&lt;std::basic_string')]/@id"/>
 <xsl:variable name="vector_vec3_type_id" select="/GCC_XML/Class[starts-with(@name, 'vector&lt;OpenMM::Vec3')]/@id"/>
 <xsl:variable name="vector_bond_type_id" select="/GCC_XML/Class[starts-with(@name, 'vector&lt;std::pair&lt;int, int')]/@id"/>
-<xsl:variable name="map_parameter_type_id" select="/GCC_XML/Class[starts-with(@name, 'map&lt;std::basic_string')]/@id"/>
+<xsl:variable name="map_parameter_type_id" select="/GCC_XML/Class[starts-with(@name, 'map&lt;std::basic_string') and contains(@name, 'double')]/@id"/>
+<xsl:variable name="map_property_type_id" select="/GCC_XML/Class[starts-with(@name, 'map&lt;std::basic_string') and not(contains(@name, 'double'))]/@id"/>
 <xsl:variable name="vector_double_type_id" select="/GCC_XML/Class[starts-with(@name, 'vector&lt;double')]/@id"/>
 <xsl:variable name="newline">
 <xsl:text>
@@ -129,6 +130,18 @@ OPENMM_EXPORT double OpenMM_ParameterArray_get(const OpenMM_ParameterArray* arra
     if (iter == params->end())
         throw OpenMMException("OpenMM_ParameterArray_get: No such parameter");
     return iter->second;
+}
+
+/* OpenMM_PropertyArray */
+OPENMM_EXPORT int OpenMM_PropertyArray_getSize(const OpenMM_PropertyArray* array) {
+    return reinterpret_cast&lt;const map&lt;string, double&gt;*&gt;(array)->size();
+}
+OPENMM_EXPORT const char* OpenMM_PropertyArray_get(const OpenMM_PropertyArray* array, const char* name) {
+    const map&lt;string, string&gt;* params = reinterpret_cast&lt;const map&lt;string, string&gt;*&gt;(array);
+    const map&lt;string, string&gt;::const_iterator iter = params->find(string(name));
+    if (iter == params->end())
+        throw OpenMMException("OpenMM_PropertyArray_get: No such property");
+    return iter->second.c_str();
 }
 <xsl:call-template name="primitive_array">
  <xsl:with-param name="element_type" select="'double'"/>
@@ -328,6 +341,9 @@ OPENMM_EXPORT <xsl:call-template name="wrap_type"><xsl:with-param name="type_id"
   <xsl:when test="$type_id=$map_parameter_type_id">
    <xsl:value-of select="'OpenMM_ParameterArray'"/>
   </xsl:when>
+  <xsl:when test="$type_id=$map_property_type_id">
+   <xsl:value-of select="'OpenMM_PropertyArray'"/>
+  </xsl:when>
   <xsl:when test="$type_id=$vector_double_type_id">
    <xsl:value-of select="'OpenMM_DoubleArray'"/>
   </xsl:when>
@@ -374,6 +390,9 @@ OPENMM_EXPORT <xsl:call-template name="wrap_type"><xsl:with-param name="type_id"
   </xsl:when>
   <xsl:when test="$type_id=$map_parameter_type_id">
    <xsl:value-of select="'map&lt;string, double&gt;'"/>
+  </xsl:when>
+  <xsl:when test="$type_id=$map_property_type_id">
+   <xsl:value-of select="'map&lt;string, string&gt;'"/>
   </xsl:when>
   <xsl:when test="$type_id=$vector_double_type_id">
    <xsl:value-of select="'vector&lt;double&gt;'"/>
