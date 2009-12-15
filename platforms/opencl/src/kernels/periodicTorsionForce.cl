@@ -5,6 +5,7 @@
 __kernel void calcPeriodicTorsionForce(int numAtoms, int numTorsions, __global float4* forceBuffers, __global float* energyBuffer, __global float4* posq, __global float4* params, __global int8* indices) {
     int index = get_global_id(0);
     float energy = 0.0f;
+    const float PI = 3.14159265358979323846f;
     while (index < numTorsions) {
         // Look up the data for this torsion.
 
@@ -23,17 +24,28 @@ __kernel void calcPeriodicTorsionForce(int numAtoms, int numTorsions, __global f
         float4 cp0 = cross(v0, v1);
         float4 cp1 = cross(v1, v2);
         float cosangle = dot(normalize(cp0), normalize(cp1));
-        cosangle = clamp(cosangle, -1.0f, 1.0f);
-        float dihedralAngle = acos(cosangle);
+        float dihedralAngle;
+        if (cosangle > 0.99f || cosangle < -0.99f) {
+            // We're close to the singularity in acos(), so take the cross product and use asin() instead.
+
+            float4 cross = cross(cp0, cp1);
+            float scale = dot(cp0, cp0)*dot(cp1, cp1);
+            dihedralAngle = asin(sqrt(dot(cross, cross)/scale));
+            if (cosangle < 0.0f)
+                dihedralAngle = PI-dihedralAngle;
+        }
+        else
+           dihedralAngle = acos(cosangle);
         dihedralAngle = (dot(v0, cp1) >= 0 ? dihedralAngle : -dihedralAngle);
         float deltaAngle = torsionParams.z*dihedralAngle-torsionParams.y;
         energy += torsionParams.x*(1.0f+cos(deltaAngle));
         float sinDeltaAngle = sin(deltaAngle);
         float dEdAngle = -torsionParams.x*torsionParams.z*sinDeltaAngle;
         float normCross1 = dot(cp0, cp0);
-        float normBC = sqrt(dot(v1, v1));
+        float normSqrBC = dot(v1, v1);
+        float normBC = sqrt(normSqrBC);
         float normCross2 = dot(cp1, cp1);
-        float dp = 1.0f/normBC;
+        float dp = 1.0f/normSqrBC;
         float4 ff = (float4) ((-dEdAngle*normBC)/normCross1, dot(v0, v1)*dp, dot(v2, v1)*dp, (dEdAngle*normBC)/normCross2);
         float4 internalF0 = ff.x*cp0;
         float4 internalF3 = ff.w*cp1;

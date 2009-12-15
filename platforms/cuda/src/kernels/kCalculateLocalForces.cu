@@ -76,7 +76,17 @@ static __constant__ cudaGmxSimulation cSim;
 { \
     float dp; \
     GETNORMEDDOTPRODUCT(v1, v2, dp); \
-    angle = acos(dp); \
+    if (dp > 0.99f || dp < -0.99f) { \
+        float4 cross; \
+        CROSS_PRODUCT(v1, v2, cross); \
+        float scale = DOT3(v1, v1)*DOT3(v2, v2); \
+        angle = asin(sqrt(DOT3(cross, cross)/scale)); \
+        if (dp < 0.0f) \
+            angle = LOCAL_HACK_PI-angle; \
+    } \
+    else { \
+        angle = acos(dp); \
+    } \
 }
 
 #define GETANGLECOSINEBETWEENTWOVECTORS(v1, v2, angle, cosine) \
