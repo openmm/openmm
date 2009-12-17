@@ -32,14 +32,14 @@ using namespace OpenMM;
 using namespace Lepton;
 using namespace std;
 
-static string doubleToString(double value) {
+string OpenCLExpressionUtilities::doubleToString(double value) {
     stringstream s;
     s.precision(8);
     s << scientific << value << "f";
     return s.str();
 }
 
-static string intToString(int value) {
+string OpenCLExpressionUtilities::intToString(int value) {
     stringstream s;
     s << value;
     return s.str();

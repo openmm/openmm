@@ -64,6 +64,14 @@ public:
      * @return the spline coefficients
      */
     static std::vector<mm_float4> computeFunctionCoefficients(const std::vector<double>& values, bool interpolating);
+    /**
+     * Convert a number to a string in a format suitable for including in a kernel.
+     */
+    static std::string doubleToString(double value);
+    /**
+     * Convert a number to a string in a format suitable for including in a kernel.
+     */
+    static std::string intToString(int value);
     class FunctionPlaceholder;
 private:
     static void processExpression(std::stringstream& out, const Lepton::ExpressionTreeNode& node,
