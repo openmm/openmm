@@ -36,29 +36,49 @@ using namespace OpenMM;
 using namespace std;
 
 OpenCLFFT3D::OpenCLFFT3D(OpenCLContext& context, int xsize, int ysize, int zsize) : context(context), xsize(xsize), ysize(ysize), zsize(zsize) {
-    xkernel = createKernel(xsize);
-    ykernel = createKernel(ysize);
-    zkernel = createKernel(zsize);
-}
-
-OpenCLFFT3D::~OpenCLFFT3D() {
+    xkernel = createKernel(xsize, ysize, zsize, ysize*zsize, zsize, 1);
+    ykernel = createKernel(ysize, zsize, xsize, zsize, 1, ysize*zsize);
+    zkernel = createKernel(zsize, xsize, ysize, 1, ysize*zsize, zsize);
 }
 
 void OpenCLFFT3D::execFFT(OpenCLArray<mm_float2>& data, bool forward) {
     xkernel.setArg<cl::Buffer>(0, data.getDeviceBuffer());
     xkernel.setArg<cl_float>(1, forward ? 1.0f : -1.0f);
-    context.executeKernel(xkernel, xsize, xsize);
+    context.executeKernel(xkernel, xsize*ysize*zsize, xsize);
+    ykernel.setArg<cl::Buffer>(0, data.getDeviceBuffer());
+    ykernel.setArg<cl_float>(1, forward ? 1.0f : -1.0f);
+    context.executeKernel(ykernel, xsize*ysize*zsize, ysize);
+    zkernel.setArg<cl::Buffer>(0, data.getDeviceBuffer());
+    zkernel.setArg<cl_float>(1, forward ? 1.0f : -1.0f);
+    context.executeKernel(zkernel, xsize*ysize*zsize, zsize);
 }
 
-cl::Kernel OpenCLFFT3D::createKernel(int size) {
-    map<string, string> replacements;
-    replacements["SIZE"] = OpenCLExpressionUtilities::intToString(size);
-    replacements["M_PI"] = OpenCLExpressionUtilities::doubleToString(M_PI);
+int OpenCLFFT3D::findLegalDimension(int minimum) {
+    if (minimum < 1)
+        return 1;
+    while (true) {
+        // Attempt to factor the current value.
+
+        int unfactored = minimum;
+        for (int factor = 2; factor < 6; factor++) {
+            while (unfactored > 1 && unfactored%factor == 0)
+                unfactored /= factor;
+        }
+        if (unfactored == 1)
+            return minimum;
+        minimum++;
+    }
+}
+
+cl::Kernel OpenCLFFT3D::createKernel(int xsize, int ysize, int zsize, int xmult, int ymult, int zmult) {
     stringstream source;
-    int unfactored = size;
+    int unfactored = xsize;
     int stage = 0;
-    int L = size;
+    int L = xsize;
     int m = 1;
+
+    // Factor xsize, generating an appropriate block of code for each factor.
+
     while (unfactored > 1) {
         int input = stage%2;
         int output = 1-input;
@@ -85,10 +105,10 @@ cl::Kernel OpenCLFFT3D::createKernel(int size) {
             source<<"float2 d9 = sign*(float2) (d2.y+"<<coeff<<"*d3.y, -d2.x-"<<coeff<<"*d3.x);\n";
             source<<"float2 d10 = sign*(float2) ("<<coeff<<"*d2.y-d3.y, d3.x-"<<coeff<<"*d2.x);\n";
             source<<"data"<<output<<"[i+4*j*"<<m<<"] = c0+d4;\n";
-            source<<"data"<<output<<"[i+(4*j+1)*"<<m<<"] = multiplyComplex(w[j*"<<size<<"/"<<(5*L)<<"], d7+d9);\n";
-            source<<"data"<<output<<"[i+(4*j+2)*"<<m<<"] = multiplyComplex(w[j*"<<(2*size)<<"/"<<(5*L)<<"], d8+d10);\n";
-            source<<"data"<<output<<"[i+(4*j+3)*"<<m<<"] = multiplyComplex(w[j*"<<(3*size)<<"/"<<(5*L)<<"], d8-d10);\n";
-            source<<"data"<<output<<"[i+(4*j+4)*"<<m<<"] = multiplyComplex(w[j*"<<(4*size)<<"/"<<(5*L)<<"], d7-d9);\n";
+            source<<"data"<<output<<"[i+(4*j+1)*"<<m<<"] = multiplyComplex(w[j*"<<xsize<<"/"<<(5*L)<<"], d7+d9);\n";
+            source<<"data"<<output<<"[i+(4*j+2)*"<<m<<"] = multiplyComplex(w[j*"<<(2*xsize)<<"/"<<(5*L)<<"], d8+d10);\n";
+            source<<"data"<<output<<"[i+(4*j+3)*"<<m<<"] = multiplyComplex(w[j*"<<(3*xsize)<<"/"<<(5*L)<<"], d8-d10);\n";
+            source<<"data"<<output<<"[i+(4*j+4)*"<<m<<"] = multiplyComplex(w[j*"<<(4*xsize)<<"/"<<(5*L)<<"], d7-d9);\n";
             m = m*5;
             unfactored /= 5;
         }
@@ -105,9 +125,9 @@ cl::Kernel OpenCLFFT3D::createKernel(int size) {
             source<<"float2 d2 = c1+c3;\n";
             source<<"float2 d3 = sign*(float2) (c1.y-c3.y, c3.x-c1.x);\n";
             source<<"data"<<output<<"[i+3*j*"<<m<<"] = d0+d2;\n";
-            source<<"data"<<output<<"[i+(3*j+1)*"<<m<<"] = multiplyComplex(w[j*"<<size<<"/"<<(4*L)<<"], d1+d3);\n";
-            source<<"data"<<output<<"[i+(3*j+2)*"<<m<<"] = multiplyComplex(w[j*"<<(2*size)<<"/"<<(4*L)<<"], d0-d2);\n";
-            source<<"data"<<output<<"[i+(3*j+3)*"<<m<<"] = multiplyComplex(w[j*"<<(3*size)<<"/"<<(4*L)<<"], d1-d3);\n";
+            source<<"data"<<output<<"[i+(3*j+1)*"<<m<<"] = multiplyComplex(w[j*"<<xsize<<"/"<<(4*L)<<"], d1+d3);\n";
+            source<<"data"<<output<<"[i+(3*j+2)*"<<m<<"] = multiplyComplex(w[j*"<<(2*xsize)<<"/"<<(4*L)<<"], d0-d2);\n";
+            source<<"data"<<output<<"[i+(3*j+3)*"<<m<<"] = multiplyComplex(w[j*"<<(3*xsize)<<"/"<<(4*L)<<"], d1-d3);\n";
             m = m*4;
             unfactored /= 4;
         }
@@ -122,8 +142,8 @@ cl::Kernel OpenCLFFT3D::createKernel(int size) {
             source<<"float2 d1 = c0-0.5f*d0;\n";
             source<<"float2 d2 = sign*"<<OpenCLExpressionUtilities::doubleToString(sin(M_PI/3.0))<<"*(float2) (c1.y-c2.y, c2.x-c1.x);\n";
             source<<"data"<<output<<"[i+2*j*"<<m<<"] = c0+d0;\n";
-            source<<"data"<<output<<"[i+(2*j+1)*"<<m<<"] = multiplyComplex(w[j*"<<size<<"/"<<(3*L)<<"], d1+d2);\n";
-            source<<"data"<<output<<"[i+(2*j+2)*"<<m<<"] = multiplyComplex(w[j*"<<(2*size)<<"/"<<(3*L)<<"], d1-d2);\n";
+            source<<"data"<<output<<"[i+(2*j+1)*"<<m<<"] = multiplyComplex(w[j*"<<xsize<<"/"<<(3*L)<<"], d1+d2);\n";
+            source<<"data"<<output<<"[i+(2*j+2)*"<<m<<"] = multiplyComplex(w[j*"<<(2*xsize)<<"/"<<(3*L)<<"], d1-d2);\n";
             m = m*3;
             unfactored /= 3;
         }
@@ -134,22 +154,33 @@ cl::Kernel OpenCLFFT3D::createKernel(int size) {
             source<<"float2 c0 = data"<<input<<"[i];\n";
             source<<"float2 c1 = data"<<input<<"[i+"<<(L*m)<<"];\n";
             source<<"data"<<output<<"[i+j*"<<m<<"] = c0+c1;\n";
-            source<<"data"<<output<<"[i+(j+1)*"<<m<<"] = multiplyComplex(w[j*"<<size<<"/"<<(2*L)<<"], c0-c1);\n";
+            source<<"data"<<output<<"[i+(j+1)*"<<m<<"] = multiplyComplex(w[j*"<<xsize<<"/"<<(2*L)<<"], c0-c1);\n";
             m = m*2;
             unfactored /= 2;
         }
         else
-            throw OpenMMException("Illegal size for FFT: "+OpenCLExpressionUtilities::intToString(size));
+            throw OpenMMException("Illegal size for FFT: "+OpenCLExpressionUtilities::intToString(xsize));
         source<<"barrier(CLK_LOCAL_MEM_FENCE);\n";
         source<<"}\n";
         ++stage;
     }
-    source<<"matrix[i] = data"<<(stage%2)<<"[i];";
+
+    // Create the kernel.
+
+    source<<"matrix[element] = data"<<(stage%2)<<"[i];";
+    map<string, string> replacements;
+    replacements["XSIZE"] = OpenCLExpressionUtilities::intToString(xsize);
+    replacements["YSIZE"] = OpenCLExpressionUtilities::intToString(ysize);
+    replacements["ZSIZE"] = OpenCLExpressionUtilities::intToString(zsize);
+    replacements["XMULT"] = OpenCLExpressionUtilities::intToString(xmult);
+    replacements["YMULT"] = OpenCLExpressionUtilities::intToString(ymult);
+    replacements["ZMULT"] = OpenCLExpressionUtilities::intToString(zmult);
+    replacements["M_PI"] = OpenCLExpressionUtilities::doubleToString(M_PI);
     replacements["COMPUTE_FFT"] = source.str();
     cl::Program program = context.createProgram(context.loadSourceFromFile("fft.cl", replacements));
     cl::Kernel kernel(program, "execFFT");
-    kernel.setArg(2, size*sizeof(mm_float2), NULL);
-    kernel.setArg(3, size*sizeof(mm_float2), NULL);
-    kernel.setArg(4, size*sizeof(mm_float2), NULL);
+    kernel.setArg(2, xsize*sizeof(mm_float2), NULL);
+    kernel.setArg(3, xsize*sizeof(mm_float2), NULL);
+    kernel.setArg(4, xsize*sizeof(mm_float2), NULL);
     return kernel;
 }

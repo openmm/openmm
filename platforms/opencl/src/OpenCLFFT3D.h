@@ -31,13 +31,54 @@
 
 namespace OpenMM {
 
+/**
+ * This class performs three dimensional Fast Fourier Transforms.  It is based on the
+ * mixed radix algorithm described in
+ * <p>
+ * Takahashi, D. and Kanada, Y., "High-Performance Radix-2, 3 and 5 Parallel 1-D Complex
+ * FFT Algorithms for Distributed-Memory Parallel Computers."  Journal of Supercomputing,
+ * 15, 207–228 (2000).
+ * <p>
+ * This class places certain restrictions on the allowed dimensions of the grid.  First,
+ * the size of each dimension may have no prime factors other than 2, 3, and 5.  You
+ * can call findLegalDimension() to determine the smallest size that satisfies this
+ * requirement and is greater than or equal to a specified minimum size.  Second, the size
+ * of each dimension must be small enough to compute each 1D transform entirely in local
+ * memory with one work unit per data point.  This will vary between platforms, but is
+ * typically at least 512.
+ * <p>
+ * Note that this class performs an unnormalized transform.  That means that if you perform
+ * a forward transform followed immediately by an inverse transform, the effect is to
+ * multiply every value of the original data set by the total number of data points.
+ */
+
 class OpenCLFFT3D {
 public:
+    /**
+     * Create an OpenCLFFT3D object for performing transforms of a particular size.
+     *
+     * @param context the context in which to perform calculations
+     * @param xsize   the first dimension of the data sets on which FFTs will be performed
+     * @param ysize   the second dimension of the data sets on which FFTs will be performed
+     * @param zsize   the third dimension of the data sets on which FFTs will be performed
+     */
     OpenCLFFT3D(OpenCLContext& context, int xsize, int ysize, int zsize);
-    ~OpenCLFFT3D();
+    /**
+     * Perform an in-place Fourier transform.
+     *
+     * @param data     the data to transform, ordered such that data[x*ysize*zsize + y*zsize + z] contains element (x, y, z)
+     * @param forward  true to perform a forward transform, false to perform an inverse transform
+     */
     void execFFT(OpenCLArray<mm_float2>& data, bool forward = true);
+    /**
+     * Get the smallest legal size for a dimension of the grid (that is, a size with no prime
+     * factors other than 2, 3, and 5).
+     *
+     * @param minimum   the minimum size the return value must be greater than or equal to
+     */
+    static int findLegalDimension(int minimum);
 private:
-    cl::Kernel createKernel(int size);
+    cl::Kernel createKernel(int xsize, int ysize, int zsize, int xmult, int ymult, int zmult);
     int xsize, ysize, zsize;
     OpenCLContext& context;
     cl::Kernel xkernel, ykernel, zkernel;
