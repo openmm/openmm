@@ -247,7 +247,7 @@ RealOpenMM ReferenceBondIxn::getAngleBetweenTwoVectors( RealOpenMM* vector1, Rea
        RealOpenMM scale = DOT3(vector1, vector1)*DOT3(vector2, vector2);
        angle = ASIN(SQRT(DOT3(cross, cross)/scale));
        if (dotProduct < zero)
-           angle = M_PI-angle;
+           angle = (RealOpenMM) (M_PI-angle);
    } else {
       angle = ACOS(dotProduct);
    }

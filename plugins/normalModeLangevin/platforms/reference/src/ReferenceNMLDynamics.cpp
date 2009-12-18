@@ -126,7 +126,7 @@ int ReferenceNMLDynamics::_setFixedParameters( void ){
 
     //dt, myGamma, fdt, vdt, ndt, sqrtFCoverM from Langevin Leapfrog
     
-    _fixedParameters[DT]         = getTimeStep();
+    _fixedParameters[DT]         = (RealOpenMM) getTimeStep();
     _fixedParameters[GAMMA]      = (_tau == zero ? eighty : one/_tau);
     _fixedParameters[FDT]        = ( one - EXP( -half * _fixedParameters[GAMMA] * _fixedParameters[DT] ) ) / _fixedParameters[GAMMA];
     _fixedParameters[VDT]        = EXP(-half * _fixedParameters[GAMMA] * _fixedParameters[DT]);
@@ -237,12 +237,12 @@ void ReferenceNMLDynamics::halfKick( int numberOfAtoms, RealOpenMM** atomCoordin
                                       RealOpenMM* inverseMasses, RealOpenMM** xVector ){
     
     //dt, myGamma, fdt, vdt, ndt, sqrtFCoverM from Langevin Leapfrog
-    static const RealOpenMM dt = getTimeStep(); // in ps
-    static const RealOpenMM myGamma = (_tau == 0.0 ? 80.0 : 1.0/_tau);
-    static const RealOpenMM fdt = ( 1.0 - EXP( -0.5 * myGamma * dt ) ) / myGamma;
-    static const RealOpenMM vdt = EXP(-0.5 * myGamma * dt);
-    static const RealOpenMM ndt = SQRT( ( 1.0 - EXP( -myGamma * dt ) ) / (2.0 * myGamma) ); 
-    static const RealOpenMM sqrtFCoverM = SQRT( 2.0 * (RealOpenMM) BOLTZ * getTemperature() * myGamma );
+    static const RealOpenMM dt = (RealOpenMM) getTimeStep(); // in ps
+    static const RealOpenMM myGamma = (RealOpenMM) (_tau == 0.0 ? 80.0 : 1.0/_tau);
+    static const RealOpenMM fdt = (RealOpenMM) (( 1.0 - EXP( -0.5 * myGamma * dt ) ) / myGamma);
+    static const RealOpenMM vdt = (RealOpenMM) EXP(-0.5 * myGamma * dt);
+    static const RealOpenMM ndt = (RealOpenMM) SQRT( ( 1.0 - EXP( -myGamma * dt ) ) / (2.0 * myGamma) );
+    static const RealOpenMM sqrtFCoverM = (RealOpenMM) SQRT( 2.0 * (RealOpenMM) BOLTZ * getTemperature() * myGamma );
     
     //project forces into sub space. TODO put this somewhere callable from NMLIntegrator, else projecting twice.
     subspaceProjection(forces, forces, numberOfAtoms, masses, inverseMasses, 0);
@@ -285,7 +285,7 @@ void ReferenceNMLDynamics::drift( int numberOfAtoms, RealOpenMM** atomCoordinate
                                    RealOpenMM** forces, RealOpenMM* masses, RealOpenMM* inverseMasses,
                                    RealOpenMM** xPrime ){
     
-    static const RealOpenMM deltaT = getTimeStep();
+    static const RealOpenMM deltaT = (RealOpenMM) getTimeStep();
     
     for( int i = 0; i < numberOfAtoms; i++ ){
         for( int j = 0; j < 3; j++ ) {
@@ -442,7 +442,7 @@ int ReferenceNMLDynamics::update( int numberOfAtoms, RealOpenMM** atomCoordinate
             subspaceProjection(forces, xPrime, numberOfAtoms, masses, inverseMasses, 2);
             
             //find slope of PE with /lambda here
-            RealOpenMM lambda = 1.0 / _maxEig;
+            RealOpenMM lambda = (RealOpenMM) (1.0 / _maxEig);
             RealOpenMM oldLambda = lambda;
             std::stringstream message;
             message << "Lambda "<< lambda << " oldLambda " << oldLambda  <<"\n";
@@ -468,11 +468,11 @@ int ReferenceNMLDynamics::update( int numberOfAtoms, RealOpenMM** atomCoordinate
             if( a != 0.0){
                 lambda = -b / (2 * a);
             }else{
-                lambda = oldLambda / 2.0;
+                lambda = (RealOpenMM) (oldLambda / 2.0);
             }
             
             //test if lambda negative, if so just use smaller lambda
-            if(lambda <= 0.0) lambda = oldLambda / 2.0;
+            if(lambda <= 0.0) lambda = (RealOpenMM) (oldLambda / 2.0);
             
             //std::stringstream message;
             //message << "Lambda "<< lambda << " oldLambda " << oldLambda << " slope " << lambdaSlp << " lastSlope " << lastSlope<<"\n";
@@ -497,7 +497,7 @@ int ReferenceNMLDynamics::update( int numberOfAtoms, RealOpenMM** atomCoordinate
     message << "Array     "<<forces[0][0]<<" " <<forces[0][1]<<" " <<forces[0][2]<<" "<<xPrime[1][0]<<" " <<xPrime[1][1]<<" " <<xPrime[1][2]<<" " <<"\n";
     RealOpenMM* mydata = &forces[0][0];
     message << "Lin Array "<<mydata[0]<<" " <<mydata[1]<<" " <<mydata[2]<<" "<<mydata[3]<<" " <<mydata[4]<<" " <<mydata[5]<<" " <<"\n";
-    forces[0][0] = 1.0; forces[0][1] = 1.1; xPrime[1][0] = 2.0;
+    forces[0][0] = 1.0f; forces[0][1] = 1.1f; xPrime[1][0] = 2.0f;
     message << "Lin Array "<<mydata[0]<<" " <<mydata[1]<<" " <<mydata[2]<<" "<<mydata[3]<<" " <<mydata[4]<<" " <<mydata[5]<<" " <<"\n";
     
     SimTKOpenMMLog::printMessage( message );
@@ -823,11 +823,11 @@ void ReferenceNMLDynamics::subspaceProjection(  RealOpenMM** arrayParam,
   
   //const int _3N = numberOfAtoms * 3; //eigenvector vector/array length
   
-  for(int i=0; i < _numProjectionVectors; i++){   //over all eigenvectors
+  for(int i=0; i < (int) _numProjectionVectors; i++){   //over all eigenvectors
     
     tmpC[i] = 0.0;  //clear
     
-    for(int j=0; j< _3N; j++){  //over each element in the vector
+    for(int j=0; j< (int) _3N; j++){  //over each element in the vector
       //tmpC[i] += _projectionVectors[j * _3N + i] * outArray[j];
         tmpC[i] += _projectionVectors[j  + i * _3N] * outArray[j];
     }
@@ -841,19 +841,19 @@ void ReferenceNMLDynamics::subspaceProjection(  RealOpenMM** arrayParam,
   const bool pMode = !(projectionMode & 0x02);
   
   //find product
-  for(int i=0; i< _3N; i++){  //over each element in the vector
+  for(int i=0; i< (int) _3N; i++){  //over each element in the vector
     
     //if sub-space do Q*c
     //else do a'-Q(Q^T a') = (I-QQ^T)a'
       if(pMode){
           outArray[i] = 0.0; //if not complement
     
-          for(int j=0; j < _numProjectionVectors; j++){   //over all eigenvectors
+          for(int j=0; j < (int) _numProjectionVectors; j++){   //over all eigenvectors
               //outArray[i] += _projectionVectors[i * _3N + j] * tmpC[j];
               outArray[i] += _projectionVectors[i + j * _3N] * tmpC[j];
           }
       }else{
-          for(int j=0; j < _numProjectionVectors; j++){   //over all eigenvectors
+          for(int j=0; j < (int) _numProjectionVectors; j++){   //over all eigenvectors
               //outArray[i] -= _projectionVectors[i * _3N + j] * tmpC[j];
               outArray[i] -= _projectionVectors[i + j * _3N] * tmpC[j];
           }
