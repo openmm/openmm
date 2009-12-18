@@ -175,7 +175,8 @@ void testEnergyEthaneSwitchingFunction( int useSwitchingFunction ) {
     for( int i = 0; i < numParticles; i++ ){
        system.addParticle(1.0);
     }
-    LangevinIntegrator integrator(0, 0.1, 0.01);
+    LangevinIntegrator integrator1(0, 0.1, 0.01);
+    LangevinIntegrator integrator2(0, 0.1, 0.01);
 
     double C_HBondDistance   = 0.1097;
     double C_CBondDistance   = 0.1504;
@@ -280,8 +281,8 @@ void testEnergyEthaneSwitchingFunction( int useSwitchingFunction ) {
 
     system.addForce(nonbonded);
 
-    Context referenceContext(system, integrator, referencePlatform);
-    Context context(system, integrator, platform);
+    Context referenceContext(system, integrator1, referencePlatform);
+    Context context(system, integrator2, platform);
     
     vector<Vec3> positions(numParticles);
     positions[0] = Vec3(0.5480,    1.7661,    0.0000);

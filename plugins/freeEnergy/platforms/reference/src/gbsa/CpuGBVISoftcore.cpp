@@ -68,7 +68,7 @@ CpuGBVISoftcore::~CpuGBVISoftcore( ){
 
    // ---------------------------------------------------------------------------------------
 
-   delete _switchDeriviative;
+   delete[] _switchDeriviative;
    //if( _gbviParameters != NULL ){
      // delete _gbviParameters;
    //}
