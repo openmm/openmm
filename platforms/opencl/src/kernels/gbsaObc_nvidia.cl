@@ -127,9 +127,9 @@ __kernel void computeBornSum(__global float* global_bornSum, __local float* loca
                                         bornSum += 2.0f*(1.0f/params1.x-l_ij);
                                 }
                                 float rScaledRadiusI = r+params1.y;
-                                if (params2.x < rScaledRadiusJ) {
+                                if (params2.x < rScaledRadiusI) {
                                     float l_ij = 1.0f/max(params2.x, fabs(r-params1.y));
-                                    float u_ij = 1.0f/rScaledRadiusJ;
+                                    float u_ij = 1.0f/rScaledRadiusI;
                                     float l_ij2 = l_ij*l_ij;
                                     float u_ij2 = u_ij*u_ij;
                                     float ratio = log(u_ij / l_ij);
@@ -195,9 +195,9 @@ __kernel void computeBornSum(__global float* global_bornSum, __local float* loca
                                 bornSum += 2.0f*(1.0f/params1.x-l_ij);
                         }
                         float rScaledRadiusI = r+params1.y;
-                        if (params2.x < rScaledRadiusJ) {
+                        if (params2.x < rScaledRadiusI) {
                             float l_ij = 1.0f/max(params2.x, fabs(r-params1.y));
-                            float u_ij = 1.0f/rScaledRadiusJ;
+                            float u_ij = 1.0f/rScaledRadiusI;
                             float l_ij2 = l_ij*l_ij;
                             float u_ij2 = u_ij*u_ij;
                             float ratio = log(u_ij / l_ij);
