@@ -1,4 +1,6 @@
 #define TILE_SIZE 32
+#define STORE_DERIVATIVE_1(INDEX) derivBuffers##INDEX[offset1] += deriv##INDEX##_1;
+#define STORE_DERIVATIVE_2(INDEX) derivBuffers##INDEX[offset2] += local_deriv##INDEX[get_local_id(0)];
 
 /**
  * Compute a force based on pair interactions.

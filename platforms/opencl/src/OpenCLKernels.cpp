@@ -1494,7 +1494,7 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         }
         map<string, string> replacements;
         replacements["COMPUTE_INTERACTION"] = n2EnergySource.str();
-        stringstream extraArgs, loadLocal1, loadLocal2, load1, load2, recordDeriv, storeDerivs1, storeDerivs2;
+        stringstream extraArgs, loadLocal1, loadLocal2, load1, load2, recordDeriv, storeDerivs1, storeDerivs2, declareTemps, setTemps;
         if (force.getNumGlobalParameters() > 0)
             extraArgs << ", __constant float* globals";
         for (int i = 0; i < (int) params->getBuffers().size(); i++) {
@@ -1523,8 +1523,10 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
             load1 << buffer.getType() << " deriv" << index << "_1 = 0;\n";
             load2 << buffer.getType() << " deriv" << index << "_2 = 0;\n";
             recordDeriv << "local_deriv" << index << "[atom2] += deriv" << index << "_2;\n";
-            storeDerivs1 << "derivBuffers" << index << "[offset1] += deriv" << index << "_1;\n";
-            storeDerivs2 << "derivBuffers" << index << "[offset2] += local_deriv" << index << "[get_local_id(0)];\n";
+            storeDerivs1 << "STORE_DERIVATIVE_1(" << index << ")";
+            storeDerivs2 << "STORE_DERIVATIVE_2(" << index << ")";
+            declareTemps << "__local " << buffer.getType() << " tempDerivBuffer" << index << "[64];\n";
+            setTemps << "tempDerivBuffer" << index << "[get_local_id(0)] = deriv" << index << "_1;\n";
         }
         replacements["PARAMETER_ARGUMENTS"] = extraArgs.str()+tableArgs.str();
         replacements["LOAD_LOCAL_PARAMETERS_FROM_1"] = loadLocal1.str();
@@ -1534,6 +1536,8 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         replacements["RECORD_DERIVATIVE_2"] = recordDeriv.str();
         replacements["STORE_DERIVATIVES_1"] = storeDerivs1.str();
         replacements["STORE_DERIVATIVES_2"] = storeDerivs2.str();
+        replacements["DECLARE_TEMP_BUFFERS"] = declareTemps.str();
+        replacements["SET_TEMP_BUFFERS"] = setTemps.str();
         map<string, string> defines;
         if (cl.getNonbondedUtilities().getForceBufferPerAtomBlock())
             defines["USE_OUTPUT_BUFFER_PER_BLOCK"] = "1";
