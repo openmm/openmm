@@ -67,6 +67,7 @@ public:
 class OpenCLPlatform::PlatformData {
 public:
     PlatformData(int numParticles, int deviceIndex);
+    ~PlatformData();
     OpenCLContext* context;
     bool removeCM;
     int cmMotionFrequency;

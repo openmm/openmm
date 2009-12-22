@@ -105,3 +105,7 @@ OpenCLPlatform::PlatformData::PlatformData(int numParticles, int deviceIndex) : 
     device << context->getDeviceIndex();
     propertyValues[OpenCLPlatform::OpenCLDeviceIndex()] = device.str();
 }
+
+OpenCLPlatform::PlatformData::~PlatformData() {
+    delete context;
+}
