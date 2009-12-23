@@ -79,7 +79,7 @@ OpenCLContext::OpenCLContext(int numParticles, int deviceIndex) : time(0.0), ste
         nonbonded = new OpenCLNonbondedUtilities(*this);
         posq = new OpenCLArray<mm_float4>(*this, paddedNumAtoms, "posq", true);
         velm = new OpenCLArray<mm_float4>(*this, paddedNumAtoms, "velm", true);
-        posCellOffsets.resize(paddedNumAtoms, (mm_int4) {0, 0, 0, 0});
+        posCellOffsets.resize(paddedNumAtoms, mm_int4(0, 0, 0, 0));
     }
     catch (cl::Error err) {
         std::stringstream str;

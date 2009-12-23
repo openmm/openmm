@@ -333,15 +333,15 @@ vector<mm_float4> OpenCLExpressionUtilities::computeFunctionCoefficients(const v
     vector<mm_float4> f(values.size()-1);
     for (int i = 0; i < (int) values.size()-1; i++) {
         if (interpolating)
-            f[i] = (mm_float4) {(cl_float) padded[i+1],
+            f[i] = mm_float4((cl_float) padded[i+1],
                                 (cl_float) (0.5*(-padded[i]+padded[i+2])),
                                 (cl_float) (0.5*(2.0*padded[i]-5.0*padded[i+1]+4.0*padded[i+2]-padded[i+3])),
-                                (cl_float) (0.5*(-padded[i]+3.0*padded[i+1]-3.0*padded[i+2]+padded[i+3]))};
+                                (cl_float) (0.5*(-padded[i]+3.0*padded[i+1]-3.0*padded[i+2]+padded[i+3])));
         else
-            f[i] = (mm_float4) {(cl_float) ((padded[i]+4.0*padded[i+1]+padded[i+2])/6.0),
+            f[i] = mm_float4((cl_float) ((padded[i]+4.0*padded[i+1]+padded[i+2])/6.0),
                                 (cl_float) ((-3.0*padded[i]+3.0*padded[i+2])/6.0),
                                 (cl_float) ((3.0*padded[i]-6.0*padded[i+1]+3.0*padded[i+2])/6.0),
-                                (cl_float) ((-padded[i]+3.0*padded[i+1]-3.0*padded[i+2]+padded[i+3])/6.0)};
+                                (cl_float) ((-padded[i]+3.0*padded[i+1]-3.0*padded[i+2]+padded[i+3])/6.0));
     }
     return f;
 }

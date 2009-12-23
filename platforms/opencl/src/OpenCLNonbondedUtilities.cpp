@@ -211,7 +211,7 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
 
     Vec3 boxVectors[3];
     system.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
-    periodicBoxSize = (mm_float4) {(float) boxVectors[0][0], (float) boxVectors[1][1], (float) boxVectors[2][2], 0.0f};
+    periodicBoxSize = mm_float4((float) boxVectors[0][0], (float) boxVectors[1][1], (float) boxVectors[2][2], 0.0f);
 
     // Create data structures for the neighbor list.
 

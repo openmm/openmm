@@ -27,9 +27,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
-#define __CL_ENABLE_EXCEPTIONS
 #include <map>
 #include <string>
+#define __CL_ENABLE_EXCEPTIONS
+#ifdef _MSC_VER
+    // Prevent Windows from defining macros that interfere with other code.
+    #define NOMINMAX
+#endif
 #include <cl.hpp>
 
 namespace OpenMM {
@@ -47,24 +51,50 @@ class System;
  * types to represent them on the host.
  */
 
-typedef struct {
+struct mm_float2 {
     cl_float x, y;
-} mm_float2;
-typedef struct {
+    mm_float2() {
+    }
+    mm_float2(cl_float x, cl_float y) : x(x), y(y) {
+    }
+};
+ struct mm_float4 {
     cl_float x, y, z, w;
-} mm_float4;
-typedef struct {
+    mm_float4() {
+    }
+    mm_float4(cl_float x, cl_float y, cl_float z, cl_float w) : x(x), y(y), z(z), w(w) {
+    }
+};
+struct mm_float8 {
     cl_float s0, s1, s2, s3, s4, s5, s6, s7;
-} mm_float8;
-typedef struct {
+    mm_float8() {
+    }
+    mm_float8(cl_float s0, cl_float s1, cl_float s2, cl_float s3, cl_float s4, cl_float s5, cl_float s6, cl_float s7) :
+        s0(s0), s1(s1), s2(s2), s3(s3), s4(s4), s5(s5), s6(s6), s7(s7) {
+    }
+};
+struct mm_int2 {
     cl_int x, y;
-} mm_int2;
-typedef struct {
+    mm_int2() {
+    }
+    mm_int2(cl_int x, cl_int y) : x(x), y(y) {
+    }
+};
+struct mm_int4 {
     cl_int x, y, z, w;
-} mm_int4;
-typedef struct {
+    mm_int4() {
+    }
+    mm_int4(cl_int x, cl_int y, cl_int z, cl_int w) : x(x), y(y), z(z), w(w) {
+    }
+};
+struct mm_int8 {
     cl_int s0, s1, s2, s3, s4, s5, s6, s7;
-} mm_int8;
+    mm_int8() {
+    }
+    mm_int8(cl_int s0, cl_int s1, cl_int s2, cl_int s3, cl_int s4, cl_int s5, cl_int s6, cl_int s7) :
+        s0(s0), s1(s1), s2(s2), s3(s3), s4(s4), s5(s5), s6(s6), s7(s7) {
+    }
+};
 
 /**
  * This class contains the information associated with a Context by the OpenCL Platform.

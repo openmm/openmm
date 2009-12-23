@@ -126,7 +126,7 @@ void OpenCLUpdateStateDataKernel::setPositions(ContextImpl& context, const std::
     }
     posq.upload();
     for (int i = 0; i < cl.getPosCellOffsets().size(); i++)
-        cl.getPosCellOffsets()[i] = (mm_int4) {0, 0, 0, 0};
+        cl.getPosCellOffsets()[i] = mm_int4(0, 0, 0, 0);
 }
 
 void OpenCLUpdateStateDataKernel::getVelocities(ContextImpl& context, std::vector<Vec3>& velocities) {
@@ -213,8 +213,8 @@ void OpenCLCalcHarmonicBondForceKernel::initialize(const System& system, const H
         int particle1, particle2;
         double length, k;
         force.getBondParameters(i, particle1, particle2, length, k);
-        paramVector[i] = (mm_float2) {(cl_float) length, (cl_float) k};
-        indicesVector[i] = (mm_int4) {particle1, particle2, forceBufferCounter[particle1]++, forceBufferCounter[particle2]++};
+        paramVector[i] = mm_float2((cl_float) length, (cl_float) k);
+        indicesVector[i] = mm_int4(particle1, particle2, forceBufferCounter[particle1]++, forceBufferCounter[particle2]++);
     }
     params->upload(paramVector);
     indices->upload(indicesVector);
@@ -306,7 +306,7 @@ void OpenCLCalcCustomBondForceKernel::initialize(const System& system, const Cus
         paramVector[i].resize(parameters.size());
         for (int j = 0; j < parameters.size(); j++)
             paramVector[i][j] = (cl_float) parameters[j];
-        indicesVector[i] = (mm_int4) {particle1, particle2, forceBufferCounter[particle1]++, forceBufferCounter[particle2]++};
+        indicesVector[i] = mm_int4(particle1, particle2, forceBufferCounter[particle1]++, forceBufferCounter[particle2]++);
     }
     params->setParameterValues(paramVector);
     indices->upload(indicesVector);
@@ -447,9 +447,9 @@ void OpenCLCalcHarmonicAngleForceKernel::initialize(const System& system, const 
         int particle1, particle2, particle3;
         double angle, k;
         force.getAngleParameters(i, particle1, particle2, particle3, angle, k);
-        paramVector[i] = (mm_float2) {(cl_float) angle, (cl_float) k};
-        indicesVector[i] = (mm_int8) {particle1, particle2, particle3,
-                forceBufferCounter[particle1]++, forceBufferCounter[particle2]++, forceBufferCounter[particle3]++, 0, 0};
+        paramVector[i] = mm_float2((cl_float) angle, (cl_float) k);
+        indicesVector[i] = mm_int8(particle1, particle2, particle3,
+                forceBufferCounter[particle1]++, forceBufferCounter[particle2]++, forceBufferCounter[particle3]++, 0, 0);
 
     }
     params->upload(paramVector);
@@ -531,9 +531,9 @@ void OpenCLCalcPeriodicTorsionForceKernel::initialize(const System& system, cons
         int particle1, particle2, particle3, particle4, periodicity;
         double phase, k;
         force.getTorsionParameters(i, particle1, particle2, particle3, particle4, periodicity, phase, k);
-        paramVector[i] = (mm_float4) {(cl_float) k, (cl_float) phase, (cl_float) periodicity, 0.0f};
-        indicesVector[i] = (mm_int8) {particle1, particle2, particle3, particle4,
-                forceBufferCounter[particle1]++, forceBufferCounter[particle2]++, forceBufferCounter[particle3]++, forceBufferCounter[particle4]++};
+        paramVector[i] = mm_float4((cl_float) k, (cl_float) phase, (cl_float) periodicity, 0.0f);
+        indicesVector[i] = mm_int8(particle1, particle2, particle3, particle4,
+                forceBufferCounter[particle1]++, forceBufferCounter[particle2]++, forceBufferCounter[particle3]++, forceBufferCounter[particle4]++);
 
     }
     params->upload(paramVector);
@@ -615,9 +615,9 @@ void OpenCLCalcRBTorsionForceKernel::initialize(const System& system, const RBTo
         int particle1, particle2, particle3, particle4;
         double c0, c1, c2, c3, c4, c5;
         force.getTorsionParameters(i, particle1, particle2, particle3, particle4, c0, c1, c2, c3, c4, c5);
-        paramVector[i] = (mm_float8) {(cl_float) c0, (cl_float) c1, (cl_float) c2, (cl_float) c3, (cl_float) c4, (cl_float) c5, 0.0f, 0.0f};
-        indicesVector[i] = (mm_int8) {particle1, particle2, particle3, particle4,
-                forceBufferCounter[particle1]++, forceBufferCounter[particle2]++, forceBufferCounter[particle3]++, forceBufferCounter[particle4]++};
+        paramVector[i] = mm_float8((cl_float) c0, (cl_float) c1, (cl_float) c2, (cl_float) c3, (cl_float) c4, (cl_float) c5, 0.0f, 0.0f);
+        indicesVector[i] = mm_int8(particle1, particle2, particle3, particle4,
+                forceBufferCounter[particle1]++, forceBufferCounter[particle2]++, forceBufferCounter[particle3]++, forceBufferCounter[particle4]++);
 
     }
     params->upload(paramVector);
@@ -721,7 +721,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         double charge, sigma, epsilon;
         force.getParticleParameters(i, charge, sigma, epsilon);
         posq[i].w = (float) charge;
-        sigmaEpsilonVector[i] = (mm_float2) {(float) (0.5*sigma), (float) (2.0*sqrt(epsilon))};
+        sigmaEpsilonVector[i] = mm_float2((float) (0.5*sigma), (float) (2.0*sqrt(epsilon)));
         exclusionList[i].push_back(i);
         sumSquaredCharges += charge*charge;
         if (charge != 0.0)
@@ -804,8 +804,8 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
             int particle1, particle2;
             double chargeProd, sigma, epsilon;
             force.getExceptionParameters(exceptions[i], particle1, particle2, chargeProd, sigma, epsilon);
-            exceptionParamsVector[i] = (mm_float4) {(float) (ONE_4PI_EPS0*chargeProd), (float) sigma, (float) (4.0*epsilon), 0.0f};
-            exceptionIndicesVector[i] = (mm_int4) {particle1, particle2, forceBufferCounter[particle1]++, forceBufferCounter[particle2]++};
+            exceptionParamsVector[i] = mm_float4((float) (ONE_4PI_EPS0*chargeProd), (float) sigma, (float) (4.0*epsilon), 0.0f);
+            exceptionIndicesVector[i] = mm_int4(particle1, particle2, forceBufferCounter[particle1]++, forceBufferCounter[particle2]++);
         }
         exceptionParams->upload(exceptionParamsVector);
         exceptionIndices->upload(exceptionIndicesVector);
@@ -946,7 +946,7 @@ void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, cons
         string arrayName = prefix+"table"+intToString(i);
         functionDefinitions.push_back(make_pair(name, arrayName));
         functions[name] = &fp;
-        tabulatedFunctionParamsVec[i] = (mm_float4) {(float) min, (float) max, (float) ((values.size()-1)/(max-min)), 0.0f};
+        tabulatedFunctionParamsVec[i] = mm_float4((float) min, (float) max, (float) ((values.size()-1)/(max-min)), 0.0f);
         vector<mm_float4> f = OpenCLExpressionUtilities::computeFunctionCoefficients(values, interpolating);
         tabulatedFunctions.push_back(new OpenCLArray<mm_float4>(cl, values.size()-1, "TabulatedFunction"));
         tabulatedFunctions[tabulatedFunctions.size()-1]->upload(f);
@@ -1071,7 +1071,7 @@ void OpenCLCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOB
         double charge, radius, scalingFactor;
         force.getParticleParameters(i, charge, radius, scalingFactor);
         radius -= dielectricOffset;
-        paramsVector[i] = (mm_float2) {(float) radius, (float) (scalingFactor*radius)};
+        paramsVector[i] = mm_float2((float) radius, (float) (scalingFactor*radius));
         posq[i].w = (float) charge;
     }
     posq.upload();
@@ -1288,7 +1288,7 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         string arrayName = prefix+"table"+intToString(i);
         functionDefinitions.push_back(make_pair(name, arrayName));
         functions[name] = &fp;
-        tabulatedFunctionParamsVec[i] = (mm_float4) {(float) min, (float) max, (float) ((values.size()-1)/(max-min)), 0.0f};
+        tabulatedFunctionParamsVec[i] = mm_float4((float) min, (float) max, (float) ((values.size()-1)/(max-min)), 0.0f);
         vector<mm_float4> f = OpenCLExpressionUtilities::computeFunctionCoefficients(values, interpolating);
         tabulatedFunctions.push_back(new OpenCLArray<mm_float4>(cl, values.size()-1, "TabulatedFunction"));
         tabulatedFunctions[tabulatedFunctions.size()-1]->upload(f);
@@ -2013,7 +2013,7 @@ void OpenCLIntegrateVerletStepKernel::execute(ContextImpl& context, const Verlet
     }
     if (dt != prevStepSize) {
         vector<mm_float2> stepSizeVec(1);
-        stepSizeVec[0] = (mm_float2) {dt, dt};
+        stepSizeVec[0] = mm_float2(dt, dt);
         cl.getIntegrationUtilities().getStepSize().upload(stepSizeVec);
         prevStepSize = dt;
     }
@@ -2058,7 +2058,7 @@ void OpenCLIntegrateLangevinStepKernel::initialize(const System& system, const L
     params = new OpenCLArray<cl_float>(cl, 11, "langevinParams");
     xVector = new OpenCLArray<mm_float4>(cl, cl.getPaddedNumAtoms(), "xVector");
     vVector = new OpenCLArray<mm_float4>(cl, cl.getPaddedNumAtoms(), "vVector");
-    vector<mm_float4> initialXVector(xVector->getSize(), (mm_float4) {0.0f, 0.0f, 0.0f, 0.0f});
+    vector<mm_float4> initialXVector(xVector->getSize(), mm_float4(0.0f, 0.0f, 0.0f, 0.0f));
     xVector->upload(initialXVector);
     prevStepSize = -1.0;
 }
@@ -2326,7 +2326,7 @@ void OpenCLIntegrateVariableLangevinStepKernel::initialize(const System& system,
     params = new OpenCLArray<cl_float>(cl, 11, "langevinParams");
     xVector = new OpenCLArray<mm_float4>(cl, cl.getPaddedNumAtoms(), "xVector");
     vVector = new OpenCLArray<mm_float4>(cl, cl.getPaddedNumAtoms(), "vVector");
-    vector<mm_float4> initialXVector(xVector->getSize(), (mm_float4) {0.0f, 0.0f, 0.0f, 0.0f});
+    vector<mm_float4> initialXVector(xVector->getSize(), mm_float4(0.0f, 0.0f, 0.0f, 0.0f));
     xVector->upload(initialXVector);
     blockSize = std::min(256, system.getNumParticles());
     blockSize = std::max(blockSize, params->getSize());

@@ -73,7 +73,7 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
 
     posDelta = new OpenCLArray<mm_float4>(context, context.getPaddedNumAtoms(), "posDelta");
     stepSize = new OpenCLArray<mm_float2>(context, 1, "stepSize", true);
-    stepSize->set(0, (mm_float2) {0.0f, 0.0f});
+    stepSize->set(0, mm_float2(0.0f, 0.0f));
     stepSize->upload();
 
     // Create kernels for enforcing constraints.
@@ -140,18 +140,18 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
             float dist23 = settleConstraints[atom2].find(atom3)->second;
             if (dist12 == dist13) {
                 // atom1 is the central atom
-                atoms.push_back((mm_int4) {atom1, atom2, atom3, 0});
-                params.push_back((mm_float2) {dist12, dist23});
+                atoms.push_back(mm_int4(atom1, atom2, atom3, 0));
+                params.push_back(mm_float2(dist12, dist23));
             }
             else if (dist12 == dist23) {
                 // atom2 is the central atom
-                atoms.push_back((mm_int4) {atom2, atom1, atom3, 0});
-                params.push_back((mm_float2) {dist12, dist13});
+                atoms.push_back(mm_int4(atom2, atom1, atom3, 0));
+                params.push_back(mm_float2(dist12, dist13));
             }
             else if (dist13 == dist23) {
                 // atom3 is the central atom
-                atoms.push_back((mm_int4) {atom3, atom1, atom2, 0});
-                params.push_back((mm_float2) {dist13, dist12});
+                atoms.push_back(mm_int4(atom3, atom1, atom2, 0));
+                params.push_back(mm_float2(dist13, dist12));
             }
             else
                 throw OpenMMException("Two of the three distances constrained with SETTLE must be the same.");
@@ -231,8 +231,8 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
             const ShakeCluster& cluster = iter->second;
             if (!cluster.valid)
                 continue;
-            atoms.push_back((mm_int4) {cluster.centralID, cluster.peripheralID[0], (cluster.size > 1 ? cluster.peripheralID[1] : -1), (cluster.size > 2 ? cluster.peripheralID[2] : -1)});
-            params.push_back((mm_float4) {cluster.centralInvMass, 0.5f/(cluster.centralInvMass+cluster.peripheralInvMass), cluster.distance*cluster.distance, cluster.peripheralInvMass});
+            atoms.push_back(mm_int4(cluster.centralID, cluster.peripheralID[0], (cluster.size > 1 ? cluster.peripheralID[1] : -1), (cluster.size > 2 ? cluster.peripheralID[2] : -1)));
+            params.push_back(mm_float4(cluster.centralInvMass, 0.5f/(cluster.centralInvMass+cluster.peripheralInvMass), cluster.distance*cluster.distance, cluster.peripheralInvMass));
             isShakeAtom[cluster.centralID] = true;
             isShakeAtom[cluster.peripheralID[0]] = true;
             if (cluster.size > 1)
