@@ -1494,7 +1494,7 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         }
         map<string, string> replacements;
         replacements["COMPUTE_INTERACTION"] = n2EnergySource.str();
-        stringstream extraArgs, loadLocal1, loadLocal2, load1, load2, recordDeriv, storeDerivs1, storeDerivs2, declareTemps, setTemps;
+        stringstream extraArgs, loadLocal1, loadLocal2, clearLocal, load1, load2, recordDeriv, storeDerivs1, storeDerivs2, declareTemps, setTemps;
         if (force.getNumGlobalParameters() > 0)
             extraArgs << ", __constant float* globals";
         for (int i = 0; i < (int) params->getBuffers().size(); i++) {
@@ -1519,9 +1519,9 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
             const OpenCLNonbondedUtilities::ParameterInfo& buffer = energyDerivs->getBuffers()[i];
             string index = intToString(i+1);
             extraArgs << ", __global " << buffer.getType() << "* derivBuffers" << index << ", __local " << buffer.getType() << "* local_deriv" << index;
-            loadLocal2 << "local_deriv" << index << "[get_local_id(0)] = 0.0f;\n";
-            load1 << buffer.getType() << " deriv" << index << "_1 = 0;\n";
-            load2 << buffer.getType() << " deriv" << index << "_2 = 0;\n";
+            clearLocal << "local_deriv" << index << "[get_local_id(0)] = 0.0f;\n";
+            load1 << buffer.getType() << " deriv" << index << "_1 = 0.0f;\n";
+            load2 << buffer.getType() << " deriv" << index << "_2 = 0.0f;\n";
             recordDeriv << "local_deriv" << index << "[atom2] += deriv" << index << "_2;\n";
             storeDerivs1 << "STORE_DERIVATIVE_1(" << index << ")";
             storeDerivs2 << "STORE_DERIVATIVE_2(" << index << ")";
@@ -1531,6 +1531,7 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         replacements["PARAMETER_ARGUMENTS"] = extraArgs.str()+tableArgs.str();
         replacements["LOAD_LOCAL_PARAMETERS_FROM_1"] = loadLocal1.str();
         replacements["LOAD_LOCAL_PARAMETERS_FROM_GLOBAL"] = loadLocal2.str();
+        replacements["CLEAR_LOCAL_DERIVATIVES"] = clearLocal.str();
         replacements["LOAD_ATOM1_PARAMETERS"] = load1.str();
         replacements["LOAD_ATOM2_PARAMETERS"] = load2.str();
         replacements["RECORD_DERIVATIVE_2"] = recordDeriv.str();

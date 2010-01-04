@@ -101,6 +101,7 @@ __kernel void computeN2Energy(__global float4* forceBuffers, __global float* ene
                 LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
             }
             local_force[get_local_id(0)] = 0.0f;
+            CLEAR_LOCAL_DERIVATIVES
 #ifdef USE_CUTOFF
             unsigned int flags = interactionFlags[pos];
             if (!hasExclusions && flags == 0) {

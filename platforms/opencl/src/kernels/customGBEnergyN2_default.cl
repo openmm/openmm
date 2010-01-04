@@ -110,6 +110,7 @@ __kernel void computeN2Energy(__global float4* forceBuffers, __global float* ene
                 LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
             }
             local_force[get_local_id(0)] = 0.0f;
+            CLEAR_LOCAL_DERIVATIVES
             barrier(CLK_LOCAL_MEM_FENCE);
 
             // Compute the full set of interactions in this tile.
@@ -151,7 +152,7 @@ __kernel void computeN2Energy(__global float4* forceBuffers, __global float* ene
                 energy += tempEnergy;
                 delta.xyz *= dEdR;
                 force.xyz -= delta.xyz;
-                atom2 = baseLocalAtom+tj;
+                atom2 = baseLocalAtom+tj+forceBufferOffset;
                 local_force[baseLocalAtom+tj+forceBufferOffset].xyz += delta.xyz;
                 RECORD_DERIVATIVE_2
 #ifdef USE_CUTOFF
