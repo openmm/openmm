@@ -62,7 +62,7 @@ public:
      * can be used when processing or analyzing parsed expressions.
      */
     enum Id {CONSTANT, VARIABLE, CUSTOM, ADD, SUBTRACT, MULTIPLY, DIVIDE, POWER, NEGATE, SQRT, EXP, LOG,
-             SIN, COS, SEC, CSC, TAN, COT, ASIN, ACOS, ATAN, SINH, COSH, TANH, STEP, SQUARE, CUBE, RECIPROCAL,
+             SIN, COS, SEC, CSC, TAN, COT, ASIN, ACOS, ATAN, SINH, COSH, TANH, ERF, ERFC, STEP, SQUARE, CUBE, RECIPROCAL,
              ADD_CONSTANT, MULTIPLY_CONSTANT, POWER_CONSTANT};
     /**
      * Get the name of this Operation.
@@ -139,6 +139,8 @@ public:
     class Sinh;
     class Cosh;
     class Tanh;
+    class Erf;
+    class Erfc;
     class Step;
     class Square;
     class Cube;
@@ -737,6 +739,46 @@ public:
     double evaluate(double* args, const std::map<std::string, double>& variables) const {
         return std::tanh(args[0]);
     }
+    ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
+};
+
+class Operation::Erf : public Operation {
+public:
+    Erf() {
+    }
+    std::string getName() const {
+        return "erf";
+    }
+    Id getId() const {
+        return ERF;
+    }
+    int getNumArguments() const {
+        return 1;
+    }
+    Operation* clone() const {
+        return new Erf();
+    }
+    double evaluate(double* args, const std::map<std::string, double>& variables) const;
+    ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
+};
+
+class Operation::Erfc : public Operation {
+public:
+    Erfc() {
+    }
+    std::string getName() const {
+        return "erfc";
+    }
+    Id getId() const {
+        return ERFC;
+    }
+    int getNumArguments() const {
+        return 1;
+    }
+    Operation* clone() const {
+        return new Erfc();
+    }
+    double evaluate(double* args, const std::map<std::string, double>& variables) const;
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 

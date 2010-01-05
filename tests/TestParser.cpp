@@ -199,6 +199,7 @@ int main() {
         verifyEvaluation("x/(1/y)", 1.0, 4.0, 4.0);
         verifyEvaluation("x*w; w = 5", 3.0, 1.0, 15.0);
         verifyEvaluation("a+b^2;a=x-b;b=3*y", 2.0, 3.0, 74.0);
+        verifyEvaluation("erf(x)+erfc(x)", 2.0, 3.0, 1.0);
         verifyInvalidExpression("1..2");
         verifyInvalidExpression("1*(2+3");
         verifyInvalidExpression("5++4");
@@ -222,6 +223,8 @@ int main() {
         verifyDerivative("sinh(x)", "cosh(x)");
         verifyDerivative("cosh(x)", "sinh(x)");
         verifyDerivative("tanh(x)", "1/(cosh(x)^2)");
+        verifyDerivative("erf(x)", "1.12837916709551*exp(-x^2)");
+        verifyDerivative("erfc(x)", "-1.12837916709551*exp(-x^2)");
         verifyDerivative("step(x)*x+step(1-x)*2*x", "step(x)+step(1-x)*2");
         verifyDerivative("recip(x)", "-1/x^2");
         verifyDerivative("square(x)", "2*x");

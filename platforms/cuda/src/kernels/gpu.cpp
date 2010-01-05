@@ -256,6 +256,12 @@ static Expression<SIZE> createExpression(gpuContext gpu, const string& expressio
             case Operation::TANH:
                 exp.op[i] = TANH;
                 break;
+            case Operation::ERF:
+                exp.op[i] = ERF;
+                break;
+            case Operation::ERFC:
+                exp.op[i] = ERFC;
+                break;
             case Operation::STEP:
                 exp.op[i] = STEP;
                 break;

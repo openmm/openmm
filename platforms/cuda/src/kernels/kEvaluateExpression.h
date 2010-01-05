@@ -179,8 +179,14 @@ __device__ float kEvaluateExpression_kernel(Expression<SIZE>* expression, float*
                 else if (op == COSH) {
                     STACK(stackPointer) = cosh(STACK(stackPointer));
                 }
-                else /*if (op == TANH)*/ {
+                else if (op == TANH) {
                     STACK(stackPointer) = tanh(STACK(stackPointer));
+                }
+                else if (op == ERF) {
+                    STACK(stackPointer) = erf(STACK(stackPointer));
+                }
+                else /*if (op == ERFC)*/ {
+                    STACK(stackPointer) = erfc(STACK(stackPointer));
                 }
             }
         }

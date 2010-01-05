@@ -194,6 +194,12 @@ void OpenCLExpressionUtilities::processExpression(stringstream& out, const Expre
         case Operation::TANH:
             out << "tanh(" << getTempName(node.getChildren()[0], temps) << ")";
             break;
+        case Operation::ERF:
+            out << "erf(" << getTempName(node.getChildren()[0], temps) << ")";
+            break;
+        case Operation::ERFC:
+            out << "erfc(" << getTempName(node.getChildren()[0], temps) << ")";
+            break;
         case Operation::STEP:
             out << getTempName(node.getChildren()[0], temps) << " >= 0.0f ? 1.0f : 0.0f";
             break;

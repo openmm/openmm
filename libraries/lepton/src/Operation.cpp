@@ -32,9 +32,18 @@
 
 #include "lepton/Operation.h"
 #include "lepton/ExpressionTreeNode.h"
+#include "MSVC_erfc.h"
 
 using namespace Lepton;
 using namespace std;
+
+double Operation::Erf::evaluate(double* args, const map<string, double>& variables) const {
+    return erf(args[0]);
+}
+
+double Operation::Erfc::evaluate(double* args, const map<string, double>& variables) const {
+    return erfc(args[0]);
+}
 
 ExpressionTreeNode Operation::Constant::differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const {
     return ExpressionTreeNode(new Operation::Constant(0.0));
@@ -213,6 +222,26 @@ ExpressionTreeNode Operation::Tanh::differentiate(const std::vector<ExpressionTr
                                                  ExpressionTreeNode(new Operation::Constant(1.0)),
                                                  ExpressionTreeNode(new Operation::Square(),
                                                                     ExpressionTreeNode(new Operation::Tanh(), children[0]))),
+                              childDerivs[0]);
+}
+
+ExpressionTreeNode Operation::Erf::differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const {
+    return ExpressionTreeNode(new Operation::Multiply(),
+                              ExpressionTreeNode(new Operation::Multiply(),
+                                                 ExpressionTreeNode(new Operation::Constant(2.0/sqrt(M_PI))),
+                                                 ExpressionTreeNode(new Operation::Exp(),
+                                                                    ExpressionTreeNode(new Operation::Negate(),
+                                                                                       ExpressionTreeNode(new Operation::Square(), children[0])))),
+                              childDerivs[0]);
+}
+
+ExpressionTreeNode Operation::Erfc::differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const {
+    return ExpressionTreeNode(new Operation::Multiply(),
+                              ExpressionTreeNode(new Operation::Multiply(),
+                                                 ExpressionTreeNode(new Operation::Constant(-2.0/sqrt(M_PI))),
+                                                 ExpressionTreeNode(new Operation::Exp(),
+                                                                    ExpressionTreeNode(new Operation::Negate(),
+                                                                                       ExpressionTreeNode(new Operation::Square(), children[0])))),
                               childDerivs[0]);
 }
 
