@@ -120,12 +120,12 @@ void OpenCLUpdateStateDataKernel::setPositions(ContextImpl& context, const std::
     for (int i = 0; i < numParticles; ++i) {
         mm_float4& pos = posq[i];
         const Vec3& p = positions[order[i]];
-        pos.x = p[0];
-        pos.y = p[1];
-        pos.z = p[2];
+        pos.x = (cl_float) p[0];
+        pos.y = (cl_float) p[1];
+        pos.z = (cl_float) p[2];
     }
     posq.upload();
-    for (int i = 0; i < cl.getPosCellOffsets().size(); i++)
+    for (int i = 0; i < (int) cl.getPosCellOffsets().size(); i++)
         cl.getPosCellOffsets()[i] = mm_int4(0, 0, 0, 0);
 }
 
@@ -148,9 +148,9 @@ void OpenCLUpdateStateDataKernel::setVelocities(ContextImpl& context, const std:
     for (int i = 0; i < numParticles; ++i) {
         mm_float4& vel = velm[i];
         const Vec3& p = velocities[order[i]];
-        vel.x = p[0];
-        vel.y = p[1];
-        vel.z = p[2];
+        vel.x = (cl_float) p[0];
+        vel.y = (cl_float) p[1];
+        vel.z = (cl_float) p[2];
     }
     velm.upload();
 }
@@ -219,7 +219,7 @@ void OpenCLCalcHarmonicBondForceKernel::initialize(const System& system, const H
     params->upload(paramVector);
     indices->upload(indicesVector);
     int maxBuffers = 1;
-    for (int i = 0; i < forceBufferCounter.size(); i++)
+    for (int i = 0; i < (int) forceBufferCounter.size(); i++)
         maxBuffers = max(maxBuffers, forceBufferCounter[i]);
     cl.addForce(new OpenCLBondForceInfo(maxBuffers, force));
     cl::Program program = cl.createProgram(cl.loadSourceFromFile("harmonicBondForce.cl"));
@@ -304,14 +304,14 @@ void OpenCLCalcCustomBondForceKernel::initialize(const System& system, const Cus
         vector<double> parameters;
         force.getBondParameters(i, particle1, particle2, parameters);
         paramVector[i].resize(parameters.size());
-        for (int j = 0; j < parameters.size(); j++)
+        for (int j = 0; j < (int) parameters.size(); j++)
             paramVector[i][j] = (cl_float) parameters[j];
         indicesVector[i] = mm_int4(particle1, particle2, forceBufferCounter[particle1]++, forceBufferCounter[particle2]++);
     }
     params->setParameterValues(paramVector);
     indices->upload(indicesVector);
     int maxBuffers = 1;
-    for (int i = 0; i < forceBufferCounter.size(); i++)
+    for (int i = 0; i < (int) forceBufferCounter.size(); i++)
         maxBuffers = max(maxBuffers, forceBufferCounter[i]);
     cl.addForce(new OpenCLCustomBondForceInfo(maxBuffers, force));
 
@@ -367,7 +367,7 @@ void OpenCLCalcCustomBondForceKernel::executeForces(ContextImpl& context) {
         return;
     if (globals != NULL) {
         bool changed = false;
-        for (int i = 0; i < globalParamNames.size(); i++) {
+        for (int i = 0; i < (int) globalParamNames.size(); i++) {
             cl_float value = (cl_float) context.getParameter(globalParamNames[i]);
             if (value != globalParamValues[i])
                 changed = true;
@@ -455,7 +455,7 @@ void OpenCLCalcHarmonicAngleForceKernel::initialize(const System& system, const 
     params->upload(paramVector);
     indices->upload(indicesVector);
     int maxBuffers = 1;
-    for (int i = 0; i < forceBufferCounter.size(); i++)
+    for (int i = 0; i < (int) forceBufferCounter.size(); i++)
         maxBuffers = max(maxBuffers, forceBufferCounter[i]);
     cl.addForce(new OpenCLAngleForceInfo(maxBuffers, force));
     cl::Program program = cl.createProgram(cl.loadSourceFromFile("harmonicAngleForce.cl"));
@@ -539,7 +539,7 @@ void OpenCLCalcPeriodicTorsionForceKernel::initialize(const System& system, cons
     params->upload(paramVector);
     indices->upload(indicesVector);
     int maxBuffers = 1;
-    for (int i = 0; i < forceBufferCounter.size(); i++)
+    for (int i = 0; i < (int) forceBufferCounter.size(); i++)
         maxBuffers = max(maxBuffers, forceBufferCounter[i]);
     cl.addForce(new OpenCLPeriodicTorsionForceInfo(maxBuffers, force));
     cl::Program program = cl.createProgram(cl.loadSourceFromFile("periodicTorsionForce.cl"));
@@ -623,7 +623,7 @@ void OpenCLCalcRBTorsionForceKernel::initialize(const System& system, const RBTo
     params->upload(paramVector);
     indices->upload(indicesVector);
     int maxBuffers = 1;
-    for (int i = 0; i < forceBufferCounter.size(); i++)
+    for (int i = 0; i < (int) forceBufferCounter.size(); i++)
         maxBuffers = max(maxBuffers, forceBufferCounter[i]);
     cl.addForce(new OpenCLRBTorsionForceInfo(maxBuffers, force));
     cl::Program program = cl.createProgram(cl.loadSourceFromFile("rbTorsionForce.cl"));
@@ -809,7 +809,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         }
         exceptionParams->upload(exceptionParamsVector);
         exceptionIndices->upload(exceptionIndicesVector);
-        for (int i = 0; i < forceBufferCounter.size(); i++)
+        for (int i = 0; i < (int) forceBufferCounter.size(); i++)
             maxBuffers = max(maxBuffers, forceBufferCounter[i]);
     }
     cl.addForce(new OpenCLNonbondedForceInfo(maxBuffers, force));
@@ -829,7 +829,7 @@ void OpenCLCalcNonbondedForceKernel::executeForces(ContextImpl& context) {
             int numExceptions = exceptionIndices->getSize();
             exceptionsKernel.setArg<cl_int>(0, cl.getPaddedNumAtoms());
             exceptionsKernel.setArg<cl_int>(1, numExceptions);
-            exceptionsKernel.setArg<cl_float>(2, cutoffSquared);
+            exceptionsKernel.setArg<cl_float>(2, (cl_float) cutoffSquared);
             exceptionsKernel.setArg<mm_float4>(3, cl.getNonbondedUtilities().getPeriodicBoxSize());
             exceptionsKernel.setArg<cl::Buffer>(4, cl.getForceBuffers().getDeviceBuffer());
             exceptionsKernel.setArg<cl::Buffer>(5, cl.getEnergyBuffer().getDeviceBuffer());
@@ -868,7 +868,7 @@ public:
         vector<double> params2;
         force.getParticleParameters(particle1, params1);
         force.getParticleParameters(particle2, params2);
-        for (int i = 0; i < params1.size(); i++)
+        for (int i = 0; i < (int) params1.size(); i++)
             if (params1[i] != params2[i])
                 return false;
         return true;
@@ -919,7 +919,7 @@ void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, cons
         vector<double> parameters;
         force.getParticleParameters(i, parameters);
         paramVector[i].resize(parameters.size());
-        for (int j = 0; j < parameters.size(); j++)
+        for (int j = 0; j < (int) parameters.size(); j++)
             paramVector[i][j] = (cl_float) parameters[j];
         exclusionList[i].push_back(i);
     }
@@ -1013,7 +1013,7 @@ void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, cons
 void OpenCLCalcCustomNonbondedForceKernel::executeForces(ContextImpl& context) {
     if (globals != NULL) {
         bool changed = false;
-        for (int i = 0; i < globalParamNames.size(); i++) {
+        for (int i = 0; i < (int) globalParamNames.size(); i++) {
             cl_float value = (cl_float) context.getParameter(globalParamNames[i]);
             if (value != globalParamValues[i])
                 changed = true;
@@ -1187,7 +1187,7 @@ public:
         vector<double> params2;
         force.getParticleParameters(particle1, params1);
         force.getParticleParameters(particle2, params2);
-        for (int i = 0; i < params1.size(); i++)
+        for (int i = 0; i < (int) params1.size(); i++)
             if (params1[i] != params2[i])
                 return false;
         return true;
@@ -1260,7 +1260,7 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         vector<double> parameters;
         force.getParticleParameters(i, parameters);
         paramVector[i].resize(parameters.size());
-        for (int j = 0; j < parameters.size(); j++)
+        for (int j = 0; j < (int) parameters.size(); j++)
             paramVector[i][j] = (cl_float) parameters[j];
         exclusionList[i].push_back(i);
     }
@@ -1807,7 +1807,7 @@ void OpenCLCalcCustomGBForceKernel::executeForces(ContextImpl& context) {
     }
     if (globals != NULL) {
         bool changed = false;
-        for (int i = 0; i < globalParamNames.size(); i++) {
+        for (int i = 0; i < (int) globalParamNames.size(); i++) {
             cl_float value = (cl_float) context.getParameter(globalParamNames[i]);
             if (value != globalParamValues[i])
                 changed = true;
@@ -1854,7 +1854,7 @@ public:
         vector<double> params2;
         force.getParticleParameters(particle1, temp, params1);
         force.getParticleParameters(particle2, temp, params2);
-        for (int i = 0; i < params1.size(); i++)
+        for (int i = 0; i < (int) params1.size(); i++)
             if (params1[i] != params2[i])
                 return false;
         return true;
@@ -1888,7 +1888,7 @@ void OpenCLCalcCustomExternalForceKernel::initialize(const System& system, const
         vector<double> parameters;
         force.getParticleParameters(i, indicesVector[i], parameters);
         paramVector[i].resize(parameters.size());
-        for (int j = 0; j < parameters.size(); j++)
+        for (int j = 0; j < (int) parameters.size(); j++)
             paramVector[i][j] = (cl_float) parameters[j];
     }
     params->setParameterValues(paramVector);
@@ -1951,7 +1951,7 @@ void OpenCLCalcCustomExternalForceKernel::initialize(const System& system, const
 void OpenCLCalcCustomExternalForceKernel::executeForces(ContextImpl& context) {
     if (globals != NULL) {
         bool changed = false;
-        for (int i = 0; i < globalParamNames.size(); i++) {
+        for (int i = 0; i < (int) globalParamNames.size(); i++) {
             cl_float value = (cl_float) context.getParameter(globalParamNames[i]);
             if (value != globalParamValues[i])
                 changed = true;
@@ -2014,7 +2014,7 @@ void OpenCLIntegrateVerletStepKernel::execute(ContextImpl& context, const Verlet
     }
     if (dt != prevStepSize) {
         vector<mm_float2> stepSizeVec(1);
-        stepSizeVec[0] = mm_float2(dt, dt);
+        stepSizeVec[0] = mm_float2((cl_float) dt, (cl_float) dt);
         cl.getIntegrationUtilities().getStepSize().upload(stepSizeVec);
         prevStepSize = dt;
     }
@@ -2136,17 +2136,17 @@ void OpenCLIntegrateLangevinStepKernel::execute(ContextImpl& context, const Lang
         double Yv = sqrt(kT*B/C);
         double Yx = tau*sqrt(kT*B/(1.0 - EM));
         vector<cl_float> p(params->getSize());
-        p[0] = EM;
-        p[1] = EM;
-        p[2] = DOverTauC;
-        p[3] = TauOneMinusEM;
-        p[4] = TauDOverEMMinusOne;
-        p[5] = V;
-        p[6] = X;
-        p[7] = Yv;
-        p[8] = Yx;
-        p[9] = fix1;
-        p[10] = oneOverFix1;
+        p[0] = (cl_float) EM;
+        p[1] = (cl_float) EM;
+        p[2] = (cl_float) DOverTauC;
+        p[3] = (cl_float) TauOneMinusEM;
+        p[4] = (cl_float) TauDOverEMMinusOne;
+        p[5] = (cl_float) V;
+        p[6] = (cl_float) X;
+        p[7] = (cl_float) Yv;
+        p[8] = (cl_float) Yx;
+        p[9] = (cl_float) fix1;
+        p[10] = (cl_float) oneOverFix1;
         params->upload(p);
         prevTemp = temperature;
         prevFriction = friction;
@@ -2278,7 +2278,7 @@ void OpenCLIntegrateVariableVerletStepKernel::execute(ContextImpl& context, cons
 
     float maxStepSize = (float)(maxTime-cl.getTime());
     selectSizeKernel.setArg<cl_float>(1, maxStepSize);
-    selectSizeKernel.setArg<cl_float>(2, integrator.getErrorTolerance());
+    selectSizeKernel.setArg<cl_float>(2, (cl_float) integrator.getErrorTolerance());
     cl.executeKernel(selectSizeKernel, blockSize, blockSize);
 
     // Call the first integration kernel.

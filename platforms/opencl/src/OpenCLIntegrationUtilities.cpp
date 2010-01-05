@@ -103,8 +103,8 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
     vector<map<int, float> > settleConstraints(system.getNumParticles());
     for (int i = 0; i < (int)atom1.size(); i++) {
         if (constraintCount[atom1[i]] == 2 && constraintCount[atom2[i]] == 2) {
-            settleConstraints[atom1[i]][atom2[i]] = distance[i];
-            settleConstraints[atom2[i]][atom1[i]] = distance[i];
+            settleConstraints[atom1[i]][atom2[i]] = (float) distance[i];
+            settleConstraints[atom2[i]][atom1[i]] = (float) distance[i];
         }
     }
 
@@ -232,7 +232,7 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
             if (!cluster.valid)
                 continue;
             atoms.push_back(mm_int4(cluster.centralID, cluster.peripheralID[0], (cluster.size > 1 ? cluster.peripheralID[1] : -1), (cluster.size > 2 ? cluster.peripheralID[2] : -1)));
-            params.push_back(mm_float4(cluster.centralInvMass, 0.5f/(cluster.centralInvMass+cluster.peripheralInvMass), cluster.distance*cluster.distance, cluster.peripheralInvMass));
+            params.push_back(mm_float4((cl_float) cluster.centralInvMass, (cl_float) (0.5/(cluster.centralInvMass+cluster.peripheralInvMass)), (cl_float) (cluster.distance*cluster.distance), (cl_float) cluster.peripheralInvMass));
             isShakeAtom[cluster.centralID] = true;
             isShakeAtom[cluster.peripheralID[0]] = true;
             if (cluster.size > 1)
@@ -270,7 +270,7 @@ OpenCLIntegrationUtilities::~OpenCLIntegrationUtilities() {
 void OpenCLIntegrationUtilities::applyConstraints(double tol) {
     if (settleAtoms != NULL) {
         settleKernel.setArg<cl_int>(0, settleAtoms->getSize());
-        settleKernel.setArg<cl_float>(1, tol);
+        settleKernel.setArg<cl_float>(1, (cl_float) tol);
         settleKernel.setArg<cl::Buffer>(2, context.getPosq().getDeviceBuffer());
         settleKernel.setArg<cl::Buffer>(3, posDelta->getDeviceBuffer());
         settleKernel.setArg<cl::Buffer>(4, posDelta->getDeviceBuffer());
@@ -281,7 +281,7 @@ void OpenCLIntegrationUtilities::applyConstraints(double tol) {
     }
     if (shakeAtoms != NULL) {
         shakeKernel.setArg<cl_int>(0, shakeAtoms->getSize());
-        shakeKernel.setArg<cl_float>(1, tol);
+        shakeKernel.setArg<cl_float>(1, (cl_float) tol);
         shakeKernel.setArg<cl::Buffer>(2, context.getPosq().getDeviceBuffer());
         shakeKernel.setArg<cl::Buffer>(3, posDelta->getDeviceBuffer());
         shakeKernel.setArg<cl::Buffer>(4, posDelta->getDeviceBuffer());

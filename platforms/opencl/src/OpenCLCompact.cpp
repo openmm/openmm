@@ -42,7 +42,7 @@ OpenCLCompact::~OpenCLCompact() {
 
 void OpenCLCompact::compactStream(OpenCLArray<cl_uint>& dOut, OpenCLArray<cl_uint>& dIn, OpenCLArray<cl_uint>& dValid, OpenCLArray<cl_uint>& numValid) {
     // Figure out # elements per block
-    int len = dIn.getSize();
+    unsigned int len = dIn.getSize();
     unsigned int numBlocks = context.getNumThreadBlocks();
     if (numBlocks*128 > len)
         numBlocks = (len+127)/128;

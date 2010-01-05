@@ -46,11 +46,11 @@ OpenCLContext::OpenCLContext(int numParticles, int deviceIndex) : time(0.0), ste
         context = cl::Context(CL_DEVICE_TYPE_ALL);
         vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
         const int minThreadBlockSize = 32;
-        if (deviceIndex < 0 || deviceIndex >= devices.size()) {
+        if (deviceIndex < 0 || deviceIndex >= (int) devices.size()) {
             // Try to figure out which device is the fastest.
 
             int bestSpeed = 0;
-            for (int i = 0; i < devices.size(); i++) {
+            for (int i = 0; i < (int) devices.size(); i++) {
                 int maxSize = devices[i].getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>()[0];
                 int speed = devices[i].getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>()*devices[i].getInfo<CL_DEVICE_MAX_CLOCK_FREQUENCY>();
                 if (maxSize >= minThreadBlockSize && speed > bestSpeed)
@@ -245,12 +245,12 @@ void OpenCLContext::findMoleculeGroups(const System& system) {
         atomBonds[particle1].push_back(particle2);
         atomBonds[particle2].push_back(particle1);
     }
-    for (int i = 0; i < forces.size(); i++) {
+    for (int i = 0; i < (int) forces.size(); i++) {
         for (int j = 0; j < forces[i]->getNumParticleGroups(); j++) {
             vector<int> particles;
             forces[i]->getParticlesInGroup(j, particles);
-            for (int k = 0; k < particles.size(); k++)
-                for (int m = 0; m < particles.size(); m++)
+            for (int k = 0; k < (int) particles.size(); k++)
+                for (int m = 0; m < (int) particles.size(); m++)
                     if (k != m)
                         atomBonds[particles[k]].push_back(particles[m]);
         }
@@ -280,7 +280,7 @@ void OpenCLContext::findMoleculeGroups(const System& system) {
         system.getConstraintParameters(i, particle1, particle2, distance);
         molecules[atomMolecule[particle1]].constraints.push_back(i);
     }
-    for (int i = 0; i < forces.size(); i++)
+    for (int i = 0; i < (int) forces.size(); i++)
         for (int j = 0; j < forces[i]->getNumParticleGroups(); j++) {
             vector<int> particles;
             forces[i]->getParticlesInGroup(j, particles);
@@ -307,7 +307,7 @@ void OpenCLContext::findMoleculeGroups(const System& system) {
             for (int i = 0; i < (int) mol.atoms.size() && identical; i++) {
                 if (mol.atoms[i] != mol2.atoms[i]-atomOffset || system.getParticleMass(mol.atoms[i]) != system.getParticleMass(mol2.atoms[i]))
                     identical = false;
-                for (int k = 0; k < forces.size(); k++)
+                for (int k = 0; k < (int) forces.size(); k++)
                     if (!forces[k]->areParticlesIdentical(mol.atoms[i], mol2.atoms[i]))
                         identical = false;
             }
@@ -325,10 +325,10 @@ void OpenCLContext::findMoleculeGroups(const System& system) {
 
             // See if the force groups are identical.
 
-            for (int i = 0; i < forces.size() && identical; i++) {
+            for (int i = 0; i < (int) forces.size() && identical; i++) {
                 if (mol.groups[i].size() != mol2.groups[i].size())
                     identical = false;
-                for (int k = 0; k < mol.groups[i].size() && identical; k++)
+                for (int k = 0; k < (int) mol.groups[i].size() && identical; k++)
                     if (!forces[i]->areGroupsIdentical(mol.groups[i][k], mol2.groups[i][k]))
                         identical = false;
             }

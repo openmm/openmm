@@ -260,7 +260,7 @@ void OpenCLExpressionUtilities::processExpression(stringstream& out, const Expre
                 bool done = false;
                 while (!done) {
                     done = true;
-                    for (int i = 0; i < exponents.size(); i++) {
+                    for (int i = 0; i < (int) exponents.size(); i++) {
                         if (exponents[i]%2 == 1) {
                             if (!hasAssigned[i])
                                 out << names[i] << " = multiplier;\n";
@@ -313,7 +313,10 @@ void OpenCLExpressionUtilities::findRelatedTabulatedFunctions(const ExpressionTr
 
 void OpenCLExpressionUtilities::findRelatedPowers(const ExpressionTreeNode& node, const ExpressionTreeNode& searchNode, map<int, const ExpressionTreeNode*>& powers) {
     if (searchNode.getOperation().getId() == Operation::POWER_CONSTANT && node.getChildren()[0] == searchNode.getChildren()[0]) {
-        int power = dynamic_cast<const Operation::PowerConstant*>(&searchNode.getOperation())->getValue();
+        double realPower = dynamic_cast<const Operation::PowerConstant*>(&searchNode.getOperation())->getValue();
+        int power = (int) realPower;
+        if (power != realPower)
+            return; // We are only interested in integer powers.
         if (powers.find(power) != powers.end())
             return; // This power is already in the map.
         if (powers.begin()->first*power < 0)

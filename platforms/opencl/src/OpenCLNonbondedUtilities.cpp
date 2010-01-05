@@ -79,10 +79,10 @@ void OpenCLNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic
     }
     if (usesExclusions && atomExclusions.size() != 0) {
         bool sameExclusions = (exclusionList.size() == atomExclusions.size());
-        for (int i = 0; i < exclusionList.size() && sameExclusions; i++) {
+        for (int i = 0; i < (int) exclusionList.size() && sameExclusions; i++) {
             if (exclusionList[i].size() != atomExclusions[i].size())
                 sameExclusions = false;
-            for (int j = 0; j < exclusionList[i].size(); j++)
+            for (int j = 0; j < (int) exclusionList[i].size(); j++)
                 if (exclusionList[i][j] != atomExclusions[i][j])
                     sameExclusions = false;
         }
@@ -115,7 +115,7 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
         // No exclusions were specifically requested, so just mark every atom as not interacting with itself.
         
         atomExclusions.resize(context.getNumAtoms());
-        for (int i = 0; i < atomExclusions.size(); i++)
+        for (int i = 0; i < (int) atomExclusions.size(); i++)
             atomExclusions[i].push_back(i);
     }
 
@@ -126,8 +126,8 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
     tiles = new OpenCLArray<cl_uint>(context, numTiles, "tiles");
     vector<cl_uint> tileVec(tiles->getSize());
     unsigned int count = 0;
-    for (unsigned int y = 0; y < numAtomBlocks; y++)
-        for (unsigned int x = y; x < numAtomBlocks; x++)
+    for (unsigned int y = 0; y < (unsigned int) numAtomBlocks; y++)
+        for (unsigned int x = y; x < (unsigned int) numAtomBlocks; x++)
             tileVec[count++] = (x << 17) | (y << 2);
 
     // Mark which tiles have exclusions.
@@ -242,14 +242,14 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
         findBlockBoundsKernel.setArg<cl::Buffer>(4, blockBoundingBox->getDeviceBuffer());
         findInteractingBlocksKernel = cl::Kernel(interactingBlocksProgram, "findBlocksWithInteractions");
         findInteractingBlocksKernel.setArg<cl_int>(0, tiles->getSize());
-        findInteractingBlocksKernel.setArg<cl_float>(1, cutoff*cutoff);
+        findInteractingBlocksKernel.setArg<cl_float>(1, (cl_float) (cutoff*cutoff));
         findInteractingBlocksKernel.setArg<mm_float4>(2, periodicBoxSize);
         findInteractingBlocksKernel.setArg<cl::Buffer>(3, tiles->getDeviceBuffer());
         findInteractingBlocksKernel.setArg<cl::Buffer>(4, blockCenter->getDeviceBuffer());
         findInteractingBlocksKernel.setArg<cl::Buffer>(5, blockBoundingBox->getDeviceBuffer());
         findInteractingBlocksKernel.setArg<cl::Buffer>(6, interactionFlags->getDeviceBuffer());
         findInteractionsWithinBlocksKernel = cl::Kernel(interactingBlocksProgram, "findInteractionsWithinBlocks");
-        findInteractionsWithinBlocksKernel.setArg<cl_float>(0, cutoff*cutoff);
+        findInteractionsWithinBlocksKernel.setArg<cl_float>(0, (cl_float) (cutoff*cutoff));
         findInteractionsWithinBlocksKernel.setArg<mm_float4>(1, periodicBoxSize);
         findInteractionsWithinBlocksKernel.setArg<cl::Buffer>(2, context.getPosq().getDeviceBuffer());
         findInteractionsWithinBlocksKernel.setArg<cl::Buffer>(3, interactingTiles->getDeviceBuffer());
@@ -282,7 +282,7 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
     map<string, string> replacements;
     replacements["COMPUTE_INTERACTION"] = source;
     stringstream args;
-    for (int i = 0; i < params.size(); i++) {
+    for (int i = 0; i < (int) params.size(); i++) {
         args << ", __global ";
         args << params[i].getType();
         args << "* global_";
@@ -292,7 +292,7 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
         args << "* local_";
         args << params[i].getName();
     }
-    for (int i = 0; i < arguments.size(); i++) {
+    for (int i = 0; i < (int) arguments.size(); i++) {
         if ((arguments[i].getBuffer().getInfo<CL_MEM_FLAGS>() & CL_MEM_READ_ONLY) == 0)
             args << ", __global ";
         else
@@ -303,7 +303,7 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
     }
     replacements["PARAMETER_ARGUMENTS"] = args.str();
     stringstream loadLocal1;
-    for (int i = 0; i < params.size(); i++) {
+    for (int i = 0; i < (int) params.size(); i++) {
         loadLocal1 << "local_";
         loadLocal1 << params[i].getName();
         loadLocal1 << "[get_local_id(0)] = ";
@@ -312,7 +312,7 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
     }
     replacements["LOAD_LOCAL_PARAMETERS_FROM_1"] = loadLocal1.str();
     stringstream loadLocal2;
-    for (int i = 0; i < params.size(); i++) {
+    for (int i = 0; i < (int) params.size(); i++) {
         loadLocal2 << "local_";
         loadLocal2 << params[i].getName();
         loadLocal2 << "[get_local_id(0)] = global_";
@@ -321,7 +321,7 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
     }
     replacements["LOAD_LOCAL_PARAMETERS_FROM_GLOBAL"] = loadLocal2.str();
     stringstream load1;
-    for (int i = 0; i < params.size(); i++) {
+    for (int i = 0; i < (int) params.size(); i++) {
         load1 << params[i].getType();
         load1 << " ";
         load1 << params[i].getName();
@@ -331,7 +331,7 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
     }
     replacements["LOAD_ATOM1_PARAMETERS"] = load1.str();
     stringstream load2j;
-    for (int i = 0; i < params.size(); i++) {
+    for (int i = 0; i < (int) params.size(); i++) {
         load2j << params[i].getType();
         load2j << " ";
         load2j << params[i].getName();
