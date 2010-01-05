@@ -254,6 +254,10 @@ private:
     std::map<std::pair<int, int>, int> exceptionMap;
 };
 
+/**
+ * This is an internal class used to record information about a particle.
+ * @private
+ */
 class NonbondedForce::ParticleInfo {
 public:
     double charge, sigma, epsilon;
@@ -265,6 +269,10 @@ public:
     }
 };
 
+/**
+ * This is an internal class used to record information about an exception.
+ * @private
+ */
 class NonbondedForce::ExceptionInfo {
 public:
     int particle1, particle2;

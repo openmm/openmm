@@ -61,7 +61,10 @@ ENABLED_SECTIONS       =
 MAX_INITIALIZER_LINES  = 30
 SHOW_USED_FILES        = YES
 SHOW_DIRECTORIES       = YES
-FILE_VERSION_FILTER    = 
+FILE_VERSION_FILTER    =
+SHOW_NAMESPACES        = NO
+SHOW_FILES             = NO
+SHOW_DIRECTORIES       = NO
 #---------------------------------------------------------------------------
 # configuration options related to warning and progress messages
 #---------------------------------------------------------------------------
@@ -83,10 +86,9 @@ EXCLUDE                =
 EXCLUDE_SYMLINKS       = NO
 EXCLUDE_PATTERNS       = */tests/* \
                          */src/* \
-                         */.svn/*
-EXCLUDE_SYMBOLS        = StandardMMForceField::*Info \
-                         GBSAOBCForceField::AtomInfo \
-                         System::ConstraintInfo
+                         */.svn/* \
+                         */olla/include/openmm/kernels.h
+EXCLUDE_SYMBOLS        = 
 EXAMPLE_PATH           = 
 EXAMPLE_PATTERNS       = 
 EXAMPLE_RECURSIVE      = NO
@@ -232,4 +234,4 @@ DOT_CLEANUP            = YES
 #---------------------------------------------------------------------------
 # Configuration::additions related to the search engine   
 #---------------------------------------------------------------------------
-SEARCHENGINE           = NO
+SEARCHENGINE           = YES

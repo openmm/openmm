@@ -196,6 +196,10 @@ private:
     std::vector<Force*> forces;
 };
 
+/**
+ * This is an internal class used to record information about a constraint.
+ * @private
+ */
 class System::ConstraintInfo {
 public:
     int particle1, particle2;

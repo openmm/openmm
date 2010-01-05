@@ -328,6 +328,10 @@ private:
     std::vector<FunctionInfo> functions;
 };
 
+/**
+ * This is an internal class used to record information about a particle.
+ * @private
+ */
 class CustomNonbondedForce::ParticleInfo {
 public:
     std::vector<double> parameters;
@@ -337,6 +341,10 @@ public:
     }
 };
 
+/**
+ * This is an internal class used to record information about a per-particle parameter.
+ * @private
+ */
 class CustomNonbondedForce::PerParticleParameterInfo {
 public:
     std::string name;
@@ -346,6 +354,10 @@ public:
     }
 };
 
+/**
+ * This is an internal class used to record information about a global parameter.
+ * @private
+ */
 class CustomNonbondedForce::GlobalParameterInfo {
 public:
     std::string name;
@@ -356,6 +368,10 @@ public:
     }
 };
 
+/**
+ * This is an internal class used to record information about an exclusion.
+ * @private
+ */
 class CustomNonbondedForce::ExclusionInfo {
 public:
     int particle1, particle2;
@@ -367,6 +383,10 @@ public:
     }
 };
 
+/**
+ * This is an internal class used to record information about a tabulated function.
+ * @private
+ */
 class CustomNonbondedForce::FunctionInfo {
 public:
     std::string name;

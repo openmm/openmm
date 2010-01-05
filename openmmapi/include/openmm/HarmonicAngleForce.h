@@ -95,21 +95,13 @@ protected:
     ForceImpl* createImpl();
 private:
     class AngleInfo;
-
-// Retarded visual studio compiler complains about being unable to 
-// export private stl class members.
-// This stanza explains that it should temporarily shut up.
-#if defined(_MSC_VER)
-#pragma warning(push)
-#pragma warning(disable:4251)
-#endif
     std::vector<AngleInfo> angles;
-#if defined(_MSC_VER)
-#pragma warning(pop)
-#endif
-
 };
 
+/**
+ * This is an internal class used to record information about an angle.
+ * @private
+ */
 class HarmonicAngleForce::AngleInfo {
 public:
     int particle1, particle2, particle3;

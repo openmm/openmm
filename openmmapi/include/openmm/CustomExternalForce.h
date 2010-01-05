@@ -199,6 +199,10 @@ private:
     std::vector<ParticleInfo> particles;
 };
 
+/**
+ * This is an internal class used to record information about a particle.
+ * @private
+ */
 class CustomExternalForce::ParticleInfo {
 public:
     int particle;
@@ -209,6 +213,10 @@ public:
     }
 };
 
+/**
+ * This is an internal class used to record information about a per-particle parameter.
+ * @private
+ */
 class CustomExternalForce::ParticleParameterInfo {
 public:
     std::string name;
@@ -218,6 +226,10 @@ public:
     }
 };
 
+/**
+ * This is an internal class used to record information about a global parameter.
+ * @private
+ */
 class CustomExternalForce::GlobalParameterInfo {
 public:
     std::string name;

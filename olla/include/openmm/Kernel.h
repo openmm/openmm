@@ -47,7 +47,7 @@ namespace OpenMM {
  * 
  * The Kernel class itself does not specify any details of what calculation is to be performed or the API
  * for calling it.  Instead, subclasses of KernelImpl will define APIs which are appropriate to particular
- * calculations.  To execute a Kernel, you therefore requests its implementation object and cast it to the
+ * calculations.  To execute a Kernel, you therefore request its implementation object and cast it to the
  * correct type:
  * 
  * <pre>

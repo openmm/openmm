@@ -506,6 +506,10 @@ private:
     std::vector<ComputationInfo> energyTerms;
 };
 
+/**
+ * This is an internal class used to record information about a particle.
+ * @private
+ */
 class CustomGBForce::ParticleInfo {
 public:
     std::vector<double> parameters;
@@ -515,6 +519,10 @@ public:
     }
 };
 
+/**
+ * This is an internal class used to record information about a per-particle parameter.
+ * @private
+ */
 class CustomGBForce::PerParticleParameterInfo {
 public:
     std::string name;
@@ -524,6 +532,10 @@ public:
     }
 };
 
+/**
+ * This is an internal class used to record information about a global parameter.
+ * @private
+ */
 class CustomGBForce::GlobalParameterInfo {
 public:
     std::string name;
@@ -534,6 +546,10 @@ public:
     }
 };
 
+/**
+ * This is an internal class used to record information about an exclusion.
+ * @private
+ */
 class CustomGBForce::ExclusionInfo {
 public:
     int particle1, particle2;
@@ -545,6 +561,10 @@ public:
     }
 };
 
+/**
+ * This is an internal class used to record information about a tabulated function.
+ * @private
+ */
 class CustomGBForce::FunctionInfo {
 public:
     std::string name;
@@ -558,6 +578,10 @@ public:
     }
 };
 
+/**
+ * This is an internal class used to record information about a computed value or energy term.
+ * @private
+ */
 class CustomGBForce::ComputationInfo {
 public:
     std::string name;

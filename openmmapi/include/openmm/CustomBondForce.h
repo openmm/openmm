@@ -199,6 +199,10 @@ private:
     std::vector<BondInfo> bonds;
 };
 
+/**
+ * This is an internal class used to record information about a bond.
+ * @private
+ */
 class CustomBondForce::BondInfo {
 public:
     int particle1, particle2;
@@ -210,6 +214,10 @@ public:
     }
 };
 
+/**
+ * This is an internal class used to record information about a per-bond parameter.
+ * @private
+ */
 class CustomBondForce::BondParameterInfo {
 public:
     std::string name;
@@ -219,6 +227,10 @@ public:
     }
 };
 
+/**
+ * This is an internal class used to record information about a global parameter.
+ * @private
+ */
 class CustomBondForce::GlobalParameterInfo {
 public:
     std::string name;

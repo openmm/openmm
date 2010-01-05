@@ -191,24 +191,14 @@ private:
     NonbondedMethod nonbondedMethod;
     double cutoffDistance, solventDielectric, soluteDielectric;
     class BondInfo;
-
-// Retarded visual studio compiler complains about being unable to 
-// export private stl class members.
-// This stanza explains that it should temporarily shut up.
-#if defined(_MSC_VER)
-#pragma warning(push)
-#pragma warning(disable:4251)
-#endif
-
     std::vector<ParticleInfo> particles;
     std::vector<BondInfo> bonds;
-
-#if defined(_MSC_VER)
-#pragma warning(pop)
-#endif
-
 };
 
+/**
+ * This is an internal class used to record information about a particle.
+ * @private
+ */
 class GBVIForce::ParticleInfo {
 public:
     double charge, radius, gamma;
@@ -220,6 +210,10 @@ public:
     }
 };
 
+/**
+ * This is an internal class used to record information about a bond.
+ * @private
+ */
 class GBVIForce::BondInfo {
 public:
     int particle1, particle2;
