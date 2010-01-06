@@ -65,12 +65,12 @@ public:
      * @param particle2    the index of the second particle forming the torsion
      * @param particle3    the index of the third particle forming the torsion
      * @param particle3    the index of the fourth particle forming the torsion
-     * @param c0           the coefficient of the constant term
-     * @param c1           the coefficient of the 1st order term
-     * @param c2           the coefficient of the 2nd order term
-     * @param c3           the coefficient of the 3rd order term
-     * @param c4           the coefficient of the 4th order term
-     * @param c5           the coefficient of the 5th order term
+     * @param c0           the coefficient of the constant term, measured in kJ/mol
+     * @param c1           the coefficient of the 1st order term, measured in kJ/mol
+     * @param c2           the coefficient of the 2nd order term, measured in kJ/mol
+     * @param c3           the coefficient of the 3rd order term, measured in kJ/mol
+     * @param c4           the coefficient of the 4th order term, measured in kJ/mol
+     * @param c5           the coefficient of the 5th order term, measured in kJ/mol
      * @return the index of the torsion that was added
      */
     int addTorsion(int particle1, int particle2, int particle3, int particle4, double c0, double c1, double c2, double c3, double c4, double c5);
@@ -82,12 +82,12 @@ public:
      * @param particle2    the index of the second particle forming the torsion
      * @param particle3    the index of the third particle forming the torsion
      * @param particle3    the index of the fourth particle forming the torsion
-     * @param c0           the coefficient of the constant term
-     * @param c1           the coefficient of the 1st order term
-     * @param c2           the coefficient of the 2nd order term
-     * @param c3           the coefficient of the 3rd order term
-     * @param c4           the coefficient of the 4th order term
-     * @param c5           the coefficient of the 5th order term
+     * @param c0           the coefficient of the constant term, measured in kJ/mol
+     * @param c1           the coefficient of the 1st order term, measured in kJ/mol
+     * @param c2           the coefficient of the 2nd order term, measured in kJ/mol
+     * @param c3           the coefficient of the 3rd order term, measured in kJ/mol
+     * @param c4           the coefficient of the 4th order term, measured in kJ/mol
+     * @param c5           the coefficient of the 5th order term, measured in kJ/mol
      */
     void getTorsionParameters(int index, int& particle1, int& particle2, int& particle3, int& particle4, double& c0, double& c1, double& c2, double& c3, double& c4, double& c5) const;
     /**
@@ -98,12 +98,12 @@ public:
      * @param particle2    the index of the second particle forming the torsion
      * @param particle3    the index of the third particle forming the torsion
      * @param particle3    the index of the fourth particle forming the torsion
-     * @param c0           the coefficient of the constant term
-     * @param c1           the coefficient of the 1st order term
-     * @param c2           the coefficient of the 2nd order term
-     * @param c3           the coefficient of the 3rd order term
-     * @param c4           the coefficient of the 4th order term
-     * @param c5           the coefficient of the 5th order term
+     * @param c0           the coefficient of the constant term, measured in kJ/mol
+     * @param c1           the coefficient of the 1st order term, measured in kJ/mol
+     * @param c2           the coefficient of the 2nd order term, measured in kJ/mol
+     * @param c3           the coefficient of the 3rd order term, measured in kJ/mol
+     * @param c4           the coefficient of the 4th order term, measured in kJ/mol
+     * @param c5           the coefficient of the 5th order term, measured in kJ/mol
      */
     void setTorsionParameters(int index, int particle1, int particle2, int particle3, int particle4, double c0, double c1, double c2, double c3, double c4, double c5);
 protected:

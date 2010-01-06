@@ -68,12 +68,16 @@ public:
     AndersenThermostat(double defaultTemperature, double defaultCollisionFrequency);
     /**
      * Get the default temperature of the heat bath (in Kelvin).
+     *
+     * @return the default temperature of the heat bath, measured in Kelvin.
      */
     double getDefaultTemperature() const {
         return defaultTemp;
     }
     /**
      * Get the default collision frequency (in 1/ps).
+     *
+     * @return the default collision frequency, measured in 1/ps.
      */
     double getDefaultCollisionFrequency() const {
         return defaultFreq;

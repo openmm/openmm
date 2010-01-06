@@ -64,7 +64,7 @@ public:
      * @param particle1 the index of the first particle connected by the bond
      * @param particle2 the index of the second particle connected by the bond
      * @param length    the equilibrium length of the bond, measured in nm
-     * @param k         the harmonic force constant for the bond
+     * @param k         the harmonic force constant for the bond, measured in kJ/mol/nm^2
      * @return the index of the bond that was added
      */
     int addBond(int particle1, int particle2, double length, double k);
@@ -75,7 +75,7 @@ public:
      * @param particle1 the index of the first particle connected by the bond
      * @param particle2 the index of the second particle connected by the bond
      * @param length    the equilibrium length of the bond, measured in nm
-     * @param k         the harmonic force constant for the bond
+     * @param k         the harmonic force constant for the bond, measured in kJ/mol/nm^2
      */
     void getBondParameters(int index, int& particle1, int& particle2, double& length, double& k) const;
     /**
@@ -85,7 +85,7 @@ public:
      * @param particle1 the index of the first particle connected by the bond
      * @param particle2 the index of the second particle connected by the bond
      * @param length    the equilibrium length of the bond, measured in nm
-     * @param k         the harmonic force constant for the bond
+     * @param k         the harmonic force constant for the bond, measured in kJ/mol/nm^2
      */
     void setBondParameters(int index, int particle1, int particle2, double length, double k);
 protected:

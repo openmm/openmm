@@ -54,12 +54,16 @@ public:
     LangevinIntegrator(double temperature, double frictionCoeff, double stepSize);
     /**
      * Get the temperature of the heat bath (in Kelvin).
+     *
+     * @return the temperature of the heat bath, measured in Kelvin
      */
     double getTemperature() const {
         return temperature;
     }
     /**
      * Set the temperature of the heat bath (in Kelvin).
+     *
+     * @param temp    the temperature of the heat bath, measured in Kelvin
      */
     void setTemperature(double temp) {
         temperature = temp;
@@ -67,6 +71,8 @@ public:
     /**
      * Get the friction coefficient which determines how strongly the system is coupled to
      * the heat bath (in inverse ps).
+     *
+     * @return the friction coefficient, measured in 1/ps
      */
     double getFriction() const {
         return friction;
@@ -74,6 +80,8 @@ public:
     /**
      * Set the friction coefficient which determines how strongly the system is coupled to
      * the heat bath (in inverse ps).
+     *
+     * @param coeff    the friction coefficient, measured in 1/ps
      */
     void setFriction(double coeff) {
         friction = coeff;

@@ -57,6 +57,8 @@ public:
     /**
      * Get the size of each time step, in picoseconds.  If this integrator uses variable time steps,
      * the size of the most recent step is returned.
+     *
+     * @return the step size, measured in ps
      */
     double getStepSize() const {
         return stepSize;
@@ -64,6 +66,8 @@ public:
     /**
      * Set the size of each time step, in picoseconds.  If this integrator uses variable time steps,
      * the effect of calling this method is undefined, and it may simply be ignored.
+     *
+     * @param size    the step size, measured in ps
      */
     void setStepSize(double size) {
         stepSize = size;

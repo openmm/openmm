@@ -161,11 +161,15 @@ public:
     /**
      * Get the cutoff distance (in nm) being used for nonbonded interactions.  If the NonbondedMethod in use
      * is NoCutoff, this value will have no effect.
+     *
+     * @return the cutoff distance, measured in nm
      */
     double getCutoffDistance() const;
     /**
      * Set the cutoff distance (in nm) being used for nonbonded interactions.  If the NonbondedMethod in use
      * is NoCutoff, this value will have no effect.
+     *
+     * @param distance    the cutoff distance, measured in nm
      */
     void setCutoffDistance(double distance);
     /**
