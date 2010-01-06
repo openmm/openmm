@@ -130,12 +130,12 @@ void CudaUpdateStateDataKernel::setPositions(ContextImpl& context, const std::ve
     for (int i = 0; i < numParticles; ++i) {
         float4& pos = (*gpu->psPosq4)[i];
         const Vec3& p = positions[order[i]];
-        pos.x = p[0];
-        pos.y = p[1];
-        pos.z = p[2];
+        pos.x = (float) p[0];
+        pos.y = (float) p[1];
+        pos.z = (float) p[2];
     }
     gpu->psPosq4->Upload();
-    for (int i = 0; i < gpu->posCellOffsets.size(); i++)
+    for (int i = 0; i < (int) gpu->posCellOffsets.size(); i++)
         gpu->posCellOffsets[i] = make_int3(0, 0, 0);
 }
 
@@ -158,9 +158,9 @@ void CudaUpdateStateDataKernel::setVelocities(ContextImpl& context, const std::v
     for (int i = 0; i < numParticles; ++i) {
         float4& vel = (*gpu->psVelm4)[i];
         const Vec3& v = velocities[order[i]];
-        vel.x = v[0];
-        vel.y = v[1];
-        vel.z = v[2];
+        vel.x = (float) v[0];
+        vel.y = (float) v[1];
+        vel.z = (float) v[2];
     }
     gpu->psVelm4->Upload();
 }
@@ -392,7 +392,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
         gpuSetPeriodicBoxSize(gpu, (float)boxVectors[0][0], (float)boxVectors[1][1], (float)boxVectors[2][2]);
         CudaNonbondedMethod method = NO_CUTOFF;
         if (force.getNonbondedMethod() != NonbondedForce::NoCutoff) {
-            gpuSetNonbondedCutoff(gpu, (float)force.getCutoffDistance(), force.getReactionFieldDielectric());
+            gpuSetNonbondedCutoff(gpu, (float) force.getCutoffDistance(), (float) force.getReactionFieldDielectric());
             method = CUTOFF;
         }
         if (force.getNonbondedMethod() == NonbondedForce::CutoffPeriodic) {
@@ -576,7 +576,7 @@ void CudaCalcGBVIForceKernel::initialize(const System& system, const GBVIForce& 
     vector<float> gammas(numParticles);
 
     for (int i = 0; i < numParticles; i++) {
-        double charge, particleRadius, gamma, bornRadiusScaleFactor;
+        double charge, particleRadius, gamma;
         force.getParticleParameters(i, charge, particleRadius, gamma );
         particle[i]                  = i;
         radius[i]                    = (float) particleRadius;

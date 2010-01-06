@@ -148,14 +148,14 @@ static Expression<SIZE> createExpression(gpuContext gpu, const string& expressio
         throw OpenMMException("Expression contains too many operations: "+expression);
     exp.length = program.getNumOperations();
     exp.stackSize = program.getStackSize();
-    if (exp.stackSize > maxStackSize)
+    if (exp.stackSize > (int) maxStackSize)
         maxStackSize = exp.stackSize;
     for (int i = 0; i < program.getNumOperations(); i++) {
         const Operation& op = program.getOperation(i);
         switch (op.getId()) {
             case Operation::CONSTANT:
                 exp.op[i] = CONSTANT;
-                exp.arg[i] = dynamic_cast<const Operation::Constant*>(&op)->getValue();
+                exp.arg[i] = (float) dynamic_cast<const Operation::Constant*>(&op)->getValue();
                 break;
             case Operation::VARIABLE:
                 if (variables.size() > 0 && op.getName() == variables[0])
@@ -178,18 +178,18 @@ static Expression<SIZE> createExpression(gpuContext gpu, const string& expressio
                     exp.op[i] = VARIABLE8;
                 else {
                     int j;
-                    for (j = 0; j < globalParamNames.size() && op.getName() != globalParamNames[j]; j++);
+                    for (j = 0; j < (int) globalParamNames.size() && op.getName() != globalParamNames[j]; j++);
                     if (j == globalParamNames.size())
                         throw OpenMMException("Unknown variable '"+op.getName()+"' in expression: "+expression);
                     exp.op[i] = GLOBAL;
-                    exp.arg[i] = j;
+                    exp.arg[i] = (float) j;
                 }
                 break;
             case Operation::CUSTOM:
                 exp.op[i] = dynamic_cast<const Operation::Custom*>(&op)->getDerivOrder()[0] == 0 ? CUSTOM : CUSTOM_DERIV;
                 for (int j = 0; j < MAX_TABULATED_FUNCTIONS; j++)
                     if (op.getName() == gpu->tabulatedFunctions[j].name) {
-                        exp.arg[i] = j;
+                        exp.arg[i] = (float) j;
                         break;
                     }
                 break;
@@ -276,15 +276,15 @@ static Expression<SIZE> createExpression(gpuContext gpu, const string& expressio
                 break;
             case Operation::ADD_CONSTANT:
                 exp.op[i] = ADD_CONSTANT;
-                exp.arg[i] = dynamic_cast<const Operation::AddConstant*>(&op)->getValue();
+                exp.arg[i] = (float) dynamic_cast<const Operation::AddConstant*>(&op)->getValue();
                 break;
             case Operation::MULTIPLY_CONSTANT:
                 exp.op[i] = MULTIPLY_CONSTANT;
-                exp.arg[i] = dynamic_cast<const Operation::MultiplyConstant*>(&op)->getValue();
+                exp.arg[i] = (float) dynamic_cast<const Operation::MultiplyConstant*>(&op)->getValue();
                 break;
             case Operation::POWER_CONSTANT:
                 exp.op[i] = POWER_CONSTANT;
-                exp.arg[i] = dynamic_cast<const Operation::PowerConstant*>(&op)->getValue();
+                exp.arg[i] = (float) dynamic_cast<const Operation::PowerConstant*>(&op)->getValue();
                 break;
         }
     }
@@ -540,11 +540,11 @@ void gpuSetLJ14Parameters(gpuContext gpu, float epsfac, float fudge, const vecto
 extern "C" void setExclusions(gpuContext gpu, const vector<vector<int> >& exclusions) {
     if (gpu->exclusions.size() > 0) {
         bool ok = (exclusions.size() == gpu->exclusions.size());
-        for (int i = 0; i < exclusions.size() && ok; i++) {
+        for (int i = 0; i < (int) exclusions.size() && ok; i++) {
             if (exclusions[i].size() != gpu->exclusions[i].size())
                 ok = false;
             else {
-                for (int j = 0; j < exclusions[i].size(); j++)
+                for (int j = 0; j < (int) exclusions[i].size(); j++)
                     if (find(gpu->exclusions[i].begin(), gpu->exclusions[i].end(), exclusions[i][j]) == gpu->exclusions[i].end())
                         ok = false;
             }
@@ -638,16 +638,16 @@ void gpuSetTabulatedFunction(gpuContext gpu, int index, const string& name, cons
     for (int i = 0; i < (int) values.size()-1; i++) {
         float4 c;
         if (interpolating) {
-            c.x = padded[i+1];
-            c.y = 0.5*(-padded[i]+padded[i+2]);
-            c.z = 0.5*(2.0*padded[i]-5.0*padded[i+1]+4.0*padded[i+2]-padded[i+3]);
-            c.w = 0.5*(-padded[i]+3.0*padded[i+1]-3.0*padded[i+2]+padded[i+3]);
+            c.x = (float) padded[i+1];
+            c.y = (float) (0.5*(-padded[i]+padded[i+2]));
+            c.z = (float) (0.5*(2.0*padded[i]-5.0*padded[i+1]+4.0*padded[i+2]-padded[i+3]));
+            c.w = (float) (0.5*(-padded[i]+3.0*padded[i+1]-3.0*padded[i+2]+padded[i+3]));
         }
         else {
-            c.x = (padded[i]+4.0*padded[i+1]+padded[i+2])/6.0;
-            c.y = (-3.0*padded[i]+3.0*padded[i+2])/6.0;
-            c.z = (3.0*padded[i]-6.0*padded[i+1]+3.0*padded[i+2])/6.0;
-            c.w = (-padded[i]+3.0*padded[i+1]-3.0*padded[i+2]+padded[i+3])/6.0;
+            c.x = (float) ((padded[i]+4.0*padded[i+1]+padded[i+2])/6.0);
+            c.y = (float) ((-3.0*padded[i]+3.0*padded[i+2])/6.0);
+            c.z = (float) ((3.0*padded[i]-6.0*padded[i+1]+3.0*padded[i+2])/6.0);
+            c.w = (float) ((-padded[i]+3.0*padded[i+1]-3.0*padded[i+2]+padded[i+3])/6.0);
         }
         (*coeff)[i] = c;
     }
@@ -677,18 +677,18 @@ void gpuSetCustomBondParameters(gpuContext gpu, const vector<int>& bondAtom1, co
         (*gpu->psCustomBondID)[i].z = forceBufferCounter[bondAtom1[i]]++;
         (*gpu->psCustomBondID)[i].w = forceBufferCounter[bondAtom2[i]]++;
         if (bondParams[i].size() > 0)
-            (*gpu->psCustomBondParams)[i].x = bondParams[i][0];
+            (*gpu->psCustomBondParams)[i].x = (float) bondParams[i][0];
         if (bondParams[i].size() > 1)
-            (*gpu->psCustomBondParams)[i].y = bondParams[i][1];
+            (*gpu->psCustomBondParams)[i].y = (float) bondParams[i][1];
         if (bondParams[i].size() > 2)
-            (*gpu->psCustomBondParams)[i].z = bondParams[i][2];
+            (*gpu->psCustomBondParams)[i].z = (float) bondParams[i][2];
         if (bondParams[i].size() > 3)
-            (*gpu->psCustomBondParams)[i].w = bondParams[i][3];
+            (*gpu->psCustomBondParams)[i].w = (float) bondParams[i][3];
     }
     gpu->psCustomBondID->Upload();
     gpu->psCustomBondParams->Upload();
     for (int i = 0; i < (int) forceBufferCounter.size(); i++)
-        if (forceBufferCounter[i] > gpu->pOutputBufferCounter[i])
+        if (forceBufferCounter[i] > (int) gpu->pOutputBufferCounter[i])
             gpu->pOutputBufferCounter[i] = forceBufferCounter[i];
 
     // Create the Expressions.
@@ -720,13 +720,13 @@ void gpuSetCustomExternalParameters(gpuContext gpu, const vector<int>& atomIndex
     for (int i = 0; i < (int) atomIndex.size(); i++) {
         (*gpu->psCustomExternalID)[i] = atomIndex[i];
         if (atomParams[i].size() > 0)
-            (*gpu->psCustomExternalParams)[i].x = atomParams[i][0];
+            (*gpu->psCustomExternalParams)[i].x = (float) atomParams[i][0];
         if (atomParams[i].size() > 1)
-            (*gpu->psCustomExternalParams)[i].y = atomParams[i][1];
+            (*gpu->psCustomExternalParams)[i].y = (float) atomParams[i][1];
         if (atomParams[i].size() > 2)
-            (*gpu->psCustomExternalParams)[i].z = atomParams[i][2];
+            (*gpu->psCustomExternalParams)[i].z = (float) atomParams[i][2];
         if (atomParams[i].size() > 3)
-            (*gpu->psCustomExternalParams)[i].w = atomParams[i][3];
+            (*gpu->psCustomExternalParams)[i].w = (float) atomParams[i][3];
     }
     gpu->psCustomExternalID->Upload();
     gpu->psCustomExternalParams->Upload();
@@ -834,7 +834,7 @@ static void tabulateErfc(gpuContext gpu)
     gpu->psTabulatedErfc = new CUDAStream<float>(tableSize, 1, "TabulatedErfc");
     gpu->sim.pTabulatedErfc = gpu->psTabulatedErfc->_pDevData;
     for (int i = 0; i < tableSize; ++i)
-        (*gpu->psTabulatedErfc)[i] = erfc(i*(gpu->sim.alphaEwald*gpu->sim.nonbondedCutoff)/tableSize);
+        (*gpu->psTabulatedErfc)[i] = (float) erfc(i*(gpu->sim.alphaEwald*gpu->sim.nonbondedCutoff)/tableSize);
     gpu->psTabulatedErfc->Upload();
 }
 
@@ -996,7 +996,7 @@ void gpuSetGBVIParameters(gpuContext gpu, float innerDielectric, float solventDi
     {
             (*gpu->psGBVIData)[i].x = radius[i];
             (*gpu->psGBVIData)[i].y = scaledRadii[i];
-            (*gpu->psGBVIData)[i].z = tau*gamma[i];
+            (*gpu->psGBVIData)[i].z = (float) (tau*gamma[i]);
             (*gpu->psGBVIData)[i].w = 1.0f;
 
 (*gpu->psObcData)[i].x  = radius[i];

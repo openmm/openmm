@@ -189,8 +189,8 @@ void bbSortBody(T* dData,int size,int listOrder/*,float sliceStep,int sliceSize,
 		evaluateDisorder(dData,size,maxValue,minValue,listOrder);
 	}
 	
-	float sliceStep =(50.0*((double)(maxValue-minValue)/(double)size));
-	int sliceSize = (maxValue-minValue)/sliceStep + 10;
+	float sliceStep = (float) (50.0*((double)(maxValue-minValue)/(double)size));
+	int sliceSize = (int) ((maxValue-minValue)/sliceStep + 10);
 
 	int blockCount;
 

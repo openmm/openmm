@@ -89,7 +89,7 @@ inline __host__ __device__ float4 operator*(float4 a, float4 b)
 }
 inline __host__ __device__ float4 make_float4(int3 a)
 {
-    return make_float4(a.x, a.y, a.z, 0);
+    return make_float4((float) a.x, (float) a.y, (float) a.z, 0);
 }
 
 __global__ void kUpdateGridIndexAndFraction_kernel()
