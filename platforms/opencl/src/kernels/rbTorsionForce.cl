@@ -28,9 +28,9 @@ __kernel void calcRBTorsionForce(int numAtoms, int numTorsions, __global float4*
         if (cosangle > 0.99f || cosangle < -0.99f) {
             // We're close to the singularity in acos(), so take the cross product and use asin() instead.
 
-            float4 cross = cross(cp0, cp1);
+            float4 cross_prod = cross(cp0, cp1);
             float scale = dot(cp0, cp0)*dot(cp1, cp1);
-            dihedralAngle = asin(sqrt(dot(cross, cross)/scale));
+            dihedralAngle = asin(sqrt(dot(cross_prod, cross_prod)/scale));
             if (cosangle < 0.0f)
                 dihedralAngle = PI-dihedralAngle;
         }
