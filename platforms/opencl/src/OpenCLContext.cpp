@@ -43,7 +43,11 @@ using namespace std;
 
 OpenCLContext::OpenCLContext(int numParticles, int deviceIndex) : time(0.0), stepCount(0), computeForceCount(0) {
     try {
-        context = cl::Context(CL_DEVICE_TYPE_ALL);
+		std::vector<cl::Platform> platforms;	
+		cl::Platform::get(&platforms);	
+		cl_context_properties cprops[] = {CL_CONTEXT_PLATFORM, (cl_context_properties)platforms[0](), 0 };
+        context = cl::Context(CL_DEVICE_TYPE_ALL, cprops);
+
         vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
         const int minThreadBlockSize = 32;
         if (deviceIndex < 0 || deviceIndex >= (int) devices.size()) {
