@@ -3402,7 +3402,7 @@ Integrator* readParameterFile( const std::string& inputParameterFile, MapStringI
    }
 
    if( log ){
-      (void) fprintf( log, "%s\n", methodName.c_str() );
+      (void) fprintf( log, "%s %s\n", methodName.c_str(), inputParameterFile.c_str() );
       (void) fflush( log );
    }   
 
@@ -3417,12 +3417,12 @@ Integrator* readParameterFile( const std::string& inputParameterFile, MapStringI
 
    if( filePtr == NULL ){
       char buffer[1024];
-      (void) sprintf( buffer, "Input parameter file=<%s> could not be opened -- aborting.\n", methodName.c_str(), inputParameterFile.c_str() );
+      (void) sprintf( buffer, "%s Input parameter file=<%s> could not be opened -- aborting.\n", methodName.c_str(), inputParameterFile.c_str() );
       throwException(__FILE__, __LINE__, buffer );
       (void) fflush( stderr);
       exit(-1);
    } else if( log ){
-      (void) fprintf( log, "Input parameter file=<%s> opened.\n", methodName.c_str(), inputParameterFile.c_str() );
+      (void) fprintf( log, "%s Input parameter file=<%s> opened.\n", methodName.c_str(), inputParameterFile.c_str() );
    }
 
    int lineCount                  = 0;
@@ -4036,7 +4036,7 @@ static int _getStatistics( const std::vector<double> & array,  std::vector<doubl
    return DefaultReturnValue;
 }
 
-static int getForceStrings( System& system, StringVector& forceStringArray, FILE* log ){
+static void getForceStrings( System& system, StringVector& forceStringArray, FILE* log ){
 
     // print active forces and relevant parameters
 
@@ -4251,7 +4251,7 @@ static int getForceStrings( System& system, StringVector& forceStringArray, FILE
 
     }
 
-    return 0;
+    return;
 }
 
 /** 
@@ -4423,7 +4423,7 @@ static int checkEnergyForceConsistent( Context& context, MapStringString& inputA
 
 int compareForces( const std::vector<Vec3>& forceArray1, const std::string& f1Name, std::vector<double>& forceArray1Sum, std::vector<double>& forceArray1Stats,
                    const std::vector<Vec3>& forceArray2, const std::string& f2Name, std::vector<double>& forceArray2Sum, std::vector<double>& forceArray2Stats,
-                   double* maxDelta, int* maxDeltaIndex, double* maxRelativeDelta, int* maxRelativeDeltaIndex, double* maxDot, double forceTolerance, FILE* inputLog ){
+                   double *averageDelta, double* maxDelta, int* maxDeltaIndex, double* maxRelativeDelta, int* maxRelativeDeltaIndex, double* maxDot, double forceTolerance, FILE* inputLog ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -4449,6 +4449,7 @@ int compareForces( const std::vector<Vec3>& forceArray1, const std::string& f1Na
    *maxDot                             = -1.0e+30;
    *maxDeltaIndex                      = -1;
    *maxRelativeDeltaIndex              = -1;
+   *averageDelta                       = 0.0;
 
    std::vector<double> forceArray1Norms;
    std::vector<double> forceArray2Norms;
@@ -4479,6 +4480,7 @@ int compareForces( const std::vector<Vec3>& forceArray1, const std::string& f1Na
       forceArray2Sum[2]     += f2[2];
 
       double delta           = std::sqrt( (f1[0]-f2[0])*(f1[0]-f2[0]) + (f1[1]-f2[1])*(f1[1]-f2[1]) + (f1[2]-f2[2])*(f1[2]-f2[2]) );
+      *averageDelta         += delta;
       double dotProduct      = f1[0]*f2[0] + f1[1]*f2[1] + f1[2]*f2[2];
              dotProduct     /= (normF1*normF2);
              dotProduct      = 1.0 - dotProduct;
@@ -4513,6 +4515,10 @@ int compareForces( const std::vector<Vec3>& forceArray1, const std::string& f1Na
                          ii, delta, relativeDelta, dotProduct, normF1, f1[0], f1[1], f1[2], normF2, f2[0], f2[1], f2[2], ((normF1 > 1.0e+06 || normF2 > 1.0e+06) ? "!!!" : "") );
          (void) fflush( log );
       }
+   }
+
+   if( forceArray2.size() ){
+      *averageDelta /= (double)( forceArray2.size() );
    }
 
    findStatsForDouble( forceArray1Norms, forceArray1Stats );
@@ -4569,6 +4575,7 @@ static int checkForcesDuringSimulation( int currentStep, Context& cudaContext, C
    double maxRelativeDeltaPrmCud                   = -1.0e+30;
    double maxDotPrmCud                             = -1.0e+30;
    double forceTolerance                           = 1.0e-01;
+   double averageDelta;
    int maxDeltaIndex;
    int maxRelativeDeltaRefCudIndex;
    
@@ -4581,10 +4588,11 @@ static int checkForcesDuringSimulation( int currentStep, Context& cudaContext, C
    
    compareForces( referenceForces, "fRef", forceArray1Sum, referenceForceStats,
                   cudaForces,      "fCud", forceArray2Sum, cudaForceStats, 
-                  &maxDeltaRefCud, &maxDeltaIndex, &maxRelativeDeltaRefCud, &maxRelativeDeltaRefCudIndex, &maxDotRefCud, forceTolerance, log );
+                  &averageDelta, &maxDeltaRefCud, &maxDeltaIndex, &maxRelativeDeltaRefCud,
+                  &maxRelativeDeltaRefCudIndex, &maxDotRefCud, forceTolerance, log );
 
-   (void) fprintf( log, "MaxDelta=%13.7e at %d MaxRelativeDelta=%13.7e at %d maxDotRefCud=%14.6e\n",
-                   maxDeltaRefCud, maxDeltaIndex, maxRelativeDeltaRefCud, maxRelativeDeltaRefCudIndex, maxDotRefCud );
+   (void) fprintf( log, "MaxDelta=%13.7e at %d MaxRelativeDelta=%13.7e at %d maxDotRefCud=%14.6e averageDelta=%13.7e\n",
+                   maxDeltaRefCud, maxDeltaIndex, maxRelativeDeltaRefCud, maxRelativeDeltaRefCudIndex, maxDotRefCud, averageDelta );
    (void) fprintf( log, "Reference force average=%14.7e stddev=%14.7e min=%14.7e at %6.0f max=%14.7e at %6.0f\n",
                    referenceForceStats[0], referenceForceStats[1], referenceForceStats[2], referenceForceStats[3],
                    referenceForceStats[4], referenceForceStats[5] );
@@ -5311,6 +5319,7 @@ void testReferenceCudaForces( std::string parameterFileName, MapStringInt& force
       double maxDeltaPrmCud                          = -1.0e+30;
       double maxRelativeDeltaPrmCud                  = -1.0e+30;
       double maxDotPrmCud                            = -1.0e+30;
+      double averageDelta;
       int maxDeltaIndex;
       int maxRelativeDeltaRefCudIndex;
 
@@ -5325,7 +5334,7 @@ void testReferenceCudaForces( std::string parameterFileName, MapStringInt& force
 
       compareForces( referenceForces, "fRef", forceArray1Sum, referenceForceStats,
                      cudaForces,      "fCud", forceArray2Sum, cudaForceStats, 
-                     &maxDeltaRefCud, &maxDeltaIndex, &maxRelativeDeltaRefCud,
+                     &averageDelta, &maxDeltaRefCud, &maxDeltaIndex, &maxRelativeDeltaRefCud,
                      &maxRelativeDeltaRefCudIndex, &maxDotRefCud, forceTolerance, log );
       
       (void) fflush( log );
@@ -5359,8 +5368,8 @@ void testReferenceCudaForces( std::string parameterFileName, MapStringInt& force
          if( forceString.size() < 1 ){
             forceString = "NA";
          }
-         (void) fprintf( summaryFile, "Force %s\nAtoms %u\nMaxDelta %14.7e\nMaxRelDelta %14.7e\nMaxDot %14.7e\n",
-                         forceString.c_str(), referenceForces.size(), maxDeltaRefCud, maxRelativeDeltaRefCud, maxDotRefCud);
+         (void) fprintf( summaryFile, "Force %s\nAtoms %u\nMaxDelta %14.7e\nMaxRelDelta %14.7e\nMaxDot %14.7e\nAverageDelta %14.7e\n",
+                         forceString.c_str(), referenceForces.size(), maxDeltaRefCud, maxRelativeDeltaRefCud, maxDotRefCud, averageDelta);
 
          double sum = ( fabs(forceArray1Sum[0] ) + fabs( forceArray1Sum[1] ) + fabs( forceArray1Sum[2]) )*0.33333;
          (void) fprintf( summaryFile, "SumRef %14.7e\n", sum );
