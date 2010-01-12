@@ -25,12 +25,13 @@
 */
 
 #include "OpenCLCompact.h"
+#include "OpenCLKernelSources.h"
 
 using namespace OpenMM;
 
 OpenCLCompact::OpenCLCompact(OpenCLContext& context) : context(context), dgBlockCounts(NULL) {
     dgBlockCounts = new OpenCLArray<cl_uint>(context, context.getNumThreadBlocks(), "dgBlockCounts");
-    cl::Program program = context.createProgram(context.loadSourceFromFile("compact.cl"));
+    cl::Program program = context.createProgram(OpenCLKernelSources::compact);
     countKernel = cl::Kernel(program, "countElts");
     moveValidKernel = cl::Kernel(program, "moveValidElementsStaged");
 }

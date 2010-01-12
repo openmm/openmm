@@ -193,6 +193,14 @@ public:
      */
     std::string loadSourceFromFile(const std::string& filename, const std::map<std::string, std::string>& replacements) const;
     /**
+     * Replace all occurance of a list of substrings.
+     *
+     * @param input   a string to process
+     * @param replacements a set of strings that should be replaced with new strings wherever they appear in the input string
+     * @return a new string produced by performing the replacements
+     */
+    std::string replaceStrings(const std::string& input, const std::map<std::string, std::string>& replacements) const;
+    /**
      * Create an OpenCL Program from source code.
      */
     cl::Program createProgram(const std::string source);

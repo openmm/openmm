@@ -26,7 +26,7 @@
 
 #include "OpenCLFFT3D.h"
 #include "OpenCLExpressionUtilities.h"
-#include "OpenCLExpressionUtilities.h"
+#include "OpenCLKernelSources.h"
 #include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
 #include <map>
 #include <sstream>
@@ -177,7 +177,7 @@ cl::Kernel OpenCLFFT3D::createKernel(int xsize, int ysize, int zsize, int xmult,
     replacements["ZMULT"] = OpenCLExpressionUtilities::intToString(zmult);
     replacements["M_PI"] = OpenCLExpressionUtilities::doubleToString(M_PI);
     replacements["COMPUTE_FFT"] = source.str();
-    cl::Program program = context.createProgram(context.loadSourceFromFile("fft.cl", replacements));
+    cl::Program program = context.createProgram(context.replaceStrings(OpenCLKernelSources::fft, replacements));
     cl::Kernel kernel(program, "execFFT");
     kernel.setArg(2, xsize*sizeof(mm_float2), NULL);
     kernel.setArg(3, xsize*sizeof(mm_float2), NULL);

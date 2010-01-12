@@ -26,6 +26,7 @@
 
 #include "OpenCLIntegrationUtilities.h"
 #include "OpenCLArray.h"
+#include "OpenCLKernelSources.h"
 #include <cmath>
 #include <cstdlib>
 #include <map>
@@ -78,9 +79,9 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
 
     // Create kernels for enforcing constraints.
 
-    cl::Program settleProgram = context.createProgram(context.loadSourceFromFile("settle.cl"));
+    cl::Program settleProgram = context.createProgram(OpenCLKernelSources::settle);
     settleKernel = cl::Kernel(settleProgram, "applySettle");
-    cl::Program shakeProgram = context.createProgram(context.loadSourceFromFile("shakeHydrogens.cl"));
+    cl::Program shakeProgram = context.createProgram(OpenCLKernelSources::shakeHydrogens);
     shakeKernel = cl::Kernel(shakeProgram, "applyShakeToHydrogens");
 
     // Record the set of constraints and how many constraints each atom is involved in.
@@ -319,7 +320,7 @@ void OpenCLIntegrationUtilities::initRandomNumberGenerator(unsigned int randomNu
 
     // Create the kernel.
 
-    cl::Program randomProgram = context.createProgram(context.loadSourceFromFile("random.cl"));
+    cl::Program randomProgram = context.createProgram(OpenCLKernelSources::random);
     randomKernel = cl::Kernel(randomProgram, "generateRandomNumbers");
 }
 

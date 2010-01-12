@@ -82,8 +82,12 @@ ENDFOREACH(subdir)
 
 INCLUDE_DIRECTORIES(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-# Install kernel files that will be loaded at runtime.
-FILE(GLOB OPENCL_KERNELS   ${CMAKE_CURRENT_SOURCE_DIR}/src/kernels/*.cl src/kernels/*.h)
-INSTALL_FILES(/lib/plugins/opencl FILES ${OPENCL_KERNELS})
+# Set variables needed for encoding kernel sources into a C++ class
+
+SET(CL_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
+SET(CL_KERNELS_CPP ${CMAKE_CURRENT_BINARY_DIR}/src/OpenCLKernelSources.cpp)
+SET(CL_KERNELS_H ${CMAKE_CURRENT_BINARY_DIR}/src/OpenCLKernelSources.h)
+SET(SOURCE_FILES ${SOURCE_FILES} ${CL_KERNELS_CPP} ${CL_KERNELS_H})
+INCLUDE_DIRECTORIES(BEFORE ${CMAKE_CURRENT_BINARY_DIR}/src)
 
 SUBDIRS (sharedTarget)

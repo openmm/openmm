@@ -28,6 +28,7 @@
 #include "OpenCLArray.h"
 #include "OpenCLForceInfo.h"
 #include "OpenCLIntegrationUtilities.h"
+#include "OpenCLKernelSources.h"
 #include "OpenCLNonbondedUtilities.h"
 #include "hilbert.h"
 #include "openmm/Platform.h"
@@ -43,11 +44,10 @@ using namespace std;
 
 OpenCLContext::OpenCLContext(int numParticles, int deviceIndex) : time(0.0), stepCount(0), computeForceCount(0) {
     try {
-		std::vector<cl::Platform> platforms;	
-		cl::Platform::get(&platforms);	
-		cl_context_properties cprops[] = {CL_CONTEXT_PLATFORM, (cl_context_properties)platforms[0](), 0 };
+        std::vector<cl::Platform> platforms;
+        cl::Platform::get(&platforms);
+        cl_context_properties cprops[] = {CL_CONTEXT_PLATFORM, (cl_context_properties) platforms[0](), 0};
         context = cl::Context(CL_DEVICE_TYPE_ALL, cprops);
-
         vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
         const int minThreadBlockSize = 32;
         if (deviceIndex < 0 || deviceIndex >= (int) devices.size()) {
@@ -93,7 +93,7 @@ OpenCLContext::OpenCLContext(int numParticles, int deviceIndex) : time(0.0), ste
 
     // Create utility kernels that are used in multiple places.
 
-    utilities = createProgram(loadSourceFromFile("utilities.cl"));
+    utilities = createProgram(OpenCLKernelSources::utilities);
     clearBufferKernel = cl::Kernel(utilities, "clearBuffer");
     reduceFloat4Kernel = cl::Kernel(utilities, "reduceFloat4Buffer");
 }
@@ -143,10 +143,6 @@ void OpenCLContext::addForce(OpenCLForceInfo* force) {
 }
 
 string OpenCLContext::loadSourceFromFile(const string& filename) const {
-    return loadSourceFromFile(filename, map<string, string>());
-}
-
-string OpenCLContext::loadSourceFromFile(const string& filename, const std::map<std::string, std::string>& replacements) const {
     ifstream file((Platform::getDefaultPluginsDirectory()+"/opencl/"+filename).c_str());
     if (!file.is_open())
         throw OpenMMException("Unable to load kernel: "+filename);
@@ -158,15 +154,24 @@ string OpenCLContext::loadSourceFromFile(const string& filename, const std::map<
         kernel += '\n';
     }
     file.close();
+    return kernel;
+}
+
+string OpenCLContext::loadSourceFromFile(const string& filename, const std::map<std::string, std::string>& replacements) const {
+    return replaceStrings(loadSourceFromFile(filename), replacements);
+}
+
+string OpenCLContext::replaceStrings(const string& input, const std::map<std::string, std::string>& replacements) const {
+    string result = input;
     for (map<string, string>::const_iterator iter = replacements.begin(); iter != replacements.end(); iter++) {
         int index = -1;
         do {
-            index = kernel.find(iter->first);
-            if (index != kernel.npos)
-                kernel.replace(index, iter->first.size(), iter->second);
-        } while (index != kernel.npos);
+            index = result.find(iter->first);
+            if (index != result.npos)
+                result.replace(index, iter->first.size(), iter->second);
+        } while (index != result.npos);
     }
-    return kernel;
+    return result;
 }
 
 cl::Program OpenCLContext::createProgram(const string source) {

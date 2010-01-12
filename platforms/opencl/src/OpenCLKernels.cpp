@@ -33,6 +33,7 @@
 #include "OpenCLExpressionUtilities.h"
 #include "OpenCLIntegrationUtilities.h"
 #include "OpenCLNonbondedUtilities.h"
+#include "OpenCLKernelSources.h"
 #include "lepton/Parser.h"
 #include "lepton/ParsedExpression.h"
 #include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
@@ -222,7 +223,7 @@ void OpenCLCalcHarmonicBondForceKernel::initialize(const System& system, const H
     for (int i = 0; i < (int) forceBufferCounter.size(); i++)
         maxBuffers = max(maxBuffers, forceBufferCounter[i]);
     cl.addForce(new OpenCLBondForceInfo(maxBuffers, force));
-    cl::Program program = cl.createProgram(cl.loadSourceFromFile("harmonicBondForce.cl"));
+    cl::Program program = cl.createProgram(OpenCLKernelSources::harmonicBondForce);
     kernel = cl::Kernel(program, "calcHarmonicBondForce");
 }
 
@@ -358,7 +359,7 @@ void OpenCLCalcCustomBondForceKernel::initialize(const System& system, const Cus
     map<string, string> replacements;
     replacements["COMPUTE_FORCE"] = compute.str();
     replacements["EXTRA_ARGUMENTS"] = extraArguments;
-    cl::Program program = cl.createProgram(cl.loadSourceFromFile("customBondForce.cl", replacements));
+    cl::Program program = cl.createProgram(cl.replaceStrings(OpenCLKernelSources::customBondForce, replacements));
     kernel = cl::Kernel(program, "computeCustomBondForces");
 }
 
@@ -458,7 +459,7 @@ void OpenCLCalcHarmonicAngleForceKernel::initialize(const System& system, const 
     for (int i = 0; i < (int) forceBufferCounter.size(); i++)
         maxBuffers = max(maxBuffers, forceBufferCounter[i]);
     cl.addForce(new OpenCLAngleForceInfo(maxBuffers, force));
-    cl::Program program = cl.createProgram(cl.loadSourceFromFile("harmonicAngleForce.cl"));
+    cl::Program program = cl.createProgram(OpenCLKernelSources::harmonicAngleForce);
     kernel = cl::Kernel(program, "calcHarmonicAngleForce");
 }
 
@@ -542,7 +543,7 @@ void OpenCLCalcPeriodicTorsionForceKernel::initialize(const System& system, cons
     for (int i = 0; i < (int) forceBufferCounter.size(); i++)
         maxBuffers = max(maxBuffers, forceBufferCounter[i]);
     cl.addForce(new OpenCLPeriodicTorsionForceInfo(maxBuffers, force));
-    cl::Program program = cl.createProgram(cl.loadSourceFromFile("periodicTorsionForce.cl"));
+    cl::Program program = cl.createProgram(OpenCLKernelSources::periodicTorsionForce);
     kernel = cl::Kernel(program, "calcPeriodicTorsionForce");
 }
 
@@ -626,7 +627,7 @@ void OpenCLCalcRBTorsionForceKernel::initialize(const System& system, const RBTo
     for (int i = 0; i < (int) forceBufferCounter.size(); i++)
         maxBuffers = max(maxBuffers, forceBufferCounter[i]);
     cl.addForce(new OpenCLRBTorsionForceInfo(maxBuffers, force));
-    cl::Program program = cl.createProgram(cl.loadSourceFromFile("rbTorsionForce.cl"));
+    cl::Program program = cl.createProgram(OpenCLKernelSources::rbTorsionForce);
     kernel = cl::Kernel(program, "calcRBTorsionForce");
 }
 
@@ -774,7 +775,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         replacements["RECIPROCAL_BOX_SIZE_Z"] = doubleToString(2.0*M_PI/boxVectors[2][2]);
         replacements["RECIPROCAL_COEFFICIENT"] = doubleToString(ONE_4PI_EPS0*4*M_PI/(boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2]));
         replacements["EXP_COEFFICIENT"] = doubleToString(-1.0/(4.0*alpha*alpha));
-        cl::Program program = cl.createProgram(cl.loadSourceFromFile("ewald.cl"), replacements);
+        cl::Program program = cl.createProgram(OpenCLKernelSources::ewald, replacements);
         ewaldSumsKernel = cl::Kernel(program, "calculateEwaldCosSinSums");
         ewaldForcesKernel = cl::Kernel(program, "calculateEwaldForces");
         cosSinSums = new OpenCLArray<mm_float2>(cl, (2*kmaxx-1)*(2*kmaxy-1)*(2*kmaxz-1), "cosSinSums");
@@ -784,7 +785,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
 
     // Add the interaction to the default nonbonded kernel.
     
-    string source = cl.loadSourceFromFile("coulombLennardJones.cl", defines);
+    string source = cl.replaceStrings(OpenCLKernelSources::coulombLennardJones, defines);
     cl.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, source);
     if (hasLJ)
         cl.getNonbondedUtilities().addParameter(OpenCLNonbondedUtilities::ParameterInfo("sigmaEpsilon", "float2", sizeof(cl_float2), sigmaEpsilon->getDeviceBuffer()));
@@ -818,7 +819,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     }
     if (usePeriodic)
         defines["USE_PERIODIC"] = "1";
-    cl::Program program = cl.createProgram(cl.loadSourceFromFile("nonbondedExceptions.cl"), defines);
+    cl::Program program = cl.createProgram(OpenCLKernelSources::nonbondedExceptions, defines);
     exceptionsKernel = cl::Kernel(program, "computeNonbondedExceptions");
 }
 
@@ -997,7 +998,7 @@ void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, cons
     compute << OpenCLExpressionUtilities::createExpressions(forceExpressions, variables, functionDefinitions, prefix+"temp", prefix+"functionParams");
     map<string, string> replacements;
     replacements["COMPUTE_FORCE"] = compute.str();
-    string source = cl.loadSourceFromFile("customNonbonded.cl", replacements);
+    string source = cl.replaceStrings(OpenCLKernelSources::customNonbonded, replacements);
     cl.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, source);
     for (int i = 0; i < (int) params->getBuffers().size(); i++) {
         const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
@@ -1079,7 +1080,7 @@ void OpenCLCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOB
     prefactor = -ONE_4PI_EPS0*((1.0/force.getSoluteDielectric())-(1.0/force.getSolventDielectric()));
     bool useCutoff = (force.getNonbondedMethod() != GBSAOBCForce::NoCutoff);
     bool usePeriodic = (force.getNonbondedMethod() != GBSAOBCForce::NoCutoff && force.getNonbondedMethod() != GBSAOBCForce::CutoffNonPeriodic);
-    string source = cl.loadSourceFromFile("gbsaObc2.cl");
+    string source = OpenCLKernelSources::gbsaObc2;
     nb.addInteraction(useCutoff, usePeriodic, false, force.getCutoffDistance(), vector<vector<int> >(), source);
     nb.addParameter(OpenCLNonbondedUtilities::ParameterInfo("obcParams", "float2", sizeof(cl_float2), params->getDeviceBuffer()));;
     nb.addParameter(OpenCLNonbondedUtilities::ParameterInfo("bornForce", "float", sizeof(cl_float), bornForce->getDeviceBuffer()));;
@@ -1106,8 +1107,8 @@ void OpenCLCalcGBSAOBCForceKernel::executeForces(ContextImpl& context) {
         defines["PREFACTOR"] = doubleToString(prefactor);
         defines["NUM_ATOMS"] = intToString(cl.getNumAtoms());
         defines["PADDED_NUM_ATOMS"] = intToString(cl.getPaddedNumAtoms());
-        string filename = (cl.getSIMDWidth() == 32 ? "gbsaObc_nvidia.cl" : "gbsaObc_default.cl");
-        cl::Program program = cl.createProgram(cl.loadSourceFromFile(filename), defines);
+        string file = (cl.getSIMDWidth() == 32 ? OpenCLKernelSources::gbsaObc_nvidia : OpenCLKernelSources::gbsaObc_default);
+        cl::Program program = cl.createProgram(file, defines);
         computeBornSumKernel = cl::Kernel(program, "computeBornSum");
         computeBornSumKernel.setArg<cl::Buffer>(0, bornSum->getDeviceBuffer());
         computeBornSumKernel.setArg(1, OpenCLContext::ThreadBlockSize*sizeof(cl_float), NULL);
@@ -1145,7 +1146,7 @@ void OpenCLCalcGBSAOBCForceKernel::executeForces(ContextImpl& context) {
             force1Kernel.setArg<cl::Buffer>(10, nb.getTiles().getDeviceBuffer());
             force1Kernel.setArg<cl_uint>(11, nb.getTiles().getSize());
         }
-        program = cl.createProgram(cl.loadSourceFromFile("gbsaObcReductions.cl"), defines);
+        program = cl.createProgram(OpenCLKernelSources::gbsaObcReductions, defines);
         reduceBornSumKernel = cl::Kernel(program, "reduceBornSum");
         reduceBornSumKernel.setArg<cl_int>(0, cl.getPaddedNumAtoms());
         reduceBornSumKernel.setArg<cl_int>(1, nb.getNumForceBuffers());
@@ -1408,8 +1409,8 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         defines["CUTOFF_SQUARED"] = doubleToString(force.getCutoffDistance()*force.getCutoffDistance());
         defines["NUM_ATOMS"] = intToString(cl.getNumAtoms());
         defines["PADDED_NUM_ATOMS"] = intToString(cl.getPaddedNumAtoms());
-        string filename = (cl.getSIMDWidth() == 32 ? "customGBValueN2_nvidia.cl" : "customGBValueN2_default.cl");
-        cl::Program program = cl.createProgram(cl.loadSourceFromFile(filename, replacements), defines);
+        string file = (cl.getSIMDWidth() == 32 ? OpenCLKernelSources::customGBValueN2_nvidia : OpenCLKernelSources::customGBValueN2_default);
+        cl::Program program = cl.createProgram(cl.replaceStrings(file, replacements), defines);
         pairValueKernel = cl::Kernel(program, "computeN2Value");
     }
     {
@@ -1450,7 +1451,7 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         replacements["COMPUTE_VALUES"] = reductionSource.str();
         map<string, string> defines;
         defines["NUM_ATOMS"] = intToString(cl.getNumAtoms());
-        cl::Program program = cl.createProgram(cl.loadSourceFromFile("customGBValuePerParticle.cl", replacements), defines);
+        cl::Program program = cl.createProgram(cl.replaceStrings(OpenCLKernelSources::customGBValuePerParticle, replacements), defines);
         perParticleValueKernel = cl::Kernel(program, "computePerParticleValues");
     }
     {
@@ -1556,8 +1557,8 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         defines["CUTOFF_SQUARED"] = doubleToString(force.getCutoffDistance()*force.getCutoffDistance());
         defines["NUM_ATOMS"] = intToString(cl.getNumAtoms());
         defines["PADDED_NUM_ATOMS"] = intToString(cl.getPaddedNumAtoms());
-        string filename = (cl.getSIMDWidth() == 32 ? "customGBEnergyN2_nvidia.cl" : "customGBEnergyN2_default.cl");
-        cl::Program program = cl.createProgram(cl.loadSourceFromFile(filename, replacements), defines);
+        string file = (cl.getSIMDWidth() == 32 ? OpenCLKernelSources::customGBEnergyN2_nvidia : OpenCLKernelSources::customGBEnergyN2_default);
+        cl::Program program = cl.createProgram(cl.replaceStrings(file, replacements), defines);
         pairEnergyKernel = cl::Kernel(program, "computeN2Energy");
     }
     {
@@ -1612,7 +1613,7 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         replacements["COMPUTE_ENERGY"] = compute.str();
         map<string, string> defines;
         defines["NUM_ATOMS"] = intToString(cl.getNumAtoms());
-        cl::Program program = cl.createProgram(cl.loadSourceFromFile("customGBEnergyPerParticle.cl", replacements), defines);
+        cl::Program program = cl.createProgram(cl.replaceStrings(OpenCLKernelSources::customGBEnergyPerParticle, replacements), defines);
         perParticleEnergyKernel = cl::Kernel(program, "computePerParticleEnergy");
     }
     {
@@ -1673,7 +1674,7 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         }
         map<string, string> replacements;
         replacements["COMPUTE_FORCE"] = chainSource.str();
-        string source = cl.loadSourceFromFile("customGBChainRule.cl", replacements);
+        string source = cl.replaceStrings(OpenCLKernelSources::customGBChainRule, replacements);
         cl.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, source);
         for (int i = 0; i < (int) params->getBuffers().size(); i++) {
             const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
@@ -1944,7 +1945,7 @@ void OpenCLCalcCustomExternalForceKernel::initialize(const System& system, const
     map<string, string> replacements;
     replacements["COMPUTE_FORCE"] = compute.str();
     replacements["EXTRA_ARGUMENTS"] = extraArguments;
-    cl::Program program = cl.createProgram(cl.loadSourceFromFile("customExternalForce.cl", replacements));
+    cl::Program program = cl.createProgram(cl.replaceStrings(OpenCLKernelSources::customExternalForce, replacements));
     kernel = cl::Kernel(program, "computeCustomExternalForces");
 }
 
@@ -1988,7 +1989,7 @@ OpenCLIntegrateVerletStepKernel::~OpenCLIntegrateVerletStepKernel() {
 
 void OpenCLIntegrateVerletStepKernel::initialize(const System& system, const VerletIntegrator& integrator) {
     cl.initialize(system);
-    cl::Program program = cl.createProgram(cl.loadSourceFromFile("verlet.cl"));
+    cl::Program program = cl.createProgram(OpenCLKernelSources::verlet);
     kernel1 = cl::Kernel(program, "integrateVerletPart1");
     kernel2 = cl::Kernel(program, "integrateVerletPart2");
     prevStepSize = -1.0;
@@ -2052,7 +2053,7 @@ void OpenCLIntegrateLangevinStepKernel::initialize(const System& system, const L
     map<string, string> defines;
     defines["NUM_ATOMS"] = intToString(cl.getNumAtoms());
     defines["PADDED_NUM_ATOMS"] = intToString(cl.getPaddedNumAtoms());
-    cl::Program program = cl.createProgram(cl.loadSourceFromFile("langevin.cl"), defines);
+    cl::Program program = cl.createProgram(OpenCLKernelSources::langevin, defines);
     kernel1 = cl::Kernel(program, "integrateLangevinPart1");
     kernel2 = cl::Kernel(program, "integrateLangevinPart2");
     kernel3 = cl::Kernel(program, "integrateLangevinPart3");
@@ -2189,7 +2190,7 @@ void OpenCLIntegrateBrownianStepKernel::initialize(const System& system, const B
     cl.getIntegrationUtilities().initRandomNumberGenerator(integrator.getRandomNumberSeed());
     map<string, string> defines;
     defines["NUM_ATOMS"] = intToString(cl.getNumAtoms());
-    cl::Program program = cl.createProgram(cl.loadSourceFromFile("brownian.cl"), defines);
+    cl::Program program = cl.createProgram(OpenCLKernelSources::brownian, defines);
     kernel1 = cl::Kernel(program, "integrateBrownianPart1");
     kernel2 = cl::Kernel(program, "integrateBrownianPart2");
     prevStepSize = -1.0;
@@ -2244,7 +2245,7 @@ OpenCLIntegrateVariableVerletStepKernel::~OpenCLIntegrateVariableVerletStepKerne
 
 void OpenCLIntegrateVariableVerletStepKernel::initialize(const System& system, const VariableVerletIntegrator& integrator) {
     cl.initialize(system);
-    cl::Program program = cl.createProgram(cl.loadSourceFromFile("verlet.cl"));
+    cl::Program program = cl.createProgram(OpenCLKernelSources::verlet);
     kernel1 = cl::Kernel(program, "integrateVerletPart1");
     kernel2 = cl::Kernel(program, "integrateVerletPart2");
     selectSizeKernel = cl::Kernel(program, "selectVerletStepSize");
@@ -2319,7 +2320,7 @@ void OpenCLIntegrateVariableLangevinStepKernel::initialize(const System& system,
     map<string, string> defines;
     defines["NUM_ATOMS"] = intToString(cl.getNumAtoms());
     defines["PADDED_NUM_ATOMS"] = intToString(cl.getPaddedNumAtoms());
-    cl::Program program = cl.createProgram(cl.loadSourceFromFile("langevin.cl"), defines);
+    cl::Program program = cl.createProgram(OpenCLKernelSources::langevin, defines);
     kernel1 = cl::Kernel(program, "integrateLangevinPart1");
     kernel2 = cl::Kernel(program, "integrateLangevinPart2");
     kernel3 = cl::Kernel(program, "integrateLangevinPart3");
@@ -2414,7 +2415,7 @@ void OpenCLApplyAndersenThermostatKernel::initialize(const System& system, const
     map<string, string> defines;
     defines["NUM_ATOMS"] = intToString(cl.getNumAtoms());
     defines["PADDED_NUM_ATOMS"] = intToString(cl.getPaddedNumAtoms());
-    cl::Program program = cl.createProgram(cl.loadSourceFromFile("andersenThermostat.cl"), defines);
+    cl::Program program = cl.createProgram(OpenCLKernelSources::andersenThermostat, defines);
     kernel = cl::Kernel(program, "applyAndersenThermostat");
 }
 
@@ -2467,7 +2468,7 @@ void OpenCLRemoveCMMotionKernel::initialize(const System& system, const CMMotion
         totalMass += system.getParticleMass(i);
     map<string, string> defines;
     defines["INVERSE_TOTAL_MASS"] = doubleToString(1.0/totalMass);
-    cl::Program program = cl.createProgram(cl.loadSourceFromFile("removeCM.cl"), defines);
+    cl::Program program = cl.createProgram(OpenCLKernelSources::removeCM, defines);
     kernel1 = cl::Kernel(program, "calcCenterOfMassMomentum");
     kernel1.setArg<cl_int>(0, numAtoms);
     kernel1.setArg<cl::Buffer>(1, cl.getVelm().getDeviceBuffer());

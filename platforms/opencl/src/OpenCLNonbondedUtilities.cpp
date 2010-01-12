@@ -27,6 +27,7 @@
 #include "OpenCLNonbondedUtilities.h"
 #include "OpenCLArray.h"
 #include "OpenCLCompact.h"
+#include "OpenCLKernelSources.h"
 #include <map>
 
 using namespace OpenMM;
@@ -233,7 +234,7 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
             defines["USE_OUTPUT_BUFFER_PER_BLOCK"] = "1";
         if (usePeriodic)
             defines["USE_PERIODIC"] = "1";
-        cl::Program interactingBlocksProgram = context.createProgram(context.loadSourceFromFile("findInteractingBlocks.cl"), defines);
+        cl::Program interactingBlocksProgram = context.createProgram(OpenCLKernelSources::findInteractingBlocks, defines);
         findBlockBoundsKernel = cl::Kernel(interactingBlocksProgram, "findBlockBounds");
         findBlockBoundsKernel.setArg<cl_int>(0, context.getNumAtoms());
         findBlockBoundsKernel.setArg<mm_float4>(1, periodicBoxSize);
@@ -367,8 +368,8 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
     padded << context.getPaddedNumAtoms();
     defines["NUM_ATOMS"] = natom.str();
     defines["PADDED_NUM_ATOMS"] = padded.str();
-    string filename = (context.getSIMDWidth() == 32 ? "nonbonded_nvidia.cl" : "nonbonded_default.cl");
-    cl::Program program = context.createProgram(context.loadSourceFromFile(filename, replacements), defines);
+    string file = (context.getSIMDWidth() == 32 ? OpenCLKernelSources::nonbonded_nvidia : OpenCLKernelSources::nonbonded_default);
+    cl::Program program = context.createProgram(context.replaceStrings(file, replacements), defines);
     cl::Kernel kernel(program, "computeNonbonded");
 
     // Set arguments to the Kernel.
