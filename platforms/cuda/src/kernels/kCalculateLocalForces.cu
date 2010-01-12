@@ -89,12 +89,6 @@ static __constant__ cudaGmxSimulation cSim;
     } \
 }
 
-#define GETANGLECOSINEBETWEENTWOVECTORS(v1, v2, angle, cosine) \
-{ \
-    GETNORMEDDOTPRODUCT(v1, v2, cosine); \
-    angle = acos(cosine); \
-}
-
 #define GETDIHEDRALANGLEBETWEENTHREEVECTORS(vector1, vector2, vector3, signVector, cp0, cp1, angle) \
 { \
     CROSS_PRODUCT(vector1, vector2, cp0); \
@@ -108,9 +102,10 @@ static __constant__ cudaGmxSimulation cSim;
 { \
     CROSS_PRODUCT(vector1, vector2, cp0); \
     CROSS_PRODUCT(vector2, vector3, cp1); \
-    GETANGLECOSINEBETWEENTWOVECTORS(cp0, cp1, angle, cosine); \
+    GETANGLEBETWEENTWOVECTORS(cp0, cp1, angle); \
     float dp = DOT3(signVector, cp1); \
     angle = (dp >= 0) ? angle : -angle; \
+    cosine = cos(angle); \
 }
 
 void SetCalculateLocalForcesSim(gpuContext gpu)
