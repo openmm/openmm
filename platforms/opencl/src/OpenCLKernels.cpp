@@ -780,6 +780,8 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         ewaldForcesKernel = cl::Kernel(program, "calculateEwaldForces");
         cosSinSums = new OpenCLArray<mm_float2>(cl, (2*kmaxx-1)*(2*kmaxy-1)*(2*kmaxz-1), "cosSinSums");
     }
+    else if (force.getNonbondedMethod() == NonbondedForce::PME)
+        throw OpenMMException("OpenMMPlatform does not yet support PME");
     else
         ewaldSelfEnergy = 0.0;
 
