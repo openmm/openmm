@@ -41,8 +41,8 @@ const std::string ValidateOpenMM::NB_SOFTCORE_FORCE               = "NbSoftcore"
 const std::string ValidateOpenMM::NB_EXCEPTION_FORCE              = "NbException";
 const std::string ValidateOpenMM::NB_EXCEPTION_SOFTCORE_FORCE     = "NbSoftcoreException";
 
-const std::string ValidateOpenMM::GBSA_OBC_FORCE                  = "Obc";
-const std::string ValidateOpenMM::GBSA_OBC_SOFTCORE_FORCE         = "ObcSoftcore";
+const std::string ValidateOpenMM::GBSA_OBC_FORCE                  = "GBSAOBC";
+const std::string ValidateOpenMM::GBSA_OBC_SOFTCORE_FORCE         = "GBSAOBCSoftcore";
 
 const std::string ValidateOpenMM::GBVI_FORCE                      = "GBVI";
 const std::string ValidateOpenMM::GBVI_SOFTCORE_FORCE             = "GBVISoftcore";
