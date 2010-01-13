@@ -147,9 +147,6 @@ class CpuObc : public CpuImplicitSolvent {
       int computeBornEnergyForces( RealOpenMM* bornRadii, RealOpenMM** atomCoordinates,
                                    const RealOpenMM* partialCharges, RealOpenMM** forces );
       
-      int computeBornEnergyForcesPrint( RealOpenMM* bornRadii, RealOpenMM** atomCoordinates,
-                                        const RealOpenMM* partialCharges, RealOpenMM** forces );
-      
       /**---------------------------------------------------------------------------------------
       
          Get state 
@@ -161,61 +158,6 @@ class CpuObc : public CpuImplicitSolvent {
          --------------------------------------------------------------------------------------- */
       
       std::string getStateString( const char* title ) const;
-
-      /**---------------------------------------------------------------------------------------
-      
-         Write Born energy and forces (Simbios)
-      
-         @param atomCoordinates   atomic coordinates
-         @param partialCharges    partial atom charges
-         @param forces            force array
-         @param resultsFileName   output file name
-      
-         @return SimTKOpenMMCommon::DefaultReturn if file opened; else return SimTKOpenMMCommon::ErrorReturn
-      
-         --------------------------------------------------------------------------------------- */
-          
-      int writeBornEnergyForces( RealOpenMM** atomCoordinates,
-                                 const RealOpenMM* partialCharges, RealOpenMM** forces,
-                                 const std::string& resultsFileName ) const;
-
-      /**---------------------------------------------------------------------------------------
-      
-         Write  results from first loop
-      
-         @param atomCoordinates     atomic coordinates
-         @param RealOpenMM forces         forces
-         @param outputFileName      output file name
-      
-         @return SimTKOpenMMCommon::DefaultReturn unless
-                 file cannot be opened
-                 in which case return SimTKOpenMMCommon::ErrorReturn
-      
-         --------------------------------------------------------------------------------------- */
-      
-      static int writeForceLoop1( int numberOfAtoms, RealOpenMM** forces, const RealOpenMM* bornForce,
-                                  const std::string& outputFileName );
-      
-      /**---------------------------------------------------------------------------------------
-      
-         Write results
-      
-         @param numberOfAtoms       number of atoms
-         @param chunkSizes          vector of chunk sizes for realRealOpenMMVector
-         @param realRealOpenMMVector      vector of RealOpenMM**
-         @param realVector          vector of RealOpenMM*
-         @param outputFileName      output file name
-      
-         @return SimTKOpenMMCommon::DefaultReturn unless
-                 file cannot be opened
-                 in which case return SimTKOpenMMCommon::ErrorReturn
-      
-         --------------------------------------------------------------------------------------- */
-      
-      static int writeForceLoop( int numberOfAtoms, const IntVector& chunkSizes,
-                                 const RealOpenMMPtrPtrVector& realRealOpenMMVector, 
-                                 const RealOpenMMPtrVector& realVector,
-                                 const std::string& outputFileName );
       
 };
 
