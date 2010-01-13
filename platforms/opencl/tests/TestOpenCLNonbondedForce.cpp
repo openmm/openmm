@@ -553,24 +553,26 @@ void testBlockInteractions(bool periodic) {
 
         // Check the interaction flags.
 
-        unsigned int flags = interactionFlags[i];
-        for (int atom2 = 0; atom2 < 32; atom2++) {
-            if ((flags & 1) == 0) {
-                mm_float4 pos2 = clcontext.getPosq()[y*blockSize+atom2];
-                for (int atom1 = 0; atom1 < blockSize; ++atom1) {
-                    mm_float4 pos1 = clcontext.getPosq()[x*blockSize+atom1];
-                    float dx = pos2.x-pos1.x;
-                    float dy = pos2.y-pos1.y;
-                    float dz = pos2.z-pos1.z;
-                    if (periodic) {
-                        dx -= (float)(floor(0.5+dx/boxSize)*boxSize);
-                        dy -= (float)(floor(0.5+dy/boxSize)*boxSize);
-                        dz -= (float)(floor(0.5+dz/boxSize)*boxSize);
+        if (clcontext.getSIMDWidth() == 32) {
+            unsigned int flags = interactionFlags[i];
+            for (int atom2 = 0; atom2 < 32; atom2++) {
+                if ((flags & 1) == 0) {
+                    mm_float4 pos2 = clcontext.getPosq()[y*blockSize+atom2];
+                    for (int atom1 = 0; atom1 < blockSize; ++atom1) {
+                        mm_float4 pos1 = clcontext.getPosq()[x*blockSize+atom1];
+                        float dx = pos2.x-pos1.x;
+                        float dy = pos2.y-pos1.y;
+                        float dz = pos2.z-pos1.z;
+                        if (periodic) {
+                            dx -= (float)(floor(0.5+dx/boxSize)*boxSize);
+                            dy -= (float)(floor(0.5+dy/boxSize)*boxSize);
+                            dz -= (float)(floor(0.5+dz/boxSize)*boxSize);
+                        }
+                        ASSERT(dx*dx+dy*dy+dz*dz > cutoff*cutoff);
                     }
-                    ASSERT(dx*dx+dy*dy+dz*dz > cutoff*cutoff);
                 }
+                flags >>= 1;
             }
-            flags >>= 1;
         }
     }
 
