@@ -116,11 +116,11 @@ void testEwaldPME() {
         Vec3 f = cudaState.getForces()[i];
         positions[i] = Vec3(p[0]-f[0]*step, p[1]-f[1]*step, p[2]-f[2]*step);
     }
-    Context cudaContext2(system, integrator, cuda);
-    cudaContext2.setPositions(positions);
+    cudaContext.reinitialize();
+    cudaContext.setPositions(positions);
     
     tol = 1e-3;
-    State cudaState2 = cudaContext2.getState(State::Energy);
+    State cudaState2 = cudaContext.getState(State::Energy);
     ASSERT_EQUAL_TOL(norm, (cudaState2.getPotentialEnergy()-cudaState.getPotentialEnergy())/delta, tol)
 
 //    (3)  Check whether the Reference and Cuda platforms agree when using PME
@@ -154,11 +154,11 @@ void testEwaldPME() {
         Vec3 f = cudaState.getForces()[i];
         positions[i] = Vec3(p[0]-f[0]*step, p[1]-f[1]*step, p[2]-f[2]*step);
     }
-    Context cudaContext3(system, integrator, cuda);
-    cudaContext3.setPositions(positions);
+    cudaContext.reinitialize();
+    cudaContext.setPositions(positions);
      
     tol = 1e-3;
-    State cudaState3 = cudaContext3.getState(State::Energy);
+    State cudaState3 = cudaContext.getState(State::Energy);
     ASSERT_EQUAL_TOL(norm, (cudaState3.getPotentialEnergy()-cudaState.getPotentialEnergy())/delta, tol)
 }
 

@@ -131,7 +131,7 @@ void testExclusionsAnd14() {
     for (int i = 1; i < 5; ++i) {
  
         // Test LJ forces
-        
+
         vector<Vec3> positions(5);
         const double r = 1.0;
         for (int j = 0; j < 5; ++j) {
@@ -143,49 +143,55 @@ void testExclusionsAnd14() {
         nonbonded->setExceptionParameters(first14, 0, 3, 0, 1.5, i == 3 ? 0.5 : 0.0);
         nonbonded->setExceptionParameters(second14, 1, 4, 0, 1.5, 0.0);
         positions[i] = Vec3(r, 0, 0);
-        Context context(system, integrator, platform);
-        context.setPositions(positions);
-        State state = context.getState(State::Forces | State::Energy);
-        const vector<Vec3>& forces = state.getForces();
-        double x = 1.5/r;
-        double eps = 1.0;
-        double force = 4.0*eps*(12*std::pow(x, 12.0)-6*std::pow(x, 6.0))/r;
-        double energy = 4.0*eps*(std::pow(x, 12.0)-std::pow(x, 6.0));
-        if (i == 3) {
-            force *= 0.5;
-            energy *= 0.5;
+        // The following is in its own block, because CUDA can't deal with multiple Contexts
+        // existing on the same thread at the same time.
+        {
+            Context context(system, integrator, platform);
+            context.setPositions(positions);
+            State state = context.getState(State::Forces | State::Energy);
+            const vector<Vec3>& forces = state.getForces();
+            double x = 1.5/r;
+            double eps = 1.0;
+            double force = 4.0*eps*(12*std::pow(x, 12.0)-6*std::pow(x, 6.0))/r;
+            double energy = 4.0*eps*(std::pow(x, 12.0)-std::pow(x, 6.0));
+            if (i == 3) {
+                force *= 0.5;
+                energy *= 0.5;
+            }
+            if (i < 3) {
+                force = 0;
+                energy = 0;
+            }
+            ASSERT_EQUAL_VEC(Vec3(-force, 0, 0), forces[0], TOL);
+            ASSERT_EQUAL_VEC(Vec3(force, 0, 0), forces[i], TOL);
+            ASSERT_EQUAL_TOL(energy, state.getPotentialEnergy(), TOL);
         }
-        if (i < 3) {
-            force = 0;
-            energy = 0;
-        }
-        ASSERT_EQUAL_VEC(Vec3(-force, 0, 0), forces[0], TOL);
-        ASSERT_EQUAL_VEC(Vec3(force, 0, 0), forces[i], TOL);
-        ASSERT_EQUAL_TOL(energy, state.getPotentialEnergy(), TOL);
 
         // Test Coulomb forces
-        
-        nonbonded->setParticleParameters(0, 2, 1.5, 0);
-        nonbonded->setParticleParameters(i, 2, 1.5, 0);
-        nonbonded->setExceptionParameters(first14, 0, 3, i == 3 ? 4/1.2 : 0, 1.5, 0);
-        nonbonded->setExceptionParameters(second14, 1, 4, 0, 1.5, 0);
-        Context context2(system, integrator, platform);
-        context2.setPositions(positions);
-        state = context2.getState(State::Forces | State::Energy);
-        const vector<Vec3>& forces2 = state.getForces();
-        force = ONE_4PI_EPS0*4/(r*r);
-        energy = ONE_4PI_EPS0*4/r;
-        if (i == 3) {
-            force /= 1.2;
-            energy /= 1.2;
+
+        {
+            nonbonded->setParticleParameters(0, 2, 1.5, 0);
+            nonbonded->setParticleParameters(i, 2, 1.5, 0);
+            nonbonded->setExceptionParameters(first14, 0, 3, i == 3 ? 4/1.2 : 0, 1.5, 0);
+            nonbonded->setExceptionParameters(second14, 1, 4, 0, 1.5, 0);
+            Context context(system, integrator, platform);
+            context.setPositions(positions);
+            State state = context.getState(State::Forces | State::Energy);
+            const vector<Vec3>& forces2 = state.getForces();
+            double force = ONE_4PI_EPS0*4/(r*r);
+            double energy = ONE_4PI_EPS0*4/r;
+            if (i == 3) {
+                force /= 1.2;
+                energy /= 1.2;
+            }
+            if (i < 3) {
+                force = 0;
+                energy = 0;
+            }
+            ASSERT_EQUAL_VEC(Vec3(-force, 0, 0), forces2[0], TOL);
+            ASSERT_EQUAL_VEC(Vec3(force, 0, 0), forces2[i], TOL);
+            ASSERT_EQUAL_TOL(energy, state.getPotentialEnergy(), TOL);
         }
-        if (i < 3) {
-            force = 0;
-            energy = 0;
-        }
-        ASSERT_EQUAL_VEC(Vec3(-force, 0, 0), forces2[0], TOL);
-        ASSERT_EQUAL_VEC(Vec3(force, 0, 0), forces2[i], TOL);
-        ASSERT_EQUAL_TOL(energy, state.getPotentialEnergy(), TOL);
     }
 }
 

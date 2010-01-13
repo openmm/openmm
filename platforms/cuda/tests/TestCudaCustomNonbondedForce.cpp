@@ -294,17 +294,27 @@ void testCoulombLennardJones() {
     customSystem.addForce(customNonbonded);
     VerletIntegrator integrator1(0.01);
     VerletIntegrator integrator2(0.01);
-    Context context1(standardSystem, integrator1, platform);
-    context1.setPositions(positions);
-    context1.setVelocities(velocities);
-    State state1 = context1.getState(State::Forces | State::Energy);
-    Context context2(customSystem, integrator2, platform);
-    context2.setPositions(positions);
-    context2.setVelocities(velocities);
-    State state2 = context2.getState(State::Forces | State::Energy);
-    ASSERT_EQUAL_TOL(state1.getPotentialEnergy(), state2.getPotentialEnergy(), 1e-4);
+    double energy1, energy2;
+    vector<Vec3> forces1, forces2;
+    {
+        Context context(standardSystem, integrator1, platform);
+        context.setPositions(positions);
+        context.setVelocities(velocities);
+        State state = context.getState(State::Forces | State::Energy);
+        energy1 = state.getPotentialEnergy();
+        forces1 = state.getForces();
+    }
+    {
+        Context context(customSystem, integrator2, platform);
+        context.setPositions(positions);
+        context.setVelocities(velocities);
+        State state = context.getState(State::Forces | State::Energy);
+        energy2 = state.getPotentialEnergy();
+        forces2 = state.getForces();
+    }
+    ASSERT_EQUAL_TOL(energy1, energy2, 1e-4);
     for (int i = 0; i < numParticles; i++) {
-        ASSERT_EQUAL_VEC(state1.getForces()[i], state2.getForces()[i], 1e-4);
+        ASSERT_EQUAL_VEC(forces1[i], forces2[i], 1e-4);
     }
 }
 
