@@ -248,7 +248,7 @@ void OpenCLExpressionUtilities::processExpression(stringstream& out, const Expre
                 names.push_back(name);
                 for (map<int, const ExpressionTreeNode*>::const_iterator iter = powers.begin(); iter != powers.end(); ++iter) {
                     if (iter->first != exponent) {
-                        exponents.push_back(abs(iter->first));
+                        exponents.push_back((int) fabs(iter->first));
                         string name2 = prefix+intToString(temps.size());
                         names.push_back(name2);
                         temps.push_back(make_pair(*iter->second, name2));
