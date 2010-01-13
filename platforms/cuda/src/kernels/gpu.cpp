@@ -1692,8 +1692,11 @@ void* gpuInit(int numAtoms, unsigned int device, bool useBlockingSync)
     int SMMinor = 0;
 
     // Select which device to use
-    cudaError_t status = cudaSetDevice(device);
-    RTERROR(status, "Error setting CUDA device")
+    int currentDevice;
+    cudaError_t status = cudaGetDevice(&currentDevice);
+    RTERROR(status, "Error getting CUDA device")
+    if (device != currentDevice)
+        cudaSetDevice(device); // Ignore errors
     status = cudaGetDevice(&gpu->device);
     RTERROR(status, "Error getting CUDA device")
     status = cudaSetDeviceFlags(useBlockingSync ? cudaDeviceBlockingSync : cudaDeviceScheduleAuto);
@@ -1702,7 +1705,7 @@ void* gpuInit(int numAtoms, unsigned int device, bool useBlockingSync)
 
     // Determine kernel call configuration
     cudaDeviceProp deviceProp;
-    cudaGetDeviceProperties(&deviceProp, gpu->device);
+    cudaGetDeviceProperties(&deviceProp, currentDevice);
 
     // Determine SM version
     if (deviceProp.major == 1)
