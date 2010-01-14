@@ -4421,9 +4421,10 @@ static int checkEnergyForceConsistent( Context& context, MapStringString& inputA
 
    --------------------------------------------------------------------------------------- */
 
-int compareForces( const std::vector<Vec3>& forceArray1, const std::string& f1Name, std::vector<double>& forceArray1Sum, std::vector<double>& forceArray1Stats,
+void compareForces( const std::vector<Vec3>& forceArray1, const std::string& f1Name, std::vector<double>& forceArray1Sum, std::vector<double>& forceArray1Stats,
                    const std::vector<Vec3>& forceArray2, const std::string& f2Name, std::vector<double>& forceArray2Sum, std::vector<double>& forceArray2Stats,
-                   double *averageDelta, double* maxDelta, int* maxDeltaIndex, double* maxRelativeDelta, int* maxRelativeDeltaIndex, double* maxDot, double forceTolerance, FILE* inputLog ){
+                   double *averageDelta, double* averageRelativeDelta, double* maxDelta, int* maxDeltaIndex,
+                   double* maxRelativeDelta, int* maxRelativeDeltaIndex, double* maxDot, double forceTolerance, FILE* inputLog ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -4450,6 +4451,8 @@ int compareForces( const std::vector<Vec3>& forceArray1, const std::string& f1Na
    *maxDeltaIndex                      = -1;
    *maxRelativeDeltaIndex              = -1;
    *averageDelta                       = 0.0;
+   *averageRelativeDelta               = 0.0;
+   double averageRelativeDeltaCount    = 0.0;
 
    std::vector<double> forceArray1Norms;
    std::vector<double> forceArray2Norms;
@@ -4485,7 +4488,15 @@ int compareForces( const std::vector<Vec3>& forceArray1, const std::string& f1Na
              dotProduct     /= (normF1*normF2);
              dotProduct      = 1.0 - dotProduct;
 
-      double relativeDelta   = (delta*2.0)/(normF1+normF2);
+      
+      double relativeDelta;
+      if( normF1 > 0.0 || normF2 > 0.0 ){
+          relativeDelta               = (delta*2.0)/(normF1+normF2);
+          *averageRelativeDelta      += relativeDelta;
+          averageRelativeDeltaCount  += 1.0;
+      } else {
+          relativeDelta               = 0.0;
+      }
 
       int print              = 0;
       if( delta > forceTolerance ){
@@ -4518,13 +4529,16 @@ int compareForces( const std::vector<Vec3>& forceArray1, const std::string& f1Na
    }
 
    if( forceArray2.size() ){
-      *averageDelta /= (double)( forceArray2.size() );
+      *averageDelta          /= (double)( forceArray2.size() );
+   }
+   if( averageRelativeDeltaCount ){
+       *averageRelativeDelta /= averageRelativeDeltaCount;
    }
 
    findStatsForDouble( forceArray1Norms, forceArray1Stats );
    findStatsForDouble( forceArray2Norms, forceArray2Stats );
 
-   return 0;
+   return;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -4538,7 +4552,7 @@ int compareForces( const std::vector<Vec3>& forceArray1, const std::string& f1Na
  *
    --------------------------------------------------------------------------------------- */
 
-static int checkForcesDuringSimulation( int currentStep, Context& cudaContext, Context& referenceContext, FILE* log ) {
+static void checkForcesDuringSimulation( int currentStep, Context& cudaContext, Context& referenceContext, FILE* log ) {
     
 // ---------------------------------------------------------------------------------------
 
@@ -4576,6 +4590,7 @@ static int checkForcesDuringSimulation( int currentStep, Context& cudaContext, C
    double maxDotPrmCud                             = -1.0e+30;
    double forceTolerance                           = 1.0e-01;
    double averageDelta;
+   double averageRelativeDelta;
    int maxDeltaIndex;
    int maxRelativeDeltaRefCudIndex;
    
@@ -4588,7 +4603,7 @@ static int checkForcesDuringSimulation( int currentStep, Context& cudaContext, C
    
    compareForces( referenceForces, "fRef", forceArray1Sum, referenceForceStats,
                   cudaForces,      "fCud", forceArray2Sum, cudaForceStats, 
-                  &averageDelta, &maxDeltaRefCud, &maxDeltaIndex, &maxRelativeDeltaRefCud,
+                  &averageDelta, &averageRelativeDelta, &maxDeltaRefCud, &maxDeltaIndex, &maxRelativeDeltaRefCud,
                   &maxRelativeDeltaRefCudIndex, &maxDotRefCud, forceTolerance, log );
 
    (void) fprintf( log, "MaxDelta=%13.7e at %d MaxRelativeDelta=%13.7e at %d maxDotRefCud=%14.6e averageDelta=%13.7e\n",
@@ -4603,7 +4618,7 @@ static int checkForcesDuringSimulation( int currentStep, Context& cudaContext, C
 
    (void) fflush( log );
 
-   return 0;
+   return;
 
 }
 
@@ -4823,21 +4838,25 @@ static int checkEnergyConservation( Context& context,  MapStringString& inputArg
       (void) fflush( log );
    }
 
+   Context*       simulationContext = equilibrationContext;
+   Integrator* simulationIntegrator = integrator;
+
    // get simulation integrator & context
 
+/*
    Integrator* simulationIntegrator = _getIntegrator( simulationIntegratorName, simulationTimeStep,
                                                       simulationFriction, simulationTemperature,
                                                       simulationShakeTolerance, simulationErrorTolerance,
                                                       simulationSeed, log );
+*/
 
    if( log ){
       _printIntegratorInfo( simulationIntegrator, log );
    }
 
    //delete equilibrationContext;
-   Context*       simulationContext = _getContext( &system, equilibrationContext, simulationIntegrator, "CudaPlatform", "SimulationContext", deviceId, log );
+   //Context*       simulationContext = _getContext( &system, equilibrationContext, simulationIntegrator, "CudaPlatform", "SimulationContext", deviceId, log );
    //Context*       simulationContext = _getContext( &system, equilibrationContext, simulationIntegrator, "ReferencePlatform", "SimulationContext", deviceId, log );
-   //Context*       simulationContext = equilibrationContext;
    //Context*       simulationContext = _getContext( &system, &context, simulationIntegrator, "CudaPlatform", "SimulationContext", deviceId, log );
    //Context*       simulationContext = _getContext( &system, &context, simulationIntegrator, "ReferencePlatform", "SimulationContext", deviceId, log );
    //Context*       simulationContext = _getContext( &system, &context, simulationIntegrator, "ReferencePlatform", "SimulationContext", deviceId, log );
@@ -5320,6 +5339,7 @@ void testReferenceCudaForces( std::string parameterFileName, MapStringInt& force
       double maxRelativeDeltaPrmCud                  = -1.0e+30;
       double maxDotPrmCud                            = -1.0e+30;
       double averageDelta;
+      double averageRelativeDelta;
       int maxDeltaIndex;
       int maxRelativeDeltaRefCudIndex;
 
@@ -5334,7 +5354,7 @@ void testReferenceCudaForces( std::string parameterFileName, MapStringInt& force
 
       compareForces( referenceForces, "fRef", forceArray1Sum, referenceForceStats,
                      cudaForces,      "fCud", forceArray2Sum, cudaForceStats, 
-                     &averageDelta, &maxDeltaRefCud, &maxDeltaIndex, &maxRelativeDeltaRefCud,
+                     &averageDelta, &averageRelativeDelta, &maxDeltaRefCud, &maxDeltaIndex, &maxRelativeDeltaRefCud,
                      &maxRelativeDeltaRefCudIndex, &maxDotRefCud, forceTolerance, log );
       
       (void) fflush( log );
@@ -5368,8 +5388,8 @@ void testReferenceCudaForces( std::string parameterFileName, MapStringInt& force
          if( forceString.size() < 1 ){
             forceString = "NA";
          }
-         (void) fprintf( summaryFile, "Force %s\nAtoms %u\nMaxDelta %14.7e\nMaxRelDelta %14.7e\nMaxDot %14.7e\nAverageDelta %14.7e\n",
-                         forceString.c_str(), referenceForces.size(), maxDeltaRefCud, maxRelativeDeltaRefCud, maxDotRefCud, averageDelta);
+         (void) fprintf( summaryFile, "Force %s\nAtoms %u\nMaxDelta %14.7e\nMaxRelDelta %14.7e\nMaxDot %14.7e\nAverageDelta %14.7e\nAverageRelativeDelta %14.7e\n",
+                         forceString.c_str(), referenceForces.size(), maxDeltaRefCud, maxRelativeDeltaRefCud, maxDotRefCud, averageDelta, averageRelativeDelta);
 
          double sum = ( fabs(forceArray1Sum[0] ) + fabs( forceArray1Sum[1] ) + fabs( forceArray1Sum[2]) )*0.33333;
          (void) fprintf( summaryFile, "SumRef %14.7e\n", sum );
