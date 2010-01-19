@@ -94,8 +94,8 @@ ENDIF( CMAKE_SIZEOF_VOID_P EQUAL 8 )
 
 # Build 32 bit binaries, since CUDA doesn't currently work with 64 bit
 IF (APPLE)
-   SET (CMAKE_CXX_FLAGS "-arch i386")
-   SET (CMAKE_C_FLAGS "-arch i386")
+   SET (CMAKE_CXX_FLAGS "-arch i386 -isysroot /Developer/SDKs/MacOSX10.5.sdk -mmacosx-version-min=10.5")
+   SET (CMAKE_C_FLAGS "-arch i386 -isysroot /Developer/SDKs/MacOSX10.5.sdk -mmacosx-version-min=10.5")
 ENDIF (APPLE)
 
 IF(UNIX AND NOT CMAKE_BUILD_TYPE)
