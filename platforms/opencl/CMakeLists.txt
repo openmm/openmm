@@ -14,6 +14,11 @@
 #   libOpenMMOpenCL_static[_d].a
 #----------------------------------------------------
 
+IF (APPLE)
+   SET (CMAKE_CXX_FLAGS "-arch i386")
+   SET (CMAKE_C_FLAGS "-arch i386")
+ENDIF (APPLE)
+
 SUBDIRS (tests)
 
 # The source is organized into subdirectories, but we handle them all from
