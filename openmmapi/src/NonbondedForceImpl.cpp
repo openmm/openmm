@@ -143,6 +143,9 @@ void NonbondedForceImpl::calcPMEParameters(const System& system, const Nonbonded
     xsize = (int) ceil(alpha*boxVectors[0][0]/pow(0.5*tol, 0.2));
     ysize = (int) ceil(alpha*boxVectors[1][1]/pow(0.5*tol, 0.2));
     zsize = (int) ceil(alpha*boxVectors[2][2]/pow(0.5*tol, 0.2));
+    xsize = max(xsize, 5);
+    ysize = max(ysize, 5);
+    zsize = max(zsize, 5);
 }
 
 int NonbondedForceImpl::findZero(const NonbondedForceImpl::ErrorFunction& f, int initialGuess) {

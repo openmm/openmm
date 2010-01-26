@@ -92,6 +92,8 @@ public:
             sortKernelSize = maxLocalBuffer;
         int targetBucketSize = sortKernelSize/2;
         int numBuckets = length/targetBucketSize;
+        if (numBuckets < 1)
+            numBuckets = 1;
         if (positionsKernelSize > numBuckets)
             positionsKernelSize = numBuckets;
 

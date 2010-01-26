@@ -30,7 +30,9 @@
 #include "OpenCLPlatform.h"
 #include "OpenCLArray.h"
 #include "OpenCLContext.h"
+#include "OpenCLFFT3D.h"
 #include "OpenCLParameterSet.h"
+#include "OpenCLSort.h"
 #include "openmm/kernels.h"
 #include "openmm/System.h"
 
@@ -350,7 +352,9 @@ private:
 class OpenCLCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
 public:
     OpenCLCalcNonbondedForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcNonbondedForceKernel(name, platform),
-            hasInitializedKernel(false), cl(cl), sigmaEpsilon(NULL), exceptionParams(NULL), exceptionIndices(NULL), cosSinSums(NULL) {
+            hasInitializedKernel(false), cl(cl), sigmaEpsilon(NULL), exceptionParams(NULL), exceptionIndices(NULL), cosSinSums(NULL), pmeGrid(NULL),
+            pmeBsplineModuliX(NULL), pmeBsplineModuliY(NULL), pmeBsplineModuliZ(NULL), pmeBsplineTheta(NULL), pmeBsplineDtheta(NULL), pmeAtomRange(NULL),
+            pmeAtomGridIndex(NULL), sort(NULL), fft(NULL) {
     }
     ~OpenCLCalcNonbondedForceKernel();
     /**
@@ -380,10 +384,28 @@ private:
     OpenCLArray<mm_float4>* exceptionParams;
     OpenCLArray<mm_int4>* exceptionIndices;
     OpenCLArray<mm_float2>* cosSinSums;
+    OpenCLArray<mm_float2>* pmeGrid;
+    OpenCLArray<cl_float>* pmeBsplineModuliX;
+    OpenCLArray<cl_float>* pmeBsplineModuliY;
+    OpenCLArray<cl_float>* pmeBsplineModuliZ;
+    OpenCLArray<mm_float4>* pmeBsplineTheta;
+    OpenCLArray<mm_float4>* pmeBsplineDtheta;
+    OpenCLArray<cl_int>* pmeAtomRange;
+    OpenCLArray<mm_float2>* pmeAtomGridIndex;
+    OpenCLSort<mm_float2>* sort;
+    OpenCLFFT3D* fft;
     cl::Kernel exceptionsKernel;
     cl::Kernel ewaldSumsKernel;
     cl::Kernel ewaldForcesKernel;
+    cl::Kernel pmeGridIndexKernel;
+    cl::Kernel pmeAtomRangeKernel;
+    cl::Kernel pmeUpdateBsplinesKernel;
+    cl::Kernel pmeSpreadChargeKernel;
+    cl::Kernel pmeConvolutionKernel;
+    cl::Kernel pmeInterpolateForceKernel;
+    std::map<std::string, std::string> pmeDefines;
     double cutoffSquared, ewaldSelfEnergy;
+    static const int PmeOrder = 5;
 };
 
 /**

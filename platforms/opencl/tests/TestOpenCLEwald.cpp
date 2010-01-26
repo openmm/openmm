@@ -123,7 +123,7 @@ void testEwaldPME() {
     ASSERT_EQUAL_TOL(norm, (clState2.getPotentialEnergy()-clState.getPotentialEnergy())/delta, tol)
 
 //    (3)  Check whether the Reference and OpenCL platforms agree when using PME
-/*
+
     nonbonded->setNonbondedMethod(NonbondedForce::PME);
     clContext.reinitialize();
     referenceContext.reinitialize();
@@ -158,7 +158,7 @@ void testEwaldPME() {
 
     tol = 1e-3;
     State clState3 = clContext3.getState(State::Energy);
-    ASSERT_EQUAL_TOL(norm, (clState3.getPotentialEnergy()-clState.getPotentialEnergy())/delta, tol)*/
+    ASSERT_EQUAL_TOL(norm, (clState3.getPotentialEnergy()-clState.getPotentialEnergy())/delta, tol)
 }
 
 void testEwald2Ions() {
@@ -244,7 +244,7 @@ int main() {
      testEwaldPME();
 //     testEwald2Ions();
      testErrorTolerance(NonbondedForce::Ewald);
-//     testErrorTolerance(NonbondedForce::PME);
+     testErrorTolerance(NonbondedForce::PME);
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;
