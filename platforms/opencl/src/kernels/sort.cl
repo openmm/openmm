@@ -76,8 +76,10 @@ __kernel void computeBucketPositions(int numBuckets, __global int* bucketOffset,
         // Perform a parallel prefix sum.
         
         for (int step = 1; step < get_local_size(0); step *= 2) {
+            int add = buffer[get_local_id(0)-step];
+            barrier(CLK_LOCAL_MEM_FENCE);
             if (get_local_id(0) >= step)
-                buffer[get_local_id(0)] += buffer[get_local_id(0)-step];
+                buffer[get_local_id(0)] += add;
             barrier(CLK_LOCAL_MEM_FENCE);
         }
 
