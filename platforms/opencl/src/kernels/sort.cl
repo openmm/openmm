@@ -23,17 +23,19 @@ __kernel void computeRange(__global TYPE* data, int length, __global float2* ran
     // Now reduce them.
 
     buffer[get_local_id(0)] = minimum;
+    barrier(CLK_LOCAL_MEM_FENCE);
     for (int step = 1; step < get_local_size(0); step *= 2) {
         if (get_local_id(0)+step < get_local_size(0) && get_local_id(0)%(2*step) == 0)
             buffer[get_local_id(0)] = min(buffer[get_local_id(0)], buffer[get_local_id(0)+step]);
-            barrier(CLK_LOCAL_MEM_FENCE);
+        barrier(CLK_LOCAL_MEM_FENCE);
     }
     minimum = buffer[0];
     buffer[get_local_id(0)] = maximum;
+    barrier(CLK_LOCAL_MEM_FENCE);
     for (int step = 1; step < get_local_size(0); step *= 2) {
         if (get_local_id(0)+step < get_local_size(0) && get_local_id(0)%(2*step) == 0)
             buffer[get_local_id(0)] = max(buffer[get_local_id(0)], buffer[get_local_id(0)+step]);
-            barrier(CLK_LOCAL_MEM_FENCE);
+        barrier(CLK_LOCAL_MEM_FENCE);
     }
     maximum = buffer[0];
     if (get_local_id(0) == 0)
