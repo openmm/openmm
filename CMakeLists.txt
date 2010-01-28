@@ -354,7 +354,7 @@ IF(OPENMM_BUILD_FREE_ENERGY_PLUGIN)
 ENDIF(OPENMM_BUILD_FREE_ENERGY_PLUGIN)
 
 # Normal mode langevin plugin
-set(OPENMM_BUILD_NML_PLUGIN ON CACHE BOOL "Build normal-mode langevin plugin")
+set(OPENMM_BUILD_NML_PLUGIN OFF CACHE BOOL "Build normal-mode langevin plugin")
 if(OPENMM_BUILD_NML_PLUGIN)
     add_subdirectory(plugins/normalModeLangevin)
 endif(OPENMM_BUILD_NML_PLUGIN)
