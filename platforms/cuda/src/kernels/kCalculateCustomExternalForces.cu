@@ -116,6 +116,6 @@ void kCalculateCustomExternalForces(gpuContext gpu)
 {
 //    printf("kCalculateCustomExternalForces\n");
     kCalculateCustomExternalForces_kernel<<<gpu->sim.blocks, gpu->sim.localForces_threads_per_block,
-            gpu->sim.customExpressionStackSize*sizeof(float)*gpu->sim.localForces_threads_per_block>>>();
+            (gpu->sim.customExpressionStackSize+9)*sizeof(float)*gpu->sim.localForces_threads_per_block>>>();
     LAUNCHERROR("kCalculateCustomExternalForces");
 }
