@@ -50,6 +50,7 @@ CudaPlatform::CudaPlatform() {
     registerKernelFactory(CalcHarmonicBondForceKernel::Name(), factory);
     registerKernelFactory(CalcCustomBondForceKernel::Name(), factory);
     registerKernelFactory(CalcHarmonicAngleForceKernel::Name(), factory);
+    registerKernelFactory(CalcCustomAngleForceKernel::Name(), factory);
     registerKernelFactory(CalcPeriodicTorsionForceKernel::Name(), factory);
     registerKernelFactory(CalcRBTorsionForceKernel::Name(), factory);
     registerKernelFactory(CalcNonbondedForceKernel::Name(), factory);

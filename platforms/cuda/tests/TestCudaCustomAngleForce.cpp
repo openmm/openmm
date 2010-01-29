@@ -30,12 +30,12 @@
  * -------------------------------------------------------------------------- */
 
 /**
- * This tests the reference implementation of CustomAngleForce.
+ * This tests the CUDA implementation of CustomAngleForce.
  */
 
 #include "../../../tests/AssertionUtilities.h"
 #include "openmm/Context.h"
-#include "ReferencePlatform.h"
+#include "CudaPlatform.h"
 #include "openmm/CustomAngleForce.h"
 #include "openmm/HarmonicAngleForce.h"
 #include "openmm/System.h"
@@ -50,7 +50,7 @@ using namespace std;
 const double TOL = 1e-5;
 
 void testAngles() {
-    ReferencePlatform platform;
+    CudaPlatform platform;
 
     // Create a system using a CustomAngleForce.
 
@@ -92,19 +92,28 @@ void testAngles() {
     VerletIntegrator integrator1(0.01);
     VerletIntegrator integrator2(0.01);
     for (int i = 0; i < 10; i++) {
-        Context c1(customSystem, integrator1, platform);
-        Context c2(harmonicSystem, integrator2, platform);
         for (int j = 0; j < (int) positions.size(); j++)
             positions[j] = Vec3(5.0*genrand_real2(), 5.0*genrand_real2(), 5.0*genrand_real2());
-        c1.setPositions(positions);
-        c2.setPositions(positions);
-        State s1 = c1.getState(State::Forces | State::Energy);
-        State s2 = c2.getState(State::Forces | State::Energy);
-        const vector<Vec3>& forces = s1.getForces();
-        ASSERT_EQUAL_VEC(s1.getForces()[0], s2.getForces()[0], TOL);
-        ASSERT_EQUAL_VEC(s1.getForces()[1], s2.getForces()[1], TOL);
-        ASSERT_EQUAL_VEC(s1.getForces()[2], s2.getForces()[2], TOL);
-        ASSERT_EQUAL_TOL(s1.getPotentialEnergy(), s2.getPotentialEnergy(), TOL);
+        double energy1, energy2;
+        vector<Vec3> forces1, forces2;
+        {
+            Context c(customSystem, integrator1, platform);
+            c.setPositions(positions);
+            State s = c.getState(State::Forces | State::Energy);
+            energy1 = s.getPotentialEnergy();
+            forces1 = s.getForces();
+        }
+        {
+            Context c(harmonicSystem, integrator1, platform);
+            c.setPositions(positions);
+            State s = c.getState(State::Forces | State::Energy);
+            energy2 = s.getPotentialEnergy();
+            forces2 = s.getForces();
+        }
+        ASSERT_EQUAL_VEC(forces2[0], forces1[0], TOL);
+        ASSERT_EQUAL_VEC(forces2[1], forces1[1], TOL);
+        ASSERT_EQUAL_VEC(forces2[2], forces1[2], TOL);
+        ASSERT_EQUAL_TOL(energy2, energy1, TOL);
     }
 }
 
@@ -119,5 +128,6 @@ int main() {
     cout << "Done" << endl;
     return 0;
 }
+
 
 

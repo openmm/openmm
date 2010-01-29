@@ -278,6 +278,54 @@ double CudaCalcHarmonicAngleForceKernel::executeEnergy(ContextImpl& context) {
     return 0.0;
 }
 
+CudaCalcCustomAngleForceKernel::~CudaCalcCustomAngleForceKernel() {
+}
+
+void CudaCalcCustomAngleForceKernel::initialize(const System& system, const CustomAngleForce& force) {
+    numAngles = force.getNumAngles();
+    vector<int> particle1(numAngles);
+    vector<int> particle2(numAngles);
+    vector<int> particle3(numAngles);
+    vector<vector<double> > params(numAngles);
+    for (int i = 0; i < numAngles; i++)
+        force.getAngleParameters(i, particle1[i], particle2[i], particle3[i], params[i]);
+    vector<string> paramNames;
+    for (int i = 0; i < force.getNumPerAngleParameters(); i++)
+        paramNames.push_back(force.getPerAngleParameterName(i));
+    globalParamNames.resize(force.getNumGlobalParameters());
+    globalParamValues.resize(force.getNumGlobalParameters());
+    for (int i = 0; i < force.getNumGlobalParameters(); i++) {
+        globalParamNames[i] = force.getGlobalParameterName(i);
+        globalParamValues[i] = (float) force.getGlobalParameterDefaultValue(i);
+    }
+    gpuSetCustomAngleParameters(data.gpu, particle1, particle2, particle3, params, force.getEnergyFunction(), paramNames, globalParamNames);
+    if (globalParamValues.size() > 0)
+        SetCustomAngleGlobalParams(globalParamValues);
+}
+
+void CudaCalcCustomAngleForceKernel::executeForces(ContextImpl& context) {
+    updateGlobalParams(context);
+    kCalculateCustomAngleForces(data.gpu);
+}
+
+double CudaCalcCustomAngleForceKernel::executeEnergy(ContextImpl& context) {
+    updateGlobalParams(context);
+    kCalculateCustomAngleForces(data.gpu);
+    return 0.0;
+}
+
+void CudaCalcCustomAngleForceKernel::updateGlobalParams(ContextImpl& context) {
+    bool changed = false;
+    for (int i = 0; i < (int) globalParamNames.size(); i++) {
+        float value = (float) context.getParameter(globalParamNames[i]);
+        if (value != globalParamValues[i])
+            changed = true;
+        globalParamValues[i] = value;
+    }
+    if (changed)
+        SetCustomAngleGlobalParams(globalParamValues);
+}
+
 CudaCalcPeriodicTorsionForceKernel::~CudaCalcPeriodicTorsionForceKernel() {
 }
 

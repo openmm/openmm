@@ -702,6 +702,58 @@ void gpuSetCustomBondParameters(gpuContext gpu, const vector<int>& bondAtom1, co
 }
 
 extern "C"
+void gpuSetCustomAngleParameters(gpuContext gpu, const vector<int>& angleAtom1, const vector<int>& angleAtom2, const vector<int>& angleAtom3, const vector<vector<double> >& angleParams,
+            const string& energyExp, const vector<string>& paramNames, const vector<string>& globalParamNames)
+{
+    if (paramNames.size() > 4)
+        throw OpenMMException("CudaPlatform only supports four per-angle parameters for custom angle forces");
+    if (globalParamNames.size() > 8)
+        throw OpenMMException("CudaPlatform only supports eight global parameters for custom angle forces");
+    if (gpu->psCustomAngleID1 != NULL)
+        throw OpenMMException("CudaPlatform only supports a single CustomAngleForce per System");
+    gpu->sim.customAngles = angleAtom1.size();
+    gpu->sim.customAngleParameters = paramNames.size();
+    gpu->psCustomAngleID1 = new CUDAStream<int4>(gpu->sim.customAngles, 1, "CustomAngleId1");
+    gpu->sim.pCustomAngleID1 = gpu->psCustomAngleID1->_pDevData;
+    gpu->psCustomAngleID2 = new CUDAStream<int2>(gpu->sim.customAngles, 1, "CustomAngleId2");
+    gpu->sim.pCustomAngleID2 = gpu->psCustomAngleID2->_pDevData;
+    gpu->psCustomAngleParams = new CUDAStream<float4>(gpu->sim.customAngles, 1, "CustomAngleParams");
+    gpu->sim.pCustomAngleParams = gpu->psCustomAngleParams->_pDevData;
+    vector<int> forceBufferCounter(gpu->natoms, 0);
+    for (int i = 0; i < (int) angleAtom1.size(); i++) {
+        (*gpu->psCustomAngleID1)[i].x = angleAtom1[i];
+        (*gpu->psCustomAngleID1)[i].y = angleAtom2[i];
+        (*gpu->psCustomAngleID1)[i].z = angleAtom3[i];
+        (*gpu->psCustomAngleID1)[i].w = forceBufferCounter[angleAtom1[i]]++;
+        (*gpu->psCustomAngleID2)[i].x = forceBufferCounter[angleAtom2[i]]++;
+        (*gpu->psCustomAngleID2)[i].y = forceBufferCounter[angleAtom2[i]]++;
+        if (angleParams[i].size() > 0)
+            (*gpu->psCustomAngleParams)[i].x = (float) angleParams[i][0];
+        if (angleParams[i].size() > 1)
+            (*gpu->psCustomAngleParams)[i].y = (float) angleParams[i][1];
+        if (angleParams[i].size() > 2)
+            (*gpu->psCustomAngleParams)[i].z = (float) angleParams[i][2];
+        if (angleParams[i].size() > 3)
+            (*gpu->psCustomAngleParams)[i].w = (float) angleParams[i][3];
+    }
+    gpu->psCustomAngleID1->Upload();
+    gpu->psCustomAngleID2->Upload();
+    gpu->psCustomAngleParams->Upload();
+    for (int i = 0; i < (int) forceBufferCounter.size(); i++)
+        if (forceBufferCounter[i] > (int) gpu->pOutputBufferCounter[i])
+            gpu->pOutputBufferCounter[i] = forceBufferCounter[i];
+
+    // Create the Expressions.
+
+    vector<string> variables;
+    variables.push_back("theta");
+    for (int i = 0; i < (int) paramNames.size(); i++)
+        variables.push_back(paramNames[i]);
+    SetCustomAngleEnergyExpression(createExpression<256>(gpu, energyExp, Lepton::Parser::parse(energyExp).optimize().createProgram(), variables, globalParamNames, gpu->sim.customExpressionStackSize));
+    SetCustomAngleForceExpression(createExpression<256>(gpu, energyExp, Lepton::Parser::parse(energyExp).differentiate("theta").optimize().createProgram(), variables, globalParamNames, gpu->sim.customExpressionStackSize));
+}
+
+extern "C"
 void gpuSetCustomExternalParameters(gpuContext gpu, const vector<int>& atomIndex, const vector<vector<double> >& atomParams,
             const string& energyExp, const vector<string>& paramNames, const vector<string>& globalParamNames)
 {
@@ -1829,10 +1881,11 @@ void* gpuInit(int numAtoms, unsigned int device, bool useBlockingSync)
     gpu->psLJ14ID                   = NULL;
     gpu->psLJ14Parameter            = NULL;
     gpu->psCustomParams             = NULL;
-    gpu->psCustomExceptionID        = NULL;
-    gpu->psCustomExceptionParams    = NULL;
     gpu->psCustomBondID             = NULL;
     gpu->psCustomBondParams         = NULL;
+    gpu->psCustomAngleID1           = NULL;
+    gpu->psCustomAngleID2           = NULL;
+    gpu->psCustomAngleParams        = NULL;
     gpu->psCustomExternalID         = NULL;
     gpu->psCustomExternalParams     = NULL;
     gpu->psEwaldCosSinSum           = NULL;
@@ -1999,14 +2052,16 @@ void gpuShutDown(gpuContext gpu)
     delete gpu->psxVector4;
     delete gpu->psvVector4;
     delete gpu->psSigEps2;
-    if (gpu->psCustomParams != NULL) {
+    if (gpu->psCustomParams != NULL)
         delete gpu->psCustomParams;
-        delete gpu->psCustomExceptionID;
-        delete gpu->psCustomExceptionParams;
-    }
     if (gpu->psCustomBondParams != NULL) {
         delete gpu->psCustomBondID;
         delete gpu->psCustomBondParams;
+    }
+    if (gpu->psCustomAngleParams != NULL) {
+        delete gpu->psCustomAngleID1;
+        delete gpu->psCustomAngleID2;
+        delete gpu->psCustomAngleParams;
     }
     if (gpu->psCustomExternalParams != NULL) {
         delete gpu->psCustomExternalID;
@@ -2380,6 +2435,7 @@ int gpuSetConstants(gpuContext gpu)
     SetCalculateCDLJObcGbsaForces1Sim(gpu);
     SetCalculateCustomNonbondedForcesSim(gpu);
     SetCalculateCustomBondForcesSim(gpu);
+    SetCalculateCustomAngleForcesSim(gpu);
     SetCalculateCustomExternalForcesSim(gpu);
     SetCalculateLocalForcesSim(gpu);
     SetCalculateObcGbsaBornSumSim(gpu);

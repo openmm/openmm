@@ -257,6 +257,44 @@ private:
 };
 
 /**
+ * This kernel is invoked by CustomAngleForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CudaCalcCustomAngleForceKernel : public CalcCustomAngleForceKernel {
+public:
+    CudaCalcCustomAngleForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data, System& system) : CalcCustomAngleForceKernel(name, platform),
+            data(data), system(system) {
+    }
+    ~CudaCalcCustomAngleForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomAngleForce this kernel will be used for
+     */
+    void initialize(const System& system, const CustomAngleForce& force);
+    /**
+     * Execute the kernel to calculate the forces.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void executeForces(ContextImpl& context);
+    /**
+     * Execute the kernel to calculate the energy.
+     *
+     * @param context    the context in which to execute this kernel
+     * @return the potential energy due to the CustomAngleForce
+     */
+    double executeEnergy(ContextImpl& context);
+private:
+    void updateGlobalParams(ContextImpl& context);
+    int numAngles;
+    CudaPlatform::PlatformData& data;
+    std::vector<std::string> globalParamNames;
+    std::vector<float> globalParamValues;
+    System& system;
+};
+
+/**
  * This kernel is invoked by PeriodicTorsionForce to calculate the forces acting on the system and the energy of the system.
  */
 class CudaCalcPeriodicTorsionForceKernel : public CalcPeriodicTorsionForceKernel {

@@ -43,6 +43,8 @@ KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform
         return new CudaCalcCustomBondForceKernel(name, platform, data, context.getSystem());
     if (name == CalcHarmonicAngleForceKernel::Name())
         return new CudaCalcHarmonicAngleForceKernel(name, platform, data, context.getSystem());
+    if (name == CalcCustomAngleForceKernel::Name())
+        return new CudaCalcCustomAngleForceKernel(name, platform, data, context.getSystem());
     if (name == CalcPeriodicTorsionForceKernel::Name())
         return new CudaCalcPeriodicTorsionForceKernel(name, platform, data, context.getSystem());
     if (name == CalcRBTorsionForceKernel::Name())

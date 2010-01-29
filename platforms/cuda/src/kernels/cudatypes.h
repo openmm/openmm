@@ -352,14 +352,17 @@ struct cudaGmxSimulation {
     float4*         pGBVIData;                      // Pointer to fixed Born data for GB/VI algorithm
     float2*         pAttr;                          // Pointer to additional atom attributes (sig, eps)
     float4*         pCustomParams;                  // Pointer to atom parameters for custom nonbonded force
-    int4*           pCustomExceptionID;             // Atom indices for custom nonbonded exceptions
-    float4*         pCustomExceptionParams;         // Parameters for custom nonbonded exceptions
     unsigned int    customExceptions;               // Number of custom nonbonded exceptions
     unsigned int    customParameters;               // Number of parameters for custom nonbonded interactions
     int4*           pCustomBondID;                  // Atom indices for custom bonds
     float4*         pCustomBondParams;              // Parameters for custom bonds
     unsigned int    customBonds;                    // Number of custom bonds
     unsigned int    customBondParameters;           // Number of parameters for custom bonds
+    int4*           pCustomAngleID1;                // Atom indices for custom angles
+    int2*           pCustomAngleID2;                // Atom indices for custom angles
+    float4*         pCustomAngleParams;             // Parameters for custom angles
+    unsigned int    customAngles;                   // Number of custom angles
+    unsigned int    customAngleParameters;          // Number of parameters for custom angles
     int*            pCustomExternalID;              // Atom indices for custom external force
     float4*         pCustomExternalParams;          // Parameters for custom external force
     unsigned int    customExternals;                // Number of particles for custom external force
