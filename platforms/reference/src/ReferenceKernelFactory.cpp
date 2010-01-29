@@ -54,6 +54,8 @@ KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name, const Pla
         return new ReferenceCalcHarmonicAngleForceKernel(name, platform);
     if (name == CalcHarmonicAngleForceKernel::Name())
         return new ReferenceCalcHarmonicAngleForceKernel(name, platform);
+    if (name == CalcCustomAngleForceKernel::Name())
+        return new ReferenceCalcCustomAngleForceKernel(name, platform);
     if (name == CalcPeriodicTorsionForceKernel::Name())
         return new ReferenceCalcPeriodicTorsionForceKernel(name, platform);
     if (name == CalcRBTorsionForceKernel::Name())

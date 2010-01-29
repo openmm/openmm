@@ -1,0 +1,113 @@
+/* -------------------------------------------------------------------------- *
+ *                                   OpenMM                                   *
+ * -------------------------------------------------------------------------- *
+ * This is part of the OpenMM molecular simulation toolkit originating from   *
+ * Simbios, the NIH National Center for Physics-Based Simulation of           *
+ * Biological Structures at Stanford, funded under the NIH Roadmap for        *
+ * Medical Research, grant U54 GM072970. See https://simtk.org.               *
+ *                                                                            *
+ * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Authors: Peter Eastman                                                     *
+ * Contributors:                                                              *
+ *                                                                            *
+ * Permission is hereby granted, free of charge, to any person obtaining a    *
+ * copy of this software and associated documentation files (the "Software"), *
+ * to deal in the Software without restriction, including without limitation  *
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,   *
+ * and/or sell copies of the Software, and to permit persons to whom the      *
+ * Software is furnished to do so, subject to the following conditions:       *
+ *                                                                            *
+ * The above copyright notice and this permission notice shall be included in *
+ * all copies or substantial portions of the Software.                        *
+ *                                                                            *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR *
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,   *
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL    *
+ * THE AUTHORS, CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,    *
+ * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR      *
+ * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE  *
+ * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
+ * -------------------------------------------------------------------------- */
+
+#include "openmm/Force.h"
+#include "openmm/OpenMMException.h"
+#include "openmm/CustomAngleForce.h"
+#include "openmm/internal/CustomAngleForceImpl.h"
+#include <cmath>
+#include <map>
+#include <sstream>
+#include <utility>
+
+using namespace OpenMM;
+using std::string;
+using std::stringstream;
+using std::vector;
+
+CustomAngleForce::CustomAngleForce(const string& energy) : energyExpression(energy) {
+}
+
+const string& CustomAngleForce::getEnergyFunction() const {
+    return energyExpression;
+}
+
+void CustomAngleForce::setEnergyFunction(const std::string& energy) {
+    energyExpression = energy;
+}
+
+int CustomAngleForce::addPerAngleParameter(const string& name) {
+    parameters.push_back(AngleParameterInfo(name));
+    return parameters.size()-1;
+}
+
+const string& CustomAngleForce::getPerAngleParameterName(int index) const {
+    return parameters[index].name;
+}
+
+void CustomAngleForce::setPerAngleParameterName(int index, const string& name) {
+    parameters[index].name = name;
+}
+
+int CustomAngleForce::addGlobalParameter(const string& name, double defaultValue) {
+    globalParameters.push_back(GlobalParameterInfo(name, defaultValue));
+    return globalParameters.size()-1;
+}
+
+const string& CustomAngleForce::getGlobalParameterName(int index) const {
+    return globalParameters[index].name;
+}
+
+void CustomAngleForce::setGlobalParameterName(int index, const string& name) {
+    globalParameters[index].name = name;
+}
+
+double CustomAngleForce::getGlobalParameterDefaultValue(int index) const {
+    return globalParameters[index].defaultValue;
+}
+
+void CustomAngleForce::setGlobalParameterDefaultValue(int index, double defaultValue) {
+    globalParameters[index].defaultValue = defaultValue;
+}
+
+int CustomAngleForce::addAngle(int particle1, int particle2, int particle3, const vector<double>& parameters) {
+    angles.push_back(AngleInfo(particle1, particle2, particle3, parameters));
+    return angles.size()-1;
+}
+
+void CustomAngleForce::getAngleParameters(int index, int& particle1, int& particle2, int& particle3, std::vector<double>& parameters) const {
+    particle1 = angles[index].particle1;
+    particle2 = angles[index].particle2;
+    particle3 = angles[index].particle3;
+    parameters = angles[index].parameters;
+}
+
+void CustomAngleForce::setAngleParameters(int index, int particle1, int particle2, int particle3, const vector<double>& parameters) {
+    angles[index].parameters = parameters;
+    angles[index].particle1 = particle1;
+    angles[index].particle2 = particle2;
+    angles[index].particle3 = particle3;
+}
+
+ForceImpl* CustomAngleForce::createImpl() {
+    return new CustomAngleForceImpl(*this);
+}
+

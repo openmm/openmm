@@ -37,6 +37,7 @@
 #include "SimTKReference/ReferenceBondForce.h"
 #include "SimTKReference/ReferenceBrownianDynamics.h"
 #include "SimTKReference/ReferenceCCMAAlgorithm.h"
+#include "SimTKReference/ReferenceCustomAngleIxn.h"
 #include "SimTKReference/ReferenceCustomBondIxn.h"
 #include "SimTKReference/ReferenceCustomExternalIxn.h"
 #include "SimTKReference/ReferenceCustomGBIxn.h"
@@ -277,7 +278,7 @@ void ReferenceCalcCustomBondForceKernel::initialize(const System& system, const 
 
     // Build the arrays.
 
-    bondIndexArray = allocateIntArray(numBonds, numParameters);
+    bondIndexArray = allocateIntArray(numBonds, 2);
     bondParamArray = allocateRealArray(numBonds, numParameters);
     vector<double> params;
     for (int i = 0; i < force.getNumBonds(); ++i) {
@@ -368,6 +369,70 @@ double ReferenceCalcHarmonicAngleForceKernel::executeEnergy(ContextImpl& context
     for (int i = 0; i < numAngles; ++i)
         energyArray[i] = 0;
     refBondForce.calculateForce(numAngles, angleIndexArray, posData, angleParamArray, forceData, energyArray, 0, &energy, angleBond);
+    disposeRealArray(forceData, context.getSystem().getNumParticles());
+    delete[] energyArray;
+    return energy;
+}
+
+ReferenceCalcCustomAngleForceKernel::~ReferenceCalcCustomAngleForceKernel() {
+    disposeIntArray(angleIndexArray, numAngles);
+    disposeRealArray(angleParamArray, numAngles);
+}
+
+void ReferenceCalcCustomAngleForceKernel::initialize(const System& system, const CustomAngleForce& force) {
+    numAngles = force.getNumAngles();
+    int numParameters = force.getNumPerAngleParameters();
+
+    // Build the arrays.
+
+    angleIndexArray = allocateIntArray(numAngles, 3);
+    angleParamArray = allocateRealArray(numAngles, numParameters);
+    vector<double> params;
+    for (int i = 0; i < force.getNumAngles(); ++i) {
+        int particle1, particle2, particle3;
+        force.getAngleParameters(i, particle1, particle2, particle3, params);
+        angleIndexArray[i][0] = particle1;
+        angleIndexArray[i][1] = particle2;
+        angleIndexArray[i][2] = particle3;
+        for (int j = 0; j < numParameters; j++)
+            angleParamArray[i][j] = (RealOpenMM) params[j];
+    }
+
+    // Parse the expression used to calculate the force.
+
+    Lepton::ParsedExpression expression = Lepton::Parser::parse(force.getEnergyFunction()).optimize();
+    energyExpression = expression.createProgram();
+    forceExpression = expression.differentiate("theta").optimize().createProgram();
+    for (int i = 0; i < numParameters; i++)
+        parameterNames.push_back(force.getPerAngleParameterName(i));
+    for (int i = 0; i < force.getNumGlobalParameters(); i++)
+        globalParameterNames.push_back(force.getGlobalParameterName(i));
+}
+
+void ReferenceCalcCustomAngleForceKernel::executeForces(ContextImpl& context) {
+    RealOpenMM** posData = extractPositions(context);
+    RealOpenMM** forceData = extractForces(context);
+    map<string, double> globalParameters;
+    for (int i = 0; i < (int) globalParameterNames.size(); i++)
+        globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
+    ReferenceBondForce refBondForce;
+    ReferenceCustomAngleIxn harmonicAngle(energyExpression, forceExpression, parameterNames, globalParameters);
+    refBondForce.calculateForce(numAngles, angleIndexArray, posData, angleParamArray, forceData, 0, 0, 0, harmonicAngle);
+}
+
+double ReferenceCalcCustomAngleForceKernel::executeEnergy(ContextImpl& context) {
+    RealOpenMM** posData = extractPositions(context);
+    RealOpenMM** forceData = allocateRealArray(context.getSystem().getNumParticles(), 3);
+    RealOpenMM* energyArray = new RealOpenMM[numAngles];
+    RealOpenMM energy = 0;
+    map<string, double> globalParameters;
+    for (int i = 0; i < (int) globalParameterNames.size(); i++)
+        globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
+    ReferenceBondForce refBondForce;
+    ReferenceCustomAngleIxn harmonicAngle(energyExpression, forceExpression, parameterNames, globalParameters);
+    for (int i = 0; i < numAngles; ++i)
+        energyArray[i] = 0;
+    refBondForce.calculateForce(numAngles, angleIndexArray, posData, angleParamArray, forceData, energyArray, 0, &energy, harmonicAngle);
     disposeRealArray(forceData, context.getSystem().getNumParticles());
     delete[] energyArray;
     return energy;

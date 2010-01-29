@@ -263,6 +263,42 @@ private:
 };
 
 /**
+ * This kernel is invoked by CustomAngleForce to calculate the forces acting on the system and the energy of the system.
+ */
+class ReferenceCalcCustomAngleForceKernel : public CalcCustomAngleForceKernel {
+public:
+    ReferenceCalcCustomAngleForceKernel(std::string name, const Platform& platform) : CalcCustomAngleForceKernel(name, platform) {
+    }
+    ~ReferenceCalcCustomAngleForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomAngleForce this kernel will be used for
+     */
+    void initialize(const System& system, const CustomAngleForce& force);
+    /**
+     * Execute the kernel to calculate the forces.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void executeForces(ContextImpl& context);
+    /**
+     * Execute the kernel to calculate the energy.
+     *
+     * @param context    the context in which to execute this kernel
+     * @return the potential energy due to the CustomAngleForce
+     */
+    double executeEnergy(ContextImpl& context);
+private:
+    int numAngles;
+    int **angleIndexArray;
+    RealOpenMM **angleParamArray;
+    Lepton::ExpressionProgram energyExpression, forceExpression;
+    std::vector<std::string> parameterNames, globalParameterNames;
+};
+
+/**
  * This kernel is invoked by PeriodicTorsionForce to calculate the forces acting on the system and the energy of the system.
  */
 class ReferenceCalcPeriodicTorsionForceKernel : public CalcPeriodicTorsionForceKernel {
