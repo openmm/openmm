@@ -484,6 +484,161 @@ double OpenCLCalcHarmonicAngleForceKernel::executeEnergy(ContextImpl& context) {
     return 0.0;
 }
 
+class OpenCLCustomAngleForceInfo : public OpenCLForceInfo {
+public:
+    OpenCLCustomAngleForceInfo(int requiredBuffers, const CustomAngleForce& force) : OpenCLForceInfo(requiredBuffers), force(force) {
+    }
+    int getNumParticleGroups() {
+        return force.getNumAngles();
+    }
+    void getParticlesInGroup(int index, std::vector<int>& particles) {
+        int particle1, particle2, particle3;
+        vector<double> parameters;
+        force.getAngleParameters(index, particle1, particle2, particle3, parameters);
+        particles.resize(3);
+        particles[0] = particle1;
+        particles[1] = particle2;
+        particles[2] = particle3;
+    }
+    bool areGroupsIdentical(int group1, int group2) {
+        int particle1, particle2, particle3;
+        vector<double> parameters1, parameters2;
+        force.getAngleParameters(group1, particle1, particle2, particle3, parameters1);
+        force.getAngleParameters(group2, particle1, particle2, particle3, parameters2);
+        for (int i = 0; i < (int) parameters1.size(); i++)
+            if (parameters1[i] != parameters2[i])
+                return false;
+        return true;
+    }
+private:
+    const CustomAngleForce& force;
+};
+
+OpenCLCalcCustomAngleForceKernel::~OpenCLCalcCustomAngleForceKernel() {
+    if (params != NULL)
+        delete params;
+    if (indices != NULL)
+        delete indices;
+    if (globals != NULL)
+        delete globals;
+}
+
+void OpenCLCalcCustomAngleForceKernel::initialize(const System& system, const CustomAngleForce& force) {
+    numAngles = force.getNumAngles();
+    if (numAngles == 0)
+        return;
+    params = new OpenCLParameterSet(cl, force.getNumPerAngleParameters(), numAngles, "customAngleParams");
+    indices = new OpenCLArray<mm_int8>(cl, numAngles, "customAngleIndices");
+    string extraArguments;
+    if (force.getNumGlobalParameters() > 0) {
+        globals = new OpenCLArray<cl_float>(cl, force.getNumGlobalParameters(), "customAngleGlobals", false, CL_MEM_READ_ONLY);
+        extraArguments += ", __constant float* globals";
+    }
+    vector<int> forceBufferCounter(system.getNumParticles(), 0);
+    vector<vector<cl_float> > paramVector(numAngles);
+    vector<mm_int8> indicesVector(numAngles);
+    for (int i = 0; i < numAngles; i++) {
+        int particle1, particle2, particle3;
+        vector<double> parameters;
+        force.getAngleParameters(i, particle1, particle2, particle3, parameters);
+        paramVector[i].resize(parameters.size());
+        for (int j = 0; j < (int) parameters.size(); j++)
+            paramVector[i][j] = (cl_float) parameters[j];
+        indicesVector[i] = mm_int8(particle1, particle2, particle3, forceBufferCounter[particle1]++,
+                forceBufferCounter[particle2]++, forceBufferCounter[particle3]++, 0, 0);
+    }
+    params->setParameterValues(paramVector);
+    indices->upload(indicesVector);
+    int maxBuffers = 1;
+    for (int i = 0; i < (int) forceBufferCounter.size(); i++)
+        maxBuffers = max(maxBuffers, forceBufferCounter[i]);
+    cl.addForce(new OpenCLCustomAngleForceInfo(maxBuffers, force));
+
+    // Record information for the expressions.
+
+    vector<string> paramNames;
+    for (int i = 0; i < force.getNumPerAngleParameters(); i++)
+        paramNames.push_back(force.getPerAngleParameterName(i));
+    globalParamNames.resize(force.getNumGlobalParameters());
+    globalParamValues.resize(force.getNumGlobalParameters());
+    for (int i = 0; i < force.getNumGlobalParameters(); i++) {
+        globalParamNames[i] = force.getGlobalParameterName(i);
+        globalParamValues[i] = (cl_float) force.getGlobalParameterDefaultValue(i);
+    }
+    if (globals != NULL)
+        globals->upload(globalParamValues);
+    Lepton::ParsedExpression energyExpression = Lepton::Parser::parse(force.getEnergyFunction()).optimize();
+    Lepton::ParsedExpression forceExpression = energyExpression.differentiate("theta").optimize();
+    map<string, Lepton::ParsedExpression> expressions;
+    expressions["energy += "] = energyExpression;
+    expressions["float dEdR = "] = forceExpression;
+
+    // Create the kernels.
+
+    map<string, string> variables;
+    variables["theta"] = "theta";
+    for (int i = 0; i < force.getNumPerAngleParameters(); i++) {
+        const string& name = force.getPerAngleParameterName(i);
+        variables[name] = "angleParams"+params->getParameterSuffix(i);
+    }
+    for (int i = 0; i < force.getNumGlobalParameters(); i++) {
+        const string& name = force.getGlobalParameterName(i);
+        string value = "globals["+intToString(i)+"]";
+        variables[name] = value;
+    }
+    stringstream compute;
+    for (int i = 0; i < (int) params->getBuffers().size(); i++) {
+        const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
+        extraArguments += ", __global "+buffer.getType()+"* "+buffer.getName();
+        compute<<buffer.getType()<<" angleParams"<<(i+1)<<" = "<<buffer.getName()<<"[index];\n";
+    }
+    vector<pair<string, string> > functions;
+    compute << OpenCLExpressionUtilities::createExpressions(expressions, variables, functions, "temp", "");
+    map<string, string> replacements;
+    replacements["COMPUTE_FORCE"] = compute.str();
+    replacements["EXTRA_ARGUMENTS"] = extraArguments;
+    cl::Program program = cl.createProgram(cl.replaceStrings(OpenCLKernelSources::customAngleForce, replacements));
+    kernel = cl::Kernel(program, "computeCustomAngleForces");
+}
+
+void OpenCLCalcCustomAngleForceKernel::executeForces(ContextImpl& context) {
+    if (numAngles == 0)
+        return;
+    if (globals != NULL) {
+        bool changed = false;
+        for (int i = 0; i < (int) globalParamNames.size(); i++) {
+            cl_float value = (cl_float) context.getParameter(globalParamNames[i]);
+            if (value != globalParamValues[i])
+                changed = true;
+            globalParamValues[i] = value;
+        }
+        if (changed)
+            globals->upload(globalParamValues);
+    }
+    if (!hasInitializedKernel) {
+        hasInitializedKernel = true;
+        kernel.setArg<cl_int>(0, cl.getPaddedNumAtoms());
+        kernel.setArg<cl_int>(1, numAngles);
+        kernel.setArg<cl::Buffer>(2, cl.getForceBuffers().getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(3, cl.getEnergyBuffer().getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(4, cl.getPosq().getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(5, indices->getDeviceBuffer());
+        int nextIndex = 6;
+        if (globals != NULL)
+            kernel.setArg<cl::Buffer>(nextIndex++, globals->getDeviceBuffer());
+        for (int i = 0; i < (int) params->getBuffers().size(); i++) {
+            const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
+            kernel.setArg<cl::Buffer>(nextIndex++, buffer.getBuffer());
+        }
+    }
+    cl.executeKernel(kernel, numAngles);
+}
+
+double OpenCLCalcCustomAngleForceKernel::executeEnergy(ContextImpl& context) {
+    executeForces(context);
+    return 0.0;
+}
+
 class OpenCLPeriodicTorsionForceInfo : public OpenCLForceInfo {
 public:
     OpenCLPeriodicTorsionForceInfo(int requiredBuffers, const PeriodicTorsionForce& force) : OpenCLForceInfo(requiredBuffers), force(force) {

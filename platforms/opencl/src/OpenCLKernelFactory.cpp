@@ -44,6 +44,8 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
         return new OpenCLCalcCustomBondForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcHarmonicAngleForceKernel::Name())
         return new OpenCLCalcHarmonicAngleForceKernel(name, platform, cl, context.getSystem());
+    if (name == CalcCustomAngleForceKernel::Name())
+        return new OpenCLCalcCustomAngleForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcPeriodicTorsionForceKernel::Name())
         return new OpenCLCalcPeriodicTorsionForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcRBTorsionForceKernel::Name())
