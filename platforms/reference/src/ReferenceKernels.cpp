@@ -42,6 +42,7 @@
 #include "SimTKReference/ReferenceCustomExternalIxn.h"
 #include "SimTKReference/ReferenceCustomGBIxn.h"
 #include "SimTKReference/ReferenceCustomNonbondedIxn.h"
+#include "SimTKReference/ReferenceCustomTorsionIxn.h"
 #include "SimTKReference/ReferenceHarmonicBondIxn.h"
 #include "SimTKReference/ReferenceLJCoulomb14.h"
 #include "SimTKReference/ReferenceLJCoulombIxn.h"
@@ -416,8 +417,8 @@ void ReferenceCalcCustomAngleForceKernel::executeForces(ContextImpl& context) {
     for (int i = 0; i < (int) globalParameterNames.size(); i++)
         globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
     ReferenceBondForce refBondForce;
-    ReferenceCustomAngleIxn harmonicAngle(energyExpression, forceExpression, parameterNames, globalParameters);
-    refBondForce.calculateForce(numAngles, angleIndexArray, posData, angleParamArray, forceData, 0, 0, 0, harmonicAngle);
+    ReferenceCustomAngleIxn customAngle(energyExpression, forceExpression, parameterNames, globalParameters);
+    refBondForce.calculateForce(numAngles, angleIndexArray, posData, angleParamArray, forceData, 0, 0, 0, customAngle);
 }
 
 double ReferenceCalcCustomAngleForceKernel::executeEnergy(ContextImpl& context) {
@@ -429,10 +430,10 @@ double ReferenceCalcCustomAngleForceKernel::executeEnergy(ContextImpl& context) 
     for (int i = 0; i < (int) globalParameterNames.size(); i++)
         globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
     ReferenceBondForce refBondForce;
-    ReferenceCustomAngleIxn harmonicAngle(energyExpression, forceExpression, parameterNames, globalParameters);
+    ReferenceCustomAngleIxn customAngle(energyExpression, forceExpression, parameterNames, globalParameters);
     for (int i = 0; i < numAngles; ++i)
         energyArray[i] = 0;
-    refBondForce.calculateForce(numAngles, angleIndexArray, posData, angleParamArray, forceData, energyArray, 0, &energy, harmonicAngle);
+    refBondForce.calculateForce(numAngles, angleIndexArray, posData, angleParamArray, forceData, energyArray, 0, &energy, customAngle);
     disposeRealArray(forceData, context.getSystem().getNumParticles());
     delete[] energyArray;
     return energy;
@@ -528,6 +529,71 @@ double ReferenceCalcRBTorsionForceKernel::executeEnergy(ContextImpl& context) {
     for (int i = 0; i < numTorsions; ++i)
         energyArray[i] = 0;
     refBondForce.calculateForce(numTorsions, torsionIndexArray, posData, torsionParamArray, forceData, energyArray, 0, &energy, rbTorsionBond);
+    disposeRealArray(forceData, context.getSystem().getNumParticles());
+    delete[] energyArray;
+    return energy;
+}
+
+ReferenceCalcCustomTorsionForceKernel::~ReferenceCalcCustomTorsionForceKernel() {
+    disposeIntArray(torsionIndexArray, numTorsions);
+    disposeRealArray(torsionParamArray, numTorsions);
+}
+
+void ReferenceCalcCustomTorsionForceKernel::initialize(const System& system, const CustomTorsionForce& force) {
+    numTorsions = force.getNumTorsions();
+    int numParameters = force.getNumPerTorsionParameters();
+
+    // Build the arrays.
+
+    torsionIndexArray = allocateIntArray(numTorsions, 4);
+    torsionParamArray = allocateRealArray(numTorsions, numParameters);
+    vector<double> params;
+    for (int i = 0; i < force.getNumTorsions(); ++i) {
+        int particle1, particle2, particle3, particle4;
+        force.getTorsionParameters(i, particle1, particle2, particle3, particle4, params);
+        torsionIndexArray[i][0] = particle1;
+        torsionIndexArray[i][1] = particle2;
+        torsionIndexArray[i][2] = particle3;
+        torsionIndexArray[i][3] = particle4;
+        for (int j = 0; j < numParameters; j++)
+            torsionParamArray[i][j] = (RealOpenMM) params[j];
+    }
+
+    // Parse the expression used to calculate the force.
+
+    Lepton::ParsedExpression expression = Lepton::Parser::parse(force.getEnergyFunction()).optimize();
+    energyExpression = expression.createProgram();
+    forceExpression = expression.differentiate("theta").optimize().createProgram();
+    for (int i = 0; i < numParameters; i++)
+        parameterNames.push_back(force.getPerTorsionParameterName(i));
+    for (int i = 0; i < force.getNumGlobalParameters(); i++)
+        globalParameterNames.push_back(force.getGlobalParameterName(i));
+}
+
+void ReferenceCalcCustomTorsionForceKernel::executeForces(ContextImpl& context) {
+    RealOpenMM** posData = extractPositions(context);
+    RealOpenMM** forceData = extractForces(context);
+    map<string, double> globalParameters;
+    for (int i = 0; i < (int) globalParameterNames.size(); i++)
+        globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
+    ReferenceBondForce refBondForce;
+    ReferenceCustomTorsionIxn customTorsion(energyExpression, forceExpression, parameterNames, globalParameters);
+    refBondForce.calculateForce(numTorsions, torsionIndexArray, posData, torsionParamArray, forceData, 0, 0, 0, customTorsion);
+}
+
+double ReferenceCalcCustomTorsionForceKernel::executeEnergy(ContextImpl& context) {
+    RealOpenMM** posData = extractPositions(context);
+    RealOpenMM** forceData = allocateRealArray(context.getSystem().getNumParticles(), 3);
+    RealOpenMM* energyArray = new RealOpenMM[numTorsions];
+    RealOpenMM energy = 0;
+    map<string, double> globalParameters;
+    for (int i = 0; i < (int) globalParameterNames.size(); i++)
+        globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
+    ReferenceBondForce refBondForce;
+    ReferenceCustomTorsionIxn customTorsion(energyExpression, forceExpression, parameterNames, globalParameters);
+    for (int i = 0; i < numTorsions; ++i)
+        energyArray[i] = 0;
+    refBondForce.calculateForce(numTorsions, torsionIndexArray, posData, torsionParamArray, forceData, energyArray, 0, &energy, customTorsion);
     disposeRealArray(forceData, context.getSystem().getNumParticles());
     delete[] energyArray;
     return energy;

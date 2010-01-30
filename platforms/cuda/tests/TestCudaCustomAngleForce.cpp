@@ -110,9 +110,8 @@ void testAngles() {
             energy2 = s.getPotentialEnergy();
             forces2 = s.getForces();
         }
-        ASSERT_EQUAL_VEC(forces2[0], forces1[0], TOL);
-        ASSERT_EQUAL_VEC(forces2[1], forces1[1], TOL);
-        ASSERT_EQUAL_VEC(forces2[2], forces1[2], TOL);
+        for (int i = 0; i < customSystem.getNumParticles(); i++)
+            ASSERT_EQUAL_VEC(forces2[i], forces1[i], TOL);
         ASSERT_EQUAL_TOL(energy2, energy1, TOL);
     }
 }

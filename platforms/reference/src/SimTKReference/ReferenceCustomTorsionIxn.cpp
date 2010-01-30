@@ -1,0 +1,182 @@
+/* Portions copyright (c) 2010 Stanford University and Simbios.
+ * Contributors: Peter Eastman
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the
+ * "Software"), to deal in the Software without restriction, including
+ * without limitation the rights to use, copy, modify, merge, publish,
+ * distribute, sublicense, and/or sell copies of the Software, and to
+ * permit persons to whom the Software is furnished to do so, subject
+ * to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS, CONTRIBUTORS OR COPYRIGHT HOLDERS BE
+ * LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+ * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+ * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+#include <string.h>
+#include <sstream>
+
+#include "../SimTKUtilities/SimTKOpenMMCommon.h"
+#include "../SimTKUtilities/SimTKOpenMMLog.h"
+#include "../SimTKUtilities/SimTKOpenMMUtilities.h"
+#include "ReferenceCustomTorsionIxn.h"
+#include "ReferenceForce.h"
+
+using namespace std;
+
+/**---------------------------------------------------------------------------------------
+
+   ReferenceCustomTorsionIxn constructor
+
+   --------------------------------------------------------------------------------------- */
+
+ReferenceCustomTorsionIxn::ReferenceCustomTorsionIxn(const Lepton::ExpressionProgram& energyExpression,
+        const Lepton::ExpressionProgram& forceExpression, const vector<string>& parameterNames, map<string, double> globalParameters) :
+        energyExpression(energyExpression), forceExpression(forceExpression), paramNames(parameterNames), globalParameters(globalParameters) {
+
+   // ---------------------------------------------------------------------------------------
+
+   // static const char* methodName = "\nReferenceCustomTorsionIxn::ReferenceCustomTorsionIxn";
+
+   // ---------------------------------------------------------------------------------------
+
+}
+
+/**---------------------------------------------------------------------------------------
+
+   ReferenceCustomTorsionIxn destructor
+
+   --------------------------------------------------------------------------------------- */
+
+ReferenceCustomTorsionIxn::~ReferenceCustomTorsionIxn( ){
+
+   // ---------------------------------------------------------------------------------------
+
+   // static const char* methodName = "\nReferenceCustomTorsionIxn::~ReferenceCustomTorsionIxn";
+
+   // ---------------------------------------------------------------------------------------
+
+}
+
+/**---------------------------------------------------------------------------------------
+
+   Calculate Custom Torsion Ixn
+
+   @param atomIndices      atom indices of atom participating in bond
+   @param atomCoordinates  atom coordinates
+   @param parameters       parameters values
+   @param forces           force array (forces added to input values)
+   @param energiesByBond   energies by bond: energiesByBond[bondIndex]
+   @param energiesByAtom   energies by atom: energiesByAtom[atomIndex]
+
+   @return ReferenceForce::DefaultReturn;
+
+   --------------------------------------------------------------------------------------- */
+
+int ReferenceCustomTorsionIxn::calculateBondIxn( int* atomIndices,
+                                                RealOpenMM** atomCoordinates,
+                                                RealOpenMM* parameters,
+                                                RealOpenMM** forces,
+                                                RealOpenMM* energiesByBond,
+                                                RealOpenMM* energiesByAtom ) const {
+
+   // ---------------------------------------------------------------------------------------
+
+   // static const char* methodName = "\nReferenceCustomTorsionIxn::calculateTorsionIxn";
+
+   // ---------------------------------------------------------------------------------------
+
+   static const std::string methodName = "\nReferenceCustomTorsionIxn::calculateTorsionIxn";
+
+   static const RealOpenMM zero        = 0.0;
+   static const RealOpenMM one         = 1.0;
+
+   RealOpenMM deltaR[3][ReferenceForce::LastDeltaRIndex];
+   map<string, double> variables = globalParameters;
+   for (int i = 0; i < (int) paramNames.size(); ++i)
+       variables[paramNames[i]] = parameters[i];
+
+   // ---------------------------------------------------------------------------------------
+
+   // get deltaR, R2, and R between three pairs of atoms: [j,i], [j,k], [l,k]
+
+   int atomAIndex = atomIndices[0];
+   int atomBIndex = atomIndices[1];
+   int atomCIndex = atomIndices[2];
+   int atomDIndex = atomIndices[3];
+   ReferenceForce::getDeltaR(atomCoordinates[atomBIndex], atomCoordinates[atomAIndex], deltaR[0]);
+   ReferenceForce::getDeltaR(atomCoordinates[atomBIndex], atomCoordinates[atomCIndex], deltaR[1]);
+   ReferenceForce::getDeltaR(atomCoordinates[atomDIndex], atomCoordinates[atomCIndex], deltaR[2]);
+
+   // Visual Studio complains if crossProduct declared as 'crossProduct[2][3]'
+
+   RealOpenMM crossProductMemory[6];
+   RealOpenMM* crossProduct[2];
+   crossProduct[0] = crossProductMemory;
+   crossProduct[1] = crossProductMemory + 3;
+
+   // get dihedral angle
+
+   RealOpenMM dotDihedral;
+   RealOpenMM signOfAngle;
+   variables["theta"] =  getDihedralAngleBetweenThreeVectors(deltaR[0], deltaR[1], deltaR[2],
+                                                             crossProduct, &dotDihedral, deltaR[0],
+                                                             &signOfAngle, 1);
+
+   // evaluate delta angle, dE/d(angle)
+
+   RealOpenMM energy = (RealOpenMM) energyExpression.evaluate(variables);
+   RealOpenMM dEdAngle = (RealOpenMM) forceExpression.evaluate(variables);
+
+   // compute force
+
+   RealOpenMM internalF[4][3];
+   RealOpenMM forceFactors[4];
+   RealOpenMM normCross1         = DOT3( crossProduct[0], crossProduct[0] );
+   RealOpenMM normBC             = deltaR[1][ReferenceForce::RIndex];
+              forceFactors[0]    = (-dEdAngle*normBC)/normCross1;
+
+   RealOpenMM normCross2         = DOT3( crossProduct[1], crossProduct[1] );
+              forceFactors[3]    = (dEdAngle*normBC)/normCross2;
+
+              forceFactors[1]    = DOT3( deltaR[0], deltaR[1] );
+              forceFactors[1]   /= deltaR[1][ReferenceForce::R2Index];
+
+              forceFactors[2]    = DOT3( deltaR[2], deltaR[1] );
+              forceFactors[2]   /= deltaR[1][ReferenceForce::R2Index];
+
+   for( int ii = 0; ii < 3; ii++ ){
+
+      internalF[0][ii]  = forceFactors[0]*crossProduct[0][ii];
+      internalF[3][ii]  = forceFactors[3]*crossProduct[1][ii];
+
+      RealOpenMM s      = forceFactors[1]*internalF[0][ii] - forceFactors[2]*internalF[3][ii];
+
+      internalF[1][ii]  = internalF[0][ii] - s;
+      internalF[2][ii]  = internalF[3][ii] + s;
+   }
+
+   // accumulate forces
+
+   for( int ii = 0; ii < 3; ii++ ){
+      forces[atomAIndex][ii] += internalF[0][ii];
+      forces[atomBIndex][ii] -= internalF[1][ii];
+      forces[atomCIndex][ii] -= internalF[2][ii];
+      forces[atomDIndex][ii] += internalF[3][ii];
+   }
+
+   // accumulate energies
+
+   updateEnergy( energy, energiesByBond, 4, atomIndices, energiesByAtom );
+
+   return ReferenceForce::DefaultReturn;
+}
+

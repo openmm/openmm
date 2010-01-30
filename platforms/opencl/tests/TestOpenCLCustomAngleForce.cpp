@@ -101,9 +101,8 @@ void testAngles() {
         State s1 = c1.getState(State::Forces | State::Energy);
         State s2 = c2.getState(State::Forces | State::Energy);
         const vector<Vec3>& forces = s1.getForces();
-        ASSERT_EQUAL_VEC(s1.getForces()[0], s2.getForces()[0], TOL);
-        ASSERT_EQUAL_VEC(s1.getForces()[1], s2.getForces()[1], TOL);
-        ASSERT_EQUAL_VEC(s1.getForces()[2], s2.getForces()[2], TOL);
+        for (int i = 0; i < customSystem.getNumParticles(); i++)
+            ASSERT_EQUAL_VEC(s1.getForces()[i], s2.getForces()[i], TOL);
         ASSERT_EQUAL_TOL(s1.getPotentialEnergy(), s2.getPotentialEnergy(), TOL);
     }
 }

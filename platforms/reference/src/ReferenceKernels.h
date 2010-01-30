@@ -367,6 +367,42 @@ private:
 };
 
 /**
+ * This kernel is invoked by CustomTorsionForce to calculate the forces acting on the system and the energy of the system.
+ */
+class ReferenceCalcCustomTorsionForceKernel : public CalcCustomTorsionForceKernel {
+public:
+    ReferenceCalcCustomTorsionForceKernel(std::string name, const Platform& platform) : CalcCustomTorsionForceKernel(name, platform) {
+    }
+    ~ReferenceCalcCustomTorsionForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomTorsionForce this kernel will be used for
+     */
+    void initialize(const System& system, const CustomTorsionForce& force);
+    /**
+     * Execute the kernel to calculate the forces.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void executeForces(ContextImpl& context);
+    /**
+     * Execute the kernel to calculate the energy.
+     *
+     * @param context    the context in which to execute this kernel
+     * @return the potential energy due to the CustomTorsionForce
+     */
+    double executeEnergy(ContextImpl& context);
+private:
+    int numTorsions;
+    int **torsionIndexArray;
+    RealOpenMM **torsionParamArray;
+    Lepton::ExpressionProgram energyExpression, forceExpression;
+    std::vector<std::string> parameterNames, globalParameterNames;
+};
+
+/**
  * This kernel is invoked by NonbondedForce to calculate the forces acting on the system.
  */
 class ReferenceCalcNonbondedForceKernel : public CalcNonbondedForceKernel {
