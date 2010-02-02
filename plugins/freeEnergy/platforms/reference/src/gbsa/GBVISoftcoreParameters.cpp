@@ -253,7 +253,7 @@ int GBVISoftcoreParameters::setQuinticUpperBornRadiusLimit( RealOpenMM quinticUp
 
    --------------------------------------------------------------------------------------- */
 
-float GBVISoftcoreParameters::getQuinticUpperSplineLimit( void ) const {
+RealOpenMM GBVISoftcoreParameters::getQuinticUpperSplineLimit( void ) const {
 
    // ---------------------------------------------------------------------------------------
 
@@ -406,7 +406,7 @@ int GBVISoftcoreParameters::setScaledRadii( RealOpenMM* scaledRadii ){
 
 }
 
-#if RealOpenMMType == 2
+#if RealOpenMMType == 0
 
 /**---------------------------------------------------------------------------------------
 
@@ -549,7 +549,7 @@ int GBVISoftcoreParameters::setGammaParameters( RealOpenMM* gammas ){
 
 }
 
-#if RealOpenMMType == 2
+#if RealOpenMMType == 0
 
 /**---------------------------------------------------------------------------------------
 
@@ -693,7 +693,7 @@ int GBVISoftcoreParameters::setBornRadiusScaleFactors( RealOpenMM* bornRadiusSca
 
 }
 
-#if RealOpenMMType == 2
+#if RealOpenMMType == 0
 
 /**---------------------------------------------------------------------------------------
 

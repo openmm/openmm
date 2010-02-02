@@ -442,7 +442,7 @@ int ObcSoftcoreParameters::setScaledRadiusFactors( RealOpenMM* scaledRadiusFacto
 
 }
 
-#if RealOpenMMType == 2
+#if RealOpenMMType == 0
 
 /**---------------------------------------------------------------------------------------
 
@@ -831,7 +831,7 @@ int ObcSoftcoreParameters::setNonPolarScaleFactors( const RealOpenMMVector& nonP
 
 }
 
-#if RealOpenMMType == 2
+#if RealOpenMMType == 0
 
 /**---------------------------------------------------------------------------------------
 
