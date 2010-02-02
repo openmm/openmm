@@ -431,7 +431,7 @@ int ObcParameters::setScaledRadiusFactors( RealOpenMM* scaledRadiusFactors ){
 
 }
 
-#if RealOpenMMType == 2
+#if RealOpenMMType == 0
 
 /**---------------------------------------------------------------------------------------
 

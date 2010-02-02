@@ -184,7 +184,7 @@ class ObcParameters : public ImplicitSolventParameters {
          --------------------------------------------------------------------------------------- */
       
       int setScaledRadiusFactors( RealOpenMM* scaledRadiusFactors );
-#if RealOpenMMType == 2
+#if RealOpenMMType == 0
       int setScaledRadiusFactors( float* scaledRadiusFactors );
 #endif
       int setScaledRadiusFactors( const RealOpenMMVector& scaledRadiusFactors );

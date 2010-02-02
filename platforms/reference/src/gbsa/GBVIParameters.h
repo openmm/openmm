@@ -93,7 +93,7 @@ class GBVIParameters : public ImplicitSolventParameters {
          --------------------------------------------------------------------------------------- */
       
       int setScaledRadii( RealOpenMM* scaledRadii );
-#if RealOpenMMType == 2
+#if RealOpenMMType == 0
       int setScaledRadii( float* scaledRadii );
 #endif
       int setScaledRadii( const RealOpenMMVector& scaledRadii );

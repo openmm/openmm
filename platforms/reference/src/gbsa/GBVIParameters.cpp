@@ -300,7 +300,7 @@ int GBVIParameters::setScaledRadii( RealOpenMM* scaledRadii ){
 
 }
 
-#if RealOpenMMType == 2
+#if RealOpenMMType == 0
 
 /**---------------------------------------------------------------------------------------
 
@@ -443,7 +443,7 @@ int GBVIParameters::setGammaParameters( RealOpenMM* gammas ){
 
 }
 
-#if RealOpenMMType == 2
+#if RealOpenMMType == 0
 
 /**---------------------------------------------------------------------------------------
 
