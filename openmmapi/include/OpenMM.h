@@ -36,6 +36,8 @@
 #include "openmm/BrownianIntegrator.h"
 #include "openmm/CMMotionRemover.h"
 #include "openmm/CustomBondForce.h"
+#include "openmm/CustomAngleForce.h"
+#include "openmm/CustomTorsionForce.h"
 #include "openmm/CustomExternalForce.h"
 #include "openmm/CustomGBForce.h"
 #include "openmm/CustomNonbondedForce.h"

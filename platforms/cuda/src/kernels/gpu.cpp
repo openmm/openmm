@@ -112,6 +112,9 @@ struct Molecule {
     vector<int> rbTorsions;
     vector<int> constraints;
     vector<int> lj14s;
+    vector<int> customBonds;
+    vector<int> customAngles;
+    vector<int> customTorsions;
 };
 
 static const float dielectricOffset         =    0.009f;
@@ -751,6 +754,60 @@ void gpuSetCustomAngleParameters(gpuContext gpu, const vector<int>& angleAtom1, 
         variables.push_back(paramNames[i]);
     SetCustomAngleEnergyExpression(createExpression<256>(gpu, energyExp, Lepton::Parser::parse(energyExp).optimize().createProgram(), variables, globalParamNames, gpu->sim.customExpressionStackSize));
     SetCustomAngleForceExpression(createExpression<256>(gpu, energyExp, Lepton::Parser::parse(energyExp).differentiate("theta").optimize().createProgram(), variables, globalParamNames, gpu->sim.customExpressionStackSize));
+}
+
+extern "C"
+void gpuSetCustomTorsionParameters(gpuContext gpu, const vector<int>& torsionAtom1, const vector<int>& torsionAtom2, const vector<int>& torsionAtom3, const vector<int>& torsionAtom4, const vector<vector<double> >& torsionParams,
+            const string& energyExp, const vector<string>& paramNames, const vector<string>& globalParamNames)
+{
+    if (paramNames.size() > 4)
+        throw OpenMMException("CudaPlatform only supports four per-torsion parameters for custom torsion forces");
+    if (globalParamNames.size() > 8)
+        throw OpenMMException("CudaPlatform only supports eight global parameters for custom torsion forces");
+    if (gpu->psCustomTorsionID1 != NULL)
+        throw OpenMMException("CudaPlatform only supports a single CustomTorsionForce per System");
+    gpu->sim.customTorsions = torsionAtom1.size();
+    gpu->sim.customTorsionParameters = paramNames.size();
+    gpu->psCustomTorsionID1 = new CUDAStream<int4>(gpu->sim.customTorsions, 1, "CustomTorsionId1");
+    gpu->sim.pCustomTorsionID1 = gpu->psCustomTorsionID1->_pDevData;
+    gpu->psCustomTorsionID2 = new CUDAStream<int4>(gpu->sim.customTorsions, 1, "CustomTorsionId2");
+    gpu->sim.pCustomTorsionID2 = gpu->psCustomTorsionID2->_pDevData;
+    gpu->psCustomTorsionParams = new CUDAStream<float4>(gpu->sim.customTorsions, 1, "CustomTorsionParams");
+    gpu->sim.pCustomTorsionParams = gpu->psCustomTorsionParams->_pDevData;
+    vector<int> forceBufferCounter(gpu->natoms, 0);
+    for (int i = 0; i < (int) torsionAtom1.size(); i++) {
+        (*gpu->psCustomTorsionID1)[i].x = torsionAtom1[i];
+        (*gpu->psCustomTorsionID1)[i].y = torsionAtom2[i];
+        (*gpu->psCustomTorsionID1)[i].z = torsionAtom3[i];
+        (*gpu->psCustomTorsionID1)[i].w = torsionAtom4[i];
+        (*gpu->psCustomTorsionID2)[i].x = forceBufferCounter[torsionAtom1[i]]++;
+        (*gpu->psCustomTorsionID2)[i].y = forceBufferCounter[torsionAtom2[i]]++;
+        (*gpu->psCustomTorsionID2)[i].z = forceBufferCounter[torsionAtom3[i]]++;
+        (*gpu->psCustomTorsionID2)[i].w = forceBufferCounter[torsionAtom4[i]]++;
+        if (torsionParams[i].size() > 0)
+            (*gpu->psCustomTorsionParams)[i].x = (float) torsionParams[i][0];
+        if (torsionParams[i].size() > 1)
+            (*gpu->psCustomTorsionParams)[i].y = (float) torsionParams[i][1];
+        if (torsionParams[i].size() > 2)
+            (*gpu->psCustomTorsionParams)[i].z = (float) torsionParams[i][2];
+        if (torsionParams[i].size() > 3)
+            (*gpu->psCustomTorsionParams)[i].w = (float) torsionParams[i][3];
+    }
+    gpu->psCustomTorsionID1->Upload();
+    gpu->psCustomTorsionID2->Upload();
+    gpu->psCustomTorsionParams->Upload();
+    for (int i = 0; i < (int) forceBufferCounter.size(); i++)
+        if (forceBufferCounter[i] > (int) gpu->pOutputBufferCounter[i])
+            gpu->pOutputBufferCounter[i] = forceBufferCounter[i];
+
+    // Create the Expressions.
+
+    vector<string> variables;
+    variables.push_back("theta");
+    for (int i = 0; i < (int) paramNames.size(); i++)
+        variables.push_back(paramNames[i]);
+    SetCustomTorsionEnergyExpression(createExpression<256>(gpu, energyExp, Lepton::Parser::parse(energyExp).optimize().createProgram(), variables, globalParamNames, gpu->sim.customExpressionStackSize));
+    SetCustomTorsionForceExpression(createExpression<256>(gpu, energyExp, Lepton::Parser::parse(energyExp).differentiate("theta").optimize().createProgram(), variables, globalParamNames, gpu->sim.customExpressionStackSize));
 }
 
 extern "C"
@@ -1886,6 +1943,9 @@ void* gpuInit(int numAtoms, unsigned int device, bool useBlockingSync)
     gpu->psCustomAngleID1           = NULL;
     gpu->psCustomAngleID2           = NULL;
     gpu->psCustomAngleParams        = NULL;
+    gpu->psCustomTorsionID1         = NULL;
+    gpu->psCustomTorsionID2         = NULL;
+    gpu->psCustomTorsionParams      = NULL;
     gpu->psCustomExternalID         = NULL;
     gpu->psCustomExternalParams     = NULL;
     gpu->psEwaldCosSinSum           = NULL;
@@ -1927,6 +1987,8 @@ void* gpuInit(int numAtoms, unsigned int device, bool useBlockingSync)
         gpu->tabulatedFunctions[i].coefficients = NULL;
     gpu->sim.customExpressionStackSize = 0;
     gpu->sim.customBonds = 0;
+    gpu->sim.customAngles = 0;
+    gpu->sim.customTorsions = 0;
     
     // Initialize output buffer before reading parameters
     gpu->pOutputBufferCounter       = new unsigned int[gpu->sim.paddedNumberOfAtoms];
@@ -2062,6 +2124,11 @@ void gpuShutDown(gpuContext gpu)
         delete gpu->psCustomAngleID1;
         delete gpu->psCustomAngleID2;
         delete gpu->psCustomAngleParams;
+    }
+    if (gpu->psCustomTorsionParams != NULL) {
+        delete gpu->psCustomTorsionID1;
+        delete gpu->psCustomTorsionID2;
+        delete gpu->psCustomTorsionParams;
     }
     if (gpu->psCustomExternalParams != NULL) {
         delete gpu->psCustomExternalID;
@@ -2436,6 +2503,7 @@ int gpuSetConstants(gpuContext gpu)
     SetCalculateCustomNonbondedForcesSim(gpu);
     SetCalculateCustomBondForcesSim(gpu);
     SetCalculateCustomAngleForcesSim(gpu);
+    SetCalculateCustomTorsionForcesSim(gpu);
     SetCalculateCustomExternalForcesSim(gpu);
     SetCalculateLocalForcesSim(gpu);
     SetCalculateObcGbsaBornSumSim(gpu);
@@ -2569,6 +2637,21 @@ static void findMoleculeGroups(gpuContext gpu)
         int atom1 = (*gpu->psLJ14ID)[i].x;
         molecules[atomMolecule[atom1]].lj14s.push_back(i);
     }
+    for (int i = 0; i < (int)gpu->sim.customBonds; i++)
+    {
+        int atom1 = (*gpu->psCustomBondID)[i].x;
+        molecules[atomMolecule[atom1]].customBonds.push_back(i);
+    }
+    for (int i = 0; i < (int)gpu->sim.customAngles; i++)
+    {
+        int atom1 = (*gpu->psCustomAngleID1)[i].x;
+        molecules[atomMolecule[atom1]].customAngles.push_back(i);
+    }
+    for (int i = 0; i < (int)gpu->sim.customTorsions; i++)
+    {
+        int atom1 = (*gpu->psCustomTorsionID1)[i].x;
+        molecules[atomMolecule[atom1]].customTorsions.push_back(i);
+    }
 
     // Sort them into groups of identical molecules.
 
@@ -2588,7 +2671,8 @@ static void findMoleculeGroups(gpuContext gpu)
             if (mol.atoms.size() != mol2.atoms.size() || mol.bonds.size() != mol2.bonds.size()
                     || mol.angles.size() != mol2.angles.size() || mol.periodicTorsions.size() != mol2.periodicTorsions.size()
                     || mol.rbTorsions.size() != mol2.rbTorsions.size() || mol.constraints.size() != mol2.constraints.size()
-                    || mol.lj14s.size() != mol2.lj14s.size())
+                    || mol.lj14s.size() != mol2.lj14s.size() || mol.customBonds.size() != mol2.customBonds.size()
+                    || mol.customAngles.size() != mol2.customAngles.size() || mol.customTorsions.size() != mol2.customTorsions.size())
                 identical = false;
             int atomOffset = mol2.atoms[0]-mol.atoms[0];
             float4* posq = gpu->psPosq4->_pSysData;
@@ -2652,6 +2736,45 @@ static void findMoleculeGroups(gpuContext gpu)
                         lj14Param[mol.lj14s[i]].x != lj14Param[mol2.lj14s[i]].x || lj14Param[mol.lj14s[i]].y != lj14Param[mol2.lj14s[i]].y ||
                         lj14Param[mol.lj14s[i]].z != lj14Param[mol2.lj14s[i]].z)
                     identical = false;
+            if (mol.customBonds.size() > 0) {
+                int4* customBondID = gpu->psCustomBondID->_pSysData;
+                float4* customBondParam = gpu->psCustomBondParams->_pSysData;
+                for (int i = 0; i < (int)mol.customBonds.size() && identical; i++)
+                    if (customBondID[mol.customBonds[i]].x != customBondID[mol2.customBonds[i]].x-atomOffset ||
+                            customBondID[mol.customBonds[i]].y != customBondID[mol2.customBonds[i]].y-atomOffset ||
+                            (customBondParam[mol.customBonds[i]].x != customBondParam[mol2.customBonds[i]].x && gpu->sim.customBondParameters > 0) ||
+                            (customBondParam[mol.customBonds[i]].y != customBondParam[mol2.customBonds[i]].y && gpu->sim.customBondParameters > 1) ||
+                            (customBondParam[mol.customBonds[i]].z != customBondParam[mol2.customBonds[i]].z && gpu->sim.customBondParameters > 2) ||
+                            (customBondParam[mol.customBonds[i]].w != customBondParam[mol2.customBonds[i]].w && gpu->sim.customBondParameters > 3))
+                        identical = false;
+            }
+            if (mol.customAngles.size() > 0) {
+                int4* customAngleID = gpu->psCustomAngleID1->_pSysData;
+                float4* customAngleParam = gpu->psCustomAngleParams->_pSysData;
+                for (int i = 0; i < (int)mol.customAngles.size() && identical; i++)
+                    if (customAngleID[mol.customAngles[i]].x != customAngleID[mol2.customAngles[i]].x-atomOffset ||
+                            customAngleID[mol.customAngles[i]].y != customAngleID[mol2.customAngles[i]].y-atomOffset ||
+                            customAngleID[mol.customAngles[i]].z != customAngleID[mol2.customAngles[i]].z-atomOffset ||
+                            (customAngleParam[mol.customAngles[i]].x != customAngleParam[mol2.customAngles[i]].x && gpu->sim.customAngleParameters > 0) ||
+                            (customAngleParam[mol.customAngles[i]].y != customAngleParam[mol2.customAngles[i]].y && gpu->sim.customAngleParameters > 1) ||
+                            (customAngleParam[mol.customAngles[i]].z != customAngleParam[mol2.customAngles[i]].z && gpu->sim.customAngleParameters > 2) ||
+                            (customAngleParam[mol.customAngles[i]].w != customAngleParam[mol2.customAngles[i]].w && gpu->sim.customAngleParameters > 3))
+                        identical = false;
+            }
+            if (mol.customTorsions.size() > 0) {
+                int4* customTorsionID = gpu->psCustomTorsionID1->_pSysData;
+                float4* customTorsionParam = gpu->psCustomTorsionParams->_pSysData;
+                for (int i = 0; i < (int)mol.customTorsions.size() && identical; i++)
+                    if (customTorsionID[mol.customTorsions[i]].x != customTorsionID[mol2.customTorsions[i]].x-atomOffset ||
+                            customTorsionID[mol.customTorsions[i]].y != customTorsionID[mol2.customTorsions[i]].y-atomOffset ||
+                            customTorsionID[mol.customTorsions[i]].z != customTorsionID[mol2.customTorsions[i]].z-atomOffset ||
+                            customTorsionID[mol.customTorsions[i]].w != customTorsionID[mol2.customTorsions[i]].w-atomOffset ||
+                            (customTorsionParam[mol.customTorsions[i]].x != customTorsionParam[mol2.customTorsions[i]].x && gpu->sim.customTorsionParameters > 0) ||
+                            (customTorsionParam[mol.customTorsions[i]].y != customTorsionParam[mol2.customTorsions[i]].y && gpu->sim.customTorsionParameters > 1) ||
+                            (customTorsionParam[mol.customTorsions[i]].z != customTorsionParam[mol2.customTorsions[i]].z && gpu->sim.customTorsionParameters > 2) ||
+                            (customTorsionParam[mol.customTorsions[i]].w != customTorsionParam[mol2.customTorsions[i]].w && gpu->sim.customTorsionParameters > 3))
+                        identical = false;
+            }
             if (identical)
             {
                 moleculeInstances[j].push_back(mol.atoms[0]);

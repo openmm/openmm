@@ -363,6 +363,44 @@ private:
 };
 
 /**
+ * This kernel is invoked by CustomTorsionForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CudaCalcCustomTorsionForceKernel : public CalcCustomTorsionForceKernel {
+public:
+    CudaCalcCustomTorsionForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data, System& system) : CalcCustomTorsionForceKernel(name, platform),
+            data(data), system(system) {
+    }
+    ~CudaCalcCustomTorsionForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomTorsionForce this kernel will be used for
+     */
+    void initialize(const System& system, const CustomTorsionForce& force);
+    /**
+     * Execute the kernel to calculate the forces.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void executeForces(ContextImpl& context);
+    /**
+     * Execute the kernel to calculate the energy.
+     *
+     * @param context    the context in which to execute this kernel
+     * @return the potential energy due to the CustomTorsionForce
+     */
+    double executeEnergy(ContextImpl& context);
+private:
+    void updateGlobalParams(ContextImpl& context);
+    int numTorsions;
+    CudaPlatform::PlatformData& data;
+    std::vector<std::string> globalParamNames;
+    std::vector<float> globalParamValues;
+    System& system;
+};
+
+/**
  * This kernel is invoked by NonbondedForce to calculate the forces acting on the system.
  */
 class CudaCalcNonbondedForceKernel : public CalcNonbondedForceKernel {

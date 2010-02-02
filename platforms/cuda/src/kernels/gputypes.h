@@ -107,6 +107,9 @@ struct _gpuContext {
     CUDAStream<int4>* psCustomAngleID1;           // Atom indices for custom angles
     CUDAStream<int2>* psCustomAngleID2;           // Atom indices for custom angles
     CUDAStream<float4>* psCustomAngleParams;      // Parameters for custom angles
+    CUDAStream<int4>* psCustomTorsionID1;           // Atom indices for custom torsions
+    CUDAStream<int4>* psCustomTorsionID2;           // Atom indices for custom torsions
+    CUDAStream<float4>* psCustomTorsionParams;      // Parameters for custom torsions
     CUDAStream<int>* psCustomExternalID;          // Atom indices for custom external force
     CUDAStream<float4>* psCustomExternalParams;   // Parameters for custom external force
     CUDAStream<float4>* psTabulatedFunctionParams; // The min, max, and spacing for each tabulated function
@@ -216,7 +219,11 @@ void gpuSetCustomBondParameters(gpuContext gpu, const std::vector<int>& bondAtom
             const std::string& energyExp, const std::vector<std::string>& paramNames, const std::vector<std::string>& globalParamNames);
 
 extern "C"
-void gpuSetCustomAngleParameters(gpuContext gpu, const std::vector<int>& bondAtom1, const std::vector<int>& bondAtom2, const std::vector<int>& bondAtom3, const std::vector<std::vector<double> >& bondParams,
+void gpuSetCustomAngleParameters(gpuContext gpu, const std::vector<int>& angleAtom1, const std::vector<int>& angleAtom2, const std::vector<int>& angleAtom3, const std::vector<std::vector<double> >& angleParams,
+            const std::string& energyExp, const std::vector<std::string>& paramNames, const std::vector<std::string>& globalParamNames);
+
+extern "C"
+void gpuSetCustomTorsionParameters(gpuContext gpu, const std::vector<int>& torsionAtom1, const std::vector<int>& torsionAtom2, const std::vector<int>& torsionAtom3, const std::vector<int>& torsionAtom4, const std::vector<std::vector<double> >& torsionParams,
             const std::string& energyExp, const std::vector<std::string>& paramNames, const std::vector<std::string>& globalParamNames);
 
 extern "C"

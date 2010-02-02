@@ -392,6 +392,55 @@ double CudaCalcRBTorsionForceKernel::executeEnergy(ContextImpl& context) {
     return 0.0;
 }
 
+CudaCalcCustomTorsionForceKernel::~CudaCalcCustomTorsionForceKernel() {
+}
+
+void CudaCalcCustomTorsionForceKernel::initialize(const System& system, const CustomTorsionForce& force) {
+    numTorsions = force.getNumTorsions();
+    vector<int> particle1(numTorsions);
+    vector<int> particle2(numTorsions);
+    vector<int> particle3(numTorsions);
+    vector<int> particle4(numTorsions);
+    vector<vector<double> > params(numTorsions);
+    for (int i = 0; i < numTorsions; i++)
+        force.getTorsionParameters(i, particle1[i], particle2[i], particle3[i], particle4[i], params[i]);
+    vector<string> paramNames;
+    for (int i = 0; i < force.getNumPerTorsionParameters(); i++)
+        paramNames.push_back(force.getPerTorsionParameterName(i));
+    globalParamNames.resize(force.getNumGlobalParameters());
+    globalParamValues.resize(force.getNumGlobalParameters());
+    for (int i = 0; i < force.getNumGlobalParameters(); i++) {
+        globalParamNames[i] = force.getGlobalParameterName(i);
+        globalParamValues[i] = (float) force.getGlobalParameterDefaultValue(i);
+    }
+    gpuSetCustomTorsionParameters(data.gpu, particle1, particle2, particle3, particle4, params, force.getEnergyFunction(), paramNames, globalParamNames);
+    if (globalParamValues.size() > 0)
+        SetCustomTorsionGlobalParams(globalParamValues);
+}
+
+void CudaCalcCustomTorsionForceKernel::executeForces(ContextImpl& context) {
+    updateGlobalParams(context);
+    kCalculateCustomTorsionForces(data.gpu);
+}
+
+double CudaCalcCustomTorsionForceKernel::executeEnergy(ContextImpl& context) {
+    updateGlobalParams(context);
+    kCalculateCustomTorsionForces(data.gpu);
+    return 0.0;
+}
+
+void CudaCalcCustomTorsionForceKernel::updateGlobalParams(ContextImpl& context) {
+    bool changed = false;
+    for (int i = 0; i < (int) globalParamNames.size(); i++) {
+        float value = (float) context.getParameter(globalParamNames[i]);
+        if (value != globalParamValues[i])
+            changed = true;
+        globalParamValues[i] = value;
+    }
+    if (changed)
+        SetCustomTorsionGlobalParams(globalParamValues);
+}
+
 CudaCalcNonbondedForceKernel::~CudaCalcNonbondedForceKernel() {
 }
 

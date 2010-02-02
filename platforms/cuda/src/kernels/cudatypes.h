@@ -363,6 +363,11 @@ struct cudaGmxSimulation {
     float4*         pCustomAngleParams;             // Parameters for custom angles
     unsigned int    customAngles;                   // Number of custom angles
     unsigned int    customAngleParameters;          // Number of parameters for custom angles
+    int4*           pCustomTorsionID1;              // Atom indices for custom torsions
+    int4*           pCustomTorsionID2;              // Atom indices for custom torsions
+    float4*         pCustomTorsionParams;           // Parameters for custom torsions
+    unsigned int    customTorsions;                 // Number of custom torsions
+    unsigned int    customTorsionParameters;        // Number of parameters for custom torsions
     int*            pCustomExternalID;              // Atom indices for custom external force
     float4*         pCustomExternalParams;          // Parameters for custom external force
     unsigned int    customExternals;                // Number of particles for custom external force
