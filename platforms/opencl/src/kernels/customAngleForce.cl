@@ -25,8 +25,8 @@ __kernel void computeCustomAngleForces(int numAtoms, int numAngles, __global flo
         float cosine = dot/sqrt(r21*r23);
         float theta = acos(cosine);
         COMPUTE_FORCE
-        float4 c21 = cross(v0, cp)*(dEdR/(r21*rp));
-        float4 c23 = cross(cp, v1)*(dEdR/(r23*rp));
+        float4 c21 = cross(v0, cp)*(dEdAngle/(r21*rp));
+        float4 c23 = cross(cp, v1)*(dEdAngle/(r23*rp));
 
         // Record the force on each of the three atoms.
 

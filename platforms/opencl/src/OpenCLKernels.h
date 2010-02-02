@@ -389,6 +389,48 @@ private:
 };
 
 /**
+ * This kernel is invoked by CustomTorsionForce to calculate the forces acting on the system and the energy of the system.
+ */
+class OpenCLCalcCustomTorsionForceKernel : public CalcCustomTorsionForceKernel {
+public:
+    OpenCLCalcCustomTorsionForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcCustomTorsionForceKernel(name, platform),
+            hasInitializedKernel(false), cl(cl), system(system), params(NULL), indices(NULL), globals(NULL) {
+    }
+    ~OpenCLCalcCustomTorsionForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomTorsionForce this kernel will be used for
+     */
+    void initialize(const System& system, const CustomTorsionForce& force);
+    /**
+     * Execute the kernel to calculate the forces.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void executeForces(ContextImpl& context);
+    /**
+     * Execute the kernel to calculate the energy.
+     *
+     * @param context    the context in which to execute this kernel
+     * @return the potential energy due to the CustomTorsionForce
+     */
+    double executeEnergy(ContextImpl& context);
+private:
+    int numTorsions;
+    bool hasInitializedKernel;
+    OpenCLContext& cl;
+    System& system;
+    OpenCLParameterSet* params;
+    OpenCLArray<mm_int8>* indices;
+    OpenCLArray<cl_float>* globals;
+    std::vector<std::string> globalParamNames;
+    std::vector<cl_float> globalParamValues;
+    cl::Kernel kernel;
+};
+
+/**
  * This kernel is invoked by NonbondedForce to calculate the forces acting on the system.
  */
 class OpenCLCalcNonbondedForceKernel : public CalcNonbondedForceKernel {

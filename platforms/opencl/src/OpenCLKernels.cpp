@@ -571,7 +571,7 @@ void OpenCLCalcCustomAngleForceKernel::initialize(const System& system, const Cu
     Lepton::ParsedExpression forceExpression = energyExpression.differentiate("theta").optimize();
     map<string, Lepton::ParsedExpression> expressions;
     expressions["energy += "] = energyExpression;
-    expressions["float dEdR = "] = forceExpression;
+    expressions["float dEdAngle = "] = forceExpression;
 
     // Create the kernels.
 
@@ -803,6 +803,163 @@ void OpenCLCalcRBTorsionForceKernel::executeForces(ContextImpl& context) {
 }
 
 double OpenCLCalcRBTorsionForceKernel::executeEnergy(ContextImpl& context) {
+    executeForces(context);
+    return 0.0;
+}
+
+class OpenCLCustomTorsionForceInfo : public OpenCLForceInfo {
+public:
+    OpenCLCustomTorsionForceInfo(int requiredBuffers, const CustomTorsionForce& force) : OpenCLForceInfo(requiredBuffers), force(force) {
+    }
+    int getNumParticleGroups() {
+        return force.getNumTorsions();
+    }
+    void getParticlesInGroup(int index, std::vector<int>& particles) {
+        int particle1, particle2, particle3, particle4;
+        vector<double> parameters;
+        force.getTorsionParameters(index, particle1, particle2, particle3, particle4, parameters);
+        particles.resize(3);
+        particles[0] = particle1;
+        particles[1] = particle2;
+        particles[2] = particle3;
+        particles[3] = particle4;
+    }
+    bool areGroupsIdentical(int group1, int group2) {
+        int particle1, particle2, particle3, particle4;
+        vector<double> parameters1, parameters2;
+        force.getTorsionParameters(group1, particle1, particle2, particle3, particle4, parameters1);
+        force.getTorsionParameters(group2, particle1, particle2, particle3, particle4, parameters2);
+        for (int i = 0; i < (int) parameters1.size(); i++)
+            if (parameters1[i] != parameters2[i])
+                return false;
+        return true;
+    }
+private:
+    const CustomTorsionForce& force;
+};
+
+OpenCLCalcCustomTorsionForceKernel::~OpenCLCalcCustomTorsionForceKernel() {
+    if (params != NULL)
+        delete params;
+    if (indices != NULL)
+        delete indices;
+    if (globals != NULL)
+        delete globals;
+}
+
+void OpenCLCalcCustomTorsionForceKernel::initialize(const System& system, const CustomTorsionForce& force) {
+    numTorsions = force.getNumTorsions();
+    if (numTorsions == 0)
+        return;
+    params = new OpenCLParameterSet(cl, force.getNumPerTorsionParameters(), numTorsions, "customTorsionParams");
+    indices = new OpenCLArray<mm_int8>(cl, numTorsions, "customTorsionIndices");
+    string extraArguments;
+    if (force.getNumGlobalParameters() > 0) {
+        globals = new OpenCLArray<cl_float>(cl, force.getNumGlobalParameters(), "customTorsionGlobals", false, CL_MEM_READ_ONLY);
+        extraArguments += ", __constant float* globals";
+    }
+    vector<int> forceBufferCounter(system.getNumParticles(), 0);
+    vector<vector<cl_float> > paramVector(numTorsions);
+    vector<mm_int8> indicesVector(numTorsions);
+    for (int i = 0; i < numTorsions; i++) {
+        int particle1, particle2, particle3, particle4;
+        vector<double> parameters;
+        force.getTorsionParameters(i, particle1, particle2, particle3, particle4, parameters);
+        paramVector[i].resize(parameters.size());
+        for (int j = 0; j < (int) parameters.size(); j++)
+            paramVector[i][j] = (cl_float) parameters[j];
+        indicesVector[i] = mm_int8(particle1, particle2, particle3, particle4, forceBufferCounter[particle1]++,
+                forceBufferCounter[particle2]++, forceBufferCounter[particle3]++, forceBufferCounter[particle4]++);
+    }
+    params->setParameterValues(paramVector);
+    indices->upload(indicesVector);
+    int maxBuffers = 1;
+    for (int i = 0; i < (int) forceBufferCounter.size(); i++)
+        maxBuffers = max(maxBuffers, forceBufferCounter[i]);
+    cl.addForce(new OpenCLCustomTorsionForceInfo(maxBuffers, force));
+
+    // Record information for the expressions.
+
+    vector<string> paramNames;
+    for (int i = 0; i < force.getNumPerTorsionParameters(); i++)
+        paramNames.push_back(force.getPerTorsionParameterName(i));
+    globalParamNames.resize(force.getNumGlobalParameters());
+    globalParamValues.resize(force.getNumGlobalParameters());
+    for (int i = 0; i < force.getNumGlobalParameters(); i++) {
+        globalParamNames[i] = force.getGlobalParameterName(i);
+        globalParamValues[i] = (cl_float) force.getGlobalParameterDefaultValue(i);
+    }
+    if (globals != NULL)
+        globals->upload(globalParamValues);
+    Lepton::ParsedExpression energyExpression = Lepton::Parser::parse(force.getEnergyFunction()).optimize();
+    Lepton::ParsedExpression forceExpression = energyExpression.differentiate("theta").optimize();
+    map<string, Lepton::ParsedExpression> expressions;
+    expressions["energy += "] = energyExpression;
+    expressions["float dEdAngle = "] = forceExpression;
+
+    // Create the kernels.
+
+    map<string, string> variables;
+    variables["theta"] = "theta";
+    for (int i = 0; i < force.getNumPerTorsionParameters(); i++) {
+        const string& name = force.getPerTorsionParameterName(i);
+        variables[name] = "torsionParams"+params->getParameterSuffix(i);
+    }
+    for (int i = 0; i < force.getNumGlobalParameters(); i++) {
+        const string& name = force.getGlobalParameterName(i);
+        string value = "globals["+intToString(i)+"]";
+        variables[name] = value;
+    }
+    stringstream compute;
+    for (int i = 0; i < (int) params->getBuffers().size(); i++) {
+        const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
+        extraArguments += ", __global "+buffer.getType()+"* "+buffer.getName();
+        compute<<buffer.getType()<<" torsionParams"<<(i+1)<<" = "<<buffer.getName()<<"[index];\n";
+    }
+    vector<pair<string, string> > functions;
+    compute << OpenCLExpressionUtilities::createExpressions(expressions, variables, functions, "temp", "");
+    map<string, string> replacements;
+    replacements["COMPUTE_FORCE"] = compute.str();
+    replacements["EXTRA_ARGUMENTS"] = extraArguments;
+    replacements["M_PI"] = doubleToString(M_PI);
+    cl::Program program = cl.createProgram(cl.replaceStrings(OpenCLKernelSources::customTorsionForce, replacements));
+    kernel = cl::Kernel(program, "computeCustomTorsionForces");
+}
+
+void OpenCLCalcCustomTorsionForceKernel::executeForces(ContextImpl& context) {
+    if (numTorsions == 0)
+        return;
+    if (globals != NULL) {
+        bool changed = false;
+        for (int i = 0; i < (int) globalParamNames.size(); i++) {
+            cl_float value = (cl_float) context.getParameter(globalParamNames[i]);
+            if (value != globalParamValues[i])
+                changed = true;
+            globalParamValues[i] = value;
+        }
+        if (changed)
+            globals->upload(globalParamValues);
+    }
+    if (!hasInitializedKernel) {
+        hasInitializedKernel = true;
+        kernel.setArg<cl_int>(0, cl.getPaddedNumAtoms());
+        kernel.setArg<cl_int>(1, numTorsions);
+        kernel.setArg<cl::Buffer>(2, cl.getForceBuffers().getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(3, cl.getEnergyBuffer().getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(4, cl.getPosq().getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(5, indices->getDeviceBuffer());
+        int nextIndex = 6;
+        if (globals != NULL)
+            kernel.setArg<cl::Buffer>(nextIndex++, globals->getDeviceBuffer());
+        for (int i = 0; i < (int) params->getBuffers().size(); i++) {
+            const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
+            kernel.setArg<cl::Buffer>(nextIndex++, buffer.getBuffer());
+        }
+    }
+    cl.executeKernel(kernel, numTorsions);
+}
+
+double OpenCLCalcCustomTorsionForceKernel::executeEnergy(ContextImpl& context) {
     executeForces(context);
     return 0.0;
 }
