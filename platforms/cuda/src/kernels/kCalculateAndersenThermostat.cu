@@ -58,12 +58,13 @@ __global__ void kCalculateAndersenThermostat_kernel()
     __syncthreads();
 
     float collisionProbability = 1.0f-exp(-cSim.collisionFrequency*cSim.pStepSize[0].y);
+    float randomRange = erf(collisionProbability/sqrt(2.0f));
     while (pos < cSim.atoms)
     {
         float4 velocity         = cSim.pVelm4[pos];
         float4 random4a         = cSim.pRandom4a[rpos + pos];
-        float scale = (random4a.w < collisionProbability ? 0.0 : 1.0);
-        float add = (1.0-scale)*sqrt(cSim.kT*velocity.w);
+        float scale = (random4a.w > -randomRange && random4a.w < randomRange ? 0.0f : 1.0f);
+        float add = (1.0f-scale)*sqrt(cSim.kT*velocity.w);
         velocity.x = scale*velocity.x + add*random4a.x;
         velocity.y = scale*velocity.y + add*random4a.y;
         velocity.z = scale*velocity.z + add*random4a.z;
