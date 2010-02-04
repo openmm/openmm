@@ -39,12 +39,21 @@
 #include "openmm/Context.h"
 
 #include "openmm/HarmonicBondForce.h"
+#include "openmm/CustomBondForce.h"
+
 #include "openmm/HarmonicAngleForce.h"
+#include "openmm/CustomAngleForce.h"
+
 #include "openmm/PeriodicTorsionForce.h"
 #include "openmm/RBTorsionForce.h"
+#include "openmm/CustomTorsionForce.h"
+
 #include "openmm/GBSAOBCForce.h"
 #include "openmm/GBVIForce.h"
+
 #include "openmm/NonbondedForce.h"
+#include "openmm/CustomNonbondedForce.h"
+
 #include "openmm/CMMotionRemover.h"
 #include "openmm/System.h"
 #include "openmm/LangevinIntegrator.h"
@@ -82,11 +91,17 @@
 // force names
 
 std::string HARMONIC_BOND_FORCE             = "HarmonicBond";
+std::string CUSTOM_BOND_FORCE               = "CustomBond";
+
 std::string HARMONIC_ANGLE_FORCE            = "HarmonicAngle"; 
+std::string CUSTOM_ANGLE_FORCE              = "CustomAngle"; 
+
 std::string PERIODIC_TORSION_FORCE          = "PeriodicTorsion";
 std::string RB_TORSION_FORCE                = "RbTorsion";
+std::string CUSTOM_TORSION_FORCE            = "CustomTorsion";
 
 std::string NB_FORCE                        = "Nb";
+std::string CUSTOM_NB_FORCE                 = "CustomNb";
 std::string NB_SOFTCORE_FORCE               = "NbSoftcore";
 
 std::string NB_EXCEPTION_FORCE              = "NbException";
@@ -1181,6 +1196,58 @@ static int setIntFromMap( MapStringString& argumentMap, std::string fieldToCheck
 }
 
 /**---------------------------------------------------------------------------------------
+ * Set field if in map
+ * 
+ * @param  argumentMap            map to check
+ * @param  fieldToCheck           key
+ * @param  fieldToSet             field to set
+ *
+ * @return 1 if argument set, else 0
+ *
+   --------------------------------------------------------------------------------------- */
+
+static void copyMap( MapStringInt& inputMap, MapStringInt& outputMap ){
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName             = "setIntFromMap";
+
+// ---------------------------------------------------------------------------------------
+
+   for( MapStringIntI ii = inputMap.begin(); ii != inputMap.end(); ii++ ){
+         outputMap[(*ii).first] = (*ii).second;
+   }
+}
+
+
+/**---------------------------------------------------------------------------------------
+ * Set field if in map
+ * 
+ * @param  argumentMap            map to check
+ * @param  fieldToCheck           key
+ * @param  fieldToSet             field to set
+ *
+ * @return 1 if argument set, else 0
+ *
+   --------------------------------------------------------------------------------------- */
+
+static void editMap( MapStringInt& inputMap, MapStringInt& outputMap, int newValue ){
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName             = "setIntFromMap";
+
+// ---------------------------------------------------------------------------------------
+
+   copyMap( inputMap, outputMap );
+   for( MapStringIntI ii = inputMap.begin(); ii != inputMap.end(); ii++ ){
+      if( (*ii).second ){
+         outputMap[(*ii).first] = newValue;
+      }
+   }
+}
+
+/**---------------------------------------------------------------------------------------
 
  * Set field if in map
  * 
@@ -1312,6 +1379,177 @@ static int readMasses( FILE* filePtr, const StringVector& tokens, System& system
    return system.getNumParticles();
 }
 
+static CustomBondForce* copyToCustomBondForce(const HarmonicBondForce* bondForce ) { 
+
+// ---------------------------------------------------------------------------------------
+
+    //static const std::string methodName      = "copyToCustomBondForce";
+
+// ---------------------------------------------------------------------------------------
+
+    // bond force
+
+    CustomBondForce* customBondForce = new CustomBondForce("scale*k*(r-r0)^2");
+    customBondForce->addPerBondParameter("r0");
+    customBondForce->addPerBondParameter("k");
+    customBondForce->addPerBondParameter("scale");
+    //customBondForce->addGlobalParameter("scale", 0.5);
+
+    std::vector<double> parameters(3);
+    unsigned int numberOfBonds = static_cast<unsigned int>(bondForce->getNumBonds());
+    for( unsigned int ii = 0; ii < bondForce->getNumBonds(); ii++ ){
+        int particle1, particle2;
+        double length, k;
+        bondForce->getBondParameters( ii, particle1, particle2, length, k ); 
+        parameters[0] = length;
+        parameters[1] = k; 
+        parameters[2] = 0.5f; 
+        customBondForce->addBond( particle1, particle2, parameters);
+    }    
+
+    return customBondForce;
+}
+
+static CustomAngleForce* copyToCustomAngleForce(const HarmonicAngleForce* angleForce, FILE* log ) { 
+
+// ---------------------------------------------------------------------------------------
+
+    //static const std::string methodName      = "copyToCustomAngleForce";
+
+// ---------------------------------------------------------------------------------------
+
+    // angle force
+
+    CustomAngleForce* customAngleForce = new CustomAngleForce("scale*k*(theta-theta0)^2");
+    customAngleForce->addPerAngleParameter("theta0");
+    customAngleForce->addPerAngleParameter("k");
+    //customAngleForce->addPerAngleParameter("scale");
+    customAngleForce->addGlobalParameter("scale", 0.5);
+
+    std::vector<double> parameters(2);
+int targetAtom = 466;
+    unsigned int numberOfAngles = static_cast<unsigned int>(angleForce->getNumAngles());
+    for( unsigned int ii = 0; ii < angleForce->getNumAngles(); ii++ ){
+        int particle1, particle2, particle3;
+        double length, k;
+        angleForce->getAngleParameters( ii, particle1, particle2, particle3, length, k ); 
+if( particle1 == targetAtom || particle2 == targetAtom || particle3 == targetAtom ){
+   (void) fprintf( log, "CstmQ [%5d %5d %5d] %14.6e %14.6e\n", particle1, particle2, particle3, length, k );
+}
+        parameters[0] = length;
+        parameters[1] = k; 
+//        parameters[2] = 0.5f; 
+        customAngleForce->addAngle( particle1, particle2, particle3, parameters);
+    }    
+
+    return customAngleForce;
+}
+
+static CustomTorsionForce* copyToCustomPeriodicTorsionForce(const PeriodicTorsionForce* periodicTorsionForce ) { 
+
+// ---------------------------------------------------------------------------------------
+
+    //static const std::string methodName      = "copyToCustomTorsionForce";
+
+// ---------------------------------------------------------------------------------------
+
+    // periodic torsion force
+
+    CustomTorsionForce* customTorsionForce = new CustomTorsionForce("k*(1+cos(n*theta-theta0))");
+    customTorsionForce->addPerTorsionParameter("theta0");
+    customTorsionForce->addPerTorsionParameter("n");
+    customTorsionForce->addPerTorsionParameter("k");
+
+    std::vector<double> parameters(3);
+    unsigned int numberOfTorsions = static_cast<unsigned int>(periodicTorsionForce->getNumTorsions());
+    for( unsigned int ii = 0; ii < periodicTorsionForce->getNumTorsions(); ii++ ){
+        int particle1, particle2, particle3, particle4, periodicity;
+        double phase, k;
+        periodicTorsionForce->getTorsionParameters( ii, particle1, particle2, particle3, particle4, periodicity, phase, k ); 
+        parameters[0] = phase;
+        parameters[1] = static_cast<double>(periodicity); 
+        parameters[2] = k;
+        customTorsionForce->addTorsion( particle1, particle2, particle3, particle4, parameters);
+    }    
+
+    return customTorsionForce;
+}
+
+static CustomTorsionForce* copyToCustomRbTorsionForce(const RBTorsionForce* rbTorsionForce ) { 
+
+// ---------------------------------------------------------------------------------------
+
+    //static const std::string methodName      = "copyToCustomTorsionForce";
+
+// ---------------------------------------------------------------------------------------
+
+    // RB torsion force
+
+    CustomTorsionForce* customTorsionForce = new CustomTorsionForce("c0+cp*(c1+cp*(c2+cp*(c3+cp*(c4+cp*c5)))); cp=-cos(theta)");
+    customTorsionForce->addPerTorsionParameter("c0");
+    customTorsionForce->addPerTorsionParameter("c1");
+    customTorsionForce->addPerTorsionParameter("c2");
+    customTorsionForce->addPerTorsionParameter("c3");
+    customTorsionForce->addPerTorsionParameter("c4");
+    customTorsionForce->addPerTorsionParameter("c5");
+
+    std::vector<double> parameters(6);
+    unsigned int numberOfTorsions = static_cast<unsigned int>(rbTorsionForce->getNumTorsions());
+    for( unsigned int ii = 0; ii < rbTorsionForce->getNumTorsions(); ii++ ){
+        int particle1, particle2, particle3, particle4;
+        double c0, c1, c2, c3, c4, c5;
+        rbTorsionForce->getTorsionParameters( ii, particle1, particle2, particle3, particle4, c0, c1, c2, c3, c4, c5 ); 
+        parameters[0] = c0;
+        parameters[1] = c1;
+        parameters[2] = c2;
+        parameters[3] = c3;
+        parameters[4] = c4;
+        parameters[5] = c5;
+        customTorsionForce->addTorsion( particle1, particle2, particle3, particle4, parameters);
+    }    
+
+    return customTorsionForce;
+}
+
+static CustomNonbondedForce* copyToCustomNonbondedForce(const NonbondedForce* nonbondedForce ) { 
+
+// ---------------------------------------------------------------------------------------
+
+    //static const std::string methodName      = "copyToCustomTorsionForce";
+
+// ---------------------------------------------------------------------------------------
+
+    // nonbonded force
+
+    CustomNonbondedForce* customNonbondedForce = new CustomNonbondedForce("4*eps*((sigma/r)^12-(sigma/r)^6)+138.935456*q/r; q=q1*q2; sigma=0.5*(sigma1+sigma2); eps=sqrt(eps1*eps2)" );
+    customNonbondedForce->addPerParticleParameter("q");
+    customNonbondedForce->addPerParticleParameter("sigma");
+    customNonbondedForce->addPerParticleParameter("eps");
+
+    std::vector<double> parameters(3);
+    unsigned int numberOfNonbondeds = static_cast<unsigned int>(nonbondedForce->getNumParticles());
+    for( unsigned int ii = 0; ii < nonbondedForce->getNumParticles(); ii++ ){
+        double charge, sigma, epsilon;
+        nonbondedForce->getParticleParameters(ii, charge, sigma, epsilon);
+        parameters[0] = charge;
+        parameters[1] = sigma;
+        parameters[2] = epsilon;
+        customNonbondedForce->addParticle(parameters);
+    }    
+    customNonbondedForce->setNonbondedMethod(CustomNonbondedForce::NoCutoff);
+
+    // exceptions
+
+    for( unsigned int ii = 0; ii < nonbondedForce->getNumExceptions(); ii++ ){
+        int particle1, particle2;
+        double chargeProd, sigma, epsilon;
+        nonbondedForce->getExceptionParameters( ii, particle1, particle2, chargeProd, sigma, epsilon );
+        customNonbondedForce->addExclusion( particle1, particle2 );
+   }
+
+    return customNonbondedForce;
+}
+
 /**---------------------------------------------------------------------------------------
 
    Read harmonic bond parameters
@@ -1343,17 +1581,7 @@ static int readHarmonicBondForce( FILE* filePtr, MapStringInt& forceMap, const S
       exit(-1);
    }
 
-   HarmonicBondForce* bondForce = new HarmonicBondForce();
-   MapStringIntI forceActive    = forceMap.find( HARMONIC_BOND_FORCE );
-   if( forceActive != forceMap.end() && (*forceActive).second ){
-      system.addForce( bondForce );
-      if( log ){
-         (void) fprintf( log, "harmonic bond force is being included.\n" );
-      }
-   } else if( log ){
-      (void) fprintf( log, "harmonic bond force is not being included.\n" );
-   }
-
+   HarmonicBondForce* bondForce       = new HarmonicBondForce();
    int numberOfBonds            = atoi( tokens[1].c_str() );
    if( log ){
       (void) fprintf( log, "%s number of HarmonicBondForce terms=%d\n", methodName.c_str(), numberOfBonds );
@@ -1393,7 +1621,35 @@ static int readHarmonicBondForce( FILE* filePtr, MapStringInt& forceMap, const S
       }
    }
 
-   return bondForce->getNumBonds();
+   // add force?
+
+   MapStringIntI forceActive          = forceMap.find( HARMONIC_BOND_FORCE );
+   if( forceActive != forceMap.end() ){
+      if( (*forceActive).second == 1 ){
+         if( log ){
+             (void) fprintf( log, "Harmonic bond force is being included.\n" );
+         }
+         system.addForce( bondForce );
+         return bondForce->getNumBonds();
+      } else if(  (*forceActive).second == 2 ){
+         CustomBondForce* customBondForce = copyToCustomBondForce( bondForce );
+         if( log ){
+            (void) fprintf( log, "Custom bond force is being included.\n" );
+         }
+         system.addForce( customBondForce );
+         delete bondForce;
+         return customBondForce->getNumBonds();
+      } else if( log ){
+         (void) fprintf( log, "force flag=%d not recognized.\n", (*forceActive).second );
+      }
+   } else {
+      delete bondForce;
+      if( log ){
+         (void) fprintf( log, "Harmonic bond force is not being included.\n" );
+      }
+   }
+
+   return 0;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -1427,16 +1683,7 @@ static int readHarmonicAngleForce( FILE* filePtr, MapStringInt& forceMap, const 
       throwException(__FILE__, __LINE__, buffer );
    }
 
-   HarmonicAngleForce* bondForce = new HarmonicAngleForce();
-   MapStringIntI forceActive     = forceMap.find( HARMONIC_ANGLE_FORCE );
-   if( forceActive != forceMap.end() && (*forceActive).second ){
-      system.addForce( bondForce );
-      if( log ){
-         (void) fprintf( log, "harmonic angle force is being included.\n" );
-      }
-   } else if( log ){
-      (void) fprintf( log, "harmonic angle force is not being included.\n" );
-   }
+   HarmonicAngleForce* angleForce = new HarmonicAngleForce();
 
    int numberOfAngles            = atoi( tokens[1].c_str() );
    if( log ){
@@ -1453,7 +1700,7 @@ static int readHarmonicAngleForce( FILE* filePtr, MapStringInt& forceMap, const 
          int particle3  = atoi( lineTokens[tokenIndex++].c_str() );
          double angle   = atof( lineTokens[tokenIndex++].c_str() );
          double k       = atof( lineTokens[tokenIndex++].c_str() );
-         bondForce->addAngle( particle1, particle2, particle3, angle, k );
+         angleForce->addAngle( particle1, particle2, particle3, angle, k );
       } else {
          char buffer[1024];
          (void) sprintf( buffer, "%s HarmonicAngleForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
@@ -1466,12 +1713,12 @@ static int readHarmonicAngleForce( FILE* filePtr, MapStringInt& forceMap, const 
 
    if( log ){
       static const unsigned int maxPrint   = MAX_PRINT;
-      unsigned int arraySize               = static_cast<unsigned int>(bondForce->getNumAngles());
+      unsigned int arraySize               = static_cast<unsigned int>(angleForce->getNumAngles());
       (void) fprintf( log, "%s: sample of HarmonicAngleForce parameters\n", methodName.c_str() );
       for( unsigned int ii = 0; ii < arraySize; ii++ ){
          int particle1, particle2, particle3;
          double angle, k;
-         bondForce->getAngleParameters( ii, particle1, particle2, particle3, angle, k ); 
+         angleForce->getAngleParameters( ii, particle1, particle2, particle3, angle, k ); 
          (void) fprintf( log, "%8d %8d %8d %8d %14.7e %14.7e\n", ii, particle1, particle2, particle3, angle, k);
          if( ii == maxPrint ){
             ii = arraySize - maxPrint;
@@ -1480,7 +1727,41 @@ static int readHarmonicAngleForce( FILE* filePtr, MapStringInt& forceMap, const 
       }
    }
 
-   return bondForce->getNumAngles();
+   // add force?
+
+   MapStringIntI forceActive          = forceMap.find( HARMONIC_ANGLE_FORCE );
+   if( forceActive != forceMap.end() ){
+      if( (*forceActive).second == 1 ){
+
+         if( log ){
+             (void) fprintf( log, "Harmonic angle force is being included.\n" );
+         }
+
+         system.addForce( angleForce );
+         return angleForce->getNumAngles();
+
+      } else if(  (*forceActive).second == 2 ){
+
+         CustomAngleForce* customAngleForce = copyToCustomAngleForce( angleForce, log );
+         if( log ){
+            (void) fprintf( log, "Custom angle force is being included.\n" );
+         }
+
+         system.addForce( customAngleForce );
+         delete angleForce;
+         return customAngleForce->getNumAngles();
+
+      } else if( log ){
+         (void) fprintf( log, "force flag=%d not recognized.\n", (*forceActive).second );
+      }
+   } else {
+      delete angleForce;
+      if( log ){
+         (void) fprintf( log, "Harmonic angle force is not being included.\n" );
+      }
+   }
+
+   return 0;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -1514,17 +1795,7 @@ static int readPeriodicTorsionForce( FILE* filePtr, MapStringInt& forceMap, cons
       exit(-1);
    }
 
-   PeriodicTorsionForce* bondForce = new PeriodicTorsionForce();
-   MapStringIntI forceActive    = forceMap.find( PERIODIC_TORSION_FORCE );
-   if( forceActive != forceMap.end() && (*forceActive).second ){
-      system.addForce( bondForce );
-      if( log ){
-         (void) fprintf( log, "periodic torsion force is being included.\n" );
-      }
-   } else if( log ){
-      (void) fprintf( log, "periodic torsion force is not being included.\n" );
-   }
-
+   PeriodicTorsionForce* torsionForce = new PeriodicTorsionForce();
    int numberOfTorsions            = atoi( tokens[1].c_str() );
    if( log ){
       (void) fprintf( log, "%s number of PeriodicTorsionForce terms=%d\n", methodName.c_str(), numberOfTorsions );
@@ -1542,7 +1813,7 @@ static int readPeriodicTorsionForce( FILE* filePtr, MapStringInt& forceMap, cons
          int periodicity = atoi( lineTokens[tokenIndex++].c_str() );
          double phase    = atof( lineTokens[tokenIndex++].c_str() );
          double k        = atof( lineTokens[tokenIndex++].c_str() );
-         bondForce->addTorsion( particle1, particle2, particle3, particle4, periodicity, phase, k );
+         torsionForce->addTorsion( particle1, particle2, particle3, particle4, periodicity, phase, k );
       } else {
          char buffer[1024];
          (void) sprintf( buffer, "%s PeriodicTorsionForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
@@ -1555,12 +1826,12 @@ static int readPeriodicTorsionForce( FILE* filePtr, MapStringInt& forceMap, cons
 
    if( log ){
       static const unsigned int maxPrint   = MAX_PRINT;
-      unsigned int arraySize               = static_cast<unsigned int>(bondForce->getNumTorsions());
+      unsigned int arraySize               = static_cast<unsigned int>(torsionForce->getNumTorsions());
       (void) fprintf( log, "%s: sample of PeriodicTorsionForce parameters\n", methodName.c_str() );
       for( unsigned int ii = 0; ii < arraySize; ii++ ){
          int particle1, particle2, particle3, particle4, periodicity;
          double phase, k;
-         bondForce->getTorsionParameters( ii, particle1, particle2, particle3, particle4, periodicity, phase, k );
+         torsionForce->getTorsionParameters( ii, particle1, particle2, particle3, particle4, periodicity, phase, k );
          (void) fprintf( log, "%8d %8d %8d %8d %8d %8d %14.7e %14.7e\n", ii, particle1, particle2, particle3, particle4, periodicity, phase, k );
          if( ii == maxPrint ){
             ii = arraySize - maxPrint;
@@ -1569,7 +1840,35 @@ static int readPeriodicTorsionForce( FILE* filePtr, MapStringInt& forceMap, cons
       }
    }
 
-   return bondForce->getNumTorsions();
+   // add force?
+
+   MapStringIntI forceActive          = forceMap.find( PERIODIC_TORSION_FORCE );
+   if( forceActive != forceMap.end() ){
+      if( (*forceActive).second == 1 ){
+         if( log ){
+             (void) fprintf( log, "Periodic torsion force is being included.\n" );
+         }
+         system.addForce( torsionForce );
+         return torsionForce->getNumTorsions();
+      } else if(  (*forceActive).second == 2 ){
+         CustomTorsionForce* customTorsionForce = copyToCustomPeriodicTorsionForce( torsionForce );
+         if( log ){
+            (void) fprintf( log, "Custom periodic torsion force is being included.\n" );
+         }
+         system.addForce( customTorsionForce );
+         delete torsionForce;
+         return customTorsionForce->getNumTorsions();
+      } else if( log ){
+         (void) fprintf( log, "force flag=%d not recognized.\n", (*forceActive).second );
+      }
+   } else {
+      delete torsionForce;
+      if( log ){
+         (void) fprintf( log, "Periodic torsion force is not being included.\n" );
+      }
+   }
+
+   return 0;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -1603,18 +1902,8 @@ static int readRBTorsionForce( FILE* filePtr, MapStringInt& forceMap, const Stri
       exit(-1);
    }
 
-   RBTorsionForce* bondForce       = new RBTorsionForce();
-   MapStringIntI forceActive    = forceMap.find( RB_TORSION_FORCE );
-   if( forceActive != forceMap.end() && (*forceActive).second ){
-      system.addForce( bondForce );
-      if( log ){
-         (void) fprintf( log, "RB torsion force is being included.\n" );
-      }
-   } else if( log ){
-      (void) fprintf( log, "RB torsion force is not being included.\n" );
-   }
-
-   int numberOfTorsions            = atoi( tokens[1].c_str() );
+   RBTorsionForce* torsionForce       = new RBTorsionForce();
+   int numberOfTorsions               = atoi( tokens[1].c_str() );
    if( log ){
       (void) fprintf( log, "%s number of RBTorsionForce terms=%d\n", methodName.c_str(), numberOfTorsions );
       (void) fflush( log );
@@ -1664,13 +1953,13 @@ int isBond = checkBondIndices( 4, targets[nextIndex], bond );
 if( isBond ){
 if( log )
 (void) fprintf( log, "TGT %d %d [%d %d %d %d]\n", nextIndex, parity, targets[nextIndex][0], targets[nextIndex][1], targets[nextIndex][2], targets[nextIndex][3] );
-         bondForce->addTorsion( particle1, particle2, particle3, particle4, c0, c1, c2, c3, c4, c5 );
+         torsionForce->addTorsion( particle1, particle2, particle3, particle4, c0, c1, c2, c3, c4, c5 );
 } 
 
 #else
 
 
-         bondForce->addTorsion( particle1, particle2, particle3, particle4, c0, c1, c2, c3, c4, c5 );
+         torsionForce->addTorsion( particle1, particle2, particle3, particle4, c0, c1, c2, c3, c4, c5 );
 #endif
 
       } else {
@@ -1694,12 +1983,12 @@ if( parity ){
 
    if( log ){
       static const unsigned int maxPrint   = MAX_PRINT;
-      unsigned int arraySize               = static_cast<unsigned int>(bondForce->getNumTorsions());
+      unsigned int arraySize               = static_cast<unsigned int>(torsionForce->getNumTorsions());
       (void) fprintf( log, "%s: sample of RBTorsionForce parameters\n", methodName.c_str() );
       for( unsigned int ii = 0; ii < arraySize; ii++ ){
          int particle1, particle2, particle3, particle4;
          double c0, c1, c2, c3, c4, c5;
-         bondForce->getTorsionParameters( ii, particle1, particle2, particle3, particle4, c0, c1, c2, c3, c4, c5 );
+         torsionForce->getTorsionParameters( ii, particle1, particle2, particle3, particle4, c0, c1, c2, c3, c4, c5 );
          (void) fprintf( log, "%8d %8d %8d %8d %8d %14.7e %14.7e %14.7e %14.7e %14.7e %14.7e\n",
                          ii, particle1, particle2, particle3, particle4, c0, c1, c2, c3, c4, c5 );
          if( ii == maxPrint ){
@@ -1709,7 +1998,35 @@ if( parity ){
       }
    }
 
-   return bondForce->getNumTorsions();
+   // add force?
+
+   MapStringIntI forceActive          = forceMap.find( RB_TORSION_FORCE );
+   if( forceActive != forceMap.end() ){
+      if( (*forceActive).second == 1 ){
+         if( log ){
+             (void) fprintf( log, "RB torsion force is being included.\n" );
+         }
+         system.addForce( torsionForce );
+         return torsionForce->getNumTorsions();
+      } else if(  (*forceActive).second == 2 ){
+         CustomTorsionForce* customTorsionForce = copyToCustomRbTorsionForce( torsionForce );
+         if( log ){
+            (void) fprintf( log, "Custom RB torsion force is being included.\n" );
+         }
+         system.addForce( customTorsionForce );
+         delete torsionForce;
+         return customTorsionForce->getNumTorsions();
+      } else if( log ){
+         (void) fprintf( log, "force flag=%d not recognized.\n", (*forceActive).second );
+      }
+   } else {
+      delete torsionForce;
+      if( log ){
+         (void) fprintf( log, "RB torsion force is not being included.\n" );
+      }
+   }
+
+   return 0;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -2035,7 +2352,6 @@ static int readNonbondedForce( FILE* filePtr, MapStringInt& forceMap, const Stri
    int includeNonbonded                   = ( forceActive != forceMap.end() && (*forceActive).second ) ? 1 : 0;
    int includeNonbondedExceptions         = ( forceExceptionsActive != forceMap.end() && (*forceExceptionsActive).second ) ? 1 : 0;
    if( includeNonbonded || includeNonbondedExceptions ){
-      system.addForce( nonbondedForce );
       if( log ){
          if( includeNonbonded ){
             (void) fprintf( log, "nonbonded force is being included.\n" );
@@ -2184,7 +2500,34 @@ static int readNonbondedForce( FILE* filePtr, MapStringInt& forceMap, const Stri
       }
    }
 
-   return nonbondedForce->getNumParticles();
+   // add force?
+
+   if( forceActive != forceMap.end() ){
+      if( (*forceActive).second == 1 ){
+         if( log ){
+             (void) fprintf( log, "nonbonded force is being included.\n" );
+         }
+         system.addForce( nonbondedForce );
+         return nonbondedForce->getNumParticles();
+      } else if(  (*forceActive).second == 2 ){
+         CustomNonbondedForce* customNonbondedForce = copyToCustomNonbondedForce( nonbondedForce );
+         if( log ){
+            (void) fprintf( log, "Custom nonbonded force is being included.\n" );
+         }
+         system.addForce( customNonbondedForce );
+         delete nonbondedForce;
+         return customNonbondedForce->getNumParticles();
+      } else if( log ){
+         (void) fprintf( log, "force flag=%d not recognized.\n", (*forceActive).second );
+      }
+   } else {
+      delete nonbondedForce;
+      if( log ){
+         (void) fprintf( log, "Nonbonded force is not being included.\n" );
+      }
+   }
+
+   return 0;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -4057,6 +4400,15 @@ static void getForceStrings( System& system, StringVector& forceStringArray, FIL
             }
         }
     
+        if( !hit ){
+            try {
+               CustomBondForce& harmonicBondForce = dynamic_cast<CustomBondForce&>(force);
+               forceStringArray.push_back( CUSTOM_BOND_FORCE );
+               hit++;
+            } catch( std::bad_cast ){
+            }
+        }
+    
         // angle
 
         if( !hit ){
@@ -4064,6 +4416,18 @@ static void getForceStrings( System& system, StringVector& forceStringArray, FIL
             try {
                HarmonicAngleForce& harmonicAngleForce = dynamic_cast<HarmonicAngleForce&>(force);
                forceStringArray.push_back( HARMONIC_ANGLE_FORCE );
+               hit++;
+            } catch( std::bad_cast ){
+            }
+        }
+
+        // custom angle
+
+        if( !hit ){
+    
+            try {
+               CustomAngleForce& harmonicAngleForce = dynamic_cast<CustomAngleForce&>(force);
+               forceStringArray.push_back( CUSTOM_ANGLE_FORCE );
                hit++;
             } catch( std::bad_cast ){
             }
@@ -4087,6 +4451,17 @@ static void getForceStrings( System& system, StringVector& forceStringArray, FIL
             try {
                RBTorsionForce& rBTorsionForce = dynamic_cast<RBTorsionForce&>(force);
                forceStringArray.push_back( RB_TORSION_FORCE );
+               hit++;
+            } catch( std::bad_cast ){
+            }
+        }
+    
+        // CustomTorsionForce
+    
+        if( !hit ){
+            try {
+               CustomTorsionForce& customTorsionForce = dynamic_cast<CustomTorsionForce&>(force);
+               forceStringArray.push_back( CUSTOM_TORSION_FORCE );
                hit++;
             } catch( std::bad_cast ){
             }
@@ -4134,6 +4509,16 @@ static void getForceStrings( System& system, StringVector& forceStringArray, FIL
                 if( nbExceptions ){
                    forceStringArray.push_back( NB_EXCEPTION_FORCE );
                 }
+            } catch( std::bad_cast ){
+            }
+        } 
+
+        // nonbonded custom
+
+        if( !hit ){
+            try {
+               CustomNonbondedForce& nbForce = dynamic_cast<CustomNonbondedForce&>(force);
+               forceStringArray.push_back( CUSTOM_NB_FORCE );
             } catch( std::bad_cast ){
             }
         } 
@@ -5176,6 +5561,7 @@ Context* testSetup( std::string parameterFileName, MapStringInt& forceMap, Platf
    return context;
 
 }
+
 void testReferenceCudaForces( std::string parameterFileName, MapStringInt& forceMap,
                               MapStringString& inputArgumentMap, FILE* inputLog, FILE* summaryFile ){
 
@@ -5190,6 +5576,10 @@ void testReferenceCudaForces( std::string parameterFileName, MapStringInt& force
   int numberOfSteps                        = 1; 
   int steps                                = 0; 
   int applyAssertion                       = 1;
+  int custom1                              = 0;
+  int custom2                              = 0;
+  int platform1                            = 0;
+  int platform2                            = 1;
 
 // ---------------------------------------------------------------------------------------
 
@@ -5201,6 +5591,10 @@ void testReferenceCudaForces( std::string parameterFileName, MapStringInt& force
    } 
 
    setIntFromMap(    inputArgumentMap, "applyAssertion",     applyAssertion    );
+   setIntFromMap(    inputArgumentMap, "custom1",            custom1           );
+   setIntFromMap(    inputArgumentMap, "custom2",            custom2           );
+   setIntFromMap(    inputArgumentMap, "platform1",          platform1         );
+   setIntFromMap(    inputArgumentMap, "platform2",          platform2         );
 
    if( log ){
       (void) fprintf( log, "%s force tolerance=%.3e energy tolerance=%.3e step=%d\n",
@@ -5208,11 +5602,32 @@ void testReferenceCudaForces( std::string parameterFileName, MapStringInt& force
       (void) fflush( log );
    }   
 
-   ReferencePlatform referencePlatform;
-   registerFreeEnergyMethodsReferencePlatform( referencePlatform );
 
-   CudaPlatform cudaPlatform;
-   registerFreeEnergyMethodsCudaPlatform( cudaPlatform );
+   MapStringInt forceMap1;
+   copyMap( forceMap, forceMap1 );
+   if( custom1 ){
+      editMap( forceMap, forceMap1, 2 );
+   } else {
+      copyMap( forceMap, forceMap1 );
+   }
+
+   MapStringInt forceMap2;
+   copyMap( forceMap, forceMap2 );
+   if( custom2 ){
+      editMap( forceMap, forceMap2, 2 );
+   } else {
+      copyMap( forceMap, forceMap2 );
+   }
+
+   ReferencePlatform referencePlatform1;
+   registerFreeEnergyMethodsReferencePlatform( referencePlatform1 );
+   ReferencePlatform referencePlatform2;
+   registerFreeEnergyMethodsReferencePlatform( referencePlatform2 );
+
+   CudaPlatform cudaPlatform1;
+   registerFreeEnergyMethodsCudaPlatform( cudaPlatform1 );
+   CudaPlatform cudaPlatform2;
+   registerFreeEnergyMethodsCudaPlatform( cudaPlatform2 );
 
    double parameterKineticEnergy, parameterPotentialEnergy;
 
@@ -5220,13 +5635,30 @@ void testReferenceCudaForces( std::string parameterFileName, MapStringInt& force
    std::vector<Vec3> parameterForces2;
    MapStringVectorOfVectors supplementary;
 
-   Context* referenceContext       = testSetup( parameterFileName, forceMap, referencePlatform, 
-                                                parameterForces, &parameterKineticEnergy, &parameterPotentialEnergy,
-                                                supplementary, inputArgumentMap, log );
-   Context* cudaContext            = testSetup( parameterFileName, forceMap,  cudaPlatform,
-                                                parameterForces2, &parameterKineticEnergy, &parameterPotentialEnergy,
-                                                supplementary, inputArgumentMap, log );
+   Context* referenceContext;
+   if( platform1 == 0 ){
+       referenceContext      = testSetup( parameterFileName, forceMap1, referencePlatform1, 
+                                           parameterForces, &parameterKineticEnergy, &parameterPotentialEnergy,
+                                           supplementary, inputArgumentMap, log );
+   } else {
+      referenceContext       = testSetup( parameterFileName, forceMap1, cudaPlatform1, 
+                                          parameterForces, &parameterKineticEnergy, &parameterPotentialEnergy,
+                                          supplementary, inputArgumentMap, log );
+   }
 
+   Context* cudaContext;
+   if( platform2 == 1 ){
+      cudaContext            = testSetup( parameterFileName, forceMap2,  cudaPlatform2,
+                                          parameterForces2, &parameterKineticEnergy, &parameterPotentialEnergy,
+                                          supplementary, inputArgumentMap, log );
+   } else {
+      cudaContext            = testSetup( parameterFileName, forceMap2,  referencePlatform2,
+                                          parameterForces2, &parameterKineticEnergy, &parameterPotentialEnergy,
+                                          supplementary, inputArgumentMap, log );
+   }
+
+   (void) fprintf( log, "Platform1: %s\n", referenceContext->getPlatform().getName().c_str() ); (void) fflush( log );
+   (void) fprintf( log, "Platform2: %s\n", cudaContext->getPlatform().getName().c_str() ); (void) fflush( log );
    Integrator& referenceIntegrator = referenceContext->getIntegrator();
    Integrator& cudaIntegrator      = cudaContext->getIntegrator();
 
@@ -6055,6 +6487,10 @@ int main( int numberOfArguments, char* argv[] ){
       } else if( STRCASECMP( argv[ii], "-energyForceDelta" )     == 0    ||
                  STRCASECMP( argv[ii], "-energyForceTolerance" ) == 0    ||
                  STRCASECMP( argv[ii], "-cudaDeviceId" )         == 0    ||
+                 STRCASECMP( argv[ii], "-platform1" )            == 0    ||
+                 STRCASECMP( argv[ii], "-platform2" )            == 0    ||
+                 STRCASECMP( argv[ii], "-custom1" )              == 0    ||
+                 STRCASECMP( argv[ii], "-custom2" )              == 0    ||
                  STRCASECMP( argv[ii], "-platform" )             == 0    ||
                  STRCASECMP( argv[ii], "-applyAssertion" )       == 0 ){
          addToMap                   = ii;
