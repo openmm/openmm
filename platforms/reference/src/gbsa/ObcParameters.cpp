@@ -431,40 +431,6 @@ int ObcParameters::setScaledRadiusFactors( RealOpenMM* scaledRadiusFactors ){
 
 }
 
-#if RealOpenMMType == 0
-
-/**---------------------------------------------------------------------------------------
-
-   Set OBC scale factors
-
-   @param scaledRadiusFactors  scaledRadiusFactors
-
-   @return SimTKOpenMMCommon::DefaultReturn always
-
-   --------------------------------------------------------------------------------------- */
-
-int ObcParameters::setScaledRadiusFactors( float* scaledRadiusFactors ){
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nCpuObc::setScaledRadiusFactors";
-
-   // ---------------------------------------------------------------------------------------
-
-   if( _scaledRadiusFactors == NULL ){
-      _scaledRadiusFactors    = new RealOpenMM[getNumberOfAtoms()];
-      _ownScaledRadiusFactors = true;
-   }   
-   for( int ii = 0; ii < getNumberOfAtoms(); ii++ ){
-      _scaledRadiusFactors[ii] = (RealOpenMM) scaledRadiusFactors[ii];
-   }
-
-   return SimTKOpenMMCommon::DefaultReturn;
-
-}
-
-#endif
-
 /**---------------------------------------------------------------------------------------
 
    Set OBC scale factors

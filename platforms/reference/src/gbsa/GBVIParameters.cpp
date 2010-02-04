@@ -300,40 +300,6 @@ int GBVIParameters::setScaledRadii( RealOpenMM* scaledRadii ){
 
 }
 
-#if RealOpenMMType == 0
-
-/**---------------------------------------------------------------------------------------
-
-   Set scaled radii
-
-   @param scaledRadii  scaledRadii
-
-   @return SimTKOpenMMCommon::DefaultReturn always
-
-   --------------------------------------------------------------------------------------- */
-
-int GBVIParameters::setScaledRadii( float* scaledRadii ){
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nGBVIParameters::setScaledRadii";
-
-   // ---------------------------------------------------------------------------------------
-
-   if( _scaledRadii == NULL ){
-      _scaledRadii    = new RealOpenMM[getNumberOfAtoms()];
-      _ownScaledRadii = true;
-   }   
-   for( int ii = 0; ii < getNumberOfAtoms(); ii++ ){
-      _scaledRadii[ii] = (RealOpenMM) scaledRadii[ii];
-   }
-
-   return SimTKOpenMMCommon::DefaultReturn;
-
-}
-
-#endif
-
 /**---------------------------------------------------------------------------------------
 
    Set scaled radii
@@ -442,40 +408,6 @@ int GBVIParameters::setGammaParameters( RealOpenMM* gammas ){
    return SimTKOpenMMCommon::DefaultReturn;
 
 }
-
-#if RealOpenMMType == 0
-
-/**---------------------------------------------------------------------------------------
-
-   Set gamma parameters
-
-   @param gammas  gammas
-
-   @return SimTKOpenMMCommon::DefaultReturn always
-
-   --------------------------------------------------------------------------------------- */
-
-int GBVIParameters::setGammaParameters( float* gammas ){
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nGBVIParameters::setGammas";
-
-   // ---------------------------------------------------------------------------------------
-
-   if( _gammaParameters == NULL ){
-      _gammaParameters    = new RealOpenMM[getNumberOfAtoms()];
-      _ownGammaParameters = true;
-   }   
-   for( int ii = 0; ii < getNumberOfAtoms(); ii++ ){
-      _gammaParameters[ii] = (RealOpenMM) gammas[ii];
-   }
-
-   return SimTKOpenMMCommon::DefaultReturn;
-
-}
-
-#endif
 
 /**---------------------------------------------------------------------------------------
 
