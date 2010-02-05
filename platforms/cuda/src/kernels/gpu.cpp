@@ -729,7 +729,7 @@ void gpuSetCustomAngleParameters(gpuContext gpu, const vector<int>& angleAtom1, 
         (*gpu->psCustomAngleID1)[i].z = angleAtom3[i];
         (*gpu->psCustomAngleID1)[i].w = forceBufferCounter[angleAtom1[i]]++;
         (*gpu->psCustomAngleID2)[i].x = forceBufferCounter[angleAtom2[i]]++;
-        (*gpu->psCustomAngleID2)[i].y = forceBufferCounter[angleAtom2[i]]++;
+        (*gpu->psCustomAngleID2)[i].y = forceBufferCounter[angleAtom3[i]]++;
         if (angleParams[i].size() > 0)
             (*gpu->psCustomAngleParams)[i].x = (float) angleParams[i][0];
         if (angleParams[i].size() > 1)
