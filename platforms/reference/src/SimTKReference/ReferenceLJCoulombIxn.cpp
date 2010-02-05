@@ -88,8 +88,8 @@ ReferenceLJCoulombIxn::~ReferenceLJCoulombIxn( ){
     cutoff = true;
     cutoffDistance = distance;
     neighborList = &neighbors;
-    krf = pow(cutoffDistance, -3.0f)*(solventDielectric-1.0f)/(2.0f*solventDielectric+1.0f);
-    crf = (1.0f/cutoffDistance)*(3.0f*solventDielectric)/(2.0f*solventDielectric+1.0f);
+    krf = pow(cutoffDistance, -3.0)*(solventDielectric-1.0)/(2.0*solventDielectric+1.0);
+    crf = (1.0/cutoffDistance)*(3.0*solventDielectric)/(2.0*solventDielectric+1.0);
 
     return ReferenceForce::DefaultReturn;
   }
