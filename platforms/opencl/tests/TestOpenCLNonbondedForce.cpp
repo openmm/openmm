@@ -366,7 +366,7 @@ void testLargeSystem() {
     const int numParticles = numMolecules*2;
     const double cutoff = 2.0;
     const double boxSize = 20.0;
-    const double tol = 1e-3;
+    const double tol = 2e-3;
     OpenCLPlatform cl;
     ReferencePlatform reference;
     System system;
