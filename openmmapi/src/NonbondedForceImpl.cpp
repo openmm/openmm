@@ -85,6 +85,15 @@ void NonbondedForceImpl::initialize(ContextImpl& context) {
         exceptions[particle1].insert(particle2);
         exceptions[particle2].insert(particle1);
     }
+    if (owner.getNonbondedMethod() == NonbondedForce::CutoffPeriodic ||
+            owner.getNonbondedMethod() == NonbondedForce::Ewald ||
+            owner.getNonbondedMethod() == NonbondedForce::PME) {
+        Vec3 boxVectors[3];
+        system.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+        double cutoff = owner.getCutoffDistance();
+        if (cutoff > 0.5*boxVectors[0][0] || cutoff > 0.5*boxVectors[1][1] || cutoff > 0.5*boxVectors[2][2])
+            throw OpenMMException("NonbondedForce: The cutoff distance cannot be greater than half the periodic box size.");
+    }
     dynamic_cast<CalcNonbondedForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
 

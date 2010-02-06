@@ -94,6 +94,13 @@ void GBVIForceImpl::initialize(ContextImpl& context) {
         bondIndices[i].push_back( particle2 );
         bondLengths[i] = bondLength;
     }   
+    if (owner.getNonbondedMethod() == GBVIForce::CutoffPeriodic) {
+        Vec3 boxVectors[3];
+        system.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+        double cutoff = owner.getCutoffDistance();
+        if (cutoff > 0.5*boxVectors[0][0] || cutoff > 0.5*boxVectors[1][1] || cutoff > 0.5*boxVectors[2][2])
+            throw OpenMMException("GBVIForce: The cutoff distance cannot be greater than half the periodic box size.");
+    }
 
     vector<double> scaledRadii;
     scaledRadii.resize(numberOfParticles);
