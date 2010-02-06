@@ -80,6 +80,10 @@ private:
     OpenCLContext& context;
     cl::Kernel settleKernel;
     cl::Kernel shakeKernel;
+    cl::Kernel ccmaDirectionsKernel;
+    cl::Kernel ccmaForceKernel;
+    cl::Kernel ccmaMultiplyKernel;
+    cl::Kernel ccmaUpdateKernel;
     cl::Kernel randomKernel;
     OpenCLArray<mm_float4>* posDelta;
     OpenCLArray<mm_int4>* settleAtoms;
@@ -89,9 +93,21 @@ private:
     OpenCLArray<mm_float4>* random;
     OpenCLArray<mm_int4>* randomSeed;
     OpenCLArray<mm_float2>* stepSize;
+    OpenCLArray<mm_int2>* ccmaAtoms;
+    OpenCLArray<mm_float4>* ccmaDistance;
+    OpenCLArray<cl_float>* ccmaReducedMass;
+    OpenCLArray<cl_int>* ccmaAtomConstraints;
+    OpenCLArray<cl_int>* ccmaNumAtomConstraints;
+    OpenCLArray<cl_int>* ccmaConstraintMatrixColumn;
+    OpenCLArray<cl_float>* ccmaConstraintMatrixValue;
+    OpenCLArray<cl_float>* ccmaDelta1;
+    OpenCLArray<cl_float>* ccmaDelta2;
+    OpenCLArray<cl_int>* ccmaConverged;
     int randomPos;
     int lastSeed;
+    bool hasInitializedConstraintKernels;
     struct ShakeCluster;
+    struct ConstraintOrderer;
 };
 
 } // namespace OpenMM

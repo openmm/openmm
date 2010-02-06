@@ -234,7 +234,7 @@ int main() {
     try {
         testSingleBond();
         testTemperature();
-//        testConstraints();
+        testConstraints();
         testRandomSeed();
     }
     catch(const exception& e) {
