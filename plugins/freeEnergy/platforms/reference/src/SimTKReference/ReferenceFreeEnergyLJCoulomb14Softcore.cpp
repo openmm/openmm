@@ -78,7 +78,7 @@ ReferenceFreeEnergyLJCoulomb14Softcore::~ReferenceFreeEnergyLJCoulomb14Softcore(
     
     cutoff = true;
     cutoffDistance = distance;
-    krf = pow(cutoffDistance, -3.0f)*(solventDielectric-1.0f)/(2.0f*solventDielectric+1.0f);
+    krf = pow(cutoffDistance, (RealOpenMM)-3.0)*(solventDielectric-1.0f)/(2.0f*solventDielectric+1.0f);
     crf = (1.0f/cutoffDistance)*(3.0f*solventDielectric)/(2.0f*solventDielectric+1.0f);
             
     return ReferenceForce::DefaultReturn;
