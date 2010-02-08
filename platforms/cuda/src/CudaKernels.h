@@ -40,6 +40,9 @@ class CudaVerletDynamics;
 
 namespace OpenMM {
 
+// Export internal cudaOpenMMInitializeIntegration() method so it can be used by NML plugin
+void OPENMMCUDA_EXPORT cudaOpenMMInitializeIntegration(const System& system, CudaPlatform::PlatformData& data, const Integrator& integrator);
+
 /**
  * This kernel is invoked at the beginning and end of force and energy computations.  It gives the
  * Platform a chance to clear buffers and do other initialization at the beginning, and to do any

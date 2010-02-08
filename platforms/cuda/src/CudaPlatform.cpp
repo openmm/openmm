@@ -38,7 +38,7 @@ using std::map;
 using std::string;
 using std::stringstream;
 
-extern "C" OPENMM_EXPORT void registerPlatforms() {
+extern "C" OPENMMCUDA_EXPORT void registerPlatforms() {
     if (gpuIsAvailable())
         Platform::registerPlatform(new CudaPlatform());
 }

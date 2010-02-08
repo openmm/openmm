@@ -30,6 +30,7 @@
 #include "cudatypes.h"
 #include "cudaCompact.h"
 #include <vector>
+#include "windowsExportCuda.h"
 
 struct gpuAtomType {
     std::string name;
@@ -268,7 +269,7 @@ extern "C"
 void gpuSetMass(gpuContext gpu, const std::vector<float>& mass);
 
 extern "C"
-void gpuInitializeRandoms(gpuContext gpu);
+void OPENMMCUDA_EXPORT gpuInitializeRandoms(gpuContext gpu);
 
 extern "C"
 void* gpuInit(int numAtoms, unsigned int device = 0, bool useBlockingSync = false);
@@ -298,7 +299,7 @@ extern "C"
 void gpuBuildExclusionList(gpuContext gpu);
 
 extern "C"
-int gpuSetConstants(gpuContext gpu);
+int OPENMMCUDA_EXPORT gpuSetConstants(gpuContext gpu);
 
 extern "C"
 void gpuReorderAtoms(gpuContext gpu);

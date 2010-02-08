@@ -28,6 +28,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/Platform.h"
+#include "windowsExportCuda.h"
 
 struct _gpuContext;
 
@@ -37,7 +38,7 @@ namespace OpenMM {
  * This Platform subclass uses CUDA implementations of the OpenMM kernels to run on NVidia GPUs.
  */
 
-class OPENMM_EXPORT CudaPlatform : public Platform {
+class OPENMMCUDA_EXPORT CudaPlatform : public Platform {
 public:
     class PlatformData;
     CudaPlatform();

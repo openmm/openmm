@@ -34,7 +34,7 @@
 #include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
 #include <cmath>
 
-extern "C" int gpuSetConstants( gpuContext gpu );
+extern "C" int OPENMMCUDA_EXPORT gpuSetConstants( gpuContext gpu );
 
 using namespace OpenMM;
 using namespace std;
@@ -737,7 +737,7 @@ void CudaCalcCustomExternalForceKernel::updateGlobalParams(ContextImpl& context)
         SetCustomExternalGlobalParams(globalParamValues);
 }
 
-static void initializeIntegration(const System& system, CudaPlatform::PlatformData& data, const Integrator& integrator) {
+void OPENMMCUDA_EXPORT OpenMM::cudaOpenMMInitializeIntegration(const System& system, CudaPlatform::PlatformData& data, const Integrator& integrator) {
 
     // Initialize any terms that haven't already been handled by a Force.
 
@@ -803,7 +803,7 @@ CudaIntegrateVerletStepKernel::~CudaIntegrateVerletStepKernel() {
 }
 
 void CudaIntegrateVerletStepKernel::initialize(const System& system, const VerletIntegrator& integrator) {
-    initializeIntegration(system, data, integrator);
+    cudaOpenMMInitializeIntegration(system, data, integrator);
     prevStepSize = -1.0;
 }
 
@@ -833,7 +833,7 @@ CudaIntegrateLangevinStepKernel::~CudaIntegrateLangevinStepKernel() {
 }
 
 void CudaIntegrateLangevinStepKernel::initialize(const System& system, const LangevinIntegrator& integrator) {
-    initializeIntegration(system, data, integrator);
+    cudaOpenMMInitializeIntegration(system, data, integrator);
     _gpuContext* gpu = data.gpu;
     gpu->seed = (unsigned long) integrator.getRandomNumberSeed();
     gpuInitializeRandoms(gpu);
@@ -877,7 +877,7 @@ CudaIntegrateBrownianStepKernel::~CudaIntegrateBrownianStepKernel() {
 }
 
 void CudaIntegrateBrownianStepKernel::initialize(const System& system, const BrownianIntegrator& integrator) {
-    initializeIntegration(system, data, integrator);
+    cudaOpenMMInitializeIntegration(system, data, integrator);
     _gpuContext* gpu = data.gpu;
     gpu->seed = (unsigned long) integrator.getRandomNumberSeed();
     gpuInitializeRandoms(gpu);
@@ -918,7 +918,7 @@ CudaIntegrateVariableVerletStepKernel::~CudaIntegrateVariableVerletStepKernel() 
 }
 
 void CudaIntegrateVariableVerletStepKernel::initialize(const System& system, const VariableVerletIntegrator& integrator) {
-    initializeIntegration(system, data, integrator);
+    cudaOpenMMInitializeIntegration(system, data, integrator);
     prevErrorTol = -1.0;
 }
 
@@ -953,7 +953,7 @@ CudaIntegrateVariableLangevinStepKernel::~CudaIntegrateVariableLangevinStepKerne
 }
 
 void CudaIntegrateVariableLangevinStepKernel::initialize(const System& system, const VariableLangevinIntegrator& integrator) {
-    initializeIntegration(system, data, integrator);
+    cudaOpenMMInitializeIntegration(system, data, integrator);
     _gpuContext* gpu = data.gpu;
     gpu->seed = (unsigned long) integrator.getRandomNumberSeed();
     gpuInitializeRandoms(gpu);

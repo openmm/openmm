@@ -9,6 +9,11 @@ INCLUDE_DIRECTORIES(${CUDA_INCLUDE})
 
 # Automatically create tests using files named "Test*.cpp"
 FILE(GLOB TEST_PROGS "*Test*.cpp")
+# TestCudaRandom has never worked on windows, so let's stop polluting the dashboard with it.
+IF (${CMAKE_GENERATOR} MATCHES "Visual Studio")
+    FILE(GLOB TEST_CUDA_RANDOM_PROG "*TestCudaRandom.cpp")
+    LIST(REMOVE_ITEM TEST_PROGS "${TEST_CUDA_RANDOM_PROG}")
+ENDIF (${CMAKE_GENERATOR} MATCHES "Visual Studio")
 FOREACH(TEST_PROG ${TEST_PROGS})
     GET_FILENAME_COMPONENT(TEST_ROOT ${TEST_PROG} NAME_WE)
 
