@@ -124,6 +124,7 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int*
     #endif
 #else
                     float factorX           = apos.w * psA[j].q * invR;
+
                     dEdR                   += factorX;
                     /* E */
                     CDLJObcGbsa_energy     += factorX;
@@ -214,6 +215,7 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int*
     #endif
 #else
                     float factorX           = apos.w * psA[j].q * invR;
+
                     dEdR                   += factorX;
                     /* E */
                     CDLJObcGbsa_energy     += factorX;
@@ -361,6 +363,7 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int*
     #endif
 #else
                         float factorX           = apos.w * psA[tj].q * invR;
+
                         dEdR                   += factorX;
                         /* E */
                         CDLJObcGbsa_energy     += factorX;
@@ -449,6 +452,7 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int*
     #endif
 #else
                             float factorX           = apos.w * psA[j].q * invR;
+
                             dEdR                   += factorX;
                             /* E */
                             CDLJObcGbsa_energy     += factorX;
@@ -664,7 +668,7 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int*
             of.z                       += af.z;
             of.w                       += af.w;
             cSim.pForce4a[offset]       = of;
-            cSim.pBornForce[offset]     = af.w;
+            cSim.pBornForce[offset]     = of.w;
             offset                      = y + tgx + warp*cSim.stride;
             of                          = cSim.pForce4a[offset];
             of.x                       += sA[threadIdx.x].fx;
@@ -672,7 +676,7 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int*
             of.z                       += sA[threadIdx.x].fz;
             of.w                       += sA[threadIdx.x].fb;
             cSim.pForce4a[offset]       = of;
-            cSim.pBornForce[offset]     = af.w;
+            cSim.pBornForce[offset]     = of.w;
 #else
             unsigned int offset         = x + tgx + (y >> GRIDBITS) * cSim.stride;
             cSim.pForce4a[offset]       = af;
