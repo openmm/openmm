@@ -19,6 +19,7 @@ ENDFOREACH(subdir)
 #CUDA_INCLUDE_DIRECTORIES(BEFORE ${OPENMM_BUILD_FREE_ENERGY_PATH}/jama/include)
 CUDA_INCLUDE_DIRECTORIES(${OPENMM_BUILD_FREE_ENERGY_PATH}/platforms/cuda/../src
                          ${OPENMM_DIR}/platforms/cuda/src
+                         ${OPENMM_DIR}/platforms/cuda/include
                          ${OPENMM_DIR}/platforms/cuda/src/kernels
                          ${OPENMM_DIR}/openmmapi/include ) 
 
