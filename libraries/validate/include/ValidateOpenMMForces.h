@@ -224,8 +224,8 @@ private:
 class ValidateOpenMMForces : public ValidateOpenMM {
 public:
 
-    ValidateOpenMMForces( void );
-    ~ValidateOpenMMForces();
+    OPENMM_VALIDATE_EXPORT ValidateOpenMMForces( void );
+    OPENMM_VALIDATE_EXPORT ~ValidateOpenMMForces();
 
     /**
      * Validate force/energy by comparing the results between the forces/energies computed on user-provided context platform
@@ -236,7 +236,7 @@ public:
      *
      * @return number of inconsistent entries
      */
-     int compareWithReferencePlatform(Context& context, std::string* summaryString = NULL );
+     int OPENMM_VALIDATE_EXPORT compareWithReferencePlatform(Context& context, std::string* summaryString = NULL );
 
     /**
      * Validate force/energy by comparing the results between the forces/energies computed on two different platforms

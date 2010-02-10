@@ -31,6 +31,7 @@
 #include "../../../platforms/reference/include/ReferencePlatform.h"
 #include "openmm/Context.h"
 #include "openmm/System.h"
+#include "ValidateWindowsIncludes.h"
 
 // free-energy plugin includes
 
@@ -174,7 +175,7 @@ public:
      * @param log  log
      *
      */
-    void setLog( FILE* log );
+    void OPENMM_VALIDATE_EXPORT setLog( FILE* log );
     
     /**---------------------------------------------------------------------------------------
     
