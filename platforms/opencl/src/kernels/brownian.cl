@@ -3,10 +3,11 @@
  */
 
 __kernel void integrateBrownianPart1(float tauDeltaT, float noiseAmplitude, __global float4* force,
-        __global float4* posDelta, __global float4* random, unsigned int randomIndex) {
+        __global float4* posDelta, __global float4* velm, __global float4* random, unsigned int randomIndex) {
     randomIndex += get_global_id(0);
     for (int index = get_global_id(0); index < NUM_ATOMS; index += get_global_size(0)) {
-        posDelta[index] = (float4) (tauDeltaT*force[index].xyz + noiseAmplitude*random[randomIndex].xyz, 0.0f);
+        float invMass = velm[index].w;
+        posDelta[index] = (float4) (tauDeltaT*invMass*force[index].xyz + noiseAmplitude*sqrt(invMass)*random[randomIndex].xyz, 0.0f);
         randomIndex += get_global_size(0);
     }
 }

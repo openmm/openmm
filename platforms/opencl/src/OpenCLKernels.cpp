@@ -2680,7 +2680,8 @@ void OpenCLIntegrateBrownianStepKernel::execute(ContextImpl& context, const Brow
         hasInitializedKernels = true;
         kernel1.setArg<cl::Buffer>(2, cl.getForce().getDeviceBuffer());
         kernel1.setArg<cl::Buffer>(3, integration.getPosDelta().getDeviceBuffer());
-        kernel1.setArg<cl::Buffer>(4,integration.getRandom().getDeviceBuffer());
+        kernel1.setArg<cl::Buffer>(4, cl.getVelm().getDeviceBuffer());
+        kernel1.setArg<cl::Buffer>(5, integration.getRandom().getDeviceBuffer());
         kernel2.setArg<cl::Buffer>(1, cl.getPosq().getDeviceBuffer());
         kernel2.setArg<cl::Buffer>(2, cl.getVelm().getDeviceBuffer());
         kernel2.setArg<cl::Buffer>(3, integration.getPosDelta().getDeviceBuffer());
@@ -2700,7 +2701,7 @@ void OpenCLIntegrateBrownianStepKernel::execute(ContextImpl& context, const Brow
 
     // Call the first integration kernel.
 
-    kernel1.setArg<cl_uint>(5, integration.prepareRandomNumbers(cl.getPaddedNumAtoms()));
+    kernel1.setArg<cl_uint>(6, integration.prepareRandomNumbers(cl.getPaddedNumAtoms()));
     cl.executeKernel(kernel1, numAtoms);
 
     // Apply constraints.

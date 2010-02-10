@@ -62,11 +62,14 @@ __global__ void kBrownianUpdatePart1_kernel()
         float4 random4a         = cSim.pRandom4a[rpos + pos];
         float4 apos             = cSim.pPosq[pos];
         float4 force            = cSim.pForce4[pos];
+        float invMass           = cSim.pVelm4[pos].w;
+        float forceScale        = cSim.tauDeltaT*invMass;
+        float noiseScale        = cSim.noiseAmplitude*sqrt(invMass);
 
         cSim.pOldPosq[pos]      = apos;
-        apos.x                  = force.x*cSim.tauDeltaT + cSim.noiseAmplitude*random4a.x;
-        apos.y                  = force.y*cSim.tauDeltaT + cSim.noiseAmplitude*random4a.y;
-        apos.z                  = force.z*cSim.tauDeltaT + cSim.noiseAmplitude*random4a.z;
+        apos.x                  = force.x*forceScale + noiseScale*random4a.x;
+        apos.y                  = force.y*forceScale + noiseScale*random4a.y;
+        apos.z                  = force.z*forceScale + noiseScale*random4a.z;
         cSim.pPosqP[pos]        = apos;
         pos                    += blockDim.x * gridDim.x;
     }

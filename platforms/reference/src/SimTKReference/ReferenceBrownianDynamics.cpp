@@ -202,7 +202,7 @@ int ReferenceBrownianDynamics::update( int numberOfAtoms, RealOpenMM** atomCoord
    const RealOpenMM forceScale = getDeltaT()/getFriction();
    for (int i = 0; i < numberOfAtoms; ++i) {
        for (int j = 0; j < 3; ++j) {
-           xPrime[i][j] = atomCoordinates[i][j] + forceScale*forces[i][j] + noiseAmplitude*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+           xPrime[i][j] = atomCoordinates[i][j] + forceScale*inverseMasses[i]*forces[i][j] + noiseAmplitude*SQRT(inverseMasses[i])*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
        }
    }
    ReferenceConstraintAlgorithm* referenceConstraintAlgorithm = getReferenceConstraintAlgorithm();

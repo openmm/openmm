@@ -68,7 +68,7 @@ void testSingleBond() {
     
     // This is simply an overdamped harmonic oscillator, so compare it to the analytical solution.
     
-    double rate = 2*1.0/0.1;
+    double rate = 2*1.0/(0.1*2.0);
     for (int i = 0; i < 1000; ++i) {
         State state = context.getState(State::Positions | State::Velocities);
         double time = state.getTime();
