@@ -180,8 +180,6 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
                                              RealOpenMM** atomParameters, int** exclusions,
                                              RealOpenMM* fixedParameters, RealOpenMM** forces,
                                              RealOpenMM* energyByAtom, RealOpenMM* totalEnergy) const {
-
-    #include "../SimTKUtilities/RealTypeSimTk.h"
     typedef std::complex<RealOpenMM> d_complex;
 
     static const RealOpenMM epsilon     =  1.0;
@@ -191,9 +189,9 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
 
     int kmax                            = (ewald ? std::max(numRx, std::max(numRy,numRz)) : 0);
     RealOpenMM  factorEwald             = -1 / (4*alphaEwald*alphaEwald);
-    RealOpenMM SQRT_PI                  = sqrt(PI);
-    RealOpenMM TWO_PI                   = 2.0 * PI;
-    RealOpenMM recipCoeff               = (RealOpenMM)(ONE_4PI_EPS0*4*PI/(periodicBoxSize[0] * periodicBoxSize[1] * periodicBoxSize[2]) /epsilon);
+    RealOpenMM SQRT_PI                  = sqrt(PI_M);
+    RealOpenMM TWO_PI                   = 2.0 * PI_M;
+    RealOpenMM recipCoeff               = (RealOpenMM)(ONE_4PI_EPS0*4*PI_M/(periodicBoxSize[0] * periodicBoxSize[1] * periodicBoxSize[2]) /epsilon);
 
     RealOpenMM totalSelfEwaldEnergy     = 0.0;
     RealOpenMM realSpaceEwaldEnergy     = 0.0;
