@@ -242,7 +242,6 @@ int ReferenceFreeEnergyLJCoulombSoftcoreIxn::calculateEwaldIxn( int numberOfAtom
                                                                  RealOpenMM** atomParameters, int** exclusions,
                                                                  RealOpenMM* fixedParameters, RealOpenMM** forces,
                                                                  RealOpenMM* energyByAtom, RealOpenMM* totalEnergy) const {
-    #include "../SimTKUtilities/RealTypeSimTk.h"
 #if 0
     typedef std::complex<RealOpenMM> d_complex;
 
