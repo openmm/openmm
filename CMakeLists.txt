@@ -353,12 +353,6 @@ IF(OPENMM_BUILD_FREE_ENERGY_PLUGIN)
    ADD_SUBDIRECTORY(plugins/freeEnergy)
 ENDIF(OPENMM_BUILD_FREE_ENERGY_PLUGIN)
 
-# Normal mode langevin plugin
-set(OPENMM_BUILD_NML_PLUGIN OFF CACHE BOOL "Build normal-mode langevin plugin")
-if(OPENMM_BUILD_NML_PLUGIN)
-    add_subdirectory(plugins/normalModeLangevin)
-endif(OPENMM_BUILD_NML_PLUGIN)
-
 INSTALL_TARGETS(/lib RUNTIME_DIRECTORY /lib ${SHARED_TARGET})
 INSTALL_TARGETS(/lib RUNTIME_DIRECTORY /lib ${STATIC_TARGET})
 FILE(GLOB CORE_HEADERS     include/*.h          */include/*.h)
