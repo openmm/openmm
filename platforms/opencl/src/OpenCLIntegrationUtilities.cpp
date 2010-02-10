@@ -30,6 +30,7 @@
 #include "openmm/HarmonicAngleForce.h"
 #include "quern.h"
 #include "OpenCLExpressionUtilities.h"
+#include <algorithm>
 #include <cmath>
 #include <cstdlib>
 #include <map>
