@@ -243,7 +243,7 @@ extern "C"
 void gpuSetPMEParameters(gpuContext gpu, float alpha, int gridSizeX, int gridSizeY, int gridSizeZ);
 
 extern "C"
-void gpuSetPeriodicBoxSize(gpuContext gpu, float xsize, float ysize, float zsize);
+void OPENMMCUDA_EXPORT gpuSetPeriodicBoxSize(gpuContext gpu, float xsize, float ysize, float zsize);
 
 extern "C"
 void gpuSetObcParameters(gpuContext gpu, float innerDielectric, float solventDielectric, const std::vector<float>& radius, const std::vector<float>& scale, const std::vector<float>& charge);

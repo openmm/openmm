@@ -154,7 +154,7 @@ ADD_SUBDIRECTORY(platforms/reference/tests)
 
 # Which hardware platforms to build
 
-SET(OPENMM_BUILD_FREE_ENERGY_CUDA_LIB OFF CACHE BOOL "Build OpenMMFreeEnergyCuda library for Nvidia GPUs")
+SET(OPENMM_BUILD_FREE_ENERGY_CUDA_LIB ON CACHE BOOL "Build OpenMMFreeEnergyCuda library for Nvidia GPUs")
 
 SET(OPENMM_BUILD_FREE_ENERGY_PATH)
 SET(OPENMM_BUILD_FREE_ENERGY_CUDA_PATH)
