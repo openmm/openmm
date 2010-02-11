@@ -126,7 +126,7 @@ void testTemperature() {
     }
     ke /= 10000;
     double expected = 0.5*numParticles*3*BOLTZ*temp;
-    ASSERT_EQUAL_TOL(expected, ke, 6/std::sqrt(10000.0));
+    ASSERT_USUALLY_EQUAL_TOL(expected, ke, 6/std::sqrt(10000.0));
 }
 
 void testConstraints() {

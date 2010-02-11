@@ -62,4 +62,6 @@ void throwException(const char* file, int line, const std::string& details) {
 
 #define ASSERT_EQUAL_VEC(expected, found, tol) {ASSERT_EQUAL_TOL((expected)[0], (found)[0], (tol)); ASSERT_EQUAL_TOL((expected)[1], (found)[1], (tol)); ASSERT_EQUAL_TOL((expected)[2], (found)[2], (tol));};
 
+#define ASSERT_USUALLY_EQUAL_TOL(expected, found, tol) {double _scale_ = std::fabs(expected) > 1.0 ? std::fabs(expected) : 1.0; if (!(std::fabs((expected)-(found))/_scale_ <= (tol))) {std::stringstream details; details << "Expected "<<(expected)<<", found "<<(found)<<" (This test is stochastic and may occasionally fail)"; throwException(__FILE__, __LINE__, details.str());}};
+
 #endif /*OPENMM_ASSERTIONUTILITIES_H_*/

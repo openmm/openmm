@@ -121,7 +121,7 @@ void testTemperature() {
     }
     pe /= steps;
     double expected = 0.5*numBonds*BOLTZ*temp;
-    ASSERT_EQUAL_TOL(expected, pe, 0.1*expected);
+    ASSERT_USUALLY_EQUAL_TOL(expected, pe, 0.1*expected);
 }
 
 void testConstraints() {
