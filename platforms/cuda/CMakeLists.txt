@@ -14,7 +14,29 @@
 #   libOpenMMCuda_static[_d].a
 #----------------------------------------------------
 
-SUBDIRS (tests)
+# Only run tests if this machine has a cuda-capable GPU
+# So run a little test program at configuration time to sniff for GPUs
+find_package(CUDA)
+try_run(RUN_RESULT_VAR COMPILE_RESULT_VAR
+    ${CMAKE_BINARY_DIR} 
+    ${CMAKE_CURRENT_SOURCE_DIR}/tests/has_cuda_gpu.c
+    CMAKE_FLAGS 
+        -DINCLUDE_DIRECTORIES:STRING=${CUDA_TOOLKIT_INCLUDE}
+        -DLINK_LIBRARIES:STRING=${CUDA_CUDART_LIBRARY}
+    COMPILE_OUTPUT_VARIABLE COMPILE_OUTPUT_VAR
+    RUN_OUTPUT_VARIABLE RUN_OUTPUT_VAR
+)
+message("${RUN_OUTPUT_VAR}") # Display number of GPUs found
+# COMPILE_RESULT_VAR is TRUE when compile succeeds
+# RUN_RESULT_VAR is equal to the number of GPUs found
+if(COMPILE_RESULT_VAR AND RUN_RESULT_VAR)
+    set(CUDA_HAVE_GPU TRUE CACHE BOOL "Whether CUDA-capable GPU is present")
+else()
+    set(CUDA_HAVE_GPU FALSE CACHE BOOL "Whether CUDA-capable GPU is present")
+endif()
+if(CUDA_HAVE_GPU)
+    SUBDIRS (tests)
+endif(CUDA_HAVE_GPU)
 
 # The source is organized into subdirectories, but we handle them all from
 # this CMakeLists file rather than letting CMake visit them as SUBDIRS.
