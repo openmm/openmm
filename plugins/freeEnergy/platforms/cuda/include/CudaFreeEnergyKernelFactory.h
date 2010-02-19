@@ -35,7 +35,7 @@ namespace OpenMM {
  * This KernelFactory creates all kernels for CudaFreeEnergyPlatform.
  */
 
-class CudaFreeEnergyKernelFactory : public KernelFactory {
+class OPENMM_EXPORT CudaFreeEnergyKernelFactory : public KernelFactory {
 public:
     KernelImpl* createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const;
 };
