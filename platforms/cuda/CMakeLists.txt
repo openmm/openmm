@@ -26,10 +26,12 @@ try_run(RUN_RESULT_VAR COMPILE_RESULT_VAR
     COMPILE_OUTPUT_VARIABLE COMPILE_OUTPUT_VAR
     RUN_OUTPUT_VARIABLE RUN_OUTPUT_VAR
 )
+message("COMPILE_OUTPUT_VAR = ${COMPILE_OUTPUT_VAR}")
+message("RUN_OUTPUT_VAR = ${RUN_OUTPUT_VAR}")
 message("${RUN_OUTPUT_VAR}") # Display number of GPUs found
 # COMPILE_RESULT_VAR is TRUE when compile succeeds
-# RUN_RESULT_VAR is equal to the number of GPUs found
-if(COMPILE_RESULT_VAR AND RUN_RESULT_VAR)
+# RUN_RESULT_VAR is zero when a GPU is found
+if(COMPILE_RESULT_VAR AND NOT RUN_RESULT_VAR)
     set(CUDA_HAVE_GPU TRUE CACHE BOOL "Whether CUDA-capable GPU is present")
 else()
     set(CUDA_HAVE_GPU FALSE CACHE BOOL "Whether CUDA-capable GPU is present")
