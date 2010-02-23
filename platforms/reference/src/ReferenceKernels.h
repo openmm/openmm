@@ -629,6 +629,46 @@ private:
 };
 
 /**
+ * This kernel is invoked by CustomHbondForce to calculate the forces acting on the system.
+ */
+class ReferenceCalcCustomHbondForceKernel : public CalcCustomHbondForceKernel {
+public:
+    ReferenceCalcCustomHbondForceKernel(std::string name, const Platform& platform) : CalcCustomHbondForceKernel(name, platform) {
+    }
+    ~ReferenceCalcCustomHbondForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomHbondForce this kernel will be used for
+     */
+    void initialize(const System& system, const CustomHbondForce& force);
+    /**
+     * Execute the kernel to calculate the forces.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void executeForces(ContextImpl& context);
+    /**
+     * Execute the kernel to calculate the energy.
+     *
+     * @param context    the context in which to execute this kernel
+     * @return the potential energy due to the CustomHbondForce
+     */
+    double executeEnergy(ContextImpl& context);
+private:
+    int numDonors, numAcceptors, numParticles;
+    int **exclusionArray;
+    RealOpenMM **donorParamArray, **acceptorParamArray;
+    RealOpenMM nonbondedCutoff, periodicBoxSize[3];
+    std::vector<std::set<int> > exclusions;
+    std::vector<std::pair<int, int> > donorParticles, acceptorParticles;
+    Lepton::ExpressionProgram energyExpression, rForceExpression, thetaForceExpression, psiForceExpression, chiForceExpression;
+    std::vector<std::string> donorParameterNames, acceptorParameterNames, globalParameterNames;
+    NonbondedMethod nonbondedMethod;
+};
+
+/**
  * This kernel is invoked by VerletIntegrator to take one time step.
  */
 class ReferenceIntegrateVerletStepKernel : public IntegrateVerletStepKernel {

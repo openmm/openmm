@@ -1,5 +1,5 @@
-#ifndef OPENMM_CUSTOMNONBONDEDFORCE_H_
-#define OPENMM_CUSTOMNONBONDEDFORCE_H_
+#ifndef OPENMM_CUSTOMHBONDFORCE_H_
+#define OPENMM_CUSTOMHBONDFORCE_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2010 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -43,47 +43,64 @@
 namespace OpenMM {
 
 /**
- * This class implements nonbonded interactions between particles.  Unlike NonbondedForce, the functional form
- * of the interaction is completely customizable, and may involve arbitrary algebraic expressions and tabulated
- * functions.  It may depend on the distance between particles, as well as on arbitrary global and
- * per-particle parameters.  It also optionally supports periodic boundary conditions and cutoffs for long range interactions.
+ * This class supports a wide variety of energy functions used to represent hydrogen bonding.  It computes
+ * interactions between "donor" particle pairs and "acceptor" particle pairs (so each interaction involves four
+ * particles in all).  Typically a donor pair consists of a hydrogen atom and the atom it is bonded to,
+ * and an acceptor pair consists of a negatively charged atom and the atom it is bonded to.  Within each pair,
+ * one particle is designated as the "primary particle" (usually the hydrogen atom in a donor, and the negatively
+ * charged atom in an acceptor), and the other particle is called the "secondary particle".
  *
- * To use this class, create a CustomNonbondedForce object, passing an algebraic expression to the constructor
- * that defines the interaction energy between each pair of particles.  The expression may depend on r, the distance
- * between the particles, as well as on any parameters you choose.  Then call addPerParticleParameter() to define per-particle
- * parameters, and addGlobalParameter() to define global parameters.  The values of per-particle parameters are specified as
- * part of the system definition, while values of global parameters may be modified during a simulation by calling Context::setParameter().
- * 
- * Next, call addParticle() once for each particle in the System to set the values of its per-particle parameters.
- * The number of particles for which you set parameters must be exactly equal to the number of particles in the
- * System, or else an exception will be thrown when you try to create a Context.  After a particle has been added,
- * you can modify its parameters by calling setParticleParameters().
+ * We refer to the primary and secondary donor particles as D1 and D2, and the primary and secondary acceptor
+ * particles as A1 and A2.  For each donor and each acceptor, CustomHbondForce computes the following values:
  *
- * CustomNonbondedForce also lets you specify "exclusions", particular pairs of particles whose interactions should be
- * omitted from force and energy calculations.  This is most often used for particles that are bonded to each other.
+ * r: the distance between D1 and A1
+ * theta: the angle formed by D2-D1-A1, measured in radians
+ * psi: the angle formed by A2-A1-D1, measured in radians
+ * chi: the dihedral angle formed by D2-D1-A1-A2, measured in radians.  The angle is defined to be zero when
+ * D2 and A2 are on the same side of the bond formed by D1 and A1.
  *
- * As an example, the following code creates a CustomNonbondedForce that implements a 12-6 Lennard-Jones potential:
+ * The user then specifies an algebraic expression which gives the energy of each interaction as a function
+ * of r, theta, psi, and chi.  The expression also may involve tabulated functions, and may depend on arbitrary
+ * global, per-donor, and per-acceptor parameters.  It also optionally supports periodic boundary conditions
+ * and cutoffs for long range interactions.
  *
- * <tt>CustomNonbondedForce* force = new CustomNonbondedForce("4*epsilon*((sigma/r)^12-(sigma/r)^6); sigma=0.5*(sigma1*sigma2); epsilon=sqrt(epsilon1*epsilon2)");</tt>
+ * To use this class, create a CustomHbondForce object, passing an algebraic expression to the constructor
+ * that defines the interaction energy between each donor and acceptor.  The expression may depend on r, theta,
+ * psi, and chi, as well as on any parameters you choose.  Then call addPerDonorParameter() to define per-donor
+ * parameters, addPerAcceptorParameter to define per-acceptor parameters, and addGlobalParameter() to define
+ * global parameters.  The values of per-donor and per-acceptor parameters are specified as part of the system
+ * definition, while values of global parameters may be modified during a simulation by calling Context::setParameter().
  *
- * This force depends on two parameters: sigma and epsilon.  The following code defines these as per-particle parameters:
+ * Next, call addDonor() and addAcceptor() to define donors and acceptors and specify their parameter values.
+ * After a donor or acceptor has been added, you can modify its parameters by calling setDonorParameters() or
+ * setAcceptorParameters().
+ *
+ * CustomHbondForce also lets you specify "exclusions", particular combinations of donors and acceptors whose
+ * interactions should be omitted from force and energy calculations.  This is most often used for particles
+ * that are bonded to each other.
+ *
+ * As an example, the following code creates a CustomHbondForce that implements a simple harmonic potential
+ * to keep r and theta near ideal values:
+ *
+ * <tt>CustomHbondForce* force = new CustomHbondForce("k*(r-r0)^2*(theta-theta0)^2");</tt>
+ *
+ * This force depends on three parameters: k, r0, and theta0.  The following code defines these as per-donor parameters:
  *
  * <tt><pre>
- * force->addPerParticleParameter("sigma");
- * force->addPerParticleParameter("epsilon");
+ * force->addPerDonorParameter("k");
+ * force->addPerDonorParameter("r0");
+ * force->addPerDonorParameter("theta0");
  * </pre></tt>
  *
  * Expressions may involve the operators + (add), - (subtract), * (multiply), / (divide), and ^ (power), and the following
  * functions: sqrt, exp, log, sin, cos, sec, csc, tan, cot, asin, acos, atan, sinh, cosh, tanh, erf, erfc, step.  All trigonometric functions
- * are defined in radians, and log is the natural logarithm.  step(x) = 0 if x is less than 0, 1 otherwise.  The names of per-particle parameters
- * have the suffix "1" or "2" appended to them to indicate the values for the two interacting particles.  As seen in the above example,
- * the expression may also involve intermediate quantities that are defined following the main expression, using ";" as a separator.
+ * are defined in radians, and log is the natural logarithm.  step(x) = 0 if x is less than 0, 1 otherwise.
  *
  * In addition, you can call addFunction() to define a new function based on tabulated values.  You specify a vector of
  * values, and an interpolating or approximating spline is created from them.  That function can then appear in the expression.
  */
 
-class OPENMM_EXPORT CustomNonbondedForce : public Force {
+class OPENMM_EXPORT CustomHbondForce : public Force {
 public:
     /**
      * This is an enumeration of the different methods that may be used for handling long range nonbonded forces.
@@ -105,17 +122,24 @@ public:
         CutoffPeriodic = 2,
     };
     /**
-     * Create a CustomNonbondedForce.
+     * Create a CustomHbondForce.
      *
-     * @param energy    an algebraic expression giving the interaction energy between two particles as a function
-     *                  of r, the distance between them, as well as any global and per-particle parameters
+     * @param energy    an algebraic expression giving the interaction energy between a donor as a function
+     *                  of the distance r and the angles theta, psi, and chi, as well as any global, per-donor, and
+     *                  per-acceptor parameters
      */
-    CustomNonbondedForce(const std::string& energy);
+    CustomHbondForce(const std::string& energy);
     /**
-     * Get the number of particles for which force field parameters have been defined.
+     * Get the number of donors for which force field parameters have been defined.
      */
-    int getNumParticles() const {
-        return particles.size();
+    int getNumDonors() const {
+        return donors.size();
+    }
+    /**
+     * Get the number of acceptors for which force field parameters have been defined.
+     */
+    int getNumAcceptors() const {
+        return acceptors.size();
     }
     /**
      * Get the number of particle pairs whose interactions should be excluded.
@@ -124,10 +148,16 @@ public:
         return exclusions.size();
     }
     /**
-     * Get the number of per-particle parameters that the interaction depends on.
+     * Get the number of per-donor parameters that the interaction depends on.
      */
-    int getNumPerParticleParameters() const {
-        return parameters.size();
+    int getNumPerDonorParameters() const {
+        return donorParameters.size();
+    }
+    /**
+     * Get the number of per-acceptor parameters that the interaction depends on.
+     */
+    int getNumPerAcceptorParameters() const {
+        return acceptorParameters.size();
     }
     /**
      * Get the number of global parameters that the interaction depends on.
@@ -142,11 +172,11 @@ public:
         return functions.size();
     }
     /**
-     * Get the algebraic expression that gives the interaction energy between two particles
+     * Get the algebraic expression that gives the interaction energy between a donor and an acceptor
      */
     const std::string& getEnergyFunction() const;
     /**
-     * Set the algebraic expression that gives the interaction energy between two particles
+     * Set the algebraic expression that gives the interaction energy between a donor and an acceptor
      */
     void setEnergyFunction(const std::string& energy);
     /**
@@ -158,40 +188,59 @@ public:
      */
     void setNonbondedMethod(NonbondedMethod method);
     /**
-     * Get the cutoff distance (in nm) being used for nonbonded interactions.  If the NonbondedMethod in use
-     * is NoCutoff, this value will have no effect.
+     * Get the cutoff distance (in nm) being used.  If the NonbondedMethod in use is NoCutoff, this value will have no effect.
      *
      * @return the cutoff distance, measured in nm
      */
     double getCutoffDistance() const;
     /**
-     * Set the cutoff distance (in nm) being used for nonbonded interactions.  If the NonbondedMethod in use
-     * is NoCutoff, this value will have no effect.
+     * Set the cutoff distance (in nm) being used.  If the NonbondedMethod in use is NoCutoff, this value will have no effect.
      *
      * @param distance    the cutoff distance, measured in nm
      */
     void setCutoffDistance(double distance);
     /**
-     * Add a new per-particle parameter that the interaction may depend on.
+     * Add a new per-donor parameter that the interaction may depend on.
      *
      * @param name     the name of the parameter
      * @return the index of the parameter that was added
      */
-    int addPerParticleParameter(const std::string& name);
+    int addPerDonorParameter(const std::string& name);
     /**
-     * Get the name of a per-particle parameter.
+     * Get the name of a per-donor parameter.
      *
      * @param index     the index of the parameter for which to get the name
      * @return the parameter name
      */
-    const std::string& getPerParticleParameterName(int index) const;
+    const std::string& getPerDonorParameterName(int index) const;
     /**
-     * Set the name of a per-particle parameter.
+     * Set the name of a per-donor parameter.
      *
      * @param index          the index of the parameter for which to set the name
      * @param name           the name of the parameter
      */
-    void setPerParticleParameterName(int index, const std::string& name);
+    void setPerDonorParameterName(int index, const std::string& name);
+    /**
+     * Add a new per-acceptor parameter that the interaction may depend on.
+     *
+     * @param name     the name of the parameter
+     * @return the index of the parameter that was added
+     */
+    int addPerAcceptorParameter(const std::string& name);
+    /**
+     * Get the name of a per-acceptor parameter.
+     *
+     * @param index     the index of the parameter for which to get the name
+     * @return the parameter name
+     */
+    const std::string& getPerAcceptorParameterName(int index) const;
+    /**
+     * Set the name of a per-acceptor parameter.
+     *
+     * @param index          the index of the parameter for which to set the name
+     * @param name           the name of the parameter
+     */
+    void setPerAcceptorParameterName(int index, const std::string& name);
     /**
      * Add a new global parameter that the interaction may depend on.
      *
@@ -229,51 +278,83 @@ public:
      */
     void setGlobalParameterDefaultValue(int index, double defaultValue);
     /**
-     * Add the nonbonded force parameters for a particle.  This should be called once for each particle
-     * in the System.  When it is called for the i'th time, it specifies the parameters for the i'th particle.
+     * Add a donor pair to the force
      *
-     * @param parameters    the list of parameters for the new particle
-     * @return the index of the particle that was added
+     * @param primaryParticle    the index of the primary particle for this donor pair
+     * @param secondaryParticle  the index of the secondary particle for this donor pair
+     * @param parameters         the list of per-donor parameter values for the new donor
+     * @return the index of the donor that was added
      */
-    int addParticle(const std::vector<double>& parameters);
+    int addDonor(int primaryParticle, int secondaryParticle, const std::vector<double>& parameters);
     /**
-     * Get the nonbonded force parameters for a particle.
+     * Get the properties of a donor pair.
      *
-     * @param index       the index of the particle for which to get parameters
-     * @param parameters  the list of parameters for the specified particle
+     * @param index              the index of the donor pair to get
+     * @param primaryParticle    the index of the primary particle for this donor pair
+     * @param secondaryParticle  the index of the secondary particle for this donor pair
+     * @param parameters         the list of per-donor parameter values for the new donor
      */
-    void getParticleParameters(int index, std::vector<double>& parameters) const;
+    void getDonorParameters(int index, int& primaryParticle, int& secondaryParticle, std::vector<double>& parameters) const;
     /**
-     * Set the nonbonded force parameters for a particle.
+     * Set the properties of a donor pair.
      *
-     * @param index       the index of the particle for which to set parameters
-     * @param parameters  the list of parameters for the specified particle
+     * @param index              the index of the donor pair to get
+     * @param primaryParticle    the index of the primary particle for this donor pair
+     * @param secondaryParticle  the index of the secondary particle for this donor pair
+     * @param parameters         the list of per-donor parameter values for the new donor
      */
-    void setParticleParameters(int index, const std::vector<double>& parameters);
+    void setDonorParameters(int index, int primaryParticle, int secondaryParticle, const std::vector<double>& parameters);
     /**
-     * Add a particle pair to the list of interactions that should be excluded.
+     * Add an acceptor pair to the force
      *
-     * @param particle1  the index of the first particle in the pair
-     * @param particle2  the index of the second particle in the pair
+     * @param primaryParticle    the index of the primary particle for this acceptor pair
+     * @param secondaryParticle  the index of the secondary particle for this acceptor pair
+     * @param parameters         the list of per-acceptor parameter values for the new acceptor
+     * @return the index of the acceptor that was added
+     */
+    int addAcceptor(int primaryParticle, int secondaryParticle, const std::vector<double>& parameters);
+    /**
+     * Get the properties of an acceptor pair.
+     *
+     * @param index              the index of the acceptor pair to get
+     * @param primaryParticle    the index of the primary particle for this acceptor pair
+     * @param secondaryParticle  the index of the secondary particle for this acceptor pair
+     * @param parameters         the list of per-acceptor parameter values for the new acceptor
+     */
+    void getAcceptorParameters(int index, int& primaryParticle, int& secondaryParticle, std::vector<double>& parameters) const;
+    /**
+     * Set the properties of an acceptor pair.
+     *
+     * @param index              the index of the acceptor pair to get
+     * @param primaryParticle    the index of the primary particle for this acceptor pair
+     * @param secondaryParticle  the index of the secondary particle for this acceptor pair
+     * @param parameters         the list of per-acceptor parameter values for the new acceptor
+     */
+    void setAcceptorParameters(int index, int primaryParticle, int secondaryParticle, const std::vector<double>& parameters);
+    /**
+     * Add a donor-acceptor pair to the list of interactions that should be excluded.
+     *
+     * @param donor     the index of the donor to exclude
+     * @param acceptor  the index of the acceptor to exclude
      * @return the index of the exclusion that was added
      */
-    int addExclusion(int particle1, int particle2);
+    int addExclusion(int donor, int acceptor);
     /**
-     * Get the particles in a pair whose interaction should be excluded.
+     * Get the donor and acceptor in a pair whose interaction should be excluded.
      *
-     * @param index      the index of the exclusion for which to get particle indices
-     * @param particle1  the index of the first particle in the pair
-     * @param particle2  the index of the second particle in the pair
+     * @param index      the index of the exclusion for which to get donor and acceptor indices
+     * @param particle1  the index of the donor
+     * @param particle2  the index of the acceptor
      */
-    void getExclusionParticles(int index, int& particle1, int& particle2) const;
+    void getExclusionParticles(int index, int& donor, int& acceptor) const;
     /**
-     * Set the particles in a pair whose interaction should be excluded.
+     * Get the donor and acceptor in a pair whose interaction should be excluded.
      *
-     * @param index      the index of the exclusion for which to set particle indices
-     * @param particle1  the index of the first particle in the pair
-     * @param particle2  the index of the second particle in the pair
+     * @param index      the index of the exclusion for which to get donor and acceptor indices
+     * @param particle1  the index of the donor
+     * @param particle2  the index of the acceptor
      */
-    void setExclusionParticles(int index, int particle1, int particle2);
+    void setExclusionParticles(int index, int donor, int acceptor);
     /**
      * Add a tabulated function that may appear in the energy expression.
      *
@@ -316,44 +397,48 @@ public:
 protected:
     ForceImpl* createImpl();
 private:
-    class ParticleInfo;
-    class PerParticleParameterInfo;
+    class PairInfo;
+    class PerPairParameterInfo;
     class GlobalParameterInfo;
     class ExclusionInfo;
     class FunctionInfo;
     NonbondedMethod nonbondedMethod;
     double cutoffDistance;
     std::string energyExpression;
-    std::vector<PerParticleParameterInfo> parameters;
+    std::vector<PerPairParameterInfo> donorParameters;
+    std::vector<PerPairParameterInfo> acceptorParameters;
     std::vector<GlobalParameterInfo> globalParameters;
-    std::vector<ParticleInfo> particles;
+    std::vector<PairInfo> donors;
+    std::vector<PairInfo> acceptors;
     std::vector<ExclusionInfo> exclusions;
     std::vector<FunctionInfo> functions;
 };
 
 /**
- * This is an internal class used to record information about a particle.
+ * This is an internal class used to record information about a donor or acceptor.
  * @private
  */
-class CustomNonbondedForce::ParticleInfo {
+class CustomHbondForce::PairInfo {
 public:
     std::vector<double> parameters;
-    ParticleInfo() {
+    int primaryParticle, secondaryParticle;
+    PairInfo() : primaryParticle(-1), secondaryParticle(-1) {
     }
-    ParticleInfo(const std::vector<double>& parameters) : parameters(parameters) {
+    PairInfo(int primaryParticle, int secondaryParticle, const std::vector<double>& parameters) :
+        primaryParticle(primaryParticle), secondaryParticle(secondaryParticle), parameters(parameters) {
     }
 };
 
 /**
- * This is an internal class used to record information about a per-particle parameter.
+ * This is an internal class used to record information about a per-donor or per-acceptor parameter.
  * @private
  */
-class CustomNonbondedForce::PerParticleParameterInfo {
+class CustomHbondForce::PerPairParameterInfo {
 public:
     std::string name;
-    PerParticleParameterInfo() {
+    PerPairParameterInfo() {
     }
-    PerParticleParameterInfo(const std::string& name) : name(name) {
+    PerPairParameterInfo(const std::string& name) : name(name) {
     }
 };
 
@@ -361,7 +446,7 @@ public:
  * This is an internal class used to record information about a global parameter.
  * @private
  */
-class CustomNonbondedForce::GlobalParameterInfo {
+class CustomHbondForce::GlobalParameterInfo {
 public:
     std::string name;
     double defaultValue;
@@ -375,14 +460,14 @@ public:
  * This is an internal class used to record information about an exclusion.
  * @private
  */
-class CustomNonbondedForce::ExclusionInfo {
+class CustomHbondForce::ExclusionInfo {
 public:
-    int particle1, particle2;
+    int donor, acceptor;
     ExclusionInfo() {
-        particle1 = particle2 = -1;
+        donor = acceptor = -1;
     }
-    ExclusionInfo(int particle1, int particle2) :
-        particle1(particle1), particle2(particle2) {
+    ExclusionInfo(int donor, int acceptor) :
+        donor(donor), acceptor(acceptor) {
     }
 };
 
@@ -390,7 +475,7 @@ public:
  * This is an internal class used to record information about a tabulated function.
  * @private
  */
-class CustomNonbondedForce::FunctionInfo {
+class CustomHbondForce::FunctionInfo {
 public:
     std::string name;
     std::vector<double> values;
@@ -405,4 +490,4 @@ public:
 
 } // namespace OpenMM
 
-#endif /*OPENMM_CUSTOMNONBONDEDFORCE_H_*/
+#endif /*OPENMM_CUSTOMHBONDFORCE_H_*/

@@ -1,0 +1,193 @@
+/* -------------------------------------------------------------------------- *
+ *                                   OpenMM                                   *
+ * -------------------------------------------------------------------------- *
+ * This is part of the OpenMM molecular simulation toolkit originating from   *
+ * Simbios, the NIH National Center for Physics-Based Simulation of           *
+ * Biological Structures at Stanford, funded under the NIH Roadmap for        *
+ * Medical Research, grant U54 GM072970. See https://simtk.org.               *
+ *                                                                            *
+ * Portions copyright (c) 2008-2010 Stanford University and the Authors.      *
+ * Authors: Peter Eastman                                                     *
+ * Contributors:                                                              *
+ *                                                                            *
+ * Permission is hereby granted, free of charge, to any person obtaining a    *
+ * copy of this software and associated documentation files (the "Software"), *
+ * to deal in the Software without restriction, including without limitation  *
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,   *
+ * and/or sell copies of the Software, and to permit persons to whom the      *
+ * Software is furnished to do so, subject to the following conditions:       *
+ *                                                                            *
+ * The above copyright notice and this permission notice shall be included in *
+ * all copies or substantial portions of the Software.                        *
+ *                                                                            *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR *
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,   *
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL    *
+ * THE AUTHORS, CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,    *
+ * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR      *
+ * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE  *
+ * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
+ * -------------------------------------------------------------------------- */
+
+/**
+ * This tests the reference implementation of CustomTorsionForce.
+ */
+
+#include "../../../tests/AssertionUtilities.h"
+#include "openmm/Context.h"
+#include "ReferencePlatform.h"
+#include "openmm/CustomHbondForce.h"
+#include "openmm/HarmonicAngleForce.h"
+#include "openmm/HarmonicBondForce.h"
+#include "openmm/PeriodicTorsionForce.h"
+#include "openmm/System.h"
+#include "openmm/VerletIntegrator.h"
+#include "../src/sfmt/SFMT.h"
+#include <iostream>
+#include <vector>
+
+using namespace OpenMM;
+using namespace std;
+
+const double TOL = 1e-5;
+
+void testHbond() {
+    ReferencePlatform platform;
+
+    // Create a system using a CustomHbondForce.
+
+    System customSystem;
+    customSystem.addParticle(1.0);
+    customSystem.addParticle(1.0);
+    customSystem.addParticle(1.0);
+    customSystem.addParticle(1.0);
+    CustomHbondForce* custom = new CustomHbondForce("0.5*kr*(r-r0)^2 + 0.5*ktheta*(theta-theta0)^2 + 0.5*kpsi*(psi-psi0)^2 + kchi*(1+cos(n*chi-chi0))");
+    custom->addPerDonorParameter("r0");
+    custom->addPerDonorParameter("theta0");
+    custom->addPerDonorParameter("psi0");
+    custom->addPerAcceptorParameter("chi0");
+    custom->addPerAcceptorParameter("n");
+    custom->addGlobalParameter("kr", 0.4);
+    custom->addGlobalParameter("ktheta", 0.5);
+    custom->addGlobalParameter("kpsi", 0.6);
+    custom->addGlobalParameter("kchi", 0.7);
+    vector<double> parameters(3);
+    parameters[0] = 1.5;
+    parameters[1] = 1.7;
+    parameters[2] = 1.9;
+    custom->addDonor(1, 0, parameters);
+    parameters.resize(2);
+    parameters[0] = 2.1;
+    parameters[1] = 2;
+    custom->addAcceptor(2, 3, parameters);
+    custom->setCutoffDistance(10.0);
+    customSystem.addForce(custom);
+
+    // Create an identical system using HarmonicBondForce, HarmonicAngleForce, and PeriodicTorsionForce.
+
+    System standardSystem;
+    standardSystem.addParticle(1.0);
+    standardSystem.addParticle(1.0);
+    standardSystem.addParticle(1.0);
+    standardSystem.addParticle(1.0);
+    HarmonicBondForce* bond = new HarmonicBondForce();
+    bond->addBond(1, 2, 1.5, 0.4);
+    standardSystem.addForce(bond);
+    HarmonicAngleForce* angle = new HarmonicAngleForce();
+    angle->addAngle(0, 1, 2, 1.7, 0.5);
+    angle->addAngle(1, 2, 3, 1.9, 0.6);
+    standardSystem.addForce(angle);
+    PeriodicTorsionForce* torsion = new PeriodicTorsionForce();
+    torsion->addTorsion(0, 1, 2, 3, 2, 2.1, 0.7);;
+    standardSystem.addForce(torsion);
+
+    // Set the atoms in various positions, and verify that both systems give identical forces and energy.
+
+    init_gen_rand(0);
+    vector<Vec3> positions(4);
+    VerletIntegrator integrator1(0.01);
+    VerletIntegrator integrator2(0.01);
+    for (int i = 0; i < 10; i++) {
+        Context c1(customSystem, integrator1, platform);
+        Context c2(standardSystem, integrator2, platform);
+        for (int j = 0; j < (int) positions.size(); j++)
+            positions[j] = Vec3(2.0*genrand_real2(), 2.0*genrand_real2(), 2.0*genrand_real2());
+        c1.setPositions(positions);
+        c2.setPositions(positions);
+        State s1 = c1.getState(State::Forces | State::Energy);
+        State s2 = c2.getState(State::Forces | State::Energy);
+        for (int i = 0; i < customSystem.getNumParticles(); i++)
+            ASSERT_EQUAL_VEC(s2.getForces()[i], s1.getForces()[i], TOL);
+        ASSERT_EQUAL_TOL(s2.getPotentialEnergy(), s1.getPotentialEnergy(), TOL);
+    }
+}
+
+void testExclusions() {
+    ReferencePlatform platform;
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    VerletIntegrator integrator(0.01);
+    CustomHbondForce* custom = new CustomHbondForce("(r-1)^2");
+    custom->addDonor(0, 1, vector<double>());
+    custom->addDonor(1, 0, vector<double>());
+    custom->addAcceptor(2, 0, vector<double>());
+    custom->addExclusion(1, 0);
+    system.addForce(custom);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(3);
+    positions[0] = Vec3(0, 0, 0);
+    positions[1] = Vec3(0, 2, 0);
+    positions[2] = Vec3(2, 0, 0);
+    context.setPositions(positions);
+    State state = context.getState(State::Forces | State::Energy);
+    const vector<Vec3>& forces = state.getForces();
+    ASSERT_EQUAL_VEC(Vec3(2, 0, 0), forces[0], TOL);
+    ASSERT_EQUAL_VEC(Vec3(0, 0, 0), forces[1], TOL);
+    ASSERT_EQUAL_VEC(Vec3(-2, 0, 0), forces[2], TOL);
+    ASSERT_EQUAL_TOL(1, state.getPotentialEnergy(), TOL);
+}
+
+void testCutoff() {
+    ReferencePlatform platform;
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    VerletIntegrator integrator(0.01);
+    CustomHbondForce* custom = new CustomHbondForce("(r-1)^2");
+    custom->addDonor(0, 1, vector<double>());
+    custom->addDonor(1, 0, vector<double>());
+    custom->addAcceptor(2, 0, vector<double>());
+    custom->setNonbondedMethod(CustomHbondForce::CutoffNonPeriodic);
+    custom->setCutoffDistance(2.5);
+    system.addForce(custom);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(3);
+    positions[0] = Vec3(0, 0, 0);
+    positions[1] = Vec3(0, 3, 0);
+    positions[2] = Vec3(2, 0, 0);
+    context.setPositions(positions);
+    State state = context.getState(State::Forces | State::Energy);
+    const vector<Vec3>& forces = state.getForces();
+    ASSERT_EQUAL_VEC(Vec3(2, 0, 0), forces[0], TOL);
+    ASSERT_EQUAL_VEC(Vec3(0, 0, 0), forces[1], TOL);
+    ASSERT_EQUAL_VEC(Vec3(-2, 0, 0), forces[2], TOL);
+    ASSERT_EQUAL_TOL(1, state.getPotentialEnergy(), TOL);
+}
+
+int main() {
+    try {
+        testHbond();
+        testExclusions();
+        testCutoff();
+    }
+    catch(const exception& e) {
+        cout << "exception: " << e.what() << endl;
+        return 1;
+    }
+    cout << "Done" << endl;
+    return 0;
+}
+

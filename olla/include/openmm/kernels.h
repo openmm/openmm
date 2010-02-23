@@ -39,6 +39,7 @@
 #include "openmm/CustomBondForce.h"
 #include "openmm/CustomExternalForce.h"
 #include "openmm/CustomGBForce.h"
+#include "openmm/CustomHbondForce.h"
 #include "openmm/CustomNonbondedForce.h"
 #include "openmm/CustomTorsionForce.h"
 #include "openmm/GBSAOBCForce.h"
@@ -603,6 +604,43 @@ public:
      *
      * @param context    the context in which to execute this kernel
      * @return the potential energy due to the CustomExternalForce
+     */
+    virtual double executeEnergy(ContextImpl& context) = 0;
+};
+
+/**
+ * This kernel is invoked by CustomHbondForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CalcCustomHbondForceKernel : public KernelImpl {
+public:
+    enum NonbondedMethod {
+        NoCutoff = 0,
+        CutoffNonPeriodic = 1,
+        CutoffPeriodic = 2
+    };
+    static std::string Name() {
+        return "CalcCustomHbondForce";
+    }
+    CalcCustomHbondForceKernel(std::string name, const Platform& platform) : KernelImpl(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomHbondForce this kernel will be used for
+     */
+    virtual void initialize(const System& system, const CustomHbondForce& force) = 0;
+    /**
+     * Execute the kernel to calculate the forces.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    virtual void executeForces(ContextImpl& context) = 0;
+    /**
+     * Execute the kernel to calculate the energy.
+     *
+     * @param context    the context in which to execute this kernel
+     * @return the potential energy due to the CustomHbondForce
      */
     virtual double executeEnergy(ContextImpl& context) = 0;
 };

@@ -41,6 +41,7 @@
 #include "SimTKReference/ReferenceCustomBondIxn.h"
 #include "SimTKReference/ReferenceCustomExternalIxn.h"
 #include "SimTKReference/ReferenceCustomGBIxn.h"
+#include "SimTKReference/ReferenceCustomHbondIxn.h"
 #include "SimTKReference/ReferenceCustomNonbondedIxn.h"
 #include "SimTKReference/ReferenceCustomTorsionIxn.h"
 #include "SimTKReference/ReferenceHarmonicBondIxn.h"
@@ -1230,6 +1231,130 @@ double ReferenceCalcCustomExternalForceKernel::executeEnergy(ContextImpl& contex
     for (int i = 0; i < numParticles; ++i)
         force.calculateForce(particles[i], posData, particleParamArray[i], forceData, &energy);
     disposeRealArray(forceData, context.getSystem().getNumParticles());
+    return energy;
+}
+
+ReferenceCalcCustomHbondForceKernel::~ReferenceCalcCustomHbondForceKernel() {
+    disposeRealArray(donorParamArray, numDonors);
+    disposeRealArray(acceptorParamArray, numAcceptors);
+    disposeIntArray(exclusionArray, numDonors);
+}
+
+void ReferenceCalcCustomHbondForceKernel::initialize(const System& system, const CustomHbondForce& force) {
+
+    // Record the exclusions.
+
+    numDonors = force.getNumDonors();
+    numAcceptors = force.getNumAcceptors();
+    numParticles = system.getNumParticles();
+    exclusions.resize(numDonors);
+    for (int i = 0; i < force.getNumExclusions(); i++) {
+        int donor, acceptor;
+        force.getExclusionParticles(i, donor, acceptor);
+        exclusions[donor].insert(acceptor);
+    }
+
+    // Build the arrays.
+
+    donorParticles.resize(numDonors);
+    int numDonorParameters = force.getNumPerDonorParameters();
+    donorParamArray = allocateRealArray(numDonors, numDonorParameters);
+    for (int i = 0; i < numDonors; ++i) {
+        vector<double> parameters;
+        force.getDonorParameters(i, donorParticles[i].first, donorParticles[i].second, parameters);
+        for (int j = 0; j < numDonorParameters; j++)
+            donorParamArray[i][j] = static_cast<RealOpenMM>(parameters[j]);
+    }
+    acceptorParticles.resize(numAcceptors);
+    int numAcceptorParameters = force.getNumPerAcceptorParameters();
+    acceptorParamArray = allocateRealArray(numAcceptors, numAcceptorParameters);
+    for (int i = 0; i < numAcceptors; ++i) {
+        vector<double> parameters;
+        force.getAcceptorParameters(i, acceptorParticles[i].first, acceptorParticles[i].second, parameters);
+        for (int j = 0; j < numAcceptorParameters; j++)
+            acceptorParamArray[i][j] = static_cast<RealOpenMM>(parameters[j]);
+    }
+    exclusionArray = new int*[numDonors];
+    for (int i = 0; i < numDonors; ++i) {
+        exclusionArray[i] = new int[exclusions[i].size()+1];
+        exclusionArray[i][0] = exclusions[i].size();
+        int index = 0;
+        for (set<int>::const_iterator iter = exclusions[i].begin(); iter != exclusions[i].end(); ++iter)
+            exclusionArray[i][++index] = *iter;
+    }
+    nonbondedMethod = CalcCustomHbondForceKernel::NonbondedMethod(force.getNonbondedMethod());
+    nonbondedCutoff = (RealOpenMM) force.getCutoffDistance();
+    Vec3 boxVectors[3];
+    system.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+    periodicBoxSize[0] = (RealOpenMM) boxVectors[0][0];
+    periodicBoxSize[1] = (RealOpenMM) boxVectors[1][1];
+    periodicBoxSize[2] = (RealOpenMM) boxVectors[2][2];
+
+    // Create custom functions for the tabulated functions.
+
+    map<string, Lepton::CustomFunction*> functions;
+    for (int i = 0; i < force.getNumFunctions(); i++) {
+        string name;
+        vector<double> values;
+        double min, max;
+        bool interpolating;
+        force.getFunctionParameters(i, name, values, min, max, interpolating);
+        functions[name] = new ReferenceTabulatedFunction(min, max, values, interpolating);
+    }
+
+    // Parse the various expressions used to calculate the force.
+
+    Lepton::ParsedExpression expression = Lepton::Parser::parse(force.getEnergyFunction(), functions).optimize();
+    energyExpression = expression.createProgram();
+    rForceExpression = expression.differentiate("r").optimize().createProgram();
+    thetaForceExpression = expression.differentiate("theta").optimize().createProgram();
+    psiForceExpression = expression.differentiate("psi").optimize().createProgram();
+    chiForceExpression = expression.differentiate("chi").optimize().createProgram();
+    for (int i = 0; i < numDonorParameters; i++)
+        donorParameterNames.push_back(force.getPerDonorParameterName(i));
+    for (int i = 0; i < numAcceptorParameters; i++)
+        acceptorParameterNames.push_back(force.getPerAcceptorParameterName(i));
+    for (int i = 0; i < force.getNumGlobalParameters(); i++)
+        globalParameterNames.push_back(force.getGlobalParameterName(i));
+
+    // Delete the custom functions.
+
+    for (map<string, Lepton::CustomFunction*>::iterator iter = functions.begin(); iter != functions.end(); iter++)
+        delete iter->second;
+}
+
+void ReferenceCalcCustomHbondForceKernel::executeForces(ContextImpl& context) {
+    RealOpenMM** posData = extractPositions(context);
+    RealOpenMM** forceData = extractForces(context);
+    ReferenceCustomHbondIxn ixn(donorParticles, acceptorParticles, energyExpression, rForceExpression, thetaForceExpression, psiForceExpression,
+            chiForceExpression, donorParameterNames, acceptorParameterNames);
+    bool periodic = (nonbondedMethod == CutoffPeriodic);
+    if (nonbondedMethod != NoCutoff)
+        ixn.setUseCutoff(nonbondedCutoff);
+    if (periodic)
+        ixn.setPeriodic(periodicBoxSize);
+    map<string, double> globalParameters;
+    for (int i = 0; i < (int) globalParameterNames.size(); i++)
+        globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
+    ixn.calculatePairIxn(posData, donorParamArray, acceptorParamArray, exclusionArray, globalParameters, forceData, 0);
+}
+
+double ReferenceCalcCustomHbondForceKernel::executeEnergy(ContextImpl& context) {
+    RealOpenMM** posData = extractPositions(context);
+    RealOpenMM** forceData = allocateRealArray(numParticles, 3);
+    RealOpenMM energy = 0;
+    ReferenceCustomHbondIxn ixn(donorParticles, acceptorParticles, energyExpression, rForceExpression, thetaForceExpression, psiForceExpression,
+            chiForceExpression, donorParameterNames, acceptorParameterNames);
+    bool periodic = (nonbondedMethod == CutoffPeriodic);
+    if (nonbondedMethod != NoCutoff)
+        ixn.setUseCutoff(nonbondedCutoff);
+    if (periodic)
+        ixn.setPeriodic(periodicBoxSize);
+    map<string, double> globalParameters;
+    for (int i = 0; i < (int) globalParameterNames.size(); i++)
+        globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
+    ixn.calculatePairIxn(posData, donorParamArray, acceptorParamArray, exclusionArray, globalParameters, forceData, &energy);
+    disposeRealArray(forceData, numParticles);
     return energy;
 }
 
