@@ -278,6 +278,9 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int*
             // Write results
 #ifdef USE_OUTPUT_BUFFER_PER_WARP
             unsigned int offset         = x + tgx + warp*cSim.stride;
+#else
+            unsigned int offset         = x + tgx + (x >> GRIDBITS) * cSim.stride;
+#endif
             float4 of                   = cSim.pForce4a[offset];
             of.x                       += af.x;
             of.y                       += af.y;
@@ -285,11 +288,6 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int*
             of.w                       += af.w;
             cSim.pForce4a[offset]       = of;
             cSim.pBornForce[offset]     = of.w;
-#else
-            unsigned int offset         = x + tgx + (x >> GRIDBITS) * cSim.stride;
-            cSim.pForce4a[offset]       = af;
-            cSim.pBornForce[offset]     = af.w;
-#endif
         }
         else        // 100% utilization
         {
@@ -662,6 +660,9 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int*
             // Write results
 #ifdef USE_OUTPUT_BUFFER_PER_WARP
             unsigned int offset         = x + tgx + warp*cSim.stride;
+#else
+            unsigned int offset         = x + tgx + (y >> GRIDBITS) * cSim.stride;
+#endif
             float4 of                   = cSim.pForce4a[offset];
             of.x                       += af.x;
             of.y                       += af.y;
@@ -669,7 +670,11 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int*
             of.w                       += af.w;
             cSim.pForce4a[offset]       = of;
             cSim.pBornForce[offset]     = of.w;
+#ifdef USE_OUTPUT_BUFFER_PER_WARP
             offset                      = y + tgx + warp*cSim.stride;
+#else
+            offset                      = y + tgx + (x >> GRIDBITS) * cSim.stride;
+#endif
             of                          = cSim.pForce4a[offset];
             of.x                       += sA[threadIdx.x].fx;
             of.y                       += sA[threadIdx.x].fy;
@@ -677,18 +682,6 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsa, Forces1_kernel)(unsigned int*
             of.w                       += sA[threadIdx.x].fb;
             cSim.pForce4a[offset]       = of;
             cSim.pBornForce[offset]     = of.w;
-#else
-            unsigned int offset         = x + tgx + (y >> GRIDBITS) * cSim.stride;
-            cSim.pForce4a[offset]       = af;
-            cSim.pBornForce[offset]     = af.w;
-            af.x                        = sA[threadIdx.x].fx;
-            af.y                        = sA[threadIdx.x].fy;
-            af.z                        = sA[threadIdx.x].fz;
-            af.w                        = sA[threadIdx.x].fb;
-            offset                      = y + tgx + (x >> GRIDBITS) * cSim.stride;
-            cSim.pForce4a[offset]       = af;
-            cSim.pBornForce[offset]     = af.w;
-#endif
             lasty = y;
         }
         pos++;

@@ -230,22 +230,16 @@ __global__ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUni
             }
 
             // Write results
-            float4 of;
 #ifdef USE_OUTPUT_BUFFER_PER_WARP
-            unsigned int offset                          = x + tgx + warp*cSim.stride;
-            of                                  = cSim.pForce4a[offset];
+            unsigned int offset                 = x + tgx + warp*cSim.stride;
+#else
+            unsigned int offset                 = x + tgx + (x >> GRIDBITS) * cSim.stride;
+#endif
+            float4 of                           = cSim.pForce4a[offset];
             of.x                               += af.x;
             of.y                               += af.y;
             of.z                               += af.z;
             cSim.pForce4a[offset]               = of;
-#else
-            of.x                                = af.x;
-            of.y                                = af.y;
-            of.z                                = af.z;
-            of.w                                = 0.0f;
-            unsigned int offset                          = x + tgx + (x >> GRIDBITS) * cSim.stride;
-            cSim.pForce4a[offset]               = of;
-#endif
         }
         else        // 100% utilization
         {
@@ -530,31 +524,25 @@ __global__ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUni
             // Write results
             float4 of;
 #ifdef USE_OUTPUT_BUFFER_PER_WARP
-            unsigned int offset                          = x + tgx + warp*cSim.stride;
+            unsigned int offset                 = x + tgx + warp*cSim.stride;
+#else
+            unsigned int offset                 = x + tgx + (y >> GRIDBITS) * cSim.stride;
+#endif
             of                                  = cSim.pForce4a[offset];
             of.x                               += af.x;
             of.y                               += af.y;
             of.z                               += af.z;
             cSim.pForce4a[offset]               = of;
+#ifdef USE_OUTPUT_BUFFER_PER_WARP
             offset                              = y + tgx + warp*cSim.stride;
+#else
+            offset                              = y + tgx + (x >> GRIDBITS) * cSim.stride;
+#endif
             of                                  = cSim.pForce4a[offset];
             of.x                               += sA[threadIdx.x].fx;
             of.y                               += sA[threadIdx.x].fy;
             of.z                               += sA[threadIdx.x].fz;
             cSim.pForce4a[offset]               = of;
-#else
-            of.x                                = af.x;
-            of.y                                = af.y;
-            of.z                                = af.z;
-            of.w                                = 0.0f;
-            unsigned int offset                          = x + tgx + (y >> GRIDBITS) * cSim.stride;
-            cSim.pForce4a[offset]               = of;
-            of.x                                = sA[threadIdx.x].fx;
-            of.y                                = sA[threadIdx.x].fy;
-            of.z                                = sA[threadIdx.x].fz;
-            offset                              = y + tgx + (x >> GRIDBITS) * cSim.stride;
-            cSim.pForce4a[offset]               = of;
-#endif
             lasty = y;
         }
 
