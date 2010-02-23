@@ -319,6 +319,24 @@ IF(NOT cmv EQUAL "2.4")
 ENDIF(NOT cmv EQUAL "2.4")
 IF(CUDA_FOUND)
     SET(OPENMM_BUILD_CUDA_LIB ON CACHE BOOL "Build OpenMMCuda library for Nvidia GPUs")
+
+    # I wish I was not hardcoding /MD here
+    # Avoid strange windows link error with cuda free energy 
+    # plugin by specifying /MD to CUDA_NVCC_FLAGS
+    MARK_AS_ADVANCED(CLEAR CUDA_NVCC_FLAGS)
+    IF(MSVC)
+        # Unfortunately the variables CUDA_NVCC_FLAGS_RELEASE and CUDA_NVCC_FLAGS_DEBUG
+        # appear to be unused, at least in CMake 2.6
+        # Release /MD linkage
+        IF(NOT (CUDA_NVCC_FLAGS MATCHES "-Xcompiler"))
+            set(new_flags "-Xcompiler \"/MD\"")
+            if(CUDA_NVCC_FLAGS)
+                set(new_flags "${CUDA_NVCC_FLAGS};${new_flags}")
+            endif(CUDA_NVCC_FLAGS)
+            SET(CUDA_NVCC_FLAGS "${new_flags}" 
+                CACHE STRING "Semicolon delimit multiple arguments" FORCE)
+        ENDIF(NOT (CUDA_NVCC_FLAGS MATCHES "-Xcompiler"))
+    ENDIF(MSVC)
 ELSE(CUDA_FOUND)
     SET(OPENMM_BUILD_CUDA_LIB OFF CACHE BOOL "Build OpenMMCuda library for Nvidia GPUs")
 ENDIF(CUDA_FOUND)
