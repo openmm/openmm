@@ -328,14 +328,18 @@ IF(CUDA_FOUND)
         # Unfortunately the variables CUDA_NVCC_FLAGS_RELEASE and CUDA_NVCC_FLAGS_DEBUG
         # appear to be unused, at least in CMake 2.6
         # Release /MD linkage
-        IF(NOT (CUDA_NVCC_FLAGS MATCHES "-Xcompiler"))
+        SET(HAS_NVCC_FLAG FALSE)
+        IF(CUDA_NVCC_FLAGS MATCHES "-Xcompiler")
+            SET(HAS_NVCC_FLAG TRUE)
+        ENDIF(CUDA_NVCC_FLAGS MATCHES "-Xcompiler")
+        IF(NOT HAS_NVCC_FLAG)
             set(new_flags "-Xcompiler \"/MD\"")
             if(CUDA_NVCC_FLAGS)
                 set(new_flags "${CUDA_NVCC_FLAGS};${new_flags}")
             endif(CUDA_NVCC_FLAGS)
             SET(CUDA_NVCC_FLAGS "${new_flags}" 
                 CACHE STRING "Semicolon delimit multiple arguments" FORCE)
-        ENDIF(NOT (CUDA_NVCC_FLAGS MATCHES "-Xcompiler"))
+        ENDIF(NOT HAS_NVCC_FLAG)
     ENDIF(MSVC)
 ELSE(CUDA_FOUND)
     SET(OPENMM_BUILD_CUDA_LIB OFF CACHE BOOL "Build OpenMMCuda library for Nvidia GPUs")

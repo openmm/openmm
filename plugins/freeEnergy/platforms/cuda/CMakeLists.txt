@@ -38,9 +38,16 @@ ENDIF(LOG)
 # ----------------------------------------------------------------------------
 
 # Only run tests when cuda-enabled GPU is found
-IF( (NOT DEFINED CUDA_HAVE_GPU) OR (CUDA_HAVE_GPU) )
+SET(DO_TESTS FALSE)
+IF(NOT DEFINED CUDA_HAVE_GPU)
+    SET(DO_TESTS TRUE)
+ENDIF(NOT DEFINED CUDA_HAVE_GPU)
+IF(CUDA_HAVE_GPU)
+    SET(DO_TESTS TRUE)
+ENDIF(CUDA_HAVE_GPU)
+IF(DO_TESTS)
     SUBDIRS (tests)
-ENDIF( (NOT DEFINED CUDA_HAVE_GPU) OR (CUDA_HAVE_GPU) )
+ENDIF(DO_TESTS)
 
 # The source is organized into subdirectories, but we handle them all from
 # this CMakeLists file rather than letting CMake visit them as SUBDIRS.
