@@ -732,7 +732,8 @@ private:
  */
 class OpenCLIntegrateBrownianStepKernel : public IntegrateBrownianStepKernel {
 public:
-    OpenCLIntegrateBrownianStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateBrownianStepKernel(name, platform), cl(cl) {
+    OpenCLIntegrateBrownianStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateBrownianStepKernel(name, platform), cl(cl),
+            hasInitializedKernels(false), prevTemp(-1), prevFriction(-1), prevStepSize(-1) {
     }
     ~OpenCLIntegrateBrownianStepKernel();
     /**
