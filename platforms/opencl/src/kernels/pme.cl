@@ -84,7 +84,7 @@ __kernel void updateBsplines(__global float4* posq, __global float4* pmeBsplineT
 __kernel void gridSpreadCharge(__global float2* pmeAtomGridIndex, __global int* pmeAtomRange, __global float2* pmeGrid, __global float4* pmeBsplineTheta) {
     unsigned int numGridPoints = GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z;
     for (int gridIndex = get_global_id(0); gridIndex < numGridPoints; gridIndex += get_global_size(0)) {
-        int3 gridPoint;
+        int4 gridPoint;
         gridPoint.x = gridIndex/(GRID_SIZE_Y*GRID_SIZE_Z);
         int remainder = gridIndex-gridPoint.x*GRID_SIZE_Y*GRID_SIZE_Z;
         gridPoint.y = remainder/GRID_SIZE_Z;
@@ -145,7 +145,7 @@ __kernel void reciprocalConvolution(__global float2* pmeGrid, __global float* en
 
 __kernel void gridInterpolateForce(__global float4* posq, __global float4* forceBuffers, __global float4* pmeBsplineTheta, __global float4* pmeBsplineDTheta, __global float2* pmeGrid) {
     for (int atom = get_global_id(0); atom < NUM_ATOMS; atom += get_global_size(0)) {
-        float3 force = 0.0f;
+        float4 force = 0.0f;
         float4 pos = posq[atom];
         float4 t = (float4) ((pos.x/PERIODIC_BOX_SIZE_X+1.0f)*GRID_SIZE_X,
                              (pos.y/PERIODIC_BOX_SIZE_Y+1.0f)*GRID_SIZE_Y,

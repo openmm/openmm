@@ -114,7 +114,7 @@ __kernel void sortBuckets(__global TYPE* data, __global TYPE* buckets, int numBu
         if (length <= get_local_size(0)) {
             // Load the data into local memory.
 
-            buffer[get_local_id(0)] = (get_local_id(0) < length ? buckets[startIndex+get_local_id(0)] : MAXFLOAT);
+            buffer[get_local_id(0)] = (get_local_id(0) < length ? buckets[startIndex+get_local_id(0)] : (TYPE) MAXFLOAT);
             barrier(CLK_LOCAL_MEM_FENCE);
 
             // Perform a bitonic sort in local memory.

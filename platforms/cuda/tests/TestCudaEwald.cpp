@@ -208,7 +208,6 @@ void testErrorTolerance(NonbondedForce::NonbondedMethod method) {
     }
     force->setNonbondedMethod(method);
     CudaPlatform platform;
-    VerletIntegrator integrator(0.01);
 
     // For various values of the cutoff and error tolerance, see if the actual error is reasonable.
 
@@ -218,6 +217,7 @@ void testErrorTolerance(NonbondedForce::NonbondedMethod method) {
         double norm = 0.0;
         for (double tol = 5e-5; tol < 1e-3; tol *= 2.0) {
             force->setEwaldErrorTolerance(tol);
+            VerletIntegrator integrator(0.01);
             Context context(system, integrator, platform);
             context.setPositions(positions);
             State state = context.getState(State::Forces);
