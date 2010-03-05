@@ -120,37 +120,41 @@ void CustomHbondForce::setGlobalParameterDefaultValue(int index, double defaultV
     globalParameters[index].defaultValue = defaultValue;
 }
 
-int CustomHbondForce::addDonor(int primaryParticle, int secondaryParticle, const vector<double>& parameters) {
-    donors.push_back(PairInfo(primaryParticle, secondaryParticle, parameters));
+int CustomHbondForce::addDonor(int d1, int d2, int d3, const vector<double>& parameters) {
+    donors.push_back(GroupInfo(d1, d2, d3, parameters));
     return donors.size()-1;
 }
 
-void CustomHbondForce::getDonorParameters(int index, int& primaryParticle, int& secondaryParticle, std::vector<double>& parameters) const {
-    primaryParticle = donors[index].primaryParticle;
-    secondaryParticle = donors[index].secondaryParticle;
+void CustomHbondForce::getDonorParameters(int index, int& d1, int& d2, int&  d3, std::vector<double>& parameters) const {
+    d1 = donors[index].p1;
+    d2 = donors[index].p2;
+    d3 = donors[index].p3;
     parameters = donors[index].parameters;
 }
 
-void CustomHbondForce::setDonorParameters(int index, int primaryParticle, int secondaryParticle, const vector<double>& parameters) {
-    donors[index].primaryParticle = primaryParticle;
-    donors[index].secondaryParticle = secondaryParticle;
+void CustomHbondForce::setDonorParameters(int index, int d1, int d2, int d3, const vector<double>& parameters) {
+    donors[index].p1 = d1;
+    donors[index].p2 = d2;
+    donors[index].p3 = d3;
     donors[index].parameters = parameters;
 }
 
-int CustomHbondForce::addAcceptor(int primaryParticle, int secondaryParticle, const vector<double>& parameters) {
-    acceptors.push_back(PairInfo(primaryParticle, secondaryParticle, parameters));
+int CustomHbondForce::addAcceptor(int a1, int a2, int a3, const vector<double>& parameters) {
+    acceptors.push_back(GroupInfo(a1, a2, a3, parameters));
     return acceptors.size()-1;
 }
 
-void CustomHbondForce::getAcceptorParameters(int index, int& primaryParticle, int& secondaryParticle, std::vector<double>& parameters) const {
-    primaryParticle = acceptors[index].primaryParticle;
-    secondaryParticle = acceptors[index].secondaryParticle;
+void CustomHbondForce::getAcceptorParameters(int index, int& a1, int& a2, int& a3, std::vector<double>& parameters) const {
+    a1 = acceptors[index].p1;
+    a2 = acceptors[index].p2;
+    a3 = acceptors[index].p3;
     parameters = acceptors[index].parameters;
 }
 
-void CustomHbondForce::setAcceptorParameters(int index, int primaryParticle, int secondaryParticle, const vector<double>& parameters) {
-    acceptors[index].primaryParticle = primaryParticle;
-    acceptors[index].secondaryParticle = secondaryParticle;
+void CustomHbondForce::setAcceptorParameters(int index, int a1, int a2, int a3, const vector<double>& parameters) {
+    acceptors[index].p1 = a1;
+    acceptors[index].p2 = a2;
+    acceptors[index].p3 = a3;
     acceptors[index].parameters = parameters;
 }
 

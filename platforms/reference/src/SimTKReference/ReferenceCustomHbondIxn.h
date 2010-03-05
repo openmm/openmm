@@ -27,6 +27,7 @@
 
 #include "ReferenceBondIxn.h"
 #include "lepton/ExpressionProgram.h"
+#include "lepton/ParsedExpression.h"
 #include <map>
 #include <vector>
 
@@ -36,17 +37,19 @@ class ReferenceCustomHbondIxn : public ReferenceBondIxn {
 
    private:
 
+      class DistanceTermInfo;
+      class AngleTermInfo;
+      class DihedralTermInfo;
       bool cutoff;
       bool periodic;
       RealOpenMM periodicBoxSize[3];
       RealOpenMM cutoffDistance;
+      std::vector<std::vector<int> > donorAtoms, acceptorAtoms;
       Lepton::ExpressionProgram energyExpression;
-      Lepton::ExpressionProgram rForceExpression;
-      Lepton::ExpressionProgram thetaForceExpression;
-      Lepton::ExpressionProgram psiForceExpression;
-      Lepton::ExpressionProgram chiForceExpression;
       std::vector<std::string> donorParamNames, acceptorParamNames;
-      std::vector<std::pair<int, int> > donorAtoms, acceptorAtoms;
+      std::vector<DistanceTermInfo> distanceTerms;
+      std::vector<AngleTermInfo> angleTerms;
+      std::vector<DihedralTermInfo> dihedralTerms;
 
       /**---------------------------------------------------------------------------------------
 
@@ -65,7 +68,9 @@ class ReferenceCustomHbondIxn : public ReferenceBondIxn {
                            std::map<std::string, double>& variables, RealOpenMM** forces,
                            RealOpenMM* totalEnergy) const;
 
-      static RealOpenMM computeAngle(RealOpenMM* vec1, RealOpenMM* vec2, RealOpenMM sign);
+      void computeDelta(int atom1, int atom2, RealOpenMM* delta, RealOpenMM** atomCoordinates) const;
+
+      static RealOpenMM computeAngle(RealOpenMM* vec1, RealOpenMM* vec2);
 
 
    public:
@@ -76,11 +81,10 @@ class ReferenceCustomHbondIxn : public ReferenceBondIxn {
 
          --------------------------------------------------------------------------------------- */
 
-       ReferenceCustomHbondIxn(const std::vector<std::pair<int, int> >& donorAtoms, const std::vector<std::pair<int, int> >& acceptorAtoms,
-                               const Lepton::ExpressionProgram& energyExpression, const Lepton::ExpressionProgram& rForceExpression,
-                               const Lepton::ExpressionProgram& thetaForceExpression, const Lepton::ExpressionProgram& psiForceExpression,
-                               const Lepton::ExpressionProgram& chiForceExpression, const std::vector<std::string>& donorParameterNames,
-                               const std::vector<std::string>& acceptorParameterNames);
+       ReferenceCustomHbondIxn(const std::vector<std::vector<int> >& donorAtoms, const std::vector<std::vector<int> >& acceptorAtoms,
+                               const Lepton::ParsedExpression& energyExpression, const std::vector<std::string>& donorParameterNames,
+                               const std::vector<std::string>& acceptorParameterNames, const std::map<std::string, std::vector<int> >& distances,
+                               const std::map<std::string, std::vector<int> >& angles, const std::map<std::string, std::vector<int> >& dihedrals);
 
       /**---------------------------------------------------------------------------------------
 
@@ -135,6 +139,44 @@ class ReferenceCustomHbondIxn : public ReferenceBondIxn {
 
 // ---------------------------------------------------------------------------------------
 
+};
+
+class ReferenceCustomHbondIxn::DistanceTermInfo {
+public:
+    std::string name;
+    int p1, p2;
+    Lepton::ExpressionProgram forceExpression;
+    mutable RealOpenMM delta[ReferenceForce::LastDeltaRIndex];
+    DistanceTermInfo(const std::string& name, const std::vector<int>& atoms, const Lepton::ExpressionProgram& forceExpression) :
+            name(name), p1(atoms[0]), p2(atoms[1]), forceExpression(forceExpression) {
+    }
+};
+
+class ReferenceCustomHbondIxn::AngleTermInfo {
+public:
+    std::string name;
+    int p1, p2, p3;
+    Lepton::ExpressionProgram forceExpression;
+    mutable RealOpenMM delta1[ReferenceForce::LastDeltaRIndex];
+    mutable RealOpenMM delta2[ReferenceForce::LastDeltaRIndex];
+    AngleTermInfo(const std::string& name, const std::vector<int>& atoms, const Lepton::ExpressionProgram& forceExpression) :
+            name(name), p1(atoms[0]), p2(atoms[1]), p3(atoms[2]), forceExpression(forceExpression) {
+    }
+};
+
+class ReferenceCustomHbondIxn::DihedralTermInfo {
+public:
+    std::string name;
+    int p1, p2, p3, p4;
+    Lepton::ExpressionProgram forceExpression;
+    mutable RealOpenMM delta1[ReferenceForce::LastDeltaRIndex];
+    mutable RealOpenMM delta2[ReferenceForce::LastDeltaRIndex];
+    mutable RealOpenMM delta3[ReferenceForce::LastDeltaRIndex];
+    mutable RealOpenMM cross1[3];
+    mutable RealOpenMM cross2[3];
+    DihedralTermInfo(const std::string& name, const std::vector<int>& atoms, const Lepton::ExpressionProgram& forceExpression) :
+            name(name), p1(atoms[0]), p2(atoms[1]), p3(atoms[2]), p4(atoms[3]), forceExpression(forceExpression) {
+    }
 };
 
 #endif // __ReferenceCustomHbondIxn_H__

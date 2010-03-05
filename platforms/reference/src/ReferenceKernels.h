@@ -41,6 +41,7 @@
 class CpuObc;
 class CpuGBVI;
 class ReferenceAndersenThermostat;
+class ReferenceCustomHbondIxn;
 class ReferenceBrownianDynamics;
 class ReferenceStochasticDynamics;
 class ReferenceConstraintAlgorithm;
@@ -633,7 +634,7 @@ private:
  */
 class ReferenceCalcCustomHbondForceKernel : public CalcCustomHbondForceKernel {
 public:
-    ReferenceCalcCustomHbondForceKernel(std::string name, const Platform& platform) : CalcCustomHbondForceKernel(name, platform) {
+    ReferenceCalcCustomHbondForceKernel(std::string name, const Platform& platform) : CalcCustomHbondForceKernel(name, platform), ixn(NULL) {
     }
     ~ReferenceCalcCustomHbondForceKernel();
     /**
@@ -661,11 +662,9 @@ private:
     int **exclusionArray;
     RealOpenMM **donorParamArray, **acceptorParamArray;
     RealOpenMM nonbondedCutoff, periodicBoxSize[3];
+    ReferenceCustomHbondIxn* ixn;
     std::vector<std::set<int> > exclusions;
-    std::vector<std::pair<int, int> > donorParticles, acceptorParticles;
-    Lepton::ExpressionProgram energyExpression, rForceExpression, thetaForceExpression, psiForceExpression, chiForceExpression;
-    std::vector<std::string> donorParameterNames, acceptorParameterNames, globalParameterNames;
-    NonbondedMethod nonbondedMethod;
+    std::vector<std::string> globalParameterNames;
 };
 
 /**

@@ -30,7 +30,7 @@
  * -------------------------------------------------------------------------- */
 
 /**
- * This tests the reference implementation of CustomTorsionForce.
+ * This tests the reference implementation of CustomHbondForce.
  */
 
 #include "../../../tests/AssertionUtilities.h"
@@ -61,7 +61,8 @@ void testHbond() {
     customSystem.addParticle(1.0);
     customSystem.addParticle(1.0);
     customSystem.addParticle(1.0);
-    CustomHbondForce* custom = new CustomHbondForce("0.5*kr*(r-r0)^2 + 0.5*ktheta*(theta-theta0)^2 + 0.5*kpsi*(psi-psi0)^2 + kchi*(1+cos(n*chi-chi0))");
+    customSystem.addParticle(1.0);
+    CustomHbondForce* custom = new CustomHbondForce("0.5*kr*(distance(d1,a1)-r0)^2 + 0.5*ktheta*(angle(a1,d1,d2)-theta0)^2 + 0.5*kpsi*(angle(d1,a1,a2)-psi0)^2 + kchi*(1+cos(n*dihedral(a3,a2,a1,d1)-chi0))");
     custom->addPerDonorParameter("r0");
     custom->addPerDonorParameter("theta0");
     custom->addPerDonorParameter("psi0");
@@ -75,17 +76,18 @@ void testHbond() {
     parameters[0] = 1.5;
     parameters[1] = 1.7;
     parameters[2] = 1.9;
-    custom->addDonor(1, 0, parameters);
+    custom->addDonor(1, 0, -1, parameters);
     parameters.resize(2);
     parameters[0] = 2.1;
     parameters[1] = 2;
-    custom->addAcceptor(2, 3, parameters);
+    custom->addAcceptor(2, 3, 4, parameters);
     custom->setCutoffDistance(10.0);
     customSystem.addForce(custom);
 
     // Create an identical system using HarmonicBondForce, HarmonicAngleForce, and PeriodicTorsionForce.
 
     System standardSystem;
+    standardSystem.addParticle(1.0);
     standardSystem.addParticle(1.0);
     standardSystem.addParticle(1.0);
     standardSystem.addParticle(1.0);
@@ -98,13 +100,13 @@ void testHbond() {
     angle->addAngle(1, 2, 3, 1.9, 0.6);
     standardSystem.addForce(angle);
     PeriodicTorsionForce* torsion = new PeriodicTorsionForce();
-    torsion->addTorsion(0, 1, 2, 3, 2, 2.1, 0.7);;
+    torsion->addTorsion(1, 2, 3, 4, 2, 2.1, 0.7);;
     standardSystem.addForce(torsion);
 
     // Set the atoms in various positions, and verify that both systems give identical forces and energy.
 
     init_gen_rand(0);
-    vector<Vec3> positions(4);
+    vector<Vec3> positions(5);
     VerletIntegrator integrator1(0.01);
     VerletIntegrator integrator2(0.01);
     for (int i = 0; i < 10; i++) {
@@ -129,10 +131,10 @@ void testExclusions() {
     system.addParticle(1.0);
     system.addParticle(1.0);
     VerletIntegrator integrator(0.01);
-    CustomHbondForce* custom = new CustomHbondForce("(r-1)^2");
-    custom->addDonor(0, 1, vector<double>());
-    custom->addDonor(1, 0, vector<double>());
-    custom->addAcceptor(2, 0, vector<double>());
+    CustomHbondForce* custom = new CustomHbondForce("(distance(d1,a1)-1)^2");
+    custom->addDonor(0, 1, -1, vector<double>());
+    custom->addDonor(1, 0, -1, vector<double>());
+    custom->addAcceptor(2, 0, -1, vector<double>());
     custom->addExclusion(1, 0);
     system.addForce(custom);
     Context context(system, integrator, platform);
@@ -156,10 +158,10 @@ void testCutoff() {
     system.addParticle(1.0);
     system.addParticle(1.0);
     VerletIntegrator integrator(0.01);
-    CustomHbondForce* custom = new CustomHbondForce("(r-1)^2");
-    custom->addDonor(0, 1, vector<double>());
-    custom->addDonor(1, 0, vector<double>());
-    custom->addAcceptor(2, 0, vector<double>());
+    CustomHbondForce* custom = new CustomHbondForce("(distance(d1,a1)-1)^2");
+    custom->addDonor(0, 1, -1, vector<double>());
+    custom->addDonor(1, 0, -1, vector<double>());
+    custom->addAcceptor(2, 0, -1, vector<double>());
     custom->setNonbondedMethod(CustomHbondForce::CutoffNonPeriodic);
     custom->setCutoffDistance(2.5);
     system.addForce(custom);

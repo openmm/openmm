@@ -35,6 +35,8 @@
 #include "ForceImpl.h"
 #include "openmm/CustomHbondForce.h"
 #include "openmm/Kernel.h"
+#include "lepton/ExpressionTreeNode.h"
+#include "lepton/ParsedExpression.h"
 #include <utility>
 #include <map>
 #include <string>
@@ -60,7 +62,27 @@ public:
     double calcEnergy(ContextImpl& context);
     std::map<std::string, double> getDefaultParameters();
     std::vector<std::string> getKernelNames();
+    /**
+     * This is a utility routine that parses the energy expression, identifies the angles and dihedrals
+     * in it, and replaces them with variables.  The particle indices returned in the maps are defined
+     * as follows: 0=a1, 1=a2, 2=a3, 3=d1, 4=d2, 5=d3.
+     *
+     * @param force     the CustomHbondForce to process
+     * @param distances on exist, this will contain an entry for each distance used in the expression.  The key is the name
+     *                  of the corresponding variable, and the value is the list of particle indices.
+     * @param angles    on exist, this will contain an entry for each angle used in the expression.  The key is the name
+     *                  of the corresponding variable, and the value is the list of particle indices.
+     * @param dihedrals on exist, this will contain an entry for each dihedral used in the expression.  The key is the name
+     *                  of the corresponding variable, and the value is the list of particle indices.
+     * @return a Parsed expression for the energy
+     */
+    static Lepton::ParsedExpression prepareExpression(const CustomHbondForce& force, std::map<std::string, std::vector<int> >& distances,
+            std::map<std::string, std::vector<int> >& angles, std::map<std::string, std::vector<int> >& dihedrals);
 private:
+    class FunctionPlaceholder;
+    static Lepton::ExpressionTreeNode replaceFunctions(const Lepton::ExpressionTreeNode& node, std::map<std::string, int> atoms,
+            std::map<std::string, std::vector<int> >& distances, std::map<std::string, std::vector<int> >& angles,
+            std::map<std::string, std::vector<int> >& dihedrals);
     CustomHbondForce& owner;
     Kernel kernel;
 };

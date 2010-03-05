@@ -44,30 +44,25 @@ namespace OpenMM {
 
 /**
  * This class supports a wide variety of energy functions used to represent hydrogen bonding.  It computes
- * interactions between "donor" particle pairs and "acceptor" particle pairs (so each interaction involves four
- * particles in all).  Typically a donor pair consists of a hydrogen atom and the atom it is bonded to,
- * and an acceptor pair consists of a negatively charged atom and the atom it is bonded to.  Within each pair,
- * one particle is designated as the "primary particle" (usually the hydrogen atom in a donor, and the negatively
- * charged atom in an acceptor), and the other particle is called the "secondary particle".
+ * interactions between "donor" particle groups and "acceptor" particle groups, where each group may include
+ * up to three particles.  Typically a donor group consists of a hydrogen atom and the atoms it is bonded to,
+ * and an acceptor group consists of a negatively charged atom and the atoms it is bonded to.
  *
- * We refer to the primary and secondary donor particles as D1 and D2, and the primary and secondary acceptor
- * particles as A1 and A2.  For each donor and each acceptor, CustomHbondForce computes the following values:
+ * We refer to the particles in a donor group as d1, d2 and d3, and the particles in an acceptor group as
+ * a1, a2, and a3.  For each donor and each acceptor, CustomHbondForce evaluates a user supplied algebraic
+ * expression to determine the interaction energy.  The expression may depend on arbitrary distances, angles,
+ * and dihedral angles defined by any of the six particles involved.  The function distance(p1, p2) is the distance
+ * between the particles p1 and p2 (where "p1" and "p2" should be replaced by the names of the actual particles
+ * to calculate the distance between), angle(p1, p2, p3) is the angle formed by the three specified particles,
+ * and dihedral(p1, p2, p3, p4) is the dihedral angle formed by the four specified particles.
  *
- * r: the distance between D1 and A1
- * theta: the angle formed by D2-D1-A1, measured in radians
- * psi: the angle formed by A2-A1-D1, measured in radians
- * chi: the dihedral angle formed by D2-D1-A1-A2, measured in radians.  The angle is defined to be zero when
- * D2 and A2 are on the same side of the bond formed by D1 and A1.
- *
- * The user then specifies an algebraic expression which gives the energy of each interaction as a function
- * of r, theta, psi, and chi.  The expression also may involve tabulated functions, and may depend on arbitrary
+ * The expression also may involve tabulated functions, and may depend on arbitrary
  * global, per-donor, and per-acceptor parameters.  It also optionally supports periodic boundary conditions
  * and cutoffs for long range interactions.
  *
  * To use this class, create a CustomHbondForce object, passing an algebraic expression to the constructor
- * that defines the interaction energy between each donor and acceptor.  The expression may depend on r, theta,
- * psi, and chi, as well as on any parameters you choose.  Then call addPerDonorParameter() to define per-donor
- * parameters, addPerAcceptorParameter to define per-acceptor parameters, and addGlobalParameter() to define
+ * that defines the interaction energy between each donor and acceptor.  Then call addPerDonorParameter() to define per-donor
+ * parameters, addPerAcceptorParameter() to define per-acceptor parameters, and addGlobalParameter() to define
  * global parameters.  The values of per-donor and per-acceptor parameters are specified as part of the system
  * definition, while values of global parameters may be modified during a simulation by calling Context::setParameter().
  *
@@ -80,9 +75,9 @@ namespace OpenMM {
  * that are bonded to each other.
  *
  * As an example, the following code creates a CustomHbondForce that implements a simple harmonic potential
- * to keep r and theta near ideal values:
+ * to keep the distance between a1 and d1, and the angle formed by a1-d1-d2, near ideal values:
  *
- * <tt>CustomHbondForce* force = new CustomHbondForce("k*(r-r0)^2*(theta-theta0)^2");</tt>
+ * <tt>CustomHbondForce* force = new CustomHbondForce("k*(distance(a1,d1)-r0)^2*(angle(a1,d1,d2)-theta0)^2");</tt>
  *
  * This force depends on three parameters: k, r0, and theta0.  The following code defines these as per-donor parameters:
  *
@@ -125,7 +120,7 @@ public:
      * Create a CustomHbondForce.
      *
      * @param energy    an algebraic expression giving the interaction energy between a donor as a function
-     *                  of the distance r and the angles theta, psi, and chi, as well as any global, per-donor, and
+     *                  of inter-particle distances, angles, and dihedrals, as well as any global, per-donor, and
      *                  per-acceptor parameters
      */
     CustomHbondForce(const std::string& energy);
@@ -142,7 +137,7 @@ public:
         return acceptors.size();
     }
     /**
-     * Get the number of particle pairs whose interactions should be excluded.
+     * Get the number of donor-acceptor pairs whose interactions should be excluded.
      */
     int getNumExclusions() const {
         return exclusions.size();
@@ -188,13 +183,15 @@ public:
      */
     void setNonbondedMethod(NonbondedMethod method);
     /**
-     * Get the cutoff distance (in nm) being used.  If the NonbondedMethod in use is NoCutoff, this value will have no effect.
+     * Get the cutoff distance (in nm) being used.  All interactions for which the distance between d1 and a1
+     * is greater than the cutoff will be ignored.  If the NonbondedMethod in use is NoCutoff, this value will have no effect.
      *
      * @return the cutoff distance, measured in nm
      */
     double getCutoffDistance() const;
     /**
-     * Set the cutoff distance (in nm) being used.  If the NonbondedMethod in use is NoCutoff, this value will have no effect.
+     * Set the cutoff distance (in nm) being used.  All interactions for which the distance between d1 and a1
+     * is greater than the cutoff will be ignored.  If the NonbondedMethod in use is NoCutoff, this value will have no effect.
      *
      * @param distance    the cutoff distance, measured in nm
      */
@@ -278,59 +275,77 @@ public:
      */
     void setGlobalParameterDefaultValue(int index, double defaultValue);
     /**
-     * Add a donor pair to the force
+     * Add a donor group to the force
      *
-     * @param primaryParticle    the index of the primary particle for this donor pair
-     * @param secondaryParticle  the index of the secondary particle for this donor pair
-     * @param parameters         the list of per-donor parameter values for the new donor
+     * @param d1          the index of the first particle for this donor group
+     * @param d2          the index of the second particle for this donor group.  If the group only
+     *                    includes one particle, this must be -1.
+     * @param d3          the index of the third particle for this donor group.  If the group includes
+     *                    less than three particles, this must be -1.
+     * @param parameters  the list of per-donor parameter values for the new donor
      * @return the index of the donor that was added
      */
-    int addDonor(int primaryParticle, int secondaryParticle, const std::vector<double>& parameters);
+    int addDonor(int d1, int d2, int d3, const std::vector<double>& parameters);
     /**
-     * Get the properties of a donor pair.
+     * Get the properties of a donor group.
      *
-     * @param index              the index of the donor pair to get
-     * @param primaryParticle    the index of the primary particle for this donor pair
-     * @param secondaryParticle  the index of the secondary particle for this donor pair
-     * @param parameters         the list of per-donor parameter values for the new donor
+     * @param index       the index of the donor group to get
+     * @param d1          the index of the first particle for this donor group
+     * @param d2          the index of the second particle for this donor group.  If the group only
+     *                    includes one particle, this will be -1.
+     * @param d3          the index of the third particle for this donor group.  If the group includes
+     *                    less than three particles, this will be -1.
+     * @param parameters  the list of per-donor parameter values for the new donor
      */
-    void getDonorParameters(int index, int& primaryParticle, int& secondaryParticle, std::vector<double>& parameters) const;
+    void getDonorParameters(int index, int& d1, int& d2, int& d3, std::vector<double>& parameters) const;
     /**
-     * Set the properties of a donor pair.
+     * Set the properties of a donor group.
      *
-     * @param index              the index of the donor pair to get
-     * @param primaryParticle    the index of the primary particle for this donor pair
-     * @param secondaryParticle  the index of the secondary particle for this donor pair
-     * @param parameters         the list of per-donor parameter values for the new donor
+     * @param index       the index of the donor group to set
+     * @param d1          the index of the first particle for this donor group
+     * @param d2          the index of the second particle for this donor group.  If the group only
+     *                    includes one particle, this must be -1.
+     * @param d3          the index of the third particle for this donor group.  If the group includes
+     *                    less than three particles, this must be -1.
+     * @param parameters  the list of per-donor parameter values for the new donor
      */
-    void setDonorParameters(int index, int primaryParticle, int secondaryParticle, const std::vector<double>& parameters);
+    void setDonorParameters(int index, int d1, int d2, int d3, const std::vector<double>& parameters);
     /**
-     * Add an acceptor pair to the force
+     * Add an acceptor group to the force
      *
-     * @param primaryParticle    the index of the primary particle for this acceptor pair
-     * @param secondaryParticle  the index of the secondary particle for this acceptor pair
-     * @param parameters         the list of per-acceptor parameter values for the new acceptor
+     * @param a1          the index of the first particle for this acceptor group
+     * @param a2          the index of the second particle for this acceptor group.  If the group only
+     *                    includes one particle, this must be -1.
+     * @param a3          the index of the third particle for this acceptor group.  If the group includes
+     *                    less than three particles, this must be -1.
+     * @param parameters  the list of per-acceptor parameter values for the new acceptor
      * @return the index of the acceptor that was added
      */
-    int addAcceptor(int primaryParticle, int secondaryParticle, const std::vector<double>& parameters);
+    int addAcceptor(int a1, int a2, int a3, const std::vector<double>& parameters);
     /**
-     * Get the properties of an acceptor pair.
+     * Get the properties of an acceptor group.
      *
-     * @param index              the index of the acceptor pair to get
-     * @param primaryParticle    the index of the primary particle for this acceptor pair
-     * @param secondaryParticle  the index of the secondary particle for this acceptor pair
-     * @param parameters         the list of per-acceptor parameter values for the new acceptor
+     * @param index       the index of the acceptor group to get
+     * @param a1          the index of the first particle for this acceptor group
+     * @param a2          the index of the second particle for this acceptor group.  If the group only
+     *                    includes one particle, this will be -1.
+     * @param a3          the index of the third particle for this acceptor group.  If the group includes
+     *                    less than three particles, this will be -1.
+     * @param parameters  the list of per-acceptor parameter values for the new acceptor
      */
-    void getAcceptorParameters(int index, int& primaryParticle, int& secondaryParticle, std::vector<double>& parameters) const;
+    void getAcceptorParameters(int index, int& a1, int& a2, int& a3, std::vector<double>& parameters) const;
     /**
-     * Set the properties of an acceptor pair.
+     * Set the properties of an acceptor group.
      *
-     * @param index              the index of the acceptor pair to get
-     * @param primaryParticle    the index of the primary particle for this acceptor pair
-     * @param secondaryParticle  the index of the secondary particle for this acceptor pair
-     * @param parameters         the list of per-acceptor parameter values for the new acceptor
+     * @param index       the index of the acceptor group to set
+     * @param a1          the index of the first particle for this acceptor group
+     * @param a2          the index of the second particle for this acceptor group.  If the group only
+     *                    includes one particle, this must be -1.
+     * @param a3          the index of the third particle for this acceptor group.  If the group includes
+     *                    less than three particles, this must be -1.
+     * @param parameters  the list of per-acceptor parameter values for the new acceptor
      */
-    void setAcceptorParameters(int index, int primaryParticle, int secondaryParticle, const std::vector<double>& parameters);
+    void setAcceptorParameters(int index, int a1, int a2, int a3, const std::vector<double>& parameters);
     /**
      * Add a donor-acceptor pair to the list of interactions that should be excluded.
      *
@@ -397,7 +412,7 @@ public:
 protected:
     ForceImpl* createImpl();
 private:
-    class PairInfo;
+    class GroupInfo;
     class PerPairParameterInfo;
     class GlobalParameterInfo;
     class ExclusionInfo;
@@ -408,8 +423,8 @@ private:
     std::vector<PerPairParameterInfo> donorParameters;
     std::vector<PerPairParameterInfo> acceptorParameters;
     std::vector<GlobalParameterInfo> globalParameters;
-    std::vector<PairInfo> donors;
-    std::vector<PairInfo> acceptors;
+    std::vector<GroupInfo> donors;
+    std::vector<GroupInfo> acceptors;
     std::vector<ExclusionInfo> exclusions;
     std::vector<FunctionInfo> functions;
 };
@@ -418,14 +433,14 @@ private:
  * This is an internal class used to record information about a donor or acceptor.
  * @private
  */
-class CustomHbondForce::PairInfo {
+class CustomHbondForce::GroupInfo {
 public:
     std::vector<double> parameters;
-    int primaryParticle, secondaryParticle;
-    PairInfo() : primaryParticle(-1), secondaryParticle(-1) {
+    int p1, p2, p3;
+    GroupInfo() : p1(-1), p2(-1), p3(-1) {
     }
-    PairInfo(int primaryParticle, int secondaryParticle, const std::vector<double>& parameters) :
-        primaryParticle(primaryParticle), secondaryParticle(secondaryParticle), parameters(parameters) {
+    GroupInfo(int p1, int p2, int p3, const std::vector<double>& parameters) :
+        p1(p1), p2(p2), p3(p3), parameters(parameters) {
     }
 };
 

@@ -44,14 +44,17 @@ using std::vector;
 
    --------------------------------------------------------------------------------------- */
 
-ReferenceCustomHbondIxn::ReferenceCustomHbondIxn(const vector<pair<int, int> >& donorAtoms, const vector<pair<int, int> >& acceptorAtoms,
-            const Lepton::ExpressionProgram& energyExpression,
-            const Lepton::ExpressionProgram& rForceExpression, const Lepton::ExpressionProgram& thetaForceExpression,
-            const Lepton::ExpressionProgram& psiForceExpression, const Lepton::ExpressionProgram& chiForceExpression,
-            const vector<string>& donorParameterNames, const vector<string>& acceptorParameterNames) :
-            cutoff(false), periodic(false), donorAtoms(donorAtoms), acceptorAtoms(acceptorAtoms), energyExpression(energyExpression),
-            rForceExpression(rForceExpression), thetaForceExpression(thetaForceExpression), psiForceExpression(psiForceExpression),
-            chiForceExpression(chiForceExpression), donorParamNames(donorParameterNames), acceptorParamNames(acceptorParameterNames) {
+ReferenceCustomHbondIxn::ReferenceCustomHbondIxn(const vector<vector<int> >& donorAtoms, const vector<vector<int> >& acceptorAtoms,
+            const Lepton::ParsedExpression& energyExpression, const vector<string>& donorParameterNames, const vector<string>& acceptorParameterNames,
+            const map<string, vector<int> >& distances, const map<string, vector<int> >& angles, const map<string, vector<int> >& dihedrals) :
+            cutoff(false), periodic(false), donorAtoms(donorAtoms), acceptorAtoms(acceptorAtoms), energyExpression(energyExpression.createProgram()),
+            donorParamNames(donorParameterNames), acceptorParamNames(acceptorParameterNames) {
+    for (map<string, vector<int> >::const_iterator iter = distances.begin(); iter != distances.end(); ++iter)
+        distanceTerms.push_back(ReferenceCustomHbondIxn::DistanceTermInfo(iter->first, iter->second, energyExpression.differentiate(iter->first).optimize().createProgram()));
+    for (map<string, vector<int> >::const_iterator iter = angles.begin(); iter != angles.end(); ++iter)
+        angleTerms.push_back(ReferenceCustomHbondIxn::AngleTermInfo(iter->first, iter->second, energyExpression.differentiate(iter->first).optimize().createProgram()));
+    for (map<string, vector<int> >::const_iterator iter = dihedrals.begin(); iter != dihedrals.end(); ++iter)
+        dihedralTerms.push_back(ReferenceCustomHbondIxn::DihedralTermInfo(iter->first, iter->second, energyExpression.differentiate(iter->first).optimize().createProgram()));
 }
 
 /**---------------------------------------------------------------------------------------
@@ -180,136 +183,113 @@ void ReferenceCustomHbondIxn::calculateOneIxn(int donor, int acceptor, RealOpenM
 
     // ---------------------------------------------------------------------------------------
 
-    // Visual Studio complains if crossProduct declared as 'crossProduct[2][3]'
-
-    RealOpenMM crossProductMemory[6];
-    RealOpenMM* crossProduct[2];
-    crossProduct[0] = crossProductMemory;
-    crossProduct[1] = crossProductMemory + 3;
+    int atoms[6];
+    atoms[0] = acceptorAtoms[acceptor][0];
+    atoms[1] = acceptorAtoms[acceptor][1];
+    atoms[2] = acceptorAtoms[acceptor][2];
+    atoms[3] = donorAtoms[donor][0];
+    atoms[4] = donorAtoms[donor][1];
+    atoms[5] = donorAtoms[donor][2];
 
     // Compute the distance between the primary donor and acceptor atoms, and compare to the cutoff.
 
-    int d1 = donorAtoms[donor].first;
-    int a1 = acceptorAtoms[acceptor].first;
-    RealOpenMM deltaD1A1[ReferenceForce::LastDeltaRIndex];
-    if (periodic)
-        ReferenceForce::getDeltaRPeriodic(atomCoordinates[a1], atomCoordinates[d1], periodicBoxSize, deltaD1A1);
-    else
-        ReferenceForce::getDeltaR(atomCoordinates[a1], atomCoordinates[d1], deltaD1A1);
-    if (cutoff && deltaD1A1[ReferenceForce::RIndex] >= cutoffDistance)
-        return;
+    if (cutoff) {
+        RealOpenMM delta[ReferenceForce::LastDeltaRIndex];
+        computeDelta(atoms[0], atoms[3], delta, atomCoordinates);
+        if (delta[ReferenceForce::RIndex] >= cutoffDistance)
+            return;
+    }
 
     // Compute all of the variables the energy can depend on.
-    
-    int d2 = donorAtoms[donor].second;
-    int a2 = acceptorAtoms[acceptor].second;
-    RealOpenMM deltaD1D2[ReferenceForce::LastDeltaRIndex];
-    RealOpenMM deltaA2A1[ReferenceForce::LastDeltaRIndex];
-    if (periodic) {
-        ReferenceForce::getDeltaRPeriodic(atomCoordinates[d2], atomCoordinates[d1], periodicBoxSize, deltaD1D2);
-        ReferenceForce::getDeltaRPeriodic(atomCoordinates[a1], atomCoordinates[a2], periodicBoxSize, deltaA2A1);
-    }
-    else {
-        ReferenceForce::getDeltaR(atomCoordinates[d2], atomCoordinates[d1], deltaD1D2);
-        ReferenceForce::getDeltaR(atomCoordinates[a1], atomCoordinates[a2], deltaA2A1);
-    }
-    variables["r"] = deltaD1A1[ReferenceForce::RIndex];
-    variables["theta"] = computeAngle(deltaD1A1, deltaD1D2, 1);
-    variables["psi"] = computeAngle(deltaD1A1, deltaA2A1, 1);
-    RealOpenMM dotDihedral, signOfDihedral;
-    variables["chi"] =  getDihedralAngleBetweenThreeVectors(deltaA2A1, deltaD1A1, deltaD1D2,
-                                  crossProduct, &dotDihedral, deltaA2A1, &signOfDihedral, 1);
 
-    // Apply forces based on r.
+    for (int i = 0; i < (int) distanceTerms.size(); i++) {
+        const DistanceTermInfo& term = distanceTerms[i];
+        computeDelta(atoms[term.p1], atoms[term.p2], term.delta, atomCoordinates);
+        variables[term.name] = term.delta[ReferenceForce::RIndex];
+    }
+    for (int i = 0; i < (int) angleTerms.size(); i++) {
+        const AngleTermInfo& term = angleTerms[i];
+        computeDelta(atoms[term.p1], atoms[term.p2], term.delta1, atomCoordinates);
+        computeDelta(atoms[term.p3], atoms[term.p2], term.delta2, atomCoordinates);
+        variables[term.name] = computeAngle(term.delta1, term.delta2);
+    }
+    for (int i = 0; i < (int) dihedralTerms.size(); i++) {
+        const DihedralTermInfo& term = dihedralTerms[i];
+        computeDelta(atoms[term.p2], atoms[term.p1], term.delta1, atomCoordinates);
+        computeDelta(atoms[term.p2], atoms[term.p3], term.delta2, atomCoordinates);
+        computeDelta(atoms[term.p4], atoms[term.p3], term.delta3, atomCoordinates);
+        RealOpenMM dotDihedral, signOfDihedral;
+        RealOpenMM* crossProduct[] = {term.cross1, term.cross2};
+        variables[term.name] = getDihedralAngleBetweenThreeVectors(term.delta1, term.delta2, term.delta3, crossProduct, &dotDihedral, term.delta1, &signOfDihedral, 1);
+    }
 
-    RealOpenMM dEdR = (RealOpenMM) (rForceExpression.evaluate(variables)/(deltaD1A1[ReferenceForce::RIndex]));
-    if (dEdR != 0) {
+    // Apply forces based on distances.
+
+    for (int i = 0; i < (int) distanceTerms.size(); i++) {
+        const DistanceTermInfo& term = distanceTerms[i];
+        RealOpenMM dEdR = (RealOpenMM) (term.forceExpression.evaluate(variables)/(term.delta[ReferenceForce::RIndex]));
         for (int i = 0; i < 3; i++) {
-           RealOpenMM force  = -dEdR*deltaD1A1[i];
-           forces[d1][i] += force;
-           forces[a1][i] -= force;
+           RealOpenMM force  = -dEdR*term.delta[i];
+           forces[atoms[term.p1]][i] -= force;
+           forces[atoms[term.p2]][i] += force;
         }
     }
 
-    // Apply forces based on theta.
+    // Apply forces based on angles.
 
-    RealOpenMM dEdTheta = (RealOpenMM) thetaForceExpression.evaluate(variables);
-    if (dEdTheta != 0) {
+    for (int i = 0; i < (int) angleTerms.size(); i++) {
+        const AngleTermInfo& term = angleTerms[i];
+        RealOpenMM dEdTheta = (RealOpenMM) term.forceExpression.evaluate(variables);
         RealOpenMM thetaCross[ReferenceForce::LastDeltaRIndex];
-        SimTKOpenMMUtilities::crossProductVector3(deltaD1D2, deltaD1A1, thetaCross);
+        SimTKOpenMMUtilities::crossProductVector3(term.delta1, term.delta2, thetaCross);
         RealOpenMM lengthThetaCross = SQRT(DOT3(thetaCross, thetaCross));
         if (lengthThetaCross < 1.0e-06)
             lengthThetaCross = (RealOpenMM) 1.0e-06;
-        RealOpenMM termA = dEdTheta/(deltaD1D2[ReferenceForce::R2Index]*lengthThetaCross);
-        RealOpenMM termC = -dEdTheta/(deltaD1A1[ReferenceForce::R2Index]*lengthThetaCross);
+        RealOpenMM termA = dEdTheta/(term.delta1[ReferenceForce::R2Index]*lengthThetaCross);
+        RealOpenMM termC = -dEdTheta/(term.delta2[ReferenceForce::R2Index]*lengthThetaCross);
         RealOpenMM deltaCrossP[3][3];
-        SimTKOpenMMUtilities::crossProductVector3(deltaD1D2, thetaCross, deltaCrossP[0]);
-        SimTKOpenMMUtilities::crossProductVector3(deltaD1A1, thetaCross, deltaCrossP[2]);
+        SimTKOpenMMUtilities::crossProductVector3(term.delta1, thetaCross, deltaCrossP[0]);
+        SimTKOpenMMUtilities::crossProductVector3(term.delta2, thetaCross, deltaCrossP[2]);
         for (int i = 0; i < 3; i++) {
             deltaCrossP[0][i] *= termA;
             deltaCrossP[2][i] *= termC;
             deltaCrossP[1][i] = -(deltaCrossP[0][i]+deltaCrossP[2][i]);
         }
         for (int i = 0; i < 3; i++) {
-            forces[d2][i] += deltaCrossP[0][i];
-            forces[d1][i] += deltaCrossP[1][i];
-            forces[a1][i] += deltaCrossP[2][i];
+            forces[atoms[term.p1]][i] += deltaCrossP[0][i];
+            forces[atoms[term.p2]][i] += deltaCrossP[1][i];
+            forces[atoms[term.p3]][i] += deltaCrossP[2][i];
         }
     }
 
-    // Apply forces based on psi.
+    // Apply forces based on dihedrals.
 
-    RealOpenMM dEdPsi = (RealOpenMM) psiForceExpression.evaluate(variables);
-    if (dEdPsi != 0) {
-        RealOpenMM psiCross[ReferenceForce::LastDeltaRIndex];
-        SimTKOpenMMUtilities::crossProductVector3(deltaA2A1, deltaD1A1, psiCross);
-        RealOpenMM lengthPsiCross = SQRT(DOT3(psiCross, psiCross));
-        if (lengthPsiCross < 1.0e-06)
-            lengthPsiCross = (RealOpenMM) 1.0e-06;
-        RealOpenMM termA =  dEdPsi/(deltaD1A1[ReferenceForce::R2Index]*lengthPsiCross);
-        RealOpenMM termC = -dEdPsi/(deltaA2A1[ReferenceForce::R2Index]*lengthPsiCross);
-        RealOpenMM deltaCrossP[3][3];
-        SimTKOpenMMUtilities::crossProductVector3(deltaD1A1, psiCross, deltaCrossP[0]);
-        SimTKOpenMMUtilities::crossProductVector3(deltaA2A1, psiCross, deltaCrossP[2]);
-        for (int i = 0; i < 3; i++) {
-            deltaCrossP[0][i] *= termA;
-            deltaCrossP[2][i] *= termC;
-            deltaCrossP[1][i] = -(deltaCrossP[0][i]+deltaCrossP[2][i]);
-        }
-        for (int i = 0; i < 3; i++) {
-            forces[d1][i] += deltaCrossP[0][i];
-            forces[a1][i] += deltaCrossP[1][i];
-            forces[a2][i] += deltaCrossP[2][i];
-        }
-    }
-
-    // Apply forces based on chi.
-
-    RealOpenMM dEdChi = (RealOpenMM) chiForceExpression.evaluate(variables);
-    if (dEdChi != 0) {
+    for (int i = 0; i < (int) dihedralTerms.size(); i++) {
+        const DihedralTermInfo& term = dihedralTerms[i];
+        RealOpenMM dEdTheta = (RealOpenMM) term.forceExpression.evaluate(variables);
         RealOpenMM internalF[4][3];
         RealOpenMM forceFactors[4];
-        RealOpenMM normCross1 = DOT3(crossProduct[0], crossProduct[0]);
-        RealOpenMM normBC = deltaD1A1[ReferenceForce::RIndex];
-        forceFactors[0] = (-dEdChi*normBC)/normCross1;
-        RealOpenMM normCross2 = DOT3(crossProduct[1], crossProduct[1]);
-                   forceFactors[3] = (dEdChi*normBC)/normCross2;
-                   forceFactors[1] = DOT3(deltaA2A1, deltaD1A1);
-                   forceFactors[1] /= deltaD1A1[ReferenceForce::R2Index];
-                   forceFactors[2] = DOT3(deltaD1D2, deltaD1A1);
-                   forceFactors[2] /= deltaD1A1[ReferenceForce::R2Index];
+        RealOpenMM normCross1 = DOT3(term.cross1, term.cross1);
+        RealOpenMM normBC = term.delta2[ReferenceForce::RIndex];
+        forceFactors[0] = (-dEdTheta*normBC)/normCross1;
+        RealOpenMM normCross2 = DOT3(term.cross2, term.cross2);
+                   forceFactors[3] = (dEdTheta*normBC)/normCross2;
+                   forceFactors[1] = DOT3(term.delta1, term.delta2);
+                   forceFactors[1] /= term.delta2[ReferenceForce::R2Index];
+                   forceFactors[2] = DOT3(term.delta3, term.delta2);
+                   forceFactors[2] /= term.delta2[ReferenceForce::R2Index];
         for (int i = 0; i < 3; i++) {
-            internalF[0][i] = forceFactors[0]*crossProduct[0][i];
-            internalF[3][i] = forceFactors[3]*crossProduct[1][i];
+            internalF[0][i] = forceFactors[0]*term.cross1[i];
+            internalF[3][i] = forceFactors[3]*term.cross2[i];
             RealOpenMM s = forceFactors[1]*internalF[0][i] - forceFactors[2]*internalF[3][i];
             internalF[1][i] = internalF[0][i] - s;
             internalF[2][i] = internalF[3][i] + s;
         }
         for (int i = 0; i < 3; i++) {
-            forces[a2][i] += internalF[0][i];
-            forces[a1][i] -= internalF[1][i];
-            forces[d1][i] -= internalF[2][i];
-            forces[d2][i] += internalF[3][i];
+            forces[atoms[term.p1]][i] += internalF[0][i];
+            forces[atoms[term.p2]][i] -= internalF[1][i];
+            forces[atoms[term.p3]][i] -= internalF[2][i];
+            forces[atoms[term.p4]][i] += internalF[3][i];
         }
     }
 
@@ -319,8 +299,15 @@ void ReferenceCustomHbondIxn::calculateOneIxn(int donor, int acceptor, RealOpenM
         *totalEnergy += (RealOpenMM) energyExpression.evaluate(variables);
 }
 
-RealOpenMM ReferenceCustomHbondIxn::computeAngle(RealOpenMM* vec1, RealOpenMM* vec2, RealOpenMM sign) {
-    RealOpenMM dot = sign*DOT3(vec1, vec2);
+void ReferenceCustomHbondIxn::computeDelta(int atom1, int atom2, RealOpenMM* delta, RealOpenMM** atomCoordinates) const {
+    if (periodic)
+        ReferenceForce::getDeltaRPeriodic(atomCoordinates[atom1], atomCoordinates[atom2], periodicBoxSize, delta);
+    else
+        ReferenceForce::getDeltaR(atomCoordinates[atom1], atomCoordinates[atom2], delta);
+}
+
+RealOpenMM ReferenceCustomHbondIxn::computeAngle(RealOpenMM* vec1, RealOpenMM* vec2) {
+    RealOpenMM dot = DOT3(vec1, vec2);
     RealOpenMM cosine = dot/SQRT((vec1[ReferenceForce::R2Index]*vec2[ReferenceForce::R2Index]));
     RealOpenMM angle;
     if (cosine >= 1)

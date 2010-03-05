@@ -33,15 +33,43 @@
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/CustomHbondForceImpl.h"
 #include "openmm/kernels.h"
+#include "lepton/Operation.h"
+#include "lepton/Parser.h"
 #include <sstream>
 
 using namespace OpenMM;
+using Lepton::CustomFunction;
+using Lepton::ExpressionTreeNode;
+using Lepton::Operation;
+using Lepton::ParsedExpression;
 using std::map;
 using std::pair;
 using std::vector;
 using std::set;
 using std::string;
 using std::stringstream;
+
+/**
+ * This class serves as a placeholder for angles and dihedrals in expressions.
+ */
+class CustomHbondForceImpl::FunctionPlaceholder : public CustomFunction {
+public:
+    int numArguments;
+    FunctionPlaceholder(int numArguments) : numArguments(numArguments) {
+    }
+    int getNumArguments() const {
+        return numArguments;
+    }
+    double evaluate(const double* arguments) const {
+        return 0.0;
+    }
+    double evaluateDerivative(const double* arguments, const int* derivOrder) const {
+        return 0.0;
+    }
+    CustomFunction* clone() const {
+        return new FunctionPlaceholder(numArguments);
+    }
+};
 
 CustomHbondForceImpl::CustomHbondForceImpl(CustomHbondForce& owner) : owner(owner) {
 }
@@ -59,18 +87,24 @@ void CustomHbondForceImpl::initialize(ContextImpl& context) {
     vector<double> parameters;
     int numDonorParameters = owner.getNumPerDonorParameters();
     for (int i = 0; i < owner.getNumDonors(); i++) {
-        int primary, secondary;
-        owner.getDonorParameters(i, primary, secondary, parameters);
-        if (primary < 0 || primary >= system.getNumParticles()) {
+        int d1, d2, d3;
+        owner.getDonorParameters(i, d1, d2, d3, parameters);
+        if (d1 < 0 || d1 >= system.getNumParticles()) {
             stringstream msg;
             msg << "CustomHbondForce: Illegal particle index for a donor: ";
-            msg << primary;
+            msg << d1;
             throw OpenMMException(msg.str());
         }
-        if (secondary < 0 || secondary >= system.getNumParticles()) {
+        if (d2 < -1 || d2 >= system.getNumParticles()) {
             stringstream msg;
             msg << "CustomHbondForce: Illegal particle index for a donor: ";
-            msg << secondary;
+            msg << d2;
+            throw OpenMMException(msg.str());
+        }
+        if (d3 < -1 || d3 >= system.getNumParticles()) {
+            stringstream msg;
+            msg << "CustomHbondForce: Illegal particle index for a donor: ";
+            msg << d3;
             throw OpenMMException(msg.str());
         }
         if (parameters.size() != numDonorParameters) {
@@ -82,18 +116,24 @@ void CustomHbondForceImpl::initialize(ContextImpl& context) {
     }
     int numAcceptorParameters = owner.getNumPerAcceptorParameters();
     for (int i = 0; i < owner.getNumAcceptors(); i++) {
-        int primary, secondary;
-        owner.getAcceptorParameters(i, primary, secondary, parameters);
-        if (primary < 0 || primary >= system.getNumParticles()) {
+        int a1, a2, a3;
+        owner.getAcceptorParameters(i, a1, a2, a3, parameters);
+        if (a1 < 0 || a1 >= system.getNumParticles()) {
             stringstream msg;
             msg << "CustomHbondForce: Illegal particle index for an acceptor: ";
-            msg << primary;
+            msg << a1;
             throw OpenMMException(msg.str());
         }
-        if (secondary < 0 || secondary >= system.getNumParticles()) {
+        if (a2 < -1 || a2 >= system.getNumParticles()) {
             stringstream msg;
             msg << "CustomHbondForce: Illegal particle index for an acceptor: ";
-            msg << secondary;
+            msg << a2;
+            throw OpenMMException(msg.str());
+        }
+        if (a3 < -1 || a3 >= system.getNumParticles()) {
+            stringstream msg;
+            msg << "CustomHbondForce: Illegal particle index for an acceptor: ";
+            msg << a3;
             throw OpenMMException(msg.str());
         }
         if (parameters.size() != numAcceptorParameters) {
@@ -157,4 +197,82 @@ map<string, double> CustomHbondForceImpl::getDefaultParameters() {
     for (int i = 0; i < owner.getNumGlobalParameters(); i++)
         parameters[owner.getGlobalParameterName(i)] = owner.getGlobalParameterDefaultValue(i);
     return parameters;
+}
+
+ParsedExpression CustomHbondForceImpl::prepareExpression(const CustomHbondForce& force, map<string, vector<int> >& distances,
+        map<string, vector<int> >& angles, map<string, vector<int> >& dihedrals) {
+    CustomHbondForceImpl::FunctionPlaceholder custom(1);
+    CustomHbondForceImpl::FunctionPlaceholder distance(2);
+    CustomHbondForceImpl::FunctionPlaceholder angle(3);
+    CustomHbondForceImpl::FunctionPlaceholder dihedral(4);
+    map<string, CustomFunction*> functions;
+    functions["distance"] = &distance;
+    functions["angle"] = &angle;
+    functions["dihedral"] = &dihedral;
+    for (int i = 0; i < force.getNumFunctions(); i++) {
+        string name;
+        vector<double> values;
+        double min, max;
+        bool interpolating;
+        force.getFunctionParameters(i, name, values, min, max, interpolating);
+        functions[name] = &custom;
+    }
+    ParsedExpression expression = Lepton::Parser::parse(force.getEnergyFunction(), functions);
+    map<string, int> atoms;
+    atoms["a1"] = 0;
+    atoms["a2"] = 1;
+    atoms["a3"] = 2;
+    atoms["d1"] = 3;
+    atoms["d2"] = 4;
+    atoms["d3"] = 5;
+    return ParsedExpression(replaceFunctions(expression.getRootNode(), atoms, distances, angles, dihedrals)).optimize();
+}
+
+ExpressionTreeNode CustomHbondForceImpl::replaceFunctions(const ExpressionTreeNode& node, map<string, int> atoms,
+        map<string, vector<int> >& distances, map<string, vector<int> >& angles, map<string, vector<int> >& dihedrals) {
+    const Operation& op = node.getOperation();
+    if (op.getId() != Operation::CUSTOM || op.getNumArguments() < 2)
+    {
+        // This is not an angle or dihedral, so process its children.
+
+        vector<ExpressionTreeNode> children;
+        for (int i = 0; i < (int) node.getChildren().size(); i++)
+            children.push_back(replaceFunctions(node.getChildren()[i], atoms, distances, angles, dihedrals));
+        return ExpressionTreeNode(op.clone(), children);
+    }
+    const Operation::Custom& custom = static_cast<const Operation::Custom&>(op);
+
+    // Identify the atoms this term is based on.
+
+    int numArgs = custom.getNumArguments();
+    vector<int> indices(numArgs);
+    for (int i = 0; i < numArgs; i++) {
+        map<string, int>::const_iterator iter = atoms.find(node.getChildren()[i].getOperation().getName());
+        if (iter == atoms.end())
+            throw OpenMMException("CustomHBondForce: Unknown particle '"+node.getChildren()[i].getOperation().getName()+"'");
+        indices[i] = iter->second;
+    }
+    
+    // Select a name for the variable and add it to the appropriate map.
+    
+    stringstream variable;
+    if (numArgs == 2)
+        variable << "distance";
+    else if (numArgs == 3)
+        variable << "angle";
+    else
+        variable << "dihedral";
+    for (int i = 0; i < numArgs; i++)
+        variable << indices[i];
+    string name = variable.str();
+    if (numArgs == 2)
+        distances[name] = indices;
+    else if (numArgs == 3)
+        angles[name] = indices;
+    else
+        dihedrals[name] = indices;
+    
+    // Return a new node that represents it as a simple variable.
+    
+    return ExpressionTreeNode(new Operation::Variable(name));
 }
