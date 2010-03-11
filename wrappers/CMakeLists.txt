@@ -18,7 +18,7 @@ ADD_CUSTOM_COMMAND(OUTPUT OpenMMCWrapper.h COMMAND ${JAVA_RUNTIME} -jar ${CMAKE_
 ADD_CUSTOM_COMMAND(OUTPUT OpenMMCWrapper.cpp COMMAND ${JAVA_RUNTIME} -jar ${CMAKE_SOURCE_DIR}/wrappers/saxonb9-1-0-7j/saxon9.jar -t -s:OpenMMApi.xml
      -xsl:${CMAKE_SOURCE_DIR}/wrappers/CWrapper_Source.xslt -o:OpenMMCWrapper.cpp DEPENDS OpenMMApi.xml)
 ADD_CUSTOM_COMMAND(OUTPUT OpenMMFortranModule.f90 COMMAND ${JAVA_RUNTIME} -jar ${CMAKE_SOURCE_DIR}/wrappers/saxonb9-1-0-7j/saxon9.jar -t -s:OpenMMApi.xml
-     -xsl:${CMAKE_SOURCE_DIR}/wrappers/FortranWrapper_Header.xslt -o:OpenMMFortranModule.f90 DEPENDS OpenMMApi.xml)
+     -xsl:${CMAKE_SOURCE_DIR}/wrappers/FortranWrapper_Header.xslt -o:OpenMMFortranModule.f90 DEPENDS OpenMMApi.xml ${CMAKE_SOURCE_DIR}/wrappers/FortranWrapper_Header.xslt)
 ADD_CUSTOM_COMMAND(OUTPUT OpenMMFortranWrapper.cpp COMMAND ${JAVA_RUNTIME} -jar ${CMAKE_SOURCE_DIR}/wrappers/saxonb9-1-0-7j/saxon9.jar -t -s:OpenMMApi.xml
      -xsl:${CMAKE_SOURCE_DIR}/wrappers/FortranWrapper_Source.xslt -o:OpenMMFortranWrapper.cpp DEPENDS OpenMMApi.xml)
 

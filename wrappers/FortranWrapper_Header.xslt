@@ -396,11 +396,17 @@ END MODULE OpenMM
   <xsl:value-of select="'target'"/>
  </xsl:if>
  <xsl:for-each select="Argument">
-  <xsl:if test="position() > 1 or not($method/@static='1')">, </xsl:if>
+  <xsl:if test="position() > 1 or not($method/@static='1')">
+   <xsl:text>, &amp;
+                          </xsl:text>
+  </xsl:if>
   <xsl:value-of select="@name"/>
  </xsl:for-each>
  <xsl:if test="$has_return_arg">
-  <xsl:if test="not(@static='1') or not(empty(Argument))">, </xsl:if>
+  <xsl:if test="not(@static='1') or not(empty(Argument))">
+   <xsl:text>, &amp;
+                          </xsl:text>
+  </xsl:if>
   <xsl:value-of select="'result'"/>
  </xsl:if>
  <xsl:value-of select="')'"/>
