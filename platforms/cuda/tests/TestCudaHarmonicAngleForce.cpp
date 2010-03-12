@@ -77,9 +77,42 @@ void testAngles() {
     ASSERT_EQUAL_TOL(0.5*1.1*(PI_M/6)*(PI_M/6) + 0.5*1.2*(PI_M/4)*(PI_M/4), state.getPotentialEnergy(), TOL);
 }
 
+void testCollinear() {
+    CudaPlatform platform;
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    LangevinIntegrator integrator(0.0, 0.1, 0.01);
+    HarmonicAngleForce* forceField = new HarmonicAngleForce();
+    forceField->addAngle(0, 1, 2, M_PI * 120. / 180., 10.0);
+    system.addForce(forceField);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(3);
+    for (int a = 0; a < 3; ++a) 
+    {   
+        positions[a] = OpenMM::Vec3(0.5*a,0,0); // location, nm
+    }   
+    context.setPositions(positions);
+    State state = context.getState(State::Forces | State::Energy);
+    const vector<Vec3>& forces = state.getForces();
+    double expectedEnergy = 10.0*0.5*(PI_M/3.0)*(PI_M/3.0);
+#if 0
+    { 
+        (void) fprintf( stderr, "testCollinear: E=%12.5f %12.5f\n", state.getPotentialEnergy(), expectedEnergy );
+        for (int a = 0; a < 3; ++a) {
+            (void) fprintf( stderr, "%3d F[%12.5f %12.5f %12.5f]\n", a, forces[a][0], forces[a][1], forces[a][2] );
+        }
+    }
+#endif
+    ASSERT_EQUAL_VEC(Vec3(0, 0, 0), forces[0], TOL);
+    ASSERT_EQUAL_TOL(expectedEnergy, state.getPotentialEnergy(), TOL);
+}
+
 int main() {
     try {
         testAngles();
+        testCollinear();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;
