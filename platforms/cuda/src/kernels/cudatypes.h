@@ -216,22 +216,44 @@ T& CUDAStream<T>::operator[](int index)
 
 static const unsigned int GRID = 32;
 static const unsigned int GRIDBITS = 5;
+static const int G8X_BLOCKS_PER_SM                      = 1;
+static const int GT2XX_BLOCKS_PER_SM                    = 1;
+static const int GF1XX_BLOCKS_PER_SM                    = 3;
+
 static const int G8X_NONBOND_THREADS_PER_BLOCK          = 256;
 static const int GT2XX_NONBOND_THREADS_PER_BLOCK        = 320;
+static const int GF1XX_NONBOND_THREADS_PER_BLOCK        = 256;
+//static const int GF1XX_NONBOND_THREADS_PER_BLOCK        = 768;
+
 static const int G8X_BORNFORCE2_THREADS_PER_BLOCK       = 256;
 static const int GT2XX_BORNFORCE2_THREADS_PER_BLOCK     = 320;
+static const int GF1XX_BORNFORCE2_THREADS_PER_BLOCK     = 256;
+//static const int GF1XX_BORNFORCE2_THREADS_PER_BLOCK     = 768;
+
 static const int G8X_SHAKE_THREADS_PER_BLOCK            = 128;
 static const int GT2XX_SHAKE_THREADS_PER_BLOCK          = 256;
+static const int GF1XX_SHAKE_THREADS_PER_BLOCK          = 512;
+
 static const int G8X_UPDATE_THREADS_PER_BLOCK           = 192;
 static const int GT2XX_UPDATE_THREADS_PER_BLOCK         = 384;
+static const int GF1XX_UPDATE_THREADS_PER_BLOCK         = 768;
+
 static const int G8X_LOCALFORCES_THREADS_PER_BLOCK      = 192;
 static const int GT2XX_LOCALFORCES_THREADS_PER_BLOCK    = 384;
+static const int GF1XX_LOCALFORCES_THREADS_PER_BLOCK    = 768;
+
 static const int G8X_THREADS_PER_BLOCK                  = 256;
 static const int GT2XX_THREADS_PER_BLOCK                = 256;
+static const int GF1XX_THREADS_PER_BLOCK                = 512;
+
 static const int G8X_RANDOM_THREADS_PER_BLOCK           = 256;
 static const int GT2XX_RANDOM_THREADS_PER_BLOCK         = 384;
+static const int GF1XX_RANDOM_THREADS_PER_BLOCK         = 768;
+
 static const int G8X_NONBOND_WORKUNITS_PER_SM           = 220;
 static const int GT2XX_NONBOND_WORKUNITS_PER_SM         = 256;
+static const int GF1XX_NONBOND_WORKUNITS_PER_SM         = 256;
+
 static const unsigned int MAX_STACK_SIZE = 8;
 static const unsigned int MAX_TABULATED_FUNCTIONS = 4;
 
@@ -265,6 +287,7 @@ struct cudaGmxSimulation {
     unsigned int    atoms;                          // Number of atoms
     unsigned int    paddedNumberOfAtoms;            // Padded number of atoms
     unsigned int    blocks;                         // Number of blocks to launch across linear kernels
+    unsigned int    blocksPerSM;                    // Number of blocks per share memory
     unsigned int    nonbond_blocks;                 // Number of blocks to launch across CDLJ and Born Force Part1
     unsigned int    bornForce2_blocks;              // Number of blocks to launch across Born Force 2
     unsigned int    interaction_blocks;             // Number of blocks to launch when identifying interacting tiles

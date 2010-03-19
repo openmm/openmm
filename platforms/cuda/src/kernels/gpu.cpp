@@ -1352,9 +1352,11 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
     // Find connected constraints for CCMA.
 
     vector<int> ccmaConstraints;
+/*
     for (unsigned i = 0; i < atom1.size(); i++)
         if (!isShakeAtom[atom1[i]])
             ccmaConstraints.push_back(i);
+*/
 
     // Record the connections between constraints.
 
@@ -1832,11 +1834,13 @@ void* gpuInit(int numAtoms, unsigned int device, bool useBlockingSync)
             gpu->sim.workUnitsPerSM = GT2XX_NONBOND_WORKUNITS_PER_SM;
             break;
         }
+    } 
+    else
+    {    
+        gpu->sm_version = SM_20;
+        gpu->sim.workUnitsPerSM = GF1XX_NONBOND_WORKUNITS_PER_SM;
     }
 
-    gpu->sim.nonbond_blocks = deviceProp.multiProcessorCount;
-    gpu->sim.bornForce2_blocks = deviceProp.multiProcessorCount;
-    gpu->sim.blocks = deviceProp.multiProcessorCount;
     if (deviceProp.regsPerBlock == 8192)
     {
         gpu->sim.nonbond_threads_per_block          = G8X_NONBOND_THREADS_PER_BLOCK;
@@ -1846,8 +1850,9 @@ void* gpuInit(int numAtoms, unsigned int device, bool useBlockingSync)
         gpu->sim.max_localForces_threads_per_block  = G8X_LOCALFORCES_THREADS_PER_BLOCK;
         gpu->sim.threads_per_block                  = G8X_THREADS_PER_BLOCK;
         gpu->sim.random_threads_per_block           = G8X_RANDOM_THREADS_PER_BLOCK;
+        gpu->blocksPerSM                            = G8X_BLOCKS_PER_SM;
     }
-    else
+    else if (deviceProp.regsPerBlock <= 16384)
     {
         gpu->sim.nonbond_threads_per_block          = GT2XX_NONBOND_THREADS_PER_BLOCK;
         gpu->sim.bornForce2_threads_per_block       = GT2XX_BORNFORCE2_THREADS_PER_BLOCK;
@@ -1856,7 +1861,23 @@ void* gpuInit(int numAtoms, unsigned int device, bool useBlockingSync)
         gpu->sim.max_localForces_threads_per_block  = GT2XX_LOCALFORCES_THREADS_PER_BLOCK;
         gpu->sim.threads_per_block                  = GT2XX_NONBOND_THREADS_PER_BLOCK;
         gpu->sim.random_threads_per_block           = GT2XX_RANDOM_THREADS_PER_BLOCK;
+        gpu->blocksPerSM                            = GT2XX_BLOCKS_PER_SM;
     }
+    else
+    {
+        gpu->sim.nonbond_threads_per_block          = GF1XX_NONBOND_THREADS_PER_BLOCK;
+        gpu->sim.bornForce2_threads_per_block       = GF1XX_BORNFORCE2_THREADS_PER_BLOCK;
+        gpu->sim.max_shake_threads_per_block        = GF1XX_SHAKE_THREADS_PER_BLOCK;
+        gpu->sim.max_update_threads_per_block       = GF1XX_UPDATE_THREADS_PER_BLOCK;
+        gpu->sim.max_localForces_threads_per_block  = GF1XX_LOCALFORCES_THREADS_PER_BLOCK;
+        gpu->sim.threads_per_block                  = GF1XX_NONBOND_THREADS_PER_BLOCK;
+        gpu->sim.random_threads_per_block           = GF1XX_RANDOM_THREADS_PER_BLOCK;
+        gpu->blocksPerSM                            = GF1XX_BLOCKS_PER_SM;
+    }
+    gpu->sim.nonbond_blocks = deviceProp.multiProcessorCount*gpu->blocksPerSM;
+    gpu->sim.bornForce2_blocks = deviceProp.multiProcessorCount*gpu->blocksPerSM;
+    gpu->sim.blocks = deviceProp.multiProcessorCount;
+
     gpu->sim.shake_threads_per_block                = gpu->sim.max_shake_threads_per_block;
     gpu->sim.localForces_threads_per_block          = gpu->sim.max_localForces_threads_per_block;
 

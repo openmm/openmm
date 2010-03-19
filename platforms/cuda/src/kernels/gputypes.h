@@ -55,7 +55,8 @@ enum SM_VERSION
 {
     SM_10,
     SM_11,
-    SM_12
+    SM_12,
+    SM_20
 };
 
 
@@ -70,6 +71,7 @@ struct _gpuContext {
     bool useBlockingSync;
     gpuAtomType* gpAtomTable;
     int gAtomTypes;
+    unsigned int blocksPerSM;
     cudaGmxSimulation sim;
     unsigned int* pOutputBufferCounter;
     std::vector<std::vector<int> > exclusions;
