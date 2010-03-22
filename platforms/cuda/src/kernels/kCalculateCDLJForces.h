@@ -33,7 +33,15 @@
 /* Cuda compiler on Windows does not recognized "static const float" values */
 #define LOCAL_HACK_PI 3.1415926535897932384626433832795
 
-__global__ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUnit)
+__global__ 
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(GF1XX_NONBOND_THREADS_PER_BLOCK, 1)
+#elif (__CUDA_ARCH__ >= 130)
+__launch_bounds__(GT2XX_NONBOND_THREADS_PER_BLOCK, 1)
+#else
+__launch_bounds__(G8X_NONBOND_THREADS_PER_BLOCK, 1)
+#endif
+void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUnit)
 {
     extern __shared__ Atom sA[];
     unsigned int totalWarps = gridDim.x*blockDim.x/GRID;

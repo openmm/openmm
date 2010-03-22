@@ -30,7 +30,15 @@
  * different versions of the kernels.
  */
 
-__global__ void METHOD_NAME(kCalculateObcGbsa, Forces2_kernel)(unsigned int* workUnit)
+__global__ 
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(GF1XX_BORNFORCE2_THREADS_PER_BLOCK, 1)
+#elif (__CUDA_ARCH__ >= 130)
+__launch_bounds__(GT2XX_BORNFORCE2_THREADS_PER_BLOCK, 1)
+#else
+__launch_bounds__(G8X_BORNFORCE2_THREADS_PER_BLOCK, 1)
+#endif
+void METHOD_NAME(kCalculateObcGbsa, Forces2_kernel)(unsigned int* workUnit)
 {
     extern __shared__ Atom sA[];
     unsigned int totalWarps = cSim.bornForce2_blocks*cSim.bornForce2_threads_per_block/GRID;

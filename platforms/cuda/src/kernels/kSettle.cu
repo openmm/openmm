@@ -57,7 +57,15 @@ void GetSettleSim(gpuContext gpu)
  * S. Miyamoto and P. Kollman, J. Comp. Chem., vol 13, no. 8, pp. 952-962 (1992).
  */
 
-__global__ void kApplyFirstSettle_kernel()
+__global__ 
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(GF1XX_SHAKE_THREADS_PER_BLOCK, 1)
+#elif (__CUDA_ARCH__ >= 130)
+__launch_bounds__(GT2XX_SHAKE_THREADS_PER_BLOCK, 1)
+#else
+__launch_bounds__(G8X_SHAKE_THREADS_PER_BLOCK, 1)
+#endif
+void kApplyFirstSettle_kernel()
 {
     unsigned int pos = threadIdx.x + blockIdx.x * blockDim.x;
     while (pos < cSim.settleConstraints)
@@ -231,7 +239,15 @@ void kApplyFirstSettle(gpuContext gpu)
     }
 }
 
-__global__ void kApplySecondSettle_kernel()
+__global__ void 
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(GF1XX_SHAKE_THREADS_PER_BLOCK, 1)
+#elif (__CUDA_ARCH__ >= 130)
+__launch_bounds__(GT2XX_SHAKE_THREADS_PER_BLOCK, 1)
+#else
+__launch_bounds__(G8X_SHAKE_THREADS_PER_BLOCK, 1)
+#endif
+kApplySecondSettle_kernel()
 {
     unsigned int pos = threadIdx.x + blockIdx.x * blockDim.x;
     while (pos < cSim.settleConstraints)

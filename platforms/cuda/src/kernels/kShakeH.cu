@@ -64,9 +64,23 @@ void GetShakeHSim(gpuContext gpu)
     RTERROR(status, "cudaMemcpyFromSymbol: SetSim copy from cSim failed");
 }
 
-__global__ void kApplyFirstShake_kernel()
+__global__ 
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(GF1XX_SHAKE_THREADS_PER_BLOCK, 1)
+#elif (__CUDA_ARCH__ >= 130)
+__launch_bounds__(GT2XX_SHAKE_THREADS_PER_BLOCK, 1)
+#else
+__launch_bounds__(G8X_SHAKE_THREADS_PER_BLOCK, 1)
+#endif
+void kApplyFirstShake_kernel()
 {
-    __shared__ Atom sA[G8X_THREADS_PER_BLOCK];
+#if (__CUDA_ARCH__ >= 200)
+ __shared__ Atom sA[GF1XX_SHAKE_THREADS_PER_BLOCK];
+#elif (__CUDA_ARCH__ >= 130)
+ __shared__ Atom sA[GT2XX_SHAKE_THREADS_PER_BLOCK];
+#else
+ __shared__ Atom sA[G8X_SHAKE_THREADS_PER_BLOCK];
+#endif
     Atom* psA = &sA[threadIdx.x];
     unsigned int pos = threadIdx.x + blockIdx.x * blockDim.x;
     while (pos < cSim.ShakeConstraints)
@@ -226,9 +240,23 @@ void kApplyFirstShake(gpuContext gpu)
     }
 }
 
-__global__ void kApplySecondShake_kernel()
+__global__ 
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(GF1XX_SHAKE_THREADS_PER_BLOCK, 1)
+#elif (__CUDA_ARCH__ >= 130)
+__launch_bounds__(GT2XX_SHAKE_THREADS_PER_BLOCK, 1)
+#else
+__launch_bounds__(G8X_SHAKE_THREADS_PER_BLOCK, 1)
+#endif
+void kApplySecondShake_kernel()
 {
-    __shared__ Atom sA[G8X_THREADS_PER_BLOCK];
+#if (__CUDA_ARCH__ >= 200)
+ __shared__ Atom sA[GF1XX_SHAKE_THREADS_PER_BLOCK];
+#elif (__CUDA_ARCH__ >= 130)
+ __shared__ Atom sA[GT2XX_SHAKE_THREADS_PER_BLOCK];
+#else
+ __shared__ Atom sA[G8X_SHAKE_THREADS_PER_BLOCK];
+#endif
     Atom* psA = &sA[threadIdx.x];
     unsigned int pos = threadIdx.x + blockIdx.x * blockDim.x;
     while (pos < cSim.ShakeConstraints)
@@ -394,7 +422,15 @@ __global__ void kApplySecondShake_kernel()
     }
 }
 
-__global__ void kApplyNoShake_kernel()
+__global__ void 
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(GF1XX_SHAKE_THREADS_PER_BLOCK, 1)
+#elif (__CUDA_ARCH__ >= 130)
+__launch_bounds__(GT2XX_SHAKE_THREADS_PER_BLOCK, 1)
+#else
+__launch_bounds__(G8X_SHAKE_THREADS_PER_BLOCK, 1)
+#endif
+kApplyNoShake_kernel()
 {
     unsigned int pos = threadIdx.x + blockIdx.x * blockDim.x;
     while (pos < cSim.NonShakeConstraints)

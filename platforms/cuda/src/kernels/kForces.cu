@@ -53,7 +53,9 @@ void GetForcesSim(gpuContext gpu)
     RTERROR(status, "cudaMemcpyFromSymbol: GetForcesSim copy from cSim failed");
 }
 
-__global__ void kClearForces_kernel()
+__global__ 
+__launch_bounds__(384, 1)
+void kClearForces_kernel()
 {
     unsigned int pos = blockIdx.x * blockDim.x + threadIdx.x;
     while (pos < cSim.stride * cSim.outputBuffers)
@@ -70,7 +72,9 @@ void kClearForces(gpuContext gpu)
     LAUNCHERROR("kClearForces");
 }
 
-__global__ void kClearBornForces_kernel()
+__global__ 
+__launch_bounds__(384, 1)
+void kClearBornForces_kernel()
 {
     unsigned int pos = blockIdx.x * blockDim.x + threadIdx.x;
     while (pos < cSim.stride * cSim.nonbondOutputBuffers)
@@ -87,7 +91,9 @@ void kClearBornForces(gpuContext gpu)
     LAUNCHERROR("kClearBornForces");
 }
 
-__global__ void kClearEnergy_kernel()
+__global__ 
+__launch_bounds__(384, 1)
+void kClearEnergy_kernel()
 {
     unsigned int pos = blockIdx.x * blockDim.x + threadIdx.x;
     while (pos < cSim.energyOutputBuffers)
@@ -104,7 +110,15 @@ void kClearEnergy(gpuContext gpu)
     LAUNCHERROR("kClearEnergy");
 }
 
-__global__ void kReduceBornSumAndForces_kernel()
+__global__ 
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(GF1XX_THREADS_PER_BLOCK, 1)
+#elif (__CUDA_ARCH__ >= 130)
+__launch_bounds__(GT2XX_THREADS_PER_BLOCK, 1)
+#else
+__launch_bounds__(G8X_THREADS_PER_BLOCK, 1)
+#endif
+void kReduceBornSumAndForces_kernel()
 {
     unsigned int pos = (blockIdx.x * blockDim.x + threadIdx.x);
    
@@ -207,7 +221,15 @@ void kReduceBornSumAndForces(gpuContext gpu)
     LAUNCHERROR("kReduceBornSumAndForces");
 }
 
-__global__ void kReduceForces_kernel()
+__global__ 
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(GF1XX_THREADS_PER_BLOCK, 1)
+#elif (__CUDA_ARCH__ >= 130)
+__launch_bounds__(GT2XX_THREADS_PER_BLOCK, 1)
+#else
+__launch_bounds__(G8X_THREADS_PER_BLOCK, 1)
+#endif
+void kReduceForces_kernel()
 {
     unsigned int pos = (blockIdx.x * blockDim.x + threadIdx.x);
    
@@ -269,7 +291,15 @@ double kReduceEnergy(gpuContext gpu)
     return sum;
 }
 
-__global__ void kReduceObcGbsaBornForces_kernel()
+__global__ 
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(GF1XX_UPDATE_THREADS_PER_BLOCK, 1)
+#elif (__CUDA_ARCH__ >= 130)
+__launch_bounds__(GT2XX_UPDATE_THREADS_PER_BLOCK, 1)
+#else
+__launch_bounds__(G8X_UPDATE_THREADS_PER_BLOCK, 1)
+#endif
+void kReduceObcGbsaBornForces_kernel()
 {
     unsigned int pos = (blockIdx.x * blockDim.x + threadIdx.x);
     float energy = 0.0f;
@@ -327,7 +357,15 @@ __global__ void kReduceObcGbsaBornForces_kernel()
     cSim.pEnergy[blockIdx.x * blockDim.x + threadIdx.x] += energy / -6.0f;
 }
 
-__global__ void kReduceGBVIBornForces_kernel()
+__global__ 
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(GF1XX_UPDATE_THREADS_PER_BLOCK, 1)
+#elif (__CUDA_ARCH__ >= 130)
+__launch_bounds__(GT2XX_UPDATE_THREADS_PER_BLOCK, 1)
+#else
+__launch_bounds__(G8X_UPDATE_THREADS_PER_BLOCK, 1)
+#endif
+void kReduceGBVIBornForces_kernel()
 {
     unsigned int pos = (blockIdx.x * blockDim.x + threadIdx.x);
     float energy = 0.0f;

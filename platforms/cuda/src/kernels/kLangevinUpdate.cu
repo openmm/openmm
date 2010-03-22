@@ -101,7 +101,15 @@ void kLangevinUpdatePart2(gpuContext gpu)
 }
 
 
-__global__ void kSelectLangevinStepSize_kernel(float maxStepSize)
+__global__ 
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(GF1XX_UPDATE_THREADS_PER_BLOCK, 1)
+#elif (__CUDA_ARCH__ >= 130)
+__launch_bounds__(GT2XX_UPDATE_THREADS_PER_BLOCK, 1)
+#else
+__launch_bounds__(G8X_UPDATE_THREADS_PER_BLOCK, 1)
+#endif
+void kSelectLangevinStepSize_kernel(float maxStepSize)
 {
     // Calculate the error.
 

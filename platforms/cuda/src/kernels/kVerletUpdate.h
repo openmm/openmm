@@ -29,16 +29,24 @@
  * several times in kVerletUpdate.cu with different #defines to generate
  * different versions of the kernels.
  */
-
-#ifdef REMOVE_CM
-__global__ void kVerletUpdatePart1CM_kernel()
+ 
+__global__
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(GF1XX_UPDATE_THREADS_PER_BLOCK, 1)
+#elif (__CUDA_ARCH__ >= 130)
+__launch_bounds__(GT2XX_UPDATE_THREADS_PER_BLOCK, 1)
 #else
-__global__ void kVerletUpdatePart1_kernel()
+__launch_bounds__(G8X_UPDATE_THREADS_PER_BLOCK, 1)
+#endif
+#ifdef REMOVE_CM
+void kVerletUpdatePart1CM_kernel()
+#else
+void kVerletUpdatePart1_kernel()
 #endif
 {
     // Load the step size to take.
-    __shared__ float dtPos;
-    __shared__ float dtVel;
+    __shared__ volatile float dtPos;
+    __shared__ volatile float dtVel;
     if (threadIdx.x == 0)
     {
         float2 stepSize = cSim.pStepSize[0];
@@ -111,10 +119,18 @@ __global__ void kVerletUpdatePart1_kernel()
     }
 }
 
-#ifdef REMOVE_CM
-__global__ void kVerletUpdatePart2CM_kernel()
+__global__
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(GF1XX_UPDATE_THREADS_PER_BLOCK, 1)
+#elif (__CUDA_ARCH__ >= 130)
+__launch_bounds__(GT2XX_UPDATE_THREADS_PER_BLOCK, 1)
 #else
-__global__ void kVerletUpdatePart2_kernel()
+__launch_bounds__(G8X_UPDATE_THREADS_PER_BLOCK, 1)
+#endif
+#ifdef REMOVE_CM
+void kVerletUpdatePart2CM_kernel()
+#else
+void kVerletUpdatePart2_kernel()
 #endif
 {
     // Load the step size to take.

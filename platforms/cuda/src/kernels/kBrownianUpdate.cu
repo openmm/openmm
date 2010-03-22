@@ -51,7 +51,15 @@ void GetBrownianUpdateSim(gpuContext gpu)
     RTERROR(status, "cudaMemcpyFromSymbol: SetSim copy from cSim failed");
 }
 
-__global__ void kBrownianUpdatePart1_kernel()
+__global__ 
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(GF1XX_UPDATE_THREADS_PER_BLOCK, 1)
+#elif (__CUDA_ARCH__ >= 130)
+__launch_bounds__(GT2XX_UPDATE_THREADS_PER_BLOCK, 1)
+#else
+__launch_bounds__(G8X_UPDATE_THREADS_PER_BLOCK, 1)
+#endif
+void kBrownianUpdatePart1_kernel()
 {
     unsigned int pos    = threadIdx.x + blockIdx.x * blockDim.x;
     unsigned int rpos   = cSim.pRandomPosition[blockIdx.x];
@@ -82,7 +90,15 @@ void kBrownianUpdatePart1(gpuContext gpu)
     LAUNCHERROR("kBrownianUpdatePart1");
 }
 
-__global__ void kBrownianUpdatePart2_kernel()
+__global__ 
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(GF1XX_UPDATE_THREADS_PER_BLOCK, 1)
+#elif (__CUDA_ARCH__ >= 130)
+__launch_bounds__(GT2XX_UPDATE_THREADS_PER_BLOCK, 1)
+#else
+__launch_bounds__(G8X_UPDATE_THREADS_PER_BLOCK, 1)
+#endif
+void kBrownianUpdatePart2_kernel()
 {
     unsigned int pos            = threadIdx.x + blockIdx.x * blockDim.x;
     unsigned int rpos           = cSim.pRandomPosition[blockIdx.x];

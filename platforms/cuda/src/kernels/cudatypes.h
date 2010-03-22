@@ -222,12 +222,12 @@ static const int GF1XX_BLOCKS_PER_SM                    = 3;
 
 static const int G8X_NONBOND_THREADS_PER_BLOCK          = 256;
 static const int GT2XX_NONBOND_THREADS_PER_BLOCK        = 320;
-static const int GF1XX_NONBOND_THREADS_PER_BLOCK        = 256;
+static const int GF1XX_NONBOND_THREADS_PER_BLOCK        = 768;
 //static const int GF1XX_NONBOND_THREADS_PER_BLOCK        = 768;
 
 static const int G8X_BORNFORCE2_THREADS_PER_BLOCK       = 256;
 static const int GT2XX_BORNFORCE2_THREADS_PER_BLOCK     = 320;
-static const int GF1XX_BORNFORCE2_THREADS_PER_BLOCK     = 256;
+static const int GF1XX_BORNFORCE2_THREADS_PER_BLOCK     = 768;
 //static const int GF1XX_BORNFORCE2_THREADS_PER_BLOCK     = 768;
 
 static const int G8X_SHAKE_THREADS_PER_BLOCK            = 128;
@@ -252,7 +252,7 @@ static const int GF1XX_RANDOM_THREADS_PER_BLOCK         = 768;
 
 static const int G8X_NONBOND_WORKUNITS_PER_SM           = 220;
 static const int GT2XX_NONBOND_WORKUNITS_PER_SM         = 256;
-static const int GF1XX_NONBOND_WORKUNITS_PER_SM         = 256;
+static const int GF1XX_NONBOND_WORKUNITS_PER_SM         = 768;
 
 static const unsigned int MAX_STACK_SIZE = 8;
 static const unsigned int MAX_TABULATED_FUNCTIONS = 4;

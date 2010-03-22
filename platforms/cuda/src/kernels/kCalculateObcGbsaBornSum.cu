@@ -97,7 +97,9 @@ void GetCalculateObcGbsaBornSumSim(gpuContext gpu)
 #include "kCalculateObcGbsaBornSum.h"
 
 
-__global__ void kClearObcGbsaBornSum_kernel()
+__global__ 
+__launch_bounds__(384, 1)
+void kClearObcGbsaBornSum_kernel()
 {
     unsigned int pos = blockIdx.x * blockDim.x + threadIdx.x;
     while (pos < cSim.stride * cSim.nonbondOutputBuffers)
@@ -107,7 +109,9 @@ __global__ void kClearObcGbsaBornSum_kernel()
     }
 }
 
-__global__ void kReduceObcGbsaBornSum_kernel()
+__global__ 
+__launch_bounds__(384, 1)
+void kReduceObcGbsaBornSum_kernel()
 {
     unsigned int pos = (blockIdx.x * blockDim.x + threadIdx.x);
     
