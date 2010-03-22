@@ -81,7 +81,15 @@ void SetCustomAngleGlobalParams(const vector<float>& paramValues)
 
 #define CROSS_PRODUCT(v1, v2) make_float3(v1.y*v2.z - v1.z*v2.y, v1.z*v2.x - v1.x*v2.z, v1.x*v2.y - v1.y*v2.x)
 
-__global__ void kCalculateCustomAngleForces_kernel()
+__global__ 
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(1024, 1)
+#elif (__CUDA_ARCH__ >= 130)
+__launch_bounds__(512, 1)
+#else
+__launch_bounds__(256, 1)
+#endif
+void kCalculateCustomAngleForces_kernel()
 {
     extern __shared__ float stack[];
     float* variables = (float*) &stack[cSim.customExpressionStackSize*blockDim.x];
