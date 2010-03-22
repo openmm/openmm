@@ -218,7 +218,7 @@ static const unsigned int GRID = 32;
 static const unsigned int GRIDBITS = 5;
 static const int G8X_BLOCKS_PER_SM                      = 1;
 static const int GT2XX_BLOCKS_PER_SM                    = 1;
-static const int GF1XX_BLOCKS_PER_SM                    = 3;
+static const int GF1XX_BLOCKS_PER_SM                    = 1;
 
 static const int G8X_NONBOND_THREADS_PER_BLOCK          = 256;
 static const int GT2XX_NONBOND_THREADS_PER_BLOCK        = 320;
