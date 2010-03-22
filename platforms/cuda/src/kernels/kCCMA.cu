@@ -66,7 +66,15 @@ __device__ void kSyncAllThreads_kernel(short* syncCounter, short newCount)
     __syncthreads();
 }
 
-__global__ void kApplyCCMA_kernel(float4* atomPositions, bool addOldPosition)
+__global__ void 
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(1024, 1)
+#elif (__CUDA_ARCH__ >= 130)
+__launch_bounds__(512, 1)
+#else
+__launch_bounds__(256, 1)
+#endif
+kApplyCCMA_kernel(float4* atomPositions, bool addOldPosition)
 {
     // Initialize counters used for monitoring convergence and doing global thread synchronization.
 

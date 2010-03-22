@@ -82,7 +82,15 @@ void SetCustomExternalGlobalParams(const vector<float>& paramValues)
 }
 
 
-__global__ void kCalculateCustomExternalForces_kernel()
+__global__ 
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(1024, 1)
+#elif (__CUDA_ARCH__ >= 130)
+__launch_bounds__(512, 1)
+#else
+__launch_bounds__(256, 1)
+#endif
+void kCalculateCustomExternalForces_kernel()
 {
     extern __shared__ float stack[];
     float* variables = (float*) &stack[cSim.customExpressionStackSize*blockDim.x];

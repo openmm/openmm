@@ -92,7 +92,15 @@ inline __host__ __device__ float4 make_float4(int3 a)
     return make_float4((float) a.x, (float) a.y, (float) a.z, 0);
 }
 
-__global__ void kUpdateGridIndexAndFraction_kernel()
+__global__ 
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(1024, 1)
+#elif (__CUDA_ARCH__ >= 130)
+__launch_bounds__(512, 1)
+#else
+__launch_bounds__(256, 1)
+#endif
+void kUpdateGridIndexAndFraction_kernel()
 {
     unsigned int tnb = blockDim.x * gridDim.x;
     unsigned int tid = blockIdx.x * blockDim.x + threadIdx.x;
@@ -114,7 +122,15 @@ __global__ void kUpdateGridIndexAndFraction_kernel()
  * For each grid point, find the range of sorted atoms associated with that point.
  */
 
-__global__ void kFindAtomRangeForGrid_kernel()
+__global__ 
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(1024, 1)
+#elif (__CUDA_ARCH__ >= 130)
+__launch_bounds__(512, 1)
+#else
+__launch_bounds__(256, 1)
+#endif
+void kFindAtomRangeForGrid_kernel()
 {
     int thread = blockIdx.x*blockDim.x+threadIdx.x;
     int start = (cSim.atoms*thread)/(blockDim.x*gridDim.x);
@@ -147,7 +163,15 @@ __global__ void kFindAtomRangeForGrid_kernel()
     }
 }
 
-__global__ void kUpdateBsplines_kernel()
+__global__ 
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(1024, 1)
+#elif (__CUDA_ARCH__ >= 130)
+__launch_bounds__(512, 1)
+#else
+__launch_bounds__(256, 1)
+#endif
+void kUpdateBsplines_kernel()
 {
     unsigned int    tnb = blockDim.x * gridDim.x;
     unsigned int    tid = blockIdx.x * blockDim.x + threadIdx.x;
@@ -217,7 +241,15 @@ __global__ void kUpdateBsplines_kernel()
     }
 }
 
-__global__ void kGridSpreadCharge_kernel()
+__global__ 
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(1024, 1)
+#elif (__CUDA_ARCH__ >= 130)
+__launch_bounds__(512, 1)
+#else
+__launch_bounds__(256, 1)
+#endif
+void kGridSpreadCharge_kernel()
 {
     unsigned int numGridPoints = cSim.pmeGridSize.x*cSim.pmeGridSize.y*cSim.pmeGridSize.z;
     unsigned int numThreads = gridDim.x*blockDim.x;
@@ -254,7 +286,15 @@ __global__ void kGridSpreadCharge_kernel()
     }
 }
 
-__global__ void kReciprocalConvolution_kernel()
+__global__ 
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(1024, 1)
+#elif (__CUDA_ARCH__ >= 130)
+__launch_bounds__(512, 1)
+#else
+__launch_bounds__(256, 1)
+#endif
+void kReciprocalConvolution_kernel()
 {
     const unsigned int gridSize = cSim.pmeGridSize.x*cSim.pmeGridSize.y*cSim.pmeGridSize.z;
     float expFactor = LOCAL_HACK_PI*LOCAL_HACK_PI/(cSim.alphaEwald*cSim.alphaEwald);
@@ -287,7 +327,15 @@ __global__ void kReciprocalConvolution_kernel()
     cSim.pEnergy[blockIdx.x*blockDim.x+threadIdx.x] += 0.5f*energy;
 }
 
-__global__ void kGridInterpolateForce_kernel()
+__global__ 
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(1024, 1)
+#elif (__CUDA_ARCH__ >= 130)
+__launch_bounds__(512, 1)
+#else
+__launch_bounds__(256, 1)
+#endif
+void kGridInterpolateForce_kernel()
 {
     for (int atom = blockIdx.x*blockDim.x+threadIdx.x; atom < cSim.atoms; atom += blockDim.x*gridDim.x)
     {
