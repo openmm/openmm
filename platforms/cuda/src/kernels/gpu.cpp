@@ -1352,11 +1352,9 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
     // Find connected constraints for CCMA.
 
     vector<int> ccmaConstraints;
-/*
     for (unsigned i = 0; i < atom1.size(); i++)
         if (!isShakeAtom[atom1[i]])
             ccmaConstraints.push_back(i);
-*/
 
     // Record the connections between constraints.
 
