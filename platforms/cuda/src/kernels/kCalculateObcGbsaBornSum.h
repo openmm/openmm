@@ -41,12 +41,6 @@ __launch_bounds__(G8X_NONBOND_THREADS_PER_BLOCK, 1)
 void METHOD_NAME(kCalculateObcGbsa, BornSum_kernel)(unsigned int* workUnit)
 {
     extern __shared__ Atom sA[];
-/*
-    unsigned int numWorkUnits = cSim.pInteractionCount[0];
-    int end = numWorkUnits / gridDim.x;
-    int pos = end - (threadIdx.x >> GRIDBITS) - 1;
-*/
-
     unsigned int totalWarps = cSim.nonbond_blocks*cSim.nonbond_threads_per_block/GRID;
     unsigned int warp = (blockIdx.x*blockDim.x+threadIdx.x)/GRID;
     unsigned int numWorkUnits = cSim.pInteractionCount[0];
@@ -60,12 +54,10 @@ void METHOD_NAME(kCalculateObcGbsa, BornSum_kernel)(unsigned int* workUnit)
     float* tempBuffer = (float*) &sA[cSim.nonbond_threads_per_block];
 #endif
 
-    //while (pos >= 0)
     while (pos < end)
     {
         // Extract cell coordinates from appropriate work unit
         
-        //unsigned int x = workUnit[pos + (blockIdx.x*numWorkUnits)/gridDim.x];
         unsigned int x = workUnit[pos];
         unsigned int y = ((x >> 2) & 0x7fff) << GRIDBITS;
         x = (x >> 17) << GRIDBITS;
@@ -162,7 +154,6 @@ void METHOD_NAME(kCalculateObcGbsa, BornSum_kernel)(unsigned int* workUnit)
             sA[threadIdx.x].sum = apos.w    = 0.0f;
 
 #ifdef USE_CUTOFF
-            //unsigned int flags = cSim.pInteractionFlag[pos + (blockIdx.x*numWorkUnits)/gridDim.x];
             unsigned int flags = cSim.pInteractionFlag[pos];
             if (flags == 0)
             {
@@ -339,8 +330,6 @@ void METHOD_NAME(kCalculateObcGbsa, BornSum_kernel)(unsigned int* workUnit)
             cSim.pBornSum[offset] = sA[threadIdx.x].sum;
 #endif
         }
-
-        //pos -= cSim.nonbond_workBlock;
         pos++;
     }
 }

@@ -45,6 +45,7 @@ struct Atom {
     float r;
     float sr;
     float sum;
+    float padding;
 };
 
 static __constant__ cudaGmxSimulation cSim;
