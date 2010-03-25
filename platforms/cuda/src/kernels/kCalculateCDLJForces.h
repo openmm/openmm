@@ -243,11 +243,11 @@ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUnit)
 #else
             unsigned int offset                 = x + tgx + (x >> GRIDBITS) * cSim.stride;
 #endif
-            float4 of                           = cSim.pForce4a[offset];
+            float4 of                           = cSim.pForce4[offset];
             of.x                               += af.x;
             of.y                               += af.y;
             of.z                               += af.z;
-            cSim.pForce4a[offset]               = of;
+            cSim.pForce4[offset]               = of;
         }
         else        // 100% utilization
         {
@@ -536,21 +536,21 @@ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUnit)
 #else
             unsigned int offset                 = x + tgx + (y >> GRIDBITS) * cSim.stride;
 #endif
-            of                                  = cSim.pForce4a[offset];
+            of                                  = cSim.pForce4[offset];
             of.x                               += af.x;
             of.y                               += af.y;
             of.z                               += af.z;
-            cSim.pForce4a[offset]               = of;
+            cSim.pForce4[offset]               = of;
 #ifdef USE_OUTPUT_BUFFER_PER_WARP
             offset                              = y + tgx + warp*cSim.stride;
 #else
             offset                              = y + tgx + (x >> GRIDBITS) * cSim.stride;
 #endif
-            of                                  = cSim.pForce4a[offset];
+            of                                  = cSim.pForce4[offset];
             of.x                               += sA[threadIdx.x].fx;
             of.y                               += sA[threadIdx.x].fy;
             of.z                               += sA[threadIdx.x].fz;
-            cSim.pForce4a[offset]               = of;
+            cSim.pForce4[offset]               = of;
             lasty = y;
         }
 

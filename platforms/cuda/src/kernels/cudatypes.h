@@ -331,7 +331,6 @@ struct cudaGmxSimulation {
     unsigned int    stride3;                        // Atomic attributes stride x 3
     unsigned int    stride4;                        // Atomic attributes stride x 4
     unsigned int    nonbondOutputBuffers;           // Nonbond output buffers per nonbond call
-    unsigned int    totalNonbondOutputBuffers;      // Total nonbond output buffers
     unsigned int    outputBuffers;                  // Number of output buffers
     unsigned int    energyOutputBuffers;            // Number of energy output buffers
     float           bigFloat;                       // Floating point value used as a flag for Shaken atoms 
@@ -474,9 +473,7 @@ struct cudaGmxSimulation {
     float4*         pVelm4;                         // Pointer to atom velocity and inverse mass
     float4*         pvVector4;                      // Pointer to atom v Vector
     float4*         pxVector4;                      // Pointer to atom x Vector
-    float4*         pForce4;                        // Pointer to all force4 data
-    float4*         pForce4a;                       // Pointer to first set of force4 data
-    float4*         pForce4b;                       // Pointer to second set of force4 data
+    float4*         pForce4;                        // Pointer to force data
     float*          pEnergy;                        // Pointer to energy output buffer
     float*          pBornForce;                     // Pointer to Born force data
     float*	    pBornSum;                       // Pointer to Born Radii calculation output buffers

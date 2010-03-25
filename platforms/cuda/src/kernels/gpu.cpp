@@ -1936,8 +1936,6 @@ void* gpuInit(int numAtoms, unsigned int device, bool useBlockingSync)
     gpu->psForce4                   = NULL;
     gpu->psEnergy                   = NULL;
     gpu->sim.pForce4                = NULL;
-    gpu->sim.pForce4a               = NULL;
-    gpu->sim.pForce4b               = NULL;
     gpu->psBornForce                = NULL;
     gpu->sim.pBornForce             = NULL;
     gpu->psBornSum                  = NULL;
@@ -2246,10 +2244,9 @@ int gpuBuildOutputBuffers(gpuContext gpu)
         gpu->bOutputBufferPerWarp           = false;
         gpu->sim.nonbondOutputBuffers       = gpu->sim.paddedNumberOfAtoms / GRID;
     }
-    gpu->sim.totalNonbondOutputBuffers  = ( (gpu->bIncludeGBSA || gpu->bIncludeGBVI) ? 2 * gpu->sim.nonbondOutputBuffers : gpu->sim.nonbondOutputBuffers);
-    gpu->sim.outputBuffers              = gpu->sim.totalNonbondOutputBuffers;
+    gpu->sim.outputBuffers              = gpu->sim.nonbondOutputBuffers;
 
-    unsigned int outputBuffers = gpu->sim.totalNonbondOutputBuffers;
+    unsigned int outputBuffers = gpu->sim.outputBuffers;
     for (unsigned int i = 0; i < gpu->sim.paddedNumberOfAtoms; i++)
     {
         if (outputBuffers < gpu->pOutputBufferCounter[i])
@@ -2264,8 +2261,6 @@ int gpuBuildOutputBuffers(gpuContext gpu)
     gpu->psBornForce            = new CUDAStream<float>(gpu->sim.paddedNumberOfAtoms, gpu->sim.nonbondOutputBuffers, "BornForce");
     gpu->psBornSum              = new CUDAStream<float>(gpu->sim.paddedNumberOfAtoms, gpu->sim.nonbondOutputBuffers, "BornSum");
     gpu->sim.pForce4            = gpu->psForce4->_pDevStream[0];
-    gpu->sim.pForce4a           = gpu->sim.pForce4;
-    gpu->sim.pForce4b           = gpu->sim.pForce4 + 1 * gpu->sim.nonbondOutputBuffers * gpu->sim.stride;
     gpu->sim.pEnergy            = gpu->psEnergy->_pDevStream[0];
     gpu->sim.pBornForce         = gpu->psBornForce->_pDevStream[0];
     gpu->sim.pBornSum           = gpu->psBornSum->_pDevStream[0];
