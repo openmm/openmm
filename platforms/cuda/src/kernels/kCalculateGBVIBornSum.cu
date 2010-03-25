@@ -102,21 +102,6 @@ void GetCalculateGBVIBornSumSim(gpuContext gpu)
 #define METHOD_NAME(a, b) a##PeriodicByWarp##b
 #include "kCalculateGBVIBornSum.h"
 
-
-__global__ void kClearGBVIBornSum_kernel()
-{
-    unsigned int pos = blockIdx.x * blockDim.x + threadIdx.x;
-    while (pos < cSim.stride * cSim.nonbondOutputBuffers)
-    {
-        ((float*)cSim.pBornSum)[pos] = 0.0f;
-        pos += gridDim.x * blockDim.x;
-    }
-}
-
-void kClearGBVIBornSum(gpuContext gpu) {
-    kClearGBVIBornSum_kernel<<<gpu->sim.blocks, 384>>>();
-}
-
 __global__ void kReduceGBVIBornSum_kernel()
 {
     unsigned int pos = (blockIdx.x * blockDim.x + threadIdx.x);
@@ -177,8 +162,6 @@ void kReduceGBVIBornSum(gpuContext gpu)
 void kCalculateGBVIBornSum(gpuContext gpu)
 {
     //printf("kCalculateGBVIBornSum\n");
-    kClearGBVIBornSum( gpu );
-    LAUNCHERROR("kClearBornSum");
     //size_t numWithInteractions;
     switch (gpu->sim.nonbondedMethod)
     {

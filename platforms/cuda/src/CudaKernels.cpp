@@ -47,7 +47,10 @@ void CudaCalcForcesAndEnergyKernel::beginForceComputation(ContextImpl& context) 
     if (data.nonbondedMethod != NO_CUTOFF && data.computeForceCount%100 == 0)
         gpuReorderAtoms(gpu);
     data.computeForceCount++;
-    kClearForces(gpu);
+    if (gpu->bIncludeGBSA || gpu->bIncludeGBVI)
+        kClearBornSumAndForces(gpu);
+    else
+        kClearForces(gpu);
 }
 
 void CudaCalcForcesAndEnergyKernel::finishForceComputation(ContextImpl& context) {
@@ -77,6 +80,8 @@ void CudaCalcForcesAndEnergyKernel::beginEnergyComputation(ContextImpl& context)
         gpuReorderAtoms(gpu);
     data.stepCount++;
     kClearEnergy(gpu);
+    if (gpu->bIncludeGBSA || gpu->bIncludeGBVI)
+        kClearBornSumAndForces(gpu);
 }
 
 double CudaCalcForcesAndEnergyKernel::finishEnergyComputation(ContextImpl& context) {
@@ -790,8 +795,10 @@ void OPENMMCUDA_EXPORT OpenMM::cudaOpenMMInitializeIntegration(const System& sys
     gpuBuildExclusionList(gpu);
     gpuBuildOutputBuffers(gpu);
     gpuSetConstants(gpu);
-    kClearBornForces(gpu);
-    kClearForces(gpu);
+    if (gpu->bIncludeGBSA || gpu->bIncludeGBVI)
+        kClearBornSumAndForces(gpu);
+    else
+        kClearForces(gpu);
     cudaThreadSynchronize();
 }
 

@@ -134,10 +134,6 @@ extern void kCalculatePME(gpuContext gpu);
 void kCalculateCDLJObcGbsaForces1(gpuContext gpu)
 {
 //    printf("kCalculateCDLJObcGbsaForces1\n");
-
-    // check if Born radii need to be calculated
-
-    kClearBornForces(gpu);
     switch (gpu->sim.nonbondedMethod)
     {
         case NO_CUTOFF:

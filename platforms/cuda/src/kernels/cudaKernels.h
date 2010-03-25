@@ -29,7 +29,7 @@
 // Initialization
 extern void kClearForces(gpuContext gpu);
 extern void kClearEnergy(gpuContext gpu);
-extern void kClearBornForces(gpuContext gpu);
+extern void kClearBornSumAndForces(gpuContext gpu);
 extern void kClearObcGbsaBornSum(gpuContext gpu);
 extern void kCalculateObcGbsaBornSum(gpuContext gpu);
 extern void kReduceObcGbsaBornSum(gpuContext gpu);

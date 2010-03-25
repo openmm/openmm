@@ -97,19 +97,6 @@ void GetCalculateObcGbsaBornSumSim(gpuContext gpu)
 #define METHOD_NAME(a, b) a##PeriodicByWarp##b
 #include "kCalculateObcGbsaBornSum.h"
 
-
-__global__ 
-__launch_bounds__(384, 1)
-void kClearObcGbsaBornSum_kernel()
-{
-    unsigned int pos = blockIdx.x * blockDim.x + threadIdx.x;
-    while (pos < cSim.stride * cSim.nonbondOutputBuffers)
-    {
-        ((float*)cSim.pBornSum)[pos] = 0.0f;
-        pos += gridDim.x * blockDim.x;
-    }
-}
-
 __global__ 
 __launch_bounds__(384, 1)
 void kReduceObcGbsaBornSum_kernel()
@@ -154,17 +141,9 @@ void kReduceObcGbsaBornSum(gpuContext gpu)
     LAUNCHERROR("kReduceObcGbsaBornSum");
 }
 
-extern void kClearObcGbsaBornSum(gpuContext gpu)
-{
-  //  printf("kClearObcGbsaBornSum\n");
-    kClearObcGbsaBornSum_kernel<<<gpu->sim.blocks, 384>>>();
-}
-
 void kCalculateObcGbsaBornSum(gpuContext gpu)
 {
   //  printf("kCalculateObcgbsaBornSum\n");
-    kClearObcGbsaBornSum(gpu);
-    LAUNCHERROR("kClearBornSum");
     switch (gpu->sim.nonbondedMethod)
     {
         case NO_CUTOFF:

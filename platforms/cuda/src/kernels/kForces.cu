@@ -74,21 +74,28 @@ void kClearForces(gpuContext gpu)
 
 __global__ 
 __launch_bounds__(384, 1)
-void kClearBornForces_kernel()
+void kClearBornSumAndForces_kernel()
 {
     unsigned int pos = blockIdx.x * blockDim.x + threadIdx.x;
     while (pos < cSim.stride * cSim.nonbondOutputBuffers)
     {
-        ((float*)cSim.pBornForce)[pos] = 0.0f;
+        cSim.pBornSum[pos] = 0.0f;
+        cSim.pBornForce[pos] = 0.0f;
+        cSim.pForce4[pos] = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+        pos += gridDim.x * blockDim.x;
+    }
+    while (pos < cSim.stride * cSim.outputBuffers)
+    {
+        cSim.pForce4[pos] = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
         pos += gridDim.x * blockDim.x;
     }
 }
 
-void kClearBornForces(gpuContext gpu)
+void kClearBornSumAndForces(gpuContext gpu)
 {
-  //  printf("kClearBornForces\n");
-    kClearBornForces_kernel<<<gpu->sim.blocks, 384>>>();
-    LAUNCHERROR("kClearBornForces");
+  //  printf("kClearBornSumAndForces\n");
+    kClearBornSumAndForces_kernel<<<gpu->sim.blocks, 384>>>();
+    LAUNCHERROR("kClearBornSumAndForces");
 }
 
 __global__ 
