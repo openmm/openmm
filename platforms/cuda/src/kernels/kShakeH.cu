@@ -420,6 +420,22 @@ void kApplySecondShake_kernel()
 
         pos += blockDim.x * gridDim.x;
     }
+
+    // Update any atoms that SHAKE is not applied to.
+
+    pos = threadIdx.x + blockIdx.x * blockDim.x;
+    while (pos < cSim.NonShakeConstraints)
+    {
+        int  atomID          = cSim.pNonShakeID[pos];
+        float4 apos          = cSim.pOldPosq[atomID];
+        float4 xpi           = cSim.pPosq[atomID];
+        xpi.x               += apos.x;
+        xpi.y               += apos.y;
+        xpi.z               += apos.z;
+        cSim.pPosq[atomID]   = xpi;
+
+        pos += blockDim.x * gridDim.x;
+    }
 }
 
 __global__ void 
@@ -447,7 +463,6 @@ kApplyNoShake_kernel()
     }
 }
 
-
 void kApplySecondShake(gpuContext gpu)
 {
   //  printf("kApplySecondShake\n");
@@ -456,11 +471,9 @@ void kApplySecondShake(gpuContext gpu)
         kApplySecondShake_kernel<<<gpu->sim.blocks, gpu->sim.shake_threads_per_block>>>();
         LAUNCHERROR("kApplySecondShake");
     }
-
-    // handle non-Shake atoms
-
-    if (gpu->sim.NonShakeConstraints > 0)
+    else if (gpu->sim.NonShakeConstraints > 0)
     {
+        // handle non-Shake atoms
         kApplyNoShake_kernel<<<gpu->sim.blocks, gpu->sim.nonshake_threads_per_block>>>();
         LAUNCHERROR("kApplyNoShake");
     }
