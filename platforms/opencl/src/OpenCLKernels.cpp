@@ -818,7 +818,7 @@ public:
         int particle1, particle2, particle3, particle4;
         vector<double> parameters;
         force.getTorsionParameters(index, particle1, particle2, particle3, particle4, parameters);
-        particles.resize(3);
+        particles.resize(4);
         particles[0] = particle1;
         particles[1] = particle2;
         particles[2] = particle3;
