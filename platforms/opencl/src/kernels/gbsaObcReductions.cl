@@ -1,6 +1,6 @@
-const float dielectricOffset = 0.009f;
-const float probeRadius = 0.14f;
-const float surfaceAreaFactor = -6.0f*3.14159265358979323846f*0.0216f*1000.0f*0.4184f;
+#define DIELECTRIC_OFFSET 0.009f
+#define PROBE_RADIUS 0.14f
+#define SURFACE_AREA_FACTOR -170.351730667551f //-6.0f*3.14159265358979323846f*0.0216f*1000.0f*0.4184f;
 
 /**
  * Reduce the Born sums to compute the Born radii.
@@ -24,7 +24,7 @@ __kernel void reduceBornSum(int bufferSize, int numBuffers, float alpha, float b
         float sum2 = sum*sum;
         float sum3 = sum*sum2;
         float tanhSum = tanh(alpha*sum - beta*sum2 + gamma*sum3);
-        float nonOffsetRadius = offsetRadius + dielectricOffset;
+        float nonOffsetRadius = offsetRadius + DIELECTRIC_OFFSET;
         float radius = 1.0f/(1.0f/offsetRadius - tanhSum/nonOffsetRadius);
         float chain = offsetRadius*(alpha - 2.0f*beta*sum + 3.0f*gamma*sum2);
         chain = (1.0f-tanhSum*tanhSum)*chain / nonOffsetRadius;
@@ -54,9 +54,9 @@ __kernel void reduceBornForce(int bufferSize, int numBuffers, __global float* bo
 
         float offsetRadius = params[index].x;
         float bornRadius = bornRadii[index];
-        float r = offsetRadius+dielectricOffset+probeRadius;
-        float ratio6 = pow((offsetRadius+dielectricOffset)/bornRadius, 6.0f);
-        float saTerm = surfaceAreaFactor*r*r*ratio6;
+        float r = offsetRadius+DIELECTRIC_OFFSET+PROBE_RADIUS;
+        float ratio6 = pow((offsetRadius+DIELECTRIC_OFFSET)/bornRadius, 6.0f);
+        float saTerm = SURFACE_AREA_FACTOR*r*r*ratio6;
         force += saTerm/bornRadius;
         energy += saTerm;
         force *= bornRadius*bornRadius*obcChain[index];

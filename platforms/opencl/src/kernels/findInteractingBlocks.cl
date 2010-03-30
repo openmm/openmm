@@ -1,11 +1,11 @@
-const int TileSize = 32;
+#define TILE_SIZE 32
 
 /**
  * Find a bounding box for the atoms in each block.
  */
 __kernel void findBlockBounds(int numAtoms, float4 periodicBoxSize, __global float4* posq, __global float4* blockCenter, __global float4* blockBoundingBox) {
     int index = get_global_id(0);
-    int base = index*TileSize;
+    int base = index*TILE_SIZE;
     while (base < numAtoms) {
         float4 pos = posq[base];
 #ifdef USE_PERIODIC
@@ -16,7 +16,7 @@ __kernel void findBlockBounds(int numAtoms, float4 periodicBoxSize, __global flo
 #endif
         float4 minPos = pos;
         float4 maxPos = pos;
-        int last = min(base+TileSize, numAtoms);
+        int last = min(base+TILE_SIZE, numAtoms);
         for (int i = base+1; i < last; i++) {
             pos = posq[i];
 #ifdef USE_PERIODIC
@@ -30,7 +30,7 @@ __kernel void findBlockBounds(int numAtoms, float4 periodicBoxSize, __global flo
         blockBoundingBox[index] = 0.5f*(maxPos-minPos);
         blockCenter[index] = 0.5f*(maxPos+minPos);
         index += get_global_size(0);
-        base = index*TileSize;
+        base = index*TILE_SIZE;
     }
 }
 
@@ -72,12 +72,12 @@ __kernel void findBlocksWithInteractions(int numTiles, float cutoffSquared, floa
  */
 __kernel void findInteractionsWithinBlocks(float cutoffSquared, float4 periodicBoxSize, __global float4* posq, __global unsigned int* tiles, __global float4* blockCenter,
             __global float4* blockBoundingBox, __global unsigned int* interactionFlags, __global unsigned int* interactionCount, __local unsigned int* flags) {
-    unsigned int totalWarps = get_global_size(0)/TileSize;
-    unsigned int warp = get_global_id(0)/TileSize;
+    unsigned int totalWarps = get_global_size(0)/TILE_SIZE;
+    unsigned int warp = get_global_id(0)/TILE_SIZE;
     unsigned int numTiles = interactionCount[0];
     unsigned int pos = warp*numTiles/totalWarps;
     unsigned int end = (warp+1)*numTiles/totalWarps;
-    unsigned int index = get_local_id(0) & (TileSize - 1);
+    unsigned int index = get_local_id(0) & (TILE_SIZE - 1);
 
     unsigned int lasty = 0xFFFFFFFF;
     float4 apos;
@@ -99,7 +99,7 @@ __kernel void findInteractionsWithinBlocks(float cutoffSquared, float4 periodicB
             float4 center = blockCenter[x];
             float4 boxSize = blockBoundingBox[x];
             if (y != lasty)
-                apos = posq[y*TileSize+index];
+                apos = posq[y*TILE_SIZE+index];
 
             // Find the distance of the atom from the bounding box.
 
