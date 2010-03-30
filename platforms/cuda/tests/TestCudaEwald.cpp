@@ -53,7 +53,7 @@ using namespace std;
 
 const double TOL = 1e-5;
 
-void testEwaldPME() {
+void testEwaldPME(bool includeExceptions) {
 
 //      Use amorphous NaCl system for the tests
 
@@ -79,6 +79,12 @@ void testEwaldPME() {
         nonbonded->addParticle(1.0, 1.0,0.0);
     for (int i = 0; i < numParticles/2; i++)
         nonbonded->addParticle(-1.0, 1.0,0.0);
+    if (includeExceptions) {
+        // Add some exclusions.
+
+        for (int i = 0; i < numParticles-1; i++)
+          nonbonded->addException(i, i+1, 0.0, 1.0, 0.0);
+    }
     system.setPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
     system.addForce(nonbonded);
 
@@ -242,7 +248,8 @@ void testErrorTolerance(NonbondedForce::NonbondedMethod method) {
 
 int main() {
     try {
-     testEwaldPME();
+     testEwaldPME(false);
+     testEwaldPME(true);
 //     testEwald2Ions();
      testErrorTolerance(NonbondedForce::Ewald);
      testErrorTolerance(NonbondedForce::PME);

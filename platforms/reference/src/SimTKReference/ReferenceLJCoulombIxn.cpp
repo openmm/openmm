@@ -419,6 +419,8 @@ int ReferenceLJCoulombIxn::calculateEwaldIxn( int numberOfAtoms, RealOpenMM** at
                RealOpenMM deltaR[2][ReferenceForce::LastDeltaRIndex];
                ReferenceForce::getDeltaRPeriodic( atomCoordinates[jj], atomCoordinates[ii], periodicBoxSize, deltaR[0] );
                RealOpenMM r         = deltaR[0][ReferenceForce::RIndex];
+               if (r >= cutoffDistance)
+                   continue;
                RealOpenMM inverseR  = one/(deltaR[0][ReferenceForce::RIndex]);
                RealOpenMM alphaR    = alphaEwald * r;
                RealOpenMM dEdR      = (RealOpenMM) (ONE_4PI_EPS0 * atomParameters[ii][QIndex] * atomParameters[jj][QIndex] * inverseR * inverseR * inverseR);
