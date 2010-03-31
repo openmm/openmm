@@ -74,13 +74,7 @@ __launch_bounds__(G8X_SHAKE_THREADS_PER_BLOCK, 1)
 #endif
 void kApplyFirstShake_kernel()
 {
-#if (__CUDA_ARCH__ >= 200)
- __shared__ Atom sA[GF1XX_SHAKE_THREADS_PER_BLOCK];
-#elif (__CUDA_ARCH__ >= 130)
- __shared__ Atom sA[GT2XX_SHAKE_THREADS_PER_BLOCK];
-#else
- __shared__ Atom sA[G8X_SHAKE_THREADS_PER_BLOCK];
-#endif
+    extern __shared__ Atom sA[];
     Atom* psA = &sA[threadIdx.x];
     unsigned int pos = threadIdx.x + blockIdx.x * blockDim.x;
     while (pos < cSim.ShakeConstraints)
@@ -235,9 +229,10 @@ void kApplyFirstShake(gpuContext gpu)
 //    printf("kApplyFirstShake\n");
     if (gpu->sim.ShakeConstraints > 0)
     {
-        kApplyFirstShake_kernel<<<gpu->sim.blocks, gpu->sim.shake_threads_per_block>>>();
+        kApplyFirstShake_kernel<<<gpu->sim.blocks, gpu->sim.shake_threads_per_block, sizeof(Atom)*gpu->sim.shake_threads_per_block>>>();
         LAUNCHERROR("kApplyFirstShake");
     }
+
 }
 
 __global__ 
@@ -250,13 +245,7 @@ __launch_bounds__(G8X_SHAKE_THREADS_PER_BLOCK, 1)
 #endif
 void kApplySecondShake_kernel()
 {
-#if (__CUDA_ARCH__ >= 200)
- __shared__ Atom sA[GF1XX_SHAKE_THREADS_PER_BLOCK];
-#elif (__CUDA_ARCH__ >= 130)
- __shared__ Atom sA[GT2XX_SHAKE_THREADS_PER_BLOCK];
-#else
- __shared__ Atom sA[G8X_SHAKE_THREADS_PER_BLOCK];
-#endif
+    extern __shared__ Atom sA[];
     Atom* psA = &sA[threadIdx.x];
     unsigned int pos = threadIdx.x + blockIdx.x * blockDim.x;
     while (pos < cSim.ShakeConstraints)
@@ -465,10 +454,10 @@ kApplyNoShake_kernel()
 
 void kApplySecondShake(gpuContext gpu)
 {
-  //  printf("kApplySecondShake\n");
+    //  printf("kApplySecondShake\n");
     if (gpu->sim.ShakeConstraints > 0)
     {
-        kApplySecondShake_kernel<<<gpu->sim.blocks, gpu->sim.shake_threads_per_block>>>();
+        kApplySecondShake_kernel<<<gpu->sim.blocks, gpu->sim.shake_threads_per_block, sizeof(Atom)*gpu->sim.shake_threads_per_block>>>();
         LAUNCHERROR("kApplySecondShake");
     }
     else if (gpu->sim.NonShakeConstraints > 0)
@@ -477,5 +466,6 @@ void kApplySecondShake(gpuContext gpu)
         kApplyNoShake_kernel<<<gpu->sim.blocks, gpu->sim.nonshake_threads_per_block>>>();
         LAUNCHERROR("kApplyNoShake");
     }
+
 }
 
