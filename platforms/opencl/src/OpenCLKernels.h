@@ -488,7 +488,7 @@ private:
     cl::Kernel pmeConvolutionKernel;
     cl::Kernel pmeInterpolateForceKernel;
     std::map<std::string, std::string> pmeDefines;
-    double cutoffSquared, ewaldSelfEnergy;
+    double ewaldSelfEnergy;
     static const int PmeOrder = 5;
 };
 
@@ -661,6 +661,55 @@ private:
     OpenCLArray<cl_float>* globals;
     std::vector<std::string> globalParamNames;
     std::vector<cl_float> globalParamValues;
+    cl::Kernel kernel;
+};
+
+/**
+ * This kernel is invoked by CustomHbondForce to calculate the forces acting on the system.
+ */
+class OpenCLCalcCustomHbondForceKernel : public CalcCustomHbondForceKernel {
+public:
+    OpenCLCalcCustomHbondForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcCustomHbondForceKernel(name, platform),
+            hasInitializedKernel(false), cl(cl), donorParams(NULL), acceptorParams(NULL), donors(NULL), acceptors(NULL),
+            donorBufferIndices(NULL), acceptorBufferIndices(NULL), globals(NULL), tabulatedFunctionParams(NULL), system(system) {
+    }
+    ~OpenCLCalcCustomHbondForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CustomHbondForce this kernel will be used for
+     */
+    void initialize(const System& system, const CustomHbondForce& force);
+    /**
+     * Execute the kernel to calculate the forces.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void executeForces(ContextImpl& context);
+    /**
+     * Execute the kernel to calculate the energy.
+     *
+     * @param context    the context in which to execute this kernel
+     * @return the potential energy due to the CustomHbondForce
+     */
+    double executeEnergy(ContextImpl& context);
+private:
+    int numDonors, numAcceptors;
+    bool hasInitializedKernel;
+    OpenCLContext& cl;
+    OpenCLParameterSet* donorParams;
+    OpenCLParameterSet* acceptorParams;
+    OpenCLArray<cl_float>* globals;
+    OpenCLArray<mm_int4>* donors;
+    OpenCLArray<mm_int4>* acceptors;
+    OpenCLArray<mm_int4>* donorBufferIndices;
+    OpenCLArray<mm_int4>* acceptorBufferIndices;
+    OpenCLArray<mm_float4>* tabulatedFunctionParams;
+    std::vector<std::string> globalParamNames;
+    std::vector<cl_float> globalParamValues;
+    std::vector<OpenCLArray<mm_float4>*> tabulatedFunctions;
+    System& system;
     cl::Kernel kernel;
 };
 

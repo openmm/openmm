@@ -78,17 +78,20 @@ void testEwaldPME(bool includeExceptions) {
         nonbonded->addParticle(1.0, 1.0,0.0);
     for (int i = 0; i < numParticles/2; i++)
         nonbonded->addParticle(-1.0, 1.0,0.0);
-    if (includeExceptions) {
-        // Add some exclusions.
-
-        for (int i = 0; i < numParticles-1; i++)
-          nonbonded->addException(i, i+1, 0.0, 1.0, 0.0);
-    }
     system.setPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
     system.addForce(nonbonded);
 
     vector<Vec3> positions(numParticles);
     #include "nacl_amorph.dat"
+    if (includeExceptions) {
+        // Add some exclusions.
+
+        for (int i = 0; i < numParticles-1; i++) {
+            Vec3 delta = positions[i]-positions[i+1];
+            if (sqrt(delta.dot(delta)) < 0.5*cutoff)
+                nonbonded->addException(i, i+1, i%2 == 0 ? 0.0 : 0.5, 1.0, 0.0);
+        }
+    }
 
 //    (1)  Check whether the Reference and OpenCL platforms agree when using Ewald Method
 

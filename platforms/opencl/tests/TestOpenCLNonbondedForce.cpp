@@ -307,10 +307,8 @@ void testCutoff14() {
         context.setPositions(positions);
         state = context.getState(State::Forces | State::Energy);
         const vector<Vec3>& forces2 = state.getForces();
-        const double krf = (1.0/(cutoff*cutoff*cutoff))*(eps-1.0)/(2.0*eps+1.0);
-        const double crf = (1.0/cutoff)*(3.0*eps)/(2.0*eps+1.0);
-        force = ONE_4PI_EPS0*q*q*(1.0/(r*r)-2.0*krf*r);
-        energy = ONE_4PI_EPS0*q*q*(1.0/r+krf*r*r-crf);
+        force = ONE_4PI_EPS0*q*q/(r*r);
+        energy = ONE_4PI_EPS0*q*q/r;
         if (i == 3) {
             force /= 1.2;
             energy /= 1.2;

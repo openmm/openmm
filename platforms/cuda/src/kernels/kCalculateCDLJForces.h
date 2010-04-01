@@ -213,7 +213,7 @@ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUnit)
                     dEdR           *= invR * invR;
 #ifdef USE_CUTOFF
     #ifdef USE_EWALD
-                    if ((!(excl & 0x1) && !needCorrection) || r2 > cSim.nonbondedCutoffSqr)
+                    if (!needCorrection && (!(excl & 0x1) || r2 > cSim.nonbondedCutoffSqr))
     #else
                     if (!(excl & 0x1) || r2 > cSim.nonbondedCutoffSqr)
     #endif
@@ -501,7 +501,7 @@ void METHOD_NAME(kCalculateCDLJ, Forces_kernel)(unsigned int* workUnit)
                     dEdR           *= invR * invR;
 #ifdef USE_CUTOFF
     #ifdef USE_EWALD
-                    if ((!(excl & 0x1) && !needCorrection) || r2 > cSim.nonbondedCutoffSqr)
+                    if (!needCorrection && (!(excl & 0x1) || r2 > cSim.nonbondedCutoffSqr))
     #else
                     if (!(excl & 0x1) || r2 > cSim.nonbondedCutoffSqr)
     #endif

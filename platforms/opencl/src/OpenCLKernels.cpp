@@ -37,6 +37,7 @@
 #include "lepton/Parser.h"
 #include "lepton/ParsedExpression.h"
 #include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
+#include "lepton/Operation.h"
 #include <cmath>
 
 using namespace OpenMM;
@@ -53,6 +54,13 @@ static string intToString(int value) {
     stringstream s;
     s << value;
     return s.str();
+}
+
+static bool isZeroExpression(const Lepton::ParsedExpression& expression) {
+    const Lepton::Operation& op = expression.getRootNode().getOperation();
+    if (op.getId() != Lepton::Operation::CONSTANT)
+        return false;
+    return (dynamic_cast<const Lepton::Operation::Constant&>(op).getValue() == 0.0);
 }
 
 void OpenCLCalcForcesAndEnergyKernel::initialize(const System& system) {
@@ -318,9 +326,6 @@ void OpenCLCalcCustomBondForceKernel::initialize(const System& system, const Cus
 
     // Record information for the expressions.
 
-    vector<string> paramNames;
-    for (int i = 0; i < force.getNumPerBondParameters(); i++)
-        paramNames.push_back(force.getPerBondParameterName(i));
     globalParamNames.resize(force.getNumGlobalParameters());
     globalParamValues.resize(force.getNumGlobalParameters());
     for (int i = 0; i < force.getNumGlobalParameters(); i++) {
@@ -556,9 +561,6 @@ void OpenCLCalcCustomAngleForceKernel::initialize(const System& system, const Cu
 
     // Record information for the expressions.
 
-    vector<string> paramNames;
-    for (int i = 0; i < force.getNumPerAngleParameters(); i++)
-        paramNames.push_back(force.getPerAngleParameterName(i));
     globalParamNames.resize(force.getNumGlobalParameters());
     globalParamValues.resize(force.getNumGlobalParameters());
     for (int i = 0; i < force.getNumGlobalParameters(); i++) {
@@ -880,9 +882,6 @@ void OpenCLCalcCustomTorsionForceKernel::initialize(const System& system, const 
 
     // Record information for the expressions.
 
-    vector<string> paramNames;
-    for (int i = 0; i < force.getNumPerTorsionParameters(); i++)
-        paramNames.push_back(force.getPerTorsionParameterName(i));
     globalParamNames.resize(force.getNumGlobalParameters());
     globalParamValues.resize(force.getNumGlobalParameters());
     for (int i = 0; i < force.getNumGlobalParameters(); i++) {
@@ -1218,7 +1217,6 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     cl.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, source);
     if (hasLJ)
         cl.getNonbondedUtilities().addParameter(OpenCLNonbondedUtilities::ParameterInfo("sigmaEpsilon", "float2", sizeof(cl_float2), sigmaEpsilon->getDeviceBuffer()));
-    cutoffSquared = force.getCutoffDistance()*force.getCutoffDistance();
 
     // Initialize the exceptions.
 
@@ -1243,11 +1241,9 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
             maxBuffers = max(maxBuffers, forceBufferCounter[i]);
     }
     cl.addForce(new OpenCLNonbondedForceInfo(maxBuffers, force));
-    if (useCutoff) {
-        defines["USE_CUTOFF"] = "1";
-    }
-    if (usePeriodic)
-        defines["USE_PERIODIC"] = "1";
+    defines.clear();
+    defines["NUM_ATOMS"] = intToString(numParticles);
+    defines["NUM_EXCEPTIONS"] = intToString(numExceptions);
     cl::Program program = cl.createProgram(OpenCLKernelSources::nonbondedExceptions, defines);
     exceptionsKernel = cl::Kernel(program, "computeNonbondedExceptions");
 }
@@ -1256,16 +1252,11 @@ void OpenCLCalcNonbondedForceKernel::executeForces(ContextImpl& context) {
     if (!hasInitializedKernel) {
         hasInitializedKernel = true;
         if (exceptionIndices != NULL) {
-            int numExceptions = exceptionIndices->getSize();
-            exceptionsKernel.setArg<cl_int>(0, cl.getPaddedNumAtoms());
-            exceptionsKernel.setArg<cl_int>(1, numExceptions);
-            exceptionsKernel.setArg<cl_float>(2, (cl_float) cutoffSquared);
-            exceptionsKernel.setArg<mm_float4>(3, cl.getNonbondedUtilities().getPeriodicBoxSize());
-            exceptionsKernel.setArg<cl::Buffer>(4, cl.getForceBuffers().getDeviceBuffer());
-            exceptionsKernel.setArg<cl::Buffer>(5, cl.getEnergyBuffer().getDeviceBuffer());
-            exceptionsKernel.setArg<cl::Buffer>(6, cl.getPosq().getDeviceBuffer());
-            exceptionsKernel.setArg<cl::Buffer>(7, exceptionParams->getDeviceBuffer());
-            exceptionsKernel.setArg<cl::Buffer>(8, exceptionIndices->getDeviceBuffer());
+            exceptionsKernel.setArg<cl::Buffer>(0, cl.getForceBuffers().getDeviceBuffer());
+            exceptionsKernel.setArg<cl::Buffer>(1, cl.getEnergyBuffer().getDeviceBuffer());
+            exceptionsKernel.setArg<cl::Buffer>(2, cl.getPosq().getDeviceBuffer());
+            exceptionsKernel.setArg<cl::Buffer>(3, exceptionParams->getDeviceBuffer());
+            exceptionsKernel.setArg<cl::Buffer>(4, exceptionIndices->getDeviceBuffer());
         }
         if (cosSinSums != NULL) {
             ewaldSumsKernel.setArg<cl::Buffer>(0, cl.getEnergyBuffer().getDeviceBuffer());
@@ -1438,9 +1429,6 @@ void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, cons
 
     // Record information for the expressions.
 
-    vector<string> paramNames;
-    for (int i = 0; i < force.getNumPerParticleParameters(); i++)
-        paramNames.push_back(force.getPerParticleParameterName(i));
     globalParamNames.resize(force.getNumGlobalParameters());
     globalParamValues.resize(force.getNumGlobalParameters());
     for (int i = 0; i < force.getNumGlobalParameters(); i++) {
@@ -1782,9 +1770,6 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
 
     // Record the global parameters.
 
-    vector<string> paramNames;
-    for (int i = 0; i < force.getNumPerParticleParameters(); i++)
-        paramNames.push_back(force.getPerParticleParameterName(i));
     globalParamNames.resize(force.getNumGlobalParameters());
     globalParamValues.resize(force.getNumGlobalParameters());
     for (int i = 0; i < force.getNumGlobalParameters(); i++) {
@@ -2375,9 +2360,6 @@ void OpenCLCalcCustomExternalForceKernel::initialize(const System& system, const
 
     // Record information for the expressions.
 
-    vector<string> paramNames;
-    for (int i = 0; i < force.getNumPerParticleParameters(); i++)
-        paramNames.push_back(force.getPerParticleParameterName(i));
     globalParamNames.resize(force.getNumGlobalParameters());
     globalParamValues.resize(force.getNumGlobalParameters());
     for (int i = 0; i < force.getNumGlobalParameters(); i++) {
@@ -2457,6 +2439,306 @@ void OpenCLCalcCustomExternalForceKernel::executeForces(ContextImpl& context) {
 }
 
 double OpenCLCalcCustomExternalForceKernel::executeEnergy(ContextImpl& context) {
+    executeForces(context);
+    return 0.0;
+}
+
+class OpenCLCustomHbondForceInfo : public OpenCLForceInfo {
+public:
+    OpenCLCustomHbondForceInfo(int requiredBuffers, const CustomHbondForce& force) : OpenCLForceInfo(requiredBuffers), force(force) {
+    }
+    bool areParticlesIdentical(int particle1, int particle2) {
+        return true;
+    }
+    int getNumParticleGroups() {
+        return force.getNumDonors()+force.getNumAcceptors()+force.getNumExclusions();
+    }
+    void getParticlesInGroup(int index, std::vector<int>& particles) {
+        int p1, p2, p3;
+        vector<double> parameters;
+        if (index < force.getNumDonors()) {
+            force.getDonorParameters(index, p1, p2, p3, parameters);
+            particles.resize(3);
+            particles[0] = p1;
+            particles[1] = p2;
+            particles[2] = p3;
+            return;
+        }
+        index -= force.getNumDonors();
+        if (index < force.getNumAcceptors()) {
+            force.getAcceptorParameters(index, p1, p2, p3, parameters);
+            particles.resize(3);
+            particles[0] = p1;
+            particles[1] = p2;
+            particles[2] = p3;
+            return;
+        }
+        index -= force.getNumAcceptors();
+        int donor, acceptor;
+        force.getExclusionParticles(index, donor, acceptor);
+        particles.resize(6);
+        force.getDonorParameters(donor, p1, p2, p3, parameters);
+        particles[0] = p1;
+        particles[1] = p2;
+        particles[2] = p3;
+        force.getAcceptorParameters(acceptor, p1, p2, p3, parameters);
+        particles[3] = p1;
+        particles[4] = p2;
+        particles[5] = p3;
+    }
+    bool areGroupsIdentical(int group1, int group2) {
+        int p1, p2, p3;
+        vector<double> params1, params2;
+        if (group1 < force.getNumDonors() && group2 < force.getNumDonors()) {
+            force.getDonorParameters(group1, p1, p2, p3, params1);
+            force.getDonorParameters(group2, p1, p2, p3, params2);
+            return (params1 == params2 && params1 == params2);
+        }
+        if (group1 < force.getNumDonors() || group2 < force.getNumDonors())
+            return false;
+        group1 -= force.getNumDonors();
+        group2 -= force.getNumDonors();
+        if (group1 < force.getNumAcceptors() && group2 < force.getNumAcceptors()) {
+            force.getAcceptorParameters(group1, p1, p2, p3, params1);
+            force.getAcceptorParameters(group2, p1, p2, p3, params2);
+            return (params1 == params2 && params1 == params2);
+        }
+        if (group1 < force.getNumAcceptors() || group2 < force.getNumAcceptors())
+            return false;
+        return true;
+    }
+private:
+    const CustomHbondForce& force;
+};
+
+OpenCLCalcCustomHbondForceKernel::~OpenCLCalcCustomHbondForceKernel() {
+    if (donorParams != NULL)
+        delete donorParams;
+    if (acceptorParams != NULL)
+        delete acceptorParams;
+    if (donors != NULL)
+        delete donors;
+    if (acceptors != NULL)
+        delete acceptors;
+    if (donorBufferIndices != NULL)
+        delete donorBufferIndices;
+    if (acceptorBufferIndices != NULL)
+        delete acceptorBufferIndices;
+    if (globals != NULL)
+        delete globals;
+    if (tabulatedFunctionParams != NULL)
+        delete tabulatedFunctionParams;
+    for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
+        delete tabulatedFunctions[i];
+}
+
+void OpenCLCalcCustomHbondForceKernel::initialize(const System& system, const CustomHbondForce& force) {
+    int forceIndex;
+    for (forceIndex = 0; forceIndex < system.getNumForces() && &system.getForce(forceIndex) != &force; ++forceIndex)
+        ;
+    string prefix = "custom"+intToString(forceIndex)+"_";
+
+    // Record the lists of donors and acceptors, and the parameters for each one.
+
+    numDonors = force.getNumDonors();
+    numAcceptors = force.getNumAcceptors();
+    int numParticles = system.getNumParticles();
+    donors = new OpenCLArray<mm_int4>(cl, numDonors, "customHbondDonors");
+    acceptors = new OpenCLArray<mm_int4>(cl, numAcceptors, "customHbondAcceptors");
+    donorParams = new OpenCLParameterSet(cl, force.getNumPerDonorParameters(), numDonors, "customHbondDonorParameters");
+    acceptorParams = new OpenCLParameterSet(cl, force.getNumPerAcceptorParameters(), numAcceptors, "customHbondAcceptorParameters");
+    if (force.getNumGlobalParameters() > 0)
+        globals = new OpenCLArray<cl_float>(cl, force.getNumGlobalParameters(), "customHbondGlobals", false, CL_MEM_READ_ONLY);
+    vector<vector<cl_float> > donorParamVector(numDonors);
+    vector<mm_int4> donorVector(numDonors);
+    for (int i = 0; i < numDonors; i++) {
+        vector<double> parameters;
+        force.getDonorParameters(i, donorVector[i].x, donorVector[i].y, donorVector[i].z, parameters);
+        donorParamVector[i].resize(parameters.size());
+        for (int j = 0; j < (int) parameters.size(); j++)
+            donorParamVector[i][j] = (cl_float) parameters[j];
+    }
+    donors->upload(donorVector);
+    donorParams->setParameterValues(donorParamVector);
+    vector<vector<cl_float> > acceptorParamVector(numAcceptors);
+    vector<mm_int4> acceptorVector(numAcceptors);
+    for (int i = 0; i < numAcceptors; i++) {
+        vector<double> parameters;
+        force.getAcceptorParameters(i, acceptorVector[i].x, acceptorVector[i].y, acceptorVector[i].z, parameters);
+        acceptorParamVector[i].resize(parameters.size());
+        for (int j = 0; j < (int) parameters.size(); j++)
+            acceptorParamVector[i][j] = (cl_float) parameters[j];
+    }
+    acceptors->upload(acceptorVector);
+    acceptorParams->setParameterValues(acceptorParamVector);
+
+    // Select a output buffer indices for each donor and acceptor.
+
+    donorBufferIndices = new OpenCLArray<mm_int4>(cl, numDonors, "customHbondDonorBuffers");
+    acceptorBufferIndices = new OpenCLArray<mm_int4>(cl, numAcceptors, "customHbondAcceptorBuffers");
+    vector<mm_int4> donorBufferVector(numDonors);
+    vector<mm_int4> acceptorBufferVector(numAcceptors);
+    vector<int> particleBuffers(numParticles, 0);
+    for (int i = 0; i < numDonors; i++)
+        donorBufferVector[i] = mm_int4(particleBuffers[donorVector[i].x]++, particleBuffers[donorVector[i].y]++, particleBuffers[donorVector[i].z]++, 0);
+    for (int i = 0; i < numAcceptors; i++)
+        acceptorBufferVector[i] = mm_int4(particleBuffers[acceptorVector[i].x]++, particleBuffers[acceptorVector[i].y]++, particleBuffers[acceptorVector[i].z]++, 0);
+    donorBufferIndices->upload(donorBufferVector);
+    acceptorBufferIndices->upload(acceptorBufferVector);
+
+    // Record exclusions.
+
+    vector<vector<int> > exclusionList(numDonors);
+    for (int i = 0; i < force.getNumExclusions(); i++) {
+        int donor, acceptor;
+        force.getExclusionParticles(i, donor, acceptor);
+        exclusionList[donor].push_back(acceptor);
+    }
+
+    // Record the tabulated functions.
+
+    OpenCLExpressionUtilities::FunctionPlaceholder fp;
+    map<string, Lepton::CustomFunction*> functions;
+    vector<pair<string, string> > functionDefinitions;
+    vector<mm_float4> tabulatedFunctionParamsVec(force.getNumFunctions());
+    stringstream tableArgs;
+    for (int i = 0; i < force.getNumFunctions(); i++) {
+        string name;
+        vector<double> values;
+        double min, max;
+        bool interpolating;
+        force.getFunctionParameters(i, name, values, min, max, interpolating);
+        string arrayName = prefix+"table"+intToString(i);
+        functionDefinitions.push_back(make_pair(name, arrayName));
+        functions[name] = &fp;
+        tabulatedFunctionParamsVec[i] = mm_float4((float) min, (float) max, (float) ((values.size()-1)/(max-min)), 0.0f);
+        vector<mm_float4> f = OpenCLExpressionUtilities::computeFunctionCoefficients(values, interpolating);
+        tabulatedFunctions.push_back(new OpenCLArray<mm_float4>(cl, values.size()-1, "TabulatedFunction"));
+        tabulatedFunctions[tabulatedFunctions.size()-1]->upload(f);
+        tableArgs << ", __global float4* " << arrayName;
+    }
+    if (force.getNumFunctions() > 0) {
+        tabulatedFunctionParams = new OpenCLArray<mm_float4>(cl, tabulatedFunctionParamsVec.size(), "tabulatedFunctionParameters", false, CL_MEM_READ_ONLY);
+        tabulatedFunctionParams->upload(tabulatedFunctionParamsVec);
+        tableArgs << ", __constant float4* " << prefix << "functionParams";
+    }
+
+    // Record information for the expressions.
+
+    globalParamNames.resize(force.getNumGlobalParameters());
+    globalParamValues.resize(force.getNumGlobalParameters());
+    for (int i = 0; i < force.getNumGlobalParameters(); i++) {
+        globalParamNames[i] = force.getGlobalParameterName(i);
+        globalParamValues[i] = (cl_float) force.getGlobalParameterDefaultValue(i);
+    }
+    if (globals != NULL)
+        globals->upload(globalParamValues);
+    bool useCutoff = (force.getNonbondedMethod() != CustomHbondForce::NoCutoff);
+    bool usePeriodic = (force.getNonbondedMethod() != CustomHbondForce::NoCutoff && force.getNonbondedMethod() != CustomHbondForce::CutoffNonPeriodic);
+    Lepton::ParsedExpression energyExpression = Lepton::Parser::parse(force.getEnergyFunction(), functions).optimize();
+    Lepton::ParsedExpression rForceExpression = energyExpression.differentiate("r").optimize();
+    Lepton::ParsedExpression thetaForceExpression = energyExpression.differentiate("theta").optimize();
+    Lepton::ParsedExpression psiForceExpression = energyExpression.differentiate("psi").optimize();
+    Lepton::ParsedExpression chiForceExpression = energyExpression.differentiate("chi").optimize();
+    map<string, Lepton::ParsedExpression> forceExpressions;
+    forceExpressions["energy += "] = energyExpression;
+    forceExpressions["float dEdR = "] = rForceExpression;
+    forceExpressions["float dEdTheta = "] = thetaForceExpression;
+    forceExpressions["float dEdPsi = "] = psiForceExpression;
+    forceExpressions["float dEdChi = "] = chiForceExpression;
+
+    // Create the kernels.
+
+    map<string, string> variables;
+    variables["r"] = "r";
+    variables["theta"] = "theta";
+    variables["psi"] = "psi";
+    variables["chi"] = "chi";
+    for (int i = 0; i < force.getNumPerDonorParameters(); i++) {
+        const string& name = force.getPerDonorParameterName(i);
+        variables[name] = "donorParams"+donorParams->getParameterSuffix(i);
+    }
+    for (int i = 0; i < force.getNumPerAcceptorParameters(); i++) {
+        const string& name = force.getPerAcceptorParameterName(i);
+        variables[name] = "acceptorParams"+acceptorParams->getParameterSuffix(i);
+    }
+    for (int i = 0; i < force.getNumGlobalParameters(); i++) {
+        const string& name = force.getGlobalParameterName(i);
+        variables[name] = "globals["+intToString(i)+"]";
+    }
+    stringstream compute, extraArgs;
+    if (force.getNumGlobalParameters() > 0)
+        extraArgs << ", __constant float* globals";
+    for (int i = 0; i < (int) donorParams->getBuffers().size(); i++) {
+        const OpenCLNonbondedUtilities::ParameterInfo& buffer = donorParams->getBuffers()[i];
+        extraArgs << ", __global "+buffer.getType()+"* donor"+buffer.getName();
+        compute<<buffer.getType()<<" donorParams"<<(i+1)<<" = donor"<<buffer.getName()<<"[index];\n";
+    }
+    for (int i = 0; i < (int) acceptorParams->getBuffers().size(); i++) {
+        const OpenCLNonbondedUtilities::ParameterInfo& buffer = acceptorParams->getBuffers()[i];
+        extraArgs << ", __global "+buffer.getType()+"* acceptor"+buffer.getName();
+        compute<<buffer.getType()<<" acceptorParams"<<(i+1)<<" = acceptor"<<buffer.getName()<<"[index];\n";
+    }
+    compute << OpenCLExpressionUtilities::createExpressions(forceExpressions, variables, functionDefinitions, "temp", "functionParams");
+    map<string, string> replacements;
+    replacements["COMPUTE_FORCE"] = compute.str();
+    replacements["PARAMETER_ARGUMENTS"] = extraArgs.str()+tableArgs.str();
+    map<string, string> defines;
+    defines["PADDED_NUM_ATOMS"] = intToString(cl.getPaddedNumAtoms());
+    defines["NUM_DONORS"] = intToString(force.getNumDonors());
+    defines["NUM_ACCEPTORS"] = intToString(force.getNumAcceptors());
+    defines["M_PI"] = doubleToString(M_PI);
+    if (!isZeroExpression(rForceExpression))
+        defines["INCLUDE_R"] = "1";
+    if (!isZeroExpression(thetaForceExpression))
+        defines["INCLUDE_THETA"] = "1";
+    if (!isZeroExpression(psiForceExpression))
+        defines["INCLUDE_PSI"] = "1";
+    if (!isZeroExpression(chiForceExpression))
+        defines["INCLUDE_CHI"] = "1";
+    cl::Program program = cl.createProgram(cl.replaceStrings(OpenCLKernelSources::customHbondForce, replacements), defines);
+    kernel = cl::Kernel(program, "computeHbonds");
+}
+
+void OpenCLCalcCustomHbondForceKernel::executeForces(ContextImpl& context) {
+    if (globals != NULL) {
+        bool changed = false;
+        for (int i = 0; i < (int) globalParamNames.size(); i++) {
+            cl_float value = (cl_float) context.getParameter(globalParamNames[i]);
+            if (value != globalParamValues[i])
+                changed = true;
+            globalParamValues[i] = value;
+        }
+        if (changed)
+            globals->upload(globalParamValues);
+    }
+    if (!hasInitializedKernel) {
+        hasInitializedKernel = true;
+        int index = 0;
+        kernel.setArg<cl::Buffer>(index++, cl.getForceBuffers().getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(index++, cl.getEnergyBuffer().getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(index++, donors->getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(index++, acceptors->getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(index++, donorBufferIndices->getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(index++, acceptorBufferIndices->getDeviceBuffer());
+        kernel.setArg(index++, OpenCLContext::ThreadBlockSize*sizeof(mm_float4), NULL);
+        kernel.setArg(index++, OpenCLContext::ThreadBlockSize*sizeof(mm_float4), NULL);
+        if (globals != NULL)
+            kernel.setArg<cl::Buffer>(index++, globals->getDeviceBuffer());
+        for (int i = 0; i < (int) donorParams->getBuffers().size(); i++) {
+            const OpenCLNonbondedUtilities::ParameterInfo& buffer = donorParams->getBuffers()[i];
+            kernel.setArg<cl::Buffer>(index++, buffer.getBuffer());
+        }
+        for (int i = 0; i < (int) acceptorParams->getBuffers().size(); i++) {
+            const OpenCLNonbondedUtilities::ParameterInfo& buffer = acceptorParams->getBuffers()[i];
+            kernel.setArg<cl::Buffer>(index++, buffer.getBuffer());
+        }
+    }
+    cl.executeKernel(kernel, std::max(numDonors, numAcceptors));
+}
+
+double OpenCLCalcCustomHbondForceKernel::executeEnergy(ContextImpl& context) {
     executeForces(context);
     return 0.0;
 }

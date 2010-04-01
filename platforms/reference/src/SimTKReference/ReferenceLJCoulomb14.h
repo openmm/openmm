@@ -31,12 +31,6 @@
 
 class ReferenceLJCoulomb14 : public ReferenceBondIxn {
 
-   private:
-
-        bool cutoff;
-        RealOpenMM cutoffDistance;
-        RealOpenMM krf, crf;
-
    public:
 
       /**---------------------------------------------------------------------------------------
@@ -55,19 +49,6 @@ class ReferenceLJCoulomb14 : public ReferenceBondIxn {
 
        ~ReferenceLJCoulomb14( );
 
-      /**---------------------------------------------------------------------------------------
-      
-         Set the force to use a cutoff.
-      
-         @param distance            the cutoff distance
-         @param solventDielectric   the dielectric constant of the bulk solvent
-      
-         @return ReferenceForce::DefaultReturn
-      
-         --------------------------------------------------------------------------------------- */
-      
-      int setUseCutoff( RealOpenMM distance, RealOpenMM solventDielectric );
-             
       /**---------------------------------------------------------------------------------------
       
          Calculate Ryckaert-Bellemans bond ixn
