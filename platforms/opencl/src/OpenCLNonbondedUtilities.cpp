@@ -271,7 +271,8 @@ void OpenCLNonbondedUtilities::prepareInteractions() {
     context.executeKernel(findBlockBoundsKernel, context.getNumAtoms());
     context.executeKernel(findInteractingBlocksKernel, context.getNumAtoms());
     compact->compactStream(*interactingTiles, *tiles, *interactionFlags, *interactionCount);
-    context.executeKernel(findInteractionsWithinBlocksKernel, context.getNumAtoms());
+    if (context.getSIMDWidth() == 32)
+        context.executeKernel(findInteractionsWithinBlocksKernel, context.getNumAtoms());
 }
 
 void OpenCLNonbondedUtilities::computeInteractions() {
