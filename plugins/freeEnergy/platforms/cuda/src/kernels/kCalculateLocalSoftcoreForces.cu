@@ -26,7 +26,7 @@
 
 #include "GpuLJ14Softcore.h"
 #include "GpuFreeEnergyCudaKernels.h"
-#include <cuda.h>
+//#include <cuda.h>
 
 static __constant__ cudaGmxSimulation cSim;
 static __constant__ cudaFreeEnergySimulationNonbonded14 feSim;

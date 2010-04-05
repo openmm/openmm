@@ -298,13 +298,13 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsaSoftcore, Forces1_kernel)(unsig
             unsigned int offset         = x + tgx + (x >> GRIDBITS) * cSim.stride;
 #endif
 
-            float4 of                   = cSim.pForce4a[offset];
+            float4 of                   = cSim.pForce4[offset];
             float  bf                   = cSim.pBornForce[offset];
             of.x                       += af.x;
             of.y                       += af.y;
             of.z                       += af.z;
             bf                         += af.w;
-            cSim.pForce4a[offset]       = of;
+            cSim.pForce4[offset]        = of;
             cSim.pBornForce[offset]     = bf;
 
         }
@@ -691,13 +691,13 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsaSoftcore, Forces1_kernel)(unsig
 #else
             unsigned int offset         = x + tgx + (y >> GRIDBITS) * cSim.stride;
 #endif
-            float4 of                   = cSim.pForce4a[offset];
+            float4 of                   = cSim.pForce4[offset];
             float  bf                   = cSim.pBornForce[offset];
             of.x                       += af.x;
             of.y                       += af.y;
             of.z                       += af.z;
             bf                         += af.w;
-            cSim.pForce4a[offset]       = of;
+            cSim.pForce4[offset]        = of;
             cSim.pBornForce[offset]     = bf;
 
 #ifdef USE_OUTPUT_BUFFER_PER_WARP
@@ -705,44 +705,44 @@ __global__ void METHOD_NAME(kCalculateCDLJObcGbsaSoftcore, Forces1_kernel)(unsig
 #else
             offset                      = y + tgx + (x >> GRIDBITS) * cSim.stride;
 #endif
-            of                          = cSim.pForce4a[offset];
+            of                          = cSim.pForce4[offset];
             bf                          = cSim.pBornForce[offset];
             of.x                       += sA[threadIdx.x].fx;
             of.y                       += sA[threadIdx.x].fy;
             of.z                       += sA[threadIdx.x].fz;
             bf                         += sA[threadIdx.x].fb;
-            cSim.pForce4a[offset]       = of;
+            cSim.pForce4[offset]        = of;
             cSim.pBornForce[offset]     = bf;
 
 #if 0
 
 #ifdef USE_OUTPUT_BUFFER_PER_WARP
             unsigned int offset         = x + tgx + warp*cSim.stride;
-            float4 of                   = cSim.pForce4a[offset];
+            float4 of                   = cSim.pForce4[offset];
             of.x                       += af.x;
             of.y                       += af.y;
             of.z                       += af.z;
             of.w                       += af.w;
-            cSim.pForce4a[offset]       = of; 
+            cSim.pForce4[offset]        = of; 
             cSim.pBornForce[offset]     = af.w;
             offset                      = y + tgx + warp*cSim.stride;
-            of                          = cSim.pForce4a[offset];
+            of                          = cSim.pForce4[offset];
             of.x                       += sA[threadIdx.x].fx;
             of.y                       += sA[threadIdx.x].fy;
             of.z                       += sA[threadIdx.x].fz;
             of.w                       += sA[threadIdx.x].fb;
-            cSim.pForce4a[offset]       = of; 
+            cSim.pForce4[offset]        = of; 
             cSim.pBornForce[offset]     = af.w;
 #else
             unsigned int offset         = x + tgx + (y >> GRIDBITS) * cSim.stride;
-            cSim.pForce4a[offset]       = af; 
+            cSim.pForce4[offset]        = af; 
             cSim.pBornForce[offset]     = af.w;
             af.x                        = sA[threadIdx.x].fx;
             af.y                        = sA[threadIdx.x].fy;
             af.z                        = sA[threadIdx.x].fz;
             af.w                        = sA[threadIdx.x].fb;
             offset                      = y + tgx + (x >> GRIDBITS) * cSim.stride;
-            cSim.pForce4a[offset]       = af; 
+            cSim.pForce4[offset]        = af; 
             cSim.pBornForce[offset]     = af.w;
 #endif
 

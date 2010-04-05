@@ -130,7 +130,7 @@ __global__ void kCalculateGBVISoftcoreForces2a_kernel()
     }
 
     // Write results
-    cSim.pForce4a[pos]             = force;
+    cSim.pForce4[pos]              = force;
 
 }
 
