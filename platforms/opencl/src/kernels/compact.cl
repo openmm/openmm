@@ -131,6 +131,7 @@ __kernel void moveValidElementsStaged(__global unsigned int* dgData, __global un
         // Parallel reduce these counts
         // Accumulate in the final offset variable
         blockOutOffset += sumReduce128(validBlock);
+        barrier(CLK_LOCAL_MEM_FENCE);
     }
 
     unsigned int ub;
