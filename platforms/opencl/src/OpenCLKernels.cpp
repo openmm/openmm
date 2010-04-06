@@ -1242,7 +1242,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     }
     cl.addForce(new OpenCLNonbondedForceInfo(maxBuffers, force));
     defines.clear();
-    defines["NUM_ATOMS"] = intToString(numParticles);
+    defines["NUM_ATOMS"] = intToString(cl.getPaddedNumAtoms());
     defines["NUM_EXCEPTIONS"] = intToString(numExceptions);
     cl::Program program = cl.createProgram(OpenCLKernelSources::nonbondedExceptions, defines);
     exceptionsKernel = cl::Kernel(program, "computeNonbondedExceptions");
