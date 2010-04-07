@@ -1288,6 +1288,7 @@ void OpenCLCalcNonbondedForceKernel::executeForces(ContextImpl& context) {
             pmeUpdateBsplinesKernel.setArg<cl::Buffer>(1, pmeBsplineTheta->getDeviceBuffer());
             pmeUpdateBsplinesKernel.setArg<cl::Buffer>(2, pmeBsplineDtheta->getDeviceBuffer());
             pmeUpdateBsplinesKernel.setArg(3, 2*OpenCLContext::ThreadBlockSize*PmeOrder*sizeof(mm_float4), NULL);
+            pmeUpdateBsplinesKernel.setArg<cl::Buffer>(4, pmeAtomGridIndex->getDeviceBuffer());
             pmeSpreadChargeKernel.setArg<cl::Buffer>(0, pmeAtomGridIndex->getDeviceBuffer());
             pmeSpreadChargeKernel.setArg<cl::Buffer>(1, pmeAtomRange->getDeviceBuffer());
             pmeSpreadChargeKernel.setArg<cl::Buffer>(2, pmeGrid->getDeviceBuffer());

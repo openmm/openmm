@@ -27,11 +27,6 @@ __kernel void findAtomRangeForGrid(__global float4* posq, __global float2* pmeAt
                 pmeAtomRange[j] = i;
             last = gridIndex;
         }
-
-        // The grid index won't be needed again.  Reuse that component to hold the atom charge, thus saving
-        // an extra load operation in the charge spreading kernel.
-
-        pmeAtomGridIndex[i].y = posq[(int) atomData.x].w;
     }
 
     // Fill in values beyond the last atom.
@@ -43,7 +38,7 @@ __kernel void findAtomRangeForGrid(__global float4* posq, __global float2* pmeAt
     }
 }
 
-__kernel void updateBsplines(__global float4* posq, __global float4* pmeBsplineTheta, __global float4* pmeBsplineDTheta, __local float4* bsplinesCache) {
+__kernel void updateBsplines(__global float4* posq, __global float4* pmeBsplineTheta, __global float4* pmeBsplineDTheta, __local float4* bsplinesCache, __global float2* pmeAtomGridIndex) {
     const float4 scale = 1.0f/(PME_ORDER-1);
     for (int i = get_global_id(0); i < NUM_ATOMS; i += get_global_size(0)) {
         __local float4* data = &bsplinesCache[get_local_id(0)*PME_ORDER];
@@ -78,6 +73,16 @@ __kernel void updateBsplines(__global float4* posq, __global float4* pmeBsplineT
             pmeBsplineTheta[i+j*NUM_ATOMS] = data[j];
             pmeBsplineDTheta[i+j*NUM_ATOMS] = ddata[j];
         }
+    }
+
+    // The grid index won't be needed again.  Reuse that component to hold the atom charge, thus saving
+    // an extra load operation in the charge spreading kernel.
+
+    int start = (NUM_ATOMS*get_global_id(0))/get_global_size(0);
+    int end = (NUM_ATOMS*(get_global_id(0)+1))/get_global_size(0);
+    for (int i = start; i < end; ++i) {
+        float2 atomData = pmeAtomGridIndex[i];
+        pmeAtomGridIndex[i].y = posq[(int) atomData.x].w;
     }
 }
 
