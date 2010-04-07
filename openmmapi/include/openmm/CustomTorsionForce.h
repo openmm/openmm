@@ -76,7 +76,7 @@ public:
      * @param energy    an algebraic expression giving the interaction energy between three particles as a function
      *                  of theta, the torsion angle between them
      */
-    CustomTorsionForce(const std::string& energy);
+    explicit CustomTorsionForce(const std::string& energy);
     /**
      * Get the number of torsions for which force field parameters have been defined.
      */

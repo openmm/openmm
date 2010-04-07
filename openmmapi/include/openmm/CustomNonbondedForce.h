@@ -110,7 +110,7 @@ public:
      * @param energy    an algebraic expression giving the interaction energy between two particles as a function
      *                  of r, the distance between them, as well as any global and per-particle parameters
      */
-    CustomNonbondedForce(const std::string& energy);
+    explicit CustomNonbondedForce(const std::string& energy);
     /**
      * Get the number of particles for which force field parameters have been defined.
      */

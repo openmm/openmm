@@ -123,7 +123,7 @@ public:
      *                  of inter-particle distances, angles, and dihedrals, as well as any global, per-donor, and
      *                  per-acceptor parameters
      */
-    CustomHbondForce(const std::string& energy);
+    explicit CustomHbondForce(const std::string& energy);
     /**
      * Get the number of donors for which force field parameters have been defined.
      */

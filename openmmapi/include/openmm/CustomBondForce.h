@@ -76,7 +76,7 @@ public:
      * @param energy    an algebraic expression giving the interaction energy between two bonded particles as a function
      *                  of r, the distance between them
      */
-    CustomBondForce(const std::string& energy);
+    explicit CustomBondForce(const std::string& energy);
     /**
      * Get the number of bonds for which force field parameters have been defined.
      */

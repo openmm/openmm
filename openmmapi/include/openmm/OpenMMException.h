@@ -43,7 +43,7 @@ namespace OpenMM {
 
 class OpenMMException : public std::exception {
 public:
-    OpenMMException(const std::string& message) : message(message) {
+    explicit OpenMMException(const std::string& message) : message(message) {
     }
     ~OpenMMException() throw() {
     }

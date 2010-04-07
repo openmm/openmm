@@ -76,7 +76,7 @@ public:
      * @param energy    an algebraic expression giving the interaction energy between three particles as a function
      *                  of theta, the angle between them
      */
-    CustomAngleForce(const std::string& energy);
+    explicit CustomAngleForce(const std::string& energy);
     /**
      * Get the number of angles for which force field parameters have been defined.
      */

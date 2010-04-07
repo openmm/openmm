@@ -49,7 +49,7 @@ public:
      * 
      * @param stepSize the step size with which to integrator the system (in picoseconds)
      */
-    VerletIntegrator(double stepSize);
+    explicit VerletIntegrator(double stepSize);
    /**
      * Advance a simulation through time by taking a series of time steps.
      * 

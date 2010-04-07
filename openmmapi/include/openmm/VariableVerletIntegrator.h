@@ -65,7 +65,7 @@ public:
      *
      * @param errorTol    the error tolerance
      */
-    VariableVerletIntegrator(double errorTol);
+    explicit VariableVerletIntegrator(double errorTol);
     /**
      * Get the error tolerance.
      */

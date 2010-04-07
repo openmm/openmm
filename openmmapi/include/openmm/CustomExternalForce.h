@@ -79,7 +79,7 @@ public:
      * @param energy    an algebraic expression giving the potential energy of each particle as a function
      *                  of its x, y, and z coordinates
      */
-    CustomExternalForce(const std::string& energy);
+    explicit CustomExternalForce(const std::string& energy);
     /**
      * Get the number of particles for which force field parameters have been defined.
      */

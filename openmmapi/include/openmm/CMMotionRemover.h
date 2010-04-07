@@ -48,7 +48,7 @@ public:
     /**
      * Create a CMMotionRemover.
      */
-    CMMotionRemover(int frequency = 1);
+    explicit CMMotionRemover(int frequency = 1);
     /**
      * Get the frequency (in time steps) at which center of mass motion should be removed
      */
