@@ -29,9 +29,6 @@
  * Ewald summation method (Reciprocal space summation).
  */
 
-/* Cuda compiler on Windows does not recognized "static const float" values */
-#define LOCAL_HACK_PI 3.1415926535897932384626433832795
-
 /* Define multiply operations for floats */
 
 __device__ float2 MultofFloat2(float2 a, float2 b)

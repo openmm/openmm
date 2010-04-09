@@ -31,7 +31,7 @@
  */
 
 /* Cuda compiler on Windows does not recognized "static const float" values */
-#define LOCAL_HACK_PI 3.1415926535897932384626433832795
+#define LOCAL_HACK_PI 3.1415926535897932384626433832795f
 
 __global__ 
 #if (__CUDA_ARCH__ >= 200)
