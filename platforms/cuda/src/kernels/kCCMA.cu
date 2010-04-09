@@ -75,7 +75,7 @@ kComputeCCMAConstraintDirections()
     // Mark that no blocks have converged yet.
 
     for (unsigned int index = threadIdx.x+blockIdx.x*blockDim.x; index < gridDim.x; index += blockDim.x*gridDim.x)
-        cSim.pCcmaConverged[index] = false;
+        cSim.pCcmaConverged[index] = 0;
 }
 
 __global__ void
@@ -219,9 +219,9 @@ void kApplyCCMA(gpuContext gpu, float4* posq, bool addOldPosition)
     kComputeCCMAConstraintDirections<<<gpu->sim.blocks, gpu->sim.ccma_threads_per_block>>>();
     LAUNCHERROR("kComputeCCMAConstraintDirections");
     for (int i = 0; i < 150; i++) {
-        kComputeCCMAConstraintForces<<<gpu->sim.blocks, gpu->sim.ccma_threads_per_block>>>(posq, addOldPosition);
-        kMultiplyByCCMAConstraintMatrix<<<gpu->sim.blocks, gpu->sim.ccma_threads_per_block>>>();
+        kComputeCCMAConstraintForces<<<gpu->sim.blocks, gpu->sim.ccma_threads_per_block, gpu->sim.ccma_threads_per_block*sizeof(int)>>>(posq, addOldPosition);
         gpu->psCcmaConverged->Download();
+        kMultiplyByCCMAConstraintMatrix<<<gpu->sim.blocks, gpu->sim.ccma_threads_per_block, gpu->sim.ccma_threads_per_block*sizeof(int)>>>();
         if ((*gpu->psCcmaConverged)[0])
             break;
         kUpdateCCMAAtomPositions<<<gpu->sim.blocks, gpu->sim.ccma_threads_per_block>>>(posq, i);
