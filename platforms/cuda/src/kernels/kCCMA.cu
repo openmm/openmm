@@ -48,25 +48,7 @@ void GetCCMASim(gpuContext gpu)
     RTERROR(status, "cudaMemcpyFromSymbol: SetSim copy from cSim failed");
 }
 
-/**
- * Synchronize all threads across all blocks.
- */
-__device__ void kSyncAllThreads_kernel(short* syncCounter, short newCount)
-{
-    __syncthreads();
-    if (threadIdx.x == 0)
-        syncCounter[blockIdx.x] = newCount;
-    if (threadIdx.x < gridDim.x)
-    {
-        volatile short* counter = &syncCounter[threadIdx.x];
-        do
-        {
-        } while (*counter != newCount);
-    }
-    __syncthreads();
-}
-
-__global__ void 
+__global__ void
 #if (__CUDA_ARCH__ >= 200)
 __launch_bounds__(1024, 1)
 #elif (__CUDA_ARCH__ >= 130)
@@ -74,148 +56,188 @@ __launch_bounds__(512, 1)
 #else
 __launch_bounds__(256, 1)
 #endif
-kApplyCCMA_kernel(float4* atomPositions, bool addOldPosition)
+kComputeCCMAConstraintDirections()
 {
-    // Initialize counters used for monitoring convergence and doing global thread synchronization.
-
-    __shared__ unsigned int requiredIterations;
-    if (threadIdx.x == 0)
-    {
-        requiredIterations = 0;
-        cSim.pSyncCounter[gridDim.x+blockIdx.x] = -1;
-        cSim.pSyncCounter[2*gridDim.x+blockIdx.x] = -1;
-        cSim.pRequiredIterations[0] = 0;
-    }
-
     // Calculate the direction of each constraint.
 
-    unsigned int pos = threadIdx.x + blockIdx.x * blockDim.x;
-    while (pos < cSim.ccmaConstraints)
+    for (unsigned int index = threadIdx.x+blockIdx.x*blockDim.x; index < cSim.ccmaConstraints; index += blockDim.x*gridDim.x)
     {
-        int2 atoms = cSim.pCcmaAtoms[pos];
-        float4 dir = cSim.pCcmaDistance[pos];
+        int2 atoms = cSim.pCcmaAtoms[index];
+        float4 dir = cSim.pCcmaDistance[index];
         float4 oldPos1 = cSim.pOldPosq[atoms.x];
         float4 oldPos2 = cSim.pOldPosq[atoms.y];
         dir.x = oldPos1.x-oldPos2.x;
         dir.y = oldPos1.y-oldPos2.y;
         dir.z = oldPos1.z-oldPos2.z;
-        cSim.pCcmaDistance[pos] = dir;
-        pos += blockDim.x*gridDim.x;
+        cSim.pCcmaDistance[index] = dir;
     }
-    __syncthreads();
 
-    // Iteratively update the atom positions.
+    // Mark that no blocks have converged yet.
 
-    unsigned int maxIterations = 150;
+    for (unsigned int index = threadIdx.x+blockIdx.x*blockDim.x; index < gridDim.x; index += blockDim.x*gridDim.x)
+        cSim.pCcmaConverged[index] = false;
+}
+
+__global__ void
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(1024, 1)
+#elif (__CUDA_ARCH__ >= 130)
+__launch_bounds__(512, 1)
+#else
+__launch_bounds__(256, 1)
+#endif
+kComputeCCMAConstraintForces(float4* atomPositions, bool addOldPosition)
+{
+    if (cSim.pCcmaConverged[blockIdx.x])
+        return; // The constraint iteration has already converged.
+    extern __shared__ int convergedBuffer[];
     float lowerTol = 1.0f-2.0f*cSim.shakeTolerance+cSim.shakeTolerance*cSim.shakeTolerance;
     float upperTol = 1.0f+2.0f*cSim.shakeTolerance+cSim.shakeTolerance*cSim.shakeTolerance;
-    for (unsigned int iteration = 0; iteration < maxIterations; iteration++)
+    int threadConverged = 1;
+
+    // Calculate the constraint force for each constraint.
+
+    for (unsigned int index = threadIdx.x+blockIdx.x*blockDim.x; index < cSim.ccmaConstraints; index += blockDim.x*gridDim.x)
     {
-        // Calculate the constraint force for each constraint.
-
-        pos = threadIdx.x + blockIdx.x * blockDim.x;
-        while (pos < cSim.ccmaConstraints)
+        int2 atoms = cSim.pCcmaAtoms[index];
+        float4 delta1 = atomPositions[atoms.x];
+        float4 delta2 = atomPositions[atoms.y];
+        float4 dir = cSim.pCcmaDistance[index];
+        float3 rp_ij = make_float3(delta1.x-delta2.x, delta1.y-delta2.y, delta1.z-delta2.z);
+        if (addOldPosition)
         {
-            int2 atoms = cSim.pCcmaAtoms[pos];
-            float4 delta1 = atomPositions[atoms.x];
-            float4 delta2 = atomPositions[atoms.y];
-            float4 dir = cSim.pCcmaDistance[pos];
-            float3 rp_ij = make_float3(delta1.x-delta2.x, delta1.y-delta2.y, delta1.z-delta2.z);
-            if (addOldPosition)
-            {
-                rp_ij.x += dir.x;
-                rp_ij.y += dir.y;
-                rp_ij.z += dir.z;
-            }
-            float rp2 = rp_ij.x*rp_ij.x + rp_ij.y*rp_ij.y + rp_ij.z*rp_ij.z;
-            float dist2 = dir.w*dir.w;
-            float diff = dist2 - rp2;
-            float rrpr  = rp_ij.x*dir.x + rp_ij.y*dir.y + rp_ij.z*dir.z;
-            float d_ij2  = dir.x*dir.x + dir.y*dir.y + dir.z*dir.z;
-            float reducedMass = cSim.pCcmaReducedMass[pos];
-            cSim.pCcmaDelta1[pos] = (rrpr > d_ij2*1e-6f ? reducedMass*diff/rrpr : 0.0f);
-            if (requiredIterations == iteration && (rp2 < lowerTol*dist2 || rp2 > upperTol*dist2))
-                requiredIterations = iteration+1;
-            pos += blockDim.x * gridDim.x;
+            rp_ij.x += dir.x;
+            rp_ij.y += dir.y;
+            rp_ij.z += dir.z;
         }
-        __syncthreads();
-        if (threadIdx.x == 0 && requiredIterations > iteration)
-            cSim.pRequiredIterations[0] = requiredIterations;
-        kSyncAllThreads_kernel(cSim.pSyncCounter, iteration);
-        if (iteration == cSim.pRequiredIterations[0])
-            break; // All constraints have converged.
+        float rp2 = rp_ij.x*rp_ij.x + rp_ij.y*rp_ij.y + rp_ij.z*rp_ij.z;
+        float dist2 = dir.w*dir.w;
+        float diff = dist2 - rp2;
+        float rrpr  = rp_ij.x*dir.x + rp_ij.y*dir.y + rp_ij.z*dir.z;
+        float d_ij2  = dir.x*dir.x + dir.y*dir.y + dir.z*dir.z;
+        float reducedMass = cSim.pCcmaReducedMass[index];
+        cSim.pCcmaDelta1[index] = (rrpr > d_ij2*1e-6f ? reducedMass*diff/rrpr : 0.0f);
 
-        // Multiply by the inverse constraint matrix.
+        // See whether it has converged.
 
-        pos = threadIdx.x + blockIdx.x * blockDim.x;
-        while (pos < cSim.ccmaConstraints)
-        {
-            float sum = 0.0f;
-            for (unsigned int i = 0; ; i++)
-            {
-                unsigned int index = pos+i*cSim.ccmaConstraints;
-                unsigned int column = cSim.pConstraintMatrixColumn[index];
-                if (column >= cSim.ccmaConstraints)
-                    break;
-                sum += cSim.pCcmaDelta1[column]*cSim.pConstraintMatrixValue[index];
-            }
-            cSim.pCcmaDelta2[pos] = sum;
-            pos += blockDim.x * gridDim.x;
-        }
-        kSyncAllThreads_kernel(&cSim.pSyncCounter[gridDim.x], iteration);
-
-        // Update the position of each atom.
-
-        pos = threadIdx.x + blockIdx.x * blockDim.x;
-        float damping = (iteration < 2 ? 0.5f : 1.0f);
-        while (pos < cSim.atoms)
-        {
-            float4 atomPos = atomPositions[pos];
-            float invMass = cSim.pVelm4[pos].w;
-            int num = cSim.pCcmaNumAtomConstraints[pos];
-            for (int i = 0; i < num; i++)
-            {
-                int index = pos+i*cSim.atoms;
-                int constraint = cSim.pCcmaAtomConstraints[index];
-                bool forward = (constraint > 0);
-                constraint = (forward ? constraint-1 : -constraint-1);
-                float constraintForce = damping*invMass*cSim.pCcmaDelta2[constraint];
-                constraintForce = (forward ? constraintForce : -constraintForce);
-                float4 dir = cSim.pCcmaDistance[constraint];
-                atomPos.x += constraintForce*dir.x;
-                atomPos.y += constraintForce*dir.y;
-                atomPos.z += constraintForce*dir.z;
-            }
-            atomPositions[pos] = atomPos;
-            pos += blockDim.x*gridDim.x;
-        }
-        if (threadIdx.x == 0)
-            requiredIterations = iteration+1;
-        kSyncAllThreads_kernel(&cSim.pSyncCounter[2*gridDim.x], iteration);
+        threadConverged &= (rp2 >= lowerTol*dist2 && rp2 <= upperTol*dist2);
     }
 
-    // Reset the initial sync counter to be ready for the next call.
+    // Perform a parallel reduction to see if all constraints handled by this block have converged.
 
+    convergedBuffer[threadIdx.x] = threadConverged;
+    __syncthreads();
+    for (unsigned int step = 1; step < blockDim.x; step *= 2) {
+        if (threadIdx.x%(2*step) == 0)
+            convergedBuffer[threadIdx.x] &= convergedBuffer[threadIdx.x+step];
+        __syncthreads();
+    }
     if (threadIdx.x == 0)
-        cSim.pSyncCounter[blockIdx.x] = -1;
+        cSim.pCcmaConverged[blockIdx.x] = convergedBuffer[0];
+}
+
+__global__ void
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(1024, 1)
+#elif (__CUDA_ARCH__ >= 130)
+__launch_bounds__(512, 1)
+#else
+__launch_bounds__(256, 1)
+#endif
+kMultiplyByCCMAConstraintMatrix()
+{
+    extern __shared__ int convergedBuffer[];
+    // First see whether all work groups have converged.
+
+    convergedBuffer[threadIdx.x] = true;
+    for (int index = threadIdx.x; index < gridDim.x; index += blockDim.x)
+        convergedBuffer[threadIdx.x] &= cSim.pCcmaConverged[index];
+    __syncthreads();
+    for (int step = 1; step < blockDim.x; step *= 2) {
+        if (threadIdx.x%(2*step) == 0)
+            convergedBuffer[threadIdx.x] &= convergedBuffer[threadIdx.x+step];
+        __syncthreads();
+    }
+    if (threadIdx.x == 0)
+        cSim.pCcmaConverged[blockIdx.x] = convergedBuffer[0];
+    if (cSim.pCcmaConverged[0])
+        return; // The constraint iteration has already converged.
+
+    // Multiply by the inverse constraint matrix.
+
+    for (unsigned int index = threadIdx.x+blockIdx.x*blockDim.x; index < cSim.ccmaConstraints; index += blockDim.x*gridDim.x)
+    {
+        float sum = 0.0f;
+        for (unsigned int i = 0; ; i++)
+        {
+            unsigned int element = index+i*cSim.ccmaConstraints;
+            unsigned int column = cSim.pConstraintMatrixColumn[element];
+            if (column >= cSim.ccmaConstraints)
+                break;
+            sum += cSim.pCcmaDelta1[column]*cSim.pConstraintMatrixValue[element];
+        }
+        cSim.pCcmaDelta2[index] = sum;
+    }
+}
+
+__global__ void
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(1024, 1)
+#elif (__CUDA_ARCH__ >= 130)
+__launch_bounds__(512, 1)
+#else
+__launch_bounds__(256, 1)
+#endif
+kUpdateCCMAAtomPositions(float4* atomPositions, int iteration)
+{
+    if (cSim.pCcmaConverged[blockIdx.x])
+        return; // The constraint iteration has already converged.
+    float damping = (iteration < 2 ? 0.5f : 1.0f);
+    for (unsigned int index = threadIdx.x+blockIdx.x*blockDim.x; index < cSim.atoms; index += blockDim.x*gridDim.x)
+    {
+        float4 atomPos = atomPositions[index];
+        float invMass = cSim.pVelm4[index].w;
+        int num = cSim.pCcmaNumAtomConstraints[index];
+        for (int i = 0; i < num; i++)
+        {
+            int constraint = cSim.pCcmaAtomConstraints[index+i*cSim.atoms];
+            bool forward = (constraint > 0);
+            constraint = (forward ? constraint-1 : -constraint-1);
+            float constraintForce = damping*invMass*cSim.pCcmaDelta2[constraint];
+            constraintForce = (forward ? constraintForce : -constraintForce);
+            float4 dir = cSim.pCcmaDistance[constraint];
+            atomPos.x += constraintForce*dir.x;
+            atomPos.y += constraintForce*dir.y;
+            atomPos.z += constraintForce*dir.z;
+        }
+        atomPositions[index] = atomPos;
+    }
+}
+
+void kApplyCCMA(gpuContext gpu, float4* posq, bool addOldPosition)
+{
+    kComputeCCMAConstraintDirections<<<gpu->sim.blocks, gpu->sim.ccma_threads_per_block>>>();
+    LAUNCHERROR("kComputeCCMAConstraintDirections");
+    for (int i = 0; i < 150; i++) {
+        kComputeCCMAConstraintForces<<<gpu->sim.blocks, gpu->sim.ccma_threads_per_block>>>(posq, addOldPosition);
+        kMultiplyByCCMAConstraintMatrix<<<gpu->sim.blocks, gpu->sim.ccma_threads_per_block>>>();
+        gpu->psCcmaConverged->Download();
+        if ((*gpu->psCcmaConverged)[0])
+            break;
+        kUpdateCCMAAtomPositions<<<gpu->sim.blocks, gpu->sim.ccma_threads_per_block>>>(posq, i);
+    }
 }
 
 void kApplyFirstCCMA(gpuContext gpu)
 {
 //    printf("kApplyFirstCCMA\n");
     if (gpu->sim.ccmaConstraints > 0)
-    {
-        kApplyCCMA_kernel<<<gpu->sim.blocks, gpu->sim.ccma_threads_per_block>>>(gpu->sim.pPosqP, true);
-        LAUNCHERROR("kApplyCCMA");
-    }
+        kApplyCCMA(gpu, gpu->sim.pPosqP, true);
 }
 
 void kApplySecondCCMA(gpuContext gpu)
 {
 //    printf("kApplySecondCCMA\n");
     if (gpu->sim.ccmaConstraints > 0)
-    {
-        kApplyCCMA_kernel<<<gpu->sim.blocks, gpu->sim.ccma_threads_per_block>>>(gpu->sim.pPosq, false);
-        LAUNCHERROR("kApplyCCMA");
-    }
+        kApplyCCMA(gpu, gpu->sim.pPosq, false);
 }

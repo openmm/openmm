@@ -1533,12 +1533,9 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
     CUDAStream<float>* psCcmaDelta2 = new CUDAStream<float>(numCCMA, 1, "CcmaDelta2");
     gpu->psCcmaDelta2             = psCcmaDelta2;
     gpu->sim.pCcmaDelta2          = psCcmaDelta2->_pDevData;
-    CUDAStream<short>* psSyncCounter = new CUDAStream<short>(3*gpu->sim.blocks, 1, "SyncCounter");
-    gpu->psSyncCounter               = psSyncCounter;
-    gpu->sim.pSyncCounter            = psSyncCounter->_pDevData;
-    CUDAStream<unsigned int>* psRequiredIterations = new CUDAStream<unsigned int>(1, 1, "RequiredIterations");
-    gpu->psRequiredIterations               = psRequiredIterations;
-    gpu->sim.pRequiredIterations            = psRequiredIterations->_pDevData;
+    CUDAStream<int>* psCcmaConverged = new CUDAStream<int>(gpu->sim.blocks, 1, "CcmaConverged");
+    gpu->psCcmaConverged             = psCcmaConverged;
+    gpu->sim.pCcmaConverged          = psCcmaConverged->_pDevData;
     CUDAStream<float>* psCcmaReducedMass = new CUDAStream<float>(numCCMA, 1, "CcmaReducedMass");
     gpu->psCcmaReducedMass             = psCcmaReducedMass;
     gpu->sim.pCcmaReducedMass          = psCcmaReducedMass->_pDevData;
@@ -1562,8 +1559,6 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
         }
         (*psConstraintMatrixColumn)[i+matrix[index].size()*numCCMA] = numCCMA;
     }
-    for (unsigned int i = 0; i < psSyncCounter->_length; i++)
-        (*psSyncCounter)[i] = -1;
     for (unsigned int i = 0; i < atomConstraints.size(); i++) {
         (*psCcmaNumAtomConstraints)[i] = atomConstraints[i].size();
         for (unsigned int j = 0; j < atomConstraints[i].size(); j++) {
@@ -1576,7 +1571,6 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
     psCcmaReducedMass->Upload();
     psCcmaAtomConstraints->Upload();
     psCcmaNumAtomConstraints->Upload();
-    psSyncCounter->Upload();
     psConstraintMatrixColumn->Upload();
     psConstraintMatrixValue->Upload();
     gpu->sim.ccma_threads_per_block = (gpu->sim.ccmaConstraints + gpu->sim.blocks - 1) / gpu->sim.blocks;
@@ -1994,8 +1988,7 @@ void* gpuInit(int numAtoms, unsigned int device, bool useBlockingSync)
     gpu->psCcmaNumAtomConstraints   = NULL;
     gpu->psCcmaDelta1               = NULL;
     gpu->psCcmaDelta2               = NULL;
-    gpu->psSyncCounter              = NULL;
-    gpu->psRequiredIterations       = NULL;
+    gpu->psCcmaConverged            = NULL;
     gpu->psCcmaReducedMass          = NULL;
     gpu->psConstraintMatrixColumn   = NULL;
     gpu->psConstraintMatrixValue    = NULL;
@@ -2214,8 +2207,7 @@ void gpuShutDown(gpuContext gpu)
     delete gpu->psCcmaNumAtomConstraints;
     delete gpu->psCcmaDelta1;
     delete gpu->psCcmaDelta2;
-    delete gpu->psSyncCounter;
-    delete gpu->psRequiredIterations;
+    delete gpu->psCcmaConverged;
     delete gpu->psCcmaReducedMass;
     delete gpu->psConstraintMatrixColumn;
     delete gpu->psConstraintMatrixValue;

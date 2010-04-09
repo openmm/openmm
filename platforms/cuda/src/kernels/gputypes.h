@@ -171,9 +171,8 @@ struct _gpuContext {
     CUDAStream<int>* psCcmaNumAtomConstraints; // The number of constraints involving each atom
     CUDAStream<float>* psCcmaDelta1;        // Workspace for CCMA
     CUDAStream<float>* psCcmaDelta2;        // Workspace for CCMA
-    CUDAStream<short>* psSyncCounter;       // Used for global thread synchronization
-    CUDAStream<unsigned int>* psRequiredIterations; // Used by SHAKE to communicate whether iteration has converged
-    CUDAStream<float>* psCcmaReducedMass;   // The reduced mass for each SHAKE constraint
+    CUDAStream<int>* psCcmaConverged;       // Used by CCMA to communicate whether iteration has converged
+    CUDAStream<float>* psCcmaReducedMass;   // The reduced mass for each CCMA constraint
     CUDAStream<float>* psRigidClusterMatrix;// The inverse constraint matrix for each rigid cluster
     CUDAStream<unsigned int>* psRigidClusterConstraintIndex; // The index of each cluster in the stream containing cluster constraints.
     CUDAStream<unsigned int>* psRigidClusterMatrixIndex; // The index of each cluster in the stream containing cluster matrices.
