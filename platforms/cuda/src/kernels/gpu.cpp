@@ -1488,7 +1488,7 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
             result = QUERN_solve_with_r(numCCMA, rRowStart, rColIndex, rValue, &rhs[0], &rhs[0]);
             for (int j = 0; j < numCCMA; j++) {
                 double value = rhs[j]*distance[ccmaConstraints[i]]/distance[ccmaConstraints[j]];
-                if (abs(value) > 0.1)
+                if (abs(value) > 0.05)
                     matrix[j].push_back(pair<int, double>(i, value));
             }
         }
@@ -1533,9 +1533,6 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
     CUDAStream<float>* psCcmaDelta2 = new CUDAStream<float>(numCCMA, 1, "CcmaDelta2");
     gpu->psCcmaDelta2             = psCcmaDelta2;
     gpu->sim.pCcmaDelta2          = psCcmaDelta2->_pDevData;
-    CUDAStream<int>* psCcmaConverged = new CUDAStream<int>(gpu->sim.blocks, 1, "CcmaConverged");
-    gpu->psCcmaConverged             = psCcmaConverged;
-    gpu->sim.pCcmaConverged          = psCcmaConverged->_pDevData;
     CUDAStream<float>* psCcmaReducedMass = new CUDAStream<float>(numCCMA, 1, "CcmaReducedMass");
     gpu->psCcmaReducedMass             = psCcmaReducedMass;
     gpu->sim.pCcmaReducedMass          = psCcmaReducedMass->_pDevData;
@@ -1545,6 +1542,9 @@ void gpuSetConstraintParameters(gpuContext gpu, const vector<int>& atom1, const 
     CUDAStream<float>* psConstraintMatrixValue = new CUDAStream<float>(numCCMA*maxRowElements, 1, "ConstraintMatrixValue");
     gpu->psConstraintMatrixValue             = psConstraintMatrixValue;
     gpu->sim.pConstraintMatrixValue          = psConstraintMatrixValue->_pDevData;
+    cudaHostAlloc((void**) &gpu->ccmaConvergedHostMarker, sizeof(int), cudaHostAllocMapped);
+    cudaHostGetDevicePointer((void**) &gpu->sim.ccmaConvergedDeviceMarker, (void*) gpu->ccmaConvergedHostMarker, 0);
+    cudaEventCreate(&gpu->ccmaEvent);
     gpu->sim.ccmaConstraints = numCCMA;
     for (int i = 0; i < numCCMA; i++) {
         int index = constraintOrder[i];
@@ -1802,7 +1802,7 @@ void* gpuInit(int numAtoms, unsigned int device, bool useBlockingSync)
         cudaSetDevice(device); // Ignore errors
     status = cudaGetDevice(&gpu->device);
     RTERROR(status, "Error getting CUDA device")
-    status = cudaSetDeviceFlags(useBlockingSync ? cudaDeviceBlockingSync : cudaDeviceScheduleAuto);
+    status = cudaSetDeviceFlags(cudaDeviceMapHost+(useBlockingSync ? cudaDeviceBlockingSync : cudaDeviceScheduleAuto));
     RTERROR(status, "Error setting device flags")
     gpu->useBlockingSync = useBlockingSync;
 
@@ -1988,7 +1988,6 @@ void* gpuInit(int numAtoms, unsigned int device, bool useBlockingSync)
     gpu->psCcmaNumAtomConstraints   = NULL;
     gpu->psCcmaDelta1               = NULL;
     gpu->psCcmaDelta2               = NULL;
-    gpu->psCcmaConverged            = NULL;
     gpu->psCcmaReducedMass          = NULL;
     gpu->psConstraintMatrixColumn   = NULL;
     gpu->psConstraintMatrixValue    = NULL;
@@ -2207,8 +2206,8 @@ void gpuShutDown(gpuContext gpu)
     delete gpu->psCcmaNumAtomConstraints;
     delete gpu->psCcmaDelta1;
     delete gpu->psCcmaDelta2;
-    delete gpu->psCcmaConverged;
     delete gpu->psCcmaReducedMass;
+    cudaEventDestroy(gpu->ccmaEvent);
     delete gpu->psConstraintMatrixColumn;
     delete gpu->psConstraintMatrixValue;
     delete gpu->psTabulatedFunctionParams;

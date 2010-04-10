@@ -460,7 +460,7 @@ struct cudaGmxSimulation {
     float*          pCcmaDelta2;                    // Workspace for CCMA
     int*            pCcmaAtomConstraints;           // The indices of constraints involving each atom
     int*            pCcmaNumAtomConstraints;        // The number of constraints involving each atom
-    int*            pCcmaConverged;                 // Used by CCMA to communicate whether iteration has converged
+    int*            ccmaConvergedDeviceMarker;      // Device memory used to communicate that CCMA has converged
     float*          pCcmaReducedMass;               // The reduced mass for each CCMA constraint
     unsigned int*   pConstraintMatrixColumn;        // The column of each element in the constraint matrix.
     float*          pConstraintMatrixValue;         // The value of each element in the constraint matrix.

@@ -71,11 +71,6 @@ kComputeCCMAConstraintDirections()
         dir.z = oldPos1.z-oldPos2.z;
         cSim.pCcmaDistance[index] = dir;
     }
-
-    // Mark that no blocks have converged yet.
-
-    for (unsigned int index = threadIdx.x+blockIdx.x*blockDim.x; index < gridDim.x; index += blockDim.x*gridDim.x)
-        cSim.pCcmaConverged[index] = 0;
 }
 
 __global__ void
@@ -88,12 +83,12 @@ __launch_bounds__(256, 1)
 #endif
 kComputeCCMAConstraintForces(float4* atomPositions, bool addOldPosition)
 {
-    if (cSim.pCcmaConverged[blockIdx.x])
-        return; // The constraint iteration has already converged.
-    extern __shared__ int convergedBuffer[];
+    __shared__ int converged;
     float lowerTol = 1.0f-2.0f*cSim.shakeTolerance+cSim.shakeTolerance*cSim.shakeTolerance;
     float upperTol = 1.0f+2.0f*cSim.shakeTolerance+cSim.shakeTolerance*cSim.shakeTolerance;
-    int threadConverged = 1;
+    if (threadIdx.x == 0)
+        converged = 1;
+    __syncthreads();
 
     // Calculate the constraint force for each constraint.
 
@@ -120,20 +115,12 @@ kComputeCCMAConstraintForces(float4* atomPositions, bool addOldPosition)
 
         // See whether it has converged.
 
-        threadConverged &= (rp2 >= lowerTol*dist2 && rp2 <= upperTol*dist2);
+        if (converged && (rp2 < lowerTol*dist2 || rp2 > upperTol*dist2))
+        {
+            converged = 0;
+            *cSim.ccmaConvergedDeviceMarker = 0;
+        }
     }
-
-    // Perform a parallel reduction to see if all constraints handled by this block have converged.
-
-    convergedBuffer[threadIdx.x] = threadConverged;
-    __syncthreads();
-    for (unsigned int step = 1; step < blockDim.x; step *= 2) {
-        if (threadIdx.x%(2*step) == 0)
-            convergedBuffer[threadIdx.x] &= convergedBuffer[threadIdx.x+step];
-        __syncthreads();
-    }
-    if (threadIdx.x == 0)
-        cSim.pCcmaConverged[blockIdx.x] = convergedBuffer[0];
 }
 
 __global__ void
@@ -146,22 +133,8 @@ __launch_bounds__(256, 1)
 #endif
 kMultiplyByCCMAConstraintMatrix()
 {
-    extern __shared__ int convergedBuffer[];
-    // First see whether all work groups have converged.
-
-    convergedBuffer[threadIdx.x] = true;
-    for (int index = threadIdx.x; index < gridDim.x; index += blockDim.x)
-        convergedBuffer[threadIdx.x] &= cSim.pCcmaConverged[index];
-    __syncthreads();
-    for (int step = 1; step < blockDim.x; step *= 2) {
-        if (threadIdx.x%(2*step) == 0)
-            convergedBuffer[threadIdx.x] &= convergedBuffer[threadIdx.x+step];
-        __syncthreads();
-    }
-    if (threadIdx.x == 0)
-        cSim.pCcmaConverged[blockIdx.x] = convergedBuffer[0];
-    if (cSim.pCcmaConverged[0])
-        return; // The constraint iteration has already converged.
+    if (*cSim.ccmaConvergedDeviceMarker)
+        return; // The constraint iteration has already converged
 
     // Multiply by the inverse constraint matrix.
 
@@ -190,7 +163,7 @@ __launch_bounds__(256, 1)
 #endif
 kUpdateCCMAAtomPositions(float4* atomPositions, int iteration)
 {
-    if (cSim.pCcmaConverged[blockIdx.x])
+    if (*cSim.ccmaConvergedDeviceMarker)
         return; // The constraint iteration has already converged.
     float damping = (iteration < 2 ? 0.5f : 1.0f);
     for (unsigned int index = threadIdx.x+blockIdx.x*blockDim.x; index < cSim.atoms; index += blockDim.x*gridDim.x)
@@ -218,13 +191,17 @@ void kApplyCCMA(gpuContext gpu, float4* posq, bool addOldPosition)
 {
     kComputeCCMAConstraintDirections<<<gpu->sim.blocks, gpu->sim.ccma_threads_per_block>>>();
     LAUNCHERROR("kComputeCCMAConstraintDirections");
+    const int checkInterval = 3;
     for (int i = 0; i < 150; i++) {
+        if ((i+1)%checkInterval == 0)
+            *gpu->ccmaConvergedHostMarker = 1;
         kComputeCCMAConstraintForces<<<gpu->sim.blocks, gpu->sim.ccma_threads_per_block, gpu->sim.ccma_threads_per_block*sizeof(int)>>>(posq, addOldPosition);
-        gpu->psCcmaConverged->Download();
+        cudaEventRecord(gpu->ccmaEvent, 0);
         kMultiplyByCCMAConstraintMatrix<<<gpu->sim.blocks, gpu->sim.ccma_threads_per_block, gpu->sim.ccma_threads_per_block*sizeof(int)>>>();
-        if ((*gpu->psCcmaConverged)[0])
+        kUpdateCCMAAtomPositions<<<gpu->sim.blocks, gpu->sim.ccma_threads_per_block>>>(posq, 3*i+2);
+        cudaEventSynchronize(gpu->ccmaEvent);
+        if ((i+1)%checkInterval == 0 && *gpu->ccmaConvergedHostMarker)
             break;
-        kUpdateCCMAAtomPositions<<<gpu->sim.blocks, gpu->sim.ccma_threads_per_block>>>(posq, i);
     }
 }
 
