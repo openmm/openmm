@@ -2530,6 +2530,10 @@ OpenCLCalcCustomHbondForceKernel::~OpenCLCalcCustomHbondForceKernel() {
         delete acceptorBufferIndices;
     if (globals != NULL)
         delete globals;
+    if (donorExclusions != NULL)
+        delete donorExclusions;
+    if (acceptorExclusions != NULL)
+        delete acceptorExclusions;
     if (tabulatedFunctionParams != NULL)
         delete tabulatedFunctionParams;
     for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
@@ -2607,12 +2611,36 @@ void OpenCLCalcCustomHbondForceKernel::initialize(const System& system, const Cu
 
     // Record exclusions.
 
-    vector<vector<int> > exclusionList(numDonors);
+    vector<mm_int4> donorExclusionVector(numDonors, mm_int4(-1, -1, -1, -1));
+    vector<mm_int4> acceptorExclusionVector(numAcceptors, mm_int4(-1, -1, -1, -1));
     for (int i = 0; i < force.getNumExclusions(); i++) {
         int donor, acceptor;
         force.getExclusionParticles(i, donor, acceptor);
-        exclusionList[donor].push_back(acceptor);
+        if (donorExclusionVector[donor].x == -1)
+            donorExclusionVector[donor].x = acceptor;
+        else if (donorExclusionVector[donor].y == -1)
+            donorExclusionVector[donor].y = acceptor;
+        else if (donorExclusionVector[donor].z == -1)
+            donorExclusionVector[donor].z = acceptor;
+        else if (donorExclusionVector[donor].w == -1)
+            donorExclusionVector[donor].w = acceptor;
+        else
+            throw OpenMMException("CustomHbondForce: OpenCLPlatform does not support more than four exclusions per donor");
+        if (acceptorExclusionVector[acceptor].x == -1)
+            acceptorExclusionVector[acceptor].x = donor;
+        else if (acceptorExclusionVector[acceptor].y == -1)
+            acceptorExclusionVector[acceptor].y = donor;
+        else if (acceptorExclusionVector[acceptor].z == -1)
+            acceptorExclusionVector[acceptor].z = donor;
+        else if (acceptorExclusionVector[acceptor].w == -1)
+            acceptorExclusionVector[acceptor].w = donor;
+        else
+            throw OpenMMException("CustomHbondForce: OpenCLPlatform does not support more than four exclusions per acceptor");
     }
+    donorExclusions = new OpenCLArray<mm_int4>(cl, numDonors, "customHbondDonorExclusions");
+    acceptorExclusions = new OpenCLArray<mm_int4>(cl, numDonors, "customHbondAcceptorExclusions");
+    donorExclusions->upload(donorExclusionVector);
+    acceptorExclusions->upload(acceptorExclusionVector);
 
     // Record the tabulated functions.
 
@@ -2827,7 +2855,8 @@ void OpenCLCalcCustomHbondForceKernel::initialize(const System& system, const Cu
     }
     if (force.getNonbondedMethod() != CustomHbondForce::NoCutoff && force.getNonbondedMethod() != CustomHbondForce::CutoffNonPeriodic)
         defines["USE_PERIODIC"] = "1";
-
+    if (force.getNumExclusions() > 0)
+        defines["USE_EXCLUSIONS"] = "1";
     cl::Program program = cl.createProgram(cl.replaceStrings(OpenCLKernelSources::customHbondForce, replacements), defines);
     donorKernel = cl::Kernel(program, "computeDonorForces");
     acceptorKernel = cl::Kernel(program, "computeAcceptorForces");
@@ -2851,6 +2880,7 @@ void OpenCLCalcCustomHbondForceKernel::executeForces(ContextImpl& context) {
         donorKernel.setArg<cl::Buffer>(index++, cl.getForceBuffers().getDeviceBuffer());
         donorKernel.setArg<cl::Buffer>(index++, cl.getEnergyBuffer().getDeviceBuffer());
         donorKernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
+        donorKernel.setArg<cl::Buffer>(index++, donorExclusions->getDeviceBuffer());
         donorKernel.setArg<cl::Buffer>(index++, donors->getDeviceBuffer());
         donorKernel.setArg<cl::Buffer>(index++, acceptors->getDeviceBuffer());
         donorKernel.setArg<cl::Buffer>(index++, donorBufferIndices->getDeviceBuffer());
@@ -2874,6 +2904,7 @@ void OpenCLCalcCustomHbondForceKernel::executeForces(ContextImpl& context) {
         acceptorKernel.setArg<cl::Buffer>(index++, cl.getForceBuffers().getDeviceBuffer());
         acceptorKernel.setArg<cl::Buffer>(index++, cl.getEnergyBuffer().getDeviceBuffer());
         acceptorKernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
+        acceptorKernel.setArg<cl::Buffer>(index++, acceptorExclusions->getDeviceBuffer());
         acceptorKernel.setArg<cl::Buffer>(index++, donors->getDeviceBuffer());
         acceptorKernel.setArg<cl::Buffer>(index++, acceptors->getDeviceBuffer());
         acceptorKernel.setArg<cl::Buffer>(index++, acceptorBufferIndices->getDeviceBuffer());

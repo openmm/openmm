@@ -55,8 +55,8 @@ float4 computeCross(float4 vec1, float4 vec2) {
 /**
  * Compute forces on donors.
  */
-__kernel void computeDonorForces(__global float4* forceBuffers, __global float* energyBuffer, __global float4* posq, /*__global unsigned int* exclusions,
-        __global unsigned int* exclusionIndices, */__global int4* donorAtoms, __global int4* acceptorAtoms, __global int4* donorBufferIndices, __local float4* posBuffer
+__kernel void computeDonorForces(__global float4* forceBuffers, __global float* energyBuffer, __global float4* posq, __global int4* exclusions,
+        __global int4* donorAtoms, __global int4* acceptorAtoms, __global int4* donorBufferIndices, __local float4* posBuffer
         PARAMETER_ARGUMENTS) {
     float energy = 0.0f;
     float4 f1 = 0;
@@ -66,13 +66,16 @@ __kernel void computeDonorForces(__global float4* forceBuffers, __global float* 
         // Load information about the donor this thread will compute forces on.
 
         int donorIndex = donorStart+get_global_id(0);
-        int4 atoms;
+        int4 atoms, exclusionIndices;
         float4 d1, d2, d3;
         if (donorIndex < NUM_DONORS) {
             atoms = donorAtoms[donorIndex];
             d1 = posq[atoms.x];
             d2 = posq[atoms.y];
             d3 = posq[atoms.z];
+#ifdef USE_EXCLUSIONS
+            exclusionIndices = exclusions[donorIndex];
+#endif
         }
         else
             atoms = (int4) (-1, -1, -1, -1);
@@ -89,6 +92,11 @@ __kernel void computeDonorForces(__global float4* forceBuffers, __global float* 
             barrier(CLK_LOCAL_MEM_FENCE);
             if (donorIndex < NUM_DONORS) {
                 for (int index = 0; index < blockSize; index++) {
+#ifdef USE_EXCLUSIONS
+                    int acceptorIndex = acceptorStart+index;
+                    if (acceptorIndex == exclusionIndices.x || acceptorIndex == exclusionIndices.y || acceptorIndex == exclusionIndices.z || acceptorIndex == exclusionIndices.w)
+                        continue;
+#endif
                     // Compute the interaction between a donor and an acceptor.
 
                     float4 a1 = posBuffer[3*index];
@@ -133,8 +141,8 @@ __kernel void computeDonorForces(__global float4* forceBuffers, __global float* 
 /**
  * Compute forces on acceptors.
  */
-__kernel void computeAcceptorForces(__global float4* forceBuffers, __global float* energyBuffer, __global float4* posq, /*__global unsigned int* exclusions,
-        __global unsigned int* exclusionIndices, */__global int4* donorAtoms, __global int4* acceptorAtoms, __global int4* acceptorBufferIndices, __local float4* posBuffer
+__kernel void computeAcceptorForces(__global float4* forceBuffers, __global float* energyBuffer, __global float4* posq, __global int4* exclusions,
+        __global int4* donorAtoms, __global int4* acceptorAtoms, __global int4* acceptorBufferIndices, __local float4* posBuffer
         PARAMETER_ARGUMENTS) {
     float4 f1 = 0;
     float4 f2 = 0;
@@ -143,13 +151,16 @@ __kernel void computeAcceptorForces(__global float4* forceBuffers, __global floa
         // Load information about the acceptor this thread will compute forces on.
 
         int acceptorIndex = acceptorStart+get_global_id(0);
-        int4 atoms;
+        int4 atoms, exclusionIndices;
         float4 a1, a2, a3;
         if (acceptorIndex < NUM_ACCEPTORS) {
             atoms = acceptorAtoms[acceptorIndex];
             a1 = posq[atoms.x];
             a2 = posq[atoms.y];
             a3 = posq[atoms.z];
+#ifdef USE_EXCLUSIONS
+            exclusionIndices = exclusions[acceptorIndex];
+#endif
         }
         else
             atoms = (int4) (-1, -1, -1, -1);
@@ -166,6 +177,11 @@ __kernel void computeAcceptorForces(__global float4* forceBuffers, __global floa
             barrier(CLK_LOCAL_MEM_FENCE);
             if (acceptorIndex < NUM_ACCEPTORS) {
                 for (int index = 0; index < blockSize; index++) {
+#ifdef USE_EXCLUSIONS
+                    int donorIndex = donorStart+index;
+                    if (donorIndex == exclusionIndices.x || donorIndex == exclusionIndices.y || donorIndex == exclusionIndices.z || donorIndex == exclusionIndices.w)
+                        continue;
+#endif
                     // Compute the interaction between a donor and an acceptor.
 
                     float4 d1 = posBuffer[3*index];

@@ -671,7 +671,8 @@ class OpenCLCalcCustomHbondForceKernel : public CalcCustomHbondForceKernel {
 public:
     OpenCLCalcCustomHbondForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcCustomHbondForceKernel(name, platform),
             hasInitializedKernel(false), cl(cl), donorParams(NULL), acceptorParams(NULL), donors(NULL), acceptors(NULL),
-            donorBufferIndices(NULL), acceptorBufferIndices(NULL), globals(NULL), tabulatedFunctionParams(NULL), system(system) {
+            donorBufferIndices(NULL), acceptorBufferIndices(NULL), globals(NULL), donorExclusions(NULL), acceptorExclusions(NULL),
+            tabulatedFunctionParams(NULL), system(system) {
     }
     ~OpenCLCalcCustomHbondForceKernel();
     /**
@@ -705,6 +706,8 @@ private:
     OpenCLArray<mm_int4>* acceptors;
     OpenCLArray<mm_int4>* donorBufferIndices;
     OpenCLArray<mm_int4>* acceptorBufferIndices;
+    OpenCLArray<mm_int4>* donorExclusions;
+    OpenCLArray<mm_int4>* acceptorExclusions;
     OpenCLArray<mm_float4>* tabulatedFunctionParams;
     std::vector<std::string> globalParamNames;
     std::vector<cl_float> globalParamValues;

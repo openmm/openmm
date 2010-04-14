@@ -212,7 +212,7 @@ void testCustomFunctions() {
 int main() {
     try {
         testHbond();
-//        testExclusions();
+        testExclusions();
         testCutoff();
         testCustomFunctions();
     }
