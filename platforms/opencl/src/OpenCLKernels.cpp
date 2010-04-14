@@ -29,6 +29,7 @@
 #include "openmm/LangevinIntegrator.h"
 #include "openmm/Context.h"
 #include "openmm/internal/ContextImpl.h"
+#include "openmm/internal/CustomHbondForceImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
 #include "OpenCLExpressionUtilities.h"
 #include "OpenCLIntegrationUtilities.h"
@@ -39,6 +40,7 @@
 #include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
 #include "lepton/Operation.h"
 #include <cmath>
+#include <set>
 
 using namespace OpenMM;
 using namespace std;
@@ -54,13 +56,6 @@ static string intToString(int value) {
     stringstream s;
     s << value;
     return s.str();
-}
-
-static bool isZeroExpression(const Lepton::ParsedExpression& expression) {
-    const Lepton::Operation& op = expression.getRootNode().getOperation();
-    if (op.getId() != Lepton::Operation::CONSTANT)
-        return false;
-    return (dynamic_cast<const Lepton::Operation::Constant&>(op).getValue() == 0.0);
 }
 
 void OpenCLCalcForcesAndEnergyKernel::initialize(const System& system) {
@@ -2459,33 +2454,41 @@ public:
         vector<double> parameters;
         if (index < force.getNumDonors()) {
             force.getDonorParameters(index, p1, p2, p3, parameters);
-            particles.resize(3);
-            particles[0] = p1;
-            particles[1] = p2;
-            particles[2] = p3;
+            particles.clear();
+            particles.push_back(p1);
+            if (p2 > -1)
+                particles.push_back(p2);
+            if (p3 > -1)
+                particles.push_back(p3);
             return;
         }
         index -= force.getNumDonors();
         if (index < force.getNumAcceptors()) {
             force.getAcceptorParameters(index, p1, p2, p3, parameters);
-            particles.resize(3);
-            particles[0] = p1;
-            particles[1] = p2;
-            particles[2] = p3;
+            particles.clear();
+            particles.push_back(p1);
+            if (p2 > -1)
+                particles.push_back(p2);
+            if (p3 > -1)
+                particles.push_back(p3);
             return;
         }
         index -= force.getNumAcceptors();
         int donor, acceptor;
         force.getExclusionParticles(index, donor, acceptor);
-        particles.resize(6);
+        particles.clear();
         force.getDonorParameters(donor, p1, p2, p3, parameters);
-        particles[0] = p1;
-        particles[1] = p2;
-        particles[2] = p3;
+        particles.push_back(p1);
+        if (p2 > -1)
+            particles.push_back(p2);
+        if (p3 > -1)
+            particles.push_back(p3);
         force.getAcceptorParameters(acceptor, p1, p2, p3, parameters);
-        particles[3] = p1;
-        particles[4] = p2;
-        particles[5] = p3;
+        particles.push_back(p1);
+        if (p2 > -1)
+            particles.push_back(p2);
+        if (p3 > -1)
+            particles.push_back(p3);
     }
     bool areGroupsIdentical(int group1, int group2) {
         int p1, p2, p3;
@@ -2533,12 +2536,20 @@ OpenCLCalcCustomHbondForceKernel::~OpenCLCalcCustomHbondForceKernel() {
         delete tabulatedFunctions[i];
 }
 
-void OpenCLCalcCustomHbondForceKernel::initialize(const System& system, const CustomHbondForce& force) {
-    int forceIndex;
-    for (forceIndex = 0; forceIndex < system.getNumForces() && &system.getForce(forceIndex) != &force; ++forceIndex)
-        ;
-    string prefix = "custom"+intToString(forceIndex)+"_";
+static void addDonorAndAcceptorCode(stringstream& computeDonor, stringstream& computeAcceptor, const string& value) {
+    computeDonor << value;
+    computeAcceptor << value;
+}
 
+static void applyDonorAndAcceptorForces(stringstream& applyToDonor, stringstream& applyToAcceptor, int atom, const string& value) {
+    string forceNames[] = {"f1", "f2", "f3"};
+    if (atom < 3)
+        applyToAcceptor << forceNames[atom]<<".xyz += "<<value<<";\n";
+    else
+        applyToDonor << forceNames[atom-3]<<".xyz += "<<value<<";\n";
+}
+
+void OpenCLCalcCustomHbondForceKernel::initialize(const System& system, const CustomHbondForce& force) {
     // Record the lists of donors and acceptors, and the parameters for each one.
 
     numDonors = force.getNumDonors();
@@ -2573,19 +2584,26 @@ void OpenCLCalcCustomHbondForceKernel::initialize(const System& system, const Cu
     acceptors->upload(acceptorVector);
     acceptorParams->setParameterValues(acceptorParamVector);
 
-    // Select a output buffer indices for each donor and acceptor.
+    // Select an output buffer index for each donor and acceptor.
 
     donorBufferIndices = new OpenCLArray<mm_int4>(cl, numDonors, "customHbondDonorBuffers");
     acceptorBufferIndices = new OpenCLArray<mm_int4>(cl, numAcceptors, "customHbondAcceptorBuffers");
     vector<mm_int4> donorBufferVector(numDonors);
     vector<mm_int4> acceptorBufferVector(numAcceptors);
-    vector<int> particleBuffers(numParticles, 0);
+    vector<int> donorBufferCounter(numParticles, 0);
     for (int i = 0; i < numDonors; i++)
-        donorBufferVector[i] = mm_int4(particleBuffers[donorVector[i].x]++, particleBuffers[donorVector[i].y]++, particleBuffers[donorVector[i].z]++, 0);
+        donorBufferVector[i] = mm_int4(donorBufferCounter[donorVector[i].x]++, donorBufferCounter[donorVector[i].y]++, donorBufferCounter[donorVector[i].z]++, 0);
+    vector<int> acceptorBufferCounter(numParticles, 0);
     for (int i = 0; i < numAcceptors; i++)
-        acceptorBufferVector[i] = mm_int4(particleBuffers[acceptorVector[i].x]++, particleBuffers[acceptorVector[i].y]++, particleBuffers[acceptorVector[i].z]++, 0);
+        acceptorBufferVector[i] = mm_int4(acceptorBufferCounter[acceptorVector[i].x]++, acceptorBufferCounter[acceptorVector[i].y]++, acceptorBufferCounter[acceptorVector[i].z]++, 0);
     donorBufferIndices->upload(donorBufferVector);
     acceptorBufferIndices->upload(acceptorBufferVector);
+    int maxBuffers = 1;
+    for (int i = 0; i < (int) donorBufferCounter.size(); i++)
+        maxBuffers = max(maxBuffers, donorBufferCounter[i]);
+    for (int i = 0; i < (int) acceptorBufferCounter.size(); i++)
+        maxBuffers = max(maxBuffers, acceptorBufferCounter[i]);
+    cl.addForce(new OpenCLCustomHbondForceInfo(maxBuffers, force));
 
     // Record exclusions.
 
@@ -2609,7 +2627,7 @@ void OpenCLCalcCustomHbondForceKernel::initialize(const System& system, const Cu
         double min, max;
         bool interpolating;
         force.getFunctionParameters(i, name, values, min, max, interpolating);
-        string arrayName = prefix+"table"+intToString(i);
+        string arrayName = "table"+intToString(i);
         functionDefinitions.push_back(make_pair(name, arrayName));
         functions[name] = &fp;
         tabulatedFunctionParamsVec[i] = mm_float4((float) min, (float) max, (float) ((values.size()-1)/(max-min)), 0.0f);
@@ -2621,10 +2639,10 @@ void OpenCLCalcCustomHbondForceKernel::initialize(const System& system, const Cu
     if (force.getNumFunctions() > 0) {
         tabulatedFunctionParams = new OpenCLArray<mm_float4>(cl, tabulatedFunctionParamsVec.size(), "tabulatedFunctionParameters", false, CL_MEM_READ_ONLY);
         tabulatedFunctionParams->upload(tabulatedFunctionParamsVec);
-        tableArgs << ", __constant float4* " << prefix << "functionParams";
+        tableArgs << ", __constant float4* functionParams";
     }
 
-    // Record information for the expressions.
+    // Record information about parameters.
 
     globalParamNames.resize(force.getNumGlobalParameters());
     globalParamValues.resize(force.getNumGlobalParameters());
@@ -2634,27 +2652,7 @@ void OpenCLCalcCustomHbondForceKernel::initialize(const System& system, const Cu
     }
     if (globals != NULL)
         globals->upload(globalParamValues);
-    bool useCutoff = (force.getNonbondedMethod() != CustomHbondForce::NoCutoff);
-    bool usePeriodic = (force.getNonbondedMethod() != CustomHbondForce::NoCutoff && force.getNonbondedMethod() != CustomHbondForce::CutoffNonPeriodic);
-    Lepton::ParsedExpression energyExpression = Lepton::Parser::parse(force.getEnergyFunction(), functions).optimize();
-    Lepton::ParsedExpression rForceExpression = energyExpression.differentiate("r").optimize();
-    Lepton::ParsedExpression thetaForceExpression = energyExpression.differentiate("theta").optimize();
-    Lepton::ParsedExpression psiForceExpression = energyExpression.differentiate("psi").optimize();
-    Lepton::ParsedExpression chiForceExpression = energyExpression.differentiate("chi").optimize();
-    map<string, Lepton::ParsedExpression> forceExpressions;
-    forceExpressions["energy += "] = energyExpression;
-    forceExpressions["float dEdR = "] = rForceExpression;
-    forceExpressions["float dEdTheta = "] = thetaForceExpression;
-    forceExpressions["float dEdPsi = "] = psiForceExpression;
-    forceExpressions["float dEdChi = "] = chiForceExpression;
-
-    // Create the kernels.
-
     map<string, string> variables;
-    variables["r"] = "r";
-    variables["theta"] = "theta";
-    variables["psi"] = "psi";
-    variables["chi"] = "chi";
     for (int i = 0; i < force.getNumPerDonorParameters(); i++) {
         const string& name = force.getPerDonorParameterName(i);
         variables[name] = "donorParams"+donorParams->getParameterSuffix(i);
@@ -2667,38 +2665,172 @@ void OpenCLCalcCustomHbondForceKernel::initialize(const System& system, const Cu
         const string& name = force.getGlobalParameterName(i);
         variables[name] = "globals["+intToString(i)+"]";
     }
-    stringstream compute, extraArgs;
+
+    // Now to generate the kernel.  First, it needs to calculate all distances, angles,
+    // and dihedrals the expression depends on.
+
+    map<string, vector<int> > distances;
+    map<string, vector<int> > angles;
+    map<string, vector<int> > dihedrals;
+    Lepton::ParsedExpression energyExpression = CustomHbondForceImpl::prepareExpression(force, functions, distances, angles, dihedrals);
+    map<string, Lepton::ParsedExpression> forceExpressions;
+    set<string> computedDeltas;
+    computedDeltas.insert("D1A1");
+    string atomNames[] = {"A1", "A2", "A3", "D1", "D2", "D3"};
+    string atomNamesLower[] = {"a1", "a2", "a3", "d1", "d2", "d3"};
+    stringstream computeDonor, computeAcceptor, extraArgs;
+    int index = 0;
+    for (map<string, vector<int> >::const_iterator iter = distances.begin(); iter != distances.end(); ++iter, ++index) {
+        const vector<int>& atoms = iter->second;
+        string deltaName = atomNames[atoms[0]]+atomNames[atoms[1]];
+        if (computedDeltas.count(deltaName) == 0) {
+            addDonorAndAcceptorCode(computeDonor, computeAcceptor, "float4 delta"+deltaName+" = delta("+atomNamesLower[atoms[0]]+", "+atomNamesLower[atoms[1]]+");\n");
+            computedDeltas.insert(deltaName);
+        }
+        addDonorAndAcceptorCode(computeDonor, computeAcceptor, "float r_"+deltaName+" = sqrt(delta"+deltaName+".w);\n");
+        variables[iter->first] = "r_"+deltaName;
+        forceExpressions["float dEdDistance"+intToString(index)+" = "] = energyExpression.differentiate(iter->first).optimize();
+    }
+    index = 0;
+    for (map<string, vector<int> >::const_iterator iter = angles.begin(); iter != angles.end(); ++iter, ++index) {
+        const vector<int>& atoms = iter->second;
+        string deltaName1 = atomNames[atoms[1]]+atomNames[atoms[0]];
+        string deltaName2 = atomNames[atoms[1]]+atomNames[atoms[2]];
+        string angleName = "angle_"+atomNames[atoms[0]]+atomNames[atoms[1]]+atomNames[atoms[2]];
+        if (computedDeltas.count(deltaName1) == 0) {
+            addDonorAndAcceptorCode(computeDonor, computeAcceptor, "float4 delta"+deltaName1+" = delta("+atomNamesLower[atoms[1]]+", "+atomNamesLower[atoms[0]]+");\n");
+            computedDeltas.insert(deltaName1);
+        }
+        if (computedDeltas.count(deltaName2) == 0) {
+            addDonorAndAcceptorCode(computeDonor, computeAcceptor, "float4 delta"+deltaName2+" = delta("+atomNamesLower[atoms[1]]+", "+atomNamesLower[atoms[2]]+");\n");
+            computedDeltas.insert(deltaName2);
+        }
+        addDonorAndAcceptorCode(computeDonor, computeAcceptor, "float "+angleName+" = computeAngle(delta"+deltaName1+", delta"+deltaName2+");\n");
+        variables[iter->first] = angleName;
+        forceExpressions["float dEdAngle"+intToString(index)+" = "] = energyExpression.differentiate(iter->first).optimize();
+    }
+    index = 0;
+    for (map<string, vector<int> >::const_iterator iter = dihedrals.begin(); iter != dihedrals.end(); ++iter, ++index) {
+        const vector<int>& atoms = iter->second;
+        string deltaName1 = atomNames[atoms[0]]+atomNames[atoms[1]];
+        string deltaName2 = atomNames[atoms[2]]+atomNames[atoms[1]];
+        string deltaName3 = atomNames[atoms[2]]+atomNames[atoms[3]];
+        string crossName1 = "cross_"+deltaName1+"_"+deltaName2;
+        string crossName2 = "cross_"+deltaName2+"_"+deltaName3;
+        string dihedralName = "dihedral_"+atomNames[atoms[0]]+atomNames[atoms[1]]+atomNames[atoms[2]]+atomNames[atoms[3]];
+        if (computedDeltas.count(deltaName1) == 0) {
+            addDonorAndAcceptorCode(computeDonor, computeAcceptor, "float4 delta"+deltaName1+" = delta("+atomNamesLower[atoms[0]]+", "+atomNamesLower[atoms[1]]+");\n");
+            computedDeltas.insert(deltaName1);
+        }
+        if (computedDeltas.count(deltaName2) == 0) {
+            addDonorAndAcceptorCode(computeDonor, computeAcceptor, "float4 delta"+deltaName2+" = delta("+atomNamesLower[atoms[2]]+", "+atomNamesLower[atoms[1]]+");\n");
+            computedDeltas.insert(deltaName2);
+        }
+        if (computedDeltas.count(deltaName3) == 0) {
+            addDonorAndAcceptorCode(computeDonor, computeAcceptor, "float4 delta"+deltaName3+" = delta("+atomNamesLower[atoms[2]]+", "+atomNamesLower[atoms[3]]+");\n");
+            computedDeltas.insert(deltaName3);
+        }
+        addDonorAndAcceptorCode(computeDonor, computeAcceptor, "float4 "+crossName1+" = computeCross(delta"+deltaName1+", delta"+deltaName2+");\n");
+        addDonorAndAcceptorCode(computeDonor, computeAcceptor, "float4 "+crossName2+" = computeCross(delta"+deltaName2+", delta"+deltaName3+");\n");
+        addDonorAndAcceptorCode(computeDonor, computeAcceptor, "float "+dihedralName+" = computeAngle("+crossName1+", "+crossName2+");\n");
+        addDonorAndAcceptorCode(computeDonor, computeAcceptor, dihedralName+" *= (delta"+deltaName1+".x*"+crossName2+".x + delta"+deltaName1+".y*"+crossName2+".y + delta"+deltaName1+".z*"+crossName2+".z < 0 ? -1 : 1);\n");
+        variables[iter->first] = dihedralName;
+        forceExpressions["float dEdDihedral"+intToString(index)+" = "] = energyExpression.differentiate(iter->first).optimize();
+    }
+
+    // Next it needs to load parameters from global memory.
+
     if (force.getNumGlobalParameters() > 0)
         extraArgs << ", __constant float* globals";
     for (int i = 0; i < (int) donorParams->getBuffers().size(); i++) {
         const OpenCLNonbondedUtilities::ParameterInfo& buffer = donorParams->getBuffers()[i];
         extraArgs << ", __global "+buffer.getType()+"* donor"+buffer.getName();
-        compute<<buffer.getType()<<" donorParams"<<(i+1)<<" = donor"<<buffer.getName()<<"[index];\n";
+        addDonorAndAcceptorCode(computeDonor, computeAcceptor, buffer.getType()+" donorParams"+intToString(i+1)+" = donor"+buffer.getName()+"[index];\n");
     }
     for (int i = 0; i < (int) acceptorParams->getBuffers().size(); i++) {
         const OpenCLNonbondedUtilities::ParameterInfo& buffer = acceptorParams->getBuffers()[i];
         extraArgs << ", __global "+buffer.getType()+"* acceptor"+buffer.getName();
-        compute<<buffer.getType()<<" acceptorParams"<<(i+1)<<" = acceptor"<<buffer.getName()<<"[index];\n";
+        addDonorAndAcceptorCode(computeDonor, computeAcceptor, buffer.getType()+" acceptorParams"+intToString(i+1)+" = acceptor"+buffer.getName()+"[index];\n");
     }
-    compute << OpenCLExpressionUtilities::createExpressions(forceExpressions, variables, functionDefinitions, "temp", "functionParams");
+
+    // Now evaluate the expressions.
+
+    computeAcceptor << OpenCLExpressionUtilities::createExpressions(forceExpressions, variables, functionDefinitions, "temp", "functionParams");
+    forceExpressions["energy += "] = energyExpression;
+    computeDonor << OpenCLExpressionUtilities::createExpressions(forceExpressions, variables, functionDefinitions, "temp", "functionParams");
+
+    // Finally, apply forces to atoms.
+
+    index = 0;
+    for (map<string, vector<int> >::const_iterator iter = distances.begin(); iter != distances.end(); ++iter, ++index) {
+        const vector<int>& atoms = iter->second;
+        string deltaName = atomNames[atoms[0]]+atomNames[atoms[1]];
+        string value = "(dEdDistance"+intToString(index)+"/r_"+deltaName+")*delta"+deltaName+".xyz";
+        applyDonorAndAcceptorForces(computeDonor, computeAcceptor, atoms[0], "-"+value);
+        applyDonorAndAcceptorForces(computeDonor, computeAcceptor, atoms[1], value);
+    }
+    index = 0;
+    for (map<string, vector<int> >::const_iterator iter = angles.begin(); iter != angles.end(); ++iter, ++index) {
+        const vector<int>& atoms = iter->second;
+        string deltaName1 = atomNames[atoms[1]]+atomNames[atoms[0]];
+        string deltaName2 = atomNames[atoms[1]]+atomNames[atoms[2]];
+        addDonorAndAcceptorCode(computeDonor, computeAcceptor, "{\n");
+        addDonorAndAcceptorCode(computeDonor, computeAcceptor, "float4 crossProd = cross(delta"+deltaName2+", delta"+deltaName1+");\n");
+        addDonorAndAcceptorCode(computeDonor, computeAcceptor, "float lengthCross = max(length(crossProd), 1e-6f);\n");
+        addDonorAndAcceptorCode(computeDonor, computeAcceptor, "float4 deltaCross0 = -cross(delta"+deltaName1+", crossProd)*dEdAngle"+intToString(index)+"/(delta"+deltaName1+".w*lengthCross);\n");
+        addDonorAndAcceptorCode(computeDonor, computeAcceptor, "float4 deltaCross2 = cross(delta"+deltaName2+", crossProd)*dEdAngle"+intToString(index)+"/(delta"+deltaName2+".w*lengthCross);\n");
+        addDonorAndAcceptorCode(computeDonor, computeAcceptor, "float4 deltaCross1 = -(deltaCross0+deltaCross2);\n");
+        applyDonorAndAcceptorForces(computeDonor, computeAcceptor, atoms[0], "deltaCross0.xyz");
+        applyDonorAndAcceptorForces(computeDonor, computeAcceptor, atoms[1], "deltaCross1.xyz");
+        applyDonorAndAcceptorForces(computeDonor, computeAcceptor, atoms[2], "deltaCross2.xyz");
+        addDonorAndAcceptorCode(computeDonor, computeAcceptor, "}\n");
+    }
+    index = 0;
+    for (map<string, vector<int> >::const_iterator iter = dihedrals.begin(); iter != dihedrals.end(); ++iter, ++index) {
+        const vector<int>& atoms = iter->second;
+        string deltaName1 = atomNames[atoms[0]]+atomNames[atoms[1]];
+        string deltaName2 = atomNames[atoms[2]]+atomNames[atoms[1]];
+        string deltaName3 = atomNames[atoms[2]]+atomNames[atoms[3]];
+        string crossName1 = "cross_"+deltaName1+"_"+deltaName2;
+        string crossName2 = "cross_"+deltaName2+"_"+deltaName3;
+        addDonorAndAcceptorCode(computeDonor, computeAcceptor, "{\n");
+        addDonorAndAcceptorCode(computeDonor, computeAcceptor, "float r = sqrt(delta"+deltaName2+".w);\n");
+        addDonorAndAcceptorCode(computeDonor, computeAcceptor, "float4 ff;\n");
+        addDonorAndAcceptorCode(computeDonor, computeAcceptor, "ff.x = (-dEdDihedral"+intToString(index)+"*r)/"+crossName1+".w;\n");
+        addDonorAndAcceptorCode(computeDonor, computeAcceptor, "ff.y = (delta"+deltaName1+".x*delta"+deltaName2+".x + delta"+deltaName1+".y*delta"+deltaName2+".y + delta"+deltaName1+".z*delta"+deltaName2+".z)/delta"+deltaName2+".w;\n");
+        addDonorAndAcceptorCode(computeDonor, computeAcceptor, "ff.z = (delta"+deltaName3+".x*delta"+deltaName2+".x + delta"+deltaName3+".y*delta"+deltaName2+".y + delta"+deltaName3+".z*delta"+deltaName2+".z)/delta"+deltaName2+".w;\n");
+        addDonorAndAcceptorCode(computeDonor, computeAcceptor, "ff.w = (dEdDihedral"+intToString(index)+"*r)/"+crossName2+".w;\n");
+        addDonorAndAcceptorCode(computeDonor, computeAcceptor, "float4 internalF0 = ff.x*"+crossName1+";\n");
+        addDonorAndAcceptorCode(computeDonor, computeAcceptor, "float4 internalF3 = ff.w*"+crossName2+";\n");
+        addDonorAndAcceptorCode(computeDonor, computeAcceptor, "float4 s = ff.y*internalF0 - ff.z*internalF3;\n");
+        applyDonorAndAcceptorForces(computeDonor, computeAcceptor, atoms[0], "internalF0.xyz");
+        applyDonorAndAcceptorForces(computeDonor, computeAcceptor, atoms[1], "s.xyz-internalF0.xyz");
+        applyDonorAndAcceptorForces(computeDonor, computeAcceptor, atoms[2], "-s.xyz-internalF3.xyz");
+        applyDonorAndAcceptorForces(computeDonor, computeAcceptor, atoms[3], "internalF3.xyz");
+        addDonorAndAcceptorCode(computeDonor, computeAcceptor, "}\n");
+    }
+
+    // Generate the kernels.
+
     map<string, string> replacements;
-    replacements["COMPUTE_FORCE"] = compute.str();
+    replacements["COMPUTE_DONOR_FORCE"] = computeDonor.str();
+    replacements["COMPUTE_ACCEPTOR_FORCE"] = computeAcceptor.str();
     replacements["PARAMETER_ARGUMENTS"] = extraArgs.str()+tableArgs.str();
     map<string, string> defines;
     defines["PADDED_NUM_ATOMS"] = intToString(cl.getPaddedNumAtoms());
     defines["NUM_DONORS"] = intToString(force.getNumDonors());
     defines["NUM_ACCEPTORS"] = intToString(force.getNumAcceptors());
     defines["M_PI"] = doubleToString(M_PI);
-    if (!isZeroExpression(rForceExpression))
-        defines["INCLUDE_R"] = "1";
-    if (!isZeroExpression(thetaForceExpression))
-        defines["INCLUDE_THETA"] = "1";
-    if (!isZeroExpression(psiForceExpression))
-        defines["INCLUDE_PSI"] = "1";
-    if (!isZeroExpression(chiForceExpression))
-        defines["INCLUDE_CHI"] = "1";
+    if (force.getNonbondedMethod() != CustomHbondForce::NoCutoff) {
+        defines["USE_CUTOFF"] = "1";
+        defines["CUTOFF_SQUARED"] = doubleToString(force.getCutoffDistance()*force.getCutoffDistance());
+    }
+    if (force.getNonbondedMethod() != CustomHbondForce::NoCutoff && force.getNonbondedMethod() != CustomHbondForce::CutoffNonPeriodic)
+        defines["USE_PERIODIC"] = "1";
+
     cl::Program program = cl.createProgram(cl.replaceStrings(OpenCLKernelSources::customHbondForce, replacements), defines);
-    kernel = cl::Kernel(program, "computeHbonds");
+    donorKernel = cl::Kernel(program, "computeDonorForces");
+    acceptorKernel = cl::Kernel(program, "computeAcceptorForces");
 }
 
 void OpenCLCalcCustomHbondForceKernel::executeForces(ContextImpl& context) {
@@ -2716,27 +2848,54 @@ void OpenCLCalcCustomHbondForceKernel::executeForces(ContextImpl& context) {
     if (!hasInitializedKernel) {
         hasInitializedKernel = true;
         int index = 0;
-        kernel.setArg<cl::Buffer>(index++, cl.getForceBuffers().getDeviceBuffer());
-        kernel.setArg<cl::Buffer>(index++, cl.getEnergyBuffer().getDeviceBuffer());
-        kernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
-        kernel.setArg<cl::Buffer>(index++, donors->getDeviceBuffer());
-        kernel.setArg<cl::Buffer>(index++, acceptors->getDeviceBuffer());
-        kernel.setArg<cl::Buffer>(index++, donorBufferIndices->getDeviceBuffer());
-        kernel.setArg<cl::Buffer>(index++, acceptorBufferIndices->getDeviceBuffer());
-        kernel.setArg(index++, OpenCLContext::ThreadBlockSize*sizeof(mm_float4), NULL);
-        kernel.setArg(index++, OpenCLContext::ThreadBlockSize*sizeof(mm_float4), NULL);
+        donorKernel.setArg<cl::Buffer>(index++, cl.getForceBuffers().getDeviceBuffer());
+        donorKernel.setArg<cl::Buffer>(index++, cl.getEnergyBuffer().getDeviceBuffer());
+        donorKernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
+        donorKernel.setArg<cl::Buffer>(index++, donors->getDeviceBuffer());
+        donorKernel.setArg<cl::Buffer>(index++, acceptors->getDeviceBuffer());
+        donorKernel.setArg<cl::Buffer>(index++, donorBufferIndices->getDeviceBuffer());
+        donorKernel.setArg(index++, 3*OpenCLContext::ThreadBlockSize*sizeof(mm_float4), NULL);
         if (globals != NULL)
-            kernel.setArg<cl::Buffer>(index++, globals->getDeviceBuffer());
+            donorKernel.setArg<cl::Buffer>(index++, globals->getDeviceBuffer());
         for (int i = 0; i < (int) donorParams->getBuffers().size(); i++) {
             const OpenCLNonbondedUtilities::ParameterInfo& buffer = donorParams->getBuffers()[i];
-            kernel.setArg<cl::Buffer>(index++, buffer.getBuffer());
+            donorKernel.setArg<cl::Buffer>(index++, buffer.getBuffer());
         }
         for (int i = 0; i < (int) acceptorParams->getBuffers().size(); i++) {
             const OpenCLNonbondedUtilities::ParameterInfo& buffer = acceptorParams->getBuffers()[i];
-            kernel.setArg<cl::Buffer>(index++, buffer.getBuffer());
+            donorKernel.setArg<cl::Buffer>(index++, buffer.getBuffer());
+        }
+        if (tabulatedFunctionParams != NULL) {
+            for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
+                donorKernel.setArg<cl::Buffer>(index++, tabulatedFunctions[i]->getDeviceBuffer());
+            donorKernel.setArg<cl::Buffer>(index++, tabulatedFunctionParams->getDeviceBuffer());
+        }
+        index = 0;
+        acceptorKernel.setArg<cl::Buffer>(index++, cl.getForceBuffers().getDeviceBuffer());
+        acceptorKernel.setArg<cl::Buffer>(index++, cl.getEnergyBuffer().getDeviceBuffer());
+        acceptorKernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
+        acceptorKernel.setArg<cl::Buffer>(index++, donors->getDeviceBuffer());
+        acceptorKernel.setArg<cl::Buffer>(index++, acceptors->getDeviceBuffer());
+        acceptorKernel.setArg<cl::Buffer>(index++, acceptorBufferIndices->getDeviceBuffer());
+        acceptorKernel.setArg(index++, 3*OpenCLContext::ThreadBlockSize*sizeof(mm_float4), NULL);
+        if (globals != NULL)
+            acceptorKernel.setArg<cl::Buffer>(index++, globals->getDeviceBuffer());
+        for (int i = 0; i < (int) donorParams->getBuffers().size(); i++) {
+            const OpenCLNonbondedUtilities::ParameterInfo& buffer = donorParams->getBuffers()[i];
+            acceptorKernel.setArg<cl::Buffer>(index++, buffer.getBuffer());
+        }
+        for (int i = 0; i < (int) acceptorParams->getBuffers().size(); i++) {
+            const OpenCLNonbondedUtilities::ParameterInfo& buffer = acceptorParams->getBuffers()[i];
+            acceptorKernel.setArg<cl::Buffer>(index++, buffer.getBuffer());
+        }
+        if (tabulatedFunctionParams != NULL) {
+            for (int i = 0; i < (int) tabulatedFunctions.size(); i++)
+                acceptorKernel.setArg<cl::Buffer>(index++, tabulatedFunctions[i]->getDeviceBuffer());
+            acceptorKernel.setArg<cl::Buffer>(index++, tabulatedFunctionParams->getDeviceBuffer());
         }
     }
-    cl.executeKernel(kernel, std::max(numDonors, numAcceptors));
+    cl.executeKernel(donorKernel, std::max(numDonors, numAcceptors));
+    cl.executeKernel(acceptorKernel, std::max(numDonors, numAcceptors));
 }
 
 double OpenCLCalcCustomHbondForceKernel::executeEnergy(ContextImpl& context) {

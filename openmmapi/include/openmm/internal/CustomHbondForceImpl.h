@@ -35,6 +35,7 @@
 #include "ForceImpl.h"
 #include "openmm/CustomHbondForce.h"
 #include "openmm/Kernel.h"
+#include "lepton/CustomFunction.h"
 #include "lepton/ExpressionTreeNode.h"
 #include "lepton/ParsedExpression.h"
 #include <utility>
@@ -68,15 +69,16 @@ public:
      * as follows: 0=a1, 1=a2, 2=a3, 3=d1, 4=d2, 5=d3.
      *
      * @param force     the CustomHbondForce to process
-     * @param distances on exist, this will contain an entry for each distance used in the expression.  The key is the name
+     * @param functions definitions of custom function that may appear in the expression
+     * @param distances on exit, this will contain an entry for each distance used in the expression.  The key is the name
      *                  of the corresponding variable, and the value is the list of particle indices.
-     * @param angles    on exist, this will contain an entry for each angle used in the expression.  The key is the name
+     * @param angles    on exit, this will contain an entry for each angle used in the expression.  The key is the name
      *                  of the corresponding variable, and the value is the list of particle indices.
-     * @param dihedrals on exist, this will contain an entry for each dihedral used in the expression.  The key is the name
+     * @param dihedrals on exit, this will contain an entry for each dihedral used in the expression.  The key is the name
      *                  of the corresponding variable, and the value is the list of particle indices.
      * @return a Parsed expression for the energy
      */
-    static Lepton::ParsedExpression prepareExpression(const CustomHbondForce& force, std::map<std::string, std::vector<int> >& distances,
+    static Lepton::ParsedExpression prepareExpression(const CustomHbondForce& force, const std::map<std::string, Lepton::CustomFunction*>& functions, std::map<std::string, std::vector<int> >& distances,
             std::map<std::string, std::vector<int> >& angles, std::map<std::string, std::vector<int> >& dihedrals);
 private:
     class FunctionPlaceholder;

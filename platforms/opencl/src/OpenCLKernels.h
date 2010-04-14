@@ -710,7 +710,7 @@ private:
     std::vector<cl_float> globalParamValues;
     std::vector<OpenCLArray<mm_float4>*> tabulatedFunctions;
     System& system;
-    cl::Kernel kernel;
+    cl::Kernel donorKernel, acceptorKernel;
 };
 
 /**

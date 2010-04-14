@@ -25,7 +25,6 @@ float4 deltaPeriodic(float4 vec1, float4 vec2) {
 /**
  * Compute the angle between two vectors.  The w component of each vector should contain the squared magnitude.
  */
-
 float computeAngle(float4 vec1, float4 vec2) {
     float dot = vec1.x*vec2.x + vec1.y*vec2.y + vec1.z*vec2.z;
     float cosine = dot/sqrt(vec1.w*vec2.w);
@@ -45,120 +44,165 @@ float computeAngle(float4 vec1, float4 vec2) {
 }
 
 /**
- * Compute hbond interactions.
+ * Compute the cross product of two vectors, setting the fourth component to the squared magnitude.
  */
+float4 computeCross(float4 vec1, float4 vec2) {
+    float4 result = cross(vec1, vec2);
+    result.w = result.x*result.x + result.y*result.y + result.z*result.z;
+    return result;
+}
 
-__kernel void computeHbonds(__global float4* forceBuffers, __global float* energyBuffer, __global float4* posq, /*__global unsigned int* exclusions,
-        __global unsigned int* exclusionIndices, */__global int4* donorAtoms, __global int4* acceptorAtoms, __global int4* donorBufferIndices, __global int4* acceptorBufferIndices, __local float4* posBuffer, __local float4* deltaBuffer
+/**
+ * Compute forces on donors.
+ */
+__kernel void computeDonorForces(__global float4* forceBuffers, __global float* energyBuffer, __global float4* posq, /*__global unsigned int* exclusions,
+        __global unsigned int* exclusionIndices, */__global int4* donorAtoms, __global int4* acceptorAtoms, __global int4* donorBufferIndices, __local float4* posBuffer
         PARAMETER_ARGUMENTS) {
     float energy = 0.0f;
-    unsigned int tgx = get_local_id(0) & (get_local_size(0)-1);
-    unsigned int tbx = get_local_id(0) - tgx;
     float4 f1 = 0;
     float4 f2 = 0;
-    for (int donorIndex = get_global_id(0); donorIndex < NUM_DONORS; donorIndex += get_global_size(0)) {
+    float4 f3 = 0;
+    for (int donorStart = 0; donorStart < NUM_DONORS; donorStart += get_global_size(0)) {
         // Load information about the donor this thread will compute forces on.
 
-        int4 atoms = donorAtoms[donorIndex];
-        float4 d1 = posq[atoms.x];
-        float4 d2 = posq[atoms.y];
-        float4 d3 = posq[atoms.z];
-        float4 deltaD1D2 = delta(d1, d2);
+        int donorIndex = donorStart+get_global_id(0);
+        int4 atoms;
+        float4 d1, d2, d3;
+        if (donorIndex < NUM_DONORS) {
+            atoms = donorAtoms[donorIndex];
+            d1 = posq[atoms.x];
+            d2 = posq[atoms.y];
+            d3 = posq[atoms.z];
+        }
+        else
+            atoms = (int4) (-1, -1, -1, -1);
         for (int acceptorStart = 0; acceptorStart < NUM_ACCEPTORS; acceptorStart += get_local_size(0)) {
             // Load the next block of acceptors into local memory.
 
             int blockSize = min((int) get_local_size(0), NUM_ACCEPTORS-acceptorStart);
-            if (tgx < blockSize) {
-                int4 atoms2 = acceptorAtoms[acceptorStart+tgx];
-                float4 pos1 = posq[atoms2.x];
-                float4 pos2 = posq[atoms2.y];
-                float4 pos3 = posq[atoms2.z];
-                posBuffer[get_local_id(0)] = pos1;
-                deltaBuffer[get_local_id(0)] = delta(pos2, pos1);
+            if (get_local_id(0) < blockSize) {
+                int4 atoms2 = acceptorAtoms[acceptorStart+get_local_id(0)];
+                posBuffer[3*get_local_id(0)] = posq[atoms2.x];
+                posBuffer[3*get_local_id(0)+1] = posq[atoms2.y];
+                posBuffer[3*get_local_id(0)+2] = posq[atoms2.z];
             }
             barrier(CLK_LOCAL_MEM_FENCE);
-            for (int index = 0; index < blockSize; index++) {
-                // Compute the interaction between a donor and an acceptor.
+            if (donorIndex < NUM_DONORS) {
+                for (int index = 0; index < blockSize; index++) {
+                    // Compute the interaction between a donor and an acceptor.
 
-                float4 a1 = posBuffer[index];
-                float4 deltaD1A1 = deltaPeriodic(d1, a1);
+                    float4 a1 = posBuffer[3*index];
+                    float4 a2 = posBuffer[3*index+1];
+                    float4 a3 = posBuffer[3*index+2];
+                    float4 deltaD1A1 = deltaPeriodic(d1, a1);
 #ifdef USE_CUTOFF
-                if (deltaD1A1.w < CUTOFF_SQUARED) {
+                    if (deltaD1A1.w < CUTOFF_SQUARED) {
 #endif
-                    // Compute variables the force can depend on.
-
-                    float r = sqrt(deltaD1A1.w);
-                    float4 deltaA2A1 = deltaBuffer[index];
-                    float theta = computeAngle(deltaD1A1, deltaD1D2);
-                    float psi = computeAngle(deltaD1A1, deltaA2A1);
-                    float4 cross1 = cross(deltaA2A1, deltaD1A1);
-                    float4 cross2 = cross(deltaD1A1, deltaD1D2);
-                    cross1.w = cross1.x*cross1.x + cross1.y*cross1.y + cross1.z*cross1.z;
-                    cross2.w = cross2.x*cross2.x + cross2.y*cross2.y + cross2.z*cross2.z;
-                    float chi = computeAngle(cross1, cross2);
-                    chi = (dot(deltaA2A1, cross2) < 0 ? -chi : chi);
-                    COMPUTE_FORCE
-
-#ifdef INCLUDE_R
-                    // Apply forces based on r.
-
-                    f1.xyz -= (dEdR/r)*deltaD1A1.xyz;
-#endif
-
-#ifdef INCLUDE_THETA
-                    // Apply forces based on theta.
-
-                    float4 thetaCross = cross(deltaD1D2, deltaD1A1);
-                    float lengthThetaCross = max(length(thetaCross), 1e-6f);
-                    float4 deltaCross0 = cross(deltaD1D2, thetaCross)*dEdTheta/(deltaD1D2.w*lengthThetaCross);
-                    float4 deltaCross2 = -cross(deltaD1A1, thetaCross)*dEdTheta/(deltaD1A1.w*lengthThetaCross);
-                    float4 deltaCross1 = -(deltaCross0+deltaCross2);
-                    f1.xyz += deltaCross1.xyz;
-                    f2.xyz += deltaCross0.xyz;
-#endif
-
-#ifdef INCLUDE_PSI
-                    // Apply forces based on psi.
-
-                    float4 psiCross = cross(deltaA2A1, deltaD1A1);
-                    float lengthPsiCross = max(length(psiCross), 1e-6f);
-                    deltaCross0 = cross(deltaD1A1, psiCross)*dEdPsi/(deltaD1A1.w*lengthPsiCross);
-//                    float4 deltaCross2 = -cross(deltaA2A1, psiCross)*dEdPsi/(deltaA2A1.w*lengthPsiCross);
-//                    float4 deltaCross1 = -(deltaCross0+deltaCross2);
-                    f1.xyz += deltaCross0.xyz;
-#endif
-
-#ifdef INCLUDE_CHI
-                    // Apply forces based on chi.
-
-                    float4 ff;
-                    ff.x = (-dEdChi*r)/cross1.w;
-                    ff.y = (deltaA2A1.x*deltaD1A1.x + deltaA2A1.y*deltaD1A1.y + deltaA2A1.z*deltaD1A1.z)/deltaD1A1.w;
-                    ff.z = (deltaD1D2.x*deltaD1A1.x + deltaD1D2.y*deltaD1A1.y + deltaD1D2.z*deltaD1A1.z)/deltaD1A1.w;
-                    ff.w = (dEdChi*r)/cross2.w;
-                    float4 internalF0 = ff.x*cross1;
-                    float4 internalF3 = ff.w*cross2;
-                    float4 s = ff.y*internalF0 - ff.z*internalF3;
-                    f1.xyz -= s.xyz+internalF3.xyz;
-                    f2.xyz += internalF3.xyz;
-#endif
+                        COMPUTE_DONOR_FORCE
 #ifdef USE_CUTOFF
+                    }
+#endif
                 }
-#endif
             }
         }
 
         // Write results
 
         int4 bufferIndices = donorBufferIndices[donorIndex];
-        unsigned int offset1 = atoms.x+bufferIndices.x*PADDED_NUM_ATOMS;
-        unsigned int offset2 = atoms.y+bufferIndices.y*PADDED_NUM_ATOMS;
-        float4 force1 = forceBuffers[offset1];
-        float4 force2 = forceBuffers[offset2];
-        force1.xyz += f1.xyz;
-        force2.xyz += f2.xyz;
-        forceBuffers[offset1] = force1;
-        forceBuffers[offset2] = force2;
+        if (atoms.x > -1) {
+            unsigned int offset = atoms.x+bufferIndices.x*PADDED_NUM_ATOMS;
+            float4 force = forceBuffers[offset];
+            force.xyz += f1.xyz;
+            forceBuffers[offset] = force;
+        }
+        if (atoms.y > -1) {
+            unsigned int offset = atoms.y+bufferIndices.y*PADDED_NUM_ATOMS;
+            float4 force = forceBuffers[offset];
+            force.xyz += f2.xyz;
+            forceBuffers[offset] = force;
+        }
+        if (atoms.z > -1) {
+            unsigned int offset = atoms.z+bufferIndices.z*PADDED_NUM_ATOMS;
+            float4 force = forceBuffers[offset];
+            force.xyz += f3.xyz;
+            forceBuffers[offset] = force;
+        }
     }
     energyBuffer[get_global_id(0)] += energy;
+}
+/**
+ * Compute forces on acceptors.
+ */
+__kernel void computeAcceptorForces(__global float4* forceBuffers, __global float* energyBuffer, __global float4* posq, /*__global unsigned int* exclusions,
+        __global unsigned int* exclusionIndices, */__global int4* donorAtoms, __global int4* acceptorAtoms, __global int4* acceptorBufferIndices, __local float4* posBuffer
+        PARAMETER_ARGUMENTS) {
+    float4 f1 = 0;
+    float4 f2 = 0;
+    float4 f3 = 0;
+    for (int acceptorStart = 0; acceptorStart < NUM_ACCEPTORS; acceptorStart += get_global_size(0)) {
+        // Load information about the acceptor this thread will compute forces on.
+
+        int acceptorIndex = acceptorStart+get_global_id(0);
+        int4 atoms;
+        float4 a1, a2, a3;
+        if (acceptorIndex < NUM_ACCEPTORS) {
+            atoms = acceptorAtoms[acceptorIndex];
+            a1 = posq[atoms.x];
+            a2 = posq[atoms.y];
+            a3 = posq[atoms.z];
+        }
+        else
+            atoms = (int4) (-1, -1, -1, -1);
+        for (int donorStart = 0; donorStart < NUM_DONORS; donorStart += get_local_size(0)) {
+            // Load the next block of donors into local memory.
+
+            int blockSize = min((int) get_local_size(0), NUM_DONORS-donorStart);
+            if (get_local_id(0) < blockSize) {
+                int4 atoms2 = donorAtoms[donorStart+get_local_id(0)];
+                posBuffer[3*get_local_id(0)] = posq[atoms2.x];
+                posBuffer[3*get_local_id(0)+1] = posq[atoms2.y];
+                posBuffer[3*get_local_id(0)+2] = posq[atoms2.z];
+            }
+            barrier(CLK_LOCAL_MEM_FENCE);
+            if (acceptorIndex < NUM_ACCEPTORS) {
+                for (int index = 0; index < blockSize; index++) {
+                    // Compute the interaction between a donor and an acceptor.
+
+                    float4 d1 = posBuffer[3*index];
+                    float4 d2 = posBuffer[3*index+1];
+                    float4 d3 = posBuffer[3*index+2];
+                    float4 deltaD1A1 = deltaPeriodic(d1, a1);
+#ifdef USE_CUTOFF
+                    if (deltaD1A1.w < CUTOFF_SQUARED) {
+#endif
+                        COMPUTE_ACCEPTOR_FORCE
+#ifdef USE_CUTOFF
+                    }
+#endif
+                }
+            }
+        }
+
+        // Write results
+
+        int4 bufferIndices = acceptorBufferIndices[acceptorIndex];
+        if (atoms.x > -1) {
+            unsigned int offset = atoms.x+bufferIndices.x*PADDED_NUM_ATOMS;
+            float4 force = forceBuffers[offset];
+            force.xyz += f1.xyz;
+            forceBuffers[offset] = force;
+        }
+        if (atoms.y > -1) {
+            unsigned int offset = atoms.y+bufferIndices.y*PADDED_NUM_ATOMS;
+            float4 force = forceBuffers[offset];
+            force.xyz += f2.xyz;
+            forceBuffers[offset] = force;
+        }
+        if (atoms.z > -1) {
+            unsigned int offset = atoms.z+bufferIndices.z*PADDED_NUM_ATOMS;
+            float4 force = forceBuffers[offset];
+            force.xyz += f3.xyz;
+            forceBuffers[offset] = force;
+        }
+    }
 }

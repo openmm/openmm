@@ -199,24 +199,16 @@ map<string, double> CustomHbondForceImpl::getDefaultParameters() {
     return parameters;
 }
 
-ParsedExpression CustomHbondForceImpl::prepareExpression(const CustomHbondForce& force, map<string, vector<int> >& distances,
+ParsedExpression CustomHbondForceImpl::prepareExpression(const CustomHbondForce& force, const map<string, CustomFunction*>& customFunctions, map<string, vector<int> >& distances,
         map<string, vector<int> >& angles, map<string, vector<int> >& dihedrals) {
     CustomHbondForceImpl::FunctionPlaceholder custom(1);
     CustomHbondForceImpl::FunctionPlaceholder distance(2);
     CustomHbondForceImpl::FunctionPlaceholder angle(3);
     CustomHbondForceImpl::FunctionPlaceholder dihedral(4);
-    map<string, CustomFunction*> functions;
+    map<string, CustomFunction*> functions = customFunctions;
     functions["distance"] = &distance;
     functions["angle"] = &angle;
     functions["dihedral"] = &dihedral;
-    for (int i = 0; i < force.getNumFunctions(); i++) {
-        string name;
-        vector<double> values;
-        double min, max;
-        bool interpolating;
-        force.getFunctionParameters(i, name, values, min, max, interpolating);
-        functions[name] = &custom;
-    }
     ParsedExpression expression = Lepton::Parser::parse(force.getEnergyFunction(), functions);
     map<string, int> atoms;
     atoms["a1"] = 0;

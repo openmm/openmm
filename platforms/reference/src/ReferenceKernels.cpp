@@ -1314,7 +1314,7 @@ void ReferenceCalcCustomHbondForceKernel::initialize(const System& system, const
     map<string, vector<int> > distances;
     map<string, vector<int> > angles;
     map<string, vector<int> > dihedrals;
-    Lepton::ParsedExpression energyExpression = CustomHbondForceImpl::prepareExpression(force, distances, angles, dihedrals);
+    Lepton::ParsedExpression energyExpression = CustomHbondForceImpl::prepareExpression(force, functions, distances, angles, dihedrals);
     vector<string> donorParameterNames;
     vector<string> acceptorParameterNames;
     for (int i = 0; i < numDonorParameters; i++)
