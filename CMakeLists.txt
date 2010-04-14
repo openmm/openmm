@@ -14,14 +14,27 @@
 #   libOpenMM_static[_d].a
 #----------------------------------------------------
 
+# Don't create a new project name if this is part of a mega-build from the
+# parent directory
+IF( NOT PROJECT_NAME )
+    PROJECT (OpenMM)
+ENDIF( NOT PROJECT_NAME )
+
 # On Linux it appears that cmake 2.4 does not work with Cuda cmake rules
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
 #SET(CMAKE_VERBOSE_MAKEFILE 1)
 
+# CMake 2.4 on dart server only needs to know about Dart
+INCLUDE(Dart)
+MARK_AS_ADVANCED(DART_ROOT)
+
+# Avoid dart server problem with cmake 2.4 --cmb
+set(cmv "${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}")
+IF(NOT cmv EQUAL "2.4") # This whole file...
+
 # We have custom cmake modules for FindOpenMM and running python tests
 SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake_modules")
-
 
 # Does someone at Kitware actually believe that this policy crap
 # might actually make cmake LESS brittle?
@@ -40,12 +53,6 @@ if(COMMAND cmake_policy)
         cmake_policy(SET CMP0011 NEW) 
     endif(CMAKE_MAJOR_VERSION GREATER 2 OR CMAKE_MINOR_VERSION GREATER 6 OR CMAKE_PATCH_VERSION GREATER 2)
 endif(COMMAND cmake_policy)
-
-# Don't create a new project name if this is part of a mega-build from the
-# parent directory
-IF( NOT PROJECT_NAME )
-    PROJECT (OpenMM)
-ENDIF( NOT PROJECT_NAME )
 
 # Where to install
 IF(${CMAKE_C_COMPILER} MATCHES "gcc")
@@ -68,9 +75,6 @@ MARK_AS_ADVANCED(OPENMM_INSTALL_PREFIX)
 IF(${CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT})
   SET(CMAKE_INSTALL_PREFIX ${OPENMM_INSTALL_PREFIX} CACHE PATH "Where to install OpenMM" FORCE)
 ENDIF(${CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT})
-
-INCLUDE(Dart)
-MARK_AS_ADVANCED(DART_ROOT)
 
 # The source is organized into subdirectories, but we handle them all from
 # this CMakeLists file rather than letting CMake visit them as SUBDIRS.
@@ -261,9 +265,6 @@ FOREACH(subdir ${OPENMM_SOURCE_SUBDIRS})
     INCLUDE_DIRECTORIES(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/${subdir}/include)
 ENDFOREACH(subdir)
 
-# Avoid dart server problem with cmake 2.4 --cmb
-set(cmv "${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION}")
-
 # If API wrappers are being generated, and add them to the build.
 # Java and gccxml are required for API wrappers
 FIND_PACKAGE(Java)
@@ -314,10 +315,27 @@ ADD_SUBDIRECTORY(platforms/reference/tests)
 
 # Which hardware platforms to build
 
-IF(NOT cmv EQUAL "2.4")
-    FIND_PACKAGE(CUDA QUIET)
-ENDIF(NOT cmv EQUAL "2.4")
-IF(CUDA_FOUND)
+# A bit of tedium because we are using custom FindCUDA files that happen to work...
+SET(FINDCUDA_DIR "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/FindCUDA")
+SET(CUDA_BUILD_CUBIN OFF)
+FIND_PACKAGE(CUDA QUIET)
+IF(FOUND_CUDA)
+    IF(NOT CUDA_NVCC_FLAGS)
+        SET(FLAGS "")
+        # Note that cmake will insert semicolons between these item automatically...
+        SET(FLAGS ${FLAGS} -gencode arch=compute_11,code=sm_11)
+        SET(FLAGS ${FLAGS} -gencode arch=compute_13,code=sm_13)
+        SET(FLAGS ${FLAGS} -gencode arch=compute_20,code=sm_20)
+        SET(FLAGS ${FLAGS} -use_fast_math)
+        IF(MSVC)
+            # Unfortunately the variables CUDA_NVCC_FLAGS_RELEASE and CUDA_NVCC_FLAGS_DEBUG
+            # appear to be unused, at least in CMake 2.6
+            # Release /MD linkage
+            set(FLAGS ${FLAGS} "-Xcompiler \"/MD\"")
+        ENDIF(MSVC)
+        SET(CUDA_NVCC_FLAGS  "${FLAGS}"
+            CACHE STRING "Semicolon delimit multiple arguments")
+    ENDIF(NOT CUDA_NVCC_FLAGS)
     SET(OPENMM_BUILD_CUDA_LIB ON CACHE BOOL "Build OpenMMCuda library for Nvidia GPUs")
 
     # I wish I was not hardcoding /MD here
@@ -341,9 +359,9 @@ IF(CUDA_FOUND)
                 CACHE STRING "Semicolon delimit multiple arguments" FORCE)
         ENDIF(NOT HAS_NVCC_FLAG)
     ENDIF(MSVC)
-ELSE(CUDA_FOUND)
+ELSE(FOUND_CUDA)
     SET(OPENMM_BUILD_CUDA_LIB OFF CACHE BOOL "Build OpenMMCuda library for Nvidia GPUs")
-ENDIF(CUDA_FOUND)
+ENDIF(FOUND_CUDA)
 IF(OPENMM_BUILD_CUDA_LIB)
     ADD_SUBDIRECTORY(platforms/cuda)
 ENDIF(OPENMM_BUILD_CUDA_LIB)
@@ -414,3 +432,5 @@ INCLUDE(ApiDoxygen.cmake)
 
 ADD_SUBDIRECTORY(tests)
 ADD_SUBDIRECTORY(examples)
+
+ENDIF(NOT cmv EQUAL "2.4") # This whole file...

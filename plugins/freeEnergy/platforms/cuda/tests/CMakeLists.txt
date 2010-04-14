@@ -2,7 +2,7 @@
 # Testing
 #
 ENABLE_TESTING()
-INCLUDE(${CMAKE_SOURCE_DIR}/platforms/cuda/cuda-cmake/FindCuda.cmake)
+# INCLUDE(${CMAKE_SOURCE_DIR}/platforms/cuda/cuda-cmake/FindCuda.cmake)
 INCLUDE_DIRECTORIES(${CUDA_INCLUDE})
 INCLUDE_DIRECTORIES(${OPENMM_DIR}/platforms/cuda/include)
 INCLUDE_DIRECTORIES(${OPENMM_DIR}/platforms/cuda/src)

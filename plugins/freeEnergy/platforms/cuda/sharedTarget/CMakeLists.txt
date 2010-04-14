@@ -36,7 +36,7 @@ ENDIF(LOG)
 ## ----------------------------------------------------------------------------
 
 # message("CUDA_NVCC_FLAGS = ${CUDA_NVCC_FLAGS}")
-INCLUDE(${FINDCUDA_DIR}/FindCuda.cmake)
+# INCLUDE(${FINDCUDA_DIR}/FindCuda.cmake)
 # message("CUDA_NVCC_FLAGS = ${CUDA_NVCC_FLAGS}")
 INCLUDE_DIRECTORIES(${CUDA_INCLUDE})
 LINK_DIRECTORIES(${CUDA_TARGET_LINK})

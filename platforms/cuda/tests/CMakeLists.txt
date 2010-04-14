@@ -4,7 +4,7 @@
 
 ENABLE_TESTING()
 
-INCLUDE(${CMAKE_SOURCE_DIR}/platforms/cuda/cuda-cmake/FindCuda.cmake)
+# INCLUDE(${CMAKE_SOURCE_DIR}/platforms/cuda/cuda-cmake/FindCuda.cmake)
 INCLUDE_DIRECTORIES(${CUDA_INCLUDE})
 
 # Automatically create tests using files named "Test*.cpp"
