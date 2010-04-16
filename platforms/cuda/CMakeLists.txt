@@ -17,6 +17,7 @@
 # Only run tests if this machine has a cuda-capable GPU
 # So run a little test program at configuration time to sniff for GPUs
 # find_package(CUDA) # find_package has already run and causes trouble w/ cmake 2.4
+message("Checking for working GPU...")
 try_run(RUN_RESULT_VAR COMPILE_RESULT_VAR
     ${CMAKE_BINARY_DIR} 
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/has_cuda_gpu.c
@@ -24,7 +25,7 @@ try_run(RUN_RESULT_VAR COMPILE_RESULT_VAR
         # -DINCLUDE_DIRECTORIES:STRING=${CUDA_TOOLKIT_INCLUDE}
         # -DLINK_LIBRARIES:STRING=${CUDA_CUDART_LIBRARY}
         -DINCLUDE_DIRECTORIES:STRING=${CUDA_INCLUDE}
-        -DLINK_LIBRARIES:STRING=${CUDA_TARGET_LINK}
+        -DLINK_LIBRARIES:STRING=${FOUND_CUDART}
     COMPILE_OUTPUT_VARIABLE COMPILE_OUTPUT_VAR
     RUN_OUTPUT_VARIABLE RUN_OUTPUT_VAR
 )
@@ -40,8 +41,12 @@ if(RUN_RESULT_VAR)
 endif(RUN_RESULT_VAR)
 if(CUDA_HAVE_GPU_MAYBE)
     set(CUDA_HAVE_GPU TRUE CACHE BOOL "Whether CUDA-capable GPU is present")
+    message("GPU check succeeded")
 else(CUDA_HAVE_GPU_MAYBE)
     set(CUDA_HAVE_GPU FALSE CACHE BOOL "Whether CUDA-capable GPU is present")
+    message("GPU check failed")
+    message("${COMPILE_OUTPUT_VAR}")
+    message("${RUN_OUTPUT_VAR}")
 endif(CUDA_HAVE_GPU_MAYBE)
 if(CUDA_HAVE_GPU)
     SUBDIRS (tests)
