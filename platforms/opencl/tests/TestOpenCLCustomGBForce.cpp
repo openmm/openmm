@@ -78,8 +78,8 @@ void testOBC(GBSAOBCForce::NonbondedMethod obcMethod, CustomGBForce::NonbondedMe
     custom->addComputedValue("I", "step(r+sr2-or1)*0.5*(1/L-1/U+0.25*(1/U^2-1/L^2)*(r-sr2*sr2/r)+0.5*log(L/U)/r+C);"
                                   "U=r+sr2;"
                                   "C=2*(1/or1-1/L)*step(sr2-r-or1);"
-                                  "L=step(or1-D)*or1+(1-step(or1-D))*D;"
-                                  "D=step(r-sr2)*(r-sr2)+(1-step(r-sr2))*(sr2-r);"
+                                  "L=max(or1, D);"
+                                  "D=abs(r-sr2);"
                                   "sr2 = scale2*or2;"
                                   "or1 = radius1-0.009; or2 = radius2-0.009", CustomGBForce::ParticlePairNoExclusions);
     custom->addComputedValue("B", "1/(1/or-tanh(1*psi-0.8*psi^2+4.85*psi^3)/radius);"

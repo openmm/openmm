@@ -200,6 +200,11 @@ int main() {
         verifyEvaluation("x*w; w = 5", 3.0, 1.0, 15.0);
         verifyEvaluation("a+b^2;a=x-b;b=3*y", 2.0, 3.0, 74.0);
         verifyEvaluation("erf(x)+erfc(x)", 2.0, 3.0, 1.0);
+        verifyEvaluation("min(3, x)", 2.0, 3.0, 2.0);
+        verifyEvaluation("min(y, 5)", 2.0, 3.0, 3.0);
+        verifyEvaluation("max(x, y)", 2.0, 3.0, 3.0);
+        verifyEvaluation("max(x, -1)", 2.0, 3.0, 2.0);
+        verifyEvaluation("abs(x-y)", 2.0, 3.0, 1.0);
         verifyInvalidExpression("1..2");
         verifyInvalidExpression("1*(2+3");
         verifyInvalidExpression("5++4");
@@ -229,6 +234,9 @@ int main() {
         verifyDerivative("recip(x)", "-1/x^2");
         verifyDerivative("square(x)", "2*x");
         verifyDerivative("cube(x)", "3*x^2");
+        verifyDerivative("min(x, 2*x)", "step(x-2*x)*2+(1-step(x-2*x))*1");
+        verifyDerivative("max(5, x^2)", "(1-step(5-x^2))*2*x");
+        verifyDerivative("abs(3*x)", "step(3*x)*3+(1-step(3*x))*-3");
         testCustomFunction("custom(x, y)/2", "x*y");
         testCustomFunction("custom(x^2, 1)+custom(2, y-1)", "2*x^2+4*(y-1)");
         cout << Parser::parse("2*3*x").optimize() << endl;

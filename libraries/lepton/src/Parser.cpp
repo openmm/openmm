@@ -316,6 +316,9 @@ Operation* Parser::getFunctionOperation(const std::string& name, const map<strin
         opMap["square"] = Operation::SQUARE;
         opMap["cube"] = Operation::CUBE;
         opMap["recip"] = Operation::RECIPROCAL;
+        opMap["min"] = Operation::MIN;
+        opMap["max"] = Operation::MAX;
+        opMap["abs"] = Operation::ABS;
     }
     string trimmed = name.substr(0, name.size()-1);
 
@@ -373,6 +376,12 @@ Operation* Parser::getFunctionOperation(const std::string& name, const map<strin
             return new Operation::Cube();
         case Operation::RECIPROCAL:
             return new Operation::Reciprocal();
+        case Operation::MIN:
+            return new Operation::Min();
+        case Operation::MAX:
+            return new Operation::Max();
+        case Operation::ABS:
+            return new Operation::Abs();
         default:
             throw Exception("Parse error: unknown function");
     }

@@ -281,9 +281,35 @@ ExpressionTreeNode Operation::MultiplyConstant::differentiate(const std::vector<
 }
 
 ExpressionTreeNode Operation::PowerConstant::differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const {
-    return ExpressionTreeNode(ExpressionTreeNode(new Operation::Multiply(),
-                                                 ExpressionTreeNode(new Operation::MultiplyConstant(value),
-                                                                    ExpressionTreeNode(new Operation::PowerConstant(value-1),
-                                                                                       children[0])),
-                                                 childDerivs[0]));
+    return ExpressionTreeNode(new Operation::Multiply(),
+                              ExpressionTreeNode(new Operation::MultiplyConstant(value),
+                                                 ExpressionTreeNode(new Operation::PowerConstant(value-1),
+                                                                    children[0])),
+                              childDerivs[0]);
+}
+
+ExpressionTreeNode Operation::Min::differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const {
+    ExpressionTreeNode step(new Operation::Step(),
+                            ExpressionTreeNode(new Operation::Subtract(), children[0], children[1]));
+    return ExpressionTreeNode(new Operation::Subtract(),
+                              ExpressionTreeNode(new Operation::Multiply(), childDerivs[1], step),
+                              ExpressionTreeNode(new Operation::Multiply(), childDerivs[0],
+                                                 ExpressionTreeNode(new Operation::AddConstant(-1), step)));
+}
+
+ExpressionTreeNode Operation::Max::differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const {
+    ExpressionTreeNode step(new Operation::Step(),
+                            ExpressionTreeNode(new Operation::Subtract(), children[0], children[1]));
+    return ExpressionTreeNode(new Operation::Subtract(),
+                              ExpressionTreeNode(new Operation::Multiply(), childDerivs[0], step),
+                              ExpressionTreeNode(new Operation::Multiply(), childDerivs[1],
+                                                 ExpressionTreeNode(new Operation::AddConstant(-1), step)));
+}
+
+ExpressionTreeNode Operation::Abs::differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const {
+    ExpressionTreeNode step(new Operation::Step(), children[0]);
+    return ExpressionTreeNode(new Operation::Multiply(),
+                              childDerivs[0],
+                              ExpressionTreeNode(new Operation::AddConstant(-1),
+                                                 ExpressionTreeNode(new Operation::MultiplyConstant(2), step)));
 }

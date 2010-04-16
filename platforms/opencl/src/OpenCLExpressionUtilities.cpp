@@ -281,6 +281,15 @@ void OpenCLExpressionUtilities::processExpression(stringstream& out, const Expre
                 out << "pow(" << getTempName(node.getChildren()[0], temps) << ", " << doubleToString(exponent) << ")";
             break;
         }
+        case Operation::MIN:
+            out << "min(" << getTempName(node.getChildren()[0], temps) << ", " << getTempName(node.getChildren()[1], temps) << ")";
+            break;
+        case Operation::MAX:
+            out << "max(" << getTempName(node.getChildren()[0], temps) << ", " << getTempName(node.getChildren()[1], temps) << ")";
+            break;
+        case Operation::ABS:
+            out << "fabs(" << getTempName(node.getChildren()[0], temps) << ")";
+            break;
         default:
             throw OpenMMException("Internal error: Unknown operation in user-defined expression: "+node.getOperation().getName());
     }

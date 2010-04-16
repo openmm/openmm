@@ -63,7 +63,7 @@ public:
      */
     enum Id {CONSTANT, VARIABLE, CUSTOM, ADD, SUBTRACT, MULTIPLY, DIVIDE, POWER, NEGATE, SQRT, EXP, LOG,
              SIN, COS, SEC, CSC, TAN, COT, ASIN, ACOS, ATAN, SINH, COSH, TANH, ERF, ERFC, STEP, SQUARE, CUBE, RECIPROCAL,
-             ADD_CONSTANT, MULTIPLY_CONSTANT, POWER_CONSTANT};
+             ADD_CONSTANT, MULTIPLY_CONSTANT, POWER_CONSTANT, MIN, MAX, ABS};
     /**
      * Get the name of this Operation.
      */
@@ -148,6 +148,9 @@ public:
     class AddConstant;
     class MultiplyConstant;
     class PowerConstant;
+    class Min;
+    class Max;
+    class Abs;
 };
 
 class Operation::Constant : public Operation {
@@ -970,6 +973,72 @@ public:
     }
 private:
     double value;
+};
+
+class Operation::Min : public Operation {
+public:
+    Min() {
+    }
+    std::string getName() const {
+        return "min";
+    }
+    Id getId() const {
+        return MIN;
+    }
+    int getNumArguments() const {
+        return 2;
+    }
+    Operation* clone() const {
+        return new Min();
+    }
+    double evaluate(double* args, const std::map<std::string, double>& variables) const {
+        return std::min(args[0], args[1]);
+    }
+    ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
+};
+
+class Operation::Max : public Operation {
+public:
+    Max() {
+    }
+    std::string getName() const {
+        return "max";
+    }
+    Id getId() const {
+        return MAX;
+    }
+    int getNumArguments() const {
+        return 2;
+    }
+    Operation* clone() const {
+        return new Max();
+    }
+    double evaluate(double* args, const std::map<std::string, double>& variables) const {
+        return std::max(args[0], args[1]);
+    }
+    ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
+};
+
+class Operation::Abs : public Operation {
+public:
+    Abs() {
+    }
+    std::string getName() const {
+        return "abs";
+    }
+    Id getId() const {
+        return ABS;
+    }
+    int getNumArguments() const {
+        return 1;
+    }
+    Operation* clone() const {
+        return new Abs();
+    }
+    double evaluate(double* args, const std::map<std::string, double>& variables) const {
+        return std::abs(args[0]);
+    }
+    ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
 
 } // namespace Lepton

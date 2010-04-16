@@ -289,6 +289,15 @@ static Expression<SIZE> createExpression(gpuContext gpu, const string& expressio
                 exp.op[i] = POWER_CONSTANT;
                 exp.arg[i] = (float) dynamic_cast<const Operation::PowerConstant*>(&op)->getValue();
                 break;
+            case Operation::MIN:
+                exp.op[i] = MIN;
+                break;
+            case Operation::MAX:
+                exp.op[i] = MAX;
+                break;
+            case Operation::ABS:
+                exp.op[i] = ABS;
+                break;
         }
     }
     return exp;

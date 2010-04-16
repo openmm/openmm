@@ -185,8 +185,19 @@ __device__ float kEvaluateExpression_kernel(Expression<SIZE>* expression, float*
                 else if (op == ERF) {
                     STACK(stackPointer) = erf(STACK(stackPointer));
                 }
-                else /*if (op == ERFC)*/ {
+                else if (op == ERFC) {
                     STACK(stackPointer) = erfc(STACK(stackPointer));
+                }
+                else if (op == MIN) {
+                    float temp = STACK(stackPointer);
+                    STACK(stackPointer) = min(temp, STACK(--stackPointer));
+                }
+                else if (op == MAX) {
+                    float temp = STACK(stackPointer);
+                    STACK(stackPointer) = max(temp, STACK(--stackPointer));
+                }
+                else /*if (op == ABS)*/ {
+                    STACK(stackPointer) = fabs(STACK(stackPointer));
                 }
             }
         }
