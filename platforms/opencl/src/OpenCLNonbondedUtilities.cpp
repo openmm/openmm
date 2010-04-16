@@ -90,14 +90,12 @@ void OpenCLNonbondedUtilities::addInteraction(bool usesCutoff, bool usesPeriodic
         if (!sameExclusions)
             throw OpenMMException("All Forces must have identical exceptions");
     }
-    else {
-        useCutoff = usesCutoff;
-        usePeriodic = usesPeriodic;
-        cutoff = cutoffDistance;
-        kernelSource += kernel+"\n";
-        if (usesExclusions)
-            atomExclusions = exclusionList;
-    }
+    useCutoff = usesCutoff;
+    usePeriodic = usesPeriodic;
+    cutoff = cutoffDistance;
+    kernelSource += kernel+"\n";
+    if (usesExclusions)
+        atomExclusions = exclusionList;
 }
 
 void OpenCLNonbondedUtilities::addParameter(const ParameterInfo& parameter) {
