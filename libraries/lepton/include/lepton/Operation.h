@@ -992,7 +992,8 @@ public:
         return new Min();
     }
     double evaluate(double* args, const std::map<std::string, double>& variables) const {
-        return std::min(args[0], args[1]);
+        // parens around (std::min) are workaround for horrible microsoft max/min macro trouble
+        return (std::min)(args[0], args[1]);
     }
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
@@ -1014,7 +1015,8 @@ public:
         return new Max();
     }
     double evaluate(double* args, const std::map<std::string, double>& variables) const {
-        return std::max(args[0], args[1]);
+        // parens around (std::min) are workaround for horrible microsoft max/min macro trouble
+        return (std::max)(args[0], args[1]);
     }
     ExpressionTreeNode differentiate(const std::vector<ExpressionTreeNode>& children, const std::vector<ExpressionTreeNode>& childDerivs, const std::string& variable) const;
 };
