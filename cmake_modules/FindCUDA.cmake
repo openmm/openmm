@@ -92,7 +92,7 @@
 ###############################################################################
 
 # FindCuda.cmake
-CMAKE_MINIMUM_REQUIRED(VERSION 2.4)
+CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
 INCLUDE(${FINDCUDA_DIR}/CudaDependency.cmake)
 
@@ -132,9 +132,9 @@ IF(NOT CUDA_INSTALL_PREFIX)
   IF (CUDA_INSTALL_PREFIX) 
     STRING(REGEX REPLACE "[/\\\\]?bin[/\\\\]?$" "" CUDA_INSTALL_PREFIX ${CUDA_INSTALL_PREFIX})
   ENDIF(CUDA_INSTALL_PREFIX)
-  IF (NOT EXISTS ${CUDA_INSTALL_PREFIX})
-    MESSAGE(FATAL_ERROR "Specify CUDA_INSTALL_PREFIX")
-  ENDIF (NOT EXISTS ${CUDA_INSTALL_PREFIX})
+  # IF (NOT EXISTS ${CUDA_INSTALL_PREFIX})
+    # MESSAGE(FATAL_ERROR "Specify CUDA_INSTALL_PREFIX")
+  # ENDIF (NOT EXISTS ${CUDA_INSTALL_PREFIX})
 ENDIF (NOT CUDA_INSTALL_PREFIX)
 
 # CUDA_NVCC
@@ -143,11 +143,11 @@ IF (NOT CUDA_NVCC)
     nvcc
     PATHS ${CUDA_INSTALL_PREFIX}/bin $ENV{CUDA_BIN_PATH}
     )
-  IF(NOT CUDA_NVCC)
-    MESSAGE(FATAL_ERROR "Could not find nvcc")
-  ELSE(NOT CUDA_NVCC)
-    MARK_AS_ADVANCED(CUDA_NVCC)
-  ENDIF(NOT CUDA_NVCC)
+  # IF(NOT CUDA_NVCC)
+    # MESSAGE(FATAL_ERROR "Could not find nvcc")
+  # ELSE(NOT CUDA_NVCC)
+  #  MARK_AS_ADVANCED(CUDA_NVCC)
+  # ENDIF(NOT CUDA_NVCC)
 ENDIF(NOT CUDA_NVCC)
 
 # CUDA_NVCC_INCLUDE_ARGS
@@ -158,9 +158,10 @@ ENDIF(NOT CUDA_NVCC)
           $ENV{CUDA_INC_PATH}
     )
   
-  IF(NOT FOUND_CUDA_NVCC_INCLUDE)
-    MESSAGE(FATAL_ERROR "Could not find Cuda headers")
-  ELSE(NOT FOUND_CUDA_NVCC_INCLUDE)
+  # IF(NOT FOUND_CUDA_NVCC_INCLUDE)
+  #   MESSAGE(FATAL_ERROR "Could not find Cuda headers")
+  # ELSE(NOT FOUND_CUDA_NVCC_INCLUDE)
+  IF(FOUND_CUDA_NVCC_INCLUDE)
     # Set the initial include dir.
     SET (CUDA_NVCC_INCLUDE_ARGS "-I"${FOUND_CUDA_NVCC_INCLUDE})
 	SET (CUDA_INCLUDE ${FOUND_CUDA_NVCC_INCLUDE})
@@ -169,7 +170,7 @@ ENDIF(NOT CUDA_NVCC)
       FOUND_CUDA_NVCC_INCLUDE
       CUDA_NVCC_INCLUDE_ARGS
       )
-  ENDIF(NOT FOUND_CUDA_NVCC_INCLUDE)
+  ENDIF(FOUND_CUDA_NVCC_INCLUDE)
   
 # ENDIF(NOT FOUND_CUDA_NVCC_INCLUDE)
 
@@ -184,9 +185,9 @@ IF (NOT CUDA_TARGET_LINK)
     )
   
   # Check to see if cudart library was found.
-  IF(NOT FOUND_CUDART)
-    MESSAGE(FATAL_ERROR "Could not find cudart library (cudart)")
-  ENDIF(NOT FOUND_CUDART)  
+  # IF(NOT FOUND_CUDART)
+  #   MESSAGE(FATAL_ERROR "Could not find cudart library (cudart)")
+  # ENDIF(NOT FOUND_CUDART)  
 
   # 1.1 toolkit on linux doesn't appear to have a separate library on 
   # some platforms.
@@ -217,8 +218,8 @@ IF (NOT CUDA_TARGET_LINK)
       FOUND_CUDA
       FOUND_CUDART
       )
-  ELSE(FOUND_CUDART)
-    MESSAGE(FATAL_ERROR "Could not find cuda libraries.")
+  # ELSE(FOUND_CUDART)
+  #   MESSAGE(FATAL_ERROR "Could not find cuda libraries.")
   ENDIF(FOUND_CUDART)
   
 ENDIF(NOT CUDA_TARGET_LINK)
@@ -299,11 +300,33 @@ ELSE(CUDA_BUILD_TYPE MATCHES "Emulation")
   SET(CUBLAS_TARGET_LINK ${FOUND_CUBLAS})
 ENDIF(CUDA_BUILD_TYPE MATCHES "Emulation")
 
-
-
-
 ENDIF(NOT CUDA_CUT_TARGET_LINK)
 
+# Set CUDA_FOUND variable (requires cmake version 2.6)
+set(CUDA_FOUND TRUE)
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(CUDA DEFAULT_MSG
+    CUDA_INSTALL_PREFIX
+    CUDA_NVCC
+    FOUND_CUDA_NVCC_INCLUDE
+    FOUND_CUDART
+)
+if(NOT CUDA_FOUND)
+    mark_as_advanced(
+        CUDA_BUILD_TYPE
+        CUDA_INSTALL_PREFIX
+        CUDA_SDK_ROOT_DIR
+        CUDA_TOOLKIT_ROOT_DIR
+        FOUND_CUBLAS
+        FOUND_CUBLASEMU
+        FOUND_CUDA
+        FOUND_CUDART
+        FOUND_CUFFT
+        FOUND_CUFFTEMU
+        FOUND_CUT
+        FOUND_CUT_INCLUDE
+    )
+endif(NOT CUDA_FOUND)
 
 ###############################################################################
 # Add include directories to pass to the nvcc command.
