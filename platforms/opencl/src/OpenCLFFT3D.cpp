@@ -42,15 +42,16 @@ OpenCLFFT3D::OpenCLFFT3D(OpenCLContext& context, int xsize, int ysize, int zsize
 }
 
 void OpenCLFFT3D::execFFT(OpenCLArray<mm_float2>& data, bool forward) {
+    int maxSize = xkernel.getWorkGroupInfo<CL_KERNEL_WORK_GROUP_SIZE>(context.getDevice());
     xkernel.setArg<cl::Buffer>(0, data.getDeviceBuffer());
     xkernel.setArg<cl_float>(1, forward ? 1.0f : -1.0f);
-    context.executeKernel(xkernel, xsize*ysize*zsize, xsize);
+    context.executeKernel(xkernel, xsize*ysize*zsize, min(xsize, (int) maxSize));
     ykernel.setArg<cl::Buffer>(0, data.getDeviceBuffer());
     ykernel.setArg<cl_float>(1, forward ? 1.0f : -1.0f);
-    context.executeKernel(ykernel, xsize*ysize*zsize, ysize);
+    context.executeKernel(ykernel, xsize*ysize*zsize, min(ysize, (int) maxSize));
     zkernel.setArg<cl::Buffer>(0, data.getDeviceBuffer());
     zkernel.setArg<cl_float>(1, forward ? 1.0f : -1.0f);
-    context.executeKernel(zkernel, xsize*ysize*zsize, zsize);
+    context.executeKernel(zkernel, xsize*ysize*zsize, min(zsize, (int) maxSize));
 }
 
 int OpenCLFFT3D::findLegalDimension(int minimum) {
@@ -86,7 +87,7 @@ cl::Kernel OpenCLFFT3D::createKernel(int xsize, int ysize, int zsize, int xmult,
         if (unfactored%5 == 0) {
             L = L/5;
             source<<"// Pass "<<(stage+1)<<" (radix 5)\n";
-            source<<"if (i < "<<(L*m)<<") {\n";
+            source<<"for (int i = get_local_id(0); i < "<<(L*m)<<"; i += get_local_size(0)) {\n";
             source<<"int j = i/"<<m<<";\n";
             source<<"float2 c0 = data"<<input<<"[i];\n";
             source<<"float2 c1 = data"<<input<<"[i+"<<(L*m)<<"];\n";
@@ -117,7 +118,7 @@ cl::Kernel OpenCLFFT3D::createKernel(int xsize, int ysize, int zsize, int xmult,
         else if (unfactored%4 == 0) {
             L = L/4;
             source<<"// Pass "<<(stage+1)<<" (radix 4)\n";
-            source<<"if (i < "<<(L*m)<<") {\n";
+            source<<"for (int i = get_local_id(0); i < "<<(L*m)<<"; i += get_local_size(0)) {\n";
             source<<"int j = i/"<<m<<";\n";
             source<<"float2 c0 = data"<<input<<"[i];\n";
             source<<"float2 c1 = data"<<input<<"[i+"<<(L*m)<<"];\n";
@@ -138,7 +139,7 @@ cl::Kernel OpenCLFFT3D::createKernel(int xsize, int ysize, int zsize, int xmult,
         else if (unfactored%3 == 0) {
             L = L/3;
             source<<"// Pass "<<(stage+1)<<" (radix 3)\n";
-            source<<"if (i < "<<(L*m)<<") {\n";
+            source<<"for (int i = get_local_id(0); i < "<<(L*m)<<"; i += get_local_size(0)) {\n";
             source<<"int j = i/"<<m<<";\n";
             source<<"float2 c0 = data"<<input<<"[i];\n";
             source<<"float2 c1 = data"<<input<<"[i+"<<(L*m)<<"];\n";
@@ -156,7 +157,7 @@ cl::Kernel OpenCLFFT3D::createKernel(int xsize, int ysize, int zsize, int xmult,
         else if (unfactored%2 == 0) {
             L = L/2;
             source<<"// Pass "<<(stage+1)<<" (radix 2)\n";
-            source<<"if (i < "<<(L*m)<<") {\n";
+            source<<"for (int i = get_local_id(0); i < "<<(L*m)<<"; i += get_local_size(0)) {\n";
             source<<"int j = i/"<<m<<";\n";
             source<<"float2 c0 = data"<<input<<"[i];\n";
             source<<"float2 c1 = data"<<input<<"[i+"<<(L*m)<<"];\n";
@@ -175,7 +176,8 @@ cl::Kernel OpenCLFFT3D::createKernel(int xsize, int ysize, int zsize, int xmult,
 
     // Create the kernel.
 
-    source<<"matrix[element] = data"<<(stage%2)<<"[i];\n";
+    source<<"for (int i = get_local_id(0); i < XSIZE; i += get_local_size(0))\n";
+    source<<"matrix[i*XMULT+y*YMULT+z*ZMULT] = data"<<(stage%2)<<"[i];\n";
     source<<"barrier(CLK_GLOBAL_MEM_FENCE);";
     map<string, string> replacements;
     replacements["XSIZE"] = OpenCLExpressionUtilities::intToString(xsize);

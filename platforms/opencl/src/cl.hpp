@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2008-2009 The Khronos Group Inc.
+ * Copyright (c) 2008-2010 The Khronos Group Inc.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and/or associated documentation files (the
@@ -21,14 +21,15 @@
  * MATERIALS OR THE USE OR OTHER DEALINGS IN THE MATERIALS.
  ******************************************************************************/
 
-
 /*! \file
  *
- *   \brief C++ bindings for OpenCL 1.0 (rev 45)
+ *   \brief C++ bindings for OpenCL 1.0 (rev 48) and OpenCL 1.1 (rev 17)    
  *   \author Benedict R. Gaster and Laurent Morichetti
- *   \version 0.4
- *   \date September 2009
- *
+ *   
+ *   Additions and fixes from Brian Cole, March 3rd 2010.
+ *   
+ *   \version 1.0
+ *   \date March 2010
  *
  */
 
@@ -155,9 +156,15 @@
  *      __CREATE_CONTEXT_FROM_TYPE_ERR
  *      __GET_SUPPORTED_IMAGE_FORMATS_ERR
  *      __CREATE_BUFFER_ERR
+ *      __CREATE_SUBBUFFER_ERR
  *      __CREATE_GL_BUFFER_ERR
  *      __CREATE_IMAGE2D_ERR
  *      __CREATE_IMAGE3D_ERR
+ *      __CREATE_SAMPLER_ERR
+ *      __SET_MEM_OBJECT_DESTRUCTOR_CALLBACK_ERR
+ *      __CREATE_USER_EVENT_ERR
+ *      __SET_USER_EVENT_STATUS_ERR
+ *      __SET_EVENT_CALLBACK_ERR
  *      __WAIT_FOR_EVENTS_ERR
  *      __CREATE_KERNEL_ERR
  *      __SET_KERNEL_ARGS_ERR
@@ -168,8 +175,11 @@
  *      __CREATE_COMMAND_QUEUE_ERR
  *      __SET_COMMAND_QUEUE_PROPERTY_ERR
  *      __ENQUEUE_READ_BUFFER_ERR
+ *      __ENQUEUE_READ_BUFFER_RECT_ERR
  *      __ENQUEUE_WRITE_BUFFER_ERR
+ *      __ENQUEUE_WRITE_BUFFER_RECT_ERR
  *      __ENQEUE_COPY_BUFFER_ERR
+ *      __ENQEUE_COPY_BUFFER_RECT_ERR
  *      __ENQUEUE_READ_IMAGE_ERR
  *      __ENQUEUE_WRITE_IMAGE_ERR
  *      __ENQUEUE_COPY_IMAGE_ERR
@@ -271,12 +281,16 @@
 
 #if defined(__APPLE__) || defined(__MACOSX)
 #include <OpenCL/cl.h>
-#include <OpenGL/opengl.h>
+#include <OpenGL/OpenGL.h>
 #include <OpenCL/cl_gl.h>
 #else
 #include <CL/cl.h>
 #include <GL/gl.h>
 #include <CL/cl_gl.h>
+#include <CL/cl_gl.h>
+#if defined(USE_DX_INTEROP)
+#include <CL/cl_d3d10.h>
+#endif
 #endif // !__APPLE__
 
 #include <utility>
@@ -302,10 +316,19 @@
  */
 namespace cl {
 
+#define __INIT_CL_EXT_FCN_PTR(name) \
+    if(!pfn_##name) { \
+        pfn_##name = (PFN_##name) \
+            clGetExtensionFunctionAddress(#name); \
+        if(!pfn_##name) { \
+        } \
+    }
+
 class Program;
 class Device;
 class Context;
 class CommandQueue;
+class Memory;
 
 #if defined(__CL_ENABLE_EXCEPTIONS)
 #include <exception>
@@ -374,10 +397,17 @@ public:
 #define __GET_SUPPORTED_IMAGE_FORMATS_ERR   __ERR_STR(clGetSupportedImageFormats)
 
 #define __CREATE_BUFFER_ERR                 __ERR_STR(clCreateBuffer)
+#define __CREATE_SUBBUFFER_ERR              __ERR_STR(clCreateSubBuffer)
 #define __CREATE_GL_BUFFER_ERR              __ERR_STR(clCreateFromGLBuffer)
+#define __GET_GL_OBJECT_INFO_ERR            __ERR_STR(clGetGLObjectInfo)
 #define __CREATE_IMAGE2D_ERR                __ERR_STR(clCreateImage2D)
 #define __CREATE_IMAGE3D_ERR                __ERR_STR(clCreateImage3D)
+#define __CREATE_SAMPLER_ERR                __ERR_STR(clCreateSampler)
+#define __SET_MEM_OBJECT_DESTRUCTOR_CALLBACK_ERR __ERR_STR(clSetMemObjectDestructorCallback)
 
+#define __CREATE_USER_EVENT_ERR             __ERR_STR(clCreateUserEvent)
+#define __SET_USER_EVENT_STATUS_ERR         __ERR_STR(clSetUserEventStatus)
+#define __SET_EVENT_CALLBACK_ERR            __ERR_STR(clSetEventCallback)
 #define __WAIT_FOR_EVENTS_ERR               __ERR_STR(clWaitForEvents)
 
 #define __CREATE_KERNEL_ERR                 __ERR_STR(clCreateKernel)
@@ -390,8 +420,11 @@ public:
 #define __CREATE_COMMAND_QUEUE_ERR          __ERR_STR(clCreateCommandQueue)
 #define __SET_COMMAND_QUEUE_PROPERTY_ERR    __ERR_STR(clSetCommandQueueProperty)
 #define __ENQUEUE_READ_BUFFER_ERR           __ERR_STR(clEnqueueReadBuffer)
+#define __ENQUEUE_READ_BUFFER_RECT_ERR      __ERR_STR(clEnqueueReadBufferRect)
 #define __ENQUEUE_WRITE_BUFFER_ERR          __ERR_STR(clEnqueueWriteBuffer)
+#define __ENQUEUE_WRITE_BUFFER_RECT_ERR     __ERR_STR(clEnqueueWriteBufferRect)
 #define __ENQEUE_COPY_BUFFER_ERR            __ERR_STR(clEnqueueCopyBuffer)
+#define __ENQEUE_COPY_BUFFER_RECT_ERR       __ERR_STR(clEnqueueCopyBufferRect)
 #define __ENQUEUE_READ_IMAGE_ERR            __ERR_STR(clEnqueueReadImage)
 #define __ENQUEUE_WRITE_IMAGE_ERR           __ERR_STR(clEnqueueWriteImage)
 #define __ENQUEUE_COPY_IMAGE_ERR            __ERR_STR(clEnqueueCopyImage)
@@ -414,6 +447,7 @@ public:
 
 #define __FLUSH_ERR                         __ERR_STR(clFlush)
 #define __FINISH_ERR                        __ERR_STR(clFinish)
+
 #endif // __CL_USER_OVERRIDE_ERROR_STRINGS
 //! \endcond
 
@@ -834,7 +868,7 @@ struct GetInfoHelper<Func, STRING_CLASS>
     }
 };
 
-#define __PARAM_NAME_INFO(F) \
+#define __PARAM_NAME_INFO_1_0(F) \
     F(cl_platform_info, CL_PLATFORM_PROFILE, STRING_CLASS) \
     F(cl_platform_info, CL_PLATFORM_VERSION, STRING_CLASS) \
     F(cl_platform_info, CL_PLATFORM_NAME, STRING_CLASS) \
@@ -894,7 +928,7 @@ struct GetInfoHelper<Func, STRING_CLASS>
     \
     F(cl_context_info, CL_CONTEXT_REFERENCE_COUNT, cl_uint) \
     F(cl_context_info, CL_CONTEXT_DEVICES, VECTOR_CLASS<Device>) \
-    F(cl_context_info, CL_CONTEXT_PROPERTIES, cl_context_properties) \
+    F(cl_context_info, CL_CONTEXT_PROPERTIES, VECTOR_CLASS<cl_context_properties>) \
     \
     F(cl_event_info, CL_EVENT_COMMAND_QUEUE, cl::CommandQueue) \
     F(cl_event_info, CL_EVENT_COMMAND_TYPE, cl_command_type) \
@@ -948,6 +982,7 @@ struct GetInfoHelper<Func, STRING_CLASS>
     \
     F(cl_kernel_work_group_info, CL_KERNEL_WORK_GROUP_SIZE, ::size_t) \
     F(cl_kernel_work_group_info, CL_KERNEL_COMPILE_WORK_GROUP_SIZE, cl::size_t<3>) \
+    F(cl_kernel_work_group_info, CL_KERNEL_LOCAL_MEM_SIZE, cl_ulong) \
     \
     F(cl_command_queue_info, CL_QUEUE_CONTEXT, cl::Context) \
     F(cl_command_queue_info, CL_QUEUE_DEVICE, cl::Device) \
@@ -966,7 +1001,7 @@ struct param_traits<detail:: token,param_name>       \
     typedef T param_type;                            \
 };
 
-__PARAM_NAME_INFO(__DECLARE_PARAM_TRAITS);
+__PARAM_NAME_INFO_1_0(__DECLARE_PARAM_TRAITS);
 
 #undef __DECLARE_PARAM_TRAITS
 
@@ -1023,10 +1058,10 @@ template <>
 struct ReferenceHandler<cl_device_id>
 {
     // cl_device_id does not have retain().
-    static cl_int retain(cl_device_id device)
+    static cl_int retain(cl_device_id)
     { return CL_INVALID_DEVICE; }
     // cl_device_id does not have release().
-    static cl_int release(cl_device_id device)
+    static cl_int release(cl_device_id)
     { return CL_INVALID_DEVICE; }
 };
 
@@ -1034,10 +1069,10 @@ template <>
 struct ReferenceHandler<cl_platform_id>
 {
     // cl_platform_id does not have retain().
-    static cl_int retain(cl_platform_id device)
+    static cl_int retain(cl_platform_id)
     { return CL_INVALID_PLATFORM; }
     // cl_platform_id does not have release().
-    static cl_int release(cl_platform_id device)
+    static cl_int release(cl_platform_id)
     { return CL_INVALID_PLATFORM; }
 };
 
@@ -1197,24 +1232,26 @@ public:
     //! Construct a new device from a device ID.
     Device(cl_device_id device) { object_ = device; }
 
+    //! Default constructor; device is not valid at this point.
+    Device() : detail::Wrapper<cl_type>() { }
+
     /*!
      * \brief Construct a new device from a valid device.
      *
      * \param device The device object used for creation.
     */
-    Device(const Device& device) { object_ = device.object_; }
-
-    //! Default constructor; device is not valid at this point.
-    Device() { }
+    Device(const Device& device) : detail::Wrapper<cl_type>(device) { }
 
     /*!
      * \brief Assign a device to device.
      *
-     * \param device the device object on rhs of the assignment.
+     * \param rhs the device object on rhs of the assignment.
      */
-    Device& operator = (const Device& device)
+    Device& operator = (const Device& rhs)
     {
-        object_ = device.object_;
+        if (this != &rhs) {
+            detail::Wrapper<cl_type>::operator=(rhs);
+        }
         return *this;
     }
 
@@ -1291,24 +1328,26 @@ public:
     //! Construct a new platform from a platform ID.
     Platform(cl_platform_id platform) { object_ = platform; }
 
+    //! Default constructor; platform is not valid at this point.
+    Platform() : detail::Wrapper<cl_type>()  { }
+
     /*!
      * \brief Construct a new platform from a valid platform.
      *
      * \param platform The platform object used for creation.
     */
-    Platform(const Platform& platform) { object_ = platform.object_; }
-
-    //! Default constructor; platform is not valid at this point.
-    Platform() { }
+    Platform(const Platform& platform) : detail::Wrapper<cl_type>(platform) { }
 
     /*!
      * \brief Assign a platform to platform.
      *
-     * \param platform the platform object on rhs of the assignment.
+     * \param rhs the platform object on rhs of the assignment.
      */
-    Platform& operator = (const Platform& platform)
+    Platform& operator = (const Platform& rhs)
     {
-        object_ = platform.object_;
+        if (this != &rhs) {
+            detail::Wrapper<cl_type>::operator=(rhs);
+        }
         return *this;
     }
 
@@ -1414,6 +1453,79 @@ public:
         return CL_SUCCESS;
     }
 
+#if defined(USE_DX_INTEROP)
+   /*! \brief Get the list of available D3D10 devices.
+     *
+     *  \param d3d_device_source.
+	 *
+	 *  \param d3d_object.
+	 *
+	 *  \param d3d_device_set.
+     *
+     *  \param devices returns a vector of OpenCL D3D10 devices found. The cl::Device
+     *  values returned in devices can be used to identify a specific OpenCL
+     *  device. If \a devices argument is NULL, this argument is ignored.
+     *
+     *  \return One of the following values:
+     *    - CL_SUCCESS if the function is executed successfully.
+     *
+     *  The application can query specific capabilities of the OpenCL device(s)
+     *  returned by cl::getDevices. This can be used by the application to
+     *  determine which device(s) to use.
+     *
+     * \note In the case that exceptions are enabled and a return value
+     * other than CL_SUCCESS is generated, then cl::Error exception is
+     * generated.
+     */
+    cl_int getDevices(
+		cl_d3d10_device_source_khr d3d_device_source,
+		void *                     d3d_object,
+		cl_d3d10_device_set_khr    d3d_device_set,
+        VECTOR_CLASS<Device>* devices) const
+    {
+		typedef CL_API_ENTRY cl_int (CL_API_CALL *PFN_clGetDeviceIDsFromD3D10KHR)(
+		cl_platform_id platform, 
+		cl_d3d10_device_source_khr d3d_device_source, 
+		void * d3d_object,
+		cl_d3d10_device_set_khr d3d_device_set,
+		cl_uint num_entries,
+		cl_device_id * devices,
+		cl_uint* num_devices);
+
+		static PFN_clGetDeviceIDsFromD3D10KHR pfn_clGetDeviceIDsFromD3D10KHR = NULL;
+		__INIT_CL_EXT_FCN_PTR(clGetDeviceIDsFromD3D10KHR);
+
+        cl_uint n = 0;
+        cl_int err = pfn_clGetDeviceIDsFromD3D10KHR(
+			object_, 
+			d3d_device_source, 
+			d3d_object,
+			d3d_device_set, 
+			0, 
+			NULL, 
+			&n);
+        if (err != CL_SUCCESS) {
+            return detail::errHandler(err, __GET_DEVICE_IDS_ERR);
+        }
+
+        cl_device_id* ids = (cl_device_id*) alloca(n * sizeof(cl_device_id));
+        err = pfn_clGetDeviceIDsFromD3D10KHR(
+			object_, 
+			d3d_device_source, 
+			d3d_object,
+			d3d_device_set,
+			n, 
+			ids, 
+			NULL);
+        if (err != CL_SUCCESS) {
+            return detail::errHandler(err, __GET_DEVICE_IDS_ERR);
+        }
+
+        devices->assign(&ids[0], &ids[n]);
+        return CL_SUCCESS;
+    }
+#endif
+
     static cl_int get(
         VECTOR_CLASS<Platform>* platforms)
     {
@@ -1505,7 +1617,7 @@ public:
     Context(
         const VECTOR_CLASS<Device>& devices,
         cl_context_properties* properties = NULL,
-        void (*notifyFptr)(
+        void (CL_CALLBACK * notifyFptr)(
             const char *,
             const void *,
             ::size_t,
@@ -1559,7 +1671,7 @@ public:
     Context(
         cl_device_type type,
         cl_context_properties* properties = NULL,
-        void (*notifyFptr)(
+        void (CL_CALLBACK * notifyFptr)(
             const char *,
             const void *,
             ::size_t,
@@ -1578,7 +1690,27 @@ public:
     }
 
     //! Default constructor; context is not valid at this point.
-    Context() { }
+    Context() : detail::Wrapper<cl_type>() { }
+
+    /*!
+     * \brief Construct a new context from a valid context.
+     *
+     * \param context The context object used for creation.
+    */
+    Context(const Context& context) : detail::Wrapper<cl_type>(context) { }
+
+    /*!
+     * \brief Assign a context to context.
+     *
+     * \param rhs the context object on rhs of the assignment.
+     */
+    Context& operator = (const Context& rhs)
+    {
+        if (this != &rhs) {
+            detail::Wrapper<cl_type>::operator=(rhs);
+        }
+        return *this;
+    }
 
     /*! \brief Query information about a context.
      *
@@ -1664,7 +1796,7 @@ public:
     cl_int getSupportedImageFormats(
         cl_mem_flags flags,
         cl_mem_object_type type,
-        VECTOR_CLASS<ImageFormat>* formats)
+        VECTOR_CLASS<ImageFormat>* formats) const
     {
         cl_uint numEntries;
         cl_int err = ::clGetSupportedImageFormats(
@@ -1694,7 +1826,27 @@ class Event : public detail::Wrapper<cl_event>
 {
 public:
     //! Default constructor; event is not valid at this point.
-    Event() { }
+    Event() : detail::Wrapper<cl_type>() { }
+
+    /*!
+     * \brief Construct a new event from a valid event.
+     *
+     * \param event The event object used for creation.
+    */
+    Event(const Event& event) : detail::Wrapper<cl_type>(event) { }
+
+    /*!
+     * \brief Assign a event to event.
+     *
+     * \param rhs the event object on rhs of the assignment.
+     */
+    Event& operator = (const Event& rhs)
+    {
+        if (this != &rhs) {
+            detail::Wrapper<cl_type>::operator=(rhs);
+        }
+        return *this;
+    }
 
     /*! \brief Return information about the event.
      *
@@ -1838,6 +1990,33 @@ public:
             ::clWaitForEvents(1, &object_),
             __WAIT_FOR_EVENTS_ERR);
     }
+
+	/*! \brief Wait on the host thread for commands identified by event objects in
+	 *  event_list to complete.
+	 *
+	 *  A command is considered complete if its execution status is CL_COMPLETE or
+	 *  a negative value. The events specified in event_list act as synchronization
+	 *  points.
+	 *
+	 * \param events is a vector of events.
+	 *
+	 *  \return One of the following values:
+	 *  - CL_SUCCESS if the function was executed successfully.
+	 *  - CL_INVALID_VALUE if size of \a events is zero.
+	 *  - CL_INVALID_EVENT if an event in \a events is not valid.
+	 *
+	 * \note In the case that exceptions are enabled and error value
+	 * other than CL_SUCCESS is generated, then cl::Error exception is
+	 * generated.
+	 */
+	static cl_int
+	waitForEvents(const VECTOR_CLASS<Event>& events)
+	{
+		return detail::errHandler(
+			::clWaitForEvents(
+				(cl_uint) events.size(), (cl_event*)&events.front()),
+				__WAIT_FOR_EVENTS_ERR);
+	}
 };
 
 /*! \brief Wait on the host thread for commands identified by event objects in
@@ -1873,6 +2052,29 @@ WaitForEvents(const VECTOR_CLASS<Event>& events)
 class Memory : public detail::Wrapper<cl_mem>
 {
 public:
+    //! Default constructor; memory is not valid at this point.
+    Memory() : detail::Wrapper<cl_type>() { }
+
+    /*!
+     * \brief Construct a new memory from a valid memory.
+     *
+     * \param memory The memory object used for creation.
+    */
+    Memory(const Memory& memory) : detail::Wrapper<cl_type>(memory) { }
+
+    /*!
+     * \brief Assign a memory to memory.
+     *
+     * \param rhs the memory object on rhs of the assignment.
+     */
+    Memory& operator = (const Memory& rhs)
+    {
+        if (this != &rhs) {
+            detail::Wrapper<cl_type>::operator=(rhs);
+        }
+        return *this;
+    }
+
     /*! \brief Get information that is common to all memory objects (buffer and
      *  image objects)
      *
@@ -1994,14 +2196,296 @@ public:
     }
 
     //! Default constructor; buffer is not valid at this point.
-    Buffer() { }
+    Buffer() : Memory() { }
+
+    /*!
+     * \brief Construct a new buffer from a valid buffer.
+     *
+     * \param buffer The buffer object used for creation.
+    */
+    Buffer(const Buffer& buffer) : Memory(buffer) { }
+
+    /*!
+     * \brief Assign a buffer to buffer.
+     *
+     * \param rhs the buffer object on rhs of the assignment.
+     */
+    Buffer& operator = (const Buffer& rhs)
+    {
+        if (this != &rhs) {
+            Memory::operator=(rhs);
+        }
+        return *this;
+    }
 };
+
+#if defined (USE_DX_INTEROP)
+class BufferD3D10 : public Buffer
+{
+public:
+	typedef CL_API_ENTRY cl_mem (CL_API_CALL *PFN_clCreateFromD3D10BufferKHR)(
+    cl_context context, cl_mem_flags flags, ID3D10Buffer*  buffer,
+    cl_int* errcode_ret);
+
+    BufferD3D10(
+        const Context& context,
+        cl_mem_flags flags,
+        ID3D10Buffer* bufobj,
+        cl_int * err = NULL)
+    {
+		static PFN_clCreateFromD3D10BufferKHR pfn_clCreateFromD3D10BufferKHR = NULL;
+		__INIT_CL_EXT_FCN_PTR(clCreateFromD3D10BufferKHR);
+
+        cl_int error;
+        object_ = pfn_clCreateFromD3D10BufferKHR(
+            context(),
+            flags,
+            bufobj,
+            &error);
+
+        detail::errHandler(error, __CREATE_GL_BUFFER_ERR);
+        if (err != NULL) {
+            *err = error;
+        }
+    }
+
+    //! Default constructor; buffer is not valid at this point.
+	BufferD3D10() : Buffer() { }
+
+    /*!
+     * \brief Construct a new D3D10 buffer from a valid D3D10 buffer.
+     *
+     * \param buffer The buffer object used for creation.
+    */
+    BufferD3D10(const BufferD3D10& buffer) : Buffer(buffer) { }
+
+    /*!
+     * \brief Assign a D3D10 buffer to D3D10 buffer.
+     *
+     * \param rhs the D3D10 buffer object on rhs of the assignment.
+     */
+    BufferD3D10& operator = (const BufferD3D10& rhs)
+    {
+        if (this != &rhs) {
+            Buffer::operator=(rhs);
+        }
+        return *this;
+    }
+};
+#endif
+
+/*! \class BufferGL
+ * \brief Memory buffer interface for GL interop.
+ */
+class BufferGL : public Buffer
+{
+public:
+    /*! \brief Create a buffer object.
+     *
+     *  \param context is a valid OpenCL context used to create the buffer object.
+     *
+     *  \param flags is a bit-field that is used to specify allocation and usage
+     *  information such as the memory arena that should be used to allocate the
+     *  buffer object and how it will be used.
+     *
+     *  \param bufobj is the name fo a GL buffer object.
+     *
+     *  \param err will return an appropriate error code.
+     *  If \a err is NULL, no error code is returned.
+     *
+     *  \return A valid non-zero buffer object and \a err is set to
+     *  CL_SUCCESS if the buffer object is created successfully or a NULL value
+     *  with one of the following error values returned in \a err:
+     *  - CL_INVALID_CONTEXT if \a context is not a valid context.
+     *  - CL_INVALID_VALUE if values specified in \a flags are not valid.
+     *  - CL_INVALID_GL_OBJECT if bufobj is not a GL buffer object or is a GL
+	 *    buffer object but does not have an existing data store.
+     *  - CL_OUT_OF_HOST_MEMORY if there is a failure to allocate resources
+     *    required by the runtime.
+     *
+     * \note In the case that exceptions are enabled and error value
+     * other than CL_SUCCESS is generated, then cl::Error exception is
+     * generated.
+     */
+    BufferGL(
+        const Context& context,
+        cl_mem_flags flags,
+        GLuint bufobj,
+        cl_int * err = NULL)
+    {
+        cl_int error;
+        object_ = ::clCreateFromGLBuffer(
+            context(),
+            flags,
+            bufobj,
+            &error);
+
+        detail::errHandler(error, __CREATE_GL_BUFFER_ERR);
+        if (err != NULL) {
+            *err = error;
+        }
+    }
+
+    //! Default constructor; buffer is not valid at this point.
+	BufferGL() : Buffer() { }
+
+    /*!
+     * \brief Construct a new GL buffer from a valid GL buffer.
+     *
+     * \param buffer The buffer object used for creation.
+    */
+    BufferGL(const BufferGL& buffer) : Buffer(buffer) { }
+
+    /*!
+     * \brief Assign a GL buffer to GL buffer.
+     *
+     * \param rhs the GL buffer object on rhs of the assignment.
+     */
+    BufferGL& operator = (const BufferGL& rhs)
+    {
+        if (this != &rhs) {
+            Buffer::operator=(rhs);
+        }
+        return *this;
+    }
+
+    /*!
+     * \brief Report the type of GL buffer used to create the object.
+     *
+     * \param type type of GL buffer.
+	 * \param gl_object_name 
+     */
+	cl_int getObjectInfo(
+		cl_gl_object_type *type,
+		GLuint * gl_object_name)
+	{
+		return detail::errHandler(
+			::clGetGLObjectInfo(object_,type,gl_object_name),
+            __GET_GL_OBJECT_INFO_ERR);
+	}
+};
+
+/*! \class BufferRenderGL
+ * \brief Memory buffer interface for GL interop with renderbuffer.
+ */
+class BufferRenderGL : public Buffer
+{
+public:
+    /*! \brief Create a buffer object.
+     *
+     *  \param context is a valid OpenCL context used to create the buffer object.
+     *
+     *  \param flags is a bit-field that is used to specify allocation and usage
+     *  information such as the memory arena that should be used to allocate the
+     *  buffer object and how it will be used.
+     *
+     *  \param bufobj is the name for a GL render buffer object.
+     *
+     *  \param err will return an appropriate error code.
+     *  If \a err is NULL, no error code is returned.
+     *
+     *  \return A valid non-zero buffer object and \a err is set to
+     *  CL_SUCCESS if the buffer object is created successfully or a NULL value
+     *  with one of the following error values returned in \a err:
+     *  - CL_INVALID_CONTEXT if \a context is not a valid context.
+     *  - CL_INVALID_VALUE if values specified in \a flags are not valid.
+     *  - CL_INVALID_GL_OBJECT if bufobj is not a GL render buffer object or is a GL
+	 *    render buffer object but does not have an existing data store.
+     *  - CL_OUT_OF_HOST_MEMORY if there is a failure to allocate resources
+     *    required by the runtime.
+     *
+     * \note In the case that exceptions are enabled and error value
+     * other than CL_SUCCESS is generated, then cl::Error exception is
+     * generated.
+     */
+    BufferRenderGL(
+        const Context& context,
+        cl_mem_flags flags,
+        GLuint bufobj,
+        cl_int * err = NULL)
+    {
+        cl_int error;
+        object_ = ::clCreateFromGLRenderbuffer(
+            context(),
+            flags,
+            bufobj,
+            &error);
+
+        detail::errHandler(error, __CREATE_GL_BUFFER_ERR);
+        if (err != NULL) {
+            *err = error;
+        }
+    }
+
+    //! Default constructor; buffer is not valid at this point.
+	BufferRenderGL() : Buffer() { }
+
+    /*!
+     * \brief Construct a new GL buffer from a valid GL buffer.
+     *
+     * \param buffer The buffer object used for creation.
+    */
+    BufferRenderGL(const BufferGL& buffer) : Buffer(buffer) { }
+
+    /*!
+     * \brief Assign a GL buffer to GL buffer.
+     *
+     * \param rhs the GL buffer object on rhs of the assignment.
+     */
+    BufferRenderGL& operator = (const BufferRenderGL& rhs)
+    {
+        if (this != &rhs) {
+            Buffer::operator=(rhs);
+        }
+        return *this;
+    }
+
+    /*!
+     * \brief Report the type of GL buffer used to create the object.
+     *
+     * \param type type of GL buffer.
+	 * \param gl_object_name .
+     */
+	cl_int getObjectInfo(
+		cl_gl_object_type *type,
+		GLuint * gl_object_name)
+	{
+		return detail::errHandler(
+			::clGetGLObjectInfo(object_,type,gl_object_name),
+            __GET_GL_OBJECT_INFO_ERR);
+	}
+};
+
+
 
 /*! \class Image
  * \brief Base class  interface for all images.
  */
 class Image : public Memory
 {
+protected:
+    //! Default constructor; image is not valid at this point.
+    Image() : Memory() { }
+
+    /*!
+     * \brief Construct a new image from a valid image.
+     *
+     * \param image The image object used for creation.
+    */
+    Image(const Image& image) : Memory(image) { }
+
+    /*!
+     * \brief Assign a image to image.
+     *
+     * \param rhs the image object on rhs of the assignment.
+     */
+    Image& operator = (const Image& rhs)
+    {
+        if (this != &rhs) {
+            Memory::operator=(rhs);
+        }
+        return *this;
+    }
 public:
     /*! \brief Get information specific to an image object.
      *
@@ -2147,6 +2631,110 @@ public:
 
     //! Default constructor; image is not valid at this point.
     Image2D() { }
+
+    /*!
+     * \brief Construct a new image2D from a valid image2D.
+     *
+     * \param image2D The image2D object used for creation.
+    */
+    Image2D(const Image2D& image2D) : Image(image2D) { }
+
+    /*!
+     * \brief Assign a image2D to image2D.
+     *
+     * \param rhs the image2D object on rhs of the assignment.
+     */
+    Image2D& operator = (const Image2D& rhs)
+    {
+        if (this != &rhs) {
+            Image::operator=(rhs);
+        }
+        return *this;
+    }
+};
+
+/*! \class Image2DGL
+ * \brief 2D image interface for GL interop.
+ */
+class Image2DGL : public Image2D
+{
+public:
+    /*! \brief Create a 2D image object.
+     *
+     *  \param context is a valid OpenCL context used to create the buffer object.
+     *
+     *  \param flags is a bit-field that is used to specify allocation and usage
+     *  information such as the memory arena that should be used to allocate the
+     *  buffer object and how it will be used.
+     *
+	 *  \param target.
+	 *
+     *  \param miplevel is the level for the incomming texture.
+	 *
+     *  \param texobj is the name fo a GL buffer object.
+     *
+     *  \param err will return an appropriate error code.
+     *  If \a err is NULL, no error code is returned.
+     *
+     *  \return A valid non-zero buffer object and \a err is set to
+     *  CL_SUCCESS if the buffer object is created successfully or a NULL value
+     *  with one of the following error values returned in \a err:
+     *  - CL_INVALID_CONTEXT if \a context is not a valid context.
+     *  - CL_INVALID_VALUE if values specified in \a flags are not valid.
+     *  - CL_INVALID_GL_OBJECT if bufobj is not a GL buffer object or is a GL
+	 *    buffer object but does not have an existing data store.
+     *  - CL_OUT_OF_HOST_MEMORY if there is a failure to allocate resources
+     *    required by the runtime.
+     *
+     * \note In the case that exceptions are enabled and error value
+     * other than CL_SUCCESS is generated, then cl::Error exception is
+     * generated.
+     */
+    Image2DGL(
+        const Context& context,
+        cl_mem_flags flags,
+		GLenum target,
+		GLint  miplevel,
+        GLuint texobj,
+        cl_int * err = NULL)
+    {
+        cl_int error;
+        object_ = ::clCreateFromGLTexture2D(
+            context(),
+            flags,
+			target,
+			miplevel,
+            texobj,
+            &error);
+
+        detail::errHandler(error, __CREATE_GL_BUFFER_ERR);
+        if (err != NULL) {
+            *err = error;
+        }
+    }
+
+    //! Default constructor; image is not valid at this point.
+	Image2DGL() : Image2D() { }
+
+    /*!
+     * \brief Construct a new CL 2D image from a valid GL 2D texture.
+     *
+     * \param image The buffer object used for creation.
+    */
+    Image2DGL(const Image2DGL& image) : Image2D(image) { }
+
+    /*!
+     * \brief Assign a GL 2D image to GL 2D image buffer.
+     *
+     * \param rhs the GL buffer object on rhs of the assignment.
+     */
+    Image2DGL& operator = (const Image2DGL& rhs)
+    {
+        if (this != &rhs) {
+            Image2D::operator=(rhs);
+        }
+        return *this;
+    }
 };
 
 /*! \class Image3D
@@ -2251,6 +2839,110 @@ public:
 
     //! Default constructor; image is not valid at this point.
     Image3D() { }
+
+    /*!
+     * \brief Construct a new image3D from a valid image3D.
+     *
+     * \param image3D The image3D object used for creation.
+    */
+    Image3D(const Image3D& image3D) : Image(image3D) { }
+
+    /*!
+     * \brief Assign a image3D to image3D.
+     *
+     * \param rhs the image3D object on rhs of the assignment.
+     */
+    Image3D& operator = (const Image3D& rhs)
+    {
+        if (this != &rhs) {
+            Image::operator=(rhs);
+        }
+        return *this;
+    }
+};
+
+/*! \class Image2DGL
+ * \brief 2D image interface for GL interop.
+ */
+class Image3DGL : public Image3D
+{
+public:
+    /*! \brief Create a 3D image object.
+     *
+     *  \param context is a valid OpenCL context used to create the buffer object.
+     *
+     *  \param flags is a bit-field that is used to specify allocation and usage
+     *  information such as the memory arena that should be used to allocate the
+     *  buffer object and how it will be used.
+     *
+	 *  \param target.
+	 *
+     *  \param miplevel is the level for the incomming texture.
+	 *
+     *  \param texobj is the name fo a GL buffer object.
+     *
+     *  \param err will return an appropriate error code.
+     *  If \a err is NULL, no error code is returned.
+     *
+     *  \return A valid non-zero buffer object and \a err is set to
+     *  CL_SUCCESS if the buffer object is created successfully or a NULL value
+     *  with one of the following error values returned in \a err:
+     *  - CL_INVALID_CONTEXT if \a context is not a valid context.
+     *  - CL_INVALID_VALUE if values specified in \a flags are not valid.
+     *  - CL_INVALID_GL_OBJECT if bufobj is not a GL buffer object or is a GL
+	 *    buffer object but does not have an existing data store.
+     *  - CL_OUT_OF_HOST_MEMORY if there is a failure to allocate resources
+     *    required by the runtime.
+     *
+     * \note In the case that exceptions are enabled and error value
+     * other than CL_SUCCESS is generated, then cl::Error exception is
+     * generated.
+     */
+    Image3DGL(
+        const Context& context,
+        cl_mem_flags flags,
+		GLenum target,
+		GLint  miplevel,
+        GLuint texobj,
+        cl_int * err = NULL)
+    {
+        cl_int error;
+        object_ = ::clCreateFromGLTexture3D(
+            context(),
+            flags,
+			target,
+			miplevel,
+            texobj,
+            &error);
+
+        detail::errHandler(error, __CREATE_GL_BUFFER_ERR);
+        if (err != NULL) {
+            *err = error;
+        }
+    }
+
+    //! Default constructor; image is not valid at this point.
+	Image3DGL() : Image3D() { }
+
+    /*!
+     * \brief Construct a new CL 2D image from a valid GL 2D texture.
+     *
+     * \param image The buffer object used for creation.
+    */
+    Image3DGL(const Image3DGL& image) : Image3D(image) { }
+
+    /*!
+     * \brief Assign a GL 2D image to GL 2D image buffer.
+     *
+     * \param rhs the GL buffer object on rhs of the assignment.
+     */
+    Image3DGL& operator = (const Image3DGL& rhs)
+    {
+        if (this != &rhs) {
+            Image3D::operator=(rhs);
+        }
+        return *this;
+    }
 };
 
 /*! \class Sampler
@@ -2261,6 +2953,51 @@ class Sampler : public detail::Wrapper<cl_sampler>
 public:
     //! Default constructor.
     Sampler() { }
+
+	/*! \brief Create a sampler object.
+     *
+     */
+    Sampler(
+        const Context& context,
+        cl_bool normalized_coords,
+        cl_addressing_mode addressing_mode,
+		cl_filter_mode filter_mode,
+        cl_int* err = NULL)
+    {
+        cl_int error;
+        object_ = ::clCreateSampler(
+            context(), 
+			normalized_coords,
+			addressing_mode,
+			filter_mode,
+			&error);
+
+        detail::errHandler(error, __CREATE_SAMPLER_ERR);
+        if (err != NULL) {
+            *err = error;
+        }
+    }
+
+
+    /*!
+     * \brief Construct a new sampler from a valid sampler.
+     *
+     * \param sampler The sampler object used for creation.
+    */
+    Sampler(const Sampler& sampler) : detail::Wrapper<cl_type>(sampler) { }
+
+    /*!
+     * \brief Assign a sampler to sampler.
+     *
+     * \param rhs the sampler object on rhs of the assignment.
+     */
+    Sampler& operator = (const Sampler& rhs)
+    {
+        if (this != &rhs) {
+            detail::Wrapper<cl_type>::operator=(rhs);
+        }
+        return *this;
+    }
 
     /*! \brief Return information about the sampler object.
      *
@@ -2365,615 +3102,6 @@ public:
 //! Null range object
 static const NDRange NullRange;
 
-/*! \class KernelFunctor
- * \brief Kernel functor interface
- *
- * \note Currently only functors of zero to ten arguments are supported. It
- * is straightforward to add more and a more general solution, similar to
- * Boost.Lambda could be followed if required in the future.
- */
-class KernelFunctor
-{
-private:
-    Kernel& kernel_;
-    CommandQueue& queue_;
-    NDRange offset_;
-    NDRange global_;
-    NDRange local_;
-
-    cl_int err_;
-public:
-    KernelFunctor(
-        Kernel& kernel,
-        const CommandQueue& queue,
-        const NDRange& offset,
-        const NDRange& global,
-        const NDRange& local) :
-            kernel_(kernel),
-            queue_((CommandQueue&)queue),
-            offset_((NDRange)offset),
-            global_((NDRange)global),
-            local_((NDRange)local),
-            err_(CL_SUCCESS)
-    {}
-
-    /*! \brief Assignment operator.
-     *
-     * \param rhs KernelFunctor object for rhs of assignment.
-     *
-     * \return KernelFunctor object for lhs of assignment.
-     */
-    KernelFunctor& operator=(const KernelFunctor& rhs);
-
-    /*! \brief Copy constructor
-     *
-     * \param rhs is the KernelFunctor to be copied (cloned).
-     */
-    KernelFunctor(const KernelFunctor& rhs);
-
-    /*! \brief Get the error code returned by the last call to the
-     *         functor.
-     *
-     * \return The last error; in the case that the functor object
-     * in question has not been called CL_SUCCESS is returned.
-     */
-    cl_int getError() { return err_; }
-
-    /*! \brief Enqueue a command to execute a kernel on a device.
-     *
-     *  \param events specifies the list of events that need to complete before
-     *  this particular command can be executed. If \a events is NULL, its
-     *  default value, then this particular command does not wait on any event
-     *  to complete. The events specified in \a events act as
-     *  synchronization points.
-     *
-     *  \return An event that identifies this particular kernel
-     *  execution instance.
-     *
-     * \note In the case that exceptions are enabled and error value
-     * other than CL_SUCCESS is generated, then cl::Error exception is
-     * generated, otherwise the returned error is stored in the Kernel
-     * object and can get accessed using \a get_error.
-     */
-    inline Event operator()(const VECTOR_CLASS<Event>* events = NULL);
-
-    /*! \brief Enqueue a command to execute a kernel on a device.
-     *
-     *  \param a1 is used argument 0 for the kernel call.
-     *
-     *  \param events specifies the list of events that need to complete before
-     *  this particular command can be executed. If \a events is NULL, its
-     *  default value, then this particular command does not wait on any event
-     *  to complete. The events specified in \a events act as
-     *  synchronization points.
-     *  \return An event that identifies this particular kernel
-     *  execution instance.
-     *
-     * \note In the case that exceptions are enabled and error value
-     * other than CL_SUCCESS is generated, then cl::Error exception is
-     * generated, otherwise the returned error is stored in the Kernel
-     * object and can get accessed using \a get_error.
-     */
-    template<typename A1>
-    inline Event operator()(
-		const A1& a1, 
-		const VECTOR_CLASS<Event>* events = NULL);
-
-    /*! \brief Enqueue a command to execute a kernel on a device.
-     *
-     *  \param a1 is used argument 0 for the kernel call.
-     *  \param a2 is used argument 1 for the kernel call.
-     *
-     *  \param events specifies the list of events that need to complete before
-     *  this particular command can be executed. If \a events is NULL, its
-     *  default value, then this particular command does not wait on any event
-     *  to complete. The events specified in \a events act as
-     *  synchronization points.
-     *
-     *  \return An event that identifies this particular kernel
-     *  execution instance.
-     *
-     * \note In the case that exceptions are enabled and error value
-     * other than CL_SUCCESS is generated, then cl::Error exception is
-     * generated, otherwise the returned error is stored in the Kernel
-     * object and can get accessed using \a get_error.
-     */
-    template<class A1, class A2>
-    inline Event operator()(
-		const A1& a1, 
-		const A2& a2, 
-		const VECTOR_CLASS<Event>* events = NULL);
-
-    /*! \brief Enqueue a command to execute a kernel on a device.
-     *
-     *  \param a1 is used argument 0 for the kernel call.
-     *  \param a2 is used argument 1 for the kernel call.
-     *  \param a3 is used argument 3 for the kernel call.
-     *
-     *  \param events specifies the list of events that need to complete before
-     *  this particular command can be executed. If \a events is NULL, its
-     *  default value, then this particular command does not wait on any event
-     *  to complete. The events specified in \a events act as
-     *  synchronization points.
-     *
-     *  \return An event that identifies this particular kernel
-     *  execution instance.
-     *
-     * \note In the case that exceptions are enabled and error value
-     * other than CL_SUCCESS is generated, then cl::Error exception is
-     * generated, otherwise the returned error is stored in the Kernel
-     * object and can get accessed using \a get_error.
-     */
-    template<class A1, class A2, class A3>
-    inline Event operator()(
-		const A1& a1, 
-		const A2& a2, 
-		const A3& a3,
-        const VECTOR_CLASS<Event>* events = NULL);
-
-    /*! \brief Enqueue a command to execute a kernel on a device.
-     *
-     *  \param a1 is used argument 0 for the kernel call.
-     *  \param a2 is used argument 1 for the kernel call.
-     *  \param a3 is used argument 2 for the kernel call.
-     *  \param a4 is used argument 3 for the kernel call.
-     *
-     *  \param events specifies the list of events that need to complete before
-     *  this particular command can be executed. If \a events is NULL, its
-     *  default value, then this particular command does not wait on any event
-     *  to complete. The events specified in \a events act as
-     *  synchronization points.
-     *
-     *  \return An event that identifies this particular kernel
-     *  execution instance.
-     *
-     * \note In the case that exceptions are enabled and error value
-     * other than CL_SUCCESS is generated, then cl::Error exception is
-     * generated, otherwise the returned error is stored in the Kernel
-     * object and can get accessed using \a get_error.
-     */
-    template<class A1, class A2, class A3, class A4>
-    inline Event operator()(
-		const A1& a1, 
-		const A2& a2, 
-		const A3& a3, 
-		const A4& a4,
-        const VECTOR_CLASS<Event>* events = NULL);
-
-    /*! \brief Enqueue a command to execute a kernel on a device.
-     *
-     *  \param a1 is used argument 0 for the kernel call.
-     *  \param a2 is used argument 1 for the kernel call.
-     *  \param a3 is used argument 2 for the kernel call.
-     *  \param a4 is used argument 3 for the kernel call.
-     *  \param a5 is used argument 4 for the kernel call.
-     *
-     *  \param events specifies the list of events that need to complete before
-     *  this particular command can be executed. If \a events is NULL, its
-     *  default value, then this particular command does not wait on any event
-     *  to complete. The events specified in \a events act as
-     *  synchronization points.
-     *
-     *  \return An event that identifies this particular kernel
-     *  execution instance.
-     *
-     * \note In the case that exceptions are enabled and error value
-     * other than CL_SUCCESS is generated, then cl::Error exception is
-     * generated, otherwise the returned error is stored in the Kernel
-     * object and can get accessed using \a get_error.
-     */
-    template<class A1, class A2, class A3, class A4, class A5>
-    inline Event operator()(
-		const A1& a1, 
-		const A2& a2, 
-		const A3& a3, 
-		const A4& a4, 
-		const A5& a5,
-        const VECTOR_CLASS<Event>* events = NULL);
-
-    /*! \brief Enqueue a command to execute a kernel on a device.
-     *
-     *  \param a1 is used argument 0 for the kernel call.
-     *  \param a2 is used argument 1 for the kernel call.
-     *  \param a3 is used argument 2 for the kernel call.
-     *  \param a4 is used argument 3 for the kernel call.
-     *  \param a5 is used argument 4 for the kernel call.
-     *  \param a6 is used argument 5 for the kernel call.
-     *
-     *  \param events specifies the list of events that need to complete before
-     *  this particular command can be executed. If \a events is NULL, its
-     *  default value, then this particular command does not wait on any event
-     *  to complete. The events specified in \a events act as
-     *  synchronization points.
-     *
-     *  \return An event that identifies this particular kernel
-     *  execution instance.
-     *
-     * \note In the case that exceptions are enabled and error value
-     * other than CL_SUCCESS is generated, then cl::Error exception is
-     * generated, otherwise the returned error is stored in the Kernel
-     * object and can get accessed using \a get_error.
-     */
-    template<class A1, class A2, class A3, class A4, class A5, class A6>
-    inline Event operator()(
-		const A1& a1, 
-		const A2& a2, 
-		const A3& a3, 
-		const A4& a4, 
-		const A5& a5, 
-		const A6& a6,
-        const VECTOR_CLASS<Event>* events = NULL);
-
-    /*! \brief Enqueue a command to execute a kernel on a device.
-     *
-     *  \param a1 is used argument 0 for the kernel call.
-     *  \param a2 is used argument 1 for the kernel call.
-     *  \param a3 is used argument 2 for the kernel call.
-     *  \param a4 is used argument 3 for the kernel call.
-     *  \param a5 is used argument 4 for the kernel call.
-     *  \param a6 is used argument 5 for the kernel call.
-     *  \param a7 is used argument 6 for the kernel call.
-     *
-     *  \param events specifies the list of events that need to complete before
-     *  this particular command can be executed. If \a events is NULL, its
-     *  default value, then this particular command does not wait on any event
-     *  to complete. The events specified in \a events act as
-     *  synchronization points.
-     *
-     *  \return An event that identifies this particular kernel
-     *  execution instance.
-     *
-     * \note In the case that exceptions are enabled and error value
-     * other than CL_SUCCESS is generated, then cl::Error exception is
-     * generated, otherwise the returned error is stored in the Kernel
-     * object and can get accessed using \a get_error.
-     */
-    template<class A1, class A2, class A3, class A4,
-             class A5, class A6, class A7>
-    inline Event operator()(
-		const A1& a1, 
-		const A2& a2, 
-		const A3& a3, 
-		const A4& a4, 
-		const A5& a5, 
-		const A6& a6, 
-		const A7& a7,
-        const VECTOR_CLASS<Event>* events = NULL);
-
-    /*! \brief Enqueue a command to execute a kernel on a device.
-     *
-     *  \param a1 is used argument 0 for the kernel call.
-     *  \param a2 is used argument 1 for the kernel call.
-     *  \param a3 is used argument 2 for the kernel call.
-     *  \param a4 is used argument 3 for the kernel call.
-     *  \param a5 is used argument 4 for the kernel call.
-     *  \param a6 is used argument 5 for the kernel call.
-     *  \param a7 is used argument 6 for the kernel call.
-     *  \param a8 is used argument 7 for the kernel call.
-     *
-     *  \param events specifies the list of events that need to complete before
-     *  this particular command can be executed. If \a events is NULL, its
-     *  default value, then this particular command does not wait on any event
-     *  to complete. The events specified in \a events act as
-     *  synchronization points.
-     *
-     *  \return An event that identifies this particular kernel
-     *  execution instance.
-     *
-     * \note In the case that exceptions are enabled and error value
-     * other than CL_SUCCESS is generated, then cl::Error exception is
-     * generated, otherwise the returned error is stored in the Kernel
-     * object and can get accessed using \a get_error.
-     */
-    template<class A1, class A2, class A3, class A4, class A5,
-             class A6, class A7, class A8>
-    inline Event operator()(
-		const A1& a1, 
-		const A2& a2, 
-		const A3& a3, 
-		const A4& a4, 
-		const A5& a5, 
-		const A6& a6, 
-		const A7& a7, 
-		const A8& a8,
-        const VECTOR_CLASS<Event>* events = NULL);
-
-    /*! \brief Enqueue a command to execute a kernel on a device.
-     *
-     *  \param a1 is used argument 0 for the kernel call.
-     *  \param a2 is used argument 1 for the kernel call.
-     *  \param a3 is used argument 2 for the kernel call.
-     *  \param a4 is used argument 3 for the kernel call.
-     *  \param a5 is used argument 4 for the kernel call.
-     *  \param a6 is used argument 5 for the kernel call.
-     *  \param a7 is used argument 6 for the kernel call.
-     *  \param a8 is used argument 7 for the kernel call.
-     *  \param a9 is used argument 8 for the kernel call.
-     *
-     *  \param events specifies the list of events that need to complete before
-     *  this particular command can be executed. If \a events is NULL, its
-     *  default value, then this particular command does not wait on any event
-     *  to complete. The events specified in \a events act as
-     *  synchronization points.
-     *
-     *  \return An event that identifies this particular kernel
-     *  execution instance.
-     *
-     * \note In the case that exceptions are enabled and error value
-     * other than CL_SUCCESS is generated, then cl::Error exception is
-     * generated, otherwise the returned error is stored in the Kernel
-     * object and can get accessed using \a get_error.
-     */
-    template<class A1, class A2, class A3, class A4, class A5,
-             class A6, class A7, class A8, class A9>
-    inline Event operator()(
-		const A1& a1, 
-		const A2& a2, 
-		const A3& a3, 
-		const A4& a4, 
-		const A5& a5, 
-		const A6& a6, 
-		const A7& a7, 
-		const A8& a8, 
-		const A9& a9,
-        const VECTOR_CLASS<Event>* events = NULL);
-
-    /*! \brief Enqueue a command to execute a kernel on a device.
-     *
-     *  \param a1 is used argument 0 for the kernel call.
-     *  \param a2 is used argument 1 for the kernel call.
-     *  \param a3 is used argument 2 for the kernel call.
-     *  \param a4 is used argument 3 for the kernel call.
-     *  \param a5 is used argument 4 for the kernel call.
-     *  \param a6 is used argument 5 for the kernel call.
-     *  \param a7 is used argument 6 for the kernel call.
-     *  \param a8 is used argument 7 for the kernel call.
-     *  \param a9 is used argument 8 for the kernel call.
-     *  \param a10 is used argument 9 for the kernel call.
-     *
-     *  \param events specifies the list of events that need to complete before
-     *  this particular command can be executed. If \a events is NULL, its
-     *  default value, then this particular command does not wait on any event
-     *  to complete. The events specified in \a events act as
-     *  synchronization points.
-     *
-     *  \return An event that identifies this particular kernel
-     *  execution instance.
-     *
-     * \note In the case that exceptions are enabled and error value
-     * other than CL_SUCCESS is generated, then cl::Error exception is
-     * generated, otherwise the returned error is stored in the Kernel
-     * object and can get accessed using \a get_error.
-     */
-    template<class A1, class A2, class A3, class A4, class A5,
-             class A6, class A7, class A8, class A9, class A10>
-    inline Event operator()(
-		const A1& a1, 
-		const A2& a2, 
-		const A3& a3, 
-		const A4& a4, 
-		const A5& a5, 
-		const A6& a6,
-        const A7& a7, 
-		const A8& a8, 
-		const A9& a9, 
-		const A10& a10,
-        const VECTOR_CLASS<Event>* events = NULL);
-
-    /*! \brief Enqueue a command to execute a kernel on a device.
-     *
-     *  \param a1 is used argument 0 for the kernel call.
-     *  \param a2 is used argument 1 for the kernel call.
-     *  \param a3 is used argument 2 for the kernel call.
-     *  \param a4 is used argument 3 for the kernel call.
-     *  \param a5 is used argument 4 for the kernel call.
-     *  \param a6 is used argument 5 for the kernel call.
-     *  \param a7 is used argument 6 for the kernel call.
-     *  \param a8 is used argument 7 for the kernel call.
-     *  \param a9 is used argument 8 for the kernel call.
-     *  \param a10 is used argument 9 for the kernel call.
-	 *  \param a11 is used argument 10 for the kernel call.
-     *
-     *  \param events specifies the list of events that need to complete before
-     *  this particular command can be executed. If \a events is NULL, its
-     *  default value, then this particular command does not wait on any event
-     *  to complete. The events specified in \a events act as
-     *  synchronization points.
-     *
-     *  \return An event that identifies this particular kernel
-     *  execution instance.
-     *
-     * \note In the case that exceptions are enabled and error value
-     * other than CL_SUCCESS is generated, then cl::Error exception is
-     * generated, otherwise the returned error is stored in the Kernel
-     * object and can get accessed using \a get_error.
-     */
-    template<class A1, class A2, class A3, class A4, class A5,
-             class A6, class A7, class A8, class A9, class A10,
-			 class A11>
-    inline Event operator()(
-		const A1& a1, 
-		const A2& a2, 
-		const A3& a3, 
-		const A4& a4, 
-		const A5& a5, 
-		const A6& a6,
-        const A7& a7, 
-		const A8& a8, 
-		const A9& a9, 
-		const A10& a10, 
-		const A11& a11,
-        const VECTOR_CLASS<Event>* events = NULL);
-
-     /*! \brief Enqueue a command to execute a kernel on a device.
-     *
-     *  \param a1 is used argument 0 for the kernel call.
-     *  \param a2 is used argument 1 for the kernel call.
-     *  \param a3 is used argument 2 for the kernel call.
-     *  \param a4 is used argument 3 for the kernel call.
-     *  \param a5 is used argument 4 for the kernel call.
-     *  \param a6 is used argument 5 for the kernel call.
-     *  \param a7 is used argument 6 for the kernel call.
-     *  \param a8 is used argument 7 for the kernel call.
-     *  \param a9 is used argument 8 for the kernel call.
-     *  \param a10 is used argument 9 for the kernel call.
-	 *  \param a11 is used argument 10 for the kernel call.
-	 *  \param a12 is used argument 11 for the kernel call.
-     *
-     *  \param events specifies the list of events that need to complete before
-     *  this particular command can be executed. If \a events is NULL, its
-     *  default value, then this particular command does not wait on any event
-     *  to complete. The events specified in \a events act as
-     *  synchronization points.
-     *
-     *  \return An event that identifies this particular kernel
-     *  execution instance.
-     *
-     * \note In the case that exceptions are enabled and error value
-     * other than CL_SUCCESS is generated, then cl::Error exception is
-     * generated, otherwise the returned error is stored in the Kernel
-     * object and can get accessed using \a get_error.
-     */
-    template<class A1, class A2, class A3, class A4, class A5,
-             class A6, class A7, class A8, class A9, class A10,
-			 class A11, class A12>
-    inline Event operator()(
-		const A1& a1, 
-		const A2& a2, 
-		const A3& a3, 
-		const A4& a4, 
-		const A5& a5, 
-		const A6& a6,
-        const A7& a7, 
-		const A8& a8, 
-		const A9& a9, 
-		const A10& a10, 
-		const A11& a11, 
-		const A12& a12,
-        const VECTOR_CLASS<Event>* events = NULL);
-
-    /*! \brief Enqueue a command to execute a kernel on a device.
-     *
-     *  \param a1 is used argument 0 for the kernel call.
-     *  \param a2 is used argument 1 for the kernel call.
-     *  \param a3 is used argument 2 for the kernel call.
-     *  \param a4 is used argument 3 for the kernel call.
-     *  \param a5 is used argument 4 for the kernel call.
-     *  \param a6 is used argument 5 for the kernel call.
-     *  \param a7 is used argument 6 for the kernel call.
-     *  \param a8 is used argument 7 for the kernel call.
-     *  \param a9 is used argument 8 for the kernel call.
-     *  \param a10 is used argument 9 for the kernel call.
-	 *  \param a11 is used argument 10 for the kernel call.
-	 *  \param a12 is used argument 11 for the kernel call.
-	 *  \param a13 is used argument 12 for the kernel call.
-     *
-     *  \param events specifies the list of events that need to complete before
-     *  this particular command can be executed. If \a events is NULL, its
-     *  default value, then this particular command does not wait on any event
-     *  to complete. The events specified in \a events act as
-     *  synchronization points.
-     *
-     *  \return An event that identifies this particular kernel
-     *  execution instance.
-     *
-     * \note In the case that exceptions are enabled and error value
-     * other than CL_SUCCESS is generated, then cl::Error exception is
-     * generated, otherwise the returned error is stored in the Kernel
-     * object and can get accessed using \a get_error.
-     */
-    template<class A1, class A2, class A3, class A4, class A5,
-             class A6, class A7, class A8, class A9, class A10,
-			 class A11, class A12, class A13>
-    inline Event operator()(
-		const A1& a1, 
-		const A2& a2, 
-		const A3& a3, 
-		const A4& a4, 
-		const A5& a5, 
-		const A6& a6,
-        const A7& a7, 
-		const A8& a8, 
-		const A9& a9, 
-		const A10& a10, 
-		const A11& a11, 
-		const A12& a12, 
-		const A13& a13,
-        const VECTOR_CLASS<Event>* events = NULL);
-
-    /*! \brief Enqueue a command to execute a kernel on a device.
-     *
-     *  \param a1 is used argument 0 for the kernel call.
-     *  \param a2 is used argument 1 for the kernel call.
-     *  \param a3 is used argument 2 for the kernel call.
-     *  \param a4 is used argument 3 for the kernel call.
-     *  \param a5 is used argument 4 for the kernel call.
-     *  \param a6 is used argument 5 for the kernel call.
-     *  \param a7 is used argument 6 for the kernel call.
-     *  \param a8 is used argument 7 for the kernel call.
-     *  \param a9 is used argument 8 for the kernel call.
-     *  \param a10 is used argument 9 for the kernel call.
-	 *  \param a11 is used argument 10 for the kernel call.
-	 *  \param a12 is used argument 11 for the kernel call.
-	 *  \param a13 is used argument 12 for the kernel call.
-	 *  \param a13 is used argument 13 for the kernel call.
-     *
-     *  \param events specifies the list of events that need to complete before
-     *  this particular command can be executed. If \a events is NULL, its
-     *  default value, then this particular command does not wait on any event
-     *  to complete. The events specified in \a events act as
-     *  synchronization points.
-     *
-     *  \return An event that identifies this particular kernel
-     *  execution instance.
-     *
-     * \note In the case that exceptions are enabled and error value
-     * other than CL_SUCCESS is generated, then cl::Error exception is
-     * generated, otherwise the returned error is stored in the Kernel
-     * object and can get accessed using \a get_error.
-     */
-    template<class A1, class A2, class A3, class A4, class A5,
-             class A6, class A7, class A8, class A9, class A10,
-			 class A11, class A12, class A13, class A14>
-    inline Event operator()(
-		const A1& a1, 
-		const A2& a2, 
-		const A3& a3, 
-		const A4& a4, 
-		const A5& a5, 
-		const A6& a6,
-        const A7& a7, 
-		const A8& a8, 
-		const A9& a9, 
-		const A10& a10, 
-		const A11& a11,
-		const A12& a12, 
-		const A13& a13, 
-		const A14& a14,
-        const VECTOR_CLASS<Event>* events = NULL);
-
-	template<class A1, class A2, class A3, class A4, class A5,
-             class A6, class A7, class A8, class A9, class A10,
-			 class A11, class A12, class A13, class A14, class A15>
-    inline Event operator()(
-		const A1& a1, 
-		const A2& a2, 
-		const A3& a3, 
-		const A4& a4, 
-		const A5& a5, 
-		const A6& a6,
-        const A7& a7, 
-		const A8& a8, 
-		const A9& a9, 
-		const A10& a10, 
-		const A11& a11,
-		const A12& a12, 
-		const A13& a13, 
-		const A14& a14, 
-		const A15& a15,
-        const VECTOR_CLASS<Event>* events = NULL);
-};
-
 /*!
  * \struct LocalSpaceArg
  * \brief Local address raper for use with Kernel::setArg
@@ -2989,7 +3117,7 @@ namespace detail {
 template <typename T>
 struct KernelArgumentHandler
 {
-    static ::size_t size(const T& value) { return sizeof(T); }
+    static ::size_t size(const T&) { return sizeof(T); }
     static T* ptr(T& value) { return &value; }
 };
 
@@ -2997,7 +3125,7 @@ template <>
 struct KernelArgumentHandler<LocalSpaceArg>
 {
     static ::size_t size(const LocalSpaceArg& value) { return value.size_; }
-    static void* ptr(LocalSpaceArg& value) { return NULL; }
+    static void* ptr(LocalSpaceArg&) { return NULL; }
 };
 
 } // namespace detail
@@ -3017,6 +3145,8 @@ __local(::size_t size)
     LocalSpaceArg ret = { size };
     return ret;
 }
+
+class KernelFunctor;
 
 /*! \class Kernel
  * \brief Kernel interface that implements cl_kernel
@@ -3058,6 +3188,26 @@ public:
 
     //! Default constructor; kernel is not valid at this point.
     Kernel() { }
+
+    /*!
+     * \brief Construct a new kernel from a valid kernel.
+     *
+     * \param kernel The kernel object used for creation.
+    */
+    Kernel(const Kernel& kernel) : detail::Wrapper<cl_type>(kernel) { }
+
+    /*!
+     * \brief Assign a kernel to kernel.
+     *
+     * \param rhs the kernel object on rhs of the assignment.
+     */
+    Kernel& operator = (const Kernel& rhs)
+    {
+        if (this != &rhs) {
+            detail::Wrapper<cl_type>::operator=(rhs);
+        }
+        return *this;
+    }
 
     /*! \brief Return information about the kernel object.
      *
@@ -3142,7 +3292,7 @@ public:
     {
         return detail::errHandler(
             detail::getInfo(
-                &::clGetKernelWorkGroupInfo, device(), object_, name, param),
+                &::clGetKernelWorkGroupInfo, object_, device(), name, param),
                 __GET_KERNEL_WORK_GROUP_INFO_ERR);
     }
 
@@ -3166,11 +3316,11 @@ public:
      */
     template <cl_int name> typename
     detail::param_traits<detail::cl_kernel_work_group_info, name>::param_type
-    getWorkGroupInfo(cl_int* err = NULL) const
+	getWorkGroupInfo(const Device& device, cl_int* err = NULL) const
     {
         typename detail::param_traits<
             detail::cl_kernel_work_group_info, name>::param_type param;
-        cl_int result = getWorkGroupInfo(name, &param);
+        cl_int result = getWorkGroupInfo(device, name, &param);
         if (err != NULL) {
             *err = result;
         }
@@ -3300,7 +3450,7 @@ public:
 
     /*! \brief Bind a kernel to a command-queue and launch dimensions.
      *
-     * \param queue is the command-queue to bind with.
+     *  \param queue is the command-queue to bind with.
      *
      *  \param offset must currently be  a  NullRange value. In  a future
      *  revision of OpenCL, \a global_work_offset can be used to specify an
@@ -3317,7 +3467,7 @@ public:
      *  work-group (also referred to as the size of the work-group) that
      *  will execute the  kernel specified by kernel.
      *
-     *  /return A KernelFunctor object that when called with the appropriate
+     *  \return A KernelFunctor object that when called with the appropriate
      *  number of arguments, as defined by kernel itself, will be launched
      *  with the corresponding queue, offset, global, and local values.
      */
@@ -3325,10 +3475,7 @@ public:
         const CommandQueue& queue,
         const NDRange& offset,
         const NDRange& global,
-        const NDRange& local)
-    {
-        return KernelFunctor(*this,queue,offset,global,local);
-    }
+        const NDRange& local);
 
     /*! \brief Bind a kernel to a command-queue and launch dimensions.
      *
@@ -3350,10 +3497,7 @@ public:
     KernelFunctor bind(
         const CommandQueue& queue,
         const NDRange& global,
-        const NDRange& local)
-    {
-        return KernelFunctor(*this,queue,NullRange,global,local);
-    }
+        const NDRange& local);
 };
 
 
@@ -3394,17 +3538,17 @@ public:
     {
         cl_int error;
 
-        const cl_uint n = (cl_uint) sources.size();
+		const ::size_t n = (::size_t)sources.size();
         ::size_t* lengths = (::size_t*) alloca(n * sizeof(::size_t));
         const char** strings = (const char**) alloca(n * sizeof(const char*));
 
         for (::size_t i = 0; i < n; ++i) {
-            strings[i] = sources[i].first;
-            lengths[i] = sources[i].second;
+            strings[i] = sources[(int)i].first;
+            lengths[i] = sources[(int)i].second;
         }
 
         object_ = ::clCreateProgramWithSource(
-            context(), n, strings, lengths, &error);
+            context(), (cl_uint)n, strings, lengths, &error);
 
         detail::errHandler(error, __CREATE_PROGRAM_WITH_SOURCE_ERR);
         if (err != NULL) {
@@ -3479,8 +3623,8 @@ public:
         const unsigned char** images = (const unsigned char**) alloca(n * sizeof(const void*));
 
         for (::size_t i = 0; i < n; ++i) {
-            images[i] = (const unsigned char*)binaries[i].first;
-            lengths[i] = binaries[i].second;
+            images[i] = (const unsigned char*)binaries[(int)i].first;
+            lengths[i] = binaries[(int)i].second;
         }
 
         object_ = ::clCreateProgramWithBinary(
@@ -3498,6 +3642,26 @@ public:
 
     //! Default constructor; program is not valid at this point.
     Program() { }
+
+    /*!
+     * \brief Construct a new program from a valid program.
+     *
+     * \param program The program object used for creation.
+    */
+    Program(const Program& program) : detail::Wrapper<cl_type>(program) { }
+
+    /*!
+     * \brief Assign a program to program.
+     *
+     * \param rhs the program object on rhs of the assignment.
+     */
+    Program& operator = (const Program& rhs)
+    {
+        if (this != &rhs) {
+            detail::Wrapper<cl_type>::operator=(rhs);
+        }
+        return *this;
+    }
 
     /*! \brief Build (compile & link) a program executable from the program
      *   source or binary for all the devices or a specific device(s) in the
@@ -3552,7 +3716,7 @@ public:
     cl_int build(
         const VECTOR_CLASS<Device>& devices,
         const char* options = NULL,
-        void (*notifyFptr)(cl_program, void *) = NULL,
+        void (CL_CALLBACK * notifyFptr)(cl_program, void *) = NULL,
         void* data = NULL) const
     {
         return detail::errHandler(
@@ -3804,6 +3968,26 @@ public:
     //! Default constructor; command queue is not valid at this point.
     CommandQueue() { }
 
+    /*!
+     * \brief Construct a new commandQueue from a valid commandQueue.
+     *
+     * \param commandQueue The commandQueue object used for creation.
+    */
+    CommandQueue(const CommandQueue& commandQueue) : detail::Wrapper<cl_type>(commandQueue) { }
+
+    /*!
+     * \brief Assign a commandQueue to commandQueue.
+     *
+     * \param rhs the commandQueue object on rhs of the assignment.
+     */
+    CommandQueue& operator = (const CommandQueue& rhs)
+    {
+        if (this != &rhs) {
+            detail::Wrapper<cl_type>::operator=(rhs);
+        }
+        return *this;
+    }
+
     /*! \brief Query information about a command-queue.
      *
      *  \param name specifies the information to query.
@@ -3962,7 +4146,7 @@ public:
                 object_, buffer(), blocking, offset, size,
                 ptr,
                 (events != NULL) ? (cl_uint) events->size() : 0,
-                (events != NULL) ? (cl_event*) &events->front() : NULL,
+                (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
                 (cl_event*) event),
             __ENQUEUE_READ_BUFFER_ERR);
     }
@@ -4024,7 +4208,7 @@ public:
         cl_bool blocking,
         ::size_t offset,
         ::size_t size,
-        void* ptr,
+        const void* ptr,
         const VECTOR_CLASS<Event>* events = NULL,
         Event* event = NULL) const
     {
@@ -4033,7 +4217,7 @@ public:
                 object_, buffer(), blocking, offset, size,
                 ptr,
                 (events != NULL) ? (cl_uint) events->size() : 0,
-                (events != NULL) ? (cl_event*) &events->front() : NULL,
+                (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
                 (cl_event*) event),
                 __ENQUEUE_WRITE_BUFFER_ERR);
     }
@@ -4096,7 +4280,7 @@ public:
             ::clEnqueueCopyBuffer(
                 object_, src(), dst(), src_offset, dst_offset, size,
                 (events != NULL) ? (cl_uint) events->size() : 0,
-                (events != NULL) ? (cl_event*) &events->front() : NULL,
+                (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
                 (cl_event*) event),
             __ENQEUE_COPY_BUFFER_ERR);
     }
@@ -4190,7 +4374,7 @@ public:
                 object_, image(), blocking, (const ::size_t *) origin,
                 (const ::size_t *) region, row_pitch, slice_pitch, ptr,
                 (events != NULL) ? (cl_uint) events->size() : 0,
-                (events != NULL) ? (cl_event*) &events->front() : NULL,
+                (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
                 (cl_event*) event),
             __ENQUEUE_READ_IMAGE_ERR);
     }
@@ -4285,7 +4469,7 @@ public:
                 object_, image(), blocking, (const ::size_t *) origin,
                 (const ::size_t *) region, row_pitch, slice_pitch, ptr,
                 (events != NULL) ? (cl_uint) events->size() : 0,
-                (events != NULL) ? (cl_event*) &events->front() : NULL,
+                (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
                 (cl_event*) event),
             __ENQUEUE_WRITE_IMAGE_ERR);
     }
@@ -4364,7 +4548,7 @@ public:
                 object_, src(), dst(), (const ::size_t *) src_origin,
                 (const ::size_t *)dst_origin, (const ::size_t *) region,
                 (events != NULL) ? (cl_uint) events->size() : 0,
-                (events != NULL) ? (cl_event*) &events->front() : NULL,
+                (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
                 (cl_event*) event),
             __ENQUEUE_COPY_IMAGE_ERR);
     }
@@ -4438,7 +4622,7 @@ public:
                 object_, src(), dst(), (const ::size_t *) src_origin,
                 (const ::size_t *) region, dst_offset,
                 (events != NULL) ? (cl_uint) events->size() : 0,
-                (events != NULL) ? (cl_event*) &events->front() : NULL,
+                (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
                 (cl_event*) event),
             __ENQUEUE_COPY_IMAGE_TO_BUFFER_ERR);
     }
@@ -4508,7 +4692,7 @@ public:
                 object_, src(), dst(), src_offset,
                 (const ::size_t *) dst_origin, (const ::size_t *) region,
                 (events != NULL) ? (cl_uint) events->size() : 0,
-                (events != NULL) ? (cl_event*) &events->front() : NULL,
+                (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
                 (cl_event*) event),
             __ENQUEUE_COPY_BUFFER_TO_IMAGE_ERR);
     }
@@ -4598,7 +4782,7 @@ public:
         void * result = ::clEnqueueMapBuffer(
 	    object_, buffer(), blocking, flags, offset, size,
 	    (events != NULL) ? (cl_uint) events->size() : 0,
-	    (events != NULL) ? (cl_event*) &events->front() : NULL,
+	    (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
 	    (cl_event*) event,
 	    &error);
 
@@ -4713,7 +4897,7 @@ public:
 	    (const ::size_t *) origin, (const ::size_t *) region,
 	    row_pitch, slice_pitch,
 	    (events != NULL) ? (cl_uint) events->size() : 0,
-	    (events != NULL) ? (cl_event*) &events->front() : NULL,
+	    (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
 	    (cl_event*) event,
 	    &error);
 
@@ -4782,7 +4966,7 @@ public:
             ::clEnqueueUnmapMemObject(
                 object_, memory(), mapped_ptr,
                 (events != NULL) ? (cl_uint) events->size() : 0,
-                (events != NULL) ? (cl_event*) &events->front() : NULL,
+                (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
                 (cl_event*) event),
             __ENQUEUE_UNMAP_MEM_OBJECT_ERR);
     }
@@ -4909,7 +5093,7 @@ public:
                 (const ::size_t*) global,
                 local.dimensions() != 0 ? (const ::size_t*) local : NULL,
                 (events != NULL) ? (cl_uint) events->size() : 0,
-                (events != NULL) ? (cl_event*) &events->front() : NULL,
+                (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
                 (cl_event*) event),
             __ENQUEUE_NDRANGE_KERNEL_ERR);
     }
@@ -4975,7 +5159,7 @@ public:
             ::clEnqueueTask(
                 object_, kernel(),
                 (events != NULL) ? (cl_uint) events->size() : 0,
-                (events != NULL) ? (cl_event*) &events->front() : NULL,
+                (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
                 (cl_event*) event),
             __ENQUEUE_TASK_ERR);
     }
@@ -5050,7 +5234,7 @@ public:
                 (mem_objects != NULL) ? (const cl_mem *) &mem_objects->front(): NULL,
                 (mem_locs != NULL) ? (const void **) &mem_locs->front() : NULL,
                 (events != NULL) ? (cl_uint) events->size() : 0,
-                (events != NULL) ? (cl_event*) &events->front() : NULL,
+                (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
                 (cl_event*) event),
             __ENQUEUE_NATIVE_KERNEL);
     }
@@ -5128,7 +5312,7 @@ public:
                  (mem_objects != NULL) ? (cl_uint) mem_objects->size() : 0,
                  (mem_objects != NULL) ? (const cl_mem *) &mem_objects->front(): NULL,
                  (events != NULL) ? (cl_uint) events->size() : 0,
-                 (events != NULL) ? (cl_event*) &events->front() : NULL,
+                 (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
                  (cl_event*) event),
              __ENQUEUE_ACQUIRE_GL_ERR);
      }
@@ -5144,10 +5328,59 @@ public:
                  (mem_objects != NULL) ? (cl_uint) mem_objects->size() : 0,
                  (mem_objects != NULL) ? (const cl_mem *) &mem_objects->front(): NULL,
                  (events != NULL) ? (cl_uint) events->size() : 0,
+                 (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
+                 (cl_event*) event),
+             __ENQUEUE_RELEASE_GL_ERR);
+     }
+
+#if defined (USE_DX_INTEROP)
+typedef CL_API_ENTRY cl_int (CL_API_CALL *PFN_clEnqueueAcquireD3D10ObjectsKHR)(
+    cl_command_queue command_queue, cl_uint num_objects,
+    const cl_mem* mem_objects, cl_uint num_events_in_wait_list,
+    const cl_event* event_wait_list, cl_event* event);
+typedef CL_API_ENTRY cl_int (CL_API_CALL *PFN_clEnqueueReleaseD3D10ObjectsKHR)(
+    cl_command_queue command_queue, cl_uint num_objects,
+    const cl_mem* mem_objects,  cl_uint num_events_in_wait_list,
+    const cl_event* event_wait_list, cl_event* event);
+
+   cl_int enqueueAcquireD3D10Objects(
+         const VECTOR_CLASS<Memory>* mem_objects = NULL,
+         const VECTOR_CLASS<Event>* events = NULL,
+         Event* event = NULL) const
+     {
+		static PFN_clEnqueueAcquireD3D10ObjectsKHR pfn_clEnqueueAcquireD3D10ObjectsKHR = NULL;
+		__INIT_CL_EXT_FCN_PTR(clEnqueueAcquireD3D10ObjectsKHR);
+		
+		 return detail::errHandler(
+             pfn_clEnqueueAcquireD3D10ObjectsKHR(
+                 object_,
+                 (mem_objects != NULL) ? (cl_uint) mem_objects->size() : 0,
+                 (mem_objects != NULL) ? (const cl_mem *) &mem_objects->front(): NULL,
+                 (events != NULL) ? (cl_uint) events->size() : 0,
+                 (events != NULL) ? (cl_event*) &events->front() : NULL,
+                 (cl_event*) event),
+             __ENQUEUE_ACQUIRE_GL_ERR);
+     }
+
+    cl_int enqueueReleaseD3D10Objects(
+         const VECTOR_CLASS<Memory>* mem_objects = NULL,
+         const VECTOR_CLASS<Event>* events = NULL,
+         Event* event = NULL) const
+     {
+		 static PFN_clEnqueueReleaseD3D10ObjectsKHR pfn_clEnqueueReleaseD3D10ObjectsKHR = NULL;
+		 __INIT_CL_EXT_FCN_PTR(clEnqueueReleaseD3D10ObjectsKHR);
+
+         return detail::errHandler(
+             pfn_clEnqueueReleaseD3D10ObjectsKHR(
+                 object_,
+                 (mem_objects != NULL) ? (cl_uint) mem_objects->size() : 0,
+                 (mem_objects != NULL) ? (const cl_mem *) &mem_objects->front(): NULL,
+                 (events != NULL) ? (cl_uint) events->size() : 0,
                  (events != NULL) ? (cl_event*) &events->front() : NULL,
                  (cl_event*) event),
              __ENQUEUE_RELEASE_GL_ERR);
      }
+#endif
 
     /*! \brief Enqueue a barrier operation.
      *
@@ -5189,7 +5422,7 @@ public:
      *
      *  Any blocking commands queued in a command-queue such as
      *  enqueueRead{Image|Buffer} with \a blocking_read set to CL_TRUE,
-     *s  enqueueWrite{Image|Buffer} with \a blocking_write set to CL_TRUE,
+     *  enqueueWrite{Image|Buffer} with \a blocking_write set to CL_TRUE,
      *  enqueueMap{Buffer|Image} with \a blocking_map set to CL_TRUE or
      *  waitForEvents perform an implicit flush of the command-queue.
      *
@@ -5224,6 +5457,667 @@ public:
     }
 };
 
+/*! \class KernelFunctor
+ * \brief Kernel functor interface
+ *
+ * \note Currently only functors of zero to ten arguments are supported. It
+ * is straightforward to add more and a more general solution, similar to
+ * Boost.Lambda could be followed if required in the future.
+ */
+class KernelFunctor
+{
+private:
+    Kernel kernel_;
+    CommandQueue queue_;
+    NDRange offset_;
+    NDRange global_;
+    NDRange local_;
+
+    cl_int err_;
+public:
+    //! Default constructor; KernelFunctor is not valid at this point.
+    KernelFunctor() { }
+
+    /*! \brief Construct a KernelFunctor.
+     *
+     *  A KernelFunctor object will launch the \a kernel with the
+     *  corresponding \a queue, \a offset, \a global, and \a local
+     *  values when called with the appropriate number of arguments,
+     *  as defined by kernel itself,
+     *
+     *  \param kernel is the kernel to launch when this functor is executed.
+     *
+     *  \param queue is the command-queue to launch on.
+     *
+     *  \param offset must currently be  a  NullRange value. In  a future
+     *  revision of OpenCL, \a global_work_offset can be used to specify an
+     *  array of \a work_dim unsigned values that describe the offset used to
+     *  calculate the global ID of a work-item instead of having the global IDs
+     *  always start at offset (0, 0, 0).
+     *
+     *  \param global describes  the number of global work-items in will execute
+     *  the  kernel  function. The  total  number  of  global
+     *  work-items is computed as global_work_size[0] * ...
+     *  * global_work_size[work_dim - 1].
+     *
+     *  \param local describes the number of work-items that  make  up  a
+     *  work-group (also referred to as the size of the work-group) that
+     *  will execute the  kernel specified by kernel.
+     * 
+     *  \return A KernelFunctor object that when called with the appropriate
+     *  number of arguments, as defined by kernel itself, will be launched
+     *  with the corresponding queue, offset, global, and local values.
+     *
+     *  \note This constructor is typically not used in favor of the Kernel::bind method. 
+     */
+    KernelFunctor(
+        const Kernel& kernel,
+        const CommandQueue& queue,
+        const NDRange& offset,
+        const NDRange& global,
+        const NDRange& local) :
+            kernel_(kernel),
+            queue_(queue),
+            offset_(offset),
+            global_(global),
+            local_(local),
+            err_(CL_SUCCESS)
+    {}
+
+    /*! \brief Assignment operator.
+     *
+     * \param rhs KernelFunctor object for rhs of assignment.
+     *
+     * \return KernelFunctor object for lhs of assignment.
+     */
+    KernelFunctor& operator=(const KernelFunctor& rhs);
+
+    /*! \brief Copy constructor
+     *
+     * \param rhs is the KernelFunctor to be copied (cloned).
+     */
+    KernelFunctor(const KernelFunctor& rhs);
+
+    /*! \brief Get the error code returned by the last call to the
+     *         functor.
+     *
+     * \return The last error; in the case that the functor object
+     * in question has not been called CL_SUCCESS is returned.
+     */
+    cl_int getError() { return err_; }
+
+    /*! \brief Enqueue a command to execute a kernel on a device.
+     *
+     *  \param events specifies the list of events that need to complete before
+     *  this particular command can be executed. If \a events is NULL, its
+     *  default value, then this particular command does not wait on any event
+     *  to complete. The events specified in \a events act as
+     *  synchronization points.
+     *
+     *  \return An event that identifies this particular kernel
+     *  execution instance.
+     *
+     * \note In the case that exceptions are enabled and error value
+     * other than CL_SUCCESS is generated, then cl::Error exception is
+     * generated, otherwise the returned error is stored in the Kernel
+     * object and can get accessed using \a get_error.
+     */
+    inline Event operator()(const VECTOR_CLASS<Event>* events = NULL);
+
+    /*! \brief Enqueue a command to execute a kernel on a device.
+     *
+     *  \param a1 is used argument 0 for the kernel call.
+     *
+     *  \param events specifies the list of events that need to complete before
+     *  this particular command can be executed. If \a events is NULL, its
+     *  default value, then this particular command does not wait on any event
+     *  to complete. The events specified in \a events act as
+     *  synchronization points.
+     *  \return An event that identifies this particular kernel
+     *  execution instance.
+     *
+     * \note In the case that exceptions are enabled and error value
+     * other than CL_SUCCESS is generated, then cl::Error exception is
+     * generated, otherwise the returned error is stored in the Kernel
+     * object and can get accessed using \a get_error.
+     */
+    template<typename A1>
+    inline Event operator()(
+        const A1& a1, 
+        const VECTOR_CLASS<Event>* events = NULL);
+
+    /*! \brief Enqueue a command to execute a kernel on a device.
+     *
+     *  \param a1 is used argument 0 for the kernel call.
+     *  \param a2 is used argument 1 for the kernel call.
+     *
+     *  \param events specifies the list of events that need to complete before
+     *  this particular command can be executed. If \a events is NULL, its
+     *  default value, then this particular command does not wait on any event
+     *  to complete. The events specified in \a events act as
+     *  synchronization points.
+     *
+     *  \return An event that identifies this particular kernel
+     *  execution instance.
+     *
+     * \note In the case that exceptions are enabled and error value
+     * other than CL_SUCCESS is generated, then cl::Error exception is
+     * generated, otherwise the returned error is stored in the Kernel
+     * object and can get accessed using \a get_error.
+     */
+    template<class A1, class A2>
+    inline Event operator()(
+        const A1& a1, 
+        const A2& a2, 
+        const VECTOR_CLASS<Event>* events = NULL);
+
+    /*! \brief Enqueue a command to execute a kernel on a device.
+     *
+     *  \param a1 is used argument 0 for the kernel call.
+     *  \param a2 is used argument 1 for the kernel call.
+     *  \param a3 is used argument 3 for the kernel call.
+     *
+     *  \param events specifies the list of events that need to complete before
+     *  this particular command can be executed. If \a events is NULL, its
+     *  default value, then this particular command does not wait on any event
+     *  to complete. The events specified in \a events act as
+     *  synchronization points.
+     *
+     *  \return An event that identifies this particular kernel
+     *  execution instance.
+     *
+     * \note In the case that exceptions are enabled and error value
+     * other than CL_SUCCESS is generated, then cl::Error exception is
+     * generated, otherwise the returned error is stored in the Kernel
+     * object and can get accessed using \a get_error.
+     */
+    template<class A1, class A2, class A3>
+    inline Event operator()(
+        const A1& a1, 
+        const A2& a2, 
+        const A3& a3,
+        const VECTOR_CLASS<Event>* events = NULL);
+
+    /*! \brief Enqueue a command to execute a kernel on a device.
+     *
+     *  \param a1 is used argument 0 for the kernel call.
+     *  \param a2 is used argument 1 for the kernel call.
+     *  \param a3 is used argument 2 for the kernel call.
+     *  \param a4 is used argument 3 for the kernel call.
+     *
+     *  \param events specifies the list of events that need to complete before
+     *  this particular command can be executed. If \a events is NULL, its
+     *  default value, then this particular command does not wait on any event
+     *  to complete. The events specified in \a events act as
+     *  synchronization points.
+     *
+     *  \return An event that identifies this particular kernel
+     *  execution instance.
+     *
+     * \note In the case that exceptions are enabled and error value
+     * other than CL_SUCCESS is generated, then cl::Error exception is
+     * generated, otherwise the returned error is stored in the Kernel
+     * object and can get accessed using \a get_error.
+     */
+    template<class A1, class A2, class A3, class A4>
+    inline Event operator()(
+        const A1& a1, 
+        const A2& a2, 
+        const A3& a3, 
+        const A4& a4,
+        const VECTOR_CLASS<Event>* events = NULL);
+
+    /*! \brief Enqueue a command to execute a kernel on a device.
+     *
+     *  \param a1 is used argument 0 for the kernel call.
+     *  \param a2 is used argument 1 for the kernel call.
+     *  \param a3 is used argument 2 for the kernel call.
+     *  \param a4 is used argument 3 for the kernel call.
+     *  \param a5 is used argument 4 for the kernel call.
+     *
+     *  \param events specifies the list of events that need to complete before
+     *  this particular command can be executed. If \a events is NULL, its
+     *  default value, then this particular command does not wait on any event
+     *  to complete. The events specified in \a events act as
+     *  synchronization points.
+     *
+     *  \return An event that identifies this particular kernel
+     *  execution instance.
+     *
+     * \note In the case that exceptions are enabled and error value
+     * other than CL_SUCCESS is generated, then cl::Error exception is
+     * generated, otherwise the returned error is stored in the Kernel
+     * object and can get accessed using \a get_error.
+     */
+    template<class A1, class A2, class A3, class A4, class A5>
+    inline Event operator()(
+        const A1& a1, 
+        const A2& a2, 
+        const A3& a3, 
+        const A4& a4, 
+        const A5& a5,
+        const VECTOR_CLASS<Event>* events = NULL);
+
+    /*! \brief Enqueue a command to execute a kernel on a device.
+     *
+     *  \param a1 is used argument 0 for the kernel call.
+     *  \param a2 is used argument 1 for the kernel call.
+     *  \param a3 is used argument 2 for the kernel call.
+     *  \param a4 is used argument 3 for the kernel call.
+     *  \param a5 is used argument 4 for the kernel call.
+     *  \param a6 is used argument 5 for the kernel call.
+     *
+     *  \param events specifies the list of events that need to complete before
+     *  this particular command can be executed. If \a events is NULL, its
+     *  default value, then this particular command does not wait on any event
+     *  to complete. The events specified in \a events act as
+     *  synchronization points.
+     *
+     *  \return An event that identifies this particular kernel
+     *  execution instance.
+     *
+     * \note In the case that exceptions are enabled and error value
+     * other than CL_SUCCESS is generated, then cl::Error exception is
+     * generated, otherwise the returned error is stored in the Kernel
+     * object and can get accessed using \a get_error.
+     */
+    template<class A1, class A2, class A3, class A4, class A5, class A6>
+    inline Event operator()(
+        const A1& a1, 
+        const A2& a2, 
+        const A3& a3, 
+        const A4& a4, 
+        const A5& a5, 
+        const A6& a6,
+        const VECTOR_CLASS<Event>* events = NULL);
+
+    /*! \brief Enqueue a command to execute a kernel on a device.
+     *
+     *  \param a1 is used argument 0 for the kernel call.
+     *  \param a2 is used argument 1 for the kernel call.
+     *  \param a3 is used argument 2 for the kernel call.
+     *  \param a4 is used argument 3 for the kernel call.
+     *  \param a5 is used argument 4 for the kernel call.
+     *  \param a6 is used argument 5 for the kernel call.
+     *  \param a7 is used argument 6 for the kernel call.
+     *
+     *  \param events specifies the list of events that need to complete before
+     *  this particular command can be executed. If \a events is NULL, its
+     *  default value, then this particular command does not wait on any event
+     *  to complete. The events specified in \a events act as
+     *  synchronization points.
+     *
+     *  \return An event that identifies this particular kernel
+     *  execution instance.
+     *
+     * \note In the case that exceptions are enabled and error value
+     * other than CL_SUCCESS is generated, then cl::Error exception is
+     * generated, otherwise the returned error is stored in the Kernel
+     * object and can get accessed using \a get_error.
+     */
+    template<class A1, class A2, class A3, class A4,
+             class A5, class A6, class A7>
+    inline Event operator()(
+        const A1& a1, 
+        const A2& a2, 
+        const A3& a3, 
+        const A4& a4, 
+        const A5& a5, 
+        const A6& a6, 
+        const A7& a7,
+        const VECTOR_CLASS<Event>* events = NULL);
+
+    /*! \brief Enqueue a command to execute a kernel on a device.
+     *
+     *  \param a1 is used argument 0 for the kernel call.
+     *  \param a2 is used argument 1 for the kernel call.
+     *  \param a3 is used argument 2 for the kernel call.
+     *  \param a4 is used argument 3 for the kernel call.
+     *  \param a5 is used argument 4 for the kernel call.
+     *  \param a6 is used argument 5 for the kernel call.
+     *  \param a7 is used argument 6 for the kernel call.
+     *  \param a8 is used argument 7 for the kernel call.
+     *
+     *  \param events specifies the list of events that need to complete before
+     *  this particular command can be executed. If \a events is NULL, its
+     *  default value, then this particular command does not wait on any event
+     *  to complete. The events specified in \a events act as
+     *  synchronization points.
+     *
+     *  \return An event that identifies this particular kernel
+     *  execution instance.
+     *
+     * \note In the case that exceptions are enabled and error value
+     * other than CL_SUCCESS is generated, then cl::Error exception is
+     * generated, otherwise the returned error is stored in the Kernel
+     * object and can get accessed using \a get_error.
+     */
+    template<class A1, class A2, class A3, class A4, class A5,
+             class A6, class A7, class A8>
+    inline Event operator()(
+        const A1& a1, 
+        const A2& a2, 
+        const A3& a3, 
+        const A4& a4, 
+        const A5& a5, 
+        const A6& a6, 
+        const A7& a7, 
+        const A8& a8,
+        const VECTOR_CLASS<Event>* events = NULL);
+
+    /*! \brief Enqueue a command to execute a kernel on a device.
+     *
+     *  \param a1 is used argument 0 for the kernel call.
+     *  \param a2 is used argument 1 for the kernel call.
+     *  \param a3 is used argument 2 for the kernel call.
+     *  \param a4 is used argument 3 for the kernel call.
+     *  \param a5 is used argument 4 for the kernel call.
+     *  \param a6 is used argument 5 for the kernel call.
+     *  \param a7 is used argument 6 for the kernel call.
+     *  \param a8 is used argument 7 for the kernel call.
+     *  \param a9 is used argument 8 for the kernel call.
+     *
+     *  \param events specifies the list of events that need to complete before
+     *  this particular command can be executed. If \a events is NULL, its
+     *  default value, then this particular command does not wait on any event
+     *  to complete. The events specified in \a events act as
+     *  synchronization points.
+     *
+     *  \return An event that identifies this particular kernel
+     *  execution instance.
+     *
+     * \note In the case that exceptions are enabled and error value
+     * other than CL_SUCCESS is generated, then cl::Error exception is
+     * generated, otherwise the returned error is stored in the Kernel
+     * object and can get accessed using \a get_error.
+     */
+    template<class A1, class A2, class A3, class A4, class A5,
+             class A6, class A7, class A8, class A9>
+    inline Event operator()(
+        const A1& a1, 
+        const A2& a2, 
+        const A3& a3, 
+        const A4& a4, 
+        const A5& a5, 
+        const A6& a6, 
+        const A7& a7, 
+        const A8& a8, 
+        const A9& a9,
+        const VECTOR_CLASS<Event>* events = NULL);
+    
+    /*! \brief Enqueue a command to execute a kernel on a device.
+     *
+     *  \param a1 is used argument 0 for the kernel call.
+     *  \param a2 is used argument 1 for the kernel call.
+     *  \param a3 is used argument 2 for the kernel call.
+     *  \param a4 is used argument 3 for the kernel call.
+     *  \param a5 is used argument 4 for the kernel call.
+     *  \param a6 is used argument 5 for the kernel call.
+     *  \param a7 is used argument 6 for the kernel call.
+     *  \param a8 is used argument 7 for the kernel call.
+     *  \param a9 is used argument 8 for the kernel call.
+     *  \param a10 is used argument 9 for the kernel call.
+     *
+     *  \param events specifies the list of events that need to complete before
+     *  this particular command can be executed. If \a events is NULL, its
+     *  default value, then this particular command does not wait on any event
+     *  to complete. The events specified in \a events act as
+     *  synchronization points.
+     *
+     *  \return An event that identifies this particular kernel
+     *  execution instance.
+     *
+     * \note In the case that exceptions are enabled and error value
+     * other than CL_SUCCESS is generated, then cl::Error exception is
+     * generated, otherwise the returned error is stored in the Kernel
+     * object and can get accessed using \a get_error.
+     */
+    template<class A1, class A2, class A3, class A4, class A5,
+             class A6, class A7, class A8, class A9, class A10>
+    inline Event operator()(
+        const A1& a1, 
+        const A2& a2, 
+        const A3& a3, 
+        const A4& a4, 
+        const A5& a5, 
+        const A6& a6,
+        const A7& a7, 
+        const A8& a8, 
+        const A9& a9, 
+        const A10& a10,
+        const VECTOR_CLASS<Event>* events = NULL);
+    
+    /*! \brief Enqueue a command to execute a kernel on a device.
+     *
+     *  \param a1 is used argument 0 for the kernel call.
+     *  \param a2 is used argument 1 for the kernel call.
+     *  \param a3 is used argument 2 for the kernel call.
+     *  \param a4 is used argument 3 for the kernel call.
+     *  \param a5 is used argument 4 for the kernel call.
+     *  \param a6 is used argument 5 for the kernel call.
+     *  \param a7 is used argument 6 for the kernel call.
+     *  \param a8 is used argument 7 for the kernel call.
+     *  \param a9 is used argument 8 for the kernel call.
+     *  \param a10 is used argument 9 for the kernel call.
+     *  \param a11 is used argument 10 for the kernel call.
+     *
+     *  \param events specifies the list of events that need to complete before
+     *  this particular command can be executed. If \a events is NULL, its
+     *  default value, then this particular command does not wait on any event
+     *  to complete. The events specified in \a events act as
+     *  synchronization points.
+     *
+     *  \return An event that identifies this particular kernel
+     *  execution instance.
+     *
+     * \note In the case that exceptions are enabled and error value
+     * other than CL_SUCCESS is generated, then cl::Error exception is
+     * generated, otherwise the returned error is stored in the Kernel
+     * object and can get accessed using \a get_error.
+     */
+    template<class A1, class A2, class A3, class A4, class A5,
+             class A6, class A7, class A8, class A9, class A10,
+             class A11>
+    inline Event operator()(
+        const A1& a1, 
+        const A2& a2, 
+        const A3& a3, 
+        const A4& a4, 
+        const A5& a5, 
+        const A6& a6,
+        const A7& a7, 
+        const A8& a8, 
+        const A9& a9, 
+        const A10& a10, 
+        const A11& a11,
+        const VECTOR_CLASS<Event>* events = NULL);
+    
+    /*! \brief Enqueue a command to execute a kernel on a device.
+     *
+     *  \param a1 is used argument 0 for the kernel call.
+     *  \param a2 is used argument 1 for the kernel call.
+     *  \param a3 is used argument 2 for the kernel call.
+     *  \param a4 is used argument 3 for the kernel call.
+     *  \param a5 is used argument 4 for the kernel call.
+     *  \param a6 is used argument 5 for the kernel call.
+     *  \param a7 is used argument 6 for the kernel call.
+     *  \param a8 is used argument 7 for the kernel call.
+     *  \param a9 is used argument 8 for the kernel call.
+     *  \param a10 is used argument 9 for the kernel call.
+     *  \param a11 is used argument 10 for the kernel call.
+     *  \param a12 is used argument 11 for the kernel call.
+     *
+     *  \param events specifies the list of events that need to complete before
+     *  this particular command can be executed. If \a events is NULL, its
+     *  default value, then this particular command does not wait on any event
+     *  to complete. The events specified in \a events act as
+     *  synchronization points.
+     *
+     *  \return An event that identifies this particular kernel
+     *  execution instance.
+     *
+     * \note In the case that exceptions are enabled and error value
+     * other than CL_SUCCESS is generated, then cl::Error exception is
+     * generated, otherwise the returned error is stored in the Kernel
+     * object and can get accessed using \a get_error.
+     */
+    template<class A1, class A2, class A3, class A4, class A5,
+             class A6, class A7, class A8, class A9, class A10,
+             class A11, class A12>
+    inline Event operator()(
+        const A1& a1, 
+        const A2& a2, 
+        const A3& a3, 
+        const A4& a4, 
+        const A5& a5, 
+        const A6& a6,
+        const A7& a7, 
+        const A8& a8, 
+        const A9& a9, 
+        const A10& a10, 
+        const A11& a11, 
+        const A12& a12,
+        const VECTOR_CLASS<Event>* events = NULL);
+    
+    /*! \brief Enqueue a command to execute a kernel on a device.
+     *
+     *  \param a1 is used argument 0 for the kernel call.
+     *  \param a2 is used argument 1 for the kernel call.
+     *  \param a3 is used argument 2 for the kernel call.
+     *  \param a4 is used argument 3 for the kernel call.
+     *  \param a5 is used argument 4 for the kernel call.
+     *  \param a6 is used argument 5 for the kernel call.
+     *  \param a7 is used argument 6 for the kernel call.
+     *  \param a8 is used argument 7 for the kernel call.
+     *  \param a9 is used argument 8 for the kernel call.
+     *  \param a10 is used argument 9 for the kernel call.
+     *  \param a11 is used argument 10 for the kernel call.
+     *  \param a12 is used argument 11 for the kernel call.
+     *  \param a13 is used argument 12 for the kernel call.
+     *
+     *  \param events specifies the list of events that need to complete before
+     *  this particular command can be executed. If \a events is NULL, its
+     *  default value, then this particular command does not wait on any event
+     *  to complete. The events specified in \a events act as
+     *  synchronization points.
+     *
+     *  \return An event that identifies this particular kernel
+     *  execution instance.
+     *
+     * \note In the case that exceptions are enabled and error value
+     * other than CL_SUCCESS is generated, then cl::Error exception is
+     * generated, otherwise the returned error is stored in the Kernel
+     * object and can get accessed using \a get_error.
+     */
+    template<class A1, class A2, class A3, class A4, class A5,
+             class A6, class A7, class A8, class A9, class A10,
+             class A11, class A12, class A13>
+    inline Event operator()(
+        const A1& a1, 
+        const A2& a2, 
+        const A3& a3, 
+        const A4& a4, 
+        const A5& a5, 
+        const A6& a6,
+        const A7& a7, 
+        const A8& a8, 
+        const A9& a9, 
+        const A10& a10, 
+        const A11& a11, 
+        const A12& a12, 
+        const A13& a13,
+        const VECTOR_CLASS<Event>* events = NULL);
+    
+    /*! \brief Enqueue a command to execute a kernel on a device.
+     *
+     *  \param a1 is used argument 0 for the kernel call.
+     *  \param a2 is used argument 1 for the kernel call.
+     *  \param a3 is used argument 2 for the kernel call.
+     *  \param a4 is used argument 3 for the kernel call.
+     *  \param a5 is used argument 4 for the kernel call.
+     *  \param a6 is used argument 5 for the kernel call.
+     *  \param a7 is used argument 6 for the kernel call.
+     *  \param a8 is used argument 7 for the kernel call.
+     *  \param a9 is used argument 8 for the kernel call.
+     *  \param a10 is used argument 9 for the kernel call.
+     *  \param a11 is used argument 10 for the kernel call.
+     *  \param a12 is used argument 11 for the kernel call.
+     *  \param a13 is used argument 12 for the kernel call.
+     *  \param a13 is used argument 13 for the kernel call.
+     *
+     *  \param events specifies the list of events that need to complete before
+     *  this particular command can be executed. If \a events is NULL, its
+     *  default value, then this particular command does not wait on any event
+     *  to complete. The events specified in \a events act as
+     *  synchronization points.
+     *
+     *  \return An event that identifies this particular kernel
+     *  execution instance.
+     *
+     * \note In the case that exceptions are enabled and error value
+     * other than CL_SUCCESS is generated, then cl::Error exception is
+     * generated, otherwise the returned error is stored in the Kernel
+     * object and can get accessed using \a get_error.
+     */
+    template<class A1, class A2, class A3, class A4, class A5,
+             class A6, class A7, class A8, class A9, class A10,
+             class A11, class A12, class A13, class A14>
+    inline Event operator()(
+        const A1& a1, 
+        const A2& a2, 
+        const A3& a3, 
+        const A4& a4, 
+        const A5& a5, 
+        const A6& a6,
+        const A7& a7, 
+        const A8& a8, 
+        const A9& a9, 
+        const A10& a10, 
+        const A11& a11,
+        const A12& a12, 
+        const A13& a13, 
+        const A14& a14,
+        const VECTOR_CLASS<Event>* events = NULL);
+    
+    template<class A1, class A2, class A3, class A4, class A5,
+             class A6, class A7, class A8, class A9, class A10,
+             class A11, class A12, class A13, class A14, class A15>
+    inline Event operator()(
+        const A1& a1, 
+        const A2& a2, 
+        const A3& a3, 
+        const A4& a4, 
+        const A5& a5, 
+        const A6& a6,
+        const A7& a7, 
+        const A8& a8, 
+        const A9& a9, 
+        const A10& a10, 
+        const A11& a11,
+        const A12& a12, 
+        const A13& a13, 
+        const A14& a14, 
+        const A15& a15,
+        const VECTOR_CLASS<Event>* events = NULL);
+};
+
+inline KernelFunctor Kernel::bind(
+    const CommandQueue& queue,
+    const NDRange& offset,
+    const NDRange& global,
+    const NDRange& local)
+{
+    return KernelFunctor(*this,queue,offset,global,local);
+}
+
+inline KernelFunctor Kernel::bind(
+    const CommandQueue& queue,
+    const NDRange& global,
+    const NDRange& local)
+{
+    return KernelFunctor(*this,queue,NullRange,global,local);
+}
+
 inline KernelFunctor& KernelFunctor::operator=(const KernelFunctor& rhs)
 {
     if (this == &rhs) {
@@ -5234,16 +6128,18 @@ inline KernelFunctor& KernelFunctor::operator=(const KernelFunctor& rhs)
     queue_  = rhs.queue_;
     offset_ = rhs.offset_;
     global_ = rhs.global_;
-    local_  = local_;
+    local_  = rhs.local_;
     
     return *this;
 }
 
 inline KernelFunctor::KernelFunctor(const KernelFunctor& rhs) :
     kernel_(rhs.kernel_),
-    queue_(rhs.queue_)
+    queue_(rhs.queue_),
+    offset_(rhs.offset_),
+    global_(rhs.global_),
+    local_(rhs.local_)
 {
-    *this = rhs;
 }
 
 Event KernelFunctor::operator()(const VECTOR_CLASS<Event>* events)
@@ -5807,8 +6703,15 @@ Event KernelFunctor::operator()(
 #undef __GET_SUPPORTED_IMAGE_FORMATS_ERR
 
 #undef __CREATE_BUFFER_ERR
+#undef __CREATE_SUBBUFFER_ERR
 #undef __CREATE_IMAGE2D_ERR
 #undef __CREATE_IMAGE3D_ERR
+#undef __CREATE_SAMPLER_ERR
+#undef __SET_MEM_OBJECT_DESTRUCTOR_CALLBACK_ERR
+
+#undef __CREATE_USER_EVENT_ERR
+#undef __SET_USER_EVENT_STATUS_ERR
+#undef __SET_EVENT_CALLBACK_ERR
 
 #undef __WAIT_FOR_EVENTS_ERR
 
@@ -5823,7 +6726,10 @@ Event KernelFunctor::operator()(
 #undef __SET_COMMAND_QUEUE_PROPERTY_ERR
 #undef __ENQUEUE_READ_BUFFER_ERR
 #undef __ENQUEUE_WRITE_BUFFER_ERR
+#undef __ENQUEUE_READ_BUFFER_RECT_ERR
+#undef __ENQUEUE_WRITE_BUFFER_RECT_ERR
 #undef __ENQEUE_COPY_BUFFER_ERR
+#undef __ENQEUE_COPY_BUFFER_RECT_ERR
 #undef __ENQUEUE_READ_IMAGE_ERR
 #undef __ENQUEUE_WRITE_IMAGE_ERR
 #undef __ENQUEUE_COPY_IMAGE_ERR
@@ -5838,6 +6744,8 @@ Event KernelFunctor::operator()(
 
 #undef __UNLOAD_COMPILER_ERR
 #endif //__CL_USER_OVERRIDE_ERROR_STRINGS
+
+#undef __INIT_CL_EXT_FCN_PTR
 
 } // namespace cl
 
