@@ -2596,10 +2596,14 @@ void OpenCLCalcCustomHbondForceKernel::initialize(const System& system, const Cu
     vector<mm_int4> acceptorBufferVector(numAcceptors);
     vector<int> donorBufferCounter(numParticles, 0);
     for (int i = 0; i < numDonors; i++)
-        donorBufferVector[i] = mm_int4(donorBufferCounter[donorVector[i].x]++, donorBufferCounter[donorVector[i].y]++, donorBufferCounter[donorVector[i].z]++, 0);
+        donorBufferVector[i] = mm_int4(donorVector[i].x > -1 ? donorBufferCounter[donorVector[i].x]++ : 0,
+                                       donorVector[i].y > -1 ? donorBufferCounter[donorVector[i].y]++ : 0,
+                                       donorVector[i].z > -1 ? donorBufferCounter[donorVector[i].z]++ : 0, 0);
     vector<int> acceptorBufferCounter(numParticles, 0);
     for (int i = 0; i < numAcceptors; i++)
-        acceptorBufferVector[i] = mm_int4(acceptorBufferCounter[acceptorVector[i].x]++, acceptorBufferCounter[acceptorVector[i].y]++, acceptorBufferCounter[acceptorVector[i].z]++, 0);
+        acceptorBufferVector[i] = mm_int4(acceptorVector[i].x > -1 ? acceptorBufferCounter[acceptorVector[i].x]++ : 0,
+                                       acceptorVector[i].y > -1 ? acceptorBufferCounter[acceptorVector[i].y]++ : 0,
+                                       acceptorVector[i].z > -1 ? acceptorBufferCounter[acceptorVector[i].z]++ : 0, 0);
     donorBufferIndices->upload(donorBufferVector);
     acceptorBufferIndices->upload(acceptorBufferVector);
     int maxBuffers = 1;
