@@ -427,7 +427,7 @@ ENDIF (EXECUTABLE_OUTPUT_PATH)
 
 # Build and install documentation
 INCLUDE(cmake_modules/ApiDoxygen.cmake)
-install(FILES docs/UserGuide/OpenMMUserGuide.pdf
+install(FILES docs/UsersGuide/OpenMMUsersGuide.pdf
     DESTINATION docs)
 
 ADD_SUBDIRECTORY(tests)
