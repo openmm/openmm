@@ -293,6 +293,16 @@
 #endif
 #endif // !__APPLE__
 
+#if defined(_WIN32)
+#define CL_API_ENTRY
+#define CL_API_CALL __stdcall
+#define CL_CALLBACK __stdcall
+#else
+#define CL_API_ENTRY
+#define CL_API_CALL
+#define CL_CALLBACK
+#endif
+
 #include <utility>
 
 #if !defined(__NO_STD_VECTOR)
