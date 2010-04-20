@@ -59,9 +59,9 @@ __kernel void computeDonorForces(__global float4* forceBuffers, __global float* 
         __global int4* donorAtoms, __global int4* acceptorAtoms, __global int4* donorBufferIndices, __local float4* posBuffer
         PARAMETER_ARGUMENTS) {
     float energy = 0.0f;
-    float4 f1 = 0;
-    float4 f2 = 0;
-    float4 f3 = 0;
+    float4 f1 = (float4) 0;
+    float4 f2 = (float4) 0;
+    float4 f3 = (float4) 0;
     for (int donorStart = 0; donorStart < NUM_DONORS; donorStart += get_global_size(0)) {
         // Load information about the donor this thread will compute forces on.
 
@@ -144,9 +144,9 @@ __kernel void computeDonorForces(__global float4* forceBuffers, __global float* 
 __kernel void computeAcceptorForces(__global float4* forceBuffers, __global float* energyBuffer, __global float4* posq, __global int4* exclusions,
         __global int4* donorAtoms, __global int4* acceptorAtoms, __global int4* acceptorBufferIndices, __local float4* posBuffer
         PARAMETER_ARGUMENTS) {
-    float4 f1 = 0;
-    float4 f2 = 0;
-    float4 f3 = 0;
+    float4 f1 = (float4) 0;
+    float4 f2 = (float4) 0;
+    float4 f3 = (float4) 0;
     for (int acceptorStart = 0; acceptorStart < NUM_ACCEPTORS; acceptorStart += get_global_size(0)) {
         // Load information about the acceptor this thread will compute forces on.
 
