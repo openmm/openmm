@@ -75,12 +75,14 @@ void testBonds() {
 
 int main() {
     try {
+        cout << "Running test..." << endl;
         testBonds();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;
+        cout << "FAIL - ERROR.  Test failed." << endl;
         return 1;
     }
-    cout << "Done" << endl;
+    cout << "PASS - Test succeeded." << endl;
     return 0;
 }

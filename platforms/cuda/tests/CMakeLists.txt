@@ -57,4 +57,6 @@ SET(INCLUDE_CUDA_STATIC 1)
 #  ADD_TEST(${TEST_STATIC} "${EXECUTABLE_OUTPUT_PATH}/TestCudaUsingParameterFileStatic" "-parameterFileName" "${CMAKE_CURRENT_SOURCE_DIR}/bptiMdRfPbcParameters.txt" " +checkEnergyForceConsistent -checkForces" )
 #ENDIF(INCLUDE_CUDA_STATIC)
 
+install(TARGETS TestCudaHarmonicBondForce
+    RUNTIME DESTINATION bin)
 

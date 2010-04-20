@@ -425,7 +425,10 @@ ELSE (EXECUTABLE_OUTPUT_PATH)
   SET (TEST_PATH .)
 ENDIF (EXECUTABLE_OUTPUT_PATH)
 
-INCLUDE(ApiDoxygen.cmake)
+# Build and install documentation
+INCLUDE(cmake_modules/ApiDoxygen.cmake)
+install(FILES docs/UserGuide/OpenMMUserGuide.pdf
+    DESTINATION docs)
 
 ADD_SUBDIRECTORY(tests)
 ADD_SUBDIRECTORY(examples)
