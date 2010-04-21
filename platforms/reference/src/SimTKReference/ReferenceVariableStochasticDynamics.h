@@ -33,22 +33,10 @@ class ReferenceVariableStochasticDynamics : public ReferenceDynamics {
 
    private:
 
-      enum FixedParameters   { GDT, EPH, EMH, EP, EM, EM_V, B, C, D, V, X, Yv, Yx, MaxFixedParameters };
-      enum TwoDArrayIndicies { X2D, V2D, OldV, xPrime2D, vPrime2D, Max2DArrays };
+      enum TwoDArrayIndicies { xPrime2D, Max2DArrays };
       enum OneDArrayIndicies { InverseMasses, Max1DArrays };
 
       RealOpenMM _tau, _accuracy;
-      RealOpenMM _fixedParameters[MaxFixedParameters];
-
-      /**---------------------------------------------------------------------------------------
-
-         Set fixed values
-
-         @return ReferenceDynamics::DefaultReturn
-
-         --------------------------------------------------------------------------------------- */
-
-      int _setFixedParameters( RealOpenMM timeStep, RealOpenMM prevTimeStep );
 
    public:
 
@@ -103,16 +91,6 @@ class ReferenceVariableStochasticDynamics : public ReferenceDynamics {
 
       /**---------------------------------------------------------------------------------------
 
-         Get array of fixed parameters indexed by 'FixedParameters' enums
-
-         @return array
-
-         --------------------------------------------------------------------------------------- */
-
-      const RealOpenMM* getFixedParameters( void ) const;
-
-      /**---------------------------------------------------------------------------------------
-
          Print parameters
 
          @param message message
@@ -152,9 +130,6 @@ class ReferenceVariableStochasticDynamics : public ReferenceDynamics {
          @param masses              atom masses
          @param inverseMasses       inverse atom masses
          @param xPrime              xPrime
-         @param oldVelocities       previous velocities
-         @param xVector             xVector
-         @param vVector             vVector
          @param maxStepSize         maximum time step
 
          @return ReferenceDynamics::DefaultReturn
@@ -163,8 +138,7 @@ class ReferenceVariableStochasticDynamics : public ReferenceDynamics {
 
       int updatePart1( int numberOfAtoms, RealOpenMM** atomCoordinates, RealOpenMM** velocities,
                        RealOpenMM** forces, RealOpenMM* masses, RealOpenMM* inverseMasses,
-                       RealOpenMM** xPrime, RealOpenMM** oldVelocities,
-                       RealOpenMM** xVector, RealOpenMM** vVector, RealOpenMM maxStepSize );
+                       RealOpenMM** xPrime, RealOpenMM maxStepSize );
 
       /**---------------------------------------------------------------------------------------
 
@@ -182,8 +156,7 @@ class ReferenceVariableStochasticDynamics : public ReferenceDynamics {
 
       int updatePart2( int numberOfAtoms, RealOpenMM** atomCoordinates, RealOpenMM** velocities,
                        RealOpenMM** forces, RealOpenMM* inverseMasses,
-                       RealOpenMM** xPrime, RealOpenMM** oldVelocities,
-                       RealOpenMM** xVector, RealOpenMM** vVector );
+                       RealOpenMM** xPrime );
       
 };
 

@@ -33,22 +33,10 @@ class ReferenceStochasticDynamics : public ReferenceDynamics {
 
    private:
 
-      enum FixedParameters   { GDT, EPH, EMH, EP, EM, B, C, D, V, X, Yv, Yx, MaxFixedParameters };
-      enum TwoDArrayIndicies { X2D, V2D, OldV, xPrime2D, vPrime2D, Max2DArrays };
+      enum TwoDArrayIndicies { xPrime2D, Max2DArrays };
       enum OneDArrayIndicies { InverseMasses, Max1DArrays };
 
       RealOpenMM _tau;
-      RealOpenMM _fixedParameters[MaxFixedParameters];
-
-      /**---------------------------------------------------------------------------------------
-      
-         Set fixed values
-      
-         @return ReferenceDynamics::DefaultReturn
-      
-         --------------------------------------------------------------------------------------- */
-      
-      int _setFixedParameters( void );
       
    public:
 
@@ -82,16 +70,6 @@ class ReferenceStochasticDynamics : public ReferenceDynamics {
          --------------------------------------------------------------------------------------- */
       
       RealOpenMM getTau( void ) const;
-      
-      /**---------------------------------------------------------------------------------------
-      
-         Get array of fixed parameters indexed by 'FixedParameters' enums
-      
-         @return array
-      
-         --------------------------------------------------------------------------------------- */
-      
-      const RealOpenMM* getFixedParameters( void ) const;
       
       /**---------------------------------------------------------------------------------------
       
@@ -132,18 +110,13 @@ class ReferenceStochasticDynamics : public ReferenceDynamics {
          @param forces              forces
          @param inverseMasses       inverse atom masses
          @param xPrime              xPrime
-         @param oldVelocities       previous velocities
-         @param xVector             xVector
-         @param vVector             vVector
       
          @return ReferenceDynamics::DefaultReturn
       
          --------------------------------------------------------------------------------------- */
       
       int updatePart1( int numberOfAtoms, RealOpenMM** atomCoordinates, RealOpenMM** velocities,
-                       RealOpenMM** forces, RealOpenMM* inverseMasses,
-                       RealOpenMM** xPrime, RealOpenMM** oldVelocities,
-                       RealOpenMM** xVector, RealOpenMM** vVector );
+                       RealOpenMM** forces, RealOpenMM* inverseMasses, RealOpenMM** xPrime );
       
       /**---------------------------------------------------------------------------------------
       
@@ -160,29 +133,7 @@ class ReferenceStochasticDynamics : public ReferenceDynamics {
          --------------------------------------------------------------------------------------- */
       
       int updatePart2( int numberOfAtoms, RealOpenMM** atomCoordinates, RealOpenMM** velocities,
-                       RealOpenMM** forces, RealOpenMM* inverseMasses,
-                       RealOpenMM** xPrime, RealOpenMM** oldVelocities,
-                       RealOpenMM** xVector, RealOpenMM** vVector );
-      
-      /**---------------------------------------------------------------------------------------
-      
-         Write state
-      
-         @param numberOfAtoms       number of atoms
-         @param atomCoordinates     atom coordinates
-         @param velocities          velocities
-         @param forces              forces
-         @param masses              atom masses
-         @param state               0 if initial state; otherwise nonzero
-         @param baseFileName        base file name
-      
-         @return ReferenceDynamics::DefaultReturn
-      
-         --------------------------------------------------------------------------------------- */
-      
-      int writeState( int numberOfAtoms, RealOpenMM** atomCoordinates,
-                      RealOpenMM** velocities, RealOpenMM** forces, RealOpenMM* masses,
-                      int state, const std::string& baseFileName ) const;
+                       RealOpenMM** forces, RealOpenMM* inverseMasses, RealOpenMM** xPrime );
       
 };
 

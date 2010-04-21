@@ -116,77 +116,6 @@ void ReferenceVariableStochasticDynamics::setAccuracy( RealOpenMM accuracy ) {
 
 /**---------------------------------------------------------------------------------------
 
-   Set fixed parameters
-
-   @return ReferenceDynamics::DefaultReturn
-
-   --------------------------------------------------------------------------------------- */
-
-int ReferenceVariableStochasticDynamics::_setFixedParameters( RealOpenMM timeStep, RealOpenMM prevTimeStep ){
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceVariableStochasticDynamics::_setFixedParameters";
-
-   static const RealOpenMM zero       =  0.0;
-   static const RealOpenMM one        =  1.0;
-   static const RealOpenMM two        =  2.0;
-   static const RealOpenMM three      =  3.0;
-   static const RealOpenMM four       =  4.0;
-   static const RealOpenMM half       =  0.5;
-
-   // ---------------------------------------------------------------------------------------
-
-   _fixedParameters[GDT]      = timeStep/getTau();
-   _fixedParameters[EPH]      = EXP(  half*_fixedParameters[GDT] );
-   _fixedParameters[EMH]      = EXP( -half*_fixedParameters[GDT] );
-   _fixedParameters[EM]       = EXP(      -_fixedParameters[GDT] );
-   _fixedParameters[EM_V]     = EXP(      -half*(timeStep+prevTimeStep)/getTau() );
-   _fixedParameters[EP]       = EXP(       _fixedParameters[GDT] );
-
-   if( _fixedParameters[GDT] >= (RealOpenMM) 0.1 ){
-
-      RealOpenMM term1        = _fixedParameters[EPH] - one;
-                 term1       *= term1;
-      _fixedParameters[B]     = _fixedParameters[GDT]*(_fixedParameters[EP] - one) - four*term1;
-
-      _fixedParameters[C]     = _fixedParameters[GDT] - three + four*_fixedParameters[EMH] - _fixedParameters[EM];
-      _fixedParameters[D]     = two - _fixedParameters[EPH] - _fixedParameters[EMH];
-
-    } else {
-
-      // this has not been debugged
-
-      RealOpenMM term1        = half*_fixedParameters[GDT];
-      RealOpenMM term2        = term1*term1;
-      RealOpenMM term4        = term2*term2;
-
-      RealOpenMM third        = (RealOpenMM) ( 1.0/3.0 );
-      RealOpenMM o7_9         = (RealOpenMM) ( 7.0/9.0 );
-      RealOpenMM o1_12        = (RealOpenMM) ( 1.0/12.0 );
-      RealOpenMM o17_90       = (RealOpenMM) ( 17.0/90.0 );
-      RealOpenMM o7_30        = (RealOpenMM) ( 7.0/30.0 );
-      RealOpenMM o31_1260     = (RealOpenMM) ( 31.0/1260.0 );
-      RealOpenMM o_360        = (RealOpenMM) ( 1.0/360.0 );
-
-      _fixedParameters[B]     = term4*( third  + term1*( third + term1*( o17_90 + term1*o7_9 )));
-      _fixedParameters[C]     = term2*term1*( two*third + term1*( -half + term1*( o7_30 + term1*(-o1_12 + term1*o31_1260 ))));
-      _fixedParameters[D]     = term2*( -one + term2*(-o1_12 - term2*o_360));
-   }
-
-   RealOpenMM kT        = ((RealOpenMM) BOLTZ)*getTemperature();
-
-   _fixedParameters[V]  = SQRT( kT*( one - _fixedParameters[EM]) );
-   _fixedParameters[X]  = getTau()*SQRT( kT*_fixedParameters[C] );
-   _fixedParameters[Yv] = SQRT( kT*_fixedParameters[B]/_fixedParameters[C] );
-   _fixedParameters[Yx] = getTau()*SQRT( kT*_fixedParameters[B]/(one - _fixedParameters[EM]) );
-
-   return ReferenceDynamics::DefaultReturn;
-
-};
-
-/**---------------------------------------------------------------------------------------
-
    Get tau
 
    @return tau
@@ -206,25 +135,6 @@ RealOpenMM ReferenceVariableStochasticDynamics::getTau( void ) const {
 
 /**---------------------------------------------------------------------------------------
 
-   Get array of fixed parameters indexed by 'FixedParameters' enums
-
-   @return array
-
-   --------------------------------------------------------------------------------------- */
-
-const RealOpenMM* ReferenceVariableStochasticDynamics::getFixedParameters( void ) const {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName  = "\nReferenceVariableStochasticDynamics::getFixedParameters";
-
-   // ---------------------------------------------------------------------------------------
-
-   return _fixedParameters;
-}
-
-/**---------------------------------------------------------------------------------------
-
    Print parameters
 
    @param message             message
@@ -237,9 +147,7 @@ int ReferenceVariableStochasticDynamics::printParameters( std::stringstream& mes
 
    // ---------------------------------------------------------------------------------------
 
-   static const char* methodName  = "\nReferenceVariableStochasticDynamics::printParameters";
-   static const char* parameterNames[MaxFixedParameters] = { "gdt", "ep", "eph", "emh", "em", "B", "C", "D",
-                                                             "V", "X", "Yv", "Yx" };
+   //static const char* methodName  = "\nReferenceVariableStochasticDynamics::printParameters";
 
    // ---------------------------------------------------------------------------------------
 
@@ -248,14 +156,6 @@ int ReferenceVariableStochasticDynamics::printParameters( std::stringstream& mes
    ReferenceDynamics::printParameters( message );
    message << " tau=" << getTau();
    message << " T=" << getTemperature();
-   int cut = 3;
-   for( int ii = 0; ii < MaxFixedParameters; ii++ ){
-      message << " " << parameterNames[ii] << "=" << _fixedParameters[ii];
-      if( cut++ > 5 ){
-         cut = 0;
-         message << std::endl;
-      }
-   }
 
    return ReferenceDynamics::DefaultReturn;
 
@@ -272,9 +172,6 @@ int ReferenceVariableStochasticDynamics::printParameters( std::stringstream& mes
    @param masses              atom masses
    @param inverseMasses       inverse atom masses
    @param xPrime              xPrime
-   @param oldVelocities       previous velocities
-   @param xVector             xVector
-   @param vVector             vVector
    @param maxStepSize         maximum time step
 
    @return ReferenceDynamics::DefaultReturn
@@ -284,17 +181,11 @@ int ReferenceVariableStochasticDynamics::printParameters( std::stringstream& mes
 int ReferenceVariableStochasticDynamics::updatePart1( int numberOfAtoms, RealOpenMM** atomCoordinates,
                                               RealOpenMM** velocities,
                                               RealOpenMM** forces, RealOpenMM* masses, RealOpenMM* inverseMasses,
-                                              RealOpenMM** xPrime, RealOpenMM** oldVelocities,
-                                              RealOpenMM** xVector, RealOpenMM** vVector,
-                                              RealOpenMM maxStepSize ){
+                                              RealOpenMM** xPrime, RealOpenMM maxStepSize ){
 
    // ---------------------------------------------------------------------------------------
 
    static const char* methodName  = "\nReferenceVariableStochasticDynamics::updatePart1";
-
-   static const RealOpenMM zero   =  0.0;
-   static const RealOpenMM one    =  1.0;
-   static int debug               = 0;
 
    // ---------------------------------------------------------------------------------------
 
@@ -310,11 +201,11 @@ int ReferenceVariableStochasticDynamics::updatePart1( int numberOfAtoms, RealOpe
       // invert masses
 
       for( int ii = 0; ii < numberOfAtoms; ii++ ){
-         if( masses[ii] <= zero ){
+         if( masses[ii] <= 0 ){
             message << "mass at atom index=" << ii << " (" << masses[ii] << ") is <= 0" << std::endl;
             errors++;
          } else {
-            inverseMasses[ii] = one/masses[ii];
+            inverseMasses[ii] = 1/masses[ii];
          }
       }
 
@@ -326,7 +217,7 @@ int ReferenceVariableStochasticDynamics::updatePart1( int numberOfAtoms, RealOpe
    }
 
    // Select the step size to use
-    RealOpenMM error = zero;
+    RealOpenMM error = 0;
     for (int i = 0; i < numberOfAtoms; ++i) {
         for (int j = 0; j < 3; ++j) {
             RealOpenMM xerror = inverseMasses[i]*forces[i][j];
@@ -341,48 +232,20 @@ int ReferenceVariableStochasticDynamics::updatePart1( int numberOfAtoms, RealOpe
         newStepSize = getDeltaT(); // Keeping dt constant between steps improves the behavior of the integrator.
     if (newStepSize > maxStepSize)
         newStepSize = maxStepSize;
-   _setFixedParameters(newStepSize, getDeltaT());
     setDeltaT(newStepSize);
  
-   if( getTimeStep() == 0 ){
-
-      // Initialize xVector
-
-      const RealOpenMM*  fixedParameters = getFixedParameters();
-      for( int ii = 0; ii < numberOfAtoms; ii++ ){
-         RealOpenMM sqrtInverseMass = SQRT( inverseMasses[ii] )*fixedParameters[X];
-         for( int jj = 0; jj < 3; jj++ ){
-            xVector[ii][jj] = sqrtInverseMass*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
-         }
-      }
-   }
-
     // perform first update
 
-   const RealOpenMM*  fixedParameters = getFixedParameters();
-   RealOpenMM   tau                   = getTau();
-   RealOpenMM   fix1                  = tau*(fixedParameters[EPH] - fixedParameters[EMH]);
-   if (fix1 == zero)
-       fix1 = getDeltaT();
+   RealOpenMM tau = getTau();
+   const RealOpenMM vscale = EXP(-getDeltaT()/tau);
+   const RealOpenMM fscale = (1-vscale)*tau;
+   const RealOpenMM kT = BOLTZ*getTemperature();
+   const RealOpenMM noisescale = SQRT(2*kT/tau)*SQRT(0.5*(1-vscale*vscale)*tau);
 
-   for( int ii = 0; ii < numberOfAtoms; ii++ ){
-
-      RealOpenMM sqrtInvMass = SQRT( inverseMasses[ii] );
-
-      for( int jj = 0; jj < 3; jj++ ){
-
-         oldVelocities[ii][jj] = velocities[ii][jj];
-
-         RealOpenMM Vmh        = xVector[ii][jj]*fixedParameters[D]/(tau*fixedParameters[C]) +
-                                 sqrtInvMass*fixedParameters[Yv]*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
-
-           vVector[ii][jj]     = sqrtInvMass*fixedParameters[V]*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
-
-           RealOpenMM vPrime   = oldVelocities[ii][jj]*fixedParameters[EM_V] +
-                                 inverseMasses[ii]*forces[ii][jj]*tau*(one - fixedParameters[EM_V]) +
-                                 vVector[ii][jj] - fixedParameters[EM]*Vmh;
-
-           xPrime[ii][jj]      = atomCoordinates[ii][jj] + vPrime*fix1;
+   for (int ii = 0; ii < numberOfAtoms; ii++) {
+      RealOpenMM sqrtInvMass = SQRT(inverseMasses[ii]);
+      for (int jj = 0; jj < 3; jj++) {
+           velocities[ii][jj]  = vscale*velocities[ii][jj] + fscale*inverseMasses[ii]*forces[ii][jj] + noisescale*sqrtInvMass*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
       }
    }
 
@@ -407,41 +270,19 @@ int ReferenceVariableStochasticDynamics::updatePart1( int numberOfAtoms, RealOpe
 int ReferenceVariableStochasticDynamics::updatePart2( int numberOfAtoms, RealOpenMM** atomCoordinates,
                                               RealOpenMM** velocities,
                                               RealOpenMM** forces, RealOpenMM* inverseMasses,
-                                              RealOpenMM** xPrime, RealOpenMM** oldVelocities,
-                                              RealOpenMM** xVector, RealOpenMM** vVector ){
+                                              RealOpenMM** xPrime ){
 
    // ---------------------------------------------------------------------------------------
 
-   static const char* methodName  = "\nReferenceVariableStochasticDynamics::updatePart2";
-
-   static const RealOpenMM zero   =  0.0;
-   static const RealOpenMM one    =  1.0;
-   static int debug               = 0;
+   //static const char* methodName  = "\nReferenceVariableStochasticDynamics::updatePart2";
 
    // ---------------------------------------------------------------------------------------
 
    // perform second update
 
-   const RealOpenMM*  fixedParameters = getFixedParameters();
-   RealOpenMM   tau                   = getTau();
-   RealOpenMM   fix1                  = tau*(fixedParameters[EPH] - fixedParameters[EMH]);
-   if (fix1 == zero)
-       fix1 = getDeltaT();
-                fix1                  = one/fix1;
-
-   for( int ii = 0; ii < numberOfAtoms; ii++ ){
-
-      RealOpenMM sqrtInvMass = SQRT( inverseMasses[ii] );
-
-      for( int jj = 0; jj < 3; jj++ ){
-
-           velocities[ii][jj]  = (xPrime[ii][jj] - atomCoordinates[ii][jj])*fix1;
-         RealOpenMM Xmh        = vVector[ii][jj]*tau*fixedParameters[D]/(fixedParameters[EM] - one) +
-                                 sqrtInvMass*fixedParameters[Yx]*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
-
-           xVector[ii][jj]     = sqrtInvMass*fixedParameters[X]*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
-
-           xPrime[ii][jj]     += xVector[ii][jj] - Xmh;
+   for (int ii = 0; ii < numberOfAtoms; ii++) {
+      for (int jj = 0; jj < 3; jj++) {
+         xPrime[ii][jj] = atomCoordinates[ii][jj]+getDeltaT()*velocities[ii][jj];
       }
    }
 
@@ -470,40 +311,24 @@ int ReferenceVariableStochasticDynamics::update( int numberOfAtoms, RealOpenMM**
 
    // ---------------------------------------------------------------------------------------
 
-   static const char* methodName      = "\nReferenceVariableStochasticDynamics::update";
-
-   static const RealOpenMM zero       =  0.0;
-   static const RealOpenMM one        =  1.0;
-
-   static int debug                   =  0;
+   //static const char* methodName      = "\nReferenceVariableStochasticDynamics::update";
 
    // ---------------------------------------------------------------------------------------
 
    // get work arrays
 
    RealOpenMM** xPrime          = get2DArrayAtIndex( xPrime2D );
-   RealOpenMM** oldVelocities   = get2DArrayAtIndex( OldV );
-   RealOpenMM** xVector         = get2DArrayAtIndex( X2D );
-   RealOpenMM** vVector         = get2DArrayAtIndex( V2D );
-
    RealOpenMM* inverseMasses    = get1DArrayAtIndex( InverseMasses );
 
    // 1st update
 
-   updatePart1( numberOfAtoms, atomCoordinates, velocities, forces, masses, inverseMasses,
-                xPrime, oldVelocities, xVector, vVector, maxStepSize );
-
-   ReferenceConstraintAlgorithm* referenceConstraintAlgorithm = getReferenceConstraintAlgorithm();
-   if( referenceConstraintAlgorithm ){
-      referenceConstraintAlgorithm->apply( numberOfAtoms, atomCoordinates, xPrime,
-                                           inverseMasses );
-   }
+   updatePart1( numberOfAtoms, atomCoordinates, velocities, forces, masses, inverseMasses, xPrime, maxStepSize );
 
    // 2nd update
 
-   updatePart2( numberOfAtoms, atomCoordinates, velocities, forces, inverseMasses,
-                xPrime, oldVelocities, xVector, vVector );
+   updatePart2( numberOfAtoms, atomCoordinates, velocities, forces, inverseMasses, xPrime );
 
+   ReferenceConstraintAlgorithm* referenceConstraintAlgorithm = getReferenceConstraintAlgorithm();
    if( referenceConstraintAlgorithm ){
       referenceConstraintAlgorithm->apply( numberOfAtoms, atomCoordinates, xPrime,
                                            inverseMasses );
