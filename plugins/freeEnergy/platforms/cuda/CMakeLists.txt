@@ -140,4 +140,6 @@ INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 # SET(FINDCUDA_DIR ${CMAKE_CURRENT_SOURCE_DIR}/cuda-cmake)
 
-SUBDIRS (sharedTarget staticTarget)
+# SUBDIRS (sharedTarget staticTarget)
+SUBDIRS (sharedTarget)
+
