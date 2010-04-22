@@ -73,7 +73,7 @@ void kGenerateRandoms_kernel()
     
     float4 random4;
     float2 random2;
-    while (pos < cSim.totalRandomsTimesTwo)
+    while (pos < cSim.totalRandoms)
     {
         
         // Generate 6 randoms in GRF
@@ -156,10 +156,10 @@ void kGenerateRandoms_kernel()
         random4.y               = sRand[threadIdx.x].y;
         random4.z               = sRand[threadIdx.x].z;
         random4.w               = sRand[threadIdx.x + blockDim.x].x;
-        cSim.pRandom4a[pos]     = random4;
+        cSim.pRandom4[pos]     = random4;
         random2.x               = sRand[threadIdx.x + blockDim.x].y;
         random2.y               = sRand[threadIdx.x + blockDim.x].z;
-        cSim.pRandom2a[pos]     = random2;
+        cSim.pRandom2[pos]     = random2;
         
         pos += increment;
     }

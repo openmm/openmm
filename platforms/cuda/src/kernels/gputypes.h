@@ -101,8 +101,6 @@ struct _gpuContext {
     CUDAStream<float4>* psVelm4;
     CUDAStream<float4>* psForce4;
     CUDAStream<float>*  psEnergy;           // Energy output buffer
-    CUDAStream<float4>* psxVector4;
-    CUDAStream<float4>* psvVector4;
     CUDAStream<float2>* psSigEps2; 
     CUDAStream<float4>* psCustomParams;     // Atom parameters for custom nonbonded force
     CUDAStream<int4>* psCustomBondID;             // Atom indices for custom bonds

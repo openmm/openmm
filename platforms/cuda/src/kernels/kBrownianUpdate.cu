@@ -67,7 +67,7 @@ void kBrownianUpdatePart1_kernel()
     
     while (pos < cSim.atoms)
     {
-        float4 random4a         = cSim.pRandom4a[rpos + pos];
+        float4 random4a         = cSim.pRandom4[rpos + pos];
         float4 apos             = cSim.pPosq[pos];
         float4 force            = cSim.pForce4[pos];
         float invMass           = cSim.pVelm4[pos].w;

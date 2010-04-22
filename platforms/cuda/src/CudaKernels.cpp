@@ -869,9 +869,6 @@ void CudaIntegrateLangevinStepKernel::execute(ContextImpl& context, const Langev
         prevStepSize = stepSize;
     }
     kLangevinUpdatePart1(gpu);
-    kApplyFirstShake(gpu);
-    kApplyFirstSettle(gpu);
-    kApplyFirstCCMA(gpu);
     if (data.removeCM)
         if (data.stepCount%data.cmMotionFrequency == 0)
             gpu->bCalculateCM = true;
@@ -991,9 +988,6 @@ void CudaIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, cons
     float maxStepSize = (float)(maxTime-data.time);
     kSelectLangevinStepSize(gpu, maxStepSize);
     kLangevinUpdatePart1(gpu);
-    kApplyFirstShake(gpu);
-    kApplyFirstSettle(gpu);
-    kApplyFirstCCMA(gpu);
     if (data.removeCM)
         if (data.stepCount%data.cmMotionFrequency == 0)
             gpu->bCalculateCM = true;

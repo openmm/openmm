@@ -24,6 +24,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
+#include "cudatypes.h"
 
 /**
  * This file contains the kernels for Langevin integration.  It is included
@@ -45,12 +46,12 @@ void kLangevinUpdatePart1CM_kernel()
 void kLangevinUpdatePart1_kernel()
 #endif
 {
-    __shared__ volatile float params[MaxParams];
-    if (threadIdx.x < MaxParams)
-        params[threadIdx.x] = cSim.pLangevinParameters[threadIdx.x];
-    __syncthreads();
     unsigned int pos    = threadIdx.x + blockIdx.x * blockDim.x;
     unsigned int rpos   = cSim.pRandomPosition[blockIdx.x];
+    float vscale = cSim.pLangevinParameters[VelScale];
+    float fscale = cSim.pLangevinParameters[ForceScale];
+    float noisescale = cSim.pLangevinParameters[NoiseScale];
+
 #ifdef REMOVE_CM
     extern __shared__ float3 sCM[];
     float3 CM           = { 0.0f, 0.0f, 0.0f};
@@ -91,45 +92,19 @@ void kLangevinUpdatePart1_kernel()
     while (pos < cSim.atoms)
     {
         float4 velocity         = cSim.pVelm4[pos];
-        float4 xVector          = cSim.pxVector4[pos];
-        float4 random4a         = cSim.pRandom4a[rpos + pos];
-        float2 random2a         = cSim.pRandom2a[rpos + pos];
-        float4 apos             = cSim.pPosq[pos];
+        float4 random4a         = cSim.pRandom4[rpos + pos];
         float4 force            = cSim.pForce4[pos];
 
-        float3 Vmh;
         float sqrtInvMass       = sqrt(velocity.w);
-        Vmh.x                   = xVector.x * params[DOverTauC] + sqrtInvMass * params[Yv] * random4a.x;
-        Vmh.y                   = xVector.y * params[DOverTauC] + sqrtInvMass * params[Yv] * random4a.y;
-        Vmh.z                   = xVector.z * params[DOverTauC] + sqrtInvMass * params[Yv] * random4a.z;
-        float4 vVector;
-        vVector.x               = sqrtInvMass * params[V] * random4a.w;
-        vVector.y               = sqrtInvMass * params[V] * random2a.x;
-        vVector.z               = sqrtInvMass * params[V] * random2a.y;
-        vVector.w               = 0.0f;
-        cSim.pvVector4[pos]     = vVector;
-        velocity.x              = velocity.x * params[EM_V] +
-                                  velocity.w * force.x * params[TauOneMinusEM_V] +
-                                  vVector.x -
-                                  params[EM] * Vmh.x;
-        velocity.y              = velocity.y * params[EM_V] +
-                                  velocity.w * force.y * params[TauOneMinusEM_V] +
-                                  vVector.y -
-                                  params[EM] * Vmh.y;
-        velocity.z              = velocity.z * params[EM_V] +
-                                  velocity.w * force.z * params[TauOneMinusEM_V] +
-                                  vVector.z -
-                                  params[EM] * Vmh.z;
+        velocity.x = vscale*velocity.x + fscale*velocity.w*force.x + noisescale*sqrtInvMass*random4a.x;
+        velocity.y = vscale*velocity.y + fscale*velocity.w*force.y + noisescale*sqrtInvMass*random4a.y;
+        velocity.z = vscale*velocity.z + fscale*velocity.w*force.z + noisescale*sqrtInvMass*random4a.z;
 #ifdef REMOVE_CM
         velocity.x             -= sCM[0].x;
         velocity.y             -= sCM[0].y;
         velocity.z             -= sCM[0].z;
 #endif
-        cSim.pOldPosq[pos]      = apos;
-        apos.x                  = velocity.x * params[Fix1];
-        apos.y                  = velocity.y * params[Fix1];
-        apos.z                  = velocity.z * params[Fix1];
-        cSim.pPosqP[pos]        = apos;
+        cSim.pOldPosq[pos]      = cSim.pPosq[pos];
         cSim.pVelm4[pos]        = velocity;
         pos                    += blockDim.x * gridDim.x;
     }
@@ -149,12 +124,9 @@ void kLangevinUpdatePart2CM_kernel()
 void kLangevinUpdatePart2_kernel()
 #endif
 {
-    __shared__ float params[MaxParams];
-    if (threadIdx.x < MaxParams)
-        params[threadIdx.x] = cSim.pLangevinParameters[threadIdx.x];
-    __syncthreads();
     unsigned int pos            = threadIdx.x + blockIdx.x * blockDim.x;
     unsigned int rpos           = cSim.pRandomPosition[blockIdx.x];
+    float dt = cSim.pStepSize[0].y;
 #ifdef REMOVE_CM
     extern __shared__ float3 sCM[];
     float3 CM                   = {0.0f, 0.0f, 0.0f};
@@ -164,16 +136,6 @@ void kLangevinUpdatePart2_kernel()
     while (pos < cSim.atoms)
     {
         float4 velocity         = cSim.pVelm4[pos];
-        float4 xPrime           = cSim.pPosqP[pos];
-        float4 vVector          = cSim.pvVector4[pos];
-        float4 xVector;
-        float4 random4b         = cSim.pRandom4b[rpos + pos];
-        float2 random2b         = cSim.pRandom2b[rpos + pos];
-        float3 Xmh;
-        float sqrtInvMass       = sqrt(velocity.w);
-        velocity.x              = xPrime.x * params[OneOverFix1];
-        velocity.y              = xPrime.y * params[OneOverFix1];
-        velocity.z              = xPrime.z * params[OneOverFix1];
 #ifdef REMOVE_CM
         float mass              = 1.0f / velocity.w;
         CM.x                   += mass * velocity.x;
@@ -181,24 +143,9 @@ void kLangevinUpdatePart2_kernel()
         CM.z                   += mass * velocity.z;
 #endif
 
-        Xmh.x                   = vVector.x * params[TauDOverEMMinusOne] +
-                                  sqrtInvMass * params[Yx] * random4b.x;
-        Xmh.y                   = vVector.y * params[TauDOverEMMinusOne] +
-                                  sqrtInvMass * params[Yx] * random4b.y;
-        Xmh.z                   = vVector.z * params[TauDOverEMMinusOne] +
-                                  sqrtInvMass * params[Yx] * random4b.z;
-        xVector.x               = sqrtInvMass * params[X] * random4b.w;
-        xVector.y               = sqrtInvMass * params[X] * random2b.x;
-        xVector.z               = sqrtInvMass * params[X] * random2b.y;
-        xPrime.x               += xVector.x - Xmh.x;
-        xPrime.y               += xVector.y - Xmh.y;
-        xPrime.z               += xVector.z - Xmh.z;
-
+        float4 xPrime = make_float4(dt*velocity.x, dt*velocity.y, dt*velocity.z, 0);
 
         cSim.pPosq[pos]         = xPrime;
-        cSim.pVelm4[pos]        = velocity;
-        cSim.pxVector4[pos]     = xVector;
-
         pos                    += blockDim.x * gridDim.x;
     }
 

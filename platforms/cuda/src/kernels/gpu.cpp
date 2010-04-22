@@ -1651,10 +1651,6 @@ int gpuAllocateInitialBuffers(gpuContext gpu)
     gpu->sim.pOldPosq                   = gpu->psOldPosq4->_pDevStream[0];
     gpu->psVelm4                        = new CUDAStream<float4>(gpu->sim.paddedNumberOfAtoms, 1, "Velm");
     gpu->sim.pVelm4                     = gpu->psVelm4->_pDevStream[0];
-    gpu->psvVector4                     = new CUDAStream<float4>(gpu->sim.paddedNumberOfAtoms, 1, "vVector");
-    gpu->sim.pvVector4                  = gpu->psvVector4->_pDevStream[0];
-    gpu->psxVector4                     = new CUDAStream<float4>(gpu->sim.paddedNumberOfAtoms, 1, "xVector");
-    gpu->sim.pxVector4                  = gpu->psxVector4->_pDevStream[0];
     gpu->psBornRadii                    = new CUDAStream<float>(gpu->sim.paddedNumberOfAtoms, 1, "BornRadii");
     gpu->sim.pBornRadii                 = gpu->psBornRadii->_pDevStream[0];
     gpu->psObcChain                     = new CUDAStream<float>(gpu->sim.paddedNumberOfAtoms, 1, "ObcChain");
@@ -1669,7 +1665,7 @@ int gpuAllocateInitialBuffers(gpuContext gpu)
     gpu->sim.pStepSize                  = gpu->psStepSize->_pDevStream[0];
     (*gpu->psStepSize)[0] = make_float2(0.0f, 0.0f);
     gpu->psStepSize->Upload();
-    gpu->psLangevinParameters           = new CUDAStream<float>(11, 1, "LangevinParameters");
+    gpu->psLangevinParameters           = new CUDAStream<float>(3, 1, "LangevinParameters");
     gpu->sim.pLangevinParameters        = gpu->psLangevinParameters->_pDevStream[0];
     gpu->pAtomSymbol                    = new unsigned char[gpu->natoms];
     gpu->psAtomIndex                    = new CUDAStream<int>(gpu->sim.paddedNumberOfAtoms, 1, "AtomIndex");
@@ -1684,15 +1680,12 @@ int gpuAllocateInitialBuffers(gpuContext gpu)
     gpu->sim.randomIterations           = gpu->sim.randomFrames;
     gpu->sim.randoms                    = gpu->sim.randomFrames * gpu->sim.paddedNumberOfAtoms;
     gpu->sim.totalRandoms               = gpu->sim.randoms + gpu->sim.paddedNumberOfAtoms;
-    gpu->sim.totalRandomsTimesTwo       = gpu->sim.totalRandoms * 2;
-    gpu->psRandom4                      = new CUDAStream<float4>(gpu->sim.totalRandomsTimesTwo, 1, "Random4");
-    gpu->psRandom2                      = new CUDAStream<float2>(gpu->sim.totalRandomsTimesTwo, 1, "Random2");
+    gpu->psRandom4                      = new CUDAStream<float4>(gpu->sim.totalRandoms, 1, "Random4");
+    gpu->psRandom2                      = new CUDAStream<float2>(gpu->sim.totalRandoms, 1, "Random2");
     gpu->psRandomPosition               = new CUDAStream<int>(gpu->sim.blocks, 1, "RandomPosition");
     gpu->psRandomSeed                   = new CUDAStream<uint4>(gpu->sim.blocks * gpu->sim.random_threads_per_block, 1, "RandomSeed");
-    gpu->sim.pRandom4a                  = gpu->psRandom4->_pDevStream[0];
-    gpu->sim.pRandom2a                  = gpu->psRandom2->_pDevStream[0];
-    gpu->sim.pRandom4b                  = gpu->psRandom4->_pDevStream[0] + gpu->sim.totalRandoms;
-    gpu->sim.pRandom2b                  = gpu->psRandom2->_pDevStream[0] + gpu->sim.totalRandoms;
+    gpu->sim.pRandom4                   = gpu->psRandom4->_pDevStream[0];
+    gpu->sim.pRandom2                   = gpu->psRandom2->_pDevStream[0];
     gpu->sim.pRandomPosition            = gpu->psRandomPosition->_pDevStream[0];
     gpu->sim.pRandomSeed                = gpu->psRandomSeed->_pDevStream[0];
 
@@ -1884,14 +1877,6 @@ void* gpuInit(int numAtoms, unsigned int device, bool useBlockingSync)
 
     gpu->natoms = numAtoms;
     gpuAllocateInitialBuffers(gpu);
-    for (int i = 0; i < gpu->natoms; i++)
-    {
-        (*gpu->psxVector4)[i].x = 0.0f;
-        (*gpu->psxVector4)[i].y = 0.0f;
-        (*gpu->psxVector4)[i].z = 0.0f;
-        (*gpu->psxVector4)[i].w = 0.0f;
-    }
-    gpu->psxVector4->Upload();
 
     gpu->iterations = 0;
     gpu->sim.update_threads_per_block               = (gpu->natoms + gpu->sim.blocks - 1) / gpu->sim.blocks;
@@ -2023,60 +2008,12 @@ void gpuSetLangevinIntegrationParameters(gpuContext gpu, float tau, float deltaT
     gpu->sim.tau                    = tau;
     gpu->sim.T                      = temperature;
     gpu->sim.kT                     = BOLTZ * gpu->sim.T;
-    double GDT                       = gpu->sim.deltaT / gpu->sim.tau;
-    double EPH                       = exp(0.5 * GDT);
-    double EMH                       = exp(-0.5 * GDT);
-    double EP                        = exp(GDT);
-    double EM                        = exp(-GDT);
-    double B, C, D;
-    if (GDT >= 0.1)
-    {
-        double term1 = EPH - 1.0;
-        term1                      *= term1;
-        B                           = GDT * (EP - 1.0) - 4.0 * term1;
-        C                           = GDT - 3.0 + 4.0 * EMH - EM;
-        D                           = 2.0 - EPH - EMH;
-    }
-    else
-    {
-        double term1                 = 0.5 * GDT;
-        double term2                 = term1 * term1;
-        double term4                 = term2 * term2;
-
-        double third                 = 1.0 / 3.0;
-        double o7_9                  = 7.0 / 9.0;
-        double o1_12                 = 1.0 / 12.0;
-        double o17_90                = 17.0 / 90.0;
-        double o7_30                 = 7.0 / 30.0;
-        double o31_1260              = 31.0 / 1260.0;
-        double o_360                 = 1.0 / 360.0;
-
-        B                           = term4 * (third + term1 * (third + term1 * (o17_90 + term1 * o7_9)));
-        C                           = term2 * term1 * (2.0 * third + term1 * (-0.5 + term1 * (o7_30 + term1 * (-o1_12 + term1 * o31_1260))));
-        D                           = term2 * (-1.0 + term2 * (-o1_12 - term2 * o_360));
-    }
-    double DOverTauC                 = D / (gpu->sim.tau * C);
-    double TauOneMinusEM             = gpu->sim.tau * (1.0-EM);
-    double TauDOverEMMinusOne        = gpu->sim.tau * D / (EM - 1.0);
-    double fix1                      = gpu->sim.tau * (EPH - EMH);
-    if (fix1 == 0.0)
-        fix1 = deltaT;
-    double oneOverFix1               = 1.0 / fix1;
-    double V                         = sqrt(gpu->sim.kT * (1.0 - EM));
-    double X                         = gpu->sim.tau * sqrt(gpu->sim.kT * C);
-    double Yv                        = sqrt(gpu->sim.kT * B / C);
-    double Yx                        = gpu->sim.tau * sqrt(gpu->sim.kT * B / (1.0 - EM));
-    (*gpu->psLangevinParameters)[0] = (float) EM;
-    (*gpu->psLangevinParameters)[1] = (float) EM;
-    (*gpu->psLangevinParameters)[2] = (float) DOverTauC;
-    (*gpu->psLangevinParameters)[3] = (float) TauOneMinusEM;
-    (*gpu->psLangevinParameters)[4] = (float) TauDOverEMMinusOne;
-    (*gpu->psLangevinParameters)[5] = (float) V;
-    (*gpu->psLangevinParameters)[6] = (float) X;
-    (*gpu->psLangevinParameters)[7] = (float) Yv;
-    (*gpu->psLangevinParameters)[8] = (float) Yx;
-    (*gpu->psLangevinParameters)[9] = (float) fix1;
-    (*gpu->psLangevinParameters)[10] = (float) oneOverFix1;
+    double vscale = exp(-deltaT/tau);
+    double fscale = (1-vscale)*tau;
+    double noisescale = sqrt(2*gpu->sim.kT/tau)*sqrt(0.5*(1-vscale*vscale)*tau);
+    (*gpu->psLangevinParameters)[0] = (float) vscale;
+    (*gpu->psLangevinParameters)[1] = (float) fscale;
+    (*gpu->psLangevinParameters)[2] = (float) noisescale;
     gpu->psLangevinParameters->Upload();
     gpu->psStepSize->Download();
     (*gpu->psStepSize)[0].y = deltaT;
@@ -2129,8 +2066,6 @@ void gpuShutDown(gpuContext gpu)
     delete gpu->psVelm4;
     delete gpu->psForce4;
     delete gpu->psEnergy;
-    delete gpu->psxVector4;
-    delete gpu->psvVector4;
     delete gpu->psSigEps2;
     if (gpu->psCustomParams != NULL)
         delete gpu->psCustomParams;

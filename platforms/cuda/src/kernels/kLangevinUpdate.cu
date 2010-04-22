@@ -34,7 +34,7 @@ using namespace std;
 
 #include "gputypes.h"
 
-enum {EM, EM_V, DOverTauC, TauOneMinusEM_V, TauDOverEMMinusOne, V, X, Yv, Yx, Fix1, OneOverFix1, MaxParams};
+enum {VelScale, ForceScale, NoiseScale, MaxParams};
 
 static __constant__ cudaGmxSimulation cSim;
 
@@ -151,53 +151,12 @@ void kSelectLangevinStepSize_kernel(float maxStepSize)
 
         // Recalculate the integration parameters.
 
-        float gdt                  = newStepSize / cSim.tau;
-        float eph                  = exp(0.5f * gdt);
-        float emh                  = exp(-0.5f * gdt);
-        float ep                   = exp(gdt);
-        float em                   = exp(-gdt);
-        float em_v                 = exp(-0.5f*(oldStepSize+newStepSize)/cSim.tau);
-        float b, c, d;
-        if (gdt >= 0.1f)
-        {
-            float term1 = eph - 1.0f;
-            term1                 *= term1;
-            b                      = gdt * (ep - 1.0f) - 4.0f * term1;
-            c                      = gdt - 3.0f + 4.0f * emh - em;
-            d                      = 2.0f - eph - emh;
-        }
-        else
-        {
-            float term1            = 0.5f * gdt;
-            float term2            = term1 * term1;
-            float term4            = term2 * term2;
-
-            float third            = 1.0f / 3.0f;
-            float o7_9             = 7.0f / 9.0f;
-            float o1_12            = 1.0f / 12.0f;
-            float o17_90           = 17.0f / 90.0f;
-            float o7_30            = 7.0f / 30.0f;
-            float o31_1260         = 31.0f / 1260.0f;
-            float o_360            = 1.0f / 360.0f;
-
-            b                      = term4 * (third + term1 * (third + term1 * (o17_90 + term1 * o7_9)));
-            c                      = term2 * term1 * (2.0f * third + term1 * (-0.5f + term1 * (o7_30 + term1 * (-o1_12 + term1 * o31_1260))));
-            d                      = term2 * (-1.0f + term2 * (-o1_12 - term2 * o_360));
-        }
-        float fix1                 = cSim.tau * (eph - emh);
-        if (fix1 == 0.0f)
-            fix1 = newStepSize;
-        params[EM]                 = em;
-        params[EM_V]               = em_v;
-        params[DOverTauC]          = d / (cSim.tau * c);
-        params[TauOneMinusEM_V]    = cSim.tau * (1.0f-em_v);
-        params[TauDOverEMMinusOne] = cSim.tau * d / (em - 1.0f);
-        params[Fix1]               = fix1;
-        params[OneOverFix1]        = 1.0f / fix1;
-        params[V]                  = sqrt(cSim.kT * (1.0f - em));
-        params[X]                  = cSim.tau * sqrt(cSim.kT * c);
-        params[Yv]                 = sqrt(cSim.kT * b / c);
-        params[Yx]                 = cSim.tau * sqrt(cSim.kT * b / (1.0f - em));
+        float vscale = exp(-newStepSize/cSim.tau);
+        float fscale = (1-vscale)*cSim.tau;
+        float noisescale = sqrt(2*cSim.kT/cSim.tau)*sqrt(0.5f*(1-vscale*vscale)*cSim.tau);
+        params[VelScale] = vscale;
+        params[ForceScale] = fscale;
+        params[NoiseScale] = noisescale;
     }
     __syncthreads();
     if (threadIdx.x < MaxParams)

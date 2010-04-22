@@ -62,7 +62,7 @@ __global__ void kCalculateAndersenThermostat_kernel()
     while (pos < cSim.atoms)
     {
         float4 velocity         = cSim.pVelm4[pos];
-        float4 random4a         = cSim.pRandom4a[rpos + pos];
+        float4 random4a         = cSim.pRandom4[rpos + pos];
         float scale = (random4a.w > -randomRange && random4a.w < randomRange ? 0.0f : 1.0f);
         float add = (1.0f-scale)*sqrt(cSim.kT*velocity.w);
         velocity.x = scale*velocity.x + add*random4a.x;

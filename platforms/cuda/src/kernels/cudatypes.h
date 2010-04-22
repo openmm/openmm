@@ -471,8 +471,6 @@ struct cudaGmxSimulation {
     float4*         pPosqP;                         // Pointer to mid-integration atom positions
     float4*         pOldPosq;                       // Pointer to old atom positions
     float4*         pVelm4;                         // Pointer to atom velocity and inverse mass
-    float4*         pvVector4;                      // Pointer to atom v Vector
-    float4*         pxVector4;                      // Pointer to atom x Vector
     float4*         pForce4;                        // Pointer to force data
     float*          pEnergy;                        // Pointer to energy output buffer
     float*          pBornForce;                     // Pointer to Born force data
@@ -482,15 +480,12 @@ struct cudaGmxSimulation {
     float4*         pLinearMomentum;                // Pointer to linear momentum
     
     // Random numbers
-    float4*         pRandom4a;                      // Pointer to first set of 4 random numbers
-    float4*         pRandom4b;                      // Pointer to second set of 4 random numbers
-    float2*         pRandom2a;                      // Pointer to first set of 2 random numbers
-    float2*         pRandom2b;                      // Pointer to second set of 2 random numbers
+    float4*         pRandom4;                       // Pointer to 4 random numbers
+    float2*         pRandom2;                       // Pointer to 2 random numbers
     uint4*          pRandomSeed;                    // Pointer to random seeds
     int*            pRandomPosition;                // Pointer to random number positions
     unsigned int    randoms;                        // Number of randoms
     unsigned int    totalRandoms;                   // Number of randoms plus overflow.
-    unsigned int    totalRandomsTimesTwo;           // Used for generating randoms
     unsigned int    randomIterations;               // Number of iterations before regenerating randoms
     unsigned int    randomFrames;                   // Number of frames of random numbers
 };
