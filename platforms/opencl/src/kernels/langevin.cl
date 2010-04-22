@@ -1,30 +1,24 @@
-enum {EM, EM_V, DOverTauC, TauOneMinusEM_V, TauDOverEMMinusOne, V, X, Yv, Yx, Fix1, OneOverFix1, MaxParams};
+enum {VelScale, ForceScale, NoiseScale, MaxParams};
 
 /**
  * Perform the first step of Langevin integration.
  */
 
 __kernel void integrateLangevinPart1(__global float4* velm, __global float4* force, __global float4* posDelta,
-        __global float* paramBuffer, __local float* params, __global float4* xVector, __global float4* vVector,
-        __global float4* random, unsigned int randomIndex) {
-
-    // Load the parameters into local memory for faster access.
-
-    if (get_local_id(0) < MaxParams)
-        params[get_local_id(0)] = paramBuffer[get_local_id(0)];
-    barrier(CLK_LOCAL_MEM_FENCE);
+        __global float* paramBuffer, __global float2* dt, __global float4* random, unsigned int randomIndex) {
+    float vscale = paramBuffer[VelScale];
+    float fscale = paramBuffer[ForceScale];
+    float noisescale = paramBuffer[NoiseScale];
+    float stepSize = dt[0].y;
     int index = get_global_id(0);
     randomIndex += index;
     while (index < NUM_ATOMS) {
         float4 velocity = velm[index];
         float sqrtInvMass = sqrt(velocity.w);
-        float4 vmh = (float4) (xVector[index].xyz*params[DOverTauC] + sqrtInvMass*params[Yv]*random[randomIndex].xyz, 0.0f);
-        float4 vVec = (float4) (sqrtInvMass*params[V]*random[randomIndex+PADDED_NUM_ATOMS].xyz, 0.0f);
-        randomIndex += get_global_size(0);
-        vVector[index] = vVec;
-        velocity.xyz = velocity.xyz*params[EM_V] + velocity.w*force[index].xyz*params[TauOneMinusEM_V] + vVec.xyz - params[EM]*vmh.xyz;
-        posDelta[index] = velocity*params[Fix1];
+        velocity.xyz = vscale*velocity.xyz + fscale*velocity.w*force[index].xyz + noisescale*sqrtInvMass*random[randomIndex].xyz;
         velm[index] = velocity;
+        posDelta[index] = stepSize*velocity;
+        randomIndex += get_global_size(0);
         index += get_global_size(0);
     }
 }
@@ -33,37 +27,7 @@ __kernel void integrateLangevinPart1(__global float4* velm, __global float4* for
  * Perform the second step of Langevin integration.
  */
 
-__kernel void integrateLangevinPart2(__global float4* velm, __global float4* posDelta, __global float* paramBuffer,
-        __local float* params, __global float4* xVector, __global float4* vVector, __global float4* random, unsigned int randomIndex) {
-
-    // Load the parameters into local memory for faster access.
-
-    if (get_local_id(0) < MaxParams)
-        params[get_local_id(0)] = paramBuffer[get_local_id(0)];
-    barrier(CLK_LOCAL_MEM_FENCE);
-    int index = get_global_id(0);
-    randomIndex += index;
-    while (index < NUM_ATOMS) {
-        float4 delta = posDelta[index];
-        float4 velocity = velm[index];
-        float sqrtInvMass = sqrt(velocity.w);
-        velocity.xyz = delta.xyz*params[OneOverFix1];
-        float4 xmh = (float4) (vVector[index].xyz*params[TauDOverEMMinusOne] + sqrtInvMass*params[Yx]*random[randomIndex].xyz, 0.0f);
-        float4 xVec = (float4) (sqrtInvMass*params[X]*random[randomIndex+PADDED_NUM_ATOMS].xyz, 0.0f);
-        randomIndex += get_global_size(0);
-        delta.xyz += xVec.xyz - xmh.xyz;
-        posDelta[index] = delta;
-        velm[index] = velocity;
-        xVector[index] = xVec;
-        index += get_global_size(0);
-    }
-}
-
-/**
- * Perform the third step of Langevin integration.
- */
-
-__kernel void integrateLangevinPart3(__global float4* posq, __global float4* posDelta) {
+__kernel void integrateLangevinPart2(__global float4* posq, __global float4* posDelta) {
     int index = get_global_id(0);
     while (index < NUM_ATOMS) {
         float4 pos = posq[index];
@@ -116,51 +80,12 @@ __kernel void selectLangevinStepSize(float maxStepSize, float errorTol, float ta
 
         // Recalculate the integration parameters.
 
-        float gdt                  = newStepSize/tau;
-        float eph                  = exp(0.5f*gdt);
-        float emh                  = exp(-0.5f*gdt);
-        float ep                   = exp(gdt);
-        float em                   = exp(-gdt);
-        float em_v                 = exp(-0.5f*(oldStepSize+newStepSize)/tau);
-        float b, c, d;
-        if (gdt >= 0.1f) {
-            float term1 = eph-1.0f;
-            term1                 *= term1;
-            b                      = gdt*(ep-1.0f) - 4.0f*term1;
-            c                      = gdt - 3.0f + 4.0f*emh - em;
-            d                      = 2.0f - eph - emh;
-        }
-        else {
-            float term1            = 0.5f*gdt;
-            float term2            = term1*term1;
-            float term4            = term2*term2;
-
-            float third            = 1.0f/3.0f;
-            float o7_9             = 7.0f/9.0f;
-            float o1_12            = 1.0f/12.0f;
-            float o17_90           = 17.0f/90.0f;
-            float o7_30            = 7.0f/30.0f;
-            float o31_1260         = 31.0f/1260.0f;
-            float o_360            = 1.0f/360.0f;
-
-            b                      = term4*(third + term1*(third + term1*(o17_90 + term1*o7_9)));
-            c                      = term2*term1*(2.0f*third + term1*(-0.5f + term1*(o7_30 + term1*(-o1_12 + term1*o31_1260))));
-            d                      = term2*(-1.0f + term2*(-o1_12 - term2*o_360));
-        }
-        float fix1                 = tau*(eph - emh);
-        if (fix1 == 0.0f)
-            fix1 = newStepSize;
-        params[EM]                 = em;
-        params[EM_V]               = em_v;
-        params[DOverTauC]          = d/(tau*c);
-        params[TauOneMinusEM_V]    = tau*(1.0f-em_v);
-        params[TauDOverEMMinusOne] = tau*d/(em - 1.0f);
-        params[Fix1]               = fix1;
-        params[OneOverFix1]        = 1.0f/fix1;
-        params[V]                  = sqrt(kT*(1.0f - em));
-        params[X]                  = tau*sqrt(kT*c);
-        params[Yv]                 = sqrt(kT*b/c);
-        params[Yx]                 = tau*sqrt(kT*b/(1.0f - em));
+        float vscale = exp(-newStepSize/tau);
+        float fscale = (1-vscale)*tau;
+        float noisescale = sqrt(2*kT/tau)*sqrt(0.5f*(1-vscale*vscale)*tau);
+        params[VelScale] = vscale;
+        params[ForceScale] = fscale;
+        params[NoiseScale] = noisescale;
     }
     barrier(CLK_LOCAL_MEM_FENCE);
     if (get_local_id(0) < MaxParams)

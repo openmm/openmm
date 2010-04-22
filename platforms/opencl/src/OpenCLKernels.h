@@ -752,7 +752,7 @@ private:
 class OpenCLIntegrateLangevinStepKernel : public IntegrateLangevinStepKernel {
 public:
     OpenCLIntegrateLangevinStepKernel(std::string name, const Platform& platform, OpenCLContext& cl) : IntegrateLangevinStepKernel(name, platform), cl(cl),
-            hasInitializedKernels(false), params(NULL), xVector(NULL), vVector(NULL) {
+            hasInitializedKernels(false), params(NULL) {
     }
     ~OpenCLIntegrateLangevinStepKernel();
     /**
@@ -774,9 +774,7 @@ private:
     double prevTemp, prevFriction, prevStepSize;
     bool hasInitializedKernels;
     OpenCLArray<cl_float>* params;
-    OpenCLArray<mm_float4>* xVector;
-    OpenCLArray<mm_float4>* vVector;
-    cl::Kernel kernel1, kernel2, kernel3;
+    cl::Kernel kernel1, kernel2;
 };
 
 /**
@@ -869,9 +867,7 @@ private:
     bool hasInitializedKernels;
     int blockSize;
     OpenCLArray<cl_float>* params;
-    OpenCLArray<mm_float4>* xVector;
-    OpenCLArray<mm_float4>* vVector;
-    cl::Kernel kernel1, kernel2, kernel3, selectSizeKernel;
+    cl::Kernel kernel1, kernel2, selectSizeKernel;
     double prevTemp, prevFriction, prevErrorTol;
 };
 

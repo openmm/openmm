@@ -2995,10 +2995,6 @@ void OpenCLIntegrateVerletStepKernel::execute(ContextImpl& context, const Verlet
 OpenCLIntegrateLangevinStepKernel::~OpenCLIntegrateLangevinStepKernel() {
     if (params != NULL)
         delete params;
-    if (xVector != NULL)
-        delete xVector;
-    if (vVector != NULL)
-        delete vVector;
 }
 
 void OpenCLIntegrateLangevinStepKernel::initialize(const System& system, const LangevinIntegrator& integrator) {
@@ -3010,12 +3006,7 @@ void OpenCLIntegrateLangevinStepKernel::initialize(const System& system, const L
     cl::Program program = cl.createProgram(OpenCLKernelSources::langevin, defines);
     kernel1 = cl::Kernel(program, "integrateLangevinPart1");
     kernel2 = cl::Kernel(program, "integrateLangevinPart2");
-    kernel3 = cl::Kernel(program, "integrateLangevinPart3");
-    params = new OpenCLArray<cl_float>(cl, 11, "langevinParams");
-    xVector = new OpenCLArray<mm_float4>(cl, cl.getPaddedNumAtoms(), "xVector");
-    vVector = new OpenCLArray<mm_float4>(cl, cl.getPaddedNumAtoms(), "vVector");
-    vector<mm_float4> initialXVector(xVector->getSize(), mm_float4(0.0f, 0.0f, 0.0f, 0.0f));
-    xVector->upload(initialXVector);
+    params = new OpenCLArray<cl_float>(cl, 3, "langevinParams");
     prevStepSize = -1.0;
 }
 
@@ -3028,19 +3019,10 @@ void OpenCLIntegrateLangevinStepKernel::execute(ContextImpl& context, const Lang
         kernel1.setArg<cl::Buffer>(1, cl.getForce().getDeviceBuffer());
         kernel1.setArg<cl::Buffer>(2, integration.getPosDelta().getDeviceBuffer());
         kernel1.setArg<cl::Buffer>(3, params->getDeviceBuffer());
-        kernel1.setArg(4, params->getSize()*sizeof(cl_float), NULL);
-        kernel1.setArg<cl::Buffer>(5, xVector->getDeviceBuffer());
-        kernel1.setArg<cl::Buffer>(6, vVector->getDeviceBuffer());
-        kernel1.setArg<cl::Buffer>(7,integration.getRandom().getDeviceBuffer());
-        kernel2.setArg<cl::Buffer>(0, cl.getVelm().getDeviceBuffer());
+        kernel1.setArg<cl::Buffer>(4, integration.getStepSize().getDeviceBuffer());
+        kernel1.setArg<cl::Buffer>(5, integration.getRandom().getDeviceBuffer());
+        kernel2.setArg<cl::Buffer>(0, cl.getPosq().getDeviceBuffer());
         kernel2.setArg<cl::Buffer>(1, integration.getPosDelta().getDeviceBuffer());
-        kernel2.setArg<cl::Buffer>(2, params->getDeviceBuffer());
-        kernel2.setArg(3, params->getSize()*sizeof(cl_float), NULL);
-        kernel2.setArg<cl::Buffer>(4, xVector->getDeviceBuffer());
-        kernel2.setArg<cl::Buffer>(5, vVector->getDeviceBuffer());
-        kernel2.setArg<cl::Buffer>(6,integration.getRandom().getDeviceBuffer());
-        kernel3.setArg<cl::Buffer>(0, cl.getPosq().getDeviceBuffer());
-        kernel3.setArg<cl::Buffer>(1, integration.getPosDelta().getDeviceBuffer());
     }
     double temperature = integrator.getTemperature();
     double friction = integrator.getFriction();
@@ -3050,59 +3032,16 @@ void OpenCLIntegrateLangevinStepKernel::execute(ContextImpl& context, const Lang
 
         double tau = (friction == 0.0 ? 0.0 : 1.0/friction);
         double kT = BOLTZ*temperature;
-        double GDT = stepSize/tau;
-        double EPH = exp(0.5*GDT);
-        double EMH = exp(-0.5*GDT);
-        double EP = exp(GDT);
-        double EM = exp(-GDT);
-        double B, C, D;
-        if (GDT >= 0.1) {
-            double term1 = EPH - 1.0;
-            term1 *= term1;
-            B = GDT*(EP - 1.0) - 4.0*term1;
-            C = GDT - 3.0 + 4.0*EMH - EM;
-            D = 2.0 - EPH - EMH;
-        }
-        else {
-            double term1 = 0.5*GDT;
-            double term2 = term1*term1;
-            double term4 = term2*term2;
-
-            double third = 1.0/3.0;
-            double o7_9 = 7.0/9.0;
-            double o1_12 = 1.0/12.0;
-            double o17_90 = 17.0/90.0;
-            double o7_30 = 7.0/30.0;
-            double o31_1260 = 31.0/1260.0;
-            double o_360 = 1.0/360.0;
-            B = term4*(third + term1*(third + term1*(o17_90 + term1*o7_9)));
-            C = term2*term1*(2.0*third + term1*(-0.5 + term1*(o7_30 + term1*(-o1_12 + term1*o31_1260))));
-            D = term2*(-1.0 + term2*(-o1_12 - term2*o_360));
-        }
-        double DOverTauC = D/(tau*C);
-        double TauOneMinusEM = tau*(1.0-EM);
-        double TauDOverEMMinusOne = tau*D/(EM - 1.0);
-        double fix1 = tau*(EPH - EMH);
-        if (fix1 == 0.0)
-            fix1 = stepSize;
-        double oneOverFix1 = 1.0/fix1;
-        double V = sqrt(kT*(1.0 - EM));
-        double X = tau*sqrt(kT*C);
-        double Yv = sqrt(kT*B/C);
-        double Yx = tau*sqrt(kT*B/(1.0 - EM));
+        double vscale = std::exp(-stepSize/tau);
+        double fscale = (1-vscale)*tau;
+        double noisescale = std::sqrt(2*kT/tau)*std::sqrt(0.5*(1-vscale*vscale)*tau);
         vector<cl_float> p(params->getSize());
-        p[0] = (cl_float) EM;
-        p[1] = (cl_float) EM;
-        p[2] = (cl_float) DOverTauC;
-        p[3] = (cl_float) TauOneMinusEM;
-        p[4] = (cl_float) TauDOverEMMinusOne;
-        p[5] = (cl_float) V;
-        p[6] = (cl_float) X;
-        p[7] = (cl_float) Yv;
-        p[8] = (cl_float) Yx;
-        p[9] = (cl_float) fix1;
-        p[10] = (cl_float) oneOverFix1;
+        p[0] = (cl_float) vscale;
+        p[1] = (cl_float) fscale;
+        p[2] = (cl_float) noisescale;
         params->upload(p);
+        integration.getStepSize()[0].y = stepSize;
+        integration.getStepSize().upload();
         prevTemp = temperature;
         prevFriction = friction;
         prevStepSize = stepSize;
@@ -3110,7 +3049,7 @@ void OpenCLIntegrateLangevinStepKernel::execute(ContextImpl& context, const Lang
 
     // Call the first integration kernel.
 
-    kernel1.setArg<cl_uint>(8, integration.prepareRandomNumbers(2*cl.getPaddedNumAtoms()));
+    kernel1.setArg<cl_uint>(6, integration.prepareRandomNumbers(cl.getPaddedNumAtoms()));
     cl.executeKernel(kernel1, numAtoms);
 
     // Apply constraints.
@@ -3119,16 +3058,7 @@ void OpenCLIntegrateLangevinStepKernel::execute(ContextImpl& context, const Lang
 
     // Call the second integration kernel.
 
-    kernel2.setArg<cl_uint>(7, integration.prepareRandomNumbers(2*cl.getPaddedNumAtoms()));
     cl.executeKernel(kernel2, numAtoms);
-
-    // Reapply constraints.
-
-    integration.applyConstraints(integrator.getConstraintTolerance());
-
-    // Call the third integration kernel.
-
-    cl.executeKernel(kernel3, numAtoms);
 
     // Update the time and step count.
 
@@ -3263,10 +3193,6 @@ void OpenCLIntegrateVariableVerletStepKernel::execute(ContextImpl& context, cons
 OpenCLIntegrateVariableLangevinStepKernel::~OpenCLIntegrateVariableLangevinStepKernel() {
     if (params != NULL)
         delete params;
-    if (xVector != NULL)
-        delete xVector;
-    if (vVector != NULL)
-        delete vVector;
 }
 
 void OpenCLIntegrateVariableLangevinStepKernel::initialize(const System& system, const VariableLangevinIntegrator& integrator) {
@@ -3278,13 +3204,8 @@ void OpenCLIntegrateVariableLangevinStepKernel::initialize(const System& system,
     cl::Program program = cl.createProgram(OpenCLKernelSources::langevin, defines);
     kernel1 = cl::Kernel(program, "integrateLangevinPart1");
     kernel2 = cl::Kernel(program, "integrateLangevinPart2");
-    kernel3 = cl::Kernel(program, "integrateLangevinPart3");
     selectSizeKernel = cl::Kernel(program, "selectLangevinStepSize");
-    params = new OpenCLArray<cl_float>(cl, 11, "langevinParams");
-    xVector = new OpenCLArray<mm_float4>(cl, cl.getPaddedNumAtoms(), "xVector");
-    vVector = new OpenCLArray<mm_float4>(cl, cl.getPaddedNumAtoms(), "vVector");
-    vector<mm_float4> initialXVector(xVector->getSize(), mm_float4(0.0f, 0.0f, 0.0f, 0.0f));
-    xVector->upload(initialXVector);
+    params = new OpenCLArray<cl_float>(cl, 3, "langevinParams");
     blockSize = std::min(256, system.getNumParticles());
     blockSize = std::max(blockSize, params->getSize());
     blockSize = std::min(blockSize, (int) cl.getDevice().getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>());
@@ -3299,20 +3220,11 @@ void OpenCLIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, co
         kernel1.setArg<cl::Buffer>(1, cl.getForce().getDeviceBuffer());
         kernel1.setArg<cl::Buffer>(2, integration.getPosDelta().getDeviceBuffer());
         kernel1.setArg<cl::Buffer>(3, params->getDeviceBuffer());
-        kernel1.setArg(4, params->getSize()*sizeof(cl_float), NULL);
-        kernel1.setArg<cl::Buffer>(5, xVector->getDeviceBuffer());
-        kernel1.setArg<cl::Buffer>(6, vVector->getDeviceBuffer());
-        kernel1.setArg<cl::Buffer>(7,integration.getRandom().getDeviceBuffer());
-        kernel2.setArg<cl::Buffer>(0, cl.getVelm().getDeviceBuffer());
+        kernel1.setArg<cl::Buffer>(4, integration.getStepSize().getDeviceBuffer());
+        kernel1.setArg<cl::Buffer>(5, integration.getRandom().getDeviceBuffer());
+        kernel2.setArg<cl::Buffer>(0, cl.getPosq().getDeviceBuffer());
         kernel2.setArg<cl::Buffer>(1, integration.getPosDelta().getDeviceBuffer());
-        kernel2.setArg<cl::Buffer>(2, params->getDeviceBuffer());
-        kernel2.setArg(3, params->getSize()*sizeof(cl_float), NULL);
-        kernel2.setArg<cl::Buffer>(4, xVector->getDeviceBuffer());
-        kernel2.setArg<cl::Buffer>(5, vVector->getDeviceBuffer());
-        kernel2.setArg<cl::Buffer>(6,integration.getRandom().getDeviceBuffer());
-        kernel3.setArg<cl::Buffer>(0, cl.getPosq().getDeviceBuffer());
-        kernel3.setArg<cl::Buffer>(1, integration.getPosDelta().getDeviceBuffer());
-        selectSizeKernel.setArg<cl::Buffer>(4, cl.getIntegrationUtilities().getStepSize().getDeviceBuffer());
+        selectSizeKernel.setArg<cl::Buffer>(4, integration.getStepSize().getDeviceBuffer());
         selectSizeKernel.setArg<cl::Buffer>(5, cl.getVelm().getDeviceBuffer());
         selectSizeKernel.setArg<cl::Buffer>(6, cl.getForce().getDeviceBuffer());
         selectSizeKernel.setArg<cl::Buffer>(7, params->getDeviceBuffer());
@@ -3331,7 +3243,7 @@ void OpenCLIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, co
 
     // Call the first integration kernel.
 
-    kernel1.setArg<cl_uint>(8, integration.prepareRandomNumbers(2*cl.getPaddedNumAtoms()));
+    kernel1.setArg<cl_uint>(6, integration.prepareRandomNumbers(cl.getPaddedNumAtoms()));
     cl.executeKernel(kernel1, numAtoms);
 
     // Apply constraints.
@@ -3340,16 +3252,7 @@ void OpenCLIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, co
 
     // Call the second integration kernel.
 
-    kernel2.setArg<cl_uint>(7, integration.prepareRandomNumbers(2*cl.getPaddedNumAtoms()));
     cl.executeKernel(kernel2, numAtoms);
-
-    // Reapply constraints.
-
-    integration.applyConstraints(integrator.getConstraintTolerance());
-
-    // Call the third integration kernel.
-
-    cl.executeKernel(kernel3, numAtoms);
 
     // Update the time and step count.
 
