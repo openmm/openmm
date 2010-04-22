@@ -143,7 +143,7 @@ void kLangevinUpdatePart2_kernel()
         CM.z                   += mass * velocity.z;
 #endif
 
-        float4 xPrime = make_float4(dt*velocity.x, dt*velocity.y, dt*velocity.z, 0);
+        float4 xPrime = make_float4(dt*velocity.x, dt*velocity.y, dt*velocity.z, cSim.pPosq[pos].w);
 
         cSim.pPosq[pos]         = xPrime;
         pos                    += blockDim.x * gridDim.x;
