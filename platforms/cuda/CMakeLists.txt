@@ -22,18 +22,13 @@
 # get this gpu-sniffer to work, we need to set DYLD_LIBRARY_PATH here.
 get_filename_component(CUDART_DIR "${FOUND_CUDART}" PATH)
 file(TO_NATIVE_PATH "${CUDART_DIR}" CUDART_NATIVE_DIR)
-set(ALREADY_MODIFIED_PATH FALSE CACHE BOOL "Whether link path has been modified for GPU sniffer")
-mark_as_advanced(ALREADY_MODIFIED_PATH)
-if(NOT ALREADY_MODIFIED_PATH)
-    if(APPLE)
-            set(ENV{DYLD_LIBRARY_PATH} "$ENV{DYLD_LIBRARY_PATH}:${CUDART_NATIVE_DIR}")
-    elseif(UNIX)
-            set(ENV{LD_LIBRARY_PATH} "$ENV{LD_LIBRARY_PATH}:${CUDART_NATIVE_DIR}")
-    elseif(MSVC)
-            set(ENV{PATH} "$ENV{PATH};${CUDART_NATIVE_DIR}")
-    endif(APPLE)
-    set(ALREADY_MODIFIED_PATH TRUE CACHE BOOL "Whether link path has been modified for GPU sniffer" FORCE)
-endif(NOT ALREADY_MODIFIED_PATH)
+if(APPLE)
+        set(ENV{DYLD_LIBRARY_PATH} "$ENV{DYLD_LIBRARY_PATH}:${CUDART_NATIVE_DIR}")
+elseif(UNIX)
+        set(ENV{LD_LIBRARY_PATH} "$ENV{LD_LIBRARY_PATH}:${CUDART_NATIVE_DIR}")
+elseif(MSVC)
+        set(ENV{PATH} "$ENV{PATH};${CUDART_NATIVE_DIR}")
+endif(APPLE)
 try_run(RUN_RESULT_VAR COMPILE_RESULT_VAR
     ${CMAKE_BINARY_DIR} 
     ${CMAKE_CURRENT_SOURCE_DIR}/tests/has_cuda_gpu.c
