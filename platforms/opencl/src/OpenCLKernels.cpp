@@ -3023,6 +3023,8 @@ void OpenCLIntegrateLangevinStepKernel::execute(ContextImpl& context, const Lang
         kernel1.setArg<cl::Buffer>(5, integration.getRandom().getDeviceBuffer());
         kernel2.setArg<cl::Buffer>(0, cl.getPosq().getDeviceBuffer());
         kernel2.setArg<cl::Buffer>(1, integration.getPosDelta().getDeviceBuffer());
+        kernel2.setArg<cl::Buffer>(2, cl.getVelm().getDeviceBuffer());
+        kernel2.setArg<cl::Buffer>(3, integration.getStepSize().getDeviceBuffer());
     }
     double temperature = integrator.getTemperature();
     double friction = integrator.getFriction();
@@ -3224,6 +3226,8 @@ void OpenCLIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, co
         kernel1.setArg<cl::Buffer>(5, integration.getRandom().getDeviceBuffer());
         kernel2.setArg<cl::Buffer>(0, cl.getPosq().getDeviceBuffer());
         kernel2.setArg<cl::Buffer>(1, integration.getPosDelta().getDeviceBuffer());
+        kernel2.setArg<cl::Buffer>(2, cl.getVelm().getDeviceBuffer());
+        kernel2.setArg<cl::Buffer>(3, integration.getStepSize().getDeviceBuffer());
         selectSizeKernel.setArg<cl::Buffer>(4, integration.getStepSize().getDeviceBuffer());
         selectSizeKernel.setArg<cl::Buffer>(5, cl.getVelm().getDeviceBuffer());
         selectSizeKernel.setArg<cl::Buffer>(6, cl.getForce().getDeviceBuffer());

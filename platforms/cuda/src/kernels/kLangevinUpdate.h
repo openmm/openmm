@@ -126,7 +126,14 @@ void kLangevinUpdatePart2_kernel()
 {
     unsigned int pos            = threadIdx.x + blockIdx.x * blockDim.x;
     unsigned int rpos           = cSim.pRandomPosition[blockIdx.x];
-    float dt = cSim.pStepSize[0].y;
+    __shared__ float dt;
+    if (threadIdx.x == 0)
+    {
+        dt = cSim.pStepSize[0].y;
+        if (pos == 0)
+            cSim.pStepSize[0].x = dt;
+    }
+    __syncthreads();
 #ifdef REMOVE_CM
     extern __shared__ float3 sCM[];
     float3 CM                   = {0.0f, 0.0f, 0.0f};

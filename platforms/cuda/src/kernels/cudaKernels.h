@@ -62,6 +62,7 @@ extern void kApplySecondSettle(gpuContext gpu);
 extern void kLangevinUpdatePart1(gpuContext gpu);
 extern void kLangevinUpdatePart2(gpuContext gpu);
 extern void kSelectLangevinStepSize(gpuContext gpu, float maxTimeStep);
+extern void kSetVelocitiesFromPositions(gpuContext gpu);
 extern void kVerletUpdatePart1(gpuContext gpu);
 extern void kVerletUpdatePart2(gpuContext gpu);
 extern void kSelectVerletStepSize(gpuContext gpu, float maxTimeStep);

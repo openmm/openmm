@@ -27,13 +27,17 @@ __kernel void integrateLangevinPart1(__global float4* velm, __global float4* for
  * Perform the second step of Langevin integration.
  */
 
-__kernel void integrateLangevinPart2(__global float4* posq, __global float4* posDelta) {
+__kernel void integrateLangevinPart2(__global float4* posq, __global float4* posDelta, __global float4* velm, __global float2* dt) {
+    float invStepSize = 1.0f/dt[0].y;
     int index = get_global_id(0);
     while (index < NUM_ATOMS) {
         float4 pos = posq[index];
         float4 delta = posDelta[index];
+        float4 vel = velm[index];
         pos.xyz += delta.xyz;
+        vel.xyz = invStepSize*delta.xyz;
         posq[index] = pos;
+        velm[index] = vel;
         index += get_global_size(0);
     }
 }

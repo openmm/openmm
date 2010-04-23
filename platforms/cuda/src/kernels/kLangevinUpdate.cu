@@ -169,3 +169,36 @@ void kSelectLangevinStepSize(gpuContext gpu, float maxTimeStep)
     kSelectLangevinStepSize_kernel<<<1, gpu->sim.update_threads_per_block, sizeof(float)*gpu->sim.update_threads_per_block>>>(maxTimeStep);
     LAUNCHERROR("kSelectLangevinStepSize");
 }
+
+__global__
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(GF1XX_UPDATE_THREADS_PER_BLOCK, 1)
+#elif (__CUDA_ARCH__ >= 130)
+__launch_bounds__(GT2XX_UPDATE_THREADS_PER_BLOCK, 1)
+#else
+__launch_bounds__(G8X_UPDATE_THREADS_PER_BLOCK, 1)
+#endif
+void kSetVelocitiesFromPositions_kernel()
+{
+    float2 stepSize = cSim.pStepSize[0];
+    float oneOverDt = 2.0f/(stepSize.x+stepSize.y);
+    unsigned int pos = threadIdx.x;
+    while (pos < cSim.atoms)
+    {
+        float4 posq = cSim.pPosq[pos];
+        float4 oldPosq = cSim.pOldPosq[pos];
+        float4 velm = cSim.pVelm4[pos];
+        velm.x = oneOverDt*(posq.x-oldPosq.x);
+        velm.y = oneOverDt*(posq.y-oldPosq.y);
+        velm.z = oneOverDt*(posq.z-oldPosq.z);
+        cSim.pVelm4[pos] = velm;
+        pos += blockDim.x * gridDim.x;
+    }
+}
+
+void kSetVelocitiesFromPositions(gpuContext gpu)
+{
+//    printf("kSetVelocitiesFromPositions\n");
+    kSetVelocitiesFromPositions_kernel<<<1, gpu->sim.update_threads_per_block, sizeof(float)*gpu->sim.update_threads_per_block>>>();
+    LAUNCHERROR("kSetVelocitiesFromPositions");
+}

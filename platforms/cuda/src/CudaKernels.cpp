@@ -876,6 +876,7 @@ void CudaIntegrateLangevinStepKernel::execute(ContextImpl& context, const Langev
     kApplySecondShake(gpu);
     kApplySecondSettle(gpu);
     kApplySecondCCMA(gpu);
+    kSetVelocitiesFromPositions(gpu);
     data.time += stepSize;
     data.stepCount++;
 }
@@ -995,6 +996,7 @@ void CudaIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, cons
     kApplySecondShake(gpu);
     kApplySecondSettle(gpu);
     kApplySecondCCMA(gpu);
+    kSetVelocitiesFromPositions(gpu);
     gpu->psStepSize->Download();
     data.time += (*gpu->psStepSize)[0].y;
     if ((*gpu->psStepSize)[0].y == maxStepSize)
