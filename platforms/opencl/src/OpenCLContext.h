@@ -35,6 +35,7 @@
     #define NOMINMAX
 #endif
 #include <cl.hpp>
+#include "openmm/internal/windowsExport.h"
 
 namespace OpenMM {
 
@@ -100,7 +101,7 @@ struct mm_int8 {
  * This class contains the information associated with a Context by the OpenCL Platform.
  */
 
-class OpenCLContext {
+class OPENMM_EXPORT OpenCLContext {
 public:
     static const int ThreadBlockSize = 64;
     static const int TileSize = 32;
