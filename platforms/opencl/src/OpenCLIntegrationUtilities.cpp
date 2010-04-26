@@ -450,7 +450,7 @@ OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, c
         ccmaNumAtomConstraints = new OpenCLArray<cl_int>(context, numAtoms, "CcmaAtomConstraintsIndex");
         ccmaDelta1 = new OpenCLArray<cl_float>(context, numCCMA, "CcmaDelta1");
         ccmaDelta2 = new OpenCLArray<cl_float>(context, numCCMA, "CcmaDelta2");
-        ccmaConverged = new OpenCLArray<cl_int>(context, context.getNumThreadBlocks(), "CcmaConverged");
+        ccmaConverged = new OpenCLArray<cl_int>(context, 1, "CcmaConverged", true);
         ccmaReducedMass = new OpenCLArray<cl_float>(context, numCCMA, "CcmaReducedMass");
         ccmaConstraintMatrixColumn = new OpenCLArray<cl_int>(context, numCCMA*maxRowElements, "ConstraintMatrixColumn");
         ccmaConstraintMatrixValue = new OpenCLArray<cl_float>(context, numCCMA*maxRowElements, "ConstraintMatrixValue");
@@ -572,20 +572,17 @@ void OpenCLIntegrationUtilities::applyConstraints(double tol) {
             ccmaDirectionsKernel.setArg<cl::Buffer>(0, ccmaAtoms->getDeviceBuffer());
             ccmaDirectionsKernel.setArg<cl::Buffer>(1, ccmaDistance->getDeviceBuffer());
             ccmaDirectionsKernel.setArg<cl::Buffer>(2, context.getPosq().getDeviceBuffer());
-            ccmaDirectionsKernel.setArg<cl::Buffer>(3, ccmaConverged->getDeviceBuffer());
             ccmaForceKernel.setArg<cl::Buffer>(0, ccmaAtoms->getDeviceBuffer());
             ccmaForceKernel.setArg<cl::Buffer>(1, ccmaDistance->getDeviceBuffer());
             ccmaForceKernel.setArg<cl::Buffer>(2, posDelta->getDeviceBuffer());
             ccmaForceKernel.setArg<cl::Buffer>(3, ccmaReducedMass->getDeviceBuffer());
             ccmaForceKernel.setArg<cl::Buffer>(4, ccmaDelta1->getDeviceBuffer());
             ccmaForceKernel.setArg<cl::Buffer>(5, ccmaConverged->getDeviceBuffer());
-            ccmaForceKernel.setArg(6, sizeof(cl_int)*OpenCLContext::ThreadBlockSize, NULL);
             ccmaMultiplyKernel.setArg<cl::Buffer>(0, ccmaDelta1->getDeviceBuffer());
             ccmaMultiplyKernel.setArg<cl::Buffer>(1, ccmaDelta2->getDeviceBuffer());
             ccmaMultiplyKernel.setArg<cl::Buffer>(2, ccmaConstraintMatrixColumn->getDeviceBuffer());
             ccmaMultiplyKernel.setArg<cl::Buffer>(3, ccmaConstraintMatrixValue->getDeviceBuffer());
             ccmaMultiplyKernel.setArg<cl::Buffer>(4, ccmaConverged->getDeviceBuffer());
-            ccmaMultiplyKernel.setArg(5, sizeof(cl_int)*OpenCLContext::ThreadBlockSize, NULL);
             ccmaUpdateKernel.setArg<cl::Buffer>(0, ccmaNumAtomConstraints->getDeviceBuffer());
             ccmaUpdateKernel.setArg<cl::Buffer>(1, ccmaAtomConstraints->getDeviceBuffer());
             ccmaUpdateKernel.setArg<cl::Buffer>(2, ccmaDistance->getDeviceBuffer());
@@ -595,22 +592,21 @@ void OpenCLIntegrationUtilities::applyConstraints(double tol) {
             ccmaUpdateKernel.setArg<cl::Buffer>(6, ccmaDelta2->getDeviceBuffer());
             ccmaUpdateKernel.setArg<cl::Buffer>(7, ccmaConverged->getDeviceBuffer());
         }
-        ccmaForceKernel.setArg<cl_float>(7, (cl_float) tol);
+        ccmaForceKernel.setArg<cl_float>(6, (cl_float) tol);
         context.executeKernel(ccmaDirectionsKernel, ccmaAtoms->getSize());
-        vector<cl_int> converged;
-        for (int i = 0; i < 75; i++) {
-            // To reduce the overhead of checking for convergence, perform two iterations
-            // each time through the loop.
-            
+        const int checkInterval = 3;
+        for (int i = 0; i < 150; i++) {
+            if ((i+1)%checkInterval == 0) {
+                (*ccmaConverged)[0] = 1;
+                ccmaConverged->upload();
+            }
             context.executeKernel(ccmaForceKernel, ccmaAtoms->getSize());
+            if ((i+1)%checkInterval == 0) {
+                ccmaConverged->download();
+                if ((*ccmaConverged)[0])
+                    break;
+            }
             context.executeKernel(ccmaMultiplyKernel, ccmaAtoms->getSize());
-            ccmaUpdateKernel.setArg<cl_int>(8, i);
-            context.executeKernel(ccmaUpdateKernel, context.getNumAtoms());
-            context.executeKernel(ccmaForceKernel, ccmaAtoms->getSize());
-            context.executeKernel(ccmaMultiplyKernel, ccmaAtoms->getSize());
-            ccmaConverged->download(converged);
-            if (converged[0])
-                break;
             ccmaUpdateKernel.setArg<cl_int>(8, i);
             context.executeKernel(ccmaUpdateKernel, context.getNumAtoms());
         }
