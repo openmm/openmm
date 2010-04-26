@@ -16,7 +16,7 @@ __kernel void computeNonbondedExceptions(__global float4* forceBuffers, __global
         // Compute the force.
 
         float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
-        float invR = 1.0f/sqrt(r2);
+        float invR = native_rsqrt(r2);
         float sig2 = invR*exceptionParams.y;
         sig2 *= sig2;
         float sig6 = sig2*sig2*sig2;

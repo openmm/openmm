@@ -28,6 +28,7 @@
 #include "OpenCLArray.h"
 #include "OpenCLCompact.h"
 #include "OpenCLKernelSources.h"
+#include "OpenCLExpressionUtilities.h"
 #include <map>
 
 using namespace OpenMM;
@@ -349,19 +350,13 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
         defines["USE_PERIODIC"] = "1";
     if (useExclusions)
         defines["USE_EXCLUSIONS"] = "1";
-    stringstream xsize, ysize, zsize, cutoffSquared;
-    xsize.precision(8);
-    ysize.precision(8);
-    zsize.precision(8);
-    cutoffSquared.precision(8);
-    xsize << scientific << periodicBoxSize.x << "f";
-    ysize << scientific << periodicBoxSize.y << "f";
-    zsize << scientific << periodicBoxSize.z << "f";
-    cutoffSquared << scientific << (cutoff*cutoff) << "f";
-    defines["PERIODIC_BOX_SIZE_X"] = xsize.str();
-    defines["PERIODIC_BOX_SIZE_Y"] = ysize.str();
-    defines["PERIODIC_BOX_SIZE_Z"] = zsize.str();
-    defines["CUTOFF_SQUARED"] = cutoffSquared.str();
+    defines["PERIODIC_BOX_SIZE_X"] = OpenCLExpressionUtilities::doubleToString(periodicBoxSize.x);
+    defines["PERIODIC_BOX_SIZE_Y"] = OpenCLExpressionUtilities::doubleToString(periodicBoxSize.y);
+    defines["PERIODIC_BOX_SIZE_Z"] = OpenCLExpressionUtilities::doubleToString(periodicBoxSize.z);
+    defines["INV_PERIODIC_BOX_SIZE_X"] = OpenCLExpressionUtilities::doubleToString(1.0/periodicBoxSize.x);
+    defines["INV_PERIODIC_BOX_SIZE_Y"] = OpenCLExpressionUtilities::doubleToString(1.0/periodicBoxSize.y);
+    defines["INV_PERIODIC_BOX_SIZE_Z"] = OpenCLExpressionUtilities::doubleToString(1.0/periodicBoxSize.z);
+    defines["CUTOFF_SQUARED"] = OpenCLExpressionUtilities::doubleToString(cutoff*cutoff);
     stringstream natom, padded;
     natom << context.getNumAtoms();
     padded << context.getPaddedNumAtoms();

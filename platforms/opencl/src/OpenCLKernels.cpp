@@ -1266,6 +1266,9 @@ void OpenCLCalcNonbondedForceKernel::executeForces(ContextImpl& context) {
             pmeDefines["PERIODIC_BOX_SIZE_X"] = doubleToString(boxSize.x);
             pmeDefines["PERIODIC_BOX_SIZE_Y"] = doubleToString(boxSize.y);
             pmeDefines["PERIODIC_BOX_SIZE_Z"] = doubleToString(boxSize.z);
+            pmeDefines["INV_PERIODIC_BOX_SIZE_X"] = doubleToString(1.0/boxSize.x);
+            pmeDefines["INV_PERIODIC_BOX_SIZE_Y"] = doubleToString(1.0/boxSize.y);
+            pmeDefines["INV_PERIODIC_BOX_SIZE_Z"] = doubleToString(1.0/boxSize.z);
             pmeDefines["RECIP_SCALE_FACTOR"] = doubleToString(1.0/(M_PI*boxSize.x*boxSize.y*boxSize.z));
             cl::Program program = cl.createProgram(OpenCLKernelSources::pme, pmeDefines);
             pmeGridIndexKernel = cl::Kernel(program, "updateGridIndexAndFraction");
@@ -1564,6 +1567,9 @@ void OpenCLCalcGBSAOBCForceKernel::executeForces(ContextImpl& context) {
         defines["PERIODIC_BOX_SIZE_X"] = doubleToString(nb.getPeriodicBoxSize().x);
         defines["PERIODIC_BOX_SIZE_Y"] = doubleToString(nb.getPeriodicBoxSize().y);
         defines["PERIODIC_BOX_SIZE_Z"] = doubleToString(nb.getPeriodicBoxSize().z);
+        defines["INV_PERIODIC_BOX_SIZE_X"] = doubleToString(1.0/nb.getPeriodicBoxSize().x);
+        defines["INV_PERIODIC_BOX_SIZE_Y"] = doubleToString(1.0/nb.getPeriodicBoxSize().y);
+        defines["INV_PERIODIC_BOX_SIZE_Z"] = doubleToString(1.0/nb.getPeriodicBoxSize().z);
         defines["CUTOFF_SQUARED"] = doubleToString(nb.getCutoffDistance()*nb.getCutoffDistance());
         defines["PREFACTOR"] = doubleToString(prefactor);
         defines["NUM_ATOMS"] = intToString(cl.getNumAtoms());
@@ -1864,6 +1870,9 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         defines["PERIODIC_BOX_SIZE_X"] = doubleToString(boxVectors[0][0]);
         defines["PERIODIC_BOX_SIZE_Y"] = doubleToString(boxVectors[1][1]);
         defines["PERIODIC_BOX_SIZE_Z"] = doubleToString(boxVectors[2][2]);
+        defines["INV_PERIODIC_BOX_SIZE_X"] = doubleToString(1.0/boxVectors[0][0]);
+        defines["INV_PERIODIC_BOX_SIZE_Y"] = doubleToString(1.0/boxVectors[1][1]);
+        defines["INV_PERIODIC_BOX_SIZE_Z"] = doubleToString(1.0/boxVectors[2][2]);
         defines["CUTOFF_SQUARED"] = doubleToString(force.getCutoffDistance()*force.getCutoffDistance());
         defines["NUM_ATOMS"] = intToString(cl.getNumAtoms());
         defines["PADDED_NUM_ATOMS"] = intToString(cl.getPaddedNumAtoms());
@@ -2012,6 +2021,9 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         defines["PERIODIC_BOX_SIZE_X"] = doubleToString(boxVectors[0][0]);
         defines["PERIODIC_BOX_SIZE_Y"] = doubleToString(boxVectors[1][1]);
         defines["PERIODIC_BOX_SIZE_Z"] = doubleToString(boxVectors[2][2]);
+        defines["INV_PERIODIC_BOX_SIZE_X"] = doubleToString(1.0/boxVectors[0][0]);
+        defines["INV_PERIODIC_BOX_SIZE_Y"] = doubleToString(1.0/boxVectors[1][1]);
+        defines["INV_PERIODIC_BOX_SIZE_Z"] = doubleToString(1.0/boxVectors[2][2]);
         defines["CUTOFF_SQUARED"] = doubleToString(force.getCutoffDistance()*force.getCutoffDistance());
         defines["NUM_ATOMS"] = intToString(cl.getNumAtoms());
         defines["PADDED_NUM_ATOMS"] = intToString(cl.getPaddedNumAtoms());

@@ -1,9 +1,9 @@
 __kernel void updateGridIndexAndFraction(__global float4* posq, __global float2* pmeAtomGridIndex) {
     for (int i = get_global_id(0); i < NUM_ATOMS; i += get_global_size(0)) {
         float4 pos = posq[i];
-        float4 t = (float4) ((pos.x/PERIODIC_BOX_SIZE_X+1.0f)*GRID_SIZE_X,
-                             (pos.y/PERIODIC_BOX_SIZE_Y+1.0f)*GRID_SIZE_Y,
-                             (pos.z/PERIODIC_BOX_SIZE_Z+1.0f)*GRID_SIZE_Z, 0.0f);
+        float4 t = (float4) ((pos.x*INV_PERIODIC_BOX_SIZE_X+1.0f)*GRID_SIZE_X,
+                             (pos.y*INV_PERIODIC_BOX_SIZE_Y+1.0f)*GRID_SIZE_Y,
+                             (pos.z*INV_PERIODIC_BOX_SIZE_Z+1.0f)*GRID_SIZE_Z, 0.0f);
         int4 gridIndex = (int4) (((int) t.x) % GRID_SIZE_X,
                                  ((int) t.y) % GRID_SIZE_Y,
                                  ((int) t.z) % GRID_SIZE_Z, 0);
@@ -48,9 +48,9 @@ __kernel void updateBsplines(__global float4* posq, __global float4* pmeBsplineT
             ddata[j] = 0.0f;
         }
         float4 pos = posq[i];
-        float4 t = (float4) ((pos.x/PERIODIC_BOX_SIZE_X+1.0f)*GRID_SIZE_X,
-                             (pos.y/PERIODIC_BOX_SIZE_Y+1.0f)*GRID_SIZE_Y,
-                             (pos.z/PERIODIC_BOX_SIZE_Z+1.0f)*GRID_SIZE_Z, 0.0f);
+        float4 t = (float4) ((pos.x*INV_PERIODIC_BOX_SIZE_X+1.0f)*GRID_SIZE_X,
+                             (pos.y*INV_PERIODIC_BOX_SIZE_Y+1.0f)*GRID_SIZE_Y,
+                             (pos.z*INV_PERIODIC_BOX_SIZE_Z+1.0f)*GRID_SIZE_Z, 0.0f);
         float4 dr = (float4) (t.x-(int) t.x, t.y-(int) t.y, t.z-(int) t.z, 0.0f);
         data[PME_ORDER-1] = 0.0f;
         data[1] = dr;
@@ -132,9 +132,9 @@ __kernel void reciprocalConvolution(__global float2* pmeGrid, __global float* en
         int mx = (kx < (GRID_SIZE_X+1)/2) ? kx : (kx-GRID_SIZE_X);
         int my = (ky < (GRID_SIZE_Y+1)/2) ? ky : (ky-GRID_SIZE_Y);
         int mz = (kz < (GRID_SIZE_Z+1)/2) ? kz : (kz-GRID_SIZE_Z);
-        float mhx = mx/PERIODIC_BOX_SIZE_X;
-        float mhy = my/PERIODIC_BOX_SIZE_Y;
-        float mhz = mz/PERIODIC_BOX_SIZE_Z;
+        float mhx = mx*INV_PERIODIC_BOX_SIZE_X;
+        float mhy = my*INV_PERIODIC_BOX_SIZE_Y;
+        float mhz = mz*INV_PERIODIC_BOX_SIZE_Z;
         float bx = pmeBsplineModuliX[kx];
         float by = pmeBsplineModuliY[ky];
         float bz = pmeBsplineModuliZ[kz];
@@ -152,9 +152,9 @@ __kernel void gridInterpolateForce(__global float4* posq, __global float4* force
     for (int atom = get_global_id(0); atom < NUM_ATOMS; atom += get_global_size(0)) {
         float4 force = 0.0f;
         float4 pos = posq[atom];
-        float4 t = (float4) ((pos.x/PERIODIC_BOX_SIZE_X+1.0f)*GRID_SIZE_X,
-                             (pos.y/PERIODIC_BOX_SIZE_Y+1.0f)*GRID_SIZE_Y,
-                             (pos.z/PERIODIC_BOX_SIZE_Z+1.0f)*GRID_SIZE_Z, 0.0f);
+        float4 t = (float4) ((pos.x*INV_PERIODIC_BOX_SIZE_X+1.0f)*GRID_SIZE_X,
+                             (pos.y*INV_PERIODIC_BOX_SIZE_Y+1.0f)*GRID_SIZE_Y,
+                             (pos.z*INV_PERIODIC_BOX_SIZE_Z+1.0f)*GRID_SIZE_Z, 0.0f);
         int4 gridIndex = (int4) (((int) t.x) % GRID_SIZE_X,
                                  ((int) t.y) % GRID_SIZE_Y,
                                  ((int) t.z) % GRID_SIZE_Z, 0);
@@ -180,9 +180,9 @@ __kernel void gridInterpolateForce(__global float4* posq, __global float4* force
         }
         float4 totalForce = forceBuffers[atom];
         float q = pos.w*EPSILON_FACTOR;
-        totalForce.x -= q*force.x*GRID_SIZE_X/PERIODIC_BOX_SIZE_X;
-        totalForce.y -= q*force.y*GRID_SIZE_Y/PERIODIC_BOX_SIZE_Y;
-        totalForce.z -= q*force.z*GRID_SIZE_Z/PERIODIC_BOX_SIZE_Z;
+        totalForce.x -= q*force.x*GRID_SIZE_X*INV_PERIODIC_BOX_SIZE_X;
+        totalForce.y -= q*force.y*GRID_SIZE_Y*INV_PERIODIC_BOX_SIZE_Y;
+        totalForce.z -= q*force.z*GRID_SIZE_Z*INV_PERIODIC_BOX_SIZE_Z;
         forceBuffers[atom] = totalForce;
     }
 }

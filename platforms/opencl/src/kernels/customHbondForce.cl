@@ -14,9 +14,9 @@ float4 delta(float4 vec1, float4 vec2) {
 float4 deltaPeriodic(float4 vec1, float4 vec2) {
     float4 result = (float4) (vec1.x-vec2.x, vec1.y-vec2.y, vec1.z-vec2.z, 0.0f);
 #ifdef USE_PERIODIC
-    result.x -= floor(result.x/PERIODIC_BOX_SIZE_X+0.5f)*PERIODIC_BOX_SIZE_X;
-    result.y -= floor(result.y/PERIODIC_BOX_SIZE_Y+0.5f)*PERIODIC_BOX_SIZE_Y;
-    result.z -= floor(result.z/PERIODIC_BOX_SIZE_Z+0.5f)*PERIODIC_BOX_SIZE_Z;
+    result.x -= floor(result.x*INV_PERIODIC_BOX_SIZE_X+0.5f)*PERIODIC_BOX_SIZE_X;
+    result.y -= floor(result.y*INV_PERIODIC_BOX_SIZE_Y+0.5f)*PERIODIC_BOX_SIZE_Y;
+    result.z -= floor(result.z*INV_PERIODIC_BOX_SIZE_Z+0.5f)*PERIODIC_BOX_SIZE_Z;
 #endif
     result.w = result.x*result.x + result.y*result.y + result.z*result.z;
     return result;
@@ -27,14 +27,14 @@ float4 deltaPeriodic(float4 vec1, float4 vec2) {
  */
 float computeAngle(float4 vec1, float4 vec2) {
     float dotProduct = vec1.x*vec2.x + vec1.y*vec2.y + vec1.z*vec2.z;
-    float cosine = dotProduct/sqrt(vec1.w*vec2.w);
+    float cosine = dotProduct*native_rsqrt(vec1.w*vec2.w);
     float angle;
     if (cosine > 0.99f || cosine < -0.99f) {
         // We're close to the singularity in acos(), so take the cross product and use asin() instead.
 
         float4 crossProduct = cross(vec1, vec2);
         float scale = vec1.w*vec2.w;
-        angle = asin(sqrt(dot(crossProduct, crossProduct)/scale));
+        angle = asin(native_sqrt(dot(crossProduct, crossProduct)/scale));
         if (cosine < 0.0f)
             angle = M_PI-angle;
     }

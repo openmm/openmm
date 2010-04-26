@@ -42,9 +42,9 @@ __kernel void computeBornSum(__global float* global_bornSum, __local float* loca
             for (unsigned int j = 0; j < TILE_SIZE/2; j++) {
                 float4 delta = (float4) (local_posq[baseLocalAtom+j].xyz - posq1.xyz, 0.0f);
 #ifdef USE_PERIODIC
-                delta.x -= floor(delta.x/PERIODIC_BOX_SIZE_X+0.5f)*PERIODIC_BOX_SIZE_X;
-                delta.y -= floor(delta.y/PERIODIC_BOX_SIZE_Y+0.5f)*PERIODIC_BOX_SIZE_Y;
-                delta.z -= floor(delta.z/PERIODIC_BOX_SIZE_Z+0.5f)*PERIODIC_BOX_SIZE_Z;
+                delta.x -= floor(delta.x*INV_PERIODIC_BOX_SIZE_X+0.5f)*PERIODIC_BOX_SIZE_X;
+                delta.y -= floor(delta.y*INV_PERIODIC_BOX_SIZE_Y+0.5f)*PERIODIC_BOX_SIZE_Y;
+                delta.z -= floor(delta.z*INV_PERIODIC_BOX_SIZE_Z+0.5f)*PERIODIC_BOX_SIZE_Z;
 #endif
                 float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
 #ifdef USE_CUTOFF
@@ -52,8 +52,8 @@ __kernel void computeBornSum(__global float* global_bornSum, __local float* loca
 #else
                 if (atom1 < NUM_ATOMS && y+baseLocalAtom+j < NUM_ATOMS) {
 #endif
-                    float r = sqrt(r2);
-                    float invR = 1.0f/r;
+                    float invR = native_rsqrt(r2);
+                    float r = native_recip(invR);
                     float2 params2 = local_params[baseLocalAtom+j];
                     float rScaledRadiusJ = r+params2.y;
                     if ((j != tgx) && (params1.x < rScaledRadiusJ)) {
@@ -104,9 +104,9 @@ __kernel void computeBornSum(__global float* global_bornSum, __local float* loca
             for (unsigned int j = 0; j < TILE_SIZE/2; j++) {
                 float4 delta = (float4) (local_posq[baseLocalAtom+tj].xyz - posq1.xyz, 0.0f);
 #ifdef USE_PERIODIC
-                delta.x -= floor(delta.x/PERIODIC_BOX_SIZE_X+0.5f)*PERIODIC_BOX_SIZE_X;
-                delta.y -= floor(delta.y/PERIODIC_BOX_SIZE_Y+0.5f)*PERIODIC_BOX_SIZE_Y;
-                delta.z -= floor(delta.z/PERIODIC_BOX_SIZE_Z+0.5f)*PERIODIC_BOX_SIZE_Z;
+                delta.x -= floor(delta.x*INV_PERIODIC_BOX_SIZE_X+0.5f)*PERIODIC_BOX_SIZE_X;
+                delta.y -= floor(delta.y*INV_PERIODIC_BOX_SIZE_Y+0.5f)*PERIODIC_BOX_SIZE_Y;
+                delta.z -= floor(delta.z*INV_PERIODIC_BOX_SIZE_Z+0.5f)*PERIODIC_BOX_SIZE_Z;
 #endif
                 float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
 #ifdef USE_CUTOFF
@@ -114,8 +114,8 @@ __kernel void computeBornSum(__global float* global_bornSum, __local float* loca
 #else
                 if (atom1 < NUM_ATOMS && y+baseLocalAtom+tj < NUM_ATOMS) {
 #endif
-                    float r = sqrt(r2);
-                    float invR = 1.0f/r;
+                    float invR = native_rsqrt(r2);
+                    float r = native_recip(invR);
                     float2 params2 = local_params[baseLocalAtom+tj];
                     float rScaledRadiusJ = r+params2.y;
                     if (params1.x < rScaledRadiusJ) {
@@ -214,19 +214,19 @@ __kernel void computeGBSAForce1(__global float4* forceBuffers, __global float* e
                     float4 posq2 = local_posq[baseLocalAtom+j];
                     float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
 #ifdef USE_PERIODIC
-                    delta.x -= floor(delta.x/PERIODIC_BOX_SIZE_X+0.5f)*PERIODIC_BOX_SIZE_X;
-                    delta.y -= floor(delta.y/PERIODIC_BOX_SIZE_Y+0.5f)*PERIODIC_BOX_SIZE_Y;
-                    delta.z -= floor(delta.z/PERIODIC_BOX_SIZE_Z+0.5f)*PERIODIC_BOX_SIZE_Z;
+                    delta.x -= floor(delta.x*INV_PERIODIC_BOX_SIZE_X+0.5f)*PERIODIC_BOX_SIZE_X;
+                    delta.y -= floor(delta.y*INV_PERIODIC_BOX_SIZE_Y+0.5f)*PERIODIC_BOX_SIZE_Y;
+                    delta.z -= floor(delta.z*INV_PERIODIC_BOX_SIZE_Z+0.5f)*PERIODIC_BOX_SIZE_Z;
 #endif
                     float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
-                    float r = sqrt(r2);
-                    float invR = 1.0f/r;
+                    float invR = native_rsqrt(r2);
+                    float r = native_recip(invR);
                     float bornRadius2 = local_bornRadii[baseLocalAtom+j];
                     float alpha2_ij = bornRadius1*bornRadius2;
                     float D_ij = r2/(4.0f*alpha2_ij);
                     float expTerm = exp(-D_ij);
                     float denominator2 = r2 + alpha2_ij*expTerm;
-                    float denominator = sqrt(denominator2);
+                    float denominator = native_sqrt(denominator2);
                     float tempEnergy = (PREFACTOR*posq1.w*posq2.w)/denominator;
                     float Gpol = tempEnergy/denominator2;
                     float dGpol_dalpha2_ij = -0.5f*Gpol*expTerm*(1.0f+D_ij);
@@ -281,19 +281,19 @@ __kernel void computeGBSAForce1(__global float4* forceBuffers, __global float* e
                     float4 posq2 = local_posq[baseLocalAtom+tj];
                     float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
 #ifdef USE_PERIODIC
-                    delta.x -= floor(delta.x/PERIODIC_BOX_SIZE_X+0.5f)*PERIODIC_BOX_SIZE_X;
-                    delta.y -= floor(delta.y/PERIODIC_BOX_SIZE_Y+0.5f)*PERIODIC_BOX_SIZE_Y;
-                    delta.z -= floor(delta.z/PERIODIC_BOX_SIZE_Z+0.5f)*PERIODIC_BOX_SIZE_Z;
+                    delta.x -= floor(delta.x*INV_PERIODIC_BOX_SIZE_X+0.5f)*PERIODIC_BOX_SIZE_X;
+                    delta.y -= floor(delta.y*INV_PERIODIC_BOX_SIZE_Y+0.5f)*PERIODIC_BOX_SIZE_Y;
+                    delta.z -= floor(delta.z*INV_PERIODIC_BOX_SIZE_Z+0.5f)*PERIODIC_BOX_SIZE_Z;
 #endif
                     float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
-                    float r = sqrt(r2);
-                    float invR = 1.0f/r;
+                    float invR = native_rsqrt(r2);
+                    float r = native_recip(invR);
                     float bornRadius2 = local_bornRadii[baseLocalAtom+tj];
                     float alpha2_ij = bornRadius1*bornRadius2;
                     float D_ij = r2/(4.0f*alpha2_ij);
                     float expTerm = exp(-D_ij);
                     float denominator2 = r2 + alpha2_ij*expTerm;
-                    float denominator = sqrt(denominator2);
+                    float denominator = native_sqrt(denominator2);
                     float tempEnergy = (PREFACTOR*posq1.w*posq2.w)/denominator;
                     float Gpol = tempEnergy/denominator2;
                     float dGpol_dalpha2_ij = -0.5f*Gpol*expTerm*(1.0f+D_ij);

@@ -14,7 +14,7 @@ __kernel void calcHarmonicBondForce(int numAtoms, int numBonds, __global float4*
 
         // Compute the force.
 
-        float r = sqrt(delta.x*delta.x + delta.y*delta.y + delta.z*delta.z);
+        float r = native_sqrt(delta.x*delta.x + delta.y*delta.y + delta.z*delta.z);
         float deltaIdeal = r-bondParams.x;
         energy += 0.5f * bondParams.y*deltaIdeal*deltaIdeal;
         float dEdR = bondParams.y * deltaIdeal;
