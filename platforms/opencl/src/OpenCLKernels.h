@@ -476,9 +476,9 @@ private:
     OpenCLArray<mm_float4>* pmeBsplineDtheta;
     OpenCLArray<cl_int>* pmeAtomRange;
     OpenCLArray<mm_float2>* pmeAtomGridIndex;
+    OpenCLArray<cl_float>* erfcTable;
     OpenCLSort<mm_float2>* sort;
     OpenCLFFT3D* fft;
-    cl::Image2D* erfcTable;
     cl::Kernel exceptionsKernel;
     cl::Kernel ewaldSumsKernel;
     cl::Kernel ewaldForcesKernel;

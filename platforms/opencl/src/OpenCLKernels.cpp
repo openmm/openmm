@@ -1209,32 +1209,14 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     // Tabulate values of erfc().
 
     if (force.getNonbondedMethod() == NonbondedForce::Ewald || force.getNonbondedMethod() == NonbondedForce::PME) {
-        if (cl.getDevice().getInfo<CL_DEVICE_IMAGE_SUPPORT>()) {
-            try
-            {
-                const int tableSize = 2048;
-                defines["USE_TABULATED_ERFC"] = "1";
-                defines["ERFC_TABLE_SCALE"] = doubleToString((tableSize-1)/(alpha*force.getCutoffDistance()));
-                erfcTable = new cl::Image2D(cl.getContext(), CL_MEM_READ_ONLY, cl::ImageFormat(CL_INTENSITY, CL_FLOAT), tableSize, 1, 0);
-                vector<cl_float> erfcVector(tableSize);
-                for (int i = 0; i < tableSize; ++i)
-                    erfcVector[i] = (float) erfc(i*(alpha*force.getCutoffDistance())/(tableSize-1));
-                cl::size_t<3> origin, region;
-                origin.push_back(0);
-                origin.push_back(0);
-                origin.push_back(0);
-                region.push_back(tableSize);
-                region.push_back(1);
-                region.push_back(1);
-                cl.getQueue().enqueueWriteImage(*erfcTable, CL_TRUE, origin, region, 0, 0, &erfcVector[0]);
-                cl.getNonbondedUtilities().addArgument(OpenCLNonbondedUtilities::ParameterInfo("erfcTable", "image2d_t", sizeof(cl_float), *erfcTable));
-            }
-            catch (cl::Error err) {
-                std::stringstream str;
-                str<<"Error creating erfc() image: "<<err.what()<<" ("<<err.err()<<")";
-                throw OpenMMException(str.str());
-            }
-        }
+        const int tableSize = 2048;
+        defines["ERFC_TABLE_SCALE"] = doubleToString((tableSize-1)/(alpha*force.getCutoffDistance()));
+        erfcTable = new OpenCLArray<cl_float>(cl, tableSize, "ErfcTable", false, CL_MEM_READ_ONLY);
+        vector<cl_float> erfcVector(tableSize);
+        for (int i = 0; i < tableSize; ++i)
+            erfcVector[i] = (float) erfc(i*(alpha*force.getCutoffDistance())/(tableSize-1));
+        erfcTable->upload(erfcVector);
+        cl.getNonbondedUtilities().addArgument(OpenCLNonbondedUtilities::ParameterInfo("erfcTable", "float", sizeof(cl_float), erfcTable->getDeviceBuffer()));
     }
 
     // Add the interaction to the default nonbonded kernel.

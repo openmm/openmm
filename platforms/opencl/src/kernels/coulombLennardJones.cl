@@ -3,15 +3,16 @@ bool needCorrection = isExcluded && atom1 != atom2 && atom1 < NUM_ATOMS && atom2
 if (!isExcluded || needCorrection) {
     const float prefactor = 138.935456f*posq1.w*posq2.w*invR;
     float alphaR = EWALD_ALPHA*r;
-#ifdef USE_TABULATED_ERFC
-    float normalized = ERFC_TABLE_SCALE*alphaR;
-    int tableIndex = (int) normalized;
-    float fract2 = normalized-tableIndex;
-    float fract1 = 1.0f-fract2;
-    float erfcAlphaR = fract1*read_imagef(erfcTable, sampler, (int2)(tableIndex, 0)).x + fract2*read_imagef(erfcTable, sampler, (int2)(tableIndex+1, 0)).x;
-#else
-    float erfcAlphaR = erfc(alphaR);
-#endif
+    float erfcAlphaR = 0.0f;
+    if (r2 < CUTOFF_SQUARED) {
+        float normalized = ERFC_TABLE_SCALE*alphaR;
+        int tableIndex = (int) normalized;
+        float fract2 = normalized-tableIndex;
+        float fract1 = 1.0f-fract2;
+        erfcAlphaR = fract1*erfcTable[tableIndex] + fract2*erfcTable[tableIndex+1];
+    }
+    else if (needCorrection)
+        erfcAlphaR = erfc(alphaR);
     float tempForce = 0.0f;
     if (needCorrection) {
         // Subtract off the part of this interaction that was included in the reciprocal space contribution.
