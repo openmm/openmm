@@ -1,4 +1,5 @@
 #define TILE_SIZE 32
+const sampler_t sampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP_TO_EDGE | CLK_FILTER_NEAREST;
 
 /**
  * Compute nonbonded interactions.

@@ -231,10 +231,10 @@ public:
      * @param name      the name of the parameter
      * @param type      the data type of the parameter
      * @param size      the size of the parameter in bytes
-     * @param buffer    the buffer containing the parameter values
+     * @param memory    the memory containing the parameter values
      */
-    ParameterInfo(const std::string& name, const std::string& type, int size, cl::Buffer& buffer) :
-            name(name), type(type), size(size), buffer(&buffer) {
+    ParameterInfo(const std::string& name, const std::string& type, int size, cl::Memory& memory) :
+            name(name), type(type), size(size), memory(&memory) {
     }
     const std::string& getName() const {
         return name;
@@ -245,14 +245,14 @@ public:
     int getSize() const {
         return size;
     }
-    cl::Buffer& getBuffer() const {
-        return *buffer;
+    cl::Memory& getMemory() const {
+        return *memory;
     }
 private:
     std::string name;
     std::string type;
     int size;
-    cl::Buffer* buffer;
+    cl::Memory* memory;
 };
 
 } // namespace OpenMM

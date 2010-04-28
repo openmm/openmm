@@ -294,13 +294,19 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
         args << params[i].getName();
     }
     for (int i = 0; i < (int) arguments.size(); i++) {
-        if ((arguments[i].getBuffer().getInfo<CL_MEM_FLAGS>() & CL_MEM_READ_ONLY) == 0)
-            args << ", __global ";
-        else
-            args << ", __constant ";
-        args << arguments[i].getType();
-        args << "* ";
-        args << arguments[i].getName();
+        if (arguments[i].getMemory().getInfo<CL_MEM_TYPE>() == CL_MEM_OBJECT_IMAGE2D) {
+            args << ", __read_only image2d_t ";
+            args << arguments[i].getName();
+        }
+        else {
+            if ((arguments[i].getMemory().getInfo<CL_MEM_FLAGS>() & CL_MEM_READ_ONLY) == 0)
+                args << ", __global ";
+            else
+                args << ", __constant ";
+            args << arguments[i].getType();
+            args << "* ";
+            args << arguments[i].getName();
+        }
     }
     replacements["PARAMETER_ARGUMENTS"] = args.str();
     stringstream loadLocal1;
@@ -388,12 +394,12 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
         kernel.setArg<cl_uint>(9, tiles->getSize());
     }
     for (int i = 0; i < (int) params.size(); i++) {
-        kernel.setArg<cl::Buffer>(i*2+paramBase, params[i].getBuffer());
+        kernel.setArg<cl::Memory>(i*2+paramBase, params[i].getMemory());
         kernel.setArg(i*2+paramBase+1, OpenCLContext::ThreadBlockSize*params[i].getSize(), NULL);
     }
     paramBase += 2*params.size();
     for (int i = 0; i < (int) arguments.size(); i++) {
-        kernel.setArg<cl::Buffer>(i+paramBase, arguments[i].getBuffer());
+        kernel.setArg<cl::Memory>(i+paramBase, arguments[i].getMemory());
     }
     return kernel;
 }

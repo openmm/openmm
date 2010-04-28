@@ -214,8 +214,8 @@ void OpenCLContext::clearBuffer(OpenCLArray<mm_float4>& array) {
     clearBuffer(array.getDeviceBuffer(), array.getSize()*4);
 }
 
-void OpenCLContext::clearBuffer(cl::Buffer& buffer, int size) {
-    clearBufferKernel.setArg<cl::Buffer>(0, buffer);
+void OpenCLContext::clearBuffer(cl::Memory& memory, int size) {
+    clearBufferKernel.setArg<cl::Memory>(0, memory);
     clearBufferKernel.setArg<cl_int>(1, size);
     executeKernel(clearBufferKernel, size);
 }

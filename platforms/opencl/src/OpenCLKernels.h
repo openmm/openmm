@@ -438,7 +438,7 @@ public:
     OpenCLCalcNonbondedForceKernel(std::string name, const Platform& platform, OpenCLContext& cl, System& system) : CalcNonbondedForceKernel(name, platform),
             hasInitializedKernel(false), cl(cl), sigmaEpsilon(NULL), exceptionParams(NULL), exceptionIndices(NULL), cosSinSums(NULL), pmeGrid(NULL),
             pmeBsplineModuliX(NULL), pmeBsplineModuliY(NULL), pmeBsplineModuliZ(NULL), pmeBsplineTheta(NULL), pmeBsplineDtheta(NULL), pmeAtomRange(NULL),
-            pmeAtomGridIndex(NULL), sort(NULL), fft(NULL) {
+            pmeAtomGridIndex(NULL), erfcTable(NULL), sort(NULL), fft(NULL) {
     }
     ~OpenCLCalcNonbondedForceKernel();
     /**
@@ -478,6 +478,7 @@ private:
     OpenCLArray<mm_float2>* pmeAtomGridIndex;
     OpenCLSort<mm_float2>* sort;
     OpenCLFFT3D* fft;
+    cl::Image2D* erfcTable;
     cl::Kernel exceptionsKernel;
     cl::Kernel ewaldSumsKernel;
     cl::Kernel ewaldForcesKernel;
