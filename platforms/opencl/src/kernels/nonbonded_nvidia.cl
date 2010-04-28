@@ -1,11 +1,17 @@
 #define TILE_SIZE 32
 
+typedef struct {
+    float4 posq;
+    float4 force;
+    ATOM_PARAMETER_DATA
+} AtomData;
+
 /**
  * Compute nonbonded interactions.
  */
 
 __kernel void computeNonbonded(__global float4* forceBuffers, __global float* energyBuffer, __global float4* posq, __global unsigned int* exclusions,
-        __global unsigned int* exclusionIndices, __local float4* local_posq, __local float4* local_force, __local float4* tempBuffer, __global unsigned int* tiles,
+        __global unsigned int* exclusionIndices, __local AtomData* localData, __local float4* tempBuffer, __global unsigned int* tiles,
 #ifdef USE_CUTOFF
         __global unsigned int* interactionFlags, __global unsigned int* interactionCount
 #else
@@ -37,7 +43,7 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
         if (x == y) {
             // This tile is on the diagonal.
 
-            local_posq[get_local_id(0)] = posq1;
+            localData[get_local_id(0)].posq = posq1;
             LOAD_LOCAL_PARAMETERS_FROM_1
             unsigned int xi = x/TILE_SIZE;
             unsigned int tile = xi+xi*PADDED_NUM_ATOMS/TILE_SIZE-xi*(xi+1)/2;
@@ -49,7 +55,7 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
                 bool isExcluded = !(excl & 0x1);
 #endif
                 int atom2 = tbx+j;
-                float4 posq2 = local_posq[atom2];
+                float4 posq2 = localData[atom2].posq;
                 float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
 #ifdef USE_PERIODIC
                 delta.x -= floor(delta.x*INV_PERIODIC_BOX_SIZE_X+0.5f)*PERIODIC_BOX_SIZE_X;
@@ -83,13 +89,13 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
 
             if (lasty != y) {
                 unsigned int j = y + tgx;
-                local_posq[get_local_id(0)] = posq[j];
+                localData[get_local_id(0)].posq = posq[j];
                 LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
             }
-            local_force[get_local_id(0)] = 0.0f;
+            localData[get_local_id(0)].force = 0.0f;
 #ifdef USE_CUTOFF
             unsigned int flags = interactionFlags[pos];
-            if (!hasExclusions && flags != 0xFFFFFFFF) {
+            if (!hasExclusions && flags != 0xFFFFFFFF  && flags == 0) {
                 if (flags == 0) {
                     // No interactions in this tile.
                 }
@@ -100,7 +106,7 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
                         if ((flags&(1<<j)) != 0) {
                             bool isExcluded = false;
                             int atom2 = tbx+j;
-                            float4 posq2 = local_posq[atom2];
+                            float4 posq2 = localData[atom2].posq;
                             float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
 #ifdef USE_PERIODIC
                             delta.x -= floor(delta.x*INV_PERIODIC_BOX_SIZE_X+0.5f)*PERIODIC_BOX_SIZE_X;
@@ -131,7 +137,7 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
                             if (tgx % 16 == 0)
                                 tempBuffer[get_local_id(0)].xyz += tempBuffer[get_local_id(0)+8].xyz;
                             if (tgx == 0)
-                                local_force[tbx+j].xyz += tempBuffer[get_local_id(0)].xyz + tempBuffer[get_local_id(0)+16].xyz;
+                                localData[tbx+j].force.xyz += tempBuffer[get_local_id(0)].xyz + tempBuffer[get_local_id(0)+16].xyz;
                         }
                     }
                 }
@@ -154,7 +160,7 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
                     bool isExcluded = !(excl & 0x1);
 #endif
                     int atom2 = tbx+tj;
-                    float4 posq2 = local_posq[atom2];
+                    float4 posq2 = localData[atom2].posq;
                     float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
 #ifdef USE_PERIODIC
                     delta.x -= floor(delta.x*INV_PERIODIC_BOX_SIZE_X+0.5f)*PERIODIC_BOX_SIZE_X;
@@ -172,7 +178,7 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
 		    energy += tempEnergy;
                     delta.xyz *= dEdR;
                     force.xyz -= delta.xyz;
-                    local_force[tbx+tj].xyz += delta.xyz;
+                    localData[tbx+tj].force.xyz += delta.xyz;
                     excl >>= 1;
                     tj = (tj + 1) & (TILE_SIZE - 1);
                 }
@@ -187,7 +193,7 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
             unsigned int offset2 = y + tgx + warp*PADDED_NUM_ATOMS;
 #endif
             forceBuffers[offset1].xyz += force.xyz;
-            forceBuffers[offset2].xyz += local_force[get_local_id(0)].xyz;
+            forceBuffers[offset2].xyz += localData[get_local_id(0)].force.xyz;
             lasty = y;
         }
         pos++;

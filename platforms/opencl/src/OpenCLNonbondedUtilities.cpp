@@ -282,15 +282,22 @@ void OpenCLNonbondedUtilities::computeInteractions() {
 cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& source, const vector<ParameterInfo>& params, const vector<ParameterInfo>& arguments, bool useExclusions) const {
     map<string, string> replacements;
     replacements["COMPUTE_INTERACTION"] = source;
+    int localDataSize = 2*sizeof(cl_float4);
+    stringstream localData;
+    for (int i = 0; i < (int) params.size(); i++) {
+        localData << params[i].getType() << " " << params[i].getName() << ";\n";
+        localDataSize += params[i].getSize();
+    }
+    if ((localDataSize/4)%2 == 0) {
+        localData << "float padding;\n";
+        localDataSize += 4;
+    }
+    replacements["ATOM_PARAMETER_DATA"] = localData.str();
     stringstream args;
     for (int i = 0; i < (int) params.size(); i++) {
         args << ", __global ";
         args << params[i].getType();
         args << "* global_";
-        args << params[i].getName();
-        args << ", __local ";
-        args << params[i].getType();
-        args << "* local_";
         args << params[i].getName();
     }
     for (int i = 0; i < (int) arguments.size(); i++) {
@@ -311,18 +318,18 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
     replacements["PARAMETER_ARGUMENTS"] = args.str();
     stringstream loadLocal1;
     for (int i = 0; i < (int) params.size(); i++) {
-        loadLocal1 << "local_";
+        loadLocal1 << "localData[get_local_id(0)].";
         loadLocal1 << params[i].getName();
-        loadLocal1 << "[get_local_id(0)] = ";
+        loadLocal1 << " = ";
         loadLocal1 << params[i].getName();
         loadLocal1 << "1;\n";
     }
     replacements["LOAD_LOCAL_PARAMETERS_FROM_1"] = loadLocal1.str();
     stringstream loadLocal2;
     for (int i = 0; i < (int) params.size(); i++) {
-        loadLocal2 << "local_";
+        loadLocal2 << "localData[get_local_id(0)].";
         loadLocal2 << params[i].getName();
-        loadLocal2 << "[get_local_id(0)] = global_";
+        loadLocal2 << " = global_";
         loadLocal2 << params[i].getName();
         loadLocal2 << "[j];\n";
     }
@@ -342,9 +349,9 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
         load2j << params[i].getType();
         load2j << " ";
         load2j << params[i].getName();
-        load2j << "2 = local_";
+        load2j << "2 = localData[atom2].";
         load2j << params[i].getName();
-        load2j << "[atom2];\n";
+        load2j << ";\n";
     }
     replacements["LOAD_ATOM2_PARAMETERS"] = load2j.str();
     map<string, string> defines;
@@ -374,32 +381,28 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
 
     // Set arguments to the Kernel.
 
-    kernel.setArg<cl::Buffer>(0, context.getForceBuffers().getDeviceBuffer());
-    kernel.setArg<cl::Buffer>(1, context.getEnergyBuffer().getDeviceBuffer());
-    kernel.setArg<cl::Buffer>(2, context.getPosq().getDeviceBuffer());
-    kernel.setArg<cl::Buffer>(3, exclusions->getDeviceBuffer());
-    kernel.setArg<cl::Buffer>(4, exclusionIndex->getDeviceBuffer());
-    kernel.setArg(5, OpenCLContext::ThreadBlockSize*sizeof(cl_float4), NULL);
-    kernel.setArg(6, OpenCLContext::ThreadBlockSize*sizeof(cl_float4), NULL);
-    kernel.setArg(7, OpenCLContext::ThreadBlockSize*sizeof(cl_float4), NULL);
-    int paramBase = 10;
+    int index = 0;
+    kernel.setArg<cl::Buffer>(index++, context.getForceBuffers().getDeviceBuffer());
+    kernel.setArg<cl::Buffer>(index++, context.getEnergyBuffer().getDeviceBuffer());
+    kernel.setArg<cl::Buffer>(index++, context.getPosq().getDeviceBuffer());
+    kernel.setArg<cl::Buffer>(index++, exclusions->getDeviceBuffer());
+    kernel.setArg<cl::Buffer>(index++, exclusionIndex->getDeviceBuffer());
+    kernel.setArg(index++, OpenCLContext::ThreadBlockSize*(2*sizeof(cl_float4)+localDataSize), NULL);
+    kernel.setArg(index++, OpenCLContext::ThreadBlockSize*sizeof(cl_float4), NULL);
     if (useCutoff) {
-        paramBase = 11;
-        kernel.setArg<cl::Buffer>(8, interactingTiles->getDeviceBuffer());
-        kernel.setArg<cl::Buffer>(9, interactionFlags->getDeviceBuffer());
-        kernel.setArg<cl::Buffer>(10, interactionCount->getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(index++, interactingTiles->getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(index++, interactionFlags->getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(index++, interactionCount->getDeviceBuffer());
     }
     else {
-        kernel.setArg<cl::Buffer>(8, tiles->getDeviceBuffer());
-        kernel.setArg<cl_uint>(9, tiles->getSize());
+        kernel.setArg<cl::Buffer>(index++, tiles->getDeviceBuffer());
+        kernel.setArg<cl_uint>(index++, tiles->getSize());
     }
     for (int i = 0; i < (int) params.size(); i++) {
-        kernel.setArg<cl::Memory>(i*2+paramBase, params[i].getMemory());
-        kernel.setArg(i*2+paramBase+1, OpenCLContext::ThreadBlockSize*params[i].getSize(), NULL);
+        kernel.setArg<cl::Memory>(index++, params[i].getMemory());
     }
-    paramBase += 2*params.size();
     for (int i = 0; i < (int) arguments.size(); i++) {
-        kernel.setArg<cl::Memory>(i+paramBase, arguments[i].getMemory());
+        kernel.setArg<cl::Memory>(index++, arguments[i].getMemory());
     }
     return kernel;
 }
