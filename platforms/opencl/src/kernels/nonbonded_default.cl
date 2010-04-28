@@ -1,8 +1,9 @@
 #define TILE_SIZE 32
 
 typedef struct {
-    float4 posq;
-    float4 force;
+    float x, y, z;
+    float q;
+    float fx, fy, fz;
     ATOM_PARAMETER_DATA
 } AtomData;
 
@@ -42,7 +43,10 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
         if (x == y) {
             // This tile is on the diagonal.
 
-            localData[get_local_id(0)].posq = posq1;
+            localData[get_local_id(0)].x = posq1.x;
+            localData[get_local_id(0)].y = posq1.y;
+            localData[get_local_id(0)].z = posq1.z;
+            localData[get_local_id(0)].q = posq1.w;
             LOAD_LOCAL_PARAMETERS_FROM_1
             barrier(CLK_LOCAL_MEM_FENCE);
             unsigned int xi = x/TILE_SIZE;
@@ -55,7 +59,7 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
                 bool isExcluded = !(excl & 0x1);
 #endif
                 int atom2 = baseLocalAtom+j;
-                float4 posq2 = localData[atom2].posq;
+                float4 posq2 = (float4) (localData[atom2].x, localData[atom2].y, localData[atom2].z, localData[atom2].q);
                 float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
 #ifdef USE_PERIODIC
                 delta.x -= floor(delta.x*INV_PERIODIC_BOX_SIZE_X+0.5f)*PERIODIC_BOX_SIZE_X;
@@ -95,10 +99,16 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
 
             if (lasty != y && get_local_id(0) < TILE_SIZE) {
                 unsigned int j = y + tgx;
-                localData[get_local_id(0)].posq = posq[j];
+                float4 tempPosq = posq[j];
+                localData[get_local_id(0)].x = tempPosq.x;
+                localData[get_local_id(0)].y = tempPosq.y;
+                localData[get_local_id(0)].z = tempPosq.z;
+                localData[get_local_id(0)].q = tempPosq.w;
                 LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
             }
-            localData[get_local_id(0)].force = 0.0f;
+            localData[get_local_id(0)].fx = 0.0f;
+            localData[get_local_id(0)].fy = 0.0f;
+            localData[get_local_id(0)].fz = 0.0f;
             barrier(CLK_LOCAL_MEM_FENCE);
 
             // Compute the full set of interactions in this tile.
@@ -117,7 +127,7 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
                 bool isExcluded = !(excl & 0x1);
 #endif
                 int atom2 = baseLocalAtom+tj;
-                float4 posq2 = localData[atom2].posq;
+                float4 posq2 = (float4) (localData[atom2].x, localData[atom2].y, localData[atom2].z, localData[atom2].q);
                 float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
 #ifdef USE_PERIODIC
                 delta.x -= floor(delta.x*INV_PERIODIC_BOX_SIZE_X+0.5f)*PERIODIC_BOX_SIZE_X;
@@ -135,7 +145,9 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
                 energy += tempEnergy;
                 delta.xyz *= dEdR;
                 force.xyz -= delta.xyz;
-                localData[baseLocalAtom+tj+forceBufferOffset].force.xyz += delta.xyz;
+                localData[baseLocalAtom+tj+forceBufferOffset].fx += delta.x;
+                localData[baseLocalAtom+tj+forceBufferOffset].fy += delta.y;
+                localData[baseLocalAtom+tj+forceBufferOffset].fz += delta.z;
                 barrier(CLK_LOCAL_MEM_FENCE);
                 excl >>= 1;
                 tj = (tj+1)%(TILE_SIZE/2);
@@ -155,7 +167,8 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
                 unsigned int offset2 = y + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
 #endif
                 forceBuffers[offset1].xyz = forceBuffers[offset1].xyz+force.xyz+tempBuffer[get_local_id(0)+TILE_SIZE].xyz;
-                forceBuffers[offset2].xyz = forceBuffers[offset2].xyz+localData[get_local_id(0)].force.xyz+localData[get_local_id(0)+TILE_SIZE].force.xyz;
+                float4 sum = (float4) (localData[get_local_id(0)].fx+localData[get_local_id(0)+TILE_SIZE].fx, localData[get_local_id(0)].fy+localData[get_local_id(0)+TILE_SIZE].fy, localData[get_local_id(0)].fz+localData[get_local_id(0)+TILE_SIZE].fz, 0.0f);
+                forceBuffers[offset2].xyz = forceBuffers[offset2].xyz+sum.xyz;
             }
             lasty = y;
         }

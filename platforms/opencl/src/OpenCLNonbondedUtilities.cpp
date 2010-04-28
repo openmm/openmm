@@ -282,7 +282,7 @@ void OpenCLNonbondedUtilities::computeInteractions() {
 cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& source, const vector<ParameterInfo>& params, const vector<ParameterInfo>& arguments, bool useExclusions) const {
     map<string, string> replacements;
     replacements["COMPUTE_INTERACTION"] = source;
-    int localDataSize = 2*sizeof(cl_float4);
+    int localDataSize = 7*sizeof(cl_float);
     stringstream localData;
     for (int i = 0; i < (int) params.size(); i++) {
         localData << params[i].getType() << " " << params[i].getName() << ";\n";

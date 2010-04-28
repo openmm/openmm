@@ -1,8 +1,9 @@
 #define TILE_SIZE 32
 
 typedef struct {
-    float4 posq;
-    float4 force;
+    float x, y, z;
+    float q;
+    float fx, fy, fz;
     ATOM_PARAMETER_DATA
 } AtomData;
 
@@ -43,7 +44,10 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
         if (x == y) {
             // This tile is on the diagonal.
 
-            localData[get_local_id(0)].posq = posq1;
+            localData[get_local_id(0)].x = posq1.x;
+            localData[get_local_id(0)].y = posq1.y;
+            localData[get_local_id(0)].z = posq1.z;
+            localData[get_local_id(0)].q = posq1.w;
             LOAD_LOCAL_PARAMETERS_FROM_1
             unsigned int xi = x/TILE_SIZE;
             unsigned int tile = xi+xi*PADDED_NUM_ATOMS/TILE_SIZE-xi*(xi+1)/2;
@@ -55,7 +59,7 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
                 bool isExcluded = !(excl & 0x1);
 #endif
                 int atom2 = tbx+j;
-                float4 posq2 = localData[atom2].posq;
+                float4 posq2 = (float4) (localData[atom2].x, localData[atom2].y, localData[atom2].z, localData[atom2].q);
                 float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
 #ifdef USE_PERIODIC
                 delta.x -= floor(delta.x*INV_PERIODIC_BOX_SIZE_X+0.5f)*PERIODIC_BOX_SIZE_X;
@@ -89,10 +93,16 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
 
             if (lasty != y) {
                 unsigned int j = y + tgx;
-                localData[get_local_id(0)].posq = posq[j];
+                float4 tempPosq = posq[j];
+                localData[get_local_id(0)].x = tempPosq.x;
+                localData[get_local_id(0)].y = tempPosq.y;
+                localData[get_local_id(0)].z = tempPosq.z;
+                localData[get_local_id(0)].q = tempPosq.w;
                 LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
             }
-            localData[get_local_id(0)].force = 0.0f;
+            localData[get_local_id(0)].fx = 0.0f;
+            localData[get_local_id(0)].fy = 0.0f;
+            localData[get_local_id(0)].fz = 0.0f;
 #ifdef USE_CUTOFF
             unsigned int flags = interactionFlags[pos];
             if (!hasExclusions && flags != 0xFFFFFFFF  && flags == 0) {
@@ -106,7 +116,7 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
                         if ((flags&(1<<j)) != 0) {
                             bool isExcluded = false;
                             int atom2 = tbx+j;
-                            float4 posq2 = localData[atom2].posq;
+                            float4 posq2 = (float4) (localData[atom2].x, localData[atom2].y, localData[atom2].z, localData[atom2].q);
                             float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
 #ifdef USE_PERIODIC
                             delta.x -= floor(delta.x*INV_PERIODIC_BOX_SIZE_X+0.5f)*PERIODIC_BOX_SIZE_X;
@@ -136,8 +146,11 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
                                 tempBuffer[get_local_id(0)].xyz += tempBuffer[get_local_id(0)+4].xyz;
                             if (tgx % 16 == 0)
                                 tempBuffer[get_local_id(0)].xyz += tempBuffer[get_local_id(0)+8].xyz;
-                            if (tgx == 0)
-                                localData[tbx+j].force.xyz += tempBuffer[get_local_id(0)].xyz + tempBuffer[get_local_id(0)+16].xyz;
+                            if (tgx == 0) {
+                                localData[tbx+j].fx += tempBuffer[get_local_id(0)].x + tempBuffer[get_local_id(0)+16].x;
+                                localData[tbx+j].fy += tempBuffer[get_local_id(0)].y + tempBuffer[get_local_id(0)+16].y;
+                                localData[tbx+j].fz += tempBuffer[get_local_id(0)].z + tempBuffer[get_local_id(0)+16].z;
+                            }
                         }
                     }
                 }
@@ -160,7 +173,7 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
                     bool isExcluded = !(excl & 0x1);
 #endif
                     int atom2 = tbx+tj;
-                    float4 posq2 = localData[atom2].posq;
+                    float4 posq2 = (float4) (localData[atom2].x, localData[atom2].y, localData[atom2].z, localData[atom2].q);
                     float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
 #ifdef USE_PERIODIC
                     delta.x -= floor(delta.x*INV_PERIODIC_BOX_SIZE_X+0.5f)*PERIODIC_BOX_SIZE_X;
@@ -178,7 +191,9 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
 		    energy += tempEnergy;
                     delta.xyz *= dEdR;
                     force.xyz -= delta.xyz;
-                    localData[tbx+tj].force.xyz += delta.xyz;
+                    localData[tbx+tj].fx += delta.x;
+                    localData[tbx+tj].fy += delta.y;
+                    localData[tbx+tj].fz += delta.z;
                     excl >>= 1;
                     tj = (tj + 1) & (TILE_SIZE - 1);
                 }
@@ -193,7 +208,7 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
             unsigned int offset2 = y + tgx + warp*PADDED_NUM_ATOMS;
 #endif
             forceBuffers[offset1].xyz += force.xyz;
-            forceBuffers[offset2].xyz += localData[get_local_id(0)].force.xyz;
+            forceBuffers[offset2] += (float4) (localData[get_local_id(0)].fx, localData[get_local_id(0)].fy, localData[get_local_id(0)].fz, 0.0f);
             lasty = y;
         }
         pos++;
