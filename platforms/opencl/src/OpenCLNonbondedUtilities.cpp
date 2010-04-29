@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009 Stanford University and the Authors.           *
+ * Portions copyright (c) 2009-2010 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -283,9 +283,15 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
     map<string, string> replacements;
     replacements["COMPUTE_INTERACTION"] = source;
     int localDataSize = 7*sizeof(cl_float);
+    const string suffixes[] = {"x", "y", "z", "w"};
     stringstream localData;
     for (int i = 0; i < (int) params.size(); i++) {
-        localData << params[i].getType() << " " << params[i].getName() << ";\n";
+        if (params[i].getNumComponents() == 1)
+            localData<<params[i].getType()<<" "<<params[i].getName()<<";\n";
+        else {
+            for (int j = 0; j < params[i].getNumComponents(); ++j)
+                localData<<params[i].getComponentType()<<" "<<params[i].getName()<<"_"<<suffixes[j]<<";\n";
+        }
         localDataSize += params[i].getSize();
     }
     if ((localDataSize/4)%2 == 0) {
@@ -318,20 +324,25 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
     replacements["PARAMETER_ARGUMENTS"] = args.str();
     stringstream loadLocal1;
     for (int i = 0; i < (int) params.size(); i++) {
-        loadLocal1 << "localData[get_local_id(0)].";
-        loadLocal1 << params[i].getName();
-        loadLocal1 << " = ";
-        loadLocal1 << params[i].getName();
-        loadLocal1 << "1;\n";
+        if (params[i].getNumComponents() == 1) {
+            loadLocal1<<"localData[get_local_id(0)]."<<params[i].getName()<<" = "<<params[i].getName()<<"1;\n";
+        }
+        else {
+            for (int j = 0; j < params[i].getNumComponents(); ++j)
+                loadLocal1<<"localData[get_local_id(0)]."<<params[i].getName()<<"_"<<suffixes[j]<<" = "<<params[i].getName()<<"1."<<suffixes[j]<<";\n";
+        }
     }
     replacements["LOAD_LOCAL_PARAMETERS_FROM_1"] = loadLocal1.str();
     stringstream loadLocal2;
     for (int i = 0; i < (int) params.size(); i++) {
-        loadLocal2 << "localData[get_local_id(0)].";
-        loadLocal2 << params[i].getName();
-        loadLocal2 << " = global_";
-        loadLocal2 << params[i].getName();
-        loadLocal2 << "[j];\n";
+        if (params[i].getNumComponents() == 1) {
+            loadLocal2<<"localData[get_local_id(0)]."<<params[i].getName()<<" = global_"<<params[i].getName()<<"[j];\n";
+        }
+        else {
+            loadLocal2<<params[i].getType()<<" temp_"<<params[i].getName()<<" = global_"<<params[i].getName()<<"[j];\n";
+            for (int j = 0; j < params[i].getNumComponents(); ++j)
+                loadLocal2<<"localData[get_local_id(0)]."<<params[i].getName()<<"_"<<suffixes[j]<<" = temp_"<<params[i].getName()<<"."<<suffixes[j]<<";\n";
+        }
     }
     replacements["LOAD_LOCAL_PARAMETERS_FROM_GLOBAL"] = loadLocal2.str();
     stringstream load1;
@@ -346,12 +357,18 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
     replacements["LOAD_ATOM1_PARAMETERS"] = load1.str();
     stringstream load2j;
     for (int i = 0; i < (int) params.size(); i++) {
-        load2j << params[i].getType();
-        load2j << " ";
-        load2j << params[i].getName();
-        load2j << "2 = localData[atom2].";
-        load2j << params[i].getName();
-        load2j << ";\n";
+        if (params[i].getNumComponents() == 1) {
+            load2j<<params[i].getType()<<" "<<params[i].getName()<<"2 = localData[atom2]."<<params[i].getName()<<";\n";
+        }
+        else {
+            load2j<<params[i].getType()<<" "<<params[i].getName()<<"2 = ("<<params[i].getType()<<") (";
+            for (int j = 0; j < params[i].getNumComponents(); ++j) {
+                if (j > 0)
+                    load2j<<", ";
+                load2j<<"localData[atom2]."<<params[i].getName()<<"_"<<suffixes[j];
+            }
+            load2j<<");\n";
+        }
     }
     replacements["LOAD_ATOM2_PARAMETERS"] = load2j.str();
     map<string, string> defines;

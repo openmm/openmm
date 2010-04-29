@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009 Stanford University and the Authors.           *
+ * Portions copyright (c) 2009-2010 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -29,6 +29,7 @@
 
 #include "OpenCLContext.h"
 #include "openmm/System.h"
+#include "OpenCLExpressionUtilities.h"
 #include <string>
 #include <vector>
 
@@ -228,19 +229,30 @@ public:
     /**
      * Create a ParameterInfo object.
      *
-     * @param name      the name of the parameter
-     * @param type      the data type of the parameter
-     * @param size      the size of the parameter in bytes
-     * @param memory    the memory containing the parameter values
+     * @param name           the name of the parameter
+     * @param type           the data type of the parameter's components
+     * @param numComponents  the number of components in the parameter
+     * @param size           the size of the parameter in bytes
+     * @param memory         the memory containing the parameter values
      */
-    ParameterInfo(const std::string& name, const std::string& type, int size, cl::Memory& memory) :
-            name(name), type(type), size(size), memory(&memory) {
+    ParameterInfo(const std::string& name, const std::string& componentType, int numComponents, int size, cl::Memory& memory) :
+            name(name), componentType(componentType), numComponents(numComponents), size(size), memory(&memory) {
+        if (numComponents == 1)
+            type = componentType;
+        else
+            type = componentType+OpenCLExpressionUtilities::intToString(numComponents);
     }
     const std::string& getName() const {
         return name;
     }
+    const std::string& getComponentType() const {
+        return componentType;
+    }
     const std::string& getType() const {
         return type;
+    }
+    int getNumComponents() const {
+        return numComponents;
     }
     int getSize() const {
         return size;
@@ -250,8 +262,9 @@ public:
     }
 private:
     std::string name;
+    std::string componentType;
     std::string type;
-    int size;
+    int size, numComponents;
     cl::Memory* memory;
 };
 

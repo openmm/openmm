@@ -41,21 +41,21 @@ OpenCLParameterSet::OpenCLParameterSet(OpenCLContext& context, int numParameters
             cl::Buffer* buf = new cl::Buffer(context.getContext(), CL_MEM_READ_WRITE, numObjects*sizeof(mm_float4));
             std::stringstream name;
             name << "param" << (++bufferCount);
-            buffers.push_back(OpenCLNonbondedUtilities::ParameterInfo(name.str(), "float4", sizeof(mm_float4), *buf));
+            buffers.push_back(OpenCLNonbondedUtilities::ParameterInfo(name.str(), "float", 4, sizeof(mm_float4), *buf));
             params -= 4;
         }
         if (params > 1) {
             cl::Buffer* buf = new cl::Buffer(context.getContext(), CL_MEM_READ_WRITE, numObjects*sizeof(mm_float2));
             std::stringstream name;
             name << "param" << (++bufferCount);
-            buffers.push_back(OpenCLNonbondedUtilities::ParameterInfo(name.str(), "float2", sizeof(mm_float2), *buf));
+            buffers.push_back(OpenCLNonbondedUtilities::ParameterInfo(name.str(), "float", 2, sizeof(mm_float2), *buf));
             params -= 2;
         }
         if (params > 0) {
             cl::Buffer* buf = new cl::Buffer(context.getContext(), CL_MEM_READ_WRITE, numObjects*sizeof(cl_float));
             std::stringstream name;
             name << "param" << (++bufferCount);
-            buffers.push_back(OpenCLNonbondedUtilities::ParameterInfo(name.str(), "float", sizeof(cl_float), *buf));
+            buffers.push_back(OpenCLNonbondedUtilities::ParameterInfo(name.str(), "float", 1, sizeof(cl_float), *buf));
         }
     }
     catch (cl::Error err) {

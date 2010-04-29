@@ -1,11 +1,20 @@
 #define TILE_SIZE 32
 
+typedef struct {
+    float x, y, z;
+    float q;
+    float fx, fy, fz, fw;
+    float radius, scaledRadius;
+    float bornSum;
+    float bornRadius;
+    float bornForce;
+} AtomData;
+
 /**
  * Compute the Born sum.
  */
 
-__kernel void computeBornSum(__global float* global_bornSum, __local float* local_bornSum, __global float4* posq,
-        __local float4* local_posq, __global float2* global_params, __local float2* local_params, __local float* tempBuffer, __global unsigned int* tiles,
+__kernel void computeBornSum(__global float* global_bornSum, __global float4* posq, __global float2* global_params, __local AtomData* localData, __local float* tempBuffer, __global unsigned int* tiles,
 #ifdef USE_CUTOFF
         __global unsigned int* interactionFlags, __global unsigned int* interactionCount) {
 #else
@@ -34,13 +43,17 @@ __kernel void computeBornSum(__global float* global_bornSum, __local float* loca
         if (x == y) {
             // This tile is on the diagonal.
 
-            local_posq[get_local_id(0)] = posq1;
-            local_params[get_local_id(0)] = params1;
+            localData[get_local_id(0)].x = posq1.x;
+            localData[get_local_id(0)].y = posq1.y;
+            localData[get_local_id(0)].z = posq1.z;
+            localData[get_local_id(0)].q = posq1.w;
+            localData[get_local_id(0)].radius = params1.x;
+            localData[get_local_id(0)].scaledRadius = params1.y;
             barrier(CLK_LOCAL_MEM_FENCE);
             unsigned int xi = x/TILE_SIZE;
             unsigned int tile = xi+xi*PADDED_NUM_ATOMS/TILE_SIZE-xi*(xi+1)/2;
             for (unsigned int j = 0; j < TILE_SIZE/2; j++) {
-                float4 delta = (float4) (local_posq[baseLocalAtom+j].xyz - posq1.xyz, 0.0f);
+                float4 delta = (float4) (localData[baseLocalAtom+j].x-posq1.x, localData[baseLocalAtom+j].y-posq1.y, localData[baseLocalAtom+j].z-posq1.z, 0.0f);
 #ifdef USE_PERIODIC
                 delta.x -= floor(delta.x*INV_PERIODIC_BOX_SIZE_X+0.5f)*PERIODIC_BOX_SIZE_X;
                 delta.y -= floor(delta.y*INV_PERIODIC_BOX_SIZE_Y+0.5f)*PERIODIC_BOX_SIZE_Y;
@@ -54,7 +67,7 @@ __kernel void computeBornSum(__global float* global_bornSum, __local float* loca
 #endif
                     float invR = native_rsqrt(r2);
                     float r = native_recip(invR);
-                    float2 params2 = local_params[baseLocalAtom+j];
+                    float2 params2 = (float2) (localData[baseLocalAtom+j].radius, localData[baseLocalAtom+j].scaledRadius);
                     float rScaledRadiusJ = r+params2.y;
                     if ((j != tgx) && (params1.x < rScaledRadiusJ)) {
                         float l_ij = 1.0f/max(params1.x, fabs(r-params2.y));
@@ -89,10 +102,16 @@ __kernel void computeBornSum(__global float* global_bornSum, __local float* loca
 
             if (lasty != y && get_local_id(0) < TILE_SIZE) {
                 unsigned int j = y + tgx;
-                local_posq[get_local_id(0)] = posq[j];
-                local_params[get_local_id(0)] = global_params[j];
+                float4 tempPosq = posq[j];
+                localData[get_local_id(0)].x = tempPosq.x;
+                localData[get_local_id(0)].y = tempPosq.y;
+                localData[get_local_id(0)].z = tempPosq.z;
+                localData[get_local_id(0)].q = tempPosq.w;
+                float2 tempParams = global_params[j];
+                localData[get_local_id(0)].radius = tempParams.x;
+                localData[get_local_id(0)].scaledRadius = tempParams.y;
             }
-            local_bornSum[get_local_id(0)] = 0.0f;
+            localData[get_local_id(0)].bornSum = 0.0f;
             barrier(CLK_LOCAL_MEM_FENCE);
 
             // Compute the full set of interactions in this tile.
@@ -102,7 +121,7 @@ __kernel void computeBornSum(__global float* global_bornSum, __local float* loca
             unsigned int tile = xi+yi*PADDED_NUM_ATOMS/TILE_SIZE-yi*(yi+1)/2;
             unsigned int tj = tgx%(TILE_SIZE/2);
             for (unsigned int j = 0; j < TILE_SIZE/2; j++) {
-                float4 delta = (float4) (local_posq[baseLocalAtom+tj].xyz - posq1.xyz, 0.0f);
+                float4 delta = (float4) (localData[baseLocalAtom+tj].x-posq1.x, localData[baseLocalAtom+tj].y-posq1.y, localData[baseLocalAtom+tj].z-posq1.z, 0.0f);
 #ifdef USE_PERIODIC
                 delta.x -= floor(delta.x*INV_PERIODIC_BOX_SIZE_X+0.5f)*PERIODIC_BOX_SIZE_X;
                 delta.y -= floor(delta.y*INV_PERIODIC_BOX_SIZE_Y+0.5f)*PERIODIC_BOX_SIZE_Y;
@@ -116,7 +135,7 @@ __kernel void computeBornSum(__global float* global_bornSum, __local float* loca
 #endif
                     float invR = native_rsqrt(r2);
                     float r = native_recip(invR);
-                    float2 params2 = local_params[baseLocalAtom+tj];
+                    float2 params2 = (float2) (localData[baseLocalAtom+tj].radius, localData[baseLocalAtom+tj].scaledRadius);
                     float rScaledRadiusJ = r+params2.y;
                     if (params1.x < rScaledRadiusJ) {
                         float l_ij = 1.0f/max(params1.x, fabs(r-params2.y));
@@ -140,7 +159,7 @@ __kernel void computeBornSum(__global float* global_bornSum, __local float* loca
                                          (0.25f*params1.y*params1.y*invR)*(l_ij2-u_ij2);
                         if (params2.x < params1.x-r)
                             term += 2.0f*(1.0f/params2.x-l_ij);
-                        local_bornSum[baseLocalAtom+tj+forceBufferOffset] += term;
+                        localData[baseLocalAtom+tj+forceBufferOffset].bornSum += term;
                     }
                 }
                 barrier(CLK_LOCAL_MEM_FENCE);
@@ -161,7 +180,7 @@ __kernel void computeBornSum(__global float* global_bornSum, __local float* loca
                 unsigned int offset2 = y + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
 #endif
                 global_bornSum[offset1] += bornSum+tempBuffer[get_local_id(0)+TILE_SIZE];
-                global_bornSum[offset2] += local_bornSum[get_local_id(0)]+local_bornSum[get_local_id(0)+TILE_SIZE];
+                global_bornSum[offset2] += localData[get_local_id(0)].bornSum+localData[get_local_id(0)+TILE_SIZE].bornSum;
             }
             lasty = y;
         }
@@ -174,8 +193,8 @@ __kernel void computeBornSum(__global float* global_bornSum, __local float* loca
  */
 
 __kernel void computeGBSAForce1(__global float4* forceBuffers, __global float* energyBuffer,
-        __global float4* posq, __local float4* local_posq, __local float4* local_force, __global float* global_bornRadii, __local float* local_bornRadii,
-        __global float* global_bornForce, __local float* local_bornForce, __local float4* tempBuffer, __global unsigned int* tiles,
+        __global float4* posq, __global float* global_bornRadii,
+        __global float* global_bornForce, __local AtomData* localData, __local float4* tempBuffer, __global unsigned int* tiles,
 #ifdef USE_CUTOFF
         __global unsigned int* interactionFlags, __global unsigned int* interactionCount) {
 #else
@@ -204,14 +223,17 @@ __kernel void computeGBSAForce1(__global float4* forceBuffers, __global float* e
         if (x == y) {
             // This tile is on the diagonal.
 
-            local_posq[get_local_id(0)] = posq1;
-            local_bornRadii[get_local_id(0)] = bornRadius1;
+            localData[get_local_id(0)].x = posq1.x;
+            localData[get_local_id(0)].y = posq1.y;
+            localData[get_local_id(0)].z = posq1.z;
+            localData[get_local_id(0)].q = posq1.w;
+            localData[get_local_id(0)].bornRadius = bornRadius1;
             barrier(CLK_LOCAL_MEM_FENCE);
             unsigned int xi = x/TILE_SIZE;
             unsigned int tile = xi+xi*PADDED_NUM_ATOMS/TILE_SIZE-xi*(xi+1)/2;
             for (unsigned int j = 0; j < TILE_SIZE/2; j++) {
                 if (atom1 < NUM_ATOMS && y+baseLocalAtom+j < NUM_ATOMS) {
-                    float4 posq2 = local_posq[baseLocalAtom+j];
+                    float4 posq2 = (float4) (localData[baseLocalAtom+j].x, localData[baseLocalAtom+j].y, localData[baseLocalAtom+j].z, localData[baseLocalAtom+j].q);
                     float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
 #ifdef USE_PERIODIC
                     delta.x -= floor(delta.x*INV_PERIODIC_BOX_SIZE_X+0.5f)*PERIODIC_BOX_SIZE_X;
@@ -221,7 +243,7 @@ __kernel void computeGBSAForce1(__global float4* forceBuffers, __global float* e
                     float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
                     float invR = native_rsqrt(r2);
                     float r = native_recip(invR);
-                    float bornRadius2 = local_bornRadii[baseLocalAtom+j];
+                    float bornRadius2 = localData[baseLocalAtom+j].bornRadius;
                     float alpha2_ij = bornRadius1*bornRadius2;
                     float D_ij = r2/(4.0f*alpha2_ij);
                     float expTerm = exp(-D_ij);
@@ -264,10 +286,17 @@ __kernel void computeGBSAForce1(__global float4* forceBuffers, __global float* e
 
             if (lasty != y && get_local_id(0) < TILE_SIZE) {
                 unsigned int j = y + tgx;
-                local_posq[get_local_id(0)] = posq[j];
-                local_bornRadii[get_local_id(0)] = global_bornRadii[j];
+                float4 tempPosq = posq[j];
+                localData[get_local_id(0)].x = tempPosq.x;
+                localData[get_local_id(0)].y = tempPosq.y;
+                localData[get_local_id(0)].z = tempPosq.z;
+                localData[get_local_id(0)].q = tempPosq.w;
+                localData[get_local_id(0)].bornRadius = global_bornRadii[j];
             }
-            local_force[get_local_id(0)] = 0.0f;
+            localData[get_local_id(0)].fx = 0.0f;
+            localData[get_local_id(0)].fy = 0.0f;
+            localData[get_local_id(0)].fz = 0.0f;
+            localData[get_local_id(0)].fw = 0.0f;
             barrier(CLK_LOCAL_MEM_FENCE);
 
             // Compute the full set of interactions in this tile.
@@ -278,7 +307,7 @@ __kernel void computeGBSAForce1(__global float4* forceBuffers, __global float* e
             unsigned int tj = tgx%(TILE_SIZE/2);
             for (unsigned int j = 0; j < TILE_SIZE/2; j++) {
                 if (atom1 < NUM_ATOMS && y+baseLocalAtom+tj < NUM_ATOMS) {
-                    float4 posq2 = local_posq[baseLocalAtom+tj];
+                    float4 posq2 = (float4) (localData[baseLocalAtom+tj].x, localData[baseLocalAtom+tj].y, localData[baseLocalAtom+tj].z, localData[baseLocalAtom+tj].q);
                     float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
 #ifdef USE_PERIODIC
                     delta.x -= floor(delta.x*INV_PERIODIC_BOX_SIZE_X+0.5f)*PERIODIC_BOX_SIZE_X;
@@ -288,7 +317,7 @@ __kernel void computeGBSAForce1(__global float4* forceBuffers, __global float* e
                     float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
                     float invR = native_rsqrt(r2);
                     float r = native_recip(invR);
-                    float bornRadius2 = local_bornRadii[baseLocalAtom+tj];
+                    float bornRadius2 = localData[baseLocalAtom+tj].bornRadius;
                     float alpha2_ij = bornRadius1*bornRadius2;
                     float D_ij = r2/(4.0f*alpha2_ij);
                     float expTerm = exp(-D_ij);
@@ -308,7 +337,10 @@ __kernel void computeGBSAForce1(__global float4* forceBuffers, __global float* e
                     energy += tempEnergy;
                     delta.xyz *= dEdR;
                     force.xyz -= delta.xyz;
-                    local_force[baseLocalAtom+tj+forceBufferOffset] += (float4) (delta.xyz, dGpol_dalpha2_ij*bornRadius1);
+                    localData[baseLocalAtom+tj+forceBufferOffset].fx += delta.x;
+                    localData[baseLocalAtom+tj+forceBufferOffset].fy += delta.y;
+                    localData[baseLocalAtom+tj+forceBufferOffset].fz += delta.z;
+                    localData[baseLocalAtom+tj+forceBufferOffset].fw += dGpol_dalpha2_ij*bornRadius1;
                 }
                 barrier(CLK_LOCAL_MEM_FENCE);
                 tj = (tj+1)%(TILE_SIZE/2);
@@ -328,9 +360,13 @@ __kernel void computeGBSAForce1(__global float4* forceBuffers, __global float* e
                 unsigned int offset2 = y + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
 #endif
                 forceBuffers[offset1].xyz = forceBuffers[offset1].xyz+force.xyz+tempBuffer[get_local_id(0)+TILE_SIZE].xyz;
-                forceBuffers[offset2].xyz = forceBuffers[offset2].xyz+local_force[get_local_id(0)].xyz+local_force[get_local_id(0)+TILE_SIZE].xyz;
+                float4 sum = (float4) (localData[get_local_id(0)].fx+localData[get_local_id(0)+TILE_SIZE].fx,
+                                       localData[get_local_id(0)].fy+localData[get_local_id(0)+TILE_SIZE].fy,
+                                       localData[get_local_id(0)].fz+localData[get_local_id(0)+TILE_SIZE].fz,
+                                       localData[get_local_id(0)].fw+localData[get_local_id(0)+TILE_SIZE].fw);
+                forceBuffers[offset2].xyz = forceBuffers[offset2].xyz+sum.xyz;
                 global_bornForce[offset1] += force.w+tempBuffer[get_local_id(0)+TILE_SIZE].w;
-                global_bornForce[offset2] += local_force[get_local_id(0)].w+local_force[get_local_id(0)+TILE_SIZE].w;
+                global_bornForce[offset2] += sum.w;
             }
             lasty = y;
         }

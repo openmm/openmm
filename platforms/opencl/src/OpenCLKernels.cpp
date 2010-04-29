@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2010 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -1216,7 +1216,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         for (int i = 0; i < tableSize; ++i)
             erfcVector[i] = (float) erfc(i*(alpha*force.getCutoffDistance())/(tableSize-1));
         erfcTable->upload(erfcVector);
-        cl.getNonbondedUtilities().addArgument(OpenCLNonbondedUtilities::ParameterInfo("erfcTable", "float", sizeof(cl_float), erfcTable->getDeviceBuffer()));
+        cl.getNonbondedUtilities().addArgument(OpenCLNonbondedUtilities::ParameterInfo("erfcTable", "float", 1, sizeof(cl_float), erfcTable->getDeviceBuffer()));
     }
 
     // Add the interaction to the default nonbonded kernel.
@@ -1224,7 +1224,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     string source = cl.replaceStrings(OpenCLKernelSources::coulombLennardJones, defines);
     cl.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, source);
     if (hasLJ)
-        cl.getNonbondedUtilities().addParameter(OpenCLNonbondedUtilities::ParameterInfo("sigmaEpsilon", "float2", sizeof(cl_float2), sigmaEpsilon->getDeviceBuffer()));
+        cl.getNonbondedUtilities().addParameter(OpenCLNonbondedUtilities::ParameterInfo("sigmaEpsilon", "float", 2, sizeof(cl_float2), sigmaEpsilon->getDeviceBuffer()));
 
     // Initialize the exceptions.
 
@@ -1431,12 +1431,12 @@ void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, cons
         vector<mm_float4> f = OpenCLExpressionUtilities::computeFunctionCoefficients(values, interpolating);
         tabulatedFunctions.push_back(new OpenCLArray<mm_float4>(cl, values.size()-1, "TabulatedFunction"));
         tabulatedFunctions[tabulatedFunctions.size()-1]->upload(f);
-        cl.getNonbondedUtilities().addArgument(OpenCLNonbondedUtilities::ParameterInfo(arrayName, "float4", sizeof(cl_float4), tabulatedFunctions[tabulatedFunctions.size()-1]->getDeviceBuffer()));
+        cl.getNonbondedUtilities().addArgument(OpenCLNonbondedUtilities::ParameterInfo(arrayName, "float", 4, sizeof(cl_float4), tabulatedFunctions[tabulatedFunctions.size()-1]->getDeviceBuffer()));
     }
     if (force.getNumFunctions() > 0) {
         tabulatedFunctionParams = new OpenCLArray<mm_float4>(cl, tabulatedFunctionParamsVec.size(), "tabulatedFunctionParameters", false, CL_MEM_READ_ONLY);
         tabulatedFunctionParams->upload(tabulatedFunctionParamsVec);
-        cl.getNonbondedUtilities().addArgument(OpenCLNonbondedUtilities::ParameterInfo(prefix+"functionParams", "float4", sizeof(cl_float4), tabulatedFunctionParams->getDeviceBuffer()));
+        cl.getNonbondedUtilities().addArgument(OpenCLNonbondedUtilities::ParameterInfo(prefix+"functionParams", "float", 4, sizeof(cl_float4), tabulatedFunctionParams->getDeviceBuffer()));
     }
 
     // Record information for the expressions.
@@ -1479,11 +1479,11 @@ void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, cons
     cl.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, source);
     for (int i = 0; i < (int) params->getBuffers().size(); i++) {
         const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
-        cl.getNonbondedUtilities().addParameter(OpenCLNonbondedUtilities::ParameterInfo(prefix+"params"+intToString(i+1), buffer.getType(), buffer.getSize(), buffer.getMemory()));
+        cl.getNonbondedUtilities().addParameter(OpenCLNonbondedUtilities::ParameterInfo(prefix+"params"+intToString(i+1), buffer.getComponentType(), buffer.getNumComponents(), buffer.getSize(), buffer.getMemory()));
     }
     if (globals != NULL) {
         globals->upload(globalParamValues);
-        cl.getNonbondedUtilities().addArgument(OpenCLNonbondedUtilities::ParameterInfo(prefix+"globals", "float", sizeof(cl_float), globals->getDeviceBuffer()));
+        cl.getNonbondedUtilities().addArgument(OpenCLNonbondedUtilities::ParameterInfo(prefix+"globals", "float", 1, sizeof(cl_float), globals->getDeviceBuffer()));
     }
     cl.addForce(new OpenCLCustomNonbondedForceInfo(cl.getNonbondedUtilities().getNumForceBuffers(), force));
 }
@@ -1559,8 +1559,8 @@ void OpenCLCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOB
     bool usePeriodic = (force.getNonbondedMethod() != GBSAOBCForce::NoCutoff && force.getNonbondedMethod() != GBSAOBCForce::CutoffNonPeriodic);
     string source = OpenCLKernelSources::gbsaObc2;
     nb.addInteraction(useCutoff, usePeriodic, false, force.getCutoffDistance(), vector<vector<int> >(), source);
-    nb.addParameter(OpenCLNonbondedUtilities::ParameterInfo("obcParams", "float2", sizeof(cl_float2), params->getDeviceBuffer()));;
-    nb.addParameter(OpenCLNonbondedUtilities::ParameterInfo("bornForce", "float", sizeof(cl_float), bornForce->getDeviceBuffer()));;
+    nb.addParameter(OpenCLNonbondedUtilities::ParameterInfo("obcParams", "float", 2, sizeof(cl_float2), params->getDeviceBuffer()));;
+    nb.addParameter(OpenCLNonbondedUtilities::ParameterInfo("bornForce", "float", 1, sizeof(cl_float), bornForce->getDeviceBuffer()));;
     cl.addForce(new OpenCLGBSAOBCForceInfo(nb.getNumForceBuffers(), force));
 }
 
@@ -1589,42 +1589,39 @@ void OpenCLCalcGBSAOBCForceKernel::executeForces(ContextImpl& context) {
         defines["PADDED_NUM_ATOMS"] = intToString(cl.getPaddedNumAtoms());
         string file = (cl.getSIMDWidth() == 32 ? OpenCLKernelSources::gbsaObc_nvidia : OpenCLKernelSources::gbsaObc_default);
         cl::Program program = cl.createProgram(file, defines);
+        int index = 0;
         computeBornSumKernel = cl::Kernel(program, "computeBornSum");
-        computeBornSumKernel.setArg<cl::Buffer>(0, bornSum->getDeviceBuffer());
-        computeBornSumKernel.setArg(1, OpenCLContext::ThreadBlockSize*sizeof(cl_float), NULL);
-        computeBornSumKernel.setArg<cl::Buffer>(2, cl.getPosq().getDeviceBuffer());
-        computeBornSumKernel.setArg(3, OpenCLContext::ThreadBlockSize*sizeof(cl_float4), NULL);
-        computeBornSumKernel.setArg<cl::Buffer>(4, params->getDeviceBuffer());
-        computeBornSumKernel.setArg(5, OpenCLContext::ThreadBlockSize*sizeof(cl_float2), NULL);
-        computeBornSumKernel.setArg(6, OpenCLContext::ThreadBlockSize*sizeof(cl_float), NULL);
+        computeBornSumKernel.setArg<cl::Buffer>(index++, bornSum->getDeviceBuffer());
+        computeBornSumKernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
+        computeBornSumKernel.setArg<cl::Buffer>(index++, params->getDeviceBuffer());
+        computeBornSumKernel.setArg(index++, OpenCLContext::ThreadBlockSize*13*sizeof(cl_float), NULL);
+        computeBornSumKernel.setArg(index++, OpenCLContext::ThreadBlockSize*sizeof(cl_float), NULL);
         if (nb.getUseCutoff()) {
-            computeBornSumKernel.setArg<cl::Buffer>(7, nb.getInteractingTiles().getDeviceBuffer());
-            computeBornSumKernel.setArg<cl::Buffer>(8, nb.getInteractionFlags().getDeviceBuffer());
-            computeBornSumKernel.setArg<cl::Buffer>(9, nb.getInteractionCount().getDeviceBuffer());
+            computeBornSumKernel.setArg<cl::Buffer>(index++, nb.getInteractingTiles().getDeviceBuffer());
+            computeBornSumKernel.setArg<cl::Buffer>(index++, nb.getInteractionFlags().getDeviceBuffer());
+            computeBornSumKernel.setArg<cl::Buffer>(index++, nb.getInteractionCount().getDeviceBuffer());
         }
         else {
-            computeBornSumKernel.setArg<cl::Buffer>(7, nb.getTiles().getDeviceBuffer());
-            computeBornSumKernel.setArg<cl_uint>(8, nb.getTiles().getSize());
+            computeBornSumKernel.setArg<cl::Buffer>(index++, nb.getTiles().getDeviceBuffer());
+            computeBornSumKernel.setArg<cl_uint>(index++, nb.getTiles().getSize());
         }
         force1Kernel = cl::Kernel(program, "computeGBSAForce1");
-        force1Kernel.setArg<cl::Buffer>(0, cl.getForceBuffers().getDeviceBuffer());
-        force1Kernel.setArg<cl::Buffer>(1, cl.getEnergyBuffer().getDeviceBuffer());
-        force1Kernel.setArg<cl::Buffer>(2, cl.getPosq().getDeviceBuffer());
-        force1Kernel.setArg(3, OpenCLContext::ThreadBlockSize*sizeof(cl_float4), NULL);
-        force1Kernel.setArg(4, OpenCLContext::ThreadBlockSize*sizeof(cl_float4), NULL);
-        force1Kernel.setArg<cl::Buffer>(5, bornRadii->getDeviceBuffer());
-        force1Kernel.setArg(6, OpenCLContext::ThreadBlockSize*sizeof(cl_float), NULL);
-        force1Kernel.setArg<cl::Buffer>(7, bornForce->getDeviceBuffer());
-        force1Kernel.setArg(8, OpenCLContext::ThreadBlockSize*sizeof(cl_float), NULL);
-        force1Kernel.setArg(9, OpenCLContext::ThreadBlockSize*sizeof(mm_float4), NULL);
+        index = 0;
+        force1Kernel.setArg<cl::Buffer>(index++, cl.getForceBuffers().getDeviceBuffer());
+        force1Kernel.setArg<cl::Buffer>(index++, cl.getEnergyBuffer().getDeviceBuffer());
+        force1Kernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
+        force1Kernel.setArg<cl::Buffer>(index++, bornRadii->getDeviceBuffer());
+        force1Kernel.setArg<cl::Buffer>(index++, bornForce->getDeviceBuffer());
+        force1Kernel.setArg(index++, OpenCLContext::ThreadBlockSize*13*sizeof(cl_float), NULL);
+        force1Kernel.setArg(index++, OpenCLContext::ThreadBlockSize*sizeof(mm_float4), NULL);
         if (nb.getUseCutoff()) {
-            force1Kernel.setArg<cl::Buffer>(10, nb.getInteractingTiles().getDeviceBuffer());
-            force1Kernel.setArg<cl::Buffer>(11, nb.getInteractionFlags().getDeviceBuffer());
-            force1Kernel.setArg<cl::Buffer>(12, nb.getInteractionCount().getDeviceBuffer());
+            force1Kernel.setArg<cl::Buffer>(index++, nb.getInteractingTiles().getDeviceBuffer());
+            force1Kernel.setArg<cl::Buffer>(index++, nb.getInteractionFlags().getDeviceBuffer());
+            force1Kernel.setArg<cl::Buffer>(index++, nb.getInteractionCount().getDeviceBuffer());
         }
         else {
-            force1Kernel.setArg<cl::Buffer>(10, nb.getTiles().getDeviceBuffer());
-            force1Kernel.setArg<cl_uint>(11, nb.getTiles().getSize());
+            force1Kernel.setArg<cl::Buffer>(index++, nb.getTiles().getDeviceBuffer());
+            force1Kernel.setArg<cl_uint>(index++, nb.getTiles().getSize());
         }
         program = cl.createProgram(OpenCLKernelSources::gbsaObcReductions, defines);
         reduceBornSumKernel = cl::Kernel(program, "reduceBornSum");
@@ -1773,13 +1770,13 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         vector<mm_float4> f = OpenCLExpressionUtilities::computeFunctionCoefficients(values, interpolating);
         tabulatedFunctions.push_back(new OpenCLArray<mm_float4>(cl, values.size()-1, "TabulatedFunction"));
         tabulatedFunctions[tabulatedFunctions.size()-1]->upload(f);
-        cl.getNonbondedUtilities().addArgument(OpenCLNonbondedUtilities::ParameterInfo(arrayName, "float4", sizeof(cl_float4), tabulatedFunctions[tabulatedFunctions.size()-1]->getDeviceBuffer()));
+        cl.getNonbondedUtilities().addArgument(OpenCLNonbondedUtilities::ParameterInfo(arrayName, "float", 4, sizeof(cl_float4), tabulatedFunctions[tabulatedFunctions.size()-1]->getDeviceBuffer()));
         tableArgs << ", __global float4* " << arrayName;
     }
     if (force.getNumFunctions() > 0) {
         tabulatedFunctionParams = new OpenCLArray<mm_float4>(cl, tabulatedFunctionParamsVec.size(), "tabulatedFunctionParameters", false, CL_MEM_READ_ONLY);
         tabulatedFunctionParams->upload(tabulatedFunctionParamsVec);
-        cl.getNonbondedUtilities().addArgument(OpenCLNonbondedUtilities::ParameterInfo(prefix+"functionParams", "float4", sizeof(cl_float4), tabulatedFunctionParams->getDeviceBuffer()));
+        cl.getNonbondedUtilities().addArgument(OpenCLNonbondedUtilities::ParameterInfo(prefix+"functionParams", "float", 4, sizeof(cl_float4), tabulatedFunctionParams->getDeviceBuffer()));
         tableArgs << ", __constant float4* " << prefix << "functionParams";
     }
 
@@ -2162,21 +2159,21 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         for (int i = 0; i < (int) params->getBuffers().size(); i++) {
             const OpenCLNonbondedUtilities::ParameterInfo& buffer = params->getBuffers()[i];
             string paramName = prefix+"params"+intToString(i+1);
-            cl.getNonbondedUtilities().addParameter(OpenCLNonbondedUtilities::ParameterInfo(paramName, buffer.getType(), buffer.getSize(), buffer.getMemory()));
+            cl.getNonbondedUtilities().addParameter(OpenCLNonbondedUtilities::ParameterInfo(paramName, buffer.getComponentType(), buffer.getNumComponents(), buffer.getSize(), buffer.getMemory()));
         }
         for (int i = 0; i < (int) computedValues->getBuffers().size(); i++) {
             const OpenCLNonbondedUtilities::ParameterInfo& buffer = computedValues->getBuffers()[i];
             string paramName = prefix+"values"+intToString(i+1);
-            cl.getNonbondedUtilities().addParameter(OpenCLNonbondedUtilities::ParameterInfo(paramName, buffer.getType(), buffer.getSize(), buffer.getMemory()));
+            cl.getNonbondedUtilities().addParameter(OpenCLNonbondedUtilities::ParameterInfo(paramName, buffer.getComponentType(), buffer.getNumComponents(), buffer.getSize(), buffer.getMemory()));
         }
         for (int i = 0; i < (int) energyDerivs->getBuffers().size(); i++) {
             const OpenCLNonbondedUtilities::ParameterInfo& buffer = energyDerivs->getBuffers()[i];
             string paramName = prefix+"dEdV"+intToString(i+1);
-            cl.getNonbondedUtilities().addParameter(OpenCLNonbondedUtilities::ParameterInfo(paramName, buffer.getType(), buffer.getSize(), buffer.getMemory()));
+            cl.getNonbondedUtilities().addParameter(OpenCLNonbondedUtilities::ParameterInfo(paramName, buffer.getComponentType(), buffer.getNumComponents(), buffer.getSize(), buffer.getMemory()));
         }
         if (globals != NULL) {
             globals->upload(globalParamValues);
-            cl.getNonbondedUtilities().addArgument(OpenCLNonbondedUtilities::ParameterInfo(prefix+"globals", "float", sizeof(cl_float), globals->getDeviceBuffer()));
+            cl.getNonbondedUtilities().addArgument(OpenCLNonbondedUtilities::ParameterInfo(prefix+"globals", "float", 1, sizeof(cl_float), globals->getDeviceBuffer()));
         }
     }
     cl.addForce(new OpenCLCustomGBForceInfo(cl.getNonbondedUtilities().getNumForceBuffers(), force));
