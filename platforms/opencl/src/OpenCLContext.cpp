@@ -96,6 +96,40 @@ OpenCLContext::OpenCLContext(int numParticles, int deviceIndex) : time(0.0), ste
     utilities = createProgram(OpenCLKernelSources::utilities);
     clearBufferKernel = cl::Kernel(utilities, "clearBuffer");
     reduceFloat4Kernel = cl::Kernel(utilities, "reduceFloat4Buffer");
+
+    // Decide whether native_sqrt(), native_rsqrt(), and native_recip() are sufficiently accurate to use.
+
+    cl::Kernel accuracyKernel(utilities, "determineNativeAccuracy");
+    OpenCLArray<mm_float4> values(*this, 20, "values", true);
+    float nextValue = 1e-4;
+    for (int i = 0; i < values.getSize(); ++i) {
+        values[i].x = nextValue;
+        nextValue *= M_PI;
+    }
+    values.upload();
+    accuracyKernel.setArg<cl::Buffer>(0, values.getDeviceBuffer());
+    accuracyKernel.setArg<cl_int>(1, values.getSize());
+    executeKernel(accuracyKernel, values.getSize());
+    values.download();
+    double maxSqrtError = 0.0, maxRsqrtError = 0.0, maxRecipError = 0.0;
+    for (int i = 0; i < values.getSize(); ++i) {
+        double correctSqrt = sqrt(values[i].x);
+        maxSqrtError = max(maxSqrtError, fabs(correctSqrt-values[i].y)/correctSqrt);
+        maxRsqrtError = max(maxRsqrtError, fabs(1.0/correctSqrt-values[i].z)*correctSqrt);
+        maxRecipError = max(maxRecipError, fabs(1.0/values[i].x-values[i].w)/values[i].w);
+    }
+    if (maxSqrtError < 1e-6)
+        compilationOptions += " -DSQRT=native_sqrt";
+    else
+        compilationOptions += " -DSQRT=sqrt";
+    if (maxRsqrtError < 1e-6)
+        compilationOptions += " -DRSQRT=native_rsqrt";
+    else
+        compilationOptions += " -DRSQRT=rsqrt";
+    if (maxRecipError < 1e-6)
+        compilationOptions += " -DRECIP=native_recip";
+    else
+        compilationOptions += " -DRECIP=1.0f/";
 }
 
 OpenCLContext::~OpenCLContext() {

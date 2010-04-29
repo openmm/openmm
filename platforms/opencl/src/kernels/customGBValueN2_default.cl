@@ -61,7 +61,7 @@ __kernel void computeN2Value(__global float4* posq, __local float4* local_posq, 
 #ifdef USE_CUTOFF
                 if (r2 < CUTOFF_SQUARED) {
 #endif
-                float r = native_sqrt(r2);
+                float r = SQRT(r2);
                 LOAD_ATOM2_PARAMETERS
                 atom2 = y+baseLocalAtom+j;
                 float tempValue1 = 0.0f;
@@ -134,7 +134,7 @@ __kernel void computeN2Value(__global float4* posq, __local float4* local_posq, 
 #ifdef USE_CUTOFF
                 if (r2 < CUTOFF_SQUARED) {
 #endif
-                float r = native_sqrt(r2);
+                float r = SQRT(r2);
                 LOAD_ATOM2_PARAMETERS
                 atom2 = y+baseLocalAtom+tj;
                 float tempValue1 = 0.0f;

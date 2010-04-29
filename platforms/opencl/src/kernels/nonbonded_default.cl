@@ -67,8 +67,8 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
                 delta.z -= floor(delta.z*INV_PERIODIC_BOX_SIZE_Z+0.5f)*PERIODIC_BOX_SIZE_Z;
 #endif
                 float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
-                float invR = native_rsqrt(r2);
-                float r = native_recip(invR);
+                float invR = RSQRT(r2);
+                float r = RECIP(invR);
                 LOAD_ATOM2_PARAMETERS
                 atom2 = y+baseLocalAtom+j;
                 float dEdR = 0.0f;
@@ -135,8 +135,8 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
                 delta.z -= floor(delta.z*INV_PERIODIC_BOX_SIZE_Z+0.5f)*PERIODIC_BOX_SIZE_Z;
 #endif
                 float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
-                float invR = native_rsqrt(r2);
-                float r = native_recip(invR);
+                float invR = RSQRT(r2);
+                float r = RECIP(invR);
                 LOAD_ATOM2_PARAMETERS
                 atom2 = y+baseLocalAtom+tj;
                 float dEdR = 0.0f;

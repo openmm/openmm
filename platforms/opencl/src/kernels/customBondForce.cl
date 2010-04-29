@@ -14,7 +14,7 @@ __kernel void computeCustomBondForces(int numAtoms, int numBonds, __global float
 
         // Compute the force.
 
-        float r = native_sqrt(delta.x*delta.x + delta.y*delta.y + delta.z*delta.z);
+        float r = SQRT(delta.x*delta.x + delta.y*delta.y + delta.z*delta.z);
         COMPUTE_FORCE
         delta.xyz *= -dEdR/r;
 

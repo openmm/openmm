@@ -30,3 +30,14 @@ __kernel void reduceFloat4Buffer(__global float4* buffer, int bufferSize, int nu
         index += get_global_size(0);
     }
 }
+
+/**
+ * This is called to determine the accuracy of native_sqrt(), native_rsqrt() and native_recip().
+ */
+
+__kernel void determineNativeAccuracy(__global float4* values, int numValues) {
+    for (int i = 0; i < numValues; ++i) {
+        float v = values[i].x;
+        values[i] = (float4) (v, native_sqrt(v), native_rsqrt(v), native_recip(v));
+    }
+}

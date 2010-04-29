@@ -63,7 +63,7 @@ __kernel void computeN2Energy(__global float4* forceBuffers, __global float* ene
 #ifdef USE_CUTOFF
                 if (r2 < CUTOFF_SQUARED) {
 #endif
-                float r = native_sqrt(r2);
+                float r = SQRT(r2);
                 LOAD_ATOM2_PARAMETERS
                 atom2 = y+j;
                 float dEdR = 0.0f;
@@ -136,7 +136,7 @@ __kernel void computeN2Energy(__global float4* forceBuffers, __global float* ene
 #ifdef USE_CUTOFF
                     if (r2 < CUTOFF_SQUARED) {
 #endif
-                    float r = native_sqrt(r2);
+                    float r = SQRT(r2);
                     LOAD_ATOM2_PARAMETERS
                     atom2 = y+tj;
                     float dEdR = 0.0f;
