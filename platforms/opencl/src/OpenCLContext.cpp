@@ -24,6 +24,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
  * -------------------------------------------------------------------------- */
 
+#ifdef WIN32
+  #define _USE_MATH_DEFINES // Needed to get M_PI
+#endif
+#include <cmath>
 #include "OpenCLContext.h"
 #include "OpenCLArray.h"
 #include "OpenCLForceInfo.h"
@@ -34,7 +38,6 @@
 #include "openmm/Platform.h"
 #include "openmm/System.h"
 #include <algorithm>
-#include <cmath>
 #include <fstream>
 #include <iostream>
 #include <sstream>
