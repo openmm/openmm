@@ -106,7 +106,7 @@ __kernel void computeNonbonded(__global float4* forceBuffers, __global float* en
             localData[get_local_id(0)].fz = 0.0f;
 #ifdef USE_CUTOFF
             unsigned int flags = interactionFlags[pos];
-            if (!hasExclusions && flags != 0xFFFFFFFF  && flags == 0) {
+            if (!hasExclusions && flags != 0xFFFFFFFF) {
                 if (flags == 0) {
                     // No interactions in this tile.
                 }
