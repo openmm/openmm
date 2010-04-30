@@ -404,7 +404,7 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
     kernel.setArg<cl::Buffer>(index++, context.getPosq().getDeviceBuffer());
     kernel.setArg<cl::Buffer>(index++, exclusions->getDeviceBuffer());
     kernel.setArg<cl::Buffer>(index++, exclusionIndex->getDeviceBuffer());
-    kernel.setArg(index++, OpenCLContext::ThreadBlockSize*(2*sizeof(cl_float4)+localDataSize), NULL);
+    kernel.setArg(index++, OpenCLContext::ThreadBlockSize*localDataSize, NULL);
     kernel.setArg(index++, OpenCLContext::ThreadBlockSize*sizeof(cl_float4), NULL);
     if (useCutoff) {
         kernel.setArg<cl::Buffer>(index++, interactingTiles->getDeviceBuffer());
