@@ -14,8 +14,8 @@ typedef struct {
  * Compute the Born sum.
  */
 
-__attribute__((reqd_work_group_size(64, 1, 1)))
-__kernel void computeBornSum(__global float* global_bornSum, __global float4* posq, __global float2* global_params, __local AtomData* localData, __local float* tempBuffer, __global unsigned int* tiles,
+__kernel __attribute__((reqd_work_group_size(WORK_GROUP_SIZE, 1, 1)))
+void computeBornSum(__global float* global_bornSum, __global float4* posq, __global float2* global_params, __local AtomData* localData, __local float* tempBuffer, __global unsigned int* tiles,
 #ifdef USE_CUTOFF
         __global unsigned int* interactionFlags, __global unsigned int* interactionCount) {
 #else
@@ -193,8 +193,8 @@ __kernel void computeBornSum(__global float* global_bornSum, __global float4* po
  * First part of computing the GBSA interaction.
  */
 
-__attribute__((reqd_work_group_size(64, 1, 1)))
-__kernel void computeGBSAForce1(__global float4* forceBuffers, __global float* energyBuffer,
+__kernel __attribute__((reqd_work_group_size(WORK_GROUP_SIZE, 1, 1)))
+void computeGBSAForce1(__global float4* forceBuffers, __global float* energyBuffer,
         __global float4* posq, __global float* global_bornRadii,
         __global float* global_bornForce, __local AtomData* localData, __local float4* tempBuffer, __global unsigned int* tiles,
 #ifdef USE_CUTOFF

@@ -6,8 +6,8 @@
  * Compute a force based on pair interactions.
  */
 
-__attribute__((reqd_work_group_size(64, 1, 1)))
-__kernel void computeN2Energy(__global float4* forceBuffers, __global float* energyBuffer, __local float4* local_force,
+__kernel __attribute__((reqd_work_group_size(WORK_GROUP_SIZE, 1, 1)))
+void computeN2Energy(__global float4* forceBuffers, __global float* energyBuffer, __local float4* local_force,
 	__global float4* posq, __local float4* local_posq, __global unsigned int* exclusions, __global unsigned int* exclusionIndices,
         __local float4* tempForceBuffer, __global unsigned int* tiles,
 #ifdef USE_CUTOFF

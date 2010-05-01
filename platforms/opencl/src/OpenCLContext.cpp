@@ -70,7 +70,7 @@ OpenCLContext::OpenCLContext(int numParticles, int deviceIndex) : time(0.0), ste
         this->deviceIndex = deviceIndex;
         if (device.getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>() < minThreadBlockSize)
             throw OpenMMException("The specified OpenCL device is not compatible with OpenMM");
-        compilationOptions = "-cl-fast-relaxed-math";
+        compilationOptions = "-cl-fast-relaxed-math -DWORK_GROUP_SIZE="+OpenCLExpressionUtilities::intToString(ThreadBlockSize);
         string vendor = device.getInfo<CL_DEVICE_VENDOR>();
         if (vendor.size() >= 6 && vendor.substr(0, 6) == "NVIDIA") {
             compilationOptions += " -DWARPS_ARE_ATOMIC";

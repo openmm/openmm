@@ -11,8 +11,8 @@ typedef struct {
  * Compute nonbonded interactions.
  */
 
-__attribute__((reqd_work_group_size(64, 1, 1)))
-__kernel void computeNonbonded(__global float4* forceBuffers, __global float* energyBuffer, __global float4* posq, __global unsigned int* exclusions,
+__kernel __attribute__((reqd_work_group_size(WORK_GROUP_SIZE, 1, 1)))
+void computeNonbonded(__global float4* forceBuffers, __global float* energyBuffer, __global float4* posq, __global unsigned int* exclusions,
         __global unsigned int* exclusionIndices, __local AtomData* localData, __local float4* tempBuffer, __global unsigned int* tiles,
 #ifdef USE_CUTOFF
         __global unsigned int* interactionFlags, __global unsigned int* interactionCount
