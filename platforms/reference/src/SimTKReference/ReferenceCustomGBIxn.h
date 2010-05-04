@@ -44,7 +44,7 @@ class ReferenceCustomGBIxn {
       RealOpenMM periodicBoxSize[3];
       RealOpenMM cutoffDistance;
       std::vector<Lepton::ExpressionProgram> valueExpressions;
-      std::vector<Lepton::ExpressionProgram> valueDerivExpressions;
+      std::vector<std::vector<Lepton::ExpressionProgram> > valueDerivExpressions;
       std::vector<std::string> valueNames;
       std::vector<OpenMM::CustomGBForce::ComputationType> valueTypes;
       std::vector<Lepton::ExpressionProgram> energyExpressions;
@@ -221,7 +221,7 @@ class ReferenceCustomGBIxn {
          --------------------------------------------------------------------------------------- */
 
        ReferenceCustomGBIxn(const std::vector<Lepton::ExpressionProgram>& valueExpressions,
-                            const std::vector<Lepton::ExpressionProgram>& valueDerivExpressions,
+                            const std::vector<std::vector<Lepton::ExpressionProgram> > valueDerivExpressions,
                             const std::vector<std::string>& valueNames,
                             const std::vector<OpenMM::CustomGBForce::ComputationType>& valueTypes,
                             const std::vector<Lepton::ExpressionProgram>& energyExpressions,

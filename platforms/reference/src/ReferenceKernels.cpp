@@ -1093,6 +1093,7 @@ void ReferenceCalcCustomGBForceKernel::initialize(const System& system, const Cu
 
     // Parse the expressions for computed values.
 
+    valueDerivExpressions.resize(force.getNumComputedValues());
     for (int i = 0; i < force.getNumComputedValues(); i++) {
         string name, expression;
         CustomGBForce::ComputationType type;
@@ -1101,10 +1102,12 @@ void ReferenceCalcCustomGBForceKernel::initialize(const System& system, const Cu
         valueExpressions.push_back(ex.createProgram());
         valueTypes.push_back(type);
         valueNames.push_back(name);
-        if (type == CustomGBForce::SingleParticle)
-            valueDerivExpressions.push_back(ex.differentiate(valueNames[i-1]).optimize().createProgram());
-        else
-            valueDerivExpressions.push_back(ex.differentiate("r").optimize().createProgram());
+        if (i == 0)
+            valueDerivExpressions[i].push_back(ex.differentiate("r").optimize().createProgram());
+        else {
+            for (int j = 0; j < i; j++)
+                valueDerivExpressions[i].push_back(ex.differentiate(valueNames[j]).optimize().createProgram());
+        }
     }
 
     // Parse the expressions for energy terms.

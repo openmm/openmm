@@ -1793,16 +1793,7 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
 
     // Record derivatives of expressions needed for the chain rule terms.
 
-    vector<Lepton::ParsedExpression> valueDerivExpressions;
-    vector<vector<Lepton::ParsedExpression> > energyDerivExpressions;
-    for (int i = 0; i < force.getNumComputedValues(); i++) {
-        Lepton::ParsedExpression ex = Lepton::Parser::parse(computedValueExpressions[i], functions).optimize();
-        if (i == 0)
-            valueDerivExpressions.push_back(ex.differentiate("r").optimize());
-        else
-            valueDerivExpressions.push_back(ex.differentiate(computedValueNames[i-1]).optimize());
-    }
-    energyDerivExpressions.resize(force.getNumEnergyTerms());
+    vector<vector<Lepton::ParsedExpression> > energyDerivExpressions(force.getNumEnergyTerms());
     for (int i = 0; i < force.getNumEnergyTerms(); i++) {
         string expression;
         CustomGBForce::ComputationType type;
@@ -2118,11 +2109,11 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         map<string, Lepton::ParsedExpression> derivExpressions;
         stringstream chainSource;
         Lepton::ParsedExpression dVdR = Lepton::Parser::parse(computedValueExpressions[0], functions).differentiate("r").optimize();
-        derivExpressions["float dVdR1 = "] = dVdR;
-        derivExpressions["float dVdR2 = "] = dVdR.renameVariables(rename);
+        derivExpressions["float dV0dR1 = "] = dVdR;
+        derivExpressions["float dV0dR2 = "] = dVdR.renameVariables(rename);
         chainSource << OpenCLExpressionUtilities::createExpressions(derivExpressions, variables, functionDefinitions, prefix+"temp0_", prefix+"functionParams");
-        chainSource << "tempForce -= dVdR1*" << prefix << "dEdV" << energyDerivs->getParameterSuffix(0, "1") << ";\n";
-        chainSource << "tempForce -= dVdR2*" << prefix << "dEdV" << energyDerivs->getParameterSuffix(0, "2") << ";\n";
+        chainSource << "tempForce -= dV0dR1*" << prefix << "dEdV" << energyDerivs->getParameterSuffix(0, "1") << ";\n";
+        chainSource << "tempForce -= dV0dR2*" << prefix << "dEdV" << energyDerivs->getParameterSuffix(0, "2") << ";\n";
         variables = globalVariables;
         map<string, string> rename1;
         map<string, string> rename2;
@@ -2141,16 +2132,17 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
             rename2[name] = name+"2";
             if (i == 0)
                 continue;
-            Lepton::ParsedExpression dVdV = Lepton::Parser::parse(computedValueExpressions[1], functions).differentiate(computedValueNames[i-1]).optimize();
-            string var = "dV"+intToString(i+1)+"dV"+intToString(i)+"_";
-            derivExpressions.clear();
-            derivExpressions["float "+var+"1 = "] = dVdV.renameVariables(rename1);
-            derivExpressions["float "+var+"2 = "] = dVdV.renameVariables(rename2);
-            chainSource << OpenCLExpressionUtilities::createExpressions(derivExpressions, variables, functionDefinitions, prefix+"temp"+intToString(i)+"_", prefix+"functionParams");
-            chainSource << "dVdR1 *= "+var+"1;\n";
-            chainSource << "dVdR2 *= "+var+"2;\n";
-            chainSource << "tempForce -= dVdR1*" << prefix << "dEdV" << energyDerivs->getParameterSuffix(i, "1") << ";\n";
-            chainSource << "tempForce -= dVdR2*" << prefix << "dEdV" << energyDerivs->getParameterSuffix(i, "2") << ";\n";
+            chainSource << "float dV"+intToString(i)+"dR1 = 0;\n";
+            chainSource << "float dV"+intToString(i)+"dR2 = 0;\n";
+            for (int j = 0; j < i; j++) {
+                Lepton::ParsedExpression dVdV = Lepton::Parser::parse(computedValueExpressions[i], functions).differentiate(computedValueNames[j]).optimize();
+                derivExpressions.clear();
+                derivExpressions["dV"+intToString(i)+"dR1 += dV"+intToString(j)+"dR1*"] = dVdV.renameVariables(rename1);
+                derivExpressions["dV"+intToString(i)+"dR2 += dV"+intToString(j)+"dR2*"] = dVdV.renameVariables(rename2);
+                chainSource << OpenCLExpressionUtilities::createExpressions(derivExpressions, variables, functionDefinitions, prefix+"temp"+intToString(i)+"_"+intToString(j)+"_", prefix+"functionParams");
+            }
+            chainSource << "tempForce -= dV"<< intToString(i) << "dR1*" << prefix << "dEdV" << energyDerivs->getParameterSuffix(i, "1") << ";\n";
+            chainSource << "tempForce -= dV"<< intToString(i) << "dR2*" << prefix << "dEdV" << energyDerivs->getParameterSuffix(i, "2") << ";\n";
         }
         map<string, string> replacements;
         replacements["COMPUTE_FORCE"] = chainSource.str();

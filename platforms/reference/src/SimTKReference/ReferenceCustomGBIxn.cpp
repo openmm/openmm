@@ -44,7 +44,7 @@ using std::vector;
    --------------------------------------------------------------------------------------- */
 
 ReferenceCustomGBIxn::ReferenceCustomGBIxn(const vector<Lepton::ExpressionProgram>& valueExpressions,
-                     const vector<Lepton::ExpressionProgram>& valueDerivExpressions,
+                     const vector<vector<Lepton::ExpressionProgram> > valueDerivExpressions,
                      const vector<string>& valueNames,
                      const vector<OpenMM::CustomGBForce::ComputationType>& valueTypes,
                      const vector<Lepton::ExpressionProgram>& energyExpressions,
@@ -371,10 +371,11 @@ void ReferenceCustomGBIxn::calculateOnePairChainRule(int atom1, int atom2, RealO
 
     // Evaluate the derivative of each parameter with respect to position and apply forces.
 
-    RealOpenMM dVdR = (RealOpenMM) valueDerivExpressions[0].evaluate(variables);
+    vector<RealOpenMM> dVdR(valueDerivExpressions.size(), 0.0);
+    dVdR[0] = (RealOpenMM) valueDerivExpressions[0][0].evaluate(variables);
     RealOpenMM rinv = 1/r;
     for (int i = 0; i < 3; i++) {
-        RealOpenMM f = dEdV[0][atom1]*dVdR*deltaR[i]*rinv;
+        RealOpenMM f = dEdV[0][atom1]*dVdR[0]*deltaR[i]*rinv;
         forces[atom1][i] -= f;
         forces[atom2][i] += f;
     }
@@ -384,9 +385,10 @@ void ReferenceCustomGBIxn::calculateOnePairChainRule(int atom1, int atom2, RealO
     variables[valueNames[0]] = values[0][atom1];
     for (int i = 1; i < (int) valueNames.size(); i++) {
         variables[valueNames[i]] = values[i][atom1];
-        dVdR *= (RealOpenMM) valueDerivExpressions[i].evaluate(variables);
+        for (int j = 0; j < i; j++)
+            dVdR[i] += (RealOpenMM) (valueDerivExpressions[i][j].evaluate(variables)*dVdR[j]);
         for (int j = 0; j < 3; j++) {
-            RealOpenMM f = dEdV[i][atom1]*dVdR*deltaR[j]*rinv;
+            RealOpenMM f = dEdV[i][atom1]*dVdR[i]*deltaR[j]*rinv;
             forces[atom1][j] -= f;
             forces[atom2][j] += f;
         }

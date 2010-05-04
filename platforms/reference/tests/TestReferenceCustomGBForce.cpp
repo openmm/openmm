@@ -172,6 +172,34 @@ void testTabulatedFunction(bool interpolating) {
     }
 }
 
+void testMultipleChainRules() {
+    ReferencePlatform platform;
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    VerletIntegrator integrator(0.01);
+    CustomGBForce* force = new CustomGBForce();
+    force->addComputedValue("a", "2*r", CustomGBForce::ParticlePair);
+    force->addComputedValue("b", "a+1", CustomGBForce::SingleParticle);
+    force->addComputedValue("c", "2*b+a", CustomGBForce::SingleParticle);
+    force->addEnergyTerm("0.1*a+1*b+10*c", CustomGBForce::SingleParticle); // 0.1*(2*r) + 2*r+1 + 10*(3*a+2) = 0.2*r + 2*r+1 + 40*r+20+20*r = 62.2*r+21
+    force->addParticle(vector<double>());
+    force->addParticle(vector<double>());
+    system.addForce(force);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(2);
+    positions[0] = Vec3(0, 0, 0);
+    for (int i = 1; i < 5; i++) {
+        positions[1] = Vec3(i, 0, 0);
+        context.setPositions(positions);
+        State state = context.getState(State::Forces | State::Energy);
+        const vector<Vec3>& forces = state.getForces();
+        ASSERT_EQUAL_VEC(Vec3(124.4, 0, 0), forces[0], 1e-4);
+        ASSERT_EQUAL_VEC(Vec3(-124.4, 0, 0), forces[1], 1e-4);
+        ASSERT_EQUAL_TOL(2*(62.2*i+21), state.getPotentialEnergy(), 0.02);
+    }
+}
+
 int main() {
     try {
         testOBC(GBSAOBCForce::NoCutoff, CustomGBForce::NoCutoff);
@@ -179,6 +207,7 @@ int main() {
         testOBC(GBSAOBCForce::CutoffPeriodic, CustomGBForce::CutoffPeriodic);
         testTabulatedFunction(true);
         testTabulatedFunction(false);
+        testMultipleChainRules();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;
