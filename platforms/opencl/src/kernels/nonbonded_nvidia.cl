@@ -41,15 +41,14 @@ void computeNonbonded(__global float4* forceBuffers, __global float* energyBuffe
         unsigned int atom1 = x + tgx;
         float4 force = 0.0f;
         float4 posq1 = posq[atom1];
-        __local AtomData* atom1Data = &localData[get_local_id(0)];
         LOAD_ATOM1_PARAMETERS
         if (x == y) {
             // This tile is on the diagonal.
 
-            atom1Data->x = posq1.x;
-            atom1Data->y = posq1.y;
-            atom1Data->z = posq1.z;
-            atom1Data->q = posq1.w;
+            localData[get_local_id(0)].x = posq1.x;
+            localData[get_local_id(0)].y = posq1.y;
+            localData[get_local_id(0)].z = posq1.z;
+            localData[get_local_id(0)].q = posq1.w;
             LOAD_LOCAL_PARAMETERS_FROM_1
             unsigned int xi = x/TILE_SIZE;
             unsigned int tile = xi+xi*PADDED_NUM_ATOMS/TILE_SIZE-xi*(xi+1)/2;
@@ -60,8 +59,8 @@ void computeNonbonded(__global float4* forceBuffers, __global float* energyBuffe
 #ifdef USE_EXCLUSIONS
                 bool isExcluded = !(excl & 0x1);
 #endif
-                __local AtomData* atom2Data = &localData[tbx+j];
-                float4 posq2 = (float4) (atom2Data->x, atom2Data->y, atom2Data->z, atom2Data->q);
+                int atom2 = tbx+j;
+                float4 posq2 = (float4) (localData[atom2].x, localData[atom2].y, localData[atom2].z, localData[atom2].q);
                 float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
 #ifdef USE_PERIODIC
                 delta.x -= floor(delta.x*INV_PERIODIC_BOX_SIZE_X+0.5f)*PERIODIC_BOX_SIZE_X;
@@ -72,7 +71,7 @@ void computeNonbonded(__global float4* forceBuffers, __global float* energyBuffe
                 float r = sqrt(r2);
                 float invR = 1.0f/r;
                 LOAD_ATOM2_PARAMETERS
-                int atom2 = y+j;
+                atom2 = y+j;
                 float dEdR = 0.0f;
                 float tempEnergy = 0.0f;
                 COMPUTE_INTERACTION
@@ -96,15 +95,15 @@ void computeNonbonded(__global float4* forceBuffers, __global float* energyBuffe
             if (lasty != y) {
                 unsigned int j = y + tgx;
                 float4 tempPosq = posq[j];
-                atom1Data->x = tempPosq.x;
-                atom1Data->y = tempPosq.y;
-                atom1Data->z = tempPosq.z;
-                atom1Data->q = tempPosq.w;
+                localData[get_local_id(0)].x = tempPosq.x;
+                localData[get_local_id(0)].y = tempPosq.y;
+                localData[get_local_id(0)].z = tempPosq.z;
+                localData[get_local_id(0)].q = tempPosq.w;
                 LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
             }
-            atom1Data->fx = 0.0f;
-            atom1Data->fy = 0.0f;
-            atom1Data->fz = 0.0f;
+            localData[get_local_id(0)].fx = 0.0f;
+            localData[get_local_id(0)].fy = 0.0f;
+            localData[get_local_id(0)].fz = 0.0f;
 #ifdef USE_CUTOFF
             unsigned int flags = interactionFlags[pos];
             if (!hasExclusions && flags != 0xFFFFFFFF) {
@@ -117,8 +116,8 @@ void computeNonbonded(__global float4* forceBuffers, __global float* energyBuffe
                     for (unsigned int j = 0; j < TILE_SIZE; j++) {
                         if ((flags&(1<<j)) != 0) {
                             bool isExcluded = false;
-                            __local AtomData* atom2Data = &localData[tbx+j];
-                            float4 posq2 = (float4) (atom2Data->x, atom2Data->y, atom2Data->z, atom2Data->q);
+                            int atom2 = tbx+j;
+                            float4 posq2 = (float4) (localData[atom2].x, localData[atom2].y, localData[atom2].z, localData[atom2].q);
                             float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
 #ifdef USE_PERIODIC
                             delta.x -= floor(delta.x*INV_PERIODIC_BOX_SIZE_X+0.5f)*PERIODIC_BOX_SIZE_X;
@@ -129,7 +128,7 @@ void computeNonbonded(__global float4* forceBuffers, __global float* energyBuffe
                             float invR = RSQRT(r2);
                             float r = RECIP(invR);
                             LOAD_ATOM2_PARAMETERS
-                            int atom2 = y+j;
+                            atom2 = y+j;
                             float dEdR = 0.0f;
                             float tempEnergy = 0.0f;
                             COMPUTE_INTERACTION
@@ -149,9 +148,9 @@ void computeNonbonded(__global float4* forceBuffers, __global float* energyBuffe
                             if (tgx % 16 == 0)
                                 tempBuffer[get_local_id(0)].xyz += tempBuffer[get_local_id(0)+8].xyz;
                             if (tgx == 0) {
-                                atom2Data->fx += tempBuffer[get_local_id(0)].x + tempBuffer[get_local_id(0)+16].x;
-                                atom2Data->fy += tempBuffer[get_local_id(0)].y + tempBuffer[get_local_id(0)+16].y;
-                                atom2Data->fz += tempBuffer[get_local_id(0)].z + tempBuffer[get_local_id(0)+16].z;
+                                localData[tbx+j].fx += tempBuffer[get_local_id(0)].x + tempBuffer[get_local_id(0)+16].x;
+                                localData[tbx+j].fy += tempBuffer[get_local_id(0)].y + tempBuffer[get_local_id(0)+16].y;
+                                localData[tbx+j].fz += tempBuffer[get_local_id(0)].z + tempBuffer[get_local_id(0)+16].z;
                             }
                         }
                     }
@@ -174,8 +173,8 @@ void computeNonbonded(__global float4* forceBuffers, __global float* energyBuffe
 #ifdef USE_EXCLUSIONS
                     bool isExcluded = !(excl & 0x1);
 #endif
-                    __local AtomData* atom2Data = &localData[tbx+tj];
-                    float4 posq2 = (float4) (atom2Data->x, atom2Data->y, atom2Data->z, atom2Data->q);
+                    int atom2 = tbx+tj;
+                    float4 posq2 = (float4) (localData[atom2].x, localData[atom2].y, localData[atom2].z, localData[atom2].q);
                     float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
 #ifdef USE_PERIODIC
                     delta.x -= floor(delta.x*INV_PERIODIC_BOX_SIZE_X+0.5f)*PERIODIC_BOX_SIZE_X;
@@ -186,16 +185,16 @@ void computeNonbonded(__global float4* forceBuffers, __global float* energyBuffe
                     float invR = RSQRT(r2);
                     float r = RECIP(invR);
                     LOAD_ATOM2_PARAMETERS
-                    int atom2 = y+tj;
+                    atom2 = y+tj;
                     float dEdR = 0.0f;
                     float tempEnergy = 0.0f;
                     COMPUTE_INTERACTION
 		    energy += tempEnergy;
                     delta.xyz *= dEdR;
                     force.xyz -= delta.xyz;
-                    atom2Data->fx += delta.x;
-                    atom2Data->fy += delta.y;
-                    atom2Data->fz += delta.z;
+                    localData[tbx+tj].fx += delta.x;
+                    localData[tbx+tj].fy += delta.y;
+                    localData[tbx+tj].fz += delta.z;
                     excl >>= 1;
                     tj = (tj + 1) & (TILE_SIZE - 1);
                 }
@@ -210,7 +209,7 @@ void computeNonbonded(__global float4* forceBuffers, __global float* energyBuffe
             unsigned int offset2 = y + tgx + warp*PADDED_NUM_ATOMS;
 #endif
             forceBuffers[offset1].xyz += force.xyz;
-            forceBuffers[offset2] += (float4) (atom1Data->fx, atom1Data->fy, atom1Data->fz, 0.0f);
+            forceBuffers[offset2] += (float4) (localData[get_local_id(0)].fx, localData[get_local_id(0)].fy, localData[get_local_id(0)].fz, 0.0f);
             lasty = y;
         }
         pos++;

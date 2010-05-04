@@ -325,23 +325,23 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
     stringstream loadLocal1;
     for (int i = 0; i < (int) params.size(); i++) {
         if (params[i].getNumComponents() == 1) {
-            loadLocal1<<"atom1Data->"<<params[i].getName()<<" = "<<params[i].getName()<<"1;\n";
+            loadLocal1<<"localData[get_local_id(0)]."<<params[i].getName()<<" = "<<params[i].getName()<<"1;\n";
         }
         else {
             for (int j = 0; j < params[i].getNumComponents(); ++j)
-                loadLocal1<<"atom1Data->"<<params[i].getName()<<"_"<<suffixes[j]<<" = "<<params[i].getName()<<"1."<<suffixes[j]<<";\n";
+                loadLocal1<<"localData[get_local_id(0)]."<<params[i].getName()<<"_"<<suffixes[j]<<" = "<<params[i].getName()<<"1."<<suffixes[j]<<";\n";
         }
     }
     replacements["LOAD_LOCAL_PARAMETERS_FROM_1"] = loadLocal1.str();
     stringstream loadLocal2;
     for (int i = 0; i < (int) params.size(); i++) {
         if (params[i].getNumComponents() == 1) {
-            loadLocal2<<"atom1Data->"<<params[i].getName()<<" = global_"<<params[i].getName()<<"[j];\n";
+            loadLocal2<<"localData[get_local_id(0)]."<<params[i].getName()<<" = global_"<<params[i].getName()<<"[j];\n";
         }
         else {
             loadLocal2<<params[i].getType()<<" temp_"<<params[i].getName()<<" = global_"<<params[i].getName()<<"[j];\n";
             for (int j = 0; j < params[i].getNumComponents(); ++j)
-                loadLocal2<<"atom1Data->"<<params[i].getName()<<"_"<<suffixes[j]<<" = temp_"<<params[i].getName()<<"."<<suffixes[j]<<";\n";
+                loadLocal2<<"localData[get_local_id(0)]."<<params[i].getName()<<"_"<<suffixes[j]<<" = temp_"<<params[i].getName()<<"."<<suffixes[j]<<";\n";
         }
     }
     replacements["LOAD_LOCAL_PARAMETERS_FROM_GLOBAL"] = loadLocal2.str();
@@ -358,14 +358,14 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
     stringstream load2j;
     for (int i = 0; i < (int) params.size(); i++) {
         if (params[i].getNumComponents() == 1) {
-            load2j<<params[i].getType()<<" "<<params[i].getName()<<"2 = atom2Data->"<<params[i].getName()<<";\n";
+            load2j<<params[i].getType()<<" "<<params[i].getName()<<"2 = localData[atom2]."<<params[i].getName()<<";\n";
         }
         else {
             load2j<<params[i].getType()<<" "<<params[i].getName()<<"2 = ("<<params[i].getType()<<") (";
             for (int j = 0; j < params[i].getNumComponents(); ++j) {
                 if (j > 0)
                     load2j<<", ";
-                load2j<<"atom2Data->"<<params[i].getName()<<"_"<<suffixes[j];
+                load2j<<"localData[atom2]."<<params[i].getName()<<"_"<<suffixes[j];
             }
             load2j<<");\n";
         }
