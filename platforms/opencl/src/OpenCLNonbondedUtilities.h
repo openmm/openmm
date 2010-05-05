@@ -62,7 +62,7 @@ class OpenCLCompact;
  * by ForceImpls during calcForces() or calcEnergy().
  */
 
-class OpenCLNonbondedUtilities {
+class OPENMM_EXPORT OpenCLNonbondedUtilities {
 public:
     class ParameterInfo;
     OpenCLNonbondedUtilities(OpenCLContext& context);

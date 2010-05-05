@@ -43,7 +43,7 @@ namespace OpenMM {
  * user defined mathematical expressions.
  */
 
-class OpenCLExpressionUtilities {
+class OPENMM_EXPORT OpenCLExpressionUtilities {
 public:
     /**
      * Generate the source code for calculating a set of expressions.

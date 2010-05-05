@@ -29,7 +29,7 @@
 
 namespace OpenMM {
 
-class OpenCLCompact {
+class OPENMM_EXPORT OpenCLCompact {
 public:
     OpenCLCompact(OpenCLContext& context);
     ~OpenCLCompact();

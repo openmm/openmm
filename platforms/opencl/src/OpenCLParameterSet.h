@@ -40,7 +40,7 @@ class OpenCLNonbondedUtilities;
  * on the number of parameters required.
  */
 
-class OpenCLParameterSet {
+class OPENMM_EXPORT OpenCLParameterSet {
 public:
     /**
      * Create an OpenCLParameterSet.

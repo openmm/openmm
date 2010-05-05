@@ -37,7 +37,7 @@ namespace OpenMM {
  * common workspace arrays, random number generation, and enforcing constraints.
  */
 
-class OpenCLIntegrationUtilities {
+class OPENMM_EXPORT OpenCLIntegrationUtilities {
 public:
     OpenCLIntegrationUtilities(OpenCLContext& context, const System& system);
     ~OpenCLIntegrationUtilities();
