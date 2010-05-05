@@ -45,6 +45,7 @@
 #include "openmm/VerletIntegrator.h"
 #include <iostream>
 #include <vector>
+#include <algorithm>
 
 using namespace OpenMM;
 using namespace std;
