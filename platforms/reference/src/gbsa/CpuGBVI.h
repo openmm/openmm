@@ -200,7 +200,7 @@ class CpuGBVI : public CpuImplicitSolvent {
       
          --------------------------------------------------------------------------------------- */
       
-      static RealOpenMM getVolume( RealOpenMM r, RealOpenMM R, RealOpenMM S );
+      static RealOpenMM getVolume( RealOpenMM r, RealOpenMM R, RealOpenMM S  );
       
       /**---------------------------------------------------------------------------------------
       

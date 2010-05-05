@@ -221,6 +221,24 @@ if( atomI == 1568 || atomJ == 1568 ){
 
    }
 
+#if( GBVIDebug == 2 )
+   std::string fileName  = "br.txt";
+   FILE* brFile          = NULL;
+#ifdef WIN32
+   fopen_s( &brFile, fileName.c_str(), "w" );
+#else
+   brFile = fopen( fileName.c_str(), "w" );
+#endif
+
+   (void) fprintf( brFile, "%5d\n", numberOfAtoms );
+   for( unsigned int ii = 0; ii < numberOfAtoms; ii++ ){
+       (void) fprintf( brFile, "%6u %14.6e %9.4f %9.4f %14.6e %14.6e %14.6e\n",
+                       ii, bornRadii[ii], atomicRadii[ii], scaledRadii[ii], 
+                       atomCoordinates[ii][0], atomCoordinates[ii][1], atomCoordinates[ii][2] );
+   }
+   (void) fclose( brFile );
+#endif
+
    return SimTKOpenMMCommon::DefaultReturn;
 
 }
@@ -252,7 +270,6 @@ RealOpenMM CpuGBVI::getVolume( RealOpenMM r, RealOpenMM R, RealOpenMM S ){
    if( FABS( diff ) < r ){
 
       RealOpenMM lowerBound = (R > (r - S)) ? R : (r - S);
-
       return (CpuGBVI::getL( r, (r + S),    S ) -
               CpuGBVI::getL( r, lowerBound, S ));
 
@@ -479,6 +496,7 @@ RealOpenMM e1 = partialChargeI*partialCharges[atomI]/bornRadii[atomI];
 RealOpenMM e2 = gammaParameters[atomI]*ratio*ratio*ratio;
 (void) fprintf( stderr, "E %d self=%.4e gamma=%.4e e=%.4e\n", atomI, e1, e2, energy );
 */
+
       for( int atomJ = atomI + 1; atomJ < numberOfAtoms; atomJ++ ){
 
          RealOpenMM deltaR[ReferenceForce::LastDeltaRIndex];
@@ -492,8 +510,10 @@ RealOpenMM e2 = gammaParameters[atomI]*ratio*ratio*ratio;
          RealOpenMM r2                 = deltaR[ReferenceForce::R2Index];
          RealOpenMM t                  = fourth*r2/(bornRadii[atomI]*bornRadii[atomJ]);         
          atomIEnergy                  += partialCharges[atomJ]*Sgb( t )/deltaR[ReferenceForce::RIndex];
+
 /*
-RealOpenMM e3 = -partialChargeI2*partialCharges[atomJ]*Sgb( t )/deltaR[ReferenceForce::RIndex];
+RealOpenMM e3 =  -partialChargeI*partialCharges[atomJ]*Sgb( t )/deltaR[ReferenceForce::RIndex];
+partialCharges[atomJ]*Sgb( t )/deltaR[ReferenceForce::RIndex];
 (void) fprintf( stderr, "E %d %d e3=%.4e r2=%4e t=%.3e sgb=%.4e e=%.5e\n", atomI, atomJ, e3, r2, t, Sgb( t ), energy );
 */
       }
@@ -501,7 +521,7 @@ RealOpenMM e3 = -partialChargeI2*partialCharges[atomJ]*Sgb( t )/deltaR[Reference
       energy += two*partialChargeI*atomIEnergy;
    }
    energy *= preFactor;
-   energy -= cavityEnergy;
+   energy -= 138.935485*cavityEnergy;
 
 #if( GBVIDebug == 1 )
    (void) fprintf( logFile, "ElectricConstant=%.4e Tau=%.4e e=%.5e eOut=%.5e\n", preFactor, gbviParameters->getTau(), energy, gbviParameters->getTau()*energy );
@@ -723,7 +743,7 @@ if( atomI == 0 ){
       // partial of cavity term wrt Born radius
      
       RealOpenMM  ratio   = (atomicRadii[atomI]/bornRadii[atomI]);
-      bornForces[atomI]  += (stupidFactor*gammaParameters[atomI]*ratio*ratio*ratio)/bornRadii[atomI]; 
+      bornForces[atomI]  += (stupidFactor*138.935485*gammaParameters[atomI]*ratio*ratio*ratio)/bornRadii[atomI]; 
 
       RealOpenMM b2       = bornRadii[atomI]*bornRadii[atomI];
       bornForces[atomI]  *= oneThird*b2*b2;
