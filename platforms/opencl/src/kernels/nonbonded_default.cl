@@ -72,12 +72,20 @@ void computeNonbonded(__global float4* forceBuffers, __global float* energyBuffe
                 float r = RECIP(invR);
                 LOAD_ATOM2_PARAMETERS
                 atom2 = y+baseLocalAtom+j;
+#ifdef USE_SYMMETRIC
                 float dEdR = 0.0f;
+#else
+                float4 dEdR1 = (float4) 0.0f;
+                float4 dEdR2 = (float4) 0.0f;
+#endif
                 float tempEnergy = 0.0f;
                 COMPUTE_INTERACTION
                 energy += 0.5f*tempEnergy;
-                delta.xyz *= dEdR;
-                force.xyz -= delta.xyz;
+#ifdef USE_SYMMETRIC
+                force.xyz -= delta.xyz*dEdR;
+#else
+                force.xyz -= dEdR1.xyz;
+#endif
                 excl >>= 1;
             }
 
@@ -140,15 +148,27 @@ void computeNonbonded(__global float4* forceBuffers, __global float* energyBuffe
                 float r = RECIP(invR);
                 LOAD_ATOM2_PARAMETERS
                 atom2 = y+baseLocalAtom+tj;
+#ifdef USE_SYMMETRIC
                 float dEdR = 0.0f;
+#else
+                float4 dEdR1 = (float4) 0.0f;
+                float4 dEdR2 = (float4) 0.0f;
+#endif
                 float tempEnergy = 0.0f;
                 COMPUTE_INTERACTION
                 energy += tempEnergy;
+#ifdef USE_SYMMETRIC
                 delta.xyz *= dEdR;
                 force.xyz -= delta.xyz;
                 localData[baseLocalAtom+tj+forceBufferOffset].fx += delta.x;
                 localData[baseLocalAtom+tj+forceBufferOffset].fy += delta.y;
                 localData[baseLocalAtom+tj+forceBufferOffset].fz += delta.z;
+#else
+                force.xyz -= dEdR1.xyz;
+                localData[baseLocalAtom+tj+forceBufferOffset].fx += dEdR2.x;
+                localData[baseLocalAtom+tj+forceBufferOffset].fy += dEdR2.y;
+                localData[baseLocalAtom+tj+forceBufferOffset].fz += dEdR2.z;
+#endif
                 barrier(CLK_LOCAL_MEM_FENCE);
                 excl >>= 1;
                 tj = (tj+1)%(TILE_SIZE/2);

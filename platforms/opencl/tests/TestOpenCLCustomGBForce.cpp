@@ -200,6 +200,63 @@ void testMultipleChainRules() {
     }
 }
 
+void testPositionDependence() {
+    OpenCLPlatform platform;
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    VerletIntegrator integrator(0.01);
+    CustomGBForce* force = new CustomGBForce();
+    force->addComputedValue("a", "r", CustomGBForce::ParticlePair);
+    force->addComputedValue("b", "a+y", CustomGBForce::SingleParticle);
+    force->addEnergyTerm("b*z", CustomGBForce::SingleParticle);
+    force->addParticle(vector<double>());
+    force->addParticle(vector<double>());
+    system.addForce(force);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(2);
+    vector<Vec3> forces(2);
+    init_gen_rand(0);
+    for (int i = 0; i < 5; i++) {
+        positions[0] = Vec3(genrand_real2(), genrand_real2(), genrand_real2());
+        positions[1] = Vec3(genrand_real2(), genrand_real2(), genrand_real2());
+        context.setPositions(positions);
+        State state = context.getState(State::Forces | State::Energy);
+        const vector<Vec3>& forces = state.getForces();
+        Vec3 delta = positions[0]-positions[1];
+        double r = sqrt(delta.dot(delta));
+        double energy = 0;
+        for (int j = 0; j < 2; j++)
+            energy += positions[j][2]*(r+positions[j][1]);
+        Vec3 force1(-positions[0][2]*delta[0]/r-positions[1][2]*delta[0]/r,
+                    -positions[0][2]*(delta[1]/r+1)-positions[1][2]*delta[1]/r,
+                    -positions[0][2]*delta[2]/r-(r+positions[0][1])-positions[1][2]*delta[2]/r);
+        Vec3 force2(positions[0][2]*delta[0]/r+positions[1][2]*delta[0]/r,
+                    positions[0][2]*delta[1]/r+positions[1][2]*(delta[1]/r-1),
+                    positions[0][2]*delta[2]/r+positions[1][2]*delta[2]/r-(r+positions[1][1]));
+        ASSERT_EQUAL_VEC(force1, forces[0], 1e-4);
+        ASSERT_EQUAL_VEC(force2, forces[1], 1e-4);
+        ASSERT_EQUAL_TOL(energy, state.getPotentialEnergy(), 0.02);
+
+        // Take a small step in the direction of the energy gradient and see whether the potential energy changes by the expected amount.
+
+        double norm = 0.0;
+        for (int i = 0; i < (int) forces.size(); ++i)
+            norm += forces[i].dot(forces[i]);
+        norm = std::sqrt(norm);
+        const double stepSize = 1e-3;
+        double step = stepSize/norm;
+        for (int i = 0; i < (int) positions.size(); ++i) {
+            Vec3 p = positions[i];
+            Vec3 f = forces[i];
+            positions[i] = Vec3(p[0]-f[0]*step, p[1]-f[1]*step, p[2]-f[2]*step);
+        }
+        context.setPositions(positions);
+        State state2 = context.getState(State::Energy);
+        ASSERT_EQUAL_TOL(norm, (state2.getPotentialEnergy()-state.getPotentialEnergy())/stepSize, 1e-3*abs(state.getPotentialEnergy()));
+    }
+}
+
 int main() {
     try {
         testOBC(GBSAOBCForce::NoCutoff, CustomGBForce::NoCutoff);
@@ -208,6 +265,7 @@ int main() {
         testTabulatedFunction(true);
         testTabulatedFunction(false);
         testMultipleChainRules();
+        testPositionDependence();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

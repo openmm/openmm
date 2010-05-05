@@ -1094,6 +1094,7 @@ void ReferenceCalcCustomGBForceKernel::initialize(const System& system, const Cu
     // Parse the expressions for computed values.
 
     valueDerivExpressions.resize(force.getNumComputedValues());
+    valueGradientExpressions.resize(force.getNumComputedValues());
     for (int i = 0; i < force.getNumComputedValues(); i++) {
         string name, expression;
         CustomGBForce::ComputationType type;
@@ -1105,6 +1106,9 @@ void ReferenceCalcCustomGBForceKernel::initialize(const System& system, const Cu
         if (i == 0)
             valueDerivExpressions[i].push_back(ex.differentiate("r").optimize().createProgram());
         else {
+            valueGradientExpressions[i].push_back(ex.differentiate("x").optimize().createProgram());
+            valueGradientExpressions[i].push_back(ex.differentiate("y").optimize().createProgram());
+            valueGradientExpressions[i].push_back(ex.differentiate("z").optimize().createProgram());
             for (int j = 0; j < i; j++)
                 valueDerivExpressions[i].push_back(ex.differentiate(valueNames[j]).optimize().createProgram());
         }
@@ -1113,6 +1117,7 @@ void ReferenceCalcCustomGBForceKernel::initialize(const System& system, const Cu
     // Parse the expressions for energy terms.
 
     energyDerivExpressions.resize(force.getNumEnergyTerms());
+    energyGradientExpressions.resize(force.getNumEnergyTerms());
     for (int i = 0; i < force.getNumEnergyTerms(); i++) {
         string expression;
         CustomGBForce::ComputationType type;
@@ -1123,8 +1128,12 @@ void ReferenceCalcCustomGBForceKernel::initialize(const System& system, const Cu
         if (type != CustomGBForce::SingleParticle)
             energyDerivExpressions[i].push_back(ex.differentiate("r").optimize().createProgram());
         for (int j = 0; j < force.getNumComputedValues(); j++) {
-            if (type == CustomGBForce::SingleParticle)
+            if (type == CustomGBForce::SingleParticle) {
                 energyDerivExpressions[i].push_back(ex.differentiate(valueNames[j]).optimize().createProgram());
+                energyGradientExpressions[i].push_back(ex.differentiate("x").optimize().createProgram());
+                energyGradientExpressions[i].push_back(ex.differentiate("y").optimize().createProgram());
+                energyGradientExpressions[i].push_back(ex.differentiate("z").optimize().createProgram());
+            }
             else {
                 energyDerivExpressions[i].push_back(ex.differentiate(valueNames[j]+"1").optimize().createProgram());
                 energyDerivExpressions[i].push_back(ex.differentiate(valueNames[j]+"2").optimize().createProgram());
@@ -1141,8 +1150,8 @@ void ReferenceCalcCustomGBForceKernel::initialize(const System& system, const Cu
 void ReferenceCalcCustomGBForceKernel::executeForces(ContextImpl& context) {
     RealOpenMM** posData = extractPositions(context);
     RealOpenMM** forceData = extractForces(context);
-    ReferenceCustomGBIxn ixn(valueExpressions, valueDerivExpressions, valueNames, valueTypes, energyExpressions,
-        energyDerivExpressions, energyTypes, particleParameterNames);
+    ReferenceCustomGBIxn ixn(valueExpressions, valueDerivExpressions, valueGradientExpressions, valueNames, valueTypes, energyExpressions,
+        energyDerivExpressions, energyGradientExpressions, energyTypes, particleParameterNames);
     bool periodic = (nonbondedMethod == CutoffPeriodic);
     if (nonbondedMethod != NoCutoff) {
         computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, periodic ? periodicBoxSize : NULL, nonbondedCutoff, 0.0);
@@ -1160,8 +1169,8 @@ double ReferenceCalcCustomGBForceKernel::executeEnergy(ContextImpl& context) {
     RealOpenMM** posData = extractPositions(context);
     RealOpenMM** forceData = allocateRealArray(numParticles, 3);
     RealOpenMM energy = 0;
-    ReferenceCustomGBIxn ixn(valueExpressions, valueDerivExpressions, valueNames, valueTypes, energyExpressions,
-        energyDerivExpressions, energyTypes, particleParameterNames);
+    ReferenceCustomGBIxn ixn(valueExpressions, valueDerivExpressions, valueGradientExpressions, valueNames, valueTypes, energyExpressions,
+        energyDerivExpressions, energyGradientExpressions, energyTypes, particleParameterNames);
     bool periodic = (nonbondedMethod == CutoffPeriodic);
     if (nonbondedMethod != NoCutoff) {
         computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, periodic ? periodicBoxSize : NULL, nonbondedCutoff, 0.0);

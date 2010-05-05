@@ -61,7 +61,7 @@ namespace OpenMM {
  *
  * <ul>
  * <li><b>Single Particle</b>: The expression is evaluated once for each particle in the System.  In the case of a computed
- * value, this means the value for a particle depends only on other properties of that particle (its parameters and other
+ * value, this means the value for a particle depends only on other properties of that particle (its position, parameters, and other
  * computed values).  In the case of an energy term, it means each particle makes an independent contribution to the System
  * energy.</li>
  * <li><b>Particle Pairs</b>: The expression is evaluated for every pair of particles in the system.  In the case of a computed
@@ -329,9 +329,9 @@ public:
      * @param name        the name of the value
      * @param expression  an algebraic expression to evaluate when calculating the computed value.  If the
      *                    ComputationType is SingleParticle, the expression is evaluated independently
-     *                    for each particle, and may depend on the per-particle parameters and previous
-     *                    computed values for that particle.  If the ComputationType is ParticlePair or
-     *                    ParticlePairNoExclusions, the expression is evaluated once for every other
+     *                    for each particle, and may depend on its x, y, and z coordinates, as well as the per-particle
+     *                    parameters and previous computed values for that particle.  If the ComputationType is ParticlePair
+     *                    or ParticlePairNoExclusions, the expression is evaluated once for every other
      *                    particle in the system and summed to get the final value.  In the latter case,
      *                    the expression may depend on the distance r between the two particles, and on
      *                    the per-particle parameters and previous computed values for each of them.
@@ -347,9 +347,9 @@ public:
      * @param name        the name of the value
      * @param expression  an algebraic expression to evaluate when calculating the computed value.  If the
      *                    ComputationType is SingleParticle, the expression is evaluated independently
-     *                    for each particle, and may depend on the per-particle parameters and previous
-     *                    computed values for that particle.  If the ComputationType is ParticlePair or
-     *                    ParticlePairNoExclusions, the expression is evaluated once for every other
+     *                    for each particle, and may depend on its x, y, and z coordinates, as well as the per-particle
+     *                    parameters and previous computed values for that particle.  If the ComputationType is ParticlePair
+     *                    or ParticlePairNoExclusions, the expression is evaluated once for every other
      *                    particle in the system and summed to get the final value.  In the latter case,
      *                    the expression may depend on the distance r between the two particles, and on
      *                    the per-particle parameters and previous computed values for each of them.
@@ -365,9 +365,9 @@ public:
      * @param name        the name of the value
      * @param expression  an algebraic expression to evaluate when calculating the computed value.  If the
      *                    ComputationType is SingleParticle, the expression is evaluated independently
-     *                    for each particle, and may depend on the per-particle parameters and previous
-     *                    computed values for that particle.  If the ComputationType is ParticlePair or
-     *                    ParticlePairNoExclusions, the expression is evaluated once for every other
+     *                    for each particle, and may depend on its x, y, and z coordinates, as well as the per-particle
+     *                    parameters and previous computed values for that particle.  If the ComputationType is ParticlePair
+     *                    or ParticlePairNoExclusions, the expression is evaluated once for every other
      *                    particle in the system and summed to get the final value.  In the latter case,
      *                    the expression may depend on the distance r between the two particles, and on
      *                    the per-particle parameters and previous computed values for each of them.
@@ -381,8 +381,8 @@ public:
      *
      * @param expression  an algebraic expression to evaluate when calculating the energy.  If the
      *                    ComputationType is SingleParticle, the expression is evaluated once
-     *                    for each particle, and may depend on the per-particle parameters and
-     *                    computed values for that particle.  If the ComputationType is ParticlePair or
+     *                    for each particle, and may depend on its x, y, and z coordinates, as well as the per-particle
+     *                    parameters and computed values for that particle.  If the ComputationType is ParticlePair or
      *                    ParticlePairNoExclusions, the expression is evaluated once for every pair of
      *                    particles in the system.  In the latter case,
      *                    the expression may depend on the distance r between the two particles, and on
@@ -398,8 +398,8 @@ public:
      * @param index       the index of the term for which to get parameters
      * @param expression  an algebraic expression to evaluate when calculating the energy.  If the
      *                    ComputationType is SingleParticle, the expression is evaluated once
-     *                    for each particle, and may depend on the per-particle parameters and
-     *                    computed values for that particle.  If the ComputationType is ParticlePair or
+     *                    for each particle, and may depend on its x, y, and z coordinates, as well as the per-particle
+     *                    parameters and computed values for that particle.  If the ComputationType is ParticlePair or
      *                    ParticlePairNoExclusions, the expression is evaluated once for every pair of
      *                    particles in the system.  In the latter case,
      *                    the expression may depend on the distance r between the two particles, and on
@@ -415,8 +415,8 @@ public:
      * @param index       the index of the term for which to set parameters
      * @param expression  an algebraic expression to evaluate when calculating the energy.  If the
      *                    ComputationType is SingleParticle, the expression is evaluated once
-     *                    for each particle, and may depend on the per-particle parameters and
-     *                    computed values for that particle.  If the ComputationType is ParticlePair or
+     *                    for each particle, and may depend on its x, y, and z coordinates, as well as the per-particle
+     *                    parameters and computed values for that particle.  If the ComputationType is ParticlePair or
      *                    ParticlePairNoExclusions, the expression is evaluated once for every pair of
      *                    particles in the system.  In the latter case,
      *                    the expression may depend on the distance r between the two particles, and on

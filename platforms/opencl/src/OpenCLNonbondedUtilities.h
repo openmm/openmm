@@ -192,8 +192,9 @@ public:
      * @param params        the per-atom parameters this kernel may depend on
      * @param arguments     arrays (other than per-atom parameters) that should be passed as arguments to the kernel
      * @param useExclusions specifies whether exclusions are applied to this interaction
+     * @param isSymmetric   specifies whether the interaction is symmetric
      */
-    cl::Kernel createInteractionKernel(const std::string& source, const std::vector<ParameterInfo>& params, const std::vector<ParameterInfo>& arguments, bool useExclusions) const;
+    cl::Kernel createInteractionKernel(const std::string& source, const std::vector<ParameterInfo>& params, const std::vector<ParameterInfo>& arguments, bool useExclusions, bool isSymmetric) const;
 private:
     OpenCLContext& context;
     cl::Kernel forceKernel;

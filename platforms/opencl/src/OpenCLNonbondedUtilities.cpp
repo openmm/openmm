@@ -226,7 +226,7 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
 
     // Create kernels.
 
-    forceKernel = createInteractionKernel(kernelSource, parameters, arguments, true);
+    forceKernel = createInteractionKernel(kernelSource, parameters, arguments, true, true);
     if (useCutoff) {
         map<string, string> defines;
         if (forceBufferPerAtomBlock)
@@ -279,7 +279,7 @@ void OpenCLNonbondedUtilities::computeInteractions() {
         context.executeKernel(forceKernel, tiles->getSize()*OpenCLContext::TileSize);
 }
 
-cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& source, const vector<ParameterInfo>& params, const vector<ParameterInfo>& arguments, bool useExclusions) const {
+cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& source, const vector<ParameterInfo>& params, const vector<ParameterInfo>& arguments, bool useExclusions, bool isSymmetric) const {
     map<string, string> replacements;
     replacements["COMPUTE_INTERACTION"] = source;
     int localDataSize = 7*sizeof(cl_float);
@@ -380,6 +380,8 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
         defines["USE_PERIODIC"] = "1";
     if (useExclusions)
         defines["USE_EXCLUSIONS"] = "1";
+    if (isSymmetric)
+        defines["USE_SYMMETRIC"] = "1";
     defines["PERIODIC_BOX_SIZE_X"] = OpenCLExpressionUtilities::doubleToString(periodicBoxSize.x);
     defines["PERIODIC_BOX_SIZE_Y"] = OpenCLExpressionUtilities::doubleToString(periodicBoxSize.y);
     defines["PERIODIC_BOX_SIZE_Z"] = OpenCLExpressionUtilities::doubleToString(periodicBoxSize.z);

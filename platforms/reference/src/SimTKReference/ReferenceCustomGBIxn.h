@@ -45,10 +45,12 @@ class ReferenceCustomGBIxn {
       RealOpenMM cutoffDistance;
       std::vector<Lepton::ExpressionProgram> valueExpressions;
       std::vector<std::vector<Lepton::ExpressionProgram> > valueDerivExpressions;
+      std::vector<std::vector<Lepton::ExpressionProgram> > valueGradientExpressions;
       std::vector<std::string> valueNames;
       std::vector<OpenMM::CustomGBForce::ComputationType> valueTypes;
       std::vector<Lepton::ExpressionProgram> energyExpressions;
       std::vector<std::vector<Lepton::ExpressionProgram> > energyDerivExpressions;
+      std::vector<std::vector<Lepton::ExpressionProgram> > energyGradientExpressions;
       std::vector<std::string> paramNames;
       std::vector<OpenMM::CustomGBForce::ComputationType> energyTypes;
       std::vector<std::string> particleParamNames;
@@ -60,13 +62,14 @@ class ReferenceCustomGBIxn {
 
          @param index            the index of the value to compute
          @param numAtoms         number of atoms
+         @param atomCoordinates  atom coordinates
          @param values           the vector to store computed values into
          @param globalParameters the values of global parameters
          @param atomParameters   atomParameters[atomIndex][paramterIndex]
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateSingleParticleValue(int index, int numAtoms, std::vector<std::vector<RealOpenMM> >& values,
+      void calculateSingleParticleValue(int index, int numAtoms, RealOpenMM** atomCoordinates, std::vector<std::vector<RealOpenMM> >& values,
                                         const std::map<std::string, double>& globalParameters, RealOpenMM** atomParameters) const;
 
       /**---------------------------------------------------------------------------------------
@@ -113,16 +116,18 @@ class ReferenceCustomGBIxn {
 
          @param index            the index of the value to compute
          @param numAtoms         number of atoms
+         @param atomCoordinates  atom coordinates
          @param values           the vector containing computed values
          @param globalParameters the values of global parameters
          @param atomParameters   atomParameters[atomIndex][paramterIndex]
+         @param forces           forces on atoms are added to this
          @param totalEnergy      the energy contribution is added to this
          @param dEdV             the derivative of energy with respect to computed values is stored in this
 
          --------------------------------------------------------------------------------------- */
 
-      void calculateSingleParticleEnergyTerm(int index, int numAtoms, const std::vector<std::vector<RealOpenMM> >& values,
-                                        const std::map<std::string, double>& globalParameters, RealOpenMM** atomParameters,
+      void calculateSingleParticleEnergyTerm(int index, int numAtoms, RealOpenMM** atomCoordinates, const std::vector<std::vector<RealOpenMM> >& values,
+                                        const std::map<std::string, double>& globalParameters, RealOpenMM** atomParameters, RealOpenMM** forces,
                                         RealOpenMM* totalEnergy, std::vector<std::vector<RealOpenMM> >& dEdV) const;
 
       /**---------------------------------------------------------------------------------------
@@ -222,10 +227,12 @@ class ReferenceCustomGBIxn {
 
        ReferenceCustomGBIxn(const std::vector<Lepton::ExpressionProgram>& valueExpressions,
                             const std::vector<std::vector<Lepton::ExpressionProgram> > valueDerivExpressions,
+                            const std::vector<std::vector<Lepton::ExpressionProgram> > valueGradientExpressions,
                             const std::vector<std::string>& valueNames,
                             const std::vector<OpenMM::CustomGBForce::ComputationType>& valueTypes,
                             const std::vector<Lepton::ExpressionProgram>& energyExpressions,
                             const std::vector<std::vector<Lepton::ExpressionProgram> > energyDerivExpressions,
+                            const std::vector<std::vector<Lepton::ExpressionProgram> > energyGradientExpressions,
                             const std::vector<OpenMM::CustomGBForce::ComputationType>& energyTypes,
                             const std::vector<std::string>& parameterNames);
 

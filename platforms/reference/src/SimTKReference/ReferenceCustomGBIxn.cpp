@@ -45,14 +45,16 @@ using std::vector;
 
 ReferenceCustomGBIxn::ReferenceCustomGBIxn(const vector<Lepton::ExpressionProgram>& valueExpressions,
                      const vector<vector<Lepton::ExpressionProgram> > valueDerivExpressions,
+                     const vector<vector<Lepton::ExpressionProgram> > valueGradientExpressions,
                      const vector<string>& valueNames,
                      const vector<OpenMM::CustomGBForce::ComputationType>& valueTypes,
                      const vector<Lepton::ExpressionProgram>& energyExpressions,
                      const vector<vector<Lepton::ExpressionProgram> > energyDerivExpressions,
+                     const vector<vector<Lepton::ExpressionProgram> > energyGradientExpressions,
                      const vector<OpenMM::CustomGBForce::ComputationType>& energyTypes,
                      const vector<string>& parameterNames) :
-            cutoff(false), periodic(false), valueExpressions(valueExpressions), valueDerivExpressions(valueDerivExpressions), valueNames(valueNames),
-            valueTypes(valueTypes), energyExpressions(energyExpressions), energyDerivExpressions(energyDerivExpressions),
+            cutoff(false), periodic(false), valueExpressions(valueExpressions), valueDerivExpressions(valueDerivExpressions), valueGradientExpressions(valueGradientExpressions),
+            valueNames(valueNames), valueTypes(valueTypes), energyExpressions(energyExpressions), energyDerivExpressions(energyDerivExpressions), energyGradientExpressions(energyGradientExpressions),
             energyTypes(energyTypes), paramNames(parameterNames) {
 
    // ---------------------------------------------------------------------------------------
@@ -140,7 +142,7 @@ void ReferenceCustomGBIxn::calculateIxn(int numberOfAtoms, RealOpenMM** atomCoor
     vector<vector<RealOpenMM> > values(numValues);
     for (int valueIndex = 0; valueIndex < numValues; valueIndex++) {
         if (valueTypes[valueIndex] == OpenMM::CustomGBForce::SingleParticle)
-            calculateSingleParticleValue(valueIndex, numberOfAtoms, values, globalParameters, atomParameters);
+            calculateSingleParticleValue(valueIndex, numberOfAtoms, atomCoordinates, values, globalParameters, atomParameters);
         else if (valueTypes[valueIndex] == OpenMM::CustomGBForce::ParticlePair)
             calculateParticlePairValue(valueIndex, numberOfAtoms, atomCoordinates, atomParameters, values, globalParameters, exclusions, true);
         else
@@ -152,7 +154,7 @@ void ReferenceCustomGBIxn::calculateIxn(int numberOfAtoms, RealOpenMM** atomCoor
     vector<vector<RealOpenMM> > dEdV(numValues, vector<RealOpenMM>(numberOfAtoms, (RealOpenMM) 0));
     for (int termIndex = 0; termIndex < (int) energyExpressions.size(); termIndex++) {
         if (energyTypes[termIndex] == OpenMM::CustomGBForce::SingleParticle)
-            calculateSingleParticleEnergyTerm(termIndex, numberOfAtoms, values, globalParameters, atomParameters, totalEnergy, dEdV);
+            calculateSingleParticleEnergyTerm(termIndex, numberOfAtoms, atomCoordinates, values, globalParameters, atomParameters, forces, totalEnergy, dEdV);
         else if (energyTypes[termIndex] == OpenMM::CustomGBForce::ParticlePair)
             calculateParticlePairEnergyTerm(termIndex, numberOfAtoms, atomCoordinates, atomParameters, values, globalParameters, exclusions, true, forces, totalEnergy, dEdV);
         else
@@ -164,11 +166,14 @@ void ReferenceCustomGBIxn::calculateIxn(int numberOfAtoms, RealOpenMM** atomCoor
     calculateChainRuleForces(numberOfAtoms, atomCoordinates, atomParameters, values, globalParameters, exclusions, forces, dEdV);
 }
 
-void ReferenceCustomGBIxn::calculateSingleParticleValue(int index, int numAtoms, vector<vector<RealOpenMM> >& values,
+void ReferenceCustomGBIxn::calculateSingleParticleValue(int index, int numAtoms, RealOpenMM** atomCoordinates, vector<vector<RealOpenMM> >& values,
         const map<string, double>& globalParameters, RealOpenMM** atomParameters) const {
     values[index].resize(numAtoms);
     map<string, double> variables = globalParameters;
     for (int i = 0; i < numAtoms; i++) {
+        variables["x"] = atomCoordinates[i][0];
+        variables["y"] = atomCoordinates[i][1];
+        variables["z"] = atomCoordinates[i][2];
         for (int j = 0; j < (int) paramNames.size(); j++)
             variables[paramNames[j]] = atomParameters[i][j];
         for (int j = 0; j < index; j++)
@@ -230,11 +235,14 @@ void ReferenceCustomGBIxn::calculateOnePairValue(int index, int atom1, int atom2
     values[index][atom1] += (RealOpenMM) valueExpressions[index].evaluate(variables);
 }
 
-void ReferenceCustomGBIxn::calculateSingleParticleEnergyTerm(int index, int numAtoms, const vector<vector<RealOpenMM> >& values,
-        const map<string, double>& globalParameters, RealOpenMM** atomParameters, RealOpenMM* totalEnergy,
+void ReferenceCustomGBIxn::calculateSingleParticleEnergyTerm(int index, int numAtoms, RealOpenMM** atomCoordinates, const vector<vector<RealOpenMM> >& values,
+        const map<string, double>& globalParameters, RealOpenMM** atomParameters, RealOpenMM** forces, RealOpenMM* totalEnergy,
         vector<vector<RealOpenMM> >& dEdV) const {
     map<string, double> variables = globalParameters;
     for (int i = 0; i < numAtoms; i++) {
+        variables["x"] = atomCoordinates[i][0];
+        variables["y"] = atomCoordinates[i][1];
+        variables["z"] = atomCoordinates[i][2];
         for (int j = 0; j < (int) paramNames.size(); j++)
             variables[paramNames[j]] = atomParameters[i][j];
         for (int j = 0; j < (int) valueNames.size(); j++)
@@ -243,6 +251,9 @@ void ReferenceCustomGBIxn::calculateSingleParticleEnergyTerm(int index, int numA
             *totalEnergy += (RealOpenMM) energyExpressions[index].evaluate(variables);
         for (int j = 0; j < (int) valueNames.size(); j++)
             dEdV[j][i] += (RealOpenMM) energyDerivExpressions[index][j].evaluate(variables);
+        forces[i][0] -= (RealOpenMM) energyGradientExpressions[index][0].evaluate(variables);
+        forces[i][1] -= (RealOpenMM) energyGradientExpressions[index][1].evaluate(variables);
+        forces[i][2] -= (RealOpenMM) energyGradientExpressions[index][2].evaluate(variables);
     }
 }
 
@@ -371,13 +382,15 @@ void ReferenceCustomGBIxn::calculateOnePairChainRule(int atom1, int atom2, RealO
 
     // Evaluate the derivative of each parameter with respect to position and apply forces.
 
-    vector<RealOpenMM> dVdR(valueDerivExpressions.size(), 0.0);
-    dVdR[0] = (RealOpenMM) valueDerivExpressions[0][0].evaluate(variables);
+    vector<vector<RealOpenMM> > gradient1(valueDerivExpressions.size(), vector<RealOpenMM>(3, 0.0));
+    vector<vector<RealOpenMM> > gradient2(valueDerivExpressions.size(), vector<RealOpenMM>(3, 0.0));
+    RealOpenMM dVdR = (RealOpenMM) valueDerivExpressions[0][0].evaluate(variables);
     RealOpenMM rinv = 1/r;
     for (int i = 0; i < 3; i++) {
-        RealOpenMM f = dEdV[0][atom1]*dVdR[0]*deltaR[i]*rinv;
-        forces[atom1][i] -= f;
-        forces[atom2][i] += f;
+        gradient1[0][i] = dVdR*deltaR[i]*rinv;
+        gradient2[0][i] = -gradient1[0][i];
+        forces[atom1][i] -= dEdV[0][atom1]*gradient1[0][i];
+        forces[atom2][i] -= dEdV[0][atom1]*gradient2[0][i];
     }
     variables = globalParameters;
     for (int i = 0; i < (int) paramNames.size(); i++)
@@ -385,12 +398,17 @@ void ReferenceCustomGBIxn::calculateOnePairChainRule(int atom1, int atom2, RealO
     variables[valueNames[0]] = values[0][atom1];
     for (int i = 1; i < (int) valueNames.size(); i++) {
         variables[valueNames[i]] = values[i][atom1];
-        for (int j = 0; j < i; j++)
-            dVdR[i] += (RealOpenMM) (valueDerivExpressions[i][j].evaluate(variables)*dVdR[j]);
-        for (int j = 0; j < 3; j++) {
-            RealOpenMM f = dEdV[i][atom1]*dVdR[i]*deltaR[j]*rinv;
-            forces[atom1][j] -= f;
-            forces[atom2][j] += f;
+        for (int j = 0; j < i; j++) {
+            RealOpenMM dVdV = (RealOpenMM) valueDerivExpressions[i][j].evaluate(variables);
+            for (int k = 0; k < 3; k++) {
+                gradient1[i][k] += dVdV*gradient1[j][k];
+                gradient2[i][k] += dVdV*gradient2[j][k];
+            }
+        }
+        for (int k = 0; k < 3; k++) {
+            gradient1[i][k] += (RealOpenMM) valueGradientExpressions[i][k].evaluate(variables);
+            forces[atom1][k] -= dEdV[i][atom1]*gradient1[i][k];
+            forces[atom2][k] -= dEdV[i][atom1]*gradient2[i][k];
         }
     }
 }

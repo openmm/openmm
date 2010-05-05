@@ -72,12 +72,20 @@ void computeNonbonded(__global float4* forceBuffers, __global float* energyBuffe
                 float invR = 1.0f/r;
                 LOAD_ATOM2_PARAMETERS
                 atom2 = y+j;
+#ifdef USE_SYMMETRIC
                 float dEdR = 0.0f;
+#else
+                float4 dEdR1 = (float4) 0.0f;
+                float4 dEdR2 = (float4) 0.0f;
+#endif
                 float tempEnergy = 0.0f;
                 COMPUTE_INTERACTION
                 energy += 0.5f*tempEnergy;
-                delta.xyz *= dEdR;
-                force.xyz -= delta.xyz;
+#ifdef USE_SYMMETRIC
+                force.xyz -= delta.xyz*dEdR;
+#else
+                force.xyz -= dEdR1.xyz;
+#endif
                 excl >>= 1;
             }
 
@@ -129,13 +137,23 @@ void computeNonbonded(__global float4* forceBuffers, __global float* energyBuffe
                             float r = RECIP(invR);
                             LOAD_ATOM2_PARAMETERS
                             atom2 = y+j;
+#ifdef USE_SYMMETRIC
                             float dEdR = 0.0f;
+#else
+                            float4 dEdR1 = (float4) 0.0f;
+                            float4 dEdR2 = (float4) 0.0f;
+#endif
                             float tempEnergy = 0.0f;
                             COMPUTE_INTERACTION
 			    energy += tempEnergy;
+#ifdef USE_SYMMETRIC
                             delta.xyz *= dEdR;
                             force.xyz -= delta.xyz;
                             tempBuffer[get_local_id(0)] = delta;
+#else
+                            force.xyz -= dEdR1.xyz;
+                            tempBuffer[get_local_id(0)] = dEdR2;
+#endif
 
                             // Sum the forces on atom2.
 
@@ -186,15 +204,27 @@ void computeNonbonded(__global float4* forceBuffers, __global float* energyBuffe
                     float r = RECIP(invR);
                     LOAD_ATOM2_PARAMETERS
                     atom2 = y+tj;
+#ifdef USE_SYMMETRIC
                     float dEdR = 0.0f;
+#else
+                    float4 dEdR1 = (float4) 0.0f;
+                    float4 dEdR2 = (float4) 0.0f;
+#endif
                     float tempEnergy = 0.0f;
                     COMPUTE_INTERACTION
 		    energy += tempEnergy;
+#ifdef USE_SYMMETRIC
                     delta.xyz *= dEdR;
                     force.xyz -= delta.xyz;
                     localData[tbx+tj].fx += delta.x;
                     localData[tbx+tj].fy += delta.y;
                     localData[tbx+tj].fz += delta.z;
+#else
+                    force.xyz -= dEdR1.xyz;
+                    localData[tbx+tj].fx += dEdR2.x;
+                    localData[tbx+tj].fy += dEdR2.y;
+                    localData[tbx+tj].fz += dEdR2.z;
+#endif
                     excl >>= 1;
                     tj = (tj + 1) & (TILE_SIZE - 1);
                 }
