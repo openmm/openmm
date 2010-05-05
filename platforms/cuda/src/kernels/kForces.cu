@@ -414,7 +414,7 @@ void kReduceGBVIBornForces_kernel()
         float ratio         = (gbviData.x/bornRadius);
         float ratio3        = ratio*ratio*ratio;
         energy             -= gbviData.z*ratio3;
-        totalForce         += (3.0f*gbviData.z*ratio3)/bornRadius; // 'cavity' term
+        totalForce         += (3.0f*138.93548*gbviData.z*ratio3)/bornRadius; // 'cavity' term
         float br2           = bornRadius*bornRadius;
         totalForce         *= (1.0f/3.0f)*br2*br2;
 
@@ -422,7 +422,7 @@ void kReduceGBVIBornForces_kernel()
         *pFt = totalForce;
         pos += gridDim.x * blockDim.x;
     }
-    cSim.pEnergy[blockIdx.x * blockDim.x + threadIdx.x] += energy;
+    cSim.pEnergy[blockIdx.x * blockDim.x + threadIdx.x] += 138.93548*energy;
 }
 
 void kReduceObcGbsaBornForces(gpuContext gpu)
