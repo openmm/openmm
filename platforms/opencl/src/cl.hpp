@@ -23,13 +23,13 @@
 
 /*! \file
  *
- *   \brief C++ bindings for OpenCL 1.0 (rev 48) and OpenCL 1.1 (rev 17)    
+ *   \brief C++ bindings for OpenCL 1.0 (rev 48) and OpenCL 1.1 (rev 17)
  *   \author Benedict R. Gaster and Laurent Morichetti
- *   
+ *
  *   Additions and fixes from Brian Cole, March 3rd 2010.
- *   
+ *
  *   \version 1.0
- *   \date March 2010
+ *   \date $Date: 2010-04-23 10:16:50 -0500 (Fri, 23 Apr 2010) $
  *
  */
 
@@ -60,7 +60,7 @@
  * #define __CL_ENABLE_EXCEPTIONS
  * #define __NO_STD_VECTOR
  * #define __NO_STD_STRING
- * 
+ *
  * #if defined(__APPLE__) || defined(__MACOSX)
  * #include <OpenCL/cl.hpp>
  * #else
@@ -69,39 +69,39 @@
  * #include <cstdio>
  * #include <cstdlib>
  * #include <iostream>
- * 
+ *
  *  const char * helloStr  = "__kernel void "
  *                           "hello(void) "
  *                           "{ "
  *                           "  "
  *                           "} ";
- * 
+ *
  *  int
  *  main(void)
  *  {
  *     cl_int err = CL_SUCCESS;
  *     try {
- *       cl::Context context(CL_DEVICE_TYPE_CPU, 0, NULL, NULL, &err); 
- * 
+ *       cl::Context context(CL_DEVICE_TYPE_CPU, 0, NULL, NULL, &err);
+ *
  *       cl::vector<cl::Device> devices = context.getInfo<CL_CONTEXT_DEVICES>();
- * 
+ *
  *       cl::Program::Sources source(1,
  *           std::make_pair(helloStr,strlen(helloStr)));
  *       cl::Program program_ = cl::Program(context, source);
  *       program_.build(devices);
- * 
+ *
  *       cl::Kernel kernel(program_, "hello", &err);
- * 
+ *
  *       cl::CommandQueue queue(context, devices[0], 0, &err);
  *       cl::KernelFunctor func = kernel.bind(
  *          queue,
  *          cl::NDRange(4, 4),
  *          cl::NDRange(2, 2));
- * 
+ *
  *       func().wait();
  *     }
  *     catch (cl::Error err) {
- *        std::cerr 
+ *        std::cerr
  *           << "ERROR: "
  *           << err.what()
  *           << "("
@@ -109,10 +109,10 @@
  *           << ")"
  *           << std::endl;
  *     }
- * 
+ *
  *    return EXIT_SUCCESS;
  *  }
- * 
+ *
  * \endcode
  *
  * \section exceptions Exceptions
@@ -200,7 +200,7 @@
  * \endcode
  *
  * \section vectorstring Replacing STL's vector and string classes
- * 
+ *
  * While C++'s Standard Template library provides an excellent
  * resource for quick access to many useful algorithms and containers
  * it is ofen not used due to compatability issues across different
@@ -212,15 +212,15 @@
  * while using the C++ bindings, and replacements are provided for both
  * std::vector and std::string or the developer has the option to replace
  * their own implementations.
- * 
+ *
  * By default, to avoid issues with backward compatibility, both std::vector
  * and std::string are used. Either can be over ridden by defining, for vectors:
  *
- *    - If __NO_STD_VECTOR is defined and __USE_DEV_VECTOR is not defined, then 
+ *    - If __NO_STD_VECTOR is defined and __USE_DEV_VECTOR is not defined, then
  *    the vector type:
  *
  *      template cl::vector<
- *           typename T, 
+ *           typename T,
  *           unsigned int N = __MAX_DEFAULT_VECTOR_SIZE>;
  *
  *   is used instead of std::vector. The space requirments for
@@ -248,7 +248,7 @@
  *
  * For vectors the developer must define:
  *
- *    #define __USE_DEV_VECTOR 
+ *    #define __USE_DEV_VECTOR
  *
  * to tell cl.hpp that std::vector and cl::vector should not be
  * used. When __USE_DEV_VECTOR the user must also provide a mapping
@@ -293,15 +293,9 @@
 #endif
 #endif // !__APPLE__
 
-#if defined(_WIN32)
-#define CL_API_ENTRY
-#define CL_API_CALL __stdcall
-#define CL_CALLBACK __stdcall
-#else
-#define CL_API_ENTRY
-#define CL_API_CALL
+#if !defined(CL_CALLBACK)
 #define CL_CALLBACK
-#endif
+#endif //CL_CALLBACK
 
 #include <utility>
 
@@ -311,10 +305,12 @@
 
 #if !defined(__NO_STD_STRING)
 #include <string>
-#endif 
+#endif
 
 #if defined(linux) || defined(__APPLE__) || defined(__MACOSX)
 # include <alloca.h>
+#else
+# include <malloc.h>
 #endif // linux
 
 #include <cstring>
@@ -511,7 +507,7 @@ public:
         if (rhs.size_ == 0 || rhs.str_ == NULL) {
             size_ = 0;
             str_  = NULL;
-        } 
+        }
         else {
             size_ = rhs.size_;
             str_ = new char[size_ + 1];
@@ -547,15 +543,15 @@ public:
 #if !defined(__USE_DEV_STRING) && !defined(__NO_STD_STRING)
 #include <string>
 typedef std::string STRING_CLASS;
-#elif !defined(__USE_DEV_STRING) 
+#elif !defined(__USE_DEV_STRING)
 typedef cl::string STRING_CLASS;
 #endif
 
 #if !defined(__USE_DEV_VECTOR) && !defined(__NO_STD_VECTOR)
 #include <vector>
 #define VECTOR_CLASS std::vector
-#elif !defined(__USE_DEV_VECTOR) 
-#define VECTOR_CLASS cl::vector 
+#elif !defined(__USE_DEV_VECTOR)
+#define VECTOR_CLASS cl::vector
 #endif
 
 #if !defined(__MAX_DEFAULT_VECTOR_SIZE)
@@ -563,7 +559,7 @@ typedef cl::string STRING_CLASS;
 #endif
 
 /*! \class vector
- * \brief Fixed sized vector implementation that mirroring 
+ * \brief Fixed sized vector implementation that mirroring
  * std::vector functionality.
  */
 template <typename T, unsigned int N = __MAX_DEFAULT_VECTOR_SIZE>
@@ -574,7 +570,7 @@ private:
     unsigned int size_;
     bool empty_;
 public:
-    vector() : 
+    vector() :
         size_(-1),
         empty_(true)
     {}
@@ -593,9 +589,9 @@ public:
     }
 
     void push_back (const T& x)
-    { 
+    {
         if (size() < N) {
-            size_++;  
+            size_++;
             data_[size_] = x;
             empty_ = false;
         }
@@ -611,15 +607,15 @@ public:
             }
         }
     }
-  
-    vector(const vector<T, N>& vec) : 
+
+    vector(const vector<T, N>& vec) :
         size_(vec.size_),
         empty_(vec.empty_)
     {
         if (!empty_) {
             memcpy(&data_[0], &vec.data_[0], size() * sizeof(T));
         }
-    } 
+    }
 
     vector(unsigned int size, const T& val = T()) :
         size_(-1),
@@ -639,10 +635,10 @@ public:
         size_  = rhs.size_;
         empty_ = rhs.empty_;
 
-        if (!empty_) {	
+        if (!empty_) {
             memcpy(&data_[0], &rhs.data_[0], size() * sizeof(T));
         }
-    
+
         return *this;
     }
 
@@ -658,15 +654,15 @@ public:
 
         return memcmp(&data_[0], &vec.data_[0], size() * sizeof(T)) == 0 ? true : false;
     }
-  
+
     operator T* ()             { return data_; }
     operator const T* () const { return data_; }
-   
+
     bool empty (void) const
     {
         return empty_;
     }
-  
+
     unsigned int max_size (void) const
     {
         return N;
@@ -681,16 +677,16 @@ public:
     {
         return data_[index];
     }
-  
+
     T operator[](int index) const
     {
         return data_[index];
     }
-  
+
     template<class I>
     void assign(I start, I end)
     {
-        clear();   
+        clear();
         while(start < end) {
             push_back(*start);
             start++;
@@ -707,7 +703,7 @@ public:
         int index_;
         bool initialized_;
     public:
-        iterator(void) : 
+        iterator(void) :
             index_(-1),
             initialized_(false)
         {
@@ -741,11 +737,11 @@ public:
             i.initialized_ = true;
             return i;
         }
-    
+
         bool operator==(iterator i)
         {
-            return ((vec_ == i.vec_) && 
-                    (index_ == i.index_) && 
+            return ((vec_ == i.vec_) &&
+                    (index_ == i.index_) &&
                     (initialized_ == i.initialized_));
         }
 
@@ -809,8 +805,8 @@ public:
     {
         return data_[size_];
     }
-};  
-    
+};
+
 /*!
  * \brief size_t class used to interface between C++ and
  * OpenCL C calls that require arrays of size_t values, who's
@@ -999,6 +995,30 @@ struct GetInfoHelper<Func, STRING_CLASS>
     F(cl_command_queue_info, CL_QUEUE_REFERENCE_COUNT, cl_uint) \
     F(cl_command_queue_info, CL_QUEUE_PROPERTIES, cl_command_queue_properties)
 
+#if defined(CL_VERSION_1_1)
+#define __PARAM_NAME_INFO_1_1(F) \
+	F(cl_context_info, CL_CONTEXT_NUM_DEVICES, cl_uint)\
+    F(cl_device_info, CL_DEVICE_PREFERRED_VECTOR_WIDTH_HALF, cl_uint) \
+    F(cl_device_info, CL_DEVICE_NATIVE_VECTOR_WIDTH_CHAR, cl_uint)      \
+    F(cl_device_info, CL_DEVICE_NATIVE_VECTOR_WIDTH_SHORT, cl_uint)     \
+    F(cl_device_info, CL_DEVICE_NATIVE_VECTOR_WIDTH_INT, cl_uint)       \
+    F(cl_device_info, CL_DEVICE_NATIVE_VECTOR_WIDTH_LONG, cl_uint) \
+    F(cl_device_info, CL_DEVICE_NATIVE_VECTOR_WIDTH_FLOAT, cl_uint) \
+    F(cl_device_info, CL_DEVICE_NATIVE_VECTOR_WIDTH_DOUBLE, cl_uint) \
+    F(cl_device_info, CL_DEVICE_NATIVE_VECTOR_WIDTH_HALF, cl_uint) \
+    F(cl_device_info, CL_DEVICE_DOUBLE_FP_CONFIG, cl_device_fp_config) \
+    F(cl_device_info, CL_DEVICE_HALF_FP_CONFIG, cl_device_fp_config) \
+    F(cl_device_info, CL_DEVICE_HOST_UNIFIED_MEMORY, cl_bool) \
+    \
+    F(cl_mem_info, CL_MEM_ASSOCIATED_MEMOBJECT, cl::Memory) \
+    F(cl_mem_info, CL_MEM_OFFSET, ::size_t) \
+    \
+    F(cl_kernel_work_group_info, CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE, ::size_t) \
+    F(cl_kernel_work_group_info, CL_KERNEL_PRIVATE_MEM_SIZE, cl_ulong) \
+    \
+    F(cl_event_info, CL_EVENT_CONTEXT, cl::Context)
+#endif // CL_VERSION_1_1
+
 template <typename enum_type, cl_int Name>
 struct param_traits {};
 
@@ -1012,6 +1032,9 @@ struct param_traits<detail:: token,param_name>       \
 };
 
 __PARAM_NAME_INFO_1_0(__DECLARE_PARAM_TRAITS);
+#if defined(CL_VERSION_1_1)
+__PARAM_NAME_INFO_1_1(__DECLARE_PARAM_TRAITS);
+#endif // CL_VERSION_1_1
 
 #undef __DECLARE_PARAM_TRAITS
 
@@ -1220,6 +1243,8 @@ static inline cl_int errHandler (cl_int err, const char * errStr = NULL)
  */
 struct ImageFormat : public cl_image_format
 {
+	ImageFormat(){}
+
     /*! \brief Create an image format.
      *
      * \param order
@@ -1230,6 +1255,20 @@ struct ImageFormat : public cl_image_format
     {
         image_channel_order = order;
         image_channel_data_type = type;
+    }
+
+	/*!
+     * \brief Assignment operator
+     *
+     * \param rhs the imageformat object on rhs of the assignment.
+    */
+    ImageFormat& operator = (const ImageFormat& rhs)
+    {
+        if (this != &rhs) {
+			this->image_channel_data_type = rhs.image_channel_data_type;
+			this->image_channel_order     = rhs.image_channel_order;
+        }
+        return *this;
     }
 };
 
@@ -1494,8 +1533,8 @@ public:
         VECTOR_CLASS<Device>* devices) const
     {
 		typedef CL_API_ENTRY cl_int (CL_API_CALL *PFN_clGetDeviceIDsFromD3D10KHR)(
-		cl_platform_id platform, 
-		cl_d3d10_device_source_khr d3d_device_source, 
+		cl_platform_id platform,
+		cl_d3d10_device_source_khr d3d_device_source,
 		void * d3d_object,
 		cl_d3d10_device_set_khr d3d_device_set,
 		cl_uint num_entries,
@@ -1507,12 +1546,12 @@ public:
 
         cl_uint n = 0;
         cl_int err = pfn_clGetDeviceIDsFromD3D10KHR(
-			object_, 
-			d3d_device_source, 
+			object_,
+			d3d_device_source,
 			d3d_object,
-			d3d_device_set, 
-			0, 
-			NULL, 
+			d3d_device_set,
+			0,
+			NULL,
 			&n);
         if (err != CL_SUCCESS) {
             return detail::errHandler(err, __GET_DEVICE_IDS_ERR);
@@ -1520,12 +1559,12 @@ public:
 
         cl_device_id* ids = (cl_device_id*) alloca(n * sizeof(cl_device_id));
         err = pfn_clGetDeviceIDsFromD3D10KHR(
-			object_, 
-			d3d_device_source, 
+			object_,
+			d3d_device_source,
 			d3d_object,
 			d3d_device_set,
-			n, 
-			ids, 
+			n,
+			ids,
 			NULL);
         if (err != CL_SUCCESS) {
             return detail::errHandler(err, __GET_DEVICE_IDS_ERR);
@@ -2001,6 +2040,65 @@ public:
             __WAIT_FOR_EVENTS_ERR);
     }
 
+#if defined(CL_VERSION_1_1)
+  /*!
+     * \brief Register a user callback function.
+     *
+     * \param type specifies the command execution status for which the callback
+	 * is registered. The command execution callback mask values for which a
+	 * callback can be registered are: CL_COMPLETE. There is no guarantee that
+	 * the callback functions registered for various execution status values for
+	 * an event will be called in the exact order that the execution status of a
+	 * command changes.
+	 *
+	 * \param pfn_event_notify is the event callback function that can be
+	 * registered by the application. This callback function may be called
+	 * asynchronously by the OpenCL implementation. It is the application�s
+	 * responsibility to ensure that the callback function is thread-safe.
+	 * The parameters to this callback function are:
+	 *
+	 *    - event is the event object for which the callback function is invoked.
+	 *    - event_command_exec_status represents the execution status of command
+	 *      for which this callback function is invoked. Refer to table 5.15 for
+	 *      the command execution status values. If the callback is called as the
+	 *      result of the command associated with event being abnormally terminated,
+	 *      an appropriate error code for the error that caused the termination
+	 *      will be passed to event_command_exec_status instead.
+	 *    - user_data is a pointer to user supplied data.
+	 *
+	 * \param user_data will be passed as the user_data argument when pfn_notify
+	 * is called. user_data can be NULL.
+	 *
+	 * \return CL_SUCCESS if successfull otherwise one of the following
+	 *  error values:
+	 *
+	 *  - CL_INVALID_EVENT if event is not a valid event object or is a user
+	 *    event object created using clCreateUserEvent.
+	 *  - CL_INVALID_VALUE if pfn_event_notify is NULL or if
+	 *    command_exec_callback_type is not a valid command execution status.
+	 *
+	 *  - CL_OUT_OF_HOST_MEMORY if there is a failure to allocate resources
+	 *    required by the OpenCL implementation on the host.
+     *
+     * \note In the case that exceptions are enabled and error value
+     * other than CL_SUCCESS is generated, then cl::Error exception is
+     * generated.
+     */
+	cl_int setCallback(
+		cl_int type,
+        void (CL_CALLBACK * pfn_notify)(cl_event, cl_int, void *),
+		void * user_data = NULL)
+	{
+        return detail::errHandler(
+			::clSetEventCallback(
+				object_,
+				type,
+				pfn_notify,
+				user_data),
+			__SET_EVENT_CALLBACK_ERR);
+	}
+#endif
+
 	/*! \brief Wait on the host thread for commands identified by event objects in
 	 *  event_list to complete.
 	 *
@@ -2028,6 +2126,95 @@ public:
 				__WAIT_FOR_EVENTS_ERR);
 	}
 };
+
+#if defined(CL_VERSION_1_1)
+/*! \class UserEvent
+ * \brief User event interface for cl_event.
+ */
+class UserEvent : public Event
+{
+public:
+    /*! \brief Create a user event object.
+     *
+     *  \param context is a valid OpenCL context used to create the event object.
+     *
+     *  \param err will return an appropriate error code.
+     *  If \a err is NULL, no error code is returned.
+     *
+     *  \return A valid non-zero buffer object and \a err is set to
+     *  CL_SUCCESS if the buffer object is created successfully or a NULL value
+     *  with one of the following error values returned in \a err:
+     *  - CL_INVALID_CONTEXT if \a context is not a valid context.
+     *  - CL_OUT_OF_HOST_MEMORY if there is a failure to allocate resources
+     *    required by the runtime.
+     *
+     * \note In the case that exceptions are enabled and error value
+     * other than CL_SUCCESS is generated, then cl::Error exception is
+     * generated.
+     */
+    UserEvent(
+        const Context& context,
+        cl_int * err = NULL)
+    {
+        cl_int error;
+        object_ = ::clCreateUserEvent(
+            context(),
+            &error);
+
+        detail::errHandler(error, __CREATE_USER_EVENT_ERR);
+        if (err != NULL) {
+            *err = error;
+        }
+    }
+
+    //! Default constructor; buffer is not valid at this point.
+	UserEvent() : Event() { }
+
+    /*!
+     * \brief Construct a new user event from a valid user event.
+     *
+     * \param event The event object used for creation.
+    */
+    UserEvent(const UserEvent& event) : Event(event) { }
+
+    /*!
+     * \brief Assign a user event.
+     *
+     * \param rhs the user event object on rhs of the assignment.
+     */
+    UserEvent& operator = (const UserEvent& rhs)
+    {
+        if (this != &rhs) {
+            Event::operator=(rhs);
+        }
+        return *this;
+    }
+
+   /*!
+     * \brief Set the execution status.
+     *
+     * \param status specifies the new execution status to be set
+	 * and can be CL_COMPLETE or a negative integer value to indicate an error.
+	 *
+	 * \return CL_SUCCESS if the status is updated successfully or
+     *  one of the following error values:
+     *  - CL_INVALID_VALUE if the execution_status is not CL_COMPLETE or a
+	 *    negative integer value.
+	 *  - CL_INVALID_OPERATION if the execution_status for event has already
+	 *  been changed by a previous call to setStatus.
+     *
+     * \note In the case that exceptions are enabled and error value
+     * other than CL_SUCCESS is generated, then cl::Error exception is
+     * generated.
+     */
+	cl_int setStatus(cl_int status)
+	{
+        return detail::errHandler(
+			::clSetUserEventStatus(object_,status),
+			__SET_USER_EVENT_STATUS_ERR);
+	}
+};
+#endif
 
 /*! \brief Wait on the host thread for commands identified by event objects in
  *  event_list to complete.
@@ -2139,6 +2326,48 @@ public:
         }
         return param;
     }
+
+#if defined(CL_VERSION_1_1)
+  /*!
+     * \brief Register a destructor callback function.
+     *
+	 * \param pfn_event_notify is the event callback function that can be
+	 * registered by the application. This callback function may be called
+	 * asynchronously by the OpenCL implementation. It is the application�s
+	 * responsibility to ensure that the callback function is thread-safe.
+	 * The parameters to this callback function are:
+	 *
+	 *    - memobj is the memory object being deleted.
+	 *    - user_data is a pointer to user supplied data.
+	 *
+	 * \param user_data will be passed as the user_data argument when pfn_notify
+	 * is called. user_data can be NULL.
+	 *
+	 * \return CL_SUCCESS if successfull otherwise one of the following
+	 *  error values:
+	 *
+	 * - CL_INVALID_MEM_OBJECT if memobj is not a valid memory object.
+	 *
+	 * - CL_OUT_OF_HOST_MEMORY if there is a failure to allocate resources
+	 * required by the OpenCL implementation on the host.
+     *
+     * \note In the case that exceptions are enabled and error value
+     * other than CL_SUCCESS is generated, then cl::Error exception is
+     * generated.
+     */
+	cl_int setDestructorCallback(
+        void (CL_CALLBACK * pfn_notify)(cl_mem, void *),
+		void * user_data = NULL)
+	{
+        return detail::errHandler(
+			::clSetMemObjectDestructorCallback(
+				object_,
+				pfn_notify,
+				user_data),
+			__SET_MEM_OBJECT_DESTRUCTOR_CALLBACK_ERR);
+	}
+#endif
+
 };
 
 /*! \class Buffer
@@ -2227,6 +2456,55 @@ public:
         }
         return *this;
     }
+
+#if defined(CL_VERSION_1_1)
+   /*!
+     * \brief Create a new buffer object from current.
+     *
+     * \param flags is a bit-field that is used to specify allocation
+	 * and usage information about the buffer memory object being created.
+	 *
+	 * \param buffer_create_type describes the type of buffer object to be
+	 * created.
+	 *
+	 * \param buffer_create_info is the buffer descriptor.
+	 *
+     *  \param err is  A valid non-zero buffer object and \a err is set to
+     *  CL_SUCCESS if the buffer object is created successfully or a NULL value
+     *  with one of the following error values returned in \a err:
+     *  - CL_INVALID_VALUE if values specified in \a flags are not valid.
+     *  - CL_INVALID_VALUE if value specified in \a buffer_create_type is not valid.
+     *  - CL_INVALID_VALUE if value(s) specified in \a buffer_create_info
+	 *    (for a given \a buffer_create_type) is not a valid or if
+	 *    \a buffer_create_type is NULL.
+     *
+	 * \return Buffer object, if the creation fails then the object is not valid.
+	 *
+     * \note In the case that exceptions are enabled and error value
+     * other than CL_SUCCESS is generated, then cl::Error exception is
+     * generated.
+     */
+	Buffer createSubBuffer(
+		cl_mem_flags flags,
+		cl_buffer_create_type buffer_create_type,
+		const void * buffer_create_info,
+		cl_int * err = NULL)
+	{
+		Buffer result;
+		cl_int error;
+        result.object_ = ::clCreateSubBuffer(
+			object_,
+			flags,
+			buffer_create_type,
+			buffer_create_info,
+			&error);
+
+        detail::errHandler(error, __CREATE_SUBBUFFER_ERR);
+        if (err != NULL) {
+            *err = error;
+        }
+	}
+#endif
 };
 
 #if defined (USE_DX_INTEROP)
@@ -2363,7 +2641,7 @@ public:
      * \brief Report the type of GL buffer used to create the object.
      *
      * \param type type of GL buffer.
-	 * \param gl_object_name 
+	 * \param gl_object_name
      */
 	cl_int getObjectInfo(
 		cl_gl_object_type *type,
@@ -2976,7 +3254,7 @@ public:
     {
         cl_int error;
         object_ = ::clCreateSampler(
-            context(), 
+            context(),
 			normalized_coords,
 			addressing_mode,
 			filter_mode,
@@ -4295,6 +4573,373 @@ public:
             __ENQEUE_COPY_BUFFER_ERR);
     }
 
+#if defined(CL_VERSION_1_1)
+    /*! \brief Enqueue a command to read a 2D or 3D rectangular region from
+	 *  a buffer object to host memory.
+     *
+     *  \param buffer refers to a valid buffer object.
+     *
+     *  \param blocking indicates if  the  write  operation  is  blocking  or
+     *  non-blocking. If \a blocking is CL_TRUE,  the  OpenCL  implementation
+     *  copies the data referred to by \a ptr and enqueues the write  operation
+     *  in the command-queue. The memory pointed to by \a ptr can  be  reused
+     *  by  the application after the enqueueReadBufferRect call returns. If
+     *  \a blocking is CL_FALSE, the OpenCL implementation will use \a ptr to
+     *  perform a nonblocking write. As the write is non-blocking the
+     *  implementation can return immediately. The memory pointed to by \a ptr
+     *  cannot be reused by the application after the call returns.
+     *  The \a event  argument  returns  an event object which can be used to
+     *  query the execution status of  the  write command. When the write
+     *  command has completed, the  memory  pointed  to  by \a ptr can then be
+     *  reused by the application
+     *
+	 *  \param buffer_origin defines the (x, y, z) offset in the memory region
+	 *  associated with buffer. For a 2D rectangle region, the z value given
+	 *  by buffer_origin[2] should be 0. The offset in bytes is computed as
+	 *  buffer_origin[2] * buffer_slice_pitch + buffer_origin[1] * buffer_row_pitch
+	 *  + buffer_origin[0].
+	 *
+	 * \param host_origin defines the (x, y, z) offset in the memory region
+	 *  pointed to by ptr. For a 2D rectangle region, the z value given by
+	 *  host_origin[2] should be 0. The offset in bytes is computed as
+	 *  host_origin[2] * host_slice_pitch + host_origin[1] * host_row_pitch +
+	 *  host_origin[0].
+	 *
+	 * \param region defines the (width, height, depth) in bytes of the 2D or
+	 * 3D rectangle being read or written. For a 2D rectangle copy, the depth
+	 * value given by region[2] should be 1.
+	 *
+	 * \param buffer_row_pitch is the length of each row in bytes to be used
+	 * for the memory region associated with buffer. If buffer_row_pitch is 0,
+	 * buffer_row_pitch is computed as region[0].
+	 *
+	 * \param buffer_slice_pitch is the length of each 2D slice in bytes to be
+	 * used for the memory region associated with buffer. If buffer_slice_pitch
+	 * is 0, buffer_slice_pitch is computed as region[1] * buffer_row_pitch.
+     *
+	 * \param host_row_pitch is the length of each row in bytes to be used for
+	 * the memory region pointed to by ptr. If host_row_pitch is 0, host_row_pitch
+	 * is computed as region[0].
+	 *
+	 * \param host_slice_pitch is the length of each 2D slice in bytes to be
+	 * used for the memory region pointed to by ptr. If host_slice_pitch is 0,
+	 * host_slice_pitch is computed as region[1] * host_row_pitch.
+	 *
+     *  \param events specifies events that need to complete  before  this
+     *  particular command can be executed. If \a events is NULL, its default,
+     *  then this particular command does not wait on any event to  complete.
+     *  The events specified in \a event_wait_list act as synchronization
+     *  points.
+     *
+     *  \param event returns an event object that identifies this particular
+     *  write command and can be used to query or queue a wait for this
+     *  particular command to complete. \a event can be NULL in which case it
+     *  will not be possible for the application to query the status of this
+     *  command or queue a wait for this command to complete.
+     *
+     *  \return CL_SUCCESS if the function is executed successfully. Otherwise
+     *  it returns one of the following errors:
+     *  - CL_INVALID_CONTEXT if the context associated with command_queue and
+	 *  buffer are not the same or if the context associated with command_queue
+	 *  and events in event_wait_list are not the same.
+	 *
+	 *  - CL_INVALID_MEM_OBJECT if buffer is not a valid buffer object.
+	 *
+	 *  - CL_INVALID_VALUE if the region being read or written specified by
+	 *  (buffer_offset,region) is out of bounds.
+	 *
+	 * - CL_INVALID_VALUE if ptr is a NULL value.
+	 *
+	 * - CL_MISALIGNED_SUB_BUFFER_OFFSET if buffer is a sub-buffer object and
+	 *   offset specified when the sub-buffer object is created is not aligned to
+	 *   CL_DEVICE_MEM_BASE_ADDR_ALIGN value for device associated with queue.
+	 *
+	 * - CL_MEM_OBJECT_ALLOCATION_FAILURE if there is a failure to allocate memory
+	 * for data store associated with buffer.
+	 *
+	 * - CL_OUT_OF_HOST_MEMORY if there is a failure to allocate resources
+	 *   required by the OpenCL implementation on the host.
+     *
+     * \note In the case that exceptions are enabled and error value
+     * other than CL_SUCCESS is generated, then cl::Error exception is
+     * generated.
+     */
+    cl_int enqueueReadBufferRect(
+        const Buffer& buffer,
+        cl_bool blocking,
+		const size_t<3>& buffer_offset,
+		const size_t<3>& host_offset,
+		const size_t<3>& region,
+		::size_t buffer_row_pitch,
+		::size_t buffer_slice_pitch,
+		::size_t host_row_pitch,
+		::size_t host_slice_pitch,
+		void *ptr,
+        const VECTOR_CLASS<Event>* events = NULL,
+        Event* event = NULL) const
+    {
+        return detail::errHandler(
+            ::clEnqueueReadBufferRect(
+                object_,
+				buffer(),
+				blocking,
+				(const ::size_t *)buffer_offset,
+				(const ::size_t *)host_offset,
+				(const ::size_t *)region,
+				buffer_row_pitch,
+				buffer_slice_pitch,
+				host_row_pitch,
+				host_slice_pitch,
+                ptr,
+                (events != NULL) ? (cl_uint) events->size() : 0,
+                (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
+                (cl_event*) event),
+                __ENQUEUE_READ_BUFFER_RECT_ERR);
+    }
+
+   /*! \brief Enqueue a command to write a 2D or 3D rectangular region from
+	 *  host memory to a buffer object.
+     *
+     *  \param buffer refers to a valid buffer object.
+     *
+     *  \param blocking indicates if  the  write  operation  is  blocking  or
+     *  non-blocking. If \a blocking is CL_TRUE,  the  OpenCL  implementation
+     *  copies the data referred to by \a ptr and enqueues the write  operation
+     *  in the command-queue. The memory pointed to by \a ptr can  be  reused
+     *  by  the application after the enqueueWriteBufferRect call returns. If
+     *  \a blocking is CL_FALSE, the OpenCL implementation will use \a ptr to
+     *  perform a nonblocking write. As the write is non-blocking the
+     *  implementation can return immediately. The memory pointed to by \a ptr
+     *  cannot be reused by the application after the call returns.
+     *  The \a event  argument  returns  an event object which can be used to
+     *  query the execution status of  the  write command. When the write
+     *  command has completed, the  memory  pointed  to  by \a ptr can then be
+     *  reused by the application
+     *
+	 *  \param buffer_origin defines the (x, y, z) offset in the memory region
+	 *  associated with buffer. For a 2D rectangle region, the z value given
+	 *  by buffer_origin[2] should be 0. The offset in bytes is computed as
+	 *  buffer_origin[2] * buffer_slice_pitch + buffer_origin[1] * buffer_row_pitch
+	 *  + buffer_origin[0].
+	 *
+	 * \param host_origin defines the (x, y, z) offset in the memory region
+	 *  pointed to by ptr. For a 2D rectangle region, the z value given by
+	 *  host_origin[2] should be 0. The offset in bytes is computed as
+	 *  host_origin[2] * host_slice_pitch + host_origin[1] * host_row_pitch +
+	 *  host_origin[0].
+	 *
+	 * \param region defines the (width, height, depth) in bytes of the 2D or
+	 * 3D rectangle being read or written. For a 2D rectangle copy, the depth
+	 * value given by region[2] should be 1.
+	 *
+	 * \param buffer_row_pitch is the length of each row in bytes to be used
+	 * for the memory region associated with buffer. If buffer_row_pitch is 0,
+	 * buffer_row_pitch is computed as region[0].
+	 *
+	 * \param buffer_slice_pitch is the length of each 2D slice in bytes to be
+	 * used for the memory region associated with buffer. If buffer_slice_pitch
+	 * is 0, buffer_slice_pitch is computed as region[1] * buffer_row_pitch.
+     *
+	 * \param host_row_pitch is the length of each row in bytes to be used for
+	 * the memory region pointed to by ptr. If host_row_pitch is 0, host_row_pitch
+	 * is computed as region[0].
+	 *
+	 * \param host_slice_pitch is the length of each 2D slice in bytes to be
+	 * used for the memory region pointed to by ptr. If host_slice_pitch is 0,
+	 * host_slice_pitch is computed as region[1] * host_row_pitch.
+	 *
+     *  \param events specifies events that need to complete  before  this
+     *  particular command can be executed. If \a events is NULL, its default,
+     *  then this particular command does not wait on any event to  complete.
+     *  The events specified in \a event_wait_list act as synchronization
+     *  points.
+     *
+     *  \param event returns an event object that identifies this particular
+     *  write command and can be used to query or queue a wait for this
+     *  particular command to complete. \a event can be NULL in which case it
+     *  will not be possible for the application to query the status of this
+     *  command or queue a wait for this command to complete.
+     *
+     *  \return CL_SUCCESS if the function is executed successfully. Otherwise
+     *  it returns one of the following errors:
+     *  - CL_INVALID_CONTEXT if the context associated with command_queue and
+	 *  buffer are not the same or if the context associated with command_queue
+	 *  and events in event_wait_list are not the same.
+	 *
+	 *  - CL_INVALID_MEM_OBJECT if buffer is not a valid buffer object.
+	 *
+	 *  - CL_INVALID_VALUE if the region being read or written specified by
+	 *  (buffer_offset,region) is out of bounds.
+	 *
+	 * - CL_INVALID_VALUE if ptr is a NULL value.
+	 *
+	 * - CL_MISALIGNED_SUB_BUFFER_OFFSET if buffer is a sub-buffer object and
+	 *   offset specified when the sub-buffer object is created is not aligned to
+	 *   CL_DEVICE_MEM_BASE_ADDR_ALIGN value for device associated with queue.
+	 *
+	 * - CL_MEM_OBJECT_ALLOCATION_FAILURE if there is a failure to allocate memory
+	 * for data store associated with buffer.
+	 *
+	 * - CL_OUT_OF_HOST_MEMORY if there is a failure to allocate resources
+	 *   required by the OpenCL implementation on the host.
+     *
+     * \note In the case that exceptions are enabled and error value
+     * other than CL_SUCCESS is generated, then cl::Error exception is
+     * generated.
+     */
+    cl_int enqueueWriteBufferRect(
+        const Buffer& buffer,
+        cl_bool blocking,
+		const size_t<3>& buffer_offset,
+		const size_t<3>& host_offset,
+		const size_t<3>& region,
+		::size_t buffer_row_pitch,
+		::size_t buffer_slice_pitch,
+		::size_t host_row_pitch,
+		::size_t host_slice_pitch,
+		const void *ptr,
+        const VECTOR_CLASS<Event>* events = NULL,
+        Event* event = NULL) const
+    {
+        return detail::errHandler(
+            ::clEnqueueWriteBufferRect(
+                object_,
+				buffer(),
+				blocking,
+				(const ::size_t *)buffer_offset,
+				(const ::size_t *)host_offset,
+				(const ::size_t *)region,
+				buffer_row_pitch,
+				buffer_slice_pitch,
+				host_row_pitch,
+				host_slice_pitch,
+                ptr,
+                (events != NULL) ? (cl_uint) events->size() : 0,
+                (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
+                (cl_event*) event),
+                __ENQUEUE_WRITE_BUFFER_RECT_ERR);
+    }
+
+   /*! \brief Enqueues a command to copy a 2D or 3D rectangular region from
+     *        a buffer object to a 2D or 3D region of another.
+     *
+     *  \param src is the source buffer object.
+     *
+     *  \param dst is the destination buffer object.
+     *
+     *  \param src_origin defines the (x, y, z) offset in the memory region
+	 *  associated with src_buffer. For a 2D rectangle region, the z value
+	 *  given by src_origin[2] should be 0. The offset in bytes is computed as
+	 *  src_origin[2] * src_slice_pitch + src_origin[1] *
+	 *  src_row_pitch + src_origin[0].
+     *
+     *  \param dst_origin dst_origin defines the (x, y, z) offset in the memory
+	 *  region associated with dst_buffer. For a 2D rectangle region, the z
+	 *  value given by dst_origin[2] should be 0. The offset in bytes is
+	 *  computed as dst_origin[2] * dst_slice_pitch + dst_origin[1] *
+	 *  dst_row_pitch + dst_origin[0].
+     *
+	 *  \param region defines the (width, height, depth) in bytes of the 2D or
+	 *  3D rectangle being copied. For a 2D rectangle, the depth value
+	 *  given by region[2] should be 1.
+     *
+	 * \param src_row_pitch is the length of each row in bytes to be used for
+	 *  the memory region associated with src_buffer. If src_row_pitch is 0,
+	 * src_row_pitch is computed as region[0].
+     *
+	 * \param src_slice_pitch is the length of each 2D slice in bytes to be used
+	 * for the memory region associated with src_buffer. If src_slice_pitch is 0,
+	 * src_slice_pitch is computed as region[1] * src_row_pitch.
+	 *
+	 * \param dst_row_pitch is the length of each row in bytes to be used for the memory
+	 * region associated with dst_buffer. If dst_row_pitch is 0, dst_row_pitch
+	 * is computed as region[0].
+     *
+     * \param dst_slice_pitch is the length of each 2D slice in bytes to be used
+	 * for the memory region associated with dst_buffer. If dst_slice_pitch is 0,
+	 * dst_slice_pitch is computed as region[1] * dst_row_pitch.
+     *
+     *  \param events specifies events that need to complete before this
+     *  particular command can be executed. If \a events is NULL,
+     *  then this particular command does not wait on  any event to complete.
+     *  The events specified in \a event_wait_list act as synchronization
+     *  points.
+     *
+     *  \param event returns an event object that identifies this particular
+     *  copy command and can be used to query or queue a wait for this
+     *  particular command to complete. \a event can be NULL in which case it
+     *  will not be possible for the application to query the status of this
+     *  command or queue and wait for this command to complete. enqueueBarrier
+     *  can be used instead.
+     *
+     *  \return CL_SUCCESS if the function is executed successfully. Otherwise
+     *  it returns one of the following errors:
+     *  - CL_INVALID_CONTEXT if the context associated with command_queue,
+	 *    src_buffer and dst_buffer are not the same or if the context
+	 *    associated with command_queue and events in \a events are not the same.
+	 *
+	 *  - CL_INVALID_MEM_OBJECT if src_buffer and dst_buffer are not valid
+	 *    buffer objects.
+     *
+	 *  - CL_INVALID_VALUE if (src_offset, region) or (dst_offset, region)
+	 *    require accessing elements outside the src_buffer and dst_buffer
+	 *    buffer objects respectively.
+	 *
+	 *  - CL_MEM_COPY_OVERLAP if src_buffer and dst_buffer are the same buffer
+	 *    object and the source and destination regions overlap.
+	 *
+	 *  - CL_MISALIGNED_SUB_BUFFER_OFFSET if src_buffer is a sub-buffer object and
+	 *    offset specified when the sub-buffer object is created is not aligned to
+	 *
+	 *  - CL_DEVICE_MEM_BASE_ADDR_ALIGN value for device associated with queue.
+	 *
+	 *  - CL_MISALIGNED_SUB_BUFFER_OFFSET if dst_buffer is a sub-buffer object
+	 *    and offset specified when the sub-buffer object is created is not
+	 *    aligned to CL_DEVICE_MEM_BASE_ADDR_ALIGN value for device associated
+	 *    with queue.
+	 *
+	 *  - CL_MEM_OBJECT_ALLOCATION_FAILURE if there is a failure to allocate
+	 *    memory for data store associated with src_buffer or dst_buffer.
+	 *
+	 *  - CL_OUT_OF_HOST_MEMORY if there is a failure to allocate resources
+	 *    required by the OpenCL implementation on the host.
+     *
+     * \note In the case that exceptions are enabled and error value
+     * other than CL_SUCCESS is generated, then cl::Error exception is
+     * generated.
+     */
+    cl_int enqueueCopyBufferRect(
+        const Buffer& src,
+        const Buffer& dst,
+		const size_t<3>& src_origin,
+		const size_t<3>& dst_origin,
+		const size_t<3>& region,
+		::size_t src_row_pitch,
+		::size_t src_slice_pitch,
+		::size_t dst_row_pitch,
+		::size_t dst_slice_pitch,
+        const VECTOR_CLASS<Event>* events = NULL,
+        Event* event = NULL) const
+    {
+        return detail::errHandler(
+            ::clEnqueueCopyBufferRect(
+                object_,
+				src(),
+				dst(),
+				(const ::size_t *)src_origin,
+				(const ::size_t *)dst_origin,
+				(const ::size_t *)region,
+				src_row_pitch,
+				src_slice_pitch,
+				dst_row_pitch,
+				dst_slice_pitch,
+                (events != NULL) ? (cl_uint) events->size() : 0,
+                (events != NULL && events->size() > 0) ? (cl_event*) &events->front() : NULL,
+                (cl_event*) event),
+            __ENQEUE_COPY_BUFFER_RECT_ERR);
+    }
+#endif
+
     /*! \brief Enqueue a command to read from a 2D or 3D image object to host
      *         memory
      *
@@ -5360,7 +6005,7 @@ typedef CL_API_ENTRY cl_int (CL_API_CALL *PFN_clEnqueueReleaseD3D10ObjectsKHR)(
      {
 		static PFN_clEnqueueAcquireD3D10ObjectsKHR pfn_clEnqueueAcquireD3D10ObjectsKHR = NULL;
 		__INIT_CL_EXT_FCN_PTR(clEnqueueAcquireD3D10ObjectsKHR);
-		
+
 		 return detail::errHandler(
              pfn_clEnqueueAcquireD3D10ObjectsKHR(
                  object_,
@@ -5513,12 +6158,12 @@ public:
      *  \param local describes the number of work-items that  make  up  a
      *  work-group (also referred to as the size of the work-group) that
      *  will execute the  kernel specified by kernel.
-     * 
+     *
      *  \return A KernelFunctor object that when called with the appropriate
      *  number of arguments, as defined by kernel itself, will be launched
      *  with the corresponding queue, offset, global, and local values.
      *
-     *  \note This constructor is typically not used in favor of the Kernel::bind method. 
+     *  \note This constructor is typically not used in favor of the Kernel::bind method.
      */
     KernelFunctor(
         const Kernel& kernel,
@@ -5593,7 +6238,7 @@ public:
      */
     template<typename A1>
     inline Event operator()(
-        const A1& a1, 
+        const A1& a1,
         const VECTOR_CLASS<Event>* events = NULL);
 
     /*! \brief Enqueue a command to execute a kernel on a device.
@@ -5617,8 +6262,8 @@ public:
      */
     template<class A1, class A2>
     inline Event operator()(
-        const A1& a1, 
-        const A2& a2, 
+        const A1& a1,
+        const A2& a2,
         const VECTOR_CLASS<Event>* events = NULL);
 
     /*! \brief Enqueue a command to execute a kernel on a device.
@@ -5643,8 +6288,8 @@ public:
      */
     template<class A1, class A2, class A3>
     inline Event operator()(
-        const A1& a1, 
-        const A2& a2, 
+        const A1& a1,
+        const A2& a2,
         const A3& a3,
         const VECTOR_CLASS<Event>* events = NULL);
 
@@ -5671,9 +6316,9 @@ public:
      */
     template<class A1, class A2, class A3, class A4>
     inline Event operator()(
-        const A1& a1, 
-        const A2& a2, 
-        const A3& a3, 
+        const A1& a1,
+        const A2& a2,
+        const A3& a3,
         const A4& a4,
         const VECTOR_CLASS<Event>* events = NULL);
 
@@ -5701,10 +6346,10 @@ public:
      */
     template<class A1, class A2, class A3, class A4, class A5>
     inline Event operator()(
-        const A1& a1, 
-        const A2& a2, 
-        const A3& a3, 
-        const A4& a4, 
+        const A1& a1,
+        const A2& a2,
+        const A3& a3,
+        const A4& a4,
         const A5& a5,
         const VECTOR_CLASS<Event>* events = NULL);
 
@@ -5733,11 +6378,11 @@ public:
      */
     template<class A1, class A2, class A3, class A4, class A5, class A6>
     inline Event operator()(
-        const A1& a1, 
-        const A2& a2, 
-        const A3& a3, 
-        const A4& a4, 
-        const A5& a5, 
+        const A1& a1,
+        const A2& a2,
+        const A3& a3,
+        const A4& a4,
+        const A5& a5,
         const A6& a6,
         const VECTOR_CLASS<Event>* events = NULL);
 
@@ -5768,12 +6413,12 @@ public:
     template<class A1, class A2, class A3, class A4,
              class A5, class A6, class A7>
     inline Event operator()(
-        const A1& a1, 
-        const A2& a2, 
-        const A3& a3, 
-        const A4& a4, 
-        const A5& a5, 
-        const A6& a6, 
+        const A1& a1,
+        const A2& a2,
+        const A3& a3,
+        const A4& a4,
+        const A5& a5,
+        const A6& a6,
         const A7& a7,
         const VECTOR_CLASS<Event>* events = NULL);
 
@@ -5805,13 +6450,13 @@ public:
     template<class A1, class A2, class A3, class A4, class A5,
              class A6, class A7, class A8>
     inline Event operator()(
-        const A1& a1, 
-        const A2& a2, 
-        const A3& a3, 
-        const A4& a4, 
-        const A5& a5, 
-        const A6& a6, 
-        const A7& a7, 
+        const A1& a1,
+        const A2& a2,
+        const A3& a3,
+        const A4& a4,
+        const A5& a5,
+        const A6& a6,
+        const A7& a7,
         const A8& a8,
         const VECTOR_CLASS<Event>* events = NULL);
 
@@ -5844,17 +6489,17 @@ public:
     template<class A1, class A2, class A3, class A4, class A5,
              class A6, class A7, class A8, class A9>
     inline Event operator()(
-        const A1& a1, 
-        const A2& a2, 
-        const A3& a3, 
-        const A4& a4, 
-        const A5& a5, 
-        const A6& a6, 
-        const A7& a7, 
-        const A8& a8, 
+        const A1& a1,
+        const A2& a2,
+        const A3& a3,
+        const A4& a4,
+        const A5& a5,
+        const A6& a6,
+        const A7& a7,
+        const A8& a8,
         const A9& a9,
         const VECTOR_CLASS<Event>* events = NULL);
-    
+
     /*! \brief Enqueue a command to execute a kernel on a device.
      *
      *  \param a1 is used argument 0 for the kernel call.
@@ -5885,18 +6530,18 @@ public:
     template<class A1, class A2, class A3, class A4, class A5,
              class A6, class A7, class A8, class A9, class A10>
     inline Event operator()(
-        const A1& a1, 
-        const A2& a2, 
-        const A3& a3, 
-        const A4& a4, 
-        const A5& a5, 
+        const A1& a1,
+        const A2& a2,
+        const A3& a3,
+        const A4& a4,
+        const A5& a5,
         const A6& a6,
-        const A7& a7, 
-        const A8& a8, 
-        const A9& a9, 
+        const A7& a7,
+        const A8& a8,
+        const A9& a9,
         const A10& a10,
         const VECTOR_CLASS<Event>* events = NULL);
-    
+
     /*! \brief Enqueue a command to execute a kernel on a device.
      *
      *  \param a1 is used argument 0 for the kernel call.
@@ -5929,19 +6574,19 @@ public:
              class A6, class A7, class A8, class A9, class A10,
              class A11>
     inline Event operator()(
-        const A1& a1, 
-        const A2& a2, 
-        const A3& a3, 
-        const A4& a4, 
-        const A5& a5, 
+        const A1& a1,
+        const A2& a2,
+        const A3& a3,
+        const A4& a4,
+        const A5& a5,
         const A6& a6,
-        const A7& a7, 
-        const A8& a8, 
-        const A9& a9, 
-        const A10& a10, 
+        const A7& a7,
+        const A8& a8,
+        const A9& a9,
+        const A10& a10,
         const A11& a11,
         const VECTOR_CLASS<Event>* events = NULL);
-    
+
     /*! \brief Enqueue a command to execute a kernel on a device.
      *
      *  \param a1 is used argument 0 for the kernel call.
@@ -5975,20 +6620,20 @@ public:
              class A6, class A7, class A8, class A9, class A10,
              class A11, class A12>
     inline Event operator()(
-        const A1& a1, 
-        const A2& a2, 
-        const A3& a3, 
-        const A4& a4, 
-        const A5& a5, 
+        const A1& a1,
+        const A2& a2,
+        const A3& a3,
+        const A4& a4,
+        const A5& a5,
         const A6& a6,
-        const A7& a7, 
-        const A8& a8, 
-        const A9& a9, 
-        const A10& a10, 
-        const A11& a11, 
+        const A7& a7,
+        const A8& a8,
+        const A9& a9,
+        const A10& a10,
+        const A11& a11,
         const A12& a12,
         const VECTOR_CLASS<Event>* events = NULL);
-    
+
     /*! \brief Enqueue a command to execute a kernel on a device.
      *
      *  \param a1 is used argument 0 for the kernel call.
@@ -6023,21 +6668,21 @@ public:
              class A6, class A7, class A8, class A9, class A10,
              class A11, class A12, class A13>
     inline Event operator()(
-        const A1& a1, 
-        const A2& a2, 
-        const A3& a3, 
-        const A4& a4, 
-        const A5& a5, 
+        const A1& a1,
+        const A2& a2,
+        const A3& a3,
+        const A4& a4,
+        const A5& a5,
         const A6& a6,
-        const A7& a7, 
-        const A8& a8, 
-        const A9& a9, 
-        const A10& a10, 
-        const A11& a11, 
-        const A12& a12, 
+        const A7& a7,
+        const A8& a8,
+        const A9& a9,
+        const A10& a10,
+        const A11& a11,
+        const A12& a12,
         const A13& a13,
         const VECTOR_CLASS<Event>* events = NULL);
-    
+
     /*! \brief Enqueue a command to execute a kernel on a device.
      *
      *  \param a1 is used argument 0 for the kernel call.
@@ -6073,40 +6718,40 @@ public:
              class A6, class A7, class A8, class A9, class A10,
              class A11, class A12, class A13, class A14>
     inline Event operator()(
-        const A1& a1, 
-        const A2& a2, 
-        const A3& a3, 
-        const A4& a4, 
-        const A5& a5, 
+        const A1& a1,
+        const A2& a2,
+        const A3& a3,
+        const A4& a4,
+        const A5& a5,
         const A6& a6,
-        const A7& a7, 
-        const A8& a8, 
-        const A9& a9, 
-        const A10& a10, 
+        const A7& a7,
+        const A8& a8,
+        const A9& a9,
+        const A10& a10,
         const A11& a11,
-        const A12& a12, 
-        const A13& a13, 
+        const A12& a12,
+        const A13& a13,
         const A14& a14,
         const VECTOR_CLASS<Event>* events = NULL);
-    
+
     template<class A1, class A2, class A3, class A4, class A5,
              class A6, class A7, class A8, class A9, class A10,
              class A11, class A12, class A13, class A14, class A15>
     inline Event operator()(
-        const A1& a1, 
-        const A2& a2, 
-        const A3& a3, 
-        const A4& a4, 
-        const A5& a5, 
+        const A1& a1,
+        const A2& a2,
+        const A3& a3,
+        const A4& a4,
+        const A5& a5,
         const A6& a6,
-        const A7& a7, 
-        const A8& a8, 
-        const A9& a9, 
-        const A10& a10, 
+        const A7& a7,
+        const A8& a8,
+        const A9& a9,
+        const A10& a10,
         const A11& a11,
-        const A12& a12, 
-        const A13& a13, 
-        const A14& a14, 
+        const A12& a12,
+        const A13& a13,
+        const A14& a14,
         const A15& a15,
         const VECTOR_CLASS<Event>* events = NULL);
 };
@@ -6133,13 +6778,13 @@ inline KernelFunctor& KernelFunctor::operator=(const KernelFunctor& rhs)
     if (this == &rhs) {
         return *this;
     }
-    
+
     kernel_ = rhs.kernel_;
     queue_  = rhs.queue_;
     offset_ = rhs.offset_;
     global_ = rhs.global_;
     local_  = rhs.local_;
-    
+
     return *this;
 }
 
@@ -6169,7 +6814,7 @@ Event KernelFunctor::operator()(const VECTOR_CLASS<Event>* events)
 
 template<typename A1>
 Event KernelFunctor::operator()(
-	const A1& a1, 
+	const A1& a1,
 	const VECTOR_CLASS<Event>* events)
 {
     Event event;
@@ -6189,7 +6834,7 @@ Event KernelFunctor::operator()(
 
 template<typename A1, typename A2>
 Event KernelFunctor::operator()(
-	const A1& a1, 
+	const A1& a1,
 	const A2& a2,
     const VECTOR_CLASS<Event>* events)
 {
@@ -6211,8 +6856,8 @@ Event KernelFunctor::operator()(
 
 template<typename A1, typename A2, typename A3>
 Event KernelFunctor::operator()(
-	const A1& a1, 
-	const A2& a2, 
+	const A1& a1,
+	const A2& a2,
 	const A3& a3,
     const VECTOR_CLASS<Event>* events)
 {
@@ -6235,9 +6880,9 @@ Event KernelFunctor::operator()(
 
 template<typename A1, typename A2, typename A3, typename A4>
 Event KernelFunctor::operator()(
-    const A1& a1, 
-	const A2& a2, 
-	const A3& a3, 
+    const A1& a1,
+	const A2& a2,
+	const A3& a3,
 	const A4& a4,
     const VECTOR_CLASS<Event>* events)
 {
@@ -6261,10 +6906,10 @@ Event KernelFunctor::operator()(
 
 template<typename A1, typename A2, typename A3, typename A4, typename A5>
 Event KernelFunctor::operator()(
-    const A1& a1, 
-	const A2& a2, 
-	const A3& a3, 
-	const A4& a4, 
+    const A1& a1,
+	const A2& a2,
+	const A3& a3,
+	const A4& a4,
 	const A5& a5,
     const VECTOR_CLASS<Event>* events)
 {
@@ -6290,11 +6935,11 @@ Event KernelFunctor::operator()(
 template<typename A1, typename A2, typename A3, typename A4, typename A5,
          typename A6>
 Event KernelFunctor::operator()(
-    const A1& a1, 
-	const A2& a2, 
-	const A3& a3, 
-	const A4& a4, 
-	const A5& a5, 
+    const A1& a1,
+	const A2& a2,
+	const A3& a3,
+	const A4& a4,
+	const A5& a5,
 	const A6& a6,
     const VECTOR_CLASS<Event>* events)
 {
@@ -6321,12 +6966,12 @@ Event KernelFunctor::operator()(
 template<typename A1, typename A2, typename A3, typename A4,
          typename A5, typename A6, typename A7>
 Event KernelFunctor::operator()(
-	const A1& a1, 
-	const A2& a2, 
-	const A3& a3, 
-	const A4& a4, 
-	const A5& a5, 
-	const A6& a6, 
+	const A1& a1,
+	const A2& a2,
+	const A3& a3,
+	const A4& a4,
+	const A5& a5,
+	const A6& a6,
 	const A7& a7,
     const VECTOR_CLASS<Event>* events)
 {
@@ -6354,13 +6999,13 @@ Event KernelFunctor::operator()(
 template<typename A1, typename A2, typename A3, typename A4, typename A5,
          typename A6, typename A7, typename A8>
 Event KernelFunctor::operator()(
-	const A1& a1, 
-	const A2& a2, 
-	const A3& a3, 
-	const A4& a4, 
-	const A5& a5, 
-	const A6& a6, 
-	const A7& a7, 
+	const A1& a1,
+	const A2& a2,
+	const A3& a3,
+	const A4& a4,
+	const A5& a5,
+	const A6& a6,
+	const A7& a7,
 	const A8& a8,
     const VECTOR_CLASS<Event>* events)
 {
@@ -6389,14 +7034,14 @@ Event KernelFunctor::operator()(
 template<typename A1, typename A2, typename A3, typename A4, typename A5,
          typename A6, typename A7, typename A8, typename A9>
 Event KernelFunctor::operator()(
-	const A1& a1, 
-	const A2& a2, 
-	const A3& a3, 
-	const A4& a4, 
+	const A1& a1,
+	const A2& a2,
+	const A3& a3,
+	const A4& a4,
 	const A5& a5,
-    const A6& a6, 
-	const A7& a7, 
-	const A8& a8, 
+    const A6& a6,
+	const A7& a7,
+	const A8& a8,
 	const A9& a9,
     const VECTOR_CLASS<Event>* events)
 {
@@ -6426,15 +7071,15 @@ Event KernelFunctor::operator()(
 template<typename A1, typename A2, typename A3, typename A4, typename A5,
         typename A6, typename A7, typename A8, typename A9, typename A10>
 Event KernelFunctor::operator()(
-    const A1& a1, 
-	const A2& a2, 
-	const A3& a3, 
-	const A4& a4, 
-	const A5& a5, 
+    const A1& a1,
+	const A2& a2,
+	const A3& a3,
+	const A4& a4,
+	const A5& a5,
 	const A6& a6,
-    const A7& a7, 
-	const A8& a8, 
-	const A9& a9, 
+    const A7& a7,
+	const A8& a8,
+	const A9& a9,
 	const A10& a10,
     const VECTOR_CLASS<Event>* events)
 {
@@ -6466,16 +7111,16 @@ template<class A1, class A2, class A3, class A4, class A5,
              class A6, class A7, class A8, class A9, class A10,
 			 class A11>
 Event KernelFunctor::operator()(
-	const A1& a1, 
-	const A2& a2, 
-	const A3& a3, 
-	const A4& a4, 
-	const A5& a5, 
+	const A1& a1,
+	const A2& a2,
+	const A3& a3,
+	const A4& a4,
+	const A5& a5,
 	const A6& a6,
-    const A7& a7, 
-	const A8& a8, 
-	const A9& a9, 
-	const A10& a10, 
+    const A7& a7,
+	const A8& a8,
+	const A9& a9,
+	const A10& a10,
 	const A11& a11,
     const VECTOR_CLASS<Event>* events)
 {
@@ -6508,17 +7153,17 @@ template<class A1, class A2, class A3, class A4, class A5,
             class A6, class A7, class A8, class A9, class A10,
 			 class A11, class A12>
 Event KernelFunctor::operator()(
-    const A1& a1, 
-	const A2& a2, 
-	const A3& a3, 
-	const A4& a4, 
-	const A5& a5, 
+    const A1& a1,
+	const A2& a2,
+	const A3& a3,
+	const A4& a4,
+	const A5& a5,
 	const A6& a6,
-    const A7& a7, 
-	const A8& a8, 
-	const A9& a9, 
-	const A10& a10, 
-	const A11& a11, 
+    const A7& a7,
+	const A8& a8,
+	const A9& a9,
+	const A10& a10,
+	const A11& a11,
 	const A12& a12,
     const VECTOR_CLASS<Event>* events)
 {
@@ -6552,18 +7197,18 @@ template<class A1, class A2, class A3, class A4, class A5,
              class A6, class A7, class A8, class A9, class A10,
 			 class A11, class A12, class A13>
 Event KernelFunctor::operator()(
-    const A1& a1, 
-	const A2& a2, 
-	const A3& a3, 
-	const A4& a4, 
-	const A5& a5, 
+    const A1& a1,
+	const A2& a2,
+	const A3& a3,
+	const A4& a4,
+	const A5& a5,
 	const A6& a6,
-    const A7& a7, 
-	const A8& a8, 
-	const A9& a9, 
-	const A10& a10, 
-	const A11& a11, 
-	const A12& a12, 
+    const A7& a7,
+	const A8& a8,
+	const A9& a9,
+	const A10& a10,
+	const A11& a11,
+	const A12& a12,
 	const A13& a13,
     const VECTOR_CLASS<Event>* events)
 {
@@ -6598,19 +7243,19 @@ template<class A1, class A2, class A3, class A4, class A5,
          class A6, class A7, class A8, class A9, class A10,
 		 class A11, class A12, class A13, class A14>
 Event KernelFunctor::operator()(
-    const A1& a1, 
-	const A2& a2, 
-	const A3& a3, 
-	const A4& a4, 
-	const A5& a5, 
+    const A1& a1,
+	const A2& a2,
+	const A3& a3,
+	const A4& a4,
+	const A5& a5,
 	const A6& a6,
-    const A7& a7, 
-	const A8& a8, 
-	const A9& a9, 
-	const A10& a10, 
+    const A7& a7,
+	const A8& a8,
+	const A9& a9,
+	const A10& a10,
 	const A11& a11,
-	const A12& a12, 
-	const A13& a13, 
+	const A12& a12,
+	const A13& a13,
 	const A14& a14,
     const VECTOR_CLASS<Event>* events)
 {
@@ -6646,20 +7291,20 @@ template<class A1, class A2, class A3, class A4, class A5,
          class A6, class A7, class A8, class A9, class A10,
 		 class A11, class A12, class A13, class A14, class A15>
 Event KernelFunctor::operator()(
-    const A1& a1, 
-	const A2& a2, 
-	const A3& a3, 
-	const A4& a4, 
-	const A5& a5, 
+    const A1& a1,
+	const A2& a2,
+	const A3& a3,
+	const A4& a4,
+	const A5& a5,
 	const A6& a6,
-    const A7& a7, 
-	const A8& a8, 
-	const A9& a9, 
-	const A10& a10, 
+    const A7& a7,
+	const A8& a8,
+	const A9& a9,
+	const A10& a10,
 	const A11& a11,
-	const A12& a12, 
-	const A13& a13, 
-	const A14& a14, 
+	const A12& a12,
+	const A13& a13,
+	const A14& a14,
 	const A15& a15,
     const VECTOR_CLASS<Event>* events)
 {
