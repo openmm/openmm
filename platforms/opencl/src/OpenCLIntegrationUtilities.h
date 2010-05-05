@@ -29,6 +29,7 @@
 
 #include "openmm/System.h"
 #include "OpenCLContext.h"
+#include "openmm/internal/windowsExport.h"
 
 namespace OpenMM {
 

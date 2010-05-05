@@ -1,7 +1,7 @@
 #
 # Include OpenCL related files.
 #
-INCLUDE(${CMAKE_CURRENT_SOURCE_DIR}/../FindOpenCL.cmake)
+# INCLUDE(${CMAKE_CURRENT_SOURCE_DIR}/../FindOpenCL.cmake)
 INCLUDE_DIRECTORIES(${OPENCL_INCLUDE_DIR})
 
 FILE(GLOB OPENCL_KERNELS ${CL_SOURCE_DIR}/kernels/*.cl)
