@@ -300,7 +300,7 @@ static CustomGBForce* createCustomGBVI( double solventDielectric, double soluteD
 
     // nonpolar term + polar self energy
 
-    customGbviForce->addEnergyTerm("-138.935485*((1.0/soluteDielectric)-(1.0/solventDielectric))*((gamma*(radius/B)^3)+(0.5*q^2/B))", CustomGBForce::SingleParticle);
+    customGbviForce->addEnergyTerm("(-138.935485*0.5*((1.0/soluteDielectric)-(1.0/solventDielectric))*q^2/B)-((1.0/soluteDielectric)-(1.0/solventDielectric))*((gamma*(radius/B)^3))", CustomGBForce::SingleParticle);
 
     // polar pair energy
 
