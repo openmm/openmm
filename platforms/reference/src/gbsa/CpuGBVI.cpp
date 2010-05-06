@@ -521,7 +521,7 @@ partialCharges[atomJ]*Sgb( t )/deltaR[ReferenceForce::RIndex];
       energy += two*partialChargeI*atomIEnergy;
    }
    energy *= preFactor;
-   energy -= 138.935485*cavityEnergy;
+   energy -= cavityEnergy;
 
 #if( GBVIDebug == 1 )
    (void) fprintf( logFile, "ElectricConstant=%.4e Tau=%.4e e=%.5e eOut=%.5e\n", preFactor, gbviParameters->getTau(), energy, gbviParameters->getTau()*energy );
@@ -743,7 +743,7 @@ if( atomI == 0 ){
       // partial of cavity term wrt Born radius
      
       RealOpenMM  ratio   = (atomicRadii[atomI]/bornRadii[atomI]);
-      bornForces[atomI]  += (stupidFactor*138.935485*gammaParameters[atomI]*ratio*ratio*ratio)/bornRadii[atomI]; 
+      bornForces[atomI]  += (stupidFactor*gammaParameters[atomI]*ratio*ratio*ratio)/bornRadii[atomI]; 
 
       RealOpenMM b2       = bornRadii[atomI]*bornRadii[atomI];
       bornForces[atomI]  *= oneThird*b2*b2;
