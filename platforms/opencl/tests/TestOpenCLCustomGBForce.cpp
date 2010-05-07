@@ -210,6 +210,7 @@ void testPositionDependence() {
     force->addComputedValue("a", "r", CustomGBForce::ParticlePair);
     force->addComputedValue("b", "a+y", CustomGBForce::SingleParticle);
     force->addEnergyTerm("b*z", CustomGBForce::SingleParticle);
+    force->addEnergyTerm("b1+b2", CustomGBForce::ParticlePair); // = 2*r+y1+y2
     force->addParticle(vector<double>());
     force->addParticle(vector<double>());
     system.addForce(force);
@@ -225,15 +226,15 @@ void testPositionDependence() {
         const vector<Vec3>& forces = state.getForces();
         Vec3 delta = positions[0]-positions[1];
         double r = sqrt(delta.dot(delta));
-        double energy = 0;
+        double energy = 2*r+positions[0][1]+positions[1][1];
         for (int j = 0; j < 2; j++)
             energy += positions[j][2]*(r+positions[j][1]);
-        Vec3 force1(-positions[0][2]*delta[0]/r-positions[1][2]*delta[0]/r,
-                    -positions[0][2]*(delta[1]/r+1)-positions[1][2]*delta[1]/r,
-                    -positions[0][2]*delta[2]/r-(r+positions[0][1])-positions[1][2]*delta[2]/r);
-        Vec3 force2(positions[0][2]*delta[0]/r+positions[1][2]*delta[0]/r,
-                    positions[0][2]*delta[1]/r+positions[1][2]*(delta[1]/r-1),
-                    positions[0][2]*delta[2]/r+positions[1][2]*delta[2]/r-(r+positions[1][1]));
+        Vec3 force1(-(1+positions[0][2])*delta[0]/r-(1+positions[1][2])*delta[0]/r,
+                    -(1+positions[0][2])*delta[1]/r-positions[0][2]-(1+positions[1][2])*delta[1]/r-1,
+                    -(1+positions[0][2])*delta[2]/r-(r+positions[0][1])-(1+positions[1][2])*delta[2]/r);
+        Vec3 force2((1+positions[0][2])*delta[0]/r+(1+positions[1][2])*delta[0]/r,
+                    (1+positions[0][2])*delta[1]/r+(1+positions[1][2])*delta[1]/r-positions[1][2]-1,
+                    (1+positions[0][2])*delta[2]/r+(1+positions[1][2])*delta[2]/r-(r+positions[1][1]));
         ASSERT_EQUAL_VEC(force1, forces[0], 1e-4);
         ASSERT_EQUAL_VEC(force2, forces[1], 1e-4);
         ASSERT_EQUAL_TOL(energy, state.getPotentialEnergy(), 0.02);
