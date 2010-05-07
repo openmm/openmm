@@ -123,7 +123,6 @@ ReferenceCustomGBIxn::~ReferenceCustomGBIxn( ){
 
   void ReferenceCustomGBIxn::setPeriodic( RealOpenMM* boxSize ) {
 
-    assert(cutoff);
     assert(boxSize[0] >= 2.0*cutoffDistance);
     assert(boxSize[1] >= 2.0*cutoffDistance);
     assert(boxSize[2] >= 2.0*cutoffDistance);

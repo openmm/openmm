@@ -435,7 +435,7 @@ private:
     int numParticles, num14;
     int **exclusionArray, **bonded14IndexArray;
     RealOpenMM **particleParamArray, **bonded14ParamArray;
-    RealOpenMM nonbondedCutoff, periodicBoxSize[3], rfDielectric, ewaldAlpha;
+    RealOpenMM nonbondedCutoff, rfDielectric, ewaldAlpha;
     int kmax[3], gridSize[3];
     std::vector<std::set<int> > exclusions;
     NonbondedMethod nonbondedMethod;
@@ -513,6 +513,7 @@ public:
 private:
     CpuObc* obc;
     std::vector<RealOpenMM> charges;
+    bool isPeriodic;
 };
 
 /**
@@ -547,6 +548,7 @@ public:
 private:
     CpuGBVI * gbvi;
     std::vector<RealOpenMM> charges;
+    bool isPeriodic;
 };
 
 /**
@@ -579,8 +581,9 @@ public:
     double executeEnergy(ContextImpl& context);
 private:
     int numParticles;
+    bool isPeriodic;
     RealOpenMM **particleParamArray;
-    RealOpenMM nonbondedCutoff, periodicBoxSize[3];
+    RealOpenMM nonbondedCutoff;
     std::vector<std::set<int> > exclusions;
     std::vector<std::string> particleParameterNames, globalParameterNames, valueNames;
     std::vector<Lepton::ExpressionProgram> valueExpressions;
@@ -661,9 +664,10 @@ public:
     double executeEnergy(ContextImpl& context);
 private:
     int numDonors, numAcceptors, numParticles;
+    bool isPeriodic;
     int **exclusionArray;
     RealOpenMM **donorParamArray, **acceptorParamArray;
-    RealOpenMM nonbondedCutoff, periodicBoxSize[3];
+    RealOpenMM nonbondedCutoff;
     ReferenceCustomHbondIxn* ixn;
     std::vector<std::set<int> > exclusions;
     std::vector<std::string> globalParameterNames;

@@ -91,7 +91,7 @@ void testCutoffAndPeriodic() {
     const double boxSize = 10.0;
     nonbonded->setCutoffDistance(cutoffDistance);
     gbsa->setCutoffDistance(cutoffDistance);
-    system.setPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
     system.addForce(gbsa);
     system.addForce(nonbonded);
     vector<Vec3> positions(2);
@@ -152,7 +152,7 @@ void testForce(int numParticles, NonbondedForce::NonbondedMethod method, GBSAOBC
     int grid = (int) floor(0.5+pow(numParticles, 1.0/3.0));
     if (method == NonbondedForce::CutoffPeriodic) {
         double boxSize = (grid+1)*1.1;
-        system.setPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+        system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
     }
     system.addForce(gbsa);
     system.addForce(nonbonded);

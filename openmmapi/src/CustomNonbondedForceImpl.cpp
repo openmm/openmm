@@ -97,7 +97,7 @@ void CustomNonbondedForceImpl::initialize(ContextImpl& context) {
     }
     if (owner.getNonbondedMethod() == CustomNonbondedForce::CutoffPeriodic) {
         Vec3 boxVectors[3];
-        system.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+        system.getDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
         double cutoff = owner.getCutoffDistance();
         if (cutoff > 0.5*boxVectors[0][0] || cutoff > 0.5*boxVectors[1][1] || cutoff > 0.5*boxVectors[2][2])
             throw OpenMMException("CustomNonbondedForce: The cutoff distance cannot be greater than half the periodic box size.");

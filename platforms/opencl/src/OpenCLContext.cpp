@@ -408,7 +408,6 @@ void OpenCLContext::reorderAtoms() {
 
     posq->download();
     velm->download();
-    mm_float4 periodicBoxSize = nonbonded->getPeriodicBoxSize();
     float minx = posq->get(0).x, maxx = posq->get(0).x;
     float miny = posq->get(0).y, maxy = posq->get(0).y;
     float minz = posq->get(0).z, maxz = posq->get(0).z;

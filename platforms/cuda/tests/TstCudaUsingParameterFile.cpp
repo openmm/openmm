@@ -3848,9 +3848,9 @@ Integrator* readParameterFile( const std::string& inputParameterFile, MapStringI
                   boxIndex++;
                }
             }
-            system.setPeriodicBoxVectors( box[0], box[1], box[2] );
+            system.setDefaultPeriodicBoxVectors( box[0], box[1], box[2] );
             Vec3 a, b, c;
-            system.getPeriodicBoxVectors( a, b, c);
+            system.getDefaultPeriodicBoxVectors( a, b, c);
             if( log ){
                (void) fprintf( log, "Box [%14.7f %14.7f %14.7f]\n    [%14.7f %14.7f %14.7f]\n    [%14.7f %14.7f %14.7f]\n",
                                a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2] );

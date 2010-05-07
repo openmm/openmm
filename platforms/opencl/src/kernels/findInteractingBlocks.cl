@@ -3,15 +3,15 @@
 /**
  * Find a bounding box for the atoms in each block.
  */
-__kernel void findBlockBounds(int numAtoms, float4 periodicBoxSize, __global float4* posq, __global float4* blockCenter, __global float4* blockBoundingBox) {
+__kernel void findBlockBounds(int numAtoms, float4 periodicBoxSize, float4 invPeriodicBoxSize, __global float4* posq, __global float4* blockCenter, __global float4* blockBoundingBox) {
     int index = get_global_id(0);
     int base = index*TILE_SIZE;
     while (base < numAtoms) {
         float4 pos = posq[base];
 #ifdef USE_PERIODIC
-        pos.x -= floor(pos.x/periodicBoxSize.x)*periodicBoxSize.x;
-        pos.y -= floor(pos.y/periodicBoxSize.y)*periodicBoxSize.y;
-        pos.z -= floor(pos.z/periodicBoxSize.z)*periodicBoxSize.z;
+        pos.x -= floor(pos.x*invPeriodicBoxSize.x)*periodicBoxSize.x;
+        pos.y -= floor(pos.y*invPeriodicBoxSize.y)*periodicBoxSize.y;
+        pos.z -= floor(pos.z*invPeriodicBoxSize.z)*periodicBoxSize.z;
         float4 firstPoint = pos;
 #endif
         float4 minPos = pos;
@@ -20,9 +20,9 @@ __kernel void findBlockBounds(int numAtoms, float4 periodicBoxSize, __global flo
         for (int i = base+1; i < last; i++) {
             pos = posq[i];
 #ifdef USE_PERIODIC
-            pos.x -= floor((pos.x-firstPoint.x)/periodicBoxSize.x+0.5f)*periodicBoxSize.x;
-            pos.y -= floor((pos.y-firstPoint.y)/periodicBoxSize.y+0.5f)*periodicBoxSize.y;
-            pos.z -= floor((pos.z-firstPoint.z)/periodicBoxSize.z+0.5f)*periodicBoxSize.z;
+            pos.x -= floor((pos.x-firstPoint.x)*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
+            pos.y -= floor((pos.y-firstPoint.y)*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
+            pos.z -= floor((pos.z-firstPoint.z)*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
             minPos = min(minPos, pos);
             maxPos = max(maxPos, pos);
@@ -38,7 +38,7 @@ __kernel void findBlockBounds(int numAtoms, float4 periodicBoxSize, __global flo
  * Compare the bounding boxes for each pair of blocks.  If they are sufficiently far apart,
  * mark them as non-interacting.
  */
-__kernel void findBlocksWithInteractions(int numTiles, float cutoffSquared, float4 periodicBoxSize, __global unsigned int* tiles, __global float4* blockCenter,
+__kernel void findBlocksWithInteractions(int numTiles, float cutoffSquared, float4 periodicBoxSize, float4 invPeriodicBoxSize, __global unsigned int* tiles, __global float4* blockCenter,
         __global float4* blockBoundingBox, __global unsigned int* interactionFlag) {
     int index = get_global_id(0);
     while (index < numTiles) {
@@ -52,9 +52,9 @@ __kernel void findBlocksWithInteractions(int numTiles, float cutoffSquared, floa
 
         float4 delta = blockCenter[x]-blockCenter[y];
 #ifdef USE_PERIODIC
-        delta.x -= floor(delta.x/periodicBoxSize.x+0.5f)*periodicBoxSize.x;
-        delta.y -= floor(delta.y/periodicBoxSize.y+0.5f)*periodicBoxSize.y;
-        delta.z -= floor(delta.z/periodicBoxSize.z+0.5f)*periodicBoxSize.z;
+        delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
+        delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
+        delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
         float4 boxSizea = blockBoundingBox[x];
         float4 boxSizeb = blockBoundingBox[y];
@@ -70,7 +70,7 @@ __kernel void findBlocksWithInteractions(int numTiles, float cutoffSquared, floa
  * Compare each atom in one block to the bounding box of another block, and set
  * flags for which ones are interacting.
  */
-__kernel void findInteractionsWithinBlocks(float cutoffSquared, float4 periodicBoxSize, __global float4* posq, __global unsigned int* tiles, __global float4* blockCenter,
+__kernel void findInteractionsWithinBlocks(float cutoffSquared, float4 periodicBoxSize, float4 invPeriodicBoxSize, __global float4* posq, __global unsigned int* tiles, __global float4* blockCenter,
             __global float4* blockBoundingBox, __global unsigned int* interactionFlags, __global unsigned int* interactionCount, __local unsigned int* flags) {
     unsigned int totalWarps = get_global_size(0)/TILE_SIZE;
     unsigned int warp = get_global_id(0)/TILE_SIZE;
@@ -105,9 +105,9 @@ __kernel void findInteractionsWithinBlocks(float cutoffSquared, float4 periodicB
 
             float4 delta = apos-center;
 #ifdef USE_PERIODIC
-            delta.x -= floor(delta.x/periodicBoxSize.x+0.5f)*periodicBoxSize.x;
-            delta.y -= floor(delta.y/periodicBoxSize.y+0.5f)*periodicBoxSize.y;
-            delta.z -= floor(delta.z/periodicBoxSize.z+0.5f)*periodicBoxSize.z;
+            delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
+            delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
+            delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
             delta = max((float4) 0.0f, fabs(delta)-boxSize);
             int thread = get_local_id(0);

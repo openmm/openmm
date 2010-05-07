@@ -63,13 +63,13 @@ void System::setConstraintParameters(int index, int particle1, int particle2, do
     constraints[index].distance = distance;
 }
 
-void System::getPeriodicBoxVectors(Vec3& a, Vec3& b, Vec3& c) const {
+void System::getDefaultPeriodicBoxVectors(Vec3& a, Vec3& b, Vec3& c) const {
     a = periodicBoxVectors[0];
     b = periodicBoxVectors[1];
     c = periodicBoxVectors[2];
 }
 
-void System::setPeriodicBoxVectors(Vec3 a, Vec3 b, Vec3 c) {
+void System::setDefaultPeriodicBoxVectors(Vec3 a, Vec3 b, Vec3 c) {
     if (a[1] != 0.0 || a[2] != 0.0)
         throw OpenMMException("First periodic box vector must be parallel to x.");
     if (b[0] != 0.0 || b[2] != 0.0)

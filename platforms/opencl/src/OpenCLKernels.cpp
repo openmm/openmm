@@ -70,6 +70,9 @@ void OpenCLCalcForcesAndEnergyKernel::initialize(const System& system) {
 }
 
 void OpenCLCalcForcesAndEnergyKernel::beginForceComputation(ContextImpl& context) {
+    Vec3 boxVectors[3];
+    context.getOwner().getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+    cl.setPeriodicBoxSize(boxVectors[0][0], boxVectors[1][1], boxVectors[2][2]);
     if (cl.getNonbondedUtilities().getUseCutoff() && cl.getComputeForceCount()%100 == 0)
         cl.reorderAtoms();
     cl.setComputeForceCount(cl.getComputeForceCount()+1);
@@ -83,6 +86,9 @@ void OpenCLCalcForcesAndEnergyKernel::finishForceComputation(ContextImpl& contex
 }
 
 void OpenCLCalcForcesAndEnergyKernel::beginEnergyComputation(ContextImpl& context) {
+    Vec3 boxVectors[3];
+    context.getOwner().getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+    cl.setPeriodicBoxSize(boxVectors[0][0], boxVectors[1][1], boxVectors[2][2]);
     if (cl.getNonbondedUtilities().getUseCutoff() && cl.getComputeForceCount()%100 == 0)
         cl.reorderAtoms();
     cl.setComputeForceCount(cl.getComputeForceCount()+1);
@@ -117,7 +123,7 @@ void OpenCLUpdateStateDataKernel::getPositions(ContextImpl& context, std::vector
     OpenCLArray<cl_int>& order = cl.getAtomIndex();
     int numParticles = context.getSystem().getNumParticles();
     positions.resize(numParticles);
-    mm_float4 periodicBoxSize = cl.getNonbondedUtilities().getPeriodicBoxSize();
+    mm_float4 periodicBoxSize = cl.getPeriodicBoxSize();
     for (int i = 0; i < numParticles; ++i) {
         mm_float4 pos = posq[i];
         mm_int4 offset = cl.getPosCellOffsets()[i];
@@ -1076,8 +1082,6 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     sigmaEpsilon->upload(sigmaEpsilonVector);
     bool useCutoff = (force.getNonbondedMethod() != NonbondedForce::NoCutoff);
     bool usePeriodic = (force.getNonbondedMethod() != NonbondedForce::NoCutoff && force.getNonbondedMethod() != NonbondedForce::CutoffNonPeriodic);
-    Vec3 boxVectors[3];
-    system.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
     map<string, string> defines;
     defines["HAS_COULOMB"] = (hasCoulomb ? "1" : "0");
     defines["HAS_LENNARD_JONES"] = (hasLJ ? "1" : "0");
@@ -1107,10 +1111,6 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         replacements["KMAX_X"] = intToString(kmaxx);
         replacements["KMAX_Y"] = intToString(kmaxy);
         replacements["KMAX_Z"] = intToString(kmaxz);
-        replacements["RECIPROCAL_BOX_SIZE_X"] = doubleToString(2.0*M_PI/boxVectors[0][0]);
-        replacements["RECIPROCAL_BOX_SIZE_Y"] = doubleToString(2.0*M_PI/boxVectors[1][1]);
-        replacements["RECIPROCAL_BOX_SIZE_Z"] = doubleToString(2.0*M_PI/boxVectors[2][2]);
-        replacements["RECIPROCAL_COEFFICIENT"] = doubleToString(ONE_4PI_EPS0*4*M_PI/(boxVectors[0][0]*boxVectors[1][1]*boxVectors[2][2]));
         replacements["EXP_COEFFICIENT"] = doubleToString(-1.0/(4.0*alpha*alpha));
         cl::Program program = cl.createProgram(OpenCLKernelSources::ewald, replacements);
         ewaldSumsKernel = cl::Kernel(program, "calculateEwaldCosSinSums");
@@ -1282,14 +1282,6 @@ void OpenCLCalcNonbondedForceKernel::executeForces(ContextImpl& context) {
             ewaldForcesKernel.setArg<cl::Buffer>(2, cosSinSums->getDeviceBuffer());
         }
         if (pmeGrid != NULL) {
-            mm_float4 boxSize = cl.getNonbondedUtilities().getPeriodicBoxSize();
-            pmeDefines["PERIODIC_BOX_SIZE_X"] = doubleToString(boxSize.x);
-            pmeDefines["PERIODIC_BOX_SIZE_Y"] = doubleToString(boxSize.y);
-            pmeDefines["PERIODIC_BOX_SIZE_Z"] = doubleToString(boxSize.z);
-            pmeDefines["INV_PERIODIC_BOX_SIZE_X"] = doubleToString(1.0/boxSize.x);
-            pmeDefines["INV_PERIODIC_BOX_SIZE_Y"] = doubleToString(1.0/boxSize.y);
-            pmeDefines["INV_PERIODIC_BOX_SIZE_Z"] = doubleToString(1.0/boxSize.z);
-            pmeDefines["RECIP_SCALE_FACTOR"] = doubleToString(1.0/(M_PI*boxSize.x*boxSize.y*boxSize.z));
             cl::Program program = cl.createProgram(OpenCLKernelSources::pme, pmeDefines);
             pmeGridIndexKernel = cl::Kernel(program, "updateGridIndexAndFraction");
             pmeAtomRangeKernel = cl::Kernel(program, "findAtomRangeForGrid");
@@ -1326,18 +1318,32 @@ void OpenCLCalcNonbondedForceKernel::executeForces(ContextImpl& context) {
     if (exceptionIndices != NULL)
         cl.executeKernel(exceptionsKernel, exceptionIndices->getSize());
     if (cosSinSums != NULL) {
+        mm_float4 boxSize = cl.getPeriodicBoxSize();
+        mm_float4 recipBoxSize = mm_float4((float) (2*M_PI/boxSize.x), (float) (2*M_PI/boxSize.y), (float) (2*M_PI/boxSize.z), 0);
+        float recipCoefficient = ONE_4PI_EPS0*4*M_PI/(boxSize.x*boxSize.y*boxSize.z);
+        ewaldSumsKernel.setArg<mm_float4>(3, recipBoxSize);
+        ewaldSumsKernel.setArg<cl_float>(4, recipCoefficient);
         cl.executeKernel(ewaldSumsKernel, cosSinSums->getSize());
+        ewaldForcesKernel.setArg<mm_float4>(3, recipBoxSize);
+        ewaldForcesKernel.setArg<cl_float>(4, recipCoefficient);
         cl.executeKernel(ewaldForcesKernel, cl.getNumAtoms());
     }
     if (pmeGrid != NULL) {
+        mm_float4 boxSize = cl.getPeriodicBoxSize();
+        mm_float4 invBoxSize = cl.getInvPeriodicBoxSize();
+        pmeGridIndexKernel.setArg<mm_float4>(2, invBoxSize);
         cl.executeKernel(pmeGridIndexKernel, cl.getNumAtoms());
         sort->sort(*pmeAtomGridIndex);
         cl.executeKernel(pmeAtomRangeKernel, cl.getNumAtoms());
+        pmeUpdateBsplinesKernel.setArg<mm_float4>(5, invBoxSize);
         cl.executeKernel(pmeUpdateBsplinesKernel, cl.getNumAtoms());
         cl.executeKernel(pmeSpreadChargeKernel, cl.getNumAtoms());
         fft->execFFT(*pmeGrid, true);
+        pmeConvolutionKernel.setArg<mm_float4>(5, invBoxSize);
+        pmeConvolutionKernel.setArg<cl_float>(6, (float) (1.0/(M_PI*boxSize.x*boxSize.y*boxSize.z)));
         cl.executeKernel(pmeConvolutionKernel, cl.getNumAtoms());
         fft->execFFT(*pmeGrid, false);
+        pmeInterpolateForceKernel.setArg<mm_float4>(5, invBoxSize);
         cl.executeKernel(pmeInterpolateForceKernel, cl.getNumAtoms());
     }
 }
@@ -1584,12 +1590,6 @@ void OpenCLCalcGBSAOBCForceKernel::executeForces(ContextImpl& context) {
             defines["USE_CUTOFF"] = "1";
         if (nb.getUsePeriodic())
             defines["USE_PERIODIC"] = "1";
-        defines["PERIODIC_BOX_SIZE_X"] = doubleToString(nb.getPeriodicBoxSize().x);
-        defines["PERIODIC_BOX_SIZE_Y"] = doubleToString(nb.getPeriodicBoxSize().y);
-        defines["PERIODIC_BOX_SIZE_Z"] = doubleToString(nb.getPeriodicBoxSize().z);
-        defines["INV_PERIODIC_BOX_SIZE_X"] = doubleToString(1.0/nb.getPeriodicBoxSize().x);
-        defines["INV_PERIODIC_BOX_SIZE_Y"] = doubleToString(1.0/nb.getPeriodicBoxSize().y);
-        defines["INV_PERIODIC_BOX_SIZE_Z"] = doubleToString(1.0/nb.getPeriodicBoxSize().z);
         defines["CUTOFF_SQUARED"] = doubleToString(nb.getCutoffDistance()*nb.getCutoffDistance());
         defines["PREFACTOR"] = doubleToString(prefactor);
         defines["NUM_ATOMS"] = intToString(cl.getNumAtoms());
@@ -1652,6 +1652,12 @@ void OpenCLCalcGBSAOBCForceKernel::executeForces(ContextImpl& context) {
     }
     cl.clearBuffer(*bornSum);
     cl.clearBuffer(*bornForce);
+    if (nb.getUseCutoff()) {
+        computeBornSumKernel.setArg<mm_float4>(8, cl.getPeriodicBoxSize());
+        computeBornSumKernel.setArg<mm_float4>(9, cl.getInvPeriodicBoxSize());
+        force1Kernel.setArg<mm_float4>(10, cl.getPeriodicBoxSize());
+        force1Kernel.setArg<mm_float4>(11, cl.getInvPeriodicBoxSize());
+    }
     cl.executeKernel(computeBornSumKernel, nb.getTiles().getSize()*OpenCLContext::TileSize);
     cl.executeKernel(reduceBornSumKernel, cl.getPaddedNumAtoms());
     cl.executeKernel(force1Kernel, nb.getTiles().getSize()*OpenCLContext::TileSize);
@@ -1883,14 +1889,6 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
             defines["USE_PERIODIC"] = "1";
         if (useExclusionsForValue)
             defines["USE_EXCLUSIONS"] = "1";
-        Vec3 boxVectors[3];
-        system.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
-        defines["PERIODIC_BOX_SIZE_X"] = doubleToString(boxVectors[0][0]);
-        defines["PERIODIC_BOX_SIZE_Y"] = doubleToString(boxVectors[1][1]);
-        defines["PERIODIC_BOX_SIZE_Z"] = doubleToString(boxVectors[2][2]);
-        defines["INV_PERIODIC_BOX_SIZE_X"] = doubleToString(1.0/boxVectors[0][0]);
-        defines["INV_PERIODIC_BOX_SIZE_Y"] = doubleToString(1.0/boxVectors[1][1]);
-        defines["INV_PERIODIC_BOX_SIZE_Z"] = doubleToString(1.0/boxVectors[2][2]);
         defines["CUTOFF_SQUARED"] = doubleToString(force.getCutoffDistance()*force.getCutoffDistance());
         defines["NUM_ATOMS"] = intToString(cl.getNumAtoms());
         defines["PADDED_NUM_ATOMS"] = intToString(cl.getPaddedNumAtoms());
@@ -2037,14 +2035,6 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
             defines["USE_PERIODIC"] = "1";
         if (anyExclusions)
             defines["USE_EXCLUSIONS"] = "1";
-        Vec3 boxVectors[3];
-        system.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
-        defines["PERIODIC_BOX_SIZE_X"] = doubleToString(boxVectors[0][0]);
-        defines["PERIODIC_BOX_SIZE_Y"] = doubleToString(boxVectors[1][1]);
-        defines["PERIODIC_BOX_SIZE_Z"] = doubleToString(boxVectors[2][2]);
-        defines["INV_PERIODIC_BOX_SIZE_X"] = doubleToString(1.0/boxVectors[0][0]);
-        defines["INV_PERIODIC_BOX_SIZE_Y"] = doubleToString(1.0/boxVectors[1][1]);
-        defines["INV_PERIODIC_BOX_SIZE_Z"] = doubleToString(1.0/boxVectors[2][2]);
         defines["CUTOFF_SQUARED"] = doubleToString(force.getCutoffDistance()*force.getCutoffDistance());
         defines["NUM_ATOMS"] = intToString(cl.getNumAtoms());
         defines["PADDED_NUM_ATOMS"] = intToString(cl.getPaddedNumAtoms());
@@ -2290,6 +2280,7 @@ void OpenCLCalcCustomGBForceKernel::executeForces(ContextImpl& context) {
             pairValueKernel.setArg<cl::Buffer>(index++, nb.getInteractingTiles().getDeviceBuffer());
             pairValueKernel.setArg<cl::Buffer>(index++, nb.getInteractionFlags().getDeviceBuffer());
             pairValueKernel.setArg<cl::Buffer>(index++, nb.getInteractionCount().getDeviceBuffer());
+            index += 2; // Periodic box size arguments are set when the kernel is executed.
         }
         else {
             pairValueKernel.setArg<cl::Buffer>(index++, nb.getTiles().getDeviceBuffer());
@@ -2336,6 +2327,7 @@ void OpenCLCalcCustomGBForceKernel::executeForces(ContextImpl& context) {
             pairEnergyKernel.setArg<cl::Buffer>(index++, nb.getInteractingTiles().getDeviceBuffer());
             pairEnergyKernel.setArg<cl::Buffer>(index++, nb.getInteractionFlags().getDeviceBuffer());
             pairEnergyKernel.setArg<cl::Buffer>(index++, nb.getInteractionCount().getDeviceBuffer());
+            index += 2; // Periodic box size arguments are set when the kernel is executed.
         }
         else {
             pairEnergyKernel.setArg<cl::Buffer>(index++, nb.getTiles().getDeviceBuffer());
@@ -2399,6 +2391,16 @@ void OpenCLCalcCustomGBForceKernel::executeForces(ContextImpl& context) {
     for (int i = 0; i < (int) energyDerivs->getBuffers().size(); i++) {
         const OpenCLNonbondedUtilities::ParameterInfo& buffer = energyDerivs->getBuffers()[i];
         cl.clearBuffer(buffer.getMemory(), buffer.getSize()*energyDerivs->getNumObjects()/sizeof(cl_float));
+    }
+    if (nb.getUseCutoff()) {
+        pairValueKernel.setArg<mm_float4>(10, cl.getPeriodicBoxSize());
+        pairValueKernel.setArg<mm_float4>(11, cl.getInvPeriodicBoxSize());
+        pairEnergyKernel.setArg<mm_float4>(11, cl.getPeriodicBoxSize());
+        pairEnergyKernel.setArg<mm_float4>(12, cl.getInvPeriodicBoxSize());
+        if (separateChainRuleKernel) {
+            chainRuleKernel.setArg<mm_float4>(10, cl.getPeriodicBoxSize());
+            chainRuleKernel.setArg<mm_float4>(11, cl.getInvPeriodicBoxSize());
+        }
     }
     cl.executeKernel(pairValueKernel, nb.getTiles().getSize()*OpenCLContext::TileSize);
     cl.executeKernel(perParticleValueKernel, cl.getPaddedNumAtoms());
@@ -3011,6 +3013,7 @@ void OpenCLCalcCustomHbondForceKernel::executeForces(ContextImpl& context) {
         donorKernel.setArg<cl::Buffer>(index++, acceptors->getDeviceBuffer());
         donorKernel.setArg<cl::Buffer>(index++, donorBufferIndices->getDeviceBuffer());
         donorKernel.setArg(index++, 3*OpenCLContext::ThreadBlockSize*sizeof(mm_float4), NULL);
+        index += 2; // Periodic box size arguments are set when the kernel is executed.
         if (globals != NULL)
             donorKernel.setArg<cl::Buffer>(index++, globals->getDeviceBuffer());
         for (int i = 0; i < (int) donorParams->getBuffers().size(); i++) {
@@ -3035,6 +3038,7 @@ void OpenCLCalcCustomHbondForceKernel::executeForces(ContextImpl& context) {
         acceptorKernel.setArg<cl::Buffer>(index++, acceptors->getDeviceBuffer());
         acceptorKernel.setArg<cl::Buffer>(index++, acceptorBufferIndices->getDeviceBuffer());
         acceptorKernel.setArg(index++, 3*OpenCLContext::ThreadBlockSize*sizeof(mm_float4), NULL);
+        index += 2; // Periodic box size arguments are set when the kernel is executed.
         if (globals != NULL)
             acceptorKernel.setArg<cl::Buffer>(index++, globals->getDeviceBuffer());
         for (int i = 0; i < (int) donorParams->getBuffers().size(); i++) {
@@ -3051,7 +3055,11 @@ void OpenCLCalcCustomHbondForceKernel::executeForces(ContextImpl& context) {
             acceptorKernel.setArg<cl::Buffer>(index++, tabulatedFunctionParams->getDeviceBuffer());
         }
     }
+    donorKernel.setArg<mm_float4>(8, cl.getPeriodicBoxSize());
+    donorKernel.setArg<mm_float4>(9, cl.getInvPeriodicBoxSize());
     cl.executeKernel(donorKernel, std::max(numDonors, numAcceptors));
+    acceptorKernel.setArg<mm_float4>(8, cl.getPeriodicBoxSize());
+    acceptorKernel.setArg<mm_float4>(9, cl.getInvPeriodicBoxSize());
     cl.executeKernel(acceptorKernel, std::max(numDonors, numAcceptors));
 }
 

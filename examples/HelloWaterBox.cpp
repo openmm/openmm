@@ -248,7 +248,7 @@ myInitializeOpenMM( int                 numWatersAlongEdge,
     // Create periodic box
     nonbond.setNonbondedMethod(OpenMM::NonbondedForce::CutoffPeriodic);
     nonbond.setCutoffDistance(CutoffDistanceInAng * OpenMM::NmPerAngstrom);
-    system.setPeriodicBoxVectors(Vec3(boxEdgeLengthInNm,0,0),
+    system.setDefaultPeriodicBoxVectors(Vec3(boxEdgeLengthInNm,0,0),
                                   Vec3(0,boxEdgeLengthInNm,0), 
                                   Vec3(0,0,boxEdgeLengthInNm));
 

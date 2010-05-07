@@ -316,6 +316,25 @@ public:
         return simdWidth;
     }
     /**
+     * Get the size of the periodic box.
+     */
+    mm_float4 getPeriodicBoxSize() const {
+        return periodicBoxSize;
+    }
+    /**
+     * Set the size of the periodic box.
+     */
+    void setPeriodicBoxSize(double xsize, double ysize, double zsize) {
+        periodicBoxSize = mm_float4((float) xsize, (float) ysize, (float) zsize, 0);
+        invPeriodicBoxSize = mm_float4((float) (1.0/xsize), (float) (1.0/ysize), (float) (1.0/zsize), 0);
+    }
+    /**
+     * Get the inverse of the size of the periodic box.
+     */
+    mm_float4 getInvPeriodicBoxSize() const {
+        return invPeriodicBoxSize;
+    }
+    /**
      * Get the OpenCLIntegrationUtilities for this context.
      */
     OpenCLIntegrationUtilities& getIntegrationUtilities() {
@@ -347,6 +366,8 @@ private:
     int numThreadBlocks;
     int numForceBuffers;
     int simdWidth;
+    mm_float4 periodicBoxSize;
+    mm_float4 invPeriodicBoxSize;
     std::string compilationOptions;
     cl::Context context;
     cl::Device device;

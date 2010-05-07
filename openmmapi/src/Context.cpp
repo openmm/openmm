@@ -38,14 +38,17 @@ using namespace std;
 
 Context::Context(System& system, Integrator& integrator) : properties(map<string, string>()) {
     impl = new ContextImpl(*this, system, integrator, 0, properties);
+    system.getDefaultPeriodicBoxVectors(periodicBoxVectors[0], periodicBoxVectors[1], periodicBoxVectors[2]);
 }
 
 Context::Context(System& system, Integrator& integrator, Platform& platform) : properties(map<string, string>()) {
     impl = new ContextImpl(*this, system, integrator, &platform, properties);
+    system.getDefaultPeriodicBoxVectors(periodicBoxVectors[0], periodicBoxVectors[1], periodicBoxVectors[2]);
 }
 
 Context::Context(System& system, Integrator& integrator, Platform& platform, const map<string, string>& properties) : properties(properties) {
     impl = new ContextImpl(*this, system, integrator, &platform, properties);
+    system.getDefaultPeriodicBoxVectors(periodicBoxVectors[0], periodicBoxVectors[1], periodicBoxVectors[2]);
 }
 
 Context::~Context() {
@@ -120,10 +123,29 @@ void Context::setParameter(const string& name, double value) {
     impl->setParameter(name, value);
 }
 
+void Context::getPeriodicBoxVectors(Vec3& a, Vec3& b, Vec3& c) const {
+    a = periodicBoxVectors[0];
+    b = periodicBoxVectors[1];
+    c = periodicBoxVectors[2];
+}
+
+void Context::setPeriodicBoxVectors(Vec3 a, Vec3 b, Vec3 c) {
+    if (a[1] != 0.0 || a[2] != 0.0)
+        throw OpenMMException("First periodic box vector must be parallel to x.");
+    if (b[0] != 0.0 || b[2] != 0.0)
+        throw OpenMMException("Second periodic box vector must be parallel to y.");
+    if (c[0] != 0.0 || c[1] != 0.0)
+        throw OpenMMException("Third periodic box vector must be parallel to z.");
+    periodicBoxVectors[0] = a;
+    periodicBoxVectors[1] = b;
+    periodicBoxVectors[2] = c;
+}
+
 void Context::reinitialize() {
     System& system = impl->getSystem();
     Integrator& integrator = impl->getIntegrator();
     Platform& platform = impl->getPlatform();
+    system.getDefaultPeriodicBoxVectors(periodicBoxVectors[0], periodicBoxVectors[1], periodicBoxVectors[2]);
     delete impl;
     impl = new ContextImpl(*this, system, integrator, &platform, properties);
 }

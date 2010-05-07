@@ -343,7 +343,7 @@ void testPeriodic() {
     nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
     const double cutoff = 2.0;
     nonbonded->setCutoffDistance(cutoff);
-    system.setPeriodicBoxVectors(Vec3(4, 0, 0), Vec3(0, 4, 0), Vec3(0, 0, 4));
+    system.setDefaultPeriodicBoxVectors(Vec3(4, 0, 0), Vec3(0, 4, 0), Vec3(0, 0, 4));
     system.addForce(nonbonded);
     Context context(system, integrator, platform);
     vector<Vec3> positions(3);
@@ -423,7 +423,7 @@ void testLargeSystem() {
     // Now do the same thing with periodic boundary conditions.
 
     nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
-    system.setPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
     cudaContext.reinitialize();
     referenceContext.reinitialize();
     cudaContext.setPositions(positions);
@@ -461,7 +461,7 @@ void testBlockInteractions(bool periodic) {
     }
     nonbonded->setNonbondedMethod(periodic ? NonbondedForce::CutoffPeriodic : NonbondedForce::CutoffNonPeriodic);
     nonbonded->setCutoffDistance(cutoff);
-    system.setPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
     system.addForce(nonbonded);
     Context context(system, integrator, cuda);
     context.setPositions(positions);

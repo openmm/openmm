@@ -121,12 +121,6 @@ public:
         return cutoff;
     }
     /**
-     * Get the periodic box size.
-     */
-    mm_float4 getPeriodicBoxSize() {
-        return periodicBoxSize;
-    }
-    /**
      * Prepare to compute interactions.  This updates the neighbor list.
      */
     void prepareInteractions();
@@ -218,7 +212,6 @@ private:
     double cutoff;
     bool useCutoff, usePeriodic, forceBufferPerAtomBlock;
     int numForceBuffers;
-    mm_float4 periodicBoxSize;
 };
 
 /**

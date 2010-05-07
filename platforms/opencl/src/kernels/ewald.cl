@@ -7,7 +7,7 @@ float2 multofFloat2(float2 a, float2 b) {
  * Precompute the cosine and sine sums which appear in each force term.
  */
 
-__kernel void calculateEwaldCosSinSums(__global float* energyBuffer, __global float4* posq, __global float2* cosSinSum) {
+__kernel void calculateEwaldCosSinSums(__global float* energyBuffer, __global float4* posq, __global float2* cosSinSum, float4 reciprocalPeriodicBoxSize, float reciprocalCoefficient) {
     const unsigned int ksizex = 2*KMAX_X-1;
     const unsigned int ksizey = 2*KMAX_Y-1;
     const unsigned int ksizez = 2*KMAX_Z-1;
@@ -24,9 +24,9 @@ __kernel void calculateEwaldCosSinSums(__global float* energyBuffer, __global fl
         int ry = remainder/ksizez;
         int rz = remainder - ry*ksizez - KMAX_Z + 1;
         ry += -KMAX_Y + 1;
-        float kx = rx*RECIPROCAL_BOX_SIZE_X;
-        float ky = ry*RECIPROCAL_BOX_SIZE_Y;
-        float kz = rz*RECIPROCAL_BOX_SIZE_Z;
+        float kx = rx*reciprocalPeriodicBoxSize.x;
+        float ky = ry*reciprocalPeriodicBoxSize.y;
+        float kz = rz*reciprocalPeriodicBoxSize.z;
 
         // Compute the sum for this wave vector.
 
@@ -47,7 +47,7 @@ __kernel void calculateEwaldCosSinSums(__global float* energyBuffer, __global fl
 
         float k2 = kx*kx + ky*ky + kz*kz;
         float ak = exp(k2*EXP_COEFFICIENT) / k2;
-        energy += RECIPROCAL_COEFFICIENT*ak*(sum.x*sum.x + sum.y*sum.y);
+        energy += reciprocalCoefficient*ak*(sum.x*sum.x + sum.y*sum.y);
         index += get_global_size(0);
     }
     energyBuffer[get_global_id(0)] += energy;
@@ -58,7 +58,7 @@ __kernel void calculateEwaldCosSinSums(__global float* energyBuffer, __global fl
  * previous routine.
  */
 
-__kernel void calculateEwaldForces(__global float4* forceBuffers, __global float4* posq, __global float2* cosSinSum) {
+__kernel void calculateEwaldForces(__global float4* forceBuffers, __global float4* posq, __global float2* cosSinSum, float4 reciprocalPeriodicBoxSize, float reciprocalCoefficient) {
     unsigned int atom = get_global_id(0);
     while (atom < NUM_ATOMS) {
         float4 force = forceBuffers[atom];
@@ -69,15 +69,15 @@ __kernel void calculateEwaldForces(__global float4* forceBuffers, __global float
         int lowry = 0;
         int lowrz = 1;
         for (int rx = 0; rx < KMAX_X; rx++) {
-            float kx = rx*RECIPROCAL_BOX_SIZE_X;
+            float kx = rx*reciprocalPeriodicBoxSize.x;
             for (int ry = lowry; ry < KMAX_Y; ry++) {
-                float ky = ry*RECIPROCAL_BOX_SIZE_Y;
+                float ky = ry*reciprocalPeriodicBoxSize.y;
                 float phase = apos.x*kx;
                 float2 tab_xy = (float2) (cos(phase), sin(phase));
                 phase = apos.y*ky;
                 tab_xy = multofFloat2(tab_xy, (float2) (cos(phase), sin(phase)));
                 for (int rz = lowrz; rz < KMAX_Z; rz++) {
-                    float kz = rz*RECIPROCAL_BOX_SIZE_Z;
+                    float kz = rz*reciprocalPeriodicBoxSize.z;
 
                     // Compute the force contribution of this wave vector.
 
@@ -87,7 +87,7 @@ __kernel void calculateEwaldForces(__global float4* forceBuffers, __global float
                     phase = apos.z*kz;
                     float2 structureFactor = multofFloat2(tab_xy, (float2) (cos(phase), sin(phase)));
                     float2 sum = cosSinSum[index];
-                    float dEdR = 2*RECIPROCAL_COEFFICIENT*ak*apos.w*(sum.x*structureFactor.y - sum.y*structureFactor.x);
+                    float dEdR = 2*reciprocalCoefficient*ak*apos.w*(sum.x*structureFactor.y - sum.y*structureFactor.x);
                     force.x += dEdR*kx;
                     force.y += dEdR*ky;
                     force.z += dEdR*kz;

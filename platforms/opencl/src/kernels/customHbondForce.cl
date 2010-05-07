@@ -11,12 +11,12 @@ float4 delta(float4 vec1, float4 vec2) {
  * Compute the difference between two vectors, taking periodic boundary conditions into account
  * and setting the fourth component to the squared magnitude.
  */
-float4 deltaPeriodic(float4 vec1, float4 vec2) {
+float4 deltaPeriodic(float4 vec1, float4 vec2, float4 periodicBoxSize, float4 invPeriodicBoxSize) {
     float4 result = (float4) (vec1.x-vec2.x, vec1.y-vec2.y, vec1.z-vec2.z, 0.0f);
 #ifdef USE_PERIODIC
-    result.x -= floor(result.x*INV_PERIODIC_BOX_SIZE_X+0.5f)*PERIODIC_BOX_SIZE_X;
-    result.y -= floor(result.y*INV_PERIODIC_BOX_SIZE_Y+0.5f)*PERIODIC_BOX_SIZE_Y;
-    result.z -= floor(result.z*INV_PERIODIC_BOX_SIZE_Z+0.5f)*PERIODIC_BOX_SIZE_Z;
+    result.x -= floor(result.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
+    result.y -= floor(result.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
+    result.z -= floor(result.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
     result.w = result.x*result.x + result.y*result.y + result.z*result.z;
     return result;
@@ -56,7 +56,7 @@ float4 computeCross(float4 vec1, float4 vec2) {
  * Compute forces on donors.
  */
 __kernel void computeDonorForces(__global float4* forceBuffers, __global float* energyBuffer, __global float4* posq, __global int4* exclusions,
-        __global int4* donorAtoms, __global int4* acceptorAtoms, __global int4* donorBufferIndices, __local float4* posBuffer
+        __global int4* donorAtoms, __global int4* acceptorAtoms, __global int4* donorBufferIndices, __local float4* posBuffer, float4 periodicBoxSize, float4 invPeriodicBoxSize
         PARAMETER_ARGUMENTS) {
     float energy = 0.0f;
     float4 f1 = (float4) 0;
@@ -102,7 +102,7 @@ __kernel void computeDonorForces(__global float4* forceBuffers, __global float* 
                     float4 a1 = posBuffer[3*index];
                     float4 a2 = posBuffer[3*index+1];
                     float4 a3 = posBuffer[3*index+2];
-                    float4 deltaD1A1 = deltaPeriodic(d1, a1);
+                    float4 deltaD1A1 = deltaPeriodic(d1, a1, periodicBoxSize, invPeriodicBoxSize);
 #ifdef USE_CUTOFF
                     if (deltaD1A1.w < CUTOFF_SQUARED) {
 #endif
@@ -142,7 +142,7 @@ __kernel void computeDonorForces(__global float4* forceBuffers, __global float* 
  * Compute forces on acceptors.
  */
 __kernel void computeAcceptorForces(__global float4* forceBuffers, __global float* energyBuffer, __global float4* posq, __global int4* exclusions,
-        __global int4* donorAtoms, __global int4* acceptorAtoms, __global int4* acceptorBufferIndices, __local float4* posBuffer
+        __global int4* donorAtoms, __global int4* acceptorAtoms, __global int4* acceptorBufferIndices, __local float4* posBuffer, float4 periodicBoxSize, float4 invPeriodicBoxSize
         PARAMETER_ARGUMENTS) {
     float4 f1 = (float4) 0;
     float4 f2 = (float4) 0;
@@ -187,7 +187,7 @@ __kernel void computeAcceptorForces(__global float4* forceBuffers, __global floa
                     float4 d1 = posBuffer[3*index];
                     float4 d2 = posBuffer[3*index+1];
                     float4 d3 = posBuffer[3*index+2];
-                    float4 deltaD1A1 = deltaPeriodic(d1, a1);
+                    float4 deltaD1A1 = deltaPeriodic(d1, a1, periodicBoxSize, invPeriodicBoxSize);
 #ifdef USE_CUTOFF
                     if (deltaD1A1.w < CUTOFF_SQUARED) {
 #endif

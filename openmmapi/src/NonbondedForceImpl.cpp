@@ -89,7 +89,7 @@ void NonbondedForceImpl::initialize(ContextImpl& context) {
             owner.getNonbondedMethod() == NonbondedForce::Ewald ||
             owner.getNonbondedMethod() == NonbondedForce::PME) {
         Vec3 boxVectors[3];
-        system.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+        system.getDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
         double cutoff = owner.getCutoffDistance();
         if (cutoff > 0.5*boxVectors[0][0] || cutoff > 0.5*boxVectors[1][1] || cutoff > 0.5*boxVectors[2][2])
             throw OpenMMException("NonbondedForce: The cutoff distance cannot be greater than half the periodic box size.");
@@ -130,7 +130,7 @@ private:
 
 void NonbondedForceImpl::calcEwaldParameters(const System& system, const NonbondedForce& force, double& alpha, int& kmaxx, int& kmaxy, int& kmaxz) {
     Vec3 boxVectors[3];
-    system.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+    system.getDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
     double tol = force.getEwaldErrorTolerance();
     alpha = (1.0/force.getCutoffDistance())*std::sqrt(-log(2.0*tol));
     kmaxx = findZero(EwaldErrorFunction(boxVectors[0][0], alpha, tol), 10);
@@ -146,7 +146,7 @@ void NonbondedForceImpl::calcEwaldParameters(const System& system, const Nonbond
 
 void NonbondedForceImpl::calcPMEParameters(const System& system, const NonbondedForce& force, double& alpha, int& xsize, int& ysize, int& zsize) {
     Vec3 boxVectors[3];
-    system.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+    system.getDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
     double tol = force.getEwaldErrorTolerance();
     alpha = (1.0/force.getCutoffDistance())*std::sqrt(-log(2.0*tol));
     xsize = (int) ceil(alpha*boxVectors[0][0]/pow(0.5*tol, 0.2));

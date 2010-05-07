@@ -45,6 +45,13 @@ void CudaCalcForcesAndEnergyKernel::initialize(const System& system) {
 
 void CudaCalcForcesAndEnergyKernel::beginForceComputation(ContextImpl& context) {
     _gpuContext* gpu = data.gpu;
+    Vec3 boxVectors[3];
+    context.getOwner().getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+    float boxx = boxVectors[0][0], boxy = boxVectors[1][1], boxz = boxVectors[2][2];
+    if (boxx != gpu->sim.periodicBoxSizeX || boxy != gpu->sim.periodicBoxSizeY || boxz != gpu->sim.periodicBoxSizeZ) {
+        gpuSetPeriodicBoxSize(gpu, boxx, boxy, boxz);
+        gpuSetConstants(gpu);
+    }
     if (data.nonbondedMethod != NO_CUTOFF && data.computeForceCount%100 == 0)
         gpuReorderAtoms(gpu);
     data.computeForceCount++;
@@ -77,6 +84,13 @@ void CudaCalcForcesAndEnergyKernel::finishForceComputation(ContextImpl& context)
 
 void CudaCalcForcesAndEnergyKernel::beginEnergyComputation(ContextImpl& context) {
     _gpuContext* gpu = data.gpu;
+    Vec3 boxVectors[3];
+    context.getOwner().getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+    float boxx = boxVectors[0][0], boxy = boxVectors[1][1], boxz = boxVectors[2][2];
+    if (boxx != gpu->sim.periodicBoxSizeX || boxy != gpu->sim.periodicBoxSizeY || boxz != gpu->sim.periodicBoxSizeZ) {
+        gpuSetPeriodicBoxSize(gpu, boxx, boxy, boxz);
+        gpuSetConstants(gpu);
+    }
     if (data.nonbondedMethod != NO_CUTOFF && data.stepCount%100 == 0)
         gpuReorderAtoms(gpu);
     data.stepCount++;
@@ -490,9 +504,6 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
             exclusionList[exclusions[i].first].push_back(exclusions[i].second);
             exclusionList[exclusions[i].second].push_back(exclusions[i].first);
         }
-        Vec3 boxVectors[3];
-        system.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
-        gpuSetPeriodicBoxSize(gpu, (float)boxVectors[0][0], (float)boxVectors[1][1], (float)boxVectors[2][2]);
         CudaNonbondedMethod method = NO_CUTOFF;
         if (force.getNonbondedMethod() != NonbondedForce::NoCutoff) {
             gpuSetNonbondedCutoff(gpu, (float) force.getCutoffDistance(), (float) force.getReactionFieldDielectric());
@@ -583,9 +594,6 @@ void CudaCalcCustomNonbondedForceKernel::initialize(const System& system, const 
         exclusionList[particle1].push_back(particle2);
         exclusionList[particle2].push_back(particle1);
     }
-    Vec3 boxVectors[3];
-    system.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
-    gpuSetPeriodicBoxSize(gpu, (float)boxVectors[0][0], (float)boxVectors[1][1], (float)boxVectors[2][2]);
     CudaNonbondedMethod method = NO_CUTOFF;
     if (force.getNonbondedMethod() != CustomNonbondedForce::NoCutoff)
         method = CUTOFF;

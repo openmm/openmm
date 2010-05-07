@@ -165,7 +165,8 @@ public:
         return *forces[index];
     }
     /**
-     * Get the vectors which define the axes of the periodic box (measured in nm).  These will affect
+     * Get the default values of the vectors defining the axes of the periodic box (measured in nm).  Any newly
+     * created Context will have its box vectors set to these.  They will affect
      * any Force added to the System that uses periodic boundary conditions.
      *
      * Currently, only rectangular boxes are supported.  This means that a, b, and c must be aligned with the
@@ -175,9 +176,10 @@ public:
      * @param b      on exit, this contains the vector defining the second edge of the periodic box
      * @param c      on exit, this contains the vector defining the third edge of the periodic box
      */
-    void getPeriodicBoxVectors(Vec3& a, Vec3& b, Vec3& c) const;
+    void getDefaultPeriodicBoxVectors(Vec3& a, Vec3& b, Vec3& c) const;
     /**
-     * Set the vectors which define the axes of the periodic box (measured in nm).  These will affect
+     * Set the default values of the vectors defining the axes of the periodic box (measured in nm).  Any newly
+     * created Context will have its box vectors set to these.  They will affect
      * any Force added to the System that uses periodic boundary conditions.
      *
      * Currently, only rectangular boxes are supported.  This means that a, b, and c must be aligned with the
@@ -187,7 +189,7 @@ public:
      * @param b      the vector defining the second edge of the periodic box
      * @param c      the vector defining the third edge of the periodic box
      */
-    void setPeriodicBoxVectors(Vec3 a, Vec3 b, Vec3 c);
+    void setDefaultPeriodicBoxVectors(Vec3 a, Vec3 b, Vec3 c);
 private:
     class ConstraintInfo;
     Vec3 periodicBoxVectors[3];

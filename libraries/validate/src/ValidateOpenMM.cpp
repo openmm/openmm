@@ -387,8 +387,8 @@ System* ValidateOpenMM::copySystemExcludingForces( const System& systemToCopy ) 
     }   
 
     Vec3 a, b, c;
-    systemToCopy.getPeriodicBoxVectors( a, b, c ); 
-    system->setPeriodicBoxVectors( a, b, c );
+    systemToCopy.getDefaultPeriodicBoxVectors( a, b, c );
+    system->setDefaultPeriodicBoxVectors( a, b, c );
 
     copyConstraints( systemToCopy, system );
 
@@ -490,7 +490,7 @@ void ValidateOpenMM::writeMasses( FILE* filePtr, const System& system ) const {
     }
 
     Vec3 a, b, c;
-    system.getPeriodicBoxVectors( a, b, c);
+    system.getDefaultPeriodicBoxVectors( a, b, c);
     (void) fprintf( filePtr, "Box %14.6f %14.6f %14.6f  %14.6f %14.6f %14.6f   %14.6f %14.6f %14.6f\n",
                     a[0], a[1], a[2], b[0], b[1], b[2], c[0], c[1], c[2] );
 }

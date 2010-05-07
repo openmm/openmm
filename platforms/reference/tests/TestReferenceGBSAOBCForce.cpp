@@ -87,7 +87,7 @@ void testCutoffAndPeriodic() {
     const double boxSize = 10.0;
     nonbonded->setCutoffDistance(cutoffDistance);
     gbsa->setCutoffDistance(cutoffDistance);
-    system.setPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
     system.addForce(gbsa);
     system.addForce(nonbonded);
     vector<Vec3> positions(2);

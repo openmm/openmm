@@ -74,7 +74,7 @@ void testEwaldExact() {
         nonbonded->addParticle(-1.0, 1.0,0.0);
     nonbonded->setNonbondedMethod(NonbondedForce::Ewald);
     nonbonded->setCutoffDistance(cutoff);
-    system.setPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
     nonbonded->setEwaldErrorTolerance(EWALD_TOL);
     system.addForce(nonbonded);
     Context context(system, integrator, platform);
@@ -126,7 +126,7 @@ void testEwaldPME() {
         nonbonded->addParticle(-1.0, 1.0,0.0);
     nonbonded->setNonbondedMethod(NonbondedForce::Ewald);
     nonbonded->setCutoffDistance(cutoff);
-    system.setPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
     nonbonded->setEwaldErrorTolerance(EWALD_TOL);
     system.addForce(nonbonded);
     Context context(system, integrator, platform);
@@ -228,7 +228,7 @@ void testEwald2Ions() {
     nonbonded->setNonbondedMethod(NonbondedForce::Ewald);
     const double cutoff = 2.0;
     nonbonded->setCutoffDistance(cutoff);
-    system.setPeriodicBoxVectors(Vec3(6, 0, 0), Vec3(0, 6, 0), Vec3(0, 0, 6));
+    system.setDefaultPeriodicBoxVectors(Vec3(6, 0, 0), Vec3(0, 6, 0), Vec3(0, 0, 6));
     nonbonded->setEwaldErrorTolerance(EWALD_TOL);
     system.addForce(nonbonded);
     Context context(system, integrator, platform);
@@ -264,7 +264,7 @@ void testWaterSystem() {
     nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
     const double cutoff = 0.8;
     nonbonded->setCutoffDistance(cutoff);
-    system.setPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
     nonbonded->setEwaldErrorTolerance(EWALD_TOL);
     system.addForce(nonbonded);
     Context context(system, integrator, platform);
@@ -308,7 +308,7 @@ void testErrorTolerance(NonbondedForce::NonbondedMethod method) {
     const int numParticles = 51;
     const double boxWidth = 5.0;
     System system;
-    system.setPeriodicBoxVectors(Vec3(boxWidth, 0, 0), Vec3(0, boxWidth, 0), Vec3(0, 0, boxWidth));
+    system.setDefaultPeriodicBoxVectors(Vec3(boxWidth, 0, 0), Vec3(0, boxWidth, 0), Vec3(0, 0, boxWidth));
     NonbondedForce* force = new NonbondedForce();
     system.addForce(force);
     vector<Vec3> positions(numParticles);

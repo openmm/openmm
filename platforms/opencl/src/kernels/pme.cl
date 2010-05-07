@@ -1,9 +1,9 @@
-__kernel void updateGridIndexAndFraction(__global float4* posq, __global float2* pmeAtomGridIndex) {
+__kernel void updateGridIndexAndFraction(__global float4* posq, __global float2* pmeAtomGridIndex, float4 invPeriodicBoxSize) {
     for (int i = get_global_id(0); i < NUM_ATOMS; i += get_global_size(0)) {
         float4 pos = posq[i];
-        float4 t = (float4) ((pos.x*INV_PERIODIC_BOX_SIZE_X+1.0f)*GRID_SIZE_X,
-                             (pos.y*INV_PERIODIC_BOX_SIZE_Y+1.0f)*GRID_SIZE_Y,
-                             (pos.z*INV_PERIODIC_BOX_SIZE_Z+1.0f)*GRID_SIZE_Z, 0.0f);
+        float4 t = (float4) ((pos.x*invPeriodicBoxSize.x+1.0f)*GRID_SIZE_X,
+                             (pos.y*invPeriodicBoxSize.y+1.0f)*GRID_SIZE_Y,
+                             (pos.z*invPeriodicBoxSize.z+1.0f)*GRID_SIZE_Z, 0.0f);
         int4 gridIndex = (int4) (((int) t.x) % GRID_SIZE_X,
                                  ((int) t.y) % GRID_SIZE_Y,
                                  ((int) t.z) % GRID_SIZE_Z, 0);
@@ -38,7 +38,7 @@ __kernel void findAtomRangeForGrid(__global float4* posq, __global float2* pmeAt
     }
 }
 
-__kernel void updateBsplines(__global float4* posq, __global float4* pmeBsplineTheta, __global float4* pmeBsplineDTheta, __local float4* bsplinesCache, __global float2* pmeAtomGridIndex) {
+__kernel void updateBsplines(__global float4* posq, __global float4* pmeBsplineTheta, __global float4* pmeBsplineDTheta, __local float4* bsplinesCache, __global float2* pmeAtomGridIndex, float4 invPeriodicBoxSize) {
     const float4 scale = 1.0f/(PME_ORDER-1);
     for (int i = get_global_id(0); i < NUM_ATOMS; i += get_global_size(0)) {
         __local float4* data = &bsplinesCache[get_local_id(0)*PME_ORDER];
@@ -48,9 +48,9 @@ __kernel void updateBsplines(__global float4* posq, __global float4* pmeBsplineT
             ddata[j] = 0.0f;
         }
         float4 pos = posq[i];
-        float4 t = (float4) ((pos.x*INV_PERIODIC_BOX_SIZE_X+1.0f)*GRID_SIZE_X,
-                             (pos.y*INV_PERIODIC_BOX_SIZE_Y+1.0f)*GRID_SIZE_Y,
-                             (pos.z*INV_PERIODIC_BOX_SIZE_Z+1.0f)*GRID_SIZE_Z, 0.0f);
+        float4 t = (float4) ((pos.x*invPeriodicBoxSize.x+1.0f)*GRID_SIZE_X,
+                             (pos.y*invPeriodicBoxSize.y+1.0f)*GRID_SIZE_Y,
+                             (pos.z*invPeriodicBoxSize.z+1.0f)*GRID_SIZE_Z, 0.0f);
         float4 dr = (float4) (t.x-(int) t.x, t.y-(int) t.y, t.z-(int) t.z, 0.0f);
         data[PME_ORDER-1] = 0.0f;
         data[1] = dr;
@@ -119,7 +119,7 @@ __kernel void gridSpreadCharge(__global float2* pmeAtomGridIndex, __global int* 
 }
 
 __kernel void reciprocalConvolution(__global float2* pmeGrid, __global float* energyBuffer, __global float* pmeBsplineModuliX,
-        __global float* pmeBsplineModuliY, __global float* pmeBsplineModuliZ) {
+        __global float* pmeBsplineModuliY, __global float* pmeBsplineModuliZ, float4 invPeriodicBoxSize, float recipScaleFactor) {
     const unsigned int gridSize = GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z;
     float energy = 0.0f;
     for (int index = get_global_id(0); index < gridSize; index += get_global_size(0)) {
@@ -132,29 +132,29 @@ __kernel void reciprocalConvolution(__global float2* pmeGrid, __global float* en
         int mx = (kx < (GRID_SIZE_X+1)/2) ? kx : (kx-GRID_SIZE_X);
         int my = (ky < (GRID_SIZE_Y+1)/2) ? ky : (ky-GRID_SIZE_Y);
         int mz = (kz < (GRID_SIZE_Z+1)/2) ? kz : (kz-GRID_SIZE_Z);
-        float mhx = mx*INV_PERIODIC_BOX_SIZE_X;
-        float mhy = my*INV_PERIODIC_BOX_SIZE_Y;
-        float mhz = mz*INV_PERIODIC_BOX_SIZE_Z;
+        float mhx = mx*invPeriodicBoxSize.x;
+        float mhy = my*invPeriodicBoxSize.y;
+        float mhz = mz*invPeriodicBoxSize.z;
         float bx = pmeBsplineModuliX[kx];
         float by = pmeBsplineModuliY[ky];
         float bz = pmeBsplineModuliZ[kz];
         float2 grid = pmeGrid[index];
         float m2 = mhx*mhx+mhy*mhy+mhz*mhz;
         float denom = m2*bx*by*bz;
-        float eterm = RECIP_SCALE_FACTOR*exp(-RECIP_EXP_FACTOR*m2)/denom;
+        float eterm = recipScaleFactor*exp(-RECIP_EXP_FACTOR*m2)/denom;
         pmeGrid[index] = (float2) (grid.x*eterm, grid.y*eterm);
         energy += eterm*(grid.x*grid.x + grid.y*grid.y);
     }
     energyBuffer[get_global_id(0)] += 0.5f*energy;
 }
 
-__kernel void gridInterpolateForce(__global float4* posq, __global float4* forceBuffers, __global float4* pmeBsplineTheta, __global float4* pmeBsplineDTheta, __global float2* pmeGrid) {
+__kernel void gridInterpolateForce(__global float4* posq, __global float4* forceBuffers, __global float4* pmeBsplineTheta, __global float4* pmeBsplineDTheta, __global float2* pmeGrid, float4 invPeriodicBoxSize) {
     for (int atom = get_global_id(0); atom < NUM_ATOMS; atom += get_global_size(0)) {
         float4 force = 0.0f;
         float4 pos = posq[atom];
-        float4 t = (float4) ((pos.x*INV_PERIODIC_BOX_SIZE_X+1.0f)*GRID_SIZE_X,
-                             (pos.y*INV_PERIODIC_BOX_SIZE_Y+1.0f)*GRID_SIZE_Y,
-                             (pos.z*INV_PERIODIC_BOX_SIZE_Z+1.0f)*GRID_SIZE_Z, 0.0f);
+        float4 t = (float4) ((pos.x*invPeriodicBoxSize.x+1.0f)*GRID_SIZE_X,
+                             (pos.y*invPeriodicBoxSize.y+1.0f)*GRID_SIZE_Y,
+                             (pos.z*invPeriodicBoxSize.z+1.0f)*GRID_SIZE_Z, 0.0f);
         int4 gridIndex = (int4) (((int) t.x) % GRID_SIZE_X,
                                  ((int) t.y) % GRID_SIZE_Y,
                                  ((int) t.z) % GRID_SIZE_Z, 0);
@@ -180,9 +180,9 @@ __kernel void gridInterpolateForce(__global float4* posq, __global float4* force
         }
         float4 totalForce = forceBuffers[atom];
         float q = pos.w*EPSILON_FACTOR;
-        totalForce.x -= q*force.x*GRID_SIZE_X*INV_PERIODIC_BOX_SIZE_X;
-        totalForce.y -= q*force.y*GRID_SIZE_Y*INV_PERIODIC_BOX_SIZE_Y;
-        totalForce.z -= q*force.z*GRID_SIZE_Z*INV_PERIODIC_BOX_SIZE_Z;
+        totalForce.x -= q*force.x*GRID_SIZE_X*invPeriodicBoxSize.x;
+        totalForce.y -= q*force.y*GRID_SIZE_Y*invPeriodicBoxSize.y;
+        totalForce.z -= q*force.z*GRID_SIZE_Z*invPeriodicBoxSize.z;
         forceBuffers[atom] = totalForce;
     }
 }
