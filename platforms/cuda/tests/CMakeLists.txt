@@ -37,7 +37,7 @@ ENDFOREACH(TEST_PROG ${TEST_PROGS})
 # TestCudaUsingParameterFile customized w/ command-line argument (input file name used in test) 
 
 ADD_EXECUTABLE(TestCudaUsingParameterFile TstCudaUsingParameterFile.cpp)
-TARGET_LINK_LIBRARIES(TestCudaUsingParameterFile ${SHARED_TARGET})
+TARGET_LINK_LIBRARIES(TestCudaUsingParameterFile ${SHARED_TARGET} "OpenMMOpenCL")
 ADD_TEST(TestCudaUsingParameterFile "${EXECUTABLE_OUTPUT_PATH}/TestCudaUsingParameterFile" "-parameterFileName" "${CMAKE_CURRENT_SOURCE_DIR}/lambdaSdObcParameters.txt")
 ADD_TEST(TestCudaUsingParameterFile "${EXECUTABLE_OUTPUT_PATH}/TestCudaUsingParameterFile" "-parameterFileName" "${CMAKE_CURRENT_SOURCE_DIR}/bptiMdRfNoPbcParameters.txt")
 

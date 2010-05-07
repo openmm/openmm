@@ -34,6 +34,7 @@
 
 #include "../../../tests/AssertionUtilities.h"
 #include "CudaPlatform.h"
+#include "../../../platforms/opencl/include/OpenCLPlatform.h"
 #include "ReferencePlatform.h"
 
 #include "openmm/Context.h"
@@ -79,6 +80,8 @@
 #include <cstdlib>
 #include <typeinfo>
 #include <sstream>
+#include <algorithm>
+#include <map>
 
 #ifdef _MSC_VER
    #define isinf !_finite
@@ -1235,7 +1238,7 @@ static void editMap( MapStringInt& inputMap, MapStringInt& outputMap, int newVal
 
 // ---------------------------------------------------------------------------------------
 
-   static const std::string methodName             = "setIntFromMap";
+   static const std::string methodName             = "editMap";
 
 // ---------------------------------------------------------------------------------------
 
@@ -1246,6 +1249,35 @@ static void editMap( MapStringInt& inputMap, MapStringInt& outputMap, int newVal
       }
    }
 }
+
+/**---------------------------------------------------------------------------------------
+
+ * Set field if in map
+ * 
+ * @param  argumentMap            map to check
+ * @param  fieldToCheck           key
+ * @param  fieldToSet             field to set
+ *
+ * @return 1 if argument set, else 0
+ *
+   --------------------------------------------------------------------------------------- */
+
+static int setFloatFromMap( MapStringString& argumentMap, std::string fieldToCheck, float& fieldToSet ){
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName             = "setFloatFromMap";
+
+// ---------------------------------------------------------------------------------------
+
+   MapStringStringCI check = argumentMap.find( fieldToCheck );
+   if( check != argumentMap.end() ){
+      fieldToSet = static_cast<float>(atof( (*check).second.c_str() )); 
+      return 1;
+   }
+   return 0;
+}
+
 
 /**---------------------------------------------------------------------------------------
 
@@ -4916,6 +4948,7 @@ void compareForces( const std::vector<Vec3>& forceArray1, const std::string& f1N
    if( forceArray2.size() ){
       *averageDelta          /= (double)( forceArray2.size() );
    }
+
    if( averageRelativeDeltaCount ){
        *averageRelativeDelta /= averageRelativeDeltaCount;
    }
@@ -5573,7 +5606,7 @@ void testReferenceCudaForces( std::string parameterFileName, MapStringInt& force
 
   double forceTolerance                    = 0.01; 
   double energyTolerance                   = 0.01; 
-  int numberOfSteps                        = 1; 
+  int numberOfSteps                        = 2; 
   int steps                                = 0; 
   int applyAssertion                       = 1;
   int custom1                              = 0;
@@ -5638,8 +5671,8 @@ void testReferenceCudaForces( std::string parameterFileName, MapStringInt& force
    Context* referenceContext;
    if( platform1 == 0 ){
        referenceContext      = testSetup( parameterFileName, forceMap1, referencePlatform1, 
-                                           parameterForces, &parameterKineticEnergy, &parameterPotentialEnergy,
-                                           supplementary, inputArgumentMap, log );
+                                          parameterForces, &parameterKineticEnergy, &parameterPotentialEnergy,
+                                          supplementary, inputArgumentMap, log );
    } else {
       referenceContext       = testSetup( parameterFileName, forceMap1, cudaPlatform1, 
                                           parameterForces, &parameterKineticEnergy, &parameterPotentialEnergy,
@@ -5901,6 +5934,250 @@ void testReferenceCudaForces( std::string parameterFileName, MapStringInt& force
       }
       (void) fflush( log );
    }
+}
+
+void testForces( std::string parameterFileName, MapStringInt& forceMap,
+                 MapStringString& inputArgumentMap, FILE* inputLog, FILE* summaryFile ){
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName      = "testForces";
+   int PrintOn                              = 1; 
+   int compareParameterForces               = 0; 
+ 
+   double forceTolerance                    = 0.01; 
+   double energyTolerance                   = 0.01; 
+   int numberOfSteps                        = 1; 
+   int steps                                = 0; 
+   int applyAssertion                       = 1;
+ 
+ // ---------------------------------------------------------------------------------------
+ 
+    FILE* log;
+    if( PrintOn == 0 && inputLog ){
+       log = NULL;
+    } else {
+       log = inputLog;
+    } 
+ 
+    int customs[2] = { 0 , 0 };
+    setIntFromMap(    inputArgumentMap, "applyAssertion",     applyAssertion    );
+    setIntFromMap(    inputArgumentMap, "custom1",            customs[0]        );
+    setIntFromMap(    inputArgumentMap, "custom2",            customs[1]        );
+ 
+    std::string comparisonPlatform[2];
+    if( setStringFromMap(    inputArgumentMap, "comparisonPlatform1", comparisonPlatform[0] ) == 0 ){
+        comparisonPlatform[0] = "ReferencePlatform";
+    }
+    if( setStringFromMap(    inputArgumentMap, "comparisonPlatform2", comparisonPlatform[1] ) == 0 ){
+        comparisonPlatform[1] = "ReferencePlatform";
+    }
+ 
+    MapStringInt forceMaps[2];
+    for( int ii = 0; ii < 2; ii++ ){
+         copyMap( forceMap, forceMaps[ii] );
+         if( customs[ii] ){
+             editMap( forceMap, forceMaps[ii], 2 );
+         }
+    }
+ 
+    ReferencePlatform referencePlatform;
+    CudaPlatform cudaPlatform;
+    OpenCLPlatform openCLPlatform;
+ 
+    double parameterKineticEnergy, parameterPotentialEnergy;
+ 
+    std::vector<Vec3> parameterForces;
+    std::vector<Vec3> parameterForces2;
+    MapStringVectorOfVectors supplementary;
+ 
+    Context* contexts[2];
+    for( int ii = 0; ii < 2; ii++ ){
+        if( comparisonPlatform[ii] == "ReferencePlatform" ){
+            contexts[ii] = testSetup( parameterFileName, forceMaps[ii], referencePlatform, 
+                                      parameterForces, &parameterKineticEnergy, &parameterPotentialEnergy,
+                                      supplementary, inputArgumentMap, log );
+        } else if( comparisonPlatform[ii] == "CudaPlatform" ){
+            contexts[ii] = testSetup( parameterFileName, forceMaps[ii], cudaPlatform, 
+                                      parameterForces, &parameterKineticEnergy, &parameterPotentialEnergy,
+                                      supplementary, inputArgumentMap, log );
+        } else if( comparisonPlatform[ii] == "OpenCLPlatform" ){
+            contexts[ii] = testSetup( parameterFileName, forceMaps[ii], openCLPlatform, 
+                                      parameterForces, &parameterKineticEnergy, &parameterPotentialEnergy,
+                                      supplementary, inputArgumentMap, log );
+        } else {
+            (void) fprintf( log, "%s Platform: %d %s not recognized\n", methodName.c_str(), ii, comparisonPlatform[ii].c_str() );
+            exit(0);
+        }
+        (void) fprintf( log, "Platform %d: %s\n", ii, contexts[ii]->getPlatform().getName().c_str() ); (void) fflush( log );
+    }
+ 
+    if( log ){
+        (void) fprintf( log, "%s force tolerance=%.3e energy tolerance=%.3e step=%d\n",
+                        methodName.c_str(), forceTolerance, energyTolerance, numberOfSteps );
+        (void) fprintf( log, "Platform 0: %s\n", contexts[0]->getPlatform().getName().c_str() );
+        (void) fprintf( log, "Platform 1: %s\n", contexts[1]->getPlatform().getName().c_str() );
+        (void) fflush( log );
+    }   
+ 
+    // Run several steps and see if relative force difference is within tolerance
+    
+    double kineticEnergy[2];
+    double potentialEnergy[2];
+    std::vector<Vec3> forces[2];
+    for( int step = 0; step < numberOfSteps; step++ ){
+ 
+        // pull info out of contexts
+  
+        int types                                       = State::Positions | State::Velocities | State::Forces | State::Energy;
+  
+        std::vector<Vec3> coordinates[2];
+        std::vector<Vec3> velocities[2];
+        for( int ii = 0; ii < 2; ii++ ){
+            State state             = contexts[ii]->getState( types );
+            coordinates[ii]         = state.getPositions();
+            velocities[ii]          = state.getVelocities();
+            forces[ii]              = state.getForces();
+            kineticEnergy[ii]       = state.getKineticEnergy();
+            potentialEnergy[ii]     = state.getPotentialEnergy();
+        }
+  
+        // diagnostics
+  
+        if( log ){
+            //static const unsigned int maxPrint = MAX_PRINT;
+            static const unsigned int maxPrint   = 1000000;
+   
+            (void) fprintf( log, "%s\n", methodName.c_str() );
+            (void) fprintf( log, "Kinetic   energies: %14.7e %14.7e\n", kineticEnergy[0], kineticEnergy[1] );
+            (void) fprintf( log, "Potential energies: %14.7e %14.7e\n", potentialEnergy[0], potentialEnergy[1] );
+   
+            for( unsigned int ii = 0; ii < forces[0].size(); ii++ ){
+                (void) fprintf( log, "%6u [%14.7e %14.7e %14.7e] [%14.7e %14.7e %14.7e]\n", ii,
+                                forces[0][ii][0], forces[0][ii][1], forces[0][ii][2],
+                                forces[1][ii][0], forces[1][ii][1], forces[1][ii][2] );
+                if( ii == maxPrint ){
+                    ii = forces[0].size() - maxPrint;
+                    if( ii < maxPrint )ii = maxPrint;
+               }
+            }
+       
+        }
+ 
+        // compare reference vs cuda forces
+  
+        double maxDeltaRefCud                          = -1.0e+30;
+        double maxRelativeDeltaRefCud                  = -1.0e+30;
+        double maxDotRefCud                            = -1.0e+30;
+        double maxDeltaPrmCud                          = -1.0e+30;
+        double maxRelativeDeltaPrmCud                  = -1.0e+30;
+        double maxDotPrmCud                            = -1.0e+30;
+        double averageDelta;
+        double averageRelativeDelta;
+        int maxDeltaIndex;
+        int maxRelativeDeltaRefCudIndex;
+  
+        std::vector<double> forceArraySum[2];
+        std::vector<double> forceStats[2];
+
+        compareForces( forces[0], comparisonPlatform[0], forceArraySum[0], forceStats[0],
+                       forces[1], comparisonPlatform[1], forceArraySum[1], forceStats[1], 
+                       &averageDelta, &averageRelativeDelta, &maxDeltaRefCud, &maxDeltaIndex, &maxRelativeDeltaRefCud,
+                       &maxRelativeDeltaRefCudIndex, &maxDotRefCud, forceTolerance, log );
+        
+        (void) fflush( log );
+ 
+        // summary file info
+  
+        if( summaryFile ){
+   
+            StringVector forceStringArray;
+            System system = contexts[0]->getSystem();
+            getForceStrings( system, forceStringArray, log );
+            std::string forceString;
+            if( forceStringArray.size() > 5 ){
+               forceString = "All";
+            } else {
+               for( StringVectorCI ii = forceStringArray.begin(); ii != forceStringArray.end(); ii++ ){
+                  forceString += *ii;
+               }
+            }
+            if( forceString.size() < 1 ){
+               forceString = "NA";
+            }
+            (void) fprintf( summaryFile,"Force %s\nPlatform1 %s\nPlatform2 %s\nAtoms %u\nMaxDelta %14.7e\nMaxRelDelta %14.7e\nMaxDot %14.7e\nAverageDelta %14.7e\nAverageRelativeDelta %14.7e\n",
+                            forceString.c_str(),
+                            contexts[0]->getPlatform().getName().c_str(),
+                            contexts[1]->getPlatform().getName().c_str(),
+                            forces[0].size(),
+                            maxDeltaRefCud, maxRelativeDeltaRefCud, maxDotRefCud,
+                            averageDelta, averageRelativeDelta);
+   
+            double sum = ( fabs(forceArraySum[0][0] ) + fabs( forceArraySum[0][1] ) + fabs( forceArraySum[0][2]) )*0.33333;
+            (void) fprintf( summaryFile, "Sum1 %14.7e\n", sum );
+   
+                   sum = ( fabs(forceArraySum[1][0] ) + fabs( forceArraySum[1][1] ) + fabs( forceArraySum[1][2]) )*0.33333;
+            (void) fprintf( summaryFile, "Sum2 %14.7e\n", sum );
+            double difference         = fabs( potentialEnergy[0] - potentialEnergy[1] );
+            double relativeDifference = difference/( fabs( potentialEnergy[0] ) + fabs(  potentialEnergy[1] ) + 1.0e-10);
+            (void) fprintf( summaryFile, "PE1 %14.7e\nPE2 %14.7e\nDiffPE %14.7e\nRelDiffPE %14.7e\n",
+                            potentialEnergy[0], potentialEnergy[1], difference, relativeDifference );
+        }
+ 
+        if( log ){
+            (void) fprintf( log, "max delta=%13.7e at %d maxRelDelta=%13.7e at %d maxDot=%14.7e\n",
+                            maxDeltaRefCud, maxDeltaIndex, maxRelativeDeltaRefCud, maxRelativeDeltaRefCudIndex, maxDotRefCud );
+            for( int ii = 0; ii < 2; ii++ ){
+                (void) fprintf( log, "%25s force sum [%14.7e %14.7e %14.7e]\n",
+                                comparisonPlatform[ii].c_str(),
+                                forceArraySum[ii][0], forceArraySum[ii][1], forceArraySum[ii][2] );
+            }
+            for( int ii = 0; ii < 2; ii++ ){
+                (void) fprintf( log, "%25s force average=%14.7e stddev=%14.7e min=%14.7e at %6.0f max=%14.7e at %6.0f\n",
+                                comparisonPlatform[ii].c_str(), 
+                                forceStats[ii][0], forceStats[ii][1], forceStats[ii][2], forceStats[ii][3], forceStats[ii][4], forceStats[ii][5] ); 
+            }
+            (void) fflush( log );
+        }
+ 
+       // check that relative force difference is small
+ 
+       if( applyAssertion ){
+          ASSERT( maxRelativeDeltaRefCud < forceTolerance );
+ 
+          // check energies
+ 
+          ASSERT_EQUAL_TOL( kineticEnergy[0],    kineticEnergy[1],   energyTolerance );
+          ASSERT_EQUAL_TOL( potentialEnergy[0],  potentialEnergy[1], energyTolerance );
+       }
+ 
+ /*
+        double energy = state.getKineticEnergy()+state.getPotentialEnergy();
+        if( PrintOn > 1 ){
+           (void) fprintf( log, "%s %d e[%.5e %.5e] ke=%.5e pe=%.5e\n", 
+                           methodName.c_str(), i, initialEnergy, energy, state.getKineticEnergy(), state.getPotentialEnergy() ); (void) fflush( log );
+        }
+        if( i == 1 ){
+            initialEnergy = energy;
+        } else if( i > 1 ){
+            ASSERT_EQUAL_TOL(initialEnergy, energy, 0.5);
+        }
+ */
+       if( steps ){
+          contexts[0]->getIntegrator().step( steps );
+          _synchContexts( *contexts[0], *contexts[1]);
+       }
+ 
+    }
+ 
+    if( log ){
+       if( applyAssertion ){
+          (void) fprintf( log, "\n%s tests passed\n", methodName.c_str() );
+       } else {
+          (void) fprintf( log, "\n%s tests off\n", methodName.c_str() );
+       }
+       (void) fflush( log );
+    }
 }
 
 void testInputForces( std::string parameterFileName, MapStringInt& forceMap,
@@ -6297,6 +6574,1297 @@ void testEnergyConservation( std::string parameterFileName, MapStringInt& forceM
    checkEnergyConservation( *referenceContext, inputArgumentMap, log, summaryFile );
 }
 
+// ---------------------------------------------------------------------------------------
+// GB/VI test start
+// ---------------------------------------------------------------------------------------
+
+static Context* setupTwoParticle( FILE* log ){
+
+    //ReferencePlatform platform;
+    //CudaPlatform platform;
+    const int numParticles         = 2;
+    System* system                 = new System();
+    LangevinIntegrator* integrator = new LangevinIntegrator(0, 0.1, 0.01);
+
+    // harmonic bond
+
+    double C_HBondDistance   = 0.05;
+    HarmonicBondForce* bonds = new HarmonicBondForce();
+    bonds->addBond(0, 1, C_HBondDistance, 0.0);
+    system->addForce(bonds);
+
+    double C_radius =  0.1;
+    double C_gamma  =  0.0;
+    double C_charge =  1.0;
+    double H_radius =  1.00;
+    double H_gamma  =  0.0;
+    double H_charge = -1.0;
+
+    NonbondedForce* nonbonded = new NonbondedForce();
+    nonbonded->setNonbondedMethod(NonbondedForce::NoCutoff);
+
+    (void) fprintf( log, "Applying GB/VI\n" );
+    GBVIForce* forceField = new GBVIForce();
+    for( int i = 0; i < numParticles; i++ ){
+       system->addParticle(1.0);
+       forceField->addParticle( H_charge, H_radius, H_gamma);
+       nonbonded->addParticle(  H_charge, H_radius, 0.0);
+    }
+ 
+    forceField->setParticleParameters( 1, C_charge, C_radius, C_gamma);
+//    nonbonded->setParticleParameters(  1, C_charge, C_radius, 0.0);
+ 
+    forceField->addBond( 0, 1, C_HBondDistance );
+    
+    std::vector<pair<int, int> > bondExceptions;
+    std::vector<double> bondDistances;
+    
+    bondExceptions.push_back(pair<int, int>(0, 1)); 
+    bondDistances.push_back( C_HBondDistance );
+    
+    nonbonded->createExceptionsFromBonds(bondExceptions, 0.0, 0.0);
+ 
+    system->addForce(forceField);
+    system->addForce(nonbonded);
+
+    //Context context(system, integrator, platform);
+    Context* context = new Context( *system, *integrator);
+    
+    vector<Vec3> positions(numParticles);
+    positions[0] = Vec3(0.0000,    0.0000,    0.0000);
+    positions[1] = Vec3(0.500,    0.0000,    0.0000);
+    context->setPositions(positions);
+
+    State state = context->getState(State::Forces | State::Energy);
+    (void) fprintf( log, "Energy %.4e\n", state.getPotentialEnergy() );
+
+    return context;
+} 
+
+// ---------------------------------------------------------------------------------------
+// GB/VI test start
+// ---------------------------------------------------------------------------------------
+
+static Context* setupEthane( FILE* log ){
+
+    //ReferencePlatform platform;
+    //CudaPlatform platform;
+    const int numParticles         = 8;
+    System* system                 = new System();
+    LangevinIntegrator* integrator = new LangevinIntegrator(0, 0.1, 0.01);
+
+    // harmonic bond
+
+    double C_HBondDistance   = 0.1097;
+    double C_CBondDistance   = 0.1504;
+    HarmonicBondForce* bonds = new HarmonicBondForce();
+    bonds->addBond(0, 1, C_HBondDistance, 0.0);
+    bonds->addBond(2, 1, C_HBondDistance, 0.0);
+    bonds->addBond(3, 1, C_HBondDistance, 0.0);
+
+    bonds->addBond(1, 4, C_CBondDistance, 0.0);
+
+    bonds->addBond(5, 4, C_HBondDistance, 0.0);
+    bonds->addBond(6, 4, C_HBondDistance, 0.0);
+    bonds->addBond(7, 4, C_HBondDistance, 0.0);
+
+    system->addForce(bonds);
+
+    double C_radius, C_gamma, C_charge, H_radius, H_gamma, H_charge;
+
+    int AM1_BCC = 1;
+    H_charge    = -0.053;
+    C_charge    = -3.0*H_charge;
+    if( AM1_BCC ){
+       C_radius =  0.180;
+       C_gamma  = -0.2863;
+       H_radius =  0.125;
+       H_gamma  =  0.2437;
+    } else {
+       C_radius =  0.215;
+       C_gamma  = -1.1087;
+       H_radius =  0.150;
+       H_gamma  =  0.1237;
+    }
+
+    NonbondedForce* nonbonded = new NonbondedForce();
+    nonbonded->setNonbondedMethod(NonbondedForce::NoCutoff);
+
+    (void) fprintf( log, "Applying GB/VI\n" );
+    GBVIForce* forceField = new GBVIForce();
+    for( int i = 0; i < numParticles; i++ ){
+       system->addParticle(1.0);
+       forceField->addParticle( H_charge, H_radius, H_gamma);
+       nonbonded->addParticle(  H_charge, H_radius, 0.0);
+    }
+ 
+    forceField->setParticleParameters( 1, C_charge, C_radius, C_gamma);
+    forceField->setParticleParameters( 4, C_charge, C_radius, C_gamma);
+ 
+    nonbonded->setParticleParameters(  1, C_charge, C_radius, 0.0);
+    nonbonded->setParticleParameters(  4, C_charge, C_radius, 0.0);
+ 
+    forceField->addBond( 0, 1, C_HBondDistance );
+    forceField->addBond( 2, 1, C_HBondDistance );
+    forceField->addBond( 3, 1, C_HBondDistance );
+    forceField->addBond( 1, 4, C_CBondDistance );
+    forceField->addBond( 5, 4, C_HBondDistance );
+    forceField->addBond( 6, 4, C_HBondDistance );
+    forceField->addBond( 7, 4, C_HBondDistance );
+    
+    std::vector<pair<int, int> > bondExceptions;
+    std::vector<double> bondDistances;
+    
+    bondExceptions.push_back(pair<int, int>(0, 1)); 
+    bondDistances.push_back( C_HBondDistance );
+    
+    bondExceptions.push_back(pair<int, int>(2, 1)); 
+    bondDistances.push_back( C_HBondDistance );
+    
+    bondExceptions.push_back(pair<int, int>(3, 1)); 
+    bondDistances.push_back( C_HBondDistance );
+    
+    bondExceptions.push_back(pair<int, int>(1, 4)); 
+    bondDistances.push_back( C_CBondDistance );
+    
+    bondExceptions.push_back(pair<int, int>(5, 4)); 
+    bondDistances.push_back( C_HBondDistance );
+    
+    bondExceptions.push_back(pair<int, int>(6, 4)); 
+    bondDistances.push_back( C_HBondDistance );
+ 
+    bondExceptions.push_back(pair<int, int>(7, 4));
+    bondDistances.push_back( C_HBondDistance );
+ 
+    nonbonded->createExceptionsFromBonds(bondExceptions, 0.0, 0.0);
+ 
+    system->addForce(forceField);
+    system->addForce(nonbonded);
+
+    //Context context(system, integrator, platform);
+    Context* context = new Context( *system, *integrator);
+    
+    vector<Vec3> positions(numParticles);
+    positions[0] = Vec3(0.5480,    1.7661,    0.0000);
+    positions[1] = Vec3(0.7286,    0.8978,    0.6468);
+    positions[2] = Vec3(0.4974,    0.0000,    0.0588);
+    positions[3] = Vec3(0.0000,    0.9459,    1.4666);
+    positions[4] = Vec3(2.1421,    0.8746,    1.1615);
+    positions[5] = Vec3(2.3239,    0.0050,    1.8065);
+    positions[6] = Vec3(2.8705,    0.8295,    0.3416);
+    positions[7] = Vec3(2.3722,    1.7711,    1.7518);
+    for( int ii = 0; ii < positions.size(); ii++ ) {
+        positions[ii][0] *= 0.1;
+        positions[ii][1] *= 0.1;
+        positions[ii][2] *= 0.1;
+    }
+    context->setPositions(positions);
+
+    State state = context->getState(State::Forces | State::Energy);
+    (void) fprintf( log, "Energy %.4e\n", state.getPotentialEnergy() );
+
+    return context;
+} 
+
+// ---------------------------------------------------------------------------------------
+// GB/VI small molecule input
+// ---------------------------------------------------------------------------------------
+
+static Context* setupSmallMolecule( FILE* filePtr, int* lineCount, FILE* log ){
+
+    System* system                  = new System();
+    LangevinIntegrator* integrator  = new LangevinIntegrator(0, 0.1, 0.01);
+
+    NonbondedForce* nonbonded       = new NonbondedForce();
+    nonbonded->setNonbondedMethod(NonbondedForce::NoCutoff);
+    system->addForce(nonbonded);
+
+    GBVIForce* forceField           = new GBVIForce();
+    system->addForce(forceField);
+
+    StringVector tokensName;
+    char* isNotEof                  = readLine( filePtr, tokensName, lineCount, log );
+    std::string moleculeName        = tokensName[0].c_str();
+
+    StringVector tokensNumberParticles;
+    isNotEof                        = readLine( filePtr, tokensNumberParticles, lineCount, log );
+    const int numParticles          = atoi( tokensNumberParticles[0].c_str() );
+    vector<Vec3> positions(numParticles);
+ 
+    (void) fprintf( log, "setupSmallMolecule: %20s %5d\n", moleculeName.c_str(), numParticles );
+    (void) fflush( log );
+
+    for( unsigned int ii = 0; ii < numParticles; ii++ ){
+
+        unsigned int tokenIndex     = 1;
+        StringVector tokens;
+        isNotEof                    = readLine( filePtr, tokens, lineCount, log );
+
+       double mass                  = atof( tokens[tokenIndex++].c_str() );
+       system->addParticle(mass);
+
+       double charge                = atof( tokens[tokenIndex++].c_str() );
+       double radius                = atof( tokens[tokenIndex++].c_str() );
+#if 0
+if( mass < 1.01 ){
+    radius = .125; // H
+} else if( 11.99 < mass && mass < 12.01 ){ 
+    radius = 0.18; // C
+} else if( 13.99 < mass && mass < 14.01 ){ 
+    radius = 0.17; // N
+} else if( 15.99 < mass && mass < 16.01 ){ 
+    radius = 0.16; // O
+} else if( 18.99 < mass && mass < 19.01 ){ 
+    radius = 0.15; // F
+} else if( 30.99 < mass && mass < 31.01 ){ 
+    radius = 0.20; // P
+} else if( 31.99 < mass && mass < 32.01 ){ 
+    radius = 0.19; // S
+} else if( 34.99 < mass && mass < 35.01 ){ 
+    radius = 0.18; // CL
+} else if( 78.99 < mass && mass < 79.01 ){ 
+    radius = 0.22; // BR
+} else if( 126.99 < mass && mass < 127.01 ){ 
+    radius = 0.25; // I
+} else {
+    (void) fprintf( log, "Mass not handled %.4e   radius=-%14.6e\n", mass, radius );
+}
+#endif
+       double gamma                 = atof( tokens[tokenIndex++].c_str() );
+
+       double x1                    = atof( tokens[tokenIndex++].c_str() );
+       double x2                    = atof( tokens[tokenIndex++].c_str() );
+       double x3                    = atof( tokens[tokenIndex++].c_str() );
+
+       forceField->addParticle( charge, radius, gamma);
+       nonbonded->addParticle( charge, radius, 0.0);
+
+       positions[ii]                = Vec3(x1,x2,x3);
+    }
+   
+    StringVector tokensNumberBonds;
+    isNotEof                        = readLine( filePtr, tokensNumberBonds, lineCount, log );
+    const int numBonds              = atoi( tokensNumberBonds[0].c_str() );
+    for( unsigned int ii = 0; ii < numBonds; ii++ ){
+
+        unsigned int tokenIndex     = 1;
+        StringVector tokens;
+        isNotEof                    = readLine( filePtr, tokens, lineCount, log );
+
+       int atom1                    = atoi( tokens[tokenIndex++].c_str() );
+       int atom2                    = atoi( tokens[tokenIndex++].c_str() );
+       double bondDistance          = atof( tokens[tokenIndex++].c_str() );
+
+       forceField->addBond( atom1, atom2, bondDistance );
+    }
+    StringVector tokensJunk;
+    isNotEof                    = readLine( filePtr, tokensJunk, lineCount, log );
+   
+    Context* context            = new Context( *system, *integrator);
+    context->setPositions(positions);
+
+    State state = context->getState(State::Forces | State::Energy);
+    (void) fprintf( log, "Energy %.4e\n", state.getPotentialEnergy() );
+
+    return context;
+} 
+
+static void getGBVIRadii( System& system, std::string forceName, std::vector<float>& radii, FILE* log ){
+
+    for( int ii = 0; ii < system.getNumForces(); ii++ ) {
+
+        Force& force            = system.getForce(ii);
+
+        // GBVI
+    
+        if( forceName == GBVI_FORCE ){
+            try {
+                GBVIForce& gbviForce = dynamic_cast<GBVIForce&>(force);
+    
+                unsigned int numberOfParticles = static_cast<unsigned int>(gbviForce.getNumParticles());
+                radii.resize( numberOfParticles );
+                for( unsigned int ii = 0; ii < radii.size(); ii++ ){
+                   double charge, radius, gamma;
+                   gbviForce.getParticleParameters( ii, charge, radius, gamma );
+                   radii[ii] = radius;
+                }
+                return;
+            } catch( std::bad_cast ){
+            }
+        }
+    
+        // GBVI softcore
+    
+#ifdef INCLUDE_FREE_ENERGY_PLUGIN
+        if( forceName == GBVI_SOFTCORE_FORCE ){
+            try {
+                GBVISoftcoreForce& gbviForce = dynamic_cast<GBVISoftcoreForce&>(force);
+                unsigned int numberOfParticles = static_cast<unsigned int>(gbviForce.getNumParticles());
+                radii.resize( numberOfParticles );
+                for( unsigned int ii = 0; ii < radii.size(); ii++ ){
+                   double charge, radius, gamma;
+                   gbviForce.getParticleParameters( ii, charge, radius, gamma );
+                   radii[ii] = radius;
+                }
+                return;
+            } catch( std::bad_cast ){
+            }
+        }
+#endif
+    
+    }
+
+    // force not found
+
+    radii.resize( 0 );
+
+    return;
+}
+
+// get distance
+
+static float getDistance( const float coordinates1[3], const float coordinates2[3]  ){
+
+    float distance = (coordinates1[0] - coordinates2[0] )*(coordinates1[0] - coordinates2[0] ) +
+                     (coordinates1[1] - coordinates2[1] )*(coordinates1[1] - coordinates2[1] ) +
+                     (coordinates1[2] - coordinates2[2] )*(coordinates1[2] - coordinates2[2] );
+
+    return sqrtf( distance );
+}
+
+static float getMaxRadius( const std::vector<float>& radii, FILE* log ){
+
+    float maxRadius = -1.0e+30;
+    for( int ii = 0; ii < radii.size(); ii++ ) {
+       if( radii[ii] > maxRadius )maxRadius = radii[ii];
+    }
+    return maxRadius;
+}
+
+struct BoundingBox {
+    float minCoordinates[3];
+    float maxCoordinates[3];
+};
+
+// Get bounding box
+
+void getBoundingBox( const std::vector<Vec3>& positions, struct BoundingBox& boundingBox,
+                     const float maxAtomicRadius, FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+    //static const std::string methodName      = "getBoundingBox";
+
+// ---------------------------------------------------------------------------------------
+
+    // initialize min/max bounding box  coordinates
+    // and find min/max positions
+    // widen box to enclose max atomic radius
+
+    for( unsigned int ii = 0; ii < 3; ii++ ){
+        boundingBox.minCoordinates[ii] =  1.0e+30;
+        boundingBox.maxCoordinates[ii] = -1.0e+30;
+    }
+
+    for( unsigned int ii = 0; ii < positions.size(); ii++ ){
+        for( unsigned int jj = 0; jj < 3; jj++ ){
+            if( positions[ii][jj] < boundingBox.minCoordinates[jj] ){
+                boundingBox.minCoordinates[jj] = positions[ii][jj];
+            }
+            if( positions[ii][jj] > boundingBox.maxCoordinates[jj] ){
+                boundingBox.maxCoordinates[jj] = positions[ii][jj];
+            }
+        }
+    }
+
+    for( unsigned int ii = 0; ii < 3; ii++ ){
+        boundingBox.minCoordinates[ii] -= maxAtomicRadius;
+        boundingBox.maxCoordinates[ii] += maxAtomicRadius;
+    }
+
+    (void) fprintf( log, "BoundingBox min: [%12.5f %12.5f %12.5f]\n",       boundingBox.minCoordinates[0],  boundingBox.minCoordinates[1], boundingBox.minCoordinates[2]);
+    (void) fprintf( log, "            max: [%12.5f %12.5f %12.5f]\n",       boundingBox.maxCoordinates[0],  boundingBox.maxCoordinates[1], boundingBox.maxCoordinates[2]);
+    (void) fflush( log );
+
+    return;
+}
+
+struct IntegrationGrid {
+    float resolution;
+    float origin[3];
+    int numberOfGridPoints[3];
+    int gridIndex[3];
+    int offset[3];
+    int totalNumberOfGridPoints;
+    int totalNumberOfGridMaskPoints;
+    int* mask;
+    int* savedMask;
+};
+
+// print grid
+
+static void printGrid( const struct IntegrationGrid& grid, FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+    static const std::string methodName      = "printGrid";
+
+// ---------------------------------------------------------------------------------------
+
+    (void) fprintf( log, "Grid:\n" );
+    (void) fprintf( log, "            : [%12d %12d %12d]\n",       grid.numberOfGridPoints[0],
+                                                                   grid.numberOfGridPoints[1], grid.numberOfGridPoints[2]);
+    (void) fprintf( log, "       total:  %12d %12d\n",             grid.totalNumberOfGridPoints, grid.totalNumberOfGridMaskPoints );
+    (void) fprintf( log, "  resolution:  %12.5f\n",                grid.resolution );
+    (void) fprintf( log, "      origin: [%12.5f %12.5f %12.5f]\n", grid.origin[0],  grid.origin[1], grid.origin[2]);
+    (void) fprintf( log, "     indices: [%12d %12d %12d]\n",       grid.gridIndex[0],  grid.gridIndex[1], grid.gridIndex[2]);
+    (void) fprintf( log, "      offset: [%12d %12d %12d]\n",       grid.offset[0],  grid.offset[1], grid.offset[2]);
+    (void) fflush( log );
+
+    return;
+}
+
+// Get grid
+
+static void getGrid( const struct BoundingBox& boundingBox,  struct IntegrationGrid& grid, FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+    static const std::string methodName      = "getGrid";
+
+// ---------------------------------------------------------------------------------------
+
+    if( grid.resolution <= 0.0f ){
+        (void) fprintf( log, "%s grid resolution is invalid: %14.6e\n", methodName.c_str(), grid.resolution );
+        (void) fflush( log );
+        exit(-1);
+    }
+
+    // initialize min/max bounding box  coordinates
+    // and find min/max positions
+
+    grid.totalNumberOfGridPoints = 1;
+    for( unsigned int ii = 0; ii < 3; ii++ ){
+        float span                     = boundingBox.maxCoordinates[ii] - boundingBox.minCoordinates[ii];
+		  grid.origin[ii]                = boundingBox.minCoordinates[ii];
+		  grid.numberOfGridPoints[ii]    = static_cast<int>(span/grid.resolution) + 1;
+        grid.totalNumberOfGridPoints  *= grid.numberOfGridPoints[ii];
+        grid.offset[ii]                = (ii > 0) ? (grid.numberOfGridPoints[ii-1]*grid.offset[ii-1]) : 1;
+    }
+    grid.totalNumberOfGridMaskPoints = (grid.totalNumberOfGridPoints + 31)/32;
+    if( grid.totalNumberOfGridMaskPoints ){
+        grid.mask       = (int*) malloc( sizeof(int)*grid.totalNumberOfGridMaskPoints );
+        grid.savedMask  = (int*) malloc( sizeof(int)*grid.totalNumberOfGridMaskPoints );
+        memset( grid.mask, 0, sizeof(int)*grid.totalNumberOfGridMaskPoints );
+    } else {
+        grid.mask      = NULL;
+        grid.savedMask = NULL;
+    }
+
+    return;
+}
+
+// get grid coordinates given grid index
+
+static void getGridCoordinatesGivenIndex( int gridIndex, struct IntegrationGrid& grid,
+                                          float gridCoordinates[3], int gridIndices[3], FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+    static const std::string methodName      = "getGridCoordinatesGivenIndex";
+
+// ---------------------------------------------------------------------------------------
+
+    for( int ii = 2; ii >= 0; ii-- ){
+//fprintf( log, "%s %u %d %d\n", methodName.c_str(), ii, gridIndex, grid.offset[ii] ); fflush( log );
+        gridIndices[ii]    = gridIndex/grid.offset[ii]; 
+        gridIndex     -= gridIndices[ii]*grid.offset[ii];
+    }
+
+    for( unsigned int ii = 0; ii < 3; ii++ ){
+        gridCoordinates[ii] = gridIndices[ii]*grid.resolution + grid.origin[ii];
+    } 
+
+    return;
+}
+
+// get grid index given integer grid coordinates given grid index
+
+static void getGridIndexGivenCoordinates( struct IntegrationGrid& grid,
+                                          float gridCoordinates[3],
+                                          int& gridIndex, int gridIndices[3], FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+    // static const std::string methodName      = "getGridIndexGivenGridCoordinates";
+
+// ---------------------------------------------------------------------------------------
+
+    gridIndex = 0;
+    for( unsigned int ii = 0; ii < 3; ii++ ){
+        gridIndices[ii]   = static_cast<int>( (gridCoordinates[ii] - grid.origin[ii])/grid.resolution + 1.0e-04f);
+        gridIndex        += gridIndices[ii]*grid.offset[ii];
+    }
+
+    return;
+}
+
+// set mask at given grid index
+
+static std::string printMask( int maskValue, FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+    //static const std::string methodName      = "maskGridPoint";
+
+// ---------------------------------------------------------------------------------------
+
+    std::string bitFields;
+    for( int ii = 0; ii < 32; ii++ ){
+       int mask = (1 << ii);
+       if( mask & maskValue ){
+           bitFields += "1";
+       } else {
+           bitFields += "0";
+       }
+    }
+
+    return bitFields;
+}
+
+// set mask at given grid index
+
+static int getMaskGridValue( int gridIndex, struct IntegrationGrid& grid, FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+    //static const std::string methodName      = "maskGridPoint";
+
+// ---------------------------------------------------------------------------------------
+
+    int maskIndex = gridIndex/32; 
+    if( maskIndex < grid.totalNumberOfGridMaskPoints ){
+        return grid.mask[maskIndex];
+    } else {
+        (void) fprintf( log, "Grid index %d (maskIndex=%d) is out of range [0, %d] ([0, %d])\n", gridIndex, maskIndex,
+                        grid.totalNumberOfGridPoints, grid.totalNumberOfGridMaskPoints );
+        exit(-1);
+    }
+
+    return 0;
+}
+
+
+// set mask at given grid index
+
+static void maskGridPoint( int gridIndex, struct IntegrationGrid& grid, int maskValue, FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+    //static const std::string methodName      = "maskGridPoint";
+
+// ---------------------------------------------------------------------------------------
+
+    int maskIndex = gridIndex/32; 
+    if( maskIndex < grid.totalNumberOfGridMaskPoints ){
+        int offset = gridIndex - maskIndex*32;
+        if( maskValue ){
+            grid.mask[maskIndex] |=  (1 << offset);
+        } else {
+//std::string vvv = printMask( grid.mask[maskIndex], log );
+            grid.mask[maskIndex] &= ~(1 << offset);
+/*
+std::string www = printMask( grid.mask[maskIndex], log );
+(void) fprintf( log, "Grid index %8d (maskIndex=%8d) offset=%8d %s %s\n", gridIndex, maskIndex, offset, vvv.c_str(), www.c_str() );
+*/
+
+        }
+    } else {
+        (void) fprintf( log, "Grid index %d (maskIndex=%d) is out of range [0, %d] ([0, %d])\n", gridIndex, maskIndex,
+                        grid.totalNumberOfGridPoints, grid.totalNumberOfGridMaskPoints );
+    }
+
+    return;
+}
+
+// diagnoistic
+
+static int isGridIndexSet( const struct IntegrationGrid& grid,
+                           const int gridIndex, FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName      = "isGridIndexSet";
+
+// ---------------------------------------------------------------------------------------
+
+    int maskIndex    = gridIndex/32;
+    int offset       = gridIndex - maskIndex*32;
+    if( grid.mask[maskIndex] & (1 << offset) ){
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+// diagnoistic
+
+static void checkGridSetting( const float atomCoordinates[3], const struct IntegrationGrid& grid,
+                              const int gridIndex, const std::string& idString, FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName      = "checkGridSetting";
+
+// ---------------------------------------------------------------------------------------
+
+    int maskIndex    = gridIndex/32;
+    int offset       = gridIndex - maskIndex*32;
+    std::string www  = printMask( grid.mask[maskIndex], log );
+    (void) fprintf( log, "Check: %20s Grid index=%8d maskIndex=%8d offset=%2d %s ",
+                    idString.c_str(), gridIndex, maskIndex, offset, www.c_str() );
+    if( grid.mask[maskIndex] & (1 << offset) )fprintf( log, " hit offset" );
+    fprintf( log, "\n" );
+}
+
+// get total masked count
+
+static void getTotalMasked( struct IntegrationGrid& grid, unsigned int& totalMasked ){
+
+// ---------------------------------------------------------------------------------------
+
+    //static const std::string methodName      = "maskGridPoint";
+
+// ---------------------------------------------------------------------------------------
+
+    totalMasked  = 0;
+    for( unsigned int ii = 0; ii < grid.totalNumberOfGridMaskPoints; ii++ ){
+        if( grid.mask[ii] ){
+            for( unsigned int jj = 0; jj < 32; jj++ ){
+                if( grid.mask[ii] & (1 << jj) )totalMasked++;
+            }
+        }
+    }
+
+    return;
+}
+
+// used to sort atoms
+
+typedef struct {
+    int listIndex;
+    unsigned int gridCount;
+    unsigned int maskedCount;
+    unsigned int bornMaskedCount;
+    float radius;
+    double bornSum;
+    double bornRadius;
+    double scaledRadius;
+    int countCases[4];
+    double minR;
+    float coordinates[3];
+    float range[2][3];
+} sortedAtom;
+
+static int compareAtomCoordinate( const sortedAtom& p1, const sortedAtom& p2){
+    return p1.coordinates[0] < p2.coordinates[0];
+}
+
+static void sortAtomsByCoordinate( const std::vector<Vec3>& positions, 
+                                   const std::vector<float>& radii,
+                                   std::vector<sortedAtom>& sortedAtoms, FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+  static const std::string methodName      = "sortAtomsByCoordinate";
+
+// ---------------------------------------------------------------------------------------
+
+    sortedAtoms.resize( positions.size() );
+    for( unsigned int ii = 0; ii < positions.size(); ii++ ){
+        sortedAtoms[ii].listIndex      = ii;
+        sortedAtoms[ii].radius         = radii[ii];
+        sortedAtoms[ii].coordinates[0] = positions[ii][0];
+        sortedAtoms[ii].coordinates[1] = positions[ii][1];
+        sortedAtoms[ii].coordinates[2] = positions[ii][2];
+        sortedAtoms[ii].range[0][0]    = positions[ii][0] - radii[ii];
+        sortedAtoms[ii].range[1][0]    = positions[ii][0] + radii[ii];
+        sortedAtoms[ii].range[0][1]    = positions[ii][1] - radii[ii];
+        sortedAtoms[ii].range[1][1]    = positions[ii][1] + radii[ii];
+        sortedAtoms[ii].range[0][2]    = positions[ii][2] - radii[ii];
+        sortedAtoms[ii].range[1][2]    = positions[ii][2] + radii[ii];
+    }
+    std::sort( sortedAtoms.begin(), sortedAtoms.end(), compareAtomCoordinate );
+}
+
+static int cubesOverlap( int dimension, const float cube1[2][3], const float cube2[2][3] ){
+
+    if( cube1[0][dimension] >= cube2[0][dimension] &&
+        cube1[0][dimension] <= cube2[1][dimension] )return 1;
+
+    if( cube1[1][dimension] >= cube2[0][dimension] &&
+        cube1[1][dimension] <= cube2[1][dimension] )return 1;
+
+    return 0;
+}
+
+// get indices of atoms in cube
+
+static void getAtomsInCube( float cube[2][3], const std::vector<sortedAtom>& sortedAtoms,
+                            std::vector<unsigned int>& prospectiveAtoms, FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+  static const std::string methodName      = "getAtomsInCube";
+
+// ---------------------------------------------------------------------------------------
+
+    prospectiveAtoms.resize(0);
+    if( cube[1][0] < sortedAtoms[0].coordinates[0] ||
+        cube[0][0] > sortedAtoms[sortedAtoms.size()-1].coordinates[0] ){
+        return;
+    }
+
+    unsigned int lowerIndex    = 0;
+    unsigned int upperIndex    = sortedAtoms.size();
+    unsigned int midpoint      = (lowerIndex + upperIndex)/2;
+    unsigned int done          = 0;
+    while( done == 0 ){
+        if( cube[0][0] > sortedAtoms[midpoint].coordinates[0] ){
+            lowerIndex = midpoint; 
+        } else if( cube[1][0] < sortedAtoms[midpoint].coordinates[0] ){
+            upperIndex = midpoint; 
+        } else {
+            done = 1;
+        }
+        if( (upperIndex - lowerIndex) < 2 )done = 1;
+        midpoint = done ? midpoint : (lowerIndex + upperIndex)/2;
+    }
+ 
+    // check if atom was found
+/*
+    if( cube[0][0] > sortedAtoms[midpoint].coordinates[0] ||
+        cube[1][0] < sortedAtoms[midpoint].coordinates[0] ){
+        if( 0 && log ){
+            (void) fprintf( log, "No atom in cube [%14.6e %14.6e%14.6e] [%14.6e %14.6e%14.6e]\n",
+                            cube[0][0], cube[0][1], cube[0][2],
+                            cube[1][0], cube[1][1], cube[1][2] );
+        }
+        return;
+    }
+*/
+
+    int atomIndex = (midpoint == (sortedAtoms.size()-1) ) ? midpoint : (midpoint+1);
+    while( atomIndex >= 0 && cube[0][0] <= sortedAtoms[atomIndex].coordinates[0] ){
+        if( cube[0][1] <= sortedAtoms[atomIndex].coordinates[1] &&
+            cube[1][1] >= sortedAtoms[atomIndex].coordinates[1] &&
+            cube[0][2] <= sortedAtoms[atomIndex].coordinates[2] &&
+            cube[1][2] >= sortedAtoms[atomIndex].coordinates[2] &&
+            cube[0][0] <= sortedAtoms[atomIndex].coordinates[0] &&
+            cube[1][0] >= sortedAtoms[atomIndex].coordinates[0] ){
+            prospectiveAtoms.push_back( atomIndex );
+        }
+        atomIndex--;
+    }
+
+    atomIndex = midpoint > 0 ? midpoint - 1 : midpoint;
+    while( atomIndex < sortedAtoms.size() && cube[1][0] >= sortedAtoms[atomIndex].coordinates[0] ){
+        if( cube[0][1] <= sortedAtoms[atomIndex].coordinates[1] &&
+            cube[1][1] >= sortedAtoms[atomIndex].coordinates[1] &&
+            cube[0][2] <= sortedAtoms[atomIndex].coordinates[2] &&
+            cube[1][2] >= sortedAtoms[atomIndex].coordinates[2] &&
+            cube[0][0] <= sortedAtoms[atomIndex].coordinates[0] &&
+            cube[1][0] >= sortedAtoms[atomIndex].coordinates[0] &&
+            (prospectiveAtoms.size() == 0 || prospectiveAtoms[0] != atomIndex) ){
+            prospectiveAtoms.push_back( atomIndex );
+        }
+        atomIndex++;
+    }
+
+    return;
+
+}
+
+// get Born sum
+
+static void getBornSum( float atomCoordinates[3], struct IntegrationGrid& grid,
+                        const int exponent, double& bornSum, double& minR, FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName      = "getBornSum";
+
+// ---------------------------------------------------------------------------------------
+
+    bornSum                 = 0.0;
+    minR                    = 1.0e+30;
+    int closeIndex          = 0;
+    for( unsigned int ii = 0; ii < grid.totalNumberOfGridMaskPoints; ii++ ){
+
+  
+if( ii == -380316 ){
+int gridIndex = 12170113;
+checkGridSetting( atomCoordinates, grid, gridIndex, "BornSum", log );
+}
+
+        if( grid.mask[ii] ){
+            for( unsigned int jj = 0; jj < 32; jj++ ){
+                if( grid.mask[ii] & (1 << jj) ){
+                    int gridIndices[3];
+                    float gridCoordinates[3];
+                    int gridIndex = ii*32 + jj;
+                    getGridCoordinatesGivenIndex( gridIndex, grid, gridCoordinates, gridIndices, log );
+                    double r2 = static_cast<double>(
+                                (gridCoordinates[0] - atomCoordinates[0])*(gridCoordinates[0] - atomCoordinates[0]) +
+                                (gridCoordinates[1] - atomCoordinates[1])*(gridCoordinates[1] - atomCoordinates[1]) +
+                                (gridCoordinates[2] - atomCoordinates[2])*(gridCoordinates[2] - atomCoordinates[2]) );
+                    if( exponent == 4 ){
+                        bornSum += 1.0/(r2*r2);
+                    } else if( exponent == 6 ){
+                        bornSum += 1.0/(r2*r2*r2);
+                    }
+                    if( r2 < minR ){
+                        minR       = r2;
+                        closeIndex = gridIndex;
+                    }
+                }
+            }
+        }
+    }
+
+    minR = sqrt( minR );
+fprintf( log, "BornSum closest index=%8d %14.6e\n", closeIndex, minR );
+
+    return;
+}
+
+static void readBornRadiiFile( const std::string& fileName, std::vector<sortedAtom>& bornRadii, FILE* log ){ 
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName      = "readBornRadiiFile";
+   char buffer[1024];
+
+// ---------------------------------------------------------------------------------------
+
+    FILE* brFile          = NULL;
+#ifdef WIN32
+    fopen_s( &brFile, fileName.c_str(), "r" );
+#else
+    brFile = fopen( fileName.c_str(), "r" );
+#endif
+    if( brFile == NULL ){
+        (void) fprintf( log, "Born radii file=%s not opened.\n", fileName.c_str() );
+        return;
+    } else {
+        (void) fprintf( log, "Born radii file=%s opened.\n", fileName.c_str() );
+    }
+
+    fgets( buffer, 1024, brFile );
+    int numberOfAtoms = atoi( buffer );
+    int lineCount     = 0;
+    if( numberOfAtoms > 0 ){
+        bornRadii.resize( numberOfAtoms );
+        for( int ii = 0; ii < numberOfAtoms; ii++ ){
+            StringVector lineTokens;
+            char* isNotEof = readLine( brFile, lineTokens, &lineCount, log );
+            int tokenIndex = 0;
+            if( lineTokens.size() >= 4 ){
+                int index                      = atoi( lineTokens[tokenIndex++].c_str() );
+                double bornRadius              = atof( lineTokens[tokenIndex++].c_str() );
+                double radius                  = atof( lineTokens[tokenIndex++].c_str() );
+                double scaledRadius            = atof( lineTokens[tokenIndex++].c_str() );
+                int countCase1                 = atoi( lineTokens[tokenIndex++].c_str() );
+                int countCase2                 = atoi( lineTokens[tokenIndex++].c_str() );
+                int countCase3                 = atoi( lineTokens[tokenIndex++].c_str() );
+                int countCase4                 = atoi( lineTokens[tokenIndex++].c_str() );
+                double coord0                  = atof( lineTokens[tokenIndex++].c_str() );
+                double coord1                  = atof( lineTokens[tokenIndex++].c_str() );
+                double coord2                  = atof( lineTokens[tokenIndex++].c_str() );
+
+                bornRadii[ii].listIndex        = ii; 
+                bornRadii[ii].radius           = radius; 
+                bornRadii[ii].bornRadius       = bornRadius; 
+                bornRadii[ii].scaledRadius     = scaledRadius; 
+                bornRadii[ii].countCases[0]    = countCase1; 
+                bornRadii[ii].countCases[1]    = countCase2; 
+                bornRadii[ii].countCases[2]    = countCase3; 
+                bornRadii[ii].countCases[3]    = countCase4; 
+                bornRadii[ii].coordinates[0]   = coord0; 
+                bornRadii[ii].coordinates[1]   = coord1; 
+                bornRadii[ii].coordinates[2]   = coord2; 
+            }
+        }
+    }
+
+    std::sort( bornRadii.begin(), bornRadii.end(), compareAtomCoordinate );
+
+    (void) fclose( brFile );
+    return;
+}
+
+static void calculateBornRadiiByDirectIntegration( std::string parameterFileName, MapStringInt forceMap,
+                                                   MapStringString& inputArgumentMap, FILE* inputLog,
+                                                   FILE* filePtr, int* lineCount, FILE* resultsFile ){
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName      = "calculateBornRadiiByDirectIntegration";
+   int PrintOn                              = 1; 
+
+// ---------------------------------------------------------------------------------------
+
+    FILE* log;
+    if( PrintOn == 0 && inputLog ){
+       log = stderr;
+    } else {
+       log = inputLog;
+    } 
+ 
+    if( log ){
+       (void) fprintf( log, "%s\n", methodName.c_str() );
+       (void) fflush( log );
+    }   
+ 
+    //Context* context = setupEthane( log );
+    Context* context = setupTwoParticle( log );
+    //Context* context = setupSmallMolecule( filePtr, lineCount, log );
+
+#if 0
+    ReferencePlatform referencePlatform;
+    registerFreeEnergyMethodsReferencePlatform( referencePlatform );
+
+    if( log ){
+        (void) fprintf( log, "%s Testing reference platform\n", methodName.c_str() );
+        (void) fflush( log );
+    }   
+
+   double parameterKineticEnergy, parameterPotentialEnergy;
+
+    std::vector<Vec3> parameterForces;
+    std::vector<Vec3> parameterForces2;
+    MapStringVectorOfVectors supplementary;
+
+    Context* context       = testSetup( parameterFileName, forceMap, referencePlatform, 
+                                        parameterForces, &parameterKineticEnergy, &parameterPotentialEnergy,
+                                        supplementary, inputArgumentMap, log );
+ 
+#endif
+ 	 State state            = context->getState(State::Positions | State::Energy);
+ 	 const std::vector<Vec3>& positions = state.getPositions();
+ 
+    // get radii and find maximum radius
+
+    // std::string GBVI_FORCE                      = "GBVI";
+    // std::string GBVI_SOFTCORE_FORCE             = "GBVISoftcore";
+    std::vector<float> radii;
+    System& system = context->getSystem();
+    getGBVIRadii( system, GBVI_FORCE, radii, log );
+    if( radii.size() < 1 ){
+       (void) fprintf( log, "%s GB/VI force not found.\n", methodName.c_str() );
+       (void) fflush( log );
+       exit(-1);
+    }   
+ 
+    float maxAtomicRadius = getMaxRadius( radii, log );
+    
+    (void) fprintf( log, "maxAtomicRadius=%14.6e\n", maxAtomicRadius ); fflush( log );
+
+    // get bounding dimensions of system 
+ 
+    struct BoundingBox boundingBox;
+    getBoundingBox( positions, boundingBox, maxAtomicRadius, log );
+ 
+    // allocate grid and set all entries to zero
+ 
+    struct IntegrationGrid grid;
+    memset( &grid, 0, sizeof( IntegrationGrid ) );
+    int bornExponent;
+    setFloatFromMap( inputArgumentMap, "gridResolution",  grid.resolution );
+    setIntFromMap( inputArgumentMap, "bornExponent",  bornExponent );
+
+    getGrid( boundingBox, grid, log );
+    printGrid( grid, log );
+ 
+    // sort atoms by x-coordinate and y-coordinate
+
+    std::vector<sortedAtom> sortedAtoms;
+    sortAtomsByCoordinate( positions, radii, sortedAtoms, log );
+#if 1
+    (void) fprintf( log, "\nSorted atoms:\n" );
+    for( unsigned int ii = 0; ii < sortedAtoms.size(); ii++ ){
+        (void) fprintf( log, "%6d [%14.6e %14.6e %14.6e] r=%8.3f\n", ii,
+                        sortedAtoms[ii].coordinates[0],
+                        sortedAtoms[ii].coordinates[1],
+                        sortedAtoms[ii].coordinates[2],
+                        sortedAtoms[ii].radius );
+        for( unsigned int jj = ii+1; jj < sortedAtoms.size(); jj++ ){
+            float separation = getDistance( sortedAtoms[ii].coordinates, sortedAtoms[jj].coordinates );
+            if( separation <  (sortedAtoms[ii].radius +  sortedAtoms[ii].radius) ){
+                (void) fprintf( log, "    %6d sep=%18.3f r+r=%8.3f r_j=%8.3f [%14.6e %14.6e %14.6e]\n", jj,
+                                separation, (sortedAtoms[ii].radius + sortedAtoms[jj].radius), sortedAtoms[jj].radius,
+                                sortedAtoms[jj].coordinates[0], sortedAtoms[jj].coordinates[1], sortedAtoms[jj].coordinates[2] );
+            }
+        }
+    }
+#endif
+
+    int debug = 0;
+    if( debug ){
+        unsigned int misses = 0;
+        for( unsigned int ii = 0; ii < grid.totalNumberOfGridPoints; ii++ ){
+            float gridCoordinates[3];
+            int gridIndices1[3];
+            getGridCoordinatesGivenIndex( ii, grid, gridCoordinates, gridIndices1, log );
+            int gridIndex;
+            int gridIndices2[3];
+            getGridIndexGivenCoordinates( grid, gridCoordinates, gridIndex, gridIndices2, log );
+            if( ii != gridIndex && misses++ < 100 ){
+               (void) fprintf( log, "Miss grid check: %6u %6d [%14.6e %14.6e %14.6e] [%4d %4d %4d] %4d %4d %4d]\n",
+                               ii, gridIndex,
+                               gridCoordinates[0], gridCoordinates[1], gridCoordinates[2],
+                               gridIndices1[0], gridIndices1[1], gridIndices1[2],
+                               gridIndices2[0], gridIndices2[1], gridIndices2[2] );
+            }
+            if( misses == 100 )exit(0);
+        }
+        (void) fprintf( log, "Total misses=%u getGridCoordinatesGivenIndex/getGridCoordinatesGivenIndex \n", misses );
+        exit(0);
+    }
+
+    // set mask for grid points that are internal to the molecule to 1
+
+    const unsigned int inside  = 1;
+    const unsigned int outside = 0;
+    for( unsigned int ii = 0; ii < grid.totalNumberOfGridPoints; ii++ ){
+
+        float gridCoordinates[3];
+        int gridIndices[3];
+        getGridCoordinatesGivenIndex( ii, grid, gridCoordinates, gridIndices, log );
+
+        // check if any atoms close by
+
+        float cube[2][3];
+        for( unsigned int jj = 0; jj < 3; jj++ ){
+            cube[0][jj] = gridCoordinates[jj] - maxAtomicRadius;
+            cube[1][jj] = gridCoordinates[jj] + maxAtomicRadius;
+        }
+        std::vector<unsigned int> prospectiveAtoms;
+        getAtomsInCube( cube, sortedAtoms, prospectiveAtoms, log );
+ 
+        unsigned int gridPointEnclosed = 0;
+        std::vector<unsigned int> enclosingAtoms;
+        std::vector<float> distanceCubeAtom;
+        for( unsigned int jj = 0; jj < prospectiveAtoms.size() && gridPointEnclosed == 0; jj++ ){
+            unsigned int atomIndex = prospectiveAtoms[jj];
+            float distance         = sqrtf(
+                                         (sortedAtoms[atomIndex].coordinates[0] - gridCoordinates[0] )*
+                                         (sortedAtoms[atomIndex].coordinates[0] - gridCoordinates[0] ) + 
+                                         (sortedAtoms[atomIndex].coordinates[1] - gridCoordinates[1] )*
+                                         (sortedAtoms[atomIndex].coordinates[1] - gridCoordinates[1] ) +
+                                         (sortedAtoms[atomIndex].coordinates[2] - gridCoordinates[2] )*
+                                         (sortedAtoms[atomIndex].coordinates[2] - gridCoordinates[2] ) );
+            if( distance < sortedAtoms[atomIndex].radius ){
+                //gridPointEnclosed++;
+                sortedAtoms[atomIndex].gridCount++;
+                enclosingAtoms.push_back( atomIndex );
+                distanceCubeAtom.push_back( distance );
+                maskGridPoint( ii, grid, inside, log );
+            }
+        }
+
+        //if( log && gridPointEnclosed )
+        if( 0 && log && enclosingAtoms.size() ){
+            (void) fprintf( log, "%3u atoms out of %3u prospective atoms in cube [%14.6e %14.6e%14.6e] [%14.6e %14.6e%14.6e]\n",
+                            gridPointEnclosed, prospectiveAtoms.size(),
+                            cube[0][0], cube[0][1], cube[0][2],
+                            cube[1][0], cube[1][1], cube[1][2] );
+            for( unsigned int jj = 0; jj < enclosingAtoms.size(); jj++ ){
+                unsigned int atomIndex = enclosingAtoms[jj];
+                (void) fprintf( log, "  %3u %3u %14.4e [%14.6e %14.6e%14.6e]\n", jj, atomIndex, distanceCubeAtom[jj],
+                                sortedAtoms[atomIndex].coordinates[0],
+                                sortedAtoms[atomIndex].coordinates[1], 
+                                sortedAtoms[atomIndex].coordinates[2] );
+            }
+        }
+
+    }
+
+#if 0
+    (void) fprintf( log, "\nSorted atoms:\n" );
+    for( unsigned int ii = 0; ii < sortedAtoms.size(); ii++ ){
+        float factor          = sortedAtoms[ii].radius/grid.resolution;
+        float volume          = 4.1887902f*factor*factor*factor;
+        int expectedGridCount = static_cast<int>(volume);
+        (void) fprintf( log, "%6d [%14.6e %14.6e %14.6e] r=%14.6e %8u %8d\n", ii,
+                        sortedAtoms[ii].coordinates[0],
+                        sortedAtoms[ii].coordinates[1],
+                        sortedAtoms[ii].coordinates[2],
+                        sortedAtoms[ii].radius, sortedAtoms[ii].gridCount, expectedGridCount );
+    }
+    (void) fflush( log );
+#endif
+
+    // save grid result
+ 
+    memcpy( grid.savedMask, grid.mask, sizeof(int)*grid.totalNumberOfGridMaskPoints );
+//checkGridSetting( sortedAtoms[0].coordinates, grid, 12170113, "PostSave", log );
+
+    unsigned int maskedTotal;
+    getTotalMasked( grid, maskedTotal );
+    double delta = static_cast<double>(bornExponent - 3 );
+
+    // find Born radius for each atom
+
+    for( unsigned int ii = 0; ii < sortedAtoms.size(); ii++ ){
+    //for( unsigned int ii = 0; ii < 1; ii++ ){
+
+        memcpy( grid.mask, grid.savedMask, sizeof(int)*grid.totalNumberOfGridMaskPoints );
+//checkGridSetting( sortedAtoms[0].coordinates, grid, 12170113, "PostCopy", log );
+
+        float radiusSquared = sortedAtoms[ii].radius*sortedAtoms[ii].radius;
+
+float closest        = 1.0e+30f;
+int   closestIndex   = -1;
+
+        // set grid points enclosed by atom to 0 in temp array
+
+        float gridCoordinates[3];
+        for( int jj = 0; jj < grid.numberOfGridPoints[0]; jj++ ){
+            gridCoordinates[0] = grid.origin[0] + static_cast<float>(jj)*grid.resolution;    
+            if( fabsf( gridCoordinates[0] - sortedAtoms[ii].coordinates[0] ) < sortedAtoms[ii].radius ){ 
+                for( int kk = 0; kk < grid.numberOfGridPoints[1]; kk++ ){
+
+                    gridCoordinates[1] = grid.origin[1] + static_cast<float>(kk)*grid.resolution;    
+
+                    float distance01   = (gridCoordinates[0] - sortedAtoms[ii].coordinates[0] )*(gridCoordinates[0] - sortedAtoms[ii].coordinates[0] ) +
+                                         (gridCoordinates[1] - sortedAtoms[ii].coordinates[1] )*(gridCoordinates[1] - sortedAtoms[ii].coordinates[1] );
+
+                    if( distance01 < radiusSquared ){
+                        for( int mm = 0; mm < grid.numberOfGridPoints[2]; mm++ ){
+
+                            gridCoordinates[2] = grid.origin[2] + static_cast<float>(mm)*grid.resolution;    
+
+                            float distance     = distance01 +
+                                                 (sortedAtoms[ii].coordinates[2] - gridCoordinates[2] )*(sortedAtoms[ii].coordinates[2] - gridCoordinates[2] );
+
+                            if( distance < radiusSquared ){
+                                 int gridIndices2[3];
+                                 int gridIndex2;
+                                 getGridIndexGivenCoordinates( grid, gridCoordinates, gridIndex2, gridIndices2, log );
+                                int gridIndex = jj + kk*grid.offset[1] + mm*grid.offset[2];
+                                maskGridPoint( gridIndex, grid, outside, log );
+                                sortedAtoms[ii].maskedCount++;
+                                if( gridIndex2 != gridIndex ){
+                                    (void) fprintf( log, "Index issue: Atom=%6d [%7d %7d] [%5d %5d %5d ] [%5d %5d %5d] [%14.6e %14.6e %14.6e]\n", ii,
+                                                    gridIndex, gridIndex2, jj, kk, mm, gridIndices2[0], gridIndices2[1], gridIndices2[2],
+                                                    gridCoordinates[0], gridCoordinates[1], gridCoordinates[2] );
+                                }
+                            } else if( distance < closest ){
+                                int gridIndex = jj + kk*grid.offset[1] + mm*grid.offset[2];
+                                int isSet     = isGridIndexSet( grid, gridIndex, log );
+                                if( isSet ){
+                                    (void) fprintf( log, "Close: Atom=%6d %14.6e %7d [%5d %5d %5d ] Set=%d\n", ii,
+                                                    sqrtf( distance ), gridIndex, jj, kk, mm, isSet );
+                                    closest      = distance;
+                                    closestIndex = gridIndex;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        getTotalMasked( grid, sortedAtoms[ii].bornMaskedCount );
+
+        // sum 1/r**n for points nonzero
+
+        getBornSum( sortedAtoms[ii].coordinates, grid, bornExponent, sortedAtoms[ii].bornSum, sortedAtoms[ii].minR, log );
+        sortedAtoms[ii].bornSum      *= (grid.resolution*grid.resolution*grid.resolution);
+        sortedAtoms[ii].bornRadius    = std::pow( static_cast<double>(sortedAtoms[ii].radius), -delta ) -
+                                        delta*0.0795774715*sortedAtoms[ii].bornSum;
+        sortedAtoms[ii].bornRadius    = 1.0/std::pow( sortedAtoms[ii].bornRadius, 1.0/delta );
+
+(void) fprintf( log, "Closest: Atom=%6d %7d %14.6e\n", ii, closestIndex, sqrtf( closest ) );
+        // compute Born radius given volume
+
+    }
+
+    (void) fprintf( log, "\nSorted atoms: total masked=%u\n", maskedTotal );
+    std::string bornRadiiFile = "br.txt"; 
+    std::vector<sortedAtom> gbviRadii;
+    readBornRadiiFile( bornRadiiFile, gbviRadii, log );
+    for( unsigned int jj = 0; jj < sortedAtoms.size(); jj++ ){
+        float factor          = sortedAtoms[jj].radius/grid.resolution;
+        float volume          = 4.1887902f*factor*factor*factor;
+        int expectedGridCount = static_cast<int>(volume);
+        (void) fprintf( log, "%6d r=%8.3f %8u %8d masked=%8d bMask=%8u Bsum=%14.6e bR=%14.6e %14.6e minR=%14.6e",
+                        sortedAtoms[jj].listIndex,
+                        sortedAtoms[jj].radius, sortedAtoms[jj].gridCount, expectedGridCount, 
+                        sortedAtoms[jj].maskedCount,
+                        sortedAtoms[jj].bornMaskedCount,
+                        sortedAtoms[jj].bornSum, 
+                        sortedAtoms[jj].bornRadius, gbviRadii[jj].bornRadius,
+                        sortedAtoms[jj].minR );
+        if( sortedAtoms[jj].listIndex != gbviRadii[jj].listIndex ){
+            (void) fprintf( log, " Indices: %5d %5d XXXX", sortedAtoms[jj].listIndex != gbviRadii[jj].listIndex );
+        }
+        if( 0 ){
+            (void) fprintf( log, " [%14.6e %14.6e %14.6e]",
+                        sortedAtoms[jj].coordinates[0],
+                        sortedAtoms[jj].coordinates[1],
+                        sortedAtoms[jj].coordinates[2] );
+        }
+        (void) fprintf( log, "\n" );
+    }
+    (void) fflush( log );
+
+    FILE* brFile          = resultsFile;
+    int closeBrFile       = 0;
+    if( brFile == NULL ){
+        closeBrFile       = 1;
+        std::string fileName  = "BornResults.txt";
+#ifdef WIN32
+        fopen_s( &brFile, fileName.c_str(), "w" );
+#else
+        brFile = fopen( fileName.c_str(), "w" );
+#endif
+        if( brFile == NULL ){
+            (void) fprintf( log, "Born radii file=%s not opened.\n", fileName.c_str() );
+            return;
+        } else {
+            (void) fprintf( log, "Born radii file=%s opened.\n", fileName.c_str() );
+        }
+    }
+    
+    for( unsigned int jj = 0; jj < sortedAtoms.size(); jj++ ){
+        (void) fprintf( brFile, "%6d %14.6e %14.6e %14.6e %14.6e %8.3f  %8.3f %5d %5d %5d %5d\n", jj,
+                        sortedAtoms[jj].bornRadius, gbviRadii[jj].bornRadius,
+                        1.0/sortedAtoms[jj].bornRadius, 1.0/gbviRadii[jj].bornRadius,
+                        sortedAtoms[jj].radius, gbviRadii[jj].scaledRadius, 
+                        gbviRadii[jj].countCases[0], gbviRadii[jj].countCases[1], gbviRadii[jj].countCases[2], gbviRadii[jj].countCases[3] );
+    }
+    (void) fflush( brFile );
+    if( closeBrFile ){
+        (void) fclose( brFile );
+    }
+
+    // compute Born radius given volume
+  
+    if( grid.mask ){
+        free( grid.mask );
+        free( grid.savedMask );
+    }
+    if( context ){
+        delete context;
+    }
+}
+
+// ---------------------------------------------------------------------------------------
+// GB/VI test end
+// ---------------------------------------------------------------------------------------
+
 /**---------------------------------------------------------------------------------------
 
    Print usage to screen and exit
@@ -6429,9 +7997,12 @@ int main( int numberOfArguments, char* argv[] ){
 
    static const std::string methodName               = "TestCudaFromFile";
    int checkForces                                   = 0;
+   int checkPlatformForces                           = 0;
    int checkEnergyForceConsistent                    = 0;
    int checkEnergyConservation                       = 0;
    int checkInputForces                              = 0;
+   int checkBornRadii                                = 0;
+   int checkSmallMoleculeBornRadii                   = 0;
    MapStringString inputArgumentMap;
 
    FILE* log                                         = NULL;
@@ -6446,6 +8017,7 @@ int main( int numberOfArguments, char* argv[] ){
    }
 
    std::string parameterFileName            = defaultParameterFileName;
+   std::string resultsFileName              = defaultParameterFileName;
    MapStringInt forceMap;
    initializeForceMap( forceMap, 0 );
    int logFileNameIndex                     = -1;
@@ -6466,6 +8038,9 @@ int main( int numberOfArguments, char* argv[] ){
       if( STRCASECMP( argv[ii], "-parameterFileName" ) == 0 ){
          parameterFileName          = argv[ii+1];
          ii++;
+      } else if( STRCASECMP( argv[ii], "-resultsFileName" ) == 0 ){
+         resultsFileName          = argv[ii+1];
+         ii++;
       } else if( STRCASECMP( argv[ii], "-logFileName" ) == 0 ){
          logFileNameIndex           = ii + 1;
          ii++;
@@ -6475,11 +8050,20 @@ int main( int numberOfArguments, char* argv[] ){
       } else if( STRCASECMP( argv[ii], "-checkForces" ) == 0 ){
          checkForces                = atoi( argv[ii+1] );
          ii++;
+      } else if( STRCASECMP( argv[ii], "-checkPlatformForces" ) == 0 ){
+         checkPlatformForces        = atoi( argv[ii+1] );
+         ii++;
       } else if( STRCASECMP( argv[ii], "-checkInputForces" ) == 0 ){
          checkInputForces           = atoi( argv[ii+1] );
          ii++;
       } else if( STRCASECMP( argv[ii], "-checkEnergyForceConsistent" ) == 0 ){
          checkEnergyForceConsistent = atoi( argv[ii+1] );
+         ii++;
+      } else if( STRCASECMP( argv[ii], "-checkSmallMoleculeBornRadii" ) == 0 ){
+         checkSmallMoleculeBornRadii = atoi( argv[ii+1] );
+         ii++;
+      } else if( STRCASECMP( argv[ii], "-checkBornRadii" ) == 0 ){
+         checkBornRadii              = atoi( argv[ii+1] );
          ii++;
       } else if( STRCASECMP( argv[ii], "-checkEnergyConservation" ) == 0 ){
          checkEnergyConservation = atoi( argv[ii+1] );;
@@ -6512,11 +8096,14 @@ int main( int numberOfArguments, char* argv[] ){
 
       } else if( getForceOffset( ii, numberOfArguments, argv, forceMap ) ){
          ii++;
-      } else if( STRNCASECMP( argv[ii], "-equilibration", 14  ) == 0 ||
-                 STRNCASECMP( argv[ii], "-simulation",    11  ) == 0 ||
-                 STRNCASECMP( argv[ii], "-runId",          6  ) == 0 ||
-                 STRNCASECMP( argv[ii], "-nonbonded",     10  ) == 0 ||
-                 STRNCASECMP( argv[ii], "-readContext",   12  ) == 0 ){
+      } else if( STRNCASECMP( argv[ii], "-equilibration",           14  ) == 0 ||
+                 STRNCASECMP( argv[ii], "-simulation",              11  ) == 0 ||
+                 STRNCASECMP( argv[ii], "-comparisonPlatform",      19  ) == 0 ||
+                 STRNCASECMP( argv[ii], "-runId",                    6  ) == 0 ||
+                 STRNCASECMP( argv[ii], "-nonbonded",               10  ) == 0 ||
+                 STRNCASECMP( argv[ii], "-readContext",             12  ) == 0 ||
+                 STRNCASECMP( argv[ii], "-gridResolution",          15  ) == 0 ||
+                 STRNCASECMP( argv[ii], "-bornExponent",            13  ) == 0 ){
          addToMap = ii;
          ii++;
       } else {
@@ -6568,7 +8155,11 @@ int main( int numberOfArguments, char* argv[] ){
 
       (void) fprintf( log, "checkEnergyForceConsistent  %d\n", checkEnergyForceConsistent );
       (void) fprintf( log, "checkEnergyConservation     %d\n", checkEnergyConservation );
+      (void) fprintf( log, "checkForces                 %d\n", checkForces );
+      (void) fprintf( log, "checkPlatformForces         %d\n", checkPlatformForces );
       (void) fprintf( log, "checkInputForces            %d\n", checkInputForces );
+      (void) fprintf( log, "checkBornRadii              %d\n", checkBornRadii );
+      (void) fprintf( log, "checkSmallMoleculeBornRadii %d\n", checkSmallMoleculeBornRadii );
 
       (void) fprintf( log, "ForceMap: %u\n", forceMap.size() );
       for( MapStringIntCI ii = forceMap.begin(); ii != forceMap.end(); ii++ ){
@@ -6582,12 +8173,75 @@ int main( int numberOfArguments, char* argv[] ){
    }
 
    // check forces
+   // deprecated -- replace w/ checkPlatformForces
 
    if( checkForces ){
       try {
          testReferenceCudaForces( parameterFileName, forceMap, inputArgumentMap, log, summaryFile );
        } catch( const exception& e ){
          (void) fprintf( stderr, "Exception checkForces %s %s\n", methodName.c_str(),  e.what() ); (void) fflush( stderr );
+         return 1;
+      }   
+   }
+
+   if( checkPlatformForces ){
+      try {
+         testForces( parameterFileName, forceMap, inputArgumentMap, log, summaryFile );
+       } catch( const exception& e ){
+         (void) fprintf( stderr, "Exception checkPlatformForces %s %s\n", methodName.c_str(),  e.what() ); (void) fflush( stderr );
+         return 1;
+      }   
+   }
+
+   // check Born radii
+
+   if( checkBornRadii ){
+      FILE* brFile          = NULL;
+      int lineCount         = 0;
+      try {
+         calculateBornRadiiByDirectIntegration( parameterFileName, forceMap, inputArgumentMap, log, brFile, &lineCount, NULL );
+       } catch( const exception& e ){
+         (void) fprintf( stderr, "Exception checkBornRadii %s %s\n", methodName.c_str(),  e.what() ); (void) fflush( stderr );
+         return 1;
+      }   
+   }
+
+   // check Born radii
+
+   if( checkSmallMoleculeBornRadii ){
+      FILE* brFile          = NULL;
+      FILE* resultsFile     = NULL;
+      int lineCount         = 0;
+      try {
+#ifdef WIN32
+         fopen_s( &brFile, parameterFileName.c_str(), "r" );
+#else
+         brFile = fopen( parameterFileName.c_str(), "r" );
+#endif
+#ifdef WIN32
+         fopen_s( &resultsFile, resultsFileName.c_str(), "w" );
+#else
+         resultsFile = fopen( resultsFileName.c_str(), "w" );
+#endif
+         if( brFile == NULL ){
+            (void) fprintf( log, "parameterFile=%s not opened.\n", parameterFileName.c_str() );
+         } else {
+           (void) fprintf( log, "parameterFile=%s opened.\n", parameterFileName.c_str() );
+         }
+
+         if( resultsFile == NULL ){
+            (void) fprintf( log, "resultsFile=%s not opened.\n", resultsFileName.c_str() );
+         } else {
+           (void) fprintf( log, "resultsFile=%s opened.\n", resultsFileName.c_str() );
+         }
+
+         while( lineCount < 18596 ){
+             calculateBornRadiiByDirectIntegration( parameterFileName, forceMap, inputArgumentMap, log, brFile, &lineCount, resultsFile );
+         }
+         (void) fclose( brFile );
+         (void) fclose( resultsFile );
+       } catch( const exception& e ){
+         (void) fprintf( stderr, "Exception checkBornRadii %s %s\n", methodName.c_str(),  e.what() ); (void) fflush( stderr );
          return 1;
       }   
    }
