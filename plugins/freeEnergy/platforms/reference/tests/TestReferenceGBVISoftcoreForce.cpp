@@ -43,7 +43,7 @@
 #include "openmm/NonbondedForce.h"
 #include "openmm/NonbondedSoftcoreForce.h"
 #include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
-#include "../src/sfmt/SFMT.h"
+#include "../../../../../libraries/sfmt/include/sfmt/SFMT.h"
 #include "OpenMMFreeEnergy.h"
 #include "openmm/freeEnergyKernels.h"
 #include "ReferenceFreeEnergyKernelFactory.h"
