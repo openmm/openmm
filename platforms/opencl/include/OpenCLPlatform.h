@@ -29,8 +29,6 @@
 
 #include "openmm/Platform.h"
 
-struct _gpuContext;
-
 namespace OpenMM {
     
 class OpenCLContext;
@@ -48,7 +46,7 @@ public:
         return name;
     }
     double getSpeed() const {
-        return 0; // TODO Increase this.  Currently set to 0 so it will never be selected automatically.
+        return 50;
     }
     bool supportsDoublePrecision() const;
     const std::string& getPropertyValue(const Context& context, const std::string& property) const;
