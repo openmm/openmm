@@ -35,7 +35,7 @@
  */
 
 #include "../../../tests/AssertionUtilities.h"
-#include "../src/sfmt/SFMT.h"
+#include "sfmt/SFMT.h"
 #include "openmm/Context.h"
 #include "CudaPlatform.h"
 #include "openmm/CustomNonbondedForce.h"
@@ -256,7 +256,9 @@ void testCoulombLennardJones() {
     customNonbonded->addPerParticleParameter("eps");
     vector<Vec3> positions(numParticles);
     vector<Vec3> velocities(numParticles);
-    init_gen_rand(0);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+
     vector<double> params(3);
     for (int i = 0; i < numMolecules; i++) {
         if (i < numMolecules/2) {
@@ -281,10 +283,10 @@ void testCoulombLennardJones() {
             params[1] = 0.1;
             customNonbonded->addParticle(params);
         }
-        positions[2*i] = Vec3(boxSize*genrand_real2(), boxSize*genrand_real2(), boxSize*genrand_real2());
+        positions[2*i] = Vec3(boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt));
         positions[2*i+1] = Vec3(positions[2*i][0]+1.0, positions[2*i][1], positions[2*i][2]);
-        velocities[2*i] = Vec3(genrand_real2(), genrand_real2(), genrand_real2());
-        velocities[2*i+1] = Vec3(genrand_real2(), genrand_real2(), genrand_real2());
+        velocities[2*i] = Vec3(genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt));
+        velocities[2*i+1] = Vec3(genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt));
         standardNonbonded->addException(2*i, 2*i+1, 0.0, 1.0, 0.0);
         customNonbonded->addExclusion(2*i, 2*i+1);
     }

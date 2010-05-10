@@ -1,4 +1,4 @@
-/** 
+/**
  * @file  SFMT.c
  * @brief SIMD oriented Fast Mersenne Twister(SFMT)
  *
@@ -10,10 +10,11 @@
  *
  * The new BSD License is applied to this software, see LICENSE.txt
  */
-#include <string.h>
-#include <assert.h>
-#include "SFMT.h"
-#include "SFMT-params.h"
+#include "sfmt/SFMT.h"
+#include "sfmt/SFMT-params.h"
+
+#include <cstring>
+#include <cassert>
 
 #if defined(__BIG_ENDIAN__) && !defined(__amd64) && !defined(BIG_ENDIAN64)
 #define BIG_ENDIAN64 1
@@ -66,23 +67,55 @@ typedef struct W128_T w128_t;
 
 /*--------------------------------------
   FILE GLOBAL VARIABLES
-  internal state, index counter and flag 
+  internal state, index counter and flag
   --------------------------------------*/
-/** the 128-bit internal state array */
-static w128_t sfmt[N];
-/** the 32bit integer pointer to the 128-bit internal state array */
-static uint32_t *psfmt32 = &sfmt[0].u[0];
+///** the 128-bit internal state array */
+//static w128_t sfmt[N];
+///** the 32bit integer pointer to the 128-bit internal state array */
+//static uint32_t *psfmt32 = &sfmt[0].u[0];
+//#if !defined(BIG_ENDIAN64) || defined(ONLY64)
+///** the 64bit integer pointer to the 128-bit internal state array */
+//static uint64_t *psfmt64 = (uint64_t *)&sfmt[0].u[0];
+//#endif
+///** index counter to the 32-bit internal state array */
+//static int idx;
+///** a flag: it is 0 if and only if the internal state is not yet
+// * initialized. */
+//static int initialized = 0;
+///** a parity check vector which certificate the period of 2^{MEXP} */
+//static uint32_t parity[4] = {PARITY1, PARITY2, PARITY3, PARITY4};
+
+namespace OpenMM_SFMT {
+
+class SFMTData {
+public:
+	/** the 128-bit internal state array */
+	w128_t sfmt[N];
+	/** the 32bit integer pointer to the 128-bit internal state array */
+	uint32_t *psfmt32;
+	#if !defined(BIG_ENDIAN64) || defined(ONLY64)
+	/** the 64bit integer pointer to the 128-bit internal state array */
+	uint64_t *psfmt64;
+	#endif
+	/** index counter to the 32-bit internal state array */
+	int idx;
+	/** a flag: it is 0 if and only if the internal state is not yet
+	 * initialized. */
+	int initialized;
+	/** a parity check vector which certificate the period of 2^{MEXP} */
+	uint32_t parity[4];
+	SFMTData() {
+		psfmt32 = &sfmt[0].u[0];
 #if !defined(BIG_ENDIAN64) || defined(ONLY64)
-/** the 64bit integer pointer to the 128-bit internal state array */
-static uint64_t *psfmt64 = (uint64_t *)&sfmt[0].u[0];
+		psfmt64 = (uint64_t *)&sfmt[0].u[0];
 #endif
-/** index counter to the 32-bit internal state array */
-static int idx;
-/** a flag: it is 0 if and only if the internal state is not yet
- * initialized. */
-static int initialized = 0;
-/** a parity check vector which certificate the period of 2^{MEXP} */
-static uint32_t parity[4] = {PARITY1, PARITY2, PARITY3, PARITY4};
+		initialized = 0;
+		parity[0] = PARITY1;
+		parity[1] = PARITY2;
+		parity[2] = PARITY3;
+		parity[3] = PARITY4;
+	}
+};
 
 /*----------------
   STATIC FUNCTIONS
@@ -90,11 +123,11 @@ static uint32_t parity[4] = {PARITY1, PARITY2, PARITY3, PARITY4};
 inline static int idxof(int i);
 inline static void rshift128(w128_t *out,  w128_t const *in, int shift);
 inline static void lshift128(w128_t *out,  w128_t const *in, int shift);
-inline static void gen_rand_all(void);
-inline static void gen_rand_array(w128_t *array, int size);
+inline static void gen_rand_all(SFMT& sfmt);
+inline static void gen_rand_array(w128_t *array, int size, SFMT& sfmt);
 inline static uint32_t func1(uint32_t x);
 inline static uint32_t func2(uint32_t x);
-static void period_certification(void);
+static void period_certification(SFMT& sfmt);
 #if defined(BIG_ENDIAN64) && !defined(ONLY64)
 inline static void swap(w128_t *array, int size);
 #endif
@@ -106,7 +139,7 @@ inline static void swap(w128_t *array, int size);
 #endif
 
 /**
- * This function simulate a 64-bit index of LITTLE ENDIAN 
+ * This function simulate a 64-bit index of LITTLE ENDIAN
  * in BIG ENDIAN machine.
  */
 #ifdef ONLY64
@@ -205,7 +238,6 @@ inline static void lshift128(w128_t *out, w128_t const *in, int shift) {
  * @param c a 128-bit part of the internal state array
  * @param d a 128-bit part of the internal state array
  */
-#if (!defined(HAVE_ALTIVEC)) && (!defined(HAVE_SSE2))
 #ifdef ONLY64
 inline static void do_recursion(w128_t *r, w128_t *a, w128_t *b, w128_t *c,
 				w128_t *d) {
@@ -214,13 +246,13 @@ inline static void do_recursion(w128_t *r, w128_t *a, w128_t *b, w128_t *c,
 
     lshift128(&x, a, SL2);
     rshift128(&y, c, SR2);
-    r->u[0] = a->u[0] ^ x.u[0] ^ ((b->u[0] >> SR1) & MSK2) ^ y.u[0] 
+    r->u[0] = a->u[0] ^ x.u[0] ^ ((b->u[0] >> SR1) & MSK2) ^ y.u[0]
 	^ (d->u[0] << SL1);
-    r->u[1] = a->u[1] ^ x.u[1] ^ ((b->u[1] >> SR1) & MSK1) ^ y.u[1] 
+    r->u[1] = a->u[1] ^ x.u[1] ^ ((b->u[1] >> SR1) & MSK1) ^ y.u[1]
 	^ (d->u[1] << SL1);
-    r->u[2] = a->u[2] ^ x.u[2] ^ ((b->u[2] >> SR1) & MSK4) ^ y.u[2] 
+    r->u[2] = a->u[2] ^ x.u[2] ^ ((b->u[2] >> SR1) & MSK4) ^ y.u[2]
 	^ (d->u[2] << SL1);
-    r->u[3] = a->u[3] ^ x.u[3] ^ ((b->u[3] >> SR1) & MSK3) ^ y.u[3] 
+    r->u[3] = a->u[3] ^ x.u[3] ^ ((b->u[3] >> SR1) & MSK3) ^ y.u[3]
 	^ (d->u[3] << SL1);
 }
 #else
@@ -231,16 +263,15 @@ inline static void do_recursion(w128_t *r, w128_t *a, w128_t *b, w128_t *c,
 
     lshift128(&x, a, SL2);
     rshift128(&y, c, SR2);
-    r->u[0] = a->u[0] ^ x.u[0] ^ ((b->u[0] >> SR1) & MSK1) ^ y.u[0] 
+    r->u[0] = a->u[0] ^ x.u[0] ^ ((b->u[0] >> SR1) & MSK1) ^ y.u[0]
 	^ (d->u[0] << SL1);
-    r->u[1] = a->u[1] ^ x.u[1] ^ ((b->u[1] >> SR1) & MSK2) ^ y.u[1] 
+    r->u[1] = a->u[1] ^ x.u[1] ^ ((b->u[1] >> SR1) & MSK2) ^ y.u[1]
 	^ (d->u[1] << SL1);
-    r->u[2] = a->u[2] ^ x.u[2] ^ ((b->u[2] >> SR1) & MSK3) ^ y.u[2] 
+    r->u[2] = a->u[2] ^ x.u[2] ^ ((b->u[2] >> SR1) & MSK3) ^ y.u[2]
 	^ (d->u[2] << SL1);
-    r->u[3] = a->u[3] ^ x.u[3] ^ ((b->u[3] >> SR1) & MSK4) ^ y.u[3] 
+    r->u[3] = a->u[3] ^ x.u[3] ^ ((b->u[3] >> SR1) & MSK4) ^ y.u[3]
 	^ (d->u[3] << SL1);
 }
-#endif
 #endif
 
 #if (!defined(HAVE_ALTIVEC)) && (!defined(HAVE_SSE2))
@@ -248,21 +279,22 @@ inline static void do_recursion(w128_t *r, w128_t *a, w128_t *b, w128_t *c,
  * This function fills the internal state array with pseudorandom
  * integers.
  */
-inline static void gen_rand_all(void) {
+inline static void gen_rand_all(SFMT& sfmt) {
     int i;
     w128_t *r1, *r2;
 
-    r1 = &sfmt[N - 2];
-    r2 = &sfmt[N - 1];
+    SFMTData& data = *sfmt.data;
+    r1 = &(data.sfmt[N - 2]);
+    r2 = &(data.sfmt[N - 1]);
     for (i = 0; i < N - POS1; i++) {
-	do_recursion(&sfmt[i], &sfmt[i], &sfmt[i + POS1], r1, r2);
+	do_recursion(&(data.sfmt[i]), &(data.sfmt[i]), &(data.sfmt[i + POS1]), r1, r2);
 	r1 = r2;
-	r2 = &sfmt[i];
+	r2 = &(data.sfmt[i]);
     }
     for (; i < N; i++) {
-	do_recursion(&sfmt[i], &sfmt[i], &sfmt[i + POS1 - N], r1, r2);
+	do_recursion(&(data.sfmt[i]), &(data.sfmt[i]), &(data.sfmt[i + POS1 - N]), r1, r2);
 	r1 = r2;
-	r2 = &sfmt[i];
+	r2 = &(data.sfmt[i]);
     }
 }
 
@@ -270,22 +302,23 @@ inline static void gen_rand_all(void) {
  * This function fills the user-specified array with pseudorandom
  * integers.
  *
- * @param array an 128-bit array to be filled by pseudorandom numbers.  
+ * @param array an 128-bit array to be filled by pseudorandom numbers.
  * @param size number of 128-bit pseudorandom numbers to be generated.
  */
-inline static void gen_rand_array(w128_t *array, int size) {
+inline static void gen_rand_array(w128_t *array, int size, SFMT& sfmt) {
     int i, j;
     w128_t *r1, *r2;
 
-    r1 = &sfmt[N - 2];
-    r2 = &sfmt[N - 1];
+    SFMTData& data = *sfmt.data;
+    r1 = &(data.sfmt[N - 2]);
+    r2 = &(data.sfmt[N - 1]);
     for (i = 0; i < N - POS1; i++) {
-	do_recursion(&array[i], &sfmt[i], &sfmt[i + POS1], r1, r2);
+	do_recursion(&array[i], &(data.sfmt[i]), &(data.sfmt[i + POS1]), r1, r2);
 	r1 = r2;
 	r2 = &array[i];
     }
     for (; i < N; i++) {
-	do_recursion(&array[i], &sfmt[i], &array[i + POS1 - N], r1, r2);
+	do_recursion(&array[i], &(data.sfmt[i]), &array[i + POS1 - N], r1, r2);
 	r1 = r2;
 	r2 = &array[i];
     }
@@ -295,13 +328,13 @@ inline static void gen_rand_array(w128_t *array, int size) {
 	r2 = &array[i];
     }
     for (j = 0; j < 2 * N - size; j++) {
-	sfmt[j] = array[j + size - N];
+	data.sfmt[j] = array[j + size - N];
     }
     for (; i < size; i++, j++) {
 	do_recursion(&array[i], &array[i - N], &array[i + POS1 - N], r1, r2);
 	r1 = r2;
 	r2 = &array[i];
-	sfmt[j] = array[i];
+	data.sfmt[j] = array[i];
     }
 }
 #endif
@@ -344,13 +377,14 @@ static uint32_t func2(uint32_t x) {
 /**
  * This function certificate the period of 2^{MEXP}
  */
-static void period_certification(void) {
+static void period_certification(SFMT& sfmt) {
     int inner = 0;
     int i, j;
     uint32_t work;
+    SFMTData& data = *sfmt.data;
 
     for (i = 0; i < 4; i++)
-	inner ^= psfmt32[idxof(i)] & parity[i];
+	inner ^= data.psfmt32[idxof(i)] & data.parity[i];
     for (i = 16; i > 0; i >>= 1)
 	inner ^= inner >> i;
     inner &= 1;
@@ -362,8 +396,8 @@ static void period_certification(void) {
     for (i = 0; i < 4; i++) {
 	work = 1;
 	for (j = 0; j < 32; j++) {
-	    if ((work & parity[i]) != 0) {
-		psfmt32[idxof(i)] ^= work;
+	    if ((work & data.parity[i]) != 0) {
+		data.psfmt32[idxof(i)] ^= work;
 		return;
 	    }
 	    work = work << 1;
@@ -407,15 +441,16 @@ int get_min_array_size64(void) {
  * init_gen_rand or init_by_array must be called before this function.
  * @return 32-bit pseudorandom number
  */
-uint32_t gen_rand32(void) {
+uint32_t gen_rand32(SFMT& sfmt) {
     uint32_t r;
+    SFMTData& data = *sfmt.data;
 
-    assert(initialized);
-    if (idx >= N32) {
-	gen_rand_all();
-	idx = 0;
+    assert(data.initialized);
+    if (data.idx >= N32) {
+	gen_rand_all(sfmt);
+	data.idx = 0;
     }
-    r = psfmt32[idx++];
+    r = data.psfmt32[data.idx++];
     return r;
 }
 #endif
@@ -423,31 +458,32 @@ uint32_t gen_rand32(void) {
  * This function generates and returns 64-bit pseudorandom number.
  * init_gen_rand or init_by_array must be called before this function.
  * The function gen_rand64 should not be called after gen_rand32,
- * unless an initialization is again executed. 
+ * unless an initialization is again executed.
  * @return 64-bit pseudorandom number
  */
-uint64_t gen_rand64(void) {
+uint64_t gen_rand64(SFMT& sfmt) {
 #if defined(BIG_ENDIAN64) && !defined(ONLY64)
     uint32_t r1, r2;
 #else
     uint64_t r;
 #endif
+    SFMTData& data = *sfmt.data;
 
-    assert(initialized);
-    assert(idx % 2 == 0);
+    assert(data.initialized);
+    assert(data.idx % 2 == 0);
 
-    if (idx >= N32) {
-	gen_rand_all();
-	idx = 0;
+    if (data.idx >= N32) {
+	gen_rand_all(sfmt);
+	data.idx = 0;
     }
 #if defined(BIG_ENDIAN64) && !defined(ONLY64)
-    r1 = psfmt32[idx];
-    r2 = psfmt32[idx + 1];
-    idx += 2;
+    r1 = data.psfmt32[data.idx];
+    r2 = data.psfmt32[data.idx + 1];
+    data.idx += 2;
     return ((uint64_t)r2 << 32) | r1;
 #else
-    r = psfmt64[idx / 2];
-    idx += 2;
+    r = data.psfmt64[data.idx / 2];
+    data.idx += 2;
     return r;
 #endif
 }
@@ -478,14 +514,15 @@ uint64_t gen_rand64(void) {
  * memory. Mac OSX doesn't have these functions, but \b malloc of OSX
  * returns the pointer to the aligned memory block.
  */
-void fill_array32(uint32_t *array, int size) {
-    assert(initialized);
-    assert(idx == N32);
+void fill_array32(uint32_t *array, int size, SFMT& sfmt) {
+    SFMTData& data = *sfmt.data;
+    assert(data.initialized);
+    assert(data.idx == N32);
     assert(size % 4 == 0);
     assert(size >= N32);
 
-    gen_rand_array((w128_t *)array, size / 4);
-    idx = N32;
+    gen_rand_array((w128_t *)array, size / 4, sfmt);
+    data.idx = N32;
 }
 #endif
 
@@ -514,14 +551,15 @@ void fill_array32(uint32_t *array, int size) {
  * memory. Mac OSX doesn't have these functions, but \b malloc of OSX
  * returns the pointer to the aligned memory block.
  */
-void fill_array64(uint64_t *array, int size) {
-    assert(initialized);
-    assert(idx == N32);
+void fill_array64(uint64_t *array, int size, SFMT& sfmt) {
+    SFMTData& data = *sfmt.data;
+    assert(data.initialized);
+    assert(data.idx == N32);
     assert(size % 2 == 0);
     assert(size >= N64);
 
-    gen_rand_array((w128_t *)array, size / 2);
-    idx = N32;
+    gen_rand_array((w128_t *)array, size / 2, sfmt);
+    data.idx = N32;
 
 #if defined(BIG_ENDIAN64) && !defined(ONLY64)
     swap((w128_t *)array, size /2);
@@ -534,18 +572,19 @@ void fill_array64(uint64_t *array, int size) {
  *
  * @param seed a 32-bit integer used as the seed.
  */
-void init_gen_rand(uint32_t seed) {
+void init_gen_rand(uint32_t seed, SFMT& sfmt) {
     int i;
+    SFMTData& data = *sfmt.data;
 
-    psfmt32[idxof(0)] = seed;
+    data.psfmt32[idxof(0)] = seed;
     for (i = 1; i < N32; i++) {
-	psfmt32[idxof(i)] = 1812433253UL * (psfmt32[idxof(i - 1)] 
-					    ^ (psfmt32[idxof(i - 1)] >> 30))
+    	data.psfmt32[idxof(i)] = 1812433253UL * (data.psfmt32[idxof(i - 1)]
+					    ^ (data.psfmt32[idxof(i - 1)] >> 30))
 	    + i;
     }
-    idx = N32;
-    period_certification();
-    initialized = 1;
+    data.idx = N32;
+    period_certification(sfmt);
+    data.initialized = 1;
 }
 
 /**
@@ -554,7 +593,7 @@ void init_gen_rand(uint32_t seed) {
  * @param init_key the array of 32-bit integers, used as a seed.
  * @param key_length the length of init_key.
  */
-void init_by_array(uint32_t *init_key, int key_length) {
+void init_by_array(uint32_t *init_key, int key_length, SFMT& sfmt) {
     int i, j, count;
     uint32_t r;
     int lag;
@@ -572,49 +611,68 @@ void init_by_array(uint32_t *init_key, int key_length) {
     }
     mid = (size - lag) / 2;
 
-    memset(sfmt, 0x8b, sizeof(sfmt));
+    SFMTData& data = *sfmt.data;
+    memset(data.sfmt, 0x8b, sizeof(data.sfmt));
     if (key_length + 1 > N32) {
 	count = key_length + 1;
     } else {
 	count = N32;
     }
-    r = func1(psfmt32[idxof(0)] ^ psfmt32[idxof(mid)] 
-	      ^ psfmt32[idxof(N32 - 1)]);
-    psfmt32[idxof(mid)] += r;
+    r = func1(data.psfmt32[idxof(0)] ^ data.psfmt32[idxof(mid)]
+	      ^ data.psfmt32[idxof(N32 - 1)]);
+    data.psfmt32[idxof(mid)] += r;
     r += key_length;
-    psfmt32[idxof(mid + lag)] += r;
-    psfmt32[idxof(0)] = r;
+    data.psfmt32[idxof(mid + lag)] += r;
+    data.psfmt32[idxof(0)] = r;
 
     count--;
     for (i = 1, j = 0; (j < count) && (j < key_length); j++) {
-	r = func1(psfmt32[idxof(i)] ^ psfmt32[idxof((i + mid) % N32)] 
-		  ^ psfmt32[idxof((i + N32 - 1) % N32)]);
-	psfmt32[idxof((i + mid) % N32)] += r;
+	r = func1(data.psfmt32[idxof(i)] ^ data.psfmt32[idxof((i + mid) % N32)]
+		  ^ data.psfmt32[idxof((i + N32 - 1) % N32)]);
+	data.psfmt32[idxof((i + mid) % N32)] += r;
 	r += init_key[j] + i;
-	psfmt32[idxof((i + mid + lag) % N32)] += r;
-	psfmt32[idxof(i)] = r;
+	data.psfmt32[idxof((i + mid + lag) % N32)] += r;
+	data.psfmt32[idxof(i)] = r;
 	i = (i + 1) % N32;
     }
     for (; j < count; j++) {
-	r = func1(psfmt32[idxof(i)] ^ psfmt32[idxof((i + mid) % N32)] 
-		  ^ psfmt32[idxof((i + N32 - 1) % N32)]);
-	psfmt32[idxof((i + mid) % N32)] += r;
+	r = func1(data.psfmt32[idxof(i)] ^ data.psfmt32[idxof((i + mid) % N32)]
+		  ^ data.psfmt32[idxof((i + N32 - 1) % N32)]);
+	data.psfmt32[idxof((i + mid) % N32)] += r;
 	r += i;
-	psfmt32[idxof((i + mid + lag) % N32)] += r;
-	psfmt32[idxof(i)] = r;
+	data.psfmt32[idxof((i + mid + lag) % N32)] += r;
+	data.psfmt32[idxof(i)] = r;
 	i = (i + 1) % N32;
     }
     for (j = 0; j < N32; j++) {
-	r = func2(psfmt32[idxof(i)] + psfmt32[idxof((i + mid) % N32)] 
-		  + psfmt32[idxof((i + N32 - 1) % N32)]);
-	psfmt32[idxof((i + mid) % N32)] ^= r;
+	r = func2(data.psfmt32[idxof(i)] + data.psfmt32[idxof((i + mid) % N32)]
+		  + data.psfmt32[idxof((i + N32 - 1) % N32)]);
+	data.psfmt32[idxof((i + mid) % N32)] ^= r;
 	r -= i;
-	psfmt32[idxof((i + mid + lag) % N32)] ^= r;
-	psfmt32[idxof(i)] = r;
+	data.psfmt32[idxof((i + mid + lag) % N32)] ^= r;
+	data.psfmt32[idxof(i)] = r;
 	i = (i + 1) % N32;
     }
 
-    idx = N32;
-    period_certification();
-    initialized = 1;
+    data.idx = N32;
+    period_certification(sfmt);
+    data.initialized = 1;
 }
+
+/**
+ * Create an SFMTData object.  This allows outside code to create these objects without needing to know their definition.
+ */
+SFMTData* createSFMTData(void) {
+	return new SFMTData();
+}
+
+/**
+ * Delete an SFMTData object that was created with createSFMTData().
+ */
+void deleteSFMTData(SFMTData* data) {
+	delete data;
+}
+
+} // OpenMM_SFMT
+
+

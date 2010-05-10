@@ -40,7 +40,7 @@
 #include "openmm/NonbondedForce.h"
 #include "openmm/System.h"
 #include "openmm/LangevinIntegrator.h"
-#include "../src/sfmt/SFMT.h"
+#include "sfmt/SFMT.h"
 #include <iostream>
 #include <vector>
 
@@ -72,14 +72,16 @@ void testConstraints() {
     Context context(system, integrator, platform);
     vector<Vec3> positions(numParticles);
     vector<Vec3> velocities(numParticles);
-    init_gen_rand(0);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+
     for (int i = 0; i < numMolecules; ++i) {
         positions[i*3] = Vec3((i%4)*0.4, (i/4)*0.4, 0);
         positions[i*3+1] = positions[i*3]+Vec3(0.1, 0, 0);
         positions[i*3+2] = positions[i*3]+Vec3(-0.03333, 0.09428, 0);
-        velocities[i*3] = Vec3(genrand_real2()-0.5, genrand_real2()-0.5, genrand_real2()-0.5);
-        velocities[i*3+1] = Vec3(genrand_real2()-0.5, genrand_real2()-0.5, genrand_real2()-0.5);
-        velocities[i*3+2] = Vec3(genrand_real2()-0.5, genrand_real2()-0.5, genrand_real2()-0.5);
+        velocities[i*3] = Vec3(genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5);
+        velocities[i*3+1] = Vec3(genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5);
+        velocities[i*3+2] = Vec3(genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5);
     }
     context.setPositions(positions);
     context.setVelocities(velocities);

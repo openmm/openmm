@@ -42,7 +42,7 @@
 #include "openmm/System.h"
 #include "openmm/VerletIntegrator.h"
 #include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
-#include "../src/sfmt/SFMT.h"
+#include "sfmt/SFMT.h"
 #include <iostream>
 #include <vector>
 
@@ -80,10 +80,12 @@ void testMotionRemoval() {
     Context context(system, integrator, platform);
     vector<Vec3> positions(numParticles);
     vector<Vec3> velocities(numParticles);
-    init_gen_rand(0);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+
     for (int i = 0; i < numParticles; ++i) {
         positions[i] = Vec3((i%2 == 0 ? 2 : -2), (i%4 < 2 ? 2 : -2), (i < 4 ? 2 : -2));
-        velocities[i] = Vec3(genrand_real2()-0.5, genrand_real2()-0.5, genrand_real2()-0.5);
+        velocities[i] = Vec3(genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5, genrand_real2(sfmt)-0.5);
     }
     context.setPositions(positions);
     context.setVelocities(velocities);

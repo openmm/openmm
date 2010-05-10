@@ -42,7 +42,7 @@
 #include "openmm/PeriodicTorsionForce.h"
 #include "openmm/System.h"
 #include "openmm/VerletIntegrator.h"
-#include "../src/sfmt/SFMT.h"
+#include "sfmt/SFMT.h"
 #include <iostream>
 #include <vector>
 
@@ -105,7 +105,9 @@ void testHbond() {
 
     // Set the atoms in various positions, and verify that both systems give identical forces and energy.
 
-    init_gen_rand(0);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+
     vector<Vec3> positions(5);
     VerletIntegrator integrator1(0.01);
     VerletIntegrator integrator2(0.01);
@@ -113,7 +115,7 @@ void testHbond() {
         Context c1(customSystem, integrator1, platform);
         Context c2(standardSystem, integrator2, platform);
         for (int j = 0; j < (int) positions.size(); j++)
-            positions[j] = Vec3(2.0*genrand_real2(), 2.0*genrand_real2(), 2.0*genrand_real2());
+            positions[j] = Vec3(2.0*genrand_real2(sfmt), 2.0*genrand_real2(sfmt), 2.0*genrand_real2(sfmt));
         c1.setPositions(positions);
         c2.setPositions(positions);
         State s1 = c1.getState(State::Forces | State::Energy);

@@ -43,7 +43,7 @@
 #include "openmm/LangevinIntegrator.h"
 #include "openmm/NonbondedForce.h"
 #include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
-#include "../src/sfmt/SFMT.h"
+#include "sfmt/SFMT.h"
 #include <iostream>
 #include <vector>
 

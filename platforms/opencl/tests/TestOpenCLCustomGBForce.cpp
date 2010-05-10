@@ -35,7 +35,7 @@
  */
 
 #include "../../../tests/AssertionUtilities.h"
-#include "../src/sfmt/SFMT.h"
+#include "sfmt/SFMT.h"
 #include "openmm/Context.h"
 #include "OpenCLPlatform.h"
 #include "openmm/CustomGBForce.h"
@@ -89,7 +89,9 @@ void testOBC(GBSAOBCForce::NonbondedMethod obcMethod, CustomGBForce::NonbondedMe
                           "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))", CustomGBForce::ParticlePairNoExclusions);
     vector<Vec3> positions(numParticles);
     vector<Vec3> velocities(numParticles);
-    init_gen_rand(0);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+
     vector<double> params(3);
     for (int i = 0; i < numMolecules; i++) {
         if (i < numMolecules/2) {
@@ -114,10 +116,10 @@ void testOBC(GBSAOBCForce::NonbondedMethod obcMethod, CustomGBForce::NonbondedMe
             params[1] = 0.1;
             custom->addParticle(params);
         }
-        positions[2*i] = Vec3(boxSize*genrand_real2(), boxSize*genrand_real2(), boxSize*genrand_real2());
+        positions[2*i] = Vec3(boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt));
         positions[2*i+1] = Vec3(positions[2*i][0]+1.0, positions[2*i][1], positions[2*i][2]);
-        velocities[2*i] = Vec3(genrand_real2(), genrand_real2(), genrand_real2());
-        velocities[2*i+1] = Vec3(genrand_real2(), genrand_real2(), genrand_real2());
+        velocities[2*i] = Vec3(genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt));
+        velocities[2*i+1] = Vec3(genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt));
     }
     obc->setNonbondedMethod(obcMethod);
     custom->setNonbondedMethod(customMethod);
@@ -217,10 +219,12 @@ void testPositionDependence() {
     Context context(system, integrator, platform);
     vector<Vec3> positions(2);
     vector<Vec3> forces(2);
-    init_gen_rand(0);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+
     for (int i = 0; i < 5; i++) {
-        positions[0] = Vec3(genrand_real2(), genrand_real2(), genrand_real2());
-        positions[1] = Vec3(genrand_real2(), genrand_real2(), genrand_real2());
+        positions[0] = Vec3(genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt));
+        positions[1] = Vec3(genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt));
         context.setPositions(positions);
         State state = context.getState(State::Forces | State::Energy);
         const vector<Vec3>& forces = state.getForces();

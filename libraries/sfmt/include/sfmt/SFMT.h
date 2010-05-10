@@ -1,5 +1,5 @@
-/** 
- * @file SFMT.h 
+/**
+ * @file SFMT.h
  *
  * @brief SIMD oriented Fast Mersenne Twister(SFMT) pseudorandom
  * number generator
@@ -18,7 +18,7 @@
  * and you have to define PRIu64 and PRIx64 in this file as follows:
  * @verbatim
  typedef unsigned int uint32_t
- typedef unsigned long long uint64_t  
+ typedef unsigned long long uint64_t
  #define PRIu64 "llu"
  #define PRIx64 "llx"
 @endverbatim
@@ -73,89 +73,110 @@
   #define PRE_ALWAYS inline
 #endif
 
-uint32_t OPENMM_EXPORT gen_rand32(void);
-uint64_t OPENMM_EXPORT gen_rand64(void);
+/**
+ * This namespace contains the functions defined by the SFMT library.
+ */
 
-void fill_array32(uint32_t *array, int size);
-void fill_array64(uint64_t *array, int size);
+namespace OpenMM_SFMT {
 
-void OPENMM_EXPORT init_gen_rand(uint32_t seed);
+class SFMTData;
+class SFMT;
 
-void init_by_array(uint32_t *init_key, int key_length);
-const char *get_idstring(void);
-int get_min_array_size32(void);
-int get_min_array_size64(void);
+OPENMM_EXPORT uint32_t gen_rand32(SFMT& sfmt);
+OPENMM_EXPORT uint64_t gen_rand64(SFMT& sfmt);
+OPENMM_EXPORT void fill_array32(uint32_t *array, int size, SFMT& sfmt);
+OPENMM_EXPORT void fill_array64(uint64_t *array, int size, SFMT& sfmt);
+OPENMM_EXPORT void init_gen_rand(uint32_t seed, SFMT& sfmt);
+OPENMM_EXPORT void init_by_array(uint32_t *init_key, int key_length, SFMT& sfmt);
+OPENMM_EXPORT const char* get_idstring(void);
+OPENMM_EXPORT int get_min_array_size32(void);
+OPENMM_EXPORT int get_min_array_size64(void);
+OPENMM_EXPORT SFMTData* createSFMTData(void);
+OPENMM_EXPORT void deleteSFMTData(SFMTData* data);
+
+class SFMT {
+public:
+    SFMT() : data(createSFMTData()) {
+    }
+    ~SFMT() {
+        deleteSFMTData(data);
+    }
+    SFMTData* data;
+};
 
 /* These real versions are due to Isaku Wada */
 /** generates a random number on [0,1]-real-interval */
 inline static double to_real1(uint32_t v)
 {
-    return v * (1.0/4294967295.0); 
-    /* divided by 2^32-1 */ 
+    return v * (1.0/4294967295.0);
+    /* divided by 2^32-1 */
 }
 
 /** generates a random number on [0,1]-real-interval */
-inline static double genrand_real1(void)
+inline static double genrand_real1(SFMT& sfmt)
 {
-    return to_real1(gen_rand32());
+    return to_real1(gen_rand32(sfmt));
 }
 
 /** generates a random number on [0,1)-real-interval */
 inline static double to_real2(uint32_t v)
 {
-    return v * (1.0/4294967296.0); 
+    return v * (1.0/4294967296.0);
     /* divided by 2^32 */
 }
 
 /** generates a random number on [0,1)-real-interval */
-inline static double genrand_real2(void)
+inline static double genrand_real2(SFMT& sfmt)
 {
-    return to_real2(gen_rand32());
+    return to_real2(gen_rand32(sfmt));
 }
 
 /** generates a random number on (0,1)-real-interval */
 inline static double to_real3(uint32_t v)
 {
-    return (((double)v) + 0.5)*(1.0/4294967296.0); 
+    return (((double)v) + 0.5)*(1.0/4294967296.0);
     /* divided by 2^32 */
 }
 
 /** generates a random number on (0,1)-real-interval */
-inline static double genrand_real3(void)
+inline static double genrand_real3(SFMT& sfmt)
 {
-    return to_real3(gen_rand32());
+    return to_real3(gen_rand32(sfmt));
 }
 /** These real versions are due to Isaku Wada */
 
 /** generates a random number on [0,1) with 53-bit resolution*/
-inline static double to_res53(uint64_t v) 
-{ 
+inline static double to_res53(uint64_t v)
+{
     return v * (1.0/18446744073709551616.0L);
 }
 
 /** generates a random number on [0,1) with 53-bit resolution from two
  * 32 bit integers */
-inline static double to_res53_mix(uint32_t x, uint32_t y) 
-{ 
+inline static double to_res53_mix(uint32_t x, uint32_t y)
+{
     return to_res53(x | ((uint64_t)y << 32));
 }
 
 /** generates a random number on [0,1) with 53-bit resolution
  */
-inline static double genrand_res53(void) 
-{ 
-    return to_res53(gen_rand64());
-} 
+inline static double genrand_res53(SFMT& sfmt)
+{
+    return to_res53(gen_rand64(sfmt));
+}
 
 /** generates a random number on [0,1) with 53-bit resolution
     using 32bit integer.
  */
-inline static double genrand_res53_mix(void) 
-{ 
+inline static double genrand_res53_mix(SFMT& sfmt)
+{
     uint32_t x, y;
 
-    x = gen_rand32();
-    y = gen_rand32();
+    x = gen_rand32(sfmt);
+    y = gen_rand32(sfmt);
     return to_res53_mix(x, y);
-} 
+}
+
+} // OpenMM_SFMT
+
 #endif

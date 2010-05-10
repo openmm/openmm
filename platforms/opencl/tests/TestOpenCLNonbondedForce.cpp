@@ -46,7 +46,7 @@
 #include "OpenCLArray.h"
 #include "OpenCLNonbondedUtilities.h"
 #include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
-#include "../src/sfmt/SFMT.h"
+#include "sfmt/SFMT.h"
 #include <iostream>
 #include <vector>
 
@@ -375,7 +375,9 @@ void testLargeSystem() {
     HarmonicBondForce* bonds = new HarmonicBondForce();
     vector<Vec3> positions(numParticles);
     vector<Vec3> velocities(numParticles);
-    init_gen_rand(0);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+
     for (int i = 0; i < numMolecules; i++) {
         if (i < numMolecules/2) {
             nonbonded->addParticle(-1.0, 0.2, 0.1);
@@ -385,10 +387,10 @@ void testLargeSystem() {
             nonbonded->addParticle(-1.0, 0.2, 0.2);
             nonbonded->addParticle(1.0, 0.1, 0.2);
         }
-        positions[2*i] = Vec3(boxSize*genrand_real2(), boxSize*genrand_real2(), boxSize*genrand_real2());
+        positions[2*i] = Vec3(boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt));
         positions[2*i+1] = Vec3(positions[2*i][0]+1.0, positions[2*i][1], positions[2*i][2]);
-        velocities[2*i] = Vec3(genrand_real2(), genrand_real2(), genrand_real2());
-        velocities[2*i+1] = Vec3(genrand_real2(), genrand_real2(), genrand_real2());
+        velocities[2*i] = Vec3(genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt));
+        velocities[2*i+1] = Vec3(genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt));
         bonds->addBond(2*i, 2*i+1, 1.0, 0.1);
         nonbonded->addException(2*i, 2*i+1, 0.0, 0.15, 0.0);
     }
@@ -448,11 +450,13 @@ void testBlockInteractions(bool periodic) {
     VerletIntegrator integrator(0.01);
     NonbondedForce* nonbonded = new NonbondedForce();
     vector<Vec3> positions(numParticles);
-    init_gen_rand(0);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+
     for (int i = 0; i < numParticles; i++) {
         system.addParticle(1.0);
         nonbonded->addParticle(1.0, 0.2, 0.2);
-        positions[i] = Vec3(boxSize*(3*genrand_real2()-1), boxSize*(3*genrand_real2()-1), boxSize*(3*genrand_real2()-1));
+        positions[i] = Vec3(boxSize*(3*genrand_real2(sfmt)-1), boxSize*(3*genrand_real2(sfmt)-1), boxSize*(3*genrand_real2(sfmt)-1));
     }
     nonbonded->setNonbondedMethod(periodic ? NonbondedForce::CutoffPeriodic : NonbondedForce::CutoffNonPeriodic);
     nonbonded->setCutoffDistance(cutoff);

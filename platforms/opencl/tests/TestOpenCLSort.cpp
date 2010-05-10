@@ -37,7 +37,7 @@
 #include "../src/OpenCLArray.h"
 #include "../src/OpenCLContext.h"
 #include "../src/OpenCLSort.h"
-#include "../src/sfmt/SFMT.h"
+#include "sfmt/SFMT.h"
 #include "openmm/System.h"
 #include <iostream>
 #include <cmath>
@@ -74,19 +74,23 @@ void verifySorting(vector<float> array) {
 
 void testUniformValues()
 {
-    init_gen_rand(0);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+
     vector<float> array(10000);
     for (int i = 0; i < (int) array.size(); i++)
-        array[i] = (float) genrand_real2();
+        array[i] = (float) genrand_real2(sfmt);
     verifySorting(array);
 }
 
 void testLogValues()
 {
-    init_gen_rand(0);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+
     vector<float> array(10000);
     for (int i = 0; i < (int) array.size(); i++)
-        array[i] = (float) log(genrand_real2());
+        array[i] = (float) log(genrand_real2(sfmt));
     verifySorting(array);
 }
 

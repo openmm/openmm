@@ -31,7 +31,7 @@
 
 #include "../../../tests/AssertionUtilities.h"
 #include "../src/SimTKReference/ReferenceNeighborList.h"
-#include "../src/sfmt/SFMT.h"
+#include "sfmt/SFMT.h"
 #include <cassert>
 #include <iostream>
 
@@ -103,12 +103,14 @@ void testPeriodic() {
     const double cutoff = 3.0;
     const RealOpenMM periodicBoxSize[3] = {20.0, 15.0, 22.0};
     RealOpenMM* particleList[numParticles];
-    init_gen_rand(0);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+
     for (int i = 0; i <numParticles; i++) {
         particleList[i] = new RealOpenMM[3];
-        particleList[i][0] = (RealOpenMM) (genrand_real2()*periodicBoxSize[0]*3);
-        particleList[i][1] = (RealOpenMM) (genrand_real2()*periodicBoxSize[1]*3);
-        particleList[i][2] = (RealOpenMM) (genrand_real2()*periodicBoxSize[2]*3);
+        particleList[i][0] = (RealOpenMM) (genrand_real2(sfmt)*periodicBoxSize[0]*3);
+        particleList[i][1] = (RealOpenMM) (genrand_real2(sfmt)*periodicBoxSize[1]*3);
+        particleList[i][2] = (RealOpenMM) (genrand_real2(sfmt)*periodicBoxSize[2]*3);
     }
     vector<set<int> > exclusions(numParticles);
     NeighborList neighborList;

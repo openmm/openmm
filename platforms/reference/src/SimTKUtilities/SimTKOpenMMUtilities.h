@@ -28,7 +28,7 @@
 // class of shared, static utility methods
 
 #include "SimTKOpenMMCommon.h" 
-#include "../sfmt/SFMT.h"
+#include "sfmt/SFMT.h"
 #include "openmm/internal/windowsExport.h"
 
 #include <stdio.h>
@@ -60,6 +60,7 @@ class OPENMM_EXPORT SimTKOpenMMUtilities {
        static bool _randomInitialized;
        static bool nextGaussianIsValid;
        static RealOpenMM nextGaussian;
+       static OpenMM_SFMT::SFMT sfmt;
 
    public:
 

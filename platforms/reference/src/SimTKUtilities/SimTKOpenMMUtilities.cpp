@@ -26,7 +26,7 @@
 
 #include "SimTKOpenMMUtilities.h"
 #include "SimTKOpenMMLog.h"
-#include "../sfmt/SFMT.h"
+#include "sfmt/SFMT.h"
 
 // fabs(), ...
 
@@ -37,6 +37,7 @@ uint32_t SimTKOpenMMUtilities::_randomNumberSeed = 0;
 bool SimTKOpenMMUtilities::_randomInitialized = false;
 bool SimTKOpenMMUtilities::nextGaussianIsValid = false;
 RealOpenMM SimTKOpenMMUtilities::nextGaussian = 0;
+OpenMM_SFMT::SFMT SimTKOpenMMUtilities::sfmt;
 
 /* ---------------------------------------------------------------------------------------
 
@@ -1436,7 +1437,7 @@ RealOpenMM SimTKOpenMMUtilities::getNormallyDistributedRandomNumber( void ) {
         return nextGaussian;
     }
     if (!_randomInitialized) {
-        init_gen_rand(_randomNumberSeed);
+        init_gen_rand(_randomNumberSeed, sfmt);
         _randomInitialized = true;
         nextGaussianIsValid = false;
     }
@@ -1445,8 +1446,8 @@ RealOpenMM SimTKOpenMMUtilities::getNormallyDistributedRandomNumber( void ) {
     
     RealOpenMM x, y, r2;
     do {
-        x = static_cast<RealOpenMM>(2.0 * genrand_real2() - 1.0);
-        y = static_cast<RealOpenMM>(2.0 * genrand_real2() - 1.0);
+        x = static_cast<RealOpenMM>(2.0 * genrand_real2(sfmt) - 1.0);
+        y = static_cast<RealOpenMM>(2.0 * genrand_real2(sfmt) - 1.0);
         r2 = x*x + y*y;
     } while (r2 >= 1.0 || r2 == 0.0);
     RealOpenMM multiplier = static_cast<RealOpenMM>( sqrt((-2.0*log(r2))/r2) );
@@ -1465,11 +1466,11 @@ RealOpenMM SimTKOpenMMUtilities::getNormallyDistributedRandomNumber( void ) {
 
 RealOpenMM SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber( void ) {
     if (!_randomInitialized) {
-        init_gen_rand(_randomNumberSeed);
+        init_gen_rand(_randomNumberSeed, sfmt);
         _randomInitialized = true;
         nextGaussianIsValid = false;
     }
-    RealOpenMM value = static_cast<RealOpenMM>( genrand_real2() );
+    RealOpenMM value = static_cast<RealOpenMM>( genrand_real2(sfmt) );
     return value;
 }
 

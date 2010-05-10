@@ -62,7 +62,7 @@
 #include "openmm/VerletIntegrator.h"
 #include "openmm/VariableVerletIntegrator.h"
 #include "openmm/BrownianIntegrator.h"
-#include "../src/sfmt/SFMT.h"
+#include "sfmt/SFMT.h"
 
 // free-energy plugin includes
 //#define	INCLUDE_FREE_ENERGY_PLUGIN

@@ -44,7 +44,7 @@
 #include "openmm/internal/ContextImpl.h"
 #include "kernels/gputypes.h"
 #include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
-#include "../src/sfmt/SFMT.h"
+#include "sfmt/SFMT.h"
 #include <iostream>
 #include <vector>
 
@@ -209,11 +209,13 @@ void testErrorTolerance(NonbondedForce::NonbondedMethod method) {
     NonbondedForce* force = new NonbondedForce();
     system.addForce(force);
     vector<Vec3> positions(numParticles);
-    init_gen_rand(0);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+
     for (int i = 0; i < numParticles; i++) {
         system.addParticle(1.0);
         force->addParticle(-1.0+i*2.0/(numParticles-1), 1.0, 0.0);
-        positions[i] = Vec3(boxWidth*genrand_real2(), boxWidth*genrand_real2(), boxWidth*genrand_real2());
+        positions[i] = Vec3(boxWidth*genrand_real2(sfmt), boxWidth*genrand_real2(sfmt), boxWidth*genrand_real2(sfmt));
     }
     force->setNonbondedMethod(method);
     CudaPlatform platform;

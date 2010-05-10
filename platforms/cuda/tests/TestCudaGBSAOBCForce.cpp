@@ -41,7 +41,7 @@
 #include "openmm/System.h"
 #include "openmm/LangevinIntegrator.h"
 #include "../src/SimTKUtilities/SimTKOpenMMRealType.h"
-#include "../src/sfmt/SFMT.h"
+#include "sfmt/SFMT.h"
 #include "openmm/NonbondedForce.h"
 #include <iostream>
 #include <vector>
@@ -162,13 +162,15 @@ void testForce(int numParticles, NonbondedForce::NonbondedMethod method, GBSAOBC
     // Set random (but uniformly distributed) positions for all the particles.
     
     vector<Vec3> positions(numParticles);
-    init_gen_rand(0);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+
     for (int i = 0; i < grid; i++)
         for (int j = 0; j < grid; j++)
             for (int k = 0; k < grid; k++)
                 positions[i*grid*grid+j*grid+k] = Vec3(i*1.1, j*1.1, k*1.1);
     for (int i = 0; i < numParticles; ++i)
-        positions[i] = positions[i] + Vec3(0.5*genrand_real2(), 0.5*genrand_real2(), 0.5*genrand_real2());
+        positions[i] = positions[i] + Vec3(0.5*genrand_real2(sfmt), 0.5*genrand_real2(sfmt), 0.5*genrand_real2(sfmt));
     context.setPositions(positions);
     refContext.setPositions(positions);
     State state = context.getState(State::Forces | State::Energy);
