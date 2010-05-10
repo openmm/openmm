@@ -294,7 +294,7 @@ void CudaFreeEnergyCalcNonbondedSoftcoreForceKernel::initialize(const System& sy
             exclusionList[exclusions[i].second].push_back(exclusions[i].first);
         }
         Vec3 boxVectors[3];
-        system.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+        system.getDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
         gpuSetPeriodicBoxSize(gpu, static_cast<float>(boxVectors[0][0] ), static_cast<float>(boxVectors[1][1] ), static_cast<float>(boxVectors[2][2] ));
         CudaNonbondedMethod method = NO_CUTOFF;
         if (force.getNonbondedMethod() != NonbondedSoftcoreForce::NoCutoff) {

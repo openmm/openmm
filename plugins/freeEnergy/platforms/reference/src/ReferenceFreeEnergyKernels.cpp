@@ -177,7 +177,7 @@ void ReferenceFreeEnergyCalcNonbondedSoftcoreForceKernel::initialize(const Syste
     //softCoreLJLambda = (RealOpenMM) force.getSoftCoreLJLambda();
 
     Vec3 boxVectors[3];
-    system.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+    system.getDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
     periodicBoxSize[0] = (RealOpenMM) boxVectors[0][0];
     periodicBoxSize[1] = (RealOpenMM) boxVectors[1][1];
     periodicBoxSize[2] = (RealOpenMM) boxVectors[2][2];
@@ -351,7 +351,7 @@ void ReferenceFreeEnergyCalcGBSAOBCSoftcoreForceKernel::initialize(const System&
                 obcParameters->setUseCutoff(static_cast<RealOpenMM>(nonbonded->getCutoffDistance()));
             if (nonbonded->getNonbondedMethod() == NonbondedForce::CutoffPeriodic) {
                 Vec3 boxVectors[3];
-                system.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+                system.getDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
                 RealOpenMM periodicBoxSize[3];
                 periodicBoxSize[0] = (RealOpenMM) boxVectors[0][0];
                 periodicBoxSize[1] = (RealOpenMM) boxVectors[1][1];
@@ -427,7 +427,7 @@ void ReferenceFreeEnergyCalcGBVISoftcoreForceKernel::initialize(const System& sy
         gBVIParameters->setUseCutoff(static_cast<RealOpenMM>(force.getCutoffDistance()));
     if (force.getNonbondedMethod() == GBVISoftcoreForce::CutoffPeriodic) {
         Vec3 boxVectors[3];
-        system.getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
+        system.getDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
         RealOpenMM periodicBoxSize[3];
         periodicBoxSize[0] = (RealOpenMM) boxVectors[0][0];
         periodicBoxSize[1] = (RealOpenMM) boxVectors[1][1];
