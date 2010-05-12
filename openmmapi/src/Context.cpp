@@ -37,18 +37,18 @@ using namespace OpenMM;
 using namespace std;
 
 Context::Context(System& system, Integrator& integrator) : properties(map<string, string>()) {
-    impl = new ContextImpl(*this, system, integrator, 0, properties);
     system.getDefaultPeriodicBoxVectors(periodicBoxVectors[0], periodicBoxVectors[1], periodicBoxVectors[2]);
+    impl = new ContextImpl(*this, system, integrator, 0, properties);
 }
 
 Context::Context(System& system, Integrator& integrator, Platform& platform) : properties(map<string, string>()) {
-    impl = new ContextImpl(*this, system, integrator, &platform, properties);
     system.getDefaultPeriodicBoxVectors(periodicBoxVectors[0], periodicBoxVectors[1], periodicBoxVectors[2]);
+    impl = new ContextImpl(*this, system, integrator, &platform, properties);
 }
 
 Context::Context(System& system, Integrator& integrator, Platform& platform, const map<string, string>& properties) : properties(properties) {
-    impl = new ContextImpl(*this, system, integrator, &platform, properties);
     system.getDefaultPeriodicBoxVectors(periodicBoxVectors[0], periodicBoxVectors[1], periodicBoxVectors[2]);
+    impl = new ContextImpl(*this, system, integrator, &platform, properties);
 }
 
 Context::~Context() {

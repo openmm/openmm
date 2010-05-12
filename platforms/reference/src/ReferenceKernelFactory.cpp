@@ -84,6 +84,8 @@ KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name, const Pla
         return new ReferenceIntegrateVariableVerletStepKernel(name, platform, data);
     if (name == ApplyAndersenThermostatKernel::Name())
         return new ReferenceApplyAndersenThermostatKernel(name, platform);
+    if (name == ApplyMonteCarloBarostatKernel::Name())
+        return new ReferenceApplyMonteCarloBarostatKernel(name, platform);
     if (name == CalcKineticEnergyKernel::Name())
         return new ReferenceCalcKineticEnergyKernel(name, platform);
     if (name == RemoveCMMotionKernel::Name())

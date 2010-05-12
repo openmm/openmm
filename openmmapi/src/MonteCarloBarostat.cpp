@@ -1,6 +1,3 @@
-#ifndef OPENMM_VEC3_H_
-#define OPENMM_VEC3_H_
-
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -9,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,88 +29,17 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include <cassert>
-#include <iosfwd>
+#include "openmm/MonteCarloBarostat.h"
+#include "openmm/internal/MonteCarloBarostatImpl.h"
+#include <ctime>
 
-namespace OpenMM {
+using namespace OpenMM;
 
-/**
- * This class represents a three component vector.  It is used for storing positions,
- * velocities, and forces.
- */
-
-class Vec3 {
-public:
-    /**
-     * Create a Vec3 whose elements are all 0.
-     */
-    Vec3() {
-        data[0] = data[1] = data[2] = 0.0;
-    }
-    /**
-     * Create a Vec3 with specified x, y, and z components.
-     */
-    Vec3(double x, double y, double z) {
-        data[0] = x;
-        data[1] = y;
-        data[2] = z;
-    }
-    double operator[](int index) const {
-        assert(index >= 0 && index < 3);
-        return data[index];
-    }
-    double& operator[](int index) {
-        assert(index >= 0 && index < 3);
-        return data[index];
-    }
-    
-    // Arithmetic operators
-    
-    // unary plus
-    Vec3 operator+() const {
-        return Vec3(*this);
-    }
-    
-    // plus
-    Vec3 operator+(const Vec3& rhs) const {
-        const Vec3& lhs = *this;
-        return Vec3(lhs[0] + rhs[0], lhs[1] + rhs[1], lhs[2] + rhs[2]);
-    }
-    
-    // unary minus
-    Vec3 operator-() const {
-        const Vec3& lhs = *this;
-        return Vec3(-lhs[0], -lhs[1], -lhs[2]);
-    }
-    
-    // minus
-    Vec3 operator-(const Vec3& rhs) const {
-        const Vec3& lhs = *this;
-        return Vec3(lhs[0] - rhs[0], lhs[1] - rhs[1], lhs[2] - rhs[2]);
-    }
-
-    // scalar product
-    Vec3 operator*(double rhs) const {
-        const Vec3& lhs = *this;
-        return Vec3(lhs[0]*rhs, lhs[1]*rhs, lhs[2]*rhs);
-    }
-    
-    // dot product
-    double dot(const Vec3& rhs) const {
-        const Vec3& lhs = *this;
-        return lhs[0]*rhs[0] + lhs[1]*rhs[1] + lhs[2]*rhs[2];
-    }
-    
-private:
-    double data[3];
-};
-
-template <class CHAR, class TRAITS>
-std::basic_ostream<CHAR,TRAITS>& operator<<(std::basic_ostream<CHAR,TRAITS>& o, const Vec3& v) {
-    o<<'['<<v[0]<<", "<<v[1]<<", "<<v[2]<<']';
-    return o;
+MonteCarloBarostat::MonteCarloBarostat(double defaultPressure, double temperature, int frequency) :
+        defaultPressure(defaultPressure), temperature(temperature), frequency(frequency) {
+    setRandomNumberSeed((int) time(NULL));
 }
 
-} // namespace OpenMM
-
-#endif /*OPENMM_VEC3_H_*/
+ForceImpl* MonteCarloBarostat::createImpl() {
+    return new MonteCarloBarostatImpl(*this);
+}

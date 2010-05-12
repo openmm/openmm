@@ -47,6 +47,7 @@
 #include "SimTKReference/ReferenceHarmonicBondIxn.h"
 #include "SimTKReference/ReferenceLJCoulomb14.h"
 #include "SimTKReference/ReferenceLJCoulombIxn.h"
+#include "SimTKReference/ReferenceMonteCarloBarostat.h"
 #include "SimTKReference/ReferenceProperDihedralBond.h"
 #include "SimTKReference/ReferenceRbDihedralBond.h"
 #include "SimTKReference/ReferenceStochasticDynamics.h"
@@ -1755,6 +1756,36 @@ void ReferenceApplyAndersenThermostatKernel::execute(ContextImpl& context) {
 			static_cast<RealOpenMM>(context.getParameter(AndersenThermostat::Temperature())), 
 			static_cast<RealOpenMM>(context.getParameter(AndersenThermostat::CollisionFrequency())), 
 			static_cast<RealOpenMM>(context.getIntegrator().getStepSize()) );
+}
+
+ReferenceApplyMonteCarloBarostatKernel::~ReferenceApplyMonteCarloBarostatKernel() {
+    if (barostat)
+        delete barostat;
+}
+
+void ReferenceApplyMonteCarloBarostatKernel::initialize(const System& system, const MonteCarloBarostat& barostat) {
+    int numConstraints = system.getNumConstraints();
+    vector<pair<int, int> > constraints;
+    for (int i = 0; i < numConstraints; i++) {
+        int particle1, particle2;
+        double distance;
+        system.getConstraintParameters(i, particle1, particle2, distance);
+        constraints.push_back(make_pair(particle1, particle2));
+    }
+    this->barostat = new ReferenceMonteCarloBarostat(system.getNumParticles(), constraints);
+}
+
+void ReferenceApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, double scale) {
+    RealOpenMM** posData = extractPositions(context);
+    Vec3 box[3];
+    context.getOwner().getPeriodicBoxVectors(box[0], box[1], box[2]);
+    RealOpenMM boxSize[] = {box[0][0], box[1][1], box[2][2]};
+    barostat->applyBarostat(posData, boxSize, scale);
+}
+
+void ReferenceApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& context) {
+    RealOpenMM** posData = extractPositions(context);
+    barostat->restorePositions(posData);
 }
 
 void ReferenceCalcKineticEnergyKernel::initialize(const System& system) {

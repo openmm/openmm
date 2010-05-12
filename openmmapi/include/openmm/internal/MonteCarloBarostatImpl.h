@@ -1,5 +1,5 @@
-#ifndef OPENMM_VEC3_H_
-#define OPENMM_VEC3_H_
+#ifndef OPENMM_MONTECARLOBAROSTATIMPL_H_
+#define OPENMM_MONTECARLOBAROSTATIMPL_H_
 
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,88 +32,42 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include <cassert>
-#include <iosfwd>
+#include "ForceImpl.h"
+#include "openmm/MonteCarloBarostat.h"
+#include "openmm/Kernel.h"
+#include "sfmt/SFMT.h"
+#include <string>
 
 namespace OpenMM {
 
 /**
- * This class represents a three component vector.  It is used for storing positions,
- * velocities, and forces.
+ * This is the internal implementation of MonteCarloBarostat.
  */
 
-class Vec3 {
+class MonteCarloBarostatImpl : public ForceImpl {
 public:
-    /**
-     * Create a Vec3 whose elements are all 0.
-     */
-    Vec3() {
-        data[0] = data[1] = data[2] = 0.0;
+    MonteCarloBarostatImpl(MonteCarloBarostat& owner);
+    void initialize(ContextImpl& context);
+    MonteCarloBarostat& getOwner() {
+        return owner;
     }
-    /**
-     * Create a Vec3 with specified x, y, and z components.
-     */
-    Vec3(double x, double y, double z) {
-        data[0] = x;
-        data[1] = y;
-        data[2] = z;
+    void updateContextState(ContextImpl& context);
+    void calcForces(ContextImpl& context) {
+        // This force doesn't apply forces to particles.
     }
-    double operator[](int index) const {
-        assert(index >= 0 && index < 3);
-        return data[index];
+    double calcEnergy(ContextImpl& context) {
+        return 0.0; // This force doesn't contribute to the potential energy.
     }
-    double& operator[](int index) {
-        assert(index >= 0 && index < 3);
-        return data[index];
-    }
-    
-    // Arithmetic operators
-    
-    // unary plus
-    Vec3 operator+() const {
-        return Vec3(*this);
-    }
-    
-    // plus
-    Vec3 operator+(const Vec3& rhs) const {
-        const Vec3& lhs = *this;
-        return Vec3(lhs[0] + rhs[0], lhs[1] + rhs[1], lhs[2] + rhs[2]);
-    }
-    
-    // unary minus
-    Vec3 operator-() const {
-        const Vec3& lhs = *this;
-        return Vec3(-lhs[0], -lhs[1], -lhs[2]);
-    }
-    
-    // minus
-    Vec3 operator-(const Vec3& rhs) const {
-        const Vec3& lhs = *this;
-        return Vec3(lhs[0] - rhs[0], lhs[1] - rhs[1], lhs[2] - rhs[2]);
-    }
-
-    // scalar product
-    Vec3 operator*(double rhs) const {
-        const Vec3& lhs = *this;
-        return Vec3(lhs[0]*rhs, lhs[1]*rhs, lhs[2]*rhs);
-    }
-    
-    // dot product
-    double dot(const Vec3& rhs) const {
-        const Vec3& lhs = *this;
-        return lhs[0]*rhs[0] + lhs[1]*rhs[1] + lhs[2]*rhs[2];
-    }
-    
+    std::map<std::string, double> getDefaultParameters();
+    std::vector<std::string> getKernelNames();
 private:
-    double data[3];
+    MonteCarloBarostat& owner;
+    int step;
+    double volumeScale;
+    OpenMM_SFMT::SFMT random;
+    Kernel kernel;
 };
-
-template <class CHAR, class TRAITS>
-std::basic_ostream<CHAR,TRAITS>& operator<<(std::basic_ostream<CHAR,TRAITS>& o, const Vec3& v) {
-    o<<'['<<v[0]<<", "<<v[1]<<", "<<v[2]<<']';
-    return o;
-}
 
 } // namespace OpenMM
 
-#endif /*OPENMM_VEC3_H_*/
+#endif /*OPENMM_MONTECARLOBAROSTATIMPL_H_*/
