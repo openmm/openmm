@@ -637,24 +637,6 @@ int CpuImplicitSolvent::computeImplicitSolventForces( RealOpenMM** atomCoordinat
       return SimTKOpenMMCommon::ErrorReturn; 
    }
 
-   // check if parameters good-to-go
-   // radii and scalefactors (OBC) need to be set
-
-   if( callId == 1 ){
-      if( implicitSolventParameters->isNotReady() ){
-         std::stringstream message;
-         message << methodName;
-         message << " implicitSolventParameters are not set for force calculations!";
-         SimTKOpenMMLog::printError( message );
-         return SimTKOpenMMCommon::ErrorReturn; 
-      } else {
-         std::stringstream message;
-         message << methodName;
-         message << " implicitSolventParameters appear to be set.";
-         // SimTKOpenMMLog::printMessage( message );
-      }
-   }
-
    // check to see if Born radii have been previously calculated
    // if not, then calculate;
    // logic here assumes that the radii are intitialized to zero 

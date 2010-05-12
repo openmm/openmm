@@ -571,58 +571,6 @@ std::string ObcParameters::getStateString( const char* title ) const {
 }
 
 /**---------------------------------------------------------------------------------------
-            
-   Return zero value if all parameters set; else return nonzero
-         
-   @return ready status
-            
-   --------------------------------------------------------------------------------------- */
- 
-int ObcParameters::isNotReady( void ) const {
-
-   // ---------------------------------------------------------------------------------------
-
-   static const char* methodName = "\nObcParameters::isNotReady";
-
-   // ---------------------------------------------------------------------------------------
-
-   int isReady = ImplicitSolventParameters::isNotReady();
-
-   int errors  = 0;
-   std::stringstream message;
-   message << methodName;
-
-   const RealOpenMM* scaledRadiusFactors = getScaledRadiusFactors();
-   if( scaledRadiusFactors == NULL || scaledRadiusFactors[0] <= 0.0 ){
-      errors++;
-      message << "\n   scaledRadiusFactors is not set";
-   }
-
-   // check scale factors are in correct units
-
-   RealOpenMM average, stdDev, maxValue, minValue;
-   int minIndex, maxIndex;
-   SimTKOpenMMUtilities::getArrayStatistics( getNumberOfAtoms(), scaledRadiusFactors, &average,
-                                             &stdDev, &minValue, &minIndex,
-                                             &maxValue, &maxIndex );
-
-   if( average < 0.3 || average > 2.0 || minValue < 0.1 ){
-      errors++;
-      message << "\n   scale factors for atomic radii appear not to be set correctly -- radii should be in nm";
-      message << "\n   average radius=" << average << " min radius=" << minValue << " at atom index=" << minIndex;
-   }   
-
-   if( errors ){
-      message << std::endl;
-      SimTKOpenMMLog::printMessage( message );
-   }
-
-   errors += isReady;
-
-   return errors;
-}
-
-/**---------------------------------------------------------------------------------------
 
      Set the force to use a cutoff.
 

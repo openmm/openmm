@@ -282,16 +282,6 @@ class ObcParameters : public ImplicitSolventParameters {
       std::string getStateString( const char* title ) const;
 
       /**---------------------------------------------------------------------------------------
-                  
-         Return zero value if all parameters set; else return nonzero
-               
-         @return ready status
-                  
-         --------------------------------------------------------------------------------------- */
-       
-      int isNotReady( void ) const;
-
-      /**---------------------------------------------------------------------------------------
 
          Set the force to use a cutoff.
 

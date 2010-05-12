@@ -367,16 +367,6 @@ class OPENMM_EXPORT ImplicitSolventParameters {
       
       std::string getStringTab( void ) const;
       
-      /**---------------------------------------------------------------------------------------
-            
-         Return nonzero value errors
-         
-         @return ready status
-            
-         --------------------------------------------------------------------------------------- */
-      
-      virtual int isNotReady( void ) const;
-      
 };
 
 // ---------------------------------------------------------------------------------------
