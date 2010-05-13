@@ -786,64 +786,6 @@ std::string GBVISoftcoreParameters::getStateString( const char* title ) const {
 }
 
 /**---------------------------------------------------------------------------------------
-            
-   Return zero value if all parameters set; else return nonzero
-         
-   @return ready status
-            
-   --------------------------------------------------------------------------------------- */
- 
-int GBVISoftcoreParameters::isNotReady( void ) const {
-
-   // ---------------------------------------------------------------------------------------
-
-   static const char* methodName = "\nGBVISoftcoreParameters::isNotReady";
-
-   // ---------------------------------------------------------------------------------------
-
-   int isReady = ImplicitSolventParameters::isNotReady();
-
-   int errors  = 0;
-   std::stringstream message;
-   message << methodName;
-
-   const RealOpenMM* scaledRadii = getScaledRadii();
-   if( scaledRadii == NULL || scaledRadii[0] <= 0.0 ){
-      errors++;
-      message << "\n   scaledRadii are not set";
-   }
-
-   const RealOpenMM* gamma = getGammaParameters();
-   if( gamma == NULL ){
-      errors++;
-      message << "\n   gamma parameters are not set";
-   }
-
-   // check scale factors are in correct units
-
-   RealOpenMM average, stdDev, maxValue, minValue;
-   int minIndex, maxIndex;
-   SimTKOpenMMUtilities::getArrayStatistics( getNumberOfAtoms(), scaledRadii, &average,
-                                             &stdDev, &minValue, &minIndex,
-                                             &maxValue, &maxIndex );
-
-   if( average < 0.3 || average > 2.0 || minValue < 0.1 ){
-      errors++;
-      message << "\n   scale factors for atomic radii appear not to be set correctly -- radii should be in nm";
-      message << "\n   average radius=" << average << " min radius=" << minValue << " at atom index=" << minIndex;
-   }   
-
-   if( errors ){
-      message << std::endl;
-      (void) fprintf( stderr, "%s", message.str().c_str() );
-   }
-
-   errors += isReady;
-
-   return errors;
-}
-
-/**---------------------------------------------------------------------------------------
 
      Set the force to use a cutoff.
 
