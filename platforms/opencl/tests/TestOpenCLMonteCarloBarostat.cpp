@@ -30,13 +30,13 @@
  * -------------------------------------------------------------------------- */
 
 /**
- * This tests the reference implementation of MonteCarloBarostat.
+ * This tests the OpenCL implementation of MonteCarloBarostat.
  */
 
 #include "../../../tests/AssertionUtilities.h"
 #include "openmm/MonteCarloBarostat.h"
 #include "openmm/Context.h"
-#include "ReferencePlatform.h"
+#include "OpenCLPlatform.h"
 #include "openmm/NonbondedForce.h"
 #include "openmm/System.h"
 #include "openmm/LangevinIntegrator.h"
@@ -50,9 +50,10 @@ using namespace OpenMM;
 using namespace std;
 
 void testChangingBoxSize() {
-    ReferencePlatform platform;
+    OpenCLPlatform platform;
     System system;
     system.setDefaultPeriodicBoxVectors(Vec3(4, 0, 0), Vec3(0, 5, 0), Vec3(0, 0, 6));
+    system.addParticle(1.0);
     LangevinIntegrator integrator(300.0, 1.0, 0.01);
     Context context(system, integrator, platform);
     Vec3 x, y, z;
@@ -79,7 +80,7 @@ void testIdealGas() {
 
     // Create a gas of noninteracting particles.
 
-    ReferencePlatform platform;
+    OpenCLPlatform platform;
     System system;
     system.setDefaultPeriodicBoxVectors(Vec3(initialLength, 0, 0), Vec3(0, 0.5*initialLength, 0), Vec3(0, 0, 2*initialLength));
     vector<Vec3> positions(numParticles);
@@ -125,7 +126,7 @@ void testRandomSeed() {
     const int numParticles = 8;
     const double temp = 100.0;
     const double pressure = 1.5;
-    ReferencePlatform platform;
+    OpenCLPlatform platform;
     System system;
     system.setDefaultPeriodicBoxVectors(Vec3(8, 0, 0), Vec3(0, 8, 0), Vec3(0, 0, 8));
     VerletIntegrator integrator(0.01);
@@ -184,11 +185,79 @@ void testRandomSeed() {
     }
 }
 
+void testWater() {
+    const int gridSize = 8;
+    const int numMolecules = gridSize*gridSize*gridSize;
+    const int frequency = 10;
+    const int steps = 400;
+    const double temp = 273.15;
+    const double pressure = 3;
+    const double spacing = 0.32;
+    const double angle = 109.47*M_PI/180;
+    const double dOH = 0.1;
+    const double dHH = dOH*2*std::sin(0.5*angle);
+
+    // Create a box of SPC water molecules.
+
+    OpenCLPlatform platform;
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(gridSize*spacing, 0, 0), Vec3(0, gridSize*spacing, 0), Vec3(0, 0, gridSize*spacing));
+    NonbondedForce* nonbonded = new NonbondedForce();
+    nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    vector<Vec3> positions;
+    Vec3 offset1(dOH, 0, 0);
+    Vec3 offset2(dOH*std::cos(angle), dOH*std::sin(angle), 0);
+    for (int i = 0; i < gridSize; ++i) {
+        for (int j = 0; j < gridSize; ++j) {
+            for (int k = 0; k < gridSize; ++k) {
+                int firstParticle = system.getNumParticles();
+                system.addParticle(16.0);
+                system.addParticle(1.0);
+                system.addParticle(1.0);
+                nonbonded->addParticle(-0.82, 0.316557, 0.650194);
+                nonbonded->addParticle(0.41, 1, 0);
+                nonbonded->addParticle(0.41, 1, 0);
+                Vec3 pos = Vec3(spacing*i, spacing*j, spacing*k);
+                positions.push_back(pos);
+                positions.push_back(pos+offset1);
+                positions.push_back(pos+offset2);
+                system.addConstraint(firstParticle, firstParticle+1, dOH);
+                system.addConstraint(firstParticle, firstParticle+2, dOH);
+                system.addConstraint(firstParticle+1, firstParticle+2, dHH);
+                nonbonded->addException(firstParticle, firstParticle+1, 0, 1, 0);
+                nonbonded->addException(firstParticle, firstParticle+2, 0, 1, 0);
+                nonbonded->addException(firstParticle+1, firstParticle+2, 0, 1, 0);
+            }
+        }
+    }
+    system.addForce(nonbonded);
+    MonteCarloBarostat* barostat = new MonteCarloBarostat(pressure, temp, frequency);
+    system.addForce(barostat);
+
+    // Simulate it and see if the density matches the expected value (1 g/mL).
+
+    LangevinIntegrator integrator(temp, 1.0, 0.002);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    integrator.step(2000);
+    double volume = 0.0;
+    for (int j = 0; j < steps; ++j) {
+        Vec3 box[3];
+        context.getPeriodicBoxVectors(box[0], box[1], box[2]);
+        volume += box[0][0]*box[1][1]*box[2][2];
+        integrator.step(frequency);
+    }
+    volume /= steps;
+    double density = numMolecules*18/(AVOGADRO*volume*1e-21);
+    ASSERT_USUALLY_EQUAL_TOL(1, density, 0.1);
+}
+
 int main() {
     try {
         testChangingBoxSize();
         testIdealGas();
         testRandomSeed();
+        testWater();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;
@@ -197,4 +266,5 @@ int main() {
     cout << "Done" << endl;
     return 0;
 }
+
 

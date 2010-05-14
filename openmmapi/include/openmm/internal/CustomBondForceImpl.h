@@ -60,6 +60,7 @@ public:
     double calcEnergy(ContextImpl& context);
     std::map<std::string, double> getDefaultParameters();
     std::vector<std::string> getKernelNames();
+    std::vector<std::pair<int, int> > getBondedParticles();
 private:
     CustomBondForce& owner;
     Kernel kernel;

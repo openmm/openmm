@@ -3425,6 +3425,61 @@ void OpenCLApplyAndersenThermostatKernel::execute(ContextImpl& context) {
     cl.executeKernel(kernel, cl.getNumAtoms());
 }
 
+OpenCLApplyMonteCarloBarostatKernel::~OpenCLApplyMonteCarloBarostatKernel() {
+    if (savedPositions != NULL)
+        delete savedPositions;
+    if (moleculeAtoms != NULL)
+        delete moleculeAtoms;
+    if (moleculeStartIndex != NULL)
+        delete moleculeStartIndex;
+}
+
+void OpenCLApplyMonteCarloBarostatKernel::initialize(const System& system, const MonteCarloBarostat& thermostat) {
+    savedPositions = new OpenCLArray<mm_float4>(cl, cl.getPaddedNumAtoms(), "savedPositions");
+    cl::Program program = cl.createProgram(OpenCLKernelSources::monteCarloBarostat);
+    kernel = cl::Kernel(program, "scalePositions");
+}
+
+void OpenCLApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, double scale) {
+    if (!hasInitializedKernels) {
+        hasInitializedKernels = true;
+
+        // Create the arrays with the molecule definitions.
+
+        vector<vector<int> > molecules = context.getMolecules();
+        numMolecules = molecules.size();
+        moleculeAtoms = new OpenCLArray<int>(cl, cl.getNumAtoms(), "moleculeAtoms");
+        moleculeStartIndex = new OpenCLArray<int>(cl, numMolecules+1, "moleculeStartIndex");
+        vector<int> atoms(moleculeAtoms->getSize());
+        vector<int> startIndex(moleculeStartIndex->getSize());
+        int index = 0;
+        for (int i = 0; i < numMolecules; i++) {
+            startIndex[i] = index;
+            for (int j = 0; j < (int) molecules[i].size(); j++)
+                atoms[index++] = molecules[i][j];
+        }
+        startIndex[numMolecules] = index;
+        moleculeAtoms->upload(atoms);
+        moleculeStartIndex->upload(startIndex);
+
+        // Initialize the kernel arguments.
+        
+        kernel.setArg<cl_int>(1, numMolecules);
+        kernel.setArg<cl::Buffer>(4, cl.getPosq().getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(5, moleculeAtoms->getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(6, moleculeStartIndex->getDeviceBuffer());
+    }
+    cl.getQueue().enqueueCopyBuffer(cl.getPosq().getDeviceBuffer(), savedPositions->getDeviceBuffer(), 0, 0, cl.getPosq().getSize()*sizeof(mm_float4));
+    kernel.setArg<cl_float>(0, (cl_float) scale);
+    kernel.setArg<mm_float4>(2, cl.getPeriodicBoxSize());
+    kernel.setArg<mm_float4>(3, cl.getInvPeriodicBoxSize());
+    cl.executeKernel(kernel, cl.getNumAtoms());
+}
+
+void OpenCLApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& context) {
+    cl.getQueue().enqueueCopyBuffer(savedPositions->getDeviceBuffer(), cl.getPosq().getDeviceBuffer(), 0, 0, cl.getPosq().getSize()*sizeof(mm_float4));
+}
+
 void OpenCLCalcKineticEnergyKernel::initialize(const System& system) {
     int numParticles = system.getNumParticles();
     masses.resize(numParticles);

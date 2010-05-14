@@ -1764,18 +1764,11 @@ ReferenceApplyMonteCarloBarostatKernel::~ReferenceApplyMonteCarloBarostatKernel(
 }
 
 void ReferenceApplyMonteCarloBarostatKernel::initialize(const System& system, const MonteCarloBarostat& barostat) {
-    int numConstraints = system.getNumConstraints();
-    vector<pair<int, int> > constraints;
-    for (int i = 0; i < numConstraints; i++) {
-        int particle1, particle2;
-        double distance;
-        system.getConstraintParameters(i, particle1, particle2, distance);
-        constraints.push_back(make_pair(particle1, particle2));
-    }
-    this->barostat = new ReferenceMonteCarloBarostat(system.getNumParticles(), constraints);
 }
 
 void ReferenceApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, double scale) {
+    if (barostat == NULL)
+        barostat = new ReferenceMonteCarloBarostat(context.getSystem().getNumParticles(), context.getMolecules());
     RealOpenMM** posData = extractPositions(context);
     Vec3 box[3];
     context.getOwner().getPeriodicBoxVectors(box[0], box[1], box[2]);

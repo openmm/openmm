@@ -103,3 +103,12 @@ map<string, double> CustomBondForceImpl::getDefaultParameters() {
     return parameters;
 }
 
+vector<pair<int, int> > CustomBondForceImpl::getBondedParticles() {
+    int numBonds = owner.getNumBonds();
+    vector<pair<int, int> > bonds(numBonds);
+    for (int i = 0; i < numBonds; i++) {
+        vector<double> parameters;
+        owner.getBondParameters(i, bonds[i].first, bonds[i].second, parameters);
+    }
+    return bonds;
+}

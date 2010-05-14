@@ -76,6 +76,8 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
         return new OpenCLIntegrateVariableLangevinStepKernel(name, platform, cl);
     if (name == ApplyAndersenThermostatKernel::Name())
         return new OpenCLApplyAndersenThermostatKernel(name, platform, cl);
+    if (name == ApplyMonteCarloBarostatKernel::Name())
+        return new OpenCLApplyMonteCarloBarostatKernel(name, platform, cl);
     if (name == CalcKineticEnergyKernel::Name())
         return new OpenCLCalcKineticEnergyKernel(name, platform, cl);
     if (name == RemoveCMMotionKernel::Name())

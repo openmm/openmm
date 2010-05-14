@@ -163,13 +163,21 @@ public:
      * Set the platform-specific data stored in this context.
      */
     void setPlatformData(void* data);
+    /**
+     * Get a list of the particles in each molecules in the system.  Two particles are in the
+     * same molecule if they are connected by constraints or bonds.
+     */
+    const std::vector<std::vector<int> >& getMolecules() const;
 private:
     friend class Context;
+    static void tagParticlesInMolecule(int particle, int molecule, std::vector<int>& particleMolecule, std::vector<std::vector<int> >& particleBonds);
     Context& owner;
     System& system;
     Integrator& integrator;
     std::vector<ForceImpl*> forceImpls;
     std::map<std::string, double> parameters;
+    mutable std::vector<std::vector<int> > molecules;
+    bool hasInitializedForces;
     Platform* platform;
     Kernel initializeForcesKernel, kineticEnergyKernel, updateStateDataKernel;
     void* platformData;

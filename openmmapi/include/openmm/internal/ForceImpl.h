@@ -35,6 +35,7 @@
 #include "openmm/internal/windowsExport.h"
 #include <map>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace OpenMM {
@@ -100,6 +101,13 @@ public:
      * Get the names of all Kernels used by this Force.
      */
     virtual std::vector<std::string> getKernelNames() = 0;
+    /**
+     * Get pairs of particles connected by bonds by this force.  This is used to determine which particles
+     * are part of the same molecule.
+     */
+    std::vector<std::pair<int, int> > getBondedParticles() {
+        return std::vector<std::pair<int, int> >(0);
+    }
 };
 
 } // namespace OpenMM

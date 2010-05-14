@@ -902,7 +902,49 @@ private:
     bool hasInitializedKernels;
     int randomSeed;
     cl::Kernel kernel;
-    double prevTemp, prevFriction, prevStepSize;
+};
+
+/**
+ * This kernel is invoked by MonteCarloBarostat to adjust the periodic box volume
+ */
+class OpenCLApplyMonteCarloBarostatKernel : public ApplyMonteCarloBarostatKernel {
+public:
+    OpenCLApplyMonteCarloBarostatKernel(std::string name, const Platform& platform, OpenCLContext& cl) : ApplyMonteCarloBarostatKernel(name, platform), cl(cl),
+            savedPositions(NULL), moleculeAtoms(NULL), moleculeStartIndex(NULL) {
+    }
+    ~OpenCLApplyMonteCarloBarostatKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param barostat   the MonteCarloBarostat this kernel will be used for
+     */
+    void initialize(const System& system, const MonteCarloBarostat& barostat);
+    /**
+     * Attempt a Monte Carlo step, scaling particle positions (or cluster centers) by a specified value.
+     * This is called BEFORE the periodic box size is modified.  It should begin by translating each particle
+     * or cluster into the first periodic box, so that coordinates will still be correct after the box size
+     * is changed.
+     *
+     * @param context    the context in which to execute this kernel
+     * @param scale      the scale factor by which to multiply particle positions
+     */
+    void scaleCoordinates(ContextImpl& context, double scale);
+    /**
+     * Reject the most recent Monte Carlo step, restoring the particle positions to where they were before
+     * scaleCoordinates() was last called.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void restoreCoordinates(ContextImpl& context);
+private:
+    OpenCLContext& cl;
+    bool hasInitializedKernels;
+    int numMolecules;
+    OpenCLArray<mm_float4>* savedPositions;
+    OpenCLArray<cl_int>* moleculeAtoms;
+    OpenCLArray<cl_int>* moleculeStartIndex;
+    cl::Kernel kernel;
 };
 
 /**

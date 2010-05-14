@@ -877,7 +877,7 @@ private:
  */
 class ReferenceApplyMonteCarloBarostatKernel : public ApplyMonteCarloBarostatKernel {
 public:
-    ReferenceApplyMonteCarloBarostatKernel(std::string name, const Platform& platform) : ApplyMonteCarloBarostatKernel(name, platform) {
+    ReferenceApplyMonteCarloBarostatKernel(std::string name, const Platform& platform) : ApplyMonteCarloBarostatKernel(name, platform), barostat(NULL) {
     }
     ~ReferenceApplyMonteCarloBarostatKernel();
     /**

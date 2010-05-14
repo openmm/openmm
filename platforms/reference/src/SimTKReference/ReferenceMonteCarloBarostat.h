@@ -36,9 +36,7 @@ class ReferenceMonteCarloBarostat {
    private:
 
        std::vector<RealOpenMM> savedAtomPositions[3];
-       std::vector<std::vector<int> > clusters;
-       
-       void tagAtomsInCluster(int atom, int cluster, std::vector<int>& atomCluster, std::vector<std::vector<int> >& atomBonds);
+       std::vector<std::vector<int> > molecules;
 
    public:
 
@@ -48,7 +46,7 @@ class ReferenceMonteCarloBarostat {
 
          --------------------------------------------------------------------------------------- */
 
-       ReferenceMonteCarloBarostat(int numAtoms, const std::vector<std::pair<int, int> >& constraints);
+       ReferenceMonteCarloBarostat(int numAtoms, const std::vector<std::vector<int> >& molecules);
 
       /**---------------------------------------------------------------------------------------
 

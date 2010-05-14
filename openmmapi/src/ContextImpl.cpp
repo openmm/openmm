@@ -37,15 +37,17 @@
 #include "openmm/internal/ForceImpl.h"
 #include "openmm/internal/ContextImpl.h"
 #include <map>
+#include <utility>
 #include <vector>
 
 using namespace OpenMM;
 using std::map;
+using std::pair;
 using std::vector;
 using std::string;
 
 ContextImpl::ContextImpl(Context& owner, System& system, Integrator& integrator, Platform* platform, const map<string, string>& properties) :
-         owner(owner), system(system), integrator(integrator), platform(platform), platformData(NULL) {
+         owner(owner), system(system), integrator(integrator), hasInitializedForces(false), platform(platform), platformData(NULL) {
     vector<string> kernelNames;
     kernelNames.push_back(CalcKineticEnergyKernel::Name());
     kernelNames.push_back(CalcForcesAndEnergyKernel::Name());
@@ -57,6 +59,7 @@ ContextImpl::ContextImpl(Context& owner, System& system, Integrator& integrator,
         vector<string> forceKernels = forceImpls[forceImpls.size()-1]->getKernelNames();
         kernelNames.insert(kernelNames.begin(), forceKernels.begin(), forceKernels.end());
     }
+    hasInitializedForces = true;
     vector<string> integratorKernels = integrator.getKernelNames();
     kernelNames.insert(kernelNames.begin(), integratorKernels.begin(), integratorKernels.end());
     if (platform == 0)
@@ -159,4 +162,55 @@ const void* ContextImpl::getPlatformData() const {
 
 void ContextImpl::setPlatformData(void* data) {
     platformData = data;
+}
+
+const vector<vector<int> >& ContextImpl::getMolecules() const {
+    if (!hasInitializedForces)
+        throw OpenMMException("ContextImpl: getMolecules() cannot be called until all ForceImpls have been initialized");
+    if (molecules.size() > 0 || system.getNumParticles() == 0)
+        return molecules;
+
+    // First make a list of bonds and constraints.
+
+    vector<pair<int, int> > bonds;
+    for (int i = 0; i < system.getNumConstraints(); i++) {
+        int particle1, particle2;
+        double distance;
+        system.getConstraintParameters(i, particle1, particle2, distance);
+        bonds.push_back(std::make_pair(particle1, particle2));
+    }
+    for (int i = 0; i < (int) forceImpls.size(); i++) {
+        vector<pair<int, int> > forceBonds = forceImpls[i]->getBondedParticles();
+        bonds.insert(bonds.end(), forceBonds.begin(), forceBonds.end());
+    }
+
+    // Make a list of every other particle to which each particle is connected
+
+    int numParticles = system.getNumParticles();
+    vector<vector<int> > particleBonds(numParticles);
+    for (int i = 0; i < (int) bonds.size(); i++) {
+        particleBonds[bonds[i].first].push_back(bonds[i].second);
+        particleBonds[bonds[i].second].push_back(bonds[i].first);
+    }
+
+    // Now tag particles by which molecule they belong to.
+
+    vector<int> particleMolecule(numParticles, -1);
+    int numMolecules = 0;
+    for (int i = 0; i < numParticles; i++)
+        if (particleMolecule[i] == -1)
+            tagParticlesInMolecule(i, numMolecules++, particleMolecule, particleBonds);
+    molecules.resize(numMolecules);
+    for (int i = 0; i < numParticles; i++)
+        molecules[particleMolecule[i]].push_back(i);
+    return molecules;
+}
+
+void ContextImpl::tagParticlesInMolecule(int particle, int molecule, vector<int>& particleMolecule, vector<vector<int> >& particleBonds) {
+    // Recursively tag particles as belonging to a particular molecule.
+
+    particleMolecule[particle] = molecule;
+    for (int i = 0; i < (int) particleBonds[particle].size(); i++)
+        if (particleMolecule[particleBonds[particle][i]] == -1)
+            tagParticlesInMolecule(particleBonds[particle][i], molecule, particleMolecule, particleBonds);
 }
