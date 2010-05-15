@@ -741,6 +741,47 @@ private:
 };
 
 /**
+ * This kernel is invoked by MonteCarloBarostat to adjust the periodic box volume
+ */
+class CudaApplyMonteCarloBarostatKernel : public ApplyMonteCarloBarostatKernel {
+public:
+    CudaApplyMonteCarloBarostatKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data) : ApplyMonteCarloBarostatKernel(name, platform), data(data),
+            moleculeAtoms(NULL), moleculeStartIndex(NULL) {
+    }
+    ~CudaApplyMonteCarloBarostatKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param barostat   the MonteCarloBarostat this kernel will be used for
+     */
+    void initialize(const System& system, const MonteCarloBarostat& barostat);
+    /**
+     * Attempt a Monte Carlo step, scaling particle positions (or cluster centers) by a specified value.
+     * This is called BEFORE the periodic box size is modified.  It should begin by translating each particle
+     * or cluster into the first periodic box, so that coordinates will still be correct after the box size
+     * is changed.
+     *
+     * @param context    the context in which to execute this kernel
+     * @param scale      the scale factor by which to multiply particle positions
+     */
+    void scaleCoordinates(ContextImpl& context, double scale);
+    /**
+     * Reject the most recent Monte Carlo step, restoring the particle positions to where they were before
+     * scaleCoordinates() was last called.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void restoreCoordinates(ContextImpl& context);
+private:
+    CudaPlatform::PlatformData& data;
+    bool hasInitializedMolecules;
+    int numMolecules;
+    CUDAStream<int>* moleculeAtoms;
+    CUDAStream<int>* moleculeStartIndex;
+};
+
+/**
  * This kernel is invoked to calculate the kinetic energy of the system.
  */
 class CudaCalcKineticEnergyKernel : public CalcKineticEnergyKernel {

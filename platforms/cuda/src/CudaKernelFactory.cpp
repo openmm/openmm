@@ -73,6 +73,8 @@ KernelImpl* CudaKernelFactory::createKernelImpl(std::string name, const Platform
         return new CudaIntegrateVariableLangevinStepKernel(name, platform, data);
     if (name == ApplyAndersenThermostatKernel::Name())
         return new CudaApplyAndersenThermostatKernel(name, platform, data);
+    if (name == ApplyMonteCarloBarostatKernel::Name())
+        return new CudaApplyMonteCarloBarostatKernel(name, platform, data);
     if (name == CalcKineticEnergyKernel::Name())
         return new CudaCalcKineticEnergyKernel(name, platform, data);
     if (name == RemoveCMMotionKernel::Name())

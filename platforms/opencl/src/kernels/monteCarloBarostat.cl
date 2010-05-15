@@ -21,7 +21,7 @@ __kernel void scalePositions(float scale, int numMolecules, float4 periodicBoxSi
         int xcell = (int) floor(center.x*invPeriodicBoxSize.x);
         int ycell = (int) floor(center.y*invPeriodicBoxSize.y);
         int zcell = (int) floor(center.z*invPeriodicBoxSize.z);
-        float4 delta = (float) (xcell*periodicBoxSize.x, ycell*periodicBoxSize.y, zcell*periodicBoxSize.z, 0);
+        float4 delta = (float4) (xcell*periodicBoxSize.x, ycell*periodicBoxSize.y, zcell*periodicBoxSize.z, 0);
         center -= delta;
 
         // Now scale the position of the molecule center.

@@ -65,6 +65,7 @@ CudaPlatform::CudaPlatform() {
     registerKernelFactory(IntegrateVariableVerletStepKernel::Name(), factory);
     registerKernelFactory(IntegrateVariableLangevinStepKernel::Name(), factory);
     registerKernelFactory(ApplyAndersenThermostatKernel::Name(), factory);
+    registerKernelFactory(ApplyMonteCarloBarostatKernel::Name(), factory);
     registerKernelFactory(CalcKineticEnergyKernel::Name(), factory);
     registerKernelFactory(RemoveCMMotionKernel::Name(), factory);
     platformProperties.push_back(CudaDevice());

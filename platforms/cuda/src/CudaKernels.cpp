@@ -1042,6 +1042,46 @@ void CudaApplyAndersenThermostatKernel::execute(ContextImpl& context) {
     kCalculateAndersenThermostat(gpu);
 }
 
+CudaApplyMonteCarloBarostatKernel::~CudaApplyMonteCarloBarostatKernel() {
+    if (moleculeAtoms != NULL)
+        delete moleculeAtoms;
+    if (moleculeStartIndex != NULL)
+        delete moleculeStartIndex;
+}
+
+void CudaApplyMonteCarloBarostatKernel::initialize(const System& system, const MonteCarloBarostat& thermostat) {
+}
+
+void CudaApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, double scale) {
+    if (!hasInitializedMolecules) {
+        hasInitializedMolecules = true;
+
+        // Create the arrays with the molecule definitions.
+
+        vector<vector<int> > molecules = context.getMolecules();
+        numMolecules = molecules.size();
+        moleculeAtoms = new CUDAStream<int>(context.getSystem().getNumParticles(), 1, "moleculeAtoms");
+        moleculeStartIndex = new CUDAStream<int>(numMolecules+1, 1, "moleculeStartIndex");
+        int index = 0;
+        for (int i = 0; i < numMolecules; i++) {
+            (*moleculeStartIndex)[i] = index;
+            for (int j = 0; j < (int) molecules[i].size(); j++)
+                (*moleculeAtoms)[index++] = molecules[i][j];
+        }
+        (*moleculeStartIndex)[numMolecules] = index;
+        moleculeAtoms->Upload();
+        moleculeStartIndex->Upload();
+    }
+    _gpuContext* gpu = data.gpu;
+    gpu->psPosqP4->CopyFrom(*gpu->psPosq4);
+    kScaleAtomCoordinates(gpu, scale, *moleculeAtoms, *moleculeStartIndex);
+}
+
+void CudaApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& context) {
+    _gpuContext* gpu = data.gpu;
+    gpu->psPosq4->CopyFrom(*gpu->psPosqP4);
+}
+
 void CudaCalcKineticEnergyKernel::initialize(const System& system) {
     int numParticles = system.getNumParticles();
     masses.resize(numParticles);

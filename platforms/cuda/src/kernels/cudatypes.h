@@ -82,6 +82,7 @@ struct CUDAStream : public SoADeviceObject
     void Deallocate();
     void Upload();
     void Download();
+    void CopyFrom(const CUDAStream<T>& src);
     void Collapse(unsigned int newstreams = 1, unsigned int interleave = 1);
     T& operator[](int index);
 };
@@ -164,6 +165,14 @@ void CUDAStream<T>::Download()
     cudaError_t status;
     status = cudaMemcpy(_pSysData, _pDevData, _stride * _subStreams * sizeof(T), cudaMemcpyDeviceToHost);
     RTERROR(status, (_name+": cudaMemcpy in CUDAStream::Download failed").c_str());
+}
+
+template <typename T>
+void CUDAStream<T>::CopyFrom(const CUDAStream<T>& src)
+{
+    cudaError_t status;
+    status = cudaMemcpy(_pDevData, src._pDevData, _stride * _subStreams * sizeof(T), cudaMemcpyDeviceToDevice);
+    RTERROR(status, (_name+": cudaMemcpy in CUDAStream::Copy failed").c_str());
 }
 
 template <typename T>
