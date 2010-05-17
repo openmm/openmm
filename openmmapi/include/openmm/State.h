@@ -82,6 +82,14 @@ public:
      */
     double getPotentialEnergy() const;
     /**
+     * Get the vectors defining the axes of the periodic box (measured in nm).
+     *
+     * @param a      on exit, this contains the vector defining the first edge of the periodic box
+     * @param b      on exit, this contains the vector defining the second edge of the periodic box
+     * @param c      on exit, this contains the vector defining the third edge of the periodic box
+     */
+    void getPeriodicBoxVectors(Vec3& a, Vec3& b, Vec3& c) const;
+    /**
      * Get a map containing the values of all parameters.  If this State does not contain parameters, this will throw an exception.
      */
     const std::map<std::string, double>& getParameters() const;
@@ -93,11 +101,13 @@ private:
     std::vector<Vec3>& updForces();
     std::map<std::string, double>& updParameters();
     void setEnergy(double ke, double pe);
+    void setPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Vec3& c);
     DataType types;
     double time, ke, pe;
     std::vector<Vec3> positions;
     std::vector<Vec3> velocities;
     std::vector<Vec3> forces;
+    Vec3 periodicBoxVectors[3];
     std::map<std::string, double> parameters;
 };
 

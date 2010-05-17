@@ -173,6 +173,22 @@ public:
      * @param forces  on exit, this contains the forces
      */
     virtual void getForces(ContextImpl& context, std::vector<Vec3>& forces) = 0;
+    /**
+     * Get the current periodic box vectors.
+     *
+     * @param a      on exit, this contains the vector defining the first edge of the periodic box
+     * @param b      on exit, this contains the vector defining the second edge of the periodic box
+     * @param c      on exit, this contains the vector defining the third edge of the periodic box
+     */
+    virtual void getPeriodicBoxVectors(ContextImpl& context, Vec3& a, Vec3& b, Vec3& c) const = 0;
+    /**
+     * Set the current periodic box vectors.
+     *
+     * @param a      the vector defining the first edge of the periodic box
+     * @param b      the vector defining the second edge of the periodic box
+     * @param c      the vector defining the third edge of the periodic box
+     */
+    virtual void setPeriodicBoxVectors(ContextImpl& context, const Vec3& a, const Vec3& b, const Vec3& c) const = 0;
 };
 
 /**

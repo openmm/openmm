@@ -73,6 +73,9 @@ ContextImpl::ContextImpl(Context& owner, System& system, Integrator& integrator,
     dynamic_cast<CalcKineticEnergyKernel&>(kineticEnergyKernel.getImpl()).initialize(system);
     updateStateDataKernel = platform->createKernel(UpdateStateDataKernel::Name(), *this);
     dynamic_cast<UpdateStateDataKernel&>(updateStateDataKernel.getImpl()).initialize(system);
+    Vec3 periodicBoxVectors[3];
+    system.getDefaultPeriodicBoxVectors(periodicBoxVectors[0], periodicBoxVectors[1], periodicBoxVectors[2]);
+    dynamic_cast<UpdateStateDataKernel&>(updateStateDataKernel.getImpl()).setPeriodicBoxVectors(*this, periodicBoxVectors[0], periodicBoxVectors[1], periodicBoxVectors[2]);
     for (size_t i = 0; i < forceImpls.size(); ++i)
         forceImpls[i]->initialize(*this);
     integrator.initialize(*this);
@@ -123,6 +126,20 @@ void ContextImpl::setParameter(std::string name, double value) {
     if (parameters.find(name) == parameters.end())
         throw OpenMMException("Called setParameter() with invalid parameter name");
     parameters[name] = value;
+}
+
+void ContextImpl::getPeriodicBoxVectors(Vec3& a, Vec3& b, Vec3& c) {
+    dynamic_cast<UpdateStateDataKernel&>(updateStateDataKernel.getImpl()).getPeriodicBoxVectors(*this, a, b, c);
+}
+
+void ContextImpl::setPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Vec3& c) {
+    if (a[1] != 0.0 || a[2] != 0.0)
+        throw OpenMMException("First periodic box vector must be parallel to x.");
+    if (b[0] != 0.0 || b[2] != 0.0)
+        throw OpenMMException("Second periodic box vector must be parallel to y.");
+    if (c[0] != 0.0 || c[1] != 0.0)
+        throw OpenMMException("Third periodic box vector must be parallel to z.");
+    dynamic_cast<UpdateStateDataKernel&>(updateStateDataKernel.getImpl()).setPeriodicBoxVectors(*this, a, b, c);
 }
 
 void ContextImpl::calcForces() {

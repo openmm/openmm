@@ -37,17 +37,14 @@ using namespace OpenMM;
 using namespace std;
 
 Context::Context(System& system, Integrator& integrator) : properties(map<string, string>()) {
-    system.getDefaultPeriodicBoxVectors(periodicBoxVectors[0], periodicBoxVectors[1], periodicBoxVectors[2]);
     impl = new ContextImpl(*this, system, integrator, 0, properties);
 }
 
 Context::Context(System& system, Integrator& integrator, Platform& platform) : properties(map<string, string>()) {
-    system.getDefaultPeriodicBoxVectors(periodicBoxVectors[0], periodicBoxVectors[1], periodicBoxVectors[2]);
     impl = new ContextImpl(*this, system, integrator, &platform, properties);
 }
 
 Context::Context(System& system, Integrator& integrator, Platform& platform, const map<string, string>& properties) : properties(properties) {
-    system.getDefaultPeriodicBoxVectors(periodicBoxVectors[0], periodicBoxVectors[1], periodicBoxVectors[2]);
     impl = new ContextImpl(*this, system, integrator, &platform, properties);
 }
 
@@ -82,6 +79,9 @@ Platform& Context::getPlatform() {
 
 State Context::getState(int types) const {
     State state(impl->getTime(), impl->getSystem().getNumParticles(), State::DataType(types));
+    Vec3 periodicBoxSize[3];
+    impl->getPeriodicBoxVectors(periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2]);
+    state.setPeriodicBoxVectors(periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2]);
     if (types&State::Energy)
         state.setEnergy(impl->calcKineticEnergy(), impl->calcPotentialEnergy());
     if (types&State::Forces) {
@@ -123,29 +123,14 @@ void Context::setParameter(const string& name, double value) {
     impl->setParameter(name, value);
 }
 
-void Context::getPeriodicBoxVectors(Vec3& a, Vec3& b, Vec3& c) const {
-    a = periodicBoxVectors[0];
-    b = periodicBoxVectors[1];
-    c = periodicBoxVectors[2];
-}
-
-void Context::setPeriodicBoxVectors(Vec3 a, Vec3 b, Vec3 c) {
-    if (a[1] != 0.0 || a[2] != 0.0)
-        throw OpenMMException("First periodic box vector must be parallel to x.");
-    if (b[0] != 0.0 || b[2] != 0.0)
-        throw OpenMMException("Second periodic box vector must be parallel to y.");
-    if (c[0] != 0.0 || c[1] != 0.0)
-        throw OpenMMException("Third periodic box vector must be parallel to z.");
-    periodicBoxVectors[0] = a;
-    periodicBoxVectors[1] = b;
-    periodicBoxVectors[2] = c;
+void Context::setPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Vec3& c) {
+    impl->setPeriodicBoxVectors(a, b, c);
 }
 
 void Context::reinitialize() {
     System& system = impl->getSystem();
     Integrator& integrator = impl->getIntegrator();
     Platform& platform = impl->getPlatform();
-    system.getDefaultPeriodicBoxVectors(periodicBoxVectors[0], periodicBoxVectors[1], periodicBoxVectors[2]);
     delete impl;
     impl = new ContextImpl(*this, system, integrator, &platform, properties);
 }

@@ -57,12 +57,12 @@ void testChangingBoxSize() {
     LangevinIntegrator integrator(300.0, 1.0, 0.01);
     Context context(system, integrator, platform);
     Vec3 x, y, z;
-    context.getPeriodicBoxVectors(x, y, z);
+    context.getState(0).getPeriodicBoxVectors(x, y, z);
     ASSERT_EQUAL_VEC(Vec3(4, 0, 0), x, 0);
     ASSERT_EQUAL_VEC(Vec3(0, 5, 0), y, 0);
     ASSERT_EQUAL_VEC(Vec3(0, 0, 6), z, 0);
     context.setPeriodicBoxVectors(Vec3(7, 0, 0), Vec3(0, 8, 0), Vec3(0, 0, 9));
-    context.getPeriodicBoxVectors(x, y, z);
+    context.getState(0).getPeriodicBoxVectors(x, y, z);
     ASSERT_EQUAL_VEC(Vec3(7, 0, 0), x, 0);
     ASSERT_EQUAL_VEC(Vec3(0, 8, 0), y, 0);
     ASSERT_EQUAL_VEC(Vec3(0, 0, 9), z, 0);
@@ -110,7 +110,7 @@ void testIdealGas() {
         double volume = 0.0;
         for (int j = 0; j < steps; ++j) {
             Vec3 box[3];
-            context.getPeriodicBoxVectors(box[0], box[1], box[2]);
+            context.getState(0).getPeriodicBoxVectors(box[0], box[1], box[2]);
             volume += box[0][0]*box[1][1]*box[2][2];
             ASSERT_EQUAL_TOL(0.5*box[0][0], box[1][1], 1e-5);
             ASSERT_EQUAL_TOL(2*box[0][0], box[2][2], 1e-5);
@@ -243,7 +243,7 @@ void testWater() {
     double volume = 0.0;
     for (int j = 0; j < steps; ++j) {
         Vec3 box[3];
-        context.getPeriodicBoxVectors(box[0], box[1], box[2]);
+        context.getState(0).getPeriodicBoxVectors(box[0], box[1], box[2]);
         volume += box[0][0]*box[1][1]*box[2][2];
         integrator.step(frequency);
     }

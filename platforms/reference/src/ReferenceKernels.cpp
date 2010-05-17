@@ -137,6 +137,11 @@ static RealOpenMM** extractForces(ContextImpl& context) {
     return (RealOpenMM**) data->forces;
 }
 
+static RealOpenMM* extractBoxSize(ContextImpl& context) {
+    ReferencePlatform::PlatformData* data = reinterpret_cast<ReferencePlatform::PlatformData*>(context.getPlatformData());
+    return (RealOpenMM*) data->periodicBoxSize;
+}
+
 static void findAnglesForCCMA(const System& system, vector<ReferenceCCMAAlgorithm::AngleInfo>& angles) {
     for (int i = 0; i < system.getNumForces(); i++) {
         const HarmonicAngleForce* force = dynamic_cast<const HarmonicAngleForce*>(&system.getForce(i));
@@ -227,6 +232,20 @@ void ReferenceUpdateStateDataKernel::getForces(ContextImpl& context, std::vector
     forces.resize(numParticles);
     for (int i = 0; i < numParticles; ++i)
         forces[i] = Vec3(forceData[i][0], forceData[i][1], forceData[i][2]);
+}
+
+void ReferenceUpdateStateDataKernel::getPeriodicBoxVectors(ContextImpl& context, Vec3& a, Vec3& b, Vec3& c) const {
+    RealOpenMM* box = extractBoxSize(context);
+    a = Vec3(box[0], 0, 0);
+    b = Vec3(0, box[1], 0);
+    c = Vec3(0, 0, box[2]);
+}
+
+void ReferenceUpdateStateDataKernel::setPeriodicBoxVectors(ContextImpl& context, const Vec3& a, const Vec3& b, const Vec3& c) const {
+    RealOpenMM* box = extractBoxSize(context);
+    box[0] = (RealOpenMM) a[0];
+    box[1] = (RealOpenMM) b[1];
+    box[2] = (RealOpenMM) c[2];
 }
 
 ReferenceCalcHarmonicBondForceKernel::~ReferenceCalcHarmonicBondForceKernel() {
@@ -687,18 +706,12 @@ void ReferenceCalcNonbondedForceKernel::executeForces(ContextImpl& context) {
     bool periodic = (nonbondedMethod == CutoffPeriodic);
     bool ewald  = (nonbondedMethod == Ewald);
     bool pme  = (nonbondedMethod == PME);
-    RealOpenMM periodicBoxSize[3];
     if (nonbondedMethod != NoCutoff) {
-        Vec3 boxVectors[3];
-        context.getOwner().getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
-        periodicBoxSize[0] = (RealOpenMM) boxVectors[0][0];
-        periodicBoxSize[1] = (RealOpenMM) boxVectors[1][1];
-        periodicBoxSize[2] = (RealOpenMM) boxVectors[2][2];
-        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, (periodic || ewald || pme) ? periodicBoxSize : NULL, nonbondedCutoff, 0.0);
+        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, (periodic || ewald || pme) ? extractBoxSize(context) : NULL, nonbondedCutoff, 0.0);
         clj.setUseCutoff(nonbondedCutoff, *neighborList, rfDielectric);
     }
     if (periodic || ewald || pme)
-        clj.setPeriodic(periodicBoxSize);
+        clj.setPeriodic(extractBoxSize(context));
     if (ewald)
         clj.setUseEwald(ewaldAlpha, kmax[0], kmax[1], kmax[2]);
     if (pme)
@@ -717,18 +730,12 @@ double ReferenceCalcNonbondedForceKernel::executeEnergy(ContextImpl& context) {
     bool periodic = (nonbondedMethod == CutoffPeriodic);
     bool ewald  = (nonbondedMethod == Ewald);
     bool pme  = (nonbondedMethod == PME);
-    RealOpenMM periodicBoxSize[3];
     if (nonbondedMethod != NoCutoff) {
-        Vec3 boxVectors[3];
-        context.getOwner().getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
-        periodicBoxSize[0] = (RealOpenMM) boxVectors[0][0];
-        periodicBoxSize[1] = (RealOpenMM) boxVectors[1][1];
-        periodicBoxSize[2] = (RealOpenMM) boxVectors[2][2];
-        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, (periodic || ewald || pme) ? periodicBoxSize : NULL, nonbondedCutoff, 0.0);
+        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, (periodic || ewald || pme) ? extractBoxSize(context) : NULL, nonbondedCutoff, 0.0);
         clj.setUseCutoff(nonbondedCutoff, *neighborList, rfDielectric);
     }
     if (periodic || ewald || pme)
-        clj.setPeriodic(periodicBoxSize);
+        clj.setPeriodic(extractBoxSize(context));
     if (ewald)
         clj.setUseEwald(ewaldAlpha, kmax[0], kmax[1], kmax[2]);
     if (pme)
@@ -882,18 +889,12 @@ void ReferenceCalcCustomNonbondedForceKernel::executeForces(ContextImpl& context
     RealOpenMM** forceData = extractForces(context);
     ReferenceCustomNonbondedIxn ixn(energyExpression, forceExpression, parameterNames);
     bool periodic = (nonbondedMethod == CutoffPeriodic);
-    RealOpenMM periodicBoxSize[3];
     if (nonbondedMethod != NoCutoff) {
-        Vec3 boxVectors[3];
-        context.getOwner().getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
-        periodicBoxSize[0] = (RealOpenMM) boxVectors[0][0];
-        periodicBoxSize[1] = (RealOpenMM) boxVectors[1][1];
-        periodicBoxSize[2] = (RealOpenMM) boxVectors[2][2];
-        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, periodic ? periodicBoxSize : NULL, nonbondedCutoff, 0.0);
+        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, periodic ? extractBoxSize(context) : NULL, nonbondedCutoff, 0.0);
         ixn.setUseCutoff(nonbondedCutoff, *neighborList);
     }
     if (periodic)
-        ixn.setPeriodic(periodicBoxSize);
+        ixn.setPeriodic(extractBoxSize(context));
     map<string, double> globalParameters;
     for (int i = 0; i < (int) globalParameterNames.size(); i++)
         globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
@@ -906,18 +907,12 @@ double ReferenceCalcCustomNonbondedForceKernel::executeEnergy(ContextImpl& conte
     RealOpenMM energy = 0;
     ReferenceCustomNonbondedIxn ixn(energyExpression, forceExpression, parameterNames);
     bool periodic = (nonbondedMethod == CutoffPeriodic);
-    RealOpenMM periodicBoxSize[3];
     if (nonbondedMethod != NoCutoff) {
-        Vec3 boxVectors[3];
-        context.getOwner().getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
-        periodicBoxSize[0] = (RealOpenMM) boxVectors[0][0];
-        periodicBoxSize[1] = (RealOpenMM) boxVectors[1][1];
-        periodicBoxSize[2] = (RealOpenMM) boxVectors[2][2];
-        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, periodic ? periodicBoxSize : NULL, nonbondedCutoff, 0.0);
+        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, periodic ? extractBoxSize(context) : NULL, nonbondedCutoff, 0.0);
         ixn.setUseCutoff(nonbondedCutoff, *neighborList);
     }
     if (periodic)
-        ixn.setPeriodic(periodicBoxSize);
+        ixn.setPeriodic(extractBoxSize(context));
     map<string, double> globalParameters;
     for (int i = 0; i < (int) globalParameterNames.size(); i++)
         globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
@@ -960,30 +955,16 @@ void ReferenceCalcGBSAOBCForceKernel::initialize(const System& system, const GBS
 void ReferenceCalcGBSAOBCForceKernel::executeForces(ContextImpl& context) {
     RealOpenMM** posData = extractPositions(context);
     RealOpenMM** forceData = extractForces(context);
-    if (isPeriodic) {
-        Vec3 boxVectors[3];
-        context.getOwner().getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
-        RealOpenMM periodicBoxSize[3];
-        periodicBoxSize[0] = (RealOpenMM) boxVectors[0][0];
-        periodicBoxSize[1] = (RealOpenMM) boxVectors[1][1];
-        periodicBoxSize[2] = (RealOpenMM) boxVectors[2][2];
-        obc->getObcParameters()->setPeriodic(periodicBoxSize);
-    }
+    if (isPeriodic)
+        obc->getObcParameters()->setPeriodic(extractBoxSize(context));
     obc->computeImplicitSolventForces(posData, &charges[0], forceData, 1);
 }
 
 double ReferenceCalcGBSAOBCForceKernel::executeEnergy(ContextImpl& context) {
     RealOpenMM** posData = extractPositions(context);
     RealOpenMM** forceData = allocateRealArray(context.getSystem().getNumParticles(), 3);
-    if (isPeriodic) {
-        Vec3 boxVectors[3];
-        context.getOwner().getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
-        RealOpenMM periodicBoxSize[3];
-        periodicBoxSize[0] = (RealOpenMM) boxVectors[0][0];
-        periodicBoxSize[1] = (RealOpenMM) boxVectors[1][1];
-        periodicBoxSize[2] = (RealOpenMM) boxVectors[2][2];
-        obc->getObcParameters()->setPeriodic(periodicBoxSize);
-    }
+    if (isPeriodic)
+        obc->getObcParameters()->setPeriodic(extractBoxSize(context));
     obc->computeImplicitSolventForces(posData, &charges[0], forceData, 1);
     disposeRealArray(forceData, context.getSystem().getNumParticles());
     return obc->getEnergy();
@@ -1026,15 +1007,8 @@ void ReferenceCalcGBVIForceKernel::executeForces(ContextImpl& context) {
     RealOpenMM** posData = extractPositions(context);
     RealOpenMM** forceData = extractForces(context);
     RealOpenMM* bornRadii  = new RealOpenMM[context.getSystem().getNumParticles()];
-    if (isPeriodic) {
-        Vec3 boxVectors[3];
-        context.getOwner().getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
-        RealOpenMM periodicBoxSize[3];
-        periodicBoxSize[0] = (RealOpenMM) boxVectors[0][0];
-        periodicBoxSize[1] = (RealOpenMM) boxVectors[1][1];
-        periodicBoxSize[2] = (RealOpenMM) boxVectors[2][2];
-        gbvi->getGBVIParameters()->setPeriodic(periodicBoxSize);
-    }
+    if (isPeriodic)
+        gbvi->getGBVIParameters()->setPeriodic(extractBoxSize(context));
     gbvi->computeBornRadii(posData, bornRadii, NULL ); 
     gbvi->computeBornForces(bornRadii, posData, &charges[0], forceData);
     delete[] bornRadii;
@@ -1043,15 +1017,8 @@ void ReferenceCalcGBVIForceKernel::executeForces(ContextImpl& context) {
 double ReferenceCalcGBVIForceKernel::executeEnergy(ContextImpl& context) {
     RealOpenMM** posData = extractPositions(context);
     RealOpenMM* bornRadii = new RealOpenMM[context.getSystem().getNumParticles()];
-    if (isPeriodic) {
-        Vec3 boxVectors[3];
-        context.getOwner().getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
-        RealOpenMM periodicBoxSize[3];
-        periodicBoxSize[0] = (RealOpenMM) boxVectors[0][0];
-        periodicBoxSize[1] = (RealOpenMM) boxVectors[1][1];
-        periodicBoxSize[2] = (RealOpenMM) boxVectors[2][2];
-        gbvi->getGBVIParameters()->setPeriodic(periodicBoxSize);
-    }
+    if (isPeriodic)
+        gbvi->getGBVIParameters()->setPeriodic(extractBoxSize(context));
     gbvi->computeBornRadii(posData, bornRadii, NULL );
     RealOpenMM energy     = gbvi->computeBornEnergy(bornRadii ,posData, &charges[0]);
     delete[] bornRadii;
@@ -1184,17 +1151,10 @@ void ReferenceCalcCustomGBForceKernel::executeForces(ContextImpl& context) {
     ReferenceCustomGBIxn ixn(valueExpressions, valueDerivExpressions, valueGradientExpressions, valueNames, valueTypes, energyExpressions,
         energyDerivExpressions, energyGradientExpressions, energyTypes, particleParameterNames);
     bool periodic = (nonbondedMethod == CutoffPeriodic);
-    RealOpenMM periodicBoxSize[3];
-    if (periodic) {
-        Vec3 boxVectors[3];
-        context.getOwner().getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
-        periodicBoxSize[0] = (RealOpenMM) boxVectors[0][0];
-        periodicBoxSize[1] = (RealOpenMM) boxVectors[1][1];
-        periodicBoxSize[2] = (RealOpenMM) boxVectors[2][2];
-        ixn.setPeriodic(periodicBoxSize);
-    }
+    if (periodic)
+        ixn.setPeriodic(extractBoxSize(context));
     if (nonbondedMethod != NoCutoff) {
-        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, periodic ? periodicBoxSize : NULL, nonbondedCutoff, 0.0);
+        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, periodic ? extractBoxSize(context) : NULL, nonbondedCutoff, 0.0);
         ixn.setUseCutoff(nonbondedCutoff, *neighborList);
     }
     map<string, double> globalParameters;
@@ -1210,17 +1170,10 @@ double ReferenceCalcCustomGBForceKernel::executeEnergy(ContextImpl& context) {
     ReferenceCustomGBIxn ixn(valueExpressions, valueDerivExpressions, valueGradientExpressions, valueNames, valueTypes, energyExpressions,
         energyDerivExpressions, energyGradientExpressions, energyTypes, particleParameterNames);
     bool periodic = (nonbondedMethod == CutoffPeriodic);
-    RealOpenMM periodicBoxSize[3];
-    if (periodic) {
-        Vec3 boxVectors[3];
-        context.getOwner().getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
-        periodicBoxSize[0] = (RealOpenMM) boxVectors[0][0];
-        periodicBoxSize[1] = (RealOpenMM) boxVectors[1][1];
-        periodicBoxSize[2] = (RealOpenMM) boxVectors[2][2];
-        ixn.setPeriodic(periodicBoxSize);
-    }
+    if (periodic)
+        ixn.setPeriodic(extractBoxSize(context));
     if (nonbondedMethod != NoCutoff) {
-        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, periodic ? periodicBoxSize : NULL, nonbondedCutoff, 0.0);
+        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, periodic ? extractBoxSize(context) : NULL, nonbondedCutoff, 0.0);
         ixn.setUseCutoff(nonbondedCutoff, *neighborList);
     }
     map<string, double> globalParameters;
@@ -1389,15 +1342,8 @@ void ReferenceCalcCustomHbondForceKernel::initialize(const System& system, const
 void ReferenceCalcCustomHbondForceKernel::executeForces(ContextImpl& context) {
     RealOpenMM** posData = extractPositions(context);
     RealOpenMM** forceData = extractForces(context);
-    if (isPeriodic) {
-        RealOpenMM periodicBoxSize[3];
-        Vec3 boxVectors[3];
-        context.getOwner().getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
-        periodicBoxSize[0] = (RealOpenMM) boxVectors[0][0];
-        periodicBoxSize[1] = (RealOpenMM) boxVectors[1][1];
-        periodicBoxSize[2] = (RealOpenMM) boxVectors[2][2];
-        ixn->setPeriodic(periodicBoxSize);
-    }
+    if (isPeriodic)
+        ixn->setPeriodic(extractBoxSize(context));
     map<string, double> globalParameters;
     for (int i = 0; i < (int) globalParameterNames.size(); i++)
         globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
@@ -1407,15 +1353,8 @@ void ReferenceCalcCustomHbondForceKernel::executeForces(ContextImpl& context) {
 double ReferenceCalcCustomHbondForceKernel::executeEnergy(ContextImpl& context) {
     RealOpenMM** posData = extractPositions(context);
     RealOpenMM** forceData = allocateRealArray(numParticles, 3);
-    if (isPeriodic) {
-        RealOpenMM periodicBoxSize[3];
-        Vec3 boxVectors[3];
-        context.getOwner().getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
-        periodicBoxSize[0] = (RealOpenMM) boxVectors[0][0];
-        periodicBoxSize[1] = (RealOpenMM) boxVectors[1][1];
-        periodicBoxSize[2] = (RealOpenMM) boxVectors[2][2];
-        ixn->setPeriodic(periodicBoxSize);
-    }
+    if (isPeriodic)
+        ixn->setPeriodic(extractBoxSize(context));
     RealOpenMM energy = 0;
     map<string, double> globalParameters;
     for (int i = 0; i < (int) globalParameterNames.size(); i++)
@@ -1770,9 +1709,7 @@ void ReferenceApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& conte
     if (barostat == NULL)
         barostat = new ReferenceMonteCarloBarostat(context.getSystem().getNumParticles(), context.getMolecules());
     RealOpenMM** posData = extractPositions(context);
-    Vec3 box[3];
-    context.getOwner().getPeriodicBoxVectors(box[0], box[1], box[2]);
-    RealOpenMM boxSize[] = {box[0][0], box[1][1], box[2][2]};
+    RealOpenMM* boxSize = extractBoxSize(context);
     barostat->applyBarostat(posData, boxSize, scale);
 }
 

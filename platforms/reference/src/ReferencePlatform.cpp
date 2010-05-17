@@ -92,6 +92,7 @@ ReferencePlatform::PlatformData::PlatformData(int numParticles) : time(0.0), ste
     this->positions = positions;
     this->velocities = velocities;
     this->forces = forces;
+    periodicBoxSize = new RealOpenMM[3];
 }
 
 ReferencePlatform::PlatformData::~PlatformData() {
@@ -106,4 +107,5 @@ ReferencePlatform::PlatformData::~PlatformData() {
     delete[] positions;
     delete[] velocities;
     delete[] forces;
+    delete[] periodicBoxSize;
 }

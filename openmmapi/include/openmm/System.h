@@ -189,7 +189,7 @@ public:
      * @param b      the vector defining the second edge of the periodic box
      * @param c      the vector defining the third edge of the periodic box
      */
-    void setDefaultPeriodicBoxVectors(Vec3 a, Vec3 b, Vec3 c);
+    void setDefaultPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Vec3& c);
 private:
     class ConstraintInfo;
     Vec3 periodicBoxVectors[3];

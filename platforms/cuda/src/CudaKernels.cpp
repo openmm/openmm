@@ -45,13 +45,6 @@ void CudaCalcForcesAndEnergyKernel::initialize(const System& system) {
 
 void CudaCalcForcesAndEnergyKernel::beginForceComputation(ContextImpl& context) {
     _gpuContext* gpu = data.gpu;
-    Vec3 boxVectors[3];
-    context.getOwner().getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
-    float boxx = boxVectors[0][0], boxy = boxVectors[1][1], boxz = boxVectors[2][2];
-    if (boxx != gpu->sim.periodicBoxSizeX || boxy != gpu->sim.periodicBoxSizeY || boxz != gpu->sim.periodicBoxSizeZ) {
-        gpuSetPeriodicBoxSize(gpu, boxx, boxy, boxz);
-        gpuSetConstants(gpu);
-    }
     if (data.nonbondedMethod != NO_CUTOFF && data.computeForceCount%100 == 0)
         gpuReorderAtoms(gpu);
     data.computeForceCount++;
@@ -84,13 +77,6 @@ void CudaCalcForcesAndEnergyKernel::finishForceComputation(ContextImpl& context)
 
 void CudaCalcForcesAndEnergyKernel::beginEnergyComputation(ContextImpl& context) {
     _gpuContext* gpu = data.gpu;
-    Vec3 boxVectors[3];
-    context.getOwner().getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
-    float boxx = boxVectors[0][0], boxy = boxVectors[1][1], boxz = boxVectors[2][2];
-    if (boxx != gpu->sim.periodicBoxSizeX || boxy != gpu->sim.periodicBoxSizeY || boxz != gpu->sim.periodicBoxSizeZ) {
-        gpuSetPeriodicBoxSize(gpu, boxx, boxy, boxz);
-        gpuSetConstants(gpu);
-    }
     if (data.nonbondedMethod != NO_CUTOFF && data.stepCount%100 == 0)
         gpuReorderAtoms(gpu);
     data.stepCount++;
@@ -195,6 +181,19 @@ void CudaUpdateStateDataKernel::getForces(ContextImpl& context, std::vector<Vec3
         float4 force = (*gpu->psForce4)[i];
         forces[order[i]] = Vec3(force.x, force.y, force.z);
     }
+}
+
+void CudaUpdateStateDataKernel::getPeriodicBoxVectors(ContextImpl& context, Vec3& a, Vec3& b, Vec3& c) const {
+    _gpuContext* gpu = data.gpu;
+    a = Vec3(gpu->sim.periodicBoxSizeX, 0, 0);
+    b = Vec3(0, gpu->sim.periodicBoxSizeY, 0);
+    c = Vec3(0, 0, gpu->sim.periodicBoxSizeZ);
+}
+
+void CudaUpdateStateDataKernel::setPeriodicBoxVectors(ContextImpl& context, const Vec3& a, const Vec3& b, const Vec3& c) const {
+    _gpuContext* gpu = data.gpu;
+    gpuSetPeriodicBoxSize(gpu, a[0], b[1], c[2]);
+    gpuSetConstants(gpu);
 }
 
 CudaCalcHarmonicBondForceKernel::~CudaCalcHarmonicBondForceKernel() {

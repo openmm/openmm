@@ -69,7 +69,7 @@ void System::getDefaultPeriodicBoxVectors(Vec3& a, Vec3& b, Vec3& c) const {
     c = periodicBoxVectors[2];
 }
 
-void System::setDefaultPeriodicBoxVectors(Vec3 a, Vec3 b, Vec3 c) {
+void System::setDefaultPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Vec3& c) {
     if (a[1] != 0.0 || a[2] != 0.0)
         throw OpenMMException("First periodic box vector must be parallel to x.");
     if (b[0] != 0.0 || b[2] != 0.0)

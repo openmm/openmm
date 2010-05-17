@@ -70,9 +70,6 @@ void OpenCLCalcForcesAndEnergyKernel::initialize(const System& system) {
 }
 
 void OpenCLCalcForcesAndEnergyKernel::beginForceComputation(ContextImpl& context) {
-    Vec3 boxVectors[3];
-    context.getOwner().getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
-    cl.setPeriodicBoxSize(boxVectors[0][0], boxVectors[1][1], boxVectors[2][2]);
     if (cl.getNonbondedUtilities().getUseCutoff() && cl.getComputeForceCount()%100 == 0)
         cl.reorderAtoms();
     cl.setComputeForceCount(cl.getComputeForceCount()+1);
@@ -86,9 +83,6 @@ void OpenCLCalcForcesAndEnergyKernel::finishForceComputation(ContextImpl& contex
 }
 
 void OpenCLCalcForcesAndEnergyKernel::beginEnergyComputation(ContextImpl& context) {
-    Vec3 boxVectors[3];
-    context.getOwner().getPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
-    cl.setPeriodicBoxSize(boxVectors[0][0], boxVectors[1][1], boxVectors[2][2]);
     if (cl.getNonbondedUtilities().getUseCutoff() && cl.getComputeForceCount()%100 == 0)
         cl.reorderAtoms();
     cl.setComputeForceCount(cl.getComputeForceCount()+1);
@@ -183,6 +177,17 @@ void OpenCLUpdateStateDataKernel::getForces(ContextImpl& context, std::vector<Ve
         mm_float4 f = force[i];
         forces[order[i]] = Vec3(f.x, f.y, f.z);
     }
+}
+
+void OpenCLUpdateStateDataKernel::getPeriodicBoxVectors(ContextImpl& context, Vec3& a, Vec3& b, Vec3& c) const {
+    mm_float4 box = cl.getPeriodicBoxSize();
+    a = Vec3(box.x, 0, 0);
+    b = Vec3(0, box.y, 0);
+    c = Vec3(0, 0, box.z);
+}
+
+void OpenCLUpdateStateDataKernel::setPeriodicBoxVectors(ContextImpl& context, const Vec3& a, const Vec3& b, const Vec3& c) const {
+    cl.setPeriodicBoxSize(a[0], b[1], c[2]);
 }
 
 class OpenCLBondForceInfo : public OpenCLForceInfo {

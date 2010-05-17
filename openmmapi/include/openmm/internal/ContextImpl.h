@@ -134,6 +134,30 @@ public:
      */
     void setParameter(std::string name, double value);
     /**
+     * Get the vectors defining the axes of the periodic box (measured in nm).  They will affect
+     * any Force that uses periodic boundary conditions.
+     *
+     * Currently, only rectangular boxes are supported.  This means that a, b, and c must be aligned with the
+     * x, y, and z axes respectively.  Future releases may support arbitrary triclinic boxes.
+     *
+     * @param a      the vector defining the first edge of the periodic box
+     * @param b      the vector defining the second edge of the periodic box
+     * @param c      the vector defining the third edge of the periodic box
+     */
+    void getPeriodicBoxVectors(Vec3& a, Vec3& b, Vec3& c);
+    /**
+     * Set the vectors defining the axes of the periodic box (measured in nm).  They will affect
+     * any Force that uses periodic boundary conditions.
+     *
+     * Currently, only rectangular boxes are supported.  This means that a, b, and c must be aligned with the
+     * x, y, and z axes respectively.  Future releases may support arbitrary triclinic boxes.
+     *
+     * @param a      the vector defining the first edge of the periodic box
+     * @param b      the vector defining the second edge of the periodic box
+     * @param c      the vector defining the third edge of the periodic box
+     */
+    void setPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Vec3& c);
+    /**
      * Recalculate all of the forces in the system.  After calling this, use getForces() to retrieve
      * the forces that were calculated.
      */

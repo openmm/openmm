@@ -63,6 +63,11 @@ double State::getPotentialEnergy() const {
         throw OpenMMException("Invoked getPotentialEnergy() on a State which does not contain energies.");
     return pe;
 }
+void State::getPeriodicBoxVectors(Vec3& a, Vec3& b, Vec3& c) const {
+    a = periodicBoxVectors[0];
+    b = periodicBoxVectors[1];
+    c = periodicBoxVectors[2];
+}
 const map<string, double>& State::getParameters() const {
     if ((types&Parameters) == 0)
         throw OpenMMException("Invoked getParameters() on a State which does not contain parameters.");
@@ -87,4 +92,10 @@ map<string, double>& State::updParameters() {
 void State::setEnergy(double kinetic, double potential) {
     ke = kinetic;
     pe = potential;
+}
+
+void State::setPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Vec3& c) {
+    periodicBoxVectors[0] = a;
+    periodicBoxVectors[1] = b;
+    periodicBoxVectors[2] = c;
 }

@@ -154,18 +154,6 @@ public:
      */
     void setParameter(const std::string& name, double value);
     /**
-     * Get the vectors defining the axes of the periodic box (measured in nm).  They will affect
-     * any Force that uses periodic boundary conditions.
-     *
-     * Currently, only rectangular boxes are supported.  This means that a, b, and c must be aligned with the
-     * x, y, and z axes respectively.  Future releases may support arbitrary triclinic boxes.
-     *
-     * @param a      on exit, this contains the vector defining the first edge of the periodic box
-     * @param b      on exit, this contains the vector defining the second edge of the periodic box
-     * @param c      on exit, this contains the vector defining the third edge of the periodic box
-     */
-    void getPeriodicBoxVectors(Vec3& a, Vec3& b, Vec3& c) const;
-    /**
      * Set the vectors defining the axes of the periodic box (measured in nm).  They will affect
      * any Force that uses periodic boundary conditions.
      *
@@ -176,7 +164,7 @@ public:
      * @param b      the vector defining the second edge of the periodic box
      * @param c      the vector defining the third edge of the periodic box
      */
-    void setPeriodicBoxVectors(Vec3 a, Vec3 b, Vec3 c);
+    void setPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Vec3& c);
     /**
      * When a Context is created, it may cache information about the System being simulated
      * and the Force objects contained in it.  This means that, if the System or Forces are then
@@ -191,7 +179,6 @@ private:
     friend class Platform;
     ContextImpl* impl;
     std::map<std::string, std::string> properties;
-    Vec3 periodicBoxVectors[3];
 };
 
 } // namespace OpenMM

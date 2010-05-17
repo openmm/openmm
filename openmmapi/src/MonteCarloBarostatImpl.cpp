@@ -52,7 +52,7 @@ void MonteCarloBarostatImpl::initialize(ContextImpl& context) {
     kernel = context.getPlatform().createKernel(ApplyMonteCarloBarostatKernel::Name(), context);
     dynamic_cast<ApplyMonteCarloBarostatKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
     Vec3 box[3];
-    context.getOwner().getPeriodicBoxVectors(box[0], box[1], box[2]);
+    context.getPeriodicBoxVectors(box[0], box[1], box[2]);
     double volume = box[0][0]*box[1][1]*box[2][2];
     volumeScale = 0.01*volume;
     init_gen_rand(owner.getRandomNumberSeed(), random);
@@ -70,7 +70,7 @@ void MonteCarloBarostatImpl::updateContextState(ContextImpl& context) {
     // Modify the periodic box size.
 
     Vec3 box[3];
-    context.getOwner().getPeriodicBoxVectors(box[0], box[1], box[2]);
+    context.getPeriodicBoxVectors(box[0], box[1], box[2]);
     double volume = box[0][0]*box[1][1]*box[2][2];
     double deltaVolume = volumeScale*2*(genrand_real2(random)-0.5);
     double newVolume = volume+deltaVolume;
