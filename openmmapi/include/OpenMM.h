@@ -49,6 +49,7 @@
 #include "openmm/HarmonicBondForce.h"
 #include "openmm/Integrator.h"
 #include "openmm/LangevinIntegrator.h"
+#include "openmm/MonteCarloBarostat.h"
 #include "openmm/NonbondedForce.h"
 #include "openmm/Context.h"
 #include "openmm/OpenMMException.h"
