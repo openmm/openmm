@@ -99,7 +99,7 @@ void GetCalculateObcGbsaForces2Sim(gpuContext gpu)
 #define METHOD_NAME(a, b) a##PeriodicByWarp##b
 #include "kCalculateObcGbsaForces2.h"
 
-void OPENMMCUDA_EXPORT kCalculateObcGbsaForces2(gpuContext gpu)
+void kCalculateObcGbsaForces2(gpuContext gpu)
 {
     //printf("kCalculateObcGbsaForces2\n");
     switch (gpu->sim.nonbondedMethod)
