@@ -23,20 +23,20 @@
  */
 
 
-#ifndef __RealOpenMMOpenMMSimTk_H_
-#define __RealOpenMMOpenMMSimTk_H__
+#ifndef __RealSimTk_H_
+#define __RealSimTk_H__
 
 #include <math.h>
 
-// Set RealOpenMMOpenMMOpenMMType to 2 for double precision, 1 for float
+// Set RealOpenMMType to 2 for double precision, 1 for float
 
-#ifndef RealOpenMMOpenMMOpenMMType
-#define RealOpenMMOpenMMOpenMMType 2
+#ifndef RealOpenMMType
+#define RealOpenMMType 2
 #endif 
 
-#if RealOpenMMOpenMMOpenMMType == 1 
+#if RealOpenMMType == 1 
 
-#define RealOpenMMOpenMMOpenMM     float
+#define RealOpenMM     float
 #define SQRT           sqrtf
 #define POW            powf
 #define SIN            sinf
@@ -67,7 +67,6 @@
 #else
 
 #define RealOpenMM     double
-#define Real           double
 #define SQRT           sqrt
 #define POW            pow
 #define SIN            sin
@@ -144,4 +143,4 @@
 #define ENM2DEBYE         48.0321               /* Convert electron nm to debye */
 #define DEBYE2ENM         0.02081941
 
-#endif // __RealOpenMMOpenMMSimTk_H__
+#endif // __RealSimTk_H__
