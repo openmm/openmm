@@ -2175,10 +2175,10 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
                 continue;
             string is = intToString(i);
             if (needParameterGradient) {
-                chainSource << "float4 grad1_"+is+"_1 = 0;\n";
-                chainSource << "float4 grad1_"+is+"_2 = 0;\n";
-                chainSource << "float4 grad2_"+is+"_1 = 0;\n";
-                chainSource << "float4 grad2_"+is+"_2 = 0;\n";
+                chainSource << "float4 grad1_"+is+"_1 = (float4) 0;\n";
+                chainSource << "float4 grad1_"+is+"_2 = (float4) 0;\n";
+                chainSource << "float4 grad2_"+is+"_1 = (float4) 0;\n";
+                chainSource << "float4 grad2_"+is+"_2 = (float4) 0;\n";
                 for (int j = 0; j < i; j++) {
                     string js = intToString(j);
                     Lepton::ParsedExpression dVdV = Lepton::Parser::parse(computedValueExpressions[i], functions).differentiate(computedValueNames[j]).optimize();
