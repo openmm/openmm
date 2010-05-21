@@ -767,8 +767,10 @@ void OPENMMCUDA_EXPORT OpenMM::cudaOpenMMInitializeIntegration(const System& sys
     if (!data.hasNonbonded) {
         gpuSetCoulombParameters(gpu, (float) ONE_4PI_EPS0, vector<int>(), vector<float>(), vector<float>(), vector<float>(), vector<char>(), vector<vector<int> >(), NO_CUTOFF);
         gpuSetLJ14Parameters(gpu, (float) ONE_4PI_EPS0, 1.0f, vector<int>(), vector<int>(), vector<float>(), vector<float>(), vector<float>(), vector<float>());
+/*
         if (gpu->bIncludeGBSA || gpu->bIncludeGBVI)
             throw OpenMMException("CudaPlatform requires GBSAOBCForce and GBVIForce to be used with a NonbondedForce");
+*/
     }
     
     // Set masses.

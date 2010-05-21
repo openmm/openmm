@@ -28,6 +28,7 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/KernelFactory.h"
+#include "windowsExportCuda.h"
 
 namespace OpenMM {
 
@@ -37,7 +38,7 @@ namespace OpenMM {
 
 class CudaKernelFactory : public KernelFactory {
 public:
-    KernelImpl* createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const;
+    OPENMMCUDA_EXPORT KernelImpl* createKernelImpl(std::string name, const Platform& platform, ContextImpl& context) const;
 };
 
 } // namespace OpenMM

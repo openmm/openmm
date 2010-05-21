@@ -58,6 +58,7 @@ using namespace std;
 // make sure that erf() and erfc() are defined.
 #include "openmm/internal/MSVC_erfc.h"
 #include "openmm/internal/windowsExport.h"
+#include "windowsExportCuda.h"
 
 using OpenMM::OpenMMException;
 using Lepton::Operation;
@@ -1788,7 +1789,7 @@ bool gpuIsAvailable()
 }
 
 extern "C"
-void* gpuInit(int numAtoms, unsigned int device, bool useBlockingSync)
+ void* gpuInit(int numAtoms, unsigned int device, bool useBlockingSync)
 {
     gpuContext gpu = new _gpuContext;
     int LRFSize = 0;

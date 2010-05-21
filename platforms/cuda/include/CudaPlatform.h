@@ -72,7 +72,7 @@ public:
 
 class CudaPlatform::PlatformData {
 public:
-    PlatformData(_gpuContext* gpu);
+    OPENMMCUDA_EXPORT PlatformData(_gpuContext* gpu);
     _gpuContext* gpu;
     bool removeCM;
     bool hasBonds, hasAngles, hasPeriodicTorsions, hasRB, hasNonbonded, hasCustomNonbonded;

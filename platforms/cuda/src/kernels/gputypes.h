@@ -272,7 +272,7 @@ extern "C"
 void OPENMMCUDA_EXPORT gpuInitializeRandoms(gpuContext gpu);
 
 extern "C"
-void* gpuInit(int numAtoms, unsigned int device = 0, bool useBlockingSync = false);
+OPENMMCUDA_EXPORT void* gpuInit(int numAtoms, unsigned int device = 0, bool useBlockingSync = false);
 
 extern "C"
 void gpuSetLangevinIntegrationParameters(gpuContext gpu, float tau, float deltaT, float temperature, float errorTol);
