@@ -762,7 +762,7 @@ private:
 class CudaApplyMonteCarloBarostatKernel : public ApplyMonteCarloBarostatKernel {
 public:
     CudaApplyMonteCarloBarostatKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data) : ApplyMonteCarloBarostatKernel(name, platform), data(data),
-            moleculeAtoms(NULL), moleculeStartIndex(NULL) {
+            hasInitializedMolecules(false), moleculeAtoms(NULL), moleculeStartIndex(NULL) {
     }
     ~CudaApplyMonteCarloBarostatKernel();
     /**
