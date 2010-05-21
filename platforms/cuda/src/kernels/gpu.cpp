@@ -1871,6 +1871,7 @@ void* gpuInit(int numAtoms, unsigned int device, bool useBlockingSync)
     gpu->sim.nonbond_blocks = deviceProp.multiProcessorCount*gpu->blocksPerSM;
     gpu->sim.bornForce2_blocks = deviceProp.multiProcessorCount*gpu->blocksPerSM;
     gpu->sim.blocks = deviceProp.multiProcessorCount;
+    gpu->sharedMemoryPerBlock = deviceProp.sharedMemPerBlock;
 
     gpu->sim.shake_threads_per_block                = gpu->sim.max_shake_threads_per_block;
     gpu->sim.localForces_threads_per_block          = gpu->sim.max_localForces_threads_per_block;

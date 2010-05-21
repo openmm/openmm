@@ -195,7 +195,9 @@ void kCalculateCustomTorsionForces_kernel()
 void kCalculateCustomTorsionForces(gpuContext gpu)
 {
 //    printf("kCalculateCustomTorsionForces\n");
-    kCalculateCustomTorsionForces_kernel<<<gpu->sim.blocks, gpu->sim.localForces_threads_per_block,
-            (gpu->sim.customExpressionStackSize+9)*sizeof(float)*gpu->sim.localForces_threads_per_block>>>();
+    int memoryPerThread = (gpu->sim.customExpressionStackSize+9)*sizeof(float);
+    int maxThreads = (gpu->sharedMemoryPerBlock-16)/memoryPerThread;
+    int threads = min(gpu->sim.localForces_threads_per_block, (maxThreads/64)*64);
+    kCalculateCustomTorsionForces_kernel<<<gpu->sim.blocks, threads, memoryPerThread*threads>>>();
     LAUNCHERROR("kCalculateCustomTorsionForces");
 }

@@ -72,6 +72,7 @@ struct _gpuContext {
     gpuAtomType* gpAtomTable;
     int gAtomTypes;
     unsigned int blocksPerSM;
+    unsigned int sharedMemoryPerBlock;
     cudaGmxSimulation sim;
     unsigned int* pOutputBufferCounter;
     std::vector<std::vector<int> > exclusions;

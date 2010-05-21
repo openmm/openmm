@@ -150,7 +150,7 @@ void kCalculateCustomNonbondedForces(gpuContext gpu, bool neighborListValid)
     if (gpu->sim.customNonbondedMethod != NO_CUTOFF)
         sharedPerThread += sizeof(float3);
     int threads = gpu->sim.nonbond_threads_per_block;
-    int maxThreads = 16380/sharedPerThread;
+    int maxThreads = (gpu->sharedMemoryPerBlock-16)/sharedPerThread;
     if (threads > maxThreads)
         threads = (maxThreads/32)*32;
     switch (gpu->sim.customNonbondedMethod)

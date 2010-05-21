@@ -135,7 +135,9 @@ void kCalculateCustomBondForces_kernel()
 void kCalculateCustomBondForces(gpuContext gpu)
 {
 //    printf("kCalculateCustomBondForces\n");
-    kCalculateCustomBondForces_kernel<<<gpu->sim.blocks, gpu->sim.localForces_threads_per_block,
-            (gpu->sim.customExpressionStackSize+9)*sizeof(float)*gpu->sim.localForces_threads_per_block>>>();
+    int memoryPerThread = (gpu->sim.customExpressionStackSize+9)*sizeof(float);
+    int maxThreads = (gpu->sharedMemoryPerBlock-16)/memoryPerThread;
+    int threads = min(gpu->sim.localForces_threads_per_block, (maxThreads/64)*64);
+    kCalculateCustomBondForces_kernel<<<gpu->sim.blocks, threads, memoryPerThread*threads>>>();
     LAUNCHERROR("kCalculateCustomBondForces");
 }
