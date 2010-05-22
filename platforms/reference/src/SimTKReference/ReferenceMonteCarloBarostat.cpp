@@ -88,9 +88,9 @@ void ReferenceMonteCarloBarostat::applyBarostat(RealOpenMM** atomPositions, Real
         int xcell = (int) floor(pos[0]/boxSize[0]);
         int ycell = (int) floor(pos[1]/boxSize[1]);
         int zcell = (int) floor(pos[2]/boxSize[2]);
-        float dx = xcell*boxSize[0];
-        float dy = ycell*boxSize[1];
-        float dz = zcell*boxSize[2];
+        RealOpenMM dx = xcell*boxSize[0];
+        RealOpenMM dy = ycell*boxSize[1];
+        RealOpenMM dz = zcell*boxSize[2];
         pos[0] -= dx;
         pos[1] -= dy;
         pos[2] -= dz;

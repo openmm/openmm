@@ -85,7 +85,7 @@ struct OpenCLIntegrationUtilities::ConstraintOrderer : public binary_function<in
 
 OpenCLIntegrationUtilities::OpenCLIntegrationUtilities(OpenCLContext& context, const System& system) : context(context),
         posDelta(NULL), settleAtoms(NULL), settleParams(NULL), shakeAtoms(NULL), shakeParams(NULL),
-        random(NULL), randomSeed(NULL), randomPos(NULL), stepSize(NULL), ccmaAtoms(NULL), ccmaDistance(NULL),
+        random(NULL), randomSeed(NULL), randomPos(0), stepSize(NULL), ccmaAtoms(NULL), ccmaDistance(NULL),
         ccmaReducedMass(NULL), ccmaAtomConstraints(NULL), ccmaNumAtomConstraints(NULL), ccmaConstraintMatrixColumn(NULL),
         ccmaConstraintMatrixValue(NULL), ccmaDelta1(NULL), ccmaDelta2(NULL), ccmaConverged(NULL),
         hasInitializedConstraintKernels(false) {

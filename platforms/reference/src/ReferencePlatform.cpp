@@ -99,6 +99,7 @@ ReferencePlatform::PlatformData::~PlatformData() {
     RealOpenMM** positions = (RealOpenMM**) this->positions;
     RealOpenMM** velocities = (RealOpenMM**) this->velocities;
     RealOpenMM** forces = (RealOpenMM**) this->forces;
+    RealOpenMM* periodicBoxSize = (RealOpenMM*) this->periodicBoxSize;
     for (int i = 0; i < numParticles; ++i) {
         delete[] positions[i];
         delete[] velocities[i];
