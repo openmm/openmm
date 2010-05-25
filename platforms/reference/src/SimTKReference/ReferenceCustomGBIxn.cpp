@@ -397,6 +397,9 @@ void ReferenceCustomGBIxn::calculateOnePairChainRule(int atom1, int atom2, RealO
     variables[valueNames[0]] = values[0][atom1];
     for (int i = 1; i < (int) valueNames.size(); i++) {
         variables[valueNames[i]] = values[i][atom1];
+        variables["x"] = atomCoordinates[atom1][0];
+        variables["y"] = atomCoordinates[atom1][1];
+        variables["z"] = atomCoordinates[atom1][2];
         for (int j = 0; j < i; j++) {
             RealOpenMM dVdV = (RealOpenMM) valueDerivExpressions[i][j].evaluate(variables);
             for (int k = 0; k < 3; k++) {

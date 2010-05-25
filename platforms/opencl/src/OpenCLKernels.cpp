@@ -2144,8 +2144,8 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         if (needParameterGradient) {
             chainSource << "float4 grad1_0_1 = dV0dR1*delta*invR;\n";
             chainSource << "float4 grad1_0_2 = dV0dR2*delta*invR;\n";
-            chainSource << "float4 grad2_0_1 = -grad1_0_1;\n";
-            chainSource << "float4 grad2_0_2 = -grad1_0_2;\n";
+            chainSource << "float4 grad2_0_1 = grad1_0_1;\n";
+            chainSource << "float4 grad2_0_2 = grad1_0_2;\n";
             chainSource << "tempForce1 -= grad1_0_1*" << prefix << "dEdV" << energyDerivs->getParameterSuffix(0, "1") << ";\n";
             chainSource << "tempForce1 -= grad1_0_2*" << prefix << "dEdV" << energyDerivs->getParameterSuffix(0, "2") << ";\n";
             chainSource << "tempForce2 -= grad2_0_1*" << prefix << "dEdV" << energyDerivs->getParameterSuffix(0, "1") << ";\n";
@@ -2158,6 +2158,18 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         variables = globalVariables;
         map<string, string> rename1;
         map<string, string> rename2;
+        variables["x1"] = "posq1.x";
+        variables["y1"] = "posq1.y";
+        variables["z1"] = "posq1.z";
+        variables["x2"] = "posq2.x";
+        variables["y2"] = "posq2.y";
+        variables["z2"] = "posq2.z";
+        rename1["x"] = "x1";
+        rename1["y"] = "y1";
+        rename1["z"] = "z1";
+        rename2["x"] = "x2";
+        rename2["y"] = "y2";
+        rename2["z"] = "z2";
         for (int i = 0; i < force.getNumPerParticleParameters(); i++) {
             const string& name = force.getPerParticleParameterName(i);
             variables[name+"1"] = prefix+"params"+params->getParameterSuffix(i, "1");
