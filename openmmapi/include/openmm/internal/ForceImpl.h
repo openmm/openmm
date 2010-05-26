@@ -105,7 +105,7 @@ public:
      * Get pairs of particles connected by bonds by this force.  This is used to determine which particles
      * are part of the same molecule.
      */
-    std::vector<std::pair<int, int> > getBondedParticles() {
+    virtual std::vector<std::pair<int, int> > getBondedParticles() const {
         return std::vector<std::pair<int, int> >(0);
     }
 };

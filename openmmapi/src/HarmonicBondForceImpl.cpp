@@ -63,7 +63,7 @@ std::vector<std::string> HarmonicBondForceImpl::getKernelNames() {
     return names;
 }
 
-vector<pair<int, int> > HarmonicBondForceImpl::getBondedParticles() {
+vector<pair<int, int> > HarmonicBondForceImpl::getBondedParticles() const {
     int numBonds = owner.getNumBonds();
     vector<pair<int, int> > bonds(numBonds);
     for (int i = 0; i < numBonds; i++) {

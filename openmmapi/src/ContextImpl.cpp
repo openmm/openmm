@@ -169,6 +169,10 @@ void ContextImpl::updateContextState() {
         forceImpls[i]->updateContextState(*this);
 }
 
+const vector<ForceImpl*>& ContextImpl::getForceImpls() const {
+    return forceImpls;
+}
+
 void* ContextImpl::getPlatformData() {
     return platformData;
 }

@@ -62,7 +62,7 @@ public:
         return std::map<std::string, double>(); // This force field doesn't define any parameters.
     }
     std::vector<std::string> getKernelNames();
-    std::vector<std::pair<int, int> > getBondedParticles();
+    std::vector<std::pair<int, int> > getBondedParticles() const;
 private:
     HarmonicBondForce& owner;
     Kernel kernel;
