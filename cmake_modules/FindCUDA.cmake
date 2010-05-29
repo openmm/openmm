@@ -363,7 +363,7 @@ MACRO(CUDA_add_custom_commands cuda_target)
     
     FILE(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/src/cuda)
 
-    SET(source_file ${CMAKE_CURRENT_SOURCE_DIR}/../${file})
+    SET(source_file ${file})
 
     # MESSAGE("${CUDA_NVCC} ${source_file} ${CUDA_NVCC_FLAGS} ${nvcc_flags} -cuda -o ${generated_file} ${CUDA_NVCC_INCLUDE_ARGS}")
     
