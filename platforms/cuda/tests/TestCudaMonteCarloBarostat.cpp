@@ -249,7 +249,7 @@ void testWater() {
     }
     volume /= steps;
     double density = numMolecules*18/(AVOGADRO*volume*1e-21);
-    ASSERT_USUALLY_EQUAL_TOL(1, density, 0.1);
+    ASSERT_USUALLY_EQUAL_TOL(1.0, density, 0.1);
 }
 
 int main() {
