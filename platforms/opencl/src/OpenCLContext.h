@@ -235,6 +235,17 @@ public:
      */
     void clearBuffer(cl::Memory& memory, int size);
     /**
+     * Register a buffer that should be automatically cleared (all elements set to 0) at the start of each force or energy computation.
+     *
+     * @param memory     the Memory to clear
+     * @param size       the number of float elements in the buffer
+     */
+    void addAutoclearBuffer(cl::Memory& memory, int size);
+    /**
+     * Clear all buffers that have been registered with addAutoclearBuffer().
+     */
+    void clearAutoclearBuffers();
+    /**
      * Given a collection of buffers packed into an array, sum them and store
      * the sum in the first buffer.
      *
@@ -374,6 +385,9 @@ private:
     cl::CommandQueue queue;
     cl::Program utilities;
     cl::Kernel clearBufferKernel;
+    cl::Kernel clearTwoBuffersKernel;
+    cl::Kernel clearThreeBuffersKernel;
+    cl::Kernel clearFourBuffersKernel;
     cl::Kernel reduceFloat4Kernel;
     std::vector<OpenCLForceInfo*> forces;
     std::vector<MoleculeGroup> moleculeGroups;
@@ -384,6 +398,8 @@ private:
     OpenCLArray<mm_float4>* forceBuffers;
     OpenCLArray<cl_float>* energyBuffer;
     OpenCLArray<cl_int>* atomIndex;
+    std::vector<cl::Memory*> autoclearBuffers;
+    std::vector<int> autoclearBufferSizes;
     OpenCLIntegrationUtilities* integration;
     OpenCLNonbondedUtilities* nonbonded;
 };

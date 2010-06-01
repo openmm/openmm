@@ -73,7 +73,7 @@ void OpenCLCalcForcesAndEnergyKernel::beginForceComputation(ContextImpl& context
     if (cl.getNonbondedUtilities().getUseCutoff() && cl.getComputeForceCount()%100 == 0)
         cl.reorderAtoms();
     cl.setComputeForceCount(cl.getComputeForceCount()+1);
-    cl.clearBuffer(cl.getForceBuffers());
+    cl.clearAutoclearBuffers();
     cl.getNonbondedUtilities().prepareInteractions();
 }
 
@@ -86,7 +86,7 @@ void OpenCLCalcForcesAndEnergyKernel::beginEnergyComputation(ContextImpl& contex
     if (cl.getNonbondedUtilities().getUseCutoff() && cl.getComputeForceCount()%100 == 0)
         cl.reorderAtoms();
     cl.setComputeForceCount(cl.getComputeForceCount()+1);
-    cl.clearBuffer(cl.getEnergyBuffer());
+    cl.clearAutoclearBuffers();
     cl.getNonbondedUtilities().prepareInteractions();
 }
 
@@ -1580,6 +1580,8 @@ void OpenCLCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOB
     nb.addParameter(OpenCLNonbondedUtilities::ParameterInfo("obcParams", "float", 2, sizeof(cl_float2), params->getDeviceBuffer()));;
     nb.addParameter(OpenCLNonbondedUtilities::ParameterInfo("bornForce", "float", 1, sizeof(cl_float), bornForce->getDeviceBuffer()));;
     cl.addForce(new OpenCLGBSAOBCForceInfo(nb.getNumForceBuffers(), force));
+    cl.addAutoclearBuffer(bornSum->getDeviceBuffer(), bornSum->getSize());
+    cl.addAutoclearBuffer(bornForce->getDeviceBuffer(), bornForce->getSize());
 }
 
 void OpenCLCalcGBSAOBCForceKernel::executeForces(ContextImpl& context) {
@@ -1655,8 +1657,6 @@ void OpenCLCalcGBSAOBCForceKernel::executeForces(ContextImpl& context) {
         reduceBornForceKernel.setArg<cl::Buffer>(5, bornRadii->getDeviceBuffer());
         reduceBornForceKernel.setArg<cl::Buffer>(6, obcChain->getDeviceBuffer());
     }
-    cl.clearBuffer(*bornSum);
-    cl.clearBuffer(*bornForce);
     if (nb.getUseCutoff()) {
         computeBornSumKernel.setArg<mm_float4>(8, cl.getPeriodicBoxSize());
         computeBornSumKernel.setArg<mm_float4>(9, cl.getInvPeriodicBoxSize());
@@ -2278,6 +2278,10 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         }
     }
     cl.addForce(new OpenCLCustomGBForceInfo(cl.getNonbondedUtilities().getNumForceBuffers(), force));
+    for (int i = 0; i < (int) energyDerivs->getBuffers().size(); i++) {
+        const OpenCLNonbondedUtilities::ParameterInfo& buffer = energyDerivs->getBuffers()[i];
+        cl.addAutoclearBuffer(buffer.getMemory(), buffer.getSize()*energyDerivs->getNumObjects()/sizeof(cl_float));
+    }
 }
 
 void OpenCLCalcCustomGBForceKernel::executeForces(ContextImpl& context) {
@@ -2285,6 +2289,8 @@ void OpenCLCalcCustomGBForceKernel::executeForces(ContextImpl& context) {
     if (!hasInitializedKernels) {
         hasInitializedKernels = true;
         valueBuffers = new OpenCLArray<cl_float>(cl, cl.getPaddedNumAtoms()*cl.getNumForceBuffers(), "customGBValueBuffers");
+        cl.addAutoclearBuffer(valueBuffers->getDeviceBuffer(), valueBuffers->getSize());
+        cl.clearBuffer(*valueBuffers);
         int index = 0;
         pairValueKernel.setArg<cl::Buffer>(index++, cl.getPosq().getDeviceBuffer());
         pairValueKernel.setArg(index++, OpenCLContext::ThreadBlockSize*sizeof(cl_float4), NULL);
@@ -2403,11 +2409,6 @@ void OpenCLCalcCustomGBForceKernel::executeForces(ContextImpl& context) {
         }
         if (changed)
             globals->upload(globalParamValues);
-    }
-    cl.clearBuffer(*valueBuffers);
-    for (int i = 0; i < (int) energyDerivs->getBuffers().size(); i++) {
-        const OpenCLNonbondedUtilities::ParameterInfo& buffer = energyDerivs->getBuffers()[i];
-        cl.clearBuffer(buffer.getMemory(), buffer.getSize()*energyDerivs->getNumObjects()/sizeof(cl_float));
     }
     if (nb.getUseCutoff()) {
         pairValueKernel.setArg<mm_float4>(10, cl.getPeriodicBoxSize());

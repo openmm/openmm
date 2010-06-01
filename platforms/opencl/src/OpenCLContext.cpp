@@ -45,7 +45,8 @@
 using namespace OpenMM;
 using namespace std;
 
-OpenCLContext::OpenCLContext(int numParticles, int deviceIndex) : time(0.0), stepCount(0), computeForceCount(0) {
+OpenCLContext::OpenCLContext(int numParticles, int deviceIndex) : time(0.0), stepCount(0), computeForceCount(0), posq(NULL), velm(NULL),
+        forceBuffers(NULL), energyBuffer(NULL), atomIndex(NULL), integration(NULL), nonbonded(NULL) {
     try {
         std::vector<cl::Platform> platforms;
         cl::Platform::get(&platforms);
@@ -98,6 +99,9 @@ OpenCLContext::OpenCLContext(int numParticles, int deviceIndex) : time(0.0), ste
 
     utilities = createProgram(OpenCLKernelSources::utilities);
     clearBufferKernel = cl::Kernel(utilities, "clearBuffer");
+    clearTwoBuffersKernel = cl::Kernel(utilities, "clearTwoBuffers");
+    clearThreeBuffersKernel = cl::Kernel(utilities, "clearThreeBuffers");
+    clearFourBuffersKernel = cl::Kernel(utilities, "clearFourBuffers");
     reduceFloat4Kernel = cl::Kernel(utilities, "reduceFloat4Buffer");
 
     // Decide whether native_sqrt(), native_rsqrt(), and native_recip() are sufficiently accurate to use.
@@ -164,8 +168,10 @@ void OpenCLContext::initialize(const System& system) {
     for (int i = 0; i < (int) forces.size(); i++)
         numForceBuffers = std::max(numForceBuffers, forces[i]->getRequiredForceBuffers());
     forceBuffers = new OpenCLArray<mm_float4>(*this, paddedNumAtoms*numForceBuffers, "forceBuffers", false);
+    addAutoclearBuffer(forceBuffers->getDeviceBuffer(), forceBuffers->getSize()*4);
     force = new OpenCLArray<mm_float4>(*this, &forceBuffers->getDeviceBuffer(), paddedNumAtoms, "force", true);
     energyBuffer = new OpenCLArray<cl_float>(*this, numThreadBlocks*ThreadBlockSize, "energyBuffer", true);
+    addAutoclearBuffer(energyBuffer->getDeviceBuffer(), energyBuffer->getSize());
     atomIndex = new OpenCLArray<cl_int>(*this, paddedNumAtoms, "atomIndex", true);
     for (int i = 0; i < paddedNumAtoms; ++i)
         (*atomIndex)[i] = i;
@@ -255,6 +261,47 @@ void OpenCLContext::clearBuffer(cl::Memory& memory, int size) {
     clearBufferKernel.setArg<cl::Memory>(0, memory);
     clearBufferKernel.setArg<cl_int>(1, size);
     executeKernel(clearBufferKernel, size);
+}
+
+void OpenCLContext::addAutoclearBuffer(cl::Memory& memory, int size) {
+    autoclearBuffers.push_back(&memory);
+    autoclearBufferSizes.push_back(size);
+}
+
+void OpenCLContext::clearAutoclearBuffers() {
+    int base = 0;
+    int total = autoclearBufferSizes.size();
+    while (total-base >= 4) {
+        clearFourBuffersKernel.setArg<cl::Memory>(0, *autoclearBuffers[base]);
+        clearFourBuffersKernel.setArg<cl_int>(1, autoclearBufferSizes[base]);
+        clearFourBuffersKernel.setArg<cl::Memory>(2, *autoclearBuffers[base+1]);
+        clearFourBuffersKernel.setArg<cl_int>(3, autoclearBufferSizes[base+1]);
+        clearFourBuffersKernel.setArg<cl::Memory>(4, *autoclearBuffers[base+2]);
+        clearFourBuffersKernel.setArg<cl_int>(5, autoclearBufferSizes[base+2]);
+        clearFourBuffersKernel.setArg<cl::Memory>(6, *autoclearBuffers[base+3]);
+        clearFourBuffersKernel.setArg<cl_int>(7, autoclearBufferSizes[base+3]);
+        executeKernel(clearFourBuffersKernel, max(max(max(autoclearBufferSizes[base], autoclearBufferSizes[base+1]), autoclearBufferSizes[base+2]), autoclearBufferSizes[base]+3));
+        base += 4;
+    }
+    if (total-base == 3) {
+        clearThreeBuffersKernel.setArg<cl::Memory>(0, *autoclearBuffers[base]);
+        clearThreeBuffersKernel.setArg<cl_int>(1, autoclearBufferSizes[base]);
+        clearThreeBuffersKernel.setArg<cl::Memory>(2, *autoclearBuffers[base+1]);
+        clearThreeBuffersKernel.setArg<cl_int>(3, autoclearBufferSizes[base+1]);
+        clearThreeBuffersKernel.setArg<cl::Memory>(4, *autoclearBuffers[base+2]);
+        clearThreeBuffersKernel.setArg<cl_int>(5, autoclearBufferSizes[base+2]);
+        executeKernel(clearThreeBuffersKernel, max(max(autoclearBufferSizes[base], autoclearBufferSizes[base+1]), autoclearBufferSizes[base+2]));
+    }
+    else if (total-base == 2) {
+        clearTwoBuffersKernel.setArg<cl::Memory>(0, *autoclearBuffers[base]);
+        clearTwoBuffersKernel.setArg<cl_int>(1, autoclearBufferSizes[base]);
+        clearTwoBuffersKernel.setArg<cl::Memory>(2, *autoclearBuffers[base+1]);
+        clearTwoBuffersKernel.setArg<cl_int>(3, autoclearBufferSizes[base+1]);
+        executeKernel(clearTwoBuffersKernel, max(autoclearBufferSizes[base], autoclearBufferSizes[base+1]));
+    }
+    else if (total-base == 1) {
+        clearBuffer(*autoclearBuffers[base], autoclearBufferSizes[base]);
+    }
 }
 
 void OpenCLContext::reduceBuffer(OpenCLArray<mm_float4>& array, int numBuffers) {

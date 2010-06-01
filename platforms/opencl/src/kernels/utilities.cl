@@ -16,6 +16,33 @@ __kernel void clearBuffer(__global float* buffer, int size) {
 }
 
 /**
+ * Fill two buffers with 0.
+ */
+__kernel void clearTwoBuffers(__global float* buffer1, int size1, __global float* buffer2, int size2) {
+    clearBuffer(buffer1, size1);
+    clearBuffer(buffer2, size2);
+}
+
+/**
+ * Fill three buffers with 0.
+ */
+__kernel void clearThreeBuffers(__global float* buffer1, int size1, __global float* buffer2, int size2, __global float* buffer3, int size3) {
+    clearBuffer(buffer1, size1);
+    clearBuffer(buffer2, size2);
+    clearBuffer(buffer3, size3);
+}
+
+/**
+ * Fill four buffers with 0.
+ */
+__kernel void clearFourBuffers(__global float* buffer1, int size1, __global float* buffer2, int size2, __global float* buffer3, int size3, __global float* buffer4, int size4) {
+    clearBuffer(buffer1, size1);
+    clearBuffer(buffer2, size2);
+    clearBuffer(buffer3, size3);
+    clearBuffer(buffer4, size4);
+}
+
+/**
  * Sum a collection of buffers into the first one.
  */
 
