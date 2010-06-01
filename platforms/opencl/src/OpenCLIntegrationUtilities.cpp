@@ -50,7 +50,7 @@ struct OpenCLIntegrationUtilities::ShakeCluster {
     ShakeCluster(int centralID, double invMass) : centralID(centralID), centralInvMass(invMass), size(0), valid(true) {
     }
     void addAtom(int id, double dist, double invMass) {
-        if (size == 3 || (size > 0 && dist != distance) || (size > 0 && invMass != peripheralInvMass))
+        if (size == 3 || (size > 0 && abs(dist-distance)/distance > 1e-8) || (size > 0 && abs(invMass-peripheralInvMass)/peripheralInvMass > 1e-8))
             valid = false;
         else {
             peripheralID[size++] = id;
