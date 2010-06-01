@@ -42,10 +42,7 @@ INCLUDE_DIRECTORIES(${CUDA_INCLUDE})
 LINK_DIRECTORIES(${CUDA_TARGET_LINK})
 FOREACH(subdir ${OPENMM_FREE_ENERGY_SOURCE_SUBDIRS})
     FILE(GLOB src_files ${OPENMM_BUILD_FREE_ENERGY_PATH}/platforms/cuda/${subdir}/src/*.cu ${OPENMM_BUILD_FREE_ENERGY_PATH}/platforms/cuda/src/*/*.cu)
-    FOREACH(file ${src_files})
-        FILE(RELATIVE_PATH file ${OPENMM_BUILD_FREE_ENERGY_PATH}/platforms/cuda ${file})
-        SET(SOURCE_FILES         ${SOURCE_FILES}         ${file})   #append
-    ENDFOREACH(file)
+    SET(SOURCE_FILES ${SOURCE_FILES} ${src_files})
     CUDA_INCLUDE_DIRECTORIES(BEFORE ${OPENMM_BUILD_FREE_ENERGY_PATH}/platforms/cuda/../${subdir}/include)
 ENDFOREACH(subdir)
 
