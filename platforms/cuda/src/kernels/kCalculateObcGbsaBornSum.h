@@ -91,9 +91,9 @@ void METHOD_NAME(kCalculateObcGbsa, BornSum_kernel)(unsigned int* workUnit)
                 dy                      = psA[j].y - apos.y;
                 dz                      = psA[j].z - apos.z;
 #ifdef USE_PERIODIC
-                dx -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                dy -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                dz -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                dx -= floor(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                dy -= floor(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                dz -= floor(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                 r2                      = dx * dx + dy * dy + dz * dz;
 #if defined USE_PERIODIC
@@ -170,9 +170,9 @@ void METHOD_NAME(kCalculateObcGbsa, BornSum_kernel)(unsigned int* workUnit)
                     dy                      = psA[tj].y - apos.y;
                     dz                      = psA[tj].z - apos.z;
 #ifdef USE_PERIODIC
-                    dx -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                    dy -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                    dz -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                    dx -= floor(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                    dy -= floor(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                    dz -= floor(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                     r2                      = dx * dx + dy * dy + dz * dz;
 #ifdef USE_PERIODIC
@@ -243,9 +243,9 @@ void METHOD_NAME(kCalculateObcGbsa, BornSum_kernel)(unsigned int* workUnit)
                         dy                      = psA[j].y - apos.y;
                         dz                      = psA[j].z - apos.z;
 #ifdef USE_PERIODIC
-                        dx -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                        dy -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                        dz -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                        dx -= floor(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                        dy -= floor(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                        dz -= floor(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                         r2                      = dx * dx + dy * dy + dz * dz;
 #ifdef USE_PERIODIC

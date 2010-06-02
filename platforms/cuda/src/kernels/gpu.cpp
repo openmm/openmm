@@ -1063,6 +1063,9 @@ void gpuSetPeriodicBoxSize(gpuContext gpu, float xsize, float ysize, float zsize
     gpu->sim.periodicBoxSizeX = xsize;
     gpu->sim.periodicBoxSizeY = ysize;
     gpu->sim.periodicBoxSizeZ = zsize;
+    gpu->sim.invPeriodicBoxSizeX = 1.0f/xsize;
+    gpu->sim.invPeriodicBoxSizeY = 1.0f/ysize;
+    gpu->sim.invPeriodicBoxSizeZ = 1.0f/zsize;
     gpu->sim.recipBoxSizeX = 2.0f*PI/gpu->sim.periodicBoxSizeX;
     gpu->sim.recipBoxSizeY = 2.0f*PI/gpu->sim.periodicBoxSizeY;
     gpu->sim.recipBoxSizeZ = 2.0f*PI/gpu->sim.periodicBoxSizeZ;

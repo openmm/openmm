@@ -108,9 +108,9 @@ void kUpdateGridIndexAndFraction_kernel()
     for (int i = tid; i < cSim.atoms; i += tnb)
     {
         float4 posq = cSim.pPosq[i];
-        float3 t = make_float3((posq.x/cSim.periodicBoxSizeX+1.0f)*cSim.pmeGridSize.x,
-                               (posq.y/cSim.periodicBoxSizeY+1.0f)*cSim.pmeGridSize.y,
-                               (posq.z/cSim.periodicBoxSizeZ+1.0f)*cSim.pmeGridSize.z);
+        float3 t = make_float3((posq.x*cSim.invPeriodicBoxSizeX+1.0f)*cSim.pmeGridSize.x,
+                               (posq.y*cSim.invPeriodicBoxSizeY+1.0f)*cSim.pmeGridSize.y,
+                               (posq.z*cSim.invPeriodicBoxSizeZ+1.0f)*cSim.pmeGridSize.z);
         int3 gridIndex = make_int3(((int) t.x) % cSim.pmeGridSize.x,
                               ((int) t.y) % cSim.pmeGridSize.y,
                               ((int) t.z) % cSim.pmeGridSize.z);
@@ -192,9 +192,9 @@ void kUpdateBsplines_kernel()
         }
 
         float4 posq = cSim.pPosq[i];
-        float3 t = make_float3((posq.x/cSim.periodicBoxSizeX+1.0f)*cSim.pmeGridSize.x,
-                               (posq.y/cSim.periodicBoxSizeY+1.0f)*cSim.pmeGridSize.y,
-                               (posq.z/cSim.periodicBoxSizeZ+1.0f)*cSim.pmeGridSize.z);
+        float3 t = make_float3((posq.x*cSim.invPeriodicBoxSizeX+1.0f)*cSim.pmeGridSize.x,
+                               (posq.y*cSim.invPeriodicBoxSizeY+1.0f)*cSim.pmeGridSize.y,
+                               (posq.z*cSim.invPeriodicBoxSizeZ+1.0f)*cSim.pmeGridSize.z);
         float4 dr = make_float4(t.x-(int) t.x, t.y-(int) t.y, t.z-(int) t.z, 0.0f);
 
         data[PME_ORDER - 1] = make_float4(0.0f);
@@ -311,9 +311,9 @@ void kReciprocalConvolution_kernel()
         int mx = (kx < (cSim.pmeGridSize.x+1)/2) ? kx : (kx-cSim.pmeGridSize.x);
         int my = (ky < (cSim.pmeGridSize.y+1)/2) ? ky : (ky-cSim.pmeGridSize.y);
         int mz = (kz < (cSim.pmeGridSize.z+1)/2) ? kz : (kz-cSim.pmeGridSize.z);
-        float mhx = mx/cSim.periodicBoxSizeX;
-        float mhy = my/cSim.periodicBoxSizeY;
-        float mhz = mz/cSim.periodicBoxSizeZ;
+        float mhx = mx*cSim.invPeriodicBoxSizeX;
+        float mhy = my*cSim.invPeriodicBoxSizeY;
+        float mhz = mz*cSim.invPeriodicBoxSizeZ;
         float bx = cSim.pPmeBsplineModuli[0][kx];
         float by = cSim.pPmeBsplineModuli[1][ky];
         float bz = cSim.pPmeBsplineModuli[2][kz];
@@ -341,9 +341,9 @@ void kGridInterpolateForce_kernel()
     {
         float3 force = make_float3(0.0f, 0.0f, 0.0f);
         float4 posq = cSim.pPosq[atom];
-        float3 t = make_float3((posq.x/cSim.periodicBoxSizeX+1.0f)*cSim.pmeGridSize.x,
-                               (posq.y/cSim.periodicBoxSizeY+1.0f)*cSim.pmeGridSize.y,
-                               (posq.z/cSim.periodicBoxSizeZ+1.0f)*cSim.pmeGridSize.z);
+        float3 t = make_float3((posq.x*cSim.invPeriodicBoxSizeX+1.0f)*cSim.pmeGridSize.x,
+                               (posq.y*cSim.invPeriodicBoxSizeY+1.0f)*cSim.pmeGridSize.y,
+                               (posq.z*cSim.invPeriodicBoxSizeZ+1.0f)*cSim.pmeGridSize.z);
         int3 gridIndex = make_int3(((int) t.x) % cSim.pmeGridSize.x,
                               ((int) t.y) % cSim.pmeGridSize.y,
                               ((int) t.z) % cSim.pmeGridSize.z);
@@ -372,9 +372,9 @@ void kGridInterpolateForce_kernel()
         }
         float4 totalForce = cSim.pForce4[atom];
         float q = posq.w*sqrt(cSim.epsfac);
-        totalForce.x -= q*force.x*cSim.pmeGridSize.x/cSim.periodicBoxSizeX;
-        totalForce.y -= q*force.y*cSim.pmeGridSize.y/cSim.periodicBoxSizeY;
-        totalForce.z -= q*force.z*cSim.pmeGridSize.z/cSim.periodicBoxSizeZ;
+        totalForce.x -= q*force.x*cSim.pmeGridSize.x*cSim.invPeriodicBoxSizeX;
+        totalForce.y -= q*force.y*cSim.pmeGridSize.y*cSim.invPeriodicBoxSizeY;
+        totalForce.z -= q*force.z*cSim.pmeGridSize.z*cSim.invPeriodicBoxSizeZ;
         cSim.pForce4[atom] = totalForce;
     }
 }

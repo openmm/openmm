@@ -94,9 +94,9 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
                 float dy        = psA[j].y - apos.y;
                 float dz        = psA[j].z - apos.z;
 #ifdef USE_PERIODIC
-                dx -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                dy -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                dz -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                dx -= floor(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                dy -= floor(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                dz -= floor(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                 float r         = sqrt(dx*dx + dy*dy + dz*dz);
                 float invR      = 1.0f/r;
@@ -182,9 +182,9 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
                         float dy        = psA[tj].y - apos.y;
                         float dz        = psA[tj].z - apos.z;
 #ifdef USE_PERIODIC
-                        dx -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                        dy -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                        dz -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                        dx -= floor(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                        dy -= floor(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                        dz -= floor(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                         float r         = sqrt(dx*dx + dy*dy + dz*dz);
                         float invR      = 1.0f/r;
@@ -237,9 +237,9 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
                             float dy        = psA[j].y - apos.y;
                             float dz        = psA[j].z - apos.z;
 #ifdef USE_PERIODIC
-                            dx -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                            dy -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                            dz -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                            dx -= floor(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                            dy -= floor(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                            dz -= floor(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                             float r         = sqrt(dx*dx + dy*dy + dz*dz);
                             float invR      = 1.0f/r;
@@ -328,9 +328,9 @@ __global__ void METHOD_NAME(kCalculateCustomNonbonded, Forces_kernel)(unsigned i
                     float dy        = psA[tj].y - apos.y;
                     float dz        = psA[tj].z - apos.z;
 #ifdef USE_PERIODIC
-                    dx -= floor(dx/cSim.periodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
-                    dy -= floor(dy/cSim.periodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
-                    dz -= floor(dz/cSim.periodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
+                    dx -= floor(dx*cSim.invPeriodicBoxSizeX+0.5f)*cSim.periodicBoxSizeX;
+                    dy -= floor(dy*cSim.invPeriodicBoxSizeY+0.5f)*cSim.periodicBoxSizeY;
+                    dz -= floor(dz*cSim.invPeriodicBoxSizeZ+0.5f)*cSim.periodicBoxSizeZ;
 #endif
                     float r         = sqrt(dx*dx + dy*dy + dz*dz);
                     float invR      = 1.0f/r;

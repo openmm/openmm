@@ -352,6 +352,9 @@ struct cudaGmxSimulation {
     float           periodicBoxSizeX;               // The X dimension of the periodic box
     float           periodicBoxSizeY;               // The Y dimension of the periodic box
     float           periodicBoxSizeZ;               // The Z dimension of the periodic box
+    float           invPeriodicBoxSizeX;            // The 1 over the X dimension of the periodic box
+    float           invPeriodicBoxSizeY;            // The 1 over the Y dimension of the periodic box
+    float           invPeriodicBoxSizeZ;            // The 1 over the Z dimension of the periodic box
     float           recipBoxSizeX;                  // The X dimension of the reciprocal box for Ewald summation
     float           recipBoxSizeY;                  // The Y dimension of the reciprocal box for Ewald summation
     float           recipBoxSizeZ;                  // The Z dimension of the reciprocal box for Ewald summation
