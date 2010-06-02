@@ -95,9 +95,9 @@ void testTorsions() {
     vector<Vec3> positions(5);
     VerletIntegrator integrator1(0.01);
     VerletIntegrator integrator2(0.01);
+    Context c1(customSystem, integrator1, platform);
+    Context c2(harmonicSystem, integrator2, platform);
     for (int i = 0; i < 10; i++) {
-        Context c1(customSystem, integrator1, platform);
-        Context c2(harmonicSystem, integrator2, platform);
         for (int j = 0; j < (int) positions.size(); j++)
             positions[j] = Vec3(5.0*genrand_real2(sfmt), 5.0*genrand_real2(sfmt), 5.0*genrand_real2(sfmt));
         c1.setPositions(positions);
@@ -110,9 +110,44 @@ void testTorsions() {
     }
 }
 
+void testRange() {
+    OpenCLPlatform platform;
+    System system;
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    system.addParticle(1.0);
+    CustomTorsionForce* custom = new CustomTorsionForce("theta");
+    custom->addTorsion(0, 1, 2, 3, vector<double>());
+    system.addForce(custom);
+
+    // Set the atoms in various positions, and verify that the angle is always in the expected range.
+
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    vector<Vec3> positions(4);
+    VerletIntegrator integrator(0.01);
+    double minAngle = 1000;
+    double maxAngle = -1000;
+    Context context(system, integrator, platform);
+    for (int i = 0; i < 100; i++) {
+        for (int j = 0; j < (int) positions.size(); j++)
+            positions[j] = Vec3(5.0*genrand_real2(sfmt), 5.0*genrand_real2(sfmt), 5.0*genrand_real2(sfmt));
+        context.setPositions(positions);
+        double angle = context.getState(State::Energy).getPotentialEnergy();
+        if (angle < minAngle)
+            minAngle = angle;
+        if (angle > maxAngle)
+            maxAngle = angle;
+    }
+    ASSERT(minAngle >= -M_PI);
+    ASSERT(maxAngle <= M_PI);
+}
+
 int main() {
     try {
         testTorsions();
+        testRange();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;
