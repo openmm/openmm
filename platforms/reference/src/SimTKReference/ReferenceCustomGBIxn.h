@@ -209,13 +209,15 @@ class ReferenceCustomGBIxn {
          @param values           the vector containing computed values
          @param forces           forces on atoms are added to this
          @param dEdV             the derivative of energy with respect to computed values is stored in this
+         @param isExcluded       specifies whether this is an excluded pair
 
          --------------------------------------------------------------------------------------- */
 
       void calculateOnePairChainRule(int atom1, int atom2, RealOpenMM** atomCoordinates, RealOpenMM** atomParameters,
                                  const std::map<std::string, double>& globalParameters,
                                  const std::vector<std::vector<RealOpenMM> >& values,
-                                 RealOpenMM** forces, std::vector<std::vector<RealOpenMM> >& dEdV) const;
+                                 RealOpenMM** forces, std::vector<std::vector<RealOpenMM> >& dEdV,
+                                 bool isExcluded) const;
 
    public:
 

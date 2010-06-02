@@ -264,9 +264,76 @@ void testPositionDependence() {
     }
 }
 
+void testExclusions() {
+    ReferencePlatform platform;
+    for (int i = 3; i < 4; i++) {
+        System system;
+        system.addParticle(1.0);
+        system.addParticle(1.0);
+        VerletIntegrator integrator(0.01);
+        CustomGBForce* force = new CustomGBForce();
+        force->addComputedValue("a", "r", i < 2 ? CustomGBForce::ParticlePair : CustomGBForce::ParticlePairNoExclusions);
+        force->addEnergyTerm("a", CustomGBForce::SingleParticle);
+        force->addEnergyTerm("(1+a1+a2)*r", i%2 == 0 ? CustomGBForce::ParticlePair : CustomGBForce::ParticlePairNoExclusions);
+        force->addParticle(vector<double>());
+        force->addParticle(vector<double>());
+        force->addExclusion(0, 1);
+        system.addForce(force);
+        Context context(system, integrator, platform);
+        vector<Vec3> positions(2);
+        positions[0] = Vec3(0, 0, 0);
+        positions[1] = Vec3(1, 0, 0);
+        context.setPositions(positions);
+        State state = context.getState(State::Forces | State::Energy);
+        const vector<Vec3>& forces = state.getForces();
+        double f, energy;
+        switch (i)
+        {
+            case 0: // e = 0
+                f = 0;
+                energy = 0;
+                break;
+            case 1: // e = r
+                f = 1;
+                energy = 1;
+                break;
+            case 2: // e = 2r
+                f = 2;
+                energy = 2;
+                break;
+            case 3: // e = 3r + 2r^2
+                f = 7;
+                energy = 5;
+                break;
+            default:
+                ASSERT(false);
+        }
+        ASSERT_EQUAL_VEC(Vec3(f, 0, 0), forces[0], 1e-4);
+        ASSERT_EQUAL_VEC(Vec3(-f, 0, 0), forces[1], 1e-4);
+        ASSERT_EQUAL_TOL(energy, state.getPotentialEnergy(), 1e-4);
+
+        // Take a small step in the direction of the energy gradient and see whether the potential energy changes by the expected amount.
+
+        double norm = 0.0;
+        for (int i = 0; i < (int) forces.size(); ++i)
+            norm += forces[i].dot(forces[i]);
+        norm = std::sqrt(norm);
+        const double stepSize = 1e-3;
+        double step = stepSize/norm;
+        for (int i = 0; i < (int) positions.size(); ++i) {
+            Vec3 p = positions[i];
+            Vec3 f = forces[i];
+            positions[i] = Vec3(p[0]-f[0]*step, p[1]-f[1]*step, p[2]-f[2]*step);
+        }
+        context.setPositions(positions);
+        State state2 = context.getState(State::Energy);
+        ASSERT_EQUAL_TOL(norm, (state2.getPotentialEnergy()-state.getPotentialEnergy())/stepSize, 1e-3*abs(state.getPotentialEnergy()));
+    }
+}
+
 // create custom GB/VI force
 
-static CustomGBForce* createCustomGBVI( double solventDielectric, double soluteDielectric, FILE* log ) {
+static CustomGBForce* createCustomGBVI( double solventDielectric, double soluteDielectric ) {
 
     CustomGBForce* customGbviForce  = new CustomGBForce();
 
@@ -312,11 +379,6 @@ static CustomGBForce* createCustomGBVI( double solventDielectric, double soluteD
     customGbviForce->addEnergyTerm("-138.935485*(1/soluteDielectric-1/solventDielectric)*q1*q2/f;"
                                    "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))", CustomGBForce::ParticlePairNoExclusions);
 
-    if( log ){
-        (void) fprintf( log, "customGbviForce created %12.5f %12.5f\n", solventDielectric, soluteDielectric );
-        (void) fflush( log );
-    }
-
     return customGbviForce;
 }
 
@@ -325,7 +387,6 @@ static CustomGBForce* createCustomGBVI( double solventDielectric, double soluteD
 static void buildEthane( GBVIForce* gbviForce, std::vector<Vec3>& positions ) {
 
     const int numParticles = 8;
-    const int log          = 0;
 
     double C_HBondDistance   = 0.1097;
     double C_CBondDistance   = 0.1504;
@@ -614,7 +675,7 @@ static void findScaledRadii( GBVIForce& gbviForce, std::vector<double> & scaledR
 // findScaledRadii() is called to calculate the scaled radii (S)
 // S is derived quantity in GBVIForce, not a parameter is the case here
 
-static void loadGbviParameters( GBVIForce* gbviForce, CustomGBForce* customGbviForce, FILE* log ) {
+static void loadGbviParameters( GBVIForce* gbviForce, CustomGBForce* customGbviForce ) {
 
     int numParticles = gbviForce->getNumParticles();
 
@@ -624,9 +685,6 @@ static void loadGbviParameters( GBVIForce* gbviForce, CustomGBForce* customGbviF
     std::vector<double> scaledRadii;
     findScaledRadii( *gbviForce, scaledRadii);
 
-   if( log ){
-       (void) fprintf( log, "loadGbviParameters particles=%d\n", numParticles);
-    }
     for( int ii = 0; ii < numParticles; ii++) {
         double charge, radius, gamma;
         gbviForce->getParticleParameters( ii, charge, radius, gamma );
@@ -634,93 +692,8 @@ static void loadGbviParameters( GBVIForce* gbviForce, CustomGBForce* customGbviF
         params[1] = radius;
         params[2] = scaledRadii[ii];
         params[3] = gamma;
-        if( log ){
-            (void) fprintf( log, "%5d %12.4f %12.4f %12.4f %12.4f \n", ii, params[0], params[1], params[2], params[3]);
-        }
         customGbviForce->addParticle(params);
     }
-
-}
-
-// print info (parameters, terms, ...) in Custom GB
-
-static void printCustomGbviInfo( CustomGBForce* customGbviForce, FILE* log ) {
-
-    if( log == NULL ){
-        return;
-    }
-
-    int numParticles = customGbviForce->getNumParticles();
-
-    (void) fprintf( log, "CustomGbviInfo: particles=%d exclusions=%d cutoff distance=%12.4f\n",
-                    numParticles, customGbviForce->getNumExclusions(), customGbviForce->getCutoffDistance() );
-    std::string globals[2];
-
-    // global parameters
-
-    (void) fprintf( log, "\nGlobal parameters %d\n", customGbviForce->getNumGlobalParameters() );
-    for( int ii = 0; ii < customGbviForce->getNumGlobalParameters(); ii++) {
-        globals[ii] = customGbviForce->getGlobalParameterName( 0 );
-        (void) fprintf( log, "<%s>\n", globals[ii].c_str() );
-    }
-
-    // per-particle parameters
-
-    (void) fprintf( log, "\nPerParticle parameters %d\n", customGbviForce->getNumPerParticleParameters() );
-    for( int ii = 0; ii < customGbviForce->getNumPerParticleParameters(); ii++) {
-        std::string parameterName = customGbviForce->getPerParticleParameterName( ii );
-        (void) fprintf( log, "<%s>\n", parameterName.c_str() );
-    }
-
-    // per-particle parameter values
-
-    (void) fprintf( log, "\nParameter values\n" );
-    for( int ii = 0; ii < numParticles; ii++) {
-        std::vector<double> parameters(customGbviForce->getNumPerParticleParameters());
-        customGbviForce->getParticleParameters( ii, parameters );
-        (void) fprintf( log, "%5d %12.4f %12.4f %12.4f %12.4f \n", ii, parameters[0], parameters[1], parameters[2], parameters[3]);
-    }
-
-    // expressions for computed values
-
-    (void) fprintf( log, "\nComputedValues %d\n", customGbviForce->getNumComputedValues() );
-    for( int ii = 0; ii < customGbviForce->getNumComputedValues(); ii++) {
-        std::string name;
-        std::string expression;
-        CustomGBForce::ComputationType type;
-        customGbviForce->getComputedValueParameters(ii, name, expression, type);
-        std::replace( expression.begin(), expression.end(), ';', '\n' );
-        std::string typeExpression = "Unknown";
-        if( type == 0 ){
-            typeExpression = "SingleParticle"; 
-        } else if( type == 1 ){
-            typeExpression = "ParticlePair"; 
-        } else if( type == 2 ){
-            typeExpression = "ParticlePairNoExclusions"; 
-        }
-        (void) fprintf( log, "%d <%s> <%s> %s\n", ii, name.c_str(), expression.c_str(), typeExpression.c_str() ); (void) fflush( log );
-    }
-
-    // energy expressions
-
-    (void) fprintf( log, "\nEnergy terms %d\n", customGbviForce->getNumEnergyTerms() );
-    for( int ii = 0; ii < customGbviForce->getNumEnergyTerms(); ii++) {
-        std::string expression;
-        CustomGBForce::ComputationType type;
-        customGbviForce->getEnergyTermParameters(ii, expression, type);
-        std::replace( expression.begin(), expression.end(), ';', '\n' );
-        std::string typeExpression = "Unknown";
-        if( type == 0 ){
-            typeExpression = "SingleParticle"; 
-        } else if( type == 1 ){
-            typeExpression = "ParticlePair"; 
-        } else if( type == 2 ){
-            typeExpression = "ParticlePairNoExclusions"; 
-        }
-        (void) fprintf( log, "%d <%s> %s\n", ii, expression.c_str(),  typeExpression.c_str()); (void) fflush( log );
-    }
-
-    (void) fprintf( log, "\n\n" );
 
 }
 
@@ -729,8 +702,6 @@ void testGBVI(GBVIForce::NonbondedMethod gbviMethod, CustomGBForce::NonbondedMet
     const int numMolecules = 1;
     const double boxSize   = 10.0;
     ReferencePlatform platform;
-    //FILE* log              = stderr;
-    FILE* log              = NULL;
 
     GBVIForce*        gbvi = new GBVIForce();
     std::vector<Vec3> positions;
@@ -758,13 +729,12 @@ void testGBVI(GBVIForce::NonbondedMethod gbviMethod, CustomGBForce::NonbondedMet
 
     // create customGbviForce GBVI force
 
-    CustomGBForce* customGbviForce  = createCustomGBVI( gbvi->getSolventDielectric(), gbvi->getSoluteDielectric(), log );
+    CustomGBForce* customGbviForce  = createCustomGBVI( gbvi->getSolventDielectric(), gbvi->getSoluteDielectric() );
     customGbviForce->setCutoffDistance(2.0);
 
     // load parameters from gbvi to customGbviForce
 
-    loadGbviParameters( gbvi, customGbviForce, log );
-    printCustomGbviInfo( customGbviForce, log );
+    loadGbviParameters( gbvi, customGbviForce );
 
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);
@@ -792,21 +762,8 @@ void testGBVI(GBVIForce::NonbondedMethod gbviMethod, CustomGBForce::NonbondedMet
     context2.setVelocities(velocities);
     State state2 = context2.getState(State::Forces | State::Energy);
 
-    if( log ){
-        (void) fprintf( log, "PE gbvi=%12.5e Cstm=%12.5e\n", state1.getPotentialEnergy(), state2.getPotentialEnergy() );
-    }
     ASSERT_EQUAL_TOL(state1.getPotentialEnergy(), state2.getPotentialEnergy(), 1e-4);
 
-    if( log ){
-        for (int i = 0; i < numParticles; i++) {
-            Vec3 f1 = state1.getForces()[i];
-            Vec3 f2 = state2.getForces()[i];
-        
-            (void) fprintf( log, "%5d [%12.5e %12.5e %12.5e] Cstm=[%12.5e %12.5e %12.5e]\n", i,
-                            f1[0], f1[1], f1[2], f2[0], f2[1], f2[2] ); fflush( log );
-    
-        }
-    }
     for (int i = 0; i < numParticles; i++) {
         ASSERT_EQUAL_VEC(state1.getForces()[i], state2.getForces()[i], 1e-4);
     }
@@ -822,6 +779,7 @@ int main() {
         testTabulatedFunction(false);
         testMultipleChainRules();
         testPositionDependence();
+        testExclusions();
 
         // GBVI tests
 

@@ -328,16 +328,14 @@ void ReferenceCustomGBIxn::calculateOnePairEnergyTerm(int index, int atom1, int 
 void ReferenceCustomGBIxn::calculateChainRuleForces(int numAtoms, RealOpenMM** atomCoordinates, RealOpenMM** atomParameters,
         const vector<vector<RealOpenMM> >& values, const map<string, double>& globalParameters,
         const vector<set<int> >& exclusions, RealOpenMM** forces, vector<vector<RealOpenMM> >& dEdV) const {
-    bool useExclusions = (energyTypes[0] == OpenMM::CustomGBForce::ParticlePair);
     if (cutoff) {
         // Loop over all pairs in the neighbor list.
 
         for (int i = 0; i < (int) neighborList->size(); i++) {
             OpenMM::AtomPair pair = (*neighborList)[i];
-            if (useExclusions && exclusions[pair.first].find(pair.second) != exclusions[pair.first].end())
-                continue;
-            calculateOnePairChainRule(pair.first, pair.second, atomCoordinates, atomParameters, globalParameters, values, forces, dEdV);
-            calculateOnePairChainRule(pair.second, pair.first, atomCoordinates, atomParameters, globalParameters, values, forces, dEdV);
+            bool isExcluded = (exclusions[pair.first].find(pair.second) != exclusions[pair.first].end());
+            calculateOnePairChainRule(pair.first, pair.second, atomCoordinates, atomParameters, globalParameters, values, forces, dEdV, isExcluded);
+            calculateOnePairChainRule(pair.second, pair.first, atomCoordinates, atomParameters, globalParameters, values, forces, dEdV, isExcluded);
         }
     }
     else {
@@ -345,10 +343,9 @@ void ReferenceCustomGBIxn::calculateChainRuleForces(int numAtoms, RealOpenMM** a
 
         for (int i = 0; i < numAtoms; i++){
             for (int j = i+1; j < numAtoms; j++ ){
-                if (useExclusions && exclusions[i].find(j) != exclusions[i].end())
-                    continue;
-                calculateOnePairChainRule(i, j, atomCoordinates, atomParameters, globalParameters, values, forces, dEdV);
-                calculateOnePairChainRule(j, i, atomCoordinates, atomParameters, globalParameters, values, forces, dEdV);
+                bool isExcluded = (exclusions[i].find(j) != exclusions[i].end());
+                calculateOnePairChainRule(i, j, atomCoordinates, atomParameters, globalParameters, values, forces, dEdV, isExcluded);
+                calculateOnePairChainRule(j, i, atomCoordinates, atomParameters, globalParameters, values, forces, dEdV, isExcluded);
            }
         }
     }
@@ -356,7 +353,7 @@ void ReferenceCustomGBIxn::calculateChainRuleForces(int numAtoms, RealOpenMM** a
 
 void ReferenceCustomGBIxn::calculateOnePairChainRule(int atom1, int atom2, RealOpenMM** atomCoordinates, RealOpenMM** atomParameters,
         const map<string, double>& globalParameters, const vector<vector<RealOpenMM> >& values, RealOpenMM** forces,
-        vector<vector<RealOpenMM> >& dEdV) const {
+        vector<vector<RealOpenMM> >& dEdV, bool isExcluded) const {
     // Compute the displacement.
 
     RealOpenMM deltaR[ReferenceForce::LastDeltaRIndex];
@@ -383,13 +380,15 @@ void ReferenceCustomGBIxn::calculateOnePairChainRule(int atom1, int atom2, RealO
 
     vector<vector<RealOpenMM> > gradient1(valueDerivExpressions.size(), vector<RealOpenMM>(3, 0.0));
     vector<vector<RealOpenMM> > gradient2(valueDerivExpressions.size(), vector<RealOpenMM>(3, 0.0));
-    RealOpenMM dVdR = (RealOpenMM) valueDerivExpressions[0][0].evaluate(variables);
-    RealOpenMM rinv = 1/r;
-    for (int i = 0; i < 3; i++) {
-        gradient1[0][i] = dVdR*deltaR[i]*rinv;
-        gradient2[0][i] = -gradient1[0][i];
-        forces[atom1][i] -= dEdV[0][atom1]*gradient1[0][i];
-        forces[atom2][i] -= dEdV[0][atom1]*gradient2[0][i];
+    if (!isExcluded || valueTypes[0] != OpenMM::CustomGBForce::ParticlePair) {
+        RealOpenMM dVdR = (RealOpenMM) valueDerivExpressions[0][0].evaluate(variables);
+        RealOpenMM rinv = 1/r;
+        for (int i = 0; i < 3; i++) {
+            gradient1[0][i] = dVdR*deltaR[i]*rinv;
+            gradient2[0][i] = -gradient1[0][i];
+            forces[atom1][i] -= dEdV[0][atom1]*gradient1[0][i];
+            forces[atom2][i] -= dEdV[0][atom1]*gradient2[0][i];
+        }
     }
     variables = globalParameters;
     for (int i = 0; i < (int) paramNames.size(); i++)

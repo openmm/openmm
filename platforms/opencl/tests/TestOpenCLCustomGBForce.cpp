@@ -262,6 +262,73 @@ void testPositionDependence() {
     }
 }
 
+void testExclusions() {
+    OpenCLPlatform platform;
+    for (int i = 0; i < 4; i++) {
+        System system;
+        system.addParticle(1.0);
+        system.addParticle(1.0);
+        VerletIntegrator integrator(0.01);
+        CustomGBForce* force = new CustomGBForce();
+        force->addComputedValue("a", "r", i < 2 ? CustomGBForce::ParticlePair : CustomGBForce::ParticlePairNoExclusions);
+        force->addEnergyTerm("a", CustomGBForce::SingleParticle);
+        force->addEnergyTerm("(1+a1+a2)*r", i%2 == 0 ? CustomGBForce::ParticlePair : CustomGBForce::ParticlePairNoExclusions);
+        force->addParticle(vector<double>());
+        force->addParticle(vector<double>());
+        force->addExclusion(0, 1);
+        system.addForce(force);
+        Context context(system, integrator, platform);
+        vector<Vec3> positions(2);
+        positions[0] = Vec3(0, 0, 0);
+        positions[1] = Vec3(1, 0, 0);
+        context.setPositions(positions);
+        State state = context.getState(State::Forces | State::Energy);
+        const vector<Vec3>& forces = state.getForces();
+        double f, energy;
+        switch (i)
+        {
+            case 0: // e = 0
+                f = 0;
+                energy = 0;
+                break;
+            case 1: // e = r
+                f = 1;
+                energy = 1;
+                break;
+            case 2: // e = 2r
+                f = 2;
+                energy = 2;
+                break;
+            case 3: // e = 3r + 2r^2
+                f = 7;
+                energy = 5;
+                break;
+            default:
+                ASSERT(false);
+        }
+        ASSERT_EQUAL_VEC(Vec3(f, 0, 0), forces[0], 1e-4);
+        ASSERT_EQUAL_VEC(Vec3(-f, 0, 0), forces[1], 1e-4);
+        ASSERT_EQUAL_TOL(energy, state.getPotentialEnergy(), 1e-4);
+
+        // Take a small step in the direction of the energy gradient and see whether the potential energy changes by the expected amount.
+
+        double norm = 0.0;
+        for (int i = 0; i < (int) forces.size(); ++i)
+            norm += forces[i].dot(forces[i]);
+        norm = std::sqrt(norm);
+        const double stepSize = 1e-3;
+        double step = stepSize/norm;
+        for (int i = 0; i < (int) positions.size(); ++i) {
+            Vec3 p = positions[i];
+            Vec3 f = forces[i];
+            positions[i] = Vec3(p[0]-f[0]*step, p[1]-f[1]*step, p[2]-f[2]*step);
+        }
+        context.setPositions(positions);
+        State state2 = context.getState(State::Energy);
+        ASSERT_EQUAL_TOL(norm, (state2.getPotentialEnergy()-state.getPotentialEnergy())/stepSize, 1e-3*abs(state.getPotentialEnergy()));
+    }
+}
+
 int main() {
     try {
         testOBC(GBSAOBCForce::NoCutoff, CustomGBForce::NoCutoff);
@@ -271,6 +338,7 @@ int main() {
         testTabulatedFunction(false);
         testMultipleChainRules();
         testPositionDependence();
+        testExclusions();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

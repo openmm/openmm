@@ -1961,7 +1961,6 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         }
         for (int i = 0; i < force.getNumGlobalParameters(); i++)
             variables[force.getGlobalParameterName(i)] = "globals["+intToString(i)+"]";
-        map<string, Lepton::ParsedExpression> n2EnergyExpressions;
         stringstream n2EnergySource;
         bool anyExclusions = false;
         for (int i = 0; i < force.getNumEnergyTerms(); i++) {
@@ -1972,6 +1971,7 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
                 continue;
             bool exclude = (type == CustomGBForce::ParticlePair);
             anyExclusions |= exclude;
+            map<string, Lepton::ParsedExpression> n2EnergyExpressions;
             n2EnergyExpressions["tempEnergy += "] = Lepton::Parser::parse(expression, functions).optimize();
             n2EnergyExpressions["dEdR += "] = Lepton::Parser::parse(expression, functions).differentiate("r").optimize();
             for (int j = 0; j < force.getNumComputedValues(); j++) {
@@ -2142,18 +2142,30 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         derivExpressions["float dV0dR2 = "] = dVdR.renameVariables(rename);
         chainSource << OpenCLExpressionUtilities::createExpressions(derivExpressions, variables, functionDefinitions, prefix+"temp0_", prefix+"functionParams");
         if (needParameterGradient) {
-            chainSource << "float4 grad1_0_1 = dV0dR1*delta*invR;\n";
-            chainSource << "float4 grad1_0_2 = dV0dR2*delta*invR;\n";
-            chainSource << "float4 grad2_0_1 = grad1_0_1;\n";
-            chainSource << "float4 grad2_0_2 = grad1_0_2;\n";
+            chainSource << "float4 grad1_0_1 = (float4) 0;\n";
+            chainSource << "float4 grad1_0_2 = (float4) 0;\n";
+            chainSource << "float4 grad2_0_1 = (float4) 0;\n";
+            chainSource << "float4 grad2_0_2 = (float4) 0;\n";
+            if (useExclusionsForValue)
+                chainSource << "if (!isExcluded) {\n";
+            chainSource << "grad1_0_1 = dV0dR1*delta*invR;\n";
+            chainSource << "grad1_0_2 = dV0dR2*delta*invR;\n";
+            chainSource << "grad2_0_1 = grad1_0_1;\n";
+            chainSource << "grad2_0_2 = grad1_0_2;\n";
             chainSource << "tempForce1 -= grad1_0_1*" << prefix << "dEdV" << energyDerivs->getParameterSuffix(0, "1") << ";\n";
             chainSource << "tempForce1 -= grad1_0_2*" << prefix << "dEdV" << energyDerivs->getParameterSuffix(0, "2") << ";\n";
             chainSource << "tempForce2 -= grad2_0_1*" << prefix << "dEdV" << energyDerivs->getParameterSuffix(0, "1") << ";\n";
             chainSource << "tempForce2 -= grad2_0_2*" << prefix << "dEdV" << energyDerivs->getParameterSuffix(0, "2") << ";\n";
+            if (useExclusionsForValue)
+                chainSource << "}\n";
         }
         else {
+            if (useExclusionsForValue)
+                chainSource << "if (!isExcluded) {\n";
             chainSource << "tempForce -= dV0dR1*" << prefix << "dEdV" << energyDerivs->getParameterSuffix(0, "1") << ";\n";
             chainSource << "tempForce -= dV0dR2*" << prefix << "dEdV" << energyDerivs->getParameterSuffix(0, "2") << ";\n";
+            if (useExclusionsForValue)
+                chainSource << "}\n";
         }
         variables = globalVariables;
         map<string, string> rename1;
@@ -2266,10 +2278,10 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
             chainRuleArguments = arguments;
             chainRuleSource = source;
             separateChainRuleKernel = true;
-            cl.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, "");
+            cl.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, force.getNumExclusions() > 0, force.getCutoffDistance(), exclusionList, "");
         }
         else {
-            cl.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, true, force.getCutoffDistance(), exclusionList, source);
+            cl.getNonbondedUtilities().addInteraction(useCutoff, usePeriodic, force.getNumExclusions() > 0, force.getCutoffDistance(), exclusionList, source);
             for (int i = 0; i < (int) parameters.size(); i++)
                 cl.getNonbondedUtilities().addParameter(parameters[i]);
             for (int i = 0; i < (int) arguments.size(); i++)
