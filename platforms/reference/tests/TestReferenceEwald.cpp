@@ -325,7 +325,7 @@ void testErrorTolerance(NonbondedForce::NonbondedMethod method) {
 
     // For various values of the cutoff and error tolerance, see if the actual error is reasonable.
 
-    for (double cutoff = 1.0; cutoff < boxWidth/2; cutoff += 0.2) {
+    for (double cutoff = 1.0; cutoff < boxWidth/2; cutoff *= 1.2) {
         force->setCutoffDistance(cutoff);
         vector<Vec3> refForces;
         double norm = 0.0;
