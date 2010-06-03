@@ -358,8 +358,9 @@ MACRO(CUDA_add_custom_commands cuda_target)
     IF(${file} MATCHES ".*\\.cu$")
     
     # Add a custom target to generate a c file.
-    SET(generated_file  "${CMAKE_BINARY_DIR}/src/cuda/${file}_${cuda_target}_generated.cpp")
-    SET(generated_target "${file}_target")
+    GET_FILENAME_COMPONENT(filename ${file} NAME)
+    SET(generated_file  "${CMAKE_BINARY_DIR}/src/cuda/${filename}_${cuda_target}_generated.cpp")
+    SET(generated_target "${filename}_target")
     
     FILE(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/src/cuda)
 
