@@ -23,7 +23,7 @@
  */
 
 
-#ifndef __RealSimTk_H_
+#ifndef __RealSimTk_H__
 #define __RealSimTk_H__
 
 #include <math.h>

@@ -48,7 +48,7 @@ extern void kCalculateCustomTorsionForces(gpuContext gpu);
 extern void kCalculateCustomExternalForces(gpuContext gpu);
 extern void kCalculateCustomNonbondedForces(gpuContext gpu, bool neighborListValid);
 extern void kReduceObcGbsaBornForces(gpuContext gpu);
-extern void kCalculateObcGbsaForces2(gpuContext gpu);
+extern void OPENMMCUDA_EXPORT kCalculateObcGbsaForces2(gpuContext gpu);
 extern void kCalculateGBVIForces2(gpuContext gpu);
 extern void kCalculateLocalForces(gpuContext gpu);
 extern void kCalculateAndersenThermostat(gpuContext gpu);
