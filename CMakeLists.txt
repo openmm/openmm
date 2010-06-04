@@ -335,7 +335,7 @@ IF(CUDA_FOUND)
             # Unfortunately the variables CUDA_NVCC_FLAGS_RELEASE and CUDA_NVCC_FLAGS_DEBUG
             # appear to be unused, at least in CMake 2.6
             # Release /MD linkage
-            set(FLAGS ${FLAGS} "-Xcompiler \"/MD\"")
+            set(FLAGS ${FLAGS} "-Xcompiler \"/MD\" -DOPENMMCUDA_BUILDING_SHARED_LIBRARY")
         ENDIF(MSVC)
         SET(CUDA_NVCC_FLAGS  "${FLAGS}"
             CACHE STRING "Semicolon delimit multiple arguments")
@@ -355,7 +355,7 @@ IF(CUDA_FOUND)
             SET(HAS_NVCC_FLAG TRUE)
         ENDIF(CUDA_NVCC_FLAGS MATCHES "-Xcompiler")
         IF(NOT HAS_NVCC_FLAG)
-            set(new_flags "-Xcompiler \"/MD\"")
+            set(new_flags "-Xcompiler \"/MD\" -DOPENMMCUDA_BUILDING_SHARED_LIBRARY")
             if(CUDA_NVCC_FLAGS)
                 set(new_flags "${CUDA_NVCC_FLAGS};${new_flags}")
             endif(CUDA_NVCC_FLAGS)
