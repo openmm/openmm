@@ -3,13 +3,13 @@ if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS && atom1 != atom2 && r2 < CUTOFF_SQUA
 #else
 if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS && atom1 != atom2) {
 #endif
-    float invRSquared = 1.0f/r2;
+    float invRSquared = RECIP(r2);
     float rScaledRadiusJ = r+obcParams2.y;
     float rScaledRadiusI = r+obcParams1.y;
-    float l_ijJ = 1.0f/max(obcParams1.x, fabs(r-obcParams2.y));
-    float l_ijI = 1.0f/max(obcParams2.x, fabs(r-obcParams1.y));
-    float u_ijJ = 1.0f/rScaledRadiusJ;
-    float u_ijI = 1.0f/rScaledRadiusI;
+    float l_ijJ = RECIP(max(obcParams1.x, fabs(r-obcParams2.y)));
+    float l_ijI = RECIP(max(obcParams2.x, fabs(r-obcParams1.y)));
+    float u_ijJ = RECIP(rScaledRadiusJ);
+    float u_ijI = RECIP(rScaledRadiusI);
     float l_ij2J = l_ijJ*l_ijJ;
     float l_ij2I = l_ijI*l_ijI;
     float u_ij2J = u_ijJ*u_ijJ;
@@ -22,12 +22,8 @@ if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS && atom1 != atom2) {
     float t3I = t2I*invR;
     t1J *= invR;
     t1I *= invR;
-    if (obcParams1.x < rScaledRadiusJ) {
-        float term = 0.125f*(1.0f+obcParams2.y*obcParams2.y*invRSquared)*t3J + 0.25f*t1J*invRSquared;
-        dEdR += bornForce1*term;
-    }
-    if (obcParams2.x < rScaledRadiusJ) {
-        float term = 0.125f*(1.0f+obcParams1.y*obcParams1.y*invRSquared)*t3I + 0.25f*t1I*invRSquared;
-        dEdR += bornForce2*term;
-    }
+    float term1 = 0.125f*(1.0f+obcParams2.y*obcParams2.y*invRSquared)*t3J + 0.25f*t1J*invRSquared;
+    float term2 = 0.125f*(1.0f+obcParams1.y*obcParams1.y*invRSquared)*t3I + 0.25f*t1I*invRSquared;
+    dEdR += (obcParams1.x < rScaledRadiusJ ? bornForce1*term1 : 0.0f);
+    dEdR += (obcParams2.x < rScaledRadiusJ ? bornForce2*term2 : 0.0f);
 }

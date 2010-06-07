@@ -69,7 +69,7 @@ void computeNonbonded(__global float4* forceBuffers, __global float* energyBuffe
 #endif
                 float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
                 float r = sqrt(r2);
-                float invR = 1.0f/r;
+                float invR = RECIP(r);
                 LOAD_ATOM2_PARAMETERS
                 atom2 = y+j;
 #ifdef USE_SYMMETRIC

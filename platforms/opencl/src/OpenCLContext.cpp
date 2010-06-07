@@ -83,7 +83,7 @@ OpenCLContext::OpenCLContext(int numParticles, int deviceIndex) : time(0.0), ste
         numAtoms = numParticles;
         paddedNumAtoms = TileSize*((numParticles+TileSize-1)/TileSize);
         numAtomBlocks = (paddedNumAtoms+(TileSize-1))/TileSize;
-        numThreadBlocks = 4*device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>();
+        numThreadBlocks = 6*device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>();
         nonbonded = new OpenCLNonbondedUtilities(*this);
         posq = new OpenCLArray<mm_float4>(*this, paddedNumAtoms, "posq", true);
         velm = new OpenCLArray<mm_float4>(*this, paddedNumAtoms, "velm", true);

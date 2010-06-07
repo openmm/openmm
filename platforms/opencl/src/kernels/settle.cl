@@ -15,9 +15,9 @@ __kernel void applySettle(int numClusters, float tol, __global float4* oldPos, _
         float4 xp1 = posDelta[atoms.y];
         float4 apos2 = oldPos[atoms.z];
         float4 xp2 = posDelta[atoms.z];
-        float m0 = 1.0f/velm[atoms.x].w;
-        float m1 = 1.0f/velm[atoms.y].w;
-        float m2 = 1.0f/velm[atoms.z].w;
+        float m0 = RECIP(velm[atoms.x].w);
+        float m1 = RECIP(velm[atoms.y].w);
+        float m2 = RECIP(velm[atoms.z].w);
 
         // Translate the molecule to the origin to improve numerical precision.
 

@@ -71,15 +71,15 @@ void computeBornSum(__global float* global_bornSum, __global float4* posq, __glo
                     float2 params2 = (float2) (localData[tbx+j].radius, localData[tbx+j].scaledRadius);
                     float rScaledRadiusJ = r+params2.y;
                     if ((j != tgx) && (params1.x < rScaledRadiusJ)) {
-                        float l_ij = 1.0f/max(params1.x, fabs(r-params2.y));
-                        float u_ij = 1.0f/rScaledRadiusJ;
+                        float l_ij = RECIP(max(params1.x, fabs(r-params2.y)));
+                        float u_ij = RECIP(rScaledRadiusJ);
                         float l_ij2 = l_ij*l_ij;
                         float u_ij2 = u_ij*u_ij;
                         float ratio = log(u_ij / l_ij);
                         bornSum += l_ij - u_ij + 0.25f*r*(u_ij2-l_ij2) + (0.50f*invR*ratio) +
                                          (0.25f*params2.y*params2.y*invR)*(l_ij2-u_ij2);
                         if (params1.x < params2.x-r)
-                            bornSum += 2.0f*(1.0f/params1.x-l_ij);
+                            bornSum += 2.0f*RECIP(params1.x-l_ij);
                     }
                 }
             }
@@ -136,27 +136,27 @@ void computeBornSum(__global float* global_bornSum, __global float4* posq, __glo
                                 float2 params2 = (float2) (localData[tbx+j].radius, localData[tbx+j].scaledRadius);
                                 float rScaledRadiusJ = r+params2.y;
                                 if (params1.x < rScaledRadiusJ) {
-                                    float l_ij = 1.0f/max(params1.x, fabs(r-params2.y));
-                                    float u_ij = 1.0f/rScaledRadiusJ;
+                                    float l_ij = RECIP(max(params1.x, fabs(r-params2.y)));
+                                    float u_ij = RECIP(rScaledRadiusJ);
                                     float l_ij2 = l_ij*l_ij;
                                     float u_ij2 = u_ij*u_ij;
                                     float ratio = log(u_ij / l_ij);
                                     bornSum += l_ij - u_ij + 0.25f*r*(u_ij2-l_ij2) + (0.50f*invR*ratio) +
                                                      (0.25f*params2.y*params2.y*invR)*(l_ij2-u_ij2);
                                     if (params1.x < params2.x-r)
-                                        bornSum += 2.0f*(1.0f/params1.x-l_ij);
+                                        bornSum += 2.0f*RECIP(params1.x-l_ij);
                                 }
                                 float rScaledRadiusI = r+params1.y;
                                 if (params2.x < rScaledRadiusI) {
-                                    float l_ij = 1.0f/max(params2.x, fabs(r-params1.y));
-                                    float u_ij = 1.0f/rScaledRadiusI;
+                                    float l_ij = RECIP(max(params2.x, fabs(r-params1.y)));
+                                    float u_ij = RECIP(rScaledRadiusI);
                                     float l_ij2 = l_ij*l_ij;
                                     float u_ij2 = u_ij*u_ij;
                                     float ratio = log(u_ij / l_ij);
                                     float term = l_ij - u_ij + 0.25f*r*(u_ij2-l_ij2) + (0.50f*invR*ratio) +
                                                      (0.25f*params1.y*params1.y*invR)*(l_ij2-u_ij2);
                                     if (params2.x < params1.x-r)
-                                        term += 2.0f*(1.0f/params2.x-l_ij);
+                                        term += 2.0f*RECIP(params2.x-l_ij);
                                     tempBuffer[get_local_id(0)] = term;
                                 }
                             }
@@ -204,27 +204,27 @@ void computeBornSum(__global float* global_bornSum, __global float4* posq, __glo
                         float2 params2 = (float2) (localData[tbx+tj].radius, localData[tbx+tj].scaledRadius);
                         float rScaledRadiusJ = r+params2.y;
                         if (params1.x < rScaledRadiusJ) {
-                            float l_ij = 1.0f/max(params1.x, fabs(r-params2.y));
-                            float u_ij = 1.0f/rScaledRadiusJ;
+                            float l_ij = RECIP(max(params1.x, fabs(r-params2.y)));
+                            float u_ij = RECIP(rScaledRadiusJ);
                             float l_ij2 = l_ij*l_ij;
                             float u_ij2 = u_ij*u_ij;
                             float ratio = log(u_ij / l_ij);
                             bornSum += l_ij - u_ij + 0.25f*r*(u_ij2-l_ij2) + (0.50f*invR*ratio) +
                                              (0.25f*params2.y*params2.y*invR)*(l_ij2-u_ij2);
                             if (params1.x < params2.x-r)
-                                bornSum += 2.0f*(1.0f/params1.x-l_ij);
+                                bornSum += 2.0f*RECIP(params1.x-l_ij);
                         }
                         float rScaledRadiusI = r+params1.y;
                         if (params2.x < rScaledRadiusI) {
-                            float l_ij = 1.0f/max(params2.x, fabs(r-params1.y));
-                            float u_ij = 1.0f/rScaledRadiusI;
+                            float l_ij = RECIP(max(params2.x, fabs(r-params1.y)));
+                            float u_ij = RECIP(rScaledRadiusI);
                             float l_ij2 = l_ij*l_ij;
                             float u_ij2 = u_ij*u_ij;
                             float ratio = log(u_ij / l_ij);
                             float term = l_ij - u_ij + 0.25f*r*(u_ij2-l_ij2) + (0.50f*invR*ratio) +
                                              (0.25f*params1.y*params1.y*invR)*(l_ij2-u_ij2);
                             if (params2.x < params1.x-r)
-                                term += 2.0f*(1.0f/params2.x-l_ij);
+                                term += 2.0f*RECIP(params2.x-l_ij);
                             localData[tbx+tj].bornSum += term;
                         }
                     }
