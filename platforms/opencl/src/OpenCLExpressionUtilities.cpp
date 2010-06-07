@@ -216,7 +216,7 @@ void OpenCLExpressionUtilities::processExpression(stringstream& out, const Expre
             break;
         }
         case Operation::RECIPROCAL:
-            out << "1.0f/" << getTempName(node.getChildren()[0], temps);
+            out << "RECIP(" << getTempName(node.getChildren()[0], temps) << ")";
             break;
         case Operation::ADD_CONSTANT:
             out << doubleToString(dynamic_cast<const Operation::AddConstant*>(&node.getOperation())->getValue()) << "+" << getTempName(node.getChildren()[0], temps);
