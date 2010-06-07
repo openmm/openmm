@@ -33,6 +33,9 @@
  * This tests the OpenCL implementation of CustomTorsionForce.
  */
 
+#ifdef WIN32
+  #define _USE_MATH_DEFINES // Needed to get M_PI
+#endif
 #include "../../../tests/AssertionUtilities.h"
 #include "openmm/Context.h"
 #include "OpenCLPlatform.h"
