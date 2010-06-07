@@ -79,7 +79,7 @@ void computeBornSum(__global float* global_bornSum, __global float4* posq, __glo
                         bornSum += l_ij - u_ij + 0.25f*r*(u_ij2-l_ij2) + (0.50f*invR*ratio) +
                                          (0.25f*params2.y*params2.y*invR)*(l_ij2-u_ij2);
                         if (params1.x < params2.x-r)
-                            bornSum += 2.0f*RECIP(params1.x-l_ij);
+                            bornSum += 2.0f*(RECIP(params1.x)-l_ij);
                     }
                 }
             }
@@ -144,7 +144,7 @@ void computeBornSum(__global float* global_bornSum, __global float4* posq, __glo
                                     bornSum += l_ij - u_ij + 0.25f*r*(u_ij2-l_ij2) + (0.50f*invR*ratio) +
                                                      (0.25f*params2.y*params2.y*invR)*(l_ij2-u_ij2);
                                     if (params1.x < params2.x-r)
-                                        bornSum += 2.0f*RECIP(params1.x-l_ij);
+                                        bornSum += 2.0f*(RECIP(params1.x)-l_ij);
                                 }
                                 float rScaledRadiusI = r+params1.y;
                                 if (params2.x < rScaledRadiusI) {
@@ -156,7 +156,7 @@ void computeBornSum(__global float* global_bornSum, __global float4* posq, __glo
                                     float term = l_ij - u_ij + 0.25f*r*(u_ij2-l_ij2) + (0.50f*invR*ratio) +
                                                      (0.25f*params1.y*params1.y*invR)*(l_ij2-u_ij2);
                                     if (params2.x < params1.x-r)
-                                        term += 2.0f*RECIP(params2.x-l_ij);
+                                        term += 2.0f*(RECIP(params2.x)-l_ij);
                                     tempBuffer[get_local_id(0)] = term;
                                 }
                             }
@@ -212,7 +212,7 @@ void computeBornSum(__global float* global_bornSum, __global float4* posq, __glo
                             bornSum += l_ij - u_ij + 0.25f*r*(u_ij2-l_ij2) + (0.50f*invR*ratio) +
                                              (0.25f*params2.y*params2.y*invR)*(l_ij2-u_ij2);
                             if (params1.x < params2.x-r)
-                                bornSum += 2.0f*RECIP(params1.x-l_ij);
+                                bornSum += 2.0f*(RECIP(params1.x)-l_ij);
                         }
                         float rScaledRadiusI = r+params1.y;
                         if (params2.x < rScaledRadiusI) {
@@ -224,7 +224,7 @@ void computeBornSum(__global float* global_bornSum, __global float4* posq, __glo
                             float term = l_ij - u_ij + 0.25f*r*(u_ij2-l_ij2) + (0.50f*invR*ratio) +
                                              (0.25f*params1.y*params1.y*invR)*(l_ij2-u_ij2);
                             if (params2.x < params1.x-r)
-                                term += 2.0f*RECIP(params2.x-l_ij);
+                                term += 2.0f*(RECIP(params2.x)-l_ij);
                             localData[tbx+tj].bornSum += term;
                         }
                     }
