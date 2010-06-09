@@ -141,6 +141,95 @@ void testOBC(GBSAOBCForce::NonbondedMethod obcMethod, CustomGBForce::NonbondedMe
     }
 }
 
+void testMembrane() {
+    const int numMolecules = 70;
+    const int numParticles = numMolecules*2;
+    const double boxSize = 10.0;
+    OpenCLPlatform platform;
+
+    // Create a system with an implicit membrane.
+
+    System system;
+    for (int i = 0; i < numParticles; i++) {
+        system.addParticle(1.0);
+    }
+    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0.0, 0.0), Vec3(0.0, boxSize, 0.0), Vec3(0.0, 0.0, boxSize));
+    CustomGBForce* custom = new CustomGBForce();
+    custom->setCutoffDistance(2.0);
+    custom->addPerParticleParameter("q");
+    custom->addPerParticleParameter("radius");
+    custom->addPerParticleParameter("scale");
+    custom->addGlobalParameter("thickness", 3);
+    custom->addGlobalParameter("solventDielectric", 78.3);
+    custom->addGlobalParameter("soluteDielectric", 1);
+    custom->addComputedValue("Imol", "step(r+sr2-or1)*0.5*(1/L-1/U+0.25*(1/U^2-1/L^2)*(r-sr2*sr2/r)+0.5*log(L/U)/r+C);"
+                             "U=r+sr2;"
+                             "C=2*(1/or1-1/L)*step(sr2-r-or1);"
+                             "L=max(or1, D);"
+                             "D=abs(r-sr2);"
+                             "sr2 = scale2*or2;"
+                             "or1 = radius1-0.009; or2 = radius2-0.009", CustomGBForce::ParticlePairNoExclusions);
+    custom->addComputedValue("Imem", "(1/radius+2*log(2)/thickness)/(1+exp(7.2*(abs(z)+radius-0.5*thickness)))", CustomGBForce::SingleParticle);
+    custom->addComputedValue("B", "1/(1/or-tanh(1*psi-0.8*psi^2+4.85*psi^3)/radius);"
+                             "psi=max(Imol,Imem)*or; or=radius-0.009", CustomGBForce::SingleParticle);
+    custom->addEnergyTerm("28.3919551*(radius+0.14)^2*(radius/B)^6-0.5*138.935456*(1/soluteDielectric-1/solventDielectric)*q^2/B", CustomGBForce::SingleParticle);
+    custom->addEnergyTerm("-138.935456*(1/soluteDielectric-1/solventDielectric)*q1*q2/f;"
+                          "f=sqrt(r^2+B1*B2*exp(-r^2/(4*B1*B2)))", CustomGBForce::ParticlePairNoExclusions);
+    vector<Vec3> positions(numParticles);
+    vector<Vec3> velocities(numParticles);
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    vector<double> params(3);
+    for (int i = 0; i < numMolecules; i++) {
+        if (i < numMolecules/2) {
+            params[0] = 1.0;
+            params[1] = 0.2;
+            params[2] = 0.5;
+            custom->addParticle(params);
+            params[0] = -1.0;
+            params[1] = 0.1;
+            custom->addParticle(params);
+        }
+        else {
+            params[0] = 1.0;
+            params[1] = 0.2;
+            params[2] = 0.8;
+            custom->addParticle(params);
+            params[0] = -1.0;
+            params[1] = 0.1;
+            custom->addParticle(params);
+        }
+        positions[2*i] = Vec3(boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt));
+        positions[2*i+1] = Vec3(positions[2*i][0]+1.0, positions[2*i][1], positions[2*i][2]);
+        velocities[2*i] = Vec3(genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt));
+        velocities[2*i+1] = Vec3(genrand_real2(sfmt), genrand_real2(sfmt), genrand_real2(sfmt));
+    }
+    system.addForce(custom);
+    VerletIntegrator integrator(0.01);
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    context.setVelocities(velocities);
+    State state = context.getState(State::Forces | State::Energy);
+    const vector<Vec3>& forces = state.getForces();
+
+    // Take a small step in the direction of the energy gradient and see whether the potential energy changes by the expected amount.
+
+    double norm = 0.0;
+    for (int i = 0; i < (int) forces.size(); ++i)
+        norm += forces[i].dot(forces[i]);
+    norm = std::sqrt(norm);
+    const double stepSize = 1e-3;
+    double step = stepSize/norm;
+    for (int i = 0; i < (int) positions.size(); ++i) {
+        Vec3 p = positions[i];
+        Vec3 f = forces[i];
+        positions[i] = Vec3(p[0]-f[0]*step, p[1]-f[1]*step, p[2]-f[2]*step);
+    }
+    context.setPositions(positions);
+    State state2 = context.getState(State::Energy);
+    ASSERT_EQUAL_TOL(norm, (state2.getPotentialEnergy()-state.getPotentialEnergy())/stepSize, 1e-2);
+}
+
 void testTabulatedFunction(bool interpolating) {
     OpenCLPlatform platform;
     System system;
@@ -334,6 +423,7 @@ int main() {
         testOBC(GBSAOBCForce::NoCutoff, CustomGBForce::NoCutoff);
         testOBC(GBSAOBCForce::CutoffNonPeriodic, CustomGBForce::CutoffNonPeriodic);
         testOBC(GBSAOBCForce::CutoffPeriodic, CustomGBForce::CutoffPeriodic);
+        testMembrane();
         testTabulatedFunction(true);
         testTabulatedFunction(false);
         testMultipleChainRules();

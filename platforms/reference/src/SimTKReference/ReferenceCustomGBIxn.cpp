@@ -349,6 +349,24 @@ void ReferenceCustomGBIxn::calculateChainRuleForces(int numAtoms, RealOpenMM** a
            }
         }
     }
+
+    // Compute chain rule terms for computed values that depend explicitly on particle coordinates.
+
+    map<string, double> variables = globalParameters;
+    for (int i = 0; i < numAtoms; i++) {
+        variables["x"] = atomCoordinates[i][0];
+        variables["y"] = atomCoordinates[i][1];
+        variables["z"] = atomCoordinates[i][2];
+        for (int j = 0; j < (int) paramNames.size(); j++)
+            variables[paramNames[j]] = atomParameters[i][j];
+        for (int j = 1; j < (int) valueNames.size(); j++) {
+            variables[valueNames[j-1]] = values[j-1][i];
+            for (int k = 0; k < 3; k++) {
+                RealOpenMM gradient = (RealOpenMM) valueGradientExpressions[j][k].evaluate(variables);
+                forces[i][k] -= dEdV[j][i]*gradient;
+            }
+        }
+    }
 }
 
 void ReferenceCustomGBIxn::calculateOnePairChainRule(int atom1, int atom2, RealOpenMM** atomCoordinates, RealOpenMM** atomParameters,
@@ -378,16 +396,18 @@ void ReferenceCustomGBIxn::calculateOnePairChainRule(int atom1, int atom2, RealO
 
     // Evaluate the derivative of each parameter with respect to position and apply forces.
 
-    vector<vector<RealOpenMM> > gradient1(valueDerivExpressions.size(), vector<RealOpenMM>(3, 0.0));
-    vector<vector<RealOpenMM> > gradient2(valueDerivExpressions.size(), vector<RealOpenMM>(3, 0.0));
+    RealOpenMM rinv = 1/r;
+    deltaR[0] *= rinv;
+    deltaR[1] *= rinv;
+    deltaR[2] *= rinv;
+    vector<RealOpenMM> dVdR1(valueDerivExpressions.size(), 0.0);
+    vector<RealOpenMM> dVdR2(valueDerivExpressions.size(), 0.0);
     if (!isExcluded || valueTypes[0] != OpenMM::CustomGBForce::ParticlePair) {
-        RealOpenMM dVdR = (RealOpenMM) valueDerivExpressions[0][0].evaluate(variables);
-        RealOpenMM rinv = 1/r;
+        dVdR1[0] = (RealOpenMM) valueDerivExpressions[0][0].evaluate(variables);;
+        dVdR2[0] = -dVdR1[0];
         for (int i = 0; i < 3; i++) {
-            gradient1[0][i] = dVdR*deltaR[i]*rinv;
-            gradient2[0][i] = -gradient1[0][i];
-            forces[atom1][i] -= dEdV[0][atom1]*gradient1[0][i];
-            forces[atom2][i] -= dEdV[0][atom1]*gradient2[0][i];
+            forces[atom1][i] -= dEdV[0][atom1]*dVdR1[0]*deltaR[i];
+            forces[atom2][i] -= dEdV[0][atom1]*dVdR2[0]*deltaR[i];
         }
     }
     variables = globalParameters;
@@ -401,15 +421,12 @@ void ReferenceCustomGBIxn::calculateOnePairChainRule(int atom1, int atom2, RealO
         variables["z"] = atomCoordinates[atom1][2];
         for (int j = 0; j < i; j++) {
             RealOpenMM dVdV = (RealOpenMM) valueDerivExpressions[i][j].evaluate(variables);
-            for (int k = 0; k < 3; k++) {
-                gradient1[i][k] += dVdV*gradient1[j][k];
-                gradient2[i][k] += dVdV*gradient2[j][k];
-            }
+            dVdR1[i] += dVdV*dVdR1[j];
+            dVdR2[i] += dVdV*dVdR2[j];
         }
         for (int k = 0; k < 3; k++) {
-            gradient1[i][k] += (RealOpenMM) valueGradientExpressions[i][k].evaluate(variables);
-            forces[atom1][k] -= dEdV[i][atom1]*gradient1[i][k];
-            forces[atom2][k] -= dEdV[i][atom1]*gradient2[i][k];
+            forces[atom1][k] -= dEdV[i][atom1]*dVdR1[i]*deltaR[k];
+            forces[atom2][k] -= dEdV[i][atom1]*dVdR2[i]*deltaR[k];
         }
     }
 }

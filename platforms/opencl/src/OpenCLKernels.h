@@ -624,7 +624,7 @@ public:
      */
     double executeEnergy(ContextImpl& context);
 private:
-    bool hasInitializedKernels, separateChainRuleKernel;
+    bool hasInitializedKernels, needParameterGradient;
     OpenCLContext& cl;
     OpenCLParameterSet* params;
     OpenCLParameterSet* computedValues;
@@ -635,11 +635,8 @@ private:
     std::vector<std::string> globalParamNames;
     std::vector<cl_float> globalParamValues;
     std::vector<OpenCLArray<mm_float4>*> tabulatedFunctions;
-    std::vector<OpenCLNonbondedUtilities::ParameterInfo> chainRuleParameters;
-    std::vector<OpenCLNonbondedUtilities::ParameterInfo> chainRuleArguments;
-    std::string chainRuleSource;
     System& system;
-    cl::Kernel pairValueKernel, perParticleValueKernel, pairEnergyKernel, perParticleEnergyKernel, chainRuleKernel;
+    cl::Kernel pairValueKernel, perParticleValueKernel, pairEnergyKernel, perParticleEnergyKernel, gradientChainRuleKernel;
 };
 
 /**
