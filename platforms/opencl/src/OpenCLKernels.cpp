@@ -1296,9 +1296,8 @@ void OpenCLCalcNonbondedForceKernel::executeForces(ContextImpl& context) {
             pmeInterpolateForceKernel = cl::Kernel(program, "gridInterpolateForce");
             pmeGridIndexKernel.setArg<cl::Buffer>(0, cl.getPosq().getDeviceBuffer());
             pmeGridIndexKernel.setArg<cl::Buffer>(1, pmeAtomGridIndex->getDeviceBuffer());
-            pmeAtomRangeKernel.setArg<cl::Buffer>(0, cl.getPosq().getDeviceBuffer());
-            pmeAtomRangeKernel.setArg<cl::Buffer>(1, pmeAtomGridIndex->getDeviceBuffer());
-            pmeAtomRangeKernel.setArg<cl::Buffer>(2, pmeAtomRange->getDeviceBuffer());
+            pmeAtomRangeKernel.setArg<cl::Buffer>(0, pmeAtomGridIndex->getDeviceBuffer());
+            pmeAtomRangeKernel.setArg<cl::Buffer>(1, pmeAtomRange->getDeviceBuffer());
             pmeUpdateBsplinesKernel.setArg<cl::Buffer>(0, cl.getPosq().getDeviceBuffer());
             pmeUpdateBsplinesKernel.setArg<cl::Buffer>(1, pmeBsplineTheta->getDeviceBuffer());
             pmeUpdateBsplinesKernel.setArg<cl::Buffer>(2, pmeBsplineDtheta->getDeviceBuffer());
@@ -1336,11 +1335,13 @@ void OpenCLCalcNonbondedForceKernel::executeForces(ContextImpl& context) {
     if (pmeGrid != NULL) {
         mm_float4 boxSize = cl.getPeriodicBoxSize();
         mm_float4 invBoxSize = cl.getInvPeriodicBoxSize();
-        pmeGridIndexKernel.setArg<mm_float4>(2, invBoxSize);
+        pmeGridIndexKernel.setArg<mm_float4>(2, boxSize);
+        pmeGridIndexKernel.setArg<mm_float4>(3, invBoxSize);
         cl.executeKernel(pmeGridIndexKernel, cl.getNumAtoms());
         sort->sort(*pmeAtomGridIndex);
         cl.executeKernel(pmeAtomRangeKernel, cl.getNumAtoms());
-        pmeUpdateBsplinesKernel.setArg<mm_float4>(5, invBoxSize);
+        pmeUpdateBsplinesKernel.setArg<mm_float4>(5, boxSize);
+        pmeUpdateBsplinesKernel.setArg<mm_float4>(6, invBoxSize);
         cl.executeKernel(pmeUpdateBsplinesKernel, cl.getNumAtoms());
         cl.executeKernel(pmeSpreadChargeKernel, cl.getNumAtoms());
         fft->execFFT(*pmeGrid, true);
@@ -1348,7 +1349,8 @@ void OpenCLCalcNonbondedForceKernel::executeForces(ContextImpl& context) {
         pmeConvolutionKernel.setArg<cl_float>(6, (float) (1.0/(M_PI*boxSize.x*boxSize.y*boxSize.z)));
         cl.executeKernel(pmeConvolutionKernel, cl.getNumAtoms());
         fft->execFFT(*pmeGrid, false);
-        pmeInterpolateForceKernel.setArg<mm_float4>(5, invBoxSize);
+        pmeInterpolateForceKernel.setArg<mm_float4>(5, boxSize);
+        pmeInterpolateForceKernel.setArg<mm_float4>(6, invBoxSize);
         cl.executeKernel(pmeInterpolateForceKernel, cl.getNumAtoms());
     }
 }

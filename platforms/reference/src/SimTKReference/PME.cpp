@@ -241,7 +241,9 @@ pme_update_grid_index_and_fraction(pme_t    pme,
              *    numerical problems, so this shouldnt cause any problems.
              *    (And, by adding 100.0 box lengths, we would lose a bit of numerical accuracy here!)
              */
-            t  = (atomCoordinates[i][d] / periodicBoxSize[d] + 1)*pme->ngrid[d];
+            RealOpenMM coord = atomCoordinates[i][d];
+            coord -= floor(coord/periodicBoxSize[d])*periodicBoxSize[d];
+            t  = (coord / periodicBoxSize[d])*pme->ngrid[d];
             ti = (int) t;
 
             pme->particlefraction[i][d] = t - ti;

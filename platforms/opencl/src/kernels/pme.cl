@@ -1,9 +1,12 @@
-__kernel void updateGridIndexAndFraction(__global float4* posq, __global float2* pmeAtomGridIndex, float4 invPeriodicBoxSize) {
+__kernel void updateGridIndexAndFraction(__global float4* posq, __global float2* pmeAtomGridIndex, float4 periodicBoxSize, float4 invPeriodicBoxSize) {
     for (int i = get_global_id(0); i < NUM_ATOMS; i += get_global_size(0)) {
         float4 pos = posq[i];
-        float4 t = (float4) ((pos.x*invPeriodicBoxSize.x+1.0f)*GRID_SIZE_X,
-                             (pos.y*invPeriodicBoxSize.y+1.0f)*GRID_SIZE_Y,
-                             (pos.z*invPeriodicBoxSize.z+1.0f)*GRID_SIZE_Z, 0.0f);
+        pos.x -= floor(pos.x*invPeriodicBoxSize.x)*periodicBoxSize.x;
+        pos.y -= floor(pos.y*invPeriodicBoxSize.y)*periodicBoxSize.y;
+        pos.z -= floor(pos.z*invPeriodicBoxSize.z)*periodicBoxSize.z;
+        float4 t = (float4) ((pos.x*invPeriodicBoxSize.x)*GRID_SIZE_X,
+                             (pos.y*invPeriodicBoxSize.y)*GRID_SIZE_Y,
+                             (pos.z*invPeriodicBoxSize.z)*GRID_SIZE_Z, 0.0f);
         int4 gridIndex = (int4) (((int) t.x) % GRID_SIZE_X,
                                  ((int) t.y) % GRID_SIZE_Y,
                                  ((int) t.z) % GRID_SIZE_Z, 0);
@@ -15,7 +18,7 @@ __kernel void updateGridIndexAndFraction(__global float4* posq, __global float2*
  * For each grid point, find the range of sorted atoms associated with that point.
  */
 
-__kernel void findAtomRangeForGrid(__global float4* posq, __global float2* pmeAtomGridIndex, __global int* pmeAtomRange) {
+__kernel void findAtomRangeForGrid(__global float2* pmeAtomGridIndex, __global int* pmeAtomRange) {
     int start = (NUM_ATOMS*get_global_id(0))/get_global_size(0);
     int end = (NUM_ATOMS*(get_global_id(0)+1))/get_global_size(0);
     int last = (start == 0 ? -1 : pmeAtomGridIndex[start-1].y);
@@ -38,7 +41,7 @@ __kernel void findAtomRangeForGrid(__global float4* posq, __global float2* pmeAt
     }
 }
 
-__kernel void updateBsplines(__global float4* posq, __global float4* pmeBsplineTheta, __global float4* pmeBsplineDTheta, __local float4* bsplinesCache, __global float2* pmeAtomGridIndex, float4 invPeriodicBoxSize) {
+__kernel void updateBsplines(__global float4* posq, __global float4* pmeBsplineTheta, __global float4* pmeBsplineDTheta, __local float4* bsplinesCache, __global float2* pmeAtomGridIndex, float4 periodicBoxSize, float4 invPeriodicBoxSize) {
     const float4 scale = 1.0f/(PME_ORDER-1);
     for (int i = get_global_id(0); i < NUM_ATOMS; i += get_global_size(0)) {
         __local float4* data = &bsplinesCache[get_local_id(0)*PME_ORDER];
@@ -48,9 +51,12 @@ __kernel void updateBsplines(__global float4* posq, __global float4* pmeBsplineT
             ddata[j] = 0.0f;
         }
         float4 pos = posq[i];
-        float4 t = (float4) ((pos.x*invPeriodicBoxSize.x+1.0f)*GRID_SIZE_X,
-                             (pos.y*invPeriodicBoxSize.y+1.0f)*GRID_SIZE_Y,
-                             (pos.z*invPeriodicBoxSize.z+1.0f)*GRID_SIZE_Z, 0.0f);
+        pos.x -= floor(pos.x*invPeriodicBoxSize.x)*periodicBoxSize.x;
+        pos.y -= floor(pos.y*invPeriodicBoxSize.y)*periodicBoxSize.y;
+        pos.z -= floor(pos.z*invPeriodicBoxSize.z)*periodicBoxSize.z;
+        float4 t = (float4) ((pos.x*invPeriodicBoxSize.x)*GRID_SIZE_X,
+                             (pos.y*invPeriodicBoxSize.y)*GRID_SIZE_Y,
+                             (pos.z*invPeriodicBoxSize.z)*GRID_SIZE_Z, 0.0f);
         float4 dr = (float4) (t.x-(int) t.x, t.y-(int) t.y, t.z-(int) t.z, 0.0f);
         data[PME_ORDER-1] = 0.0f;
         data[1] = dr;
@@ -148,13 +154,16 @@ __kernel void reciprocalConvolution(__global float2* pmeGrid, __global float* en
     energyBuffer[get_global_id(0)] += 0.5f*energy;
 }
 
-__kernel void gridInterpolateForce(__global float4* posq, __global float4* forceBuffers, __global float4* pmeBsplineTheta, __global float4* pmeBsplineDTheta, __global float2* pmeGrid, float4 invPeriodicBoxSize) {
+__kernel void gridInterpolateForce(__global float4* posq, __global float4* forceBuffers, __global float4* pmeBsplineTheta, __global float4* pmeBsplineDTheta, __global float2* pmeGrid, float4 periodicBoxSize, float4 invPeriodicBoxSize) {
     for (int atom = get_global_id(0); atom < NUM_ATOMS; atom += get_global_size(0)) {
         float4 force = 0.0f;
         float4 pos = posq[atom];
-        float4 t = (float4) ((pos.x*invPeriodicBoxSize.x+1.0f)*GRID_SIZE_X,
-                             (pos.y*invPeriodicBoxSize.y+1.0f)*GRID_SIZE_Y,
-                             (pos.z*invPeriodicBoxSize.z+1.0f)*GRID_SIZE_Z, 0.0f);
+        pos.x -= floor(pos.x*invPeriodicBoxSize.x)*periodicBoxSize.x;
+        pos.y -= floor(pos.y*invPeriodicBoxSize.y)*periodicBoxSize.y;
+        pos.z -= floor(pos.z*invPeriodicBoxSize.z)*periodicBoxSize.z;
+        float4 t = (float4) ((pos.x*invPeriodicBoxSize.x)*GRID_SIZE_X,
+                             (pos.y*invPeriodicBoxSize.y)*GRID_SIZE_Y,
+                             (pos.z*invPeriodicBoxSize.z)*GRID_SIZE_Z, 0.0f);
         int4 gridIndex = (int4) (((int) t.x) % GRID_SIZE_X,
                                  ((int) t.y) % GRID_SIZE_Y,
                                  ((int) t.z) % GRID_SIZE_Z, 0);
