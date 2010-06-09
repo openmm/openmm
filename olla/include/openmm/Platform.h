@@ -215,6 +215,10 @@ public:
      * @return the path to the default plugin directory
      */
     static const std::string& getDefaultPluginsDirectory();
+    /**
+     * Get a string containing the version number of the OpenMM library.
+     */
+    static const std::string& getOpenMMVersion();
 protected:
     /**
      * Get the ContextImpl for a Context.

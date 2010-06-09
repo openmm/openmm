@@ -278,6 +278,11 @@ const string& Platform::getDefaultPluginsDirectory() {
     return directory;
 }
 
+const string& Platform::getOpenMMVersion() {
+    static const string version = "2.0";
+    return version;
+}
+
 ContextImpl& Platform::getContextImpl(Context& context) const {
     return *context.impl;
 }
