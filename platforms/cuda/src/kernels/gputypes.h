@@ -122,7 +122,7 @@ struct _gpuContext {
     CUDAStream<float4>* psPmeBsplineTheta;
     CUDAStream<float4>* psPmeBsplineDtheta;
     CUDAStream<int>* psPmeAtomRange;           // The range of sorted atoms at each grid point
-    CUDAStream<float2>* psPmeAtomGridIndex;    // The grid point each atom is at
+    CUDAStream<int2>* psPmeAtomGridIndex;      // The grid point each atom is at
     CUDAStream<float2>* psObcData;
     CUDAStream<float4>* psGBVIData;
     CUDAStream<float>* psObcChain;

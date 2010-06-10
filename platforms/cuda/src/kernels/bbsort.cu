@@ -17,7 +17,7 @@
 #include "bbsort_kernel.cu"
 
 
-float getValue(float2 v){
+int getValue(int2 v){
 	return v.y;
 }
 
@@ -115,7 +115,7 @@ void reduceMinMax(T* dData,int size,float& result,bool isMax)
 
 	CUDA_SAFE_CALL(cudaMemcpy(&originalResult, dData, sizeof(T), cudaMemcpyDeviceToHost));
 
-	result=(float)getValue(originalResult);
+	result=(int)getValue(originalResult);
 }
 
 template <typename T>
@@ -305,7 +305,7 @@ Also note that you need to use 1.3 capbility (use arch=sm_13 in your compile com
 *************************************************************************************/
 
 template<>
-void bbSort(float2* dData,int size,int listOrder)
+void bbSort(int2* dData,int size,int listOrder)
 {
 
 	bbSortBody(dData,size,listOrder);

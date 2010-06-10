@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009 Stanford University and the Authors.           *
+ * Portions copyright (c) 2009-2010 Stanford University and the Authors.      *
  * Authors: Erik Lindahl, Rossen Apostolov, Szilard Pall, Peter Eastman       *
  * Contributors:                                                              *
  *                                                                            *
@@ -117,7 +117,7 @@ void kUpdateGridIndexAndFraction_kernel()
         int3 gridIndex = make_int3(((int) t.x) % cSim.pmeGridSize.x,
                               ((int) t.y) % cSim.pmeGridSize.y,
                               ((int) t.z) % cSim.pmeGridSize.z);
-        cSim.pPmeAtomGridIndex[i] = make_float2(i, gridIndex.x*cSim.pmeGridSize.y*cSim.pmeGridSize.z+gridIndex.y*cSim.pmeGridSize.z+gridIndex.z);
+        cSim.pPmeAtomGridIndex[i] = make_int2(i, gridIndex.x*cSim.pmeGridSize.y*cSim.pmeGridSize.z+gridIndex.y*cSim.pmeGridSize.z+gridIndex.z);
     }
 }
 
@@ -141,7 +141,7 @@ void kFindAtomRangeForGrid_kernel()
     int last = (start == 0 ? -1 : cSim.pPmeAtomGridIndex[start-1].y);
     for (int i = start; i < end; ++i)
     {
-        float2 atomData = cSim.pPmeAtomGridIndex[i];
+        int2 atomData = cSim.pPmeAtomGridIndex[i];
         int gridIndex = atomData.y;
         if (gridIndex != last)
         {
@@ -150,10 +150,13 @@ void kFindAtomRangeForGrid_kernel()
             last = gridIndex;
         }
 
-        // The grid index won't be needed again.  Reuse that component to hold the atom charge, thus saving
-        // an extra load operation in the charge spreading kernel.
+        // The grid index won't be needed again.  Reuse that component to hold the z index, thus saving
+        // some work in the charge spreading kernel.
 
-        cSim.pPmeAtomGridIndex[i].y = cSim.pPosq[(int) atomData.x].w;
+        float posz = cSim.pPosq[atomData.x].z;
+        posz -= floor(posz*cSim.invPeriodicBoxSizeZ)*cSim.periodicBoxSizeZ;
+        int z = ((int) ((posz*cSim.invPeriodicBoxSizeZ)*cSim.pmeGridSize.z)) % cSim.pmeGridSize.z;
+        cSim.pPmeAtomGridIndex[i].y = z;
     }
 
     // Fill in values beyond the last atom.
@@ -266,28 +269,47 @@ void kGridSpreadCharge_kernel()
         int remainder = gridIndex-gridPoint.x*cSim.pmeGridSize.y*cSim.pmeGridSize.z;
         gridPoint.y = remainder/cSim.pmeGridSize.z;
         gridPoint.z = remainder-gridPoint.y*cSim.pmeGridSize.z;
-        gridPoint.x += cSim.pmeGridSize.x;
-        gridPoint.y += cSim.pmeGridSize.y;
-        gridPoint.z += cSim.pmeGridSize.z;
         float result = 0.0f;
         for (int ix = 0; ix < PME_ORDER; ++ix)
+        {
+            int x = gridPoint.x-ix+(gridPoint.x >= ix ? 0 : cSim.pmeGridSize.x);
             for (int iy = 0; iy < PME_ORDER; ++iy)
-                for (int iz = 0; iz < PME_ORDER; ++iz)
+            {
+                int y = gridPoint.y-iy+(gridPoint.y >= iy ? 0 : cSim.pmeGridSize.y);
+                int z1 = gridPoint.z-PME_ORDER+1;
+                z1 += (z1 >= 0 ? 0 : cSim.pmeGridSize.z);
+                int z2 = (z1 < gridPoint.z ? gridPoint.z : cSim.pmeGridSize.z-1);
+                int gridIndex1 = x*cSim.pmeGridSize.y*cSim.pmeGridSize.z+y*cSim.pmeGridSize.z+z1;
+                int gridIndex2 = x*cSim.pmeGridSize.y*cSim.pmeGridSize.z+y*cSim.pmeGridSize.z+z2;
+                int firstAtom = cSim.pPmeAtomRange[gridIndex1];
+                int lastAtom = cSim.pPmeAtomRange[gridIndex2+1];
+                for (int i = firstAtom; i < lastAtom; ++i)
                 {
-                    int x = (gridPoint.x-ix)%cSim.pmeGridSize.x;
-                    int y = (gridPoint.y-iy)%cSim.pmeGridSize.y;
-                    int z = (gridPoint.z-iz)%cSim.pmeGridSize.z;
-                    int gridIndex = x*cSim.pmeGridSize.y*cSim.pmeGridSize.z+y*cSim.pmeGridSize.z+z;
-                    int firstAtom = cSim.pPmeAtomRange[gridIndex];
-                    int lastAtom = cSim.pPmeAtomRange[gridIndex+1];
+                    int2 atomData = cSim.pPmeAtomGridIndex[i];
+                    int atomIndex = atomData.x;
+                    int z = atomData.y;
+                    int iz = gridPoint.z-z+(gridPoint.z >= z ? 0 : cSim.pmeGridSize.z);
+                    float atomCharge = cSim.pPosq[atomIndex].w;
+                    result += atomCharge*tex1Dfetch(bsplineThetaRef, atomIndex+ix*cSim.atoms).x*tex1Dfetch(bsplineThetaRef, atomIndex+iy*cSim.atoms).y*tex1Dfetch(bsplineThetaRef, atomIndex+iz*cSim.atoms).z;
+                }
+                if (z1 > gridPoint.z)
+                {
+                    gridIndex1 = x*cSim.pmeGridSize.y*cSim.pmeGridSize.z+y*cSim.pmeGridSize.z;
+                    gridIndex2 = x*cSim.pmeGridSize.y*cSim.pmeGridSize.z+y*cSim.pmeGridSize.z+gridPoint.z;
+                    firstAtom = cSim.pPmeAtomRange[gridIndex1];
+                    lastAtom = cSim.pPmeAtomRange[gridIndex2+1];
                     for (int i = firstAtom; i < lastAtom; ++i)
                     {
-                        float2 atomData = cSim.pPmeAtomGridIndex[i];
+                        int2 atomData = cSim.pPmeAtomGridIndex[i];
                         int atomIndex = atomData.x;
-                        float atomCharge = atomData.y;
+                        int z = atomData.y;
+                        int iz = gridPoint.z-z+(gridPoint.z >= z ? 0 : cSim.pmeGridSize.z);
+                        float atomCharge = cSim.pPosq[atomIndex].w;
                         result += atomCharge*tex1Dfetch(bsplineThetaRef, atomIndex+ix*cSim.atoms).x*tex1Dfetch(bsplineThetaRef, atomIndex+iy*cSim.atoms).y*tex1Dfetch(bsplineThetaRef, atomIndex+iz*cSim.atoms).z;
                     }
                 }
+            }
+        }
         cSim.pPmeGrid[gridIndex] = make_cuComplex(result*sqrt(cSim.epsfac), 0.0f);
     }
 }
@@ -358,17 +380,20 @@ void kGridInterpolateForce_kernel()
                               ((int) t.z) % cSim.pmeGridSize.z);
         for (int ix = 0; ix < PME_ORDER; ix++)
         {
-            int xindex = (gridIndex.x + ix) % cSim.pmeGridSize.x;
+            int xindex = gridIndex.x+ix;
+            xindex -= (xindex >= cSim.pmeGridSize.x ? cSim.pmeGridSize.x : 0);
             float tx = cSim.pPmeBsplineTheta[atom+ix*cSim.atoms].x;
             float dtx = cSim.pPmeBsplineDtheta[atom+ix*cSim.atoms].x;
             for (int iy = 0; iy < PME_ORDER; iy++)
             {
-                int yindex = (gridIndex.y + iy) % cSim.pmeGridSize.y;
+                int yindex = gridIndex.y+iy;
+                yindex -= (yindex >= cSim.pmeGridSize.y ? cSim.pmeGridSize.y : 0);
                 float ty = cSim.pPmeBsplineTheta[atom+iy*cSim.atoms].y;
                 float dty = cSim.pPmeBsplineDtheta[atom+iy*cSim.atoms].y;
                 for (int iz = 0; iz < PME_ORDER; iz++)
                 {
-                    int zindex               = (gridIndex.z + iz) % cSim.pmeGridSize.z;
+                    int zindex               = gridIndex.z+iz;
+                    zindex -= (zindex >= cSim.pmeGridSize.z ? cSim.pmeGridSize.z : 0);
                     float tz = cSim.pPmeBsplineTheta[atom+iz*cSim.atoms].z;
                     float dtz = cSim.pPmeBsplineDtheta[atom+iz*cSim.atoms].z;
                     int index                = xindex*cSim.pmeGridSize.y*cSim.pmeGridSize.z + yindex*cSim.pmeGridSize.z + zindex;

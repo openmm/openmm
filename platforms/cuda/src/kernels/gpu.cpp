@@ -994,7 +994,7 @@ void gpuSetPMEParameters(gpuContext gpu, float alpha, int gridSizeX, int gridSiz
     gpu->sim.pPmeBsplineDtheta = gpu->psPmeBsplineDtheta->_pDevData;
     gpu->psPmeAtomRange = new CUDAStream<int>(gridSize.x*gridSize.y*gridSize.z+1, 1, "PmeAtomRange");
     gpu->sim.pPmeAtomRange = gpu->psPmeAtomRange->_pDevData;
-    gpu->psPmeAtomGridIndex = new CUDAStream<float2>(gpu->natoms, 1, "PmeAtomGridIndex");
+    gpu->psPmeAtomGridIndex = new CUDAStream<int2>(gpu->natoms, 1, "PmeAtomGridIndex");
     gpu->sim.pPmeAtomGridIndex = gpu->psPmeAtomGridIndex->_pDevData;
     tabulateErfc(gpu);
 

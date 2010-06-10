@@ -1,4 +1,4 @@
-__kernel void updateGridIndexAndFraction(__global float4* posq, __global float2* pmeAtomGridIndex, float4 periodicBoxSize, float4 invPeriodicBoxSize) {
+__kernel void updateGridIndexAndFraction(__global float4* posq, __global int2* pmeAtomGridIndex, float4 periodicBoxSize, float4 invPeriodicBoxSize) {
     for (int i = get_global_id(0); i < NUM_ATOMS; i += get_global_size(0)) {
         float4 pos = posq[i];
         pos.x -= floor(pos.x*invPeriodicBoxSize.x)*periodicBoxSize.x;
@@ -10,7 +10,7 @@ __kernel void updateGridIndexAndFraction(__global float4* posq, __global float2*
         int4 gridIndex = (int4) (((int) t.x) % GRID_SIZE_X,
                                  ((int) t.y) % GRID_SIZE_Y,
                                  ((int) t.z) % GRID_SIZE_Z, 0);
-        pmeAtomGridIndex[i] = (float2) (i, gridIndex.x*GRID_SIZE_Y*GRID_SIZE_Z+gridIndex.y*GRID_SIZE_Z+gridIndex.z);
+        pmeAtomGridIndex[i] = (int2) (i, gridIndex.x*GRID_SIZE_Y*GRID_SIZE_Z+gridIndex.y*GRID_SIZE_Z+gridIndex.z);
     }
 }
 
@@ -18,12 +18,12 @@ __kernel void updateGridIndexAndFraction(__global float4* posq, __global float2*
  * For each grid point, find the range of sorted atoms associated with that point.
  */
 
-__kernel void findAtomRangeForGrid(__global float2* pmeAtomGridIndex, __global int* pmeAtomRange) {
+__kernel void findAtomRangeForGrid(__global int2* pmeAtomGridIndex, __global int* pmeAtomRange) {
     int start = (NUM_ATOMS*get_global_id(0))/get_global_size(0);
     int end = (NUM_ATOMS*(get_global_id(0)+1))/get_global_size(0);
     int last = (start == 0 ? -1 : pmeAtomGridIndex[start-1].y);
     for (int i = start; i < end; ++i) {
-        float2 atomData = pmeAtomGridIndex[i];
+        int2 atomData = pmeAtomGridIndex[i];
         int gridIndex = atomData.y;
         if (gridIndex != last) {
             for (int j = last+1; j <= gridIndex; ++j)
@@ -41,7 +41,7 @@ __kernel void findAtomRangeForGrid(__global float2* pmeAtomGridIndex, __global i
     }
 }
 
-__kernel void updateBsplines(__global float4* posq, __global float4* pmeBsplineTheta, __global float4* pmeBsplineDTheta, __local float4* bsplinesCache, __global float2* pmeAtomGridIndex, float4 periodicBoxSize, float4 invPeriodicBoxSize) {
+__kernel void updateBsplines(__global float4* posq, __global float4* pmeBsplineTheta, __global float4* pmeBsplineDTheta, __local float4* bsplinesCache, __global int2* pmeAtomGridIndex, float4 periodicBoxSize, float4 invPeriodicBoxSize) {
     const float4 scale = 1.0f/(PME_ORDER-1);
     for (int i = get_global_id(0); i < NUM_ATOMS; i += get_global_size(0)) {
         __local float4* data = &bsplinesCache[get_local_id(0)*PME_ORDER];
@@ -81,45 +81,71 @@ __kernel void updateBsplines(__global float4* posq, __global float4* pmeBsplineT
         }
     }
 
-    // The grid index won't be needed again.  Reuse that component to hold the atom charge, thus saving
-    // an extra load operation in the charge spreading kernel.
+    // The grid index won't be needed again.  Reuse that component to hold the z index, thus saving
+    // some work in the charge spreading kernel.
 
     int start = (NUM_ATOMS*get_global_id(0))/get_global_size(0);
     int end = (NUM_ATOMS*(get_global_id(0)+1))/get_global_size(0);
     for (int i = start; i < end; ++i) {
-        float2 atomData = pmeAtomGridIndex[i];
-        pmeAtomGridIndex[i].y = posq[(int) atomData.x].w;
+        float posz = posq[pmeAtomGridIndex[i].x].z;
+        posz -= floor(posz*invPeriodicBoxSize.z)*periodicBoxSize.z;
+        int z = ((int) ((posz*invPeriodicBoxSize.z)*GRID_SIZE_Z)) % GRID_SIZE_Z;
+        pmeAtomGridIndex[i].y = z;
     }
 }
 
-__kernel void gridSpreadCharge(__global float2* pmeAtomGridIndex, __global int* pmeAtomRange, __global float2* pmeGrid, __global float4* pmeBsplineTheta) {
+__kernel void gridSpreadCharge(__global float4* posq, __global int2* pmeAtomGridIndex, __global int* pmeAtomRange, __global float2* pmeGrid, __global float4* pmeBsplineTheta) {
     unsigned int numGridPoints = GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z;
     for (int gridIndex = get_global_id(0); gridIndex < numGridPoints; gridIndex += get_global_size(0)) {
+        // Compute the charge on a grid point.
+
         int4 gridPoint;
         gridPoint.x = gridIndex/(GRID_SIZE_Y*GRID_SIZE_Z);
         int remainder = gridIndex-gridPoint.x*GRID_SIZE_Y*GRID_SIZE_Z;
         gridPoint.y = remainder/GRID_SIZE_Z;
         gridPoint.z = remainder-gridPoint.y*GRID_SIZE_Z;
-        gridPoint.x += GRID_SIZE_X;
-        gridPoint.y += GRID_SIZE_Y;
-        gridPoint.z += GRID_SIZE_Z;
         float result = 0.0f;
-        for (int ix = 0; ix < PME_ORDER; ++ix)
-            for (int iy = 0; iy < PME_ORDER; ++iy)
-                for (int iz = 0; iz < PME_ORDER; ++iz) {
-                    int x = (gridPoint.x-ix)%GRID_SIZE_X;
-                    int y = (gridPoint.y-iy)%GRID_SIZE_Y;
-                    int z = (gridPoint.z-iz)%GRID_SIZE_Z;
-                    int gridIndex = x*GRID_SIZE_Y*GRID_SIZE_Z+y*GRID_SIZE_Z+z;
-                    int firstAtom = pmeAtomRange[gridIndex];
-                    int lastAtom = pmeAtomRange[gridIndex+1];
-                    for (int i = firstAtom; i < lastAtom; ++i) {
-                        float2 atomData = pmeAtomGridIndex[i];
+
+        // Loop over all atoms that affect this grid point.
+        
+        for (int ix = 0; ix < PME_ORDER; ++ix) {
+            int x = gridPoint.x-ix+(gridPoint.x >= ix ? 0 : GRID_SIZE_X);
+            for (int iy = 0; iy < PME_ORDER; ++iy) {
+                int y = gridPoint.y-iy+(gridPoint.y >= iy ? 0 : GRID_SIZE_Y);
+                int z1 = gridPoint.z-PME_ORDER+1;
+                z1 += (z1 >= 0 ? 0 : GRID_SIZE_Z);
+                int z2 = (z1 < gridPoint.z ? gridPoint.z : GRID_SIZE_Z-1);
+                int gridIndex1 = x*GRID_SIZE_Y*GRID_SIZE_Z+y*GRID_SIZE_Z+z1;
+                int gridIndex2 = x*GRID_SIZE_Y*GRID_SIZE_Z+y*GRID_SIZE_Z+z2;
+                int firstAtom = pmeAtomRange[gridIndex1];
+                int lastAtom = pmeAtomRange[gridIndex2+1];
+                for (int i = firstAtom; i < lastAtom; ++i)
+                {
+                    int2 atomData = pmeAtomGridIndex[i];
+                    int atomIndex = atomData.x;
+                    int z = atomData.y;
+                    int iz = gridPoint.z-z+(gridPoint.z >= z ? 0 : GRID_SIZE_Z);
+                    float atomCharge = posq[atomIndex].w;
+                    result += atomCharge*pmeBsplineTheta[atomIndex+ix*NUM_ATOMS].x*pmeBsplineTheta[atomIndex+iy*NUM_ATOMS].y*pmeBsplineTheta[atomIndex+iz*NUM_ATOMS].z;
+                }
+                if (z1 > gridPoint.z)
+                {
+                    gridIndex1 = x*GRID_SIZE_Y*GRID_SIZE_Z+y*GRID_SIZE_Z;
+                    gridIndex2 = x*GRID_SIZE_Y*GRID_SIZE_Z+y*GRID_SIZE_Z+gridPoint.z;
+                    firstAtom = pmeAtomRange[gridIndex1];
+                    lastAtom = pmeAtomRange[gridIndex2+1];
+                    for (int i = firstAtom; i < lastAtom; ++i)
+                    {
+                        int2 atomData = pmeAtomGridIndex[i];
                         int atomIndex = atomData.x;
-                        float atomCharge = atomData.y;
+                        int z = atomData.y;
+                        int iz = gridPoint.z-z+(gridPoint.z >= z ? 0 : GRID_SIZE_Z);
+                        float atomCharge = posq[atomIndex].w;
                         result += atomCharge*pmeBsplineTheta[atomIndex+ix*NUM_ATOMS].x*pmeBsplineTheta[atomIndex+iy*NUM_ATOMS].y*pmeBsplineTheta[atomIndex+iz*NUM_ATOMS].z;
                     }
                 }
+            }
+        }
         pmeGrid[gridIndex] = (float2) (result*EPSILON_FACTOR, 0.0f);
     }
 }
@@ -168,15 +194,18 @@ __kernel void gridInterpolateForce(__global float4* posq, __global float4* force
                                  ((int) t.y) % GRID_SIZE_Y,
                                  ((int) t.z) % GRID_SIZE_Z, 0);
         for (int ix = 0; ix < PME_ORDER; ix++) {
-            int xindex = (gridIndex.x + ix) % GRID_SIZE_X;
+            int xindex = gridIndex.x+ix;
+            xindex -= (xindex >= GRID_SIZE_X ? GRID_SIZE_X : 0);
             float tx = pmeBsplineTheta[atom+ix*NUM_ATOMS].x;
             float dtx = pmeBsplineDTheta[atom+ix*NUM_ATOMS].x;
             for (int iy = 0; iy < PME_ORDER; iy++) {
-                int yindex = (gridIndex.y + iy) % GRID_SIZE_Y;
+                int yindex = gridIndex.y+iy;
+                yindex -= (yindex >= GRID_SIZE_Y ? GRID_SIZE_Y : 0);
                 float ty = pmeBsplineTheta[atom+iy*NUM_ATOMS].y;
                 float dty = pmeBsplineDTheta[atom+iy*NUM_ATOMS].y;
                 for (int iz = 0; iz < PME_ORDER; iz++) {
-                    int zindex = (gridIndex.z + iz) % GRID_SIZE_Z;
+                    int zindex = gridIndex.z+iz;
+                    zindex -= (zindex >= GRID_SIZE_Z ? GRID_SIZE_Z : 0);
                     float tz = pmeBsplineTheta[atom+iz*NUM_ATOMS].z;
                     float dtz = pmeBsplineDTheta[atom+iz*NUM_ATOMS].z;
                     int index = xindex*GRID_SIZE_Y*GRID_SIZE_Z + yindex*GRID_SIZE_Z + zindex;

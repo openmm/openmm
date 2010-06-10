@@ -19,7 +19,7 @@ texture<unsigned int, 1, cudaReadModeElementType> tBucketOffsets;
 texture<unsigned int, 1, cudaReadModeElementType> tBucketOfSlices;
 texture<unsigned int, 1, cudaReadModeElementType> tSliceOffsetInBucket;
 
-__device__ float dGetValue(float2 v){
+__device__ int dGetValue(int2 v){
 	return v.y;
 }
 
@@ -29,7 +29,7 @@ __device__ T dGetValue(T v){
 }
 
 
-__device__ void dPad(float2& v){
+__device__ void dPad(int2& v){
 	v.x=0x3fffffff;
 	v.y=0x4fffffff;
 }

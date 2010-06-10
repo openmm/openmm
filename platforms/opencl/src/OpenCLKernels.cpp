@@ -1151,8 +1151,8 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         pmeBsplineTheta = new OpenCLArray<mm_float4>(cl, PmeOrder*numParticles, "pmeBsplineTheta");
         pmeBsplineDtheta = new OpenCLArray<mm_float4>(cl, PmeOrder*numParticles, "pmeBsplineDtheta");
         pmeAtomRange = new OpenCLArray<cl_int>(cl, gridSizeX*gridSizeY*gridSizeZ+1, "pmeAtomRange");
-        pmeAtomGridIndex = new OpenCLArray<mm_float2>(cl, numParticles, "pmeAtomGridIndex");
-        sort = new OpenCLSort<mm_float2>(cl, cl.getNumAtoms(), "float2", "value.y");
+        pmeAtomGridIndex = new OpenCLArray<mm_int2>(cl, numParticles, "pmeAtomGridIndex");
+        sort = new OpenCLSort<mm_int2>(cl, cl.getNumAtoms(), "int2", "value.y");
         fft = new OpenCLFFT3D(cl, gridSizeX, gridSizeY, gridSizeZ);
 
         // Initialize the b-spline moduli.
@@ -1303,10 +1303,11 @@ void OpenCLCalcNonbondedForceKernel::executeForces(ContextImpl& context) {
             pmeUpdateBsplinesKernel.setArg<cl::Buffer>(2, pmeBsplineDtheta->getDeviceBuffer());
             pmeUpdateBsplinesKernel.setArg(3, 2*OpenCLContext::ThreadBlockSize*PmeOrder*sizeof(mm_float4), NULL);
             pmeUpdateBsplinesKernel.setArg<cl::Buffer>(4, pmeAtomGridIndex->getDeviceBuffer());
-            pmeSpreadChargeKernel.setArg<cl::Buffer>(0, pmeAtomGridIndex->getDeviceBuffer());
-            pmeSpreadChargeKernel.setArg<cl::Buffer>(1, pmeAtomRange->getDeviceBuffer());
-            pmeSpreadChargeKernel.setArg<cl::Buffer>(2, pmeGrid->getDeviceBuffer());
-            pmeSpreadChargeKernel.setArg<cl::Buffer>(3, pmeBsplineTheta->getDeviceBuffer());
+            pmeSpreadChargeKernel.setArg<cl::Buffer>(0, cl.getPosq().getDeviceBuffer());
+            pmeSpreadChargeKernel.setArg<cl::Buffer>(1, pmeAtomGridIndex->getDeviceBuffer());
+            pmeSpreadChargeKernel.setArg<cl::Buffer>(2, pmeAtomRange->getDeviceBuffer());
+            pmeSpreadChargeKernel.setArg<cl::Buffer>(3, pmeGrid->getDeviceBuffer());
+            pmeSpreadChargeKernel.setArg<cl::Buffer>(4, pmeBsplineTheta->getDeviceBuffer());
             pmeConvolutionKernel.setArg<cl::Buffer>(0, pmeGrid->getDeviceBuffer());
             pmeConvolutionKernel.setArg<cl::Buffer>(1, cl.getEnergyBuffer().getDeviceBuffer());
             pmeConvolutionKernel.setArg<cl::Buffer>(2, pmeBsplineModuliX->getDeviceBuffer());

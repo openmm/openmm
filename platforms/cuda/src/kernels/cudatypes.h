@@ -420,7 +420,7 @@ struct cudaGmxSimulation {
     float4*         pPmeBsplineTheta;
     float4*         pPmeBsplineDtheta;
     int*            pPmeAtomRange;                  // The range of sorted atoms at each grid point
-    float2*         pPmeAtomGridIndex;              // The grid point each atom is at
+    int2*           pPmeAtomGridIndex;              // The grid point each atom is at
     unsigned int    bonds;                          // Number of bonds
     int4*           pBondID;                        // Bond atom and output buffer IDs
     float2*         pBondParameter;                 // Bond parameters
