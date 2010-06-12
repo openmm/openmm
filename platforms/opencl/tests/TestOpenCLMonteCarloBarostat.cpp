@@ -73,7 +73,7 @@ void testIdealGas() {
     const int frequency = 10;
     const int steps = 1000;
     const double pressure = 1.5;
-    const double pressureInMD = pressure/(AVOGADRO*1e-25);
+    const double pressureInMD = pressure*(AVOGADRO*1e-25);
     const double temp[] = {300.0, 600.0, 1000.0};
     const double initialVolume = numParticles*BOLTZ*temp[1]/pressureInMD;
     const double initialLength = std::pow(initialVolume, 1.0/3.0);
