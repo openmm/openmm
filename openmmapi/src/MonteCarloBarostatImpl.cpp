@@ -81,7 +81,7 @@ void MonteCarloBarostatImpl::updateContextState(ContextImpl& context) {
     // Compute the energy of the modified system.
     
     double finalEnergy = context.getOwner().getState(State::Energy).getPotentialEnergy();
-    double pressure = context.getParameter(MonteCarloBarostat::Pressure())/(AVOGADRO*1e-25);
+    double pressure = context.getParameter(MonteCarloBarostat::Pressure())*(AVOGADRO*1e-25);
     double kT = BOLTZ*owner.getTemperature();
     double w = finalEnergy-initialEnergy + pressure*deltaVolume - context.getMolecules().size()*kT*std::log(newVolume/volume);
     if (w > 0 && genrand_real2(random) > std::exp(-w/kT)) {
