@@ -116,7 +116,7 @@ void testIdealGas() {
             integrator.step(frequency);
         }
         volume /= steps;
-        double expected = numParticles*BOLTZ*temp[i]/pressureInMD;//+numParticles*(4*M_PI/3)*sigma*sigma*sigma;
+        double expected = (numParticles+1)*BOLTZ*temp[i]/pressureInMD;
         ASSERT_USUALLY_EQUAL_TOL(expected, volume, 3/std::sqrt((double) steps));
     }
 }

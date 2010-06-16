@@ -62,7 +62,7 @@ public:
     std::vector<std::string> getKernelNames();
 private:
     MonteCarloBarostat& owner;
-    int step;
+    int step, numAttempted, numAccepted;
     double volumeScale;
     OpenMM_SFMT::SFMT random;
     Kernel kernel;

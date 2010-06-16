@@ -55,6 +55,8 @@ void MonteCarloBarostatImpl::initialize(ContextImpl& context) {
     context.getPeriodicBoxVectors(box[0], box[1], box[2]);
     double volume = box[0][0]*box[1][1]*box[2][2];
     volumeScale = 0.01*volume;
+    numAttempted = 0;
+    numAccepted = 0;
     init_gen_rand(owner.getRandomNumberSeed(), random);
 }
 
@@ -89,10 +91,23 @@ void MonteCarloBarostatImpl::updateContextState(ContextImpl& context) {
 
         dynamic_cast<ApplyMonteCarloBarostatKernel&>(kernel.getImpl()).restoreCoordinates(context);
         context.getOwner().setPeriodicBoxVectors(box[0], box[1], box[2]);
-        volumeScale /= 1.1;
+        volume = newVolume;
     }
     else
-        volumeScale = std::min(volumeScale*1.1, newVolume*0.1);
+        numAccepted++;
+    numAttempted++;
+    if (numAttempted >= 10) {
+        if (numAccepted < 0.25*numAttempted) {
+            volumeScale /= 1.1;
+            numAttempted = 0;
+            numAccepted = 0;
+        }
+        else if (numAccepted > 0.75*numAttempted) {
+            volumeScale = std::min(volumeScale*1.1, volume*0.3);
+            numAttempted = 0;
+            numAccepted = 0;
+        }
+    }
 }
 
 std::map<std::string, double> MonteCarloBarostatImpl::getDefaultParameters() {
