@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2010 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -600,6 +600,76 @@ void testBlockInteractions(bool periodic) {
         }
 }
 
+void testDispersionCorrection() {
+    // Create a box full of identical particles.
+
+    int gridSize = 5;
+    int numParticles = gridSize*gridSize*gridSize;
+    double boxSize = gridSize*0.5;
+    double cutoff = boxSize/3;
+    CudaPlatform platform;
+    System system;
+    VerletIntegrator integrator(0.01);
+    NonbondedForce* nonbonded = new NonbondedForce();
+    vector<Vec3> positions(numParticles);
+    int index = 0;
+    for (int i = 0; i < gridSize; i++)
+        for (int j = 0; j < gridSize; j++)
+            for (int k = 0; k < gridSize; k++) {
+                system.addParticle(1.0);
+                nonbonded->addParticle(0, 1.1, 0.5);
+                positions[index] = Vec3(i*boxSize/gridSize, j*boxSize/gridSize, k*boxSize/gridSize);
+                index++;
+            }
+    nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    nonbonded->setCutoffDistance(cutoff);
+    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    system.addForce(nonbonded);
+
+    // See if the correction has the correct value.
+
+    Context context(system, integrator, platform);
+    context.setPositions(positions);
+    double energy1 = context.getState(State::Energy).getPotentialEnergy();
+    nonbonded->setUseDispersionCorrection(true);
+    context.reinitialize();
+    context.setPositions(positions);
+    double energy2 = context.getState(State::Energy).getPotentialEnergy();
+    double term1 = (0.5*pow(1.1, 12)/pow(cutoff, 9))/9;
+    double term2 = (0.5*pow(1.1, 6)/pow(cutoff, 3))/3;
+    double expected = 8*M_PI*numParticles*numParticles*(term1-term2)/(boxSize*boxSize*boxSize);
+    ASSERT_EQUAL_TOL(expected, energy2-energy1, 1e-4);
+
+    // Now modify half the particles to be different, and see if it is still correct.
+
+    int numType2 = 0;
+    for (int i = 0; i < numParticles; i += 2) {
+        nonbonded->setParticleParameters(i, 0, 1, 1);
+        numType2++;
+    }
+    int numType1 = numParticles-numType2;
+    nonbonded->setUseDispersionCorrection(false);
+    context.reinitialize();
+    context.setPositions(positions);
+    energy1 = context.getState(State::Energy).getPotentialEnergy();
+    nonbonded->setUseDispersionCorrection(true);
+    context.reinitialize();
+    context.setPositions(positions);
+    energy2 = context.getState(State::Energy).getPotentialEnergy();
+    term1 = ((numType1*(numType1+1))/2)*(0.5*pow(1.1, 12)/pow(cutoff, 9))/9;
+    term2 = ((numType1*(numType1+1))/2)*(0.5*pow(1.1, 6)/pow(cutoff, 3))/3;
+    term1 += ((numType2*(numType2+1))/2)*(1*pow(1.0, 12)/pow(cutoff, 9))/9;
+    term2 += ((numType2*(numType2+1))/2)*(1*pow(1.0, 6)/pow(cutoff, 3))/3;
+    double combinedSigma = 0.5*(1+1.1);
+    double combinedEpsilon = sqrt(1*0.5);
+    term1 += (numType1*numType2)*(combinedEpsilon*pow(combinedSigma, 12)/pow(cutoff, 9))/9;
+    term2 += (numType1*numType2)*(combinedEpsilon*pow(combinedSigma, 6)/pow(cutoff, 3))/3;
+    term1 /= (numParticles*(numParticles+1))/2;
+    term2 /= (numParticles*(numParticles+1))/2;
+    expected = 8*M_PI*numParticles*numParticles*(term1-term2)/(boxSize*boxSize*boxSize);
+    ASSERT_EQUAL_TOL(expected, energy2-energy1, 1e-4);
+}
+
 int main() {
     try {
         testCoulomb();
@@ -611,6 +681,7 @@ int main() {
         testLargeSystem();
         testBlockInteractions(false);
         testBlockInteractions(true);
+        testDispersionCorrection();
     }
     catch(const exception& e) {
         cout << "exception: " << e.what() << endl;

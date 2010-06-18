@@ -204,6 +204,7 @@ void testWater() {
     system.setDefaultPeriodicBoxVectors(Vec3(gridSize*spacing, 0, 0), Vec3(0, gridSize*spacing, 0), Vec3(0, 0, gridSize*spacing));
     NonbondedForce* nonbonded = new NonbondedForce();
     nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    nonbonded->setUseDispersionCorrection(true);
     vector<Vec3> positions;
     Vec3 offset1(dOH, 0, 0);
     Vec3 offset2(dOH*std::cos(angle), dOH*std::sin(angle), 0);
@@ -249,7 +250,7 @@ void testWater() {
     }
     volume /= steps;
     double density = numMolecules*18/(AVOGADRO*volume*1e-21);
-    ASSERT_USUALLY_EQUAL_TOL(1.0, density, 0.1);
+    ASSERT_USUALLY_EQUAL_TOL(1.0, density, 0.02);
 }
 
 int main() {

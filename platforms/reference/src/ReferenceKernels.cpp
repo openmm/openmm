@@ -697,6 +697,10 @@ void ReferenceCalcNonbondedForceKernel::initialize(const System& system, const N
         ewaldAlpha = (RealOpenMM) alpha;
     }
     rfDielectric = (RealOpenMM)force.getReactionFieldDielectric();
+    if (force.getUseDispersionCorrection())
+        dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(system, force);
+    else
+        dispersionCoefficient = 0.0;
 }
 
 void ReferenceCalcNonbondedForceKernel::executeForces(ContextImpl& context) {
@@ -749,6 +753,10 @@ double ReferenceCalcNonbondedForceKernel::executeEnergy(ContextImpl& context) {
     refBondForce.calculateForce(num14, bonded14IndexArray, posData, bonded14ParamArray, forceData, energyArray, 0, &energy, nonbonded14);
     disposeRealArray(forceData, numParticles);
     delete[] energyArray;
+    if (periodic || ewald || pme) {
+        RealOpenMM* boxSize = extractBoxSize(context);
+        energy += dispersionCoefficient/(boxSize[0]*boxSize[1]*boxSize[2]);
+    }
     return energy;
 }
 

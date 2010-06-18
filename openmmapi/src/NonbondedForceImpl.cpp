@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2010 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -34,6 +34,7 @@
 #include "openmm/internal/NonbondedForceImpl.h"
 #include "openmm/kernels.h"
 #include <cmath>
+#include <map>
 #include <sstream>
 
 #ifndef M_PI
@@ -93,6 +94,10 @@ void NonbondedForceImpl::initialize(ContextImpl& context) {
         double cutoff = owner.getCutoffDistance();
         if (cutoff > 0.5*boxVectors[0][0] || cutoff > 0.5*boxVectors[1][1] || cutoff > 0.5*boxVectors[2][2])
             throw OpenMMException("NonbondedForce: The cutoff distance cannot be greater than half the periodic box size.");
+    }
+    else {
+        if (owner.getUseDispersionCorrection())
+            throw OpenMMException("NonbondedForce: Dispersion correction may only be used with periodic boundary conditions.");
     }
     dynamic_cast<CalcNonbondedForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
@@ -168,4 +173,50 @@ int NonbondedForceImpl::findZero(const NonbondedForceImpl::ErrorFunction& f, int
     while (value < 0.0)
         value = f.getValue(++arg);
     return arg;
+}
+
+double NonbondedForceImpl::calcDispersionCorrection(const System& system, const NonbondedForce& force) {
+    // Identify all particle classes (defined by sigma and epsilon), and count the number of
+    // particles in each class.
+
+    map<pair<double, double>, int> classCounts;
+    for (int i = 0; i < force.getNumParticles(); i++) {
+        double charge, sigma, epsilon;
+        force.getParticleParameters(i, charge, sigma, epsilon);
+        pair<double, double> key = make_pair(sigma, epsilon);
+        map<pair<double, double>, int>::iterator entry = classCounts.find(key);
+        if (entry == classCounts.end())
+            classCounts[key] = 1;
+        else
+            entry->second++;
+    }
+
+    // Loop over all pairs of classes to compute the coefficient.
+
+    double sum1 = 0, sum2 = 0;
+    for (map<pair<double, double>, int>::const_iterator entry = classCounts.begin(); entry != classCounts.end(); ++entry) {
+        double sigma = entry->first.first;
+        double epsilon = entry->first.second;
+        int count = (entry->second*(entry->second+1))/2;
+        double sigma2 = sigma*sigma;
+        double sigma6 = sigma2*sigma2*sigma2;
+        sum1 += count*epsilon*sigma6*sigma6;
+        sum2 += count*epsilon*sigma6;
+    }
+    for (map<pair<double, double>, int>::const_iterator class1 = classCounts.begin(); class1 != classCounts.end(); ++class1)
+        for (map<pair<double, double>, int>::const_iterator class2 = classCounts.begin(); class2 != class1; ++class2) {
+            double sigma = 0.5*(class1->first.first+class2->first.first);
+            double epsilon = sqrt(class1->first.second*class2->first.second);
+            int count = class1->second*class2->second;
+            double sigma2 = sigma*sigma;
+            double sigma6 = sigma2*sigma2*sigma2;
+            sum1 += count*epsilon*sigma6*sigma6;
+            sum2 += count*epsilon*sigma6;
+        }
+    int numParticles = system.getNumParticles();
+    int numInteractions = (numParticles*(numParticles+1))/2;
+    sum1 /= numInteractions;
+    sum2 /= numInteractions;
+    double cutoff = force.getCutoffDistance();
+    return 8*numParticles*numParticles*M_PI*(sum1/(9*pow(cutoff, 9))-sum2/(3*pow(cutoff, 3)));
 }

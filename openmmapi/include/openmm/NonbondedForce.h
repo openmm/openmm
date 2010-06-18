@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2010 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -245,6 +245,24 @@ public:
      *                        multiplied by this factor
      */
     void createExceptionsFromBonds(const std::vector<std::pair<int, int> >& bonds, double coulomb14Scale, double lj14Scale);
+    /**
+     * Get whether to add a contribution to the energy that approximately represents the effect of Lennard-Jones
+     * interactions beyond the cutoff distance.  The energy depends on the volume of the periodic box, and is only
+     * applicable when periodic boundary conditions are used.  When running simulations at constant pressure, adding
+     * this contribution can improve the quality of results.
+     */
+    bool getUseDispersionCorrection() const {
+        return useDispersionCorrection;
+    }
+    /**
+     * Set whether to add a contribution to the energy that approximately represents the effect of Lennard-Jones
+     * interactions beyond the cutoff distance.  The energy depends on the volume of the periodic box, and is only
+     * applicable when periodic boundary conditions are used.  When running simulations at constant pressure, adding
+     * this contribution can improve the quality of results.
+     */
+    void setUseDispersionCorrection(bool useCorrection) {
+        useDispersionCorrection = useCorrection;
+    }
 protected:
     ForceImpl* createImpl();
 private:
@@ -252,6 +270,7 @@ private:
     class ExceptionInfo;
     NonbondedMethod nonbondedMethod;
     double cutoffDistance, rfDielectric, ewaldErrorTol;
+    bool useDispersionCorrection;
     void addExclusionsToSet(const std::vector<std::set<int> >& bonded12, std::set<int>& exclusions, int baseParticle, int fromParticle, int currentLevel) const;
     std::vector<ParticleInfo> particles;
     std::vector<ExceptionInfo> exceptions;

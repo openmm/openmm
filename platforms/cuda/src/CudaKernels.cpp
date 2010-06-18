@@ -102,7 +102,10 @@ double CudaCalcForcesAndEnergyKernel::finishEnergyComputation(ContextImpl& conte
     if (data.hasCustomNonbonded)
         kCalculateCustomNonbondedForces(gpu, data.hasNonbonded);
     kCalculateLocalForces(gpu);
-    return kReduceEnergy(gpu)+data.ewaldSelfEnergy;
+    double energy = kReduceEnergy(gpu)+data.ewaldSelfEnergy;
+    if (data.dispersionCoefficient != 0.0)
+        energy += data.dispersionCoefficient/(gpu->sim.periodicBoxSizeX*gpu->sim.periodicBoxSizeY*gpu->sim.periodicBoxSizeZ);
+    return energy;
 }
 
 void CudaUpdateStateDataKernel::initialize(const System& system) {
@@ -538,6 +541,13 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
                 for (int i = 0; i < numParticles; i++)
                     data.ewaldSelfEnergy -= selfEnergyScale*q[i]*q[i];
         }
+
+        // Compute the long range dispersion correction.
+
+        if (force.getUseDispersionCorrection())
+            data.dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(system, force);
+        else
+            data.dispersionCoefficient = 0.0;
     }
 
     // Initialize 1-4 nonbonded interactions.

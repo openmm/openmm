@@ -1098,6 +1098,10 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
         defines["REACTION_FIELD_K"] = doubleToString(reactionFieldK);
         defines["REACTION_FIELD_C"] = doubleToString(reactionFieldC);
     }
+    if (force.getUseDispersionCorrection())
+        dispersionCoefficient = NonbondedForceImpl::calcDispersionCorrection(system, force);
+    else
+        dispersionCoefficient = 0.0;
     double alpha = 0;
     if (force.getNonbondedMethod() == NonbondedForce::Ewald) {
         // Compute the Ewald parameters.
@@ -1358,7 +1362,12 @@ void OpenCLCalcNonbondedForceKernel::executeForces(ContextImpl& context) {
 
 double OpenCLCalcNonbondedForceKernel::executeEnergy(ContextImpl& context) {
     executeForces(context);
-    return ewaldSelfEnergy;
+    double energy = ewaldSelfEnergy;
+    if (dispersionCoefficient != 0.0) {
+        mm_float4 boxSize = cl.getPeriodicBoxSize();
+        energy += dispersionCoefficient/(boxSize.x*boxSize.y*boxSize.z);
+    }
+    return energy;
 }
 
 class OpenCLCustomNonbondedForceInfo : public OpenCLForceInfo {

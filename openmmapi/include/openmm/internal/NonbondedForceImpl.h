@@ -9,7 +9,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
+ * Portions copyright (c) 2008-2010 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -74,6 +74,11 @@ public:
      * Particle Mesh Ewald.
      */
     static void calcPMEParameters(const System& system, const NonbondedForce& force, double& alpha, int& xsize, int& ysize, int& zsize);
+    /**
+     * Compute the coefficient which, when divided by the periodic box volume, gives the
+     * long range dispersion correction to the energy.
+     */
+    static double calcDispersionCorrection(const System& system, const NonbondedForce& force);
 private:
     class ErrorFunction;
     class EwaldErrorFunction;
