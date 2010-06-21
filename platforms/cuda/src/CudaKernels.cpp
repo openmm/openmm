@@ -1084,6 +1084,8 @@ void CudaApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context, d
     _gpuContext* gpu = data.gpu;
     gpu->psPosqP4->CopyFrom(*gpu->psPosq4);
     kScaleAtomCoordinates(gpu, scale, *moleculeAtoms, *moleculeStartIndex);
+    for (int i = 0; i < (int) gpu->posCellOffsets.size(); i++)
+        gpu->posCellOffsets[i] = make_int3(0, 0, 0);
 }
 
 void CudaApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& context) {

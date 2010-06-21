@@ -3506,6 +3506,8 @@ void OpenCLApplyMonteCarloBarostatKernel::scaleCoordinates(ContextImpl& context,
     kernel.setArg<mm_float4>(2, cl.getPeriodicBoxSize());
     kernel.setArg<mm_float4>(3, cl.getInvPeriodicBoxSize());
     cl.executeKernel(kernel, cl.getNumAtoms());
+    for (int i = 0; i < (int) cl.getPosCellOffsets().size(); i++)
+        cl.getPosCellOffsets()[i] = mm_int4(0, 0, 0, 0);
 }
 
 void OpenCLApplyMonteCarloBarostatKernel::restoreCoordinates(ContextImpl& context) {
