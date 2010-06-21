@@ -111,7 +111,7 @@ void CudaPlatform::contextDestroyed(ContextImpl& context) const {
 
 CudaPlatform::PlatformData::PlatformData(_gpuContext* gpu) : gpu(gpu), removeCM(false), nonbondedMethod(0), customNonbondedMethod(0), hasBonds(false), hasAngles(false),
         hasPeriodicTorsions(false), hasRB(false), hasNonbonded(false), hasCustomNonbonded(false), stepCount(0), computeForceCount(0), time(0.0),
-        ewaldSelfEnergy(0.0) {
+        ewaldSelfEnergy(0.0), dispersionCoefficient(0.0) {
     stringstream device;
     device << gpu->device;
     propertyValues[CudaPlatform::CudaDevice()] = device.str();
