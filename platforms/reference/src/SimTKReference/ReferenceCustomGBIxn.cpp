@@ -357,14 +357,25 @@ void ReferenceCustomGBIxn::calculateChainRuleForces(int numAtoms, RealOpenMM** a
         variables["x"] = atomCoordinates[i][0];
         variables["y"] = atomCoordinates[i][1];
         variables["z"] = atomCoordinates[i][2];
+        vector<RealOpenMM> dVdX(valueDerivExpressions.size(), 0.0);
+        vector<RealOpenMM> dVdY(valueDerivExpressions.size(), 0.0);
+        vector<RealOpenMM> dVdZ(valueDerivExpressions.size(), 0.0);
         for (int j = 0; j < (int) paramNames.size(); j++)
             variables[paramNames[j]] = atomParameters[i][j];
         for (int j = 1; j < (int) valueNames.size(); j++) {
             variables[valueNames[j-1]] = values[j-1][i];
-            for (int k = 0; k < 3; k++) {
-                RealOpenMM gradient = (RealOpenMM) valueGradientExpressions[j][k].evaluate(variables);
-                forces[i][k] -= dEdV[j][i]*gradient;
+            for (int k = 1; k < j; k++) {
+                RealOpenMM dVdV = (RealOpenMM) valueDerivExpressions[j][k].evaluate(variables);
+                dVdX[j] += dVdV*dVdX[k];
+                dVdY[j] += dVdV*dVdY[k];
+                dVdZ[j] += dVdV*dVdZ[k];
             }
+            dVdX[j] += (RealOpenMM) valueGradientExpressions[j][0].evaluate(variables);
+            dVdY[j] += (RealOpenMM) valueGradientExpressions[j][1].evaluate(variables);
+            dVdZ[j] += (RealOpenMM) valueGradientExpressions[j][2].evaluate(variables);
+            forces[i][0] -= dEdV[j][i]*dVdX[j];
+            forces[i][1] -= dEdV[j][i]*dVdY[j];
+            forces[i][2] -= dEdV[j][i]*dVdZ[j];
         }
     }
 }

@@ -1824,6 +1824,7 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
     // Record derivatives of expressions needed for the chain rule terms.
 
     vector<vector<Lepton::ParsedExpression> > valueGradientExpressions(force.getNumComputedValues());
+    vector<vector<Lepton::ParsedExpression> > valueDerivExpressions(force.getNumComputedValues());
     needParameterGradient = false;
     for (int i = 1; i < force.getNumComputedValues(); i++) {
         Lepton::ParsedExpression ex = Lepton::Parser::parse(computedValueExpressions[i], functions).optimize();
@@ -1832,6 +1833,8 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         valueGradientExpressions[i].push_back(ex.differentiate("z").optimize());
         if (!isZeroExpression(valueGradientExpressions[i][0]) || !isZeroExpression(valueGradientExpressions[i][1]) || !isZeroExpression(valueGradientExpressions[i][2]))
             needParameterGradient = true;
+         for (int j = 0; j < i; j++)
+            valueDerivExpressions[i].push_back(ex.differentiate(computedValueNames[j]).optimize());
     }
     vector<vector<Lepton::ParsedExpression> > energyDerivExpressions(force.getNumEnergyTerms());
     for (int i = 0; i < force.getNumEnergyTerms(); i++) {
@@ -2160,16 +2163,31 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
             variables[force.getGlobalParameterName(i)] = "globals["+intToString(i)+"]";
         for (int i = 0; i < force.getNumComputedValues(); i++)
             variables[computedValueNames[i]] = "values"+computedValues->getParameterSuffix(i, "[index]");
-        map<string, Lepton::ParsedExpression> gradientExpressions;
         for (int i = 1; i < force.getNumComputedValues(); i++) {
+            string is = intToString(i);
+            compute << "float4 dV"<<is<<"dR = (float4) 0;\n";
+            for (int j = 1; j < i; j++) {
+                if (!isZeroExpression(valueDerivExpressions[i][j])) {
+                    map<string, Lepton::ParsedExpression> derivExpressions;
+                    string js = intToString(j);
+                    derivExpressions["float dV"+is+"dV"+js+" = "] = valueDerivExpressions[i][j];
+                    compute << OpenCLExpressionUtilities::createExpressions(derivExpressions, variables, functionDefinitions, "temp_"+is+"_"+js, prefix+"functionParams");
+                    compute << "dV"<<is<<"dR += dV"<<is<<"dV"<<js<<"*dV"<<js<<"dR;\n";
+                }
+            }
+            map<string, Lepton::ParsedExpression> gradientExpressions;
             if (!isZeroExpression(valueGradientExpressions[i][0]))
-                gradientExpressions["force.x -= deriv"+energyDerivs->getParameterSuffix(i)+"*"] = valueGradientExpressions[i][0];
+                gradientExpressions["dV"+is+"dR.x += "] = valueGradientExpressions[i][0];
             if (!isZeroExpression(valueGradientExpressions[i][1]))
-                gradientExpressions["force.y -= deriv"+energyDerivs->getParameterSuffix(i)+"*"] = valueGradientExpressions[i][1];
+                gradientExpressions["dV"+is+"dR.y += "] = valueGradientExpressions[i][1];
             if (!isZeroExpression(valueGradientExpressions[i][2]))
-                gradientExpressions["force.z -= deriv"+energyDerivs->getParameterSuffix(i)+"*"] = valueGradientExpressions[i][2];
+                gradientExpressions["dV"+is+"dR.z += "] = valueGradientExpressions[i][2];
+            compute << OpenCLExpressionUtilities::createExpressions(gradientExpressions, variables, functionDefinitions, "temp", prefix+"functionParams");
         }
-        compute << OpenCLExpressionUtilities::createExpressions(gradientExpressions, variables, functionDefinitions, "temp", prefix+"functionParams");
+        for (int i = 1; i < force.getNumComputedValues(); i++) {
+            string is = intToString(i);
+            compute << "force -= deriv"<<energyDerivs->getParameterSuffix(i)<<"*dV"<<is<<"dR;\n";
+        }
         map<string, string> replacements;
         replacements["PARAMETER_ARGUMENTS"] = extraArgs.str()+tableArgs.str();
         replacements["COMPUTE_FORCES"] = compute.str();
