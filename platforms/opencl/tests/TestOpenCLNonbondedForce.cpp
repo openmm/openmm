@@ -636,14 +636,14 @@ void testDispersionCorrection() {
     Context context(system, integrator, platform);
     context.setPositions(positions);
     double energy1 = context.getState(State::Energy).getPotentialEnergy();
-    nonbonded->setUseDispersionCorrection(true);
+    nonbonded->setUseDispersionCorrection(false);
     context.reinitialize();
     context.setPositions(positions);
     double energy2 = context.getState(State::Energy).getPotentialEnergy();
     double term1 = (0.5*pow(1.1, 12)/pow(cutoff, 9))/9;
     double term2 = (0.5*pow(1.1, 6)/pow(cutoff, 3))/3;
     double expected = 8*M_PI*numParticles*numParticles*(term1-term2)/(boxSize*boxSize*boxSize);
-    ASSERT_EQUAL_TOL(expected, energy2-energy1, 1e-4);
+    ASSERT_EQUAL_TOL(expected, energy1-energy2, 1e-4);
 
     // Now modify half the particles to be different, and see if it is still correct.
 
@@ -653,11 +653,11 @@ void testDispersionCorrection() {
         numType2++;
     }
     int numType1 = numParticles-numType2;
-    nonbonded->setUseDispersionCorrection(false);
+    nonbonded->setUseDispersionCorrection(true);
     context.reinitialize();
     context.setPositions(positions);
     energy1 = context.getState(State::Energy).getPotentialEnergy();
-    nonbonded->setUseDispersionCorrection(true);
+    nonbonded->setUseDispersionCorrection(false);
     context.reinitialize();
     context.setPositions(positions);
     energy2 = context.getState(State::Energy).getPotentialEnergy();
@@ -672,7 +672,7 @@ void testDispersionCorrection() {
     term1 /= (numParticles*(numParticles+1))/2;
     term2 /= (numParticles*(numParticles+1))/2;
     expected = 8*M_PI*numParticles*numParticles*(term1-term2)/(boxSize*boxSize*boxSize);
-    ASSERT_EQUAL_TOL(expected, energy2-energy1, 1e-4);
+    ASSERT_EQUAL_TOL(expected, energy1-energy2, 1e-4);
 }
 
 int main() {

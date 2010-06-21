@@ -95,10 +95,6 @@ void NonbondedForceImpl::initialize(ContextImpl& context) {
         if (cutoff > 0.5*boxVectors[0][0] || cutoff > 0.5*boxVectors[1][1] || cutoff > 0.5*boxVectors[2][2])
             throw OpenMMException("NonbondedForce: The cutoff distance cannot be greater than half the periodic box size.");
     }
-    else {
-        if (owner.getUseDispersionCorrection())
-            throw OpenMMException("NonbondedForce: Dispersion correction may only be used with periodic boundary conditions.");
-    }
     dynamic_cast<CalcNonbondedForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
 
@@ -176,6 +172,9 @@ int NonbondedForceImpl::findZero(const NonbondedForceImpl::ErrorFunction& f, int
 }
 
 double NonbondedForceImpl::calcDispersionCorrection(const System& system, const NonbondedForce& force) {
+    if (force.getNonbondedMethod() == NonbondedForce::NoCutoff || force.getNonbondedMethod() == NonbondedForce::CutoffNonPeriodic)
+        return 0.0;
+    
     // Identify all particle classes (defined by sigma and epsilon), and count the number of
     // particles in each class.
 
