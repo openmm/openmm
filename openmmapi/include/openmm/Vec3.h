@@ -80,10 +80,11 @@ public:
         return Vec3(lhs[0] + rhs[0], lhs[1] + rhs[1], lhs[2] + rhs[2]);
     }
     
-    Vec3 operator+=(const Vec3& rhs) {
+    Vec3& operator+=(const Vec3& rhs) {
         data[0] += rhs[0];
         data[1] += rhs[1];
         data[2] += rhs[2];
+        return *this;
     }
 
     // unary minus
@@ -98,10 +99,11 @@ public:
         return Vec3(lhs[0] - rhs[0], lhs[1] - rhs[1], lhs[2] - rhs[2]);
     }
 
-    Vec3 operator-=(const Vec3& rhs) {
+    Vec3& operator-=(const Vec3& rhs) {
         data[0] -= rhs[0];
         data[1] -= rhs[1];
         data[2] -= rhs[2];
+        return *this;
     }
 
     // scalar product
@@ -110,10 +112,11 @@ public:
         return Vec3(lhs[0]*rhs, lhs[1]*rhs, lhs[2]*rhs);
     }
 
-    Vec3 operator*=(double rhs) {
+    Vec3& operator*=(double rhs) {
         data[0] *= rhs;
         data[1] *= rhs;
         data[2] *= rhs;
+        return *this;
     }
     
     // dot product
