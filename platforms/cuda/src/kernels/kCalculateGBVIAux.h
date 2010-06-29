@@ -36,7 +36,7 @@
  * This file contains subroutines used in evaluating quantities associated w/ the GB/VI function
  */
 
-__device__ float getGBVI_L( float r, float x, float S )
+static __device__ float getGBVI_L( float r, float x, float S )
 {
 
    float rInv   = 1.0f/r;
@@ -48,7 +48,7 @@ __device__ float getGBVI_L( float r, float x, float S )
    return (1.5f*xInv2)*( (0.25f*rInv) - (xInv/3.0f) + (0.125f*diff2*xInv2*rInv) );
 }
 
-__device__ float getGBVI_Volume( float r_ij, float R, float S )
+static __device__ float getGBVI_Volume( float r_ij, float R, float S )
 {
 
      float upperBound        = r_ij + S; 
@@ -63,7 +63,7 @@ __device__ float getGBVI_Volume( float r_ij, float R, float S )
 
 }
 
-__device__ float getGBVI_dL_dr( float r, float x, float S )
+static __device__ float getGBVI_dL_dr( float r, float x, float S )
 {
 
    float rInv   = 1.0f/r;
@@ -80,7 +80,7 @@ __device__ float getGBVI_dL_dr( float r, float x, float S )
 
 }
 
-__device__ float getGBVI_dL_dx( float r, float x, float S )
+static __device__ float getGBVI_dL_dx( float r, float x, float S )
 {
 
    float rInv   = 1.0f/r;
@@ -96,7 +96,7 @@ __device__ float getGBVI_dL_dx( float r, float x, float S )
 
 }
 
-__device__ float getGBVI_dE2( float r, float R, float S, float bornForce )
+static __device__ float getGBVI_dE2( float r, float R, float S, float bornForce )
 {
 
     float diff              = S - R;
@@ -119,7 +119,7 @@ __device__ float getGBVI_dE2( float r, float R, float S, float bornForce )
 
 }
 
-__device__ float getGBVIBornForce2( float bornRadius, float R, float bornForce, float gamma )
+static __device__ float getGBVIBornForce2( float bornRadius, float R, float bornForce, float gamma )
 { 
     float ratio                     = (R/bornRadius);
     float returnBornForce           = bornForce + (3.0f*gamma*ratio*ratio*ratio)/bornRadius; // 'cavity' term

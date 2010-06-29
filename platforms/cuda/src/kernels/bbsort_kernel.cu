@@ -19,23 +19,23 @@ texture<unsigned int, 1, cudaReadModeElementType> tBucketOffsets;
 texture<unsigned int, 1, cudaReadModeElementType> tBucketOfSlices;
 texture<unsigned int, 1, cudaReadModeElementType> tSliceOffsetInBucket;
 
-__device__ int dGetValue(int2 v){
+static __device__ int dGetValue(int2 v){
 	return v.y;
 }
 
 template <typename T>
-__device__ T dGetValue(T v){
+static __device__ T dGetValue(T v){
 	return v;
 }
 
 
-__device__ void dPad(int2& v){
+static __device__ void dPad(int2& v){
 	v.x=0x3fffffff;
 	v.y=0x4fffffff;
 }
 
 template <typename T>
-__device__ void dPad(T & v){
+static __device__ void dPad(T & v){
 	v=0x7fffffff;
 }
 

@@ -32,7 +32,7 @@
  */
 
 #ifdef USE_SOFTCORE_LJ
-__device__ float getSoftCoreLJ( float r2, float sig, float  eps, float lambdaI, float lambdaJ, float* energy)
+static __device__ float getSoftCoreLJ( float r2, float sig, float  eps, float lambdaI, float lambdaJ, float* energy)
 {
 
    float r                         = sqrt(r2);

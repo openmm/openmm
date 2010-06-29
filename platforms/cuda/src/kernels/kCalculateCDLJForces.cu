@@ -69,7 +69,7 @@ void GetCalculateCDLJForcesSim(gpuContext gpu)
 
 texture<float, 1, cudaReadModeElementType> tabulatedErfcRef;
 
-__device__ float fastErfc(float r)
+static __device__ float fastErfc(float r)
 {
     float normalized = cSim.tabulatedErfcScale*r;
     int index = (int) normalized;
