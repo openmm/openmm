@@ -2,17 +2,19 @@
 ### OPENCL_INCLUDE_DIR ###
 # Try OPENCL_DIR variable before looking elsewhere
 find_path(OPENCL_INCLUDE_DIR 
-    NAMES OpenCL/cl.h CL/cl.h 
+    NAMES OpenCL/opencl.h CL/opencl.h
     PATHS "$ENV{OPENCL_DIR}"
     PATH_SUFFIXES "include"
     NO_DEFAULT_PATH
 )
 # As a last resort, look in default include areas and elsewhere
 find_path(OPENCL_INCLUDE_DIR 
-    NAMES OpenCL/cl.h CL/cl.h
+    NAMES OpenCL/opencl.h CL/opencl.h
     PATHS
         "$ENV{CUDA_INC_PATH}"
         "C:/CUDA"
+        "/usr/local/cuda"
+        "/usr"
     PATH_SUFFIXES "include"
 )
 
@@ -36,6 +38,8 @@ find_library(OPENCL_LIBRARY
     PATHS
         "$ENV{CUDA_LIB_PATH}"
         "C:/CUDA"
+        "/usr/local/cuda"
+        "/usr"
     PATH_SUFFIXES ${path_suffixes} "lib"
 )
 
