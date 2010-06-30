@@ -14,6 +14,7 @@ find_path(OPENCL_INCLUDE_DIR
         "$ENV{CUDA_INC_PATH}"
         "C:/CUDA"
         "/usr/local/cuda"
+        "/usr/local/streamsdk"
         "/usr"
     PATH_SUFFIXES "include"
 )
@@ -39,6 +40,7 @@ find_library(OPENCL_LIBRARY
         "$ENV{CUDA_LIB_PATH}"
         "C:/CUDA"
         "/usr/local/cuda"
+        "/usr/local/streamsdk"
         "/usr"
     PATH_SUFFIXES ${path_suffixes} "lib"
 )
