@@ -65,7 +65,6 @@ void testGaussian() {
         skew += value*value*value;
         kurtosis += value*value*value*value;
     }
-    gpuShutDown(gpu);
     mean /= numValues;
     var /= numValues;
     skew /= numValues;
