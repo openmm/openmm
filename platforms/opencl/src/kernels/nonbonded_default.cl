@@ -127,8 +127,9 @@ void computeNonbonded(__global float4* forceBuffers, __global float* energyBuffe
             unsigned int tile = xi+yi*PADDED_NUM_ATOMS/TILE_SIZE-yi*(yi+1)/2;
 #ifdef USE_EXCLUSIONS
             unsigned int excl = (hasExclusions ? exclusions[exclusionIndices[tile]+tgx] : 0xFFFFFFFF);
+            excl = (excl >> baseLocalAtom) & 0xFFFF;
+            excl += excl << 16;
             excl = (excl >> tgx) | (excl << (TILE_SIZE - tgx));
-            excl >>= baseLocalAtom;
 #endif
             unsigned int tj = tgx%(TILE_SIZE/2);
             for (unsigned int j = 0; j < TILE_SIZE/2; j++) {
