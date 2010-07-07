@@ -150,9 +150,9 @@ void NonbondedForceImpl::calcPMEParameters(const System& system, const Nonbonded
     system.getDefaultPeriodicBoxVectors(boxVectors[0], boxVectors[1], boxVectors[2]);
     double tol = force.getEwaldErrorTolerance();
     alpha = (1.0/force.getCutoffDistance())*std::sqrt(-log(2.0*tol));
-    xsize = (int) ceil(alpha*boxVectors[0][0]/pow(0.5*tol, 0.2));
-    ysize = (int) ceil(alpha*boxVectors[1][1]/pow(0.5*tol, 0.2));
-    zsize = (int) ceil(alpha*boxVectors[2][2]/pow(0.5*tol, 0.2));
+    xsize = (int) ceil(2*alpha*boxVectors[0][0]/(3*pow(tol, 0.2)));
+    ysize = (int) ceil(2*alpha*boxVectors[1][1]/(3*pow(tol, 0.2)));
+    zsize = (int) ceil(2*alpha*boxVectors[2][2]/(3*pow(tol, 0.2)));
     xsize = max(xsize, 5);
     ysize = max(ysize, 5);
     zsize = max(zsize, 5);
