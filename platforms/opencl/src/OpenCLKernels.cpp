@@ -2845,7 +2845,7 @@ void OpenCLCalcCustomHbondForceKernel::initialize(const System& system, const Cu
     if (force.getNumFunctions() > 0) {
         tabulatedFunctionParams = new OpenCLArray<mm_float4>(cl, tabulatedFunctionParamsVec.size(), "tabulatedFunctionParameters", false, CL_MEM_READ_ONLY);
         tabulatedFunctionParams->upload(tabulatedFunctionParamsVec);
-        tableArgs << ", __constant float4* functionParams";
+        tableArgs << ", __global float4* functionParams";
     }
 
     // Record information about parameters.
@@ -2947,7 +2947,7 @@ void OpenCLCalcCustomHbondForceKernel::initialize(const System& system, const Cu
     // Next it needs to load parameters from global memory.
 
     if (force.getNumGlobalParameters() > 0)
-        extraArgs << ", __constant float* globals";
+        extraArgs << ", __global float* globals";
     for (int i = 0; i < (int) donorParams->getBuffers().size(); i++) {
         const OpenCLNonbondedUtilities::ParameterInfo& buffer = donorParams->getBuffers()[i];
         extraArgs << ", __global "+buffer.getType()+"* donor"+buffer.getName();
