@@ -70,7 +70,7 @@ void computeBornSum(__global float* global_bornSum, __global float4* posq, __glo
                     float r = RECIP(invR);
                     float2 params2 = (float2) (localData[baseLocalAtom+j].radius, localData[baseLocalAtom+j].scaledRadius);
                     float rScaledRadiusJ = r+params2.y;
-                    if ((j != tgx) && (params1.x < rScaledRadiusJ)) {
+                    if ((j+baseLocalAtom != tgx) && (params1.x < rScaledRadiusJ)) {
                         float l_ij = RECIP(max(params1.x, fabs(r-params2.y)));
                         float u_ij = RECIP(rScaledRadiusJ);
                         float l_ij2 = l_ij*l_ij;
