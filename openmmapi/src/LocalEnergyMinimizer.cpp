@@ -1,6 +1,3 @@
-#ifndef OPENMM_H_
-#define OPENMM_H_
-
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -9,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,37 +29,64 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/AndersenThermostat.h"
-#include "openmm/BrownianIntegrator.h"
-#include "openmm/CMMotionRemover.h"
-#include "openmm/CustomBondForce.h"
-#include "openmm/CustomAngleForce.h"
-#include "openmm/CustomTorsionForce.h"
-#include "openmm/CustomExternalForce.h"
-#include "openmm/CustomGBForce.h"
-#include "openmm/CustomHbondForce.h"
-#include "openmm/CustomNonbondedForce.h"
-#include "openmm/Force.h"
-#include "openmm/GBSAOBCForce.h"
-#include "openmm/GBVIForce.h"
-#include "openmm/HarmonicAngleForce.h"
-#include "openmm/HarmonicBondForce.h"
-#include "openmm/Integrator.h"
-#include "openmm/LangevinIntegrator.h"
 #include "openmm/LocalEnergyMinimizer.h"
-#include "openmm/MonteCarloBarostat.h"
-#include "openmm/NonbondedForce.h"
-#include "openmm/Context.h"
 #include "openmm/OpenMMException.h"
-#include "openmm/PeriodicTorsionForce.h"
-#include "openmm/RBTorsionForce.h"
-#include "openmm/State.h"
-#include "openmm/System.h"
-#include "openmm/Units.h"
-#include "openmm/VariableLangevinIntegrator.h"
-#include "openmm/VariableVerletIntegrator.h"
-#include "openmm/Vec3.h"
-#include "openmm/VerletIntegrator.h"
+#include "lbfgs.h"
 #include "openmm/Platform.h"
+#include <cmath>
+#include <sstream>
+#include <vector>
 
-#endif /*OPENMM_H_*/
+using namespace OpenMM;
+using namespace std;
+
+static lbfgsfloatval_t evaluate(void *instance, const lbfgsfloatval_t *x, lbfgsfloatval_t *g, const int n, const lbfgsfloatval_t step) {
+    Context* context = reinterpret_cast<Context*>(instance);
+    int numParticles = context->getSystem().getNumParticles();
+    vector<Vec3> positions(numParticles);
+    for (int i = 0; i < numParticles; i++)
+        positions[i] = Vec3(x[3*i], x[3*i+1], x[3*i+2]);
+    context->setPositions(positions);
+    State state = context->getState(State::Forces | State::Energy);
+    const vector<Vec3>& forces = state.getForces();
+    for (int i = 0; i < numParticles; i++) {
+        g[3*i] = -forces[i][0];
+        g[3*i+1] = -forces[i][1];
+        g[3*i+2] = -forces[i][2];
+    }
+    return state.getPotentialEnergy();
+}
+
+void LocalEnergyMinimizer::minimize(Context& context, double tolerance, int maxIterations) {
+    int numParticles = context.getSystem().getNumParticles();
+    lbfgsfloatval_t *x = lbfgs_malloc(numParticles*3);
+    if (x == NULL)
+        throw OpenMMException("LocalEnergyMinimizer: Failed to allocate memory");
+
+    // Record the initial positions and determine a normalization constant for scaling the tolerance.
+    
+    const vector<Vec3>& positions = context.getState(State::Positions).getPositions();
+    double norm = 0.0;
+    for (int i = 0; i < numParticles; i++) {
+        x[3*i] = positions[i][0];
+        x[3*i+1] = positions[i][1];
+        x[3*i+2] = positions[i][2];
+        norm += positions[i].dot(positions[i]);
+    }
+    norm /= numParticles;
+    norm = (norm < 1 ? 1 : sqrt(norm));
+
+    // Perform the minimization.
+
+    lbfgs_parameter_t param;
+    lbfgs_parameter_init(&param);
+    if (!context.getPlatform().supportsDoublePrecision())
+        param.xtol = 1e-7;
+    param.epsilon = tolerance/norm;
+    param.max_iterations = maxIterations;
+    param.linesearch = LBFGS_LINESEARCH_BACKTRACKING_STRONG_WOLFE;
+    lbfgsfloatval_t fx;
+    lbfgs(numParticles*3, x, &fx, evaluate, NULL, &context, &param);
+    lbfgs_free(x);
+}
+

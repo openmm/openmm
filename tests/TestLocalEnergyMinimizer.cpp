@@ -1,0 +1,130 @@
+
+/* -------------------------------------------------------------------------- *
+ *                                   OpenMM                                   *
+ * -------------------------------------------------------------------------- *
+ * This is part of the OpenMM molecular simulation toolkit originating from   *
+ * Simbios, the NIH National Center for Physics-Based Simulation of           *
+ * Biological Structures at Stanford, funded under the NIH Roadmap for        *
+ * Medical Research, grant U54 GM072970. See https://simtk.org.               *
+ *                                                                            *
+ * Portions copyright (c) 2010 Stanford University and the Authors.           *
+ * Authors: Peter Eastman                                                     *
+ * Contributors:                                                              *
+ *                                                                            *
+ * Permission is hereby granted, free of charge, to any person obtaining a    *
+ * copy of this software and associated documentation files (the "Software"), *
+ * to deal in the Software without restriction, including without limitation  *
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,   *
+ * and/or sell copies of the Software, and to permit persons to whom the      *
+ * Software is furnished to do so, subject to the following conditions:       *
+ *                                                                            *
+ * The above copyright notice and this permission notice shall be included in *
+ * all copies or substantial portions of the Software.                        *
+ *                                                                            *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR *
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,   *
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL    *
+ * THE AUTHORS, CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,    *
+ * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR      *
+ * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE  *
+ * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
+ * -------------------------------------------------------------------------- */
+
+#include "AssertionUtilities.h"
+#include "openmm/Context.h"
+#include "openmm/HarmonicBondForce.h"
+#include "openmm/LocalEnergyMinimizer.h"
+#include "openmm/NonbondedForce.h"
+#include "openmm/VerletIntegrator.h"
+#include "sfmt/SFMT.h"
+#include <iostream>
+#include <vector>
+
+using namespace OpenMM;
+using namespace std;
+
+void testHarmonicBonds() {
+    const int numParticles = 10;
+    System system;
+    HarmonicBondForce* bonds = new HarmonicBondForce();
+    system.addForce(bonds);
+
+    // Create a chain of particles connected by harmonic bonds.
+
+    vector<Vec3> positions(numParticles);
+    for (int i = 0; i < numParticles; i++) {
+        system.addParticle(1.0);
+        positions[i] = Vec3(i, 0, 0);
+        if (i > 0)
+            bonds->addBond(i-1, i, 1+0.1*i, 1);
+    }
+
+    // Minimize it and check that all bonds are at their equilibrium distances.
+
+    VerletIntegrator integrator(0.01);
+    Context context(system, integrator);
+    context.setPositions(positions);
+    LocalEnergyMinimizer::minimize(context, 1e-5);
+    State state = context.getState(State::Positions);
+    for (int i = 1; i < numParticles; i++) {
+        Vec3 delta = state.getPositions()[i]-state.getPositions()[i-1];
+        ASSERT_EQUAL_TOL(1+0.1*i, sqrt(delta.dot(delta)), 1e-4);
+    }
+}
+
+void testLargeSystem() {
+    const int numParticles = 100;
+    const double cutoff = 2.0;
+    const double boxSize = 5.0;
+    const double tolerance = 5;
+    System system;
+    system.setDefaultPeriodicBoxVectors(Vec3(boxSize, 0, 0), Vec3(0, boxSize, 0), Vec3(0, 0, boxSize));
+    NonbondedForce* nonbonded = new NonbondedForce();
+    nonbonded->setCutoffDistance(cutoff);
+    nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
+    system.addForce(nonbonded);
+
+    // Create a cloud of particles.
+
+    OpenMM_SFMT::SFMT sfmt;
+    init_gen_rand(0, sfmt);
+    vector<Vec3> positions(numParticles);
+    for (int i = 0; i < numParticles; i++) {
+        system.addParticle(1.0);
+        nonbonded->addParticle(i%2 == 0 ? 1 : -1, 0.2, 0.2);
+        positions[i] = Vec3(boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt));
+    }
+
+    // Minimize it, verify that the energy has decreased, and check that the force magnitude satisfies the requested tolerance.
+    
+    VerletIntegrator integrator(0.01);
+    Context context(system, integrator);
+    context.setPositions(positions);
+    State initialState = context.getState(State::Forces | State::Energy);
+    LocalEnergyMinimizer::minimize(context, tolerance);
+    State finalState = context.getState(State::Forces | State::Energy);
+    ASSERT(finalState.getPotentialEnergy() < initialState.getPotentialEnergy());
+    double initialNorm = 0.0;
+    double finalNorm = 0.0;
+    for (int i = 0; i < numParticles; i++) {
+        initialNorm += initialState.getForces()[i].dot(initialState.getForces()[i]);
+        finalNorm += finalState.getForces()[i].dot(finalState.getForces()[i]);
+    }
+    initialNorm = sqrt(initialNorm/numParticles);
+    finalNorm = sqrt(finalNorm/numParticles);
+    ASSERT(finalNorm < initialNorm);
+    ASSERT(finalNorm < 2*tolerance);
+}
+
+int main() {
+    try {
+        testHarmonicBonds();
+        testLargeSystem();
+    }
+    catch(const exception& e) {
+        cout << "exception: " << e.what() << endl;
+        return 1;
+    }
+    cout << "Done" << endl;
+    return 0;
+}
