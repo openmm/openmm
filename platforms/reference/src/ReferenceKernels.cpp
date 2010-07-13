@@ -248,6 +248,51 @@ void ReferenceUpdateStateDataKernel::setPeriodicBoxVectors(ContextImpl& context,
     box[2] = (RealOpenMM) c[2];
 }
 
+void ReferenceApplyConstraintsKernel::initialize(const System& system) {
+    int numParticles = system.getNumParticles();
+    masses = new RealOpenMM[numParticles];
+    inverseMasses = new RealOpenMM[numParticles];
+    for (int i = 0; i < numParticles; ++i) {
+        masses[i] = static_cast<RealOpenMM>(system.getParticleMass(i));
+        inverseMasses[i] = 1.0/masses[i];
+    }
+    numConstraints = system.getNumConstraints();
+    constraintIndices = allocateIntArray(numConstraints, 2);
+    constraintDistances = new RealOpenMM[numConstraints];
+    for (int i = 0; i < numConstraints; ++i) {
+        int particle1, particle2;
+        double distance;
+        system.getConstraintParameters(i, particle1, particle2, distance);
+        constraintIndices[i][0] = particle1;
+        constraintIndices[i][1] = particle2;
+        constraintDistances[i] = static_cast<RealOpenMM>(distance);
+    }
+}
+
+ReferenceApplyConstraintsKernel::~ReferenceApplyConstraintsKernel() {
+    if (constraints)
+        delete constraints;
+    if (masses)
+        delete[] masses;
+    if (inverseMasses)
+        delete[] inverseMasses;
+    if (constraintIndices)
+        disposeIntArray(constraintIndices, numConstraints);
+    if (constraintDistances)
+        delete[] constraintDistances;
+}
+
+void ReferenceApplyConstraintsKernel::apply(ContextImpl& context, double tol) {
+    if (constraints == NULL) {
+        vector<ReferenceCCMAAlgorithm::AngleInfo> angles;
+        findAnglesForCCMA(context.getSystem(), angles);
+        constraints = new ReferenceCCMAAlgorithm(context.getSystem().getNumParticles(), numConstraints, constraintIndices, constraintDistances, masses, angles, tol);
+    }
+    RealOpenMM** positions = extractPositions(context);
+    constraints->setTolerance(tol);
+    constraints->apply(data.numParticles, positions, positions, inverseMasses);
+}
+
 ReferenceCalcHarmonicBondForceKernel::~ReferenceCalcHarmonicBondForceKernel() {
     disposeIntArray(bondIndexArray, numBonds);
     disposeRealArray(bondParamArray, numBonds);

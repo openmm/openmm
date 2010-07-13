@@ -30,7 +30,8 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "AssertionUtilities.h"
+#include "../../../tests/AssertionUtilities.h"
+#include "CudaPlatform.h"
 #include "openmm/Context.h"
 #include "openmm/HarmonicBondForce.h"
 #include "openmm/LocalEnergyMinimizer.h"
@@ -62,7 +63,8 @@ void testHarmonicBonds() {
     // Minimize it and check that all bonds are at their equilibrium distances.
 
     VerletIntegrator integrator(0.01);
-    Context context(system, integrator);
+    CudaPlatform platform;
+    Context context(system, integrator, platform);
     context.setPositions(positions);
     LocalEnergyMinimizer::minimize(context, 1e-5);
     State state = context.getState(State::Positions);
@@ -73,7 +75,8 @@ void testHarmonicBonds() {
 }
 
 void testLargeSystem() {
-    const int numParticles = 100;
+    const int numMolecules = 50;
+    const int numParticles = numMolecules*2;
     const double cutoff = 2.0;
     const double boxSize = 5.0;
     const double tolerance = 5;
@@ -84,36 +87,49 @@ void testLargeSystem() {
     nonbonded->setNonbondedMethod(NonbondedForce::CutoffPeriodic);
     system.addForce(nonbonded);
 
-    // Create a cloud of particles.
+    // Create a cloud of molecules.
 
     OpenMM_SFMT::SFMT sfmt;
     init_gen_rand(0, sfmt);
     vector<Vec3> positions(numParticles);
-    for (int i = 0; i < numParticles; i++) {
+    for (int i = 0; i < numMolecules; i++) {
         system.addParticle(1.0);
-        nonbonded->addParticle(i%2 == 0 ? 1 : -1, 0.2, 0.2);
-        positions[i] = Vec3(boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt));
+        system.addParticle(1.0);
+        nonbonded->addParticle(-1.0, 0.2, 0.2);
+        nonbonded->addParticle(1.0, 0.2, 0.2);
+        positions[2*i] = Vec3(boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt), boxSize*genrand_real2(sfmt));
+        positions[2*i+1] = Vec3(positions[2*i][0]+1.0, positions[2*i][1], positions[2*i][2]);
+        system.addConstraint(2*i, 2*i+1, 1.0);
     }
 
-    // Minimize it, verify that the energy has decreased, and check that the force magnitude satisfies the requested tolerance.
-    
+    // Minimize it and verify that the energy has decreased.
+
+    CudaPlatform platform;
     VerletIntegrator integrator(0.01);
-    Context context(system, integrator);
+    Context context(system, integrator, platform);
     context.setPositions(positions);
     State initialState = context.getState(State::Forces | State::Energy);
     LocalEnergyMinimizer::minimize(context, tolerance);
-    State finalState = context.getState(State::Forces | State::Energy);
+    State finalState = context.getState(State::Forces | State::Energy | State::Positions);
     ASSERT(finalState.getPotentialEnergy() < initialState.getPotentialEnergy());
-    double initialNorm = 0.0;
-    double finalNorm = 0.0;
-    for (int i = 0; i < numParticles; i++) {
-        initialNorm += initialState.getForces()[i].dot(initialState.getForces()[i]);
-        finalNorm += finalState.getForces()[i].dot(finalState.getForces()[i]);
+
+    // Compute the force magnitude, substracting off any component parallel to a constraint, and
+    // check that it satisfies the requested tolerance.
+
+    double forceNorm = 0.0;
+    for (int i = 0; i < numParticles; i += 2) {
+        Vec3 dir = finalState.getPositions()[i+1]-finalState.getPositions()[i];
+        double distance = sqrt(dir.dot(dir));
+        dir *= 1.0/distance;
+        Vec3 f = finalState.getForces()[i];
+        f -= dir*dir.dot(f);
+        forceNorm += f.dot(f);
+        f = finalState.getForces()[i+1];
+        f -= dir*dir.dot(f);
+        forceNorm += f.dot(f);
     }
-    initialNorm = sqrt(initialNorm/numParticles);
-    finalNorm = sqrt(finalNorm/numParticles);
-    ASSERT(finalNorm < initialNorm);
-    ASSERT(finalNorm < 2*tolerance);
+    forceNorm = sqrt(forceNorm/(4*numMolecules));
+    ASSERT(forceNorm < 3*tolerance);
 }
 
 int main() {
@@ -128,3 +144,4 @@ int main() {
     cout << "Done" << endl;
     return 0;
 }
+

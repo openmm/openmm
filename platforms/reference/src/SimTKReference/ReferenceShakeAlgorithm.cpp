@@ -190,11 +190,9 @@ RealOpenMM ReferenceShakeAlgorithm::getTolerance( void ) const {
 
    @param tolerance new tolerance
 
-   @return tolerance
-
    --------------------------------------------------------------------------------------- */
 
-int ReferenceShakeAlgorithm::setTolerance( RealOpenMM tolerance ){
+void ReferenceShakeAlgorithm::setTolerance( RealOpenMM tolerance ){
 
 
    // ---------------------------------------------------------------------------------------
@@ -204,9 +202,6 @@ int ReferenceShakeAlgorithm::setTolerance( RealOpenMM tolerance ){
    // ---------------------------------------------------------------------------------------
 
    _tolerance = tolerance;;
-
-   return ReferenceDynamics::DefaultReturn;
-
 }
 
 /**---------------------------------------------------------------------------------------

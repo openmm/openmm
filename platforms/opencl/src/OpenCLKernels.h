@@ -165,6 +165,30 @@ private:
 };
 
 /**
+ * This kernel modifies the positions of particles to enforce distance constraints.
+ */
+class OpenCLApplyConstraintsKernel : public ApplyConstraintsKernel {
+public:
+    OpenCLApplyConstraintsKernel(std::string name, const Platform& platform, OpenCLContext& cl) : ApplyConstraintsKernel(name, platform), cl(cl) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     */
+    void initialize(const System& system);
+    /**
+     * Update particle positions to enforce constraints.
+     *
+     * @param context    the context in which to execute this kernel
+     * @param tol        the distance tolerance within which constraints must be satisfied.
+     */
+    void apply(ContextImpl& context, double tol);
+private:
+    OpenCLContext& cl;
+};
+
+/**
  * This kernel is invoked by HarmonicBondForce to calculate the forces acting on the system and the energy of the system.
  */
 class OpenCLCalcHarmonicBondForceKernel : public CalcHarmonicBondForceKernel {

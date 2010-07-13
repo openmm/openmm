@@ -38,6 +38,8 @@ KernelImpl* OpenCLKernelFactory::createKernelImpl(std::string name, const Platfo
         return new OpenCLCalcForcesAndEnergyKernel(name, platform, cl);
     if (name == UpdateStateDataKernel::Name())
         return new OpenCLUpdateStateDataKernel(name, platform, cl);
+    if (name == ApplyConstraintsKernel::Name())
+        return new OpenCLApplyConstraintsKernel(name, platform, cl);
     if (name == CalcHarmonicBondForceKernel::Name())
         return new OpenCLCalcHarmonicBondForceKernel(name, platform, cl, context.getSystem());
     if (name == CalcCustomBondForceKernel::Name())

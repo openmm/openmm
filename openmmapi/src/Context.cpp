@@ -127,6 +127,10 @@ void Context::setPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Vec3& c)
     impl->setPeriodicBoxVectors(a, b, c);
 }
 
+void Context::applyConstraints(double tol) {
+    impl->applyConstraints(tol);
+}
+
 void Context::reinitialize() {
     System& system = impl->getSystem();
     Integrator& integrator = impl->getIntegrator();

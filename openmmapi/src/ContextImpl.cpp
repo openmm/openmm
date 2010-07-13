@@ -73,6 +73,8 @@ ContextImpl::ContextImpl(Context& owner, System& system, Integrator& integrator,
     dynamic_cast<CalcKineticEnergyKernel&>(kineticEnergyKernel.getImpl()).initialize(system);
     updateStateDataKernel = platform->createKernel(UpdateStateDataKernel::Name(), *this);
     dynamic_cast<UpdateStateDataKernel&>(updateStateDataKernel.getImpl()).initialize(system);
+    applyConstraintsKernel = platform->createKernel(ApplyConstraintsKernel::Name(), *this);
+    dynamic_cast<ApplyConstraintsKernel&>(applyConstraintsKernel.getImpl()).initialize(system);
     Vec3 periodicBoxVectors[3];
     system.getDefaultPeriodicBoxVectors(periodicBoxVectors[0], periodicBoxVectors[1], periodicBoxVectors[2]);
     dynamic_cast<UpdateStateDataKernel&>(updateStateDataKernel.getImpl()).setPeriodicBoxVectors(*this, periodicBoxVectors[0], periodicBoxVectors[1], periodicBoxVectors[2]);
@@ -140,6 +142,10 @@ void ContextImpl::setPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Vec3
     if (c[0] != 0.0 || c[1] != 0.0)
         throw OpenMMException("Third periodic box vector must be parallel to z.");
     dynamic_cast<UpdateStateDataKernel&>(updateStateDataKernel.getImpl()).setPeriodicBoxVectors(*this, a, b, c);
+}
+
+void ContextImpl::applyConstraints(double tol) {
+    dynamic_cast<ApplyConstraintsKernel&>(applyConstraintsKernel.getImpl()).apply(*this, tol);
 }
 
 void ContextImpl::calcForces() {

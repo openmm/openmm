@@ -199,6 +199,13 @@ void CudaUpdateStateDataKernel::setPeriodicBoxVectors(ContextImpl& context, cons
     gpuSetConstants(gpu);
 }
 
+void CudaApplyConstraintsKernel::initialize(const System& system) {
+}
+
+void CudaApplyConstraintsKernel::apply(ContextImpl& context, double tol) {
+    kApplyConstraints(data.gpu);
+}
+
 CudaCalcHarmonicBondForceKernel::~CudaCalcHarmonicBondForceKernel() {
 }
 

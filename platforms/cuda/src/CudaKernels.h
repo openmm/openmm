@@ -170,6 +170,30 @@ private:
 };
 
 /**
+ * This kernel modifies the positions of particles to enforce distance constraints.
+ */
+class CudaApplyConstraintsKernel : public ApplyConstraintsKernel {
+public:
+    CudaApplyConstraintsKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data) : ApplyConstraintsKernel(name, platform), data(data) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     */
+    void initialize(const System& system);
+    /**
+     * Update particle positions to enforce constraints.
+     *
+     * @param context    the context in which to execute this kernel
+     * @param tol        the distance tolerance within which constraints must be satisfied.
+     */
+    void apply(ContextImpl& context, double tol);
+private:
+    CudaPlatform::PlatformData& data;
+};
+
+/**
  * This kernel is invoked by HarmonicBondForce to calculate the forces acting on the system and the energy of the system.
  */
 class CudaCalcHarmonicBondForceKernel : public CalcHarmonicBondForceKernel {

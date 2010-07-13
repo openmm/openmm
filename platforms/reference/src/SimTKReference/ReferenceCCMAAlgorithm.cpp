@@ -320,11 +320,9 @@ RealOpenMM ReferenceCCMAAlgorithm::getTolerance( void ) const {
 
    @param tolerance new tolerance
 
-   @return tolerance
-
    --------------------------------------------------------------------------------------- */
 
-int ReferenceCCMAAlgorithm::setTolerance( RealOpenMM tolerance ){
+void ReferenceCCMAAlgorithm::setTolerance( RealOpenMM tolerance ){
 
 
    // ---------------------------------------------------------------------------------------
@@ -334,9 +332,6 @@ int ReferenceCCMAAlgorithm::setTolerance( RealOpenMM tolerance ){
    // ---------------------------------------------------------------------------------------
 
    _tolerance = tolerance;;
-
-   return ReferenceDynamics::DefaultReturn;
-
 }
 
 /**---------------------------------------------------------------------------------------

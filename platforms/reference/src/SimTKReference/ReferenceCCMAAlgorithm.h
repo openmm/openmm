@@ -124,11 +124,9 @@ class OPENMM_EXPORT ReferenceCCMAAlgorithm : public ReferenceConstraintAlgorithm
 
          @param tolerance new tolerance
 
-         @return tolerance
-
          --------------------------------------------------------------------------------------- */
 
-      int setTolerance( RealOpenMM tolerance );
+      void setTolerance( RealOpenMM tolerance );
 
       /**---------------------------------------------------------------------------------------
 

@@ -177,6 +177,38 @@ private:
 };
 
 /**
+ * This kernel modifies the positions of particles to enforce distance constraints.
+ */
+class ReferenceApplyConstraintsKernel : public ApplyConstraintsKernel {
+public:
+    ReferenceApplyConstraintsKernel(std::string name, const Platform& platform, ReferencePlatform::PlatformData& data) :
+            ApplyConstraintsKernel(name, platform), data(data), constraints(0), masses(0), inverseMasses(0), constraintDistances(0), constraintIndices(0) {
+    }
+    ~ReferenceApplyConstraintsKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     */
+    void initialize(const System& system);
+    /**
+     * Update particle positions to enforce constraints.
+     *
+     * @param context    the context in which to execute this kernel
+     * @param tol        the distance tolerance within which constraints must be satisfied.
+     */
+    void apply(ContextImpl& context, double tol);
+private:
+    ReferencePlatform::PlatformData& data;
+    ReferenceConstraintAlgorithm* constraints;
+    RealOpenMM* masses;
+    RealOpenMM* inverseMasses;
+    RealOpenMM* constraintDistances;
+    int** constraintIndices;
+    int numConstraints;
+};
+
+/**
  * This kernel is invoked by HarmonicBondForce to calculate the forces acting on the system and the energy of the system.
  */
 class ReferenceCalcHarmonicBondForceKernel : public CalcHarmonicBondForceKernel {

@@ -69,6 +69,7 @@ extern void kSelectVerletStepSize(gpuContext gpu, float maxTimeStep);
 extern void kBrownianUpdatePart1(gpuContext gpu);
 extern void kBrownianUpdatePart2(gpuContext gpu);
 extern void kScaleAtomCoordinates(gpuContext gpu, float scale, CUDAStream<int>& moleculeAtoms, CUDAStream<int>& moleculeStartIndex);
+extern void kApplyConstraints(gpuContext gpu);
 
 // Extras
 extern void kReduceForces(gpuContext gpu);

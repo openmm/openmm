@@ -158,6 +158,12 @@ public:
      */
     void setPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Vec3& c);
     /**
+     * Update the positions of particles so that all distance constraints are satisfied.
+     *
+     * @param tol    the distance tolerance within which constraints must be satisfied.
+     */
+    void applyConstraints(double tol);
+    /**
      * Recalculate all of the forces in the system.  After calling this, use getForces() to retrieve
      * the forces that were calculated.
      */
@@ -207,7 +213,7 @@ private:
     mutable std::vector<std::vector<int> > molecules;
     bool hasInitializedForces;
     Platform* platform;
-    Kernel initializeForcesKernel, kineticEnergyKernel, updateStateDataKernel;
+    Kernel initializeForcesKernel, kineticEnergyKernel, updateStateDataKernel, applyConstraintsKernel;
     void* platformData;
 };
 

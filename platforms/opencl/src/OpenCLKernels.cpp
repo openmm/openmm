@@ -190,6 +190,13 @@ void OpenCLUpdateStateDataKernel::setPeriodicBoxVectors(ContextImpl& context, co
     cl.setPeriodicBoxSize(a[0], b[1], c[2]);
 }
 
+void OpenCLApplyConstraintsKernel::initialize(const System& system) {
+}
+
+void OpenCLApplyConstraintsKernel::apply(ContextImpl& context, double tol) {
+    cl.getIntegrationUtilities().applyConstraints(tol);
+}
+
 class OpenCLBondForceInfo : public OpenCLForceInfo {
 public:
     OpenCLBondForceInfo(int requiredBuffers, const HarmonicBondForce& force) : OpenCLForceInfo(requiredBuffers), force(force) {

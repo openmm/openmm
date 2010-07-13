@@ -115,12 +115,10 @@ class ReferenceShakeAlgorithm : public ReferenceConstraintAlgorithm {
          Set tolerance
       
          @param tolerance new tolerance
-
-         @return tolerance
       
          --------------------------------------------------------------------------------------- */
       
-      int setTolerance( RealOpenMM tolerance );
+      void setTolerance( RealOpenMM tolerance );
       
       /**---------------------------------------------------------------------------------------
       

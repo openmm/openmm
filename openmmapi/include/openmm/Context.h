@@ -127,7 +127,9 @@ public:
      */
     void setTime(double time);
     /**
-     * Set the positions of all particles in the System (measured in nm).
+     * Set the positions of all particles in the System (measured in nm).  This method simply sets the positions
+     * without checking to see whether they satisfy distance constraints.  If you want constraints to be
+     * enforced, call applyConstraints() after setting the positions.
      * 
      * @param positions   a vector whose length equals the number of particles in the System.  The i'th element
      * contains the position of the i'th particle.
@@ -165,6 +167,12 @@ public:
      * @param c      the vector defining the third edge of the periodic box
      */
     void setPeriodicBoxVectors(const Vec3& a, const Vec3& b, const Vec3& c);
+    /**
+     * Update the positions of particles so that all distance constraints are satisfied.
+     *
+     * @param tol    the distance tolerance within which constraints must be satisfied.
+     */
+    void applyConstraints(double tol);
     /**
      * When a Context is created, it may cache information about the System being simulated
      * and the Force objects contained in it.  This means that, if the System or Forces are then

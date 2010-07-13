@@ -39,6 +39,10 @@ namespace OpenMM {
 /**
  * Given a Context, this class searches for a new set of particle positions that represent
  * a local minimum of the potential energy.  The search is performed with the L-BFGS algorithm.
+ * Distance constraints are enforced during minimization by adding a harmonic restraining
+ * force to the potential function.  The strength of the restraining force is steadily increased
+ * until the minimum energy configuration satisfies all constraints to within the tolerance
+ * specified by the Context's Integrator.
  */
 
 class OPENMM_EXPORT LocalEnergyMinimizer {
