@@ -40,10 +40,12 @@
 using namespace OpenMM;
 using namespace std;
 
-typedef struct {
+struct MinimizerData {
     Context& context;
     double k;
-} MinimizerData;
+    MinimizerData(Context& context, double k)
+        : context(context), k(k) {}
+};
 
 static lbfgsfloatval_t evaluate(void *instance, const lbfgsfloatval_t *x, lbfgsfloatval_t *g, const int n, const lbfgsfloatval_t step) {
     MinimizerData* data = reinterpret_cast<MinimizerData*>(instance);
@@ -134,7 +136,7 @@ void LocalEnergyMinimizer::minimize(Context& context, double tolerance, int maxI
         // Perform the minimization.
 
         lbfgsfloatval_t fx;
-        MinimizerData data = (MinimizerData) {context, k};
+        MinimizerData data(context, k);
         lbfgs(numParticles*3, x, &fx, evaluate, NULL, &data, &param);
 
         // Check whether all constraints are satisfied.
