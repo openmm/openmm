@@ -33,9 +33,6 @@ const bool   UseConstraints      = false;   // Should we constrain C-H bonds?
 const double StepSizeInFs        = 2;       // integration step size (fs)
 const double ReportIntervalInFs  = 10;      // how often to generate PDB frame (fs)
 const double SimulationTimeInPs  = 100;     // total simulation time (ps)
-
-// Currently energy calculation is not available in the GPU kernels so asking
-// for it requires slow Reference Platform computation at reporting intervals.
 static const bool   WantEnergy   = true;
 
 //                            FORCE FIELD DATA
