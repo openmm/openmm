@@ -44,43 +44,43 @@ using namespace std;
 void testNaturalSpline() {
     vector<double> x(20);
     vector<double> y(20);
-    for (int i = 0; i < x.size(); i++) {
-        x[i] = 0.5*i+0.1*sin(i);
-        y[i] = sin(x[i]);
+    for (unsigned int i = 0; i < x.size(); i++) {
+        x[i] = 0.5*i+0.1*sin(double(i));
+        y[i] = sin(double(x[i]));
     }
     vector<double> deriv;
     SplineFitter::createNaturalSpline(x, y, deriv);
     ASSERT_EQUAL_TOL(deriv[0], 0.0, 1e-6);
     ASSERT_EQUAL_TOL(deriv[deriv.size()-1], 0.0, 1e-6);
-    for (int i = 0; i < x.size(); i++) {
+    for (unsigned int i = 0; i < x.size(); i++) {
         ASSERT_EQUAL_TOL(y[i], SplineFitter::evaluateSpline(x, y, deriv, x[i]), 1e-6);
         ASSERT_EQUAL_TOL(cos(x[i]), SplineFitter::evaluateSplineDerivative(x, y, deriv, x[i]), 0.05);
     }
     for (int i = 1; i < 9; i++) {
-        ASSERT_EQUAL_TOL(sin(i), SplineFitter::evaluateSpline(x, y, deriv, i), 0.05);
-        ASSERT_EQUAL_TOL(cos(i), SplineFitter::evaluateSplineDerivative(x, y, deriv, i), 0.05);
+        ASSERT_EQUAL_TOL(sin((double)i), SplineFitter::evaluateSpline(x, y, deriv, i), 0.05);
+        ASSERT_EQUAL_TOL(cos((double)i), SplineFitter::evaluateSplineDerivative(x, y, deriv, i), 0.05);
     }
 }
 
 void testPeriodicSpline() {
     vector<double> x(26);
     vector<double> y(26);
-    for (int i = 0; i < x.size()-1; i++) {
-        x[i] = 0.5*i+0.1*sin(i);
-        y[i] = sin(x[i]);
+    for (unsigned int i = 0; i < x.size()-1; i++) {
+        x[i] = 0.5*i+0.1*sin((double)i);
+        y[i] = sin((double)x[i]);
     }
     x[x.size()-1] = 4*M_PI;
     y[y.size()-1] = y[0];
     vector<double> deriv;
     SplineFitter::createPeriodicSpline(x, y, deriv);
     ASSERT_EQUAL_TOL(deriv[0], deriv[deriv.size()-1], 1e-6);
-    for (int i = 0; i < x.size(); i++) {
+    for (unsigned int i = 0; i < x.size(); i++) {
         ASSERT_EQUAL_TOL(y[i], SplineFitter::evaluateSpline(x, y, deriv, x[i]), 1e-6);
         ASSERT_EQUAL_TOL(cos(x[i]), SplineFitter::evaluateSplineDerivative(x, y, deriv, x[i]), 0.05);
     }
     for (int i = 1; i < 9; i++) {
-        ASSERT_EQUAL_TOL(sin(i), SplineFitter::evaluateSpline(x, y, deriv, i), 0.05);
-        ASSERT_EQUAL_TOL(cos(i), SplineFitter::evaluateSplineDerivative(x, y, deriv, i), 0.05);
+        ASSERT_EQUAL_TOL(sin((double)i), SplineFitter::evaluateSpline(x, y, deriv, i), 0.05);
+        ASSERT_EQUAL_TOL(cos((double)i), SplineFitter::evaluateSplineDerivative(x, y, deriv, i), 0.05);
     }
 }
 

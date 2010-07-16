@@ -41,7 +41,7 @@ namespace OpenMM {
  * SplineFitter provides routines for performing cubic spline interpolation.
  */
 
-class SplineFitter {
+class OPENMM_EXPORT SplineFitter {
 public:
     /**
      * Fit a natural cubic spline to a set of data points.  The resulting spline interpolates all the
