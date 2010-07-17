@@ -37,6 +37,7 @@
 #include "SimTKReference/ReferenceBondForce.h"
 #include "SimTKReference/ReferenceBrownianDynamics.h"
 #include "SimTKReference/ReferenceCCMAAlgorithm.h"
+#include "SimTKReference/ReferenceCMAPTorsionIxn.h"
 #include "SimTKReference/ReferenceCustomAngleIxn.h"
 #include "SimTKReference/ReferenceCustomBondIxn.h"
 #include "SimTKReference/ReferenceCustomExternalIxn.h"
@@ -59,6 +60,7 @@
 #include "openmm/System.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/CustomHbondForceImpl.h"
+#include "openmm/internal/CMAPTorsionForceImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
 #include "openmm/Integrator.h"
 #include "openmm/OpenMMException.h"
@@ -600,6 +602,48 @@ double ReferenceCalcRBTorsionForceKernel::executeEnergy(ContextImpl& context) {
     disposeRealArray(forceData, context.getSystem().getNumParticles());
     delete[] energyArray;
     return energy;
+}
+
+void ReferenceCalcCMAPTorsionForceKernel::initialize(const System& system, const CMAPTorsionForce& force) {
+    int numMaps = force.getNumMaps();
+    int numTorsions = force.getNumTorsions();
+    coeff.resize(numMaps);
+    vector<double> energy;
+    vector<vector<double> > c;
+    for (int i = 0; i < numMaps; i++) {
+        int size;
+        force.getMapParameters(i, size, energy);
+        CMAPTorsionForceImpl::calcMapDerivatives(size, energy, c);
+        coeff[i].resize(size*size);
+        for (int j = 0; j < size*size; j++) {
+            coeff[i][j].resize(16);
+            for (int k = 0; k < 16; k++)
+                coeff[i][j][k] = c[j][k];
+        }
+    }
+    torsionMaps.resize(numTorsions);
+    torsionIndices.resize(numTorsions);
+    for (int i = 0; i < numTorsions; i++) {
+        torsionIndices[i].resize(8);
+        force.getTorsionParameters(i, torsionMaps[i], torsionIndices[i][0], torsionIndices[i][1], torsionIndices[i][2],
+            torsionIndices[i][3], torsionIndices[i][4], torsionIndices[i][5], torsionIndices[i][6], torsionIndices[i][7]);
+    }
+}
+
+void ReferenceCalcCMAPTorsionForceKernel::executeForces(ContextImpl& context) {
+    RealOpenMM** posData = extractPositions(context);
+    RealOpenMM** forceData = extractForces(context);
+    ReferenceCMAPTorsionIxn torsion(coeff, torsionMaps, torsionIndices);
+    torsion.calculateIxn(posData, forceData, 0);
+}
+
+double ReferenceCalcCMAPTorsionForceKernel::executeEnergy(ContextImpl& context) {
+    RealOpenMM** posData = extractPositions(context);
+    RealOpenMM** forceData = allocateRealArray(context.getSystem().getNumParticles(), 3);
+    RealOpenMM totalEnergy = 0;
+    ReferenceCMAPTorsionIxn torsion(coeff, torsionMaps, torsionIndices);
+    torsion.calculateIxn(posData, forceData, &totalEnergy);
+    return totalEnergy;
 }
 
 ReferenceCalcCustomTorsionForceKernel::~ReferenceCalcCustomTorsionForceKernel() {

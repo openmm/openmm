@@ -62,6 +62,8 @@ KernelImpl* ReferenceKernelFactory::createKernelImpl(std::string name, const Pla
         return new ReferenceCalcPeriodicTorsionForceKernel(name, platform);
     if (name == CalcRBTorsionForceKernel::Name())
         return new ReferenceCalcRBTorsionForceKernel(name, platform);
+    if (name == CalcCMAPTorsionForceKernel::Name())
+        return new ReferenceCalcCMAPTorsionForceKernel(name, platform);
     if (name == CalcCustomTorsionForceKernel::Name())
         return new ReferenceCalcCustomTorsionForceKernel(name, platform);
     if (name == CalcGBSAOBCForceKernel::Name())

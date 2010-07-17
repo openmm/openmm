@@ -417,6 +417,39 @@ private:
 };
 
 /**
+ * This kernel is invoked by CMAPTorsionForce to calculate the forces acting on the system and the energy of the system.
+ */
+class ReferenceCalcCMAPTorsionForceKernel : public CalcCMAPTorsionForceKernel {
+public:
+    ReferenceCalcCMAPTorsionForceKernel(std::string name, const Platform& platform) : CalcCMAPTorsionForceKernel(name, platform) {
+    }
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CMAPTorsionForce this kernel will be used for
+     */
+    void initialize(const System& system, const CMAPTorsionForce& force);
+    /**
+     * Execute the kernel to calculate the forces.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void executeForces(ContextImpl& context);
+    /**
+     * Execute the kernel to calculate the energy.
+     *
+     * @param context    the context in which to execute this kernel
+     * @return the potential energy due to the CMAPTorsionForce
+     */
+    double executeEnergy(ContextImpl& context);
+private:
+    std::vector<std::vector<std::vector<RealOpenMM> > > coeff;
+    std::vector<int> torsionMaps;
+    std::vector<std::vector<int> > torsionIndices;
+};
+
+/**
  * This kernel is invoked by CustomTorsionForce to calculate the forces acting on the system and the energy of the system.
  */
 class ReferenceCalcCustomTorsionForceKernel : public CalcCustomTorsionForceKernel {

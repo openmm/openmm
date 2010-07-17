@@ -1,6 +1,3 @@
-#ifndef OPENMM_H_
-#define OPENMM_H_
-
 /* -------------------------------------------------------------------------- *
  *                                   OpenMM                                   *
  * -------------------------------------------------------------------------- *
@@ -9,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2009 Stanford University and the Authors.           *
+ * Portions copyright (c) 2010 Stanford University and the Authors.           *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -32,38 +29,65 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
-#include "openmm/AndersenThermostat.h"
-#include "openmm/BrownianIntegrator.h"
-#include "openmm/CMAPTorsionForce.h"
-#include "openmm/CMMotionRemover.h"
-#include "openmm/CustomBondForce.h"
-#include "openmm/CustomAngleForce.h"
-#include "openmm/CustomTorsionForce.h"
-#include "openmm/CustomExternalForce.h"
-#include "openmm/CustomGBForce.h"
-#include "openmm/CustomHbondForce.h"
-#include "openmm/CustomNonbondedForce.h"
 #include "openmm/Force.h"
-#include "openmm/GBSAOBCForce.h"
-#include "openmm/GBVIForce.h"
-#include "openmm/HarmonicAngleForce.h"
-#include "openmm/HarmonicBondForce.h"
-#include "openmm/Integrator.h"
-#include "openmm/LangevinIntegrator.h"
-#include "openmm/LocalEnergyMinimizer.h"
-#include "openmm/MonteCarloBarostat.h"
-#include "openmm/NonbondedForce.h"
-#include "openmm/Context.h"
 #include "openmm/OpenMMException.h"
-#include "openmm/PeriodicTorsionForce.h"
-#include "openmm/RBTorsionForce.h"
-#include "openmm/State.h"
-#include "openmm/System.h"
-#include "openmm/Units.h"
-#include "openmm/VariableLangevinIntegrator.h"
-#include "openmm/VariableVerletIntegrator.h"
-#include "openmm/Vec3.h"
-#include "openmm/VerletIntegrator.h"
-#include "openmm/Platform.h"
+#include "openmm/CMAPTorsionForce.h"
+#include "openmm/internal/CMAPTorsionForceImpl.h"
 
-#endif /*OPENMM_H_*/
+using namespace OpenMM;
+
+CMAPTorsionForce::CMAPTorsionForce() {
+}
+
+int CMAPTorsionForce::addMap(int size, const std::vector<double>& energy) {
+    if (energy.size() != size*size)
+        throw OpenMMException("CMAPTorsionForce: incorrect number of energy values");
+    maps.push_back(MapInfo(size, energy));
+    return maps.size()-1;
+}
+
+void CMAPTorsionForce::getMapParameters(int index, int& size, std::vector<double>& energy) const {
+    size = maps[index].size;
+    energy = maps[index].energy;
+}
+
+void CMAPTorsionForce::setMapParameters(int index, int size, const std::vector<double>& energy) {
+    if (energy.size() != size*size)
+        throw OpenMMException("CMAPTorsionForce: incorrect number of energy values");
+    maps[index].size = size;
+    maps[index].energy = energy;
+}
+
+int CMAPTorsionForce::addTorsion(int map, int a1, int a2, int a3, int a4, int b1, int b2, int b3, int b4) {
+    torsions.push_back(CMAPTorsionInfo(map, a1, a2, a3, a4, b1, b2, b3, b4));
+    return torsions.size()-1;
+}
+
+void CMAPTorsionForce::getTorsionParameters(int index, int& map, int& a1, int& a2, int& a3, int& a4, int& b1, int& b2, int& b3, int& b4) const {
+    map = torsions[index].map;
+    a1 = torsions[index].a1;
+    a2 = torsions[index].a2;
+    a3 = torsions[index].a3;
+    a4 = torsions[index].a4;
+    b1 = torsions[index].b1;
+    b2 = torsions[index].b2;
+    b3 = torsions[index].b3;
+    b4 = torsions[index].b4;
+}
+
+void CMAPTorsionForce::setTorsionParameters(int index, int map, int a1, int a2, int a3, int a4, int b1, int b2, int b3, int b4) {
+    torsions[index].map = map;
+    torsions[index].a1 = a1;
+    torsions[index].a2 = a2;
+    torsions[index].a3 = a3;
+    torsions[index].a4 = a4;
+    torsions[index].b1 = b1;
+    torsions[index].b2 = b2;
+    torsions[index].b3 = b3;
+    torsions[index].b4 = b4;
+}
+
+ForceImpl* CMAPTorsionForce::createImpl() {
+    return new CMAPTorsionForceImpl(*this);
+}
+
