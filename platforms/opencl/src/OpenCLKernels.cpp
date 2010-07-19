@@ -28,6 +28,7 @@
 #include "OpenCLForceInfo.h"
 #include "openmm/LangevinIntegrator.h"
 #include "openmm/Context.h"
+#include "openmm/internal/CMAPTorsionForceImpl.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/CustomHbondForceImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
@@ -683,7 +684,7 @@ public:
         int particle1, particle2, particle3, particle4, periodicity1, periodicity2;
         double phase1, phase2, k1, k2;
         force.getTorsionParameters(group1, particle1, particle2, particle3, particle4, periodicity1, phase1, k1);
-        force.getTorsionParameters(group1, particle1, particle2, particle3, particle4, periodicity2, phase2, k2);
+        force.getTorsionParameters(group2, particle1, particle2, particle3, particle4, periodicity2, phase2, k2);
         return (periodicity1 == periodicity2 && phase1 == phase2 && k1 == k2);
     }
 private:
@@ -767,7 +768,7 @@ public:
         int particle1, particle2, particle3, particle4;
         double c0a, c0b, c1a, c1b, c2a, c2b, c3a, c3b, c4a, c4b, c5a, c5b;
         force.getTorsionParameters(group1, particle1, particle2, particle3, particle4, c0a, c1a, c2a, c3a, c4a, c5a);
-        force.getTorsionParameters(group1, particle1, particle2, particle3, particle4, c0b, c1b, c2b, c3b, c4b, c5b);
+        force.getTorsionParameters(group2, particle1, particle2, particle3, particle4, c0b, c1b, c2b, c3b, c4b, c5b);
         return (c0a == c0b && c1a == c1b && c2a == c2b && c3a == c3b && c4a == c4b && c5a == c5b);
     }
 private:
@@ -826,6 +827,124 @@ void OpenCLCalcRBTorsionForceKernel::executeForces(ContextImpl& context) {
 }
 
 double OpenCLCalcRBTorsionForceKernel::executeEnergy(ContextImpl& context) {
+    executeForces(context);
+    return 0.0;
+}
+
+class OpenCLCMAPTorsionForceInfo : public OpenCLForceInfo {
+public:
+    OpenCLCMAPTorsionForceInfo(int requiredBuffers, const CMAPTorsionForce& force) : OpenCLForceInfo(requiredBuffers), force(force) {
+    }
+    int getNumParticleGroups() {
+        return force.getNumTorsions();
+    }
+    void getParticlesInGroup(int index, std::vector<int>& particles) {
+        int map, a1, a2, a3, a4, b1, b2, b3, b4;
+        force.getTorsionParameters(index, map, a1, a2, a3, a4, b1, b2, b3, b4);
+        particles.resize(8);
+        particles[0] = a1;
+        particles[1] = a2;
+        particles[2] = a3;
+        particles[3] = a4;
+        particles[4] = b1;
+        particles[5] = b2;
+        particles[6] = b3;
+        particles[7] = b4;
+    }
+    bool areGroupsIdentical(int group1, int group2) {
+        int map1, map2, a1, a2, a3, a4, b1, b2, b3, b4;
+        force.getTorsionParameters(group1, map1, a1, a2, a3, a4, b1, b2, b3, b4);
+        force.getTorsionParameters(group2, map2, a1, a2, a3, a4, b1, b2, b3, b4);
+        return (map1 == map2);
+    }
+private:
+    const CMAPTorsionForce& force;
+};
+
+OpenCLCalcCMAPTorsionForceKernel::~OpenCLCalcCMAPTorsionForceKernel() {
+    if (coefficients != NULL)
+        delete coefficients;
+    if (mapPositions != NULL)
+        delete mapPositions;
+    if (torsionMaps != NULL)
+        delete torsionMaps;
+    if (torsionIndices != NULL)
+        delete torsionIndices;
+}
+
+void OpenCLCalcCMAPTorsionForceKernel::initialize(const System& system, const CMAPTorsionForce& force) {
+    numTorsions = force.getNumTorsions();
+    if (numTorsions == 0)
+        return;
+    int numMaps = force.getNumMaps();
+    vector<mm_float4> coeffVec;
+    vector<mm_int2> mapPositionsVec(numMaps);
+    vector<double> energy;
+    vector<vector<double> > c;
+    int currentPosition = 0;
+    for (int i = 0; i < numMaps; i++) {
+        int size;
+        force.getMapParameters(i, size, energy);
+        CMAPTorsionForceImpl::calcMapDerivatives(size, energy, c);
+        mapPositionsVec[i] = mm_int2(currentPosition, size);
+        currentPosition += 4*size*size;
+        for (int j = 0; j < size*size; j++) {
+            coeffVec.push_back(mm_float4(c[j][0], c[j][1], c[j][2], c[j][3]));
+            coeffVec.push_back(mm_float4(c[j][4], c[j][5], c[j][6], c[j][7]));
+            coeffVec.push_back(mm_float4(c[j][8], c[j][9], c[j][10], c[j][11]));
+            coeffVec.push_back(mm_float4(c[j][12], c[j][13], c[j][14], c[j][15]));
+        }
+    }
+    vector<int> forceBufferCounter(system.getNumParticles(), 0);
+    vector<cl_int> torsionMapsVec(numTorsions);
+    vector<mm_int16> torsionIndicesVec(numTorsions);
+    for (int i = 0; i < numTorsions; i++) {
+        mm_int16& ind = torsionIndicesVec[i];
+        force.getTorsionParameters(i, torsionMapsVec[i], ind.s0, ind.s1, ind.s2, ind.s3, ind.s4, ind.s5, ind.s6, ind.s7);
+        ind.s8 = forceBufferCounter[ind.s0]++;
+        ind.s9 = forceBufferCounter[ind.s1]++;
+        ind.s10 = forceBufferCounter[ind.s2]++;
+        ind.s11 = forceBufferCounter[ind.s3]++;
+        ind.s12 = forceBufferCounter[ind.s4]++;
+        ind.s13 = forceBufferCounter[ind.s5]++;
+        ind.s14 = forceBufferCounter[ind.s6]++;
+        ind.s15 = forceBufferCounter[ind.s7]++;
+    }
+    coefficients = new OpenCLArray<mm_float4>(cl, coeffVec.size(), "cmapTorsionCoefficients");
+    mapPositions = new OpenCLArray<mm_int2>(cl, numMaps, "cmapTorsionMapPositions");
+    torsionMaps = new OpenCLArray<cl_int>(cl, numTorsions, "cmapTorsionMaps");
+    torsionIndices = new OpenCLArray<mm_int16>(cl, numTorsions, "cmapTorsionIndices");
+    coefficients->upload(coeffVec);
+    mapPositions->upload(mapPositionsVec);
+    torsionMaps->upload(torsionMapsVec);
+    torsionIndices->upload(torsionIndicesVec);
+    int maxBuffers = 1;
+    for (int i = 0; i < (int) forceBufferCounter.size(); i++)
+        maxBuffers = max(maxBuffers, forceBufferCounter[i]);
+    cl.addForce(new OpenCLCMAPTorsionForceInfo(maxBuffers, force));
+    cl::Program program = cl.createProgram(OpenCLKernelSources::cmapTorsionForce);
+    kernel = cl::Kernel(program, "computeCMAPTorsionForces");
+}
+
+void OpenCLCalcCMAPTorsionForceKernel::executeForces(ContextImpl& context) {
+    if (numTorsions == 0)
+        return;
+    if (!hasInitializedKernel) {
+        hasInitializedKernel = true;
+        kernel.setArg<cl_int>(0, cl.getPaddedNumAtoms());
+        kernel.setArg<cl_int>(1, numTorsions);
+        kernel.setArg<cl::Buffer>(2, cl.getForceBuffers().getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(3, cl.getEnergyBuffer().getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(4, cl.getPosq().getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(5, coefficients->getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(6, mapPositions->getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(7, torsionIndices->getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(8, torsionMaps->getDeviceBuffer());
+    }
+    cl.executeKernel(kernel, numTorsions);
+}
+
+double OpenCLCalcCMAPTorsionForceKernel::executeEnergy(ContextImpl& context) {
     executeForces(context);
     return 0.0;
 }

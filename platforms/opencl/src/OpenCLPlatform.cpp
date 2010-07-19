@@ -53,6 +53,7 @@ OpenCLPlatform::OpenCLPlatform() {
     registerKernelFactory(CalcCustomAngleForceKernel::Name(), factory);
     registerKernelFactory(CalcPeriodicTorsionForceKernel::Name(), factory);
     registerKernelFactory(CalcRBTorsionForceKernel::Name(), factory);
+    registerKernelFactory(CalcCMAPTorsionForceKernel::Name(), factory);
     registerKernelFactory(CalcCustomTorsionForceKernel::Name(), factory);
     registerKernelFactory(CalcNonbondedForceKernel::Name(), factory);
     registerKernelFactory(CalcCustomNonbondedForceKernel::Name(), factory);

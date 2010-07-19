@@ -30,12 +30,12 @@
  * -------------------------------------------------------------------------- */
 
 /**
- * This tests the reference implementation of CMAPTorsionForce.
+ * This tests the OpenCL implementation of CMAPTorsionForce.
  */
 
 #include "../../../tests/AssertionUtilities.h"
 #include "openmm/Context.h"
-#include "ReferencePlatform.h"
+#include "OpenCLPlatform.h"
 #include "openmm/CMAPTorsionForce.h"
 #include "openmm/PeriodicTorsionForce.h"
 #include "openmm/System.h"
@@ -56,7 +56,7 @@ void testCMAPTorsions() {
     // Create two systems: one with a pair of periodic torsions, and one with a CMAP torsion
     // that approximates the same force.
 
-    ReferencePlatform platform;
+    OpenCLPlatform platform;
     System system1;
     for (int i = 0; i < 5; i++)
         system1.addParticle(1.0);
