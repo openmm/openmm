@@ -113,7 +113,7 @@ void ReferenceCMAPTorsionIxn::calculateOneIxn(int index, RealOpenMM** atomCoordi
 
     // Identify which patch this is in.
 
-    int size = (int) SQRT(double(coeff[map].size()));
+    int size = (int) SQRT((RealOpenMM) coeff[map].size());
     RealOpenMM delta = 2*M_PI/size;
     int s = (int) (angleA/delta);
     int t = (int) (angleB/delta);
@@ -189,6 +189,6 @@ void ReferenceCMAPTorsionIxn::calculateOneIxn(int index, RealOpenMM** atomCoordi
    --------------------------------------------------------------------------------------- */
 
 int ReferenceCMAPTorsionIxn::calculateBondIxn(int* atomIndices, RealOpenMM** atomCoordinates,
-     RealOpenMM* parameters, RealOpenMM** forces, RealOpenMM* energyByBond, RealOpenMM* energyByAtom) const {
-         return 0; // but it must return a value to avoid MSVC compile error
+        RealOpenMM* parameters, RealOpenMM** forces, RealOpenMM* energyByBond, RealOpenMM* energyByAtom) const {
+    return ReferenceForce::DefaultReturn;
 }
