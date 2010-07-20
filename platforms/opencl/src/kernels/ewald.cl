@@ -46,7 +46,7 @@ __kernel void calculateEwaldCosSinSums(__global float* energyBuffer, __global fl
         // Compute the contribution to the energy.
 
         float k2 = kx*kx + ky*ky + kz*kz;
-        float ak = exp(k2*EXP_COEFFICIENT) / k2;
+        float ak = EXP(k2*EXP_COEFFICIENT) / k2;
         energy += reciprocalCoefficient*ak*(sum.x*sum.x + sum.y*sum.y);
         index += get_global_size(0);
     }
@@ -83,7 +83,7 @@ __kernel void calculateEwaldForces(__global float4* forceBuffers, __global float
 
                     int index = rx*(KMAX_Y*2-1)*(KMAX_Z*2-1) + (ry+KMAX_Y-1)*(KMAX_Z*2-1) + (rz+KMAX_Z-1);
                     float k2 = kx*kx + ky*ky + kz*kz;
-                    float ak = exp(k2*EXP_COEFFICIENT)/k2;
+                    float ak = EXP(k2*EXP_COEFFICIENT)/k2;
                     phase = apos.z*kz;
                     float2 structureFactor = multofFloat2(tab_xy, (float2) (cos(phase), sin(phase)));
                     float2 sum = cosSinSum[index];

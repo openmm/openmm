@@ -153,10 +153,10 @@ void OpenCLExpressionUtilities::processExpression(stringstream& out, const Expre
             out << "sqrt(" << getTempName(node.getChildren()[0], temps) << ")";
             break;
         case Operation::EXP:
-            out << "exp(" << getTempName(node.getChildren()[0], temps) << ")";
+            out << "EXP(" << getTempName(node.getChildren()[0], temps) << ")";
             break;
         case Operation::LOG:
-            out << "log(" << getTempName(node.getChildren()[0], temps) << ")";
+            out << "LOG(" << getTempName(node.getChildren()[0], temps) << ")";
             break;
         case Operation::SIN:
             out << "sin(" << getTempName(node.getChildren()[0], temps) << ")";

@@ -107,10 +107,10 @@ OpenCLContext::OpenCLContext(int numParticles, int deviceIndex) : time(0.0), ste
     // Decide whether native_sqrt(), native_rsqrt(), and native_recip() are sufficiently accurate to use.
 
     cl::Kernel accuracyKernel(utilities, "determineNativeAccuracy");
-    OpenCLArray<mm_float4> values(*this, 20, "values", true);
+    OpenCLArray<mm_float8> values(*this, 20, "values", true);
     float nextValue = 1e-4;
     for (int i = 0; i < values.getSize(); ++i) {
-        values[i].x = nextValue;
+        values[i].s0 = nextValue;
         nextValue *= M_PI;
     }
     values.upload();
@@ -118,12 +118,15 @@ OpenCLContext::OpenCLContext(int numParticles, int deviceIndex) : time(0.0), ste
     accuracyKernel.setArg<cl_int>(1, values.getSize());
     executeKernel(accuracyKernel, values.getSize());
     values.download();
-    double maxSqrtError = 0.0, maxRsqrtError = 0.0, maxRecipError = 0.0;
+    double maxSqrtError = 0.0, maxRsqrtError = 0.0, maxRecipError = 0.0, maxExpError = 0.0, maxLogError = 0.0;
     for (int i = 0; i < values.getSize(); ++i) {
-        double correctSqrt = sqrt(values[i].x);
-        maxSqrtError = max(maxSqrtError, fabs(correctSqrt-values[i].y)/correctSqrt);
-        maxRsqrtError = max(maxRsqrtError, fabs(1.0/correctSqrt-values[i].z)*correctSqrt);
-        maxRecipError = max(maxRecipError, fabs(1.0/values[i].x-values[i].w)/values[i].w);
+        double v = values[i].s0;
+        double correctSqrt = sqrt(v);
+        maxSqrtError = max(maxSqrtError, fabs(correctSqrt-values[i].s1)/correctSqrt);
+        maxRsqrtError = max(maxRsqrtError, fabs(1.0/correctSqrt-values[i].s2)*correctSqrt);
+        maxRecipError = max(maxRecipError, fabs(1.0/v-values[i].s3)/values[i].s3);
+        maxExpError = max(maxExpError, fabs(exp(v)-values[i].s4)/values[i].s4);
+        maxLogError = max(maxLogError, fabs(log(v)-values[i].s5)/values[i].s5);
     }
     if (maxSqrtError < 1e-6)
         compilationOptions += " -DSQRT=native_sqrt";
@@ -137,6 +140,14 @@ OpenCLContext::OpenCLContext(int numParticles, int deviceIndex) : time(0.0), ste
         compilationOptions += " -DRECIP=native_recip";
     else
         compilationOptions += " -DRECIP=1.0f/";
+    if (maxExpError < 1e-6)
+        compilationOptions += " -DEXP=native_exp";
+    else
+        compilationOptions += " -DEXP=exp";
+    if (maxLogError < 1e-6)
+        compilationOptions += " -DLOG=native_log";
+    else
+        compilationOptions += " -DLOG=log";
 }
 
 OpenCLContext::~OpenCLContext() {

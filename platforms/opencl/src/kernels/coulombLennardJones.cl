@@ -17,7 +17,7 @@ if (!isExcluded || needCorrection) {
     if (needCorrection) {
         // Subtract off the part of this interaction that was included in the reciprocal space contribution.
 
-        tempForce = -prefactor*((1.0f-erfcAlphaR)-alphaR*exp(-alphaR*alphaR)*TWO_OVER_SQRT_PI);
+        tempForce = -prefactor*((1.0f-erfcAlphaR)-alphaR*EXP(-alphaR*alphaR)*TWO_OVER_SQRT_PI);
         tempEnergy += -prefactor*(1.0f-erfcAlphaR);
     }
     else if (r2 < CUTOFF_SQUARED) {
@@ -27,10 +27,10 @@ if (!isExcluded || needCorrection) {
         sig2 *= sig2;
         float sig6 = sig2*sig2*sig2;
         float eps = sigmaEpsilon1.y*sigmaEpsilon2.y;
-        tempForce = eps*(12.0f*sig6 - 6.0f)*sig6 + prefactor*(erfcAlphaR+alphaR*exp(-alphaR*alphaR)*TWO_OVER_SQRT_PI);
+        tempForce = eps*(12.0f*sig6 - 6.0f)*sig6 + prefactor*(erfcAlphaR+alphaR*EXP(-alphaR*alphaR)*TWO_OVER_SQRT_PI);
         tempEnergy += eps*(sig6 - 1.0f)*sig6 + prefactor*erfcAlphaR;
 #else
-        tempForce = prefactor*(erfcAlphaR+alphaR*exp(-alphaR*alphaR)*TWO_OVER_SQRT_PI);
+        tempForce = prefactor*(erfcAlphaR+alphaR*EXP(-alphaR*alphaR)*TWO_OVER_SQRT_PI);
         tempEnergy += prefactor*erfcAlphaR;
 #endif
     }

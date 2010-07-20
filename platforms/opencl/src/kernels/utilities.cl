@@ -59,12 +59,12 @@ __kernel void reduceFloat4Buffer(__global float4* buffer, int bufferSize, int nu
 }
 
 /**
- * This is called to determine the accuracy of native_sqrt(), native_rsqrt() and native_recip().
+ * This is called to determine the accuracy of various native functions.
  */
 
-__kernel void determineNativeAccuracy(__global float4* values, int numValues) {
+__kernel void determineNativeAccuracy(__global float8* values, int numValues) {
     for (int i = 0; i < numValues; ++i) {
-        float v = values[i].x;
-        values[i] = (float4) (v, native_sqrt(v), native_rsqrt(v), native_recip(v));
+        float v = values[i].s0;
+        values[i] = (float8) (v, native_sqrt(v), native_rsqrt(v), native_recip(v), native_exp(v), native_log(v), 0.0f, 0.0f);
     }
 }

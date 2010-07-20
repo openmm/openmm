@@ -173,7 +173,7 @@ __kernel void reciprocalConvolution(__global float2* pmeGrid, __global float* en
         float2 grid = pmeGrid[index];
         float m2 = mhx*mhx+mhy*mhy+mhz*mhz;
         float denom = m2*bx*by*bz;
-        float eterm = recipScaleFactor*exp(-RECIP_EXP_FACTOR*m2)/denom;
+        float eterm = recipScaleFactor*EXP(-RECIP_EXP_FACTOR*m2)/denom;
         pmeGrid[index] = (float2) (grid.x*eterm, grid.y*eterm);
         energy += eterm*(grid.x*grid.x + grid.y*grid.y);
     }
