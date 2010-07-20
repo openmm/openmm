@@ -1677,6 +1677,7 @@ int gpuAllocateInitialBuffers(gpuContext gpu)
         (*gpu->psAtomIndex)[i] = i;
     gpu->psAtomIndex->Upload();
     gpu->posCellOffsets.resize(gpu->natoms, make_int3(0, 0, 0));
+    gpu->sim.outputBuffers = 0;
     // Determine randoms
     gpu->seed                           = 1;
     gpu->sim.randomFrames               = 20;
@@ -2183,7 +2184,8 @@ int gpuBuildOutputBuffers(gpuContext gpu)
         gpu->bOutputBufferPerWarp           = false;
         gpu->sim.nonbondOutputBuffers       = gpu->sim.paddedNumberOfAtoms / GRID;
     }
-    gpu->sim.outputBuffers              = gpu->sim.nonbondOutputBuffers;
+    if (gpu->sim.nonbondOutputBuffers > gpu->sim.outputBuffers)
+        gpu->sim.outputBuffers = gpu->sim.nonbondOutputBuffers;
 
     unsigned int outputBuffers = gpu->sim.outputBuffers;
     for (unsigned int i = 0; i < gpu->sim.paddedNumberOfAtoms; i++)

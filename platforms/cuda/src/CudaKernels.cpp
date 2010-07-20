@@ -28,6 +28,7 @@
 #include "openmm/LangevinIntegrator.h"
 #include "openmm/Context.h"
 #include "openmm/OpenMMException.h"
+#include "openmm/internal/CMAPTorsionForceImpl.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
 #include "kernels/gputypes.h"
@@ -418,6 +419,76 @@ void CudaCalcRBTorsionForceKernel::executeForces(ContextImpl& context) {
 }
 
 double CudaCalcRBTorsionForceKernel::executeEnergy(ContextImpl& context) {
+    return 0.0;
+}
+
+CudaCalcCMAPTorsionForceKernel::~CudaCalcCMAPTorsionForceKernel() {
+    if (coefficients != NULL)
+        delete coefficients;
+    if (mapPositions != NULL)
+        delete mapPositions;
+    if (torsionMaps != NULL)
+        delete torsionMaps;
+    if (torsionIndices != NULL)
+        delete torsionIndices;
+}
+
+void CudaCalcCMAPTorsionForceKernel::initialize(const System& system, const CMAPTorsionForce& force) {
+    numTorsions = force.getNumTorsions();
+    if (numTorsions == 0)
+        return;
+    int numMaps = force.getNumMaps();
+    vector<float4> coeffVec;
+    vector<int2> mapPositionsVec(numMaps);
+    vector<double> energy;
+    vector<vector<double> > c;
+    int currentPosition = 0;
+    mapPositions = new CUDAStream<int2>(numMaps, 1, "cmapTorsionMapPositions");
+    for (int i = 0; i < numMaps; i++) {
+        int size;
+        force.getMapParameters(i, size, energy);
+        CMAPTorsionForceImpl::calcMapDerivatives(size, energy, c);
+        (*mapPositions)[i] = make_int2(currentPosition, size);
+        currentPosition += 4*size*size;
+        for (int j = 0; j < size*size; j++) {
+            coeffVec.push_back(make_float4(c[j][0], c[j][1], c[j][2], c[j][3]));
+            coeffVec.push_back(make_float4(c[j][4], c[j][5], c[j][6], c[j][7]));
+            coeffVec.push_back(make_float4(c[j][8], c[j][9], c[j][10], c[j][11]));
+            coeffVec.push_back(make_float4(c[j][12], c[j][13], c[j][14], c[j][15]));
+        }
+    }
+    coefficients = new CUDAStream<float4>((int) coeffVec.size(), 1, "cmapTorsionCoefficients");;
+    for (int i = 0; i < (int) coeffVec.size(); i++)
+        (*coefficients)[i] = coeffVec[i];
+    torsionMaps = new CUDAStream<int>(numTorsions, 1, "cmapTorsionMaps");
+    torsionIndices = new CUDAStream<int4>(4*numTorsions, 1, "cmapTorsionIndices");
+    vector<int> forceBufferCounter(system.getNumParticles(), 0);
+    for (int i = 0; i < numTorsions; i++) {
+        int map, a1, a2, a3, a4, b1, b2, b3, b4;
+        force.getTorsionParameters(i, map, a1, a2, a3, a4, b1, b2, b3, b4);
+        (*torsionMaps)[i] = map;
+        (*torsionIndices)[i*4] = make_int4(a1, a2, a3, a4);
+        (*torsionIndices)[i*4+1] = make_int4(b1, b2, b3, b4);
+        (*torsionIndices)[i*4+2] = make_int4(forceBufferCounter[a1]++, forceBufferCounter[a2]++, forceBufferCounter[a3]++, forceBufferCounter[a4]++);
+        (*torsionIndices)[i*4+3] = make_int4(forceBufferCounter[b1]++, forceBufferCounter[b2]++, forceBufferCounter[b3]++, forceBufferCounter[b4]++);
+    }
+    coefficients->Upload();
+    mapPositions->Upload();
+    torsionMaps->Upload();
+    torsionIndices->Upload();
+    int maxBuffers = 1;
+    for (int i = 0; i < (int) forceBufferCounter.size(); i++)
+        maxBuffers = max(maxBuffers, forceBufferCounter[i]);
+    if (maxBuffers > data.gpu->sim.outputBuffers)
+        data.gpu->sim.outputBuffers = maxBuffers;
+}
+
+void CudaCalcCMAPTorsionForceKernel::executeForces(ContextImpl& context) {
+    kCalculateCMAPTorsionForces(data.gpu, *coefficients, *mapPositions, *torsionIndices, *torsionMaps);
+}
+
+double CudaCalcCMAPTorsionForceKernel::executeEnergy(ContextImpl& context) {
+    kCalculateCMAPTorsionForces(data.gpu, *coefficients, *mapPositions, *torsionIndices, *torsionMaps);
     return 0.0;
 }
 

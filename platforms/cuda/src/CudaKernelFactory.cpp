@@ -51,6 +51,8 @@ OPENMMCUDA_EXPORT KernelImpl* CudaKernelFactory::createKernelImpl(std::string na
         return new CudaCalcPeriodicTorsionForceKernel(name, platform, data, context.getSystem());
     if (name == CalcRBTorsionForceKernel::Name())
         return new CudaCalcRBTorsionForceKernel(name, platform, data, context.getSystem());
+    if (name == CalcCMAPTorsionForceKernel::Name())
+        return new CudaCalcCMAPTorsionForceKernel(name, platform, data, context.getSystem());
     if (name == CalcCustomTorsionForceKernel::Name())
         return new CudaCalcCustomTorsionForceKernel(name, platform, data, context.getSystem());
     if (name == CalcNonbondedForceKernel::Name())

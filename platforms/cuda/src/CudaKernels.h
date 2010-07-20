@@ -406,6 +406,46 @@ private:
 };
 
 /**
+ * This kernel is invoked by CMAPTorsionForce to calculate the forces acting on the system and the energy of the system.
+ */
+class CudaCalcCMAPTorsionForceKernel : public CalcCMAPTorsionForceKernel {
+public:
+    CudaCalcCMAPTorsionForceKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data, System& system) :
+            CalcCMAPTorsionForceKernel(name, platform), data(data), system(system), coefficients(NULL), mapPositions(NULL),
+            torsionIndices(NULL), torsionMaps(NULL) {
+    }
+    ~CudaCalcCMAPTorsionForceKernel();
+    /**
+     * Initialize the kernel.
+     *
+     * @param system     the System this kernel will be applied to
+     * @param force      the CMAPTorsionForce this kernel will be used for
+     */
+    void initialize(const System& system, const CMAPTorsionForce& force);
+    /**
+     * Execute the kernel to calculate the forces.
+     *
+     * @param context    the context in which to execute this kernel
+     */
+    void executeForces(ContextImpl& context);
+    /**
+     * Execute the kernel to calculate the energy.
+     *
+     * @param context    the context in which to execute this kernel
+     * @return the potential energy due to the CMAPTorsionForce
+     */
+    double executeEnergy(ContextImpl& context);
+private:
+    CudaPlatform::PlatformData& data;
+    System& system;
+    int numTorsions;
+    CUDAStream<float4>* coefficients;
+    CUDAStream<int2>* mapPositions;
+    CUDAStream<int4>* torsionIndices;
+    CUDAStream<int>* torsionMaps;
+};
+
+/**
  * This kernel is invoked by CustomTorsionForce to calculate the forces acting on the system and the energy of the system.
  */
 class CudaCalcCustomTorsionForceKernel : public CalcCustomTorsionForceKernel {

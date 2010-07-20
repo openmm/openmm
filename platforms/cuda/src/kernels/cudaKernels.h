@@ -42,6 +42,7 @@ extern void kGenerateRandoms(gpuContext gpu);
 extern void kCalculateCDLJObcGbsaForces1(gpuContext gpu);
 extern void kCalculateCDLJGBVIForces1(gpuContext gpu);
 extern void kCalculateCDLJForces(gpuContext gpu);
+extern void kCalculateCMAPTorsionForces(gpuContext gpu, CUDAStream<float4>& coefficients, CUDAStream<int2>& mapPositions, CUDAStream<int4>& torsionIndices, CUDAStream<int>& torsionMaps);
 extern void kCalculateCustomBondForces(gpuContext gpu);
 extern void kCalculateCustomAngleForces(gpuContext gpu);
 extern void kCalculateCustomTorsionForces(gpuContext gpu);
