@@ -44,7 +44,7 @@ namespace OpenMM {
  * This is the internal implementation of CMAPTorsionForce.
  */
 
-class CMAPTorsionForceImpl : public ForceImpl {
+class OPENMM_EXPORT CMAPTorsionForceImpl : public ForceImpl {
 public:
     CMAPTorsionForceImpl(CMAPTorsionForce& owner);
     ~CMAPTorsionForceImpl();
