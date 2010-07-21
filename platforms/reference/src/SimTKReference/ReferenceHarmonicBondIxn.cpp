@@ -72,25 +72,15 @@ ReferenceHarmonicBondIxn::~ReferenceHarmonicBondIxn( ){
    @param parameters       parameters: parameters[0] = ideal bond length
                                        parameters[1] = bond k
    @param forces           force array (forces added to input values)
-   @param energiesByBond   energies by bond: energiesByBond[bondIndex]
-   @param energiesByAtom   energies by atom: energiesByAtom[atomIndex]
-
-   @return ReferenceForce::DefaultReturn;
+   @param totalEnergy      if not null, the energy will be added to this
 
    --------------------------------------------------------------------------------------- */
 
-int ReferenceHarmonicBondIxn::calculateBondIxn( int* atomIndices,
+void ReferenceHarmonicBondIxn::calculateBondIxn( int* atomIndices,
                                                 RealOpenMM** atomCoordinates,
                                                 RealOpenMM* parameters,
                                                 RealOpenMM** forces,
-                                                RealOpenMM* energiesByBond, 
-                                                RealOpenMM* energiesByAtom ) const {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceHarmonicBondIxn::calculateBondIxn";
-
-   // ---------------------------------------------------------------------------------------
+                                                RealOpenMM* totalEnergy ) const {
 
    static const std::string methodName = "\nReferenceHarmonicBondIxn::calculateBondIxn";
 
@@ -129,8 +119,6 @@ int ReferenceHarmonicBondIxn::calculateBondIxn( int* atomIndices,
    forces[atomBIndex][1]     -= dEdR*deltaR[ReferenceForce::YIndex];
    forces[atomBIndex][2]     -= dEdR*deltaR[ReferenceForce::ZIndex];
 
-   RealOpenMM energy          = half*parameters[1]*deltaIdeal2;
-   updateEnergy( energy, energiesByBond, twoI, atomIndices, energiesByAtom );
-
-   return ReferenceForce::DefaultReturn;
+   if (totalEnergy != NULL)
+       *totalEnergy += half*parameters[1]*deltaIdeal2;
 }

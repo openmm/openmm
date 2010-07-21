@@ -84,9 +84,9 @@ public:
 
        --------------------------------------------------------------------------------------- */
 
-    int calculateBondIxn(int* atomIndices, RealOpenMM** atomCoordinates,
+    void calculateBondIxn(int* atomIndices, RealOpenMM** atomCoordinates,
                          RealOpenMM* parameters, RealOpenMM** forces,
-                         RealOpenMM* energyByBond, RealOpenMM* energyByAtom) const;
+                         RealOpenMM* totalEnergy) const;
 
 // ---------------------------------------------------------------------------------------
 

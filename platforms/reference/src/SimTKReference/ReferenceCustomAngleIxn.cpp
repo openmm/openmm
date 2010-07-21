@@ -74,25 +74,15 @@ ReferenceCustomAngleIxn::~ReferenceCustomAngleIxn( ){
    @param atomCoordinates  atom coordinates
    @param parameters       parameters values
    @param forces           force array (forces added to input values)
-   @param energiesByBond   energies by bond: energiesByBond[bondIndex]
-   @param energiesByAtom   energies by atom: energiesByAtom[atomIndex]
-
-   @return ReferenceForce::DefaultReturn;
+   @param totalEnergy      if not null, the energy will be added to this
 
    --------------------------------------------------------------------------------------- */
 
-int ReferenceCustomAngleIxn::calculateBondIxn( int* atomIndices,
+void ReferenceCustomAngleIxn::calculateBondIxn( int* atomIndices,
                                                 RealOpenMM** atomCoordinates,
                                                 RealOpenMM* parameters,
                                                 RealOpenMM** forces,
-                                                RealOpenMM* energiesByBond,
-                                                RealOpenMM* energiesByAtom ) const {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceCustomAngleIxn::calculateAngleIxn";
-
-   // ---------------------------------------------------------------------------------------
+                                                RealOpenMM* totalEnergy ) const {
 
    static const std::string methodName = "\nReferenceCustomAngleIxn::calculateAngleIxn";
 
@@ -156,8 +146,7 @@ int ReferenceCustomAngleIxn::calculateBondIxn( int* atomIndices,
 
    // accumulate energies
 
-   updateEnergy(energy, energiesByBond, 3, atomIndices, energiesByAtom);
-
-   return ReferenceForce::DefaultReturn;
+   if (totalEnergy != NULL)
+       *totalEnergy += energy;
 }
 

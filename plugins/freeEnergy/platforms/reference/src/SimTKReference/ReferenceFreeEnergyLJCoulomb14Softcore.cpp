@@ -140,23 +140,13 @@ int ReferenceFreeEnergyLJCoulomb14Softcore::getDerivedParameters( RealOpenMM c6,
 										parameters[1]= c6*c6/c12      (4*epsilon)
 										parameters[2]= epsfac*q1*q2
    @param forces           force array (forces added to current values)
-   @param energiesByBond   energies by bond: energiesByBond[bondIndex]
-   @param energiesByAtom   energies by atom: energiesByAtom[atomIndex]
-
-   @return ReferenceForce::DefaultReturn
+   @param totalEnergy      if not null, the energy will be added to this
 
    --------------------------------------------------------------------------------------- */
 
-int ReferenceFreeEnergyLJCoulomb14Softcore::calculateBondIxn( int* atomIndices, RealOpenMM** atomCoordinates,
+void ReferenceFreeEnergyLJCoulomb14Softcore::calculateBondIxn( int* atomIndices, RealOpenMM** atomCoordinates,
                                                                RealOpenMM* parameters, RealOpenMM** forces,
-                                                               RealOpenMM* energiesByBond,
-                                                               RealOpenMM* energiesByAtom ) const {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceFreeEnergyLJCoulomb14Softcore::calculateBondIxn";
-
-   // ---------------------------------------------------------------------------------------
+                                                               RealOpenMM* totalEnergy ) const {
 
    static const std::string methodName = "\nReferenceFreeEnergyLJCoulomb14Softcore::calculateBondIxn";
 
@@ -193,7 +183,7 @@ int ReferenceFreeEnergyLJCoulomb14Softcore::calculateBondIxn( int* atomIndices, 
    ReferenceForce::getDeltaR( atomCoordinates[atomBIndex], atomCoordinates[atomAIndex], deltaR[0] );  
 
    if (cutoff && deltaR[0][ReferenceForce::RIndex] > cutoffDistance)
-       return ReferenceForce::DefaultReturn;
+       return;
    RealOpenMM r2        = deltaR[0][ReferenceForce::R2Index];
    RealOpenMM inverseR  = one/(deltaR[0][ReferenceForce::RIndex]);
 
@@ -229,7 +219,8 @@ int ReferenceFreeEnergyLJCoulomb14Softcore::calculateBondIxn( int* atomIndices, 
 
    // accumulate energies
 
-   updateEnergy( energy, energiesByBond, LastAtomIndex, atomIndices, energiesByAtom );
+   if (totalEnergy != NULL)
+       *totalEnergy += energy;
 
    // debug 
 
@@ -283,8 +274,6 @@ int ReferenceFreeEnergyLJCoulomb14Softcore::calculateBondIxn( int* atomIndices, 
 
       //SimTKOpenMMLog::printMessage( message );
    }   
-
-   return ReferenceForce::DefaultReturn;
 }
 
   /**---------------------------------------------------------------------------------------

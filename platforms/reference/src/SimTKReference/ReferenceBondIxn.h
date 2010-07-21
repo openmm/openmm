@@ -59,32 +59,13 @@ class OPENMM_EXPORT ReferenceBondIxn {
          @param atomCoordinates  atom coordinates
          @param parameters       parameters
          @param forces           force array (forces added)
-         @param energyByBond     bond energy 
-         @param energy           atom energy
+         @param totalEnergy      if not null, the energy will be added to this
       
          --------------------------------------------------------------------------------------- */
       
-      virtual int calculateBondIxn( int* atomIndices, RealOpenMM** atomCoordinates,
+      virtual void calculateBondIxn( int* atomIndices, RealOpenMM** atomCoordinates,
                                     RealOpenMM* parameters, RealOpenMM** forces,
-                                    RealOpenMM* energyByBond, RealOpenMM* energyByAtom ) const;
-
-      /**---------------------------------------------------------------------------------------
-      
-         Update energy
-      
-         @param  energy               energy value to update 
-         @param  energyByBond         ptr to energyByBond accumulator (may be null)
-         @param  numberOfAtomIndices  number of atoms in bond
-         @param  atomIndices          array of atom indices of size 'numberOfAtomIndices'
-         @param  energyByAtom         array of energies by atom (may be null)
-      
-         @return ReferenceForce::DefaultReturn 
-      
-         --------------------------------------------------------------------------------------- */
-      
-      int updateEnergy( RealOpenMM energy, RealOpenMM* energyByBond,
-                        int numberOfAtomIndices, int* atomIndices, RealOpenMM* energyByAtom ) const;
-      
+                                    RealOpenMM* totalEnergy ) const;
       
       /**---------------------------------------------------------------------------------------
       

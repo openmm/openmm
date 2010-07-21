@@ -73,25 +73,15 @@ ReferenceProperDihedralBond::~ReferenceProperDihedralBond( ){
                                          parameters[1] = ideal bond angle in radians
                                          parameters[2] = multiplicity
    @param forces           force array (forces added to current values)
-   @param energiesByBond   energies by bond: energiesByBond[bondIndex]
-   @param energiesByAtom   energies by atom: energiesByAtom[atomIndex]
-
-   @return ReferenceForce::DefaultReturn
+   @param totalEnergy      if not null, the energy will be added to this
 
    --------------------------------------------------------------------------------------- */
 
-int ReferenceProperDihedralBond::calculateBondIxn( int* atomIndices,
+void ReferenceProperDihedralBond::calculateBondIxn( int* atomIndices,
                                                    RealOpenMM** atomCoordinates,
                                                    RealOpenMM* parameters,
                                                    RealOpenMM** forces,
-                                                   RealOpenMM* energiesByBond,
-                                                   RealOpenMM* energiesByAtom ) const {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceProperDihedralBond::calculateBondIxn";
-
-   // ---------------------------------------------------------------------------------------
+                                                   RealOpenMM* totalEnergy ) const {
 
    static const std::string methodName = "\nReferenceProperDihedralBond::calculateBondIxn";
 
@@ -185,7 +175,6 @@ int ReferenceProperDihedralBond::calculateBondIxn( int* atomIndices,
 
    // accumulate energies
 
-   updateEnergy( energy, energiesByBond, LastAtomIndex, atomIndices, energiesByAtom );
-
-   return ReferenceForce::DefaultReturn;
+   if (totalEnergy != NULL)
+       *totalEnergy += energy;
 }

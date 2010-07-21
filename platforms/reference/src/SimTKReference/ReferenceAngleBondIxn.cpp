@@ -117,27 +117,15 @@ int ReferenceAngleBondIxn::getPrefactorsGivenAngleCosine( RealOpenMM cosine, Rea
    @param parameters       parameters: parameters[0] = ideal bond length
                                        parameters[1] = bond k (includes factor of 2)
    @param forces           force array (forces added)
-   @param energiesByBond   energies by bond: energiesByBond[bondIndex]
-   @param energiesByAtom   energies by atom: energiesByAtom[atomIndex]
-
-   @return ReferenceForce::DefaultReturn
+   @param totalEnergy      if not null, the energy will be added to this
 
    --------------------------------------------------------------------------------------- */
 
-int ReferenceAngleBondIxn::calculateBondIxn( int* atomIndices,
+void ReferenceAngleBondIxn::calculateBondIxn( int* atomIndices,
                                              RealOpenMM** atomCoordinates,
                                              RealOpenMM* parameters,
                                              RealOpenMM** forces,
-                                             RealOpenMM* energiesByBond,
-                                             RealOpenMM* energiesByAtom ) const {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceAngleBondIxn::calculateBondIxn";
-
-   // ---------------------------------------------------------------------------------------
-
-   static const std::string methodName = "\nReferenceAngleBondIxn::calculateBondIxn";
+                                             RealOpenMM* totalEnergy ) const {
 
    // constants -- reduce Visual Studio warnings regarding conversions between float & double
 
@@ -200,7 +188,6 @@ int ReferenceAngleBondIxn::calculateBondIxn( int* atomIndices,
 
    // accumulate energies
 
-   updateEnergy( energy, energiesByBond, LastAtomIndex, atomIndices, energiesByAtom );
-
-   return ReferenceForce::DefaultReturn;
+   if (totalEnergy != NULL)
+       *totalEnergy += energy;
 }

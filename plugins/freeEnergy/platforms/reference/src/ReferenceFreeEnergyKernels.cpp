@@ -259,7 +259,7 @@ void ReferenceFreeEnergyCalcNonbondedSoftcoreForceKernel::executeForces(ContextI
     ReferenceFreeEnergyLJCoulomb14Softcore nonbonded14;
     if (nonbondedMethod == CutoffNonPeriodic || nonbondedMethod == CutoffPeriodic)
         nonbonded14.setUseCutoff(nonbondedCutoff, rfDielectric);
-    refBondForce.calculateForce(num14, bonded14IndexArray, posData, bonded14ParamArray, forceData, 0, 0, 0, nonbonded14);
+    refBondForce.calculateForce(num14, bonded14IndexArray, posData, bonded14ParamArray, forceData, 0, nonbonded14);
 }
 
 double ReferenceFreeEnergyCalcNonbondedSoftcoreForceKernel::executeEnergy(ContextImpl& context) {
@@ -289,12 +289,8 @@ double ReferenceFreeEnergyCalcNonbondedSoftcoreForceKernel::executeEnergy(Contex
     if (nonbondedMethod == CutoffNonPeriodic || nonbondedMethod == CutoffPeriodic)
         nonbonded14.setUseCutoff(nonbondedCutoff, rfDielectric);
 
-    RealOpenMM* energyArray = new RealOpenMM[num14];
-    for (int i = 0; i < num14; ++i)
-        energyArray[i] = 0;
-    refBondForce.calculateForce(num14, bonded14IndexArray, posData, bonded14ParamArray, forceData, energyArray, 0, &energy, nonbonded14);
+    refBondForce.calculateForce(num14, bonded14IndexArray, posData, bonded14ParamArray, forceData, &energy, nonbonded14);
     disposeRealArray(forceData, numParticles);
-    delete[] energyArray;
 
     return energy;
 }

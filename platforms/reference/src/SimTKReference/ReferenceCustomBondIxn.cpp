@@ -75,25 +75,15 @@ ReferenceCustomBondIxn::~ReferenceCustomBondIxn( ){
    @param atomCoordinates  atom coordinates
    @param parameters       parameters values
    @param forces           force array (forces added to input values)
-   @param energiesByBond   energies by bond: energiesByBond[bondIndex]
-   @param energiesByAtom   energies by atom: energiesByAtom[atomIndex]
-
-   @return ReferenceForce::DefaultReturn;
+   @param totalEnergy      if not null, the energy will be added to this
 
    --------------------------------------------------------------------------------------- */
 
-int ReferenceCustomBondIxn::calculateBondIxn( int* atomIndices,
+void ReferenceCustomBondIxn::calculateBondIxn( int* atomIndices,
                                                 RealOpenMM** atomCoordinates,
                                                 RealOpenMM* parameters,
                                                 RealOpenMM** forces,
-                                                RealOpenMM* energiesByBond,
-                                                RealOpenMM* energiesByAtom ) const {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceCustomBondIxn::calculateBondIxn";
-
-   // ---------------------------------------------------------------------------------------
+                                                RealOpenMM* totalEnergy ) const {
 
    static const std::string methodName = "\nReferenceCustomBondIxn::calculateBondIxn";
 
@@ -127,8 +117,6 @@ int ReferenceCustomBondIxn::calculateBondIxn( int* atomIndices,
    forces[atomBIndex][1]     -= dEdR*deltaR[ReferenceForce::YIndex];
    forces[atomBIndex][2]     -= dEdR*deltaR[ReferenceForce::ZIndex];
 
-   RealOpenMM energy          = (RealOpenMM) energyExpression.evaluate(variables);
-   updateEnergy( energy, energiesByBond, twoI, atomIndices, energiesByAtom );
-
-   return ReferenceForce::DefaultReturn;
+   if (totalEnergy != NULL)
+       *totalEnergy += (RealOpenMM) energyExpression.evaluate(variables);
 }

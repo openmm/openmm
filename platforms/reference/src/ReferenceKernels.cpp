@@ -320,21 +320,17 @@ void ReferenceCalcHarmonicBondForceKernel::executeForces(ContextImpl& context) {
     RealOpenMM** forceData = extractForces(context);
     ReferenceBondForce refBondForce;
     ReferenceHarmonicBondIxn harmonicBond;
-    refBondForce.calculateForce(numBonds, bondIndexArray, posData, bondParamArray, forceData, 0, 0, 0, harmonicBond);
+    refBondForce.calculateForce(numBonds, bondIndexArray, posData, bondParamArray, forceData, 0, harmonicBond);
 }
 
 double ReferenceCalcHarmonicBondForceKernel::executeEnergy(ContextImpl& context) {
     RealOpenMM** posData = extractPositions(context);
     RealOpenMM** forceData = allocateRealArray(context.getSystem().getNumParticles(), 3);
-    RealOpenMM* energyArray = new RealOpenMM[numBonds];
     RealOpenMM energy = 0;
     ReferenceBondForce refBondForce;
     ReferenceHarmonicBondIxn harmonicBond;
-    for (int i = 0; i < numBonds; ++i)
-        energyArray[i] = 0;
-    refBondForce.calculateForce(numBonds, bondIndexArray, posData, bondParamArray, forceData, energyArray, 0, &energy, harmonicBond);
+    refBondForce.calculateForce(numBonds, bondIndexArray, posData, bondParamArray, forceData, &energy, harmonicBond);
     disposeRealArray(forceData, context.getSystem().getNumParticles());
-    delete[] energyArray;
     return energy;
 }
 
@@ -380,24 +376,20 @@ void ReferenceCalcCustomBondForceKernel::executeForces(ContextImpl& context) {
         globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
     ReferenceBondForce refBondForce;
     ReferenceCustomBondIxn harmonicBond(energyExpression, forceExpression, parameterNames, globalParameters);
-    refBondForce.calculateForce(numBonds, bondIndexArray, posData, bondParamArray, forceData, 0, 0, 0, harmonicBond);
+    refBondForce.calculateForce(numBonds, bondIndexArray, posData, bondParamArray, forceData, 0, harmonicBond);
 }
 
 double ReferenceCalcCustomBondForceKernel::executeEnergy(ContextImpl& context) {
     RealOpenMM** posData = extractPositions(context);
     RealOpenMM** forceData = allocateRealArray(context.getSystem().getNumParticles(), 3);
-    RealOpenMM* energyArray = new RealOpenMM[numBonds];
     RealOpenMM energy = 0;
     map<string, double> globalParameters;
     for (int i = 0; i < (int) globalParameterNames.size(); i++)
         globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
     ReferenceBondForce refBondForce;
     ReferenceCustomBondIxn harmonicBond(energyExpression, forceExpression, parameterNames, globalParameters);
-    for (int i = 0; i < numBonds; ++i)
-        energyArray[i] = 0;
-    refBondForce.calculateForce(numBonds, bondIndexArray, posData, bondParamArray, forceData, energyArray, 0, &energy, harmonicBond);
+    refBondForce.calculateForce(numBonds, bondIndexArray, posData, bondParamArray, forceData, &energy, harmonicBond);
     disposeRealArray(forceData, context.getSystem().getNumParticles());
-    delete[] energyArray;
     return energy;
 }
 
@@ -427,21 +419,17 @@ void ReferenceCalcHarmonicAngleForceKernel::executeForces(ContextImpl& context) 
     RealOpenMM** forceData = extractForces(context);
     ReferenceBondForce refBondForce;
     ReferenceAngleBondIxn angleBond;
-    refBondForce.calculateForce(numAngles, angleIndexArray, posData, angleParamArray, forceData, 0, 0, 0, angleBond);
+    refBondForce.calculateForce(numAngles, angleIndexArray, posData, angleParamArray, forceData, 0, angleBond);
 }
 
 double ReferenceCalcHarmonicAngleForceKernel::executeEnergy(ContextImpl& context) {
     RealOpenMM** posData = extractPositions(context);
     RealOpenMM** forceData = allocateRealArray(context.getSystem().getNumParticles(), 3);
-    RealOpenMM* energyArray = new RealOpenMM[numAngles];
     RealOpenMM energy = 0;
     ReferenceBondForce refBondForce;
     ReferenceAngleBondIxn angleBond;
-    for (int i = 0; i < numAngles; ++i)
-        energyArray[i] = 0;
-    refBondForce.calculateForce(numAngles, angleIndexArray, posData, angleParamArray, forceData, energyArray, 0, &energy, angleBond);
+    refBondForce.calculateForce(numAngles, angleIndexArray, posData, angleParamArray, forceData, &energy, angleBond);
     disposeRealArray(forceData, context.getSystem().getNumParticles());
-    delete[] energyArray;
     return energy;
 }
 
@@ -488,24 +476,20 @@ void ReferenceCalcCustomAngleForceKernel::executeForces(ContextImpl& context) {
         globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
     ReferenceBondForce refBondForce;
     ReferenceCustomAngleIxn customAngle(energyExpression, forceExpression, parameterNames, globalParameters);
-    refBondForce.calculateForce(numAngles, angleIndexArray, posData, angleParamArray, forceData, 0, 0, 0, customAngle);
+    refBondForce.calculateForce(numAngles, angleIndexArray, posData, angleParamArray, forceData, 0, customAngle);
 }
 
 double ReferenceCalcCustomAngleForceKernel::executeEnergy(ContextImpl& context) {
     RealOpenMM** posData = extractPositions(context);
     RealOpenMM** forceData = allocateRealArray(context.getSystem().getNumParticles(), 3);
-    RealOpenMM* energyArray = new RealOpenMM[numAngles];
     RealOpenMM energy = 0;
     map<string, double> globalParameters;
     for (int i = 0; i < (int) globalParameterNames.size(); i++)
         globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
     ReferenceBondForce refBondForce;
     ReferenceCustomAngleIxn customAngle(energyExpression, forceExpression, parameterNames, globalParameters);
-    for (int i = 0; i < numAngles; ++i)
-        energyArray[i] = 0;
-    refBondForce.calculateForce(numAngles, angleIndexArray, posData, angleParamArray, forceData, energyArray, 0, &energy, customAngle);
+    refBondForce.calculateForce(numAngles, angleIndexArray, posData, angleParamArray, forceData, &energy, customAngle);
     disposeRealArray(forceData, context.getSystem().getNumParticles());
-    delete[] energyArray;
     return energy;
 }
 
@@ -537,21 +521,17 @@ void ReferenceCalcPeriodicTorsionForceKernel::executeForces(ContextImpl& context
     RealOpenMM** forceData = extractForces(context);
     ReferenceBondForce refBondForce;
     ReferenceProperDihedralBond periodicTorsionBond;
-    refBondForce.calculateForce(numTorsions, torsionIndexArray, posData, torsionParamArray, forceData, 0, 0, 0, periodicTorsionBond);
+    refBondForce.calculateForce(numTorsions, torsionIndexArray, posData, torsionParamArray, forceData, 0, periodicTorsionBond);
 }
 
 double ReferenceCalcPeriodicTorsionForceKernel::executeEnergy(ContextImpl& context) {
     RealOpenMM** posData = extractPositions(context);
     RealOpenMM** forceData = allocateRealArray(context.getSystem().getNumParticles(), 3);
-    RealOpenMM* energyArray = new RealOpenMM[numTorsions];
     RealOpenMM energy = 0;
     ReferenceBondForce refBondForce;
     ReferenceProperDihedralBond periodicTorsionBond;
-    for (int i = 0; i < numTorsions; ++i)
-        energyArray[i] = 0;
-    refBondForce.calculateForce(numTorsions, torsionIndexArray, posData, torsionParamArray, forceData, energyArray, 0, &energy, periodicTorsionBond);
+    refBondForce.calculateForce(numTorsions, torsionIndexArray, posData, torsionParamArray, forceData, &energy, periodicTorsionBond);
     disposeRealArray(forceData, context.getSystem().getNumParticles());
-    delete[] energyArray;
     return energy;
 }
 
@@ -586,21 +566,17 @@ void ReferenceCalcRBTorsionForceKernel::executeForces(ContextImpl& context) {
     RealOpenMM** forceData = extractForces(context);
     ReferenceBondForce refBondForce;
     ReferenceRbDihedralBond rbTorsionBond;
-    refBondForce.calculateForce(numTorsions, torsionIndexArray, posData, torsionParamArray, forceData, 0, 0, 0, rbTorsionBond);
+    refBondForce.calculateForce(numTorsions, torsionIndexArray, posData, torsionParamArray, forceData, 0, rbTorsionBond);
 }
 
 double ReferenceCalcRBTorsionForceKernel::executeEnergy(ContextImpl& context) {
     RealOpenMM** posData = extractPositions(context);
     RealOpenMM** forceData = allocateRealArray(context.getSystem().getNumParticles(), 3);
-    RealOpenMM* energyArray = new RealOpenMM[numTorsions];
     RealOpenMM energy = 0;
     ReferenceBondForce refBondForce;
     ReferenceRbDihedralBond rbTorsionBond;
-    for (int i = 0; i < numTorsions; ++i)
-        energyArray[i] = 0;
-    refBondForce.calculateForce(numTorsions, torsionIndexArray, posData, torsionParamArray, forceData, energyArray, 0, &energy, rbTorsionBond);
+    refBondForce.calculateForce(numTorsions, torsionIndexArray, posData, torsionParamArray, forceData, &energy, rbTorsionBond);
     disposeRealArray(forceData, context.getSystem().getNumParticles());
-    delete[] energyArray;
     return energy;
 }
 
@@ -690,24 +666,20 @@ void ReferenceCalcCustomTorsionForceKernel::executeForces(ContextImpl& context) 
         globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
     ReferenceBondForce refBondForce;
     ReferenceCustomTorsionIxn customTorsion(energyExpression, forceExpression, parameterNames, globalParameters);
-    refBondForce.calculateForce(numTorsions, torsionIndexArray, posData, torsionParamArray, forceData, 0, 0, 0, customTorsion);
+    refBondForce.calculateForce(numTorsions, torsionIndexArray, posData, torsionParamArray, forceData, 0, customTorsion);
 }
 
 double ReferenceCalcCustomTorsionForceKernel::executeEnergy(ContextImpl& context) {
     RealOpenMM** posData = extractPositions(context);
     RealOpenMM** forceData = allocateRealArray(context.getSystem().getNumParticles(), 3);
-    RealOpenMM* energyArray = new RealOpenMM[numTorsions];
     RealOpenMM energy = 0;
     map<string, double> globalParameters;
     for (int i = 0; i < (int) globalParameterNames.size(); i++)
         globalParameters[globalParameterNames[i]] = context.getParameter(globalParameterNames[i]);
     ReferenceBondForce refBondForce;
     ReferenceCustomTorsionIxn customTorsion(energyExpression, forceExpression, parameterNames, globalParameters);
-    for (int i = 0; i < numTorsions; ++i)
-        energyArray[i] = 0;
-    refBondForce.calculateForce(numTorsions, torsionIndexArray, posData, torsionParamArray, forceData, energyArray, 0, &energy, customTorsion);
+    refBondForce.calculateForce(numTorsions, torsionIndexArray, posData, torsionParamArray, forceData, &energy, customTorsion);
     disposeRealArray(forceData, context.getSystem().getNumParticles());
-    delete[] energyArray;
     return energy;
 }
 
@@ -812,7 +784,7 @@ void ReferenceCalcNonbondedForceKernel::executeForces(ContextImpl& context) {
     clj.calculatePairIxn(numParticles, posData, particleParamArray, exclusionArray, 0, forceData, 0, 0);
     ReferenceBondForce refBondForce;
     ReferenceLJCoulomb14 nonbonded14;
-    refBondForce.calculateForce(num14, bonded14IndexArray, posData, bonded14ParamArray, forceData, 0, 0, 0, nonbonded14);
+    refBondForce.calculateForce(num14, bonded14IndexArray, posData, bonded14ParamArray, forceData, 0, nonbonded14);
 }
 
 double ReferenceCalcNonbondedForceKernel::executeEnergy(ContextImpl& context) {
@@ -836,12 +808,8 @@ double ReferenceCalcNonbondedForceKernel::executeEnergy(ContextImpl& context) {
     clj.calculatePairIxn(numParticles, posData, particleParamArray, exclusionArray, 0, forceData, 0, &energy);
     ReferenceBondForce refBondForce;
     ReferenceLJCoulomb14 nonbonded14;
-    RealOpenMM* energyArray = new RealOpenMM[num14];
-    for (int i = 0; i < num14; ++i)
-        energyArray[i] = 0;
-    refBondForce.calculateForce(num14, bonded14IndexArray, posData, bonded14ParamArray, forceData, energyArray, 0, &energy, nonbonded14);
+    refBondForce.calculateForce(num14, bonded14IndexArray, posData, bonded14ParamArray, forceData, &energy, nonbonded14);
     disposeRealArray(forceData, numParticles);
-    delete[] energyArray;
     if (periodic || ewald || pme) {
         RealOpenMM* boxSize = extractBoxSize(context);
         energy += dispersionCoefficient/(boxSize[0]*boxSize[1]*boxSize[2]);

@@ -74,25 +74,15 @@ ReferenceCustomTorsionIxn::~ReferenceCustomTorsionIxn( ){
    @param atomCoordinates  atom coordinates
    @param parameters       parameters values
    @param forces           force array (forces added to input values)
-   @param energiesByBond   energies by bond: energiesByBond[bondIndex]
-   @param energiesByAtom   energies by atom: energiesByAtom[atomIndex]
-
-   @return ReferenceForce::DefaultReturn;
+   @param totalEnergy      if not null, the energy will be added to this
 
    --------------------------------------------------------------------------------------- */
 
-int ReferenceCustomTorsionIxn::calculateBondIxn( int* atomIndices,
+void ReferenceCustomTorsionIxn::calculateBondIxn( int* atomIndices,
                                                 RealOpenMM** atomCoordinates,
                                                 RealOpenMM* parameters,
                                                 RealOpenMM** forces,
-                                                RealOpenMM* energiesByBond,
-                                                RealOpenMM* energiesByAtom ) const {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceCustomTorsionIxn::calculateTorsionIxn";
-
-   // ---------------------------------------------------------------------------------------
+                                                RealOpenMM* totalEnergy ) const {
 
    static const std::string methodName = "\nReferenceCustomTorsionIxn::calculateTorsionIxn";
 
@@ -133,7 +123,6 @@ int ReferenceCustomTorsionIxn::calculateBondIxn( int* atomIndices,
 
    // evaluate delta angle, dE/d(angle)
 
-   RealOpenMM energy = (RealOpenMM) energyExpression.evaluate(variables);
    RealOpenMM dEdAngle = (RealOpenMM) forceExpression.evaluate(variables);
 
    // compute force
@@ -175,8 +164,7 @@ int ReferenceCustomTorsionIxn::calculateBondIxn( int* atomIndices,
 
    // accumulate energies
 
-   updateEnergy( energy, energiesByBond, 4, atomIndices, energiesByAtom );
-
-   return ReferenceForce::DefaultReturn;
+   if (totalEnergy != NULL)
+       *totalEnergy += (RealOpenMM) energyExpression.evaluate(variables);
 }
 

@@ -79,21 +79,13 @@ ReferenceCustomExternalIxn::~ReferenceCustomExternalIxn( ){
    @param forces           force array (forces added to input values)
    @param energy           energy is added to this
 
-   @return ReferenceForce::DefaultReturn;
-
    --------------------------------------------------------------------------------------- */
 
-int ReferenceCustomExternalIxn::calculateForce( int atomIndex,
+void ReferenceCustomExternalIxn::calculateForce( int atomIndex,
                                                 RealOpenMM** atomCoordinates,
                                                 RealOpenMM* parameters,
                                                 RealOpenMM** forces,
                                                 RealOpenMM* energy ) const {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceCustomExternalIxn::calculateBondIxn";
-
-   // ---------------------------------------------------------------------------------------
 
    static const std::string methodName = "\nReferenceCustomExternalIxn::calculateBondIxn";
 
@@ -111,6 +103,4 @@ int ReferenceCustomExternalIxn::calculateForce( int atomIndex,
    forces[atomIndex][2] -= (RealOpenMM) forceExpressionZ.evaluate(variables);
    if (energy != NULL)
        *energy += (RealOpenMM) energyExpression.evaluate(variables);
-
-   return ReferenceForce::DefaultReturn;
 }

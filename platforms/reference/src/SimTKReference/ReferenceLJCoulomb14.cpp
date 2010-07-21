@@ -74,23 +74,13 @@ ReferenceLJCoulomb14::~ReferenceLJCoulomb14( ){
 										parameters[1]= c6*c6/c12      (4*epsilon)
 										parameters[2]= epsfac*q1*q2
    @param forces           force array (forces added to current values)
-   @param energiesByBond   energies by bond: energiesByBond[bondIndex]
-   @param energiesByAtom   energies by atom: energiesByAtom[atomIndex]
-
-   @return ReferenceForce::DefaultReturn
+   @param totalEnergy      if not null, the energy will be added to this
 
    --------------------------------------------------------------------------------------- */
 
-int ReferenceLJCoulomb14::calculateBondIxn( int* atomIndices, RealOpenMM** atomCoordinates,
+void ReferenceLJCoulomb14::calculateBondIxn( int* atomIndices, RealOpenMM** atomCoordinates,
                                      RealOpenMM* parameters, RealOpenMM** forces,
-                                     RealOpenMM* energiesByBond,
-                                     RealOpenMM* energiesByAtom ) const {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceLJCoulomb14::calculateBondIxn";
-
-   // ---------------------------------------------------------------------------------------
+                                     RealOpenMM* totalEnergy ) const {
 
    static const std::string methodName = "\nReferenceLJCoulomb14::calculateBondIxn";
 
@@ -140,12 +130,8 @@ int ReferenceLJCoulomb14::calculateBondIxn( int* atomIndices, RealOpenMM** atomC
       forces[atomBIndex][ii] -= force;
    }
 
-   RealOpenMM energy = parameters[1]*( sig6 - one )*sig6;
-   energy += (RealOpenMM) (ONE_4PI_EPS0*parameters[2]*inverseR);
-
    // accumulate energies
 
-   updateEnergy( energy, energiesByBond, LastAtomIndex, atomIndices, energiesByAtom );
-
-   return ReferenceForce::DefaultReturn;
+   if (totalEnergy != NULL)
+       *totalEnergy += parameters[1]*( sig6 - one )*sig6 + (ONE_4PI_EPS0*parameters[2]*inverseR);
 }

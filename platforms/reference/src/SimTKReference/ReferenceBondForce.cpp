@@ -72,21 +72,15 @@ ReferenceBondForce::~ReferenceBondForce( ){
    @param parameters       parameters: parameters[bondIndex][*]; contents of array 
                            depend on ixn
    @param forces           force array (forces added to current values): forces[atomIndex][3]
-   @param energiesByBond   energies by bond: energiesByBond[bondIndex]
-   @param energiesByAtom   energies by atom: energiesByAtom[atomIndex]
-   @param totalEnergy      totalEnergy: sum over { energies[atomIndex] }
+   @param totalEnergy      if not null, the energy will be added to this
    @param ReferenceBondIxn ixn to be calculated
-
-   @return  ReferenceForce::DefaultReturn
 
    --------------------------------------------------------------------------------------- */
 
-int ReferenceBondForce::calculateForce( int numberOfBonds, int** atomIndices,
+void ReferenceBondForce::calculateForce( int numberOfBonds, int** atomIndices,
                                         RealOpenMM** atomCoordinates,
                                         RealOpenMM** parameters,
                                         RealOpenMM** forces, 
-                                        RealOpenMM* energiesByBond, 
-                                        RealOpenMM* energiesByAtom, 
                                         RealOpenMM *totalEnergy, 
                                         ReferenceBondIxn& referenceBondIxn ){
 
@@ -102,13 +96,7 @@ int ReferenceBondForce::calculateForce( int numberOfBonds, int** atomIndices,
       // calculate bond ixn
 
       referenceBondIxn.calculateBondIxn( atomIndices[ii], atomCoordinates, parameters[ii], 
-                                         forces, (energiesByBond == NULL ? NULL : energiesByBond + ii), energiesByAtom ); 
-
-      if( energiesByBond != NULL ){
-         *totalEnergy += energiesByBond[ii];
-      }
+                                         forces, totalEnergy );
    }
-
-   return ReferenceForce::DefaultReturn;
 }
 

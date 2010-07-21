@@ -188,7 +188,6 @@ void ReferenceCMAPTorsionIxn::calculateOneIxn(int index, RealOpenMM** atomCoordi
 
    --------------------------------------------------------------------------------------- */
 
-int ReferenceCMAPTorsionIxn::calculateBondIxn(int* atomIndices, RealOpenMM** atomCoordinates,
-        RealOpenMM* parameters, RealOpenMM** forces, RealOpenMM* energyByBond, RealOpenMM* energyByAtom) const {
-    return ReferenceForce::DefaultReturn;
+void ReferenceCMAPTorsionIxn::calculateBondIxn(int* atomIndices, RealOpenMM** atomCoordinates,
+        RealOpenMM* parameters, RealOpenMM** forces, RealOpenMM* totalEnergy) const {
 }

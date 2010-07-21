@@ -77,16 +77,13 @@ class ReferenceAngleBondIxn : public ReferenceBondIxn {
          @param parameters       parameters: parameters[0] = ideal bond length
                                              parameters[1] = bond k (includes factor of 2)
          @param forces           force array (forces added)
-         @param energiesByBond   energies by bond: energiesByBond[bondIndex]
-         @param energiesByAtom   energies by atom: energiesByAtom[atomIndex]
-      
-         @return ReferenceForce::DefaultReturn
+         @param totalEnergy      if not null, the energy will be added to this
       
          --------------------------------------------------------------------------------------- */
       
-      int calculateBondIxn( int* atomIndices, RealOpenMM** atomCoordinates,
+      void calculateBondIxn( int* atomIndices, RealOpenMM** atomCoordinates,
                             RealOpenMM* parameters, RealOpenMM** forces,
-                            RealOpenMM* energiesByBond, RealOpenMM* energiesByAtom ) const;
+                            RealOpenMM* totalEnergy ) const;
       
 
 };

@@ -71,25 +71,15 @@ ReferenceRbDihedralBond::~ReferenceRbDihedralBond( ){
    @param atomCoordinates  atom coordinates
    @param parameters       six RB parameters
    @param forces           force array (forces added to current values)
-   @param energiesByBond   energies by bond: energiesByBond[bondIndex]
-   @param energiesByAtom   energies by atom: energiesByAtom[atomIndex]
-
-   @return ReferenceForce::DefaultReturn
+   @param totalEnergy      if not null, the energy will be added to this
 
    --------------------------------------------------------------------------------------- */
 
-int ReferenceRbDihedralBond::calculateBondIxn( int* atomIndices,
+void ReferenceRbDihedralBond::calculateBondIxn( int* atomIndices,
                                                RealOpenMM** atomCoordinates,
                                                RealOpenMM* parameters,
                                                RealOpenMM** forces,
-                                               RealOpenMM* energiesByBond,
-                                               RealOpenMM* energiesByAtom ) const {
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName = "\nReferenceRbDihedralBond::calculateBondIxn";
-
-   // ---------------------------------------------------------------------------------------
+                                               RealOpenMM* totalEnergy ) const {
 
    static const std::string methodName = "\nReferenceRbDihedralBond::calculateBondIxn";
 
@@ -200,7 +190,6 @@ int ReferenceRbDihedralBond::calculateBondIxn( int* atomIndices,
 
    // accumulate energies
 
-   updateEnergy( energy, energiesByBond, LastAtomIndex, atomIndices, energiesByAtom );
-
-   return ReferenceForce::DefaultReturn;
+   if (totalEnergy != NULL)
+       *totalEnergy += energy;
 }
