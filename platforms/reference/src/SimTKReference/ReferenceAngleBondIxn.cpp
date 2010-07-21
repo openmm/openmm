@@ -149,10 +149,6 @@ int ReferenceAngleBondIxn::calculateBondIxn( int* atomIndices,
 
    static const int threeI             = 3;
 
-   // debug flag
-
-   static const int debug              = 0;
-
    static const int LastAtomIndex      = 3;
 
    RealOpenMM deltaR[2][ReferenceForce::LastDeltaRIndex];
@@ -205,68 +201,6 @@ int ReferenceAngleBondIxn::calculateBondIxn( int* atomIndices,
    // accumulate energies
 
    updateEnergy( energy, energiesByBond, LastAtomIndex, atomIndices, energiesByAtom );
-
-   // debug 
-
-   if( debug ){
-      static bool printHeader = false;
-      std::stringstream message;
-      message << methodName;
-      message << std::endl;
-      if( !printHeader  ){  
-         printHeader = true;
-         message << std::endl;
-         message << methodName.c_str() << " a0 k [c q p s] r1 r2  angle dt rp p[] dot cosine angle dEdR*r F[]" << std::endl;
-      }   
-
-      message << std::endl;
-      for( int ii = 0; ii < 3; ii++ ){
-         message << " Atm " << atomIndices[ii] << " [" << atomCoordinates[ii][0] << " " << atomCoordinates[ii][1] << " " << atomCoordinates[ii][2] << "] ";
-      }
-      message << std::endl << " Delta:";
-      for( int ii = 0; ii < 2; ii++ ){
-         message << " [";
-         for( int jj = 0; jj < ReferenceForce::LastDeltaRIndex; jj++ ){
-            message << deltaR[ii][jj] << " ";
-         }
-         message << "]";
-      }
-      message << std::endl;
-
-      message << " a0="     << parameters[0];
-      message << " k="      << parameters[1];
-      message << " rab2="  << deltaR[0][ReferenceForce::R2Index];
-      message << " rcb2="  << deltaR[1][ReferenceForce::R2Index];
-      message << std::endl << "            ";
-      message << " rp="    << rp; 
-      message << " p[";
-      SimTKOpenMMUtilities::formatRealStringStream( message, pVector );
-      message << "] dot="   << dot;
-      message << " cos="   << cosine;
-
-      message << std::endl << "            ";
-      message << " dEdr=" << dEdR;
-      message << " trmA=" << termA;
-      message << " trmC=" << termC;
-
-      message << " E=" << energy << " F=compute force; f=cumulative force";
-
-      message << std::endl << "            ";
-      for( int ii = 0; ii < 3; ii++ ){
-         message << " F" << (ii+1) << "[";
-         SimTKOpenMMUtilities::formatRealStringStream( message, deltaCrossP[ii], threeI );
-         message << "]";
-      }   
-      message << std::endl << "            ";
-
-      for( int ii = 0; ii < LastAtomIndex; ii++ ){
-         message << " f" << (ii+1) << "[";
-         SimTKOpenMMUtilities::formatRealStringStream( message, forces[atomIndices[ii]], threeI );
-         message << "]";
-      }
-
-      SimTKOpenMMLog::printMessage( message );
-   }   
 
    return ReferenceForce::DefaultReturn;
 }

@@ -78,18 +78,6 @@ class ReferenceVariableVerletDynamics : public ReferenceDynamics {
 
       /**---------------------------------------------------------------------------------------
 
-         Print parameters
-
-         @param message message
-
-         @return ReferenceDynamics::DefaultReturn
-
-         --------------------------------------------------------------------------------------- */
-
-      int printParameters( std::stringstream& message ) const;
-
-      /**---------------------------------------------------------------------------------------
-
          Update
 
          @param numberOfAtoms       number of atoms

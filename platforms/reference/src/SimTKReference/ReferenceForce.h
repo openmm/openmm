@@ -118,33 +118,6 @@ class OPENMM_EXPORT  ReferenceForce {
       
       static int getDeltaROnly( const RealOpenMM* atomCoordinatesI, const RealOpenMM* atomCoordinatesJ,
                                 RealOpenMM* deltaR );
-      
-      /**---------------------------------------------------------------------------------------
-      
-         Write coordinates, energies and forces (Simbios)
-      
-         @param numberOfAtoms       number of atoms
-         @param atomsPerBond        atoms/bond (used to normalize total energy)
-         @param atomCoordinates     atomic coordinates
-         @param forces              forces
-         @param energies            energies (optional)
-         @param resultsFileName     output file name
-         @param lengthConversion    length conversion (optional defaults to 1)
-         @param forceConversion     force  conversion (optional defaults to 1)
-         @param energyConversion    energy conversion (optional defaults to 1)
-      
-         @return ReferenceForce::DefaultReturn unless
-                 file cannot be opened
-                 in which case return ReferenceForce::ErrorReturn
-      
-         --------------------------------------------------------------------------------------- */
-      
-      static int writeForces( int numberOfAtoms, int atomsPerBond, RealOpenMM** atomCoordinates,
-                              RealOpenMM** forces, RealOpenMM* energies,
-                              const std::string& resultsFileName,
-                              RealOpenMM lengthConversion, RealOpenMM forceConversion,
-                              RealOpenMM energyConversion );
-      
 };
 
 // ---------------------------------------------------------------------------------------

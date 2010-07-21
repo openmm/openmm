@@ -119,18 +119,6 @@ class ReferenceShakeAlgorithm : public ReferenceConstraintAlgorithm {
          --------------------------------------------------------------------------------------- */
       
       void setTolerance( RealOpenMM tolerance );
-      
-      /**---------------------------------------------------------------------------------------
-      
-         Print parameters
-      
-         @param message message
-
-         @return ReferenceShakeAlgorithm::DefaultReturn
-      
-         --------------------------------------------------------------------------------------- */
-          
-      int printParameters( std::stringstream& message ) const;
 
       /**---------------------------------------------------------------------------------------
       

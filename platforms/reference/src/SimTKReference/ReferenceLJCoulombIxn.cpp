@@ -555,10 +555,6 @@ int ReferenceLJCoulombIxn::calculateOneIxn( int ii, int jj, RealOpenMM** atomCoo
 
     static const int threeI             = 3;
 
-    // debug flag
-
-    static const int debug              = -1;
-
     static const int LastAtomIndex      = 2;
 
     RealOpenMM deltaR[2][ReferenceForce::LastDeltaRIndex];
@@ -611,58 +607,6 @@ int ReferenceLJCoulombIxn::calculateOneIxn( int ii, int jj, RealOpenMM** atomCoo
         }
     }
 
-    // debug
-
-    if( debug == ii ){
-       static bool printHeader = false;
-       std::stringstream message;
-       message << methodName;
-       message << std::endl;
-       int pairArray[2] = { ii, jj };
-       if( !printHeader  ){
-          printHeader = true;
-          message << std::endl;
-          message << methodName.c_str() << " a0 k [c q p s] r1 r2  angle dt rp p[] dot cosine angle dEdR*r F[]" << std::endl;
-       }
-
-       message << std::endl;
-       for( int kk = 0; kk < 2; kk++ ){
-          message << " Atm " << pairArray[kk] << " [" << atomCoordinates[pairArray[kk]][0] << " " << atomCoordinates[pairArray[kk]][1] << " " << atomCoordinates[pairArray[kk]][2] << "] ";
-       }
-       message << std::endl << " Delta:";
-       for( int kk = 0; kk < (LastAtomIndex - 1); kk++ ){
-          message << " [";
-          for( int jj = 0; jj < ReferenceForce::LastDeltaRIndex; jj++ ){
-             message << deltaR[kk][jj] << " ";
-          }
-          message << "]";
-       }
-       message << std::endl;
-
-       for( int kk = 0; kk < 2; kk++ ){
-          message << " p" << pairArray[kk] << " [";
-          message << atomParameters[pairArray[kk]][0] << " " << atomParameters[pairArray[kk]][1] << " " << atomParameters[pairArray[kk]][2];
-          message << "]";
-       }
-      message << std::endl;
-
-       message << " dEdR=" << dEdR;
-       message << " E=" << energy << " force factors: ";
-       message << "F=compute force; f=cumulative force";
-
-       message << std::endl << "  ";
-       message << " f" << ii << "[";
-       SimTKOpenMMUtilities::formatRealStringStream( message, deltaR[0], threeI, dEdR );
-       message << "]";
-
-       for( int kk = 0; kk < 2; kk++ ){
-          message << " F" <<  pairArray[kk] << " [";
-          SimTKOpenMMUtilities::formatRealStringStream( message, forces[pairArray[kk]], threeI );
-          message << "]";
-       }
-
-       SimTKOpenMMLog::printMessage( message );
-    }
     return ReferenceForce::DefaultReturn;
   }
 

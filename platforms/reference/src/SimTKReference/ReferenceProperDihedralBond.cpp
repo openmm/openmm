@@ -105,10 +105,6 @@ int ReferenceProperDihedralBond::calculateBondIxn( int* atomIndices,
 
    static const int threeI             = 3;
 
-   // debug flag
-
-   static const int debug              = 0;
-
    static const int LastAtomIndex      = 4;
 
    RealOpenMM deltaR[3][ReferenceForce::LastDeltaRIndex];
@@ -190,83 +186,6 @@ int ReferenceProperDihedralBond::calculateBondIxn( int* atomIndices,
    // accumulate energies
 
    updateEnergy( energy, energiesByBond, LastAtomIndex, atomIndices, energiesByAtom );
-
-   // debug 
-
-   if( debug ){
-      static bool printHeader = false;
-      std::stringstream message;
-      message << methodName;
-      message << std::endl;
-      if( !printHeader  ){  
-         printHeader = true;
-         message << std::endl;
-         message << methodName.c_str() << " a0 k [c q p s] r1 r2  angle dt rp p[] dot cosine angle dEdR*r F[]" << std::endl;
-      }   
-
-      message << std::endl;
-      for( int ii = 0; ii < 4; ii++ ){
-         message << " Atm " << atomIndices[ii] << " [" << atomCoordinates[atomIndices[ii]][0] << " " << atomCoordinates[atomIndices[ii]][1] << " " << atomCoordinates[atomIndices[ii]][2] << "] ";
-      }
-      message << std::endl << " Delta:";
-      for( int ii = 0; ii < (LastAtomIndex - 1); ii++ ){
-         message << " [";
-         for( int jj = 0; jj < ReferenceForce::LastDeltaRIndex; jj++ ){
-            message << deltaR[ii][jj] << " ";
-         }
-         message << "]";
-      }
-      message << std::endl;
-
-      message << std::endl << " Cross:";
-      for( int ii = 0; ii < 2; ii++ ){
-         message << " [";
-         for( int jj = 0; jj < 3; jj++ ){
-            message << crossProduct[ii][jj] << " ";
-         }
-         message << "]";
-      }
-      message << std::endl;
-
-      message << " k="     << parameters[0];
-      message << " a="     << parameters[1];
-      message << " m="     << parameters[2];
-      message << " ang="   << dihedralAngle;
-      message << " dotD="  << dotDihedral;
-      message << " sign="  << signOfAngle;
-      message << std::endl << "  ";
-
-      message << " deltaAngle=" << deltaAngle;
-      message << " dEdAngle=" << dEdAngle;
-      message << " E=" << energy << " force factors: [";
-      for( int ii = 0; ii < 4; ii++ ){
-         message << forceFactors[ii] << " ";
-      }
-      message << "] F=compute force; f=cumulative force";
-
-      message << std::endl << "  ";
-      for( int ii = 0; ii < LastAtomIndex; ii++ ){
-         message << " F" << (ii+1) << "[";
-         SimTKOpenMMUtilities::formatRealStringStream( message, internalF[ii], threeI );
-         message << "]";
-      }   
-      message << std::endl << "  ";
-
-      for( int ii = 0; ii < LastAtomIndex; ii++ ){
-         message << " f" << (ii+1) << "[";
-         SimTKOpenMMUtilities::formatRealStringStream( message, forces[atomIndices[ii]], threeI );
-         message << "]";
-      }
-
-      SimTKOpenMMLog::printMessage( message );
-   }   
-
-   if( debug ){
-      std::stringstream message;
-      message << methodName << " DONE";
-      message << std::endl;
-      SimTKOpenMMLog::printMessage( message );
-   }
 
    return ReferenceForce::DefaultReturn;
 }

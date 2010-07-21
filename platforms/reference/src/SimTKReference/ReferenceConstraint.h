@@ -135,19 +135,6 @@ class ReferenceShakeConstraint : public ReferenceConstraint {
          --------------------------------------------------------------------------------------- */
       
       int getLightAtomIndex( void );
-      
-      /**---------------------------------------------------------------------------------------
-      
-         Print state
-      
-         @param message             message
-      
-         @return ReferenceDynamics::DefaultReturn
-      
-         --------------------------------------------------------------------------------------- */
-      
-      int printState( std::stringstream& message );
-      
 };
 
 typedef std::vector<ReferenceShakeConstraint*> ShakeVector;

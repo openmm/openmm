@@ -59,19 +59,6 @@ class ReferenceVerletDynamics : public ReferenceDynamics {
 
        ~ReferenceVerletDynamics( );
 
-      
-      /**---------------------------------------------------------------------------------------
-      
-         Print parameters
-      
-         @param message message
-
-         @return ReferenceDynamics::DefaultReturn
-      
-         --------------------------------------------------------------------------------------- */
-      
-      int printParameters( std::stringstream& message ) const;
-      
       /**---------------------------------------------------------------------------------------
       
          Update
@@ -88,26 +75,6 @@ class ReferenceVerletDynamics : public ReferenceDynamics {
      
       int update( int numberOfAtoms, RealOpenMM** atomCoordinates,
                   RealOpenMM** velocities, RealOpenMM** forces, RealOpenMM* masses );
-      
-      /**---------------------------------------------------------------------------------------
-      
-         Write state
-      
-         @param numberOfAtoms       number of atoms
-         @param atomCoordinates     atom coordinates
-         @param velocities          velocities
-         @param forces              forces
-         @param masses              atom masses
-         @param state               0 if initial state; otherwise nonzero
-         @param baseFileName        base file name
-      
-         @return ReferenceDynamics::DefaultReturn
-      
-         --------------------------------------------------------------------------------------- */
-      
-      int writeState( int numberOfAtoms, RealOpenMM** atomCoordinates,
-                      RealOpenMM** velocities, RealOpenMM** forces, RealOpenMM* masses,
-                      int state, const std::string& baseFileName ) const;
       
 };
 

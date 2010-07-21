@@ -474,8 +474,6 @@ int ReferenceDynamics::update( int numberOfAtoms, RealOpenMM** atomCoordinates,
    static const RealOpenMM zero       =  0.0;
    static const RealOpenMM one        =  1.0;
 
-   static int debug                   =  0;  
-
    // ---------------------------------------------------------------------------------------
 
    return ReferenceDynamics::DefaultReturn;
@@ -500,8 +498,6 @@ int ReferenceDynamics::removeTotalLinearMomentum( int numberOfAtoms, RealOpenMM*
 
    static const char* methodName  = "\nReferenceDynamics::removeTotalLinearMomentum";
 
-   static const int debug              = 1;
-
    static const RealOpenMM zero        = 0.0;
    static const RealOpenMM one         = 1.0;
 
@@ -514,341 +510,21 @@ int ReferenceDynamics::removeTotalLinearMomentum( int numberOfAtoms, RealOpenMM*
       linearMomentum[0]  += masses[ii]*velocities[ii][0];
       linearMomentum[1]  += masses[ii]*velocities[ii][1];
       linearMomentum[2]  += masses[ii]*velocities[ii][2];
-/*
-      if( debug ){
-         std::stringstream message;
-         message << ii << " TotalM=" << totalMass << " m=" << masses[ii] << " linearMomentum [";
-         SimTKOpenMMUtilities::formatRealStringStream( message, linearMomentum, 3, one );
-         message << "] [";
-         SimTKOpenMMUtilities::formatRealStringStream( message, velocities[ii], 3, one );
-         message << "]\n";
-         SimTKOpenMMLog::printMessage( message );
-      }
-*/
    }
 
    if( totalMass > zero ){
 
       RealOpenMM totalMassI      = one/totalMass;
-
-/*
-      if( debug ){
-         std::stringstream message;
-         message << " Pre scale linearMomentum [";
-         SimTKOpenMMUtilities::formatRealStringStream( message, linearMomentum, 3, one );
-         message << "]\n";
-         SimTKOpenMMLog::printMessage( message );
-      }
-*/
-
       linearMomentum[0]         *= totalMassI;
       linearMomentum[1]         *= totalMassI;
       linearMomentum[2]         *= totalMassI;
 
-/*
-      if( debug ){
-         std::stringstream message;
-         message << " Pre sub linearMomentum [";
-         SimTKOpenMMUtilities::formatRealStringStream( message, linearMomentum, 3, one );
-         message << "]\n";
-         SimTKOpenMMLog::printMessage( message );
-      }
-*/
       for( int ii = 0; ii < numberOfAtoms; ii++ ){
          velocities[ii][0]     -= linearMomentum[0];
          velocities[ii][1]     -= linearMomentum[1];
          velocities[ii][2]     -= linearMomentum[2];
       }
-
-      // debug
-
-      if( debug ){
-         RealOpenMM tempV[3];
-         std::stringstream message;
-         int maxPrint = 5;
-         message << methodName;
-         message << " TotalM=" << totalMass << " linearMomentum: [";
-         SimTKOpenMMUtilities::formatRealStringStream( message, linearMomentum, 3, one );
-         message << "]\nSample v:\n";
-         for( int ii = 0; ii < maxPrint; ii++ ){
-            tempV[0] = velocities[ii][0] + linearMomentum[0];
-            tempV[1] = velocities[ii][1] + linearMomentum[1];
-            tempV[2] = velocities[ii][2] + linearMomentum[2];
-            message << "OldV[ ";
-            SimTKOpenMMUtilities::formatRealStringStream( message, tempV, 3, one );
-            message << "] NewV[ ";
-            SimTKOpenMMUtilities::formatRealStringStream( message, velocities[ii], 3, one );
-            message << "]" << std::endl;
-         }
-         SimTKOpenMMLog::printMessage( message );
-      }
    }
 
-   return ReferenceDynamics::DefaultReturn;
-}
-
-/**---------------------------------------------------------------------------------------
-
-   Print parameters
-
-   @param message             message
-
-   @return ReferenceDynamics::DefaultReturn
-
-   --------------------------------------------------------------------------------------- */
-
-int ReferenceDynamics::printParameters( std::stringstream& message ) const {
-
-   // ---------------------------------------------------------------------------------------
-
-   static const char* methodName  = "\nReferenceDynamics::printParameters";
-
-   // ---------------------------------------------------------------------------------------
-
-   message << "atoms=" << getNumberOfAtoms()     << " ";
-   message << "delta_t=" << getDeltaT()          << " ";
-   message << "temperature=" << getTemperature() << " ";
-   message << "step=" << getTimeStep()           << " ";
-   message << "seed=" << SimTKOpenMMUtilities::getRandomNumberSeed()   << " ";
-   message << std::endl;
-
-   return ReferenceDynamics::DefaultReturn;
-}
-
-/**---------------------------------------------------------------------------------------
-
-   Write state
-
-   @param numberOfAtoms       number of atoms
-   @param atomCoordinates     atom coordinates
-   @param velocities          velocities
-   @param forces              forces
-   @param masses              atom masses
-   @param state               0 if initial state; otherwise nonzero
-   @param baseFileName        base file name
-
-   @return ReferenceDynamics::DefaultReturn
-
-   --------------------------------------------------------------------------------------- */
-
-int ReferenceDynamics::writeState( int numberOfAtoms, RealOpenMM** atomCoordinates,
-                                   RealOpenMM** velocities,
-                                   RealOpenMM** forces, RealOpenMM* masses,
-                                   int state, const std::string& baseFileName ) const {
-
-   // ---------------------------------------------------------------------------------------
-
-   static const char* methodName      = "\nReferenceStochasticDynamics::writeState";
-
-   static const RealOpenMM zero       =  0.0;
-   static const RealOpenMM one        =  1.0;
-   static const int threeI            =  3;
-
-   // ---------------------------------------------------------------------------------------
-
-   std::stringstream stateFileName;
-
-   stateFileName << baseFileName;
-   stateFileName << "_Step" << getTimeStep();
-   // stateFileName << "_State" << state;
-   stateFileName << ".txt";
-
-   // ---------------------------------------------------------------------------------------
-
-   // open file -- return if unsuccessful
-
-   FILE* stateFile = NULL;
-#ifdef _MSC_VER
-   fopen_s( &stateFile, stateFileName.str().c_str(), "w" );
-#else
-   stateFile = fopen( stateFileName.str().c_str(), "w" );
-#endif
-
-   // ---------------------------------------------------------------------------------------
-
-   // diagnostics
-
-   if( stateFile != NULL ){
-      std::stringstream message;
-      message << methodName;
-      message << " Opened file=<" << stateFileName.str() << ">.\n";
-      SimTKOpenMMLog::printMessage( message );
-   } else {
-      std::stringstream message;
-      message << methodName;
-      message << " could not open file=<" << stateFileName.str() << "> -- abort output.\n";
-      SimTKOpenMMLog::printMessage( message );
-      return ReferenceDynamics::ErrorReturn;
-   }   
-
-   // ---------------------------------------------------------------------------------------
-
-   StringVector scalarNameI;
-   IntVector scalarI;
-
-   StringVector scalarNameR;
-   RealOpenMMVector scalarR;
-
-   StringVector scalarNameR1;
-   RealOpenMMPtrVector scalarR1;
-
-   StringVector scalarNameR2;
-   RealOpenMMPtrPtrVector scalarR2;
-
-   scalarI.push_back( getNumberOfAtoms() );
-   scalarNameI.push_back( "Atoms" );
-
-   scalarI.push_back( getTimeStep() );
-   scalarNameI.push_back( "Timestep" );
-
-   scalarR.push_back( getDeltaT() );
-   scalarNameR.push_back( "delta_t" );
-
-   scalarR.push_back( static_cast<RealOpenMM>(SimTKOpenMMUtilities::getRandomNumberSeed()) );
-   scalarNameR.push_back( "seed" );
-
-   scalarR.push_back( getTemperature() );
-   scalarNameR.push_back( "T" );
-
-   if( masses ){
-      scalarR1.push_back( masses );
-      scalarNameR1.push_back( "mass" );
-   }
-
-   if( atomCoordinates ){
-      scalarR2.push_back( atomCoordinates );
-      scalarNameR2.push_back( "coord" );
-   }
-
-   if( velocities ){
-      scalarR2.push_back( velocities );
-      scalarNameR2.push_back( "velocities" );
-   }
-
-   if( forces ){
-      scalarR2.push_back( forces );
-      scalarNameR2.push_back( "forces" );
-   }
-
-   writeStateToFile( stateFile, scalarNameI, scalarI, scalarNameR, scalarR, getNumberOfAtoms(), scalarNameR1, scalarR1, threeI, scalarNameR2, scalarR2 ); 
-
-   (void) fclose( stateFile );
-
-   return ReferenceDynamics::DefaultReturn;
-
-}
-
-/**---------------------------------------------------------------------------------------
-
-   Write state
-
-   @param stateFile       file to write to
-   @param scalarNameI     vector of scalar names for ints
-   @param scalarI         vector of scalar ints
-   @param scalarNameR     vector of scalar names for real
-   @param scalarR         vector of scalar reals
-   @param dimension1      size of first dimension for 1D & 2D real arrays
-   @param scalarNameR1    vector of names for 1D real arrays
-   @param scalarR1        vector of 1D real arrays
-   @param dimension2      size of second dimension for 2D real arrays
-   @param scalarNameR2    vector of names for 2D real arrays
-   @param scalarR2        vector of 2D real arrays
-
-   @return ReferenceDynamics::DefaultReturn
-
-   --------------------------------------------------------------------------------------- */
-
-int ReferenceDynamics::writeStateToFile( FILE* stateFile, 
-                                         StringVector& scalarNameI, IntVector& scalarI,
-                                         StringVector& scalarNameR, RealOpenMMVector& scalarR,
-                                         int dimension1, StringVector& scalarNameR1,
-                                         RealOpenMMPtrVector& scalarR1,
-                                         int dimension2, StringVector& scalarNameR2,
-                                         RealOpenMMPtrPtrVector& scalarR2 ) const {
-
-   // ---------------------------------------------------------------------------------------
-
-   static const char* methodName  = "\nReferenceDynamics::writeState";
-
-   // ---------------------------------------------------------------------------------------
-
-   // validate vector sizes
-
-   std::stringstream message;
-   message << methodName << std::endl;
-   int errors  = 0;
-   if( scalarNameI.size() != scalarI.size() ){
-      message << "   int name size=" << scalarNameI.size() << " != " << " int vector size=" << scalarI.size() << std::endl; 
-      errors++;
-   }
-   if( scalarNameR.size() != scalarR.size() ){
-      message << "   real name size=" << scalarNameR.size() << " != " << " real vector size=" << scalarR.size() << std::endl; 
-      errors++;
-   }
-
-   if( scalarNameR1.size() != scalarR1.size() ){
-      message << "   real* name size=" << scalarNameR1.size() << " != " << " real* vector size=" << scalarR1.size() << std::endl; 
-      errors++;
-   }
-
-   if( scalarNameR2.size() != scalarR2.size() ){
-      message << "   real** name size=" << scalarNameR2.size() << " != " << " real** vector size=" << scalarR2.size() << std::endl; 
-      errors++;
-   }
-   if( errors ){
-      SimTKOpenMMLog::printError( message );
-      return ReferenceDynamics::ErrorReturn;
-   }
-
-   // ---------------------------------------------------------------------------------------
-
-   // array header
-
-   (void) fprintf( stateFile, "# " );
-   for( unsigned int ii = 0; ii < scalarNameR1.size(); ii++ ){  
-      (void) fprintf( stateFile, " %s", scalarNameR1[ii].c_str() );
-   }
-
-   for( unsigned int ii = 0; ii < scalarNameR2.size(); ii++ ){  
-      (void) fprintf( stateFile, " %s", scalarNameR2[ii].c_str() );
-   }
-   (void) fprintf( stateFile, "\n" );
-
-   // int scalars
-
-   for( unsigned int ii = 0; ii < scalarI.size(); ii++ ){  
-      (void) fprintf( stateFile, "%6d  # %s\n", scalarI[ii], scalarNameI[ii].c_str() );
-   }
-
-   // real scalars
-
-   for( unsigned int ii = 0; ii < scalarR.size(); ii++ ){  
-      (void) fprintf( stateFile, "%14.6e  # %s\n", scalarR[ii], scalarNameR[ii].c_str() );
-   }
-
-   // arrays
-
-   int maxPerLine = 3;
-   for( unsigned int ii = 0; ii < (unsigned int) dimension1; ii++ ){  
-      (void) fprintf( stateFile, "%5d ", ii );
-      for( RealOpenMMPtrVectorI jj = scalarR1.begin(); jj != scalarR1.end(); jj++ ){  
-         (void) fprintf( stateFile, "%14.6e ", (*jj)[ii] );
-      }
-      int r2Count = 0;
-      for( RealOpenMMPtrPtrVectorI jj = scalarR2.begin(); jj != scalarR2.end(); jj++ ){  
-         RealOpenMM** array = *jj;
-         for( int kk = 0; kk < dimension2; kk++ ){
-            (void) fprintf( stateFile, "%14.6e ", array[ii][kk] );
-         }
-         (void) fprintf( stateFile, "   " );
-         r2Count++;
-         if( r2Count == maxPerLine && ( (r2Count % (int) (scalarR2.size()-1)) > 2) ){
-            (void) fprintf( stateFile, "\n     " );
-            r2Count = 0;
-         }
-      }
-      (void) fprintf( stateFile, "\n" );
-   }
-         
    return ReferenceDynamics::DefaultReturn;
 }

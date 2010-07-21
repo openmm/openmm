@@ -363,8 +363,6 @@ int ReferenceCCMAAlgorithm::apply( int numberOfAtoms, RealOpenMM** atomCoordinat
 
    static const RealOpenMM epsilon6    = (RealOpenMM) 1.0e-06;
 
-   static int debug                    = 0;
-
    // ---------------------------------------------------------------------------------------
 
    // temp arrays
@@ -463,26 +461,6 @@ int ReferenceCCMAAlgorithm::apply( int numberOfAtoms, RealOpenMM** atomCoordinat
             atomCoordinatesP[atomJ][jj] -= inverseMasses[atomJ]*dr;
          }
       }
-   }
-
-   // diagnostics
-
-   if( debug || numberConverged < _numberOfConstraints ){
-      std::stringstream message;
-      message << methodName;
-      message << " iterations=" << iterations << " no. converged=" << numberConverged << " out of " << _numberOfConstraints;
-      if( numberConverged == _numberOfConstraints ){
-         message << " SUCCESS";
-      } else {
-         message << " FAILED";
-      }
-      message << "\n";
-      int errors = reportCCMA( numberOfAtoms, atomCoordinatesP, message );
-      if( !errors ){
-         message << "*** no errors recorded in explicit check ***";
-      }
-      message << "\n";
-      SimTKOpenMMLog::printMessage( message );
    }
 
    return (numberConverged == _numberOfConstraints ? ReferenceDynamics::DefaultReturn : ReferenceDynamics::ErrorReturn);

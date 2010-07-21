@@ -237,18 +237,6 @@ class OPENMM_EXPORT ReferenceDynamics {
          --------------------------------------------------------------------------------------- */
       
       int removeTotalLinearMomentum( int numberOfAtoms, RealOpenMM* masses, RealOpenMM** velocities ) const;
-      
-      /**---------------------------------------------------------------------------------------
-      
-         Print parameters
-      
-         @param message message
-
-         @return ReferenceDynamics::DefaultReturn
-      
-         --------------------------------------------------------------------------------------- */
-          
-      int printParameters( std::stringstream& message ) const;
 
       /**---------------------------------------------------------------------------------------
       
@@ -288,52 +276,6 @@ class OPENMM_EXPORT ReferenceDynamics {
          --------------------------------------------------------------------------------------- */
       
       int setReferenceConstraintAlgorithm( ReferenceConstraintAlgorithm* referenceConstraint );
-      
-      /**---------------------------------------------------------------------------------------
-      
-         Write state
-      
-         @param numberOfAtoms       number of atoms
-         @param atomCoordinates     atom coordinates
-         @param velocities          velocities
-         @param forces              forces
-         @param masses              atom masses
-         @param state               0 if initial state; otherwise nonzero
-         @param baseFileName        base file name
-      
-         @return ReferenceDynamics::DefaultReturn
-      
-         --------------------------------------------------------------------------------------- */
-    
-      int writeState( int numberOfAtoms, RealOpenMM** atomCoordinates,
-                      RealOpenMM** velocities, RealOpenMM** forces, RealOpenMM* masses,
-                      int state, const std::string& baseFileName ) const;
-
-      /**---------------------------------------------------------------------------------------
-      
-         Write state
-      
-         @param stateFile       file to write to
-         @param scalarNameI     vector of scalar names for ints
-         @param scalarI         vector of scalar ints
-         @param scalarNameR     vector of scalar names for real
-         @param scalarR         vector of scalar reals
-         @param dimension1      size of first dimension for 1D & 2D real arrays
-         @param scalarNameR1    vector of names for 1D real arrays
-         @param scalarR1        vector of 1D real arrays
-         @param dimension2      size of second dimension for 2D real arrays
-         @param scalarNameR2    vector of names for 2D real arrays
-         @param scalarR2        vector of 2D real arrays
-      
-         @return ReferenceDynamics::DefaultReturn
-      
-         --------------------------------------------------------------------------------------- */
-      
-      int writeStateToFile( FILE* stateFile, StringVector& scalarNameI, IntVector& scalarI,
-                            StringVector& scalarNameR, RealOpenMMVector& scalarR,
-                            int dimension1, StringVector& scalarNameR1, RealOpenMMPtrVector& scalarR1,
-                            int dimension2, StringVector& scalarNameR2, RealOpenMMPtrPtrVector& scalarR2 ) const;
-      
 };
 
 // ---------------------------------------------------------------------------------------

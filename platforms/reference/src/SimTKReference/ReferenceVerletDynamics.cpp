@@ -79,32 +79,6 @@ ReferenceVerletDynamics::~ReferenceVerletDynamics( ){
 
 /**---------------------------------------------------------------------------------------
 
-   Print parameters
-
-   @param message             message
-
-   @return ReferenceDynamics::DefaultReturn
-
-   --------------------------------------------------------------------------------------- */
-
-int ReferenceVerletDynamics::printParameters( std::stringstream& message ) const {
-
-   // ---------------------------------------------------------------------------------------
-
-   static const char* methodName  = "\nReferenceVerletDynamics::printParameters";
-
-   // ---------------------------------------------------------------------------------------
-
-   // print parameters
-
-   ReferenceDynamics::printParameters( message );
-
-   return ReferenceDynamics::DefaultReturn;
-
-}
-
-/**---------------------------------------------------------------------------------------
-
    Update -- driver routine for performing Verlet dynamics update of coordinates
    and velocities
 
@@ -128,8 +102,6 @@ int ReferenceVerletDynamics::update( int numberOfAtoms, RealOpenMM** atomCoordin
 
    static const RealOpenMM zero       =  0.0;
    static const RealOpenMM one        =  1.0;
-
-   static int debug                   =  0;
 
    // ---------------------------------------------------------------------------------------
 
@@ -187,135 +159,6 @@ int ReferenceVerletDynamics::update( int numberOfAtoms, RealOpenMM** atomCoordin
    }
 
    incrementTimeStep();
-
-   return ReferenceDynamics::DefaultReturn;
-
-}
-
-/**---------------------------------------------------------------------------------------
-
-   Write state
-
-   @param numberOfAtoms       number of atoms
-   @param atomCoordinates     atom coordinates
-   @param velocities          velocities
-   @param forces              forces
-   @param masses              atom masses
-   @param state               0 if initial state; otherwise nonzero
-   @param baseFileName        base file name
-
-   @return ReferenceDynamics::DefaultReturn
-
-   --------------------------------------------------------------------------------------- */
-
-int ReferenceVerletDynamics::writeState( int numberOfAtoms, RealOpenMM** atomCoordinates,
-                                             RealOpenMM** velocities,
-                                             RealOpenMM** forces, RealOpenMM* masses,
-                                             int state, const std::string& baseFileName ) const {
-
-   // ---------------------------------------------------------------------------------------
-
-   static const char* methodName      = "\nReferenceVerletDynamics::writeState";
-
-   static const RealOpenMM zero       =  0.0;
-   static const RealOpenMM one        =  1.0;
-   static const int threeI            =  3;
-
-   // ---------------------------------------------------------------------------------------
-
-   std::stringstream stateFileName;
-
-   stateFileName << baseFileName;
-   stateFileName << "_Step" << getTimeStep();
-   // stateFileName << "_State" << state;
-   stateFileName << ".txt";
-
-   // ---------------------------------------------------------------------------------------
-
-   // open file -- return if unsuccessful
-
-   FILE* stateFile = NULL;
-#ifdef _MSC_VER
-   fopen_s( &stateFile, stateFileName.str().c_str(), "w" );
-#else
-   stateFile = fopen( stateFileName.str().c_str(), "w" );
-#endif
-
-   // ---------------------------------------------------------------------------------------
-
-   // diagnostics
-
-   if( stateFile != NULL ){
-      std::stringstream message;
-      message << methodName;
-      message << " Opened file=<" << stateFileName.str() << ">.\n";
-      SimTKOpenMMLog::printMessage( message );
-   } else {
-      std::stringstream message;
-      message << methodName;
-      message << " could not open file=<" << stateFileName.str() << "> -- abort output.\n";
-      SimTKOpenMMLog::printMessage( message );
-      return ReferenceDynamics::ErrorReturn;
-   }   
-
-   // ---------------------------------------------------------------------------------------
-
-   StringVector scalarNameI;
-   IntVector scalarI;
-
-   StringVector scalarNameR;
-   RealOpenMMVector scalarR;
-
-   StringVector scalarNameR1;
-   RealOpenMMPtrVector scalarR1;
-
-   StringVector scalarNameR2;
-   RealOpenMMPtrPtrVector scalarR2;
-
-   scalarI.push_back( getNumberOfAtoms() );
-   scalarNameI.push_back( "Atoms" );
-
-   scalarI.push_back( getTimeStep() );
-   scalarNameI.push_back( "Timestep" );
-
-   if( state == 0 || state == -1 ){
-
-      scalarR.push_back( getDeltaT() );
-      scalarNameR.push_back( "delta_t" );
-
-      scalarR1.push_back( masses );
-      scalarNameR1.push_back( "mass" );
-
-      scalarR2.push_back( atomCoordinates );
-      scalarNameR2.push_back( "coord" );
-
-      scalarR2.push_back( velocities );
-      scalarNameR2.push_back( "velocities" );
-
-      scalarR2.push_back( forces );
-      scalarNameR2.push_back( "forces" );
-
-      if( state == -1 ){
-
-         RealOpenMM** xPrime = get2DArrayAtIndex( xPrime2D );
-
-         scalarR2.push_back( xPrime );
-         scalarNameR2.push_back( "xPrime" );
-      }
-      
-   } else {
-
-      scalarR2.push_back( atomCoordinates );
-      scalarNameR2.push_back( "coord" );
-
-      scalarR2.push_back( velocities );
-      scalarNameR2.push_back( "velocities" );
-
-   }
-
-   writeStateToFile( stateFile, scalarNameI, scalarI, scalarNameR, scalarR, getNumberOfAtoms(), scalarNameR1, scalarR1, threeI, scalarNameR2, scalarR2 ); 
-
-   (void) fclose( stateFile );
 
    return ReferenceDynamics::DefaultReturn;
 

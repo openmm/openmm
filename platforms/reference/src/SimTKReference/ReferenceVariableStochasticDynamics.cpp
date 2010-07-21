@@ -58,7 +58,7 @@ ReferenceVariableStochasticDynamics::ReferenceVariableStochasticDynamics( int nu
 
    // ---------------------------------------------------------------------------------------
 
-   // insure tau is not zero -- if it is print warning message
+   // ensure tau is not zero -- if it is print warning message
 
    if( _tau == zero ){
 
@@ -131,34 +131,6 @@ RealOpenMM ReferenceVariableStochasticDynamics::getTau( void ) const {
    // ---------------------------------------------------------------------------------------
 
    return _tau;
-}
-
-/**---------------------------------------------------------------------------------------
-
-   Print parameters
-
-   @param message             message
-
-   @return ReferenceDynamics::DefaultReturn
-
-   --------------------------------------------------------------------------------------- */
-
-int ReferenceVariableStochasticDynamics::printParameters( std::stringstream& message ) const {
-
-   // ---------------------------------------------------------------------------------------
-
-   //static const char* methodName  = "\nReferenceVariableStochasticDynamics::printParameters";
-
-   // ---------------------------------------------------------------------------------------
-
-   // print parameters
-
-   ReferenceDynamics::printParameters( message );
-   message << " tau=" << getTau();
-   message << " T=" << getTemperature();
-
-   return ReferenceDynamics::DefaultReturn;
-
 }
 
 /**---------------------------------------------------------------------------------------

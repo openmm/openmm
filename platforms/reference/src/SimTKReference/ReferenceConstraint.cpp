@@ -217,32 +217,3 @@ int ReferenceShakeConstraint::getLightAtomIndex( void ){
 
    return _atomIndices[1];
 }
-
-
-/**---------------------------------------------------------------------------------------
-
-   Print state
-
-   @param message             message
-
-   @return ReferenceDynamics::DefaultReturn
-
-   --------------------------------------------------------------------------------------- */
-
-int ReferenceShakeConstraint::printState( std::stringstream& message ){
-
-   // ---------------------------------------------------------------------------------------
-
-   // static const char* methodName  = "\nReferenceShakeConstraint::printState";
-
-   // ---------------------------------------------------------------------------------------
-
-   // print state
-
-   message << " atoms[" << _atomIndices[0] << " " << _atomIndices[1] << "]";
-   message << " d=" << _constraintDistance;
-   message << " massI[" << _inverseMasses[0] << " " << _inverseMasses[1] << "]";
-
-   return ReferenceDynamics::DefaultReturn;
-
-}

@@ -97,32 +97,6 @@ void ReferenceVariableVerletDynamics::setAccuracy( RealOpenMM accuracy ) {
 
 /**---------------------------------------------------------------------------------------
 
-   Print parameters
-
-   @param message             message
-
-   @return ReferenceDynamics::DefaultReturn
-
-   --------------------------------------------------------------------------------------- */
-
-int ReferenceVariableVerletDynamics::printParameters( std::stringstream& message ) const {
-
-   // ---------------------------------------------------------------------------------------
-
-   static const char* methodName  = "\nReferenceVariableVerletDynamics::printParameters";
-
-   // ---------------------------------------------------------------------------------------
-
-   // print parameters
-
-   ReferenceDynamics::printParameters( message );
-
-   return ReferenceDynamics::DefaultReturn;
-
-}
-
-/**---------------------------------------------------------------------------------------
-
    Update -- driver routine for performing Verlet dynamics update of coordinates
    and velocities
 
@@ -147,8 +121,6 @@ int ReferenceVariableVerletDynamics::update( int numberOfAtoms, RealOpenMM** ato
 
     static const RealOpenMM zero       =  0.0;
     static const RealOpenMM one        =  1.0;
-
-    static int debug                   =  0;
 
     // ---------------------------------------------------------------------------------------
 

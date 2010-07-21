@@ -235,8 +235,6 @@ int ReferenceShakeAlgorithm::apply( int numberOfAtoms, RealOpenMM** atomCoordina
 
    static const RealOpenMM epsilon6    = (RealOpenMM) 1.0e-06;
 
-   static int debug                    = 0;
-
    // ---------------------------------------------------------------------------------------
 
    int numberOfConstraints = getNumberOfConstraints();
@@ -313,22 +311,6 @@ int ReferenceShakeAlgorithm::apply( int numberOfAtoms, RealOpenMM** atomCoordina
                   atomCoordinatesP[atomJ][jj] -= inverseMasses[atomJ]*dr;
                }
             }
-
-/*
-if( ii < -3 ){
-   std::stringstream message;
-   message << iterations << " C0 it=" << ii << " [" << atomI << " " << atomJ << "]";
-   message <<  " rp2=" << rp2 << " tol=" << d_ij2[ii];
-   message <<  " diff=" << diff << " acor=" << acor;
-   message <<  " m2=" << reducedMasses[ii];
-   message <<  " rm[" << inverseMasses[atomI] << " " << inverseMasses[atomJ];
-   message << " [" << atomCoordinatesP[atomI][0] << " " << atomCoordinatesP[atomI][1] << " " << atomCoordinatesP[atomI][2] << "] ";
-   message << " [" << atomCoordinatesP[atomJ][0] << " " << atomCoordinatesP[atomJ][1] << " " << atomCoordinatesP[atomJ][2] << "] ";
-   message <<  " rrpr=" << rrpr << " rijx=" << r_ij[ii][0];
-   message <<  " \n";
-   SimTKOpenMMLog::printMessage( message );
-} */
-
          } else {
             numberConverged++;
          }
@@ -336,26 +318,6 @@ if( ii < -3 ){
       if( numberConverged == _numberOfConstraints ){
          done = true;
       }
-   }
-          
-   // diagnostics
-
-   if( debug || !done ){
-      std::stringstream message;
-      message << methodName;
-      message << " iterations=" << iterations << " no. converged=" << numberConverged << " out of " << _numberOfConstraints; 
-      if( done ){
-         message << " SUCCESS";
-      } else {
-         message << " FAILED";
-      }
-      message << "\n";
-      int errors = reportShake( numberOfAtoms, atomCoordinatesP, message );
-      if( !errors ){
-         message << "*** no errors recorded in explicit check ***";
-      }
-      message << "\n";
-      SimTKOpenMMLog::printMessage( message );
    }
 
    return (done ? ReferenceDynamics::DefaultReturn : ReferenceDynamics::ErrorReturn);

@@ -99,16 +99,6 @@ int ReferenceBondForce::calculateForce( int numberOfBonds, int** atomIndices,
 
    for( int ii = 0; ii < numberOfBonds; ii++ ){
 
-      // diagnostics
-
-      if( 0 ){
-         std::stringstream message;
-         message << methodName << " " << ii;
-         //message << " XAtm" << (unsigned int) atomIndices << " " << (unsigned int) atomIndices[0];
-         //message << " atm[" << atomIndices[ii][0] << " " << atomIndices[ii][1] << "]";
-         SimTKOpenMMLog::printMessage( message );
-      }
-
       // calculate bond ixn
 
       referenceBondIxn.calculateBondIxn( atomIndices[ii], atomCoordinates, parameters[ii], 
