@@ -75,7 +75,7 @@ void computeBornSum(__global float* global_bornSum, __global float4* posq, __glo
                         float u_ij = RECIP(rScaledRadiusJ);
                         float l_ij2 = l_ij*l_ij;
                         float u_ij2 = u_ij*u_ij;
-                        float ratio = LOG(u_ij / l_ij);
+                        float ratio = LOG(u_ij * RECIP(l_ij));
                         bornSum += l_ij - u_ij + 0.25f*r*(u_ij2-l_ij2) + (0.50f*invR*ratio) +
                                          (0.25f*params2.y*params2.y*invR)*(l_ij2-u_ij2);
                         if (params1.x < params2.x-r)
@@ -140,7 +140,7 @@ void computeBornSum(__global float* global_bornSum, __global float4* posq, __glo
                                     float u_ij = RECIP(rScaledRadiusJ);
                                     float l_ij2 = l_ij*l_ij;
                                     float u_ij2 = u_ij*u_ij;
-                                    float ratio = LOG(u_ij / l_ij);
+                                    float ratio = LOG(u_ij * RECIP(l_ij));
                                     bornSum += l_ij - u_ij + 0.25f*r*(u_ij2-l_ij2) + (0.50f*invR*ratio) +
                                                      (0.25f*params2.y*params2.y*invR)*(l_ij2-u_ij2);
                                     if (params1.x < params2.x-r)
@@ -152,7 +152,7 @@ void computeBornSum(__global float* global_bornSum, __global float4* posq, __glo
                                     float u_ij = RECIP(rScaledRadiusI);
                                     float l_ij2 = l_ij*l_ij;
                                     float u_ij2 = u_ij*u_ij;
-                                    float ratio = LOG(u_ij / l_ij);
+                                    float ratio = LOG(u_ij * RECIP(l_ij));
                                     float term = l_ij - u_ij + 0.25f*r*(u_ij2-l_ij2) + (0.50f*invR*ratio) +
                                                      (0.25f*params1.y*params1.y*invR)*(l_ij2-u_ij2);
                                     if (params2.x < params1.x-r)
@@ -208,7 +208,7 @@ void computeBornSum(__global float* global_bornSum, __global float4* posq, __glo
                             float u_ij = RECIP(rScaledRadiusJ);
                             float l_ij2 = l_ij*l_ij;
                             float u_ij2 = u_ij*u_ij;
-                            float ratio = LOG(u_ij / l_ij);
+                            float ratio = LOG(u_ij * RECIP(l_ij));
                             bornSum += l_ij - u_ij + 0.25f*r*(u_ij2-l_ij2) + (0.50f*invR*ratio) +
                                              (0.25f*params2.y*params2.y*invR)*(l_ij2-u_ij2);
                             if (params1.x < params2.x-r)
@@ -220,7 +220,7 @@ void computeBornSum(__global float* global_bornSum, __global float4* posq, __glo
                             float u_ij = RECIP(rScaledRadiusI);
                             float l_ij2 = l_ij*l_ij;
                             float u_ij2 = u_ij*u_ij;
-                            float ratio = LOG(u_ij / l_ij);
+                            float ratio = LOG(u_ij * RECIP(l_ij));
                             float term = l_ij - u_ij + 0.25f*r*(u_ij2-l_ij2) + (0.50f*invR*ratio) +
                                              (0.25f*params1.y*params1.y*invR)*(l_ij2-u_ij2);
                             if (params2.x < params1.x-r)
@@ -307,12 +307,12 @@ void computeGBSAForce1(__global float4* forceBuffers, __global float* energyBuff
                     float r = RECIP(invR);
                     float bornRadius2 = localData[tbx+j].bornRadius;
                     float alpha2_ij = bornRadius1*bornRadius2;
-                    float D_ij = r2/(4.0f*alpha2_ij);
+                    float D_ij = r2*RECIP(4.0f*alpha2_ij);
                     float expTerm = EXP(-D_ij);
                     float denominator2 = r2 + alpha2_ij*expTerm;
                     float denominator = SQRT(denominator2);
-                    float tempEnergy = (PREFACTOR*posq1.w*posq2.w)/denominator;
-                    float Gpol = tempEnergy/denominator2;
+                    float tempEnergy = (PREFACTOR*posq1.w*posq2.w)*RECIP(denominator);
+                    float Gpol = tempEnergy*RECIP(denominator2);
                     float dGpol_dalpha2_ij = -0.5f*Gpol*expTerm*(1.0f+D_ij);
                     force.w += dGpol_dalpha2_ij*bornRadius2;
                     float dEdR = Gpol*(1.0f - 0.25f*expTerm);
@@ -376,12 +376,12 @@ void computeGBSAForce1(__global float4* forceBuffers, __global float* energyBuff
                             float r = RECIP(invR);
                             float bornRadius2 = localData[tbx+j].bornRadius;
                             float alpha2_ij = bornRadius1*bornRadius2;
-                            float D_ij = r2/(4.0f*alpha2_ij);
+                            float D_ij = r2*RECIP(4.0f*alpha2_ij);
                             float expTerm = EXP(-D_ij);
                             float denominator2 = r2 + alpha2_ij*expTerm;
                             float denominator = SQRT(denominator2);
-                            float tempEnergy = (PREFACTOR*posq1.w*posq2.w)/denominator;
-                            float Gpol = tempEnergy/denominator2;
+                            float tempEnergy = (PREFACTOR*posq1.w*posq2.w)*RECIP(denominator);
+                            float Gpol = tempEnergy*RECIP(denominator2);
                             float dGpol_dalpha2_ij = -0.5f*Gpol*expTerm*(1.0f+D_ij);
                             force.w += dGpol_dalpha2_ij*bornRadius2;
                             float dEdR = Gpol*(1.0f - 0.25f*expTerm);
@@ -442,12 +442,12 @@ void computeGBSAForce1(__global float4* forceBuffers, __global float* energyBuff
                         float r = RECIP(invR);
                         float bornRadius2 = localData[tbx+tj].bornRadius;
                         float alpha2_ij = bornRadius1*bornRadius2;
-                        float D_ij = r2/(4.0f*alpha2_ij);
+                        float D_ij = r2*RECIP(4.0f*alpha2_ij);
                         float expTerm = EXP(-D_ij);
                         float denominator2 = r2 + alpha2_ij*expTerm;
                         float denominator = SQRT(denominator2);
-                        float tempEnergy = (PREFACTOR*posq1.w*posq2.w)/denominator;
-                        float Gpol = tempEnergy/denominator2;
+                        float tempEnergy = (PREFACTOR*posq1.w*posq2.w)*RECIP(denominator);
+                        float Gpol = tempEnergy*RECIP(denominator2);
                         float dGpol_dalpha2_ij = -0.5f*Gpol*expTerm*(1.0f+D_ij);
                         force.w += dGpol_dalpha2_ij*bornRadius2;
                         float dEdR = Gpol*(1.0f - 0.25f*expTerm);
