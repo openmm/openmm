@@ -1,0 +1,228 @@
+#---------------------------------------------------
+# OpenMM Amoeba Plugin
+#
+# Creates OpenMM Amoeba plugin library, base name=OpenMMAmoeba.
+# Default libraries are shared & optimized. Variants
+# are created for static (_static) and debug (_d).
+#
+# Windows:
+#   OpenMMAmoeba[_d].dll
+#   OpenMMAmoeba[_d].lib
+#   OpenMMAmoeba_static[_d].lib
+# Unix:
+#   libOpenMMAmoeba[_d].so
+#   libOpenMMAmoeba_static[_d].a
+#----------------------------------------------------
+
+#INCLUDE(Dart)
+
+SET(LOG FALSE)
+# ----------------------------------------------------------------------------
+IF(LOG)
+   SET(LOG_FILE "CMakeLog.txt" )
+   FILE( WRITE ${LOG_FILE} "In OpenMM Cmake\n")
+ENDIF(LOG)
+
+IF(LOG)
+   MACRO(LOG_DIR LOG_FILE DIR_LIST )
+    
+      FILE( APPEND ${LOG_FILE} "\n${DIR_LIST}\n")
+      FOREACH(currentFile ${ARGN})
+         FILE( APPEND ${LOG_FILE} "   ${currentFile}\n" )
+      ENDFOREACH(currentFile)
+    
+    ENDMACRO(LOG_DIR) 
+ENDIF(LOG)
+
+# ----------------------------------------------------------------------------
+
+# The source is organized into subdirectories, but we handle them all from
+# this CMakeLists file rather than letting CMake visit them as SUBDIRS.
+#SET(OPENMM_AMOEBA_PLUGIN_SOURCE_SUBDIRS . openmmapi platforms/reference)
+SET(OPENMM_AMOEBA_PLUGIN_SOURCE_SUBDIRS . openmmapi )
+
+# Collect up information about the version of the OpenMM library we're building
+# and make it available to the code so it can be built into the binaries.
+
+SET(OPENMM_AMOEBA_LIBRARY_NAME OpenMMAmoeba)
+SET(OPENMM_AMOEBA_MAJOR_VERSION 1)
+SET(OPENMM_AMOEBA_MINOR_VERSION 0)
+SET(OPENMM_AMOEBA_BUILD_VERSION 0)
+
+ADD_DEFINITIONS(-DOPENMM_AMOEBA_LIBRARY_NAME=${OPENMM_AMOEBA_LIBRARY_NAME}
+                -DOPENMM_AMOEBA_MAJOR_VERSION=${OPENMM_AMOEBA_MAJOR_VERSION}
+                -DOPENMM_AMOEBA_MINOR_VERSION=${OPENMM_AMOEBA_MINOR_VERSION}
+		          -DOPENMM_AMOEBA_BUILD_VERSION=${OPENMM_AMOEBA_BUILD_VERSION})
+
+SET(SHARED_AMOEBA_TARGET ${OPENMM_AMOEBA_LIBRARY_NAME})
+SET(STATIC_AMOEBA_TARGET ${OPENMM_AMOEBA_LIBRARY_NAME}_static)
+
+# But on Unix or Cygwin we have to add the suffix manually
+IF (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
+    SET(SHARED_AMOEBA_TARGET ${SHARED_AMOEBA_TARGET}_d)
+    SET(STATIC_AMOEBA_TARGET ${STATIC_AMOEBA_TARGET}_d)
+ENDIF (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
+
+# These are all the places to search for header files which are
+# to be part of the API.
+SET(API_AMOEBA_INCLUDE_DIRS) # start empty
+FOREACH(subdir ${OPENMM_AMOEBA_PLUGIN_SOURCE_SUBDIRS})
+    # append
+    SET(API_AMOEBA_INCLUDE_DIRS ${API_AMOEBA_INCLUDE_DIRS}
+                                     ${CMAKE_CURRENT_SOURCE_DIR}/${subdir}/include 
+                                     ${CMAKE_CURRENT_SOURCE_DIR}/${subdir}/include/internal)
+ENDFOREACH(subdir)
+
+# We'll need both *relative* path names, starting with their API_INCLUDE_DIRS,
+# and absolute pathnames.
+SET(API_AMOEBA_REL_INCLUDE_FILES)   # start these out empty
+SET(API_AMOEBA_ABS_INCLUDE_FILES)
+
+FOREACH(dir ${API_AMOEBA_INCLUDE_DIRS})
+    FILE(GLOB fullpaths ${dir}/*.h)	# returns full pathnames
+    SET(API_AMOEBA_ABS_INCLUDE_FILES ${API_AMOEBA_ABS_INCLUDE_FILES} ${fullpaths})
+
+    FOREACH(pathname ${fullpaths})
+        GET_FILENAME_COMPONENT(filename ${pathname} NAME)
+        SET(API_AMOEBA_REL_INCLUDE_FILES ${API_AMOEBA_REL_INCLUDE_FILES} ${dir}/${filename})
+    ENDFOREACH(pathname)
+ENDFOREACH(dir)
+
+# collect up source files
+SET(SOURCE_AMOEBA_FILES) # empty
+SET(SOURCE_AMOEBA_INCLUDE_FILES)
+
+FOREACH(subdir ${OPENMM_AMOEBA_PLUGIN_SOURCE_SUBDIRS})
+    FILE(GLOB src_files  ${CMAKE_CURRENT_SOURCE_DIR}/${subdir}/src/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/${subdir}/src/*/*.cpp)
+    FILE(GLOB incl_files ${CMAKE_CURRENT_SOURCE_DIR}/${subdir}/src/*.h)
+    SET(SOURCE_AMOEBA_FILES         ${SOURCE_AMOEBA_FILES}         ${src_files})   #append
+    SET(SOURCE_AMOEBA_INCLUDE_FILES ${SOURCE_AMOEBA_INCLUDE_FILES} ${incl_files})
+
+    ## Make sure we find these locally before looking in OpenMM/include if
+    ## OpenMM was previously installed there.
+    INCLUDE_DIRECTORIES(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/${subdir}/include)
+ENDFOREACH(subdir)
+
+#INCLUDE_DIRECTORIES(BEFORE ${OPENMM_DIR}/platforms/reference/src)
+#INCLUDE_DIRECTORIES(BEFORE ${OPENMM_DIR}/platforms/reference/src/SimTKReference)
+
+# ----------------------------------------------------------------------------
+IF(LOG)
+    FILE( APPEND ${LOG_FILE} "SOURCE_AMOEBA_FILES=" ${SOURCE_AMOEBA_FILES} "\n" )
+    FILE( APPEND ${LOG_FILE} "SOURCE_AMOEBA_INCLUDE_FILES=" ${SOURCE_AMOEBA_INCLUDE_FILES} "\n" )
+    FILE( APPEND ${LOG_FILE} "OPENMM_PATH="            ${OPENMM_PATH} "\n" )
+    FILE( APPEND ${LOG_FILE} "CUDA_PATH="              ${CUDA_PATH} "\n" )
+ENDIF(LOG)
+
+# ----------------------------------------------------------------------------
+
+# If API_AMOEBA wrappers are being generated, and add them to the build.
+#SET(OPENMM_BUILD_API_AMOEBA_WRAPPERS OFF CACHE BOOL "Build wrappers for C and Fortran")
+#IF(OPENMM_BUILD_API_AMOEBA_WRAPPERS)
+#    ADD_SUBDIRECTORY(wrappers)
+#    SET(SOURCE_AMOEBA_FILES ${SOURCE_AMOEBA_FILES} wrappers/OpenMMCWrapper.cpp  wrappers/OpenMMFortranWrapper.cpp)
+#    SET_SOURCE_AMOEBA_FILES_PROPERTIES(wrappers/OpenMMCWrapper.cpp wrappers/OpenMMFortranWrapper.cpp PROPERTIES GENERATED TRUE)
+#ENDIF(OPENMM_BUILD_API_AMOEBA_WRAPPERS)
+
+INCLUDE_DIRECTORIES(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+ADD_LIBRARY(${SHARED_AMOEBA_TARGET} SHARED ${SOURCE_AMOEBA_FILES} ${SOURCE_AMOEBA_INCLUDE_FILES} ${API_AMOEBA_ABS_INCLUDE_FILES})
+SET_TARGET_PROPERTIES(${SHARED_AMOEBA_TARGET} PROPERTIES COMPILE_FLAGS "-DOPENMM_BUILDING_SHARED_LIBRARY -DLEPTON_BUILDING_SHARED_LIBRARY")
+
+IF(OPENMM_BUILD_STATIC_LIB)
+  ADD_LIBRARY(${STATIC_AMOEBA_TARGET} STATIC ${SOURCE_AMOEBA_FILES} ${SOURCE_AMOEBA_INCLUDE_FILES} ${API_AMOEBA_ABS_INCLUDE_FILES})
+  SET_TARGET_PROPERTIES(${STATIC_AMOEBA_TARGET} PROPERTIES COMPILE_FLAGS "-DOPENMM_USE_STATIC_LIBRARIES -DOPENMM_BUILDING_STATIC_LIBRARY -DLEPTON_USE_STATIC_LIBRARIES -DLEPTON_BUILDING_STATIC_LIBRARY")
+ENDIF(OPENMM_BUILD_STATIC_LIB)
+
+#IF(OPENMM_BUILD_API_AMOEBA_WRAPPERS)
+#    ADD_DEPENDENCIES(${SHARED_AMOEBA_TARGET} ApiWrappers)
+#    ADD_DEPENDENCIES(${STATIC_AMOEBA_TARGET} ApiWrappers)
+#ENDIF(OPENMM_BUILD_API_AMOEBA_WRAPPERS)
+
+# On Linux need to link to libdl
+FIND_LIBRARY(DL_LIBRARY dl)
+IF(DL_LIBRARY)
+  TARGET_LINK_LIBRARIES(${SHARED_AMOEBA_TARGET} ${DL_LIBRARY})
+  IF(OPENMM_BUILD_STATIC_LIB)
+    TARGET_LINK_LIBRARIES(${STATIC_AMOEBA_TARGET} ${DL_LIBRARY})
+  ENDIF(OPENMM_BUILD_STATIC_LIB)
+ENDIF(DL_LIBRARY)
+
+SET( OpenMMLib OpenMM )
+# But on Unix or Cygwin we have to add the suffix manually
+IF (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
+    SET(OpenMMLib ${OpenMMLib}_d)
+ENDIF (UNIX AND CMAKE_BUILD_TYPE MATCHES Debug)
+TARGET_LINK_LIBRARIES( ${SHARED_AMOEBA_TARGET} ${SHARED_TARGET} )
+IF(OPENMM_BUILD_STATIC_LIB)
+  TARGET_LINK_LIBRARIES( ${STATIC_AMOEBA_TARGET} ${STATIC_TARGET} )
+ENDIF(OPENMM_BUILD_STATIC_LIB)
+
+#ADD_SUBDIRECTORY(platforms/reference/tests)
+
+# Which hardware platforms to build
+IF(CUDA_FOUND)
+    SET(OPENMM_BUILD_AMOEBA_CUDA_LIB ON CACHE BOOL "Build OpenMMAmoebaCuda library for Nvidia GPUs")
+ELSE(CUDA_FOUND)
+    SET(OPENMM_BUILD_AMOEBA_CUDA_LIB OFF CACHE BOOL "Build OpenMMAmoebaCuda library for Nvidia GPUs")
+ENDIF(CUDA_FOUND)
+
+SET(OPENMM_BUILD_AMOEBA_PATH)
+SET(OPENMM_BUILD_AMOEBA_CUDA_PATH)
+IF(OPENMM_BUILD_AMOEBA_CUDA_LIB)
+    ADD_SUBDIRECTORY(platforms/cuda)
+    SET(OPENMM_BUILD_AMOEBA_PATH ${CMAKE_CURRENT_SOURCE_DIR}/platforms/cuda)
+    SET(OPENMM_BUILD_AMOEBA_CUDA_PATH ${CMAKE_CURRENT_SOURCE_DIR}/platforms/cuda)
+    SET(OPENMM_AMOEBA_CUDA_SOURCE_SUBDIRS . openmmapi olla platforms/cuda)
+ENDIF(OPENMM_BUILD_AMOEBA_CUDA_LIB)
+
+#SET(OPENMM_BUILD_BROOK_LIB OFF CACHE BOOL "Build OpenMMBrook library for ATI GPUs")
+#IF(OPENMM_BUILD_BROOK_LIB)
+#    ADD_SUBDIRECTORY(platforms/brook)
+#ENDIF(OPENMM_BUILD_BROOK_LIB)
+#
+#SET(OPENMM_BUILD_OPENCL_LIB OFF CACHE BOOL "Build OpenMMOpenCL library for Nvidia GPUs")
+#IF(OPENMM_BUILD_OPENCL_LIB)
+#    ADD_SUBDIRECTORY(platforms/opencl)
+#ENDIF(OPENMM_BUILD_OPENCL_LIB)
+
+INSTALL_TARGETS(/lib RUNTIME_DIRECTORY /lib/plugins ${SHARED_AMOEBA_TARGET})
+IF(OPENMM_BUILD_STATIC_LIB)
+  INSTALL_TARGETS(/lib RUNTIME_DIRECTORY /lib/plugins ${STATIC_AMOEBA_TARGET})
+ENDIF(OPENMM_BUILD_STATIC_LIB)
+FILE(GLOB CORE_HEADERS     include/*.h          */include/*.h)
+FILE(GLOB TOP_HEADERS      include/openmm/*.h          */include/openmm/*.h)
+FILE(GLOB INTERNAL_HEADERS include/openmm/internal/*.h */include/openmm/internal/*.h )
+INSTALL_FILES(/include                 FILES ${CORE_HEADERS})
+INSTALL_FILES(/include/openmm          FILES ${TOP_HEADERS})
+INSTALL_FILES(/include/openmm/internal FILES ${INTERNAL_HEADERS})
+
+#
+# Allow automated build and dashboard.
+#
+#INCLUDE (Dart)
+
+#IF (UNIX AND NOT CYGWIN AND NOT APPLE)
+#  IF (NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE MATCHES Debug)
+#    ADD_DEFINITIONS(-fprofile-arcs -ftest-coverage)
+#    LINK_LIBRARIES(gcov)
+#  ENDIF (NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE MATCHES Debug)
+#ENDIF (UNIX AND NOT CYGWIN AND NOT APPLE)
+
+
+#
+# Testing
+#
+
+ENABLE_TESTING()
+
+IF (EXECUTABLE_OUTPUT_PATH)
+  SET (TEST_PATH ${EXECUTABLE_OUTPUT_PATH})
+ELSE (EXECUTABLE_OUTPUT_PATH)
+  SET (TEST_PATH .)
+ENDIF (EXECUTABLE_OUTPUT_PATH)
+
+#INCLUDE(ApiDoxygen.cmake)
+
+#ADD_SUBDIRECTORY(tests)
+#ADD_SUBDIRECTORY(examples)

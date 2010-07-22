@@ -1,0 +1,216 @@
+/* -------------------------------------------------------------------------- *
+ *                                AmoebaOpenMM                                *
+ * -------------------------------------------------------------------------- *
+ * This is part of the OpenMM molecular simulation toolkit originating from   *
+ * Simbios, the NIH National Center for Physics-Based Simulation of           *
+ * Biological Structures at Stanford, funded under the NIH Roadmap for        *
+ * Medical Research, grant U54 GM072970. See https://simtk.org.               *
+ *                                                                            *
+ * Portions copyright (c) 2008-2009 Stanford University and the Authors.      *
+ * Authors:                                                                   *
+ * Contributors:                                                              *
+ *                                                                            *
+ * Permission is hereby granted, free of charge, to any person obtaining a    *
+ * copy of this software and associated documentation files (the "Software"), *
+ * to deal in the Software without restriction, including without limitation  *
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,   *
+ * and/or sell copies of the Software, and to permit persons to whom the      *
+ * Software is furnished to do so, subject to the following conditions:       *
+ *                                                                            *
+ * The above copyright notice and this permission notice shall be included in *
+ * all copies or substantial portions of the Software.                        *
+ *                                                                            *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR *
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,   *
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL    *
+ * THE AUTHORS, CONTRIBUTORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,    *
+ * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR      *
+ * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE  *
+ * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
+ * -------------------------------------------------------------------------- */
+
+#include "openmm/Force.h"
+#include "openmm/OpenMMException.h"
+#include "AmoebaMultipoleForce.h"
+#include "internal/AmoebaMultipoleForceImpl.h"
+
+using namespace OpenMM;
+
+const int AmoebaMultipoleForce::CovalentDegrees[8] = { 1, 2, 3, 4, 0, 1, 2, 3 };
+
+
+AmoebaMultipoleForce::AmoebaMultipoleForce() {
+    mutualInducedIterationMethod  = SOR;
+    mutualInducedMaxIterations    = 60;
+    mutualInducedTargetEpsilon    = 1.0e-06;
+    scalingDistanceCutoff         = 100.0;
+
+                                    // ONE_4PI_EPS0
+    electricConstant              = 138.9354558456;
+}
+
+AmoebaMultipoleForce::MutualInducedIterationMethod AmoebaMultipoleForce::getMutualInducedIterationMethod( void ) const {
+    return mutualInducedIterationMethod;
+}
+
+void AmoebaMultipoleForce::setMutualInducedIterationMethod( AmoebaMultipoleForce::MutualInducedIterationMethod inputMutualInducedIterationMethod ) {
+    mutualInducedIterationMethod = inputMutualInducedIterationMethod;
+}
+
+int AmoebaMultipoleForce::getMutualInducedMaxIterations( void ) const {
+    return mutualInducedMaxIterations;
+}
+
+void AmoebaMultipoleForce::setMutualInducedMaxIterations( int inputMutualInducedMaxIterations ) {
+    mutualInducedMaxIterations = inputMutualInducedMaxIterations;
+}
+
+double AmoebaMultipoleForce::getMutualInducedTargetEpsilon( void ) const {
+    return mutualInducedTargetEpsilon;
+}
+
+void AmoebaMultipoleForce::setMutualInducedTargetEpsilon( double inputMutualInducedTargetEpsilon ) {
+    mutualInducedTargetEpsilon = inputMutualInducedTargetEpsilon;
+}
+
+double AmoebaMultipoleForce::getScalingDistanceCutoff( void ) const {
+    return scalingDistanceCutoff;
+}
+
+void AmoebaMultipoleForce::setScalingDistanceCutoff( double inputScalingDistanceCutoff ) {
+    scalingDistanceCutoff = inputScalingDistanceCutoff;
+}
+
+double AmoebaMultipoleForce::getElectricConstant( void ) const {
+    return electricConstant;
+}
+
+void AmoebaMultipoleForce::setElectricConstant( double inputElectricConstant ) {
+    electricConstant = inputElectricConstant;
+}
+
+int AmoebaMultipoleForce::addParticle( double charge, std::vector<double>& molecularDipole, std::vector<double>& molecularQuadrupole, int axisType, 
+                                        int multipoleAtomId1, int multipoleAtomId2, double thole, double dampingFactor, double polarity) {
+    multipoles.push_back(MultipoleInfo( charge, molecularDipole, molecularQuadrupole,  axisType, multipoleAtomId1,  multipoleAtomId2, thole, dampingFactor, polarity));
+    return multipoles.size()-1;
+}
+
+void AmoebaMultipoleForce::getMultipoleParameters(int index, double& charge, std::vector<double>& molecularDipole, std::vector<double>& molecularQuadrupole, 
+                                                  int& axisType, int& multipoleAtomId1, int& multipoleAtomId2, double& thole, double& dampingFactor, double& polarity ) const {
+    charge                      = multipoles[index].charge;
+
+    molecularDipole.resize( 3 );
+    molecularDipole[0]          = multipoles[index].molecularDipole[0];
+    molecularDipole[1]          = multipoles[index].molecularDipole[1];
+    molecularDipole[2]          = multipoles[index].molecularDipole[2];
+
+    molecularQuadrupole.resize( 9 );
+    molecularQuadrupole[0]      = multipoles[index].molecularQuadrupole[0];
+    molecularQuadrupole[1]      = multipoles[index].molecularQuadrupole[1];
+    molecularQuadrupole[2]      = multipoles[index].molecularQuadrupole[2];
+    molecularQuadrupole[3]      = multipoles[index].molecularQuadrupole[3];
+    molecularQuadrupole[4]      = multipoles[index].molecularQuadrupole[4];
+    molecularQuadrupole[5]      = multipoles[index].molecularQuadrupole[5];
+    molecularQuadrupole[6]      = multipoles[index].molecularQuadrupole[6];
+    molecularQuadrupole[7]      = multipoles[index].molecularQuadrupole[7];
+    molecularQuadrupole[8]      = multipoles[index].molecularQuadrupole[8];
+
+    axisType                    = multipoles[index].axisType;
+    multipoleAtomId1            = multipoles[index].multipoleAtomId1;
+    multipoleAtomId2            = multipoles[index].multipoleAtomId2;
+
+    thole                       = multipoles[index].thole;
+    dampingFactor               = multipoles[index].dampingFactor;
+    polarity                    = multipoles[index].polarity;
+}
+
+void AmoebaMultipoleForce::setMultipoleParameters(int index, double charge, std::vector<double>& molecularDipole, std::vector<double>& molecularQuadrupole, 
+                                                  int axisType, int multipoleAtomId1, int multipoleAtomId2, double thole, double dampingFactor, double polarity ) {
+
+    multipoles[index].charge                      = charge;
+
+    multipoles[index].molecularDipole[0]          = molecularDipole[0];
+    multipoles[index].molecularDipole[1]          = molecularDipole[1];
+    multipoles[index].molecularDipole[2]          = molecularDipole[2];
+
+    multipoles[index].molecularQuadrupole[0]      = molecularQuadrupole[0];
+    multipoles[index].molecularQuadrupole[1]      = molecularQuadrupole[1];
+    multipoles[index].molecularQuadrupole[2]      = molecularQuadrupole[2];
+    multipoles[index].molecularQuadrupole[3]      = molecularQuadrupole[3];
+    multipoles[index].molecularQuadrupole[4]      = molecularQuadrupole[4];
+    multipoles[index].molecularQuadrupole[5]      = molecularQuadrupole[5];
+    multipoles[index].molecularQuadrupole[6]      = molecularQuadrupole[6];
+    multipoles[index].molecularQuadrupole[7]      = molecularQuadrupole[7];
+    multipoles[index].molecularQuadrupole[8]      = molecularQuadrupole[8];
+
+    multipoles[index].axisType                    = axisType;
+    multipoles[index].multipoleAtomId1            = multipoleAtomId1;
+    multipoles[index].multipoleAtomId2            = multipoleAtomId2;
+    multipoles[index].thole                       = thole;
+    multipoles[index].dampingFactor               = dampingFactor;
+    multipoles[index].polarity                    = polarity;
+
+}
+
+void AmoebaMultipoleForce::setCovalentMap(int index, CovalentType typeId, const std::vector<int>& covalentAtoms ) {
+
+    std::vector<int>& covalentList = multipoles[index].covalentInfo[typeId];
+    covalentList.resize( covalentAtoms.size() );
+    for( unsigned int ii = 0; ii < covalentAtoms.size(); ii++ ){
+       covalentList[ii] = covalentAtoms[ii];
+    }
+}
+
+void AmoebaMultipoleForce::getCovalentMap(int index, CovalentType typeId, std::vector<int>& covalentAtoms ) const {
+
+    // load covalent atom index entries for atomId==index and covalentId==typeId into covalentAtoms
+
+    std::vector<int> covalentList = multipoles[index].covalentInfo[typeId];
+    covalentAtoms.resize( covalentList.size() );
+    for( unsigned int ii = 0; ii < covalentList.size(); ii++ ){
+       covalentAtoms[ii] = covalentList[ii];
+    }
+}
+
+void AmoebaMultipoleForce::getCovalentMaps(int index, std::vector< std::vector<int> >& covalentLists ) const {
+
+    covalentLists.resize( CovalentEnd );
+    for( unsigned int jj = 0; jj < CovalentEnd; jj++ ){
+        std::vector<int> covalentList = multipoles[index].covalentInfo[jj];
+        std::vector<int> covalentAtoms;
+        covalentAtoms.resize( covalentList.size() );
+        for( unsigned int ii = 0; ii < covalentList.size(); ii++ ){
+           covalentAtoms[ii] = covalentList[ii];
+        }
+        covalentLists[jj] = covalentAtoms;
+    }
+}
+
+void AmoebaMultipoleForce::getCovalentRange( int index, const std::vector<CovalentType>& lists, int* minCovalentIndex, int* maxCovalentIndex ) const {
+
+    *minCovalentIndex =  999999999;
+    *maxCovalentIndex = -999999999;
+    for( unsigned int kk = 0; kk < lists.size(); kk++ ){
+        CovalentType jj = lists[kk];
+        std::vector<int> covalentList = multipoles[index].covalentInfo[jj];
+        for( unsigned int ii = 0; ii < covalentList.size(); ii++ ){
+            if( *minCovalentIndex > covalentList[ii] ){
+               *minCovalentIndex = covalentList[ii];
+            }
+            if( *maxCovalentIndex < covalentList[ii] ){
+               *maxCovalentIndex = covalentList[ii];
+            }
+        }
+    }
+}
+
+void AmoebaMultipoleForce::getCovalentDegree( std::vector<int>& covalentDegree ) const {
+    covalentDegree.resize( CovalentEnd );
+    for( unsigned int kk = 0; kk < CovalentEnd; kk++ ){
+        covalentDegree[kk] = CovalentDegrees[kk];
+    }
+}
+
+ForceImpl* AmoebaMultipoleForce::createImpl() {
+    return new AmoebaMultipoleForceImpl(*this);
+}

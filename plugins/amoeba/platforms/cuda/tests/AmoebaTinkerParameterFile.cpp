@@ -1,0 +1,5409 @@
+/* -------------------------------------------------------------------------- *
+ *                                   OpenMM                                   *
+ * -------------------------------------------------------------------------- *
+ * This is part of the OpenMM molecular simulation toolkit originating from   *
+ * Simbios, the NIH National Center for Physics-Based Simulation of           *
+ * Biological Structures at Stanford, funded under the NIH Roadmap for        *
+ * Medical Research, grant U54 GM072970. See https://simtk.org.               *
+ *                                                                            *
+ * Portions copyright (c) 2009 Stanford University and the Authors.           *
+ * Authors: Peter Eastman, Mark Friedrichs                                    *
+ * Contributors:                                                              *
+ *                                                                            *
+ * This program is free software: you can redistribute it and/or modify       *
+ * it under the terms of the GNU Lesser General Public License as published   *
+ * by the Free Software Foundation, either version 3 of the License, or       *
+ * (at your option) any later version.                                        *
+ *                                                                            *
+ * This program is distributed in the hope that it will be useful,            *
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of             *
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the              *
+ * GNU Lesser General Public License for more details.                        *
+ *                                                                            *
+ * You should have received a copy of the GNU Lesser General Public License   *
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.      *
+ * -------------------------------------------------------------------------- */
+
+#include "AmoebaTinkerParameterFile.h"
+#include "openmm/GBSAOBCForce.h"
+#include "openmm/internal/ContextImpl.h"
+#include "kernels/amoebaGpuTypes.h"
+#include "AmoebaCudaData.h"
+
+#include <exception>
+using namespace std;
+
+
+extern "C" void* getAmoebaCudaData( ContextImpl& context );
+
+/**---------------------------------------------------------------------------------------
+
+    Replacement of sorts for strtok()
+    Used to parse parameter file lines
+
+    @param lineBuffer           string to tokenize
+    @param delimiter            token delimter
+
+    @return number of args
+
+    --------------------------------------------------------------------------------------- */
+
+static char* strsepLocal( char** lineBuffer, const char* delimiter ){
+
+    // ---------------------------------------------------------------------------------------
+
+    // static const std::string methodName = "strsepLocal";
+
+    char *s;
+    const char *spanp;
+    int c, sc;
+    char *tok;
+
+    // ---------------------------------------------------------------------------------------
+
+    s = *lineBuffer;
+    if( s == NULL ){
+       return (NULL);
+    }
+
+    for( tok = s;; ){
+       c     = *s++;
+       spanp = delimiter;
+       do {
+          if( (sc = *spanp++) == c ){
+             if( c == 0 ){
+                s = NULL;
+             } else {
+                s[-1] = 0;
+             }
+/*
+             if( *s == '\n' ){ 
+                *s = NULL;
+             }
+*/
+             *lineBuffer = s;
+             return( tok );
+          }
+       } while( sc != 0 );
+    }
+}
+
+/**---------------------------------------------------------------------------------------
+
+    Tokenize a string
+
+    @param lineBuffer           string to tokenize
+    @param tokenArray           upon return vector of tokens
+    @param delimiter            token delimter
+
+    @return number of tokens
+
+    --------------------------------------------------------------------------------------- */
+
+int tokenizeString( char* lineBuffer, StringVector& tokenArray, const std::string delimiter ){
+
+    // ---------------------------------------------------------------------------------------
+
+    // static const std::string methodName = "\nSimTKOpenMMUtilities::tokenizeString";
+
+    // ---------------------------------------------------------------------------------------
+
+    char *ptr_c = NULL;
+
+    for( ; (ptr_c = strsepLocal( &lineBuffer, delimiter.c_str() )) != NULL; ){
+       if( *ptr_c ){
+/*
+          char* endOfLine = ptr_c;
+          while( endOfLine ){
+printf( "%c", *endOfLine ); fflush( stdout );
+             if( *endOfLine == '\n' )*endOfLine = '\0';
+             endOfLine++;
+          }  
+*/
+          tokenArray.push_back( std::string( ptr_c ) );
+       }
+    }
+
+    return (int) tokenArray.size();
+}
+
+/**---------------------------------------------------------------------------------------
+ * Set field if in map
+ * 
+ * @param  argumentMap            map to check
+ * @param  fieldToCheck           key
+ * @param  fieldToSet             field to set
+ *
+ * @return 1 if argument set, else 0
+ *
+   --------------------------------------------------------------------------------------- */
+
+static int setStringFromMap( MapStringString& argumentMap, std::string fieldToCheck, std::string& fieldToSet ){
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName             = "setStringFromMap";
+
+// ---------------------------------------------------------------------------------------
+
+   MapStringStringCI check = argumentMap.find( fieldToCheck );
+   if( check != argumentMap.end() ){
+      fieldToSet = (*check).second; 
+      return 1;
+   }
+   return 0;
+}
+
+/**---------------------------------------------------------------------------------------
+ * Set field if in map
+ * 
+ * @param  argumentMap            map to check
+ * @param  fieldToCheck           key
+ * @param  fieldToSet             field to set
+ *
+ * @return 1 if argument set, else 0
+ *
+   --------------------------------------------------------------------------------------- */
+
+static int setIntFromMap( MapStringString& argumentMap, std::string fieldToCheck, int& fieldToSet ){
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName             = "setIntFromMap";
+
+// ---------------------------------------------------------------------------------------
+
+   MapStringStringCI check = argumentMap.find( fieldToCheck );
+   if( check != argumentMap.end() ){
+      fieldToSet = atoi( (*check).second.c_str() ); 
+      return 1;
+   }
+   return 0;
+}
+
+/**---------------------------------------------------------------------------------------
+ * Set field if in map
+ * 
+ * @param  argumentMap            map to check
+ * @param  fieldToCheck           key
+ * @param  fieldToSet             field to set
+ *
+ * @return 1 if argument set, else 0
+ *
+   --------------------------------------------------------------------------------------- */
+
+static void copyMap( MapStringInt& inputMap, MapStringInt& outputMap ){
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName             = "setIntFromMap";
+
+// ---------------------------------------------------------------------------------------
+
+   for( MapStringIntI ii = inputMap.begin(); ii != inputMap.end(); ii++ ){
+         outputMap[(*ii).first] = (*ii).second;
+   }
+}
+
+
+/**---------------------------------------------------------------------------------------
+ * Set field if in map
+ * 
+ * @param  argumentMap            map to check
+ * @param  fieldToCheck           key
+ * @param  fieldToSet             field to set
+ *
+ * @return 1 if argument set, else 0
+ *
+   --------------------------------------------------------------------------------------- */
+
+static void editMap( MapStringInt& inputMap, MapStringInt& outputMap, int newValue ){
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName             = "editMap";
+
+// ---------------------------------------------------------------------------------------
+
+   copyMap( inputMap, outputMap );
+   for( MapStringIntI ii = inputMap.begin(); ii != inputMap.end(); ii++ ){
+      if( (*ii).second ){
+         outputMap[(*ii).first] = newValue;
+      }
+   }
+}
+
+/**---------------------------------------------------------------------------------------
+
+ * Set field if in map
+ * 
+ * @param  argumentMap            map to check
+ * @param  fieldToCheck           key
+ * @param  fieldToSet             field to set
+ *
+ * @return 1 if argument set, else 0
+ *
+   --------------------------------------------------------------------------------------- */
+
+static int setFloatFromMap( MapStringString& argumentMap, std::string fieldToCheck, float& fieldToSet ){
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName             = "setFloatFromMap";
+
+// ---------------------------------------------------------------------------------------
+
+   MapStringStringCI check = argumentMap.find( fieldToCheck );
+   if( check != argumentMap.end() ){
+      fieldToSet = static_cast<float>(atof( (*check).second.c_str() )); 
+      return 1;
+   }
+   return 0;
+}
+
+
+/**---------------------------------------------------------------------------------------
+
+ * Set field if in map
+ * 
+ * @param  argumentMap            map to check
+ * @param  fieldToCheck           key
+ * @param  fieldToSet             field to set
+ *
+ * @return 1 if argument set, else 0
+ *
+   --------------------------------------------------------------------------------------- */
+
+static int setDoubleFromMap( MapStringString& argumentMap, std::string fieldToCheck, double& fieldToSet ){
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName             = "setDoubleFromMap";
+
+// ---------------------------------------------------------------------------------------
+
+   MapStringStringCI check = argumentMap.find( fieldToCheck );
+   if( check != argumentMap.end() ){
+      fieldToSet = atof( (*check).second.c_str() ); 
+      return 1;
+   }
+   return 0;
+}
+
+/**---------------------------------------------------------------------------------------
+
+    Read a line from a file and tokenize into an array of strings
+
+    @param filePtr              file to read from
+    @param tokens               array of token strings
+    @param lineCount            line count
+    @param log                  optional file ptr for logging
+
+    @return ptr to string containing line
+
+    --------------------------------------------------------------------------------------- */
+
+static char* readLine( FILE* filePtr, StringVector& tokens, int* lineCount, FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+    //static const std::string methodName      = "readLine";
+    
+    std::string delimiter                    = " \n";
+    const int bufferSize                     = 4096;
+    char buffer[bufferSize];
+
+// ---------------------------------------------------------------------------------------
+
+    char* isNotEof = fgets( buffer, bufferSize, filePtr );
+    if( isNotEof ){
+       (*lineCount)++;
+       tokenizeString( buffer, tokens, delimiter );
+    }
+    return isNotEof;
+
+}
+
+/**---------------------------------------------------------------------------------------
+
+    Read a file
+
+    @param fileName             file name
+    @param fileContents         output file contents
+    @param log                  log
+
+    --------------------------------------------------------------------------------------- */
+
+static void readFile( std::string fileName, StringVectorVector& fileContents, FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+    //static const std::string methodName      = "readFile";
+
+// ---------------------------------------------------------------------------------------
+
+     fileContents.resize(0);
+     FILE* filePtr;
+ #ifdef _MSC_VER
+     fopen_s( &filePtr, fileName.c_str(), "r" );
+ #else
+     filePtr = fopen( fileName.c_str(), "r" );
+ #endif
+     if( filePtr == NULL ){
+        return;
+     }
+     StringVector firstLine;
+     int lineCount  = 0;
+     char* isNotEof = readLine( filePtr, firstLine, &lineCount, log );
+     fileContents.push_back( firstLine );
+     //int lineCount  = 0;
+     while( isNotEof ){
+         StringVector lineTokens;
+         isNotEof = readLine( filePtr, lineTokens, &lineCount, log );
+         fileContents.push_back( lineTokens );
+     }
+     (void) fclose( filePtr );
+
+     return;
+}
+
+/**---------------------------------------------------------------------------------------
+
+    Read vector of double vectors
+
+    @param filePtr              file pointer to parameter file
+    @param tokens               array of strings from first line of parameter file for this block of parameters
+    @param vectorOfVectors      output of vector of vectors
+    @param lineCount            used to track line entries read from parameter file
+    @param typeName             id of entries being read
+    @param log                  log file pointer -- may be NULL
+
+    @return number of entries read
+
+    --------------------------------------------------------------------------------------- */
+
+static int readVectorOfDoubleVectors( FILE* filePtr, const StringVector& tokens, std::vector< std::vector<double> >& vectorOfVectors, 
+                                       int* lineCount, std::string typeName, FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+    static const std::string methodName      = "readVectorOfDoubleVectors";
+    
+// ---------------------------------------------------------------------------------------
+
+    if( tokens.size() < 1 ){
+       char buffer[1024];
+       (void) sprintf( buffer, "%s no Coordinates terms entry???\n", methodName.c_str() );
+       throwException(__FILE__, __LINE__, buffer );
+       exit(-1);
+    }
+
+    int numberToRead = atoi( tokens[1].c_str() );
+    if( log ){
+       (void) fprintf( log, "%s number of %s to read: %d\n", methodName.c_str(), typeName.c_str(), numberToRead );
+       (void) fflush( log );
+    }
+    for( int ii = 0; ii < numberToRead; ii++ ){
+       StringVector lineTokens;
+       char* isNotEof = readLine( filePtr, lineTokens, lineCount, log );
+       if( lineTokens.size() > 1 ){
+          int index            = atoi( lineTokens[0].c_str() );
+          std::vector<double> nextEntry;
+          for( unsigned int jj = 1; jj < lineTokens.size(); jj++ ){
+              double value = atof( lineTokens[jj].c_str() );
+              nextEntry.push_back( value );
+          }
+          vectorOfVectors.push_back( nextEntry );
+       } else {
+          char buffer[1024];
+          (void) sprintf( buffer, "%s %s tokens incomplete at line=%d\n", methodName.c_str(), typeName.c_str(), *lineCount );
+          throwException(__FILE__, __LINE__, buffer );
+          exit(-1);
+       }
+    }
+
+    // diagnostics
+
+    if( log ){
+       static const unsigned int maxPrint = MAX_PRINT;
+       unsigned int   arraySize           = vectorOfVectors.size();
+       (void) fprintf( log, "%s: sample of %s size=%u\n", methodName.c_str(), typeName.c_str(), arraySize );
+       for( unsigned int ii = 0; ii < vectorOfVectors.size(); ii++ ){
+          (void) fprintf( log, "%6u [", ii );
+          for( unsigned int jj = 0; jj < vectorOfVectors[ii].size(); jj++ ){
+             (void) fprintf( log, "%14.7e ", vectorOfVectors[ii][jj] );
+          }
+          (void) fprintf( log, "]\n" );
+
+          // skip to end
+
+          if( ii == maxPrint && (arraySize - maxPrint) > ii ){
+             ii = arraySize - maxPrint - 1;
+          } 
+       }
+    }
+
+    return static_cast<int>(vectorOfVectors.size());
+}
+
+/**---------------------------------------------------------------------------------------
+
+    Read vector of double vectors
+
+    @param filePtr              file pointer to parameter file
+    @param tokens               array of strings from first line of parameter file for this block of parameters
+    @param vectorOfVectors      output of vector of vectors
+    @param lineCount            used to track line entries read from parameter file
+    @param typeName             id of entries being read
+    @param log                  log file pointer -- may be NULL
+
+    @return number of entries read
+
+    --------------------------------------------------------------------------------------- */
+
+static int readVectorOfIntVectors( FILE* filePtr, const StringVector& tokens, std::vector< std::vector<int> >& vectorOfVectors, 
+                                     int* lineCount, std::string typeName, FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+    static const std::string methodName      = "readVectorOfIntVectors";
+    
+// ---------------------------------------------------------------------------------------
+
+    if( tokens.size() < 1 ){
+       char buffer[1024];
+       (void) sprintf( buffer, "%s no number of terms entry???\n", methodName.c_str() );
+       throwException(__FILE__, __LINE__, buffer );
+       exit(-1);
+    }
+
+    int numberToRead = atoi( tokens[1].c_str() );
+    if( log ){
+       (void) fprintf( log, "%s number of %s to read: %d\n", methodName.c_str(), typeName.c_str(), numberToRead );
+       (void) fflush( log );
+    }
+    for( int ii = 0; ii < numberToRead; ii++ ){
+       StringVector lineTokens;
+       char* isNotEof = readLine( filePtr, lineTokens, lineCount, log );
+       if( lineTokens.size() > 1 ){
+          int index            = atoi( lineTokens[0].c_str() );
+          std::vector<int> nextEntry;
+          for( unsigned int jj = 1; jj < lineTokens.size(); jj++ ){
+              int value = atoi( lineTokens[jj].c_str() );
+              nextEntry.push_back( value );
+          }
+          vectorOfVectors.push_back( nextEntry );
+       } else {
+          char buffer[1024];
+          (void) sprintf( buffer, "%s %s tokens incomplete at line=%d\n", methodName.c_str(), typeName.c_str(), *lineCount );
+          throwException(__FILE__, __LINE__, buffer );
+          exit(-1);
+       }
+    }
+
+    // diagnostics
+
+    if( log ){
+       static const unsigned int maxPrint = MAX_PRINT;
+       unsigned int   arraySize           = vectorOfVectors.size();
+       (void) fprintf( log, "%s: sample of %s size=%u\n", methodName.c_str(), typeName.c_str(), arraySize );
+       for( unsigned int ii = 0; ii < vectorOfVectors.size(); ii++ ){
+          (void) fprintf( log, "%6u [", ii );
+          for( unsigned int jj = 0; jj < vectorOfVectors[ii].size(); jj++ ){
+             (void) fprintf( log, "%6d ", vectorOfVectors[ii][jj] );
+          }
+          (void) fprintf( log, "]\n" );
+
+          // skip to end
+
+          if( ii == maxPrint && (arraySize - maxPrint) > ii ){
+             ii = arraySize - maxPrint - 1;
+          } 
+       }
+    }
+
+    return static_cast<int>(vectorOfVectors.size());
+}
+
+/**---------------------------------------------------------------------------------------
+
+    Read vector of ints
+
+    @param filePtr              file pointer to parameter file
+    @param tokens               array of strings from first line of parameter file for this block of parameters
+                                line format: ... <numberOfTokens> <int value1> <int value2> ...<int valueN>,
+                                where N=<numberOfTokens> 
+    @param numberTokenIndex     index of entry <numberOfTokens> in token array
+    @param intVector            output vector of ints
+    @param lineCount            used to track line entries read from parameter file
+    @param typeName             id of entries being read
+    @param log                  log file pointer -- may be NULL
+
+    @return number of entries read
+
+    --------------------------------------------------------------------------------------- */
+
+static int readIntVector( FILE* filePtr, const StringVector& tokens, int numberTokenIndex,
+                           std::vector<int>& intVector, int* lineCount,
+                           std::string typeName, FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+    static const std::string methodName      = "readIntVector";
+    
+// ---------------------------------------------------------------------------------------
+
+     if( tokens.size() < 1 ){
+         char buffer[1024];
+         (void) sprintf( buffer, "%s tokens empty? token size=%u\n", methodName.c_str(), tokens.size() );
+         throwException(__FILE__, __LINE__, buffer );
+         exit(-1);
+     }
+ 
+     int numberToRead = atoi( tokens[numberTokenIndex].c_str() );
+     intVector.resize( numberToRead );
+     if( 0 && log ){
+         (void) fprintf( log, "%s number of %s to read: %d\n", methodName.c_str(), typeName.c_str(), numberToRead );
+         (void) fflush( log );
+     }
+     int startIndex = numberTokenIndex+1;
+     for( int ii = startIndex; ii < numberToRead + startIndex; ii++ ){
+         intVector[ii-3] = atoi( tokens[ii].c_str() );
+     }
+ 
+     return static_cast<int>(intVector.size());
+}
+
+/**---------------------------------------------------------------------------------------
+
+    Read particles count
+
+    @param filePtr              file pointer to parameter file
+    @param tokens               array of strings from first line of parameter file for this block of parameters
+    @param system               System reference
+    @param lineCount            used to track line entries read from parameter file
+    @param log                  log file pointer -- may be NULL
+
+    @return number of parameters read
+
+    --------------------------------------------------------------------------------------- */
+
+static int readParticles( FILE* filePtr, const StringVector& tokens, System& system, int* lineCount, FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+    static const std::string methodName      = "readParticles";
+    
+// ---------------------------------------------------------------------------------------
+
+    if( tokens.size() < 1 ){
+       char buffer[1024];
+       (void) sprintf( buffer, "%s no particles number entry???\n", methodName.c_str() );
+       throwException(__FILE__, __LINE__, buffer );
+       exit(-1);
+    }
+
+    int numberOfParticles = atoi( tokens[1].c_str() );
+    if( log ){
+       (void) fprintf( log, "%s particles=%d\n", methodName.c_str(), numberOfParticles );
+    }
+
+    return numberOfParticles;
+}
+
+/**---------------------------------------------------------------------------------------
+
+    Read particle masses
+
+    @param filePtr              file pointer to parameter file
+    @param tokens               array of strings from first line of parameter file for this block of parameters
+    @param system               System reference
+    @param lineCount            used to track line entries read from parameter file
+    @param log                  log file pointer -- may be NULL
+
+    @return number of masses read
+
+    --------------------------------------------------------------------------------------- */
+
+static int readMasses( FILE* filePtr, const StringVector& tokens, System& system, int* lineCount, FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+    static const std::string methodName      = "readMasses";
+    
+// ---------------------------------------------------------------------------------------
+
+    if( tokens.size() < 1 ){
+       char buffer[1024];
+       (void) sprintf( buffer, "%s no particles number entry???\n", methodName.c_str() );
+       throwException(__FILE__, __LINE__, buffer );
+       exit(-1);
+    }
+
+    int numberOfParticles = atoi( tokens[1].c_str() );
+    if( log ){
+       (void) fprintf( log, "%s particle masses=%d\n", methodName.c_str(), numberOfParticles );
+    }
+    for( int ii = 0; ii < numberOfParticles; ii++ ){
+       StringVector lineTokens;
+       char* isNotEof = readLine( filePtr, lineTokens, lineCount, log );
+       if( lineTokens.size() >= 1 ){
+          int tokenIndex       = 0;
+          int index            = atoi( lineTokens[tokenIndex++].c_str() );
+          double mass          = atof( lineTokens[tokenIndex++].c_str() );
+          system.addParticle( mass );
+       } else {
+          char buffer[1024];
+          (void) sprintf( buffer, "%s particle tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
+          throwException(__FILE__, __LINE__, buffer );
+          exit(-1);
+       }
+    }
+
+    // diagnostics
+
+    if( log ){
+       static const unsigned int maxPrint   = MAX_PRINT;
+       unsigned int arraySize               = static_cast<unsigned int>(system.getNumParticles());
+       (void) fprintf( log, "%s: sample of masses\n", methodName.c_str() );
+       for( unsigned int ii = 0; ii < arraySize; ii++ ){
+          (void) fprintf( log, "%6u %14.7e \n", ii, system.getParticleMass( ii ) );
+
+          // skip to end
+
+          if( ii == maxPrint && (arraySize - maxPrint) > ii ){
+             ii = arraySize - maxPrint - 1;
+          } 
+       }
+    }
+
+    return system.getNumParticles();
+}
+
+/**---------------------------------------------------------------------------------------
+
+    Read Amoeba harmonic bond parameters
+
+    @param filePtr              file pointer to parameter file
+    @param forceMap             map of forces to be included
+    @param tokens               array of strings from first line of parameter file for this block of parameters
+    @param system               System reference
+    @param useOpenMMUnits       if set, use OpenMM units (override input (kcal/A) units)
+    @param inputArgumentMap     supplementary arguments
+    @param lineCount            used to track line entries read from parameter file
+    @param log                  log file pointer -- may be NULL
+
+    @return number of bonds
+
+    --------------------------------------------------------------------------------------- */
+
+static int readAmoebaHarmonicBondParameters( FILE* filePtr, MapStringInt& forceMap, const StringVector& tokens,
+                                             System& system, int useOpenMMUnits,
+                                             MapStringString& inputArgumentMap, int* lineCount, FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+    static const std::string methodName      = "readAmoebaHarmonicBondParameters";
+    
+// ---------------------------------------------------------------------------------------
+
+    if( tokens.size() < 1 ){
+       char buffer[1024];
+       (void) sprintf( buffer, "%s no bonds number entry???\n", methodName.c_str() );
+       throwException(__FILE__, __LINE__, buffer );
+       exit(-1);
+    }
+
+    AmoebaHarmonicBondForce* bondForce = new AmoebaHarmonicBondForce();
+    MapStringIntI forceActive          = forceMap.find( AMOEBA_HARMONIC_BOND_FORCE );
+    if( forceActive != forceMap.end() && (*forceActive).second ){
+        system.addForce( bondForce );
+        if( log ){
+            (void) fprintf( log, "Amoeba harmonic bond force is being included.\n" );
+        }
+    } else if( log ){
+        (void) fprintf( log, "Amoeba harmonic bond force is not being included.\n" );
+    }
+
+    int numberOfBonds            = atoi( tokens[1].c_str() );
+    if( log ){
+       (void) fprintf( log, "%s number of HarmonicBondForce terms=%d\n", methodName.c_str(), numberOfBonds );
+    }
+    for( int ii = 0; ii < numberOfBonds; ii++ ){
+       StringVector lineTokens;
+       char* isNotEof = readLine( filePtr, lineTokens, lineCount, log );
+       if( lineTokens.size() > 4 ){
+          int tokenIndex       = 0;
+          int index            = atoi( lineTokens[tokenIndex++].c_str() );
+          int particle1        = atoi( lineTokens[tokenIndex++].c_str() );
+          int particle2        = atoi( lineTokens[tokenIndex++].c_str() );
+          double length        = atof( lineTokens[tokenIndex++].c_str() );
+          double k             = atof( lineTokens[tokenIndex++].c_str() );
+          bondForce->addBond( particle1, particle2, length, k );
+       } else {
+          (void) fprintf( log, "%s AmoebaHarmonicBondForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
+          exit(-1);
+       }
+    }
+
+    // get cubic and quartic factors
+
+    char* isNotEof                 = "1";
+    int hits                       = 0;
+    while( hits < 2 ){
+        StringVector tokens;
+        isNotEof = readLine( filePtr, tokens, lineCount, log );
+        if( isNotEof && tokens.size() > 0 ){
+ 
+            std::string field       = tokens[0];
+            if( field.compare( "#" ) == 0 ){
+  
+               // skip
+               if( log ){
+                     (void) fprintf( log, "skip <%s>\n", field.c_str());
+               }
+  
+           } else if( field.compare( "AmoebaHarmonicBondCubic" ) == 0 ){
+               double cubicParameter = atof( tokens[1].c_str() );
+               bondForce->setAmoebaGlobalHarmonicBondCubic( cubicParameter );
+               hits++;
+           } else if( field.compare( "AmoebaHarmonicBondQuartic" ) == 0 ){
+               double quarticParameter = atof( tokens[1].c_str() );
+               bondForce->setAmoebaGlobalHarmonicBondQuartic( quarticParameter );
+               hits++;
+           }
+        }
+    }
+
+    // diagnostics
+
+    if( log ){
+        static const unsigned int maxPrint   = MAX_PRINT;
+        unsigned int arraySize               = static_cast<unsigned int>(bondForce->getNumBonds());
+        (void) fprintf( log, "%s: %u sample of AmoebaHarmonicBondForce parameters; cubic=%14.7e quartic=%14.7e\n",
+                        methodName.c_str(), arraySize, bondForce->getAmoebaGlobalHarmonicBondCubic(), bondForce->getAmoebaGlobalHarmonicBondQuartic() );
+        for( unsigned int ii = 0; ii < arraySize; ii++ ){
+            int particle1, particle2;
+            double length, k, cubic, quartic;
+            bondForce->getBondParameters( ii, particle1, particle2, length, k, cubic, quartic ); 
+            (void) fprintf( log, "%8d %8d %8d %14.7e %14.7e %14.7e %14.7e\n", ii, particle1, particle2, length, k, cubic, quartic);
+  
+            // skip to end
+  
+            if( ii == maxPrint && (arraySize - maxPrint) > ii ){
+               ii = arraySize - maxPrint - 1;
+            } 
+        }
+    }
+
+    // convert units to kJ-nm from kCal-Angstrom?
+
+    if( useOpenMMUnits ){
+        for( int ii = 0; ii < bondForce->getNumBonds(); ii++ ){
+            int particle1, particle2;
+            double length, k, cubic, quartic;
+            bondForce->getBondParameters( ii, particle1, particle2, length, k, cubic, quartic ); 
+            length           *= AngstromToNm;
+            k                *= CalToJoule/(AngstromToNm*AngstromToNm);
+            cubic            /= AngstromToNm;
+            quartic          /= AngstromToNm*AngstromToNm;
+            bondForce->setBondParameters( ii, particle1, particle2, length, k, cubic, quartic ); 
+        }
+        if( log ){
+            static const unsigned int maxPrint   = MAX_PRINT;
+            unsigned int arraySize               = static_cast<unsigned int>(bondForce->getNumBonds());
+            (void) fprintf( log, "%s: %u sample of CONVERTED AmoebaHarmonicBondForce parameters; cubic=%14.7e quartic=%14.7e\n",
+                            methodName.c_str(), arraySize, bondForce->getAmoebaGlobalHarmonicBondCubic(), bondForce->getAmoebaGlobalHarmonicBondQuartic() );
+            for( unsigned int ii = 0; ii < arraySize; ii++ ){
+                int particle1, particle2;
+                double length, k, cubic, quartic;
+                bondForce->getBondParameters( ii, particle1, particle2, length, k, cubic, quartic ); 
+                (void) fprintf( log, "%8d %8d %8d %14.7e %14.7e %14.7e %14.7e\n", ii, particle1, particle2, length, k, cubic, quartic);
+      
+                // skip to end
+      
+                if( ii == maxPrint && (arraySize - maxPrint) > ii ){
+                   ii = arraySize - maxPrint - 1;
+                } 
+            }
+        }
+    }
+
+    return bondForce->getNumBonds();
+}
+
+/**---------------------------------------------------------------------------------------
+    Read Amoeba harmonic angle parameters
+
+    @param filePtr              file pointer to parameter file
+    @param forceMap             map of forces to be included
+    @param tokens               array of strings from first line of parameter file for this block of parameters
+    @param system               System reference
+    @param useOpenMMUnits       if set, use OpenMM units (override input (kcal/A) units)
+    @param inputArgumentMap     supplementary arguments
+    @param lineCount            used to track line entries read from parameter file
+    @param log                  log file pointer -- may be NULL
+
+    @return number of angles
+
+    --------------------------------------------------------------------------------------- */
+
+static int readAmoebaHarmonicAngleParameters( FILE* filePtr, MapStringInt& forceMap, const StringVector& tokens,
+                                              System& system, int useOpenMMUnits,
+                                              MapStringString& inputArgumentMap, int* lineCount, FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+    static const std::string methodName      = "readAmoebaHarmonicAngleParameters";
+    
+// ---------------------------------------------------------------------------------------
+
+    if( tokens.size() < 1 ){
+       char buffer[1024];
+       (void) sprintf( buffer, "%s no angles number entry???\n", methodName.c_str() );
+       throwException(__FILE__, __LINE__, buffer );
+       exit(-1);
+    }
+
+    AmoebaHarmonicAngleForce* angleForce = new AmoebaHarmonicAngleForce();
+    MapStringIntI forceActive            = forceMap.find( AMOEBA_HARMONIC_ANGLE_FORCE );
+    if( forceActive != forceMap.end() && (*forceActive).second ){
+        system.addForce( angleForce );
+        if( log ){
+            (void) fprintf( log, "Amoeba harmonic angle force is being included.\n" );
+        }
+    } else if( log ){
+        (void) fprintf( log, "Amoeba harmonic angle force is not being included.\n" );
+    }
+
+    int numberOfAngles            = atoi( tokens[1].c_str() );
+    if( log ){
+       (void) fprintf( log, "%s number of HarmonicAngleForce terms=%d\n", methodName.c_str(), numberOfAngles );
+    }
+    for( int ii = 0; ii < numberOfAngles; ii++ ){
+       StringVector lineTokens;
+       char* isNotEof = readLine( filePtr, lineTokens, lineCount, log );
+       if( lineTokens.size() > 5 ){
+          int tokenIndex       = 0;
+          int index            = atoi( lineTokens[tokenIndex++].c_str() );
+          int particle1        = atoi( lineTokens[tokenIndex++].c_str() );
+          int particle2        = atoi( lineTokens[tokenIndex++].c_str() );
+          int particle3        = atoi( lineTokens[tokenIndex++].c_str() );
+          //double angle   = DegreesToRadians*atof( lineTokens[tokenIndex++].c_str() );
+          double angle         = atof( lineTokens[tokenIndex++].c_str() );
+          double k             = atof( lineTokens[tokenIndex++].c_str() );
+          angleForce->addAngle( particle1, particle2, particle3, angle, k );
+       } else {
+          (void) fprintf( log, "%s AmoebaHarmonicAngleForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
+          exit(-1);
+       }
+    }
+
+    // get cubic, quartic, pentic, sextic factors
+
+    char* isNotEof                 = "1";
+    int hits                       = 0;
+    while( hits < 4 ){
+       StringVector tokens;
+       isNotEof = readLine( filePtr, tokens, lineCount, log );
+       if( isNotEof && tokens.size() > 0 ){
+
+          std::string field       = tokens[0];
+          if( field.compare( "#" ) == 0 ){
+
+             // skip
+             if( log ){
+                   (void) fprintf( log, "skip <%s>\n", field.c_str());
+             }
+
+          } else if( field.compare( "AmoebaHarmonicAngleCubic" ) == 0 ){
+             angleForce->setAmoebaGlobalHarmonicAngleCubic( atof( tokens[1].c_str() ) );
+             hits++;
+          } else if( field.compare( "AmoebaHarmonicAngleQuartic" ) == 0 ){
+             angleForce->setAmoebaGlobalHarmonicAngleQuartic( atof( tokens[1].c_str() ) );
+             hits++;
+          } else if( field.compare( "AmoebaHarmonicAnglePentic" ) == 0 ){
+             angleForce->setAmoebaGlobalHarmonicAnglePentic( atof( tokens[1].c_str() ) );
+             hits++;
+          } else if( field.compare( "AmoebaHarmonicAngleSextic" ) == 0 ){
+             angleForce->setAmoebaGlobalHarmonicAngleSextic( atof( tokens[1].c_str() ) );
+             hits++;
+          }
+       }
+    }
+
+    // diagnostics
+
+    if( log ){
+       static const unsigned int maxPrint   = MAX_PRINT;
+       unsigned int arraySize               = static_cast<unsigned int>(angleForce->getNumAngles());
+       (void) fprintf( log, "%s: %u sample of AmoebaHarmonicAngleForce parameters; cubic=%14.7e quartic=%14.7e pentic=%14.7e sextic=%14.7e\n",
+                       methodName.c_str(), arraySize, angleForce->getAmoebaGlobalHarmonicAngleCubic(), 
+                       angleForce->getAmoebaGlobalHarmonicAngleQuartic(), angleForce->getAmoebaGlobalHarmonicAnglePentic(),
+                       angleForce->getAmoebaGlobalHarmonicAngleSextic() );
+
+       for( unsigned int ii = 0; ii < arraySize; ii++ ){
+          int particle1, particle2, particle3;
+          double length, k, cubic, quartic, pentic, sextic;
+          angleForce->getAngleParameters( ii, particle1, particle2, particle3, length, k ); 
+          (void) fprintf( log, "%8d %8d %8d %8d %14.7e %14.7e\n",
+                          ii, particle1, particle2, particle3, length, k );
+
+          // skip to end
+
+          if( ii == maxPrint && (arraySize - maxPrint) > ii ){
+             ii = arraySize - maxPrint - 1;
+          } 
+       }
+    }
+
+    // convert units to kJ-nm from kCal-Angstrom?
+
+    if( useOpenMMUnits ){
+        for( int ii = 0; ii < angleForce->getNumAngles(); ii++ ){
+            int particle1, particle2, particle3;
+            double length, k, cubic, quartic, pentic, sextic;
+            angleForce->getAngleParameters( ii, particle1, particle2, particle3, length, k ); 
+            k                *= CalToJoule;
+            angleForce->setAngleParameters( ii, particle1, particle2, particle3, length, k ); 
+        }
+        if( log ){
+           static const unsigned int maxPrint   = MAX_PRINT;
+           unsigned int arraySize               = static_cast<unsigned int>(angleForce->getNumAngles());
+           (void) fprintf( log, "%s: %u sample of CONVERTED AmoebaHarmonicAngleForce parameters; cubic=%14.7e quartic=%14.7e pentic=%14.7e sextic=%14.7e\n",
+                           methodName.c_str(), arraySize, angleForce->getAmoebaGlobalHarmonicAngleCubic(), 
+                           angleForce->getAmoebaGlobalHarmonicAngleQuartic(), angleForce->getAmoebaGlobalHarmonicAnglePentic(),
+                           angleForce->getAmoebaGlobalHarmonicAngleSextic() );
+    
+           for( unsigned int ii = 0; ii < arraySize; ii++ ){
+              int particle1, particle2, particle3;
+              double length, k, cubic, quartic, pentic, sextic;
+              angleForce->getAngleParameters( ii, particle1, particle2, particle3, length, k ); 
+              (void) fprintf( log, "%8d %8d %8d %8d %14.7e %14.7e\n",
+                              ii, particle1, particle2, particle3, length, k );
+    
+              // skip to end
+    
+              if( ii == maxPrint && (arraySize - maxPrint) > ii ){
+                 ii = arraySize - maxPrint - 1;
+              } 
+           }
+        }
+    }
+    return angleForce->getNumAngles();
+}
+
+/**---------------------------------------------------------------------------------------
+
+    Read Amoeba harmonic angle parameters
+
+    @param filePtr              file pointer to parameter file
+    @param forceMap             map of forces to be included
+    @param tokens               array of strings from first line of parameter file for this block of parameters
+    @param system               System reference
+    @param useOpenMMUnits       if set, use OpenMM units (override input (kcal/A) units)
+    @param inputArgumentMap     supplementary arguments
+    @param lineCount            used to track line entries read from parameter file
+    @param log                  log file pointer -- may be NULL
+
+    @return number of angles
+
+    --------------------------------------------------------------------------------------- */
+
+static int readAmoebaHarmonicInPlaneAngleParameters( FILE* filePtr, MapStringInt& forceMap, const StringVector& tokens,
+                                                      System& system, int useOpenMMUnits,
+                                                      MapStringString& inputArgumentMap, int* lineCount, FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+    static const std::string methodName      = "readAmoebaHarmonicInPlaneAngleParameters";
+    
+// ---------------------------------------------------------------------------------------
+
+    if( tokens.size() < 1 ){
+       char buffer[1024];
+       (void) sprintf( buffer, "%s no angles number entry???\n", methodName.c_str() );
+       throwException(__FILE__, __LINE__, buffer );
+       exit(-1);
+    }
+
+    AmoebaHarmonicInPlaneAngleForce* angleForce = new AmoebaHarmonicInPlaneAngleForce();
+    MapStringIntI forceActive                   = forceMap.find( AMOEBA_HARMONIC_IN_PLANE_ANGLE_FORCE );
+    if( forceActive != forceMap.end() && (*forceActive).second ){
+        system.addForce( angleForce );
+        if( log ){
+            (void) fprintf( log, "Amoeba harmonic in-plane angle force is being included.\n" );
+        }
+    } else if( log ){
+        (void) fprintf( log, "Amoeba harmonic in-plane angle force is not being included.\n" );
+    }
+
+    int numberOfAngles            = atoi( tokens[1].c_str() );
+    if( log ){
+        (void) fprintf( log, "%s number of HarmonicInPlaneAngleForce terms=%d\n", methodName.c_str(), numberOfAngles );
+    }
+    for( int ii = 0; ii < numberOfAngles; ii++ ){
+        StringVector lineTokens;
+        char* isNotEof = readLine( filePtr, lineTokens, lineCount, log );
+        if( lineTokens.size() > 6 ){
+            int tokenIndex       = 0;
+            int index            = atoi( lineTokens[tokenIndex++].c_str() );
+            int particle1        = atoi( lineTokens[tokenIndex++].c_str() );
+            int particle2        = atoi( lineTokens[tokenIndex++].c_str() );
+            int particle3        = atoi( lineTokens[tokenIndex++].c_str() );
+            int particle4        = atoi( lineTokens[tokenIndex++].c_str() );
+            double angle         = atof( lineTokens[tokenIndex++].c_str() );
+            double k             = atof( lineTokens[tokenIndex++].c_str() );
+            angleForce->addAngle( particle1, particle2, particle3, particle4, angle, k );
+        } else {
+            (void) fprintf( log, "%s AmoebaHarmonicInPlaneAngleForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
+            exit(-1);
+        }
+    }
+
+    // get cubic, quartic, pentic, sextic factors
+
+    char* isNotEof                 = "1";
+    int hits                       = 0;
+    while( hits < 4 ){
+        StringVector tokens;
+        isNotEof = readLine( filePtr, tokens, lineCount, log );
+        if( isNotEof && tokens.size() > 0 ){
+            std::string field       = tokens[0];
+            if( field.compare( "#" ) == 0 ){
+  
+               // skip
+               if( log ){
+                   (void) fprintf( log, "skip <%s>\n", field.c_str());
+               }
+  
+            } else if( field.compare( "AmoebaHarmonicInPlaneAngleCubic" ) == 0 ){
+                angleForce->setAmoebaGlobalHarmonicInPlaneAngleCubic( atof( tokens[1].c_str() ) );
+                hits++;
+            } else if( field.compare( "AmoebaHarmonicInPlaneAngleQuartic" ) == 0 ){
+                angleForce->setAmoebaGlobalHarmonicInPlaneAngleQuartic( atof( tokens[1].c_str() ) );
+                hits++;
+            } else if( field.compare( "AmoebaHarmonicInPlaneAnglePentic" ) == 0 ){
+                angleForce->setAmoebaGlobalHarmonicInPlaneAnglePentic( atof( tokens[1].c_str() ) );
+                hits++;
+            } else if( field.compare( "AmoebaHarmonicInPlaneAngleSextic" ) == 0 ){
+                angleForce->setAmoebaGlobalHarmonicInPlaneAngleSextic( atof( tokens[1].c_str() ) );
+                hits++;
+            }
+        }
+    }
+
+    // diagnostics
+
+    if( log ){
+        static const unsigned int maxPrint   = MAX_PRINT;
+        unsigned int arraySize               = static_cast<unsigned int>(angleForce->getNumAngles());
+        (void) fprintf( log, "%s: %u sample of AmoebaHarmonicInPlaneAngleForce parameters; cubic=%14.7e quartic=%14.7e pentic=%14.7e sextic=%14.7e\n",
+                        methodName.c_str(), arraySize, angleForce->getAmoebaGlobalHarmonicInPlaneAngleCubic(), 
+                        angleForce->getAmoebaGlobalHarmonicInPlaneAngleQuartic(), angleForce->getAmoebaGlobalHarmonicInPlaneAnglePentic(),
+                        angleForce->getAmoebaGlobalHarmonicInPlaneAngleSextic() );
+ 
+        for( unsigned int ii = 0; ii < arraySize; ii++ ){
+            int particle1, particle2, particle3, particle4;
+            double length, k;
+            angleForce->getAngleParameters( ii, particle1, particle2, particle3, particle4, length, k );
+            (void) fprintf( log, "%8d %8d %8d %8d %8d %14.7e %14.7e\n",
+                            ii, particle1, particle2, particle3, particle4, length, k );
+  
+            // skip to end
+  
+            if( ii == maxPrint && (arraySize - maxPrint) > ii ){
+                ii = arraySize - maxPrint - 1;
+            } 
+        }
+    }
+
+    // convert units to kJ-nm from kCal-Angstrom?
+
+    if( useOpenMMUnits ){
+        for( int ii = 0; ii < angleForce->getNumAngles(); ii++ ){
+            int particle1, particle2, particle3, particle4;
+            double length, k;
+            angleForce->getAngleParameters( ii, particle1, particle2, particle3, particle4, length, k );
+            k                *= CalToJoule;
+            angleForce->setAngleParameters( ii, particle1, particle2, particle3, particle4, length, k );
+        }
+        if( log ){
+            static const unsigned int maxPrint   = MAX_PRINT;
+            unsigned int arraySize               = static_cast<unsigned int>(angleForce->getNumAngles());
+            (void) fprintf( log, "%s: %u sample of AmoebaHarmonicInPlaneAngleForce CONVERTED parameters; cubic=%14.7e quartic=%14.7e pentic=%14.7e sextic=%14.7e\n",
+                            methodName.c_str(), arraySize, angleForce->getAmoebaGlobalHarmonicInPlaneAngleCubic(), 
+                            angleForce->getAmoebaGlobalHarmonicInPlaneAngleQuartic(), angleForce->getAmoebaGlobalHarmonicInPlaneAnglePentic(),
+                            angleForce->getAmoebaGlobalHarmonicInPlaneAngleSextic() );
+     
+            for( unsigned int ii = 0; ii < arraySize; ii++ ){
+                int particle1, particle2, particle3, particle4;
+                double length, k;
+                angleForce->getAngleParameters( ii, particle1, particle2, particle3, particle4, length, k );
+                (void) fprintf( log, "%8d %8d %8d %8d %8d %14.7e %14.7e\n",
+                                ii, particle1, particle2, particle3, particle4, length, k );
+      
+                // skip to end
+      
+                if( ii == maxPrint && (arraySize - maxPrint) > ii ){
+                    ii = arraySize - maxPrint - 1;
+                } 
+            }
+        }
+    }
+    return angleForce->getNumAngles();
+}
+
+/**---------------------------------------------------------------------------------------
+
+    Read Amoeba harmonic angle parameters
+
+    @param filePtr              file pointer to parameter file
+    @param forceMap             map of forces to be included
+    @param tokens               array of strings from first line of parameter file for this block of parameters
+    @param system               System reference
+    @param useOpenMMUnits       if set, use OpenMM units (override input (kcal/A) units)
+    @param inputArgumentMap     supplementary arguments
+    @param lineCount            used to track line entries read from parameter file
+    @param log                  log file pointer -- may be NULL
+
+    @return number of angles
+
+    --------------------------------------------------------------------------------------- */
+
+static int readAmoebaTorsionParameters( FILE* filePtr, MapStringInt& forceMap, const StringVector& tokens,
+                                        System& system, int useOpenMMUnits,
+                                        MapStringString& inputArgumentMap, int* lineCount, FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+    static const std::string methodName      = "readAmoebaTorsionParameters";
+    
+// ---------------------------------------------------------------------------------------
+
+    if( tokens.size() < 1 ){
+       char buffer[1024];
+       (void) sprintf( buffer, "%s no torsions number entry???\n", methodName.c_str() );
+       throwException(__FILE__, __LINE__, buffer );
+       exit(-1);
+    }
+
+    AmoebaTorsionForce* torsionForce   = new AmoebaTorsionForce();
+    MapStringIntI forceActive          = forceMap.find( AMOEBA_TORSION_FORCE );
+    if( forceActive != forceMap.end() && (*forceActive).second ){
+        system.addForce( torsionForce );
+        if( log ){
+            (void) fprintf( log, "Amoeba torsion force is being included.\n" );
+        }
+    } else if( log ){
+        (void) fprintf( log, "Amoeba torsion force is not being included.\n" );
+    }
+
+    int numberOfTorsions            = atoi( tokens[1].c_str() );
+    if( log ){
+       (void) fprintf( log, "%s number of TorsionForce terms=%d\n", methodName.c_str(), numberOfTorsions );
+    }
+    for( int ii = 0; ii < numberOfTorsions; ii++ ){
+       StringVector lineTokens;
+       char* isNotEof = readLine( filePtr, lineTokens, lineCount, log );
+       if( lineTokens.size() > 10 ){
+          std::vector<double> torsion1;
+          std::vector<double> torsion2;
+          std::vector<double> torsion3;
+          int index            = 0;
+          int torsionIndex     = atoi( lineTokens[index++].c_str() );
+          int particle1        = atoi( lineTokens[index++].c_str() );
+          int particle2        = atoi( lineTokens[index++].c_str() );
+          int particle3        = atoi( lineTokens[index++].c_str() );
+          int particle4        = atoi( lineTokens[index++].c_str() );
+
+          double a1            = atof( lineTokens[index++].c_str() );
+          double p1            = DegreesToRadians*atof( lineTokens[index++].c_str() );
+          torsion1.push_back( a1 );
+          torsion1.push_back( p1 );
+
+          double a2            = atof( lineTokens[index++].c_str() );
+          double p2            = DegreesToRadians*atof( lineTokens[index++].c_str() );
+          torsion2.push_back( a2 );
+          torsion2.push_back( p2 );
+
+
+          double a3            = atof( lineTokens[index++].c_str() );
+          double p3            = DegreesToRadians*atof( lineTokens[index++].c_str() );
+          torsion3.push_back( a3 );
+          torsion3.push_back( p3 );
+
+          torsionForce->addTorsion( particle1, particle2, particle3, particle4, torsion1, torsion2, torsion3 );
+       } else {
+          (void) fprintf( log, "%s AmoebaTorsionForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
+          exit(-1);
+       }
+    }
+
+    // diagnostics
+
+    if( log ){
+        static const unsigned int maxPrint   = MAX_PRINT;
+        unsigned int arraySize               = static_cast<unsigned int>(torsionForce->getNumTorsions());
+        (void) fprintf( log, "%s: %u sample of AmoebaTorsionForce parameters\n",
+                        methodName.c_str(), arraySize );
+    
+        for( unsigned int ii = 0; ii < arraySize; ii++ ){
+            int particle1, particle2, particle3, particle4;
+            std::vector<double> torsion1;
+            std::vector<double> torsion2;
+            std::vector<double> torsion3;
+            torsionForce->getTorsionParameters( ii, particle1, particle2, particle3, particle4, torsion1, torsion2, torsion3 ); 
+            (void) fprintf( log, "%8d %8d %8d %8d %8d [%14.7e %14.7e] [%14.7e %14.7e] [%14.7e %14.7e]\n",
+                            ii, particle1, particle2, particle3, particle4, 
+                            torsion1[0], torsion1[1]/DegreesToRadians, torsion2[0], torsion2[1]/DegreesToRadians, torsion3[0], torsion3[1]/DegreesToRadians );
+    
+            // skip to end
+    
+            if( ii == maxPrint && (arraySize - maxPrint) > ii ){
+               ii = arraySize - maxPrint - 1;
+            } 
+        }
+    } 
+
+    // convert units to kJ-nm from kCal-Angstrom?
+
+    if( useOpenMMUnits ){
+        for( unsigned int ii = 0; ii < torsionForce->getNumTorsions(); ii++ ){
+            int particle1, particle2, particle3, particle4;
+            std::vector<double> torsion1;
+            std::vector<double> torsion2;
+            std::vector<double> torsion3;
+            torsionForce->getTorsionParameters( ii, particle1, particle2, particle3, particle4, torsion1, torsion2, torsion3 ); 
+            torsion1[0] *= CalToJoule;
+            torsion2[0] *= CalToJoule;
+            torsion3[0] *= CalToJoule;
+            torsionForce->setTorsionParameters( ii, particle1, particle2, particle3, particle4, torsion1, torsion2, torsion3 ); 
+        }
+        if( log ){
+            static const unsigned int maxPrint   = MAX_PRINT;
+            unsigned int arraySize               = static_cast<unsigned int>(torsionForce->getNumTorsions());
+            (void) fprintf( log, "%s: %u sample of CONVERTED AmoebaTorsionForce parameters\n",
+                            methodName.c_str(), arraySize );
+        
+            for( unsigned int ii = 0; ii < arraySize; ii++ ){
+                int particle1, particle2, particle3, particle4;
+                std::vector<double> torsion1;
+                std::vector<double> torsion2;
+                std::vector<double> torsion3;
+                torsionForce->getTorsionParameters( ii, particle1, particle2, particle3, particle4, torsion1, torsion2, torsion3 ); 
+                (void) fprintf( log, "%8d %8d %8d %8d %8d [%14.7e %14.7e] [%14.7e %14.7e] [%14.7e %14.7e]\n",
+                                ii, particle1, particle2, particle3, particle4, 
+                                torsion1[0], torsion1[1]/DegreesToRadians, torsion2[0], torsion2[1]/DegreesToRadians, torsion3[0], torsion3[1]/DegreesToRadians );
+        
+                // skip to end
+        
+                if( ii == maxPrint && (arraySize - maxPrint) > ii ){
+                   ii = arraySize - maxPrint - 1;
+                } 
+            }
+        } 
+    
+    }
+
+    return torsionForce->getNumTorsions();
+}
+
+/**---------------------------------------------------------------------------------------
+
+    Read Amoeba pi torsion parameters
+
+    @param filePtr              file pointer to parameter file
+    @param forceMap             map of forces to be included
+    @param tokens               array of strings from first line of parameter file for this block of parameters
+    @param system               System reference
+    @param useOpenMMUnits       if set, use OpenMM units (override input (kcal/A) units)
+    @param inputArgumentMap     supplementary arguments
+    @param lineCount            used to track line entries read from parameter file
+    @param log                  log file pointer -- may be NULL
+
+    @return number of angles
+
+    --------------------------------------------------------------------------------------- */
+
+static int readAmoebaPiTorsionParameters( FILE* filePtr, MapStringInt& forceMap, const StringVector& tokens,
+                                          System& system, int useOpenMMUnits,
+                                          MapStringString& inputArgumentMap, int* lineCount, FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+    static const std::string methodName      = "readAmoebaPiTorsionParameters";
+    
+// ---------------------------------------------------------------------------------------
+
+    if( tokens.size() < 1 ){
+        char buffer[1024];
+        (void) sprintf( buffer, "%s no pi torsions number entry???\n", methodName.c_str() );
+        throwException(__FILE__, __LINE__, buffer );
+        exit(-1);
+    }
+
+    AmoebaPiTorsionForce* piTorsionForce = new AmoebaPiTorsionForce();
+    MapStringIntI forceActive            = forceMap.find( AMOEBA_PI_TORSION_FORCE );
+
+    if( forceActive != forceMap.end() && (*forceActive).second ){
+        system.addForce( piTorsionForce );
+        if( log ){
+            (void) fprintf( log, "Amoeba pi torsion force is being included.\n" );
+        }
+    } else if( log ){
+        (void) fprintf( log, "Amoeba pi torsion force is not being included.\n" );
+    }
+
+    int numberOfPiTorsions            = atoi( tokens[1].c_str() );
+    if( log ){
+       (void) fprintf( log, "%s number of PiTorsionForce terms=%d\n", methodName.c_str(), numberOfPiTorsions );
+    }
+    for( int ii = 0; ii < numberOfPiTorsions; ii++ ){
+        StringVector lineTokens;
+        char* isNotEof = readLine( filePtr, lineTokens, lineCount, log );
+        if( lineTokens.size() > 7 ){
+           std::vector<double> torsionK;
+           int index            = 0;
+           int torsionIndex     = atoi( lineTokens[index++].c_str() );
+           int particle1        = atoi( lineTokens[index++].c_str() );
+           int particle2        = atoi( lineTokens[index++].c_str() );
+           int particle3        = atoi( lineTokens[index++].c_str() );
+           int particle4        = atoi( lineTokens[index++].c_str() );
+           int particle5        = atoi( lineTokens[index++].c_str() );
+           int particle6        = atoi( lineTokens[index++].c_str() );
+           double k             = atof( lineTokens[index++].c_str() );
+ 
+           piTorsionForce->addPiTorsion( particle1, particle2, particle3, particle4, particle5, particle6, k );
+        } else {
+           (void) fprintf( log, "%s AmoebaPiTorsionForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
+           exit(-1);
+        }
+    }
+
+    // diagnostics
+
+    if( log ){
+        static const unsigned int maxPrint   = MAX_PRINT;
+        unsigned int arraySize               = static_cast<unsigned int>(piTorsionForce->getNumPiTorsions());
+        (void) fprintf( log, "%s: %u sample of AmoebaPiTorsionForce parameters\n",
+                        methodName.c_str(), arraySize );
+ 
+        for( unsigned int ii = 0; ii < arraySize; ii++ ){
+            int particle1, particle2, particle3, particle4, particle5, particle6;
+            double torsionK;
+            piTorsionForce->getPiTorsionParameters( ii, particle1, particle2, particle3, particle4, particle5, particle6, torsionK ); 
+            (void) fprintf( log, "%8d %8d %8d %8d %8d %8d %8d k=%14.7e\n",
+                            ii, particle1, particle2, particle3, particle4,  particle5, particle6, torsionK );
+  
+            // skip to end
+  
+            if( ii == maxPrint && (arraySize - maxPrint) > ii ){
+               ii = arraySize - maxPrint - 1;
+            } 
+        }
+    } 
+
+    if( useOpenMMUnits ){
+        for( unsigned int ii = 0; ii < piTorsionForce->getNumPiTorsions(); ii++ ){
+            int particle1, particle2, particle3, particle4, particle5, particle6;
+            double torsionK;
+            piTorsionForce->getPiTorsionParameters( ii, particle1, particle2, particle3, particle4, particle5, particle6, torsionK ); 
+            torsionK *= CalToJoule;
+            piTorsionForce->setPiTorsionParameters( ii, particle1, particle2, particle3, particle4, particle5, particle6, torsionK ); 
+        }
+        if( log ){
+            static const unsigned int maxPrint   = MAX_PRINT;
+            unsigned int arraySize               = static_cast<unsigned int>(piTorsionForce->getNumPiTorsions());
+            (void) fprintf( log, "%s: %u sample of CONVERTED AmoebaPiTorsionForce parameters\n",
+                            methodName.c_str(), arraySize );
+     
+            for( unsigned int ii = 0; ii < arraySize; ii++ ){
+                int particle1, particle2, particle3, particle4, particle5, particle6;
+                double torsionK;
+                piTorsionForce->getPiTorsionParameters( ii, particle1, particle2, particle3, particle4, particle5, particle6, torsionK ); 
+                (void) fprintf( log, "%8d %8d %8d %8d %8d %8d %8d k=%14.7e\n",
+                                ii, particle1, particle2, particle3, particle4,  particle5, particle6, torsionK );
+      
+                // skip to end
+      
+                if( ii == maxPrint && (arraySize - maxPrint) > ii ){
+                   ii = arraySize - maxPrint - 1;
+                } 
+            }
+        } 
+    } 
+
+    return piTorsionForce->getNumPiTorsions();
+}
+
+/**---------------------------------------------------------------------------------------
+
+    Read Amoeba stretchBend parameters
+
+    @param filePtr              file pointer to parameter file
+    @param forceMap             map of forces to be included
+    @param tokens               array of strings from first line of parameter file for this block of parameters
+    @param system               System reference
+    @param useOpenMMUnits       if set, use OpenMM units (override input (kcal/A) units)
+    @param inputArgumentMap     supplementary arguments
+    @param lineCount            used to track line entries read from parameter file
+    @param log                  log file pointer -- may be NULL
+
+    @return number of stretchBends
+
+    --------------------------------------------------------------------------------------- */
+
+static int readAmoebaStretchBendParameters( FILE* filePtr, MapStringInt& forceMap, const StringVector& tokens,
+                                            System& system, int useOpenMMUnits,
+                                            MapStringString& inputArgumentMap, int* lineCount, FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+    static const std::string methodName      = "readAmoebaStretchBendParameters";
+    
+// ---------------------------------------------------------------------------------------
+
+    // validate number of tokens
+
+    if( tokens.size() < 1 ){
+        char buffer[1024];
+        (void) sprintf( buffer, "%s no stretchBends number entry???\n", methodName.c_str() );
+        throwException(__FILE__, __LINE__, buffer );
+        exit(-1);
+    }
+
+    // create force
+
+    AmoebaStretchBendForce* stretchBendForce = new AmoebaStretchBendForce();
+    MapStringIntI forceActive                = forceMap.find( AMOEBA_STRETCH_BEND_FORCE );
+    if( forceActive != forceMap.end() && (*forceActive).second ){
+        system.addForce( stretchBendForce );
+        if( log ){
+            (void) fprintf( log, "Amoeba stretchBend force is being included.\n" );
+        }
+    } else if( log ){
+        (void) fprintf( log, "Amoeba stretchBend force is not being included.\n" );
+    }
+
+    // load in parameters
+
+    int numberOfStretchBends            = atoi( tokens[1].c_str() );
+    if( log ){
+        (void) fprintf( log, "%s number of StretchBendForce terms=%d\n", methodName.c_str(), numberOfStretchBends );
+    }
+    for( int ii = 0; ii < numberOfStretchBends; ii++ ){
+        StringVector lineTokens;
+        char* isNotEof = readLine( filePtr, lineTokens, lineCount, log );
+        if( lineTokens.size() > 7 ){
+            int tokenIndex       = 0;
+            int index            = atoi( lineTokens[tokenIndex++].c_str() );
+            int particle1        = atoi( lineTokens[tokenIndex++].c_str() );
+            int particle2        = atoi( lineTokens[tokenIndex++].c_str() );
+            int particle3        = atoi( lineTokens[tokenIndex++].c_str() );
+            double lengthAB      = atof( lineTokens[tokenIndex++].c_str() );
+            double lengthCB      = atof( lineTokens[tokenIndex++].c_str() );
+            double angle         = atof( lineTokens[tokenIndex++].c_str() )*DegreesToRadians;
+            double k             = atof( lineTokens[tokenIndex++].c_str() );
+            stretchBendForce->addStretchBend( particle1, particle2, particle3, lengthAB, lengthCB, angle, k );
+        } else {
+            (void) fprintf( log, "%s AmoebaStretchBendForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
+            exit(-1);
+        }
+    }
+
+    // diagnostics
+
+    if( log ){
+        static const unsigned int maxPrint   = MAX_PRINT;
+        unsigned int arraySize               = static_cast<unsigned int>(stretchBendForce->getNumStretchBends());
+        (void) fprintf( log, "%s: %u sample of AmoebaStretchBendForce parameters\n",
+                        methodName.c_str(), arraySize );
+        for( unsigned int ii = 0; ii < arraySize;  ii++ ){
+            int particle1, particle2, particle3;
+            double lengthAB, lengthCB, angle, k;
+            stretchBendForce->getStretchBendParameters( ii, particle1, particle2, particle3, lengthAB, lengthCB, angle, k );
+            (void) fprintf( log, "%8d %8d %8d %8d %14.7e %14.7e %14.7e %14.7e\n",
+                            ii, particle1, particle2, particle3, lengthAB, lengthCB, angle/DegreesToRadians, k );
+  
+            // skip to end
+  
+            if( ii == maxPrint && (arraySize - maxPrint) > ii ){
+               ii = arraySize - maxPrint - 1;
+            } 
+        }
+    }
+
+    if( useOpenMMUnits ){
+        for( unsigned int ii = 0; ii < stretchBendForce->getNumStretchBends();  ii++ ){
+            int particle1, particle2, particle3;
+            double lengthAB, lengthCB, angle, k;
+            stretchBendForce->getStretchBendParameters( ii, particle1, particle2, particle3, lengthAB, lengthCB, angle, k );
+            lengthAB     *= AngstromToNm;
+            lengthCB     *= AngstromToNm;
+            k            *= CalToJoule/AngstromToNm;
+            stretchBendForce->setStretchBendParameters( ii, particle1, particle2, particle3, lengthAB, lengthCB, angle, k );
+        }
+        if( log ){
+            static const unsigned int maxPrint   = MAX_PRINT;
+            unsigned int arraySize               = static_cast<unsigned int>(stretchBendForce->getNumStretchBends());
+            (void) fprintf( log, "%s: %u sample of AmoebaStretchBendForce parameters\n",
+                            methodName.c_str(), arraySize );
+            for( unsigned int ii = 0; ii < arraySize;  ii++ ){
+                int particle1, particle2, particle3;
+                double lengthAB, lengthCB, angle, k;
+                stretchBendForce->getStretchBendParameters( ii, particle1, particle2, particle3, lengthAB, lengthCB, angle, k );
+                (void) fprintf( log, "%8d %8d %8d %8d %14.7e %14.7e %14.7e %14.7e\n",
+                                ii, particle1, particle2, particle3, lengthAB, lengthCB, angle/DegreesToRadians, k );
+      
+                // skip to end
+      
+                if( ii == maxPrint && (arraySize - maxPrint) > ii ){
+                   ii = arraySize - maxPrint - 1;
+                } 
+            }
+        }
+    }
+
+    return stretchBendForce->getNumStretchBends();
+}
+
+/**---------------------------------------------------------------------------------------
+
+    Read Amoeba stretchBend parameters
+
+    @param filePtr              file pointer to parameter file
+    @param forceMap             map of forces to be included
+    @param tokens               array of strings from first line of parameter file for this block of parameters
+    @param system               System reference
+    @param useOpenMMUnits       if set, use OpenMM units (override input (kcal/A) units)
+    @param inputArgumentMap     supplementary arguments
+    @param lineCount            used to track line entries read from parameter file
+    @param log                  log file pointer -- may be NULL
+
+    @return number of stretchBends
+
+    --------------------------------------------------------------------------------------- */
+
+static int readAmoebaOutOfPlaneBendParameters( FILE* filePtr, MapStringInt& forceMap, const StringVector& tokens,
+                                               System& system, int useOpenMMUnits,
+                                               MapStringString& inputArgumentMap, int* lineCount, FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+    static const std::string methodName      = "readAmoebaOutOfPlaneBendParameters";
+    
+// ---------------------------------------------------------------------------------------
+
+    // validate number of tokens
+
+    if( tokens.size() < 1 ){
+        char buffer[1024];
+        (void) sprintf( buffer, "%s no outOfPlaneBends number entry???\n", methodName.c_str() );
+        throwException(__FILE__, __LINE__, buffer );
+        exit(-1);
+    }
+
+    // create force
+
+    AmoebaOutOfPlaneBendForce* outOfPlaneBendForce = new AmoebaOutOfPlaneBendForce();
+    MapStringIntI forceActive                      = forceMap.find( AMOEBA_OUT_OF_PLANE_BEND_FORCE );
+
+    if( forceActive != forceMap.end() && (*forceActive).second ){
+        system.addForce( outOfPlaneBendForce );
+        if( log ){
+            (void) fprintf( log, "Amoeba outOfPlaneBend force is being included.\n" );
+        }
+    } else if( log ){
+        (void) fprintf( log, "Amoeba outOfPlaneBend force is not being included.\n" );
+    }
+
+    // load in parameters
+
+    int numberOfOutOfPlaneBends            = atoi( tokens[1].c_str() );
+    if( log ){
+        (void) fprintf( log, "%s number of OutOfPlaneBendForce terms=%d\n", methodName.c_str(), numberOfOutOfPlaneBends );
+    }
+    for( int ii = 0; ii < numberOfOutOfPlaneBends; ii++ ){
+        StringVector lineTokens;
+        char* isNotEof = readLine( filePtr, lineTokens, lineCount, log );
+        if( lineTokens.size() > 5 ){
+           int tokenIndex       = 0;
+           int index            = atoi( lineTokens[tokenIndex++].c_str() );
+           int particle1        = atoi( lineTokens[tokenIndex++].c_str() );
+           int particle2        = atoi( lineTokens[tokenIndex++].c_str() );
+           int particle3        = atoi( lineTokens[tokenIndex++].c_str() );
+           int particle4        = atoi( lineTokens[tokenIndex++].c_str() );
+           double k             = atof( lineTokens[tokenIndex++].c_str() );
+           outOfPlaneBendForce->addOutOfPlaneBend( particle1, particle2, particle3, particle4, k );
+        } else {
+           (void) fprintf( log, "%s AmoebaOutOfPlaneBendForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
+           exit(-1);
+        }
+    }
+
+    // get cubic, quartic, pentic, sextic factors
+
+    char* isNotEof                 = "1";
+    int hits                       = 0;
+    while( hits < 4 ){
+        StringVector tokens;
+        isNotEof = readLine( filePtr, tokens, lineCount, log );
+        if( isNotEof && tokens.size() > 0 ){
+           std::string field       = tokens[0];
+           if( field.compare( "#" ) == 0 ){
+ 
+              // skip
+              if( log ){
+                  (void) fprintf( log, "skip <%s>\n", field.c_str());
+              }
+ 
+           } else if( field.compare( "AmoebaOutOfPlaneBendCubic" ) == 0 ){
+               outOfPlaneBendForce->setAmoebaGlobalOutOfPlaneBendCubic( atof( tokens[1].c_str() ) );
+               hits++;
+           } else if( field.compare( "AmoebaOutOfPlaneBendQuartic" ) == 0 ){
+               outOfPlaneBendForce->setAmoebaGlobalOutOfPlaneBendQuartic( atof( tokens[1].c_str() ) );
+               hits++;
+           } else if( field.compare( "AmoebaOutOfPlaneBendPentic" ) == 0 ){
+               outOfPlaneBendForce->setAmoebaGlobalOutOfPlaneBendPentic( atof( tokens[1].c_str() ) );
+               hits++;
+           } else if( field.compare( "AmoebaOutOfPlaneBendSextic" ) == 0 ){
+               outOfPlaneBendForce->setAmoebaGlobalOutOfPlaneBendSextic( atof( tokens[1].c_str() ) );
+               hits++;
+           }
+        }
+    }
+
+    // diagnostics
+
+    if( log ){
+        static const unsigned int maxPrint   = MAX_PRINT;
+        unsigned int arraySize               = static_cast<unsigned int>(outOfPlaneBendForce->getNumOutOfPlaneBends());
+        (void) fprintf( log, "%s: %u sample of AmoebaOutOfPlaneBendForce parameters\n",
+                        methodName.c_str(), arraySize );
+        (void) fprintf( log, "%s: %u sample of AmoebaOutOfPlaneBendForce parameters; cubic=%14.7e quartic=%14.7e pentic=%14.7e sextic=%14.7e\n",
+                        methodName.c_str(), arraySize,
+                        outOfPlaneBendForce->getAmoebaGlobalOutOfPlaneBendCubic(), 
+                        outOfPlaneBendForce->getAmoebaGlobalOutOfPlaneBendQuartic(),
+                        outOfPlaneBendForce->getAmoebaGlobalOutOfPlaneBendPentic(),
+                        outOfPlaneBendForce->getAmoebaGlobalOutOfPlaneBendSextic() );
+ 
+        for( unsigned int ii = 0; ii < arraySize;  ii++ ){
+            int particle1, particle2, particle3, particle4;
+            double k;
+            outOfPlaneBendForce->getOutOfPlaneBendParameters( ii, particle1, particle2, particle3, particle4, k );
+            (void) fprintf( log, "%8d %8d %8d %8d %8d %14.7e\n",
+                            ii, particle1, particle2, particle3, particle4, k );
+  
+            // skip to end
+  
+            if( ii == maxPrint && (arraySize - maxPrint) > ii ){
+                ii = arraySize - maxPrint - 1;
+            } 
+        }
+    }
+
+    if( useOpenMMUnits ){
+        for( unsigned int ii = 0; ii < outOfPlaneBendForce->getNumOutOfPlaneBends();  ii++ ){
+            int particle1, particle2, particle3, particle4;
+            double k;
+            outOfPlaneBendForce->getOutOfPlaneBendParameters( ii, particle1, particle2, particle3, particle4, k );
+            //k *= CalToJoule/(AngstromToNm*AngstromToNm);
+            k *= CalToJoule;
+            outOfPlaneBendForce->setOutOfPlaneBendParameters( ii, particle1, particle2, particle3, particle4, k );
+        }
+        if( log ){
+            static const unsigned int maxPrint   = MAX_PRINT;
+            unsigned int arraySize               = static_cast<unsigned int>(outOfPlaneBendForce->getNumOutOfPlaneBends());
+            (void) fprintf( log, "%s: %u sample of AmoebaOutOfPlaneBendForce parameters\n",
+                            methodName.c_str(), arraySize );
+            (void) fprintf( log, "%s: %u sample of AmoebaOutOfPlaneBendForce parameters; cubic=%14.7e quartic=%14.7e pentic=%14.7e sextic=%14.7e\n",
+                            methodName.c_str(), arraySize,
+                            outOfPlaneBendForce->getAmoebaGlobalOutOfPlaneBendCubic(), 
+                            outOfPlaneBendForce->getAmoebaGlobalOutOfPlaneBendQuartic(),
+                            outOfPlaneBendForce->getAmoebaGlobalOutOfPlaneBendPentic(),
+                            outOfPlaneBendForce->getAmoebaGlobalOutOfPlaneBendSextic() );
+     
+            for( unsigned int ii = 0; ii < arraySize;  ii++ ){
+                int particle1, particle2, particle3, particle4;
+                double k;
+                outOfPlaneBendForce->getOutOfPlaneBendParameters( ii, particle1, particle2, particle3, particle4, k );
+                (void) fprintf( log, "%8d %8d %8d %8d %8d %14.7e\n",
+                                ii, particle1, particle2, particle3, particle4, k );
+      
+                // skip to end
+      
+                if( ii == maxPrint && (arraySize - maxPrint) > ii ){
+                    ii = arraySize - maxPrint - 1;
+                } 
+            }
+        }
+    }
+
+    return outOfPlaneBendForce->getNumOutOfPlaneBends();
+}
+
+/**---------------------------------------------------------------------------------------
+
+    Read Amoeba torsion-torsion parameters
+
+    @param filePtr              file pointer to parameter file
+    @param forceMap             map of forces to be included
+    @param tokens               array of strings from first line of parameter file for this block of parameters
+    @param system               System reference
+    @param useOpenMMUnits       if set, use OpenMM units (override input (kcal/A) units)
+    @param inputArgumentMap     supplementary arguments
+    @param lineCount            used to track line entries read from parameter file
+    @param log                  log file pointer -- may be NULL
+
+    @return number of torsion-torsion parameters
+
+    --------------------------------------------------------------------------------------- */
+
+static int readAmoebaTorsionTorsionGrid( FILE* filePtr, int numX, int numY, TorsionTorsionGrid& grid, 
+                                         int useOpenMMUnits,
+                                         MapStringString& inputArgumentMap, int* lineCount, FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+    static const std::string methodName      = "readAmoebaTorsionTorsionForce";
+    
+// ---------------------------------------------------------------------------------------
+
+    int gridCount = numX*numY;
+    if( log ){
+        (void) fprintf( log, "%s number of TorsionTorsion grid entries: %d %d %d\n", methodName.c_str(), numX, numY, gridCount);
+    }
+
+    grid.resize( numX );
+    for( unsigned int ii = 0; ii < numX; ii++ ){
+        grid[ii].resize( numY );
+    }
+    for( int ii = 0; ii < gridCount; ii++ ){
+        StringVector lineTokens;
+        char* isNotEof = readLine( filePtr, lineTokens, lineCount, log );
+        if( lineTokens.size() > 8 ){
+           int tokenIndex             = 0;
+           int index                  = atoi( lineTokens[tokenIndex++].c_str() );
+           int xIndex                 = atoi( lineTokens[tokenIndex++].c_str() );
+           int yIndex                 = atoi( lineTokens[tokenIndex++].c_str() );
+ 
+           std::vector<double> values;
+           values.resize( 6 ); 
+           int vIndex                 = 0;
+           values[vIndex++]           = atof( lineTokens[tokenIndex++].c_str() ); // xValue
+           values[vIndex++]           = atof( lineTokens[tokenIndex++].c_str() ); // yValue
+           values[vIndex++]           = atof( lineTokens[tokenIndex++].c_str() ); // fValue
+           values[vIndex++]           = atof( lineTokens[tokenIndex++].c_str() ); // dfdxValue
+           values[vIndex++]           = atof( lineTokens[tokenIndex++].c_str() ); // dfdyValue
+           values[vIndex++]           = atof( lineTokens[tokenIndex++].c_str() ); // dfdxyValue
+           if( useOpenMMUnits ){
+               values[2] *= CalToJoule;
+               values[3] *= CalToJoule;
+               values[4] *= CalToJoule;
+               values[5] *= CalToJoule;
+           }
+           grid[xIndex][yIndex]       = values;
+       } else {
+           (void) fprintf( log, "%s grid tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
+           exit(-1);
+       }
+    }
+
+    // diagnostics
+
+    if( log ){
+        static const unsigned int maxPrint   = 20;
+        (void) fprintf( log, "%s: %dx%d sample of grid values\n", methodName.c_str(), numX, numY );
+ 
+        int xI = 0;
+        int yI = 0;
+ 
+        // 'top' of grid
+ 
+        for( unsigned int ii = 0; ii < gridCount;  ii++ ){
+            std::vector<double> values = grid[xI][yI];
+            (void) fprintf( log, "%4d %4d %4d ", ii, xI, yI );
+            for( unsigned int jj = 0; jj < values.size(); jj++ ){
+                (void) fprintf( log, "%14.7e ", values[jj] );
+            }
+            fprintf( log, "\n" );
+  
+            // increment or quit
+  
+            xI++; 
+            if( xI == numX ){
+               xI = 0;
+               yI++;
+               if( yI == 3 )ii = gridCount;
+            }
+        }
+ 
+        // 'bottom' of grid
+ 
+        xI = 0;
+        yI = (gridCount/numX) - 3;
+        for( unsigned int ii = 0; ii < gridCount;  ii++ ){
+            std::vector<double> values = grid[xI][yI];
+            (void) fprintf( log, "%4d %4d %4d ",
+                            ii, xI, yI );
+            for( unsigned int jj = 0; jj < values.size(); jj++ ){
+                (void) fprintf( log, "%14.7e ", values[jj] );
+            }
+            fprintf( log, "\n" );
+            xI++; 
+            if( xI == numX ){
+               xI = 0;
+               yI++;
+               if( yI == numY )ii = gridCount;
+            }
+        }
+    }
+
+    return 0;
+}
+
+/**---------------------------------------------------------------------------------------
+
+    Read Amoeba torsion-torsion parameters
+
+    @param filePtr              file pointer to parameter file
+    @param forceMap             map of forces to be included
+    @param tokens               array of strings from first line of parameter file for this block of parameters
+    @param system               System reference
+    @param useOpenMMUnits       if set, use OpenMM units (override input (kcal/A) units)
+    @param inputArgumentMap     supplementary arguments
+    @param lineCount            used to track line entries read from parameter file
+    @param log                  log file pointer -- may be NULL
+
+    @return number of torsion-torsion parameters
+
+    --------------------------------------------------------------------------------------- */
+
+static int readAmoebaTorsionTorsionParameters( FILE* filePtr, MapStringInt& forceMap, const StringVector& tokens,
+                                               System& system, int useOpenMMUnits,
+                                               MapStringString& inputArgumentMap, int* lineCount, FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+    static const std::string methodName      = "readAmoebaTorsionTorsionParameters";
+    
+// ---------------------------------------------------------------------------------------
+
+    // validate number of tokens
+
+    if( tokens.size() < 1 ){
+        char buffer[1024];
+        (void) sprintf( buffer, "%s no torsionTorsions number entry???\n", methodName.c_str() );
+        throwException(__FILE__, __LINE__, buffer );
+        exit(-1);
+    }
+
+    // create force
+
+    AmoebaTorsionTorsionForce* torsionTorsionForce = new AmoebaTorsionTorsionForce();
+    MapStringIntI forceActive                      = forceMap.find( AMOEBA_TORSION_TORSION_FORCE );
+
+    if( forceActive != forceMap.end() && (*forceActive).second ){
+        system.addForce( torsionTorsionForce );
+        if( log ){
+            (void) fprintf( log, "Amoeba torsionTorsion force is being included.\n" );
+        }
+    } else if( log ){
+        (void) fprintf( log, "Amoeba torsionTorsion force is not being included.\n" );
+    }
+
+    // load in parameters
+
+    int numberOfTorsionTorsions            = atoi( tokens[1].c_str() );
+    if( log ){
+        (void) fprintf( log, "%s number of TorsionTorsionForce terms=%d\n", methodName.c_str(), numberOfTorsionTorsions );
+    }
+    for( int ii = 0; ii < numberOfTorsionTorsions; ii++ ){
+        StringVector lineTokens;
+        char* isNotEof = readLine( filePtr, lineTokens, lineCount, log );
+        if( lineTokens.size() > 7 ){
+            int tokenIndex       = 0;
+            int index            = atoi( lineTokens[tokenIndex++].c_str() );
+            int particle1        = atoi( lineTokens[tokenIndex++].c_str() );
+            int particle2        = atoi( lineTokens[tokenIndex++].c_str() );
+            int particle3        = atoi( lineTokens[tokenIndex++].c_str() );
+            int particle4        = atoi( lineTokens[tokenIndex++].c_str() );
+            int particle5        = atoi( lineTokens[tokenIndex++].c_str() );
+            int chiralAtomIndex  = atoi( lineTokens[tokenIndex++].c_str() );
+            int gridIndex        = atoi( lineTokens[tokenIndex++].c_str() );
+            torsionTorsionForce->addTorsionTorsion( particle1, particle2, particle3, particle4, particle5, chiralAtomIndex, gridIndex );
+        } else {
+            (void) fprintf( log, "%s AmoebaTorsionTorsionForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
+            exit(-1);
+        }
+    }
+
+    // get grid
+
+    char* isNotEof                 = "1";
+    int totalNumberOfGrids         = 1;
+    int gridCount                  = 0;
+    while( gridCount < totalNumberOfGrids ){
+        StringVector tokens;
+        isNotEof = readLine( filePtr, tokens, lineCount, log );
+        if( isNotEof && tokens.size() > 0 ){
+            std::string field       = tokens[0];
+            if( field.compare( "#" ) == 0 ){
+  
+               // skip
+               if( log ){
+                   (void) fprintf( log, "skip <%s>\n", field.c_str());
+               }
+  
+            } else if( field.compare( "AmoebaTorsionTorsionGrids" ) == 0 ){
+                totalNumberOfGrids = atoi( tokens[1].c_str() );
+            } else if( field.compare( "AmoebaTorsionTorsionGridPoints" ) == 0 ){
+                int gridIndex = atoi( tokens[1].c_str() );
+                int numX      = atoi( tokens[2].c_str() );
+                int numY      = atoi( tokens[3].c_str() );
+                TorsionTorsionGrid torsionTorsionGrid;
+                readAmoebaTorsionTorsionGrid( filePtr, numX, numY, torsionTorsionGrid, useOpenMMUnits, inputArgumentMap, lineCount, log );
+                torsionTorsionForce->setTorsionTorsionGrid( gridIndex, torsionTorsionGrid );
+                gridCount++;
+            }
+        }
+    }
+
+    // diagnostics
+
+    if( log ){
+        static const unsigned int maxPrint   = MAX_PRINT;
+        unsigned int arraySize               = static_cast<unsigned int>(torsionTorsionForce->getNumTorsionTorsions());
+        (void) fprintf( log, "%s: %u sample of AmoebaTorsionTorsionForce parameters\n",
+                        methodName.c_str(), arraySize );
+        (void) fprintf( log, "%s: %u sample of AmoebaTorsionTorsionForce parameters\n",
+                        methodName.c_str(), arraySize );
+ 
+        for( unsigned int ii = 0; ii < arraySize;  ii++ ){
+            int particle1, particle2, particle3, particle4, particle5, chiralAtomIndex, gridIndex;
+            torsionTorsionForce->getTorsionTorsionParameters( ii, particle1, particle2, particle3, particle4, particle5, chiralAtomIndex, gridIndex );
+            (void) fprintf( log, "%8d %8d %8d %8d %8d %8d %8d %8d\n",
+                            ii, particle1, particle2, particle3, particle4, particle5, chiralAtomIndex, gridIndex );
+  
+            // skip to end
+  
+            if( ii == maxPrint && (arraySize - maxPrint) > ii ){
+                ii = arraySize - maxPrint - 1;
+            } 
+        }
+    }
+
+    return torsionTorsionForce->getNumTorsionTorsions();
+}
+
+/**---------------------------------------------------------------------------------------
+
+    Read Amoeba multipole parameters
+
+    @param filePtr              file pointer to parameter file
+    @param multipoleForce       AmoebaMultipoleForce reference
+    @param lineCount            used to track line entries read from parameter file
+    @param log                  log file pointer -- may be NULL
+
+    @return number of multipole parameters
+
+    --------------------------------------------------------------------------------------- */
+
+static void readAmoebaMultipoleCovalent( FILE* filePtr, AmoebaMultipoleForce* multipoleForce,
+                                          int* lineCount, FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+     static const std::string methodName      = "readAmoebaMultipoleCovalent";
+    
+// ---------------------------------------------------------------------------------------
+
+     // load in parameters
+ 
+     int numberOfMultipoles            = multipoleForce->getNumMultipoles();
+     if( log ){
+         (void) fprintf( log, "%s number of multipoles=%d\n", methodName.c_str(), numberOfMultipoles );
+     }
+     unsigned int numberOfCovalentTypes = AmoebaMultipoleForce::CovalentEnd;
+     AmoebaMultipoleForce::CovalentType covalentTypes[AmoebaMultipoleForce::CovalentEnd] = {
+               AmoebaMultipoleForce::Covalent12,
+               AmoebaMultipoleForce::Covalent13,
+               AmoebaMultipoleForce::Covalent14,
+               AmoebaMultipoleForce::Covalent15,
+               AmoebaMultipoleForce::PolarizationCovalent11,
+               AmoebaMultipoleForce::PolarizationCovalent12,
+               AmoebaMultipoleForce::PolarizationCovalent13,
+               AmoebaMultipoleForce::PolarizationCovalent14 };
+ 
+     char* isNotEof = "1";
+     for( int ii = 0; ii < numberOfMultipoles && isNotEof; ii++ ){
+         for( int jj = 0; jj < numberOfCovalentTypes && isNotEof; jj++ ){
+             StringVector lineTokens;
+             isNotEof = readLine( filePtr, lineTokens, lineCount, log );
+             std::vector<int> intVector;
+             readIntVector( filePtr, lineTokens, 2, intVector, lineCount, lineTokens[0], log );
+             multipoleForce->setCovalentMap( ii, covalentTypes[jj], intVector ); 
+         }
+     }
+}
+
+/**---------------------------------------------------------------------------------------
+
+    Read Amoeba multipole parameters
+
+    @param filePtr              file pointer to parameter file
+    @param forceMap             map of forces to be included
+    @param tokens               array of strings from first line of parameter file for this block of parameters
+    @param system               System reference
+    @param useOpenMMUnits       if set, use OpenMM units (override input (kcal/A) units)
+    @param inputArgumentMap     supplementary arguments
+    @param lineCount            used to track line entries read from parameter file
+    @param log                  log file pointer -- may be NULL
+
+    @return number of multipole parameters
+
+    --------------------------------------------------------------------------------------- */
+
+static int readAmoebaMultipoleParameters( FILE* filePtr, MapStringInt& forceMap, const StringVector& tokens,
+                                           System& system, int useOpenMMUnits, MapStringVectorOfVectors& supplementary,
+                                           MapStringString& inputArgumentMap, int* lineCount, FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+    static const std::string methodName      = "readAmoebaMultipoleParameters";
+    
+// ---------------------------------------------------------------------------------------
+
+    // validate number of tokens
+
+    if( tokens.size() < 1 ){
+        char buffer[1024];
+        (void) sprintf( buffer, "%s no multipoles number entry???\n", methodName.c_str() );
+        throwException(__FILE__, __LINE__, buffer );
+        exit(-1);
+    }
+
+    // create force
+
+    AmoebaMultipoleForce* multipoleForce = new AmoebaMultipoleForce();
+    MapStringIntI forceActive            = forceMap.find( AMOEBA_MULTIPOLE_FORCE );
+    if( forceActive != forceMap.end() && (*forceActive).second ){
+        system.addForce( multipoleForce );
+        if( log ){
+            (void) fprintf( log, "Amoeba multipole force is being included.\n" );  (void) fflush( log );
+        }    
+    } else if( log ){
+        (void) fprintf( log, "Amoeba multipole force is not being included.\n" ); (void) fflush( log );
+    }
+
+    // load in parameters
+ 
+    int numberOfMultipoles            = atoi( tokens[1].c_str() );
+    if( log ){
+        (void) fprintf( log, "%s number of MultipoleParameter terms=%d\n", methodName.c_str(), numberOfMultipoles );
+        (void) fflush( log );
+    }
+    for( int ii = 0; ii < numberOfMultipoles; ii++ ){
+        StringVector lineTokens;
+        char* isNotEof = readLine( filePtr, lineTokens, lineCount, log );
+        if( lineTokens.size() > 7 ){
+            std::vector<double> dipole;
+            std::vector<double> quadrupole;
+            dipole.resize( 3 );
+            quadrupole.resize( 9 );
+            int tokenIndex       = 0;
+            int index            = atoi( lineTokens[tokenIndex++].c_str() );
+            int axisType         = atoi( lineTokens[tokenIndex++].c_str() );
+            int zAxis            = atoi( lineTokens[tokenIndex++].c_str() );
+            int xAxis            = atoi( lineTokens[tokenIndex++].c_str() );
+            double pdamp         = atof( lineTokens[tokenIndex++].c_str() );
+            double tholeDamp     = atof( lineTokens[tokenIndex++].c_str() );
+            double polarity      = atof( lineTokens[tokenIndex++].c_str() );
+            double charge        = atof( lineTokens[tokenIndex++].c_str() );
+            dipole[0]            = atof( lineTokens[tokenIndex++].c_str() );
+            dipole[1]            = atof( lineTokens[tokenIndex++].c_str() );
+            dipole[2]            = atof( lineTokens[tokenIndex++].c_str() );
+            quadrupole[0]        = atof( lineTokens[tokenIndex++].c_str() );
+            quadrupole[1]        = atof( lineTokens[tokenIndex++].c_str() );
+            quadrupole[2]        = atof( lineTokens[tokenIndex++].c_str() );
+            quadrupole[3]        = atof( lineTokens[tokenIndex++].c_str() );
+            quadrupole[4]        = atof( lineTokens[tokenIndex++].c_str() );
+            quadrupole[5]        = atof( lineTokens[tokenIndex++].c_str() );
+            quadrupole[6]        = atof( lineTokens[tokenIndex++].c_str() );
+            quadrupole[7]        = atof( lineTokens[tokenIndex++].c_str() );
+            quadrupole[8]        = atof( lineTokens[tokenIndex++].c_str() );
+            multipoleForce->addParticle( charge, dipole, quadrupole, axisType, zAxis, xAxis, tholeDamp, pdamp, polarity );
+        } else {
+            (void) fprintf( log, "%s AmoebaMultipoleForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
+            (void) fflush( log );
+            exit(-1);
+        }
+    }
+
+    // get supplementary fields
+
+    char* isNotEof                 = "1";
+    int totalFields                = 2;
+    int fieldCount                 = 0;
+    int done                       = 0;
+    while( done == 0 && isNotEof ){
+        StringVector tokens;
+        isNotEof = readLine( filePtr, tokens, lineCount, log );
+        if( isNotEof && tokens.size() > 0 ){
+ 
+            std::string field        = tokens[0];
+            if( field.compare( "#" ) == 0 ){
+   
+               // skip
+               if( log ){
+                   (void) fprintf( log, "skip <%s>\n", field.c_str());
+                   (void) fflush( log );
+               }
+   
+            } else if( field.compare( "AmoebaMultipoleEnd" ) == 0 ){
+                done++;
+            } else if( field.compare( AMOEBA_MULTIPOLE_ROTATION_MATRICES ) == 0 || 
+                       field.compare( AMOEBA_MULTIPOLE_ROTATED )           == 0 ||
+                       field.compare( AMOEBA_FIXED_E )                     == 0 ||
+                       field.compare( AMOEBA_FIXED_E_GK )                  == 0 ||
+                       field.compare( AMOEBA_INDUCDED_DIPOLES )            == 0 ||
+                       field.compare( AMOEBA_INDUCDED_DIPOLES_GK )         == 0 
+                      ){
+                fieldCount++;
+                std::vector< std::vector<double> > vectorOfDoubleVectors;
+                readVectorOfDoubleVectors( filePtr, tokens, vectorOfDoubleVectors, lineCount, field, log );
+                supplementary[field] = vectorOfDoubleVectors;
+            } else if( field.compare( "AmoebaMultipoleCovalent" ) == 0 ){
+                fieldCount++;
+                readAmoebaMultipoleCovalent( filePtr, multipoleForce, lineCount, log );
+            }
+        }
+    }
+
+    // diagnostics
+
+    if( log ){
+
+        (void) fprintf( log, "%s Supplementary fields %u: ", methodName.c_str(), supplementary.size()  );
+        for( MapStringVectorOfVectorsCI ii = supplementary.begin(); ii != supplementary.end();  ii++ ){
+            (void) fprintf( log, "%s ", (*ii).first.c_str() );
+        }
+        (void) fprintf( log, "\n" );
+        (void) fflush( log );
+        AmoebaMultipoleForce::CovalentType covalentTypes[AmoebaMultipoleForce::CovalentEnd] = {
+                  AmoebaMultipoleForce::Covalent12,
+                  AmoebaMultipoleForce::Covalent13,
+                  AmoebaMultipoleForce::Covalent14,
+                  AmoebaMultipoleForce::Covalent15,
+                  AmoebaMultipoleForce::PolarizationCovalent11,
+                  AmoebaMultipoleForce::PolarizationCovalent12,
+                  AmoebaMultipoleForce::PolarizationCovalent13,
+                  AmoebaMultipoleForce::PolarizationCovalent14 };
+     
+        //static const unsigned int maxPrint   = MAX_PRINT;
+        static const unsigned int maxPrint   = 15;
+        unsigned int arraySize               = static_cast<unsigned int>(multipoleForce->getNumMultipoles());
+        (void) fprintf( log, "%s: %u sample of AmoebaMultipoleForce parameters\n",
+                        methodName.c_str(), arraySize );
+         (void) fflush( log );
+ 
+        for( unsigned int ii = 0; ii < arraySize;  ii++ ){
+            int axisType, zAxis, xAxis;
+            std::vector<double> dipole;
+            std::vector<double> quadrupole;
+            double charge, thole, dampingFactor, polarity;
+            multipoleForce->getMultipoleParameters( ii, charge, dipole, quadrupole, axisType, zAxis, xAxis, thole, dampingFactor, polarity );
+            (void) fprintf( log, "%8d %8d %8d %8d q %10.4f thl %10.4f pgm %10.4f pol %10.4f d[%10.4f %10.4f %10.4f]\n",
+                            ii, axisType, zAxis, xAxis, charge, thole, dampingFactor, polarity, dipole[0], dipole[1], dipole[2] );
+            (void) fprintf( log, "   q[%10.4f %10.4f %10.4f] [%10.4f %10.4f %10.4f] [%10.4f %10.4f %10.4f]\n",
+                            quadrupole[0], quadrupole[1], quadrupole[2],
+                            quadrupole[3], quadrupole[4], quadrupole[5],
+                            quadrupole[6], quadrupole[7], quadrupole[8] );
+   
+            for( int jj = 0; jj < AmoebaMultipoleForce::CovalentEnd; jj++ ){
+                std::vector<int> covalentAtoms;
+                multipoleForce->getCovalentMap( ii, covalentTypes[jj], covalentAtoms );
+                (void) fprintf( log, "   CovTypeId=%d %u [", jj, covalentAtoms.size() );
+                for( unsigned int kk = 0; kk < covalentAtoms.size(); kk++ ){
+                    (void) fprintf( log, "%5d ", covalentAtoms[kk] );
+                }
+                (void) fprintf( log, "]\n" );
+                (void) fflush( log );
+            }
+
+            // skip to end
+   
+            if( ii == maxPrint && (arraySize - maxPrint) > ii ){
+                ii = arraySize - maxPrint - 1;
+            } 
+        }
+        (void) fflush( log );
+    }
+
+    if( useOpenMMUnits ){
+
+/*
+scalingDistanceCutoff, thole, dampingFactor, pGamma, 
+    gkc          = cAmoebaSim.gkc;
+
+    fc           = cAmoebaSim.fc;
+    fd           = cAmoebaSim.fd;
+    fq           = cAmoebaSim.fq;
+*/
+
+
+        double dipoleConversion        = AngstromToNm;
+        double quadrupoleConversion    = AngstromToNm*AngstromToNm;
+        double polarityConversion      = AngstromToNm*AngstromToNm*AngstromToNm;
+        double dampingFactorConversion = sqrt( AngstromToNm );
+      
+        float scalingDistanceCutoff    = multipoleForce->getScalingDistanceCutoff();
+              scalingDistanceCutoff   *= AngstromToNm;
+        multipoleForce->setScalingDistanceCutoff( scalingDistanceCutoff );
+
+
+        for( unsigned int ii = 0; ii < multipoleForce->getNumMultipoles();  ii++ ){
+
+            int axisType, zAxis, xAxis;
+            std::vector<double> dipole;
+            std::vector<double> quadrupole;
+            double charge, thole, dampingFactor, polarity;
+            multipoleForce->getMultipoleParameters( ii, charge, dipole, quadrupole, axisType, zAxis, xAxis, thole, dampingFactor, polarity );
+
+            for( unsigned int jj = 0; jj < dipole.size(); jj++ ){
+                dipole[jj] *= dipoleConversion;
+            }
+            for( unsigned int jj = 0; jj < quadrupole.size(); jj++ ){
+                quadrupole[jj] *= quadrupoleConversion;
+            }
+            polarity          *= polarityConversion;
+            dampingFactor     *= dampingFactorConversion;
+
+            multipoleForce->setMultipoleParameters( ii, charge, dipole, quadrupole, axisType, zAxis, xAxis, thole, dampingFactor, polarity );
+
+        }
+    } else {
+        float electricConstant         = multipoleForce->getElectricConstant();
+              electricConstant        /= (AngstromToNm*CalToJoule);
+        multipoleForce->setElectricConstant( electricConstant );
+    }
+
+    return multipoleForce->getNumMultipoles();
+}
+
+/**---------------------------------------------------------------------------------------
+
+    Read GK Force parameters
+
+    @param filePtr              file pointer to parameter file
+    @param forceMap             map of forces to be included
+    @param tokens               array of strings from first line of parameter file for this block of parameters
+    @param system               System reference
+    @param forceMap             map of forces to be included
+    @param tokens               array of strings from first line of parameter file for this block of parameters
+    @param system               System reference
+    @param useOpenMMUnits       if set, use OpenMM units (override input (kcal/A) units)
+    @param lineCount            used to track line entries read from parameter file
+    @param log                  log file pointer -- may be NULL
+
+    @return number of parameters read
+
+    --------------------------------------------------------------------------------------- */
+
+static int readAmoebaGeneralizedKirkwoodParameters( FILE* filePtr, MapStringInt& forceMap, const StringVector& tokens,
+                                                    System& system, int useOpenMMUnits,
+                                                    MapStringVectorOfVectors& supplementary,
+                                                    MapStringString& inputArgumentMap, int* lineCount, FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+    static const std::string methodName      = "readAmoebaGeneralizedKirkwoodParameters";
+    
+// ---------------------------------------------------------------------------------------
+
+    if( tokens.size() < 1 ){
+       char buffer[1024];
+       (void) sprintf( buffer, "%s no GK terms entry???\n", methodName.c_str() );
+       throwException(__FILE__, __LINE__, buffer );
+       exit(-1);
+    }
+
+    AmoebaGeneralizedKirkwoodForce* gbsaObcForce   = new AmoebaGeneralizedKirkwoodForce();
+    MapStringIntI forceActive                      = forceMap.find( AMOEBA_GK_FORCE );
+    if( forceActive != forceMap.end() && (*forceActive).second ){
+       system.addForce( gbsaObcForce );
+       if( log ){
+          (void) fprintf( log, "GK force is being included.\n" );
+       }
+    } else if( log ){
+       (void) fprintf( log, "GK force is not being included.\n" );
+    }
+
+    int numberOfParticles           = atoi( tokens[1].c_str() );
+    if( log ){
+       (void) fprintf( log, "%s number of GK force terms=%d\n", methodName.c_str(), numberOfParticles );
+       (void) fflush( log );
+    }
+    for( int ii = 0; ii < numberOfParticles; ii++ ){
+       StringVector lineTokens;
+       char* isNotEof = readLine( filePtr, lineTokens, lineCount, log );
+       int tokenIndex = 0;
+       if( lineTokens.size() > 3 ){
+          int index            = atoi( lineTokens[tokenIndex++].c_str() );
+          double charge        = atof( lineTokens[tokenIndex++].c_str() );
+          double radius        = atof( lineTokens[tokenIndex++].c_str() );
+          double scalingFactor = atof( lineTokens[tokenIndex++].c_str() );
+          gbsaObcForce->addParticle( charge, radius, scalingFactor );
+       } else {
+          char buffer[1024];
+          (void) sprintf( buffer, "%s GK force tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
+          throwException(__FILE__, __LINE__, buffer );
+          exit(-1);
+       }
+    }
+
+    char* isNotEof                 = "1";
+    int hits                       = 0;
+    while( hits < 2 ){
+       StringVector tokens;
+       isNotEof = readLine( filePtr, tokens, lineCount, log );
+       if( isNotEof && tokens.size() > 0 ){
+
+          std::string field       = tokens[0];
+          if( field.compare( "SoluteDielectric" ) == 0 ){
+             gbsaObcForce->setSoluteDielectric( atof( tokens[1].c_str() ) );
+             hits++;
+          } else if( field.compare( "SolventDielectric" ) == 0 ){
+             gbsaObcForce->setSolventDielectric( atof( tokens[1].c_str() ) );
+             hits++;
+          } else {
+                char buffer[1024];
+                (void) sprintf( buffer, "%s read past GK block at line=%d\n", methodName.c_str(), lineCount );
+                throwException(__FILE__, __LINE__, buffer );
+                exit(-1);
+          }
+       } else {
+          char buffer[1024];
+          (void) sprintf( buffer, "%s invalid token count at line=%d?\n", methodName.c_str(), lineCount );
+          throwException(__FILE__, __LINE__, buffer );
+          exit(-1);
+       }
+    }
+
+    // get supplementart fields
+
+    isNotEof                       = "1";
+    int totalFields                = 2;
+    int fieldCount                 = 0;
+    int done                       = 0;
+    while( done == 0 && isNotEof ){
+        StringVector tokens;
+        isNotEof = readLine( filePtr, tokens, lineCount, log );
+        if( isNotEof && tokens.size() > 0 ){
+ 
+            std::string field        = tokens[0];
+            if( field.compare( "#" ) == 0 ){
+   
+               // skip
+               if( log ){
+                   (void) fprintf( log, "skip <%s>\n", field.c_str());
+               }
+   
+            } else if( field.compare( "AmoebaGeneralizedKirkwoodEnd" ) == 0 ){
+                done++;
+            } else if( field.compare( "AmoebaGeneralizedKirkwoodBornRadii" ) == 0 ){
+                fieldCount++;
+                std::vector< std::vector<double> > vectorOfDoubleVectors;
+                readVectorOfDoubleVectors( filePtr, tokens, vectorOfDoubleVectors, lineCount, field, log );
+                supplementary[field] = vectorOfDoubleVectors;
+                done++;
+            }
+        }
+    }
+
+    // check if cavity term is to be included
+
+    MapStringStringI isPresent = inputArgumentMap.find( INCLUDE_OBC_CAVITY_TERM );
+    if( isPresent != inputArgumentMap.end() ){
+          gbsaObcForce->setIncludeCavityTerm( atoi( isPresent->second.c_str() ) );
+    }
+
+    if( useOpenMMUnits ){
+        gbsaObcForce->setDielectricOffset( 0.009 );
+    } else {
+        gbsaObcForce->setDielectricOffset( 0.09 );
+        gbsaObcForce->setProbeRadius( 1.4 );
+        double surfaceAreaFactor = gbsaObcForce->getSurfaceAreaFactor( );
+        surfaceAreaFactor       *= (AngstromToNm*AngstromToNm)/CalToJoule;
+        gbsaObcForce->setSurfaceAreaFactor( surfaceAreaFactor );
+    }
+
+    if( log ){
+       static const unsigned int maxPrint   = MAX_PRINT;
+       unsigned int arraySize               = static_cast<unsigned int>(gbsaObcForce->getNumParticles());
+       (void) fprintf( log, "%s: sample of GK force parameters; no. of particles=%d useOpenMMUnits=%d\n",
+                       methodName.c_str(), gbsaObcForce->getNumParticles(), useOpenMMUnits );
+       (void) fprintf( log, "solute/solvent dielectrics: [%10.4f %10.4f] includeCavityTerm=%1d probeRadius=%14.7e SA prefactor=%14.7e\n",
+                       gbsaObcForce->getSoluteDielectric(),  gbsaObcForce->getSolventDielectric(),
+                       gbsaObcForce->getIncludeCavityTerm(), gbsaObcForce->getProbeRadius( ), gbsaObcForce->getSurfaceAreaFactor( ) );
+
+       for( unsigned int ii = 0; ii < arraySize; ii++ ){
+          double charge, radius, scalingFactor;
+          gbsaObcForce->getParticleParameters( ii, charge, radius, scalingFactor );
+          (void) fprintf( log, "%8d  %14.7e %14.7e %14.7e\n", ii, charge, radius, scalingFactor );
+          if( ii == maxPrint ){
+             ii = arraySize - maxPrint;
+             if( ii < maxPrint )ii = maxPrint;
+          }
+       }
+    }
+
+    if( useOpenMMUnits ){
+       for( unsigned int ii = 0; ii < gbsaObcForce->getNumParticles(); ii++ ){
+          double charge, radius, scalingFactor;
+          gbsaObcForce->getParticleParameters( ii, charge, radius, scalingFactor );
+          radius      *= AngstromToNm;
+          gbsaObcForce->setParticleParameters( ii, charge, radius, scalingFactor );
+       }
+    }
+
+    return gbsaObcForce->getNumParticles();
+}
+
+/**---------------------------------------------------------------------------------------
+
+    Read Amoeba vdw parameters
+
+    @param filePtr              file pointer to parameter file
+    @param forceMap             map of forces to be included
+    @param tokens               array of strings from first line of parameter file for this block of parameters
+    @param system               System reference
+    @param useOpenMMUnits       if set, use OpenMM units (override input (kcal/A) units)
+    @param inputArgumentMap     supplementary arguments
+    @param lineCount            used to track line entries read from parameter file
+    @param log                  log file pointer -- may be NULL
+
+    @return number of multipole parameters
+
+    --------------------------------------------------------------------------------------- */
+
+static int readAmoebaVdwParameters( FILE* filePtr, MapStringInt& forceMap, const StringVector& tokens,
+                                    System& system,  int useOpenMMUnits,
+                                    MapStringVectorOfVectors& supplementary,
+                                    MapStringString& inputArgumentMap, int* lineCount, FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+     static const std::string methodName      = "readAmoebaVdwParameters";
+    
+// ---------------------------------------------------------------------------------------
+
+    // validate number of tokens
+
+    if( tokens.size() < 1 ){
+        char buffer[1024];
+        (void) sprintf( buffer, "%s no vdw entries???\n", methodName.c_str() );
+        throwException(__FILE__, __LINE__, buffer );
+        exit(-1);
+    }
+
+    // create force
+
+    AmoebaVdwForce* vdwForce   = new AmoebaVdwForce();
+    MapStringIntI forceActive  = forceMap.find( AMOEBA_VDW_FORCE );
+    if( forceActive != forceMap.end() && (*forceActive).second ){
+        system.addForce( vdwForce );
+        if( log ){
+            (void) fprintf( log, "Amoeba Vdw force is being included.\n" );
+        }    
+    } else if( log ){
+        (void) fprintf( log, "Amoeba Vdw force is not being included.\n" );
+    }
+
+    // read sig/eps table
+ 
+    bool tableLoaded = 0;
+    int numberOfParticles;
+    if( tokens[0].compare( "AmoebaVdw14_7SigEpsTable" ) == 0 ){
+        tableLoaded  = 1;
+        int tableSize  = atoi( tokens[1].c_str() );
+        if( log ){
+            (void) fprintf( log, "%s vdwForce table size=%d\n", methodName.c_str(), tableSize);
+        }
+        vdwForce->setSigEpsTableSize( tableSize );
+        for( int ii = 0; ii < tableSize; ii++ ){
+            StringVector lineTokens;
+            char* isNotEof = readLine( filePtr, lineTokens, lineCount, log );
+            if( lineTokens.size() > 2 ){
+                int tokenIndex       = 0;
+                int index            = atoi( lineTokens[tokenIndex++].c_str() );
+                for( int jj = 0; jj < tableSize; jj++ ){
+                   double radius        = atof( lineTokens[tokenIndex++].c_str() );
+                   double epsilon       = atof( lineTokens[tokenIndex++].c_str() );
+                   double radius4       = atof( lineTokens[tokenIndex++].c_str() );
+                   double epsilon4      = atof( lineTokens[tokenIndex++].c_str() );
+                   vdwForce->setSigEpsTableEntry( ii, jj, radius, epsilon, radius4, epsilon4 );
+                }
+            } else {
+                (void) fprintf( log, "%s AmoebaVdw table tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
+                exit(-1);
+            }
+        }
+     
+        StringVector lineTokensT;
+        char* isNotEof               = readLine( filePtr, lineTokensT, lineCount, log );
+        numberOfParticles            = atoi( lineTokensT[1].c_str() );
+    } else {
+        numberOfParticles            = atoi( tokens[1].c_str() );
+    }
+
+    // read in parameters
+ 
+    if( log ){
+        (void) fprintf( log, "%s number of vdwForce terms=%d\n", methodName.c_str(), numberOfParticles );
+    }
+    for( int ii = 0; ii < numberOfParticles; ii++ ){
+        StringVector lineTokens;
+        char* isNotEof = readLine( filePtr, lineTokens, lineCount, log );
+        if( lineTokens.size() > 2 ){
+            int tokenIndex       = 0;
+            int index            = atoi( lineTokens[tokenIndex++].c_str() );
+            //int indexI           = atoi( lineTokens[tokenIndex++].c_str() );
+            int indexIV          = atoi( lineTokens[tokenIndex++].c_str() );
+            int indexClass       = atoi( lineTokens[tokenIndex++].c_str() );
+            double sigma         = atof( lineTokens[tokenIndex++].c_str() );
+            double sigma4        = atof( lineTokens[tokenIndex++].c_str() );
+            double epsilon       = atof( lineTokens[tokenIndex++].c_str() );
+            double epsilon4      = atof( lineTokens[tokenIndex++].c_str() );
+            double reduction     = atof( lineTokens[tokenIndex++].c_str() );
+            vdwForce->addParticle( indexIV, indexClass, sigma, sigma4, epsilon, epsilon4, reduction );
+        } else {
+            (void) fprintf( log, "%s AmoebaVdwForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
+            exit(-1);
+        }
+    }
+
+    // scale factors -- just check that have not changed from assummed values
+    // abort if have changed
+
+    StringVector lineTokensT;
+    char* isNotEof = readLine( filePtr, lineTokensT, lineCount, log );
+    if( lineTokensT[0].compare( "AmoebaVdw14_7Scales" ) == 0 ){
+        int tokenIndex    = 1;
+        double scale2     = atof( lineTokensT[tokenIndex++].c_str() );
+        double scale3     = atof( lineTokensT[tokenIndex++].c_str() );
+        double scale4     = atof( lineTokensT[tokenIndex++].c_str() );
+        double scale5     = atof( lineTokensT[tokenIndex++].c_str() );
+        if( fabs( scale2 )       > 0.0 || 
+            fabs( scale3 )       > 0.0 || 
+            fabs( 1.0 - scale4 ) > 0.0 || 
+            fabs( 1.0 - scale5 ) > 0.0 ){
+            char buffer[1024];
+            (void) sprintf( buffer, "Vdw scaling factors different from assummed values [0.0 0.0 1.0 1.0] [%12.5e %12.5e %12.5e %12.5e]\n",
+                            scale2, scale3, scale4, scale5 );
+            throwException(__FILE__, __LINE__, buffer );
+            exit(-1);
+        }
+    }
+
+(void) fprintf( log, "%s AmoebaVdwForce scales read\n", methodName.c_str() ); fflush( log );
+    lineTokensT.resize(0);
+    isNotEof = readLine( filePtr, lineTokensT, lineCount, log );
+    if( lineTokensT[0].compare( "AmoebaVdw14_7Exclusion" ) == 0 ){
+        int numberOfParticles =  atoi( lineTokensT[1].c_str() );
+        for( int ii = 0; ii < numberOfParticles; ii++ ){
+            StringVector lineTokens;
+            char* isNotEof = readLine( filePtr, lineTokens, lineCount, log );
+            std::vector< int > exclusions;
+            if( lineTokens.size() > 1 ){
+                int tokenIndex       = 0;
+                int index            = atoi( lineTokens[tokenIndex++].c_str() );
+                int exclusionCount   = atoi( lineTokens[tokenIndex++].c_str() );
+                for( int jj = 0; jj < exclusionCount; jj++ ){
+                    int atomIndex = atoi( lineTokens[tokenIndex++].c_str() );
+                    exclusions.push_back( atomIndex );
+                }
+                vdwForce->setParticleExclusions( ii, exclusions );
+            } else {
+                (void) fprintf( log, "%s AmoebaVdwForce exclusion tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
+                exit(-1);
+            }
+        }
+    }
+
+    // 14-7 factors -- just check that have not changed from assummed values
+    // abort if have changed
+
+    lineTokensT.resize(0);
+    isNotEof = readLine( filePtr, lineTokensT, lineCount, log );
+    if( lineTokensT[0].compare( "AmoebaVdw14_7Hal" ) == 0 ){
+        int tokenIndex    = 1;
+        double hal1       = atof( lineTokensT[tokenIndex++].c_str() );
+        double hal2       = atof( lineTokensT[tokenIndex++].c_str() );
+        if( fabs( hal1 - 0.07 )  > 0.0 || 
+            fabs( hal2 - 0.12 )  > 0.0 ){ 
+            char buffer[1024];
+            (void) sprintf( buffer, "Vdw hal values different from assummed values [0.07 0.12 ] [%12.5e %12.5e]\n",
+                            hal1, hal2 );
+            throwException(__FILE__, __LINE__, buffer );
+            exit(-1);
+        }
+    }
+
+    // get combining rule
+
+    lineTokensT.resize(0);
+    isNotEof = readLine( filePtr, lineTokensT, lineCount, log );
+    if( lineTokensT[0].compare( "AmoebaVdw14_CombiningRule" ) == 0 ){
+        int tokenIndex    = 1;
+        std::string sigmaCombiningRule   = lineTokensT[tokenIndex++].c_str();
+        std::string epsilonCombiningRule = lineTokensT[tokenIndex++].c_str();
+        vdwForce->setSigmaCombiningRule( sigmaCombiningRule );
+        vdwForce->setEpsilonCombiningRule( epsilonCombiningRule );
+    }
+
+    // diagnostics
+ 
+    if( log ){
+
+        //static const unsigned int maxPrint   = MAX_PRINT;
+        static const unsigned int maxPrint   = 15;
+        unsigned int arraySize               = static_cast<unsigned int>(vdwForce->getNumParticles());
+        unsigned int tableSize               = static_cast<unsigned int>(vdwForce->getSigEpsTableSize());
+        (void) fprintf( log, "%s: %u sample of AmoebaVdwForce parameters; SigEpsTableSize=%d combining rules=[sig=%s eps=%s]\n",
+                        methodName.c_str(), arraySize, vdwForce->getSigEpsTableSize(),
+                        vdwForce->getSigmaCombiningRule().c_str(), vdwForce->getEpsilonCombiningRule().c_str() );
+  
+       if( tableLoaded ){
+            for( unsigned int ii = 0; ii < tableSize;  ii++ ){
+                for( unsigned int jj = 0; jj < tableSize;  jj++ ){
+                    double sig, eps, sig4, eps4;
+                    vdwForce->getSigEpsTableEntry( ii, jj, sig, eps, sig4, eps4);
+                    (void) fprintf( log, "%8d %8d %10.4f %10.4f %10.4f %10.4f\n", ii, jj, sig, eps, sig4, eps4 );
+    
+                    // skip to end
+           
+                    if( jj == maxPrint && (tableSize - maxPrint) > jj ){
+                        jj = tableSize - maxPrint - 1;
+                    } 
+                } 
+        
+                // skip to end
+       
+                if( ii == maxPrint && (tableSize - maxPrint) > ii ){
+                    ii = tableSize - maxPrint - 1;
+                } 
+            }
+        } else {
+            (void) fprintf( log, "SigWEps table not loaded\n" );
+        }
+
+        for( unsigned int ii = 0; ii < vdwForce->getNumParticles();  ii++ ){
+            int indexIV, indexClass;
+            double sigma, sigma4, epsilon, epsilon4, reduction;
+            std::vector< int > exclusions;
+            vdwForce->getParticleParameters( ii, indexIV, indexClass, sigma, sigma4, epsilon, epsilon4, reduction );
+            vdwForce->getParticleExclusions( ii, exclusions );
+            (void) fprintf( log, "%8d %8d %8d sig=[%10.4f %10.4f] eps=[ %10.4f %10.4f] redct=%10.4f ",
+                            ii, indexIV, indexClass, sigma, sigma4, epsilon, epsilon4, reduction );
+
+            (void) fprintf( log, "Excl=%3u [", exclusions.size() );
+            for( unsigned int jj = 0; jj < exclusions.size();  jj++ ){
+                (void) fprintf( log, "%5d ", exclusions[jj] );
+            }
+            (void) fprintf( log, "]\n", exclusions.size() );
+
+            // skip to end
+   
+            if( ii == maxPrint && (arraySize - maxPrint) > ii ){
+                ii = arraySize - maxPrint - 1;
+            } 
+        }
+
+        // check if sigmas/sgma4s and epslon/epsilon4s same
+
+        bool anyDifferentSigma   = false;
+        bool anyDifferentEpsilon = false;
+        for( unsigned int ii = 0; ii < arraySize && !anyDifferentSigma && !anyDifferentEpsilon;  ii++ ){
+            int indexIV, indexClass;
+            double sigma, sigma4, epsilon, epsilon4, reduction;
+            vdwForce->getParticleParameters( ii, indexIV, indexClass, sigma, sigma4, epsilon, epsilon4, reduction );
+            if( fabs( sigma - sigma4 ) > 1.0e-05 ){
+                anyDifferentSigma = true;
+                (void) fprintf( log, "sigmas and sigma4 different at entry %d [%14.7f [%14.7f]\n", ii, sigma, sigma4 );
+            }
+            if( fabs( epsilon - epsilon4 ) > 1.0e-05 ){
+                anyDifferentEpsilon = true;
+                (void) fprintf( log, "epsilons and epsilon4 different at entry %d [%14.7f [%14.7f]\n", ii, epsilon, epsilon4 );
+            }
+        }
+        if( anyDifferentSigma || anyDifferentEpsilon ){ 
+            (void) fprintf( log, "sigmas and sigma4s and epsilons and epsilon4 are NOT identical.\n" );
+        } else {
+            (void) fprintf( log, "sigmas and sigma4s and epsilons and epsilon4s are identical.\n" );
+        }
+
+        (void) fflush( log );
+    }
+ 
+    // convert units to kJ-nm from kCal-Angstrom?
+
+    if( useOpenMMUnits ){
+
+        unsigned int tableSize = static_cast<unsigned int>(vdwForce->getSigEpsTableSize());
+       if( tableLoaded ){
+/*
+            for( unsigned int ii = 0; ii < tableSize;  ii++ ){
+                for( unsigned int jj = 0; jj < tableSize;  jj++ ){
+                    double sig, eps, sig4, eps4;
+                    vdwForce->getSigEpsTableEntry( ii, jj, sig, eps, sig4, eps4);
+                    (void) fprintf( log, "%8d %8d %10.4f %10.4f %10.4f %10.4f\n", ii, jj, sig, eps, sig4, eps4 );
+    
+                    // skip to end
+           
+                    if( jj == maxPrint && (tableSize - maxPrint) > jj ){
+                        jj = tableSize - maxPrint - 1;
+                    } 
+                } 
+        
+                // skip to end
+       
+                if( ii == maxPrint && (tableSize - maxPrint) > ii ){
+                    ii = tableSize - maxPrint - 1;
+                } 
+            }
+*/
+        }
+
+        for( unsigned int ii = 0; ii < vdwForce->getNumParticles();  ii++ ){
+            int indexIV, indexClass;
+            double sigma, sigma4, epsilon, epsilon4, reduction;
+            vdwForce->getParticleParameters( ii, indexIV, indexClass, sigma, sigma4, epsilon, epsilon4, reduction );
+            sigma        *= AngstromToNm;
+            sigma4       *= AngstromToNm;
+            epsilon      *= CalToJoule;
+            vdwForce->setParticleParameters( ii, indexIV, indexClass, sigma, sigma4, epsilon, epsilon4, reduction );
+        }
+
+    }
+    return vdwForce->getNumParticles();
+}
+
+/**---------------------------------------------------------------------------------------
+
+    Read Amoeba WCA dispersion parameters
+
+    @param filePtr              file pointer to parameter file
+    @param forceMap             map of forces to be included
+    @param tokens               array of strings from first line of parameter file for this block of parameters
+    @param system               System reference
+    @param useOpenMMUnits       if set, use OpenMM units (override input (kcal/A) units)
+    @param inputArgumentMap     supplementary arguments
+    @param lineCount            used to track line entries read from parameter file
+    @param log                  log file pointer -- may be NULL
+
+    @return number of particles
+
+    --------------------------------------------------------------------------------------- */
+
+static int readAmoebaWcaDispersionParameters( FILE* filePtr, MapStringInt& forceMap, const StringVector& tokens,
+                                              System& system, int useOpenMMUnits, MapStringVectorOfVectors& supplementary,
+                                              MapStringString& inputArgumentMap, int* lineCount, FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+     static const std::string methodName      = "readAmoebaWcaDispersionParameters";
+    
+// ---------------------------------------------------------------------------------------
+
+    // validate number of tokens
+ 
+    if( tokens.size() < 1 ){
+        char buffer[1024];
+        (void) sprintf( buffer, "%s no wca entries???\n", methodName.c_str() );
+        throwException(__FILE__, __LINE__, buffer );
+        exit(-1);
+    }
+ 
+   // create force
+
+    AmoebaWcaDispersionForce* wcaDispersionForce   = new AmoebaWcaDispersionForce();
+    MapStringIntI forceActive  = forceMap.find( AMOEBA_WCA_DISPERSION_FORCE );
+    if( forceActive != forceMap.end() && (*forceActive).second ){
+        system.addForce( wcaDispersionForce );
+        if( log ){
+            (void) fprintf( log, "Amoeba WcaDispersion force is being included.\n" );
+        }    
+    } else if( log ){
+        (void) fprintf( log, "Amoeba WcaDispersion force is not being included.\n" );
+    }
+
+    int numberOfParticles = atoi( tokens[1].c_str() );
+
+    // read in parameters
+ 
+    if( log ){
+        (void) fprintf( log, "%s number of wcaDispersionForce terms=%d\n", methodName.c_str(), numberOfParticles );
+    }
+
+    std::vector<double> maxDispersionEnergyVector;
+    for( int ii = 0; ii < numberOfParticles; ii++ ){
+        StringVector lineTokens;
+        char* isNotEof = readLine( filePtr, lineTokens, lineCount, log );
+        if( lineTokens.size() > 2 ){
+            int tokenIndex       = 0;
+            int index            = atoi( lineTokens[tokenIndex++].c_str() );
+            double radius        = atof( lineTokens[tokenIndex++].c_str() );
+            double epsilon       = atof( lineTokens[tokenIndex++].c_str() );
+            wcaDispersionForce->addParticle( radius, epsilon );
+
+            if( tokenIndex < lineTokens.size() ){
+                double cdisp         = atof( lineTokens[tokenIndex++].c_str() );
+                maxDispersionEnergyVector.push_back( cdisp );
+            }
+
+        } else {
+            (void) fprintf( log, "%s AmoebaWcaDispersionForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
+            exit(-1);
+        }
+    }
+
+    char* isNotEof                 = "1";
+    int hits                       = 0;
+    while( hits < 6 ){
+       StringVector tokens;
+       isNotEof = readLine( filePtr, tokens, lineCount, log );
+       if( isNotEof && tokens.size() > 0 ){
+          std::string field       = tokens[0];
+          if( field.compare( "AmoebaWcaDispersionAwater" ) == 0 ){
+             wcaDispersionForce->setAwater( atof( tokens[1].c_str() ) );
+             hits++;
+          } else if( field.compare( "AmoebaWcaDispersionSlevy" ) == 0 ){
+             wcaDispersionForce->setSlevy( atof( tokens[1].c_str() ) );
+             hits++;
+          } else if( field.compare( "AmoebaWcaDispersionShctd" ) == 0 ){
+             wcaDispersionForce->setShctd( atof( tokens[1].c_str() ) );
+             hits++;
+          } else if( field.compare( "AmoebaWcaDispersionDispoff" ) == 0 ){
+             wcaDispersionForce->setDispoff( atof( tokens[1].c_str() ) );
+             hits++;
+          } else if( field.compare( "AmoebaWcaDispersionEps" ) == 0 ){
+             wcaDispersionForce->setEpso( atof( tokens[1].c_str() ) );
+             wcaDispersionForce->setEpsh( atof( tokens[2].c_str() ) );
+             hits++;
+          } else if( field.compare( "AmoebaWcaDispersionRmin" ) == 0 ){
+             wcaDispersionForce->setRmino( atof( tokens[1].c_str() ) );
+             wcaDispersionForce->setRminh( atof( tokens[2].c_str() ) );
+             hits++;
+          } else {
+                char buffer[1024];
+                (void) sprintf( buffer, "%s read past WcaDispersion block at line=%d\n", methodName.c_str(), lineCount );
+                throwException(__FILE__, __LINE__, buffer );
+                exit(-1);
+          }
+       } else {
+          char buffer[1024];
+          (void) sprintf( buffer, "%s invalid token count at line=%d?\n", methodName.c_str(), lineCount );
+          throwException(__FILE__, __LINE__, buffer );
+          exit(-1);
+       }
+    }
+
+    // diagnostics
+
+    if( log ){
+
+        //static const unsigned int maxPrint   = MAX_PRINT;
+        static const unsigned int maxPrint   = 15;
+        unsigned int arraySize               = static_cast<unsigned int>(wcaDispersionForce->getNumParticles());
+        (void) fprintf( log, "%s: %u sample of AmoebaVdwForce parameters\n",
+                        methodName.c_str(), arraySize );
+
+        (void) fprintf( log, "Eps[%14.7f %14.7f] Rmin[%14.7f %14.7f]\nAwater %14.7f Shctd %14.7f Dispoff %14.7f Slevy %14.7f\n",
+                        wcaDispersionForce->getEpso( ), wcaDispersionForce->getEpsh( ),
+                        wcaDispersionForce->getRmino( ), wcaDispersionForce->getRminh( ),
+                        wcaDispersionForce->getAwater( ), wcaDispersionForce->getShctd( ), wcaDispersionForce->getDispoff( ), wcaDispersionForce->getSlevy( ) );
+
+        for( unsigned int ii = 0; ii < arraySize;  ii++ ){
+            double radius, epsilon, maxDispersionEnergy;
+            wcaDispersionForce->getParticleParameters( ii, radius, epsilon );
+            (void) fprintf( log, "%8d %10.4f %10.4f", ii, radius, epsilon );
+            if( ii < maxDispersionEnergyVector.size() ){
+                wcaDispersionForce->getMaximumDispersionEnergy( ii, maxDispersionEnergy );
+                double delta = fabs( maxDispersionEnergy - maxDispersionEnergyVector[ii] );
+                const char* error  = (delta > 1.0e-05) ? "XXX" : "";
+                (void) fprintf( log, " maxDispEDiff=%12.5e %14.7f %14.7f  %s",
+                                 delta,  maxDispersionEnergy, maxDispersionEnergyVector[ii], error );
+            }
+            (void) fprintf( log, "\n" );
+
+            // skip to end
+
+            if( ii == maxPrint && (arraySize - maxPrint) > ii ){
+                ii = arraySize - maxPrint - 1;
+            } 
+        }
+        (void) fflush( log );
+
+        // check max dispersion energy for all particles
+
+        int errors = 0;
+        for( unsigned int ii = 0; ii < arraySize && ii < maxDispersionEnergyVector.size(); ii++ ){
+            double maxDispersionEnergy;
+            wcaDispersionForce->getMaximumDispersionEnergy( ii, maxDispersionEnergy );
+            double delta = fabs( maxDispersionEnergy - maxDispersionEnergyVector[ii] );
+            if( delta > 1.0e-05 ){
+                (void) fprintf( log, " maxDispEDiff=%12.5e %14.7f %14.7f  XXX\n" );
+                errors++;
+            } 
+        }
+        if( errors ){
+            exit(-1);
+        } else {
+            (void) fprintf( log, "No errors detected in maxDispEnergy!\n" );
+        }
+        (void) fflush( log );
+    }
+
+    if( useOpenMMUnits ){
+
+        // slevy enthalpy-to-free energy scale factor for dispersion
+
+        // awater is number density at STP
+
+        double aWater       = wcaDispersionForce->getAwater( );
+        aWater             /= (AngstromToNm*AngstromToNm*AngstromToNm);
+        wcaDispersionForce->setAwater( aWater );
+
+        double dispoff      = wcaDispersionForce->getDispoff( );
+        dispoff            *= AngstromToNm;
+        wcaDispersionForce->setDispoff( dispoff );
+
+        // rmino water-oxygen Rmin for implicit dispersion term
+        // rminh water-hydrogen Rmin for implicit dispersion term
+
+        double rmino        = wcaDispersionForce->getRmino( );
+        double rminh        = wcaDispersionForce->getRminh( );
+        rmino              *= AngstromToNm;
+        rminh              *= AngstromToNm;
+        wcaDispersionForce->setRmino( rmino );
+        wcaDispersionForce->setRminh( rminh );
+
+        // epso water-oxygen epsilon for implicit dispersion term
+        // epsh water-hydrogen epsilon for implicit dispersion term
+
+        double epso         = wcaDispersionForce->getEpso( );
+        double epsh         = wcaDispersionForce->getEpsh( );
+        epso               *= CalToJoule;
+        epsh               *= CalToJoule;
+        wcaDispersionForce->setEpso( epso );
+        wcaDispersionForce->setEpsh( epsh );
+
+        for( unsigned int ii = 0; ii < wcaDispersionForce->getNumParticles(); ii++ ){
+
+            double radius, epsilon, maxDispersionEnergy;
+            wcaDispersionForce->getParticleParameters( ii, radius, epsilon );
+            radius           *= AngstromToNm;
+            epsilon          *= CalToJoule;
+            wcaDispersionForce->setParticleParameters( ii, radius, epsilon );
+
+            if( ii < maxDispersionEnergyVector.size() ){
+                wcaDispersionForce->getMaximumDispersionEnergy( ii, maxDispersionEnergy );
+                double tinkerValue  = maxDispersionEnergyVector[ii];
+                       tinkerValue *= CalToJoule;
+                double delta        = fabs( maxDispersionEnergy - tinkerValue );
+                const char* error   = (delta > 1.0e-05) ? "XXX" : "";
+                if( delta > 1.0e-05 && log ){
+                    (void) fprintf( log, "useOpenMMUnits: maxDispEDiff=%12.5e %14.7f %14.7f  %s\n",
+                                    delta,  maxDispersionEnergy, tinkerValue, error );
+                }
+            }
+        }
+    }
+ 
+    return wcaDispersionForce->getNumParticles();
+}
+
+/**---------------------------------------------------------------------------------------
+
+    Read Amoeba surface parameters
+
+    @param filePtr              file pointer to parameter file
+    @param forceFlag            flag signalling whether force is to be added to system
+                                if force == 0 || forceFlag & AMOEBA_HARMONIC_ANGLE_FORCE, then included
+    @param tokens               array of strings from first line of parameter file for this block of parameters
+    @param system               System reference
+    @param lineCount            used to track line entries read from parameter file
+    @param log                  log file pointer -- may be NULL
+
+    @return number of multipole parameters
+
+    --------------------------------------------------------------------------------------- */
+
+static int readAmoebaSurfaceParameters( FILE* filePtr, MapStringInt& forceMap, const StringVector& tokens,
+                                         System& system, int* lineCount,
+                                         MapStringVectorOfVectors& supplementary, FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+     static const std::string methodName      = "readAmoebaSurfaceParameters";
+    
+// ---------------------------------------------------------------------------------------
+
+     // validate number of tokens
+ 
+     if( tokens.size() < 1 ){
+         char buffer[1024];
+         (void) sprintf( buffer, "%s no surface entries???\n", methodName.c_str() );
+         throwException(__FILE__, __LINE__, buffer );
+         exit(-1);
+     }
+ 
+     // create force
+ 
+     AmoebaSASAForce* sasaForce = new AmoebaSASAForce();
+
+//globalSasaForce = sasaForce;
+
+     MapStringIntI forceActive  = forceMap.find( AMOEBA_SASA_FORCE );
+     if( forceActive != forceMap.end() && (*forceActive).second ){
+         system.addForce( sasaForce );
+         if( log ){
+             (void) fprintf( log, "Amoeba SASA force is being included.\n" );
+         }    
+     } else if( log ){
+         (void) fprintf( log, "Amoeba SASA force is not being included.\n" );
+     }
+
+     // load in parameters
+  
+     int numberOfParticles            = atoi( tokens[1].c_str() );
+     if( log ){
+         (void) fprintf( log, "%s number of sasaForce terms=%d\n", methodName.c_str(), numberOfParticles );
+     }
+     for( int ii = 0; ii < numberOfParticles; ii++ ){
+         StringVector lineTokens;
+         char* isNotEof = readLine( filePtr, lineTokens, lineCount, log );
+         if( lineTokens.size() > 2 ){
+             int tokenIndex       = 0;
+             int index            = atoi( lineTokens[tokenIndex++].c_str() );
+             double radius        = atof( lineTokens[tokenIndex++].c_str() );
+             double weight        = atof( lineTokens[tokenIndex++].c_str() );
+             sasaForce->addParticle( radius, weight );
+         } else {
+             (void) fprintf( log, "%s AmoebaSASAForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
+             exit(-1);
+         }
+     }
+ 
+     char* isNotEof                 = "1";
+     int hits                       = 0;
+     while( hits < 1 ){
+        StringVector tokens;
+        isNotEof = readLine( filePtr, tokens, lineCount, log );
+        if( isNotEof && tokens.size() > 0 ){
+ 
+           std::string field       = tokens[0];
+           if( field.compare( "AmoebaSurfaceProbe" ) == 0 ){
+              sasaForce->setProbeRadius( atof( tokens[1].c_str() ) );
+              hits++;
+           } else {
+                 char buffer[1024];
+                 (void) sprintf( buffer, "%s read past SASA block at line=%d\n", methodName.c_str(), lineCount );
+                 throwException(__FILE__, __LINE__, buffer );
+                 exit(-1);
+           }
+        } else {
+           char buffer[1024];
+           (void) sprintf( buffer, "%s invalid token count at line=%d?\n", methodName.c_str(), lineCount );
+           throwException(__FILE__, __LINE__, buffer );
+           exit(-1);
+        }
+     }
+
+     // diagnostics
+ 
+     if( log ){
+
+         //static const unsigned int maxPrint   = MAX_PRINT;
+         static const unsigned int maxPrint   = 15;
+         unsigned int arraySize               = static_cast<unsigned int>(sasaForce->getNumParticles());
+         (void) fprintf( log, "%s: %u sample of AmoebaSASAForce parameters; probe radius=%10.4f\n",
+                         methodName.c_str(), arraySize, sasaForce->getProbeRadius() );
+  
+         for( unsigned int ii = 0; ii < arraySize;  ii++ ){
+             double radius, weight;
+             sasaForce->getParticleParameters( ii, radius, weight );
+             (void) fprintf( log, "%8d %10.4f %10.4f\n", ii, radius, weight );
+
+             // skip to end
+    
+             if( ii == maxPrint && (arraySize - maxPrint) > ii ){
+                 ii = arraySize - maxPrint - 1;
+             } 
+         }
+         (void) fflush( log );
+     }
+ 
+     return sasaForce->getNumParticles();
+}
+
+/**---------------------------------------------------------------------------------------
+
+    Read Constraints
+
+    @param filePtr              file pointer to parameter file
+    @param tokens               array of strings from first line of parameter file for this block of parameters
+    @param system               System reference
+    @param lineCount            used to track line entries read from parameter file
+    @param log                  log file pointer -- may be NULL
+
+    @return number of parameters read
+
+    --------------------------------------------------------------------------------------- */
+
+static int readConstraints( FILE* filePtr, const StringVector& tokens, System& system, int* lineCount, FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+    static const std::string methodName      = "readConstraints";
+    
+// ---------------------------------------------------------------------------------------
+
+    if( tokens.size() < 1 ){
+       char buffer[1024];
+       (void) sprintf( buffer, "%s no Constraints terms entry???\n", methodName.c_str() );
+       throwException(__FILE__, __LINE__, buffer );
+       exit(-1);
+    }
+
+    int numberOfConstraints = atoi( tokens[1].c_str() );
+    if( log ){
+       (void) fprintf( log, "%s number of constraints=%d\n", methodName.c_str(), numberOfConstraints );
+       (void) fflush( log );
+    }
+    for( int ii = 0; ii < numberOfConstraints; ii++ ){
+       StringVector lineTokens;
+       char* isNotEof = readLine( filePtr, lineTokens, lineCount, log );
+       if( lineTokens.size() > 3 ){
+          int index            = atoi( lineTokens[0].c_str() );
+          int particle1        = atoi( lineTokens[1].c_str() );
+          int particle2        = atoi( lineTokens[2].c_str() );
+          double distance      = atof( lineTokens[3].c_str() );
+          system.addConstraint( particle1, particle2, distance );
+       } else {
+          char buffer[1024];
+          (void) sprintf( buffer, "%s constraint tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
+          throwException(__FILE__, __LINE__, buffer );
+          exit(-1);
+       }
+    }
+
+    if( log ){
+       static const unsigned int maxPrint   = MAX_PRINT;
+       unsigned int arraySize               = static_cast<unsigned int>(system.getNumConstraints());
+       (void) fprintf( log, "%s: sample constraints\n", methodName.c_str() );
+       for( unsigned int ii = 0; ii < arraySize && ii < maxPrint; ii++ ){
+          int particle1, particle2;
+          double distance;
+          system.getConstraintParameters( ii, particle1, particle2, distance ); 
+          (void) fprintf( log, "%8d %8d %8d %14.7e\n", ii, particle1, particle2, distance );
+       }
+       if( arraySize > maxPrint ){
+          for( unsigned int ii = arraySize - maxPrint; ii < arraySize; ii++ ){
+             int particle1, particle2;
+             double distance;
+             system.getConstraintParameters( ii, particle1, particle2, distance ); 
+             (void) fprintf( log, "%8d %8d %8d %14.7e\n", ii, particle1, particle2, distance );
+          }
+       }
+    }
+
+    return system.getNumConstraints();
+}
+
+/**---------------------------------------------------------------------------------------
+
+    Read integrator
+
+    @param filePtr              file pointer to parameter file
+    @param tokens               array of strings from first line of parameter file for this block of parameters
+    @param system               System reference
+    @param lineCount            used to track line entries read from parameter file
+    @param log                  log file pointer -- may be NULL
+
+    @return integrator
+
+    --------------------------------------------------------------------------------------- */
+
+static Integrator* readIntegrator( FILE* filePtr, const StringVector& tokens, System& system, int* lineCount, FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+    static const std::string methodName      = "readIntegrator";
+    
+// ---------------------------------------------------------------------------------------
+
+    if( tokens.size() < 1 ){
+       char buffer[1024];
+       (void) sprintf( buffer, "%s integrator name missing?\n", methodName.c_str() );
+       throwException(__FILE__, __LINE__, buffer );
+       exit(-1);
+    }
+
+    std::string integratorName = tokens[1];
+    if( log ){
+       (void) fprintf( log, "%s integrator=%s\n", methodName.c_str(), integratorName.c_str() );
+       (void) fflush( log );
+    }
+
+    // set number of parameters (lines to read)
+
+    int readLines;
+    if( integratorName.compare( "LangevinIntegrator" ) == 0 ){
+       readLines = 5;
+    } else if( integratorName.compare( "VariableLangevinIntegrator" ) == 0 ){
+       readLines = 6;
+    } else if( integratorName.compare( "VerletIntegrator" ) == 0 ){
+       readLines = 2;
+    } else if( integratorName.compare( "VariableVerletIntegrator" ) == 0 ){
+       readLines = 3;
+    } else if( integratorName.compare( "BrownianIntegrator" ) == 0 ){
+       readLines = 5;
+    } else {
+       (void) fprintf( log, "%s integrator=%s not recognized.\n", methodName.c_str(), integratorName.c_str() );
+       (void) fflush( log );
+       exit(-1);
+    }
+    
+    // read in parameters
+
+    double stepSize               = 0.001;
+    double constraintTolerance    = 1.0e-05;
+    double temperature            = 300.0;
+    double friction               = 0.01099;
+    double errorTolerance         = 1.0e-05;
+    int randomNumberSeed          = 1993;
+
+    for( int ii = 0; ii < readLines; ii++ ){
+       StringVector lineTokens;
+       char* isNotEof = readLine( filePtr, lineTokens, lineCount, log );
+       if( lineTokens.size() > 1 ){
+          if( lineTokens[0].compare( "StepSize" ) == 0 ){
+             stepSize            =  atof( lineTokens[1].c_str() );
+          } else if( lineTokens[0].compare( "ConstraintTolerance" ) == 0 ){
+             constraintTolerance =  atof( lineTokens[1].c_str() );
+          } else if( lineTokens[0].compare( "Temperature" ) == 0 ){
+             temperature         =  atof( lineTokens[1].c_str() );
+          } else if( lineTokens[0].compare( "Friction" ) == 0 ){
+             friction            =  atof( lineTokens[1].c_str() );
+          } else if( lineTokens[0].compare( "ErrorTolerance" ) == 0 ){
+             errorTolerance      =  atof( lineTokens[1].c_str() );
+          } else if( lineTokens[0].compare( "RandomNumberSeed" ) == 0 ){
+             randomNumberSeed    =  atoi( lineTokens[1].c_str() );
+          } else {
+             (void) fprintf( log, "%s integrator field=%s not recognized.\n", methodName.c_str(), lineTokens[0].c_str() );
+             (void) fflush( log );
+             exit(-1);
+          }
+       } else {
+          char buffer[1024];
+          (void) sprintf( buffer, "%s integrator parameters incomplete at line=%d\n", methodName.c_str(), *lineCount );
+          throwException(__FILE__, __LINE__, buffer );
+          exit(-1);
+       }
+    }
+
+    // build integrator
+
+    Integrator* returnIntegrator = NULL;
+
+    if( integratorName.compare( "LangevinIntegrator" ) == 0 ){
+       returnIntegrator = new LangevinIntegrator( temperature, friction, stepSize );
+//      returnIntegrator->setRandomNumberSeed( randomNumberSeed );
+    } else if( integratorName.compare( "VariableLangevinIntegrator" ) == 0 ){
+       returnIntegrator = new VariableLangevinIntegrator( temperature, friction, errorTolerance );
+       returnIntegrator->setStepSize( stepSize );
+//      returnIntegrator->setRandomNumberSeed( randomNumberSeed );
+    } else if( integratorName.compare( "VerletIntegrator" ) == 0 ){
+       returnIntegrator = new VerletIntegrator( stepSize );
+    } else if( integratorName.compare( "VariableVerletIntegrator" ) == 0 ){
+       returnIntegrator = new VariableVerletIntegrator( errorTolerance );
+       returnIntegrator->setStepSize( stepSize );
+    } else if( integratorName.compare( "BrownianIntegrator" ) == 0 ){
+       returnIntegrator = new BrownianIntegrator( temperature, friction, stepSize );
+//      returnIntegrator->setRandomNumberSeed( randomNumberSeed );
+    }
+    returnIntegrator->setConstraintTolerance( constraintTolerance );
+    
+    if( log ){
+       static const unsigned int maxPrint   = MAX_PRINT;
+       (void) fprintf( log, "%s: parameters\n", methodName.c_str() );
+       (void) fprintf( log, "StepSize=%14.7e constraint tolerance=%14.7e ", stepSize, constraintTolerance );
+       if( integratorName.compare( "LangevinIntegrator" ) == 0 || 
+           integratorName.compare( "BrownianIntegrator" ) == 0 ||  
+           integratorName.compare( "VariableLangevinIntegrator" ) == 0 ){
+           (void) fprintf( log, "Temperature=%14.7e friction=%14.7e seed=%d (seed may not be set!) ", temperature, friction, randomNumberSeed );
+       }
+       if( integratorName.compare( "VariableLangevinIntegrator" ) == 0 || 
+           integratorName.compare( "VariableVerletIntegrator" ) == 0 ){
+           (void) fprintf( log, "Error tolerance=%14.7e", errorTolerance);
+       }
+       (void) fprintf( log, "\n" );
+    }
+
+    return returnIntegrator;
+}
+
+/**---------------------------------------------------------------------------------------
+
+    Read arrays of Vec3s (coordinates/velocities/forces/...)
+
+    @param filePtr              file pointer to parameter file
+    @param tokens               array of strings from first line of parameter file for this block of parameters
+    @param coordinates          Vec3 array
+    @param lineCount            used to track line entries read from parameter file
+    @param log                  log file pointer -- may be NULL
+
+    @return number of entries read
+
+    --------------------------------------------------------------------------------------- */
+
+static int readVec3( FILE* filePtr, const StringVector& tokens, std::vector<Vec3>& coordinates, int* lineCount,
+                      std::string typeName, FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+    static const std::string methodName      = "readVec3";
+    
+// ---------------------------------------------------------------------------------------
+
+    if( tokens.size() < 1 ){
+       char buffer[1024];
+       (void) sprintf( buffer, "%s no Coordinates terms entry???\n", methodName.c_str() );
+       throwException(__FILE__, __LINE__, buffer );
+       exit(-1);
+    }
+
+    int numberOfCoordinates= atoi( tokens[1].c_str() );
+    if( log ){
+       (void) fprintf( log, "%s number of %s=%d\n", methodName.c_str(), typeName.c_str(), numberOfCoordinates );
+       (void) fflush( log );
+    }
+    for( int ii = 0; ii < numberOfCoordinates; ii++ ){
+       StringVector lineTokens;
+       char* isNotEof = readLine( filePtr, lineTokens, lineCount, log );
+       if( lineTokens.size() > 3 ){
+          int index            = atoi( lineTokens[0].c_str() );
+          double xCoord        = atof( lineTokens[1].c_str() );
+          double yCoord        = atof( lineTokens[2].c_str() );
+          double zCoord        = atof( lineTokens[3].c_str() );
+          coordinates.push_back( Vec3( xCoord, yCoord, zCoord ) );
+       } else {
+          char buffer[1024];
+          (void) sprintf( buffer, "%s coordinates tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
+          throwException(__FILE__, __LINE__, buffer );
+          exit(-1);
+       }
+    }
+
+    // diagnostics
+
+    if( log ){
+       static const unsigned int maxPrint = MAX_PRINT;
+       unsigned int arraySize             = coordinates.size();
+       (void) fprintf( log, "%s: sample of vec3: %u\n", methodName.c_str(), arraySize );
+       for( unsigned int ii = 0; ii < arraySize; ii++ ){
+          (void) fprintf( log, "%6u [%14.7e %14.7e %14.7e]\n", ii,
+                          coordinates[ii][0], coordinates[ii][1], coordinates[ii][2] );
+          // skip to end
+
+          if( ii == maxPrint && (arraySize - maxPrint) > ii ){
+             ii = arraySize - maxPrint - 1;
+          } 
+       }
+    }
+
+    return static_cast<int>(coordinates.size());
+}
+
+/**---------------------------------------------------------------------------------------
+
+    Read arrays of Vec3s (coordinates/velocities/forces/...)
+
+    @param filePtr              file pointer to parameter file
+    @param tokens               array of strings from first line of parameter file for this block of parameters
+    @param coordinates          Vec3 array
+    @param lineCount            used to track line entries read from parameter file
+    @param log                  log file pointer -- may be NULL
+
+    @return number of entries read
+
+    --------------------------------------------------------------------------------------- */
+
+static int addForces( std::vector<Vec3>& forceToAdd, std::vector<Vec3>& forceAccumulator ){
+
+// ---------------------------------------------------------------------------------------
+
+    static const std::string methodName      = "addForces";
+    
+// ---------------------------------------------------------------------------------------
+
+    if( forceAccumulator.size() < forceToAdd.size() ){
+       forceAccumulator.resize( forceToAdd.size() );
+    }
+    for( unsigned int ii = 0; ii < forceToAdd.size(); ii++ ){
+       forceAccumulator[ii][0] += forceToAdd[ii][0];
+       forceAccumulator[ii][1] += forceToAdd[ii][1];
+       forceAccumulator[ii][2] += forceToAdd[ii][2];
+    }
+    return static_cast<int>(forceAccumulator.size());
+}
+
+
+static void getForceStrings( System& system, StringVector& forceStringArray, FILE* log ){
+
+     // print active forces and relevant parameters
+
+     for( int ii = 0; ii < system.getNumForces(); ii++ ) {
+
+         int hit                 = 0;
+         Force& force            = system.getForce(ii);
+
+         // bond
+
+         if( !hit ){
+
+             try {
+                AmoebaHarmonicBondForce& harmonicBondForce = dynamic_cast<AmoebaHarmonicBondForce&>(force);
+                forceStringArray.push_back( AMOEBA_HARMONIC_BOND_FORCE );
+                hit++;
+             } catch( std::bad_cast ){
+             }
+         }
+     
+         // multipole
+
+         if( !hit ){
+
+             try {
+                AmoebaMultipoleForce& multipoleForce = dynamic_cast<AmoebaMultipoleForce &>(force);
+                forceStringArray.push_back( AMOEBA_MULTIPOLE_FORCE );
+                hit++;
+             } catch( std::bad_cast ){
+             }
+         }
+     
+         // out-of-plane-bend Force
+
+         if( !hit ){
+
+             try {
+                AmoebaOutOfPlaneBendForce& outOfPlaneBend = dynamic_cast<AmoebaOutOfPlaneBendForce&>(force);
+                forceStringArray.push_back( AMOEBA_OUT_OF_PLANE_BEND_FORCE );
+                hit++;
+             } catch( std::bad_cast ){
+             }
+         }
+     
+         // Pi-torsion Force
+
+         if( !hit ){
+
+             try {
+                AmoebaPiTorsionForce& piTorsion = dynamic_cast<AmoebaPiTorsionForce&>(force);
+                forceStringArray.push_back( AMOEBA_PI_TORSION_FORCE );
+                hit++;
+             } catch( std::bad_cast ){
+             }
+         }
+     
+         // Torsion-torsion Force
+
+         if( !hit ){
+
+             try {
+                AmoebaTorsionTorsionForce& torsionTorsion = dynamic_cast<AmoebaTorsionTorsionForce&>(force);
+                forceStringArray.push_back( AMOEBA_TORSION_TORSION_FORCE );
+                hit++;
+             } catch( std::bad_cast ){
+             }
+         }
+     
+         // Torsion Force
+
+         if( !hit ){
+
+             try {
+                AmoebaTorsionForce& torsion = dynamic_cast<AmoebaTorsionForce&>(force);
+                forceStringArray.push_back( AMOEBA_TORSION_FORCE );
+                hit++;
+             } catch( std::bad_cast ){
+             }
+         }
+     
+         // SASA Force
+
+         if( !hit ){
+
+             try {
+                AmoebaSASAForce& sasaForce = dynamic_cast<AmoebaSASAForce&>(force);
+                forceStringArray.push_back( AMOEBA_SASA_FORCE );
+                hit++;
+             } catch( std::bad_cast ){
+             }
+         }
+     
+         // stretch bend force
+
+         if( !hit ){
+
+             try {
+                AmoebaStretchBendForce& stretchBend = dynamic_cast<AmoebaStretchBendForce&>(force);
+                forceStringArray.push_back( AMOEBA_STRETCH_BEND_FORCE );
+                hit++;
+             } catch( std::bad_cast ){
+             }
+         }
+     
+         // vdw force
+
+         if( !hit ){
+
+             try {
+                AmoebaVdwForce& vdw = dynamic_cast<AmoebaVdwForce&>(force);
+                forceStringArray.push_back( AMOEBA_VDW_FORCE );
+                hit++;
+             } catch( std::bad_cast ){
+             }
+         }
+     
+         // WCA dspersion force
+
+         if( !hit ){
+
+             try {
+                AmoebaWcaDispersionForce& wcaDispersionForce = dynamic_cast<AmoebaWcaDispersionForce&>(force);
+                forceStringArray.push_back( AMOEBA_WCA_DISPERSION_FORCE );
+                hit++;
+             } catch( std::bad_cast ){
+             }
+         }
+     
+         // angle
+
+         if( !hit ){
+     
+             try {
+                AmoebaHarmonicAngleForce & harmonicAngleForce = dynamic_cast<AmoebaHarmonicAngleForce&>(force);
+                forceStringArray.push_back( AMOEBA_HARMONIC_ANGLE_FORCE );
+                hit++;
+             } catch( std::bad_cast ){
+             }
+         }
+
+         // in-plane angle
+
+         if( !hit ){
+     
+             try {
+                AmoebaHarmonicInPlaneAngleForce & harmonicAngleForce = dynamic_cast<AmoebaHarmonicInPlaneAngleForce&>(force);
+                forceStringArray.push_back( AMOEBA_HARMONIC_IN_PLANE_ANGLE_FORCE );
+                hit++;
+             } catch( std::bad_cast ){
+             }
+         }
+
+         // Kirkwood
+     
+         if( !hit ){
+             try {
+                AmoebaGeneralizedKirkwoodForce& kirkwoodForce = dynamic_cast<AmoebaGeneralizedKirkwoodForce&>(force);
+                forceStringArray.push_back( AMOEBA_GK_FORCE );
+                hit++;
+             } catch( std::bad_cast ){
+             }
+         }
+     
+         // COM
+
+         if( !hit ){
+     
+             try {
+                CMMotionRemover& cMMotionRemover = dynamic_cast<CMMotionRemover&>(force);
+                hit++;
+             } catch( std::bad_cast ){
+             }
+         }
+
+         if( !hit && log ){
+            (void) fprintf( log, "   entry=%2d force not recognized XXXX\n", ii );
+         }
+
+     }
+
+     return;
+}
+
+/**---------------------------------------------------------------------------------------
+
+    Read parameter file
+
+    @param inputParameterFile   input parameter file name
+    @param system               system to which forces based on parameters are to be added
+    @param coordinates          Vec3 array containing coordinates on output
+    @param velocities           Vec3 array containing velocities on output
+    @param inputLog             log file pointer -- may be NULL
+
+    @return number of lines read
+
+    --------------------------------------------------------------------------------------- */
+
+Integrator* readAmoebaParameterFile( const std::string& inputParameterFile, MapStringInt& forceMap, System& system,
+                                      std::vector<Vec3>& coordinates, 
+                                      std::vector<Vec3>& velocities,
+                                      MapStringVec3& forces, MapStringDouble& potentialEnergy,
+                                      MapStringVectorOfVectors& supplementary, int useOpenMMUnits,
+                                      MapStringString& inputArgumentMap, FILE* inputLog ){
+
+// ---------------------------------------------------------------------------------------
+
+    static const std::string methodName      = "readAmoebaParameterFile";
+    int PrintOn                              = 1; 
+    double unitsConversion[LastUnits];
+     
+// ---------------------------------------------------------------------------------------
+ 
+    FILE* log;
+    if( PrintOn == 0 && inputLog ){
+        log = NULL;
+    } else {
+        log = inputLog;
+    }
+ 
+    if( log ){
+        (void) fprintf( log, "%s\n", methodName.c_str() );
+        (void) fflush( log );
+    }   
+ 
+    // open parameter file
+ 
+    FILE* filePtr;
+ #ifdef _MSC_VER
+    fopen_s( &filePtr, inputParameterFile.c_str(), "r" );
+ #else
+     filePtr = fopen( inputParameterFile.c_str(), "r" );
+ #endif
+ 
+    if( filePtr == NULL ){
+        char buffer[1024];
+        (void) sprintf( buffer, "Input parameter file=<%s> could not be opened -- aborting.\n", methodName.c_str(), inputParameterFile.c_str() );
+        throwException(__FILE__, __LINE__, buffer );
+    } else if( log ){
+        (void) fprintf( log, "Input parameter file=<%s> opened.\n", methodName.c_str(), inputParameterFile.c_str() );
+        (void) fflush( log );
+    }
+
+    int lineCount                  = 0;
+    std::string version            = "0.1"; 
+    char* isNotEof                 = "1";
+    Integrator* returnIntegrator   = NULL;
+
+    // loop over lines in file
+
+    while( isNotEof ){
+ 
+        // read line and continue if not EOF and tokens found on line
+ 
+        StringVector tokens;
+        isNotEof = readLine( filePtr, tokens, &lineCount, log );
+ 
+        if( isNotEof && tokens.size() > 0 ){
+ 
+            std::string field       = tokens[0];
+  
+            if( log ){
+                (void) fprintf( log, "Field=<%s> at line=%d\n", field.c_str(), lineCount );
+                (void) fflush( log );
+            }
+   
+            if( field == "Version" ){
+                if( tokens.size() > 1 ){
+                   version = tokens[1];
+                   if( log ){
+                       (void) fprintf( log, "Version=<%s> at line=%d\n", version.c_str(), lineCount );
+                   }
+                }
+            } else if( field == "Particles" ){
+            } else if( field == "Masses" ){
+                readMasses( filePtr, tokens, system, &lineCount, log );
+            } else if( field == "NumberOfForces" ){
+               // skip
+            } else if( field == "CMMotionRemover" ){
+                int frequency = atoi( tokens[1].c_str() );
+                system.addForce( new CMMotionRemover( frequency ) );
+                if( log ){
+                    (void) fprintf( log, "CMMotionRemover added w/ frequency=%d at line=%d\n", frequency, lineCount );
+                }
+   
+            // AmoebaHarmonicBond
+  
+            } else if( field == "AmoebaHarmonicBondParameters" ){
+                readAmoebaHarmonicBondParameters( filePtr, forceMap, tokens, system, useOpenMMUnits, inputArgumentMap,&lineCount, log );
+            } else if( field == "AmoebaHarmonicBondForce" ){
+                readVec3( filePtr, tokens, forces[AMOEBA_HARMONIC_BOND_FORCE], &lineCount, field, log );
+            } else if( field == "AmoebaHarmonicBondEnergy" ){
+                if( tokens.size() > 1 ){
+                   potentialEnergy[AMOEBA_HARMONIC_BOND_FORCE] = atof( tokens[1].c_str() ); 
+                }
+   
+            // AmoebaHarmonicAngle
+  
+            } else if( field == "AmoebaHarmonicAngleParameters" ){
+                readAmoebaHarmonicAngleParameters( filePtr, forceMap, tokens, system, useOpenMMUnits, inputArgumentMap, &lineCount, log );
+            } else if( field == "AmoebaHarmonicAngleForce" ){
+                readVec3( filePtr, tokens, forces[AMOEBA_HARMONIC_ANGLE_FORCE], &lineCount, field, log );
+            } else if( field == "AmoebaHarmonicAngleEnergy" ){
+                if( tokens.size() > 1 ){
+                   potentialEnergy[AMOEBA_HARMONIC_ANGLE_FORCE] = atof( tokens[1].c_str() );
+                }
+   
+            // AmoebaHarmonicInPlaneAngle
+  
+            } else if( field == "AmoebaHarmonicInPlaneAngleParameters" ){
+                readAmoebaHarmonicInPlaneAngleParameters( filePtr, forceMap, tokens, system, useOpenMMUnits, inputArgumentMap, &lineCount, log );
+            } else if( field == "AmoebaHarmonicInPlaneAngleForce" ){
+                readVec3( filePtr, tokens, forces[AMOEBA_HARMONIC_IN_PLANE_ANGLE_FORCE], &lineCount, field, log );
+            } else if( field == "AmoebaHarmonicInPlaneAngleEnergy" ){
+                if( tokens.size() > 1 ){
+                   potentialEnergy[AMOEBA_HARMONIC_IN_PLANE_ANGLE_FORCE] = atof( tokens[1].c_str() );
+                }
+   
+            // AmoebaTorsion
+  
+            } else if( field == "AmoebaTorsionParameters" ){
+                readAmoebaTorsionParameters( filePtr, forceMap, tokens, system, useOpenMMUnits, inputArgumentMap, &lineCount, log );
+            } else if( field == "AmoebaTorsionForce" ){
+                readVec3( filePtr, tokens, forces[AMOEBA_TORSION_FORCE], &lineCount, field, log );
+            } else if( field == "AmoebaTorsionEnergy" ){
+                if( tokens.size() > 1 ){
+                   potentialEnergy[AMOEBA_TORSION_FORCE] = atof( tokens[1].c_str() ); 
+                }
+   
+            // AmoebaPiTorsion
+  
+            } else if( field == "AmoebaPiTorsionParameters" ){
+               readAmoebaPiTorsionParameters( filePtr, forceMap, tokens, system, useOpenMMUnits, inputArgumentMap, &lineCount, log );
+            } else if( field == "AmoebaPiTorsionForce" ){
+               readVec3( filePtr, tokens, forces[AMOEBA_PI_TORSION_FORCE], &lineCount, field, log );
+            } else if( field == "AmoebaPiTorsionEnergy" ){
+                if( tokens.size() > 1 ){
+                   potentialEnergy[AMOEBA_PI_TORSION_FORCE] = atof( tokens[1].c_str() );
+                }
+  
+            // AmoebaStretchBend
+  
+            } else if( field == "AmoebaStretchBendParameters" ){
+                readAmoebaStretchBendParameters( filePtr, forceMap, tokens, system, useOpenMMUnits, inputArgumentMap, &lineCount, log );
+            } else if( field == "AmoebaStretchBendForce" ){
+                readVec3( filePtr, tokens, forces[AMOEBA_STRETCH_BEND_FORCE], &lineCount, field, log );
+            } else if( field == "AmoebaStretchBendEnergy" ){
+                if( tokens.size() > 1 ){
+                   potentialEnergy[AMOEBA_STRETCH_BEND_FORCE] = atof( tokens[1].c_str() );
+                }
+  
+            // AmoebaOutOfPlaneBend
+  
+            } else if( field == "AmoebaOutOfPlaneBendParameters" ){
+                readAmoebaOutOfPlaneBendParameters( filePtr, forceMap, tokens, system, useOpenMMUnits, inputArgumentMap, &lineCount, log );
+            } else if( field == "AmoebaOutOfPlaneBendForce" ){
+                readVec3( filePtr, tokens, forces[AMOEBA_OUT_OF_PLANE_BEND_FORCE], &lineCount, field, log );
+            } else if( field == "AmoebaOutOfPlaneBendEnergy" ){
+                if( tokens.size() > 1 ){
+                   potentialEnergy[AMOEBA_OUT_OF_PLANE_BEND_FORCE] = atof( tokens[1].c_str() ); 
+                }
+  
+            // AmoebaTorsionTorsion
+  
+            } else if( field == "AmoebaTorsionTorsionParameters" ){
+                readAmoebaTorsionTorsionParameters( filePtr, forceMap, tokens, system, useOpenMMUnits, inputArgumentMap, &lineCount, log );
+            } else if( field == "AmoebaTorsionTorsionForce" ){
+                readVec3( filePtr, tokens, forces[AMOEBA_TORSION_TORSION_FORCE], &lineCount, field, log );
+            } else if( field == "AmoebaTorsionTorsionEnergy" ){
+                if( tokens.size() > 1 ){
+                   potentialEnergy[AMOEBA_TORSION_TORSION_FORCE] = atof( tokens[1].c_str() ); 
+                }
+  
+            // AmoebaMultipole
+  
+            } else if( field == "AmoebaMultipoleParameters" ){
+                readAmoebaMultipoleParameters( filePtr, forceMap, tokens, system, useOpenMMUnits, supplementary, inputArgumentMap, &lineCount, log );
+            } else if( field == "AmoebaMultipoleForce" ){
+                readVec3( filePtr, tokens, forces[AMOEBA_MULTIPOLE_FORCE], &lineCount, field, log );
+            } else if( field == "AmoebaMultipoleEnergy" ){
+               if( tokens.size() > 1 ){
+                 potentialEnergy[AMOEBA_MULTIPOLE_FORCE] = atof( tokens[1].c_str() ); 
+              }
+           } else if( field == "AmoebaGeneralizedKirkwoodParameters" ){
+               readAmoebaGeneralizedKirkwoodParameters( filePtr, forceMap, tokens, system, useOpenMMUnits, supplementary, inputArgumentMap, &lineCount, log );
+           } else if( field == "AmoebaGkForce" ){
+               readVec3( filePtr, tokens, forces[AMOEBA_GK_FORCE], &lineCount, field, log );
+           } else if(  field == "AmoebaGk_A_ForceAndTorque"            || 
+                       field == "AmoebaGk_A_Force"                     ||
+                       field == "AmoebaGk_A_DrB"                       ||
+                       field == "AmoebaDBorn"                          ||
+                       field == "AmoebaBornForce"                      ||
+                       field == "AmoebaGkEdiffForceAndTorque"          ||
+                       field == "AmoebaGkEdiffForce"                      ){
+               std::vector< std::vector<double> > vectorOfDoubleVectors;
+               readVectorOfDoubleVectors( filePtr, tokens, vectorOfDoubleVectors, &lineCount, field, log );
+               supplementary[field] = vectorOfDoubleVectors;
+           } else if( field == "AmoebaGkEnergy"       || 
+                      field == "AmoebaGkEdiffEnergy"  ||
+                      field == "AmoebaGk_A_Energy"    ||
+                      field == "AmoebaBornEnergy"     ){
+               double value = atof( tokens[1].c_str() );
+               std::vector< std::vector<double> > vectorOfDoubleVectors;
+               std::vector<double> doubleVectors;
+               doubleVectors.push_back( value );
+               vectorOfDoubleVectors.push_back( doubleVectors ); 
+               supplementary[field] =  vectorOfDoubleVectors;
+               if( field == "AmoebaGkEnergy" ){
+                   potentialEnergy[AMOEBA_GK_FORCE] = value; 
+               }
+           } else if( field == "AmoebaSurfaceParameters" ){
+               readAmoebaSurfaceParameters( filePtr, forceMap, tokens, system, &lineCount, supplementary, log );
+           } else if( field == "AmoebaVdw14_7SigEpsTable"  || field == "AmoebaVdw14_7Reduction" ){
+               readAmoebaVdwParameters( filePtr, forceMap, tokens, system, useOpenMMUnits, supplementary, inputArgumentMap, &lineCount, log );
+           } else if( field == "AmoebaVdwForce" ){
+               readVec3( filePtr, tokens, forces[AMOEBA_VDW_FORCE], &lineCount, field, log );
+           } else if( field == "AmoebaVdwEnergy" ){
+               if( tokens.size() > 1 ){
+                  potentialEnergy[AMOEBA_VDW_FORCE] = atof( tokens[1].c_str() ); 
+               }
+           } else if( field == "AmoebaWcaDispersionParameters" ){
+               readAmoebaWcaDispersionParameters( filePtr, forceMap, tokens, system, useOpenMMUnits, supplementary, inputArgumentMap, &lineCount, log );
+           } else if( field == "AmoebaWcaDispersionForce" ){
+               readVec3( filePtr, tokens, forces[AMOEBA_WCA_DISPERSION_FORCE], &lineCount, field, log );
+           } else if( field == "AmoebaWcaDispersionEnergy" ){
+               if( tokens.size() > 1 ){
+                  potentialEnergy[AMOEBA_WCA_DISPERSION_FORCE] = atof( tokens[1].c_str() ); 
+               }
+           } else if( field == "Constraints" ){
+               readConstraints( filePtr, tokens, system, &lineCount, log );
+           } else if( field == "Integrator" ){
+               returnIntegrator = readIntegrator( filePtr, tokens, system, &lineCount, log );
+           } else if( field == "Positions"  || field == "Coordinates" ){
+               readVec3( filePtr, tokens, coordinates, &lineCount, field, log );
+               if( useOpenMMUnits ){
+                   for( unsigned int ii = 0; ii < coordinates.size(); ii++ ){
+                       coordinates[ii][0] *= AngstromToNm;
+                       coordinates[ii][1] *= AngstromToNm;
+                       coordinates[ii][2] *= AngstromToNm;
+                   }
+               }
+           } else if( field == "Velocities" ){
+               readVec3( filePtr, tokens, velocities, &lineCount, field, log );
+           } else if( field == "Forces" ){
+            //  readVec3( filePtr, tokens, forces, &lineCount, field, log );
+           } else if( field == "KineticEnergy"  ||
+                      field == "PotentialEnergy" ){
+           } else {
+               char buffer[1024];
+               (void) sprintf( buffer, "Field=<%s> not recognized at line=%d\n", field.c_str(), lineCount );
+               throwException(__FILE__, __LINE__, buffer );
+               exit(-1);
+           }
+       }
+    }
+
+    if( returnIntegrator == NULL ){
+       returnIntegrator = new VerletIntegrator(0.001);
+    }
+ 
+    if( log ){
+        (void) fprintf( log, "Potential energies\n" );
+        for( MapStringDoubleI ii = potentialEnergy.begin(); ii != potentialEnergy.end(); ii++ ){
+            (void) fprintf( log, "%30s %14.7e\n", ii->first.c_str(), ii->second );
+       }
+       (void) fprintf( log, "Read %d lines from file=<%s>\n", lineCount, inputParameterFile.c_str() );
+       (void) fflush( log );
+    }
+
+   return returnIntegrator;
+}
+
+/**---------------------------------------------------------------------------------------
+ * Initialize forceMap
+ *
+ * @param forceMap        has w/ force name as key and int as value
+ * @param initialValue    initial value
+ *
+ *
+    --------------------------------------------------------------------------------------- */
+
+void initializeForceMap( MapStringInt& forceMap, int initialValue ){
+
+     forceMap[AMOEBA_HARMONIC_BOND_FORCE]            = initialValue;
+     forceMap[AMOEBA_HARMONIC_ANGLE_FORCE]           = initialValue;
+     forceMap[AMOEBA_HARMONIC_IN_PLANE_ANGLE_FORCE]  = initialValue;
+     forceMap[AMOEBA_TORSION_FORCE]                  = initialValue;
+     forceMap[AMOEBA_PI_TORSION_FORCE]               = initialValue;
+     forceMap[AMOEBA_STRETCH_BEND_FORCE]             = initialValue;
+     forceMap[AMOEBA_OUT_OF_PLANE_BEND_FORCE]        = initialValue;
+     forceMap[AMOEBA_TORSION_TORSION_FORCE]          = initialValue;
+
+     forceMap[AMOEBA_MULTIPOLE_FORCE]                = initialValue;
+     forceMap[AMOEBA_GK_FORCE]                       = initialValue;
+     forceMap[AMOEBA_VDW_FORCE]                      = initialValue;
+     forceMap[AMOEBA_WCA_DISPERSION_FORCE]           = initialValue;
+     forceMap[AMOEBA_SASA_FORCE]                     = 0;
+ 
+     return;
+
+}
+
+void checkIntermediateMultipoleQuantities( Context* context, MapStringVectorOfVectors& supplementary,
+                                           int useOpenMMUnits, FILE* log ) {
+
+// ---------------------------------------------------------------------------------------
+
+    static const std::string methodName      = "checkIntermediateMultipoleQuantities";
+ 
+// ---------------------------------------------------------------------------------------
+
+    // get pointer to AmoebaCudaData for this context
+
+    ContextImpl* contextImpl          = *reinterpret_cast<ContextImpl**>(context);
+    void* amoebaCudaDataV             = getAmoebaCudaData( *contextImpl );
+    if( log == NULL ){
+        return;
+    }
+
+    (void) fprintf( log, "%s amoebaCudaDataV=%p\n", methodName.c_str(), amoebaCudaDataV );
+    AmoebaCudaData* amoebaCudaData = static_cast<AmoebaCudaData*>(amoebaCudaDataV);
+    amoebaGpuContext amoebaGpu     = amoebaCudaData->getAmoebaGpu();
+
+    unsigned int totalMisses       = 0;
+
+    // compare rotation matrix 
+
+    try {
+        amoebaGpu->psRotationMatrix->Download();
+        unsigned int numberOfEntries                                  = amoebaGpu->psRotationMatrix->_length/9;
+        float* rotationMatrices                                       = reinterpret_cast<float*>(amoebaGpu->psRotationMatrix->_pSysData);
+        std::vector< std::vector<double> > expectedRotationMatrices   =  supplementary[AMOEBA_MULTIPOLE_ROTATION_MATRICES];
+    
+        unsigned int index  = 0;
+        unsigned int misses = 0;
+        double tolerance    = 5.0e-03;
+        numberOfEntries     = expectedRotationMatrices.size() < numberOfEntries ? expectedRotationMatrices.size() : numberOfEntries;
+        for( unsigned int ii = 0; ii < numberOfEntries; ii++ ){
+            std::vector<double> expectedRotationMatrix = expectedRotationMatrices[ii];
+            int rowHit = 0;
+            for( unsigned int jj = 0; jj < expectedRotationMatrix.size(); jj++ ){
+                double diff = fabs( rotationMatrices[index] - expectedRotationMatrix[jj] );
+                if( diff > 0.0 ){
+                    diff = 2.0*diff/(fabs( rotationMatrices[index] ) + fabs( expectedRotationMatrix[jj] ) );
+                }
+                if( diff > tolerance ){
+                    misses++;
+                    if( misses == 1 ){
+                        (void) fprintf( log, "%s: RotationMatrix tolerance=%10.3e\n", methodName.c_str(), tolerance );
+                    }
+                    if( !rowHit ){
+                        (void) fprintf( log, "%5u ", ii );
+                        rowHit = 1;
+                    }
+                    (void) fprintf( log, "%5u [%14.7e %14.7e %14.7e]\n", jj,
+                                    diff, rotationMatrices[index], expectedRotationMatrix[jj] );
+                }
+                index++;
+            }
+        }
+        if( misses == 0 ){
+            (void) fprintf( log, "%u rotation matricies agree to relative tolerance of %10.3e\n", numberOfEntries, tolerance );
+            (void) fflush( log );
+        } else {
+            totalMisses += misses;
+        }
+    } catch( exception& e ){
+        (void) fprintf( log, "Rotation matricies not available\n" );
+        (void) fflush( log );
+    }
+    
+    // compare fixed E field
+    
+    try {
+        amoebaGpu->psE_Field->Download();
+        amoebaGpu->psE_FieldPolar->Download();
+        unsigned int numberOfEntries                                  = amoebaGpu->psE_Field->_length/3;
+        float* E_Field                                                = reinterpret_cast<float*>(amoebaGpu->psE_Field->_pSysData);
+        float* E_FieldPolar                                           = reinterpret_cast<float*>(amoebaGpu->psE_FieldPolar->_pSysData);
+        std::vector< std::vector<double> > expectedEFields            = supplementary[AMOEBA_FIXED_E];
+    
+        double dipoleConversion       = useOpenMMUnits ? 1.0/AngstromToNm : 1.0;
+        unsigned int misses           = 0;
+        double tolerance              = 1.0e-03;
+        numberOfEntries               = expectedEFields.size() < numberOfEntries ? expectedEFields.size() : numberOfEntries;
+        for( unsigned int ii = 0; ii < numberOfEntries; ii++ ){
+            std::vector<double> expectedEField = expectedEFields[ii];
+            int rowHit = 0;
+            for( unsigned int jj = 0; jj < expectedEField.size(); jj++ ){
+                double eFieldValue  = (jj < 3) ? E_Field[ii*3+jj] : E_FieldPolar[ii*3+jj-3];
+                       eFieldValue *= dipoleConversion;
+                double diff         = fabs( eFieldValue - expectedEField[jj] );
+                if( diff > 1.0e-04 ){
+                    diff = 2.0*diff/(fabs( eFieldValue ) + fabs( expectedEField[jj] ) );
+                }
+                if( diff > tolerance ){
+                    misses++;
+                    if( misses == 1 ){
+                        (void) fprintf( log, "%s: EField\n", methodName.c_str() );
+                    }
+                    if( !rowHit ){
+                        (void) fprintf( log, "     Row %5u\n", ii );
+                        rowHit = 1;
+                    }
+                    (void) fprintf( log, "         %5u [%14.7e %14.7e %14.7e]\n", jj, diff, eFieldValue, expectedEField[jj] );
+                }
+            }
+        }
+        if( misses == 0 ){
+            (void) fprintf( log, "%u fixed-E fields agree to relative tolerance of %10.3e\n", numberOfEntries, tolerance); 
+            (void) fflush( log );
+        } else {
+            totalMisses += misses;
+        }
+    } catch( exception& e ){
+        (void) fprintf( log, "Fixed-E fields not available\n" );
+        (void) fflush( log );
+    }
+    
+    try {
+        // compare induced dipoles
+    
+        amoebaGpu->psInducedDipole->Download();
+        amoebaGpu->psInducedDipolePolar->Download();
+        unsigned int numberOfEntries                                  = amoebaGpu->psInducedDipole->_length/3;
+        float* inducedDipole                                          = reinterpret_cast<float*>(amoebaGpu->psInducedDipole->_pSysData);
+        float* inducedDipolePolar                                     = reinterpret_cast<float*>(amoebaGpu->psInducedDipolePolar->_pSysData);
+        std::vector< std::vector<double> > expectedInducedDipoles     = supplementary[AMOEBA_INDUCDED_DIPOLES];
+    
+        unsigned int misses           = 0;
+        double tolerance              = 1.0e-03;
+        double dipoleConversion       = useOpenMMUnits ? 1.0/AngstromToNm : 1.0;
+        numberOfEntries      = expectedInducedDipoles.size() < numberOfEntries ? expectedInducedDipoles.size() : numberOfEntries;
+        for( unsigned int ii = 0; ii < numberOfEntries; ii++ ){
+
+            std::vector<double> expectedInducedDipole = expectedInducedDipoles[ii];
+            int rowHit                                = 0;
+
+            for( unsigned int jj = 0; jj < expectedInducedDipole.size(); jj++ ){
+                double inducedDipoleValue  = (jj < 3) ? inducedDipole[ii*3+jj] : inducedDipolePolar[ii*3+jj-3];
+                       inducedDipoleValue *= dipoleConversion;
+                double diff         = fabs( inducedDipoleValue - expectedInducedDipole[jj] );
+                if( diff > 1.0e-04 ){
+                    diff = 2.0*diff/(fabs( inducedDipoleValue ) + fabs( expectedInducedDipole[jj] ) );
+                }
+                if( diff > tolerance ){
+                    misses++;
+                    if( misses == 1 ){
+                        (void) fprintf( log, "%s: induced dipole\n", methodName.c_str() );
+                    }
+                    if( !rowHit ){
+                        (void) fprintf( log, "     Row %5u\n", ii );
+                        rowHit = 1;
+                    }
+                    (void) fprintf( log, "         %5u [%14.7e %14.7e %14.7e]\n", jj, diff, inducedDipoleValue, expectedInducedDipole[jj] );
+                }
+            }
+        }
+        if( misses == 0 ){
+            (void) fprintf( log, "%u induced dipoles agree to relative tolerance of %10.3e\n", numberOfEntries, tolerance);
+            (void) fflush( log );
+        } else {
+            totalMisses += misses;
+        }
+    } catch( exception& e ){
+        (void) fprintf( log, "Induced dipoles not available\n" ); 
+        (void) fflush( log );
+    }
+
+}
+
+void calculateBorn1( System& amoebaSystem, std::vector<Vec3>& tinkerCoordinates, FILE* log ) {
+
+// ---------------------------------------------------------------------------------------
+
+    static const std::string methodName      = "calculateBorn1";
+ 
+// ---------------------------------------------------------------------------------------
+ 
+    System* system  = new System();
+    int hit         = 0;
+    for( int ii = 0; ii < amoebaSystem.getNumForces() && hit == 0; ii++ ){
+        const Force& force = amoebaSystem.getForce(ii);
+        try {
+            const AmoebaGeneralizedKirkwoodForce& amoebaGeneralizedKirkwoodForce = dynamic_cast<const AmoebaGeneralizedKirkwoodForce&>(force);
+            hit = 1;
+            GBSAOBCForce* gbsa = new GBSAOBCForce();
+            system->addForce( gbsa );
+            for( int jj = 0; jj < amoebaGeneralizedKirkwoodForce.getNumParticles(); jj++ ){
+                double charge, radius, scalingFactor;
+                amoebaGeneralizedKirkwoodForce.getParticleParameters(jj, charge, radius, scalingFactor);
+                radius *= 0.1;
+                gbsa->addParticle( charge, radius, scalingFactor);
+                system->addParticle( 1.0 );
+            }
+            gbsa->setSoluteDielectric( amoebaGeneralizedKirkwoodForce.getSoluteDielectric() );
+            gbsa->setSolventDielectric( amoebaGeneralizedKirkwoodForce.getSolventDielectric() );
+        } catch( std::bad_cast ){
+        }    
+    }
+    if( hit == 0 ){
+        (void) fprintf( log, "%s: AmoebaGeneralizedKirkwoodForce not found\n", methodName.c_str() );
+    } else {
+        (void) fprintf( log, "%s: AmoebaGeneralizedKirkwoodForce found\n", methodName.c_str() );
+    }
+    LangevinIntegrator integrator(0.0, 0.1, 0.01);
+    Context context(*system, integrator, Platform::getPlatformByName( "Reference"));
+    std::vector<Vec3> coordinates;
+    coordinates.resize( tinkerCoordinates.size() );
+    for( unsigned int ii = 0; ii < tinkerCoordinates.size(); ii++ ){
+        Vec3 coordinate = tinkerCoordinates[ii];
+        coordinates[ii] = Vec3( coordinate[0]*0.1, coordinate[1]*0.1, coordinate[2]*0.1 );
+    }
+    context.setPositions(coordinates);
+
+    State state                            = context.getState(State::Forces | State::Energy);
+    const std::vector<Vec3> forces         = state.getForces();
+
+    if( log ){
+        (void) fprintf( log, "%s: energy=%14.7e\n", methodName.c_str(), state.getPotentialEnergy() );
+        for( unsigned int ii = 0; ii < forces.size(); ii++ ){
+            (void) fprintf( log, "%6u [%14.7e %14.7e %14.7e]\n", ii, forces[ii][0], forces[ii][1], forces[ii][2] );
+        }
+        (void) fflush( log );
+    }
+}
+
+/**---------------------------------------------------------------------------------------
+ * Get integrator
+ * 
+ * @param  integratorName       integratorName (VerletIntegrator, BrownianIntegrator, LangevinIntegrator, ...)
+ * @param  timeStep             time step
+ * @param  friction (ps)        friction
+ * @param  temperature          temperature
+ * @param  shakeTolerance       Shake tolerance
+ * @param  errorTolerance       Error tolerance
+ * @param  randomNumberSeed     seed
+ *
+ * @return DefaultReturnValue or ErrorReturnValue
+ *
+   --------------------------------------------------------------------------------------- */
+
+Integrator* getIntegrator( MapStringString& inputArgumentMap, FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName      = "getIntegrator";
+
+   std::string integratorName               = "LangevinIntegrator";
+   double timeStep                          = 0.001;
+   double friction                          = 91.0;
+   double temperature                       = 300.0;
+   double shakeTolerance                    = 1.0e-05;
+   double errorTolerance                    = 1.0e-05;
+   int randomNumberSeed                     = 1993;
+
+// ---------------------------------------------------------------------------------------
+
+    setStringFromMap( inputArgumentMap, "integrator",       integratorName );
+    setDoubleFromMap( inputArgumentMap, "timeStep",         timeStep );
+    setDoubleFromMap( inputArgumentMap, "friction",         friction );
+    setDoubleFromMap( inputArgumentMap, "temperature",      temperature );
+    setDoubleFromMap( inputArgumentMap, "shakeTolerance",   shakeTolerance );
+    setDoubleFromMap( inputArgumentMap, "errorTolerance",   errorTolerance );
+    setIntFromMap(    inputArgumentMap, "randomNumberSeed", randomNumberSeed );
+
+    // Create an integrator 
+    
+    Integrator* integrator;
+
+    if( integratorName.compare( "VerletIntegrator" ) == 0 ){
+        integrator = new VerletIntegrator( timeStep );
+    } else if( integratorName.compare( "VariableVerletIntegrator" ) == 0 ){
+        integrator = new VariableVerletIntegrator( errorTolerance );
+    } else if( integratorName.compare( "BrownianIntegrator" ) == 0 ){
+        integrator = new BrownianIntegrator( temperature, friction, timeStep );
+    } else if( integratorName.compare( "LangevinIntegrator" ) == 0 ){
+        integrator                                = new LangevinIntegrator( temperature, friction, timeStep );
+        LangevinIntegrator* langevinIntegrator    = dynamic_cast<LangevinIntegrator*>(integrator);
+        langevinIntegrator->setRandomNumberSeed( randomNumberSeed );
+    } else if( integratorName.compare( "VariableLangevinIntegrator" ) == 0 ){
+        integrator                                        = new VariableLangevinIntegrator( temperature, friction, errorTolerance );
+        VariableLangevinIntegrator* langevinIntegrator    = dynamic_cast<VariableLangevinIntegrator*>(integrator);
+        langevinIntegrator->setRandomNumberSeed( randomNumberSeed );
+    } else {
+       char buffer[1024];
+       (void) sprintf( buffer, "%s  integrator=<%s> not recognized.\n", methodName.c_str(), integratorName.c_str() );
+       if( log ){
+          (void) fprintf( log , "%s", buffer );
+          (void) fflush( log );
+       }
+       throwException(__FILE__, __LINE__, buffer );
+       return NULL;
+    }    
+
+    integrator->setConstraintTolerance( shakeTolerance );
+    
+   return integrator;
+}
+
+/**---------------------------------------------------------------------------------------
+ * Get integrator type
+ * 
+ * @param  integrator 
+ *
+ * @return name or "NotFound"
+ *
+   --------------------------------------------------------------------------------------- */
+
+static std::string getIntegratorName( Integrator* integrator ){
+
+// ---------------------------------------------------------------------------------------
+
+//   static const std::string methodName      = "getIntegratorName";
+
+// ---------------------------------------------------------------------------------------
+
+   // LangevinIntegrator
+
+   try {
+      LangevinIntegrator& langevinIntegrator = dynamic_cast<LangevinIntegrator&>(*integrator);
+      return  "LangevinIntegrator";
+   } catch( std::bad_cast ){
+   }
+
+   // VariableLangevinIntegrator
+
+   try {
+      VariableLangevinIntegrator& langevinIntegrator = dynamic_cast<VariableLangevinIntegrator&>(*integrator);
+      return "VariableLangevinIntegrator";
+   } catch( std::bad_cast ){
+   }
+
+   // VerletIntegrator
+
+   try {
+      VerletIntegrator& verletIntegrator = dynamic_cast<VerletIntegrator&>(*integrator);
+      return "VerletIntegrator";
+   } catch( std::bad_cast ){
+   }
+    
+   // VariableVerletIntegrator
+
+   try {
+      VariableVerletIntegrator & variableVerletIntegrator = dynamic_cast<VariableVerletIntegrator&>(*integrator);
+      return "VariableVerletIntegrator";
+   } catch( std::bad_cast ){
+   }
+    
+   // BrownianIntegrator
+
+   try {
+      BrownianIntegrator& brownianIntegrator = dynamic_cast<BrownianIntegrator&>(*integrator);
+      return "BrownianIntegrator";
+   } catch( std::bad_cast ){
+   }
+    
+   return "NotFound";
+}
+
+/**---------------------------------------------------------------------------------------
+ * Set velocities based on temperature
+ * 
+ * @param system       System reference -- retrieve particle masses
+ * @param velocities   array of Vec3 for velocities (size must be set)
+ * @param temperature  temperature
+ * @param log          optional log reference
+ *
+ * @return DefaultReturnValue
+ *
+   --------------------------------------------------------------------------------------- */
+
+static void setVelocitiesBasedOnTemperature( const System& system, std::vector<Vec3>& velocities, double temperature, FILE* log ) {
+    
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName    = "setVelocitiesBasedOnTemperature";
+
+   double randomValues[3];
+
+// ---------------------------------------------------------------------------------------
+
+   // set velocities based on temperature
+
+   temperature   *= BOLTZ;
+   double randMax = static_cast<double>(RAND_MAX);
+   randMax        = 1.0/randMax;
+   for( unsigned int ii = 0; ii < velocities.size(); ii++ ){
+      double velocityScale      = std::sqrt( temperature/system.getParticleMass(ii) );
+      randomValues[0]           = randMax*( (double) rand() );
+      randomValues[1]           = randMax*( (double) rand() );
+      randomValues[2]           = randMax*( (double) rand() );
+      velocities[ii]            = Vec3( randomValues[0]*velocityScale, randomValues[1]*velocityScale, randomValues[2]*velocityScale );
+   }
+
+   return;
+}
+
+/**---------------------------------------------------------------------------------------
+ * Print Integrator info to log
+ * 
+ * @param integrator   integrator
+ * @param log          optional log reference
+ *
+ * @return DefaultReturnValue
+ *
+   --------------------------------------------------------------------------------------- */
+
+static void printIntegratorInfo( Integrator& integrator, FILE* log ){
+    
+// ---------------------------------------------------------------------------------------
+
+   //static const std::string methodName    = "printIntegratorInfo";
+
+// ---------------------------------------------------------------------------------------
+
+   std::string integratorName           = getIntegratorName( &integrator );
+   (void) fprintf( log, "Integrator=%s stepSize=%.3f ShakeTol=%.3e\n", 
+                   integratorName.c_str(), integrator.getStepSize(), integrator.getConstraintTolerance() );
+
+   // stochastic integrators (seed, friction, temperature)
+
+   if( integratorName == "LangevinIntegrator" || integratorName == "VariableLangevinIntegrator"  ||
+       integratorName ==  "BrownianIntegrator" ){
+
+      double temperature = 300.0;
+      double friction    = 100.0;
+      int seed           = 0;
+
+      if( integratorName == "LangevinIntegrator" ){
+         LangevinIntegrator&  langevinIntegrator         = dynamic_cast<LangevinIntegrator&>(integrator);
+         temperature                                     = langevinIntegrator.getTemperature();
+         friction                                        = langevinIntegrator.getFriction();
+         seed                                            = langevinIntegrator.getRandomNumberSeed();
+      } else if( integratorName == "VariableLangevinIntegrator" ){
+         VariableLangevinIntegrator&  langevinIntegrator = dynamic_cast<VariableLangevinIntegrator&>(integrator);
+         temperature                                     = langevinIntegrator.getTemperature();
+         friction                                        = langevinIntegrator.getFriction();
+         seed                                            = langevinIntegrator.getRandomNumberSeed();
+      } else if( integratorName == "BrownianIntegrator" ){
+         BrownianIntegrator& brownianIntegrator          = dynamic_cast<BrownianIntegrator&>(integrator);
+         temperature                                     = brownianIntegrator.getTemperature();
+         friction                                        = brownianIntegrator.getFriction();
+         seed                                            = brownianIntegrator.getRandomNumberSeed();
+      }
+   
+      (void) fprintf( log, "T=%.3f friction=%.3f seed=%d\n", temperature, friction, seed );
+   }
+
+   // variable integrators -- error tolerance
+
+   if( integratorName == "VariableLangevinIntegrator" || integratorName== "VariableVerletIntegrator" ){
+      double errorTolerance = 0.0;
+      if( integratorName == "VariableLangevinIntegrator" ){
+         VariableLangevinIntegrator& langevinIntegrator          = dynamic_cast<VariableLangevinIntegrator&>(integrator);
+         errorTolerance                                          = langevinIntegrator.getErrorTolerance();
+      } else {
+         VariableVerletIntegrator& verletIntegrator              = dynamic_cast<VariableVerletIntegrator&>(integrator);
+         errorTolerance                                          = verletIntegrator.getErrorTolerance();
+      }
+      (void) fprintf( log, "Error tolerance=%.3e\n", errorTolerance );
+   }
+
+   (void) fflush( log );
+
+   return;
+}
+
+/**---------------------------------------------------------------------------------------
+
+   Set the velocities/positions of context2 to those of context1
+
+   @param context1                 context1 
+   @param context2                 context2 
+
+   @return 0
+
+   --------------------------------------------------------------------------------------- */
+
+static int _synchContexts( const Context& context1, Context& context2 ){
+
+   // ---------------------------------------------------------------------------------------
+
+   //static const char* methodName  = "\n_synchContexts: ";
+
+   // ---------------------------------------------------------------------------------------
+
+   const State state                       = context1.getState(State::Positions | State::Velocities);
+   const std::vector<Vec3>& positions      = state.getPositions();
+   const std::vector<Vec3>& velocities     = state.getVelocities();
+
+   context2.setPositions( positions );
+   context2.setVelocities( velocities );
+
+   return DefaultReturnValue;
+}
+
+
+/**---------------------------------------------------------------------------------------
+      
+   Get statistics of elements in array
+   
+   @param array               array to collect stats
+   @param statistics          statistics of array
+      index = 0   mean
+      index = 1   stddev
+      index = 2   min 
+      index = 3   index of min value 
+      index = 4   max
+      index = 5   index of max value 
+      index = 6   size of array
+
+   @return DefaultReturnValue
+      
+   --------------------------------------------------------------------------------------- */
+
+static void getStatistics( const std::vector<double> & array,  std::vector<double> & statistics ){
+
+   // ---------------------------------------------------------------------------------------
+
+   static const char* methodName = "getStatistics";
+
+   static const int mean         = 0;
+   static const int stddev       = 1;
+   static const int min          = 2;
+   static const int minIndex     = 3;
+   static const int max          = 4;
+   static const int maxIndex     = 5;
+   static const int size         = 6;
+
+   // ---------------------------------------------------------------------------------------
+
+   // initialize stat array
+
+   statistics.resize( 10 );
+   for( unsigned int jj = 0; jj < statistics.size(); jj++ ){
+      statistics[jj] = 0.0;
+   }
+   statistics[min] =  1.0e+30;
+   statistics[max] = -1.0e+30;
+
+   // collect stats
+
+   int index       = 0;
+   for( std::vector<double>::const_iterator ii = array.begin(); ii != array.end(); ii++ ){
+
+      // first/second moments
+
+      statistics[mean]     += *ii;
+      statistics[stddev]   += (*ii)*(*ii);
+
+      // min/max
+
+      if( *ii < statistics[min] ){
+         statistics[min]      = *ii;
+         statistics[minIndex] = index;
+      }
+      if( *ii > statistics[max] ){
+         statistics[max]      = *ii;
+         statistics[maxIndex] = index;
+      }
+      index++;
+   }
+
+   // compute mean & std dev
+
+   double arraySz      = (double) index;
+   statistics[size]    = arraySz;
+   if( index ){
+      statistics[mean]   /= arraySz;
+      statistics[stddev]  = statistics[stddev] - arraySz*statistics[mean]*statistics[mean];
+      if( index > 1 ){
+         statistics[stddev]  = std::sqrt( statistics[stddev] / ( arraySz - 1.0 ) );
+      }
+   }
+
+   return;
+}
+
+Context* createContext( const std::string& amoebaTinkerParameterFileName, MapStringInt& forceMap,
+                        int useOpenMMUnits, MapStringString& inputArgumentMap, MapStringVectorOfVectors& supplementary,
+                        MapStringVec3& tinkerForces, MapStringDouble& tinkerEnergies, FILE* log ) {
+
+// ---------------------------------------------------------------------------------------
+
+    static const std::string methodName      = "createContext";
+ 
+// ---------------------------------------------------------------------------------------
+ 
+    System* system  = new System();
+ 
+    std::vector<Vec3> coordinates; 
+    std::vector<Vec3> velocities; 
+    MapStringIntI isPresent = forceMap.find( AMOEBA_GK_FORCE );
+    bool gkIsActive;
+    if( isPresent != forceMap.end() && isPresent->second != 0 ){
+        forceMap[AMOEBA_MULTIPOLE_FORCE] = 1;
+        gkIsActive                       = true;
+    } else {
+        gkIsActive                       = false;
+    }
+
+    // read parameters into system and coord/velocities into appropriate arrays
+ 
+    readAmoebaParameterFile( amoebaTinkerParameterFileName, forceMap, *system, coordinates, velocities,
+                             tinkerForces, tinkerEnergies, supplementary, useOpenMMUnits, inputArgumentMap, log );
+ 
+    Integrator* integrator = getIntegrator( inputArgumentMap, log );
+    Context* context = new Context(*system, *integrator, Platform::getPlatformByName( "Cuda"));
+    context->setPositions(coordinates);
+
+    return context;
+
+}
+
+void testUsingAmoebaTinkerParameterFile( const std::string& amoebaTinkerParameterFileName, MapStringInt& forceMap,
+                                         int useOpenMMUnits, MapStringString& inputArgumentMap,
+                                         FILE* summaryFile,  FILE* log ) {
+
+// ---------------------------------------------------------------------------------------
+
+    double tolerance                         = 1.0e-02;
+    static const std::string methodName      = "testUsingAmoebaTinkerParameterFile";
+ 
+// ---------------------------------------------------------------------------------------
+ 
+   setDoubleFromMap( inputArgumentMap, "tolerance",  tolerance );
+
+    MapStringVec3 tinkerForces;
+    MapStringDouble tinkerEnergies;
+    MapStringVectorOfVectors supplementary;
+ 
+    MapStringIntI isPresent = forceMap.find( AMOEBA_GK_FORCE );
+    bool gkIsActive;
+    if( isPresent != forceMap.end() && isPresent->second != 0 ){
+        forceMap[AMOEBA_MULTIPOLE_FORCE] = 1;
+        gkIsActive                       = true;
+    } else {
+        gkIsActive                       = false;
+    }
+
+    // read parameters into system and coord/velocities into appropriate arrays
+    // and create context
+ 
+    Context* context = createContext( amoebaTinkerParameterFileName, forceMap,
+                                      useOpenMMUnits, inputArgumentMap, supplementary, tinkerForces, tinkerEnergies, log );
+
+    State state                            = context->getState(State::Forces | State::Energy);
+    System& system                         = context->getSystem();
+    std::vector<Vec3> forces               = state.getForces();
+
+    // get list of forces and then accumulate expected energies/forces
+
+    StringVector forceList;
+    std::string activeForceNames;
+    for( MapStringInt::const_iterator ii = forceMap.begin(); ii != forceMap.end(); ii++ ){
+        if( ii->second ){
+            forceList.push_back( ii->first );
+            activeForceNames += ii->first + ":";
+        }
+    }
+  
+    std::vector<Vec3> expectedForces;
+    expectedForces.resize( system.getNumParticles() );
+    for( unsigned int ii = 0; ii < system.getNumParticles(); ii++ ){
+        expectedForces[ii][0] = 0.0;
+        expectedForces[ii][1] = 0.0;
+        expectedForces[ii][2] = 0.0;
+    }
+    double expectedEnergy = 0.0;
+
+    for( unsigned int ii = 0; ii < forceList.size(); ii++ ){
+        expectedEnergy                += tinkerEnergies[forceList[ii]];
+        std::vector<Vec3> forces       = tinkerForces[forceList[ii]];
+        for( unsigned int jj = 0; jj < system.getNumParticles(); jj++ ){
+            expectedForces[jj][0] += forces[jj][0];
+            expectedForces[jj][1] += forces[jj][1];
+            expectedForces[jj][2] += forces[jj][2];
+        }
+    }
+
+    int showAll                            = 0;
+    double energyConversion;
+    double forceConversion;
+    if( useOpenMMUnits ){
+        energyConversion = 1.0/CalToJoule;
+        forceConversion  = -energyConversion*AngstromToNm;
+    } else {
+        energyConversion = 1.0;
+        forceConversion  = -energyConversion;
+    }
+
+    // output to log and/or summary file
+
+    if( log ){
+        std::vector<FILE*> fileList;
+        if( log )fileList.push_back( log );
+        for( unsigned int ii = 0; ii < fileList.size(); ii++ ){
+            FILE* filePtr = fileList[ii];
+            (void) fprintf( filePtr, "\n" );
+            (void) fprintf( filePtr, "%s: conversion factors %14.7e %14.7e tolerance=%14.7e %s\n", methodName.c_str(), energyConversion, forceConversion, tolerance, amoebaTinkerParameterFileName.c_str() );
+            double deltaE = fabs( expectedEnergy   -       energyConversion*state.getPotentialEnergy());
+            double denom  = fabs( expectedEnergy ) + fabs( energyConversion*state.getPotentialEnergy());
+            if( denom > 0.0 )deltaE *= 2.0/denom;
+            (void) fprintf( filePtr, "expectedE        %10.3e %14.7e %14.7e %20s %30s\n", deltaE, expectedEnergy, energyConversion*state.getPotentialEnergy(), amoebaTinkerParameterFileName.c_str(), activeForceNames.c_str() );
+            (void) fprintf( filePtr, "%s: %u %u Active forces: %s\n", methodName.c_str(), expectedForces.size(), forces.size(), activeForceNames.c_str() );
+            double maxRelativeDelta            = -1.0e+30;
+            unsigned int maxRelativeDeltaIndex = -1;
+            for( unsigned int ii = 0; ii < forces.size(); ii++ ){
+                double normF1          = std::sqrt( (expectedForces[ii][0]*expectedForces[ii][0]) + (expectedForces[ii][1]*expectedForces[ii][1]) + (expectedForces[ii][2]*expectedForces[ii][2]) );
+                double normF2          = std::sqrt( (forces[ii][0]*forces[ii][0]) + (forces[ii][1]*forces[ii][1]) + (forces[ii][2]*forces[ii][2]) );
+                       normF2         *= fabs( forceConversion );
+                double delta           = fabs( normF1 - normF2 );
+                double sumNorms        = 0.5*(normF1 + normF2);
+                double relativeDelta   = sumNorms > 0.0 ? fabs( normF1 - normF2 )/sumNorms : 0.0;
+                if( ( (maxRelativeDelta < relativeDelta) && (sumNorms > 0.1)) || showAll ){
+                    (void) fprintf( filePtr, "%6u %10.3e %10.3e [%14.7e %14.7e %14.7e]   [%14.7e %14.7e %14.7e]\n", ii, relativeDelta, delta,
+                                    expectedForces[ii][0], expectedForces[ii][1], expectedForces[ii][2], forceConversion*forces[ii][0], forceConversion*forces[ii][1], forceConversion*forces[ii][2] );
+                    if( ( (maxRelativeDelta < relativeDelta) && (sumNorms > 0.1)) ){
+                        maxRelativeDelta      =  relativeDelta;
+                        maxRelativeDeltaIndex = ii;
+                    }
+                }
+            }
+            (void) fprintf( filePtr, "maxRelativeDelta %10.3e at %6u %20s %30s\n", maxRelativeDelta, maxRelativeDeltaIndex, amoebaTinkerParameterFileName.c_str(), activeForceNames.c_str() );
+            (void) fflush( filePtr );
+        }
+    }
+
+    if( summaryFile ){
+        std::vector<FILE*> fileList;
+        if( summaryFile )fileList.push_back( summaryFile );
+        for( unsigned int ii = 0; ii < fileList.size(); ii++ ){
+
+            FILE* filePtr = fileList[ii];
+
+            double deltaE = fabs( expectedEnergy   -       energyConversion*state.getPotentialEnergy());
+            double denom  = fabs( expectedEnergy ) + fabs( energyConversion*state.getPotentialEnergy());
+            if( denom > 0.0 )deltaE *= 2.0/denom;
+
+            double maxRelativeDelta            = -1.0e+30;
+            unsigned int maxRelativeDeltaIndex = -1;
+            for( unsigned int ii = 0; ii < forces.size(); ii++ ){
+                double normF1          = std::sqrt( (expectedForces[ii][0]*expectedForces[ii][0]) + (expectedForces[ii][1]*expectedForces[ii][1]) + (expectedForces[ii][2]*expectedForces[ii][2]) );
+                double normF2          = std::sqrt( (forces[ii][0]*forces[ii][0]) + (forces[ii][1]*forces[ii][1]) + (forces[ii][2]*forces[ii][2]) );
+                       normF2         *= fabs( forceConversion );
+                double delta           = fabs( normF1 - normF2 );
+                double sumNorms        = 0.5*(normF1 + normF2);
+                double relativeDelta   = sumNorms > 0.0 ? fabs( normF1 - normF2 )/sumNorms : 0.0;
+                if( ( (maxRelativeDelta < relativeDelta) && (sumNorms > 0.1)) || showAll ){
+                    if( ( (maxRelativeDelta < relativeDelta) && (sumNorms > 0.1)) ){
+                        maxRelativeDelta      =  relativeDelta;
+                        maxRelativeDeltaIndex = ii;
+                    }
+                }
+            }
+            (void) fprintf( filePtr, "%30s maxRelF/E %10.3e %10.3e E[%14.7e %14.7e] %20s %d\n", activeForceNames.c_str(), maxRelativeDelta,
+                            deltaE, expectedEnergy, energyConversion*state.getPotentialEnergy(), amoebaTinkerParameterFileName.c_str(), useOpenMMUnits );
+            (void) fflush( filePtr );
+        }
+    }
+
+    if( gkIsActive == false ){
+        isPresent = forceMap.find( AMOEBA_MULTIPOLE_FORCE );
+        if( isPresent != forceMap.end() && isPresent->second != 0 ){
+             checkIntermediateMultipoleQuantities( context, supplementary, useOpenMMUnits, log );
+        }
+    }
+
+    for( unsigned int ii = 0; ii < forces.size(); ii++ ){
+        forces[ii][0] *= forceConversion;
+        forces[ii][1] *= forceConversion;
+        forces[ii][2] *= forceConversion;
+        ASSERT_EQUAL_VEC( expectedForces[ii], forces[ii], tolerance );
+    }
+    ASSERT_EQUAL_TOL( expectedEnergy, energyConversion*state.getPotentialEnergy(), tolerance );
+
+    if( log ){
+        (void) fprintf( log, "No issues w/ tolerance=%10.3e\n", tolerance );
+        (void) fflush( log );
+    }
+}
+
+/** 
+ * Check that energy and force are consistent
+ * 
+ * @return DefaultReturnValue or ErrorReturnValue
+ *
+ */
+
+void testEnergyForcesConsistent( std::string parameterFileName, MapStringInt& forceMap, int useOpenMMUnits, 
+                                 MapStringString& inputArgumentMap,
+                                 FILE* log, FILE* summaryFile ){
+
+// ---------------------------------------------------------------------------------------
+
+   int applyAssertion                     = 1;
+   double delta                           = 1.0e-04;
+   double tolerance                       = 0.01;
+  
+   static const std::string methodName    = "checkEnergyForceConsistent";
+
+// ---------------------------------------------------------------------------------------
+
+    MapStringVectorOfVectors supplementary;
+    MapStringVec3 tinkerForces;
+    MapStringDouble tinkerEnergies;
+
+    Context* context = createContext( parameterFileName, forceMap, useOpenMMUnits, inputArgumentMap, supplementary,
+                                      tinkerForces, tinkerEnergies, log );
+
+    setIntFromMap(    inputArgumentMap, "applyAssertion",          applyAssertion  );
+    setDoubleFromMap( inputArgumentMap, "energyForceDelta",        delta           );
+    setDoubleFromMap( inputArgumentMap, "energyForceTolerance",    tolerance       );
+ 
+    StringVector forceStringArray;
+    System& system = context->getSystem();
+    getForceStrings( system, forceStringArray, log );
+ 
+    if( log ){
+        (void) fprintf( log, "%s delta=%.3e tolerance=%.3e applyAssertion=%d\n", methodName.c_str(), delta, tolerance, applyAssertion );
+        (void) fprintf( log, "\nForces:\n" );
+        for( StringVectorCI ii = forceStringArray.begin(); ii != forceStringArray.end(); ii++ ){
+           (void) fprintf( log, "   %s\n", (*ii).c_str() );
+        }
+        (void) fflush( log );
+    }
+ 
+    int returnStatus                       = 0;
+ 
+    // get positions, forces and potential energy
+ 
+    int types                              = State::Positions | State::Velocities | State::Forces | State::Energy;
+ 
+    State state                            = context->getState( types );
+ 
+    std::vector<Vec3> coordinates          = state.getPositions();
+    std::vector<Vec3> velocities           = state.getVelocities();
+    std::vector<Vec3> forces               = state.getForces();
+    double kineticEnergy                   = state.getKineticEnergy();
+    double potentialEnergy                 = state.getPotentialEnergy();
+ 
+    // compute norm of force
+ 
+    double forceNorm         = 0.0;
+    for( unsigned int ii = 0; ii < forces.size(); ii++ ){
+        forceNorm += forces[ii][0]*forces[ii][0] + forces[ii][1]*forces[ii][1] + forces[ii][2]*forces[ii][2];
+    }
+ 
+    // check norm is not nan
+ 
+    if( isinf( forceNorm ) || isnan( forceNorm ) ){ 
+        if( log ){
+            (void) fprintf( log, "%s norm of force is nan -- aborting.\n", methodName.c_str() );
+            unsigned int hitNan = 0;
+            for( unsigned int ii = 0; (ii < forces.size()) && (hitNan < 10); ii++ ){
+   
+               if( isinf( forces[ii][0] ) || isnan( forces[ii][0] ) ||
+                   isinf( forces[ii][1] ) || isnan( forces[ii][1] ) ||
+                   isinf( forces[ii][2] ) || isnan( forces[ii][2] ) )hitNan++;
+   
+                (void) fprintf( log, "%6u x[%14.7e %14.7e %14.7e] f[%14.7e %14.7e %14.7e]\n", ii,
+                                coordinates[ii][0], coordinates[ii][1], coordinates[ii][2],
+                                forces[ii][0], forces[ii][1], forces[ii][2] );
+            }
+            char buffer[1024];
+            (void) sprintf( buffer, "%s : nans detected -- aborting.\n", methodName.c_str() );
+            throwException(__FILE__, __LINE__, buffer );
+        }    
+    }
+ 
+    forceNorm = std::sqrt( forceNorm );
+ 
+     if( forceNorm <= 0.0 ){
+        if( log ){
+           (void) fprintf( log, "%s norm of force is <= 0 norm=%.3e\n", methodName.c_str(), forceNorm );
+           (void) fflush( log );
+        }
+        return;
+    }
+  
+    // take step in direction of energy gradient
+ 
+    double step = delta/forceNorm;
+    std::vector<Vec3> perturbedPositions; 
+    perturbedPositions.resize( forces.size() );
+    for( unsigned int ii = 0; ii < forces.size(); ii++ ){
+        perturbedPositions[ii] = Vec3( coordinates[ii][0] - step*forces[ii][0], coordinates[ii][1] - step*forces[ii][1], coordinates[ii][2] - step*forces[ii][2] ); 
+    }
+ 
+    context->setPositions( perturbedPositions );
+ 
+    // get new potential energy
+ 
+    state    = context->getState( types );
+ 
+    // report energies
+ 
+    double perturbedPotentialEnergy = state.getPotentialEnergy();
+    double deltaEnergy              = ( perturbedPotentialEnergy - potentialEnergy )/delta;
+    double difference               = fabs( deltaEnergy - forceNorm );
+    double denominator              = forceNorm; 
+    if( denominator > 0.0 ){
+        difference /= denominator;
+    }
+ 
+    if( log ){
+        (void) fprintf( log, "%s  difference=%14.8e dE=%14.8e Pe2/1 [%16.10e %16.10e] delta=%10.4e nrm=%16.10e\n",
+                        methodName.c_str(), difference, deltaEnergy, perturbedPotentialEnergy,
+                        potentialEnergy, delta, forceNorm );
+        (void) fflush( log );
+    }
+    if( summaryFile ){
+        std::string forceString;
+        if( forceStringArray.size() > 11 ){
+           forceString = "All ";
+        } else {
+           for( StringVectorCI ii = forceStringArray.begin(); ii != forceStringArray.end(); ii++ ){
+              forceString += (*ii) + " ";
+           }
+        }
+        if( forceString.size() < 1 ){
+           forceString = "NA";
+        }
+        (void) fprintf( summaryFile, "EFCnstnt %30s %14.7e dE[%14.6e %14.7e] E[%14.7e %14.7e FNorm %14.7e Delta %14.7e %20s %s\n",
+                        forceString.c_str(), difference, deltaEnergy, forceNorm, 
+                        potentialEnergy, perturbedPotentialEnergy, forceNorm, delta, parameterFileName.c_str(), context->getPlatform().getName().c_str() );
+    }
+ 
+    if( applyAssertion ){
+        ASSERT( difference < tolerance );
+        if( log ){
+           (void) fprintf( log, "\n%s passed\n", methodName.c_str() );
+           (void) fflush( log );
+        }
+    }
+
+    delete context;
+
+    return;
+
+}
+
+/** 
+ * Check that energy and force are consistent
+ * 
+ * @return DefaultReturnValue or ErrorReturnValue
+ *
+ */
+
+void testEnergyConservation( std::string parameterFileName, MapStringInt& forceMap, int useOpenMMUnits, 
+                             MapStringString& inputArgumentMap,
+                             FILE* log, FILE* summaryFile ){
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName             = "testEnergyConservation";
+
+   // tolerance for thermostat
+
+   double temperatureTolerance                     = 3.0;
+
+   // tolerance for energy conservation test
+
+   double energyTolerance                          = 0.05;
+
+   int equilibrationTotalSteps                     = 10000;
+   double equilibrationStepsBetweenReportsRatio    = 0.1;
+
+   int simulationTotalSteps                        = 1000;
+   double simulationStepsBetweenReportsRatio       = 0.01;
+
+// ---------------------------------------------------------------------------------------
+
+    MapStringVectorOfVectors supplementary;
+    MapStringVec3 tinkerForces;
+    MapStringDouble tinkerEnergies;
+
+    Context* context = createContext( parameterFileName, forceMap, useOpenMMUnits, inputArgumentMap, supplementary,
+                                      tinkerForces, tinkerEnergies, log );
+
+    setIntFromMap(    inputArgumentMap, "equilibrationTotalSteps",          equilibrationTotalSteps  );
+    setIntFromMap(    inputArgumentMap, "simulationTotalSteps",             simulationTotalSteps     );
+ 
+// ---------------------------------------------------------------------------------------
+
+   int returnStatus                   = 0;
+   clock_t     totalEquilibrationTime = 0;
+   clock_t     totalSimulationTime    = 0;
+   clock_t     cpuTime;
+
+   int allTypes                       = State::Positions | State::Velocities | State::Forces | State::Energy;
+
+   // set velocities based on temperature
+
+   System& system                     = context->getSystem();
+   int numberOfAtoms                  = system.getNumParticles();
+   std::vector<Vec3> velocities; 
+   //velocities.resize( numberOfAtoms );
+   //_setVelocitiesBasedOnTemperature( system, velocities, initialTemperature, log );
+
+   // get integrator for equilibration and context
+
+   Integrator& integrator     = context->getIntegrator();
+   std::string integratorName = getIntegratorName( &integrator );
+   double simulationTimeStep  = integrator.getStepSize();
+   if( log ){
+      printIntegratorInfo( integrator, log );
+   }
+   // equilibration loop
+
+   int currentStep                        = 0;
+   int equilibrationStepsBetweenReports   = static_cast<int>(static_cast<double>(equilibrationTotalSteps)*equilibrationStepsBetweenReportsRatio);
+   if( equilibrationStepsBetweenReports < 1 )equilibrationStepsBetweenReports = 1;
+
+   if( log ){
+      (void) fprintf( log, "equilibrationTotalSteps=%d equilibrationStepsBetweenReports=%d ratio=%.4f\n", 
+                      equilibrationTotalSteps, equilibrationStepsBetweenReports, equilibrationStepsBetweenReportsRatio);
+      (void) fflush( log );
+   }
+
+   while( currentStep < equilibrationTotalSteps ){
+
+      int nextStep = currentStep + equilibrationStepsBetweenReports;
+      if( nextStep > equilibrationTotalSteps ){
+         equilibrationStepsBetweenReports = equilibrationTotalSteps - currentStep;
+      }
+
+      // integrate
+
+      cpuTime                 = clock();
+      integrator.step(equilibrationStepsBetweenReports);
+      totalEquilibrationTime += clock() - cpuTime;
+      currentStep            += equilibrationStepsBetweenReports;
+
+      // get energies and check for nans
+
+      State state                            = context->getState( State::Energy );
+   
+      double kineticEnergy                   = state.getKineticEnergy();
+      double potentialEnergy                 = state.getPotentialEnergy();
+      double totalEnergy                     = kineticEnergy + potentialEnergy;
+      if( log ){
+         (void) fprintf( log, "%6d KE=%14.7e PE=%14.7e E=%14.7e\n", currentStep, kineticEnergy, potentialEnergy, totalEnergy );
+         (void) fflush( log );
+      }
+
+#ifdef _MSC_VER
+   #define isinf !_finite
+   #define isnan _isnan
+#endif
+      if( isinf( totalEnergy ) || isnan( totalEnergy ) ){
+         char buffer[1024];
+         (void) sprintf( buffer, "%s Equilibration: nans detected at step %d -- aborting.\n", methodName.c_str(), currentStep );
+         throwException(__FILE__, __LINE__, buffer );
+         exit(-1);
+      }
+
+   }
+
+   double kineticEnergy;
+   double potentialEnergy;
+   double totalEnergy;
+
+   // report energies
+
+   if( log ){
+
+      State state                = context->getState( State::Energy );
+      kineticEnergy              = state.getKineticEnergy();
+      potentialEnergy            = state.getPotentialEnergy();
+      totalEnergy                = kineticEnergy + potentialEnergy;
+   
+      double totalTime           = static_cast<double>(totalEquilibrationTime)/static_cast<double>(CLOCKS_PER_SEC);
+      double timePerStep         = totalTime/static_cast<double>(equilibrationTotalSteps);
+      double timePerStepPerAtom  = timePerStep/static_cast<double>(numberOfAtoms);
+      (void) fprintf( log, "Final Equilibration energies: %6d  E=%14.7e [%14.7e %14.7e]  cpu time=%.3f time/step=%.3e time/step/atom=%.3e\n",
+                      currentStep, (kineticEnergy + potentialEnergy), kineticEnergy, potentialEnergy,
+                      totalTime, timePerStep, timePerStepPerAtom );
+      (void) fflush( log );
+   }
+
+   // create/initialize arrays used to track energies
+
+   std::vector<double> stepIndexArray;
+   std::vector<double> kineticEnergyArray;
+   std::vector<double> potentialEnergyArray;
+   std::vector<double> totalEnergyArray;
+
+   State state                            = context->getState( State::Energy );
+   kineticEnergy                          = state.getKineticEnergy();
+   potentialEnergy                        = state.getPotentialEnergy();
+   totalEnergy                            = kineticEnergy + potentialEnergy;
+
+   stepIndexArray.push_back( 0.0 );
+   kineticEnergyArray.push_back( kineticEnergy );
+   potentialEnergyArray.push_back( potentialEnergy );
+   totalEnergyArray.push_back( totalEnergy );
+
+   // log
+
+   if( log ){
+      (void) fprintf( log, "Initial Simulation energies: E=%14.7e [%14.7e %14.7e]\n",
+                      (kineticEnergy + potentialEnergy), kineticEnergy, potentialEnergy );
+      (void) fflush( log );
+   }
+
+   /* -------------------------------------------------------------------------------------------------------------- */
+
+   // prelude for simulation
+
+   int simulationStepsBetweenReports   = static_cast<int>(static_cast<double>(simulationTotalSteps)*simulationStepsBetweenReportsRatio);
+   if( simulationStepsBetweenReports < 1 )simulationStepsBetweenReports = 1;
+   currentStep                       = 0;
+
+   if( log ){
+      (void) fprintf( log, "simulationTotalSteps=%d simulationStepsBetweenReports=%d ratio=%.4f\n", 
+                      simulationTotalSteps, simulationStepsBetweenReports, simulationStepsBetweenReportsRatio );
+      (void) fflush( log );
+   }
+
+   // main simulation loop
+
+   while( currentStep < simulationTotalSteps ){
+
+      // set step increment, perform integration, update step 
+
+      int nextStep = currentStep + simulationStepsBetweenReports;
+      if( nextStep > simulationTotalSteps ){
+         simulationStepsBetweenReports = simulationTotalSteps - currentStep;
+      }
+
+      cpuTime              = clock();
+      integrator.step( simulationStepsBetweenReports );
+      totalSimulationTime += clock() - cpuTime;
+
+      currentStep         += simulationStepsBetweenReports;
+
+      // record energies
+
+      State state                            = context->getState( State::Energy );
+      double kineticEnergy                   = state.getKineticEnergy();
+      double potentialEnergy                 = state.getPotentialEnergy();
+      double totalEnergy                     = kineticEnergy + potentialEnergy;
+
+      stepIndexArray.push_back( (double) currentStep );
+      kineticEnergyArray.push_back( kineticEnergy );
+      potentialEnergyArray.push_back( potentialEnergy );
+      totalEnergyArray.push_back( totalEnergy );
+
+      // diagnostics & check for nans
+
+      if( log ){
+         (void) fprintf( log, "%6d KE=%14.7e PE=%14.7e E=%14.7e\n", currentStep, kineticEnergy, potentialEnergy, totalEnergy );
+         (void) fflush( log );
+      }
+
+      if( isinf( totalEnergy ) || isnan( totalEnergy ) ){
+         char buffer[1024];
+         (void) sprintf( buffer, "%s Simulation: nans detected at step %d -- aborting.\n", methodName.c_str(), currentStep );
+         throwException(__FILE__, __LINE__, buffer );
+         exit(-1);
+      }
+   }
+
+   state                                  = context->getState( State::Energy );
+   kineticEnergy                          = state.getKineticEnergy();
+   potentialEnergy                        = state.getPotentialEnergy();
+   totalEnergy                            = kineticEnergy + potentialEnergy;
+
+   // log times and energies
+
+   if( log ){
+      double totalTime           = static_cast<double>(totalSimulationTime)/static_cast<double>(CLOCKS_PER_SEC);
+      double timePerStep         = totalTime/static_cast<double>(simulationTotalSteps);
+      double timePerStepPerAtom  = timePerStep/static_cast<double>(numberOfAtoms);
+      (void) fprintf( log, "Final Simulation: %6d  E=%14.7e [%14.7e %14.7e]  cpu time=%.3f time/step=%.3e time/step/atom=%.3e\n",
+                      currentStep, (kineticEnergy + potentialEnergy), kineticEnergy, potentialEnergy,
+                      totalTime, timePerStep, timePerStepPerAtom );
+      (void) fflush( log );
+   }
+
+   // set dof
+
+   double degreesOfFreedom  = static_cast<double>(3*numberOfAtoms - system.getNumConstraints() - 3 );
+   double conversionFactor  = degreesOfFreedom*0.5*BOLTZ;
+          conversionFactor  = 1.0/conversionFactor;
+
+   // if Langevin or Brownian integrator, then check that temperature constant
+   // else (Verlet integrator) check that energy drift is acceptable
+
+   if( (integratorName == "LangevinIntegrator"           ||
+        integratorName == "VariableLangevinIntegrator"   ||
+        integratorName == "BrownianIntegrator" ) && numberOfAtoms > 0 ){
+
+      // check that temperature constant
+
+      // convert KE to temperature
+
+      std::vector<double> temperature;
+      for( std::vector<double>::const_iterator ii = kineticEnergyArray.begin(); ii != kineticEnergyArray.end(); ii++ ){
+         temperature.push_back( (*ii)*conversionFactor );
+      }
+
+      // get temperature stats
+
+      std::vector<double> temperatureStatistics;
+      getStatistics( temperature, temperatureStatistics );
+      double initialTemperature = 300.0;
+
+      if( integratorName == "LangevinIntegrator" ){
+          LangevinIntegrator* langevinIntegrator          = dynamic_cast<LangevinIntegrator*>(&integrator);
+          initialTemperature                              = langevinIntegrator->getTemperature();
+      } else if( integratorName == "VariableLangevinIntegrator" ){
+          VariableLangevinIntegrator* langevinIntegrator  = dynamic_cast<VariableLangevinIntegrator*>(&integrator);
+          initialTemperature                              = langevinIntegrator->getTemperature();
+      }
+
+      if( log ){
+         (void) fprintf( log, "Simulation temperature results: mean=%14.7e stddev=%14.7e   min=%14.7e   %d max=%14.7e %d\n",
+                         temperatureStatistics[0], temperatureStatistics[1], temperatureStatistics[2],
+                         (int) (temperatureStatistics[3] + 0.001), temperatureStatistics[4],
+                         (int) (temperatureStatistics[5] + 0.001) );
+
+      }
+
+      // check that <temperature> is within tolerance
+
+      ASSERT_EQUAL_TOL( temperatureStatistics[0], initialTemperature, temperatureTolerance );
+
+   } else {
+
+      // total energy constant
+
+      std::vector<double> statistics;
+      getStatistics( totalEnergyArray, statistics );
+
+      std::vector<double> kineticEnergyStatistics;
+      getStatistics( kineticEnergyArray, kineticEnergyStatistics );
+      double temperature  = kineticEnergyStatistics[0]*conversionFactor;
+      double kT           = temperature*BOLTZ;
+
+      // compute stddev in units of kT/dof/ns
+
+      double stddevE      = statistics[1]/kT;
+             stddevE     /= degreesOfFreedom;
+             stddevE     /= simulationTotalSteps*simulationTimeStep*0.001;
+
+      if( log ){
+         (void) fprintf( log, "Simulation results: mean=%14.7e stddev=%14.7e  kT/dof/ns=%14.7e kT=%14.7e  min=%14.7e   %d max=%14.7e %d\n",
+                         statistics[0], statistics[1], stddevE, kT, statistics[2], (int) (statistics[3] + 0.001), statistics[4], (int) (statistics[5] + 0.001) );
+      }
+
+      // check that energy fluctuation is within tolerance
+
+      ASSERT_EQUAL_TOL( stddevE, 0.0, energyTolerance );
+
+   }
+
+   if( log ){
+      (void) fprintf( log, "\n%s passed\n", methodName.c_str() );
+      (void) fflush( log );
+   }
+
+   return;
+
+}
+
+// ---------------------------------------------------------------------------------------
+
+int runTestsUsingAmoebaTinkerParameterFile( MapStringString& argumentMap ){
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName               = "runTestsUsingAmoebaTinkerParameterFile";
+   MapStringString inputArgumentMap;
+   std::string openmmPluginDirectory                 = ".";
+
+   FILE* log                                         = NULL;
+   FILE* summaryFile                                 = NULL;
+
+// ---------------------------------------------------------------------------------------
+
+    std::string defaultParameterFileName     = "OpenParameters.txt";
+
+    std::string parameterFileName            = "1UBQ.prm";
+    MapStringInt forceMap;
+    initializeForceMap( forceMap, 0 );
+
+    int logFileNameIndex                     = 0;
+    std::string logFileName;
+
+    int summaryFileNameIndex                 = 0;
+    std::string summaryFileName;
+
+    int specifiedOpenmmPluginDirectory       = 0;
+    int useOpenMMUnits                       = 0;
+    int logControl                           = 0;
+    int checkForces                          = 1;
+    int checkEnergyForceConsistency          = 0;
+    int checkEnergyConservation              = 0;
+
+    // parse arguments
+
+    for( MapStringStringCI ii = argumentMap.begin(); ii != argumentMap.end(); ii++ ){
+        std::string key   = ii->first;
+        std::string value = ii->second;
+        if( key == "parameterFileName" ){
+            parameterFileName          = value;
+        } else if( key == "logFileName" ){
+            logFileNameIndex = 1;
+            logFileName      = value;
+        } else if( key == "summaryFileName" ){
+            summaryFileNameIndex = 1;
+            summaryFileName      = value;
+        } else if( key == "openmmPluginDirectory" ){
+            specifiedOpenmmPluginDirectory = 1;
+            openmmPluginDirectory          = value;
+        } else if( key == "useOpenMMUnits" ){
+            useOpenMMUnits = atoi( value.c_str() );
+        } else if( key == "checkEnergyForceConsistency" ){
+            checkEnergyForceConsistency = atoi( value.c_str() );
+            //if( checkEnergyForceConsistency )checkForces = 0;
+        } else if( key == "checkEnergyConservation" ){
+            checkEnergyConservation = atoi( value.c_str() );
+            //if( checkEnergyForceConsistency )checkForces = 0;
+        } else if( key == "log" ){
+            logControl = atoi( value.c_str() );
+        } else if( key == "AllForces" ){
+            initializeForceMap( forceMap, 1 );
+        } else if( key == AMOEBA_HARMONIC_BOND_FORCE              ||
+                   key == AMOEBA_HARMONIC_ANGLE_FORCE             ||
+                   key == AMOEBA_HARMONIC_IN_PLANE_ANGLE_FORCE    ||
+                   key == AMOEBA_TORSION_FORCE                    ||
+                   key == AMOEBA_PI_TORSION_FORCE                 ||
+                   key == AMOEBA_STRETCH_BEND_FORCE               ||
+                   key == AMOEBA_OUT_OF_PLANE_BEND_FORCE          ||
+                   key == AMOEBA_TORSION_TORSION_FORCE            ||
+                   key == AMOEBA_MULTIPOLE_FORCE                  ||
+                   key == AMOEBA_GK_FORCE                         ||
+                   key == AMOEBA_VDW_FORCE                        ||
+                   key == AMOEBA_WCA_DISPERSION_FORCE             ||
+                   key == AMOEBA_SASA_FORCE                       ){
+            forceMap[key] = atoi( value.c_str() );
+        } else {
+            inputArgumentMap[key] = value;
+        }
+    }
+
+    // open log file
+
+    if( logControl ){
+        std::string mode = logControl == 1 ? "w" : "a";
+        if( logFileNameIndex > -1 ){
+#ifdef _MSC_VER
+            fopen_s( &log, logFileName.c_str(), mode.c_str());
+#else
+            log = fopen( logFileName.c_str(), mode.c_str() );
+#endif
+        } else {
+            log = stderr;
+        }
+    }
+   
+    if( summaryFileNameIndex > 0 ){
+        std::string mode = "a";
+#ifdef _MSC_VER
+        fopen_s( &summaryFile, summaryFileName.c_str(), mode.c_str());
+#else
+        summaryFile = fopen( summaryFileName.c_str(), mode.c_str() );
+#endif
+    }
+
+    // log info
+
+    if( log ){
+        log = log ? log : stderr;
+        (void) fprintf( log, "Input arguments:\n" );
+        for( MapStringStringCI ii = argumentMap.begin(); ii != argumentMap.end(); ii++ ){
+            std::string key   = ii->first;
+            std::string value = ii->second;
+            (void) fprintf( log, "      %30s %40s\n", key.c_str(), value.c_str() );
+        }
+        (void) fprintf( log, "parameter file=<%s>\n", parameterFileName.c_str() );
+
+        (void) fprintf( log, "Argument map: %u (unhandled args)\n", inputArgumentMap.size() );
+        for( MapStringStringCI ii = inputArgumentMap.begin(); ii != inputArgumentMap.end(); ii++ ){
+            (void) fprintf( log, "Map %s %s\n", (*ii).first.c_str(), (*ii).second.c_str() );
+        }
+        (void) fflush( log );
+    }
+
+    // load plugins
+
+    if( specifiedOpenmmPluginDirectory ){
+        Platform::loadPluginsFromDirectory( openmmPluginDirectory );
+    }
+
+    if( checkEnergyForceConsistency ){
+        // args:
+
+        //     applyAssertion
+        //     energyForceDelta 
+        //     energyForceTolerance
+        testEnergyForcesConsistent( parameterFileName, forceMap, useOpenMMUnits, 
+                                    inputArgumentMap, log, summaryFile );
+
+    } else if( checkEnergyConservation ){
+        // args:
+
+        testEnergyConservation( parameterFileName, forceMap, useOpenMMUnits, 
+                                inputArgumentMap, log, summaryFile );
+
+    } else {
+        // args:
+        //     tolerance
+        testUsingAmoebaTinkerParameterFile( parameterFileName, forceMap,
+                                            useOpenMMUnits, inputArgumentMap, summaryFile, log );
+    }
+    if( log ){
+        (void) fprintf( log, "\n%s done\n", methodName.c_str() ); (void) fflush( log );
+    }
+    if( summaryFile ){
+        (void) fclose( summaryFile );
+    }
+
+    return 0;
+}
+
+// ---------------------------------------------------------------------------------------
+
+void appendInputArgumentsToArgumentMap( int numberOfArguments, char* argv[], MapStringString& argumentMap ){
+
+// ---------------------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------------------
+
+    for( int ii = 1; ii < numberOfArguments; ii += 2 ){
+        char* key        = argv[ii];
+        if( *key == '-' )key++;
+        argumentMap[key] = (ii+1) < numberOfArguments ? argv[ii+1] : "NA";
+    }
+
+    return;
+}
