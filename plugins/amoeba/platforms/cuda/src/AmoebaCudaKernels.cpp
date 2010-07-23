@@ -46,8 +46,8 @@ using namespace std;
 static void computeAmoebaLocalForces( AmoebaCudaData& data ) {
     amoebaGpuContext gpu = data.getAmoebaGpu();
 
-    if( gpu->log ){
-        (void) fprintf( gpu->log, "computeAmoebaLocalForces\n" ); (void) fflush( gpu->log );
+    if( 0 && data.getLog() ){
+        (void) fprintf( data.getLog(), "computeAmoebaLocalForces\n" ); (void) fflush( data.getLog() );
     }
 
     data.initializeGpu();
@@ -485,7 +485,7 @@ static void computeAmoebaMultipoleForce( AmoebaCudaData& data ) {
     amoebaGpuContext gpu = data.getAmoebaGpu();
     data.initializeGpu();
 
-    if( data.getLog() ){
+    if( 0 && data.getLog() ){
         (void) fprintf( data.getLog(), "computeAmoebaMultipoleForce\n" );
         (void) fflush( data.getLog());
     }
@@ -510,7 +510,7 @@ static void computeAmoebaMultipoleForce( AmoebaCudaData& data ) {
         kCalculateAmoebaKirkwood(gpu);
     }
 
-    if( data.getLog() ){
+    if( 0 && data.getLog() ){
         (void) fprintf( data.getLog(), "completed computeAmoebaMultipoleForce\n" );
         (void) fflush( data.getLog());
     }
@@ -821,13 +821,13 @@ double CudaCalcAmoebaVdwForceKernel::executeEnergy(ContextImpl& context) {
 static void computeAmoebaWcaDispersionForce( AmoebaCudaData& data ) {
 
     data.initializeGpu();
-    if( data.getLog() ){
+    if( 0 && data.getLog() ){
         (void) fprintf( data.getLog(), "Calling computeAmoebaWcaDispersionForce  " ); (void) fflush( data.getLog() );
     }
 
     kCalculateAmoebaWcaDispersionForces( data.getAmoebaGpu() );
 
-    if( data.getLog() ){
+    if( 0 && data.getLog() ){
         (void) fprintf( data.getLog(), " -- completed\n" ); (void) fflush( data.getLog() );
     }
 }

@@ -94,7 +94,8 @@ KernelImpl* AmoebaCudaData::getAmoebaLocalForcesKernel( void ) const {
 }
 
 void AmoebaCudaData::setLog( FILE* inputLog ) {
-    log = inputLog;
+    log            = inputLog;
+    amoebaGpu->log = inputLog;
 }
 
 FILE* AmoebaCudaData::getLog( void ) const {

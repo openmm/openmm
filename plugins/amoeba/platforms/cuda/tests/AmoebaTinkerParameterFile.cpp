@@ -2181,6 +2181,18 @@ static int readAmoebaMultipoleParameters( FILE* filePtr, MapStringInt& forceMap,
         }
     }
 
+    // set parameters if available
+
+    MapStringStringI isPresent = inputArgumentMap.find( MUTUAL_INDUCED_MAX_ITERATIONS );
+    if( isPresent != inputArgumentMap.end() ){
+         multipoleForce->setMutualInducedMaxIterations( atoi( isPresent->second.c_str() ) );
+    }
+
+    isPresent = inputArgumentMap.find( MUTUAL_INDUCED_TARGET_EPSILON );
+    if( isPresent != inputArgumentMap.end() ){
+         multipoleForce->setMutualInducedTargetEpsilon( atof( isPresent->second.c_str() ) );
+    }
+
     // diagnostics
 
     if( log ){
@@ -2204,9 +2216,12 @@ static int readAmoebaMultipoleParameters( FILE* filePtr, MapStringInt& forceMap,
         //static const unsigned int maxPrint   = MAX_PRINT;
         static const unsigned int maxPrint   = 15;
         unsigned int arraySize               = static_cast<unsigned int>(multipoleForce->getNumMultipoles());
-        (void) fprintf( log, "%s: %u sample of AmoebaMultipoleForce parameters\n",
-                        methodName.c_str(), arraySize );
-         (void) fflush( log );
+        (void) fprintf( log, "%s: %u maxIter=%d targetEps=%14.7e\n",
+                        methodName.c_str(), arraySize,
+                        multipoleForce->getMutualInducedMaxIterations(),
+                        multipoleForce->getMutualInducedTargetEpsilon() );
+        (void) fprintf( log, "Sample of AmoebaMultipoleForce parameters\n" );
+        (void) fflush( log );
  
         for( unsigned int ii = 0; ii < arraySize;  ii++ ){
             int axisType, zAxis, xAxis;
@@ -3461,189 +3476,197 @@ static int addForces( std::vector<Vec3>& forceToAdd, std::vector<Vec3>& forceAcc
     return static_cast<int>(forceAccumulator.size());
 }
 
+static void getStringForceMap( System& system, MapStringForce& forceMap, FILE* log ){
+
+    // print active forces and relevant parameters
+
+    for( int ii = 0; ii < system.getNumForces(); ii++ ) {
+
+        int hit                 = 0;
+        Force& force            = system.getForce(ii);
+
+        // bond
+
+        if( !hit ){
+
+            try {
+               AmoebaHarmonicBondForce& harmonicBondForce = dynamic_cast<AmoebaHarmonicBondForce&>(force);
+               forceMap[AMOEBA_HARMONIC_BOND_FORCE]       = &force;
+               hit++;
+            } catch( std::bad_cast ){
+            }
+        }
+    
+        // multipole
+
+        if( !hit ){
+
+            try {
+               AmoebaMultipoleForce& multipoleForce = dynamic_cast<AmoebaMultipoleForce &>(force);
+               forceMap[AMOEBA_MULTIPOLE_FORCE]     = &force;
+               hit++;
+            } catch( std::bad_cast ){
+            }
+        }
+    
+        // out-of-plane-bend Force
+
+        if( !hit ){
+
+            try {
+               AmoebaOutOfPlaneBendForce& outOfPlaneBend = dynamic_cast<AmoebaOutOfPlaneBendForce&>(force);
+               forceMap[AMOEBA_OUT_OF_PLANE_BEND_FORCE]  = &force;
+               hit++;
+            } catch( std::bad_cast ){
+            }
+        }
+    
+        // Pi-torsion Force
+
+        if( !hit ){
+
+            try {
+               AmoebaPiTorsionForce& piTorsion         = dynamic_cast<AmoebaPiTorsionForce&>(force);
+               forceMap[AMOEBA_PI_TORSION_FORCE]       = &force;
+               hit++;
+            } catch( std::bad_cast ){
+            }
+        }
+    
+        // Torsion-torsion Force
+
+        if( !hit ){
+
+            try {
+               AmoebaTorsionTorsionForce& torsionTorsion = dynamic_cast<AmoebaTorsionTorsionForce&>(force);
+               forceMap[AMOEBA_TORSION_TORSION_FORCE]    = &force;
+               hit++;
+            } catch( std::bad_cast ){
+            }
+        }
+    
+        // Torsion Force
+
+        if( !hit ){
+
+            try {
+               AmoebaTorsionForce& torsion          = dynamic_cast<AmoebaTorsionForce&>(force);
+               forceMap[AMOEBA_TORSION_FORCE]       = &force;
+               hit++;
+            } catch( std::bad_cast ){
+            }
+        }
+    
+        // SASA Force
+
+        if( !hit ){
+
+            try {
+               AmoebaSASAForce& sasaForce        = dynamic_cast<AmoebaSASAForce&>(force);
+               forceMap[AMOEBA_SASA_FORCE]       = &force;
+               hit++;
+            } catch( std::bad_cast ){
+            }
+        }
+    
+        // stretch bend force
+
+        if( !hit ){
+
+            try {
+               AmoebaStretchBendForce& stretchBend = dynamic_cast<AmoebaStretchBendForce&>(force);
+               forceMap[AMOEBA_STRETCH_BEND_FORCE] = &force;
+               hit++;
+            } catch( std::bad_cast ){
+            }
+        }
+    
+        // vdw force
+
+        if( !hit ){
+
+            try {
+               AmoebaVdwForce& vdw              = dynamic_cast<AmoebaVdwForce&>(force);
+               forceMap[AMOEBA_VDW_FORCE]       = &force;
+               hit++;
+            } catch( std::bad_cast ){
+            }
+        }
+    
+        // WCA dspersion force
+
+        if( !hit ){
+
+            try {
+               AmoebaWcaDispersionForce& wcaDispersionForce = dynamic_cast<AmoebaWcaDispersionForce&>(force);
+               forceMap[AMOEBA_WCA_DISPERSION_FORCE]        = &force;
+               hit++;
+            } catch( std::bad_cast ){
+            }
+        }
+    
+        // angle
+
+        if( !hit ){
+    
+            try {
+               AmoebaHarmonicAngleForce & harmonicAngleForce = dynamic_cast<AmoebaHarmonicAngleForce&>(force);
+               forceMap[AMOEBA_HARMONIC_ANGLE_FORCE]         = &force;
+               hit++;
+            } catch( std::bad_cast ){
+            }
+        }
+
+        // in-plane angle
+
+        if( !hit ){
+    
+            try {
+               AmoebaHarmonicInPlaneAngleForce & harmonicAngleForce = dynamic_cast<AmoebaHarmonicInPlaneAngleForce&>(force);
+               forceMap[AMOEBA_HARMONIC_IN_PLANE_ANGLE_FORCE]       = &force;
+               hit++;
+            } catch( std::bad_cast ){
+            }
+        }
+
+        // Kirkwood
+    
+        if( !hit ){
+            try {
+               AmoebaGeneralizedKirkwoodForce& kirkwoodForce = dynamic_cast<AmoebaGeneralizedKirkwoodForce&>(force);
+               forceMap[AMOEBA_GK_FORCE]                     = &force;
+               hit++;
+            } catch( std::bad_cast ){
+            }
+        }
+    
+        // COM
+
+        if( !hit ){
+    
+            try {
+               CMMotionRemover& cMMotionRemover = dynamic_cast<CMMotionRemover&>(force);
+               hit++;
+            } catch( std::bad_cast ){
+            }
+        }
+
+        if( !hit && log ){
+           (void) fprintf( log, "   entry=%2d force not recognized XXXX\n", ii );
+        }
+
+    }
+
+    return;
+}
 
 static void getForceStrings( System& system, StringVector& forceStringArray, FILE* log ){
 
-     // print active forces and relevant parameters
-
-     for( int ii = 0; ii < system.getNumForces(); ii++ ) {
-
-         int hit                 = 0;
-         Force& force            = system.getForce(ii);
-
-         // bond
-
-         if( !hit ){
-
-             try {
-                AmoebaHarmonicBondForce& harmonicBondForce = dynamic_cast<AmoebaHarmonicBondForce&>(force);
-                forceStringArray.push_back( AMOEBA_HARMONIC_BOND_FORCE );
-                hit++;
-             } catch( std::bad_cast ){
-             }
-         }
-     
-         // multipole
-
-         if( !hit ){
-
-             try {
-                AmoebaMultipoleForce& multipoleForce = dynamic_cast<AmoebaMultipoleForce &>(force);
-                forceStringArray.push_back( AMOEBA_MULTIPOLE_FORCE );
-                hit++;
-             } catch( std::bad_cast ){
-             }
-         }
-     
-         // out-of-plane-bend Force
-
-         if( !hit ){
-
-             try {
-                AmoebaOutOfPlaneBendForce& outOfPlaneBend = dynamic_cast<AmoebaOutOfPlaneBendForce&>(force);
-                forceStringArray.push_back( AMOEBA_OUT_OF_PLANE_BEND_FORCE );
-                hit++;
-             } catch( std::bad_cast ){
-             }
-         }
-     
-         // Pi-torsion Force
-
-         if( !hit ){
-
-             try {
-                AmoebaPiTorsionForce& piTorsion = dynamic_cast<AmoebaPiTorsionForce&>(force);
-                forceStringArray.push_back( AMOEBA_PI_TORSION_FORCE );
-                hit++;
-             } catch( std::bad_cast ){
-             }
-         }
-     
-         // Torsion-torsion Force
-
-         if( !hit ){
-
-             try {
-                AmoebaTorsionTorsionForce& torsionTorsion = dynamic_cast<AmoebaTorsionTorsionForce&>(force);
-                forceStringArray.push_back( AMOEBA_TORSION_TORSION_FORCE );
-                hit++;
-             } catch( std::bad_cast ){
-             }
-         }
-     
-         // Torsion Force
-
-         if( !hit ){
-
-             try {
-                AmoebaTorsionForce& torsion = dynamic_cast<AmoebaTorsionForce&>(force);
-                forceStringArray.push_back( AMOEBA_TORSION_FORCE );
-                hit++;
-             } catch( std::bad_cast ){
-             }
-         }
-     
-         // SASA Force
-
-         if( !hit ){
-
-             try {
-                AmoebaSASAForce& sasaForce = dynamic_cast<AmoebaSASAForce&>(force);
-                forceStringArray.push_back( AMOEBA_SASA_FORCE );
-                hit++;
-             } catch( std::bad_cast ){
-             }
-         }
-     
-         // stretch bend force
-
-         if( !hit ){
-
-             try {
-                AmoebaStretchBendForce& stretchBend = dynamic_cast<AmoebaStretchBendForce&>(force);
-                forceStringArray.push_back( AMOEBA_STRETCH_BEND_FORCE );
-                hit++;
-             } catch( std::bad_cast ){
-             }
-         }
-     
-         // vdw force
-
-         if( !hit ){
-
-             try {
-                AmoebaVdwForce& vdw = dynamic_cast<AmoebaVdwForce&>(force);
-                forceStringArray.push_back( AMOEBA_VDW_FORCE );
-                hit++;
-             } catch( std::bad_cast ){
-             }
-         }
-     
-         // WCA dspersion force
-
-         if( !hit ){
-
-             try {
-                AmoebaWcaDispersionForce& wcaDispersionForce = dynamic_cast<AmoebaWcaDispersionForce&>(force);
-                forceStringArray.push_back( AMOEBA_WCA_DISPERSION_FORCE );
-                hit++;
-             } catch( std::bad_cast ){
-             }
-         }
-     
-         // angle
-
-         if( !hit ){
-     
-             try {
-                AmoebaHarmonicAngleForce & harmonicAngleForce = dynamic_cast<AmoebaHarmonicAngleForce&>(force);
-                forceStringArray.push_back( AMOEBA_HARMONIC_ANGLE_FORCE );
-                hit++;
-             } catch( std::bad_cast ){
-             }
-         }
-
-         // in-plane angle
-
-         if( !hit ){
-     
-             try {
-                AmoebaHarmonicInPlaneAngleForce & harmonicAngleForce = dynamic_cast<AmoebaHarmonicInPlaneAngleForce&>(force);
-                forceStringArray.push_back( AMOEBA_HARMONIC_IN_PLANE_ANGLE_FORCE );
-                hit++;
-             } catch( std::bad_cast ){
-             }
-         }
-
-         // Kirkwood
-     
-         if( !hit ){
-             try {
-                AmoebaGeneralizedKirkwoodForce& kirkwoodForce = dynamic_cast<AmoebaGeneralizedKirkwoodForce&>(force);
-                forceStringArray.push_back( AMOEBA_GK_FORCE );
-                hit++;
-             } catch( std::bad_cast ){
-             }
-         }
-     
-         // COM
-
-         if( !hit ){
-     
-             try {
-                CMMotionRemover& cMMotionRemover = dynamic_cast<CMMotionRemover&>(force);
-                hit++;
-             } catch( std::bad_cast ){
-             }
-         }
-
-         if( !hit && log ){
-            (void) fprintf( log, "   entry=%2d force not recognized XXXX\n", ii );
-         }
-
-     }
-
-     return;
+    MapStringForce forceMap;
+    getStringForceMap( system, forceMap, log );
+    for( MapStringForceI ii = forceMap.begin(); ii != forceMap.end(); ii++ ) {
+        forceStringArray.push_back( ii->first );
+    }
 }
 
 /**---------------------------------------------------------------------------------------
@@ -3922,11 +3945,17 @@ Integrator* readAmoebaParameterFile( const std::string& inputParameterFile, MapS
        returnIntegrator = new VerletIntegrator(0.001);
     }
  
+    double totalPotentialEnergy = 0.0;
+    if( log )(void) fprintf( log, "Potential energies\n" );
+   
+    for( MapStringDoubleI ii = potentialEnergy.begin(); ii != potentialEnergy.end(); ii++ ){
+        totalPotentialEnergy += ii->second;
+        if( log )(void) fprintf( log, "%30s %14.7e\n", ii->first.c_str(), ii->second );
+    }
+    potentialEnergy["AllForces"] = totalPotentialEnergy;
+       
     if( log ){
-        (void) fprintf( log, "Potential energies\n" );
-        for( MapStringDoubleI ii = potentialEnergy.begin(); ii != potentialEnergy.end(); ii++ ){
-            (void) fprintf( log, "%30s %14.7e\n", ii->first.c_str(), ii->second );
-       }
+       (void) fprintf( log, "Total PE %14.7e\n", totalPotentialEnergy );
        (void) fprintf( log, "Read %d lines from file=<%s>\n", lineCount, inputParameterFile.c_str() );
        (void) fflush( log );
     }
@@ -4320,44 +4349,6 @@ static std::string getIntegratorName( Integrator* integrator ){
    }
     
    return "NotFound";
-}
-
-/**---------------------------------------------------------------------------------------
- * Set velocities based on temperature
- * 
- * @param system       System reference -- retrieve particle masses
- * @param velocities   array of Vec3 for velocities (size must be set)
- * @param temperature  temperature
- * @param log          optional log reference
- *
- * @return DefaultReturnValue
- *
-   --------------------------------------------------------------------------------------- */
-
-static void setVelocitiesBasedOnTemperature( const System& system, std::vector<Vec3>& velocities, double temperature, FILE* log ) {
-    
-// ---------------------------------------------------------------------------------------
-
-   static const std::string methodName    = "setVelocitiesBasedOnTemperature";
-
-   double randomValues[3];
-
-// ---------------------------------------------------------------------------------------
-
-   // set velocities based on temperature
-
-   temperature   *= BOLTZ;
-   double randMax = static_cast<double>(RAND_MAX);
-   randMax        = 1.0/randMax;
-   for( unsigned int ii = 0; ii < velocities.size(); ii++ ){
-      double velocityScale      = std::sqrt( temperature/system.getParticleMass(ii) );
-      randomValues[0]           = randMax*( (double) rand() );
-      randomValues[1]           = randMax*( (double) rand() );
-      randomValues[2]           = randMax*( (double) rand() );
-      velocities[ii]            = Vec3( randomValues[0]*velocityScale, randomValues[1]*velocityScale, randomValues[2]*velocityScale );
-   }
-
-   return;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -4912,6 +4903,164 @@ void testEnergyForcesConsistent( std::string parameterFileName, MapStringInt& fo
  *
  */
 
+System* getCopyOfSystem( System& system, FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName             = "getCopyOfSystem";
+
+// ---------------------------------------------------------------------------------------
+
+    System* newSystem    = new System();
+    for( int ii = 0; ii < system.getNumParticles(); ii++ ){
+        newSystem->addParticle( system.getParticleMass( ii ) );
+    }
+
+    for( int ii = 0; ii < system.getNumConstraints(); ii++ ){
+        int particle1, particle2;
+        double distance;
+        system.getConstraintParameters( ii, particle1, particle2, distance );
+        newSystem->addConstraint( particle1, particle2, distance );
+    }
+    return newSystem;
+}
+
+/** 
+ * Check that energy and force are consistent
+ * 
+ * @return DefaultReturnValue or ErrorReturnValue
+ *
+ */
+
+double getEnergyForceBreakdown( Context& context, MapStringDouble& mapEnergies, FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName             = "getEnergyForceBreakdown";
+
+// ---------------------------------------------------------------------------------------
+
+    int allTypes                       = State::Positions | State::Velocities | State::Forces | State::Energy;
+
+    State state                        = context.getState( allTypes );
+    std::vector<Vec3> coordinates      = state. getPositions();
+    System& system                     = context.getSystem();
+
+    MapStringForce forceMap;
+    getStringForceMap( system, forceMap, log );
+
+    MapStringForceI gkIsPresent        = forceMap.find( AMOEBA_GK_FORCE );
+    bool gkIsActive                    = gkIsPresent == forceMap.end() ? false : true;
+
+    double totalEnergy                 = 0.0;
+    for( MapStringForceI ii = forceMap.begin(); ii != forceMap.end(); ii++ ){
+        Force* force               = ii->second;
+        int addForce               = 1;
+        if( gkIsActive ){
+            if( ii->first == AMOEBA_MULTIPOLE_FORCE ){
+                addForce = 0; 
+            } else if( ii->first == AMOEBA_GK_FORCE ){
+                addForce = 2;
+            }
+        }
+        if( addForce ){
+            System* newSystem          = getCopyOfSystem( system, log );
+            newSystem->addForce( force );
+            if( addForce == 2 ){
+                newSystem->addForce( forceMap[AMOEBA_MULTIPOLE_FORCE] );
+            }
+             
+            Platform& platform          = Platform::getPlatformByName( "Cuda");
+            platform.setPropertyDefaultValue( "CudaDevice",  "3");
+            //Context newContext         = Context( *newSystem, context.getIntegrator(), Platform::getPlatformByName( "Cuda"));
+            Context newContext         = Context( *newSystem, context.getIntegrator(), platform );
+            newContext.setPositions(coordinates);
+            State newState             = newContext.getState( allTypes );
+            mapEnergies[ii->first]     = newState.getPotentialEnergy();
+            totalEnergy               += newState.getPotentialEnergy();
+        }
+    }
+    return totalEnergy;
+}
+
+/**---------------------------------------------------------------------------------------
+ * Set velocities based on temperature
+ * 
+ * @param system       System reference -- retrieve particle masses
+ * @param velocities   array of Vec3 for velocities (size must be set)
+ * @param temperature  temperature
+ * @param log          optional log reference
+ *
+ * @return DefaultReturnValue
+ *
+   --------------------------------------------------------------------------------------- */
+
+static void setVelocitiesBasedOnTemperature( const System& system, std::vector<Vec3>& velocities, double temperature, FILE* log ) {
+    
+// ---------------------------------------------------------------------------------------
+
+   static const std::string methodName    = "setVelocitiesBasedOnTemperature";
+   double randomValues[3];
+
+// ---------------------------------------------------------------------------------------
+
+   // set velocities based on temperature
+
+   temperature   *= BOLTZ;
+   double randMax = static_cast<double>(RAND_MAX);
+   randMax        = 1.0/randMax;
+   for( unsigned int ii = 0; ii < velocities.size(); ii++ ){
+      double velocityScale      = std::sqrt( temperature/system.getParticleMass(ii) );
+      randomValues[0]           = randMax*( (double) rand() );
+      randomValues[1]           = randMax*( (double) rand() );
+      randomValues[2]           = randMax*( (double) rand() );
+      velocities[ii]            = Vec3( randomValues[0]*velocityScale, randomValues[1]*velocityScale, randomValues[2]*velocityScale );
+   }
+
+   return;
+}
+
+/** 
+ * Check that energy and force are consistent
+ * 
+ * @return DefaultReturnValue or ErrorReturnValue
+ *
+ */
+
+void writeIntermediateStateFile( Context& context, int currentStep, FILE* intermediateStateFile, FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+    //static const std::string methodName             = "writeIntermediateStateFile";
+
+// ---------------------------------------------------------------------------------------
+
+    int allTypes                                   = State::Positions | State::Velocities | State::Forces | State::Energy;
+    State state                                    = context.getState( allTypes );
+
+    const std::vector<Vec3> positions              = state.getPositions();
+    const std::vector<Vec3> velocities             = state.getVelocities();
+    const std::vector<Vec3> forces                 = state.getForces();
+
+    (void) fprintf( intermediateStateFile, "%7u %7d %14.7e %14.7e %14.7e State\n",
+                    positions.size(), currentStep, state.getKineticEnergy(), state.getPotentialEnergy(),
+                    state.getKineticEnergy() + state.getPotentialEnergy() );
+    for( unsigned int ii = 0; ii < positions.size(); ii++ ){
+        (void) fprintf( intermediateStateFile, "%7u %14.7e %14.7e %14.7e  %14.7e %14.7e %14.7e  %14.7e %14.7e %14.7e\n", ii,
+                        positions[ii][0], positions[ii][1], positions[ii][2], 
+                        velocities[ii][0], velocities[ii][1], velocities[ii][2], 
+                        forces[ii][0], forces[ii][1], forces[ii][2] );
+    }
+    return;
+}
+
+/** 
+ * Check that energy and force are consistent
+ * 
+ * @return DefaultReturnValue or ErrorReturnValue
+ *
+ */
+
 void testEnergyConservation( std::string parameterFileName, MapStringInt& forceMap, int useOpenMMUnits, 
                              MapStringString& inputArgumentMap,
                              FILE* log, FILE* summaryFile ){
@@ -4943,8 +5092,19 @@ void testEnergyConservation( std::string parameterFileName, MapStringInt& forceM
     Context* context = createContext( parameterFileName, forceMap, useOpenMMUnits, inputArgumentMap, supplementary,
                                       tinkerForces, tinkerEnergies, log );
 
-    setIntFromMap(    inputArgumentMap, "equilibrationTotalSteps",          equilibrationTotalSteps  );
-    setIntFromMap(    inputArgumentMap, "simulationTotalSteps",             simulationTotalSteps     );
+    setIntFromMap(     inputArgumentMap, "equilibrationTotalSteps",          equilibrationTotalSteps  );
+    setIntFromMap(     inputArgumentMap, "simulationTotalSteps",             simulationTotalSteps     );
+    std::string intermediateStateFileName = "NA";
+    setStringFromMap( inputArgumentMap, "intermediateStateFileName",  intermediateStateFileName );
+
+    FILE* intermediateStateFile = NULL;
+    if( intermediateStateFileName != "NA" ){
+#ifdef _MSC_VER
+        fopen_s( &intermediateStateFile, intermediateStateFileName.c_str(), "w"));
+#else
+        intermediateStateFile = fopen( intermediateStateFileName.c_str(), "w" );
+#endif
+    }
  
 // ---------------------------------------------------------------------------------------
 
@@ -4960,8 +5120,10 @@ void testEnergyConservation( std::string parameterFileName, MapStringInt& forceM
    System& system                     = context->getSystem();
    int numberOfAtoms                  = system.getNumParticles();
    std::vector<Vec3> velocities; 
-   //velocities.resize( numberOfAtoms );
-   //_setVelocitiesBasedOnTemperature( system, velocities, initialTemperature, log );
+   velocities.resize( numberOfAtoms );
+   double initialT = 300.0;
+   setVelocitiesBasedOnTemperature( system, velocities, initialT, log );
+   context->setVelocities(velocities);
 
    // get integrator for equilibration and context
 
@@ -4976,6 +5138,7 @@ void testEnergyConservation( std::string parameterFileName, MapStringInt& forceM
    int currentStep                        = 0;
    int equilibrationStepsBetweenReports   = static_cast<int>(static_cast<double>(equilibrationTotalSteps)*equilibrationStepsBetweenReportsRatio);
    if( equilibrationStepsBetweenReports < 1 )equilibrationStepsBetweenReports = 1;
+   setIntFromMap(    inputArgumentMap, "equilibrationStepsBetweenReports",      equilibrationStepsBetweenReports );
 
    if( log ){
       (void) fprintf( log, "equilibrationTotalSteps=%d equilibrationStepsBetweenReports=%d ratio=%.4f\n", 
@@ -4994,6 +5157,7 @@ void testEnergyConservation( std::string parameterFileName, MapStringInt& forceM
 
       cpuTime                 = clock();
       integrator.step(equilibrationStepsBetweenReports);
+      //integrator.step(1);
       totalEquilibrationTime += clock() - cpuTime;
       currentStep            += equilibrationStepsBetweenReports;
 
@@ -5004,6 +5168,12 @@ void testEnergyConservation( std::string parameterFileName, MapStringInt& forceM
       double kineticEnergy                   = state.getKineticEnergy();
       double potentialEnergy                 = state.getPotentialEnergy();
       double totalEnergy                     = kineticEnergy + potentialEnergy;
+      if( intermediateStateFile ){
+          writeIntermediateStateFile( *context, currentStep, intermediateStateFile, log );
+      }
+
+      //MapStringDouble mapEnergies;
+      //double calculatedPE                    =  getEnergyForceBreakdown( *context, mapEnergies, log );
       if( log ){
          (void) fprintf( log, "%6d KE=%14.7e PE=%14.7e E=%14.7e\n", currentStep, kineticEnergy, potentialEnergy, totalEnergy );
          (void) fflush( log );
@@ -5075,6 +5245,8 @@ void testEnergyConservation( std::string parameterFileName, MapStringInt& forceM
 
    int simulationStepsBetweenReports   = static_cast<int>(static_cast<double>(simulationTotalSteps)*simulationStepsBetweenReportsRatio);
    if( simulationStepsBetweenReports < 1 )simulationStepsBetweenReports = 1;
+   setIntFromMap(    inputArgumentMap, "simulationStepsBetweenReports",      simulationStepsBetweenReports );
+   int equilibrationSteps            = currentStep;
    currentStep                       = 0;
 
    if( log ){
@@ -5099,6 +5271,10 @@ void testEnergyConservation( std::string parameterFileName, MapStringInt& forceM
       totalSimulationTime += clock() - cpuTime;
 
       currentStep         += simulationStepsBetweenReports;
+
+      if( intermediateStateFile ){
+          writeIntermediateStateFile( *context, (equilibrationSteps+currentStep), intermediateStateFile, log );
+      }
 
       // record energies
 

@@ -756,12 +756,11 @@ static void cudaComputeAmoebaMutualInducedAndGkFieldBySOR( amoebaGpuContext amoe
   
    // ---------------------------------------------------------------------------------------
 
-
-#ifdef AMOEBA_DEBUG
-    static const char* methodName = "cudaComputeAmoebaMutualInducedAndGkFieldBySOR";
     static int timestep = 0;
-    std::vector<int> fileId;
     timestep++;
+    static const char* methodName = "cudaComputeAmoebaMutualInducedAndGkFieldBySOR";
+#ifdef AMOEBA_DEBUG
+    std::vector<int> fileId;
     fileId.resize( 2 );
     fileId[0] = timestep;
     fileId[1] = 1;
@@ -780,7 +779,7 @@ static void cudaComputeAmoebaMutualInducedAndGkFieldBySOR( amoebaGpuContext amoe
     if( (numOfElems % numThreads) != 0 )numBlocks++;
 
 #ifdef AMOEBA_DEBUG
-    if( amoebaGpu->log ){
+    if( amoebaGpu->log && timestep == 1 ){
         (void) fprintf( amoebaGpu->log, "%s %d numOfElems=%d numThreads=%d numBlocks=%d "
                         "maxIterations=%d targetEpsilon=%.3e\n", 
                         methodName, gpu->natoms, numOfElems, numThreads, numBlocks,
@@ -980,6 +979,12 @@ time_t start = clock();
 
     amoebaGpu->mutualInducedDone             = done;
     amoebaGpu->mutualInducedConverged        = ( !done || iteration > amoebaGpu->mutualInducedMaxIterations ) ? 0 : 1;
+
+    if( amoebaGpu->log ){
+        (void) fprintf( amoebaGpu->log, "%s done=%d converged=%d iteration=%d eps=%14.7e\n",
+                        methodName, done, amoebaGpu->mutualInducedConverged, iteration, amoebaGpu->mutualInducedCurrentEpsilon );
+        (void) fflush( amoebaGpu->log );
+    }
 
 #ifdef AMOEBA_DEBUG
     if( 1 ){

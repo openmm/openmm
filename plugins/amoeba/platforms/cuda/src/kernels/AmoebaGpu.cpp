@@ -2115,6 +2115,7 @@ void amoebaGpuBuildVdwExclusionList( amoebaGpuContext amoebaGpu,  const std::vec
     // ---------------------------------------------------------------------------------------
 
     static const std::string methodName = "amoebaGpuBuildVdwExclusionList";
+    static const int debugOn            = 0;
 
     // ---------------------------------------------------------------------------------------
 
@@ -2155,7 +2156,7 @@ void amoebaGpuBuildVdwExclusionList( amoebaGpuContext amoebaGpu,  const std::vec
 
     // diagnostics
 
-    if( amoebaGpu->log ){
+    if( debugOn && amoebaGpu->log ){
         (void) fprintf( amoebaGpu->log, "%s min/max cell indices:\n", methodName.c_str() );
         for (int ii = 0; ii < dim; ii++)
         {
@@ -2202,7 +2203,7 @@ void amoebaGpuBuildVdwExclusionList( amoebaGpuContext amoebaGpu,  const std::vec
 
     // diagnostics
 
-    if( amoebaGpu->log ){
+    if( debugOn && amoebaGpu->log ){
         (void) fprintf( amoebaGpu->log, "%s %d cells w/ exclusions\n", methodName.c_str(), numWithExclusionIndices );
         for (int ii = 0; ii < cells; ii++)
         {
@@ -2270,7 +2271,7 @@ void amoebaGpuBuildVdwExclusionList( amoebaGpuContext amoebaGpu,  const std::vec
 
     // diagnostics
 
-    if( amoebaGpu->log ){
+    if( debugOn && amoebaGpu->log ){
 
         (void) fprintf( amoebaGpu->log, "%s Echo exclusions\n", methodName.c_str() );
         (void) fflush( amoebaGpu->log );
@@ -2890,6 +2891,7 @@ void amoebaGpuBuildScalingList( amoebaGpuContext amoebaGpu )
     // ---------------------------------------------------------------------------------------
 
     static const std::string methodName = "amoebaGpuBuildScalingList";
+    static const int debugOn            = 0;
 
     // ---------------------------------------------------------------------------------------
 
@@ -2944,7 +2946,7 @@ void amoebaGpuBuildScalingList( amoebaGpuContext amoebaGpu )
 
     // diagnostics
 
-    if( amoebaGpu->log ){
+    if( debugOn && amoebaGpu->log ){
         (void) fprintf( amoebaGpu->log, "%s min/max cell indices:\n", methodName.c_str() );
         for (int ii = 0; ii < dim; ii++)
         {
@@ -2980,7 +2982,7 @@ void amoebaGpuBuildScalingList( amoebaGpuContext amoebaGpu )
 
     // diagnostics
 
-#if 1
+#if 0
     if( 0 && amoebaGpu->log ){
         (void) fprintf( amoebaGpu->log, "%s %d cells\n",
                                         methodName.c_str(), numWithScalingIndices );
@@ -3000,7 +3002,7 @@ void amoebaGpuBuildScalingList( amoebaGpuContext amoebaGpu )
         (void) fflush( amoebaGpu->log );
     }
 #else
-    if( amoebaGpu->log ){
+    if( debugOn && amoebaGpu->log ){
         (void) fprintf( amoebaGpu->log, "%s %d cells w/ exclusions\n",
                                         methodName.c_str(), numWithScalingIndices );
         for (int ii = 0; ii < cells; ii++)
@@ -3158,7 +3160,7 @@ static unsigned int targetAtoms[2] = { 0, 1};
 
     // diagnostics
 
-    if( amoebaGpu->log && 0 ){
+    if( debugOn && amoebaGpu->log ){
 
         float* pScaleCheckSum = (float*) malloc( sizeof( float )*paddedAtoms );
         float* dScaleCheckSum = (float*) malloc( sizeof( float )*paddedAtoms );

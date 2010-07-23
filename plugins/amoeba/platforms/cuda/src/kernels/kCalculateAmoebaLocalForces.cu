@@ -1613,8 +1613,12 @@ void kCalculateAmoebaLocalForces(amoebaGpuContext gpu)
 {
    
     if( gpu->log ){
-        (void) fprintf( gpu->log,"kCalculateAmoebaLocalForces: blks=%u thrds/blk=%u\n",
-                        gpu->gpuContext->sim.blocks, gpu->gpuContext->sim.localForces_threads_per_block); fflush( gpu->log );
+        static int call = 0;
+        if( call == 0 ){
+            (void) fprintf( gpu->log,"kCalculateAmoebaLocalForces: blks=%u thrds/blk=%u\n",
+                            gpu->gpuContext->sim.blocks, gpu->gpuContext->sim.localForces_threads_per_block); fflush( gpu->log );
+            call++;
+        }
     }
 
     kCalculateAmoebaLocalForces_kernel<<<gpu->gpuContext->sim.blocks, gpu->gpuContext->sim.localForces_threads_per_block>>>();

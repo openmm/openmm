@@ -1156,11 +1156,10 @@ void kCalculateAmoebaKirkwoodEDiff( amoebaGpuContext amoebaGpu )
 
     static const char* methodName       = "kCalculateAmoebaKirkwoodEDiff";
     static unsigned int threadsPerBlock = 0;
-
-#ifdef AMOEBA_DEBUG
-    static int timestep = 0;
-    std::vector<int> fileId;
+    static int timestep                 = 0;
     timestep++;
+#ifdef AMOEBA_DEBUG
+    std::vector<int> fileId;
     fileId.resize( 2 );
     fileId[0] = timestep;
     fileId[1] = 1;
@@ -1188,21 +1187,21 @@ void kCalculateAmoebaKirkwoodEDiff( amoebaGpuContext amoebaGpu )
     unsigned int targetAtom                   = 0;
 #endif
 
-    if( amoebaGpu->log ){
-        (void) fprintf( amoebaGpu->log, "%s %d maxCovalentDegreeSz=%d"
-                        " gamma=%.3e scalingDistanceCutoff=%.3f ZZZ\n",
-                        methodName, gpu->natoms,
-                        amoebaGpu->maxCovalentDegreeSz, amoebaGpu->pGamma,
-                        amoebaGpu->scalingDistanceCutoff );
-        gpuPrintCudaAmoebaGmxSimulation(amoebaGpu, amoebaGpu->log );
-        (void) fflush( amoebaGpu->log );
-    }   
     kClearFields_3( amoebaGpu, 6 );
 
     if( threadsPerBlock == 0 ){
         threadsPerBlock = getThreadsPerBlock( amoebaGpu, sizeof(KirkwoodEDiffParticle));
     }   
     
+    if( amoebaGpu->log && timestep == 1 ){
+        (void) fprintf( amoebaGpu->log, "kCalculateAmoebaCudaKirkwoodEDiffN2Forces:  numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u Ebuf=%u ixnCt=%u workUnits=%u\n",
+                        amoebaGpu->nonbondBlocks, threadsPerBlock, amoebaGpu->bOutputBufferPerWarp,
+                        sizeof(KirkwoodEDiffParticle), sizeof(KirkwoodEDiffParticle)*threadsPerBlock,
+                        amoebaGpu->energyOutputBuffers, (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
+        //gpuPrintCudaAmoebaGmxSimulation(amoebaGpu, amoebaGpu->log );
+        (void) fflush( amoebaGpu->log );
+    }   
+
     if (gpu->bOutputBufferPerWarp){
 #if 0
         (void) fprintf( amoebaGpu->log, "kCalculateAmoebaCudaKirkwoodEDiffN2Forces warp:  numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u Ebuf=%u ixnCt=%u workUnits=%u\n",
@@ -1414,7 +1413,6 @@ void kCalculateAmoebaKirkwoodEDiff( amoebaGpuContext amoebaGpu )
          }
 
     }   
-
 #endif
 
    // ---------------------------------------------------------------------------------------

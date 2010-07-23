@@ -84,7 +84,9 @@ static std::string AMOEBA_FIXED_E_GK                                  = "AmoebaF
 static std::string AMOEBA_INDUCDED_DIPOLES                            = "AmoebaInducedDipoles";
 static std::string AMOEBA_INDUCDED_DIPOLES_GK                         = "AmoebaInducedDipoles_GK";
 
-static std::string INCLUDE_OBC_CAVITY_TERM                            = "INCLUDE_OBC_CAVITY_TERM";
+static std::string INCLUDE_OBC_CAVITY_TERM                            = "includeObcCavityTerm";
+static std::string MUTUAL_INDUCED_MAX_ITERATIONS                      = "mutualInducedMaxIterations";
+static std::string MUTUAL_INDUCED_TARGET_EPSILON                      = "mutualInducedTargetEpsilon";
 
 #define AmoebaHarmonicBondIndex                            0
 #define AmoebaHarmonicAngleIndex                           1
@@ -146,6 +148,10 @@ typedef MapStringVec3::const_iterator MapStringVec3CI;
 typedef std::map< std::string, double > MapStringDouble;
 typedef MapStringDouble::iterator MapStringDoubleI;
 typedef MapStringDouble::const_iterator MapStringDoubleCI;
+
+typedef std::map< std::string, Force*> MapStringForce;
+typedef MapStringForce::iterator MapStringForceI;
+typedef MapStringForce::const_iterator MapStringForceCI;
 
 // default return value from methods
 

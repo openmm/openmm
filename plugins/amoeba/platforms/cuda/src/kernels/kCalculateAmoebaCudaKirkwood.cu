@@ -2342,7 +2342,6 @@ void kCalculateAmoebaKirkwood( amoebaGpuContext amoebaGpu )
     for( int ii = 0; ii < amoebaGpu->gpuContext->sim.paddedNumberOfAtoms; ii++ ){
         (void) fprintf( amoebaGpu->log,"Born %6d %16.9e\n", ii,
                         gpu->psBornRadii->_pSysStream[0][ii] );
-    
     }
 #endif
 
@@ -2350,8 +2349,26 @@ void kCalculateAmoebaKirkwood( amoebaGpuContext amoebaGpu )
 
     if( threadsPerBlock == 0 ){
         threadsPerBlock                             = getThreadsPerBlock( amoebaGpu, sizeof(KirkwoodParticle));
+threadsPerBlock = 32;
         //unsigned int eDiffhreadsPerBlock            = getThreadsPerBlock( amoebaGpu, sizeof(KirkwoodEDiffParticle));
         //unsigned int maxThreadsPerBlock             = threadsPerBlock> eDiffhreadsPerBlock ? threadsPerBlock : eDiffhreadsPerBlock;
+
+        if( amoebaGpu->log ){
+       
+#if (__CUDA_ARCH__ >= 200)
+            unsigned int maxThreads = GF1XX_NONBOND_THREADS_PER_BLOCK;
+#elif (__CUDA_ARCH__ >= 130)
+            unsigned int maxThreads = GT2XX_NONBOND_THREADS_PER_BLOCK;
+#else
+            unsigned int maxThreads = G8X_NONBOND_THREADS_PER_BLOCK;
+#endif
+
+            (void) fprintf( amoebaGpu->log, "kCalculateAmoebaCudaKirkwood: blcks=%u tds=%u %u bPrWrp=%u atm=%u shrd=%u Ebuf=%u ixnCt=%u workUnits=%u\n",
+                            amoebaGpu->nonbondBlocks, threadsPerBlock, maxThreads, amoebaGpu->bOutputBufferPerWarp,
+                            sizeof(KirkwoodParticle), sizeof(KirkwoodParticle)*threadsPerBlock,
+                            amoebaGpu->energyOutputBuffers, (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
+            (void) fflush( amoebaGpu->log );
+        }
     }   
     
     kClearFields_1( amoebaGpu );
@@ -2531,7 +2548,6 @@ void kCalculateAmoebaKirkwood( amoebaGpuContext amoebaGpu )
 
     }   
     delete debugArray;
-
 #endif
 
     // map torques to forces
