@@ -61,27 +61,23 @@ void computeBornSum(__global float* global_bornSum, __global float4* posq, __glo
                 delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
                 float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
+                float invR = RSQRT(r2);
+                float r = RECIP(invR);
+                float2 params2 = (float2) (localData[baseLocalAtom+j].radius, localData[baseLocalAtom+j].scaledRadius);
+                float rScaledRadiusJ = r+params2.y;
 #ifdef USE_CUTOFF
-                if (atom1 < NUM_ATOMS && y+baseLocalAtom+j < NUM_ATOMS && r2 < CUTOFF_SQUARED) {
+                unsigned int includeInteraction = (atom1 < NUM_ATOMS && y+baseLocalAtom+j < NUM_ATOMS && r2 < CUTOFF_SQUARED && (j+baseLocalAtom != tgx) && (params1.x < rScaledRadiusJ));
 #else
-                if (atom1 < NUM_ATOMS && y+baseLocalAtom+j < NUM_ATOMS) {
+                unsigned int includeInteraction = (atom1 < NUM_ATOMS && y+baseLocalAtom+j < NUM_ATOMS && (j+baseLocalAtom != tgx) && (params1.x < rScaledRadiusJ));
 #endif
-                    float invR = RSQRT(r2);
-                    float r = RECIP(invR);
-                    float2 params2 = (float2) (localData[baseLocalAtom+j].radius, localData[baseLocalAtom+j].scaledRadius);
-                    float rScaledRadiusJ = r+params2.y;
-                    if ((j+baseLocalAtom != tgx) && (params1.x < rScaledRadiusJ)) {
-                        float l_ij = RECIP(max(params1.x, fabs(r-params2.y)));
-                        float u_ij = RECIP(rScaledRadiusJ);
-                        float l_ij2 = l_ij*l_ij;
-                        float u_ij2 = u_ij*u_ij;
-                        float ratio = LOG(u_ij * RECIP(l_ij));
-                        bornSum += l_ij - u_ij + 0.25f*r*(u_ij2-l_ij2) + (0.50f*invR*ratio) +
-                                         (0.25f*params2.y*params2.y*invR)*(l_ij2-u_ij2);
-                        if (params1.x < params2.x-r)
-                            bornSum += 2.0f*(RECIP(params1.x)-l_ij);
-                    }
-                }
+                float l_ij = RECIP(max(params1.x, fabs(r-params2.y)));
+                float u_ij = RECIP(rScaledRadiusJ);
+                float l_ij2 = l_ij*l_ij;
+                float u_ij2 = u_ij*u_ij;
+                float ratio = LOG(u_ij * RECIP(l_ij));
+                bornSum += select(0.0f, l_ij - u_ij + 0.25f*r*(u_ij2-l_ij2) + (0.50f*invR*ratio) +
+                                 (0.25f*params2.y*params2.y*invR)*(l_ij2-u_ij2), includeInteraction);
+                bornSum += select(0.0f, 2.0f*(RECIP(params1.x)-l_ij), includeInteraction && params1.x < params2.x-r);
             }
 
             // Sum the forces and write results.
@@ -130,38 +126,36 @@ void computeBornSum(__global float* global_bornSum, __global float4* posq, __glo
 #endif
                 float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
 #ifdef USE_CUTOFF
-                if (atom1 < NUM_ATOMS && y+baseLocalAtom+tj < NUM_ATOMS && r2 < CUTOFF_SQUARED) {
+                unsigned int includeInteraction = (atom1 < NUM_ATOMS && y+baseLocalAtom+tj < NUM_ATOMS && r2 < CUTOFF_SQUARED);
 #else
-                if (atom1 < NUM_ATOMS && y+baseLocalAtom+tj < NUM_ATOMS) {
+                unsigned int includeInteraction = (atom1 < NUM_ATOMS && y+baseLocalAtom+tj < NUM_ATOMS);
 #endif
-                    float invR = RSQRT(r2);
-                    float r = RECIP(invR);
-                    float2 params2 = (float2) (localData[baseLocalAtom+tj].radius, localData[baseLocalAtom+tj].scaledRadius);
-                    float rScaledRadiusJ = r+params2.y;
-                    if (params1.x < rScaledRadiusJ) {
-                        float l_ij = RECIP(max(params1.x, fabs(r-params2.y)));
-                        float u_ij = RECIP(rScaledRadiusJ);
-                        float l_ij2 = l_ij*l_ij;
-                        float u_ij2 = u_ij*u_ij;
-                        float ratio = LOG(u_ij * RECIP(l_ij));
-                        bornSum += l_ij - u_ij + 0.25f*r*(u_ij2-l_ij2) + (0.50f*invR*ratio) +
-                                         (0.25f*params2.y*params2.y*invR)*(l_ij2-u_ij2);
-                        if (params1.x < params2.x-r)
-                            bornSum += 2.0f*(RECIP(params1.x)-l_ij);
-                    }
-                    float rScaledRadiusI = r+params1.y;
-                    if (params2.x < rScaledRadiusI) {
-                        float l_ij = RECIP(max(params2.x, fabs(r-params1.y)));
-                        float u_ij = RECIP(rScaledRadiusI);
-                        float l_ij2 = l_ij*l_ij;
-                        float u_ij2 = u_ij*u_ij;
-                        float ratio = LOG(u_ij * RECIP(l_ij));
-                        float term = l_ij - u_ij + 0.25f*r*(u_ij2-l_ij2) + (0.50f*invR*ratio) +
-                                         (0.25f*params1.y*params1.y*invR)*(l_ij2-u_ij2);
-                        if (params2.x < params1.x-r)
-                            term += 2.0f*(RECIP(params2.x)-l_ij);
-                        localData[baseLocalAtom+tj+forceBufferOffset].bornSum += term;
-                    }
+                float invR = RSQRT(r2);
+                float r = RECIP(invR);
+                float2 params2 = (float2) (localData[baseLocalAtom+tj].radius, localData[baseLocalAtom+tj].scaledRadius);
+                float rScaledRadiusJ = r+params2.y;
+                {
+                    float l_ij = RECIP(max(params1.x, fabs(r-params2.y)));
+                    float u_ij = RECIP(rScaledRadiusJ);
+                    float l_ij2 = l_ij*l_ij;
+                    float u_ij2 = u_ij*u_ij;
+                    float ratio = LOG(u_ij * RECIP(l_ij));
+                    unsigned int includeTerm = (includeInteraction && params1.x < rScaledRadiusJ);
+                    bornSum += select(0.0f, l_ij - u_ij + 0.25f*r*(u_ij2-l_ij2) + (0.50f*invR*ratio) +
+                                     (0.25f*params2.y*params2.y*invR)*(l_ij2-u_ij2), includeTerm);
+                    bornSum += select(0.0f, 2.0f*(RECIP(params1.x)-l_ij), includeTerm && params1.x < params2.x-r);
+                }
+                float rScaledRadiusI = r+params1.y;
+                {
+                    float l_ij = RECIP(max(params2.x, fabs(r-params1.y)));
+                    float u_ij = RECIP(rScaledRadiusI);
+                    float l_ij2 = l_ij*l_ij;
+                    float u_ij2 = u_ij*u_ij;
+                    float ratio = LOG(u_ij * RECIP(l_ij));
+                    float term = l_ij - u_ij + 0.25f*r*(u_ij2-l_ij2) + (0.50f*invR*ratio) +
+                                     (0.25f*params1.y*params1.y*invR)*(l_ij2-u_ij2);
+                    term += select(0.0f, 2.0f*(RECIP(params2.x)-l_ij), params2.x < params1.x-r);
+                    localData[baseLocalAtom+tj+forceBufferOffset].bornSum += select(0.0f, term, includeInteraction && params2.x < rScaledRadiusI);
                 }
                 barrier(CLK_LOCAL_MEM_FENCE);
                 tj = (tj+1)%(TILE_SIZE/2);
@@ -234,38 +228,35 @@ void computeGBSAForce1(__global float4* forceBuffers, __global float* energyBuff
             unsigned int xi = x/TILE_SIZE;
             unsigned int tile = xi+xi*PADDED_NUM_ATOMS/TILE_SIZE-xi*(xi+1)/2;
             for (unsigned int j = 0; j < TILE_SIZE/2; j++) {
-                if (atom1 < NUM_ATOMS && y+baseLocalAtom+j < NUM_ATOMS) {
-                    float4 posq2 = (float4) (localData[baseLocalAtom+j].x, localData[baseLocalAtom+j].y, localData[baseLocalAtom+j].z, localData[baseLocalAtom+j].q);
-                    float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
+                unsigned int includeInteraction = (atom1 < NUM_ATOMS && y+baseLocalAtom+j < NUM_ATOMS);
+                float4 posq2 = (float4) (localData[baseLocalAtom+j].x, localData[baseLocalAtom+j].y, localData[baseLocalAtom+j].z, localData[baseLocalAtom+j].q);
+                float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
 #ifdef USE_PERIODIC
-                    delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-                    delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-                    delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
+                delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
+                delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
+                delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
-                    float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
-                    float invR = RSQRT(r2);
-                    float r = RECIP(invR);
-                    float bornRadius2 = localData[baseLocalAtom+j].bornRadius;
-                    float alpha2_ij = bornRadius1*bornRadius2;
-                    float D_ij = r2*RECIP(4.0f*alpha2_ij);
-                    float expTerm = EXP(-D_ij);
-                    float denominator2 = r2 + alpha2_ij*expTerm;
-                    float denominator = SQRT(denominator2);
-                    float tempEnergy = (PREFACTOR*posq1.w*posq2.w)*RECIP(denominator);
-                    float Gpol = tempEnergy*RECIP(denominator2);
-                    float dGpol_dalpha2_ij = -0.5f*Gpol*expTerm*(1.0f+D_ij);
-                    force.w += dGpol_dalpha2_ij*bornRadius2;
-                    float dEdR = Gpol*(1.0f - 0.25f*expTerm);
+                float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
+                float invR = RSQRT(r2);
+                float r = RECIP(invR);
+                float bornRadius2 = localData[baseLocalAtom+j].bornRadius;
+                float alpha2_ij = bornRadius1*bornRadius2;
+                float D_ij = r2*RECIP(4.0f*alpha2_ij);
+                float expTerm = EXP(-D_ij);
+                float denominator2 = r2 + alpha2_ij*expTerm;
+                float denominator = SQRT(denominator2);
+                float tempEnergy = (PREFACTOR*posq1.w*posq2.w)*RECIP(denominator);
+                float Gpol = tempEnergy*RECIP(denominator2);
+                float dGpol_dalpha2_ij = -0.5f*Gpol*expTerm*(1.0f+D_ij);
+                force.w += select(0.0f, dGpol_dalpha2_ij*bornRadius2, includeInteraction);
+                float dEdR = Gpol*(1.0f - 0.25f*expTerm);
 #ifdef USE_CUTOFF
-                    if (r2 > CUTOFF_SQUARED) {
-                        dEdR = 0.0f;
-                        tempEnergy  = 0.0f;
-                    }
+                dEdR = select(dEdR, 0.0f, r2 > CUTOFF_SQUARED);
+                tempEnergy = select(tempEnergy, 0.0f, r2 > CUTOFF_SQUARED);
 #endif
-                    energy += 0.5f*tempEnergy;
-                    delta.xyz *= dEdR;
-                    force.xyz -= delta.xyz;
-                }
+                energy += select(0.0f, 0.5f*tempEnergy, includeInteraction);
+                delta.xyz *= select(0.0f, dEdR, includeInteraction);
+                force.xyz -= delta.xyz;
             }
 
             // Sum the forces and write results.
@@ -308,42 +299,39 @@ void computeGBSAForce1(__global float4* forceBuffers, __global float* energyBuff
             unsigned int tile = xi+yi*PADDED_NUM_ATOMS/TILE_SIZE-yi*(yi+1)/2;
             unsigned int tj = tgx%(TILE_SIZE/2);
             for (unsigned int j = 0; j < TILE_SIZE/2; j++) {
-                if (atom1 < NUM_ATOMS && y+baseLocalAtom+tj < NUM_ATOMS) {
-                    float4 posq2 = (float4) (localData[baseLocalAtom+tj].x, localData[baseLocalAtom+tj].y, localData[baseLocalAtom+tj].z, localData[baseLocalAtom+tj].q);
-                    float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
+                unsigned int includeInteraction = (atom1 < NUM_ATOMS && y+baseLocalAtom+tj < NUM_ATOMS);
+                float4 posq2 = (float4) (localData[baseLocalAtom+tj].x, localData[baseLocalAtom+tj].y, localData[baseLocalAtom+tj].z, localData[baseLocalAtom+tj].q);
+                float4 delta = (float4) (posq2.xyz - posq1.xyz, 0.0f);
 #ifdef USE_PERIODIC
-                    delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
-                    delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
-                    delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
+                delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
+                delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
+                delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
 #endif
-                    float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
-                    float invR = RSQRT(r2);
-                    float r = RECIP(invR);
-                    float bornRadius2 = localData[baseLocalAtom+tj].bornRadius;
-                    float alpha2_ij = bornRadius1*bornRadius2;
-                    float D_ij = r2*RECIP(4.0f*alpha2_ij);
-                    float expTerm = EXP(-D_ij);
-                    float denominator2 = r2 + alpha2_ij*expTerm;
-                    float denominator = SQRT(denominator2);
-                    float tempEnergy = (PREFACTOR*posq1.w*posq2.w)*RECIP(denominator);
-                    float Gpol = tempEnergy*RECIP(denominator2);
-                    float dGpol_dalpha2_ij = -0.5f*Gpol*expTerm*(1.0f+D_ij);
-                    force.w += dGpol_dalpha2_ij*bornRadius2;
-                    float dEdR = Gpol*(1.0f - 0.25f*expTerm);
+                float r2 = delta.x*delta.x + delta.y*delta.y + delta.z*delta.z;
+                float invR = RSQRT(r2);
+                float r = RECIP(invR);
+                float bornRadius2 = localData[baseLocalAtom+tj].bornRadius;
+                float alpha2_ij = bornRadius1*bornRadius2;
+                float D_ij = r2*RECIP(4.0f*alpha2_ij);
+                float expTerm = EXP(-D_ij);
+                float denominator2 = r2 + alpha2_ij*expTerm;
+                float denominator = SQRT(denominator2);
+                float tempEnergy = (PREFACTOR*posq1.w*posq2.w)*RECIP(denominator);
+                float Gpol = tempEnergy*RECIP(denominator2);
+                float dGpol_dalpha2_ij = -0.5f*Gpol*expTerm*(1.0f+D_ij);
+                force.w += select(0.0f, dGpol_dalpha2_ij*bornRadius2, includeInteraction);
+                float dEdR = Gpol*(1.0f - 0.25f*expTerm);
 #ifdef USE_CUTOFF
-                    if (r2 > CUTOFF_SQUARED) {
-                        dEdR = 0.0f;
-                        tempEnergy  = 0.0f;
-                    }
+                dEdR = select(dEdR, 0.0f, r2 > CUTOFF_SQUARED);
+                tempEnergy = select(tempEnergy, 0.0f, r2 > CUTOFF_SQUARED);
 #endif
-                    energy += tempEnergy;
-                    delta.xyz *= dEdR;
-                    force.xyz -= delta.xyz;
-                    localData[baseLocalAtom+tj+forceBufferOffset].fx += delta.x;
-                    localData[baseLocalAtom+tj+forceBufferOffset].fy += delta.y;
-                    localData[baseLocalAtom+tj+forceBufferOffset].fz += delta.z;
-                    localData[baseLocalAtom+tj+forceBufferOffset].fw += dGpol_dalpha2_ij*bornRadius1;
-                }
+                energy += select(0.0f, tempEnergy, includeInteraction);
+                delta.xyz *= select(0.0f, dEdR, includeInteraction);
+                force.xyz -= delta.xyz;
+                localData[baseLocalAtom+tj+forceBufferOffset].fx += delta.x;
+                localData[baseLocalAtom+tj+forceBufferOffset].fy += delta.y;
+                localData[baseLocalAtom+tj+forceBufferOffset].fz += delta.z;
+                localData[baseLocalAtom+tj+forceBufferOffset].fw += select(0.0f, dGpol_dalpha2_ij*bornRadius1, includeInteraction);
                 barrier(CLK_LOCAL_MEM_FENCE);
                 tj = (tj+1)%(TILE_SIZE/2);
             }

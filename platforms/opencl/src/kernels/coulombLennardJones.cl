@@ -37,10 +37,11 @@ if (!isExcluded || needCorrection) {
     dEdR += tempForce*invR*invR;
 }
 #else
+{
 #ifdef USE_CUTOFF
-if (!isExcluded && r2 < CUTOFF_SQUARED) {
+    unsigned int includeInteraction = (!isExcluded && r2 < CUTOFF_SQUARED);
 #else
-if (!isExcluded) {
+    unsigned int includeInteraction = (!isExcluded);
 #endif
     float tempForce = 0.0f;
   #if HAS_LENNARD_JONES
@@ -50,19 +51,19 @@ if (!isExcluded) {
     float sig6 = sig2*sig2*sig2;
     float eps = sigmaEpsilon1.y*sigmaEpsilon2.y;
     tempForce = eps*(12.0f*sig6 - 6.0f)*sig6;
-    tempEnergy += eps*(sig6 - 1.0f)*sig6;
+    tempEnergy += select(0.0f, eps*(sig6 - 1.0f)*sig6, includeInteraction);
   #endif
 #if HAS_COULOMB
   #ifdef USE_CUTOFF
     const float prefactor = 138.935456f*posq1.w*posq2.w;
     tempForce += prefactor*(invR - 2.0f*REACTION_FIELD_K*r2);
-    tempEnergy += prefactor*(invR + REACTION_FIELD_K*r2 - REACTION_FIELD_C);
+    tempEnergy += select(0.0f, prefactor*(invR + REACTION_FIELD_K*r2 - REACTION_FIELD_C), includeInteraction);
   #else
     const float prefactor = 138.935456f*posq1.w*posq2.w*invR;
     tempForce += prefactor;
-    tempEnergy += prefactor;
+    tempEnergy += select(0.0f, prefactor, includeInteraction);
   #endif
 #endif
-    dEdR += tempForce*invR*invR;
+    dEdR += select(0.0f, tempForce*invR*invR, includeInteraction);
 }
 #endif

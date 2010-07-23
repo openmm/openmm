@@ -1,8 +1,4 @@
-#ifdef USE_CUTOFF
-if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS && atom1 != atom2 && r2 < CUTOFF_SQUARED) {
-#else
-if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS && atom1 != atom2) {
-#endif
+{
     float invRSquared = RECIP(r2);
     float rScaledRadiusJ = r+obcParams2.y;
     float rScaledRadiusI = r+obcParams1.y;
@@ -24,6 +20,12 @@ if (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS && atom1 != atom2) {
     t1I *= invR;
     float term1 = 0.125f*(1.0f+obcParams2.y*obcParams2.y*invRSquared)*t3J + 0.25f*t1J*invRSquared;
     float term2 = 0.125f*(1.0f+obcParams1.y*obcParams1.y*invRSquared)*t3I + 0.25f*t1I*invRSquared;
-    dEdR += (obcParams1.x < rScaledRadiusJ ? bornForce1*term1 : 0.0f);
-    dEdR += (obcParams2.x < rScaledRadiusJ ? bornForce2*term2 : 0.0f);
+    float tempdEdR = select(0.0f, bornForce1*term1, obcParams1.x < rScaledRadiusJ);
+    tempdEdR += select(0.0f, bornForce2*term2, obcParams2.x < rScaledRadiusJ);
+#ifdef USE_CUTOFF
+    unsigned int includeInteraction = (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS && atom1 != atom2 && r2 < CUTOFF_SQUARED);
+#else
+    unsigned int includeInteraction = (atom1 < NUM_ATOMS && atom2 < NUM_ATOMS && atom1 != atom2);
+#endif
+    dEdR += select(0.0f, tempdEdR, includeInteraction);
 }
