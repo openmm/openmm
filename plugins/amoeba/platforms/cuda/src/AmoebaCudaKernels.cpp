@@ -500,6 +500,7 @@ static void computeAmoebaMultipoleForce( AmoebaCudaData& data ) {
     // multipoles
 
     kCalculateAmoebaMultipoleForces(gpu, data.getHasAmoebaGeneralizedKirkwood() );
+
 //kClearForces(gpu->gpuContext);
 //kClearEnergy(gpu->gpuContext);
 //(void) fprintf( data.getLog(), "computeAmoebaMultipoleForce clearing forces/energy after kCalculateAmoebaMultipoleForces()\n" );

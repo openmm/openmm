@@ -1197,7 +1197,10 @@ static void gpuRotationToLabFrameAllocate( amoebaGpuContext amoebaGpu )
     // output
  
     amoebaGpu->psLabFrameDipole                      = new CUDAStream<float>(3*amoebaGpu->paddedNumberOfAtoms, 1, "LabFrameDipole");
+    amoebaGpu->amoebaSim.pLabFrameDipole             = amoebaGpu->psLabFrameDipole->_pDevStream[0];
+
     amoebaGpu->psLabFrameQuadrupole                  = new CUDAStream<float>(9*amoebaGpu->paddedNumberOfAtoms, 1, "LabFrameQuadrupole");
+    amoebaGpu->amoebaSim.pLabFrameQuadrupole         = amoebaGpu->psLabFrameQuadrupole->_pDevStream[0];
 
     memset( amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysStream[0], 0, sizeof(int)*4*amoebaGpu->paddedNumberOfAtoms );
 }
@@ -1275,7 +1278,11 @@ void gpuMutualInducedFieldAllocate( amoebaGpuContext amoebaGpu )
 #endif
 
     amoebaGpu->psInducedDipole                 = new CUDAStream<float>(paddedNumberOfAtoms*3, 1, "InducedDipole");
+    amoebaGpu->amoebaSim.pInducedDipole        = amoebaGpu->psInducedDipole->_pDevStream[0];
+
     amoebaGpu->psInducedDipolePolar            = new CUDAStream<float>(paddedNumberOfAtoms*3, 1, "InducedDipolePolar");
+    amoebaGpu->amoebaSim.pInducedDipolePolar   = amoebaGpu->psInducedDipolePolar->_pDevStream[0];
+
     amoebaGpu->psCurrentEpsilon                = new CUDAStream<float>(5, 1, "CurrentEpsilon");
     amoebaGpu->epsilonThreadsPerBlock          = 384;
  
@@ -1326,19 +1333,15 @@ void gpuElectrostaticAllocate( amoebaGpuContext amoebaGpu )
     }
 #endif
 
-    amoebaGpu->psForce                         = new CUDAStream<float>(paddedNumberOfAtoms*3, 1, "ForceuElectrostatic");
-    amoebaGpu->psTorque                        = new CUDAStream<float>(paddedNumberOfAtoms*3, 1, "ForceTorque");
+    amoebaGpu->psForce                         = new CUDAStream<float>(paddedNumberOfAtoms*3, 1, "ElectrostaticForce");
+    amoebaGpu->psTorque                        = new CUDAStream<float>(paddedNumberOfAtoms*3, 1, "Torque");
 
     unsigned int offset                        = 3*paddedNumberOfAtoms*sizeof( float );
     memset( amoebaGpu->psForce->_pSysStream[0],          0, offset );
     memset( amoebaGpu->psTorque->_pSysStream[0],         0, offset );
 
-    offset                                     = paddedNumberOfAtoms*sizeof( float );
-//  memset( amoebaGpu->psEnergy->_pSysStream[0],         0, offset );
-
     amoebaGpu->psForce->Download();
     amoebaGpu->psTorque->Download();
-//    amoebaGpu->psEnergy->Download();
     
 }
 
@@ -1363,22 +1366,27 @@ void gpuKirkwoodAllocate( amoebaGpuContext amoebaGpu )
         return;
     }
 
-    int paddedNumberOfAtoms                = amoebaGpu->paddedNumberOfAtoms;
+    int paddedNumberOfAtoms                      = amoebaGpu->paddedNumberOfAtoms;
 
 #ifdef AMOEBA_DEBUG
     if( amoebaGpu->log ){
-        (void) fprintf( amoebaGpu->log,"%s: paddedNumberOfAtoms=%d\n", methodName.c_str(), paddedNumberOfAtoms );
+        (void) fprintf( amoebaGpu->log,"%s: paddedNumberOfAtoms      =%d\n", methodName.c_str(), paddedNumberOfAtoms );
         (void) fflush( amoebaGpu->log );
     }
 #endif
 
-    amoebaGpu->psBorn                      = new CUDAStream<float>(paddedNumberOfAtoms,   1, "KirkwoodBorn");
-    amoebaGpu->psBornPolar                 = new CUDAStream<float>(paddedNumberOfAtoms,   1, "KirkwoodBornPolar");
-    amoebaGpu->psGk_Field                  = new CUDAStream<float>(paddedNumberOfAtoms*3, 1, "Gk_Fixed_Field");
-    amoebaGpu->psInducedDipoleS            = new CUDAStream<float>(paddedNumberOfAtoms*3, 1, "InducedDipoleS");
-    amoebaGpu->psInducedDipolePolarS       = new CUDAStream<float>(paddedNumberOfAtoms*3, 1, "InducedDipolePolarS");
-    amoebaGpu->psKirkwoodForce             = new CUDAStream<float>(paddedNumberOfAtoms*3, 1, "KirkwoodForce");
-    amoebaGpu->psKirkwoodEDiffForce        = new CUDAStream<float>(paddedNumberOfAtoms*3, 1, "KirkwoodEDiffForce");
+    amoebaGpu->psBorn                            = new CUDAStream<float>(paddedNumberOfAtoms,   1, "KirkwoodBorn");
+    amoebaGpu->psBornPolar                       = new CUDAStream<float>(paddedNumberOfAtoms,   1, "KirkwoodBornPolar");
+    amoebaGpu->psGk_Field                        = new CUDAStream<float>(paddedNumberOfAtoms*3, 1, "Gk_Fixed_Field");
+
+    amoebaGpu->psInducedDipoleS                  = new CUDAStream<float>(paddedNumberOfAtoms*3, 1, "InducedDipoleS");
+    amoebaGpu->amoebaSim.pInducedDipoleS         = amoebaGpu->psInducedDipoleS->_pDevStream[0];
+
+    amoebaGpu->psInducedDipolePolarS             = new CUDAStream<float>(paddedNumberOfAtoms*3, 1, "InducedDipolePolarS");
+    amoebaGpu->amoebaSim.pInducedDipolePolarS    = amoebaGpu->psInducedDipolePolarS->_pDevStream[0];
+
+    amoebaGpu->psKirkwoodForce                   = new CUDAStream<float>(paddedNumberOfAtoms*3, 1, "KirkwoodForce");
+    amoebaGpu->psKirkwoodEDiffForce              = new CUDAStream<float>(paddedNumberOfAtoms*3, 1, "KirkwoodEDiffForce");
 
     unsigned int offset                    = paddedNumberOfAtoms*sizeof( float );
     memset( amoebaGpu->psBorn->_pSysStream[0],               0, offset );
@@ -2685,7 +2693,10 @@ void amoebaGpuBuildOutputBuffers( amoebaGpuContext amoebaGpu )
         (void) fflush( amoebaGpu->log );
     }
     amoebaGpu->psWorkArray_3_1            = new CUDAStream<float>(3*paddedNumberOfAtoms, (amoebaGpu->outputBuffers), "AmoebaField_3_1");
+    amoebaGpu->amoebaSim.pWorkArray_3_1   = amoebaGpu->psWorkArray_3_1->_pDevStream[0];
+
     amoebaGpu->psWorkArray_3_2            = new CUDAStream<float>(3*paddedNumberOfAtoms, (amoebaGpu->outputBuffers), "AmoebaField_3_2");
+    amoebaGpu->amoebaSim.pWorkArray_3_2   = amoebaGpu->psWorkArray_3_2->_pDevStream[0];
 
     // used GK
     amoebaGpu->psWorkArray_3_3            = new CUDAStream<float>(3*paddedNumberOfAtoms, (amoebaGpu->outputBuffers), "AmoebaField_3_3");
@@ -2694,7 +2705,10 @@ void amoebaGpuBuildOutputBuffers( amoebaGpuContext amoebaGpu )
     amoebaGpu->psWorkArray_3_6            = new CUDAStream<float>(3*paddedNumberOfAtoms, (amoebaGpu->outputBuffers), "AmoebaField_3_6");
 
     amoebaGpu->psWorkArray_1_1            = new CUDAStream<float>(  paddedNumberOfAtoms, (amoebaGpu->outputBuffers), "AmoebaField_1_1");
+    amoebaGpu->amoebaSim.pWorkArray_1_1   = amoebaGpu->psWorkArray_1_1->_pDevStream[0];
+
     amoebaGpu->psWorkArray_1_2            = new CUDAStream<float>(  paddedNumberOfAtoms, (amoebaGpu->outputBuffers), "AmoebaField_1_2");
+    amoebaGpu->amoebaSim.pWorkArray_1_2   = amoebaGpu->psWorkArray_1_2->_pDevStream[0];
 
     amoebaGpu->psEnergy                   = new CUDAStream<float>(amoebaGpu->energyOutputBuffers, 1, "AmoebaEnergy");
 

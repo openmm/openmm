@@ -41,231 +41,6 @@
 #include <builtin_types.h>
 #include <vector_functions.h>
 
-#if 0
-#define RTERROR(status, s) \
-    if (status != cudaSuccess) { \
-        printf("%s %s\n", s, cudaGetErrorString(status)); \
-        exit(-1); \
-    }
-
-#define LAUNCHERROR(s) \
-    { \
-        cudaError_t status = cudaGetLastError(); \
-        if (status != cudaSuccess) { \
-            printf("Error: %s launching kernel %s\n", cudaGetErrorString(status), s); \
-            exit(-1); \
-        } \
-    }
-#endif
-
-#if 0
-// Pure virtual class to define an interface for objects resident both on GPU and CPU
-struct SoADeviceObject {
-    virtual void Allocate() = 0;
-    virtual void Deallocate() = 0;
-    virtual void Upload() = 0;
-    virtual void Download() = 0;
-};
-
-template <typename T>
-struct CUDAStream : public SoADeviceObject
-{
-    unsigned int    _length;
-    unsigned int    _subStreams;
-    unsigned int    _stride;
-    T**             _pSysStream;
-    T**             _pDevStream;
-    T*              _pSysData;
-    T*              _pDevData;
-    std::string     _name;
-    CUDAStream(int length, int subStreams = 1, std::string name="");
-    CUDAStream(unsigned int length, unsigned int subStreams = 1, std::string name="");
-    CUDAStream(unsigned int length, int subStreams = 1, std::string name="");
-    CUDAStream(int length, unsigned int subStreams = 1, std::string name="");
-    virtual ~CUDAStream();
-    void Allocate();
-    void Deallocate();
-    void Upload();
-    void Download();
-    void Collapse(unsigned int newstreams = 1, unsigned int interleave = 1);
-    T& operator[](int index);
-};
-
-float CompareStreams(CUDAStream<float>& s1, CUDAStream<float>& s2, float tolerance, unsigned int maxindex = 0);
-
-template <typename T>
-CUDAStream<T>::CUDAStream(int length, unsigned int subStreams, std::string name) : _length(length), _subStreams(subStreams), _stride((length + 0xf) & 0xfffffff0), _name(name)
-{
-    Allocate();   
-}
-
-template <typename T>
-CUDAStream<T>::CUDAStream(unsigned int length, int subStreams, std::string name) : _length(length), _subStreams(subStreams), _stride((length + 0xf) & 0xfffffff0), _name(name)
-{
-    Allocate();   
-}
-
-template <typename T>
-CUDAStream<T>::CUDAStream(unsigned int length, unsigned int subStreams, std::string name) : _length(length), _subStreams(subStreams), _stride((length + 0xf) & 0xfffffff0), _name(name)
-{
-    Allocate();   
-}
-
-template <typename T>
-CUDAStream<T>::CUDAStream(int length, int subStreams, std::string name) : _length(length), _subStreams(subStreams), _stride((length + 0xf) & 0xfffffff0), _name(name)
-{
-    Allocate();   
-}
-
-template <typename T>
-CUDAStream<T>::~CUDAStream()
-{
-    Deallocate();
-}
-
-template <typename T>
-void CUDAStream<T>::Allocate()
-{
-    cudaError_t status;
-    _pSysStream =   new T*[_subStreams];
-    _pDevStream =   new T*[_subStreams];
-    _pSysData =     new T[_subStreams * _stride];
-
-    status = cudaMalloc((void **) &_pDevData, _stride * _subStreams * sizeof(T));
-    RTERROR(status, (_name+": cudaMalloc in CUDAStream::Allocate failed").c_str());
-
-    for (unsigned int i = 0; i < _subStreams; i++)
-    {
-        _pSysStream[i] = _pSysData + i * _stride;
-        _pDevStream[i] = _pDevData + i * _stride;
-    }
-}
-
-template <typename T>
-void CUDAStream<T>::Deallocate()
-{
-    cudaError_t status;
-    delete[] _pSysStream;
-    _pSysStream = NULL;
-    delete[] _pDevStream;
-    _pDevStream = NULL;
-    delete[] _pSysData;
-    _pSysData = NULL;
-    status = cudaFree(_pDevData);
-    RTERROR(status, (_name+": cudaFree in CUDAStream::Deallocate failed").c_str());
-}
-
-template <typename T>
-void CUDAStream<T>::Upload()
-{
-    cudaError_t status;
-    status = cudaMemcpy(_pDevData, _pSysData, _stride * _subStreams * sizeof(T), cudaMemcpyHostToDevice);
-    RTERROR(status, (_name+": cudaMemcpy in CUDAStream::Upload failed").c_str());
-}
-
-template <typename T>
-void CUDAStream<T>::Download()
-{
-    cudaError_t status;
-    status = cudaMemcpy(_pSysData, _pDevData, _stride * _subStreams * sizeof(T), cudaMemcpyDeviceToHost);
-    RTERROR(status, (_name+": cudaMemcpy in CUDAStream::Download failed").c_str());
-}
-
-template <typename T>
-void CUDAStream<T>::Collapse(unsigned int newstreams, unsigned int interleave)
-{
-    T* pTemp = new T[_subStreams * _stride];
-    unsigned int stream = 0;
-    unsigned int pos = 0;
-    unsigned int newstride = _stride * _subStreams / newstreams;
-    unsigned int newlength = _length * _subStreams / newstreams;
-
-    // Copy data into new format
-    for (unsigned int i = 0; i < _length; i++)
-    {
-        for (unsigned int j = 0; j < _subStreams; j++)
-        {
-            pTemp[stream * newstride + pos] = _pSysStream[j][i];
-            stream++;
-            if (stream == newstreams)
-            {
-                stream = 0;
-                pos++;
-            }
-        }
-    }
-
-    // Remap stream pointers;
-    for (unsigned int i = 0; i < newstreams; i++)
-    {
-        _pSysStream[i] = _pSysData + i * newstride;
-        _pDevStream[i] = _pDevData + i * newstride;
-    }
-
-    // Copy data back intro original stream
-    for (unsigned int i = 0; i < newlength; i++)
-        for (unsigned int j = 0; j < newstreams; j++)
-            _pSysStream[j][i] = pTemp[j * newstride + i];
-    
-    _stride = newstride;
-    _length = newlength;
-    _subStreams = newstreams;
-    delete[] pTemp;
-}
-
-template <typename T>
-T& CUDAStream<T>::operator[](int index)
-{
-    return _pSysData[index];
-}
-
-static const unsigned int GRID = 32;
-static const unsigned int GRIDBITS = 5;
-static const int G8X_NONBOND_THREADS_PER_BLOCK          = 256;
-static const int GT2XX_NONBOND_THREADS_PER_BLOCK        = 320;
-static const int G8X_BORNFORCE2_THREADS_PER_BLOCK       = 256;
-static const int GT2XX_BORNFORCE2_THREADS_PER_BLOCK     = 320;
-static const int G8X_SHAKE_THREADS_PER_BLOCK            = 128;
-static const int GT2XX_SHAKE_THREADS_PER_BLOCK          = 256;
-static const int G8X_UPDATE_THREADS_PER_BLOCK           = 192;
-static const int GT2XX_UPDATE_THREADS_PER_BLOCK         = 384;
-static const int G8X_LOCALFORCES_THREADS_PER_BLOCK      = 192;
-static const int GT2XX_LOCALFORCES_THREADS_PER_BLOCK    = 384;
-static const int G8X_THREADS_PER_BLOCK                  = 256;
-static const int GT2XX_THREADS_PER_BLOCK                = 256;
-static const int G8X_RANDOM_THREADS_PER_BLOCK           = 256;
-static const int GT2XX_RANDOM_THREADS_PER_BLOCK         = 384;
-static const int G8X_NONBOND_WORKUNITS_PER_SM           = 220;
-static const int GT2XX_NONBOND_WORKUNITS_PER_SM         = 256;
-static const unsigned int MAX_STACK_SIZE = 8;
-static const unsigned int MAX_TABULATED_FUNCTIONS = 4;
-
-static const float PI = 3.14159265358979323846f;
-
-static const int PME_ORDER = 4;
-
-enum CudaNonbondedMethod
-{
-    NO_CUTOFF,
-    CUTOFF,
-    PERIODIC,
-    EWALD,
-    PARTICLE_MESH_EWALD
-};
-
-enum ExpressionOp {
-    CONSTANT = 0, VARIABLE0, VARIABLE1, VARIABLE2, VARIABLE3, VARIABLE4, VARIABLE5, VARIABLE6, VARIABLE7, VARIABLE8, GLOBAL, CUSTOM, CUSTOM_DERIV, ADD, SUBTRACT, MULTIPLY, DIVIDE,
-        POWER, NEGATE, SQRT, EXP, LOG, SIN, COS, SEC, CSC, TAN, COT, ASIN, ACOS, ATAN, SQUARE, CUBE, RECIPROCAL, ADD_CONSTANT, MULTIPLY_CONSTANT, POWER_CONSTANT
-};
-
-template<int SIZE>
-struct Expression {
-    int op[SIZE];
-    float arg[SIZE];
-    int length, stackSize;
-};
-#endif
-
 struct cudaAmoebaGmxSimulation {
     // Constants
 
@@ -343,6 +118,19 @@ struct cudaAmoebaGmxSimulation {
     unsigned int paddedNumberOfAtoms;               // padded number of atoms
     float scalingDistanceCutoff;                    // scaling cutoff
     float2*         pDampingFactorAndThole;         // Thole & damping factors
+
+    float* pLabFrameDipole;
+    float* pLabFrameQuadrupole;
+    float* pInducedDipole;
+    float* pInducedDipolePolar;
+
+    float* pInducedDipoleS;
+    float* pInducedDipolePolarS;
+
+    float* pWorkArray_3_1;
+    float* pWorkArray_3_2;
+    float* pWorkArray_1_1;
+    float* pWorkArray_1_2;
 
     unsigned int amoebaVdwNonReductions;
     int* pAmoebaVdwNonReductionID;

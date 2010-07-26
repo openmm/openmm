@@ -259,7 +259,7 @@ void kReduceFieldsToFloat4_kernel( unsigned int fieldComponents, unsigned int ou
 
         unsigned int j   = pos/3;
         unsigned int k   = pos - 3*j;
-        fieldOut[4*j+k]  = totalField;
+        fieldOut[4*j+k] += totalField;
         pos             += gridDim.x * blockDim.x;
     }   
 }

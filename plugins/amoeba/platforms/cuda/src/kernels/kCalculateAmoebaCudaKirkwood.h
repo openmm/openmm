@@ -37,18 +37,7 @@ __launch_bounds__(G8X_NONBOND_THREADS_PER_BLOCK, 1)
 #endif
 */
 void METHOD_NAME(kCalculateAmoebaCudaKirkwood, Forces_kernel)(
-                            unsigned int* workUnit,
-                            float4* atomCoord,
-                            float* labFrameDipole,
-                            float* labFrameQuadrupole,
-                            float* inducedDipole,
-                            float* inducedDipolePolar,
-                            float* bornRadii,
-                            float* outputForce,
-                            float* outputTorque,
-                            float* output_dBornRadius,
-                            float* output_dBornRadiusPolar
-
+                            unsigned int* workUnit
 #ifdef AMOEBA_DEBUG
                            , float4* debugArray, unsigned int targetAtom
 #endif
@@ -66,6 +55,12 @@ void METHOD_NAME(kCalculateAmoebaCudaKirkwood, Forces_kernel)(
     unsigned int pos             = warp*numWorkUnits/totalWarps;
     unsigned int end             = (warp+1)*numWorkUnits/totalWarps;
     unsigned int lasty           = 0xFFFFFFFF;
+
+    // pWorkArray_3_1 == force
+    // pWorkArray_3_2 == torque
+
+    // pWorkArray_1_1 == dBorn
+    // pWorkArray_1_2 == dBornPolar
 
     float4 jCoord;
     float jDipole[3];     
@@ -94,7 +89,7 @@ void METHOD_NAME(kCalculateAmoebaCudaKirkwood, Forces_kernel)(
         KirkwoodParticle* psA         = &sA[tbx];
 
         unsigned int atomI            = x + tgx;
-        float4 iCoord                 = atomCoord[atomI];
+        float4 iCoord                 =  cSim.pPosq[atomI];
 
         float forceSum[3];
         float torqueSum[3];
@@ -120,8 +115,8 @@ void METHOD_NAME(kCalculateAmoebaCudaKirkwood, Forces_kernel)(
             // load shared data
 
             loadKirkwoodShared( &(sA[threadIdx.x]), atomI,
-                                atomCoord, labFrameDipole, labFrameQuadrupole,
-                                inducedDipole, inducedDipolePolar, bornRadii );
+                                cSim.pPosq, cAmoebaSim.pLabFrameDipole, cAmoebaSim.pLabFrameQuadrupole,
+                                cAmoebaSim.pInducedDipoleS,  cAmoebaSim.pInducedDipolePolarS, cSim.pBornRadii );
 
             // this branch is never exercised since it includes the
             // interaction between atomI and itself which is always excluded
@@ -145,11 +140,11 @@ void METHOD_NAME(kCalculateAmoebaCudaKirkwood, Forces_kernel)(
 
                 calculateKirkwoodPairIxn_kernel( sameAtom,
                                                  iCoord,                                     jCoord,
-                                                 &(labFrameDipole[3*atomI]),                 jDipole,
-                                                 &(labFrameQuadrupole[9*atomI]),             jQuadrupole,
-                                                 &(inducedDipole[3*atomI]),                  jInducedDipole,
-                                                 &(inducedDipolePolar[3*atomI]),             jInducedDipolePolar,
-                                                 bornRadii[atomI],                           jBornRadius,
+                                                 &(cAmoebaSim.pLabFrameDipole[3*atomI]),     jDipole,
+                                                 &(cAmoebaSim.pLabFrameQuadrupole[9*atomI]), jQuadrupole,
+                                                 &(cAmoebaSim.pInducedDipoleS[3*atomI]),     jInducedDipole,
+                                                 &(cAmoebaSim.pInducedDipolePolarS[3*atomI]),jInducedDipolePolar,
+                                                 cSim.pBornRadii[atomI],                     jBornRadius,
                                                  force, torque, dBorn, dBornPolar, &energy
 #ifdef AMOEBA_DEBUG
                                           , pullBack
@@ -188,7 +183,7 @@ if( atomI == targetAtom  || atomJ == targetAtom ){
         debugArray[index].x                = (float) atomI;
         debugArray[index].y                = (float) atomJ;
         debugArray[index].z                = (float) (mask + 1);
-        //debugArray[index].z                = bornRadii[atomI];
+        //debugArray[index].z                = cSim.pBornRadii[atomI];
         //debugArray[index].z                = energy;
         //debugArray[index].w                = (float) (blockIdx.x*blockDim.x+threadIdx.x);
         debugArray[index].w                = jBornRadius;
@@ -234,30 +229,30 @@ if( atomI == targetAtom  || atomJ == targetAtom ){
             float  of;
             unsigned int offset                 = x + tgx + warp*cAmoebaSim.paddedNumberOfAtoms;
 
-            of                                  = output_dBornRadius[offset];
+            of                                  = cAmoebaSim.pWorkArray_1_1[offset];
             of                                 += dBornSum;
-            output_dBornRadius[offset]          = of;
+            cAmoebaSim.pWorkArray_1_1[offset]   = of;
 
-            of                                  = output_dBornRadiusPolar[offset];
+            of                                  = cAmoebaSim.pWorkArray_1_2[offset];
             of                                 += dBornPolarSum;
-            output_dBornRadiusPolar[offset]     = of;
+            cAmoebaSim.pWorkArray_1_2[offset]   = of;
 
 
             offset                             *= 3;
 
-            load3dArrayBufferPerWarp( offset, forceSum,  outputForce );
-            load3dArrayBufferPerWarp( offset, torqueSum, outputTorque );
+            load3dArrayBufferPerWarp( offset, forceSum,  cAmoebaSim.pWorkArray_3_1 );
+            load3dArrayBufferPerWarp( offset, torqueSum, cAmoebaSim.pWorkArray_3_2 );
 
 #else
             unsigned int offset                 = x + tgx + (x >> GRIDBITS) * cAmoebaSim.paddedNumberOfAtoms;
 
-            output_dBornRadius[offset]          = dBornSum;
-            output_dBornRadiusPolar[offset]     = dBornPolarSum;
+            cAmoebaSim.pWorkArray_1_1[offset]   = dBornSum;
+            cAmoebaSim.pWorkArray_1_2[offset]   = dBornPolarSum;
 
             offset                             *= 3;
 
-            load3dArray( offset, forceSum,  outputForce );
-            load3dArray( offset, torqueSum, outputTorque );
+            load3dArray( offset, forceSum,  cAmoebaSim.pWorkArray_3_1 );
+            load3dArray( offset, torqueSum, cAmoebaSim.pWorkArray_3_2 );
 
 #endif
 
@@ -271,8 +266,8 @@ if( atomI == targetAtom  || atomJ == targetAtom ){
                 // load shared data
 
                 loadKirkwoodShared( &(sA[threadIdx.x]), (y+tgx),
-                                    atomCoord, labFrameDipole, labFrameQuadrupole,
-                                    inducedDipole, inducedDipolePolar, bornRadii );
+                                    cSim.pPosq, cAmoebaSim.pLabFrameDipole, cAmoebaSim.pLabFrameQuadrupole,
+                                    cAmoebaSim.pInducedDipoleS, cAmoebaSim.pInducedDipolePolarS, cSim.pBornRadii);
 
             }
 
@@ -299,12 +294,12 @@ if( atomI == targetAtom  || atomJ == targetAtom ){
                                   jInducedDipole, jInducedDipolePolar, &jBornRadius );
 
                 calculateKirkwoodPairIxn_kernel( sameAtom, 
-                                                 iCoord,                                     jCoord,
-                                                 &(labFrameDipole[3*atomI]),                 jDipole,
-                                                 &(labFrameQuadrupole[9*atomI]),             jQuadrupole,
-                                                 &(inducedDipole[3*atomI]),                  jInducedDipole,
-                                                 &(inducedDipolePolar[3*atomI]),             jInducedDipolePolar,
-                                                 bornRadii[atomI],                           jBornRadius,
+                                                 iCoord,                                       jCoord,
+                                                 &(cAmoebaSim.pLabFrameDipole[3*atomI]),       jDipole,
+                                                 &(cAmoebaSim.pLabFrameQuadrupole[9*atomI]),   jQuadrupole,
+                                                 &(cAmoebaSim.pInducedDipoleS[3*atomI]),       jInducedDipole,
+                                                 &(cAmoebaSim.pInducedDipolePolarS[3*atomI]),  jInducedDipolePolar,
+                                                 cSim.pBornRadii[atomI],                       jBornRadius,
                                                  force, torque, dBorn, dBornPolar, &energy
 #ifdef AMOEBA_DEBUG
                                           , pullBack
@@ -350,7 +345,7 @@ if( atomI == targetAtom || atomJ == targetAtom ){
         debugArray[index].x                = (float) atomI;
         debugArray[index].y                = (float) atomJ;
         debugArray[index].z                = (float) (mask+1);
-        //debugArray[index].z                = bornRadii[atomI];
+        //debugArray[index].z                = cSim.pBornRadii[atomI];
         //debugArray[index].z                = energy;
         debugArray[index].w                = (float) (blockIdx.x*blockDim.x+threadIdx.x);
 
@@ -407,54 +402,54 @@ if( mask || !mask ){
             float of;
             unsigned int offset                 = x + tgx + warp*cAmoebaSim.paddedNumberOfAtoms;
 
-            of                                  = output_dBornRadius[offset];
+            of                                  = cAmoebaSim.pWorkArray_1_1[offset];
             of                                 += dBornSum;
-            output_dBornRadius[offset]          = of;
+            cAmoebaSim.pWorkArray_1_1[offset]   = of;
 
-            of                                  = output_dBornRadiusPolar[offset];
+            of                                  = cAmoebaSim.pWorkArray_1_2[offset];
             of                                 += dBornPolarSum;
-            output_dBornRadiusPolar[offset]     = of;
+            cAmoebaSim.pWorkArray_1_2[offset]   = of;
 
             offset                             *= 3;
 
-            load3dArrayBufferPerWarp( offset, forceSum,  outputForce );
-            load3dArrayBufferPerWarp( offset, torqueSum, outputTorque );
+            load3dArrayBufferPerWarp( offset, forceSum,  cAmoebaSim.pWorkArray_3_1 );
+            load3dArrayBufferPerWarp( offset, torqueSum, cAmoebaSim.pWorkArray_3_2 );
 
             offset                              = y + tgx + warp*cAmoebaSim.paddedNumberOfAtoms;
 
-            of                                  = output_dBornRadius[offset];
+            of                                  = cAmoebaSim.pWorkArray_1_1[offset];
             of                                 += dBornSum;
-            output_dBornRadius[offset]          = of;
+            cAmoebaSim.pWorkArray_1_1[offset]   = of;
 
-            of                                  = output_dBornRadiusPolar[offset];
+            of                                  = cAmoebaSim.pWorkArray_1_2[offset];
             of                                 += dBornPolarSum;
-            output_dBornRadiusPolar[offset]     = of;
+            cAmoebaSim.pWorkArray_1_2[offset]   = of;
 
             offset                             *= 3;
 
-            load3dArrayBufferPerWarp( offset, sA[threadIdx.x].force,  outputForce );
-            load3dArrayBufferPerWarp( offset, sA[threadIdx.x].torque, outputTorque );
+            load3dArrayBufferPerWarp( offset, sA[threadIdx.x].force,  cAmoebaSim.pWorkArray_3_1 );
+            load3dArrayBufferPerWarp( offset, sA[threadIdx.x].torque, cAmoebaSim.pWorkArray_3_2 );
 #else
             unsigned int offset                 = x + tgx + (y >> GRIDBITS) * cAmoebaSim.paddedNumberOfAtoms;
 
-            output_dBornRadius[offset]          = dBornSum;
-            output_dBornRadiusPolar[offset]     = dBornPolarSum;
+            cAmoebaSim.pWorkArray_1_1[offset]   = dBornSum;
+            cAmoebaSim.pWorkArray_1_2[offset]   = dBornPolarSum;
 
             offset                             *= 3;
 
-            load3dArray( offset, forceSum,  outputForce );
-            load3dArray( offset, torqueSum, outputTorque );
+            load3dArray( offset, forceSum,  cAmoebaSim.pWorkArray_3_1 );
+            load3dArray( offset, torqueSum, cAmoebaSim.pWorkArray_3_2 );
 
 
             offset                              = y + tgx + (x >> GRIDBITS) * cAmoebaSim.paddedNumberOfAtoms;
 
-            output_dBornRadius[offset]          = sA[threadIdx.x].dBornRadius;
-            output_dBornRadiusPolar[offset]     = sA[threadIdx.x].dBornRadiusPolar;
+            cAmoebaSim.pWorkArray_1_1[offset]   = sA[threadIdx.x].dBornRadius;
+            cAmoebaSim.pWorkArray_1_2[offset]   = sA[threadIdx.x].dBornRadiusPolar;
 
             offset                             *= 3;
 
-            load3dArray( offset, sA[threadIdx.x].force,  outputForce );
-            load3dArray( offset, sA[threadIdx.x].torque, outputTorque );
+            load3dArray( offset, sA[threadIdx.x].force,  cAmoebaSim.pWorkArray_3_1 );
+            load3dArray( offset, sA[threadIdx.x].torque, cAmoebaSim.pWorkArray_3_2 );
 
 #endif
             lasty = y;

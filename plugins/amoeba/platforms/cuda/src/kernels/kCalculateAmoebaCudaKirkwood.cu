@@ -2386,21 +2386,11 @@ threadsPerBlock = 32;
 #endif
 
         kCalculateAmoebaCudaKirkwoodN2Forces_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(KirkwoodParticle)*threadsPerBlock>>>(
-                                                                           amoebaGpu->psWorkUnit->_pDevStream[0],
-                                                                           gpu->psPosq4->_pDevStream[0],
-                                                                           amoebaGpu->psLabFrameDipole->_pDevStream[0],
-                                                                           amoebaGpu->psLabFrameQuadrupole->_pDevStream[0],
-                                                                           amoebaGpu->psInducedDipoleS->_pDevStream[0],
-                                                                           amoebaGpu->psInducedDipolePolarS->_pDevStream[0],
-                                                                           gpu->psBornRadii->_pDevStream[0],
-                                                                           amoebaGpu->psWorkArray_3_1->_pDevStream[0],
-                                                                           amoebaGpu->psWorkArray_3_2->_pDevStream[0],
-                                                                           amoebaGpu->psWorkArray_1_1->_pDevStream[0],
+                                                                           amoebaGpu->psWorkUnit->_pDevStream[0]
 #ifdef AMOEBA_DEBUG
-                                                                           amoebaGpu->psWorkArray_1_2->_pDevStream[0],
-                                                                           debugArray->_pDevStream[0], targetAtom );
+                                                                           , debugArray->_pDevStream[0], targetAtom );
 #else
-                                                                           amoebaGpu->psWorkArray_1_2->_pDevStream[0] );
+                                                                           );
 #endif
     }
 

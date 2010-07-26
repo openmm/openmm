@@ -1165,11 +1165,19 @@ void kCalculateAmoebaLocalForces_kernel()
 
             float dot               = xad*xcd + yad*ycd + zad*zcd;
             float cc                = rad2*rcd2 - dot*dot;
-            float bkk2              = (cc != 0.0f) ? (rdb2 - ee*ee/cc) : 0.0f;
-
-            float cosine            = (rdb2  !=  0.0f) ? sqrtf(bkk2/rdb2) : 0.0f;
-                  cosine            = (cosine >  1.0f) ?  1.0f            : cosine;
-                  cosine            = (cosine < -1.0f) ? -1.0f            : cosine;
+            float bkk2              = (cc   != 0.0f ) ? (ee*ee)/(cc) : 0.0f;
+            float bkk3              = (rdb2 != 0.0f ) ? bkk2/rdb2    : 0.0f;
+                  bkk2              = rdb2 - bkk2;
+            float cosine;
+            if( fabs( bkk3 ) < 0.98f ){
+                  bkk3              = 1.0f - bkk3;
+                  cosine            = bkk3 > 0.0f ? sqrtf(bkk3) : 0.0f;
+                  cosine            = (cosine >  1.0f) ?  0.0f  : acos(cosine);
+            } else {
+                  cosine            = sqrtf(bkk3);
+                  cosine            = asin(cosine);
+            }
+                
 
 /*
 c
@@ -1204,7 +1212,7 @@ c
 */
             // find the out-of-plane energy and master chain rule terms
 
-            float    dt             = LOCAL_HACK_RADIAN_D*acos(cosine);
+            float    dt             = LOCAL_HACK_RADIAN_D*cosine;
             float    dt2            = dt  * dt;
             float    dt3            = dt2 * dt;
             float    dt4            = dt2 * dt2;
@@ -1215,7 +1223,7 @@ c
                                                     (cAmoebaSim.amoebaOutOfPlaneBendPenticK* dt3) +
                                                     (cAmoebaSim.amoebaOutOfPlaneBendSexticK* dt4) );
 
-            float    deddt          = k*dt*LOCAL_HACK_RADIAN*(2.0f                                           + 
+            float    deddt          = k*dt*LOCAL_HACK_RADIAN*(2.0f                                              + 
                                                              (3.0f*cAmoebaSim.amoebaOutOfPlaneBendCubicK*  dt ) +
                                                              (4.0f*cAmoebaSim.amoebaOutOfPlaneBendQuarticK*dt2) +
                                                              (5.0f*cAmoebaSim.amoebaOutOfPlaneBendPenticK* dt3) +
@@ -1281,11 +1289,6 @@ c
             force.x                -= dedxia;
             force.y                -= dedyia;
             force.z                -= dedzia;
-
-force.x = bkk2;
-force.y = rdb2;
-force.z = cosine;
-force.w = dt;
             cSim.pForce4[offset]    = force;
 
             offset                  = atom1.y + atom2.y * cSim.stride;

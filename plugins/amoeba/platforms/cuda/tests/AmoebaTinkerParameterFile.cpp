@@ -3770,6 +3770,15 @@ Integrator* readAmoebaParameterFile( const std::string& inputParameterFile, MapS
                     (void) fprintf( log, "CMMotionRemover added w/ frequency=%d at line=%d\n", frequency, lineCount );
                 }
    
+            // All forces 
+  
+            } else if( field == ALL_FORCES ){
+                readVec3( filePtr, tokens, forces[ALL_FORCES], &lineCount, field, log );
+            } else if( field == "AllEnergy" ){
+                if( tokens.size() > 1 ){
+                   potentialEnergy[ALL_FORCES] = atof( tokens[1].c_str() ); 
+                }
+   
             // AmoebaHarmonicBond
   
             } else if( field == "AmoebaHarmonicBondParameters" ){
@@ -3876,6 +3885,7 @@ Integrator* readAmoebaParameterFile( const std::string& inputParameterFile, MapS
                        field == "AmoebaGk_A_Force"                     ||
                        field == "AmoebaGk_A_DrB"                       ||
                        field == "AmoebaDBorn"                          ||
+                       field == "AmoebaBorn1Force"                     ||
                        field == "AmoebaBornForce"                      ||
                        field == "AmoebaGkEdiffForceAndTorque"          ||
                        field == "AmoebaGkEdiffForce"                      ){
@@ -3885,6 +3895,7 @@ Integrator* readAmoebaParameterFile( const std::string& inputParameterFile, MapS
            } else if( field == "AmoebaGkEnergy"       || 
                       field == "AmoebaGkEdiffEnergy"  ||
                       field == "AmoebaGk_A_Energy"    ||
+                      field == "AmoebaBorn1Energy"    ||
                       field == "AmoebaBornEnergy"     ){
                double value = atof( tokens[1].c_str() );
                std::vector< std::vector<double> > vectorOfDoubleVectors;
@@ -3948,14 +3959,19 @@ Integrator* readAmoebaParameterFile( const std::string& inputParameterFile, MapS
     double totalPotentialEnergy = 0.0;
     if( log )(void) fprintf( log, "Potential energies\n" );
    
+    double allEnergy = 0.0;
     for( MapStringDoubleI ii = potentialEnergy.begin(); ii != potentialEnergy.end(); ii++ ){
-        totalPotentialEnergy += ii->second;
+        if( ii->first == ALL_FORCES ){
+            allEnergy = ii->second;
+        } else {
+            totalPotentialEnergy += ii->second;
+        }
         if( log )(void) fprintf( log, "%30s %14.7e\n", ii->first.c_str(), ii->second );
     }
-    potentialEnergy["AllForces"] = totalPotentialEnergy;
+    potentialEnergy["SumOfInputEnergies"] = totalPotentialEnergy;
        
     if( log ){
-       (void) fprintf( log, "Total PE %14.7e\n", totalPotentialEnergy );
+       (void) fprintf( log, "Total PE %14.7e  %14.7e\n", totalPotentialEnergy, allEnergy );
        (void) fprintf( log, "Read %d lines from file=<%s>\n", lineCount, inputParameterFile.c_str() );
        (void) fflush( log );
     }
@@ -4614,6 +4630,9 @@ void testUsingAmoebaTinkerParameterFile( const std::string& amoebaTinkerParamete
             activeForceNames += ii->first + ":";
         }
     }
+    if( forceList.size() >= 11 ){
+        activeForceNames =ALL_FORCES;
+    }
   
     std::vector<Vec3> expectedForces;
     expectedForces.resize( system.getNumParticles() );
@@ -4634,7 +4653,7 @@ void testUsingAmoebaTinkerParameterFile( const std::string& amoebaTinkerParamete
         }
     }
 
-    int showAll                            = 0;
+    int showAll                            = 1;
     double energyConversion;
     double forceConversion;
     if( useOpenMMUnits ){
@@ -4650,6 +4669,7 @@ void testUsingAmoebaTinkerParameterFile( const std::string& amoebaTinkerParamete
     if( log ){
         std::vector<FILE*> fileList;
         if( log )fileList.push_back( log );
+        double cutoffDelta = 0.02;
         for( unsigned int ii = 0; ii < fileList.size(); ii++ ){
             FILE* filePtr = fileList[ii];
             (void) fprintf( filePtr, "\n" );
@@ -4668,9 +4688,10 @@ void testUsingAmoebaTinkerParameterFile( const std::string& amoebaTinkerParamete
                 double delta           = fabs( normF1 - normF2 );
                 double sumNorms        = 0.5*(normF1 + normF2);
                 double relativeDelta   = sumNorms > 0.0 ? fabs( normF1 - normF2 )/sumNorms : 0.0;
-                if( ( (maxRelativeDelta < relativeDelta) && (sumNorms > 0.1)) || showAll ){
-                    (void) fprintf( filePtr, "%6u %10.3e %10.3e [%14.7e %14.7e %14.7e]   [%14.7e %14.7e %14.7e]\n", ii, relativeDelta, delta,
-                                    expectedForces[ii][0], expectedForces[ii][1], expectedForces[ii][2], forceConversion*forces[ii][0], forceConversion*forces[ii][1], forceConversion*forces[ii][2] );
+                bool badMatch          = (cutoffDelta < relativeDelta) && (sumNorms > 0.1) ? true : false;
+                if( badMatch || showAll ){
+                    (void) fprintf( filePtr, "%6u %10.3e %10.3e [%14.7e %14.7e %14.7e]   [%14.7e %14.7e %14.7e]  %s\n", ii, relativeDelta, delta,
+                                    expectedForces[ii][0], expectedForces[ii][1], expectedForces[ii][2], forceConversion*forces[ii][0], forceConversion*forces[ii][1], forceConversion*forces[ii][2], ( (showAll && badMatch) ? " XXX" : "") );
                     if( ( (maxRelativeDelta < relativeDelta) && (sumNorms > 0.1)) ){
                         maxRelativeDelta      =  relativeDelta;
                         maxRelativeDeltaIndex = ii;
@@ -5466,7 +5487,7 @@ int runTestsUsingAmoebaTinkerParameterFile( MapStringString& argumentMap ){
             //if( checkEnergyForceConsistency )checkForces = 0;
         } else if( key == "log" ){
             logControl = atoi( value.c_str() );
-        } else if( key == "AllForces" ){
+        } else if( key == ALL_FORCES ){
             initializeForceMap( forceMap, 1 );
         } else if( key == AMOEBA_HARMONIC_BOND_FORCE              ||
                    key == AMOEBA_HARMONIC_ANGLE_FORCE             ||

@@ -867,11 +867,11 @@ static void kReduceForceTorque(amoebaGpuContext amoebaGpu )
     kReduceFields_kernel<<<amoebaGpu->nonbondBlocks, amoebaGpu->fieldReduceThreadsPerBlock>>>(
                                amoebaGpu->paddedNumberOfAtoms*3, amoebaGpu->outputBuffers,
                                amoebaGpu->psWorkArray_3_1->_pDevStream[0], amoebaGpu->psForce->_pDevStream[0] );
-    LAUNCHERROR("kReduceForceTorque1");
+    LAUNCHERROR("kReduceElectrostaticForce");
     kReduceFields_kernel<<<amoebaGpu->nonbondBlocks, amoebaGpu->fieldReduceThreadsPerBlock>>>(
                                amoebaGpu->paddedNumberOfAtoms*3, amoebaGpu->outputBuffers,
                                amoebaGpu->psWorkArray_3_2->_pDevStream[0], amoebaGpu->psTorque->_pDevStream[0] );
-    LAUNCHERROR("kReduceForceTorque2");
+    LAUNCHERROR("kReduceElectrostaticTorque");
 }
 
 #ifdef AMOEBA_DEBUG
@@ -1137,10 +1137,7 @@ void cudaComputeAmoebaElectrostatic( amoebaGpuContext amoebaGpu )
             cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,            outputVector );
             cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psForce,      outputVector );
             cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psTorque,     outputVector);
-(void) fprintf( amoebaGpu->log, "%s calling cudaWriteVectorOfDoubleVectorsToFile \n", methodName ); fflush( amoebaGpu->log );
             cudaWriteVectorOfDoubleVectorsToFile( "CudaForceTorque", fileId, outputVector );
-(void) fprintf( amoebaGpu->log, "%s called cudaWriteVectorOfDoubleVectorsToFile \n", methodName ); fflush( amoebaGpu->log );
-
          }
 
     }   
