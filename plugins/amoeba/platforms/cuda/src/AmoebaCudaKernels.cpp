@@ -73,23 +73,21 @@ void CudaCalcAmoebaHarmonicBondForceKernel::initialize(const System& system, con
     std::vector<int>   particle2(numBonds);
     std::vector<float> length(numBonds);
     std::vector<float> quadratic(numBonds);
-    std::vector<float> cubic(numBonds);
-    std::vector<float> quartic(numBonds);
 
     for (int i = 0; i < numBonds; i++) {
 
         int particle1Index, particle2Index;
-        double lengthValue, kValue, cubicValue, quarticValue;
-        force.getBondParameters(i, particle1Index, particle2Index, lengthValue, kValue, cubicValue, quarticValue);
+        double lengthValue, kValue;
+        force.getBondParameters(i, particle1Index, particle2Index, lengthValue, kValue );
 
         particle1[i]     = particle1Index; 
         particle2[i]     = particle2Index; 
         length[i]        = static_cast<float>( lengthValue );
         quadratic[i]     = static_cast<float>( kValue );
-        cubic[i]         = static_cast<float>( cubicValue );
-        quartic[i]       = static_cast<float>( quarticValue );
     } 
-    gpuSetAmoebaBondParameters( data.getAmoebaGpu(), particle1, particle2, length, quadratic, cubic, quartic);
+    gpuSetAmoebaBondParameters( data.getAmoebaGpu(), particle1, particle2, length, quadratic, 
+                                static_cast<float>(force.getAmoebaGlobalHarmonicBondCubic()),
+                                static_cast<float>(force.getAmoebaGlobalHarmonicBondQuartic()) );
 }
 
 void CudaCalcAmoebaHarmonicBondForceKernel::executeForces(ContextImpl& context) {
@@ -132,10 +130,10 @@ void CudaCalcAmoebaHarmonicAngleForceKernel::initialize(const System& system, co
         k[i]                = static_cast<float>( kQuadratic );
     }
     gpuSetAmoebaAngleParameters(data.getAmoebaGpu(), particle1, particle2, particle3, angle, k,
-                                force.getAmoebaGlobalHarmonicAngleCubic(),
-                                force.getAmoebaGlobalHarmonicAngleQuartic(),
-                                force.getAmoebaGlobalHarmonicAnglePentic(),
-                                force.getAmoebaGlobalHarmonicAngleSextic() );
+                                static_cast<float>(force.getAmoebaGlobalHarmonicAngleCubic()),
+                                static_cast<float>(force.getAmoebaGlobalHarmonicAngleQuartic()),
+                                static_cast<float>(force.getAmoebaGlobalHarmonicAnglePentic()),
+                                static_cast<float>(force.getAmoebaGlobalHarmonicAngleSextic()) );
 
 }
 
@@ -182,10 +180,10 @@ void CudaCalcAmoebaHarmonicInPlaneAngleForceKernel::initialize(const System& sys
         k[i]                = static_cast<float>( kQuadratic );
     }
     gpuSetAmoebaInPlaneAngleParameters(data.getAmoebaGpu(), particle1, particle2, particle3, particle4, angle, k,
-                                       force.getAmoebaGlobalHarmonicInPlaneAngleCubic(),
-                                       force.getAmoebaGlobalHarmonicInPlaneAngleQuartic(),
-                                       force.getAmoebaGlobalHarmonicInPlaneAnglePentic(),
-                                       force.getAmoebaGlobalHarmonicInPlaneAngleSextic() );
+                                       static_cast<float>( force.getAmoebaGlobalHarmonicInPlaneAngleCubic()),
+                                       static_cast<float>( force.getAmoebaGlobalHarmonicInPlaneAngleQuartic()),
+                                       static_cast<float>( force.getAmoebaGlobalHarmonicInPlaneAnglePentic()),
+                                       static_cast<float>( force.getAmoebaGlobalHarmonicInPlaneAngleSextic() ) );
 
 }
 
@@ -237,9 +235,9 @@ void CudaCalcAmoebaTorsionForceKernel::initialize(const System& system, const Am
 
         force.getTorsionParameters(i, particle1[i], particle2[i], particle3[i], particle4[i], torsionParameter1, torsionParameter2, torsionParameter3 );
         for ( unsigned int jj = 0; jj < 3; jj++) {
-            torsionParameters1F[jj] = torsionParameter1[jj];
-            torsionParameters2F[jj] = torsionParameter2[jj];
-            torsionParameters3F[jj] = torsionParameter3[jj];
+            torsionParameters1F[jj] = static_cast<float>(torsionParameter1[jj]);
+            torsionParameters2F[jj] = static_cast<float>(torsionParameter2[jj]);
+            torsionParameters3F[jj] = static_cast<float>(torsionParameter3[jj]);
         }
         torsionParameters1[i] = torsionParameters1F;
         torsionParameters2[i] = torsionParameters2F;
@@ -290,7 +288,7 @@ void CudaCalcAmoebaPiTorsionForceKernel::initialize(const System& system, const 
         double torsionKParameter;
 
         force.getPiTorsionParameters(i, particle1[i], particle2[i], particle3[i], particle4[i], particle5[i], particle6[i], torsionKParameter);
-        torsionKParameters[i] = torsionKParameter;
+        torsionKParameters[i] = static_cast<float>(torsionKParameter);
     }
     gpuSetAmoebaPiTorsionParameters(data.getAmoebaGpu(), particle1, particle2, particle3, particle4, particle5, particle6, torsionKParameters);
 }
@@ -335,10 +333,10 @@ void CudaCalcAmoebaStretchBendForceKernel::initialize(const System& system, cons
         double lengthAB, lengthCB, angle, k;
 
         force.getStretchBendParameters(i, particle1[i], particle2[i], particle3[i], lengthAB, lengthCB, angle, k);
-        lengthABParameters[i] = lengthAB;
-        lengthCBParameters[i] = lengthCB;
-        angleParameters[i]    = angle;
-        kParameters[i]        = k;
+        lengthABParameters[i] = static_cast<float>(lengthAB);
+        lengthCBParameters[i] = static_cast<float>(lengthCB);
+        angleParameters[i]    = static_cast<float>(angle);
+        kParameters[i]        = static_cast<float>(k);
     }
     gpuSetAmoebaStretchBendParameters(data.getAmoebaGpu(), particle1, particle2, particle3, lengthABParameters, lengthCBParameters, angleParameters, kParameters);
 
@@ -381,13 +379,13 @@ void CudaCalcAmoebaOutOfPlaneBendForceKernel::initialize(const System& system, c
         double k;
 
         force.getOutOfPlaneBendParameters(i, particle1[i], particle2[i], particle3[i], particle4[i], k);
-        kParameters[i]  = k;
+        kParameters[i] = static_cast<float>(k);
     }
     gpuSetAmoebaOutOfPlaneBendParameters(data.getAmoebaGpu(), particle1, particle2, particle3, particle4, kParameters,
-                                         force.getAmoebaGlobalOutOfPlaneBendCubic(),
-                                         force.getAmoebaGlobalOutOfPlaneBendQuartic(),
-                                         force.getAmoebaGlobalOutOfPlaneBendPentic(),
-                                         force.getAmoebaGlobalOutOfPlaneBendSextic() );
+                                         static_cast<float>( force.getAmoebaGlobalOutOfPlaneBendCubic()),
+                                         static_cast<float>( force.getAmoebaGlobalOutOfPlaneBendQuartic()),
+                                         static_cast<float>( force.getAmoebaGlobalOutOfPlaneBendPentic()),
+                                         static_cast<float>( force.getAmoebaGlobalOutOfPlaneBendSextic() ) );
 
 }
 

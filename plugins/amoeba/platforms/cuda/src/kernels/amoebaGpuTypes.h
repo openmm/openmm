@@ -88,7 +88,7 @@ struct _amoebaGpuContext {
     int maxCovalentDegreeSz;
 
     CUDAStream<int4>*   psAmoebaBondID;
-    CUDAStream<float4>* psAmoebaBondParameter;
+    CUDAStream<float2>* psAmoebaBondParameter;
 
     CUDAStream<int4>*   psAmoebaAngleID1;
     CUDAStream<int2>*   psAmoebaAngleID2;
@@ -254,7 +254,7 @@ void amoebaGpuBuildScalingList( amoebaGpuContext gpu );
 
 extern "C"
 void gpuSetAmoebaBondParameters(amoebaGpuContext gpu, const std::vector<int>& atom1, const std::vector<int>& atom2, 
-                                const std::vector<float>& length, const std::vector<float>& k, const std::vector<float>& cubic, const std::vector<float>& quartic);
+                                const std::vector<float>& length, const std::vector<float>& k, float cubic, float quartic);
 
 extern "C"
 void gpuSetAmoebaAngleParameters(amoebaGpuContext gpu, const std::vector<int>& atom1, const std::vector<int>& atom2, const std::vector<int>& atom3,

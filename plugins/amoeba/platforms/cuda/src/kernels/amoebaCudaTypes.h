@@ -46,7 +46,9 @@ struct cudaAmoebaGmxSimulation {
 
     unsigned int    amoebaBonds;                    // Number of bonds
     int4*           pAmoebaBondID;                  // Bond atom and output buffer IDs
-    float4*         pAmoebaBondParameter;           // Bond parameters
+    float2*         pAmoebaBondParameter;           // Bond parameters
+    float           amoebaBondCubicParameter;       // cubic bond parameters
+    float           amoebaBondQuarticicParameter;   // quartic bond parameters
     unsigned int    amoebaBond_offset;              // Offset to end of bonds
 
     unsigned int    amoebaAngles;                   // Number of bond angles

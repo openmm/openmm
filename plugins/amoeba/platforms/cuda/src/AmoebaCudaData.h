@@ -96,7 +96,7 @@ public:
      * 
      * @return amoebaGpuContext
      */
-    amoebaGpuContext getAmoebaGpu( void ) const;
+    amoebaGpuContext OPENMMCUDA_EXPORT getAmoebaGpu( void ) const;
 
     /**
      * Set accessor for LocalForcesKernel

@@ -94,25 +94,23 @@ public:
      * @param particle1     the index of the first particle connected by the bond
      * @param particle2     the index of the second particle connected by the bond
      * @param length        the equilibrium length of the bond, measured in nm
-     * @param cubic k       the cubic harmonic force constant for the bond
-     * @param quartic k     the quartic harmonic force constant for the bond
-     * @param quadratic k   the quadratic harmonic force constant for the bond
+     * @param k             the quadratic harmonic force constant for the bond
      * @return the index of the bond that was added
      */
-    int addBond(int particle1, int particle2, double length, double quadraticK, double cubicK = DEFAULT_GLOBAL_K, double quarticK = DEFAULT_GLOBAL_K );
+
+    int addBond(int particle1, int particle2, double length, double quadraticK );
 
     /**
      * Get the force field parameters for a bond term.
      * 
-     * @param index     the index of the bond for which to get parameters
-     * @param particle1 the index of the first particle connected by the bond
-     * @param particle2 the index of the second particle connected by the bond
-     * @param length    the equilibrium length of the bond, measured in nm
+     * @param index         the index of the bond for which to get parameters
+     * @param particle1     the index of the first particle connected by the bond
+     * @param particle2     the index of the second particle connected by the bond
+     * @param length        the equilibrium length of the bond, measured in nm
      * @param quadratic k   the quadratic harmonic force constant for the bond
-     * @param cubic k       the cubic harmonic force constant for the bond
-     * @param quartic k     the quartic harmonic force constant for the bond
      */
-    void getBondParameters(int index, int& particle1, int& particle2, double& length, double& quadraticK, double& cubicK, double& quarticK ) const;
+
+    void getBondParameters(int index, int& particle1, int& particle2, double& length, double& quadraticK ) const;
 
     /**
      * Set the force field parameters for a bond term.
@@ -121,18 +119,15 @@ public:
      * @param particle1 the index of the first particle connected by the bond
      * @param particle2 the index of the second particle connected by the bond
      * @param length    the equilibrium length of the bond, measured in nm
-     * @param cubic k       the cubic harmonic force constant for the bond
-     * @param quartic k     the quartic harmonic force constant for the bond
-     * @param quadratic k   the quadratic harmonic force constant for the bond
+     * @param k         the quadratic harmonic force constant for the bond
      */
-    void setBondParameters(int index, int particle1, int particle2, double length, double quadraticK, double cubicK = DEFAULT_GLOBAL_K, double quarticK = DEFAULT_GLOBAL_K);
+    void setBondParameters(int index, int particle1, int particle2, double length, double quadraticK );
 
 protected:
     double _globalQuarticK, _globalCubicK;
     ForceImpl* createImpl();
 private:
 
-    static const double DEFAULT_GLOBAL_K;
     class BondInfo;
 
 // Retarded visual studio compiler complains about being unable to 
@@ -152,14 +147,13 @@ private:
 class AmoebaHarmonicBondForce::BondInfo {
 public:
     int particle1, particle2;
-    double length, quadraticK, cubicK, quarticK;
+    double length, quadraticK;
     BondInfo() {
         particle1 = particle2    = -1;
         length    = quadraticK   = 0.0;
-        cubicK    = quarticK     = DEFAULT_GLOBAL_K;
     }
-    BondInfo(int particle1, int particle2, double length, double  quadraticK, double cubicK, double quarticK) :
-        particle1(particle1), particle2(particle2), length(length), quadraticK(quadraticK), cubicK(cubicK), quarticK(quarticK) {
+    BondInfo(int particle1, int particle2, double length, double  quadraticK ) :
+        particle1(particle1), particle2(particle2), length(length), quadraticK(quadraticK) {
     }
 };
 

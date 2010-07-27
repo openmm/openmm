@@ -784,9 +784,9 @@ static int readAmoebaHarmonicBondParameters( FILE* filePtr, MapStringInt& forceM
                         methodName.c_str(), arraySize, bondForce->getAmoebaGlobalHarmonicBondCubic(), bondForce->getAmoebaGlobalHarmonicBondQuartic() );
         for( unsigned int ii = 0; ii < arraySize; ii++ ){
             int particle1, particle2;
-            double length, k, cubic, quartic;
-            bondForce->getBondParameters( ii, particle1, particle2, length, k, cubic, quartic ); 
-            (void) fprintf( log, "%8d %8d %8d %14.7e %14.7e %14.7e %14.7e\n", ii, particle1, particle2, length, k, cubic, quartic);
+            double length, k;
+            bondForce->getBondParameters( ii, particle1, particle2, length, k );
+            (void) fprintf( log, "%8d %8d %8d %14.7e %14.7e\n", ii, particle1, particle2, length, k );
   
             // skip to end
   
@@ -799,15 +799,18 @@ static int readAmoebaHarmonicBondParameters( FILE* filePtr, MapStringInt& forceM
     // convert units to kJ-nm from kCal-Angstrom?
 
     if( useOpenMMUnits ){
+        double cubic         = bondForce->getAmoebaGlobalHarmonicBondCubic()/AngstromToNm;
+        double quartic       = bondForce->getAmoebaGlobalHarmonicBondQuartic()/AngstromToNm*AngstromToNm;
+        bondForce->setAmoebaGlobalHarmonicBondCubic( cubic );
+        bondForce->setAmoebaGlobalHarmonicBondQuartic( quartic );
+
         for( int ii = 0; ii < bondForce->getNumBonds(); ii++ ){
             int particle1, particle2;
-            double length, k, cubic, quartic;
-            bondForce->getBondParameters( ii, particle1, particle2, length, k, cubic, quartic ); 
+            double length, k;
+            bondForce->getBondParameters( ii, particle1, particle2, length, k );
             length           *= AngstromToNm;
             k                *= CalToJoule/(AngstromToNm*AngstromToNm);
-            cubic            /= AngstromToNm;
-            quartic          /= AngstromToNm*AngstromToNm;
-            bondForce->setBondParameters( ii, particle1, particle2, length, k, cubic, quartic ); 
+            bondForce->setBondParameters( ii, particle1, particle2, length, k ); 
         }
         if( log ){
             static const unsigned int maxPrint   = MAX_PRINT;
@@ -816,8 +819,8 @@ static int readAmoebaHarmonicBondParameters( FILE* filePtr, MapStringInt& forceM
                             methodName.c_str(), arraySize, bondForce->getAmoebaGlobalHarmonicBondCubic(), bondForce->getAmoebaGlobalHarmonicBondQuartic() );
             for( unsigned int ii = 0; ii < arraySize; ii++ ){
                 int particle1, particle2;
-                double length, k, cubic, quartic;
-                bondForce->getBondParameters( ii, particle1, particle2, length, k, cubic, quartic ); 
+                double length, k;
+                bondForce->getBondParameters( ii, particle1, particle2, length, k );
                 (void) fprintf( log, "%8d %8d %8d %14.7e %14.7e %14.7e %14.7e\n", ii, particle1, particle2, length, k, cubic, quartic);
       
                 // skip to end
@@ -944,7 +947,7 @@ static int readAmoebaHarmonicAngleParameters( FILE* filePtr, MapStringInt& force
 
        for( unsigned int ii = 0; ii < arraySize; ii++ ){
           int particle1, particle2, particle3;
-          double length, k, cubic, quartic, pentic, sextic;
+          double length, k;
           angleForce->getAngleParameters( ii, particle1, particle2, particle3, length, k ); 
           (void) fprintf( log, "%8d %8d %8d %8d %14.7e %14.7e\n",
                           ii, particle1, particle2, particle3, length, k );
@@ -962,7 +965,7 @@ static int readAmoebaHarmonicAngleParameters( FILE* filePtr, MapStringInt& force
     if( useOpenMMUnits ){
         for( int ii = 0; ii < angleForce->getNumAngles(); ii++ ){
             int particle1, particle2, particle3;
-            double length, k, cubic, quartic, pentic, sextic;
+            double length, k;
             angleForce->getAngleParameters( ii, particle1, particle2, particle3, length, k ); 
             k                *= CalToJoule;
             angleForce->setAngleParameters( ii, particle1, particle2, particle3, length, k ); 
@@ -977,7 +980,7 @@ static int readAmoebaHarmonicAngleParameters( FILE* filePtr, MapStringInt& force
     
            for( unsigned int ii = 0; ii < arraySize; ii++ ){
               int particle1, particle2, particle3;
-              double length, k, cubic, quartic, pentic, sextic;
+              double length, k;
               angleForce->getAngleParameters( ii, particle1, particle2, particle3, length, k ); 
               (void) fprintf( log, "%8d %8d %8d %8d %14.7e %14.7e\n",
                               ii, particle1, particle2, particle3, length, k );
@@ -1269,7 +1272,7 @@ static int readAmoebaTorsionParameters( FILE* filePtr, MapStringInt& forceMap, c
     // convert units to kJ-nm from kCal-Angstrom?
 
     if( useOpenMMUnits ){
-        for( unsigned int ii = 0; ii < torsionForce->getNumTorsions(); ii++ ){
+        for( int ii = 0; ii < torsionForce->getNumTorsions(); ii++ ){
             int particle1, particle2, particle3, particle4;
             std::vector<double> torsion1;
             std::vector<double> torsion2;
@@ -1405,7 +1408,7 @@ static int readAmoebaPiTorsionParameters( FILE* filePtr, MapStringInt& forceMap,
     } 
 
     if( useOpenMMUnits ){
-        for( unsigned int ii = 0; ii < piTorsionForce->getNumPiTorsions(); ii++ ){
+        for( int ii = 0; ii < piTorsionForce->getNumPiTorsions(); ii++ ){
             int particle1, particle2, particle3, particle4, particle5, particle6;
             double torsionK;
             piTorsionForce->getPiTorsionParameters( ii, particle1, particle2, particle3, particle4, particle5, particle6, torsionK ); 
@@ -1535,7 +1538,7 @@ static int readAmoebaStretchBendParameters( FILE* filePtr, MapStringInt& forceMa
     }
 
     if( useOpenMMUnits ){
-        for( unsigned int ii = 0; ii < stretchBendForce->getNumStretchBends();  ii++ ){
+        for( int ii = 0; ii < stretchBendForce->getNumStretchBends();  ii++ ){
             int particle1, particle2, particle3;
             double lengthAB, lengthCB, angle, k;
             stretchBendForce->getStretchBendParameters( ii, particle1, particle2, particle3, lengthAB, lengthCB, angle, k );
@@ -1704,7 +1707,7 @@ static int readAmoebaOutOfPlaneBendParameters( FILE* filePtr, MapStringInt& forc
     }
 
     if( useOpenMMUnits ){
-        for( unsigned int ii = 0; ii < outOfPlaneBendForce->getNumOutOfPlaneBends();  ii++ ){
+        for( int ii = 0; ii < outOfPlaneBendForce->getNumOutOfPlaneBends();  ii++ ){
             int particle1, particle2, particle3, particle4;
             double k;
             outOfPlaneBendForce->getOutOfPlaneBendParameters( ii, particle1, particle2, particle3, particle4, k );
@@ -1776,7 +1779,7 @@ static int readAmoebaTorsionTorsionGrid( FILE* filePtr, int numX, int numY, Tors
     }
 
     grid.resize( numX );
-    for( unsigned int ii = 0; ii < numX; ii++ ){
+    for( int ii = 0; ii < numX; ii++ ){
         grid[ii].resize( numY );
     }
     for( int ii = 0; ii < gridCount; ii++ ){
@@ -1821,7 +1824,7 @@ static int readAmoebaTorsionTorsionGrid( FILE* filePtr, int numX, int numY, Tors
  
         // 'top' of grid
  
-        for( unsigned int ii = 0; ii < gridCount;  ii++ ){
+        for( int ii = 0; ii < gridCount;  ii++ ){
             std::vector<double> values = grid[xI][yI];
             (void) fprintf( log, "%4d %4d %4d ", ii, xI, yI );
             for( unsigned int jj = 0; jj < values.size(); jj++ ){
@@ -1843,7 +1846,7 @@ static int readAmoebaTorsionTorsionGrid( FILE* filePtr, int numX, int numY, Tors
  
         xI = 0;
         yI = (gridCount/numX) - 3;
-        for( unsigned int ii = 0; ii < gridCount;  ii++ ){
+        for( int ii = 0; ii < gridCount;  ii++ ){
             std::vector<double> values = grid[xI][yI];
             (void) fprintf( log, "%4d %4d %4d ",
                             ii, xI, yI );
@@ -2038,7 +2041,7 @@ static void readAmoebaMultipoleCovalent( FILE* filePtr, AmoebaMultipoleForce* mu
  
      char* isNotEof = "1";
      for( int ii = 0; ii < numberOfMultipoles && isNotEof; ii++ ){
-         for( int jj = 0; jj < numberOfCovalentTypes && isNotEof; jj++ ){
+         for( unsigned int jj = 0; jj < numberOfCovalentTypes && isNotEof; jj++ ){
              StringVector lineTokens;
              isNotEof = readLine( filePtr, lineTokens, lineCount, log );
              std::vector<int> intVector;
@@ -2273,12 +2276,12 @@ scalingDistanceCutoff, thole, dampingFactor, pGamma,
         double polarityConversion      = AngstromToNm*AngstromToNm*AngstromToNm;
         double dampingFactorConversion = sqrt( AngstromToNm );
       
-        float scalingDistanceCutoff    = multipoleForce->getScalingDistanceCutoff();
-              scalingDistanceCutoff   *= AngstromToNm;
+        float scalingDistanceCutoff    = static_cast<float>(multipoleForce->getScalingDistanceCutoff());
+              scalingDistanceCutoff   *= static_cast<float>(AngstromToNm);
         multipoleForce->setScalingDistanceCutoff( scalingDistanceCutoff );
 
 
-        for( unsigned int ii = 0; ii < multipoleForce->getNumMultipoles();  ii++ ){
+        for( int ii = 0; ii < multipoleForce->getNumMultipoles();  ii++ ){
 
             int axisType, zAxis, xAxis;
             std::vector<double> dipole;
@@ -2299,8 +2302,8 @@ scalingDistanceCutoff, thole, dampingFactor, pGamma,
 
         }
     } else {
-        float electricConstant         = multipoleForce->getElectricConstant();
-              electricConstant        /= (AngstromToNm*CalToJoule);
+        float electricConstant         = static_cast<float>(multipoleForce->getElectricConstant());
+              electricConstant        /= static_cast<float>(AngstromToNm*CalToJoule);
         multipoleForce->setElectricConstant( electricConstant );
     }
 
@@ -2475,7 +2478,7 @@ static int readAmoebaGeneralizedKirkwoodParameters( FILE* filePtr, MapStringInt&
     }
 
     if( useOpenMMUnits ){
-       for( unsigned int ii = 0; ii < gbsaObcForce->getNumParticles(); ii++ ){
+       for( int ii = 0; ii < gbsaObcForce->getNumParticles(); ii++ ){
           double charge, radius, scalingFactor;
           gbsaObcForce->getParticleParameters( ii, charge, radius, scalingFactor );
           radius      *= AngstromToNm;
@@ -2683,7 +2686,7 @@ static int readAmoebaVdwParameters( FILE* filePtr, MapStringInt& forceMap, const
     if( log ){
 
         //static const unsigned int maxPrint   = MAX_PRINT;
-        static const unsigned int maxPrint   = 15;
+        static const int maxPrint            = 15;
         unsigned int arraySize               = static_cast<unsigned int>(vdwForce->getNumParticles());
         unsigned int tableSize               = static_cast<unsigned int>(vdwForce->getSigEpsTableSize());
         (void) fprintf( log, "%s: %u sample of AmoebaVdwForce parameters; SigEpsTableSize=%d combining rules=[sig=%s eps=%s]\n",
@@ -2714,7 +2717,7 @@ static int readAmoebaVdwParameters( FILE* filePtr, MapStringInt& forceMap, const
             (void) fprintf( log, "SigWEps table not loaded\n" );
         }
 
-        for( unsigned int ii = 0; ii < vdwForce->getNumParticles();  ii++ ){
+        for( int ii = 0; ii < vdwForce->getNumParticles();  ii++ ){
             int indexIV, indexClass;
             double sigma, sigma4, epsilon, epsilon4, reduction;
             std::vector< int > exclusions;
@@ -2731,7 +2734,7 @@ static int readAmoebaVdwParameters( FILE* filePtr, MapStringInt& forceMap, const
 
             // skip to end
    
-            if( ii == maxPrint && (arraySize - maxPrint) > ii ){
+            if( ii == maxPrint && static_cast<int>(arraySize - maxPrint) > ii ){
                 ii = arraySize - maxPrint - 1;
             } 
         }
@@ -2791,7 +2794,7 @@ static int readAmoebaVdwParameters( FILE* filePtr, MapStringInt& forceMap, const
 */
         }
 
-        for( unsigned int ii = 0; ii < vdwForce->getNumParticles();  ii++ ){
+        for( int ii = 0; ii < vdwForce->getNumParticles();  ii++ ){
             int indexIV, indexClass;
             double sigma, sigma4, epsilon, epsilon4, reduction;
             vdwForce->getParticleParameters( ii, indexIV, indexClass, sigma, sigma4, epsilon, epsilon4, reduction );
@@ -2873,7 +2876,7 @@ static int readAmoebaWcaDispersionParameters( FILE* filePtr, MapStringInt& force
             double epsilon       = atof( lineTokens[tokenIndex++].c_str() );
             wcaDispersionForce->addParticle( radius, epsilon );
 
-            if( tokenIndex < lineTokens.size() ){
+            if( tokenIndex < static_cast<int>(lineTokens.size()) ){
                 double cdisp         = atof( lineTokens[tokenIndex++].c_str() );
                 maxDispersionEnergyVector.push_back( cdisp );
             }
@@ -3015,7 +3018,7 @@ static int readAmoebaWcaDispersionParameters( FILE* filePtr, MapStringInt& force
         wcaDispersionForce->setEpso( epso );
         wcaDispersionForce->setEpsh( epsh );
 
-        for( unsigned int ii = 0; ii < wcaDispersionForce->getNumParticles(); ii++ ){
+        for( int ii = 0; ii < wcaDispersionForce->getNumParticles(); ii++ ){
 
             double radius, epsilon, maxDispersionEnergy;
             wcaDispersionForce->getParticleParameters( ii, radius, epsilon );
@@ -3023,7 +3026,7 @@ static int readAmoebaWcaDispersionParameters( FILE* filePtr, MapStringInt& force
             epsilon          *= CalToJoule;
             wcaDispersionForce->setParticleParameters( ii, radius, epsilon );
 
-            if( ii < maxDispersionEnergyVector.size() ){
+            if( ii < static_cast<int>(maxDispersionEnergyVector.size()) ){
                 wcaDispersionForce->getMaximumDispersionEnergy( ii, maxDispersionEnergy );
                 double tinkerValue  = maxDispersionEnergyVector[ii];
                        tinkerValue *= CalToJoule;
@@ -3694,7 +3697,6 @@ Integrator* readAmoebaParameterFile( const std::string& inputParameterFile, MapS
 
     static const std::string methodName      = "readAmoebaParameterFile";
     int PrintOn                              = 1; 
-    double unitsConversion[LastUnits];
      
 // ---------------------------------------------------------------------------------------
  
@@ -4013,7 +4015,7 @@ void checkIntermediateMultipoleQuantities( Context* context, MapStringVectorOfVe
                                            int useOpenMMUnits, FILE* log ) {
 
 // ---------------------------------------------------------------------------------------
-
+/*
     static const std::string methodName      = "checkIntermediateMultipoleQuantities";
  
 // ---------------------------------------------------------------------------------------
@@ -4074,7 +4076,7 @@ void checkIntermediateMultipoleQuantities( Context* context, MapStringVectorOfVe
             totalMisses += misses;
         }
     } catch( exception& e ){
-        (void) fprintf( log, "Rotation matricies not available\n" );
+        (void) fprintf( log, "Rotation matricies not available %s\n", e.what() );
         (void) fflush( log );
     }
     
@@ -4122,7 +4124,7 @@ void checkIntermediateMultipoleQuantities( Context* context, MapStringVectorOfVe
             totalMisses += misses;
         }
     } catch( exception& e ){
-        (void) fprintf( log, "Fixed-E fields not available\n" );
+        (void) fprintf( log, "Fixed-E fields not available %s\n", e.what() );
         (void) fflush( log );
     }
     
@@ -4172,10 +4174,10 @@ void checkIntermediateMultipoleQuantities( Context* context, MapStringVectorOfVe
             totalMisses += misses;
         }
     } catch( exception& e ){
-        (void) fprintf( log, "Induced dipoles not available\n" ); 
+        (void) fprintf( log, "Induced dipoles not available %s\n", e.what() ); 
         (void) fflush( log );
     }
-
+*/
 }
 
 void calculateBorn1( System& amoebaSystem, std::vector<Vec3>& tinkerCoordinates, FILE* log ) {
@@ -4636,7 +4638,7 @@ void testUsingAmoebaTinkerParameterFile( const std::string& amoebaTinkerParamete
   
     std::vector<Vec3> expectedForces;
     expectedForces.resize( system.getNumParticles() );
-    for( unsigned int ii = 0; ii < system.getNumParticles(); ii++ ){
+    for( int ii = 0; ii < system.getNumParticles(); ii++ ){
         expectedForces[ii][0] = 0.0;
         expectedForces[ii][1] = 0.0;
         expectedForces[ii][2] = 0.0;
@@ -4646,7 +4648,7 @@ void testUsingAmoebaTinkerParameterFile( const std::string& amoebaTinkerParamete
     for( unsigned int ii = 0; ii < forceList.size(); ii++ ){
         expectedEnergy                += tinkerEnergies[forceList[ii]];
         std::vector<Vec3> forces       = tinkerForces[forceList[ii]];
-        for( unsigned int jj = 0; jj < system.getNumParticles(); jj++ ){
+        for( int jj = 0; jj < system.getNumParticles(); jj++ ){
             expectedForces[jj][0] += forces[jj][0];
             expectedForces[jj][1] += forces[jj][1];
             expectedForces[jj][2] += forces[jj][2];
@@ -4757,6 +4759,10 @@ void testUsingAmoebaTinkerParameterFile( const std::string& amoebaTinkerParamete
     }
 }
 
+int isNanOrInfinity( double number ){
+    return (number != number || number == std::numeric_limits<double>::infinity() || number == -std::numeric_limits<double>::infinity()) ? 1 : 0; 
+}
+
 /** 
  * Check that energy and force are consistent
  * 
@@ -4825,15 +4831,15 @@ void testEnergyForcesConsistent( std::string parameterFileName, MapStringInt& fo
  
     // check norm is not nan
  
-    if( isinf( forceNorm ) || isnan( forceNorm ) ){ 
+    if( isNanOrInfinity( forceNorm ) ){ 
         if( log ){
             (void) fprintf( log, "%s norm of force is nan -- aborting.\n", methodName.c_str() );
             unsigned int hitNan = 0;
             for( unsigned int ii = 0; (ii < forces.size()) && (hitNan < 10); ii++ ){
    
-               if( isinf( forces[ii][0] ) || isnan( forces[ii][0] ) ||
-                   isinf( forces[ii][1] ) || isnan( forces[ii][1] ) ||
-                   isinf( forces[ii][2] ) || isnan( forces[ii][2] ) )hitNan++;
+               if( isNanOrInfinity( forces[ii][0] ) ||
+                   isNanOrInfinity( forces[ii][1] ) ||
+                   isNanOrInfinity( forces[ii][2] ) )hitNan++;
    
                 (void) fprintf( log, "%6u x[%14.7e %14.7e %14.7e] f[%14.7e %14.7e %14.7e]\n", ii,
                                 coordinates[ii][0], coordinates[ii][1], coordinates[ii][2],
@@ -5121,7 +5127,7 @@ void testEnergyConservation( std::string parameterFileName, MapStringInt& forceM
     FILE* intermediateStateFile = NULL;
     if( intermediateStateFileName != "NA" ){
 #ifdef _MSC_VER
-        fopen_s( &intermediateStateFile, intermediateStateFileName.c_str(), "w"));
+        fopen_s( &intermediateStateFile, intermediateStateFileName.c_str(), "w");
 #else
         intermediateStateFile = fopen( intermediateStateFileName.c_str(), "w" );
 #endif

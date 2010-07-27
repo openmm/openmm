@@ -36,33 +36,27 @@
 
 using namespace OpenMM;
 
-const double AmoebaHarmonicBondForce::DEFAULT_GLOBAL_K = -1234.567891234;
-
 AmoebaHarmonicBondForce::AmoebaHarmonicBondForce() {
    _globalCubicK = _globalQuarticK = 0.0;
 }
 
-int AmoebaHarmonicBondForce::addBond(int particle1, int particle2, double length, double quadraticK, double cubicK, double quarticK) {
-    bonds.push_back(BondInfo(particle1, particle2, length, quadraticK, cubicK, quarticK));
+int AmoebaHarmonicBondForce::addBond(int particle1, int particle2, double length, double quadraticK) {
+    bonds.push_back(BondInfo(particle1, particle2, length, quadraticK ));
     return bonds.size()-1;
 }
 
-void AmoebaHarmonicBondForce::getBondParameters(int index, int& particle1, int& particle2, double& length, double&  quadraticK, double& cubicK, double& quarticK ) const {
+void AmoebaHarmonicBondForce::getBondParameters(int index, int& particle1, int& particle2, double& length, double&  quadraticK ) const {
     particle1       = bonds[index].particle1;
     particle2       = bonds[index].particle2;
     length          = bonds[index].length;
     quadraticK      = bonds[index].quadraticK;
-    cubicK          = bonds[index].cubicK   == DEFAULT_GLOBAL_K ? _globalCubicK   : bonds[index].cubicK;
-    quarticK        = bonds[index].quarticK == DEFAULT_GLOBAL_K ? _globalQuarticK : bonds[index].quarticK;
 }
 
-void AmoebaHarmonicBondForce::setBondParameters(int index, int particle1, int particle2, double length, double quadraticK, double cubicK, double quarticK ) {
+void AmoebaHarmonicBondForce::setBondParameters(int index, int particle1, int particle2, double length, double quadraticK ) {
     bonds[index].particle1  = particle1;
     bonds[index].particle2  = particle2;
     bonds[index].length     = length;
     bonds[index].quadraticK = quadraticK;
-    bonds[index].cubicK     = cubicK;
-    bonds[index].quarticK   = quarticK;
 }
 
 void AmoebaHarmonicBondForce::setAmoebaGlobalHarmonicBondCubic(double cubicK ) {

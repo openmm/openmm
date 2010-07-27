@@ -317,7 +317,7 @@ void kCalculateAmoebaLocalForces_kernel()
             int4   atom         = cAmoebaSim.pAmoebaBondID[pos];
             float4 atomA        = cSim.pPosq[atom.x];
             float4 atomB        = cSim.pPosq[atom.y];
-            float4 bond         = cAmoebaSim.pAmoebaBondParameter[pos];
+            float2 bond         = cAmoebaSim.pAmoebaBondParameter[pos];
             float dx            = atomB.x - atomA.x;
             float dy            = atomB.y - atomA.y;
             float dz            = atomB.z - atomA.z;
@@ -330,8 +330,12 @@ void kCalculateAmoebaLocalForces_kernel()
             dEdR                = (r > 0.0f) ? (dEdR / r) : 0.0f;
 #else
             float deltaIdeal2   = deltaIdeal*deltaIdeal;
-            energy             += bond.y * deltaIdeal2*( 1.0f + bond.z*deltaIdeal + bond.w*deltaIdeal2 );
-            float dEdR          = 2.0f*bond.y * deltaIdeal*( 1.0f + 1.5f*bond.z*deltaIdeal + 2.0f*bond.w*deltaIdeal2 );
+            energy             += bond.y * deltaIdeal2*( 1.0f + cAmoebaSim.amoebaBondCubicParameter*deltaIdeal +
+                                                                cAmoebaSim.amoebaBondQuarticicParameter*deltaIdeal2 );
+
+            float dEdR          = 2.0f*bond.y * deltaIdeal*( 1.0f + 1.5f*cAmoebaSim.amoebaBondCubicParameter*deltaIdeal +
+                                                                    2.0f*cAmoebaSim.amoebaBondQuarticicParameter*deltaIdeal2 );
+
             dEdR                = (r > 0.0f) ? (dEdR / r) : 0.0f;
 #endif
 

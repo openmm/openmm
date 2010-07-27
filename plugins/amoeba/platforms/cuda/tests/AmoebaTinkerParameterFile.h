@@ -48,6 +48,7 @@
 #include "AmoebaVdwForce.h"
 #include "AmoebaWcaDispersionForce.h"
 #include "AmoebaSASAForce.h"
+#include "internal/windowsExport.h"
 
 #include <ctime>
 #include <vector>
@@ -232,5 +233,6 @@ void initializeForceMap( MapStringInt& forceMap, int initialValue );
 
 void testUsingAmoebaTinkerParameterFile( const std::string& amoebaTinkerParameterFileName, MapStringInt& forceMap,
                                          double tolerance, FILE* summaryFile, FILE* log );
-int runTestsUsingAmoebaTinkerParameterFile( MapStringString& argumentMap );
-void appendInputArgumentsToArgumentMap( int numberOfArguments, char* argv[], MapStringString& argumentMap );
+
+int OPENMM_EXPORT runTestsUsingAmoebaTinkerParameterFile( MapStringString& argumentMap );
+void OPENMM_EXPORT appendInputArgumentsToArgumentMap( int numberOfArguments, char* argv[], MapStringString& argumentMap );
