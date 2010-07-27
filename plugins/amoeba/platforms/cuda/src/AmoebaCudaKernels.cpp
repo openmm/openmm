@@ -213,7 +213,6 @@ void CudaCalcAmoebaTorsionForceKernel::initialize(const System& system, const Am
 
     data.setAmoebaLocalForcesKernel( this );
     numTorsions                     = force.getNumTorsions();
-
     std::vector<int> particle1(numTorsions);
     std::vector<int> particle2(numTorsions);
     std::vector<int> particle3(numTorsions);
@@ -234,7 +233,7 @@ void CudaCalcAmoebaTorsionForceKernel::initialize(const System& system, const Am
         std::vector<float> torsionParameters3F(3);
 
         force.getTorsionParameters(i, particle1[i], particle2[i], particle3[i], particle4[i], torsionParameter1, torsionParameter2, torsionParameter3 );
-        for ( unsigned int jj = 0; jj < 3; jj++) {
+        for ( unsigned int jj = 0; jj < torsionParameter1.size(); jj++) {
             torsionParameters1F[jj] = static_cast<float>(torsionParameter1[jj]);
             torsionParameters2F[jj] = static_cast<float>(torsionParameter2[jj]);
             torsionParameters3F[jj] = static_cast<float>(torsionParameter3[jj]);

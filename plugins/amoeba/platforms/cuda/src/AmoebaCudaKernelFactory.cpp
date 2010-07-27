@@ -33,26 +33,11 @@
 
 using namespace OpenMM;
 
-/*
-#if defined(OPENMM_BUILDING_SHARED_LIBRARY)
-    #if defined(WIN32)
-      #include <windows.h>
-        extern "C" void initOpenMMCudaAmoebaPlugin();
-        BOOL WINAPI DllMain(HANDLE hModule, DWORD  ul_reason_for_call, LPVOID lpReserved) {
-            if (ul_reason_for_call == DLL_PROCESS_ATTACH)
-                initOpenMMCudaAmoebaPlugin();
-            return TRUE;
-        }
-    #else
-        extern "C" void __attribute__((constructor)) initOpenMMCudaAmoebaPlugin();
-    #endif
-#endif
-*/
-
-extern "C" void registerKernelFactories() {
+extern "C" void OPENMMCUDA_EXPORT registerKernelFactories() {
+//fprintf( stderr,"In registerKernelFactories AmoebaCudaKernelFactory\n" ); fflush( stderr );
     for( int ii = 0; ii < Platform::getNumPlatforms(); ii++ ){
         Platform& platform = Platform::getPlatform(ii);
-        if( platform.getName().compare( "Cuda" ) == 0 ){
+        if( platform.getName() == "Cuda" ){
              AmoebaCudaKernelFactory* factory = new AmoebaCudaKernelFactory();
              platform.registerKernelFactory(CalcAmoebaHarmonicBondForceKernel::Name(), factory);
              platform.registerKernelFactory(CalcAmoebaHarmonicAngleForceKernel::Name(), factory);
