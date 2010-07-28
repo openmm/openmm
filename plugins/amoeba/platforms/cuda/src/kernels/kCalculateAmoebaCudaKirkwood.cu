@@ -1997,7 +1997,7 @@ int debugIndex               = atomJ;
  
 }
 
-__device__ int debugAccumulate( int index, float4* debugArray, float* field, unsigned int addMask, float idLabel )
+__device__ static int debugAccumulate( int index, float4* debugArray, float* field, unsigned int addMask, float idLabel )
 {
     index                             += cAmoebaSim.paddedNumberOfAtoms;
     debugArray[index].x                = addMask ? field[0] : 0.0f;

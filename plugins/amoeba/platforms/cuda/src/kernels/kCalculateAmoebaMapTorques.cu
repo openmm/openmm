@@ -28,7 +28,7 @@ void GetCalculateAmoebaCudaMapTorquesSim(amoebaGpuContext amoebaGpu)
     RTERROR(status, "GetCalculateAmoebaCudaMapTorquesSim: cudaMemcpyFromSymbol: SetSim copy from cAmoebaSim failed");
 }
 
-__device__ float normVector3( float* vector ) 
+__device__ static float normVector3( float* vector )
 {
 
     float norm                    = DOT3( vector, vector );

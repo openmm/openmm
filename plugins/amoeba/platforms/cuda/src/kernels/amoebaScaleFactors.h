@@ -41,14 +41,14 @@ static __constant__ float directScale[5]  = { 0.0f, 1.0f, 1.0f, 1.0f, 1.0f };
            
 // subroutine to get masked scale factors
 
-__device__ void getMaskedDScaleFactor( unsigned int gridIndex, int scaleMask, float* dScale )
+__device__ static void getMaskedDScaleFactor( unsigned int gridIndex, int scaleMask, float* dScale )
 {
     unsigned int mask             = 1 << gridIndex;   
     *dScale                       = (scaleMask & mask) ? 0.0f : 1.0f;
 
 }
 
-__device__ void getMaskedPScaleFactor( unsigned int gridIndex, int2 scaleMask, float* pScale )
+__device__ static void getMaskedPScaleFactor( unsigned int gridIndex, int2 scaleMask, float* pScale )
 {
     unsigned int mask             = 1 << gridIndex;   
     *pScale                       = (scaleMask.x & mask) ? 0.5f : 1.0f;
@@ -56,7 +56,7 @@ __device__ void getMaskedPScaleFactor( unsigned int gridIndex, int2 scaleMask, f
 
 }
 
-__device__ void getMaskedMScaleFactor( unsigned int gridIndex, int2 scaleMask, float* mScale )
+__device__ static void getMaskedMScaleFactor( unsigned int gridIndex, int2 scaleMask, float* mScale )
 {
     unsigned int mask             = 1 << gridIndex;   
 
@@ -73,7 +73,7 @@ __device__ void getMaskedMScaleFactor( unsigned int gridIndex, int2 scaleMask, f
 
 // subroutine to get cell coordinates
 
-__device__ void decodeCell( unsigned int cellId, unsigned int* x, unsigned int* y, bool* exclusions )
+__device__ static void decodeCell( unsigned int cellId, unsigned int* x, unsigned int* y, bool* exclusions )
 {
     *x          = cellId;
     *y          = ((*x >> 2) & 0x7fff) << GRIDBITS;
@@ -83,7 +83,7 @@ __device__ void decodeCell( unsigned int cellId, unsigned int* x, unsigned int* 
 
 }
 
-__device__ void load3dArrayBufferPerWarp( unsigned int offset, float* forceSum, float* outputForce )
+__device__ static void load3dArrayBufferPerWarp( unsigned int offset, float* forceSum, float* outputForce )
 {
 
     float of; 
@@ -101,7 +101,7 @@ __device__ void load3dArrayBufferPerWarp( unsigned int offset, float* forceSum, 
 
 }
 
-__device__ void load3dArray( unsigned int offset, float* forceSum, float* outputForce )
+__device__ static void load3dArray( unsigned int offset, float* forceSum, float* outputForce )
 {
 
     outputForce[offset]                 = forceSum[0];  
@@ -110,7 +110,7 @@ __device__ void load3dArray( unsigned int offset, float* forceSum, float* output
 
 }
 
-__device__ void scale3dArray( float scaleFactor, float* force )
+__device__ static void scale3dArray( float scaleFactor, float* force )
 {
 
     force[0]  *= scaleFactor;  

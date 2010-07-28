@@ -54,7 +54,7 @@ static void computeAmoebaHarmonicBondForce(int bondIndex,  std::vector<Vec3>& po
     double quadraticK;
     double cubicK;
     double quarticK;
-    amoebaHarmonicBondForce.getBondParameters(bondIndex, particle1, particle2,  bondLength,  quadraticK,  cubicK,  quarticK );
+    amoebaHarmonicBondForce.getBondParameters(bondIndex, particle1, particle2,  bondLength,  quadraticK );
 
     double deltaR[3];
     double r2 = 0.0;
@@ -152,7 +152,7 @@ void testOneBond( FILE* log ) {
     double quadraticK = 1.0;
     double cubicK     = 2.0;
     double quarticicK = 3.0;
-    amoebaHarmonicBondForce->addBond(0, 1, bondLength, quadraticK, cubicK,quarticicK);
+    amoebaHarmonicBondForce->addBond(0, 1, bondLength, quadraticK);
 
     system.addForce(amoebaHarmonicBondForce);
     Context context(system, integrator, Platform::getPlatformByName( "Cuda"));
@@ -181,8 +181,8 @@ void testTwoBond( FILE* log ) {
     double quadraticK = 1.0;
     double cubicK     = 2.0;
     double quarticicK = 3.0;
-    amoebaHarmonicBondForce->addBond(0, 1, bondLength, quadraticK, cubicK, quarticicK);
-    amoebaHarmonicBondForce->addBond(1, 2, bondLength, quadraticK, cubicK, quarticicK);
+    amoebaHarmonicBondForce->addBond(0, 1, bondLength, quadraticK);
+    amoebaHarmonicBondForce->addBond(1, 2, bondLength, quadraticK);
 
     system.addForce(amoebaHarmonicBondForce);
     Context context(system, integrator, Platform::getPlatformByName( "Cuda"));

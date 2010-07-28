@@ -124,7 +124,7 @@ __device__ void loadFixedFieldParticleData( struct FixedFieldParticle* sA,
 
 // zero fields
 
-__device__ void zeroFixedFieldParticleSharedField( struct FixedFieldParticle* sA ) 
+__device__ static void zeroFixedFieldParticleSharedField( struct FixedFieldParticle* sA )
 {
 
     sA->eField[0]    = 0.0f;
@@ -144,7 +144,7 @@ __device__ void zeroFixedFieldParticleSharedField( struct FixedFieldParticle* sA
 
 // body of fixed E-field calculation
 
-__device__ void calculateFixedEFieldPairIxn_kernel( float4 atomCoordinatesI, float4 atomCoordinatesJ,
+__device__ static void calculateFixedEFieldPairIxn_kernel( float4 atomCoordinatesI, float4 atomCoordinatesJ,
                                                     float dampingFactorI,    float dampingFactorJ,
                                                     float tholeI,            float tholeJ,
                                                     float* labDipoleI, float* labDipoleJ,

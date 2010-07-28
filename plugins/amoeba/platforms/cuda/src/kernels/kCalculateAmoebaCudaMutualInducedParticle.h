@@ -77,7 +77,7 @@ __device__ void loadMutualInducedShared( struct MutualInducedParticle* sA, unsig
 #endif
 }
 
-__device__ void zeroMutualInducedParticleSharedField( struct MutualInducedParticle* sA )
+__device__ static void zeroMutualInducedParticleSharedField( struct MutualInducedParticle* sA )
 
 {
     // zero shared fields

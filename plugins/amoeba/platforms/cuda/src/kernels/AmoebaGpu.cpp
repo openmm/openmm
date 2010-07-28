@@ -38,6 +38,7 @@ extern void OPENMMCUDA_EXPORT SetForcesSim(gpuContext gpu);
 
 #include <sstream>
 #include <limits>
+#include <cstring>
 
 #ifdef WIN32
 //  #include <windows.h>

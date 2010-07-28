@@ -1031,7 +1031,7 @@ __device__ void calculateKirkwoodEDiffPairIxn_kernel( float4 atomCoordinatesI,  
 
 }
 
-__device__ int debugAccumulate( unsigned int index, float4* debugArray, float* field, unsigned int addMask, float idLabel )
+__device__ static int debugAccumulate( unsigned int index, float4* debugArray, float* field, unsigned int addMask, float idLabel )
 {
     index                             += cAmoebaSim.paddedNumberOfAtoms;
     debugArray[index].x                = addMask ? field[0] : 0.0f;
