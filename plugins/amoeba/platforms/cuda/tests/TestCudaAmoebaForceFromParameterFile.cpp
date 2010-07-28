@@ -58,7 +58,7 @@ int main( int numberOfArguments, char* argv[] ) {
             Platform::loadPluginsFromDirectory( openmmPluginDirectory );
         }
 */
-        Platform::loadPluginsFromDirectory( getDefaultPluginsDirectory() );
+        Platform::loadPluginsFromDirectory( Platform::getDefaultPluginsDirectory() );
 
         if( numberOfArguments > 1 ){
             MapStringString argumentMap;
