@@ -45,6 +45,10 @@
 using namespace OpenMM;
 using namespace std;
 
+#ifndef CL_DEVICE_COMPUTE_CAPABILITY_MAJOR_NV
+  #define CL_DEVICE_COMPUTE_CAPABILITY_MAJOR_NV 0x4000
+#endif
+
 OpenCLContext::OpenCLContext(int numParticles, int deviceIndex) : time(0.0), stepCount(0), computeForceCount(0), posq(NULL), velm(NULL),
         forceBuffers(NULL), energyBuffer(NULL), atomIndex(NULL), integration(NULL), nonbonded(NULL) {
     try {
@@ -63,7 +67,6 @@ OpenCLContext::OpenCLContext(int numParticles, int deviceIndex) : time(0.0), ste
                 int processingElementsPerComputeUnit = 1;
                 if (devices[i].getInfo<CL_DEVICE_EXTENSIONS>().find("cl_nv_device_attribute_query") != string::npos) {
                     cl_uint computeCapabilityMajor;
-                    const cl_device_info CL_DEVICE_COMPUTE_CAPABILITY_MAJOR_NV = 0x4000;
                     clGetDeviceInfo(devices[i](), CL_DEVICE_COMPUTE_CAPABILITY_MAJOR_NV, sizeof(cl_uint), &computeCapabilityMajor, NULL);
                     processingElementsPerComputeUnit = (computeCapabilityMajor < 2 ? 8 : 32);
                 }
