@@ -334,7 +334,7 @@ static char* readLine( FILE* filePtr, StringVector& tokens, int* lineCount, FILE
 
     //static const std::string methodName      = "readLine";
     
-    std::string delimiter                    = " \n";
+    std::string delimiter                    = " \r\n";
     const int bufferSize                     = 4096;
     char buffer[bufferSize];
 
@@ -2192,6 +2192,7 @@ static int readAmoebaMultipoleParameters( FILE* filePtr, MapStringInt& forceMap,
                }
    
             } else if( field.compare( "AmoebaMultipoleEnd" ) == 0 ){
+                printf("here\n");
                 done++;
             } else if( field.compare( AMOEBA_MULTIPOLE_ROTATION_MATRICES ) == 0 || 
                        field.compare( AMOEBA_MULTIPOLE_ROTATED )           == 0 ||
