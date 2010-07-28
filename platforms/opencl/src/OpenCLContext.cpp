@@ -60,9 +60,18 @@ OpenCLContext::OpenCLContext(int numParticles, int deviceIndex) : time(0.0), ste
             int bestSpeed = 0;
             for (int i = 0; i < (int) devices.size(); i++) {
                 int maxSize = devices[i].getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>()[0];
-                int speed = devices[i].getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>()*devices[i].getInfo<CL_DEVICE_MAX_CLOCK_FREQUENCY>();
-                if (maxSize >= minThreadBlockSize && speed > bestSpeed)
+                int processingElementsPerComputeUnit = 1;
+                if (devices[i].getInfo<CL_DEVICE_EXTENSIONS>().find("cl_nv_device_attribute_query") != string::npos) {
+                    cl_uint computeCapabilityMajor;
+                    const cl_device_info CL_DEVICE_COMPUTE_CAPABILITY_MAJOR_NV = 0x4000;
+                    clGetDeviceInfo(devices[i](), CL_DEVICE_COMPUTE_CAPABILITY_MAJOR_NV, sizeof(cl_uint), &computeCapabilityMajor, NULL);
+                    processingElementsPerComputeUnit = (computeCapabilityMajor < 2 ? 8 : 32);
+                }
+                int speed = devices[i].getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>()*processingElementsPerComputeUnit*devices[i].getInfo<CL_DEVICE_MAX_CLOCK_FREQUENCY>();
+                if (maxSize >= minThreadBlockSize && speed > bestSpeed) {
                     deviceIndex = i;
+                    bestSpeed = speed;
+                }
             }
         }
         if (deviceIndex == -1)
