@@ -45,21 +45,7 @@ int main( int numberOfArguments, char* argv[] ) {
 
     try {
         std::cout << "Running test..." << std::endl;
-/*
-        //std::string openmmPluginDirectory = "/cygdrive/c/cygwin/home/friedrim/src/openmm/trunk/OpenMM/bin/release";
-        std::vector<std::string> pluginDirectories;
-        pluginDirectories.push_back( "C:\\cygwin\\home\\friedrim\\src\\openmm\\trunk\\OpenMM\\bin\\Release" );
-        //pluginDirectories.push_back( "C:\\cygwin\\home\\friedrim\\src\\openmm\\trunk\\OpenMM\\bin" );
-        //pluginDirectories.push_back( "/cygdrive/c/cygwin/home/friedrim/src/openmm/trunk/OpenMM/bin/Release" );
-        //pluginDirectories.push_back( "/cygdrive/c/cygwin/home/friedrim/src/openmm/trunk/OpenMM/bin" );
-        for( unsigned int ii = 0; ii < pluginDirectories.size(); ii++ ){
-            std::string openmmPluginDirectory = pluginDirectories[ii];
-            std::cout << "Plugin directory: " << openmmPluginDirectory << std::endl;
-            Platform::loadPluginsFromDirectory( openmmPluginDirectory );
-        }
-*/
         Platform::loadPluginsFromDirectory( Platform::getDefaultPluginsDirectory() );
-
         if( numberOfArguments > 1 ){
             MapStringString argumentMap;
             appendInputArgumentsToArgumentMap( numberOfArguments, argv, argumentMap );

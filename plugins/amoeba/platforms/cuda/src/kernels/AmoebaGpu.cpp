@@ -212,8 +212,8 @@ void gpuPrintCudaAmoebaGmxSimulation(amoebaGpuContext amoebaGpu, FILE* log )
     gpuPrintCudaStreamFloat2( amoebaGpu->psAmoebaBondParameter, log );
     (void) fprintf( log, "     amoebaBonds                       %u\n",      amoebaGpu->amoebaSim.amoebaBonds );
     (void) fprintf( log, "     amoebaBond_offset                 %u\n",      amoebaGpu->amoebaSim.amoebaBond_offset );
-    (void) fprintf( log, "     cubic                             %14.7e\n",  amoebaGpu->amoebaSim.amoebaBondCubicParameter);
-    (void) fprintf( log, "     quartic                           %14.7e\n",  amoebaGpu->amoebaSim.amoebaBondQuarticicParameter);
+    (void) fprintf( log, "     cubic                             %15.7e\n",  amoebaGpu->amoebaSim.amoebaBondCubicParameter);
+    (void) fprintf( log, "     quartic                           %15.7e\n",  amoebaGpu->amoebaSim.amoebaBondQuarticicParameter);
     (void) fprintf( log, "     pAmoebaBondID                     %p\n",      amoebaGpu->amoebaSim.pAmoebaBondID );
     (void) fprintf( log, "     pAmoebaBondParameter              %p\n",      amoebaGpu->amoebaSim.pAmoebaBondParameter );
     
@@ -223,10 +223,10 @@ void gpuPrintCudaAmoebaGmxSimulation(amoebaGpuContext amoebaGpu, FILE* log )
     (void) fprintf( log, "\n" );
     (void) fprintf( log, "     amoebaAngles                      %u\n",      amoebaGpu->amoebaSim.amoebaAngles );
     (void) fprintf( log, "     amoebaAngle_offset                %u\n",      amoebaGpu->amoebaSim.amoebaAngle_offset );
-    (void) fprintf( log, "     amoebaAngleCubicK                 %14.7e\n",  amoebaGpu->amoebaSim.amoebaAngleCubicK );
-    (void) fprintf( log, "     amoebaAngleQuarticK               %14.7e\n",  amoebaGpu->amoebaSim.amoebaAngleQuarticK );
-    (void) fprintf( log, "     amoebaAnglePenticK                %14.7e\n",  amoebaGpu->amoebaSim.amoebaAnglePenticK );
-    (void) fprintf( log, "     amoebaAngleSexticK                %14.7e\n",  amoebaGpu->amoebaSim.amoebaAngleSexticK );
+    (void) fprintf( log, "     amoebaAngleCubicK                 %15.7e\n",  amoebaGpu->amoebaSim.amoebaAngleCubicK );
+    (void) fprintf( log, "     amoebaAngleQuarticK               %15.7e\n",  amoebaGpu->amoebaSim.amoebaAngleQuarticK );
+    (void) fprintf( log, "     amoebaAnglePenticK                %15.7e\n",  amoebaGpu->amoebaSim.amoebaAnglePenticK );
+    (void) fprintf( log, "     amoebaAngleSexticK                %15.7e\n",  amoebaGpu->amoebaSim.amoebaAngleSexticK );
     (void) fprintf( log, "     pAmoebaAngleID1                   %p\n",      amoebaGpu->amoebaSim.pAmoebaAngleID1 );
     (void) fprintf( log, "     pAmoebaAngleID2                   %p\n",      amoebaGpu->amoebaSim.pAmoebaAngleID2 );
     (void) fprintf( log, "     pAmoebaAngleParameter             %p\n",      amoebaGpu->amoebaSim.pAmoebaAngleParameter );
@@ -238,10 +238,10 @@ void gpuPrintCudaAmoebaGmxSimulation(amoebaGpuContext amoebaGpu, FILE* log )
     (void) fprintf( log, "\n" );
     (void) fprintf( log, "     amoebaInPlaneAngles               %u\n",      amoebaGpu->amoebaSim.amoebaInPlaneAngles );
     (void) fprintf( log, "     amoebaInPlaneAngle_offset         %u\n",      amoebaGpu->amoebaSim.amoebaInPlaneAngle_offset );
-    (void) fprintf( log, "     amoebaInPlaneAngleCubicK          %14.7e\n",  amoebaGpu->amoebaSim.amoebaInPlaneAngleCubicK );
-    (void) fprintf( log, "     amoebaInPlaneAngleQuarticK        %14.7e\n",  amoebaGpu->amoebaSim.amoebaInPlaneAngleQuarticK );
-    (void) fprintf( log, "     amoebaInPlaneAnglePenticK         %14.7e\n",  amoebaGpu->amoebaSim.amoebaInPlaneAnglePenticK );
-    (void) fprintf( log, "     amoebaInPlaneAngleSexticK         %14.7e\n",  amoebaGpu->amoebaSim.amoebaInPlaneAngleSexticK );
+    (void) fprintf( log, "     amoebaInPlaneAngleCubicK          %15.7e\n",  amoebaGpu->amoebaSim.amoebaInPlaneAngleCubicK );
+    (void) fprintf( log, "     amoebaInPlaneAngleQuarticK        %15.7e\n",  amoebaGpu->amoebaSim.amoebaInPlaneAngleQuarticK );
+    (void) fprintf( log, "     amoebaInPlaneAnglePenticK         %15.7e\n",  amoebaGpu->amoebaSim.amoebaInPlaneAnglePenticK );
+    (void) fprintf( log, "     amoebaInPlaneAngleSexticK         %15.7e\n",  amoebaGpu->amoebaSim.amoebaInPlaneAngleSexticK );
     (void) fprintf( log, "     pAmoebaInPlaneAngleID1            %p\n",      amoebaGpu->amoebaSim.pAmoebaInPlaneAngleID1 );
     (void) fprintf( log, "     pAmoebaInPlaneAngleID2            %p\n",      amoebaGpu->amoebaSim.pAmoebaInPlaneAngleID2 );
     (void) fprintf( log, "     pAmoebaInPlaneAngleParameter      %p\n",      amoebaGpu->amoebaSim.pAmoebaInPlaneAngleParameter );
@@ -288,10 +288,10 @@ void gpuPrintCudaAmoebaGmxSimulation(amoebaGpuContext amoebaGpu, FILE* log )
     gpuPrintCudaStreamFloat( amoebaGpu->psAmoebaOutOfPlaneBendParameter, log );
     (void) fprintf( log, "     amoebaOutOfPlaneBend               %u\n",      amoebaGpu->amoebaSim.amoebaOutOfPlaneBends );
     (void) fprintf( log, "     amoebaOutOfPlaneBend_offset        %u\n",      amoebaGpu->amoebaSim.amoebaOutOfPlaneBend_offset );
-    (void) fprintf( log, "     amoebaOutOfPlaneBendCubicK         %14.7e\n",  amoebaGpu->amoebaSim.amoebaOutOfPlaneBendCubicK );
-    (void) fprintf( log, "     amoebaOutOfPlaneBendQuarticK       %14.7e\n",  amoebaGpu->amoebaSim.amoebaOutOfPlaneBendQuarticK );
-    (void) fprintf( log, "     amoebaOutOfPlaneBendPenticK        %14.7e\n",  amoebaGpu->amoebaSim.amoebaOutOfPlaneBendPenticK );
-    (void) fprintf( log, "     amoebaOutOfPlaneBendSexticK        %14.7e\n",  amoebaGpu->amoebaSim.amoebaOutOfPlaneBendSexticK );
+    (void) fprintf( log, "     amoebaOutOfPlaneBendCubicK         %15.7e\n",  amoebaGpu->amoebaSim.amoebaOutOfPlaneBendCubicK );
+    (void) fprintf( log, "     amoebaOutOfPlaneBendQuarticK       %15.7e\n",  amoebaGpu->amoebaSim.amoebaOutOfPlaneBendQuarticK );
+    (void) fprintf( log, "     amoebaOutOfPlaneBendPenticK        %15.7e\n",  amoebaGpu->amoebaSim.amoebaOutOfPlaneBendPenticK );
+    (void) fprintf( log, "     amoebaOutOfPlaneBendSexticK        %15.7e\n",  amoebaGpu->amoebaSim.amoebaOutOfPlaneBendSexticK );
     (void) fprintf( log, "     pAmoebaOutOfPlaneBendID1           %p\n",      amoebaGpu->amoebaSim.pAmoebaOutOfPlaneBendID1 );
     (void) fprintf( log, "     pAmoebaOutOfPlaneBendID2           %p\n",      amoebaGpu->amoebaSim.pAmoebaOutOfPlaneBendID2 );
     (void) fprintf( log, "     pAmoebaOutOfPlaneBendParameter     %p\n",      amoebaGpu->amoebaSim.pAmoebaOutOfPlaneBendParameter );
@@ -323,19 +323,19 @@ void gpuPrintCudaAmoebaGmxSimulation(amoebaGpuContext amoebaGpu, FILE* log )
     (void) fprintf( log, "     solventDielectric                  %10.3f\n",  amoebaGpu->solventDielectric);
     (void) fprintf( log, "     pGamma                             %10.3f\n",  amoebaGpu->pGamma );
     (void) fprintf( log, "     scalingDistanceCutoff              %10.3f\n",  amoebaGpu->scalingDistanceCutoff );
-    (void) fprintf( log, "     scalingDistanceCutoff              %14.7e\n",  amoebaGpu->amoebaSim.scalingDistanceCutoff );
+    (void) fprintf( log, "     scalingDistanceCutoff              %15.7e\n",  amoebaGpu->amoebaSim.scalingDistanceCutoff );
     (void) fprintf( log, "     pDampingFactorAndThole             %p\n",      amoebaGpu->amoebaSim.pDampingFactorAndThole );
     (void) fprintf( log, "     pScaleIndicesIndex                 %p\n",      amoebaGpu->amoebaSim.pScaleIndicesIndex );
     (void) fprintf( log, "     pD_ScaleIndices                    %p\n",      amoebaGpu->amoebaSim.pD_ScaleIndices );
     (void) fprintf( log, "     pP_ScaleIndices                    %p\n",      amoebaGpu->amoebaSim.pP_ScaleIndices );
     (void) fprintf( log, "     pM_ScaleIndices                    %p\n",      amoebaGpu->amoebaSim.pM_ScaleIndices );
-    (void) fprintf( log, "     electric                           %14.7e\n",  amoebaGpu->amoebaSim.electric );
-    (void) fprintf( log, "     gkc                                %14.7e\n",  amoebaGpu->amoebaSim.gkc );
-    (void) fprintf( log, "     dielec                             %14.7e\n",  amoebaGpu->amoebaSim.dielec );
-    (void) fprintf( log, "     dwater                             %14.7e\n",  amoebaGpu->amoebaSim.dwater );
-    (void) fprintf( log, "     fc                                 %14.7e\n",  amoebaGpu->amoebaSim.fc );
-    (void) fprintf( log, "     fd                                 %14.7e\n",  amoebaGpu->amoebaSim.fd );
-    (void) fprintf( log, "     fq                                 %14.7e\n",  amoebaGpu->amoebaSim.fq );
+    (void) fprintf( log, "     electric                           %15.7e\n",  amoebaGpu->amoebaSim.electric );
+    (void) fprintf( log, "     gkc                                %15.7e\n",  amoebaGpu->amoebaSim.gkc );
+    (void) fprintf( log, "     dielec                             %15.7e\n",  amoebaGpu->amoebaSim.dielec );
+    (void) fprintf( log, "     dwater                             %15.7e\n",  amoebaGpu->amoebaSim.dwater );
+    (void) fprintf( log, "     fc                                 %15.7e\n",  amoebaGpu->amoebaSim.fc );
+    (void) fprintf( log, "     fd                                 %15.7e\n",  amoebaGpu->amoebaSim.fd );
+    (void) fprintf( log, "     fq                                 %15.7e\n",  amoebaGpu->amoebaSim.fq );
 
     gpuPrintCudaStreamFloat2( amoebaGpu->psDampingFactorAndThole, log );
 
@@ -375,9 +375,9 @@ void gpuPrintCudaAmoebaGmxSimulation(amoebaGpuContext amoebaGpu, FILE* log )
     gpuPrintCudaStreamFloat( amoebaGpu->psKirkwoodForce, log );
     gpuPrintCudaStreamFloat( amoebaGpu->psKirkwoodEDiffForce, log );
     (void) fprintf( log, "     includeObcCavityTerm               %d\n",      amoebaGpu->includeObcCavityTerm );
-    (void) fprintf( log, "     dielectricOffset                   %14.7e\n",  gpu->sim.dielectricOffset );
-    (void) fprintf( log, "     probeRadius                        %14.7e\n",  gpu->sim.probeRadius );
-    (void) fprintf( log, "     surfaceAreaFactor                  %14.7e\n",  gpu->sim.surfaceAreaFactor );
+    (void) fprintf( log, "     dielectricOffset                   %15.7e\n",  gpu->sim.dielectricOffset );
+    (void) fprintf( log, "     probeRadius                        %15.7e\n",  gpu->sim.probeRadius );
+    (void) fprintf( log, "     surfaceAreaFactor                  %15.7e\n",  gpu->sim.surfaceAreaFactor );
     (void) fprintf( log, "\n" );
 
 
@@ -404,14 +404,14 @@ void gpuPrintCudaAmoebaGmxSimulation(amoebaGpuContext amoebaGpu, FILE* log )
 
     gpuPrintCudaStreamFloat2( amoebaGpu->psWcaDispersionRadiusEpsilon, log );
     (void) fprintf( log, "\n" );
-    (void) fprintf( log, "     epso                               %14.7e\n",  amoebaGpu->amoebaSim.epso );
-    (void) fprintf( log, "     epsh                               %14.7e\n",  amoebaGpu->amoebaSim.epsh );
-    (void) fprintf( log, "     rmino                              %14.7e\n",  amoebaGpu->amoebaSim.rmino );
-    (void) fprintf( log, "     rminh                              %14.7e\n",  amoebaGpu->amoebaSim.rminh );
-    (void) fprintf( log, "     awater                             %14.7e\n",  amoebaGpu->amoebaSim.awater );
-    (void) fprintf( log, "     shctd                              %14.7e\n",  amoebaGpu->amoebaSim.shctd );
-    (void) fprintf( log, "     dispoff                            %14.7e\n",  amoebaGpu->amoebaSim.dispoff );
-    (void) fprintf( log, "     totalMaxWcaDispersionEnergy        %14.7e\n",  amoebaGpu->amoebaSim.totalMaxWcaDispersionEnergy );
+    (void) fprintf( log, "     epso                               %15.7e\n",  amoebaGpu->amoebaSim.epso );
+    (void) fprintf( log, "     epsh                               %15.7e\n",  amoebaGpu->amoebaSim.epsh );
+    (void) fprintf( log, "     rmino                              %15.7e\n",  amoebaGpu->amoebaSim.rmino );
+    (void) fprintf( log, "     rminh                              %15.7e\n",  amoebaGpu->amoebaSim.rminh );
+    (void) fprintf( log, "     awater                             %15.7e\n",  amoebaGpu->amoebaSim.awater );
+    (void) fprintf( log, "     shctd                              %15.7e\n",  amoebaGpu->amoebaSim.shctd );
+    (void) fprintf( log, "     dispoff                            %15.7e\n",  amoebaGpu->amoebaSim.dispoff );
+    (void) fprintf( log, "     totalMaxWcaDispersionEnergy        %15.7e\n",  amoebaGpu->amoebaSim.totalMaxWcaDispersionEnergy );
 
     (void) fflush( log );
 
@@ -448,7 +448,7 @@ void gpuSetAmoebaBondParameters(amoebaGpuContext amoebaGpu, const std::vector<in
 #define DUMP_PARAMETERS 5
 #if (DUMP_PARAMETERS > 0 )                
 if( amoebaGpu->log && (i < DUMP_PARAMETERS || i > bonds - (DUMP_PARAMETERS + 1)  ) )
-        fprintf( amoebaGpu->log, "Bonds: %5d [%5d %5d %5d %5d] L=%14.7e k[%14.7e %14.7e %14.7e] [%5d %5d]\n",
+        fprintf( amoebaGpu->log, "Bonds: %5d [%5d %5d %5d %5d] L=%15.7e k[%15.7e %15.7e %15.7e] [%5d %5d]\n",
             i, (*psBondID)[i].x, (*psBondID)[i].y, (*psBondID)[i].z, (*psBondID)[i].w, 
             (*psBondParameter)[i].x, (*psBondParameter)[i].y, cubic, quartic, 
             gpu->pOutputBufferCounter[(*psBondID)[i].x],
@@ -503,7 +503,7 @@ void gpuSetAmoebaAngleParameters(amoebaGpuContext amoebaGpu, const std::vector<i
 #define DUMP_PARAMETERS 5
 #if (DUMP_PARAMETERS > 0 )
 if( (i < DUMP_PARAMETERS || i > bond_angles - (DUMP_PARAMETERS + 1)) && amoebaGpu->log )
-         fprintf( amoebaGpu->log, "Angles: %5d [%5d %5d %5d] [%5d %5d %5d] A=%14.7e k[%14.7e %14.7e] [%5d %5d %5d]\n", i, 
+         fprintf( amoebaGpu->log, "Angles: %5d [%5d %5d %5d] [%5d %5d %5d] A=%15.7e k[%15.7e %15.7e] [%5d %5d %5d]\n", i, 
                   (*psAngleID1)[i].x, (*psAngleID1)[i].y, (*psAngleID1)[i].z, (*psAngleID1)[i].w,
                   (*psAngleID2)[i].x, (*psAngleID2)[i].y,
                   (*psAngleParameter)[i].x, (*psAngleParameter)[i].y,
@@ -563,7 +563,7 @@ void gpuSetAmoebaInPlaneAngleParameters(amoebaGpuContext amoebaGpu, const std::v
 #define DUMP_PARAMETERS 5
 #if (DUMP_PARAMETERS > 0 )
 if( (i < DUMP_PARAMETERS || i > bond_angles - (DUMP_PARAMETERS + 1)) && amoebaGpu->log )
-         fprintf( amoebaGpu->log, "InPlaneAngles: %5d [%5d %5d %5d %5d] [%5d %5d %5d %5d] A=%14.7e k[%14.7e %14.7e %14.7e %14.7e %14.7e] [%5d %5d %5d %5d]\n", i, 
+         fprintf( amoebaGpu->log, "InPlaneAngles: %5d [%5d %5d %5d %5d] [%5d %5d %5d %5d] A=%15.7e k[%15.7e %15.7e %15.7e %15.7e %15.7e] [%5d %5d %5d %5d]\n", i, 
                   (*psAngleID1)[i].x, (*psAngleID1)[i].y, (*psAngleID1)[i].z, (*psAngleID1)[i].w,
                   (*psAngleID2)[i].x, (*psAngleID2)[i].y, (*psAngleID2)[i].z, (*psAngleID2)[i].w,
                   (*psAngleParameter)[i].x, (*psAngleParameter)[i].y,
@@ -632,7 +632,7 @@ void gpuSetAmoebaTorsionParameters(amoebaGpuContext amoebaGpu, const std::vector
 #define DUMP_PARAMETERS 5
 #if (DUMP_PARAMETERS > 0 )
 if( (i < DUMP_PARAMETERS || i > torsions - (DUMP_PARAMETERS + 1)) && amoebaGpu->log )
-         fprintf( amoebaGpu->log, "Torsions: %5d [%5d %5d %5d %5d] [%5d %5d %5d %5d] 0[%14.7e %14.7e] 1[%14.7e %14.7e] 2[%14.7e %14.7e] [%5d %5d %5d %5d]\n", i, 
+         fprintf( amoebaGpu->log, "Torsions: %5d [%5d %5d %5d %5d] [%5d %5d %5d %5d] 0[%15.7e %15.7e] 1[%15.7e %15.7e] 2[%15.7e %15.7e] [%5d %5d %5d %5d]\n", i, 
                   (*psTorsionID1)[i].x, (*psTorsionID1)[i].y, (*psTorsionID1)[i].z, (*psTorsionID1)[i].w,
                   (*psTorsionID2)[i].x, (*psTorsionID2)[i].y, (*psTorsionID2)[i].z, (*psTorsionID2)[i].w,
                   (*psTorsionParameter1)[i].x, (*psTorsionParameter1)[i].y, (*psTorsionParameter1)[i].z, (*psTorsionParameter1)[i].w,
@@ -700,7 +700,7 @@ void gpuSetAmoebaPiTorsionParameters(amoebaGpuContext amoebaGpu, const std::vect
 #define DUMP_PARAMETERS 5
 #if (DUMP_PARAMETERS > 0 )
 if( (i < DUMP_PARAMETERS || i > piTorsions - (DUMP_PARAMETERS + 1)) && amoebaGpu->log )
-         fprintf( amoebaGpu->log, "PiTorsions: %5d [%5d %5d %5d %5d %5d %5d [%5d %5d %5d %5d %5d %5d]  k=%14.7e [%5d %5d %5d %5d %5d %5d]\n", i, 
+         fprintf( amoebaGpu->log, "PiTorsions: %5d [%5d %5d %5d %5d %5d %5d [%5d %5d %5d %5d %5d %5d]  k=%15.7e [%5d %5d %5d %5d %5d %5d]\n", i, 
                   (*psPiTorsionID1)[i].x, (*psPiTorsionID1)[i].y, (*psPiTorsionID1)[i].z, (*psPiTorsionID1)[i].w,
                   (*psPiTorsionID2)[i].x, (*psPiTorsionID2)[i].y, (*psPiTorsionID2)[i].z, (*psPiTorsionID2)[i].w,
                   (*psPiTorsionID3)[i].x, (*psPiTorsionID3)[i].y, (*psPiTorsionID3)[i].z, (*psPiTorsionID3)[i].w,
@@ -760,7 +760,7 @@ void gpuSetAmoebaStretchBendParameters(amoebaGpuContext amoebaGpu, const std::ve
 #define DUMP_PARAMETERS 5
 #if (DUMP_PARAMETERS > 0 )
 if( (i < DUMP_PARAMETERS || i > stretchBends - (DUMP_PARAMETERS + 1)) && amoebaGpu->log )
-         fprintf( amoebaGpu->log, "StretchBends: %5d [%5d %5d %5d] [%5d %5d %5d] [%14.7e %14.7e %14.7e %14.7e [%5d %5d %5d]\n", i, 
+         fprintf( amoebaGpu->log, "StretchBends: %5d [%5d %5d %5d] [%5d %5d %5d] [%15.7e %15.7e %15.7e %15.7e [%5d %5d %5d]\n", i, 
                   (*psStretchBendID1)[i].x, (*psStretchBendID1)[i].y, (*psStretchBendID1)[i].z, (*psStretchBendID1)[i].w,
                   (*psStretchBendID2)[i].x, (*psStretchBendID2)[i].y,
                   (*psStretchBendParameter)[i].x, (*psStretchBendParameter)[i].y, (*psStretchBendParameter)[i].z, (*psStretchBendParameter)[i].w,
@@ -806,7 +806,7 @@ void gpuSetAmoebaOutOfPlaneBendParameters(amoebaGpuContext amoebaGpu, const std:
 #define DUMP_PARAMETERS 5
 #if (DUMP_PARAMETERS > 0 )
     if( amoebaGpu->log )
-        fprintf( amoebaGpu->log, "OutOfPlaneBends: global ks[%14.7e %14.7e %14.7e %14.7e]\n", cubicK, quarticK, penticK, sexticK );
+        fprintf( amoebaGpu->log, "OutOfPlaneBends: global ks[%15.7e %15.7e %15.7e %15.7e]\n", cubicK, quarticK, penticK, sexticK );
 #endif
 
     for (int i = 0; i < outOfPlaneBends; i++)
@@ -823,7 +823,7 @@ void gpuSetAmoebaOutOfPlaneBendParameters(amoebaGpuContext amoebaGpu, const std:
 
 #if (DUMP_PARAMETERS > 0 )
 if( (i < DUMP_PARAMETERS || i > outOfPlaneBends - (DUMP_PARAMETERS + 1)) && amoebaGpu->log )
-         fprintf( amoebaGpu->log, "OutOfPlaneBends: %5d [%5d %5d %5d %5d] [%5d %5d %5d %5d] k=%14.7e [%5d %5d %5d %5d]\n", i, 
+         fprintf( amoebaGpu->log, "OutOfPlaneBends: %5d [%5d %5d %5d %5d] [%5d %5d %5d %5d] k=%15.7e [%5d %5d %5d %5d]\n", i, 
                   (*psOutOfPlaneBendID1)[i].x, (*psOutOfPlaneBendID1)[i].y, (*psOutOfPlaneBendID1)[i].z, (*psOutOfPlaneBendID1)[i].w,
                   (*psOutOfPlaneBendID2)[i].x, (*psOutOfPlaneBendID2)[i].y, (*psOutOfPlaneBendID2)[i].z, (*psOutOfPlaneBendID2)[i].w,
                   (*psOutOfPlaneBendParameter)[i], 
@@ -957,7 +957,7 @@ void gpuSetAmoebaTorsionTorsionGrids(amoebaGpuContext amoebaGpu, const std::vect
 #define DUMP_PARAMETERS 5
 #if (DUMP_PARAMETERS > 0 )
 if( (index < DUMP_PARAMETERS || index > totalEntries - (DUMP_PARAMETERS + 1)) && amoebaGpu->log )
-         fprintf( amoebaGpu->log, "TorsionTorsionGrid: %d %5d [%5d %5d ] [%10.3f %10.3f] [%14.7e %14.7e %14.7e %14.7e]\n", index, ii, jj, kk,
+         fprintf( amoebaGpu->log, "TorsionTorsionGrid: %d %5d [%5d %5d ] [%10.3f %10.3f] [%15.7e %15.7e %15.7e %15.7e]\n", index, ii, jj, kk,
                   floatGrids[ii][jj][kk][0], floatGrids[ii][jj][kk][1],
                   (*psTorsionTorsionGrids)[index].x, (*psTorsionTorsionGrids)[index].y, (*psTorsionTorsionGrids)[index].z, (*psTorsionTorsionGrids)[index].w );
 #endif
@@ -1004,7 +1004,7 @@ if( (index < DUMP_PARAMETERS || index > totalEntries - (DUMP_PARAMETERS + 1)) &&
                         fabsf( values[1] - floatGrids[ii][jj][kk][3] ) > epsilon ||
                         fabsf( values[2] - floatGrids[ii][jj][kk][4] ) > epsilon ||
                         fabsf( values[3] - floatGrids[ii][jj][kk][5] ) > epsilon ){
-                        (void) fprintf( amoebaGpu->log, "Error %u %u %u [%10.3f %10.3f]  [%14.7e %14.7e %14.7e %14.7e] lk=[%14.7e %14.7e %14.7e %14.7e]\n", ii, jj, kk,
+                        (void) fprintf( amoebaGpu->log, "Error %u %u %u [%10.3f %10.3f]  [%15.7e %15.7e %15.7e %15.7e] lk=[%15.7e %15.7e %15.7e %15.7e]\n", ii, jj, kk,
                                         floatGrids[ii][jj][kk][0], floatGrids[ii][jj][kk][1],
                                         floatGrids[ii][jj][kk][2], floatGrids[ii][jj][kk][3], floatGrids[ii][jj][kk][4], floatGrids[ii][jj][kk][5],
                                         values[0], values[1], values[2], values[3] );
@@ -2113,7 +2113,7 @@ void gpuSetAmoebaVdwParameters( amoebaGpuContext amoebaGpu,
                         amoebaGpu->vdwSigmaCombiningRule, amoebaGpu->vdwEpsilonCombiningRule);
         for (unsigned int ii = 0; ii < gpu->natoms; ii++) 
         {    
-            (void) fprintf( amoebaGpu->log, "%5u %14.7e %14.7e\n", ii, sigmas[ii], epsilons[ii] );
+            (void) fprintf( amoebaGpu->log, "%5u %15.7e %15.7e\n", ii, sigmas[ii], epsilons[ii] );
             if( ii == maxPrint && ii < (amoebaGpu->paddedNumberOfAtoms - maxPrint) )
             {
                 ii = (amoebaGpu->paddedNumberOfAtoms - maxPrint);
@@ -2409,7 +2409,7 @@ void gpuSetAmoebaWcaDispersionParameters( amoebaGpuContext amoebaGpu,
                         methodName, radii.size(), totalMaxWcaDisperionEnergy, epso, epsh, rmino, rminh, awater, shctd, dispoff );
         for (unsigned int ii = 0; ii < gpu->natoms; ii++) 
         {    
-            (void) fprintf( amoebaGpu->log, "%5u %14.7e %14.7e\n", ii, radii[ii], epsilons[ii] );
+            (void) fprintf( amoebaGpu->log, "%5u %15.7e %15.7e\n", ii, radii[ii], epsilons[ii] );
             if( ii == maxPrint && ii < (amoebaGpu->paddedNumberOfAtoms - maxPrint) )
             {
                 ii = (amoebaGpu->paddedNumberOfAtoms - maxPrint);
@@ -2476,7 +2476,7 @@ float scaleRadius = 10.0f;
         (void) fprintf( amoebaGpu->log, "%s probeRadius=%12.3f\n", methodName, probeRadius );
         for (unsigned int ii = 0; ii < gpu->natoms; ii++) 
         {    
-            (void) fprintf( amoebaGpu->log, "%5u %14.7e %14.7e\n", ii, radii[ii], weights[ii] );
+            (void) fprintf( amoebaGpu->log, "%5u %15.7e %15.7e\n", ii, radii[ii], weights[ii] );
             if( ii == maxPrint && ii < (amoebaGpu->paddedNumberOfAtoms - maxPrint) )
             {
                 ii = (amoebaGpu->paddedNumberOfAtoms - maxPrint);

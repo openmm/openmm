@@ -331,8 +331,7 @@ int main( int numberOfArguments, char* argv[] ) {
 
     try {
         std::cout << "Running test..." << std::endl;
-        std::string openmmPluginDirectory = "/home/friedrim/src/openmm/trunk/OpenMM/bin";
-        Platform::loadPluginsFromDirectory( openmmPluginDirectory );
+        Platform::loadPluginsFromDirectory( Platform::getDefaultPluginsDirectory() );
         //FILE* log = stderr;
         FILE* log = fopen( "AmoebaTorsionForce1.log", "w" );;
         testOneTorsion( log );
