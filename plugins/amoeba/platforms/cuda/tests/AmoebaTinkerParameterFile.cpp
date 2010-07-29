@@ -4808,12 +4808,16 @@ void testUsingAmoebaTinkerParameterFile( const std::string& amoebaTinkerParamete
         for( unsigned int ii = 0; ii < fileList.size(); ii++ ){
             FILE* filePtr = fileList[ii];
             (void) fprintf( filePtr, "\n" );
-            (void) fprintf( filePtr, "%s: conversion factors %15.7e %15.7e tolerance=%15.7e %s\n", methodName.c_str(), energyConversion, forceConversion, tolerance, amoebaTinkerParameterFileName.c_str() );
+            (void) fprintf( filePtr, "%s: conversion factors %15.7e %15.7e tolerance=%15.7e %s\n",
+                            methodName.c_str(), energyConversion, forceConversion, tolerance, amoebaTinkerParameterFileName.c_str() );
             double deltaE = fabs( expectedEnergy   -       energyConversion*state.getPotentialEnergy());
             double denom  = fabs( expectedEnergy ) + fabs( energyConversion*state.getPotentialEnergy());
             if( denom > 0.0 )deltaE *= 2.0/denom;
-            (void) fprintf( filePtr, "expectedE        %10.3e %15.7e %15.7e %20s %30s\n", deltaE, expectedEnergy, energyConversion*state.getPotentialEnergy(), amoebaTinkerParameterFileName.c_str(), activeForceNames.c_str() );
-            (void) fprintf( filePtr, "%s: %u %u Active forces: %s\n", methodName.c_str(), expectedForces.size(), forces.size(), activeForceNames.c_str() );
+            (void) fprintf( filePtr, "expectedE        %10.3e %15.7e %15.7e %20s %30s\n",
+                            deltaE, expectedEnergy, energyConversion*state.getPotentialEnergy(),
+                            amoebaTinkerParameterFileName.c_str(), activeForceNames.c_str() );
+            (void) fprintf( filePtr, "%s: %u %u Active forces: %s\n",
+                            methodName.c_str(), expectedForces.size(), forces.size(), activeForceNames.c_str() );
             double maxRelativeDelta            = -1.0e+30;
             unsigned int maxRelativeDeltaIndex = -1;
             for( unsigned int ii = 0; ii < forces.size(); ii++ ){
@@ -4824,6 +4828,7 @@ void testUsingAmoebaTinkerParameterFile( const std::string& amoebaTinkerParamete
                 double sumNorms        = 0.5*(normF1 + normF2);
                 double relativeDelta   = sumNorms > 0.0 ? fabs( normF1 - normF2 )/sumNorms : 0.0;
                 bool badMatch          = (cutoffDelta < relativeDelta) && (sumNorms > 0.1) ? true : false;
+                     badMatch          = badMatch || (normF1 == 0.0 && normF2 > 0.0) || (normF2 == 0.0 && normF1 > 0.0);
                 if( badMatch || showAll ){
                     (void) fprintf( filePtr, "%6u %10.3e %10.3e [%15.7e %15.7e %15.7e]   [%15.7e %15.7e %15.7e]  %s\n", ii, relativeDelta, delta,
                                     expectedForces[ii][0], expectedForces[ii][1], expectedForces[ii][2], forceConversion*forces[ii][0], forceConversion*forces[ii][1], forceConversion*forces[ii][2], ( (showAll && badMatch) ? " XXX" : "") );

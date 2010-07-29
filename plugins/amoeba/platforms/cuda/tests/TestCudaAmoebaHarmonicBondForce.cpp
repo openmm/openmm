@@ -52,8 +52,8 @@ static void computeAmoebaHarmonicBondForce(int bondIndex,  std::vector<Vec3>& po
     int particle1, particle2;
     double bondLength;
     double quadraticK;
-    double cubicK;
-    double quarticK;
+    double cubicK    = amoebaHarmonicBondForce.getAmoebaGlobalHarmonicBondCubic();
+    double quarticK  = amoebaHarmonicBondForce.getAmoebaGlobalHarmonicBondQuartic();
     amoebaHarmonicBondForce.getBondParameters(bondIndex, particle1, particle2,  bondLength,  quadraticK );
 
     double deltaR[3];
@@ -152,6 +152,8 @@ void testOneBond( FILE* log ) {
     double quadraticK = 1.0;
     double cubicK     = 2.0;
     double quarticicK = 3.0;
+    amoebaHarmonicBondForce->setAmoebaGlobalHarmonicBondCubic( cubicK );
+    amoebaHarmonicBondForce->setAmoebaGlobalHarmonicBondQuartic( quarticicK );
     amoebaHarmonicBondForce->addBond(0, 1, bondLength, quadraticK);
 
     system.addForce(amoebaHarmonicBondForce);
@@ -181,6 +183,8 @@ void testTwoBond( FILE* log ) {
     double quadraticK = 1.0;
     double cubicK     = 2.0;
     double quarticicK = 3.0;
+    amoebaHarmonicBondForce->setAmoebaGlobalHarmonicBondCubic( cubicK );
+    amoebaHarmonicBondForce->setAmoebaGlobalHarmonicBondQuartic( quarticicK );
     amoebaHarmonicBondForce->addBond(0, 1, bondLength, quadraticK);
     amoebaHarmonicBondForce->addBond(1, 2, bondLength, quadraticK);
 

@@ -1033,7 +1033,14 @@ exit(0);
 extern "C"
 void gpuSetAmoebaBondOffsets(amoebaGpuContext amoebaGpu )
 {
+ 
+    // make sure only flip once
 
+    static int flipped = 0;
+    if( amoebaGpu && flipped ){
+        return;
+    }
+    flipped = 1;
     _gpuContext* gpu                                           = amoebaGpu->gpuContext;
 
 

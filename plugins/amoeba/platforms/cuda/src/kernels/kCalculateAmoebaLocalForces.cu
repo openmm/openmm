@@ -1172,51 +1172,21 @@ void kCalculateAmoebaLocalForces_kernel()
             float bkk2              = (cc   != 0.0f ) ? (ee*ee)/(cc) : 0.0f;
             float bkk3              = (rdb2 != 0.0f ) ? bkk2/rdb2    : 0.0f;
                   bkk2              = rdb2 - bkk2;
-            float cosine;
-            if( fabs( bkk3 ) < 0.98f ){
-                  bkk3              = 1.0f - bkk3;
-                  cosine            = bkk3 > 0.0f ? sqrtf(bkk3) : 0.0f;
-                  cosine            = (cosine >  1.0f) ?  0.0f  : acos(cosine);
+
+            float angle;
+            if( bkk3 < 1.0e-6f ){
+                angle             = sqrtf( bkk3 );
+            } else if( bkk3 < 0.98f ){
+                float cosine      = sqrtf(1.0f - bkk3);
+                angle             = acos(cosine);
             } else {
-                  cosine            = sqrtf(bkk3);
-                  cosine            = asin(cosine);
+                float sin         = sqrtf(bkk3);
+                angle             = asin(sin);
             }
                 
-
-/*
-c
-c     W-D-C angle between A-B-C plane and B-D vector for D-B<AC
-c
-            if (opbtyp .eq. 'W-D-C') then
-               rab2 = xab*xab + yab*yab + zab*zab
-               rcb2 = xcb*xcb + ycb*ycb + zcb*zcb
-               dot = xab*xcb+yab*ycb+zab*zcb
-               cc = rab2*rcb2 - dot*dot
-c
-c     Allinger angle between A-C-D plane and D-B vector for D-B<AC
-c
-            else if (opbtyp .eq. 'ALLINGER') then
-               rad2 = xad*xad + yad*yad + zad*zad
-               rcd2 = xcd*xcd + ycd*ycd + zcd*zcd
-               dot = xad*xcd + yad*ycd + zad*zcd
-               cc = rad2*rcd2 - dot*dot
-            end if
-c
-c     find the out-of-plane angle bending energy
-c
-            ee = xdb*(yab*zcb-zab*ycb) + ydb*(zab*xcb-xab*zcb)
-     &              + zdb*(xab*ycb-yab*xcb)
-            rdb2 = xdb*xdb + ydb*ydb + zdb*zdb
-            if (rdb2.ne.0.0d0 .and. cc.ne.0.0d0) then
-               bkk2 = rdb2 - ee*ee/cc
-               cosine = sqrt(bkk2/rdb2)
-               cosine = min(1.0d0,max(-1.0d0,cosine))
-               angle = radian * acos(cosine)
-
-*/
             // find the out-of-plane energy and master chain rule terms
 
-            float    dt             = LOCAL_HACK_RADIAN_D*cosine;
+            float    dt             = LOCAL_HACK_RADIAN_D*angle;
             float    dt2            = dt  * dt;
             float    dt3            = dt2 * dt;
             float    dt4            = dt2 * dt2;
@@ -1284,7 +1254,7 @@ c
             float    dedyib          = -dedyia - dedyic - dedyid;
             float    dedzib          = -dedzia - dedzic - dedzid;
 
-            // increment the out-of-plane bending energy and gradient;
+            // increment the out-of-plane bending gradient
 
             int4   atom2            = cAmoebaSim.pAmoebaOutOfPlaneBendID2[pos1];  
 
