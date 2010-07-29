@@ -1583,7 +1583,7 @@ void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, cons
         string arrayName = prefix+"table"+intToString(i);
         functionDefinitions.push_back(make_pair(name, arrayName));
         functions[name] = &fp;
-        tabulatedFunctionParamsVec[i] = mm_float4((float) min, (float) max, (float) ((values.size()-1)/(max-min)), 0.0f);
+        tabulatedFunctionParamsVec[i] = mm_float4((float) min, (float) max, (float) ((values.size()-1)/(max-min)), values.size()-2);
         vector<mm_float4> f = OpenCLExpressionUtilities::computeFunctionCoefficients(values, interpolating);
         tabulatedFunctions.push_back(new OpenCLArray<mm_float4>(cl, values.size()-1, "TabulatedFunction"));
         tabulatedFunctions[tabulatedFunctions.size()-1]->upload(f);
@@ -1922,7 +1922,7 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         string arrayName = prefix+"table"+intToString(i);
         functionDefinitions.push_back(make_pair(name, arrayName));
         functions[name] = &fp;
-        tabulatedFunctionParamsVec[i] = mm_float4((float) min, (float) max, (float) ((values.size()-1)/(max-min)), 0.0f);
+        tabulatedFunctionParamsVec[i] = mm_float4((float) min, (float) max, (float) ((values.size()-1)/(max-min)), values.size()-2);
         vector<mm_float4> f = OpenCLExpressionUtilities::computeFunctionCoefficients(values, interpolating);
         tabulatedFunctions.push_back(new OpenCLArray<mm_float4>(cl, values.size()-1, "TabulatedFunction"));
         tabulatedFunctions[tabulatedFunctions.size()-1]->upload(f);
@@ -2962,7 +2962,7 @@ void OpenCLCalcCustomHbondForceKernel::initialize(const System& system, const Cu
         string arrayName = "table"+intToString(i);
         functionDefinitions.push_back(make_pair(name, arrayName));
         functions[name] = &fp;
-        tabulatedFunctionParamsVec[i] = mm_float4((float) min, (float) max, (float) ((values.size()-1)/(max-min)), 0.0f);
+        tabulatedFunctionParamsVec[i] = mm_float4((float) min, (float) max, (float) ((values.size()-1)/(max-min)), values.size()-2);
         vector<mm_float4> f = OpenCLExpressionUtilities::computeFunctionCoefficients(values, interpolating);
         tabulatedFunctions.push_back(new OpenCLArray<mm_float4>(cl, values.size()-1, "TabulatedFunction"));
         tabulatedFunctions[tabulatedFunctions.size()-1]->upload(f);

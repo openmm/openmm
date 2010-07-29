@@ -121,6 +121,7 @@ void OpenCLExpressionUtilities::processExpression(stringstream& out, const Expre
             out << "float x = " << getTempName(node.getChildren()[0], temps) << ";\n";
             out << "if (x >= params.x && x <= params.y) {\n";
             out << "int index = (int) (floor((x-params.x)*params.z));\n";
+            out << "index = min(index, (int) params.w);\n";
             out << "float4 coeff = " << functions[i].second << "[index];\n";
             out << "x = (x-params.x)*params.z-index;\n";
             if (valueNode != NULL)
