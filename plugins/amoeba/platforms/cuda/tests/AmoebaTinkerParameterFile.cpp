@@ -2192,7 +2192,6 @@ static int readAmoebaMultipoleParameters( FILE* filePtr, MapStringInt& forceMap,
                }
    
             } else if( field.compare( "AmoebaMultipoleEnd" ) == 0 ){
-                printf("here\n");
                 done++;
             } else if( field.compare( AMOEBA_MULTIPOLE_ROTATION_MATRICES ) == 0 || 
                        field.compare( AMOEBA_MULTIPOLE_ROTATED )           == 0 ||
