@@ -5,12 +5,8 @@
 #include "amoebaGpuTypes.h"
 #include "amoebaCudaKernels.h"
 #include "kCalculateAmoebaCudaUtilities.h"
-#ifdef _MSC_VER
-extern void kCalculateObcGbsaForces2(gpuContext gpu);
-#else
-#include "cudaKernels.h"
-#endif
 #include "kCalculateAmoebaCudaKirkwoodParticle.h"
+extern void kCalculateObcGbsaForces2(gpuContext gpu);
 
 //#define AMOEBA_DEBUG
 #undef AMOEBA_DEBUG
@@ -22,9 +18,9 @@ void SetCalculateAmoebaKirkwoodSim(amoebaGpuContext amoebaGpu)
 {
     cudaError_t status;
     gpuContext gpu = amoebaGpu->gpuContext;
-    status         = cudaMemcpyToSymbol(cSim, &gpu->sim, sizeof(cudaGmxSimulation));    
+    status         = cudaMemcpyToSymbol(cSim, &gpu->sim, sizeof(cudaGmxSimulation));
     RTERROR(status, "SetCalculateAmoebaKirkwoodSim: cudaMemcpyToSymbol: SetSim copy to cSim failed");
-    status         = cudaMemcpyToSymbol(cAmoebaSim, &amoebaGpu->amoebaSim, sizeof(cudaAmoebaGmxSimulation));    
+    status         = cudaMemcpyToSymbol(cAmoebaSim, &amoebaGpu->amoebaSim, sizeof(cudaAmoebaGmxSimulation));
     RTERROR(status, "SetCalculateAmoebaKirkwoodSim: cudaMemcpyToSymbol: SetSim copy to cAmoebaSim failed");
 }
 
@@ -32,9 +28,9 @@ void GetCalculateAmoebaKirkwoodSim(amoebaGpuContext amoebaGpu)
 {
     cudaError_t status;
     gpuContext gpu = amoebaGpu->gpuContext;
-    status = cudaMemcpyFromSymbol(&gpu->sim, cSim, sizeof(cudaGmxSimulation));    
+    status = cudaMemcpyFromSymbol(&gpu->sim, cSim, sizeof(cudaGmxSimulation));
     RTERROR(status, "GetCalculateAmoebaKirkwoodSim: cudaMemcpyFromSymbol: SetSim copy from cSim failed");
-    status = cudaMemcpyFromSymbol(&amoebaGpu->amoebaSim, cAmoebaSim, sizeof(cudaAmoebaGmxSimulation));    
+    status = cudaMemcpyFromSymbol(&amoebaGpu->amoebaSim, cAmoebaSim, sizeof(cudaAmoebaGmxSimulation));
     RTERROR(status, "GetCalculateAmoebaKirkwoodSim: cudaMemcpyFromSymbol: SetSim copy from cAmoebaSim failed");
 }
 
@@ -82,7 +78,7 @@ __device__ void loadKirkwoodShared( struct KirkwoodParticle* sA, unsigned int at
 
 // load struct and arrays w/ shared data in sA
 
-__device__ void loadKirkwoodData( struct KirkwoodParticle* sA, 
+__device__ void loadKirkwoodData( struct KirkwoodParticle* sA,
                                   float4* jCoord, float* jDipole, float* jQuadrupole,
                                   float* jInducedDipole, float* jInducedDipolePolar, float* jBornRadius )
 {
@@ -93,11 +89,11 @@ __device__ void loadKirkwoodData( struct KirkwoodParticle* sA,
     jCoord->y               = sA->y;
     jCoord->z               = sA->z;
     jCoord->w               = sA->q;
- 
+
     jDipole[0]              = sA->labFrameDipole[0];
     jDipole[1]              = sA->labFrameDipole[1];
     jDipole[2]              = sA->labFrameDipole[2];
- 
+
     jQuadrupole[0]          = sA->labFrameQuadrupole_XX;
     jQuadrupole[1]          = sA->labFrameQuadrupole_XY;
     jQuadrupole[2]          = sA->labFrameQuadrupole_XZ;
@@ -109,17 +105,17 @@ __device__ void loadKirkwoodData( struct KirkwoodParticle* sA,
     jQuadrupole[6]          = sA->labFrameQuadrupole_XZ;
     jQuadrupole[7]          = sA->labFrameQuadrupole_YZ;
     jQuadrupole[8]          = sA->labFrameQuadrupole_ZZ;
- 
+
     jInducedDipole[0]       = sA->inducedDipole[0];
     jInducedDipole[1]       = sA->inducedDipole[1];
     jInducedDipole[2]       = sA->inducedDipole[2];
- 
+
     jInducedDipolePolar[0]  = sA->inducedDipoleP[0];
     jInducedDipolePolar[1]  = sA->inducedDipoleP[1];
     jInducedDipolePolar[2]  = sA->inducedDipoleP[2];
 
    *jBornRadius             = sA->bornRadius;
- 
+
 }
 
 __device__ void calculateKirkwoodPairIxn_kernel( unsigned int sameAtom,
@@ -137,7 +133,7 @@ __device__ void calculateKirkwoodPairIxn_kernel( unsigned int sameAtom,
 #endif
 
  ){
-  
+
     float e,ei;
     float xi,yi,zi;
     float xr,yr,zr;
@@ -184,19 +180,6 @@ __device__ void calculateKirkwoodPairIxn_kernel( unsigned int sameAtom,
     float dpsymdz,dpwidz,dpwkdz;
     float dwipdr,dwkpdr;
     float duvdr;
-    float a[6][4];
-    float b[5][3];
-    float fid[4],fkd[4];
-    float fidg[4][4],fkdg[4][4];
-    float trq[4];
-    float trqi[4];
-    float trq_k[4];
-    float trqi_k[4];
-    float gc[31];
-    float gux[31],guy[31],guz[31];
-    float gqxx[31],gqxy[31];
-    float gqxz[31],gqyy[31];
-    float gqyz[31],gqzz[31];
 
     float gkc;
 
@@ -239,7 +222,7 @@ __device__ void calculateKirkwoodPairIxn_kernel( unsigned int sameAtom,
     rbi          = bornRadiusI;
 
     // decide whether to compute the current interaction;
- 
+
     xr           = atomCoordinatesJ.x - xi;
     yr           = atomCoordinatesJ.y - yi;
     zr           = atomCoordinatesJ.z - zi;
@@ -293,1699 +276,1337 @@ __device__ void calculateKirkwoodPairIxn_kernel( unsigned int sameAtom,
 
     // reaction potential auxiliary terms;
 
-    a[0][0]      =            gf;
-    a[1][0]      =          -gf3;
-    a[2][0]      =    3.0f * gf5;
-    a[3][0]      =  -15.0f * gf7;
-    a[4][0]      =  105.0f * gf9;
-    a[5][0]      = -945.0f * gf11;
- 
+    float a00      =            gf;
+    float a10      =          -gf3;
+    float a20      =    3.0f * gf5;
+    float a30      =  -15.0f * gf7;
+    float a40      =  105.0f * gf9;
+    float a50      = -945.0f * gf11;
+
     // Born radii derivatives of reaction potential auxiliary terms;
-                 
-    b[0][0]      = dgfdr * a[1][0];
-    b[1][0]      = dgfdr * a[2][0];
-    b[2][0]      = dgfdr * a[3][0];
-    b[3][0]      = dgfdr * a[4][0];
-    b[4][0]      = dgfdr * a[5][0];
+
+    float b00      = dgfdr * a10;
+    float b10      = dgfdr * a20;
+    float b20      = dgfdr * a30;
+    float b30      = dgfdr * a40;
+    float b40      = dgfdr * a50;
 
     // reaction potential gradient auxiliary terms;
 
     expc1        = 1.0f - expc;
-    a[0][1]      = expc1 * a[1][0];
-    a[1][1]      = expc1 * a[2][0];
-    a[2][1]      = expc1 * a[3][0];
-    a[3][1]      = expc1 * a[4][0];
-    a[4][1]      = expc1 * a[5][0];
+    float a01      = expc1 * a10;
+    float a11      = expc1 * a20;
+    float a21      = expc1 * a30;
+    float a31      = expc1 * a40;
+    float a41      = expc1 * a50;
 
     // Born radii derivs of reaction potential gradient auxiliary terms;
 
-    b[0][1]      = b[1][0] - expcr*a[1][0] - expc*b[1][0];
-    b[1][1]      = b[2][0] - expcr*a[2][0] - expc*b[2][0];
-    b[2][1]      = b[3][0] - expcr*a[3][0] - expc*b[3][0];
-    b[3][1]      = b[4][0] - expcr*a[4][0] - expc*b[4][0];
- 
+    float b01      = b10 - expcr*a10 - expc*b10;
+    float b11      = b20 - expcr*a20 - expc*b20;
+    float b21      = b30 - expcr*a30 - expc*b30;
+    float b31      = b40 - expcr*a40 - expc*b40;
+
     // 2nd reaction potential gradient auxiliary terms;
- 
+
     expcdexpc    = -expc * dexpc;
-    a[0][2]      = expc1*a[1][1] + expcdexpc*a[1][0];
-    a[1][2]      = expc1*a[2][1] + expcdexpc*a[2][0];
-    a[2][2]      = expc1*a[3][1] + expcdexpc*a[3][0];
-    a[3][2]      = expc1*a[4][1] + expcdexpc*a[4][0];
- 
+    float a02      = expc1*a11 + expcdexpc*a10;
+    float a12      = expc1*a21 + expcdexpc*a20;
+    float a22      = expc1*a31 + expcdexpc*a30;
+    float a32      = expc1*a41 + expcdexpc*a40;
+
     // Born radii derivatives of the 2nd reaction potential
     // gradient auxiliary terms
 
-     b[0][2]     = b[1][1] - (expcr*(a[1][1] + dexpc*a[1][0])
-                           + expc*(b[1][1] + dexpcr*a[1][0]+dexpc*b[1][0]));
+     float b02     = b11 - (expcr*(a11 + dexpc*a10)
+                           + expc*(b11 + dexpcr*a10+dexpc*b10));
 
-     b[1][2]     = b[2][1] - (expcr*(a[2][1] + dexpc*a[2][0])
-                           +   expc*(b[2][1] + dexpcr*a[2][0]+dexpc*b[2][0]));
+     float b12     = b21 - (expcr*(a21 + dexpc*a20)
+                           +   expc*(b21 + dexpcr*a20+dexpc*b20));
 
-     b[2][2]     = b[3][1] - (expcr*(a[3][1] + dexpc*a[3][0])
-                           +   expc*(b[3][1] + dexpcr*a[3][0]+dexpc*b[3][0]));
- 
+     float b22     = b31 - (expcr*(a31 + dexpc*a30)
+                           +   expc*(b31 + dexpcr*a30+dexpc*b30));
+
     // 3rd reaction potential gradient auxiliary terms;
- 
+
     expcdexpc    = 2.0f * expcdexpc;
-    a[0][3]      = expc1*a[1][2] + expcdexpc*a[1][1];
-    a[1][3]      = expc1*a[2][2] + expcdexpc*a[2][1];
-    a[2][3]      = expc1*a[3][2] + expcdexpc*a[3][1];
+    float a03      = expc1*a12 + expcdexpc*a11;
+    float a13      = expc1*a22 + expcdexpc*a21;
+    float a23      = expc1*a32 + expcdexpc*a31;
 
     //expcdexpc    = -expc * powf( dexpc, 2.0f );
     expcdexpc    = -expc*dexpc*dexpc;
-    a[0][3]      = a[0][3] + expcdexpc*a[1][0];
-    a[1][3]      = a[1][3] + expcdexpc*a[2][0];
-    a[2][3]      = a[2][3] + expcdexpc*a[3][0];
- 
+    a03      = a03 + expcdexpc*a10;
+    a13      = a13 + expcdexpc*a20;
+    a23      = a23 + expcdexpc*a30;
+
     // multiply the auxillary terms by their dieletric functions;
- 
-    a[0][0]      = fc * a[0][0];
-    a[0][1]      = fc * a[0][1];
-    a[0][2]      = fc * a[0][2];
-    a[0][3]      = fc * a[0][3];
-    b[0][0]      = fc * b[0][0];
-    b[0][1]      = fc * b[0][1];
-    b[0][2]      = fc * b[0][2];
-    a[1][0]      = fd * a[1][0];
-    a[1][1]      = fd * a[1][1];
-    a[1][2]      = fd * a[1][2];
-    a[1][3]      = fd * a[1][3];
-    b[1][0]      = fd * b[1][0];
-    b[1][1]      = fd * b[1][1];
-    b[1][2]      = fd * b[1][2];
-    a[2][0]      = fq * a[2][0];
-    a[2][1]      = fq * a[2][1];
-    a[2][2]      = fq * a[2][2];
-    a[2][3]      = fq * a[2][3];
-    b[2][0]      = fq * b[2][0];
-    b[2][1]      = fq * b[2][1];
-    b[2][2]      = fq * b[2][2];
- 
+
+    a00      = fc * a00;
+    a01      = fc * a01;
+    a02      = fc * a02;
+    a03      = fc * a03;
+    b00      = fc * b00;
+    b01      = fc * b01;
+    b02      = fc * b02;
+    a10      = fd * a10;
+    a11      = fd * a11;
+    a12      = fd * a12;
+    a13      = fd * a13;
+    b10      = fd * b10;
+    b11      = fd * b11;
+    b12      = fd * b12;
+    a20      = fq * a20;
+    a21      = fq * a21;
+    a22      = fq * a22;
+    a23      = fq * a23;
+    b20      = fq * b20;
+    b21      = fq * b21;
+    b22      = fq * b22;
+
     // unweighted reaction potential tensor;
 
-    gc[1]        = a[0][0];
-    gux[1]       = xr * a[1][0];
-    guy[1]       = yr * a[1][0];
-    guz[1]       = zr * a[1][0];
-    gqxx[1]      = xr2 * a[2][0];
-    gqyy[1]      = yr2 * a[2][0];
-    gqzz[1]      = zr2 * a[2][0];
-    gqxy[1]      = xr * yr * a[2][0];
-    gqxz[1]      = xr * zr * a[2][0];
-    gqyz[1]      = yr * zr * a[2][0];
- 
+    float gc1        = a00;
+    float gux1       = xr * a10;
+    float guy1       = yr * a10;
+    float guz1       = zr * a10;
+    float gqxx1      = xr2 * a20;
+    float gqyy1      = yr2 * a20;
+    float gqzz1      = zr2 * a20;
+    float gqxy1      = xr * yr * a20;
+    float gqxz1      = xr * zr * a20;
+    float gqyz1      = yr * zr * a20;
+
     // Born radii derivs of unweighted reaction potential tensor;
 
-    gc[21]       = b[0][0];
-    gux[21]      = xr * b[1][0];
-    guy[21]      = yr * b[1][0];
-    guz[21]      = zr * b[1][0];
-    gqxx[21]     = xr2 * b[2][0];
-    gqyy[21]     = yr2 * b[2][0];
-    gqzz[21]     = zr2 * b[2][0];
-    gqxy[21]     = xr * yr * b[2][0];
-    gqxz[21]     = xr * zr * b[2][0];
-    gqyz[21]     = yr * zr * b[2][0];
+    float gc21       = b00;
+    float gux21      = xr * b10;
+    float guy21      = yr * b10;
+    float guz21      = zr * b10;
+    float gqxx21     = xr2 * b20;
+    float gqyy21     = yr2 * b20;
+    float gqzz21     = zr2 * b20;
+    float gqxy21     = xr * yr * b20;
+    float gqxz21     = xr * zr * b20;
+    float gqyz21     = yr * zr * b20;
 
     // unweighted reaction potential gradient tensor;
 
-    gc[2]        = xr * a[0][1];
-    gc[3]        = yr * a[0][1];
-    gc[4]        = zr * a[0][1];
-    gux[2]       = a[1][0] + xr2*a[1][1];
-    gux[3]       = xr * yr * a[1][1];
-    gux[4]       = xr * zr * a[1][1];
+    float gc2        = xr * a01;
+    float gc3        = yr * a01;
+    float gc4        = zr * a01;
+    float gux2       = a10 + xr2*a11;
+    float gux3       = xr * yr * a11;
+    float gux4       = xr * zr * a11;
 
-    guy[2]       = gux[3];
-    guy[3]       = a[1][0] + yr2*a[1][1];
-    guy[4]       = yr * zr * a[1][1];
-    guz[2]       = gux[4];
-    guz[3]       = guy[4];
-    guz[4]       = a[1][0] + zr2*a[1][1];
-    gqxx[2]      = xr * (2.0f*a[2][0]+xr2*a[2][1]);
-    gqxx[3]      = yr * xr2 * a[2][1];
-    gqxx[4]      = zr * xr2 * a[2][1];
-    gqyy[2]      = xr * yr2 * a[2][1];
-    gqyy[3]      = yr * (2.0f*a[2][0]+yr2*a[2][1]);
-    gqyy[4]      = zr * yr2 * a[2][1];
-    gqzz[2]      = xr * zr2 * a[2][1];
-    gqzz[3]      = yr * zr2 * a[2][1];
-    gqzz[4]      = zr * (2.0f*a[2][0]+zr2*a[2][1]);
-    gqxy[2]      = yr * (a[2][0]+xr2*a[2][1]);
-    gqxy[3]      = xr * (a[2][0]+yr2*a[2][1]);
-    gqxy[4]      = zr * xr * yr * a[2][1];
-    gqxz[2]      = zr * (a[2][0]+xr2*a[2][1]);
-    gqxz[3]      = gqxy[4];
-    gqxz[4]      = xr * (a[2][0]+zr2*a[2][1]);
-    gqyz[2]      = gqxy[4];
-    gqyz[3]      = zr * (a[2][0]+yr2*a[2][1]);
-    gqyz[4]      = yr * (a[2][0]+zr2*a[2][1]);
+    float guy2       = gux3;
+    float guy3       = a10 + yr2*a11;
+    float guy4       = yr * zr * a11;
+    float guz2       = gux4;
+    float guz3       = guy4;
+    float guz4       = a10 + zr2*a11;
+    float gqxx2      = xr * (2.0f*a20+xr2*a21);
+    float gqxx3      = yr * xr2 * a21;
+    float gqxx4      = zr * xr2 * a21;
+    float gqyy2      = xr * yr2 * a21;
+    float gqyy3      = yr * (2.0f*a20+yr2*a21);
+    float gqyy4      = zr * yr2 * a21;
+    float gqzz2      = xr * zr2 * a21;
+    float gqzz3      = yr * zr2 * a21;
+    float gqzz4      = zr * (2.0f*a20+zr2*a21);
+    float gqxy2      = yr * (a20+xr2*a21);
+    float gqxy3      = xr * (a20+yr2*a21);
+    float gqxy4      = zr * xr * yr * a21;
+    float gqxz2      = zr * (a20+xr2*a21);
+    float gqxz3      = gqxy4;
+    float gqxz4      = xr * (a20+zr2*a21);
+    float gqyz2      = gqxy4;
+    float gqyz3      = zr * (a20+yr2*a21);
+    float gqyz4      = yr * (a20+zr2*a21);
 
     // Born derivs of the unweighted reaction potential gradient tensor;
- 
-    gc[22]       = xr * b[0][1];
-    gc[22]       = xr * b[0][1];
-    gc[23]       = yr * b[0][1];
-    gc[24]       = zr * b[0][1];
-    gux[22]      = b[1][0] + xr2*b[1][1];
-    gux[23]      = xr * yr * b[1][1];
-    gux[24]      = xr * zr * b[1][1];
-    guy[22]      = gux[23];
-    guy[23]      = b[1][0] + yr2*b[1][1];
-    guy[24]      = yr * zr * b[1][1];
-    guz[22]      = gux[24];
-    guz[23]      = guy[24];
-    guz[24]      = b[1][0] + zr2*b[1][1];
-    gqxx[22]     = xr * (2.0f*b[2][0]+xr2*b[2][1]);
-    gqxx[23]     = yr * xr2 * b[2][1];
-    gqxx[24]     = zr * xr2 * b[2][1];
-    gqyy[22]     = xr * yr2 * b[2][1];
-    gqyy[23]     = yr * (2.0f*b[2][0]+yr2*b[2][1]);
-    gqyy[24]     = zr * yr2 * b[2][1];
-    gqzz[22]     = xr * zr2 * b[2][1];
-    gqzz[23]     = yr * zr2 * b[2][1];
-    gqzz[24]     = zr * (2.0f*b[2][0] + zr2*b[2][1]);
-    gqxy[22]     = yr * (b[2][0]+xr2*b[2][1]);
-    gqxy[23]     = xr * (b[2][0]+yr2*b[2][1]);
-    gqxy[24]     = zr * xr * yr * b[2][1];
-    gqxz[22]     = zr * (b[2][0]+xr2*b[2][1]);
-    gqxz[23]     = gqxy[24];
-    gqxz[24]     = xr * (b[2][0]+zr2*b[2][1]);
-    gqyz[22]     = gqxy[24];
-    gqyz[23]     = zr * (b[2][0]+yr2*b[2][1]);
-    gqyz[24]     = yr * (b[2][0]+zr2*b[2][1]);
- 
+
+    float gc22       = xr * b01;
+    float gc23       = yr * b01;
+    float gc24       = zr * b01;
+    float gux22      = b10 + xr2*b11;
+    float gux23      = xr * yr * b11;
+    float gux24      = xr * zr * b11;
+    float guy22      = gux23;
+    float guy23      = b10 + yr2*b11;
+    float guy24      = yr * zr * b11;
+    float guz22      = gux24;
+    float guz23      = guy24;
+    float guz24      = b10 + zr2*b11;
+    float gqxx22     = xr * (2.0f*b20+xr2*b21);
+    float gqxx23     = yr * xr2 * b21;
+    float gqxx24     = zr * xr2 * b21;
+    float gqyy22     = xr * yr2 * b21;
+    float gqyy23     = yr * (2.0f*b20+yr2*b21);
+    float gqyy24     = zr * yr2 * b21;
+    float gqzz22     = xr * zr2 * b21;
+    float gqzz23     = yr * zr2 * b21;
+    float gqzz24     = zr * (2.0f*b20 + zr2*b21);
+    float gqxy22     = yr * (b20+xr2*b21);
+    float gqxy23     = xr * (b20+yr2*b21);
+    float gqxy24     = zr * xr * yr * b21;
+    float gqxz22     = zr * (b20+xr2*b21);
+    float gqxz23     = gqxy24;
+    float gqxz24     = xr * (b20+zr2*b21);
+    float gqyz22     = gqxy24;
+    float gqyz23     = zr * (b20+yr2*b21);
+    float gqyz24     = yr * (b20+zr2*b21);
+
     // unweighted 2nd reaction potential gradient tensor;
- 
-    gc[5]        = a[0][1] + xr2*a[0][2];
-    gc[6]        = xr * yr * a[0][2];
-    gc[7]        = xr * zr * a[0][2];
-    gc[8]        = a[0][1] + yr2*a[0][2];
-    gc[9]        = yr * zr * a[0][2];
-    gc[10]       = a[0][1] + zr2*a[0][2];
-    gux[5]       = xr * (3.0f*a[1][1]+xr2*a[1][2]);
-    gux[6]       = yr * (a[1][1]+xr2*a[1][2]);
-    gux[7]       = zr * (a[1][1]+xr2*a[1][2]);
-    gux[8]       = xr * (a[1][1]+yr2*a[1][2]);
-    gux[9]       = zr * xr * yr * a[1][2];
-    gux[10]      = xr * (a[1][1]+zr2*a[1][2]);
-    guy[5]       = yr * (a[1][1]+xr2*a[1][2]);
-    guy[6]       = xr * (a[1][1]+yr2*a[1][2]);
-    guy[7]       = gux[9];
-    guy[8]       = yr * (3.0f*a[1][1]+yr2*a[1][2]);
-    guy[9]       = zr * (a[1][1]+yr2*a[1][2]);
-    guy[10]      = yr * (a[1][1]+zr2*a[1][2]);
-    guz[5]       = zr * (a[1][1]+xr2*a[1][2]);
-    guz[6]       = gux[9];
-    guz[7]       = xr * (a[1][1]+zr2*a[1][2]);
-    guz[8]       = zr * (a[1][1]+yr2*a[1][2]);
-    guz[9]       = yr * (a[1][1]+zr2*a[1][2]);
-    guz[10]      = zr * (3.0f*a[1][1]+zr2*a[1][2]);
-    gqxx[5]      = 2.0f*a[2][0] + xr2*(5.0f*a[2][1]+xr2*a[2][2]);
-    gqxx[6]      = yr * xr * (2.0f*a[2][1]+xr2*a[2][2]);
-    gqxx[7]      = zr * xr * (2.0f*a[2][1]+xr2*a[2][2]);
-    gqxx[8]      = xr2 * (a[2][1]+yr2*a[2][2]);
-    gqxx[9]      = zr * yr * xr2 * a[2][2];
-    gqxx[10]     = xr2 * (a[2][1]+zr2*a[2][2]);
-    gqyy[5]      = yr2 * (a[2][1]+xr2*a[2][2]);
-    gqyy[6]      = xr * yr * (2.0f*a[2][1]+yr2*a[2][2]);
-    gqyy[7]      = xr * zr * yr2 * a[2][2];
-    gqyy[8]      = 2.0f*a[2][0] + yr2*(5.0f*a[2][1]+yr2*a[2][2]);
-    gqyy[9]      = yr * zr * (2.0f*a[2][1]+yr2*a[2][2]);
-    gqyy[10]     = yr2 * (a[2][1]+zr2*a[2][2]);
-    gqzz[5]      = zr2 * (a[2][1]+xr2*a[2][2]);
-    gqzz[6]      = xr * yr * zr2 * a[2][2];
-    gqzz[7]      = xr * zr * (2.0f*a[2][1]+zr2*a[2][2]);
-    gqzz[8]      = zr2 * (a[2][1]+yr2*a[2][2]);
-    gqzz[9]      = yr * zr * (2.0f*a[2][1]+zr2*a[2][2]);
-    gqzz[10]     = 2.0f*a[2][0] + zr2*(5.0f*a[2][1]+zr2*a[2][2]);
-    gqxy[5]      = xr * yr * (3.0f*a[2][1]+xr2*a[2][2]);
-    gqxy[6]      = a[2][0] + (xr2+yr2)*a[2][1] + xr2*yr2*a[2][2];
-    gqxy[7]      = zr * yr * (a[2][1]+xr2*a[2][2]);
-    gqxy[8]      = xr * yr * (3.0f*a[2][1]+yr2*a[2][2]);
-    gqxy[9]      = zr * xr * (a[2][1]+yr2*a[2][2]);
-    gqxy[10]     = xr * yr * (a[2][1]+zr2*a[2][2]);
-    gqxz[5]      = xr * zr * (3.0f*a[2][1]+xr2*a[2][2]);
-    gqxz[6]      = yr * zr * (a[2][1]+xr2*a[2][2]);
-    gqxz[7]      = a[2][0] + (xr2+zr2)*a[2][1] + xr2*zr2*a[2][2];
-    gqxz[8]      = xr * zr * (a[2][1]+yr2*a[2][2]);
-    gqxz[9]      = xr * yr * (a[2][1]+zr2*a[2][2]);
-    gqxz[10]     = xr * zr * (3.0f*a[2][1]+zr2*a[2][2]);
-    gqyz[5]      = zr * yr * (a[2][1]+xr2*a[2][2]);
-    gqyz[6]      = xr * zr * (a[2][1]+yr2*a[2][2]);
-    gqyz[7]      = xr * yr * (a[2][1]+zr2*a[2][2]);
-    gqyz[8]      = yr * zr * (3.0f*a[2][1]+yr2*a[2][2]);
-    gqyz[9]      = a[2][0] + (yr2+zr2)*a[2][1] + yr2*zr2*a[2][2];
-    gqyz[10]     = yr * zr * (3.0f*a[2][1]+zr2*a[2][2]);
- 
+
+    float gc5        = a01 + xr2*a02;
+    float gc6        = xr * yr * a02;
+    float gc7        = xr * zr * a02;
+    float gc8        = a01 + yr2*a02;
+    float gc9        = yr * zr * a02;
+    float gc10       = a01 + zr2*a02;
+    float gux5       = xr * (3.0f*a11+xr2*a12);
+    float gux6       = yr * (a11+xr2*a12);
+    float gux7       = zr * (a11+xr2*a12);
+    float gux8       = xr * (a11+yr2*a12);
+    float gux9       = zr * xr * yr * a12;
+    float gux10      = xr * (a11+zr2*a12);
+    float guy5       = yr * (a11+xr2*a12);
+    float guy6       = xr * (a11+yr2*a12);
+    float guy7       = gux9;
+    float guy8       = yr * (3.0f*a11+yr2*a12);
+    float guy9       = zr * (a11+yr2*a12);
+    float guy10      = yr * (a11+zr2*a12);
+    float guz5       = zr * (a11+xr2*a12);
+    float guz6       = gux9;
+    float guz7       = xr * (a11+zr2*a12);
+    float guz8       = zr * (a11+yr2*a12);
+    float guz9       = yr * (a11+zr2*a12);
+    float guz10      = zr * (3.0f*a11+zr2*a12);
+    float gqxx5      = 2.0f*a20 + xr2*(5.0f*a21+xr2*a22);
+    float gqxx6      = yr * xr * (2.0f*a21+xr2*a22);
+    float gqxx7      = zr * xr * (2.0f*a21+xr2*a22);
+    float gqxx8      = xr2 * (a21+yr2*a22);
+    float gqxx9      = zr * yr * xr2 * a22;
+    float gqxx10     = xr2 * (a21+zr2*a22);
+    float gqyy5      = yr2 * (a21+xr2*a22);
+    float gqyy6      = xr * yr * (2.0f*a21+yr2*a22);
+    float gqyy7      = xr * zr * yr2 * a22;
+    float gqyy8      = 2.0f*a20 + yr2*(5.0f*a21+yr2*a22);
+    float gqyy9      = yr * zr * (2.0f*a21+yr2*a22);
+    float gqyy10     = yr2 * (a21+zr2*a22);
+    float gqzz5      = zr2 * (a21+xr2*a22);
+    float gqzz6      = xr * yr * zr2 * a22;
+    float gqzz7      = xr * zr * (2.0f*a21+zr2*a22);
+    float gqzz8      = zr2 * (a21+yr2*a22);
+    float gqzz9      = yr * zr * (2.0f*a21+zr2*a22);
+    float gqzz10     = 2.0f*a20 + zr2*(5.0f*a21+zr2*a22);
+    float gqxy5      = xr * yr * (3.0f*a21+xr2*a22);
+    float gqxy6      = a20 + (xr2+yr2)*a21 + xr2*yr2*a22;
+    float gqxy7      = zr * yr * (a21+xr2*a22);
+    float gqxy8      = xr * yr * (3.0f*a21+yr2*a22);
+    float gqxy9      = zr * xr * (a21+yr2*a22);
+    float gqxy10     = xr * yr * (a21+zr2*a22);
+    float gqxz5      = xr * zr * (3.0f*a21+xr2*a22);
+    float gqxz6      = yr * zr * (a21+xr2*a22);
+    float gqxz7      = a20 + (xr2+zr2)*a21 + xr2*zr2*a22;
+    float gqxz8      = xr * zr * (a21+yr2*a22);
+    float gqxz9      = xr * yr * (a21+zr2*a22);
+    float gqxz10     = xr * zr * (3.0f*a21+zr2*a22);
+    float gqyz5      = zr * yr * (a21+xr2*a22);
+    float gqyz6      = xr * zr * (a21+yr2*a22);
+    float gqyz7      = xr * yr * (a21+zr2*a22);
+    float gqyz8      = yr * zr * (3.0f*a21+yr2*a22);
+    float gqyz9      = a20 + (yr2+zr2)*a21 + yr2*zr2*a22;
+    float gqyz10     = yr * zr * (3.0f*a21+zr2*a22);
+
     // Born radii derivatives of the unweighted 2nd reaction;
     // potential gradient tensor;
 
-    gc[25]       = b[0][1] + xr2*b[0][2];
-    gc[26]       = xr * yr * b[0][2];
-    gc[27]       = xr * zr * b[0][2];
-    gc[28]       = b[0][1] + yr2*b[0][2];
-    gc[29]       = yr * zr * b[0][2];
-    gc[30]       = b[0][1] + zr2*b[0][2];
-    gux[25]      = xr * (3.0f*b[1][1]+xr2*b[1][2]);
-    gux[26]      = yr * (b[1][1]+xr2*b[1][2]);
-    gux[27]      = zr * (b[1][1]+xr2*b[1][2]);
-    gux[28]      = xr * (b[1][1]+yr2*b[1][2]);
-    gux[29]      = zr * xr * yr * b[1][2];
-    gux[30]      = xr * (b[1][1]+zr2*b[1][2]);
-    guy[25]      = yr * (b[1][1]+xr2*b[1][2]);
-    guy[26]      = xr * (b[1][1]+yr2*b[1][2]);
-    guy[27]      = gux[29];
-    guy[28]      = yr * (3.0f*b[1][1]+yr2*b[1][2]);
-    guy[29]      = zr * (b[1][1]+yr2*b[1][2]);
-    guy[30]      = yr * (b[1][1]+zr2*b[1][2]);
-    guz[25]      = zr * (b[1][1]+xr2*b[1][2]);
-    guz[26]      = gux[29];
-    guz[27]      = xr * (b[1][1]+zr2*b[1][2]);
-    guz[28]      = zr * (b[1][1]+yr2*b[1][2]);
-    guz[29]      = yr * (b[1][1]+zr2*b[1][2]);
-    guz[30]      = zr * (3.0f*b[1][1]+zr2*b[1][2]);
-    gqxx[25]     = 2.0f*b[2][0] + xr2*(5.0f*b[2][1]+xr2*b[2][2]);
-    gqxx[26]     = yr * xr * (2.0f*b[2][1]+xr2*b[2][2]);
-    gqxx[27]     = zr * xr * (2.0f*b[2][1]+xr2*b[2][2]);
-    gqxx[28]     = xr2 * (b[2][1]+yr2*b[2][2]);
-    gqxx[29]     = zr * yr * xr2 * b[2][2];
-    gqxx[30]     = xr2 * (b[2][1]+zr2*b[2][2]);
-    gqyy[25]     = yr2 * (b[2][1]+xr2*b[2][2]);
-    gqyy[26]     = xr * yr * (2.0f*b[2][1]+yr2*b[2][2]);
-    gqyy[27]     = xr * zr * yr2 * b[2][2];
-    gqyy[28]     = 2.0f*b[2][0] + yr2*(5.0f*b[2][1]+yr2*b[2][2]);
-    gqyy[29]     = yr * zr * (2.0f*b[2][1]+yr2*b[2][2]);
-    gqyy[30]     = yr2 * (b[2][1]+zr2*b[2][2]);
-    gqzz[25]     = zr2 * (b[2][1]+xr2*b[2][2]);
-    gqzz[26]     = xr * yr * zr2 * b[2][2];
-    gqzz[27]     = xr * zr * (2.0f*b[2][1]+zr2*b[2][2]);
-    gqzz[28]     = zr2 * (b[2][1]+yr2*b[2][2]);
-    gqzz[29]     = yr * zr * (2.0f*b[2][1]+zr2*b[2][2]);
-    gqzz[30]     = 2.0f*b[2][0] + zr2*(5.0f*b[2][1]+zr2*b[2][2]);
-    gqxy[25]     = xr * yr * (3.0f*b[2][1] + xr2*b[2][2]);
-    gqxy[26]     = b[2][0] + (xr2+yr2)*b[2][1] + xr2*yr2*b[2][2];
-    gqxy[27]     = zr * yr * (b[2][1]+xr2*b[2][2]);
-    gqxy[28]     = xr * yr * (3.0f*b[2][1]+yr2*b[2][2]);
-    gqxy[29]     = zr * xr * (b[2][1]+yr2*b[2][2]);
-    gqxy[30]     = xr * yr * (b[2][1]+zr2*b[2][2]);
-    gqxz[25]     = xr * zr * (3.0f*b[2][1]+xr2*b[2][2]);
-    gqxz[26]     = yr * zr * (b[2][1]+xr2*b[2][2]);
-    gqxz[27]     = b[2][0] + (xr2+zr2)*b[2][1] + xr2*zr2*b[2][2];
-    gqxz[28]     = xr * zr * (b[2][1]+yr2*b[2][2]);
-    gqxz[29]     = xr * yr * (b[2][1]+zr2*b[2][2]);
-    gqxz[30]     = xr * zr * (3.0f*b[2][1]+zr2*b[2][2]);
-    gqyz[25]     = zr * yr * (b[2][1]+xr2*b[2][2]);
-    gqyz[26]     = xr * zr * (b[2][1]+yr2*b[2][2]);
-    gqyz[27]     = xr * yr * (b[2][1]+zr2*b[2][2]);
-    gqyz[28]     = yr * zr * (3.0f*b[2][1]+yr2*b[2][2]);
-    gqyz[29]     = b[2][0] + (yr2+zr2)*b[2][1] + yr2*zr2*b[2][2];
-    gqyz[30]     = yr * zr * (3.0f*b[2][1]+zr2*b[2][2]);
+    float gc25       = b01 + xr2*b02;
+    float gc26       = xr * yr * b02;
+    float gc27       = xr * zr * b02;
+    float gc28       = b01 + yr2*b02;
+    float gc29       = yr * zr * b02;
+    float gc30       = b01 + zr2*b02;
+    float gux25      = xr * (3.0f*b11+xr2*b12);
+    float gux26      = yr * (b11+xr2*b12);
+    float gux27      = zr * (b11+xr2*b12);
+    float gux28      = xr * (b11+yr2*b12);
+    float gux29      = zr * xr * yr * b12;
+    float gux30      = xr * (b11+zr2*b12);
+    float guy25      = yr * (b11+xr2*b12);
+    float guy26      = xr * (b11+yr2*b12);
+    float guy27      = gux29;
+    float guy28      = yr * (3.0f*b11+yr2*b12);
+    float guy29      = zr * (b11+yr2*b12);
+    float guy30      = yr * (b11+zr2*b12);
+    float guz25      = zr * (b11+xr2*b12);
+    float guz26      = gux29;
+    float guz27      = xr * (b11+zr2*b12);
+    float guz28      = zr * (b11+yr2*b12);
+    float guz29      = yr * (b11+zr2*b12);
+    float guz30      = zr * (3.0f*b11+zr2*b12);
+    float gqxx25     = 2.0f*b20 + xr2*(5.0f*b21+xr2*b22);
+    float gqxx26     = yr * xr * (2.0f*b21+xr2*b22);
+    float gqxx27     = zr * xr * (2.0f*b21+xr2*b22);
+    float gqxx28     = xr2 * (b21+yr2*b22);
+    float gqxx29     = zr * yr * xr2 * b22;
+    float gqxx30     = xr2 * (b21+zr2*b22);
+    float gqyy25     = yr2 * (b21+xr2*b22);
+    float gqyy26     = xr * yr * (2.0f*b21+yr2*b22);
+    float gqyy27     = xr * zr * yr2 * b22;
+    float gqyy28     = 2.0f*b20 + yr2*(5.0f*b21+yr2*b22);
+    float gqyy29     = yr * zr * (2.0f*b21+yr2*b22);
+    float gqyy30     = yr2 * (b21+zr2*b22);
+    float gqzz25     = zr2 * (b21+xr2*b22);
+    float gqzz26     = xr * yr * zr2 * b22;
+    float gqzz27     = xr * zr * (2.0f*b21+zr2*b22);
+    float gqzz28     = zr2 * (b21+yr2*b22);
+    float gqzz29     = yr * zr * (2.0f*b21+zr2*b22);
+    float gqzz30     = 2.0f*b20 + zr2*(5.0f*b21+zr2*b22);
+    float gqxy25     = xr * yr * (3.0f*b21 + xr2*b22);
+    float gqxy26     = b20 + (xr2+yr2)*b21 + xr2*yr2*b22;
+    float gqxy27     = zr * yr * (b21+xr2*b22);
+    float gqxy28     = xr * yr * (3.0f*b21+yr2*b22);
+    float gqxy29     = zr * xr * (b21+yr2*b22);
+    float gqxy30     = xr * yr * (b21+zr2*b22);
+    float gqxz25     = xr * zr * (3.0f*b21+xr2*b22);
+    float gqxz26     = yr * zr * (b21+xr2*b22);
+    float gqxz27     = b20 + (xr2+zr2)*b21 + xr2*zr2*b22;
+    float gqxz28     = xr * zr * (b21+yr2*b22);
+    float gqxz29     = xr * yr * (b21+zr2*b22);
+    float gqxz30     = xr * zr * (3.0f*b21+zr2*b22);
+    float gqyz25     = zr * yr * (b21+xr2*b22);
+    float gqyz26     = xr * zr * (b21+yr2*b22);
+    float gqyz27     = xr * yr * (b21+zr2*b22);
+    float gqyz28     = yr * zr * (3.0f*b21+yr2*b22);
+    float gqyz29     = b20 + (yr2+zr2)*b21 + yr2*zr2*b22;
+    float gqyz30     = yr * zr * (3.0f*b21+zr2*b22);
 
     // unweighted 3rd reaction potential gradient tensor;
 
-    gc[11]       = xr * (3.0f*a[0][2]+xr2*a[0][3]);
-    gc[12]       = yr * (a[0][2]+xr2*a[0][3]);
-    gc[13]       = zr * (a[0][2]+xr2*a[0][3]);
-    gc[14]       = xr * (a[0][2]+yr2*a[0][3]);
-    gc[15]       = xr * yr * zr * a[0][3];
-    gc[16]       = xr * (a[0][2]+zr2*a[0][3]);
-    gc[17]       = yr * (3.0f*a[0][2]+yr2*a[0][3]);
-    gc[18]       = zr * (a[0][2]+yr2*a[0][3]);
-    gc[19]       = yr * (a[0][2]+zr2*a[0][3]);
-    gc[20]       = zr * (3.0f*a[0][2]+zr2*a[0][3]);
-    gux[11]      = 3.0f*a[1][1] + xr2*(6.0f*a[1][2]+xr2*a[1][3]);
-    gux[12]      = xr * yr * (3.0f*a[1][2]+xr2*a[1][3]);
-    gux[13]      = xr * zr * (3.0f*a[1][2]+xr2*a[1][3]);
-    gux[14]      = a[1][1] + (xr2+yr2)*a[1][2] + xr2*yr2*a[1][3];
-    gux[15]      = yr * zr * (a[1][2]+xr2*a[1][3]);
-    gux[16]      = a[1][1] + (xr2+zr2)*a[1][2] + xr2*zr2*a[1][3];
-    gux[17]      = xr * yr * (3.0f*a[1][2]+yr2*a[1][3]);
-    gux[18]      = xr * zr * (a[1][2]+yr2*a[1][3]);
-    gux[19]      = xr * yr * (a[1][2]+zr2*a[1][3]);
-    gux[20]      = xr * zr * (3.0f*a[1][2]+zr2*a[1][3]);
-    guy[11]      = gux[12];
-    guy[12]      = gux[14];
-    guy[13]      = gux[15];
-    guy[14]      = gux[17];
-    guy[15]      = gux[18];
-    guy[16]      = gux[19];
-    guy[17]      = 3.0f*a[1][1] + yr2*(6.0f*a[1][2]+yr2*a[1][3]);
-    guy[18]      = yr * zr * (3.0f*a[1][2]+yr2*a[1][3]);
-    guy[19]      = a[1][1] + (yr2+zr2)*a[1][2] + yr2*zr2*a[1][3];
-    guy[20]      = yr * zr * (3.0f*a[1][2]+zr2*a[1][3]);
-    guz[11]      = gux[13];
-    guz[12]      = gux[15];
-    guz[13]      = gux[16];
-    guz[14]      = gux[18];
-    guz[15]      = gux[19];
-    guz[16]      = gux[20];
-    guz[17]      = guy[18];
-    guz[18]      = guy[19];
-    guz[19]      = guy[20];
-    guz[20]      = 3.0f*a[1][1] + zr2*(6.0f*a[1][2]+zr2*a[1][3]);
+    float gc11       = xr * (3.0f*a02+xr2*a03);
+    float gc12       = yr * (a02+xr2*a03);
+    float gc13       = zr * (a02+xr2*a03);
+    float gc14       = xr * (a02+yr2*a03);
+    float gc15       = xr * yr * zr * a03;
+    float gc16       = xr * (a02+zr2*a03);
+    float gc17       = yr * (3.0f*a02+yr2*a03);
+    float gc18       = zr * (a02+yr2*a03);
+    float gc19       = yr * (a02+zr2*a03);
+    float gc20       = zr * (3.0f*a02+zr2*a03);
+    float gux11      = 3.0f*a11 + xr2*(6.0f*a12+xr2*a13);
+    float gux12      = xr * yr * (3.0f*a12+xr2*a13);
+    float gux13      = xr * zr * (3.0f*a12+xr2*a13);
+    float gux14      = a11 + (xr2+yr2)*a12 + xr2*yr2*a13;
+    float gux15      = yr * zr * (a12+xr2*a13);
+    float gux16      = a11 + (xr2+zr2)*a12 + xr2*zr2*a13;
+    float gux17      = xr * yr * (3.0f*a12+yr2*a13);
+    float gux18      = xr * zr * (a12+yr2*a13);
+    float gux19      = xr * yr * (a12+zr2*a13);
+    float gux20      = xr * zr * (3.0f*a12+zr2*a13);
+    float guy11      = gux12;
+    float guy12      = gux14;
+    float guy13      = gux15;
+    float guy14      = gux17;
+    float guy15      = gux18;
+    float guy16      = gux19;
+    float guy17      = 3.0f*a11 + yr2*(6.0f*a12+yr2*a13);
+    float guy18      = yr * zr * (3.0f*a12+yr2*a13);
+    float guy19      = a11 + (yr2+zr2)*a12 + yr2*zr2*a13;
+    float guy20      = yr * zr * (3.0f*a12+zr2*a13);
+    float guz11      = gux13;
+    float guz12      = gux15;
+    float guz13      = gux16;
+    float guz14      = gux18;
+    float guz15      = gux19;
+    float guz16      = gux20;
+    float guz17      = guy18;
+    float guz18      = guy19;
+    float guz19      = guy20;
+    float guz20      = 3.0f*a11 + zr2*(6.0f*a12+zr2*a13);
 
-    gqxx[11]     = xr * (12.0f*a[2][1]+xr2*(9.0f*a[2][2] + xr2*a[2][3]));
-    gqxx[12]     = yr * (2.0f*a[2][1]+xr2*(5.0f*a[2][2]  + xr2*a[2][3]));
-    gqxx[13]     = zr * (2.0f*a[2][1]+xr2*(5.0f*a[2][2]  + xr2*a[2][3]));
-    gqxx[14]     = xr * (2.0f*a[2][1]+yr2*2.0f*a[2][2]   +xr2*(a[2][2]+yr2*a[2][3]));
-    gqxx[15]     = xr * yr * zr * (2.0f*a[2][2]+xr2*a[2][3]);
-    gqxx[16]     = xr * (2.0f*a[2][1]+zr2*2.0f*a[2][2] +xr2*(a[2][2]+zr2*a[2][3]));
-    gqxx[17]     = yr * xr2 * (3.0f*a[2][2]+yr2*a[2][3]);
-    gqxx[18]     = zr * xr2 * (a[2][2]+yr2*a[2][3]);
-    gqxx[19]     = yr * xr2 * (a[2][2]+zr2*a[2][3]);
-    gqxx[20]     = zr * xr2 * (3.0f*a[2][2]+zr2*a[2][3]);
-    gqxy[11]     = yr * (3.0f*a[2][1]+xr2*(6.0f*a[2][2] +xr2*a[2][3]));
-    gqxy[12]     = xr * (3.0f*(a[2][1]+yr2*a[2][2]) +xr2*(a[2][2]+yr2*a[2][3]));
-    gqxy[13]     = xr * yr * zr * (3.0f*a[2][2]+xr2*a[2][3]);
-    gqxy[14]     = yr * (3.0f*(a[2][1]+xr2*a[2][2]) +yr2*(a[2][2]+xr2*a[2][3]));
-    gqxy[15]     = zr * (a[2][1]+(yr2+xr2)*a[2][2] +yr2*xr2*a[2][3]);
-    gqxy[16]     = yr * (a[2][1]+(xr2+zr2)*a[2][2] +xr2*zr2*a[2][3]);
-    gqxy[17]     = xr * (3.0f*(a[2][1]+yr2*a[2][2]) +yr2*(3.0f*a[2][2]+yr2*a[2][3]));
-    gqxy[18]     = xr * yr * zr * (3.0f*a[2][2]+yr2*a[2][3]);
-    gqxy[19]     = xr * (a[2][1]+(yr2+zr2)*a[2][2] +yr2*zr2*a[2][3]);
-    gqxy[20]     = xr * yr * zr * (3.0f*a[2][2]+zr2*a[2][3]);
-    gqxz[11]     = zr * (3.0f*a[2][1]+xr2*(6.0f*a[2][2] +xr2*a[2][3]));
-    gqxz[12]     = xr * yr * zr * (3.0f*a[2][2]+xr2*a[2][3]);
-    gqxz[13]     = xr * (3.0f*(a[2][1]+zr2*a[2][2]) +xr2*(a[2][2]+zr2*a[2][3]));
-    gqxz[14]     = zr * (a[2][1]+(xr2+yr2)*a[2][2] +xr2*yr2*a[2][3]);
-    gqxz[15]     = yr * (a[2][1]+(xr2+zr2)*a[2][2] +zr2*xr2*a[2][3]);
-    gqxz[16]     = zr * (3.0f*(a[2][1]+xr2*a[2][2]) +zr2*(a[2][2]+xr2*a[2][3]));
-    gqxz[17]     = xr * yr * zr * (3.0f*a[2][2]+yr2*a[2][3]);
-    gqxz[18]     = xr * (a[2][1]+(zr2+yr2)*a[2][2] +zr2*yr2*a[2][3]);
-    gqxz[19]     = xr * yr * zr * (3.0f*a[2][2]+zr2*a[2][3]);
-    gqxz[20]     = xr * (3.0f*a[2][1]+zr2*(6.0f*a[2][2] +zr2*a[2][3]));
-    gqyy[11]     = xr * yr2 * (3.0f*a[2][2]+xr2*a[2][3]);
-    gqyy[12]     = yr * (2.0f*a[2][1]+xr2*2.0f*a[2][2] +yr2*(a[2][2]+xr2*a[2][3]));
-    gqyy[13]     = zr * yr2 * (a[2][2]+xr2*a[2][3]);
-    gqyy[14]     = xr * (2.0f*a[2][1]+yr2*(5.0f*a[2][2] +yr2*a[2][3]));
-    gqyy[15]     = xr * yr * zr * (2.0f*a[2][2]+yr2*a[2][3]);
-    gqyy[16]     = xr * yr2 * (a[2][2]+zr2*a[2][3]);
-    gqyy[17]     = yr * (12.0f*a[2][1]+yr2*(9.0f*a[2][2] +yr2*a[2][3]));
-    gqyy[18]     = zr * (2.0f*a[2][1]+yr2*(5.0f*a[2][2] +yr2*a[2][3]));
-    gqyy[19]     = yr * (2.0f*a[2][1]+zr2*2.0f*a[2][2] +yr2*(a[2][2]+zr2*a[2][3]));
-    gqyy[20]     = zr * yr2 * (3.0f*a[2][2]+zr2*a[2][3]);
-    gqyz[11]     = xr * yr * zr * (3.0f*a[2][2]+xr2*a[2][3]);
-    gqyz[12]     = zr * (a[2][1]+(xr2+yr2)*a[2][2] +xr2*yr2*a[2][3]);
-    gqyz[13]     = yr * (a[2][1]+(xr2+zr2)*a[2][2] +xr2*zr2*a[2][3]);
-    gqyz[14]     = xr * yr * zr * (3.0f*a[2][2]+yr2*a[2][3]);
-    gqyz[15]     = xr * (a[2][1]+(yr2+zr2)*a[2][2] +yr2*zr2*a[2][3]);
-    gqyz[16]     = xr * yr * zr * (3.0f*a[2][2]+zr2*a[2][3]);
-    gqyz[17]     = zr * (3.0f*a[2][1]+yr2*(6.0f*a[2][2] +yr2*a[2][3]));
-    gqyz[18]     = yr * (3.0f*(a[2][1]+zr2*a[2][2]) +yr2*(a[2][2]+zr2*a[2][3]));
-    gqyz[19]     = zr * (3.0f*(a[2][1]+yr2*a[2][2]) +zr2*(a[2][2]+yr2*a[2][3]));
-    gqyz[20]     = yr * (3.0f*a[2][1]+zr2*(6.0f*a[2][2] +zr2*a[2][3]));
-    gqzz[11]     = xr * zr2 * (3.0f*a[2][2]+xr2*a[2][3]);
-    gqzz[12]     = yr * (zr2*a[2][2]+xr2*(zr2*a[2][3]));
-    gqzz[13]     = zr * (2.0f*a[2][1]+xr2*2.0f*a[2][2] +zr2*(a[2][2]+xr2*a[2][3]));
-    gqzz[14]     = xr * zr2 * (a[2][2]+yr2*a[2][3]);
-    gqzz[15]     = xr * yr * zr * (2.0f*a[2][2]+zr2*a[2][3]);
-    gqzz[16]     = xr * (2.0f*a[2][1]+zr2*(5.0f*a[2][2] +zr2*a[2][3]));
-    gqzz[17]     = yr * zr2 * (3.0f*a[2][2]+yr2*a[2][3]);
-    gqzz[18]     = zr * (2.0f*a[2][1]+yr2*2.0f*a[2][2] +zr2*(a[2][2]+yr2*a[2][3]));
-    gqzz[19]     = yr * (2.0f*a[2][1]+zr2*(5.0f*a[2][2] +zr2*a[2][3]));
-    gqzz[20]     = zr * (12.0f*a[2][1]+zr2*(9.0f*a[2][2] +zr2*a[2][3]));
- 
+    float gqxx11     = xr * (12.0f*a21+xr2*(9.0f*a22 + xr2*a23));
+    float gqxx12     = yr * (2.0f*a21+xr2*(5.0f*a22  + xr2*a23));
+    float gqxx13     = zr * (2.0f*a21+xr2*(5.0f*a22  + xr2*a23));
+    float gqxx14     = xr * (2.0f*a21+yr2*2.0f*a22   +xr2*(a22+yr2*a23));
+    float gqxx15     = xr * yr * zr * (2.0f*a22+xr2*a23);
+    float gqxx16     = xr * (2.0f*a21+zr2*2.0f*a22 +xr2*(a22+zr2*a23));
+    float gqxx17     = yr * xr2 * (3.0f*a22+yr2*a23);
+    float gqxx18     = zr * xr2 * (a22+yr2*a23);
+    float gqxx19     = yr * xr2 * (a22+zr2*a23);
+    float gqxx20     = zr * xr2 * (3.0f*a22+zr2*a23);
+    float gqxy11     = yr * (3.0f*a21+xr2*(6.0f*a22 +xr2*a23));
+    float gqxy12     = xr * (3.0f*(a21+yr2*a22) +xr2*(a22+yr2*a23));
+    float gqxy13     = xr * yr * zr * (3.0f*a22+xr2*a23);
+    float gqxy14     = yr * (3.0f*(a21+xr2*a22) +yr2*(a22+xr2*a23));
+    float gqxy15     = zr * (a21+(yr2+xr2)*a22 +yr2*xr2*a23);
+    float gqxy16     = yr * (a21+(xr2+zr2)*a22 +xr2*zr2*a23);
+    float gqxy17     = xr * (3.0f*(a21+yr2*a22) +yr2*(3.0f*a22+yr2*a23));
+    float gqxy18     = xr * yr * zr * (3.0f*a22+yr2*a23);
+    float gqxy19     = xr * (a21+(yr2+zr2)*a22 +yr2*zr2*a23);
+    float gqxy20     = xr * yr * zr * (3.0f*a22+zr2*a23);
+    float gqxz11     = zr * (3.0f*a21+xr2*(6.0f*a22 +xr2*a23));
+    float gqxz12     = xr * yr * zr * (3.0f*a22+xr2*a23);
+    float gqxz13     = xr * (3.0f*(a21+zr2*a22) +xr2*(a22+zr2*a23));
+    float gqxz14     = zr * (a21+(xr2+yr2)*a22 +xr2*yr2*a23);
+    float gqxz15     = yr * (a21+(xr2+zr2)*a22 +zr2*xr2*a23);
+    float gqxz16     = zr * (3.0f*(a21+xr2*a22) +zr2*(a22+xr2*a23));
+    float gqxz17     = xr * yr * zr * (3.0f*a22+yr2*a23);
+    float gqxz18     = xr * (a21+(zr2+yr2)*a22 +zr2*yr2*a23);
+    float gqxz19     = xr * yr * zr * (3.0f*a22+zr2*a23);
+    float gqxz20     = xr * (3.0f*a21+zr2*(6.0f*a22 +zr2*a23));
+    float gqyy11     = xr * yr2 * (3.0f*a22+xr2*a23);
+    float gqyy12     = yr * (2.0f*a21+xr2*2.0f*a22 +yr2*(a22+xr2*a23));
+    float gqyy13     = zr * yr2 * (a22+xr2*a23);
+    float gqyy14     = xr * (2.0f*a21+yr2*(5.0f*a22 +yr2*a23));
+    float gqyy15     = xr * yr * zr * (2.0f*a22+yr2*a23);
+    float gqyy16     = xr * yr2 * (a22+zr2*a23);
+    float gqyy17     = yr * (12.0f*a21+yr2*(9.0f*a22 +yr2*a23));
+    float gqyy18     = zr * (2.0f*a21+yr2*(5.0f*a22 +yr2*a23));
+    float gqyy19     = yr * (2.0f*a21+zr2*2.0f*a22 +yr2*(a22+zr2*a23));
+    float gqyy20     = zr * yr2 * (3.0f*a22+zr2*a23);
+    float gqyz11     = xr * yr * zr * (3.0f*a22+xr2*a23);
+    float gqyz12     = zr * (a21+(xr2+yr2)*a22 +xr2*yr2*a23);
+    float gqyz13     = yr * (a21+(xr2+zr2)*a22 +xr2*zr2*a23);
+    float gqyz14     = xr * yr * zr * (3.0f*a22+yr2*a23);
+    float gqyz15     = xr * (a21+(yr2+zr2)*a22 +yr2*zr2*a23);
+    float gqyz16     = xr * yr * zr * (3.0f*a22+zr2*a23);
+    float gqyz17     = zr * (3.0f*a21+yr2*(6.0f*a22 +yr2*a23));
+    float gqyz18     = yr * (3.0f*(a21+zr2*a22) +yr2*(a22+zr2*a23));
+    float gqyz19     = zr * (3.0f*(a21+yr2*a22) +zr2*(a22+yr2*a23));
+    float gqyz20     = yr * (3.0f*a21+zr2*(6.0f*a22 +zr2*a23));
+    float gqzz11     = xr * zr2 * (3.0f*a22+xr2*a23);
+    float gqzz12     = yr * (zr2*a22+xr2*(zr2*a23));
+    float gqzz13     = zr * (2.0f*a21+xr2*2.0f*a22 +zr2*(a22+xr2*a23));
+    float gqzz14     = xr * zr2 * (a22+yr2*a23);
+    float gqzz15     = xr * yr * zr * (2.0f*a22+zr2*a23);
+    float gqzz16     = xr * (2.0f*a21+zr2*(5.0f*a22 +zr2*a23));
+    float gqzz17     = yr * zr2 * (3.0f*a22+yr2*a23);
+    float gqzz18     = zr * (2.0f*a21+yr2*2.0f*a22 +zr2*(a22+yr2*a23));
+    float gqzz19     = yr * (2.0f*a21+zr2*(5.0f*a22 +zr2*a23));
+    float gqzz20     = zr * (12.0f*a21+zr2*(9.0f*a22 +zr2*a23));
+
     // electrostatic solvation energy of the permanent multipoles
     // in their own GK reaction potential
- 
-    esym = ci * ck * gc[1] - (uxi*(uxk*gux[2]+uyk*guy[2]+uzk*guz[2])
-                           +  uyi*(uxk*gux[3]+uyk*guy[3]+uzk*guz[3])
-                           +  uzi*(uxk*gux[4]+uyk*guy[4]+uzk*guz[4]));
 
-    ewi =  ci*(uxk*gc[2]+uyk*gc[3]+uzk*gc[4])
-          -ck*(uxi*gux[1]+uyi*guy[1]+uzi*guz[1])
-           +ci*(qxxk*gc[5]+qyyk*gc[8]+qzzk*gc[10]
-              +2.0f*(qxyk*gc[6]+qxzk*gc[7]+qyzk*gc[9]))
-                 +ck*(qxxi*gqxx[1]+qyyi*gqyy[1]+qzzi*gqzz[1]
-              +2.0f*(qxyi*gqxy[1]+qxzi*gqxz[1]+qyzi*gqyz[1]))
-               - uxi*(qxxk*gux[5]+qyyk*gux[8]+qzzk*gux[10]
-              +2.0f*(qxyk*gux[6]+qxzk*gux[7]+qyzk*gux[9]))
-               - uyi*(qxxk*guy[5]+qyyk*guy[8]+qzzk*guy[10]
-              +2.0f*(qxyk*guy[6]+qxzk*guy[7]+qyzk*guy[9]))
-               - uzi*(qxxk*guz[5]+qyyk*guz[8]+qzzk*guz[10]
-              +2.0f*(qxyk*guz[6]+qxzk*guz[7]+qyzk*guz[9]))
-               + uxk*(qxxi*gqxx[2]+qyyi*gqyy[2]+qzzi*gqzz[2]
-              +2.0f*(qxyi*gqxy[2]+qxzi*gqxz[2]+qyzi*gqyz[2]))
-               + uyk*(qxxi*gqxx[3]+qyyi*gqyy[3]+qzzi*gqzz[3]
-              +2.0f*(qxyi*gqxy[3]+qxzi*gqxz[3]+qyzi*gqyz[3]))
-               + uzk*(qxxi*gqxx[4]+qyyi*gqyy[4]+qzzi*gqzz[4]
-              +2.0f*(qxyi*gqxy[4]+qxzi*gqxz[4]+qyzi*gqyz[4]))
-              + qxxi*(qxxk*gqxx[5]+qyyk*gqxx[8]+qzzk*gqxx[10]
-              +2.0f*(qxyk*gqxx[6]+qxzk*gqxx[7]+qyzk*gqxx[9]))
-              + qyyi*(qxxk*gqyy[5]+qyyk*gqyy[8]+qzzk*gqyy[10]
-              +2.0f*(qxyk*gqyy[6]+qxzk*gqyy[7]+qyzk*gqyy[9]))
-              + qzzi*(qxxk*gqzz[5]+qyyk*gqzz[8]+qzzk*gqzz[10]
-              +2.0f*(qxyk*gqzz[6]+qxzk*gqzz[7]+qyzk*gqzz[9]))
-              + 2.0f*(qxyi*(qxxk*gqxy[5]+qyyk*gqxy[8]+qzzk*gqxy[10]
-              +2.0f*(qxyk*gqxy[6]+qxzk*gqxy[7]+qyzk*gqxy[9]))
-              + qxzi*(qxxk*gqxz[5]+qyyk*gqxz[8]+qzzk*gqxz[10]
-              +2.0f*(qxyk*gqxz[6]+qxzk*gqxz[7]+qyzk*gqxz[9]))
-              + qyzi*(qxxk*gqyz[5]+qyyk*gqyz[8]+qzzk*gqyz[10]
-              +2.0f*(qxyk*gqyz[6]+qxzk*gqyz[7]+qyzk*gqyz[9])));
+    esym = ci * ck * gc1 - (uxi*(uxk*gux2+uyk*guy2+uzk*guz2)
+                           +  uyi*(uxk*gux3+uyk*guy3+uzk*guz3)
+                           +  uzi*(uxk*gux4+uyk*guy4+uzk*guz4));
 
-#ifdef AMOEBA_DEBUG
-//int n2         = numberOfAtoms*numberOfAtoms;
-//int debugIndex = atomI*numberOfAtoms + atomJ;
-#if 0
-if( atomI == -1 ){
-// 4, [3,3], [5,5], [5,5],[5,5],
-int debugIndex               = atomJ;
+    ewi =  ci*(uxk*gc2+uyk*gc3+uzk*gc4)
+          -ck*(uxi*gux1+uyi*guy1+uzi*guz1)
+           +ci*(qxxk*gc5+qyyk*gc8+qzzk*gc10
+              +2.0f*(qxyk*gc6+qxzk*gc7+qyzk*gc9))
+                 +ck*(qxxi*gqxx1+qyyi*gqyy1+qzzi*gqzz1
+              +2.0f*(qxyi*gqxy1+qxzi*gqxz1+qyzi*gqyz1))
+               - uxi*(qxxk*gux5+qyyk*gux8+qzzk*gux10
+              +2.0f*(qxyk*gux6+qxzk*gux7+qyzk*gux9))
+               - uyi*(qxxk*guy5+qyyk*guy8+qzzk*guy10
+              +2.0f*(qxyk*guy6+qxzk*guy7+qyzk*guy9))
+               - uzi*(qxxk*guz5+qyyk*guz8+qzzk*guz10
+              +2.0f*(qxyk*guz6+qxzk*guz7+qyzk*guz9))
+               + uxk*(qxxi*gqxx2+qyyi*gqyy2+qzzi*gqzz2
+              +2.0f*(qxyi*gqxy2+qxzi*gqxz2+qyzi*gqyz2))
+               + uyk*(qxxi*gqxx3+qyyi*gqyy3+qzzi*gqzz3
+              +2.0f*(qxyi*gqxy3+qxzi*gqxz3+qyzi*gqyz3))
+               + uzk*(qxxi*gqxx4+qyyi*gqyy4+qzzi*gqzz4
+              +2.0f*(qxyi*gqxy4+qxzi*gqxz4+qyzi*gqyz4))
+              + qxxi*(qxxk*gqxx5+qyyk*gqxx8+qzzk*gqxx10
+              +2.0f*(qxyk*gqxx6+qxzk*gqxx7+qyzk*gqxx9))
+              + qyyi*(qxxk*gqyy5+qyyk*gqyy8+qzzk*gqyy10
+              +2.0f*(qxyk*gqyy6+qxzk*gqyy7+qyzk*gqyy9))
+              + qzzi*(qxxk*gqzz5+qyyk*gqzz8+qzzk*gqzz10
+              +2.0f*(qxyk*gqzz6+qxzk*gqzz7+qyzk*gqzz9))
+              + 2.0f*(qxyi*(qxxk*gqxy5+qyyk*gqxy8+qzzk*gqxy10
+              +2.0f*(qxyk*gqxy6+qxzk*gqxy7+qyzk*gqxy9))
+              + qxzi*(qxxk*gqxz5+qyyk*gqxz8+qzzk*gqxz10
+              +2.0f*(qxyk*gqxz6+qxzk*gqxz7+qyzk*gqxz9))
+              + qyzi*(qxxk*gqyz5+qyyk*gqyz8+qzzk*gqyz10
+              +2.0f*(qxyk*gqyz6+qxzk*gqyz7+qyzk*gqyz9)));
 
-    debugArray[debugIndex].x = gkc;
-    debugArray[debugIndex].y = fc;
-    debugArray[debugIndex].z = gf2;
+    ewk = ci*(uxk*gux1+uyk*guy1+uzk*guz1)
+                      -ck*(uxi*gc2+uyi*gc3+uzi*gc4)
+                 +ci*(qxxk*gqxx1+qyyk*gqyy1+qzzk*gqzz1
+              +2.0f*(qxyk*gqxy1+qxzk*gqxz1+qyzk*gqyz1))
+                 +ck*(qxxi*gc5+qyyi*gc8+qzzi*gc10
+              +2.0f*(qxyi*gc6+qxzi*gc7+qyzi*gc9))
+               - uxi*(qxxk*gqxx2+qyyk*gqyy2+qzzk*gqzz2
+              +2.0f*(qxyk*gqxy2+qxzk*gqxz2+qyzk*gqyz2))
+               - uyi*(qxxk*gqxx3+qyyk*gqyy3+qzzk*gqzz3
+              +2.0f*(qxyk*gqxy3+qxzk*gqxz3+qyzk*gqyz3))
+               - uzi*(qxxk*gqxx4+qyyk*gqyy4+qzzk*gqzz4
+              +2.0f*(qxyk*gqxy4+qxzk*gqxz4+qyzk*gqyz4))
+               + uxk*(qxxi*gux5+qyyi*gux8+qzzi*gux10
+              +2.0f*(qxyi*gux6+qxzi*gux7+qyzi*gux9))
+               + uyk*(qxxi*guy5+qyyi*guy8+qzzi*guy10
+              +2.0f*(qxyi*guy6+qxzi*guy7+qyzi*guy9))
+               + uzk*(qxxi*guz5+qyyi*guz8+qzzi*guz10
+              +2.0f*(qxyi*guz6+qxzi*guz7+qyzi*guz9))
+              + qxxi*(qxxk*gqxx5+qyyk*gqyy5+qzzk*gqzz5
+              +2.0f*(qxyk*gqxy5+qxzk*gqxz5+qyzk*gqyz5))
+              + qyyi*(qxxk*gqxx8+qyyk*gqyy8+qzzk*gqzz8
+              +2.0f*(qxyk*gqxy8+qxzk*gqxz8+qyzk*gqyz8))
+              + qzzi*(qxxk*gqxx10+qyyk*gqyy10+qzzk*gqzz10
+              +2.0f*(qxyk*gqxy10+qxzk*gqxz10+qyzk*gqyz10))
+       + 2.0f*(qxyi*(qxxk*gqxx6+qyyk*gqyy6+qzzk*gqzz6
+              +2.0f*(qxyk*gqxy6+qxzk*gqxz6+qyzk*gqyz6))
+              + qxzi*(qxxk*gqxx7+qyyk*gqyy7+qzzk*gqzz7
+              +2.0f*(qxyk*gqxy7+qxzk*gqxz7+qyzk*gqyz7))
+              + qyzi*(qxxk*gqxx9+qyyk*gqyy9+qzzk*gqzz9
+              +2.0f*(qxyk*gqxy9+qxzk*gqxz9+qyzk*gqyz9)));
 
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = ci;
-    debugArray[debugIndex].y = ck;
-    debugArray[debugIndex].z = esym;
-    debugArray[debugIndex].w = ewi;
+    desymdx = ci * ck * gc2 - (uxi*(uxk*gux5+uyk*guy5+uzk*guz5)
+                              +  uyi*(uxk*gux6+uyk*guy6+uzk*guz6)
+                              +  uzi*(uxk*gux7+uyk*guy7+uzk*guz7));
 
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = uxi;
-    debugArray[debugIndex].y = uyi;
-    debugArray[debugIndex].z = uzi;
+    dewidx = ci*(uxk*gc5+uyk*gc6+uzk*gc7)
+                      -ck*(uxi*gux2+uyi*guy2+uzi*guz2)
+                 +ci*(qxxk*gc11+qyyk*gc14+qzzk*gc16
+              +2.0f*(qxyk*gc12+qxzk*gc13+qyzk*gc15))
+                 +ck*(qxxi*gqxx2+qyyi*gqyy2+qzzi*gqzz2
+              +2.0f*(qxyi*gqxy2+qxzi*gqxz2+qyzi*gqyz2))
+               - uxi*(qxxk*gux11+qyyk*gux14+qzzk*gux16
+              +2.0f*(qxyk*gux12+qxzk*gux13+qyzk*gux15))
+               - uyi*(qxxk*guy11+qyyk*guy14+qzzk*guy16
+              +2.0f*(qxyk*guy12+qxzk*guy13+qyzk*guy15))
+               - uzi*(qxxk*guz11+qyyk*guz14+qzzk*guz16
+              +2.0f*(qxyk*guz12+qxzk*guz13+qyzk*guz15))
+               + uxk*(qxxi*gqxx5+qyyi*gqyy5+qzzi*gqzz5
+              +2.0f*(qxyi*gqxy5+qxzi*gqxz5+qyzi*gqyz5))
+               + uyk*(qxxi*gqxx6+qyyi*gqyy6+qzzi*gqzz6
+              +2.0f*(qxyi*gqxy6+qxzi*gqxz6+qyzi*gqyz6))
+               + uzk*(qxxi*gqxx7+qyyi*gqyy7+qzzi*gqzz7
+              +2.0f*(qxyi*gqxy7+qxzi*gqxz7+qyzi*gqyz7))
+              + qxxi*(qxxk*gqxx11+qyyk*gqxx14+qzzk*gqxx16
+              +2.0f*(qxyk*gqxx12+qxzk*gqxx13+qyzk*gqxx15))
+              + qyyi*(qxxk*gqyy11+qyyk*gqyy14+qzzk*gqyy16
+              +2.0f*(qxyk*gqyy12+qxzk*gqyy13+qyzk*gqyy15))
+              + qzzi*(qxxk*gqzz11+qyyk*gqzz14+qzzk*gqzz16
+              +2.0f*(qxyk*gqzz12+qxzk*gqzz13+qyzk*gqzz15))
+       + 2.0f*(qxyi*(qxxk*gqxy11+qyyk*gqxy14+qzzk*gqxy16
+              +2.0f*(qxyk*gqxy12+qxzk*gqxy13+qyzk*gqxy15))
+              + qxzi*(qxxk*gqxz11+qyyk*gqxz14+qzzk*gqxz16
+              +2.0f*(qxyk*gqxz12+qxzk*gqxz13+qyzk*gqxz15))
+              + qyzi*(qxxk*gqyz11+qyyk*gqyz14+qzzk*gqyz16
+              +2.0f*(qxyk*gqyz12+qxzk*gqyz13+qyzk*gqyz15)));
 
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = uxk;
-    debugArray[debugIndex].y = uyk;
-    debugArray[debugIndex].z = uzk;
-
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = gc[1];
-    debugArray[debugIndex].y = gc[2];
-    debugArray[debugIndex].z = gc[3];
-    debugArray[debugIndex].w = gc[4];
-
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = gc[5];
-    debugArray[debugIndex].y = gc[6];
-    debugArray[debugIndex].z = gc[7];
-    debugArray[debugIndex].w = gc[8];
-
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = gc[9];
-    debugArray[debugIndex].y = gc[10];
-
-
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = gux[1];
-    debugArray[debugIndex].y = gux[2];
-    debugArray[debugIndex].z = gux[3];
-    debugArray[debugIndex].w = gux[4];
-
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = gux[5];
-    debugArray[debugIndex].y = gux[6];
-    debugArray[debugIndex].z = gux[7];
-    debugArray[debugIndex].w = gux[8];
-
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = gux[9];
-    debugArray[debugIndex].y = gux[10];
-
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = guy[1];
-    debugArray[debugIndex].y = guy[2];
-    debugArray[debugIndex].z = guy[3];
-    debugArray[debugIndex].w = guy[4];
-
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = guy[5];
-    debugArray[debugIndex].y = guy[6];
-    debugArray[debugIndex].z = guy[7];
-    debugArray[debugIndex].w = guy[8];
-
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = guy[9];
-    debugArray[debugIndex].y = guy[10];
-
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = guz[1];
-    debugArray[debugIndex].y = guz[2];
-    debugArray[debugIndex].z = guz[3];
-    debugArray[debugIndex].w = guz[4];
-
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = guz[5];
-    debugArray[debugIndex].y = guz[6];
-    debugArray[debugIndex].z = guz[7];
-    debugArray[debugIndex].w = guz[8];
-
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = guz[9];
-    debugArray[debugIndex].y = guz[10];
-
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = qxxi;
-    debugArray[debugIndex].y = qyyi;
-    debugArray[debugIndex].z = qzzi;
-
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = qxxk;
-    debugArray[debugIndex].y = qyyk;
-    debugArray[debugIndex].z = qzzk;
-
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = qxyi;
-    debugArray[debugIndex].y = qxzi;
-    debugArray[debugIndex].z = qyzi;
-
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = qxyk;
-    debugArray[debugIndex].y = qxzk;
-    debugArray[debugIndex].z = qyzk;
-
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = gqxx[1];
-    debugArray[debugIndex].y = gqxx[2];
-    debugArray[debugIndex].z = gqxx[3];
-    debugArray[debugIndex].w = gqxx[4];
-
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = gqxx[5];
-    debugArray[debugIndex].y = gqxx[6];
-    debugArray[debugIndex].z = gqxx[7];
-    debugArray[debugIndex].w = gqxx[8];
-
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = gqxx[9];
-    debugArray[debugIndex].y = gqxx[10];
-
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = gqxy[1];
-    debugArray[debugIndex].y = gqxy[2];
-    debugArray[debugIndex].z = gqxy[3];
-    debugArray[debugIndex].w = gqxy[4];
-
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = gqxy[5];
-    debugArray[debugIndex].y = gqxy[6];
-    debugArray[debugIndex].z = gqxy[7];
-    debugArray[debugIndex].w = gqxy[8];
-
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = gqxy[9];
-    debugArray[debugIndex].y = gqxy[10];
-
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = gqxz[1];
-    debugArray[debugIndex].y = gqxz[2];
-    debugArray[debugIndex].z = gqxz[3];
-    debugArray[debugIndex].w = gqxz[4];
-
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = gqxz[5];
-    debugArray[debugIndex].y = gqxz[6];
-    debugArray[debugIndex].z = gqxz[7];
-    debugArray[debugIndex].w = gqxz[8];
-
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = gqxz[9];
-    debugArray[debugIndex].y = gqxz[10];
-
-    // float a[6][4];
-    // float b[5][3];
-    unsigned int idx1, idx2;
-
-    idx1                     = 0;
-    idx2                     = 0;
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = a[idx1][idx2++];
-    debugArray[debugIndex].y = a[idx1][idx2++];
-    debugArray[debugIndex].z = a[idx1][idx2++];
-    debugArray[debugIndex].w = a[idx1][idx2++];
-
-    idx1                     = 1;
-    idx2                     = 0;
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = a[idx1][idx2++];
-    debugArray[debugIndex].y = a[idx1][idx2++];
-    debugArray[debugIndex].z = a[idx1][idx2++];
-    debugArray[debugIndex].w = a[idx1][idx2++];
-
-    idx1                     = 2;
-    idx2                     = 0;
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = a[idx1][idx2++];
-    debugArray[debugIndex].y = a[idx1][idx2++];
-    debugArray[debugIndex].z = a[idx1][idx2++];
-    debugArray[debugIndex].w = a[idx1][idx2++];
-
-    idx1                     = 3;
-    idx2                     = 0;
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = a[idx1][idx2++];
-    debugArray[debugIndex].y = a[idx1][idx2++];
-    debugArray[debugIndex].z = a[idx1][idx2++];
-    debugArray[debugIndex].w = a[idx1][idx2++];
-
-    idx1                     = 4;
-    idx2                     = 0;
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = a[idx1][idx2++];
-    debugArray[debugIndex].y = a[idx1][idx2++];
-    debugArray[debugIndex].z = a[idx1][idx2++];
-    debugArray[debugIndex].w = a[idx1][idx2++];
-
-    idx1                     = 5;
-    idx2                     = 0;
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = a[idx1][idx2++];
-    debugArray[debugIndex].y = a[idx1][idx2++];
-    debugArray[debugIndex].z = a[idx1][idx2++];
-    debugArray[debugIndex].w = a[idx1][idx2++];
-
-    idx1                     = 0;
-    idx2                     = 0;
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = b[idx1][idx2++];
-    debugArray[debugIndex].y = b[idx1][idx2++];
-    debugArray[debugIndex].z = b[idx1][idx2++];
-
-    idx1                     = 1;
-    idx2                     = 0;
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = b[idx1][idx2++];
-    debugArray[debugIndex].y = b[idx1][idx2++];
-    debugArray[debugIndex].z = b[idx1][idx2++];
-
-    idx1                     = 2;
-    idx2                     = 0;
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = b[idx1][idx2++];
-    debugArray[debugIndex].y = b[idx1][idx2++];
-    debugArray[debugIndex].z = b[idx1][idx2++];
-
-    idx1                     = 3;
-    idx2                     = 0;
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = b[idx1][idx2++];
-    debugArray[debugIndex].y = b[idx1][idx2++];
-    debugArray[debugIndex].z = b[idx1][idx2++];
-
-    idx1                     = 4;
-    idx2                     = 0;
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = b[idx1][idx2++];
-    debugArray[debugIndex].y = b[idx1][idx2++];
-    debugArray[debugIndex].z = b[idx1][idx2++];
-
-}
-#endif
-#endif
-    ewk = ci*(uxk*gux[1]+uyk*guy[1]+uzk*guz[1])
-                      -ck*(uxi*gc[2]+uyi*gc[3]+uzi*gc[4])
-                 +ci*(qxxk*gqxx[1]+qyyk*gqyy[1]+qzzk*gqzz[1]
-              +2.0f*(qxyk*gqxy[1]+qxzk*gqxz[1]+qyzk*gqyz[1]))
-                 +ck*(qxxi*gc[5]+qyyi*gc[8]+qzzi*gc[10]
-              +2.0f*(qxyi*gc[6]+qxzi*gc[7]+qyzi*gc[9]))
-               - uxi*(qxxk*gqxx[2]+qyyk*gqyy[2]+qzzk*gqzz[2]
-              +2.0f*(qxyk*gqxy[2]+qxzk*gqxz[2]+qyzk*gqyz[2]))
-               - uyi*(qxxk*gqxx[3]+qyyk*gqyy[3]+qzzk*gqzz[3]
-              +2.0f*(qxyk*gqxy[3]+qxzk*gqxz[3]+qyzk*gqyz[3]))
-               - uzi*(qxxk*gqxx[4]+qyyk*gqyy[4]+qzzk*gqzz[4]
-              +2.0f*(qxyk*gqxy[4]+qxzk*gqxz[4]+qyzk*gqyz[4]))
-               + uxk*(qxxi*gux[5]+qyyi*gux[8]+qzzi*gux[10]
-              +2.0f*(qxyi*gux[6]+qxzi*gux[7]+qyzi*gux[9]))
-               + uyk*(qxxi*guy[5]+qyyi*guy[8]+qzzi*guy[10]
-              +2.0f*(qxyi*guy[6]+qxzi*guy[7]+qyzi*guy[9]))
-               + uzk*(qxxi*guz[5]+qyyi*guz[8]+qzzi*guz[10]
-              +2.0f*(qxyi*guz[6]+qxzi*guz[7]+qyzi*guz[9]))
-              + qxxi*(qxxk*gqxx[5]+qyyk*gqyy[5]+qzzk*gqzz[5]
-              +2.0f*(qxyk*gqxy[5]+qxzk*gqxz[5]+qyzk*gqyz[5]))
-              + qyyi*(qxxk*gqxx[8]+qyyk*gqyy[8]+qzzk*gqzz[8]
-              +2.0f*(qxyk*gqxy[8]+qxzk*gqxz[8]+qyzk*gqyz[8]))
-              + qzzi*(qxxk*gqxx[10]+qyyk*gqyy[10]+qzzk*gqzz[10]
-              +2.0f*(qxyk*gqxy[10]+qxzk*gqxz[10]+qyzk*gqyz[10]))
-       + 2.0f*(qxyi*(qxxk*gqxx[6]+qyyk*gqyy[6]+qzzk*gqzz[6]
-              +2.0f*(qxyk*gqxy[6]+qxzk*gqxz[6]+qyzk*gqyz[6]))
-              + qxzi*(qxxk*gqxx[7]+qyyk*gqyy[7]+qzzk*gqzz[7]
-              +2.0f*(qxyk*gqxy[7]+qxzk*gqxz[7]+qyzk*gqyz[7]))
-              + qyzi*(qxxk*gqxx[9]+qyyk*gqyy[9]+qzzk*gqzz[9]
-              +2.0f*(qxyk*gqxy[9]+qxzk*gqxz[9]+qyzk*gqyz[9])));
- 
-    desymdx = ci * ck * gc[2] - (uxi*(uxk*gux[5]+uyk*guy[5]+uzk*guz[5])
-                              +  uyi*(uxk*gux[6]+uyk*guy[6]+uzk*guz[6])
-                              +  uzi*(uxk*gux[7]+uyk*guy[7]+uzk*guz[7]));
-
-    dewidx = ci*(uxk*gc[5]+uyk*gc[6]+uzk*gc[7])
-                      -ck*(uxi*gux[2]+uyi*guy[2]+uzi*guz[2])
-                 +ci*(qxxk*gc[11]+qyyk*gc[14]+qzzk*gc[16]
-              +2.0f*(qxyk*gc[12]+qxzk*gc[13]+qyzk*gc[15]))
-                 +ck*(qxxi*gqxx[2]+qyyi*gqyy[2]+qzzi*gqzz[2]
-              +2.0f*(qxyi*gqxy[2]+qxzi*gqxz[2]+qyzi*gqyz[2]))
-               - uxi*(qxxk*gux[11]+qyyk*gux[14]+qzzk*gux[16]
-              +2.0f*(qxyk*gux[12]+qxzk*gux[13]+qyzk*gux[15]))
-               - uyi*(qxxk*guy[11]+qyyk*guy[14]+qzzk*guy[16]
-              +2.0f*(qxyk*guy[12]+qxzk*guy[13]+qyzk*guy[15]))
-               - uzi*(qxxk*guz[11]+qyyk*guz[14]+qzzk*guz[16]
-              +2.0f*(qxyk*guz[12]+qxzk*guz[13]+qyzk*guz[15]))
-               + uxk*(qxxi*gqxx[5]+qyyi*gqyy[5]+qzzi*gqzz[5]
-              +2.0f*(qxyi*gqxy[5]+qxzi*gqxz[5]+qyzi*gqyz[5]))
-               + uyk*(qxxi*gqxx[6]+qyyi*gqyy[6]+qzzi*gqzz[6]
-              +2.0f*(qxyi*gqxy[6]+qxzi*gqxz[6]+qyzi*gqyz[6]))
-               + uzk*(qxxi*gqxx[7]+qyyi*gqyy[7]+qzzi*gqzz[7]
-              +2.0f*(qxyi*gqxy[7]+qxzi*gqxz[7]+qyzi*gqyz[7]))
-              + qxxi*(qxxk*gqxx[11]+qyyk*gqxx[14]+qzzk*gqxx[16]
-              +2.0f*(qxyk*gqxx[12]+qxzk*gqxx[13]+qyzk*gqxx[15]))
-              + qyyi*(qxxk*gqyy[11]+qyyk*gqyy[14]+qzzk*gqyy[16]
-              +2.0f*(qxyk*gqyy[12]+qxzk*gqyy[13]+qyzk*gqyy[15]))
-              + qzzi*(qxxk*gqzz[11]+qyyk*gqzz[14]+qzzk*gqzz[16]
-              +2.0f*(qxyk*gqzz[12]+qxzk*gqzz[13]+qyzk*gqzz[15]))
-       + 2.0f*(qxyi*(qxxk*gqxy[11]+qyyk*gqxy[14]+qzzk*gqxy[16]
-              +2.0f*(qxyk*gqxy[12]+qxzk*gqxy[13]+qyzk*gqxy[15]))
-              + qxzi*(qxxk*gqxz[11]+qyyk*gqxz[14]+qzzk*gqxz[16]
-              +2.0f*(qxyk*gqxz[12]+qxzk*gqxz[13]+qyzk*gqxz[15]))
-              + qyzi*(qxxk*gqyz[11]+qyyk*gqyz[14]+qzzk*gqyz[16]
-              +2.0f*(qxyk*gqyz[12]+qxzk*gqyz[13]+qyzk*gqyz[15])));
-
-    dewkdx = ci*(uxk*gux[2]+uyk*guy[2]+uzk*guz[2])
-                      -ck*(uxi*gc[5]+uyi*gc[6]+uzi*gc[7])
-                 +ci*(qxxk*gqxx[2]+qyyk*gqyy[2]+qzzk*gqzz[2]
-              +2.0f*(qxyk*gqxy[2]+qxzk*gqxz[2]+qyzk*gqyz[2]))
-                 +ck*(qxxi*gc[11]+qyyi*gc[14]+qzzi*gc[16]
-              +2.0f*(qxyi*gc[12]+qxzi*gc[13]+qyzi*gc[15]))
-               - uxi*(qxxk*gqxx[5]+qyyk*gqyy[5]+qzzk*gqzz[5]
-              +2.0f*(qxyk*gqxy[5]+qxzk*gqxz[5]+qyzk*gqyz[5]))
-               - uyi*(qxxk*gqxx[6]+qyyk*gqyy[6]+qzzk*gqzz[6]
-              +2.0f*(qxyk*gqxy[6]+qxzk*gqxz[6]+qyzk*gqyz[6]))
-               - uzi*(qxxk*gqxx[7]+qyyk*gqyy[7]+qzzk*gqzz[7]
-              +2.0f*(qxyk*gqxy[7]+qxzk*gqxz[7]+qyzk*gqyz[7]))
-               + uxk*(qxxi*gux[11]+qyyi*gux[14]+qzzi*gux[16]
-              +2.0f*(qxyi*gux[12]+qxzi*gux[13]+qyzi*gux[15]))
-               + uyk*(qxxi*guy[11]+qyyi*guy[14]+qzzi*guy[16]
-              +2.0f*(qxyi*guy[12]+qxzi*guy[13]+qyzi*guy[15]))
-               + uzk*(qxxi*guz[11]+qyyi*guz[14]+qzzi*guz[16]
-              +2.0f*(qxyi*guz[12]+qxzi*guz[13]+qyzi*guz[15]))
-              + qxxi*(qxxk*gqxx[11]+qyyk*gqyy[11]+qzzk*gqzz[11]
-              +2.0f*(qxyk*gqxy[11]+qxzk*gqxz[11]+qyzk*gqyz[11]))
-              + qyyi*(qxxk*gqxx[14]+qyyk*gqyy[14]+qzzk*gqzz[14]
-              +2.0f*(qxyk*gqxy[14]+qxzk*gqxz[14]+qyzk*gqyz[14]))
-              + qzzi*(qxxk*gqxx[16]+qyyk*gqyy[16]+qzzk*gqzz[16]
-              +2.0f*(qxyk*gqxy[16]+qxzk*gqxz[16]+qyzk*gqyz[16]))
-       + 2.0f*(qxyi*(qxxk*gqxx[12]+qyyk*gqyy[12]+qzzk*gqzz[12]
-              +2.0f*(qxyk*gqxy[12]+qxzk*gqxz[12]+qyzk*gqyz[12]))
-              + qxzi*(qxxk*gqxx[13]+qyyk*gqyy[13]+qzzk*gqzz[13]
-              +2.0f*(qxyk*gqxy[13]+qxzk*gqxz[13]+qyzk*gqyz[13]))
-              + qyzi*(qxxk*gqxx[15]+qyyk*gqyy[15]+qzzk*gqzz[15]
-              +2.0f*(qxyk*gqxy[15]+qxzk*gqxz[15]+qyzk*gqyz[15])));
+    dewkdx = ci*(uxk*gux2+uyk*guy2+uzk*guz2)
+                      -ck*(uxi*gc5+uyi*gc6+uzi*gc7)
+                 +ci*(qxxk*gqxx2+qyyk*gqyy2+qzzk*gqzz2
+              +2.0f*(qxyk*gqxy2+qxzk*gqxz2+qyzk*gqyz2))
+                 +ck*(qxxi*gc11+qyyi*gc14+qzzi*gc16
+              +2.0f*(qxyi*gc12+qxzi*gc13+qyzi*gc15))
+               - uxi*(qxxk*gqxx5+qyyk*gqyy5+qzzk*gqzz5
+              +2.0f*(qxyk*gqxy5+qxzk*gqxz5+qyzk*gqyz5))
+               - uyi*(qxxk*gqxx6+qyyk*gqyy6+qzzk*gqzz6
+              +2.0f*(qxyk*gqxy6+qxzk*gqxz6+qyzk*gqyz6))
+               - uzi*(qxxk*gqxx7+qyyk*gqyy7+qzzk*gqzz7
+              +2.0f*(qxyk*gqxy7+qxzk*gqxz7+qyzk*gqyz7))
+               + uxk*(qxxi*gux11+qyyi*gux14+qzzi*gux16
+              +2.0f*(qxyi*gux12+qxzi*gux13+qyzi*gux15))
+               + uyk*(qxxi*guy11+qyyi*guy14+qzzi*guy16
+              +2.0f*(qxyi*guy12+qxzi*guy13+qyzi*guy15))
+               + uzk*(qxxi*guz11+qyyi*guz14+qzzi*guz16
+              +2.0f*(qxyi*guz12+qxzi*guz13+qyzi*guz15))
+              + qxxi*(qxxk*gqxx11+qyyk*gqyy11+qzzk*gqzz11
+              +2.0f*(qxyk*gqxy11+qxzk*gqxz11+qyzk*gqyz11))
+              + qyyi*(qxxk*gqxx14+qyyk*gqyy14+qzzk*gqzz14
+              +2.0f*(qxyk*gqxy14+qxzk*gqxz14+qyzk*gqyz14))
+              + qzzi*(qxxk*gqxx16+qyyk*gqyy16+qzzk*gqzz16
+              +2.0f*(qxyk*gqxy16+qxzk*gqxz16+qyzk*gqyz16))
+       + 2.0f*(qxyi*(qxxk*gqxx12+qyyk*gqyy12+qzzk*gqzz12
+              +2.0f*(qxyk*gqxy12+qxzk*gqxz12+qyzk*gqyz12))
+              + qxzi*(qxxk*gqxx13+qyyk*gqyy13+qzzk*gqzz13
+              +2.0f*(qxyk*gqxy13+qxzk*gqxz13+qyzk*gqyz13))
+              + qyzi*(qxxk*gqxx15+qyyk*gqyy15+qzzk*gqzz15
+              +2.0f*(qxyk*gqxy15+qxzk*gqxz15+qyzk*gqyz15)));
 
     dedx = desymdx + 0.5f*(dewidx + dewkdx);
- 
-    desymdy = ci * ck * gc[3]
-                           - (uxi*(uxk*gux[6]+uyk*guy[6]+uzk*guz[6])
-                             +uyi*(uxk*gux[8]+uyk*guy[8]+uzk*guz[8])
-                             +uzi*(uxk*gux[9]+uyk*guy[9]+uzk*guz[9]));
 
-    dewidy = ci*(uxk*gc[6]+uyk*gc[8]+uzk*gc[9])
-                      -ck*(uxi*gux[3]+uyi*guy[3]+uzi*guz[3])
-                 +ci*(qxxk*gc[12]+qyyk*gc[17]+qzzk*gc[19]
-              +2.0f*(qxyk*gc[14]+qxzk*gc[15]+qyzk*gc[18]))
-                 +ck*(qxxi*gqxx[3]+qyyi*gqyy[3]+qzzi*gqzz[3]
-              +2.0f*(qxyi*gqxy[3]+qxzi*gqxz[3]+qyzi*gqyz[3]))
-               - uxi*(qxxk*gux[12]+qyyk*gux[17]+qzzk*gux[19]
-              +2.0f*(qxyk*gux[14]+qxzk*gux[15]+qyzk*gux[18]))
-               - uyi*(qxxk*guy[12]+qyyk*guy[17]+qzzk*guy[19]
-              +2.0f*(qxyk*guy[14]+qxzk*guy[15]+qyzk*guy[18]))
-               - uzi*(qxxk*guz[12]+qyyk*guz[17]+qzzk*guz[19]
-              +2.0f*(qxyk*guz[14]+qxzk*guz[15]+qyzk*guz[18]))
-               + uxk*(qxxi*gqxx[6]+qyyi*gqyy[6]+qzzi*gqzz[6]
-              +2.0f*(qxyi*gqxy[6]+qxzi*gqxz[6]+qyzi*gqyz[6]))
-               + uyk*(qxxi*gqxx[8]+qyyi*gqyy[8]+qzzi*gqzz[8]
-              +2.0f*(qxyi*gqxy[8]+qxzi*gqxz[8]+qyzi*gqyz[8]))
-               + uzk*(qxxi*gqxx[9]+qyyi*gqyy[9]+qzzi*gqzz[9]
-              +2.0f*(qxyi*gqxy[9]+qxzi*gqxz[9]+qyzi*gqyz[9]))
-              + qxxi*(qxxk*gqxx[12]+qyyk*gqxx[17]+qzzk*gqxx[19]
-              +2.0f*(qxyk*gqxx[14]+qxzk*gqxx[15]+qyzk*gqxx[18]))
-              + qyyi*(qxxk*gqyy[12]+qyyk*gqyy[17]+qzzk*gqyy[19]
-              +2.0f*(qxyk*gqyy[14]+qxzk*gqyy[15]+qyzk*gqyy[18]))
-              + qzzi*(qxxk*gqzz[12]+qyyk*gqzz[17]+qzzk*gqzz[19]
-              +2.0f*(qxyk*gqzz[14]+qxzk*gqzz[15]+qyzk*gqzz[18]))
-       + 2.0f*(qxyi*(qxxk*gqxy[12]+qyyk*gqxy[17]+qzzk*gqxy[19]
-              +2.0f*(qxyk*gqxy[14]+qxzk*gqxy[15]+qyzk*gqxy[18]))
-              + qxzi*(qxxk*gqxz[12]+qyyk*gqxz[17]+qzzk*gqxz[19]
-              +2.0f*(qxyk*gqxz[14]+qxzk*gqxz[15]+qyzk*gqxz[18]))
-              + qyzi*(qxxk*gqyz[12]+qyyk*gqyz[17]+qzzk*gqyz[19]
-              +2.0f*(qxyk*gqyz[14]+qxzk*gqyz[15]+qyzk*gqyz[18])));
+    desymdy = ci * ck * gc3
+                           - (uxi*(uxk*gux6+uyk*guy6+uzk*guz6)
+                             +uyi*(uxk*gux8+uyk*guy8+uzk*guz8)
+                             +uzi*(uxk*gux9+uyk*guy9+uzk*guz9));
 
-    dewkdy = ci*(uxk*gux[3]+uyk*guy[3]+uzk*guz[3])
-                      -ck*(uxi*gc[6]+uyi*gc[8]+uzi*gc[9])
-                 +ci*(qxxk*gqxx[3]+qyyk*gqyy[3]+qzzk*gqzz[3]
-              +2.0f*(qxyk*gqxy[3]+qxzk*gqxz[3]+qyzk*gqyz[3]))
-                 +ck*(qxxi*gc[12]+qyyi*gc[17]+qzzi*gc[19]
-              +2.0f*(qxyi*gc[14]+qxzi*gc[15]+qyzi*gc[18]))
-               - uxi*(qxxk*gqxx[6]+qyyk*gqyy[6]+qzzk*gqzz[6]
-              +2.0f*(qxyk*gqxy[6]+qxzk*gqxz[6]+qyzk*gqyz[6]))
-               - uyi*(qxxk*gqxx[8]+qyyk*gqyy[8]+qzzk*gqzz[8]
-              +2.0f*(qxyk*gqxy[8]+qxzk*gqxz[8]+qyzk*gqyz[8]))
-               - uzi*(qxxk*gqxx[9]+qyyk*gqyy[9]+qzzk*gqzz[9]
-              +2.0f*(qxyk*gqxy[9]+qxzk*gqxz[9]+qyzk*gqyz[9]))
-               + uxk*(qxxi*gux[12]+qyyi*gux[17]+qzzi*gux[19]
-              +2.0f*(qxyi*gux[14]+qxzi*gux[15]+qyzi*gux[18]))
-               + uyk*(qxxi*guy[12]+qyyi*guy[17]+qzzi*guy[19]
-              +2.0f*(qxyi*guy[14]+qxzi*guy[15]+qyzi*guy[18]))
-               + uzk*(qxxi*guz[12]+qyyi*guz[17]+qzzi*guz[19]
-              +2.0f*(qxyi*guz[14]+qxzi*guz[15]+qyzi*guz[18]))
-              + qxxi*(qxxk*gqxx[12]+qyyk*gqyy[12]+qzzk*gqzz[12]
-              +2.0f*(qxyk*gqxy[12]+qxzk*gqxz[12]+qyzk*gqyz[12]))
-              + qyyi*(qxxk*gqxx[17]+qyyk*gqyy[17]+qzzk*gqzz[17]
-              +2.0f*(qxyk*gqxy[17]+qxzk*gqxz[17]+qyzk*gqyz[17]))
-              + qzzi*(qxxk*gqxx[19]+qyyk*gqyy[19]+qzzk*gqzz[19]
-              +2.0f*(qxyk*gqxy[19]+qxzk*gqxz[19]+qyzk*gqyz[19]))
-       + 2.0f*(qxyi*(qxxk*gqxx[14]+qyyk*gqyy[14]+qzzk*gqzz[14]
-              +2.0f*(qxyk*gqxy[14]+qxzk*gqxz[14]+qyzk*gqyz[14]))
-              + qxzi*(qxxk*gqxx[15]+qyyk*gqyy[15]+qzzk*gqzz[15]
-              +2.0f*(qxyk*gqxy[15]+qxzk*gqxz[15]+qyzk*gqyz[15]))
-              + qyzi*(qxxk*gqxx[18]+qyyk*gqyy[18]+qzzk*gqzz[18]
-              +2.0f*(qxyk*gqxy[18]+qxzk*gqxz[18]+qyzk*gqyz[18])));
+    dewidy = ci*(uxk*gc6+uyk*gc8+uzk*gc9)
+                      -ck*(uxi*gux3+uyi*guy3+uzi*guz3)
+                 +ci*(qxxk*gc12+qyyk*gc17+qzzk*gc19
+              +2.0f*(qxyk*gc14+qxzk*gc15+qyzk*gc18))
+                 +ck*(qxxi*gqxx3+qyyi*gqyy3+qzzi*gqzz3
+              +2.0f*(qxyi*gqxy3+qxzi*gqxz3+qyzi*gqyz3))
+               - uxi*(qxxk*gux12+qyyk*gux17+qzzk*gux19
+              +2.0f*(qxyk*gux14+qxzk*gux15+qyzk*gux18))
+               - uyi*(qxxk*guy12+qyyk*guy17+qzzk*guy19
+              +2.0f*(qxyk*guy14+qxzk*guy15+qyzk*guy18))
+               - uzi*(qxxk*guz12+qyyk*guz17+qzzk*guz19
+              +2.0f*(qxyk*guz14+qxzk*guz15+qyzk*guz18))
+               + uxk*(qxxi*gqxx6+qyyi*gqyy6+qzzi*gqzz6
+              +2.0f*(qxyi*gqxy6+qxzi*gqxz6+qyzi*gqyz6))
+               + uyk*(qxxi*gqxx8+qyyi*gqyy8+qzzi*gqzz8
+              +2.0f*(qxyi*gqxy8+qxzi*gqxz8+qyzi*gqyz8))
+               + uzk*(qxxi*gqxx9+qyyi*gqyy9+qzzi*gqzz9
+              +2.0f*(qxyi*gqxy9+qxzi*gqxz9+qyzi*gqyz9))
+              + qxxi*(qxxk*gqxx12+qyyk*gqxx17+qzzk*gqxx19
+              +2.0f*(qxyk*gqxx14+qxzk*gqxx15+qyzk*gqxx18))
+              + qyyi*(qxxk*gqyy12+qyyk*gqyy17+qzzk*gqyy19
+              +2.0f*(qxyk*gqyy14+qxzk*gqyy15+qyzk*gqyy18))
+              + qzzi*(qxxk*gqzz12+qyyk*gqzz17+qzzk*gqzz19
+              +2.0f*(qxyk*gqzz14+qxzk*gqzz15+qyzk*gqzz18))
+       + 2.0f*(qxyi*(qxxk*gqxy12+qyyk*gqxy17+qzzk*gqxy19
+              +2.0f*(qxyk*gqxy14+qxzk*gqxy15+qyzk*gqxy18))
+              + qxzi*(qxxk*gqxz12+qyyk*gqxz17+qzzk*gqxz19
+              +2.0f*(qxyk*gqxz14+qxzk*gqxz15+qyzk*gqxz18))
+              + qyzi*(qxxk*gqyz12+qyyk*gqyz17+qzzk*gqyz19
+              +2.0f*(qxyk*gqyz14+qxzk*gqyz15+qyzk*gqyz18)));
+
+    dewkdy = ci*(uxk*gux3+uyk*guy3+uzk*guz3)
+                      -ck*(uxi*gc6+uyi*gc8+uzi*gc9)
+                 +ci*(qxxk*gqxx3+qyyk*gqyy3+qzzk*gqzz3
+              +2.0f*(qxyk*gqxy3+qxzk*gqxz3+qyzk*gqyz3))
+                 +ck*(qxxi*gc12+qyyi*gc17+qzzi*gc19
+              +2.0f*(qxyi*gc14+qxzi*gc15+qyzi*gc18))
+               - uxi*(qxxk*gqxx6+qyyk*gqyy6+qzzk*gqzz6
+              +2.0f*(qxyk*gqxy6+qxzk*gqxz6+qyzk*gqyz6))
+               - uyi*(qxxk*gqxx8+qyyk*gqyy8+qzzk*gqzz8
+              +2.0f*(qxyk*gqxy8+qxzk*gqxz8+qyzk*gqyz8))
+               - uzi*(qxxk*gqxx9+qyyk*gqyy9+qzzk*gqzz9
+              +2.0f*(qxyk*gqxy9+qxzk*gqxz9+qyzk*gqyz9))
+               + uxk*(qxxi*gux12+qyyi*gux17+qzzi*gux19
+              +2.0f*(qxyi*gux14+qxzi*gux15+qyzi*gux18))
+               + uyk*(qxxi*guy12+qyyi*guy17+qzzi*guy19
+              +2.0f*(qxyi*guy14+qxzi*guy15+qyzi*guy18))
+               + uzk*(qxxi*guz12+qyyi*guz17+qzzi*guz19
+              +2.0f*(qxyi*guz14+qxzi*guz15+qyzi*guz18))
+              + qxxi*(qxxk*gqxx12+qyyk*gqyy12+qzzk*gqzz12
+              +2.0f*(qxyk*gqxy12+qxzk*gqxz12+qyzk*gqyz12))
+              + qyyi*(qxxk*gqxx17+qyyk*gqyy17+qzzk*gqzz17
+              +2.0f*(qxyk*gqxy17+qxzk*gqxz17+qyzk*gqyz17))
+              + qzzi*(qxxk*gqxx19+qyyk*gqyy19+qzzk*gqzz19
+              +2.0f*(qxyk*gqxy19+qxzk*gqxz19+qyzk*gqyz19))
+       + 2.0f*(qxyi*(qxxk*gqxx14+qyyk*gqyy14+qzzk*gqzz14
+              +2.0f*(qxyk*gqxy14+qxzk*gqxz14+qyzk*gqyz14))
+              + qxzi*(qxxk*gqxx15+qyyk*gqyy15+qzzk*gqzz15
+              +2.0f*(qxyk*gqxy15+qxzk*gqxz15+qyzk*gqyz15))
+              + qyzi*(qxxk*gqxx18+qyyk*gqyy18+qzzk*gqzz18
+              +2.0f*(qxyk*gqxy18+qxzk*gqxz18+qyzk*gqyz18)));
 
     dedy = desymdy + 0.5f*(dewidy + dewkdy);
- 
-    desymdz = ci * ck * gc[4]
-                           - (uxi*(uxk*gux[7]+uyk*guy[7]+uzk*guz[7])
-                             +uyi*(uxk*gux[9]+uyk*guy[9]+uzk*guz[9])
-                             +uzi*(uxk*gux[10]+uyk*guy[10]+uzk*guz[10]));
 
-    dewidz = ci*(uxk*gc[7]+uyk*gc[9]+uzk*gc[10])
-                      -ck*(uxi*gux[4]+uyi*guy[4]+uzi*guz[4])
-                 +ci*(qxxk*gc[13]+qyyk*gc[18]+qzzk*gc[20]
-              +2.0f*(qxyk*gc[15]+qxzk*gc[16]+qyzk*gc[19]))
-                 +ck*(qxxi*gqxx[4]+qyyi*gqyy[4]+qzzi*gqzz[4]
-              +2.0f*(qxyi*gqxy[4]+qxzi*gqxz[4]+qyzi*gqyz[4]))
-               - uxi*(qxxk*gux[13]+qyyk*gux[18]+qzzk*gux[20]
-              +2.0f*(qxyk*gux[15]+qxzk*gux[16]+qyzk*gux[19]))
-               - uyi*(qxxk*guy[13]+qyyk*guy[18]+qzzk*guy[20]
-              +2.0f*(qxyk*guy[15]+qxzk*guy[16]+qyzk*guy[19]))
-               - uzi*(qxxk*guz[13]+qyyk*guz[18]+qzzk*guz[20]
-              +2.0f*(qxyk*guz[15]+qxzk*guz[16]+qyzk*guz[19]))
-               + uxk*(qxxi*gqxx[7]+qyyi*gqyy[7]+qzzi*gqzz[7]
-              +2.0f*(qxyi*gqxy[7]+qxzi*gqxz[7]+qyzi*gqyz[7]))
-               + uyk*(qxxi*gqxx[9]+qyyi*gqyy[9]+qzzi*gqzz[9]
-              +2.0f*(qxyi*gqxy[9]+qxzi*gqxz[9]+qyzi*gqyz[9]))
-               + uzk*(qxxi*gqxx[10]+qyyi*gqyy[10]+qzzi*gqzz[10]
-              +2.0f*(qxyi*gqxy[10]+qxzi*gqxz[10]+qyzi*gqyz[10]))
-              + qxxi*(qxxk*gqxx[13]+qyyk*gqxx[18]+qzzk*gqxx[20]
-              +2.0f*(qxyk*gqxx[15]+qxzk*gqxx[16]+qyzk*gqxx[19]))
-              + qyyi*(qxxk*gqyy[13]+qyyk*gqyy[18]+qzzk*gqyy[20]
-              +2.0f*(qxyk*gqyy[15]+qxzk*gqyy[16]+qyzk*gqyy[19]))
-              + qzzi*(qxxk*gqzz[13]+qyyk*gqzz[18]+qzzk*gqzz[20]
-              +2.0f*(qxyk*gqzz[15]+qxzk*gqzz[16]+qyzk*gqzz[19]))
-       + 2.0f*(qxyi*(qxxk*gqxy[13]+qyyk*gqxy[18]+qzzk*gqxy[20]
-              +2.0f*(qxyk*gqxy[15]+qxzk*gqxy[16]+qyzk*gqxy[19]))
-              + qxzi*(qxxk*gqxz[13]+qyyk*gqxz[18]+qzzk*gqxz[20]
-              +2.0f*(qxyk*gqxz[15]+qxzk*gqxz[16]+qyzk*gqxz[19]))
-              + qyzi*(qxxk*gqyz[13]+qyyk*gqyz[18]+qzzk*gqyz[20]
-              +2.0f*(qxyk*gqyz[15]+qxzk*gqyz[16]+qyzk*gqyz[19])));
+    desymdz = ci * ck * gc4
+                           - (uxi*(uxk*gux7+uyk*guy7+uzk*guz7)
+                             +uyi*(uxk*gux9+uyk*guy9+uzk*guz9)
+                             +uzi*(uxk*gux10+uyk*guy10+uzk*guz10));
 
-    dewkdz = ci*(uxk*gux[4]+uyk*guy[4]+uzk*guz[4])
-                      -ck*(uxi*gc[7]+uyi*gc[9]+uzi*gc[10])
-                 +ci*(qxxk*gqxx[4]+qyyk*gqyy[4]+qzzk*gqzz[4]
-              +2.0f*(qxyk*gqxy[4]+qxzk*gqxz[4]+qyzk*gqyz[4]))
-                 +ck*(qxxi*gc[13]+qyyi*gc[18]+qzzi*gc[20]
-              +2.0f*(qxyi*gc[15]+qxzi*gc[16]+qyzi*gc[19]))
-               - uxi*(qxxk*gqxx[7]+qyyk*gqyy[7]+qzzk*gqzz[7]
-              +2.0f*(qxyk*gqxy[7]+qxzk*gqxz[7]+qyzk*gqyz[7]))
-               - uyi*(qxxk*gqxx[9]+qyyk*gqyy[9]+qzzk*gqzz[9]
-              +2.0f*(qxyk*gqxy[9]+qxzk*gqxz[9]+qyzk*gqyz[9]))
-               - uzi*(qxxk*gqxx[10]+qyyk*gqyy[10]+qzzk*gqzz[10]
-              +2.0f*(qxyk*gqxy[10]+qxzk*gqxz[10]+qyzk*gqyz[10]))
-               + uxk*(qxxi*gux[13]+qyyi*gux[18]+qzzi*gux[20]
-              +2.0f*(qxyi*gux[15]+qxzi*gux[16]+qyzi*gux[19]))
-               + uyk*(qxxi*guy[13]+qyyi*guy[18]+qzzi*guy[20]
-              +2.0f*(qxyi*guy[15]+qxzi*guy[16]+qyzi*guy[19]))
-               + uzk*(qxxi*guz[13]+qyyi*guz[18]+qzzi*guz[20]
-              +2.0f*(qxyi*guz[15]+qxzi*guz[16]+qyzi*guz[19]))
-              + qxxi*(qxxk*gqxx[13]+qyyk*gqyy[13]+qzzk*gqzz[13]
-              +2.0f*(qxyk*gqxy[13]+qxzk*gqxz[13]+qyzk*gqyz[13]))
-              + qyyi*(qxxk*gqxx[18]+qyyk*gqyy[18]+qzzk*gqzz[18]
-              +2.0f*(qxyk*gqxy[18]+qxzk*gqxz[18]+qyzk*gqyz[18]))
-              + qzzi*(qxxk*gqxx[20]+qyyk*gqyy[20]+qzzk*gqzz[20]
-              +2.0f*(qxyk*gqxy[20]+qxzk*gqxz[20]+qyzk*gqyz[20]))
-       + 2.0f*(qxyi*(qxxk*gqxx[15]+qyyk*gqyy[15]+qzzk*gqzz[15]
-              +2.0f*(qxyk*gqxy[15]+qxzk*gqxz[15]+qyzk*gqyz[15]))
-              + qxzi*(qxxk*gqxx[16]+qyyk*gqyy[16]+qzzk*gqzz[16]
-              +2.0f*(qxyk*gqxy[16]+qxzk*gqxz[16]+qyzk*gqyz[16]))
-              + qyzi*(qxxk*gqxx[19]+qyyk*gqyy[19]+qzzk*gqzz[19]
-              +2.0f*(qxyk*gqxy[19]+qxzk*gqxz[19]+qyzk*gqyz[19])));
+    dewidz = ci*(uxk*gc7+uyk*gc9+uzk*gc10)
+                      -ck*(uxi*gux4+uyi*guy4+uzi*guz4)
+                 +ci*(qxxk*gc13+qyyk*gc18+qzzk*gc20
+              +2.0f*(qxyk*gc15+qxzk*gc16+qyzk*gc19))
+                 +ck*(qxxi*gqxx4+qyyi*gqyy4+qzzi*gqzz4
+              +2.0f*(qxyi*gqxy4+qxzi*gqxz4+qyzi*gqyz4))
+               - uxi*(qxxk*gux13+qyyk*gux18+qzzk*gux20
+              +2.0f*(qxyk*gux15+qxzk*gux16+qyzk*gux19))
+               - uyi*(qxxk*guy13+qyyk*guy18+qzzk*guy20
+              +2.0f*(qxyk*guy15+qxzk*guy16+qyzk*guy19))
+               - uzi*(qxxk*guz13+qyyk*guz18+qzzk*guz20
+              +2.0f*(qxyk*guz15+qxzk*guz16+qyzk*guz19))
+               + uxk*(qxxi*gqxx7+qyyi*gqyy7+qzzi*gqzz7
+              +2.0f*(qxyi*gqxy7+qxzi*gqxz7+qyzi*gqyz7))
+               + uyk*(qxxi*gqxx9+qyyi*gqyy9+qzzi*gqzz9
+              +2.0f*(qxyi*gqxy9+qxzi*gqxz9+qyzi*gqyz9))
+               + uzk*(qxxi*gqxx10+qyyi*gqyy10+qzzi*gqzz10
+              +2.0f*(qxyi*gqxy10+qxzi*gqxz10+qyzi*gqyz10))
+              + qxxi*(qxxk*gqxx13+qyyk*gqxx18+qzzk*gqxx20
+              +2.0f*(qxyk*gqxx15+qxzk*gqxx16+qyzk*gqxx19))
+              + qyyi*(qxxk*gqyy13+qyyk*gqyy18+qzzk*gqyy20
+              +2.0f*(qxyk*gqyy15+qxzk*gqyy16+qyzk*gqyy19))
+              + qzzi*(qxxk*gqzz13+qyyk*gqzz18+qzzk*gqzz20
+              +2.0f*(qxyk*gqzz15+qxzk*gqzz16+qyzk*gqzz19))
+       + 2.0f*(qxyi*(qxxk*gqxy13+qyyk*gqxy18+qzzk*gqxy20
+              +2.0f*(qxyk*gqxy15+qxzk*gqxy16+qyzk*gqxy19))
+              + qxzi*(qxxk*gqxz13+qyyk*gqxz18+qzzk*gqxz20
+              +2.0f*(qxyk*gqxz15+qxzk*gqxz16+qyzk*gqxz19))
+              + qyzi*(qxxk*gqyz13+qyyk*gqyz18+qzzk*gqyz20
+              +2.0f*(qxyk*gqyz15+qxzk*gqyz16+qyzk*gqyz19)));
+
+    dewkdz = ci*(uxk*gux4+uyk*guy4+uzk*guz4)
+                      -ck*(uxi*gc7+uyi*gc9+uzi*gc10)
+                 +ci*(qxxk*gqxx4+qyyk*gqyy4+qzzk*gqzz4
+              +2.0f*(qxyk*gqxy4+qxzk*gqxz4+qyzk*gqyz4))
+                 +ck*(qxxi*gc13+qyyi*gc18+qzzi*gc20
+              +2.0f*(qxyi*gc15+qxzi*gc16+qyzi*gc19))
+               - uxi*(qxxk*gqxx7+qyyk*gqyy7+qzzk*gqzz7
+              +2.0f*(qxyk*gqxy7+qxzk*gqxz7+qyzk*gqyz7))
+               - uyi*(qxxk*gqxx9+qyyk*gqyy9+qzzk*gqzz9
+              +2.0f*(qxyk*gqxy9+qxzk*gqxz9+qyzk*gqyz9))
+               - uzi*(qxxk*gqxx10+qyyk*gqyy10+qzzk*gqzz10
+              +2.0f*(qxyk*gqxy10+qxzk*gqxz10+qyzk*gqyz10))
+               + uxk*(qxxi*gux13+qyyi*gux18+qzzi*gux20
+              +2.0f*(qxyi*gux15+qxzi*gux16+qyzi*gux19))
+               + uyk*(qxxi*guy13+qyyi*guy18+qzzi*guy20
+              +2.0f*(qxyi*guy15+qxzi*guy16+qyzi*guy19))
+               + uzk*(qxxi*guz13+qyyi*guz18+qzzi*guz20
+              +2.0f*(qxyi*guz15+qxzi*guz16+qyzi*guz19))
+              + qxxi*(qxxk*gqxx13+qyyk*gqyy13+qzzk*gqzz13
+              +2.0f*(qxyk*gqxy13+qxzk*gqxz13+qyzk*gqyz13))
+              + qyyi*(qxxk*gqxx18+qyyk*gqyy18+qzzk*gqzz18
+              +2.0f*(qxyk*gqxy18+qxzk*gqxz18+qyzk*gqyz18))
+              + qzzi*(qxxk*gqxx20+qyyk*gqyy20+qzzk*gqzz20
+              +2.0f*(qxyk*gqxy20+qxzk*gqxz20+qyzk*gqyz20))
+       + 2.0f*(qxyi*(qxxk*gqxx15+qyyk*gqyy15+qzzk*gqzz15
+              +2.0f*(qxyk*gqxy15+qxzk*gqxz15+qyzk*gqyz15))
+              + qxzi*(qxxk*gqxx16+qyyk*gqyy16+qzzk*gqzz16
+              +2.0f*(qxyk*gqxy16+qxzk*gqxz16+qyzk*gqyz16))
+              + qyzi*(qxxk*gqxx19+qyyk*gqyy19+qzzk*gqzz19
+              +2.0f*(qxyk*gqxy19+qxzk*gqxz19+qyzk*gqyz19)));
 
     dedz = desymdz + 0.5f*(dewidz + dewkdz);
- 
-    desymdr = ci * ck * gc[21]
-                           - (uxi*(uxk*gux[22]+uyk*guy[22]+uzk*guz[22])
-                             +uyi*(uxk*gux[23]+uyk*guy[23]+uzk*guz[23])
-                             +uzi*(uxk*gux[24]+uyk*guy[24]+uzk*guz[24]));
 
-    dewidr = ci*(uxk*gc[22]+uyk*gc[23]+uzk*gc[24])
-                      -ck*(uxi*gux[21]+uyi*guy[21]+uzi*guz[21])
-                 +ci*(qxxk*gc[25]+qyyk*gc[28]+qzzk*gc[30]
-              +2.0f*(qxyk*gc[26]+qxzk*gc[27]+qyzk*gc[29]))
-                 +ck*(qxxi*gqxx[21]+qyyi*gqyy[21]+qzzi*gqzz[21]
-              +2.0f*(qxyi*gqxy[21]+qxzi*gqxz[21]+qyzi*gqyz[21]))
-               - uxi*(qxxk*gux[25]+qyyk*gux[28]+qzzk*gux[30]
-              +2.0f*(qxyk*gux[26]+qxzk*gux[27]+qyzk*gux[29]))
-               - uyi*(qxxk*guy[25]+qyyk*guy[28]+qzzk*guy[30]
-              +2.0f*(qxyk*guy[26]+qxzk*guy[27]+qyzk*guy[29]))
-               - uzi*(qxxk*guz[25]+qyyk*guz[28]+qzzk*guz[30]
-              +2.0f*(qxyk*guz[26]+qxzk*guz[27]+qyzk*guz[29]))
-               + uxk*(qxxi*gqxx[22]+qyyi*gqyy[22]+qzzi*gqzz[22]
-              +2.0f*(qxyi*gqxy[22]+qxzi*gqxz[22]+qyzi*gqyz[22]))
-               + uyk*(qxxi*gqxx[23]+qyyi*gqyy[23]+qzzi*gqzz[23]
-              +2.0f*(qxyi*gqxy[23]+qxzi*gqxz[23]+qyzi*gqyz[23]))
-               + uzk*(qxxi*gqxx[24]+qyyi*gqyy[24]+qzzi*gqzz[24]
-              +2.0f*(qxyi*gqxy[24]+qxzi*gqxz[24]+qyzi*gqyz[24]))
-              + qxxi*(qxxk*gqxx[25]+qyyk*gqxx[28]+qzzk*gqxx[30]
-              +2.0f*(qxyk*gqxx[26]+qxzk*gqxx[27]+qyzk*gqxx[29]))
-              + qyyi*(qxxk*gqyy[25]+qyyk*gqyy[28]+qzzk*gqyy[30]
-              +2.0f*(qxyk*gqyy[26]+qxzk*gqyy[27]+qyzk*gqyy[29]))
-              + qzzi*(qxxk*gqzz[25]+qyyk*gqzz[28]+qzzk*gqzz[30]
-              +2.0f*(qxyk*gqzz[26]+qxzk*gqzz[27]+qyzk*gqzz[29]))
-              + 2.0f*(qxyi*(qxxk*gqxy[25]+qyyk*gqxy[28]+qzzk*gqxy[30]
-              +2.0f*(qxyk*gqxy[26]+qxzk*gqxy[27]+qyzk*gqxy[29]))
-              + qxzi*(qxxk*gqxz[25]+qyyk*gqxz[28]+qzzk*gqxz[30]
-              +2.0f*(qxyk*gqxz[26]+qxzk*gqxz[27]+qyzk*gqxz[29]))
-              + qyzi*(qxxk*gqyz[25]+qyyk*gqyz[28]+qzzk*gqyz[30]
-              +2.0f*(qxyk*gqyz[26]+qxzk*gqyz[27]+qyzk*gqyz[29])));
+    desymdr = ci * ck * gc21
+                           - (uxi*(uxk*gux22+uyk*guy22+uzk*guz22)
+                             +uyi*(uxk*gux23+uyk*guy23+uzk*guz23)
+                             +uzi*(uxk*gux24+uyk*guy24+uzk*guz24));
 
-    dewkdr = ci*(uxk*gux[21]+uyk*guy[21]+uzk*guz[21])
-                      -ck*(uxi*gc[22]+uyi*gc[23]+uzi*gc[24])
-                 +ci*(qxxk*gqxx[21]+qyyk*gqyy[21]+qzzk*gqzz[21]
-              +2.0f*(qxyk*gqxy[21]+qxzk*gqxz[21]+qyzk*gqyz[21]))
-                 +ck*(qxxi*gc[25]+qyyi*gc[28]+qzzi*gc[30]
-              +2.0f*(qxyi*gc[26]+qxzi*gc[27]+qyzi*gc[29]))
-               - uxi*(qxxk*gqxx[22]+qyyk*gqyy[22]+qzzk*gqzz[22]
-              +2.0f*(qxyk*gqxy[22]+qxzk*gqxz[22]+qyzk*gqyz[22]))
-               - uyi*(qxxk*gqxx[23]+qyyk*gqyy[23]+qzzk*gqzz[23]
-              +2.0f*(qxyk*gqxy[23]+qxzk*gqxz[23]+qyzk*gqyz[23]))
-               - uzi*(qxxk*gqxx[24]+qyyk*gqyy[24]+qzzk*gqzz[24]
-              +2.0f*(qxyk*gqxy[24]+qxzk*gqxz[24]+qyzk*gqyz[24]))
-               + uxk*(qxxi*gux[25]+qyyi*gux[28]+qzzi*gux[30]
-              +2.0f*(qxyi*gux[26]+qxzi*gux[27]+qyzi*gux[29]))
-               + uyk*(qxxi*guy[25]+qyyi*guy[28]+qzzi*guy[30]
-              +2.0f*(qxyi*guy[26]+qxzi*guy[27]+qyzi*guy[29]))
-               + uzk*(qxxi*guz[25]+qyyi*guz[28]+qzzi*guz[30]
-              +2.0f*(qxyi*guz[26]+qxzi*guz[27]+qyzi*guz[29]))
-              + qxxi*(qxxk*gqxx[25]+qyyk*gqyy[25]+qzzk*gqzz[25]
-              +2.0f*(qxyk*gqxy[25]+qxzk*gqxz[25]+qyzk*gqyz[25]))
-              + qyyi*(qxxk*gqxx[28]+qyyk*gqyy[28]+qzzk*gqzz[28]
-              +2.0f*(qxyk*gqxy[28]+qxzk*gqxz[28]+qyzk*gqyz[28]))
-              + qzzi*(qxxk*gqxx[30]+qyyk*gqyy[30]+qzzk*gqzz[30]
-              +2.0f*(qxyk*gqxy[30]+qxzk*gqxz[30]+qyzk*gqyz[30]))
-              + 2.0f*(qxyi*(qxxk*gqxx[26]+qyyk*gqyy[26]+qzzk*gqzz[26]
-              +2.0f*(qxyk*gqxy[26]+qxzk*gqxz[26]+qyzk*gqyz[26]))
-              + qxzi*(qxxk*gqxx[27]+qyyk*gqyy[27]+qzzk*gqzz[27]
-              +2.0f*(qxyk*gqxy[27]+qxzk*gqxz[27]+qyzk*gqyz[27]))
-              + qyzi*(qxxk*gqxx[29]+qyyk*gqyy[29]+qzzk*gqzz[29]
-              +2.0f*(qxyk*gqxy[29]+qxzk*gqxz[29]+qyzk*gqyz[29])));
+    dewidr = ci*(uxk*gc22+uyk*gc23+uzk*gc24)
+                      -ck*(uxi*gux21+uyi*guy21+uzi*guz21)
+                 +ci*(qxxk*gc25+qyyk*gc28+qzzk*gc30
+              +2.0f*(qxyk*gc26+qxzk*gc27+qyzk*gc29))
+                 +ck*(qxxi*gqxx21+qyyi*gqyy21+qzzi*gqzz21
+              +2.0f*(qxyi*gqxy21+qxzi*gqxz21+qyzi*gqyz21))
+               - uxi*(qxxk*gux25+qyyk*gux28+qzzk*gux30
+              +2.0f*(qxyk*gux26+qxzk*gux27+qyzk*gux29))
+               - uyi*(qxxk*guy25+qyyk*guy28+qzzk*guy30
+              +2.0f*(qxyk*guy26+qxzk*guy27+qyzk*guy29))
+               - uzi*(qxxk*guz25+qyyk*guz28+qzzk*guz30
+              +2.0f*(qxyk*guz26+qxzk*guz27+qyzk*guz29))
+               + uxk*(qxxi*gqxx22+qyyi*gqyy22+qzzi*gqzz22
+              +2.0f*(qxyi*gqxy22+qxzi*gqxz22+qyzi*gqyz22))
+               + uyk*(qxxi*gqxx23+qyyi*gqyy23+qzzi*gqzz23
+              +2.0f*(qxyi*gqxy23+qxzi*gqxz23+qyzi*gqyz23))
+               + uzk*(qxxi*gqxx24+qyyi*gqyy24+qzzi*gqzz24
+              +2.0f*(qxyi*gqxy24+qxzi*gqxz24+qyzi*gqyz24))
+              + qxxi*(qxxk*gqxx25+qyyk*gqxx28+qzzk*gqxx30
+              +2.0f*(qxyk*gqxx26+qxzk*gqxx27+qyzk*gqxx29))
+              + qyyi*(qxxk*gqyy25+qyyk*gqyy28+qzzk*gqyy30
+              +2.0f*(qxyk*gqyy26+qxzk*gqyy27+qyzk*gqyy29))
+              + qzzi*(qxxk*gqzz25+qyyk*gqzz28+qzzk*gqzz30
+              +2.0f*(qxyk*gqzz26+qxzk*gqzz27+qyzk*gqzz29))
+              + 2.0f*(qxyi*(qxxk*gqxy25+qyyk*gqxy28+qzzk*gqxy30
+              +2.0f*(qxyk*gqxy26+qxzk*gqxy27+qyzk*gqxy29))
+              + qxzi*(qxxk*gqxz25+qyyk*gqxz28+qzzk*gqxz30
+              +2.0f*(qxyk*gqxz26+qxzk*gqxz27+qyzk*gqxz29))
+              + qyzi*(qxxk*gqyz25+qyyk*gqyz28+qzzk*gqyz30
+              +2.0f*(qxyk*gqyz26+qxzk*gqyz27+qyzk*gqyz29)));
+
+    dewkdr = ci*(uxk*gux21+uyk*guy21+uzk*guz21)
+                      -ck*(uxi*gc22+uyi*gc23+uzi*gc24)
+                 +ci*(qxxk*gqxx21+qyyk*gqyy21+qzzk*gqzz21
+              +2.0f*(qxyk*gqxy21+qxzk*gqxz21+qyzk*gqyz21))
+                 +ck*(qxxi*gc25+qyyi*gc28+qzzi*gc30
+              +2.0f*(qxyi*gc26+qxzi*gc27+qyzi*gc29))
+               - uxi*(qxxk*gqxx22+qyyk*gqyy22+qzzk*gqzz22
+              +2.0f*(qxyk*gqxy22+qxzk*gqxz22+qyzk*gqyz22))
+               - uyi*(qxxk*gqxx23+qyyk*gqyy23+qzzk*gqzz23
+              +2.0f*(qxyk*gqxy23+qxzk*gqxz23+qyzk*gqyz23))
+               - uzi*(qxxk*gqxx24+qyyk*gqyy24+qzzk*gqzz24
+              +2.0f*(qxyk*gqxy24+qxzk*gqxz24+qyzk*gqyz24))
+               + uxk*(qxxi*gux25+qyyi*gux28+qzzi*gux30
+              +2.0f*(qxyi*gux26+qxzi*gux27+qyzi*gux29))
+               + uyk*(qxxi*guy25+qyyi*guy28+qzzi*guy30
+              +2.0f*(qxyi*guy26+qxzi*guy27+qyzi*guy29))
+               + uzk*(qxxi*guz25+qyyi*guz28+qzzi*guz30
+              +2.0f*(qxyi*guz26+qxzi*guz27+qyzi*guz29))
+              + qxxi*(qxxk*gqxx25+qyyk*gqyy25+qzzk*gqzz25
+              +2.0f*(qxyk*gqxy25+qxzk*gqxz25+qyzk*gqyz25))
+              + qyyi*(qxxk*gqxx28+qyyk*gqyy28+qzzk*gqzz28
+              +2.0f*(qxyk*gqxy28+qxzk*gqxz28+qyzk*gqyz28))
+              + qzzi*(qxxk*gqxx30+qyyk*gqyy30+qzzk*gqzz30
+              +2.0f*(qxyk*gqxy30+qxzk*gqxz30+qyzk*gqyz30))
+              + 2.0f*(qxyi*(qxxk*gqxx26+qyyk*gqyy26+qzzk*gqzz26
+              +2.0f*(qxyk*gqxy26+qxzk*gqxz26+qyzk*gqyz26))
+              + qxzi*(qxxk*gqxx27+qyyk*gqyy27+qzzk*gqzz27
+              +2.0f*(qxyk*gqxy27+qxzk*gqxz27+qyzk*gqyz27))
+              + qyzi*(qxxk*gqxx29+qyyk*gqyy29+qzzk*gqzz29
+              +2.0f*(qxyk*gqxy29+qxzk*gqxz29+qyzk*gqyz29)));
 
     dsumdr = desymdr + 0.5f*(dewidr + dewkdr);
     drbi = rbk*dsumdr;
     drbk = rbi*dsumdr;
- 
-    // torque on permanent dipoles due to permanent reaction field
- 
-    trq[1]   = 0.0f;
-    trq[2]   = 0.0f;
-    trq[3]   = 0.0f;
 
-    trq_k[1] = 0.0f;
-    trq_k[2] = 0.0f;
-    trq_k[3] = 0.0f;
+    // torque on permanent dipoles due to permanent reaction field
+
+    float trq1   = 0.0f;
+    float trq2   = 0.0f;
+    float trq3   = 0.0f;
+
+    float trq_k1 = 0.0f;
+    float trq_k2 = 0.0f;
+    float trq_k3 = 0.0f;
 
     if ( sameAtom == 0 )
     {
 
-        fid[1] = uxk*gux[2] + uyk*gux[3] + uzk*gux[4]
-                + 0.5f*(ck*gux[1]+qxxk*gux[5]+qyyk*gux[8]+qzzk*gux[10]
-                      +2.0f*(qxyk*gux[6]+qxzk*gux[7]+qyzk*gux[9])
-                      +ck*gc[2]+qxxk*gqxx[2]+qyyk*gqyy[2]+qzzk*gqzz[2]
-                      +2.0f*(qxyk*gqxy[2]+qxzk*gqxz[2]+qyzk*gqyz[2]));
+        float fid1 = uxk*gux2 + uyk*gux3 + uzk*gux4
+                + 0.5f*(ck*gux1+qxxk*gux5+qyyk*gux8+qzzk*gux10
+                      +2.0f*(qxyk*gux6+qxzk*gux7+qyzk*gux9)
+                      +ck*gc2+qxxk*gqxx2+qyyk*gqyy2+qzzk*gqzz2
+                      +2.0f*(qxyk*gqxy2+qxzk*gqxz2+qyzk*gqyz2));
 
-        fid[2] = uxk*guy[2] + uyk*guy[3] + uzk*guy[4]
-                + 0.5f*(ck*guy[1]+qxxk*guy[5]+qyyk*guy[8]+qzzk*guy[10]
-                      +2.0f*(qxyk*guy[6]+qxzk*guy[7]+qyzk*guy[9])
-                      +ck*gc[3]+qxxk*gqxx[3]+qyyk*gqyy[3]+qzzk*gqzz[3]
-                      +2.0f*(qxyk*gqxy[3]+qxzk*gqxz[3]+qyzk*gqyz[3]));
+        float fid2 = uxk*guy2 + uyk*guy3 + uzk*guy4
+                + 0.5f*(ck*guy1+qxxk*guy5+qyyk*guy8+qzzk*guy10
+                      +2.0f*(qxyk*guy6+qxzk*guy7+qyzk*guy9)
+                      +ck*gc3+qxxk*gqxx3+qyyk*gqyy3+qzzk*gqzz3
+                      +2.0f*(qxyk*gqxy3+qxzk*gqxz3+qyzk*gqyz3));
 
-        fid[3] = uxk*guz[2] + uyk*guz[3] + uzk*guz[4]
-                + 0.5f*(ck*guz[1]+qxxk*guz[5]+qyyk*guz[8]+qzzk*guz[10]
-                      +2.0f*(qxyk*guz[6]+qxzk*guz[7]+qyzk*guz[9])
-                      +ck*gc[4]+qxxk*gqxx[4]+qyyk*gqyy[4]+qzzk*gqzz[4]
-                      +2.0f*(qxyk*gqxy[4]+qxzk*gqxz[4]+qyzk*gqyz[4]));
+        float fid3 = uxk*guz2 + uyk*guz3 + uzk*guz4
+                + 0.5f*(ck*guz1+qxxk*guz5+qyyk*guz8+qzzk*guz10
+                      +2.0f*(qxyk*guz6+qxzk*guz7+qyzk*guz9)
+                      +ck*gc4+qxxk*gqxx4+qyyk*gqyy4+qzzk*gqzz4
+                      +2.0f*(qxyk*gqxy4+qxzk*gqxz4+qyzk*gqyz4));
 
-        fkd[1] = uxi*gux[2] + uyi*gux[3] + uzi*gux[4]
-                - 0.5f*(ci*gux[1]+qxxi*gux[5]+qyyi*gux[8]+qzzi*gux[10]
-                      +2.0f*(qxyi*gux[6]+qxzi*gux[7]+qyzi*gux[9])
-                      +ci*gc[2]+qxxi*gqxx[2]+qyyi*gqyy[2]+qzzi*gqzz[2]
-                      +2.0f*(qxyi*gqxy[2]+qxzi*gqxz[2]+qyzi*gqyz[2]));
+        float fkd1 = uxi*gux2 + uyi*gux3 + uzi*gux4
+                - 0.5f*(ci*gux1+qxxi*gux5+qyyi*gux8+qzzi*gux10
+                      +2.0f*(qxyi*gux6+qxzi*gux7+qyzi*gux9)
+                      +ci*gc2+qxxi*gqxx2+qyyi*gqyy2+qzzi*gqzz2
+                      +2.0f*(qxyi*gqxy2+qxzi*gqxz2+qyzi*gqyz2));
 
-        fkd[2] = uxi*guy[2] + uyi*guy[3] + uzi*guy[4]
-                - 0.5f*(ci*guy[1]+qxxi*guy[5]+qyyi*guy[8]+qzzi*guy[10]
-                      +2.0f*(qxyi*guy[6]+qxzi*guy[7]+qyzi*guy[9])
-                      +ci*gc[3]+qxxi*gqxx[3]+qyyi*gqyy[3]+qzzi*gqzz[3]
-                      +2.0f*(qxyi*gqxy[3]+qxzi*gqxz[3]+qyzi*gqyz[3]));
+        float fkd2 = uxi*guy2 + uyi*guy3 + uzi*guy4
+                - 0.5f*(ci*guy1+qxxi*guy5+qyyi*guy8+qzzi*guy10
+                      +2.0f*(qxyi*guy6+qxzi*guy7+qyzi*guy9)
+                      +ci*gc3+qxxi*gqxx3+qyyi*gqyy3+qzzi*gqzz3
+                      +2.0f*(qxyi*gqxy3+qxzi*gqxz3+qyzi*gqyz3));
 
-        fkd[3] = uxi*guz[2] + uyi*guz[3] + uzi*guz[4]
-                - 0.5f*(ci*guz[1]+qxxi*guz[5]+qyyi*guz[8]+qzzi*guz[10]
-                      +2.0f*(qxyi*guz[6]+qxzi*guz[7]+qyzi*guz[9])
-                      +ci*gc[4]+qxxi*gqxx[4]+qyyi*gqyy[4]+qzzi*gqzz[4]
-                      +2.0f*(qxyi*gqxy[4]+qxzi*gqxz[4]+qyzi*gqyz[4]));
+        float fkd3 = uxi*guz2 + uyi*guz3 + uzi*guz4
+                - 0.5f*(ci*guz1+qxxi*guz5+qyyi*guz8+qzzi*guz10
+                      +2.0f*(qxyi*guz6+qxzi*guz7+qyzi*guz9)
+                      +ci*gc4+qxxi*gqxx4+qyyi*gqyy4+qzzi*gqzz4
+                      +2.0f*(qxyi*gqxy4+qxzi*gqxz4+qyzi*gqyz4));
 
-        trq[1]    = uyi*fid[3] - uzi*fid[2];
-        trq[2]    = uzi*fid[1] - uxi*fid[3];
-        trq[3]    = uxi*fid[2] - uyi*fid[1];
+        trq1    = uyi*fid3 - uzi*fid2;
+        trq2    = uzi*fid1 - uxi*fid3;
+        trq3    = uxi*fid2 - uyi*fid1;
 
-        trq_k[1]  = uyk*fkd[3] - uzk*fkd[2];
-        trq_k[2]  = uzk*fkd[1] - uxk*fkd[3];
-        trq_k[3]  = uxk*fkd[2] - uyk*fkd[1];
- 
+        trq_k1  = uyk*fkd3 - uzk*fkd2;
+        trq_k2  = uzk*fkd1 - uxk*fkd3;
+        trq_k3  = uxk*fkd2 - uyk*fkd1;
+
         // torque on quadrupoles due to permanent reaction field gradient
- 
-        fidg[1][1] =
-                - 0.5f*(ck*gqxx[1]+uxk*gqxx[2]+uyk*gqxx[3]+uzk*gqxx[4]
-                      +qxxk*gqxx[5]+qyyk*gqxx[8]+qzzk*gqxx[10]
-                      +2.0f*(qxyk*gqxx[6]+qxzk*gqxx[7]+qyzk*gqxx[9])
-                      +ck*gc[5]+uxk*gux[5]+uyk*guy[5]+uzk*guz[5]
-                      +qxxk*gqxx[5]+qyyk*gqyy[5]+qzzk*gqzz[5]
-                      +2.0f*(qxyk*gqxy[5]+qxzk*gqxz[5]+qyzk*gqyz[5]));
 
-        fidg[1][2] =
-                - 0.5f*(ck*gqxy[1]+uxk*gqxy[2]+uyk*gqxy[3]+uzk*gqxy[4]
-                      +qxxk*gqxy[5]+qyyk*gqxy[8]+qzzk*gqxy[10]
-                      +2.0f*(qxyk*gqxy[6]+qxzk*gqxy[7]+qyzk*gqxy[9])
-                      +ck*gc[6]+uxk*gux[6]+uyk*guy[6]+uzk*guz[6]
-                      +qxxk*gqxx[6]+qyyk*gqyy[6]+qzzk*gqzz[6]
-                      +2.0f*(qxyk*gqxy[6]+qxzk*gqxz[6]+qyzk*gqyz[6]));
+        float fidg11 =
+                - 0.5f*(ck*gqxx1+uxk*gqxx2+uyk*gqxx3+uzk*gqxx4
+                      +qxxk*gqxx5+qyyk*gqxx8+qzzk*gqxx10
+                      +2.0f*(qxyk*gqxx6+qxzk*gqxx7+qyzk*gqxx9)
+                      +ck*gc5+uxk*gux5+uyk*guy5+uzk*guz5
+                      +qxxk*gqxx5+qyyk*gqyy5+qzzk*gqzz5
+                      +2.0f*(qxyk*gqxy5+qxzk*gqxz5+qyzk*gqyz5));
 
-        fidg[1][3] =
-                - 0.5f*(ck*gqxz[1]+uxk*gqxz[2]+uyk*gqxz[3]+uzk*gqxz[4]
-                      +qxxk*gqxz[5]+qyyk*gqxz[8]+qzzk*gqxz[10]
-                      +2.0f*(qxyk*gqxz[6]+qxzk*gqxz[7]+qyzk*gqxz[9])
-                      +ck*gc[7]+uxk*gux[7]+uyk*guy[7]+uzk*guz[7]
-                      +qxxk*gqxx[7]+qyyk*gqyy[7]+qzzk*gqzz[7]
-                      +2.0f*(qxyk*gqxy[7]+qxzk*gqxz[7]+qyzk*gqyz[7]));
+        float fidg12 =
+                - 0.5f*(ck*gqxy1+uxk*gqxy2+uyk*gqxy3+uzk*gqxy4
+                      +qxxk*gqxy5+qyyk*gqxy8+qzzk*gqxy10
+                      +2.0f*(qxyk*gqxy6+qxzk*gqxy7+qyzk*gqxy9)
+                      +ck*gc6+uxk*gux6+uyk*guy6+uzk*guz6
+                      +qxxk*gqxx6+qyyk*gqyy6+qzzk*gqzz6
+                      +2.0f*(qxyk*gqxy6+qxzk*gqxz6+qyzk*gqyz6));
 
-        fidg[2][2] =
-                - 0.5f*(ck*gqyy[1]+uxk*gqyy[2]+uyk*gqyy[3]+uzk*gqyy[4]
-                      +qxxk*gqyy[5]+qyyk*gqyy[8]+qzzk*gqyy[10]
-                      +2.0f*(qxyk*gqyy[6]+qxzk*gqyy[7]+qyzk*gqyy[9])
-                      +ck*gc[8]+uxk*gux[8]+uyk*guy[8]+uzk*guz[8]
-                      +qxxk*gqxx[8]+qyyk*gqyy[8]+qzzk*gqzz[8]
-                      +2.0f*(qxyk*gqxy[8]+qxzk*gqxz[8]+qyzk*gqyz[8]));
+        float fidg13 =
+                - 0.5f*(ck*gqxz1+uxk*gqxz2+uyk*gqxz3+uzk*gqxz4
+                      +qxxk*gqxz5+qyyk*gqxz8+qzzk*gqxz10
+                      +2.0f*(qxyk*gqxz6+qxzk*gqxz7+qyzk*gqxz9)
+                      +ck*gc7+uxk*gux7+uyk*guy7+uzk*guz7
+                      +qxxk*gqxx7+qyyk*gqyy7+qzzk*gqzz7
+                      +2.0f*(qxyk*gqxy7+qxzk*gqxz7+qyzk*gqyz7));
 
-        fidg[2][3] =
-                - 0.5f*(ck*gqyz[1]+uxk*gqyz[2]+uyk*gqyz[3]+uzk*gqyz[4]
-                      +qxxk*gqyz[5]+qyyk*gqyz[8]+qzzk*gqyz[10]
-                      +2.0f*(qxyk*gqyz[6]+qxzk*gqyz[7]+qyzk*gqyz[9])
-                      +ck*gc[9]+uxk*gux[9]+uyk*guy[9]+uzk*guz[9]
-                      +qxxk*gqxx[9]+qyyk*gqyy[9]+qzzk*gqzz[9]
-                      +2.0f*(qxyk*gqxy[9]+qxzk*gqxz[9]+qyzk*gqyz[9]));
+        float fidg22 =
+                - 0.5f*(ck*gqyy1+uxk*gqyy2+uyk*gqyy3+uzk*gqyy4
+                      +qxxk*gqyy5+qyyk*gqyy8+qzzk*gqyy10
+                      +2.0f*(qxyk*gqyy6+qxzk*gqyy7+qyzk*gqyy9)
+                      +ck*gc8+uxk*gux8+uyk*guy8+uzk*guz8
+                      +qxxk*gqxx8+qyyk*gqyy8+qzzk*gqzz8
+                      +2.0f*(qxyk*gqxy8+qxzk*gqxz8+qyzk*gqyz8));
 
-        fidg[3][3] =
-                - 0.5f*(ck*gqzz[1]+uxk*gqzz[2]+uyk*gqzz[3]+uzk*gqzz[4]
-                      +qxxk*gqzz[5]+qyyk*gqzz[8]+qzzk*gqzz[10]
-                      +2.0f*(qxyk*gqzz[6]+qxzk*gqzz[7]+qyzk*gqzz[9])
-                      +ck*gc[10]+uxk*gux[10]+uyk*guy[10]+uzk*guz[10]
-                      +qxxk*gqxx[10]+qyyk*gqyy[10]+qzzk*gqzz[10]
-                   +2.0f*(qxyk*gqxy[10]+qxzk*gqxz[10]+qyzk*gqyz[10]));
+        float fidg23 =
+                - 0.5f*(ck*gqyz1+uxk*gqyz2+uyk*gqyz3+uzk*gqyz4
+                      +qxxk*gqyz5+qyyk*gqyz8+qzzk*gqyz10
+                      +2.0f*(qxyk*gqyz6+qxzk*gqyz7+qyzk*gqyz9)
+                      +ck*gc9+uxk*gux9+uyk*guy9+uzk*guz9
+                      +qxxk*gqxx9+qyyk*gqyy9+qzzk*gqzz9
+                      +2.0f*(qxyk*gqxy9+qxzk*gqxz9+qyzk*gqyz9));
 
-        fidg[2][1] = fidg[1][2];
-        fidg[3][1] = fidg[1][3];
-        fidg[3][2] = fidg[2][3];
+        float fidg33 =
+                - 0.5f*(ck*gqzz1+uxk*gqzz2+uyk*gqzz3+uzk*gqzz4
+                      +qxxk*gqzz5+qyyk*gqzz8+qzzk*gqzz10
+                      +2.0f*(qxyk*gqzz6+qxzk*gqzz7+qyzk*gqzz9)
+                      +ck*gc10+uxk*gux10+uyk*guy10+uzk*guz10
+                      +qxxk*gqxx10+qyyk*gqyy10+qzzk*gqzz10
+                   +2.0f*(qxyk*gqxy10+qxzk*gqxz10+qyzk*gqyz10));
 
-        fkdg[1][1] =
-                - 0.5f*(ci*gqxx[1]-uxi*gqxx[2]-uyi*gqxx[3]-uzi *gqxx[4]
-                      +qxxi*gqxx[5]+qyyi*gqxx[8]+qzzi*gqxx[10]
-                      +2.0f*(qxyi*gqxx[6]+qxzi*gqxx[7]+qyzi*gqxx[9])
-                      +ci*gc[5]-uxi*gux[5]-uyi*guy[5]-uzi*guz[5]
-                      +qxxi*gqxx[5]+qyyi*gqyy[5]+qzzi*gqzz[5]
-                      +2.0f*(qxyi*gqxy[5]+qxzi*gqxz[5]+qyzi*gqyz[5]));
+        float fidg21 = fidg12;
+        float fidg31 = fidg13;
+        float fidg32 = fidg23;
 
-        fkdg[1][2] =
-                - 0.5f*(ci*gqxy[1]-uxi*gqxy[2]-uyi*gqxy[3]-uzi*gqxy[4]
-                      +qxxi*gqxy[5]+qyyi*gqxy[8]+qzzi*gqxy[10]
-                      +2.0f*(qxyi*gqxy[6]+qxzi*gqxy[7]+qyzi*gqxy[9])
-                      +ci*gc[6]-uxi*gux[6]-uyi*guy[6]-uzi*guz[6]
-                      +qxxi*gqxx[6]+qyyi*gqyy[6]+qzzi*gqzz[6]
-                      +2.0f*(qxyi*gqxy[6]+qxzi*gqxz[6]+qyzi*gqyz[6]));
+        float fkdg11 =
+                - 0.5f*(ci*gqxx1-uxi*gqxx2-uyi*gqxx3-uzi *gqxx4
+                      +qxxi*gqxx5+qyyi*gqxx8+qzzi*gqxx10
+                      +2.0f*(qxyi*gqxx6+qxzi*gqxx7+qyzi*gqxx9)
+                      +ci*gc5-uxi*gux5-uyi*guy5-uzi*guz5
+                      +qxxi*gqxx5+qyyi*gqyy5+qzzi*gqzz5
+                      +2.0f*(qxyi*gqxy5+qxzi*gqxz5+qyzi*gqyz5));
 
-        fkdg[1][3] =
-                - 0.5f*(ci*gqxz[1]-uxi*gqxz[2]-uyi*gqxz[3]-uzi*gqxz[4]
-                      +qxxi*gqxz[5]+qyyi*gqxz[8]+qzzi*gqxz[10]
-                      +2.0f*(qxyi*gqxz[6]+qxzi*gqxz[7]+qyzi*gqxz[9])
-                      +ci*gc[7]-uxi*gux[7]-uyi*guy[7]-uzi*guz[7]
-                      +qxxi*gqxx[7]+qyyi*gqyy[7]+qzzi*gqzz[7]
-                      +2.0f*(qxyi*gqxy[7]+qxzi*gqxz[7]+qyzi*gqyz[7]));
+        float fkdg12 =
+                - 0.5f*(ci*gqxy1-uxi*gqxy2-uyi*gqxy3-uzi*gqxy4
+                      +qxxi*gqxy5+qyyi*gqxy8+qzzi*gqxy10
+                      +2.0f*(qxyi*gqxy6+qxzi*gqxy7+qyzi*gqxy9)
+                      +ci*gc6-uxi*gux6-uyi*guy6-uzi*guz6
+                      +qxxi*gqxx6+qyyi*gqyy6+qzzi*gqzz6
+                      +2.0f*(qxyi*gqxy6+qxzi*gqxz6+qyzi*gqyz6));
 
-        fkdg[2][2] =
-                - 0.5f*(ci*gqyy[1]-uxi*gqyy[2]-uyi*gqyy[3]-uzi*gqyy[4]
-                      +qxxi*gqyy[5]+qyyi*gqyy[8]+qzzi*gqyy[10]
-                      +2.0f*(qxyi*gqyy[6]+qxzi*gqyy[7]+qyzi*gqyy[9])
-                      +ci*gc[8]-uxi*gux[8]-uyi*guy[8]-uzi*guz[8]
-                      +qxxi*gqxx[8]+qyyi*gqyy[8]+qzzi*gqzz[8]
-                      +2.0f*(qxyi*gqxy[8]+qxzi*gqxz[8]+qyzi*gqyz[8]));
+        float fkdg13 =
+                - 0.5f*(ci*gqxz1-uxi*gqxz2-uyi*gqxz3-uzi*gqxz4
+                      +qxxi*gqxz5+qyyi*gqxz8+qzzi*gqxz10
+                      +2.0f*(qxyi*gqxz6+qxzi*gqxz7+qyzi*gqxz9)
+                      +ci*gc7-uxi*gux7-uyi*guy7-uzi*guz7
+                      +qxxi*gqxx7+qyyi*gqyy7+qzzi*gqzz7
+                      +2.0f*(qxyi*gqxy7+qxzi*gqxz7+qyzi*gqyz7));
 
-        fkdg[2][3] =
-                - 0.5f*(ci*gqyz[1]-uxi*gqyz[2]-uyi*gqyz[3]-uzi*gqyz[4]
-                      +qxxi*gqyz[5]+qyyi*gqyz[8]+qzzi*gqyz[10]
-                      +2.0f*(qxyi*gqyz[6]+qxzi*gqyz[7]+qyzi*gqyz[9])
-                      +ci*gc[9]-uxi*gux[9]-uyi*guy[9]-uzi*guz[9]
-                      +qxxi*gqxx[9]+qyyi*gqyy[9]+qzzi*gqzz[9]
-                      +2.0f*(qxyi*gqxy[9]+qxzi*gqxz[9]+qyzi*gqyz[9]));
-        fkdg[3][3] =
-                - 0.5f*(ci*gqzz[1]-uxi*gqzz[2]-uyi*gqzz[3]-uzi*gqzz[4]
-                      +qxxi*gqzz[5]+qyyi*gqzz[8]+qzzi*gqzz[10]
-                      +2.0f*(qxyi*gqzz[6]+qxzi*gqzz[7]+qyzi*gqzz[9])
-                      +ci*gc[10]-uxi*gux[10]-uyi*guy[10]-uzi*guz[10]
-                      +qxxi*gqxx[10]+qyyi*gqyy[10]+qzzi*gqzz[10]
-                    +2.0f*(qxyi*gqxy[10]+qxzi*gqxz[10]+qyzi*gqyz[10]));
+        float fkdg22 =
+                - 0.5f*(ci*gqyy1-uxi*gqyy2-uyi*gqyy3-uzi*gqyy4
+                      +qxxi*gqyy5+qyyi*gqyy8+qzzi*gqyy10
+                      +2.0f*(qxyi*gqyy6+qxzi*gqyy7+qyzi*gqyy9)
+                      +ci*gc8-uxi*gux8-uyi*guy8-uzi*guz8
+                      +qxxi*gqxx8+qyyi*gqyy8+qzzi*gqzz8
+                      +2.0f*(qxyi*gqxy8+qxzi*gqxz8+qyzi*gqyz8));
 
-        fkdg[2][1] = fkdg[1][2];
-        fkdg[3][1] = fkdg[1][3];
-        fkdg[3][2] = fkdg[2][3];
+        float fkdg23 =
+                - 0.5f*(ci*gqyz1-uxi*gqyz2-uyi*gqyz3-uzi*gqyz4
+                      +qxxi*gqyz5+qyyi*gqyz8+qzzi*gqyz10
+                      +2.0f*(qxyi*gqyz6+qxzi*gqyz7+qyzi*gqyz9)
+                      +ci*gc9-uxi*gux9-uyi*guy9-uzi*guz9
+                      +qxxi*gqxx9+qyyi*gqyy9+qzzi*gqzz9
+                      +2.0f*(qxyi*gqxy9+qxzi*gqxz9+qyzi*gqyz9));
+        float fkdg33 =
+                - 0.5f*(ci*gqzz1-uxi*gqzz2-uyi*gqzz3-uzi*gqzz4
+                      +qxxi*gqzz5+qyyi*gqzz8+qzzi*gqzz10
+                      +2.0f*(qxyi*gqzz6+qxzi*gqzz7+qyzi*gqzz9)
+                      +ci*gc10-uxi*gux10-uyi*guy10-uzi*guz10
+                      +qxxi*gqxx10+qyyi*gqyy10+qzzi*gqzz10
+                    +2.0f*(qxyi*gqxy10+qxzi*gqxz10+qyzi*gqyz10));
 
-        trq[1]   += 2.0f* (qxyi*fidg[1][3]+qyyi*fidg[2][3]+qyzi*fidg[3][3]
-                           -qxzi*fidg[1][2]-qyzi*fidg[2][2]-qzzi*fidg[3][2]);
+        float fkdg21 = fkdg12;
+        float fkdg31 = fkdg13;
+        float fkdg32 = fkdg23;
 
-        trq[2]   += 2.0f*(qxzi*fidg[1][1]+qyzi*fidg[2][1]+qzzi*fidg[3][1]
-                         -qxxi*fidg[1][3]-qxyi*fidg[2][3]-qxzi*fidg[3][3]);
+        trq1   += 2.0f* (qxyi*fidg13+qyyi*fidg23+qyzi*fidg33
+                           -qxzi*fidg12-qyzi*fidg22-qzzi*fidg32);
 
-        trq[3]   += 2.0f*(qxxi*fidg[1][2]+qxyi*fidg[2][2]+qxzi*fidg[3][2]
-                         -qxyi*fidg[1][1]-qyyi*fidg[2][1]-qyzi*fidg[3][1]);
+        trq2   += 2.0f*(qxzi*fidg11+qyzi*fidg21+qzzi*fidg31
+                         -qxxi*fidg13-qxyi*fidg23-qxzi*fidg33);
 
-        trq_k[1] += 2.0f*
-                          (qxyk*fkdg[1][3]+qyyk*fkdg[2][3]+qyzk*fkdg[3][3]
-                          -qxzk*fkdg[1][2]-qyzk*fkdg[2][2]-qzzk*fkdg[3][2]);
+        trq3   += 2.0f*(qxxi*fidg12+qxyi*fidg22+qxzi*fidg32
+                         -qxyi*fidg11-qyyi*fidg21-qyzi*fidg31);
 
-        trq_k[2] += 2.0f*
-                          (qxzk*fkdg[1][1]+qyzk*fkdg[2][1]+qzzk*fkdg[3][1]
-                          -qxxk*fkdg[1][3]-qxyk*fkdg[2][3]-qxzk*fkdg[3][3]);
+        trq_k1 += 2.0f*
+                          (qxyk*fkdg13+qyyk*fkdg23+qyzk*fkdg33
+                          -qxzk*fkdg12-qyzk*fkdg22-qzzk*fkdg32);
 
-        trq_k[3] += 2.0f*
-                          (qxxk*fkdg[1][2]+qxyk*fkdg[2][2]+qxzk*fkdg[3][2]
-                          -qxyk*fkdg[1][1]-qyyk*fkdg[2][1]-qyzk*fkdg[3][1]);
+        trq_k2 += 2.0f*
+                          (qxzk*fkdg11+qyzk*fkdg21+qzzk*fkdg31
+                          -qxxk*fkdg13-qxyk*fkdg23-qxzk*fkdg33);
+
+        trq_k3 += 2.0f*
+                          (qxxk*fkdg12+qxyk*fkdg22+qxzk*fkdg32
+                          -qxyk*fkdg11-qyyk*fkdg21-qyzk*fkdg31);
     }
- 
+
     // electrostatic solvation energy of the permanent multipoles in
     // the GK reaction potential of the induced dipoles
- 
-    esymi =              -uxi*(dxk*gux[2]+dyk*guy[2]+dzk*guz[2])
-                        - uyi*(dxk*gux[3]+dyk*guy[3]+dzk*guz[3])
-                        - uzi*(dxk*gux[4]+dyk*guy[4]+dzk*guz[4])
-                        - uxk*(dxi*gux[2]+dyi*guy[2]+dzi*guz[2])
-                        - uyk*(dxi*gux[3]+dyi*guy[3]+dzi*guz[3])
-                        - uzk*(dxi*gux[4]+dyi*guy[4]+dzi*guz[4]);
 
-    ewii = ci*(dxk*gc[2]+dyk*gc[3]+dzk*gc[4])
-                      - ck*(dxi*gux[1]+dyi*guy[1]+dzi*guz[1])
-                      - dxi*(qxxk*gux[5]+qyyk*gux[8]+qzzk*gux[10]
-                     +2.0f*(qxyk*gux[6]+qxzk*gux[7]+qyzk*gux[9]))
-                      - dyi*(qxxk*guy[5]+qyyk*guy[8]+qzzk*guy[10]
-                     +2.0f*(qxyk*guy[6]+qxzk*guy[7]+qyzk*guy[9]))
-                      - dzi*(qxxk*guz[5]+qyyk*guz[8]+qzzk*guz[10]
-                     +2.0f*(qxyk*guz[6]+qxzk*guz[7]+qyzk*guz[9]))
-                      + dxk*(qxxi*gqxx[2]+qyyi*gqyy[2]+qzzi*gqzz[2]
-                     +2.0f*(qxyi*gqxy[2]+qxzi*gqxz[2]+qyzi*gqyz[2]))
-                      + dyk*(qxxi*gqxx[3]+qyyi*gqyy[3]+qzzi*gqzz[3]
-                     +2.0f*(qxyi*gqxy[3]+qxzi*gqxz[3]+qyzi*gqyz[3]))
-                      + dzk*(qxxi*gqxx[4]+qyyi*gqyy[4]+qzzi*gqzz[4]
-                     +2.0f*(qxyi*gqxy[4]+qxzi*gqxz[4]+qyzi*gqyz[4]));
+    esymi =              -uxi*(dxk*gux2+dyk*guy2+dzk*guz2)
+                        - uyi*(dxk*gux3+dyk*guy3+dzk*guz3)
+                        - uzi*(dxk*gux4+dyk*guy4+dzk*guz4)
+                        - uxk*(dxi*gux2+dyi*guy2+dzi*guz2)
+                        - uyk*(dxi*gux3+dyi*guy3+dzi*guz3)
+                        - uzk*(dxi*gux4+dyi*guy4+dzi*guz4);
 
-    ewki = ci*(dxk*gux[1]+dyk*guy[1]+dzk*guz[1])
-                      - ck*(dxi*gc[2]+dyi*gc[3]+dzi*gc[4])
-                      - dxi*(qxxk*gqxx[2]+qyyk*gqyy[2]+qzzk*gqzz[2]
-                     +2.0f*(qxyk*gqxy[2]+qxzk*gqxz[2]+qyzk*gqyz[2]))
-                      - dyi*(qxxk*gqxx[3]+qyyk*gqyy[3]+qzzk*gqzz[3]
-                     +2.0f*(qxyk*gqxy[3]+qxzk*gqxz[3]+qyzk*gqyz[3]))
-                      - dzi*(qxxk*gqxx[4]+qyyk*gqyy[4]+qzzk*gqzz[4]
-                     +2.0f*(qxyk*gqxy[4]+qxzk*gqxz[4]+qyzk*gqyz[4]))
-                      + dxk*(qxxi*gux[5]+qyyi*gux[8]+qzzi*gux[10]
-                     +2.0f*(qxyi*gux[6]+qxzi*gux[7]+qyzi*gux[9]))
-                      + dyk*(qxxi*guy[5]+qyyi*guy[8]+qzzi*guy[10]
-                     +2.0f*(qxyi*guy[6]+qxzi*guy[7]+qyzi*guy[9]))
-                      + dzk*(qxxi*guz[5]+qyyi*guz[8]+qzzi*guz[10]
-                     +2.0f*(qxyi*guz[6]+qxzi*guz[7]+qyzi*guz[9]));
- 
+    ewii = ci*(dxk*gc2+dyk*gc3+dzk*gc4)
+                      - ck*(dxi*gux1+dyi*guy1+dzi*guz1)
+                      - dxi*(qxxk*gux5+qyyk*gux8+qzzk*gux10
+                     +2.0f*(qxyk*gux6+qxzk*gux7+qyzk*gux9))
+                      - dyi*(qxxk*guy5+qyyk*guy8+qzzk*guy10
+                     +2.0f*(qxyk*guy6+qxzk*guy7+qyzk*guy9))
+                      - dzi*(qxxk*guz5+qyyk*guz8+qzzk*guz10
+                     +2.0f*(qxyk*guz6+qxzk*guz7+qyzk*guz9))
+                      + dxk*(qxxi*gqxx2+qyyi*gqyy2+qzzi*gqzz2
+                     +2.0f*(qxyi*gqxy2+qxzi*gqxz2+qyzi*gqyz2))
+                      + dyk*(qxxi*gqxx3+qyyi*gqyy3+qzzi*gqzz3
+                     +2.0f*(qxyi*gqxy3+qxzi*gqxz3+qyzi*gqyz3))
+                      + dzk*(qxxi*gqxx4+qyyi*gqyy4+qzzi*gqzz4
+                     +2.0f*(qxyi*gqxy4+qxzi*gqxz4+qyzi*gqyz4));
+
+    ewki = ci*(dxk*gux1+dyk*guy1+dzk*guz1)
+                      - ck*(dxi*gc2+dyi*gc3+dzi*gc4)
+                      - dxi*(qxxk*gqxx2+qyyk*gqyy2+qzzk*gqzz2
+                     +2.0f*(qxyk*gqxy2+qxzk*gqxz2+qyzk*gqyz2))
+                      - dyi*(qxxk*gqxx3+qyyk*gqyy3+qzzk*gqzz3
+                     +2.0f*(qxyk*gqxy3+qxzk*gqxz3+qyzk*gqyz3))
+                      - dzi*(qxxk*gqxx4+qyyk*gqyy4+qzzk*gqzz4
+                     +2.0f*(qxyk*gqxy4+qxzk*gqxz4+qyzk*gqyz4))
+                      + dxk*(qxxi*gux5+qyyi*gux8+qzzi*gux10
+                     +2.0f*(qxyi*gux6+qxzi*gux7+qyzi*gux9))
+                      + dyk*(qxxi*guy5+qyyi*guy8+qzzi*guy10
+                     +2.0f*(qxyi*guy6+qxzi*guy7+qyzi*guy9))
+                      + dzk*(qxxi*guz5+qyyi*guz8+qzzi*guz10
+                     +2.0f*(qxyi*guz6+qxzi*guz7+qyzi*guz9));
+
     // electrostatic solvation free energy gradient of the permanent
     // multipoles in the reaction potential of the induced dipoles
- 
-    dpsymdx = -uxi*(sxk*gux[5]+syk*guy[5]+szk*guz[5])
-                          - uyi*(sxk*gux[6]+syk*guy[6]+szk*guz[6])
-                          - uzi*(sxk*gux[7]+syk*guy[7]+szk*guz[7])
-                          - uxk*(sxi*gux[5]+syi*guy[5]+szi*guz[5])
-                          - uyk*(sxi*gux[6]+syi*guy[6]+szi*guz[6])
-                          - uzk*(sxi*gux[7]+syi*guy[7]+szi*guz[7]);
 
-    dpwidx = ci*(sxk*gc[5]+syk*gc[6]+szk*gc[7])
-                        - ck*(sxi*gux[2]+syi*guy[2]+szi*guz[2])
-                      - sxi*(qxxk*gux[11]+qyyk*gux[14]+qzzk*gux[16]
-                     +2.0f*(qxyk*gux[12]+qxzk*gux[13]+qyzk*gux[15]))
-                      - syi*(qxxk*guy[11]+qyyk*guy[14]+qzzk*guy[16]
-                     +2.0f*(qxyk*guy[12]+qxzk*guy[13]+qyzk*guy[15]))
-                      - szi*(qxxk*guz[11]+qyyk*guz[14]+qzzk*guz[16]
-                     +2.0f*(qxyk*guz[12]+qxzk*guz[13]+qyzk*guz[15]))
-                      + sxk*(qxxi*gqxx[5]+qyyi*gqyy[5]+qzzi*gqzz[5]
-                     +2.0f*(qxyi*gqxy[5]+qxzi*gqxz[5]+qyzi*gqyz[5]))
-                      + syk*(qxxi*gqxx[6]+qyyi*gqyy[6]+qzzi*gqzz[6]
-                     +2.0f*(qxyi*gqxy[6]+qxzi*gqxz[6]+qyzi*gqyz[6]))
-                      + szk*(qxxi*gqxx[7]+qyyi*gqyy[7]+qzzi*gqzz[7]
-                     +2.0f*(qxyi*gqxy[7]+qxzi*gqxz[7]+qyzi*gqyz[7]));
+    dpsymdx = -uxi*(sxk*gux5+syk*guy5+szk*guz5)
+                          - uyi*(sxk*gux6+syk*guy6+szk*guz6)
+                          - uzi*(sxk*gux7+syk*guy7+szk*guz7)
+                          - uxk*(sxi*gux5+syi*guy5+szi*guz5)
+                          - uyk*(sxi*gux6+syi*guy6+szi*guz6)
+                          - uzk*(sxi*gux7+syi*guy7+szi*guz7);
 
-    dpwkdx = ci*(sxk*gux[2]+syk*guy[2]+szk*guz[2])
-                        - ck*(sxi*gc[5]+syi*gc[6]+szi*gc[7])
-                      - sxi*(qxxk*gqxx[5]+qyyk*gqyy[5]+qzzk*gqzz[5]
-                     +2.0f*(qxyk*gqxy[5]+qxzk*gqxz[5]+qyzk*gqyz[5]))
-                      - syi*(qxxk*gqxx[6]+qyyk*gqyy[6]+qzzk*gqzz[6]
-                     +2.0f*(qxyk*gqxy[6]+qxzk*gqxz[6]+qyzk*gqyz[6]))
-                      - szi*(qxxk*gqxx[7]+qyyk*gqyy[7]+qzzk*gqzz[7]
-                     +2.0f*(qxyk*gqxy[7]+qxzk*gqxz[7]+qyzk*gqyz[7]))
-                      + sxk*(qxxi*gux[11]+qyyi*gux[14]+qzzi*gux[16]
-                     +2.0f*(qxyi*gux[12]+qxzi*gux[13]+qyzi*gux[15]))
-                      + syk*(qxxi*guy[11]+qyyi*guy[14]+qzzi*guy[16]
-                     +2.0f*(qxyi*guy[12]+qxzi*guy[13]+qyzi*guy[15]))
-                      + szk*(qxxi*guz[11]+qyyi*guz[14]+qzzi*guz[16]
-                     +2.0f*(qxyi*guz[12]+qxzi*guz[13]+qyzi*guz[15]));
+    dpwidx = ci*(sxk*gc5+syk*gc6+szk*gc7)
+                        - ck*(sxi*gux2+syi*guy2+szi*guz2)
+                      - sxi*(qxxk*gux11+qyyk*gux14+qzzk*gux16
+                     +2.0f*(qxyk*gux12+qxzk*gux13+qyzk*gux15))
+                      - syi*(qxxk*guy11+qyyk*guy14+qzzk*guy16
+                     +2.0f*(qxyk*guy12+qxzk*guy13+qyzk*guy15))
+                      - szi*(qxxk*guz11+qyyk*guz14+qzzk*guz16
+                     +2.0f*(qxyk*guz12+qxzk*guz13+qyzk*guz15))
+                      + sxk*(qxxi*gqxx5+qyyi*gqyy5+qzzi*gqzz5
+                     +2.0f*(qxyi*gqxy5+qxzi*gqxz5+qyzi*gqyz5))
+                      + syk*(qxxi*gqxx6+qyyi*gqyy6+qzzi*gqzz6
+                     +2.0f*(qxyi*gqxy6+qxzi*gqxz6+qyzi*gqyz6))
+                      + szk*(qxxi*gqxx7+qyyi*gqyy7+qzzi*gqzz7
+                     +2.0f*(qxyi*gqxy7+qxzi*gqxz7+qyzi*gqyz7));
+
+    dpwkdx = ci*(sxk*gux2+syk*guy2+szk*guz2)
+                        - ck*(sxi*gc5+syi*gc6+szi*gc7)
+                      - sxi*(qxxk*gqxx5+qyyk*gqyy5+qzzk*gqzz5
+                     +2.0f*(qxyk*gqxy5+qxzk*gqxz5+qyzk*gqyz5))
+                      - syi*(qxxk*gqxx6+qyyk*gqyy6+qzzk*gqzz6
+                     +2.0f*(qxyk*gqxy6+qxzk*gqxz6+qyzk*gqyz6))
+                      - szi*(qxxk*gqxx7+qyyk*gqyy7+qzzk*gqzz7
+                     +2.0f*(qxyk*gqxy7+qxzk*gqxz7+qyzk*gqyz7))
+                      + sxk*(qxxi*gux11+qyyi*gux14+qzzi*gux16
+                     +2.0f*(qxyi*gux12+qxzi*gux13+qyzi*gux15))
+                      + syk*(qxxi*guy11+qyyi*guy14+qzzi*guy16
+                     +2.0f*(qxyi*guy12+qxzi*guy13+qyzi*guy15))
+                      + szk*(qxxi*guz11+qyyi*guz14+qzzi*guz16
+                     +2.0f*(qxyi*guz12+qxzi*guz13+qyzi*guz15));
 
     dpdx = 0.5f * (dpsymdx + 0.5f*(dpwidx + dpwkdx));
 
-    dpsymdy = -uxi*(sxk*gux[6]+syk*guy[6]+szk*guz[6])
-                          - uyi*(sxk*gux[8]+syk*guy[8]+szk*guz[8])
-                          - uzi*(sxk*gux[9]+syk*guy[9]+szk*guz[9])
-                          - uxk*(sxi*gux[6]+syi*guy[6]+szi*guz[6])
-                          - uyk*(sxi*gux[8]+syi*guy[8]+szi*guz[8])
-                          - uzk*(sxi*gux[9]+syi*guy[9]+szi*guz[9]);
+    dpsymdy = -uxi*(sxk*gux6+syk*guy6+szk*guz6)
+                          - uyi*(sxk*gux8+syk*guy8+szk*guz8)
+                          - uzi*(sxk*gux9+syk*guy9+szk*guz9)
+                          - uxk*(sxi*gux6+syi*guy6+szi*guz6)
+                          - uyk*(sxi*gux8+syi*guy8+szi*guz8)
+                          - uzk*(sxi*gux9+syi*guy9+szi*guz9);
 
-    dpwidy = ci*(sxk*gc[6]+syk*gc[8]+szk*gc[9])
-                        - ck*(sxi*gux[3]+syi*guy[3]+szi*guz[3])
-                         - sxi*(qxxk*gux[12]+qyyk*gux[17]+qzzk*gux[19]
-                        +2.0f*(qxyk*gux[14]+qxzk*gux[15]+qyzk*gux[18]))
-                         - syi*(qxxk*guy[12]+qyyk*guy[17]+qzzk*guy[19]
-                        +2.0f*(qxyk*guy[14]+qxzk*guy[15]+qyzk*guy[18]))
-                         - szi*(qxxk*guz[12]+qyyk*guz[17]+qzzk*guz[19]
-                        +2.0f*(qxyk*guz[14]+qxzk*guz[15]+qyzk*guz[18]))
-                         + sxk*(qxxi*gqxx[6]+qyyi*gqyy[6]+qzzi*gqzz[6]
-                        +2.0f*(qxyi*gqxy[6]+qxzi*gqxz[6]+qyzi*gqyz[6]))
-                         + syk*(qxxi*gqxx[8]+qyyi*gqyy[8]+qzzi*gqzz[8]
-                        +2.0f*(qxyi*gqxy[8]+qxzi*gqxz[8]+qyzi*gqyz[8]))
-                         + szk*(qxxi*gqxx[9]+qyyi*gqyy[9]+qzzi*gqzz[9]
-                        +2.0f*(qxyi*gqxy[9]+qxzi*gqxz[9]+qyzi*gqyz[9]));
+    dpwidy = ci*(sxk*gc6+syk*gc8+szk*gc9)
+                        - ck*(sxi*gux3+syi*guy3+szi*guz3)
+                         - sxi*(qxxk*gux12+qyyk*gux17+qzzk*gux19
+                        +2.0f*(qxyk*gux14+qxzk*gux15+qyzk*gux18))
+                         - syi*(qxxk*guy12+qyyk*guy17+qzzk*guy19
+                        +2.0f*(qxyk*guy14+qxzk*guy15+qyzk*guy18))
+                         - szi*(qxxk*guz12+qyyk*guz17+qzzk*guz19
+                        +2.0f*(qxyk*guz14+qxzk*guz15+qyzk*guz18))
+                         + sxk*(qxxi*gqxx6+qyyi*gqyy6+qzzi*gqzz6
+                        +2.0f*(qxyi*gqxy6+qxzi*gqxz6+qyzi*gqyz6))
+                         + syk*(qxxi*gqxx8+qyyi*gqyy8+qzzi*gqzz8
+                        +2.0f*(qxyi*gqxy8+qxzi*gqxz8+qyzi*gqyz8))
+                         + szk*(qxxi*gqxx9+qyyi*gqyy9+qzzi*gqzz9
+                        +2.0f*(qxyi*gqxy9+qxzi*gqxz9+qyzi*gqyz9));
 
-    dpwkdy = ci*(sxk*gux[3]+syk*guy[3]+szk*guz[3])
-                        - ck*(sxi*gc[6]+syi*gc[8]+szi*gc[9])
-                      - sxi*(qxxk*gqxx[6]+qyyk*gqyy[6]+qzzk*gqzz[6]
-                     +2.0f*(qxyk*gqxy[6]+qxzk*gqxz[6]+qyzk*gqyz[6]))
-                      - syi*(qxxk*gqxx[8]+qyyk*gqyy[8]+qzzk*gqzz[8]
-                     +2.0f*(qxyk*gqxy[8]+qxzk*gqxz[8]+qyzk*gqyz[8]))
-                      - szi*(qxxk*gqxx[9]+qyyk*gqyy[9]+qzzk*gqzz[9]
-                     +2.0f*(qxyk*gqxy[9]+qxzk*gqxz[9]+qyzk*gqyz[9]))
-                      + sxk*(qxxi*gux[12]+qyyi*gux[17]+qzzi*gux[19]
-                     +2.0f*(qxyi*gux[14]+qxzi*gux[15]+qyzi*gux[18]))
-                      + syk*(qxxi*guy[12]+qyyi*guy[17]+qzzi*guy[19]
-                     +2.0f*(qxyi*guy[14]+qxzi*guy[15]+qyzi*guy[18]))
-                      + szk*(qxxi*guz[12]+qyyi*guz[17]+qzzi*guz[19]
-                     +2.0f*(qxyi*guz[14]+qxzi*guz[15]+qyzi*guz[18]));
+    dpwkdy = ci*(sxk*gux3+syk*guy3+szk*guz3)
+                        - ck*(sxi*gc6+syi*gc8+szi*gc9)
+                      - sxi*(qxxk*gqxx6+qyyk*gqyy6+qzzk*gqzz6
+                     +2.0f*(qxyk*gqxy6+qxzk*gqxz6+qyzk*gqyz6))
+                      - syi*(qxxk*gqxx8+qyyk*gqyy8+qzzk*gqzz8
+                     +2.0f*(qxyk*gqxy8+qxzk*gqxz8+qyzk*gqyz8))
+                      - szi*(qxxk*gqxx9+qyyk*gqyy9+qzzk*gqzz9
+                     +2.0f*(qxyk*gqxy9+qxzk*gqxz9+qyzk*gqyz9))
+                      + sxk*(qxxi*gux12+qyyi*gux17+qzzi*gux19
+                     +2.0f*(qxyi*gux14+qxzi*gux15+qyzi*gux18))
+                      + syk*(qxxi*guy12+qyyi*guy17+qzzi*guy19
+                     +2.0f*(qxyi*guy14+qxzi*guy15+qyzi*guy18))
+                      + szk*(qxxi*guz12+qyyi*guz17+qzzi*guz19
+                     +2.0f*(qxyi*guz14+qxzi*guz15+qyzi*guz18));
 
     dpdy    = 0.5f * (dpsymdy + 0.5f*(dpwidy + dpwkdy));
 
-    dpsymdz = -uxi*(sxk*gux[7]+syk*guy[7]+szk*guz[7])
-                          - uyi*(sxk*gux[9]+syk*guy[9]+szk*guz[9])
-                          - uzi*(sxk*gux[10]+syk*guy[10]+szk*guz[10])
-                          - uxk*(sxi*gux[7]+syi*guy[7]+szi*guz[7])
-                          - uyk*(sxi*gux[9]+syi*guy[9]+szi*guz[9])
-                          - uzk*(sxi*gux[10]+syi*guy[10]+szi*guz[10]);
+    dpsymdz = -uxi*(sxk*gux7+syk*guy7+szk*guz7)
+                          - uyi*(sxk*gux9+syk*guy9+szk*guz9)
+                          - uzi*(sxk*gux10+syk*guy10+szk*guz10)
+                          - uxk*(sxi*gux7+syi*guy7+szi*guz7)
+                          - uyk*(sxi*gux9+syi*guy9+szi*guz9)
+                          - uzk*(sxi*gux10+syi*guy10+szi*guz10);
 
-    dpwidz = ci*(sxk*gc[7]+syk*gc[9]+szk*gc[10])
-                        - ck*(sxi*gux[4]+syi*guy[4]+szi*guz[4])
-                      - sxi*(qxxk*gux[13]+qyyk*gux[18]+qzzk*gux[20]
-                     +2.0f*(qxyk*gux[15]+qxzk*gux[16]+qyzk*gux[19]))
-                      - syi*(qxxk*guy[13]+qyyk*guy[18]+qzzk*guy[20]
-                     +2.0f*(qxyk*guy[15]+qxzk*guy[16]+qyzk*guy[19]))
-                      - szi*(qxxk*guz[13]+qyyk*guz[18]+qzzk*guz[20]
-                     +2.0f*(qxyk*guz[15]+qxzk*guz[16]+qyzk*guz[19]))
-                      + sxk*(qxxi*gqxx[7]+qyyi*gqyy[7]+qzzi*gqzz[7]
-                     +2.0f*(qxyi*gqxy[7]+qxzi*gqxz[7]+qyzi*gqyz[7]))
-                      + syk*(qxxi*gqxx[9]+qyyi*gqyy[9]+qzzi*gqzz[9]
-                     +2.0f*(qxyi*gqxy[9]+qxzi*gqxz[9]+qyzi*gqyz[9]))
-                      + szk*(qxxi*gqxx[10]+qyyi*gqyy[10]+qzzi*gqzz[10]
-                     +2.0f*(qxyi*gqxy[10]+qxzi*gqxz[10]+qyzi*gqyz[10]));
+    dpwidz = ci*(sxk*gc7+syk*gc9+szk*gc10)
+                        - ck*(sxi*gux4+syi*guy4+szi*guz4)
+                      - sxi*(qxxk*gux13+qyyk*gux18+qzzk*gux20
+                     +2.0f*(qxyk*gux15+qxzk*gux16+qyzk*gux19))
+                      - syi*(qxxk*guy13+qyyk*guy18+qzzk*guy20
+                     +2.0f*(qxyk*guy15+qxzk*guy16+qyzk*guy19))
+                      - szi*(qxxk*guz13+qyyk*guz18+qzzk*guz20
+                     +2.0f*(qxyk*guz15+qxzk*guz16+qyzk*guz19))
+                      + sxk*(qxxi*gqxx7+qyyi*gqyy7+qzzi*gqzz7
+                     +2.0f*(qxyi*gqxy7+qxzi*gqxz7+qyzi*gqyz7))
+                      + syk*(qxxi*gqxx9+qyyi*gqyy9+qzzi*gqzz9
+                     +2.0f*(qxyi*gqxy9+qxzi*gqxz9+qyzi*gqyz9))
+                      + szk*(qxxi*gqxx10+qyyi*gqyy10+qzzi*gqzz10
+                     +2.0f*(qxyi*gqxy10+qxzi*gqxz10+qyzi*gqyz10));
 
-    dpwkdz = ci*(sxk*gux[4]+syk*guy[4]+szk*guz[4])
-                        - ck*(sxi*gc[7]+syi*gc[9]+szi*gc[10])
-                      - sxi*(qxxk*gqxx[7]+qyyk*gqyy[7]+qzzk*gqzz[7]
-                     +2.0f*(qxyk*gqxy[7]+qxzk*gqxz[7]+qyzk*gqyz[7]))
-                      - syi*(qxxk*gqxx[9]+qyyk*gqyy[9]+qzzk*gqzz[9]
-                     +2.0f*(qxyk*gqxy[9]+qxzk*gqxz[9]+qyzk*gqyz[9]))
-                      - szi*(qxxk*gqxx[10]+qyyk*gqyy[10]+qzzk*gqzz[10]
-                     +2.0f*(qxyk*gqxy[10]+qxzk*gqxz[10]+qyzk*gqyz[10]))
-                      + sxk*(qxxi*gux[13]+qyyi*gux[18]+qzzi*gux[20]
-                     +2.0f*(qxyi*gux[15]+qxzi*gux[16]+qyzi*gux[19]))
-                      + syk*(qxxi*guy[13]+qyyi*guy[18]+qzzi*guy[20]
-                     +2.0f*(qxyi*guy[15]+qxzi*guy[16]+qyzi*guy[19]))
-                      + szk*(qxxi*guz[13]+qyyi*guz[18]+qzzi*guz[20]
-                     +2.0f*(qxyi*guz[15]+qxzi*guz[16]+qyzi*guz[19]));
+    dpwkdz = ci*(sxk*gux4+syk*guy4+szk*guz4)
+                        - ck*(sxi*gc7+syi*gc9+szi*gc10)
+                      - sxi*(qxxk*gqxx7+qyyk*gqyy7+qzzk*gqzz7
+                     +2.0f*(qxyk*gqxy7+qxzk*gqxz7+qyzk*gqyz7))
+                      - syi*(qxxk*gqxx9+qyyk*gqyy9+qzzk*gqzz9
+                     +2.0f*(qxyk*gqxy9+qxzk*gqxz9+qyzk*gqyz9))
+                      - szi*(qxxk*gqxx10+qyyk*gqyy10+qzzk*gqzz10
+                     +2.0f*(qxyk*gqxy10+qxzk*gqxz10+qyzk*gqyz10))
+                      + sxk*(qxxi*gux13+qyyi*gux18+qzzi*gux20
+                     +2.0f*(qxyi*gux15+qxzi*gux16+qyzi*gux19))
+                      + syk*(qxxi*guy13+qyyi*guy18+qzzi*guy20
+                     +2.0f*(qxyi*guy15+qxzi*guy16+qyzi*guy19))
+                      + szk*(qxxi*guz13+qyyi*guz18+qzzi*guz20
+                     +2.0f*(qxyi*guz15+qxzi*guz16+qyzi*guz19));
 
     dpdz = 0.5f * (dpsymdz + 0.5f*(dpwidz + dpwkdz));
- 
+
     // effective radii chain rule terms for the;
     // electrostatic solvation free energy gradient of the permanent;
     // multipoles in the reaction potential of the induced dipoles;
- 
-    dsymdr = -uxi*(sxk*gux[22]+syk*guy[22]+szk*guz[22])
-                          - uyi*(sxk*gux[23]+syk*guy[23]+szk*guz[23])
-                          - uzi*(sxk*gux[24]+syk*guy[24]+szk*guz[24])
-                          - uxk*(sxi*gux[22]+syi*guy[22]+szi*guz[22])
-                          - uyk*(sxi*gux[23]+syi*guy[23]+szi*guz[23])
-                          - uzk*(sxi*gux[24]+syi*guy[24]+szi*guz[24]);
 
-    dwipdr = ci*(sxk*gc[22]+syk*gc[23]+szk*gc[24])
-                         - ck*(sxi*gux[21]+syi*guy[21]+szi*guz[21])
-                      - sxi*(qxxk*gux[25]+qyyk*gux[28]+qzzk*gux[30]
-                     +2.0f*(qxyk*gux[26]+qxzk*gux[27]+qyzk*gux[29]))
-                      - syi*(qxxk*guy[25]+qyyk*guy[28]+qzzk*guy[30]
-                     +2.0f*(qxyk*guy[26]+qxzk*guy[27]+qyzk*guy[29]))
-                      - szi*(qxxk*guz[25]+qyyk*guz[28]+qzzk*guz[30]
-                     +2.0f*(qxyk*guz[26]+qxzk*guz[27]+qyzk*guz[29]))
-                      + sxk*(qxxi*gqxx[22]+qyyi*gqyy[22]+qzzi*gqzz[22]
-                     +2.0f*(qxyi*gqxy[22]+qxzi*gqxz[22]+qyzi*gqyz[22]))
-                      + syk*(qxxi*gqxx[23]+qyyi*gqyy[23]+qzzi*gqzz[23]
-                     +2.0f*(qxyi*gqxy[23]+qxzi*gqxz[23]+qyzi*gqyz[23]))
-                      + szk*(qxxi*gqxx[24]+qyyi*gqyy[24]+qzzi*gqzz[24]
-                     +2.0f*(qxyi*gqxy[24]+qxzi*gqxz[24]+qyzi*gqyz[24]));
+    dsymdr = -uxi*(sxk*gux22+syk*guy22+szk*guz22)
+                          - uyi*(sxk*gux23+syk*guy23+szk*guz23)
+                          - uzi*(sxk*gux24+syk*guy24+szk*guz24)
+                          - uxk*(sxi*gux22+syi*guy22+szi*guz22)
+                          - uyk*(sxi*gux23+syi*guy23+szi*guz23)
+                          - uzk*(sxi*gux24+syi*guy24+szi*guz24);
 
-    dwkpdr = ci*(sxk*gux[21]+syk*guy[21]+szk*guz[21])
-                         - ck*(sxi*gc[22]+syi*gc[23]+szi*gc[24])
-                      - sxi*(qxxk*gqxx[22]+qyyk*gqyy[22]+qzzk*gqzz[22]
-                     +2.0f*(qxyk*gqxy[22]+qxzk*gqxz[22]+qyzk*gqyz[22]))
-                      - syi*(qxxk*gqxx[23]+qyyk*gqyy[23]+qzzk*gqzz[23]
-                     +2.0f*(qxyk*gqxy[23]+qxzk*gqxz[23]+qyzk*gqyz[23]))
-                      - szi*(qxxk*gqxx[24]+qyyk*gqyy[24]+qzzk*gqzz[24]
-                     +2.0f*(qxyk*gqxy[24]+qxzk*gqxz[24]+qyzk*gqyz[24]))
-                      + sxk*(qxxi*gux[25]+qyyi*gux[28]+qzzi*gux[30]
-                     +2.0f*(qxyi*gux[26]+qxzi*gux[27]+qyzi*gux[29]))
-                      + syk*(qxxi*guy[25]+qyyi*guy[28]+qzzi*guy[30]
-                     +2.0f*(qxyi*guy[26]+qxzi*guy[27]+qyzi*guy[29]))
-                      + szk*(qxxi*guz[25]+qyyi*guz[28]+qzzi*guz[30]
-                     +2.0f*(qxyi*guz[26]+qxzi*guz[27]+qyzi*guz[29]));
+    dwipdr = ci*(sxk*gc22+syk*gc23+szk*gc24)
+                         - ck*(sxi*gux21+syi*guy21+szi*guz21)
+                      - sxi*(qxxk*gux25+qyyk*gux28+qzzk*gux30
+                     +2.0f*(qxyk*gux26+qxzk*gux27+qyzk*gux29))
+                      - syi*(qxxk*guy25+qyyk*guy28+qzzk*guy30
+                     +2.0f*(qxyk*guy26+qxzk*guy27+qyzk*guy29))
+                      - szi*(qxxk*guz25+qyyk*guz28+qzzk*guz30
+                     +2.0f*(qxyk*guz26+qxzk*guz27+qyzk*guz29))
+                      + sxk*(qxxi*gqxx22+qyyi*gqyy22+qzzi*gqzz22
+                     +2.0f*(qxyi*gqxy22+qxzi*gqxz22+qyzi*gqyz22))
+                      + syk*(qxxi*gqxx23+qyyi*gqyy23+qzzi*gqzz23
+                     +2.0f*(qxyi*gqxy23+qxzi*gqxz23+qyzi*gqyz23))
+                      + szk*(qxxi*gqxx24+qyyi*gqyy24+qzzi*gqzz24
+                     +2.0f*(qxyi*gqxy24+qxzi*gqxz24+qyzi*gqyz24));
+
+    dwkpdr = ci*(sxk*gux21+syk*guy21+szk*guz21)
+                         - ck*(sxi*gc22+syi*gc23+szi*gc24)
+                      - sxi*(qxxk*gqxx22+qyyk*gqyy22+qzzk*gqzz22
+                     +2.0f*(qxyk*gqxy22+qxzk*gqxz22+qyzk*gqyz22))
+                      - syi*(qxxk*gqxx23+qyyk*gqyy23+qzzk*gqzz23
+                     +2.0f*(qxyk*gqxy23+qxzk*gqxz23+qyzk*gqyz23))
+                      - szi*(qxxk*gqxx24+qyyk*gqyy24+qzzk*gqzz24
+                     +2.0f*(qxyk*gqxy24+qxzk*gqxz24+qyzk*gqyz24))
+                      + sxk*(qxxi*gux25+qyyi*gux28+qzzi*gux30
+                     +2.0f*(qxyi*gux26+qxzi*gux27+qyzi*gux29))
+                      + syk*(qxxi*guy25+qyyi*guy28+qzzi*guy30
+                     +2.0f*(qxyi*guy26+qxzi*guy27+qyzi*guy29))
+                      + szk*(qxxi*guz25+qyyi*guz28+qzzi*guz30
+                     +2.0f*(qxyi*guz26+qxzi*guz27+qyzi*guz29));
 
     dsumdr = dsymdr + 0.5f*(dwipdr + dwkpdr);
     dpbi = 0.5f*rbk*dsumdr;
     dpbk = 0.5f*rbi*dsumdr;
- 
+
     // mutual polarization electrostatic solvation free energy gradient
- 
+
 //   if (poltyp .eq. 'MUTUAL'){
 
         dpdx = dpdx - 0.5f *
-                           (dxi*(pxk*gux[5]+pyk*gux[6]+pzk*gux[7])
-                           +dyi*(pxk*guy[5]+pyk*guy[6]+pzk*guy[7])
-                           +dzi*(pxk*guz[5]+pyk*guz[6]+pzk*guz[7])
-                           +dxk*(pxi*gux[5]+pyi*gux[6]+pzi*gux[7])
-                           +dyk*(pxi*guy[5]+pyi*guy[6]+pzi*guy[7])
-                           +dzk*(pxi*guz[5]+pyi*guz[6]+pzi*guz[7]));
+                           (dxi*(pxk*gux5+pyk*gux6+pzk*gux7)
+                           +dyi*(pxk*guy5+pyk*guy6+pzk*guy7)
+                           +dzi*(pxk*guz5+pyk*guz6+pzk*guz7)
+                           +dxk*(pxi*gux5+pyi*gux6+pzi*gux7)
+                           +dyk*(pxi*guy5+pyi*guy6+pzi*guy7)
+                           +dzk*(pxi*guz5+pyi*guz6+pzi*guz7));
 
         dpdy = dpdy - 0.5f *
-                           (dxi*(pxk*gux[6]+pyk*gux[8]+pzk*gux[9])
-                           +dyi*(pxk*guy[6]+pyk*guy[8]+pzk*guy[9])
-                           +dzi*(pxk*guz[6]+pyk*guz[8]+pzk*guz[9])
-                           +dxk*(pxi*gux[6]+pyi*gux[8]+pzi*gux[9])
-                           +dyk*(pxi*guy[6]+pyi*guy[8]+pzi*guy[9])
-                           +dzk*(pxi*guz[6]+pyi*guz[8]+pzi*guz[9]));
+                           (dxi*(pxk*gux6+pyk*gux8+pzk*gux9)
+                           +dyi*(pxk*guy6+pyk*guy8+pzk*guy9)
+                           +dzi*(pxk*guz6+pyk*guz8+pzk*guz9)
+                           +dxk*(pxi*gux6+pyi*gux8+pzi*gux9)
+                           +dyk*(pxi*guy6+pyi*guy8+pzi*guy9)
+                           +dzk*(pxi*guz6+pyi*guz8+pzi*guz9));
 
         dpdz = dpdz - 0.5f *
-                           (dxi*(pxk*gux[7]+pyk*gux[9]+pzk*gux[10])
-                           +dyi*(pxk*guy[7]+pyk*guy[9]+pzk*guy[10])
-                           +dzi*(pxk*guz[7]+pyk*guz[9]+pzk*guz[10])
-                           +dxk*(pxi*gux[7]+pyi*gux[9]+pzi*gux[10])
-                           +dyk*(pxi*guy[7]+pyi*guy[9]+pzi*guy[10])
-                           +dzk*(pxi*guz[7]+pyi*guz[9]+pzi*guz[10]));
+                           (dxi*(pxk*gux7+pyk*gux9+pzk*gux10)
+                           +dyi*(pxk*guy7+pyk*guy9+pzk*guy10)
+                           +dzi*(pxk*guz7+pyk*guz9+pzk*guz10)
+                           +dxk*(pxi*gux7+pyi*gux9+pzi*gux10)
+                           +dyk*(pxi*guy7+pyi*guy9+pzi*guy10)
+                           +dzk*(pxi*guz7+pyi*guz9+pzi*guz10));
 
-        duvdr = dxi*(pxk*gux[22]+pyk*gux[23]+pzk*gux[24])
-                            + dyi*(pxk*guy[22]+pyk*guy[23]+pzk*guy[24])
-                            + dzi*(pxk*guz[22]+pyk*guz[23]+pzk*guz[24])
-                            + dxk*(pxi*gux[22]+pyi*gux[23]+pzi*gux[24])
-                            + dyk*(pxi*guy[22]+pyi*guy[23]+pzi*guy[24])
-                            + dzk*(pxi*guz[22]+pyi*guz[23]+pzi*guz[24]);
+        duvdr = dxi*(pxk*gux22+pyk*gux23+pzk*gux24)
+                            + dyi*(pxk*guy22+pyk*guy23+pzk*guy24)
+                            + dzi*(pxk*guz22+pyk*guz23+pzk*guz24)
+                            + dxk*(pxi*gux22+pyi*gux23+pzi*gux24)
+                            + dyk*(pxi*guy22+pyi*guy23+pzi*guy24)
+                            + dzk*(pxi*guz22+pyi*guz23+pzi*guz24);
         dpbi = dpbi - 0.5f*rbk*duvdr;
         dpbk = dpbk - 0.5f*rbi*duvdr;
 //    }
- 
+
     // torque due to induced reaction field on permanent dipoles
 
-    fid[1] = 0.5f * (sxk*gux[2]+syk*guy[2]+szk*guz[2]);
-    fid[2] = 0.5f * (sxk*gux[3]+syk*guy[3]+szk*guz[3]);
-    fid[3] = 0.5f * (sxk*gux[4]+syk*guy[4]+szk*guz[4]);
-    fkd[1] = 0.5f * (sxi*gux[2]+syi*guy[2]+szi*guz[2]);
-    fkd[2] = 0.5f * (sxi*gux[3]+syi*guy[3]+szi*guz[3]);
-    fkd[3] = 0.5f * (sxi*gux[4]+syi*guy[4]+szi*guz[4]);
+    float fid1 = 0.5f * (sxk*gux2+syk*guy2+szk*guz2);
+    float fid2 = 0.5f * (sxk*gux3+syk*guy3+szk*guz3);
+    float fid3 = 0.5f * (sxk*gux4+syk*guy4+szk*guz4);
+    float fkd1 = 0.5f * (sxi*gux2+syi*guy2+szi*guz2);
+    float fkd2 = 0.5f * (sxi*gux3+syi*guy3+szi*guz3);
+    float fkd3 = 0.5f * (sxi*gux4+syi*guy4+szi*guz4);
 
 
-    // the factor 0.5 appears to be included since trqi[1][i] & trqi[1][k]
+    // the factor 0.5 appears to be included since trqi1[i] & trqi1[k]
     // are identical in the Tinker code (inner loop starts at k = i
     // factor not needed here since
 /*
     if ( sameAtom )
     {
-        fid[1] = 0.5f * fid[1];
-        fid[2] = 0.5f * fid[2];
-        fid[3] = 0.5f * fid[3];
-        fkd[1] = 0.5f * fkd[1];
-        fkd[2] = 0.5f * fkd[2];
-        fkd[3] = 0.5f * fkd[3];
+        fid1 = 0.5f * fid1;
+        fid2 = 0.5f * fid2;
+        fid3 = 0.5f * fid3;
+        fkd1 = 0.5f * fkd1;
+        fkd2 = 0.5f * fkd2;
+        fkd3 = 0.5f * fkd3;
     }
 */
-    trqi[1]   = uyi*fid[3] - uzi*fid[2];
-    trqi[2]   = uzi*fid[1] - uxi*fid[3];
-    trqi[3]   = uxi*fid[2] - uyi*fid[1];
+    float trqi1   = uyi*fid3 - uzi*fid2;
+    float trqi2   = uzi*fid1 - uxi*fid3;
+    float trqi3   = uxi*fid2 - uyi*fid1;
 
-    trqi_k[1] = uyk*fkd[3] - uzk*fkd[2];
-    trqi_k[2] = uzk*fkd[1] - uxk*fkd[3];
-    trqi_k[3] = uxk*fkd[2] - uyk*fkd[1];
+    float trqi_k1 = uyk*fkd3 - uzk*fkd2;
+    float trqi_k2 = uzk*fkd1 - uxk*fkd3;
+    float trqi_k3 = uxk*fkd2 - uyk*fkd1;
 
- 
+
     // torque due to induced reaction field gradient on quadrupoles;
 
-    fidg[1][1] = -0.25f *
-                              ( (sxk*gqxx[2]+syk*gqxx[3]+szk*gqxx[4])
-                              + (sxk*gux[5]+syk*guy[5]+szk*guz[5]));
+    float fidg11 = -0.25f *
+                              ( (sxk*gqxx2+syk*gqxx3+szk*gqxx4)
+                              + (sxk*gux5+syk*guy5+szk*guz5));
 
-    fidg[1][2] = -0.25f *
-                              ( (sxk*gqxy[2]+syk*gqxy[3]+szk*gqxy[4])
-                              + (sxk*gux[6]+syk*guy[6]+szk*guz[6]));
+    float fidg12 = -0.25f *
+                              ( (sxk*gqxy2+syk*gqxy3+szk*gqxy4)
+                              + (sxk*gux6+syk*guy6+szk*guz6));
 
-    fidg[1][3] = -0.25f *
-                              ( (sxk*gqxz[2]+syk*gqxz[3]+szk*gqxz[4])
-                              + (sxk*gux[7]+syk*guy[7]+szk*guz[7]));
+    float fidg13 = -0.25f *
+                              ( (sxk*gqxz2+syk*gqxz3+szk*gqxz4)
+                              + (sxk*gux7+syk*guy7+szk*guz7));
 
-    fidg[2][2] = -0.25f *
-                              ( (sxk*gqyy[2]+syk*gqyy[3]+szk*gqyy[4])
-                              + (sxk*gux[8]+syk*guy[8]+szk*guz[8]));
+    float fidg22 = -0.25f *
+                              ( (sxk*gqyy2+syk*gqyy3+szk*gqyy4)
+                              + (sxk*gux8+syk*guy8+szk*guz8));
 
-    fidg[2][3] = -0.25f *
-                              ( (sxk*gqyz[2]+syk*gqyz[3]+szk*gqyz[4])
-                              + (sxk*gux[9]+syk*guy[9]+szk*guz[9]));
+    float fidg23 = -0.25f *
+                              ( (sxk*gqyz2+syk*gqyz3+szk*gqyz4)
+                              + (sxk*gux9+syk*guy9+szk*guz9));
 
-    fidg[3][3] = -0.25f *
-                              ( (sxk*gqzz[2]+syk*gqzz[3]+szk*gqzz[4])
-                              + (sxk*gux[10]+syk*guy[10]+szk*guz[10]));
+    float fidg33 = -0.25f *
+                              ( (sxk*gqzz2+syk*gqzz3+szk*gqzz4)
+                              + (sxk*gux10+syk*guy10+szk*guz10));
 
-    fidg[2][1] = fidg[1][2];
-    fidg[3][1] = fidg[1][3];
-    fidg[3][2] = fidg[2][3];
+    float fidg21 = fidg12;
+    float fidg31 = fidg13;
+    float fidg32 = fidg23;
 
-    fkdg[1][1] = 0.25f *
-                              ( (sxi*gqxx[2]+syi*gqxx[3]+szi*gqxx[4])
-                              + (sxi*gux[5]+syi*guy[5]+szi*guz[5]));
+    float fkdg11 = 0.25f *
+                              ( (sxi*gqxx2+syi*gqxx3+szi*gqxx4)
+                              + (sxi*gux5+syi*guy5+szi*guz5));
 
-    fkdg[1][2] = 0.25f *
-                              ( (sxi*gqxy[2]+syi*gqxy[3]+szi*gqxy[4])
-                              + (sxi*gux[6]+syi*guy[6]+szi*guz[6]));
-    fkdg[1][3] = 0.25f *
-                              ( (sxi*gqxz[2]+syi*gqxz[3]+szi*gqxz[4])
-                              + (sxi*gux[7]+syi*guy[7]+szi*guz[7]));
-    fkdg[2][2] = 0.25f *
-                              ( (sxi*gqyy[2]+syi*gqyy[3]+szi*gqyy[4])
-                              + (sxi*gux[8]+syi*guy[8]+szi*guz[8]));
-    fkdg[2][3] = 0.25f *
-                              ( (sxi*gqyz[2]+syi*gqyz[3]+szi*gqyz[4])
-                              + (sxi*gux[9]+syi*guy[9]+szi*guz[9]));
-    fkdg[3][3] = 0.25f *
-                              ( (sxi*gqzz[2]+syi*gqzz[3]+szi*gqzz[4])
-                              + (sxi*gux[10]+syi*guy[10]+szi*guz[10]));
-    fkdg[2][1] = fkdg[1][2];
-    fkdg[3][1] = fkdg[1][3];
-    fkdg[3][2] = fkdg[2][3];
+    float fkdg12 = 0.25f *
+                              ( (sxi*gqxy2+syi*gqxy3+szi*gqxy4)
+                              + (sxi*gux6+syi*guy6+szi*guz6));
+    float fkdg13 = 0.25f *
+                              ( (sxi*gqxz2+syi*gqxz3+szi*gqxz4)
+                              + (sxi*gux7+syi*guy7+szi*guz7));
+    float fkdg22 = 0.25f *
+                              ( (sxi*gqyy2+syi*gqyy3+szi*gqyy4)
+                              + (sxi*gux8+syi*guy8+szi*guz8));
+    float fkdg23 = 0.25f *
+                              ( (sxi*gqyz2+syi*gqyz3+szi*gqyz4)
+                              + (sxi*gux9+syi*guy9+szi*guz9));
+    float fkdg33 = 0.25f *
+                              ( (sxi*gqzz2+syi*gqzz3+szi*gqzz4)
+                              + (sxi*gux10+syi*guy10+szi*guz10));
+    float fkdg21 = fkdg12;
+    float fkdg31 = fkdg13;
+    float fkdg32 = fkdg23;
 
 /*
     if ( sameAtom )
     {
-        fidg[1][1] = 0.5f * fidg[1][1];
-        fidg[1][2] = 0.5f * fidg[1][2];
-        fidg[1][3] = 0.5f * fidg[1][3];
-        fidg[2][1] = 0.5f * fidg[2][1];
-        fidg[2][2] = 0.5f * fidg[2][2];
-        fidg[2][3] = 0.5f * fidg[2][3];
-        fidg[3][1] = 0.5f * fidg[3][1];
-        fidg[3][2] = 0.5f * fidg[3][2];
-        fidg[3][3] = 0.5f * fidg[3][3];
-        fkdg[1][1] = 0.5f * fkdg[1][1];
-        fkdg[1][2] = 0.5f * fkdg[1][2];
-        fkdg[1][3] = 0.5f * fkdg[1][3];
-        fkdg[2][1] = 0.5f * fkdg[2][1];
-        fkdg[2][2] = 0.5f * fkdg[2][2];
-        fkdg[2][3] = 0.5f * fkdg[2][3];
-        fkdg[3][1] = 0.5f * fkdg[3][1];
-        fkdg[3][2] = 0.5f * fkdg[3][2];
-        fkdg[3][3] = 0.5f * fkdg[3][3];
+        fidg11 = 0.5f * fidg11;
+        fidg12 = 0.5f * fidg12;
+        fidg13 = 0.5f * fidg13;
+        fidg21 = 0.5f * fidg21;
+        fidg22 = 0.5f * fidg22;
+        fidg23 = 0.5f * fidg23;
+        fidg31 = 0.5f * fidg31;
+        fidg32 = 0.5f * fidg32;
+        fidg33 = 0.5f * fidg33;
+        fkdg11 = 0.5f * fkdg11;
+        fkdg12 = 0.5f * fkdg12;
+        fkdg13 = 0.5f * fkdg13;
+        fkdg21 = 0.5f * fkdg21;
+        fkdg22 = 0.5f * fkdg22;
+        fkdg23 = 0.5f * fkdg23;
+        fkdg31 = 0.5f * fkdg31;
+        fkdg32 = 0.5f * fkdg32;
+        fkdg33 = 0.5f * fkdg33;
      }
 */
 
-    trqi[1] += 2.0f*(qxyi*fidg[1][3]+qyyi*fidg[2][3]+qyzi*fidg[3][3]
-                        -qxzi*fidg[1][2]-qyzi*fidg[2][2]-qzzi*fidg[3][2]);
-    trqi[2] += 2.0f*(qxzi*fidg[1][1]+qyzi*fidg[2][1]+qzzi*fidg[3][1]
-                        -qxxi*fidg[1][3]-qxyi*fidg[2][3]-qxzi*fidg[3][3]);
+    trqi1 += 2.0f*(qxyi*fidg13+qyyi*fidg23+qyzi*fidg33
+                        -qxzi*fidg12-qyzi*fidg22-qzzi*fidg32);
+    trqi2 += 2.0f*(qxzi*fidg11+qyzi*fidg21+qzzi*fidg31
+                        -qxxi*fidg13-qxyi*fidg23-qxzi*fidg33);
 
-    trqi[3] += 2.0f*(qxxi*fidg[1][2]+qxyi*fidg[2][2]+qxzi*fidg[3][2]
-                        -qxyi*fidg[1][1]-qyyi*fidg[2][1]-qyzi*fidg[3][1]);
+    trqi3 += 2.0f*(qxxi*fidg12+qxyi*fidg22+qxzi*fidg32
+                        -qxyi*fidg11-qyyi*fidg21-qyzi*fidg31);
 
-    trqi_k[1] += 2.0f*
-                        (qxyk*fkdg[1][3]+qyyk*fkdg[2][3]+qyzk*fkdg[3][3]
-                        -qxzk*fkdg[1][2]-qyzk*fkdg[2][2]-qzzk*fkdg[3][2]);
+    trqi_k1 += 2.0f*
+                        (qxyk*fkdg13+qyyk*fkdg23+qyzk*fkdg33
+                        -qxzk*fkdg12-qyzk*fkdg22-qzzk*fkdg32);
 
-    trqi_k[2] += 2.0f*
-                        (qxzk*fkdg[1][1]+qyzk*fkdg[2][1]+qzzk*fkdg[3][1]
-                        -qxxk*fkdg[1][3]-qxyk*fkdg[2][3]-qxzk*fkdg[3][3]);
+    trqi_k2 += 2.0f*
+                        (qxzk*fkdg11+qyzk*fkdg21+qzzk*fkdg31
+                        -qxxk*fkdg13-qxyk*fkdg23-qxzk*fkdg33);
 
-    trqi_k[3] += 2.0f*
-                        (qxxk*fkdg[1][2]+qxyk*fkdg[2][2]+qxzk*fkdg[3][2]
-                        -qxyk*fkdg[1][1]-qyyk*fkdg[2][1]-qyzk*fkdg[3][1]);
- 
-#if 1
-#ifdef AMOEBA_DEBUG
-if( 1 ){
-/*
-int debugIndex               = atomJ;
-    debugArray[debugIndex].x = rbi;
-    debugArray[debugIndex].y = rbk;
-    debugArray[debugIndex].z = esym;
-    debugArray[debugIndex].w = ewi;
-*/
-    debugArray[0].x          = dedx;
-    debugArray[0].y          = dedy;
-    debugArray[0].z          = dedz;
-/*
-    dewidx = ci*(uxk*gc[5]+uyk*gc[6]+uzk*gc[7])
-                      -ck*(uxi*gux[2]+uyi*guy[2]+uzi*guz[2])
-                 +ci*(qxxk*gc[11]+qyyk*gc[14]+qzzk*gc[16]
-              +2.0f*(qxyk*gc[12]+qxzk*gc[13]+qyzk*gc[15]))
- xr * yr * zr * a[0][3];
-*/
-
-    debugArray[1].x          = 5.0f;
-    debugArray[1].y          = expc*powf( dexpc, 2.0f );
-    debugArray[1].z          = powf( dexpc, 2.0f );
-    debugArray[1].w          = dexpc*dexpc;
-
-    //a[0][3]      = expc1*a[1][2] + expcdexpc*a[1][1];
-    //expcdexpc    = -expc * dexpc;
-    debugArray[2].x          = expc;
-    debugArray[2].y          = dexpc;
-    debugArray[2].z          = expcdexpc;
-    debugArray[2].w          = a[1][1];
-/*
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = trq[1] + trqi[1];
-    debugArray[debugIndex].y = trq[2] + trqi[2];
-    debugArray[debugIndex].z = trq[3] + trqi[3];
-
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = drbi;
-    debugArray[debugIndex].y = dpbi;
-
-*/
-/*
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = dedx;
-    debugArray[debugIndex].y = dedy;
-    debugArray[debugIndex].z = dedz;
-
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = dpdx;
-    debugArray[debugIndex].y = dpdy;
-    debugArray[debugIndex].z = dpdz;
-
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = trq[1];
-    debugArray[debugIndex].y = trq[2];
-    debugArray[debugIndex].z = trq[3];
-
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = trqi[1];
-    debugArray[debugIndex].y = trqi[2];
-    debugArray[debugIndex].z = trqi[3];
-
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = dpsymdx;
-    debugArray[debugIndex].y = dpwidx;
-    debugArray[debugIndex].z = dpwkdx;
-
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = dpsymdy;
-    debugArray[debugIndex].y = dpwidy;
-    debugArray[debugIndex].z = dpwkdy;
-
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = dxi;
-    debugArray[debugIndex].y = dyi;
-    debugArray[debugIndex].z = dzi;
-
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = dxk;
-    debugArray[debugIndex].y = dyk;
-    debugArray[debugIndex].z = dzk;
-
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = pxi;
-    debugArray[debugIndex].y = pyi;
-    debugArray[debugIndex].z = pzi;
-
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = pxk;
-    debugArray[debugIndex].y = pyk;
-    debugArray[debugIndex].z = pzk;
-
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = fid[1];
-    debugArray[debugIndex].y = fid[2];
-    debugArray[debugIndex].z = fid[3];
-
-    debugIndex              += numberOfAtoms;
-    debugArray[debugIndex].x = fidg[1][3];
-    debugArray[debugIndex].y = fidg[2][3];
-    debugArray[debugIndex].z = fidg[3][3];
-
-*/
-
-}
-#endif
-#endif
+    trqi_k3 += 2.0f*
+                        (qxxk*fkdg12+qxyk*fkdg22+qxzk*fkdg32
+                        -qxyk*fkdg11-qyyk*fkdg21-qyzk*fkdg31);
 
     // total permanent and induced energies for this interaction;
 
     e                        = esym + 0.5f*(ewi+ewk);
     ei                       = 0.5f * (esymi + 0.5f*(ewii+ewki));
- 
+
     outputForce[0]           = (dedx + dpdx);
     outputForce[1]           = (dedy + dpdy);
     outputForce[2]           = (dedz + dpdz);
-    
-    outputTorque[0][0]       = (trq[1] + trqi[1]);
-    outputTorque[0][1]       = (trq[2] + trqi[2]);
-    outputTorque[0][2]       = (trq[3] + trqi[3]);
 
-    outputTorque[1][0]       = (trq_k[1] + trqi_k[1]);
-    outputTorque[1][1]       = (trq_k[2] + trqi_k[2]);
-    outputTorque[1][2]       = (trq_k[3] + trqi_k[3]);
+    outputTorque[0][0]       = (trq1 + trqi1);
+    outputTorque[0][1]       = (trq2 + trqi2);
+    outputTorque[0][2]       = (trq3 + trqi3);
+
+    outputTorque[1][0]       = (trq_k1 + trqi_k1);
+    outputTorque[1][1]       = (trq_k2 + trqi_k2);
+    outputTorque[1][2]       = (trq_k3 + trqi_k3);
 
     outputBorn[0]            = drbi;
     outputBorn[1]            = drbk;
@@ -1994,18 +1615,7 @@ int debugIndex               = atomJ;
     outputBornPolar[1]       = dpbk;
 
     *outputEnergy            = (e + ei);
- 
-}
 
-__device__ static int debugAccumulate( int index, float4* debugArray, float* field, unsigned int addMask, float idLabel )
-{
-    index                             += cAmoebaSim.paddedNumberOfAtoms;
-    debugArray[index].x                = addMask ? field[0] : 0.0f;
-    debugArray[index].y                = addMask ? field[1] : 0.0f;
-    debugArray[index].z                = addMask ? field[2] : 0.0f;
-    debugArray[index].w                = idLabel;
-
-    return index;
 }
 
 __device__ void zeroKirkwoodParticleSharedField( struct KirkwoodParticle* sA )
@@ -2074,7 +1684,7 @@ static void kReduce_dBorn(amoebaGpuContext amoebaGpu )
 }
 #endif
 
-__global__ 
+__global__
 #if (__CUDA_ARCH__ >= 200)
 __launch_bounds__(GF1XX_THREADS_PER_BLOCK, 1)
 #elif (__CUDA_ARCH__ >= 130)
@@ -2090,7 +1700,7 @@ __launch_bounds__(G8X_THREADS_PER_BLOCK, 1)
     // Reduce field
 
     while (pos < fieldComponents)
-    {   
+    {
 
         float totalField = 0.0f;
 
@@ -2103,35 +1713,35 @@ __launch_bounds__(G8X_THREADS_PER_BLOCK, 1)
         unsigned int i   = outputBuffers;
 
         while (i >= 4)
-        {   
+        {
             totalField += pFt1[0] + pFt1[fieldComponents] + pFt1[2*fieldComponents] + pFt1[3*fieldComponents];
             totalField += pFt2[0] + pFt2[fieldComponents] + pFt2[2*fieldComponents] + pFt2[3*fieldComponents];
             pFt1       += fieldComponents*4;
             pFt2       += fieldComponents*4;
             i          -= 4;
-        }   
+        }
 
         if (i >= 2)
-        {   
+        {
             totalField += pFt1[0] + pFt1[fieldComponents];
             totalField += pFt2[0] + pFt2[fieldComponents];
             pFt1       += fieldComponents*2;
             pFt2       += fieldComponents*2;
             i          -= 2;
-        }   
+        }
 
         if (i > 0)
-        {   
+        {
             totalField += pFt1[0];
             totalField += pFt2[0];
-        }   
+        }
 
         fieldOut[pos]   = totalField*bornRadius*bornRadius*obcChain;
         pos            += gridDim.x * blockDim.x;
-    }   
+    }
 }
 
-__global__ 
+__global__
 #if (__CUDA_ARCH__ >= 200)
 __launch_bounds__(GF1XX_THREADS_PER_BLOCK, 1)
 #elif (__CUDA_ARCH__ >= 130)
@@ -2149,7 +1759,7 @@ void kReduceToBornForcePrefactorAndSASA_kernel( unsigned int fieldComponents, un
     // Reduce field
 
     while (pos < fieldComponents)
-    {   
+    {
 
         float totalForce = 0.0f;
 
@@ -2163,28 +1773,28 @@ void kReduceToBornForcePrefactorAndSASA_kernel( unsigned int fieldComponents, un
         unsigned int i   = outputBuffers;
 
         while (i >= 4)
-        {   
+        {
             totalForce += pFt1[0] + pFt1[fieldComponents] + pFt1[2*fieldComponents] + pFt1[3*fieldComponents];
             totalForce += pFt2[0] + pFt2[fieldComponents] + pFt2[2*fieldComponents] + pFt2[3*fieldComponents];
             pFt1       += fieldComponents*4;
             pFt2       += fieldComponents*4;
             i          -= 4;
-        }   
+        }
 
         if (i >= 2)
-        {   
+        {
             totalForce += pFt1[0] + pFt1[fieldComponents];
             totalForce += pFt2[0] + pFt2[fieldComponents];
             pFt1       += fieldComponents*2;
             pFt2       += fieldComponents*2;
             i          -= 2;
-        }   
+        }
 
         if (i > 0)
-        {   
+        {
             totalForce += pFt1[0];
             totalForce += pFt2[0];
-        }   
+        }
 
         float r        = (obcData.x + cSim.dielectricOffset + cSim.probeRadius);
         float ratio6   = ( (obcData.x + cSim.dielectricOffset) / bornRadius);
@@ -2199,7 +1809,7 @@ void kReduceToBornForcePrefactorAndSASA_kernel( unsigned int fieldComponents, un
 
         fieldOut[pos]   = totalForce*bornRadius*bornRadius*obcChain;
         pos            += gridDim.x * blockDim.x;
-    }   
+    }
 
     cSim.pEnergy[blockIdx.x * blockDim.x + threadIdx.x] += energy / -6.0f;
 }
@@ -2246,7 +1856,7 @@ static void printKirkwoodBuffer( amoebaGpuContext amoebaGpu, unsigned int buffer
         unsigned int ii3Index      = ii/3;
         unsigned int bufferIndex   = ii3Index/(amoebaGpu->paddedNumberOfAtoms);
         unsigned int particleIndex = ii3Index - bufferIndex*(amoebaGpu->paddedNumberOfAtoms);
-        (void) fprintf( amoebaGpu->log, "   %6u %3u %6u [%14.6e %14.6e %14.6e] [%14.6e %14.6e %14.6e]\n", 
+        (void) fprintf( amoebaGpu->log, "   %6u %3u %6u [%14.6e %14.6e %14.6e] [%14.6e %14.6e %14.6e]\n",
                             ii/3,  bufferIndex, particleIndex,
                             amoebaGpu->psWorkArray_3_1->_pSysStream[0][ii],
                             amoebaGpu->psWorkArray_3_1->_pSysStream[0][ii+1],
@@ -2254,23 +1864,23 @@ static void printKirkwoodBuffer( amoebaGpuContext amoebaGpu, unsigned int buffer
                             amoebaGpu->psWorkArray_3_2->_pSysStream[0][ii],
                             amoebaGpu->psWorkArray_3_2->_pSysStream[0][ii+1],
                             amoebaGpu->psWorkArray_3_2->_pSysStream[0][ii+2] );
-    } 
+    }
 
 /*
     start = 0;
     stop  = -146016;
     float maxV = -1.0e+99;
     for( unsigned int ii = start; ii < stop; ii += 3 ){
-        if(  amoebaGpu->psWorkArray_3_1->_pSysStream[0][ii] > maxV ){ 
+        if(  amoebaGpu->psWorkArray_3_1->_pSysStream[0][ii] > maxV ){
             unsigned int ii3Index      = ii/3;
             unsigned int bufferIndex   = ii3Index/(amoebaGpu->paddedNumberOfAtoms);
             unsigned int particleIndex = ii3Index - bufferIndex*(amoebaGpu->paddedNumberOfAtoms);
-            (void) fprintf( amoebaGpu->log, "MaxQ %6u %3u %6u %14.6e\n", 
+            (void) fprintf( amoebaGpu->log, "MaxQ %6u %3u %6u %14.6e\n",
                             ii/3,  bufferIndex, particleIndex,
                             amoebaGpu->psWorkArray_3_1->_pSysStream[0][ii] );
             maxV = amoebaGpu->psWorkArray_3_1->_pSysStream[0][ii];
-        } 
-    } 
+        }
+    }
 */
 }
 
@@ -2279,7 +1889,7 @@ static void printKirkwoodAtomBuffers( amoebaGpuContext amoebaGpu, unsigned int t
     (void) fprintf( amoebaGpu->log, "Kirkwood atom %u\n", targetAtom );
     for( unsigned int ii = 0; ii < amoebaGpu->outputBuffers; ii++ ){
         unsigned int particleIndex = 3*(targetAtom + ii*amoebaGpu->paddedNumberOfAtoms);
-        (void) fprintf( amoebaGpu->log, " %2u %6u [%14.6e %14.6e %14.6e] [%14.6e %14.6e %14.6e]\n", 
+        (void) fprintf( amoebaGpu->log, " %2u %6u [%14.6e %14.6e %14.6e] [%14.6e %14.6e %14.6e]\n",
                         ii, particleIndex,
                         amoebaGpu->psWorkArray_3_1->_pSysStream[0][particleIndex],
                         amoebaGpu->psWorkArray_3_1->_pSysStream[0][particleIndex+1],
@@ -2287,7 +1897,7 @@ static void printKirkwoodAtomBuffers( amoebaGpuContext amoebaGpu, unsigned int t
                         amoebaGpu->psWorkArray_3_2->_pSysStream[0][particleIndex],
                         amoebaGpu->psWorkArray_3_2->_pSysStream[0][particleIndex+1],
                         amoebaGpu->psWorkArray_3_2->_pSysStream[0][particleIndex+2] );
-    } 
+    }
 }
 #endif
 
@@ -2302,7 +1912,7 @@ static void printKirkwoodAtomBuffers( amoebaGpuContext amoebaGpu, unsigned int t
 
 void kCalculateAmoebaKirkwood( amoebaGpuContext amoebaGpu )
 {
-  
+
    // ---------------------------------------------------------------------------------------
 
     static unsigned int threadsPerBlock = 0;
@@ -2330,7 +1940,7 @@ void kCalculateAmoebaKirkwood( amoebaGpuContext amoebaGpu )
                         methodName, gpu->natoms,
                         amoebaGpu->maxCovalentDegreeSz, amoebaGpu->pGamma,
                         amoebaGpu->scalingDistanceCutoff );
-    }   
+    }
    int paddedNumberOfAtoms                    = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
     CUDAStream<float4>* debugArray            = new CUDAStream<float4>(paddedNumberOfAtoms*paddedNumberOfAtoms, 1, "DebugArray");
     memset( debugArray->_pSysStream[0],      0, sizeof( float )*4*paddedNumberOfAtoms*paddedNumberOfAtoms);
@@ -2348,20 +1958,18 @@ void kCalculateAmoebaKirkwood( amoebaGpuContext amoebaGpu )
     // on first pass, set threads/block and based on that setting the energy buffer array
 
     if( threadsPerBlock == 0 ){
-        threadsPerBlock                             = getThreadsPerBlock( amoebaGpu, sizeof(KirkwoodParticle));
-threadsPerBlock = 32;
+#if (__CUDA_ARCH__ >= 200)
+        unsigned int maxThreads = 256;
+#elif (__CUDA_ARCH__ >= 130)
+        unsigned int maxThreads = 128;
+#else
+        unsigned int maxThreads = 64;
+#endif
+        threadsPerBlock = std::max(getThreadsPerBlock(amoebaGpu, sizeof(KirkwoodParticle)), maxThreads);
         //unsigned int eDiffhreadsPerBlock            = getThreadsPerBlock( amoebaGpu, sizeof(KirkwoodEDiffParticle));
         //unsigned int maxThreadsPerBlock             = threadsPerBlock> eDiffhreadsPerBlock ? threadsPerBlock : eDiffhreadsPerBlock;
 
         if( amoebaGpu->log ){
-       
-#if (__CUDA_ARCH__ >= 200)
-            unsigned int maxThreads = GF1XX_NONBOND_THREADS_PER_BLOCK;
-#elif (__CUDA_ARCH__ >= 130)
-            unsigned int maxThreads = GT2XX_NONBOND_THREADS_PER_BLOCK;
-#else
-            unsigned int maxThreads = G8X_NONBOND_THREADS_PER_BLOCK;
-#endif
 
             (void) fprintf( amoebaGpu->log, "kCalculateAmoebaCudaKirkwood: blcks=%u tds=%u %u bPrWrp=%u atm=%u shrd=%u Ebuf=%u ixnCt=%u workUnits=%u\n",
                             amoebaGpu->nonbondBlocks, threadsPerBlock, maxThreads, amoebaGpu->bOutputBufferPerWarp,
@@ -2369,8 +1977,8 @@ threadsPerBlock = 32;
                             amoebaGpu->energyOutputBuffers, (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
             (void) fflush( amoebaGpu->log );
         }
-    }   
-    
+    }
+
     kClearFields_1( amoebaGpu );
     kClearFields_3( amoebaGpu, 6 );
 
@@ -2427,7 +2035,7 @@ threadsPerBlock = 32;
                            amoebaGpu->psInducedDipolePolarS->_pSysStream[0][indexOffset3+1],
                            amoebaGpu->psInducedDipolePolarS->_pSysStream[0][indexOffset3+2] );
         }
-*/ 
+*/
         debugArray->Download();
 
         (void) fprintf( amoebaGpu->log, "Target Info\n" );
@@ -2435,7 +2043,7 @@ threadsPerBlock = 32;
 
         int paddedNumberOfAtoms          = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
         for( int jj = 0; jj < gpu->natoms; jj++ ){
-            int debugIndex = jj; 
+            int debugIndex = jj;
             (void) fprintf( amoebaGpu->log,"%5d %5d DebugGk\n", targetAtom, jj );
             for( int kk = 0; kk < 8; kk++ ){
                 (void) fprintf( amoebaGpu->log,"[%16.9e %16.9e %16.9e %16.9e]\n",
@@ -2469,17 +2077,17 @@ threadsPerBlock = 32;
 
         int maxPrint        = 10;
         for( int ii = 0; ii < gpu->natoms; ii++ ){
-           (void) fprintf( amoebaGpu->log, "%5d ", ii); 
+           (void) fprintf( amoebaGpu->log, "%5d ", ii);
 
             int indexOffset     = ii*3;
-    
+
            // force
 
            (void) fprintf( amoebaGpu->log,"KirkwoodF [%16.9e %16.9e %16.9e] ",
                            amoebaGpu->psKirkwoodForce->_pSysStream[0][indexOffset],
                            amoebaGpu->psKirkwoodForce->_pSysStream[0][indexOffset+1],
                            amoebaGpu->psKirkwoodForce->_pSysStream[0][indexOffset+2] );
-    
+
            // torque
 
            (void) fprintf( amoebaGpu->log,"T [%16.9e %16.9e %16.9e] ",
@@ -2510,7 +2118,7 @@ threadsPerBlock = 32;
         //kReduceAndCombine_dBorn( amoebaGpu );
         amoebaGpu->psBorn->Download();
         for( int ii = 0; ii < gpu->natoms; ii++ ){
-           (void) fprintf( amoebaGpu->log, "%5d ", ii); 
+           (void) fprintf( amoebaGpu->log, "%5d ", ii);
 
            // d_Born
 
@@ -2536,7 +2144,7 @@ threadsPerBlock = 32;
 
          }
 
-    }   
+    }
     delete debugArray;
 #endif
 
@@ -2553,17 +2161,17 @@ threadsPerBlock = 32;
 
         int maxPrint        = 10;
         for( int ii = 0; ii < gpu->natoms; ii++ ){
-           (void) fprintf( amoebaGpu->log, "%5d ", ii); 
+           (void) fprintf( amoebaGpu->log, "%5d ", ii);
 
             int indexOffset     = ii*3;
-    
+
            // force
 
            (void) fprintf( amoebaGpu->log,"KirkwoodF [%16.9e %16.9e %16.9e] ",
                            amoebaGpu->psKirkwoodForce->_pSysStream[0][indexOffset],
                            amoebaGpu->psKirkwoodForce->_pSysStream[0][indexOffset+1],
                            amoebaGpu->psKirkwoodForce->_pSysStream[0][indexOffset+2] );
-    
+
            (void) fprintf( amoebaGpu->log,"\n" );
            if( ii == maxPrint && (gpu->natoms - maxPrint) > ii ){
                 ii = gpu->natoms - maxPrint;
@@ -2579,7 +2187,7 @@ threadsPerBlock = 32;
             cudaWriteVectorOfDoubleVectorsToFile( "CudaKirkwoodForce", fileId, outputVector );
          }
 
-    }   
+    }
 #endif
 
    // Tinker's Born1
