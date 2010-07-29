@@ -943,6 +943,8 @@ void cudaComputeAmoebaElectrostatic( amoebaGpuContext amoebaGpu )
   
    // ---------------------------------------------------------------------------------------
 
+    static unsigned int threadsPerBlock = 0;
+
 #ifdef AMOEBA_DEBUG
     static const char* methodName = "cudaComputeAmoebaElectrostatic";
     static int timestep = 0;
@@ -959,8 +961,6 @@ void cudaComputeAmoebaElectrostatic( amoebaGpuContext amoebaGpu )
 
     // apparently debug array can take up nontrivial no. registers
 
-#undef THREADS_PER_BLOCK
-
 #ifdef AMOEBA_DEBUG
     if( amoebaGpu->log ){
         (void) fprintf( amoebaGpu->log, "%s %d maxCovalentDegreeSz=%d"
@@ -976,15 +976,28 @@ void cudaComputeAmoebaElectrostatic( amoebaGpuContext amoebaGpu )
     unsigned int targetAtom                   = 0;
 #endif
 
+    // on first pass, set threads/block
+
+    if( threadsPerBlock == 0 ){
+        unsigned int maxThreads;
+        if (gpu->sm_version >= SM_20)
+            maxThreads = 256;
+        else if (gpu->sm_version >= SM_12)
+            maxThreads = 128;
+        else
+            maxThreads = 64;
+        threadsPerBlock = std::max(getThreadsPerBlock(amoebaGpu, sizeof(ElectrostaticParticle)), maxThreads);
+    }
+
     kClearFields_3( amoebaGpu, 2 );
 
     if (gpu->bOutputBufferPerWarp){
 
         (void) fprintf( amoebaGpu->log, "kCalculateAmoebaCudaElectrostaticN2Forces warp:  numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u Ebuf=%u ixnCt=%u workUnits=%u\n",
-                        amoebaGpu->nonbondBlocks, amoebaGpu->nonbondElectrostaticThreadsPerBlock, amoebaGpu->bOutputBufferPerWarp,
-                        sizeof(ElectrostaticParticle), sizeof(ElectrostaticParticle)*amoebaGpu->nonbondElectrostaticThreadsPerBlock, amoebaGpu->energyOutputBuffers, (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
+                        amoebaGpu->nonbondBlocks, threadsPerBlock, amoebaGpu->bOutputBufferPerWarp,
+                        sizeof(ElectrostaticParticle), sizeof(ElectrostaticParticle)*threadsPerBlock, amoebaGpu->energyOutputBuffers, (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
         (void) fflush( amoebaGpu->log );
-        kCalculateAmoebaCudaElectrostaticN2ByWarpForces_kernel<<<amoebaGpu->nonbondBlocks, amoebaGpu->nonbondElectrostaticThreadsPerBlock, sizeof(ElectrostaticParticle)*amoebaGpu->nonbondElectrostaticThreadsPerBlock>>>(
+        kCalculateAmoebaCudaElectrostaticN2ByWarpForces_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(ElectrostaticParticle)*threadsPerBlock>>>(
                                                                            amoebaGpu->psWorkUnit->_pDevStream[0],
                                                                            gpu->psPosq4->_pDevStream[0],
                                                                            amoebaGpu->psLabFrameDipole->_pDevStream[0],
@@ -1003,12 +1016,12 @@ void cudaComputeAmoebaElectrostatic( amoebaGpuContext amoebaGpu )
 
 #ifdef AMOEBA_DEBUG
         (void) fprintf( amoebaGpu->log, "kCalculateAmoebaCudaElectrostaticN2Forces no warp:  numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u Ebuf=%u ixnCt=%u workUnits=%u\n",
-                        amoebaGpu->nonbondBlocks, amoebaGpu->nonbondElectrostaticThreadsPerBlock, amoebaGpu->bOutputBufferPerWarp,
-                        sizeof(ElectrostaticParticle), sizeof(ElectrostaticParticle)*amoebaGpu->nonbondElectrostaticThreadsPerBlock, amoebaGpu->energyOutputBuffers, (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
+                        amoebaGpu->nonbondBlocks, threadsPerBlock, amoebaGpu->bOutputBufferPerWarp,
+                        sizeof(ElectrostaticParticle), sizeof(ElectrostaticParticle)*threadsPerBlock, amoebaGpu->energyOutputBuffers, (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
         (void) fflush( amoebaGpu->log );
 #endif
 
-        kCalculateAmoebaCudaElectrostaticN2Forces_kernel<<<amoebaGpu->nonbondBlocks, amoebaGpu->nonbondElectrostaticThreadsPerBlock, sizeof(ElectrostaticParticle)*amoebaGpu->nonbondElectrostaticThreadsPerBlock>>>(
+        kCalculateAmoebaCudaElectrostaticN2Forces_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(ElectrostaticParticle)*threadsPerBlock>>>(
                                                                            amoebaGpu->psWorkUnit->_pDevStream[0],
                                                                            gpu->psPosq4->_pDevStream[0],
                                                                            amoebaGpu->psLabFrameDipole->_pDevStream[0],

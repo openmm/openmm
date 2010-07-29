@@ -27,7 +27,6 @@
 #include "amoebaScaleFactors.h"
 
 __global__
-/*
 #if (__CUDA_ARCH__ >= 200)
 __launch_bounds__(256, 1)
 #elif (__CUDA_ARCH__ >= 130)
@@ -35,7 +34,6 @@ __launch_bounds__(128, 1)
 #else
 __launch_bounds__(64, 1)
 #endif
-*/
 void METHOD_NAME(kCalculateAmoebaCudaKirkwood, Forces_kernel)(
                             unsigned int* workUnit
 #ifdef AMOEBA_DEBUG

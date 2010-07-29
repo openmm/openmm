@@ -1958,13 +1958,13 @@ void kCalculateAmoebaKirkwood( amoebaGpuContext amoebaGpu )
     // on first pass, set threads/block and based on that setting the energy buffer array
 
     if( threadsPerBlock == 0 ){
-#if (__CUDA_ARCH__ >= 200)
-        unsigned int maxThreads = 256;
-#elif (__CUDA_ARCH__ >= 130)
-        unsigned int maxThreads = 128;
-#else
-        unsigned int maxThreads = 64;
-#endif
+        unsigned int maxThreads;
+        if (gpu->sm_version >= SM_20)
+            maxThreads = 256;
+        else if (gpu->sm_version >= SM_12)
+            maxThreads = 128;
+        else
+            maxThreads = 64;
         threadsPerBlock = std::max(getThreadsPerBlock(amoebaGpu, sizeof(KirkwoodParticle)), maxThreads);
         //unsigned int eDiffhreadsPerBlock            = getThreadsPerBlock( amoebaGpu, sizeof(KirkwoodEDiffParticle));
         //unsigned int maxThreadsPerBlock             = threadsPerBlock> eDiffhreadsPerBlock ? threadsPerBlock : eDiffhreadsPerBlock;
