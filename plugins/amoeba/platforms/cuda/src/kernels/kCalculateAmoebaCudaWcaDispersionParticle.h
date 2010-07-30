@@ -15,6 +15,7 @@ struct WcaDispersionParticle {
     float epsilon;
 
     float force[3];
+    float padding;
 
 };
 

@@ -28,11 +28,11 @@
 
 __global__
 #if (__CUDA_ARCH__ >= 200)
-__launch_bounds__(GF1XX_NONBOND_THREADS_PER_BLOCK, 1)
+__launch_bounds__(256, 1)
 #elif (__CUDA_ARCH__ >= 130)
-__launch_bounds__(GT2XX_NONBOND_THREADS_PER_BLOCK, 1)
+__launch_bounds__(128, 1)
 #else
-__launch_bounds__(G8X_NONBOND_THREADS_PER_BLOCK, 1)
+__launch_bounds__(64, 1)
 #endif
 void METHOD_NAME(kCalculateAmoebaMutualInducedAndGkFields, _kernel)(
                             unsigned int* workUnit,

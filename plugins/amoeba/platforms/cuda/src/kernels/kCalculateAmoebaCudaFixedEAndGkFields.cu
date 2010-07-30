@@ -370,6 +370,8 @@ void cudaComputeAmoebaFixedEAndGkFields( amoebaGpuContext amoebaGpu )
 
    // ---------------------------------------------------------------------------------------
 
+    static unsigned int threadsPerBlock = 0;
+
     gpuContext gpu                             = amoebaGpu->gpuContext;
 
 #ifdef AMOEBA_DEBUG
@@ -393,11 +395,24 @@ void cudaComputeAmoebaFixedEAndGkFields( amoebaGpuContext amoebaGpu )
 
 #endif
 
+    // on first pass, set threads/block
+
+    if( threadsPerBlock == 0 ){
+        unsigned int maxThreads;
+        if (gpu->sm_version >= SM_20)
+            maxThreads = 256;
+        else if (gpu->sm_version >= SM_12)
+            maxThreads = 128;
+        else
+            maxThreads = 64;
+        threadsPerBlock = std::min(getThreadsPerBlock(amoebaGpu, sizeof(FixedFieldParticle)), maxThreads);
+    }
+
     kClearFields_3( amoebaGpu, 3 );
 
     if (gpu->bOutputBufferPerWarp){
         (void) fprintf( amoebaGpu->log, "N2 warp\n" );
-        kCalculateAmoebaFixedEAndGkFieldN2ByWarp_kernel<<<amoebaGpu->nonbondBlocks, amoebaGpu->nonbondElectrostaticThreadsPerBlock, sizeof(FixedFieldParticle)*amoebaGpu->nonbondElectrostaticThreadsPerBlock>>>(
+        kCalculateAmoebaFixedEAndGkFieldN2ByWarp_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(FixedFieldParticle)*threadsPerBlock>>>(
                                                                            amoebaGpu->psWorkUnit->_pDevStream[0],
                                                                            gpu->psPosq4->_pDevStream[0],
                                                                            amoebaGpu->psLabFrameDipole->_pDevStream[0],
@@ -416,12 +431,12 @@ void cudaComputeAmoebaFixedEAndGkFields( amoebaGpuContext amoebaGpu )
 #ifdef AMOEBA_DEBUG
         (void) fprintf( amoebaGpu->log, "N2 no warp\n" );
         (void) fprintf( amoebaGpu->log, "AmoebaN2Forces_kernel numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u Ebuf=%u ixnCt=%u workUnits=%u\n",
-                        amoebaGpu->nonbondBlocks, amoebaGpu->nonbondElectrostaticThreadsPerBlock, amoebaGpu->bOutputBufferPerWarp,
-                        sizeof(FixedFieldParticle), sizeof(FixedFieldParticle)*amoebaGpu->nonbondElectrostaticThreadsPerBlock, amoebaGpu->energyOutputBuffers, (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
+                        amoebaGpu->nonbondBlocks, threadsPerBlock, amoebaGpu->bOutputBufferPerWarp,
+                        sizeof(FixedFieldParticle), sizeof(FixedFieldParticle)*threadsPerBlock, amoebaGpu->energyOutputBuffers, (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
         (void) fflush( amoebaGpu->log );
 #endif
 
-        kCalculateAmoebaFixedEAndGkFieldN2_kernel<<<amoebaGpu->nonbondBlocks, amoebaGpu->nonbondElectrostaticThreadsPerBlock, sizeof(FixedFieldParticle)*amoebaGpu->nonbondElectrostaticThreadsPerBlock>>>(
+        kCalculateAmoebaFixedEAndGkFieldN2_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(FixedFieldParticle)*threadsPerBlock>>>(
                                                           amoebaGpu->psWorkUnit->_pDevStream[0],
                                                           gpu->psPosq4->_pDevStream[0],
                                                           amoebaGpu->psLabFrameDipole->_pDevStream[0],

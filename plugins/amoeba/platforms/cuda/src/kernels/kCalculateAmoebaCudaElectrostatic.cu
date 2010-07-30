@@ -986,7 +986,7 @@ void cudaComputeAmoebaElectrostatic( amoebaGpuContext amoebaGpu )
             maxThreads = 128;
         else
             maxThreads = 64;
-        threadsPerBlock = std::max(getThreadsPerBlock(amoebaGpu, sizeof(ElectrostaticParticle)), maxThreads);
+        threadsPerBlock = std::min(getThreadsPerBlock(amoebaGpu, sizeof(ElectrostaticParticle)), maxThreads);
     }
 
     kClearFields_3( amoebaGpu, 2 );
