@@ -63,11 +63,6 @@ void METHOD_NAME(kCalculateAmoebaCudaElectrostatic, Forces_kernel)(
     unsigned int lasty           = 0xFFFFFFFF;
     float totalEnergy            = 0.0f;     
 
-    float4 jCoord;
-    float jDipole[3];     
-    float jQuadrupole[9];     
-    float jInducedDipole[3];     
-    float jInducedDipolePolar[3];     
     float scalingFactors[LastScalingIndex];
 
     while (pos < end)
@@ -87,18 +82,18 @@ void METHOD_NAME(kCalculateAmoebaCudaElectrostatic, Forces_kernel)(
 
         ElectrostaticParticle* psA    = &sA[tbx];
         unsigned int atomI            = x + tgx;
-        float4 iCoord                 = atomCoord[atomI];
+        ElectrostaticParticle localParticle;
+        loadElectrostaticShared(&localParticle, atomI,
+                                atomCoord, labFrameDipole, labFrameQuadrupole,
+                                inducedDipole, inducedDipolePolar, cAmoebaSim.pDampingFactorAndThole );
 
-        float forceSum[3];
-        float torqueSum[3];
+        localParticle.force[0]                   = 0.0f;
+        localParticle.force[1]                   = 0.0f;
+        localParticle.force[2]                   = 0.0f;
 
-        forceSum[0]                   = 0.0f;
-        forceSum[1]                   = 0.0f;
-        forceSum[2]                   = 0.0f;
-
-        torqueSum[0]                  = 0.0f;
-        torqueSum[1]                  = 0.0f;
-        torqueSum[2]                  = 0.0f;
+        localParticle.torque[0]                  = 0.0f;
+        localParticle.torque[1]                  = 0.0f;
+        localParticle.torque[2]                  = 0.0f;
 
         scalingFactors[PScaleIndex]   = 1.0f;
         scalingFactors[DScaleIndex]   = 1.0f;
@@ -126,19 +121,8 @@ void METHOD_NAME(kCalculateAmoebaCudaElectrostatic, Forces_kernel)(
                     float force[3];
                     float torque[2][3];
 
-                    // load coords, charge, ...
-
-                    loadElectrostaticData( &(psA[j]), &jCoord, jDipole, jQuadrupole,
-                                           jInducedDipole, jInducedDipolePolar );
-
                     float energy;
-                    calculateElectrostaticPairIxn_kernel( iCoord,                                     jCoord,
-                                                          cAmoebaSim.pDampingFactorAndThole[atomI].x, psA[j].damp,
-                                                          cAmoebaSim.pDampingFactorAndThole[atomI].y, psA[j].thole,
-                                                          &(labFrameDipole[3*atomI]),                 jDipole,
-                                                          &(labFrameQuadrupole[9*atomI]),             jQuadrupole,
-                                                          &(inducedDipole[3*atomI]),                  jInducedDipole,
-                                                          &(inducedDipolePolar[3*atomI]),             jInducedDipolePolar,
+                    calculateElectrostaticPairIxn_kernel( localParticle,                              psA[j],
                                                           cAmoebaSim.scalingDistanceCutoff,           scalingFactors,
                                                           force, torque, &energy
 #ifdef AMOEBA_DEBUG
@@ -150,13 +134,13 @@ void METHOD_NAME(kCalculateAmoebaCudaElectrostatic, Forces_kernel)(
 
                     // add to field at atomI the field due atomJ's charge/dipole/quadrupole
 
-                    forceSum[0]            += mask ? force[0]     : 0.0f;
-                    forceSum[1]            += mask ? force[1]     : 0.0f;
-                    forceSum[2]            += mask ? force[2]     : 0.0f;
+                    localParticle.force[0]            += mask ? force[0]     : 0.0f;
+                    localParticle.force[1]            += mask ? force[1]     : 0.0f;
+                    localParticle.force[2]            += mask ? force[2]     : 0.0f;
 
-                    torqueSum[0]           += mask ? torque[0][0] : 0.0f;
-                    torqueSum[1]           += mask ? torque[0][1] : 0.0f;
-                    torqueSum[2]           += mask ? torque[0][2] : 0.0f;
+                    localParticle.torque[0]           += mask ? torque[0][0] : 0.0f;
+                    localParticle.torque[1]           += mask ? torque[0][1] : 0.0f;
+                    localParticle.torque[2]           += mask ? torque[0][2] : 0.0f;
  
                     totalEnergy            += mask ? 0.5*energy   : 0.0f;
                 }
@@ -178,11 +162,6 @@ void METHOD_NAME(kCalculateAmoebaCudaElectrostatic, Forces_kernel)(
 
                     unsigned int atomJ = y + j;
 
-                    // load coords, charge, ...
-
-                    loadElectrostaticData( &(psA[j]),  &jCoord, jDipole, jQuadrupole,
-                                           jInducedDipole, jInducedDipolePolar );
-
                     // set scale factors
 
                     getMaskedDScaleFactor( j, dScaleMask, scalingFactors + DScaleIndex );
@@ -192,13 +171,7 @@ void METHOD_NAME(kCalculateAmoebaCudaElectrostatic, Forces_kernel)(
                     // force
 
                     float energy;
-                    calculateElectrostaticPairIxn_kernel( iCoord,                                     jCoord,
-                                                          cAmoebaSim.pDampingFactorAndThole[atomI].x, psA[j].damp,
-                                                          cAmoebaSim.pDampingFactorAndThole[atomI].y, psA[j].thole,
-                                                          &(labFrameDipole[3*atomI]),                 jDipole,
-                                                          &(labFrameQuadrupole[9*atomI]),             jQuadrupole,
-                                                          &(inducedDipole[3*atomI]),                  jInducedDipole,
-                                                          &(inducedDipolePolar[3*atomI]),             jInducedDipolePolar,
+                    calculateElectrostaticPairIxn_kernel( localParticle,                              psA[j],
                                                           cAmoebaSim.scalingDistanceCutoff,           scalingFactors,
                                                           force, torque, &energy
 #ifdef AMOEBA_DEBUG
@@ -213,13 +186,13 @@ void METHOD_NAME(kCalculateAmoebaCudaElectrostatic, Forces_kernel)(
 
                     // add to field at atomI the field due atomJ's charge/dipole/quadrupole
 
-                    forceSum[0]            += mask ? force[0]     : 0.0f;
-                    forceSum[1]            += mask ? force[1]     : 0.0f;
-                    forceSum[2]            += mask ? force[2]     : 0.0f;
+                    localParticle.force[0]            += mask ? force[0]     : 0.0f;
+                    localParticle.force[1]            += mask ? force[1]     : 0.0f;
+                    localParticle.force[2]            += mask ? force[2]     : 0.0f;
 
-                    torqueSum[0]           += mask ? torque[0][0] : 0.0f;
-                    torqueSum[1]           += mask ? torque[0][1] : 0.0f;
-                    torqueSum[2]           += mask ? torque[0][2] : 0.0f;
+                    localParticle.torque[0]           += mask ? torque[0][0] : 0.0f;
+                    localParticle.torque[1]           += mask ? torque[0][1] : 0.0f;
+                    localParticle.torque[2]           += mask ? torque[0][2] : 0.0f;
 
                     totalEnergy            += mask ? 0.5*energy   : 0.0f;
 
@@ -284,38 +257,38 @@ if( atomI == targetAtom ){
             float  of;
             unsigned int offset                 = 3*(x + tgx + warp*cAmoebaSim.paddedNumberOfAtoms);
             of                                  = outputForce[offset];
-            of                                 += forceSum[0];
+            of                                 += localParticle.force[0];
             outputForce[offset]                 = of;
 
             of                                  = outputForce[offset+1];
-            of                                 += forceSum[1];
+            of                                 += localParticle.force[1];
             outputForce[offset+1]               = of;
 
             of                                  = outputForce[offset+2];
-            of                                 += forceSum[2];
+            of                                 += localParticle.force[2];
             outputForce[offset+2]               = of;
 
             of                                  = outputTorque[offset];
-            of                                 += torqueSum[0];
+            of                                 += localParticle.torque[0];
             outputTorque[offset]                = of;
 
             of                                  = outputTorque[offset+1];
-            of                                 += torqueSum[1];
+            of                                 += localParticle.torque[1];
             outputTorque[offset+1]              = of;
 
             of                                  = outputTorque[offset+2];
-            of                                 += torqueSum[2];
+            of                                 += localParticle.torque[2];
             outputTorque[offset+2]              = of;
 
 #else
             unsigned int offset                 = 3*(x + tgx + (x >> GRIDBITS) * cAmoebaSim.paddedNumberOfAtoms);
-            outputForce[offset]                 = forceSum[0];
-            outputForce[offset+1]               = forceSum[1];
-            outputForce[offset+2]               = forceSum[2];
+            outputForce[offset]                 = localParticle.force[0];
+            outputForce[offset+1]               = localParticle.force[1];
+            outputForce[offset+2]               = localParticle.force[2];
 
-            outputTorque[offset]                = torqueSum[0];
-            outputTorque[offset+1]              = torqueSum[1];
-            outputTorque[offset+2]              = torqueSum[2];
+            outputTorque[offset]                = localParticle.torque[0];
+            outputTorque[offset+1]              = localParticle.torque[1];
+            outputTorque[offset+2]              = localParticle.torque[2];
 #endif
 
         }
@@ -333,13 +306,13 @@ if( atomI == targetAtom ){
 
             }
 
-            sA[threadIdx.x].force_X     = 0.0f;
-            sA[threadIdx.x].force_Y     = 0.0f;
-            sA[threadIdx.x].force_Z     = 0.0f;
+            sA[threadIdx.x].force[0]     = 0.0f;
+            sA[threadIdx.x].force[1]     = 0.0f;
+            sA[threadIdx.x].force[2]     = 0.0f;
 
-            sA[threadIdx.x].torque_X    = 0.0f;
-            sA[threadIdx.x].torque_Y    = 0.0f;
-            sA[threadIdx.x].torque_Z    = 0.0f;
+            sA[threadIdx.x].torque[0]    = 0.0f;
+            sA[threadIdx.x].torque[1]    = 0.0f;
+            sA[threadIdx.x].torque[2]    = 0.0f;
 
             if (!bExclusionFlag)
             {
@@ -351,19 +324,8 @@ if( atomI == targetAtom ){
 
                     unsigned int atomJ = y + tj;
 
-                    // load coords, charge, ...
-
-                    loadElectrostaticData( &(psA[tj]),  &jCoord, jDipole, jQuadrupole,
-                                           jInducedDipole, jInducedDipolePolar );
-
                     float energy;
-                    calculateElectrostaticPairIxn_kernel( iCoord,                                     jCoord,
-                                                                 cAmoebaSim.pDampingFactorAndThole[atomI].x, psA[tj].damp,
-                                                                 cAmoebaSim.pDampingFactorAndThole[atomI].y, psA[tj].thole,
-                                                                 &(labFrameDipole[3*atomI]),                 jDipole,
-                                                                 &(labFrameQuadrupole[9*atomI]),             jQuadrupole,
-                                                                 &(inducedDipole[3*atomI]),                  jInducedDipole,
-                                                                 &(inducedDipolePolar[3*atomI]),             jInducedDipolePolar,
+                    calculateElectrostaticPairIxn_kernel( localParticle,                              psA[tj],
                                                                  cAmoebaSim.scalingDistanceCutoff,           scalingFactors,
                                                                  force, torque, &energy
 #ifdef AMOEBA_DEBUG
@@ -375,25 +337,25 @@ if( atomI == targetAtom ){
        
                            // add force and torque to atom I due atom J
        
-                           forceSum[0]         += mask ? force[0]      : 0.0f;
-                           forceSum[1]         += mask ? force[1]      : 0.0f;
-                           forceSum[2]         += mask ? force[2]      : 0.0f;
+                           localParticle.force[0]         += mask ? force[0]      : 0.0f;
+                           localParticle.force[1]         += mask ? force[1]      : 0.0f;
+                           localParticle.force[2]         += mask ? force[2]      : 0.0f;
        
-                           torqueSum[0]        += mask ? torque[0][0]  : 0.0f;
-                           torqueSum[1]        += mask ? torque[0][1]  : 0.0f;
-                           torqueSum[2]        += mask ? torque[0][2]  : 0.0f;
+                           localParticle.torque[0]        += mask ? torque[0][0]  : 0.0f;
+                           localParticle.torque[1]        += mask ? torque[0][1]  : 0.0f;
+                           localParticle.torque[2]        += mask ? torque[0][2]  : 0.0f;
 
                            totalEnergy         += mask ? energy        : 0.0f;
            
                            // add force and torque to atom J due atom I
        
-                           psA[tj].force_X     -= mask ?  force[0]     : 0.0f;
-                           psA[tj].force_Y     -= mask ?  force[1]     : 0.0f;
-                           psA[tj].force_Z     -= mask ?  force[2]     : 0.0f;
+                           psA[tj].force[0]     -= mask ?  force[0]     : 0.0f;
+                           psA[tj].force[1]     -= mask ?  force[1]     : 0.0f;
+                           psA[tj].force[2]     -= mask ?  force[2]     : 0.0f;
        
-                           psA[tj].torque_X    += mask ?  torque[1][0] : 0.0f;
-                           psA[tj].torque_Y    += mask ?  torque[1][1] : 0.0f;
-                           psA[tj].torque_Z    += mask ?  torque[1][2] : 0.0f;
+                           psA[tj].torque[0]    += mask ?  torque[1][0] : 0.0f;
+                           psA[tj].torque[1]    += mask ?  torque[1][1] : 0.0f;
+                           psA[tj].torque[2]    += mask ?  torque[1][2] : 0.0f;
        
        
 #ifdef AMOEBA_DEBUG
@@ -478,11 +440,6 @@ if( atomI == targetAtom  || atomJ == targetAtom ){
        
                            unsigned int atomJ = y + tj;
        
-                           // load coords, charge, ...
-       
-                           loadElectrostaticData( &(psA[tj]),  &jCoord, jDipole, jQuadrupole,
-                                                  jInducedDipole, jInducedDipolePolar );
-       
                            // set scale factors
        
                            getMaskedDScaleFactor( tj, dScaleMask, scalingFactors + DScaleIndex );
@@ -492,13 +449,7 @@ if( atomI == targetAtom  || atomJ == targetAtom ){
                            // force
        
                     float energy;
-                    calculateElectrostaticPairIxn_kernel( iCoord,                                     jCoord,
-                                                          cAmoebaSim.pDampingFactorAndThole[atomI].x, psA[tj].damp,
-                                                          cAmoebaSim.pDampingFactorAndThole[atomI].y, psA[tj].thole,
-                                                          &(labFrameDipole[3*atomI]),                 jDipole,
-                                                          &(labFrameQuadrupole[9*atomI]),             jQuadrupole,
-                                                          &(inducedDipole[3*atomI]),                  jInducedDipole,
-                                                          &(inducedDipolePolar[3*atomI]),             jInducedDipolePolar,
+                    calculateElectrostaticPairIxn_kernel( localParticle,                              psA[tj],
                                                           cAmoebaSim.scalingDistanceCutoff,           scalingFactors,
                                                           force, torque, &energy
 #ifdef AMOEBA_DEBUG
@@ -512,25 +463,25 @@ if( atomI == targetAtom  || atomJ == targetAtom ){
 
                     // add force and torque to atom I due atom J
 
-                    forceSum[0]         += mask ? force[0]      : 0.0f;
-                    forceSum[1]         += mask ? force[1]      : 0.0f;
-                    forceSum[2]         += mask ? force[2]      : 0.0f;
+                    localParticle.force[0]         += mask ? force[0]      : 0.0f;
+                    localParticle.force[1]         += mask ? force[1]      : 0.0f;
+                    localParticle.force[2]         += mask ? force[2]      : 0.0f;
 
-                    torqueSum[0]        += mask ? torque[0][0]  : 0.0f;
-                    torqueSum[1]        += mask ? torque[0][1]  : 0.0f;
-                    torqueSum[2]        += mask ? torque[0][2]  : 0.0f;
+                    localParticle.torque[0]        += mask ? torque[0][0]  : 0.0f;
+                    localParticle.torque[1]        += mask ? torque[0][1]  : 0.0f;
+                    localParticle.torque[2]        += mask ? torque[0][2]  : 0.0f;
     
                     totalEnergy         += mask ? energy        : 0.0f;
 
                     // add force and torque to atom J due atom I
 
-                    psA[tj].force_X     -= mask ?  force[0]     : 0.0f;
-                    psA[tj].force_Y     -= mask ?  force[1]     : 0.0f;
-                    psA[tj].force_Z     -= mask ?  force[2]     : 0.0f;
+                    psA[tj].force[0]     -= mask ?  force[0]     : 0.0f;
+                    psA[tj].force[1]     -= mask ?  force[1]     : 0.0f;
+                    psA[tj].force[2]     -= mask ?  force[2]     : 0.0f;
 
-                    psA[tj].torque_X    += mask ?  torque[1][0] : 0.0f;
-                    psA[tj].torque_Y    += mask ?  torque[1][1] : 0.0f;
-                    psA[tj].torque_Z    += mask ?  torque[1][2] : 0.0f;
+                    psA[tj].torque[0]    += mask ?  torque[1][0] : 0.0f;
+                    psA[tj].torque[1]    += mask ?  torque[1][1] : 0.0f;
+                    psA[tj].torque[2]    += mask ?  torque[1][2] : 0.0f;
 
 
 #ifdef AMOEBA_DEBUG
@@ -642,75 +593,75 @@ if( atomI == targetAtom  || atomJ == targetAtom ){
             float of;
             unsigned int offset                 = 3*(x + tgx + warp*cAmoebaSim.paddedNumberOfAtoms);
             of                                  = outputForce[offset];
-            of                                 += forceSum[0];
+            of                                 += localParticle.force[0];
             outputForce[offset]                 = of;
 
             of                                  = outputForce[offset+1];
-            of                                 += forceSum[1];
+            of                                 += localParticle.force[1];
             outputForce[offset+1]               = of;
 
             of                                  = outputForce[offset+2];
-            of                                 += forceSum[2];
+            of                                 += localParticle.force[2];
             outputForce[offset+2]               = of;
 
             of                                  = outputTorque[offset];
-            of                                 += torqueSum[0];
+            of                                 += localParticle.torque[0];
             outputTorque[offset]                 = of;
 
             of                                  = outputTorque[offset+1];
-            of                                 += torqueSum[1];
+            of                                 += localParticle.torque[1];
             outputTorque[offset+1]               = of;
 
             of                                  = outputTorque[offset+2];
-            of                                 += torqueSum[2];
+            of                                 += localParticle.torque[2];
             outputTorque[offset+2]               = of;
 
             offset                              = 3*(y + tgx + warp*cAmoebaSim.paddedNumberOfAtoms);
 
             of                                  = outputForce[offset];
-            of                                 += sA[threadIdx.x].force_X;
+            of                                 += sA[threadIdx.x].force[0];
             outputForce[offset]                 = of;
 
             of                                  = outputForce[offset+1];
-            of                                 += sA[threadIdx.x].force_Y;
+            of                                 += sA[threadIdx.x].force[1];
             outputForce[offset+1]               = of;
 
             of                                  = outputForce[offset+2];
-            of                                 += sA[threadIdx.x].force_Z;
+            of                                 += sA[threadIdx.x].force[2];
             outputForce[offset+2]               = of;
 
             of                                  = outputTorque[offset];
-            of                                 += sA[threadIdx.x].torque_X;
+            of                                 += sA[threadIdx.x].torque[0];
             outputTorque[offset]                = of;
 
             of                                  = outputTorque[offset+1];
-            of                                 += sA[threadIdx.x].torque_Y;
+            of                                 += sA[threadIdx.x].torque[1];
             outputTorque[offset+1]              = of;
 
             of                                  = outputTorque[offset+2];
-            of                                 += sA[threadIdx.x].torque_Z;
+            of                                 += sA[threadIdx.x].torque[2];
             outputTorque[offset+2]              = of;
 
 #else
             unsigned int offset                 = 3*(x + tgx + (y >> GRIDBITS) * cAmoebaSim.paddedNumberOfAtoms);
 
-            outputForce[offset]                 = forceSum[0];
-            outputForce[offset+1]               = forceSum[1];
-            outputForce[offset+2]               = forceSum[2];
+            outputForce[offset]                 = localParticle.force[0];
+            outputForce[offset+1]               = localParticle.force[1];
+            outputForce[offset+2]               = localParticle.force[2];
 
-            outputTorque[offset]                = torqueSum[0];
-            outputTorque[offset+1]              = torqueSum[1];
-            outputTorque[offset+2]              = torqueSum[2];
+            outputTorque[offset]                = localParticle.torque[0];
+            outputTorque[offset+1]              = localParticle.torque[1];
+            outputTorque[offset+2]              = localParticle.torque[2];
 
             offset                              = 3*(y + tgx + (x >> GRIDBITS) * cAmoebaSim.paddedNumberOfAtoms);
 
-            outputForce[offset]                 = sA[threadIdx.x].force_X;
-            outputForce[offset+1]               = sA[threadIdx.x].force_Y;
-            outputForce[offset+2]               = sA[threadIdx.x].force_Z;
+            outputForce[offset]                 = sA[threadIdx.x].force[0];
+            outputForce[offset+1]               = sA[threadIdx.x].force[1];
+            outputForce[offset+2]               = sA[threadIdx.x].force[2];
 
-            outputTorque[offset]                = sA[threadIdx.x].torque_X;
-            outputTorque[offset+1]              = sA[threadIdx.x].torque_Y;
-            outputTorque[offset+2]              = sA[threadIdx.x].torque_Z;
+            outputTorque[offset]                = sA[threadIdx.x].torque[0];
+            outputTorque[offset+1]              = sA[threadIdx.x].torque[1];
+            outputTorque[offset+2]              = sA[threadIdx.x].torque[2];
 
 
 #endif

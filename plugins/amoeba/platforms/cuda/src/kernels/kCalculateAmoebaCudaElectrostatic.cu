@@ -48,70 +48,13 @@ static int const Ddsc50Index            = 11;
 static int const Ddsc70Index            = 14;
 //static int const Ddsc71Index            = 15;
 //static int const Ddsc72Index            = 16;
-//static int const DampIndex              = 17;
-//static int const DampRatioIndex         = 18; 
-//static int const DampExpIndex           = 19; 
-static int const LastScalingIndex       = 20;
+static int const LastScalingIndex       = 17;
 
-static int const _qI                    =  0;
-static int const _qJ                    =  1;
+#define DOT3_4(u,v) ((u[0])*(v[0]) + (u[1])*(v[1]) + (u[2])*(v[2]))
 
-static int const _r                     =  0; 
-static int const _dI                    =  1; 
-static int const _dJ                    =  2;
-static int const _uI                    =  3;
-static int const _uJ                    =  4;
-static int const _uIp                   =  5; 
-static int const _uJp                   =  6; 
-static int const _qIr                   =  7; 
-static int const _qJr                   =  8; 
-static int const _qIqJr                 =  9;
-static int const _qIdJ                  = 10; 
-static int const _qIuJ                  = 11;
-static int const _qIuJp                 = 12;
-
-/*
-static int const _dIxdJ                 = 13;
-static int const _dIxuJ                 = 14;
-static int const _dIxuJp                = 15;
-static int const _dJxr                  = 16;
-static int const _dJxuI                 = 17;
-
-static int const _dJxuIp                = 18;
-static int const _dIxr                  = 19;
-*/
-
-static int const _qJqIr                 = 13;
-//static int const _qIxqJ                 = 21;
-//static int const _rxqIr                 = 22;
-//static int const _rxqJr                 = 23;
-//static int const _rxqIJr                = 24;
-//static int const _rxqJIr                = 25;
-//static int const _qJrxqIr               = 26;
-static int const _qJdI                  = 14;
-//static int const _qJuI                  = 28;
-static int const _qJuI                  = 15;
-static int const _qJuIp                 = 16;
-//static int const _dIxqJr                = 30;
-//static int const _dJxqIr                = 31;
-//static int const _uIxqJr                = 32;
-//static int const uJxqIr                 = 33;
-//static int const _uIxqJrp               = 34;
-//static int const _uJxqIrp               = 35;
-//static int const _rxqIdJ                = 36;
-//static int const _rxqJdI                = 37;
-//static int const _rxqIuJ                = 38;
-//static int const _rxqJuI                = 17;
-//static int const _rxqJuIp               = 18;
-//static int const _rxqIuJp               = 40;
-//static int const _rxqJuIp               = 41; 
-static int const LastVectorFieldIndex   = 17;
-
-#define DOT3_4(u,k,v,l) ((u[k*3+0])*(v[l*3+0]) + (u[k*3+1])*(v[l*3+1]) + (u[k*3+2])*(v[l*3+2]))
-
-#define MATRIXDOT31(u,k,v,l) u[k*9+0]*v[l*9+0] + u[k*9+1]*v[l*9+1] + u[k*9+2]*v[l*9+2] + \
-  u[k*9+3]*v[l*9+3] + u[k*9+4]*v[l*9+4] + u[k*9+5]*v[l*9+5] + \
-  u[k*9+6]*v[l*9+6] + u[k*9+7]*v[l*9+7] + u[k*9+8]*v[l*9+8]
+#define MATRIXDOT31(u,v) u[0]*v[0] + u[1]*v[1] + u[2]*v[2] + \
+  u[3]*v[3] + u[4]*v[4] + u[5]*v[5] + \
+  u[6]*v[6] + u[7]*v[7] + u[8]*v[8]
 
 #define DOT31(u,v) ((u[0])*(v[0]) + (u[1])*(v[1]) + (u[2])*(v[2]))
 
@@ -149,13 +92,44 @@ __device__ void amatrixCrossProductMatrix3( float* matrixX, float* matrixY, floa
   
 }
 
-__device__ void calculateElectrostaticPairIxn_kernel( float4 atomCoordinatesI,       float4 atomCoordinatesJ,
-                                                      float dampingFactorI,          float dampingFactorJ,
-                                                      float tholeI,                  float tholeJ,
-                                                      float* labFrameDipoleI,        float* labFrameDipoleJ,
-                                                      float* labFrameQuadrupoleI,    float* labFrameQuadrupoleJ,
-                                                      float* inducedDipoleI,         float* inducedDipoleJ,
-                                                      float* inducedDipolePolarI,    float* inducedDipolePolarJ,
+struct ElectrostaticParticle {
+
+    // coordinates charge
+
+    float x;
+    float y;
+    float z;
+    float q;
+
+    // lab frame dipole
+
+    float labFrameDipole[3];
+
+    // lab frame quadrupole
+
+    float labFrameQuadrupole[9];
+
+    // induced dipole
+
+    float inducedDipole[3];
+
+    // polar induced dipole
+
+    float inducedDipoleP[3];
+
+    // scaling factors
+
+    float thole;
+    float damp;
+
+    float force[3];
+
+    float torque[3];
+    float padding;
+
+};
+
+__device__ void calculateElectrostaticPairIxn_kernel( ElectrostaticParticle& atomI,   ElectrostaticParticle& atomJ,
                                                       float scalingDistanceCutoff,   float* scalingFactors,
                                                       float*  outputForce,           float  outputTorque[2][3],
                                                       float* energy
@@ -164,71 +138,19 @@ __device__ void calculateElectrostaticPairIxn_kernel( float4 atomCoordinatesI,  
 #endif
  ){
   
-    float deltaR[5];
+    float deltaR[3];
     
     // ---------------------------------------------------------------------------------------
     
-    float vectorFields[LastVectorFieldIndex*3];
-    float vectorFields1[2*9];
-
-    float chargeI                   = atomCoordinatesI.w;
-    vectorFields[_dI*3    ]         = labFrameDipoleI[0];
-    vectorFields[_dI*3 + 1]         = labFrameDipoleI[1];
-    vectorFields[_dI*3 + 2]         = labFrameDipoleI[2];
-    
-    vectorFields[_uI*3    ]         = inducedDipoleI[0];
-    vectorFields[_uI*3 + 1]         = inducedDipoleI[1];
-    vectorFields[_uI*3 + 2]         = inducedDipoleI[2];
-    
-    vectorFields[_uIp*3    ]        = inducedDipolePolarI[0];
-    vectorFields[_uIp*3 + 1]        = inducedDipolePolarI[1];
-    vectorFields[_uIp*3 + 2]        = inducedDipolePolarI[2];
-
-    vectorFields1[_qI*9    ]        = labFrameQuadrupoleI[0];
-    vectorFields1[_qI*9 + 1]        = labFrameQuadrupoleI[1];
-    vectorFields1[_qI*9 + 2]        = labFrameQuadrupoleI[2];
-    vectorFields1[_qI*9 + 3]        = labFrameQuadrupoleI[3];
-    vectorFields1[_qI*9 + 4]        = labFrameQuadrupoleI[4];
-    vectorFields1[_qI*9 + 5]        = labFrameQuadrupoleI[5];
-    vectorFields1[_qI*9 + 6]        = labFrameQuadrupoleI[6];
-    vectorFields1[_qI*9 + 7]        = labFrameQuadrupoleI[7];
-    vectorFields1[_qI*9 + 8]        = labFrameQuadrupoleI[8];
-
     // ---------------------------------------------------------------------------------------
 
-    float chargeJ                   = atomCoordinatesJ.w;
-
-    vectorFields[_dJ*3 + 0]         = labFrameDipoleJ[0];
-    vectorFields[_dJ*3 + 1]         = labFrameDipoleJ[1];
-    vectorFields[_dJ*3 + 2]         = labFrameDipoleJ[2];
-
-    vectorFields[_uJ*3 + 0]         = inducedDipoleJ[0];
-    vectorFields[_uJ*3 + 1]         = inducedDipoleJ[1];
-    vectorFields[_uJ*3 + 2]         = inducedDipoleJ[2];
-    
-    vectorFields[_uJp*3 + 0]        = inducedDipolePolarJ[0];
-    vectorFields[_uJp*3 + 1]        = inducedDipolePolarJ[1];
-    vectorFields[_uJp*3 + 2]        = inducedDipolePolarJ[2];
-    
-    vectorFields1[_qJ*9 + 0]        = labFrameQuadrupoleJ[0];
-    vectorFields1[_qJ*9 + 1]        = labFrameQuadrupoleJ[1];
-    vectorFields1[_qJ*9 + 2]        = labFrameQuadrupoleJ[2];
-    vectorFields1[_qJ*9 + 3]        = labFrameQuadrupoleJ[3];
-    vectorFields1[_qJ*9 + 4]        = labFrameQuadrupoleJ[4];
-    vectorFields1[_qJ*9 + 5]        = labFrameQuadrupoleJ[5];
-    vectorFields1[_qJ*9 + 6]        = labFrameQuadrupoleJ[6];
-    vectorFields1[_qJ*9 + 7]        = labFrameQuadrupoleJ[7];
-    vectorFields1[_qJ*9 + 8]        = labFrameQuadrupoleJ[8];
-      
     float* ddsc3                    =  scalingFactors + Ddsc30Index;
     float* ddsc5                    =  scalingFactors + Ddsc50Index;
     float* ddsc7                    =  scalingFactors + Ddsc70Index;
 
-    float damp                      = dampingFactorI*dampingFactorJ;      
-
-    deltaR[0]                       = atomCoordinatesJ.x - atomCoordinatesI.x;
-    deltaR[1]                       = atomCoordinatesJ.y - atomCoordinatesI.y;
-    deltaR[2]                       = atomCoordinatesJ.z - atomCoordinatesI.z;
+    deltaR[0]                       = atomJ.x - atomI.x;
+    deltaR[1]                       = atomJ.y - atomI.y;
+    deltaR[2]                       = atomJ.z - atomI.z;
 
     float r2                        = DOT31( deltaR, deltaR );
     float r                         = sqrtf( r2 );
@@ -239,21 +161,19 @@ __device__ void calculateElectrostaticPairIxn_kernel( float4 atomCoordinatesI,  
     float rr7                       = 5.0f*rr5*rr2;
     float rr9                       = 7.0f*rr7*rr2;
     float rr11                      = 9.0f*rr9*rr2;
-    
-    memcpy( &vectorFields[_r*3+0], deltaR, 3*sizeof(float) ); 
 
     //-------------------------------------------
 
-    if( damp != 0.0f && r < scalingDistanceCutoff ){
+    if( atomI.damp != 0.0f && atomJ.damp != 0.0 && r < scalingDistanceCutoff ){
    
         float distanceIJ, r2I;
         distanceIJ                    = r;
         r2I                           = rr2;
         
-        float ratio                   = distanceIJ/damp;
-        float pGamma                  = tholeJ > tholeI ? tholeI : tholeJ;
+        float ratio                   = distanceIJ/(atomI.damp*atomJ.damp);
+        float pGamma                  = atomJ.thole > atomI.thole ? atomI.thole : atomJ.thole;
 
-        damp                          = ratio*ratio*ratio*pGamma;
+        float damp                          = ratio*ratio*ratio*pGamma;
         float dampExp                 = expf( -damp );
         float damp1                   = damp + one;
         float damp2                   = damp*damp;
@@ -288,46 +208,47 @@ __device__ void calculateElectrostaticPairIxn_kernel( float4 atomCoordinatesI,  
     float sc[11];
     float sci[9];
     float scip[9];
+    float qIr[3], qJr[3];
 
-    amatrixProductVector3( &vectorFields1[_qJ*9],      &vectorFields[_r*3],      &vectorFields[_qJr*3]);
-    amatrixProductVector3( &vectorFields1[_qI*9],      &vectorFields[_r*3],      &vectorFields[_qIr*3]);
+    amatrixProductVector3( atomJ.labFrameQuadrupole,      deltaR,      qJr);
+    amatrixProductVector3( atomI.labFrameQuadrupole,      deltaR,      qIr);
 
-    sc[2]     = DOT3_4(        vectorFields, _dI,  vectorFields, _dJ );
-    sc[3]     = DOT3_4(        vectorFields, _dI,  vectorFields, _r  );
-    sc[4]     = DOT3_4(        vectorFields, _dJ,  vectorFields, _r  );
+    sc[2]     = DOT3_4(        atomI.labFrameDipole,  atomJ.labFrameDipole );
+    sc[3]     = DOT3_4(        atomI.labFrameDipole,  deltaR  );
+    sc[4]     = DOT3_4(        atomJ.labFrameDipole,  deltaR  );
     
-    sc[5]     = DOT3_4(        vectorFields, _qIr, vectorFields, _r  );
-    sc[6]     = DOT3_4(        vectorFields, _qJr, vectorFields, _r  );
+    sc[5]     = DOT3_4(        qIr, deltaR  );
+    sc[6]     = DOT3_4(        qJr, deltaR  );
     
-    sc[7]     = DOT3_4(        vectorFields, _qIr, vectorFields, _dJ );
-    sc[8]     = DOT3_4(        vectorFields, _qJr, vectorFields, _dI );
+    sc[7]     = DOT3_4(        qIr, atomJ.labFrameDipole );
+    sc[8]     = DOT3_4(        qJr, atomI.labFrameDipole );
     
-    sc[9]     = DOT3_4(        vectorFields, _qIr, vectorFields, _qJr );
+    sc[9]     = DOT3_4(        qIr, qJr );
     
-    sc[10]    = MATRIXDOT31(   vectorFields1,_qI,  vectorFields1,_qJ );
+    sc[10]    = MATRIXDOT31( atomI.labFrameQuadrupole, atomJ.labFrameQuadrupole );
     
-    sci[1]    = DOT3_4(        vectorFields, _uI,  vectorFields, _dJ ) +
-                DOT3_4(        vectorFields, _uJ,  vectorFields, _dI );
+    sci[1]    = DOT3_4(        atomI.inducedDipole,  atomJ.labFrameDipole ) +
+                DOT3_4(        atomJ.inducedDipole,  atomI.labFrameDipole );
     
-    sci[2]    = DOT3_4(        vectorFields, _uI,  vectorFields, _uJ );
+    sci[2]    = DOT3_4(        atomI.inducedDipole,  atomJ.inducedDipole );
     
-    sci[3]    = DOT3_4(        vectorFields, _uI,  vectorFields, _r  );
-    sci[4]    = DOT3_4(        vectorFields, _uJ,  vectorFields, _r  );
+    sci[3]    = DOT3_4(        atomI.inducedDipole,  deltaR  );
+    sci[4]    = DOT3_4(        atomJ.inducedDipole,  deltaR  );
     
-    sci[7]    = DOT3_4(        vectorFields, _qIr, vectorFields, _uJ );
-    sci[8]    = DOT3_4(        vectorFields, _qJr, vectorFields, _uI );
+    sci[7]    = DOT3_4(        qIr, atomJ.inducedDipole );
+    sci[8]    = DOT3_4(        qJr, atomI.inducedDipole );
     
-    scip[1]   = DOT3_4(        vectorFields, _uIp, vectorFields, _dJ ) +
-                DOT3_4(        vectorFields, _uJp, vectorFields, _dI );
+    scip[1]   = DOT3_4(        atomI.inducedDipoleP, atomJ.labFrameDipole ) +
+                DOT3_4(        atomJ.inducedDipoleP, atomI.labFrameDipole );
     
-    scip[2]   = DOT3_4(        vectorFields, _uI,  vectorFields, _uJp) +
-                DOT3_4(        vectorFields, _uJ,  vectorFields, _uIp);
+    scip[2]   = DOT3_4(        atomI.inducedDipole,  atomJ.inducedDipoleP) +
+                DOT3_4(        atomJ.inducedDipole,  atomI.inducedDipoleP);
     
-    scip[3]   = DOT3_4(        vectorFields, _uIp, vectorFields, _r );
-    scip[4]   = DOT3_4(        vectorFields, _uJp, vectorFields, _r );
+    scip[3]   = DOT3_4(        atomI.inducedDipoleP, deltaR );
+    scip[4]   = DOT3_4(        atomJ.inducedDipoleP, deltaR );
     
-    scip[7]   = DOT3_4(        vectorFields, _qIr, vectorFields, _uJp );
-    scip[8]   = DOT3_4(        vectorFields, _qJr, vectorFields, _uIp );
+    scip[7]   = DOT3_4(        qIr, atomJ.inducedDipoleP );
+    scip[8]   = DOT3_4(        qJr, atomI.inducedDipoleP );
 
     float findmp[3];
     float scaleF         = 0.5f*scalingFactors[UScaleIndex];
@@ -338,14 +259,14 @@ __device__ void calculateElectrostaticPairIxn_kernel( float4 atomCoordinatesI,  
     findmp[2]            = inducedFactor3*ddsc3[2] - inducedFactor5*ddsc5[2];
 
     float gli[8];
-    gli[1]               = chargeJ*sci[3] - chargeI*sci[4];
+    gli[1]               = atomJ.q*sci[3] - atomI.q*sci[4];
     gli[2]               = -sc[3]*sci[4] - sci[3]*sc[4];
     gli[3]               = sci[3]*sc[6] - sci[4]*sc[5];
     gli[6]               = sci[1];
     gli[7]               = 2.0f*(sci[7]-sci[8]);
     
     float glip[8];
-    glip[1]              = chargeJ*scip[3] - chargeI*scip[4];
+    glip[1]              = atomJ.q*scip[3] - atomI.q*scip[4];
     glip[2]              = -sc[3]*scip[4] - scip[3]*sc[4];
     glip[3]              = scip[3]*sc[6] - scip[4]*sc[5];
     glip[6]              = scip[1];
@@ -374,9 +295,9 @@ __device__ void calculateElectrostaticPairIxn_kernel( float4 atomCoordinatesI,  
       
     float gl[9];
     
-    gl[0] = chargeI*chargeJ;
-    gl[1] = chargeJ*sc[3] - chargeI*sc[4];
-    gl[2] = chargeI*sc[6] + chargeJ*sc[5] - sc[3]*sc[4];
+    gl[0] = atomI.q*atomJ.q;
+    gl[1] = atomJ.q*sc[3] - atomI.q*sc[4];
+    gl[2] = atomI.q*sc[6] + atomJ.q*sc[5] - sc[3]*sc[4];
     
     gl[3] = sc[3]*sc[6] - sc[4]*sc[5];
     gl[4] = sc[5]*sc[6];
@@ -387,11 +308,11 @@ __device__ void calculateElectrostaticPairIxn_kernel( float4 atomCoordinatesI,  
     
     float gf[8];
     gf[1] = rr3*gl[0] + rr5*(gl[1]+gl[6]) + rr7*(gl[2]+gl[7]+gl[8]) + rr9*(gl[3]+gl[5]) + rr11*gl[4];
-    gf[2] = -chargeJ*rr3 + sc[4]*rr5 - sc[6]*rr7;
-    gf[3] =  chargeI*rr3 + sc[3]*rr5 + sc[5]*rr7;
+    gf[2] = -atomJ.q*rr3 + sc[4]*rr5 - sc[6]*rr7;
+    gf[3] =  atomI.q*rr3 + sc[3]*rr5 + sc[5]*rr7;
     gf[4] = 2.0f*rr5;
-    gf[5] = 2.0f*(-chargeJ*rr5+sc[4]*rr7-sc[6]*rr9);
-    gf[6] = 2.0f*(-chargeI*rr5-sc[3]*rr7-sc[5]*rr9);
+    gf[5] = 2.0f*(-atomJ.q*rr5+sc[4]*rr7-sc[6]*rr9);
+    gf[6] = 2.0f*(-atomI.q*rr5-sc[3]*rr7-sc[5]*rr9);
     gf[7] = 4.0f*rr7;
 
     // energy
@@ -434,20 +355,21 @@ if( 1 ){
 
     float ftm2[3];
     float temp1[3],temp2[3],temp3[3];
-    amatrixProductVector3( &vectorFields1[_qI*9],      &vectorFields[_dJ*3],     &vectorFields[ _qIdJ*3] );//MK
-    amatrixProductVector3( &vectorFields1[_qJ*9],      &vectorFields[_dI*3],     &vectorFields[ _qJdI*3] );//MK
+    float qIqJr[3], qJqIr[3], qIdJ[3], qJdI[3];
+    amatrixProductVector3( atomI.labFrameQuadrupole,      atomJ.labFrameDipole,     qIdJ );//MK
+    amatrixProductVector3( atomJ.labFrameQuadrupole,      atomI.labFrameDipole,     qJdI );//MK
 
-    amatrixProductVector3( &vectorFields1[_qI*9],      &vectorFields[_qJr*3],    &vectorFields[_qIqJr*3] );//MK
-    amatrixProductVector3( &vectorFields1[_qJ*9],      &vectorFields[_qIr*3],    &vectorFields[_qJqIr*3] );//MK
-    amatrixProductVector3( &vectorFields1[_qJ*9],      &vectorFields[_qIr*3],    temp1 );
-    amatrixProductVector3( &vectorFields1[_qJ*9],      &vectorFields[_dI*3],     temp2 );
+    amatrixProductVector3( atomI.labFrameQuadrupole,      qJr,    qIqJr );//MK
+    amatrixProductVector3( atomJ.labFrameQuadrupole,      qIr,    qJqIr );//MK
+    amatrixProductVector3( atomJ.labFrameQuadrupole,      qIr,    temp1 );
+    amatrixProductVector3( atomJ.labFrameQuadrupole,      atomI.labFrameDipole,     temp2 );
 
     for( int ii = 0; ii < 3; ii++ ){
-        ftm2[ii] = gf[1]*vectorFields[_r*3+ii]                             +
-                   gf[2]*vectorFields[_dI*3+ii]     + gf[3]*vectorFields[_dJ*3+ii]  +
-                   gf[4]*(temp2[ii]  - vectorFields[_qIdJ*3+ii])                    +
-                   gf[5]*vectorFields[_qIr*3+ii]    + gf[6]*vectorFields[_qJr*3+ii] +
-                   gf[7]*(vectorFields[_qIqJr*3+ii] + temp1[ii]);
+        ftm2[ii] = gf[1]*deltaR[ii]                             +
+                   gf[2]*atomI.labFrameDipole[ii]     + gf[3]*atomJ.labFrameDipole[ii]  +
+                   gf[4]*(temp2[ii]  - qIdJ[ii])                    +
+                   gf[5]*qIr[ii]    + gf[6]*qJr[ii] +
+                   gf[7]*(qIqJr[ii] + temp1[ii]);
     
     }
 
@@ -458,8 +380,8 @@ if( 1 ){
     float gfi[7];
     gfi[1] = rr5*0.5f*((gli[1]+gli[6])*psc[0] + (glip[1]+glip[6])*dsc[0] + scip[2]*scaleI[0]) + rr7*((gli[7]+gli[2])*psc[1] + (glip[7]+glip[2])*dsc[1] -
                                                        (sci[3]*scip[4]+scip[3]*sci[4])*scaleI[1])*0.5f + rr9*(gli[3]*psc[2]+glip[3]*dsc[2])*0.5f;
-    gfi[2] = -rr3*chargeJ + rr5*sc[4] - rr7*sc[6];
-    gfi[3] = rr3*chargeI  + rr5*sc[3] + rr7*sc[5];
+    gfi[2] = -rr3*atomJ.q + rr5*sc[4] - rr7*sc[6];
+    gfi[3] = rr3*atomI.q  + rr5*sc[3] + rr7*sc[5];
     gfi[4] = 2.0f*rr5;
     gfi[5] = rr7* (sci[4]*psc[2] + scip[4]*dsc[2]);
     gfi[6] = -rr7*(sci[3]*psc[2] + scip[3]*dsc[2]);
@@ -478,33 +400,35 @@ if( 1 ){
     float temp13[3];
     float temp14[3];
     float temp15[3];
+    float qIuJp[3], qJuIp[3];
+    float qIuJ[3], qJuI[3];
 
-    amatrixProductVector3(&vectorFields1[_qJ*9],      &vectorFields[_uIp*3],    temp4);
+    amatrixProductVector3(atomJ.labFrameQuadrupole,      atomI.inducedDipoleP,    temp4);
 
-    amatrixProductVector3(&vectorFields1[_qI*9],      &vectorFields[_uJp*3],    &vectorFields[ _qIuJp*3]);//MK
-    amatrixProductVector3(&vectorFields1[_qJ*9],      &vectorFields[_uIp*3],    &vectorFields[ _qJuIp*3]);//MK
-    amatrixProductVector3(&vectorFields1[_qJ*9],      &vectorFields[_uI*3],     &vectorFields[ _qJuI*3]);//MK
+    amatrixProductVector3(atomI.labFrameQuadrupole,      atomJ.inducedDipoleP,    qIuJp);//MK
+    amatrixProductVector3(atomJ.labFrameQuadrupole,      atomI.inducedDipoleP,    qJuIp);//MK
+    amatrixProductVector3(atomJ.labFrameQuadrupole,      atomI.inducedDipole ,    qJuI);//MK
 
-    amatrixProductVector3(&vectorFields1[_qJ*9],      &vectorFields[ _uI*3],    temp5);
-    amatrixProductVector3(&vectorFields1[_qI*9],      &vectorFields[_uJ*3],     &vectorFields[ _qIuJ*3]);//MK
+    amatrixProductVector3(atomJ.labFrameQuadrupole,      atomI.inducedDipole,    temp5);
+    amatrixProductVector3(atomI.labFrameQuadrupole,      atomJ.inducedDipole ,     qIuJ);//MK
 
     float temp1_0,temp2_0,temp3_0;
     for( int ii = 0; ii < 3; ii++ ){
-        temp1_0 = gfi[1]*vectorFields[_r*3+ii] +
-                  0.5f*(-rr3*chargeJ*(vectorFields[_uI*3+ii]*psc[0] + vectorFields[_uIp*3+ii]*dsc[0]) +
-                  rr5*sc[4]*(vectorFields[_uI*3+ii]*psc[1] + vectorFields[_uIp*3+ii]*dsc[1]) -
-                  rr7*sc[6]*(vectorFields[_uI*3+ii]*psc[2] + vectorFields[_uIp*3+ii]*dsc[2])) ;
+        temp1_0 = gfi[1]*deltaR[ii] +
+                  0.5f*(-rr3*atomJ.q*(atomI.inducedDipole[ii]*psc[0] + atomI.inducedDipoleP[ii]*dsc[0]) +
+                  rr5*sc[4]*(atomI.inducedDipole[ii]*psc[1] + atomI.inducedDipoleP[ii]*dsc[1]) -
+                  rr7*sc[6]*(atomI.inducedDipole[ii]*psc[2] + atomI.inducedDipoleP[ii]*dsc[2])) ;
 
-        temp2_0 = (rr3*chargeI*(vectorFields[_uJ*3+ii]*psc[0]+vectorFields[_uJp*3+ii]*dsc[0]) +
-                   rr5*sc[3]*(vectorFields[_uJ*3+ii]*psc[1] +vectorFields[_uJp*3+ii]*dsc[1]) +
-                   rr7*sc[5]*(vectorFields[_uJ*3+ii]*psc[2] +vectorFields[_uJp*3+ii]*dsc[2]))*0.5f +
-                   rr5*scaleI[1]*(sci[4]*vectorFields[_uIp*3+ii]+scip[4]*vectorFields[_uI*3+ii] +
-                   sci[3]*vectorFields[_uJp*3+ii]+scip[3]*vectorFields[_uJ*3+ii])*0.5f ;
+        temp2_0 = (rr3*atomI.q*(atomJ.inducedDipole[ii]*psc[0]+atomJ.inducedDipoleP[ii]*dsc[0]) +
+                   rr5*sc[3]*(atomJ.inducedDipole[ii]*psc[1] +atomJ.inducedDipoleP[ii]*dsc[1]) +
+                   rr7*sc[5]*(atomJ.inducedDipole[ii]*psc[2] +atomJ.inducedDipoleP[ii]*dsc[2]))*0.5f +
+                   rr5*scaleI[1]*(sci[4]*atomI.inducedDipoleP[ii]+scip[4]*atomI.inducedDipole[ii] +
+                   sci[3]*atomJ.inducedDipoleP[ii]+scip[3]*atomJ.inducedDipole[ii])*0.5f ;
 
-        temp3_0 = 0.5f*(sci[4]*psc[1]+scip[4]*dsc[1])*rr5*vectorFields[_dI*3+ii] +
-                  0.5f*(sci[3]*psc[1]+scip[3]*dsc[1])*rr5*vectorFields[_dJ*3+ii] +
-                  0.5f*gfi[4]*((temp5[ii]-vectorFields[_qIuJ*3+ii])*psc[1] +
-                  (temp4[ii]-vectorFields[_qIuJp*3+ii])*dsc[1]) + gfi[5]*vectorFields[_qIr*3+ii] + gfi[6]*vectorFields[_qJr*3+ii];
+        temp3_0 = 0.5f*(sci[4]*psc[1]+scip[4]*dsc[1])*rr5*atomI.labFrameDipole[ii] +
+                  0.5f*(sci[3]*psc[1]+scip[3]*dsc[1])*rr5*atomJ.labFrameDipole[ii] +
+                  0.5f*gfi[4]*((temp5[ii]-qIuJ[ii])*psc[1] +
+                  (temp4[ii]-qIuJp[ii])*dsc[1]) + gfi[5]*qIr[ii] + gfi[6]*qJr[ii];
         ftm2i[ii] = temp1_0 + temp2_0 + temp3_0;
     }
 
@@ -531,22 +455,22 @@ if( 1 ){
     float ttm2i[3];
     float ttm3[3];
     float ttm3i[3];
-    acrossProductVector3(&vectorFields[_dI*3],      &vectorFields[_dJ*3],      temp1);
-    acrossProductVector3(&vectorFields[_dI*3],      &vectorFields[_uJ*3],      temp2);
-    acrossProductVector3(&vectorFields[_dI*3],      &vectorFields[_uJp*3],     temp3);
-    acrossProductVector3(&vectorFields[_dI*3],      &vectorFields[_r*3],       temp4);
-    acrossProductVector3(&vectorFields[_r*3],       &vectorFields[_qIuJp*3],   temp5);
-    acrossProductVector3(&vectorFields[_r*3],       &vectorFields[_qIr*3],     temp6);
-    acrossProductVector3(&vectorFields[_r*3],       &vectorFields[_qIuJ*3],    temp7);
-    acrossProductVector3(&vectorFields[_uJ*3],      &vectorFields[_qIr*3],     temp8);
-    acrossProductVector3(&vectorFields[_uJp*3],     &vectorFields[_qIr*3],     temp9);
-    acrossProductVector3(&vectorFields[_dI*3],      &vectorFields[_qJr*3],     temp10);
-    acrossProductVector3(&vectorFields[_dJ*3],      &vectorFields[_qIr*3],     temp11);
-    acrossProductVector3(&vectorFields[_r*3],       &vectorFields[_qIqJr*3],   temp12);
-    acrossProductVector3(&vectorFields[_r*3],       &vectorFields[_qIdJ*3],    temp13);
+    acrossProductVector3(atomI.labFrameDipole,      atomJ.labFrameDipole,      temp1);
+    acrossProductVector3(atomI.labFrameDipole,      atomJ.inducedDipole ,      temp2);
+    acrossProductVector3(atomI.labFrameDipole,      atomJ.inducedDipoleP,     temp3);
+    acrossProductVector3(atomI.labFrameDipole,      deltaR,       temp4);
+    acrossProductVector3(deltaR,       qIuJp,   temp5);
+    acrossProductVector3(deltaR,       qIr,     temp6);
+    acrossProductVector3(deltaR,       qIuJ,    temp7);
+    acrossProductVector3(atomJ.inducedDipole ,     qIr,     temp8);
+    acrossProductVector3(atomJ.inducedDipoleP,     qIr,     temp9);
+    acrossProductVector3(atomI.labFrameDipole,     qJr,     temp10);
+    acrossProductVector3(atomJ.labFrameDipole,     qIr,     temp11);
+    acrossProductVector3(deltaR,       qIqJr,   temp12);
+    acrossProductVector3(deltaR,       qIdJ,    temp13);
 
-    amatrixCrossProductMatrix3(&vectorFields1[_qI*9],      &vectorFields1[_qJ*9],      temp14);
-    acrossProductVector3(&vectorFields[_qJr*3],     &vectorFields[_qIr*3],     temp15);
+    amatrixCrossProductMatrix3(atomI.labFrameQuadrupole,      atomJ.labFrameQuadrupole,      temp14);
+    acrossProductVector3(qJr, qIr,     temp15);
 
     // unroll?
 
@@ -561,20 +485,20 @@ if( 1 ){
     
     }
 
-    acrossProductVector3(&vectorFields[3*_dJ],      &vectorFields[3*_r],       temp2  );
-    acrossProductVector3(&vectorFields[3*_r],       &vectorFields[3*_qJr],     temp3  );
-    acrossProductVector3(&vectorFields[3*_dI],      &vectorFields[3*_qJr],     temp4  );
-    acrossProductVector3(&vectorFields[3*_dJ],      &vectorFields[3*_qIr],     temp5  );
-    acrossProductVector3(&vectorFields[3*_r],       &vectorFields[3*_qJdI],    temp6  );
-    acrossProductVector3(&vectorFields[3*_r],       &vectorFields[3*_qJqIr],   temp7  );
-    acrossProductVector3(&vectorFields[3*_qJr],     &vectorFields[3*_qIr],     temp8  ); // _qJrxqIr
-    acrossProductVector3(&vectorFields[3*_dJ],      &vectorFields[3*_uI],      temp9  ); // _dJxuI
-    acrossProductVector3(&vectorFields[3*_dJ],      &vectorFields[3*_uIp],     temp10 ); // _dJxuIp
+    acrossProductVector3(atomJ.labFrameDipole,      deltaR,       temp2  );
+    acrossProductVector3(deltaR,       qJr,     temp3  );
+    acrossProductVector3(atomI.labFrameDipole,      qJr,     temp4  );
+    acrossProductVector3(atomJ.labFrameDipole,      qIr,     temp5  );
+    acrossProductVector3(deltaR,       qJdI,    temp6  );
+    acrossProductVector3(deltaR,       qJqIr,   temp7  );
+    acrossProductVector3(qJr,     qIr,     temp8  ); // _qJrxqIr
+    acrossProductVector3(atomJ.labFrameDipole,      atomI.inducedDipole ,      temp9  ); // _dJxuI
+    acrossProductVector3(atomJ.labFrameDipole,      atomI.inducedDipoleP,     temp10 ); // _dJxuIp
 
-    acrossProductVector3(&vectorFields[3*_uIp],     &vectorFields[3*_qJr],     temp11 ); // _uIxqJrp
-    acrossProductVector3(&vectorFields[3*_uI],      &vectorFields[3*_qJr],     temp12 ); // _uIxqJr
-    acrossProductVector3(&vectorFields[3*_r],       &vectorFields[3*_qJuIp],   temp13 ); // _rxqJuIp
-    acrossProductVector3(&vectorFields[3*_r],       &vectorFields[3*_qJuI],    temp15 ); // _rxqJuI
+    acrossProductVector3(atomI.inducedDipoleP,     qJr,     temp11 ); // _uIxqJrp
+    acrossProductVector3(atomI.inducedDipole ,     qJr,     temp12 ); // _uIxqJr
+    acrossProductVector3(deltaR,       qJuIp,   temp13 ); // _rxqJuIp
+    acrossProductVector3(deltaR,       qJuI,    temp15 ); // _rxqJuI
 
     // unroll?
 
@@ -684,15 +608,15 @@ int debugIndex               = 0;
     debugArray[debugIndex].w = 21.0f;
 
     debugIndex++;
-    debugArray[debugIndex].x = vectorFields[3*_dJ];
-    debugArray[debugIndex].y = vectorFields[3*_dJ+1];
-    debugArray[debugIndex].z = vectorFields[3*_dJ+2];
+    debugArray[debugIndex].x = atomJ.labFrameDipole[0];
+    debugArray[debugIndex].y = atomJ.labFrameDipole[1];
+    debugArray[debugIndex].z = atomJ.labFrameDipole[2];
     debugArray[debugIndex].w = 22.0f;
 
     debugIndex++;
-    debugArray[debugIndex].x = vectorFields[3*_r];
-    debugArray[debugIndex].y = vectorFields[3*_r+1];
-    debugArray[debugIndex].z = vectorFields[3*_r+2];
+    debugArray[debugIndex].x = deltaR[0];
+    debugArray[debugIndex].y = deltaR[1];
+    debugArray[debugIndex].z = deltaR[2];
     debugArray[debugIndex].w = 23.0f;
 
 }
@@ -715,57 +639,6 @@ int debugIndex               = 0;
 
 }
 
-struct ElectrostaticParticle {
-
-    // coordinates charge
-
-    float x;
-    float y;
-    float z;
-    float q;
-
-    // lab frame dipole
-
-    float labFrameDipole_X; 
-    float labFrameDipole_Y; 
-    float labFrameDipole_Z; 
-
-    // lab frame quadrupole
-
-    float labFrameQuadrupole_XX;
-    float labFrameQuadrupole_XY;
-    float labFrameQuadrupole_XZ;
-    float labFrameQuadrupole_YY;
-    float labFrameQuadrupole_YZ;
-    float labFrameQuadrupole_ZZ;
-
-    // induced dipole
-
-    float inducedDipole_X; 
-    float inducedDipole_Y;
-    float inducedDipole_Z;
-
-    // polar induced dipole
-
-    float inducedDipoleP_X; 
-    float inducedDipoleP_Y;
-    float inducedDipoleP_Z;
-
-    // scaling factors
-
-    float thole;
-    float damp;
-
-    float force_X;
-    float force_Y;
-    float force_Z;
-
-    float torque_X;
-    float torque_Y;
-    float torque_Z;
-
-};
-
 __device__ void loadElectrostaticShared( struct ElectrostaticParticle* sA, unsigned int atomI,
                                          float4* atomCoord, float* labFrameDipoleJ, float* labQuadrupole,
                                          float* inducedDipole, float* inducedDipolePolar, float2* dampingFactorAndThole )
@@ -779,74 +652,37 @@ __device__ void loadElectrostaticShared( struct ElectrostaticParticle* sA, unsig
 
     // lab dipole
 
-    sA->labFrameDipole_X         = labFrameDipoleJ[atomI*3];
-    sA->labFrameDipole_Y         = labFrameDipoleJ[atomI*3+1];
-    sA->labFrameDipole_Z         = labFrameDipoleJ[atomI*3+2];
+    sA->labFrameDipole[0]         = labFrameDipoleJ[atomI*3];
+    sA->labFrameDipole[1]         = labFrameDipoleJ[atomI*3+1];
+    sA->labFrameDipole[2]         = labFrameDipoleJ[atomI*3+2];
 
     // lab quadrupole
 
-    sA->labFrameQuadrupole_XX    = labQuadrupole[atomI*9];
-    sA->labFrameQuadrupole_XY    = labQuadrupole[atomI*9+1];
-    sA->labFrameQuadrupole_XZ    = labQuadrupole[atomI*9+2];
-    sA->labFrameQuadrupole_YY    = labQuadrupole[atomI*9+4];
-    sA->labFrameQuadrupole_YZ    = labQuadrupole[atomI*9+5];
-    sA->labFrameQuadrupole_ZZ    = labQuadrupole[atomI*9+8];
+    sA->labFrameQuadrupole[0]    = labQuadrupole[atomI*9];
+    sA->labFrameQuadrupole[1]    = labQuadrupole[atomI*9+1];
+    sA->labFrameQuadrupole[2]    = labQuadrupole[atomI*9+2];
+    sA->labFrameQuadrupole[3]    = labQuadrupole[atomI*9+3];
+    sA->labFrameQuadrupole[4]    = labQuadrupole[atomI*9+4];
+    sA->labFrameQuadrupole[5]    = labQuadrupole[atomI*9+5];
+    sA->labFrameQuadrupole[6]    = labQuadrupole[atomI*9+6];
+    sA->labFrameQuadrupole[7]    = labQuadrupole[atomI*9+7];
+    sA->labFrameQuadrupole[8]    = labQuadrupole[atomI*9+8];
 
     // induced dipole
 
-    sA->inducedDipole_X          = inducedDipole[atomI*3];
-    sA->inducedDipole_Y          = inducedDipole[atomI*3+1];
-    sA->inducedDipole_Z          = inducedDipole[atomI*3+2];
+    sA->inducedDipole[0]          = inducedDipole[atomI*3];
+    sA->inducedDipole[1]          = inducedDipole[atomI*3+1];
+    sA->inducedDipole[2]          = inducedDipole[atomI*3+2];
 
     // induced dipole polar
 
-    sA->inducedDipoleP_X         = inducedDipolePolar[atomI*3];
-    sA->inducedDipoleP_Y         = inducedDipolePolar[atomI*3+1];
-    sA->inducedDipoleP_Z         = inducedDipolePolar[atomI*3+2];
+    sA->inducedDipoleP[0]         = inducedDipolePolar[atomI*3];
+    sA->inducedDipoleP[1]         = inducedDipolePolar[atomI*3+1];
+    sA->inducedDipoleP[2]         = inducedDipolePolar[atomI*3+2];
 
     sA->damp                     = dampingFactorAndThole[atomI].x;
     sA->thole                    = dampingFactorAndThole[atomI].y;
 
-}
-
-// load struct and arrays w/ shared data in sA
-
-__device__ void loadElectrostaticData( struct ElectrostaticParticle* sA, 
-                                       float4* jCoord, float* jDipole, float* jQuadrupole,
-                                       float* jInducedDipole, float* jInducedDipolePolar )
-{
-
-    // load coords, charge, ...
-
-    jCoord->x               = sA->x;
-    jCoord->y               = sA->y;
-    jCoord->z               = sA->z;
-    jCoord->w               = sA->q;
- 
-    jDipole[0]              = sA->labFrameDipole_X;
-    jDipole[1]              = sA->labFrameDipole_Y;
-    jDipole[2]              = sA->labFrameDipole_Z;
- 
-    jQuadrupole[0]          = sA->labFrameQuadrupole_XX;
-    jQuadrupole[1]          = sA->labFrameQuadrupole_XY;
-    jQuadrupole[2]          = sA->labFrameQuadrupole_XZ;
-
-    jQuadrupole[3]          = sA->labFrameQuadrupole_XY;
-    jQuadrupole[4]          = sA->labFrameQuadrupole_YY;
-    jQuadrupole[5]          = sA->labFrameQuadrupole_YZ;
-
-    jQuadrupole[6]          = sA->labFrameQuadrupole_XZ;
-    jQuadrupole[7]          = sA->labFrameQuadrupole_YZ;
-    jQuadrupole[8]          = sA->labFrameQuadrupole_ZZ;
- 
-    jInducedDipole[0]       = sA->inducedDipole_X;
-    jInducedDipole[1]       = sA->inducedDipole_Y;
-    jInducedDipole[2]       = sA->inducedDipole_Z;
- 
-    jInducedDipolePolar[0]  = sA->inducedDipoleP_X;
-    jInducedDipolePolar[1]  = sA->inducedDipoleP_Y;
-    jInducedDipolePolar[2]  = sA->inducedDipoleP_Z;
- 
 }
 
 // Include versions of the kernels for N^2 calculations.
