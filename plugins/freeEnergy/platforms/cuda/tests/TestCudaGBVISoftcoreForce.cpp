@@ -50,6 +50,7 @@
 #include "CudaFreeEnergyKernelFactory.h"
 
 #include <iostream>
+#include <cstdio>
 #include <vector>
 
 using namespace OpenMM;
@@ -370,7 +371,9 @@ void testEnergyEthaneSwitchingFunction( int useSwitchingFunction ) {
        
 //           positions[8][2] -=  static_cast<double>(ii+1)*0.1;
 //           positions[8][2] -=  0.001;
+#if PRINT_ON == 1
            (void) fprintf( stderr, "r48=%14.6e r28=%14.6e r24=%14.6e\n", positions[8][2]-positions[4][2], positions[8][2], positions[4][2] );
+#endif
        }
 #if 0
        int carbonIndex    = 1;
