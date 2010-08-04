@@ -862,7 +862,7 @@ std::string ValidateOpenMMForces::getSummary( std::vector<ForceValidationResult*
         (void) LOCAL_SPRINTF0( value, "\n" );
         summary << _getLine( tab, " ", value );
         if( inconsistentIndices.size() > 0 ){
-            (void) LOCAL_SPRINTF( value, "%u\n", inconsistentIndices.size() );
+            (void) LOCAL_SPRINTF( value, "%u\n", static_cast<unsigned int>(inconsistentIndices.size()) );
             summary << _getLine( tab, "Total errors", value );
         }
         if( forceValidationResults[ii]->nansDetected() ){
