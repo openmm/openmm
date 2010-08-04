@@ -157,19 +157,19 @@ public:
 
         if( torsion1.size() != AmoebaTorsionForce::ParametersPerTorsion ){
            char buffer[1024];
-           (void) sprintf( buffer, "TorsionInfo::TorsionInfo: torsion1 size(=%u) is not %d!", torsion1.size(), AmoebaTorsionForce::ParametersPerTorsion);
+           (void) sprintf( buffer, "TorsionInfo::TorsionInfo: torsion1 size(=%u) is not %d!", static_cast<unsigned int>(torsion1.size()), AmoebaTorsionForce::ParametersPerTorsion);
            throw OpenMMException( buffer );
         }
 
         if( torsion2.size() != AmoebaTorsionForce::ParametersPerTorsion ){
            char buffer[1024];
-           (void) sprintf( buffer, "TorsionInfo::TorsionInfo: torsion2 size(=%u) is not %d!", torsion2.size(), AmoebaTorsionForce::ParametersPerTorsion);
+           (void) sprintf( buffer, "TorsionInfo::TorsionInfo: torsion2 size(=%u) is not %d!", static_cast<unsigned int>(torsion2.size()), AmoebaTorsionForce::ParametersPerTorsion);
            throw OpenMMException( buffer );
         }
 
         if( torsion3.size() != AmoebaTorsionForce::ParametersPerTorsion ){
            char buffer[1024];
-           (void) sprintf( buffer, "TorsionInfo::TorsionInfo: torsion3 size(=%u) is not %d!", torsion3.size(), AmoebaTorsionForce::ParametersPerTorsion);
+           (void) sprintf( buffer, "TorsionInfo::TorsionInfo: torsion3 size(=%u) is not %d!", static_cast<unsigned int>(torsion3.size()), AmoebaTorsionForce::ParametersPerTorsion);
            throw OpenMMException( buffer );
         }
 
@@ -184,7 +184,8 @@ public:
 
         if( torsionParameter.size() != AmoebaTorsionForce::ParametersPerTorsion ){
            char buffer[1024];
-           (void) sprintf( buffer, "TorsionInfo::copyTorsionParameter: input torsionParameter size(=%u) is not %d!", torsionParameter.size(), AmoebaTorsionForce::ParametersPerTorsion);
+           (void) sprintf( buffer, "TorsionInfo::copyTorsionParameter: input torsionParameter size(=%u) is not %d!", 
+                           static_cast<unsigned int>(torsionParameter.size()), AmoebaTorsionForce::ParametersPerTorsion);
            throw OpenMMException( buffer );
         }
 
