@@ -322,8 +322,10 @@ static int readLine( FILE* filePtr, StringVector& tokens, int* lineCount, FILE* 
     if( isNotEof ){
        (*lineCount)++;
        tokenizeString( buffer, tokens, delimiter );
+       return 1;
+    } else {
+       return 0;
     }
-    return 0;
 
 }
 
