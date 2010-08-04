@@ -176,7 +176,7 @@ __device__ void calculateVdw14_7PairIxn_kernel( float4 atomCoordinatesI, float4 
 __global__ 
 #if (__CUDA_ARCH__ >= 200)
 __launch_bounds__(GF1XX_NONBOND_THREADS_PER_BLOCK, 1)
-#elif (__CUDA_ARCH__ >= 130)
+#elif (__CUDA_ARCH__ >= 120)
 __launch_bounds__(GT2XX_NONBOND_THREADS_PER_BLOCK, 1)
 #else
 __launch_bounds__(G8X_NONBOND_THREADS_PER_BLOCK, 1)
@@ -270,7 +270,14 @@ void kCalculateAmoebaVdw14_7Reduction_kernel( float* inputForce, float4* outputF
 
 static void kCalculateAmoebaVdw14_7Reduction(amoebaGpuContext amoebaGpu, CUDAStream<float>* vdwOutputArray, CUDAStream<float4>* forceOutputArray )
 {
-    kCalculateAmoebaVdw14_7Reduction_kernel<<<amoebaGpu->gpuContext->sim.blocks, 384>>>(
+    unsigned int threadsPerBlock;
+    if (amoebaGpu->gpuContext->sm_version >= SM_20)
+        threadsPerBlock = GF1XX_NONBOND_THREADS_PER_BLOCK;
+    else if (amoebaGpu->gpuContext->sm_version >= SM_12)
+        threadsPerBlock = GT2XX_NONBOND_THREADS_PER_BLOCK;
+    else
+        threadsPerBlock = G8X_NONBOND_THREADS_PER_BLOCK;
+    kCalculateAmoebaVdw14_7Reduction_kernel<<<amoebaGpu->gpuContext->sim.blocks, threadsPerBlock>>>(
                                vdwOutputArray->_pDevStream[0], forceOutputArray->_pDevStream[0] );
     LAUNCHERROR("kCalculateAmoebaVdw14_7Reduction");
 }
@@ -282,7 +289,7 @@ static void kCalculateAmoebaVdw14_7Reduction(amoebaGpuContext amoebaGpu, CUDAStr
 __global__ 
 #if (__CUDA_ARCH__ >= 200)
 __launch_bounds__(GF1XX_THREADS_PER_BLOCK, 1)
-#elif (__CUDA_ARCH__ >= 130)
+#elif (__CUDA_ARCH__ >= 120)
 __launch_bounds__(GT2XX_THREADS_PER_BLOCK, 1)
 #else
 __launch_bounds__(G8X_THREADS_PER_BLOCK, 1)
@@ -361,9 +368,16 @@ static void kCalculateAmoebaVdw14_7CoordinateReduction(amoebaGpuContext amoebaGp
                                                        CUDAStream<float4>* coordinateArray,
                                                        CUDAStream<float4>* reducedCoordinateArray)
 {
-    kCalculateAmoebaVdw14_7CoordinateReduction_kernel<<<amoebaGpu->gpuContext->sim.blocks, 384>>>(
+    unsigned int threadsPerBlock;
+    if (amoebaGpu->gpuContext->sm_version >= SM_20)
+        threadsPerBlock = GF1XX_THREADS_PER_BLOCK;
+    else if (amoebaGpu->gpuContext->sm_version >= SM_12)
+        threadsPerBlock = GT2XX_THREADS_PER_BLOCK;
+    else
+        threadsPerBlock = G8X_THREADS_PER_BLOCK;
+    kCalculateAmoebaVdw14_7CoordinateReduction_kernel<<<amoebaGpu->gpuContext->sim.blocks, threadsPerBlock>>>(
                                coordinateArray->_pDevStream[0], reducedCoordinateArray->_pDevStream[0] );
-    LAUNCHERROR("kCalculateAmoebaVdw14_7Reduction");
+    LAUNCHERROR("kCalculateAmoebaVdw14_7CoordinateReduction");
 }
 
 // perform reduction of force on H's and add to heavy atom partner

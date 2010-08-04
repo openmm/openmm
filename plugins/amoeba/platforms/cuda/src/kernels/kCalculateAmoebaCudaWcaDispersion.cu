@@ -408,8 +408,14 @@ void kCalculateAmoebaWcaDispersionForces( amoebaGpuContext amoebaGpu )
     // set threads/block first time through
 
     if( threadsPerBlock == 0 ){
-        threadsPerBlock = getThreadsPerBlock( amoebaGpu, sizeof(WcaDispersionParticle));
-threadsPerBlock = 128;
+        unsigned int maxThreads;
+        if (gpu->sm_version >= SM_20)
+            maxThreads = 384;
+        else if (gpu->sm_version >= SM_12)
+            maxThreads = 192;
+        else
+            maxThreads = 64;
+       threadsPerBlock = std::min(getThreadsPerBlock( amoebaGpu, sizeof(WcaDispersionParticle)), maxThreads);
     }
 
     if (gpu->bOutputBufferPerWarp){
