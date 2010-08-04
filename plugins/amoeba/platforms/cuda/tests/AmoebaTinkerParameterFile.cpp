@@ -32,6 +32,14 @@
 #include "openmm/LocalEnergyMinimizer.h"
 
 #include <exception>
+
+#ifdef WIN32
+#include <windows.h>
+#else
+#include <sys/time.h>
+#endif
+
+
 using namespace std;
 
 
@@ -77,17 +85,13 @@ static char* strsepLocal( char** lineBuffer, const char* delimiter ){
              } else {
                 s[-1] = 0;
              }
-/*
-             if( *s == '\n' ){ 
-                *s = NULL;
-             }
-*/
              *lineBuffer = s;
              return( tok );
           }
        } while( sc != 0 );
     }
 }
+
 /**---------------------------------------------------------------------------------------
 
     Tokenize a string
@@ -104,34 +108,59 @@ int tokenizeString( char* lineBuffer, StringVector& tokenArray, const std::strin
 
     // ---------------------------------------------------------------------------------------
 
-    // static const std::string methodName = "\nSimTKOpenMMUtilities::tokenizeString";
+    // static const std::string methodName = "tokenizeString";
 
     // ---------------------------------------------------------------------------------------
 
-    char *ptr_c = NULL;
-
-    for( ; (ptr_c = strsepLocal( &lineBuffer, delimiter.c_str() )) != NULL; ){
-       if( *ptr_c ){
-/*
-          char* endOfLine = ptr_c;
-          while( endOfLine ){
-printf( "%c", *endOfLine ); fflush( stdout );
-             if( *endOfLine == '\n' )*endOfLine = '\0';
-             endOfLine++;
-          }  
-*/
-          tokenArray.push_back( std::string( ptr_c ) );
-       }
+    char *ptr_c;
+    while( (ptr_c = strsepLocal( &lineBuffer, delimiter.c_str() )) != NULL ){
+        if( *ptr_c ){
+            tokenArray.push_back( std::string( ptr_c ) );
+        }
     }
-
     return (int) tokenArray.size();
 }
 
 /**---------------------------------------------------------------------------------------
 
-    Tokenize a string
+    Open file
 
-    @param lineBuffer           string to tokenize
+    @param fileName             file name
+    @param mode                 file mode: "r", "w", "a"
+    @param log                  optional logging file reference
+
+    @return file pttr or NULL if file not opened
+
+    --------------------------------------------------------------------------------------- */
+
+static FILE* openFile( const std::string& fileName, const std::string& mode, FILE* log ){
+
+    // ---------------------------------------------------------------------------------------
+
+    // static const std::string methodName = "openFile";
+
+    // ---------------------------------------------------------------------------------------
+
+    FILE* filePtr;
+
+#ifdef _MSC_VER
+    fopen_s( &filePtr, fileName.c_str(), mode.c_str() );
+#else
+    filePtr = fopen( fileName.c_str(), mode.c_str() );
+#endif
+
+    if( log ){
+        (void) fprintf( log, "openFile: file=<%s> %sopened w/ mode=%s.\n", fileName.c_str(), (filePtr == NULL ? "not " : ""), mode.c_str() );
+        (void) fflush( log );
+    }
+    return filePtr;
+}
+
+/**---------------------------------------------------------------------------------------
+
+    Tokenize a line into strings
+
+    @param line                 line to tokenize
     @param tokenArray           upon return vector of tokens
     @param delimiter            token delimter
 
@@ -143,7 +172,7 @@ int tokenizeStringFromLineString( std::string& line, StringVector& tokenArray, c
 
     // ---------------------------------------------------------------------------------------
 
-    // static const std::string methodName = "\nSimTKOpenMMUtilities::tokenizeString";
+    // static const std::string methodName = "tokenizeStringFromLineString";
 
     // ---------------------------------------------------------------------------------------
 
@@ -153,7 +182,8 @@ int tokenizeStringFromLineString( std::string& line, StringVector& tokenArray, c
 }
 
 /**---------------------------------------------------------------------------------------
- * Set field if in map
+ *
+ * Set string field if in map
  * 
  * @param  argumentMap            map to check
  * @param  fieldToCheck           key
@@ -167,7 +197,7 @@ static int setStringFromMap( MapStringString& argumentMap, std::string fieldToCh
 
 // ---------------------------------------------------------------------------------------
 
-   static const std::string methodName             = "setStringFromMap";
+   //static const std::string methodName             = "setStringFromMap";
 
 // ---------------------------------------------------------------------------------------
 
@@ -180,7 +210,8 @@ static int setStringFromMap( MapStringString& argumentMap, std::string fieldToCh
 }
 
 /**---------------------------------------------------------------------------------------
- * Set field if in map
+ *
+ * Set int field if in map
  * 
  * @param  argumentMap            map to check
  * @param  fieldToCheck           key
@@ -194,7 +225,7 @@ static int setIntFromMap( MapStringString& argumentMap, std::string fieldToCheck
 
 // ---------------------------------------------------------------------------------------
 
-   static const std::string methodName             = "setIntFromMap";
+   //static const std::string methodName             = "setIntFromMap";
 
 // ---------------------------------------------------------------------------------------
 
@@ -207,60 +238,8 @@ static int setIntFromMap( MapStringString& argumentMap, std::string fieldToCheck
 }
 
 /**---------------------------------------------------------------------------------------
- * Set field if in map
- * 
- * @param  argumentMap            map to check
- * @param  fieldToCheck           key
- * @param  fieldToSet             field to set
- *
- * @return 1 if argument set, else 0
- *
-   --------------------------------------------------------------------------------------- */
 
-static void copyMap( MapStringInt& inputMap, MapStringInt& outputMap ){
-
-// ---------------------------------------------------------------------------------------
-
-   static const std::string methodName             = "setIntFromMap";
-
-// ---------------------------------------------------------------------------------------
-
-   for( MapStringIntI ii = inputMap.begin(); ii != inputMap.end(); ii++ ){
-         outputMap[(*ii).first] = (*ii).second;
-   }
-}
-
-
-/**---------------------------------------------------------------------------------------
- * Set field if in map
- * 
- * @param  argumentMap            map to check
- * @param  fieldToCheck           key
- * @param  fieldToSet             field to set
- *
- * @return 1 if argument set, else 0
- *
-   --------------------------------------------------------------------------------------- */
-
-static void editMap( MapStringInt& inputMap, MapStringInt& outputMap, int newValue ){
-
-// ---------------------------------------------------------------------------------------
-
-   static const std::string methodName             = "editMap";
-
-// ---------------------------------------------------------------------------------------
-
-   copyMap( inputMap, outputMap );
-   for( MapStringIntI ii = inputMap.begin(); ii != inputMap.end(); ii++ ){
-      if( (*ii).second ){
-         outputMap[(*ii).first] = newValue;
-      }
-   }
-}
-
-/**---------------------------------------------------------------------------------------
-
- * Set field if in map
+ * Set float field if in map
  * 
  * @param  argumentMap            map to check
  * @param  fieldToCheck           key
@@ -286,10 +265,9 @@ static int setFloatFromMap( MapStringString& argumentMap, std::string fieldToChe
    return 0;
 }
 
-
 /**---------------------------------------------------------------------------------------
-
- * Set field if in map
+ *
+ * Set double field if in map
  * 
  * @param  argumentMap            map to check
  * @param  fieldToCheck           key
@@ -357,31 +335,40 @@ static char* readLine( FILE* filePtr, StringVector& tokens, int* lineCount, FILE
     @param fileContents         output file contents
     @param log                  log
 
+    @return 1 if file not opened; else return 0
+
     --------------------------------------------------------------------------------------- */
 
-static void readFile( std::string fileName, StringVectorVector& fileContents, FILE* log ){
+static int readFile( std::string fileName, StringVectorVector& fileContents, FILE* log ){
 
 // ---------------------------------------------------------------------------------------
 
-    //static const std::string methodName      = "readFile";
+    static const std::string methodName      = "readFile";
 
 // ---------------------------------------------------------------------------------------
 
      fileContents.resize(0);
-     FILE* filePtr;
- #ifdef _MSC_VER
-     fopen_s( &filePtr, fileName.c_str(), "r" );
- #else
-     filePtr = fopen( fileName.c_str(), "r" );
- #endif
+
+     // open file
+
+     FILE* filePtr = openFile( fileName, "r", log );
      if( filePtr == NULL ){
-        return;
+        if( log ){
+            (void) fprintf( log, "%s: file=<%s> not found.\n", methodName.c_str(), fileName.c_str() );
+            (void) fflush( log );
+        }
+        return 1;
+     } else if( log ){
+         (void) fprintf( log, "%s: file=<%s> found.\n", methodName.c_str(), fileName.c_str() );
+         (void) fflush( log );
      }
+
+     // read contents
+
      StringVector firstLine;
      int lineCount  = 0;
      char* isNotEof = readLine( filePtr, firstLine, &lineCount, log );
      fileContents.push_back( firstLine );
-     //int lineCount  = 0;
      while( isNotEof ){
          StringVector lineTokens;
          isNotEof = readLine( filePtr, lineTokens, &lineCount, log );
@@ -389,7 +376,7 @@ static void readFile( std::string fileName, StringVectorVector& fileContents, FI
      }
      (void) fclose( filePtr );
 
-     return;
+     return 0;
 }
 
 /**---------------------------------------------------------------------------------------
@@ -408,7 +395,7 @@ static void readFile( std::string fileName, StringVectorVector& fileContents, FI
     --------------------------------------------------------------------------------------- */
 
 static int readVectorOfDoubleVectors( FILE* filePtr, const StringVector& tokens, std::vector< std::vector<double> >& vectorOfVectors, 
-                                       int* lineCount, std::string typeName, FILE* log ){
+                                       int* lineCount, const std::string& typeName, FILE* log ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -418,7 +405,7 @@ static int readVectorOfDoubleVectors( FILE* filePtr, const StringVector& tokens,
 
     if( tokens.size() < 1 ){
        char buffer[1024];
-       (void) sprintf( buffer, "%s no Coordinates terms entry???\n", methodName.c_str() );
+       (void) sprintf( buffer, "%s no %s entries?\n", methodName.c_str(), typeName.c_str() );
        throwException(__FILE__, __LINE__, buffer );
        exit(-1);
     }
@@ -428,6 +415,7 @@ static int readVectorOfDoubleVectors( FILE* filePtr, const StringVector& tokens,
        (void) fprintf( log, "%s number of %s to read: %d\n", methodName.c_str(), typeName.c_str(), numberToRead );
        (void) fflush( log );
     }
+
     for( int ii = 0; ii < numberToRead; ii++ ){
        StringVector lineTokens;
        char* isNotEof = readLine( filePtr, lineTokens, lineCount, log );
@@ -487,7 +475,7 @@ static int readVectorOfDoubleVectors( FILE* filePtr, const StringVector& tokens,
     --------------------------------------------------------------------------------------- */
 
 static int readVectorOfIntVectors( FILE* filePtr, const StringVector& tokens, std::vector< std::vector<int> >& vectorOfVectors, 
-                                     int* lineCount, std::string typeName, FILE* log ){
+                                   int* lineCount, std::string typeName, FILE* log ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -497,7 +485,7 @@ static int readVectorOfIntVectors( FILE* filePtr, const StringVector& tokens, st
 
     if( tokens.size() < 1 ){
        char buffer[1024];
-       (void) sprintf( buffer, "%s no number of terms entry???\n", methodName.c_str() );
+       (void) sprintf( buffer, "%s no %s entries?\n", methodName.c_str(), typeName.c_str() );
        throwException(__FILE__, __LINE__, buffer );
        exit(-1);
     }
@@ -578,25 +566,25 @@ static int readIntVector( FILE* filePtr, const StringVector& tokens, int numberT
     
 // ---------------------------------------------------------------------------------------
 
-     if( tokens.size() < 1 ){
-         char buffer[1024];
-         (void) sprintf( buffer, "%s tokens empty? token size=%u\n", methodName.c_str(), tokens.size() );
-         throwException(__FILE__, __LINE__, buffer );
-         exit(-1);
-     }
+    if( tokens.size() < 1 ){
+        char buffer[1024];
+        (void) sprintf( buffer, "%s no %s entries?\n", methodName.c_str(), typeName.c_str() );
+        throwException(__FILE__, __LINE__, buffer );
+        exit(-1);
+    }
  
-     int numberToRead = atoi( tokens[numberTokenIndex].c_str() );
-     intVector.resize( numberToRead );
-     if( 0 && log ){
-         (void) fprintf( log, "%s number of %s to read: %d\n", methodName.c_str(), typeName.c_str(), numberToRead );
-         (void) fflush( log );
-     }
-     int startIndex = numberTokenIndex+1;
-     for( int ii = startIndex; ii < numberToRead + startIndex; ii++ ){
-         intVector[ii-3] = atoi( tokens[ii].c_str() );
-     }
+    int numberToRead = atoi( tokens[numberTokenIndex].c_str() );
+    intVector.resize( numberToRead );
+    if( log ){
+        (void) fprintf( log, "%s number of %s to read: %d\n", methodName.c_str(), typeName.c_str(), numberToRead );
+        (void) fflush( log );
+    }
+    int startIndex = numberTokenIndex+1;
+    for( int ii = startIndex; ii < numberToRead + startIndex; ii++ ){
+        intVector[ii-3] = atoi( tokens[ii].c_str() );
+    }
  
-     return static_cast<int>(intVector.size());
+    return static_cast<int>(intVector.size());
 }
 
 /**---------------------------------------------------------------------------------------
@@ -660,7 +648,7 @@ static int readMasses( FILE* filePtr, const StringVector& tokens, System& system
 
     if( tokens.size() < 1 ){
        char buffer[1024];
-       (void) sprintf( buffer, "%s no particles number entry???\n", methodName.c_str() );
+       (void) sprintf( buffer, "%s no particle masses?\n", methodName.c_str() );
        throwException(__FILE__, __LINE__, buffer );
        exit(-1);
     }
@@ -781,22 +769,44 @@ static int readAmoebaHarmonicBondParameters( FILE* filePtr, MapStringInt& forceM
         if( isNotEof && tokens.size() > 0 ){
  
             std::string field       = tokens[0];
-            if( field.compare( "#" ) == 0 ){
+            if( field == "#" ){
   
                // skip
                if( log ){
                      (void) fprintf( log, "skip <%s>\n", field.c_str());
                }
   
-           } else if( field.compare( "AmoebaHarmonicBondCubic" ) == 0 ){
+           } else if( field == "AmoebaHarmonicBondCubic" ){
                double cubicParameter = atof( tokens[1].c_str() );
                bondForce->setAmoebaGlobalHarmonicBondCubic( cubicParameter );
                hits++;
-           } else if( field.compare( "AmoebaHarmonicBondQuartic" ) == 0 ){
+           } else if( field == "AmoebaHarmonicBondQuartic" ){
                double quarticParameter = atof( tokens[1].c_str() );
                bondForce->setAmoebaGlobalHarmonicBondQuartic( quarticParameter );
                hits++;
            }
+        }
+    }
+
+    // convert units to kJ-nm from kCal-Angstrom?
+
+    if( useOpenMMUnits ){
+
+        double cubic         = bondForce->getAmoebaGlobalHarmonicBondCubic()/AngstromToNm;
+        double quartic       = bondForce->getAmoebaGlobalHarmonicBondQuartic()/(AngstromToNm*AngstromToNm);
+
+        bondForce->setAmoebaGlobalHarmonicBondCubic( cubic );
+        bondForce->setAmoebaGlobalHarmonicBondQuartic( quartic );
+
+        // scale equilibrium bond lengths/force prefactor k
+
+        for( int ii = 0; ii < bondForce->getNumBonds(); ii++ ){
+            int particle1, particle2;
+            double length, k;
+            bondForce->getBondParameters( ii, particle1, particle2, length, k );
+            length           *= AngstromToNm;
+            k                *= CalToJoule/(AngstromToNm*AngstromToNm);
+            bondForce->setBondParameters( ii, particle1, particle2, length, k ); 
         }
     }
 
@@ -805,8 +815,9 @@ static int readAmoebaHarmonicBondParameters( FILE* filePtr, MapStringInt& forceM
     if( log ){
         static const unsigned int maxPrint   = MAX_PRINT;
         unsigned int arraySize               = static_cast<unsigned int>(bondForce->getNumBonds());
-        (void) fprintf( log, "%s: %u sample of AmoebaHarmonicBondForce parameters; cubic=%15.7e quartic=%15.7e\n",
-                        methodName.c_str(), arraySize, bondForce->getAmoebaGlobalHarmonicBondCubic(), bondForce->getAmoebaGlobalHarmonicBondQuartic() );
+        (void) fprintf( log, "%s: %u sample of %sAmoebaHarmonicBondForce parameters; cubic=%15.7e quartic=%15.7e\n",
+                        methodName.c_str(), arraySize, (useOpenMMUnits ? "CONVERTED " : ""),
+                        bondForce->getAmoebaGlobalHarmonicBondCubic(), bondForce->getAmoebaGlobalHarmonicBondQuartic() );
         for( unsigned int ii = 0; ii < arraySize; ii++ ){
             int particle1, particle2;
             double length, k;
@@ -818,44 +829,6 @@ static int readAmoebaHarmonicBondParameters( FILE* filePtr, MapStringInt& forceM
             if( ii == maxPrint && (arraySize - maxPrint) > ii ){
                ii = arraySize - maxPrint - 1;
             } 
-        }
-    }
-
-    // convert units to kJ-nm from kCal-Angstrom?
-
-    if( useOpenMMUnits ){
-        double cubic         = bondForce->getAmoebaGlobalHarmonicBondCubic()/AngstromToNm;
-        double quartic       = bondForce->getAmoebaGlobalHarmonicBondQuartic()/(AngstromToNm*AngstromToNm);
-        //double cubic         = bondForce->getAmoebaGlobalHarmonicBondCubic();
-        //double quartic       = bondForce->getAmoebaGlobalHarmonicBondQuartic();
-        bondForce->setAmoebaGlobalHarmonicBondCubic( cubic );
-        bondForce->setAmoebaGlobalHarmonicBondQuartic( quartic );
-
-        for( int ii = 0; ii < bondForce->getNumBonds(); ii++ ){
-            int particle1, particle2;
-            double length, k;
-            bondForce->getBondParameters( ii, particle1, particle2, length, k );
-            length           *= AngstromToNm;
-            k                *= CalToJoule/(AngstromToNm*AngstromToNm);
-            bondForce->setBondParameters( ii, particle1, particle2, length, k ); 
-        }
-        if( log ){
-            static const unsigned int maxPrint   = MAX_PRINT;
-            unsigned int arraySize               = static_cast<unsigned int>(bondForce->getNumBonds());
-            (void) fprintf( log, "%s: %u sample of CONVERTED AmoebaHarmonicBondForce parameters; cubic=%15.7e quartic=%15.7e\n",
-                            methodName.c_str(), arraySize, bondForce->getAmoebaGlobalHarmonicBondCubic(), bondForce->getAmoebaGlobalHarmonicBondQuartic() );
-            for( unsigned int ii = 0; ii < arraySize; ii++ ){
-                int particle1, particle2;
-                double length, k;
-                bondForce->getBondParameters( ii, particle1, particle2, length, k );
-                (void) fprintf( log, "%8d %8d %8d %15.7e %15.7e\n", ii, particle1, particle2, length, k );
-      
-                // skip to end
-      
-                if( ii == maxPrint && (arraySize - maxPrint) > ii ){
-                   ii = arraySize - maxPrint - 1;
-                } 
-            }
         }
     }
 
@@ -939,23 +912,23 @@ static int readAmoebaHarmonicAngleParameters( FILE* filePtr, MapStringInt& force
        if( isNotEof && tokens.size() > 0 ){
 
           std::string field       = tokens[0];
-          if( field.compare( "#" ) == 0 ){
+          if( field == "#" ){
 
              // skip
              if( log ){
                    (void) fprintf( log, "skip <%s>\n", field.c_str());
              }
 
-          } else if( field.compare( "AmoebaHarmonicAngleCubic" ) == 0 ){
+          } else if( field == "AmoebaHarmonicAngleCubic" ){
              angleForce->setAmoebaGlobalHarmonicAngleCubic( atof( tokens[1].c_str() ) );
              hits++;
-          } else if( field.compare( "AmoebaHarmonicAngleQuartic" ) == 0 ){
+          } else if( field == "AmoebaHarmonicAngleQuartic" ){
              angleForce->setAmoebaGlobalHarmonicAngleQuartic( atof( tokens[1].c_str() ) );
              hits++;
-          } else if( field.compare( "AmoebaHarmonicAnglePentic" ) == 0 ){
+          } else if( field == "AmoebaHarmonicAnglePentic" ){
              angleForce->setAmoebaGlobalHarmonicAnglePentic( atof( tokens[1].c_str() ) );
              hits++;
-          } else if( field.compare( "AmoebaHarmonicAngleSextic" ) == 0 ){
+          } else if( field == "AmoebaHarmonicAngleSextic" ){
              angleForce->setAmoebaGlobalHarmonicAngleSextic( atof( tokens[1].c_str() ) );
              hits++;
           }
@@ -1100,23 +1073,23 @@ static int readAmoebaHarmonicInPlaneAngleParameters( FILE* filePtr, MapStringInt
         isNotEof = readLine( filePtr, tokens, lineCount, log );
         if( isNotEof && tokens.size() > 0 ){
             std::string field       = tokens[0];
-            if( field.compare( "#" ) == 0 ){
+            if( field == "#" ){
   
                // skip
                if( log ){
                    (void) fprintf( log, "skip <%s>\n", field.c_str());
                }
   
-            } else if( field.compare( "AmoebaHarmonicInPlaneAngleCubic" ) == 0 ){
+            } else if( field == "AmoebaHarmonicInPlaneAngleCubic" ){
                 angleForce->setAmoebaGlobalHarmonicInPlaneAngleCubic( atof( tokens[1].c_str() ) );
                 hits++;
-            } else if( field.compare( "AmoebaHarmonicInPlaneAngleQuartic" ) == 0 ){
+            } else if( field == "AmoebaHarmonicInPlaneAngleQuartic" ){
                 angleForce->setAmoebaGlobalHarmonicInPlaneAngleQuartic( atof( tokens[1].c_str() ) );
                 hits++;
-            } else if( field.compare( "AmoebaHarmonicInPlaneAnglePentic" ) == 0 ){
+            } else if( field == "AmoebaHarmonicInPlaneAnglePentic" ){
                 angleForce->setAmoebaGlobalHarmonicInPlaneAnglePentic( atof( tokens[1].c_str() ) );
                 hits++;
-            } else if( field.compare( "AmoebaHarmonicInPlaneAngleSextic" ) == 0 ){
+            } else if( field == "AmoebaHarmonicInPlaneAngleSextic" ){
                 angleForce->setAmoebaGlobalHarmonicInPlaneAngleSextic( atof( tokens[1].c_str() ) );
                 hits++;
             }
@@ -1681,23 +1654,23 @@ static int readAmoebaOutOfPlaneBendParameters( FILE* filePtr, MapStringInt& forc
         isNotEof = readLine( filePtr, tokens, lineCount, log );
         if( isNotEof && tokens.size() > 0 ){
            std::string field       = tokens[0];
-           if( field.compare( "#" ) == 0 ){
+           if( field == "#" ){
  
               // skip
               if( log ){
                   (void) fprintf( log, "skip <%s>\n", field.c_str());
               }
  
-           } else if( field.compare( "AmoebaOutOfPlaneBendCubic" ) == 0 ){
+           } else if( field == "AmoebaOutOfPlaneBendCubic" ){
                outOfPlaneBendForce->setAmoebaGlobalOutOfPlaneBendCubic( atof( tokens[1].c_str() ) );
                hits++;
-           } else if( field.compare( "AmoebaOutOfPlaneBendQuartic" ) == 0 ){
+           } else if( field == "AmoebaOutOfPlaneBendQuartic" ){
                outOfPlaneBendForce->setAmoebaGlobalOutOfPlaneBendQuartic( atof( tokens[1].c_str() ) );
                hits++;
-           } else if( field.compare( "AmoebaOutOfPlaneBendPentic" ) == 0 ){
+           } else if( field == "AmoebaOutOfPlaneBendPentic" ){
                outOfPlaneBendForce->setAmoebaGlobalOutOfPlaneBendPentic( atof( tokens[1].c_str() ) );
                hits++;
-           } else if( field.compare( "AmoebaOutOfPlaneBendSextic" ) == 0 ){
+           } else if( field == "AmoebaOutOfPlaneBendSextic" ){
                outOfPlaneBendForce->setAmoebaGlobalOutOfPlaneBendSextic( atof( tokens[1].c_str() ) );
                hits++;
            }
@@ -1979,16 +1952,16 @@ static int readAmoebaTorsionTorsionParameters( FILE* filePtr, MapStringInt& forc
         isNotEof = readLine( filePtr, tokens, lineCount, log );
         if( isNotEof && tokens.size() > 0 ){
             std::string field       = tokens[0];
-            if( field.compare( "#" ) == 0 ){
+            if( field == "#" ){
   
                // skip
                if( log ){
                    (void) fprintf( log, "skip <%s>\n", field.c_str());
                }
   
-            } else if( field.compare( "AmoebaTorsionTorsionGrids" ) == 0 ){
+            } else if( field == "AmoebaTorsionTorsionGrids" ){
                 totalNumberOfGrids = atoi( tokens[1].c_str() );
-            } else if( field.compare( "AmoebaTorsionTorsionGridPoints" ) == 0 ){
+            } else if( field == "AmoebaTorsionTorsionGridPoints" ){
                 int gridIndex = atoi( tokens[1].c_str() );
                 int numX      = atoi( tokens[2].c_str() );
                 int numY      = atoi( tokens[3].c_str() );
@@ -2183,7 +2156,7 @@ static int readAmoebaMultipoleParameters( FILE* filePtr, MapStringInt& forceMap,
         if( isNotEof && tokens.size() > 0 ){
  
             std::string field        = tokens[0];
-            if( field.compare( "#" ) == 0 ){
+            if( field == "#" ){
    
                // skip
                if( log ){
@@ -2191,20 +2164,19 @@ static int readAmoebaMultipoleParameters( FILE* filePtr, MapStringInt& forceMap,
                    (void) fflush( log );
                }
    
-            } else if( field.compare( "AmoebaMultipoleEnd" ) == 0 ){
+            } else if( field == "AmoebaMultipoleEnd" ){
                 done++;
-            } else if( field.compare( AMOEBA_MULTIPOLE_ROTATION_MATRICES ) == 0 || 
-                       field.compare( AMOEBA_MULTIPOLE_ROTATED )           == 0 ||
-                       field.compare( AMOEBA_FIXED_E )                     == 0 ||
-                       field.compare( AMOEBA_FIXED_E_GK )                  == 0 ||
-                       field.compare( AMOEBA_INDUCDED_DIPOLES )            == 0 ||
-                       field.compare( AMOEBA_INDUCDED_DIPOLES_GK )         == 0 
-                      ){
+            } else if( field == AMOEBA_MULTIPOLE_ROTATION_MATRICES  || 
+                       field == AMOEBA_MULTIPOLE_ROTATED            ||
+                       field == AMOEBA_FIXED_E                      ||
+                       field == AMOEBA_FIXED_E_GK                   ||
+                       field == AMOEBA_INDUCDED_DIPOLES             ||
+                       field == AMOEBA_INDUCDED_DIPOLES_GK          ){
                 fieldCount++;
                 std::vector< std::vector<double> > vectorOfDoubleVectors;
                 readVectorOfDoubleVectors( filePtr, tokens, vectorOfDoubleVectors, lineCount, field, log );
                 supplementary[field] = vectorOfDoubleVectors;
-            } else if( field.compare( "AmoebaMultipoleCovalent" ) == 0 ){
+            } else if( field == "AmoebaMultipoleCovalent" ){
                 fieldCount++;
                 readAmoebaMultipoleCovalent( filePtr, multipoleForce, lineCount, log );
             }
@@ -2416,10 +2388,10 @@ static int readAmoebaGeneralizedKirkwoodParameters( FILE* filePtr, MapStringInt&
        if( isNotEof && tokens.size() > 0 ){
 
           std::string field       = tokens[0];
-          if( field.compare( "SoluteDielectric" ) == 0 ){
+          if( field == "SoluteDielectric" ){
              gbsaObcForce->setSoluteDielectric( atof( tokens[1].c_str() ) );
              hits++;
-          } else if( field.compare( "SolventDielectric" ) == 0 ){
+          } else if( field == "SolventDielectric" ){
              gbsaObcForce->setSolventDielectric( atof( tokens[1].c_str() ) );
              hits++;
           } else {
@@ -2448,16 +2420,16 @@ static int readAmoebaGeneralizedKirkwoodParameters( FILE* filePtr, MapStringInt&
         if( isNotEof && tokens.size() > 0 ){
  
             std::string field        = tokens[0];
-            if( field.compare( "#" ) == 0 ){
+            if( field == "#" ){
    
                // skip
                if( log ){
                    (void) fprintf( log, "skip <%s>\n", field.c_str());
                }
    
-            } else if( field.compare( "AmoebaGeneralizedKirkwoodEnd" ) == 0 ){
+            } else if( field == "AmoebaGeneralizedKirkwoodEnd" ){
                 done++;
-            } else if( field.compare( "AmoebaGeneralizedKirkwoodBornRadii" ) == 0 ){
+            } else if( field == "AmoebaGeneralizedKirkwoodBornRadii" ){
                 fieldCount++;
                 std::vector< std::vector<double> > vectorOfDoubleVectors;
                 readVectorOfDoubleVectors( filePtr, tokens, vectorOfDoubleVectors, lineCount, field, log );
@@ -2570,7 +2542,7 @@ static int readAmoebaVdwParameters( FILE* filePtr, MapStringInt& forceMap, const
  
     bool tableLoaded = 0;
     int numberOfParticles;
-    if( tokens[0].compare( "AmoebaVdw14_7SigEpsTable" ) == 0 ){
+    if( tokens[0] == "AmoebaVdw14_7SigEpsTable" ){
         tableLoaded  = 1;
         int tableSize  = atoi( tokens[1].c_str() );
         if( log ){
@@ -2634,7 +2606,7 @@ static int readAmoebaVdwParameters( FILE* filePtr, MapStringInt& forceMap, const
 
     StringVector lineTokensT;
     char* isNotEof = readLine( filePtr, lineTokensT, lineCount, log );
-    if( lineTokensT[0].compare( "AmoebaVdw14_7Scales" ) == 0 ){
+    if( lineTokensT[0] == "AmoebaVdw14_7Scales" ){
         int tokenIndex    = 1;
         double scale2     = atof( lineTokensT[tokenIndex++].c_str() );
         double scale3     = atof( lineTokensT[tokenIndex++].c_str() );
@@ -2655,7 +2627,7 @@ static int readAmoebaVdwParameters( FILE* filePtr, MapStringInt& forceMap, const
 (void) fprintf( log, "%s AmoebaVdwForce scales read\n", methodName.c_str() ); fflush( log );
     lineTokensT.resize(0);
     isNotEof = readLine( filePtr, lineTokensT, lineCount, log );
-    if( lineTokensT[0].compare( "AmoebaVdw14_7Exclusion" ) == 0 ){
+    if( lineTokensT[0] == "AmoebaVdw14_7Exclusion" ){
         int numberOfParticles =  atoi( lineTokensT[1].c_str() );
         for( int ii = 0; ii < numberOfParticles; ii++ ){
             StringVector lineTokens;
@@ -2682,7 +2654,7 @@ static int readAmoebaVdwParameters( FILE* filePtr, MapStringInt& forceMap, const
 
     lineTokensT.resize(0);
     isNotEof = readLine( filePtr, lineTokensT, lineCount, log );
-    if( lineTokensT[0].compare( "AmoebaVdw14_7Hal" ) == 0 ){
+    if( lineTokensT[0] == "AmoebaVdw14_7Hal" ){
         int tokenIndex    = 1;
         double hal1       = atof( lineTokensT[tokenIndex++].c_str() );
         double hal2       = atof( lineTokensT[tokenIndex++].c_str() );
@@ -2700,7 +2672,7 @@ static int readAmoebaVdwParameters( FILE* filePtr, MapStringInt& forceMap, const
 
     lineTokensT.resize(0);
     isNotEof = readLine( filePtr, lineTokensT, lineCount, log );
-    if( lineTokensT[0].compare( "AmoebaVdw14_CombiningRule" ) == 0 ){
+    if( lineTokensT[0] == "AmoebaVdw14_CombiningRule" ){
         int tokenIndex    = 1;
         std::string sigmaCombiningRule   = lineTokensT[tokenIndex++].c_str();
         std::string epsilonCombiningRule = lineTokensT[tokenIndex++].c_str();
@@ -2921,23 +2893,23 @@ static int readAmoebaWcaDispersionParameters( FILE* filePtr, MapStringInt& force
        isNotEof = readLine( filePtr, tokens, lineCount, log );
        if( isNotEof && tokens.size() > 0 ){
           std::string field       = tokens[0];
-          if( field.compare( "AmoebaWcaDispersionAwater" ) == 0 ){
+          if( field == "AmoebaWcaDispersionAwater" ){
              wcaDispersionForce->setAwater( atof( tokens[1].c_str() ) );
              hits++;
-          } else if( field.compare( "AmoebaWcaDispersionSlevy" ) == 0 ){
+          } else if( field == "AmoebaWcaDispersionSlevy" ){
              wcaDispersionForce->setSlevy( atof( tokens[1].c_str() ) );
              hits++;
-          } else if( field.compare( "AmoebaWcaDispersionShctd" ) == 0 ){
+          } else if( field == "AmoebaWcaDispersionShctd" ){
              wcaDispersionForce->setShctd( atof( tokens[1].c_str() ) );
              hits++;
-          } else if( field.compare( "AmoebaWcaDispersionDispoff" ) == 0 ){
+          } else if( field == "AmoebaWcaDispersionDispoff" ){
              wcaDispersionForce->setDispoff( atof( tokens[1].c_str() ) );
              hits++;
-          } else if( field.compare( "AmoebaWcaDispersionEps" ) == 0 ){
+          } else if( field == "AmoebaWcaDispersionEps" ){
              wcaDispersionForce->setEpso( atof( tokens[1].c_str() ) );
              wcaDispersionForce->setEpsh( atof( tokens[2].c_str() ) );
              hits++;
-          } else if( field.compare( "AmoebaWcaDispersionRmin" ) == 0 ){
+          } else if( field == "AmoebaWcaDispersionRmin" ){
              wcaDispersionForce->setRmino( atof( tokens[1].c_str() ) );
              wcaDispersionForce->setRminh( atof( tokens[2].c_str() ) );
              hits++;
@@ -3150,7 +3122,7 @@ static int readAmoebaSurfaceParameters( FILE* filePtr, MapStringInt& forceMap, c
         if( isNotEof && tokens.size() > 0 ){
  
            std::string field       = tokens[0];
-           if( field.compare( "AmoebaSurfaceProbe" ) == 0 ){
+           if( field == "AmoebaSurfaceProbe" ){
               sasaForce->setProbeRadius( atof( tokens[1].c_str() ) );
               hits++;
            } else {
@@ -3208,7 +3180,9 @@ static int readAmoebaSurfaceParameters( FILE* filePtr, MapStringInt& forceMap, c
 
     --------------------------------------------------------------------------------------- */
 
-static int readConstraints( FILE* filePtr, const StringVector& tokens, System& system, int* lineCount, FILE* log ){
+static int readConstraints( FILE* filePtr, const StringVector& tokens, System& system, int useOpenMMUnits,
+                            MapStringVectorOfVectors& supplementary, MapStringString& inputArgumentMap,
+                            int* lineCount, FILE* log ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -3245,23 +3219,29 @@ static int readConstraints( FILE* filePtr, const StringVector& tokens, System& s
        }
     }
 
-    if( log ){
-       static const unsigned int maxPrint   = MAX_PRINT;
-       unsigned int arraySize               = static_cast<unsigned int>(system.getNumConstraints());
-       (void) fprintf( log, "%s: sample constraints\n", methodName.c_str() );
-       for( unsigned int ii = 0; ii < arraySize && ii < maxPrint; ii++ ){
+    // scale constraint distances
+
+    if( useOpenMMUnits ){
+       for( int ii = 0; ii < system.getNumConstraints(); ii++ ){
           int particle1, particle2;
           double distance;
           system.getConstraintParameters( ii, particle1, particle2, distance ); 
-          (void) fprintf( log, "%8d %8d %8d %15.7e\n", ii, particle1, particle2, distance );
+          distance *= AngstromToNm;
+          system.setConstraintParameters( ii, particle1, particle2, distance ); 
        }
-       if( arraySize > maxPrint ){
-          for( unsigned int ii = arraySize - maxPrint; ii < arraySize; ii++ ){
-             int particle1, particle2;
-             double distance;
-             system.getConstraintParameters( ii, particle1, particle2, distance ); 
-             (void) fprintf( log, "%8d %8d %8d %15.7e\n", ii, particle1, particle2, distance );
-          }
+    }
+
+    if( log ){
+       int maxPrint = 10;
+       (void) fprintf( log, "%s: sample constraints %susing OpenMM units.\n", methodName.c_str(), (useOpenMMUnits ? "" : "not ") );
+       for( int ii = 0; ii < system.getNumConstraints(); ii++ ){
+          int particle1, particle2;
+          double distance;
+          system.getConstraintParameters( ii, particle1, particle2, distance ); 
+          (void) fprintf( log, "%8u %8d %8d %15.7e\n", ii, particle1, particle2, distance );
+          if( ii == maxPrint && (system.getNumConstraints() - maxPrint) > ii ){
+             ii = system.getNumConstraints() - maxPrint - 1;
+          } 
        }
     }
 
@@ -3306,15 +3286,15 @@ static Integrator* readIntegrator( FILE* filePtr, const StringVector& tokens, Sy
     // set number of parameters (lines to read)
 
     int readLines;
-    if( integratorName.compare( "LangevinIntegrator" ) == 0 ){
+    if( integratorName == "LangevinIntegrator" ){
        readLines = 5;
-    } else if( integratorName.compare( "VariableLangevinIntegrator" ) == 0 ){
+    } else if( integratorName == "VariableLangevinIntegrator" ){
        readLines = 6;
-    } else if( integratorName.compare( "VerletIntegrator" ) == 0 ){
+    } else if( integratorName == "VerletIntegrator" ){
        readLines = 2;
-    } else if( integratorName.compare( "VariableVerletIntegrator" ) == 0 ){
+    } else if( integratorName == "VariableVerletIntegrator" ){
        readLines = 3;
-    } else if( integratorName.compare( "BrownianIntegrator" ) == 0 ){
+    } else if( integratorName == "BrownianIntegrator" ){
        readLines = 5;
     } else {
        (void) fprintf( log, "%s integrator=%s not recognized.\n", methodName.c_str(), integratorName.c_str() );
@@ -3335,17 +3315,17 @@ static Integrator* readIntegrator( FILE* filePtr, const StringVector& tokens, Sy
        StringVector lineTokens;
        char* isNotEof = readLine( filePtr, lineTokens, lineCount, log );
        if( lineTokens.size() > 1 ){
-          if( lineTokens[0].compare( "StepSize" ) == 0 ){
+          if( lineTokens[0] == "StepSize" ){
              stepSize            =  atof( lineTokens[1].c_str() );
-          } else if( lineTokens[0].compare( "ConstraintTolerance" ) == 0 ){
+          } else if( lineTokens[0] == "ConstraintTolerance" ){
              constraintTolerance =  atof( lineTokens[1].c_str() );
-          } else if( lineTokens[0].compare( "Temperature" ) == 0 ){
+          } else if( lineTokens[0] == "Temperature" ){
              temperature         =  atof( lineTokens[1].c_str() );
-          } else if( lineTokens[0].compare( "Friction" ) == 0 ){
+          } else if( lineTokens[0] == "Friction" ){
              friction            =  atof( lineTokens[1].c_str() );
-          } else if( lineTokens[0].compare( "ErrorTolerance" ) == 0 ){
+          } else if( lineTokens[0] == "ErrorTolerance" ){
              errorTolerance      =  atof( lineTokens[1].c_str() );
-          } else if( lineTokens[0].compare( "RandomNumberSeed" ) == 0 ){
+          } else if( lineTokens[0] == "RandomNumberSeed" ){
              randomNumberSeed    =  atoi( lineTokens[1].c_str() );
           } else {
              (void) fprintf( log, "%s integrator field=%s not recognized.\n", methodName.c_str(), lineTokens[0].c_str() );
@@ -3364,19 +3344,19 @@ static Integrator* readIntegrator( FILE* filePtr, const StringVector& tokens, Sy
 
     Integrator* returnIntegrator = NULL;
 
-    if( integratorName.compare( "LangevinIntegrator" ) == 0 ){
+    if( integratorName == "LangevinIntegrator" ){
        returnIntegrator = new LangevinIntegrator( temperature, friction, stepSize );
 //      returnIntegrator->setRandomNumberSeed( randomNumberSeed );
-    } else if( integratorName.compare( "VariableLangevinIntegrator" ) == 0 ){
+    } else if( integratorName == "VariableLangevinIntegrator" ){
        returnIntegrator = new VariableLangevinIntegrator( temperature, friction, errorTolerance );
        returnIntegrator->setStepSize( stepSize );
 //      returnIntegrator->setRandomNumberSeed( randomNumberSeed );
-    } else if( integratorName.compare( "VerletIntegrator" ) == 0 ){
+    } else if( integratorName == "VerletIntegrator" ){
        returnIntegrator = new VerletIntegrator( stepSize );
-    } else if( integratorName.compare( "VariableVerletIntegrator" ) == 0 ){
+    } else if( integratorName == "VariableVerletIntegrator" ){
        returnIntegrator = new VariableVerletIntegrator( errorTolerance );
        returnIntegrator->setStepSize( stepSize );
-    } else if( integratorName.compare( "BrownianIntegrator" ) == 0 ){
+    } else if( integratorName == "BrownianIntegrator" ){
        returnIntegrator = new BrownianIntegrator( temperature, friction, stepSize );
 //      returnIntegrator->setRandomNumberSeed( randomNumberSeed );
     }
@@ -3386,13 +3366,13 @@ static Integrator* readIntegrator( FILE* filePtr, const StringVector& tokens, Sy
        static const unsigned int maxPrint   = MAX_PRINT;
        (void) fprintf( log, "%s: parameters\n", methodName.c_str() );
        (void) fprintf( log, "StepSize=%15.7e constraint tolerance=%15.7e ", stepSize, constraintTolerance );
-       if( integratorName.compare( "LangevinIntegrator" ) == 0 || 
-           integratorName.compare( "BrownianIntegrator" ) == 0 ||  
-           integratorName.compare( "VariableLangevinIntegrator" ) == 0 ){
+       if( integratorName == "LangevinIntegrator"  || 
+           integratorName == "BrownianIntegrator"  ||  
+           integratorName == "VariableLangevinIntegrator" ){
            (void) fprintf( log, "Temperature=%15.7e friction=%15.7e seed=%d (seed may not be set!) ", temperature, friction, randomNumberSeed );
        }
-       if( integratorName.compare( "VariableLangevinIntegrator" ) == 0 || 
-           integratorName.compare( "VariableVerletIntegrator" ) == 0 ){
+       if( integratorName == "VariableLangevinIntegrator"  || 
+           integratorName == "VariableVerletIntegrator" ){
            (void) fprintf( log, "Error tolerance=%15.7e", errorTolerance);
        }
        (void) fprintf( log, "\n" );
@@ -3741,13 +3721,7 @@ Integrator* readAmoebaParameterFile( const std::string& inputParameterFile, MapS
  
     // open parameter file
  
-    FILE* filePtr;
- #ifdef _MSC_VER
-    fopen_s( &filePtr, inputParameterFile.c_str(), "r" );
- #else
-     filePtr = fopen( inputParameterFile.c_str(), "r" );
- #endif
- 
+    FILE* filePtr = openFile( inputParameterFile, "r", log );
     if( filePtr == NULL ){
         char buffer[1024];
         (void) sprintf( buffer, "Input parameter file=<%s> could not be opened -- aborting.\n", methodName.c_str(), inputParameterFile.c_str() );
@@ -3787,8 +3761,7 @@ Integrator* readAmoebaParameterFile( const std::string& inputParameterFile, MapS
                        (void) fprintf( log, "Version=<%s> at line=%d\n", version.c_str(), lineCount );
                    }
                 }
-            } else if( field == "Particles" ){
-            } else if( field == "Masses" ){
+            } else if( field == "Particles" || field == "Masses" ){
                 readMasses( filePtr, tokens, system, &lineCount, log );
             } else if( field == "NumberOfForces" ){
                // skip
@@ -3954,7 +3927,7 @@ Integrator* readAmoebaParameterFile( const std::string& inputParameterFile, MapS
                   potentialEnergy[AMOEBA_WCA_DISPERSION_FORCE] = atof( tokens[1].c_str() ); 
                }
            } else if( field == "Constraints" ){
-               readConstraints( filePtr, tokens, system, &lineCount, log );
+               readConstraints( filePtr, tokens, system, useOpenMMUnits, supplementary, inputArgumentMap, &lineCount, log );
            } else if( field == "Integrator" ){
                returnIntegrator = readIntegrator( filePtr, tokens, system, &lineCount, log );
            } else if( field == "Positions"  || field == "Coordinates" ){
@@ -3968,10 +3941,13 @@ Integrator* readAmoebaParameterFile( const std::string& inputParameterFile, MapS
                }
            } else if( field == "Velocities" ){
                readVec3( filePtr, tokens, velocities, &lineCount, field, log );
-           } else if( field == "Forces" ){
-            //  readVec3( filePtr, tokens, forces, &lineCount, field, log );
-           } else if( field == "KineticEnergy"  ||
-                      field == "PotentialEnergy" ){
+               if( useOpenMMUnits ){
+                   for( unsigned int ii = 0; ii < velocities.size(); ii++ ){
+                       velocities[ii][0] *= AngstromToNm;
+                       velocities[ii][1] *= AngstromToNm;
+                       velocities[ii][2] *= AngstromToNm;
+                   }
+               }
            } else {
                char buffer[1024];
                (void) sprintf( buffer, "Field=<%s> not recognized at line=%d\n", field.c_str(), lineCount );
@@ -4301,22 +4277,21 @@ Integrator* getIntegrator( MapStringString& inputArgumentMap, FILE* log ){
     setDoubleFromMap( inputArgumentMap, "shakeTolerance",   shakeTolerance );
     setDoubleFromMap( inputArgumentMap, "errorTolerance",   errorTolerance );
     setIntFromMap(    inputArgumentMap, "randomNumberSeed", randomNumberSeed );
-
     // Create an integrator 
     
     Integrator* integrator;
 
-    if( integratorName.compare( "VerletIntegrator" ) == 0 ){
+    if( integratorName == "VerletIntegrator" ){
         integrator = new VerletIntegrator( timeStep );
-    } else if( integratorName.compare( "VariableVerletIntegrator" ) == 0 ){
+    } else if( integratorName == "VariableVerletIntegrator" ){
         integrator = new VariableVerletIntegrator( errorTolerance );
-    } else if( integratorName.compare( "BrownianIntegrator" ) == 0 ){
+    } else if( integratorName == "BrownianIntegrator" ){
         integrator = new BrownianIntegrator( temperature, friction, timeStep );
-    } else if( integratorName.compare( "LangevinIntegrator" ) == 0 ){
+    } else if( integratorName == "LangevinIntegrator" ){
         integrator                                = new LangevinIntegrator( temperature, friction, timeStep );
         LangevinIntegrator* langevinIntegrator    = dynamic_cast<LangevinIntegrator*>(integrator);
         langevinIntegrator->setRandomNumberSeed( randomNumberSeed );
-    } else if( integratorName.compare( "VariableLangevinIntegrator" ) == 0 ){
+    } else if( integratorName == "VariableLangevinIntegrator" ){
         integrator                                        = new VariableLangevinIntegrator( temperature, friction, errorTolerance );
         VariableLangevinIntegrator* langevinIntegrator    = dynamic_cast<VariableLangevinIntegrator*>(integrator);
         langevinIntegrator->setRandomNumberSeed( randomNumberSeed );
@@ -4415,8 +4390,8 @@ static void printIntegratorInfo( Integrator& integrator, FILE* log ){
 // ---------------------------------------------------------------------------------------
 
    std::string integratorName           = getIntegratorName( &integrator );
-   (void) fprintf( log, "Integrator=%s stepSize=%.3f ShakeTol=%.3e\n", 
-                   integratorName.c_str(), integrator.getStepSize(), integrator.getConstraintTolerance() );
+   (void) fprintf( log, "Integrator=%s ShakeTol=%.3e ", 
+                   integratorName.c_str(), integrator.getConstraintTolerance() );
 
    // stochastic integrators (seed, friction, temperature)
 
@@ -4444,7 +4419,7 @@ static void printIntegratorInfo( Integrator& integrator, FILE* log ){
          seed                                            = brownianIntegrator.getRandomNumberSeed();
       }
    
-      (void) fprintf( log, "T=%.3f friction=%.3f seed=%d\n", temperature, friction, seed );
+      (void) fprintf( log, "T=%.3f friction=%.3f seed=%d ", temperature, friction, seed );
    }
 
    // variable integrators -- error tolerance
@@ -4459,6 +4434,8 @@ static void printIntegratorInfo( Integrator& integrator, FILE* log ){
          errorTolerance                                          = verletIntegrator.getErrorTolerance();
       }
       (void) fprintf( log, "Error tolerance=%.3e\n", errorTolerance );
+   } else {
+      (void) fprintf( log, "Step size=%12.3e\n", integrator.getStepSize() );
    }
 
    (void) fflush( log );
@@ -4658,7 +4635,11 @@ void checkIntermediateStatesUsingAmoebaTinkerParameterFile( const std::string& a
                                       useOpenMMUnits, inputArgumentMap, supplementary, tinkerForces, tinkerEnergies, log );
 
     StringVectorVector fileContents;
-    readFile( statesFileName, fileContents, log );
+    if( readFile( statesFileName, fileContents, log ) ){
+        (void) fprintf( stderr, "%s: File %s not read.\n", methodName.c_str(), statesFileName.c_str() );
+        (void) fflush( stderr );
+        exit(-1);
+    }
     unsigned int lineIndex  = 0;
     unsigned int stateIndex = 0;
 
@@ -4702,7 +4683,6 @@ fprintf( log, "\n" ); fflush( log ); */
             context->setPositions( coordinates );
             State state                            = context->getState(State::Forces | State::Energy);
             System& system                         = context->getSystem();
-            //std::vector<Vec3> forces               = state.getForces();
             //double kineticEnergy                   = state.getPotentialEnergy();
             double potentialEnergy                 = state.getPotentialEnergy();
            
@@ -4715,6 +4695,23 @@ fprintf( log, "\n" ); fflush( log ); */
                                 coordinates[lastIndex][0], coordinates[lastIndex][1], coordinates[lastIndex][2] );
                 (void) fflush( filePtr );
             }
+            if( log ){
+                std::vector<Vec3> forces     = state.getForces();
+                int lastIndex                = forces.size() - 1;
+                FILE* filePtr                = log;
+                (void) fprintf( filePtr, "%8u %15.7e   %30s  [%15.7e %15.7e %15.7e] [%15.7e %15.7e %15.7e]\n\nForces\n",
+                                stateIndex, potentialEnergy, activeForceNames.c_str(),
+                                coordinates[0][0],         coordinates[0][1],         coordinates[0][2],
+                                coordinates[lastIndex][0], coordinates[lastIndex][1], coordinates[lastIndex][2] );
+
+                for( int ii = 0; ii < numberOfAtoms; ii++ ){
+                    double forceNorm = sqrt( forces[ii][0]*forces[ii][0] + forces[ii][1]*forces[ii][1] + forces[ii][2]*forces[ii][2] );
+                    (void) fprintf( filePtr, "%8d %15.7e [%15.7e %15.7e %15.7e] %s\n",
+                                    ii, forceNorm, forces[ii][0], forces[ii][1], forces[ii][2],
+                                    (forceNorm > 1.0e+06 ? "YYY" : "" ) );
+                }
+                (void) fflush( filePtr );
+            }
         }
     }
 }
@@ -4725,12 +4722,14 @@ void testUsingAmoebaTinkerParameterFile( const std::string& amoebaTinkerParamete
 
 // ---------------------------------------------------------------------------------------
 
+    int applyAssert                          = 0;
     double tolerance                         = 1.0e-02;
     static const std::string methodName      = "testUsingAmoebaTinkerParameterFile";
  
 // ---------------------------------------------------------------------------------------
  
-   setDoubleFromMap( inputArgumentMap, "tolerance",  tolerance );
+   setIntFromMap(    inputArgumentMap, "applyAssert",  applyAssert);
+   setDoubleFromMap( inputArgumentMap, "tolerance",    tolerance );
 
     MapStringVec3 tinkerForces;
     MapStringDouble tinkerEnergies;
@@ -4751,8 +4750,9 @@ void testUsingAmoebaTinkerParameterFile( const std::string& amoebaTinkerParamete
     Context* context = createContext( amoebaTinkerParameterFileName, forceMap,
                                       useOpenMMUnits, inputArgumentMap, supplementary, tinkerForces, tinkerEnergies, log );
 
-    State state                            = context->getState(State::Forces | State::Energy);
+    State state                            = context->getState( State::Positions | State::Forces | State::Energy);
     System& system                         = context->getSystem();
+    std::vector<Vec3> coordinates          = state.getPositions();
     std::vector<Vec3> forces               = state.getForces();
 
     // get list of forces and then accumulate expected energies/forces
@@ -4791,12 +4791,15 @@ void testUsingAmoebaTinkerParameterFile( const std::string& amoebaTinkerParamete
     int showAll                            = 1;
     double energyConversion;
     double forceConversion;
+    double coordinateConversion;
     if( useOpenMMUnits ){
-        energyConversion = 1.0/CalToJoule;
-        forceConversion  = -energyConversion*AngstromToNm;
+        energyConversion     = 1.0/CalToJoule;
+        forceConversion      = -energyConversion*AngstromToNm;
+        coordinateConversion = 1.0/AngstromToNm;
     } else {
-        energyConversion = 1.0;
-        forceConversion  = -energyConversion;
+        energyConversion     = 1.0;
+        forceConversion      = -energyConversion;
+        coordinateConversion = 1.0;
     }
 
     // output to log and/or summary file
@@ -4808,8 +4811,8 @@ void testUsingAmoebaTinkerParameterFile( const std::string& amoebaTinkerParamete
         for( unsigned int ii = 0; ii < fileList.size(); ii++ ){
             FILE* filePtr = fileList[ii];
             (void) fprintf( filePtr, "\n" );
-            (void) fprintf( filePtr, "%s: conversion factors %15.7e %15.7e tolerance=%15.7e %s\n",
-                            methodName.c_str(), energyConversion, forceConversion, tolerance, amoebaTinkerParameterFileName.c_str() );
+            (void) fprintf( filePtr, "%s: conversion factors %15.7e %15.7e %12.3f tolerance=%15.7e %s\n",
+                            methodName.c_str(), energyConversion, forceConversion, coordinateConversion, tolerance, amoebaTinkerParameterFileName.c_str() );
             double deltaE = fabs( expectedEnergy   -       energyConversion*state.getPotentialEnergy());
             double denom  = fabs( expectedEnergy ) + fabs( energyConversion*state.getPotentialEnergy());
             if( denom > 0.0 )deltaE *= 2.0/denom;
@@ -4831,7 +4834,9 @@ void testUsingAmoebaTinkerParameterFile( const std::string& amoebaTinkerParamete
                      badMatch          = badMatch || (normF1 == 0.0 && normF2 > 0.0) || (normF2 == 0.0 && normF1 > 0.0);
                 if( badMatch || showAll ){
                     (void) fprintf( filePtr, "%6u %10.3e %10.3e [%15.7e %15.7e %15.7e]   [%15.7e %15.7e %15.7e]  %s\n", ii, relativeDelta, delta,
-                                    expectedForces[ii][0], expectedForces[ii][1], expectedForces[ii][2], forceConversion*forces[ii][0], forceConversion*forces[ii][1], forceConversion*forces[ii][2], ( (showAll && badMatch) ? " XXX" : "") );
+                                    expectedForces[ii][0], expectedForces[ii][1], expectedForces[ii][2],
+                                    forceConversion*forces[ii][0], forceConversion*forces[ii][1], forceConversion*forces[ii][2],
+                                    ( (showAll && badMatch) ? " XXX" : "") );
                     if( ( (maxRelativeDelta < relativeDelta) && (sumNorms > 0.1)) ){
                         maxRelativeDelta      =  relativeDelta;
                         maxRelativeDeltaIndex = ii;
@@ -4839,6 +4844,52 @@ void testUsingAmoebaTinkerParameterFile( const std::string& amoebaTinkerParamete
                 }
             }
             (void) fprintf( filePtr, "maxRelativeDelta %10.3e at %6u %20s %30s\n", maxRelativeDelta, maxRelativeDeltaIndex, amoebaTinkerParameterFileName.c_str(), activeForceNames.c_str() );
+
+            // get box dimensions and bond distance for atom 0 
+
+            double box[2][3];
+            for( unsigned int jj = 0; jj < 3; jj++ ){
+                box[0][jj] = coordinates[0][jj];
+            }
+            
+            double minDistToAtom0     = 1.0e+30;
+            double nextMinDistToAtom0 = 1.0e+30;
+            for( unsigned int ii = 1; ii < coordinates.size(); ii++ ){
+                double dist = 0.0;
+                for( unsigned int jj = 0; jj < 3; jj++ ){
+                    if( box[0][jj] > coordinates[ii][jj] ){
+                        box[0][jj] = coordinates[ii][jj];
+                    }
+                    if( box[1][jj] < coordinates[ii][jj] ){
+                        box[1][jj] = coordinates[ii][jj];
+                    }
+                    dist += (coordinates[ii][jj] - coordinates[0][jj])*(coordinates[ii][jj] - coordinates[0][jj]);
+                }
+                if( dist < minDistToAtom0 ){
+                    nextMinDistToAtom0 = minDistToAtom0;
+                    minDistToAtom0     = dist;
+                }
+            }
+                
+            (void) fprintf( filePtr, "Mindist atom 0 (in A) %10.3e %10.3e Box [%15.7e %15.7e] [%15.7e %15.7e] [%15.7e %15.7e]   [%15.7e %15.7e %15.7e]\n",
+                            sqrt( minDistToAtom0 )*coordinateConversion,
+                            sqrt( nextMinDistToAtom0 )*coordinateConversion,
+                            coordinateConversion*box[0][0], coordinateConversion*box[1][0],
+                            coordinateConversion*box[0][1], coordinateConversion*box[1][1],
+                            coordinateConversion*box[0][2], coordinateConversion*box[1][2],
+                            coordinateConversion*(box[1][0] - box[0][0]),
+                            coordinateConversion*(box[1][1] - box[0][1]),
+                            coordinateConversion*(box[1][2] - box[0][2]) );
+
+            unsigned int maxPrint = 5;
+            (void) fprintf( filePtr, "Sample raw coordinates (w/o conversion) %8u\n", coordinates.size() );
+            for( unsigned int ii = 0; ii < coordinates.size(); ii++ ){
+                (void) fprintf( filePtr, "%8u [%16.7f %16.7f %16.7f]\n", ii,
+                            coordinates[ii][0], coordinates[ii][1], coordinates[ii][2] );
+                if( ii == maxPrint && (coordinates.size()- maxPrint) > ii ){
+                    ii = coordinates.size() - maxPrint - 1;
+                }
+            } 
             (void) fflush( filePtr );
         }
     }
@@ -4883,13 +4934,15 @@ void testUsingAmoebaTinkerParameterFile( const std::string& amoebaTinkerParamete
         }
     }
 
-    for( unsigned int ii = 0; ii < forces.size(); ii++ ){
-        forces[ii][0] *= forceConversion;
-        forces[ii][1] *= forceConversion;
-        forces[ii][2] *= forceConversion;
-        ASSERT_EQUAL_VEC( expectedForces[ii], forces[ii], tolerance );
+    if( applyAssert ){
+        for( unsigned int ii = 0; ii < forces.size(); ii++ ){
+            forces[ii][0] *= forceConversion;
+            forces[ii][1] *= forceConversion;
+            forces[ii][2] *= forceConversion;
+            ASSERT_EQUAL_VEC( expectedForces[ii], forces[ii], tolerance );
+        }
+        ASSERT_EQUAL_TOL( expectedEnergy, energyConversion*state.getPotentialEnergy(), tolerance );
     }
-    ASSERT_EQUAL_TOL( expectedEnergy, energyConversion*state.getPotentialEnergy(), tolerance );
 
     if( log ){
         (void) fprintf( log, "No issues w/ tolerance=%10.3e\n", tolerance );
@@ -4897,7 +4950,7 @@ void testUsingAmoebaTinkerParameterFile( const std::string& amoebaTinkerParamete
     }
 }
 
-int isNanOrInfinity( double number ){
+static int isNanOrInfinity( double number ){
     return (number != number || number == std::numeric_limits<double>::infinity() || number == -std::numeric_limits<double>::infinity()) ? 1 : 0; 
 }
 
@@ -5186,13 +5239,15 @@ static void setVelocitiesBasedOnTemperature( const System& system, std::vector<V
 }
 
 /** 
- * Check that energy and force are consistent
+ * Write intermediate state to file
  * 
- * @return DefaultReturnValue or ErrorReturnValue
+ * @param context                OpenMM context
+ * @param intermediateStateFile  file to write to
+ * @param log                    optional logging reference
  *
  */
 
-void writeIntermediateStateFile( Context& context, int currentStep, FILE* intermediateStateFile, FILE* log ){
+void writeIntermediateStateFile( Context& context, FILE* intermediateStateFile, FILE* log ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -5207,16 +5262,95 @@ void writeIntermediateStateFile( Context& context, int currentStep, FILE* interm
     const std::vector<Vec3> velocities             = state.getVelocities();
     const std::vector<Vec3> forces                 = state.getForces();
 
-    (void) fprintf( intermediateStateFile, "%7u %7d %15.7e %15.7e %15.7e State\n",
-                    positions.size(), currentStep, state.getKineticEnergy(), state.getPotentialEnergy(),
+    (void) fprintf( intermediateStateFile, "%7u %12.3f %15.7e %15.7e %15.7e State (x,v,f)\n",
+                    positions.size(), state.getTime(), state.getKineticEnergy(), state.getPotentialEnergy(),
                     state.getKineticEnergy() + state.getPotentialEnergy() );
+
     for( unsigned int ii = 0; ii < positions.size(); ii++ ){
         (void) fprintf( intermediateStateFile, "%7u %15.7e %15.7e %15.7e  %15.7e %15.7e %15.7e  %15.7e %15.7e %15.7e\n", ii,
-                        positions[ii][0], positions[ii][1], positions[ii][2], 
+                         positions[ii][0],  positions[ii][1],  positions[ii][2], 
                         velocities[ii][0], velocities[ii][1], velocities[ii][2], 
-                        forces[ii][0], forces[ii][1], forces[ii][2] );
+                            forces[ii][0],     forces[ii][1],     forces[ii][2] );
     }
     return;
+}
+
+/** 
+ * Write intermediate state to file
+ * 
+ * @param context                OpenMM context
+ * @param intermediateStateFile  file to write to
+ * @param log                    optional logging reference
+ *
+ */
+
+static void getVerletKineticEnergy( Context& context, double& currentTime, double& potentialEnergy, double& kineticEnergy, FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+    //static const std::string methodName             = "getVerletKineticEnergy";
+
+// ---------------------------------------------------------------------------------------
+
+    int stateFieldsToRetreive                 = State::Energy | State::Velocities;
+    State state                               = context.getState( stateFieldsToRetreive );
+
+    const std::vector<Vec3>& velocitiesI      = state.getVelocities();
+
+    context.getIntegrator().step( 1 );
+
+    State statePlus1                          = context.getState( stateFieldsToRetreive );
+    currentTime                               = statePlus1.getTime();
+    potentialEnergy                           = statePlus1.getPotentialEnergy();
+    const std::vector<Vec3>& velocitiesIPlus1 = statePlus1.getVelocities();
+
+    System& system                            = context.getSystem();
+    kineticEnergy = 0.0;
+    for( unsigned int ii = 0; ii < velocitiesI.size(); ii++ ){
+        double velocity = (velocitiesIPlus1[ii][0] + velocitiesI[ii][0])*(velocitiesIPlus1[ii][0] + velocitiesI[ii][0]) +
+                          (velocitiesIPlus1[ii][1] + velocitiesI[ii][1])*(velocitiesIPlus1[ii][1] + velocitiesI[ii][1]) +
+                          (velocitiesIPlus1[ii][2] + velocitiesI[ii][2])*(velocitiesIPlus1[ii][2] + velocitiesI[ii][2]);
+        kineticEnergy  += velocity*system.getParticleMass(ii);
+    }
+    kineticEnergy *= 0.125;
+
+    return;
+}
+/** 
+ * Get time of day (implementation different for Linux/Windows
+ * 
+ * @return time
+ *
+ */
+
+double getTimeOfDay( void ){
+
+#ifdef WIN32
+    static double cycles_per_usec = 0;
+    LARGE_INTEGER counter;
+ 
+    if (cycles_per_usec == 0) {
+       static LARGE_INTEGER lFreq;
+       if (!QueryPerformanceFrequency(&lFreq)) {
+          fprintf(stderr, "Unable to read the performance counter frquency!\n");
+          return 0;
+       }   
+ 
+       cycles_per_usec = 1000000 / ((double) lFreq.QuadPart);
+    }   
+ 
+    if (!QueryPerformanceCounter(&counter)) {
+       fprintf(stderr,"Unable to read the performance counter!\n");
+       return 0;
+    }   
+ 
+    double time = ((((double) counter.QuadPart) * cycles_per_usec));
+    return time*1.0e-06;
+#else
+    struct timeval tv;
+    gettimeofday(&tv,NULL);
+    return static_cast<double>(tv.tv_sec) + 1.0e-06*static_cast<double>(tv.tv_usec);
+#endif
 }
 
 /** 
@@ -5239,16 +5373,17 @@ void testEnergyConservation( std::string parameterFileName, MapStringInt& forceM
    double temperatureTolerance                     = 3.0;
 
    int energyMinimize                              = 1;
+   int applyAssertion                              = 0;
 
    // tolerance for energy conservation test
 
    double energyTolerance                          = 0.05;
 
-   int equilibrationTotalSteps                     = 10000;
-   double equilibrationStepsBetweenReportsRatio    = 0.1;
+   double equilibrationTime                        = 1000.0;
+   double equilibrationTimeBetweenReportsRatio     = 0.1;
 
-   int simulationTotalSteps                        = 1000;
-   double simulationStepsBetweenReportsRatio       = 0.01;
+   double simulationTime                           = 1000.0;
+   double simulationTimeBetweenReportsRatio        = 0.01;
 
    int allTypes                                    = State::Positions | State::Velocities | State::Forces | State::Energy;
 
@@ -5260,6 +5395,10 @@ void testEnergyConservation( std::string parameterFileName, MapStringInt& forceM
 
     Context* context = createContext( parameterFileName, forceMap, useOpenMMUnits, inputArgumentMap, supplementary,
                                       tinkerForces, tinkerEnergies, log );
+
+    setIntFromMap( inputArgumentMap, "applyAssertion",          applyAssertion );
+
+    // energy minimize
 
     setIntFromMap( inputArgumentMap, "energyMinimize",          energyMinimize );
     if( log ){ 
@@ -5281,315 +5420,276 @@ void testEnergyConservation( std::string parameterFileName, MapStringInt& forceM
         }
     }
 
-    setIntFromMap(     inputArgumentMap, "equilibrationTotalSteps",          equilibrationTotalSteps  );
-    setIntFromMap(     inputArgumentMap, "simulationTotalSteps",             simulationTotalSteps     );
+    setDoubleFromMap(     inputArgumentMap, "equilibrationTime",          equilibrationTime  );
+    setDoubleFromMap(     inputArgumentMap, "simulationTime",             simulationTime     );
+    const double totalTime  = equilibrationTime + simulationTime;
+
     std::string intermediateStateFileName = "NA";
     setStringFromMap( inputArgumentMap, "intermediateStateFileName",  intermediateStateFileName );
 
     FILE* intermediateStateFile = NULL;
     if( intermediateStateFileName != "NA" ){
-#ifdef _MSC_VER
-        fopen_s( &intermediateStateFile, intermediateStateFileName.c_str(), "w");
-#else
-        intermediateStateFile = fopen( intermediateStateFileName.c_str(), "w" );
-#endif
+        intermediateStateFile = openFile( intermediateStateFileName, "w", log );
     }
  
 // ---------------------------------------------------------------------------------------
 
-   int returnStatus                   = 0;
-   clock_t     totalEquilibrationTime = 0;
-   clock_t     totalSimulationTime    = 0;
-   clock_t     cpuTime;
+    int returnStatus                    = 0;
+    double currentTime                  = 0.0;
+ 
+    // set velocities based on temperature
+ 
+    System& system                     = context->getSystem();
+    int numberOfAtoms                  = system.getNumParticles();
+    std::vector<Vec3> velocities; 
+    velocities.resize( numberOfAtoms );
+    double initialT = 300.0;
+    setVelocitiesBasedOnTemperature( system, velocities, initialT, log );
+    context->setVelocities(velocities);
+ 
+    // get integrator 
+ 
+    Integrator& integrator                                  = context->getIntegrator();
+    std::string integratorName                              = getIntegratorName( &integrator );
+    int  isVariableIntegrator                               = 0;
+    int  isVerletIntegrator                                 = 0;
+    VariableLangevinIntegrator*  variableLangevinIntegrator = NULL;
+    VariableVerletIntegrator*  variableVerletIntegrator     = NULL;
+    int stateFieldsToRetreive                               = State::Energy;
 
-   // set velocities based on temperature
+    if( integratorName == "VariableLangevinIntegrator" ){
+        variableLangevinIntegrator = dynamic_cast<VariableLangevinIntegrator*>(&integrator);
+        isVariableIntegrator       = 1;
+    } else if( integratorName == "VariableVerletIntegrator" ){
+        variableVerletIntegrator   = dynamic_cast<VariableVerletIntegrator*>(&integrator);
+        isVariableIntegrator       = 2;
+    } else if( integratorName == "VerletIntegrator" ){
+        isVerletIntegrator         = 1;
+        //stateFieldsToRetreive     |= State::Velocities;
+    }
 
-   System& system                     = context->getSystem();
-   int numberOfAtoms                  = system.getNumParticles();
-   std::vector<Vec3> velocities; 
-   velocities.resize( numberOfAtoms );
-   double initialT = 300.0;
-   setVelocitiesBasedOnTemperature( system, velocities, initialT, log );
-   context->setVelocities(velocities);
+    if( log ){
+        printIntegratorInfo( integrator, log );
+    }
+ 
+    // create/initialize arrays used to track energies
+ 
+    std::vector<double> timeArray;
+    std::vector<double> kineticEnergyArray;
+    std::vector<double> potentialEnergyArray;
+    std::vector<double> totalEnergyArray;
+ 
+    State state                            = context->getState( State::Energy );
+    double kineticEnergy                   = state.getKineticEnergy();
+    double potentialEnergy                 = state.getPotentialEnergy();
+    double totalEnergy                     = kineticEnergy + potentialEnergy;
+ 
+    // log
+ 
+    if( log ){
+        (void) fprintf( log, "Initial energies: E=%15.7e [%15.7e %15.7e]\n",
+                        (kineticEnergy + potentialEnergy), kineticEnergy, potentialEnergy );
+        (void) fflush( log );
+    }
+ 
+    /* -------------------------------------------------------------------------------------------------------------- */
+ 
+    setDoubleFromMap(    inputArgumentMap, "equilibrationTimeBetweenReportsRatio",      equilibrationTimeBetweenReportsRatio );
+    double equilibrationTimeBetweenReports   = equilibrationTime*equilibrationTimeBetweenReportsRatio;
+ 
+    setDoubleFromMap(    inputArgumentMap, "simulationTimeBetweenReportsRatio",         simulationTimeBetweenReportsRatio );
+    double simulationTimeBetweenReports   = simulationTime*simulationTimeBetweenReportsRatio;
 
-   // get integrator for equilibration and context
+    // if equilibrationTimeBetweenReports || simulationTimeBetweenReports <= 0, take one step at a time
+    if( equilibrationTimeBetweenReports <= 0.0 || simulationTimeBetweenReports <= 0.0 ){
+         isVariableIntegrator  = -1;
+    }
+ 
+    if( log ){
+        (void) fprintf( log, "Equilibration/simulation times [%12.3f %12.3f] timeBetweenReports [ %12.3e %12.3e] ratios [%12.4f %12.4f] variable=%d\n", 
+                        equilibrationTime, simulationTime,
+                        equilibrationTimeBetweenReports, simulationTimeBetweenReports,
+                        equilibrationTimeBetweenReportsRatio, simulationTimeBetweenReportsRatio, isVariableIntegrator );
+        (void) fflush( log );
+    }
+ 
+    // main simulation loop
+ 
+    double timeBetweenReports  = equilibrationTimeBetweenReports;
+    int    stepsBetweenReports = isVariableIntegrator != 0 ? 1 : static_cast<int>(equilibrationTimeBetweenReports/integrator.getStepSize() + 1.0e-04);
+    bool   equilibrating       = true;
+    double simulationStartTime = 0.0;
+    double totalWallClockTime  = 0.0;
+    while( currentTime < totalTime ){
+ 
+        double startTime        = getTimeOfDay();
 
-   Integrator& integrator     = context->getIntegrator();
-   std::string integratorName = getIntegratorName( &integrator );
-   double simulationTimeStep  = integrator.getStepSize();
-   if( log ){
-      printIntegratorInfo( integrator, log );
-   }
-   // equilibration loop
+        if( isVariableIntegrator <= 0 ){ 
+            integrator.step( stepsBetweenReports );
+        } else if( isVariableIntegrator == 1 ){ 
+            variableLangevinIntegrator->stepTo( currentTime + timeBetweenReports);
+        } else if( isVariableIntegrator == 2 ){ 
+            variableVerletIntegrator->stepTo( currentTime + timeBetweenReports);
+        }
 
-   int currentStep                        = 0;
-   int equilibrationStepsBetweenReports   = static_cast<int>(static_cast<double>(equilibrationTotalSteps)*equilibrationStepsBetweenReportsRatio);
-   if( equilibrationStepsBetweenReports < 1 )equilibrationStepsBetweenReports = 1;
-   setIntFromMap(    inputArgumentMap, "equilibrationStepsBetweenReports",      equilibrationStepsBetweenReports );
+        double elapsedTime      = getTimeOfDay() - startTime;
+        totalWallClockTime     += elapsedTime;
+  
+        State state                            = context->getState( stateFieldsToRetreive );
+        currentTime                            = state.getTime();
+        double kineticEnergy                   = state.getKineticEnergy();
+        double potentialEnergy                 = state.getPotentialEnergy();
+        double totalEnergy                     = kineticEnergy + potentialEnergy;
+  
+        if( intermediateStateFile ){
+            writeIntermediateStateFile( *context, intermediateStateFile, log );
+        }
+  
+        if( equilibrating && currentTime >= equilibrationTime ){ 
 
-   if( log ){
-      (void) fprintf( log, "equilibrationTotalSteps=%d equilibrationStepsBetweenReports=%d ratio=%.4f\n", 
-                      equilibrationTotalSteps, equilibrationStepsBetweenReports, equilibrationStepsBetweenReportsRatio);
-      (void) fflush( log );
-   }
+            equilibrating       = false;
+            simulationStartTime = state.getTime();
+            timeBetweenReports  = simulationTimeBetweenReports;
+            stepsBetweenReports = isVariableIntegrator != 0 ? 1 : static_cast<int>(simulationTimeBetweenReports/integrator.getStepSize() + 1.0e-04);
+            if( isVerletIntegrator )stepsBetweenReports -= 1;
 
-   while( currentStep < equilibrationTotalSteps ){
-
-      int nextStep = currentStep + equilibrationStepsBetweenReports;
-      if( nextStep > equilibrationTotalSteps ){
-         equilibrationStepsBetweenReports = equilibrationTotalSteps - currentStep;
-      }
-
-      // integrate
-
-      cpuTime                 = clock();
-      integrator.step(equilibrationStepsBetweenReports);
-      //integrator.step(1);
-      totalEquilibrationTime += clock() - cpuTime;
-      currentStep            += equilibrationStepsBetweenReports;
-
-      // get energies and check for nans
-
-      State state                            = context->getState( State::Energy );
+        } else if( !equilibrating ){ 
    
-      double kineticEnergy                   = state.getKineticEnergy();
-      double potentialEnergy                 = state.getPotentialEnergy();
-      double totalEnergy                     = kineticEnergy + potentialEnergy;
-      if( intermediateStateFile ){
-          writeIntermediateStateFile( *context, currentStep, intermediateStateFile, log );
-      }
+            if( isVerletIntegrator ){
+                getVerletKineticEnergy( *context, currentTime, potentialEnergy, kineticEnergy, log );
+            }
 
-      //MapStringDouble mapEnergies;
-      //double calculatedPE                    =  getEnergyForceBreakdown( *context, mapEnergies, log );
-      if( log ){
-         (void) fprintf( log, "%6d KE=%15.7e PE=%15.7e E=%15.7e\n", currentStep, kineticEnergy, potentialEnergy, totalEnergy );
-         (void) fflush( log );
-      }
+            // record energies
+      
+            timeArray.push_back( currentTime - simulationStartTime );
+            kineticEnergyArray.push_back( kineticEnergy );
+            potentialEnergyArray.push_back( potentialEnergy );
+            totalEnergyArray.push_back( totalEnergy );
+        } 
 
-#ifdef _MSC_VER
-   #define isinf !_finite
-   #define isnan _isnan
-#endif
-      if( isinf( totalEnergy ) || isnan( totalEnergy ) ){
-         char buffer[1024];
-         (void) sprintf( buffer, "%s Equilibration: nans detected at step %d -- aborting.\n", methodName.c_str(), currentStep );
-         throwException(__FILE__, __LINE__, buffer );
-         exit(-1);
-      }
-
-   }
-
-   double kineticEnergy;
-   double potentialEnergy;
-   double totalEnergy;
-
-   // report energies
-
-   if( log ){
-
-      State state                = context->getState( State::Energy );
-      kineticEnergy              = state.getKineticEnergy();
-      potentialEnergy            = state.getPotentialEnergy();
-      totalEnergy                = kineticEnergy + potentialEnergy;
-   
-      double totalTime           = static_cast<double>(totalEquilibrationTime)/static_cast<double>(CLOCKS_PER_SEC);
-      double timePerStep         = totalTime/static_cast<double>(equilibrationTotalSteps);
-      double timePerStepPerAtom  = timePerStep/static_cast<double>(numberOfAtoms);
-      (void) fprintf( log, "Final Equilibration energies: %6d  E=%15.7e [%15.7e %15.7e]  cpu time=%.3f time/step=%.3e time/step/atom=%.3e\n",
-                      currentStep, (kineticEnergy + potentialEnergy), kineticEnergy, potentialEnergy,
-                      totalTime, timePerStep, timePerStepPerAtom );
-      (void) fflush( log );
-   }
-
-   // create/initialize arrays used to track energies
-
-   std::vector<double> stepIndexArray;
-   std::vector<double> kineticEnergyArray;
-   std::vector<double> potentialEnergyArray;
-   std::vector<double> totalEnergyArray;
-
-   State state                            = context->getState( State::Energy );
-   kineticEnergy                          = state.getKineticEnergy();
-   potentialEnergy                        = state.getPotentialEnergy();
-   totalEnergy                            = kineticEnergy + potentialEnergy;
-
-   stepIndexArray.push_back( 0.0 );
-   kineticEnergyArray.push_back( kineticEnergy );
-   potentialEnergyArray.push_back( potentialEnergy );
-   totalEnergyArray.push_back( totalEnergy );
-
-   // log
-
-   if( log ){
-      (void) fprintf( log, "Initial Simulation energies: E=%15.7e [%15.7e %15.7e]\n",
-                      (kineticEnergy + potentialEnergy), kineticEnergy, potentialEnergy );
-      (void) fflush( log );
-   }
-
-   /* -------------------------------------------------------------------------------------------------------------- */
-
-   // prelude for simulation
-
-   int simulationStepsBetweenReports   = static_cast<int>(static_cast<double>(simulationTotalSteps)*simulationStepsBetweenReportsRatio);
-   if( simulationStepsBetweenReports < 1 )simulationStepsBetweenReports = 1;
-   setIntFromMap(    inputArgumentMap, "simulationStepsBetweenReports",      simulationStepsBetweenReports );
-   int equilibrationSteps            = currentStep;
-   currentStep                       = 0;
-
-   if( log ){
-      (void) fprintf( log, "simulationTotalSteps=%d simulationStepsBetweenReports=%d ratio=%.4f\n", 
-                      simulationTotalSteps, simulationStepsBetweenReports, simulationStepsBetweenReportsRatio );
-      (void) fflush( log );
-   }
-
-   // main simulation loop
-
-   while( currentStep < simulationTotalSteps ){
-
-      // set step increment, perform integration, update step 
-
-      int nextStep = currentStep + simulationStepsBetweenReports;
-      if( nextStep > simulationTotalSteps ){
-         simulationStepsBetweenReports = simulationTotalSteps - currentStep;
-      }
-
-      cpuTime              = clock();
-      integrator.step( simulationStepsBetweenReports );
-      totalSimulationTime += clock() - cpuTime;
-
-      currentStep         += simulationStepsBetweenReports;
-
-      if( intermediateStateFile ){
-          writeIntermediateStateFile( *context, (equilibrationSteps+currentStep), intermediateStateFile, log );
-      }
-
-      // record energies
-
-      State state                            = context->getState( State::Energy );
-      double kineticEnergy                   = state.getKineticEnergy();
-      double potentialEnergy                 = state.getPotentialEnergy();
-      double totalEnergy                     = kineticEnergy + potentialEnergy;
-
-      stepIndexArray.push_back( (double) currentStep );
-      kineticEnergyArray.push_back( kineticEnergy );
-      potentialEnergyArray.push_back( potentialEnergy );
-      totalEnergyArray.push_back( totalEnergy );
-
-      // diagnostics & check for nans
-
-      if( log ){
-         (void) fprintf( log, "%6d KE=%15.7e PE=%15.7e E=%15.7e\n", currentStep, kineticEnergy, potentialEnergy, totalEnergy );
-         (void) fflush( log );
-      }
-
-      if( isinf( totalEnergy ) || isnan( totalEnergy ) ){
-         char buffer[1024];
-         (void) sprintf( buffer, "%s Simulation: nans detected at step %d -- aborting.\n", methodName.c_str(), currentStep );
-         throwException(__FILE__, __LINE__, buffer );
-         exit(-1);
-      }
-   }
-
-   state                                  = context->getState( State::Energy );
-   kineticEnergy                          = state.getKineticEnergy();
-   potentialEnergy                        = state.getPotentialEnergy();
-   totalEnergy                            = kineticEnergy + potentialEnergy;
-
-   // log times and energies
-
-   if( log ){
-      double totalTime           = static_cast<double>(totalSimulationTime)/static_cast<double>(CLOCKS_PER_SEC);
-      double timePerStep         = totalTime/static_cast<double>(simulationTotalSteps);
-      double timePerStepPerAtom  = timePerStep/static_cast<double>(numberOfAtoms);
-      (void) fprintf( log, "Final Simulation: %6d  E=%15.7e [%15.7e %15.7e]  cpu time=%.3f time/step=%.3e time/step/atom=%.3e\n",
-                      currentStep, (kineticEnergy + potentialEnergy), kineticEnergy, potentialEnergy,
-                      totalTime, timePerStep, timePerStepPerAtom );
-      (void) fflush( log );
-   }
-
-   // set dof
-
-   double degreesOfFreedom  = static_cast<double>(3*numberOfAtoms - system.getNumConstraints() - 3 );
-   double conversionFactor  = degreesOfFreedom*0.5*BOLTZ;
-          conversionFactor  = 1.0/conversionFactor;
-
-   // if Langevin or Brownian integrator, then check that temperature constant
-   // else (Verlet integrator) check that energy drift is acceptable
-
-   if( (integratorName == "LangevinIntegrator"           ||
-        integratorName == "VariableLangevinIntegrator"   ||
-        integratorName == "BrownianIntegrator" ) && numberOfAtoms > 0 ){
-
-      // check that temperature constant
-
-      // convert KE to temperature
-
-      std::vector<double> temperature;
-      for( std::vector<double>::const_iterator ii = kineticEnergyArray.begin(); ii != kineticEnergyArray.end(); ii++ ){
-         temperature.push_back( (*ii)*conversionFactor );
-      }
-
-      // get temperature stats
-
-      std::vector<double> temperatureStatistics;
-      getStatistics( temperature, temperatureStatistics );
-      double initialTemperature = 300.0;
-
-      if( integratorName == "LangevinIntegrator" ){
-          LangevinIntegrator* langevinIntegrator          = dynamic_cast<LangevinIntegrator*>(&integrator);
-          initialTemperature                              = langevinIntegrator->getTemperature();
-      } else if( integratorName == "VariableLangevinIntegrator" ){
-          VariableLangevinIntegrator* langevinIntegrator  = dynamic_cast<VariableLangevinIntegrator*>(&integrator);
-          initialTemperature                              = langevinIntegrator->getTemperature();
-      }
-
-      if( log ){
-         (void) fprintf( log, "Simulation temperature results: mean=%15.7e stddev=%15.7e   min=%15.7e   %d max=%15.7e %d\n",
-                         temperatureStatistics[0], temperatureStatistics[1], temperatureStatistics[2],
-                         (int) (temperatureStatistics[3] + 0.001), temperatureStatistics[4],
-                         (int) (temperatureStatistics[5] + 0.001) );
-
-      }
-
-      // check that <temperature> is within tolerance
-
-      ASSERT_EQUAL_TOL( temperatureStatistics[0], initialTemperature, temperatureTolerance );
-
-   } else {
-
-      // total energy constant
-
-      std::vector<double> statistics;
-      getStatistics( totalEnergyArray, statistics );
-
-      std::vector<double> kineticEnergyStatistics;
-      getStatistics( kineticEnergyArray, kineticEnergyStatistics );
-      double temperature  = kineticEnergyStatistics[0]*conversionFactor;
-      double kT           = temperature*BOLTZ;
-
-      // compute stddev in units of kT/dof/ns
-
-      double stddevE      = statistics[1]/kT;
-             stddevE     /= degreesOfFreedom;
-             stddevE     /= simulationTotalSteps*simulationTimeStep*0.001;
-
-      if( log ){
-         (void) fprintf( log, "Simulation results: mean=%15.7e stddev=%15.7e  kT/dof/ns=%15.7e kT=%15.7e  min=%15.7e   %d max=%15.7e %d\n",
-                         statistics[0], statistics[1], stddevE, kT, statistics[2], (int) (statistics[3] + 0.001), statistics[4], (int) (statistics[5] + 0.001) );
-      }
-
-      // check that energy fluctuation is within tolerance
-
-      //ASSERT_EQUAL_TOL( stddevE, 0.0, energyTolerance );
-
-   }
-
-   if( log ){
-      (void) fprintf( log, "\n%s passed\n", methodName.c_str() );
-      (void) fflush( log );
-   }
-
-   return;
+        // diagnostics & check for nans
+  
+        if( log ){
+            double nsPerDay = 86.4*currentTime/totalWallClockTime;
+            (void) fprintf( log, "%12.3f KE=%15.7e PE=%15.7e E=%15.7e wallClock=%12.3e %12.3e %12.3f ns/day %s\n", currentTime, kineticEnergy, potentialEnergy, totalEnergy,
+                            elapsedTime, totalWallClockTime, nsPerDay, (equilibrating ? "equilibrating" : "") );
+            (void) fflush( log );
+        }
+  
+        if( isNanOrInfinity( totalEnergy ) ){
+            char buffer[1024];
+            (void) sprintf( buffer, "%s nans detected at time %12.3f -- aborting.\n", methodName.c_str(), currentTime );
+            throwException(__FILE__, __LINE__, buffer );
+            exit(-1);
+        }
+    }
+ 
+    state                                  = context->getState( State::Energy );
+    double simulationEndTime               = state.getTime();
+    if( isVerletIntegrator ){
+        getVerletKineticEnergy( *context, simulationEndTime, potentialEnergy, kineticEnergy, log );
+    } else {
+        kineticEnergy                      = state.getKineticEnergy();
+        potentialEnergy                    = state.getPotentialEnergy();
+    }
+    totalEnergy                            = kineticEnergy + potentialEnergy;
+ 
+    // log times and energies
+ 
+    if( log ){
+       double nsPerDay = 86.4*totalTime/totalWallClockTime;
+       (void) fprintf( log, "Final Simulation: %12.3f  E=%15.7e [%15.7e %15.7e]  total wall time=%12.3e ns/day=%.3e\n",
+                       currentTime, (kineticEnergy + potentialEnergy), kineticEnergy, potentialEnergy,
+                       totalWallClockTime, nsPerDay );
+       (void) fprintf( log, "\n%8u Energies\n", kineticEnergyArray.size() );
+       for( unsigned int ii = 0; ii < kineticEnergyArray.size(); ii++ ){
+           (void) fprintf( log, "%15.7e   %15.7e %15.7e  %15.7e    Energies\n",
+            timeArray[ii], kineticEnergyArray[ii], potentialEnergyArray[ii], totalEnergyArray[ii] );
+       }
+       (void) fflush( log );
+    }
+ 
+    // set dof
+ 
+    double degreesOfFreedom  = static_cast<double>(3*numberOfAtoms - system.getNumConstraints() - 3 );
+    double conversionFactor  = degreesOfFreedom*0.5*BOLTZ;
+           conversionFactor  = 1.0/conversionFactor;
+ 
+    // if Langevin or Brownian integrator, then check that temperature constant
+    // else (Verlet integrator) check that energy drift is acceptable
+ 
+    if( (integratorName == "LangevinIntegrator"           ||
+         integratorName == "VariableLangevinIntegrator"   ||
+         integratorName == "BrownianIntegrator" ) && numberOfAtoms > 0 ){
+ 
+       // check that temperature constant
+       // convert KE to temperature
+ 
+       std::vector<double> temperature;
+       for( std::vector<double>::const_iterator ii = kineticEnergyArray.begin(); ii != kineticEnergyArray.end(); ii++ ){
+          temperature.push_back( (*ii)*conversionFactor );
+       }
+ 
+       // get temperature stats
+ 
+       std::vector<double> temperatureStatistics;
+       getStatistics( temperature, temperatureStatistics );
+       double initialTemperature = 300.0;
+ 
+       if( integratorName == "LangevinIntegrator" ){
+           LangevinIntegrator* langevinIntegrator          = dynamic_cast<LangevinIntegrator*>(&integrator);
+           initialTemperature                              = langevinIntegrator->getTemperature();
+       } else if( integratorName == "VariableLangevinIntegrator" ){
+           VariableLangevinIntegrator* langevinIntegrator  = dynamic_cast<VariableLangevinIntegrator*>(&integrator);
+           initialTemperature                              = langevinIntegrator->getTemperature();
+       }
+ 
+       if( log ){
+          (void) fprintf( log, "Simulation temperature results: mean=%15.7e stddev=%15.7e   min=%15.7e   %d max=%15.7e %d\n",
+                          temperatureStatistics[0], temperatureStatistics[1], temperatureStatistics[2],
+                          (int) (temperatureStatistics[3] + 0.001), temperatureStatistics[4],
+                          (int) (temperatureStatistics[5] + 0.001) );
+ 
+       }
+ 
+       // check that <temperature> is within tolerance
+ 
+       if( applyAssertion ){
+           ASSERT_EQUAL_TOL( temperatureStatistics[0], initialTemperature, temperatureTolerance );
+       }
+ 
+    } else {
+ 
+       // total energy constant
+ 
+       std::vector<double> statistics;
+       getStatistics( totalEnergyArray, statistics );
+ 
+       std::vector<double> kineticEnergyStatistics;
+       getStatistics( kineticEnergyArray, kineticEnergyStatistics );
+       double temperature  = kineticEnergyStatistics[0]/(degreesOfFreedom*BOLTZ);
+       double kT           = temperature*BOLTZ;
+ 
+       // compute stddev in units of kT/dof/ns
+ 
+       double stddevE      = statistics[1]/kT;
+              stddevE     /= degreesOfFreedom;
+              stddevE     /= (simulationEndTime-simulationStartTime)*0.001;
+ 
+       if( log ){
+          (void) fprintf( log, "Simulation results: mean=%15.7e stddev=%15.7e  kT/dof/ns=%15.7e kT=%15.7e T=%12.3f  min=%15.7e  %d max=%15.7e %d\n",
+                          statistics[0], statistics[1], stddevE, kT, temperature, statistics[2], (int) (statistics[3] + 0.001), statistics[4], (int) (statistics[5] + 0.001) );
+       }
+ 
+       // check that energy fluctuation is within tolerance
+ 
+       if( applyAssertion ){
+           ASSERT_EQUAL_TOL( stddevE, 0.0, energyTolerance );
+       }
+ 
+    }
+ 
+    return;
 
 }
 
@@ -5599,16 +5699,14 @@ int runTestsUsingAmoebaTinkerParameterFile( MapStringString& argumentMap ){
 
 // ---------------------------------------------------------------------------------------
 
-   static const std::string methodName               = "runTestsUsingAmoebaTinkerParameterFile";
+   static const std::string methodName       = "runTestsUsingAmoebaTinkerParameterFile";
    MapStringString inputArgumentMap;
-   std::string openmmPluginDirectory                 = ".";
+   std::string openmmPluginDirectory         = ".";
 
-   FILE* log                                         = NULL;
-   FILE* summaryFile                                 = NULL;
+   FILE* log                                 = NULL;
+   FILE* summaryFile                         = NULL;
 
 // ---------------------------------------------------------------------------------------
-
-    std::string defaultParameterFileName     = "OpenParameters.txt";
 
     std::string parameterFileName            = "1UBQ.prm";
     MapStringInt forceMap;
@@ -5623,6 +5721,7 @@ int runTestsUsingAmoebaTinkerParameterFile( MapStringString& argumentMap ){
     int specifiedOpenmmPluginDirectory       = 0;
     int useOpenMMUnits                       = 0;
     int logControl                           = 0;
+
     int checkForces                          = 1;
     int checkEnergyForceConsistency          = 0;
     int checkEnergyConservation              = 0;
@@ -5634,26 +5733,26 @@ int runTestsUsingAmoebaTinkerParameterFile( MapStringString& argumentMap ){
         std::string key   = ii->first;
         std::string value = ii->second;
         if( key == "parameterFileName" ){
-            parameterFileName          = value;
+            parameterFileName              = value;
         } else if( key == "logFileName" ){
-            logFileNameIndex = 1;
-            logFileName      = value;
+            logFileNameIndex               = 1;
+            logFileName                    = value;
         } else if( key == "summaryFileName" ){
-            summaryFileNameIndex = 1;
-            summaryFileName      = value;
+            summaryFileNameIndex           = 1;
+            summaryFileName                = value;
         } else if( key == "openmmPluginDirectory" ){
             specifiedOpenmmPluginDirectory = 1;
             openmmPluginDirectory          = value;
         } else if( key == "useOpenMMUnits" ){
-            useOpenMMUnits = atoi( value.c_str() );
+            useOpenMMUnits                 = atoi( value.c_str() );
         } else if( key == "checkEnergyForceConsistency" ){
-            checkEnergyForceConsistency = atoi( value.c_str() );
+            checkEnergyForceConsistency    = atoi( value.c_str() );
         } else if( key == "checkEnergyConservation" ){
-            checkEnergyConservation = atoi( value.c_str() );
+            checkEnergyConservation        = atoi( value.c_str() );
         } else if( key == "checkIntermediateStates" ){
-            checkIntermediateStates = atoi( value.c_str() );
+            checkIntermediateStates        = atoi( value.c_str() );
         } else if( key == "log" ){
-            logControl = atoi( value.c_str() );
+            logControl                     = atoi( value.c_str() );
         } else if( key == ALL_FORCES ){
             initializeForceMap( forceMap, 1 );
         } else if( key == AMOEBA_HARMONIC_BOND_FORCE              ||
@@ -5671,7 +5770,7 @@ int runTestsUsingAmoebaTinkerParameterFile( MapStringString& argumentMap ){
                    key == AMOEBA_SASA_FORCE                       ){
             forceMap[key] = atoi( value.c_str() );
         } else {
-            inputArgumentMap[key] = value;
+            inputArgumentMap[key]          = value;
         }
     }
 
@@ -5680,29 +5779,22 @@ int runTestsUsingAmoebaTinkerParameterFile( MapStringString& argumentMap ){
     if( logControl ){
         std::string mode = logControl == 1 ? "w" : "a";
         if( logFileNameIndex > -1 ){
-#ifdef _MSC_VER
-            fopen_s( &log, logFileName.c_str(), mode.c_str());
-#else
-            log = fopen( logFileName.c_str(), mode.c_str() );
-#endif
+            log = openFile( logFileName, mode, NULL );
         } else {
             log = stderr;
         }
     }
    
+    // summary file
+
     if( summaryFileNameIndex > 0 ){
         std::string mode = "a";
-#ifdef _MSC_VER
-        fopen_s( &summaryFile, summaryFileName.c_str(), mode.c_str());
-#else
-        summaryFile = fopen( summaryFileName.c_str(), mode.c_str() );
-#endif
+        summaryFile = openFile( summaryFileName, mode, log );
     }
 
     // log info
 
     if( log ){
-        log = log ? log : stderr;
         (void) fprintf( log, "Input arguments:\n" );
         for( MapStringStringCI ii = argumentMap.begin(); ii != argumentMap.end(); ii++ ){
             std::string key   = ii->first;
@@ -5711,7 +5803,7 @@ int runTestsUsingAmoebaTinkerParameterFile( MapStringString& argumentMap ){
         }
         (void) fprintf( log, "parameter file=<%s>\n", parameterFileName.c_str() );
 
-        (void) fprintf( log, "Argument map: %u (unhandled args)\n", inputArgumentMap.size() );
+        (void) fprintf( log, "Argument map: %u\n", inputArgumentMap.size() );
         for( MapStringStringCI ii = inputArgumentMap.begin(); ii != inputArgumentMap.end(); ii++ ){
             (void) fprintf( log, "Map %s %s\n", (*ii).first.c_str(), (*ii).second.c_str() );
         }
