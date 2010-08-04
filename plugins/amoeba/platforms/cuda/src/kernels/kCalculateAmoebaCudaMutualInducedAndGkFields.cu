@@ -267,6 +267,7 @@ __device__ void calculateMutualInducedAndGkFieldsGkPairIxn_kernel( float4 atomCo
 
 }
 
+#ifdef AMOEBA_DEBUG
 __device__ static int debugAccumulate( int index, float4* debugArray, float* field, unsigned int addMask, float idLabel )
 {
     index                             += cAmoebaSim.paddedNumberOfAtoms;
@@ -277,6 +278,7 @@ __device__ static int debugAccumulate( int index, float4* debugArray, float* fie
 
     return index;
 }
+#endif
 
 #define GK
 #include "kCalculateAmoebaCudaMutualInducedParticle.h"

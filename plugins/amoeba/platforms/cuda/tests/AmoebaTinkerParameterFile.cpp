@@ -306,7 +306,7 @@ static int setDoubleFromMap( MapStringString& argumentMap, std::string fieldToCh
 
     --------------------------------------------------------------------------------------- */
 
-static char* readLine( FILE* filePtr, StringVector& tokens, int* lineCount, FILE* log ){
+static int readLine( FILE* filePtr, StringVector& tokens, int* lineCount, FILE* log ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -323,7 +323,7 @@ static char* readLine( FILE* filePtr, StringVector& tokens, int* lineCount, FILE
        (*lineCount)++;
        tokenizeString( buffer, tokens, delimiter );
     }
-    return isNotEof;
+    return 0;
 
 }
 
@@ -367,7 +367,7 @@ static int readFile( std::string fileName, StringVectorVector& fileContents, FIL
 
      StringVector firstLine;
      int lineCount  = 0;
-     char* isNotEof = readLine( filePtr, firstLine, &lineCount, log );
+     int isNotEof   = readLine( filePtr, firstLine, &lineCount, log );
      fileContents.push_back( firstLine );
      while( isNotEof ){
          StringVector lineTokens;
@@ -418,7 +418,7 @@ static int readVectorOfDoubleVectors( FILE* filePtr, const StringVector& tokens,
 
     for( int ii = 0; ii < numberToRead; ii++ ){
        StringVector lineTokens;
-       char* isNotEof = readLine( filePtr, lineTokens, lineCount, log );
+       int isNotEof = readLine( filePtr, lineTokens, lineCount, log );
        if( lineTokens.size() > 1 ){
           int index            = atoi( lineTokens[0].c_str() );
           std::vector<double> nextEntry;
@@ -497,7 +497,7 @@ static int readVectorOfIntVectors( FILE* filePtr, const StringVector& tokens, st
     }
     for( int ii = 0; ii < numberToRead; ii++ ){
        StringVector lineTokens;
-       char* isNotEof = readLine( filePtr, lineTokens, lineCount, log );
+       int isNotEof = readLine( filePtr, lineTokens, lineCount, log );
        if( lineTokens.size() > 1 ){
           int index            = atoi( lineTokens[0].c_str() );
           std::vector<int> nextEntry;
@@ -659,7 +659,7 @@ static int readMasses( FILE* filePtr, const StringVector& tokens, System& system
     }
     for( int ii = 0; ii < numberOfParticles; ii++ ){
        StringVector lineTokens;
-       char* isNotEof = readLine( filePtr, lineTokens, lineCount, log );
+       int isNotEof = readLine( filePtr, lineTokens, lineCount, log );
        if( lineTokens.size() >= 1 ){
           int tokenIndex       = 0;
           int index            = atoi( lineTokens[tokenIndex++].c_str() );
@@ -744,7 +744,7 @@ static int readAmoebaHarmonicBondParameters( FILE* filePtr, MapStringInt& forceM
     }
     for( int ii = 0; ii < numberOfBonds; ii++ ){
        StringVector lineTokens;
-       char* isNotEof = readLine( filePtr, lineTokens, lineCount, log );
+       int isNotEof = readLine( filePtr, lineTokens, lineCount, log );
        if( lineTokens.size() > 4 ){
           int tokenIndex       = 0;
           int index            = atoi( lineTokens[tokenIndex++].c_str() );
@@ -761,7 +761,7 @@ static int readAmoebaHarmonicBondParameters( FILE* filePtr, MapStringInt& forceM
 
     // get cubic and quartic factors
 
-    char* isNotEof                 = "1";
+    int isNotEof                   = 1;
     int hits                       = 0;
     while( hits < 2 ){
         StringVector tokens;
@@ -885,7 +885,7 @@ static int readAmoebaHarmonicAngleParameters( FILE* filePtr, MapStringInt& force
     }
     for( int ii = 0; ii < numberOfAngles; ii++ ){
        StringVector lineTokens;
-       char* isNotEof = readLine( filePtr, lineTokens, lineCount, log );
+       int isNotEof = readLine( filePtr, lineTokens, lineCount, log );
        if( lineTokens.size() > 5 ){
           int tokenIndex       = 0;
           int index            = atoi( lineTokens[tokenIndex++].c_str() );
@@ -904,7 +904,7 @@ static int readAmoebaHarmonicAngleParameters( FILE* filePtr, MapStringInt& force
 
     // get cubic, quartic, pentic, sextic factors
 
-    char* isNotEof                 = "1";
+    int isNotEof                   = 1;
     int hits                       = 0;
     while( hits < 4 ){
        StringVector tokens;
@@ -1047,7 +1047,7 @@ static int readAmoebaHarmonicInPlaneAngleParameters( FILE* filePtr, MapStringInt
     }
     for( int ii = 0; ii < numberOfAngles; ii++ ){
         StringVector lineTokens;
-        char* isNotEof = readLine( filePtr, lineTokens, lineCount, log );
+        int isNotEof = readLine( filePtr, lineTokens, lineCount, log );
         if( lineTokens.size() > 6 ){
             int tokenIndex       = 0;
             int index            = atoi( lineTokens[tokenIndex++].c_str() );
@@ -1066,7 +1066,7 @@ static int readAmoebaHarmonicInPlaneAngleParameters( FILE* filePtr, MapStringInt
 
     // get cubic, quartic, pentic, sextic factors
 
-    char* isNotEof                 = "1";
+    int isNotEof                   = 1;
     int hits                       = 0;
     while( hits < 4 ){
         StringVector tokens;
@@ -1208,7 +1208,7 @@ static int readAmoebaTorsionParameters( FILE* filePtr, MapStringInt& forceMap, c
     }
     for( int ii = 0; ii < numberOfTorsions; ii++ ){
        StringVector lineTokens;
-       char* isNotEof = readLine( filePtr, lineTokens, lineCount, log );
+       int isNotEof = readLine( filePtr, lineTokens, lineCount, log );
        if( lineTokens.size() > 10 ){
           std::vector<double> torsion1;
           std::vector<double> torsion2;
@@ -1364,7 +1364,7 @@ static int readAmoebaPiTorsionParameters( FILE* filePtr, MapStringInt& forceMap,
     }
     for( int ii = 0; ii < numberOfPiTorsions; ii++ ){
         StringVector lineTokens;
-        char* isNotEof = readLine( filePtr, lineTokens, lineCount, log );
+        int isNotEof = readLine( filePtr, lineTokens, lineCount, log );
         if( lineTokens.size() > 7 ){
            std::vector<double> torsionK;
            int index            = 0;
@@ -1497,7 +1497,7 @@ static int readAmoebaStretchBendParameters( FILE* filePtr, MapStringInt& forceMa
     }
     for( int ii = 0; ii < numberOfStretchBends; ii++ ){
         StringVector lineTokens;
-        char* isNotEof = readLine( filePtr, lineTokens, lineCount, log );
+        int isNotEof = readLine( filePtr, lineTokens, lineCount, log );
         if( lineTokens.size() > 7 ){
             int tokenIndex       = 0;
             int index            = atoi( lineTokens[tokenIndex++].c_str() );
@@ -1629,7 +1629,7 @@ static int readAmoebaOutOfPlaneBendParameters( FILE* filePtr, MapStringInt& forc
     }
     for( int ii = 0; ii < numberOfOutOfPlaneBends; ii++ ){
         StringVector lineTokens;
-        char* isNotEof = readLine( filePtr, lineTokens, lineCount, log );
+        int isNotEof = readLine( filePtr, lineTokens, lineCount, log );
         if( lineTokens.size() > 5 ){
            int tokenIndex       = 0;
            int index            = atoi( lineTokens[tokenIndex++].c_str() );
@@ -1647,7 +1647,7 @@ static int readAmoebaOutOfPlaneBendParameters( FILE* filePtr, MapStringInt& forc
 
     // get cubic, quartic, pentic, sextic factors
 
-    char* isNotEof                 = "1";
+    int isNotEof                   = 1;
     int hits                       = 0;
     while( hits < 4 ){
         StringVector tokens;
@@ -1784,7 +1784,7 @@ static int readAmoebaTorsionTorsionGrid( FILE* filePtr, int numX, int numY, Tors
     }
     for( int ii = 0; ii < gridCount; ii++ ){
         StringVector lineTokens;
-        char* isNotEof = readLine( filePtr, lineTokens, lineCount, log );
+        int isNotEof = readLine( filePtr, lineTokens, lineCount, log );
         if( lineTokens.size() > 8 ){
            int tokenIndex             = 0;
            int index                  = atoi( lineTokens[tokenIndex++].c_str() );
@@ -1924,7 +1924,7 @@ static int readAmoebaTorsionTorsionParameters( FILE* filePtr, MapStringInt& forc
     }
     for( int ii = 0; ii < numberOfTorsionTorsions; ii++ ){
         StringVector lineTokens;
-        char* isNotEof = readLine( filePtr, lineTokens, lineCount, log );
+        int isNotEof = readLine( filePtr, lineTokens, lineCount, log );
         if( lineTokens.size() > 7 ){
             int tokenIndex       = 0;
             int index            = atoi( lineTokens[tokenIndex++].c_str() );
@@ -1944,7 +1944,7 @@ static int readAmoebaTorsionTorsionParameters( FILE* filePtr, MapStringInt& forc
 
     // get grid
 
-    char* isNotEof                 = "1";
+    int isNotEof                   = 1;
     int totalNumberOfGrids         = 1;
     int gridCount                  = 0;
     while( gridCount < totalNumberOfGrids ){
@@ -2039,7 +2039,7 @@ static void readAmoebaMultipoleCovalent( FILE* filePtr, AmoebaMultipoleForce* mu
                AmoebaMultipoleForce::PolarizationCovalent13,
                AmoebaMultipoleForce::PolarizationCovalent14 };
  
-     char* isNotEof = "1";
+     int isNotEof = 1;
      for( int ii = 0; ii < numberOfMultipoles && isNotEof; ii++ ){
          for( unsigned int jj = 0; jj < numberOfCovalentTypes && isNotEof; jj++ ){
              StringVector lineTokens;
@@ -2109,7 +2109,7 @@ static int readAmoebaMultipoleParameters( FILE* filePtr, MapStringInt& forceMap,
     }
     for( int ii = 0; ii < numberOfMultipoles; ii++ ){
         StringVector lineTokens;
-        char* isNotEof = readLine( filePtr, lineTokens, lineCount, log );
+        int isNotEof = readLine( filePtr, lineTokens, lineCount, log );
         if( lineTokens.size() > 7 ){
             std::vector<double> dipole;
             std::vector<double> quadrupole;
@@ -2146,7 +2146,7 @@ static int readAmoebaMultipoleParameters( FILE* filePtr, MapStringInt& forceMap,
 
     // get supplementary fields
 
-    char* isNotEof                 = "1";
+    int isNotEof                = 1;
     int totalFields                = 2;
     int fieldCount                 = 0;
     int done                       = 0;
@@ -2199,7 +2199,7 @@ static int readAmoebaMultipoleParameters( FILE* filePtr, MapStringInt& forceMap,
 
     if( log ){
 
-        (void) fprintf( log, "%s Supplementary fields %u: ", methodName.c_str(), supplementary.size()  );
+        (void) fprintf( log, "%s Supplementary fields %u: ", methodName.c_str(), static_cast<unsigned int>(supplementary.size())  );
         for( MapStringVectorOfVectorsCI ii = supplementary.begin(); ii != supplementary.end();  ii++ ){
             (void) fprintf( log, "%s ", (*ii).first.c_str() );
         }
@@ -2241,7 +2241,7 @@ static int readAmoebaMultipoleParameters( FILE* filePtr, MapStringInt& forceMap,
             for( int jj = 0; jj < AmoebaMultipoleForce::CovalentEnd; jj++ ){
                 std::vector<int> covalentAtoms;
                 multipoleForce->getCovalentMap( ii, covalentTypes[jj], covalentAtoms );
-                (void) fprintf( log, "   CovTypeId=%d %u [", jj, covalentAtoms.size() );
+                (void) fprintf( log, "   CovTypeId=%d %u [", jj, static_cast<unsigned int>(covalentAtoms.size()) );
                 for( unsigned int kk = 0; kk < covalentAtoms.size(); kk++ ){
                     (void) fprintf( log, "%5d ", covalentAtoms[kk] );
                 }
@@ -2364,7 +2364,7 @@ static int readAmoebaGeneralizedKirkwoodParameters( FILE* filePtr, MapStringInt&
     }
     for( int ii = 0; ii < numberOfParticles; ii++ ){
        StringVector lineTokens;
-       char* isNotEof = readLine( filePtr, lineTokens, lineCount, log );
+       int isNotEof = readLine( filePtr, lineTokens, lineCount, log );
        int tokenIndex = 0;
        if( lineTokens.size() > 3 ){
           int index            = atoi( lineTokens[tokenIndex++].c_str() );
@@ -2380,7 +2380,7 @@ static int readAmoebaGeneralizedKirkwoodParameters( FILE* filePtr, MapStringInt&
        }
     }
 
-    char* isNotEof                 = "1";
+    int isNotEof                   = 1;
     int hits                       = 0;
     while( hits < 2 ){
        StringVector tokens;
@@ -2396,13 +2396,13 @@ static int readAmoebaGeneralizedKirkwoodParameters( FILE* filePtr, MapStringInt&
              hits++;
           } else {
                 char buffer[1024];
-                (void) sprintf( buffer, "%s read past GK block at line=%d\n", methodName.c_str(), lineCount );
+                (void) sprintf( buffer, "%s read past GK block at line=%d\n", methodName.c_str(), *lineCount );
                 throwException(__FILE__, __LINE__, buffer );
                 exit(-1);
           }
        } else {
           char buffer[1024];
-          (void) sprintf( buffer, "%s invalid token count at line=%d?\n", methodName.c_str(), lineCount );
+          (void) sprintf( buffer, "%s invalid token count at line=%d?\n", methodName.c_str(), *lineCount );
           throwException(__FILE__, __LINE__, buffer );
           exit(-1);
        }
@@ -2410,7 +2410,7 @@ static int readAmoebaGeneralizedKirkwoodParameters( FILE* filePtr, MapStringInt&
 
     // get supplementart fields
 
-    isNotEof                       = "1";
+    isNotEof                       = 1;
     int totalFields                = 2;
     int fieldCount                 = 0;
     int done                       = 0;
@@ -2551,7 +2551,7 @@ static int readAmoebaVdwParameters( FILE* filePtr, MapStringInt& forceMap, const
         vdwForce->setSigEpsTableSize( tableSize );
         for( int ii = 0; ii < tableSize; ii++ ){
             StringVector lineTokens;
-            char* isNotEof = readLine( filePtr, lineTokens, lineCount, log );
+            int isNotEof = readLine( filePtr, lineTokens, lineCount, log );
             if( lineTokens.size() > 2 ){
                 int tokenIndex       = 0;
                 int index            = atoi( lineTokens[tokenIndex++].c_str() );
@@ -2569,7 +2569,7 @@ static int readAmoebaVdwParameters( FILE* filePtr, MapStringInt& forceMap, const
         }
      
         StringVector lineTokensT;
-        char* isNotEof               = readLine( filePtr, lineTokensT, lineCount, log );
+        int isNotEof                 = readLine( filePtr, lineTokensT, lineCount, log );
         numberOfParticles            = atoi( lineTokensT[1].c_str() );
     } else {
         numberOfParticles            = atoi( tokens[1].c_str() );
@@ -2582,7 +2582,7 @@ static int readAmoebaVdwParameters( FILE* filePtr, MapStringInt& forceMap, const
     }
     for( int ii = 0; ii < numberOfParticles; ii++ ){
         StringVector lineTokens;
-        char* isNotEof = readLine( filePtr, lineTokens, lineCount, log );
+        int isNotEof = readLine( filePtr, lineTokens, lineCount, log );
         if( lineTokens.size() > 2 ){
             int tokenIndex       = 0;
             int index            = atoi( lineTokens[tokenIndex++].c_str() );
@@ -2605,7 +2605,7 @@ static int readAmoebaVdwParameters( FILE* filePtr, MapStringInt& forceMap, const
     // abort if have changed
 
     StringVector lineTokensT;
-    char* isNotEof = readLine( filePtr, lineTokensT, lineCount, log );
+    int isNotEof = readLine( filePtr, lineTokensT, lineCount, log );
     if( lineTokensT[0] == "AmoebaVdw14_7Scales" ){
         int tokenIndex    = 1;
         double scale2     = atof( lineTokensT[tokenIndex++].c_str() );
@@ -2631,7 +2631,7 @@ static int readAmoebaVdwParameters( FILE* filePtr, MapStringInt& forceMap, const
         int numberOfParticles =  atoi( lineTokensT[1].c_str() );
         for( int ii = 0; ii < numberOfParticles; ii++ ){
             StringVector lineTokens;
-            char* isNotEof = readLine( filePtr, lineTokens, lineCount, log );
+            int isNotEof = readLine( filePtr, lineTokens, lineCount, log );
             std::vector< int > exclusions;
             if( lineTokens.size() > 1 ){
                 int tokenIndex       = 0;
@@ -2725,7 +2725,7 @@ static int readAmoebaVdwParameters( FILE* filePtr, MapStringInt& forceMap, const
             (void) fprintf( log, "%8d %8d %8d sig=[%10.4f %10.4f] eps=[ %10.4f %10.4f] redct=%10.4f ",
                             ii, indexIV, indexClass, sigma, sigma4, epsilon, epsilon4, reduction );
 
-            (void) fprintf( log, "Excl=%3u [", exclusions.size() );
+            (void) fprintf( log, "Excl=%3u [", static_cast<unsigned int>(exclusions.size()) );
             for( unsigned int jj = 0; jj < exclusions.size();  jj++ ){
                 (void) fprintf( log, "%5d ", exclusions[jj] );
             }
@@ -2867,7 +2867,7 @@ static int readAmoebaWcaDispersionParameters( FILE* filePtr, MapStringInt& force
     std::vector<double> maxDispersionEnergyVector;
     for( int ii = 0; ii < numberOfParticles; ii++ ){
         StringVector lineTokens;
-        char* isNotEof = readLine( filePtr, lineTokens, lineCount, log );
+        int isNotEof = readLine( filePtr, lineTokens, lineCount, log );
         if( lineTokens.size() > 2 ){
             int tokenIndex       = 0;
             int index            = atoi( lineTokens[tokenIndex++].c_str() );
@@ -2886,7 +2886,7 @@ static int readAmoebaWcaDispersionParameters( FILE* filePtr, MapStringInt& force
         }
     }
 
-    char* isNotEof                 = "1";
+    int isNotEof                   = 1;
     int hits                       = 0;
     while( hits < 6 ){
        StringVector tokens;
@@ -2915,13 +2915,13 @@ static int readAmoebaWcaDispersionParameters( FILE* filePtr, MapStringInt& force
              hits++;
           } else {
                 char buffer[1024];
-                (void) sprintf( buffer, "%s read past WcaDispersion block at line=%d\n", methodName.c_str(), lineCount );
+                (void) sprintf( buffer, "%s read past WcaDispersion block at line=%d\n", methodName.c_str(), *lineCount );
                 throwException(__FILE__, __LINE__, buffer );
                 exit(-1);
           }
        } else {
           char buffer[1024];
-          (void) sprintf( buffer, "%s invalid token count at line=%d?\n", methodName.c_str(), lineCount );
+          (void) sprintf( buffer, "%s invalid token count at line=%d?\n", methodName.c_str(), *lineCount );
           throwException(__FILE__, __LINE__, buffer );
           exit(-1);
        }
@@ -2971,7 +2971,7 @@ static int readAmoebaWcaDispersionParameters( FILE* filePtr, MapStringInt& force
             wcaDispersionForce->getMaximumDispersionEnergy( ii, maxDispersionEnergy );
             double delta = fabs( maxDispersionEnergy - maxDispersionEnergyVector[ii] );
             if( delta > 1.0e-05 ){
-                (void) fprintf( log, " maxDispEDiff=%12.5e %14.7f %14.7f  XXX\n" );
+                (void) fprintf( log, " maxDispEDiff=%12.5e %14.7f %14.7f  XXX\n", delta, maxDispersionEnergy, maxDispersionEnergyVector[ii] );
                 errors++;
             } 
         }
@@ -3101,7 +3101,7 @@ static int readAmoebaSurfaceParameters( FILE* filePtr, MapStringInt& forceMap, c
      }
      for( int ii = 0; ii < numberOfParticles; ii++ ){
          StringVector lineTokens;
-         char* isNotEof = readLine( filePtr, lineTokens, lineCount, log );
+         int isNotEof = readLine( filePtr, lineTokens, lineCount, log );
          if( lineTokens.size() > 2 ){
              int tokenIndex       = 0;
              int index            = atoi( lineTokens[tokenIndex++].c_str() );
@@ -3114,7 +3114,7 @@ static int readAmoebaSurfaceParameters( FILE* filePtr, MapStringInt& forceMap, c
          }
      }
  
-     char* isNotEof                 = "1";
+     int isNotEof                   = 1;
      int hits                       = 0;
      while( hits < 1 ){
         StringVector tokens;
@@ -3127,13 +3127,13 @@ static int readAmoebaSurfaceParameters( FILE* filePtr, MapStringInt& forceMap, c
               hits++;
            } else {
                  char buffer[1024];
-                 (void) sprintf( buffer, "%s read past SASA block at line=%d\n", methodName.c_str(), lineCount );
+                 (void) sprintf( buffer, "%s read past SASA block at line=%d\n", methodName.c_str(), *lineCount );
                  throwException(__FILE__, __LINE__, buffer );
                  exit(-1);
            }
         } else {
            char buffer[1024];
-           (void) sprintf( buffer, "%s invalid token count at line=%d?\n", methodName.c_str(), lineCount );
+           (void) sprintf( buffer, "%s invalid token count at line=%d?\n", methodName.c_str(), *lineCount );
            throwException(__FILE__, __LINE__, buffer );
            exit(-1);
         }
@@ -3204,7 +3204,7 @@ static int readConstraints( FILE* filePtr, const StringVector& tokens, System& s
     }
     for( int ii = 0; ii < numberOfConstraints; ii++ ){
        StringVector lineTokens;
-       char* isNotEof = readLine( filePtr, lineTokens, lineCount, log );
+       int isNotEof = readLine( filePtr, lineTokens, lineCount, log );
        if( lineTokens.size() > 3 ){
           int index            = atoi( lineTokens[0].c_str() );
           int particle1        = atoi( lineTokens[1].c_str() );
@@ -3313,7 +3313,7 @@ static Integrator* readIntegrator( FILE* filePtr, const StringVector& tokens, Sy
 
     for( int ii = 0; ii < readLines; ii++ ){
        StringVector lineTokens;
-       char* isNotEof = readLine( filePtr, lineTokens, lineCount, log );
+       int isNotEof = readLine( filePtr, lineTokens, lineCount, log );
        if( lineTokens.size() > 1 ){
           if( lineTokens[0] == "StepSize" ){
              stepSize            =  atof( lineTokens[1].c_str() );
@@ -3418,7 +3418,7 @@ static int readVec3( FILE* filePtr, const StringVector& tokens, std::vector<Vec3
     }
     for( int ii = 0; ii < numberOfCoordinates; ii++ ){
        StringVector lineTokens;
-       char* isNotEof = readLine( filePtr, lineTokens, lineCount, log );
+       int isNotEof = readLine( filePtr, lineTokens, lineCount, log );
        if( lineTokens.size() > 3 ){
           int index            = atoi( lineTokens[0].c_str() );
           double xCoord        = atof( lineTokens[1].c_str() );
@@ -3733,7 +3733,7 @@ Integrator* readAmoebaParameterFile( const std::string& inputParameterFile, MapS
 
     int lineCount                  = 0;
     std::string version            = "0.1"; 
-    char* isNotEof                 = "1";
+    int isNotEof                   = 1;
     Integrator* returnIntegrator   = NULL;
 
     // loop over lines in file
@@ -4561,9 +4561,12 @@ Context* createContext( const std::string& amoebaTinkerParameterFileName, MapStr
 // ---------------------------------------------------------------------------------------
 
     static const std::string methodName      = "createContext";
+    int  cudaDevice                          = -1;
  
 // ---------------------------------------------------------------------------------------
  
+    setIntFromMap(    inputArgumentMap, "cudaDevice", cudaDevice );
+
     System* system  = new System();
  
     std::vector<Vec3> coordinates; 
@@ -4583,7 +4586,22 @@ Context* createContext( const std::string& amoebaTinkerParameterFileName, MapStr
                              tinkerForces, tinkerEnergies, supplementary, useOpenMMUnits, inputArgumentMap, log );
  
     Integrator* integrator = getIntegrator( inputArgumentMap, log );
-    Context* context = new Context(*system, *integrator, Platform::getPlatformByName( "Cuda"));
+
+    Context* context;
+    if( getenv("CudaDevice") || cudaDevice > -1 ){
+        Platform& platform = Platform::getPlatformByName("Cuda");
+        map<string, string> properties;
+        if( getenv("CudaDevice") ){
+            properties["CudaDevice"] = getenv("CudaDevice");
+        } else {
+            std::stringstream cudaDeviceStrStr;
+            cudaDeviceStrStr << cudaDevice;
+            properties["CudaDevice"] = cudaDeviceStrStr.str();
+        }
+        context = new Context(*system, *integrator, platform, properties);
+    } else {
+        context = new Context(*system, *integrator, Platform::getPlatformByName( "Cuda"));
+    }
     context->setPositions(coordinates);
 
     return context;
@@ -4679,7 +4697,7 @@ fprintf( log, "\n" ); fflush( log ); */
         if( skip ){
             (void) fprintf( log, "Skipping state=%u line=%u\n", stateIndex, lineIndex );
         } else {
-            (void) fprintf( log, "State=%u coordinates=%u\n", stateIndex, coordinates.size() );
+            (void) fprintf( log, "State=%u coordinates=%u\n", stateIndex, static_cast<unsigned int>(coordinates.size()) );
             context->setPositions( coordinates );
             State state                            = context->getState(State::Forces | State::Energy);
             System& system                         = context->getSystem();
@@ -4820,7 +4838,7 @@ void testUsingAmoebaTinkerParameterFile( const std::string& amoebaTinkerParamete
                             deltaE, expectedEnergy, energyConversion*state.getPotentialEnergy(),
                             amoebaTinkerParameterFileName.c_str(), activeForceNames.c_str() );
             (void) fprintf( filePtr, "%s: %u %u Active forces: %s\n",
-                            methodName.c_str(), expectedForces.size(), forces.size(), activeForceNames.c_str() );
+                            methodName.c_str(), static_cast<unsigned int>(expectedForces.size()), static_cast<unsigned int>(forces.size()), activeForceNames.c_str() );
             double maxRelativeDelta            = -1.0e+30;
             unsigned int maxRelativeDeltaIndex = -1;
             for( unsigned int ii = 0; ii < forces.size(); ii++ ){
@@ -4882,7 +4900,7 @@ void testUsingAmoebaTinkerParameterFile( const std::string& amoebaTinkerParamete
                             coordinateConversion*(box[1][2] - box[0][2]) );
 
             unsigned int maxPrint = 5;
-            (void) fprintf( filePtr, "Sample raw coordinates (w/o conversion) %8u\n", coordinates.size() );
+            (void) fprintf( filePtr, "Sample raw coordinates (w/o conversion) %8u\n", static_cast<unsigned int>(coordinates.size()) );
             for( unsigned int ii = 0; ii < coordinates.size(); ii++ ){
                 (void) fprintf( filePtr, "%8u [%16.7f %16.7f %16.7f]\n", ii,
                             coordinates[ii][0], coordinates[ii][1], coordinates[ii][2] );
@@ -5263,7 +5281,7 @@ void writeIntermediateStateFile( Context& context, FILE* intermediateStateFile, 
     const std::vector<Vec3> forces                 = state.getForces();
 
     (void) fprintf( intermediateStateFile, "%7u %12.3f %15.7e %15.7e %15.7e State (x,v,f)\n",
-                    positions.size(), state.getTime(), state.getKineticEnergy(), state.getPotentialEnergy(),
+                    static_cast<unsigned int>(positions.size()), state.getTime(), state.getKineticEnergy(), state.getPotentialEnergy(),
                     state.getKineticEnergy() + state.getPotentialEnergy() );
 
     for( unsigned int ii = 0; ii < positions.size(); ii++ ){
@@ -5601,7 +5619,7 @@ void testEnergyConservation( std::string parameterFileName, MapStringInt& forceM
        (void) fprintf( log, "Final Simulation: %12.3f  E=%15.7e [%15.7e %15.7e]  total wall time=%12.3e ns/day=%.3e\n",
                        currentTime, (kineticEnergy + potentialEnergy), kineticEnergy, potentialEnergy,
                        totalWallClockTime, nsPerDay );
-       (void) fprintf( log, "\n%8u Energies\n", kineticEnergyArray.size() );
+       (void) fprintf( log, "\n%8u Energies\n", static_cast<unsigned int>(kineticEnergyArray.size()) );
        for( unsigned int ii = 0; ii < kineticEnergyArray.size(); ii++ ){
            (void) fprintf( log, "%15.7e   %15.7e %15.7e  %15.7e    Energies\n",
             timeArray[ii], kineticEnergyArray[ii], potentialEnergyArray[ii], totalEnergyArray[ii] );
@@ -5803,7 +5821,7 @@ int runTestsUsingAmoebaTinkerParameterFile( MapStringString& argumentMap ){
         }
         (void) fprintf( log, "parameter file=<%s>\n", parameterFileName.c_str() );
 
-        (void) fprintf( log, "Argument map: %u\n", inputArgumentMap.size() );
+        (void) fprintf( log, "Argument map: %u\n", static_cast<unsigned int>(inputArgumentMap.size()) );
         for( MapStringStringCI ii = inputArgumentMap.begin(); ii != inputArgumentMap.end(); ii++ ){
             (void) fprintf( log, "Map %s %s\n", (*ii).first.c_str(), (*ii).second.c_str() );
         }

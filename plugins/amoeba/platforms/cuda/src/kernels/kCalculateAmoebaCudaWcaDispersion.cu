@@ -31,7 +31,7 @@ void GetCalculateAmoebaCudaWcaDispersionSim(amoebaGpuContext amoebaGpu)
     gpuContext gpu = amoebaGpu->gpuContext;
     status = cudaMemcpyFromSymbol(&gpu->sim, cSim, sizeof(cudaGmxSimulation));    
 
-    fprintf( stderr, "In GetCalculateAmoebaCudaWcaDispersionSim: %p %u %u\n", 
+    fprintf( stderr, "In GetCalculateAmoebaCudaWcaDispersionSim: %p %lu %u\n", 
              gpu->psInteractionCount->_pSysStream[0], gpu->psInteractionCount->_pSysStream[0][0], gpu->sim.workUnits );
 
     RTERROR(status, "GetCalculateAmoebaCudaWcaDispersionSim: cudaMemcpyFromSymbol: SetSim copy from cSim failed");

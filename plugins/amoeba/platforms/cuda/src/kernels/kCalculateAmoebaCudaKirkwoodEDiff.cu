@@ -1031,6 +1031,7 @@ __device__ void calculateKirkwoodEDiffPairIxn_kernel( float4 atomCoordinatesI,  
 
 }
 
+#ifdef AMOEBA_DEBUG
 __device__ static int debugAccumulate( unsigned int index, float4* debugArray, float* field, unsigned int addMask, float idLabel )
 {
     index                             += cAmoebaSim.paddedNumberOfAtoms;
@@ -1041,6 +1042,7 @@ __device__ static int debugAccumulate( unsigned int index, float4* debugArray, f
 
     return index;
 }
+#endif
 
 __device__ void zeroKirkwoodEDiffParticleSharedField( struct KirkwoodEDiffParticle* sA )
 {
@@ -1154,11 +1156,11 @@ void kCalculateAmoebaKirkwoodEDiff( amoebaGpuContext amoebaGpu )
   
    // ---------------------------------------------------------------------------------------
 
-    static const char* methodName       = "kCalculateAmoebaKirkwoodEDiff";
     static unsigned int threadsPerBlock = 0;
     static int timestep                 = 0;
     timestep++;
 #ifdef AMOEBA_DEBUG
+    static const char* methodName       = "kCalculateAmoebaKirkwoodEDiff";
     std::vector<int> fileId;
     fileId.resize( 2 );
     fileId[0] = timestep;
@@ -1201,7 +1203,7 @@ void kCalculateAmoebaKirkwoodEDiff( amoebaGpuContext amoebaGpu )
     }   
     
     if( amoebaGpu->log && timestep == 1 ){
-        (void) fprintf( amoebaGpu->log, "kCalculateAmoebaCudaKirkwoodEDiffN2Forces:  numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u Ebuf=%u ixnCt=%u workUnits=%u\n",
+        (void) fprintf( amoebaGpu->log, "kCalculateAmoebaCudaKirkwoodEDiffN2Forces:  numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%lu shrd=%lu Ebuf=%u ixnCt=%lu workUnits=%u\n",
                         amoebaGpu->nonbondBlocks, threadsPerBlock, amoebaGpu->bOutputBufferPerWarp,
                         sizeof(KirkwoodEDiffParticle), sizeof(KirkwoodEDiffParticle)*threadsPerBlock,
                         amoebaGpu->energyOutputBuffers, (*gpu->psInteractionCount)[0], gpu->sim.workUnits );

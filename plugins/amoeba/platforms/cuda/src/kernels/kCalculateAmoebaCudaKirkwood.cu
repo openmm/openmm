@@ -1971,7 +1971,7 @@ void kCalculateAmoebaKirkwood( amoebaGpuContext amoebaGpu )
 
         if( amoebaGpu->log ){
 
-            (void) fprintf( amoebaGpu->log, "kCalculateAmoebaCudaKirkwood: blcks=%u tds=%u %u bPrWrp=%u atm=%u shrd=%u Ebuf=%u ixnCt=%u workUnits=%u\n",
+            (void) fprintf( amoebaGpu->log, "kCalculateAmoebaCudaKirkwood: blcks=%u tds=%u %u bPrWrp=%u atm=%lu shrd=%lu Ebuf=%u ixnCt=%lu workUnits=%u\n",
                             amoebaGpu->nonbondBlocks, threadsPerBlock, maxThreads, amoebaGpu->bOutputBufferPerWarp,
                             sizeof(KirkwoodParticle), sizeof(KirkwoodParticle)*threadsPerBlock,
                             amoebaGpu->energyOutputBuffers, (*gpu->psInteractionCount)[0], gpu->sim.workUnits );

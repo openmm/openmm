@@ -504,7 +504,7 @@ void gpuSetAmoebaAngleParameters(amoebaGpuContext amoebaGpu, const std::vector<i
 #define DUMP_PARAMETERS 5
 #if (DUMP_PARAMETERS > 0 )
 if( (i < DUMP_PARAMETERS || i > bond_angles - (DUMP_PARAMETERS + 1)) && amoebaGpu->log )
-         fprintf( amoebaGpu->log, "Angles: %5d [%5d %5d %5d] [%5d %5d %5d] A=%15.7e k[%15.7e %15.7e] [%5d %5d %5d]\n", i, 
+         fprintf( amoebaGpu->log, "Angles: %5d [%5d %5d %5d %5d] [%5d %5d] A=%15.7e k=%15.7e [%5d %5d %5d]\n", i, 
                   (*psAngleID1)[i].x, (*psAngleID1)[i].y, (*psAngleID1)[i].z, (*psAngleID1)[i].w,
                   (*psAngleID2)[i].x, (*psAngleID2)[i].y,
                   (*psAngleParameter)[i].x, (*psAngleParameter)[i].y,
@@ -564,7 +564,7 @@ void gpuSetAmoebaInPlaneAngleParameters(amoebaGpuContext amoebaGpu, const std::v
 #define DUMP_PARAMETERS 5
 #if (DUMP_PARAMETERS > 0 )
 if( (i < DUMP_PARAMETERS || i > bond_angles - (DUMP_PARAMETERS + 1)) && amoebaGpu->log )
-         fprintf( amoebaGpu->log, "InPlaneAngles: %5d [%5d %5d %5d %5d] [%5d %5d %5d %5d] A=%15.7e k[%15.7e %15.7e %15.7e %15.7e %15.7e] [%5d %5d %5d %5d]\n", i, 
+         fprintf( amoebaGpu->log, "InPlaneAngles: %5d [%5d %5d %5d %5d] [%5d %5d %5d %5d] A=%15.7e k=%15.7e [%5d %5d %5d %5d]\n", i, 
                   (*psAngleID1)[i].x, (*psAngleID1)[i].y, (*psAngleID1)[i].z, (*psAngleID1)[i].w,
                   (*psAngleID2)[i].x, (*psAngleID2)[i].y, (*psAngleID2)[i].z, (*psAngleID2)[i].w,
                   (*psAngleParameter)[i].x, (*psAngleParameter)[i].y,
@@ -2100,7 +2100,7 @@ void gpuSetAmoebaVdwParameters( amoebaGpuContext amoebaGpu,
                 psVdwReductionID->_pSysStream[0][count].w   = ii;
             }
             if( ivMapping[ii].size() > 3 ){
-                (void) fprintf( stderr, "Atom %u has %u reductions -- invalid -- aborting", ii, ivMapping[ii].size() );
+                (void) fprintf( stderr, "Atom %u has %u reductions -- invalid -- aborting", ii, static_cast<unsigned int>(ivMapping[ii].size()) );
                 exit(1);
             }
             count++;
@@ -2335,7 +2335,7 @@ void amoebaGpuBuildVdwExclusionList( amoebaGpuContext amoebaGpu,  const std::vec
         for (unsigned int ii = 0; ii < actualAtoms; ii++){
             bool error = false;
             if( exclusions[ii].size() != echoExclusions[ii].size() ){
-                 (void) fprintf( amoebaGpu->log, "\nAtom %6d sz %6u %6u XX\n", ii, exclusions[ii].size(), echoExclusions[ii].size() );
+                 (void) fprintf( amoebaGpu->log, "\nAtom %6d sz %6u %6u XX\n", ii, static_cast<unsigned int>(exclusions[ii].size()), static_cast<unsigned int>(echoExclusions[ii].size()) );
                  error = true;
                  totalErrors++;
             }
@@ -2736,7 +2736,7 @@ static int matchMaps( std::string idString, MapIntFloat* map1,  MapIntFloat* map
     int equalSizes = 1;
     int error      = 0;
     if( map1->size() != map2->size() ){
-        (void) fprintf( log, "%s sizes unequal: %u %u\n", idString.c_str(), map1->size(), map2->size() );
+        (void) fprintf( log, "%s sizes unequal: %u %u\n", idString.c_str(), static_cast<unsigned int>(map1->size()), static_cast<unsigned int>(map2->size()) );
         equalSizes = 0;
         error++;
     }
@@ -3713,7 +3713,7 @@ void cudaWriteVectorOfDoubleVectorsToFile( char* fname, std::vector<int>& fileId
     // ---------------------------------------------------------------------------------------
 
     FILE* filePtr            = getWriteToFilePtrV( fname, fileId );
-    (void) fprintf( filePtr, "%u\n", outputVector.size() );
+    (void) fprintf( filePtr, "%u\n", static_cast<unsigned int>(outputVector.size()) );
  
     float values[50];
     for ( unsigned int ii = 0; ii < outputVector.size(); ii++ ){ 
