@@ -34,6 +34,7 @@ void GetCalculateAmoebaCudaMutualInducedFieldSim(amoebaGpuContext amoebaGpu)
 }
 
 //#define AMOEBA_DEBUG
+#undef AMOEBA_DEBUG
 
 __device__ void calculateMutualInducedFieldPairIxn_kernel( float4 atomCoordinatesI, float4 atomCoordinatesJ,
                                                            float dampingFactorI,    float dampingFactorJ,
@@ -602,9 +603,8 @@ static void cudaComputeAmoebaMutualInducedFieldBySOR( amoebaGpuContext amoebaGpu
   
    // ---------------------------------------------------------------------------------------
 
-    static const char* methodName = "cudaComputeAmoebaMutualInducedFieldBySOR";
-
 #ifdef AMOEBA_DEBUG
+    static const char* methodName = "cudaComputeAmoebaMutualInducedFieldBySOR";
     static int timestep = 0;
     std::vector<int> fileId;
     timestep++;
@@ -739,29 +739,16 @@ static void cudaComputeAmoebaMutualInducedFieldBySOR( amoebaGpuContext amoebaGpu
            amoebaGpu->psWorkVector[0]->_pDevStream[0],     amoebaGpu->psWorkVector[1]->_pDevStream[0] );
         LAUNCHERROR("kSorUpdateMutualInducedField");  
 
-        // // get total epsilon -- performing sums on gpu
+        // get total epsilon -- performing sums on gpu
 
         kReduceMutualInducedFieldDelta_kernel<<<1, amoebaGpu->epsilonThreadsPerBlock, 2*sizeof(float)*amoebaGpu->epsilonThreadsPerBlock>>>(
            3*gpu->natoms, amoebaGpu->psWorkVector[0]->_pDevStream[0], amoebaGpu->psWorkVector[1]->_pDevStream[0],
            amoebaGpu->psCurrentEpsilon->_pDevStream[0] );
         LAUNCHERROR("kReduceMutualInducedFieldDelta");
 
-#if 1
-        // get total epsilon -- performing sums on cpu
-{
-        float sum1                   = cudaGetSum( 3*gpu->natoms, amoebaGpu->psWorkVector[0]  );
-        float sum2                   = cudaGetSum( 3*gpu->natoms, amoebaGpu->psWorkVector[1] );
-        sum1                         = 4.8033324f*sqrtf( sum1/( (float) gpu->natoms) );
-        sum2                         = 4.8033324f*sqrtf( sum2/( (float) gpu->natoms) );
-
-        float currentEpsilon         = sum1 > sum2 ? sum1 : sum2;
-        amoebaGpu->mutualInducedCurrentEpsilon  = currentEpsilon;
-        (void) fprintf( amoebaGpu->log, "%s iteration=%3d eps %14.6e [%14.6e %14.6e] done=%d sums=%14.6e %14.6e\n",
-                        methodName, iteration, amoebaGpu->mutualInducedCurrentEpsilon,
-                           amoebaGpu->psCurrentEpsilon->_pSysStream[0][1], 
-                           amoebaGpu->psCurrentEpsilon->_pSysStream[0][2], done, sum1, sum2 );
-}
-#endif
+        if( amoebaGpu->log ){
+            trackMutualInducedIterations( amoebaGpu, iteration);
+        }
 
         // Debye=4.8033324f
         amoebaGpu->psCurrentEpsilon->Download();
@@ -810,14 +797,14 @@ static void cudaComputeAmoebaMutualInducedFieldBySOR( amoebaGpuContext amoebaGpu
         }
 #endif
         iteration++;
-//if(  iteration > 1 )exit(0);
     }
 
     amoebaGpu->mutualInducedDone             = done;
     amoebaGpu->mutualInducedConverged        = ( !done || iteration > amoebaGpu->mutualInducedMaxIterations ) ? 0 : 1;
 
 #ifdef AMOEBA_DEBUG
-    if( 1 ){
+/*
+    if( 0 ){
         std::vector<int> fileId;
         //fileId.push_back( 0 );
         VectorOfDoubleVectors outputVector;
@@ -826,6 +813,7 @@ static void cudaComputeAmoebaMutualInducedFieldBySOR( amoebaGpuContext amoebaGpu
         cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psInducedDipolePolar, outputVector );
         cudaWriteVectorOfDoubleVectorsToFile( "CudaMI", fileId, outputVector );
      }
+*/
 #endif
 
    // ---------------------------------------------------------------------------------------

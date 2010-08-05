@@ -48,8 +48,8 @@ int main( int numberOfArguments, char* argv[] ) {
         Platform::loadPluginsFromDirectory( Platform::getDefaultPluginsDirectory() );
         if( numberOfArguments > 1 ){
             MapStringString argumentMap;
-            appendInputArgumentsToArgumentMap( numberOfArguments, argv, argumentMap );
             argumentMap[INCLUDE_OBC_CAVITY_TERM] = "0";
+            appendInputArgumentsToArgumentMap( numberOfArguments, argv, argumentMap );
             runTestsUsingAmoebaTinkerParameterFile( argumentMap );
         }        
     }

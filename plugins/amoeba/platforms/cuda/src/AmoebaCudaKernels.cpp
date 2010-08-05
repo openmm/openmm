@@ -657,10 +657,13 @@ CudaCalcAmoebaGeneralizedKirkwoodForceKernel::~CudaCalcAmoebaGeneralizedKirkwood
 void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::initialize(const System& system, const AmoebaGeneralizedKirkwoodForce& force) {
 
     data.setHasAmoebaGeneralizedKirkwood( true );
+
     int numParticles = system.getNumParticles();
+
     std::vector<float> radius(numParticles);
     std::vector<float> scale(numParticles);
     std::vector<float> charge(numParticles);
+
     for( int ii = 0; ii < numParticles; ii++ ){
         double particleCharge, particleRadius, scalingFactor;
         force.getParticleParameters(ii, particleCharge, particleRadius, scalingFactor);

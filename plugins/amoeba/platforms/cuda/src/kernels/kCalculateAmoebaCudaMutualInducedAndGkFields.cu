@@ -767,9 +767,8 @@ static void cudaComputeAmoebaMutualInducedAndGkFieldBySOR( amoebaGpuContext amoe
 
     static int timestep                  = 0;
     timestep++;
-    static const char* methodName        = "cudaComputeAmoebaMutualInducedAndGkFieldBySOR";
-    static double iterationStat[6]       = { 0.0, 0.0, 1000.0, 0.0, 0.0, 0.0 };
 #ifdef AMOEBA_DEBUG
+    static const char* methodName        = "cudaComputeAmoebaMutualInducedAndGkFieldBySOR";
     std::vector<int> fileId;
     fileId.resize( 2 );
     fileId[0] = timestep;
@@ -781,7 +780,7 @@ static void cudaComputeAmoebaMutualInducedAndGkFieldBySOR( amoebaGpuContext amoe
     int done;
     int iteration;
 
-     gpuContext gpu    = amoebaGpu->gpuContext;
+    gpuContext gpu    = amoebaGpu->gpuContext;
     int numOfElems     = gpu->natoms*3;
     int numThreads     = min( THREADS_PER_BLOCK, numOfElems );
     int numBlocks      = numOfElems/numThreads;
@@ -859,7 +858,6 @@ static void cudaComputeAmoebaMutualInducedAndGkFieldBySOR( amoebaGpuContext amoe
     done      = 0;
     iteration = 1;
 
-time_t start = clock();
     while( !done ){
 
         // matrix multiply
@@ -919,6 +917,7 @@ time_t start = clock();
 #endif
 
         // Debye=4.8033324f
+
         amoebaGpu->psCurrentEpsilon->Download();
         float currentEpsilon                     = amoebaGpu->psCurrentEpsilon->_pSysStream[0][0];
         amoebaGpu->mutualInducedCurrentEpsilon   = currentEpsilon;
@@ -983,43 +982,24 @@ time_t start = clock();
         }
 #endif
         iteration++;
-//done = 1;
-//if(  iteration > 1 )exit(0);
     }
 
     amoebaGpu->mutualInducedDone             = done;
     amoebaGpu->mutualInducedConverged        = ( !done || iteration > amoebaGpu->mutualInducedMaxIterations ) ? 0 : 1;
 
     if( amoebaGpu->log ){
-        static int count = 0;
-        count++;
-        double interationD = static_cast<double>(iteration);
-        iterationStat[0]  += interationD;
-        iterationStat[1]  += interationD*interationD;
-        iterationStat[2]   = interationD < iterationStat[2] ? interationD : iterationStat[2];
-        iterationStat[3]   = interationD > iterationStat[3] ? interationD : iterationStat[3];
-        iterationStat[4]  += 1.0;
-        if( count == 100 ){
-            double average = iterationStat[0]/iterationStat[4]; 
-            double stddev  = iterationStat[1] - average*average*iterationStat[4]; 
-                   stddev  = sqrt( stddev )/(iterationStat[4]-1.0);
-            (void) fprintf( amoebaGpu->log, "%s iteration=%10.3f stddev=%10.3f min/max[%10.3f %10.3f] %10.1f eps=%14.7e\n",
-                            methodName, average, stddev, iterationStat[2], iterationStat[3], iterationStat[4], amoebaGpu->mutualInducedCurrentEpsilon );
-            (void) fflush( amoebaGpu->log );
-            iterationStat[0] = iterationStat[1] = iterationStat[4] = 0.0;
-            count = 0;
-        }
+        trackMutualInducedIterations( amoebaGpu, iteration );
     }
 
 #ifdef AMOEBA_DEBUG
-    if( 1 ){
+    if( 0 ){
         std::vector<int> fileId;
         //fileId.push_back( 0 );
         VectorOfDoubleVectors outputVector;
         cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,                    outputVector );
         cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psInducedDipole,      outputVector );
         cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psInducedDipolePolar, outputVector );
-        cudaWriteVectorOfDoubleVectorsToFile( "CudaMI", fileId, outputVector );
+        cudaWriteVectorOfDoubleVectorsToFile( "CudaMI_GK", fileId, outputVector );
      }
 #endif
 

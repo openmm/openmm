@@ -149,5 +149,8 @@ extern void kClearFields_1( amoebaGpuContext amoebaGpu );
 extern void kClearFields_3( amoebaGpuContext amoebaGpu, unsigned int numberToClear );
 extern unsigned int getThreadsPerBlock( amoebaGpuContext amoebaGpu, unsigned int sharedMemoryPerThread );
 
+extern int isNanOrInfinity( double number );
+extern void trackMutualInducedIterations( amoebaGpuContext amoebaGpu, int iteration);
+
 #endif //__AMOEBA_GPU_TYPES_H__
 
