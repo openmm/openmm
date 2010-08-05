@@ -3027,9 +3027,10 @@ static int readAmoebaSurfaceParameters( FILE* filePtr, MapStringInt& forceMap, c
          //static const unsigned int maxPrint   = MAX_PRINT;
          static const unsigned int maxPrint   = 15;
          unsigned int arraySize               = static_cast<unsigned int>(sasaForce->getNumParticles());
-         (void) fprintf( log, "%s: %u sample of AmoebaSASAForce parameters in %s units; probe radius=%10.4f\n",
-                         methodName.c_str(), arraySize,
+         //(void) fprintf( log, "%s: %u sample of AmoebaSASAForce parameters in %s units; probe radius=%10.4f\n",
                          //methodName.c_str(), arraySize, (useOpenMMUnits ? "OpenMM" : "Amoeba"),
+         (void) fprintf( log, "%s: %u sample of AmoebaSASAForce parameters; probe radius=%10.4f\n",
+                         methodName.c_str(), arraySize,
                          sasaForce->getProbeRadius() );
   
          for( unsigned int ii = 0; ii < arraySize;  ii++ ){
@@ -4505,17 +4506,17 @@ Context* createContext( const std::string& amoebaTinkerParameterFileName, MapStr
     Platform& platform = Platform::getPlatformByName("Cuda");
     map<string, string> properties;
     if( getenv("CudaDevice") || cudaDevice > -1 ){
-        std::string cudaDevice;
+        std::string cudaDeviceStr;
         if( getenv("CudaDevice") ){
-            cudaDevice = getenv("CudaDevice");
+            cudaDeviceStr = getenv("CudaDevice");
         } else {
             std::stringstream cudaDeviceStrStr;
             cudaDeviceStrStr << cudaDevice;
-            cudaDevice = cudaDeviceStrStr.str();
+            cudaDeviceStr = cudaDeviceStrStr.str();
         }
-        properties["CudaDevice"] = cudaDevice;
+        properties["CudaDevice"] = cudaDeviceStr;
         if( log ){
-            (void) fprintf( log, "Setting Cuda device to %s.\n", cudaDevice.c_str() );
+            (void) fprintf( log, "Setting Cuda device to %s.\n", cudaDeviceStr.c_str() );
         }
     }
     Context* context = new Context(*system, *integrator, platform, properties);
