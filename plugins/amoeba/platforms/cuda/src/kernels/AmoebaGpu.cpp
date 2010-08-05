@@ -62,7 +62,15 @@ amoebaGpuContext amoebaGpuInit( _gpuContext* gpu )
     amoebaGpu->log                             = stderr; 
 #endif
     amoebaGpu->numberOfSorWorkVectors          = 4; 
-    amoebaGpu->sharedMemoryPerBlock            = 16384; 
+    
+    if( gpu->sm_version >= SM_20 ){
+        amoebaGpu->sharedMemoryPerBlock = 49152;
+    } else if( gpu->sm_version >= SM_12 ){
+        amoebaGpu->sharedMemoryPerBlock = 16384;
+    } else {
+        amoebaGpu->sharedMemoryPerBlock = 8192;
+    }
+
     amoebaGpu->paddedNumberOfAtoms             = gpu->sim.paddedNumberOfAtoms; 
     amoebaGpu->amoebaSim.numberOfAtoms         = gpu->natoms;
     amoebaGpu->amoebaSim.paddedNumberOfAtoms   = gpu->sim.paddedNumberOfAtoms;

@@ -1203,10 +1203,11 @@ void kCalculateAmoebaKirkwoodEDiff( amoebaGpuContext amoebaGpu )
     }   
     
     if( amoebaGpu->log && timestep == 1 ){
-        (void) fprintf( amoebaGpu->log, "kCalculateAmoebaCudaKirkwoodEDiffN2Forces:  numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%lu shrd=%lu Ebuf=%u ixnCt=%lu workUnits=%u\n",
+        (void) fprintf( amoebaGpu->log, "kCalculateAmoebaCudaKirkwoodEDiffN2Forces: blocks=%u threads=%u bffr/Warp=%u atm=%lu shrd=%lu"
+                                        " Ebuf=%u ixnCt=%lu workUnits=%u sm=%d device=%d sharedMemoryPerBlock=%u\n",
                         amoebaGpu->nonbondBlocks, threadsPerBlock, amoebaGpu->bOutputBufferPerWarp,
                         sizeof(KirkwoodEDiffParticle), sizeof(KirkwoodEDiffParticle)*threadsPerBlock,
-                        amoebaGpu->energyOutputBuffers, (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
+                        amoebaGpu->energyOutputBuffers, (*gpu->psInteractionCount)[0], gpu->sim.workUnits, gpu->sm_version, gpu->device, amoebaGpu->sharedMemoryPerBlock );
         //gpuPrintCudaAmoebaGmxSimulation(amoebaGpu, amoebaGpu->log );
         (void) fflush( amoebaGpu->log );
     }   
@@ -1237,14 +1238,6 @@ void kCalculateAmoebaKirkwoodEDiff( amoebaGpuContext amoebaGpu )
 #endif
 
     } else {
-
-#ifdef AMOEBA_DEBUG
-        (void) fprintf( amoebaGpu->log, "kCalculateAmoebaCudaKirkwoodEDiffN2Forces no warp:  numBlocks=%u numThreads=%u bufferPerWarp=%u atm=%u shrd=%u Ebuf=%u ixnCt=%u workUnits=%u\n",
-                        amoebaGpu->nonbondBlocks, threadsPerBlock, amoebaGpu->bOutputBufferPerWarp,
-                        sizeof(KirkwoodEDiffParticle), sizeof(KirkwoodEDiffParticle)*threadsPerBlock,
-                        amoebaGpu->energyOutputBuffers, (*gpu->psInteractionCount)[0], gpu->sim.workUnits );
-        (void) fflush( amoebaGpu->log );
-#endif
 
         kCalculateAmoebaCudaKirkwoodEDiffN2Forces_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(KirkwoodEDiffParticle)*threadsPerBlock>>>(
                                                                            amoebaGpu->psWorkUnit->_pDevStream[0],
