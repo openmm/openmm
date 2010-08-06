@@ -1925,7 +1925,7 @@ static void readAmoebaMultipoleCovalent( FILE* filePtr, AmoebaMultipoleForce* mu
              StringVector lineTokens;
              isNotEof = readLine( filePtr, lineTokens, lineCount, log );
              std::vector<int> intVector;
-             readIntVector( filePtr, lineTokens, 2, intVector, lineCount, lineTokens[0], log );
+             readIntVector( filePtr, lineTokens, 2, intVector, lineCount, lineTokens[0], (ii < 10 ? log: NULL) );
              multipoleForce->setCovalentMap( ii, covalentTypes[jj], intVector ); 
          }
      }
