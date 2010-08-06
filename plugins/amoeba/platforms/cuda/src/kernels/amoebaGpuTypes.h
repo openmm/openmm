@@ -47,8 +47,6 @@ struct _amoebaGpuContext {
  
     FILE* log;
 
-    unsigned int sharedMemoryPerBlock;
-
     // diagnostic arrays
 
     MapIntFloat** pMapArray;

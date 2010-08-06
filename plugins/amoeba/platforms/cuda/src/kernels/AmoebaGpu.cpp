@@ -63,14 +63,6 @@ amoebaGpuContext amoebaGpuInit( _gpuContext* gpu )
 #endif
     amoebaGpu->numberOfSorWorkVectors          = 4; 
     
-    if( gpu->sm_version >= SM_20 ){
-        amoebaGpu->sharedMemoryPerBlock = 49152;
-    } else if( gpu->sm_version >= SM_12 ){
-        amoebaGpu->sharedMemoryPerBlock = 16384;
-    } else {
-        amoebaGpu->sharedMemoryPerBlock = 8192;
-    }
-
     amoebaGpu->paddedNumberOfAtoms             = gpu->sim.paddedNumberOfAtoms; 
     amoebaGpu->amoebaSim.numberOfAtoms         = gpu->natoms;
     amoebaGpu->amoebaSim.paddedNumberOfAtoms   = gpu->sim.paddedNumberOfAtoms;
@@ -183,7 +175,9 @@ void gpuPrintCudaAmoebaGmxSimulation(amoebaGpuContext amoebaGpu, FILE* log )
     (void) fprintf( log, "\n\n" );
     (void) fprintf( log, "     gpuContext                         %p\n",      amoebaGpu->gpuContext );
     (void) fprintf( log, "     log                                %p\n",      amoebaGpu->log );
-    (void) fprintf( log, "     sharedMemoryPerBlock               %u\n",      amoebaGpu->sharedMemoryPerBlock );
+    (void) fprintf( log, "     sm_version                         %u\n",      gpu->sm_version );
+    (void) fprintf( log, "     device                             %u\n",      gpu->device );
+    (void) fprintf( log, "     sharedMemoryPerBlock               %u\n",      gpu->sharedMemoryPerBlock );
     (void) fprintf( log, "     pMapArray                          %p\n",      amoebaGpu->pMapArray );
     (void) fprintf( log, "     dMapArray                          %p\n",      amoebaGpu->dMapArray );
     (void) fprintf( log, "     bOutputBufferPerWarp               %d\n",      amoebaGpu->bOutputBufferPerWarp );
@@ -3490,7 +3484,7 @@ tgx     = 0;
 unsigned int getThreadsPerBlock( amoebaGpuContext amoebaGpu, unsigned int sharedMemoryPerThread )
 {
     unsigned int grid               = amoebaGpu->gpuContext->grid;
-    unsigned int threadsPerBlock    = (amoebaGpu->sharedMemoryPerBlock + grid -1)/(grid*sharedMemoryPerThread);
+    unsigned int threadsPerBlock    = (amoebaGpu->gpuContext->sharedMemoryPerBlock + grid -1)/(grid*sharedMemoryPerThread);
     threadsPerBlock                 = threadsPerBlock < 1 ? 1 : threadsPerBlock;
     threadsPerBlock                 *= grid;
 
