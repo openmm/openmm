@@ -1899,10 +1899,26 @@ void gpuSetAmoebaObcParameters( amoebaGpuContext amoebaGpu, float innerDielectri
 
     gpu->sim.preFactor               = -amoebaGpu->amoebaSim.electric*((1.0f/innerDielectric)-(1.0f/solventDielectric));
 
+    if( amoebaGpu->log ){
+        (void) fprintf( amoebaGpu->log,"gpuSetAmoebaObcParameters: cavity=%d dielectricOffset=%15.7e probeRadius=%15.7e surfaceAreaFactor=%15.7e\n", 
+                        includeCavityTerm, dielectricOffset, probeRadius, surfaceAreaFactor );
+        (void) fprintf( amoebaGpu->log,"                           gkc=%12.3f solventDielectric=%15.7e innerDielectric=%15.7e sim.preFactor=%15.7e\n", 
+                        amoebaGpu->amoebaSim.gkc, amoebaGpu->amoebaSim.dwater, amoebaGpu->amoebaSim.dielec, gpu->sim.preFactor );
+        (void) fprintf( amoebaGpu->log,"                           fc=%15.7e fd=%15.7e fq=%15.7e\n",
+                        amoebaGpu->amoebaSim.fc, amoebaGpu->amoebaSim.fq, amoebaGpu->amoebaSim.fq );
+        (void) fprintf( amoebaGpu->log,"\nRadius (r-off) scl*(r-off) scl\n" );
+        for (unsigned int i = 0; i < amoebaGpu->paddedNumberOfAtoms && i < 10; i++) 
+        {
+            (void) fprintf( amoebaGpu->log,"%6d %15.7e %15.7e %15.7e %15.7e\n", i,
+                            radius[i] , (*gpu->psObcData)[i].x, (*gpu->psObcData)[i].y, scale[i] );
+        }
+    }
+
     gpuRotationToLabFrameAllocate( amoebaGpu );
     gpuFixedEFieldAllocate( amoebaGpu );
     gpuElectrostaticAllocate( amoebaGpu );
     gpuKirkwoodAllocate( amoebaGpu );
+
 }
 
 static int encodeCell( unsigned int x, unsigned int y ){
@@ -3775,11 +3791,46 @@ void cudaLoadCudaFloatArray( int numberOfParticles, int entriesPerParticle, CUDA
 
    --------------------------------------------------------------------------------------- */
 
+void cudaLoadCudaFloat2Array( int numberOfParticles, int entriesPerParticle, CUDAStream<float2>* array, VectorOfDoubleVectors& outputVector ) 
+{
+    // ---------------------------------------------------------------------------------------
+
+    // static const std::string methodName = "cudaLoadCudaFloat2Array";
+
+    // ---------------------------------------------------------------------------------------
+
+    array->Download();
+    int runningIndex  = 0;
+    
+    outputVector.resize( numberOfParticles ); 
+ 
+    for( int ii = 0; ii < numberOfParticles; ii++ ){ 
+        if( entriesPerParticle > 0 ){
+            outputVector[ii].push_back( array->_pSysStream[0][runningIndex].x );
+        }
+        if( entriesPerParticle > 1 ){
+            outputVector[ii].push_back( array->_pSysStream[0][runningIndex].y );
+        }
+        runningIndex++;
+    }
+}
+
+/**---------------------------------------------------------------------------------------
+
+   Load contents of arrays into vector
+
+   @param numberOfParticles    number of particles
+   @param entriesPerParticle   entries/particles array
+   @param array                cuda array
+   @param outputVector         output vector
+
+   --------------------------------------------------------------------------------------- */
+
 void cudaLoadCudaFloat4Array( int numberOfParticles, int entriesPerParticle, CUDAStream<float4>* array, VectorOfDoubleVectors& outputVector ) 
 {
     // ---------------------------------------------------------------------------------------
 
-    // static const std::string methodName = "cudaLoadCudaFloatArray";
+    // static const std::string methodName = "cudaLoadCudaFloat4Array";
 
     // ---------------------------------------------------------------------------------------
 
@@ -4089,6 +4140,7 @@ void trackMutualInducedIterations( amoebaGpuContext amoebaGpu, int iteration){
 // ---------------------------------------------------------------------------------------
 
     if( amoebaGpu->log == NULL || currentStep > 20000 )return;
+    //if( amoebaGpu->log == NULL )return;
 
     gpuContext gpu                       = amoebaGpu->gpuContext;
     currentStep++;
@@ -4117,7 +4169,7 @@ void trackMutualInducedIterations( amoebaGpuContext amoebaGpu, int iteration){
             fileId.push_back( currentStep );
         }    
         if( (currentStep % 20) == 0 || fileId[0] > 20 ){
-             (void) fprintf( amoebaGpu->log, "step=%d fileId=%d\n", currentStep, fileId[0] );
+             (void) fprintf( amoebaGpu->log, "step=%d fileId=%d iterations=%d\n", currentStep, fileId[0], iteration );
         }
         (void) fflush( amoebaGpu->log );
         VectorOfDoubleVectors outputVector;
@@ -4129,7 +4181,7 @@ void trackMutualInducedIterations( amoebaGpuContext amoebaGpu, int iteration){
             cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psInducedDipoleS,     outputVector );
             cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psInducedDipolePolarS,outputVector );
 */
-        cudaWriteVectorOfDoubleVectorsToFile( "CudaMIT", fileId, outputVector );
+        cudaWriteVectorOfDoubleVectorsToFile( "CudaMI", fileId, outputVector );
         int nansPresent = isNanOrInfinity( amoebaGpu->mutualInducedCurrentEpsilon );
         if( nansPresent == 0 ){ 
             for( int ii = 0; ii < gpu->natoms && nansPresent == 0; ii++ ){

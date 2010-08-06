@@ -4,6 +4,7 @@
 
 #include "amoebaGpuTypes.h"
 #include "amoebaCudaKernels.h"
+#include "cudaKernels.h"
 #include "kCalculateAmoebaCudaUtilities.h"
 #include "kCalculateAmoebaCudaKirkwoodParticle.h"
 extern void kCalculateObcGbsaForces2(gpuContext gpu);
@@ -1693,7 +1694,7 @@ __launch_bounds__(GT2XX_THREADS_PER_BLOCK, 1)
 __launch_bounds__(G8X_THREADS_PER_BLOCK, 1)
 #endif
  void kReduceToBornForcePrefactor_kernel( unsigned int fieldComponents, unsigned int outputBuffers, float* fieldIn1, float* fieldIn2,
-                                                    float* fieldOut )
+                                          float* fieldOut )
 {
     unsigned int pos = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -1750,7 +1751,7 @@ __launch_bounds__(GT2XX_THREADS_PER_BLOCK, 1)
 __launch_bounds__(G8X_THREADS_PER_BLOCK, 1)
 #endif
 void kReduceToBornForcePrefactorAndSASA_kernel( unsigned int fieldComponents, unsigned int outputBuffers, float* fieldIn1, float* fieldIn2,
-                                                           float* fieldOut )
+                                                float* fieldOut )
 {
     unsigned int pos = blockIdx.x * blockDim.x + threadIdx.x;
 
@@ -1802,13 +1803,13 @@ void kReduceToBornForcePrefactorAndSASA_kernel( unsigned int fieldComponents, un
               ratio6   = ratio6*ratio6;
         float saTerm   = cSim.surfaceAreaFactor * r * r * ratio6;
 
-        totalForce     += saTerm / bornRadius;
-        totalForce     *= bornRadius * bornRadius * obcChain;
+        totalForce    += saTerm / bornRadius;
+        totalForce    *= bornRadius * bornRadius * obcChain;
 
-        energy         += saTerm;
+        fieldOut[pos]  = totalForce;
 
-        fieldOut[pos]   = totalForce*bornRadius*bornRadius*obcChain;
-        pos            += gridDim.x * blockDim.x;
+        energy        += saTerm;
+        pos           += gridDim.x * blockDim.x;
     }
 
     cSim.pEnergy[blockIdx.x * blockDim.x + threadIdx.x] += energy / -6.0f;
@@ -1830,11 +1831,48 @@ static void kReduceToBornForcePrefactor( amoebaGpuContext amoebaGpu )
 {
 
     if( amoebaGpu->includeObcCavityTerm ){
+
         kReduceToBornForcePrefactorAndSASA_kernel<<<amoebaGpu->nonbondBlocks, amoebaGpu->fieldReduceThreadsPerBlock>>>(
                                                     amoebaGpu->paddedNumberOfAtoms, amoebaGpu->outputBuffers,
                                                     amoebaGpu->psWorkArray_1_1->_pDevStream[0],
                                                     amoebaGpu->psWorkArray_1_2->_pDevStream[0],
                                                     amoebaGpu->gpuContext->psBornForce->_pDevStream[0] );
+#ifdef AMOEBA_DEBUG
+    if( amoebaGpu->log ){
+
+        // kClearEnergy() should be called prior to kReduceToBornForcePrefactorAndSASA_kernel
+
+        double energy = kReduceEnergy( amoebaGpu->gpuContext );
+        amoebaGpu->gpuContext->psBornForce->Download();
+        amoebaGpu->gpuContext->psObcData->Download();
+        amoebaGpu->gpuContext->psBornRadii->Download();
+        (void) fprintf( amoebaGpu->log, "Born force w/ cavity energy=%15.7e.\n", energy ); (void) fflush( amoebaGpu->log );
+
+        for( int ii = 0; ii < amoebaGpu->gpuContext->natoms; ii++ ){
+           (void) fprintf( amoebaGpu->log, "%5d ", ii);
+           (void) fprintf( amoebaGpu->log,"bF %16.9e obc=%16.9e bR=%16.9e\n",
+                           amoebaGpu->gpuContext->psBornForce->_pSysStream[0][ii],
+                           amoebaGpu->gpuContext->psObcData->_pSysStream[0][ii].x,
+                           amoebaGpu->gpuContext->psBornRadii->_pSysStream[0][ii] );
+        }
+        (void) fflush( amoebaGpu->log );
+        if( 1 ){
+            std::vector<int> fileId;
+            //fileId.push_back( 0 );
+            VectorOfDoubleVectors outputVector;
+            cudaLoadCudaFloat4Array( amoebaGpu->gpuContext->natoms,  3, amoebaGpu->gpuContext->psPosq4,       outputVector );
+            cudaLoadCudaFloatArray(  amoebaGpu->gpuContext->natoms,  1, amoebaGpu->gpuContext->psBornRadii,   outputVector );
+            cudaLoadCudaFloat2Array( amoebaGpu->gpuContext->natoms,  2, amoebaGpu->gpuContext->psObcData,     outputVector );
+            cudaLoadCudaFloatArray(  amoebaGpu->gpuContext->natoms,  1, amoebaGpu->gpuContext->psBornForce,   outputVector );
+            cudaWriteVectorOfDoubleVectorsToFile( "CudaBornForce", fileId, outputVector );
+            (void) fprintf( amoebaGpu->log, "kReduceToBornForcePrefactor: exiting.\n" );
+            (void) fprintf( stderr, "kReduceToBornForcePrefactor: exiting.\n" ); (void) fflush( stderr );
+            exit(0);
+        }
+
+    }
+#endif
+
     } else {
         kReduceToBornForcePrefactor_kernel<<<amoebaGpu->nonbondBlocks, amoebaGpu->fieldReduceThreadsPerBlock>>>(
                                              amoebaGpu->paddedNumberOfAtoms, amoebaGpu->outputBuffers,

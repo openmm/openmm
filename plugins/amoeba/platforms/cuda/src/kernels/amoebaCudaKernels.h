@@ -140,6 +140,7 @@ extern void cudaWriteFloat1AndFloat1ArraysToFile( int numberOfAtoms, char* fname
 extern void readFile( std::string fileName, StringVectorVector& fileContents );
  
 extern void cudaLoadCudaFloatArray( int numberOfParticles, int entriesPerParticle, CUDAStream<float>* array, VectorOfDoubleVectors& outputVector );
+extern void cudaLoadCudaFloat2Array( int numberOfParticles, int entriesPerParticle, CUDAStream<float2>* array, VectorOfDoubleVectors& outputVector );
 extern void cudaLoadCudaFloat4Array( int numberOfParticles, int entriesPerParticle, CUDAStream<float4>* array, VectorOfDoubleVectors& outputVector );
 extern void cudaWriteVectorOfDoubleVectorsToFile( char* fname, std::vector<int>& fileId, VectorOfDoubleVectors& outputVector );
 
