@@ -94,10 +94,11 @@ ELSE( CMAKE_SIZEOF_VOID_P EQUAL 8 )
 ENDIF( CMAKE_SIZEOF_VOID_P EQUAL 8 )
 
 # Build 32 bit binaries, since CUDA doesn't currently work with 64 bit
-IF (APPLE)
-   SET (CMAKE_CXX_FLAGS "-arch i386 -isysroot /Developer/SDKs/MacOSX10.5.sdk -mmacosx-version-min=10.5")
-   SET (CMAKE_C_FLAGS "-arch i386 -isysroot /Developer/SDKs/MacOSX10.5.sdk -mmacosx-version-min=10.5")
-ENDIF (APPLE)
+IF (APPLE AND NOT CMAKE_OSX_ARCHITECTURES)
+    SET (CMAKE_OSX_ARCHITECTURES "i386" CACHE STRING "The processor architectures to build for" FORCE)
+    SET (CMAKE_OSX_DEPLOYMENT_TARGET "10.5" CACHE STRING "The minimum version of OS X to support" FORCE)
+    SET (CMAKE_OSX_SYSROOT "/Developer/SDKs/MacOSX10.5.sdk" CACHE STRING "The SDK to build against" FORCE)
+ENDIF (APPLE AND NOT CMAKE_OSX_ARCHITECTURES)
 
 IF(UNIX AND NOT CMAKE_BUILD_TYPE)
     SET(CMAKE_BUILD_TYPE Release CACHE STRING "Debug or Release build" FORCE)
@@ -331,6 +332,7 @@ IF(CUDA_FOUND)
         SET(FLAGS ${FLAGS} -gencode arch=compute_13,code=sm_13)
         SET(FLAGS ${FLAGS} -gencode arch=compute_20,code=sm_20)
         SET(FLAGS ${FLAGS} -use_fast_math)
+        SET(FLAGS ${FLAGS} -m32)
         IF(MSVC)
             # Unfortunately the variables CUDA_NVCC_FLAGS_RELEASE and CUDA_NVCC_FLAGS_DEBUG
             # appear to be unused, at least in CMake 2.6
