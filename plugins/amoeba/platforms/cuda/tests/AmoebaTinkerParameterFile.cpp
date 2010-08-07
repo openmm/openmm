@@ -3776,22 +3776,25 @@ Integrator* readAmoebaParameterFile( const std::string& inputParameterFile, MapS
                 readAmoebaGeneralizedKirkwoodParameters( filePtr, forceMap, tokens, system, useOpenMMUnits, supplementary, inputArgumentMap, &lineCount, log );
             } else if( field == "AmoebaGkForce" ){
                 readVec3( filePtr, tokens, forces[AMOEBA_GK_FORCE], &lineCount, field, log );
-            } else if(  field == "AmoebaGk_A_ForceAndTorque"            || 
+            } else if( field == "AmoebaGkAndCavityForce" ){
+                readVec3( filePtr, tokens, forces[AMOEBA_GK_CAVITY_FORCE], &lineCount, field, log );
+            } else if( field == "AmoebaGk_A_ForceAndTorque"            || 
                        field == "AmoebaGk_A_Force"                     ||
                        field == "AmoebaGk_A_DrB"                       ||
                        field == "AmoebaDBorn"                          ||
                        field == "AmoebaBorn1Force"                     ||
                        field == "AmoebaBornForce"                      ||
                        field == "AmoebaGkEdiffForceAndTorque"          ||
-                       field == "AmoebaGkEdiffForce"                      ){
+                       field == "AmoebaGkEdiffForce"                   ){
                 std::vector< std::vector<double> > vectorOfDoubleVectors;
                 readVectorOfDoubleVectors( filePtr, tokens, vectorOfDoubleVectors, &lineCount, field, log );
                 supplementary[field] = vectorOfDoubleVectors;
-            } else if( field == "AmoebaGkEnergy"       || 
-                       field == "AmoebaGkEdiffEnergy"  ||
-                       field == "AmoebaGk_A_Energy"    ||
-                       field == "AmoebaBorn1Energy"    ||
-                       field == "AmoebaBornEnergy"     ){
+            } else if( field == "AmoebaGkEnergy"            || 
+                       field == "AmoebaGkEdiffEnergy"       ||
+                       field == "AmoebaGk_A_Energy"         ||
+                       field == "AmoebaBorn1Energy"         ||
+                       field == "AmoebaBornEnergy"          ||
+                       field == "AmoebaGkAndCavityEnergy"      ){
                 double value = atof( tokens[1].c_str() );
                 std::vector< std::vector<double> > vectorOfDoubleVectors;
                 std::vector<double> doubleVectors;
@@ -3800,6 +3803,8 @@ Integrator* readAmoebaParameterFile( const std::string& inputParameterFile, MapS
                 supplementary[field] =  vectorOfDoubleVectors;
                 if( field == "AmoebaGkEnergy" ){
                     potentialEnergy[AMOEBA_GK_FORCE] = value; 
+                } else if( field == "AmoebaGkAndCavityEnergy" ){
+                    potentialEnergy[AMOEBA_GK_CAVITY_FORCE] = value; 
                 }
  
             // Amoeba SASA
@@ -3871,7 +3876,7 @@ Integrator* readAmoebaParameterFile( const std::string& inputParameterFile, MapS
     for( MapStringDoubleI ii = potentialEnergy.begin(); ii != potentialEnergy.end(); ii++ ){
         if( ii->first == ALL_FORCES ){
             allEnergy = ii->second;
-        } else {
+        } else if( ii->first != AMOEBA_GK_CAVITY_FORCE ){
             totalPotentialEnergy += ii->second;
         }
         if( log )(void) fprintf( log, "%30s %15.7e\n", ii->first.c_str(), ii->second );
@@ -3879,6 +3884,11 @@ Integrator* readAmoebaParameterFile( const std::string& inputParameterFile, MapS
     potentialEnergy["SumOfInputEnergies"] = totalPotentialEnergy;
        
     if( log ){
+       MapStringDoubleI isPresent = potentialEnergy.find( AMOEBA_GK_CAVITY_FORCE );
+       if( isPresent != potentialEnergy.end() ){
+           double cavityEnergy = potentialEnergy[AMOEBA_GK_CAVITY_FORCE] - potentialEnergy[AMOEBA_GK_FORCE];
+           (void) fprintf( log, "Cavity energy %15.7e\n", cavityEnergy );
+       }
        (void) fprintf( log, "Total PE %15.7e  %15.7e\n", totalPotentialEnergy, allEnergy );
        (void) fprintf( log, "Read %d lines from file=<%s>\n", lineCount, inputParameterFile.c_str() );
        (void) fflush( log );
@@ -4646,18 +4656,21 @@ void testUsingAmoebaTinkerParameterFile( const std::string& amoebaTinkerParamete
 // ---------------------------------------------------------------------------------------
 
     int applyAssert                          = 0;
+    int includeCavityTerm                    = 0;
     double tolerance                         = 1.0e-02;
     static const std::string methodName      = "testUsingAmoebaTinkerParameterFile";
  
 // ---------------------------------------------------------------------------------------
  
-   setIntFromMap(    inputArgumentMap, "applyAssert",  applyAssert);
-   setDoubleFromMap( inputArgumentMap, "tolerance",    tolerance );
+    setIntFromMap(    inputArgumentMap, "applyAssert",  applyAssert);
+    setDoubleFromMap( inputArgumentMap, "tolerance",    tolerance );
+    setIntFromMap(    inputArgumentMap, INCLUDE_OBC_CAVITY_TERM,  includeCavityTerm );
 
     MapStringVec3 tinkerForces;
     MapStringDouble tinkerEnergies;
     MapStringVectorOfVectors supplementary;
  
+
     MapStringIntI isPresent = forceMap.find( AMOEBA_GK_FORCE );
     bool gkIsActive;
     if( isPresent != forceMap.end() && isPresent->second != 0 ){
@@ -4684,12 +4697,17 @@ void testUsingAmoebaTinkerParameterFile( const std::string& amoebaTinkerParamete
     std::string activeForceNames;
     for( MapStringInt::const_iterator ii = forceMap.begin(); ii != forceMap.end(); ii++ ){
         if( ii->second ){
-            forceList.push_back( ii->first );
-            activeForceNames += ii->first + ":";
+            if( includeCavityTerm && ii->first == AMOEBA_GK_FORCE ){
+                forceList.push_back( AMOEBA_GK_CAVITY_FORCE );
+                activeForceNames += AMOEBA_GK_CAVITY_FORCE + ":";
+            } else {
+                forceList.push_back( ii->first );
+                activeForceNames += ii->first + ":";
+            }
         }
     }
     if( forceList.size() >= 11 ){
-        activeForceNames =ALL_FORCES;
+        activeForceNames = ALL_FORCES;
     }
   
     std::vector<Vec3> expectedForces;
@@ -4805,6 +4823,7 @@ void testUsingAmoebaTinkerParameterFile( const std::string& amoebaTinkerParamete
                             coordinateConversion*(box[1][2] - box[0][2]) );
 
             unsigned int maxPrint = 5;
+/*
             (void) fprintf( filePtr, "Sample raw coordinates (w/o conversion) %8u\n", static_cast<unsigned int>(coordinates.size()) );
             for( unsigned int ii = 0; ii < coordinates.size(); ii++ ){
                 (void) fprintf( filePtr, "%8u [%16.7f %16.7f %16.7f]\n", ii,
@@ -4813,6 +4832,7 @@ void testUsingAmoebaTinkerParameterFile( const std::string& amoebaTinkerParamete
                     ii = coordinates.size() - maxPrint - 1;
                 }
             } 
+*/
             (void) fflush( filePtr );
         }
     }
@@ -4844,7 +4864,7 @@ void testUsingAmoebaTinkerParameterFile( const std::string& amoebaTinkerParamete
                     }
                 }
             }
-            (void) fprintf( filePtr, "%30s maxRelF/E %10.3e %10.3e E[%15.7e %15.7e] %20s %d\n", activeForceNames.c_str(), maxRelativeDelta,
+            (void) fprintf( filePtr, "%40s maxRelF/E %10.3e %10.3e E[%15.7e %15.7e] %20s %d\n", activeForceNames.c_str(), maxRelativeDelta,
                             deltaE, expectedEnergy, energyConversion*state.getPotentialEnergy(), amoebaTinkerParameterFileName.c_str(), useOpenMMUnits );
             (void) fflush( filePtr );
         }

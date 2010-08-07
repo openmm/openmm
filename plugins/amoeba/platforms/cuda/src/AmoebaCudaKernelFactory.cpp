@@ -90,7 +90,6 @@ KernelImpl* AmoebaCudaKernelFactory::createKernelImpl(std::string name, const Pl
         contextToAmoebaDataMap[&context]       = amoebaCudaData;
         amoebaCudaData->setLog( stderr );
         amoebaCudaData->setContextImpl( static_cast<void*>(&context) );
-        //(void) fprintf( stderr, "AmoebaCudaKernelFactory::createKernelImpl amoebaCudaDataV=%p\n", static_cast<void*>(amoebaCudaData) );
     } else {
         amoebaCudaData                         = mapIterator->second;
     }

@@ -113,6 +113,7 @@ void AmoebaCudaData::initializeGpu( void ) {
         }
         amoebaGpuBuildOutputBuffers( amoebaGpu );
         amoebaGpuBuildThreadBlockWorkList( amoebaGpu );
+        amoebaGpuBuildScalingList( amoebaGpu );
         amoebaGpuSetConstants( amoebaGpu );
         gpuInitialized = true;
         if( log ){
