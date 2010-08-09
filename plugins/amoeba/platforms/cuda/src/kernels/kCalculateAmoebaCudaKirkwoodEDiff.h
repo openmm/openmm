@@ -63,14 +63,6 @@ void METHOD_NAME(kCalculateAmoebaCudaKirkwoodEDiff, Forces_kernel)(
     unsigned int end             = (warp+1)*numWorkUnits/totalWarps;
     unsigned int lasty           = 0xFFFFFFFF;
 
-    float4 jCoord;
-    float jDipole[3];     
-    float jQuadrupole[9];     
-    float jInducedDipole[3];     
-    float jInducedDipolePolar[3];     
-    float jInducedDipoleS[3];     
-    float jInducedDipolePolarS[3];     
-
     float totalEnergy     = 0.0f;
     float tinker_f        = (cAmoebaSim.electric/cAmoebaSim.dielec);
 
@@ -80,9 +72,6 @@ void METHOD_NAME(kCalculateAmoebaCudaKirkwoodEDiff, Forces_kernel)(
         unsigned int x;
         unsigned int y;
         bool bExclusionFlag;
-
-        float forceSum[3];
-        float torqueSum[3];
 
         float force[3];
         float torqueI[3];
@@ -100,15 +89,20 @@ void METHOD_NAME(kCalculateAmoebaCudaKirkwoodEDiff, Forces_kernel)(
         KirkwoodEDiffParticle* psA    = &sA[tbx];
 
         unsigned int atomI            = x + tgx;
-        float4 iCoord                 = atomCoord[atomI];
+        KirkwoodEDiffParticle localParticle;
+        loadKirkwoodEDiffShared(&localParticle, atomI,
+                                atomCoord,
+                                labFrameDipole, labFrameQuadrupole,
+                                inducedDipole,  inducedDipolePolar,
+                                inducedDipoleS, inducedDipolePolarS );
 
-        forceSum[0]                   = 0.0f;
-        forceSum[1]                   = 0.0f;
-        forceSum[2]                   = 0.0f;
+        localParticle.force[0]                   = 0.0f;
+        localParticle.force[1]                   = 0.0f;
+        localParticle.force[2]                   = 0.0f;
 
-        torqueSum[0]                  = 0.0f;
-        torqueSum[1]                  = 0.0f;
-        torqueSum[2]                  = 0.0f;
+        localParticle.torque[0]                  = 0.0f;
+        localParticle.torque[1]                  = 0.0f;
+        localParticle.torque[2]                  = 0.0f;
 
         if (x == y) // Handle diagonals uniquely at 50% efficiency
         {
@@ -135,22 +129,8 @@ void METHOD_NAME(kCalculateAmoebaCudaKirkwoodEDiff, Forces_kernel)(
 
                     unsigned int atomJ      = (y + j);
 
-                    // load coords, charge, ...
-
-                    loadKirkwoodEDiffData( &(psA[j]), &jCoord,
-                                           jDipole,         jQuadrupole,
-                                           jInducedDipole,  jInducedDipolePolar,
-                                           jInducedDipoleS, jInducedDipolePolarS );
-
-                    calculateKirkwoodEDiffPairIxn_kernel( iCoord,                                     jCoord,
-                                                          cAmoebaSim.pDampingFactorAndThole[atomI].x, psA[j].damp,
-                                                          cAmoebaSim.pDampingFactorAndThole[atomI].y, psA[j].thole,
-                                                          &(labFrameDipole[3*atomI]),                 jDipole,
-                                                          &(labFrameQuadrupole[9*atomI]),             jQuadrupole,
-                                                          &(inducedDipole[3*atomI]),                  jInducedDipole,
-                                                          &(inducedDipolePolar[3*atomI]),             jInducedDipolePolar,
-                                                          &(inducedDipoleS[3*atomI]),                 jInducedDipoleS,
-                                                          &(inducedDipolePolarS[3*atomI]),            jInducedDipolePolarS,
+                    
+                    calculateKirkwoodEDiffPairIxn_kernel( localParticle,                              psA[j],
                                                           pScale,                                     dScale,
                                                           &energy, force, torqueI, torqueJ
 #ifdef AMOEBA_DEBUG
@@ -162,9 +142,9 @@ void METHOD_NAME(kCalculateAmoebaCudaKirkwoodEDiff, Forces_kernel)(
 
                     // torques include i == j contribution
 
-                    torqueSum[0]           += mask ? torqueI[0]  : 0.0f;
-                    torqueSum[1]           += mask ? torqueI[1]  : 0.0f;
-                    torqueSum[2]           += mask ? torqueI[2]  : 0.0f;
+                    localParticle.torque[0]           += mask ? torqueI[0]  : 0.0f;
+                    localParticle.torque[1]           += mask ? torqueI[1]  : 0.0f;
+                    localParticle.torque[2]           += mask ? torqueI[2]  : 0.0f;
  
                     totalEnergy            += mask ? 0.5f*energy : 0.0f;
 
@@ -172,9 +152,9 @@ void METHOD_NAME(kCalculateAmoebaCudaKirkwoodEDiff, Forces_kernel)(
 
                     mask                    =  (atomI == atomJ) ? 0 : mask;
 
-                    forceSum[0]            += mask ? force[0]    : 0.0f;
-                    forceSum[1]            += mask ? force[1]    : 0.0f;
-                    forceSum[2]            += mask ? force[2]    : 0.0f;
+                    localParticle.force[0]            += mask ? force[0]    : 0.0f;
+                    localParticle.force[1]            += mask ? force[1]    : 0.0f;
+                    localParticle.force[2]            += mask ? force[2]    : 0.0f;
 
 
 #ifdef AMOEBA_DEBUG
@@ -210,27 +190,12 @@ if( atomI == targetAtom  || atomJ == targetAtom ){
 
                     unsigned int atomJ      = (y + j);
 
-                    // load coords, charge, ...
-
-                    loadKirkwoodEDiffData( &(psA[j]), &jCoord,
-                                           jDipole,         jQuadrupole,
-                                           jInducedDipole,  jInducedDipolePolar,
-                                           jInducedDipoleS, jInducedDipolePolarS );
-
                     float pScale;
                     float dScale;
                     getMaskedDScaleFactor( j, dScaleMask, &dScale );
                     getMaskedPScaleFactor( j, pScaleMask, &pScale );
 
-                    calculateKirkwoodEDiffPairIxn_kernel( iCoord,                                     jCoord,
-                                                          cAmoebaSim.pDampingFactorAndThole[atomI].x, psA[j].damp,
-                                                          cAmoebaSim.pDampingFactorAndThole[atomI].y, psA[j].thole,
-                                                          &(labFrameDipole[3*atomI]),                 jDipole,
-                                                          &(labFrameQuadrupole[9*atomI]),             jQuadrupole,
-                                                          &(inducedDipole[3*atomI]),                  jInducedDipole,
-                                                          &(inducedDipolePolar[3*atomI]),             jInducedDipolePolar,
-                                                          &(inducedDipoleS[3*atomI]),                 jInducedDipoleS,
-                                                          &(inducedDipolePolarS[3*atomI]),            jInducedDipolePolarS,
+                    calculateKirkwoodEDiffPairIxn_kernel( localParticle,                              psA[j],
                                                           pScale,                                     dScale,
                                                           &energy, force, torqueI, torqueJ
 #ifdef AMOEBA_DEBUG
@@ -242,17 +207,17 @@ if( atomI == targetAtom  || atomJ == targetAtom ){
 
                     // torques include i == j contribution
 
-                    torqueSum[0]           += mask ? torqueI[0]  : 0.0f;
-                    torqueSum[1]           += mask ? torqueI[1]  : 0.0f;
-                    torqueSum[2]           += mask ? torqueI[2]  : 0.0f;
+                    localParticle.torque[0]           += mask ? torqueI[0]  : 0.0f;
+                    localParticle.torque[1]           += mask ? torqueI[1]  : 0.0f;
+                    localParticle.torque[2]           += mask ? torqueI[2]  : 0.0f;
 
                     totalEnergy            += mask ? 0.5f*energy : 0.0f;
 
                     // add to field at atomI the field due atomJ's charge/dipole/quadrupole
 
-                    forceSum[0]            += mask ? force[0]    : 0.0f;
-                    forceSum[1]            += mask ? force[1]    : 0.0f;
-                    forceSum[2]            += mask ? force[2]    : 0.0f;
+                    localParticle.force[0]            += mask ? force[0]    : 0.0f;
+                    localParticle.force[1]            += mask ? force[1]    : 0.0f;
+                    localParticle.force[2]            += mask ? force[2]    : 0.0f;
 
 
 #ifdef AMOEBA_DEBUG
@@ -280,19 +245,19 @@ if( atomI == targetAtom  || atomJ == targetAtom ){
 
             // scale and write results
 
-            scale3dArray( tinker_f, forceSum );
-            scale3dArray( tinker_f, torqueSum );
+            scale3dArray( tinker_f, localParticle.force );
+            scale3dArray( tinker_f, localParticle.torque );
 
 #ifdef USE_OUTPUT_BUFFER_PER_WARP
             unsigned int offset                 = 3*(x + tgx + warp*cAmoebaSim.paddedNumberOfAtoms);
 
-            load3dArrayBufferPerWarp( offset, forceSum,  outputForce );
-            load3dArrayBufferPerWarp( offset, torqueSum, outputTorque );
+            load3dArrayBufferPerWarp( offset, localParticle.force,  outputForce );
+            load3dArrayBufferPerWarp( offset, localParticle.torque, outputTorque );
 
 #else
             unsigned int offset                 = 3*(x + tgx + (x >> GRIDBITS) * cAmoebaSim.paddedNumberOfAtoms);
-            load3dArray( offset, forceSum,  outputForce );
-            load3dArray( offset, torqueSum, outputTorque );
+            load3dArray( offset, localParticle.force,  outputForce );
+            load3dArray( offset, localParticle.torque, outputTorque );
 
 #endif
 
@@ -329,22 +294,7 @@ if( atomI == targetAtom  || atomJ == targetAtom ){
 
                     unsigned int atomJ    = y + tj;
 
-                    // load coords, charge, ...
-
-                    loadKirkwoodEDiffData( &(psA[tj]), &jCoord,
-                                           jDipole,         jQuadrupole,
-                                           jInducedDipole,  jInducedDipolePolar,
-                                           jInducedDipoleS, jInducedDipolePolarS );
-
-                    calculateKirkwoodEDiffPairIxn_kernel( iCoord,                                     jCoord,
-                                                          cAmoebaSim.pDampingFactorAndThole[atomI].x, psA[tj].damp,
-                                                          cAmoebaSim.pDampingFactorAndThole[atomI].y, psA[tj].thole,
-                                                          &(labFrameDipole[3*atomI]),                 jDipole,
-                                                          &(labFrameQuadrupole[9*atomI]),             jQuadrupole,
-                                                          &(inducedDipole[3*atomI]),                  jInducedDipole,
-                                                          &(inducedDipolePolar[3*atomI]),             jInducedDipolePolar,
-                                                          &(inducedDipoleS[3*atomI]),                 jInducedDipoleS,
-                                                          &(inducedDipolePolarS[3*atomI]),            jInducedDipolePolarS,
+                    calculateKirkwoodEDiffPairIxn_kernel( localParticle,                              psA[tj],
                                                           pScale,                                     dScale,
                                                           &energy,                                    force, 
                                                           torqueI,                                    torqueJ
@@ -358,13 +308,13 @@ if( atomI == targetAtom  || atomJ == targetAtom ){
 
                     // add force and torque to atom I due atom J
 
-                    forceSum[0]               += mask ? force[0]    : 0.0f;
-                    forceSum[1]               += mask ? force[1]    : 0.0f;
-                    forceSum[2]               += mask ? force[2]    : 0.0f;
+                    localParticle.force[0]               += mask ? force[0]    : 0.0f;
+                    localParticle.force[1]               += mask ? force[1]    : 0.0f;
+                    localParticle.force[2]               += mask ? force[2]    : 0.0f;
 
-                    torqueSum[0]              += mask ? torqueI[0]  : 0.0f;
-                    torqueSum[1]              += mask ? torqueI[1]  : 0.0f;
-                    torqueSum[2]              += mask ? torqueI[2]  : 0.0f;
+                    localParticle.torque[0]              += mask ? torqueI[0]  : 0.0f;
+                    localParticle.torque[1]              += mask ? torqueI[1]  : 0.0f;
+                    localParticle.torque[2]              += mask ? torqueI[2]  : 0.0f;
 
                     totalEnergy               += mask ? energy      : 0.0f;
 
@@ -413,27 +363,12 @@ if( atomI == targetAtom  || atomJ == targetAtom ){
                 {
 
                     unsigned int atomJ    = y + tj;
-
-                    // load coords, charge, ...
-
-                    loadKirkwoodEDiffData( &(psA[tj]), &jCoord,
-                                           jDipole,         jQuadrupole,
-                                           jInducedDipole,  jInducedDipolePolar,
-                                           jInducedDipoleS, jInducedDipolePolarS );
                     float dScale;
                     float pScale;
                     getMaskedDScaleFactor( tj, dScaleMask, &dScale );
                     getMaskedPScaleFactor( tj, pScaleMask, &pScale );
 
-                    calculateKirkwoodEDiffPairIxn_kernel( iCoord,                                     jCoord,
-                                                          cAmoebaSim.pDampingFactorAndThole[atomI].x, psA[tj].damp,
-                                                          cAmoebaSim.pDampingFactorAndThole[atomI].y, psA[tj].thole,
-                                                          &(labFrameDipole[3*atomI]),                 jDipole,
-                                                          &(labFrameQuadrupole[9*atomI]),             jQuadrupole,
-                                                          &(inducedDipole[3*atomI]),                  jInducedDipole,
-                                                          &(inducedDipolePolar[3*atomI]),             jInducedDipolePolar,
-                                                          &(inducedDipoleS[3*atomI]),                 jInducedDipoleS,
-                                                          &(inducedDipolePolarS[3*atomI]),            jInducedDipolePolarS,
+                    calculateKirkwoodEDiffPairIxn_kernel( localParticle,                              psA[tj],
                                                           pScale,                                     dScale,
                                                           &energy,                                    force, 
                                                           torqueI,                                    torqueJ
@@ -447,13 +382,13 @@ if( atomI == targetAtom  || atomJ == targetAtom ){
 
                     // add force and torque to atom I due atom J
 
-                    forceSum[0]               += mask ? force[0]    : 0.0f;
-                    forceSum[1]               += mask ? force[1]    : 0.0f;
-                    forceSum[2]               += mask ? force[2]    : 0.0f;
+                    localParticle.force[0]               += mask ? force[0]    : 0.0f;
+                    localParticle.force[1]               += mask ? force[1]    : 0.0f;
+                    localParticle.force[2]               += mask ? force[2]    : 0.0f;
 
-                    torqueSum[0]              += mask ? torqueI[0]  : 0.0f;
-                    torqueSum[1]              += mask ? torqueI[1]  : 0.0f;
-                    torqueSum[2]              += mask ? torqueI[2]  : 0.0f;
+                    localParticle.torque[0]              += mask ? torqueI[0]  : 0.0f;
+                    localParticle.torque[1]              += mask ? torqueI[1]  : 0.0f;
+                    localParticle.torque[2]              += mask ? torqueI[2]  : 0.0f;
 
                     totalEnergy               += mask ? energy      : 0.0f;
 
@@ -492,8 +427,8 @@ if( atomI == targetAtom  || atomJ == targetAtom ){
 
             // scale and write results
 
-            scale3dArray( tinker_f, forceSum );
-            scale3dArray( tinker_f, torqueSum );
+            scale3dArray( tinker_f, localParticle.force );
+            scale3dArray( tinker_f, localParticle.torque );
 
             scale3dArray( tinker_f, sA[threadIdx.x].force );
             scale3dArray( tinker_f, sA[threadIdx.x].torque );
@@ -502,8 +437,8 @@ if( atomI == targetAtom  || atomJ == targetAtom ){
 
             unsigned int offset                 = 3*(x + tgx + warp*cAmoebaSim.paddedNumberOfAtoms);
 
-            load3dArrayBufferPerWarp( offset, forceSum,  outputForce );
-            load3dArrayBufferPerWarp( offset, torqueSum, outputTorque );
+            load3dArrayBufferPerWarp( offset, localParticle.force,  outputForce );
+            load3dArrayBufferPerWarp( offset, localParticle.torque, outputTorque );
 
             offset                              = 3*(y + tgx + warp*cAmoebaSim.paddedNumberOfAtoms);
 
@@ -512,8 +447,8 @@ if( atomI == targetAtom  || atomJ == targetAtom ){
 #else
             unsigned int offset                 = 3*(x + tgx + (y >> GRIDBITS) * cAmoebaSim.paddedNumberOfAtoms);
 
-            load3dArray( offset, forceSum,  outputForce );
-            load3dArray( offset, torqueSum, outputTorque );
+            load3dArray( offset, localParticle.force,  outputForce );
+            load3dArray( offset, localParticle.torque, outputTorque );
 
 
             offset                              = 3*(y + tgx + (x >> GRIDBITS) * cAmoebaSim.paddedNumberOfAtoms);
