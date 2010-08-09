@@ -194,132 +194,120 @@ __device__ void calculateElectrostaticPairIxn_kernel( ElectrostaticParticle& ato
         }
 
     }
-
-    float scaleI[3];
-    float dsc[3];
-    float psc[3];
       
-    for( int ii = 0; ii < 3; ii++ ){
-        scaleI[ii] = scalingFactors[Scale3Index+ii]*scalingFactors[UScaleIndex];
-        dsc[ii]    = scalingFactors[Scale3Index+ii]*scalingFactors[DScaleIndex];
-        psc[ii]    = scalingFactors[Scale3Index+ii]*scalingFactors[PScaleIndex];
-    }
+    float scaleI0 = scalingFactors[Scale3Index]*scalingFactors[UScaleIndex];
+    float dsc0    = scalingFactors[Scale3Index]*scalingFactors[DScaleIndex];
+    float psc0    = scalingFactors[Scale3Index]*scalingFactors[PScaleIndex];
+    float scaleI1 = scalingFactors[Scale3Index+1]*scalingFactors[UScaleIndex];
+    float dsc1    = scalingFactors[Scale3Index+1]*scalingFactors[DScaleIndex];
+    float psc1    = scalingFactors[Scale3Index+1]*scalingFactors[PScaleIndex];
+    float dsc2    = scalingFactors[Scale3Index+2]*scalingFactors[DScaleIndex];
+    float psc2    = scalingFactors[Scale3Index+2]*scalingFactors[PScaleIndex];
                        
-    float sc[11];
-    float sci[9];
-    float scip[9];
     float qIr[3], qJr[3];
 
     amatrixProductVector3( atomJ.labFrameQuadrupole,      deltaR,      qJr);
     amatrixProductVector3( atomI.labFrameQuadrupole,      deltaR,      qIr);
 
-    sc[2]     = DOT3_4(        atomI.labFrameDipole,  atomJ.labFrameDipole );
-    sc[3]     = DOT3_4(        atomI.labFrameDipole,  deltaR  );
-    sc[4]     = DOT3_4(        atomJ.labFrameDipole,  deltaR  );
+    float sc2     = DOT3_4(        atomI.labFrameDipole,  atomJ.labFrameDipole );
+    float sc3     = DOT3_4(        atomI.labFrameDipole,  deltaR  );
+    float sc4     = DOT3_4(        atomJ.labFrameDipole,  deltaR  );
     
-    sc[5]     = DOT3_4(        qIr, deltaR  );
-    sc[6]     = DOT3_4(        qJr, deltaR  );
+    float sc5     = DOT3_4(        qIr, deltaR  );
+    float sc6     = DOT3_4(        qJr, deltaR  );
     
-    sc[7]     = DOT3_4(        qIr, atomJ.labFrameDipole );
-    sc[8]     = DOT3_4(        qJr, atomI.labFrameDipole );
+    float sc7     = DOT3_4(        qIr, atomJ.labFrameDipole );
+    float sc8     = DOT3_4(        qJr, atomI.labFrameDipole );
     
-    sc[9]     = DOT3_4(        qIr, qJr );
+    float sc9     = DOT3_4(        qIr, qJr );
     
-    sc[10]    = MATRIXDOT31( atomI.labFrameQuadrupole, atomJ.labFrameQuadrupole );
+    float sc10    = MATRIXDOT31( atomI.labFrameQuadrupole, atomJ.labFrameQuadrupole );
     
-    sci[1]    = DOT3_4(        atomI.inducedDipole,  atomJ.labFrameDipole ) +
-                DOT3_4(        atomJ.inducedDipole,  atomI.labFrameDipole );
+    float sci1    = DOT3_4(        atomI.inducedDipole,  atomJ.labFrameDipole ) +
+                    DOT3_4(        atomJ.inducedDipole,  atomI.labFrameDipole );
+        
+    float sci3    = DOT3_4(        atomI.inducedDipole,  deltaR  );
+    float sci4    = DOT3_4(        atomJ.inducedDipole,  deltaR  );
     
-    sci[2]    = DOT3_4(        atomI.inducedDipole,  atomJ.inducedDipole );
+    float sci7    = DOT3_4(        qIr, atomJ.inducedDipole );
+    float sci8    = DOT3_4(        qJr, atomI.inducedDipole );
     
-    sci[3]    = DOT3_4(        atomI.inducedDipole,  deltaR  );
-    sci[4]    = DOT3_4(        atomJ.inducedDipole,  deltaR  );
+    float scip1   = DOT3_4(        atomI.inducedDipoleP, atomJ.labFrameDipole ) +
+                    DOT3_4(        atomJ.inducedDipoleP, atomI.labFrameDipole );
     
-    sci[7]    = DOT3_4(        qIr, atomJ.inducedDipole );
-    sci[8]    = DOT3_4(        qJr, atomI.inducedDipole );
+    float scip2   = DOT3_4(        atomI.inducedDipole,  atomJ.inducedDipoleP) +
+                    DOT3_4(        atomJ.inducedDipole,  atomI.inducedDipoleP);
     
-    scip[1]   = DOT3_4(        atomI.inducedDipoleP, atomJ.labFrameDipole ) +
-                DOT3_4(        atomJ.inducedDipoleP, atomI.labFrameDipole );
+    float scip3   = DOT3_4(        atomI.inducedDipoleP, deltaR );
+    float scip4   = DOT3_4(        atomJ.inducedDipoleP, deltaR );
     
-    scip[2]   = DOT3_4(        atomI.inducedDipole,  atomJ.inducedDipoleP) +
-                DOT3_4(        atomJ.inducedDipole,  atomI.inducedDipoleP);
-    
-    scip[3]   = DOT3_4(        atomI.inducedDipoleP, deltaR );
-    scip[4]   = DOT3_4(        atomJ.inducedDipoleP, deltaR );
-    
-    scip[7]   = DOT3_4(        qIr, atomJ.inducedDipoleP );
-    scip[8]   = DOT3_4(        qJr, atomI.inducedDipoleP );
+    float scip7   = DOT3_4(        qIr, atomJ.inducedDipoleP );
+    float scip8   = DOT3_4(        qJr, atomI.inducedDipoleP );
 
     float findmp[3];
     float scaleF         = 0.5f*scalingFactors[UScaleIndex];
-    float inducedFactor3 = scip[2]*rr3*scaleF;
-    float inducedFactor5 = (sci[3]*scip[4]+scip[3]*sci[4])*rr5*scaleF;
+    float inducedFactor3 = scip2*rr3*scaleF;
+    float inducedFactor5 = (sci3*scip4+scip3*sci4)*rr5*scaleF;
     findmp[0]            = inducedFactor3*ddsc3[0] - inducedFactor5*ddsc5[0];
     findmp[1]            = inducedFactor3*ddsc3[1] - inducedFactor5*ddsc5[1];
     findmp[2]            = inducedFactor3*ddsc3[2] - inducedFactor5*ddsc5[2];
 
-    float gli[8];
-    gli[1]               = atomJ.q*sci[3] - atomI.q*sci[4];
-    gli[2]               = -sc[3]*sci[4] - sci[3]*sc[4];
-    gli[3]               = sci[3]*sc[6] - sci[4]*sc[5];
-    gli[6]               = sci[1];
-    gli[7]               = 2.0f*(sci[7]-sci[8]);
+    float gli1               = atomJ.q*sci3 - atomI.q*sci4;
+    float gli2               = -sc3*sci4 - sci3*sc4;
+    float gli3               = sci3*sc6 - sci4*sc5;
+    float gli6               = sci1;
+    float gli7               = 2.0f*(sci7-sci8);
     
-    float glip[8];
-    glip[1]              = atomJ.q*scip[3] - atomI.q*scip[4];
-    glip[2]              = -sc[3]*scip[4] - scip[3]*sc[4];
-    glip[3]              = scip[3]*sc[6] - scip[4]*sc[5];
-    glip[6]              = scip[1];
-    glip[7]              = 2.0f*(scip[7]-scip[8]);
+    float glip1              = atomJ.q*scip3 - atomI.q*scip4;
+    float glip2              = -sc3*scip4 - scip3*sc4;
+    float glip3              = scip3*sc6 - scip4*sc5;
+    float glip6              = scip1;
+    float glip7              = 2.0f*(scip7-scip8);
     
     float fridmp[3];
     float factor3, factor5, factor7;
     
     if( scalingFactors[PScaleIndex] == 1.0f && scalingFactors[PScaleIndex] == 1.0f ){
-        factor3 = rr3*( gli[1]  +  gli[6]  + glip[1]  + glip[6] );
-        factor5 = rr5*( gli[2]  +  gli[7]  + glip[2]  + glip[7] );
-        factor7 = rr7*( gli[3]  + glip[3] );
+        factor3 = rr3*( gli1  +  gli6  + glip1  + glip6 );
+        factor5 = rr5*( gli2  +  gli7  + glip2  + glip7 );
+        factor7 = rr7*( gli3  + glip3 );
     } else {
-        factor3 = rr3*(( gli[1]  +  gli[6])*scalingFactors[PScaleIndex] +
-                       (glip[1]  + glip[6])*scalingFactors[DScaleIndex]);
+        factor3 = rr3*(( gli1  +  gli6)*scalingFactors[PScaleIndex] +
+                       (glip1  + glip6)*scalingFactors[DScaleIndex]);
    
-       factor5 = rr5*(( gli[2]  +  gli[7])*scalingFactors[PScaleIndex] +
-                      (glip[2]  + glip[7])*scalingFactors[DScaleIndex]);
+       factor5 = rr5*(( gli2  +  gli7)*scalingFactors[PScaleIndex] +
+                      (glip2  + glip7)*scalingFactors[DScaleIndex]);
    
-       factor7 = rr7*( gli[3]*scalingFactors[PScaleIndex] + glip[3]*scalingFactors[DScaleIndex]);
+       factor7 = rr7*( gli3*scalingFactors[PScaleIndex] + glip3*scalingFactors[DScaleIndex]);
     }
       
     fridmp[0] = 0.5f*(factor3*ddsc3[0] + factor5*ddsc5[0] + factor7*ddsc7[0]);
     fridmp[1] = 0.5f*(factor3*ddsc3[1] + factor5*ddsc5[1] + factor7*ddsc7[1]);
     fridmp[2] = 0.5f*(factor3*ddsc3[2] + factor5*ddsc5[2] + factor7*ddsc7[2]);
       
-    float gl[9];
+    float gl0 = atomI.q*atomJ.q;
+    float gl1 = atomJ.q*sc3 - atomI.q*sc4;
+    float gl2 = atomI.q*sc6 + atomJ.q*sc5 - sc3*sc4;
+    float gl3 = sc3*sc6 - sc4*sc5;
+    float gl4 = sc5*sc6;
+    float gl6 = sc2;
+    float gl7 = 2.0f*(sc7-sc8);
+    float gl8 = 2.0f*sc10;
+    float gl5 = -4.0f*sc9;
     
-    gl[0] = atomI.q*atomJ.q;
-    gl[1] = atomJ.q*sc[3] - atomI.q*sc[4];
-    gl[2] = atomI.q*sc[6] + atomJ.q*sc[5] - sc[3]*sc[4];
-    
-    gl[3] = sc[3]*sc[6] - sc[4]*sc[5];
-    gl[4] = sc[5]*sc[6];
-    gl[6] = sc[2];
-    gl[7] = 2.0f*(sc[7]-sc[8]);
-    gl[8] = 2.0f*sc[10];
-    gl[5] = -4.0f*sc[9];
-    
-    float gf[8];
-    gf[1] = rr3*gl[0] + rr5*(gl[1]+gl[6]) + rr7*(gl[2]+gl[7]+gl[8]) + rr9*(gl[3]+gl[5]) + rr11*gl[4];
-    gf[2] = -atomJ.q*rr3 + sc[4]*rr5 - sc[6]*rr7;
-    gf[3] =  atomI.q*rr3 + sc[3]*rr5 + sc[5]*rr7;
-    gf[4] = 2.0f*rr5;
-    gf[5] = 2.0f*(-atomJ.q*rr5+sc[4]*rr7-sc[6]*rr9);
-    gf[6] = 2.0f*(-atomI.q*rr5-sc[3]*rr7-sc[5]*rr9);
-    gf[7] = 4.0f*rr7;
+    float gf1 = rr3*gl0 + rr5*(gl1+gl6) + rr7*(gl2+gl7+gl8) + rr9*(gl3+gl5) + rr11*gl4;
+    float gf2 = -atomJ.q*rr3 + sc4*rr5 - sc6*rr7;
+    float gf3 =  atomI.q*rr3 + sc3*rr5 + sc5*rr7;
+    float gf4 = 2.0f*rr5;
+    float gf5 = 2.0f*(-atomJ.q*rr5+sc4*rr7-sc6*rr9);
+    float gf6 = 2.0f*(-atomI.q*rr5-sc3*rr7-sc5*rr9);
+    float gf7 = 4.0f*rr7;
 
     // energy
 
     float conversionFactor   = (cAmoebaSim.electric/cAmoebaSim.dielec);
-    float em                 = scalingFactors[MScaleIndex]*(rr1*gl[0] + rr3*(gl[1]+gl[6]) + rr5*(gl[2]+gl[7]+gl[8]) + rr7*(gl[3]+gl[5]) + rr9*gl[4]);
-    float ei                 = 0.5f*(rr3*(gli[1]+gli[6])*psc[0] + rr5*(gli[2]+gli[7])*psc[1] + rr7*gli[3]*psc[2]);
+    float em                 = scalingFactors[MScaleIndex]*(rr1*gl0 + rr3*(gl1+gl6) + rr5*(gl2+gl7+gl8) + rr7*(gl3+gl5) + rr9*gl4);
+    float ei                 = 0.5f*(rr3*(gli1+gli6)*psc0 + rr5*(gli2+gli7)*psc1 + rr7*gli3*psc2);
     *energy                  = conversionFactor*(em+ei);
     
 #ifdef AMOEBA_DEBUG
@@ -332,21 +320,21 @@ if( 1 ){
     debugArray[debugIndex].w = rr3;
 
     debugIndex++;
-    debugArray[debugIndex].x = gl[0];
-    debugArray[debugIndex].y = gl[1];
-    debugArray[debugIndex].z = gl[6];
-    debugArray[debugIndex].w = gl[2];
+    debugArray[debugIndex].x = gl0;
+    debugArray[debugIndex].y = gl1;
+    debugArray[debugIndex].z = gl6;
+    debugArray[debugIndex].w = gl2;
 
     debugIndex++;
-    debugArray[debugIndex].x = gli[1];
-    debugArray[debugIndex].y = gli[3];
-    debugArray[debugIndex].z = gli[2];
-    debugArray[debugIndex].w = gli[7];
+    debugArray[debugIndex].x = gli1;
+    debugArray[debugIndex].y = gli3;
+    debugArray[debugIndex].z = gli2;
+    debugArray[debugIndex].w = gli7;
 
     debugIndex++;
-    debugArray[debugIndex].x = psc[0];
-    debugArray[debugIndex].y = psc[1];
-    debugArray[debugIndex].z = psc[2];
+    debugArray[debugIndex].x = psc0;
+    debugArray[debugIndex].y = psc1;
+    debugArray[debugIndex].z = psc2;
     debugArray[debugIndex].w = scalingFactors[MScaleIndex];
 
 }
@@ -365,11 +353,11 @@ if( 1 ){
     amatrixProductVector3( atomJ.labFrameQuadrupole,      atomI.labFrameDipole,     temp2 );
 
     for( int ii = 0; ii < 3; ii++ ){
-        ftm2[ii] = gf[1]*deltaR[ii]                             +
-                   gf[2]*atomI.labFrameDipole[ii]     + gf[3]*atomJ.labFrameDipole[ii]  +
-                   gf[4]*(temp2[ii]  - qIdJ[ii])                    +
-                   gf[5]*qIr[ii]    + gf[6]*qJr[ii] +
-                   gf[7]*(qIqJr[ii] + temp1[ii]);
+        ftm2[ii] = gf1*deltaR[ii]                             +
+                   gf2*atomI.labFrameDipole[ii]     + gf3*atomJ.labFrameDipole[ii]  +
+                   gf4*(temp2[ii]  - qIdJ[ii])                    +
+                   gf5*qIr[ii]    + gf6*qJr[ii] +
+                   gf7*(qIqJr[ii] + temp1[ii]);
     
     }
 
@@ -377,14 +365,11 @@ if( 1 ){
 
     // intermediate variables for the induced-permanent terms;
     
-    float gfi[7];
-    gfi[1] = rr5*0.5f*((gli[1]+gli[6])*psc[0] + (glip[1]+glip[6])*dsc[0] + scip[2]*scaleI[0]) + rr7*((gli[7]+gli[2])*psc[1] + (glip[7]+glip[2])*dsc[1] -
-                                                       (sci[3]*scip[4]+scip[3]*sci[4])*scaleI[1])*0.5f + rr9*(gli[3]*psc[2]+glip[3]*dsc[2])*0.5f;
-    gfi[2] = -rr3*atomJ.q + rr5*sc[4] - rr7*sc[6];
-    gfi[3] = rr3*atomI.q  + rr5*sc[3] + rr7*sc[5];
-    gfi[4] = 2.0f*rr5;
-    gfi[5] = rr7* (sci[4]*psc[2] + scip[4]*dsc[2]);
-    gfi[6] = -rr7*(sci[3]*psc[2] + scip[3]*dsc[2]);
+    float gfi1 = rr5*0.5f*((gli1+gli6)*psc0 + (glip1+glip6)*dsc0 + scip2*scaleI0) + rr7*((gli7+gli2)*psc1 + (glip7+glip2)*dsc1 -
+                                                       (sci3*scip4+scip3*sci4)*scaleI1)*0.5f + rr9*(gli3*psc2+glip3*dsc2)*0.5f;
+    float gfi4 = 2.0f*rr5;
+    float gfi5 = rr7* (sci4*psc2 + scip4*dsc2);
+    float gfi6 = -rr7*(sci3*psc2 + scip3*dsc2);
 
 
     float ftm2i[3];
@@ -414,21 +399,21 @@ if( 1 ){
 
     float temp1_0,temp2_0,temp3_0;
     for( int ii = 0; ii < 3; ii++ ){
-        temp1_0 = gfi[1]*deltaR[ii] +
-                  0.5f*(-rr3*atomJ.q*(atomI.inducedDipole[ii]*psc[0] + atomI.inducedDipoleP[ii]*dsc[0]) +
-                  rr5*sc[4]*(atomI.inducedDipole[ii]*psc[1] + atomI.inducedDipoleP[ii]*dsc[1]) -
-                  rr7*sc[6]*(atomI.inducedDipole[ii]*psc[2] + atomI.inducedDipoleP[ii]*dsc[2])) ;
+        temp1_0 = gfi1*deltaR[ii] +
+                  0.5f*(-rr3*atomJ.q*(atomI.inducedDipole[ii]*psc0 + atomI.inducedDipoleP[ii]*dsc0) +
+                  rr5*sc4*(atomI.inducedDipole[ii]*psc1 + atomI.inducedDipoleP[ii]*dsc1) -
+                  rr7*sc6*(atomI.inducedDipole[ii]*psc2 + atomI.inducedDipoleP[ii]*dsc2)) ;
 
-        temp2_0 = (rr3*atomI.q*(atomJ.inducedDipole[ii]*psc[0]+atomJ.inducedDipoleP[ii]*dsc[0]) +
-                   rr5*sc[3]*(atomJ.inducedDipole[ii]*psc[1] +atomJ.inducedDipoleP[ii]*dsc[1]) +
-                   rr7*sc[5]*(atomJ.inducedDipole[ii]*psc[2] +atomJ.inducedDipoleP[ii]*dsc[2]))*0.5f +
-                   rr5*scaleI[1]*(sci[4]*atomI.inducedDipoleP[ii]+scip[4]*atomI.inducedDipole[ii] +
-                   sci[3]*atomJ.inducedDipoleP[ii]+scip[3]*atomJ.inducedDipole[ii])*0.5f ;
+        temp2_0 = (rr3*atomI.q*(atomJ.inducedDipole[ii]*psc0+atomJ.inducedDipoleP[ii]*dsc0) +
+                   rr5*sc3*(atomJ.inducedDipole[ii]*psc1 +atomJ.inducedDipoleP[ii]*dsc1) +
+                   rr7*sc5*(atomJ.inducedDipole[ii]*psc2 +atomJ.inducedDipoleP[ii]*dsc2))*0.5f +
+                   rr5*scaleI1*(sci4*atomI.inducedDipoleP[ii]+scip4*atomI.inducedDipole[ii] +
+                   sci3*atomJ.inducedDipoleP[ii]+scip3*atomJ.inducedDipole[ii])*0.5f ;
 
-        temp3_0 = 0.5f*(sci[4]*psc[1]+scip[4]*dsc[1])*rr5*atomI.labFrameDipole[ii] +
-                  0.5f*(sci[3]*psc[1]+scip[3]*dsc[1])*rr5*atomJ.labFrameDipole[ii] +
-                  0.5f*gfi[4]*((temp5[ii]-qIuJ[ii])*psc[1] +
-                  (temp4[ii]-qIuJp[ii])*dsc[1]) + gfi[5]*qIr[ii] + gfi[6]*qJr[ii];
+        temp3_0 = 0.5f*(sci4*psc1+scip4*dsc1)*rr5*atomI.labFrameDipole[ii] +
+                  0.5f*(sci3*psc1+scip3*dsc1)*rr5*atomJ.labFrameDipole[ii] +
+                  0.5f*gfi4*((temp5[ii]-qIuJ[ii])*psc1 +
+                  (temp4[ii]-qIuJp[ii])*dsc1) + gfi5*qIr[ii] + gfi6*qJr[ii];
         ftm2i[ii] = temp1_0 + temp2_0 + temp3_0;
     }
 
@@ -442,19 +427,14 @@ if( 1 ){
     // now perform the torque calculation;
     // intermediate terms for torque between multipoles i and j;
     
-    float gti[7];
-    gti[2] = 0.5f*(sci[4]*psc[1]+scip[4]*dsc[1])*rr5;
-    gti[3] = 0.5f*(sci[3]*psc[1]+scip[3]*dsc[1])*rr5;
-    gti[4] = gfi[4];
-    gti[5] = gfi[5];
-    gti[6] = gfi[6];
+    float gti2 = 0.5f*(sci4*psc1+scip4*dsc1)*rr5;
+    float gti3 = 0.5f*(sci3*psc1+scip3*dsc1)*rr5;
+    float gti4 = gfi4;
+    float gti5 = gfi5;
+    float gti6 = gfi6;
 
     // get the permanent (ttm2, ttm3) and induced interaction torques (ttm2i, ttm3i)
     
-    float ttm2[3];
-    float ttm2i[3];
-    float ttm3[3];
-    float ttm3i[3];
     acrossProductVector3(atomI.labFrameDipole,      atomJ.labFrameDipole,      temp1);
     acrossProductVector3(atomI.labFrameDipole,      atomJ.inducedDipole ,      temp2);
     acrossProductVector3(atomI.labFrameDipole,      atomJ.inducedDipoleP,     temp3);
@@ -472,18 +452,12 @@ if( 1 ){
     amatrixCrossProductMatrix3(atomI.labFrameQuadrupole,      atomJ.labFrameQuadrupole,      temp14);
     acrossProductVector3(qJr, qIr,     temp15);
 
-    // unroll?
-
-    for( int ii = 0; ii < 3; ii++ ){
-       ttm2[ii]  = -rr3*temp1[ii] + gf[2]*temp4[ii]-gf[5]*temp6[ii] +
-                   gf[4]*(temp10[ii] + temp11[ii] + temp13[ii]-2.0f*temp14[ii]) -
-                   gf[7]*(temp12[ii] + temp15[ii]);
-    
-       ttm2i[ii] = -rr3*(temp2[ii]*psc[0]+temp3[ii]*dsc[0])*0.5f +
-                    gti[2]*temp4[ii] + gti[4]*((temp8[ii]+ temp7[ii])*psc[1] +
-                    (temp9[ii] + temp5[ii])*dsc[1])*0.5f - gti[5]*temp6[ii];
-    
-    }
+    float ttm2_0  = -rr3*temp1[0] + gf2*temp4[0]-gf5*temp6[0] + gf4*(temp10[0] + temp11[0] + temp13[0]-2.0f*temp14[0]) - gf7*(temp12[0] + temp15[0]);
+    float ttm2i_0 = -rr3*(temp2[0]*psc0+temp3[0]*dsc0)*0.5f + gti2*temp4[0] + gti4*((temp8[0]+ temp7[0])*psc1 + (temp9[0] + temp5[0])*dsc1)*0.5f - gti5*temp6[0];
+    float ttm2_1  = -rr3*temp1[1] + gf2*temp4[1]-gf5*temp6[1] + gf4*(temp10[1] + temp11[1] + temp13[1]-2.0f*temp14[1]) - gf7*(temp12[1] + temp15[1]);
+    float ttm2i_1 = -rr3*(temp2[1]*psc0+temp3[1]*dsc0)*0.5f + gti2*temp4[1] + gti4*((temp8[1]+ temp7[1])*psc1 + (temp9[1] + temp5[1])*dsc1)*0.5f - gti5*temp6[1];
+    float ttm2_2  = -rr3*temp1[2] + gf2*temp4[2]-gf5*temp6[2] + gf4*(temp10[2] + temp11[2] + temp13[2]-2.0f*temp14[2]) - gf7*(temp12[2] + temp15[2]);
+    float ttm2i_2 = -rr3*(temp2[2]*psc0+temp3[2]*dsc0)*0.5f + gti2*temp4[2] + gti4*((temp8[2]+ temp7[2])*psc1 + (temp9[2] + temp5[2])*dsc1)*0.5f - gti5*temp6[2];
 
     acrossProductVector3(atomJ.labFrameDipole,      deltaR,       temp2  );
     acrossProductVector3(deltaR,       qJr,     temp3  );
@@ -500,19 +474,12 @@ if( 1 ){
     acrossProductVector3(deltaR,       qJuIp,   temp13 ); // _rxqJuIp
     acrossProductVector3(deltaR,       qJuI,    temp15 ); // _rxqJuI
 
-    // unroll?
-
-    for( int ii = 0; ii < 3; ii++ ){
-    
-       ttm3[ii] = rr3*temp1[ii] +
-                  gf[3]*temp2[ii] - gf[6]*temp3[ii] - gf[4]*(temp4[ii] + temp5[ii] + temp6[ii] - 2.0f*temp14[ii]) - gf[7]*(temp7[ii] - temp8[ii]);
-
-    
-       ttm3i[ii] = -rr3*(temp9[ii]*psc[0]+ temp10[ii]*dsc[0])*0.5f +
-                    gti[3]*temp2[ii] - 
-                    gti[4]*((temp12[ii] + temp15[ii])*psc[1] +
-                    (temp11[ii] + temp13[ii])*dsc[1])*0.5f - gti[6]*temp3[ii];
-    }
+    float ttm3_0 = rr3*temp1[0] + gf3*temp2[0] - gf6*temp3[0] - gf4*(temp4[0] + temp5[0] + temp6[0] - 2.0f*temp14[0]) - gf7*(temp7[0] - temp8[0]);
+    float ttm3i_0 = -rr3*(temp9[0]*psc0+ temp10[0]*dsc0)*0.5f + gti3*temp2[0] - gti4*((temp12[0] + temp15[0])*psc1 + (temp11[0] + temp13[0])*dsc1)*0.5f - gti6*temp3[0];
+    float ttm3_1 = rr3*temp1[1] + gf3*temp2[1] - gf6*temp3[1] - gf4*(temp4[1] + temp5[1] + temp6[1] - 2.0f*temp14[1]) - gf7*(temp7[1] - temp8[1]);
+    float ttm3i_1 = -rr3*(temp9[1]*psc0+ temp10[1]*dsc0)*0.5f + gti3*temp2[1] - gti4*((temp12[1] + temp15[1])*psc1 + (temp11[1] + temp13[1])*dsc1)*0.5f - gti6*temp3[1];
+    float ttm3_2 = rr3*temp1[2] + gf3*temp2[2] - gf6*temp3[2] - gf4*(temp4[2] + temp5[2] + temp6[2] - 2.0f*temp14[2]) - gf7*(temp7[2] - temp8[2]);
+    float ttm3i_2 = -rr3*(temp9[2]*psc0+ temp10[2]*dsc0)*0.5f + gti3*temp2[2] - gti4*((temp12[2] + temp15[2])*psc1 + (temp11[2] + temp13[2])*dsc1)*0.5f - gti6*temp3[2];
 
     if( scalingFactors[MScaleIndex] < 1.0f ){
     
@@ -520,13 +487,13 @@ if( 1 ){
         ftm2[1] *= scalingFactors[MScaleIndex];
         ftm2[2] *= scalingFactors[MScaleIndex];
         
-        ttm2[0] *= scalingFactors[MScaleIndex];
-        ttm2[1] *= scalingFactors[MScaleIndex];
-        ttm2[2] *= scalingFactors[MScaleIndex];
+        ttm2_0 *= scalingFactors[MScaleIndex];
+        ttm2_1 *= scalingFactors[MScaleIndex];
+        ttm2_2 *= scalingFactors[MScaleIndex];
         
-        ttm3[0] *= scalingFactors[MScaleIndex];
-        ttm3[1] *= scalingFactors[MScaleIndex];
-        ttm3[2] *= scalingFactors[MScaleIndex];
+        ttm3_0 *= scalingFactors[MScaleIndex];
+        ttm3_1 *= scalingFactors[MScaleIndex];
+        ttm3_2 *= scalingFactors[MScaleIndex];
     
     }
 
@@ -537,8 +504,8 @@ if( 0 ){
 int debugIndex               = 0;
     debugArray[debugIndex].x = conversionFactor*ftm2[0];
     debugArray[debugIndex].y = conversionFactor*ftm2i[0];
-    debugArray[debugIndex].z = conversionFactor*ttm3[0];
-    debugArray[debugIndex].w = conversionFactor*ttm3i[0];
+    debugArray[debugIndex].z = conversionFactor*ttm3_0;
+    debugArray[debugIndex].w = conversionFactor*ttm3i_0;
 
     debugIndex++;
     debugArray[debugIndex].x = temp1[0];
@@ -597,13 +564,13 @@ int debugIndex               = 0;
 
     debugIndex++;
     debugArray[debugIndex].x = rr3;
-    debugArray[debugIndex].y = gf[3];
-    debugArray[debugIndex].z = gf[6];
+    debugArray[debugIndex].y = gf3;
+    debugArray[debugIndex].z = gf6;
     debugArray[debugIndex].w = 20.0f;
 
     debugIndex++;
-    debugArray[debugIndex].x = gf[4];
-    debugArray[debugIndex].y = gf[7];
+    debugArray[debugIndex].x = gf4;
+    debugArray[debugIndex].y = gf7;
     debugArray[debugIndex].z = 0.0f;
     debugArray[debugIndex].w = 21.0f;
 
@@ -627,13 +594,13 @@ int debugIndex               = 0;
     outputForce[1]        = -conversionFactor*(ftm2[1] + ftm2i[1]);
     outputForce[2]        = -conversionFactor*(ftm2[2] + ftm2i[2]);
     
-    outputTorque[0][0]    = conversionFactor*(ttm2[0] + ttm2i[0]); 
-    outputTorque[0][1]    = conversionFactor*(ttm2[1] + ttm2i[1]); 
-    outputTorque[0][2]    = conversionFactor*(ttm2[2] + ttm2i[2]); 
+    outputTorque[0][0]    = conversionFactor*(ttm2_0 + ttm2i_0);
+    outputTorque[0][1]    = conversionFactor*(ttm2_1 + ttm2i_1);
+    outputTorque[0][2]    = conversionFactor*(ttm2_2 + ttm2i_2);
 
-    outputTorque[1][0]    = conversionFactor*(ttm3[0] + ttm3i[0]); 
-    outputTorque[1][1]    = conversionFactor*(ttm3[1] + ttm3i[1]); 
-    outputTorque[1][2]    = conversionFactor*(ttm3[2] + ttm3i[2]); 
+    outputTorque[1][0]    = conversionFactor*(ttm3_0 + ttm3i_0);
+    outputTorque[1][1]    = conversionFactor*(ttm3_1 + ttm3i_1);
+    outputTorque[1][2]    = conversionFactor*(ttm3_2 + ttm3i_2);
 
     return;
 
