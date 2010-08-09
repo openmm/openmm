@@ -332,7 +332,9 @@ IF(CUDA_FOUND)
         SET(FLAGS ${FLAGS} -gencode arch=compute_13,code=sm_13)
         SET(FLAGS ${FLAGS} -gencode arch=compute_20,code=sm_20)
         SET(FLAGS ${FLAGS} -use_fast_math)
-        SET(FLAGS ${FLAGS} -m32)
+        IF (APPLE)
+            SET(FLAGS ${FLAGS} -m32)
+        ENDIF (APPLE)
         IF(MSVC)
             # Unfortunately the variables CUDA_NVCC_FLAGS_RELEASE and CUDA_NVCC_FLAGS_DEBUG
             # appear to be unused, at least in CMake 2.6
