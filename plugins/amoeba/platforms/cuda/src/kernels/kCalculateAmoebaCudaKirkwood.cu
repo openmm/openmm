@@ -77,55 +77,8 @@ __device__ void loadKirkwoodShared( struct KirkwoodParticle* sA, unsigned int at
 
 }
 
-// load struct and arrays w/ shared data in sA
-
-__device__ void loadKirkwoodData( struct KirkwoodParticle* sA,
-                                  float4* jCoord, float* jDipole, float* jQuadrupole,
-                                  float* jInducedDipole, float* jInducedDipolePolar, float* jBornRadius )
-{
-
-    // load coords, charge, ...
-
-    jCoord->x               = sA->x;
-    jCoord->y               = sA->y;
-    jCoord->z               = sA->z;
-    jCoord->w               = sA->q;
-
-    jDipole[0]              = sA->labFrameDipole[0];
-    jDipole[1]              = sA->labFrameDipole[1];
-    jDipole[2]              = sA->labFrameDipole[2];
-
-    jQuadrupole[0]          = sA->labFrameQuadrupole_XX;
-    jQuadrupole[1]          = sA->labFrameQuadrupole_XY;
-    jQuadrupole[2]          = sA->labFrameQuadrupole_XZ;
-
-    jQuadrupole[3]          = sA->labFrameQuadrupole_XY;
-    jQuadrupole[4]          = sA->labFrameQuadrupole_YY;
-    jQuadrupole[5]          = sA->labFrameQuadrupole_YZ;
-
-    jQuadrupole[6]          = sA->labFrameQuadrupole_XZ;
-    jQuadrupole[7]          = sA->labFrameQuadrupole_YZ;
-    jQuadrupole[8]          = sA->labFrameQuadrupole_ZZ;
-
-    jInducedDipole[0]       = sA->inducedDipole[0];
-    jInducedDipole[1]       = sA->inducedDipole[1];
-    jInducedDipole[2]       = sA->inducedDipole[2];
-
-    jInducedDipolePolar[0]  = sA->inducedDipoleP[0];
-    jInducedDipolePolar[1]  = sA->inducedDipoleP[1];
-    jInducedDipolePolar[2]  = sA->inducedDipoleP[2];
-
-   *jBornRadius             = sA->bornRadius;
-
-}
-
-__device__ void calculateKirkwoodPairIxn_kernel( unsigned int sameAtom,
-                                                 float4 atomCoordinatesI,       float4 atomCoordinatesJ,
-                                                 float* labFrameDipoleI,        float* labFrameDipoleJ,
-                                                 float* labFrameQuadrupoleI,    float* labFrameQuadrupoleJ,
-                                                 float* inducedDipoleI,         float* inducedDipoleJ,
-                                                 float* inducedDipolePolarI,    float* inducedDipolePolarJ,
-                                                 float  bornRadiusI,            float bornRadiusJ,
+__device__ void calculateKirkwoodPairIxn_kernel( KirkwoodParticle& atomI,       KirkwoodParticle& atomJ,
+                                                 unsigned int sameAtom,
                                                  float*  outputForce,           float outputTorque[2][3],
                                                  float*  outputBorn,            float*  outputBornPolar,
                                                  float* outputEnergy
@@ -136,20 +89,8 @@ __device__ void calculateKirkwoodPairIxn_kernel( unsigned int sameAtom,
  ){
 
     float e,ei;
-    float xi,yi,zi;
     float xr,yr,zr;
     float xr2,yr2,zr2;
-    float ci,ck;
-    float uxi,uyi,uzi;
-    float uxk,uyk,uzk;
-    float qxxi,qxyi,qxzi;
-    float qyyi,qyzi,qzzi;
-    float qxxk,qxyk,qxzk;
-    float qyyk,qyzk,qzzk;
-    float dxi,dyi,dzi;
-    float dxk,dyk,dzk;
-    float pxi,pyi,pzi;
-    float pxk,pyk,pzk;
     float sxi,syi,szi;
     float sxk,syk,szk;
     float r2,rb2;
@@ -160,7 +101,6 @@ __device__ void calculateKirkwoodPairIxn_kernel( unsigned int sameAtom,
     float dpbi;
     float dpbk;
     float fc,fd,fq;
-    float rbi,rbk;
     float expterm;
     float gf,gf2,gf3,gf5;
     float gf7,gf9,gf11;
@@ -182,52 +122,21 @@ __device__ void calculateKirkwoodPairIxn_kernel( unsigned int sameAtom,
     float dwipdr,dwkpdr;
     float duvdr;
 
-    float gkc;
-
     // set the bulk dielectric constant to the water value
-
-    gkc          = cAmoebaSim.gkc;
 
     fc           = cAmoebaSim.electric * cAmoebaSim.fc;
     fd           = cAmoebaSim.electric * cAmoebaSim.fd;
     fq           = cAmoebaSim.electric * cAmoebaSim.fq;
 
-    xi           = atomCoordinatesI.x;
-    yi           = atomCoordinatesI.y;
-    zi           = atomCoordinatesI.z;
-    ci           = atomCoordinatesI.w;
-
-    uxi          = labFrameDipoleI[0];
-    uyi          = labFrameDipoleI[1];
-    uzi          = labFrameDipoleI[2];
-
-    dxi          = inducedDipoleI[0];
-    dyi          = inducedDipoleI[1];
-    dzi          = inducedDipoleI[2];
-
-    pxi          = inducedDipolePolarI[0];
-    pyi          = inducedDipolePolarI[1];
-    pzi          = inducedDipolePolarI[2];
-
-    qxxi         = labFrameQuadrupoleI[0];
-    qxyi         = labFrameQuadrupoleI[1];
-    qxzi         = labFrameQuadrupoleI[2];
-    qyyi         = labFrameQuadrupoleI[4];
-    qyzi         = labFrameQuadrupoleI[5];
-    qzzi         = labFrameQuadrupoleI[8];
-
-    sxi          = dxi + pxi;
-    syi          = dyi + pyi;
-    szi          = dzi + pzi;
-
-    rbi          = bornRadiusI;
+    sxi          = atomI.inducedDipole[0] + atomI.inducedDipoleP[0];
+    syi          = atomI.inducedDipole[1] + atomI.inducedDipoleP[1];
+    szi          = atomI.inducedDipole[2] + atomI.inducedDipoleP[2];
 
     // decide whether to compute the current interaction;
 
-    xr           = atomCoordinatesJ.x - xi;
-    yr           = atomCoordinatesJ.y - yi;
-    zr           = atomCoordinatesJ.z - zi;
-    ck           = atomCoordinatesJ.w;
+    xr           = atomJ.x - atomI.x;
+    yr           = atomJ.y - atomI.y;
+    zr           = atomJ.z - atomI.z;
 
     xr2          = xr*xr;
     yr2          = yr*yr;
@@ -236,37 +145,17 @@ __device__ void calculateKirkwoodPairIxn_kernel( unsigned int sameAtom,
 
     if( r2 > cAmoebaSim.scalingDistanceCutoff ){
     }
-    rbk          = bornRadiusJ;
 
-    uxk          = labFrameDipoleJ[0];
-    uyk          = labFrameDipoleJ[1];
-    uzk          = labFrameDipoleJ[2];
-
-    dxk          = inducedDipoleJ[0];
-    dyk          = inducedDipoleJ[1];
-    dzk          = inducedDipoleJ[2];
-
-    pxk          = inducedDipolePolarJ[0];
-    pyk          = inducedDipolePolarJ[1];
-    pzk          = inducedDipolePolarJ[2];
-
-    qxxk         = labFrameQuadrupoleJ[0];
-    qxyk         = labFrameQuadrupoleJ[1];
-    qxzk         = labFrameQuadrupoleJ[2];
-    qyyk         = labFrameQuadrupoleJ[4];
-    qyzk         = labFrameQuadrupoleJ[5];
-    qzzk         = labFrameQuadrupoleJ[8];
-
-    sxk          = dxk + pxk;
-    syk          = dyk + pyk;
-    szk          = dzk + pzk;
-    rb2          = rbi * rbk;
-    expterm      = expf(-r2/(gkc*rb2));
-    expc         = expterm / gkc;
-    expcr        = r2*expterm / (gkc*gkc*rb2*rb2);
-    dexpc        = -2.0f / (gkc*rb2);
-    dexpcr       = 2.0f / (gkc*rb2*rb2);
-    dgfdr        = 0.5f * expterm * (1.0f+r2/(rb2*gkc));
+    sxk          = atomJ.inducedDipole[0] + atomJ.inducedDipoleP[0];
+    syk          = atomJ.inducedDipole[1] + atomJ.inducedDipoleP[1];
+    szk          = atomJ.inducedDipole[2] + atomJ.inducedDipoleP[2];
+    rb2          = atomI.bornRadius * atomJ.bornRadius;
+    expterm      = expf(-r2/(cAmoebaSim.gkc*rb2));
+    expc         = expterm / cAmoebaSim.gkc;
+    expcr        = r2*expterm / (cAmoebaSim.gkc*cAmoebaSim.gkc*rb2*rb2);
+    dexpc        = -2.0f / (cAmoebaSim.gkc*rb2);
+    dexpcr       = 2.0f / (cAmoebaSim.gkc*rb2*rb2);
+    dgfdr        = 0.5f * expterm * (1.0f+r2/(rb2*cAmoebaSim.gkc));
     gf2          = 1.0f / (r2+rb2*expterm);
     gf           = sqrt(gf2);
     gf3          = gf2 * gf;
@@ -692,348 +581,348 @@ __device__ void calculateKirkwoodPairIxn_kernel( unsigned int sameAtom,
     // electrostatic solvation energy of the permanent multipoles
     // in their own GK reaction potential
 
-    esym = ci * ck * gc1 - (uxi*(uxk*gux2+uyk*guy2+uzk*guz2)
-                           +  uyi*(uxk*gux3+uyk*guy3+uzk*guz3)
-                           +  uzi*(uxk*gux4+uyk*guy4+uzk*guz4));
+    esym = atomI.q * atomJ.q * gc1 - (atomI.labFrameDipole[0]*(atomJ.labFrameDipole[0]*gux2+atomJ.labFrameDipole[1]*guy2+atomJ.labFrameDipole[2]*guz2)
+                           +  atomI.labFrameDipole[1]*(atomJ.labFrameDipole[0]*gux3+atomJ.labFrameDipole[1]*guy3+atomJ.labFrameDipole[2]*guz3)
+                           +  atomI.labFrameDipole[2]*(atomJ.labFrameDipole[0]*gux4+atomJ.labFrameDipole[1]*guy4+atomJ.labFrameDipole[2]*guz4));
 
-    ewi =  ci*(uxk*gc2+uyk*gc3+uzk*gc4)
-          -ck*(uxi*gux1+uyi*guy1+uzi*guz1)
-           +ci*(qxxk*gc5+qyyk*gc8+qzzk*gc10
-              +2.0f*(qxyk*gc6+qxzk*gc7+qyzk*gc9))
-                 +ck*(qxxi*gqxx1+qyyi*gqyy1+qzzi*gqzz1
-              +2.0f*(qxyi*gqxy1+qxzi*gqxz1+qyzi*gqyz1))
-               - uxi*(qxxk*gux5+qyyk*gux8+qzzk*gux10
-              +2.0f*(qxyk*gux6+qxzk*gux7+qyzk*gux9))
-               - uyi*(qxxk*guy5+qyyk*guy8+qzzk*guy10
-              +2.0f*(qxyk*guy6+qxzk*guy7+qyzk*guy9))
-               - uzi*(qxxk*guz5+qyyk*guz8+qzzk*guz10
-              +2.0f*(qxyk*guz6+qxzk*guz7+qyzk*guz9))
-               + uxk*(qxxi*gqxx2+qyyi*gqyy2+qzzi*gqzz2
-              +2.0f*(qxyi*gqxy2+qxzi*gqxz2+qyzi*gqyz2))
-               + uyk*(qxxi*gqxx3+qyyi*gqyy3+qzzi*gqzz3
-              +2.0f*(qxyi*gqxy3+qxzi*gqxz3+qyzi*gqyz3))
-               + uzk*(qxxi*gqxx4+qyyi*gqyy4+qzzi*gqzz4
-              +2.0f*(qxyi*gqxy4+qxzi*gqxz4+qyzi*gqyz4))
-              + qxxi*(qxxk*gqxx5+qyyk*gqxx8+qzzk*gqxx10
-              +2.0f*(qxyk*gqxx6+qxzk*gqxx7+qyzk*gqxx9))
-              + qyyi*(qxxk*gqyy5+qyyk*gqyy8+qzzk*gqyy10
-              +2.0f*(qxyk*gqyy6+qxzk*gqyy7+qyzk*gqyy9))
-              + qzzi*(qxxk*gqzz5+qyyk*gqzz8+qzzk*gqzz10
-              +2.0f*(qxyk*gqzz6+qxzk*gqzz7+qyzk*gqzz9))
-              + 2.0f*(qxyi*(qxxk*gqxy5+qyyk*gqxy8+qzzk*gqxy10
-              +2.0f*(qxyk*gqxy6+qxzk*gqxy7+qyzk*gqxy9))
-              + qxzi*(qxxk*gqxz5+qyyk*gqxz8+qzzk*gqxz10
-              +2.0f*(qxyk*gqxz6+qxzk*gqxz7+qyzk*gqxz9))
-              + qyzi*(qxxk*gqyz5+qyyk*gqyz8+qzzk*gqyz10
-              +2.0f*(qxyk*gqyz6+qxzk*gqyz7+qyzk*gqyz9)));
+    ewi =  atomI.q*(atomJ.labFrameDipole[0]*gc2+atomJ.labFrameDipole[1]*gc3+atomJ.labFrameDipole[2]*gc4)
+          -atomJ.q*(atomI.labFrameDipole[0]*gux1+atomI.labFrameDipole[1]*guy1+atomI.labFrameDipole[2]*guz1)
+           +atomI.q*(atomJ.labFrameQuadrupole_XX*gc5+atomJ.labFrameQuadrupole_YY*gc8+atomJ.labFrameQuadrupole_ZZ*gc10
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gc6+atomJ.labFrameQuadrupole_XZ*gc7+atomJ.labFrameQuadrupole_YZ*gc9))
+                 +atomJ.q*(atomI.labFrameQuadrupole_XX*gqxx1+atomI.labFrameQuadrupole_YY*gqyy1+atomI.labFrameQuadrupole_ZZ*gqzz1
+              +2.0f*(atomI.labFrameQuadrupole_XY*gqxy1+atomI.labFrameQuadrupole_XZ*gqxz1+atomI.labFrameQuadrupole_YZ*gqyz1))
+               - atomI.labFrameDipole[0]*(atomJ.labFrameQuadrupole_XX*gux5+atomJ.labFrameQuadrupole_YY*gux8+atomJ.labFrameQuadrupole_ZZ*gux10
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gux6+atomJ.labFrameQuadrupole_XZ*gux7+atomJ.labFrameQuadrupole_YZ*gux9))
+               - atomI.labFrameDipole[1]*(atomJ.labFrameQuadrupole_XX*guy5+atomJ.labFrameQuadrupole_YY*guy8+atomJ.labFrameQuadrupole_ZZ*guy10
+              +2.0f*(atomJ.labFrameQuadrupole_XY*guy6+atomJ.labFrameQuadrupole_XZ*guy7+atomJ.labFrameQuadrupole_YZ*guy9))
+               - atomI.labFrameDipole[2]*(atomJ.labFrameQuadrupole_XX*guz5+atomJ.labFrameQuadrupole_YY*guz8+atomJ.labFrameQuadrupole_ZZ*guz10
+              +2.0f*(atomJ.labFrameQuadrupole_XY*guz6+atomJ.labFrameQuadrupole_XZ*guz7+atomJ.labFrameQuadrupole_YZ*guz9))
+               + atomJ.labFrameDipole[0]*(atomI.labFrameQuadrupole_XX*gqxx2+atomI.labFrameQuadrupole_YY*gqyy2+atomI.labFrameQuadrupole_ZZ*gqzz2
+              +2.0f*(atomI.labFrameQuadrupole_XY*gqxy2+atomI.labFrameQuadrupole_XZ*gqxz2+atomI.labFrameQuadrupole_YZ*gqyz2))
+               + atomJ.labFrameDipole[1]*(atomI.labFrameQuadrupole_XX*gqxx3+atomI.labFrameQuadrupole_YY*gqyy3+atomI.labFrameQuadrupole_ZZ*gqzz3
+              +2.0f*(atomI.labFrameQuadrupole_XY*gqxy3+atomI.labFrameQuadrupole_XZ*gqxz3+atomI.labFrameQuadrupole_YZ*gqyz3))
+               + atomJ.labFrameDipole[2]*(atomI.labFrameQuadrupole_XX*gqxx4+atomI.labFrameQuadrupole_YY*gqyy4+atomI.labFrameQuadrupole_ZZ*gqzz4
+              +2.0f*(atomI.labFrameQuadrupole_XY*gqxy4+atomI.labFrameQuadrupole_XZ*gqxz4+atomI.labFrameQuadrupole_YZ*gqyz4))
+              + atomI.labFrameQuadrupole_XX*(atomJ.labFrameQuadrupole_XX*gqxx5+atomJ.labFrameQuadrupole_YY*gqxx8+atomJ.labFrameQuadrupole_ZZ*gqxx10
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxx6+atomJ.labFrameQuadrupole_XZ*gqxx7+atomJ.labFrameQuadrupole_YZ*gqxx9))
+              + atomI.labFrameQuadrupole_YY*(atomJ.labFrameQuadrupole_XX*gqyy5+atomJ.labFrameQuadrupole_YY*gqyy8+atomJ.labFrameQuadrupole_ZZ*gqyy10
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqyy6+atomJ.labFrameQuadrupole_XZ*gqyy7+atomJ.labFrameQuadrupole_YZ*gqyy9))
+              + atomI.labFrameQuadrupole_ZZ*(atomJ.labFrameQuadrupole_XX*gqzz5+atomJ.labFrameQuadrupole_YY*gqzz8+atomJ.labFrameQuadrupole_ZZ*gqzz10
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqzz6+atomJ.labFrameQuadrupole_XZ*gqzz7+atomJ.labFrameQuadrupole_YZ*gqzz9))
+              + 2.0f*(atomI.labFrameQuadrupole_XY*(atomJ.labFrameQuadrupole_XX*gqxy5+atomJ.labFrameQuadrupole_YY*gqxy8+atomJ.labFrameQuadrupole_ZZ*gqxy10
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy6+atomJ.labFrameQuadrupole_XZ*gqxy7+atomJ.labFrameQuadrupole_YZ*gqxy9))
+              + atomI.labFrameQuadrupole_XZ*(atomJ.labFrameQuadrupole_XX*gqxz5+atomJ.labFrameQuadrupole_YY*gqxz8+atomJ.labFrameQuadrupole_ZZ*gqxz10
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxz6+atomJ.labFrameQuadrupole_XZ*gqxz7+atomJ.labFrameQuadrupole_YZ*gqxz9))
+              + atomI.labFrameQuadrupole_YZ*(atomJ.labFrameQuadrupole_XX*gqyz5+atomJ.labFrameQuadrupole_YY*gqyz8+atomJ.labFrameQuadrupole_ZZ*gqyz10
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqyz6+atomJ.labFrameQuadrupole_XZ*gqyz7+atomJ.labFrameQuadrupole_YZ*gqyz9)));
 
-    ewk = ci*(uxk*gux1+uyk*guy1+uzk*guz1)
-                      -ck*(uxi*gc2+uyi*gc3+uzi*gc4)
-                 +ci*(qxxk*gqxx1+qyyk*gqyy1+qzzk*gqzz1
-              +2.0f*(qxyk*gqxy1+qxzk*gqxz1+qyzk*gqyz1))
-                 +ck*(qxxi*gc5+qyyi*gc8+qzzi*gc10
-              +2.0f*(qxyi*gc6+qxzi*gc7+qyzi*gc9))
-               - uxi*(qxxk*gqxx2+qyyk*gqyy2+qzzk*gqzz2
-              +2.0f*(qxyk*gqxy2+qxzk*gqxz2+qyzk*gqyz2))
-               - uyi*(qxxk*gqxx3+qyyk*gqyy3+qzzk*gqzz3
-              +2.0f*(qxyk*gqxy3+qxzk*gqxz3+qyzk*gqyz3))
-               - uzi*(qxxk*gqxx4+qyyk*gqyy4+qzzk*gqzz4
-              +2.0f*(qxyk*gqxy4+qxzk*gqxz4+qyzk*gqyz4))
-               + uxk*(qxxi*gux5+qyyi*gux8+qzzi*gux10
-              +2.0f*(qxyi*gux6+qxzi*gux7+qyzi*gux9))
-               + uyk*(qxxi*guy5+qyyi*guy8+qzzi*guy10
-              +2.0f*(qxyi*guy6+qxzi*guy7+qyzi*guy9))
-               + uzk*(qxxi*guz5+qyyi*guz8+qzzi*guz10
-              +2.0f*(qxyi*guz6+qxzi*guz7+qyzi*guz9))
-              + qxxi*(qxxk*gqxx5+qyyk*gqyy5+qzzk*gqzz5
-              +2.0f*(qxyk*gqxy5+qxzk*gqxz5+qyzk*gqyz5))
-              + qyyi*(qxxk*gqxx8+qyyk*gqyy8+qzzk*gqzz8
-              +2.0f*(qxyk*gqxy8+qxzk*gqxz8+qyzk*gqyz8))
-              + qzzi*(qxxk*gqxx10+qyyk*gqyy10+qzzk*gqzz10
-              +2.0f*(qxyk*gqxy10+qxzk*gqxz10+qyzk*gqyz10))
-       + 2.0f*(qxyi*(qxxk*gqxx6+qyyk*gqyy6+qzzk*gqzz6
-              +2.0f*(qxyk*gqxy6+qxzk*gqxz6+qyzk*gqyz6))
-              + qxzi*(qxxk*gqxx7+qyyk*gqyy7+qzzk*gqzz7
-              +2.0f*(qxyk*gqxy7+qxzk*gqxz7+qyzk*gqyz7))
-              + qyzi*(qxxk*gqxx9+qyyk*gqyy9+qzzk*gqzz9
-              +2.0f*(qxyk*gqxy9+qxzk*gqxz9+qyzk*gqyz9)));
+    ewk = atomI.q*(atomJ.labFrameDipole[0]*gux1+atomJ.labFrameDipole[1]*guy1+atomJ.labFrameDipole[2]*guz1)
+                      -atomJ.q*(atomI.labFrameDipole[0]*gc2+atomI.labFrameDipole[1]*gc3+atomI.labFrameDipole[2]*gc4)
+                 +atomI.q*(atomJ.labFrameQuadrupole_XX*gqxx1+atomJ.labFrameQuadrupole_YY*gqyy1+atomJ.labFrameQuadrupole_ZZ*gqzz1
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy1+atomJ.labFrameQuadrupole_XZ*gqxz1+atomJ.labFrameQuadrupole_YZ*gqyz1))
+                 +atomJ.q*(atomI.labFrameQuadrupole_XX*gc5+atomI.labFrameQuadrupole_YY*gc8+atomI.labFrameQuadrupole_ZZ*gc10
+              +2.0f*(atomI.labFrameQuadrupole_XY*gc6+atomI.labFrameQuadrupole_XZ*gc7+atomI.labFrameQuadrupole_YZ*gc9))
+               - atomI.labFrameDipole[0]*(atomJ.labFrameQuadrupole_XX*gqxx2+atomJ.labFrameQuadrupole_YY*gqyy2+atomJ.labFrameQuadrupole_ZZ*gqzz2
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy2+atomJ.labFrameQuadrupole_XZ*gqxz2+atomJ.labFrameQuadrupole_YZ*gqyz2))
+               - atomI.labFrameDipole[1]*(atomJ.labFrameQuadrupole_XX*gqxx3+atomJ.labFrameQuadrupole_YY*gqyy3+atomJ.labFrameQuadrupole_ZZ*gqzz3
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy3+atomJ.labFrameQuadrupole_XZ*gqxz3+atomJ.labFrameQuadrupole_YZ*gqyz3))
+               - atomI.labFrameDipole[2]*(atomJ.labFrameQuadrupole_XX*gqxx4+atomJ.labFrameQuadrupole_YY*gqyy4+atomJ.labFrameQuadrupole_ZZ*gqzz4
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy4+atomJ.labFrameQuadrupole_XZ*gqxz4+atomJ.labFrameQuadrupole_YZ*gqyz4))
+               + atomJ.labFrameDipole[0]*(atomI.labFrameQuadrupole_XX*gux5+atomI.labFrameQuadrupole_YY*gux8+atomI.labFrameQuadrupole_ZZ*gux10
+              +2.0f*(atomI.labFrameQuadrupole_XY*gux6+atomI.labFrameQuadrupole_XZ*gux7+atomI.labFrameQuadrupole_YZ*gux9))
+               + atomJ.labFrameDipole[1]*(atomI.labFrameQuadrupole_XX*guy5+atomI.labFrameQuadrupole_YY*guy8+atomI.labFrameQuadrupole_ZZ*guy10
+              +2.0f*(atomI.labFrameQuadrupole_XY*guy6+atomI.labFrameQuadrupole_XZ*guy7+atomI.labFrameQuadrupole_YZ*guy9))
+               + atomJ.labFrameDipole[2]*(atomI.labFrameQuadrupole_XX*guz5+atomI.labFrameQuadrupole_YY*guz8+atomI.labFrameQuadrupole_ZZ*guz10
+              +2.0f*(atomI.labFrameQuadrupole_XY*guz6+atomI.labFrameQuadrupole_XZ*guz7+atomI.labFrameQuadrupole_YZ*guz9))
+              + atomI.labFrameQuadrupole_XX*(atomJ.labFrameQuadrupole_XX*gqxx5+atomJ.labFrameQuadrupole_YY*gqyy5+atomJ.labFrameQuadrupole_ZZ*gqzz5
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy5+atomJ.labFrameQuadrupole_XZ*gqxz5+atomJ.labFrameQuadrupole_YZ*gqyz5))
+              + atomI.labFrameQuadrupole_YY*(atomJ.labFrameQuadrupole_XX*gqxx8+atomJ.labFrameQuadrupole_YY*gqyy8+atomJ.labFrameQuadrupole_ZZ*gqzz8
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy8+atomJ.labFrameQuadrupole_XZ*gqxz8+atomJ.labFrameQuadrupole_YZ*gqyz8))
+              + atomI.labFrameQuadrupole_ZZ*(atomJ.labFrameQuadrupole_XX*gqxx10+atomJ.labFrameQuadrupole_YY*gqyy10+atomJ.labFrameQuadrupole_ZZ*gqzz10
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy10+atomJ.labFrameQuadrupole_XZ*gqxz10+atomJ.labFrameQuadrupole_YZ*gqyz10))
+       + 2.0f*(atomI.labFrameQuadrupole_XY*(atomJ.labFrameQuadrupole_XX*gqxx6+atomJ.labFrameQuadrupole_YY*gqyy6+atomJ.labFrameQuadrupole_ZZ*gqzz6
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy6+atomJ.labFrameQuadrupole_XZ*gqxz6+atomJ.labFrameQuadrupole_YZ*gqyz6))
+              + atomI.labFrameQuadrupole_XZ*(atomJ.labFrameQuadrupole_XX*gqxx7+atomJ.labFrameQuadrupole_YY*gqyy7+atomJ.labFrameQuadrupole_ZZ*gqzz7
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy7+atomJ.labFrameQuadrupole_XZ*gqxz7+atomJ.labFrameQuadrupole_YZ*gqyz7))
+              + atomI.labFrameQuadrupole_YZ*(atomJ.labFrameQuadrupole_XX*gqxx9+atomJ.labFrameQuadrupole_YY*gqyy9+atomJ.labFrameQuadrupole_ZZ*gqzz9
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy9+atomJ.labFrameQuadrupole_XZ*gqxz9+atomJ.labFrameQuadrupole_YZ*gqyz9)));
 
-    desymdx = ci * ck * gc2 - (uxi*(uxk*gux5+uyk*guy5+uzk*guz5)
-                              +  uyi*(uxk*gux6+uyk*guy6+uzk*guz6)
-                              +  uzi*(uxk*gux7+uyk*guy7+uzk*guz7));
+    desymdx = atomI.q * atomJ.q * gc2 - (atomI.labFrameDipole[0]*(atomJ.labFrameDipole[0]*gux5+atomJ.labFrameDipole[1]*guy5+atomJ.labFrameDipole[2]*guz5)
+                              +  atomI.labFrameDipole[1]*(atomJ.labFrameDipole[0]*gux6+atomJ.labFrameDipole[1]*guy6+atomJ.labFrameDipole[2]*guz6)
+                              +  atomI.labFrameDipole[2]*(atomJ.labFrameDipole[0]*gux7+atomJ.labFrameDipole[1]*guy7+atomJ.labFrameDipole[2]*guz7));
 
-    dewidx = ci*(uxk*gc5+uyk*gc6+uzk*gc7)
-                      -ck*(uxi*gux2+uyi*guy2+uzi*guz2)
-                 +ci*(qxxk*gc11+qyyk*gc14+qzzk*gc16
-              +2.0f*(qxyk*gc12+qxzk*gc13+qyzk*gc15))
-                 +ck*(qxxi*gqxx2+qyyi*gqyy2+qzzi*gqzz2
-              +2.0f*(qxyi*gqxy2+qxzi*gqxz2+qyzi*gqyz2))
-               - uxi*(qxxk*gux11+qyyk*gux14+qzzk*gux16
-              +2.0f*(qxyk*gux12+qxzk*gux13+qyzk*gux15))
-               - uyi*(qxxk*guy11+qyyk*guy14+qzzk*guy16
-              +2.0f*(qxyk*guy12+qxzk*guy13+qyzk*guy15))
-               - uzi*(qxxk*guz11+qyyk*guz14+qzzk*guz16
-              +2.0f*(qxyk*guz12+qxzk*guz13+qyzk*guz15))
-               + uxk*(qxxi*gqxx5+qyyi*gqyy5+qzzi*gqzz5
-              +2.0f*(qxyi*gqxy5+qxzi*gqxz5+qyzi*gqyz5))
-               + uyk*(qxxi*gqxx6+qyyi*gqyy6+qzzi*gqzz6
-              +2.0f*(qxyi*gqxy6+qxzi*gqxz6+qyzi*gqyz6))
-               + uzk*(qxxi*gqxx7+qyyi*gqyy7+qzzi*gqzz7
-              +2.0f*(qxyi*gqxy7+qxzi*gqxz7+qyzi*gqyz7))
-              + qxxi*(qxxk*gqxx11+qyyk*gqxx14+qzzk*gqxx16
-              +2.0f*(qxyk*gqxx12+qxzk*gqxx13+qyzk*gqxx15))
-              + qyyi*(qxxk*gqyy11+qyyk*gqyy14+qzzk*gqyy16
-              +2.0f*(qxyk*gqyy12+qxzk*gqyy13+qyzk*gqyy15))
-              + qzzi*(qxxk*gqzz11+qyyk*gqzz14+qzzk*gqzz16
-              +2.0f*(qxyk*gqzz12+qxzk*gqzz13+qyzk*gqzz15))
-       + 2.0f*(qxyi*(qxxk*gqxy11+qyyk*gqxy14+qzzk*gqxy16
-              +2.0f*(qxyk*gqxy12+qxzk*gqxy13+qyzk*gqxy15))
-              + qxzi*(qxxk*gqxz11+qyyk*gqxz14+qzzk*gqxz16
-              +2.0f*(qxyk*gqxz12+qxzk*gqxz13+qyzk*gqxz15))
-              + qyzi*(qxxk*gqyz11+qyyk*gqyz14+qzzk*gqyz16
-              +2.0f*(qxyk*gqyz12+qxzk*gqyz13+qyzk*gqyz15)));
+    dewidx = atomI.q*(atomJ.labFrameDipole[0]*gc5+atomJ.labFrameDipole[1]*gc6+atomJ.labFrameDipole[2]*gc7)
+                      -atomJ.q*(atomI.labFrameDipole[0]*gux2+atomI.labFrameDipole[1]*guy2+atomI.labFrameDipole[2]*guz2)
+                 +atomI.q*(atomJ.labFrameQuadrupole_XX*gc11+atomJ.labFrameQuadrupole_YY*gc14+atomJ.labFrameQuadrupole_ZZ*gc16
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gc12+atomJ.labFrameQuadrupole_XZ*gc13+atomJ.labFrameQuadrupole_YZ*gc15))
+                 +atomJ.q*(atomI.labFrameQuadrupole_XX*gqxx2+atomI.labFrameQuadrupole_YY*gqyy2+atomI.labFrameQuadrupole_ZZ*gqzz2
+              +2.0f*(atomI.labFrameQuadrupole_XY*gqxy2+atomI.labFrameQuadrupole_XZ*gqxz2+atomI.labFrameQuadrupole_YZ*gqyz2))
+               - atomI.labFrameDipole[0]*(atomJ.labFrameQuadrupole_XX*gux11+atomJ.labFrameQuadrupole_YY*gux14+atomJ.labFrameQuadrupole_ZZ*gux16
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gux12+atomJ.labFrameQuadrupole_XZ*gux13+atomJ.labFrameQuadrupole_YZ*gux15))
+               - atomI.labFrameDipole[1]*(atomJ.labFrameQuadrupole_XX*guy11+atomJ.labFrameQuadrupole_YY*guy14+atomJ.labFrameQuadrupole_ZZ*guy16
+              +2.0f*(atomJ.labFrameQuadrupole_XY*guy12+atomJ.labFrameQuadrupole_XZ*guy13+atomJ.labFrameQuadrupole_YZ*guy15))
+               - atomI.labFrameDipole[2]*(atomJ.labFrameQuadrupole_XX*guz11+atomJ.labFrameQuadrupole_YY*guz14+atomJ.labFrameQuadrupole_ZZ*guz16
+              +2.0f*(atomJ.labFrameQuadrupole_XY*guz12+atomJ.labFrameQuadrupole_XZ*guz13+atomJ.labFrameQuadrupole_YZ*guz15))
+               + atomJ.labFrameDipole[0]*(atomI.labFrameQuadrupole_XX*gqxx5+atomI.labFrameQuadrupole_YY*gqyy5+atomI.labFrameQuadrupole_ZZ*gqzz5
+              +2.0f*(atomI.labFrameQuadrupole_XY*gqxy5+atomI.labFrameQuadrupole_XZ*gqxz5+atomI.labFrameQuadrupole_YZ*gqyz5))
+               + atomJ.labFrameDipole[1]*(atomI.labFrameQuadrupole_XX*gqxx6+atomI.labFrameQuadrupole_YY*gqyy6+atomI.labFrameQuadrupole_ZZ*gqzz6
+              +2.0f*(atomI.labFrameQuadrupole_XY*gqxy6+atomI.labFrameQuadrupole_XZ*gqxz6+atomI.labFrameQuadrupole_YZ*gqyz6))
+               + atomJ.labFrameDipole[2]*(atomI.labFrameQuadrupole_XX*gqxx7+atomI.labFrameQuadrupole_YY*gqyy7+atomI.labFrameQuadrupole_ZZ*gqzz7
+              +2.0f*(atomI.labFrameQuadrupole_XY*gqxy7+atomI.labFrameQuadrupole_XZ*gqxz7+atomI.labFrameQuadrupole_YZ*gqyz7))
+              + atomI.labFrameQuadrupole_XX*(atomJ.labFrameQuadrupole_XX*gqxx11+atomJ.labFrameQuadrupole_YY*gqxx14+atomJ.labFrameQuadrupole_ZZ*gqxx16
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxx12+atomJ.labFrameQuadrupole_XZ*gqxx13+atomJ.labFrameQuadrupole_YZ*gqxx15))
+              + atomI.labFrameQuadrupole_YY*(atomJ.labFrameQuadrupole_XX*gqyy11+atomJ.labFrameQuadrupole_YY*gqyy14+atomJ.labFrameQuadrupole_ZZ*gqyy16
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqyy12+atomJ.labFrameQuadrupole_XZ*gqyy13+atomJ.labFrameQuadrupole_YZ*gqyy15))
+              + atomI.labFrameQuadrupole_ZZ*(atomJ.labFrameQuadrupole_XX*gqzz11+atomJ.labFrameQuadrupole_YY*gqzz14+atomJ.labFrameQuadrupole_ZZ*gqzz16
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqzz12+atomJ.labFrameQuadrupole_XZ*gqzz13+atomJ.labFrameQuadrupole_YZ*gqzz15))
+       + 2.0f*(atomI.labFrameQuadrupole_XY*(atomJ.labFrameQuadrupole_XX*gqxy11+atomJ.labFrameQuadrupole_YY*gqxy14+atomJ.labFrameQuadrupole_ZZ*gqxy16
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy12+atomJ.labFrameQuadrupole_XZ*gqxy13+atomJ.labFrameQuadrupole_YZ*gqxy15))
+              + atomI.labFrameQuadrupole_XZ*(atomJ.labFrameQuadrupole_XX*gqxz11+atomJ.labFrameQuadrupole_YY*gqxz14+atomJ.labFrameQuadrupole_ZZ*gqxz16
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxz12+atomJ.labFrameQuadrupole_XZ*gqxz13+atomJ.labFrameQuadrupole_YZ*gqxz15))
+              + atomI.labFrameQuadrupole_YZ*(atomJ.labFrameQuadrupole_XX*gqyz11+atomJ.labFrameQuadrupole_YY*gqyz14+atomJ.labFrameQuadrupole_ZZ*gqyz16
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqyz12+atomJ.labFrameQuadrupole_XZ*gqyz13+atomJ.labFrameQuadrupole_YZ*gqyz15)));
 
-    dewkdx = ci*(uxk*gux2+uyk*guy2+uzk*guz2)
-                      -ck*(uxi*gc5+uyi*gc6+uzi*gc7)
-                 +ci*(qxxk*gqxx2+qyyk*gqyy2+qzzk*gqzz2
-              +2.0f*(qxyk*gqxy2+qxzk*gqxz2+qyzk*gqyz2))
-                 +ck*(qxxi*gc11+qyyi*gc14+qzzi*gc16
-              +2.0f*(qxyi*gc12+qxzi*gc13+qyzi*gc15))
-               - uxi*(qxxk*gqxx5+qyyk*gqyy5+qzzk*gqzz5
-              +2.0f*(qxyk*gqxy5+qxzk*gqxz5+qyzk*gqyz5))
-               - uyi*(qxxk*gqxx6+qyyk*gqyy6+qzzk*gqzz6
-              +2.0f*(qxyk*gqxy6+qxzk*gqxz6+qyzk*gqyz6))
-               - uzi*(qxxk*gqxx7+qyyk*gqyy7+qzzk*gqzz7
-              +2.0f*(qxyk*gqxy7+qxzk*gqxz7+qyzk*gqyz7))
-               + uxk*(qxxi*gux11+qyyi*gux14+qzzi*gux16
-              +2.0f*(qxyi*gux12+qxzi*gux13+qyzi*gux15))
-               + uyk*(qxxi*guy11+qyyi*guy14+qzzi*guy16
-              +2.0f*(qxyi*guy12+qxzi*guy13+qyzi*guy15))
-               + uzk*(qxxi*guz11+qyyi*guz14+qzzi*guz16
-              +2.0f*(qxyi*guz12+qxzi*guz13+qyzi*guz15))
-              + qxxi*(qxxk*gqxx11+qyyk*gqyy11+qzzk*gqzz11
-              +2.0f*(qxyk*gqxy11+qxzk*gqxz11+qyzk*gqyz11))
-              + qyyi*(qxxk*gqxx14+qyyk*gqyy14+qzzk*gqzz14
-              +2.0f*(qxyk*gqxy14+qxzk*gqxz14+qyzk*gqyz14))
-              + qzzi*(qxxk*gqxx16+qyyk*gqyy16+qzzk*gqzz16
-              +2.0f*(qxyk*gqxy16+qxzk*gqxz16+qyzk*gqyz16))
-       + 2.0f*(qxyi*(qxxk*gqxx12+qyyk*gqyy12+qzzk*gqzz12
-              +2.0f*(qxyk*gqxy12+qxzk*gqxz12+qyzk*gqyz12))
-              + qxzi*(qxxk*gqxx13+qyyk*gqyy13+qzzk*gqzz13
-              +2.0f*(qxyk*gqxy13+qxzk*gqxz13+qyzk*gqyz13))
-              + qyzi*(qxxk*gqxx15+qyyk*gqyy15+qzzk*gqzz15
-              +2.0f*(qxyk*gqxy15+qxzk*gqxz15+qyzk*gqyz15)));
+    dewkdx = atomI.q*(atomJ.labFrameDipole[0]*gux2+atomJ.labFrameDipole[1]*guy2+atomJ.labFrameDipole[2]*guz2)
+                      -atomJ.q*(atomI.labFrameDipole[0]*gc5+atomI.labFrameDipole[1]*gc6+atomI.labFrameDipole[2]*gc7)
+                 +atomI.q*(atomJ.labFrameQuadrupole_XX*gqxx2+atomJ.labFrameQuadrupole_YY*gqyy2+atomJ.labFrameQuadrupole_ZZ*gqzz2
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy2+atomJ.labFrameQuadrupole_XZ*gqxz2+atomJ.labFrameQuadrupole_YZ*gqyz2))
+                 +atomJ.q*(atomI.labFrameQuadrupole_XX*gc11+atomI.labFrameQuadrupole_YY*gc14+atomI.labFrameQuadrupole_ZZ*gc16
+              +2.0f*(atomI.labFrameQuadrupole_XY*gc12+atomI.labFrameQuadrupole_XZ*gc13+atomI.labFrameQuadrupole_YZ*gc15))
+               - atomI.labFrameDipole[0]*(atomJ.labFrameQuadrupole_XX*gqxx5+atomJ.labFrameQuadrupole_YY*gqyy5+atomJ.labFrameQuadrupole_ZZ*gqzz5
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy5+atomJ.labFrameQuadrupole_XZ*gqxz5+atomJ.labFrameQuadrupole_YZ*gqyz5))
+               - atomI.labFrameDipole[1]*(atomJ.labFrameQuadrupole_XX*gqxx6+atomJ.labFrameQuadrupole_YY*gqyy6+atomJ.labFrameQuadrupole_ZZ*gqzz6
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy6+atomJ.labFrameQuadrupole_XZ*gqxz6+atomJ.labFrameQuadrupole_YZ*gqyz6))
+               - atomI.labFrameDipole[2]*(atomJ.labFrameQuadrupole_XX*gqxx7+atomJ.labFrameQuadrupole_YY*gqyy7+atomJ.labFrameQuadrupole_ZZ*gqzz7
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy7+atomJ.labFrameQuadrupole_XZ*gqxz7+atomJ.labFrameQuadrupole_YZ*gqyz7))
+               + atomJ.labFrameDipole[0]*(atomI.labFrameQuadrupole_XX*gux11+atomI.labFrameQuadrupole_YY*gux14+atomI.labFrameQuadrupole_ZZ*gux16
+              +2.0f*(atomI.labFrameQuadrupole_XY*gux12+atomI.labFrameQuadrupole_XZ*gux13+atomI.labFrameQuadrupole_YZ*gux15))
+               + atomJ.labFrameDipole[1]*(atomI.labFrameQuadrupole_XX*guy11+atomI.labFrameQuadrupole_YY*guy14+atomI.labFrameQuadrupole_ZZ*guy16
+              +2.0f*(atomI.labFrameQuadrupole_XY*guy12+atomI.labFrameQuadrupole_XZ*guy13+atomI.labFrameQuadrupole_YZ*guy15))
+               + atomJ.labFrameDipole[2]*(atomI.labFrameQuadrupole_XX*guz11+atomI.labFrameQuadrupole_YY*guz14+atomI.labFrameQuadrupole_ZZ*guz16
+              +2.0f*(atomI.labFrameQuadrupole_XY*guz12+atomI.labFrameQuadrupole_XZ*guz13+atomI.labFrameQuadrupole_YZ*guz15))
+              + atomI.labFrameQuadrupole_XX*(atomJ.labFrameQuadrupole_XX*gqxx11+atomJ.labFrameQuadrupole_YY*gqyy11+atomJ.labFrameQuadrupole_ZZ*gqzz11
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy11+atomJ.labFrameQuadrupole_XZ*gqxz11+atomJ.labFrameQuadrupole_YZ*gqyz11))
+              + atomI.labFrameQuadrupole_YY*(atomJ.labFrameQuadrupole_XX*gqxx14+atomJ.labFrameQuadrupole_YY*gqyy14+atomJ.labFrameQuadrupole_ZZ*gqzz14
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy14+atomJ.labFrameQuadrupole_XZ*gqxz14+atomJ.labFrameQuadrupole_YZ*gqyz14))
+              + atomI.labFrameQuadrupole_ZZ*(atomJ.labFrameQuadrupole_XX*gqxx16+atomJ.labFrameQuadrupole_YY*gqyy16+atomJ.labFrameQuadrupole_ZZ*gqzz16
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy16+atomJ.labFrameQuadrupole_XZ*gqxz16+atomJ.labFrameQuadrupole_YZ*gqyz16))
+       + 2.0f*(atomI.labFrameQuadrupole_XY*(atomJ.labFrameQuadrupole_XX*gqxx12+atomJ.labFrameQuadrupole_YY*gqyy12+atomJ.labFrameQuadrupole_ZZ*gqzz12
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy12+atomJ.labFrameQuadrupole_XZ*gqxz12+atomJ.labFrameQuadrupole_YZ*gqyz12))
+              + atomI.labFrameQuadrupole_XZ*(atomJ.labFrameQuadrupole_XX*gqxx13+atomJ.labFrameQuadrupole_YY*gqyy13+atomJ.labFrameQuadrupole_ZZ*gqzz13
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy13+atomJ.labFrameQuadrupole_XZ*gqxz13+atomJ.labFrameQuadrupole_YZ*gqyz13))
+              + atomI.labFrameQuadrupole_YZ*(atomJ.labFrameQuadrupole_XX*gqxx15+atomJ.labFrameQuadrupole_YY*gqyy15+atomJ.labFrameQuadrupole_ZZ*gqzz15
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy15+atomJ.labFrameQuadrupole_XZ*gqxz15+atomJ.labFrameQuadrupole_YZ*gqyz15)));
 
     dedx = desymdx + 0.5f*(dewidx + dewkdx);
 
-    desymdy = ci * ck * gc3
-                           - (uxi*(uxk*gux6+uyk*guy6+uzk*guz6)
-                             +uyi*(uxk*gux8+uyk*guy8+uzk*guz8)
-                             +uzi*(uxk*gux9+uyk*guy9+uzk*guz9));
+    desymdy = atomI.q * atomJ.q * gc3
+                           - (atomI.labFrameDipole[0]*(atomJ.labFrameDipole[0]*gux6+atomJ.labFrameDipole[1]*guy6+atomJ.labFrameDipole[2]*guz6)
+                             +atomI.labFrameDipole[1]*(atomJ.labFrameDipole[0]*gux8+atomJ.labFrameDipole[1]*guy8+atomJ.labFrameDipole[2]*guz8)
+                             +atomI.labFrameDipole[2]*(atomJ.labFrameDipole[0]*gux9+atomJ.labFrameDipole[1]*guy9+atomJ.labFrameDipole[2]*guz9));
 
-    dewidy = ci*(uxk*gc6+uyk*gc8+uzk*gc9)
-                      -ck*(uxi*gux3+uyi*guy3+uzi*guz3)
-                 +ci*(qxxk*gc12+qyyk*gc17+qzzk*gc19
-              +2.0f*(qxyk*gc14+qxzk*gc15+qyzk*gc18))
-                 +ck*(qxxi*gqxx3+qyyi*gqyy3+qzzi*gqzz3
-              +2.0f*(qxyi*gqxy3+qxzi*gqxz3+qyzi*gqyz3))
-               - uxi*(qxxk*gux12+qyyk*gux17+qzzk*gux19
-              +2.0f*(qxyk*gux14+qxzk*gux15+qyzk*gux18))
-               - uyi*(qxxk*guy12+qyyk*guy17+qzzk*guy19
-              +2.0f*(qxyk*guy14+qxzk*guy15+qyzk*guy18))
-               - uzi*(qxxk*guz12+qyyk*guz17+qzzk*guz19
-              +2.0f*(qxyk*guz14+qxzk*guz15+qyzk*guz18))
-               + uxk*(qxxi*gqxx6+qyyi*gqyy6+qzzi*gqzz6
-              +2.0f*(qxyi*gqxy6+qxzi*gqxz6+qyzi*gqyz6))
-               + uyk*(qxxi*gqxx8+qyyi*gqyy8+qzzi*gqzz8
-              +2.0f*(qxyi*gqxy8+qxzi*gqxz8+qyzi*gqyz8))
-               + uzk*(qxxi*gqxx9+qyyi*gqyy9+qzzi*gqzz9
-              +2.0f*(qxyi*gqxy9+qxzi*gqxz9+qyzi*gqyz9))
-              + qxxi*(qxxk*gqxx12+qyyk*gqxx17+qzzk*gqxx19
-              +2.0f*(qxyk*gqxx14+qxzk*gqxx15+qyzk*gqxx18))
-              + qyyi*(qxxk*gqyy12+qyyk*gqyy17+qzzk*gqyy19
-              +2.0f*(qxyk*gqyy14+qxzk*gqyy15+qyzk*gqyy18))
-              + qzzi*(qxxk*gqzz12+qyyk*gqzz17+qzzk*gqzz19
-              +2.0f*(qxyk*gqzz14+qxzk*gqzz15+qyzk*gqzz18))
-       + 2.0f*(qxyi*(qxxk*gqxy12+qyyk*gqxy17+qzzk*gqxy19
-              +2.0f*(qxyk*gqxy14+qxzk*gqxy15+qyzk*gqxy18))
-              + qxzi*(qxxk*gqxz12+qyyk*gqxz17+qzzk*gqxz19
-              +2.0f*(qxyk*gqxz14+qxzk*gqxz15+qyzk*gqxz18))
-              + qyzi*(qxxk*gqyz12+qyyk*gqyz17+qzzk*gqyz19
-              +2.0f*(qxyk*gqyz14+qxzk*gqyz15+qyzk*gqyz18)));
+    dewidy = atomI.q*(atomJ.labFrameDipole[0]*gc6+atomJ.labFrameDipole[1]*gc8+atomJ.labFrameDipole[2]*gc9)
+                      -atomJ.q*(atomI.labFrameDipole[0]*gux3+atomI.labFrameDipole[1]*guy3+atomI.labFrameDipole[2]*guz3)
+                 +atomI.q*(atomJ.labFrameQuadrupole_XX*gc12+atomJ.labFrameQuadrupole_YY*gc17+atomJ.labFrameQuadrupole_ZZ*gc19
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gc14+atomJ.labFrameQuadrupole_XZ*gc15+atomJ.labFrameQuadrupole_YZ*gc18))
+                 +atomJ.q*(atomI.labFrameQuadrupole_XX*gqxx3+atomI.labFrameQuadrupole_YY*gqyy3+atomI.labFrameQuadrupole_ZZ*gqzz3
+              +2.0f*(atomI.labFrameQuadrupole_XY*gqxy3+atomI.labFrameQuadrupole_XZ*gqxz3+atomI.labFrameQuadrupole_YZ*gqyz3))
+               - atomI.labFrameDipole[0]*(atomJ.labFrameQuadrupole_XX*gux12+atomJ.labFrameQuadrupole_YY*gux17+atomJ.labFrameQuadrupole_ZZ*gux19
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gux14+atomJ.labFrameQuadrupole_XZ*gux15+atomJ.labFrameQuadrupole_YZ*gux18))
+               - atomI.labFrameDipole[1]*(atomJ.labFrameQuadrupole_XX*guy12+atomJ.labFrameQuadrupole_YY*guy17+atomJ.labFrameQuadrupole_ZZ*guy19
+              +2.0f*(atomJ.labFrameQuadrupole_XY*guy14+atomJ.labFrameQuadrupole_XZ*guy15+atomJ.labFrameQuadrupole_YZ*guy18))
+               - atomI.labFrameDipole[2]*(atomJ.labFrameQuadrupole_XX*guz12+atomJ.labFrameQuadrupole_YY*guz17+atomJ.labFrameQuadrupole_ZZ*guz19
+              +2.0f*(atomJ.labFrameQuadrupole_XY*guz14+atomJ.labFrameQuadrupole_XZ*guz15+atomJ.labFrameQuadrupole_YZ*guz18))
+               + atomJ.labFrameDipole[0]*(atomI.labFrameQuadrupole_XX*gqxx6+atomI.labFrameQuadrupole_YY*gqyy6+atomI.labFrameQuadrupole_ZZ*gqzz6
+              +2.0f*(atomI.labFrameQuadrupole_XY*gqxy6+atomI.labFrameQuadrupole_XZ*gqxz6+atomI.labFrameQuadrupole_YZ*gqyz6))
+               + atomJ.labFrameDipole[1]*(atomI.labFrameQuadrupole_XX*gqxx8+atomI.labFrameQuadrupole_YY*gqyy8+atomI.labFrameQuadrupole_ZZ*gqzz8
+              +2.0f*(atomI.labFrameQuadrupole_XY*gqxy8+atomI.labFrameQuadrupole_XZ*gqxz8+atomI.labFrameQuadrupole_YZ*gqyz8))
+               + atomJ.labFrameDipole[2]*(atomI.labFrameQuadrupole_XX*gqxx9+atomI.labFrameQuadrupole_YY*gqyy9+atomI.labFrameQuadrupole_ZZ*gqzz9
+              +2.0f*(atomI.labFrameQuadrupole_XY*gqxy9+atomI.labFrameQuadrupole_XZ*gqxz9+atomI.labFrameQuadrupole_YZ*gqyz9))
+              + atomI.labFrameQuadrupole_XX*(atomJ.labFrameQuadrupole_XX*gqxx12+atomJ.labFrameQuadrupole_YY*gqxx17+atomJ.labFrameQuadrupole_ZZ*gqxx19
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxx14+atomJ.labFrameQuadrupole_XZ*gqxx15+atomJ.labFrameQuadrupole_YZ*gqxx18))
+              + atomI.labFrameQuadrupole_YY*(atomJ.labFrameQuadrupole_XX*gqyy12+atomJ.labFrameQuadrupole_YY*gqyy17+atomJ.labFrameQuadrupole_ZZ*gqyy19
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqyy14+atomJ.labFrameQuadrupole_XZ*gqyy15+atomJ.labFrameQuadrupole_YZ*gqyy18))
+              + atomI.labFrameQuadrupole_ZZ*(atomJ.labFrameQuadrupole_XX*gqzz12+atomJ.labFrameQuadrupole_YY*gqzz17+atomJ.labFrameQuadrupole_ZZ*gqzz19
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqzz14+atomJ.labFrameQuadrupole_XZ*gqzz15+atomJ.labFrameQuadrupole_YZ*gqzz18))
+       + 2.0f*(atomI.labFrameQuadrupole_XY*(atomJ.labFrameQuadrupole_XX*gqxy12+atomJ.labFrameQuadrupole_YY*gqxy17+atomJ.labFrameQuadrupole_ZZ*gqxy19
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy14+atomJ.labFrameQuadrupole_XZ*gqxy15+atomJ.labFrameQuadrupole_YZ*gqxy18))
+              + atomI.labFrameQuadrupole_XZ*(atomJ.labFrameQuadrupole_XX*gqxz12+atomJ.labFrameQuadrupole_YY*gqxz17+atomJ.labFrameQuadrupole_ZZ*gqxz19
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxz14+atomJ.labFrameQuadrupole_XZ*gqxz15+atomJ.labFrameQuadrupole_YZ*gqxz18))
+              + atomI.labFrameQuadrupole_YZ*(atomJ.labFrameQuadrupole_XX*gqyz12+atomJ.labFrameQuadrupole_YY*gqyz17+atomJ.labFrameQuadrupole_ZZ*gqyz19
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqyz14+atomJ.labFrameQuadrupole_XZ*gqyz15+atomJ.labFrameQuadrupole_YZ*gqyz18)));
 
-    dewkdy = ci*(uxk*gux3+uyk*guy3+uzk*guz3)
-                      -ck*(uxi*gc6+uyi*gc8+uzi*gc9)
-                 +ci*(qxxk*gqxx3+qyyk*gqyy3+qzzk*gqzz3
-              +2.0f*(qxyk*gqxy3+qxzk*gqxz3+qyzk*gqyz3))
-                 +ck*(qxxi*gc12+qyyi*gc17+qzzi*gc19
-              +2.0f*(qxyi*gc14+qxzi*gc15+qyzi*gc18))
-               - uxi*(qxxk*gqxx6+qyyk*gqyy6+qzzk*gqzz6
-              +2.0f*(qxyk*gqxy6+qxzk*gqxz6+qyzk*gqyz6))
-               - uyi*(qxxk*gqxx8+qyyk*gqyy8+qzzk*gqzz8
-              +2.0f*(qxyk*gqxy8+qxzk*gqxz8+qyzk*gqyz8))
-               - uzi*(qxxk*gqxx9+qyyk*gqyy9+qzzk*gqzz9
-              +2.0f*(qxyk*gqxy9+qxzk*gqxz9+qyzk*gqyz9))
-               + uxk*(qxxi*gux12+qyyi*gux17+qzzi*gux19
-              +2.0f*(qxyi*gux14+qxzi*gux15+qyzi*gux18))
-               + uyk*(qxxi*guy12+qyyi*guy17+qzzi*guy19
-              +2.0f*(qxyi*guy14+qxzi*guy15+qyzi*guy18))
-               + uzk*(qxxi*guz12+qyyi*guz17+qzzi*guz19
-              +2.0f*(qxyi*guz14+qxzi*guz15+qyzi*guz18))
-              + qxxi*(qxxk*gqxx12+qyyk*gqyy12+qzzk*gqzz12
-              +2.0f*(qxyk*gqxy12+qxzk*gqxz12+qyzk*gqyz12))
-              + qyyi*(qxxk*gqxx17+qyyk*gqyy17+qzzk*gqzz17
-              +2.0f*(qxyk*gqxy17+qxzk*gqxz17+qyzk*gqyz17))
-              + qzzi*(qxxk*gqxx19+qyyk*gqyy19+qzzk*gqzz19
-              +2.0f*(qxyk*gqxy19+qxzk*gqxz19+qyzk*gqyz19))
-       + 2.0f*(qxyi*(qxxk*gqxx14+qyyk*gqyy14+qzzk*gqzz14
-              +2.0f*(qxyk*gqxy14+qxzk*gqxz14+qyzk*gqyz14))
-              + qxzi*(qxxk*gqxx15+qyyk*gqyy15+qzzk*gqzz15
-              +2.0f*(qxyk*gqxy15+qxzk*gqxz15+qyzk*gqyz15))
-              + qyzi*(qxxk*gqxx18+qyyk*gqyy18+qzzk*gqzz18
-              +2.0f*(qxyk*gqxy18+qxzk*gqxz18+qyzk*gqyz18)));
+    dewkdy = atomI.q*(atomJ.labFrameDipole[0]*gux3+atomJ.labFrameDipole[1]*guy3+atomJ.labFrameDipole[2]*guz3)
+                      -atomJ.q*(atomI.labFrameDipole[0]*gc6+atomI.labFrameDipole[1]*gc8+atomI.labFrameDipole[2]*gc9)
+                 +atomI.q*(atomJ.labFrameQuadrupole_XX*gqxx3+atomJ.labFrameQuadrupole_YY*gqyy3+atomJ.labFrameQuadrupole_ZZ*gqzz3
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy3+atomJ.labFrameQuadrupole_XZ*gqxz3+atomJ.labFrameQuadrupole_YZ*gqyz3))
+                 +atomJ.q*(atomI.labFrameQuadrupole_XX*gc12+atomI.labFrameQuadrupole_YY*gc17+atomI.labFrameQuadrupole_ZZ*gc19
+              +2.0f*(atomI.labFrameQuadrupole_XY*gc14+atomI.labFrameQuadrupole_XZ*gc15+atomI.labFrameQuadrupole_YZ*gc18))
+               - atomI.labFrameDipole[0]*(atomJ.labFrameQuadrupole_XX*gqxx6+atomJ.labFrameQuadrupole_YY*gqyy6+atomJ.labFrameQuadrupole_ZZ*gqzz6
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy6+atomJ.labFrameQuadrupole_XZ*gqxz6+atomJ.labFrameQuadrupole_YZ*gqyz6))
+               - atomI.labFrameDipole[1]*(atomJ.labFrameQuadrupole_XX*gqxx8+atomJ.labFrameQuadrupole_YY*gqyy8+atomJ.labFrameQuadrupole_ZZ*gqzz8
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy8+atomJ.labFrameQuadrupole_XZ*gqxz8+atomJ.labFrameQuadrupole_YZ*gqyz8))
+               - atomI.labFrameDipole[2]*(atomJ.labFrameQuadrupole_XX*gqxx9+atomJ.labFrameQuadrupole_YY*gqyy9+atomJ.labFrameQuadrupole_ZZ*gqzz9
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy9+atomJ.labFrameQuadrupole_XZ*gqxz9+atomJ.labFrameQuadrupole_YZ*gqyz9))
+               + atomJ.labFrameDipole[0]*(atomI.labFrameQuadrupole_XX*gux12+atomI.labFrameQuadrupole_YY*gux17+atomI.labFrameQuadrupole_ZZ*gux19
+              +2.0f*(atomI.labFrameQuadrupole_XY*gux14+atomI.labFrameQuadrupole_XZ*gux15+atomI.labFrameQuadrupole_YZ*gux18))
+               + atomJ.labFrameDipole[1]*(atomI.labFrameQuadrupole_XX*guy12+atomI.labFrameQuadrupole_YY*guy17+atomI.labFrameQuadrupole_ZZ*guy19
+              +2.0f*(atomI.labFrameQuadrupole_XY*guy14+atomI.labFrameQuadrupole_XZ*guy15+atomI.labFrameQuadrupole_YZ*guy18))
+               + atomJ.labFrameDipole[2]*(atomI.labFrameQuadrupole_XX*guz12+atomI.labFrameQuadrupole_YY*guz17+atomI.labFrameQuadrupole_ZZ*guz19
+              +2.0f*(atomI.labFrameQuadrupole_XY*guz14+atomI.labFrameQuadrupole_XZ*guz15+atomI.labFrameQuadrupole_YZ*guz18))
+              + atomI.labFrameQuadrupole_XX*(atomJ.labFrameQuadrupole_XX*gqxx12+atomJ.labFrameQuadrupole_YY*gqyy12+atomJ.labFrameQuadrupole_ZZ*gqzz12
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy12+atomJ.labFrameQuadrupole_XZ*gqxz12+atomJ.labFrameQuadrupole_YZ*gqyz12))
+              + atomI.labFrameQuadrupole_YY*(atomJ.labFrameQuadrupole_XX*gqxx17+atomJ.labFrameQuadrupole_YY*gqyy17+atomJ.labFrameQuadrupole_ZZ*gqzz17
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy17+atomJ.labFrameQuadrupole_XZ*gqxz17+atomJ.labFrameQuadrupole_YZ*gqyz17))
+              + atomI.labFrameQuadrupole_ZZ*(atomJ.labFrameQuadrupole_XX*gqxx19+atomJ.labFrameQuadrupole_YY*gqyy19+atomJ.labFrameQuadrupole_ZZ*gqzz19
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy19+atomJ.labFrameQuadrupole_XZ*gqxz19+atomJ.labFrameQuadrupole_YZ*gqyz19))
+       + 2.0f*(atomI.labFrameQuadrupole_XY*(atomJ.labFrameQuadrupole_XX*gqxx14+atomJ.labFrameQuadrupole_YY*gqyy14+atomJ.labFrameQuadrupole_ZZ*gqzz14
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy14+atomJ.labFrameQuadrupole_XZ*gqxz14+atomJ.labFrameQuadrupole_YZ*gqyz14))
+              + atomI.labFrameQuadrupole_XZ*(atomJ.labFrameQuadrupole_XX*gqxx15+atomJ.labFrameQuadrupole_YY*gqyy15+atomJ.labFrameQuadrupole_ZZ*gqzz15
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy15+atomJ.labFrameQuadrupole_XZ*gqxz15+atomJ.labFrameQuadrupole_YZ*gqyz15))
+              + atomI.labFrameQuadrupole_YZ*(atomJ.labFrameQuadrupole_XX*gqxx18+atomJ.labFrameQuadrupole_YY*gqyy18+atomJ.labFrameQuadrupole_ZZ*gqzz18
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy18+atomJ.labFrameQuadrupole_XZ*gqxz18+atomJ.labFrameQuadrupole_YZ*gqyz18)));
 
     dedy = desymdy + 0.5f*(dewidy + dewkdy);
 
-    desymdz = ci * ck * gc4
-                           - (uxi*(uxk*gux7+uyk*guy7+uzk*guz7)
-                             +uyi*(uxk*gux9+uyk*guy9+uzk*guz9)
-                             +uzi*(uxk*gux10+uyk*guy10+uzk*guz10));
+    desymdz = atomI.q * atomJ.q * gc4
+                           - (atomI.labFrameDipole[0]*(atomJ.labFrameDipole[0]*gux7+atomJ.labFrameDipole[1]*guy7+atomJ.labFrameDipole[2]*guz7)
+                             +atomI.labFrameDipole[1]*(atomJ.labFrameDipole[0]*gux9+atomJ.labFrameDipole[1]*guy9+atomJ.labFrameDipole[2]*guz9)
+                             +atomI.labFrameDipole[2]*(atomJ.labFrameDipole[0]*gux10+atomJ.labFrameDipole[1]*guy10+atomJ.labFrameDipole[2]*guz10));
 
-    dewidz = ci*(uxk*gc7+uyk*gc9+uzk*gc10)
-                      -ck*(uxi*gux4+uyi*guy4+uzi*guz4)
-                 +ci*(qxxk*gc13+qyyk*gc18+qzzk*gc20
-              +2.0f*(qxyk*gc15+qxzk*gc16+qyzk*gc19))
-                 +ck*(qxxi*gqxx4+qyyi*gqyy4+qzzi*gqzz4
-              +2.0f*(qxyi*gqxy4+qxzi*gqxz4+qyzi*gqyz4))
-               - uxi*(qxxk*gux13+qyyk*gux18+qzzk*gux20
-              +2.0f*(qxyk*gux15+qxzk*gux16+qyzk*gux19))
-               - uyi*(qxxk*guy13+qyyk*guy18+qzzk*guy20
-              +2.0f*(qxyk*guy15+qxzk*guy16+qyzk*guy19))
-               - uzi*(qxxk*guz13+qyyk*guz18+qzzk*guz20
-              +2.0f*(qxyk*guz15+qxzk*guz16+qyzk*guz19))
-               + uxk*(qxxi*gqxx7+qyyi*gqyy7+qzzi*gqzz7
-              +2.0f*(qxyi*gqxy7+qxzi*gqxz7+qyzi*gqyz7))
-               + uyk*(qxxi*gqxx9+qyyi*gqyy9+qzzi*gqzz9
-              +2.0f*(qxyi*gqxy9+qxzi*gqxz9+qyzi*gqyz9))
-               + uzk*(qxxi*gqxx10+qyyi*gqyy10+qzzi*gqzz10
-              +2.0f*(qxyi*gqxy10+qxzi*gqxz10+qyzi*gqyz10))
-              + qxxi*(qxxk*gqxx13+qyyk*gqxx18+qzzk*gqxx20
-              +2.0f*(qxyk*gqxx15+qxzk*gqxx16+qyzk*gqxx19))
-              + qyyi*(qxxk*gqyy13+qyyk*gqyy18+qzzk*gqyy20
-              +2.0f*(qxyk*gqyy15+qxzk*gqyy16+qyzk*gqyy19))
-              + qzzi*(qxxk*gqzz13+qyyk*gqzz18+qzzk*gqzz20
-              +2.0f*(qxyk*gqzz15+qxzk*gqzz16+qyzk*gqzz19))
-       + 2.0f*(qxyi*(qxxk*gqxy13+qyyk*gqxy18+qzzk*gqxy20
-              +2.0f*(qxyk*gqxy15+qxzk*gqxy16+qyzk*gqxy19))
-              + qxzi*(qxxk*gqxz13+qyyk*gqxz18+qzzk*gqxz20
-              +2.0f*(qxyk*gqxz15+qxzk*gqxz16+qyzk*gqxz19))
-              + qyzi*(qxxk*gqyz13+qyyk*gqyz18+qzzk*gqyz20
-              +2.0f*(qxyk*gqyz15+qxzk*gqyz16+qyzk*gqyz19)));
+    dewidz = atomI.q*(atomJ.labFrameDipole[0]*gc7+atomJ.labFrameDipole[1]*gc9+atomJ.labFrameDipole[2]*gc10)
+                      -atomJ.q*(atomI.labFrameDipole[0]*gux4+atomI.labFrameDipole[1]*guy4+atomI.labFrameDipole[2]*guz4)
+                 +atomI.q*(atomJ.labFrameQuadrupole_XX*gc13+atomJ.labFrameQuadrupole_YY*gc18+atomJ.labFrameQuadrupole_ZZ*gc20
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gc15+atomJ.labFrameQuadrupole_XZ*gc16+atomJ.labFrameQuadrupole_YZ*gc19))
+                 +atomJ.q*(atomI.labFrameQuadrupole_XX*gqxx4+atomI.labFrameQuadrupole_YY*gqyy4+atomI.labFrameQuadrupole_ZZ*gqzz4
+              +2.0f*(atomI.labFrameQuadrupole_XY*gqxy4+atomI.labFrameQuadrupole_XZ*gqxz4+atomI.labFrameQuadrupole_YZ*gqyz4))
+               - atomI.labFrameDipole[0]*(atomJ.labFrameQuadrupole_XX*gux13+atomJ.labFrameQuadrupole_YY*gux18+atomJ.labFrameQuadrupole_ZZ*gux20
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gux15+atomJ.labFrameQuadrupole_XZ*gux16+atomJ.labFrameQuadrupole_YZ*gux19))
+               - atomI.labFrameDipole[1]*(atomJ.labFrameQuadrupole_XX*guy13+atomJ.labFrameQuadrupole_YY*guy18+atomJ.labFrameQuadrupole_ZZ*guy20
+              +2.0f*(atomJ.labFrameQuadrupole_XY*guy15+atomJ.labFrameQuadrupole_XZ*guy16+atomJ.labFrameQuadrupole_YZ*guy19))
+               - atomI.labFrameDipole[2]*(atomJ.labFrameQuadrupole_XX*guz13+atomJ.labFrameQuadrupole_YY*guz18+atomJ.labFrameQuadrupole_ZZ*guz20
+              +2.0f*(atomJ.labFrameQuadrupole_XY*guz15+atomJ.labFrameQuadrupole_XZ*guz16+atomJ.labFrameQuadrupole_YZ*guz19))
+               + atomJ.labFrameDipole[0]*(atomI.labFrameQuadrupole_XX*gqxx7+atomI.labFrameQuadrupole_YY*gqyy7+atomI.labFrameQuadrupole_ZZ*gqzz7
+              +2.0f*(atomI.labFrameQuadrupole_XY*gqxy7+atomI.labFrameQuadrupole_XZ*gqxz7+atomI.labFrameQuadrupole_YZ*gqyz7))
+               + atomJ.labFrameDipole[1]*(atomI.labFrameQuadrupole_XX*gqxx9+atomI.labFrameQuadrupole_YY*gqyy9+atomI.labFrameQuadrupole_ZZ*gqzz9
+              +2.0f*(atomI.labFrameQuadrupole_XY*gqxy9+atomI.labFrameQuadrupole_XZ*gqxz9+atomI.labFrameQuadrupole_YZ*gqyz9))
+               + atomJ.labFrameDipole[2]*(atomI.labFrameQuadrupole_XX*gqxx10+atomI.labFrameQuadrupole_YY*gqyy10+atomI.labFrameQuadrupole_ZZ*gqzz10
+              +2.0f*(atomI.labFrameQuadrupole_XY*gqxy10+atomI.labFrameQuadrupole_XZ*gqxz10+atomI.labFrameQuadrupole_YZ*gqyz10))
+              + atomI.labFrameQuadrupole_XX*(atomJ.labFrameQuadrupole_XX*gqxx13+atomJ.labFrameQuadrupole_YY*gqxx18+atomJ.labFrameQuadrupole_ZZ*gqxx20
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxx15+atomJ.labFrameQuadrupole_XZ*gqxx16+atomJ.labFrameQuadrupole_YZ*gqxx19))
+              + atomI.labFrameQuadrupole_YY*(atomJ.labFrameQuadrupole_XX*gqyy13+atomJ.labFrameQuadrupole_YY*gqyy18+atomJ.labFrameQuadrupole_ZZ*gqyy20
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqyy15+atomJ.labFrameQuadrupole_XZ*gqyy16+atomJ.labFrameQuadrupole_YZ*gqyy19))
+              + atomI.labFrameQuadrupole_ZZ*(atomJ.labFrameQuadrupole_XX*gqzz13+atomJ.labFrameQuadrupole_YY*gqzz18+atomJ.labFrameQuadrupole_ZZ*gqzz20
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqzz15+atomJ.labFrameQuadrupole_XZ*gqzz16+atomJ.labFrameQuadrupole_YZ*gqzz19))
+       + 2.0f*(atomI.labFrameQuadrupole_XY*(atomJ.labFrameQuadrupole_XX*gqxy13+atomJ.labFrameQuadrupole_YY*gqxy18+atomJ.labFrameQuadrupole_ZZ*gqxy20
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy15+atomJ.labFrameQuadrupole_XZ*gqxy16+atomJ.labFrameQuadrupole_YZ*gqxy19))
+              + atomI.labFrameQuadrupole_XZ*(atomJ.labFrameQuadrupole_XX*gqxz13+atomJ.labFrameQuadrupole_YY*gqxz18+atomJ.labFrameQuadrupole_ZZ*gqxz20
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxz15+atomJ.labFrameQuadrupole_XZ*gqxz16+atomJ.labFrameQuadrupole_YZ*gqxz19))
+              + atomI.labFrameQuadrupole_YZ*(atomJ.labFrameQuadrupole_XX*gqyz13+atomJ.labFrameQuadrupole_YY*gqyz18+atomJ.labFrameQuadrupole_ZZ*gqyz20
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqyz15+atomJ.labFrameQuadrupole_XZ*gqyz16+atomJ.labFrameQuadrupole_YZ*gqyz19)));
 
-    dewkdz = ci*(uxk*gux4+uyk*guy4+uzk*guz4)
-                      -ck*(uxi*gc7+uyi*gc9+uzi*gc10)
-                 +ci*(qxxk*gqxx4+qyyk*gqyy4+qzzk*gqzz4
-              +2.0f*(qxyk*gqxy4+qxzk*gqxz4+qyzk*gqyz4))
-                 +ck*(qxxi*gc13+qyyi*gc18+qzzi*gc20
-              +2.0f*(qxyi*gc15+qxzi*gc16+qyzi*gc19))
-               - uxi*(qxxk*gqxx7+qyyk*gqyy7+qzzk*gqzz7
-              +2.0f*(qxyk*gqxy7+qxzk*gqxz7+qyzk*gqyz7))
-               - uyi*(qxxk*gqxx9+qyyk*gqyy9+qzzk*gqzz9
-              +2.0f*(qxyk*gqxy9+qxzk*gqxz9+qyzk*gqyz9))
-               - uzi*(qxxk*gqxx10+qyyk*gqyy10+qzzk*gqzz10
-              +2.0f*(qxyk*gqxy10+qxzk*gqxz10+qyzk*gqyz10))
-               + uxk*(qxxi*gux13+qyyi*gux18+qzzi*gux20
-              +2.0f*(qxyi*gux15+qxzi*gux16+qyzi*gux19))
-               + uyk*(qxxi*guy13+qyyi*guy18+qzzi*guy20
-              +2.0f*(qxyi*guy15+qxzi*guy16+qyzi*guy19))
-               + uzk*(qxxi*guz13+qyyi*guz18+qzzi*guz20
-              +2.0f*(qxyi*guz15+qxzi*guz16+qyzi*guz19))
-              + qxxi*(qxxk*gqxx13+qyyk*gqyy13+qzzk*gqzz13
-              +2.0f*(qxyk*gqxy13+qxzk*gqxz13+qyzk*gqyz13))
-              + qyyi*(qxxk*gqxx18+qyyk*gqyy18+qzzk*gqzz18
-              +2.0f*(qxyk*gqxy18+qxzk*gqxz18+qyzk*gqyz18))
-              + qzzi*(qxxk*gqxx20+qyyk*gqyy20+qzzk*gqzz20
-              +2.0f*(qxyk*gqxy20+qxzk*gqxz20+qyzk*gqyz20))
-       + 2.0f*(qxyi*(qxxk*gqxx15+qyyk*gqyy15+qzzk*gqzz15
-              +2.0f*(qxyk*gqxy15+qxzk*gqxz15+qyzk*gqyz15))
-              + qxzi*(qxxk*gqxx16+qyyk*gqyy16+qzzk*gqzz16
-              +2.0f*(qxyk*gqxy16+qxzk*gqxz16+qyzk*gqyz16))
-              + qyzi*(qxxk*gqxx19+qyyk*gqyy19+qzzk*gqzz19
-              +2.0f*(qxyk*gqxy19+qxzk*gqxz19+qyzk*gqyz19)));
+    dewkdz = atomI.q*(atomJ.labFrameDipole[0]*gux4+atomJ.labFrameDipole[1]*guy4+atomJ.labFrameDipole[2]*guz4)
+                      -atomJ.q*(atomI.labFrameDipole[0]*gc7+atomI.labFrameDipole[1]*gc9+atomI.labFrameDipole[2]*gc10)
+                 +atomI.q*(atomJ.labFrameQuadrupole_XX*gqxx4+atomJ.labFrameQuadrupole_YY*gqyy4+atomJ.labFrameQuadrupole_ZZ*gqzz4
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy4+atomJ.labFrameQuadrupole_XZ*gqxz4+atomJ.labFrameQuadrupole_YZ*gqyz4))
+                 +atomJ.q*(atomI.labFrameQuadrupole_XX*gc13+atomI.labFrameQuadrupole_YY*gc18+atomI.labFrameQuadrupole_ZZ*gc20
+              +2.0f*(atomI.labFrameQuadrupole_XY*gc15+atomI.labFrameQuadrupole_XZ*gc16+atomI.labFrameQuadrupole_YZ*gc19))
+               - atomI.labFrameDipole[0]*(atomJ.labFrameQuadrupole_XX*gqxx7+atomJ.labFrameQuadrupole_YY*gqyy7+atomJ.labFrameQuadrupole_ZZ*gqzz7
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy7+atomJ.labFrameQuadrupole_XZ*gqxz7+atomJ.labFrameQuadrupole_YZ*gqyz7))
+               - atomI.labFrameDipole[1]*(atomJ.labFrameQuadrupole_XX*gqxx9+atomJ.labFrameQuadrupole_YY*gqyy9+atomJ.labFrameQuadrupole_ZZ*gqzz9
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy9+atomJ.labFrameQuadrupole_XZ*gqxz9+atomJ.labFrameQuadrupole_YZ*gqyz9))
+               - atomI.labFrameDipole[2]*(atomJ.labFrameQuadrupole_XX*gqxx10+atomJ.labFrameQuadrupole_YY*gqyy10+atomJ.labFrameQuadrupole_ZZ*gqzz10
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy10+atomJ.labFrameQuadrupole_XZ*gqxz10+atomJ.labFrameQuadrupole_YZ*gqyz10))
+               + atomJ.labFrameDipole[0]*(atomI.labFrameQuadrupole_XX*gux13+atomI.labFrameQuadrupole_YY*gux18+atomI.labFrameQuadrupole_ZZ*gux20
+              +2.0f*(atomI.labFrameQuadrupole_XY*gux15+atomI.labFrameQuadrupole_XZ*gux16+atomI.labFrameQuadrupole_YZ*gux19))
+               + atomJ.labFrameDipole[1]*(atomI.labFrameQuadrupole_XX*guy13+atomI.labFrameQuadrupole_YY*guy18+atomI.labFrameQuadrupole_ZZ*guy20
+              +2.0f*(atomI.labFrameQuadrupole_XY*guy15+atomI.labFrameQuadrupole_XZ*guy16+atomI.labFrameQuadrupole_YZ*guy19))
+               + atomJ.labFrameDipole[2]*(atomI.labFrameQuadrupole_XX*guz13+atomI.labFrameQuadrupole_YY*guz18+atomI.labFrameQuadrupole_ZZ*guz20
+              +2.0f*(atomI.labFrameQuadrupole_XY*guz15+atomI.labFrameQuadrupole_XZ*guz16+atomI.labFrameQuadrupole_YZ*guz19))
+              + atomI.labFrameQuadrupole_XX*(atomJ.labFrameQuadrupole_XX*gqxx13+atomJ.labFrameQuadrupole_YY*gqyy13+atomJ.labFrameQuadrupole_ZZ*gqzz13
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy13+atomJ.labFrameQuadrupole_XZ*gqxz13+atomJ.labFrameQuadrupole_YZ*gqyz13))
+              + atomI.labFrameQuadrupole_YY*(atomJ.labFrameQuadrupole_XX*gqxx18+atomJ.labFrameQuadrupole_YY*gqyy18+atomJ.labFrameQuadrupole_ZZ*gqzz18
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy18+atomJ.labFrameQuadrupole_XZ*gqxz18+atomJ.labFrameQuadrupole_YZ*gqyz18))
+              + atomI.labFrameQuadrupole_ZZ*(atomJ.labFrameQuadrupole_XX*gqxx20+atomJ.labFrameQuadrupole_YY*gqyy20+atomJ.labFrameQuadrupole_ZZ*gqzz20
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy20+atomJ.labFrameQuadrupole_XZ*gqxz20+atomJ.labFrameQuadrupole_YZ*gqyz20))
+       + 2.0f*(atomI.labFrameQuadrupole_XY*(atomJ.labFrameQuadrupole_XX*gqxx15+atomJ.labFrameQuadrupole_YY*gqyy15+atomJ.labFrameQuadrupole_ZZ*gqzz15
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy15+atomJ.labFrameQuadrupole_XZ*gqxz15+atomJ.labFrameQuadrupole_YZ*gqyz15))
+              + atomI.labFrameQuadrupole_XZ*(atomJ.labFrameQuadrupole_XX*gqxx16+atomJ.labFrameQuadrupole_YY*gqyy16+atomJ.labFrameQuadrupole_ZZ*gqzz16
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy16+atomJ.labFrameQuadrupole_XZ*gqxz16+atomJ.labFrameQuadrupole_YZ*gqyz16))
+              + atomI.labFrameQuadrupole_YZ*(atomJ.labFrameQuadrupole_XX*gqxx19+atomJ.labFrameQuadrupole_YY*gqyy19+atomJ.labFrameQuadrupole_ZZ*gqzz19
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy19+atomJ.labFrameQuadrupole_XZ*gqxz19+atomJ.labFrameQuadrupole_YZ*gqyz19)));
 
     dedz = desymdz + 0.5f*(dewidz + dewkdz);
 
-    desymdr = ci * ck * gc21
-                           - (uxi*(uxk*gux22+uyk*guy22+uzk*guz22)
-                             +uyi*(uxk*gux23+uyk*guy23+uzk*guz23)
-                             +uzi*(uxk*gux24+uyk*guy24+uzk*guz24));
+    desymdr = atomI.q * atomJ.q * gc21
+                           - (atomI.labFrameDipole[0]*(atomJ.labFrameDipole[0]*gux22+atomJ.labFrameDipole[1]*guy22+atomJ.labFrameDipole[2]*guz22)
+                             +atomI.labFrameDipole[1]*(atomJ.labFrameDipole[0]*gux23+atomJ.labFrameDipole[1]*guy23+atomJ.labFrameDipole[2]*guz23)
+                             +atomI.labFrameDipole[2]*(atomJ.labFrameDipole[0]*gux24+atomJ.labFrameDipole[1]*guy24+atomJ.labFrameDipole[2]*guz24));
 
-    dewidr = ci*(uxk*gc22+uyk*gc23+uzk*gc24)
-                      -ck*(uxi*gux21+uyi*guy21+uzi*guz21)
-                 +ci*(qxxk*gc25+qyyk*gc28+qzzk*gc30
-              +2.0f*(qxyk*gc26+qxzk*gc27+qyzk*gc29))
-                 +ck*(qxxi*gqxx21+qyyi*gqyy21+qzzi*gqzz21
-              +2.0f*(qxyi*gqxy21+qxzi*gqxz21+qyzi*gqyz21))
-               - uxi*(qxxk*gux25+qyyk*gux28+qzzk*gux30
-              +2.0f*(qxyk*gux26+qxzk*gux27+qyzk*gux29))
-               - uyi*(qxxk*guy25+qyyk*guy28+qzzk*guy30
-              +2.0f*(qxyk*guy26+qxzk*guy27+qyzk*guy29))
-               - uzi*(qxxk*guz25+qyyk*guz28+qzzk*guz30
-              +2.0f*(qxyk*guz26+qxzk*guz27+qyzk*guz29))
-               + uxk*(qxxi*gqxx22+qyyi*gqyy22+qzzi*gqzz22
-              +2.0f*(qxyi*gqxy22+qxzi*gqxz22+qyzi*gqyz22))
-               + uyk*(qxxi*gqxx23+qyyi*gqyy23+qzzi*gqzz23
-              +2.0f*(qxyi*gqxy23+qxzi*gqxz23+qyzi*gqyz23))
-               + uzk*(qxxi*gqxx24+qyyi*gqyy24+qzzi*gqzz24
-              +2.0f*(qxyi*gqxy24+qxzi*gqxz24+qyzi*gqyz24))
-              + qxxi*(qxxk*gqxx25+qyyk*gqxx28+qzzk*gqxx30
-              +2.0f*(qxyk*gqxx26+qxzk*gqxx27+qyzk*gqxx29))
-              + qyyi*(qxxk*gqyy25+qyyk*gqyy28+qzzk*gqyy30
-              +2.0f*(qxyk*gqyy26+qxzk*gqyy27+qyzk*gqyy29))
-              + qzzi*(qxxk*gqzz25+qyyk*gqzz28+qzzk*gqzz30
-              +2.0f*(qxyk*gqzz26+qxzk*gqzz27+qyzk*gqzz29))
-              + 2.0f*(qxyi*(qxxk*gqxy25+qyyk*gqxy28+qzzk*gqxy30
-              +2.0f*(qxyk*gqxy26+qxzk*gqxy27+qyzk*gqxy29))
-              + qxzi*(qxxk*gqxz25+qyyk*gqxz28+qzzk*gqxz30
-              +2.0f*(qxyk*gqxz26+qxzk*gqxz27+qyzk*gqxz29))
-              + qyzi*(qxxk*gqyz25+qyyk*gqyz28+qzzk*gqyz30
-              +2.0f*(qxyk*gqyz26+qxzk*gqyz27+qyzk*gqyz29)));
+    dewidr = atomI.q*(atomJ.labFrameDipole[0]*gc22+atomJ.labFrameDipole[1]*gc23+atomJ.labFrameDipole[2]*gc24)
+                      -atomJ.q*(atomI.labFrameDipole[0]*gux21+atomI.labFrameDipole[1]*guy21+atomI.labFrameDipole[2]*guz21)
+                 +atomI.q*(atomJ.labFrameQuadrupole_XX*gc25+atomJ.labFrameQuadrupole_YY*gc28+atomJ.labFrameQuadrupole_ZZ*gc30
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gc26+atomJ.labFrameQuadrupole_XZ*gc27+atomJ.labFrameQuadrupole_YZ*gc29))
+                 +atomJ.q*(atomI.labFrameQuadrupole_XX*gqxx21+atomI.labFrameQuadrupole_YY*gqyy21+atomI.labFrameQuadrupole_ZZ*gqzz21
+              +2.0f*(atomI.labFrameQuadrupole_XY*gqxy21+atomI.labFrameQuadrupole_XZ*gqxz21+atomI.labFrameQuadrupole_YZ*gqyz21))
+               - atomI.labFrameDipole[0]*(atomJ.labFrameQuadrupole_XX*gux25+atomJ.labFrameQuadrupole_YY*gux28+atomJ.labFrameQuadrupole_ZZ*gux30
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gux26+atomJ.labFrameQuadrupole_XZ*gux27+atomJ.labFrameQuadrupole_YZ*gux29))
+               - atomI.labFrameDipole[1]*(atomJ.labFrameQuadrupole_XX*guy25+atomJ.labFrameQuadrupole_YY*guy28+atomJ.labFrameQuadrupole_ZZ*guy30
+              +2.0f*(atomJ.labFrameQuadrupole_XY*guy26+atomJ.labFrameQuadrupole_XZ*guy27+atomJ.labFrameQuadrupole_YZ*guy29))
+               - atomI.labFrameDipole[2]*(atomJ.labFrameQuadrupole_XX*guz25+atomJ.labFrameQuadrupole_YY*guz28+atomJ.labFrameQuadrupole_ZZ*guz30
+              +2.0f*(atomJ.labFrameQuadrupole_XY*guz26+atomJ.labFrameQuadrupole_XZ*guz27+atomJ.labFrameQuadrupole_YZ*guz29))
+               + atomJ.labFrameDipole[0]*(atomI.labFrameQuadrupole_XX*gqxx22+atomI.labFrameQuadrupole_YY*gqyy22+atomI.labFrameQuadrupole_ZZ*gqzz22
+              +2.0f*(atomI.labFrameQuadrupole_XY*gqxy22+atomI.labFrameQuadrupole_XZ*gqxz22+atomI.labFrameQuadrupole_YZ*gqyz22))
+               + atomJ.labFrameDipole[1]*(atomI.labFrameQuadrupole_XX*gqxx23+atomI.labFrameQuadrupole_YY*gqyy23+atomI.labFrameQuadrupole_ZZ*gqzz23
+              +2.0f*(atomI.labFrameQuadrupole_XY*gqxy23+atomI.labFrameQuadrupole_XZ*gqxz23+atomI.labFrameQuadrupole_YZ*gqyz23))
+               + atomJ.labFrameDipole[2]*(atomI.labFrameQuadrupole_XX*gqxx24+atomI.labFrameQuadrupole_YY*gqyy24+atomI.labFrameQuadrupole_ZZ*gqzz24
+              +2.0f*(atomI.labFrameQuadrupole_XY*gqxy24+atomI.labFrameQuadrupole_XZ*gqxz24+atomI.labFrameQuadrupole_YZ*gqyz24))
+              + atomI.labFrameQuadrupole_XX*(atomJ.labFrameQuadrupole_XX*gqxx25+atomJ.labFrameQuadrupole_YY*gqxx28+atomJ.labFrameQuadrupole_ZZ*gqxx30
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxx26+atomJ.labFrameQuadrupole_XZ*gqxx27+atomJ.labFrameQuadrupole_YZ*gqxx29))
+              + atomI.labFrameQuadrupole_YY*(atomJ.labFrameQuadrupole_XX*gqyy25+atomJ.labFrameQuadrupole_YY*gqyy28+atomJ.labFrameQuadrupole_ZZ*gqyy30
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqyy26+atomJ.labFrameQuadrupole_XZ*gqyy27+atomJ.labFrameQuadrupole_YZ*gqyy29))
+              + atomI.labFrameQuadrupole_ZZ*(atomJ.labFrameQuadrupole_XX*gqzz25+atomJ.labFrameQuadrupole_YY*gqzz28+atomJ.labFrameQuadrupole_ZZ*gqzz30
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqzz26+atomJ.labFrameQuadrupole_XZ*gqzz27+atomJ.labFrameQuadrupole_YZ*gqzz29))
+              + 2.0f*(atomI.labFrameQuadrupole_XY*(atomJ.labFrameQuadrupole_XX*gqxy25+atomJ.labFrameQuadrupole_YY*gqxy28+atomJ.labFrameQuadrupole_ZZ*gqxy30
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy26+atomJ.labFrameQuadrupole_XZ*gqxy27+atomJ.labFrameQuadrupole_YZ*gqxy29))
+              + atomI.labFrameQuadrupole_XZ*(atomJ.labFrameQuadrupole_XX*gqxz25+atomJ.labFrameQuadrupole_YY*gqxz28+atomJ.labFrameQuadrupole_ZZ*gqxz30
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxz26+atomJ.labFrameQuadrupole_XZ*gqxz27+atomJ.labFrameQuadrupole_YZ*gqxz29))
+              + atomI.labFrameQuadrupole_YZ*(atomJ.labFrameQuadrupole_XX*gqyz25+atomJ.labFrameQuadrupole_YY*gqyz28+atomJ.labFrameQuadrupole_ZZ*gqyz30
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqyz26+atomJ.labFrameQuadrupole_XZ*gqyz27+atomJ.labFrameQuadrupole_YZ*gqyz29)));
 
-    dewkdr = ci*(uxk*gux21+uyk*guy21+uzk*guz21)
-                      -ck*(uxi*gc22+uyi*gc23+uzi*gc24)
-                 +ci*(qxxk*gqxx21+qyyk*gqyy21+qzzk*gqzz21
-              +2.0f*(qxyk*gqxy21+qxzk*gqxz21+qyzk*gqyz21))
-                 +ck*(qxxi*gc25+qyyi*gc28+qzzi*gc30
-              +2.0f*(qxyi*gc26+qxzi*gc27+qyzi*gc29))
-               - uxi*(qxxk*gqxx22+qyyk*gqyy22+qzzk*gqzz22
-              +2.0f*(qxyk*gqxy22+qxzk*gqxz22+qyzk*gqyz22))
-               - uyi*(qxxk*gqxx23+qyyk*gqyy23+qzzk*gqzz23
-              +2.0f*(qxyk*gqxy23+qxzk*gqxz23+qyzk*gqyz23))
-               - uzi*(qxxk*gqxx24+qyyk*gqyy24+qzzk*gqzz24
-              +2.0f*(qxyk*gqxy24+qxzk*gqxz24+qyzk*gqyz24))
-               + uxk*(qxxi*gux25+qyyi*gux28+qzzi*gux30
-              +2.0f*(qxyi*gux26+qxzi*gux27+qyzi*gux29))
-               + uyk*(qxxi*guy25+qyyi*guy28+qzzi*guy30
-              +2.0f*(qxyi*guy26+qxzi*guy27+qyzi*guy29))
-               + uzk*(qxxi*guz25+qyyi*guz28+qzzi*guz30
-              +2.0f*(qxyi*guz26+qxzi*guz27+qyzi*guz29))
-              + qxxi*(qxxk*gqxx25+qyyk*gqyy25+qzzk*gqzz25
-              +2.0f*(qxyk*gqxy25+qxzk*gqxz25+qyzk*gqyz25))
-              + qyyi*(qxxk*gqxx28+qyyk*gqyy28+qzzk*gqzz28
-              +2.0f*(qxyk*gqxy28+qxzk*gqxz28+qyzk*gqyz28))
-              + qzzi*(qxxk*gqxx30+qyyk*gqyy30+qzzk*gqzz30
-              +2.0f*(qxyk*gqxy30+qxzk*gqxz30+qyzk*gqyz30))
-              + 2.0f*(qxyi*(qxxk*gqxx26+qyyk*gqyy26+qzzk*gqzz26
-              +2.0f*(qxyk*gqxy26+qxzk*gqxz26+qyzk*gqyz26))
-              + qxzi*(qxxk*gqxx27+qyyk*gqyy27+qzzk*gqzz27
-              +2.0f*(qxyk*gqxy27+qxzk*gqxz27+qyzk*gqyz27))
-              + qyzi*(qxxk*gqxx29+qyyk*gqyy29+qzzk*gqzz29
-              +2.0f*(qxyk*gqxy29+qxzk*gqxz29+qyzk*gqyz29)));
+    dewkdr = atomI.q*(atomJ.labFrameDipole[0]*gux21+atomJ.labFrameDipole[1]*guy21+atomJ.labFrameDipole[2]*guz21)
+                      -atomJ.q*(atomI.labFrameDipole[0]*gc22+atomI.labFrameDipole[1]*gc23+atomI.labFrameDipole[2]*gc24)
+                 +atomI.q*(atomJ.labFrameQuadrupole_XX*gqxx21+atomJ.labFrameQuadrupole_YY*gqyy21+atomJ.labFrameQuadrupole_ZZ*gqzz21
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy21+atomJ.labFrameQuadrupole_XZ*gqxz21+atomJ.labFrameQuadrupole_YZ*gqyz21))
+                 +atomJ.q*(atomI.labFrameQuadrupole_XX*gc25+atomI.labFrameQuadrupole_YY*gc28+atomI.labFrameQuadrupole_ZZ*gc30
+              +2.0f*(atomI.labFrameQuadrupole_XY*gc26+atomI.labFrameQuadrupole_XZ*gc27+atomI.labFrameQuadrupole_YZ*gc29))
+               - atomI.labFrameDipole[0]*(atomJ.labFrameQuadrupole_XX*gqxx22+atomJ.labFrameQuadrupole_YY*gqyy22+atomJ.labFrameQuadrupole_ZZ*gqzz22
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy22+atomJ.labFrameQuadrupole_XZ*gqxz22+atomJ.labFrameQuadrupole_YZ*gqyz22))
+               - atomI.labFrameDipole[1]*(atomJ.labFrameQuadrupole_XX*gqxx23+atomJ.labFrameQuadrupole_YY*gqyy23+atomJ.labFrameQuadrupole_ZZ*gqzz23
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy23+atomJ.labFrameQuadrupole_XZ*gqxz23+atomJ.labFrameQuadrupole_YZ*gqyz23))
+               - atomI.labFrameDipole[2]*(atomJ.labFrameQuadrupole_XX*gqxx24+atomJ.labFrameQuadrupole_YY*gqyy24+atomJ.labFrameQuadrupole_ZZ*gqzz24
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy24+atomJ.labFrameQuadrupole_XZ*gqxz24+atomJ.labFrameQuadrupole_YZ*gqyz24))
+               + atomJ.labFrameDipole[0]*(atomI.labFrameQuadrupole_XX*gux25+atomI.labFrameQuadrupole_YY*gux28+atomI.labFrameQuadrupole_ZZ*gux30
+              +2.0f*(atomI.labFrameQuadrupole_XY*gux26+atomI.labFrameQuadrupole_XZ*gux27+atomI.labFrameQuadrupole_YZ*gux29))
+               + atomJ.labFrameDipole[1]*(atomI.labFrameQuadrupole_XX*guy25+atomI.labFrameQuadrupole_YY*guy28+atomI.labFrameQuadrupole_ZZ*guy30
+              +2.0f*(atomI.labFrameQuadrupole_XY*guy26+atomI.labFrameQuadrupole_XZ*guy27+atomI.labFrameQuadrupole_YZ*guy29))
+               + atomJ.labFrameDipole[2]*(atomI.labFrameQuadrupole_XX*guz25+atomI.labFrameQuadrupole_YY*guz28+atomI.labFrameQuadrupole_ZZ*guz30
+              +2.0f*(atomI.labFrameQuadrupole_XY*guz26+atomI.labFrameQuadrupole_XZ*guz27+atomI.labFrameQuadrupole_YZ*guz29))
+              + atomI.labFrameQuadrupole_XX*(atomJ.labFrameQuadrupole_XX*gqxx25+atomJ.labFrameQuadrupole_YY*gqyy25+atomJ.labFrameQuadrupole_ZZ*gqzz25
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy25+atomJ.labFrameQuadrupole_XZ*gqxz25+atomJ.labFrameQuadrupole_YZ*gqyz25))
+              + atomI.labFrameQuadrupole_YY*(atomJ.labFrameQuadrupole_XX*gqxx28+atomJ.labFrameQuadrupole_YY*gqyy28+atomJ.labFrameQuadrupole_ZZ*gqzz28
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy28+atomJ.labFrameQuadrupole_XZ*gqxz28+atomJ.labFrameQuadrupole_YZ*gqyz28))
+              + atomI.labFrameQuadrupole_ZZ*(atomJ.labFrameQuadrupole_XX*gqxx30+atomJ.labFrameQuadrupole_YY*gqyy30+atomJ.labFrameQuadrupole_ZZ*gqzz30
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy30+atomJ.labFrameQuadrupole_XZ*gqxz30+atomJ.labFrameQuadrupole_YZ*gqyz30))
+              + 2.0f*(atomI.labFrameQuadrupole_XY*(atomJ.labFrameQuadrupole_XX*gqxx26+atomJ.labFrameQuadrupole_YY*gqyy26+atomJ.labFrameQuadrupole_ZZ*gqzz26
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy26+atomJ.labFrameQuadrupole_XZ*gqxz26+atomJ.labFrameQuadrupole_YZ*gqyz26))
+              + atomI.labFrameQuadrupole_XZ*(atomJ.labFrameQuadrupole_XX*gqxx27+atomJ.labFrameQuadrupole_YY*gqyy27+atomJ.labFrameQuadrupole_ZZ*gqzz27
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy27+atomJ.labFrameQuadrupole_XZ*gqxz27+atomJ.labFrameQuadrupole_YZ*gqyz27))
+              + atomI.labFrameQuadrupole_YZ*(atomJ.labFrameQuadrupole_XX*gqxx29+atomJ.labFrameQuadrupole_YY*gqyy29+atomJ.labFrameQuadrupole_ZZ*gqzz29
+              +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy29+atomJ.labFrameQuadrupole_XZ*gqxz29+atomJ.labFrameQuadrupole_YZ*gqyz29)));
 
     dsumdr = desymdr + 0.5f*(dewidr + dewkdr);
-    drbi = rbk*dsumdr;
-    drbk = rbi*dsumdr;
+    drbi = atomJ.bornRadius*dsumdr;
+    drbk = atomI.bornRadius*dsumdr;
 
     // torque on permanent dipoles due to permanent reaction field
 
@@ -1048,334 +937,334 @@ __device__ void calculateKirkwoodPairIxn_kernel( unsigned int sameAtom,
     if ( sameAtom == 0 )
     {
 
-        float fid1 = uxk*gux2 + uyk*gux3 + uzk*gux4
-                + 0.5f*(ck*gux1+qxxk*gux5+qyyk*gux8+qzzk*gux10
-                      +2.0f*(qxyk*gux6+qxzk*gux7+qyzk*gux9)
-                      +ck*gc2+qxxk*gqxx2+qyyk*gqyy2+qzzk*gqzz2
-                      +2.0f*(qxyk*gqxy2+qxzk*gqxz2+qyzk*gqyz2));
+        float fid1 = atomJ.labFrameDipole[0]*gux2 + atomJ.labFrameDipole[1]*gux3 + atomJ.labFrameDipole[2]*gux4
+                + 0.5f*(atomJ.q*gux1+atomJ.labFrameQuadrupole_XX*gux5+atomJ.labFrameQuadrupole_YY*gux8+atomJ.labFrameQuadrupole_ZZ*gux10
+                      +2.0f*(atomJ.labFrameQuadrupole_XY*gux6+atomJ.labFrameQuadrupole_XZ*gux7+atomJ.labFrameQuadrupole_YZ*gux9)
+                      +atomJ.q*gc2+atomJ.labFrameQuadrupole_XX*gqxx2+atomJ.labFrameQuadrupole_YY*gqyy2+atomJ.labFrameQuadrupole_ZZ*gqzz2
+                      +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy2+atomJ.labFrameQuadrupole_XZ*gqxz2+atomJ.labFrameQuadrupole_YZ*gqyz2));
 
-        float fid2 = uxk*guy2 + uyk*guy3 + uzk*guy4
-                + 0.5f*(ck*guy1+qxxk*guy5+qyyk*guy8+qzzk*guy10
-                      +2.0f*(qxyk*guy6+qxzk*guy7+qyzk*guy9)
-                      +ck*gc3+qxxk*gqxx3+qyyk*gqyy3+qzzk*gqzz3
-                      +2.0f*(qxyk*gqxy3+qxzk*gqxz3+qyzk*gqyz3));
+        float fid2 = atomJ.labFrameDipole[0]*guy2 + atomJ.labFrameDipole[1]*guy3 + atomJ.labFrameDipole[2]*guy4
+                + 0.5f*(atomJ.q*guy1+atomJ.labFrameQuadrupole_XX*guy5+atomJ.labFrameQuadrupole_YY*guy8+atomJ.labFrameQuadrupole_ZZ*guy10
+                      +2.0f*(atomJ.labFrameQuadrupole_XY*guy6+atomJ.labFrameQuadrupole_XZ*guy7+atomJ.labFrameQuadrupole_YZ*guy9)
+                      +atomJ.q*gc3+atomJ.labFrameQuadrupole_XX*gqxx3+atomJ.labFrameQuadrupole_YY*gqyy3+atomJ.labFrameQuadrupole_ZZ*gqzz3
+                      +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy3+atomJ.labFrameQuadrupole_XZ*gqxz3+atomJ.labFrameQuadrupole_YZ*gqyz3));
 
-        float fid3 = uxk*guz2 + uyk*guz3 + uzk*guz4
-                + 0.5f*(ck*guz1+qxxk*guz5+qyyk*guz8+qzzk*guz10
-                      +2.0f*(qxyk*guz6+qxzk*guz7+qyzk*guz9)
-                      +ck*gc4+qxxk*gqxx4+qyyk*gqyy4+qzzk*gqzz4
-                      +2.0f*(qxyk*gqxy4+qxzk*gqxz4+qyzk*gqyz4));
+        float fid3 = atomJ.labFrameDipole[0]*guz2 + atomJ.labFrameDipole[1]*guz3 + atomJ.labFrameDipole[2]*guz4
+                + 0.5f*(atomJ.q*guz1+atomJ.labFrameQuadrupole_XX*guz5+atomJ.labFrameQuadrupole_YY*guz8+atomJ.labFrameQuadrupole_ZZ*guz10
+                      +2.0f*(atomJ.labFrameQuadrupole_XY*guz6+atomJ.labFrameQuadrupole_XZ*guz7+atomJ.labFrameQuadrupole_YZ*guz9)
+                      +atomJ.q*gc4+atomJ.labFrameQuadrupole_XX*gqxx4+atomJ.labFrameQuadrupole_YY*gqyy4+atomJ.labFrameQuadrupole_ZZ*gqzz4
+                      +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy4+atomJ.labFrameQuadrupole_XZ*gqxz4+atomJ.labFrameQuadrupole_YZ*gqyz4));
 
-        float fkd1 = uxi*gux2 + uyi*gux3 + uzi*gux4
-                - 0.5f*(ci*gux1+qxxi*gux5+qyyi*gux8+qzzi*gux10
-                      +2.0f*(qxyi*gux6+qxzi*gux7+qyzi*gux9)
-                      +ci*gc2+qxxi*gqxx2+qyyi*gqyy2+qzzi*gqzz2
-                      +2.0f*(qxyi*gqxy2+qxzi*gqxz2+qyzi*gqyz2));
+        float fkd1 = atomI.labFrameDipole[0]*gux2 + atomI.labFrameDipole[1]*gux3 + atomI.labFrameDipole[2]*gux4
+                - 0.5f*(atomI.q*gux1+atomI.labFrameQuadrupole_XX*gux5+atomI.labFrameQuadrupole_YY*gux8+atomI.labFrameQuadrupole_ZZ*gux10
+                      +2.0f*(atomI.labFrameQuadrupole_XY*gux6+atomI.labFrameQuadrupole_XZ*gux7+atomI.labFrameQuadrupole_YZ*gux9)
+                      +atomI.q*gc2+atomI.labFrameQuadrupole_XX*gqxx2+atomI.labFrameQuadrupole_YY*gqyy2+atomI.labFrameQuadrupole_ZZ*gqzz2
+                      +2.0f*(atomI.labFrameQuadrupole_XY*gqxy2+atomI.labFrameQuadrupole_XZ*gqxz2+atomI.labFrameQuadrupole_YZ*gqyz2));
 
-        float fkd2 = uxi*guy2 + uyi*guy3 + uzi*guy4
-                - 0.5f*(ci*guy1+qxxi*guy5+qyyi*guy8+qzzi*guy10
-                      +2.0f*(qxyi*guy6+qxzi*guy7+qyzi*guy9)
-                      +ci*gc3+qxxi*gqxx3+qyyi*gqyy3+qzzi*gqzz3
-                      +2.0f*(qxyi*gqxy3+qxzi*gqxz3+qyzi*gqyz3));
+        float fkd2 = atomI.labFrameDipole[0]*guy2 + atomI.labFrameDipole[1]*guy3 + atomI.labFrameDipole[2]*guy4
+                - 0.5f*(atomI.q*guy1+atomI.labFrameQuadrupole_XX*guy5+atomI.labFrameQuadrupole_YY*guy8+atomI.labFrameQuadrupole_ZZ*guy10
+                      +2.0f*(atomI.labFrameQuadrupole_XY*guy6+atomI.labFrameQuadrupole_XZ*guy7+atomI.labFrameQuadrupole_YZ*guy9)
+                      +atomI.q*gc3+atomI.labFrameQuadrupole_XX*gqxx3+atomI.labFrameQuadrupole_YY*gqyy3+atomI.labFrameQuadrupole_ZZ*gqzz3
+                      +2.0f*(atomI.labFrameQuadrupole_XY*gqxy3+atomI.labFrameQuadrupole_XZ*gqxz3+atomI.labFrameQuadrupole_YZ*gqyz3));
 
-        float fkd3 = uxi*guz2 + uyi*guz3 + uzi*guz4
-                - 0.5f*(ci*guz1+qxxi*guz5+qyyi*guz8+qzzi*guz10
-                      +2.0f*(qxyi*guz6+qxzi*guz7+qyzi*guz9)
-                      +ci*gc4+qxxi*gqxx4+qyyi*gqyy4+qzzi*gqzz4
-                      +2.0f*(qxyi*gqxy4+qxzi*gqxz4+qyzi*gqyz4));
+        float fkd3 = atomI.labFrameDipole[0]*guz2 + atomI.labFrameDipole[1]*guz3 + atomI.labFrameDipole[2]*guz4
+                - 0.5f*(atomI.q*guz1+atomI.labFrameQuadrupole_XX*guz5+atomI.labFrameQuadrupole_YY*guz8+atomI.labFrameQuadrupole_ZZ*guz10
+                      +2.0f*(atomI.labFrameQuadrupole_XY*guz6+atomI.labFrameQuadrupole_XZ*guz7+atomI.labFrameQuadrupole_YZ*guz9)
+                      +atomI.q*gc4+atomI.labFrameQuadrupole_XX*gqxx4+atomI.labFrameQuadrupole_YY*gqyy4+atomI.labFrameQuadrupole_ZZ*gqzz4
+                      +2.0f*(atomI.labFrameQuadrupole_XY*gqxy4+atomI.labFrameQuadrupole_XZ*gqxz4+atomI.labFrameQuadrupole_YZ*gqyz4));
 
-        trq1    = uyi*fid3 - uzi*fid2;
-        trq2    = uzi*fid1 - uxi*fid3;
-        trq3    = uxi*fid2 - uyi*fid1;
+        trq1    = atomI.labFrameDipole[1]*fid3 - atomI.labFrameDipole[2]*fid2;
+        trq2    = atomI.labFrameDipole[2]*fid1 - atomI.labFrameDipole[0]*fid3;
+        trq3    = atomI.labFrameDipole[0]*fid2 - atomI.labFrameDipole[1]*fid1;
 
-        trq_k1  = uyk*fkd3 - uzk*fkd2;
-        trq_k2  = uzk*fkd1 - uxk*fkd3;
-        trq_k3  = uxk*fkd2 - uyk*fkd1;
+        trq_k1  = atomJ.labFrameDipole[1]*fkd3 - atomJ.labFrameDipole[2]*fkd2;
+        trq_k2  = atomJ.labFrameDipole[2]*fkd1 - atomJ.labFrameDipole[0]*fkd3;
+        trq_k3  = atomJ.labFrameDipole[0]*fkd2 - atomJ.labFrameDipole[1]*fkd1;
 
         // torque on quadrupoles due to permanent reaction field gradient
 
         float fidg11 =
-                - 0.5f*(ck*gqxx1+uxk*gqxx2+uyk*gqxx3+uzk*gqxx4
-                      +qxxk*gqxx5+qyyk*gqxx8+qzzk*gqxx10
-                      +2.0f*(qxyk*gqxx6+qxzk*gqxx7+qyzk*gqxx9)
-                      +ck*gc5+uxk*gux5+uyk*guy5+uzk*guz5
-                      +qxxk*gqxx5+qyyk*gqyy5+qzzk*gqzz5
-                      +2.0f*(qxyk*gqxy5+qxzk*gqxz5+qyzk*gqyz5));
+                - 0.5f*(atomJ.q*gqxx1+atomJ.labFrameDipole[0]*gqxx2+atomJ.labFrameDipole[1]*gqxx3+atomJ.labFrameDipole[2]*gqxx4
+                      +atomJ.labFrameQuadrupole_XX*gqxx5+atomJ.labFrameQuadrupole_YY*gqxx8+atomJ.labFrameQuadrupole_ZZ*gqxx10
+                      +2.0f*(atomJ.labFrameQuadrupole_XY*gqxx6+atomJ.labFrameQuadrupole_XZ*gqxx7+atomJ.labFrameQuadrupole_YZ*gqxx9)
+                      +atomJ.q*gc5+atomJ.labFrameDipole[0]*gux5+atomJ.labFrameDipole[1]*guy5+atomJ.labFrameDipole[2]*guz5
+                      +atomJ.labFrameQuadrupole_XX*gqxx5+atomJ.labFrameQuadrupole_YY*gqyy5+atomJ.labFrameQuadrupole_ZZ*gqzz5
+                      +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy5+atomJ.labFrameQuadrupole_XZ*gqxz5+atomJ.labFrameQuadrupole_YZ*gqyz5));
 
         float fidg12 =
-                - 0.5f*(ck*gqxy1+uxk*gqxy2+uyk*gqxy3+uzk*gqxy4
-                      +qxxk*gqxy5+qyyk*gqxy8+qzzk*gqxy10
-                      +2.0f*(qxyk*gqxy6+qxzk*gqxy7+qyzk*gqxy9)
-                      +ck*gc6+uxk*gux6+uyk*guy6+uzk*guz6
-                      +qxxk*gqxx6+qyyk*gqyy6+qzzk*gqzz6
-                      +2.0f*(qxyk*gqxy6+qxzk*gqxz6+qyzk*gqyz6));
+                - 0.5f*(atomJ.q*gqxy1+atomJ.labFrameDipole[0]*gqxy2+atomJ.labFrameDipole[1]*gqxy3+atomJ.labFrameDipole[2]*gqxy4
+                      +atomJ.labFrameQuadrupole_XX*gqxy5+atomJ.labFrameQuadrupole_YY*gqxy8+atomJ.labFrameQuadrupole_ZZ*gqxy10
+                      +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy6+atomJ.labFrameQuadrupole_XZ*gqxy7+atomJ.labFrameQuadrupole_YZ*gqxy9)
+                      +atomJ.q*gc6+atomJ.labFrameDipole[0]*gux6+atomJ.labFrameDipole[1]*guy6+atomJ.labFrameDipole[2]*guz6
+                      +atomJ.labFrameQuadrupole_XX*gqxx6+atomJ.labFrameQuadrupole_YY*gqyy6+atomJ.labFrameQuadrupole_ZZ*gqzz6
+                      +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy6+atomJ.labFrameQuadrupole_XZ*gqxz6+atomJ.labFrameQuadrupole_YZ*gqyz6));
 
         float fidg13 =
-                - 0.5f*(ck*gqxz1+uxk*gqxz2+uyk*gqxz3+uzk*gqxz4
-                      +qxxk*gqxz5+qyyk*gqxz8+qzzk*gqxz10
-                      +2.0f*(qxyk*gqxz6+qxzk*gqxz7+qyzk*gqxz9)
-                      +ck*gc7+uxk*gux7+uyk*guy7+uzk*guz7
-                      +qxxk*gqxx7+qyyk*gqyy7+qzzk*gqzz7
-                      +2.0f*(qxyk*gqxy7+qxzk*gqxz7+qyzk*gqyz7));
+                - 0.5f*(atomJ.q*gqxz1+atomJ.labFrameDipole[0]*gqxz2+atomJ.labFrameDipole[1]*gqxz3+atomJ.labFrameDipole[2]*gqxz4
+                      +atomJ.labFrameQuadrupole_XX*gqxz5+atomJ.labFrameQuadrupole_YY*gqxz8+atomJ.labFrameQuadrupole_ZZ*gqxz10
+                      +2.0f*(atomJ.labFrameQuadrupole_XY*gqxz6+atomJ.labFrameQuadrupole_XZ*gqxz7+atomJ.labFrameQuadrupole_YZ*gqxz9)
+                      +atomJ.q*gc7+atomJ.labFrameDipole[0]*gux7+atomJ.labFrameDipole[1]*guy7+atomJ.labFrameDipole[2]*guz7
+                      +atomJ.labFrameQuadrupole_XX*gqxx7+atomJ.labFrameQuadrupole_YY*gqyy7+atomJ.labFrameQuadrupole_ZZ*gqzz7
+                      +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy7+atomJ.labFrameQuadrupole_XZ*gqxz7+atomJ.labFrameQuadrupole_YZ*gqyz7));
 
         float fidg22 =
-                - 0.5f*(ck*gqyy1+uxk*gqyy2+uyk*gqyy3+uzk*gqyy4
-                      +qxxk*gqyy5+qyyk*gqyy8+qzzk*gqyy10
-                      +2.0f*(qxyk*gqyy6+qxzk*gqyy7+qyzk*gqyy9)
-                      +ck*gc8+uxk*gux8+uyk*guy8+uzk*guz8
-                      +qxxk*gqxx8+qyyk*gqyy8+qzzk*gqzz8
-                      +2.0f*(qxyk*gqxy8+qxzk*gqxz8+qyzk*gqyz8));
+                - 0.5f*(atomJ.q*gqyy1+atomJ.labFrameDipole[0]*gqyy2+atomJ.labFrameDipole[1]*gqyy3+atomJ.labFrameDipole[2]*gqyy4
+                      +atomJ.labFrameQuadrupole_XX*gqyy5+atomJ.labFrameQuadrupole_YY*gqyy8+atomJ.labFrameQuadrupole_ZZ*gqyy10
+                      +2.0f*(atomJ.labFrameQuadrupole_XY*gqyy6+atomJ.labFrameQuadrupole_XZ*gqyy7+atomJ.labFrameQuadrupole_YZ*gqyy9)
+                      +atomJ.q*gc8+atomJ.labFrameDipole[0]*gux8+atomJ.labFrameDipole[1]*guy8+atomJ.labFrameDipole[2]*guz8
+                      +atomJ.labFrameQuadrupole_XX*gqxx8+atomJ.labFrameQuadrupole_YY*gqyy8+atomJ.labFrameQuadrupole_ZZ*gqzz8
+                      +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy8+atomJ.labFrameQuadrupole_XZ*gqxz8+atomJ.labFrameQuadrupole_YZ*gqyz8));
 
         float fidg23 =
-                - 0.5f*(ck*gqyz1+uxk*gqyz2+uyk*gqyz3+uzk*gqyz4
-                      +qxxk*gqyz5+qyyk*gqyz8+qzzk*gqyz10
-                      +2.0f*(qxyk*gqyz6+qxzk*gqyz7+qyzk*gqyz9)
-                      +ck*gc9+uxk*gux9+uyk*guy9+uzk*guz9
-                      +qxxk*gqxx9+qyyk*gqyy9+qzzk*gqzz9
-                      +2.0f*(qxyk*gqxy9+qxzk*gqxz9+qyzk*gqyz9));
+                - 0.5f*(atomJ.q*gqyz1+atomJ.labFrameDipole[0]*gqyz2+atomJ.labFrameDipole[1]*gqyz3+atomJ.labFrameDipole[2]*gqyz4
+                      +atomJ.labFrameQuadrupole_XX*gqyz5+atomJ.labFrameQuadrupole_YY*gqyz8+atomJ.labFrameQuadrupole_ZZ*gqyz10
+                      +2.0f*(atomJ.labFrameQuadrupole_XY*gqyz6+atomJ.labFrameQuadrupole_XZ*gqyz7+atomJ.labFrameQuadrupole_YZ*gqyz9)
+                      +atomJ.q*gc9+atomJ.labFrameDipole[0]*gux9+atomJ.labFrameDipole[1]*guy9+atomJ.labFrameDipole[2]*guz9
+                      +atomJ.labFrameQuadrupole_XX*gqxx9+atomJ.labFrameQuadrupole_YY*gqyy9+atomJ.labFrameQuadrupole_ZZ*gqzz9
+                      +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy9+atomJ.labFrameQuadrupole_XZ*gqxz9+atomJ.labFrameQuadrupole_YZ*gqyz9));
 
         float fidg33 =
-                - 0.5f*(ck*gqzz1+uxk*gqzz2+uyk*gqzz3+uzk*gqzz4
-                      +qxxk*gqzz5+qyyk*gqzz8+qzzk*gqzz10
-                      +2.0f*(qxyk*gqzz6+qxzk*gqzz7+qyzk*gqzz9)
-                      +ck*gc10+uxk*gux10+uyk*guy10+uzk*guz10
-                      +qxxk*gqxx10+qyyk*gqyy10+qzzk*gqzz10
-                   +2.0f*(qxyk*gqxy10+qxzk*gqxz10+qyzk*gqyz10));
+                - 0.5f*(atomJ.q*gqzz1+atomJ.labFrameDipole[0]*gqzz2+atomJ.labFrameDipole[1]*gqzz3+atomJ.labFrameDipole[2]*gqzz4
+                      +atomJ.labFrameQuadrupole_XX*gqzz5+atomJ.labFrameQuadrupole_YY*gqzz8+atomJ.labFrameQuadrupole_ZZ*gqzz10
+                      +2.0f*(atomJ.labFrameQuadrupole_XY*gqzz6+atomJ.labFrameQuadrupole_XZ*gqzz7+atomJ.labFrameQuadrupole_YZ*gqzz9)
+                      +atomJ.q*gc10+atomJ.labFrameDipole[0]*gux10+atomJ.labFrameDipole[1]*guy10+atomJ.labFrameDipole[2]*guz10
+                      +atomJ.labFrameQuadrupole_XX*gqxx10+atomJ.labFrameQuadrupole_YY*gqyy10+atomJ.labFrameQuadrupole_ZZ*gqzz10
+                   +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy10+atomJ.labFrameQuadrupole_XZ*gqxz10+atomJ.labFrameQuadrupole_YZ*gqyz10));
 
         float fidg21 = fidg12;
         float fidg31 = fidg13;
         float fidg32 = fidg23;
 
         float fkdg11 =
-                - 0.5f*(ci*gqxx1-uxi*gqxx2-uyi*gqxx3-uzi *gqxx4
-                      +qxxi*gqxx5+qyyi*gqxx8+qzzi*gqxx10
-                      +2.0f*(qxyi*gqxx6+qxzi*gqxx7+qyzi*gqxx9)
-                      +ci*gc5-uxi*gux5-uyi*guy5-uzi*guz5
-                      +qxxi*gqxx5+qyyi*gqyy5+qzzi*gqzz5
-                      +2.0f*(qxyi*gqxy5+qxzi*gqxz5+qyzi*gqyz5));
+                - 0.5f*(atomI.q*gqxx1-atomI.labFrameDipole[0]*gqxx2-atomI.labFrameDipole[1]*gqxx3-atomI.labFrameDipole[2] *gqxx4
+                      +atomI.labFrameQuadrupole_XX*gqxx5+atomI.labFrameQuadrupole_YY*gqxx8+atomI.labFrameQuadrupole_ZZ*gqxx10
+                      +2.0f*(atomI.labFrameQuadrupole_XY*gqxx6+atomI.labFrameQuadrupole_XZ*gqxx7+atomI.labFrameQuadrupole_YZ*gqxx9)
+                      +atomI.q*gc5-atomI.labFrameDipole[0]*gux5-atomI.labFrameDipole[1]*guy5-atomI.labFrameDipole[2]*guz5
+                      +atomI.labFrameQuadrupole_XX*gqxx5+atomI.labFrameQuadrupole_YY*gqyy5+atomI.labFrameQuadrupole_ZZ*gqzz5
+                      +2.0f*(atomI.labFrameQuadrupole_XY*gqxy5+atomI.labFrameQuadrupole_XZ*gqxz5+atomI.labFrameQuadrupole_YZ*gqyz5));
 
         float fkdg12 =
-                - 0.5f*(ci*gqxy1-uxi*gqxy2-uyi*gqxy3-uzi*gqxy4
-                      +qxxi*gqxy5+qyyi*gqxy8+qzzi*gqxy10
-                      +2.0f*(qxyi*gqxy6+qxzi*gqxy7+qyzi*gqxy9)
-                      +ci*gc6-uxi*gux6-uyi*guy6-uzi*guz6
-                      +qxxi*gqxx6+qyyi*gqyy6+qzzi*gqzz6
-                      +2.0f*(qxyi*gqxy6+qxzi*gqxz6+qyzi*gqyz6));
+                - 0.5f*(atomI.q*gqxy1-atomI.labFrameDipole[0]*gqxy2-atomI.labFrameDipole[1]*gqxy3-atomI.labFrameDipole[2]*gqxy4
+                      +atomI.labFrameQuadrupole_XX*gqxy5+atomI.labFrameQuadrupole_YY*gqxy8+atomI.labFrameQuadrupole_ZZ*gqxy10
+                      +2.0f*(atomI.labFrameQuadrupole_XY*gqxy6+atomI.labFrameQuadrupole_XZ*gqxy7+atomI.labFrameQuadrupole_YZ*gqxy9)
+                      +atomI.q*gc6-atomI.labFrameDipole[0]*gux6-atomI.labFrameDipole[1]*guy6-atomI.labFrameDipole[2]*guz6
+                      +atomI.labFrameQuadrupole_XX*gqxx6+atomI.labFrameQuadrupole_YY*gqyy6+atomI.labFrameQuadrupole_ZZ*gqzz6
+                      +2.0f*(atomI.labFrameQuadrupole_XY*gqxy6+atomI.labFrameQuadrupole_XZ*gqxz6+atomI.labFrameQuadrupole_YZ*gqyz6));
 
         float fkdg13 =
-                - 0.5f*(ci*gqxz1-uxi*gqxz2-uyi*gqxz3-uzi*gqxz4
-                      +qxxi*gqxz5+qyyi*gqxz8+qzzi*gqxz10
-                      +2.0f*(qxyi*gqxz6+qxzi*gqxz7+qyzi*gqxz9)
-                      +ci*gc7-uxi*gux7-uyi*guy7-uzi*guz7
-                      +qxxi*gqxx7+qyyi*gqyy7+qzzi*gqzz7
-                      +2.0f*(qxyi*gqxy7+qxzi*gqxz7+qyzi*gqyz7));
+                - 0.5f*(atomI.q*gqxz1-atomI.labFrameDipole[0]*gqxz2-atomI.labFrameDipole[1]*gqxz3-atomI.labFrameDipole[2]*gqxz4
+                      +atomI.labFrameQuadrupole_XX*gqxz5+atomI.labFrameQuadrupole_YY*gqxz8+atomI.labFrameQuadrupole_ZZ*gqxz10
+                      +2.0f*(atomI.labFrameQuadrupole_XY*gqxz6+atomI.labFrameQuadrupole_XZ*gqxz7+atomI.labFrameQuadrupole_YZ*gqxz9)
+                      +atomI.q*gc7-atomI.labFrameDipole[0]*gux7-atomI.labFrameDipole[1]*guy7-atomI.labFrameDipole[2]*guz7
+                      +atomI.labFrameQuadrupole_XX*gqxx7+atomI.labFrameQuadrupole_YY*gqyy7+atomI.labFrameQuadrupole_ZZ*gqzz7
+                      +2.0f*(atomI.labFrameQuadrupole_XY*gqxy7+atomI.labFrameQuadrupole_XZ*gqxz7+atomI.labFrameQuadrupole_YZ*gqyz7));
 
         float fkdg22 =
-                - 0.5f*(ci*gqyy1-uxi*gqyy2-uyi*gqyy3-uzi*gqyy4
-                      +qxxi*gqyy5+qyyi*gqyy8+qzzi*gqyy10
-                      +2.0f*(qxyi*gqyy6+qxzi*gqyy7+qyzi*gqyy9)
-                      +ci*gc8-uxi*gux8-uyi*guy8-uzi*guz8
-                      +qxxi*gqxx8+qyyi*gqyy8+qzzi*gqzz8
-                      +2.0f*(qxyi*gqxy8+qxzi*gqxz8+qyzi*gqyz8));
+                - 0.5f*(atomI.q*gqyy1-atomI.labFrameDipole[0]*gqyy2-atomI.labFrameDipole[1]*gqyy3-atomI.labFrameDipole[2]*gqyy4
+                      +atomI.labFrameQuadrupole_XX*gqyy5+atomI.labFrameQuadrupole_YY*gqyy8+atomI.labFrameQuadrupole_ZZ*gqyy10
+                      +2.0f*(atomI.labFrameQuadrupole_XY*gqyy6+atomI.labFrameQuadrupole_XZ*gqyy7+atomI.labFrameQuadrupole_YZ*gqyy9)
+                      +atomI.q*gc8-atomI.labFrameDipole[0]*gux8-atomI.labFrameDipole[1]*guy8-atomI.labFrameDipole[2]*guz8
+                      +atomI.labFrameQuadrupole_XX*gqxx8+atomI.labFrameQuadrupole_YY*gqyy8+atomI.labFrameQuadrupole_ZZ*gqzz8
+                      +2.0f*(atomI.labFrameQuadrupole_XY*gqxy8+atomI.labFrameQuadrupole_XZ*gqxz8+atomI.labFrameQuadrupole_YZ*gqyz8));
 
         float fkdg23 =
-                - 0.5f*(ci*gqyz1-uxi*gqyz2-uyi*gqyz3-uzi*gqyz4
-                      +qxxi*gqyz5+qyyi*gqyz8+qzzi*gqyz10
-                      +2.0f*(qxyi*gqyz6+qxzi*gqyz7+qyzi*gqyz9)
-                      +ci*gc9-uxi*gux9-uyi*guy9-uzi*guz9
-                      +qxxi*gqxx9+qyyi*gqyy9+qzzi*gqzz9
-                      +2.0f*(qxyi*gqxy9+qxzi*gqxz9+qyzi*gqyz9));
+                - 0.5f*(atomI.q*gqyz1-atomI.labFrameDipole[0]*gqyz2-atomI.labFrameDipole[1]*gqyz3-atomI.labFrameDipole[2]*gqyz4
+                      +atomI.labFrameQuadrupole_XX*gqyz5+atomI.labFrameQuadrupole_YY*gqyz8+atomI.labFrameQuadrupole_ZZ*gqyz10
+                      +2.0f*(atomI.labFrameQuadrupole_XY*gqyz6+atomI.labFrameQuadrupole_XZ*gqyz7+atomI.labFrameQuadrupole_YZ*gqyz9)
+                      +atomI.q*gc9-atomI.labFrameDipole[0]*gux9-atomI.labFrameDipole[1]*guy9-atomI.labFrameDipole[2]*guz9
+                      +atomI.labFrameQuadrupole_XX*gqxx9+atomI.labFrameQuadrupole_YY*gqyy9+atomI.labFrameQuadrupole_ZZ*gqzz9
+                      +2.0f*(atomI.labFrameQuadrupole_XY*gqxy9+atomI.labFrameQuadrupole_XZ*gqxz9+atomI.labFrameQuadrupole_YZ*gqyz9));
         float fkdg33 =
-                - 0.5f*(ci*gqzz1-uxi*gqzz2-uyi*gqzz3-uzi*gqzz4
-                      +qxxi*gqzz5+qyyi*gqzz8+qzzi*gqzz10
-                      +2.0f*(qxyi*gqzz6+qxzi*gqzz7+qyzi*gqzz9)
-                      +ci*gc10-uxi*gux10-uyi*guy10-uzi*guz10
-                      +qxxi*gqxx10+qyyi*gqyy10+qzzi*gqzz10
-                    +2.0f*(qxyi*gqxy10+qxzi*gqxz10+qyzi*gqyz10));
+                - 0.5f*(atomI.q*gqzz1-atomI.labFrameDipole[0]*gqzz2-atomI.labFrameDipole[1]*gqzz3-atomI.labFrameDipole[2]*gqzz4
+                      +atomI.labFrameQuadrupole_XX*gqzz5+atomI.labFrameQuadrupole_YY*gqzz8+atomI.labFrameQuadrupole_ZZ*gqzz10
+                      +2.0f*(atomI.labFrameQuadrupole_XY*gqzz6+atomI.labFrameQuadrupole_XZ*gqzz7+atomI.labFrameQuadrupole_YZ*gqzz9)
+                      +atomI.q*gc10-atomI.labFrameDipole[0]*gux10-atomI.labFrameDipole[1]*guy10-atomI.labFrameDipole[2]*guz10
+                      +atomI.labFrameQuadrupole_XX*gqxx10+atomI.labFrameQuadrupole_YY*gqyy10+atomI.labFrameQuadrupole_ZZ*gqzz10
+                    +2.0f*(atomI.labFrameQuadrupole_XY*gqxy10+atomI.labFrameQuadrupole_XZ*gqxz10+atomI.labFrameQuadrupole_YZ*gqyz10));
 
         float fkdg21 = fkdg12;
         float fkdg31 = fkdg13;
         float fkdg32 = fkdg23;
 
-        trq1   += 2.0f* (qxyi*fidg13+qyyi*fidg23+qyzi*fidg33
-                           -qxzi*fidg12-qyzi*fidg22-qzzi*fidg32);
+        trq1   += 2.0f* (atomI.labFrameQuadrupole_XY*fidg13+atomI.labFrameQuadrupole_YY*fidg23+atomI.labFrameQuadrupole_YZ*fidg33
+                           -atomI.labFrameQuadrupole_XZ*fidg12-atomI.labFrameQuadrupole_YZ*fidg22-atomI.labFrameQuadrupole_ZZ*fidg32);
 
-        trq2   += 2.0f*(qxzi*fidg11+qyzi*fidg21+qzzi*fidg31
-                         -qxxi*fidg13-qxyi*fidg23-qxzi*fidg33);
+        trq2   += 2.0f*(atomI.labFrameQuadrupole_XZ*fidg11+atomI.labFrameQuadrupole_YZ*fidg21+atomI.labFrameQuadrupole_ZZ*fidg31
+                         -atomI.labFrameQuadrupole_XX*fidg13-atomI.labFrameQuadrupole_XY*fidg23-atomI.labFrameQuadrupole_XZ*fidg33);
 
-        trq3   += 2.0f*(qxxi*fidg12+qxyi*fidg22+qxzi*fidg32
-                         -qxyi*fidg11-qyyi*fidg21-qyzi*fidg31);
+        trq3   += 2.0f*(atomI.labFrameQuadrupole_XX*fidg12+atomI.labFrameQuadrupole_XY*fidg22+atomI.labFrameQuadrupole_XZ*fidg32
+                         -atomI.labFrameQuadrupole_XY*fidg11-atomI.labFrameQuadrupole_YY*fidg21-atomI.labFrameQuadrupole_YZ*fidg31);
 
         trq_k1 += 2.0f*
-                          (qxyk*fkdg13+qyyk*fkdg23+qyzk*fkdg33
-                          -qxzk*fkdg12-qyzk*fkdg22-qzzk*fkdg32);
+                          (atomJ.labFrameQuadrupole_XY*fkdg13+atomJ.labFrameQuadrupole_YY*fkdg23+atomJ.labFrameQuadrupole_YZ*fkdg33
+                          -atomJ.labFrameQuadrupole_XZ*fkdg12-atomJ.labFrameQuadrupole_YZ*fkdg22-atomJ.labFrameQuadrupole_ZZ*fkdg32);
 
         trq_k2 += 2.0f*
-                          (qxzk*fkdg11+qyzk*fkdg21+qzzk*fkdg31
-                          -qxxk*fkdg13-qxyk*fkdg23-qxzk*fkdg33);
+                          (atomJ.labFrameQuadrupole_XZ*fkdg11+atomJ.labFrameQuadrupole_YZ*fkdg21+atomJ.labFrameQuadrupole_ZZ*fkdg31
+                          -atomJ.labFrameQuadrupole_XX*fkdg13-atomJ.labFrameQuadrupole_XY*fkdg23-atomJ.labFrameQuadrupole_XZ*fkdg33);
 
         trq_k3 += 2.0f*
-                          (qxxk*fkdg12+qxyk*fkdg22+qxzk*fkdg32
-                          -qxyk*fkdg11-qyyk*fkdg21-qyzk*fkdg31);
+                          (atomJ.labFrameQuadrupole_XX*fkdg12+atomJ.labFrameQuadrupole_XY*fkdg22+atomJ.labFrameQuadrupole_XZ*fkdg32
+                          -atomJ.labFrameQuadrupole_XY*fkdg11-atomJ.labFrameQuadrupole_YY*fkdg21-atomJ.labFrameQuadrupole_YZ*fkdg31);
     }
 
     // electrostatic solvation energy of the permanent multipoles in
     // the GK reaction potential of the induced dipoles
 
-    esymi =              -uxi*(dxk*gux2+dyk*guy2+dzk*guz2)
-                        - uyi*(dxk*gux3+dyk*guy3+dzk*guz3)
-                        - uzi*(dxk*gux4+dyk*guy4+dzk*guz4)
-                        - uxk*(dxi*gux2+dyi*guy2+dzi*guz2)
-                        - uyk*(dxi*gux3+dyi*guy3+dzi*guz3)
-                        - uzk*(dxi*gux4+dyi*guy4+dzi*guz4);
+    esymi =              -atomI.labFrameDipole[0]*(atomJ.inducedDipole[0]*gux2+atomJ.inducedDipole[1]*guy2+atomJ.inducedDipole[2]*guz2)
+                        - atomI.labFrameDipole[1]*(atomJ.inducedDipole[0]*gux3+atomJ.inducedDipole[1]*guy3+atomJ.inducedDipole[2]*guz3)
+                        - atomI.labFrameDipole[2]*(atomJ.inducedDipole[0]*gux4+atomJ.inducedDipole[1]*guy4+atomJ.inducedDipole[2]*guz4)
+                        - atomJ.labFrameDipole[0]*(atomI.inducedDipole[0]*gux2+atomI.inducedDipole[1]*guy2+atomI.inducedDipole[2]*guz2)
+                        - atomJ.labFrameDipole[1]*(atomI.inducedDipole[0]*gux3+atomI.inducedDipole[1]*guy3+atomI.inducedDipole[2]*guz3)
+                        - atomJ.labFrameDipole[2]*(atomI.inducedDipole[0]*gux4+atomI.inducedDipole[1]*guy4+atomI.inducedDipole[2]*guz4);
 
-    ewii = ci*(dxk*gc2+dyk*gc3+dzk*gc4)
-                      - ck*(dxi*gux1+dyi*guy1+dzi*guz1)
-                      - dxi*(qxxk*gux5+qyyk*gux8+qzzk*gux10
-                     +2.0f*(qxyk*gux6+qxzk*gux7+qyzk*gux9))
-                      - dyi*(qxxk*guy5+qyyk*guy8+qzzk*guy10
-                     +2.0f*(qxyk*guy6+qxzk*guy7+qyzk*guy9))
-                      - dzi*(qxxk*guz5+qyyk*guz8+qzzk*guz10
-                     +2.0f*(qxyk*guz6+qxzk*guz7+qyzk*guz9))
-                      + dxk*(qxxi*gqxx2+qyyi*gqyy2+qzzi*gqzz2
-                     +2.0f*(qxyi*gqxy2+qxzi*gqxz2+qyzi*gqyz2))
-                      + dyk*(qxxi*gqxx3+qyyi*gqyy3+qzzi*gqzz3
-                     +2.0f*(qxyi*gqxy3+qxzi*gqxz3+qyzi*gqyz3))
-                      + dzk*(qxxi*gqxx4+qyyi*gqyy4+qzzi*gqzz4
-                     +2.0f*(qxyi*gqxy4+qxzi*gqxz4+qyzi*gqyz4));
+    ewii = atomI.q*(atomJ.inducedDipole[0]*gc2+atomJ.inducedDipole[1]*gc3+atomJ.inducedDipole[2]*gc4)
+                      - atomJ.q*(atomI.inducedDipole[0]*gux1+atomI.inducedDipole[1]*guy1+atomI.inducedDipole[2]*guz1)
+                      - atomI.inducedDipole[0]*(atomJ.labFrameQuadrupole_XX*gux5+atomJ.labFrameQuadrupole_YY*gux8+atomJ.labFrameQuadrupole_ZZ*gux10
+                     +2.0f*(atomJ.labFrameQuadrupole_XY*gux6+atomJ.labFrameQuadrupole_XZ*gux7+atomJ.labFrameQuadrupole_YZ*gux9))
+                      - atomI.inducedDipole[1]*(atomJ.labFrameQuadrupole_XX*guy5+atomJ.labFrameQuadrupole_YY*guy8+atomJ.labFrameQuadrupole_ZZ*guy10
+                     +2.0f*(atomJ.labFrameQuadrupole_XY*guy6+atomJ.labFrameQuadrupole_XZ*guy7+atomJ.labFrameQuadrupole_YZ*guy9))
+                      - atomI.inducedDipole[2]*(atomJ.labFrameQuadrupole_XX*guz5+atomJ.labFrameQuadrupole_YY*guz8+atomJ.labFrameQuadrupole_ZZ*guz10
+                     +2.0f*(atomJ.labFrameQuadrupole_XY*guz6+atomJ.labFrameQuadrupole_XZ*guz7+atomJ.labFrameQuadrupole_YZ*guz9))
+                      + atomJ.inducedDipole[0]*(atomI.labFrameQuadrupole_XX*gqxx2+atomI.labFrameQuadrupole_YY*gqyy2+atomI.labFrameQuadrupole_ZZ*gqzz2
+                     +2.0f*(atomI.labFrameQuadrupole_XY*gqxy2+atomI.labFrameQuadrupole_XZ*gqxz2+atomI.labFrameQuadrupole_YZ*gqyz2))
+                      + atomJ.inducedDipole[1]*(atomI.labFrameQuadrupole_XX*gqxx3+atomI.labFrameQuadrupole_YY*gqyy3+atomI.labFrameQuadrupole_ZZ*gqzz3
+                     +2.0f*(atomI.labFrameQuadrupole_XY*gqxy3+atomI.labFrameQuadrupole_XZ*gqxz3+atomI.labFrameQuadrupole_YZ*gqyz3))
+                      + atomJ.inducedDipole[2]*(atomI.labFrameQuadrupole_XX*gqxx4+atomI.labFrameQuadrupole_YY*gqyy4+atomI.labFrameQuadrupole_ZZ*gqzz4
+                     +2.0f*(atomI.labFrameQuadrupole_XY*gqxy4+atomI.labFrameQuadrupole_XZ*gqxz4+atomI.labFrameQuadrupole_YZ*gqyz4));
 
-    ewki = ci*(dxk*gux1+dyk*guy1+dzk*guz1)
-                      - ck*(dxi*gc2+dyi*gc3+dzi*gc4)
-                      - dxi*(qxxk*gqxx2+qyyk*gqyy2+qzzk*gqzz2
-                     +2.0f*(qxyk*gqxy2+qxzk*gqxz2+qyzk*gqyz2))
-                      - dyi*(qxxk*gqxx3+qyyk*gqyy3+qzzk*gqzz3
-                     +2.0f*(qxyk*gqxy3+qxzk*gqxz3+qyzk*gqyz3))
-                      - dzi*(qxxk*gqxx4+qyyk*gqyy4+qzzk*gqzz4
-                     +2.0f*(qxyk*gqxy4+qxzk*gqxz4+qyzk*gqyz4))
-                      + dxk*(qxxi*gux5+qyyi*gux8+qzzi*gux10
-                     +2.0f*(qxyi*gux6+qxzi*gux7+qyzi*gux9))
-                      + dyk*(qxxi*guy5+qyyi*guy8+qzzi*guy10
-                     +2.0f*(qxyi*guy6+qxzi*guy7+qyzi*guy9))
-                      + dzk*(qxxi*guz5+qyyi*guz8+qzzi*guz10
-                     +2.0f*(qxyi*guz6+qxzi*guz7+qyzi*guz9));
+    ewki = atomI.q*(atomJ.inducedDipole[0]*gux1+atomJ.inducedDipole[1]*guy1+atomJ.inducedDipole[2]*guz1)
+                      - atomJ.q*(atomI.inducedDipole[0]*gc2+atomI.inducedDipole[1]*gc3+atomI.inducedDipole[2]*gc4)
+                      - atomI.inducedDipole[0]*(atomJ.labFrameQuadrupole_XX*gqxx2+atomJ.labFrameQuadrupole_YY*gqyy2+atomJ.labFrameQuadrupole_ZZ*gqzz2
+                     +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy2+atomJ.labFrameQuadrupole_XZ*gqxz2+atomJ.labFrameQuadrupole_YZ*gqyz2))
+                      - atomI.inducedDipole[1]*(atomJ.labFrameQuadrupole_XX*gqxx3+atomJ.labFrameQuadrupole_YY*gqyy3+atomJ.labFrameQuadrupole_ZZ*gqzz3
+                     +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy3+atomJ.labFrameQuadrupole_XZ*gqxz3+atomJ.labFrameQuadrupole_YZ*gqyz3))
+                      - atomI.inducedDipole[2]*(atomJ.labFrameQuadrupole_XX*gqxx4+atomJ.labFrameQuadrupole_YY*gqyy4+atomJ.labFrameQuadrupole_ZZ*gqzz4
+                     +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy4+atomJ.labFrameQuadrupole_XZ*gqxz4+atomJ.labFrameQuadrupole_YZ*gqyz4))
+                      + atomJ.inducedDipole[0]*(atomI.labFrameQuadrupole_XX*gux5+atomI.labFrameQuadrupole_YY*gux8+atomI.labFrameQuadrupole_ZZ*gux10
+                     +2.0f*(atomI.labFrameQuadrupole_XY*gux6+atomI.labFrameQuadrupole_XZ*gux7+atomI.labFrameQuadrupole_YZ*gux9))
+                      + atomJ.inducedDipole[1]*(atomI.labFrameQuadrupole_XX*guy5+atomI.labFrameQuadrupole_YY*guy8+atomI.labFrameQuadrupole_ZZ*guy10
+                     +2.0f*(atomI.labFrameQuadrupole_XY*guy6+atomI.labFrameQuadrupole_XZ*guy7+atomI.labFrameQuadrupole_YZ*guy9))
+                      + atomJ.inducedDipole[2]*(atomI.labFrameQuadrupole_XX*guz5+atomI.labFrameQuadrupole_YY*guz8+atomI.labFrameQuadrupole_ZZ*guz10
+                     +2.0f*(atomI.labFrameQuadrupole_XY*guz6+atomI.labFrameQuadrupole_XZ*guz7+atomI.labFrameQuadrupole_YZ*guz9));
 
     // electrostatic solvation free energy gradient of the permanent
     // multipoles in the reaction potential of the induced dipoles
 
-    dpsymdx = -uxi*(sxk*gux5+syk*guy5+szk*guz5)
-                          - uyi*(sxk*gux6+syk*guy6+szk*guz6)
-                          - uzi*(sxk*gux7+syk*guy7+szk*guz7)
-                          - uxk*(sxi*gux5+syi*guy5+szi*guz5)
-                          - uyk*(sxi*gux6+syi*guy6+szi*guz6)
-                          - uzk*(sxi*gux7+syi*guy7+szi*guz7);
+    dpsymdx = -atomI.labFrameDipole[0]*(sxk*gux5+syk*guy5+szk*guz5)
+                          - atomI.labFrameDipole[1]*(sxk*gux6+syk*guy6+szk*guz6)
+                          - atomI.labFrameDipole[2]*(sxk*gux7+syk*guy7+szk*guz7)
+                          - atomJ.labFrameDipole[0]*(sxi*gux5+syi*guy5+szi*guz5)
+                          - atomJ.labFrameDipole[1]*(sxi*gux6+syi*guy6+szi*guz6)
+                          - atomJ.labFrameDipole[2]*(sxi*gux7+syi*guy7+szi*guz7);
 
-    dpwidx = ci*(sxk*gc5+syk*gc6+szk*gc7)
-                        - ck*(sxi*gux2+syi*guy2+szi*guz2)
-                      - sxi*(qxxk*gux11+qyyk*gux14+qzzk*gux16
-                     +2.0f*(qxyk*gux12+qxzk*gux13+qyzk*gux15))
-                      - syi*(qxxk*guy11+qyyk*guy14+qzzk*guy16
-                     +2.0f*(qxyk*guy12+qxzk*guy13+qyzk*guy15))
-                      - szi*(qxxk*guz11+qyyk*guz14+qzzk*guz16
-                     +2.0f*(qxyk*guz12+qxzk*guz13+qyzk*guz15))
-                      + sxk*(qxxi*gqxx5+qyyi*gqyy5+qzzi*gqzz5
-                     +2.0f*(qxyi*gqxy5+qxzi*gqxz5+qyzi*gqyz5))
-                      + syk*(qxxi*gqxx6+qyyi*gqyy6+qzzi*gqzz6
-                     +2.0f*(qxyi*gqxy6+qxzi*gqxz6+qyzi*gqyz6))
-                      + szk*(qxxi*gqxx7+qyyi*gqyy7+qzzi*gqzz7
-                     +2.0f*(qxyi*gqxy7+qxzi*gqxz7+qyzi*gqyz7));
+    dpwidx = atomI.q*(sxk*gc5+syk*gc6+szk*gc7)
+                        - atomJ.q*(sxi*gux2+syi*guy2+szi*guz2)
+                      - sxi*(atomJ.labFrameQuadrupole_XX*gux11+atomJ.labFrameQuadrupole_YY*gux14+atomJ.labFrameQuadrupole_ZZ*gux16
+                     +2.0f*(atomJ.labFrameQuadrupole_XY*gux12+atomJ.labFrameQuadrupole_XZ*gux13+atomJ.labFrameQuadrupole_YZ*gux15))
+                      - syi*(atomJ.labFrameQuadrupole_XX*guy11+atomJ.labFrameQuadrupole_YY*guy14+atomJ.labFrameQuadrupole_ZZ*guy16
+                     +2.0f*(atomJ.labFrameQuadrupole_XY*guy12+atomJ.labFrameQuadrupole_XZ*guy13+atomJ.labFrameQuadrupole_YZ*guy15))
+                      - szi*(atomJ.labFrameQuadrupole_XX*guz11+atomJ.labFrameQuadrupole_YY*guz14+atomJ.labFrameQuadrupole_ZZ*guz16
+                     +2.0f*(atomJ.labFrameQuadrupole_XY*guz12+atomJ.labFrameQuadrupole_XZ*guz13+atomJ.labFrameQuadrupole_YZ*guz15))
+                      + sxk*(atomI.labFrameQuadrupole_XX*gqxx5+atomI.labFrameQuadrupole_YY*gqyy5+atomI.labFrameQuadrupole_ZZ*gqzz5
+                     +2.0f*(atomI.labFrameQuadrupole_XY*gqxy5+atomI.labFrameQuadrupole_XZ*gqxz5+atomI.labFrameQuadrupole_YZ*gqyz5))
+                      + syk*(atomI.labFrameQuadrupole_XX*gqxx6+atomI.labFrameQuadrupole_YY*gqyy6+atomI.labFrameQuadrupole_ZZ*gqzz6
+                     +2.0f*(atomI.labFrameQuadrupole_XY*gqxy6+atomI.labFrameQuadrupole_XZ*gqxz6+atomI.labFrameQuadrupole_YZ*gqyz6))
+                      + szk*(atomI.labFrameQuadrupole_XX*gqxx7+atomI.labFrameQuadrupole_YY*gqyy7+atomI.labFrameQuadrupole_ZZ*gqzz7
+                     +2.0f*(atomI.labFrameQuadrupole_XY*gqxy7+atomI.labFrameQuadrupole_XZ*gqxz7+atomI.labFrameQuadrupole_YZ*gqyz7));
 
-    dpwkdx = ci*(sxk*gux2+syk*guy2+szk*guz2)
-                        - ck*(sxi*gc5+syi*gc6+szi*gc7)
-                      - sxi*(qxxk*gqxx5+qyyk*gqyy5+qzzk*gqzz5
-                     +2.0f*(qxyk*gqxy5+qxzk*gqxz5+qyzk*gqyz5))
-                      - syi*(qxxk*gqxx6+qyyk*gqyy6+qzzk*gqzz6
-                     +2.0f*(qxyk*gqxy6+qxzk*gqxz6+qyzk*gqyz6))
-                      - szi*(qxxk*gqxx7+qyyk*gqyy7+qzzk*gqzz7
-                     +2.0f*(qxyk*gqxy7+qxzk*gqxz7+qyzk*gqyz7))
-                      + sxk*(qxxi*gux11+qyyi*gux14+qzzi*gux16
-                     +2.0f*(qxyi*gux12+qxzi*gux13+qyzi*gux15))
-                      + syk*(qxxi*guy11+qyyi*guy14+qzzi*guy16
-                     +2.0f*(qxyi*guy12+qxzi*guy13+qyzi*guy15))
-                      + szk*(qxxi*guz11+qyyi*guz14+qzzi*guz16
-                     +2.0f*(qxyi*guz12+qxzi*guz13+qyzi*guz15));
+    dpwkdx = atomI.q*(sxk*gux2+syk*guy2+szk*guz2)
+                        - atomJ.q*(sxi*gc5+syi*gc6+szi*gc7)
+                      - sxi*(atomJ.labFrameQuadrupole_XX*gqxx5+atomJ.labFrameQuadrupole_YY*gqyy5+atomJ.labFrameQuadrupole_ZZ*gqzz5
+                     +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy5+atomJ.labFrameQuadrupole_XZ*gqxz5+atomJ.labFrameQuadrupole_YZ*gqyz5))
+                      - syi*(atomJ.labFrameQuadrupole_XX*gqxx6+atomJ.labFrameQuadrupole_YY*gqyy6+atomJ.labFrameQuadrupole_ZZ*gqzz6
+                     +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy6+atomJ.labFrameQuadrupole_XZ*gqxz6+atomJ.labFrameQuadrupole_YZ*gqyz6))
+                      - szi*(atomJ.labFrameQuadrupole_XX*gqxx7+atomJ.labFrameQuadrupole_YY*gqyy7+atomJ.labFrameQuadrupole_ZZ*gqzz7
+                     +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy7+atomJ.labFrameQuadrupole_XZ*gqxz7+atomJ.labFrameQuadrupole_YZ*gqyz7))
+                      + sxk*(atomI.labFrameQuadrupole_XX*gux11+atomI.labFrameQuadrupole_YY*gux14+atomI.labFrameQuadrupole_ZZ*gux16
+                     +2.0f*(atomI.labFrameQuadrupole_XY*gux12+atomI.labFrameQuadrupole_XZ*gux13+atomI.labFrameQuadrupole_YZ*gux15))
+                      + syk*(atomI.labFrameQuadrupole_XX*guy11+atomI.labFrameQuadrupole_YY*guy14+atomI.labFrameQuadrupole_ZZ*guy16
+                     +2.0f*(atomI.labFrameQuadrupole_XY*guy12+atomI.labFrameQuadrupole_XZ*guy13+atomI.labFrameQuadrupole_YZ*guy15))
+                      + szk*(atomI.labFrameQuadrupole_XX*guz11+atomI.labFrameQuadrupole_YY*guz14+atomI.labFrameQuadrupole_ZZ*guz16
+                     +2.0f*(atomI.labFrameQuadrupole_XY*guz12+atomI.labFrameQuadrupole_XZ*guz13+atomI.labFrameQuadrupole_YZ*guz15));
 
     dpdx = 0.5f * (dpsymdx + 0.5f*(dpwidx + dpwkdx));
 
-    dpsymdy = -uxi*(sxk*gux6+syk*guy6+szk*guz6)
-                          - uyi*(sxk*gux8+syk*guy8+szk*guz8)
-                          - uzi*(sxk*gux9+syk*guy9+szk*guz9)
-                          - uxk*(sxi*gux6+syi*guy6+szi*guz6)
-                          - uyk*(sxi*gux8+syi*guy8+szi*guz8)
-                          - uzk*(sxi*gux9+syi*guy9+szi*guz9);
+    dpsymdy = -atomI.labFrameDipole[0]*(sxk*gux6+syk*guy6+szk*guz6)
+                          - atomI.labFrameDipole[1]*(sxk*gux8+syk*guy8+szk*guz8)
+                          - atomI.labFrameDipole[2]*(sxk*gux9+syk*guy9+szk*guz9)
+                          - atomJ.labFrameDipole[0]*(sxi*gux6+syi*guy6+szi*guz6)
+                          - atomJ.labFrameDipole[1]*(sxi*gux8+syi*guy8+szi*guz8)
+                          - atomJ.labFrameDipole[2]*(sxi*gux9+syi*guy9+szi*guz9);
 
-    dpwidy = ci*(sxk*gc6+syk*gc8+szk*gc9)
-                        - ck*(sxi*gux3+syi*guy3+szi*guz3)
-                         - sxi*(qxxk*gux12+qyyk*gux17+qzzk*gux19
-                        +2.0f*(qxyk*gux14+qxzk*gux15+qyzk*gux18))
-                         - syi*(qxxk*guy12+qyyk*guy17+qzzk*guy19
-                        +2.0f*(qxyk*guy14+qxzk*guy15+qyzk*guy18))
-                         - szi*(qxxk*guz12+qyyk*guz17+qzzk*guz19
-                        +2.0f*(qxyk*guz14+qxzk*guz15+qyzk*guz18))
-                         + sxk*(qxxi*gqxx6+qyyi*gqyy6+qzzi*gqzz6
-                        +2.0f*(qxyi*gqxy6+qxzi*gqxz6+qyzi*gqyz6))
-                         + syk*(qxxi*gqxx8+qyyi*gqyy8+qzzi*gqzz8
-                        +2.0f*(qxyi*gqxy8+qxzi*gqxz8+qyzi*gqyz8))
-                         + szk*(qxxi*gqxx9+qyyi*gqyy9+qzzi*gqzz9
-                        +2.0f*(qxyi*gqxy9+qxzi*gqxz9+qyzi*gqyz9));
+    dpwidy = atomI.q*(sxk*gc6+syk*gc8+szk*gc9)
+                        - atomJ.q*(sxi*gux3+syi*guy3+szi*guz3)
+                         - sxi*(atomJ.labFrameQuadrupole_XX*gux12+atomJ.labFrameQuadrupole_YY*gux17+atomJ.labFrameQuadrupole_ZZ*gux19
+                        +2.0f*(atomJ.labFrameQuadrupole_XY*gux14+atomJ.labFrameQuadrupole_XZ*gux15+atomJ.labFrameQuadrupole_YZ*gux18))
+                         - syi*(atomJ.labFrameQuadrupole_XX*guy12+atomJ.labFrameQuadrupole_YY*guy17+atomJ.labFrameQuadrupole_ZZ*guy19
+                        +2.0f*(atomJ.labFrameQuadrupole_XY*guy14+atomJ.labFrameQuadrupole_XZ*guy15+atomJ.labFrameQuadrupole_YZ*guy18))
+                         - szi*(atomJ.labFrameQuadrupole_XX*guz12+atomJ.labFrameQuadrupole_YY*guz17+atomJ.labFrameQuadrupole_ZZ*guz19
+                        +2.0f*(atomJ.labFrameQuadrupole_XY*guz14+atomJ.labFrameQuadrupole_XZ*guz15+atomJ.labFrameQuadrupole_YZ*guz18))
+                         + sxk*(atomI.labFrameQuadrupole_XX*gqxx6+atomI.labFrameQuadrupole_YY*gqyy6+atomI.labFrameQuadrupole_ZZ*gqzz6
+                        +2.0f*(atomI.labFrameQuadrupole_XY*gqxy6+atomI.labFrameQuadrupole_XZ*gqxz6+atomI.labFrameQuadrupole_YZ*gqyz6))
+                         + syk*(atomI.labFrameQuadrupole_XX*gqxx8+atomI.labFrameQuadrupole_YY*gqyy8+atomI.labFrameQuadrupole_ZZ*gqzz8
+                        +2.0f*(atomI.labFrameQuadrupole_XY*gqxy8+atomI.labFrameQuadrupole_XZ*gqxz8+atomI.labFrameQuadrupole_YZ*gqyz8))
+                         + szk*(atomI.labFrameQuadrupole_XX*gqxx9+atomI.labFrameQuadrupole_YY*gqyy9+atomI.labFrameQuadrupole_ZZ*gqzz9
+                        +2.0f*(atomI.labFrameQuadrupole_XY*gqxy9+atomI.labFrameQuadrupole_XZ*gqxz9+atomI.labFrameQuadrupole_YZ*gqyz9));
 
-    dpwkdy = ci*(sxk*gux3+syk*guy3+szk*guz3)
-                        - ck*(sxi*gc6+syi*gc8+szi*gc9)
-                      - sxi*(qxxk*gqxx6+qyyk*gqyy6+qzzk*gqzz6
-                     +2.0f*(qxyk*gqxy6+qxzk*gqxz6+qyzk*gqyz6))
-                      - syi*(qxxk*gqxx8+qyyk*gqyy8+qzzk*gqzz8
-                     +2.0f*(qxyk*gqxy8+qxzk*gqxz8+qyzk*gqyz8))
-                      - szi*(qxxk*gqxx9+qyyk*gqyy9+qzzk*gqzz9
-                     +2.0f*(qxyk*gqxy9+qxzk*gqxz9+qyzk*gqyz9))
-                      + sxk*(qxxi*gux12+qyyi*gux17+qzzi*gux19
-                     +2.0f*(qxyi*gux14+qxzi*gux15+qyzi*gux18))
-                      + syk*(qxxi*guy12+qyyi*guy17+qzzi*guy19
-                     +2.0f*(qxyi*guy14+qxzi*guy15+qyzi*guy18))
-                      + szk*(qxxi*guz12+qyyi*guz17+qzzi*guz19
-                     +2.0f*(qxyi*guz14+qxzi*guz15+qyzi*guz18));
+    dpwkdy = atomI.q*(sxk*gux3+syk*guy3+szk*guz3)
+                        - atomJ.q*(sxi*gc6+syi*gc8+szi*gc9)
+                      - sxi*(atomJ.labFrameQuadrupole_XX*gqxx6+atomJ.labFrameQuadrupole_YY*gqyy6+atomJ.labFrameQuadrupole_ZZ*gqzz6
+                     +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy6+atomJ.labFrameQuadrupole_XZ*gqxz6+atomJ.labFrameQuadrupole_YZ*gqyz6))
+                      - syi*(atomJ.labFrameQuadrupole_XX*gqxx8+atomJ.labFrameQuadrupole_YY*gqyy8+atomJ.labFrameQuadrupole_ZZ*gqzz8
+                     +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy8+atomJ.labFrameQuadrupole_XZ*gqxz8+atomJ.labFrameQuadrupole_YZ*gqyz8))
+                      - szi*(atomJ.labFrameQuadrupole_XX*gqxx9+atomJ.labFrameQuadrupole_YY*gqyy9+atomJ.labFrameQuadrupole_ZZ*gqzz9
+                     +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy9+atomJ.labFrameQuadrupole_XZ*gqxz9+atomJ.labFrameQuadrupole_YZ*gqyz9))
+                      + sxk*(atomI.labFrameQuadrupole_XX*gux12+atomI.labFrameQuadrupole_YY*gux17+atomI.labFrameQuadrupole_ZZ*gux19
+                     +2.0f*(atomI.labFrameQuadrupole_XY*gux14+atomI.labFrameQuadrupole_XZ*gux15+atomI.labFrameQuadrupole_YZ*gux18))
+                      + syk*(atomI.labFrameQuadrupole_XX*guy12+atomI.labFrameQuadrupole_YY*guy17+atomI.labFrameQuadrupole_ZZ*guy19
+                     +2.0f*(atomI.labFrameQuadrupole_XY*guy14+atomI.labFrameQuadrupole_XZ*guy15+atomI.labFrameQuadrupole_YZ*guy18))
+                      + szk*(atomI.labFrameQuadrupole_XX*guz12+atomI.labFrameQuadrupole_YY*guz17+atomI.labFrameQuadrupole_ZZ*guz19
+                     +2.0f*(atomI.labFrameQuadrupole_XY*guz14+atomI.labFrameQuadrupole_XZ*guz15+atomI.labFrameQuadrupole_YZ*guz18));
 
     dpdy    = 0.5f * (dpsymdy + 0.5f*(dpwidy + dpwkdy));
 
-    dpsymdz = -uxi*(sxk*gux7+syk*guy7+szk*guz7)
-                          - uyi*(sxk*gux9+syk*guy9+szk*guz9)
-                          - uzi*(sxk*gux10+syk*guy10+szk*guz10)
-                          - uxk*(sxi*gux7+syi*guy7+szi*guz7)
-                          - uyk*(sxi*gux9+syi*guy9+szi*guz9)
-                          - uzk*(sxi*gux10+syi*guy10+szi*guz10);
+    dpsymdz = -atomI.labFrameDipole[0]*(sxk*gux7+syk*guy7+szk*guz7)
+                          - atomI.labFrameDipole[1]*(sxk*gux9+syk*guy9+szk*guz9)
+                          - atomI.labFrameDipole[2]*(sxk*gux10+syk*guy10+szk*guz10)
+                          - atomJ.labFrameDipole[0]*(sxi*gux7+syi*guy7+szi*guz7)
+                          - atomJ.labFrameDipole[1]*(sxi*gux9+syi*guy9+szi*guz9)
+                          - atomJ.labFrameDipole[2]*(sxi*gux10+syi*guy10+szi*guz10);
 
-    dpwidz = ci*(sxk*gc7+syk*gc9+szk*gc10)
-                        - ck*(sxi*gux4+syi*guy4+szi*guz4)
-                      - sxi*(qxxk*gux13+qyyk*gux18+qzzk*gux20
-                     +2.0f*(qxyk*gux15+qxzk*gux16+qyzk*gux19))
-                      - syi*(qxxk*guy13+qyyk*guy18+qzzk*guy20
-                     +2.0f*(qxyk*guy15+qxzk*guy16+qyzk*guy19))
-                      - szi*(qxxk*guz13+qyyk*guz18+qzzk*guz20
-                     +2.0f*(qxyk*guz15+qxzk*guz16+qyzk*guz19))
-                      + sxk*(qxxi*gqxx7+qyyi*gqyy7+qzzi*gqzz7
-                     +2.0f*(qxyi*gqxy7+qxzi*gqxz7+qyzi*gqyz7))
-                      + syk*(qxxi*gqxx9+qyyi*gqyy9+qzzi*gqzz9
-                     +2.0f*(qxyi*gqxy9+qxzi*gqxz9+qyzi*gqyz9))
-                      + szk*(qxxi*gqxx10+qyyi*gqyy10+qzzi*gqzz10
-                     +2.0f*(qxyi*gqxy10+qxzi*gqxz10+qyzi*gqyz10));
+    dpwidz = atomI.q*(sxk*gc7+syk*gc9+szk*gc10)
+                        - atomJ.q*(sxi*gux4+syi*guy4+szi*guz4)
+                      - sxi*(atomJ.labFrameQuadrupole_XX*gux13+atomJ.labFrameQuadrupole_YY*gux18+atomJ.labFrameQuadrupole_ZZ*gux20
+                     +2.0f*(atomJ.labFrameQuadrupole_XY*gux15+atomJ.labFrameQuadrupole_XZ*gux16+atomJ.labFrameQuadrupole_YZ*gux19))
+                      - syi*(atomJ.labFrameQuadrupole_XX*guy13+atomJ.labFrameQuadrupole_YY*guy18+atomJ.labFrameQuadrupole_ZZ*guy20
+                     +2.0f*(atomJ.labFrameQuadrupole_XY*guy15+atomJ.labFrameQuadrupole_XZ*guy16+atomJ.labFrameQuadrupole_YZ*guy19))
+                      - szi*(atomJ.labFrameQuadrupole_XX*guz13+atomJ.labFrameQuadrupole_YY*guz18+atomJ.labFrameQuadrupole_ZZ*guz20
+                     +2.0f*(atomJ.labFrameQuadrupole_XY*guz15+atomJ.labFrameQuadrupole_XZ*guz16+atomJ.labFrameQuadrupole_YZ*guz19))
+                      + sxk*(atomI.labFrameQuadrupole_XX*gqxx7+atomI.labFrameQuadrupole_YY*gqyy7+atomI.labFrameQuadrupole_ZZ*gqzz7
+                     +2.0f*(atomI.labFrameQuadrupole_XY*gqxy7+atomI.labFrameQuadrupole_XZ*gqxz7+atomI.labFrameQuadrupole_YZ*gqyz7))
+                      + syk*(atomI.labFrameQuadrupole_XX*gqxx9+atomI.labFrameQuadrupole_YY*gqyy9+atomI.labFrameQuadrupole_ZZ*gqzz9
+                     +2.0f*(atomI.labFrameQuadrupole_XY*gqxy9+atomI.labFrameQuadrupole_XZ*gqxz9+atomI.labFrameQuadrupole_YZ*gqyz9))
+                      + szk*(atomI.labFrameQuadrupole_XX*gqxx10+atomI.labFrameQuadrupole_YY*gqyy10+atomI.labFrameQuadrupole_ZZ*gqzz10
+                     +2.0f*(atomI.labFrameQuadrupole_XY*gqxy10+atomI.labFrameQuadrupole_XZ*gqxz10+atomI.labFrameQuadrupole_YZ*gqyz10));
 
-    dpwkdz = ci*(sxk*gux4+syk*guy4+szk*guz4)
-                        - ck*(sxi*gc7+syi*gc9+szi*gc10)
-                      - sxi*(qxxk*gqxx7+qyyk*gqyy7+qzzk*gqzz7
-                     +2.0f*(qxyk*gqxy7+qxzk*gqxz7+qyzk*gqyz7))
-                      - syi*(qxxk*gqxx9+qyyk*gqyy9+qzzk*gqzz9
-                     +2.0f*(qxyk*gqxy9+qxzk*gqxz9+qyzk*gqyz9))
-                      - szi*(qxxk*gqxx10+qyyk*gqyy10+qzzk*gqzz10
-                     +2.0f*(qxyk*gqxy10+qxzk*gqxz10+qyzk*gqyz10))
-                      + sxk*(qxxi*gux13+qyyi*gux18+qzzi*gux20
-                     +2.0f*(qxyi*gux15+qxzi*gux16+qyzi*gux19))
-                      + syk*(qxxi*guy13+qyyi*guy18+qzzi*guy20
-                     +2.0f*(qxyi*guy15+qxzi*guy16+qyzi*guy19))
-                      + szk*(qxxi*guz13+qyyi*guz18+qzzi*guz20
-                     +2.0f*(qxyi*guz15+qxzi*guz16+qyzi*guz19));
+    dpwkdz = atomI.q*(sxk*gux4+syk*guy4+szk*guz4)
+                        - atomJ.q*(sxi*gc7+syi*gc9+szi*gc10)
+                      - sxi*(atomJ.labFrameQuadrupole_XX*gqxx7+atomJ.labFrameQuadrupole_YY*gqyy7+atomJ.labFrameQuadrupole_ZZ*gqzz7
+                     +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy7+atomJ.labFrameQuadrupole_XZ*gqxz7+atomJ.labFrameQuadrupole_YZ*gqyz7))
+                      - syi*(atomJ.labFrameQuadrupole_XX*gqxx9+atomJ.labFrameQuadrupole_YY*gqyy9+atomJ.labFrameQuadrupole_ZZ*gqzz9
+                     +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy9+atomJ.labFrameQuadrupole_XZ*gqxz9+atomJ.labFrameQuadrupole_YZ*gqyz9))
+                      - szi*(atomJ.labFrameQuadrupole_XX*gqxx10+atomJ.labFrameQuadrupole_YY*gqyy10+atomJ.labFrameQuadrupole_ZZ*gqzz10
+                     +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy10+atomJ.labFrameQuadrupole_XZ*gqxz10+atomJ.labFrameQuadrupole_YZ*gqyz10))
+                      + sxk*(atomI.labFrameQuadrupole_XX*gux13+atomI.labFrameQuadrupole_YY*gux18+atomI.labFrameQuadrupole_ZZ*gux20
+                     +2.0f*(atomI.labFrameQuadrupole_XY*gux15+atomI.labFrameQuadrupole_XZ*gux16+atomI.labFrameQuadrupole_YZ*gux19))
+                      + syk*(atomI.labFrameQuadrupole_XX*guy13+atomI.labFrameQuadrupole_YY*guy18+atomI.labFrameQuadrupole_ZZ*guy20
+                     +2.0f*(atomI.labFrameQuadrupole_XY*guy15+atomI.labFrameQuadrupole_XZ*guy16+atomI.labFrameQuadrupole_YZ*guy19))
+                      + szk*(atomI.labFrameQuadrupole_XX*guz13+atomI.labFrameQuadrupole_YY*guz18+atomI.labFrameQuadrupole_ZZ*guz20
+                     +2.0f*(atomI.labFrameQuadrupole_XY*guz15+atomI.labFrameQuadrupole_XZ*guz16+atomI.labFrameQuadrupole_YZ*guz19));
 
     dpdz = 0.5f * (dpsymdz + 0.5f*(dpwidz + dpwkdz));
 
@@ -1383,83 +1272,83 @@ __device__ void calculateKirkwoodPairIxn_kernel( unsigned int sameAtom,
     // electrostatic solvation free energy gradient of the permanent;
     // multipoles in the reaction potential of the induced dipoles;
 
-    dsymdr = -uxi*(sxk*gux22+syk*guy22+szk*guz22)
-                          - uyi*(sxk*gux23+syk*guy23+szk*guz23)
-                          - uzi*(sxk*gux24+syk*guy24+szk*guz24)
-                          - uxk*(sxi*gux22+syi*guy22+szi*guz22)
-                          - uyk*(sxi*gux23+syi*guy23+szi*guz23)
-                          - uzk*(sxi*gux24+syi*guy24+szi*guz24);
+    dsymdr = -atomI.labFrameDipole[0]*(sxk*gux22+syk*guy22+szk*guz22)
+                          - atomI.labFrameDipole[1]*(sxk*gux23+syk*guy23+szk*guz23)
+                          - atomI.labFrameDipole[2]*(sxk*gux24+syk*guy24+szk*guz24)
+                          - atomJ.labFrameDipole[0]*(sxi*gux22+syi*guy22+szi*guz22)
+                          - atomJ.labFrameDipole[1]*(sxi*gux23+syi*guy23+szi*guz23)
+                          - atomJ.labFrameDipole[2]*(sxi*gux24+syi*guy24+szi*guz24);
 
-    dwipdr = ci*(sxk*gc22+syk*gc23+szk*gc24)
-                         - ck*(sxi*gux21+syi*guy21+szi*guz21)
-                      - sxi*(qxxk*gux25+qyyk*gux28+qzzk*gux30
-                     +2.0f*(qxyk*gux26+qxzk*gux27+qyzk*gux29))
-                      - syi*(qxxk*guy25+qyyk*guy28+qzzk*guy30
-                     +2.0f*(qxyk*guy26+qxzk*guy27+qyzk*guy29))
-                      - szi*(qxxk*guz25+qyyk*guz28+qzzk*guz30
-                     +2.0f*(qxyk*guz26+qxzk*guz27+qyzk*guz29))
-                      + sxk*(qxxi*gqxx22+qyyi*gqyy22+qzzi*gqzz22
-                     +2.0f*(qxyi*gqxy22+qxzi*gqxz22+qyzi*gqyz22))
-                      + syk*(qxxi*gqxx23+qyyi*gqyy23+qzzi*gqzz23
-                     +2.0f*(qxyi*gqxy23+qxzi*gqxz23+qyzi*gqyz23))
-                      + szk*(qxxi*gqxx24+qyyi*gqyy24+qzzi*gqzz24
-                     +2.0f*(qxyi*gqxy24+qxzi*gqxz24+qyzi*gqyz24));
+    dwipdr = atomI.q*(sxk*gc22+syk*gc23+szk*gc24)
+                         - atomJ.q*(sxi*gux21+syi*guy21+szi*guz21)
+                      - sxi*(atomJ.labFrameQuadrupole_XX*gux25+atomJ.labFrameQuadrupole_YY*gux28+atomJ.labFrameQuadrupole_ZZ*gux30
+                     +2.0f*(atomJ.labFrameQuadrupole_XY*gux26+atomJ.labFrameQuadrupole_XZ*gux27+atomJ.labFrameQuadrupole_YZ*gux29))
+                      - syi*(atomJ.labFrameQuadrupole_XX*guy25+atomJ.labFrameQuadrupole_YY*guy28+atomJ.labFrameQuadrupole_ZZ*guy30
+                     +2.0f*(atomJ.labFrameQuadrupole_XY*guy26+atomJ.labFrameQuadrupole_XZ*guy27+atomJ.labFrameQuadrupole_YZ*guy29))
+                      - szi*(atomJ.labFrameQuadrupole_XX*guz25+atomJ.labFrameQuadrupole_YY*guz28+atomJ.labFrameQuadrupole_ZZ*guz30
+                     +2.0f*(atomJ.labFrameQuadrupole_XY*guz26+atomJ.labFrameQuadrupole_XZ*guz27+atomJ.labFrameQuadrupole_YZ*guz29))
+                      + sxk*(atomI.labFrameQuadrupole_XX*gqxx22+atomI.labFrameQuadrupole_YY*gqyy22+atomI.labFrameQuadrupole_ZZ*gqzz22
+                     +2.0f*(atomI.labFrameQuadrupole_XY*gqxy22+atomI.labFrameQuadrupole_XZ*gqxz22+atomI.labFrameQuadrupole_YZ*gqyz22))
+                      + syk*(atomI.labFrameQuadrupole_XX*gqxx23+atomI.labFrameQuadrupole_YY*gqyy23+atomI.labFrameQuadrupole_ZZ*gqzz23
+                     +2.0f*(atomI.labFrameQuadrupole_XY*gqxy23+atomI.labFrameQuadrupole_XZ*gqxz23+atomI.labFrameQuadrupole_YZ*gqyz23))
+                      + szk*(atomI.labFrameQuadrupole_XX*gqxx24+atomI.labFrameQuadrupole_YY*gqyy24+atomI.labFrameQuadrupole_ZZ*gqzz24
+                     +2.0f*(atomI.labFrameQuadrupole_XY*gqxy24+atomI.labFrameQuadrupole_XZ*gqxz24+atomI.labFrameQuadrupole_YZ*gqyz24));
 
-    dwkpdr = ci*(sxk*gux21+syk*guy21+szk*guz21)
-                         - ck*(sxi*gc22+syi*gc23+szi*gc24)
-                      - sxi*(qxxk*gqxx22+qyyk*gqyy22+qzzk*gqzz22
-                     +2.0f*(qxyk*gqxy22+qxzk*gqxz22+qyzk*gqyz22))
-                      - syi*(qxxk*gqxx23+qyyk*gqyy23+qzzk*gqzz23
-                     +2.0f*(qxyk*gqxy23+qxzk*gqxz23+qyzk*gqyz23))
-                      - szi*(qxxk*gqxx24+qyyk*gqyy24+qzzk*gqzz24
-                     +2.0f*(qxyk*gqxy24+qxzk*gqxz24+qyzk*gqyz24))
-                      + sxk*(qxxi*gux25+qyyi*gux28+qzzi*gux30
-                     +2.0f*(qxyi*gux26+qxzi*gux27+qyzi*gux29))
-                      + syk*(qxxi*guy25+qyyi*guy28+qzzi*guy30
-                     +2.0f*(qxyi*guy26+qxzi*guy27+qyzi*guy29))
-                      + szk*(qxxi*guz25+qyyi*guz28+qzzi*guz30
-                     +2.0f*(qxyi*guz26+qxzi*guz27+qyzi*guz29));
+    dwkpdr = atomI.q*(sxk*gux21+syk*guy21+szk*guz21)
+                         - atomJ.q*(sxi*gc22+syi*gc23+szi*gc24)
+                      - sxi*(atomJ.labFrameQuadrupole_XX*gqxx22+atomJ.labFrameQuadrupole_YY*gqyy22+atomJ.labFrameQuadrupole_ZZ*gqzz22
+                     +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy22+atomJ.labFrameQuadrupole_XZ*gqxz22+atomJ.labFrameQuadrupole_YZ*gqyz22))
+                      - syi*(atomJ.labFrameQuadrupole_XX*gqxx23+atomJ.labFrameQuadrupole_YY*gqyy23+atomJ.labFrameQuadrupole_ZZ*gqzz23
+                     +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy23+atomJ.labFrameQuadrupole_XZ*gqxz23+atomJ.labFrameQuadrupole_YZ*gqyz23))
+                      - szi*(atomJ.labFrameQuadrupole_XX*gqxx24+atomJ.labFrameQuadrupole_YY*gqyy24+atomJ.labFrameQuadrupole_ZZ*gqzz24
+                     +2.0f*(atomJ.labFrameQuadrupole_XY*gqxy24+atomJ.labFrameQuadrupole_XZ*gqxz24+atomJ.labFrameQuadrupole_YZ*gqyz24))
+                      + sxk*(atomI.labFrameQuadrupole_XX*gux25+atomI.labFrameQuadrupole_YY*gux28+atomI.labFrameQuadrupole_ZZ*gux30
+                     +2.0f*(atomI.labFrameQuadrupole_XY*gux26+atomI.labFrameQuadrupole_XZ*gux27+atomI.labFrameQuadrupole_YZ*gux29))
+                      + syk*(atomI.labFrameQuadrupole_XX*guy25+atomI.labFrameQuadrupole_YY*guy28+atomI.labFrameQuadrupole_ZZ*guy30
+                     +2.0f*(atomI.labFrameQuadrupole_XY*guy26+atomI.labFrameQuadrupole_XZ*guy27+atomI.labFrameQuadrupole_YZ*guy29))
+                      + szk*(atomI.labFrameQuadrupole_XX*guz25+atomI.labFrameQuadrupole_YY*guz28+atomI.labFrameQuadrupole_ZZ*guz30
+                     +2.0f*(atomI.labFrameQuadrupole_XY*guz26+atomI.labFrameQuadrupole_XZ*guz27+atomI.labFrameQuadrupole_YZ*guz29));
 
     dsumdr = dsymdr + 0.5f*(dwipdr + dwkpdr);
-    dpbi = 0.5f*rbk*dsumdr;
-    dpbk = 0.5f*rbi*dsumdr;
+    dpbi = 0.5f*atomJ.bornRadius*dsumdr;
+    dpbk = 0.5f*atomI.bornRadius*dsumdr;
 
     // mutual polarization electrostatic solvation free energy gradient
 
 //   if (poltyp .eq. 'MUTUAL'){
 
         dpdx = dpdx - 0.5f *
-                           (dxi*(pxk*gux5+pyk*gux6+pzk*gux7)
-                           +dyi*(pxk*guy5+pyk*guy6+pzk*guy7)
-                           +dzi*(pxk*guz5+pyk*guz6+pzk*guz7)
-                           +dxk*(pxi*gux5+pyi*gux6+pzi*gux7)
-                           +dyk*(pxi*guy5+pyi*guy6+pzi*guy7)
-                           +dzk*(pxi*guz5+pyi*guz6+pzi*guz7));
+                           (atomI.inducedDipole[0]*(atomJ.inducedDipoleP[0]*gux5+atomJ.inducedDipoleP[1]*gux6+atomJ.inducedDipoleP[2]*gux7)
+                           +atomI.inducedDipole[1]*(atomJ.inducedDipoleP[0]*guy5+atomJ.inducedDipoleP[1]*guy6+atomJ.inducedDipoleP[2]*guy7)
+                           +atomI.inducedDipole[2]*(atomJ.inducedDipoleP[0]*guz5+atomJ.inducedDipoleP[1]*guz6+atomJ.inducedDipoleP[2]*guz7)
+                           +atomJ.inducedDipole[0]*(atomI.inducedDipoleP[0]*gux5+atomI.inducedDipoleP[1]*gux6+atomI.inducedDipoleP[2]*gux7)
+                           +atomJ.inducedDipole[1]*(atomI.inducedDipoleP[0]*guy5+atomI.inducedDipoleP[1]*guy6+atomI.inducedDipoleP[2]*guy7)
+                           +atomJ.inducedDipole[2]*(atomI.inducedDipoleP[0]*guz5+atomI.inducedDipoleP[1]*guz6+atomI.inducedDipoleP[2]*guz7));
 
         dpdy = dpdy - 0.5f *
-                           (dxi*(pxk*gux6+pyk*gux8+pzk*gux9)
-                           +dyi*(pxk*guy6+pyk*guy8+pzk*guy9)
-                           +dzi*(pxk*guz6+pyk*guz8+pzk*guz9)
-                           +dxk*(pxi*gux6+pyi*gux8+pzi*gux9)
-                           +dyk*(pxi*guy6+pyi*guy8+pzi*guy9)
-                           +dzk*(pxi*guz6+pyi*guz8+pzi*guz9));
+                           (atomI.inducedDipole[0]*(atomJ.inducedDipoleP[0]*gux6+atomJ.inducedDipoleP[1]*gux8+atomJ.inducedDipoleP[2]*gux9)
+                           +atomI.inducedDipole[1]*(atomJ.inducedDipoleP[0]*guy6+atomJ.inducedDipoleP[1]*guy8+atomJ.inducedDipoleP[2]*guy9)
+                           +atomI.inducedDipole[2]*(atomJ.inducedDipoleP[0]*guz6+atomJ.inducedDipoleP[1]*guz8+atomJ.inducedDipoleP[2]*guz9)
+                           +atomJ.inducedDipole[0]*(atomI.inducedDipoleP[0]*gux6+atomI.inducedDipoleP[1]*gux8+atomI.inducedDipoleP[2]*gux9)
+                           +atomJ.inducedDipole[1]*(atomI.inducedDipoleP[0]*guy6+atomI.inducedDipoleP[1]*guy8+atomI.inducedDipoleP[2]*guy9)
+                           +atomJ.inducedDipole[2]*(atomI.inducedDipoleP[0]*guz6+atomI.inducedDipoleP[1]*guz8+atomI.inducedDipoleP[2]*guz9));
 
         dpdz = dpdz - 0.5f *
-                           (dxi*(pxk*gux7+pyk*gux9+pzk*gux10)
-                           +dyi*(pxk*guy7+pyk*guy9+pzk*guy10)
-                           +dzi*(pxk*guz7+pyk*guz9+pzk*guz10)
-                           +dxk*(pxi*gux7+pyi*gux9+pzi*gux10)
-                           +dyk*(pxi*guy7+pyi*guy9+pzi*guy10)
-                           +dzk*(pxi*guz7+pyi*guz9+pzi*guz10));
+                           (atomI.inducedDipole[0]*(atomJ.inducedDipoleP[0]*gux7+atomJ.inducedDipoleP[1]*gux9+atomJ.inducedDipoleP[2]*gux10)
+                           +atomI.inducedDipole[1]*(atomJ.inducedDipoleP[0]*guy7+atomJ.inducedDipoleP[1]*guy9+atomJ.inducedDipoleP[2]*guy10)
+                           +atomI.inducedDipole[2]*(atomJ.inducedDipoleP[0]*guz7+atomJ.inducedDipoleP[1]*guz9+atomJ.inducedDipoleP[2]*guz10)
+                           +atomJ.inducedDipole[0]*(atomI.inducedDipoleP[0]*gux7+atomI.inducedDipoleP[1]*gux9+atomI.inducedDipoleP[2]*gux10)
+                           +atomJ.inducedDipole[1]*(atomI.inducedDipoleP[0]*guy7+atomI.inducedDipoleP[1]*guy9+atomI.inducedDipoleP[2]*guy10)
+                           +atomJ.inducedDipole[2]*(atomI.inducedDipoleP[0]*guz7+atomI.inducedDipoleP[1]*guz9+atomI.inducedDipoleP[2]*guz10));
 
-        duvdr = dxi*(pxk*gux22+pyk*gux23+pzk*gux24)
-                            + dyi*(pxk*guy22+pyk*guy23+pzk*guy24)
-                            + dzi*(pxk*guz22+pyk*guz23+pzk*guz24)
-                            + dxk*(pxi*gux22+pyi*gux23+pzi*gux24)
-                            + dyk*(pxi*guy22+pyi*guy23+pzi*guy24)
-                            + dzk*(pxi*guz22+pyi*guz23+pzi*guz24);
-        dpbi = dpbi - 0.5f*rbk*duvdr;
-        dpbk = dpbk - 0.5f*rbi*duvdr;
+        duvdr = atomI.inducedDipole[0]*(atomJ.inducedDipoleP[0]*gux22+atomJ.inducedDipoleP[1]*gux23+atomJ.inducedDipoleP[2]*gux24)
+                            + atomI.inducedDipole[1]*(atomJ.inducedDipoleP[0]*guy22+atomJ.inducedDipoleP[1]*guy23+atomJ.inducedDipoleP[2]*guy24)
+                            + atomI.inducedDipole[2]*(atomJ.inducedDipoleP[0]*guz22+atomJ.inducedDipoleP[1]*guz23+atomJ.inducedDipoleP[2]*guz24)
+                            + atomJ.inducedDipole[0]*(atomI.inducedDipoleP[0]*gux22+atomI.inducedDipoleP[1]*gux23+atomI.inducedDipoleP[2]*gux24)
+                            + atomJ.inducedDipole[1]*(atomI.inducedDipoleP[0]*guy22+atomI.inducedDipoleP[1]*guy23+atomI.inducedDipoleP[2]*guy24)
+                            + atomJ.inducedDipole[2]*(atomI.inducedDipoleP[0]*guz22+atomI.inducedDipoleP[1]*guz23+atomI.inducedDipoleP[2]*guz24);
+        dpbi = dpbi - 0.5f*atomJ.bornRadius*duvdr;
+        dpbk = dpbk - 0.5f*atomI.bornRadius*duvdr;
 //    }
 
     // torque due to induced reaction field on permanent dipoles
@@ -1486,13 +1375,13 @@ __device__ void calculateKirkwoodPairIxn_kernel( unsigned int sameAtom,
         fkd3 = 0.5f * fkd3;
     }
 */
-    float trqi1   = uyi*fid3 - uzi*fid2;
-    float trqi2   = uzi*fid1 - uxi*fid3;
-    float trqi3   = uxi*fid2 - uyi*fid1;
+    float trqi1   = atomI.labFrameDipole[1]*fid3 - atomI.labFrameDipole[2]*fid2;
+    float trqi2   = atomI.labFrameDipole[2]*fid1 - atomI.labFrameDipole[0]*fid3;
+    float trqi3   = atomI.labFrameDipole[0]*fid2 - atomI.labFrameDipole[1]*fid1;
 
-    float trqi_k1 = uyk*fkd3 - uzk*fkd2;
-    float trqi_k2 = uzk*fkd1 - uxk*fkd3;
-    float trqi_k3 = uxk*fkd2 - uyk*fkd1;
+    float trqi_k1 = atomJ.labFrameDipole[1]*fkd3 - atomJ.labFrameDipole[2]*fkd2;
+    float trqi_k2 = atomJ.labFrameDipole[2]*fkd1 - atomJ.labFrameDipole[0]*fkd3;
+    float trqi_k3 = atomJ.labFrameDipole[0]*fkd2 - atomJ.labFrameDipole[1]*fkd1;
 
 
     // torque due to induced reaction field gradient on quadrupoles;
@@ -1572,25 +1461,25 @@ __device__ void calculateKirkwoodPairIxn_kernel( unsigned int sameAtom,
      }
 */
 
-    trqi1 += 2.0f*(qxyi*fidg13+qyyi*fidg23+qyzi*fidg33
-                        -qxzi*fidg12-qyzi*fidg22-qzzi*fidg32);
-    trqi2 += 2.0f*(qxzi*fidg11+qyzi*fidg21+qzzi*fidg31
-                        -qxxi*fidg13-qxyi*fidg23-qxzi*fidg33);
+    trqi1 += 2.0f*(atomI.labFrameQuadrupole_XY*fidg13+atomI.labFrameQuadrupole_YY*fidg23+atomI.labFrameQuadrupole_YZ*fidg33
+                        -atomI.labFrameQuadrupole_XZ*fidg12-atomI.labFrameQuadrupole_YZ*fidg22-atomI.labFrameQuadrupole_ZZ*fidg32);
+    trqi2 += 2.0f*(atomI.labFrameQuadrupole_XZ*fidg11+atomI.labFrameQuadrupole_YZ*fidg21+atomI.labFrameQuadrupole_ZZ*fidg31
+                        -atomI.labFrameQuadrupole_XX*fidg13-atomI.labFrameQuadrupole_XY*fidg23-atomI.labFrameQuadrupole_XZ*fidg33);
 
-    trqi3 += 2.0f*(qxxi*fidg12+qxyi*fidg22+qxzi*fidg32
-                        -qxyi*fidg11-qyyi*fidg21-qyzi*fidg31);
+    trqi3 += 2.0f*(atomI.labFrameQuadrupole_XX*fidg12+atomI.labFrameQuadrupole_XY*fidg22+atomI.labFrameQuadrupole_XZ*fidg32
+                        -atomI.labFrameQuadrupole_XY*fidg11-atomI.labFrameQuadrupole_YY*fidg21-atomI.labFrameQuadrupole_YZ*fidg31);
 
     trqi_k1 += 2.0f*
-                        (qxyk*fkdg13+qyyk*fkdg23+qyzk*fkdg33
-                        -qxzk*fkdg12-qyzk*fkdg22-qzzk*fkdg32);
+                        (atomJ.labFrameQuadrupole_XY*fkdg13+atomJ.labFrameQuadrupole_YY*fkdg23+atomJ.labFrameQuadrupole_YZ*fkdg33
+                        -atomJ.labFrameQuadrupole_XZ*fkdg12-atomJ.labFrameQuadrupole_YZ*fkdg22-atomJ.labFrameQuadrupole_ZZ*fkdg32);
 
     trqi_k2 += 2.0f*
-                        (qxzk*fkdg11+qyzk*fkdg21+qzzk*fkdg31
-                        -qxxk*fkdg13-qxyk*fkdg23-qxzk*fkdg33);
+                        (atomJ.labFrameQuadrupole_XZ*fkdg11+atomJ.labFrameQuadrupole_YZ*fkdg21+atomJ.labFrameQuadrupole_ZZ*fkdg31
+                        -atomJ.labFrameQuadrupole_XX*fkdg13-atomJ.labFrameQuadrupole_XY*fkdg23-atomJ.labFrameQuadrupole_XZ*fkdg33);
 
     trqi_k3 += 2.0f*
-                        (qxxk*fkdg12+qxyk*fkdg22+qxzk*fkdg32
-                        -qxyk*fkdg11-qyyk*fkdg21-qyzk*fkdg31);
+                        (atomJ.labFrameQuadrupole_XX*fkdg12+atomJ.labFrameQuadrupole_XY*fkdg22+atomJ.labFrameQuadrupole_XZ*fkdg32
+                        -atomJ.labFrameQuadrupole_XY*fkdg11-atomJ.labFrameQuadrupole_YY*fkdg21-atomJ.labFrameQuadrupole_YZ*fkdg31);
 
     // total permanent and induced energies for this interaction;
 

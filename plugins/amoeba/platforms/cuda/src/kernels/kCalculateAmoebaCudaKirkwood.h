@@ -60,13 +60,6 @@ void METHOD_NAME(kCalculateAmoebaCudaKirkwood, Forces_kernel)(
     // pWorkArray_1_1 == dBorn
     // pWorkArray_1_2 == dBornPolar
 
-    float4 jCoord;
-    float jDipole[3];     
-    float jQuadrupole[9];     
-    float jInducedDipole[3];     
-    float jInducedDipolePolar[3];     
-    float jBornRadius;     
-
     float energySum = 0.0f;     
 
     while (pos < end)
@@ -87,20 +80,21 @@ void METHOD_NAME(kCalculateAmoebaCudaKirkwood, Forces_kernel)(
         KirkwoodParticle* psA         = &sA[tbx];
 
         unsigned int atomI            = x + tgx;
-        float4 iCoord                 =  cSim.pPosq[atomI];
+        KirkwoodParticle localParticle;
+        loadKirkwoodShared(&localParticle, atomI,
+                           cSim.pPosq, cAmoebaSim.pLabFrameDipole, cAmoebaSim.pLabFrameQuadrupole,
+                           cAmoebaSim.pInducedDipoleS,  cAmoebaSim.pInducedDipolePolarS, cSim.pBornRadii );
 
-        float forceSum[3];
-        float torqueSum[3];
         float dBornSum;
         float dBornPolarSum;
 
-        forceSum[0]                   = 0.0f;
-        forceSum[1]                   = 0.0f;
-        forceSum[2]                   = 0.0f;
+        localParticle.force[0]                   = 0.0f;
+        localParticle.force[1]                   = 0.0f;
+        localParticle.force[2]                   = 0.0f;
 
-        torqueSum[0]                  = 0.0f;
-        torqueSum[1]                  = 0.0f;
-        torqueSum[2]                  = 0.0f;
+        localParticle.torque[0]                  = 0.0f;
+        localParticle.torque[1]                  = 0.0f;
+        localParticle.torque[2]                  = 0.0f;
 
         dBornSum                      = 0.0f;
         dBornPolarSum                 = 0.0f;
@@ -131,18 +125,8 @@ void METHOD_NAME(kCalculateAmoebaCudaKirkwood, Forces_kernel)(
                 unsigned int atomJ            = y + j;
                 unsigned int sameAtom         = atomI == atomJ ? 1 : 0;
 
-                // load coords, charge, ...
-
-                loadKirkwoodData( &(psA[j]), &jCoord, jDipole, jQuadrupole,
-                                  jInducedDipole, jInducedDipolePolar, &jBornRadius );
-
-                calculateKirkwoodPairIxn_kernel( sameAtom,
-                                                 iCoord,                                     jCoord,
-                                                 &(cAmoebaSim.pLabFrameDipole[3*atomI]),     jDipole,
-                                                 &(cAmoebaSim.pLabFrameQuadrupole[9*atomI]), jQuadrupole,
-                                                 &(cAmoebaSim.pInducedDipoleS[3*atomI]),     jInducedDipole,
-                                                 &(cAmoebaSim.pInducedDipolePolarS[3*atomI]),jInducedDipolePolar,
-                                                 cSim.pBornRadii[atomI],                     jBornRadius,
+                calculateKirkwoodPairIxn_kernel( localParticle,                              psA[j],
+                                                 sameAtom,
                                                  force, torque, dBorn, dBornPolar, &energy
 #ifdef AMOEBA_DEBUG
                                           , pullBack
@@ -153,9 +137,9 @@ void METHOD_NAME(kCalculateAmoebaCudaKirkwood, Forces_kernel)(
 
                 // torques include i == j contribution
 
-                torqueSum[0]           += mask ? torque[0][0]  : 0.0f;
-                torqueSum[1]           += mask ? torque[0][1]  : 0.0f;
-                torqueSum[2]           += mask ? torque[0][2]  : 0.0f;
+                localParticle.torque[0]           += mask ? torque[0][0]  : 0.0f;
+                localParticle.torque[1]           += mask ? torque[0][1]  : 0.0f;
+                localParticle.torque[2]           += mask ? torque[0][2]  : 0.0f;
 
                 dBornSum               += mask ? dBorn[0]      : 0.0f;
                 dBornPolarSum          += mask ? dBornPolar[0] : 0.0f;
@@ -165,9 +149,9 @@ void METHOD_NAME(kCalculateAmoebaCudaKirkwood, Forces_kernel)(
 
                 mask                    =  (atomI == atomJ) ? 0 : mask;
 
-                forceSum[0]            += mask ? force[0]      : 0.0f;
-                forceSum[1]            += mask ? force[1]      : 0.0f;
-                forceSum[2]            += mask ? force[2]      : 0.0f;
+                localParticle.force[0]            += mask ? force[0]      : 0.0f;
+                localParticle.force[1]            += mask ? force[1]      : 0.0f;
+                localParticle.force[2]            += mask ? force[2]      : 0.0f;
 
 
 #ifdef AMOEBA_DEBUG
@@ -238,8 +222,8 @@ if( atomI == targetAtom  || atomJ == targetAtom ){
 
             offset                             *= 3;
 
-            load3dArrayBufferPerWarp( offset, forceSum,  cAmoebaSim.pWorkArray_3_1 );
-            load3dArrayBufferPerWarp( offset, torqueSum, cAmoebaSim.pWorkArray_3_2 );
+            load3dArrayBufferPerWarp( offset, localParticle.force,  cAmoebaSim.pWorkArray_3_1 );
+            load3dArrayBufferPerWarp( offset, localParticle.torque, cAmoebaSim.pWorkArray_3_2 );
 
 #else
             unsigned int offset                 = x + tgx + (x >> GRIDBITS) * cAmoebaSim.paddedNumberOfAtoms;
@@ -249,8 +233,8 @@ if( atomI == targetAtom  || atomJ == targetAtom ){
 
             offset                             *= 3;
 
-            load3dArray( offset, forceSum,  cAmoebaSim.pWorkArray_3_1 );
-            load3dArray( offset, torqueSum, cAmoebaSim.pWorkArray_3_2 );
+            load3dArray( offset, localParticle.force,  cAmoebaSim.pWorkArray_3_1 );
+            load3dArray( offset, localParticle.torque, cAmoebaSim.pWorkArray_3_2 );
 
 #endif
 
@@ -286,18 +270,8 @@ if( atomI == targetAtom  || atomJ == targetAtom ){
                 unsigned int atomJ    = y + tj;
                 unsigned int sameAtom = 0;
 
-                // load coords, charge, ...
-
-                loadKirkwoodData( &(psA[tj]), &jCoord, jDipole, jQuadrupole,
-                                  jInducedDipole, jInducedDipolePolar, &jBornRadius );
-
-                calculateKirkwoodPairIxn_kernel( sameAtom, 
-                                                 iCoord,                                       jCoord,
-                                                 &(cAmoebaSim.pLabFrameDipole[3*atomI]),       jDipole,
-                                                 &(cAmoebaSim.pLabFrameQuadrupole[9*atomI]),   jQuadrupole,
-                                                 &(cAmoebaSim.pInducedDipoleS[3*atomI]),       jInducedDipole,
-                                                 &(cAmoebaSim.pInducedDipolePolarS[3*atomI]),  jInducedDipolePolar,
-                                                 cSim.pBornRadii[atomI],                       jBornRadius,
+                calculateKirkwoodPairIxn_kernel( localParticle,                                psA[tj],
+                                                 sameAtom,
                                                  force, torque, dBorn, dBornPolar, &energy
 #ifdef AMOEBA_DEBUG
                                           , pullBack
@@ -308,13 +282,13 @@ if( atomI == targetAtom  || atomJ == targetAtom ){
 
                 // add force and torque to atom I due atom J
 
-                forceSum[0]               += mask ? force[0]      : 0.0f;
-                forceSum[1]               += mask ? force[1]      : 0.0f;
-                forceSum[2]               += mask ? force[2]      : 0.0f;
+                localParticle.force[0]               += mask ? force[0]      : 0.0f;
+                localParticle.force[1]               += mask ? force[1]      : 0.0f;
+                localParticle.force[2]               += mask ? force[2]      : 0.0f;
 
-                torqueSum[0]              += mask ? torque[0][0]  : 0.0f;
-                torqueSum[1]              += mask ? torque[0][1]  : 0.0f;
-                torqueSum[2]              += mask ? torque[0][2]  : 0.0f;
+                localParticle.torque[0]              += mask ? torque[0][0]  : 0.0f;
+                localParticle.torque[1]              += mask ? torque[0][1]  : 0.0f;
+                localParticle.torque[2]              += mask ? torque[0][2]  : 0.0f;
 
                 dBornSum                  += mask ? dBorn[0]      : 0.0f;
                 dBornPolarSum             += mask ? dBornPolar[0] : 0.0f;
@@ -410,8 +384,8 @@ if( mask || !mask ){
 
             offset                             *= 3;
 
-            load3dArrayBufferPerWarp( offset, forceSum,  cAmoebaSim.pWorkArray_3_1 );
-            load3dArrayBufferPerWarp( offset, torqueSum, cAmoebaSim.pWorkArray_3_2 );
+            load3dArrayBufferPerWarp( offset, localParticle.force,  cAmoebaSim.pWorkArray_3_1 );
+            load3dArrayBufferPerWarp( offset, localParticle.torque, cAmoebaSim.pWorkArray_3_2 );
 
             offset                              = y + tgx + warp*cAmoebaSim.paddedNumberOfAtoms;
 
@@ -435,8 +409,8 @@ if( mask || !mask ){
 
             offset                             *= 3;
 
-            load3dArray( offset, forceSum,  cAmoebaSim.pWorkArray_3_1 );
-            load3dArray( offset, torqueSum, cAmoebaSim.pWorkArray_3_2 );
+            load3dArray( offset, localParticle.force,  cAmoebaSim.pWorkArray_3_1 );
+            load3dArray( offset, localParticle.torque, cAmoebaSim.pWorkArray_3_2 );
 
 
             offset                              = y + tgx + (x >> GRIDBITS) * cAmoebaSim.paddedNumberOfAtoms;
