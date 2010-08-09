@@ -4,7 +4,6 @@
 
 #include "amoebaGpuTypes.h"
 #include "amoebaCudaKernels.h"
-#include "cudaKernels.h"
 #include "kCalculateAmoebaCudaUtilities.h"
 #include "kCalculateAmoebaCudaKirkwoodParticle.h"
 extern void kCalculateObcGbsaForces2(gpuContext gpu);
