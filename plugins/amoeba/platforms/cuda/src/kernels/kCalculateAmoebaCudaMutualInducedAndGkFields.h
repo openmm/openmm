@@ -28,7 +28,7 @@
 
 __global__
 #if (__CUDA_ARCH__ >= 200)
-__launch_bounds__(256, 1)
+__launch_bounds__(384, 1)
 #elif (__CUDA_ARCH__ >= 130)
 __launch_bounds__(128, 1)
 #else
