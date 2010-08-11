@@ -784,7 +784,7 @@ void cudaComputeAmoebaElectrostatic( amoebaGpuContext amoebaGpu )
     if( threadsPerBlock == 0 ){
         unsigned int maxThreads;
         if (gpu->sm_version >= SM_20)
-            maxThreads = 256;
+            maxThreads = 384;
         else if (gpu->sm_version >= SM_12)
             maxThreads = 128;
         else
