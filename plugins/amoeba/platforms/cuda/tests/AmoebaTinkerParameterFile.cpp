@@ -3071,14 +3071,20 @@ static int readConstraints( FILE* filePtr, const StringVector& tokens, System& s
 // ---------------------------------------------------------------------------------------
 
     static const std::string methodName      = "readConstraints";
+    int applyConstraints                     = 1;
     
 // ---------------------------------------------------------------------------------------
 
     if( tokens.size() < 1 ){
        char buffer[1024];
-       (void) sprintf( buffer, "%s no Constraints terms entry???\n", methodName.c_str() );
+       (void) sprintf( buffer, "%s no constraints terms entry???\n", methodName.c_str() );
        throwException(__FILE__, __LINE__, buffer );
        exit(-1);
+    }
+
+    setIntFromMap( inputArgumentMap, "applyConstraints",  applyConstraints);
+    if( log ){
+       (void) fprintf( log, "%s: constraints are %sbeing applied.\n", methodName.c_str(), (applyConstraints ? "" : "not ") );
     }
 
     int numberOfConstraints = atoi( tokens[1].c_str() );
@@ -3094,7 +3100,9 @@ static int readConstraints( FILE* filePtr, const StringVector& tokens, System& s
           int particle1        = atoi( lineTokens[1].c_str() );
           int particle2        = atoi( lineTokens[2].c_str() );
           double distance      = atof( lineTokens[3].c_str() );
-          system.addConstraint( particle1, particle2, distance );
+          if( applyConstraints ){
+              system.addConstraint( particle1, particle2, distance );
+          }
        } else {
           char buffer[1024];
           (void) sprintf( buffer, "%s constraint tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
@@ -3118,7 +3126,7 @@ static int readConstraints( FILE* filePtr, const StringVector& tokens, System& s
 
     // diagnostics
 
-    if( log ){
+    if( log && system.getNumConstraints() ){
        int maxPrint = 10;
        (void) fprintf( log, "%s: sample of %d constraints using %s units.\n", methodName.c_str(),
                        system.getNumConstraints(), (useOpenMMUnits ? "OpenMM" : "Amoeba") );
@@ -5037,6 +5045,7 @@ void testEnergyForcesConsistent( std::string parameterFileName, MapStringInt& fo
         (void) fprintf( summaryFile, "EFCnstnt %30s %15.7e dE[%14.6e %15.7e] E[%15.7e %15.7e FNorm %15.7e Delta %15.7e %20s %s\n",
                         forceString.c_str(), difference, deltaEnergy, forceNorm, 
                         potentialEnergy, perturbedPotentialEnergy, forceNorm, delta, parameterFileName.c_str(), context->getPlatform().getName().c_str() );
+        (void) fflush( summaryFile );
     }
  
     if( applyAssertion ){
@@ -5049,6 +5058,180 @@ void testEnergyForcesConsistent( std::string parameterFileName, MapStringInt& fo
 
     delete context;
 
+    return;
+
+}
+
+/** 
+ * Check that energy and force are consistent
+ * 
+ * @return DefaultReturnValue or ErrorReturnValue
+ *
+ */
+
+void testEnergyForceByFiniteDifference( std::string parameterFileName, MapStringInt& forceMap, int useOpenMMUnits, 
+                                        MapStringString& inputArgumentMap,
+                                        FILE* log, FILE* summaryFile ){
+
+// ---------------------------------------------------------------------------------------
+
+   int applyAssertion                     = 1;
+   double energyForceDelta                = 1.0e-04;
+   double tolerance                       = 0.01;
+  
+   static const std::string methodName    = "testEnergyForceByFiniteDifference";
+
+// ---------------------------------------------------------------------------------------
+
+    MapStringVectorOfVectors supplementary;
+    MapStringVec3 tinkerForces;
+    MapStringDouble tinkerEnergies;
+
+    Context* context = createContext( parameterFileName, forceMap, useOpenMMUnits, inputArgumentMap, supplementary,
+                                      tinkerForces, tinkerEnergies, log );
+
+    setIntFromMap(    inputArgumentMap, "applyAssert",             applyAssertion   );
+    setDoubleFromMap( inputArgumentMap, "energyForceDelta",        energyForceDelta );
+    setDoubleFromMap( inputArgumentMap, "energyForceTolerance",    tolerance        );
+ 
+    StringVector forceStringArray;
+    System& system = context->getSystem();
+    getForceStrings( system, forceStringArray, log );
+ 
+    if( log ){
+        (void) fprintf( log, "%s energyForceDelta=%.3e tolerance=%.3e applyAssertion=%d\n", methodName.c_str(), energyForceDelta, tolerance, applyAssertion );
+        (void) fprintf( log, "\nForces:\n" );
+        for( StringVectorCI ii = forceStringArray.begin(); ii != forceStringArray.end(); ii++ ){
+           (void) fprintf( log, "   %s\n", (*ii).c_str() );
+        }
+        (void) fflush( log );
+    }
+ 
+    int returnStatus                       = 0;
+ 
+    // get positions, forces and potential energy
+ 
+    int types                              = State::Positions | State::Velocities | State::Forces | State::Energy;
+ 
+    State state                            = context->getState( types );
+ 
+    std::vector<Vec3> coordinates          = state.getPositions();
+    std::vector<Vec3> velocities           = state.getVelocities();
+    std::vector<Vec3> forces               = state.getForces();
+    double kineticEnergy                   = state.getKineticEnergy();
+    double potentialEnergy                 = state.getPotentialEnergy();
+ 
+    // compute norm of force
+ 
+    double forceNorm         = 0.0;
+    for( unsigned int ii = 0; ii < forces.size(); ii++ ){
+        forceNorm += forces[ii][0]*forces[ii][0] + forces[ii][1]*forces[ii][1] + forces[ii][2]*forces[ii][2];
+    }
+ 
+    // check norm is not nan
+ 
+    if( isNanOrInfinity( forceNorm ) ){ 
+        if( log ){
+            (void) fprintf( log, "%s norm of force is nan -- aborting.\n", methodName.c_str() );
+            unsigned int hitNan = 0;
+            for( unsigned int ii = 0; (ii < forces.size()) && (hitNan < 10); ii++ ){
+   
+               if( isNanOrInfinity( forces[ii][0] ) ||
+                   isNanOrInfinity( forces[ii][1] ) ||
+                   isNanOrInfinity( forces[ii][2] ) )hitNan++;
+   
+                (void) fprintf( log, "%6u x[%15.7e %15.7e %15.7e] f[%15.7e %15.7e %15.7e]\n", ii,
+                                coordinates[ii][0], coordinates[ii][1], coordinates[ii][2],
+                                forces[ii][0], forces[ii][1], forces[ii][2] );
+            }
+            char buffer[1024];
+            (void) sprintf( buffer, "%s : nans detected -- aborting.\n", methodName.c_str() );
+            throwException(__FILE__, __LINE__, buffer );
+        }    
+    }
+ 
+    std::vector<Vec3> perturbedPositions; 
+    perturbedPositions.resize( forces.size() );
+    for( unsigned int ii = 0; ii < coordinates.size(); ii++ ){
+        perturbedPositions[ii] = Vec3( coordinates[ii][0], coordinates[ii][1], coordinates[ii][2] ); 
+    }
+    
+    std::vector<double> energyForceDeltas;
+    energyForceDeltas.push_back( 1.0e-02 );
+    energyForceDeltas.push_back( 5.0e-03 );
+    energyForceDeltas.push_back( 1.0e-03 );
+    energyForceDeltas.push_back( 5.0e-04 );
+    energyForceDeltas.push_back( 1.0e-04 );
+    energyForceDeltas.push_back( 5.0e-05 );
+    energyForceDeltas.push_back( 1.0e-05 );
+    energyForceDeltas.push_back( 5.0e-06 );
+    for(  unsigned int kk = 0; kk < energyForceDeltas.size(); kk++ ){
+        energyForceDelta = energyForceDeltas[kk];
+        std::vector<double> relativeDifferenceStatistics;
+        for( unsigned int jj = 0; jj < coordinates.size(); jj++ ){
+            perturbedPositions[jj][0] += energyForceDelta;
+            context->setPositions( perturbedPositions );
+     
+            // get new potential energy
+     
+            state    = context->getState( types );
+     
+            // report energies
+     
+            double perturbedPotentialEnergy       = state.getPotentialEnergy();
+            std::vector<Vec3> perturbedForces     = state.getForces();
+            double deltaEnergy                    = ( potentialEnergy - perturbedPotentialEnergy )/energyForceDelta;
+            double difference                     = fabs( deltaEnergy - perturbedForces[jj][0]);
+            double denominator                    = 0.5*fabs( deltaEnergy ) + fabs( perturbedForces[jj][0] );
+            double relativeDifference             = denominator > 0.0 ? difference/denominator : 0.0;
+            if( log ){
+                (void) fprintf( log, "   %5u fDiff=%14.8e %14.8e dE=[%16.9e %16.9e] delta=%12.1e\n",
+                                jj, relativeDifference, difference, deltaEnergy, perturbedForces[jj][0], energyForceDelta);
+                (void) fflush( log );
+            }
+            if( denominator > 1.0e-02 ){
+                relativeDifferenceStatistics.push_back( relativeDifference );
+            }
+            perturbedPositions[jj][0] -= energyForceDelta;
+        }
+    
+        std::vector<double> statistics;
+        getStatistics( relativeDifferenceStatistics, statistics );
+        if( log ){
+            (void) fprintf( log, "Stats on relative diff average=%14.8e stddev=%14.8e max=%16.9e %8.1f %8.1f %12.3e\n",
+                            statistics[0], statistics[1], statistics[4], statistics[5], statistics[6], energyForceDelta );
+            (void) fflush( log );
+        }
+    
+        if( summaryFile ){
+            std::string forceString;
+            if( forceStringArray.size() > 11 ){
+               forceString = "All ";
+            } else {
+               for( StringVectorCI ii = forceStringArray.begin(); ii != forceStringArray.end(); ii++ ){
+                  forceString += (*ii) + " ";
+               }
+            }
+            if( forceString.size() < 1 ){
+               forceString = "NA";
+            }
+            (void) fprintf( summaryFile, "FD %30s %15.7e %14.6e %15.7e at %18.1f %8.1f delta %15.7e %20s %s\n",
+                            forceString.c_str(), statistics[0], statistics[1], statistics[4], statistics[5], statistics[6],
+                            parameterFileName.c_str(), energyForceDelta, context->getPlatform().getName().c_str() );
+            (void) fflush( summaryFile );
+        }
+    }
+     
+/*
+    if( applyAssertion ){
+        ASSERT( difference < tolerance );
+        if( log ){
+           (void) fprintf( log, "\n%s passed\n", methodName.c_str() );
+           (void) fflush( log );
+        }
+    }
+*/
+    delete context;
     return;
 
 }
@@ -5194,6 +5377,8 @@ void writeIntermediateStateFile( Context& context, FILE* intermediateStateFile, 
 
 // ---------------------------------------------------------------------------------------
 
+    if( intermediateStateFile == NULL )return;
+
     int allTypes                                   = State::Positions | State::Velocities | State::Forces | State::Energy;
     State state                                    = context.getState( allTypes );
 
@@ -5211,6 +5396,7 @@ void writeIntermediateStateFile( Context& context, FILE* intermediateStateFile, 
                         velocities[ii][0], velocities[ii][1], velocities[ii][2], 
                             forces[ii][0],     forces[ii][1],     forces[ii][2] );
     }
+    (void) fflush( intermediateStateFile );
     return;
 }
 
@@ -5255,6 +5441,55 @@ static void getVerletKineticEnergy( Context& context, double& currentTime, doubl
 
     return;
 }
+
+/** 
+ * Check for constraint violations 
+ * 
+ * @param context                OpenMM context
+ * @param log                    optional logging reference
+ *
+ * @return number of violations
+ *
+ */
+
+static int checkConstraints( Context& context, double shakeTolerance, double& maxViolation, int& maxViolationIndex, FILE* log ){
+
+// ---------------------------------------------------------------------------------------
+
+    //static const std::string methodName             = "getVerletKineticEnergy";
+
+// ---------------------------------------------------------------------------------------
+
+    int stateFieldsToRetreive                 = State::Positions;
+    State state                               = context.getState( stateFieldsToRetreive );
+
+    const std::vector<Vec3>& positions        = state.getPositions();
+
+    System& system                            = context.getSystem();
+    int violationCount                        = 0;
+    maxViolation                              = 0.0;
+    maxViolationIndex                         = 0;
+    for( int ii = 0; ii < system.getNumConstraints(); ii++ ){
+        int particle1, particle2;
+        double constrainedDistance;
+        system.getConstraintParameters( ii, particle1, particle2, constrainedDistance );
+
+        double distance = (positions[particle2][0] - positions[particle1][0])*(positions[particle2][0] - positions[particle1][0]) +
+                          (positions[particle2][1] - positions[particle1][1])*(positions[particle2][1] - positions[particle1][1]) +
+                          (positions[particle2][2] - positions[particle1][2])*(positions[particle2][2] - positions[particle1][2]);
+
+        double delta    = fabs( sqrt( distance ) - constrainedDistance );
+        if( delta > shakeTolerance ){
+            violationCount++;
+            if( delta > maxViolation ){
+                maxViolation      = delta;
+                maxViolationIndex = ii;
+            }
+        }
+    }
+    return violationCount;
+}
+
 /** 
  * Get time of day (implementation different for Linux/Windows
  * 
@@ -5292,6 +5527,32 @@ double getTimeOfDay( void ){
 #endif
 }
 
+double getEnergyDrift( std::vector<double>& totalEnergyArray, std::vector<double>& kineticEnergyArray, double degreesOfFreedom, double deltaTime, FILE* log ){
+
+       // total energy constant
+ 
+    std::vector<double> statistics;
+    getStatistics( totalEnergyArray, statistics );
+ 
+    std::vector<double> kineticEnergyStatistics;
+    getStatistics( kineticEnergyArray, kineticEnergyStatistics );
+    double temperature  = kineticEnergyStatistics[0]/(degreesOfFreedom*BOLTZ);
+    double kT           = temperature*BOLTZ;
+ 
+    // compute stddev in units of kT/dof/ns
+ 
+    double stddevE      = statistics[1]/kT;
+           stddevE     /= degreesOfFreedom;
+           stddevE     /= deltaTime*0.001;
+ 
+    if( log ){
+        (void) fprintf( log, "Simulation results: mean=%15.7e stddev=%15.7e  kT/dof/ns=%15.7e kT=%15.7e T=%12.3f  min=%15.7e  %d max=%15.7e %d\n",
+                        statistics[0], statistics[1], stddevE, kT, temperature, statistics[2], (int) (statistics[3] + 0.001), statistics[4], (int) (statistics[5] + 0.001) );
+    }
+
+    return stddevE;
+}
+ 
 /** 
  * Check that energy and force are consistent
  * 
@@ -5337,6 +5598,20 @@ void testEnergyConservation( std::string parameterFileName, MapStringInt& forceM
 
     setIntFromMap( inputArgumentMap, "applyAsser",          applyAssertion );
 
+
+    setDoubleFromMap(     inputArgumentMap, "equilibrationTime",          equilibrationTime  );
+    setDoubleFromMap(     inputArgumentMap, "simulationTime",             simulationTime     );
+    const double totalTime  = equilibrationTime + simulationTime;
+
+    std::string intermediateStateFileName = "NA";
+    setStringFromMap( inputArgumentMap, "intermediateStateFileName",  intermediateStateFileName );
+
+    FILE* intermediateStateFile = NULL;
+    if( intermediateStateFileName != "NA" ){
+        intermediateStateFile = openFile( intermediateStateFileName, "w", log );
+        writeIntermediateStateFile( *context, intermediateStateFile, log );
+    }
+ 
     // energy minimize
 
     setIntFromMap( inputArgumentMap, "energyMinimize",          energyMinimize );
@@ -5357,20 +5632,11 @@ void testEnergyConservation( std::string parameterFileName, MapStringInt& forceM
                             preState.getKineticEnergy(), preState.getPotentialEnergy(),
                             postState.getKineticEnergy(), postState.getPotentialEnergy() );
         }
+        if( intermediateStateFile ){
+            writeIntermediateStateFile( *context, intermediateStateFile, log );
+        }
     }
 
-    setDoubleFromMap(     inputArgumentMap, "equilibrationTime",          equilibrationTime  );
-    setDoubleFromMap(     inputArgumentMap, "simulationTime",             simulationTime     );
-    const double totalTime  = equilibrationTime + simulationTime;
-
-    std::string intermediateStateFileName = "NA";
-    setStringFromMap( inputArgumentMap, "intermediateStateFileName",  intermediateStateFileName );
-
-    FILE* intermediateStateFile = NULL;
-    if( intermediateStateFileName != "NA" ){
-        intermediateStateFile = openFile( intermediateStateFileName, "w", log );
-    }
- 
 // ---------------------------------------------------------------------------------------
 
     int returnStatus                    = 0;
@@ -5452,13 +5718,31 @@ void testEnergyConservation( std::string parameterFileName, MapStringInt& forceM
         (void) fflush( log );
     }
  
+    // set dof
+ 
+    double degreesOfFreedom  = static_cast<double>(3*numberOfAtoms - system.getNumConstraints() - 3 );
+
     // main simulation loop
  
-    double timeBetweenReports  = equilibrationTimeBetweenReports;
-    int    stepsBetweenReports = isVariableIntegrator != 0 ? 1 : static_cast<int>(equilibrationTimeBetweenReports/integrator.getStepSize() + 1.0e-04);
-    bool   equilibrating       = true;
+    double timeBetweenReports;
+    int    stepsBetweenReports;
+    bool   equilibrating;
+    if( equilibrationTime > 0.0 ){
+        timeBetweenReports  = equilibrationTimeBetweenReports;
+        stepsBetweenReports = isVariableIntegrator > 0 ? 1 : static_cast<int>(equilibrationTimeBetweenReports/integrator.getStepSize() + 1.0e-04);
+        equilibrating       = true;
+    } else {
+        timeBetweenReports  = simulationTimeBetweenReports;
+        stepsBetweenReports = isVariableIntegrator > 0 ? 1 : static_cast<int>(simulationTimeBetweenReports/integrator.getStepSize() + 1.0e-05);
+        equilibrating       = false;
+        if( isVerletIntegrator && stepsBetweenReports > 1 )stepsBetweenReports -= 1;
+    }
+    if( stepsBetweenReports < 1 )stepsBetweenReports = 1;
+
     double simulationStartTime = 0.0;
     double totalWallClockTime  = 0.0;
+    double energyDrift         = 0.0;
+    int totalShakeViolations   = 0;
     while( currentTime < totalTime ){
  
         double startTime        = getTimeOfDay();
@@ -5471,8 +5755,8 @@ void testEnergyConservation( std::string parameterFileName, MapStringInt& forceM
             variableVerletIntegrator->stepTo( currentTime + timeBetweenReports);
         }
 
-        double elapsedTime      = getTimeOfDay() - startTime;
-        totalWallClockTime     += elapsedTime;
+        double elapsedTime                     = getTimeOfDay() - startTime;
+        totalWallClockTime                    += elapsedTime;
   
         State state                            = context->getState( stateFieldsToRetreive );
         currentTime                            = state.getTime();
@@ -5490,7 +5774,8 @@ void testEnergyConservation( std::string parameterFileName, MapStringInt& forceM
             simulationStartTime = state.getTime();
             timeBetweenReports  = simulationTimeBetweenReports;
             stepsBetweenReports = isVariableIntegrator != 0 ? 1 : static_cast<int>(simulationTimeBetweenReports/integrator.getStepSize() + 1.0e-04);
-            if( isVerletIntegrator )stepsBetweenReports -= 1;
+            if( stepsBetweenReports < 1 )stepsBetweenReports  = 1;
+            if( isVerletIntegrator && stepsBetweenReports > 1 )stepsBetweenReports -= 1;
 
         } else if( !equilibrating ){ 
    
@@ -5504,15 +5789,20 @@ void testEnergyConservation( std::string parameterFileName, MapStringInt& forceM
             kineticEnergyArray.push_back( kineticEnergy );
             potentialEnergyArray.push_back( potentialEnergy );
             totalEnergyArray.push_back( totalEnergy );
+            energyDrift = getEnergyDrift( totalEnergyArray, kineticEnergyArray, degreesOfFreedom, (currentTime-simulationStartTime), NULL );
         } 
 
         // diagnostics & check for nans
   
         if( log ){
             double nsPerDay = 86.4*currentTime/totalWallClockTime;
-            (void) fprintf( log, "%12.3f KE=%15.7e PE=%15.7e E=%15.7e wallClock=%12.3e %12.3e %12.3f ns/day %s\n", currentTime, kineticEnergy, potentialEnergy, totalEnergy,
-                            elapsedTime, totalWallClockTime, nsPerDay, (equilibrating ? "equilibrating" : "") );
-            (void) fflush( log );
+            (void) fprintf( log, "%12.3f KE=%15.7e PE=%15.7e E=%15.7e wallClock=%12.3e %12.3e %12.3f ns/day", currentTime, kineticEnergy, potentialEnergy, totalEnergy,
+                            elapsedTime, totalWallClockTime, nsPerDay );
+            if( equilibrating ){
+                (void) fprintf( log, " equilibrating" );
+            } else if( isVerletIntegrator ){
+                (void) fprintf( log, " drift=%12.3e", energyDrift );
+            }
         }
   
         if( isNanOrInfinity( totalEnergy ) ){
@@ -5520,6 +5810,22 @@ void testEnergyConservation( std::string parameterFileName, MapStringInt& forceM
             (void) sprintf( buffer, "%s nans detected at time %12.3f -- aborting.\n", methodName.c_str(), currentTime );
             throwException(__FILE__, __LINE__, buffer );
             exit(-1);
+        }
+ 
+        // check constraints
+
+        if( system.getNumConstraints() > 0 ){
+            double maxViolation;
+            int maxViolationIndex;
+            int violations        = checkConstraints( *context, integrator.getConstraintTolerance(), maxViolation, maxViolationIndex, log );
+            totalShakeViolations += violations;
+            if( violations && log ){
+                (void) fprintf( log, " Shake violations %d max=%12.3f at index=%d", violations, maxViolation, maxViolationIndex );
+            } 
+        }
+        if( log ){
+            (void) fprintf( log, "\n" );
+            (void) fflush( log );
         }
     }
  
@@ -5537,9 +5843,9 @@ void testEnergyConservation( std::string parameterFileName, MapStringInt& forceM
  
     if( log ){
        double nsPerDay = 86.4*totalTime/totalWallClockTime;
-       (void) fprintf( log, "Final Simulation: %12.3f  E=%15.7e [%15.7e %15.7e]  total wall time=%12.3e ns/day=%.3e\n",
+       (void) fprintf( log, "Final Simulation: %12.3f  E=%15.7e [%15.7e %15.7e]  total wall time=%12.3e ns/day=%.3e Shake violations=%d\n",
                        currentTime, (kineticEnergy + potentialEnergy), kineticEnergy, potentialEnergy,
-                       totalWallClockTime, nsPerDay );
+                       totalWallClockTime, nsPerDay, totalShakeViolations );
        (void) fprintf( log, "\n%8u Energies\n", static_cast<unsigned int>(kineticEnergyArray.size()) );
        for( unsigned int ii = 0; ii < kineticEnergyArray.size(); ii++ ){
            (void) fprintf( log, "%15.7e   %15.7e %15.7e  %15.7e    Energies\n",
@@ -5548,9 +5854,6 @@ void testEnergyConservation( std::string parameterFileName, MapStringInt& forceM
        (void) fflush( log );
     }
  
-    // set dof
- 
-    double degreesOfFreedom  = static_cast<double>(3*numberOfAtoms - system.getNumConstraints() - 3 );
     double conversionFactor  = degreesOfFreedom*0.5*BOLTZ;
            conversionFactor  = 1.0/conversionFactor;
  
@@ -5599,32 +5902,13 @@ void testEnergyConservation( std::string parameterFileName, MapStringInt& forceM
  
     } else {
  
-       // total energy constant
+        double stddevE = getEnergyDrift( totalEnergyArray, kineticEnergyArray, degreesOfFreedom, (simulationEndTime-simulationStartTime), log );
  
-       std::vector<double> statistics;
-       getStatistics( totalEnergyArray, statistics );
+        // check that energy fluctuation is within tolerance
  
-       std::vector<double> kineticEnergyStatistics;
-       getStatistics( kineticEnergyArray, kineticEnergyStatistics );
-       double temperature  = kineticEnergyStatistics[0]/(degreesOfFreedom*BOLTZ);
-       double kT           = temperature*BOLTZ;
- 
-       // compute stddev in units of kT/dof/ns
- 
-       double stddevE      = statistics[1]/kT;
-              stddevE     /= degreesOfFreedom;
-              stddevE     /= (simulationEndTime-simulationStartTime)*0.001;
- 
-       if( log ){
-          (void) fprintf( log, "Simulation results: mean=%15.7e stddev=%15.7e  kT/dof/ns=%15.7e kT=%15.7e T=%12.3f  min=%15.7e  %d max=%15.7e %d\n",
-                          statistics[0], statistics[1], stddevE, kT, temperature, statistics[2], (int) (statistics[3] + 0.001), statistics[4], (int) (statistics[5] + 0.001) );
-       }
- 
-       // check that energy fluctuation is within tolerance
- 
-       if( applyAssertion ){
-           ASSERT_EQUAL_TOL( stddevE, 0.0, energyTolerance );
-       }
+        if( applyAssertion ){
+            ASSERT_EQUAL_TOL( stddevE, 0.0, energyTolerance );
+        }
  
     }
  
@@ -5701,35 +5985,38 @@ Double "simulationTimeBetweenReportsRatio"       simulationTimeBetweenReportsRat
 
     int checkForces                          = 1;
     int checkEnergyForceConsistency          = 0;
+    int checkEnergyForceByFiniteDifference   = 0;
     int checkEnergyConservation              = 0;
     int checkIntermediateStates              = 0;
 
     // parse arguments
 
     for( MapStringStringCI ii = argumentMap.begin(); ii != argumentMap.end(); ii++ ){
-        std::string key   = ii->first;
-        std::string value = ii->second;
+        std::string key                                = ii->first;
+        std::string value                              = ii->second;
         if( key == "parameterFileName" ){
-            parameterFileName              = value;
+            parameterFileName                          = value;
         } else if( key == "logFileName" ){
-            logFileNameIndex               = 1;
-            logFileName                    = value;
+            logFileNameIndex                           = 1;
+            logFileName                                = value;
         } else if( key == "summaryFileName" ){
-            summaryFileNameIndex           = 1;
-            summaryFileName                = value;
+            summaryFileNameIndex                       = 1;
+            summaryFileName                            = value;
         } else if( key == "openmmPluginDirectory" ){
-            specifiedOpenmmPluginDirectory = 1;
-            openmmPluginDirectory          = value;
+            specifiedOpenmmPluginDirectory             = 1;
+            openmmPluginDirectory                      = value;
         } else if( key == "useOpenMMUnits" ){
-            useOpenMMUnits                 = atoi( value.c_str() );
+            useOpenMMUnits                             = atoi( value.c_str() );
         } else if( key == "checkEnergyForceConsistency" ){
-            checkEnergyForceConsistency    = atoi( value.c_str() );
+            checkEnergyForceConsistency                = atoi( value.c_str() );
+        } else if( key == "checkEnergyForceByFiniteDifference" ){
+            checkEnergyForceByFiniteDifference         = atoi( value.c_str() );
         } else if( key == "checkEnergyConservation" ){
-            checkEnergyConservation        = atoi( value.c_str() );
+            checkEnergyConservation                    = atoi( value.c_str() );
         } else if( key == "checkIntermediateStates" ){
-            checkIntermediateStates        = atoi( value.c_str() );
+            checkIntermediateStates                    = atoi( value.c_str() );
         } else if( key == "log" ){
-            logControl                     = atoi( value.c_str() );
+            logControl                                 = atoi( value.c_str() );
         } else if( key == ALL_FORCES ){
             initializeForceMap( forceMap, 1 );
         } else if( key == AMOEBA_HARMONIC_BOND_FORCE              ||
@@ -5745,9 +6032,9 @@ Double "simulationTimeBetweenReportsRatio"       simulationTimeBetweenReportsRat
                    key == AMOEBA_VDW_FORCE                        ||
                    key == AMOEBA_WCA_DISPERSION_FORCE             ||
                    key == AMOEBA_SASA_FORCE                       ){
-            forceMap[key] = atoi( value.c_str() );
+            forceMap[key]                              = atoi( value.c_str() );
         } else {
-            inputArgumentMap[key]          = value;
+            inputArgumentMap[key]                      = value;
         }
     }
 
@@ -5805,6 +6092,15 @@ Double "simulationTimeBetweenReportsRatio"       simulationTimeBetweenReportsRat
         //     energyForceTolerance
         testEnergyForcesConsistent( parameterFileName, forceMap, useOpenMMUnits, 
                                     inputArgumentMap, log, summaryFile );
+
+    } else if( checkEnergyForceByFiniteDifference ){
+        // args:
+
+        //     applyAssertion
+        //     energyForceDelta 
+        //     energyForceTolerance
+        testEnergyForceByFiniteDifference( parameterFileName, forceMap, useOpenMMUnits, 
+                                           inputArgumentMap, log, summaryFile );
 
     } else if( checkEnergyConservation ){
         // args:
