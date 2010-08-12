@@ -4139,8 +4139,8 @@ void trackMutualInducedIterations( amoebaGpuContext amoebaGpu, int iteration){
 
 // ---------------------------------------------------------------------------------------
 
-    if( amoebaGpu->log == NULL || currentStep > 20000 )return;
-    //if( amoebaGpu->log == NULL )return;
+    //if( amoebaGpu->log == NULL || currentStep > 20000 )return;
+    if( amoebaGpu->log == NULL )return;
 
     gpuContext gpu                       = amoebaGpu->gpuContext;
     currentStep++;
@@ -4152,13 +4152,33 @@ void trackMutualInducedIterations( amoebaGpuContext amoebaGpu, int iteration){
     iterationStat[3]   = interationD > iterationStat[3] ? interationD : iterationStat[3];
     iterationStat[4]  += 1.0; 
     if( iterationStat[4] >= 1000.0 ){
-        double average = iterationStat[0]/iterationStat[4]; 
-        double stddev  = iterationStat[1] - average*average*iterationStat[4]; 
-               stddev  = sqrt( stddev )/(iterationStat[4]-1.0);
+        double average   = iterationStat[0]/iterationStat[4]; 
+        double stddev    = iterationStat[1] - average*average*iterationStat[4]; 
+               stddev    = sqrt( stddev )/(iterationStat[4]-1.0);
         (void) fprintf( amoebaGpu->log, "%s %8d iteration=%10.3f stddev=%10.3f min/max[%10.3f %10.3f] %10.1f eps=%14.7e\n",
                         methodName.c_str(), currentStep, average, stddev, iterationStat[2], iterationStat[3], iterationStat[4], amoebaGpu->mutualInducedCurrentEpsilon );
         (void) fflush( amoebaGpu->log );
         iterationStat[0] = iterationStat[1] = iterationStat[4] = 0.0; 
+
+        int nansPresent = isNanOrInfinity( amoebaGpu->mutualInducedCurrentEpsilon );
+        if( nansPresent == 0 ){ 
+            for( int ii = 0; ii < gpu->natoms && nansPresent == 0; ii++ ){
+                if( isNanOrInfinity( gpu->psPosq4->_pSysStream[0][ii].x )  || 
+                    isNanOrInfinity( gpu->psPosq4->_pSysStream[0][ii].y )  || 
+                    isNanOrInfinity( gpu->psPosq4->_pSysStream[0][ii].z )  || 
+                    isNanOrInfinity( gpu->psVelm4->_pSysStream[0][ii].x  ) || 
+                    isNanOrInfinity( gpu->psVelm4->_pSysStream[0][ii].y  ) || 
+                    isNanOrInfinity( gpu->psVelm4->_pSysStream[0][ii].z  ) ){ 
+                    nansPresent = 1; 
+                }
+            }
+        }
+        if( nansPresent ){
+            (void) fprintf( amoebaGpu->log, "epsilon nan - exiting\n" );
+            (void) fflush( amoebaGpu->log );
+            exit(-1);
+        }
+
     }
     if( 0 ){ 
         std::vector<int> fileId;
@@ -4182,24 +4202,6 @@ void trackMutualInducedIterations( amoebaGpuContext amoebaGpu, int iteration){
             cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psInducedDipolePolarS,outputVector );
 */
         cudaWriteVectorOfDoubleVectorsToFile( "CudaMI", fileId, outputVector );
-        int nansPresent = isNanOrInfinity( amoebaGpu->mutualInducedCurrentEpsilon );
-        if( nansPresent == 0 ){ 
-            for( int ii = 0; ii < gpu->natoms && nansPresent == 0; ii++ ){
-                if( isNanOrInfinity( gpu->psPosq4->_pSysStream[0][ii].x ) || 
-                    isNanOrInfinity( gpu->psPosq4->_pSysStream[0][ii].y ) || 
-                    isNanOrInfinity( gpu->psPosq4->_pSysStream[0][ii].z ) || 
-                    isNanOrInfinity( gpu->psVelm4->_pSysStream[0][ii].x  ) || 
-                    isNanOrInfinity( gpu->psVelm4->_pSysStream[0][ii].y  ) || 
-                    isNanOrInfinity( gpu->psVelm4->_pSysStream[0][ii].z  ) ){ 
-                    nansPresent = 1; 
-                }
-            }
-        }
-        if( nansPresent ){
-            (void) fprintf( amoebaGpu->log, "epsilon nan - exiting\n" );
-            (void) fflush( amoebaGpu->log );
-            exit(-1);
-        }
     }
 }
 
