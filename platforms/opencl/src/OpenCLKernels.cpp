@@ -70,7 +70,7 @@ static bool isZeroExpression(const Lepton::ParsedExpression& expression) {
 void OpenCLCalcForcesAndEnergyKernel::initialize(const System& system) {
 }
 
-void OpenCLCalcForcesAndEnergyKernel::beginForceComputation(ContextImpl& context) {
+void OpenCLCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool includeForces, bool includeEnergy) {
     if (cl.getNonbondedUtilities().getUseCutoff() && cl.getComputeForceCount()%100 == 0)
         cl.reorderAtoms();
     cl.setComputeForceCount(cl.getComputeForceCount()+1);
@@ -78,26 +78,17 @@ void OpenCLCalcForcesAndEnergyKernel::beginForceComputation(ContextImpl& context
     cl.getNonbondedUtilities().prepareInteractions();
 }
 
-void OpenCLCalcForcesAndEnergyKernel::finishForceComputation(ContextImpl& context) {
+double OpenCLCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForces, bool includeEnergy) {
     cl.getNonbondedUtilities().computeInteractions();
-    cl.reduceBuffer(cl.getForceBuffers(), cl.getNumForceBuffers());
-}
-
-void OpenCLCalcForcesAndEnergyKernel::beginEnergyComputation(ContextImpl& context) {
-    if (cl.getNonbondedUtilities().getUseCutoff() && cl.getComputeForceCount()%100 == 0)
-        cl.reorderAtoms();
-    cl.setComputeForceCount(cl.getComputeForceCount()+1);
-    cl.clearAutoclearBuffers();
-    cl.getNonbondedUtilities().prepareInteractions();
-}
-
-double OpenCLCalcForcesAndEnergyKernel::finishEnergyComputation(ContextImpl& context) {
-    cl.getNonbondedUtilities().computeInteractions();
-    OpenCLArray<cl_float>& energy = cl.getEnergyBuffer();
-    energy.download();
+    if (includeForces)
+        cl.reduceBuffer(cl.getForceBuffers(), cl.getNumForceBuffers());
     double sum = 0.0f;
-    for (int i = 0; i < energy.getSize(); i++)
-        sum += energy[i];
+    if (includeEnergy) {
+        OpenCLArray<cl_float>& energy = cl.getEnergyBuffer();
+        energy.download();
+        for (int i = 0; i < energy.getSize(); i++)
+            sum += energy[i];
+    }
     return sum;
 }
 
@@ -257,9 +248,9 @@ void OpenCLCalcHarmonicBondForceKernel::initialize(const System& system, const H
     kernel = cl::Kernel(program, "calcHarmonicBondForce");
 }
 
-void OpenCLCalcHarmonicBondForceKernel::executeForces(ContextImpl& context) {
+double OpenCLCalcHarmonicBondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     if (numBonds == 0)
-        return;
+        return 0.0;
     if (!hasInitializedKernel) {
         hasInitializedKernel = true;
         kernel.setArg<cl_int>(0, cl.getPaddedNumAtoms());
@@ -271,10 +262,6 @@ void OpenCLCalcHarmonicBondForceKernel::executeForces(ContextImpl& context) {
         kernel.setArg<cl::Buffer>(6, indices->getDeviceBuffer());
     }
     cl.executeKernel(kernel, numBonds);
-}
-
-double OpenCLCalcHarmonicBondForceKernel::executeEnergy(ContextImpl& context) {
-    executeForces(context);
     return 0.0;
 }
 
@@ -390,9 +377,9 @@ void OpenCLCalcCustomBondForceKernel::initialize(const System& system, const Cus
     kernel = cl::Kernel(program, "computeCustomBondForces");
 }
 
-void OpenCLCalcCustomBondForceKernel::executeForces(ContextImpl& context) {
+double OpenCLCalcCustomBondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     if (numBonds == 0)
-        return;
+        return 0.0;
     if (globals != NULL) {
         bool changed = false;
         for (int i = 0; i < (int) globalParamNames.size(); i++) {
@@ -421,10 +408,6 @@ void OpenCLCalcCustomBondForceKernel::executeForces(ContextImpl& context) {
         }
     }
     cl.executeKernel(kernel, numBonds);
-}
-
-double OpenCLCalcCustomBondForceKernel::executeEnergy(ContextImpl& context) {
-    executeForces(context);
     return 0.0;
 }
 
@@ -490,9 +473,9 @@ void OpenCLCalcHarmonicAngleForceKernel::initialize(const System& system, const 
     kernel = cl::Kernel(program, "calcHarmonicAngleForce");
 }
 
-void OpenCLCalcHarmonicAngleForceKernel::executeForces(ContextImpl& context) {
+double OpenCLCalcHarmonicAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     if (numAngles == 0)
-        return;
+        return 0.0;
     if (!hasInitializedKernel) {
         hasInitializedKernel = true;
         kernel.setArg<cl_int>(0, cl.getPaddedNumAtoms());
@@ -504,10 +487,6 @@ void OpenCLCalcHarmonicAngleForceKernel::executeForces(ContextImpl& context) {
         kernel.setArg<cl::Buffer>(6, indices->getDeviceBuffer());
     }
     cl.executeKernel(kernel, numAngles);
-}
-
-double OpenCLCalcHarmonicAngleForceKernel::executeEnergy(ContextImpl& context) {
-    executeForces(context);
     return 0.0;
 }
 
@@ -625,9 +604,9 @@ void OpenCLCalcCustomAngleForceKernel::initialize(const System& system, const Cu
     kernel = cl::Kernel(program, "computeCustomAngleForces");
 }
 
-void OpenCLCalcCustomAngleForceKernel::executeForces(ContextImpl& context) {
+double OpenCLCalcCustomAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     if (numAngles == 0)
-        return;
+        return 0.0;
     if (globals != NULL) {
         bool changed = false;
         for (int i = 0; i < (int) globalParamNames.size(); i++) {
@@ -656,10 +635,6 @@ void OpenCLCalcCustomAngleForceKernel::executeForces(ContextImpl& context) {
         }
     }
     cl.executeKernel(kernel, numAngles);
-}
-
-double OpenCLCalcCustomAngleForceKernel::executeEnergy(ContextImpl& context) {
-    executeForces(context);
     return 0.0;
 }
 
@@ -726,9 +701,9 @@ void OpenCLCalcPeriodicTorsionForceKernel::initialize(const System& system, cons
     kernel = cl::Kernel(program, "calcPeriodicTorsionForce");
 }
 
-void OpenCLCalcPeriodicTorsionForceKernel::executeForces(ContextImpl& context) {
+double OpenCLCalcPeriodicTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     if (numTorsions == 0)
-        return;
+        return 0.0;
     if (!hasInitializedKernel) {
         hasInitializedKernel = true;
         kernel.setArg<cl_int>(0, cl.getPaddedNumAtoms());
@@ -740,10 +715,6 @@ void OpenCLCalcPeriodicTorsionForceKernel::executeForces(ContextImpl& context) {
         kernel.setArg<cl::Buffer>(6, indices->getDeviceBuffer());
     }
     cl.executeKernel(kernel, numTorsions);
-}
-
-double OpenCLCalcPeriodicTorsionForceKernel::executeEnergy(ContextImpl& context) {
-    executeForces(context);
     return 0.0;
 }
 
@@ -810,9 +781,9 @@ void OpenCLCalcRBTorsionForceKernel::initialize(const System& system, const RBTo
     kernel = cl::Kernel(program, "calcRBTorsionForce");
 }
 
-void OpenCLCalcRBTorsionForceKernel::executeForces(ContextImpl& context) {
+double OpenCLCalcRBTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     if (numTorsions == 0)
-        return;
+        return 0.0;
     if (!hasInitializedKernel) {
         hasInitializedKernel = true;
         kernel.setArg<cl_int>(0, cl.getPaddedNumAtoms());
@@ -824,10 +795,6 @@ void OpenCLCalcRBTorsionForceKernel::executeForces(ContextImpl& context) {
         kernel.setArg<cl::Buffer>(6, indices->getDeviceBuffer());
     }
     cl.executeKernel(kernel, numTorsions);
-}
-
-double OpenCLCalcRBTorsionForceKernel::executeEnergy(ContextImpl& context) {
-    executeForces(context);
     return 0.0;
 }
 
@@ -926,9 +893,9 @@ void OpenCLCalcCMAPTorsionForceKernel::initialize(const System& system, const CM
     kernel = cl::Kernel(program, "computeCMAPTorsionForces");
 }
 
-void OpenCLCalcCMAPTorsionForceKernel::executeForces(ContextImpl& context) {
+double OpenCLCalcCMAPTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     if (numTorsions == 0)
-        return;
+        return 0.0;
     if (!hasInitializedKernel) {
         hasInitializedKernel = true;
         kernel.setArg<cl_int>(0, cl.getPaddedNumAtoms());
@@ -942,10 +909,6 @@ void OpenCLCalcCMAPTorsionForceKernel::executeForces(ContextImpl& context) {
         kernel.setArg<cl::Buffer>(8, torsionMaps->getDeviceBuffer());
     }
     cl.executeKernel(kernel, numTorsions);
-}
-
-double OpenCLCalcCMAPTorsionForceKernel::executeEnergy(ContextImpl& context) {
-    executeForces(context);
     return 0.0;
 }
 
@@ -1065,9 +1028,9 @@ void OpenCLCalcCustomTorsionForceKernel::initialize(const System& system, const 
     kernel = cl::Kernel(program, "computeCustomTorsionForces");
 }
 
-void OpenCLCalcCustomTorsionForceKernel::executeForces(ContextImpl& context) {
+double OpenCLCalcCustomTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     if (numTorsions == 0)
-        return;
+        return 0.0;
     if (globals != NULL) {
         bool changed = false;
         for (int i = 0; i < (int) globalParamNames.size(); i++) {
@@ -1096,10 +1059,6 @@ void OpenCLCalcCustomTorsionForceKernel::executeForces(ContextImpl& context) {
         }
     }
     cl.executeKernel(kernel, numTorsions);
-}
-
-double OpenCLCalcCustomTorsionForceKernel::executeEnergy(ContextImpl& context) {
-    executeForces(context);
     return 0.0;
 }
 
@@ -1398,7 +1357,7 @@ void OpenCLCalcNonbondedForceKernel::initialize(const System& system, const Nonb
     exceptionsKernel = cl::Kernel(program, "computeNonbondedExceptions");
 }
 
-void OpenCLCalcNonbondedForceKernel::executeForces(ContextImpl& context) {
+double OpenCLCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     if (!hasInitializedKernel) {
         hasInitializedKernel = true;
         if (exceptionIndices != NULL) {
@@ -1484,10 +1443,6 @@ void OpenCLCalcNonbondedForceKernel::executeForces(ContextImpl& context) {
         pmeInterpolateForceKernel.setArg<mm_float4>(6, invBoxSize);
         cl.executeKernel(pmeInterpolateForceKernel, cl.getNumAtoms());
     }
-}
-
-double OpenCLCalcNonbondedForceKernel::executeEnergy(ContextImpl& context) {
-    executeForces(context);
     double energy = ewaldSelfEnergy;
     if (dispersionCoefficient != 0.0) {
         mm_float4 boxSize = cl.getPeriodicBoxSize();
@@ -1644,7 +1599,7 @@ void OpenCLCalcCustomNonbondedForceKernel::initialize(const System& system, cons
     cl.addForce(new OpenCLCustomNonbondedForceInfo(cl.getNonbondedUtilities().getNumForceBuffers(), force));
 }
 
-void OpenCLCalcCustomNonbondedForceKernel::executeForces(ContextImpl& context) {
+double OpenCLCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     if (globals != NULL) {
         bool changed = false;
         for (int i = 0; i < (int) globalParamNames.size(); i++) {
@@ -1656,10 +1611,6 @@ void OpenCLCalcCustomNonbondedForceKernel::executeForces(ContextImpl& context) {
         if (changed)
             globals->upload(globalParamValues);
     }
-}
-
-double OpenCLCalcCustomNonbondedForceKernel::executeEnergy(ContextImpl& context) {
-    executeForces(context);
     return 0.0;
 }
 
@@ -1722,7 +1673,7 @@ void OpenCLCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOB
     cl.addAutoclearBuffer(bornForce->getDeviceBuffer(), bornForce->getSize());
 }
 
-void OpenCLCalcGBSAOBCForceKernel::executeForces(ContextImpl& context) {
+double OpenCLCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     OpenCLNonbondedUtilities& nb = cl.getNonbondedUtilities();
     if (!hasCreatedKernels) {
         // These Kernels cannot be created in initialize(), because the OpenCLNonbondedUtilities has not been initialized yet then.
@@ -1805,10 +1756,6 @@ void OpenCLCalcGBSAOBCForceKernel::executeForces(ContextImpl& context) {
     cl.executeKernel(reduceBornSumKernel, cl.getPaddedNumAtoms());
     cl.executeKernel(force1Kernel, nb.getTiles().getSize()*OpenCLContext::TileSize);
     cl.executeKernel(reduceBornForceKernel, cl.getPaddedNumAtoms());
-}
-
-double OpenCLCalcGBSAOBCForceKernel::executeEnergy(ContextImpl& context) {
-    executeForces(context);
     return 0.0;
 }
 
@@ -2434,7 +2381,7 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
     }
 }
 
-void OpenCLCalcCustomGBForceKernel::executeForces(ContextImpl& context) {
+double OpenCLCalcCustomGBForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     OpenCLNonbondedUtilities& nb = cl.getNonbondedUtilities();
     if (!hasInitializedKernels) {
         hasInitializedKernels = true;
@@ -2584,10 +2531,6 @@ void OpenCLCalcCustomGBForceKernel::executeForces(ContextImpl& context) {
     cl.executeKernel(perParticleEnergyKernel, cl.getPaddedNumAtoms());
     if (needParameterGradient)
         cl.executeKernel(gradientChainRuleKernel, cl.getPaddedNumAtoms());
-}
-
-double OpenCLCalcCustomGBForceKernel::executeEnergy(ContextImpl& context) {
-    executeForces(context);
     return 0.0;
 }
 
@@ -2704,7 +2647,7 @@ void OpenCLCalcCustomExternalForceKernel::initialize(const System& system, const
     kernel = cl::Kernel(program, "computeCustomExternalForces");
 }
 
-void OpenCLCalcCustomExternalForceKernel::executeForces(ContextImpl& context) {
+double OpenCLCalcCustomExternalForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     if (globals != NULL) {
         bool changed = false;
         for (int i = 0; i < (int) globalParamNames.size(); i++) {
@@ -2732,10 +2675,6 @@ void OpenCLCalcCustomExternalForceKernel::executeForces(ContextImpl& context) {
         }
     }
     cl.executeKernel(kernel, numParticles);
-}
-
-double OpenCLCalcCustomExternalForceKernel::executeEnergy(ContextImpl& context) {
-    executeForces(context);
     return 0.0;
 }
 
@@ -3166,7 +3105,7 @@ void OpenCLCalcCustomHbondForceKernel::initialize(const System& system, const Cu
     acceptorKernel = cl::Kernel(program, "computeAcceptorForces");
 }
 
-void OpenCLCalcCustomHbondForceKernel::executeForces(ContextImpl& context) {
+double OpenCLCalcCustomHbondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     if (globals != NULL) {
         bool changed = false;
         for (int i = 0; i < (int) globalParamNames.size(); i++) {
@@ -3237,10 +3176,6 @@ void OpenCLCalcCustomHbondForceKernel::executeForces(ContextImpl& context) {
     acceptorKernel.setArg<mm_float4>(8, cl.getPeriodicBoxSize());
     acceptorKernel.setArg<mm_float4>(9, cl.getInvPeriodicBoxSize());
     cl.executeKernel(acceptorKernel, std::max(numDonors, numAcceptors));
-}
-
-double OpenCLCalcCustomHbondForceKernel::executeEnergy(ContextImpl& context) {
-    executeForces(context);
     return 0.0;
 }
 

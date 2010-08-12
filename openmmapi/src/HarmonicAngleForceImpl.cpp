@@ -49,12 +49,8 @@ void HarmonicAngleForceImpl::initialize(ContextImpl& context) {
     dynamic_cast<CalcHarmonicAngleForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
 
-void HarmonicAngleForceImpl::calcForces(ContextImpl& context) {
-    dynamic_cast<CalcHarmonicAngleForceKernel&>(kernel.getImpl()).executeForces(context);
-}
-
-double HarmonicAngleForceImpl::calcEnergy(ContextImpl& context) {
-    return dynamic_cast<CalcHarmonicAngleForceKernel&>(kernel.getImpl()).executeEnergy(context);
+double HarmonicAngleForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    return dynamic_cast<CalcHarmonicAngleForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
 }
 
 std::vector<std::string> HarmonicAngleForceImpl::getKernelNames() {

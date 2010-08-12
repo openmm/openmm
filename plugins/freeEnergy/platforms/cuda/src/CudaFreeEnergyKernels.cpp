@@ -377,7 +377,7 @@ void CudaFreeEnergyCalcNonbondedSoftcoreForceKernel::initialize(const System& sy
     }
 }
 
-void CudaFreeEnergyCalcNonbondedSoftcoreForceKernel::executeForces(ContextImpl& context) {
+double CudaFreeEnergyCalcNonbondedSoftcoreForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
 
 // ---------------------------------------------------------------------------------------
 
@@ -428,10 +428,6 @@ void CudaFreeEnergyCalcNonbondedSoftcoreForceKernel::executeForces(ContextImpl& 
 //kPrintForces( gpu, "Post kCalculateLocalSoftcoreForces ", call );
 //kPrintForces(gpu, "Post kCalculateLocalSoftcoreForces", call );
 //kReduceForces(gpu);
-}
-
-double CudaFreeEnergyCalcNonbondedSoftcoreForceKernel::executeEnergy(ContextImpl& context) {
-    executeForces(context);
     return 0.0;
 }
 
@@ -519,7 +515,7 @@ void CudaFreeEnergyCalcGBSAOBCSoftcoreForceKernel::initialize(const System& syst
                                                      radius, scale, charge, nonPolarScalingFactors );
 }
 
-void CudaFreeEnergyCalcGBSAOBCSoftcoreForceKernel::executeForces(ContextImpl& context) {
+double CudaFreeEnergyCalcGBSAOBCSoftcoreForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
 
 // ---------------------------------------------------------------------------------------
 
@@ -576,11 +572,7 @@ void CudaFreeEnergyCalcGBSAOBCSoftcoreForceKernel::executeForces(ContextImpl& co
     // second loop of Obc GBSA forces
 
     kCalculateObcGbsaSoftcoreForces2(gpu);
-}
-
-double CudaFreeEnergyCalcGBSAOBCSoftcoreForceKernel::executeEnergy(ContextImpl& context) {
-    executeForces( context );
-	 return 0.0;
+    return 0.0;
 }
 
 CudaFreeEnergyCalcGBVISoftcoreForceKernel::~CudaFreeEnergyCalcGBVISoftcoreForceKernel() {
@@ -661,7 +653,7 @@ void CudaFreeEnergyCalcGBVISoftcoreForceKernel::initialize(const System& system,
 
 }
 
-void CudaFreeEnergyCalcGBVISoftcoreForceKernel::executeForces(ContextImpl& context) {
+double CudaFreeEnergyCalcGBVISoftcoreForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
 
 // ---------------------------------------------------------------------------------------
 
@@ -747,10 +739,6 @@ void CudaFreeEnergyCalcGBVISoftcoreForceKernel::executeForces(ContextImpl& conte
 
     kCalculateGBVISoftcoreForces2(gpu);
 //kPrintForces( gpu, "Post GBVISoftcoreForces2", call );
-}
-
-double CudaFreeEnergyCalcGBVISoftcoreForceKernel::executeEnergy(ContextImpl& context) {
-    executeForces( context );
     return 0.0;
 }
 

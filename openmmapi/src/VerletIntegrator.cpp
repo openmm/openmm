@@ -59,7 +59,7 @@ vector<string> VerletIntegrator::getKernelNames() {
 void VerletIntegrator::step(int steps) {
     for (int i = 0; i < steps; ++i) {
         context->updateContextState();
-        context->calcForces();
+        context->calcForcesAndEnergy(true, false);
         dynamic_cast<IntegrateVerletStepKernel&>(kernel.getImpl()).execute(*context, *this);
     }
 }

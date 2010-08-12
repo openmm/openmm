@@ -226,46 +226,10 @@ void ReferenceFreeEnergyCalcNonbondedSoftcoreForceKernel::initialize(const Syste
     rfDielectric = (RealOpenMM)force.getReactionFieldDielectric();
 }
 
-void ReferenceFreeEnergyCalcNonbondedSoftcoreForceKernel::executeForces(ContextImpl& context) {
+double ReferenceFreeEnergyCalcNonbondedSoftcoreForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
 
     RealOpenMM** posData   = extractPositions(context);
     RealOpenMM** forceData = extractForces(context);
-
-    ReferenceFreeEnergyLJCoulombSoftcoreIxn clj;
-    //clj.setSoftCoreLJLambda( softCoreLJLambda );
-
-    bool periodic = (nonbondedMethod == CutoffPeriodic);
-    bool ewald    = (nonbondedMethod == Ewald);
-    bool pme      = (nonbondedMethod == PME);
-
-    if (nonbondedMethod != NoCutoff) {
-        computeNeighborListVoxelHash(*neighborList, numParticles, posData, exclusions, (periodic || ewald || pme) ? periodicBoxSize : NULL, nonbondedCutoff, 0.0);
-        clj.setUseCutoff(nonbondedCutoff, *neighborList, rfDielectric);
-    }
-
-    if (periodic||ewald||pme)
-        clj.setPeriodic(periodicBoxSize);
-
-    if (ewald)
-        clj.setUseEwald(ewaldAlpha, kmax[0], kmax[1], kmax[2]);
-
-    if (pme)
-        clj.setUsePME(ewaldAlpha);
-
-    clj.calculatePairIxn(numParticles, posData, particleParamArray, exclusionArray, 0, forceData, 0, 0);
-
-    ReferenceBondForce refBondForce;
-
-    ReferenceFreeEnergyLJCoulomb14Softcore nonbonded14;
-    if (nonbondedMethod == CutoffNonPeriodic || nonbondedMethod == CutoffPeriodic)
-        nonbonded14.setUseCutoff(nonbondedCutoff, rfDielectric);
-    refBondForce.calculateForce(num14, bonded14IndexArray, posData, bonded14ParamArray, forceData, 0, nonbonded14);
-}
-
-double ReferenceFreeEnergyCalcNonbondedSoftcoreForceKernel::executeEnergy(ContextImpl& context) {
-
-    RealOpenMM** posData   = extractPositions(context);
-    RealOpenMM** forceData = allocateRealArray(numParticles, 3);
 
     RealOpenMM energy = 0;
     ReferenceFreeEnergyLJCoulombSoftcoreIxn clj;
@@ -290,7 +254,6 @@ double ReferenceFreeEnergyCalcNonbondedSoftcoreForceKernel::executeEnergy(Contex
         nonbonded14.setUseCutoff(nonbondedCutoff, rfDielectric);
 
     refBondForce.calculateForce(num14, bonded14IndexArray, posData, bonded14ParamArray, forceData, &energy, nonbonded14);
-    disposeRealArray(forceData, numParticles);
 
     return energy;
 }
@@ -361,13 +324,7 @@ void ReferenceFreeEnergyCalcGBSAOBCSoftcoreForceKernel::initialize(const System&
     obc->setIncludeAceApproximation(true);
 }
 
-void ReferenceFreeEnergyCalcGBSAOBCSoftcoreForceKernel::executeForces(ContextImpl& context) {
-    RealOpenMM** posData   = extractPositions(context);
-    RealOpenMM** forceData = extractForces(context);
-    obc->computeImplicitSolventForces(posData, &charges[0], forceData, 1);
-}
-
-double ReferenceFreeEnergyCalcGBSAOBCSoftcoreForceKernel::executeEnergy(ContextImpl& context) {
+double ReferenceFreeEnergyCalcGBSAOBCSoftcoreForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     RealOpenMM** posData   = extractPositions(context);
     RealOpenMM** forceData = extractForces(context);
     obc->computeImplicitSolventForces(posData, &charges[0], forceData, 1);
@@ -433,23 +390,18 @@ void ReferenceFreeEnergyCalcGBVISoftcoreForceKernel::initialize(const System& sy
     gbviSoftcore = new CpuGBVISoftcore(gBVIParameters);
 }
 
-void ReferenceFreeEnergyCalcGBVISoftcoreForceKernel::executeForces(ContextImpl& context) {
-
-    RealOpenMM** posData   = extractPositions(context);
-    RealOpenMM** forceData = extractForces(context);
-
-    RealOpenMM* bornRadii  = new RealOpenMM[context.getSystem().getNumParticles()];
-    gbviSoftcore->computeBornRadii(posData, bornRadii, NULL ); 
-    gbviSoftcore->computeBornForces(bornRadii, posData, &charges[0], forceData);
-    delete[] bornRadii;
-}
-
-double ReferenceFreeEnergyCalcGBVISoftcoreForceKernel::executeEnergy(ContextImpl& context) {
+double ReferenceFreeEnergyCalcGBVISoftcoreForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     RealOpenMM** posData = extractPositions(context);
 
     RealOpenMM* bornRadii = new RealOpenMM[context.getSystem().getNumParticles()];
-    gbviSoftcore->computeBornRadii(posData, bornRadii, NULL ); 
-    RealOpenMM energy     = gbviSoftcore->computeBornEnergy(bornRadii ,posData, &charges[0]);
+    gbviSoftcore->computeBornRadii(posData, bornRadii, NULL );
+    if (includeForces) {
+        RealOpenMM** forceData = extractForces(context);
+        gbviSoftcore->computeBornForces(bornRadii, posData, &charges[0], forceData);
+    }
+    RealOpenMM energy = 0.0;
+    if (includeEnergy)
+        energy = gbviSoftcore->computeBornEnergy(bornRadii ,posData, &charges[0]);
     delete[] bornRadii;
     return static_cast<double>(energy);
 }

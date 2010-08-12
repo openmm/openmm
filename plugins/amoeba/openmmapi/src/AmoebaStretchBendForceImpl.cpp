@@ -50,12 +50,8 @@ void AmoebaStretchBendForceImpl::initialize(ContextImpl& context) {
     dynamic_cast<CalcAmoebaStretchBendForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
 
-void AmoebaStretchBendForceImpl::calcForces(ContextImpl& context ) {
-    dynamic_cast<CalcAmoebaStretchBendForceKernel&>(kernel.getImpl()).executeForces(context);
-}
-
-double AmoebaStretchBendForceImpl::calcEnergy(ContextImpl& context) {
-    return dynamic_cast<CalcAmoebaStretchBendForceKernel&>(kernel.getImpl()).executeEnergy(context);
+double AmoebaStretchBendForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    return dynamic_cast<CalcAmoebaStretchBendForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
 }
 
 std::vector<std::string> AmoebaStretchBendForceImpl::getKernelNames() {

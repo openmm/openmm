@@ -63,7 +63,7 @@ vector<string> BrownianIntegrator::getKernelNames() {
 void BrownianIntegrator::step(int steps) {
     for (int i = 0; i < steps; ++i) {
         context->updateContextState();
-        context->calcForces();
+        context->calcForcesAndEnergy(true, false);
         dynamic_cast<IntegrateBrownianStepKernel&>(kernel.getImpl()).execute(*context, *this);
     }
 }

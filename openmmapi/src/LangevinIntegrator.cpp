@@ -63,7 +63,7 @@ vector<string> LangevinIntegrator::getKernelNames() {
 void LangevinIntegrator::step(int steps) {
     for (int i = 0; i < steps; ++i) {
         context->updateContextState();
-        context->calcForces();
+        context->calcForcesAndEnergy(true, false);
         dynamic_cast<IntegrateLangevinStepKernel&>(kernel.getImpl()).execute(*context, *this);
     }
 }

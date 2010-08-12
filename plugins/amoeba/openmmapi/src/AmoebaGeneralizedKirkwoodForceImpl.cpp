@@ -46,12 +46,8 @@ void AmoebaGeneralizedKirkwoodForceImpl::initialize(ContextImpl& context) {
     dynamic_cast<CalcAmoebaGeneralizedKirkwoodForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
 
-void AmoebaGeneralizedKirkwoodForceImpl::calcForces(ContextImpl& context) {
-    dynamic_cast<CalcAmoebaGeneralizedKirkwoodForceKernel&>(kernel.getImpl()).executeForces(context);
-}
-
-double AmoebaGeneralizedKirkwoodForceImpl::calcEnergy(ContextImpl& context) {
-    return dynamic_cast<CalcAmoebaGeneralizedKirkwoodForceKernel&>(kernel.getImpl()).executeEnergy(context);
+double AmoebaGeneralizedKirkwoodForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    return dynamic_cast<CalcAmoebaGeneralizedKirkwoodForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
 }
 
 std::vector<std::string> AmoebaGeneralizedKirkwoodForceImpl::getKernelNames() {

@@ -49,12 +49,8 @@ void PeriodicTorsionForceImpl::initialize(ContextImpl& context) {
     dynamic_cast<CalcPeriodicTorsionForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
 
-void PeriodicTorsionForceImpl::calcForces(ContextImpl& context) {
-    dynamic_cast<CalcPeriodicTorsionForceKernel&>(kernel.getImpl()).executeForces(context);
-}
-
-double PeriodicTorsionForceImpl::calcEnergy(ContextImpl& context) {
-    return dynamic_cast<CalcPeriodicTorsionForceKernel&>(kernel.getImpl()).executeEnergy(context);
+double PeriodicTorsionForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    return dynamic_cast<CalcPeriodicTorsionForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
 }
 
 std::vector<std::string> PeriodicTorsionForceImpl::getKernelNames() {

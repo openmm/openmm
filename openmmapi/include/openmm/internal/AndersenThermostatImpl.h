@@ -51,11 +51,9 @@ public:
         return owner;
     }
     void updateContextState(ContextImpl& context);
-    void calcForces(ContextImpl& context) {
+    double calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy) {
         // This force doesn't apply forces to particles.
-    }
-    double calcEnergy(ContextImpl& context) {
-        return 0.0; // This force doesn't contribute to the potential energy.
+        return 0.0;
     }
     std::map<std::string, double> getDefaultParameters();
     std::vector<std::string> getKernelNames();

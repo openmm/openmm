@@ -82,11 +82,14 @@ State Context::getState(int types) const {
     Vec3 periodicBoxSize[3];
     impl->getPeriodicBoxVectors(periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2]);
     state.setPeriodicBoxVectors(periodicBoxSize[0], periodicBoxSize[1], periodicBoxSize[2]);
-    if (types&State::Energy)
-        state.setEnergy(impl->calcKineticEnergy(), impl->calcPotentialEnergy());
-    if (types&State::Forces) {
-        impl->calcForces();
-        impl->getForces(state.updForces());
+    bool includeForces = types&State::Forces;
+    bool includeEnergy = types&State::Energy;
+    if (includeForces || includeEnergy) {
+        double energy = impl->calcForcesAndEnergy(includeForces, includeEnergy);
+        if (includeEnergy)
+            state.setEnergy(impl->calcKineticEnergy(), energy);
+        if (includeForces)
+            impl->getForces(state.updForces());
     }
     if (types&State::Parameters) {
         for (map<string, double>::const_iterator iter = impl->parameters.begin(); iter != impl->parameters.end(); iter++)

@@ -261,12 +261,8 @@ void GBVISoftcoreForceImpl::findScaledRadii( int numberOfParticles, const std::v
 
 }
 
-void GBVISoftcoreForceImpl::calcForces(ContextImpl& context) {
-    dynamic_cast<CalcGBVISoftcoreForceKernel&>(kernel.getImpl()).executeForces(context);
-}
-
-double GBVISoftcoreForceImpl::calcEnergy(ContextImpl& context) {
-    return dynamic_cast<CalcGBVISoftcoreForceKernel&>(kernel.getImpl()).executeEnergy(context);
+double GBVISoftcoreForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    return dynamic_cast<CalcGBVISoftcoreForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
 }
 
 std::vector<std::string> GBVISoftcoreForceImpl::getKernelNames() {

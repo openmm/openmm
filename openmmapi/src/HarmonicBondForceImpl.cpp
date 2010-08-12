@@ -49,12 +49,8 @@ void HarmonicBondForceImpl::initialize(ContextImpl& context) {
     dynamic_cast<CalcHarmonicBondForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
 
-void HarmonicBondForceImpl::calcForces(ContextImpl& context) {
-    dynamic_cast<CalcHarmonicBondForceKernel&>(kernel.getImpl()).executeForces(context);
-}
-
-double HarmonicBondForceImpl::calcEnergy(ContextImpl& context) {
-    return dynamic_cast<CalcHarmonicBondForceKernel&>(kernel.getImpl()).executeEnergy(context);
+double HarmonicBondForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    return dynamic_cast<CalcHarmonicBondForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
 }
 
 std::vector<std::string> HarmonicBondForceImpl::getKernelNames() {

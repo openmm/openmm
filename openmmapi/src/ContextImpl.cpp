@@ -148,26 +148,18 @@ void ContextImpl::applyConstraints(double tol) {
     dynamic_cast<ApplyConstraintsKernel&>(applyConstraintsKernel.getImpl()).apply(*this, tol);
 }
 
-void ContextImpl::calcForces() {
+double ContextImpl::calcForcesAndEnergy(bool includeForces, bool includeEnergy) {
     CalcForcesAndEnergyKernel& kernel = dynamic_cast<CalcForcesAndEnergyKernel&>(initializeForcesKernel.getImpl());
-    kernel.beginForceComputation(*this);
+    double energy = 0.0;
+    kernel.beginComputation(*this, includeForces, includeEnergy);
     for (int i = 0; i < (int) forceImpls.size(); ++i)
-        forceImpls[i]->calcForces(*this);
-    kernel.finishForceComputation(*this);
+        energy += forceImpls[i]->calcForcesAndEnergy(*this, includeForces, includeEnergy);
+    energy += kernel.finishComputation(*this, includeForces, includeEnergy);
+    return energy;
 }
 
 double ContextImpl::calcKineticEnergy() {
     return dynamic_cast<CalcKineticEnergyKernel&>(kineticEnergyKernel.getImpl()).execute(*this);
-}
-
-double ContextImpl::calcPotentialEnergy() {
-    CalcForcesAndEnergyKernel& kernel = dynamic_cast<CalcForcesAndEnergyKernel&>(initializeForcesKernel.getImpl());
-    kernel.beginEnergyComputation(*this);
-    double energy = 0.0;
-    for (int i = 0; i < (int) forceImpls.size(); ++i)
-        energy += forceImpls[i]->calcEnergy(*this);
-    energy += kernel.finishEnergyComputation(*this);
-    return energy;
 }
 
 void ContextImpl::updateContextState() {

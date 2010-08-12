@@ -59,7 +59,7 @@ vector<string> VariableVerletIntegrator::getKernelNames() {
 void VariableVerletIntegrator::step(int steps) {
     for (int i = 0; i < steps; ++i) {
         context->updateContextState();
-        context->calcForces();
+        context->calcForcesAndEnergy(true, false);
         dynamic_cast<IntegrateVariableVerletStepKernel&>(kernel.getImpl()).execute(*context, *this, std::numeric_limits<double>::infinity());
     }
 }
@@ -67,7 +67,7 @@ void VariableVerletIntegrator::step(int steps) {
 void VariableVerletIntegrator::stepTo(double time) {
     while (time > context->getTime()) {
         context->updateContextState();
-        context->calcForces();
+        context->calcForcesAndEnergy(true, false);
         dynamic_cast<IntegrateVariableVerletStepKernel&>(kernel.getImpl()).execute(*context, *this, time);
     }
 }

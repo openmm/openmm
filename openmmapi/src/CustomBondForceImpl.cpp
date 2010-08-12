@@ -82,12 +82,8 @@ void CustomBondForceImpl::initialize(ContextImpl& context) {
     dynamic_cast<CalcCustomBondForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
 
-void CustomBondForceImpl::calcForces(ContextImpl& context) {
-    dynamic_cast<CalcCustomBondForceKernel&>(kernel.getImpl()).executeForces(context);
-}
-
-double CustomBondForceImpl::calcEnergy(ContextImpl& context) {
-    return dynamic_cast<CalcCustomBondForceKernel&>(kernel.getImpl()).executeEnergy(context);
+double CustomBondForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    return dynamic_cast<CalcCustomBondForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
 }
 
 vector<string> CustomBondForceImpl::getKernelNames() {

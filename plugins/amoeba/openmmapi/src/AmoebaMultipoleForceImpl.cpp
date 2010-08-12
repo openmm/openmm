@@ -48,12 +48,8 @@ void AmoebaMultipoleForceImpl::initialize(ContextImpl& context) {
     dynamic_cast<CalcAmoebaMultipoleForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
 
-void AmoebaMultipoleForceImpl::calcForces(ContextImpl& context ) {
-    dynamic_cast<CalcAmoebaMultipoleForceKernel&>(kernel.getImpl()).executeForces(context);
-}
-
-double AmoebaMultipoleForceImpl::calcEnergy(ContextImpl& context) {
-    return dynamic_cast<CalcAmoebaMultipoleForceKernel&>(kernel.getImpl()).executeEnergy(context);
+double AmoebaMultipoleForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    return dynamic_cast<CalcAmoebaMultipoleForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
 }
 
 std::vector<std::string> AmoebaMultipoleForceImpl::getKernelNames() {

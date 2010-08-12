@@ -50,12 +50,8 @@ void AmoebaWcaDispersionForceImpl::initialize(ContextImpl& context) {
     dynamic_cast<CalcAmoebaWcaDispersionForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
 
-void AmoebaWcaDispersionForceImpl::calcForces(ContextImpl& context ) {
-    dynamic_cast<CalcAmoebaWcaDispersionForceKernel&>(kernel.getImpl()).executeForces(context);
-}
-
-double AmoebaWcaDispersionForceImpl::calcEnergy(ContextImpl& context) {
-    return dynamic_cast<CalcAmoebaWcaDispersionForceKernel&>(kernel.getImpl()).executeEnergy(context);
+double AmoebaWcaDispersionForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    return dynamic_cast<CalcAmoebaWcaDispersionForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
 }
 
 std::vector<std::string> AmoebaWcaDispersionForceImpl::getKernelNames() {

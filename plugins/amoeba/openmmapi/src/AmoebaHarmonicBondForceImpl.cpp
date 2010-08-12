@@ -51,12 +51,8 @@ void AmoebaHarmonicBondForceImpl::initialize(ContextImpl& context) {
     dynamic_cast<CalcAmoebaHarmonicBondForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
 
-void AmoebaHarmonicBondForceImpl::calcForces(ContextImpl& context ) {
-    dynamic_cast<CalcAmoebaHarmonicBondForceKernel&>(kernel.getImpl()).executeForces(context);
-}
-
-double AmoebaHarmonicBondForceImpl::calcEnergy(ContextImpl& context) {
-   return dynamic_cast<CalcAmoebaHarmonicBondForceKernel&>(kernel.getImpl()).executeEnergy(context);
+double AmoebaHarmonicBondForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    return dynamic_cast<CalcAmoebaHarmonicBondForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
 }
 
 std::vector<std::string> AmoebaHarmonicBondForceImpl::getKernelNames() {

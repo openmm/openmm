@@ -105,12 +105,8 @@ void CustomGBForceImpl::initialize(ContextImpl& context) {
     dynamic_cast<CalcCustomGBForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
 
-void CustomGBForceImpl::calcForces(ContextImpl& context) {
-    dynamic_cast<CalcCustomGBForceKernel&>(kernel.getImpl()).executeForces(context);
-}
-
-double CustomGBForceImpl::calcEnergy(ContextImpl& context) {
-    return dynamic_cast<CalcCustomGBForceKernel&>(kernel.getImpl()).executeEnergy(context);
+double CustomGBForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    return dynamic_cast<CalcCustomGBForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
 }
 
 vector<string> CustomGBForceImpl::getKernelNames() {

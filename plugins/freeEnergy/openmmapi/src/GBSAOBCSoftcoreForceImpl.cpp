@@ -48,12 +48,8 @@ void GBSAOBCSoftcoreForceImpl::initialize(ContextImpl& context) {
     dynamic_cast<CalcGBSAOBCSoftcoreForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
 
-void GBSAOBCSoftcoreForceImpl::calcForces(ContextImpl& context ) {
-    dynamic_cast<CalcGBSAOBCSoftcoreForceKernel&>(kernel.getImpl()).executeForces(context);
-}
-
-double GBSAOBCSoftcoreForceImpl::calcEnergy(ContextImpl& context) {
-    return dynamic_cast<CalcGBSAOBCSoftcoreForceKernel&>(kernel.getImpl()).executeEnergy(context);
+double GBSAOBCSoftcoreForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    return dynamic_cast<CalcGBSAOBCSoftcoreForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
 }
 
 std::vector<std::string> GBSAOBCSoftcoreForceImpl::getKernelNames() {

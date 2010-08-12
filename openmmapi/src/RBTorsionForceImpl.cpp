@@ -49,12 +49,8 @@ void RBTorsionForceImpl::initialize(ContextImpl& context) {
     dynamic_cast<CalcRBTorsionForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
 
-void RBTorsionForceImpl::calcForces(ContextImpl& context) {
-    dynamic_cast<CalcRBTorsionForceKernel&>(kernel.getImpl()).executeForces(context);
-}
-
-double RBTorsionForceImpl::calcEnergy(ContextImpl& context) {
-    return dynamic_cast<CalcRBTorsionForceKernel&>(kernel.getImpl()).executeEnergy(context);
+double RBTorsionForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    return dynamic_cast<CalcRBTorsionForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
 }
 
 std::vector<std::string> RBTorsionForceImpl::getKernelNames() {

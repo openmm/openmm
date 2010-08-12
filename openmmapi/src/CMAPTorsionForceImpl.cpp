@@ -52,12 +52,8 @@ void CMAPTorsionForceImpl::initialize(ContextImpl& context) {
     dynamic_cast<CalcCMAPTorsionForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
 
-void CMAPTorsionForceImpl::calcForces(ContextImpl& context) {
-    dynamic_cast<CalcCMAPTorsionForceKernel&>(kernel.getImpl()).executeForces(context);
-}
-
-double CMAPTorsionForceImpl::calcEnergy(ContextImpl& context) {
-    return dynamic_cast<CalcCMAPTorsionForceKernel&>(kernel.getImpl()).executeEnergy(context);
+double CMAPTorsionForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    return dynamic_cast<CalcCMAPTorsionForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
 }
 
 vector<string> CMAPTorsionForceImpl::getKernelNames() {

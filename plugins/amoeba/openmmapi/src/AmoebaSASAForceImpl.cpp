@@ -46,12 +46,8 @@ void AmoebaSASAForceImpl::initialize(ContextImpl& context) {
     dynamic_cast<CalcAmoebaSASAForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
 
-void AmoebaSASAForceImpl::calcForces(ContextImpl& context) {
-    dynamic_cast<CalcAmoebaSASAForceKernel&>(kernel.getImpl()).executeForces(context);
-}
-
-double AmoebaSASAForceImpl::calcEnergy(ContextImpl& context) {
-    return dynamic_cast<CalcAmoebaSASAForceKernel&>(kernel.getImpl()).executeEnergy(context);
+double AmoebaSASAForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    return dynamic_cast<CalcAmoebaSASAForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
 }
 
 std::vector<std::string> AmoebaSASAForceImpl::getKernelNames() {

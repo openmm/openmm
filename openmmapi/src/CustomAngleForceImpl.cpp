@@ -88,12 +88,8 @@ void CustomAngleForceImpl::initialize(ContextImpl& context) {
     dynamic_cast<CalcCustomAngleForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
 
-void CustomAngleForceImpl::calcForces(ContextImpl& context) {
-    dynamic_cast<CalcCustomAngleForceKernel&>(kernel.getImpl()).executeForces(context);
-}
-
-double CustomAngleForceImpl::calcEnergy(ContextImpl& context) {
-    return dynamic_cast<CalcCustomAngleForceKernel&>(kernel.getImpl()).executeEnergy(context);
+double CustomAngleForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    return dynamic_cast<CalcCustomAngleForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
 }
 
 vector<string> CustomAngleForceImpl::getKernelNames() {

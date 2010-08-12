@@ -50,12 +50,8 @@ void AmoebaHarmonicAngleForceImpl::initialize(ContextImpl& context) {
     dynamic_cast<CalcAmoebaHarmonicAngleForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
 
-void AmoebaHarmonicAngleForceImpl::calcForces(ContextImpl& context ) {
-    dynamic_cast<CalcAmoebaHarmonicAngleForceKernel&>(kernel.getImpl()).executeForces(context);
-}
-
-double AmoebaHarmonicAngleForceImpl::calcEnergy(ContextImpl& context) {
-    return dynamic_cast<CalcAmoebaHarmonicAngleForceKernel&>(kernel.getImpl()).executeEnergy(context);
+double AmoebaHarmonicAngleForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    return dynamic_cast<CalcAmoebaHarmonicAngleForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
 }
 
 std::vector<std::string> AmoebaHarmonicAngleForceImpl::getKernelNames() {

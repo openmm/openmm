@@ -178,12 +178,8 @@ void CustomHbondForceImpl::initialize(ContextImpl& context) {
     dynamic_cast<CalcCustomHbondForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
 
-void CustomHbondForceImpl::calcForces(ContextImpl& context) {
-    dynamic_cast<CalcCustomHbondForceKernel&>(kernel.getImpl()).executeForces(context);
-}
-
-double CustomHbondForceImpl::calcEnergy(ContextImpl& context) {
-    return dynamic_cast<CalcCustomHbondForceKernel&>(kernel.getImpl()).executeEnergy(context);
+double CustomHbondForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    return dynamic_cast<CalcCustomHbondForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
 }
 
 vector<string> CustomHbondForceImpl::getKernelNames() {

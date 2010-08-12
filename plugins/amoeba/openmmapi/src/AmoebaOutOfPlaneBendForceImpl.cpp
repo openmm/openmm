@@ -50,12 +50,8 @@ void AmoebaOutOfPlaneBendForceImpl::initialize(ContextImpl& context) {
     dynamic_cast<CalcAmoebaOutOfPlaneBendForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
 
-void AmoebaOutOfPlaneBendForceImpl::calcForces(ContextImpl& context ) {
-    dynamic_cast<CalcAmoebaOutOfPlaneBendForceKernel&>(kernel.getImpl()).executeForces(context);
-}
-
-double AmoebaOutOfPlaneBendForceImpl::calcEnergy(ContextImpl& context) {
-    return dynamic_cast<CalcAmoebaOutOfPlaneBendForceKernel&>(kernel.getImpl()).executeEnergy(context);
+double AmoebaOutOfPlaneBendForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    return dynamic_cast<CalcAmoebaOutOfPlaneBendForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
 }
 
 std::vector<std::string> AmoebaOutOfPlaneBendForceImpl::getKernelNames() {

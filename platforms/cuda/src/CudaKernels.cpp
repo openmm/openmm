@@ -44,49 +44,23 @@ using namespace std;
 void CudaCalcForcesAndEnergyKernel::initialize(const System& system) {
 }
 
-void CudaCalcForcesAndEnergyKernel::beginForceComputation(ContextImpl& context) {
+void CudaCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool includeForces, bool includeEnergy) {
     _gpuContext* gpu = data.gpu;
     if (data.nonbondedMethod != NO_CUTOFF && data.computeForceCount%100 == 0)
         gpuReorderAtoms(gpu);
-    data.computeForceCount++;
+    if (includeForces)
+        data.computeForceCount++;
     if (gpu->bIncludeGBSA || gpu->bIncludeGBVI)
         kClearBornSumAndForces(gpu);
-    else
+    else if (includeForces)
         kClearForces(gpu);
-}
-
-void CudaCalcForcesAndEnergyKernel::finishForceComputation(ContextImpl& context) {
-    _gpuContext* gpu = data.gpu;
-
-    if (gpu->bIncludeGBSA || gpu->bIncludeGBVI) {
-        gpu->bRecalculateBornRadii = true;
-        kCalculateCDLJObcGbsaForces1(gpu);
-        kReduceObcGbsaBornForces(gpu);
-        if (gpu->bIncludeGBSA ) { 
-           kCalculateObcGbsaForces2(gpu);
-        } else {
-           kCalculateGBVIForces2(gpu);
-        }
+    if (includeEnergy) {
+        data.stepCount++;
+        kClearEnergy(gpu);
     }
-    else if (data.hasNonbonded)
-        kCalculateCDLJForces(gpu);
-    if (data.hasCustomNonbonded)
-        kCalculateCustomNonbondedForces(gpu, data.hasNonbonded);
-    kCalculateLocalForces(gpu);
-    kReduceForces(gpu);
 }
 
-void CudaCalcForcesAndEnergyKernel::beginEnergyComputation(ContextImpl& context) {
-    _gpuContext* gpu = data.gpu;
-    if (data.nonbondedMethod != NO_CUTOFF && data.stepCount%100 == 0)
-        gpuReorderAtoms(gpu);
-    data.stepCount++;
-    kClearEnergy(gpu);
-    if (gpu->bIncludeGBSA || gpu->bIncludeGBVI)
-        kClearBornSumAndForces(gpu);
-}
-
-double CudaCalcForcesAndEnergyKernel::finishEnergyComputation(ContextImpl& context) {
+double CudaCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForces, bool includeEnergy) {
     _gpuContext* gpu = data.gpu;
     if (gpu->bIncludeGBSA || gpu->bIncludeGBVI) {
         gpu->bRecalculateBornRadii = true;
@@ -103,9 +77,14 @@ double CudaCalcForcesAndEnergyKernel::finishEnergyComputation(ContextImpl& conte
     if (data.hasCustomNonbonded)
         kCalculateCustomNonbondedForces(gpu, data.hasNonbonded);
     kCalculateLocalForces(gpu);
-    double energy = kReduceEnergy(gpu)+data.ewaldSelfEnergy;
-    if (data.dispersionCoefficient != 0.0)
-        energy += data.dispersionCoefficient/(gpu->sim.periodicBoxSizeX*gpu->sim.periodicBoxSizeY*gpu->sim.periodicBoxSizeZ);
+    if (includeForces)
+        kReduceForces(gpu);
+    double energy = 0.0;
+    if (includeEnergy) {
+        energy = kReduceEnergy(gpu)+data.ewaldSelfEnergy;
+        if (data.dispersionCoefficient != 0.0)
+            energy += data.dispersionCoefficient/(gpu->sim.periodicBoxSizeX*gpu->sim.periodicBoxSizeY*gpu->sim.periodicBoxSizeZ);
+    }
     return energy;
 }
 
@@ -226,10 +205,7 @@ void CudaCalcHarmonicBondForceKernel::initialize(const System& system, const Har
     gpuSetBondParameters(data.gpu, particle1, particle2, length, k);
 }
 
-void CudaCalcHarmonicBondForceKernel::executeForces(ContextImpl& context) {
-}
-
-double CudaCalcHarmonicBondForceKernel::executeEnergy(ContextImpl& context) {
+double CudaCalcHarmonicBondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     return 0.0;
 }
 
@@ -257,12 +233,7 @@ void CudaCalcCustomBondForceKernel::initialize(const System& system, const Custo
         SetCustomBondGlobalParams(globalParamValues);
 }
 
-void CudaCalcCustomBondForceKernel::executeForces(ContextImpl& context) {
-    updateGlobalParams(context);
-    kCalculateCustomBondForces(data.gpu);
-}
-
-double CudaCalcCustomBondForceKernel::executeEnergy(ContextImpl& context) {
+double CudaCalcCustomBondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     updateGlobalParams(context);
     kCalculateCustomBondForces(data.gpu);
     return 0.0;
@@ -301,10 +272,7 @@ void CudaCalcHarmonicAngleForceKernel::initialize(const System& system, const Ha
     gpuSetBondAngleParameters(data.gpu, particle1, particle2, particle3, angle, k);
 }
 
-void CudaCalcHarmonicAngleForceKernel::executeForces(ContextImpl& context) {
-}
-
-double CudaCalcHarmonicAngleForceKernel::executeEnergy(ContextImpl& context) {
+double CudaCalcHarmonicAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     return 0.0;
 }
 
@@ -333,12 +301,7 @@ void CudaCalcCustomAngleForceKernel::initialize(const System& system, const Cust
         SetCustomAngleGlobalParams(globalParamValues);
 }
 
-void CudaCalcCustomAngleForceKernel::executeForces(ContextImpl& context) {
-    updateGlobalParams(context);
-    kCalculateCustomAngleForces(data.gpu);
-}
-
-double CudaCalcCustomAngleForceKernel::executeEnergy(ContextImpl& context) {
+double CudaCalcCustomAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     updateGlobalParams(context);
     kCalculateCustomAngleForces(data.gpu);
     return 0.0;
@@ -379,10 +342,7 @@ void CudaCalcPeriodicTorsionForceKernel::initialize(const System& system, const 
     gpuSetDihedralParameters(data.gpu, particle1, particle2, particle3, particle4, k, phase, periodicity);
 }
 
-void CudaCalcPeriodicTorsionForceKernel::executeForces(ContextImpl& context) {
-}
-
-double CudaCalcPeriodicTorsionForceKernel::executeEnergy(ContextImpl& context) {
+double CudaCalcPeriodicTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     return 0.0;
 }
 
@@ -415,10 +375,7 @@ void CudaCalcRBTorsionForceKernel::initialize(const System& system, const RBTors
     gpuSetRbDihedralParameters(data.gpu, particle1, particle2, particle3, particle4, c0, c1, c2, c3, c4, c5);
 }
 
-void CudaCalcRBTorsionForceKernel::executeForces(ContextImpl& context) {
-}
-
-double CudaCalcRBTorsionForceKernel::executeEnergy(ContextImpl& context) {
+double CudaCalcRBTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     return 0.0;
 }
 
@@ -483,11 +440,7 @@ void CudaCalcCMAPTorsionForceKernel::initialize(const System& system, const CMAP
         data.gpu->sim.outputBuffers = maxBuffers;
 }
 
-void CudaCalcCMAPTorsionForceKernel::executeForces(ContextImpl& context) {
-    kCalculateCMAPTorsionForces(data.gpu, *coefficients, *mapPositions, *torsionIndices, *torsionMaps);
-}
-
-double CudaCalcCMAPTorsionForceKernel::executeEnergy(ContextImpl& context) {
+double CudaCalcCMAPTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     kCalculateCMAPTorsionForces(data.gpu, *coefficients, *mapPositions, *torsionIndices, *torsionMaps);
     return 0.0;
 }
@@ -518,12 +471,7 @@ void CudaCalcCustomTorsionForceKernel::initialize(const System& system, const Cu
         SetCustomTorsionGlobalParams(globalParamValues);
 }
 
-void CudaCalcCustomTorsionForceKernel::executeForces(ContextImpl& context) {
-    updateGlobalParams(context);
-    kCalculateCustomTorsionForces(data.gpu);
-}
-
-double CudaCalcCustomTorsionForceKernel::executeEnergy(ContextImpl& context) {
+double CudaCalcCustomTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     updateGlobalParams(context);
     kCalculateCustomTorsionForces(data.gpu);
     return 0.0;
@@ -650,10 +598,7 @@ void CudaCalcNonbondedForceKernel::initialize(const System& system, const Nonbon
     }
 }
 
-void CudaCalcNonbondedForceKernel::executeForces(ContextImpl& context) {
-}
-
-double CudaCalcNonbondedForceKernel::executeEnergy(ContextImpl& context) {
+double CudaCalcNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     return 0.0;
 }
 
@@ -716,11 +661,7 @@ void CudaCalcCustomNonbondedForceKernel::initialize(const System& system, const 
         SetCustomNonbondedGlobalParams(globalParamValues);
 }
 
-void CudaCalcCustomNonbondedForceKernel::executeForces(ContextImpl& context) {
-    updateGlobalParams(context);
-}
-
-double CudaCalcCustomNonbondedForceKernel::executeEnergy(ContextImpl& context) {
+double CudaCalcCustomNonbondedForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     updateGlobalParams(context);
     return 0.0;
 }
@@ -757,7 +698,8 @@ void CudaCalcGBSAOBCForceKernel::initialize(const System& system, const GBSAOBCF
     gpuSetObcParameters(gpu, (float) force.getSoluteDielectric(), (float) force.getSolventDielectric(), radius, scale, charge);
 }
 
-void CudaCalcGBSAOBCForceKernel::executeForces(ContextImpl& context) {
+double CudaCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+	return 0.0;
 }
 
 CudaCalcGBVIForceKernel::~CudaCalcGBVIForceKernel() {
@@ -785,10 +727,7 @@ void CudaCalcGBVIForceKernel::initialize(const System& system, const GBVIForce& 
                          radius, gammas, scaledRadii );
 }
 
-void CudaCalcGBVIForceKernel::executeForces(ContextImpl& context) {
-}
-
-double CudaCalcGBVIForceKernel::executeEnergy(ContextImpl& context) {
+double CudaCalcGBVIForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     return 0.0;
 }
 
@@ -815,12 +754,7 @@ void CudaCalcCustomExternalForceKernel::initialize(const System& system, const C
         SetCustomExternalGlobalParams(globalParamValues);
 }
 
-void CudaCalcCustomExternalForceKernel::executeForces(ContextImpl& context) {
-    updateGlobalParams(context);
-    kCalculateCustomExternalForces(data.gpu);
-}
-
-double CudaCalcCustomExternalForceKernel::executeEnergy(ContextImpl& context) {
+double CudaCalcCustomExternalForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     updateGlobalParams(context);
     kCalculateCustomExternalForces(data.gpu);
     return 0.0;
@@ -898,10 +832,6 @@ void OPENMMCUDA_EXPORT OpenMM::cudaOpenMMInitializeIntegration(const System& sys
     else
         kClearForces(gpu);
     cudaThreadSynchronize();
-}
-
-double CudaCalcGBSAOBCForceKernel::executeEnergy(ContextImpl& context) {
-	return 0.0;
 }
 
 CudaIntegrateVerletStepKernel::~CudaIntegrateVerletStepKernel() {

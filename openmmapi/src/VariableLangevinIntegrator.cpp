@@ -64,7 +64,7 @@ vector<string> VariableLangevinIntegrator::getKernelNames() {
 void VariableLangevinIntegrator::step(int steps) {
     for (int i = 0; i < steps; ++i) {
         context->updateContextState();
-        context->calcForces();
+        context->calcForcesAndEnergy(true, false);
         dynamic_cast<IntegrateVariableLangevinStepKernel&>(kernel.getImpl()).execute(*context, *this, std::numeric_limits<double>::infinity());
     }
 }
@@ -72,7 +72,7 @@ void VariableLangevinIntegrator::step(int steps) {
 void VariableLangevinIntegrator::stepTo(double time) {
     while (time > context->getTime()) {
         context->updateContextState();
-        context->calcForces();
+        context->calcForcesAndEnergy(true, false);
         dynamic_cast<IntegrateVariableLangevinStepKernel&>(kernel.getImpl()).execute(*context, *this, time);
     }
 }

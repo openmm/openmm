@@ -55,12 +55,8 @@ void GBSAOBCForceImpl::initialize(ContextImpl& context) {
     dynamic_cast<CalcGBSAOBCForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
 
-void GBSAOBCForceImpl::calcForces(ContextImpl& context) {
-    dynamic_cast<CalcGBSAOBCForceKernel&>(kernel.getImpl()).executeForces(context);
-}
-
-double GBSAOBCForceImpl::calcEnergy(ContextImpl& context) {
-    return dynamic_cast<CalcGBSAOBCForceKernel&>(kernel.getImpl()).executeEnergy(context);
+double GBSAOBCForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    return dynamic_cast<CalcGBSAOBCForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
 }
 
 std::vector<std::string> GBSAOBCForceImpl::getKernelNames() {

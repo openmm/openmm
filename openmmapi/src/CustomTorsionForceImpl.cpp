@@ -94,12 +94,8 @@ void CustomTorsionForceImpl::initialize(ContextImpl& context) {
     dynamic_cast<CalcCustomTorsionForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
 
-void CustomTorsionForceImpl::calcForces(ContextImpl& context) {
-    dynamic_cast<CalcCustomTorsionForceKernel&>(kernel.getImpl()).executeForces(context);
-}
-
-double CustomTorsionForceImpl::calcEnergy(ContextImpl& context) {
-    return dynamic_cast<CalcCustomTorsionForceKernel&>(kernel.getImpl()).executeEnergy(context);
+double CustomTorsionForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    return dynamic_cast<CalcCustomTorsionForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
 }
 
 vector<string> CustomTorsionForceImpl::getKernelNames() {

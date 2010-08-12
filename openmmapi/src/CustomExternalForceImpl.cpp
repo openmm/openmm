@@ -76,12 +76,8 @@ void CustomExternalForceImpl::initialize(ContextImpl& context) {
     dynamic_cast<CalcCustomExternalForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
 
-void CustomExternalForceImpl::calcForces(ContextImpl& context) {
-    dynamic_cast<CalcCustomExternalForceKernel&>(kernel.getImpl()).executeForces(context);
-}
-
-double CustomExternalForceImpl::calcEnergy(ContextImpl& context) {
-    return dynamic_cast<CalcCustomExternalForceKernel&>(kernel.getImpl()).executeEnergy(context);
+double CustomExternalForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    return dynamic_cast<CalcCustomExternalForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
 }
 
 vector<string> CustomExternalForceImpl::getKernelNames() {

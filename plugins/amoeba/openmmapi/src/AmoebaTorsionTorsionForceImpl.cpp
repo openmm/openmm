@@ -50,12 +50,8 @@ void AmoebaTorsionTorsionForceImpl::initialize(ContextImpl& context) {
     dynamic_cast<CalcAmoebaTorsionTorsionForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
 
-void AmoebaTorsionTorsionForceImpl::calcForces(ContextImpl& context ) {
-    dynamic_cast<CalcAmoebaTorsionTorsionForceKernel&>(kernel.getImpl()).executeForces(context);
-}
-
-double AmoebaTorsionTorsionForceImpl::calcEnergy(ContextImpl& context) {
-    return dynamic_cast<CalcAmoebaTorsionTorsionForceKernel&>(kernel.getImpl()).executeEnergy(context);
+double AmoebaTorsionTorsionForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    return dynamic_cast<CalcAmoebaTorsionTorsionForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
 }
 
 std::vector<std::string> AmoebaTorsionTorsionForceImpl::getKernelNames() {

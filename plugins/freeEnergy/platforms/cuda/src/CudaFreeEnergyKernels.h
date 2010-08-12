@@ -73,18 +73,14 @@ public:
      */
     void initialize(const System& system, const NonbondedSoftcoreForce& force);
     /**
-     * Execute the kernel to calculate the forces.
-     * 
-     * @param context    the context in which to execute this kernel
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
      */
-    void executeForces(ContextImpl& context);
-    /**
-     * Execute the kernel to calculate the energy.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @return the potential energy due to the NonbondedForce
-     */
-    double executeEnergy(ContextImpl& context);
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
     /**
      * Get flag signalling whether GBSA/OBC force is included
      *
@@ -177,18 +173,14 @@ public:
      */
     void initialize(const System& system, const GBSAOBCSoftcoreForce& force);
     /**
-     * Execute the kernel to calculate the forces.
-     * 
-     * @param context    the context in which to execute this kernel
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
      */
-    void executeForces(ContextImpl& context);
-    /**
-     * Execute the kernel to calculate the energy.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @return the potential energy due to the GBSAOBCForce
-     */
-    double executeEnergy(ContextImpl& context);
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
     CudaPlatform::PlatformData& data;
     FILE* log;
@@ -223,18 +215,14 @@ public:
      */
     void initialize(const System& system, const GBVISoftcoreForce& force, const std::vector<double> & scaledRadii);
     /**
-     * Execute the kernel to calculate the forces.
-     * 
-     * @param context    the context in which to execute this kernel
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
      */
-    void executeForces(ContextImpl& context);
-    /**
-     * Execute the kernel to calculate the energy.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @return the potential energy due to the GBVIForce
-     */
-    double executeEnergy(ContextImpl& context);
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 
     /**
      * Apply quintic scaling for Born radii

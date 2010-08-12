@@ -65,18 +65,14 @@ public:
      */
     virtual void initialize(const System& system, const GBSAOBCSoftcoreForce& force) = 0;
     /**
-     * Execute the kernel to calculate the forces.
-     * 
-     * @param context    the context in which to execute this kernel
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
      */
-    virtual void executeForces(ContextImpl& context) = 0;
-    /**
-     * Execute the kernel to calculate the energy.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @return the potential energy due to the GBSAOBCSoftcoreForce
-     */
-    virtual double executeEnergy(ContextImpl& context) = 0;
+    virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
 };
 
 /**
@@ -104,18 +100,14 @@ public:
      */
     virtual void initialize(const System& system, const NonbondedSoftcoreForce& force) = 0;
     /**
-     * Execute the kernel to calculate the forces.
-     * 
-     * @param context    the context in which to execute this kernel
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
      */
-    virtual void executeForces(ContextImpl& context) = 0;
-    /**
-     * Execute the kernel to calculate the energy.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @return the potential energy due to the NonbondedSoftcoreForce
-     */
-    virtual double executeEnergy(ContextImpl& context) = 0;
+    virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
 };
 
 /**
@@ -137,18 +129,14 @@ public:
      */
     virtual void initialize(const System& system, const GBVISoftcoreForce& force, const std::vector<double>& scaledRadii) = 0;
     /**
-     * Execute the kernel to calculate the forces.
-     * 
-     * @param context    the context in which to execute this kernel
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
      */
-    virtual void executeForces(ContextImpl& context) = 0;
-    /**
-     * Execute the kernel to calculate the energy.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @return the potential energy due to the GBVISoftcoreForce
-     */
-    virtual double executeEnergy(ContextImpl& context) = 0;
+    virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
 };
 
 } // namespace OpenMM

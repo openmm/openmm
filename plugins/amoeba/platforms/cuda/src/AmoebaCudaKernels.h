@@ -51,18 +51,14 @@ public:
      */
     void initialize(const System& system, const AmoebaHarmonicBondForce& force);
     /**
-     * Execute the kernel to calculate the forces.
-     * 
-     * @param context    the context in which to execute this kernel
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
      */
-    void executeForces(ContextImpl& context);
-    /**
-     * Execute the kernel to calculate the energy.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @return the potential energy due to the AmoebaHarmonicBondForce
-     */
-    double executeEnergy(ContextImpl& context);
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
     int numBonds;
     AmoebaCudaData& data;
@@ -84,18 +80,14 @@ public:
      */
     void initialize(const System& system, const AmoebaHarmonicAngleForce& force);
     /**
-     * Execute the kernel to calculate the forces.
-     * 
-     * @param context    the context in which to execute this kernel
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
      */
-    void executeForces(ContextImpl& context);
-    /**
-     * Execute the kernel to calculate the energy.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @return the potential energy due to the AmoebaHarmonicAngleForce
-     */
-    double executeEnergy(ContextImpl& context);
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
     int numAngles;
     AmoebaCudaData& data;
@@ -117,18 +109,14 @@ public:
      */
     void initialize(const System& system, const AmoebaHarmonicInPlaneAngleForce& force);
     /**
-     * Execute the kernel to calculate the forces.
-     * 
-     * @param context    the context in which to execute this kernel
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
      */
-    void executeForces(ContextImpl& context);
-    /**
-     * Execute the kernel to calculate the energy.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @return the potential energy due to the AmoebaHarmonicInPlaneAngleForce
-     */
-    double executeEnergy(ContextImpl& context);
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
     int numAngles;
     AmoebaCudaData& data;
@@ -150,18 +138,14 @@ public:
      */
     void initialize(const System& system, const AmoebaTorsionForce& force);
     /**
-     * Execute the kernel to calculate the forces.
-     * 
-     * @param context    the context in which to execute this kernel
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
      */
-    void executeForces(ContextImpl& context);
-    /**
-     * Execute the kernel to calculate the energy.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @return the potential energy due to the AmoebaTorsionForce
-     */
-    double executeEnergy(ContextImpl& context);
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
     int numTorsions;
     AmoebaCudaData& data;
@@ -183,18 +167,14 @@ public:
      */
     void initialize(const System& system, const AmoebaPiTorsionForce& force);
     /**
-     * Execute the kernel to calculate the forces.
-     * 
-     * @param context    the context in which to execute this kernel
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
      */
-    void executeForces(ContextImpl& context);
-    /**
-     * Execute the kernel to calculate the energy.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @return the potential energy due to the AmoebaPiTorsionForce
-     */
-    double executeEnergy(ContextImpl& context);
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
     int numPiTorsions;
     AmoebaCudaData& data;
@@ -216,18 +196,14 @@ public:
      */
     void initialize(const System& system, const AmoebaStretchBendForce& force);
     /**
-     * Execute the kernel to calculate the forces.
-     * 
-     * @param context    the context in which to execute this kernel
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
      */
-    void executeForces(ContextImpl& context);
-    /**
-     * Execute the kernel to calculate the energy.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @return the potential energy due to the AmoebaStretchBendForce
-     */
-    double executeEnergy(ContextImpl& context);
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
     int numStretchBends;
     AmoebaCudaData& data;
@@ -249,18 +225,14 @@ public:
      */
     void initialize(const System& system, const AmoebaOutOfPlaneBendForce& force);
     /**
-     * Execute the kernel to calculate the forces.
-     * 
-     * @param context    the context in which to execute this kernel
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
      */
-    void executeForces(ContextImpl& context);
-    /**
-     * Execute the kernel to calculate the energy.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @return the potential energy due to the AmoebaOutOfPlaneBendForce
-     */
-    double executeEnergy(ContextImpl& context);
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
     int numOutOfPlaneBends;
     AmoebaCudaData& data;
@@ -282,18 +254,14 @@ public:
      */
     void initialize(const System& system, const AmoebaTorsionTorsionForce& force);
     /**
-     * Execute the kernel to calculate the forces.
-     * 
-     * @param context    the context in which to execute this kernel
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
      */
-    void executeForces(ContextImpl& context);
-    /**
-     * Execute the kernel to calculate the energy.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @return the potential energy due to the AmoebaTorsionTorsionForce
-     */
-    double executeEnergy(ContextImpl& context);
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
     int numTorsionTorsions;
     int numTorsionTorsionGrids;
@@ -316,18 +284,14 @@ public:
      */
     void initialize(const System& system, const AmoebaMultipoleForce& force);
     /**
-     * Execute the kernel to calculate the forces.
-     * 
-     * @param context    the context in which to execute this kernel
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
      */
-    void executeForces(ContextImpl& context);
-    /**
-     * Execute the kernel to calculate the energy.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @return the potential energy due to the AmoebaMultipoleForce
-     */
-    double executeEnergy(ContextImpl& context);
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
     int numMultipoles;
     AmoebaCudaData& data;
@@ -349,18 +313,14 @@ public:
      */
     void initialize(const System& system, const AmoebaGeneralizedKirkwoodForce& force);
     /**
-     * Execute the kernel to calculate the forces.
-     * 
-     * @param context    the context in which to execute this kernel
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
      */
-    void executeForces(ContextImpl& context);
-    /**
-     * Execute the kernel to calculate the energy.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @return the potential energy due to the AmoebaMultipoleForce
-     */
-    double executeEnergy(ContextImpl& context);
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
     AmoebaCudaData& data;
     System& system;
@@ -381,18 +341,14 @@ public:
      */
     void initialize(const System& system, const AmoebaSASAForce& force);
     /**
-     * Execute the kernel to calculate the forces.
-     * 
-     * @param context    the context in which to execute this kernel
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
      */
-    void executeForces(ContextImpl& context);
-    /**
-     * Execute the kernel to calculate the energy.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @return the potential energy due to the AmoebaMultipoleForce
-     */
-    double executeEnergy(ContextImpl& context);
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
     AmoebaCudaData& data;
     System& system;
@@ -413,18 +369,14 @@ public:
      */
     void initialize(const System& system, const AmoebaVdwForce& force);
     /**
-     * Execute the kernel to calculate the forces.
-     * 
-     * @param context    the context in which to execute this kernel
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
      */
-    void executeForces(ContextImpl& context);
-    /**
-     * Execute the kernel to calculate the energy.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @return the potential energy due to the AmoebaMultipoleForce
-     */
-    double executeEnergy(ContextImpl& context);
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
     AmoebaCudaData& data;
     System& system;
@@ -445,18 +397,14 @@ public:
      */
     void initialize(const System& system, const AmoebaWcaDispersionForce& force);
     /**
-     * Execute the kernel to calculate the forces.
-     * 
-     * @param context    the context in which to execute this kernel
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
      */
-    void executeForces(ContextImpl& context);
-    /**
-     * Execute the kernel to calculate the energy.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @return the potential energy due to the AmoebaMultipoleForce
-     */
-    double executeEnergy(ContextImpl& context);
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
     AmoebaCudaData& data;
     System& system;

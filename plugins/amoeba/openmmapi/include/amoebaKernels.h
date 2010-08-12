@@ -61,18 +61,14 @@ public:
      */
     virtual void initialize(const System& system, const AmoebaHarmonicBondForce& force) = 0;
     /**
-     * Execute the kernel to calculate the forces.
-     * 
-     * @param context    the context in which to execute this kernel
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
      */
-    virtual void executeForces(ContextImpl& context) = 0;
-    /**
-     * Execute the kernel to calculate the energy.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @return the potential energy due to the HarmonicBondForce
-     */
-    virtual double executeEnergy(ContextImpl& context) = 0;
+    virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
 };
 
 /**
@@ -93,18 +89,14 @@ public:
      */
     virtual void initialize(const System& system, const AmoebaHarmonicAngleForce& force) = 0;
     /**
-     * Execute the kernel to calculate the forces.
-     * 
-     * @param context    the context in which to execute this kernel
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
      */
-    virtual void executeForces(ContextImpl& context) = 0;
-    /**
-     * Execute the kernel to calculate the energy.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @return the potential energy due to the HarmonicAngleForce
-     */
-    virtual double executeEnergy(ContextImpl& context) = 0;
+    virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
 };
 
 /**
@@ -125,18 +117,14 @@ public:
      */
     virtual void initialize(const System& system, const AmoebaHarmonicInPlaneAngleForce& force) = 0;
     /**
-     * Execute the kernel to calculate the forces.
-     * 
-     * @param context    the context in which to execute this kernel
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
      */
-    virtual void executeForces(ContextImpl& context) = 0;
-    /**
-     * Execute the kernel to calculate the energy.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @return the potential energy due to the HarmonicInPlaneAngleForce
-     */
-    virtual double executeEnergy(ContextImpl& context) = 0;
+    virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
 };
 
 /**
@@ -157,18 +145,14 @@ public:
      */
     virtual void initialize(const System& system, const AmoebaTorsionForce& force) = 0;
     /**
-     * Execute the kernel to calculate the forces.
-     * 
-     * @param context    the context in which to execute this kernel
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
      */
-    virtual void executeForces(ContextImpl& context) = 0;
-    /**
-     * Execute the kernel to calculate the energy.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @return the potential energy due to the TorsionForce
-     */
-    virtual double executeEnergy(ContextImpl& context) = 0;
+    virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
 };
 
 /**
@@ -189,18 +173,14 @@ public:
      */
     virtual void initialize(const System& system, const AmoebaPiTorsionForce& force) = 0;
     /**
-     * Execute the kernel to calculate the forces.
-     * 
-     * @param context    the context in which to execute this kernel
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
      */
-    virtual void executeForces(ContextImpl& context) = 0;
-    /**
-     * Execute the kernel to calculate the energy.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @return the potential energy due to the PiTorsionForce
-     */
-    virtual double executeEnergy(ContextImpl& context) = 0;
+    virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
 };
 
 /**
@@ -221,18 +201,14 @@ public:
      */
     virtual void initialize(const System& system, const AmoebaStretchBendForce& force) = 0;
     /**
-     * Execute the kernel to calculate the forces.
-     * 
-     * @param context    the context in which to execute this kernel
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
      */
-    virtual void executeForces(ContextImpl& context) = 0;
-    /**
-     * Execute the kernel to calculate the energy.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @return the potential energy due to the StretchBendForce
-     */
-    virtual double executeEnergy(ContextImpl& context) = 0;
+    virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
 };
 
 /**
@@ -253,18 +229,14 @@ public:
      */
     virtual void initialize(const System& system, const AmoebaOutOfPlaneBendForce& force) = 0;
     /**
-     * Execute the kernel to calculate the forces.
-     * 
-     * @param context    the context in which to execute this kernel
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
      */
-    virtual void executeForces(ContextImpl& context) = 0;
-    /**
-     * Execute the kernel to calculate the energy.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @return the potential energy due to the OutOfPlaneBendForce
-     */
-    virtual double executeEnergy(ContextImpl& context) = 0;
+    virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
 };
 
 /**
@@ -285,18 +257,14 @@ public:
      */
     virtual void initialize(const System& system, const AmoebaTorsionTorsionForce& force) = 0;
     /**
-     * Execute the kernel to calculate the forces.
-     * 
-     * @param context    the context in which to execute this kernel
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
      */
-    virtual void executeForces(ContextImpl& context) = 0;
-    /**
-     * Execute the kernel to calculate the energy.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @return the potential energy due to the TorsionTorsionForce
-     */
-    virtual double executeEnergy(ContextImpl& context) = 0;
+    virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
 };
 
 /**
@@ -317,18 +285,14 @@ public:
      */
     virtual void initialize(const System& system, const AmoebaMultipoleForce& force) = 0;
     /**
-     * Execute the kernel to calculate the forces.
-     * 
-     * @param context    the context in which to execute this kernel
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
      */
-    virtual void executeForces(ContextImpl& context) = 0;
-    /**
-     * Execute the kernel to calculate the energy.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @return the potential energy due to the MultipoleForce
-     */
-    virtual double executeEnergy(ContextImpl& context) = 0;
+    virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
 };
 
 /**
@@ -350,18 +314,14 @@ public:
      */
     virtual void initialize(const System& system, const AmoebaGeneralizedKirkwoodForce& force) = 0;
     /**
-     * Execute the kernel to calculate the forces.
-     * 
-     * @param context    the context in which to execute this kernel
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
      */
-    virtual void executeForces(ContextImpl& context) = 0;
-    /**
-     * Execute the kernel to calculate the energy.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @return the potential energy due to the GBSAOBCForce
-     */
-    virtual double executeEnergy(ContextImpl& context) = 0;
+    virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
 };
 
 /**
@@ -383,18 +343,14 @@ public:
      */
     virtual void initialize(const System& system, const AmoebaSASAForce& force) = 0;
     /**
-     * Execute the kernel to calculate the forces.
-     * 
-     * @param context    the context in which to execute this kernel
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
      */
-    virtual void executeForces(ContextImpl& context) = 0;
-    /**
-     * Execute the kernel to calculate the energy.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @return the potential energy due to the GBSAOBCForce
-     */
-    virtual double executeEnergy(ContextImpl& context) = 0;
+    virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
 };
 
 /**
@@ -416,18 +372,14 @@ public:
      */
     virtual void initialize(const System& system, const AmoebaVdwForce& force) = 0;
     /**
-     * Execute the kernel to calculate the forces.
-     * 
-     * @param context    the context in which to execute this kernel
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
      */
-    virtual void executeForces(ContextImpl& context) = 0;
-    /**
-     * Execute the kernel to calculate the energy.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @return the potential energy due to the GBSAOBCForce
-     */
-    virtual double executeEnergy(ContextImpl& context) = 0;
+    virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
 };
 
 /**
@@ -449,18 +401,14 @@ public:
      */
     virtual void initialize(const System& system, const AmoebaWcaDispersionForce& force) = 0;
     /**
-     * Execute the kernel to calculate the forces.
-     * 
-     * @param context    the context in which to execute this kernel
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
      */
-    virtual void executeForces(ContextImpl& context) = 0;
-    /**
-     * Execute the kernel to calculate the energy.
-     * 
-     * @param context    the context in which to execute this kernel
-     * @return the potential energy due to the GBSAOBCForce
-     */
-    virtual double executeEnergy(ContextImpl& context) = 0;
+    virtual double execute(ContextImpl& context, bool includeForces, bool includeEnergy) = 0;
 };
 
 } // namespace OpenMM

@@ -164,18 +164,18 @@ public:
      */
     void applyConstraints(double tol);
     /**
-     * Recalculate all of the forces in the system.  After calling this, use getForces() to retrieve
-     * the forces that were calculated.
+     * Recalculate all of the forces in the system and/or the potential energy of the system (in kJ/mol).
+     * After calling this, use getForces() to retrieve the forces that were calculated.
+     *
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy of the system, or 0 if includeEnergy is false
      */
-    void calcForces();
+    double calcForcesAndEnergy(bool includeForces, bool includeEnergy);
     /**
      * Calculate the kinetic energy of the system (in kJ/mol).
      */
     double calcKineticEnergy();
-    /**
-     * Calculate the potential energy of the system (in kJ/mol).
-     */
-    double calcPotentialEnergy();
     /**
      * This should be called at the start of each time step.  It calls updateContextState() on each
      * ForceImpl in the system, allowing them to modify the values of state variables.

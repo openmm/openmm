@@ -56,8 +56,7 @@ public:
     void updateContextState(ContextImpl& context) {
         // This force field doesn't update the state directly.
     }
-    void calcForces(ContextImpl& context);
-    double calcEnergy(ContextImpl& context);
+    double calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy);
     std::map<std::string, double> getDefaultParameters();
     std::vector<std::string> getKernelNames();
 private:

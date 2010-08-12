@@ -50,12 +50,8 @@ void AmoebaVdwForceImpl::initialize(ContextImpl& context) {
     dynamic_cast<CalcAmoebaVdwForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
 
-void AmoebaVdwForceImpl::calcForces(ContextImpl& context ) {
-    dynamic_cast<CalcAmoebaVdwForceKernel&>(kernel.getImpl()).executeForces(context);
-}
-
-double AmoebaVdwForceImpl::calcEnergy(ContextImpl& context) {
-    return dynamic_cast<CalcAmoebaVdwForceKernel&>(kernel.getImpl()).executeEnergy(context);
+double AmoebaVdwForceImpl::calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    return dynamic_cast<CalcAmoebaVdwForceKernel&>(kernel.getImpl()).execute(context, includeForces, includeEnergy);
 }
 
 std::vector<std::string> AmoebaVdwForceImpl::getKernelNames() {

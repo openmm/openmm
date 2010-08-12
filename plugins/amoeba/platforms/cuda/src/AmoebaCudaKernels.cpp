@@ -90,13 +90,7 @@ void CudaCalcAmoebaHarmonicBondForceKernel::initialize(const System& system, con
                                 static_cast<float>(force.getAmoebaGlobalHarmonicBondQuartic()) );
 }
 
-void CudaCalcAmoebaHarmonicBondForceKernel::executeForces(ContextImpl& context) {
-    if( data.getAmoebaLocalForcesKernel() == this ){
-        computeAmoebaLocalForces( data );
-    }
-}
-
-double CudaCalcAmoebaHarmonicBondForceKernel::executeEnergy(ContextImpl& context) {
+double CudaCalcAmoebaHarmonicBondForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     if( data.getAmoebaLocalForcesKernel() == this ){
         computeAmoebaLocalForces( data );
     }
@@ -137,13 +131,7 @@ void CudaCalcAmoebaHarmonicAngleForceKernel::initialize(const System& system, co
 
 }
 
-void CudaCalcAmoebaHarmonicAngleForceKernel::executeForces(ContextImpl& context) {
-    if( data.getAmoebaLocalForcesKernel() == this ){
-        computeAmoebaLocalForces( data );
-    }
-}
-
-double CudaCalcAmoebaHarmonicAngleForceKernel::executeEnergy(ContextImpl& context) {
+double CudaCalcAmoebaHarmonicAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     if( data.getAmoebaLocalForcesKernel() == this ){
         computeAmoebaLocalForces( data );
     }
@@ -187,13 +175,7 @@ void CudaCalcAmoebaHarmonicInPlaneAngleForceKernel::initialize(const System& sys
 
 }
 
-void CudaCalcAmoebaHarmonicInPlaneAngleForceKernel::executeForces(ContextImpl& context) {
-    if( data.getAmoebaLocalForcesKernel() == this ){
-        computeAmoebaLocalForces( data );
-    }
-}
-
-double CudaCalcAmoebaHarmonicInPlaneAngleForceKernel::executeEnergy(ContextImpl& context) {
+double CudaCalcAmoebaHarmonicInPlaneAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     if( data.getAmoebaLocalForcesKernel() == this ){
         computeAmoebaLocalForces( data );
     }
@@ -246,13 +228,7 @@ void CudaCalcAmoebaTorsionForceKernel::initialize(const System& system, const Am
 
 }
 
-void CudaCalcAmoebaTorsionForceKernel::executeForces(ContextImpl& context) {
-    if( data.getAmoebaLocalForcesKernel() == this ){
-        computeAmoebaLocalForces( data );
-    }
-}
-
-double CudaCalcAmoebaTorsionForceKernel::executeEnergy(ContextImpl& context) {
+double CudaCalcAmoebaTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     if( data.getAmoebaLocalForcesKernel() == this ){
         computeAmoebaLocalForces( data );
     }
@@ -292,13 +268,7 @@ void CudaCalcAmoebaPiTorsionForceKernel::initialize(const System& system, const 
     gpuSetAmoebaPiTorsionParameters(data.getAmoebaGpu(), particle1, particle2, particle3, particle4, particle5, particle6, torsionKParameters);
 }
 
-void CudaCalcAmoebaPiTorsionForceKernel::executeForces(ContextImpl& context) {
-    if( data.getAmoebaLocalForcesKernel() == this ){
-        computeAmoebaLocalForces( data );
-    }
-}
-
-double CudaCalcAmoebaPiTorsionForceKernel::executeEnergy(ContextImpl& context) {
+double CudaCalcAmoebaPiTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     if( data.getAmoebaLocalForcesKernel() == this ){
         computeAmoebaLocalForces( data );
     }
@@ -341,13 +311,7 @@ void CudaCalcAmoebaStretchBendForceKernel::initialize(const System& system, cons
 
 }
 
-void CudaCalcAmoebaStretchBendForceKernel::executeForces(ContextImpl& context) {
-    if( data.getAmoebaLocalForcesKernel() == this ){
-        computeAmoebaLocalForces( data );
-    }
-}
-
-double CudaCalcAmoebaStretchBendForceKernel::executeEnergy(ContextImpl& context) {
+double CudaCalcAmoebaStretchBendForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     if( data.getAmoebaLocalForcesKernel() == this ){
         computeAmoebaLocalForces( data );
     }
@@ -388,13 +352,7 @@ void CudaCalcAmoebaOutOfPlaneBendForceKernel::initialize(const System& system, c
 
 }
 
-void CudaCalcAmoebaOutOfPlaneBendForceKernel::executeForces(ContextImpl& context) {
-    if( data.getAmoebaLocalForcesKernel() == this ){
-        computeAmoebaLocalForces( data );
-    }
-}
-
-double CudaCalcAmoebaOutOfPlaneBendForceKernel::executeEnergy(ContextImpl& context) {
+double CudaCalcAmoebaOutOfPlaneBendForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     if( data.getAmoebaLocalForcesKernel() == this ){
         computeAmoebaLocalForces( data );
     }
@@ -460,13 +418,7 @@ void CudaCalcAmoebaTorsionTorsionForceKernel::initialize(const System& system, c
 
 }
 
-void CudaCalcAmoebaTorsionTorsionForceKernel::executeForces(ContextImpl& context) {
-    if( data.getAmoebaLocalForcesKernel() == this ){
-        computeAmoebaLocalForces( data );
-    }
-}
-
-double CudaCalcAmoebaTorsionTorsionForceKernel::executeEnergy(ContextImpl& context) {
+double CudaCalcAmoebaTorsionTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     if( data.getAmoebaLocalForcesKernel() == this ){
         computeAmoebaLocalForces( data );
     }
@@ -632,11 +584,7 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
 
 }
 
-void CudaCalcAmoebaMultipoleForceKernel::executeForces(ContextImpl& context) {
-    computeAmoebaMultipoleForce( data );
-}
-
-double CudaCalcAmoebaMultipoleForceKernel::executeEnergy(ContextImpl& context) {
+double CudaCalcAmoebaMultipoleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     computeAmoebaMultipoleForce( data );
     return 0.0;
 }
@@ -679,11 +627,7 @@ void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::initialize(const System& syst
                                static_cast<float>( force.getSurfaceAreaFactor() ) ); 
 }
 
-void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::executeForces(ContextImpl& context) {
-    // handled in computeAmoebaMultipoleForce()
-}
-
-double CudaCalcAmoebaGeneralizedKirkwoodForceKernel::executeEnergy(ContextImpl& context) {
+double CudaCalcAmoebaGeneralizedKirkwoodForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     // handled in computeAmoebaMultipoleForce()
     return 0.0;
 }
@@ -721,10 +665,7 @@ fflush( stderr );
 */
 }
 
-void CudaCalcAmoebaSASAForceKernel::executeForces(ContextImpl& context) {
-}
-
-double CudaCalcAmoebaSASAForceKernel::executeEnergy(ContextImpl& context) {
+double CudaCalcAmoebaSASAForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     return 0.0;
 }
 
@@ -783,11 +724,7 @@ void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const Amoeba
                                allExclusions );
 }
 
-void CudaCalcAmoebaVdwForceKernel::executeForces(ContextImpl& context) {
-    computeAmoebaVdwForce( data );
-}
-
-double CudaCalcAmoebaVdwForceKernel::executeEnergy(ContextImpl& context) {
+double CudaCalcAmoebaVdwForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     computeAmoebaVdwForce( data );
     return 0.0;
 }
@@ -845,11 +782,7 @@ void CudaCalcAmoebaWcaDispersionForceKernel::initialize(const System& system, co
                                           static_cast<float>( force.getDispoff( ) ) );
 }
 
-void CudaCalcAmoebaWcaDispersionForceKernel::executeForces(ContextImpl& context) {
-    computeAmoebaWcaDispersionForce( data );
-}
-
-double CudaCalcAmoebaWcaDispersionForceKernel::executeEnergy(ContextImpl& context) {
+double CudaCalcAmoebaWcaDispersionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     computeAmoebaWcaDispersionForce( data );
     return 0.0;
 }

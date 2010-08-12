@@ -50,7 +50,7 @@ public:
         return owner;
     }
     void updateContextState(ContextImpl& context);
-    void calcForces(ContextImpl& context) {
+    double calcForcesAndEnergy(ContextImpl& context, bool includeForces, bool includeEnergy) {
         // This force doesn't apply forces to particles.
     }
     double calcEnergy(ContextImpl& context) {
