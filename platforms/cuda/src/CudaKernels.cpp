@@ -48,16 +48,13 @@ void CudaCalcForcesAndEnergyKernel::beginComputation(ContextImpl& context, bool 
     _gpuContext* gpu = data.gpu;
     if (data.nonbondedMethod != NO_CUTOFF && data.computeForceCount%100 == 0)
         gpuReorderAtoms(gpu);
-    if (includeForces)
-        data.computeForceCount++;
+    data.computeForceCount++;
     if (gpu->bIncludeGBSA || gpu->bIncludeGBVI)
         kClearBornSumAndForces(gpu);
     else if (includeForces)
         kClearForces(gpu);
-    if (includeEnergy) {
-        data.stepCount++;
+    if (includeEnergy)
         kClearEnergy(gpu);
-    }
 }
 
 double CudaCalcForcesAndEnergyKernel::finishComputation(ContextImpl& context, bool includeForces, bool includeEnergy) {
