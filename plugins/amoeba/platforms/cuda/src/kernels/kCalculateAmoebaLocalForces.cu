@@ -306,9 +306,7 @@ __launch_bounds__(G8X_LOCALFORCES_THREADS_PER_BLOCK, 1)
 void kCalculateAmoebaLocalForces_kernel()
 {
     unsigned int pos = blockIdx.x * blockDim.x + threadIdx.x;
-    //Vectors* A = &sV[threadIdx.x];
-
-    float energy = 0.0f;
+    float energy     = 0.0f;
 
     while (pos < cAmoebaSim.amoebaBond_offset)
     {
@@ -804,15 +802,6 @@ void kCalculateAmoebaLocalForces_kernel()
         {
             int4   atom1            = cAmoebaSim.pAmoebaPiTorsionID1[pos1];  
             int4   atom2            = cAmoebaSim.pAmoebaPiTorsionID2[pos1];  
-
-            /*
-               torsionParam1.x      amplitude(1)
-               torsionParam1.y      phase(1)
-               torsionParam1.z      amplitude(2)
-               torsionParam1.w      phase(2)
-               torsionParam2.x      amplitude(3)
-               torsionParam2.y      phase(3)
-            */
 
             float4 a1               = cSim.pPosq[atom1.x];
             float4 a2               = cSim.pPosq[atom1.y];

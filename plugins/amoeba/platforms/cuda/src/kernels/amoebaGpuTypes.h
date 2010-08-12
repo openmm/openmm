@@ -317,12 +317,9 @@ void gpuSetAmoebaVdwParameters( amoebaGpuContext amoebaGpu,
                                 const std::vector<int>& indexClasses, 
                                 const std::vector<float>& sigmas,
                                 const std::vector<float>& epsilons,
-                                const std::vector<float>& sigma4s,
-                                const std::vector<float>& epsilon4s,
                                 const std::vector<float>& reductions,
                                 const std::string& sigmaCombiningRule,
                                 const std::string& epsilonCombiningRule,
-                                const std::vector< std::vector< std::vector<float> > >& sigEpsTable,
                                 const std::vector< std::vector<int> >& allExclusions );
 extern "C"
 void amoebaGpuBuildVdwExclusionList( amoebaGpuContext amoebaGpu,  const std::vector< std::vector<int> >& exclusions );

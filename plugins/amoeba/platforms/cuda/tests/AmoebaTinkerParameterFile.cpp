@@ -2415,42 +2415,7 @@ static int readAmoebaVdwParameters( FILE* filePtr, MapStringInt& forceMap, const
         (void) fprintf( log, "Amoeba Vdw force is not being included.\n" );
     }
 
-    // read sig/eps table
- 
-    bool tableLoaded = 0;
-    int numberOfParticles;
-    if( tokens[0] == "AmoebaVdw14_7SigEpsTable" ){
-        tableLoaded  = 1;
-        int tableSize  = atoi( tokens[1].c_str() );
-        if( log ){
-            (void) fprintf( log, "%s vdwForce table size=%d\n", methodName.c_str(), tableSize);
-        }
-        vdwForce->setSigEpsTableSize( tableSize );
-        for( int ii = 0; ii < tableSize; ii++ ){
-            StringVector lineTokens;
-            int isNotEof = readLine( filePtr, lineTokens, lineCount, log );
-            if( lineTokens.size() > 2 ){
-                int tokenIndex       = 0;
-                int index            = atoi( lineTokens[tokenIndex++].c_str() );
-                for( int jj = 0; jj < tableSize; jj++ ){
-                   double radius        = atof( lineTokens[tokenIndex++].c_str() );
-                   double epsilon       = atof( lineTokens[tokenIndex++].c_str() );
-                   double radius4       = atof( lineTokens[tokenIndex++].c_str() );
-                   double epsilon4      = atof( lineTokens[tokenIndex++].c_str() );
-                   vdwForce->setSigEpsTableEntry( ii, jj, radius, epsilon, radius4, epsilon4 );
-                }
-            } else {
-                (void) fprintf( log, "%s AmoebaVdw table tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
-                exit(-1);
-            }
-        }
-     
-        StringVector lineTokensT;
-        int isNotEof                 = readLine( filePtr, lineTokensT, lineCount, log );
-        numberOfParticles            = atoi( lineTokensT[1].c_str() );
-    } else {
-        numberOfParticles            = atoi( tokens[1].c_str() );
-    }
+    int numberOfParticles = atoi( tokens[1].c_str() );
 
     // read in parameters
  
@@ -2467,11 +2432,9 @@ static int readAmoebaVdwParameters( FILE* filePtr, MapStringInt& forceMap, const
             int indexIV          = atoi( lineTokens[tokenIndex++].c_str() );
             int indexClass       = atoi( lineTokens[tokenIndex++].c_str() );
             double sigma         = atof( lineTokens[tokenIndex++].c_str() );
-            double sigma4        = atof( lineTokens[tokenIndex++].c_str() );
             double epsilon       = atof( lineTokens[tokenIndex++].c_str() );
-            double epsilon4      = atof( lineTokens[tokenIndex++].c_str() );
             double reduction     = atof( lineTokens[tokenIndex++].c_str() );
-            vdwForce->addParticle( indexIV, indexClass, sigma, sigma4, epsilon, epsilon4, reduction );
+            vdwForce->addParticle( indexIV, indexClass, sigma, epsilon, reduction );
         } else {
             (void) fprintf( log, "%s AmoebaVdwForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
             exit(-1);
@@ -2559,40 +2522,13 @@ static int readAmoebaVdwParameters( FILE* filePtr, MapStringInt& forceMap, const
     // convert units to kJ-nm from kCal-Angstrom?
 
     if( useOpenMMUnits ){
-
-        unsigned int tableSize = static_cast<unsigned int>(vdwForce->getSigEpsTableSize());
-       if( tableLoaded ){
-/*
-            for( unsigned int ii = 0; ii < tableSize;  ii++ ){
-                for( unsigned int jj = 0; jj < tableSize;  jj++ ){
-                    double sig, eps, sig4, eps4;
-                    vdwForce->getSigEpsTableEntry( ii, jj, sig, eps, sig4, eps4);
-                    (void) fprintf( log, "%8d %8d %10.4f %10.4f %10.4f %10.4f\n", ii, jj, sig, eps, sig4, eps4 );
-    
-                    // skip to end
-           
-                    if( jj == maxPrint && (tableSize - maxPrint) > jj ){
-                        jj = tableSize - maxPrint - 1;
-                    } 
-                } 
-        
-                // skip to end
-       
-                if( ii == maxPrint && (tableSize - maxPrint) > ii ){
-                    ii = tableSize - maxPrint - 1;
-                } 
-            }
-*/
-        }
-
         for( int ii = 0; ii < vdwForce->getNumParticles();  ii++ ){
             int indexIV, indexClass;
-            double sigma, sigma4, epsilon, epsilon4, reduction;
-            vdwForce->getParticleParameters( ii, indexIV, indexClass, sigma, sigma4, epsilon, epsilon4, reduction );
+            double sigma, epsilon, reduction;
+            vdwForce->getParticleParameters( ii, indexIV, indexClass, sigma, epsilon, reduction );
             sigma        *= AngstromToNm;
-            sigma4       *= AngstromToNm;
             epsilon      *= CalToJoule;
-            vdwForce->setParticleParameters( ii, indexIV, indexClass, sigma, sigma4, epsilon, epsilon4, reduction );
+            vdwForce->setParticleParameters( ii, indexIV, indexClass, sigma, epsilon, reduction );
         }
     }
 
@@ -2603,44 +2539,18 @@ static int readAmoebaVdwParameters( FILE* filePtr, MapStringInt& forceMap, const
         //static const unsigned int maxPrint   = MAX_PRINT;
         static const int maxPrint            = 15;
         unsigned int arraySize               = static_cast<unsigned int>(vdwForce->getNumParticles());
-        unsigned int tableSize               = static_cast<unsigned int>(vdwForce->getSigEpsTableSize());
-        (void) fprintf( log, "%s: %u sample of AmoebaVdwForce parameters using %s units; SigEpsTableSize=%d combining rules=[sig=%s eps=%s]\n",
+        (void) fprintf( log, "%s: %u sample of AmoebaVdwForce parameters using %s units; combining rules=[sig=%s eps=%s]\n",
                         methodName.c_str(), arraySize, (useOpenMMUnits ? "OpenMM" : "Amoeba"),
-                        vdwForce->getSigEpsTableSize(),
                         vdwForce->getSigmaCombiningRule().c_str(), vdwForce->getEpsilonCombiningRule().c_str() );
   
-       if( tableLoaded ){
-            for( unsigned int ii = 0; ii < tableSize;  ii++ ){
-                for( unsigned int jj = 0; jj < tableSize;  jj++ ){
-                    double sig, eps, sig4, eps4;
-                    vdwForce->getSigEpsTableEntry( ii, jj, sig, eps, sig4, eps4);
-                    (void) fprintf( log, "%8d %8d %10.4f %10.4f %10.4f %10.4f\n", ii, jj, sig, eps, sig4, eps4 );
-    
-                    // skip to end
-           
-                    if( jj == maxPrint && (tableSize - maxPrint) > jj ){
-                        jj = tableSize - maxPrint - 1;
-                    } 
-                } 
-        
-                // skip to end
-       
-                if( ii == maxPrint && (tableSize - maxPrint) > ii ){
-                    ii = tableSize - maxPrint - 1;
-                } 
-            }
-        } else {
-            (void) fprintf( log, "SigWEps table not loaded\n" );
-        }
-
         for( int ii = 0; ii < vdwForce->getNumParticles();  ii++ ){
             int indexIV, indexClass;
-            double sigma, sigma4, epsilon, epsilon4, reduction;
+            double sigma, epsilon, reduction;
             std::vector< int > exclusions;
-            vdwForce->getParticleParameters( ii, indexIV, indexClass, sigma, sigma4, epsilon, epsilon4, reduction );
+            vdwForce->getParticleParameters( ii, indexIV, indexClass, sigma, epsilon, reduction );
             vdwForce->getParticleExclusions( ii, exclusions );
-            (void) fprintf( log, "%8d %8d %8d sig=[%10.4f %10.4f] eps=[ %10.4f %10.4f] redct=%10.4f ",
-                            ii, indexIV, indexClass, sigma, sigma4, epsilon, epsilon4, reduction );
+            (void) fprintf( log, "%8d %8d %8d sig=%10.4f eps=%10.4f redct=%10.4f ",
+                            ii, indexIV, indexClass, sigma, epsilon, reduction );
 
             (void) fprintf( log, "Excl=%3u [", static_cast<unsigned int>(exclusions.size()) );
             for( unsigned int jj = 0; jj < exclusions.size();  jj++ ){
@@ -2654,30 +2564,6 @@ static int readAmoebaVdwParameters( FILE* filePtr, MapStringInt& forceMap, const
                 ii = arraySize - maxPrint - 1;
             } 
         }
-
-        // check if sigmas/sgma4s and epslon/epsilon4s same
-
-        bool anyDifferentSigma   = false;
-        bool anyDifferentEpsilon = false;
-        for( unsigned int ii = 0; ii < arraySize && !anyDifferentSigma && !anyDifferentEpsilon;  ii++ ){
-            int indexIV, indexClass;
-            double sigma, sigma4, epsilon, epsilon4, reduction;
-            vdwForce->getParticleParameters( ii, indexIV, indexClass, sigma, sigma4, epsilon, epsilon4, reduction );
-            if( fabs( sigma - sigma4 ) > 1.0e-05 ){
-                anyDifferentSigma = true;
-                (void) fprintf( log, "sigmas and sigma4 different at entry %d [%14.7f [%14.7f]\n", ii, sigma, sigma4 );
-            }
-            if( fabs( epsilon - epsilon4 ) > 1.0e-05 ){
-                anyDifferentEpsilon = true;
-                (void) fprintf( log, "epsilons and epsilon4 different at entry %d [%14.7f [%14.7f]\n", ii, epsilon, epsilon4 );
-            }
-        }
-        if( anyDifferentSigma || anyDifferentEpsilon ){ 
-            (void) fprintf( log, "sigmas and sigma4s and epsilons and epsilon4 are NOT identical.\n" );
-        } else {
-            (void) fprintf( log, "sigmas and sigma4s and epsilons and epsilon4s are identical.\n" );
-        }
-
         (void) fflush( log );
     }
 
@@ -5157,14 +5043,19 @@ void testEnergyForceByFiniteDifference( std::string parameterFileName, MapString
     }
     
     std::vector<double> energyForceDeltas;
-    energyForceDeltas.push_back( 1.0e-02 );
-    energyForceDeltas.push_back( 5.0e-03 );
-    energyForceDeltas.push_back( 1.0e-03 );
-    energyForceDeltas.push_back( 5.0e-04 );
-    energyForceDeltas.push_back( 1.0e-04 );
-    energyForceDeltas.push_back( 5.0e-05 );
-    energyForceDeltas.push_back( 1.0e-05 );
-    energyForceDeltas.push_back( 5.0e-06 );
+    int scanEnergyForceDeltas = 0;
+    if( scanEnergyForceDeltas ){
+        energyForceDeltas.push_back( 1.0e-02 );
+        energyForceDeltas.push_back( 5.0e-03 );
+        energyForceDeltas.push_back( 1.0e-03 );
+        energyForceDeltas.push_back( 5.0e-04 );
+        energyForceDeltas.push_back( 1.0e-04 );
+        energyForceDeltas.push_back( 5.0e-05 );
+        energyForceDeltas.push_back( 1.0e-05 );
+        energyForceDeltas.push_back( 5.0e-06 );
+    } else {
+        energyForceDeltas.push_back( energyForceDelta );
+    }
     for(  unsigned int kk = 0; kk < energyForceDeltas.size(); kk++ ){
         energyForceDelta = energyForceDeltas[kk];
         std::vector<double> relativeDifferenceStatistics;

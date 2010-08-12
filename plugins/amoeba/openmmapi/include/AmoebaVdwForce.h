@@ -59,59 +59,17 @@ public:
     }
 
     /**
-     * Set table size
-     * 
-     * @param tableSize table size
-     */
-    void setSigEpsTableSize( int tableSize );
-
-    /**
-     * Get the SigEps table size
-     * 
-     * @return the table size
-     */
-    int getSigEpsTableSize( void ) const;
-
-    /**
-     * Set a entry to sigma/epsilon table.
-     *
-     * @param indexI        row index of table
-     * @param indexJ        column index of table
-     * @param sigma         sigma entry
-     * @param epsilon       epsilon entry
-     * @param sigma4        sigma4 entry
-     * @param epsilon4      epsilon4 entry
-     */
-    void setSigEpsTableEntry(int indexI, int indexJ, double sigma, double epsilon, 
-                             double sigma4, double epsilon4 );
-
-    /**
-     * Get a entry to sigma/epsilon table.
-     *
-     * @param indexI        row index of table
-     * @param indexJ        column index of table
-     * @param sigma         sigma entry
-     * @param epsilon       epsilon entry
-     * @param sigma4        sigma4 entry
-     * @param epsilon4      epsilon4 entry
-     */
-    void getSigEpsTableEntry(int indexI, int indexJ, double& sigma, double& epsilon, 
-                             double& sigma4, double& epsilon4 ) const;
-
-    /**
      * Set the force field parameters for a vdw particle.
      * 
      * @param particleIndex   the particle index
      * @param ivIndex         the iv index
      * @param classIndex      the class index into the sig-eps table
      * @param sigma           vdw sigma
-     * @param sigma4          1-4 vdw sigma
      * @param epsilon         vdw epsilon
-     * @param epsilon4        1-4 vdw epsilon
-     * @param reductionFactor the reduction factor for 1-4 ixns
+     * @param reductionFactor the reduction factor 
      */
     void setParticleParameters(int particleIndex, int ivIndex, int classIndex,
-                               double sigma, double sigma4, double epsilon, double epsilon4, double reductionFactor );
+                               double sigma, double epsilon, double reductionFactor );
 
     /**
      * Get the force field parameters for a vdw particle.
@@ -120,13 +78,11 @@ public:
      * @param ivIndex         the iv index
      * @param classIndex      the class index into the sig-eps table
      * @param sigma           vdw sigma
-     * @param sigma4          1-4 vdw sigma
      * @param epsilon         vdw epsilon
-     * @param epsilon4        1-4 vdw epsilon
-     * @param reductionFactor the reduction factor for 1-4 ixns
+     * @param reductionFactor the reduction factor 
      */
     void getParticleParameters(int particleIndex, int& ivIndex, int& classIndex,
-                               double& sigma, double& sigma4, double& epsilon, double& epsilon4, double& reductionFactor ) const;
+                               double& sigma, double& epsilon, double& reductionFactor ) const;
 
 
     /**
@@ -136,14 +92,12 @@ public:
      * @param ivIndex         the iv index
      * @param classIndex      the class index into the sig-eps table
      * @param sigma           vdw sigma
-     * @param sigma4          1-4 vdw sigma
      * @param epsilon         vdw epsilon
-     * @param epsilon4        1-4 vdw epsilon
-     * @param reductionFactor the reduction factor for 1-4 ixns
+     * @param reductionFactor the reduction factor
      * @return index of added particle
      */
     int addParticle(int ivIndex, int classIndex, 
-                    double sigma, double sigma4, double epsilon, double epsilon4, double reductionFactor );
+                    double sigma, double epsilon, double reductionFactor );
 
     /**
      * Set sigma combining rule
@@ -216,17 +170,15 @@ private:
 class AmoebaVdwForce::VdwInfo {
 public:
     int ivIndex, classIndex;
-    double reductionFactor, sigma, sigma4, epsilon, epsilon4;
+    double reductionFactor, sigma, epsilon;
     VdwInfo() {
         ivIndex = classIndex = -1;
         reductionFactor      = 0.0;
         sigma               = 1.0;
-        sigma4              = 1.0;
         epsilon              = 0.0;
-        epsilon4             = 0.0;
     }
-    VdwInfo(int ivIndex, int classIndex, double sigma, double sigma4, double epsilon, double epsilon4, double  reductionFactor ) :
-        ivIndex(ivIndex), classIndex(classIndex), sigma(sigma), sigma4(sigma4), epsilon(epsilon), epsilon4(epsilon4), reductionFactor(reductionFactor)  {
+    VdwInfo(int ivIndex, int classIndex, double sigma, double epsilon, double  reductionFactor ) :
+        ivIndex(ivIndex), classIndex(classIndex), sigma(sigma), epsilon(epsilon), reductionFactor(reductionFactor)  {
     }
 };
 

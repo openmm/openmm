@@ -563,7 +563,7 @@ void gpuSetAmoebaInPlaneAngleParameters(amoebaGpuContext amoebaGpu, const std::v
         psAngleID2->_pSysData[i].w = gpu->pOutputBufferCounter[psAngleID1->_pSysData[i].w]++;
 
 #undef DUMP_PARAMETERS
-#define DUMP_PARAMETERS 5
+#define DUMP_PARAMETERS 50000
 #if (DUMP_PARAMETERS > 0 )
 if( (i < DUMP_PARAMETERS || i > bond_angles - (DUMP_PARAMETERS + 1)) && amoebaGpu->log )
          fprintf( amoebaGpu->log, "InPlaneAngles: %5d [%5d %5d %5d %5d] [%5d %5d %5d %5d] A=%15.7e k=%15.7e [%5d %5d %5d %5d]\n", i, 
@@ -806,7 +806,7 @@ void gpuSetAmoebaOutOfPlaneBendParameters(amoebaGpuContext amoebaGpu, const std:
     amoebaGpu->amoebaSim.amoebaOutOfPlaneBendSexticK     = sexticK;
 
 #undef DUMP_PARAMETERS
-#define DUMP_PARAMETERS 5
+#define DUMP_PARAMETERS 50000
 #if (DUMP_PARAMETERS > 0 )
     if( amoebaGpu->log )
         fprintf( amoebaGpu->log, "OutOfPlaneBends: global ks[%15.7e %15.7e %15.7e %15.7e]\n", cubicK, quarticK, penticK, sexticK );
@@ -1942,12 +1942,9 @@ void gpuSetAmoebaVdwParameters( amoebaGpuContext amoebaGpu,
                                 const std::vector<int>& indexClasses, 
                                 const std::vector<float>& sigmas,
                                 const std::vector<float>& epsilons,
-                                const std::vector<float>& sigma4s,
-                                const std::vector<float>& epsilon4s,
                                 const std::vector<float>& reductions,
                                 const std::string& vdwSigmaCombiningRule,
                                 const std::string& vdwEpsilonCombiningRule,
-                                const std::vector< std::vector< std::vector<float> > >& sigEpsTable,
                                 const std::vector< std::vector<int> >& allExclusions )
 {
    // ---------------------------------------------------------------------------------------
@@ -1959,7 +1956,6 @@ void gpuSetAmoebaVdwParameters( amoebaGpuContext amoebaGpu,
     gpuContext gpu                         = amoebaGpu->gpuContext;
     amoebaGpu->paddedNumberOfAtoms         = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
     unsigned int particles                 = sigmas.size();
-    amoebaGpu->useVdwTable                 = 0;
     
     // set sigma combining rule flag
 
@@ -1997,40 +1993,26 @@ void gpuSetAmoebaVdwParameters( amoebaGpuContext amoebaGpu,
         }
     }
 
-    if( amoebaGpu->useVdwTable ){
-        amoebaGpu->vdwTableSize            = sigEpsTable.size();
-        amoebaGpu->psVdwTable              = new CUDAStream<float2>( amoebaGpu->vdwTableSize*amoebaGpu->vdwTableSize,  1, "VdwTable");
-        for (unsigned int ii = 0; ii < amoebaGpu->vdwTableSize; ii++) 
-        {    
-            for (unsigned int jj = 0; jj < amoebaGpu->vdwTableSize; jj++) 
-            {    
-                amoebaGpu->psVdwTable->_pSysStream[0][ii].x  = sigEpsTable[ii][jj][0];
-                amoebaGpu->psVdwTable->_pSysStream[0][ii].y  = sigEpsTable[ii][jj][1];
-            }    
-        }    
-        amoebaGpu->psVdwTable->Upload();
-    } else {
-        if( particles < 1 ){
-            (void) fprintf( stderr, "%s number of particles\n", methodName );
-            return;
-        } 
-    
-        amoebaGpu->psVdwSigmaEpsilon           = new CUDAStream<float2>(amoebaGpu->paddedNumberOfAtoms,   1, "VdwSigmaEpsilon");
-        for (unsigned int ii = 0; ii < particles; ii++) 
-        {    
-            amoebaGpu->psVdwSigmaEpsilon->_pSysStream[0][ii].x    = sigmas[ii];
-            amoebaGpu->psVdwSigmaEpsilon->_pSysStream[0][ii].y    = epsilons[ii];
-        }    
-    
-        // Dummy out extra particles data
+    if( particles < 1 ){
+        (void) fprintf( stderr, "%s number of particles\n", methodName );
+        return;
+    } 
 
-        for (unsigned int ii = particles; ii < amoebaGpu->paddedNumberOfAtoms; ii++) 
-        {    
-            amoebaGpu->psVdwSigmaEpsilon->_pSysStream[0][ii].x     = 1.0f;
-            amoebaGpu->psVdwSigmaEpsilon->_pSysStream[0][ii].y     = 0.0f;
-        }    
-        amoebaGpu->psVdwSigmaEpsilon->Upload();
-    }
+    amoebaGpu->psVdwSigmaEpsilon           = new CUDAStream<float2>(amoebaGpu->paddedNumberOfAtoms,   1, "VdwSigmaEpsilon");
+    for (unsigned int ii = 0; ii < particles; ii++) 
+    {    
+        amoebaGpu->psVdwSigmaEpsilon->_pSysStream[0][ii].x    = sigmas[ii];
+        amoebaGpu->psVdwSigmaEpsilon->_pSysStream[0][ii].y    = epsilons[ii];
+    }    
+
+    // Dummy out extra particles data
+
+    for (unsigned int ii = particles; ii < amoebaGpu->paddedNumberOfAtoms; ii++) 
+    {    
+        amoebaGpu->psVdwSigmaEpsilon->_pSysStream[0][ii].x     = 1.0f;
+        amoebaGpu->psVdwSigmaEpsilon->_pSysStream[0][ii].y     = 0.0f;
+    }    
+    amoebaGpu->psVdwSigmaEpsilon->Upload();
 
     std::vector< std::vector<unsigned int> > ivMapping;
     std::vector< unsigned int > ivNonMapping;

@@ -752,21 +752,20 @@ void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const Amoeba
     // per-particle parameters
 
     int numParticles = system.getNumParticles();
+
     std::vector<int> indexIVs(numParticles);
     std::vector<int> indexClasses(numParticles);
     std::vector< std::vector<int> > allExclusions(numParticles);
     std::vector<float> sigmas(numParticles);
     std::vector<float> epsilons(numParticles);
-    std::vector<float> sigma4s(numParticles);
-    std::vector<float> epsilon4s(numParticles);
     std::vector<float> reductions(numParticles);
     for( int ii = 0; ii < numParticles; ii++ ){
 
         int indexIV, indexClass;
-        double sigma, sigma4, epsilon, epsilon4, reduction;
+        double sigma, epsilon, reduction;
         std::vector<int> exclusions;
 
-        force.getParticleParameters( ii, indexIV, indexClass, sigma, sigma4, epsilon, epsilon4, reduction );
+        force.getParticleParameters( ii, indexIV, indexClass, sigma, epsilon, reduction );
         force.getParticleExclusions( ii, exclusions );
         for( unsigned int jj = 0; jj < exclusions.size(); jj++ ){
            allExclusions[ii].push_back( exclusions[jj] );
@@ -776,33 +775,11 @@ void CudaCalcAmoebaVdwForceKernel::initialize(const System& system, const Amoeba
         indexClasses[ii]  = indexClass;
         sigmas[ii]        = static_cast<float>( sigma );
         epsilons[ii]      = static_cast<float>( epsilon );
-        sigma4s[ii]       = static_cast<float>( sigma4 );
-        epsilon4s[ii]     = static_cast<float>( epsilon4 );
         reductions[ii]    = static_cast<float>( reduction );
     }   
 
-    // table
-
-    unsigned int tableSize = static_cast<unsigned int>(force.getSigEpsTableSize());
-    std::vector< std::vector< std::vector<float> > > sigEpsTable;
-    sigEpsTable.resize( tableSize );
-    for( unsigned int ii = 0; ii < tableSize; ii++ ){
-        sigEpsTable[ii].resize( tableSize );
-        for( unsigned int jj = 0; jj < tableSize; jj++ ){
-            double combinedSigma, combinedEpsilon, combinedSigma4, combinedEpsilon4;
-            force.getSigEpsTableEntry( ii, jj, combinedSigma, combinedEpsilon, combinedSigma4, combinedEpsilon4 );
-
-            sigEpsTable[ii][jj].resize( 4 );
-
-            sigEpsTable[ii][jj][0] = static_cast<float>( combinedSigma );
-            sigEpsTable[ii][jj][1] = static_cast<float>( combinedEpsilon );
-            sigEpsTable[ii][jj][2] = static_cast<float>( combinedSigma4 );
-            sigEpsTable[ii][jj][3] = static_cast<float>( combinedEpsilon4 );
-        }
-    }
-
-    gpuSetAmoebaVdwParameters( data.getAmoebaGpu(), indexIVs, indexClasses, sigmas, epsilons, sigma4s, epsilon4s, reductions,
-                               force.getSigmaCombiningRule(), force.getEpsilonCombiningRule(), sigEpsTable,
+    gpuSetAmoebaVdwParameters( data.getAmoebaGpu(), indexIVs, indexClasses, sigmas, epsilons, reductions,
+                               force.getSigmaCombiningRule(), force.getEpsilonCombiningRule(),
                                allExclusions );
 }
 
