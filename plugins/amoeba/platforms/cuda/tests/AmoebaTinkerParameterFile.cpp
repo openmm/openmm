@@ -6018,7 +6018,7 @@ Double "simulationTimeBetweenReportsRatio"       simulationTimeBetweenReportsRat
         } else if( key == "log" ){
             logControl                                 = atoi( value.c_str() );
         } else if( key == ALL_FORCES ){
-            initializeForceMap( forceMap, 1 );
+            initializeForceMap( forceMap, atoi( value.c_str() ) );
         } else if( key == AMOEBA_HARMONIC_BOND_FORCE              ||
                    key == AMOEBA_HARMONIC_ANGLE_FORCE             ||
                    key == AMOEBA_HARMONIC_IN_PLANE_ANGLE_FORCE    ||

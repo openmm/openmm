@@ -103,9 +103,9 @@ static void computeAmoebaHarmonicBondForces( Context& context, AmoebaHarmonicBon
     }
 
     if( log ){
-        (void) fprintf( log, "computeAmoebaHarmonicBondForces: expected energy=%14.7e\n", *expectedEnergy );
+        (void) fprintf( log, "computeAmoebaHarmonicBondForces: expected energy=%15.7e\n", *expectedEnergy );
         for( unsigned int ii = 0; ii < positions.size(); ii++ ){
-            (void) fprintf( log, "%6u [%14.7e %14.7e %14.7e]\n", ii, expectedForces[ii][0], expectedForces[ii][1], expectedForces[ii][2] );
+            (void) fprintf( log, "%6u [%15.7e %15.7e %15.7e]\n", ii, expectedForces[ii][0], expectedForces[ii][1], expectedForces[ii][2] );
         }
         (void) fflush( log );
     }
@@ -123,9 +123,9 @@ void compareWithExpectedForceAndEnergy( Context& context, AmoebaHarmonicBondForc
     const std::vector<Vec3> forces   = state.getForces();
 
     if( log ){
-        (void) fprintf( log, "computeAmoebaHarmonicBondForces: expected energy=%14.7e %14.7e\n", expectedEnergy, state.getPotentialEnergy() );
+        (void) fprintf( log, "computeAmoebaHarmonicBondForces: expected energy=%15.7e %15.7e\n", expectedEnergy, state.getPotentialEnergy() );
         for( unsigned int ii = 0; ii < forces.size(); ii++ ){
-            (void) fprintf( log, "%6u [%14.7e %14.7e %14.7e]   [%14.7e %14.7e %14.7e]\n", ii,
+            (void) fprintf( log, "%6u [%15.7e %15.7e %15.7e]   [%15.7e %15.7e %15.7e]\n", ii,
                             expectedForces[ii][0], expectedForces[ii][1], expectedForces[ii][2], forces[ii][0], forces[ii][1], forces[ii][2] );
         }
         (void) fflush( log );
