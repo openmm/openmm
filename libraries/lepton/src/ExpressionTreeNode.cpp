@@ -38,25 +38,25 @@ using namespace std;
 
 ExpressionTreeNode::ExpressionTreeNode(Operation* operation, const vector<ExpressionTreeNode>& children) : operation(operation), children(children) {
     if (operation->getNumArguments() != children.size())
-        throw Exception("Parse error: wrong number of arguments to function");
+        throw Exception("Parse error: wrong number of arguments to function: "+operation->getName());
 }
 
 ExpressionTreeNode::ExpressionTreeNode(Operation* operation, const ExpressionTreeNode& child1, const ExpressionTreeNode& child2) : operation(operation) {
     children.push_back(child1);
     children.push_back(child2);
     if (operation->getNumArguments() != children.size())
-        throw Exception("Parse error: wrong number of arguments to function");
+        throw Exception("Parse error: wrong number of arguments to function: "+operation->getName());
 }
 
 ExpressionTreeNode::ExpressionTreeNode(Operation* operation, const ExpressionTreeNode& child) : operation(operation) {
     children.push_back(child);
     if (operation->getNumArguments() != children.size())
-        throw Exception("Parse error: wrong number of arguments to function");
+        throw Exception("Parse error: wrong number of arguments to function: "+operation->getName());
 }
 
 ExpressionTreeNode::ExpressionTreeNode(Operation* operation) : operation(operation) {
     if (operation->getNumArguments() != children.size())
-        throw Exception("Parse error: wrong number of arguments to function");
+        throw Exception("Parse error: wrong number of arguments to function: "+operation->getName());
 }
 
 ExpressionTreeNode::ExpressionTreeNode(const ExpressionTreeNode& node) : operation(&node.getOperation() == NULL ? NULL : node.getOperation().clone()), children(node.getChildren()) {

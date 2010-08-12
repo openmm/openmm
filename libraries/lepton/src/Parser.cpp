@@ -177,7 +177,7 @@ ParsedExpression Parser::parse(const string& expression, const map<string, Custo
         int pos = 0;
         subexpDefs[name] = parsePrecedence(tokens, pos, customFunctions, subexpDefs, 0);
         if (pos != tokens.size())
-            throw Exception("Parse error: unexpected text at end of subexpression");
+            throw Exception("Parse error: unexpected text at end of subexpression: "+tokens[pos].getText());
     }
 
     // Now parse the primary expression.
@@ -186,7 +186,7 @@ ParsedExpression Parser::parse(const string& expression, const map<string, Custo
     int pos = 0;
     ExpressionTreeNode result = parsePrecedence(tokens, pos, customFunctions, subexpDefs, 0);
     if (pos != tokens.size())
-        throw Exception("Parse error: unexpected text at end of expression");
+        throw Exception("Parse error: unexpected text at end of expression: "+tokens[pos].getText());
     return ParsedExpression(result);
 }
 
@@ -250,7 +250,7 @@ ExpressionTreeNode Parser::parsePrecedence(const vector<ParseToken>& tokens, int
         result = ExpressionTreeNode(new Operation::Negate(), toNegate);
     }
     else
-        throw Exception("Parse error: unexpected token");
+        throw Exception("Parse error: unexpected token: "+token.getText());
 
     // Now deal with the next binary operator.
 
@@ -332,7 +332,7 @@ Operation* Parser::getFunctionOperation(const std::string& name, const map<strin
 
     map<string, Operation::Id>::const_iterator iter = opMap.find(trimmed);
     if (iter == opMap.end())
-        throw Exception("Parse error: unknown function");
+        throw Exception("Parse error: unknown function: "+trimmed);
     switch (iter->second) {
         case Operation::SQRT:
             return new Operation::Sqrt();
