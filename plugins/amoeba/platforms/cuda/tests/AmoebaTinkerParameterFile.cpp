@@ -30,6 +30,7 @@
 #include "kernels/amoebaGpuTypes.h"
 #include "AmoebaCudaData.h"
 #include "openmm/LocalEnergyMinimizer.h"
+#include "../../../../../platforms//reference/src//SimTKUtilities/SimTKOpenMMUtilities.h"
 
 #include <exception>
 
@@ -2769,7 +2770,7 @@ static int readAmoebaWcaDispersionParameters( FILE* filePtr, MapStringInt& force
             (void) fprintf( log, "%8d %10.4f %10.4f", ii, radius, epsilon );
             if( ii < maxDispersionEnergyVector.size() ){
                 wcaDispersionForce->getMaximumDispersionEnergy( ii, maxDispersionEnergy );
-                maxDispersionEnergy /= CalToJoule;
+                if( useOpenMMUnits )maxDispersionEnergy /= CalToJoule;
                 double delta = fabs( maxDispersionEnergy - maxDispersionEnergyVector[ii] );
                 const char* error  = (delta > 1.0e-05) ? "XXX" : "";
                 (void) fprintf( log, " maxDispEDiff=%12.5e %14.7f %14.7f  %s",
@@ -2791,7 +2792,7 @@ static int readAmoebaWcaDispersionParameters( FILE* filePtr, MapStringInt& force
         for( unsigned int ii = 0; ii < arraySize && ii < maxDispersionEnergyVector.size(); ii++ ){
             double maxDispersionEnergy;
             wcaDispersionForce->getMaximumDispersionEnergy( ii, maxDispersionEnergy );
-            maxDispersionEnergy /= CalToJoule;
+            if( useOpenMMUnits )maxDispersionEnergy /= CalToJoule;
             double delta = fabs( maxDispersionEnergy - maxDispersionEnergyVector[ii] );
             if( delta > 1.0e-05 ){
                 (void) fprintf( log, " maxDispEDiff=%12.5e %14.7f %14.7f  XXX\n", delta, maxDispersionEnergy, maxDispersionEnergyVector[ii] );
@@ -3825,7 +3826,7 @@ void checkIntermediateMultipoleQuantities( Context* context, MapStringVectorOfVe
                                            int useOpenMMUnits, FILE* log ) {
 
 // ---------------------------------------------------------------------------------------
-/*
+
     static const std::string methodName      = "checkIntermediateMultipoleQuantities";
  
 // ---------------------------------------------------------------------------------------
@@ -3951,7 +3952,7 @@ void checkIntermediateMultipoleQuantities( Context* context, MapStringVectorOfVe
         unsigned int misses           = 0;
         double tolerance              = 1.0e-03;
         double dipoleConversion       = useOpenMMUnits ? 1.0/AngstromToNm : 1.0;
-        numberOfEntries      = expectedInducedDipoles.size() < numberOfEntries ? expectedInducedDipoles.size() : numberOfEntries;
+        numberOfEntries               = expectedInducedDipoles.size() < numberOfEntries ? expectedInducedDipoles.size() : numberOfEntries;
         for( unsigned int ii = 0; ii < numberOfEntries; ii++ ){
 
             std::vector<double> expectedInducedDipole = expectedInducedDipoles[ii];
@@ -3964,11 +3965,16 @@ void checkIntermediateMultipoleQuantities( Context* context, MapStringVectorOfVe
                 if( diff > 1.0e-04 ){
                     diff = 2.0*diff/(fabs( inducedDipoleValue ) + fabs( expectedInducedDipole[jj] ) );
                 }
+
+                int printDipole = 0;
                 if( diff > tolerance ){
                     misses++;
-                    if( misses == 1 ){
-                        (void) fprintf( log, "%s: induced dipole\n", methodName.c_str() );
-                    }
+                    printDipole = 1;
+                }
+                if( misses == 1 && printDipole ){
+                    (void) fprintf( log, "%s: induced dipoles\n", methodName.c_str() );
+                }
+                if( printDipole ){
                     if( !rowHit ){
                         (void) fprintf( log, "     Row %5u\n", ii );
                         rowHit = 1;
@@ -3987,7 +3993,7 @@ void checkIntermediateMultipoleQuantities( Context* context, MapStringVectorOfVe
         (void) fprintf( log, "Induced dipoles not available %s\n", e.what() ); 
         (void) fflush( log );
     }
-*/
+
 }
 
 void calculateBorn1( System& amoebaSystem, std::vector<Vec3>& tinkerCoordinates, FILE* log ) {
@@ -5235,20 +5241,45 @@ static void setVelocitiesBasedOnTemperature( const System& system, std::vector<V
 
 // ---------------------------------------------------------------------------------------
 
-   // set velocities based on temperature
+    // set velocities based on temperature
 
-   temperature   *= BOLTZ;
-   double randMax = static_cast<double>(RAND_MAX);
-   randMax        = 1.0/randMax;
-   for( unsigned int ii = 0; ii < velocities.size(); ii++ ){
-      double velocityScale      = std::sqrt( temperature/system.getParticleMass(ii) );
-      randomValues[0]           = randMax*( (double) rand() );
-      randomValues[1]           = randMax*( (double) rand() );
-      randomValues[2]           = randMax*( (double) rand() );
-      velocities[ii]            = Vec3( randomValues[0]*velocityScale, randomValues[1]*velocityScale, randomValues[2]*velocityScale );
-   }
-
-   return;
+    temperature          *= BOLTZ;
+    double kineticEnergy  = 0.0;
+    for( unsigned int ii = 0; ii < velocities.size(); ii++ ){
+        double mass               = system.getParticleMass(ii);
+        double velocityScale      = std::sqrt( temperature/mass );
+        randomValues[0]           = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+        randomValues[1]           = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+        randomValues[2]           = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+        velocities[ii]            = Vec3( randomValues[0]*velocityScale, randomValues[1]*velocityScale, randomValues[2]*velocityScale );
+        kineticEnergy            += mass*(velocities[ii][0]*velocities[ii][0] + velocities[ii][1]*velocities[ii][1] + velocities[ii][2]*velocities[ii][2]);
+    }
+ 
+    double degreesOfFreedom  = static_cast<double>(3*velocities.size() - system.getNumConstraints() - 3 );
+    double approximateT      = (kineticEnergy)/(degreesOfFreedom*BOLTZ);
+     if( approximateT > 0.0 ){
+        double scale = sqrt(temperature/approximateT);
+        for( unsigned int ii = 0; ii < velocities.size(); ii++ ){
+            velocities[ii][0] *= scale;
+            velocities[ii][1] *= scale;
+            velocities[ii][2] *= scale;
+        }
+     }
+ 
+    if( log ){
+        double finalKineticEnergy  = 0.0;
+        for( unsigned int ii = 0; ii < velocities.size(); ii++ ){
+            double mass             = system.getParticleMass(ii);
+            finalKineticEnergy     += mass*(velocities[ii][0]*velocities[ii][0] + velocities[ii][1]*velocities[ii][1] + velocities[ii][2]*velocities[ii][2]);
+        }
+    
+        (void) fprintf( log, "%s KE=%15.7e approximateT=%15.7e desiredT=%15.7e dof=%12.3f final KE=%12.3e\n",
+                        methodName.c_str(), kineticEnergy, approximateT, temperature/BOLTZ,
+                        degreesOfFreedom, 0.5*finalKineticEnergy );
+    }
+ 
+ 
+    return;
 }
 
 /** 
@@ -5427,7 +5458,7 @@ double getEnergyDrift( std::vector<double>& totalEnergyArray, std::vector<double
  
     std::vector<double> kineticEnergyStatistics;
     getStatistics( kineticEnergyArray, kineticEnergyStatistics );
-    double temperature  = kineticEnergyStatistics[0]/(degreesOfFreedom*BOLTZ);
+    double temperature  = 2.0*kineticEnergyStatistics[0]/(degreesOfFreedom*BOLTZ);
     double kT           = temperature*BOLTZ;
  
     // compute stddev in units of kT/dof/ns
@@ -5503,6 +5534,15 @@ void testEnergyConservation( std::string parameterFileName, MapStringInt& forceM
         writeIntermediateStateFile( *context, intermediateStateFile, log );
     }
  
+    System& system                     = context->getSystem();
+    int numberOfAtoms                  = system.getNumParticles();
+ 
+    std::vector<Vec3> velocities; 
+    velocities.resize( numberOfAtoms );
+    double initialT = 300.0;
+    setVelocitiesBasedOnTemperature( system, velocities, initialT, log );
+    context->setVelocities(velocities);
+
     // energy minimize
 
     setIntFromMap( inputArgumentMap, "energyMinimize",          energyMinimize );
@@ -5534,14 +5574,6 @@ void testEnergyConservation( std::string parameterFileName, MapStringInt& forceM
     double currentTime                  = 0.0;
  
     // set velocities based on temperature
- 
-    System& system                     = context->getSystem();
-    int numberOfAtoms                  = system.getNumParticles();
-    std::vector<Vec3> velocities; 
-    velocities.resize( numberOfAtoms );
-    double initialT = 300.0;
-    setVelocitiesBasedOnTemperature( system, velocities, initialT, log );
-    context->setVelocities(velocities);
  
     // get integrator 
  

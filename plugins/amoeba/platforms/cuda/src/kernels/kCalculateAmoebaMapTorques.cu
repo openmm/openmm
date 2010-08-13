@@ -125,9 +125,9 @@ void amoebaMapTorqueToForce_kernel(
     norm                          = normVector3( vp );
 
     float dphi[3];
-    dphi[0]                       = vector[0][0]*torque[threadId*3] + vector[0][1]*torque[threadId*3+1] + vector[0][2]*torque[threadId*3+2];
-    dphi[1]                       = vector[1][0]*torque[threadId*3] + vector[1][1]*torque[threadId*3+1] + vector[1][2]*torque[threadId*3+2];
-    dphi[2]                       = vector[2][0]*torque[threadId*3] + vector[2][1]*torque[threadId*3+1] + vector[2][2]*torque[threadId*3+2];
+    dphi[0]                       = vector[U][0]*torque[threadId*3] + vector[U][1]*torque[threadId*3+1] + vector[U][2]*torque[threadId*3+2];
+    dphi[1]                       = vector[V][0]*torque[threadId*3] + vector[V][1]*torque[threadId*3+1] + vector[V][2]*torque[threadId*3+2];
+    dphi[2]                       = vector[W][0]*torque[threadId*3] + vector[W][1]*torque[threadId*3+1] + vector[W][2]*torque[threadId*3+2];
 
     // clamp c to interval [-1,1]
 

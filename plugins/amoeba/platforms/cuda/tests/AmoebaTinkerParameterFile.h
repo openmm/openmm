@@ -106,11 +106,6 @@ static std::string MUTUAL_INDUCED_TARGET_EPSILON                      = "mutualI
 #define SumIndex                                          12
 #define AmoebaLastIndex                                   13
 
-#define BOLTZMANN  (1.380658e-23)                         /* (J/K) */
-#define AVOGADRO   (6.0221367e23)                         /* ()    */
-#define RGAS       (BOLTZMANN*AVOGADRO)                   /* (J/(mol K))  */
-#define BOLTZ      (RGAS/1.0e+03)                         /* (kJ/(mol K)) */
-
 #define AngstromToNm 0.1
 #define CalToJoule   4.184
 

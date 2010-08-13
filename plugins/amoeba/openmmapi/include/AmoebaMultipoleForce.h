@@ -33,18 +33,21 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/Force.h"
-#include <vector>
+#include "openmm/OpenMMException.h"
 #include "openmm/internal/windowsExport.h"
+
+#include <sstream>
+#include <vector>
 
 namespace OpenMM {
 
 /**
- * This class implements the Amoeba pi-torsion interaction
- * To use it, create a MultipoleForce object then call addMultipole() once for each torsion.  After
- * a torsion has been added, you can modify its force field parameters by calling setMultipoleParameters().
+ * This class implements the Amoeba multipole interaction
+ * To use it, create a MultipoleForce object then call addMultipole() once for each atom.  After
+ * a entry has been added, you can modify its force field parameters by calling setMultipoleParameters().
  */
 
- class OPENMM_EXPORT AmoebaMultipoleForce : public Force {
+class OPENMM_EXPORT AmoebaMultipoleForce : public Force {
 public:
  
     enum MultipoleAxisTypes { ZThenX, Bisector };
@@ -280,6 +283,15 @@ public:
                    int axisType, int multipoleAtomId1, int multipoleAtomId2, double thole, double dampingFactor, double polarity) :
         charge(charge), axisType(axisType), multipoleAtomId1(multipoleAtomId1), multipoleAtomId2(multipoleAtomId2),
         thole(thole), dampingFactor(dampingFactor), polarity(polarity) {
+
+       // only 'Z-then-X' or 'Bisector' currently handled
+
+       if( axisType != ZThenX && axisType != Bisector ){
+           std::stringstream buffer;
+           buffer << "AmoebaMultipoleForce: axis type=" << axisType;
+           buffer << " not currently handled - only axisTypes[ " << ZThenX << ", " << Bisector << "] (ZThenX, Bisector) currently handled .";
+           throw OpenMMException(buffer.str());
+       }
 
        covalentInfo.resize( CovalentEnd );
 

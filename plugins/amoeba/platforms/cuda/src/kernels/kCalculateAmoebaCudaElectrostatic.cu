@@ -963,4 +963,3 @@ void cudaComputeAmoebaElectrostatic( amoebaGpuContext amoebaGpu )
 
    // ---------------------------------------------------------------------------------------
 }
-

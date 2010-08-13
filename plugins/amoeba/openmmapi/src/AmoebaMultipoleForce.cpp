@@ -40,6 +40,7 @@ const int AmoebaMultipoleForce::CovalentDegrees[8] = { 1, 2, 3, 4, 0, 1, 2, 3 };
 
 
 AmoebaMultipoleForce::AmoebaMultipoleForce() {
+
     mutualInducedIterationMethod  = SOR;
     mutualInducedMaxIterations    = 60;
     mutualInducedTargetEpsilon    = 1.0e-06;

@@ -971,7 +971,8 @@ if( (index < DUMP_PARAMETERS || index > totalEntries - (DUMP_PARAMETERS + 1)) &&
     }
     
 #if 0
-    float* grids = (float*) malloc( totalGridEntries*sizeof( float ) );
+    std::vector<float> grids;
+    grids.resize( totalGridEntries );
     int index    = 0;
     for (unsigned int ii = 0; ii < floatGrids.size(); ii++) {
         for (unsigned int jj = 0; jj < floatGrids[ii].size(); jj++) {
@@ -1022,7 +1023,6 @@ if( (index < DUMP_PARAMETERS || index > totalEntries - (DUMP_PARAMETERS + 1)) &&
     if( !errors ){
         (void) fprintf( amoebaGpu->log, "No errors in grid readback\n" );
     }
-    free( grids );
 exit(0);
 #endif
 
@@ -1458,13 +1458,19 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
 #ifdef AMOEBA_DEBUG
     static unsigned int targetAtoms[2] = { 0, 700000 };
 
-    float* pScaleCheckSum = (float*) malloc( sizeof( float )*charges.size() );
-    float* dScaleCheckSum = (float*) malloc( sizeof( float )*charges.size() );
-    float* mScaleCheckSum = (float*) malloc( sizeof( float )*charges.size() );
+    std::vector<float> pScaleCheckSum;
+    pScaleCheckSum.resize( charges.size() );
 
-    memset( pScaleCheckSum, 0, charges.size()*sizeof( float ) );
-    memset( dScaleCheckSum, 0, charges.size()*sizeof( float ) );
-    memset( mScaleCheckSum, 0, charges.size()*sizeof( float ) );
+    std::vector<float> dScaleCheckSum;
+    dScaleCheckSum.resize( charges.size() );
+
+    std::vector<float> mScaleCheckSum;
+    mScaleCheckSum.resize( charges.size() );
+    for( unsigned int ii = 0; ii < charges.size(); ii++ ){
+        pScaleCheckSum[ii] = 0.0;
+        dScaleCheckSum[ii] = 0.0;
+        mScaleCheckSum[ii] = 0.0;
+    }
 
     amoebaGpu->pMapArray = (MapIntFloat**) malloc( sizeof( MapIntFloat* )*amoebaGpu->paddedNumberOfAtoms );
     amoebaGpu->dMapArray = (MapIntFloat**) malloc( sizeof( MapIntFloat* )*amoebaGpu->paddedNumberOfAtoms );
@@ -1502,9 +1508,9 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
     unsigned int quadrupoleIndex                                              = 0;
     unsigned int maxPrint                                                     = 5;
     
-    int* maxIndices = (int*) malloc( charges.size()*sizeof(int) );
+    std::vector<int> maxIndices;
     for( unsigned int ii = 0; ii < charges.size(); ii++ ){
-        maxIndices[ii]                                                        = ii;
+        maxIndices.push_back(ii);
         amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysStream[0][ii].z   = ii;
     }
 
@@ -1788,9 +1794,6 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
             (void) fprintf( filePtr, "%6u %14.6e %14.6e\n", kk, pScaleCheckSum[kk], dScaleCheckSum[kk] );
         }
         (void) fclose( filePtr );
-        free( pScaleCheckSum );
-        free( dScaleCheckSum );
-        free( mScaleCheckSum );
         filePtr = fopen( "oldScaleMap.txt", "w" );
         for( unsigned int kk = 0; kk < charges.size(); kk++ ){
             MapIntFloat* pMap = amoebaGpu->pMapArray[kk];
@@ -1813,23 +1816,23 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
     for( unsigned int ii = 0; ii < charges.size(); ii++ ){
 
         // axis type & multipole particles ids
+
         int diff = maxIndices[ii] - amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysStream[0][ii].z;
         if( diff > amoebaGpu->maxMapTorqueDifference ){
             amoebaGpu->maxMapTorqueDifference = diff;
         }
     }
+    amoebaGpu->maxMapTorqueDifference += 1;
 
     // set maxMapTorqueDifferencePow2 to smallest power of 2 greater than maxMapTorqueDifference
 
     float logDiff                                = logf( static_cast<float>(amoebaGpu->maxMapTorqueDifference) )/logf(2.0f);    
     int logDiffI                                 = static_cast<int>(logDiff) + 1;
     amoebaGpu->maxMapTorqueDifferencePow2        = static_cast<int>(powf( 2.0f, static_cast<float>(logDiffI) ));
-
+ 
     amoebaGpu->torqueMapForce                    = new CUDAStream<float>(amoebaGpu->paddedNumberOfAtoms*3*amoebaGpu->maxMapTorqueDifference, 1, "torqueMapForce");
     memset( amoebaGpu->torqueMapForce->_pSysStream[0], 0, amoebaGpu->paddedNumberOfAtoms*3*amoebaGpu->maxMapTorqueDifference*sizeof( float ) );
     amoebaGpu->torqueMapForce->Upload();
-
-    free( maxIndices );
 
     amoebaGpuBuildOutputBuffers( amoebaGpu );
     amoebaGpuBuildThreadBlockWorkList( amoebaGpu );
@@ -3196,14 +3199,20 @@ static unsigned int targetAtoms[2] = { 0, 1};
 
     if( debugOn && amoebaGpu->log ){
 
-        float* pScaleCheckSum = (float*) malloc( sizeof( float )*paddedAtoms );
-        float* dScaleCheckSum = (float*) malloc( sizeof( float )*paddedAtoms );
-        float* mScaleCheckSum = (float*) malloc( sizeof( float )*paddedAtoms );
+        std::vector<float> pScaleCheckSum;
+        pScaleCheckSum.resize( paddedAtoms );
     
-        memset( pScaleCheckSum, 0, paddedAtoms*sizeof( float ) );
-        memset( dScaleCheckSum, 0, paddedAtoms*sizeof( float ) );
-        memset( mScaleCheckSum, 0, paddedAtoms*sizeof( float ) );
-
+        std::vector<float> dScaleCheckSum;
+        dScaleCheckSum.resize( paddedAtoms );
+    
+        std::vector<float> mScaleCheckSum;
+        mScaleCheckSum.resize( paddedAtoms );
+        for( unsigned int ii = 0; ii < paddedAtoms; ii++ ){
+            pScaleCheckSum[ii] = 0.0;
+            dScaleCheckSum[ii] = 0.0;
+            mScaleCheckSum[ii] = 0.0;
+        }
+    
         MapIntFloat** pMapArray = (MapIntFloat**) malloc( sizeof( MapIntFloat* )*paddedAtoms );
         MapIntFloat** dMapArray = (MapIntFloat**) malloc( sizeof( MapIntFloat* )*paddedAtoms );
         for( unsigned int ii = 0; ii < paddedAtoms; ii++ ){
@@ -3404,9 +3413,6 @@ tgx     = 0;
             (void) fprintf( filePtr, "%6u %14.6e %14.6e\n", kk, pScaleCheckSum[kk], dScaleCheckSum[kk] );
         }
         (void) fclose( filePtr );
-        free( pScaleCheckSum );
-        free( dScaleCheckSum );
-        free( mScaleCheckSum );
         filePtr = fopen( "newScaleMap.txt", "w" );
         //char buffer[1024];
 

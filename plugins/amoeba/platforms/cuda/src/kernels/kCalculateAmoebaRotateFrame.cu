@@ -374,9 +374,7 @@ void kCalculateAmoebaMultipoleForces(amoebaGpuContext amoebaGpu, bool hasAmoebaG
 
     // check if induce dipole calculation converged -- abort if it did not
 
-    if( amoebaGpu->mutualInducedDone ){
-       //cudaComputeAmoebaElectrostatic( amoebaGpuContextGlobal );
-    } else {
+    if( amoebaGpu->mutualInducedDone == 0 ){
        (void) fprintf( amoebaGpu->log, "%s induced dipole calculation did not converge -- aborting!\n", methodName.c_str() );
        (void) fflush( amoebaGpu->log );
        exit(-1);
