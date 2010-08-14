@@ -5114,7 +5114,7 @@ void testEnergyForceByFiniteDifference( std::string parameterFileName, MapString
             }
             (void) fprintf( summaryFile, "FD %30s %15.7e %14.6e %15.7e at %18.1f %8.1f delta %15.7e %20s %s\n",
                             forceString.c_str(), statistics[0], statistics[1], statistics[4], statistics[5], statistics[6],
-                            parameterFileName.c_str(), energyForceDelta, context->getPlatform().getName().c_str() );
+                            energyForceDelta, parameterFileName.c_str(), context->getPlatform().getName().c_str() );
             (void) fflush( summaryFile );
         }
     }
@@ -5243,22 +5243,24 @@ static void setVelocitiesBasedOnTemperature( const System& system, std::vector<V
 
     // set velocities based on temperature
 
-    temperature          *= BOLTZ;
-    double kineticEnergy  = 0.0;
+    double scaledTemperature     = temperature*2.0*BOLTZ;
+    double kineticEnergy         = 0.0;
     for( unsigned int ii = 0; ii < velocities.size(); ii++ ){
         double mass               = system.getParticleMass(ii);
-        double velocityScale      = std::sqrt( temperature/mass );
+        double velocityScale      = std::sqrt( scaledTemperature/mass );
         randomValues[0]           = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
         randomValues[1]           = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
         randomValues[2]           = SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
         velocities[ii]            = Vec3( randomValues[0]*velocityScale, randomValues[1]*velocityScale, randomValues[2]*velocityScale );
         kineticEnergy            += mass*(velocities[ii][0]*velocities[ii][0] + velocities[ii][1]*velocities[ii][1] + velocities[ii][2]*velocities[ii][2]);
     }
+    kineticEnergy *= 0.5;
  
-    double degreesOfFreedom  = static_cast<double>(3*velocities.size() - system.getNumConstraints() - 3 );
+    //double degreesOfFreedom  = static_cast<double>(3*velocities.size() - system.getNumConstraints() - 3 );
+    double degreesOfFreedom  = static_cast<double>(3*velocities.size() );
     double approximateT      = (kineticEnergy)/(degreesOfFreedom*BOLTZ);
      if( approximateT > 0.0 ){
-        double scale = sqrt(temperature/approximateT);
+        double scale             = approximateT > 0.0 ? std::sqrt(temperature/approximateT) : 1.0;
         for( unsigned int ii = 0; ii < velocities.size(); ii++ ){
             velocities[ii][0] *= scale;
             velocities[ii][1] *= scale;
@@ -5274,7 +5276,7 @@ static void setVelocitiesBasedOnTemperature( const System& system, std::vector<V
         }
     
         (void) fprintf( log, "%s KE=%15.7e approximateT=%15.7e desiredT=%15.7e dof=%12.3f final KE=%12.3e\n",
-                        methodName.c_str(), kineticEnergy, approximateT, temperature/BOLTZ,
+                        methodName.c_str(), kineticEnergy, approximateT, temperature,
                         degreesOfFreedom, 0.5*finalKineticEnergy );
     }
  
@@ -5352,7 +5354,7 @@ static void getVerletKineticEnergy( Context& context, double& currentTime, doubl
     const std::vector<Vec3>& velocitiesIPlus1 = statePlus1.getVelocities();
 
     System& system                            = context.getSystem();
-    kineticEnergy = 0.0;
+    kineticEnergy                             = 0.0;
     for( unsigned int ii = 0; ii < velocitiesI.size(); ii++ ){
         double velocity = (velocitiesIPlus1[ii][0] + velocitiesI[ii][0])*(velocitiesIPlus1[ii][0] + velocitiesI[ii][0]) +
                           (velocitiesIPlus1[ii][1] + velocitiesI[ii][1])*(velocitiesIPlus1[ii][1] + velocitiesI[ii][1]) +
@@ -5360,6 +5362,7 @@ static void getVerletKineticEnergy( Context& context, double& currentTime, doubl
         kineticEnergy  += velocity*system.getParticleMass(ii);
     }
     kineticEnergy *= 0.125;
+    //kineticEnergy = statePlus1.getKineticEnergy();
 
     return;
 }
@@ -5634,10 +5637,10 @@ void testEnergyConservation( std::string parameterFileName, MapStringInt& forceM
     }
  
     if( log ){
-        (void) fprintf( log, "Equilibration/simulation times [%12.3f %12.3f] timeBetweenReports [ %12.3e %12.3e] ratios [%12.4f %12.4f] variable=%d\n", 
+        (void) fprintf( log, "Equilibration/simulation times [%12.3f %12.3f] timeBetweenReports [ %12.3e %12.3e] ratios [%12.4f %12.4f] variableIntegrator=%d VerletIntegrator=%d\n", 
                         equilibrationTime, simulationTime,
                         equilibrationTimeBetweenReports, simulationTimeBetweenReports,
-                        equilibrationTimeBetweenReportsRatio, simulationTimeBetweenReportsRatio, isVariableIntegrator );
+                        equilibrationTimeBetweenReportsRatio, simulationTimeBetweenReportsRatio, isVariableIntegrator, isVerletIntegrator );
         (void) fflush( log );
     }
  
