@@ -5232,7 +5232,7 @@ double getEnergyForceBreakdown( Context& context, MapStringDouble& mapEnergies, 
  *
    --------------------------------------------------------------------------------------- */
 
-static void setVelocitiesBasedOnTemperature( const System& system, std::vector<Vec3>& velocities, double temperature, FILE* log ) {
+static void setVelocitiesBasedOnTemperature( const System& system, int seed, std::vector<Vec3>& velocities, double temperature, FILE* log ) {
     
 // ---------------------------------------------------------------------------------------
 
@@ -5240,6 +5240,13 @@ static void setVelocitiesBasedOnTemperature( const System& system, std::vector<V
    double randomValues[3];
 
 // ---------------------------------------------------------------------------------------
+
+    if( seed ){
+         SimTKOpenMMUtilities::setRandomNumberSeed( static_cast<uint32_t>(seed) );
+         if( log ){
+             (void) fprintf( log, "%s set random number seed to %d\n", methodName.c_str(), seed );
+         }
+    }
 
     // set velocities based on temperature
 
@@ -5499,6 +5506,7 @@ void testEnergyConservation( std::string parameterFileName, MapStringInt& forceM
 
    int energyMinimize                              = 1;
    int applyAssertion                              = 0;
+   int randomNumberSeed                            = 0;
 
    // tolerance for energy conservation test
 
@@ -5543,7 +5551,8 @@ void testEnergyConservation( std::string parameterFileName, MapStringInt& forceM
     std::vector<Vec3> velocities; 
     velocities.resize( numberOfAtoms );
     double initialT = 300.0;
-    setVelocitiesBasedOnTemperature( system, velocities, initialT, log );
+    setIntFromMap(     inputArgumentMap, "randomNumberSeed",     randomNumberSeed );
+    setVelocitiesBasedOnTemperature( system, randomNumberSeed, velocities, initialT, log );
     context->setVelocities(velocities);
 
     // energy minimize
