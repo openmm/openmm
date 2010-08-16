@@ -301,13 +301,15 @@ void testOnePiTorsion( FILE* log ) {
 int main( int numberOfArguments, char* argv[] ) {
 
     try {
-        std::cout << "Running test..." << std::endl;
+        std::cout << "TestCudaAmoebaPiTorsionForce running test..." << std::endl;
         Platform::loadPluginsFromDirectory( Platform::getDefaultPluginsDirectory() );
+        FILE* log = NULL;
         //FILE* log = stderr;
+        //FILE* log = fopen( "AmoebaPiTorsionForce1.log", "w" );;
 
-        FILE* log = fopen( "AmoebaPiTorsionForce1.log", "w" );;
         testOnePiTorsion( log );
-        (void) fclose( log );
+        if( log && log != stderr )
+            (void) fclose( log );
 
     }
     catch(const std::exception& e) {

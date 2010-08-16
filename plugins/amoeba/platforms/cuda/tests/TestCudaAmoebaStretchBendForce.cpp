@@ -283,13 +283,15 @@ void testOneStretchBend( FILE* log ) {
 int main( int numberOfArguments, char* argv[] ) {
 
     try {
-        std::cout << "Running test..." << std::endl;
+        std::cout << "TestCudaAmoebaStretchBendForce running test..." << std::endl;
         Platform::loadPluginsFromDirectory( Platform::getDefaultPluginsDirectory() );
-        //FILE* log = stderr;
 
-        FILE* log = fopen( "AmoebaStretchBendForce1.log", "w" );;
+        FILE* log = NULL;
+        //FILE* log = stderr;
+        //FILE* log = fopen( "AmoebaStretchBendForce1.log", "w" );;
         testOneStretchBend( log );
-        (void) fclose( log );
+        if( log && log != stderr )
+            (void) fclose( log );
 
     }
     catch(const std::exception& e) {

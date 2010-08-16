@@ -370,12 +370,15 @@ void testOneAngle( FILE* log ) {
 int main( int numberOfArguments, char* argv[] ) {
 
     try {
-        std::cout << "Running test..." << std::endl;
+        std::cout << "TestCudaAmoebaHarmonicInPlaneAngleForce running test..." << std::endl;
         Platform::loadPluginsFromDirectory( Platform::getDefaultPluginsDirectory() );
-        FILE* log = fopen( "AmoebaHarmonicInPlaneAngleForce.log", "w" );;
+        FILE* log = NULL;
+        //FILE* log = fopen( "AmoebaHarmonicInPlaneAngleForce.log", "w" );;
 
         testOneAngle( NULL );
-        (void) fclose( log );
+        if( log && log != stderr )
+            (void) fclose( log );
+
     }
     catch(const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;

@@ -304,13 +304,16 @@ void testOneTorsionTorsion( FILE* log ) {
 int main( int numberOfArguments, char* argv[] ) {
 
     try {
-        std::cout << "Running test..." << std::endl;
+        std::cout << "TestCudaAmoebaTorsionTorsionForce running test..." << std::endl;
         Platform::loadPluginsFromDirectory( Platform::getDefaultPluginsDirectory() );
+        FILE* log = NULL;
         //FILE* log = stderr;
 
         //FILE* log = fopen( "AmoebaTorsionTorsionForce1.log", "w" );;
         //testOneTorsionTorsion( log );
-        //(void) fclose( log );
+        if( log && log != stderr )
+            (void) fclose( log );
+
     } catch(const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;
         std::cout << "FAIL - ERROR.  Test failed." << std::endl;

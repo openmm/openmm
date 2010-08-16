@@ -44,7 +44,7 @@
 
 using namespace OpenMM;
 
-const double TOL = 1e-5;
+const double TOL = 1e-3;
 #define PI_M               3.141592653589
 #define RADIAN            57.29577951308
 
@@ -207,21 +207,21 @@ static void computeAmoebaTorsionForce(int bondIndex,  std::vector<Vec3>& positio
      
     // accumulate forces and energy
   
-    forces[particle1][0]       += tempVector[0][0];
-    forces[particle1][1]       += tempVector[0][1];
-    forces[particle1][2]       += tempVector[0][2];
+    forces[particle1][0]       -= tempVector[0][0];
+    forces[particle1][1]       -= tempVector[0][1];
+    forces[particle1][2]       -= tempVector[0][2];
 
-    forces[particle2][0]       += tempVector[1][0];
-    forces[particle2][1]       += tempVector[1][1];
-    forces[particle2][2]       += tempVector[1][2];
+    forces[particle2][0]       -= tempVector[1][0];
+    forces[particle2][1]       -= tempVector[1][1];
+    forces[particle2][2]       -= tempVector[1][2];
 
-    forces[particle3][0]       += tempVector[2][0];
-    forces[particle3][1]       += tempVector[2][1];
-    forces[particle3][2]       += tempVector[2][2];
+    forces[particle3][0]       -= tempVector[2][0];
+    forces[particle3][1]       -= tempVector[2][1];
+    forces[particle3][2]       -= tempVector[2][2];
 
-    forces[particle4][0]       += tempVector[3][0];
-    forces[particle4][1]       += tempVector[3][1];
-    forces[particle4][2]       += tempVector[3][2];
+    forces[particle4][0]       -= tempVector[3][0];
+    forces[particle4][1]       -= tempVector[3][1];
+    forces[particle4][2]       -= tempVector[3][2];
 
     double energyTerm = 0.0;
     for( int ii = 0; ii < 3; ii++ ){
@@ -317,10 +317,10 @@ void testOneTorsion( FILE* log ) {
 
     std::vector<Vec3> positions(numberOfParticles);
 
-    positions[0] = Vec3( 0.278860000E+02,  0.264630000E+02,  0.426300000E+01 );
-    positions[1] = Vec3( 0.273400000E+02,  0.244300000E+02,  0.261400000E+01 );
-    positions[2] = Vec3( 0.262660000E+02,  0.254130000E+02,  0.284200000E+01 );
-    positions[3] = Vec3( 0.269130000E+02,  0.266390000E+02,  0.353100000E+01 );
+    positions[0] = Vec3( 0.278860000E+01,  0.264630000E+01,  0.426300000E+00 );
+    positions[1] = Vec3( 0.273400000E+01,  0.244300000E+01,  0.261400000E+00 );
+    positions[2] = Vec3( 0.262660000E+01,  0.254130000E+01,  0.284200000E+00 );
+    positions[3] = Vec3( 0.269130000E+01,  0.266390000E+01,  0.353100000E+00 );
 
     context.setPositions(positions);
     compareWithExpectedForceAndEnergy( context, *amoebaTorsionForce, TOL, "testOneTorsion", log );
@@ -330,12 +330,14 @@ void testOneTorsion( FILE* log ) {
 int main( int numberOfArguments, char* argv[] ) {
 
     try {
-        std::cout << "Running test..." << std::endl;
+        std::cout << "TestCudaAmoebaTorsionForce running test..." << std::endl;
         Platform::loadPluginsFromDirectory( Platform::getDefaultPluginsDirectory() );
         //FILE* log = stderr;
-        FILE* log = fopen( "AmoebaTorsionForce1.log", "w" );;
+        FILE* log = NULL;
+        //FILE* log = fopen( "AmoebaTorsionForce.log", "w" );;
         testOneTorsion( log );
-        (void) fclose( log );
+        if( log && log != stderr )
+            (void) fclose( log );
 
     }
     catch(const std::exception& e) {

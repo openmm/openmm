@@ -293,12 +293,14 @@ void testOneAngle( FILE* log ) {
 int main( int numberOfArguments, char* argv[] ) {
 
     try {
-        std::cout << "Running test..." << std::endl;
+        std::cout << "TestCudaAmoebaHarmonicAngleForce running test..." << std::endl;
         Platform::loadPluginsFromDirectory( Platform::getDefaultPluginsDirectory() );
-        FILE* log = fopen( "AmoebaHarmonicAngleForce.log", "w" );;
+        //FILE* log = fopen( "AmoebaHarmonicAngleForce.log", "w" );;
+        FILE* log = NULL;
 
         testOneAngle( log );
-        fclose( log );
+        if( log && log != stderr )
+            (void) fclose( log );
 
     }
     catch(const std::exception& e) {

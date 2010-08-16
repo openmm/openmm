@@ -203,12 +203,17 @@ void testTwoBond( FILE* log ) {
 int main( int numberOfArguments, char* argv[] ) {
 
     try {
-        std::cout << "Running test..." << std::endl;
+        std::cout << "TestCudaAmoebaHarmonicBondForce running test..." << std::endl;
         Platform::loadPluginsFromDirectory( Platform::getDefaultPluginsDirectory() );
-        FILE* log = stderr;
+        FILE* log = NULL;
+        //FILE* log = stderr;
 
-        testOneBond( log );
+        //testOneBond( log );
         testTwoBond( log );
+
+        if( log && log != stderr )
+            (void) fclose( log );
+
     }
     catch(const std::exception& e) {
         std::cout << "exception: " << e.what() << std::endl;

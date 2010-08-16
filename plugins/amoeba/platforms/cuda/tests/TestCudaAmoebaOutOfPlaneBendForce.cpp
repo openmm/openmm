@@ -44,7 +44,7 @@
 
 using namespace OpenMM;
 
-const double TOL = 1e-5;
+const double TOL = 1e-3;
 #define PI_M               3.141592653589
 #define RADIAN            57.29577951308
 
@@ -492,17 +492,20 @@ void testOneOutOfPlaneBend2( FILE* log, int setId ) {
 int main( int numberOfArguments, char* argv[] ) {
 
     try {
-        std::cout << "Running test..." << std::endl;
+        std::cout << "TestCudaAmoebaOutOfPlaneBendForce running test..." << std::endl;
         Platform::loadPluginsFromDirectory( Platform::getDefaultPluginsDirectory() );
-        //FILE* log = stderr;
 
-        FILE* log = fopen( "AmoebaOutOfPlaneBendForce1.log", "w" );;
-        //testOneOutOfPlaneBend( log );
+        //FILE* log = stderr;
+        FILE* log = NULL;
+        //FILE* log = fopen( "AmoebaOutOfPlaneBendForce.log", "w" );;
+
+        testOneOutOfPlaneBend( log );
         //testOneOutOfPlaneBend2( log, atoi( argv[1] ) );
-        for( int ii = 1; ii <= 6; ii++ ){
-            testOneOutOfPlaneBend2( log, ii );
-        }
-        (void) fclose( log );
+        //for( int ii = 1; ii <= 6; ii++ ){
+        //     testOneOutOfPlaneBend2( log, ii );
+        //}
+        if( log && log != stderr )
+            (void) fclose( log );
 
     }
     catch(const std::exception& e) {
