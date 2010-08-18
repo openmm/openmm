@@ -64,7 +64,7 @@ OpenCLContext::OpenCLContext(int numParticles, int deviceIndex) : time(0.0), ste
             int bestSpeed = 0;
             for (int i = 0; i < (int) devices.size(); i++) {
                 int maxSize = devices[i].getInfo<CL_DEVICE_MAX_WORK_ITEM_SIZES>()[0];
-                int processingElementsPerComputeUnit = 1;
+                int processingElementsPerComputeUnit = (devices[i].getInfo<CL_DEVICE_TYPE>() == CL_DEVICE_TYPE_GPU ? 8 : 1);
                 if (devices[i].getInfo<CL_DEVICE_EXTENSIONS>().find("cl_nv_device_attribute_query") != string::npos) {
                     cl_uint computeCapabilityMajor;
                     clGetDeviceInfo(devices[i](), CL_DEVICE_COMPUTE_CAPABILITY_MAJOR_NV, sizeof(cl_uint), &computeCapabilityMajor, NULL);
