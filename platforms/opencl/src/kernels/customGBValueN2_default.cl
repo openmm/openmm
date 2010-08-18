@@ -6,7 +6,7 @@
 
 __kernel __attribute__((reqd_work_group_size(WORK_GROUP_SIZE, 1, 1)))
 void computeN2Value(__global float4* posq, __local float4* local_posq, __global unsigned int* exclusions,
-        __global unsigned int* exclusionIndices, __global float* global_value, __local float* local_value,
+        __global unsigned int* exclusionIndices, __global unsigned int* exclusionRowIndices, __global float* global_value, __local float* local_value,
         __local float* tempBuffer, __global unsigned int* tiles,
 #ifdef USE_CUTOFF
         __global unsigned int* interactionFlags, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize
@@ -21,30 +21,53 @@ void computeN2Value(__global float4* posq, __local float4* local_posq, __global 
     unsigned int end = (get_group_id(0)+1)*numTiles/get_num_groups(0);
     float energy = 0.0f;
     unsigned int lasty = 0xFFFFFFFF;
+    __local unsigned int exclusionRange[2];
+    __local int exclusionIndex[1];
 
     while (pos < end) {
         // Extract the coordinates of this tile
+#ifdef USE_CUTOFF
         unsigned int x = tiles[pos];
-        unsigned int y = ((x >> 2) & 0x7fff)*TILE_SIZE;
-        bool hasExclusions = (x & 0x1);
-        x = (x>>17)*TILE_SIZE;
+        unsigned int y = ((x >> 2) & 0x7fff);
+        x = (x>>17);
+#else
+        unsigned int y = (unsigned int) floor(NUM_BLOCKS+0.5f-sqrt((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
+        unsigned int x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
+        if (x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
+            y++;
+            x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
+        }
+#endif
         unsigned int baseLocalAtom = (get_local_id(0) < TILE_SIZE ? 0 : TILE_SIZE/2);
         unsigned int tgx = get_local_id(0) & (TILE_SIZE-1);
         unsigned int valueBufferOffset = (tgx < TILE_SIZE/2 ? 0 : TILE_SIZE);
-        unsigned int atom1 = x + tgx;
+        unsigned int atom1 = x*TILE_SIZE + tgx;
         float value = 0.0f;
         float4 posq1 = posq[atom1];
         LOAD_ATOM1_PARAMETERS
+
+        // Locate the exclusion data for this tile.
+
+#ifdef USE_EXCLUSIONS
+        if (get_local_id(0) < 2)
+            exclusionRange[get_local_id(0)] = exclusionRowIndices[x+get_local_id(0)];
+        if (tgx == 0)
+            exclusionIndex[0] = -1;
+        barrier(CLK_LOCAL_MEM_FENCE);
+        for (int i = exclusionRange[0]+tgx; i < exclusionRange[1]; i += TILE_SIZE)
+            if (exclusionIndices[i] == y)
+                exclusionIndex[0] = i*TILE_SIZE;
+        barrier(CLK_LOCAL_MEM_FENCE);
+        bool hasExclusions = (exclusionIndex[0] > -1);
+#endif
         if (x == y) {
             // This tile is on the diagonal.
 
             local_posq[get_local_id(0)] = posq1;
             LOAD_LOCAL_PARAMETERS_FROM_1
             barrier(CLK_LOCAL_MEM_FENCE);
-            unsigned int xi = x/TILE_SIZE;
-            unsigned int tile = xi+xi*PADDED_NUM_ATOMS/TILE_SIZE-xi*(xi+1)/2;
 #ifdef USE_EXCLUSIONS
-            unsigned int excl = exclusions[exclusionIndices[tile]+tgx] >> baseLocalAtom;
+            unsigned int excl = exclusions[exclusionIndex[0]+tgx] >> baseLocalAtom;
 #endif
             for (unsigned int j = 0; j < TILE_SIZE/2; j++) {
 #ifdef USE_EXCLUSIONS
@@ -64,7 +87,7 @@ void computeN2Value(__global float4* posq, __local float4* local_posq, __global 
 #endif
                 float r = SQRT(r2);
                 LOAD_ATOM2_PARAMETERS
-                atom2 = y+baseLocalAtom+j;
+                atom2 = y*TILE_SIZE+baseLocalAtom+j;
                 float tempValue1 = 0.0f;
                 float tempValue2 = 0.0f;
 #ifdef USE_EXCLUSIONS
@@ -90,9 +113,9 @@ void computeN2Value(__global float4* posq, __local float4* local_posq, __global 
             barrier(CLK_LOCAL_MEM_FENCE);
             if (get_local_id(0) < TILE_SIZE) {
 #ifdef USE_OUTPUT_BUFFER_PER_BLOCK
-                unsigned int offset = x + tgx + (x/TILE_SIZE)*PADDED_NUM_ATOMS;
+                unsigned int offset = x*TILE_SIZE + tgx + x*PADDED_NUM_ATOMS;
 #else
-                unsigned int offset = x + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
+                unsigned int offset = x*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
 #endif
                 global_value[offset] += value+tempBuffer[get_local_id(0)+TILE_SIZE];
             }
@@ -101,7 +124,7 @@ void computeN2Value(__global float4* posq, __local float4* local_posq, __global 
             // This is an off-diagonal tile.
 
             if (lasty != y && get_local_id(0) < TILE_SIZE) {
-                unsigned int j = y + tgx;
+                unsigned int j = y*TILE_SIZE + tgx;
                 local_posq[get_local_id(0)] = posq[j];
                 LOAD_LOCAL_PARAMETERS_FROM_GLOBAL
             }
@@ -110,11 +133,8 @@ void computeN2Value(__global float4* posq, __local float4* local_posq, __global 
 
             // Compute the full set of interactions in this tile.
 
-            unsigned int xi = x/TILE_SIZE;
-            unsigned int yi = y/TILE_SIZE;
-            unsigned int tile = xi+yi*PADDED_NUM_ATOMS/TILE_SIZE-yi*(yi+1)/2;
 #ifdef USE_EXCLUSIONS
-            unsigned int excl = (hasExclusions ? exclusions[exclusionIndices[tile]+tgx] : 0xFFFFFFFF);
+            unsigned int excl = (hasExclusions ? exclusions[exclusionIndex[0]+tgx] : 0xFFFFFFFF);
             excl = (excl >> baseLocalAtom) & 0xFFFF;
             excl += excl << 16;
             excl = (excl >> tgx) | (excl << (TILE_SIZE - tgx));
@@ -138,7 +158,7 @@ void computeN2Value(__global float4* posq, __local float4* local_posq, __global 
 #endif
                 float r = SQRT(r2);
                 LOAD_ATOM2_PARAMETERS
-                atom2 = y+baseLocalAtom+tj;
+                atom2 = y*TILE_SIZE+baseLocalAtom+tj;
                 float tempValue1 = 0.0f;
                 float tempValue2 = 0.0f;
 #ifdef USE_EXCLUSIONS
@@ -167,11 +187,11 @@ void computeN2Value(__global float4* posq, __local float4* local_posq, __global 
             barrier(CLK_LOCAL_MEM_FENCE);
             if (get_local_id(0) < TILE_SIZE) {
 #ifdef USE_OUTPUT_BUFFER_PER_BLOCK
-                unsigned int offset1 = x + tgx + (y/TILE_SIZE)*PADDED_NUM_ATOMS;
-                unsigned int offset2 = y + tgx + (x/TILE_SIZE)*PADDED_NUM_ATOMS;
+                unsigned int offset1 = x*TILE_SIZE + tgx + y*PADDED_NUM_ATOMS;
+                unsigned int offset2 = y*TILE_SIZE + tgx + x*PADDED_NUM_ATOMS;
 #else
-                unsigned int offset1 = x + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
-                unsigned int offset2 = y + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
+                unsigned int offset1 = x*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
+                unsigned int offset2 = y*TILE_SIZE + tgx + get_group_id(0)*PADDED_NUM_ATOMS;
 #endif
                 global_value[offset1] += value+tempBuffer[get_local_id(0)+TILE_SIZE];
                 global_value[offset2] += local_value[get_local_id(0)]+local_value[get_local_id(0)+TILE_SIZE];

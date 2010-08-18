@@ -1690,6 +1690,7 @@ double OpenCLCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
         defines["PREFACTOR"] = doubleToString(prefactor);
         defines["NUM_ATOMS"] = intToString(cl.getNumAtoms());
         defines["PADDED_NUM_ATOMS"] = intToString(cl.getPaddedNumAtoms());
+        defines["NUM_BLOCKS"] = OpenCLExpressionUtilities::intToString(cl.getNumAtomBlocks());
         string file = (cl.getSIMDWidth() == 32 ? OpenCLKernelSources::gbsaObc_nvidia : OpenCLKernelSources::gbsaObc_default);
         cl::Program program = cl.createProgram(file, defines);
         int index = 0;
@@ -1985,6 +1986,7 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         defines["CUTOFF_SQUARED"] = doubleToString(force.getCutoffDistance()*force.getCutoffDistance());
         defines["NUM_ATOMS"] = intToString(cl.getNumAtoms());
         defines["PADDED_NUM_ATOMS"] = intToString(cl.getPaddedNumAtoms());
+        defines["NUM_BLOCKS"] = OpenCLExpressionUtilities::intToString(cl.getNumAtomBlocks());
         string file = (cl.getSIMDWidth() == 32 ? OpenCLKernelSources::customGBValueN2_nvidia : OpenCLKernelSources::customGBValueN2_default);
         cl::Program program = cl.createProgram(cl.replaceStrings(file, replacements), defines);
         pairValueKernel = cl::Kernel(program, "computeN2Value");
@@ -2131,6 +2133,7 @@ void OpenCLCalcCustomGBForceKernel::initialize(const System& system, const Custo
         defines["CUTOFF_SQUARED"] = doubleToString(force.getCutoffDistance()*force.getCutoffDistance());
         defines["NUM_ATOMS"] = intToString(cl.getNumAtoms());
         defines["PADDED_NUM_ATOMS"] = intToString(cl.getPaddedNumAtoms());
+        defines["NUM_BLOCKS"] = OpenCLExpressionUtilities::intToString(cl.getNumAtomBlocks());
         string file = (cl.getSIMDWidth() == 32 ? OpenCLKernelSources::customGBEnergyN2_nvidia : OpenCLKernelSources::customGBEnergyN2_default);
         cl::Program program = cl.createProgram(cl.replaceStrings(file, replacements), defines);
         pairEnergyKernel = cl::Kernel(program, "computeN2Energy");
@@ -2393,6 +2396,7 @@ double OpenCLCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
         pairValueKernel.setArg(index++, OpenCLContext::ThreadBlockSize*sizeof(cl_float4), NULL);
         pairValueKernel.setArg<cl::Buffer>(index++, cl.getNonbondedUtilities().getExclusions().getDeviceBuffer());
         pairValueKernel.setArg<cl::Buffer>(index++, cl.getNonbondedUtilities().getExclusionIndices().getDeviceBuffer());
+        pairValueKernel.setArg<cl::Buffer>(index++, cl.getNonbondedUtilities().getExclusionRowIndices().getDeviceBuffer());
         pairValueKernel.setArg<cl::Buffer>(index++, valueBuffers->getDeviceBuffer());
         pairValueKernel.setArg(index++, OpenCLContext::ThreadBlockSize*sizeof(cl_float), NULL);
         pairValueKernel.setArg(index++, OpenCLContext::ThreadBlockSize*sizeof(cl_float), NULL);
@@ -2442,6 +2446,7 @@ double OpenCLCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
         pairEnergyKernel.setArg(index++, OpenCLContext::ThreadBlockSize*sizeof(cl_float4), NULL);
         pairEnergyKernel.setArg<cl::Buffer>(index++, cl.getNonbondedUtilities().getExclusions().getDeviceBuffer());
         pairEnergyKernel.setArg<cl::Buffer>(index++, cl.getNonbondedUtilities().getExclusionIndices().getDeviceBuffer());
+        pairEnergyKernel.setArg<cl::Buffer>(index++, cl.getNonbondedUtilities().getExclusionRowIndices().getDeviceBuffer());
         pairEnergyKernel.setArg(index++, OpenCLContext::ThreadBlockSize*sizeof(cl_float4), NULL);
         if (nb.getUseCutoff()) {
             pairEnergyKernel.setArg<cl::Buffer>(index++, nb.getInteractingTiles().getDeviceBuffer());
@@ -2520,10 +2525,10 @@ double OpenCLCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
             globals->upload(globalParamValues);
     }
     if (nb.getUseCutoff()) {
-        pairValueKernel.setArg<mm_float4>(10, cl.getPeriodicBoxSize());
-        pairValueKernel.setArg<mm_float4>(11, cl.getInvPeriodicBoxSize());
-        pairEnergyKernel.setArg<mm_float4>(11, cl.getPeriodicBoxSize());
-        pairEnergyKernel.setArg<mm_float4>(12, cl.getInvPeriodicBoxSize());
+        pairValueKernel.setArg<mm_float4>(11, cl.getPeriodicBoxSize());
+        pairValueKernel.setArg<mm_float4>(12, cl.getInvPeriodicBoxSize());
+        pairEnergyKernel.setArg<mm_float4>(12, cl.getPeriodicBoxSize());
+        pairEnergyKernel.setArg<mm_float4>(13, cl.getInvPeriodicBoxSize());
     }
     cl.executeKernel(pairValueKernel, nb.getTiles().getSize()*OpenCLContext::TileSize);
     cl.executeKernel(perParticleValueKernel, cl.getPaddedNumAtoms());

@@ -175,7 +175,13 @@ public:
      * Get the array containing the index into the exclusion array for each tile.
      */
     OpenCLArray<cl_uint>& getExclusionIndices() {
-        return *exclusionIndex;
+        return *exclusionIndices;
+    }
+    /**
+     * Get the array listing where the exclusion data starts for each row.
+     */
+    OpenCLArray<cl_uint>& getExclusionRowIndices() {
+        return *exclusionRowIndices;
     }
     /**
      * Create a Kernel for evaluating a nonbonded interaction.  Cutoffs and periodic boundary conditions
@@ -190,14 +196,16 @@ public:
      */
     cl::Kernel createInteractionKernel(const std::string& source, const std::vector<ParameterInfo>& params, const std::vector<ParameterInfo>& arguments, bool useExclusions, bool isSymmetric) const;
 private:
+    static int findExclusionIndex(int x, int y, const std::vector<cl_uint>& exclusionIndices, const std::vector<cl_uint>& exclusionRowIndices);
     OpenCLContext& context;
     cl::Kernel forceKernel;
     cl::Kernel findBlockBoundsKernel;
     cl::Kernel findInteractingBlocksKernel;
     cl::Kernel findInteractionsWithinBlocksKernel;
     OpenCLArray<cl_uint>* tiles;
-    OpenCLArray<cl_uint>* exclusionIndex;
     OpenCLArray<cl_uint>* exclusions;
+    OpenCLArray<cl_uint>* exclusionIndices;
+    OpenCLArray<cl_uint>* exclusionRowIndices;
     OpenCLArray<cl_uint>* interactingTiles;
     OpenCLArray<cl_uint>* interactionFlags;
     OpenCLArray<cl_uint>* interactionCount;

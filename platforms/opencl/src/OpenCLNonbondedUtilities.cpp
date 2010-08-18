@@ -30,12 +30,14 @@
 #include "OpenCLKernelSources.h"
 #include "OpenCLExpressionUtilities.h"
 #include <map>
+#include <set>
+#include <utility>
 
 using namespace OpenMM;
 using namespace std;
 
 OpenCLNonbondedUtilities::OpenCLNonbondedUtilities(OpenCLContext& context) : context(context), cutoff(-1.0), useCutoff(false),
-        numForceBuffers(0), tiles(NULL), exclusionIndex(NULL), exclusions(NULL), interactingTiles(NULL), interactionFlags(NULL),
+        numForceBuffers(0), tiles(NULL), exclusionIndices(NULL), exclusionRowIndices(NULL), exclusions(NULL), interactingTiles(NULL), interactionFlags(NULL),
         interactionCount(NULL), blockCenter(NULL), blockBoundingBox(NULL), compact(NULL) {
     // Decide how many force buffers to use.
 
@@ -52,8 +54,10 @@ OpenCLNonbondedUtilities::OpenCLNonbondedUtilities(OpenCLContext& context) : con
 OpenCLNonbondedUtilities::~OpenCLNonbondedUtilities() {
     if (tiles != NULL)
         delete tiles;
-    if (exclusionIndex != NULL)
-        delete exclusionIndex;
+    if (exclusionIndices != NULL)
+        delete exclusionIndices;
+    if (exclusionRowIndices != NULL)
+        delete exclusionRowIndices;
     if (exclusions != NULL)
         delete exclusions;
     if (interactingTiles != NULL)
@@ -153,16 +157,36 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
 
     // Build a list of indices for the tiles with exclusions.
 
-    exclusionIndex = new OpenCLArray<cl_uint>(context, numTiles, "exclusionIndex");
-    vector<cl_uint> exclusionIndexVec(exclusionIndex->getSize());
-    int numWithExclusions = 0;
-    for (int i = 0; i < numTiles; ++i)
-        if ((tileVec[i]&1) == 1)
-            exclusionIndexVec[i] = (numWithExclusions++)*OpenCLContext::TileSize;
+    set<pair<int, int> > tilesWithExclusions;
+    for (int atom1 = 0; atom1 < (int) atomExclusions.size(); ++atom1) {
+        int x = atom1/OpenCLContext::TileSize;
+        for (int j = 0; j < (int) atomExclusions[atom1].size(); ++j) {
+            int atom2 = atomExclusions[atom1][j];
+            int y = atom2/OpenCLContext::TileSize;
+            tilesWithExclusions.insert(make_pair(max(x, y), min(x, y)));
+        }
+    }
+    if (context.getPaddedNumAtoms() > context.getNumAtoms()) {
+        for (int i = 0; i < numAtomBlocks; ++i)
+            tilesWithExclusions.insert(make_pair(numAtomBlocks-1, i));
+    }
+    vector<cl_uint> exclusionRowIndicesVec(numAtomBlocks+1, 0);
+    vector<cl_uint> exclusionIndicesVec;
+    int currentRow = 0;
+    for (set<pair<int, int> >::const_iterator iter = tilesWithExclusions.begin(); iter != tilesWithExclusions.end(); ++iter) {
+        while (iter->first != currentRow)
+            exclusionRowIndicesVec[++currentRow] = exclusionIndicesVec.size();
+        exclusionIndicesVec.push_back(iter->second);
+    }
+    exclusionRowIndicesVec[++currentRow] = exclusionIndicesVec.size();
+    exclusionIndices = new OpenCLArray<cl_uint>(context, exclusionIndicesVec.size(), "exclusionIndices");
+    exclusionRowIndices = new OpenCLArray<cl_uint>(context, exclusionRowIndicesVec.size(), "exclusionRowIndices");
+    exclusionIndices->upload(exclusionIndicesVec);
+    exclusionRowIndices->upload(exclusionRowIndicesVec);
 
     // Record the exclusion data.
 
-    exclusions = new OpenCLArray<cl_uint>(context, numWithExclusions*OpenCLContext::TileSize, "exclusions");
+    exclusions = new OpenCLArray<cl_uint>(context, tilesWithExclusions.size()*OpenCLContext::TileSize, "exclusions");
     vector<cl_uint> exclusionVec(exclusions->getSize());
     for (int i = 0; i < exclusions->getSize(); ++i)
         exclusionVec[i] = 0xFFFFFFFF;
@@ -174,12 +198,12 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
             int y = atom2/OpenCLContext::TileSize;
             int offset2 = atom2-y*OpenCLContext::TileSize;
             if (x > y) {
-                int tile = x+y*numAtomBlocks-y*(y+1)/2;
-                exclusionVec[exclusionIndexVec[tile]+offset1] &= 0xFFFFFFFF-(1<<offset2);
+                int index = findExclusionIndex(x, y, exclusionIndicesVec, exclusionRowIndicesVec);
+                exclusionVec[index+offset1] &= 0xFFFFFFFF-(1<<offset2);
             }
             else {
-                int tile = y+x*numAtomBlocks-x*(x+1)/2;
-                exclusionVec[exclusionIndexVec[tile]+offset2] &= 0xFFFFFFFF-(1<<offset1);
+                int index = findExclusionIndex(y, x, exclusionIndicesVec, exclusionRowIndicesVec);
+                exclusionVec[index+offset2] &= 0xFFFFFFFF-(1<<offset1);
             }
         }
     }
@@ -193,19 +217,18 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
             int y = atom2/OpenCLContext::TileSize;
             int offset2 = atom2-y*OpenCLContext::TileSize;
             if (x >= y) {
-                int tile = x+y*numAtomBlocks-y*(y+1)/2;
-                exclusionVec[exclusionIndexVec[tile]+offset1] &= 0xFFFFFFFF-(1<<offset2);
+                int index = findExclusionIndex(x, y, exclusionIndicesVec, exclusionRowIndicesVec);
+                exclusionVec[index+offset1] &= 0xFFFFFFFF-(1<<offset2);
             }
             if (y >= x) {
-                int tile = y+x*numAtomBlocks-x*(x+1)/2;
-                exclusionVec[exclusionIndexVec[tile]+offset2] &= 0xFFFFFFFF-(1<<offset1);
+                int index = findExclusionIndex(y, x, exclusionIndicesVec, exclusionRowIndicesVec);
+                exclusionVec[index+offset2] &= 0xFFFFFFFF-(1<<offset1);
             }
         }
     }
     atomExclusions.clear(); // We won't use this again, so free the memory it used
     tiles->upload(tileVec);
     exclusions->upload(exclusionVec);
-    exclusionIndex->upload(exclusionIndexVec);
 
     // Create data structures for the neighbor list.
 
@@ -252,6 +275,15 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
     }
 }
 
+int OpenCLNonbondedUtilities::findExclusionIndex(int x, int y, const vector<cl_uint>& exclusionIndices, const vector<cl_uint>& exclusionRowIndices) {
+    int start = exclusionRowIndices[x];
+    int end = exclusionRowIndices[x+1];
+    for (int i = start; i < end; i++)
+        if (exclusionIndices[i] == y)
+            return i*OpenCLContext::TileSize;
+    throw OpenMMException("Internal error: exclusion in unexpected tile");
+}
+
 void OpenCLNonbondedUtilities::prepareInteractions() {
     if (!useCutoff)
         return;
@@ -275,8 +307,8 @@ void OpenCLNonbondedUtilities::prepareInteractions() {
 void OpenCLNonbondedUtilities::computeInteractions() {
     if (tiles != NULL) {
         if (useCutoff) {
-            forceKernel.setArg<mm_float4>(10, context.getPeriodicBoxSize());
-            forceKernel.setArg<mm_float4>(11, context.getInvPeriodicBoxSize());
+            forceKernel.setArg<mm_float4>(11, context.getPeriodicBoxSize());
+            forceKernel.setArg<mm_float4>(12, context.getInvPeriodicBoxSize());
         }
         context.executeKernel(forceKernel, tiles->getSize()*OpenCLContext::TileSize);
     }
@@ -388,6 +420,7 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
     defines["CUTOFF_SQUARED"] = OpenCLExpressionUtilities::doubleToString(cutoff*cutoff);
     defines["NUM_ATOMS"] = OpenCLExpressionUtilities::intToString(context.getNumAtoms());
     defines["PADDED_NUM_ATOMS"] = OpenCLExpressionUtilities::intToString(context.getPaddedNumAtoms());
+    defines["NUM_BLOCKS"] = OpenCLExpressionUtilities::intToString(context.getNumAtomBlocks());
     string file = (context.getSIMDWidth() == 32 ? OpenCLKernelSources::nonbonded_nvidia : OpenCLKernelSources::nonbonded_default);
     cl::Program program = context.createProgram(context.replaceStrings(file, replacements), defines);
     cl::Kernel kernel(program, "computeNonbonded");
@@ -399,7 +432,8 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
     kernel.setArg<cl::Buffer>(index++, context.getEnergyBuffer().getDeviceBuffer());
     kernel.setArg<cl::Buffer>(index++, context.getPosq().getDeviceBuffer());
     kernel.setArg<cl::Buffer>(index++, exclusions->getDeviceBuffer());
-    kernel.setArg<cl::Buffer>(index++, exclusionIndex->getDeviceBuffer());
+    kernel.setArg<cl::Buffer>(index++, exclusionIndices->getDeviceBuffer());
+    kernel.setArg<cl::Buffer>(index++, exclusionRowIndices->getDeviceBuffer());
     kernel.setArg(index++, OpenCLContext::ThreadBlockSize*localDataSize, NULL);
     kernel.setArg(index++, OpenCLContext::ThreadBlockSize*sizeof(cl_float4), NULL);
     if (useCutoff) {
