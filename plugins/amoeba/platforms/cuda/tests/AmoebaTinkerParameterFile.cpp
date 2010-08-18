@@ -5281,10 +5281,12 @@ static void setVelocitiesBasedOnTemperature( const System& system, int seed, std
             double mass             = system.getParticleMass(ii);
             finalKineticEnergy     += mass*(velocities[ii][0]*velocities[ii][0] + velocities[ii][1]*velocities[ii][1] + velocities[ii][2]*velocities[ii][2]);
         }
+        finalKineticEnergy *= 0.5;
+        double finalT       = (finalKineticEnergy)/(degreesOfFreedom*BOLTZ);
     
-        (void) fprintf( log, "%s KE=%15.7e approximateT=%15.7e desiredT=%15.7e dof=%12.3f final KE=%12.3e\n",
+        (void) fprintf( log, "%s KE=%15.7e ~T=%15.7e desiredT=%15.7e dof=%12.3f final KE=%12.3e T=%12.3e\n",
                         methodName.c_str(), kineticEnergy, approximateT, temperature,
-                        degreesOfFreedom, 0.5*finalKineticEnergy );
+                        degreesOfFreedom, finalKineticEnergy, finalT );
     }
  
  
@@ -5503,6 +5505,7 @@ void testEnergyConservation( std::string parameterFileName, MapStringInt& forceM
    // tolerance for thermostat
 
    double temperatureTolerance                     = 3.0;
+   double initialTemperature                       = 300.0;
 
    int energyMinimize                              = 1;
    int applyAssertion                              = 0;
@@ -5550,9 +5553,9 @@ void testEnergyConservation( std::string parameterFileName, MapStringInt& forceM
  
     std::vector<Vec3> velocities; 
     velocities.resize( numberOfAtoms );
-    double initialT = 300.0;
     setIntFromMap(     inputArgumentMap, "randomNumberSeed",     randomNumberSeed );
-    setVelocitiesBasedOnTemperature( system, randomNumberSeed, velocities, initialT, log );
+    setDoubleFromMap(  inputArgumentMap, "temperature",          initialTemperature );
+    setVelocitiesBasedOnTemperature( system, randomNumberSeed, velocities, initialTemperature, log );
     context->setVelocities(velocities);
 
     // energy minimize
@@ -5574,6 +5577,7 @@ void testEnergyConservation( std::string parameterFileName, MapStringInt& forceM
             (void) fprintf( log, "Energy pre/post energies [%15.7e %15.7e] [%15.7e %15.7e].\n",
                             preState.getKineticEnergy(), preState.getPotentialEnergy(),
                             postState.getKineticEnergy(), postState.getPotentialEnergy() );
+            (void) fflush( log );
         }
         if( intermediateStateFile ){
             writeIntermediateStateFile( *context, intermediateStateFile, log );
