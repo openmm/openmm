@@ -435,7 +435,7 @@ void OpenCLContext::findMoleculeGroups(const System& system) {
                 double distance1, distance2;
                 system.getConstraintParameters(mol.constraints[i], c1particle1, c1particle2, distance1);
                 system.getConstraintParameters(mol2.constraints[i], c2particle1, c2particle2, distance2);
-                if (c1particle1 != c2particle1-atomOffset || c1particle2 != c2particle2 || distance1 != distance2)
+                if (c1particle1 != c2particle1-atomOffset || c1particle2 != c2particle2-atomOffset || distance1 != distance2)
                     identical = false;
             }
 
