@@ -15,9 +15,9 @@ typedef struct {
  */
 
 __kernel __attribute__((reqd_work_group_size(WORK_GROUP_SIZE, 1, 1)))
-void computeBornSum(__global float* global_bornSum, __global float4* posq, __global float2* global_params, __local AtomData* localData, __local float* tempBuffer, __global unsigned int* tiles,
+void computeBornSum(__global float* global_bornSum, __global float4* posq, __global float2* global_params, __local AtomData* localData, __local float* tempBuffer,
 #ifdef USE_CUTOFF
-        __global unsigned int* interactionFlags, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize) {
+        __global unsigned int* tiles, __global unsigned int* interactionFlags, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize) {
 #else
         unsigned int numTiles) {
 #endif
@@ -116,7 +116,7 @@ void computeBornSum(__global float* global_bornSum, __global float4* posq, __glo
             localData[get_local_id(0)].bornSum = 0.0f;
 #ifdef USE_CUTOFF
             unsigned int flags = interactionFlags[pos];
-            if (flags != 0xFFFFFFFF) {
+            if (flags != 0xFFFFFFFF && false) { // TODO: Fix this: should be checking for exclusions
                 if (flags == 0) {
                     // No interactions in this tile.
                 }
@@ -260,9 +260,9 @@ void computeBornSum(__global float* global_bornSum, __global float4* posq, __glo
 __kernel __attribute__((reqd_work_group_size(WORK_GROUP_SIZE, 1, 1)))
 void computeGBSAForce1(__global float4* forceBuffers, __global float* energyBuffer,
         __global float4* posq, __global float* global_bornRadii,
-        __global float* global_bornForce, __local AtomData* localData, __local float4* tempBuffer, __global unsigned int* tiles,
+        __global float* global_bornForce, __local AtomData* localData, __local float4* tempBuffer,
 #ifdef USE_CUTOFF
-        __global unsigned int* interactionFlags, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize) {
+        __global unsigned int* tiles, __global unsigned int* interactionFlags, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize) {
 #else
         unsigned int numTiles) {
 #endif
@@ -366,7 +366,7 @@ void computeGBSAForce1(__global float4* forceBuffers, __global float* energyBuff
             localData[get_local_id(0)].fw = 0.0f;
 #ifdef USE_CUTOFF
             unsigned int flags = interactionFlags[pos];
-            if (flags != 0xFFFFFFFF) {
+            if (flags != 0xFFFFFFFF && false) { // TODO: Fix this: should be checking for exclusions
                 if (flags == 0) {
                     // No interactions in this tile.
                 }

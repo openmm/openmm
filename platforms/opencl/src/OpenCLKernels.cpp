@@ -1705,10 +1705,8 @@ double OpenCLCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
             computeBornSumKernel.setArg<cl::Buffer>(index++, nb.getInteractionFlags().getDeviceBuffer());
             computeBornSumKernel.setArg<cl::Buffer>(index++, nb.getInteractionCount().getDeviceBuffer());
         }
-        else {
-            computeBornSumKernel.setArg<cl::Buffer>(index++, nb.getTiles().getDeviceBuffer());
-            computeBornSumKernel.setArg<cl_uint>(index++, nb.getTiles().getSize());
-        }
+        else
+            computeBornSumKernel.setArg<cl_uint>(index++, cl.getNumAtomBlocks()*(cl.getNumAtomBlocks()+1)/2);
         force1Kernel = cl::Kernel(program, "computeGBSAForce1");
         index = 0;
         force1Kernel.setArg<cl::Buffer>(index++, cl.getForceBuffers().getDeviceBuffer());
@@ -1723,10 +1721,8 @@ double OpenCLCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
             force1Kernel.setArg<cl::Buffer>(index++, nb.getInteractionFlags().getDeviceBuffer());
             force1Kernel.setArg<cl::Buffer>(index++, nb.getInteractionCount().getDeviceBuffer());
         }
-        else {
-            force1Kernel.setArg<cl::Buffer>(index++, nb.getTiles().getDeviceBuffer());
-            force1Kernel.setArg<cl_uint>(index++, nb.getTiles().getSize());
-        }
+        else
+            force1Kernel.setArg<cl_uint>(index++, cl.getNumAtomBlocks()*(cl.getNumAtomBlocks()+1)/2);
         program = cl.createProgram(OpenCLKernelSources::gbsaObcReductions, defines);
         reduceBornSumKernel = cl::Kernel(program, "reduceBornSum");
         reduceBornSumKernel.setArg<cl_int>(0, cl.getPaddedNumAtoms());
@@ -1753,9 +1749,10 @@ double OpenCLCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
         force1Kernel.setArg<mm_float4>(10, cl.getPeriodicBoxSize());
         force1Kernel.setArg<mm_float4>(11, cl.getInvPeriodicBoxSize());
     }
-    cl.executeKernel(computeBornSumKernel, nb.getTiles().getSize()*OpenCLContext::TileSize);
+    int numTiles = cl.getNumAtomBlocks()*(cl.getNumAtomBlocks()+1)/2;
+    cl.executeKernel(computeBornSumKernel, numTiles*OpenCLContext::TileSize);
     cl.executeKernel(reduceBornSumKernel, cl.getPaddedNumAtoms());
-    cl.executeKernel(force1Kernel, nb.getTiles().getSize()*OpenCLContext::TileSize);
+    cl.executeKernel(force1Kernel, numTiles*OpenCLContext::TileSize);
     cl.executeKernel(reduceBornForceKernel, cl.getPaddedNumAtoms());
     return 0.0;
 }
@@ -2406,10 +2403,8 @@ double OpenCLCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
             pairValueKernel.setArg<cl::Buffer>(index++, nb.getInteractionCount().getDeviceBuffer());
             index += 2; // Periodic box size arguments are set when the kernel is executed.
         }
-        else {
-            pairValueKernel.setArg<cl::Buffer>(index++, nb.getTiles().getDeviceBuffer());
-            pairValueKernel.setArg<cl_uint>(index++, nb.getTiles().getSize());
-        }
+        else
+            pairValueKernel.setArg<cl_uint>(index++, cl.getNumAtomBlocks()*(cl.getNumAtomBlocks()+1)/2);
         if (globals != NULL)
             pairValueKernel.setArg<cl::Buffer>(index++, globals->getDeviceBuffer());
         for (int i = 0; i < (int) params->getBuffers().size(); i++) {
@@ -2454,10 +2449,8 @@ double OpenCLCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
             pairEnergyKernel.setArg<cl::Buffer>(index++, nb.getInteractionCount().getDeviceBuffer());
             index += 2; // Periodic box size arguments are set when the kernel is executed.
         }
-        else {
-            pairEnergyKernel.setArg<cl::Buffer>(index++, nb.getTiles().getDeviceBuffer());
-            pairEnergyKernel.setArg<cl_uint>(index++, nb.getTiles().getSize());
-        }
+        else
+            pairEnergyKernel.setArg<cl_uint>(index++, cl.getNumAtomBlocks()*(cl.getNumAtomBlocks()+1)/2);
         if (globals != NULL)
             pairEnergyKernel.setArg<cl::Buffer>(index++, globals->getDeviceBuffer());
         for (int i = 0; i < (int) params->getBuffers().size(); i++) {
@@ -2530,9 +2523,10 @@ double OpenCLCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
         pairEnergyKernel.setArg<mm_float4>(12, cl.getPeriodicBoxSize());
         pairEnergyKernel.setArg<mm_float4>(13, cl.getInvPeriodicBoxSize());
     }
-    cl.executeKernel(pairValueKernel, nb.getTiles().getSize()*OpenCLContext::TileSize);
+    int numTiles = cl.getNumAtomBlocks()*(cl.getNumAtomBlocks()+1)/2;
+    cl.executeKernel(pairValueKernel, numTiles*OpenCLContext::TileSize);
     cl.executeKernel(perParticleValueKernel, cl.getPaddedNumAtoms());
-    cl.executeKernel(pairEnergyKernel, nb.getTiles().getSize()*OpenCLContext::TileSize);
+    cl.executeKernel(pairEnergyKernel, numTiles*OpenCLContext::TileSize);
     cl.executeKernel(perParticleEnergyKernel, cl.getPaddedNumAtoms());
     if (needParameterGradient)
         cl.executeKernel(gradientChainRuleKernel, cl.getPaddedNumAtoms());

@@ -521,7 +521,7 @@ void testBlockInteractions(bool periodic) {
     vector<cl_uint> interactionFlags;
     nb.getInteractionCount().download(interactionCount);
     int numWithInteractions = interactionCount[0];
-    vector<bool> hasInteractions(nb.getTiles().getSize(), false);
+    vector<bool> hasInteractions(numBlocks*(numBlocks+1)/2, false);
     nb.getInteractingTiles().download(interactingTiles);
     nb.getInteractionFlags().download(interactionFlags);
     const unsigned int atoms = clcontext.getPaddedNumAtoms();
@@ -580,13 +580,10 @@ void testBlockInteractions(bool periodic) {
 
     // Check the tiles that did not have interactions to make sure all atoms are beyond the cutoff.
 
-    vector<cl_uint> tiles;
-    nb.getTiles().download(tiles);
     for (int i = 0; i < (int) hasInteractions.size(); i++) 
         if (!hasInteractions[i]) {
-            unsigned int tile = tiles[i];
-            unsigned int x = (tile >> 17);
-            unsigned int y = ((tile >> 2) & 0x7fff);
+            unsigned int y = (unsigned int) std::floor(numBlocks+0.5-std::sqrt((numBlocks+0.5)*(numBlocks+0.5)-2*i));
+            unsigned int x = (i-y*numBlocks+y*(y+1)/2);
             for (int atom1 = 0; atom1 < blockSize; ++atom1) {
                 mm_float4 pos1 = clcontext.getPosq()[x*blockSize+atom1];
                 for (int atom2 = 0; atom2 < blockSize; ++atom2) {

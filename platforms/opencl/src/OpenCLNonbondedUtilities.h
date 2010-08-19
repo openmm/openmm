@@ -35,8 +35,6 @@
 
 namespace OpenMM {
 
-class OpenCLCompact;
-
 /**
  * This class provides a generic interface for calculating nonbonded interactions.  It does this in two
  * ways.  First, it can be used to create Kernels that evaluate nonbonded interactions.  Clients
@@ -142,12 +140,6 @@ public:
         return *blockBoundingBox;
     }
     /**
-     * Get the array containing the full set of tiles.
-     */
-    OpenCLArray<cl_uint>& getTiles() {
-        return *tiles;
-    }
-    /**
      * Get the array whose first element contains the number of tiles with interactions.
      */
     OpenCLArray<cl_uint>& getInteractionCount() {
@@ -202,7 +194,6 @@ private:
     cl::Kernel findBlockBoundsKernel;
     cl::Kernel findInteractingBlocksKernel;
     cl::Kernel findInteractionsWithinBlocksKernel;
-    OpenCLArray<cl_uint>* tiles;
     OpenCLArray<cl_uint>* exclusions;
     OpenCLArray<cl_uint>* exclusionIndices;
     OpenCLArray<cl_uint>* exclusionRowIndices;
@@ -214,7 +205,6 @@ private:
     std::vector<std::vector<int> > atomExclusions;
     std::vector<ParameterInfo> parameters;
     std::vector<ParameterInfo> arguments;
-    OpenCLCompact* compact;
     std::string kernelSource;
     std::map<std::string, std::string> kernelDefines;
     double cutoff;

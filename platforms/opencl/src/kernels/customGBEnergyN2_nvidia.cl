@@ -9,9 +9,9 @@
 __kernel __attribute__((reqd_work_group_size(WORK_GROUP_SIZE, 1, 1)))
 void computeN2Energy(__global float4* forceBuffers, __global float* energyBuffer, __local float4* local_force,
 	__global float4* posq, __local float4* local_posq, __global unsigned int* exclusions, __global unsigned int* exclusionIndices,
-        __global unsigned int* exclusionRowIndices, __local float4* tempBuffer, __global unsigned int* tiles,
+        __global unsigned int* exclusionRowIndices, __local float4* tempBuffer,
 #ifdef USE_CUTOFF
-        __global unsigned int* interactionFlags, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize
+        __global unsigned int* tiles, __global unsigned int* interactionFlags, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize
 #else
         unsigned int numTiles
 #endif
