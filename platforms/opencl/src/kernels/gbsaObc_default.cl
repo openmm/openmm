@@ -17,7 +17,7 @@ typedef struct {
 __kernel __attribute__((reqd_work_group_size(WORK_GROUP_SIZE, 1, 1)))
 void computeBornSum(__global float* global_bornSum, __global float4* posq, __global float2* global_params, __local AtomData* localData, __local float* tempBuffer,
 #ifdef USE_CUTOFF
-        __global unsigned int* tiles, __global unsigned int* interactionFlags, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize) {
+        __global ushort2* tiles, __global unsigned int* interactionFlags, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize) {
 #else
         unsigned int numTiles) {
 #endif
@@ -32,9 +32,9 @@ void computeBornSum(__global float* global_bornSum, __global float4* posq, __glo
     while (pos < end) {
         // Extract the coordinates of this tile
 #ifdef USE_CUTOFF
-        unsigned int x = tiles[pos];
-        unsigned int y = ((x >> 2) & 0x7fff);
-        x = (x>>17);
+        ushort2 tileIndices = tiles[pos];
+        unsigned int x = tileIndices.x;
+        unsigned int y = tileIndices.y;
 #else
         unsigned int y = (unsigned int) floor(NUM_BLOCKS+0.5f-sqrt((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
         unsigned int x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
@@ -181,8 +181,8 @@ void computeBornSum(__global float* global_bornSum, __global float4* posq, __glo
                 global_bornSum[offset1] += bornSum+tempBuffer[get_local_id(0)+TILE_SIZE];
                 global_bornSum[offset2] += localData[get_local_id(0)].bornSum+localData[get_local_id(0)+TILE_SIZE].bornSum;
             }
-            lasty = y;
         }
+        lasty = y;
         pos++;
     }
 }
@@ -196,7 +196,7 @@ void computeGBSAForce1(__global float4* forceBuffers, __global float* energyBuff
         __global float4* posq, __global float* global_bornRadii,
         __global float* global_bornForce, __local AtomData* localData, __local float4* tempBuffer,
 #ifdef USE_CUTOFF
-        __global unsigned int* tiles, __global unsigned int* interactionFlags, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize) {
+        __global ushort2* tiles, __global unsigned int* interactionFlags, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize) {
 #else
         unsigned int numTiles) {
 #endif
@@ -211,9 +211,9 @@ void computeGBSAForce1(__global float4* forceBuffers, __global float* energyBuff
     while (pos < end) {
         // Extract the coordinates of this tile
 #ifdef USE_CUTOFF
-        unsigned int x = tiles[pos];
-        unsigned int y = ((x >> 2) & 0x7fff);
-        x = (x>>17);
+        ushort2 tileIndices = tiles[pos];
+        unsigned int x = tileIndices.x;
+        unsigned int y = tileIndices.y;
 #else
         unsigned int y = (unsigned int) floor(NUM_BLOCKS+0.5f-sqrt((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
         unsigned int x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
@@ -366,8 +366,8 @@ void computeGBSAForce1(__global float4* forceBuffers, __global float* energyBuff
                 global_bornForce[offset1] += force.w+tempBuffer[get_local_id(0)+TILE_SIZE].w;
                 global_bornForce[offset2] += sum.w;
             }
-            lasty = y;
         }
+        lasty = y;
         pos++;
     }
     energyBuffer[get_global_id(0)] += energy;

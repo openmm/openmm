@@ -200,7 +200,7 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
     // Create data structures for the neighbor list.
 
     if (useCutoff) {
-        interactingTiles = new OpenCLArray<cl_uint>(context, numTiles, "interactingTiles");
+        interactingTiles = new OpenCLArray<mm_ushort2>(context, numTiles, "interactingTiles");
         interactionFlags = new OpenCLArray<cl_uint>(context, numTiles, "interactionFlags");
         interactionCount = new OpenCLArray<cl_uint>(context, 1, "interactionCount");
         blockCenter = new OpenCLArray<mm_float4>(context, numAtomBlocks, "blockCenter");
@@ -230,6 +230,7 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
         findInteractingBlocksKernel.setArg<cl::Buffer>(4, blockBoundingBox->getDeviceBuffer());
         findInteractingBlocksKernel.setArg<cl::Buffer>(5, interactionCount->getDeviceBuffer());
         findInteractingBlocksKernel.setArg<cl::Buffer>(6, interactingTiles->getDeviceBuffer());
+        findInteractingBlocksKernel.setArg<cl::Buffer>(7, context.getPosq().getDeviceBuffer());
         findInteractionsWithinBlocksKernel = cl::Kernel(interactingBlocksProgram, "findInteractionsWithinBlocks");
         findInteractionsWithinBlocksKernel.setArg<cl_float>(0, (cl_float) (cutoff*cutoff));
         findInteractionsWithinBlocksKernel.setArg<cl::Buffer>(3, context.getPosq().getDeviceBuffer());

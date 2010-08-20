@@ -148,7 +148,7 @@ public:
     /**
      * Get the array containing tiles with interactions.
      */
-    OpenCLArray<cl_uint>& getInteractingTiles() {
+    OpenCLArray<mm_ushort2>& getInteractingTiles() {
         return *interactingTiles;
     }
     /**
@@ -197,7 +197,7 @@ private:
     OpenCLArray<cl_uint>* exclusions;
     OpenCLArray<cl_uint>* exclusionIndices;
     OpenCLArray<cl_uint>* exclusionRowIndices;
-    OpenCLArray<cl_uint>* interactingTiles;
+    OpenCLArray<mm_ushort2>* interactingTiles;
     OpenCLArray<cl_uint>* interactionFlags;
     OpenCLArray<cl_uint>* interactionCount;
     OpenCLArray<mm_float4>* blockCenter;

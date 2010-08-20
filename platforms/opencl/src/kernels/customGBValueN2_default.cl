@@ -9,7 +9,7 @@ void computeN2Value(__global float4* posq, __local float4* local_posq, __global 
         __global unsigned int* exclusionIndices, __global unsigned int* exclusionRowIndices, __global float* global_value, __local float* local_value,
         __local float* tempBuffer,
 #ifdef USE_CUTOFF
-        __global unsigned int* tiles, __global unsigned int* interactionFlags, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize
+        __global ushort2* tiles, __global unsigned int* interactionFlags, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize
 #else
         unsigned int numTiles
 #endif
@@ -27,9 +27,9 @@ void computeN2Value(__global float4* posq, __local float4* local_posq, __global 
     while (pos < end) {
         // Extract the coordinates of this tile
 #ifdef USE_CUTOFF
-        unsigned int x = tiles[pos];
-        unsigned int y = ((x >> 2) & 0x7fff);
-        x = (x>>17);
+        ushort2 tileIndices = tiles[pos];
+        unsigned int x = tileIndices.x;
+        unsigned int y = tileIndices.y;
 #else
         unsigned int y = (unsigned int) floor(NUM_BLOCKS+0.5f-sqrt((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
         unsigned int x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
@@ -196,8 +196,8 @@ void computeN2Value(__global float4* posq, __local float4* local_posq, __global 
                 global_value[offset1] += value+tempBuffer[get_local_id(0)+TILE_SIZE];
                 global_value[offset2] += local_value[get_local_id(0)]+local_value[get_local_id(0)+TILE_SIZE];
             }
-            lasty = y;
         }
+        lasty = y;
         pos++;
     }
 }

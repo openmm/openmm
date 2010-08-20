@@ -517,7 +517,7 @@ void testBlockInteractions(bool periodic) {
     // Verify that interactions were identified correctly.
 
     vector<cl_uint> interactionCount;
-    vector<cl_uint> interactingTiles;
+    vector<mm_ushort2> interactingTiles;
     vector<cl_uint> interactionFlags;
     nb.getInteractionCount().download(interactionCount);
     int numWithInteractions = interactionCount[0];
@@ -528,9 +528,8 @@ void testBlockInteractions(bool periodic) {
     const unsigned int grid = OpenCLContext::TileSize;
     const unsigned int dim = clcontext.getNumAtomBlocks();
     for (int i = 0; i < numWithInteractions; i++) {
-        unsigned int tile = interactingTiles[i];
-        unsigned int x = (tile >> 17);
-        unsigned int y = ((tile >> 2) & 0x7fff);
+        unsigned int x = interactingTiles[i].x;
+        unsigned int y = interactingTiles[i].y;
         int index = (x > y ? x+y*dim-y*(y+1)/2 : y+x*dim-x*(x+1)/2);
         hasInteractions[index] = true;
 

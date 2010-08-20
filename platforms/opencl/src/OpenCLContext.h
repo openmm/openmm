@@ -84,6 +84,13 @@ struct mm_float16 {
         s8(s8), s9(s9), s10(s10), s11(s11), s12(s12), s13(s13), s14(s14), s15(15) {
     }
 };
+struct mm_ushort2 {
+    cl_ushort x, y;
+    mm_ushort2() {
+    }
+    mm_ushort2(cl_ushort x, cl_ushort y) : x(x), y(y) {
+    }
+};
 struct mm_int2 {
     cl_int x, y;
     mm_int2() {

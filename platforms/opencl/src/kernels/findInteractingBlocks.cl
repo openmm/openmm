@@ -1,4 +1,5 @@
 #pragma OPENCL EXTENSION cl_khr_global_int32_base_atomics : enable
+#pragma OPENCL EXTENSION cl_khr_byte_addressable_store : enable
 #define TILE_SIZE 32
 #define GROUP_SIZE 64
 #define BUFFER_GROUPS 4
@@ -44,31 +45,34 @@ __kernel void findBlockBounds(int numAtoms, float4 periodicBoxSize, float4 invPe
  * This is called by findBlocksWithInteractions().  It compacts the list of blocks and writes them
  * to global memory.
  */
-void storeInteractionData(__local short2* buffer, __local bool* valid, __local int* sum, __local int* sum2, __local short2* temp, __local int* baseIndex,
-            __global unsigned int* interactionCount, __global unsigned int* interactingTiles) {
+void storeInteractionData(__local ushort2* buffer, __local int* valid, __local short* sum, __local ushort2* temp, __local int* baseIndex,
+            __global unsigned int* interactionCount, __global ushort2* interactingTiles, float cutoffSquared, float4 periodicBoxSize,
+            float4 invPeriodicBoxSize, __global float4* posq, __global float4* blockCenter, __global float4* blockBoundingBox) {
     // The buffer is full, so we need to compact it and write out results.  Start by doing a parallel prefix sum.
 
     for (int i = get_local_id(0); i < BUFFER_SIZE; i += GROUP_SIZE)
-        sum[i] = (valid[i] ? 1 : 0);
+        temp[i].x = (valid[i] ? 1 : 0);
     barrier(CLK_LOCAL_MEM_FENCE);
     int whichBuffer = 0;
     for (int offset = 1; offset < BUFFER_SIZE; offset *= 2) {
         if (whichBuffer == 0)
             for (int i = get_local_id(0); i < BUFFER_SIZE; i += GROUP_SIZE)
-                sum2[i] = (i < offset ? sum[i] : sum[i]+sum[i-offset]);
+                temp[i].y = (i < offset ? temp[i].x : temp[i].x+temp[i-offset].x);
         else
             for (int i = get_local_id(0); i < BUFFER_SIZE; i += GROUP_SIZE)
-                sum[i] = (i < offset ? sum2[i] : sum2[i]+sum2[i-offset]);
+                temp[i].x = (i < offset ? temp[i].y : temp[i].y+temp[i-offset].y);
         whichBuffer = 1-whichBuffer;
         barrier(CLK_LOCAL_MEM_FENCE);
     }
-    if (whichBuffer == 1) {
+    if (whichBuffer == 0)
         for (int i = get_local_id(0); i < BUFFER_SIZE; i += GROUP_SIZE)
-            sum[i] = sum2[i];
-        barrier(CLK_LOCAL_MEM_FENCE);
-    }
+            sum[i] = temp[i].x;
+    else
+        for (int i = get_local_id(0); i < BUFFER_SIZE; i += GROUP_SIZE)
+            sum[i] = temp[i].y;
+    barrier(CLK_LOCAL_MEM_FENCE);
 
-    // Compact the buffer and store it to global memory.
+    // Compact the buffer.
 
     for (int i = get_local_id(0); i < BUFFER_SIZE; i += GROUP_SIZE)
         if (valid[i]) {
@@ -77,14 +81,74 @@ void storeInteractionData(__local short2* buffer, __local bool* valid, __local i
         }
     barrier(CLK_LOCAL_MEM_FENCE);
     int numValid = sum[BUFFER_SIZE-1];
-    if (get_local_id(0) == 0)
-        *baseIndex = atom_add(interactionCount, numValid);
-    barrier(CLK_LOCAL_MEM_FENCE);
+
+    // Filter the list of tiles by comparing the distance from each atom to the other bounding box.
+
+    int tile;
+    int index = get_local_id(0)&(TILE_SIZE-1);
+    int group = get_local_id(0)/TILE_SIZE;
+    __local int* flag = sum;
+    int lasty = -1;
+    float4 center, boxSize, pos;
+    for (tile = 0; tile < numValid; tile++) {
+        int x = temp[tile].x;
+        int y = temp[tile].y;
+        if (x == y) {
+            tile++;
+            continue;
+        }
+        if (index == 0)
+            flag[group] = true;
+        barrier(CLK_LOCAL_MEM_FENCE);
+
+        // Load an atom position and the bounding box the other block.
+
+        if (group == 0) {
+            center = blockCenter[x];
+            boxSize = blockBoundingBox[x];
+            if (y != lasty)
+                pos = posq[y*TILE_SIZE+index];
+        }
+        else {
+            if (y != lasty) {
+                center = blockCenter[y];
+                boxSize = blockBoundingBox[y];
+            }
+            pos = posq[x*TILE_SIZE+index];
+        }
+        lasty = y;
+
+        // Find the distance of the atom from the bounding box.
+
+        float4 delta = pos-center;
+#ifdef USE_PERIODIC
+        delta.x -= floor(delta.x*invPeriodicBoxSize.x+0.5f)*periodicBoxSize.x;
+        delta.y -= floor(delta.y*invPeriodicBoxSize.y+0.5f)*periodicBoxSize.y;
+        delta.z -= floor(delta.z*invPeriodicBoxSize.z+0.5f)*periodicBoxSize.z;
+#endif
+        delta = max((float4) 0.0f, fabs(delta)-boxSize);
+        if (delta.x*delta.x+delta.y*delta.y+delta.z*delta.z < cutoffSquared)
+            flag[group] = false;
+        barrier(CLK_LOCAL_MEM_FENCE);
+        if (flag[0] || flag[1]) {
+            // This tile contains no interactions.
+
+            numValid--;
+            if (get_local_id(0) == 0)
+                temp[tile] = temp[numValid];
+        }
+        else
+            tile++;
+        barrier(CLK_LOCAL_MEM_FENCE);
+    }
 
     // Store it to global memory.
 
+    if (get_local_id(0) == 0)
+        *baseIndex = atom_add(interactionCount, numValid);
+    barrier(CLK_LOCAL_MEM_FENCE);
     for (int i = get_local_id(0); i < numValid; i += GROUP_SIZE)
-        interactingTiles[*baseIndex+i] = (temp[i].x<<17)+(temp[i].y<<2);
+        interactingTiles[*baseIndex+i] = temp[i];
     barrier(CLK_LOCAL_MEM_FENCE);
 }
 
@@ -93,12 +157,11 @@ void storeInteractionData(__local short2* buffer, __local bool* valid, __local i
  * mark them as non-interacting.
  */
 __kernel void findBlocksWithInteractions(float cutoffSquared, float4 periodicBoxSize, float4 invPeriodicBoxSize, __global float4* blockCenter,
-        __global float4* blockBoundingBox, __global unsigned int* interactionCount, __global unsigned int* interactingTiles) {
-    __local short2 buffer[BUFFER_SIZE];
-    __local bool valid[BUFFER_SIZE];
-    __local int sum[BUFFER_SIZE];
-    __local int sum2[BUFFER_SIZE];
-    __local short2 temp[BUFFER_SIZE];
+        __global float4* blockBoundingBox, __global unsigned int* interactionCount, __global ushort2* interactingTiles, __global float4* posq) {
+    __local ushort2 buffer[BUFFER_SIZE];
+    __local int valid[BUFFER_SIZE];
+    __local short sum[BUFFER_SIZE];
+    __local ushort2 temp[BUFFER_SIZE];
     __local int bufferFull;
     __local int globalIndex;
     int valuesInBuffer = 0;
@@ -138,7 +201,7 @@ __kernel void findBlocksWithInteractions(float cutoffSquared, float4 periodicBox
 
                 int bufferIndex = valuesInBuffer*GROUP_SIZE+get_local_id(0);
                 valid[bufferIndex] = true;
-                buffer[bufferIndex] = (short2) (x, y);
+                buffer[bufferIndex] = (ushort2) (x, y);
                 valuesInBuffer++;
                 if (!bufferFull && valuesInBuffer == BUFFER_GROUPS)
                     bufferFull = true;
@@ -146,21 +209,21 @@ __kernel void findBlocksWithInteractions(float cutoffSquared, float4 periodicBox
         }
         barrier(CLK_LOCAL_MEM_FENCE);
         if (bufferFull) {
-            storeInteractionData(buffer, valid, sum, sum2, temp, &globalIndex, interactionCount, interactingTiles);
+            storeInteractionData(buffer, valid, sum, temp, &globalIndex, interactionCount, interactingTiles, cutoffSquared, periodicBoxSize, invPeriodicBoxSize, posq, blockCenter, blockBoundingBox);
             valuesInBuffer = 0;
             if (get_local_id(0) == 0)
                 bufferFull = false;
             barrier(CLK_LOCAL_MEM_FENCE);
         }
     }
-    storeInteractionData(buffer, valid, sum, sum2, temp, &globalIndex, interactionCount, interactingTiles);
+    storeInteractionData(buffer, valid, sum, temp, &globalIndex, interactionCount, interactingTiles, cutoffSquared, periodicBoxSize, invPeriodicBoxSize, posq, blockCenter, blockBoundingBox);
 }
 
 /**
  * Compare each atom in one block to the bounding box of another block, and set
  * flags for which ones are interacting.
  */
-__kernel void findInteractionsWithinBlocks(float cutoffSquared, float4 periodicBoxSize, float4 invPeriodicBoxSize, __global float4* posq, __global unsigned int* tiles, __global float4* blockCenter,
+__kernel void findInteractionsWithinBlocks(float cutoffSquared, float4 periodicBoxSize, float4 invPeriodicBoxSize, __global float4* posq, __global ushort2* tiles, __global float4* blockCenter,
             __global float4* blockBoundingBox, __global unsigned int* interactionFlags, __global unsigned int* interactionCount, __local unsigned int* flags) {
     unsigned int totalWarps = get_global_size(0)/TILE_SIZE;
     unsigned int warp = get_global_id(0)/TILE_SIZE;
@@ -173,13 +236,10 @@ __kernel void findInteractionsWithinBlocks(float cutoffSquared, float4 periodicB
     float4 apos;
     while (pos < end) {
         // Extract the coordinates of this tile
-        unsigned int x = tiles[pos];
-        unsigned int y = ((x >> 2) & 0x7fff);
-        bool hasExclusions = (x & 0x1);
-        x = (x >> 17);
-        if (x == y || hasExclusions) {
-            // Assume this tile will be dense.
-
+        ushort2 tileIndices = tiles[pos];
+        unsigned int x = tileIndices.x;
+        unsigned int y = tileIndices.y;
+        if (x == y) {
             if (index == 0)
                 interactionFlags[pos] = 0xFFFFFFFF;
         }

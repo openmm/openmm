@@ -11,7 +11,7 @@ void computeN2Energy(__global float4* forceBuffers, __global float* energyBuffer
 	__global float4* posq, __local float4* local_posq, __global unsigned int* exclusions, __global unsigned int* exclusionIndices,
         __global unsigned int* exclusionRowIndices, __local float4* tempBuffer,
 #ifdef USE_CUTOFF
-        __global unsigned int* tiles, __global unsigned int* interactionFlags, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize
+        __global ushort2* tiles, __global unsigned int* interactionFlags, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize
 #else
         unsigned int numTiles
 #endif
@@ -31,9 +31,9 @@ void computeN2Energy(__global float4* forceBuffers, __global float* energyBuffer
     while (pos < end) {
         // Extract the coordinates of this tile
 #ifdef USE_CUTOFF
-        unsigned int x = tiles[pos];
-        unsigned int y = ((x >> 2) & 0x7fff);
-        x = (x>>17);
+        ushort2 tileIndices = tiles[pos];
+        unsigned int x = tileIndices.x;
+        unsigned int y = tileIndices.y;
 #else
         unsigned int y = (unsigned int) floor(NUM_BLOCKS+0.5f-sqrt((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
         unsigned int x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
@@ -195,8 +195,8 @@ void computeN2Energy(__global float4* forceBuffers, __global float* energyBuffer
             forceBuffers[offset2].xyz += local_force[get_local_id(0)].xyz;
             STORE_DERIVATIVES_1
             STORE_DERIVATIVES_2
-            lasty = y;
         }
+        lasty = y;
         pos++;
     }
     energyBuffer[get_global_id(0)] += energy;
