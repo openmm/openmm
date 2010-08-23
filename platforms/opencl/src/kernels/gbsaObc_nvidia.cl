@@ -17,34 +17,42 @@ typedef struct {
 __kernel __attribute__((reqd_work_group_size(WORK_GROUP_SIZE, 1, 1)))
 void computeBornSum(__global float* global_bornSum, __global float4* posq, __global float2* global_params, __local AtomData* localData, __local float* tempBuffer,
 #ifdef USE_CUTOFF
-        __global ushort2* tiles, __global unsigned int* interactionFlags, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize) {
+        __global ushort2* tiles, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, __global unsigned int* interactionFlags) {
 #else
         unsigned int numTiles) {
 #endif
-#ifdef USE_CUTOFF
-    unsigned int numTiles = interactionCount[0];
-#endif
     unsigned int totalWarps = get_global_size(0)/TILE_SIZE;
     unsigned int warp = get_global_id(0)/TILE_SIZE;
+#ifdef USE_CUTOFF
+    unsigned int numTiles = interactionCount[0];
+    unsigned int pos = warp*(numTiles > MAX_TILES ? NUM_BLOCKS*(NUM_BLOCKS+1)/2 : numTiles)/totalWarps;
+    unsigned int end = (warp+1)*(numTiles > MAX_TILES ? NUM_BLOCKS*(NUM_BLOCKS+1)/2 : numTiles)/totalWarps;
+#else
     unsigned int pos = warp*numTiles/totalWarps;
     unsigned int end = (warp+1)*numTiles/totalWarps;
+#endif
     float energy = 0.0f;
     unsigned int lasty = 0xFFFFFFFF;
 
     while (pos < end) {
         // Extract the coordinates of this tile
+        unsigned int x, y;
 #ifdef USE_CUTOFF
-        ushort2 tileIndices = tiles[pos];
-        unsigned int x = tileIndices.x;
-        unsigned int y = tileIndices.y;
-#else
-        unsigned int y = (unsigned int) floor(NUM_BLOCKS+0.5f-sqrt((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
-        unsigned int x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
-        if (x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
-            y++;
-            x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
+        if (numTiles <= MAX_TILES) {
+            ushort2 tileIndices = tiles[pos];
+            x = tileIndices.x;
+            y = tileIndices.y;
         }
+        else
 #endif
+        {
+            y = (unsigned int) floor(NUM_BLOCKS+0.5f-sqrt((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
+            x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
+            if (x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
+                y++;
+                x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
+            }
+        }
         unsigned int tgx = get_local_id(0) & (TILE_SIZE-1);
         unsigned int tbx = get_local_id(0) - tgx;
         unsigned int atom1 = x*TILE_SIZE + tgx;
@@ -115,7 +123,7 @@ void computeBornSum(__global float* global_bornSum, __global float4* posq, __glo
             }
             localData[get_local_id(0)].bornSum = 0.0f;
 #ifdef USE_CUTOFF
-            unsigned int flags = interactionFlags[pos];
+            unsigned int flags = (numTiles <= MAX_TILES ? interactionFlags[pos] : 0xFFFFFFFF);
             if (flags != 0xFFFFFFFF && false) { // TODO: Fix this: should be checking for exclusions
                 if (flags == 0) {
                     // No interactions in this tile.
@@ -262,34 +270,42 @@ void computeGBSAForce1(__global float4* forceBuffers, __global float* energyBuff
         __global float4* posq, __global float* global_bornRadii,
         __global float* global_bornForce, __local AtomData* localData, __local float4* tempBuffer,
 #ifdef USE_CUTOFF
-        __global ushort2* tiles, __global unsigned int* interactionFlags, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize) {
+        __global ushort2* tiles, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, __global unsigned int* interactionFlags) {
 #else
         unsigned int numTiles) {
 #endif
-#ifdef USE_CUTOFF
-    unsigned int numTiles = interactionCount[0];
-#endif
     unsigned int totalWarps = get_global_size(0)/TILE_SIZE;
     unsigned int warp = get_global_id(0)/TILE_SIZE;
+#ifdef USE_CUTOFF
+    unsigned int numTiles = interactionCount[0];
+    unsigned int pos = warp*(numTiles > MAX_TILES ? NUM_BLOCKS*(NUM_BLOCKS+1)/2 : numTiles)/totalWarps;
+    unsigned int end = (warp+1)*(numTiles > MAX_TILES ? NUM_BLOCKS*(NUM_BLOCKS+1)/2 : numTiles)/totalWarps;
+#else
     unsigned int pos = warp*numTiles/totalWarps;
     unsigned int end = (warp+1)*numTiles/totalWarps;
+#endif
     float energy = 0.0f;
     unsigned int lasty = 0xFFFFFFFF;
 
     while (pos < end) {
         // Extract the coordinates of this tile
+        unsigned int x, y;
 #ifdef USE_CUTOFF
-        ushort2 tileIndices = tiles[pos];
-        unsigned int x = tileIndices.x;
-        unsigned int y = tileIndices.y;
-#else
-        unsigned int y = (unsigned int) floor(NUM_BLOCKS+0.5f-sqrt((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
-        unsigned int x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
-        if (x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
-            y++;
-            x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
+        if (numTiles <= MAX_TILES) {
+            ushort2 tileIndices = tiles[pos];
+            x = tileIndices.x;
+            y = tileIndices.y;
         }
+        else
 #endif
+        {
+            y = (unsigned int) floor(NUM_BLOCKS+0.5f-sqrt((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
+            x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
+            if (x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
+                y++;
+                x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
+            }
+        }
         unsigned int tgx = get_local_id(0) & (TILE_SIZE-1);
         unsigned int tbx = get_local_id(0) - tgx;
         unsigned int atom1 = x*TILE_SIZE + tgx;
@@ -365,7 +381,7 @@ void computeGBSAForce1(__global float4* forceBuffers, __global float* energyBuff
             localData[get_local_id(0)].fz = 0.0f;
             localData[get_local_id(0)].fw = 0.0f;
 #ifdef USE_CUTOFF
-            unsigned int flags = interactionFlags[pos];
+            unsigned int flags = (numTiles <= MAX_TILES ? interactionFlags[pos] : 0xFFFFFFFF);
             if (flags != 0xFFFFFFFF && false) { // TODO: Fix this: should be checking for exclusions
                 if (flags == 0) {
                     // No interactions in this tile.

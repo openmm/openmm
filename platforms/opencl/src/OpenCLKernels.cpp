@@ -1691,6 +1691,8 @@ double OpenCLCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
         defines["NUM_ATOMS"] = intToString(cl.getNumAtoms());
         defines["PADDED_NUM_ATOMS"] = intToString(cl.getPaddedNumAtoms());
         defines["NUM_BLOCKS"] = OpenCLExpressionUtilities::intToString(cl.getNumAtomBlocks());
+        if (nb.getUseCutoff())
+            defines["MAX_TILES"] = OpenCLExpressionUtilities::intToString(nb.getInteractingTiles().getSize());
         string file = (cl.getSIMDWidth() == 32 ? OpenCLKernelSources::gbsaObc_nvidia : OpenCLKernelSources::gbsaObc_default);
         cl::Program program = cl.createProgram(file, defines);
         int index = 0;
@@ -1702,8 +1704,9 @@ double OpenCLCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
         computeBornSumKernel.setArg(index++, OpenCLContext::ThreadBlockSize*sizeof(cl_float), NULL);
         if (nb.getUseCutoff()) {
             computeBornSumKernel.setArg<cl::Buffer>(index++, nb.getInteractingTiles().getDeviceBuffer());
-            computeBornSumKernel.setArg<cl::Buffer>(index++, nb.getInteractionFlags().getDeviceBuffer());
             computeBornSumKernel.setArg<cl::Buffer>(index++, nb.getInteractionCount().getDeviceBuffer());
+            if (cl.getSIMDWidth() == 32)
+                computeBornSumKernel.setArg<cl::Buffer>(index+2, nb.getInteractionFlags().getDeviceBuffer());
         }
         else
             computeBornSumKernel.setArg<cl_uint>(index++, cl.getNumAtomBlocks()*(cl.getNumAtomBlocks()+1)/2);
@@ -1718,8 +1721,9 @@ double OpenCLCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
         force1Kernel.setArg(index++, OpenCLContext::ThreadBlockSize*sizeof(mm_float4), NULL);
         if (nb.getUseCutoff()) {
             force1Kernel.setArg<cl::Buffer>(index++, nb.getInteractingTiles().getDeviceBuffer());
-            force1Kernel.setArg<cl::Buffer>(index++, nb.getInteractionFlags().getDeviceBuffer());
             force1Kernel.setArg<cl::Buffer>(index++, nb.getInteractionCount().getDeviceBuffer());
+            if (cl.getSIMDWidth() == 32)
+                force1Kernel.setArg<cl::Buffer>(index+2, nb.getInteractionFlags().getDeviceBuffer());
         }
         else
             force1Kernel.setArg<cl_uint>(index++, cl.getNumAtomBlocks()*(cl.getNumAtomBlocks()+1)/2);
@@ -1744,10 +1748,10 @@ double OpenCLCalcGBSAOBCForceKernel::execute(ContextImpl& context, bool includeF
         reduceBornForceKernel.setArg<cl::Buffer>(6, obcChain->getDeviceBuffer());
     }
     if (nb.getUseCutoff()) {
-        computeBornSumKernel.setArg<mm_float4>(8, cl.getPeriodicBoxSize());
-        computeBornSumKernel.setArg<mm_float4>(9, cl.getInvPeriodicBoxSize());
-        force1Kernel.setArg<mm_float4>(10, cl.getPeriodicBoxSize());
-        force1Kernel.setArg<mm_float4>(11, cl.getInvPeriodicBoxSize());
+        computeBornSumKernel.setArg<mm_float4>(7, cl.getPeriodicBoxSize());
+        computeBornSumKernel.setArg<mm_float4>(8, cl.getInvPeriodicBoxSize());
+        force1Kernel.setArg<mm_float4>(9, cl.getPeriodicBoxSize());
+        force1Kernel.setArg<mm_float4>(10, cl.getInvPeriodicBoxSize());
     }
     int numTiles = cl.getNumAtomBlocks()*(cl.getNumAtomBlocks()+1)/2;
     cl.executeKernel(computeBornSumKernel, numTiles*OpenCLContext::TileSize);
@@ -2399,9 +2403,11 @@ double OpenCLCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
         pairValueKernel.setArg(index++, OpenCLContext::ThreadBlockSize*sizeof(cl_float), NULL);
         if (nb.getUseCutoff()) {
             pairValueKernel.setArg<cl::Buffer>(index++, nb.getInteractingTiles().getDeviceBuffer());
-            pairValueKernel.setArg<cl::Buffer>(index++, nb.getInteractionFlags().getDeviceBuffer());
             pairValueKernel.setArg<cl::Buffer>(index++, nb.getInteractionCount().getDeviceBuffer());
             index += 2; // Periodic box size arguments are set when the kernel is executed.
+            pairValueKernel.setArg<cl_uint>(index++, nb.getInteractingTiles().getSize());
+            if (cl.getSIMDWidth() == 32)
+                pairValueKernel.setArg<cl::Buffer>(index++, nb.getInteractionFlags().getDeviceBuffer());
         }
         else
             pairValueKernel.setArg<cl_uint>(index++, cl.getNumAtomBlocks()*(cl.getNumAtomBlocks()+1)/2);
@@ -2445,9 +2451,11 @@ double OpenCLCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
         pairEnergyKernel.setArg(index++, OpenCLContext::ThreadBlockSize*sizeof(cl_float4), NULL);
         if (nb.getUseCutoff()) {
             pairEnergyKernel.setArg<cl::Buffer>(index++, nb.getInteractingTiles().getDeviceBuffer());
-            pairEnergyKernel.setArg<cl::Buffer>(index++, nb.getInteractionFlags().getDeviceBuffer());
             pairEnergyKernel.setArg<cl::Buffer>(index++, nb.getInteractionCount().getDeviceBuffer());
             index += 2; // Periodic box size arguments are set when the kernel is executed.
+            pairEnergyKernel.setArg<cl_uint>(index++, nb.getInteractingTiles().getSize());
+            if (cl.getSIMDWidth() == 32)
+                pairEnergyKernel.setArg<cl::Buffer>(index++, nb.getInteractionFlags().getDeviceBuffer());
         }
         else
             pairEnergyKernel.setArg<cl_uint>(index++, cl.getNumAtomBlocks()*(cl.getNumAtomBlocks()+1)/2);
@@ -2518,10 +2526,10 @@ double OpenCLCalcCustomGBForceKernel::execute(ContextImpl& context, bool include
             globals->upload(globalParamValues);
     }
     if (nb.getUseCutoff()) {
-        pairValueKernel.setArg<mm_float4>(11, cl.getPeriodicBoxSize());
-        pairValueKernel.setArg<mm_float4>(12, cl.getInvPeriodicBoxSize());
-        pairEnergyKernel.setArg<mm_float4>(12, cl.getPeriodicBoxSize());
-        pairEnergyKernel.setArg<mm_float4>(13, cl.getInvPeriodicBoxSize());
+        pairValueKernel.setArg<mm_float4>(10, cl.getPeriodicBoxSize());
+        pairValueKernel.setArg<mm_float4>(11, cl.getInvPeriodicBoxSize());
+        pairEnergyKernel.setArg<mm_float4>(11, cl.getPeriodicBoxSize());
+        pairEnergyKernel.setArg<mm_float4>(12, cl.getInvPeriodicBoxSize());
     }
     int numTiles = cl.getNumAtomBlocks()*(cl.getNumAtomBlocks()+1)/2;
     cl.executeKernel(pairValueKernel, numTiles*OpenCLContext::TileSize);

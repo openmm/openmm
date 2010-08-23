@@ -9,18 +9,21 @@ void computeN2Value(__global float4* posq, __local float4* local_posq, __global 
         __global unsigned int* exclusionIndices, __global unsigned int* exclusionRowIndices, __global float* global_value, __local float* local_value,
         __local float* tempBuffer,
 #ifdef USE_CUTOFF
-        __global ushort2* tiles, __global unsigned int* interactionFlags, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize
+        __global ushort2* tiles, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles, __global unsigned int* interactionFlags
 #else
         unsigned int numTiles
 #endif
         PARAMETER_ARGUMENTS) {
-#ifdef USE_CUTOFF
-    unsigned int numTiles = interactionCount[0];
-#endif
     unsigned int totalWarps = get_global_size(0)/TILE_SIZE;
     unsigned int warp = get_global_id(0)/TILE_SIZE;
+#ifdef USE_CUTOFF
+    unsigned int numTiles = interactionCount[0];
+    unsigned int pos = warp*(numTiles > maxTiles ? NUM_BLOCKS*(NUM_BLOCKS+1)/2 : numTiles)/totalWarps;
+    unsigned int end = (warp+1)*(numTiles > maxTiles ? NUM_BLOCKS*(NUM_BLOCKS+1)/2 : numTiles)/totalWarps;
+#else
     unsigned int pos = warp*numTiles/totalWarps;
     unsigned int end = (warp+1)*numTiles/totalWarps;
+#endif
     float energy = 0.0f;
     unsigned int lasty = 0xFFFFFFFF;
     __local unsigned int exclusionRange[4];
@@ -28,18 +31,23 @@ void computeN2Value(__global float4* posq, __local float4* local_posq, __global 
 
     while (pos < end) {
         // Extract the coordinates of this tile
+        unsigned int x, y;
 #ifdef USE_CUTOFF
-        ushort2 tileIndices = tiles[pos];
-        unsigned int x = tileIndices.x;
-        unsigned int y = tileIndices.y;
-#else
-        unsigned int y = (unsigned int) floor(NUM_BLOCKS+0.5f-sqrt((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
-        unsigned int x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
-        if (x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
-            y++;
-            x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
+        if (numTiles <= maxTiles) {
+            ushort2 tileIndices = tiles[pos];
+            x = tileIndices.x;
+            y = tileIndices.y;
         }
+        else
 #endif
+        {
+            y = (unsigned int) floor(NUM_BLOCKS+0.5f-sqrt((NUM_BLOCKS+0.5f)*(NUM_BLOCKS+0.5f)-2*pos));
+            x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
+            if (x >= NUM_BLOCKS) { // Occasionally happens due to roundoff error.
+                y++;
+                x = (pos-y*NUM_BLOCKS+y*(y+1)/2);
+            }
+        }
         unsigned int tgx = get_local_id(0) & (TILE_SIZE-1);
         unsigned int tbx = get_local_id(0) - tgx;
         unsigned int atom1 = x*TILE_SIZE + tgx;
@@ -125,7 +133,7 @@ void computeN2Value(__global float4* posq, __local float4* local_posq, __global 
             }
             local_value[get_local_id(0)] = 0.0f;
 #ifdef USE_CUTOFF
-            unsigned int flags = interactionFlags[pos];
+            unsigned int flags = (numTiles <= maxTiles ? interactionFlags[pos] : 0xFFFFFFFF);
             if (!hasExclusions && flags != 0xFFFFFFFF) {
                 if (flags == 0) {
                     // No interactions in this tile.

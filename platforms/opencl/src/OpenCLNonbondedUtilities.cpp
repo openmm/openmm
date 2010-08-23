@@ -200,8 +200,18 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
     // Create data structures for the neighbor list.
 
     if (useCutoff) {
-        interactingTiles = new OpenCLArray<mm_ushort2>(context, numTiles, "interactingTiles");
-        interactionFlags = new OpenCLArray<cl_uint>(context, numTiles, "interactionFlags");
+        // Select a size for the arrays that hold the neighbor list.  This estimate is intentionally very
+        // high, because if it ever is too small, we have to fall back to the N^2 algorithm.
+
+        mm_float4 boxSize = context.getPeriodicBoxSize();
+        int maxInteractingTiles = (int) (numTiles*(cutoff/boxSize.x+cutoff/boxSize.y+cutoff/boxSize.z));
+        if (maxInteractingTiles < 1)
+            maxInteractingTiles = 1;
+        if (maxInteractingTiles > numTiles)
+            maxInteractingTiles = numTiles;
+        interactingTiles = new OpenCLArray<mm_ushort2>(context, maxInteractingTiles, "interactingTiles");
+        if (context.getSIMDWidth() == 32)
+            interactionFlags = new OpenCLArray<cl_uint>(context, maxInteractingTiles, "interactionFlags");
         interactionCount = new OpenCLArray<cl_uint>(context, 1, "interactionCount");
         blockCenter = new OpenCLArray<mm_float4>(context, numAtomBlocks, "blockCenter");
         blockBoundingBox = new OpenCLArray<mm_float4>(context, numAtomBlocks, "blockBoundingBox");
@@ -213,6 +223,7 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
     if (useCutoff) {
         map<string, string> defines;
         defines["NUM_BLOCKS"] = OpenCLExpressionUtilities::intToString(context.getNumAtomBlocks());
+        defines["MAX_TILES"] = OpenCLExpressionUtilities::intToString(interactingTiles->getSize());
         if (forceBufferPerAtomBlock)
             defines["USE_OUTPUT_BUFFER_PER_BLOCK"] = "1";
         if (usePeriodic)
@@ -231,15 +242,17 @@ void OpenCLNonbondedUtilities::initialize(const System& system) {
         findInteractingBlocksKernel.setArg<cl::Buffer>(5, interactionCount->getDeviceBuffer());
         findInteractingBlocksKernel.setArg<cl::Buffer>(6, interactingTiles->getDeviceBuffer());
         findInteractingBlocksKernel.setArg<cl::Buffer>(7, context.getPosq().getDeviceBuffer());
-        findInteractionsWithinBlocksKernel = cl::Kernel(interactingBlocksProgram, "findInteractionsWithinBlocks");
-        findInteractionsWithinBlocksKernel.setArg<cl_float>(0, (cl_float) (cutoff*cutoff));
-        findInteractionsWithinBlocksKernel.setArg<cl::Buffer>(3, context.getPosq().getDeviceBuffer());
-        findInteractionsWithinBlocksKernel.setArg<cl::Buffer>(4, interactingTiles->getDeviceBuffer());
-        findInteractionsWithinBlocksKernel.setArg<cl::Buffer>(5, blockCenter->getDeviceBuffer());
-        findInteractionsWithinBlocksKernel.setArg<cl::Buffer>(6, blockBoundingBox->getDeviceBuffer());
-        findInteractionsWithinBlocksKernel.setArg<cl::Buffer>(7, interactionFlags->getDeviceBuffer());
-        findInteractionsWithinBlocksKernel.setArg<cl::Buffer>(8, interactionCount->getDeviceBuffer());
-        findInteractionsWithinBlocksKernel.setArg(9, OpenCLContext::ThreadBlockSize*sizeof(cl_uint), NULL);
+        if (context.getSIMDWidth() == 32) {
+            findInteractionsWithinBlocksKernel = cl::Kernel(interactingBlocksProgram, "findInteractionsWithinBlocks");
+            findInteractionsWithinBlocksKernel.setArg<cl_float>(0, (cl_float) (cutoff*cutoff));
+            findInteractionsWithinBlocksKernel.setArg<cl::Buffer>(3, context.getPosq().getDeviceBuffer());
+            findInteractionsWithinBlocksKernel.setArg<cl::Buffer>(4, interactingTiles->getDeviceBuffer());
+            findInteractionsWithinBlocksKernel.setArg<cl::Buffer>(5, blockCenter->getDeviceBuffer());
+            findInteractionsWithinBlocksKernel.setArg<cl::Buffer>(6, blockBoundingBox->getDeviceBuffer());
+            findInteractionsWithinBlocksKernel.setArg<cl::Buffer>(7, interactionFlags->getDeviceBuffer());
+            findInteractionsWithinBlocksKernel.setArg<cl::Buffer>(8, interactionCount->getDeviceBuffer());
+            findInteractionsWithinBlocksKernel.setArg(9, OpenCLContext::ThreadBlockSize*sizeof(cl_uint), NULL);
+        }
     }
 }
 
@@ -264,6 +277,8 @@ void OpenCLNonbondedUtilities::prepareInteractions() {
     findInteractingBlocksKernel.setArg<mm_float4>(1, context.getPeriodicBoxSize());
     findInteractingBlocksKernel.setArg<mm_float4>(2, context.getInvPeriodicBoxSize());
     context.executeKernel(findInteractingBlocksKernel, context.getNumAtoms());
+    vector<cl_uint> count;
+    interactionCount->download(count);
     if (context.getSIMDWidth() == 32) {
         findInteractionsWithinBlocksKernel.setArg<mm_float4>(1, context.getPeriodicBoxSize());
         findInteractionsWithinBlocksKernel.setArg<mm_float4>(2, context.getInvPeriodicBoxSize());
@@ -274,8 +289,8 @@ void OpenCLNonbondedUtilities::prepareInteractions() {
 void OpenCLNonbondedUtilities::computeInteractions() {
     if (cutoff != -1.0) {
         if (useCutoff) {
-            forceKernel.setArg<mm_float4>(11, context.getPeriodicBoxSize());
-            forceKernel.setArg<mm_float4>(12, context.getInvPeriodicBoxSize());
+            forceKernel.setArg<mm_float4>(10, context.getPeriodicBoxSize());
+            forceKernel.setArg<mm_float4>(11, context.getInvPeriodicBoxSize());
         }
         context.executeKernel(forceKernel, (context.getNumAtomBlocks()*(context.getNumAtomBlocks()+1)/2)*OpenCLContext::TileSize);
     }
@@ -388,6 +403,8 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
     defines["NUM_ATOMS"] = OpenCLExpressionUtilities::intToString(context.getNumAtoms());
     defines["PADDED_NUM_ATOMS"] = OpenCLExpressionUtilities::intToString(context.getPaddedNumAtoms());
     defines["NUM_BLOCKS"] = OpenCLExpressionUtilities::intToString(context.getNumAtomBlocks());
+    if (useCutoff)
+        defines["MAX_TILES"] = OpenCLExpressionUtilities::intToString(interactingTiles->getSize());
     string file = (context.getSIMDWidth() == 32 ? OpenCLKernelSources::nonbonded_nvidia : OpenCLKernelSources::nonbonded_default);
     cl::Program program = context.createProgram(context.replaceStrings(file, replacements), defines);
     cl::Kernel kernel(program, "computeNonbonded");
@@ -405,9 +422,10 @@ cl::Kernel OpenCLNonbondedUtilities::createInteractionKernel(const string& sourc
     kernel.setArg(index++, OpenCLContext::ThreadBlockSize*sizeof(cl_float4), NULL);
     if (useCutoff) {
         kernel.setArg<cl::Buffer>(index++, interactingTiles->getDeviceBuffer());
-        kernel.setArg<cl::Buffer>(index++, interactionFlags->getDeviceBuffer());
         kernel.setArg<cl::Buffer>(index++, interactionCount->getDeviceBuffer());
         index += 2; // The periodic box size arguments are set when the kernel is executed.
+        if (context.getSIMDWidth() == 32)
+            kernel.setArg<cl::Buffer>(index++, interactionFlags->getDeviceBuffer());
     }
     else {
         kernel.setArg<cl_uint>(index++, context.getNumAtomBlocks()*(context.getNumAtomBlocks()+1)/2);

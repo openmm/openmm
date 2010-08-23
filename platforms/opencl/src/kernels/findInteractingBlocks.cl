@@ -147,8 +147,9 @@ void storeInteractionData(__local ushort2* buffer, __local int* valid, __local s
     if (get_local_id(0) == 0)
         *baseIndex = atom_add(interactionCount, numValid);
     barrier(CLK_LOCAL_MEM_FENCE);
-    for (int i = get_local_id(0); i < numValid; i += GROUP_SIZE)
-        interactingTiles[*baseIndex+i] = temp[i];
+    if (*baseIndex+numValid <= MAX_TILES)
+        for (int i = get_local_id(0); i < numValid; i += GROUP_SIZE)
+            interactingTiles[*baseIndex+i] = temp[i];
     barrier(CLK_LOCAL_MEM_FENCE);
 }
 
@@ -232,6 +233,8 @@ __kernel void findInteractionsWithinBlocks(float cutoffSquared, float4 periodicB
     unsigned int end = (warp+1)*numTiles/totalWarps;
     unsigned int index = get_local_id(0) & (TILE_SIZE - 1);
 
+    if (numTiles > MAX_TILES)
+        return;
     unsigned int lasty = 0xFFFFFFFF;
     float4 apos;
     while (pos < end) {

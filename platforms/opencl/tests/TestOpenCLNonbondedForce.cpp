@@ -523,7 +523,8 @@ void testBlockInteractions(bool periodic) {
     int numWithInteractions = interactionCount[0];
     vector<bool> hasInteractions(numBlocks*(numBlocks+1)/2, false);
     nb.getInteractingTiles().download(interactingTiles);
-    nb.getInteractionFlags().download(interactionFlags);
+    if (clcontext.getSIMDWidth() == 32)
+        nb.getInteractionFlags().download(interactionFlags);
     const unsigned int atoms = clcontext.getPaddedNumAtoms();
     const unsigned int grid = OpenCLContext::TileSize;
     const unsigned int dim = clcontext.getNumAtomBlocks();
