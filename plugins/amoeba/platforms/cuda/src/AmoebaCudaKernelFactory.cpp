@@ -49,7 +49,6 @@ extern "C" void OPENMMCUDA_EXPORT registerKernelFactories() {
              platform.registerKernelFactory(CalcAmoebaTorsionTorsionForceKernel::Name(), factory);
              platform.registerKernelFactory(CalcAmoebaMultipoleForceKernel::Name(), factory);
              platform.registerKernelFactory(CalcAmoebaGeneralizedKirkwoodForceKernel::Name(), factory);
-             platform.registerKernelFactory(CalcAmoebaSASAForceKernel::Name(), factory);
              platform.registerKernelFactory(CalcAmoebaVdwForceKernel::Name(), factory);
              platform.registerKernelFactory(CalcAmoebaWcaDispersionForceKernel::Name(), factory);
         }
@@ -123,9 +122,6 @@ KernelImpl* AmoebaCudaKernelFactory::createKernelImpl(std::string name, const Pl
 
     if (name == CalcAmoebaGeneralizedKirkwoodForceKernel::Name())
         return new CudaCalcAmoebaGeneralizedKirkwoodForceKernel(name, platform, *amoebaCudaData, context.getSystem());
-
-    if (name == CalcAmoebaSASAForceKernel::Name())
-        return new CudaCalcAmoebaSASAForceKernel(name, platform, *amoebaCudaData, context.getSystem());
 
     if (name == CalcAmoebaVdwForceKernel::Name())
         return new CudaCalcAmoebaVdwForceKernel(name, platform, *amoebaCudaData, context.getSystem());

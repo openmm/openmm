@@ -174,7 +174,7 @@ public:
     VdwInfo() {
         ivIndex = classIndex = -1;
         reductionFactor      = 0.0;
-        sigma               = 1.0;
+        sigma                = 1.0;
         epsilon              = 0.0;
     }
     VdwInfo(int ivIndex, int classIndex, double sigma, double epsilon, double  reductionFactor ) :

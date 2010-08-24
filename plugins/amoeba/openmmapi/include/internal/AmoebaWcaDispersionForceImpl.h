@@ -61,6 +61,25 @@ public:
         return std::map<std::string, double>(); // This force field doesn't define any parameters.
     }
     std::vector<std::string> getKernelNames();
+
+    /** 
+     * Get the maximum dispersion energy for a particle
+     * 
+     * @param force               AmoebaWcaDispersionForce reference
+     * @param particleIndex       the particle index
+     * @param maxDispersionEnergy maximum dispersion energy
+     */
+    static void getMaximumDispersionEnergy( const AmoebaWcaDispersionForce& force, int particleIndex, double& maxDispersionEnergy );
+
+    /** 
+     * Get the total maximum dispersion energy
+     * 
+     * @param force               AmoebaWcaDispersionForce reference
+     *
+     * @return total maximum dispersion energy for the system
+     */
+    static double getTotalMaximumDispersionEnergy( const AmoebaWcaDispersionForce& force);
+
 private:
     AmoebaWcaDispersionForce& owner;
     Kernel kernel;

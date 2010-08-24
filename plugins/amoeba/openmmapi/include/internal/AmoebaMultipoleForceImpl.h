@@ -60,9 +60,34 @@ public:
         return std::map<std::string, double>(); // This force field doesn't define any parameters.
     }
     std::vector<std::string> getKernelNames();
+
+    /**
+     * Get the CovalentMap for an atom
+     * 
+     * @param force                AmoebaMultipoleForce force reference
+     * @param index                the index of the atom for which to set parameters
+     * @param minCovalentIndex     minimum covalent index
+     * @param maxCovalentIndex     maximum covalent index
+     */
+    static void getCovalentRange( const AmoebaMultipoleForce& force, int index,
+                                  const std::vector< AmoebaMultipoleForce::CovalentType>& lists,
+                                  int* minCovalentIndex, int* maxCovalentIndex );
+
+    /**
+     * Get the covalent degree for the  CovalentEnd lists
+     * 
+     * @param force                AmoebaMultipoleForce force reference
+     * @param covalentDegree      covalent degrees for the CovalentEnd lists
+     */
+    static void getCovalentDegree( const AmoebaMultipoleForce& force, std::vector<int>& covalentDegree );
+
 private:
     AmoebaMultipoleForce& owner;
     Kernel kernel;
+
+    static int CovalentDegrees[AmoebaMultipoleForce::CovalentEnd];
+    static bool initializedCovalentDegrees;
+    static const int* getCovalentDegrees( void );
 };
 
 } // namespace OpenMM

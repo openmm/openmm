@@ -39,7 +39,8 @@
 namespace OpenMM {
 
 /**
- * This class implements an interaction between pairs of particles that varies harmonically with the distance
+ * This class implements an interaction at trigonal centers corresponding to the projected in-plane angle bend energy
+ * between four particles; the energy varies harmonically with the angle
  * between them.  To use it, create a AmoebaHarmonicInPlaneAngle object then call addAngle() once for each angle.  After
  * a angle has been added, you can modify its force field parameters by calling setAngleParameters().
  */
@@ -73,9 +74,9 @@ public:
     double getAmoebaGlobalHarmonicInPlaneAngleCubic( void ) const;
 
     /**
-     * Set the global cubic term
+     * Set the global quartic term
      * 
-     * @param quarticK       the quartic harmonic force constant for the angle
+     * @param quarticK the quartic harmonic force constant for the angle
      */
     void setAmoebaGlobalHarmonicInPlaneAngleQuartic( double quarticK );
 
@@ -121,8 +122,8 @@ public:
      * @param particle2     the index of the second particle connected by the angle
      * @param particle3     the index of the third particle connected by the angle
      * @param particle4     the index of the fourth particle connected by the angle
-     * @param length        the equilibrium length of the angle, measured in nm
-     * @param quadratic k   the quadratic harmonic force constant for the angle
+     * @param length        the equilibrium angle, measured in radians
+     * @param quadratic k   the quadratic harmonic force constant for the angle measured in kJ/mol/radian^2
      * @return the index of the angle that was added
      */
     int addAngle(int particle1, int particle2, int particle3, int particle4, double length, 
@@ -136,8 +137,8 @@ public:
      * @param particle2     the index of the second particle connected by the angle
      * @param particle3     the index of the third particle connected by the angle
      * @param particle4     the index of the fourth particle connected by the angle
-     * @param length        the equilibrium length of the angle, measured in nm
-     * @param quadratic k   the quadratic harmonic force constant for the angle
+     * @param length        the equilibrium angle, measured in radians
+     * @param quadratic k   the quadratic harmonic force constant for the angle measured in kJ/mol/radian^2
      */
     void getAngleParameters(int index, int& particle1, int& particle2, int& particle3, int& particle4, double& length,
                             double& quadraticK ) const;
@@ -150,8 +151,8 @@ public:
      * @param particle2     the index of the second particle connected by the angle
      * @param particle3     the index of the third particle connected by the angle
      * @param particle4     the index of the fourth particle connected by the angle
-     * @param length        the equilibrium length of the angle, measured in nm
-     * @param quadratic k   the quadratic harmonic force constant for the angle
+     * @param length        the equilibrium angle, measured in radians
+     * @param quadratic k   the quadratic harmonic force constant for the angle, measured in kJ/mol/radian^2
      */
     void setAngleParameters(int index, int particle1, int particle2, int particle3, int particle4, double length, double quadraticK );
 

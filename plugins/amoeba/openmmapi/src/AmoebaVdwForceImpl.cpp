@@ -46,6 +46,11 @@ AmoebaVdwForceImpl::~AmoebaVdwForceImpl() {
 }
 
 void AmoebaVdwForceImpl::initialize(ContextImpl& context) {
+    System& system = context.getSystem();
+
+    if (owner.getNumParticles() != system.getNumParticles())
+        throw OpenMMException("AmoebaVdwForce must have exactly as many particles as the System it belongs to.");
+
     kernel = context.getPlatform().createKernel(CalcAmoebaVdwForceKernel::Name(), context);
     dynamic_cast<CalcAmoebaVdwForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }

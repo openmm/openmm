@@ -36,8 +36,7 @@
 
 using namespace OpenMM;
 
-AmoebaGeneralizedKirkwoodForce::AmoebaGeneralizedKirkwoodForce() : nonbondedMethod(NoCutoff), cutoffDistance(1.0), solventDielectric(78.3), soluteDielectric(1.0),
-                                                                   dielectricOffset(0.009), includeCavityTerm(1), probeRadius(0.14) {
+AmoebaGeneralizedKirkwoodForce::AmoebaGeneralizedKirkwoodForce() : solventDielectric(78.3), soluteDielectric(1.0), dielectricOffset(0.009), includeCavityTerm(1), probeRadius(0.14) {
 
      surfaceAreaFactor = -6.0* 3.1415926535*0.0216*1000.0*0.4184;
 }
@@ -57,22 +56,6 @@ void AmoebaGeneralizedKirkwoodForce::setParticleParameters(int index, double cha
     particles[index].charge = charge;
     particles[index].radius = radius;
     particles[index].scalingFactor = scalingFactor;
-}
-
-AmoebaGeneralizedKirkwoodForce::NonbondedMethod AmoebaGeneralizedKirkwoodForce::getNonbondedMethod() const {
-    return nonbondedMethod;
-}
-
-void AmoebaGeneralizedKirkwoodForce::setNonbondedMethod(NonbondedMethod method) {
-    nonbondedMethod = method;
-}
-
-double AmoebaGeneralizedKirkwoodForce::getCutoffDistance() const {
-    return cutoffDistance;
-}
-
-void AmoebaGeneralizedKirkwoodForce::setCutoffDistance(double distance) {
-    cutoffDistance = distance;
 }
 
 double AmoebaGeneralizedKirkwoodForce::getDielectricOffset() const {

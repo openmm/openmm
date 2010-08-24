@@ -2736,7 +2736,7 @@ static int readAmoebaWcaDispersionParameters( FILE* filePtr, MapStringInt& force
             wcaDispersionForce->setParticleParameters( ii, radius, epsilon );
 
             if( ii < static_cast<int>(maxDispersionEnergyVector.size()) ){
-                wcaDispersionForce->getMaximumDispersionEnergy( ii, maxDispersionEnergy );
+                AmoebaWcaDispersionForceImpl::getMaximumDispersionEnergy( *wcaDispersionForce, ii, maxDispersionEnergy );
                 double tinkerValue  = maxDispersionEnergyVector[ii];
                        tinkerValue *= CalToJoule;
                 double delta        = fabs( maxDispersionEnergy - tinkerValue );
@@ -2769,7 +2769,7 @@ static int readAmoebaWcaDispersionParameters( FILE* filePtr, MapStringInt& force
             wcaDispersionForce->getParticleParameters( ii, radius, epsilon );
             (void) fprintf( log, "%8d %10.4f %10.4f", ii, radius, epsilon );
             if( ii < maxDispersionEnergyVector.size() ){
-                wcaDispersionForce->getMaximumDispersionEnergy( ii, maxDispersionEnergy );
+                AmoebaWcaDispersionForceImpl::getMaximumDispersionEnergy( *wcaDispersionForce, ii, maxDispersionEnergy );
                 if( useOpenMMUnits )maxDispersionEnergy /= CalToJoule;
                 double delta = fabs( maxDispersionEnergy - maxDispersionEnergyVector[ii] );
                 const char* error  = (delta > 1.0e-05) ? "XXX" : "";
@@ -2791,7 +2791,7 @@ static int readAmoebaWcaDispersionParameters( FILE* filePtr, MapStringInt& force
         int errors = 0;
         for( unsigned int ii = 0; ii < arraySize && ii < maxDispersionEnergyVector.size(); ii++ ){
             double maxDispersionEnergy;
-            wcaDispersionForce->getMaximumDispersionEnergy( ii, maxDispersionEnergy );
+            AmoebaWcaDispersionForceImpl::getMaximumDispersionEnergy( *wcaDispersionForce, ii, maxDispersionEnergy );
             if( useOpenMMUnits )maxDispersionEnergy /= CalToJoule;
             double delta = fabs( maxDispersionEnergy - maxDispersionEnergyVector[ii] );
             if( delta > 1.0e-05 ){
@@ -2808,133 +2808,6 @@ static int readAmoebaWcaDispersionParameters( FILE* filePtr, MapStringInt& force
     }
 
     return wcaDispersionForce->getNumParticles();
-}
-
-/**---------------------------------------------------------------------------------------
-
-    Read Amoeba surface parameters
-
-    @param filePtr              file pointer to parameter file
-    @param forceFlag            flag signalling whether force is to be added to system
-                                if force == 0 || forceFlag & AMOEBA_HARMONIC_ANGLE_FORCE, then included
-    @param tokens               array of strings from first line of parameter file for this block of parameters
-    @param system               System reference
-    @param lineCount            used to track line entries read from parameter file
-    @param log                  log file pointer -- may be NULL
-
-    @return number of multipole parameters
-
-    --------------------------------------------------------------------------------------- */
-
-static int readAmoebaSurfaceParameters( FILE* filePtr, MapStringInt& forceMap, const StringVector& tokens,
-                                         System& system, int* lineCount,
-                                         MapStringVectorOfVectors& supplementary, FILE* log ){
-
-// ---------------------------------------------------------------------------------------
-
-     static const std::string methodName      = "readAmoebaSurfaceParameters";
-    
-// ---------------------------------------------------------------------------------------
-
-     // validate number of tokens
- 
-     if( tokens.size() < 1 ){
-         char buffer[1024];
-         (void) sprintf( buffer, "%s no surface entries???\n", methodName.c_str() );
-         throwException(__FILE__, __LINE__, buffer );
-         exit(-1);
-     }
- 
-     // create force
- 
-     AmoebaSASAForce* sasaForce = new AmoebaSASAForce();
-
-//globalSasaForce = sasaForce;
-
-     MapStringIntI forceActive  = forceMap.find( AMOEBA_SASA_FORCE );
-     if( forceActive != forceMap.end() && (*forceActive).second ){
-         system.addForce( sasaForce );
-         if( log ){
-             (void) fprintf( log, "Amoeba SASA force is being included.\n" );
-         }    
-     } else if( log ){
-         (void) fprintf( log, "Amoeba SASA force is not being included.\n" );
-     }
-
-     // load in parameters
-  
-     int numberOfParticles            = atoi( tokens[1].c_str() );
-     if( log ){
-         (void) fprintf( log, "%s number of sasaForce terms=%d\n", methodName.c_str(), numberOfParticles );
-     }
-     for( int ii = 0; ii < numberOfParticles; ii++ ){
-         StringVector lineTokens;
-         int isNotEof = readLine( filePtr, lineTokens, lineCount, log );
-         if( lineTokens.size() > 2 ){
-             int tokenIndex       = 0;
-             int index            = atoi( lineTokens[tokenIndex++].c_str() );
-             double radius        = atof( lineTokens[tokenIndex++].c_str() );
-             double weight        = atof( lineTokens[tokenIndex++].c_str() );
-             sasaForce->addParticle( radius, weight );
-         } else {
-             (void) fprintf( log, "%s AmoebaSASAForce tokens incomplete at line=%d\n", methodName.c_str(), *lineCount );
-             exit(-1);
-         }
-     }
- 
-     int isNotEof                   = 1;
-     int hits                       = 0;
-     while( hits < 1 ){
-        StringVector tokens;
-        isNotEof = readLine( filePtr, tokens, lineCount, log );
-        if( isNotEof && tokens.size() > 0 ){
- 
-           std::string field       = tokens[0];
-           if( field == "AmoebaSurfaceProbe" ){
-              sasaForce->setProbeRadius( atof( tokens[1].c_str() ) );
-              hits++;
-           } else {
-                 char buffer[1024];
-                 (void) sprintf( buffer, "%s read past SASA block at line=%d\n", methodName.c_str(), *lineCount );
-                 throwException(__FILE__, __LINE__, buffer );
-                 exit(-1);
-           }
-        } else {
-           char buffer[1024];
-           (void) sprintf( buffer, "%s invalid token count at line=%d?\n", methodName.c_str(), *lineCount );
-           throwException(__FILE__, __LINE__, buffer );
-           exit(-1);
-        }
-     }
-
-     // diagnostics
- 
-     if( log ){
-
-         //static const unsigned int maxPrint   = MAX_PRINT;
-         static const unsigned int maxPrint   = 15;
-         unsigned int arraySize               = static_cast<unsigned int>(sasaForce->getNumParticles());
-         //(void) fprintf( log, "%s: %u sample of AmoebaSASAForce parameters in %s units; probe radius=%10.4f\n",
-                         //methodName.c_str(), arraySize, (useOpenMMUnits ? "OpenMM" : "Amoeba"),
-         (void) fprintf( log, "%s: %u sample of AmoebaSASAForce parameters; probe radius=%10.4f\n",
-                         methodName.c_str(), arraySize,
-                         sasaForce->getProbeRadius() );
-  
-         for( unsigned int ii = 0; ii < arraySize;  ii++ ){
-             double radius, weight;
-             sasaForce->getParticleParameters( ii, radius, weight );
-             (void) fprintf( log, "%8d %10.4f %10.4f\n", ii, radius, weight );
-
-             // skip to end
-    
-             if( ii == maxPrint && (arraySize - maxPrint) > ii ){
-                 ii = arraySize - maxPrint - 1;
-             } 
-         }
-         (void) fflush( log );
-     }
- 
-     return sasaForce->getNumParticles();
 }
 
 /**---------------------------------------------------------------------------------------
@@ -3354,18 +3227,6 @@ static void getStringForceMap( System& system, MapStringForce& forceMap, FILE* l
             }
         }
     
-        // SASA Force
-
-        if( !hit ){
-
-            try {
-               AmoebaSASAForce& sasaForce        = dynamic_cast<AmoebaSASAForce&>(force);
-               forceMap[AMOEBA_SASA_FORCE]       = &force;
-               hit++;
-            } catch( std::bad_cast ){
-            }
-        }
-    
         // stretch bend force
 
         if( !hit ){
@@ -3557,6 +3418,10 @@ Integrator* readAmoebaParameterFile( const std::string& inputParameterFile, MapS
                     (void) fprintf( log, "CMMotionRemover added w/ frequency=%d at line=%d\n", frequency, lineCount );
                 }
    
+            // not used any longer -- was used in SASA force
+
+            } else if( field == "AmoebaSurfaceProbe" ){
+           
             // All forces/energy
   
             } else if( field == ALL_FORCES ){
@@ -3675,6 +3540,7 @@ Integrator* readAmoebaParameterFile( const std::string& inputParameterFile, MapS
                 readVec3( filePtr, tokens, forces[AMOEBA_GK_CAVITY_FORCE], &lineCount, field, log );
             } else if( field == "AmoebaGk_A_ForceAndTorque"            || 
                        field == "AmoebaGk_A_Force"                     ||
+                       field == "AmoebaSurfaceParameters"              ||
                        field == "AmoebaGk_A_DrB"                       ||
                        field == "AmoebaDBorn"                          ||
                        field == "AmoebaBorn1Force"                     ||
@@ -3701,11 +3567,6 @@ Integrator* readAmoebaParameterFile( const std::string& inputParameterFile, MapS
                 } else if( field == "AmoebaGkAndCavityEnergy" ){
                     potentialEnergy[AMOEBA_GK_CAVITY_FORCE] = value; 
                 }
- 
-            // Amoeba SASA
- 
-            } else if( field == "AmoebaSurfaceParameters" ){
-                readAmoebaSurfaceParameters( filePtr, forceMap, tokens, system, &lineCount, supplementary, log );
  
             // Amoeba Vdw
  

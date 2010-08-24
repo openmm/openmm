@@ -40,6 +40,12 @@ AmoebaGeneralizedKirkwoodForceImpl::AmoebaGeneralizedKirkwoodForceImpl(AmoebaGen
 }
 
 void AmoebaGeneralizedKirkwoodForceImpl::initialize(ContextImpl& context) {
+
+    System& system = context.getSystem();
+    if (owner.getNumParticles() != system.getNumParticles())
+        throw OpenMMException("AmoebaGeneralizedKirkwoodForce must have exactly as many particles as the System it belongs to.");
+
+
     kernel = context.getPlatform().createKernel(CalcAmoebaGeneralizedKirkwoodForceKernel::Name(), context);
     if (owner.getNumParticles() != context.getSystem().getNumParticles())
         throw OpenMMException("AmoebaGeneralizedKirkwoodForce must have exactly as many particles as the System it belongs to.");

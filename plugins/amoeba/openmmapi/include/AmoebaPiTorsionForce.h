@@ -33,7 +33,6 @@
  * -------------------------------------------------------------------------- */
 
 #include "openmm/Force.h"
-//#include "openmm/Vec3.h"
 #include <vector>
 #include "openmm/internal/windowsExport.h"
 

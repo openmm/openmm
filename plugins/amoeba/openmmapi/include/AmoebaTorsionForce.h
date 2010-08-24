@@ -145,6 +145,7 @@ private:
             }
         }
     }
+
 public:
     int particle1, particle2, particle3, particle4;
     std::vector< std::vector<double> > torsionParameters;

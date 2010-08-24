@@ -85,42 +85,27 @@ public:
      */
     int addParticle( double radius, double epsilon );
 
-    /**
-     * Get the maximum dispersion energy for a particle
-     * 
-     * @param particleIndex       the particle index
-     * @param maxDispersionEnergy maximum dispersion energy
-     */
-    void getMaximumDispersionEnergy(int particleIndex, double& maxDispersionEnergy ) const;
-
-    /**
-     * Get the total maximum dispersion energy
-     * 
-     * @return total maximum dispersion energy for the system
-     */
-    double getTotalMaximumDispersionEnergy( void ) const;
-
     /* 
      * Constants
      */
 
-    double getEpso( void ) const;
-    double getEpsh( void ) const;
-    double getRmino( void ) const;
-    double getRminh( void ) const;
-    double getAwater( void ) const;
-    double getShctd( void ) const;
-    double getDispoff( void ) const;
-    double getSlevy( void ) const;
+    double getEpso(     void ) const;
+    double getEpsh(     void ) const;
+    double getRmino(    void ) const;
+    double getRminh(    void ) const;
+    double getAwater(   void ) const;
+    double getShctd(    void ) const;
+    double getDispoff(  void ) const;
+    double getSlevy(    void ) const;
 
-    void setEpso( double inputValue );
-    void setEpsh( double inputValue );
-    void setRmino( double inputValue );
-    void setRminh( double inputValue );
-    void setAwater( double inputValue );
-    void setShctd( double inputValue );
-    void setDispoff( double inputValue );
-    void setSlevy( double inputValue );
+    void setEpso(     double inputValue );
+    void setEpsh(     double inputValue );
+    void setRmino(    double inputValue );
+    void setRminh(    double inputValue );
+    void setAwater(   double inputValue );
+    void setShctd(    double inputValue );
+    void setDispoff(  double inputValue );
+    void setSlevy(    double inputValue );
 
 protected:
     ForceImpl* createImpl();

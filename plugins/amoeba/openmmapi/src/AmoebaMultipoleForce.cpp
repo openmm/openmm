@@ -36,9 +36,6 @@
 
 using namespace OpenMM;
 
-const int AmoebaMultipoleForce::CovalentDegrees[8] = { 1, 2, 3, 4, 0, 1, 2, 3 };
-
-
 AmoebaMultipoleForce::AmoebaMultipoleForce() {
 
     mutualInducedIterationMethod  = SOR;
@@ -184,31 +181,6 @@ void AmoebaMultipoleForce::getCovalentMaps(int index, std::vector< std::vector<i
            covalentAtoms[ii] = covalentList[ii];
         }
         covalentLists[jj] = covalentAtoms;
-    }
-}
-
-void AmoebaMultipoleForce::getCovalentRange( int index, const std::vector<CovalentType>& lists, int* minCovalentIndex, int* maxCovalentIndex ) const {
-
-    *minCovalentIndex =  999999999;
-    *maxCovalentIndex = -999999999;
-    for( unsigned int kk = 0; kk < lists.size(); kk++ ){
-        CovalentType jj = lists[kk];
-        std::vector<int> covalentList = multipoles[index].covalentInfo[jj];
-        for( unsigned int ii = 0; ii < covalentList.size(); ii++ ){
-            if( *minCovalentIndex > covalentList[ii] ){
-               *minCovalentIndex = covalentList[ii];
-            }
-            if( *maxCovalentIndex < covalentList[ii] ){
-               *maxCovalentIndex = covalentList[ii];
-            }
-        }
-    }
-}
-
-void AmoebaMultipoleForce::getCovalentDegree( std::vector<int>& covalentDegree ) const {
-    covalentDegree.resize( CovalentEnd );
-    for( unsigned int kk = 0; kk < CovalentEnd; kk++ ){
-        covalentDegree[kk] = CovalentDegrees[kk];
     }
 }
 

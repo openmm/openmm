@@ -52,13 +52,15 @@ public:
  
     enum MultipoleAxisTypes { ZThenX, Bisector };
 
-    enum MutualInducedIterationMethod { SOR, ConjugateGradient };
+    // Algorithm used to converge mutual induced dipoles:
+    //     SOR: successive-over-relaxation
+
+    //enum MutualInducedIterationMethod { SOR, ConjugateGradient };
+    enum MutualInducedIterationMethod { SOR };
 
     enum CovalentType { 
                           Covalent12, Covalent13, Covalent14, Covalent15, 
                           PolarizationCovalent11, PolarizationCovalent12, PolarizationCovalent13, PolarizationCovalent14, CovalentEnd };
-
-    static const int CovalentDegrees[8];
 
     /**
      * Create a Amoeba MultipoleForce.
@@ -66,7 +68,7 @@ public:
     AmoebaMultipoleForce();
 
     /**
-     * Get the number of pi torsion terms in the potential function
+     * Get the number of particles in the potential function
      */
     int getNumMultipoles() const {
         return multipoles.size();
@@ -149,22 +151,6 @@ public:
     void getCovalentMaps(int index, std::vector < std::vector<int> >& covalentLists ) const;
 
     /**
-     * Get the CovalentMap for an atom
-     * 
-     * @param index                the index of the atom for which to set parameters
-     * @param minCovalentIndex     minimum covalent index
-     * @param maxCovalentIndex     maximum covalent index
-     */
-    void getCovalentRange(int index, const std::vector<CovalentType>& lists, int* minCovalentIndex, int* maxCovalentIndex ) const;
-
-    /**
-     * Get the covalent degree for the  CovalentEnd lists
-     * 
-     * @param covalentDegree     covalent degrees for the CovalentEnd lists
-     */
-    void getCovalentDegree( std::vector<int>& covalentDegree ) const;
-
-    /**
      * Get the iteration method to be used for calculating the mutual induced dipoles
      * 
      * @return iteration method to be used for calculating the mutual induced dipole
@@ -222,7 +208,7 @@ public:
     
     /**
      * Get the electric constant
-     * 
+      
      * @return the electric constant
      */
     double getElectricConstant( void ) const;
@@ -283,15 +269,6 @@ public:
                    int axisType, int multipoleAtomId1, int multipoleAtomId2, double thole, double dampingFactor, double polarity) :
         charge(charge), axisType(axisType), multipoleAtomId1(multipoleAtomId1), multipoleAtomId2(multipoleAtomId2),
         thole(thole), dampingFactor(dampingFactor), polarity(polarity) {
-
-       // only 'Z-then-X' or 'Bisector' currently handled
-
-       if( axisType != ZThenX && axisType != Bisector ){
-           std::stringstream buffer;
-           buffer << "AmoebaMultipoleForce: axis type=" << axisType;
-           buffer << " not currently handled - only axisTypes[ " << ZThenX << ", " << Bisector << "] (ZThenX, Bisector) currently handled .";
-           throw OpenMMException(buffer.str());
-       }
 
        covalentInfo.resize( CovalentEnd );
 

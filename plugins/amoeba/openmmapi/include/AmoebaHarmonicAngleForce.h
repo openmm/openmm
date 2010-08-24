@@ -39,8 +39,8 @@
 namespace OpenMM {
 
 /**
- * This class implements an interaction between pairs of particles that varies harmonically with the distance
- * between them.  To use it, create a HarmonicAngleForce object then call addAngle() once for each angle.  After
+ * This class implements an interaction between triplets of particles that varies harmonically with the angle
+ * between them.  To use it, create a AmoebaHarmonicAngleForce object then call addAngle() once for each angle.  After
  * a angle has been added, you can modify its force field parameters by calling setAngleParameters().
  */
 
@@ -120,8 +120,8 @@ public:
      * @param particle1     the index of the first particle connected by the angle
      * @param particle2     the index of the second particle connected by the angle
      * @param particle3     the index of the third particle connected by the angle
-     * @param length        the equilibrium length of the angle, measured in nm
-     * @param quadratic k   the quadratic harmonic force constant for the angle
+     * @param length        the angle measured in radians
+     * @param quadratic k   the quadratic harmonic force constant for the angle, measured in kJ/mol/radian^2
      * @return the index of the angle that was added
      */
     int addAngle(int particle1, int particle2, int particle3, double length, 
@@ -134,8 +134,8 @@ public:
      * @param particle1     the index of the first particle connected by the angle
      * @param particle2     the index of the second particle connected by the angle
      * @param particle3     the index of the third particle connected by the angle
-     * @param length        the equilibrium length of the angle, measured in nm
-     * @param quadratic k   the quadratic harmonic force constant for the angle
+     * @param length        the equilibrium angle, measured in radians
+     * @param quadratic k   the quadratic harmonic force constant for the angle, measured in kJ/mol/radian^2
      */
     void getAngleParameters(int index, int& particle1, int& particle2, int& particle3, double& length,
                             double& quadraticK ) const;
@@ -147,8 +147,8 @@ public:
      * @param particle1     the index of the first particle connected by the angle
      * @param particle2     the index of the second particle connected by the angle
      * @param particle3     the index of the third particle connected by the angle
-     * @param length        the equilibrium length of the angle, measured in nm
-     * @param quadratic k   the quadratic harmonic force constant for the angle
+     * @param length        the equilibrium angle, measured in radians
+     * @param quadratic k   the quadratic harmonic force constant for the angle, measured in kJ/mol/radian^2
      */
     void setAngleParameters(int index, int particle1, int particle2, int particle3, double length, double quadraticK );
 

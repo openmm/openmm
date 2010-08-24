@@ -42,7 +42,6 @@
 #include "AmoebaTorsionTorsionForce.h"
 #include "AmoebaMultipoleForce.h"
 #include "AmoebaGeneralizedKirkwoodForce.h"
-#include "AmoebaSASAForce.h"
 #include "AmoebaVdwForce.h"
 #include "AmoebaWcaDispersionForce.h"
 

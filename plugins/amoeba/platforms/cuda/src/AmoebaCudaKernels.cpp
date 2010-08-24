@@ -25,12 +25,13 @@
  * -------------------------------------------------------------------------- */
 
 #include "AmoebaCudaKernels.h"
-#include "openmm/LangevinIntegrator.h"
-#include "openmm/Context.h"
 #include "openmm/internal/ContextImpl.h"
 #include "kernels/amoebaGpuTypes.h"
 #include "kernels/cudaKernels.h"
 #include "kernels/amoebaCudaKernels.h"
+#include "internal/AmoebaMultipoleForceImpl.h"
+#include "internal/AmoebaWcaDispersionForceImpl.h"
+
 #include <cmath>
 #ifdef _MSC_VER
 #include <windows.h>
@@ -509,7 +510,7 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
     polarizationCovalentList.push_back( AmoebaMultipoleForce::PolarizationCovalent14 );
 
     std::vector<int> covalentDegree;
-    force.getCovalentDegree( covalentDegree );
+    AmoebaMultipoleForceImpl::getCovalentDegree( force, covalentDegree );
     int dipoleIndex      = 0;
     int quadrupoleIndex  = 0;
     int maxCovalentRange = 0;
@@ -556,13 +557,13 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
         multipoleAtomCovalentInfo[i] = covalentLists;
 
         int minCovalentIndex, maxCovalentIndex;
-        force.getCovalentRange( i, covalentList, &minCovalentIndex, &maxCovalentIndex );
+        AmoebaMultipoleForceImpl::getCovalentRange( force, i, covalentList, &minCovalentIndex, &maxCovalentIndex );
         minCovalentIndices[i] = minCovalentIndex;
         if( maxCovalentRange < (maxCovalentIndex - minCovalentIndex) ){
             maxCovalentRange = maxCovalentIndex - minCovalentIndex;
         }
 
-        force.getCovalentRange( i, polarizationCovalentList, &minCovalentIndex, &maxCovalentIndex );
+        AmoebaMultipoleForceImpl::getCovalentRange( force, i, polarizationCovalentList, &minCovalentIndex, &maxCovalentIndex );
         minCovalentPolarizationIndices[i] = minCovalentIndex;
         if( maxCovalentRange < (maxCovalentIndex - minCovalentIndex) ){
             maxCovalentRange = maxCovalentIndex - minCovalentIndex;
@@ -629,43 +630,6 @@ void CudaCalcAmoebaGeneralizedKirkwoodForceKernel::initialize(const System& syst
 
 double CudaCalcAmoebaGeneralizedKirkwoodForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     // handled in computeAmoebaMultipoleForce()
-    return 0.0;
-}
-
-/* -------------------------------------------------------------------------- *
- *                       AmoebaSASA                                           *
- * -------------------------------------------------------------------------- */
-
-CudaCalcAmoebaSASAForceKernel::CudaCalcAmoebaSASAForceKernel(std::string name, const Platform& platform, AmoebaCudaData& data, System& system) :
-      CalcAmoebaSASAForceKernel(name, platform), data(data), system(system) {
-    data.incrementKernelCount();
-}
-
-CudaCalcAmoebaSASAForceKernel::~CudaCalcAmoebaSASAForceKernel() {
-    data.decrementKernelCount();
-}
-
-void CudaCalcAmoebaSASAForceKernel::initialize(const System& system, const AmoebaSASAForce& force) {
-
-/*
-    //data.hasAmoebaSASA = true;
-    int numParticles = system.getNumParticles();
-    std::vector<float> radii(numParticles);
-    std::vector<float> weights(numParticles);
-    for( int ii = 0; ii < numParticles; ii++ ){
-        double particleRadius, particleWeight;
-        force.getParticleParameters(ii, particleRadius, particleWeight);
-        radii[ii]    = static_cast<float>( particleRadius );
-        weights[ii]  = static_cast<float>( particleWeight);
-    }   
-
-fprintf( stderr, "\nIn CudaCalcAmoebaSASAForceKernel::initialize %d\n", numParticles );
-fflush( stderr );
-    gpuSetAmoebaSASAParameters( data.amoebaGpu, static_cast<float>(force.getProbeRadius() ), radii, weights);
-*/
-}
-
-double CudaCalcAmoebaSASAForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
     return 0.0;
 }
 
@@ -771,7 +735,7 @@ void CudaCalcAmoebaWcaDispersionForceKernel::initialize(const System& system, co
         radii[ii]         = static_cast<float>( radius );
         epsilons[ii]      = static_cast<float>( epsilon );
     }   
-    float totalMaximumDispersionEnergy =  static_cast<float>( force.getTotalMaximumDispersionEnergy( ) );
+    float totalMaximumDispersionEnergy =  static_cast<float>( AmoebaWcaDispersionForceImpl::getTotalMaximumDispersionEnergy( force ) );
     gpuSetAmoebaWcaDispersionParameters( data.getAmoebaGpu(), radii, epsilons, totalMaximumDispersionEnergy,
                                           static_cast<float>( force.getEpso( )),
                                           static_cast<float>( force.getEpsh( )),

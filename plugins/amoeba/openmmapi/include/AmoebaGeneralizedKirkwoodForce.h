@@ -39,7 +39,7 @@
 namespace OpenMM {
 
 /**
- * This class implements an implicit solvation force using the GBSA-OBC model.
+ * This class implements an implicit solvation force using the generalized Kirkwood/OBC model.
  * <p>
  * To use this class, create a AmoebaGeneralizedKirkwoodForce object, then call addParticle() once for each particle in the
  * System to define its parameters.  The number of particles for which you define GBSA parameters must
@@ -50,26 +50,6 @@ namespace OpenMM {
 
 class OPENMM_EXPORT AmoebaGeneralizedKirkwoodForce : public Force {
 public:
-
-    /**
-     * This is an enumeration of the different methods that may be used for handling long range nonbonded forces.
-     */
-    enum NonbondedMethod {
-        /**
-         * No cutoff is applied to nonbonded interactions.  The full set of N^2 interactions is computed exactly.
-         * This necessarily means that periodic boundary conditions cannot be used.  This is the default.
-         */
-        NoCutoff = 0,
-        /**
-         * Interactions beyond the cutoff distance are ignored.
-         */
-        CutoffNonPeriodic = 1,
-        /**
-         * Periodic boundary conditions are used, so that each particle interacts only with the nearest periodic copy of
-         * each other particle.  Interactions beyond the cutoff distance are ignored.
-         */
-        CutoffPeriodic = 2,
-    };
 
     /*
      * Create a AmoebaGeneralizedKirkwoodForce.
@@ -84,7 +64,7 @@ public:
     }
 
     /**
-     * Add the GBSA parameters for a particle.  This should be called once for each particle
+     * Add the  parameters for a particle.  This should be called once for each particle
      * in the System.  When it is called for the i'th time, it specifies the parameters for the i'th particle.
      *
      * @param charge         the charge of the particle, measured in units of the proton charge
@@ -141,27 +121,6 @@ public:
     void setSoluteDielectric(double dielectric) {
         soluteDielectric = dielectric;
     }
-    /**
-     * Get the method used for handling long range nonbonded interactions.
-     */
-    NonbondedMethod getNonbondedMethod() const;
-
-    /**
-     * Set the method used for handling long range nonbonded interactions.
-     */
-    void setNonbondedMethod(NonbondedMethod method);
-
-    /**
-     * Get the cutoff distance (in nm) being used for nonbonded interactions.  If the NonbondedMethod in use
-     * is NoCutoff, this value will have no effect.
-     */
-    double getCutoffDistance() const;
-
-    /**
-     * Set the cutoff distance (in nm) being used for nonbonded interactions.  If the NonbondedMethod in use
-     * is NoCutoff, this value will have no effect.
-     */
-    void setCutoffDistance(double distance);
 
     /**
      * Get the dielectric offset (nm) used in OBC
@@ -207,9 +166,8 @@ protected:
     ForceImpl* createImpl();
 private:
     class ParticleInfo;
-    NonbondedMethod nonbondedMethod;
     int includeCavityTerm;
-    double cutoffDistance, solventDielectric, soluteDielectric, dielectricOffset,
+    double solventDielectric, soluteDielectric, dielectricOffset,
            probeRadius, surfaceAreaFactor;
     std::vector<ParticleInfo> particles;
 };
@@ -227,4 +185,4 @@ public:
 
 } // namespace OpenMM
 
-#endif /*AMOEBA_OPENMM_GBSA_OBC_FORCE_FIELD_H_*/
+#endif /*AMOEBA_OPENMM_GK_FORCE_FIELD_H_*/

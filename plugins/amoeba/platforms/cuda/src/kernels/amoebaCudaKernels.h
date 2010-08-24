@@ -65,12 +65,6 @@ extern void SetCalculateAmoebaCudaWcaDispersionSim(amoebaGpuContext gpu);
 extern void GetCalculateAmoebaCudaWcaDispersionSim(amoebaGpuContext gpu);
 extern void kCalculateAmoebaWcaDispersionForces(amoebaGpuContext amoebaGpu );
 
-// SASA
-
-extern void SetCalculateAmoebaCudaSASAForcesSim(amoebaGpuContext gpu);
-extern void GetCalculateAmoebaCudaSASAForcesSim(amoebaGpuContext gpu);
-extern void kCalculateAmoebaSASAForces(amoebaGpuContext amoebaGpu );
-
 // fixed electric field
 
 extern void SetCalculateAmoebaCudaFixedEFieldSim(amoebaGpuContext gpu);

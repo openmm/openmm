@@ -47,8 +47,8 @@
 #include "AmoebaGeneralizedKirkwoodForce.h"
 #include "AmoebaVdwForce.h"
 #include "AmoebaWcaDispersionForce.h"
-#include "AmoebaSASAForce.h"
 #include "internal/windowsExport.h"
+#include "internal/AmoebaWcaDispersionForceImpl.h"
 
 #include <ctime>
 #include <vector>

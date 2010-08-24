@@ -37,6 +37,9 @@ using namespace OpenMM;
 
 using std::vector;
 
+bool AmoebaMultipoleForceImpl::initializedCovalentDegrees = false;
+int AmoebaMultipoleForceImpl::CovalentDegrees[]           = { 1,2,3,4,0,1,2,3};
+
 AmoebaMultipoleForceImpl::AmoebaMultipoleForceImpl(AmoebaMultipoleForce& owner) : owner(owner) {
 }
 
@@ -44,6 +47,30 @@ AmoebaMultipoleForceImpl::~AmoebaMultipoleForceImpl() {
 }
 
 void AmoebaMultipoleForceImpl::initialize(ContextImpl& context) {
+
+    System& system = context.getSystem();
+    if (owner.getNumMultipoles() != system.getNumParticles())
+        throw OpenMMException("AmoebaMultipoleForce must have exactly as many particles as the System it belongs to.");
+
+    for( int ii = 0; ii < system.getNumParticles(); ii++ ){
+
+        int index, axisType, multipoleAtomId1, multipoleAtomId2;
+        double charge, thole, dampingFactor, polarity ;
+        std::vector<double> molecularDipole;
+        std::vector<double> molecularQuadrupole;
+
+        owner.getMultipoleParameters( ii, charge, molecularDipole, molecularQuadrupole, axisType, multipoleAtomId1, multipoleAtomId2,
+                                      thole, dampingFactor, polarity );
+
+       // only 'Z-then-X' or 'Bisector' currently handled
+
+        if( axisType != AmoebaMultipoleForce::ZThenX && axisType != AmoebaMultipoleForce::Bisector ){
+             std::stringstream buffer;
+             buffer << "AmoebaMultipoleForce: axis type=" << axisType;
+             buffer << " not currently handled - only axisTypes[ " << AmoebaMultipoleForce::ZThenX << ", " << AmoebaMultipoleForce::Bisector << "] (ZThenX, Bisector) currently handled .";
+             throw OpenMMException(buffer.str());
+        }
+    }
     kernel = context.getPlatform().createKernel(CalcAmoebaMultipoleForceKernel::Name(), context);
     dynamic_cast<CalcAmoebaMultipoleForceKernel&>(kernel.getImpl()).initialize(context.getSystem(), owner);
 }
@@ -58,3 +85,47 @@ std::vector<std::string> AmoebaMultipoleForceImpl::getKernelNames() {
     return names;
 }
 
+const int* AmoebaMultipoleForceImpl::getCovalentDegrees( void ) {
+    if( !initializedCovalentDegrees ){
+        initializedCovalentDegrees                                      = true;
+        CovalentDegrees[AmoebaMultipoleForce::Covalent12]               = 1;
+        CovalentDegrees[AmoebaMultipoleForce::Covalent13]               = 2;
+        CovalentDegrees[AmoebaMultipoleForce::Covalent14]               = 3;
+        CovalentDegrees[AmoebaMultipoleForce::Covalent15]               = 4;
+        CovalentDegrees[AmoebaMultipoleForce::PolarizationCovalent11]   = 0;
+        CovalentDegrees[AmoebaMultipoleForce::PolarizationCovalent12]   = 1;
+        CovalentDegrees[AmoebaMultipoleForce::PolarizationCovalent13]   = 2;
+        CovalentDegrees[AmoebaMultipoleForce::PolarizationCovalent14]   = 3;
+    }
+    return CovalentDegrees;
+}
+
+void AmoebaMultipoleForceImpl::getCovalentRange( const AmoebaMultipoleForce& force, int atomIndex, const std::vector<AmoebaMultipoleForce::CovalentType>& lists,
+                                                 int* minCovalentIndex, int* maxCovalentIndex ){
+
+    *minCovalentIndex =  999999999;
+    *maxCovalentIndex = -999999999;
+    for( unsigned int kk = 0; kk < lists.size(); kk++ ){
+        AmoebaMultipoleForce::CovalentType jj = lists[kk];
+        std::vector<int> covalentList;
+        force.getCovalentMap( atomIndex, jj, covalentList );
+        for( unsigned int ii = 0; ii < covalentList.size(); ii++ ){
+            if( *minCovalentIndex > covalentList[ii] ){
+               *minCovalentIndex = covalentList[ii];
+            }
+            if( *maxCovalentIndex < covalentList[ii] ){
+               *maxCovalentIndex = covalentList[ii];
+            }
+        }
+    }   
+    return;
+}
+
+void AmoebaMultipoleForceImpl::getCovalentDegree( const AmoebaMultipoleForce& force, std::vector<int>& covalentDegree ){
+    covalentDegree.resize( AmoebaMultipoleForce::CovalentEnd );
+    const int* CovalentDegrees = AmoebaMultipoleForceImpl::getCovalentDegrees();
+    for( unsigned int kk = 0; kk < AmoebaMultipoleForce::CovalentEnd; kk++ ){
+        covalentDegree[kk] = CovalentDegrees[kk];
+    }   
+    return;
+}
