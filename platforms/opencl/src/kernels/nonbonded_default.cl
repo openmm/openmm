@@ -15,15 +15,15 @@ __kernel __attribute__((reqd_work_group_size(WORK_GROUP_SIZE, 1, 1)))
 void computeNonbonded(__global float4* forceBuffers, __global float* energyBuffer, __global float4* posq, __global unsigned int* exclusions,
         __global unsigned int* exclusionIndices, __global unsigned int* exclusionRowIndices, __local AtomData* localData, __local float4* tempBuffer,
 #ifdef USE_CUTOFF
-        __global ushort2* tiles, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize
+        __global ushort2* tiles, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles
 #else
         unsigned int numTiles
 #endif
         PARAMETER_ARGUMENTS) {
 #ifdef USE_CUTOFF
     unsigned int numTiles = interactionCount[0];
-    unsigned int pos = get_group_id(0)*(numTiles > MAX_TILES ? NUM_BLOCKS*(NUM_BLOCKS+1)/2 : numTiles)/get_num_groups(0);
-    unsigned int end = (get_group_id(0)+1)*(numTiles > MAX_TILES ? NUM_BLOCKS*(NUM_BLOCKS+1)/2 : numTiles)/get_num_groups(0);
+    unsigned int pos = get_group_id(0)*(numTiles > maxTiles ? NUM_BLOCKS*(NUM_BLOCKS+1)/2 : numTiles)/get_num_groups(0);
+    unsigned int end = (get_group_id(0)+1)*(numTiles > maxTiles ? NUM_BLOCKS*(NUM_BLOCKS+1)/2 : numTiles)/get_num_groups(0);
 #else
     unsigned int pos = get_group_id(0)*numTiles/get_num_groups(0);
     unsigned int end = (get_group_id(0)+1)*numTiles/get_num_groups(0);
@@ -37,7 +37,7 @@ void computeNonbonded(__global float4* forceBuffers, __global float* energyBuffe
         // Extract the coordinates of this tile
         unsigned int x, y;
 #ifdef USE_CUTOFF
-        if (numTiles <= MAX_TILES) {
+        if (numTiles <= maxTiles) {
             ushort2 tileIndices = tiles[pos];
             x = tileIndices.x;
             y = tileIndices.y;

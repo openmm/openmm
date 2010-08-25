@@ -47,7 +47,7 @@ __kernel void findBlockBounds(int numAtoms, float4 periodicBoxSize, float4 invPe
  */
 void storeInteractionData(__local ushort2* buffer, __local int* valid, __local short* sum, __local ushort2* temp, __local int* baseIndex,
             __global unsigned int* interactionCount, __global ushort2* interactingTiles, float cutoffSquared, float4 periodicBoxSize,
-            float4 invPeriodicBoxSize, __global float4* posq, __global float4* blockCenter, __global float4* blockBoundingBox) {
+            float4 invPeriodicBoxSize, __global float4* posq, __global float4* blockCenter, __global float4* blockBoundingBox, unsigned int maxTiles) {
     // The buffer is full, so we need to compact it and write out results.  Start by doing a parallel prefix sum.
 
     for (int i = get_local_id(0); i < BUFFER_SIZE; i += GROUP_SIZE)
@@ -147,7 +147,7 @@ void storeInteractionData(__local ushort2* buffer, __local int* valid, __local s
     if (get_local_id(0) == 0)
         *baseIndex = atom_add(interactionCount, numValid);
     barrier(CLK_LOCAL_MEM_FENCE);
-    if (*baseIndex+numValid <= MAX_TILES)
+    if (*baseIndex+numValid <= maxTiles)
         for (int i = get_local_id(0); i < numValid; i += GROUP_SIZE)
             interactingTiles[*baseIndex+i] = temp[i];
     barrier(CLK_LOCAL_MEM_FENCE);
@@ -158,7 +158,7 @@ void storeInteractionData(__local ushort2* buffer, __local int* valid, __local s
  * mark them as non-interacting.
  */
 __kernel void findBlocksWithInteractions(float cutoffSquared, float4 periodicBoxSize, float4 invPeriodicBoxSize, __global float4* blockCenter,
-        __global float4* blockBoundingBox, __global unsigned int* interactionCount, __global ushort2* interactingTiles, __global float4* posq) {
+        __global float4* blockBoundingBox, __global unsigned int* interactionCount, __global ushort2* interactingTiles, __global float4* posq, unsigned int maxTiles) {
     __local ushort2 buffer[BUFFER_SIZE];
     __local int valid[BUFFER_SIZE];
     __local short sum[BUFFER_SIZE];
@@ -210,14 +210,14 @@ __kernel void findBlocksWithInteractions(float cutoffSquared, float4 periodicBox
         }
         barrier(CLK_LOCAL_MEM_FENCE);
         if (bufferFull) {
-            storeInteractionData(buffer, valid, sum, temp, &globalIndex, interactionCount, interactingTiles, cutoffSquared, periodicBoxSize, invPeriodicBoxSize, posq, blockCenter, blockBoundingBox);
+            storeInteractionData(buffer, valid, sum, temp, &globalIndex, interactionCount, interactingTiles, cutoffSquared, periodicBoxSize, invPeriodicBoxSize, posq, blockCenter, blockBoundingBox, maxTiles);
             valuesInBuffer = 0;
             if (get_local_id(0) == 0)
                 bufferFull = false;
             barrier(CLK_LOCAL_MEM_FENCE);
         }
     }
-    storeInteractionData(buffer, valid, sum, temp, &globalIndex, interactionCount, interactingTiles, cutoffSquared, periodicBoxSize, invPeriodicBoxSize, posq, blockCenter, blockBoundingBox);
+    storeInteractionData(buffer, valid, sum, temp, &globalIndex, interactionCount, interactingTiles, cutoffSquared, periodicBoxSize, invPeriodicBoxSize, posq, blockCenter, blockBoundingBox, maxTiles);
 }
 
 /**
@@ -225,7 +225,7 @@ __kernel void findBlocksWithInteractions(float cutoffSquared, float4 periodicBox
  * flags for which ones are interacting.
  */
 __kernel void findInteractionsWithinBlocks(float cutoffSquared, float4 periodicBoxSize, float4 invPeriodicBoxSize, __global float4* posq, __global ushort2* tiles, __global float4* blockCenter,
-            __global float4* blockBoundingBox, __global unsigned int* interactionFlags, __global unsigned int* interactionCount, __local unsigned int* flags) {
+            __global float4* blockBoundingBox, __global unsigned int* interactionFlags, __global unsigned int* interactionCount, __local unsigned int* flags, unsigned int maxTiles) {
     unsigned int totalWarps = get_global_size(0)/TILE_SIZE;
     unsigned int warp = get_global_id(0)/TILE_SIZE;
     unsigned int numTiles = interactionCount[0];
@@ -233,7 +233,7 @@ __kernel void findInteractionsWithinBlocks(float cutoffSquared, float4 periodicB
     unsigned int end = (warp+1)*numTiles/totalWarps;
     unsigned int index = get_local_id(0) & (TILE_SIZE - 1);
 
-    if (numTiles > MAX_TILES)
+    if (numTiles > maxTiles)
         return;
     unsigned int lasty = 0xFFFFFFFF;
     float4 apos;

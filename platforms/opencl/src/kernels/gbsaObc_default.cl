@@ -17,14 +17,14 @@ typedef struct {
 __kernel __attribute__((reqd_work_group_size(WORK_GROUP_SIZE, 1, 1)))
 void computeBornSum(__global float* global_bornSum, __global float4* posq, __global float2* global_params, __local AtomData* localData, __local float* tempBuffer,
 #ifdef USE_CUTOFF
-        __global ushort2* tiles, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize) {
+        __global ushort2* tiles, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles) {
 #else
         unsigned int numTiles) {
 #endif
 #ifdef USE_CUTOFF
     unsigned int numTiles = interactionCount[0];
-    unsigned int pos = get_group_id(0)*(numTiles > MAX_TILES ? NUM_BLOCKS*(NUM_BLOCKS+1)/2 : numTiles)/get_num_groups(0);
-    unsigned int end = (get_group_id(0)+1)*(numTiles > MAX_TILES ? NUM_BLOCKS*(NUM_BLOCKS+1)/2 : numTiles)/get_num_groups(0);
+    unsigned int pos = get_group_id(0)*(numTiles > maxTiles ? NUM_BLOCKS*(NUM_BLOCKS+1)/2 : numTiles)/get_num_groups(0);
+    unsigned int end = (get_group_id(0)+1)*(numTiles > maxTiles ? NUM_BLOCKS*(NUM_BLOCKS+1)/2 : numTiles)/get_num_groups(0);
 #else
     unsigned int pos = get_group_id(0)*numTiles/get_num_groups(0);
     unsigned int end = (get_group_id(0)+1)*numTiles/get_num_groups(0);
@@ -36,7 +36,7 @@ void computeBornSum(__global float* global_bornSum, __global float4* posq, __glo
         // Extract the coordinates of this tile
         unsigned int x, y;
 #ifdef USE_CUTOFF
-        if (numTiles <= MAX_TILES) {
+        if (numTiles <= maxTiles) {
             ushort2 tileIndices = tiles[pos];
             x = tileIndices.x;
             y = tileIndices.y;
@@ -204,14 +204,14 @@ void computeGBSAForce1(__global float4* forceBuffers, __global float* energyBuff
         __global float4* posq, __global float* global_bornRadii,
         __global float* global_bornForce, __local AtomData* localData, __local float4* tempBuffer,
 #ifdef USE_CUTOFF
-        __global ushort2* tiles, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize) {
+        __global ushort2* tiles, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles) {
 #else
         unsigned int numTiles) {
 #endif
 #ifdef USE_CUTOFF
     unsigned int numTiles = interactionCount[0];
-    unsigned int pos = get_group_id(0)*(numTiles > MAX_TILES ? NUM_BLOCKS*(NUM_BLOCKS+1)/2 : numTiles)/get_num_groups(0);
-    unsigned int end = (get_group_id(0)+1)*(numTiles > MAX_TILES ? NUM_BLOCKS*(NUM_BLOCKS+1)/2 : numTiles)/get_num_groups(0);
+    unsigned int pos = get_group_id(0)*(numTiles > maxTiles ? NUM_BLOCKS*(NUM_BLOCKS+1)/2 : numTiles)/get_num_groups(0);
+    unsigned int end = (get_group_id(0)+1)*(numTiles > maxTiles ? NUM_BLOCKS*(NUM_BLOCKS+1)/2 : numTiles)/get_num_groups(0);
 #else
     unsigned int pos = get_group_id(0)*numTiles/get_num_groups(0);
     unsigned int end = (get_group_id(0)+1)*numTiles/get_num_groups(0);
@@ -223,7 +223,7 @@ void computeGBSAForce1(__global float4* forceBuffers, __global float* energyBuff
         // Extract the coordinates of this tile
         unsigned int x, y;
 #ifdef USE_CUTOFF
-        if (numTiles <= MAX_TILES) {
+        if (numTiles <= maxTiles) {
             ushort2 tileIndices = tiles[pos];
             x = tileIndices.x;
             y = tileIndices.y;

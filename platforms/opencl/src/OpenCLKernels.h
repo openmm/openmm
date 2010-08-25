@@ -592,6 +592,7 @@ public:
 private:
     double prefactor;
     bool hasCreatedKernels;
+    int maxTiles;
     OpenCLContext& cl;
     OpenCLArray<mm_float2>* params;
     OpenCLArray<cl_float>* bornSum;
@@ -632,6 +633,7 @@ public:
     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 private:
     bool hasInitializedKernels, needParameterGradient;
+    int maxTiles;
     OpenCLContext& cl;
     OpenCLParameterSet* params;
     OpenCLParameterSet* computedValues;

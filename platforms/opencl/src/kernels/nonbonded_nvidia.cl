@@ -15,7 +15,7 @@ __kernel __attribute__((reqd_work_group_size(WORK_GROUP_SIZE, 1, 1)))
 void computeNonbonded(__global float4* forceBuffers, __global float* energyBuffer, __global float4* posq, __global unsigned int* exclusions,
         __global unsigned int* exclusionIndices, __global unsigned int* exclusionRowIndices, __local AtomData* localData, __local float4* tempBuffer,
 #ifdef USE_CUTOFF
-        __global ushort2* tiles, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, __global unsigned int* interactionFlags
+        __global ushort2* tiles, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles, __global unsigned int* interactionFlags
 #else
         unsigned int numTiles
 #endif
@@ -24,8 +24,8 @@ void computeNonbonded(__global float4* forceBuffers, __global float* energyBuffe
     unsigned int warp = get_global_id(0)/TILE_SIZE;
 #ifdef USE_CUTOFF
     unsigned int numTiles = interactionCount[0];
-    unsigned int pos = warp*(numTiles > MAX_TILES ? NUM_BLOCKS*(NUM_BLOCKS+1)/2 : numTiles)/totalWarps;
-    unsigned int end = (warp+1)*(numTiles > MAX_TILES ? NUM_BLOCKS*(NUM_BLOCKS+1)/2 : numTiles)/totalWarps;
+    unsigned int pos = warp*(numTiles > maxTiles ? NUM_BLOCKS*(NUM_BLOCKS+1)/2 : numTiles)/totalWarps;
+    unsigned int end = (warp+1)*(numTiles > maxTiles ? NUM_BLOCKS*(NUM_BLOCKS+1)/2 : numTiles)/totalWarps;
 #else
     unsigned int pos = warp*numTiles/totalWarps;
     unsigned int end = (warp+1)*numTiles/totalWarps;
@@ -39,7 +39,7 @@ void computeNonbonded(__global float4* forceBuffers, __global float* energyBuffe
         // Extract the coordinates of this tile
         unsigned int x, y;
 #ifdef USE_CUTOFF
-        if (numTiles <= MAX_TILES) {
+        if (numTiles <= maxTiles) {
             ushort2 tileIndices = tiles[pos];
             x = tileIndices.x;
             y = tileIndices.y;
@@ -145,7 +145,7 @@ void computeNonbonded(__global float4* forceBuffers, __global float* energyBuffe
             localData[get_local_id(0)].fy = 0.0f;
             localData[get_local_id(0)].fz = 0.0f;
 #ifdef USE_CUTOFF
-            unsigned int flags = (numTiles <= MAX_TILES ? interactionFlags[pos] : 0xFFFFFFFF);
+            unsigned int flags = (numTiles <= maxTiles ? interactionFlags[pos] : 0xFFFFFFFF);
             if (!hasExclusions && flags != 0xFFFFFFFF) {
                 if (flags == 0) {
                     // No interactions in this tile.

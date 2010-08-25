@@ -123,10 +123,13 @@ public:
      */
     void prepareInteractions();
     /**
-     * Compute the nonbonded interactions.  This will only be executed once after each call to
-     * prepareInteractions().  Additional calls return immediately without doing anything.
+     * Compute the nonbonded interactions.
      */
     void computeInteractions();
+    /**
+     * Check to see if the neighbor list arrays are large enough, and make them bigger if necessary.
+     */
+    void updateNeighborListSize();
     /**
      * Get the array containing the center of each atom block.
      */

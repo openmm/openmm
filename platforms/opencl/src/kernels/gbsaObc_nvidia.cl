@@ -17,7 +17,7 @@ typedef struct {
 __kernel __attribute__((reqd_work_group_size(WORK_GROUP_SIZE, 1, 1)))
 void computeBornSum(__global float* global_bornSum, __global float4* posq, __global float2* global_params, __local AtomData* localData, __local float* tempBuffer,
 #ifdef USE_CUTOFF
-        __global ushort2* tiles, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, __global unsigned int* interactionFlags) {
+        __global ushort2* tiles, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles, __global unsigned int* interactionFlags) {
 #else
         unsigned int numTiles) {
 #endif
@@ -25,8 +25,8 @@ void computeBornSum(__global float* global_bornSum, __global float4* posq, __glo
     unsigned int warp = get_global_id(0)/TILE_SIZE;
 #ifdef USE_CUTOFF
     unsigned int numTiles = interactionCount[0];
-    unsigned int pos = warp*(numTiles > MAX_TILES ? NUM_BLOCKS*(NUM_BLOCKS+1)/2 : numTiles)/totalWarps;
-    unsigned int end = (warp+1)*(numTiles > MAX_TILES ? NUM_BLOCKS*(NUM_BLOCKS+1)/2 : numTiles)/totalWarps;
+    unsigned int pos = warp*(numTiles > maxTiles ? NUM_BLOCKS*(NUM_BLOCKS+1)/2 : numTiles)/totalWarps;
+    unsigned int end = (warp+1)*(numTiles > maxTiles ? NUM_BLOCKS*(NUM_BLOCKS+1)/2 : numTiles)/totalWarps;
 #else
     unsigned int pos = warp*numTiles/totalWarps;
     unsigned int end = (warp+1)*numTiles/totalWarps;
@@ -38,7 +38,7 @@ void computeBornSum(__global float* global_bornSum, __global float4* posq, __glo
         // Extract the coordinates of this tile
         unsigned int x, y;
 #ifdef USE_CUTOFF
-        if (numTiles <= MAX_TILES) {
+        if (numTiles <= maxTiles) {
             ushort2 tileIndices = tiles[pos];
             x = tileIndices.x;
             y = tileIndices.y;
@@ -123,7 +123,7 @@ void computeBornSum(__global float* global_bornSum, __global float4* posq, __glo
             }
             localData[get_local_id(0)].bornSum = 0.0f;
 #ifdef USE_CUTOFF
-            unsigned int flags = (numTiles <= MAX_TILES ? interactionFlags[pos] : 0xFFFFFFFF);
+            unsigned int flags = (numTiles <= maxTiles ? interactionFlags[pos] : 0xFFFFFFFF);
             if (flags != 0xFFFFFFFF && false) { // TODO: Fix this: should be checking for exclusions
                 if (flags == 0) {
                     // No interactions in this tile.
@@ -270,7 +270,7 @@ void computeGBSAForce1(__global float4* forceBuffers, __global float* energyBuff
         __global float4* posq, __global float* global_bornRadii,
         __global float* global_bornForce, __local AtomData* localData, __local float4* tempBuffer,
 #ifdef USE_CUTOFF
-        __global ushort2* tiles, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, __global unsigned int* interactionFlags) {
+        __global ushort2* tiles, __global unsigned int* interactionCount, float4 periodicBoxSize, float4 invPeriodicBoxSize, unsigned int maxTiles, __global unsigned int* interactionFlags) {
 #else
         unsigned int numTiles) {
 #endif
@@ -278,8 +278,8 @@ void computeGBSAForce1(__global float4* forceBuffers, __global float* energyBuff
     unsigned int warp = get_global_id(0)/TILE_SIZE;
 #ifdef USE_CUTOFF
     unsigned int numTiles = interactionCount[0];
-    unsigned int pos = warp*(numTiles > MAX_TILES ? NUM_BLOCKS*(NUM_BLOCKS+1)/2 : numTiles)/totalWarps;
-    unsigned int end = (warp+1)*(numTiles > MAX_TILES ? NUM_BLOCKS*(NUM_BLOCKS+1)/2 : numTiles)/totalWarps;
+    unsigned int pos = warp*(numTiles > maxTiles ? NUM_BLOCKS*(NUM_BLOCKS+1)/2 : numTiles)/totalWarps;
+    unsigned int end = (warp+1)*(numTiles > maxTiles ? NUM_BLOCKS*(NUM_BLOCKS+1)/2 : numTiles)/totalWarps;
 #else
     unsigned int pos = warp*numTiles/totalWarps;
     unsigned int end = (warp+1)*numTiles/totalWarps;
@@ -291,7 +291,7 @@ void computeGBSAForce1(__global float4* forceBuffers, __global float* energyBuff
         // Extract the coordinates of this tile
         unsigned int x, y;
 #ifdef USE_CUTOFF
-        if (numTiles <= MAX_TILES) {
+        if (numTiles <= maxTiles) {
             ushort2 tileIndices = tiles[pos];
             x = tileIndices.x;
             y = tileIndices.y;
@@ -381,7 +381,7 @@ void computeGBSAForce1(__global float4* forceBuffers, __global float* energyBuff
             localData[get_local_id(0)].fz = 0.0f;
             localData[get_local_id(0)].fw = 0.0f;
 #ifdef USE_CUTOFF
-            unsigned int flags = (numTiles <= MAX_TILES ? interactionFlags[pos] : 0xFFFFFFFF);
+            unsigned int flags = (numTiles <= maxTiles ? interactionFlags[pos] : 0xFFFFFFFF);
             if (flags != 0xFFFFFFFF && false) { // TODO: Fix this: should be checking for exclusions
                 if (flags == 0) {
                     // No interactions in this tile.
