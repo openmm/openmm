@@ -280,8 +280,6 @@ void OpenCLNonbondedUtilities::prepareInteractions() {
     findInteractingBlocksKernel.setArg<mm_float4>(1, context.getPeriodicBoxSize());
     findInteractingBlocksKernel.setArg<mm_float4>(2, context.getInvPeriodicBoxSize());
     context.executeKernel(findInteractingBlocksKernel, context.getNumAtoms());
-    vector<cl_uint> count;
-    interactionCount->download(count);
     if (context.getSIMDWidth() == 32) {
         findInteractionsWithinBlocksKernel.setArg<mm_float4>(1, context.getPeriodicBoxSize());
         findInteractionsWithinBlocksKernel.setArg<mm_float4>(2, context.getInvPeriodicBoxSize());
