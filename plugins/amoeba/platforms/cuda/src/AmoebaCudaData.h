@@ -30,7 +30,6 @@
 #include "CudaPlatform.h"
 #include "kernels/amoebaGpuTypes.h"
 #include "kernels/cudaKernels.h"
-#include "kernels/amoebaCudaKernels.h"
 #include "openmm/KernelImpl.h"
 
 namespace OpenMM {

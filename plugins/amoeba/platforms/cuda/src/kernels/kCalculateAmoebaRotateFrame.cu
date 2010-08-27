@@ -382,7 +382,11 @@ void kCalculateAmoebaMultipoleForces(amoebaGpuContext amoebaGpu, bool hasAmoebaG
 
     // calculate electrostatic forces
 
-    cudaComputeAmoebaElectrostatic( amoebaGpu );
+    if( amoebaGpu->multipoleNonbondedMethod == AMOEBA_NO_CUTOFF ){
+        cudaComputeAmoebaElectrostatic( amoebaGpu );
+    } else {
+        cudaComputeAmoebaRealSpaceEwald( amoebaGpu );
+    }
 
     // map torques to forces
 

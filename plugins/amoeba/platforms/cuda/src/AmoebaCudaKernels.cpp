@@ -575,12 +575,20 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
          throw OpenMMException("Iterative method for mutual induced dipoles not recognized.\n");
     }
 
+    int nonbondedMethod = static_cast<int>(force.getNonbondedMethod());
+    if( nonbondedMethod != 0 && nonbondedMethod != 1 ){
+         throw OpenMMException("AmoebaMultipoleForce nonbonded method not recognized.\n");
+    }
+
     gpuSetAmoebaMultipoleParameters(data.getAmoebaGpu(), charges, dipoles, quadrupoles, axisTypes, multipoleAtomId1s, multipoleAtomId2s,
                                     tholes, scalingDistanceCutoff, dampingFactors, polarity,
                                     multipoleAtomCovalentInfo, covalentDegree, minCovalentIndices, minCovalentPolarizationIndices, (maxCovalentRange+2),
                                     static_cast<int>(force.getMutualInducedIterationMethod()),
                                     force.getMutualInducedMaxIterations(),
                                     static_cast<float>( force.getMutualInducedTargetEpsilon()),
+                                    nonbondedMethod,
+                                    static_cast<float>( force.getCutoffDistance()),
+                                    static_cast<float>( force.getAEwald()),
                                     static_cast<float>( force.getElectricConstant()) );
 
 }

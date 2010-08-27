@@ -29,6 +29,7 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#include "openmm/OpenMMException.h"
 #include "cudaKernels.h"
 #include "amoebaCudaKernels.h"
 
@@ -332,7 +333,11 @@ void gpuPrintCudaAmoebaGmxSimulation(amoebaGpuContext amoebaGpu, FILE* log )
     (void) fprintf( log, "     pD_ScaleIndices                    %p\n",      amoebaGpu->amoebaSim.pD_ScaleIndices );
     (void) fprintf( log, "     pP_ScaleIndices                    %p\n",      amoebaGpu->amoebaSim.pP_ScaleIndices );
     (void) fprintf( log, "     pM_ScaleIndices                    %p\n",      amoebaGpu->amoebaSim.pM_ScaleIndices );
+    (void) fprintf( log, "     sqrtPi                             %15.7e\n",  amoebaGpu->amoebaSim.sqrtPi );
+    (void) fprintf( log, "     cutoffDistance2                    %15.7e\n",  amoebaGpu->amoebaSim.cutoffDistance2 );
+    (void) fprintf( log, "     aewald                             %15.7e\n",  amoebaGpu->amoebaSim.aewald );
     (void) fprintf( log, "     electric                           %15.7e\n",  amoebaGpu->amoebaSim.electric );
+    (void) fprintf( log, "     box                                %15.7e %15.7e %15.7e\n", gpu->sim.periodicBoxSizeX, gpu->sim.periodicBoxSizeY, gpu->sim.periodicBoxSizeZ);
     (void) fprintf( log, "     gkc                                %15.7e\n",  amoebaGpu->amoebaSim.gkc );
     (void) fprintf( log, "     dielec                             %15.7e\n",  amoebaGpu->amoebaSim.dielec );
     (void) fprintf( log, "     dwater                             %15.7e\n",  amoebaGpu->amoebaSim.dwater );
@@ -1429,7 +1434,8 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
                                      const std::vector<float>& tholes, float scalingDistanceCutoff,const std::vector<float>& dampingFactors, const std::vector<float>& polarity,
                                      const std::vector< std::vector< std::vector<int> > >& multipoleParticleCovalentInfo, const std::vector<int>& covalentDegree,
                                      const std::vector<int>& minCovalentIndices,  const std::vector<int>& minCovalentPolarizationIndices, int maxCovalentRange, 
-                                     int mutualInducedIterativeMethod, int mutualInducedMaxIterations, float mutualInducedTargetEpsilon, float electricConstant ){
+                                     int mutualInducedIterativeMethod, int mutualInducedMaxIterations, float mutualInducedTargetEpsilon,
+                                     int nonbondedMethod, float cutoffDistance, float aewald, float electricConstant ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -1514,7 +1520,17 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
         amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pSysStream[0][ii].z   = ii;
     }
 
-    amoebaGpu->amoebaSim.electric    = electricConstant;
+    if( nonbondedMethod == 0 ){
+        amoebaGpu->multipoleNonbondedMethod = AMOEBA_NO_CUTOFF;
+    } else if( nonbondedMethod == 1 ){
+        amoebaGpu->multipoleNonbondedMethod = AMOEBA_PARTICLE_MESH_EWALD;
+    } else {
+        throw OpenMM::OpenMMException("multipoleNonbondedMethod not recognzied.\n" );
+    }
+    amoebaGpu->amoebaSim.cutoffDistance2    = cutoffDistance*cutoffDistance;
+    amoebaGpu->amoebaSim.sqrtPi             = sqrt( 3.1415926535897932384626433832795 );
+    amoebaGpu->amoebaSim.aewald             = aewald;
+    amoebaGpu->amoebaSim.electric           = electricConstant;
     if( amoebaGpu->amoebaSim.dielec < 1.0e-05 ){
         amoebaGpu->amoebaSim.dielec      = 1.0f;
     }
@@ -2433,73 +2449,6 @@ void gpuSetAmoebaWcaDispersionParameters( amoebaGpuContext amoebaGpu,
 }
 
 extern "C"
-void gpuSetAmoebaSASAParameters( amoebaGpuContext amoebaGpu, float probeRadius, 
-                                 const std::vector<float>& radii, const std::vector<float>& weights )
-{
-   // ---------------------------------------------------------------------------------------
-
-    static const char* methodName = "gpuSetAmoebaSASAParameters";
-    static const int maxarc       = 500;
-
-   // ---------------------------------------------------------------------------------------
-
-
-    gpuContext gpu                         = amoebaGpu->gpuContext;
-    amoebaGpu->paddedNumberOfAtoms         = amoebaGpu->gpuContext->sim.paddedNumberOfAtoms;
-    unsigned int particles                 = radii.size();
-    if( particles < 1 ){
-        (void) fprintf( stderr, "%s no particles\n", methodName );
-        return;
-    } 
-(void) fprintf( stderr, "%s radius converted Ang !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n", methodName );
-float scaleRadius = 10.0f;
-
-    amoebaGpu->amoebaSim.probeRadius       = probeRadius;
-    amoebaGpu->amoebaSim.maxarc            = maxarc;
-    amoebaGpu->psSASA_Radii                = new CUDAStream<float>(amoebaGpu->paddedNumberOfAtoms,   1, "SASARadii");
-    amoebaGpu->psSASA_Weights              = new CUDAStream<float>(amoebaGpu->paddedNumberOfAtoms,   1, "SASAWeights");
-    for (unsigned int ii = 0; ii < particles; ii++) 
-    {    
-        amoebaGpu->psSASA_Radii->_pSysStream[0][ii]     = scaleRadius*( radii[ii] + probeRadius );
-        amoebaGpu->psSASA_Weights->_pSysStream[0][ii]   = weights[ii];
-    }    
-
-    // Dummy out extra particles data
-    for (unsigned int ii = particles; ii < amoebaGpu->paddedNumberOfAtoms; ii++) 
-    {    
-        amoebaGpu->psSASA_Radii->_pSysStream[0][ii]     = 1.0f;
-        amoebaGpu->psSASA_Weights->_pSysStream[0][ii]   = 0.0f;
-    }    
-    for (unsigned int ii = 0; ii < 4; ii++) 
-    {
-        amoebaGpu->psIntWorkArray[ii] = new CUDAStream<int>(amoebaGpu->amoebaSim.maxarc*amoebaGpu->paddedNumberOfAtoms,   1, "SASAIntWorkArray");
-    }
-    amoebaGpu->psFloatWorkArray = new CUDAStream<float>(amoebaGpu->amoebaSim.maxarc*amoebaGpu->paddedNumberOfAtoms,   1, "SASAFloatWorkArray");
-    amoebaGpu->psIoListCount    = new CUDAStream<int>(amoebaGpu->paddedNumberOfAtoms,   1, "SASAIoCount");
-    amoebaGpu->psDoneAtom       = new CUDAStream<int>(amoebaGpu->paddedNumberOfAtoms,   1, "SASADoneAtom");
-
-    amoebaGpu->psSASA_Radii->Upload();
-    amoebaGpu->psSASA_Weights->Upload();
-
-#ifdef AMOEBA_DEBUG
-    if( amoebaGpu->log ){
-        unsigned int maxPrint = 32;
-        (void) fprintf( amoebaGpu->log, "%s probeRadius=%12.3f\n", methodName, probeRadius );
-        for (unsigned int ii = 0; ii < gpu->natoms; ii++) 
-        {    
-            (void) fprintf( amoebaGpu->log, "%5u %15.7e %15.7e\n", ii, radii[ii], weights[ii] );
-            if( ii == maxPrint && ii < (amoebaGpu->paddedNumberOfAtoms - maxPrint) )
-            {
-                ii = (amoebaGpu->paddedNumberOfAtoms - maxPrint);
-            }
-        } 
-        (void) fflush( amoebaGpu->log );
-    }    
-#endif
-
-}
-
-extern "C"
 void amoebaGpuShutDown(amoebaGpuContext gpu)
 {
     // free Cuda arrays
@@ -2584,16 +2533,6 @@ void amoebaGpuShutDown(amoebaGpuContext gpu)
 
     delete gpu->psWcaDispersionRadiusEpsilon;
 
-    delete gpu->psSASA_Radii;
-    delete gpu->psSASA_Weights;
-    //delete gpu->psSASA_WeightIntWorkArray[0];
-    //delete gpu->psSASA_WeightIntWorkArray[1];
-    //delete gpu->psSASA_WeightIntWorkArray[2];
-    //delete gpu->psSASA_WeightIntWorkArray[3];
-    delete gpu->psDoneAtom;
-    delete gpu->psIoListCount;
-    delete gpu->psFloatWorkArray;
-
     delete gpu->psWorkArray_3_1; 
     delete gpu->psWorkArray_3_2; 
     delete gpu->psWorkArray_3_3; 
@@ -2648,7 +2587,6 @@ void amoebaGpuSetConstants(amoebaGpuContext amoebaGpu)
 
     gpuSetAmoebaBondOffsets( amoebaGpu );
     SetCalculateAmoebaLocalForcesSim( amoebaGpu );
-    //SetCalculateAmoebaCudaSASAForcesSim( amoebaGpu );
     SetForcesSim( amoebaGpu->gpuContext );
     SetCalculateAmoebaMultipoleForcesSim( amoebaGpu );
     SetCalculateAmoebaCudaFixedEFieldSim( amoebaGpu );
@@ -2656,12 +2594,12 @@ void amoebaGpuSetConstants(amoebaGpuContext amoebaGpu)
     SetCalculateAmoebaCudaWcaDispersionSim( amoebaGpu );
     SetCalculateAmoebaCudaMutualInducedFieldSim( amoebaGpu );
     SetCalculateAmoebaElectrostaticSim( amoebaGpu );
+    SetCalculateAmoebaRealSpaceEwaldSim( amoebaGpu );
     SetCalculateAmoebaCudaMapTorquesSim( amoebaGpu );
     SetCalculateAmoebaKirkwoodSim( amoebaGpu );
     SetCalculateAmoebaKirkwoodEDiffSim( amoebaGpu );
     SetCalculateAmoebaCudaFixedEAndGKFieldsSim( amoebaGpu );
     SetCalculateAmoebaCudaMutualInducedAndGkFieldsSim( amoebaGpu );
-    //SetCalculateAmoebaObcGbsaForces2Sim( amoebaGpu );
     SetCalculateObcGbsaForces2Sim(  amoebaGpu->gpuContext  );
 }
 

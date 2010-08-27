@@ -97,6 +97,10 @@ extern void SetCalculateAmoebaElectrostaticSim( amoebaGpuContext amoebaGpu );
 extern void GetCalculateAmoebaElectrostaticSim( amoebaGpuContext amoebaGpu );
 extern void cudaComputeAmoebaElectrostatic( amoebaGpuContext amoebaGpu );
 
+extern void SetCalculateAmoebaRealSpaceEwaldSim( amoebaGpuContext amoebaGpu );
+extern void GetCalculateAmoebaRealSpaceEwaldSim( amoebaGpuContext amoebaGpu );
+extern void cudaComputeAmoebaRealSpaceEwald( amoebaGpuContext amoebaGpu );
+
 extern void SetCalculateAmoebaCudaMapTorquesSim(amoebaGpuContext gpu);
 extern void GetCalculateAmoebaCudaMapTorquesSim(amoebaGpuContext gpu);
 extern void cudaComputeAmoebaMapTorques( amoebaGpuContext gpu, CUDAStream<float>* psTorque, CUDAStream<float>* psForce);
@@ -144,7 +148,7 @@ extern void kClearFields_1( amoebaGpuContext amoebaGpu );
 extern void kClearFields_3( amoebaGpuContext amoebaGpu, unsigned int numberToClear );
 extern unsigned int getThreadsPerBlock( amoebaGpuContext amoebaGpu, unsigned int sharedMemoryPerThread );
 
-extern int isNanOrInfinity( double number );
+//extern int isNanOrInfinity( double number );
 extern void trackMutualInducedIterations( amoebaGpuContext amoebaGpu, int iteration);
 
 #endif //__AMOEBA_GPU_TYPES_H__

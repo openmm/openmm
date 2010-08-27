@@ -41,6 +41,12 @@
 #include <builtin_types.h>
 #include <vector_functions.h>
 
+enum CudaAmoebaNonbondedMethod
+{
+    AMOEBA_NO_CUTOFF,
+    AMOEBA_PARTICLE_MESH_EWALD
+};
+
 struct cudaAmoebaGmxSimulation {
     // Constants
 
@@ -118,6 +124,9 @@ struct cudaAmoebaGmxSimulation {
 
     unsigned int numberOfAtoms;                     // number of atoms
     unsigned int paddedNumberOfAtoms;               // padded number of atoms
+    float cutoffDistance2;                          // cutoff distance squared for PME
+    float sqrtPi;                                   // sqrt(PI)
+    float aewald;                                   // aewald parameter
     float scalingDistanceCutoff;                    // scaling cutoff
     float2*         pDampingFactorAndThole;         // Thole & damping factors
 
@@ -167,89 +176,6 @@ struct cudaAmoebaGmxSimulation {
     float fc;        // electric * 1.0f * (1.0f-dwater)/(0.0f+1.0f*dwater);
     float fd;        // electric * 2.0f * (1.0f-dwater)/(1.0f+2.0f*dwater);
     float fq;        // electric * 3.0f * (1.0f-dwater)/(2.0f+3.0f*dwater);
-
-    // SASA probe radius
-    float probeRadius; 
-    int maxarc; 
-
-//    texture<float4,2,cudaReadModeElementType> texTorTorGrid;
-
-#if 0
-    unsigned int    dihedrals;                      // Number of dihedrals
-    int4*           pDihedralID1;                   // Dihedral IDs
-    int4*           pDihedralID2;                   // Dihedral output buffer IDs
-    float4*         pDihedralParameter;             // Dihedral parameters
-    unsigned int    rb_dihedrals;                   // Number of Ryckaert Bellemans dihedrals
-    int4*           pRbDihedralID1;                 // Ryckaert Bellemans Dihedral IDs
-    int4*           pRbDihedralID2;                 // Ryckaert Bellemans Dihedral output buffer IDs
-    float4*         pRbDihedralParameter1;          // Ryckaert Bellemans Dihedral parameters
-    float2*         pRbDihedralParameter2;          // Ryckaert Bellemans Dihedral parameters
-    unsigned int    LJ14s;                          // Number of Lennard Jones 1-4 interactions
-    int4*           pLJ14ID;                        // Lennard Jones 1-4 atom and output buffer IDs
-    float4*         pLJ14Parameter;                 // Lennard Jones 1-4 parameters
-    float           inverseTotalMass;               // Used in linear momentum removal
-    unsigned int    ShakeConstraints;               // Total number of Shake constraints
-    unsigned int    settleConstraints;              // Total number of Settle constraints
-    unsigned int    ccmaConstraints;                // Total number of CCMA constraints.
-    unsigned int    rigidClusters;                  // Total number of rigid clusters
-    unsigned int    maxRigidClusterSize;            // The size of the largest rigid cluster
-    unsigned int    clusterShakeBlockSize;          // The number of threads to process each rigid cluster
-    unsigned int    NonShakeConstraints;            // Total number of NonShake atoms
-    unsigned int    maxShakeIterations;             // Maximum shake iterations
-    unsigned int    degreesOfFreedom;               // Number of degrees of freedom in system
-    float           shakeTolerance;                 // Shake tolerance
-    float           InvMassJ;                       // Shake inverse mass for hydrogens
-    int*            pNonShakeID;                    // Not Shaking atoms
-    int4*           pShakeID;                       // Shake atoms and phase
-    float4*         pShakeParameter;                // Shake parameters
-    int4*           pSettleID;                      // Settle atoms
-    float2*         pSettleParameter;               // Settle parameters
-    unsigned int*   pExclusion;                     // Nonbond exclusion data
-    unsigned int*   pExclusionIndex;                // Index of exclusion data for each work unit
-    unsigned int    dihedral_offset;                // Offset to end of dihedrals
-    unsigned int    rb_dihedral_offset;             // Offset to end of Ryckaert Bellemans dihedrals
-    unsigned int    LJ14_offset;                    // Offset to end of Lennard Jones 1-4 parameters
-    int*            pAtomIndex;                     // The original index of each atom
-    float4*         pGridBoundingBox;               // The size of each grid cell
-    float4*         pGridCenter;                    // The center of each grid cell
-    int2*           pCcmaAtoms;                     // The atoms connected by each CCMA constraint
-    float4*         pCcmaDistance;                  // The displacement vector (x, y, z) and constraint distance (w) for each CCMA constraint
-    float*          pCcmaDelta1;                    // Workspace for CCMA
-    float*          pCcmaDelta2;                    // Workspace for CCMA
-    int*            pCcmaAtomConstraints;           // The indices of constraints involving each atom
-    int*            pCcmaNumAtomConstraints;        // The number of constraints involving each atom
-    short*          pSyncCounter;                   // Used for global thread synchronization
-    unsigned int*   pRequiredIterations;            // Used by CCMA to communicate whether iteration has converged
-    float*          pCcmaReducedMass;               // The reduced mass for each CCMA constraint
-    unsigned int*   pConstraintMatrixColumn;        // The column of each element in the constraint matrix.
-    float*          pConstraintMatrixValue;         // The value of each element in the constraint matrix.
-
-    // Mutable stuff
-    float4*         pPosq;                          // Pointer to atom positions and charges
-    float4*         pPosqP;                         // Pointer to mid-integration atom positions
-    float4*         pOldPosq;                       // Pointer to old atom positions
-    float4*         pVelm4;                         // Pointer to atom velocity and inverse mass
-    float4*         pvVector4;                      // Pointer to atom v Vector
-    float4*         pxVector4;                      // Pointer to atom x Vector
-    float*          pBornForce;                     // Pointer to Born force data
-    float*	    pBornSum;                       // Pointer to Born Radii calculation output buffers
-    float*	    pBornRadii;                     // Pointer to Born Radii
-    float*          pObcChain;                      // Pointer to OBC chain data
-    float4*         pLinearMomentum;                // Pointer to linear momentum
-    
-    // Random numbers
-    float4*         pRandom4a;                      // Pointer to first set of 4 random numbers
-    float4*         pRandom4b;                      // Pointer to second set of 4 random numbers
-    float2*         pRandom2a;                      // Pointer to first set of 2 random numbers
-    float2*         pRandom2b;                      // Pointer to second set of 2 random numbers
-    uint4*          pRandomSeed;                    // Pointer to random seeds
-    int*            pRandomPosition;                // Pointer to random number positions
-    unsigned int    randoms;                        // Number of randoms
-    unsigned int    totalRandoms;                   // Number of randoms plus overflow.
-    unsigned int    totalRandomsTimesTwo;           // Used for generating randoms
-    unsigned int    randomIterations;               // Number of iterations before regenerating randoms
-    unsigned int    randomFrames;                   // Number of frames of random numbers
-#endif
 
 };
 

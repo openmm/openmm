@@ -36,15 +36,32 @@
 
 using namespace OpenMM;
 
-AmoebaMultipoleForce::AmoebaMultipoleForce() {
+AmoebaMultipoleForce::AmoebaMultipoleForce() : nonbondedMethod(NoCutoff), cutoffDistance(1.0), aewald(0.0), mutualInducedIterationMethod(SOR), mutualInducedMaxIterations(60),
+                                               mutualInducedTargetEpsilon(1.0e-05), scalingDistanceCutoff(100.0), electricConstant(138.9354558456) {
+}
 
-    mutualInducedIterationMethod  = SOR;
-    mutualInducedMaxIterations    = 60;
-    mutualInducedTargetEpsilon    = 1.0e-06;
-    scalingDistanceCutoff         = 100.0;
+AmoebaMultipoleForce::AmoebaNonbondedMethod AmoebaMultipoleForce::getNonbondedMethod( void ) const {
+    return nonbondedMethod;
+}
 
-                                    // ONE_4PI_EPS0
-    electricConstant              = 138.9354558456;
+void AmoebaMultipoleForce::setNonbondedMethod( AmoebaMultipoleForce::AmoebaNonbondedMethod method) {
+    nonbondedMethod = method;
+}
+
+double AmoebaMultipoleForce::getCutoffDistance( void ) const {
+    return cutoffDistance;
+}
+
+void AmoebaMultipoleForce::setCutoffDistance(double distance) {
+    cutoffDistance = distance;
+}
+
+double AmoebaMultipoleForce::getAEwald() const {
+    return aewald;
+}
+
+void AmoebaMultipoleForce::setAEwald(double inputAewald ) {
+    aewald = inputAewald;
 }
 
 AmoebaMultipoleForce::MutualInducedIterationMethod AmoebaMultipoleForce::getMutualInducedIterationMethod( void ) const {

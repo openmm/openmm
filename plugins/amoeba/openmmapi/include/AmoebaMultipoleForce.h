@@ -50,6 +50,19 @@ namespace OpenMM {
 class OPENMM_EXPORT AmoebaMultipoleForce : public Force {
 public:
  
+    enum AmoebaNonbondedMethod {
+        /** 
+         * No cutoff is applied to nonbonded interactions.  The full set of N^2 interactions is computed exactly.
+         * This necessarily means that periodic boundary conditions cannot be used.  This is the default.
+         */
+        NoCutoff = 0,
+        /**
+         * Periodic boundary conditions are used, and Particle-Mesh Ewald (PME) summation is used to compute the interaction of each particle
+         * with all periodic copies of every other particle.
+         */
+        PME = 1 
+    };  
+
     enum MultipoleAxisTypes { ZThenX, Bisector };
 
     // Algorithm used to converge mutual induced dipoles:
@@ -73,6 +86,46 @@ public:
     int getNumMultipoles() const {
         return multipoles.size();
     }
+
+    /**
+     * Get the method used for handling long range nonbonded interactions.
+     */
+    AmoebaNonbondedMethod getNonbondedMethod( void ) const;
+
+    /**
+     * Set the method used for handling long range nonbonded interactions.
+     */
+    void setNonbondedMethod(AmoebaNonbondedMethod method);
+
+    /**
+     * Get the cutoff distance (in nm) being used for nonbonded interactions.  If the NonbondedMethod in use
+     * is NoCutoff, this value will have no effect.
+     *
+     * @return the cutoff distance, measured in nm
+     */
+    double getCutoffDistance( void ) const;
+
+    /**
+     * Set the cutoff distance (in nm) being used for nonbonded interactions.  If the NonbondedMethod in use
+     * is NoCutoff, this value will have no effect.
+     *
+     * @param distance    the cutoff distance, measured in nm
+     */
+    void setCutoffDistance(double distance);
+
+    /**
+     * Get the aEwald parameter
+     *
+     * @return the Ewald parameter
+     */
+    double getAEwald() const;
+
+    /**
+     * Set the aEwald parameter
+     *
+     * @param Ewald parameter
+     */
+    void setAEwald(double aewald);
 
     /**
      * Add multipole-related info for a particle 
@@ -224,6 +277,9 @@ protected:
     ForceImpl* createImpl();
 private:
 
+    AmoebaNonbondedMethod nonbondedMethod;
+    double cutoffDistance;
+    double aewald;
     MutualInducedIterationMethod mutualInducedIterationMethod;
     int mutualInducedMaxIterations;
     double mutualInducedTargetEpsilon;

@@ -152,6 +152,10 @@ struct _amoebaGpuContext {
     CUDAStream<float>*  psE_Field;
     CUDAStream<float>*  psE_FieldPolar;
 
+    int multipoleNonbondedMethod;
+    double cutoffDistance;
+    double aewald;
+
     // mutual induced field
 
     int mutualInducedIterativeMethod;
@@ -215,17 +219,6 @@ struct _amoebaGpuContext {
     // Wca dispersion fields
 
     CUDAStream<float2>*  psWcaDispersionRadiusEpsilon;
-
-    // SASA fields
-
-    CUDAStream<float>*  psSASA_Radii;
-    CUDAStream<float>*  psSASA_Weights; 
-    CUDAStream<int>*    psIntWorkArray[4]; 
-    CUDAStream<int>*    psDoneAtom; 
-    CUDAStream<int>*    psIoListCount; 
-    CUDAStream<float>*  psFloatWorkArray; 
-    float  sasaArea; 
-
 };
 
 typedef struct _amoebaGpuContext *amoebaGpuContext;
@@ -303,7 +296,8 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
                                      const std::vector<float>& tholes, float scalingDistanceCutoff,const std::vector<float>& dampingFactors, const std::vector<float>& polarity,
                                      const std::vector< std::vector< std::vector<int> > >& multipoleAtomCovalentInfo, const std::vector<int>& covalentDegree,
                                      const std::vector<int>& minCovalentIndices,  const std::vector<int>& minCovalentPolarizationIndices, int maxCovalentRange,
-                                     int mutualInducedIterationMethod, int mutualInducedMaxIterations, float mutualInducedTargetEpsilon, float electricConstant );
+                                     int mutualInducedIterationMethod, int mutualInducedMaxIterations, float mutualInducedTargetEpsilon,
+                                     int nonbondedMethod, float cutoffDistance, float aewald, float electricConstant );
 
 
 extern "C"
@@ -332,9 +326,6 @@ void gpuSetAmoebaWcaDispersionParameters( amoebaGpuContext amoebaGpu,
                                 const float epso, const float epsh, const float rmino, const float rminh,
                                 const float awater, const float shctd, const float dispoff );
  
-extern "C"
-void gpuSetAmoebaSASAParameters( amoebaGpuContext amoebaGpu , float probeRadius, const std::vector<float>& radii, const std::vector<float>& weights );
-
 extern "C"
 void amoebaGpuSetConstants(amoebaGpuContext gpu);
 

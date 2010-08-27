@@ -40,6 +40,7 @@
 #include <sys/time.h>
 #endif
 
+extern int isNanOrInfinity( double number );
 
 using namespace std;
 
@@ -1937,6 +1938,7 @@ static void readAmoebaMultipoleCovalent( FILE* filePtr, AmoebaMultipoleForce* mu
     Read Amoeba multipole parameters
 
     @param filePtr              file pointer to parameter file
+    @param version              version id for file
     @param forceMap             map of forces to be included
     @param tokens               array of strings from first line of parameter file for this block of parameters
     @param system               System reference
@@ -1949,7 +1951,7 @@ static void readAmoebaMultipoleCovalent( FILE* filePtr, AmoebaMultipoleForce* mu
 
     --------------------------------------------------------------------------------------- */
 
-static int readAmoebaMultipoleParameters( FILE* filePtr, MapStringInt& forceMap, const StringVector& tokens,
+static int readAmoebaMultipoleParameters( FILE* filePtr, int version, MapStringInt& forceMap, const StringVector& tokens,
                                            System& system, int useOpenMMUnits, MapStringVectorOfVectors& supplementary,
                                            MapStringString& inputArgumentMap, int* lineCount, FILE* log ){
 
@@ -1984,8 +1986,27 @@ static int readAmoebaMultipoleParameters( FILE* filePtr, MapStringInt& forceMap,
     // load in parameters
  
     int numberOfMultipoles            = atoi( tokens[1].c_str() );
+    int usePme                        = 0;
+    double aewald                     = 0.0;
+    double cutoffDistance             = 0.0;
+
+    // usePme, aewald, cutoffDistance added w/ Version 1
+
+    if( version > 0 ){
+        usePme                        = atoi( tokens[2].c_str() );
+        aewald                        = atof( tokens[3].c_str() );
+        cutoffDistance                = atof( tokens[4].c_str() );
+    }
+    if( usePme ){
+        multipoleForce->setNonbondedMethod( AmoebaMultipoleForce::PME );
+    } else {
+        multipoleForce->setNonbondedMethod( AmoebaMultipoleForce::NoCutoff );
+    }
+    multipoleForce->setAEwald( aewald );
+    multipoleForce->setCutoffDistance( cutoffDistance );
     if( log ){
-        (void) fprintf( log, "%s number of MultipoleParameter terms=%d\n", methodName.c_str(), numberOfMultipoles );
+        (void) fprintf( log, "%s number of MultipoleParameter terms=%d usePme=%d aewald=%15.7e cutoffDistance=%12.4f\n",
+                        methodName.c_str(), numberOfMultipoles, usePme, aewald, cutoffDistance );
         (void) fflush( log );
     }
     for( int ii = 0; ii < numberOfMultipoles; ii++ ){
@@ -3380,7 +3401,7 @@ Integrator* readAmoebaParameterFile( const std::string& inputParameterFile, MapS
     }
 
     int lineCount                  = 0;
-    std::string version            = "0.1"; 
+    int version                    = 0; 
     int isNotEof                   = 1;
     Integrator* returnIntegrator   = NULL;
 
@@ -3404,9 +3425,9 @@ Integrator* readAmoebaParameterFile( const std::string& inputParameterFile, MapS
    
             if( field == "Version" ){
                 if( tokens.size() > 1 ){
-                   version = tokens[1];
+                   version = atoi( tokens[1].c_str() );
                    if( log ){
-                       (void) fprintf( log, "Version=<%s> at line=%d\n", version.c_str(), lineCount );
+                       (void) fprintf( log, "Version=%d at line=%d\n", version, lineCount );
                    }
                 }
             } else if( field == "Masses" ){
@@ -3522,13 +3543,28 @@ Integrator* readAmoebaParameterFile( const std::string& inputParameterFile, MapS
             // AmoebaMultipole
   
             } else if( field == "AmoebaMultipoleParameters" ){
-                readAmoebaMultipoleParameters( filePtr, forceMap, tokens, system, useOpenMMUnits, supplementary, inputArgumentMap, &lineCount, log );
-            } else if( field == "AmoebaMultipoleForce" ){
+                readAmoebaMultipoleParameters( filePtr, version, forceMap, tokens, system, useOpenMMUnits, supplementary, inputArgumentMap, &lineCount, log );
+            } else if( field == "AmoebaMultipoleForce" || field == "AmoebaPmeForce" ){
                 readVec3( filePtr, tokens, forces[AMOEBA_MULTIPOLE_FORCE], &lineCount, field, log );
-            } else if( field == "AmoebaMultipoleEnergy" ){
+            } else if( field == "AmoebaMultipoleEnergy" || field == "AmoebaPmeEnergy" ){
                if( tokens.size() > 1 ){
                  potentialEnergy[AMOEBA_MULTIPOLE_FORCE] = atof( tokens[1].c_str() ); 
-              }
+               }
+            } else if( field == "AmoebaRealPmeForce"                   || 
+                       field == "AmoebaKSpacePmeForce"                 ||
+                       field == "AmoebaSelfPmeForce"                   ){
+                std::vector< std::vector<double> > vectorOfDoubleVectors;
+                readVectorOfDoubleVectors( filePtr, tokens, vectorOfDoubleVectors, &lineCount, field, log );
+                supplementary[field] = vectorOfDoubleVectors;
+            } else if( field == "AmoebaRealPmeEnergy"                  || 
+                       field == "AmoebaKSpacePmeEnergy"                ||
+                       field == "AmoebaSelfPmeEnergy"                  ){
+                double value = atof( tokens[1].c_str() );
+                std::vector< std::vector<double> > vectorOfDoubleVectors;
+                std::vector<double> doubleVectors;
+                doubleVectors.push_back( value );
+                vectorOfDoubleVectors.push_back( doubleVectors ); 
+                supplementary[field] =  vectorOfDoubleVectors;
 
             // Amoeba GK
 
@@ -3677,7 +3713,6 @@ void initializeForceMap( MapStringInt& forceMap, int initialValue ){
      forceMap[AMOEBA_GK_FORCE]                       = initialValue;
      forceMap[AMOEBA_VDW_FORCE]                      = initialValue;
      forceMap[AMOEBA_WCA_DISPERSION_FORCE]           = initialValue;
-     forceMap[AMOEBA_SASA_FORCE]                     = 0;
  
      return;
 
@@ -5830,8 +5865,7 @@ Double "simulationTimeBetweenReportsRatio"       simulationTimeBetweenReportsRat
                    key == AMOEBA_MULTIPOLE_FORCE                  ||
                    key == AMOEBA_GK_FORCE                         ||
                    key == AMOEBA_VDW_FORCE                        ||
-                   key == AMOEBA_WCA_DISPERSION_FORCE             ||
-                   key == AMOEBA_SASA_FORCE                       ){
+                   key == AMOEBA_WCA_DISPERSION_FORCE             ){
             forceMap[key]                              = atoi( value.c_str() );
         } else {
             inputArgumentMap[key]                      = value;

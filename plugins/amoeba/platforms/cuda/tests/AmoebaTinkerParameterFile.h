@@ -77,7 +77,6 @@ static std::string AMOEBA_GK_FORCE                                    = "AmoebaG
 static std::string AMOEBA_GK_CAVITY_FORCE                             = "AmoebaGkAndCavity";
 static std::string AMOEBA_VDW_FORCE                                   = "AmoebaVdw";
 static std::string AMOEBA_WCA_DISPERSION_FORCE                        = "AmoebaWcaDispersion";
-static std::string AMOEBA_SASA_FORCE                                  = "AmoebaSASA";
 static std::string ALL_FORCES                                         = "AllForces";
 
 static std::string AMOEBA_MULTIPOLE_ROTATION_MATRICES                 = "AmoebaMultipoleRotationMatrices";
