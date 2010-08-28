@@ -52,7 +52,7 @@ extern void kReduceObcGbsaBornForces(gpuContext gpu);
 extern void OPENMMCUDA_EXPORT kCalculateObcGbsaForces2(gpuContext gpu);
 extern void kCalculateGBVIForces2(gpuContext gpu);
 extern void kCalculateLocalForces(gpuContext gpu);
-extern void kCalculateAndersenThermostat(gpuContext gpu);
+extern void kCalculateAndersenThermostat(gpuContext gpu, CUDAStream<int>& atomGroups);
 extern void kReduceBornSumAndForces(gpuContext gpu);
 extern void kApplyFirstShake(gpuContext gpu);
 extern void kApplyFirstCCMA(gpuContext gpu);

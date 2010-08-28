@@ -6,7 +6,7 @@
  * Biological Structures at Stanford, funded under the NIH Roadmap for        *
  * Medical Research, grant U54 GM072970. See https://simtk.org.               *
  *                                                                            *
- * Portions copyright (c) 2008 Stanford University and the Authors.           *
+ * Portions copyright (c) 2008-2010 Stanford University and the Authors.      *
  * Authors: Peter Eastman                                                     *
  * Contributors:                                                              *
  *                                                                            *
@@ -62,4 +62,39 @@ std::vector<std::string> AndersenThermostatImpl::getKernelNames() {
     std::vector<std::string> names;
     names.push_back(ApplyAndersenThermostatKernel::Name());
     return names;
+}
+
+vector<vector<int> > AndersenThermostatImpl::calcParticleGroups(const System& system) {
+    // First make a list of every other particle to which each particle is connected by a constraint.
+
+    int numParticles = system.getNumParticles();
+    vector<vector<int> > particleConstraints(numParticles);
+    for (int i = 0; i < system.getNumConstraints(); i++) {
+        int particle1, particle2;
+        double distance;
+        system.getConstraintParameters(i, particle1, particle2, distance);
+        particleConstraints[particle1].push_back(particle2);
+        particleConstraints[particle2].push_back(particle1);
+    }
+
+    // Now tag particles by which molecule they belong to.
+
+    vector<int> particleGroup(numParticles, -1);
+    int numGroups = 0;
+    for (int i = 0; i < numParticles; i++)
+        if (particleGroup[i] == -1)
+            tagParticlesInGroup(i, numGroups++, particleGroup, particleConstraints);
+    vector<vector<int> > particleIndices(numGroups);
+    for (int i = 0; i < numParticles; i++)
+        particleIndices[particleGroup[i]].push_back(i);
+    return particleIndices;
+}
+
+void AndersenThermostatImpl::tagParticlesInGroup(int particle, int group, vector<int>& particleGroup, vector<vector<int> >& particleConstraints) {
+    // Recursively tag particles as belonging to a particular group.
+
+    particleGroup[particle] = group;
+    for (int i = 0; i < (int) particleConstraints[particle].size(); i++)
+        if (particleGroup[particleConstraints[particle][i]] == -1)
+            tagParticlesInGroup(particleConstraints[particle][i], group, particleGroup, particleConstraints);
 }

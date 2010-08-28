@@ -880,6 +880,7 @@ public:
     void execute(ContextImpl& context);
 private:
     ReferenceAndersenThermostat* thermostat;
+    std::vector<std::vector<int> > particleGroups;
     RealOpenMM* masses;
 };
 

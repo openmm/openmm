@@ -28,6 +28,7 @@
 #include "OpenCLForceInfo.h"
 #include "openmm/LangevinIntegrator.h"
 #include "openmm/Context.h"
+#include "openmm/internal/AndersenThermostatImpl.h"
 #include "openmm/internal/CMAPTorsionForceImpl.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/CustomHbondForceImpl.h"
@@ -3534,15 +3535,27 @@ void OpenCLIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, co
 }
 
 OpenCLApplyAndersenThermostatKernel::~OpenCLApplyAndersenThermostatKernel() {
+    if (atomGroups != NULL)
+        delete atomGroups;
 }
 
 void OpenCLApplyAndersenThermostatKernel::initialize(const System& system, const AndersenThermostat& thermostat) {
     randomSeed = thermostat.getRandomNumberSeed();
     map<string, string> defines;
     defines["NUM_ATOMS"] = intToString(cl.getNumAtoms());
-    defines["PADDED_NUM_ATOMS"] = intToString(cl.getPaddedNumAtoms());
     cl::Program program = cl.createProgram(OpenCLKernelSources::andersenThermostat, defines);
     kernel = cl::Kernel(program, "applyAndersenThermostat");
+
+    // Create the arrays with the group definitions.
+
+    vector<vector<int> > groups = AndersenThermostatImpl::calcParticleGroups(system);
+    atomGroups = new OpenCLArray<int>(cl, cl.getNumAtoms(), "atomGroups");
+    vector<int> atoms(atomGroups->getSize());
+    for (int i = 0; i < (int) groups.size(); i++) {
+        for (int j = 0; j < (int) groups[i].size(); j++)
+            atoms[groups[i][j]] = i;
+    }
+    atomGroups->upload(atoms);
 }
 
 void OpenCLApplyAndersenThermostatKernel::execute(ContextImpl& context) {
@@ -3552,6 +3565,7 @@ void OpenCLApplyAndersenThermostatKernel::execute(ContextImpl& context) {
         kernel.setArg<cl::Buffer>(2, cl.getVelm().getDeviceBuffer());
         kernel.setArg<cl::Buffer>(3, cl.getIntegrationUtilities().getStepSize().getDeviceBuffer());
         kernel.setArg<cl::Buffer>(4, cl.getIntegrationUtilities().getRandom().getDeviceBuffer());
+        kernel.setArg<cl::Buffer>(6, atomGroups->getDeviceBuffer());
     }
     kernel.setArg<cl_float>(0, (cl_float) context.getParameter(AndersenThermostat::CollisionFrequency()));
     kernel.setArg<cl_float>(1, (cl_float) (BOLTZ*context.getParameter(AndersenThermostat::Temperature())));

@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2008 Stanford University and Simbios.
+/* Portions copyright (c) 2008-2010 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -28,6 +28,8 @@
 #include "../SimTKUtilities/SimTKOpenMMUtilities.h"
 #include "ReferenceAndersenThermostat.h"
 
+using std::vector;
+
       /**---------------------------------------------------------------------------------------
       
          Constructor
@@ -50,7 +52,7 @@
       
          Apply the thermostat at the start of a time step.
       
-         @param numberOfAtoms      number of atoms
+         @param atomGroups         the groups of atoms to apply the thermostat to
          @param atomVelocities     atom velocities
          @param temperature        thermostat temperature in Kelvin
          @param collisionFrequency collision frequency for each atom in fs^-1
@@ -58,19 +60,22 @@
                   
          --------------------------------------------------------------------------------------- */
           
-      void ReferenceAndersenThermostat::applyThermostat( int numberOfAtoms, RealOpenMM** atomVelocities, RealOpenMM* atomMasses,
+      void ReferenceAndersenThermostat::applyThermostat( const vector<vector<int> >& atomGroups, RealOpenMM** atomVelocities, RealOpenMM* atomMasses,
               RealOpenMM temperature, RealOpenMM collisionFrequency, RealOpenMM stepSize ) const {
           
           const RealOpenMM collisionProbability = 1.0f - EXP(-collisionFrequency*stepSize);
-          for (int i = 0; i < numberOfAtoms; ++i) {
+          for (int i = 0; i < (int) atomGroups.size(); ++i) {
               if (SimTKOpenMMUtilities::getUniformlyDistributedRandomNumber() < collisionProbability) {
                   
-                  // A collision occurred, so set the velocity to a new value chosen from a Boltzmann distribution.
-                  
-                  const RealOpenMM velocityScale = static_cast<RealOpenMM>( sqrt(BOLTZ*temperature/atomMasses[i]) );
-                  atomVelocities[i][0] = velocityScale*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
-                  atomVelocities[i][1] = velocityScale*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
-                  atomVelocities[i][2] = velocityScale*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+                  // A collision occurred, so set the velocities to new values chosen from a Boltzmann distribution.
+
+                  for (int j = 0; j < (int) atomGroups[i].size(); j++) {
+                      int atom = atomGroups[i][j];
+                      const RealOpenMM velocityScale = static_cast<RealOpenMM>(sqrt(BOLTZ*temperature/atomMasses[atom]));
+                      atomVelocities[atom][0] = velocityScale*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+                      atomVelocities[atom][1] = velocityScale*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+                      atomVelocities[atom][2] = velocityScale*SimTKOpenMMUtilities::getNormallyDistributedRandomNumber();
+                  }
               }
           }
           

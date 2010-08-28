@@ -737,7 +737,8 @@ private:
  */
 class CudaApplyAndersenThermostatKernel : public ApplyAndersenThermostatKernel {
 public:
-    CudaApplyAndersenThermostatKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data) : ApplyAndersenThermostatKernel(name, platform), data(data) {
+    CudaApplyAndersenThermostatKernel(std::string name, const Platform& platform, CudaPlatform::PlatformData& data) : ApplyAndersenThermostatKernel(name, platform),
+            data(data), atomGroups(NULL) {
     }
     ~CudaApplyAndersenThermostatKernel();
     /**
@@ -756,6 +757,7 @@ public:
 private:
     CudaPlatform::PlatformData& data;
     double prevTemp, prevFrequency, prevStepSize;
+    CUDAStream<int>* atomGroups;
 };
 
 /**

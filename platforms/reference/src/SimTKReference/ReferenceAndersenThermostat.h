@@ -1,5 +1,5 @@
 
-/* Portions copyright (c) 2008 Stanford University and Simbios.
+/* Portions copyright (c) 2008-2010 Stanford University and Simbios.
  * Contributors: Peter Eastman
  *
  * Permission is hereby granted, free of charge, to any person obtaining
@@ -26,6 +26,7 @@
 #define __ReferenceAndersenThermostat_H__
 
 #include "../SimTKUtilities/SimTKOpenMMCommon.h"
+#include <vector>
 
 // ---------------------------------------------------------------------------------------
 
@@ -55,7 +56,7 @@ class ReferenceAndersenThermostat {
       
          Apply the thermostat at the start of a time step.
       
-         @param numberOfAtoms      number of atoms
+         @param atomGroups         the groups of atoms to apply the thermostat to
          @param atomVelocities     atom velocities
          @param atomMasses         atom masses
          @param temperature        thermostat temperature in Kelvin
@@ -64,7 +65,7 @@ class ReferenceAndersenThermostat {
                   
          --------------------------------------------------------------------------------------- */
           
-      void applyThermostat( int numberOfAtoms, RealOpenMM** atomVelocities, RealOpenMM* atomMasses,
+      void applyThermostat( const std::vector<std::vector<int> >& atomGroups, RealOpenMM** atomVelocities, RealOpenMM* atomMasses,
               RealOpenMM temperature, RealOpenMM collisionFrequency, RealOpenMM stepSize ) const;
       
 };

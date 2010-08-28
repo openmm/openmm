@@ -895,7 +895,7 @@ private:
 class OpenCLApplyAndersenThermostatKernel : public ApplyAndersenThermostatKernel {
 public:
     OpenCLApplyAndersenThermostatKernel(std::string name, const Platform& platform, OpenCLContext& cl) : ApplyAndersenThermostatKernel(name, platform), cl(cl),
-            hasInitializedKernels(false) {
+            hasInitializedKernels(false), atomGroups(NULL) {
     }
     ~OpenCLApplyAndersenThermostatKernel();
     /**
@@ -915,6 +915,7 @@ private:
     OpenCLContext& cl;
     bool hasInitializedKernels;
     int randomSeed;
+    OpenCLArray<cl_int>* atomGroups;
     cl::Kernel kernel;
 };
 

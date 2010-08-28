@@ -58,6 +58,7 @@
 #include "openmm/CMMotionRemover.h"
 #include "openmm/Context.h"
 #include "openmm/System.h"
+#include "openmm/internal/AndersenThermostatImpl.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/CustomHbondForceImpl.h"
 #include "openmm/internal/CMAPTorsionForceImpl.h"
@@ -90,7 +91,7 @@ static RealOpenMM** allocateRealArray(int length, int width) {
 
 static int** copyToArray(const vector<vector<int> > vec) {
     if (vec.size() == 0)
-        return new int*[0];
+        return new int*[1];
     int** array = allocateIntArray(vec.size(), vec[0].size());
     for (size_t i = 0; i < vec.size(); ++i)
         for (size_t j = 0; j < vec[i].size(); ++j)
@@ -100,7 +101,7 @@ static int** copyToArray(const vector<vector<int> > vec) {
 
 static RealOpenMM** copyToArray(const vector<vector<double> > vec) {
     if (vec.size() == 0)
-        return new RealOpenMM*[0];
+        return new RealOpenMM*[1];
     RealOpenMM** array = allocateRealArray(vec.size(), vec[0].size());
     for (size_t i = 0; i < vec.size(); ++i)
         for (size_t j = 0; j < vec[i].size(); ++j)
@@ -1566,17 +1567,15 @@ void ReferenceApplyAndersenThermostatKernel::initialize(const System& system, co
         masses[i] = static_cast<RealOpenMM>(system.getParticleMass(i));
     this->thermostat = new ReferenceAndersenThermostat();
     SimTKOpenMMUtilities::setRandomNumberSeed((unsigned int) thermostat.getRandomNumberSeed());
+    particleGroups = AndersenThermostatImpl::calcParticleGroups(system);
 }
 
 void ReferenceApplyAndersenThermostatKernel::execute(ContextImpl& context) {
     RealOpenMM** velData = extractVelocities(context);
-    thermostat->applyThermostat(
-			context.getSystem().getNumParticles(),
-			velData, 
-			masses, 
-			static_cast<RealOpenMM>(context.getParameter(AndersenThermostat::Temperature())), 
-			static_cast<RealOpenMM>(context.getParameter(AndersenThermostat::CollisionFrequency())), 
-			static_cast<RealOpenMM>(context.getIntegrator().getStepSize()) );
+    thermostat->applyThermostat(particleGroups, velData, masses,
+        static_cast<RealOpenMM>(context.getParameter(AndersenThermostat::Temperature())),
+        static_cast<RealOpenMM>(context.getParameter(AndersenThermostat::CollisionFrequency())),
+        static_cast<RealOpenMM>(context.getIntegrator().getStepSize()));
 }
 
 ReferenceApplyMonteCarloBarostatKernel::~ReferenceApplyMonteCarloBarostatKernel() {

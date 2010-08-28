@@ -52,9 +52,10 @@ void testTemperature() {
     const int numParticles = 8;
     const double temp = 100.0;
     const double collisionFreq = 10.0;
+    const int numSteps = 10000;
     OpenCLPlatform platform;
     System system;
-    VerletIntegrator integrator(0.01);
+    VerletIntegrator integrator(0.005);
     NonbondedForce* forceField = new NonbondedForce();
     for (int i = 0; i < numParticles; ++i) {
         system.addParticle(2.0);
@@ -76,14 +77,67 @@ void testTemperature() {
     // Now run it for a while and see if the temperature is correct.
 
     double ke = 0.0;
-    for (int i = 0; i < 1000; ++i) {
+    for (int i = 0; i < numSteps; ++i) {
         State state = context.getState(State::Energy);
         ke += state.getKineticEnergy();
         integrator.step(1);
     }
-    ke /= 1000;
+    ke /= numSteps;
     double expected = 0.5*numParticles*3*BOLTZ*temp;
-    ASSERT_EQUAL_TOL(expected, ke, 3*expected/std::sqrt(1000.0));
+    ASSERT_EQUAL_TOL(expected, ke, 6/std::sqrt((double) numSteps));
+}
+
+void testConstraints() {
+    const int numParticles = 8;
+    const double temp = 100.0;
+    const double collisionFreq = 10.0;
+    const int numSteps = 10000;
+    OpenCLPlatform platform;
+    System system;
+    VerletIntegrator integrator(0.005);
+    NonbondedForce* forceField = new NonbondedForce();
+    for (int i = 0; i < numParticles; ++i) {
+        system.addParticle(2.0);
+        forceField->addParticle((i%2 == 0 ? 1.0 : -1.0), 1.0, 5.0);
+    }
+    system.addForce(forceField);
+    system.addConstraint(0, 1, 1);
+    system.addConstraint(1, 2, 1);
+    system.addConstraint(2, 3, 1);
+    system.addConstraint(3, 0, 1);
+    system.addConstraint(4, 5, 1);
+    system.addConstraint(5, 6, 1);
+    system.addConstraint(6, 7, 1);
+    system.addConstraint(7, 4, 1);
+    AndersenThermostat* thermstat = new AndersenThermostat(temp, collisionFreq);
+    system.addForce(thermstat);
+    Context context(system, integrator, platform);
+    vector<Vec3> positions(numParticles);
+    positions[0] = Vec3(0, 0, 0);
+    positions[1] = Vec3(1, 0, 0);
+    positions[2] = Vec3(1, 1, 0);
+    positions[3] = Vec3(0, 1, 0);
+    positions[4] = Vec3(1, 0, 1);
+    positions[5] = Vec3(1, 1, 1);
+    positions[6] = Vec3(0, 1, 1);
+    positions[7] = Vec3(0, 0, 1);
+    context.setPositions(positions);
+
+    // Let it equilibrate.
+
+    integrator.step(10000);
+
+    // Now run it for a while and see if the temperature is correct.
+
+    double ke = 0.0;
+    for (int i = 0; i < numSteps; ++i) {
+        State state = context.getState(State::Energy);
+        ke += state.getKineticEnergy();
+        integrator.step(1);
+    }
+    ke /= numSteps;
+    double expected = 0.5*(numParticles*3-system.getNumConstraints())*BOLTZ*temp;
+    ASSERT_EQUAL_TOL(expected, ke, 6/std::sqrt((double) numSteps));
 }
 
 void testRandomSeed() {
@@ -150,6 +204,7 @@ void testRandomSeed() {
 int main() {
     try {
         testTemperature();
+        testConstraints();
         testRandomSeed();
     }
     catch(const exception& e) {

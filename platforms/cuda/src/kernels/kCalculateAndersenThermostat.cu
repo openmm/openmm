@@ -51,7 +51,7 @@ void GetCalculateAndersenThermostatSim(gpuContext gpu)
     RTERROR(status, "cudaMemcpyFromSymbol: SetSim copy from cSim failed");
 }
 
-__global__ void kCalculateAndersenThermostat_kernel()
+__global__ void kCalculateAndersenThermostat_kernel(int* atomGroups)
 {
     unsigned int pos            = threadIdx.x + blockIdx.x * blockDim.x;
     unsigned int rpos           = cSim.pRandomPosition[blockIdx.x];
@@ -62,15 +62,16 @@ __global__ void kCalculateAndersenThermostat_kernel()
     while (pos < cSim.atoms)
     {
         float4 velocity         = cSim.pVelm4[pos];
-        float4 random4a         = cSim.pRandom4[rpos + pos];
-        float scale = (random4a.w > -randomRange && random4a.w < randomRange ? 0.0f : 1.0f);
+        float4 selectRand       = cSim.pRandom4[rpos + atomGroups[pos]];
+        float4 velRand          = cSim.pRandom4[rpos + pos];
+        float scale = (selectRand.w > -randomRange && selectRand.w < randomRange ? 0.0f : 1.0f);
         float add = (1.0f-scale)*sqrt(cSim.kT*velocity.w);
-        velocity.x = scale*velocity.x + add*random4a.x;
-        velocity.y = scale*velocity.y + add*random4a.y;
-        velocity.z = scale*velocity.z + add*random4a.z;
+        velocity.x = scale*velocity.x + add*velRand.x;
+        velocity.y = scale*velocity.y + add*velRand.y;
+        velocity.z = scale*velocity.z + add*velRand.z;
         cSim.pVelm4[pos]        = velocity;
-         
-        pos                    += blockDim.x * gridDim.x;    
+
+        pos                    += blockDim.x * gridDim.x;
     }
 
     // Update random position pointer
@@ -84,10 +85,10 @@ __global__ void kCalculateAndersenThermostat_kernel()
 }
 
 extern void kGenerateRandoms(gpuContext gpu);
-void kCalculateAndersenThermostat(gpuContext gpu)
+void kCalculateAndersenThermostat(gpuContext gpu, CUDAStream<int>& atomGroups)
 {
 //    printf("kCalculateAndersenThermostat\n");
-    kCalculateAndersenThermostat_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
+    kCalculateAndersenThermostat_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>(atomGroups._pDevData);
     LAUNCHERROR("kCalculateAndersenThermostat");
     
     // Update randoms if necessary

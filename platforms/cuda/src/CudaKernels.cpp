@@ -28,6 +28,7 @@
 #include "openmm/LangevinIntegrator.h"
 #include "openmm/Context.h"
 #include "openmm/OpenMMException.h"
+#include "openmm/internal/AndersenThermostatImpl.h"
 #include "openmm/internal/CMAPTorsionForceImpl.h"
 #include "openmm/internal/ContextImpl.h"
 #include "openmm/internal/NonbondedForceImpl.h"
@@ -1027,6 +1028,8 @@ void CudaIntegrateVariableLangevinStepKernel::execute(ContextImpl& context, cons
 }
 
 CudaApplyAndersenThermostatKernel::~CudaApplyAndersenThermostatKernel() {
+    if (atomGroups != NULL)
+        delete atomGroups;
 }
 
 void CudaApplyAndersenThermostatKernel::initialize(const System& system, const AndersenThermostat& thermostat) {
@@ -1036,6 +1039,16 @@ void CudaApplyAndersenThermostatKernel::initialize(const System& system, const A
     prevTemp = -1.0;
     prevFrequency = -1.0;
     prevStepSize = -1.0;
+
+    // Create the arrays with the group definitions.
+
+    vector<vector<int> > groups = AndersenThermostatImpl::calcParticleGroups(system);
+    atomGroups = new CUDAStream<int>(system.getNumParticles(), 1, "atomGroups");
+    for (int i = 0; i < (int) groups.size(); i++) {
+        for (int j = 0; j < (int) groups[i].size(); j++)
+            (*atomGroups)[groups[i][j]] = i;
+    }
+    atomGroups->Upload();
 }
 
 void CudaApplyAndersenThermostatKernel::execute(ContextImpl& context) {
@@ -1053,7 +1066,7 @@ void CudaApplyAndersenThermostatKernel::execute(ContextImpl& context) {
         prevFrequency = frequency;
         prevStepSize = stepSize;
     }
-    kCalculateAndersenThermostat(gpu);
+    kCalculateAndersenThermostat(gpu, *atomGroups);
 }
 
 CudaApplyMonteCarloBarostatKernel::~CudaApplyMonteCarloBarostatKernel() {
