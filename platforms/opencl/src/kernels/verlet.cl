@@ -1,3 +1,7 @@
+#ifdef cl_khr_fp64
+#pragma OPENCL EXTENSION cl_khr_fp64 : enable
+#endif
+
 /**
  * Perform the first step of verlet integration.
  */
@@ -24,7 +28,11 @@ __kernel void integrateVerletPart1(int numAtoms, __global float2* dt, __global f
 
 __kernel void integrateVerletPart2(int numAtoms, __global float2* dt, __global float4* posq, __global float4* velm, __global float4* posDelta) {
     float2 stepSize = dt[0];
+#ifdef cl_khr_fp64
+    double oneOverDt = 1.0/stepSize.y;
+#else
     float oneOverDt = 1.0f/stepSize.y;
+#endif
     if (get_global_id(0) == 0)
         dt[0].x = stepSize.y;
     barrier(CLK_LOCAL_MEM_FENCE);
@@ -34,7 +42,11 @@ __kernel void integrateVerletPart2(int numAtoms, __global float2* dt, __global f
         float4 delta = posDelta[index];
         float4 velocity = velm[index];
         pos.xyz += delta.xyz;
+#ifdef cl_khr_fp64
+        velocity.xyz = convert_float4(convert_double4(delta)*oneOverDt).xyz;
+#else
         velocity.xyz = delta.xyz*oneOverDt;
+#endif
         posq[index] = pos;
         velm[index] = velocity;
         index += get_global_size(0);

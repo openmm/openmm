@@ -135,11 +135,11 @@ void kVerletUpdatePart2_kernel()
 {
     // Load the step size to take.
     unsigned int pos = threadIdx.x + blockIdx.x * blockDim.x;
-    __shared__ float oneOverDeltaT;
+    __shared__ double oneOverDeltaT;
     if (threadIdx.x == 0)
     {
         float dt = cSim.pStepSize[0].y;
-        oneOverDeltaT = 1.0f/dt;
+        oneOverDeltaT = 1.0/dt;
         if (pos == 0)
             cSim.pStepSize[0].x = dt;
     }
@@ -155,9 +155,9 @@ void kVerletUpdatePart2_kernel()
         float4 apos             = cSim.pPosq[pos];
         float4 xPrime           = cSim.pPosqP[pos];
 
-        velocity.x              = oneOverDeltaT*(xPrime.x);
-        velocity.y              = oneOverDeltaT*(xPrime.y);
-        velocity.z              = oneOverDeltaT*(xPrime.z);
+        velocity.x              = (float) (oneOverDeltaT*(double)xPrime.x);
+        velocity.y              = (float) (oneOverDeltaT*(double)xPrime.y);
+        velocity.z              = (float) (oneOverDeltaT*(double)xPrime.z);
 
         xPrime.x               += apos.x;
         xPrime.y               += apos.y;

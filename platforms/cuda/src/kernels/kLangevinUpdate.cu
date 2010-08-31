@@ -181,16 +181,16 @@ __launch_bounds__(G8X_UPDATE_THREADS_PER_BLOCK, 1)
 void kSetVelocitiesFromPositions_kernel()
 {
     float2 stepSize = cSim.pStepSize[0];
-    float oneOverDt = 2.0f/(stepSize.x+stepSize.y);
+    double oneOverDt = 2.0/(stepSize.x+stepSize.y);
     unsigned int pos = threadIdx.x;
     while (pos < cSim.atoms)
     {
         float4 posq = cSim.pPosq[pos];
         float4 oldPosq = cSim.pOldPosq[pos];
         float4 velm = cSim.pVelm4[pos];
-        velm.x = oneOverDt*(posq.x-oldPosq.x);
-        velm.y = oneOverDt*(posq.y-oldPosq.y);
-        velm.z = oneOverDt*(posq.z-oldPosq.z);
+        velm.x = (float) (oneOverDt*((double)posq.x-(double)oldPosq.x));
+        velm.y = (float) (oneOverDt*((double)posq.y-(double)oldPosq.y));
+        velm.z = (float) (oneOverDt*((double)posq.z-(double)oldPosq.z));
         cSim.pVelm4[pos] = velm;
         pos += blockDim.x * gridDim.x;
     }

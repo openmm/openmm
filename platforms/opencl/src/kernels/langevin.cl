@@ -1,3 +1,7 @@
+#ifdef cl_khr_fp64
+#pragma OPENCL EXTENSION cl_khr_fp64 : enable
+#endif
+
 enum {VelScale, ForceScale, NoiseScale, MaxParams};
 
 /**
@@ -28,14 +32,22 @@ __kernel void integrateLangevinPart1(__global float4* velm, __global float4* for
  */
 
 __kernel void integrateLangevinPart2(__global float4* posq, __global float4* posDelta, __global float4* velm, __global float2* dt) {
+#ifdef cl_khr_fp64
+    double invStepSize = 1.0/dt[0].y;
+#else
     float invStepSize = 1.0f/dt[0].y;
+#endif
     int index = get_global_id(0);
     while (index < NUM_ATOMS) {
         float4 pos = posq[index];
         float4 delta = posDelta[index];
         float4 vel = velm[index];
         pos.xyz += delta.xyz;
+#ifdef cl_khr_fp64
+        vel.xyz = convert_float4(invStepSize*convert_double4(delta)).xyz;
+#else
         vel.xyz = invStepSize*delta.xyz;
+#endif
         posq[index] = pos;
         velm[index] = vel;
         index += get_global_size(0);
