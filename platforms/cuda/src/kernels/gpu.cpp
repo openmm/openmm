@@ -1912,7 +1912,6 @@ void* gpuInit(int numAtoms, unsigned int device, bool useBlockingSync)
     gpu->sim.alphaOBC               = alphaOBC;
     gpu->sim.betaOBC                = betaOBC;
     gpu->sim.gammaOBC               = gammaOBC;
-    gpuSetLangevinIntegrationParameters(gpu, 1.0f, 2.0e-3f, 300.0f, 0.0f);
     gpu->sim.maxShakeIterations     = 15;
     gpu->sim.shakeTolerance         = 1.0e-04f * 2.0f;
     gpu->sim.InvMassJ               = 9.920635e-001f;
@@ -2021,6 +2020,8 @@ void gpuSetLangevinIntegrationParameters(gpuContext gpu, float tau, float deltaT
     (*gpu->psLangevinParameters)[2] = (float) noisescale;
     gpu->psLangevinParameters->Upload();
     gpu->psStepSize->Download();
+    if ((*gpu->psStepSize)[0].x == 0)
+        (*gpu->psStepSize)[0].x = deltaT;
     (*gpu->psStepSize)[0].y = deltaT;
     gpu->psStepSize->Upload();
 }
@@ -2031,6 +2032,8 @@ void gpuSetVerletIntegrationParameters(gpuContext gpu, float deltaT, float error
     gpu->sim.oneOverDeltaT          = 1.0f/deltaT;
     gpu->sim.errorTol               = errorTol;
     gpu->psStepSize->Download();
+    if ((*gpu->psStepSize)[0].x == 0)
+        (*gpu->psStepSize)[0].x = deltaT;
     (*gpu->psStepSize)[0].y = deltaT;
     gpu->psStepSize->Upload();
 }
@@ -2045,6 +2048,8 @@ void gpuSetBrownianIntegrationParameters(gpuContext gpu, float tau, float deltaT
     gpu->sim.kT                     = BOLTZ * gpu->sim.T;
     gpu->sim.noiseAmplitude         = sqrt(2.0f*gpu->sim.kT*deltaT*tau);
     gpu->psStepSize->Download();
+    if ((*gpu->psStepSize)[0].x == 0)
+        (*gpu->psStepSize)[0].x = deltaT;
     (*gpu->psStepSize)[0].y = deltaT;
     gpu->psStepSize->Upload();
 }
