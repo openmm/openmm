@@ -83,6 +83,9 @@ void METHOD_NAME(kCalculateAmoebaFixedEAndGkField, _kernel)(
 
         FixedFieldParticle* psA    = &sA[tbx];
         unsigned int atomI         = x + tgx;
+        FixedFieldParticle localParticle;
+        loadFixedFieldShared( &localParticle, atomI, bornRadii ); 
+
         float4 iCoord              = atomCoord[atomI];
 
         float eFieldSum[3];
@@ -106,9 +109,7 @@ void METHOD_NAME(kCalculateAmoebaFixedEAndGkField, _kernel)(
 
             // load coordinates, charge, ...
 
-            loadFixedFieldShared( &(sA[threadIdx.x]), atomI,
-                                  atomCoord, labFrameDipole, labFrameQuadrupole,
-                                  cAmoebaSim.pDampingFactorAndThole, bornRadii );
+            loadFixedFieldShared( &(sA[threadIdx.x]), atomI, bornRadii );
 
             if (!bExclusionFlag)
             {
@@ -125,12 +126,7 @@ void METHOD_NAME(kCalculateAmoebaFixedEAndGkField, _kernel)(
 
                     loadFixedFieldParticleData( &(psA[j]), &jCoord, jDipole, jQuadrupole, &jBornRadius );
 
-                    calculateFixedEFieldPairIxn_kernel( iCoord,                                          jCoord,
-                                                        cAmoebaSim.pDampingFactorAndThole[atomI].x,      psA[j].damp,
-                                                        cAmoebaSim.pDampingFactorAndThole[atomI].y,      psA[j].thole,
-                                                        &(labFrameDipole[atomI*3]),                      jDipole,
-                                                        &(labFrameQuadrupole[atomI*9]),                  jQuadrupole,
-                                                        cAmoebaSim.scalingDistanceCutoff,                ijField
+                    calculateFixedEFieldPairIxn_kernel( localParticle, psA[j], ijField
 #ifdef AMOEBA_DEBUG
                                                 , pullBack
 #endif
@@ -182,12 +178,7 @@ void METHOD_NAME(kCalculateAmoebaFixedEAndGkField, _kernel)(
 
                     loadFixedFieldParticleData( &(psA[j]), &jCoord, jDipole, jQuadrupole, &jBornRadius );
 
-                    calculateFixedEFieldPairIxn_kernel( iCoord,                                          jCoord,
-                                                        cAmoebaSim.pDampingFactorAndThole[atomI].x,      psA[j].damp,
-                                                        cAmoebaSim.pDampingFactorAndThole[atomI].y,      psA[j].thole,
-                                                        &(labFrameDipole[atomI*3]),                      jDipole,
-                                                        &(labFrameQuadrupole[atomI*9]),                  jQuadrupole,
-                                                        cAmoebaSim.scalingDistanceCutoff,                ijField
+                    calculateFixedEFieldPairIxn_kernel( localParticle, psA[j], ijField
 #ifdef AMOEBA_DEBUG
                                                 , pullBack
 #endif
@@ -366,9 +357,7 @@ if( atomI == targetAtom ){
             {
                 // load coordinates, charge, ...
 
-                loadFixedFieldShared( &(sA[threadIdx.x]), (y+tgx),
-                                      atomCoord, labFrameDipole, labFrameQuadrupole,
-                                      cAmoebaSim.pDampingFactorAndThole, bornRadii );
+                loadFixedFieldShared( &(sA[threadIdx.x]), (y+tgx),  bornRadii );
 
             }
 
@@ -387,12 +376,7 @@ if( atomI == targetAtom ){
     
                     loadFixedFieldParticleData( &(psA[tj]),  &jCoord, jDipole, jQuadrupole, &jBornRadius );
 
-                    calculateFixedEFieldPairIxn_kernel( iCoord,                                          jCoord,
-                                                        cAmoebaSim.pDampingFactorAndThole[atomI].x,      psA[tj].damp,
-                                                        cAmoebaSim.pDampingFactorAndThole[atomI].y,      psA[tj].thole,
-                                                        &(labFrameDipole[atomI*3]),                      jDipole,
-                                                        &(labFrameQuadrupole[atomI*9]),                  jQuadrupole,
-                                                        cAmoebaSim.scalingDistanceCutoff,                ijField
+                    calculateFixedEFieldPairIxn_kernel( localParticle, psA[tj], ijField
 #ifdef AMOEBA_DEBUG
                                                  , pullBack
 #endif
@@ -563,12 +547,7 @@ if( (atomI == targetAtom  || (y + tj) == targetAtom) ){
 
                     loadFixedFieldParticleData( &(psA[tj]),  &jCoord, jDipole, jQuadrupole, &jBornRadius );
  
-                    calculateFixedEFieldPairIxn_kernel( iCoord,                                          jCoord,
-                                                        cAmoebaSim.pDampingFactorAndThole[atomI].x,      psA[tj].damp,
-                                                        cAmoebaSim.pDampingFactorAndThole[atomI].y,      psA[tj].thole,
-                                                        &(labFrameDipole[atomI*3]),                      jDipole,
-                                                        &(labFrameQuadrupole[atomI*9]),                  jQuadrupole,
-                                                        cAmoebaSim.scalingDistanceCutoff,                ijField
+                    calculateFixedEFieldPairIxn_kernel( localParticle, psA[tj], ijField
 #ifdef AMOEBA_DEBUG
                                                 , pullBack
 #endif

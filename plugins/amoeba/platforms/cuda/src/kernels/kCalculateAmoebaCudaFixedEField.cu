@@ -61,46 +61,6 @@ static void kReduceE_Fields_kernel(amoebaGpuContext amoebaGpu )
 #define METHOD_NAME(a, b) a##N2ByWarp##b
 #include "kCalculateAmoebaCudaFixedEField.h"
 
-#ifdef AMOEBA_DEBUG
-#if 0
-static void printEFieldBuffer( amoebaGpuContext amoebaGpu, unsigned int bufferIndex )
-{
-    (void) fprintf( amoebaGpu->log, "EField Buffer %u\n", bufferIndex );
-    unsigned int start = bufferIndex*3*amoebaGpu->paddedNumberOfAtoms;
-    unsigned int stop  = (bufferIndex+1)*3*amoebaGpu->paddedNumberOfAtoms;
-    for( unsigned int ii = start; ii < stop; ii += 3 ){
-        unsigned int ii3Index      = ii/3;
-        unsigned int bufferIndex   = ii3Index/(amoebaGpu->paddedNumberOfAtoms);
-        unsigned int particleIndex = ii3Index - bufferIndex*(amoebaGpu->paddedNumberOfAtoms);
-        (void) fprintf( amoebaGpu->log, "   %6u %3u %6u [%14.6e %14.6e %14.6e] [%14.6e %14.6e %14.6e]\n", 
-                            ii/3,  bufferIndex, particleIndex,
-                            amoebaGpu->psWorkArray_3_1->_pSysStream[0][ii],
-                            amoebaGpu->psWorkArray_3_1->_pSysStream[0][ii+1],
-                            amoebaGpu->psWorkArray_3_1->_pSysStream[0][ii+2],
-                            amoebaGpu->psWorkArray_3_2->_pSysStream[0][ii],
-                            amoebaGpu->psWorkArray_3_2->_pSysStream[0][ii+1],
-                            amoebaGpu->psWorkArray_3_2->_pSysStream[0][ii+2] );
-    } 
-}
-
-static void printEFieldAtomBuffers( amoebaGpuContext amoebaGpu, unsigned int targetAtom )
-{
-    (void) fprintf( amoebaGpu->log, "EField atom %u\n", targetAtom );
-    for( unsigned int ii = 0; ii < amoebaGpu->outputBuffers; ii++ ){
-        unsigned int particleIndex = targetAtom + ii*3*amoebaGpu->paddedNumberOfAtoms;
-        (void) fprintf( amoebaGpu->log, " %2u %6u [%14.6e %14.6e %14.6e] [%14.6e %14.6e %14.6e]\n", 
-                        ii, particleIndex,
-                        amoebaGpu->psWorkArray_3_1->_pSysStream[0][particleIndex],
-                        amoebaGpu->psWorkArray_3_1->_pSysStream[0][particleIndex+1],
-                        amoebaGpu->psWorkArray_3_1->_pSysStream[0][particleIndex+2],
-                        amoebaGpu->psWorkArray_3_2->_pSysStream[0][particleIndex],
-                        amoebaGpu->psWorkArray_3_2->_pSysStream[0][particleIndex+1],
-                        amoebaGpu->psWorkArray_3_2->_pSysStream[0][particleIndex+2] );
-    } 
-}
-#endif
-#endif
-
 /**---------------------------------------------------------------------------------------
 
    Compute fixed electric field
@@ -145,9 +105,6 @@ void cudaComputeAmoebaFixedEField( amoebaGpuContext amoebaGpu )
         (void) fprintf( amoebaGpu->log, "N2 warp\n" );
         kCalculateAmoebaFixedE_FieldN2ByWarpForces_kernel<<<amoebaGpu->nonbondBlocks, amoebaGpu->nonbondThreadsPerBlock, sizeof(FixedFieldParticle)*amoebaGpu->nonbondThreadsPerBlock>>>(
                                                                            amoebaGpu->psWorkUnit->_pDevStream[0],
-                                                                           gpu->psPosq4->_pDevStream[0],
-                                                                           amoebaGpu->psLabFrameDipole->_pDevStream[0],
-                                                                           amoebaGpu->psLabFrameQuadrupole->_pDevStream[0],
                                                                            amoebaGpu->psWorkArray_3_1->_pDevStream[0],
 #ifdef AMOEBA_DEBUG
                                                                            amoebaGpu->psWorkArray_3_2->_pDevStream[0],
@@ -167,9 +124,6 @@ void cudaComputeAmoebaFixedEField( amoebaGpuContext amoebaGpu )
 
         kCalculateAmoebaFixedE_FieldN2Forces_kernel<<<amoebaGpu->nonbondBlocks, amoebaGpu->nonbondThreadsPerBlock, sizeof(FixedFieldParticle)*amoebaGpu->nonbondThreadsPerBlock>>>(
                                                                            amoebaGpu->psWorkUnit->_pDevStream[0],
-                                                                           gpu->psPosq4->_pDevStream[0],
-                                                                           amoebaGpu->psLabFrameDipole->_pDevStream[0],
-                                                                           amoebaGpu->psLabFrameQuadrupole->_pDevStream[0],
                                                                            amoebaGpu->psWorkArray_3_1->_pDevStream[0],
 #ifdef AMOEBA_DEBUG
                                                                            amoebaGpu->psWorkArray_3_2->_pDevStream[0],

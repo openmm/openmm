@@ -1027,6 +1027,9 @@ void cudaComputeAmoebaRealSpaceEwald( amoebaGpuContext amoebaGpu )
       (void) fflush( amoebaGpu->log );
 #endif
 
+      cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<float>();
+      cudaBindTexture(NULL, &tabulatedErfcRef, gpu->psTabulatedErfc->_pDevData, &channelDesc, gpu->psTabulatedErfc->_length*sizeof(float));
+
       kCalculateAmoebaCudaRealSpaceEwaldN2Forces_kernel<<<amoebaGpu->nonbondBlocks, threadsPerBlock, sizeof(RealSpaceEwaldParticle)*threadsPerBlock>>>(
                                                                          amoebaGpu->psWorkUnit->_pDevStream[0],
                                                                          gpu->psPosq4->_pDevStream[0],

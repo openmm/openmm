@@ -368,8 +368,12 @@ void kCalculateAmoebaMultipoleForces(amoebaGpuContext amoebaGpu, bool hasAmoebaG
         cudaComputeAmoebaFixedEAndGkFields( amoebaGpu );
         cudaComputeAmoebaMutualInducedAndGkField( amoebaGpu );
     } else {
-        cudaComputeAmoebaFixedEField( amoebaGpu );
-        cudaComputeAmoebaMutualInducedField( amoebaGpu );
+        if( amoebaGpu->multipoleNonbondedMethod == AMOEBA_NO_CUTOFF ){
+            cudaComputeAmoebaFixedEField( amoebaGpu );
+            cudaComputeAmoebaMutualInducedField( amoebaGpu );
+        } else {
+            cudaComputeAmoebaPmeFixedEField( amoebaGpu );
+        }
     }
 
     // check if induce dipole calculation converged -- abort if it did not

@@ -65,11 +65,16 @@ extern void SetCalculateAmoebaCudaWcaDispersionSim(amoebaGpuContext gpu);
 extern void GetCalculateAmoebaCudaWcaDispersionSim(amoebaGpuContext gpu);
 extern void kCalculateAmoebaWcaDispersionForces(amoebaGpuContext amoebaGpu );
 
-// fixed electric field
+// fixed electric field -- no cutoff
 
 extern void SetCalculateAmoebaCudaFixedEFieldSim(amoebaGpuContext gpu);
 extern void GetCalculateAmoebaCudaFixedEFieldSim(amoebaGpuContext gpu);
 extern void cudaComputeAmoebaFixedEField( amoebaGpuContext gpu);
+
+// fixed electric field  -- PME
+extern void SetCalculateAmoebaCudaPmeFixedEFieldSim(amoebaGpuContext gpu);
+extern void GetCalculateAmoebaCudaPmeFixedEFieldSim(amoebaGpuContext gpu);
+extern void cudaComputeAmoebaPmeFixedEField( amoebaGpuContext gpu);
 
 // fixed electric field and Gk
 

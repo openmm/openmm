@@ -1420,6 +1420,18 @@ void gpuKirkwoodAllocate( amoebaGpuContext amoebaGpu )
     
 }
 
+static void tabulateErfc(gpuContext gpu) 
+{
+    int tableSize = 2048;
+    gpu->sim.tabulatedErfcSize = tableSize;
+    gpu->sim.tabulatedErfcScale = tableSize/(gpu->sim.alphaEwald*gpu->sim.nonbondedCutoff);
+    gpu->psTabulatedErfc = new CUDAStream<float>(tableSize, 1, "TabulatedErfc");
+    gpu->sim.pTabulatedErfc = gpu->psTabulatedErfc->_pDevData;
+    for (int i = 0; i < tableSize; ++i) 
+        (*gpu->psTabulatedErfc)[i] = (float) erfc(i*(gpu->sim.alphaEwald*gpu->sim.nonbondedCutoff)/tableSize);
+    gpu->psTabulatedErfc->Upload();
+}
+
 /**---------------------------------------------------------------------------------------
 
    Create/initialize data structs associated w/ molecular -> lab frame calculation
@@ -1525,14 +1537,26 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
     } else if( nonbondedMethod == 1 ){
         amoebaGpu->multipoleNonbondedMethod = AMOEBA_PARTICLE_MESH_EWALD;
     } else {
-        throw OpenMM::OpenMMException("multipoleNonbondedMethod not recognzied.\n" );
+        throw OpenMM::OpenMMException("multipoleNonbondedMethod not recognized.\n" );
     }
-    amoebaGpu->amoebaSim.cutoffDistance2    = cutoffDistance*cutoffDistance;
-    amoebaGpu->amoebaSim.sqrtPi             = sqrt( 3.1415926535897932384626433832795 );
-    amoebaGpu->amoebaSim.aewald             = aewald;
-    amoebaGpu->amoebaSim.electric           = electricConstant;
+
+    if( amoebaGpu->log ){
+        (void) fprintf( amoebaGpu->log,"%s Nonbonded method=%d %d [NoCutoff=%d PME=%d]\n",
+                        methodName.c_str(), nonbondedMethod, amoebaGpu->multipoleNonbondedMethod,
+                        AMOEBA_NO_CUTOFF, AMOEBA_PARTICLE_MESH_EWALD );
+        (void) fflush( amoebaGpu->log );
+    }
+    amoebaGpu->amoebaSim.cutoffDistance2             = cutoffDistance*cutoffDistance;
+    amoebaGpu->amoebaSim.sqrtPi                      = sqrt( 3.1415926535897932384626433832795 );
+    amoebaGpu->amoebaSim.aewald                      = aewald;
+    amoebaGpu->amoebaSim.electric                    = electricConstant;
+
+    amoebaGpu->gpuContext->sim.alphaEwald            = aewald;
+    amoebaGpu->gpuContext->sim.nonbondedCutoff       = cutoffDistance;
+    tabulateErfc(amoebaGpu->gpuContext); 
+
     if( amoebaGpu->amoebaSim.dielec < 1.0e-05 ){
-        amoebaGpu->amoebaSim.dielec      = 1.0f;
+        amoebaGpu->amoebaSim.dielec               = 1.0f;
     }
 
     for( int ii = 0; ii < static_cast<int>(charges.size()); ii++ ){
@@ -2593,6 +2617,7 @@ void amoebaGpuSetConstants(amoebaGpuContext amoebaGpu)
     SetCalculateAmoebaCudaVdw14_7Sim( amoebaGpu );
     SetCalculateAmoebaCudaWcaDispersionSim( amoebaGpu );
     SetCalculateAmoebaCudaMutualInducedFieldSim( amoebaGpu );
+    SetCalculateAmoebaCudaPmeFixedEFieldSim( amoebaGpu );
     SetCalculateAmoebaElectrostaticSim( amoebaGpu );
     SetCalculateAmoebaRealSpaceEwaldSim( amoebaGpu );
     SetCalculateAmoebaCudaMapTorquesSim( amoebaGpu );
