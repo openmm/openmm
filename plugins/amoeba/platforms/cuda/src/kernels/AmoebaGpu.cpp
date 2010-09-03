@@ -29,6 +29,9 @@
  * USE OR OTHER DEALINGS IN THE SOFTWARE.                                     *
  * -------------------------------------------------------------------------- */
 
+#ifdef WIN32
+  #define _USE_MATH_DEFINES /* M_PI */
+#endif
 #include "openmm/OpenMMException.h"
 #include "cudaKernels.h"
 #include "amoebaCudaKernels.h"
@@ -37,9 +40,11 @@
 extern void OPENMMCUDA_EXPORT SetCalculateObcGbsaForces2Sim(gpuContext gpu);
 extern void OPENMMCUDA_EXPORT SetForcesSim(gpuContext gpu);
 
+#include <cmath>
 #include <sstream>
 #include <limits>
 #include <cstring>
+#include <vector>
 
 #ifdef WIN32
 //  #include <windows.h>
@@ -48,6 +53,8 @@ extern void OPENMMCUDA_EXPORT SetForcesSim(gpuContext gpu);
 #define DUMP_PARAMETERS 0
 //#define AMOEBA_DEBUG
 #undef  AMOEBA_DEBUG
+
+using std::vector;
 
 extern "C"
 amoebaGpuContext amoebaGpuInit( _gpuContext* gpu )
@@ -67,6 +74,12 @@ amoebaGpuContext amoebaGpuInit( _gpuContext* gpu )
     amoebaGpu->paddedNumberOfAtoms             = gpu->sim.paddedNumberOfAtoms; 
     amoebaGpu->amoebaSim.numberOfAtoms         = gpu->natoms;
     amoebaGpu->amoebaSim.paddedNumberOfAtoms   = gpu->sim.paddedNumberOfAtoms;
+
+    amoebaGpu->psThetai1 = NULL;
+    amoebaGpu->psThetai2 = NULL;
+    amoebaGpu->psThetai3 = NULL;
+    amoebaGpu->psQfac = NULL;
+    amoebaGpu->psIgrid = NULL;
 
     return amoebaGpu;
 }
@@ -2177,6 +2190,118 @@ void gpuSetAmoebaVdwParameters( amoebaGpuContext amoebaGpu,
 }
 
 extern "C"
+void gpuSetAmoebaPMEParameters(amoebaGpuContext amoebaGpu, float alpha, int gridSizeX, int gridSizeY, int gridSizeZ)
+{
+    gpuContext gpu = amoebaGpu->gpuContext;
+    gpu->sim.alphaEwald = alpha;
+    int3 gridSize = make_int3(gridSizeX, gridSizeY, gridSizeZ);
+    gpu->sim.pmeGridSize = gridSize;
+    int3 groupSize = make_int3(2, 4, 4);
+    gpu->sim.pmeGroupSize = groupSize;
+    const int3 numGroups = make_int3((gridSize.x+groupSize.x-1)/groupSize.x, (gridSize.y+groupSize.y-1)/groupSize.y, (gridSize.z+groupSize.z-1)/groupSize.z);
+    const unsigned int totalGroups = numGroups.x*numGroups.y*numGroups.z;
+    cufftPlan3d(&gpu->fftplan, gridSize.x, gridSize.y, gridSize.z, CUFFT_C2C);
+    gpu->psPmeGrid = new CUDAStream<cufftComplex>(gridSize.x*gridSize.y*gridSize.z, 1, "PmeGrid");
+    gpu->sim.pPmeGrid = gpu->psPmeGrid->_pDevData;
+    gpu->psPmeBsplineModuli[0] = new CUDAStream<float>(gridSize.x, 1, "PmeBsplineModuli0");
+    gpu->sim.pPmeBsplineModuli[0] = gpu->psPmeBsplineModuli[0]->_pDevData;
+    gpu->psPmeBsplineModuli[1] = new CUDAStream<float>(gridSize.y, 1, "PmeBsplineModuli1");
+    gpu->sim.pPmeBsplineModuli[1] = gpu->psPmeBsplineModuli[1]->_pDevData;
+    gpu->psPmeBsplineModuli[2] = new CUDAStream<float>(gridSize.z, 1, "PmeBsplineModuli2");
+    gpu->sim.pPmeBsplineModuli[2] = gpu->psPmeBsplineModuli[2]->_pDevData;
+    amoebaGpu->psQfac = new CUDAStream<float>(gridSize.x*gridSize.y*gridSize.z, 1, "qfac");
+    amoebaGpu->amoebaSim.pQfac = amoebaGpu->psQfac->_pDevData;
+    amoebaGpu->psThetai1 = new CUDAStream<float4>(AMOEBA_PME_ORDER*gpu->natoms, 1, "thetai1");
+    amoebaGpu->amoebaSim.pThetai1 = amoebaGpu->psThetai1->_pDevData;
+    amoebaGpu->psThetai2 = new CUDAStream<float4>(AMOEBA_PME_ORDER*gpu->natoms, 1, "thetai2");
+    amoebaGpu->amoebaSim.pThetai2 = amoebaGpu->psThetai2->_pDevData;
+    amoebaGpu->psThetai3 = new CUDAStream<float4>(AMOEBA_PME_ORDER*gpu->natoms, 1, "thetai3");
+    amoebaGpu->amoebaSim.pThetai3 = amoebaGpu->psThetai3->_pDevData;
+    amoebaGpu->psIgrid = new CUDAStream<int4>(gpu->natoms, 1, "igrid");
+    amoebaGpu->amoebaSim.pIgrid = amoebaGpu->psIgrid->_pDevData;
+    gpu->psPmeAtomGridIndex = new CUDAStream<int2>(gpu->natoms, 1, "PmeAtomGridIndex");
+    gpu->sim.pPmeAtomGridIndex = gpu->psPmeAtomGridIndex->_pDevData;
+    gpu->psPmeBsplineTheta = new CUDAStream<float4>(1, 1, "PmeBsplineTheta"); // Not actually uesd
+    gpu->psPmeBsplineDtheta = new CUDAStream<float4>(1, 1, "PmeBsplineDtheta"); // Not actually used
+
+    // Initialize the b-spline moduli.
+
+    double array[AMOEBA_PME_ORDER];
+    double x = 0.0;
+    array[0] = 1.0 - x;
+    array[1] = x;
+    for (int k = 2; k < AMOEBA_PME_ORDER; k++) {
+        double denom = 1.0/k;
+        array[k] = x*array[k-1]*denom;
+        for (int i = 1; i < k; i++)
+            array[k-i] = ((x+i)*array[k-i-1] + ((k-i+1)-x)*array[k-i])*denom;
+        array[0] = (1.0-x)*array[0]*denom;
+    }
+    int maxSize = std::max(std::max(gridSize.x, gridSize.y), gridSize.z);
+    vector<double> bsarray(maxSize+1, 0.0);
+    for (int i = 2; i <= AMOEBA_PME_ORDER+1; i++)
+        bsarray[i] = array[i-2];
+    for (int dim = 0; dim < 3; dim++) {
+        float* bsmod = gpu->psPmeBsplineModuli[dim]->_pSysData;
+        int size =  gpu->psPmeBsplineModuli[dim]->_length;
+
+        // get the modulus of the discrete Fourier transform
+
+        double factor = 2.0*M_PI/size;
+        for (int i = 0; i < size; i++) {
+            double sum1 = 0.0;
+            double sum2 = 0.0;
+            for (int j = 1; j <= size; j++) {
+                double arg = factor*i*(j-1);
+                sum1 = sum1 + bsarray[j]*cos(arg);
+                sum2 = sum2 + bsarray[j]*sin(arg);
+            }
+            bsmod[i] = sum1*sum1 + sum2*sum2;
+        }
+
+        // fix for exponential Euler spline interpolation failure
+
+        double eps = 1.0e-7;
+        if (bsmod[0] < eps)
+            bsmod[0] = 0.5 * bsmod[1];
+        for (int i = 1; i < size-1; i++)
+            if (bsmod[i] < eps)
+                bsmod[i] = 0.5*(bsmod[i-1]+bsmod[i+1]);
+        if (bsmod[size-1] < eps)
+            bsmod[size-1] = 0.5*bsmod[size-2];
+
+        // compute and apply the optimal zeta coefficient
+
+        int jcut = 50;
+        for (int i = 1; i <= size; i++) {
+            int k = i - 1;
+            if (i > size/2)
+                k = k - size;
+            double zeta;
+            if (k == 0)
+                zeta = 1.0;
+            else {
+                double sum1 = 1.0;
+                double sum2 = 1.0;
+                factor = M_PI*k/size;
+                for (int j = 1; j <= jcut; j++) {
+                    double arg = factor/(factor+M_PI*j);
+                    sum1 = sum1 + pow(arg, AMOEBA_PME_ORDER);
+                    sum2 = sum2 + pow(arg, 2*AMOEBA_PME_ORDER);
+                }
+                for (int j = 1; j <= jcut; j++) {
+                    double arg = factor/(factor-M_PI*j);
+                    sum1 = sum1 + pow(arg, AMOEBA_PME_ORDER);
+                    sum2 = sum2 + pow(arg, 2*AMOEBA_PME_ORDER);
+                }
+                zeta = sum2/sum1;
+            }
+            bsmod[i-1] = bsmod[i-1]*zeta*zeta;
+        }
+    }
+}
+
+extern "C"
 void amoebaGpuBuildVdwExclusionList( amoebaGpuContext amoebaGpu,  const std::vector< std::vector<int> >& exclusions )
 {
     // ---------------------------------------------------------------------------------------
@@ -2571,7 +2696,15 @@ void amoebaGpuShutDown(amoebaGpuContext gpu)
     delete gpu->psScalingIndicesIndex; 
     delete gpu->ps_D_ScaleIndices; 
     delete gpu->ps_P_ScaleIndices; 
-    delete gpu->ps_M_ScaleIndices; 
+    delete gpu->ps_M_ScaleIndices;
+
+    if (gpu->psThetai1) {
+        delete gpu->psThetai1;
+        delete gpu->psThetai2;
+        delete gpu->psThetai3;
+        delete gpu->psQfac;
+        delete gpu->psIgrid;
+    }
 
     if( gpu->pMapArray ){
         for( unsigned int ii = 0; ii < gpu->paddedNumberOfAtoms; ii++ ){
@@ -2626,6 +2759,7 @@ void amoebaGpuSetConstants(amoebaGpuContext amoebaGpu)
     SetCalculateAmoebaCudaFixedEAndGKFieldsSim( amoebaGpu );
     SetCalculateAmoebaCudaMutualInducedAndGkFieldsSim( amoebaGpu );
     SetCalculateObcGbsaForces2Sim(  amoebaGpu->gpuContext  );
+    SetCalculateAmoebaPMESim( amoebaGpu );
 }
 
 extern "C"

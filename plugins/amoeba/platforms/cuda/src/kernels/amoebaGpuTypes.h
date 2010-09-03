@@ -219,6 +219,14 @@ struct _amoebaGpuContext {
     // Wca dispersion fields
 
     CUDAStream<float2>*  psWcaDispersionRadiusEpsilon;
+
+    // PME fields
+
+    CUDAStream<float>* psQfac;
+    CUDAStream<float4>* psThetai1;
+    CUDAStream<float4>* psThetai2;
+    CUDAStream<float4>* psThetai3;
+    CUDAStream<int4>* psIgrid;
 };
 
 typedef struct _amoebaGpuContext *amoebaGpuContext;

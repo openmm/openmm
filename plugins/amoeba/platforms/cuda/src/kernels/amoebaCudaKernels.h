@@ -156,5 +156,9 @@ extern unsigned int getThreadsPerBlock( amoebaGpuContext amoebaGpu, unsigned int
 //extern int isNanOrInfinity( double number );
 extern void trackMutualInducedIterations( amoebaGpuContext amoebaGpu, int iteration);
 
+// PME
+
+extern void SetCalculateAmoebaPMESim( amoebaGpuContext amoebaGpu );
+
 #endif //__AMOEBA_GPU_TYPES_H__
 

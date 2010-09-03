@@ -47,6 +47,8 @@ enum CudaAmoebaNonbondedMethod
     AMOEBA_PARTICLE_MESH_EWALD
 };
 
+static const int AMOEBA_PME_ORDER = 5;
+
 struct cudaAmoebaGmxSimulation {
     // Constants
 
@@ -177,6 +179,13 @@ struct cudaAmoebaGmxSimulation {
     float fd;        // electric * 2.0f * (1.0f-dwater)/(1.0f+2.0f*dwater);
     float fq;        // electric * 3.0f * (1.0f-dwater)/(2.0f+3.0f*dwater);
 
+    // PME arrays
+
+    float* pQfac;
+    float4* pThetai1;
+    float4* pThetai2;
+    float4* pThetai3;
+    int4* pIgrid;
 };
 
 #endif
