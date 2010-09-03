@@ -1,46 +1,3 @@
-__kernel void updateGridIndexAndFraction(__global float4* posq, __global int2* pmeAtomGridIndex, float4 periodicBoxSize, float4 invPeriodicBoxSize) {
-    for (int i = get_global_id(0); i < NUM_ATOMS; i += get_global_size(0)) {
-        float4 pos = posq[i];
-        pos.x -= floor(pos.x*invPeriodicBoxSize.x)*periodicBoxSize.x;
-        pos.y -= floor(pos.y*invPeriodicBoxSize.y)*periodicBoxSize.y;
-        pos.z -= floor(pos.z*invPeriodicBoxSize.z)*periodicBoxSize.z;
-        float4 t = (float4) ((pos.x*invPeriodicBoxSize.x)*GRID_SIZE_X,
-                             (pos.y*invPeriodicBoxSize.y)*GRID_SIZE_Y,
-                             (pos.z*invPeriodicBoxSize.z)*GRID_SIZE_Z, 0.0f);
-        int4 gridIndex = (int4) (((int) t.x) % GRID_SIZE_X,
-                                 ((int) t.y) % GRID_SIZE_Y,
-                                 ((int) t.z) % GRID_SIZE_Z, 0);
-        pmeAtomGridIndex[i] = (int2) (i, gridIndex.x*GRID_SIZE_Y*GRID_SIZE_Z+gridIndex.y*GRID_SIZE_Z+gridIndex.z);
-    }
-}
-
-/**
- * For each grid point, find the range of sorted atoms associated with that point.
- */
-
-__kernel void findAtomRangeForGrid(__global int2* pmeAtomGridIndex, __global int* pmeAtomRange) {
-    int start = (NUM_ATOMS*get_global_id(0))/get_global_size(0);
-    int end = (NUM_ATOMS*(get_global_id(0)+1))/get_global_size(0);
-    int last = (start == 0 ? -1 : pmeAtomGridIndex[start-1].y);
-    for (int i = start; i < end; ++i) {
-        int2 atomData = pmeAtomGridIndex[i];
-        int gridIndex = atomData.y;
-        if (gridIndex != last) {
-            for (int j = last+1; j <= gridIndex; ++j)
-                pmeAtomRange[j] = i;
-            last = gridIndex;
-        }
-    }
-
-    // Fill in values beyond the last atom.
-
-    if (get_global_id(0) == get_global_size(0)-1) {
-        int gridSize = GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z;
-        for (int j = last+1; j <= gridSize; ++j)
-            pmeAtomRange[j] = NUM_ATOMS;
-    }
-}
-
 __kernel void updateBsplines(__global float4* posq, __global float4* pmeBsplineTheta, __global float4* pmeBsplineDTheta, __local float4* bsplinesCache, __global int2* pmeAtomGridIndex, float4 periodicBoxSize, float4 invPeriodicBoxSize) {
     const float4 scale = 1.0f/(PME_ORDER-1);
     for (int i = get_global_id(0); i < NUM_ATOMS; i += get_global_size(0)) {
@@ -58,6 +15,10 @@ __kernel void updateBsplines(__global float4* posq, __global float4* pmeBsplineT
                              (pos.y*invPeriodicBoxSize.y)*GRID_SIZE_Y,
                              (pos.z*invPeriodicBoxSize.z)*GRID_SIZE_Z, 0.0f);
         float4 dr = (float4) (t.x-(int) t.x, t.y-(int) t.y, t.z-(int) t.z, 0.0f);
+        int4 gridIndex = (int4) (((int) t.x) % GRID_SIZE_X,
+                                 ((int) t.y) % GRID_SIZE_Y,
+                                 ((int) t.z) % GRID_SIZE_Z, 0);
+        pmeAtomGridIndex[i] = (int2) (i, gridIndex.x*GRID_SIZE_Y*GRID_SIZE_Z+gridIndex.y*GRID_SIZE_Z+gridIndex.z);
         data[PME_ORDER-1] = 0.0f;
         data[1] = dr;
         data[0] = 1.0f-dr;
@@ -80,17 +41,39 @@ __kernel void updateBsplines(__global float4* posq, __global float4* pmeBsplineT
             pmeBsplineDTheta[i+j*NUM_ATOMS] = ddata[j];
         }
     }
+}
 
-    // The grid index won't be needed again.  Reuse that component to hold the z index, thus saving
-    // some work in the charge spreading kernel.
-
+/**
+ * For each grid point, find the range of sorted atoms associated with that point.
+ */
+__kernel void findAtomRangeForGrid(__global int2* pmeAtomGridIndex, __global int* pmeAtomRange, __global float4* posq, float4 periodicBoxSize, float4 invPeriodicBoxSize) {
     int start = (NUM_ATOMS*get_global_id(0))/get_global_size(0);
     int end = (NUM_ATOMS*(get_global_id(0)+1))/get_global_size(0);
+    int last = (start == 0 ? -1 : pmeAtomGridIndex[start-1].y);
     for (int i = start; i < end; ++i) {
+        int2 atomData = pmeAtomGridIndex[i];
+        int gridIndex = atomData.y;
+        if (gridIndex != last) {
+            for (int j = last+1; j <= gridIndex; ++j)
+                pmeAtomRange[j] = i;
+            last = gridIndex;
+        }
+
+        // The grid index won't be needed again.  Reuse that component to hold the z index, thus saving
+        // some work in the charge spreading kernel.
+
         float posz = posq[pmeAtomGridIndex[i].x].z;
         posz -= floor(posz*invPeriodicBoxSize.z)*periodicBoxSize.z;
         int z = ((int) ((posz*invPeriodicBoxSize.z)*GRID_SIZE_Z)) % GRID_SIZE_Z;
         pmeAtomGridIndex[i].y = z;
+    }
+
+    // Fill in values beyond the last atom.
+
+    if (get_global_id(0) == get_global_size(0)-1) {
+        int gridSize = GRID_SIZE_X*GRID_SIZE_Y*GRID_SIZE_Z;
+        for (int j = last+1; j <= gridSize; ++j)
+            pmeAtomRange[j] = NUM_ATOMS;
     }
 }
 

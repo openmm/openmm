@@ -100,83 +100,6 @@ __launch_bounds__(512, 1)
 #else
 __launch_bounds__(256, 1)
 #endif
-void kUpdateGridIndexAndFraction_kernel()
-{
-    unsigned int tnb = blockDim.x * gridDim.x;
-    unsigned int tid = blockIdx.x * blockDim.x + threadIdx.x;
-
-    for (int i = tid; i < cSim.atoms; i += tnb)
-    {
-        float4 posq = cSim.pPosq[i];
-        posq.x -= floor(posq.x*cSim.invPeriodicBoxSizeX)*cSim.periodicBoxSizeX;
-        posq.y -= floor(posq.y*cSim.invPeriodicBoxSizeY)*cSim.periodicBoxSizeY;
-        posq.z -= floor(posq.z*cSim.invPeriodicBoxSizeZ)*cSim.periodicBoxSizeZ;
-        float3 t = make_float3((posq.x*cSim.invPeriodicBoxSizeX)*cSim.pmeGridSize.x,
-                               (posq.y*cSim.invPeriodicBoxSizeY)*cSim.pmeGridSize.y,
-                               (posq.z*cSim.invPeriodicBoxSizeZ)*cSim.pmeGridSize.z);
-        int3 gridIndex = make_int3(((int) t.x) % cSim.pmeGridSize.x,
-                              ((int) t.y) % cSim.pmeGridSize.y,
-                              ((int) t.z) % cSim.pmeGridSize.z);
-        cSim.pPmeAtomGridIndex[i] = make_int2(i, gridIndex.x*cSim.pmeGridSize.y*cSim.pmeGridSize.z+gridIndex.y*cSim.pmeGridSize.z+gridIndex.z);
-    }
-}
-
-/**
- * For each grid point, find the range of sorted atoms associated with that point.
- */
-
-__global__ 
-#if (__CUDA_ARCH__ >= 200)
-__launch_bounds__(1024, 1)
-#elif (__CUDA_ARCH__ >= 130)
-__launch_bounds__(512, 1)
-#else
-__launch_bounds__(256, 1)
-#endif
-void kFindAtomRangeForGrid_kernel()
-{
-    int thread = blockIdx.x*blockDim.x+threadIdx.x;
-    int start = (cSim.atoms*thread)/(blockDim.x*gridDim.x);
-    int end = (cSim.atoms*(thread+1))/(blockDim.x*gridDim.x);
-    int last = (start == 0 ? -1 : cSim.pPmeAtomGridIndex[start-1].y);
-    for (int i = start; i < end; ++i)
-    {
-        int2 atomData = cSim.pPmeAtomGridIndex[i];
-        int gridIndex = atomData.y;
-        if (gridIndex != last)
-        {
-            for (int j = last+1; j <= gridIndex; ++j)
-                cSim.pPmeAtomRange[j] = i;
-            last = gridIndex;
-        }
-
-        // The grid index won't be needed again.  Reuse that component to hold the z index, thus saving
-        // some work in the charge spreading kernel.
-
-        float posz = cSim.pPosq[atomData.x].z;
-        posz -= floor(posz*cSim.invPeriodicBoxSizeZ)*cSim.periodicBoxSizeZ;
-        int z = ((int) ((posz*cSim.invPeriodicBoxSizeZ)*cSim.pmeGridSize.z)) % cSim.pmeGridSize.z;
-        cSim.pPmeAtomGridIndex[i].y = z;
-    }
-
-    // Fill in values beyond the last atom.
-    
-    if (thread == blockDim.x*gridDim.x-1)
-    {
-        int gridSize = cSim.pmeGridSize.x*cSim.pmeGridSize.y*cSim.pmeGridSize.z;
-        for (int j = last+1; j <= gridSize; ++j)
-            cSim.pPmeAtomRange[j] = cSim.atoms;
-    }
-}
-
-__global__ 
-#if (__CUDA_ARCH__ >= 200)
-__launch_bounds__(1024, 1)
-#elif (__CUDA_ARCH__ >= 130)
-__launch_bounds__(512, 1)
-#else
-__launch_bounds__(256, 1)
-#endif
 void kUpdateBsplines_kernel()
 {
     unsigned int    tnb = blockDim.x * gridDim.x;
@@ -205,6 +128,10 @@ void kUpdateBsplines_kernel()
                                (posq.y*cSim.invPeriodicBoxSizeY)*cSim.pmeGridSize.y,
                                (posq.z*cSim.invPeriodicBoxSizeZ)*cSim.pmeGridSize.z);
         float4 dr = make_float4(t.x-(int) t.x, t.y-(int) t.y, t.z-(int) t.z, 0.0f);
+        int3 gridIndex = make_int3(((int) t.x) % cSim.pmeGridSize.x,
+                              ((int) t.y) % cSim.pmeGridSize.y,
+                              ((int) t.z) % cSim.pmeGridSize.z);
+        cSim.pPmeAtomGridIndex[i] = make_int2(i, gridIndex.x*cSim.pmeGridSize.y*cSim.pmeGridSize.z+gridIndex.y*cSim.pmeGridSize.z+gridIndex.z);
 
         data[PME_ORDER - 1] = make_float4(0.0f);
         data[1]            = dr;
@@ -247,6 +174,53 @@ void kUpdateBsplines_kernel()
             cSim.pPmeBsplineTheta[i + j*cSim.atoms] =  data[j];
             cSim.pPmeBsplineDtheta[i + j*cSim.atoms] = ddata[j];
         }
+    }
+}
+
+/**
+ * For each grid point, find the range of sorted atoms associated with that point.
+ */
+__global__
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(1024, 1)
+#elif (__CUDA_ARCH__ >= 130)
+__launch_bounds__(512, 1)
+#else
+__launch_bounds__(256, 1)
+#endif
+void kFindAtomRangeForGrid_kernel()
+{
+    int thread = blockIdx.x*blockDim.x+threadIdx.x;
+    int start = (cSim.atoms*thread)/(blockDim.x*gridDim.x);
+    int end = (cSim.atoms*(thread+1))/(blockDim.x*gridDim.x);
+    int last = (start == 0 ? -1 : cSim.pPmeAtomGridIndex[start-1].y);
+    for (int i = start; i < end; ++i)
+    {
+        int2 atomData = cSim.pPmeAtomGridIndex[i];
+        int gridIndex = atomData.y;
+        if (gridIndex != last)
+        {
+            for (int j = last+1; j <= gridIndex; ++j)
+                cSim.pPmeAtomRange[j] = i;
+            last = gridIndex;
+        }
+
+        // The grid index won't be needed again.  Reuse that component to hold the z index, thus saving
+        // some work in the charge spreading kernel.
+
+        float posz = cSim.pPosq[atomData.x].z;
+        posz -= floor(posz*cSim.invPeriodicBoxSizeZ)*cSim.periodicBoxSizeZ;
+        int z = ((int) ((posz*cSim.invPeriodicBoxSizeZ)*cSim.pmeGridSize.z)) % cSim.pmeGridSize.z;
+        cSim.pPmeAtomGridIndex[i].y = z;
+    }
+
+    // Fill in values beyond the last atom.
+
+    if (thread == blockDim.x*gridDim.x-1)
+    {
+        int gridSize = cSim.pmeGridSize.x*cSim.pmeGridSize.y*cSim.pmeGridSize.z;
+        for (int j = last+1; j <= gridSize; ++j)
+            cSim.pPmeAtomRange[j] = cSim.atoms;
     }
 }
 
@@ -418,14 +392,12 @@ void kCalculatePME(gpuContext gpu)
 //    printf("kCalculatePME\n");
     cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<float4>();
     cudaBindTexture(NULL, &bsplineThetaRef, gpu->psPmeBsplineTheta->_pDevData, &channelDesc, gpu->psPmeBsplineTheta->_length*sizeof(float4));
-    kUpdateGridIndexAndFraction_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
-    LAUNCHERROR("kUpdateGridIndexAndFraction");
-    bbSort(gpu->psPmeAtomGridIndex->_pDevData, gpu->natoms);
-    kFindAtomRangeForGrid_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
-    LAUNCHERROR("kFindAtomRangeForGrid");
     unsigned int threads = 16380/(2*PME_ORDER*sizeof(float4));
     kUpdateBsplines_kernel<<<gpu->sim.blocks, threads, 2*threads*PME_ORDER*sizeof(float4)>>>();
     LAUNCHERROR("kUpdateBsplines");
+    bbSort(gpu->psPmeAtomGridIndex->_pDevData, gpu->natoms);
+    kFindAtomRangeForGrid_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
+    LAUNCHERROR("kFindAtomRangeForGrid");
     kGridSpreadCharge_kernel<<<8*gpu->sim.blocks, 64, 64*(sizeof(float)+sizeof(int4))>>>();
     LAUNCHERROR("kGridSpreadCharge");
     cufftExecC2C(gpu->fftplan, gpu->psPmeGrid->_pDevData, gpu->psPmeGrid->_pDevData, CUFFT_FORWARD);
