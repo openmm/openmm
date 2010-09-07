@@ -227,6 +227,10 @@ struct _amoebaGpuContext {
     CUDAStream<float4>* psThetai2;
     CUDAStream<float4>* psThetai3;
     CUDAStream<int4>* psIgrid;
+    CUDAStream<float>* psPhi;
+    CUDAStream<float>* psPhid;
+    CUDAStream<float>* psPhip;
+    CUDAStream<float>* psPhidp;
 };
 
 typedef struct _amoebaGpuContext *amoebaGpuContext;

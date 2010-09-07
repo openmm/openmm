@@ -80,6 +80,10 @@ amoebaGpuContext amoebaGpuInit( _gpuContext* gpu )
     amoebaGpu->psThetai3 = NULL;
     amoebaGpu->psQfac = NULL;
     amoebaGpu->psIgrid = NULL;
+    amoebaGpu->psPhi = NULL;
+    amoebaGpu->psPhid = NULL;
+    amoebaGpu->psPhip = NULL;
+    amoebaGpu->psPhidp = NULL;
 
     return amoebaGpu;
 }
@@ -2219,6 +2223,14 @@ void gpuSetAmoebaPMEParameters(amoebaGpuContext amoebaGpu, float alpha, int grid
     amoebaGpu->amoebaSim.pThetai3 = amoebaGpu->psThetai3->_pDevData;
     amoebaGpu->psIgrid = new CUDAStream<int4>(gpu->natoms, 1, "igrid");
     amoebaGpu->amoebaSim.pIgrid = amoebaGpu->psIgrid->_pDevData;
+    amoebaGpu->psPhi = new CUDAStream<float>(20*gpu->natoms, 1, "phi");
+    amoebaGpu->amoebaSim.pPhi = amoebaGpu->psPhi->_pDevData;
+    amoebaGpu->psPhid = new CUDAStream<float>(10*gpu->natoms, 1, "phid");
+    amoebaGpu->amoebaSim.pPhid = amoebaGpu->psPhid->_pDevData;
+    amoebaGpu->psPhip = new CUDAStream<float>(10*gpu->natoms, 1, "phip");
+    amoebaGpu->amoebaSim.pPhip = amoebaGpu->psPhip->_pDevData;
+    amoebaGpu->psPhidp = new CUDAStream<float>(20*gpu->natoms, 1, "phidp");
+    amoebaGpu->amoebaSim.pPhidp = amoebaGpu->psPhidp->_pDevData;
     gpu->psPmeAtomGridIndex = new CUDAStream<int2>(gpu->natoms, 1, "PmeAtomGridIndex");
     gpu->sim.pPmeAtomGridIndex = gpu->psPmeAtomGridIndex->_pDevData;
     gpu->psPmeBsplineTheta = new CUDAStream<float4>(1, 1, "PmeBsplineTheta"); // Not actually uesd
@@ -2704,6 +2716,10 @@ void amoebaGpuShutDown(amoebaGpuContext gpu)
         delete gpu->psThetai3;
         delete gpu->psQfac;
         delete gpu->psIgrid;
+        delete gpu->psPhi;
+        delete gpu->psPhid;
+        delete gpu->psPhip;
+        delete gpu->psPhidp;
     }
 
     if( gpu->pMapArray ){

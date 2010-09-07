@@ -106,7 +106,7 @@ __launch_bounds__(256, 1)
 #else
 __launch_bounds__(128, 1)
 #endif
-void computeBsplines_kernel()
+void kComputeBsplines_kernel()
 {
     extern __shared__ float bsplines_cache[]; // size = block_size*pme_order*pme_order
     float* array = &bsplines_cache[threadIdx.x*AMOEBA_PME_ORDER*AMOEBA_PME_ORDER];
@@ -149,16 +149,17 @@ void computeBsplines_kernel()
         int igrid3 = ifr - AMOEBA_PME_ORDER;
         computeBSplinePoint(&cAmoebaSim.pThetai3[i*AMOEBA_PME_ORDER], w, array);
 
+        // Record the grid point.
+
         cAmoebaSim.pIgrid[i] = make_int4(igrid1, igrid2, igrid3, 0);
         cSim.pPmeAtomGridIndex[i] = make_int2(i, igrid1*cSim.pmeGridSize.y*cSim.pmeGridSize.z+igrid2*cSim.pmeGridSize.z+igrid3);
     }
 }
 
-
 __global__
 #if (__CUDA_ARCH__ >= 200)
 __launch_bounds__(1024, 1)
-#elif (__CUDA_ARCH__ >= 130)
+#elif (__CUDA_ARCH__ >= 120)
 __launch_bounds__(512, 1)
 #else
 __launch_bounds__(256, 1)
@@ -245,6 +246,328 @@ void kGridSpreadMultipoles_kernel()
                 }
             }
         }
-        cSim.pPmeGrid[gridIndex] = make_cuComplex(result*sqrt(cSim.epsfac), 0.0f);
+        cSim.pPmeGrid[gridIndex] = make_cuComplex(result, 0.0f);
+    }
+}
+
+__global__
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(1024, 1)
+#elif (__CUDA_ARCH__ >= 120)
+__launch_bounds__(512, 1)
+#else
+__launch_bounds__(256, 1)
+#endif
+void kComputeFixedPotentialFromGrid_kernel()
+{
+    // extract the permanent multipole field at each site
+
+    for (int m = blockIdx.x*blockDim.x+threadIdx.x; m < cSim.atoms; m += blockDim.x*gridDim.x) {
+        int4 grid = cAmoebaSim.pIgrid[m];
+        float tuv000 = 0.0f;
+        float tuv001 = 0.0f;
+        float tuv010 = 0.0f;
+        float tuv100 = 0.0f;
+        float tuv200 = 0.0f;
+        float tuv020 = 0.0f;
+        float tuv002 = 0.0f;
+        float tuv110 = 0.0f;
+        float tuv101 = 0.0f;
+        float tuv011 = 0.0f;
+        float tuv300 = 0.0f;
+        float tuv030 = 0.0f;
+        float tuv003 = 0.0f;
+        float tuv210 = 0.0f;
+        float tuv201 = 0.0f;
+        float tuv120 = 0.0f;
+        float tuv021 = 0.0f;
+        float tuv102 = 0.0f;
+        float tuv012 = 0.0f;
+        float tuv111 = 0.0f;
+        for (int it3 = 0; it3 < AMOEBA_PME_ORDER; it3++) {
+            int k = grid.z+it3-(grid.z+it3 >= cSim.pmeGridSize.z ? cSim.pmeGridSize.z : 0);
+            float4 v = cAmoebaSim.pThetai3[m*AMOEBA_PME_ORDER+it3];
+            float tu00 = 0.0f;
+            float tu10 = 0.0f;
+            float tu01 = 0.0f;
+            float tu20 = 0.0f;
+            float tu11 = 0.0f;
+            float tu02 = 0.0f;
+            float tu30 = 0.0f;
+            float tu21 = 0.0f;
+            float tu12 = 0.0f;
+            float tu03 = 0.0f;
+            for (int it2 = 0; it2 < AMOEBA_PME_ORDER; it2++) {
+                int j = grid.y+it2-(grid.y+it2 >= cSim.pmeGridSize.y ? cSim.pmeGridSize.y : 0);
+                float4 u = cAmoebaSim.pThetai2[m*AMOEBA_PME_ORDER+it2];
+                float4 t = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+                for (int it1 = 0; it1 < AMOEBA_PME_ORDER; it1++) {
+                    int i = grid.x+it1-(grid.x+it1 >= cSim.pmeGridSize.x ? cSim.pmeGridSize.x : 0);
+                    int gridIndex = i*cSim.pmeGridSize.y*cSim.pmeGridSize.z + j*cSim.pmeGridSize.z + k;
+                    float tq = cSim.pPmeGrid[gridIndex].x;
+                    float4 tadd = cAmoebaSim.pThetai1[m*AMOEBA_PME_ORDER+it1];
+                    t.x += tq*tadd.x;
+                    t.y += tq*tadd.y;
+                    t.z += tq*tadd.z;
+                    t.w += tq*tadd.w;
+                }
+                tu00 += t.x*u.x;
+                tu10 += t.y*u.x;
+                tu01 += t.x*u.y;
+                tu20 += t.z*u.x;
+                tu11 += t.y*u.y;
+                tu02 += t.x*u.z;
+                tu30 += t.w*u.x;
+                tu21 += t.z*u.y;
+                tu12 += t.y*u.z;
+                tu03 += t.x*u.w;
+            }
+            tuv000 += tu00*v.x;
+            tuv100 += tu10*v.x;
+            tuv010 += tu01*v.x;
+            tuv001 += tu00*v.y;
+            tuv200 += tu20*v.x;
+            tuv020 += tu02*v.x;
+            tuv002 += tu00*v.z;
+            tuv110 += tu11*v.x;
+            tuv101 += tu10*v.y;
+            tuv011 += tu01*v.y;
+            tuv300 += tu30*v.x;
+            tuv030 += tu03*v.x;
+            tuv003 += tu00*v.w;
+            tuv210 += tu21*v.x;
+            tuv201 += tu20*v.y;
+            tuv120 += tu12*v.x;
+            tuv021 += tu02*v.y;
+            tuv102 += tu10*v.z;
+            tuv012 += tu01*v.z;
+            tuv111 += tu11*v.y;
+        }
+        cAmoebaSim.pPhi[20*m] = tuv000;
+        cAmoebaSim.pPhi[20*m+1] = tuv100;
+        cAmoebaSim.pPhi[20*m+2] = tuv010;
+        cAmoebaSim.pPhi[20*m+3] = tuv001;
+        cAmoebaSim.pPhi[20*m+4] = tuv200;
+        cAmoebaSim.pPhi[20*m+5] = tuv020;
+        cAmoebaSim.pPhi[20*m+6] = tuv002;
+        cAmoebaSim.pPhi[20*m+7] = tuv110;
+        cAmoebaSim.pPhi[20*m+8] = tuv101;
+        cAmoebaSim.pPhi[20*m+9] = tuv011;
+        cAmoebaSim.pPhi[20*m+10] = tuv300;
+        cAmoebaSim.pPhi[20*m+11] = tuv030;
+        cAmoebaSim.pPhi[20*m+12] = tuv003;
+        cAmoebaSim.pPhi[20*m+13] = tuv210;
+        cAmoebaSim.pPhi[20*m+14] = tuv201;
+        cAmoebaSim.pPhi[20*m+15] = tuv120;
+        cAmoebaSim.pPhi[20*m+16] = tuv021;
+        cAmoebaSim.pPhi[20*m+17] = tuv102;
+        cAmoebaSim.pPhi[20*m+18] = tuv012;
+        cAmoebaSim.pPhi[20*m+19] = tuv111;
+    }
+}
+
+__global__
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(1024, 1)
+#elif (__CUDA_ARCH__ >= 120)
+__launch_bounds__(512, 1)
+#else
+__launch_bounds__(256, 1)
+#endif
+void kComputeInducedPotentialFromGrid_kernel()
+{
+    // extract the induced dipole field at each site
+
+    for (int m = blockIdx.x*blockDim.x+threadIdx.x; m < cSim.atoms; m += blockDim.x*gridDim.x) {
+        int4 grid = cAmoebaSim.pIgrid[m];
+        float tuv100_1 = 0.0f;
+        float tuv010_1 = 0.0f;
+        float tuv001_1 = 0.0f;
+        float tuv200_1 = 0.0f;
+        float tuv020_1 = 0.0f;
+        float tuv002_1 = 0.0f;
+        float tuv110_1 = 0.0f;
+        float tuv101_1 = 0.0f;
+        float tuv011_1 = 0.0f;
+        float tuv100_2 = 0.0f;
+        float tuv010_2 = 0.0f;
+        float tuv001_2 = 0.0f;
+        float tuv200_2 = 0.0f;
+        float tuv020_2 = 0.0f;
+        float tuv002_2 = 0.0f;
+        float tuv110_2 = 0.0f;
+        float tuv101_2 = 0.0f;
+        float tuv011_2 = 0.0f;
+        float tuv000 = 0.0f;
+        float tuv001 = 0.0f;
+        float tuv010 = 0.0f;
+        float tuv100 = 0.0f;
+        float tuv200 = 0.0f;
+        float tuv020 = 0.0f;
+        float tuv002 = 0.0f;
+        float tuv110 = 0.0f;
+        float tuv101 = 0.0f;
+        float tuv011 = 0.0f;
+        float tuv300 = 0.0f;
+        float tuv030 = 0.0f;
+        float tuv003 = 0.0f;
+        float tuv210 = 0.0f;
+        float tuv201 = 0.0f;
+        float tuv120 = 0.0f;
+        float tuv021 = 0.0f;
+        float tuv102 = 0.0f;
+        float tuv012 = 0.0f;
+        float tuv111 = 0.0f;
+        for (int it3 = 0; it3 < AMOEBA_PME_ORDER; it3++) {
+            int k = grid.z+it3-(grid.z+it3 >= cSim.pmeGridSize.z ? cSim.pmeGridSize.z : 0);
+            float4 v = cAmoebaSim.pThetai3[m*AMOEBA_PME_ORDER+it3];
+            float tu00_1 = 0.0f;
+            float tu01_1 = 0.0f;
+            float tu10_1 = 0.0f;
+            float tu20_1 = 0.0f;
+            float tu11_1 = 0.0f;
+            float tu02_1 = 0.0f;
+            float tu00_2 = 0.0f;
+            float tu01_2 = 0.0f;
+            float tu10_2 = 0.0f;
+            float tu20_2 = 0.0f;
+            float tu11_2 = 0.0f;
+            float tu02_2 = 0.0f;
+            float tu00 = 0.0f;
+            float tu10 = 0.0f;
+            float tu01 = 0.0f;
+            float tu20 = 0.0f;
+            float tu11 = 0.0f;
+            float tu02 = 0.0f;
+            float tu30 = 0.0f;
+            float tu21 = 0.0f;
+            float tu12 = 0.0f;
+            float tu03 = 0.0f;
+            for (int it2 = 0; it2 < AMOEBA_PME_ORDER; it2++) {
+                int j = grid.y+it2-(grid.y+it2 >= cSim.pmeGridSize.y ? cSim.pmeGridSize.y : 0);
+                float4 u = cAmoebaSim.pThetai2[m*AMOEBA_PME_ORDER+it2];
+                float t0_1 = 0.0f;
+                float t1_1 = 0.0f;
+                float t2_1 = 0.0f;
+                float t0_2 = 0.0f;
+                float t1_2 = 0.0f;
+                float t2_2 = 0.0f;
+                float t3 = 0.0f;
+                for (int it1 = 0; it1 < AMOEBA_PME_ORDER; it1++) {
+                    int i = grid.x+it1-(grid.x+it1 >= cSim.pmeGridSize.x ? cSim.pmeGridSize.x : 0);
+                    int gridIndex = i*cSim.pmeGridSize.y*cSim.pmeGridSize.z + j*cSim.pmeGridSize.z + k;
+                    cufftComplex tq = cSim.pPmeGrid[gridIndex];
+                    float4 tadd = cAmoebaSim.pThetai1[m*AMOEBA_PME_ORDER+it1];
+                    t0_1 += tq.x*tadd.x;
+                    t1_1 += tq.x*tadd.y;
+                    t2_1 += tq.x*tadd.z;
+                    t0_2 += tq.y*tadd.x;
+                    t1_2 += tq.y*tadd.y;
+                    t2_2 += tq.y*tadd.z;
+                    t3 += (tq.x+tq.x)*tadd.w;
+                }
+                tu00_1 += t0_1*u.x;
+                tu10_1 += t1_1*u.x;
+                tu01_1 += t0_1*u.y;
+                tu20_1 += t2_1*u.x;
+                tu11_1 += t1_1*u.y;
+                tu02_1 += t0_1*u.z;
+                tu00_2 += t0_2*u.x;
+                tu10_2 += t1_2*u.x;
+                tu01_2 += t0_2*u.y;
+                tu20_2 += t2_2*u.x;
+                tu11_2 += t1_2*u.y;
+                tu02_2 += t0_2*u.z;
+                float t0 = t0_1 + t0_2;
+                float t1 = t1_1 + t1_2;
+                float t2 = t2_1 + t2_2;
+                tu00 += t0*u.x;
+                tu10 += t1*u.x;
+                tu01 += t0*u.y;
+                tu20 += t2*u.x;
+                tu11 += t1*u.y;
+                tu02 += t0*u.z;
+                tu30 += t3*u.x;
+                tu21 += t2*u.y;
+                tu12 += t1*u.z;
+                tu03 += t0*u.w;
+            }
+            tuv100_1 += tu10_1*v.x;
+            tuv010_1 += tu01_1*v.x;
+            tuv001_1 += tu00_1*v.y;
+            tuv200_1 += tu20_1*v.x;
+            tuv020_1 += tu02_1*v.x;
+            tuv002_1 += tu00_1*v.z;
+            tuv110_1 += tu11_1*v.x;
+            tuv101_1 += tu10_1*v.y;
+            tuv011_1 += tu01_1*v.y;
+            tuv100_2 += tu10_2*v.x;
+            tuv010_2 += tu01_2*v.x;
+            tuv001_2 += tu00_2*v.y;
+            tuv200_2 += tu20_2*v.x;
+            tuv020_2 += tu02_2*v.x;
+            tuv002_2 += tu00_2*v.z;
+            tuv110_2 += tu11_2*v.x;
+            tuv101_2 += tu10_2*v.y;
+            tuv011_2 += tu01_2*v.y;
+            tuv000 += tu00*v.x;
+            tuv100 += tu10*v.x;
+            tuv010 += tu01*v.x;
+            tuv001 += tu00*v.y;
+            tuv200 += tu20*v.x;
+            tuv020 += tu02*v.x;
+            tuv002 += tu00*v.z;
+            tuv110 += tu11*v.x;
+            tuv101 += tu10*v.y;
+            tuv011 += tu01*v.y;
+            tuv300 += tu30*v.x;
+            tuv030 += tu03*v.x;
+            tuv003 += tu00*v.w;
+            tuv210 += tu21*v.x;
+            tuv201 += tu20*v.y;
+            tuv120 += tu12*v.x;
+            tuv021 += tu02*v.y;
+            tuv102 += tu10*v.z;
+            tuv012 += tu01*v.z;
+            tuv111 += tu11*v.y;
+        }
+        cAmoebaSim.pPhid[20*m+1] = tuv100_1;
+        cAmoebaSim.pPhid[20*m+2] = tuv010_1;
+        cAmoebaSim.pPhid[20*m+3] = tuv001_1;
+        cAmoebaSim.pPhid[20*m+4] = tuv200_1;
+        cAmoebaSim.pPhid[20*m+5] = tuv020_1;
+        cAmoebaSim.pPhid[20*m+6] = tuv002_1;
+        cAmoebaSim.pPhid[20*m+7] = tuv110_1;
+        cAmoebaSim.pPhid[20*m+8] = tuv101_1;
+        cAmoebaSim.pPhid[20*m+9] = tuv011_1;
+        cAmoebaSim.pPhip[20*m+1] = tuv100_2;
+        cAmoebaSim.pPhip[20*m+2] = tuv010_2;
+        cAmoebaSim.pPhip[20*m+3] = tuv001_2;
+        cAmoebaSim.pPhip[20*m+4] = tuv200_2;
+        cAmoebaSim.pPhip[20*m+5] = tuv020_2;
+        cAmoebaSim.pPhip[20*m+6] = tuv002_2;
+        cAmoebaSim.pPhip[20*m+7] = tuv110_2;
+        cAmoebaSim.pPhip[20*m+8] = tuv101_2;
+        cAmoebaSim.pPhip[20*m+9] = tuv011_2;
+        cAmoebaSim.pPhidp[20*m] = tuv000;
+        cAmoebaSim.pPhidp[20*m+1] = tuv100;
+        cAmoebaSim.pPhidp[20*m+2] = tuv010;
+        cAmoebaSim.pPhidp[20*m+3] = tuv001;
+        cAmoebaSim.pPhidp[20*m+4] = tuv200;
+        cAmoebaSim.pPhidp[20*m+5] = tuv020;
+        cAmoebaSim.pPhidp[20*m+6] = tuv002;
+        cAmoebaSim.pPhidp[20*m+7] = tuv110;
+        cAmoebaSim.pPhidp[20*m+8] = tuv101;
+        cAmoebaSim.pPhidp[20*m+9] = tuv011;
+        cAmoebaSim.pPhidp[20*m+10] = tuv300;
+        cAmoebaSim.pPhidp[20*m+11] = tuv030;
+        cAmoebaSim.pPhidp[20*m+12] = tuv003;
+        cAmoebaSim.pPhidp[20*m+13] = tuv210;
+        cAmoebaSim.pPhidp[20*m+14] = tuv201;
+        cAmoebaSim.pPhidp[20*m+15] = tuv120;
+        cAmoebaSim.pPhidp[20*m+16] = tuv021;
+        cAmoebaSim.pPhidp[20*m+17] = tuv102;
+        cAmoebaSim.pPhidp[20*m+18] = tuv012;
+        cAmoebaSim.pPhidp[20*m+19] = tuv111;
     }
 }

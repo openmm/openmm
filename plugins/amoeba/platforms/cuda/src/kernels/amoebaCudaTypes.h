@@ -186,6 +186,10 @@ struct cudaAmoebaGmxSimulation {
     float4* pThetai2;
     float4* pThetai3;
     int4* pIgrid;
+    float* pPhi;
+    float* pPhid;
+    float* pPhip;
+    float* pPhidp;
 };
 
 #endif
