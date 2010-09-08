@@ -181,7 +181,6 @@ struct cudaAmoebaGmxSimulation {
 
     // PME arrays
 
-    float* pQfac;
     float4* pThetai1;
     float4* pThetai2;
     float4* pThetai3;

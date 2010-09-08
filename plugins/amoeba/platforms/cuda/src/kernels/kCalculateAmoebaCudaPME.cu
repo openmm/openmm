@@ -10,6 +10,9 @@
 static __constant__ cudaGmxSimulation cSim;
 static __constant__ cudaAmoebaGmxSimulation cAmoebaSim;
 
+/* Cuda compiler on Windows does not recognized "static const float" values */
+#define LOCAL_HACK_PI 3.1415926535897932384626433832795
+
 void SetCalculateAmoebaPMESim(amoebaGpuContext amoebaGpu)
 {
     cudaError_t status;
@@ -27,9 +30,6 @@ void SetCalculateAmoebaPMESim(amoebaGpuContext amoebaGpu)
  */
 __device__ void computeBSplinePoint(float4* thetai, float w, float* array)
 {
-//      real*8 thetai(4,AMOEBA_PME_ORDER)
-//      real*8 array(AMOEBA_PME_ORDER,AMOEBA_PME_ORDER)
-
     // initialization to get to 2nd order recursion
 
     ARRAY(2,2) = w;
@@ -164,7 +164,7 @@ __launch_bounds__(512, 1)
 #else
 __launch_bounds__(256, 1)
 #endif
-void kGridSpreadMultipoles_kernel()
+void kGridSpreadFixedMultipoles_kernel()
 {
     unsigned int numGridPoints = cSim.pmeGridSize.x*cSim.pmeGridSize.y*cSim.pmeGridSize.z;
     unsigned int numThreads = gridDim.x*blockDim.x;
@@ -247,6 +247,134 @@ void kGridSpreadMultipoles_kernel()
             }
         }
         cSim.pPmeGrid[gridIndex] = make_cuComplex(result, 0.0f);
+    }
+}
+
+__global__
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(1024, 1)
+#elif (__CUDA_ARCH__ >= 120)
+__launch_bounds__(512, 1)
+#else
+__launch_bounds__(256, 1)
+#endif
+void kGridSpreadInducedDipoles_kernel()
+{
+    unsigned int numGridPoints = cSim.pmeGridSize.x*cSim.pmeGridSize.y*cSim.pmeGridSize.z;
+    unsigned int numThreads = gridDim.x*blockDim.x;
+    for (int gridIndex = blockIdx.x*blockDim.x+threadIdx.x; gridIndex < numGridPoints; gridIndex += numThreads)
+    {
+        int3 gridPoint;
+        gridPoint.x = gridIndex/(cSim.pmeGridSize.y*cSim.pmeGridSize.z);
+        int remainder = gridIndex-gridPoint.x*cSim.pmeGridSize.y*cSim.pmeGridSize.z;
+        gridPoint.y = remainder/cSim.pmeGridSize.z;
+        gridPoint.z = remainder-gridPoint.y*cSim.pmeGridSize.z;
+        cufftComplex result = make_cuComplex(0.0f, 0.0f);
+        for (int ix = 0; ix < PME_ORDER; ++ix)
+        {
+            int x = gridPoint.x-ix+(gridPoint.x >= ix ? 0 : cSim.pmeGridSize.x);
+            for (int iy = 0; iy < PME_ORDER; ++iy)
+            {
+                int y = gridPoint.y-iy+(gridPoint.y >= iy ? 0 : cSim.pmeGridSize.y);
+                int z1 = gridPoint.z-PME_ORDER+1;
+                z1 += (z1 >= 0 ? 0 : cSim.pmeGridSize.z);
+                int z2 = (z1 < gridPoint.z ? gridPoint.z : cSim.pmeGridSize.z-1);
+                int gridIndex1 = x*cSim.pmeGridSize.y*cSim.pmeGridSize.z+y*cSim.pmeGridSize.z+z1;
+                int gridIndex2 = x*cSim.pmeGridSize.y*cSim.pmeGridSize.z+y*cSim.pmeGridSize.z+z2;
+                int firstAtom = cSim.pPmeAtomRange[gridIndex1];
+                int lastAtom = cSim.pPmeAtomRange[gridIndex2+1];
+                for (int i = firstAtom; i < lastAtom; ++i)
+                {
+                    int2 atomData = cSim.pPmeAtomGridIndex[i];
+                    int atomIndex = atomData.x;
+                    int z = atomData.y;
+                    int iz = gridPoint.z-z+(gridPoint.z >= z ? 0 : cSim.pmeGridSize.z);
+                    float inducedDipoleX = cAmoebaSim.pInducedDipole[atomIndex+3];
+                    float inducedDipoleY = cAmoebaSim.pInducedDipole[atomIndex+3+1];
+                    float inducedDipoleZ = cAmoebaSim.pInducedDipole[atomIndex+3+2];
+                    float inducedDipolePolarX = cAmoebaSim.pInducedDipolePolar[atomIndex+3];
+                    float inducedDipolePolarY = cAmoebaSim.pInducedDipolePolar[atomIndex+3+1];
+                    float inducedDipolePolarZ = cAmoebaSim.pInducedDipolePolar[atomIndex+3+2];
+                    float4 t = cAmoebaSim.pThetai1[atomIndex+ix*cSim.atoms];
+                    float4 u = cAmoebaSim.pThetai2[atomIndex+iy*cSim.atoms];
+                    float4 v = cAmoebaSim.pThetai3[atomIndex+iz*cSim.atoms];
+                    float term01 = inducedDipoleY*u.y*v.x + inducedDipoleZ*u.x*v.y;
+                    float term11 = inducedDipoleX*u.x*v.x;
+                    float term02 = inducedDipolePolarY*u.y*v.x + inducedDipolePolarZ*u.x*v.y;
+                    float term12 = inducedDipolePolarX*u.x*v.x;
+                    result.x += term01*t.x + term11*t.y;
+                    result.y += term02*t.x + term12*t.y;
+                }
+                if (z1 > gridPoint.z)
+                {
+                    gridIndex1 = x*cSim.pmeGridSize.y*cSim.pmeGridSize.z+y*cSim.pmeGridSize.z;
+                    gridIndex2 = x*cSim.pmeGridSize.y*cSim.pmeGridSize.z+y*cSim.pmeGridSize.z+gridPoint.z;
+                    firstAtom = cSim.pPmeAtomRange[gridIndex1];
+                    lastAtom = cSim.pPmeAtomRange[gridIndex2+1];
+                    for (int i = firstAtom; i < lastAtom; ++i)
+                    {
+                        int2 atomData = cSim.pPmeAtomGridIndex[i];
+                        int atomIndex = atomData.x;
+                        int z = atomData.y;
+                        int iz = gridPoint.z-z+(gridPoint.z >= z ? 0 : cSim.pmeGridSize.z);
+                        float inducedDipoleX = cAmoebaSim.pInducedDipole[atomIndex+3];
+                        float inducedDipoleY = cAmoebaSim.pInducedDipole[atomIndex+3+1];
+                        float inducedDipoleZ = cAmoebaSim.pInducedDipole[atomIndex+3+2];
+                        float inducedDipolePolarX = cAmoebaSim.pInducedDipolePolar[atomIndex+3];
+                        float inducedDipolePolarY = cAmoebaSim.pInducedDipolePolar[atomIndex+3+1];
+                        float inducedDipolePolarZ = cAmoebaSim.pInducedDipolePolar[atomIndex+3+2];
+                        float4 t = cAmoebaSim.pThetai1[atomIndex+ix*cSim.atoms];
+                        float4 u = cAmoebaSim.pThetai2[atomIndex+iy*cSim.atoms];
+                        float4 v = cAmoebaSim.pThetai3[atomIndex+iz*cSim.atoms];
+                        float term01 = inducedDipoleY*u.y*v.x + inducedDipoleZ*u.x*v.y;
+                        float term11 = inducedDipoleX*u.x*v.x;
+                        float term02 = inducedDipolePolarY*u.y*v.x + inducedDipolePolarZ*u.x*v.y;
+                        float term12 = inducedDipolePolarX*u.x*v.x;
+                        result.x += term01*t.x + term11*t.y;
+                        result.y += term02*t.x + term12*t.y;
+                    }
+                }
+            }
+        }
+        cSim.pPmeGrid[gridIndex] = result;
+    }
+}
+
+__global__
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(1024, 1)
+#elif (__CUDA_ARCH__ >= 130)
+__launch_bounds__(512, 1)
+#else
+__launch_bounds__(256, 1)
+#endif
+void kAmoebaReciprocalConvolution_kernel()
+{
+    const unsigned int gridSize = cSim.pmeGridSize.x*cSim.pmeGridSize.y*cSim.pmeGridSize.z;
+    float expFactor = LOCAL_HACK_PI*LOCAL_HACK_PI/(cSim.alphaEwald*cSim.alphaEwald);
+    float scaleFactor = 1.0/(LOCAL_HACK_PI*cSim.periodicBoxSizeX*cSim.periodicBoxSizeY*cSim.periodicBoxSizeZ);
+    for (int index = blockIdx.x*blockDim.x+threadIdx.x; index < gridSize; index += blockDim.x*gridDim.x)
+    {
+        int kx = index/(cSim.pmeGridSize.y*cSim.pmeGridSize.z);
+        int remainder = index-kx*cSim.pmeGridSize.y*cSim.pmeGridSize.z;
+        int ky = remainder/cSim.pmeGridSize.z;
+        int kz = remainder-ky*cSim.pmeGridSize.z;
+        if (kx == 0 && ky == 0 && kz == 0)
+            continue;
+        int mx = (kx < (cSim.pmeGridSize.x+1)/2) ? kx : (kx-cSim.pmeGridSize.x);
+        int my = (ky < (cSim.pmeGridSize.y+1)/2) ? ky : (ky-cSim.pmeGridSize.y);
+        int mz = (kz < (cSim.pmeGridSize.z+1)/2) ? kz : (kz-cSim.pmeGridSize.z);
+        float mhx = mx*cSim.invPeriodicBoxSizeX;
+        float mhy = my*cSim.invPeriodicBoxSizeY;
+        float mhz = mz*cSim.invPeriodicBoxSizeZ;
+        float bx = cSim.pPmeBsplineModuli[0][kx];
+        float by = cSim.pPmeBsplineModuli[1][ky];
+        float bz = cSim.pPmeBsplineModuli[2][kz];
+        cuComplex grid = cSim.pPmeGrid[index];
+        float m2 = mhx*mhx+mhy*mhy+mhz*mhz;
+        float denom = m2*bx*by*bz;
+        float eterm = scaleFactor*exp(-expFactor*m2)/denom;
+        cSim.pPmeGrid[index] = make_cuComplex(grid.x*eterm, grid.y*eterm);
     }
 }
 
@@ -570,4 +698,110 @@ void kComputeInducedPotentialFromGrid_kernel()
         cAmoebaSim.pPhidp[20*m+18] = tuv012;
         cAmoebaSim.pPhidp[20*m+19] = tuv111;
     }
+}
+
+__global__
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(1024, 1)
+#elif (__CUDA_ARCH__ >= 120)
+__launch_bounds__(512, 1)
+#else
+__launch_bounds__(256, 1)
+#endif
+void kComputeFixedMultipoleForceAndEnergy_kernel()
+{
+    float multipole[10];
+    const int deriv1[] = {2, 5,  8,  9, 11, 16, 18, 14, 15, 20};
+    const int deriv2[] = {3, 8,  6, 10, 14, 12, 19, 16, 20, 17};
+    const int deriv3[] = {4, 9, 10,  7, 15, 17, 13, 20, 18, 19};
+    float energy = 0.0f;
+    for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < cSim.atoms; i += blockDim.x*gridDim.x) {
+        multipole[0] = cSim.pPosq[i].w;
+        multipole[1] = cAmoebaSim.pLabFrameDipole[i+3];
+        multipole[2] = cAmoebaSim.pLabFrameDipole[i+3+1];
+        multipole[3] = cAmoebaSim.pLabFrameDipole[i+3+2];
+        multipole[4] = cAmoebaSim.pLabFrameQuadrupole[i+9];
+        multipole[5] = 2*cAmoebaSim.pLabFrameQuadrupole[i+9+1];
+        multipole[6] = 2*cAmoebaSim.pLabFrameQuadrupole[i+9+2];
+        multipole[7] = cAmoebaSim.pLabFrameQuadrupole[i+9+4];
+        multipole[8] = 2*cAmoebaSim.pLabFrameQuadrupole[i+9+5];
+        multipole[9] = cAmoebaSim.pLabFrameQuadrupole[i+9+8];
+        float4 f = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+        for (int k = 0; k < 10; k++) {
+            energy += multipole[k]*cAmoebaSim.pPhi[20*i+k];
+            f.x += multipole[k]*cAmoebaSim.pPhi[20*i+deriv1[k]];
+            f.y += multipole[k]*cAmoebaSim.pPhi[20*i+deriv2[k]];
+            f.z += multipole[k]*cAmoebaSim.pPhi[20*i+deriv3[k]];
+        }
+        f.x *= cSim.pmeGridSize.x*cSim.invPeriodicBoxSizeX;
+        f.y *= cSim.pmeGridSize.y*cSim.invPeriodicBoxSizeY;
+        f.z *= cSim.pmeGridSize.z*cSim.invPeriodicBoxSizeZ;
+        float4 force = cSim.pForce4[i];
+        force.x += f.x;
+        force.y += f.y;
+        force.z += f.z;
+        cSim.pForce4[i] = force;
+    }
+    cSim.pEnergy[blockIdx.x*blockDim.x+threadIdx.x] += 0.5f*energy;
+}
+
+__global__
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(1024, 1)
+#elif (__CUDA_ARCH__ >= 120)
+__launch_bounds__(512, 1)
+#else
+__launch_bounds__(256, 1)
+#endif
+void kComputeInducedDipoleForceAndEnergy_kernel()
+{
+    float multipole[10];
+    float inducedDipole[3];
+    float inducedDipolePolar[3];
+    const int deriv1[] = {2, 5,  8,  9, 11, 16, 18, 14, 15, 20};
+    const int deriv2[] = {3, 8,  6, 10, 14, 12, 19, 16, 20, 17};
+    const int deriv3[] = {4, 9, 10,  7, 15, 17, 13, 20, 18, 19};
+    float energy = 0.0f;
+    for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < cSim.atoms; i += blockDim.x*gridDim.x) {
+        multipole[0] = cSim.pPosq[i].w;
+        multipole[1] = cAmoebaSim.pLabFrameDipole[i+3];
+        multipole[2] = cAmoebaSim.pLabFrameDipole[i+3+1];
+        multipole[3] = cAmoebaSim.pLabFrameDipole[i+3+2];
+        multipole[4] = cAmoebaSim.pLabFrameQuadrupole[i+9];
+        multipole[5] = 2*cAmoebaSim.pLabFrameQuadrupole[i+9+1];
+        multipole[6] = 2*cAmoebaSim.pLabFrameQuadrupole[i+9+2];
+        multipole[7] = cAmoebaSim.pLabFrameQuadrupole[i+9+4];
+        multipole[8] = 2*cAmoebaSim.pLabFrameQuadrupole[i+9+5];
+        multipole[9] = cAmoebaSim.pLabFrameQuadrupole[i+9+8];
+        inducedDipole[0] = cAmoebaSim.pInducedDipole[i+3];
+        inducedDipole[1] = cAmoebaSim.pInducedDipole[i+3+1];
+        inducedDipole[2] = cAmoebaSim.pInducedDipole[i+3+2];
+        inducedDipolePolar[0] = cAmoebaSim.pInducedDipolePolar[i+3];
+        inducedDipolePolar[1] = cAmoebaSim.pInducedDipolePolar[i+3+1];
+        inducedDipolePolar[2] = cAmoebaSim.pInducedDipolePolar[i+3+2];
+        float4 f = make_float4(0.0f, 0.0f, 0.0f, 0.0f);
+        for (int k = 0; k < 3; k++) {
+            int j1 = deriv1[k+1];
+            int j2 = deriv1[k+2];
+            int j3 = deriv1[k+3];
+            energy += inducedDipole[k]*cAmoebaSim.pPhi[20*i+k+1];
+            f.x += (inducedDipole[k]+inducedDipolePolar[k])*cAmoebaSim.pPhi[20*i+j1] + inducedDipole[k]*cAmoebaSim.pPhip[20*i+j1] + inducedDipolePolar[k]*cAmoebaSim.pPhid[20*i+j1];
+            f.y += (inducedDipole[k]+inducedDipolePolar[k])*cAmoebaSim.pPhi[20*i+j2] + inducedDipole[k]*cAmoebaSim.pPhip[20*i+j2] + inducedDipolePolar[k]*cAmoebaSim.pPhid[20*i+j2];
+            f.z += (inducedDipole[k]+inducedDipolePolar[k])*cAmoebaSim.pPhi[20*i+j3] + inducedDipole[k]*cAmoebaSim.pPhip[20*i+j3] + inducedDipolePolar[k]*cAmoebaSim.pPhid[20*i+j3];
+        }
+        for (int k = 0; k < 10; k++) {
+            f.x += multipole[k]*cAmoebaSim.pPhidp[20*i+deriv1[k]];
+            f.y += multipole[k]*cAmoebaSim.pPhidp[20*i+deriv2[k]];
+            f.z += multipole[k]*cAmoebaSim.pPhidp[20*i+deriv3[k]];
+        }
+        f.x *= cSim.pmeGridSize.x*cSim.invPeriodicBoxSizeX;
+        f.y *= cSim.pmeGridSize.y*cSim.invPeriodicBoxSizeY;
+        f.z *= cSim.pmeGridSize.z*cSim.invPeriodicBoxSizeZ;
+        float4 force = cSim.pForce4[i];
+        force.x += f.x;
+        force.y += f.y;
+        force.z += f.z;
+        cSim.pForce4[i] = force;
+    }
+    cSim.pEnergy[blockIdx.x*blockDim.x+threadIdx.x] += 0.5f*energy;
 }

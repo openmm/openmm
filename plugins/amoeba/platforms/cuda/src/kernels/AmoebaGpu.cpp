@@ -78,7 +78,6 @@ amoebaGpuContext amoebaGpuInit( _gpuContext* gpu )
     amoebaGpu->psThetai1 = NULL;
     amoebaGpu->psThetai2 = NULL;
     amoebaGpu->psThetai3 = NULL;
-    amoebaGpu->psQfac = NULL;
     amoebaGpu->psIgrid = NULL;
     amoebaGpu->psPhi = NULL;
     amoebaGpu->psPhid = NULL;
@@ -2213,8 +2212,6 @@ void gpuSetAmoebaPMEParameters(amoebaGpuContext amoebaGpu, float alpha, int grid
     gpu->sim.pPmeBsplineModuli[1] = gpu->psPmeBsplineModuli[1]->_pDevData;
     gpu->psPmeBsplineModuli[2] = new CUDAStream<float>(gridSize.z, 1, "PmeBsplineModuli2");
     gpu->sim.pPmeBsplineModuli[2] = gpu->psPmeBsplineModuli[2]->_pDevData;
-    amoebaGpu->psQfac = new CUDAStream<float>(gridSize.x*gridSize.y*gridSize.z, 1, "qfac");
-    amoebaGpu->amoebaSim.pQfac = amoebaGpu->psQfac->_pDevData;
     amoebaGpu->psThetai1 = new CUDAStream<float4>(AMOEBA_PME_ORDER*gpu->natoms, 1, "thetai1");
     amoebaGpu->amoebaSim.pThetai1 = amoebaGpu->psThetai1->_pDevData;
     amoebaGpu->psThetai2 = new CUDAStream<float4>(AMOEBA_PME_ORDER*gpu->natoms, 1, "thetai2");
@@ -2714,7 +2711,6 @@ void amoebaGpuShutDown(amoebaGpuContext gpu)
         delete gpu->psThetai1;
         delete gpu->psThetai2;
         delete gpu->psThetai3;
-        delete gpu->psQfac;
         delete gpu->psIgrid;
         delete gpu->psPhi;
         delete gpu->psPhid;

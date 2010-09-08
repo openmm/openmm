@@ -222,7 +222,6 @@ struct _amoebaGpuContext {
 
     // PME fields
 
-    CUDAStream<float>* psQfac;
     CUDAStream<float4>* psThetai1;
     CUDAStream<float4>* psThetai2;
     CUDAStream<float4>* psThetai3;
