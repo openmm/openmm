@@ -27,6 +27,7 @@
 #include "AmoebaReferenceKernels.h"
 #include "AmoebaReferenceHarmonicBondForce.h"
 #include "AmoebaReferenceHarmonicAngleForce.h"
+#include "AmoebaReferenceHarmonicInPlaneAngleForce.h"
 #include "ReferencePlatform.h"
 #include "openmm/internal/ContextImpl.h"
 //#include "internal/AmoebaMultipoleForceImpl.h"
@@ -155,48 +156,57 @@ double ReferenceCalcAmoebaHarmonicAngleForceKernel::execute(ContextImpl& context
     return static_cast<double>(energy);
 }
 
-//ReferenceCalcAmoebaHarmonicInPlaneAngleForceKernel::ReferenceCalcAmoebaHarmonicInPlaneAngleForceKernel(std::string name, const Platform& platform, System& system) : 
-//          CalcAmoebaHarmonicInPlaneAngleForceKernel(name, platform), system(system) {
-//}
-//
-//ReferenceCalcAmoebaHarmonicInPlaneAngleForceKernel::~ReferenceCalcAmoebaHarmonicInPlaneAngleForceKernel() {
-//}
-//
-//void ReferenceCalcAmoebaHarmonicInPlaneAngleForceKernel::initialize(const System& system, const AmoebaHarmonicInPlaneAngleForce& force) {
-//
-//    numAngles = force.getNumAngles();
-//
-//    std::vector<int> particle1(numAngles);
-//    std::vector<int> particle2(numAngles);
-//    std::vector<int> particle3(numAngles);
-//    std::vector<int> particle4(numAngles);
-//    std::vector<RealOpenMM> angle(numAngles);
-//    std::vector<RealOpenMM> k(numAngles);
-//
-//    for (int i = 0; i < numAngles; i++) {
-//        double angleValue, kQuadratic;
-//        force.getAngleParameters(i, particle1[i], particle2[i], particle3[i], particle4[i], angleValue, kQuadratic);
-//        //angle[i]            = static_cast<RealOpenMM>( (angleValue*RadiansToDegrees) );
-//        angle[i]            = static_cast<RealOpenMM>( angleValue );
-//        k[i]                = static_cast<RealOpenMM>( kQuadratic );
-//    }
-///*
-//    gpuSetAmoebaInPlaneAngleParameters(data.getAmoebaGpu(), particle1, particle2, particle3, particle4, angle, k,
-//                                       static_cast<RealOpenMM>( force.getAmoebaGlobalHarmonicInPlaneAngleCubic()),
-//                                       static_cast<RealOpenMM>( force.getAmoebaGlobalHarmonicInPlaneAngleQuartic()),
-//                                       static_cast<RealOpenMM>( force.getAmoebaGlobalHarmonicInPlaneAnglePentic()),
-//                                       static_cast<RealOpenMM>( force.getAmoebaGlobalHarmonicInPlaneAngleSextic() ) );
-//*/
-//
-//}
-//
-//double ReferenceCalcAmoebaHarmonicInPlaneAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-//    if( data.getAmoebaLocalForcesKernel() == this ){
-//        computeAmoebaLocalForces( data );
-//    }
-//    return 0.0;
-//}
-//
+ReferenceCalcAmoebaHarmonicInPlaneAngleForceKernel::ReferenceCalcAmoebaHarmonicInPlaneAngleForceKernel(std::string name, const Platform& platform, System& system) : 
+          CalcAmoebaHarmonicInPlaneAngleForceKernel(name, platform), system(system) {
+}
+
+ReferenceCalcAmoebaHarmonicInPlaneAngleForceKernel::~ReferenceCalcAmoebaHarmonicInPlaneAngleForceKernel() {
+}
+
+void ReferenceCalcAmoebaHarmonicInPlaneAngleForceKernel::initialize(const System& system, const AmoebaHarmonicInPlaneAngleForce& force) {
+
+    numAngles = force.getNumAngles();
+    for (int ii = 0; ii < numAngles; ii++) {
+        int particle1Index, particle2Index, particle3Index, particle4Index;
+        double angleValue, k;
+        force.getAngleParameters(ii, particle1Index, particle2Index, particle3Index, particle4Index, angleValue, k);
+        particle1.push_back( particle1Index ); 
+        particle2.push_back( particle2Index ); 
+        particle3.push_back( particle3Index ); 
+        particle4.push_back( particle4Index ); 
+        angle.push_back(       static_cast<RealOpenMM>( angleValue ) );
+        kQuadratic.push_back(  static_cast<RealOpenMM>( k ) );
+    }
+    globalHarmonicInPlaneAngleCubic    = static_cast<RealOpenMM>(force.getAmoebaGlobalHarmonicInPlaneAngleCubic());
+    globalHarmonicInPlaneAngleQuartic  = static_cast<RealOpenMM>(force.getAmoebaGlobalHarmonicInPlaneAngleQuartic());
+    globalHarmonicInPlaneAnglePentic   = static_cast<RealOpenMM>(force.getAmoebaGlobalHarmonicInPlaneAnglePentic());
+    globalHarmonicInPlaneAngleSextic   = static_cast<RealOpenMM>(force.getAmoebaGlobalHarmonicInPlaneAngleSextic());
+}
+
+double ReferenceCalcAmoebaHarmonicInPlaneAngleForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    RealOpenMM** posData   = extractPositions(context);
+    RealOpenMM** forceData = extractForces(context);
+    RealOpenMM energy      = 0.0; 
+    for (unsigned int ii = 0; ii < numAngles; ii++) {
+        int particle1Index      = particle1[ii];
+        int particle2Index      = particle2[ii];
+        int particle3Index      = particle3[ii];
+        int particle4Index      = particle4[ii];
+        RealOpenMM idealAngle   = angle[ii];
+        RealOpenMM angleK       = kQuadratic[ii];
+        RealOpenMM* forces[4];
+        forces[0]               = forceData[particle1Index];
+        forces[1]               = forceData[particle2Index];
+        forces[2]               = forceData[particle3Index];
+        forces[3]               = forceData[particle4Index];
+        energy                 += AmoebaReferenceHarmonicInPlaneAngleForce::calculateForceAndEnergy( 
+                                       posData[particle1Index], posData[particle2Index], posData[particle3Index], posData[particle4Index],
+                                       idealAngle, angleK, globalHarmonicInPlaneAngleCubic, globalHarmonicInPlaneAngleQuartic,
+                                       globalHarmonicInPlaneAnglePentic, globalHarmonicInPlaneAngleSextic, forces );
+    }
+    return static_cast<double>(energy);
+}
+
 //ReferenceCalcAmoebaTorsionForceKernel::ReferenceCalcAmoebaTorsionForceKernel(std::string name, const Platform& platform, System& system) :
 //             CalcAmoebaTorsionForceKernel(name, platform), system(system) {
 //    data.incrementKernelCount();

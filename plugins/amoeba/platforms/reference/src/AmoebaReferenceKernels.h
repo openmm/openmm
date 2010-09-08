@@ -106,41 +106,50 @@ private:
     System& system;
 };
 
-// /**
-//  * This kernel is invoked by AmoebaHarmonicInPlaneAngleForce to calculate the forces acting on the system and the energy of the system.
-//  */
-// class ReferenceCalcAmoebaHarmonicInPlaneAngleForceKernel : public CalcAmoebaHarmonicInPlaneAngleForceKernel {
-// public:
-//     ReferenceCalcAmoebaHarmonicInPlaneAngleForceKernel(std::string name, const Platform& platform, AmoebaReferenceData& data, System& system);
-//     ~ReferenceCalcAmoebaHarmonicInPlaneAngleForceKernel();
-//     /**
-//      * Initialize the kernel.
-//      * 
-//      * @param system     the System this kernel will be applied to
-//      * @param force      the AmoebaHarmonicInPlaneAngleForce this kernel will be used for
-//      */
-//     void initialize(const System& system, const AmoebaHarmonicInPlaneAngleForce& force);
-//     /**
-//      * Execute the kernel to calculate the forces and/or energy.
-//      *
-//      * @param context        the context in which to execute this kernel
-//      * @param includeForces  true if forces should be calculated
-//      * @param includeEnergy  true if the energy should be calculated
-//      * @return the potential energy due to the force
-//      */
-//     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-// private:
-//     int numAngles;
-//     AmoebaReferenceData& data;
-//     System& system;
-// };
-// 
+/**
+ * This kernel is invoked by AmoebaHarmonicInPlaneAngleForce to calculate the forces acting on the system and the energy of the system.
+ */
+class ReferenceCalcAmoebaHarmonicInPlaneAngleForceKernel : public CalcAmoebaHarmonicInPlaneAngleForceKernel {
+public:
+    ReferenceCalcAmoebaHarmonicInPlaneAngleForceKernel(std::string name, const Platform& platform, System& system);
+    ~ReferenceCalcAmoebaHarmonicInPlaneAngleForceKernel();
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param force      the AmoebaHarmonicInPlaneAngleForce this kernel will be used for
+     */
+    void initialize(const System& system, const AmoebaHarmonicInPlaneAngleForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+private:
+    int numAngles;
+    std::vector<int>   particle1;
+    std::vector<int>   particle2;
+    std::vector<int>   particle3;
+    std::vector<int>   particle4;
+    std::vector<RealOpenMM> angle;
+    std::vector<RealOpenMM> kQuadratic;
+    RealOpenMM globalHarmonicInPlaneAngleCubic;
+    RealOpenMM globalHarmonicInPlaneAngleQuartic;
+    RealOpenMM globalHarmonicInPlaneAnglePentic;
+    RealOpenMM globalHarmonicInPlaneAngleSextic;
+    System& system;
+};
+
 // /**
 //  * This kernel is invoked by AmoebaTorsionForce to calculate the forces acting on the system and the energy of the system.
 //  */
 // class ReferenceCalcAmoebaTorsionForceKernel : public CalcAmoebaTorsionForceKernel {
 // public:
-//     ReferenceCalcAmoebaTorsionForceKernel(std::string name, const Platform& platform, AmoebaReferenceData& data, System& system);
+//     ReferenceCalcAmoebaTorsionForceKernel(std::string name, const Platform& platform, System& system);
 //     ~ReferenceCalcAmoebaTorsionForceKernel();
 //     /**
 //      * Initialize the kernel.
@@ -160,7 +169,6 @@ private:
 //     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 // private:
 //     int numTorsions;
-//     AmoebaReferenceData& data;
 //     System& system;
 // };
 // 
@@ -169,7 +177,7 @@ private:
 //  */
 // class ReferenceCalcAmoebaPiTorsionForceKernel : public CalcAmoebaPiTorsionForceKernel {
 // public:
-//     ReferenceCalcAmoebaPiTorsionForceKernel(std::string name, const Platform& platform, AmoebaReferenceData& data, System& system);
+//     ReferenceCalcAmoebaPiTorsionForceKernel(std::string name, const Platform& platform, System& system);
 //     ~ReferenceCalcAmoebaPiTorsionForceKernel();
 //     /**
 //      * Initialize the kernel.
@@ -189,7 +197,6 @@ private:
 //     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 // private:
 //     int numPiTorsions;
-//     AmoebaReferenceData& data;
 //     System& system;
 // };
 // 
@@ -198,7 +205,7 @@ private:
 //  */
 // class ReferenceCalcAmoebaStretchBendForceKernel : public CalcAmoebaStretchBendForceKernel {
 // public:
-//     ReferenceCalcAmoebaStretchBendForceKernel(std::string name, const Platform& platform, AmoebaReferenceData& data, System& system);
+//     ReferenceCalcAmoebaStretchBendForceKernel(std::string name, const Platform& platform, System& system);
 //     ~ReferenceCalcAmoebaStretchBendForceKernel();
 //     /**
 //      * Initialize the kernel.
@@ -218,7 +225,6 @@ private:
 //     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 // private:
 //     int numStretchBends;
-//     AmoebaReferenceData& data;
 //     System& system;
 // };
 // 
@@ -227,7 +233,7 @@ private:
 //  */
 // class ReferenceCalcAmoebaOutOfPlaneBendForceKernel : public CalcAmoebaOutOfPlaneBendForceKernel {
 // public:
-//     ReferenceCalcAmoebaOutOfPlaneBendForceKernel(std::string name, const Platform& platform, AmoebaReferenceData& data, System& system);
+//     ReferenceCalcAmoebaOutOfPlaneBendForceKernel(std::string name, const Platform& platform, System& system);
 //     ~ReferenceCalcAmoebaOutOfPlaneBendForceKernel();
 //     /**
 //      * Initialize the kernel.
@@ -247,7 +253,6 @@ private:
 //     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 // private:
 //     int numOutOfPlaneBends;
-//     AmoebaReferenceData& data;
 //     System& system;
 // };
 // 
@@ -256,7 +261,7 @@ private:
 //  */
 // class ReferenceCalcAmoebaTorsionTorsionForceKernel : public CalcAmoebaTorsionTorsionForceKernel {
 // public:
-//     ReferenceCalcAmoebaTorsionTorsionForceKernel(std::string name, const Platform& platform, AmoebaReferenceData& data, System& system);
+//     ReferenceCalcAmoebaTorsionTorsionForceKernel(std::string name, const Platform& platform, System& system);
 //     ~ReferenceCalcAmoebaTorsionTorsionForceKernel();
 //     /**
 //      * Initialize the kernel.
@@ -277,7 +282,6 @@ private:
 // private:
 //     int numTorsionTorsions;
 //     int numTorsionTorsionGrids;
-//     AmoebaReferenceData& data;
 //     System& system;
 // };
 // 
@@ -286,7 +290,7 @@ private:
 //  */
 // class ReferenceCalcAmoebaMultipoleForceKernel : public CalcAmoebaMultipoleForceKernel {
 // public:
-//     ReferenceCalcAmoebaMultipoleForceKernel(std::string name, const Platform& platform, AmoebaReferenceData& data, System& system);
+//     ReferenceCalcAmoebaMultipoleForceKernel(std::string name, const Platform& platform, System& system);
 //     ~ReferenceCalcAmoebaMultipoleForceKernel();
 //     /**
 //      * Initialize the kernel.
@@ -306,7 +310,6 @@ private:
 //     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 // private:
 //     int numMultipoles;
-//     AmoebaReferenceData& data;
 //     System& system;
 // };
 // 
@@ -315,7 +318,7 @@ private:
 //  */
 // class ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel : public CalcAmoebaGeneralizedKirkwoodForceKernel {
 // public:
-//     ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel(std::string name, const Platform& platform, AmoebaReferenceData& data, System& system);
+//     ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel(std::string name, const Platform& platform, System& system);
 //     ~ReferenceCalcAmoebaGeneralizedKirkwoodForceKernel();
 //     /**
 //      * Initialize the kernel.
@@ -334,7 +337,6 @@ private:
 //      */
 //     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 // private:
-//     AmoebaReferenceData& data;
 //     System& system;
 // };
 // 
@@ -343,7 +345,7 @@ private:
 //  */
 // class ReferenceCalcAmoebaVdwForceKernel : public CalcAmoebaVdwForceKernel {
 // public:
-//     ReferenceCalcAmoebaVdwForceKernel(std::string name, const Platform& platform, AmoebaReferenceData& data, System& system);
+//     ReferenceCalcAmoebaVdwForceKernel(std::string name, const Platform& platform, System& system);
 //     ~ReferenceCalcAmoebaVdwForceKernel();
 //     /**
 //      * Initialize the kernel.
@@ -362,7 +364,6 @@ private:
 //      */
 //     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 // private:
-//     AmoebaReferenceData& data;
 //     System& system;
 // };
 // 
@@ -371,7 +372,7 @@ private:
 //  */
 // class ReferenceCalcAmoebaWcaDispersionForceKernel : public CalcAmoebaWcaDispersionForceKernel {
 // public:
-//     ReferenceCalcAmoebaWcaDispersionForceKernel(std::string name, const Platform& platform, AmoebaReferenceData& data, System& system);
+//     ReferenceCalcAmoebaWcaDispersionForceKernel(std::string name, const Platform& platform, System& system);
 //     ~ReferenceCalcAmoebaWcaDispersionForceKernel();
 //     /**
 //      * Initialize the kernel.
@@ -390,7 +391,6 @@ private:
 //      */
 //     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
 // private:
-//     AmoebaReferenceData& data;
 //     System& system;
 // };
 

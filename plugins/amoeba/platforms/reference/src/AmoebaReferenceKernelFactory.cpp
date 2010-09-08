@@ -41,8 +41,8 @@ fprintf( stderr,"In registerKernelFactories AmoebaReferenceKernelFactory\n" ); f
              AmoebaReferenceKernelFactory* factory = new AmoebaReferenceKernelFactory();
              platform.registerKernelFactory(CalcAmoebaHarmonicBondForceKernel::Name(), factory);
              platform.registerKernelFactory(CalcAmoebaHarmonicAngleForceKernel::Name(), factory);
-/*
              platform.registerKernelFactory(CalcAmoebaHarmonicInPlaneAngleForceKernel::Name(), factory);
+/*
              platform.registerKernelFactory(CalcAmoebaTorsionForceKernel::Name(), factory);
              platform.registerKernelFactory(CalcAmoebaPiTorsionForceKernel::Name(), factory);
              platform.registerKernelFactory(CalcAmoebaStretchBendForceKernel::Name(), factory);
@@ -68,10 +68,10 @@ KernelImpl* AmoebaReferenceKernelFactory::createKernelImpl(std::string name, con
     if (name == CalcAmoebaHarmonicAngleForceKernel::Name())
         return new ReferenceCalcAmoebaHarmonicAngleForceKernel(name, platform, context.getSystem());
 
-/*
     if (name == CalcAmoebaHarmonicInPlaneAngleForceKernel::Name())
         return new ReferenceCalcAmoebaHarmonicInPlaneAngleForceKernel(name, platform, context.getSystem());
 
+/*
     if (name == CalcAmoebaTorsionForceKernel::Name())
         return new ReferenceCalcAmoebaTorsionForceKernel(name, platform, context.getSystem());
 
