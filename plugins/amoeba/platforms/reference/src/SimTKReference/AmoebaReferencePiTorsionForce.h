@@ -22,14 +22,14 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __AmoebaReferenceHarmonicAngleForce_H__
-#define __AmoebaReferenceHarmonicAngleForce_H__
+#ifndef __AmoebaReferencePiTorsionForce_H__
+#define __AmoebaReferencePiTorsionForce_H__
 
 #include "SimTKUtilities/SimTKOpenMMRealType.h"
 
 // ---------------------------------------------------------------------------------------
 
-class AmoebaReferenceHarmonicAngleForce {
+class AmoebaReferencePiTorsionForce {
 
 public:
  
@@ -39,7 +39,7 @@ public:
        
        --------------------------------------------------------------------------------------- */
  
-    AmoebaReferenceHarmonicAngleForce( );
+    AmoebaReferencePiTorsionForce( );
  
     /**---------------------------------------------------------------------------------------
        
@@ -47,31 +47,8 @@ public:
        
           --------------------------------------------------------------------------------------- */
  
-    ~AmoebaReferenceHarmonicAngleForce( );
+    ~AmoebaReferencePiTorsionForce( );
  
-    /**---------------------------------------------------------------------------------------
-    
-       Get dEdT and energy prefactor given cosine of angle :: the calculation for different
-       the force types is identical 
-    
-       @param  cosine               cosine of angle
-       @param  idealAngle           ideal angle
-       @param  angleK               angle k (quadratic prefactor)
-       @param  angleCubic           cubic prefactor
-       @param  angleQuartic         quartiic prefactor
-       @param  anglePentic          pentic prefactor
-       @param  angleSextic          sextic prefactor
-       @param  dEdR                 dEdR
-    
-       @return energy
-    
-       --------------------------------------------------------------------------------------- */
-    
-    static RealOpenMM getPrefactorsGivenAngleCosine( RealOpenMM cosine, RealOpenMM idealAngle, RealOpenMM angleK,
-                                                     RealOpenMM angleCubic,     RealOpenMM angleQuartic,
-                                                     RealOpenMM anglePentic,    RealOpenMM angleSextic,
-                                                     RealOpenMM* dEdR );
-    
     /**---------------------------------------------------------------------------------------
     
        Calculate Amoeba harmonic angle ixn (force and energy)
@@ -79,12 +56,10 @@ public:
        @param positionAtomA           Cartesian coordinates of atom A
        @param positionAtomB           Cartesian coordinates of atom B
        @param positionAtomC           Cartesian coordinates of atom C
-       @param angleLength             angle
-       @param angleK                  quadratic angle force
-       @param angleCubic              cubic angle force parameter
-       @param angleQuartic            quartic angle force parameter
-       @param anglePentic             pentic angle force parameter
-       @param angleSextic             sextic angle force parameter
+       @param positionAtomD           Cartesian coordinates of atom D
+       @param positionAtomE           Cartesian coordinates of atom E
+       @param positionAtomF           Cartesian coordinates of atom F
+       @param kTorsion                k-torsion parameter
        @param forces                  force vector
     
        @return energy
@@ -92,14 +67,12 @@ public:
        --------------------------------------------------------------------------------------- */
     
     static RealOpenMM calculateForceAndEnergy( const RealOpenMM* positionAtomA, const RealOpenMM* positionAtomB,
-                                               const RealOpenMM* positionAtomC,
-                                               RealOpenMM angle,          RealOpenMM angleK,
-                                               RealOpenMM angleCubic,     RealOpenMM angleQuartic,
-                                               RealOpenMM anglePentic,    RealOpenMM angleSextic,
-                                               RealOpenMM** forces );
+                                               const RealOpenMM* positionAtomC, const RealOpenMM* positionAtomD,
+                                               const RealOpenMM* positionAtomE, const RealOpenMM* positionAtomF,
+                                               RealOpenMM kTorsion, RealOpenMM** forces );
          
 };
 
 // ---------------------------------------------------------------------------------------
 
-#endif // _AmoebaReferenceHarmonicAngleForce___
+#endif // _AmoebaReferencePiTorsionForce___

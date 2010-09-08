@@ -22,8 +22,8 @@
  * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef __AmoebaReferenceHarmonicBondForce_H__
-#define __AmoebaReferenceHarmonicBondForce_H__
+#ifndef __AmoebaReferenceForce_H__
+#define __AmoebaReferenceForce_H__
 
 #include "SimTKUtilities/SimTKOpenMMRealType.h"
 #include <vector>
@@ -118,4 +118,4 @@ public:
 
 // ---------------------------------------------------------------------------------------
 
-#endif // _AmoebaReferenceHarmonicBondForce___
+#endif // _AmoebaReferenceForce___

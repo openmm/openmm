@@ -112,11 +112,11 @@ RealOpenMM AmoebaReferenceHarmonicInPlaneAngleForce::getPrefactorsGivenAngleCosi
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM AmoebaReferenceHarmonicInPlaneAngleForce::calculateForceAndEnergy( RealOpenMM* positionAtomA, RealOpenMM* positionAtomB,
-                                                                              RealOpenMM* positionAtomC, RealOpenMM* positionAtomD,
-                                                                              RealOpenMM angle,          RealOpenMM angleK,
-                                                                              RealOpenMM angleCubic,     RealOpenMM angleQuartic,
-                                                                              RealOpenMM anglePentic,    RealOpenMM angleSextic,
+RealOpenMM AmoebaReferenceHarmonicInPlaneAngleForce::calculateForceAndEnergy( const RealOpenMM* positionAtomA, const RealOpenMM* positionAtomB,
+                                                                              const RealOpenMM* positionAtomC, const RealOpenMM* positionAtomD,
+                                                                              RealOpenMM angle,                      RealOpenMM angleK,
+                                                                              RealOpenMM angleCubic,                 RealOpenMM angleQuartic,
+                                                                              RealOpenMM anglePentic,                RealOpenMM angleSextic,
                                                                               RealOpenMM** forces ){
 
    // ---------------------------------------------------------------------------------------
@@ -134,6 +134,7 @@ RealOpenMM AmoebaReferenceHarmonicInPlaneAngleForce::calculateForceAndEnergy( Re
     // AP  = A - P
     // CP  = A - P
     // M   = CP x AP
+
     enum { AD, BD, CD, T, AP, P, CP, M, APxM, CPxM, ADxBD, BDxCD, TxCD, ADxT, dBxAD, CDxdB, LastDeltaAtomIndex };
 
     std::vector<RealOpenMM> deltaR[LastDeltaAtomIndex];

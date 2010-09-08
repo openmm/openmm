@@ -111,8 +111,8 @@ RealOpenMM AmoebaReferenceHarmonicAngleForce::getPrefactorsGivenAngleCosine( Rea
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM AmoebaReferenceHarmonicAngleForce::calculateForceAndEnergy( RealOpenMM* positionAtomA, RealOpenMM* positionAtomB,
-                                                                       RealOpenMM* positionAtomC,
+RealOpenMM AmoebaReferenceHarmonicAngleForce::calculateForceAndEnergy( const RealOpenMM* positionAtomA, const RealOpenMM* positionAtomB,
+                                                                       const RealOpenMM* positionAtomC,
                                                                        RealOpenMM angle,          RealOpenMM angleK,
                                                                        RealOpenMM angleCubic,     RealOpenMM angleQuartic,
                                                                        RealOpenMM anglePentic,    RealOpenMM angleSextic,

@@ -144,62 +144,76 @@ private:
     System& system;
 };
 
-// /**
-//  * This kernel is invoked by AmoebaTorsionForce to calculate the forces acting on the system and the energy of the system.
-//  */
-// class ReferenceCalcAmoebaTorsionForceKernel : public CalcAmoebaTorsionForceKernel {
-// public:
-//     ReferenceCalcAmoebaTorsionForceKernel(std::string name, const Platform& platform, System& system);
-//     ~ReferenceCalcAmoebaTorsionForceKernel();
-//     /**
-//      * Initialize the kernel.
-//      * 
-//      * @param system     the System this kernel will be applied to
-//      * @param force      the AmoebaTorsionForce this kernel will be used for
-//      */
-//     void initialize(const System& system, const AmoebaTorsionForce& force);
-//     /**
-//      * Execute the kernel to calculate the forces and/or energy.
-//      *
-//      * @param context        the context in which to execute this kernel
-//      * @param includeForces  true if forces should be calculated
-//      * @param includeEnergy  true if the energy should be calculated
-//      * @return the potential energy due to the force
-//      */
-//     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-// private:
-//     int numTorsions;
-//     System& system;
-// };
-// 
-// /**
-//  * This kernel is invoked by AmoebaPiTorsionForce to calculate the forces acting on the system and the energy of the system.
-//  */
-// class ReferenceCalcAmoebaPiTorsionForceKernel : public CalcAmoebaPiTorsionForceKernel {
-// public:
-//     ReferenceCalcAmoebaPiTorsionForceKernel(std::string name, const Platform& platform, System& system);
-//     ~ReferenceCalcAmoebaPiTorsionForceKernel();
-//     /**
-//      * Initialize the kernel.
-//      * 
-//      * @param system     the System this kernel will be applied to
-//      * @param force      the AmoebaPiTorsionForce this kernel will be used for
-//      */
-//     void initialize(const System& system, const AmoebaPiTorsionForce& force);
-//     /**
-//      * Execute the kernel to calculate the forces and/or energy.
-//      *
-//      * @param context        the context in which to execute this kernel
-//      * @param includeForces  true if forces should be calculated
-//      * @param includeEnergy  true if the energy should be calculated
-//      * @return the potential energy due to the force
-//      */
-//     double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
-// private:
-//     int numPiTorsions;
-//     System& system;
-// };
-// 
+/**
+ * This kernel is invoked by AmoebaTorsionForce to calculate the forces acting on the system and the energy of the system.
+ */
+class ReferenceCalcAmoebaTorsionForceKernel : public CalcAmoebaTorsionForceKernel {
+public:
+    ReferenceCalcAmoebaTorsionForceKernel(std::string name, const Platform& platform, System& system);
+    ~ReferenceCalcAmoebaTorsionForceKernel();
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param force      the AmoebaTorsionForce this kernel will be used for
+     */
+    void initialize(const System& system, const AmoebaTorsionForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+private:
+    int numTorsions;
+    std::vector<int>   particle1;
+    std::vector<int>   particle2;
+    std::vector<int>   particle3;
+    std::vector<int>   particle4;
+    std::vector< std::vector<RealOpenMM> > torsionParameters1;
+    std::vector< std::vector<RealOpenMM> > torsionParameters2;
+    std::vector< std::vector<RealOpenMM> > torsionParameters3;
+    System& system;
+};
+
+/**
+ * This kernel is invoked by AmoebaPiTorsionForce to calculate the forces acting on the system and the energy of the system.
+ */
+class ReferenceCalcAmoebaPiTorsionForceKernel : public CalcAmoebaPiTorsionForceKernel {
+public:
+    ReferenceCalcAmoebaPiTorsionForceKernel(std::string name, const Platform& platform, System& system);
+    ~ReferenceCalcAmoebaPiTorsionForceKernel();
+    /**
+     * Initialize the kernel.
+     * 
+     * @param system     the System this kernel will be applied to
+     * @param force      the AmoebaPiTorsionForce this kernel will be used for
+     */
+    void initialize(const System& system, const AmoebaPiTorsionForce& force);
+    /**
+     * Execute the kernel to calculate the forces and/or energy.
+     *
+     * @param context        the context in which to execute this kernel
+     * @param includeForces  true if forces should be calculated
+     * @param includeEnergy  true if the energy should be calculated
+     * @return the potential energy due to the force
+     */
+    double execute(ContextImpl& context, bool includeForces, bool includeEnergy);
+private:
+    int numPiTorsions;
+    std::vector<int>   particle1;
+    std::vector<int>   particle2;
+    std::vector<int>   particle3;
+    std::vector<int>   particle4;
+    std::vector<int>   particle5;
+    std::vector<int>   particle6;
+    std::vector<RealOpenMM> kTorsion;
+    System& system;
+};
+
 // /**
 //  * This kernel is invoked by AmoebaStretchBendForce to calculate the forces acting on the system and the energy of the system.
 //  */

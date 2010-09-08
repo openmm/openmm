@@ -80,20 +80,20 @@ public:
        @param positionAtomB           Cartesian coordinates of atom B
        @param positionAtomC           Cartesian coordinates of atom C
        @param positionAtomD           Cartesian coordinates of atom D
-       @param angleLength             angle
-       @param angleK                  quadratic angle force
-       @param angleCubic              cubic angle force parameter
-       @param angleQuartic            quartic angle force parameter
-       @param anglePentic             pentic angle force parameter
-       @param angleSextic             sextic angle force parameter
+       @param angle                   angle
+       @param angleK                  quadratic angle force parameter
+       @param angleCubic              cubic     angle force parameter
+       @param angleQuartic            quartic   angle force parameter
+       @param anglePentic             pentic    angle force parameter
+       @param angleSextic             sextic    angle force parameter
        @param forces                  force vector
     
        @return energy
     
        --------------------------------------------------------------------------------------- */
     
-    static RealOpenMM calculateForceAndEnergy( RealOpenMM* positionAtomA, RealOpenMM* positionAtomB,
-                                               RealOpenMM* positionAtomC, RealOpenMM* positionAtomD,
+    static RealOpenMM calculateForceAndEnergy( const RealOpenMM* positionAtomA, const RealOpenMM* positionAtomB,
+                                               const RealOpenMM* positionAtomC, const RealOpenMM* positionAtomD,
                                                RealOpenMM angle,          RealOpenMM angleK,
                                                RealOpenMM angleCubic,     RealOpenMM angleQuartic,
                                                RealOpenMM anglePentic,    RealOpenMM angleSextic,

@@ -31,25 +31,23 @@
 
 class AmoebaReferenceHarmonicBondForce {
 
-    private:
+public:
  
-    public:
- 
-       /**---------------------------------------------------------------------------------------
+    /**---------------------------------------------------------------------------------------
        
-          Constructor
+        Constructor
        
-          --------------------------------------------------------------------------------------- */
+        --------------------------------------------------------------------------------------- */
  
-        AmoebaReferenceHarmonicBondForce( ){};
+    AmoebaReferenceHarmonicBondForce( ){};
  
-       /**---------------------------------------------------------------------------------------
+    /**---------------------------------------------------------------------------------------
        
-          Destructor
+        Destructor
        
-          --------------------------------------------------------------------------------------- */
+        --------------------------------------------------------------------------------------- */
  
-        ~AmoebaReferenceHarmonicBondForce( );
+    ~AmoebaReferenceHarmonicBondForce( );
  
  
      /**---------------------------------------------------------------------------------------
@@ -68,7 +66,7 @@ class AmoebaReferenceHarmonicBondForce {
      
         --------------------------------------------------------------------------------------- */
      
-    static RealOpenMM calculateForceAndEnergy( RealOpenMM* positionAtomA, RealOpenMM* positionAtomB,
+    static RealOpenMM calculateForceAndEnergy( const RealOpenMM* positionAtomA, const RealOpenMM* positionAtomB,
                                                RealOpenMM bondLength, RealOpenMM bondK,
                                                RealOpenMM bondCubic, RealOpenMM bondQuartic,
                                                RealOpenMM** forces );

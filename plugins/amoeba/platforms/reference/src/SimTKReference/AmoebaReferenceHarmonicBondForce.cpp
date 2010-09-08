@@ -23,6 +23,7 @@
  */
 
 #include "AmoebaReferenceHarmonicBondForce.h"
+#include "AmoebaReferenceForce.h"
 #include <vector>
 
 /**---------------------------------------------------------------------------------------
@@ -41,7 +42,7 @@
 
    --------------------------------------------------------------------------------------- */
 
-RealOpenMM AmoebaReferenceHarmonicBondForce::calculateForceAndEnergy( RealOpenMM* positionAtomA, RealOpenMM* positionAtomB,
+RealOpenMM AmoebaReferenceHarmonicBondForce::calculateForceAndEnergy( const RealOpenMM* positionAtomA, const RealOpenMM* positionAtomB,
                                                                       RealOpenMM bondLength, RealOpenMM bondK,
                                                                       RealOpenMM bondCubic, RealOpenMM bondQuartic,
                                                                       RealOpenMM** forces ){
@@ -60,11 +61,8 @@ RealOpenMM AmoebaReferenceHarmonicBondForce::calculateForceAndEnergy( RealOpenMM
    // get deltaR, R2, and R between 2 atoms
 
    std::vector<RealOpenMM> deltaR;
-   deltaR.push_back( positionAtomB[0] - positionAtomA[0] );
-   deltaR.push_back( positionAtomB[1] - positionAtomA[1] );
-   deltaR.push_back( positionAtomB[2] - positionAtomA[2] );
-
-   RealOpenMM r               = SQRT( deltaR[0]*deltaR[0] + deltaR[1]*deltaR[1] + deltaR[2]*deltaR[2] );
+   AmoebaReferenceForce::loadDeltaR( positionAtomA, positionAtomB, deltaR );
+   RealOpenMM r               = AmoebaReferenceForce::getNorm3( deltaR );
 
    // deltaIdeal = r - r_0
 

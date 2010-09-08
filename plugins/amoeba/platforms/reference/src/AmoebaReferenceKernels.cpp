@@ -28,6 +28,8 @@
 #include "AmoebaReferenceHarmonicBondForce.h"
 #include "AmoebaReferenceHarmonicAngleForce.h"
 #include "AmoebaReferenceHarmonicInPlaneAngleForce.h"
+#include "AmoebaReferenceTorsionForce.h"
+#include "AmoebaReferencePiTorsionForce.h"
 #include "ReferencePlatform.h"
 #include "openmm/internal/ContextImpl.h"
 //#include "internal/AmoebaMultipoleForceImpl.h"
@@ -207,98 +209,123 @@ double ReferenceCalcAmoebaHarmonicInPlaneAngleForceKernel::execute(ContextImpl& 
     return static_cast<double>(energy);
 }
 
-//ReferenceCalcAmoebaTorsionForceKernel::ReferenceCalcAmoebaTorsionForceKernel(std::string name, const Platform& platform, System& system) :
-//             CalcAmoebaTorsionForceKernel(name, platform), system(system) {
-//    data.incrementKernelCount();
-//}
-//
-//ReferenceCalcAmoebaTorsionForceKernel::~ReferenceCalcAmoebaTorsionForceKernel() {
-//    data.decrementKernelCount();
-//}
-//
-//void ReferenceCalcAmoebaTorsionForceKernel::initialize(const System& system, const AmoebaTorsionForce& force) {
-//
-//    data.setAmoebaLocalForcesKernel( this );
-//    numTorsions                     = force.getNumTorsions();
-//    std::vector<int> particle1(numTorsions);
-//    std::vector<int> particle2(numTorsions);
-//    std::vector<int> particle3(numTorsions);
-//    std::vector<int> particle4(numTorsions);
-//
-//    std::vector< std::vector<RealOpenMM> > torsionParameters1(numTorsions);
-//    std::vector< std::vector<RealOpenMM> > torsionParameters2(numTorsions);
-//    std::vector< std::vector<RealOpenMM> > torsionParameters3(numTorsions);
-//
-//    for (int i = 0; i < numTorsions; i++) {
-//
-//        std::vector<double> torsionParameter1;
-//        std::vector<double> torsionParameter2;
-//        std::vector<double> torsionParameter3;
-//
-//        std::vector<RealOpenMM> torsionParameters1F(3);
-//        std::vector<RealOpenMM> torsionParameters2F(3);
-//        std::vector<RealOpenMM> torsionParameters3F(3);
-//
-//        force.getTorsionParameters(i, particle1[i], particle2[i], particle3[i], particle4[i], torsionParameter1, torsionParameter2, torsionParameter3 );
-//        for ( unsigned int jj = 0; jj < torsionParameter1.size(); jj++) {
-//            torsionParameters1F[jj] = static_cast<RealOpenMM>(torsionParameter1[jj]);
-//            torsionParameters2F[jj] = static_cast<RealOpenMM>(torsionParameter2[jj]);
-//            torsionParameters3F[jj] = static_cast<RealOpenMM>(torsionParameter3[jj]);
-//        }
-//        torsionParameters1[i] = torsionParameters1F;
-//        torsionParameters2[i] = torsionParameters2F;
-//        torsionParameters3[i] = torsionParameters3F;
-//    }
-//    gpuSetAmoebaTorsionParameters(data.getAmoebaGpu(), particle1, particle2, particle3, particle4, torsionParameters1, torsionParameters2, torsionParameters3 );
-//
-//}
-//
-//double ReferenceCalcAmoebaTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-//    if( data.getAmoebaLocalForcesKernel() == this ){
-//        computeAmoebaLocalForces( data );
-//    }
-//    return 0.0;
-//}
-//
-//ReferenceCalcAmoebaPiTorsionForceKernel::ReferenceCalcAmoebaPiTorsionForceKernel(std::string name, const Platform& platform, System& system) :
-//         CalcAmoebaPiTorsionForceKernel(name, platform), system(system) {
-//    data.incrementKernelCount();
-//}
-//
-//ReferenceCalcAmoebaPiTorsionForceKernel::~ReferenceCalcAmoebaPiTorsionForceKernel() {
-//    data.decrementKernelCount();
-//}
-//
-//void ReferenceCalcAmoebaPiTorsionForceKernel::initialize(const System& system, const AmoebaPiTorsionForce& force) {
-//
-//    data.setAmoebaLocalForcesKernel( this );
-//    numPiTorsions                     = force.getNumPiTorsions();
-//
-//    std::vector<int> particle1(numPiTorsions);
-//    std::vector<int> particle2(numPiTorsions);
-//    std::vector<int> particle3(numPiTorsions);
-//    std::vector<int> particle4(numPiTorsions);
-//    std::vector<int> particle5(numPiTorsions);
-//    std::vector<int> particle6(numPiTorsions);
-//
-//    std::vector<RealOpenMM> torsionKParameters(numPiTorsions);
-//
-//    for (int i = 0; i < numPiTorsions; i++) {
-//
-//        double torsionKParameter;
-//
-//        force.getPiTorsionParameters(i, particle1[i], particle2[i], particle3[i], particle4[i], particle5[i], particle6[i], torsionKParameter);
-//        torsionKParameters[i] = static_cast<RealOpenMM>(torsionKParameter);
-//    }
-//    gpuSetAmoebaPiTorsionParameters(data.getAmoebaGpu(), particle1, particle2, particle3, particle4, particle5, particle6, torsionKParameters);
-//}
-//
-//double ReferenceCalcAmoebaPiTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-//    if( data.getAmoebaLocalForcesKernel() == this ){
-//        computeAmoebaLocalForces( data );
-//    }
-//    return 0.0;
-//}
+ReferenceCalcAmoebaTorsionForceKernel::ReferenceCalcAmoebaTorsionForceKernel(std::string name, const Platform& platform, System& system) :
+             CalcAmoebaTorsionForceKernel(name, platform), system(system) {
+}
+
+ReferenceCalcAmoebaTorsionForceKernel::~ReferenceCalcAmoebaTorsionForceKernel() {
+}
+
+void ReferenceCalcAmoebaTorsionForceKernel::initialize(const System& system, const AmoebaTorsionForce& force) {
+
+    numTorsions = force.getNumTorsions();
+    torsionParameters1.resize( numTorsions );
+    torsionParameters2.resize( numTorsions );
+    torsionParameters3.resize( numTorsions );
+    for (int ii = 0; ii < numTorsions; ii++) {
+
+        int particle1Index, particle2Index, particle3Index, particle4Index;
+        std::vector<double> torsionParameter1;
+        std::vector<double> torsionParameter2;
+        std::vector<double> torsionParameter3;
+
+        std::vector<RealOpenMM> torsionParameters1F(3);
+        std::vector<RealOpenMM> torsionParameters2F(3);
+        std::vector<RealOpenMM> torsionParameters3F(3);
+
+        force.getTorsionParameters(ii, particle1Index, particle2Index, particle3Index, particle4Index, torsionParameter1, torsionParameter2, torsionParameter3 );
+        particle1.push_back( particle1Index ); 
+        particle2.push_back( particle2Index ); 
+        particle3.push_back( particle3Index ); 
+        particle4.push_back( particle4Index ); 
+        torsionParameters1[ii].resize( torsionParameter1.size() );
+        torsionParameters2[ii].resize( torsionParameter2.size() );
+        torsionParameters3[ii].resize( torsionParameter3.size() );
+        for ( unsigned int jj = 0; jj < torsionParameter1.size(); jj++) {
+            torsionParameters1[ii][jj] = static_cast<RealOpenMM>(torsionParameter1[jj]);
+            torsionParameters2[ii][jj] = static_cast<RealOpenMM>(torsionParameter2[jj]);
+            torsionParameters3[ii][jj] = static_cast<RealOpenMM>(torsionParameter3[jj]);
+        }
+    }
+}
+
+double ReferenceCalcAmoebaTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    RealOpenMM** posData   = extractPositions(context);
+    RealOpenMM** forceData = extractForces(context);
+    RealOpenMM energy      = 0.0; 
+    for (unsigned int ii = 0; ii < numTorsions; ii++) {
+
+        int particle1Index      = particle1[ii];
+        int particle2Index      = particle2[ii];
+        int particle3Index      = particle3[ii];
+        int particle4Index      = particle4[ii];
+
+        RealOpenMM* forces[4];
+        forces[0]               = forceData[particle1Index];
+        forces[1]               = forceData[particle2Index];
+        forces[2]               = forceData[particle3Index];
+        forces[3]               = forceData[particle4Index];
+
+        energy                 += AmoebaReferenceTorsionForce::calculateForceAndEnergy( 
+                                       posData[particle1Index], posData[particle2Index], posData[particle3Index], posData[particle4Index],
+                                       torsionParameters1[ii], torsionParameters2[ii], torsionParameters3[ii],  forces );
+    }
+    return static_cast<double>(energy);
+}
+
+ReferenceCalcAmoebaPiTorsionForceKernel::ReferenceCalcAmoebaPiTorsionForceKernel(std::string name, const Platform& platform, System& system) :
+         CalcAmoebaPiTorsionForceKernel(name, platform), system(system) {
+}
+
+ReferenceCalcAmoebaPiTorsionForceKernel::~ReferenceCalcAmoebaPiTorsionForceKernel() {
+}
+
+void ReferenceCalcAmoebaPiTorsionForceKernel::initialize(const System& system, const AmoebaPiTorsionForce& force) {
+
+    numPiTorsions                     = force.getNumPiTorsions();
+    for (int ii = 0; ii < numPiTorsions; ii++) {
+
+        int particle1Index, particle2Index, particle3Index, particle4Index, particle5Index, particle6Index;
+        double kTorsionParameter;
+        force.getPiTorsionParameters(ii, particle1Index, particle2Index, particle3Index, particle4Index, particle5Index, particle6Index, kTorsionParameter );
+        particle1.push_back( particle1Index ); 
+        particle2.push_back( particle2Index ); 
+        particle3.push_back( particle3Index ); 
+        particle4.push_back( particle4Index ); 
+        particle5.push_back( particle5Index ); 
+        particle6.push_back( particle6Index ); 
+        kTorsion.push_back( static_cast<RealOpenMM>(kTorsionParameter) );
+    }
+}
+
+double ReferenceCalcAmoebaPiTorsionForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    RealOpenMM** posData   = extractPositions(context);
+    RealOpenMM** forceData = extractForces(context);
+    RealOpenMM energy      = 0.0; 
+    for( unsigned int ii = 0; ii < numPiTorsions; ii++ ){
+
+        int particle1Index      = particle1[ii];
+        int particle2Index      = particle2[ii];
+        int particle3Index      = particle3[ii];
+        int particle4Index      = particle4[ii];
+        int particle5Index      = particle5[ii];
+        int particle6Index      = particle6[ii];
+
+        RealOpenMM* forces[6];
+        forces[0]               = forceData[particle1Index];
+        forces[1]               = forceData[particle2Index];
+        forces[2]               = forceData[particle3Index];
+        forces[3]               = forceData[particle4Index];
+        forces[4]               = forceData[particle5Index];
+        forces[5]               = forceData[particle6Index];
+
+        energy                 += AmoebaReferencePiTorsionForce::calculateForceAndEnergy( 
+                                       posData[particle1Index], posData[particle2Index], posData[particle3Index], posData[particle4Index],
+                                       posData[particle5Index], posData[particle6Index], kTorsion[ii], forces );
+    }
+    return static_cast<double>(energy);
+}
+
 //
 //ReferenceCalcAmoebaStretchBendForceKernel::ReferenceCalcAmoebaStretchBendForceKernel(std::string name, const Platform& platform, System& system) :
 //                   CalcAmoebaStretchBendForceKernel(name, platform), system(system) {
