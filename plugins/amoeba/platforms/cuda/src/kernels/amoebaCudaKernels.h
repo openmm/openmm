@@ -110,6 +110,7 @@ extern void SetCalculateAmoebaCudaMapTorquesSim(amoebaGpuContext gpu);
 extern void GetCalculateAmoebaCudaMapTorquesSim(amoebaGpuContext gpu);
 extern void cudaComputeAmoebaMapTorques( amoebaGpuContext gpu, CUDAStream<float>* psTorque, CUDAStream<float>* psForce);
 extern void cudaComputeAmoebaMapTorquesAndAddTotalForce( amoebaGpuContext gpu, CUDAStream<float>* psTorque, CUDAStream<float>* psForce, CUDAStream<float4>* psOutputForce);
+extern void cudaComputeAmoebaMapTorquesAndAddTotalForce2( amoebaGpuContext gpu, CUDAStream<float>* psTorque, CUDAStream<float4>* psOutputForce);
 
 extern void SetCalculateAmoebaKirkwoodSim( amoebaGpuContext amoebaGpu );
 extern void GetCalculateAmoebaKirkwoodSim( amoebaGpuContext amoebaGpu );

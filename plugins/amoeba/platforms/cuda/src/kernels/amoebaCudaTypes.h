@@ -140,6 +140,8 @@ struct cudaAmoebaGmxSimulation {
     float* pInducedDipoleS;
     float* pInducedDipolePolarS;
 
+    float* pTorque;
+
     float* pWorkArray_3_1;
     float* pWorkArray_3_2;
     float* pWorkArray_1_1;

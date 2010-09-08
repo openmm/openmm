@@ -291,6 +291,59 @@ void amoebaMapTorqueReduce_kernel2(
 
 }
 
+__global__
+#if (__CUDA_ARCH__ >= 200)
+__launch_bounds__(GF1XX_THREADS_PER_BLOCK, 1)
+#elif (__CUDA_ARCH__ >= 130)
+__launch_bounds__(GT2XX_THREADS_PER_BLOCK, 1)
+#else
+__launch_bounds__(G8X_THREADS_PER_BLOCK, 1)
+#endif
+void amoebaMapTorqueReduce_kernel3(
+					   int numThreads,
+					   int numOfAtoms,
+					   int maxDiff,
+					   float* tempElecForce,
+					   float4* outputForce
+					   ){
+
+    unsigned int tid = threadIdx.x;
+
+    __shared__ float sfx[BLOCK_SIZE];
+    __shared__ float sfy[BLOCK_SIZE];
+    __shared__ float sfz[BLOCK_SIZE];
+
+    // load values then sum and add results to elecForce
+
+    if( tid < maxDiff ){
+
+        sfx[tid] = tempElecForce[blockIdx.x*3*maxDiff + tid*3  ];
+        sfy[tid] = tempElecForce[blockIdx.x*3*maxDiff + tid*3+1];
+        sfz[tid] = tempElecForce[blockIdx.x*3*maxDiff + tid*3+2];
+
+    } else {
+        sfx[tid] = sfy[tid] = sfz[tid] = 0.0f;
+    }
+
+    __syncthreads();
+
+    for( unsigned int s = (blockDim.x)/2; s != 0; s >>= 1 ){
+        if(tid<s){
+            sfx[tid] += sfx[tid+s];
+            sfy[tid] += sfy[tid+s];
+            sfz[tid] += sfz[tid+s];
+        }
+        __syncthreads();
+    }
+
+    if( tid == 0 ){
+        outputForce[blockIdx.x].x  += sfx[0];
+        outputForce[blockIdx.x].y  += sfy[0];
+        outputForce[blockIdx.x].z  += sfz[0];
+    }
+
+}
+
 void cudaComputeAmoebaMapTorques( amoebaGpuContext amoebaGpu, CUDAStream<float>* psTorque, CUDAStream<float>* psForce )
 {
   
@@ -609,6 +662,101 @@ void cudaComputeAmoebaMapTorquesAndAddTotalForce( amoebaGpuContext amoebaGpu,
     
             int indexOffset     = ii*3;
     
+            (void) fprintf( amoebaGpu->log,"FTtl[%16.9e %16.9e %16.9e] ",
+                            psCudaForce4->_pSysStream[0][ii].x,
+                            psCudaForce4->_pSysStream[0][ii].y,
+                            psCudaForce4->_pSysStream[0][ii].z );
+            (void) fprintf( amoebaGpu->log,"F[%16.9e %16.9e %16.9e] ",
+                            amoebaGpu->psForce->_pSysStream[0][indexOffset],
+                            amoebaGpu->psForce->_pSysStream[0][indexOffset+1],
+                            amoebaGpu->psForce->_pSysStream[0][indexOffset+2] );
+            (void) fprintf( amoebaGpu->log,"T[%16.9e %16.9e %16.9e]\n",
+                            amoebaGpu->psTorque->_pSysStream[0][indexOffset],
+                            amoebaGpu->psTorque->_pSysStream[0][indexOffset+1],
+                            amoebaGpu->psTorque->_pSysStream[0][indexOffset+2] );
+            if( ii == maxPrint && (gpu->natoms - maxPrint) > ii )ii = gpu->natoms - maxPrint;
+        }
+        (void) fflush( amoebaGpu->log );
+    }
+    if( 1 ){
+        //std::vector<int> fileId;
+        //fileId.push_back( 0 );
+        VectorOfDoubleVectors outputVector;
+        //cudaLoadCudaFloat4Array( gpu->natoms, 3, gpu->psPosq4,              outputVector );
+        cudaLoadCudaFloat4Array( gpu->natoms, 4, gpu->psForce4,             outputVector );
+        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psForce,        outputVector );
+        cudaLoadCudaFloatArray( gpu->natoms,  3, amoebaGpu->psTorque,       outputVector);
+        cudaWriteVectorOfDoubleVectorsToFile( "CudaVacuumElecForce", fileId, outputVector );
+    }
+#endif
+
+}
+
+void cudaComputeAmoebaMapTorquesAndAddTotalForce2( amoebaGpuContext amoebaGpu,
+                                                  CUDAStream<float>* psTorque,
+                                                  CUDAStream<float4>* psCudaForce4 )
+{
+
+   // ---------------------------------------------------------------------------------------
+
+//#define AMOEBA_DEBUG
+#ifdef AMOEBA_DEBUG
+    static const char* methodName = "cudaComputeAmoebaMapTorquesAndAddTotalForce";
+    static int timestep = 0;
+    std::vector<int> fileId;
+    timestep++;
+    fileId.resize( 2 );
+    fileId[0] = timestep;
+    fileId[1] = 1;
+#endif
+
+    // check that BLOCK_SIZE >= amoebaGpu->maxMapTorqueDifference
+
+    if( amoebaGpu->maxMapTorqueDifference > BLOCK_SIZE ){
+        (void) fprintf( amoebaGpu->log, "block size (%d) in amoebaMapTorqueReduce_kernel is too small ( > %d)! -- aborting.\n",
+                        BLOCK_SIZE, amoebaGpu->maxMapTorqueDifference );
+        exit(-1);
+    }
+
+   // ---------------------------------------------------------------------------------------
+
+    gpuContext gpu    = amoebaGpu->gpuContext;
+    int numThreads    = min(256, (gpu->natoms));
+    int numBlocks     =  1 + (gpu->natoms/numThreads);
+
+    amoebaMapTorqueToForce_kernel<<< numBlocks, numThreads>>> (
+                gpu->natoms,
+                gpu->psPosq4->_pDevStream[0],
+                psTorque->_pDevStream[0],
+                amoebaGpu->psMultipoleParticlesIdsAndAxisType->_pDevStream[0],
+                amoebaGpu->maxMapTorqueDifference,
+                amoebaGpu->torqueMapForce->_pDevStream[0] );
+    LAUNCHERROR("AmoebaMapTrqKernel");
+
+    numBlocks  = gpu->natoms;
+    numThreads = amoebaGpu->maxMapTorqueDifferencePow2;
+
+    amoebaMapTorqueReduce_kernel3<<< numBlocks, numThreads>>>(
+            numThreads, gpu->natoms,
+            amoebaGpu->maxMapTorqueDifference,
+            amoebaGpu->torqueMapForce->_pDevStream[0],
+            psCudaForce4->_pDevStream[0] );
+    LAUNCHERROR("amoebaMapTorqueReduce_kernel2");
+
+#ifdef AMOEBA_DEBUG
+    if( amoebaGpu->log ){
+        (void) fprintf( amoebaGpu->log, "%s: numBlocks=%d numThreads=%d %d\n", methodName, numBlocks, numThreads, amoebaGpu->maxMapTorqueDifferencePow2); (void) fflush( amoebaGpu->log );
+        amoebaGpu->psForce->Download();
+        psCudaForce4->Download();
+
+        amoebaGpu->psTorque->Download();
+        int maxPrint        = 10;
+        (void) fprintf( amoebaGpu->log,"Post torqueMap\n" );
+        for( int ii = 0; ii < gpu->natoms; ii++ ){
+            (void) fprintf( amoebaGpu->log, "%5d ", ii);
+
+            int indexOffset     = ii*3;
+
             (void) fprintf( amoebaGpu->log,"FTtl[%16.9e %16.9e %16.9e] ",
                             psCudaForce4->_pSysStream[0][ii].x,
                             psCudaForce4->_pSysStream[0][ii].y,

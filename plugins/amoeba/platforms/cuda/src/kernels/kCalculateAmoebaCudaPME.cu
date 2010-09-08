@@ -4,6 +4,7 @@
 
 #include "amoebaGpuTypes.h"
 #include "amoebaCudaKernels.h"
+#include "bbsort.h"
 
 //#define AMOEBA_DEBUG
 
@@ -11,7 +12,7 @@ static __constant__ cudaGmxSimulation cSim;
 static __constant__ cudaAmoebaGmxSimulation cAmoebaSim;
 
 /* Cuda compiler on Windows does not recognized "static const float" values */
-#define LOCAL_HACK_PI 3.1415926535897932384626433832795
+#define LOCAL_HACK_PI 3.1415926535897932384626433832795f
 
 void SetCalculateAmoebaPMESim(amoebaGpuContext amoebaGpu)
 {
@@ -100,13 +101,13 @@ __device__ void computeBSplinePoint(float4* thetai, float w, float* array)
  */
 __global__
 #if (__CUDA_ARCH__ >= 200)
-__launch_bounds__(256, 1)
+__launch_bounds__(512, 1)
 #elif (__CUDA_ARCH__ >= 120)
 __launch_bounds__(256, 1)
 #else
 __launch_bounds__(128, 1)
 #endif
-void kComputeBsplines_kernel()
+void kComputeAmoebaBsplines_kernel()
 {
     extern __shared__ float bsplines_cache[]; // size = block_size*pme_order*pme_order
     float* array = &bsplines_cache[threadIdx.x*AMOEBA_PME_ORDER*AMOEBA_PME_ORDER];
@@ -158,11 +159,11 @@ void kComputeBsplines_kernel()
 
 __global__
 #if (__CUDA_ARCH__ >= 200)
-__launch_bounds__(1024, 1)
+__launch_bounds__(768, 1)
 #elif (__CUDA_ARCH__ >= 120)
-__launch_bounds__(512, 1)
+__launch_bounds__(384, 1)
 #else
-__launch_bounds__(256, 1)
+__launch_bounds__(192, 1)
 #endif
 void kGridSpreadFixedMultipoles_kernel()
 {
@@ -252,11 +253,11 @@ void kGridSpreadFixedMultipoles_kernel()
 
 __global__
 #if (__CUDA_ARCH__ >= 200)
-__launch_bounds__(1024, 1)
+__launch_bounds__(768, 1)
 #elif (__CUDA_ARCH__ >= 120)
-__launch_bounds__(512, 1)
+__launch_bounds__(384, 1)
 #else
-__launch_bounds__(256, 1)
+__launch_bounds__(192, 1)
 #endif
 void kGridSpreadInducedDipoles_kernel()
 {
@@ -342,11 +343,11 @@ void kGridSpreadInducedDipoles_kernel()
 
 __global__
 #if (__CUDA_ARCH__ >= 200)
-__launch_bounds__(1024, 1)
-#elif (__CUDA_ARCH__ >= 130)
-__launch_bounds__(512, 1)
+__launch_bounds__(768, 1)
+#elif (__CUDA_ARCH__ >= 120)
+__launch_bounds__(384, 1)
 #else
-__launch_bounds__(256, 1)
+__launch_bounds__(192, 1)
 #endif
 void kAmoebaReciprocalConvolution_kernel()
 {
@@ -380,11 +381,11 @@ void kAmoebaReciprocalConvolution_kernel()
 
 __global__
 #if (__CUDA_ARCH__ >= 200)
-__launch_bounds__(1024, 1)
+__launch_bounds__(768, 1)
 #elif (__CUDA_ARCH__ >= 120)
-__launch_bounds__(512, 1)
+__launch_bounds__(384, 1)
 #else
-__launch_bounds__(256, 1)
+__launch_bounds__(192, 1)
 #endif
 void kComputeFixedPotentialFromGrid_kernel()
 {
@@ -496,11 +497,11 @@ void kComputeFixedPotentialFromGrid_kernel()
 
 __global__
 #if (__CUDA_ARCH__ >= 200)
-__launch_bounds__(1024, 1)
+__launch_bounds__(768, 1)
 #elif (__CUDA_ARCH__ >= 120)
-__launch_bounds__(512, 1)
+__launch_bounds__(384, 1)
 #else
-__launch_bounds__(256, 1)
+__launch_bounds__(192, 1)
 #endif
 void kComputeInducedPotentialFromGrid_kernel()
 {
@@ -702,11 +703,11 @@ void kComputeInducedPotentialFromGrid_kernel()
 
 __global__
 #if (__CUDA_ARCH__ >= 200)
-__launch_bounds__(1024, 1)
+__launch_bounds__(768, 1)
 #elif (__CUDA_ARCH__ >= 120)
-__launch_bounds__(512, 1)
+__launch_bounds__(384, 1)
 #else
-__launch_bounds__(256, 1)
+__launch_bounds__(192, 1)
 #endif
 void kComputeFixedMultipoleForceAndEnergy_kernel()
 {
@@ -716,6 +717,8 @@ void kComputeFixedMultipoleForceAndEnergy_kernel()
     const int deriv3[] = {4, 9, 10,  7, 15, 17, 13, 20, 18, 19};
     float energy = 0.0f;
     for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < cSim.atoms; i += blockDim.x*gridDim.x) {
+        // Compute the force and energy.
+
         multipole[0] = cSim.pPosq[i].w;
         multipole[1] = cAmoebaSim.pLabFrameDipole[i+3];
         multipole[2] = cAmoebaSim.pLabFrameDipole[i+3+1];
@@ -741,17 +744,32 @@ void kComputeFixedMultipoleForceAndEnergy_kernel()
         force.y += f.y;
         force.z += f.z;
         cSim.pForce4[i] = force;
+
+        // Compute the torque.
+
+        cAmoebaSim.pTorque[3*i] = multipole[3]*cAmoebaSim.pPhi[2] - multipole[2]*cAmoebaSim.pPhi[3]
+                      + 2.0f*(multipole[6]-multipole[5])*cAmoebaSim.pPhi[9]
+                      + multipole[8]*cAmoebaSim.pPhi[7] + multipole[9]*cAmoebaSim.pPhi[5]
+                      - multipole[7]*cAmoebaSim.pPhi[8] - multipole[9]*cAmoebaSim.pPhi[6];
+        cAmoebaSim.pTorque[3*i+1] = multipole[1]*cAmoebaSim.pPhi[3] - multipole[3]*cAmoebaSim.pPhi[1]
+                      + 2.0f*(multipole[4]-multipole[6])*cAmoebaSim.pPhi[9]
+                      + multipole[7]*cAmoebaSim.pPhi[9] + multipole[8]*cAmoebaSim.pPhi[6]
+                      - multipole[8]*cAmoebaSim.pPhi[4] - multipole[9]*cAmoebaSim.pPhi[7];
+        cAmoebaSim.pTorque[3*i+1] = multipole[2]*cAmoebaSim.pPhi[1] - multipole[1]*cAmoebaSim.pPhi[2]
+                      + 2.0f*(multipole[5]-multipole[4])*cAmoebaSim.pPhi[7]
+                      + multipole[7]*cAmoebaSim.pPhi[4] + multipole[9]*cAmoebaSim.pPhi[8]
+                      - multipole[7]*cAmoebaSim.pPhi[5] - multipole[8]*cAmoebaSim.pPhi[9];
     }
     cSim.pEnergy[blockIdx.x*blockDim.x+threadIdx.x] += 0.5f*energy;
 }
 
 __global__
 #if (__CUDA_ARCH__ >= 200)
-__launch_bounds__(1024, 1)
+__launch_bounds__(768, 1)
 #elif (__CUDA_ARCH__ >= 120)
-__launch_bounds__(512, 1)
+__launch_bounds__(384, 1)
 #else
-__launch_bounds__(256, 1)
+__launch_bounds__(192, 1)
 #endif
 void kComputeInducedDipoleForceAndEnergy_kernel()
 {
@@ -763,6 +781,8 @@ void kComputeInducedDipoleForceAndEnergy_kernel()
     const int deriv3[] = {4, 9, 10,  7, 15, 17, 13, 20, 18, 19};
     float energy = 0.0f;
     for (int i = blockIdx.x*blockDim.x+threadIdx.x; i < cSim.atoms; i += blockDim.x*gridDim.x) {
+        // Compute the force and energy.
+
         multipole[0] = cSim.pPosq[i].w;
         multipole[1] = cAmoebaSim.pLabFrameDipole[i+3];
         multipole[2] = cAmoebaSim.pLabFrameDipole[i+3+1];
@@ -802,6 +822,69 @@ void kComputeInducedDipoleForceAndEnergy_kernel()
         force.y += f.y;
         force.z += f.z;
         cSim.pForce4[i] = force;
+
+        // Compute the torque.
+
+        cAmoebaSim.pTorque[3*i] = multipole[3]*cAmoebaSim.pPhi[2] - multipole[2]*cAmoebaSim.pPhi[3]
+                      + 2.0f*(multipole[6]-multipole[5])*cAmoebaSim.pPhi[9]
+                      + multipole[8]*cAmoebaSim.pPhi[7] + multipole[9]*cAmoebaSim.pPhi[5]
+                      - multipole[7]*cAmoebaSim.pPhi[8] - multipole[9]*cAmoebaSim.pPhi[6];
+        cAmoebaSim.pTorque[3*i+1] = multipole[1]*cAmoebaSim.pPhi[3] - multipole[3]*cAmoebaSim.pPhi[1]
+                      + 2.0f*(multipole[4]-multipole[6])*cAmoebaSim.pPhi[9]
+                      + multipole[7]*cAmoebaSim.pPhi[9] + multipole[8]*cAmoebaSim.pPhi[6]
+                      - multipole[8]*cAmoebaSim.pPhi[4] - multipole[9]*cAmoebaSim.pPhi[7];
+        cAmoebaSim.pTorque[3*i+1] = multipole[2]*cAmoebaSim.pPhi[1] - multipole[1]*cAmoebaSim.pPhi[2]
+                      + 2.0f*(multipole[5]-multipole[4])*cAmoebaSim.pPhi[7]
+                      + multipole[7]*cAmoebaSim.pPhi[4] + multipole[9]*cAmoebaSim.pPhi[8]
+                      - multipole[7]*cAmoebaSim.pPhi[5] - multipole[8]*cAmoebaSim.pPhi[9];
     }
     cSim.pEnergy[blockIdx.x*blockDim.x+threadIdx.x] += 0.5f*energy;
+}
+
+extern void cudaComputeAmoebaMapTorquesAndAddTotalForce2(amoebaGpuContext gpu, CUDAStream<float>* psTorque, CUDAStream<float4>* psOutputForce);
+__global__ void kFindAtomRangeForGrid_kernel();
+
+void kCalculateAmoebaPME(amoebaGpuContext amoebaGpu)
+{
+    gpuContext gpu = amoebaGpu->gpuContext;
+    int threads;
+    if (gpu->sm_version >= SM_20)
+        threads = 512;
+    else if (gpu->sm_version >= SM_12)
+        threads = 256;
+    else
+        threads = 128;
+    kComputeAmoebaBsplines_kernel<<<gpu->sim.blocks, threads, threads*AMOEBA_PME_ORDER*AMOEBA_PME_ORDER*sizeof(float)>>>();
+    LAUNCHERROR("kComputeAmoebaBsplines");
+    bbSort(gpu->psPmeAtomGridIndex->_pDevData, gpu->natoms);
+    kFindAtomRangeForGrid_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
+    LAUNCHERROR("kFindAtomRangeForGrid");
+
+    // Perform PME for the fixed multipoles.
+
+    kGridSpreadFixedMultipoles_kernel<<<8*gpu->sim.blocks, 64>>>();
+    LAUNCHERROR("kGridSpreadFixedMultipoles");
+    cufftExecC2C(gpu->fftplan, gpu->psPmeGrid->_pDevData, gpu->psPmeGrid->_pDevData, CUFFT_FORWARD);
+    kAmoebaReciprocalConvolution_kernel<<<gpu->sim.blocks, gpu->sim.nonbond_threads_per_block>>>();
+    LAUNCHERROR("kAmoebaReciprocalConvolution");
+    cufftExecC2C(gpu->fftplan, gpu->psPmeGrid->_pDevData, gpu->psPmeGrid->_pDevData, CUFFT_INVERSE);
+    kComputeFixedPotentialFromGrid_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
+    LAUNCHERROR("kComputeFixedPotentialFromGrid");
+    kComputeFixedMultipoleForceAndEnergy_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
+    LAUNCHERROR("kComputeFixedMultipoleForceAndEnergy");
+    cudaComputeAmoebaMapTorquesAndAddTotalForce2(amoebaGpu, amoebaGpu->psTorque, gpu->psForce4);
+
+    // Perform PME for the induced dipoles.
+
+    kGridSpreadInducedDipoles_kernel<<<8*gpu->sim.blocks, 64>>>();
+    LAUNCHERROR("kGridSpreadInducedDipoles");
+    cufftExecC2C(gpu->fftplan, gpu->psPmeGrid->_pDevData, gpu->psPmeGrid->_pDevData, CUFFT_FORWARD);
+    kAmoebaReciprocalConvolution_kernel<<<gpu->sim.blocks, gpu->sim.nonbond_threads_per_block>>>();
+    LAUNCHERROR("kAmoebaReciprocalConvolution");
+    cufftExecC2C(gpu->fftplan, gpu->psPmeGrid->_pDevData, gpu->psPmeGrid->_pDevData, CUFFT_INVERSE);
+    kComputeInducedPotentialFromGrid_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
+    LAUNCHERROR("kComputeInducedPotentialFromGrid");
+    kComputeInducedDipoleForceAndEnergy_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
+    LAUNCHERROR("kComputeInducedDipoleForceAndEnergy");
+    cudaComputeAmoebaMapTorquesAndAddTotalForce2(amoebaGpu, amoebaGpu->psTorque, gpu->psForce4);
 }

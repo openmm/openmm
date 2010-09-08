@@ -1374,6 +1374,7 @@ void gpuElectrostaticAllocate( amoebaGpuContext amoebaGpu )
 
     amoebaGpu->psForce                         = new CUDAStream<float>(paddedNumberOfAtoms*3, 1, "ElectrostaticForce");
     amoebaGpu->psTorque                        = new CUDAStream<float>(paddedNumberOfAtoms*3, 1, "Torque");
+    amoebaGpu->amoebaSim.pTorque               = amoebaGpu->psTorque->_pDevData;
 
     unsigned int offset                        = 3*paddedNumberOfAtoms*sizeof( float );
     memset( amoebaGpu->psForce->_pSysStream[0],          0, offset );
