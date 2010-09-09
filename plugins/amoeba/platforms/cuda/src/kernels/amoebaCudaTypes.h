@@ -128,7 +128,6 @@ struct cudaAmoebaGmxSimulation {
     unsigned int paddedNumberOfAtoms;               // padded number of atoms
     float cutoffDistance2;                          // cutoff distance squared for PME
     float sqrtPi;                                   // sqrt(PI)
-    float aewald;                                   // aewald parameter
     float scalingDistanceCutoff;                    // scaling cutoff
     float2*         pDampingFactorAndThole;         // Thole & damping factors
 

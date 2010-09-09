@@ -154,7 +154,6 @@ struct _amoebaGpuContext {
 
     int multipoleNonbondedMethod;
     double cutoffDistance;
-    double aewald;
 
     // mutual induced field
 
@@ -308,7 +307,7 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
                                      const std::vector< std::vector< std::vector<int> > >& multipoleAtomCovalentInfo, const std::vector<int>& covalentDegree,
                                      const std::vector<int>& minCovalentIndices,  const std::vector<int>& minCovalentPolarizationIndices, int maxCovalentRange,
                                      int mutualInducedIterationMethod, int mutualInducedMaxIterations, float mutualInducedTargetEpsilon,
-                                     int nonbondedMethod, float cutoffDistance, float aewald, float electricConstant );
+                                     int nonbondedMethod, float cutoffDistance, float electricConstant );
 
 
 extern "C"
@@ -326,6 +325,9 @@ void gpuSetAmoebaVdwParameters( amoebaGpuContext amoebaGpu,
                                 const std::string& sigmaCombiningRule,
                                 const std::string& epsilonCombiningRule,
                                 const std::vector< std::vector<int> >& allExclusions );
+extern "C"
+void gpuSetAmoebaPMEParameters(amoebaGpuContext amoebaGpu, float alpha, int gridSizeX, int gridSizeY, int gridSizeZ);
+
 extern "C"
 void amoebaGpuBuildVdwExclusionList( amoebaGpuContext amoebaGpu,  const std::vector< std::vector<int> >& exclusions );
 

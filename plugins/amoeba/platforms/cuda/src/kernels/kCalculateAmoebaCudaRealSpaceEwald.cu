@@ -212,14 +212,14 @@ __device__ void calculateRealSpaceEwaldPairIxn_kernel( RealSpaceEwaldParticle& a
       
         // calculate the real space error function terms;
 
-        float ralpha = cAmoebaSim.aewald*r;
+        float ralpha = cSim.alphaEwald*r;
 
                bn[0] = fastErfc(ralpha)/r;
 
-        float alsq2  = 2.0f*cAmoebaSim.aewald*cAmoebaSim.aewald;
+        float alsq2  = 2.0f*cSim.alphaEwald*cSim.alphaEwald;
         float alsq2n = 0.0f;
-        if( cAmoebaSim.aewald > 0.0f){
-            alsq2n = 1.0f/(cAmoebaSim.sqrtPi*cAmoebaSim.aewald);
+        if( cSim.alphaEwald > 0.0f){
+            alsq2n = 1.0f/(cAmoebaSim.sqrtPi*cSim.alphaEwald);
         }
         float exp2a  = exp(-(ralpha*ralpha));
 

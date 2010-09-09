@@ -31,6 +31,7 @@
 #include "kernels/amoebaCudaKernels.h"
 #include "internal/AmoebaMultipoleForceImpl.h"
 #include "internal/AmoebaWcaDispersionForceImpl.h"
+#include "openmm/internal/NonbondedForceImpl.h"
 
 #include <cmath>
 #ifdef _MSC_VER
@@ -588,8 +589,16 @@ void CudaCalcAmoebaMultipoleForceKernel::initialize(const System& system, const 
                                     static_cast<float>( force.getMutualInducedTargetEpsilon()),
                                     nonbondedMethod,
                                     static_cast<float>( force.getCutoffDistance()),
-                                    static_cast<float>( force.getAEwald()),
                                     static_cast<float>( force.getElectricConstant()) );
+    if (nonbondedMethod == AmoebaMultipoleForce::PME) {
+        double alpha;
+        int xsize, ysize, zsize;
+        NonbondedForce nb;
+        nb.setEwaldErrorTolerance(force.getEwaldErrorTolerance());
+        nb.setCutoffDistance(force.getCutoffDistance());
+        NonbondedForceImpl::calcPMEParameters(system, nb, alpha, xsize, ysize, zsize);
+        gpuSetAmoebaPMEParameters(data.getAmoebaGpu(), (float) alpha, xsize, ysize, zsize);
+    }
 
 }
 

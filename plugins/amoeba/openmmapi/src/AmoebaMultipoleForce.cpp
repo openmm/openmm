@@ -36,7 +36,7 @@
 
 using namespace OpenMM;
 
-AmoebaMultipoleForce::AmoebaMultipoleForce() : nonbondedMethod(NoCutoff), cutoffDistance(1.0), aewald(0.0), mutualInducedIterationMethod(SOR), mutualInducedMaxIterations(60),
+AmoebaMultipoleForce::AmoebaMultipoleForce() : nonbondedMethod(NoCutoff), cutoffDistance(1.0), ewaldErrorTol(5e-4), mutualInducedIterationMethod(SOR), mutualInducedMaxIterations(60),
                                                mutualInducedTargetEpsilon(1.0e-05), scalingDistanceCutoff(100.0), electricConstant(138.9354558456) {
 }
 
@@ -54,14 +54,6 @@ double AmoebaMultipoleForce::getCutoffDistance( void ) const {
 
 void AmoebaMultipoleForce::setCutoffDistance(double distance) {
     cutoffDistance = distance;
-}
-
-double AmoebaMultipoleForce::getAEwald() const {
-    return aewald;
-}
-
-void AmoebaMultipoleForce::setAEwald(double inputAewald ) {
-    aewald = inputAewald;
 }
 
 AmoebaMultipoleForce::MutualInducedIterationMethod AmoebaMultipoleForce::getMutualInducedIterationMethod( void ) const {
@@ -102,6 +94,14 @@ double AmoebaMultipoleForce::getElectricConstant( void ) const {
 
 void AmoebaMultipoleForce::setElectricConstant( double inputElectricConstant ) {
     electricConstant = inputElectricConstant;
+}
+
+double AmoebaMultipoleForce::getEwaldErrorTolerance() const {
+    return ewaldErrorTol;
+}
+
+void AmoebaMultipoleForce::setEwaldErrorTolerance(double tol) {
+    ewaldErrorTol = tol;
 }
 
 int AmoebaMultipoleForce::addParticle( double charge, std::vector<double>& molecularDipole, std::vector<double>& molecularQuadrupole, int axisType, 

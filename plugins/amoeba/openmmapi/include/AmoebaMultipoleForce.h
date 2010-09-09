@@ -114,20 +114,6 @@ public:
     void setCutoffDistance(double distance);
 
     /**
-     * Get the aEwald parameter
-     *
-     * @return the Ewald parameter
-     */
-    double getAEwald() const;
-
-    /**
-     * Set the aEwald parameter
-     *
-     * @param Ewald parameter
-     */
-    void setAEwald(double aewald);
-
-    /**
      * Add multipole-related info for a particle 
      *
      * @param charge               the particle's charge
@@ -272,6 +258,20 @@ public:
      * @param the electric constant
      */
     void setElectricConstant( double inputElectricConstant ); 
+    /**
+     * Get the error tolerance for Ewald summation.  This corresponds to the fractional error in the forces
+     * which is acceptable.  This value is used to select the reciprocal space cutoff and separation
+     * parameter so that the average error level will be less than the tolerance.  There is not a
+     * rigorous guarantee that all forces on all atoms will be less than the tolerance, however.
+     */
+    double getEwaldErrorTolerance() const;
+    /**
+     * Get the error tolerance for Ewald summation.  This corresponds to the fractional error in the forces
+     * which is acceptable.  This value is used to select the reciprocal space cutoff and separation
+     * parameter so that the average error level will be less than the tolerance.  There is not a
+     * rigorous guarantee that all forces on all atoms will be less than the tolerance, however.
+     */
+    void setEwaldErrorTolerance(double tol);
     
 protected:
     ForceImpl* createImpl();
@@ -279,27 +279,15 @@ private:
 
     AmoebaNonbondedMethod nonbondedMethod;
     double cutoffDistance;
-    double aewald;
     MutualInducedIterationMethod mutualInducedIterationMethod;
     int mutualInducedMaxIterations;
     double mutualInducedTargetEpsilon;
     double scalingDistanceCutoff;
     double electricConstant;
+    double ewaldErrorTol;
 
     class MultipoleInfo;
-
-// Retarded visual studio compiler complains about being unable to 
-// export private stl class members.
-// This stanza explains that it should temporarily shut up.
-#if defined(_MSC_VER)
-#pragma warning(push)
-#pragma warning(disable:4251)
-#endif
     std::vector<MultipoleInfo> multipoles;
-#if defined(_MSC_VER)
-#pragma warning(pop)
-#endif
-
 };
 
 class AmoebaMultipoleForce::MultipoleInfo {

@@ -45,7 +45,7 @@ void kReduceDirectSelfFields_kernel( unsigned int fieldComponents, unsigned int 
 
     // Reduce field
 
-    const float term = (4.0f/3.0f)*(cAmoebaSim.aewald*cAmoebaSim.aewald*cAmoebaSim.aewald)/cAmoebaSim.sqrtPi;
+    const float term = (4.0f/3.0f)*(cSim.alphaEwald*cSim.alphaEwald*cSim.alphaEwald)/cAmoebaSim.sqrtPi;
     while (pos < fieldComponents)
     {   
 
@@ -123,12 +123,12 @@ __device__ void calculateFixedFieldRealSpacePairIxn_kernel( FixedFieldParticle& 
 
     // calculate the error function damping terms
 
-    float ralpha      = cAmoebaSim.aewald*r;
+    float ralpha      = cSim.alphaEwald*r;
     float bn[4];
 
     bn[0]             = erfc(ralpha)/r;
-    float alsq2       = 2.0f*cAmoebaSim.aewald*cAmoebaSim.aewald;
-    float alsq2n      = 1.0f/(cAmoebaSim.sqrtPi*cAmoebaSim.aewald);
+    float alsq2       = 2.0f*cSim.alphaEwald*cSim.alphaEwald;
+    float alsq2n      = 1.0f/(cAmoebaSim.sqrtPi*cSim.alphaEwald);
     float exp2a       = exp(-(ralpha*ralpha));
     alsq2n           *= alsq2;
     bn[1]             = (bn[0]+alsq2n*exp2a)/r2;

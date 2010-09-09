@@ -351,7 +351,6 @@ void gpuPrintCudaAmoebaGmxSimulation(amoebaGpuContext amoebaGpu, FILE* log )
     (void) fprintf( log, "     pM_ScaleIndices                    %p\n",      amoebaGpu->amoebaSim.pM_ScaleIndices );
     (void) fprintf( log, "     sqrtPi                             %15.7e\n",  amoebaGpu->amoebaSim.sqrtPi );
     (void) fprintf( log, "     cutoffDistance2                    %15.7e\n",  amoebaGpu->amoebaSim.cutoffDistance2 );
-    (void) fprintf( log, "     aewald                             %15.7e\n",  amoebaGpu->amoebaSim.aewald );
     (void) fprintf( log, "     electric                           %15.7e\n",  amoebaGpu->amoebaSim.electric );
     (void) fprintf( log, "     box                                %15.7e %15.7e %15.7e\n", gpu->sim.periodicBoxSizeX, gpu->sim.periodicBoxSizeY, gpu->sim.periodicBoxSizeZ);
     (void) fprintf( log, "     gkc                                %15.7e\n",  amoebaGpu->amoebaSim.gkc );
@@ -1464,7 +1463,7 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
                                      const std::vector< std::vector< std::vector<int> > >& multipoleParticleCovalentInfo, const std::vector<int>& covalentDegree,
                                      const std::vector<int>& minCovalentIndices,  const std::vector<int>& minCovalentPolarizationIndices, int maxCovalentRange, 
                                      int mutualInducedIterativeMethod, int mutualInducedMaxIterations, float mutualInducedTargetEpsilon,
-                                     int nonbondedMethod, float cutoffDistance, float aewald, float electricConstant ){
+                                     int nonbondedMethod, float cutoffDistance, float electricConstant ){
 
 // ---------------------------------------------------------------------------------------
 
@@ -1565,10 +1564,8 @@ void gpuSetAmoebaMultipoleParameters(amoebaGpuContext amoebaGpu, const std::vect
     }
     amoebaGpu->amoebaSim.cutoffDistance2             = cutoffDistance*cutoffDistance;
     amoebaGpu->amoebaSim.sqrtPi                      = sqrt( 3.1415926535897932384626433832795 );
-    amoebaGpu->amoebaSim.aewald                      = aewald;
     amoebaGpu->amoebaSim.electric                    = electricConstant;
 
-    amoebaGpu->gpuContext->sim.alphaEwald            = aewald;
     amoebaGpu->gpuContext->sim.nonbondedCutoff       = cutoffDistance;
     tabulateErfc(amoebaGpu->gpuContext); 
 
