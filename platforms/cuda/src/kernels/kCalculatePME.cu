@@ -224,14 +224,7 @@ void kFindAtomRangeForGrid_kernel()
     }
 }
 
-__global__ 
-#if (__CUDA_ARCH__ >= 200)
-__launch_bounds__(1024, 1)
-#elif (__CUDA_ARCH__ >= 130)
-__launch_bounds__(512, 1)
-#else
-__launch_bounds__(256, 1)
-#endif
+__global__
 void kGridSpreadCharge_kernel()
 {
     unsigned int numGridPoints = cSim.pmeGridSize.x*cSim.pmeGridSize.y*cSim.pmeGridSize.z;
@@ -398,7 +391,7 @@ void kCalculatePME(gpuContext gpu)
     bbSort(gpu->psPmeAtomGridIndex->_pDevData, gpu->natoms);
     kFindAtomRangeForGrid_kernel<<<gpu->sim.blocks, gpu->sim.update_threads_per_block>>>();
     LAUNCHERROR("kFindAtomRangeForGrid");
-    kGridSpreadCharge_kernel<<<8*gpu->sim.blocks, 64, 64*(sizeof(float)+sizeof(int4))>>>();
+    kGridSpreadCharge_kernel<<<16*gpu->sim.blocks, 64>>>();
     LAUNCHERROR("kGridSpreadCharge");
     cufftExecC2C(gpu->fftplan, gpu->psPmeGrid->_pDevData, gpu->psPmeGrid->_pDevData, CUFFT_FORWARD);
     kReciprocalConvolution_kernel<<<gpu->sim.blocks, gpu->sim.nonbond_threads_per_block>>>();
