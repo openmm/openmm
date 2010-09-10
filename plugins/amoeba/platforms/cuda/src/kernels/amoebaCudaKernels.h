@@ -160,6 +160,8 @@ extern void trackMutualInducedIterations( amoebaGpuContext amoebaGpu, int iterat
 // PME
 
 extern void SetCalculateAmoebaPMESim( amoebaGpuContext amoebaGpu );
+extern void kCalculateAmoebaPMEFixedMultipoleField(amoebaGpuContext amoebaGpu);
+extern void kCalculateAmoebaPMEInducedDipoleField(amoebaGpuContext amoebaGpu);
 extern void kCalculateAmoebaPME(amoebaGpuContext amoebaGpu);
 
 #endif //__AMOEBA_GPU_TYPES_H__
