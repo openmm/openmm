@@ -30,6 +30,7 @@
 #include "AmoebaReferenceHarmonicInPlaneAngleForce.h"
 #include "AmoebaReferenceTorsionForce.h"
 #include "AmoebaReferencePiTorsionForce.h"
+#include "AmoebaReferenceStretchBendForce.h"
 #include "ReferencePlatform.h"
 #include "openmm/internal/ContextImpl.h"
 //#include "internal/AmoebaMultipoleForceImpl.h"
@@ -326,49 +327,53 @@ double ReferenceCalcAmoebaPiTorsionForceKernel::execute(ContextImpl& context, bo
     return static_cast<double>(energy);
 }
 
-//
-//ReferenceCalcAmoebaStretchBendForceKernel::ReferenceCalcAmoebaStretchBendForceKernel(std::string name, const Platform& platform, System& system) :
-//                   CalcAmoebaStretchBendForceKernel(name, platform), system(system) {
-//    data.incrementKernelCount();
-//}
-//
-//ReferenceCalcAmoebaStretchBendForceKernel::~ReferenceCalcAmoebaStretchBendForceKernel() {
-//    data.decrementKernelCount();
-//}
-//
-//void ReferenceCalcAmoebaStretchBendForceKernel::initialize(const System& system, const AmoebaStretchBendForce& force) {
-//
-//    data.setAmoebaLocalForcesKernel( this );
-//    numStretchBends                     = force.getNumStretchBends();
-//
-//    std::vector<int>   particle1(numStretchBends);
-//    std::vector<int>   particle2(numStretchBends);
-//    std::vector<int>   particle3(numStretchBends);
-//    std::vector<RealOpenMM> lengthABParameters(numStretchBends);
-//    std::vector<RealOpenMM> lengthCBParameters(numStretchBends);
-//    std::vector<RealOpenMM> angleParameters(numStretchBends);
-//    std::vector<RealOpenMM> kParameters(numStretchBends);
-//
-//    for (int i = 0; i < numStretchBends; i++) {
-//
-//        double lengthAB, lengthCB, angle, k;
-//
-//        force.getStretchBendParameters(i, particle1[i], particle2[i], particle3[i], lengthAB, lengthCB, angle, k);
-//        lengthABParameters[i] = static_cast<RealOpenMM>(lengthAB);
-//        lengthCBParameters[i] = static_cast<RealOpenMM>(lengthCB);
-//        angleParameters[i]    = static_cast<RealOpenMM>(angle);
-//        kParameters[i]        = static_cast<RealOpenMM>(k);
-//    }
-//    gpuSetAmoebaStretchBendParameters(data.getAmoebaGpu(), particle1, particle2, particle3, lengthABParameters, lengthCBParameters, angleParameters, kParameters);
-//
-//}
-//
-//double ReferenceCalcAmoebaStretchBendForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
-//    if( data.getAmoebaLocalForcesKernel() == this ){
-//        computeAmoebaLocalForces( data );
-//    }
-//    return 0.0;
-//}
+ReferenceCalcAmoebaStretchBendForceKernel::ReferenceCalcAmoebaStretchBendForceKernel(std::string name, const Platform& platform, System& system) :
+                   CalcAmoebaStretchBendForceKernel(name, platform), system(system) {
+}
+
+ReferenceCalcAmoebaStretchBendForceKernel::~ReferenceCalcAmoebaStretchBendForceKernel() {
+}
+
+void ReferenceCalcAmoebaStretchBendForceKernel::initialize(const System& system, const AmoebaStretchBendForce& force) {
+
+    numStretchBends = force.getNumStretchBends();
+    for ( int ii = 0; ii < numStretchBends; ii++) {
+        int particle1Index, particle2Index, particle3Index;
+        double lengthAB, lengthCB, angle, k;
+        force.getStretchBendParameters(ii, particle1Index, particle2Index, particle3Index, lengthAB, lengthCB, angle, k);
+        particle1.push_back( particle1Index ); 
+        particle2.push_back( particle2Index ); 
+        particle3.push_back( particle3Index ); 
+        lengthABParameters.push_back( static_cast<RealOpenMM>(lengthAB) );
+        lengthCBParameters.push_back( static_cast<RealOpenMM>(lengthCB) );
+        angleParameters.push_back(    static_cast<RealOpenMM>(angle) );
+        kParameters.push_back(        static_cast<RealOpenMM>(k) );
+    }
+}
+
+double ReferenceCalcAmoebaStretchBendForceKernel::execute(ContextImpl& context, bool includeForces, bool includeEnergy) {
+    RealOpenMM** posData   = extractPositions(context);
+    RealOpenMM** forceData = extractForces(context);
+    RealOpenMM energy      = 0.0; 
+    for( unsigned int ii = 0; ii < numStretchBends; ii++ ){
+
+        int particle1Index      = particle1[ii];
+        int particle2Index      = particle2[ii];
+        int particle3Index      = particle3[ii];
+
+        RealOpenMM* forces[3];
+        forces[0]               = forceData[particle1Index];
+        forces[1]               = forceData[particle2Index];
+        forces[2]               = forceData[particle3Index];
+
+        energy                 += AmoebaReferenceStretchBendForce::calculateForceAndEnergy( 
+                                       posData[particle1Index], posData[particle2Index], posData[particle3Index],
+                                       lengthABParameters[ii], lengthCBParameters[ii],
+                                       angleParameters[ii], kParameters[ii], forces );
+    }
+    return static_cast<double>(energy);
+}
+
 //ReferenceCalcAmoebaOutOfPlaneBendForceKernel::ReferenceCalcAmoebaOutOfPlaneBendForceKernel(std::string name, const Platform& platform, System& system) :
 //          CalcAmoebaOutOfPlaneBendForceKernel(name, platform), system(system) {
 //    data.incrementKernelCount();
